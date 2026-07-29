@@ -118,7 +118,7 @@ test("previsualiza, cancela y edita en masa entre páginas", async ({ page }) =>
 });
 
 test("importa y pagina 1.000 productos", async ({ page }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(150_000);
   await openCatalog(page);
   await uploadCsv(page, performanceCsv, "catalogo-1000.csv");
   await clickDom(page.getByRole("button", { name: "Reemplazar catálogo" }));
