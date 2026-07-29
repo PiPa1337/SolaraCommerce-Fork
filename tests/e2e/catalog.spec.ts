@@ -82,7 +82,7 @@ test("edita variantes y conserva el último cambio al volver, recargar y reabrir
 test("previsualiza, cancela y confirma 1.000 productos con selección entre páginas", async ({
   page,
 }) => {
-  test.setTimeout(240_000);
+  test.setTimeout(90_000);
   await openCatalog(page);
   await uploadCsv(page);
 
@@ -97,10 +97,10 @@ test("previsualiza, cancela y confirma 1.000 productos con selección entre pág
   await expect(page.getByText("1000 productos y 2000 variantes.")).toBeVisible();
   await expect(page.locator("tbody tr")).toHaveCount(50);
 
-  await page.getByLabel("Seleccionar productos de esta página").check({ force: true });
+  await page.getByLabel("Seleccionar productos de esta página").click({ force: true });
   await expect(page.getByText("50 seleccionados")).toBeVisible();
   await page.getByRole("button", { name: "Siguiente" }).click();
-  await page.getByLabel("Seleccionar productos de esta página").check({ force: true });
+  await page.getByLabel("Seleccionar productos de esta página").click({ force: true });
   await expect(page.getByText("100 seleccionados")).toBeVisible();
 
   await page.getByLabel("Estado").selectOption("archived");
