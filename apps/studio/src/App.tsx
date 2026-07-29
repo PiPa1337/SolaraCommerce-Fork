@@ -58,6 +58,7 @@ export function App() {
   if (active) {
     return (
       <Studio
+        key={`${active.id}:${active.updatedAt}`}
         initialProject={active}
         onBack={() => {
           setActive(undefined);

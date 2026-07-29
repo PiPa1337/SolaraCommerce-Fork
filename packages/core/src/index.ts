@@ -82,6 +82,10 @@ export type DomainCommand =
       type: "products.setStatus";
       productIds: ProductId[];
       status: ProductStatus;
+    })
+  | (CommandMetadata & {
+      type: "products.replaceAll";
+      products: Product[];
     });
 
 const unique = <Value>(values: readonly Value[]): Value[] => [...new Set(values)];
@@ -96,6 +100,12 @@ function assertInteger(value: number, label: string): void {
   if (!Number.isSafeInteger(value)) {
     throw new Error(`${label} debe ser un entero seguro.`);
   }
+}
+
+function latestTimestamp(...values: string[]): string {
+  return values.reduce((latest, value) =>
+    Date.parse(value) > Date.parse(latest) ? value : latest,
+  );
 }
 
 function divideAndRound(numerator: bigint, denominator: bigint): bigint {
@@ -154,20 +164,36 @@ function updateSelectedProducts(
     return project;
   }
 
+  const missing = [...selected].filter(
+    (productId) => !project.products.some((product) => product.id === productId),
+  );
+  if (missing.length > 0) {
+    throw new Error(`Productos inexistentes: ${missing.join(", ")}.`);
+  }
+
   let changed = false;
+  let projectUpdatedAt = at;
   const products = project.products.map((product) => {
     if (!selected.has(product.id)) {
       return product;
     }
+    const candidate = update(product);
+    if (JSON.stringify(candidate) === JSON.stringify(product)) {
+      return product;
+    }
     changed = true;
-    return { ...update(product), updatedAt: at };
+    const updatedAt = latestTimestamp(at, product.updatedAt);
+    projectUpdatedAt = latestTimestamp(projectUpdatedAt, updatedAt);
+    return { ...candidate, updatedAt };
   });
 
   if (!changed) {
     return project;
   }
 
-  return synchronizeAssignments({ ...project, products, updatedAt: at });
+  return parseProject(
+    synchronizeAssignments({ ...project, products, updatedAt: projectUpdatedAt }),
+  );
 }
 
 function applyProductPatch(product: Product, changes: ProductPatch): Product {
@@ -182,6 +208,8 @@ function applyProductPatch(product: Product, changes: ProductPatch): Product {
 
 export function reduceProject(project: StoreProjectV1, command: DomainCommand): StoreProjectV1 {
   assertTimestamp(command.at);
+  const at =
+    Date.parse(command.at) < Date.parse(project.updatedAt) ? project.updatedAt : command.at;
 
   switch (command.type) {
     case "product.create": {
@@ -193,35 +221,37 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
       }
       const product = ProductSchema.parse({
         ...command.product,
-        createdAt: command.at,
-        updatedAt: command.at,
+        createdAt: at,
+        updatedAt: at,
       });
-      return synchronizeAssignments({
-        ...project,
-        products: [...project.products, product],
-        updatedAt: command.at,
-      });
+      return parseProject(
+        synchronizeAssignments({
+          ...project,
+          products: [...project.products, product],
+          updatedAt: at,
+        }),
+      );
     }
     case "product.update":
-      return updateSelectedProducts(project, [command.productId], command.at, (product) =>
+      return updateSelectedProducts(project, [command.productId], at, (product) =>
         applyProductPatch(product, command.changes),
       );
     case "product.archive":
-      return updateSelectedProducts(project, [command.productId], command.at, (product) => ({
+      return updateSelectedProducts(project, [command.productId], at, (product) => ({
         ...product,
         status: "archived",
       }));
     case "product.restore":
-      return updateSelectedProducts(project, [command.productId], command.at, (product) => ({
+      return updateSelectedProducts(project, [command.productId], at, (product) => ({
         ...product,
         status: command.status ?? "active",
       }));
     case "products.bulkUpdate":
-      return updateSelectedProducts(project, command.productIds, command.at, (product) =>
+      return updateSelectedProducts(project, command.productIds, at, (product) =>
         applyProductPatch(product, command.changes),
       );
     case "products.adjustPrices":
-      return updateSelectedProducts(project, command.productIds, command.at, (product) =>
+      return updateSelectedProducts(project, command.productIds, at, (product) =>
         ProductSchema.parse({
           ...product,
           variants: product.variants.map((variant) => ({
@@ -236,32 +266,45 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
         }),
       );
     case "products.setCategories":
-      return updateSelectedProducts(project, command.productIds, command.at, (product) => ({
+      return updateSelectedProducts(project, command.productIds, at, (product) => ({
         ...product,
         categoryIds: unique(command.categoryIds),
       }));
     case "products.setCollections":
-      return updateSelectedProducts(project, command.productIds, command.at, (product) => ({
+      return updateSelectedProducts(project, command.productIds, at, (product) => ({
         ...product,
         collectionIds: unique(command.collectionIds),
       }));
     case "products.addTags":
-      return updateSelectedProducts(project, command.productIds, command.at, (product) => ({
+      return updateSelectedProducts(project, command.productIds, at, (product) => ({
         ...product,
         tags: unique([...product.tags, ...command.tags.map((tag) => tag.trim()).filter(Boolean)]),
       }));
     case "products.removeTags": {
       const removed = new Set(command.tags);
-      return updateSelectedProducts(project, command.productIds, command.at, (product) => ({
+      return updateSelectedProducts(project, command.productIds, at, (product) => ({
         ...product,
         tags: product.tags.filter((tag) => !removed.has(tag)),
       }));
     }
     case "products.setStatus":
-      return updateSelectedProducts(project, command.productIds, command.at, (product) => ({
+      return updateSelectedProducts(project, command.productIds, at, (product) => ({
         ...product,
         status: command.status,
       }));
+    case "products.replaceAll": {
+      const products = command.products.map((product) => ProductSchema.parse(product));
+      if (JSON.stringify(products) === JSON.stringify(project.products)) {
+        return project;
+      }
+      return parseProject(
+        synchronizeAssignments({
+          ...project,
+          products,
+          updatedAt: latestTimestamp(at, ...products.map((product) => product.updatedAt)),
+        }),
+      );
+    }
   }
 }
 
@@ -456,7 +499,7 @@ function parseInteger(value: string, label: string, row: number): number {
 }
 
 export function importProductsCsv(csv: string): Product[] {
-  const rows = parseCsvRows(csv);
+  const rows = parseCsvRows(csv.replace(/^\uFEFF/, ""));
   const header = rows[0];
   if (header === undefined) {
     return [];

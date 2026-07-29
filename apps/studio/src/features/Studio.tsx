@@ -19,10 +19,11 @@ import {
   redo,
   undo,
 } from "@solara/core";
-import type { Product, StoreProjectV1 } from "@solara/project-schema";
+import type { StoreProjectV1 } from "@solara/project-schema";
 import { motion, useReducedMotion } from "motion/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { IconButton } from "../components/Ui";
+import { AutosaveQueue, type AutosaveState } from "../lib/autosave";
 import { saveProject } from "../lib/repository";
 import { Assets } from "./Assets";
 import { Builder } from "./Builder";
@@ -34,8 +35,6 @@ import { Seo } from "./Seo";
 import { ThemeEditor } from "./ThemeEditor";
 
 type StudioTab = "overview" | "catalog" | "builder" | "theme" | "assets" | "seo" | "export";
-type SaveState = "saved" | "pending" | "saving" | "error";
-
 const tabs: Array<{ id: StudioTab; label: string; icon: typeof Storefront }> = [
   { id: "overview", label: "Resumen", icon: Storefront },
   { id: "catalog", label: "Catálogo", icon: Package },
@@ -57,24 +56,46 @@ export function Studio({
 }) {
   const [history, setHistory] = useState<HistoryState>(() => createHistory(initialProject));
   const [tab, setTab] = useState<StudioTab>("overview");
-  const [saveState, setSaveState] = useState<SaveState>("saved");
+  const [saveState, setSaveState] = useState<AutosaveState>("saved");
+  const [leaving, setLeaving] = useState(false);
+  const [autosave] = useState(() => new AutosaveQueue(saveProject, 550));
+  const lastProjectRef = useRef(initialProject);
   const reduceMotion = useReducedMotion();
   const project = history.present;
 
   useEffect(() => {
-    setHistory(createHistory(initialProject));
-  }, [initialProject]);
+    return autosave.subscribe(setSaveState);
+  }, [autosave]);
 
   useEffect(() => {
-    setSaveState("pending");
-    const timeout = window.setTimeout(() => {
-      setSaveState("saving");
-      void saveProject(project)
-        .then(() => setSaveState("saved"))
-        .catch(() => setSaveState("error"));
-    }, 550);
-    return () => window.clearTimeout(timeout);
-  }, [project]);
+    if (project === lastProjectRef.current) return;
+    lastProjectRef.current = project;
+    autosave.schedule(project);
+  }, [autosave, project]);
+
+  useEffect(() => {
+    const warnBeforeClose = (event: BeforeUnloadEvent) => {
+      if (!autosave.hasUnsavedChanges) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeClose);
+    return () => {
+      window.removeEventListener("beforeunload", warnBeforeClose);
+      autosave.dispose();
+    };
+  }, [autosave]);
+
+  const leaveStudio = async () => {
+    setLeaving(true);
+    try {
+      await autosave.flush();
+      onBack();
+    } catch {
+      setSaveState("error");
+      setLeaving(false);
+    }
+  };
 
   const replaceProject = useCallback((next: StoreProjectV1) => {
     setHistory((current) => {
@@ -87,38 +108,12 @@ export function Studio({
     setHistory((current) => executeCommand(current, command));
   }, []);
 
-  const replaceProducts = useCallback(
-    (products: Product[]) => {
-      const timestamp = new Date().toISOString();
-      replaceProject({
-        ...project,
-        products,
-        categories: project.categories.map((category) => ({
-          ...category,
-          productIds: products
-            .filter((product) => product.categoryIds.includes(category.id))
-            .map((product) => product.id),
-        })),
-        collections: project.collections.map((collection) => ({
-          ...collection,
-          productIds: products
-            .filter((product) => product.collectionIds.includes(collection.id))
-            .map((product) => product.id),
-        })),
-        updatedAt: timestamp,
-      });
-    },
-    [project, replaceProject],
-  );
-
   const renderTab = () => {
     switch (tab) {
       case "overview":
         return <Overview project={project} onChange={replaceProject} />;
       case "catalog":
-        return (
-          <Catalog project={project} onCommand={runCommand} onReplaceProducts={replaceProducts} />
-        );
+        return <Catalog project={project} onCommand={runCommand} />;
       case "builder":
         return <Builder project={project} onChange={replaceProject} />;
       case "theme":
@@ -132,6 +127,7 @@ export function Studio({
           <ExportPanel
             project={project}
             onImport={async (imported) => {
+              await autosave.flush();
               await onProjectImported(imported);
               setHistory(createHistory(imported));
             }}
@@ -144,7 +140,12 @@ export function Studio({
     <div className="studio-shell">
       <header className="studio-topbar">
         <div className="studio-brand">
-          <IconButton icon={ArrowLeft} label="Volver a tiendas" onClick={onBack} />
+          <IconButton
+            icon={ArrowLeft}
+            label="Volver a tiendas"
+            disabled={leaving}
+            onClick={() => void leaveStudio()}
+          />
           <span className="brand-mark" aria-hidden>
             S
           </span>
@@ -153,16 +154,27 @@ export function Studio({
             <small>{project.baseUrl}</small>
           </div>
         </div>
-        <output className={`save-indicator save-indicator--${saveState}`} aria-live="polite">
-          <FloppyDisk aria-hidden size={16} />
-          {saveState === "saved"
-            ? "Guardado"
-            : saveState === "pending"
-              ? "Cambios pendientes"
-              : saveState === "saving"
-                ? "Guardando"
-                : "Error al guardar"}
-        </output>
+        <div className="save-status">
+          <output className={`save-indicator save-indicator--${saveState}`} aria-live="polite">
+            <FloppyDisk aria-hidden size={16} />
+            {saveState === "saved"
+              ? "Guardado"
+              : saveState === "pending"
+                ? "Cambios pendientes"
+                : saveState === "saving"
+                  ? "Guardando"
+                  : "Error al guardar"}
+          </output>
+          {saveState === "error" ? (
+            <button
+              type="button"
+              className="save-retry"
+              onClick={() => void autosave.flush().catch(() => undefined)}
+            >
+              Reintentar
+            </button>
+          ) : null}
+        </div>
         <div className="history-actions">
           <IconButton
             icon={ArrowUDownLeft}

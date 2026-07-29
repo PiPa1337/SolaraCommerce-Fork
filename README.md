@@ -27,6 +27,21 @@ corepack pnpm dev
 La aplicación guarda los proyectos en IndexedDB. Las tiendas públicas se exportan
 como ZIP estáticos, sin backend ni runtime de inteligencia artificial.
 
+## Catálogo
+
+Cada tienda admite productos con múltiples variantes, categorías, colecciones,
+tags, disponibilidad e identificadores comerciales. El catálogo ofrece:
+
+- edición completa de producto y variantes;
+- acciones masivas de estado, precios, organización y tags;
+- paginación de 25, 50 o 100 filas;
+- selección entre páginas y resultados filtrados;
+- CSV procesado en Web Worker con revisión antes de reemplazar datos;
+- undo/redo y autosave serializado antes de salir de Studio.
+
+`StoreProjectV1` valida IDs, slugs, referencias e índices derivados. Una operación
+inválida se rechaza completa y no deja cambios parciales.
+
 ## Verificación
 
 ```bash
@@ -40,6 +55,10 @@ corepack pnpm benchmark:export
 El benchmark exporta el fixture determinista de 1.000 productos y falla si supera
 30 segundos. Playwright usa Chromium para el bucle local; la matriz completa y
 Lighthouse se reservan para el gate de release.
+
+Los tests de Studio usan una IndexedDB en memoria para comprobar guardado,
+reapertura, duplicación, archivo, restauración y ráfagas de autosave sin depender
+de un navegador durante el bucle unitario.
 
 ## Integración continua
 

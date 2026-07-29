@@ -1,55 +1,18 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { createServer, type Server } from "node:http";
-import { extname, join, normalize, resolve } from "node:path";
+import type { Server } from "node:http";
 import { expect, test } from "@playwright/test";
+import { startStudioServer, stopStudioServer } from "./studio-server";
 
-const studioRoot = resolve("apps/studio/dist");
 let server: Server;
 let studioUrl: string;
 
 test.beforeAll(async () => {
-  server = createServer((request, response) => {
-    const requested = decodeURIComponent(new URL(request.url ?? "/", "http://localhost").pathname);
-    const normalized = normalize(requested).replace(/^([/\\])+/, "");
-    let file = resolve(join(studioRoot, normalized));
-
-    if (!file.startsWith(studioRoot)) {
-      response.writeHead(403).end("Forbidden");
-      return;
-    }
-    if (existsSync(file) && statSync(file).isDirectory()) file = join(file, "index.html");
-    if (!existsSync(file)) {
-      response.writeHead(404).end("Not found");
-      return;
-    }
-
-    const contentTypes: Record<string, string> = {
-      ".css": "text/css; charset=utf-8",
-      ".html": "text/html; charset=utf-8",
-      ".js": "text/javascript; charset=utf-8",
-      ".json": "application/json; charset=utf-8",
-      ".png": "image/png",
-      ".svg": "image/svg+xml",
-    };
-    response.writeHead(200, {
-      "Cache-Control": "no-store",
-      "Content-Type": contentTypes[extname(file)] ?? "application/octet-stream",
-    });
-    response.end(readFileSync(file));
-  });
-
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const address = server.address();
-  if (!address || typeof address === "string") {
-    throw new Error("No se pudo obtener el puerto del servidor de Studio.");
-  }
-  studioUrl = `http://127.0.0.1:${address.port}`;
+  const running = await startStudioServer();
+  server = running.server;
+  studioUrl = running.url;
 });
 
 test.afterAll(async () => {
-  await new Promise<void>((resolve, reject) => {
-    server.close((error) => (error ? reject(error) : resolve()));
-  });
+  await stopStudioServer(server);
 });
 
 test("Studio mantiene jerarquía y no desborda en desktop ni móvil", async ({ page }) => {

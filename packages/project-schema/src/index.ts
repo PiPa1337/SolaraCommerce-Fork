@@ -172,7 +172,7 @@ export const CommercePolicySchema = z.object({
   returnDays: z.number().int().nonnegative(),
 });
 
-export const StoreProjectV1Schema = z.object({
+const StoreProjectV1ShapeSchema = z.object({
   schemaVersion: z.literal(1),
   id: StoreIdSchema,
   name: z.string().min(1),
@@ -216,6 +216,253 @@ export const StoreProjectV1Schema = z.object({
   collections: z.array(CollectionSchema),
   assets: z.array(ImageAssetSchema),
   sections: z.array(StoreSectionSchema),
+});
+
+function addDuplicateIssues(
+  values: readonly string[],
+  path: Array<string | number>,
+  label: string,
+  context: z.RefinementCtx,
+): void {
+  const seen = new Set<string>();
+  values.forEach((value, index) => {
+    if (seen.has(value)) {
+      context.addIssue({
+        code: "custom",
+        message: `${label} duplicado: ${value}.`,
+        path: [...path, index],
+      });
+    }
+    seen.add(value);
+  });
+}
+
+function addMissingReferenceIssue(
+  exists: boolean,
+  path: Array<string | number>,
+  label: string,
+  value: string,
+  context: z.RefinementCtx,
+): void {
+  if (exists) return;
+  context.addIssue({
+    code: "custom",
+    message: `${label} inexistente: ${value}.`,
+    path,
+  });
+}
+
+function sameMembers(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((value) => right.includes(value));
+}
+
+export const StoreProjectV1Schema = StoreProjectV1ShapeSchema.superRefine((project, context) => {
+  addDuplicateIssues(
+    project.products.map((product) => product.id),
+    ["products"],
+    "ID de producto",
+    context,
+  );
+  addDuplicateIssues(
+    project.products.map((product) => product.slug),
+    ["products"],
+    "Slug de producto",
+    context,
+  );
+  addDuplicateIssues(
+    project.categories.map((category) => category.id),
+    ["categories"],
+    "ID de categoría",
+    context,
+  );
+  addDuplicateIssues(
+    project.categories.map((category) => category.slug),
+    ["categories"],
+    "Slug de categoría",
+    context,
+  );
+  addDuplicateIssues(
+    project.collections.map((collection) => collection.id),
+    ["collections"],
+    "ID de colección",
+    context,
+  );
+  addDuplicateIssues(
+    project.collections.map((collection) => collection.slug),
+    ["collections"],
+    "Slug de colección",
+    context,
+  );
+  addDuplicateIssues(
+    project.assets.map((asset) => asset.id),
+    ["assets"],
+    "ID de recurso",
+    context,
+  );
+  addDuplicateIssues(
+    project.sections.map((section) => section.id),
+    ["sections"],
+    "ID de sección",
+    context,
+  );
+
+  const variantIds = project.products.flatMap((product) =>
+    product.variants.map((variant) => variant.id),
+  );
+  addDuplicateIssues(variantIds, ["products"], "ID de variante", context);
+
+  const categoryIds = new Set(project.categories.map((category) => category.id));
+  const collectionIds = new Set(project.collections.map((collection) => collection.id));
+  const assetIds = new Set(project.assets.map((asset) => asset.id));
+
+  project.products.forEach((product, productIndex) => {
+    addDuplicateIssues(
+      product.categoryIds,
+      ["products", productIndex, "categoryIds"],
+      `Categoría del producto ${product.id}`,
+      context,
+    );
+    addDuplicateIssues(
+      product.collectionIds,
+      ["products", productIndex, "collectionIds"],
+      `Colección del producto ${product.id}`,
+      context,
+    );
+    addDuplicateIssues(
+      product.imageIds,
+      ["products", productIndex, "imageIds"],
+      `Imagen del producto ${product.id}`,
+      context,
+    );
+
+    product.categoryIds.forEach((categoryId, referenceIndex) => {
+      addMissingReferenceIssue(
+        categoryIds.has(categoryId),
+        ["products", productIndex, "categoryIds", referenceIndex],
+        `Categoría del producto ${product.id}`,
+        categoryId,
+        context,
+      );
+    });
+    product.collectionIds.forEach((collectionId, referenceIndex) => {
+      addMissingReferenceIssue(
+        collectionIds.has(collectionId),
+        ["products", productIndex, "collectionIds", referenceIndex],
+        `Colección del producto ${product.id}`,
+        collectionId,
+        context,
+      );
+    });
+    product.imageIds.forEach((assetId, referenceIndex) => {
+      addMissingReferenceIssue(
+        assetIds.has(assetId),
+        ["products", productIndex, "imageIds", referenceIndex],
+        `Imagen del producto ${product.id}`,
+        assetId,
+        context,
+      );
+    });
+    product.variants.forEach((variant, variantIndex) => {
+      if (variant.imageId === undefined) return;
+      addMissingReferenceIssue(
+        assetIds.has(variant.imageId),
+        ["products", productIndex, "variants", variantIndex, "imageId"],
+        `Imagen de la variante ${variant.id}`,
+        variant.imageId,
+        context,
+      );
+    });
+
+    if (Date.parse(product.createdAt) > Date.parse(product.updatedAt)) {
+      context.addIssue({
+        code: "custom",
+        message: `El producto ${product.id} tiene updatedAt anterior a createdAt.`,
+        path: ["products", productIndex, "updatedAt"],
+      });
+    }
+  });
+
+  project.categories.forEach((category, categoryIndex) => {
+    addDuplicateIssues(
+      category.productIds,
+      ["categories", categoryIndex, "productIds"],
+      `Producto de la categoría ${category.id}`,
+      context,
+    );
+    const expected = project.products
+      .filter((product) => product.categoryIds.includes(category.id))
+      .map((product) => product.id);
+    if (!sameMembers(category.productIds, expected)) {
+      context.addIssue({
+        code: "custom",
+        message: `La categoría ${category.id} no coincide con las asignaciones de productos.`,
+        path: ["categories", categoryIndex, "productIds"],
+      });
+    }
+    if (category.imageId !== undefined) {
+      addMissingReferenceIssue(
+        assetIds.has(category.imageId),
+        ["categories", categoryIndex, "imageId"],
+        `Imagen de la categoría ${category.id}`,
+        category.imageId,
+        context,
+      );
+    }
+  });
+
+  project.collections.forEach((collection, collectionIndex) => {
+    addDuplicateIssues(
+      collection.productIds,
+      ["collections", collectionIndex, "productIds"],
+      `Producto de la colección ${collection.id}`,
+      context,
+    );
+    const expected = project.products
+      .filter((product) => product.collectionIds.includes(collection.id))
+      .map((product) => product.id);
+    if (!sameMembers(collection.productIds, expected)) {
+      context.addIssue({
+        code: "custom",
+        message: `La colección ${collection.id} no coincide con las asignaciones de productos.`,
+        path: ["collections", collectionIndex, "productIds"],
+      });
+    }
+    if (collection.imageId !== undefined) {
+      addMissingReferenceIssue(
+        assetIds.has(collection.imageId),
+        ["collections", collectionIndex, "imageId"],
+        `Imagen de la colección ${collection.id}`,
+        collection.imageId,
+        context,
+      );
+    }
+  });
+
+  if (project.identity.logoAssetId !== undefined) {
+    addMissingReferenceIssue(
+      assetIds.has(project.identity.logoAssetId),
+      ["identity", "logoAssetId"],
+      "Logo",
+      project.identity.logoAssetId,
+      context,
+    );
+  }
+  if (project.seo.socialImageId !== undefined) {
+    addMissingReferenceIssue(
+      assetIds.has(project.seo.socialImageId),
+      ["seo", "socialImageId"],
+      "Imagen social",
+      project.seo.socialImageId,
+      context,
+    );
+  }
+  if (Date.parse(project.createdAt) > Date.parse(project.updatedAt)) {
+    context.addIssue({
+      code: "custom",
+      message: "El proyecto tiene updatedAt anterior a createdAt.",
+      path: ["updatedAt"],
+    });
+  }
 });
 
 export type ImageAsset = z.infer<typeof ImageAssetSchema>;

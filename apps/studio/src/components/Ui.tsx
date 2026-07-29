@@ -1,6 +1,13 @@
 import type { Icon } from "@phosphor-icons/react";
 import { WarningCircle } from "@phosphor-icons/react";
-import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
+import {
+  type ButtonHTMLAttributes,
+  cloneElement,
+  type HTMLAttributes,
+  isValidElement,
+  type ReactNode,
+  useId,
+} from "react";
 
 export function IconButton({
   icon: IconComponent,
@@ -72,10 +79,20 @@ export function Field({
   children: ReactNode;
   className?: string;
 }) {
+  const labelId = useId();
+  const labeledChild =
+    isValidElement<{ "aria-label"?: string; "aria-labelledby"?: string }>(children) &&
+    typeof children.type === "string" &&
+    ["input", "select", "textarea"].includes(children.type) &&
+    children.props["aria-label"] === undefined &&
+    children.props["aria-labelledby"] === undefined
+      ? cloneElement(children, { "aria-labelledby": labelId })
+      : children;
+
   return (
     <fieldset className={`field ${className}`}>
-      <legend>{label}</legend>
-      {children}
+      <legend id={labelId}>{label}</legend>
+      {labeledChild}
       {hint ? <small>{hint}</small> : null}
     </fieldset>
   );
