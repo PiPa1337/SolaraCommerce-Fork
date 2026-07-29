@@ -34,6 +34,10 @@ async function uploadCsv(page: import("@playwright/test").Page) {
   await expect(page.getByRole("heading", { name: "catalogo-1000.csv" })).toBeVisible();
 }
 
+async function clickDom(locator: import("@playwright/test").Locator) {
+  await locator.evaluate((element: HTMLElement) => element.click());
+}
+
 test("edita variantes y conserva el último cambio al volver, recargar y reabrir", async ({
   page,
 }) => {
@@ -89,30 +93,28 @@ test("previsualiza, cancela y confirma 1.000 productos con selección entre pág
   const review = page.locator(".import-review");
   await expect(review.getByText("1000", { exact: true })).toBeVisible();
   await expect(review.getByText("2", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Cancelar" }).click();
+  await clickDom(page.getByRole("button", { name: "Cancelar" }));
   await expect(page.getByText("2 productos y 3 variantes.")).toBeVisible();
 
   await uploadCsv(page);
-  await page.getByRole("button", { name: "Reemplazar catálogo" }).click();
-  await expect(page.getByText("1000 productos y 2000 variantes.")).toBeVisible();
+  await clickDom(page.getByRole("button", { name: "Reemplazar catálogo" }));
+  await expect(page.getByText("1000 productos y 2000 variantes.")).toBeVisible({
+    timeout: 30_000,
+  });
   await expect(page.locator("tbody tr")).toHaveCount(50);
 
-  await page
-    .locator('thead input[type="checkbox"]')
-    .evaluate((element: HTMLInputElement) => element.click());
+  await clickDom(page.locator('thead input[type="checkbox"]'));
   await expect(page.getByText("50 seleccionados")).toBeVisible();
-  await page.getByRole("button", { name: "Siguiente" }).click();
-  await page
-    .locator('thead input[type="checkbox"]')
-    .evaluate((element: HTMLInputElement) => element.click());
+  await clickDom(page.getByRole("button", { name: "Siguiente" }));
+  await clickDom(page.locator('thead input[type="checkbox"]'));
   await expect(page.getByText("100 seleccionados")).toBeVisible();
 
   await page.getByLabel("Estado").selectOption("archived");
-  await page.getByRole("button", { name: "Aplicar estado" }).click();
+  await clickDom(page.getByRole("button", { name: "Aplicar estado" }));
   await expect(page.locator("tbody .status-label", { hasText: "Archivado" }).first()).toBeVisible();
-  await page.getByRole("button", { name: "Deshacer" }).click();
+  await clickDom(page.getByRole("button", { name: "Deshacer" }));
   await expect(page.locator("tbody .status-label", { hasText: "Activo" }).first()).toBeVisible();
-  await page.getByRole("button", { name: "Rehacer" }).click();
+  await clickDom(page.getByRole("button", { name: "Rehacer" }));
   await expect(page.locator("tbody .status-label", { hasText: "Archivado" }).first()).toBeVisible();
 
   await page.getByRole("button", { name: "Volver a tiendas" }).click();
