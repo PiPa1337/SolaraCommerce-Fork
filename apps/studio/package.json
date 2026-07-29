@@ -1,0 +1,31 @@
+{
+  "name": "@solara/studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build --configLoader runner",
+    "dev": "vite --host 0.0.0.0 --configLoader runner",
+    "test": "vitest run --configLoader runner",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "2.1.10",
+    "@solara/core": "workspace:*",
+    "@solara/exporter": "workspace:*",
+    "@solara/modules": "workspace:*",
+    "@solara/project-schema": "workspace:*",
+    "@tanstack/react-table": "8.21.3",
+    "dexie": "4.2.0",
+    "fflate": "0.8.2",
+    "motion": "12.23.12",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.12",
+    "@types/react-dom": "19.1.9",
+    "@vitejs/plugin-react": "5.0.2",
+    "vite": "7.1.3"
+  }
+}

@@ -1,0 +1,863 @@
+import { getModuleDefinition, MODULE_STYLES, renderSections } from "@solara/modules";
+import type {
+  Category,
+  ImageAsset,
+  Product,
+  StoreProjectV1,
+  StoreSection,
+  Variant,
+} from "@solara/project-schema";
+import { StoreProjectV1Schema } from "@solara/project-schema";
+import { STOREFRONT_RUNTIME_CSS, STOREFRONT_RUNTIME_JS } from "@solara/storefront-runtime";
+import { strToU8, unzipSync, type Zippable, zipSync } from "fflate";
+
+export type ExportMode = "draft" | "production";
+export type AuditSeverity = "critical" | "warning" | "info";
+
+export interface AuditIssue {
+  code: string;
+  severity: AuditSeverity;
+  message: string;
+  path?: string;
+}
+
+export interface ExportOptions {
+  mode: ExportMode;
+}
+
+export interface ExportResult {
+  files: ReadonlyMap<string, string | Uint8Array>;
+  zip: Uint8Array;
+  audit: AuditIssue[];
+}
+
+interface PageDescriptor {
+  path: string;
+  title: string;
+  description: string;
+  canonicalPath: string;
+  pageType: "home" | "category" | "product" | "legal";
+  body: string;
+  structuredData: unknown[];
+  image?: string;
+}
+
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+const stableMtime = new Date("2000-01-01T12:00:00.000Z");
+
+function escapeHtml(value: string): string {
+  return value.replace(
+    /[&<>"']/g,
+    (character) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;",
+      })[character] ?? character,
+  );
+}
+
+function escapeXml(value: string): string {
+  return escapeHtml(value);
+}
+
+function jsonForScript(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, "\\u003c");
+}
+
+function normalizeBaseUrl(baseUrl: string): string {
+  return baseUrl.replace(/\/+$/, "");
+}
+
+function absoluteUrl(project: StoreProjectV1, path: string): string {
+  return `${normalizeBaseUrl(project.baseUrl)}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+function imageFor(project: StoreProjectV1, assetId: string | undefined): ImageAsset | undefined {
+  return project.assets.find((asset) => asset.id === assetId);
+}
+
+function imageUrl(project: StoreProjectV1, assetId: string | undefined): string | undefined {
+  const asset = imageFor(project, assetId);
+  if (!asset) return undefined;
+  if (asset.source.startsWith("data:")) return `/assets/${asset.hash}.${assetExtension(asset)}`;
+  return asset.source;
+}
+
+function assetExtension(asset: ImageAsset): string {
+  const extension = asset.mimeType.split("/")[1]?.replace("jpeg", "jpg");
+  return extension || "bin";
+}
+
+function dataUrlBytes(source: string): Uint8Array | undefined {
+  const match = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(source);
+  if (!match) return undefined;
+  const payload = match[3] ?? "";
+  if (match[2]) {
+    if (typeof atob === "function") {
+      const binary = atob(payload);
+      return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    }
+    return Uint8Array.from(Buffer.from(payload, "base64"));
+  }
+  return encoder.encode(decodeURIComponent(payload));
+}
+
+function publicAssetPath(asset: ImageAsset, kind: "primary" | "fallback", width?: number): string {
+  const suffix = width ? `-${width}` : kind === "fallback" ? "-fallback" : "";
+  const extension = kind === "fallback" ? "jpg" : assetExtension(asset);
+  return `/assets/${asset.hash}${suffix}.${extension}`;
+}
+
+function projectWithPublicAssetUrls(project: StoreProjectV1): StoreProjectV1 {
+  return {
+    ...project,
+    assets: project.assets.map((asset) => ({
+      ...asset,
+      source: asset.source.startsWith("data:") ? publicAssetPath(asset, "primary") : asset.source,
+      ...(asset.fallbackSource
+        ? {
+            fallbackSource: asset.fallbackSource.startsWith("data:")
+              ? publicAssetPath(asset, "fallback")
+              : asset.fallbackSource,
+          }
+        : {}),
+      ...(asset.responsiveSources
+        ? {
+            responsiveSources: asset.responsiveSources.map((source) => ({
+              ...source,
+              source: source.source.startsWith("data:")
+                ? publicAssetPath(asset, "primary", source.width)
+                : source.source,
+            })),
+          }
+        : {}),
+    })),
+  };
+}
+
+function themeCss(project: StoreProjectV1): string {
+  const { colors, typography, spacingScale, radius, container } = project.theme;
+  return `
+:root {
+  color-scheme: light dark;
+  --solara-background: ${colors.background};
+  --solara-surface: ${colors.surface};
+  --solara-text: ${colors.text};
+  --solara-muted: ${colors.muted};
+  --solara-accent: ${colors.accent};
+  --solara-accent-text: ${colors.accentText};
+  --solara-border: ${colors.border};
+  --solara-display: ${typography.display};
+  --solara-body: ${typography.body};
+  --solara-font-display: ${typography.display};
+  --solara-font-body: ${typography.body};
+  --solara-type-scale: ${typography.scale};
+  --solara-space-scale: ${spacingScale};
+  --solara-space: ${spacingScale};
+  --solara-radius: ${radius}px;
+  --solara-container: ${container}px;
+}
+
+* { box-sizing: border-box; }
+html { background: var(--solara-background); color: var(--solara-text); }
+body { margin: 0; min-width: 320px; font-family: var(--solara-body); line-height: 1.5; }
+img { display: block; max-width: 100%; height: auto; }
+a { color: inherit; }
+button, input, select, textarea { font: inherit; }
+button, input, select, textarea, a { outline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--solara-accent); }
+.solara-page { min-height: 100dvh; overflow: clip; }
+.solara-container { width: min(calc(100% - 2rem), var(--solara-container)); margin-inline: auto; }
+`.trim();
+}
+
+function renderProjectSections(
+  project: StoreProjectV1,
+  sections: StoreSection[],
+  pageContext: { pageType: PageDescriptor["pageType"]; product?: Product; category?: Category },
+): string {
+  const modulePageType = pageContext.pageType === "legal" ? "content" : pageContext.pageType;
+  return String(
+    renderSections(project, sections, {
+      pageType: modulePageType,
+      ...(pageContext.product ? { product: pageContext.product } : {}),
+      ...(pageContext.category ? { category: pageContext.category } : {}),
+    }),
+  );
+}
+
+function productDetailSection(project: StoreProjectV1, product: Product): string {
+  const definition = getModuleDefinition("product-detail");
+  if (!definition) throw new Error("Falta el módulo product-detail.");
+  const section: StoreSection = {
+    id: `product-detail-${product.id}` as StoreSection["id"],
+    slot: "product",
+    moduleId: "product-detail",
+    enabled: true,
+    settings: {},
+    motion: {
+      preset: "fade",
+      intensity: 4,
+      direction: "up",
+      distance: 0,
+      duration: 0.45,
+      delay: 0,
+      stagger: 0,
+      easing: "cubic-bezier(.16,1,.3,1)",
+      entryPoint: 0.15,
+      once: true,
+    },
+  };
+  const settings = definition.settingsSchema.parse({});
+  const rendered = definition.render({
+    project,
+    section,
+    settings,
+    pageType: "product",
+    product,
+  });
+  return String(rendered);
+}
+
+function storeStructuredData(project: StoreProjectV1): unknown[] {
+  const logo = imageUrl(project, project.identity.logoAssetId);
+  return [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: project.identity.brandName,
+      url: normalizeBaseUrl(project.baseUrl),
+      inLanguage: project.locale,
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "OnlineStore",
+      name: project.identity.brandName,
+      legalName: project.identity.legalName,
+      url: normalizeBaseUrl(project.baseUrl),
+      description: project.identity.description,
+      ...(logo ? { logo } : {}),
+      email: project.identity.email || undefined,
+      telephone: project.identity.phone,
+      address: project.identity.address,
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        applicableCountry: project.policies.returns.countries,
+        merchantReturnDays: project.policies.returns.returnDays,
+        returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+        returnMethod: "https://schema.org/ReturnByMail",
+      },
+    },
+  ];
+}
+
+function breadcrumbData(
+  project: StoreProjectV1,
+  items: Array<{ name: string; path: string }>,
+): unknown {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      item: absoluteUrl(project, item.path),
+    })),
+  };
+}
+
+function offerData(project: StoreProjectV1, product: Product, variant: Variant): unknown {
+  return {
+    "@type": "Offer",
+    url: absoluteUrl(project, `/productos/${product.slug}/?variant=${variant.id}`),
+    priceCurrency: project.currency,
+    price: (variant.price / 100).toFixed(2),
+    availability:
+      variant.stockStatus === "in_stock"
+        ? "https://schema.org/InStock"
+        : variant.stockStatus === "preorder"
+          ? "https://schema.org/PreOrder"
+          : "https://schema.org/OutOfStock",
+    itemCondition: "https://schema.org/NewCondition",
+    seller: { "@type": "Organization", name: project.identity.brandName },
+    shippingDetails: {
+      "@type": "OfferShippingDetails",
+      shippingDestination: {
+        "@type": "DefinedRegion",
+        addressCountry: project.policies.shipping.countries,
+      },
+      deliveryTime: {
+        "@type": "ShippingDeliveryTime",
+        handlingTime: {
+          "@type": "QuantitativeValue",
+          minValue: project.policies.shipping.handlingDaysMin,
+          maxValue: project.policies.shipping.handlingDaysMax,
+          unitCode: "DAY",
+        },
+        transitTime: {
+          "@type": "QuantitativeValue",
+          minValue: project.policies.shipping.transitDaysMin,
+          maxValue: project.policies.shipping.transitDaysMax,
+          unitCode: "DAY",
+        },
+      },
+    },
+  };
+}
+
+function productStructuredData(project: StoreProjectV1, product: Product): unknown {
+  const productImage = imageUrl(project, product.imageIds[0]);
+  const variantNodes = product.variants.map((variant) => ({
+    "@type": "Product",
+    name: `${product.title} - ${variant.title}`,
+    sku: variant.sku,
+    ...(variant.gtin ? { gtin13: variant.gtin } : {}),
+    ...(variant.mpn ? { mpn: variant.mpn } : {}),
+    ...(productImage ? { image: [productImage] } : {}),
+    offers: offerData(project, product, variant),
+  }));
+
+  if (product.variants.length === 1) {
+    return {
+      "@context": "https://schema.org",
+      ...variantNodes[0],
+      name: product.title,
+      description: product.description,
+      brand: { "@type": "Brand", name: product.brand },
+      url: absoluteUrl(project, `/productos/${product.slug}/`),
+    };
+  }
+
+  const variesBy = Array.from(
+    new Set(product.variants.flatMap((variant) => Object.keys(variant.optionValues))),
+  ).map((option) => `https://schema.org/${option}`);
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "ProductGroup",
+    productGroupID: product.id,
+    name: product.title,
+    description: product.description,
+    brand: { "@type": "Brand", name: product.brand },
+    url: absoluteUrl(project, `/productos/${product.slug}/`),
+    ...(productImage ? { image: [productImage] } : {}),
+    variesBy,
+    hasVariant: variantNodes,
+  };
+}
+
+function renderDocument(project: StoreProjectV1, page: PageDescriptor, mode: ExportMode): string {
+  const canonical = absoluteUrl(project, page.canonicalPath);
+  const robots = mode === "draft" ? "noindex,nofollow" : "index,follow,max-image-preview:large";
+  const verification = [
+    project.seo.searchConsoleVerification
+      ? `<meta name="google-site-verification" content="${escapeHtml(project.seo.searchConsoleVerification)}">`
+      : "",
+    project.seo.merchantVerification
+      ? `<meta name="google-site-verification" content="${escapeHtml(project.seo.merchantVerification)}">`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const structuredData = page.structuredData
+    .map((data) => `<script type="application/ld+json">${jsonForScript(data)}</script>`)
+    .join("\n");
+  const colorMode =
+    project.theme.colorMode === "auto" ? "" : ` data-theme="${project.theme.colorMode}"`;
+
+  return `<!doctype html>
+<html lang="${project.locale}" data-store-id="${escapeHtml(project.id)}" data-currency="${project.currency}" data-whatsapp="${escapeHtml(project.whatsapp.phone)}" data-whatsapp-greeting="${escapeHtml(project.whatsapp.greeting)}" data-whatsapp-include-sku="${String(project.whatsapp.includeSku)}"${colorMode}>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${escapeHtml(page.title)}</title>
+  <meta name="description" content="${escapeHtml(page.description)}">
+  <meta name="robots" content="${robots}">
+  <link rel="canonical" href="${escapeHtml(canonical)}">
+  <meta property="og:type" content="${page.pageType === "product" ? "product" : "website"}">
+  <meta property="og:locale" content="es_AR">
+  <meta property="og:site_name" content="${escapeHtml(project.identity.brandName)}">
+  <meta property="og:title" content="${escapeHtml(page.title)}">
+  <meta property="og:description" content="${escapeHtml(page.description)}">
+  <meta property="og:url" content="${escapeHtml(canonical)}">
+  ${page.image ? `<meta property="og:image" content="${escapeHtml(page.image)}">` : ""}
+  ${verification}
+  <link rel="stylesheet" href="/assets/storefront.css">
+  ${structuredData}
+</head>
+<body>
+  <div class="solara-page" data-solara-store data-color-mode="${project.theme.colorMode}">${page.body}</div>
+  <script src="/assets/storefront.js" defer></script>
+</body>
+</html>`;
+}
+
+function buildPages(project: StoreProjectV1): PageDescriptor[] {
+  const sharedHeader = project.sections.filter((section) =>
+    ["announcement", "header"].includes(section.slot),
+  );
+  const sharedFooter = project.sections.filter((section) =>
+    ["trust", "cart", "footer"].includes(section.slot),
+  );
+  const socialImage =
+    imageUrl(project, project.seo.socialImageId) ?? imageUrl(project, project.assets[0]?.id);
+
+  const home: PageDescriptor = {
+    path: "index.html",
+    title: project.seo.title,
+    description: project.seo.description,
+    canonicalPath: "/",
+    pageType: "home",
+    body: renderProjectSections(project, project.sections, { pageType: "home" }),
+    structuredData: storeStructuredData(project),
+    ...(socialImage ? { image: socialImage } : {}),
+  };
+
+  const categories = project.categories.flatMap((category) => {
+    const products = category.productIds
+      .map((id) => project.products.find((product) => product.id === id))
+      .filter((product): product is Product => Boolean(product && product.status === "active"));
+    const pages: PageDescriptor[] = [];
+
+    for (let offset = 0; offset < Math.max(products.length, 1); offset += 24) {
+      const pageNumber = Math.floor(offset / 24) + 1;
+      const paginated = products.slice(offset, offset + 24);
+      const categorySections = project.sections.filter((section) => section.slot === "catalog");
+      const body = [
+        renderProjectSections(project, sharedHeader, { pageType: "category", category }),
+        `<main class="solara-container">
+          <header>
+            <h1>${escapeHtml(category.title)}</h1>
+            <p>${escapeHtml(category.description)}</p>
+          </header>
+          ${renderProjectSections(project, categorySections, {
+            pageType: "category",
+            category: { ...category, productIds: paginated.map((product) => product.id) },
+          })}
+        </main>`,
+        renderProjectSections(project, sharedFooter, { pageType: "category", category }),
+      ].join("");
+      const canonicalPath =
+        pageNumber === 1
+          ? `/categorias/${category.slug}/`
+          : `/categorias/${category.slug}/pagina/${pageNumber}/`;
+      const categoryImage = imageUrl(project, category.imageId);
+
+      pages.push({
+        path:
+          pageNumber === 1
+            ? `categorias/${category.slug}/index.html`
+            : `categorias/${category.slug}/pagina/${pageNumber}/index.html`,
+        title: `${category.title} | ${project.identity.brandName}`,
+        description: category.description || project.seo.description,
+        canonicalPath,
+        pageType: "category",
+        body,
+        structuredData: [
+          breadcrumbData(project, [
+            { name: "Inicio", path: "/" },
+            { name: category.title, path: `/categorias/${category.slug}/` },
+          ]),
+        ],
+        ...(categoryImage ? { image: categoryImage } : {}),
+      });
+    }
+
+    return pages;
+  });
+
+  const products = project.products
+    .filter((product) => product.status === "active")
+    .map((product): PageDescriptor => {
+      const productImage = imageUrl(project, product.imageIds[0]);
+      const body = [
+        renderProjectSections(project, sharedHeader, { pageType: "product", product }),
+        `<main>${productDetailSection(project, product)}</main>`,
+        renderProjectSections(project, sharedFooter, { pageType: "product", product }),
+      ].join("");
+      return {
+        path: `productos/${product.slug}/index.html`,
+        title: `${product.title} | ${project.identity.brandName}`,
+        description: product.description || project.seo.description,
+        canonicalPath: `/productos/${product.slug}/`,
+        pageType: "product",
+        body,
+        structuredData: [
+          breadcrumbData(project, [
+            { name: "Inicio", path: "/" },
+            { name: "Productos", path: "/" },
+            { name: product.title, path: `/productos/${product.slug}/` },
+          ]),
+          productStructuredData(project, product),
+        ],
+        ...(productImage ? { image: productImage } : {}),
+      };
+    });
+
+  const legalPages: PageDescriptor[] = [
+    {
+      path: "politicas/envios/index.html",
+      title: `Envíos | ${project.identity.brandName}`,
+      description: project.policies.shipping.summary,
+      canonicalPath: "/politicas/envios/",
+      pageType: "legal",
+      body: `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>Envíos</h1><p>${escapeHtml(project.policies.shipping.details)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
+      structuredData: [],
+    },
+    {
+      path: "politicas/devoluciones/index.html",
+      title: `Cambios y devoluciones | ${project.identity.brandName}`,
+      description: project.policies.returns.summary,
+      canonicalPath: "/politicas/devoluciones/",
+      pageType: "legal",
+      body: `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>Cambios y devoluciones</h1><p>${escapeHtml(project.policies.returns.details)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
+      structuredData: [],
+    },
+    {
+      path: "politicas/privacidad/index.html",
+      title: `Privacidad | ${project.identity.brandName}`,
+      description: "Cómo usamos los datos compartidos al realizar un pedido.",
+      canonicalPath: "/politicas/privacidad/",
+      pageType: "legal",
+      body: `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>Privacidad</h1><p>${escapeHtml(project.policies.privacy)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
+      structuredData: [],
+    },
+    {
+      path: "politicas/terminos/index.html",
+      title: `Términos | ${project.identity.brandName}`,
+      description: "Condiciones comerciales de la tienda.",
+      canonicalPath: "/politicas/terminos/",
+      pageType: "legal",
+      body: `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>Términos</h1><p>${escapeHtml(project.policies.terms)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
+      structuredData: [],
+    },
+  ];
+
+  return [home, ...categories, ...products, ...legalPages].map((page) => ({
+    ...page,
+    body: page.body || `<main><p>No hay contenido publicado.</p></main>`,
+  }));
+}
+
+function buildSitemap(project: StoreProjectV1, pages: PageDescriptor[]): string {
+  const urls = pages.map(
+    (page) => `<url>
+  <loc>${escapeXml(absoluteUrl(project, page.canonicalPath))}</loc>
+  <lastmod>${project.updatedAt.slice(0, 10)}</lastmod>
+  ${page.image ? `<image:image><image:loc>${escapeXml(page.image)}</image:loc></image:image>` : ""}
+</url>`,
+  );
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+${urls.join("\n")}
+</urlset>`;
+}
+
+function buildImageSitemap(project: StoreProjectV1): string {
+  const urls = project.products
+    .filter((product) => product.status === "active")
+    .flatMap((product) =>
+      product.imageIds
+        .map((assetId) => imageUrl(project, assetId))
+        .filter((url): url is string => Boolean(url))
+        .map(
+          (url) => `<url>
+  <loc>${escapeXml(absoluteUrl(project, `/productos/${product.slug}/`))}</loc>
+  <image:image>
+    <image:loc>${escapeXml(url)}</image:loc>
+    <image:caption>${escapeXml(product.title)}</image:caption>
+  </image:image>
+</url>`,
+        ),
+    );
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+${urls.join("\n")}
+</urlset>`;
+}
+
+function buildMerchantFeed(project: StoreProjectV1): string {
+  const items = project.products
+    .filter((product) => product.status === "active")
+    .flatMap((product) =>
+      product.variants.map((variant) => {
+        const image = imageUrl(project, variant.imageId ?? product.imageIds[0]) ?? "";
+        const identifier = variant.gtin
+          ? `<g:gtin>${escapeXml(variant.gtin)}</g:gtin>`
+          : variant.mpn
+            ? `<g:mpn>${escapeXml(variant.mpn)}</g:mpn>`
+            : "<g:identifier_exists>no</g:identifier_exists>";
+        const availability =
+          variant.stockStatus === "in_stock"
+            ? "in_stock"
+            : variant.stockStatus === "preorder"
+              ? "preorder"
+              : "out_of_stock";
+        return `<item>
+  <g:id>${escapeXml(variant.id)}</g:id>
+  <g:item_group_id>${escapeXml(product.id)}</g:item_group_id>
+  <title>${escapeXml(`${product.title} - ${variant.title}`)}</title>
+  <description>${escapeXml(product.description)}</description>
+  <link>${escapeXml(absoluteUrl(project, `/productos/${product.slug}/?variant=${variant.id}`))}</link>
+  <g:image_link>${escapeXml(image)}</g:image_link>
+  <g:availability>${availability}</g:availability>
+  <g:price>${(variant.price / 100).toFixed(2)} ${project.currency}</g:price>
+  <g:condition>new</g:condition>
+  <g:brand>${escapeXml(product.brand)}</g:brand>
+  <g:mpn>${escapeXml(variant.mpn ?? variant.sku)}</g:mpn>
+  ${identifier}
+</item>`;
+      }),
+    );
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
+<channel>
+  <title>${escapeXml(project.identity.brandName)}</title>
+  <link>${escapeXml(normalizeBaseUrl(project.baseUrl))}</link>
+  <description>${escapeXml(project.identity.description)}</description>
+  ${items.join("\n")}
+</channel>
+</rss>`;
+}
+
+export function auditProject(project: StoreProjectV1): AuditIssue[] {
+  const issues: AuditIssue[] = [];
+  const productSlugs = new Map<string, number>();
+  const categorySlugs = new Map<string, number>();
+
+  if (!project.baseUrl.startsWith("https://")) {
+    issues.push({
+      code: "domain.https",
+      severity: "critical",
+      message: "El dominio de producción debe usar HTTPS.",
+      path: "baseUrl",
+    });
+  }
+
+  project.products.forEach((product, productIndex) => {
+    productSlugs.set(product.slug, (productSlugs.get(product.slug) ?? 0) + 1);
+    if (product.status !== "active") return;
+    if (!product.description.trim()) {
+      issues.push({
+        code: "product.description",
+        severity: "critical",
+        message: `${product.title} no tiene descripción.`,
+        path: `products.${productIndex}.description`,
+      });
+    }
+    if (product.imageIds.length === 0) {
+      issues.push({
+        code: "product.image",
+        severity: "critical",
+        message: `${product.title} no tiene imagen.`,
+        path: `products.${productIndex}.imageIds`,
+      });
+    }
+    product.imageIds.forEach((assetId) => {
+      const asset = imageFor(project, assetId);
+      if (!asset || !asset.alt.trim()) {
+        issues.push({
+          code: "image.alt",
+          severity: "warning",
+          message: `${product.title} tiene una imagen sin texto alternativo.`,
+          path: `products.${productIndex}.imageIds`,
+        });
+      }
+    });
+    product.variants.forEach((variant, variantIndex) => {
+      if (variant.price <= 0) {
+        issues.push({
+          code: "variant.price",
+          severity: "critical",
+          message: `${product.title}, ${variant.title} no tiene un precio válido.`,
+          path: `products.${productIndex}.variants.${variantIndex}.price`,
+        });
+      }
+      if (!variant.gtin && !variant.mpn && !variant.sku) {
+        issues.push({
+          code: "variant.identifier",
+          severity: "warning",
+          message: `${product.title}, ${variant.title} no tiene identificador comercial.`,
+          path: `products.${productIndex}.variants.${variantIndex}`,
+        });
+      }
+    });
+  });
+
+  project.categories.forEach((category) => {
+    categorySlugs.set(category.slug, (categorySlugs.get(category.slug) ?? 0) + 1);
+  });
+
+  productSlugs.forEach((count, slug) => {
+    if (count > 1) {
+      issues.push({
+        code: "product.slug.duplicate",
+        severity: "critical",
+        message: `El slug de producto "${slug}" está repetido.`,
+      });
+    }
+  });
+  categorySlugs.forEach((count, slug) => {
+    if (count > 1) {
+      issues.push({
+        code: "category.slug.duplicate",
+        severity: "critical",
+        message: `El slug de categoría "${slug}" está repetido.`,
+      });
+    }
+  });
+
+  if (!project.policies.shipping.details.trim() || !project.policies.returns.details.trim()) {
+    issues.push({
+      code: "policies.incomplete",
+      severity: "critical",
+      message: "Las políticas de envío y devoluciones deben estar completas.",
+    });
+  }
+
+  issues.push({
+    code: "merchant.whatsapp-checkout",
+    severity: "warning",
+    message:
+      "Google Merchant puede rechazar una tienda cuyo pedido se completa únicamente por WhatsApp.",
+  });
+
+  return issues;
+}
+
+function buildFiles(project: StoreProjectV1, mode: ExportMode): Map<string, string | Uint8Array> {
+  const publicProject = projectWithPublicAssetUrls(project);
+  const pages = buildPages(publicProject);
+  const files = new Map<string, string | Uint8Array>();
+  pages.forEach((page) => {
+    files.set(page.path, renderDocument(publicProject, page, mode));
+  });
+  files.set(
+    "assets/storefront.css",
+    `${themeCss(publicProject)}\n${MODULE_STYLES}\n${STOREFRONT_RUNTIME_CSS}`,
+  );
+  files.set("assets/storefront.js", STOREFRONT_RUNTIME_JS);
+  files.set(
+    "robots.txt",
+    mode === "draft"
+      ? "User-agent: *\nDisallow: /\n"
+      : `User-agent: *\nAllow: /\nSitemap: ${absoluteUrl(publicProject, "/sitemap.xml")}\n`,
+  );
+  files.set("sitemap.xml", buildSitemap(publicProject, pages));
+  files.set("image-sitemap.xml", buildImageSitemap(publicProject));
+  if (mode === "production") {
+    files.set("google-merchant.xml", buildMerchantFeed(publicProject));
+    files.set(
+      "_headers",
+      `/*
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: https:; script-src 'self'; style-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Content-Type-Options: nosniff
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+`,
+    );
+  }
+
+  project.assets.forEach((asset) => {
+    const bytes = dataUrlBytes(asset.source);
+    if (bytes) files.set(publicAssetPath(asset, "primary").slice(1), bytes);
+    const fallbackBytes = asset.fallbackSource ? dataUrlBytes(asset.fallbackSource) : undefined;
+    if (fallbackBytes) {
+      files.set(publicAssetPath(asset, "fallback").slice(1), fallbackBytes);
+    }
+    asset.responsiveSources?.forEach((source) => {
+      const responsiveBytes = dataUrlBytes(source.source);
+      if (responsiveBytes) {
+        files.set(publicAssetPath(asset, "primary", source.width).slice(1), responsiveBytes);
+      }
+    });
+  });
+  return files;
+}
+
+function zipFiles(files: ReadonlyMap<string, string | Uint8Array>): Uint8Array {
+  const zippable: Zippable = {};
+  [...files.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .forEach(([path, value]) => {
+      zippable[path] = [
+        typeof value === "string" ? strToU8(value) : value,
+        { level: 6, mtime: stableMtime },
+      ];
+    });
+  return zipSync(zippable);
+}
+
+export function exportProject(projectInput: StoreProjectV1, options: ExportOptions): ExportResult {
+  const project = StoreProjectV1Schema.parse(projectInput);
+  const audit = auditProject(project);
+  const critical = audit.filter((issue) => issue.severity === "critical");
+  if (options.mode === "production" && critical.length > 0) {
+    throw new Error(
+      `La exportación de producción tiene ${critical.length} errores críticos: ${critical
+        .map((issue) => issue.message)
+        .join(" ")}`,
+    );
+  }
+
+  const files = buildFiles(project, options.mode);
+  return { files, zip: zipFiles(files), audit };
+}
+
+export function renderPreviewHtml(
+  projectInput: StoreProjectV1,
+  mode: ExportMode = "draft",
+): string {
+  const project = StoreProjectV1Schema.parse(projectInput);
+  const page = buildPages(project)[0];
+  if (!page) throw new Error("No se pudo renderizar la página inicial.");
+  return renderDocument(project, page, mode)
+    .replace('href="/assets/storefront.css"', 'href="data:text/css;base64,PREVIEW_STYLE"')
+    .replace(
+      'src="/assets/storefront.js"',
+      `src="data:text/javascript;base64,${toBase64(STOREFRONT_RUNTIME_JS)}"`,
+    )
+    .replace(
+      "data:text/css;base64,PREVIEW_STYLE",
+      `data:text/css;base64,${toBase64(
+        `${themeCss(project)}\n${MODULE_STYLES}\n${STOREFRONT_RUNTIME_CSS}`,
+      )}`,
+    );
+}
+
+function toBase64(value: string): string {
+  if (typeof btoa === "function") {
+    const bytes = encoder.encode(value);
+    let binary = "";
+    bytes.forEach((byte) => {
+      binary += String.fromCharCode(byte);
+    });
+    return btoa(binary);
+  }
+  return Buffer.from(value, "utf8").toString("base64");
+}
+
+export function createProjectArchive(projectInput: StoreProjectV1): Uint8Array {
+  const project = StoreProjectV1Schema.parse(projectInput);
+  const files = new Map<string, string | Uint8Array>([
+    ["project.json", JSON.stringify(project, null, 2)],
+  ]);
+  project.assets.forEach((asset) => {
+    const bytes = dataUrlBytes(asset.source);
+    if (bytes) files.set(`assets/${asset.hash}.${assetExtension(asset)}`, bytes);
+  });
+  return zipFiles(files);
+}
+
+export function readProjectArchive(archive: Uint8Array): StoreProjectV1 {
+  const files = unzipSync(archive);
+  const projectBytes = files["project.json"];
+  if (!projectBytes) throw new Error("El archivo no contiene project.json.");
+  return StoreProjectV1Schema.parse(JSON.parse(decoder.decode(projectBytes)));
+}

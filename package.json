@@ -1,0 +1,27 @@
+{
+  "name": "solara-commerce",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.15.1",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "benchmark:export": "vitest run scripts/export-benchmark.test.ts --testTimeout=30000",
+    "build": "corepack pnpm -r --if-present build",
+    "check": "corepack pnpm format:check && corepack pnpm typecheck && corepack pnpm test",
+    "dev": "corepack pnpm --filter @solara/studio dev",
+    "format": "biome check --write .",
+    "format:check": "biome check .",
+    "test": "corepack pnpm -r --if-present test",
+    "test:e2e": "corepack pnpm --filter @solara/studio build && playwright test",
+    "typecheck": "corepack pnpm -r --if-present typecheck"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.2.2",
+    "@playwright/test": "1.55.0",
+    "@types/node": "24.3.0",
+    "typescript": "5.9.2",
+    "vitest": "3.2.4"
+  }
+}

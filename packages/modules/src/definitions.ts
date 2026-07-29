@@ -1,0 +1,609 @@
+import {
+  escapeAttribute,
+  escapeHtml,
+  formatMoney,
+  type ModuleDefinition,
+  moduleRoot,
+  renderImage,
+  safeHtml,
+  safeUrl,
+  sanitizeRichText,
+} from "@solara/module-sdk";
+import type { AssetId } from "@solara/project-schema";
+import { z } from "zod";
+import {
+  lowestPrice,
+  productImage,
+  renderBrand,
+  renderProductCards,
+  scopedAssetId,
+  visibleProducts,
+} from "./helpers";
+
+const revealZone = [
+  {
+    id: "content",
+    label: "Contenido",
+    selector: '[data-motion-zone="content"]',
+    allowedPresets: ["none", "fade", "fade-up", "slide", "scale"] as const,
+  },
+] as const;
+
+const staggerZone = [
+  {
+    id: "items",
+    label: "Elementos",
+    selector: '[data-motion-zone="items"]',
+    allowedPresets: ["none", "fade", "fade-up", "stagger"] as const,
+  },
+] as const;
+
+const announcementSettings = z.object({
+  text: z.string().default("Envíos a todo el país"),
+  linkLabel: z.string().default(""),
+  linkHref: z.string().default(""),
+});
+
+export const announcementBar: ModuleDefinition<z.infer<typeof announcementSettings>> = {
+  manifest: {
+    id: "announcement-bar",
+    name: "Barra informativa",
+    description: "Mensaje comercial breve con enlace opcional.",
+    version: 1,
+    slots: ["announcement"],
+    compatibleSettings: ["text", "linkLabel", "linkHref"],
+  },
+  settingsSchema: announcementSettings,
+  motionZones: revealZone,
+  styleAsset: scopedAssetId("announcement-bar"),
+  render(context) {
+    const link =
+      context.settings.linkLabel && context.settings.linkHref
+        ? `<a href="${escapeAttribute(safeUrl(context.settings.linkHref))}">${escapeHtml(context.settings.linkLabel)}</a>`
+        : "";
+    return moduleRoot(
+      "announcement-bar",
+      context.section,
+      safeHtml(
+        `<div class="solara-announcement" data-motion-zone="content"><p>${escapeHtml(context.settings.text)}</p>${link}</div>`,
+      ),
+    );
+  },
+};
+
+const headerSettings = z.object({
+  catalogLabel: z.string().default("Tienda"),
+  catalogHref: z.string().default("/#productos"),
+  showCategories: z.boolean().default(true),
+  cartLabel: z.string().default("Carrito"),
+});
+
+export const editorialHeader: ModuleDefinition<z.infer<typeof headerSettings>> = {
+  manifest: {
+    id: "editorial-header",
+    name: "Header editorial",
+    description: "Navegación compacta de una sola línea con menú móvil nativo.",
+    version: 1,
+    slots: ["header"],
+    compatibleSettings: ["catalogLabel", "catalogHref", "showCategories", "cartLabel"],
+  },
+  settingsSchema: headerSettings,
+  motionZones: revealZone,
+  clientAsset: "storefront-cart" as AssetId,
+  styleAsset: scopedAssetId("editorial-header"),
+  render(context) {
+    const categoryLinks = context.settings.showCategories
+      ? context.project.categories
+          .slice(0, 4)
+          .map(
+            (category) =>
+              `<a href="/categorias/${escapeAttribute(category.slug)}/">${escapeHtml(category.title)}</a>`,
+          )
+          .join("")
+      : "";
+    const nav = `<a href="${escapeAttribute(safeUrl(context.settings.catalogHref))}">${escapeHtml(context.settings.catalogLabel)}</a>${categoryLinks}`;
+    return moduleRoot(
+      "editorial-header",
+      context.section,
+      safeHtml(`<div class="solara-header" data-motion-zone="content">
+        <a class="solara-brand" href="/" aria-label="${escapeAttribute(`Inicio de ${context.project.identity.brandName}`)}">${renderBrand(context.project)}</a>
+        <nav class="solara-desktop-nav" aria-label="Navegación principal">${nav}</nav>
+        <button class="solara-cart-trigger" type="button" data-solara-cart-open data-open-cart aria-controls="solara-cart">${escapeHtml(context.settings.cartLabel)} <span data-solara-cart-count data-cart-count aria-live="polite">0</span></button>
+        <details class="solara-mobile-nav">
+          <summary>Menú</summary>
+          <nav aria-label="Navegación móvil">${nav}</nav>
+        </details>
+      </div>`),
+      { tag: "header" },
+    );
+  },
+};
+
+const heroSettings = z.object({
+  eyebrow: z.string().default(""),
+  title: z.string().default("Objetos hechos para acompañarte"),
+  body: z.string().default("Una selección precisa para el uso cotidiano."),
+  actionLabel: z.string().default("Ver colección"),
+  actionHref: z.string().default("/#productos"),
+  imageId: z.string().default(""),
+  imagePosition: z.enum(["left", "right"]).default("right"),
+});
+
+export const splitHero: ModuleDefinition<z.infer<typeof heroSettings>> = {
+  manifest: {
+    id: "split-hero",
+    name: "Hero dividido",
+    description: "Composición asimétrica de contenido y fotografía.",
+    version: 1,
+    slots: ["hero"],
+    compatibleSettings: [
+      "eyebrow",
+      "title",
+      "body",
+      "actionLabel",
+      "actionHref",
+      "imageId",
+      "imagePosition",
+    ],
+  },
+  settingsSchema: heroSettings,
+  motionZones: [
+    ...revealZone,
+    {
+      id: "media",
+      label: "Imagen",
+      selector: '[data-motion-zone="media"]',
+      allowedPresets: ["none", "fade", "scale", "parallax"] as const,
+    },
+  ],
+  styleAsset: scopedAssetId("split-hero"),
+  render(context) {
+    const eyebrow = context.settings.eyebrow
+      ? `<p class="solara-eyebrow">${escapeHtml(context.settings.eyebrow)}</p>`
+      : "";
+    const imageId =
+      context.settings.imageId ||
+      context.project.seo.socialImageId ||
+      context.project.collections[0]?.imageId ||
+      context.project.products[0]?.imageIds[0];
+    const image = renderImage(context.project, imageId, {
+      className: "solara-hero-image",
+      loading: "eager",
+      sizes: "(max-width: 767px) 100vw, 55vw",
+      fallbackAlt: context.settings.title,
+    });
+    return moduleRoot(
+      "split-hero",
+      context.section,
+      safeHtml(`<div class="solara-split-hero solara-split-hero--${context.settings.imagePosition}">
+        <div class="solara-hero-copy" data-motion-zone="content">
+          ${eyebrow}
+          <h1>${escapeHtml(context.settings.title)}</h1>
+          <p class="solara-hero-body">${escapeHtml(context.settings.body)}</p>
+          <a class="solara-primary-action" href="${escapeAttribute(safeUrl(context.settings.actionHref))}">${escapeHtml(context.settings.actionLabel)}</a>
+        </div>
+        <figure class="solara-hero-media" data-motion-zone="media">${image}</figure>
+      </div>`),
+    );
+  },
+};
+
+export const editorialHero: ModuleDefinition<z.infer<typeof heroSettings>> = {
+  manifest: {
+    id: "editorial-hero",
+    name: "Hero editorial",
+    description: "Titular manifiesto con la imagen integrada al ritmo de lectura.",
+    version: 1,
+    slots: ["hero"],
+    compatibleSettings: [
+      "eyebrow",
+      "title",
+      "body",
+      "actionLabel",
+      "actionHref",
+      "imageId",
+      "imagePosition",
+    ],
+  },
+  settingsSchema: heroSettings,
+  motionZones: [
+    ...revealZone,
+    {
+      id: "media",
+      label: "Imagen",
+      selector: '[data-motion-zone="media"]',
+      allowedPresets: ["none", "fade", "scale", "parallax"] as const,
+    },
+  ],
+  styleAsset: scopedAssetId("editorial-hero"),
+  render(context) {
+    const imageId =
+      context.settings.imageId ||
+      context.project.seo.socialImageId ||
+      context.project.collections[0]?.imageId ||
+      context.project.products[0]?.imageIds[0];
+    const image = renderImage(context.project, imageId, {
+      className: "solara-hero-image",
+      loading: "eager",
+      sizes: "(max-width: 767px) 100vw, 64vw",
+      fallbackAlt: context.settings.title,
+    });
+    return moduleRoot(
+      "editorial-hero",
+      context.section,
+      safeHtml(`<div class="solara-editorial-hero">
+        <div class="solara-editorial-head" data-motion-zone="content">
+          ${context.settings.eyebrow ? `<p class="solara-eyebrow">${escapeHtml(context.settings.eyebrow)}</p>` : ""}
+          <h1>${escapeHtml(context.settings.title)}</h1>
+          <p>${escapeHtml(context.settings.body)}</p>
+          <a class="solara-primary-action" href="${escapeAttribute(safeUrl(context.settings.actionHref))}">${escapeHtml(context.settings.actionLabel)}</a>
+        </div>
+        <figure data-motion-zone="media">${image}</figure>
+      </div>`),
+    );
+  },
+};
+
+const collectionSettings = z.object({
+  title: z.string().default("Colecciones"),
+  limit: z.number().int().min(1).max(12).default(6),
+});
+
+export const collectionGrid: ModuleDefinition<z.infer<typeof collectionSettings>> = {
+  manifest: {
+    id: "collection-grid",
+    name: "Grilla de colecciones",
+    description: "Colecciones visuales con jerarquía asimétrica.",
+    version: 1,
+    slots: ["catalog"],
+    compatibleSettings: ["title", "limit"],
+  },
+  settingsSchema: collectionSettings,
+  motionZones: staggerZone,
+  styleAsset: scopedAssetId("collection-grid"),
+  render(context) {
+    const items = context.project.collections.slice(0, context.settings.limit).map((collection) => {
+      const image = renderImage(context.project, collection.imageId, {
+        className: "solara-collection-image",
+        sizes: "(max-width: 767px) 92vw, 48vw",
+        fallbackAlt: collection.title,
+      });
+      return `<article class="solara-collection-card">
+        <a href="/colecciones/${escapeAttribute(collection.slug)}/">
+          <figure>${image}</figure>
+          <div><h3>${escapeHtml(collection.title)}</h3><p>${escapeHtml(collection.description)}</p></div>
+        </a>
+      </article>`;
+    });
+    return moduleRoot(
+      "collection-grid",
+      context.section,
+      safeHtml(`<div class="solara-section-shell">
+        <h2>${escapeHtml(context.settings.title)}</h2>
+        <div class="solara-collection-grid" data-motion-zone="items">${items.join("")}</div>
+      </div>`),
+    );
+  },
+};
+
+const productGridSettings = z.object({
+  title: z.string().default("Productos"),
+  limit: z.number().int().min(1).max(48).default(12),
+});
+
+export const editorialProductGrid: ModuleDefinition<z.infer<typeof productGridSettings>> = {
+  manifest: {
+    id: "editorial-product-grid",
+    name: "Grilla editorial de productos",
+    description: "Catálogo espacioso orientado a fotografía y relato.",
+    version: 1,
+    slots: ["catalog"],
+    compatibleSettings: ["title", "limit"],
+  },
+  settingsSchema: productGridSettings,
+  motionZones: staggerZone,
+  styleAsset: scopedAssetId("editorial-product-grid"),
+  render(context) {
+    const products = visibleProducts(context).slice(0, context.settings.limit);
+    return moduleRoot(
+      "editorial-product-grid",
+      context.section,
+      safeHtml(`<div class="solara-section-shell" id="productos">
+        <h2>${escapeHtml(context.settings.title)}</h2>
+        <div class="solara-editorial-products" data-motion-zone="items">${renderProductCards(context.project, products, "editorial")}</div>
+      </div>`),
+    );
+  },
+};
+
+export const compactProductGrid: ModuleDefinition<z.infer<typeof productGridSettings>> = {
+  manifest: {
+    id: "compact-product-grid",
+    name: "Grilla compacta de productos",
+    description: "Vista de mayor densidad para catálogos extensos.",
+    version: 1,
+    slots: ["catalog"],
+    compatibleSettings: ["title", "limit"],
+  },
+  settingsSchema: productGridSettings,
+  motionZones: staggerZone,
+  styleAsset: scopedAssetId("compact-product-grid"),
+  render(context) {
+    const products = visibleProducts(context).slice(0, context.settings.limit);
+    return moduleRoot(
+      "compact-product-grid",
+      context.section,
+      safeHtml(`<div class="solara-section-shell" id="productos">
+        <h2>${escapeHtml(context.settings.title)}</h2>
+        <div class="solara-compact-products" data-motion-zone="items">${renderProductCards(context.project, products, "compact")}</div>
+      </div>`),
+    );
+  },
+};
+
+const productDetailSettings = z.object({
+  actionLabel: z.string().default("Agregar al carrito"),
+  showDescription: z.boolean().default(true),
+  showCompareAtPrice: z.boolean().default(true),
+  deliveryNote: z.string().default("Coordinamos entrega y pago por WhatsApp."),
+});
+
+export const productDetail: ModuleDefinition<z.infer<typeof productDetailSettings>> = {
+  manifest: {
+    id: "product-detail",
+    name: "Detalle de producto",
+    description: "Galería, variantes, precio y acción de compra semánticos.",
+    version: 1,
+    slots: ["product"],
+    compatibleSettings: ["actionLabel", "showDescription", "showCompareAtPrice", "deliveryNote"],
+  },
+  settingsSchema: productDetailSettings,
+  motionZones: revealZone,
+  clientAsset: "storefront-cart" as AssetId,
+  styleAsset: scopedAssetId("product-detail"),
+  render(context) {
+    const product = context.product ?? visibleProducts(context)[0];
+    if (!product) {
+      return moduleRoot(
+        "product-detail",
+        context.section,
+        safeHtml('<p class="solara-empty-state">Este producto no está disponible.</p>'),
+      );
+    }
+    const firstVariant = product.variants[0];
+    const variants = product.variants
+      .map(
+        (variant) =>
+          `<option value="${escapeAttribute(variant.id)}" data-variant-data="${escapeAttribute(variant.id)}" data-variant-id="${escapeAttribute(variant.id)}" data-variant-title="${escapeAttribute(variant.title)}" data-sku="${escapeAttribute(variant.sku)}" data-price="${variant.price}" data-available="${String(variant.available)}" ${variant.available ? "" : "disabled"}>${escapeHtml(variant.title)} - ${escapeHtml(formatMoney(variant.price))}${variant.available ? "" : " - Agotado"}</option>`,
+      )
+      .join("");
+    const variantLinks = product.variants
+      .map(
+        (variant) =>
+          `<a href="/productos/${escapeAttribute(product.slug)}/?variant=${escapeAttribute(variant.id)}">${escapeHtml(variant.title)}</a>`,
+      )
+      .join("");
+    const compareAt =
+      context.settings.showCompareAtPrice && firstVariant?.compareAtPrice
+        ? `<del>${escapeHtml(formatMoney(firstVariant.compareAtPrice))}</del>`
+        : "";
+    const description = context.settings.showDescription
+      ? `<div class="solara-rich-text">${product.richDescription ? sanitizeRichText(product.richDescription) : `<p>${escapeHtml(product.description)}</p>`}</div>`
+      : "";
+
+    return moduleRoot(
+      "product-detail",
+      context.section,
+      safeHtml(`<div class="solara-product-detail" data-motion-zone="content" data-product data-product-id="${escapeAttribute(product.id)}" data-product-title="${escapeAttribute(product.title)}" data-default-variant="${escapeAttribute(firstVariant?.id ?? "")}">
+        <figure>${productImage(context.project, product, true)}</figure>
+        <div class="solara-product-info">
+          <p class="solara-product-brand">${escapeHtml(product.brand)}</p>
+          <h1>${escapeHtml(product.title)}</h1>
+          <p class="solara-detail-price" data-solara-product-price data-product-price>${escapeHtml(formatMoney(lowestPrice(product)))} ${compareAt}</p>
+          ${description}
+          <form action="/carrito/" method="get" data-solara-add-form>
+            <input type="hidden" name="product" value="${escapeAttribute(product.id)}">
+            <label for="variant-${escapeAttribute(context.section.id)}">Variante</label>
+            <select id="variant-${escapeAttribute(context.section.id)}" name="variant" data-variant-select required>${variants}</select>
+            <label for="quantity-${escapeAttribute(context.section.id)}">Cantidad</label>
+            <input id="quantity-${escapeAttribute(context.section.id)}" name="quantity" type="number" min="1" max="99" value="1" inputmode="numeric">
+            <button type="submit" data-add-to-cart>${escapeHtml(context.settings.actionLabel)}</button>
+          </form>
+          <nav class="solara-variant-links" aria-label="Enlaces directos a variantes">${variantLinks}</nav>
+          <p class="solara-delivery-note">${escapeHtml(context.settings.deliveryNote)}</p>
+        </div>
+      </div>`),
+    );
+  },
+};
+
+const imageTextSettings = z.object({
+  title: z.string().default("Materiales que se sienten"),
+  body: z.string().default("<p>Elegimos piezas útiles, honestas y duraderas.</p>"),
+  imageId: z.string().default(""),
+  imageSide: z.enum(["left", "right"]).default("left"),
+  actionLabel: z.string().default(""),
+  actionHref: z.string().default(""),
+});
+
+export const imageTextContent: ModuleDefinition<z.infer<typeof imageTextSettings>> = {
+  manifest: {
+    id: "image-text-content",
+    name: "Contenido imagen y texto",
+    description: "Bloque narrativo con texto enriquecido sanitizado.",
+    version: 1,
+    slots: ["content"],
+    compatibleSettings: ["title", "body", "imageId", "imageSide", "actionLabel", "actionHref"],
+  },
+  settingsSchema: imageTextSettings,
+  motionZones: [
+    ...revealZone,
+    {
+      id: "media",
+      label: "Imagen",
+      selector: '[data-motion-zone="media"]',
+      allowedPresets: ["none", "fade", "scale", "parallax"] as const,
+    },
+  ],
+  styleAsset: scopedAssetId("image-text-content"),
+  render(context) {
+    const action =
+      context.settings.actionLabel && context.settings.actionHref
+        ? `<a class="solara-secondary-action" href="${escapeAttribute(safeUrl(context.settings.actionHref))}">${escapeHtml(context.settings.actionLabel)}</a>`
+        : "";
+    const imageId =
+      context.settings.imageId ||
+      context.project.seo.socialImageId ||
+      context.project.collections[0]?.imageId ||
+      context.project.products[0]?.imageIds[0];
+    const image = renderImage(context.project, imageId, {
+      className: "solara-content-image",
+      sizes: "(max-width: 767px) 92vw, 50vw",
+      fallbackAlt: context.settings.title,
+    });
+    return moduleRoot(
+      "image-text-content",
+      context.section,
+      safeHtml(`<div class="solara-image-text solara-image-text--${context.settings.imageSide}">
+        <figure data-motion-zone="media">${image}</figure>
+        <div data-motion-zone="content">
+          <h2>${escapeHtml(context.settings.title)}</h2>
+          <div class="solara-rich-text">${sanitizeRichText(context.settings.body)}</div>
+          ${action}
+        </div>
+      </div>`),
+    );
+  },
+};
+
+const trustSettings = z.object({
+  title: z.string().default("Comprar con claridad"),
+  deliveryTitle: z.string().default("Entrega coordinada"),
+  returnsTitle: z.string().default("Cambios simples"),
+  contactTitle: z.string().default("Atención directa"),
+});
+
+export const trustStrip: ModuleDefinition<z.infer<typeof trustSettings>> = {
+  manifest: {
+    id: "trust-strip",
+    name: "Beneficios y confianza",
+    description: "Información operativa de entrega, cambios y contacto.",
+    version: 1,
+    slots: ["trust"],
+    compatibleSettings: ["title", "deliveryTitle", "returnsTitle", "contactTitle"],
+  },
+  settingsSchema: trustSettings,
+  motionZones: staggerZone,
+  styleAsset: scopedAssetId("trust-strip"),
+  render(context) {
+    return moduleRoot(
+      "trust-strip",
+      context.section,
+      safeHtml(`<div class="solara-trust">
+        <h2>${escapeHtml(context.settings.title)}</h2>
+        <div class="solara-trust-grid" data-motion-zone="items">
+          <article><h3>${escapeHtml(context.settings.deliveryTitle)}</h3><p>${escapeHtml(context.project.policies.shipping.summary)}</p></article>
+          <article><h3>${escapeHtml(context.settings.returnsTitle)}</h3><p>${escapeHtml(context.project.policies.returns.summary)}</p></article>
+          <article><h3>${escapeHtml(context.settings.contactTitle)}</h3><p>Confirmamos disponibilidad y detalles antes del pago.</p></article>
+        </div>
+      </div>`),
+    );
+  },
+};
+
+const cartSettings = z.object({
+  title: z.string().default("Tu carrito"),
+  emptyText: z.string().default("Todavía no agregaste productos."),
+  checkoutLabel: z.string().default("Continuar por WhatsApp"),
+});
+
+export const cartDrawer: ModuleDefinition<z.infer<typeof cartSettings>> = {
+  manifest: {
+    id: "cart-drawer",
+    name: "Carrito lateral",
+    description: "Shell accesible para carrito y checkout por WhatsApp.",
+    version: 1,
+    slots: ["cart"],
+    compatibleSettings: ["title", "emptyText", "checkoutLabel"],
+  },
+  settingsSchema: cartSettings,
+  motionZones: revealZone,
+  clientAsset: "storefront-cart" as AssetId,
+  styleAsset: scopedAssetId("cart-drawer"),
+  render(context) {
+    return moduleRoot(
+      "cart-drawer",
+      context.section,
+      safeHtml(`<div class="solara-cart-backdrop" data-solara-cart-close data-close-cart hidden></div>
+        <aside id="solara-cart" class="solara-cart-drawer" data-cart-drawer aria-label="${escapeAttribute(context.settings.title)}" aria-hidden="true" inert>
+          <header><h2>${escapeHtml(context.settings.title)}</h2><button type="button" data-solara-cart-close data-close-cart aria-label="Cerrar carrito">Cerrar</button></header>
+          <div data-solara-cart-items data-cart-lines><p class="solara-empty-state">${escapeHtml(context.settings.emptyText)}</p></div>
+          <div class="solara-cart-total"><span>Total</span><strong data-solara-cart-total data-cart-total>${escapeHtml(formatMoney(0))}</strong></div>
+          <form data-solara-checkout data-checkout-form>
+            <label for="solara-customer-name">Nombre</label>
+            <input id="solara-customer-name" name="name" autocomplete="name" required>
+            <label for="solara-customer-phone">Teléfono</label>
+            <input id="solara-customer-phone" name="phone" autocomplete="tel" inputmode="tel" required>
+            <label for="solara-customer-address">Dirección o punto de entrega</label>
+            <textarea id="solara-customer-address" name="address" autocomplete="street-address" required></textarea>
+            <label for="solara-customer-notes">Notas opcionales</label>
+            <textarea id="solara-customer-notes" name="notes"></textarea>
+            <button type="submit">${escapeHtml(context.settings.checkoutLabel)}</button>
+            <pre data-order-preview aria-live="polite"></pre>
+            <a data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>Enviar pedido en WhatsApp</a>
+          </form>
+        </aside>`),
+    );
+  },
+};
+
+const footerSettings = z.object({
+  note: z.string().default(""),
+  showPolicies: z.boolean().default(true),
+});
+
+export const editorialFooter: ModuleDefinition<z.infer<typeof footerSettings>> = {
+  manifest: {
+    id: "editorial-footer",
+    name: "Footer editorial",
+    description: "Cierre de marca, contacto y políticas comerciales.",
+    version: 1,
+    slots: ["footer"],
+    compatibleSettings: ["note", "showPolicies"],
+  },
+  settingsSchema: footerSettings,
+  motionZones: revealZone,
+  styleAsset: scopedAssetId("editorial-footer"),
+  render(context) {
+    const policies = context.settings.showPolicies
+      ? '<nav aria-label="Políticas"><a href="/politicas/envios/">Envíos</a><a href="/politicas/devoluciones/">Devoluciones</a><a href="/politicas/privacidad/">Privacidad</a><a href="/politicas/terminos/">Términos</a></nav>'
+      : "";
+    const note = context.settings.note || context.project.identity.description;
+    return moduleRoot(
+      "editorial-footer",
+      context.section,
+      safeHtml(`<div class="solara-footer" data-motion-zone="content">
+        <div><a class="solara-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div>
+        ${policies}
+        <address><a href="mailto:${escapeAttribute(context.project.identity.email)}">${escapeHtml(context.project.identity.email)}</a><a href="tel:${escapeAttribute(context.project.identity.phone)}">${escapeHtml(context.project.identity.phone)}</a><span>${escapeHtml(context.project.identity.address)}</span></address>
+        <small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)}</small>
+      </div>`),
+      { tag: "footer" },
+    );
+  },
+};
+
+export const officialModules = [
+  announcementBar,
+  editorialHeader,
+  splitHero,
+  editorialHero,
+  collectionGrid,
+  editorialProductGrid,
+  compactProductGrid,
+  productDetail,
+  imageTextContent,
+  trustStrip,
+  cartDrawer,
+  editorialFooter,
+] as const;

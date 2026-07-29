@@ -1,0 +1,22 @@
+{
+  "name": "@solara/exporter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "serve": "node scripts/serve.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@solara/module-sdk": "workspace:*",
+    "@solara/modules": "workspace:*",
+    "@solara/project-schema": "workspace:*",
+    "@solara/storefront-runtime": "workspace:*",
+    "fflate": "0.8.2"
+  }
+}

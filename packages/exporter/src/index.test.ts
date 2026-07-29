@@ -1,0 +1,82 @@
+import { referenceStore } from "@solara/project-schema/fixture";
+import { describe, expect, it } from "vitest";
+import {
+  auditProject,
+  createProjectArchive,
+  exportProject,
+  readProjectArchive,
+  renderPreviewHtml,
+} from "./index";
+
+describe("exporter", () => {
+  it("crea páginas estáticas y un feed consistente", () => {
+    const result = exportProject(referenceStore, { mode: "production" });
+    const productHtml = String(result.files.get("productos/manta-bruma/index.html"));
+    const feed = String(result.files.get("google-merchant.xml"));
+
+    expect(productHtml).toContain("Manta Bruma");
+    expect(productHtml).toContain("78500.00");
+    expect(productHtml).toContain('"@type":"ProductGroup"');
+    expect(feed.match(/<item>/g)).toHaveLength(3);
+    expect(feed).toContain("<g:price>78500.00 ARS</g:price>");
+  });
+
+  it("mantiene contenido y SEO en el HTML inicial", () => {
+    const preview = renderPreviewHtml(referenceStore);
+    expect(preview).toContain("Una casa con materia y calma.");
+    expect(preview).toContain('<meta name="description"');
+    expect(preview).toContain('<script type="application/ld+json">');
+  });
+
+  it("excluye feed y agrega noindex en borrador", () => {
+    const result = exportProject(referenceStore, { mode: "draft" });
+    expect(result.files.has("google-merchant.xml")).toBe(false);
+    expect(result.files.get("robots.txt")).toContain("Disallow: /");
+    expect(result.files.get("index.html")).toContain("noindex,nofollow");
+  });
+
+  it("recupera un archivo de proyecto sin cambios", () => {
+    expect(readProjectArchive(createProjectArchive(referenceStore))).toEqual(referenceStore);
+  });
+
+  it("produce un ZIP reproducible para el mismo snapshot", () => {
+    const first = exportProject(referenceStore, { mode: "production" }).zip;
+    const second = exportProject(referenceStore, { mode: "production" }).zip;
+    expect(second).toEqual(first);
+  });
+
+  it("deduplica y publica variantes responsive procesadas", () => {
+    const firstAsset = referenceStore.assets[0];
+    if (!firstAsset) throw new Error("Fixture incompleto");
+    const project = {
+      ...referenceStore,
+      assets: [
+        {
+          ...firstAsset,
+          mimeType: "image/webp",
+          source: "data:image/webp;base64,AA==",
+          fallbackSource: "data:image/jpeg;base64,AQ==",
+          responsiveSources: [
+            { width: 480, source: "data:image/webp;base64,Ag==" },
+            { width: 960, source: "data:image/webp;base64,Aw==" },
+          ],
+        },
+        ...referenceStore.assets.slice(1),
+      ],
+    };
+    const result = exportProject(project, { mode: "draft" });
+    const html = String(result.files.get("index.html"));
+
+    expect(result.files.has("assets/fixture-manta.webp")).toBe(true);
+    expect(result.files.has("assets/fixture-manta-fallback.jpg")).toBe(true);
+    expect(result.files.has("assets/fixture-manta-480.webp")).toBe(true);
+    expect(result.files.has("assets/fixture-manta-960.webp")).toBe(true);
+    expect(html).toContain("/assets/fixture-manta-480.webp 480w");
+  });
+
+  it("advierte el riesgo Merchant del checkout por WhatsApp", () => {
+    expect(auditProject(referenceStore)).toContainEqual(
+      expect.objectContaining({ code: "merchant.whatsapp-checkout", severity: "warning" }),
+    );
+  });
+});
