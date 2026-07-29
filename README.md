@@ -30,6 +30,7 @@ como ZIP estáticos, sin backend ni runtime de inteligencia artificial.
 ## Verificación
 
 ```bash
+corepack pnpm check:repository
 corepack pnpm check
 corepack pnpm build
 corepack pnpm test:e2e
@@ -39,6 +40,20 @@ corepack pnpm benchmark:export
 El benchmark exporta el fixture determinista de 1.000 productos y falla si supera
 30 segundos. Playwright usa Chromium para el bucle local; la matriz completa y
 Lighthouse se reservan para el gate de release.
+
+## Integración continua
+
+[GitHub Actions](https://github.com/PiPa1337/SolaraCommerce/actions/workflows/ci.yml)
+ejecuta sobre Windows, Node 22 y pnpm 10.15.1:
+
+1. instalación con lockfile congelado;
+2. revisión de secretos y archivos mayores a 10 MB;
+3. formato, TypeScript y unit tests;
+4. build y benchmark de 1.000 productos;
+5. Playwright Chromium sin reconstruir Studio.
+
+Si Playwright falla, el workflow conserva durante siete días el reporte HTML,
+traces y resultados disponibles. Una ejecución exitosa no publica artefactos.
 
 ## Paquetes
 

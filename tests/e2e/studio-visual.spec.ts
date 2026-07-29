@@ -5,6 +5,7 @@ import { expect, test } from "@playwright/test";
 
 const studioRoot = resolve("apps/studio/dist");
 let server: Server;
+let studioUrl: string;
 
 test.beforeAll(async () => {
   server = createServer((request, response) => {
@@ -37,7 +38,12 @@ test.beforeAll(async () => {
     response.end(readFileSync(file));
   });
 
-  await new Promise<void>((resolve) => server.listen(4173, "127.0.0.1", resolve));
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  if (!address || typeof address === "string") {
+    throw new Error("No se pudo obtener el puerto del servidor de Studio.");
+  }
+  studioUrl = `http://127.0.0.1:${address.port}`;
 });
 
 test.afterAll(async () => {
@@ -50,7 +56,7 @@ test("Studio mantiene jerarquía y no desborda en desktop ni móvil", async ({ p
   const runtimeErrors: string[] = [];
   page.on("pageerror", (error) => runtimeErrors.push(error.message));
 
-  await page.goto("http://127.0.0.1:4173");
+  await page.goto(studioUrl);
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   await page.getByRole("button", { name: /Casa Luma/ }).click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();

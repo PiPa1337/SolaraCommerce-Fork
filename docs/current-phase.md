@@ -1,27 +1,27 @@
-# Fase activa
+# Fase activa: baseline reproducible y CI
 
 ## Objetivo
 
-Cerrar la candidata local de v1: proyecto validado, Studio, catálogo, módulos,
-preview, carrito, WhatsApp, SEO, movimiento accesible y ZIP reproducible.
+Garantizar que el proyecto puede instalarse y verificarse desde un checkout limpio,
+y que GitHub ejecuta el mismo gate sobre Windows, Node 22 y Chromium.
 
-## Contratos congelados
+## Alcance
 
-- `StoreProjectV1Schema` es el límite de persistencia.
-- `DomainCommand` es el límite de edición y undo/redo.
-- `ModuleDefinition` es el límite de render visual.
-- `ExportSnapshot` es el límite del exportador.
+- Instalación con `pnpm-lock.yaml` congelado.
+- Guard contra secretos y archivos versionados mayores a 10 MB.
+- Formato, tipos, unit tests, build y benchmark.
+- Playwright Chromium sobre el build ya generado.
+- Diagnósticos E2E conservados siete días sólo cuando falla Playwright.
 
 ## Verificación
 
-- Typecheck y Vitest por paquete durante el trabajo.
-- Build completo y Playwright Chromium al cerrar la integración.
-- Benchmark explícito con 1.000 productos fuera del bucle unitario.
-- Lighthouse y matriz multi-browser quedan como gate de release, no como bucle
-  local.
+- `corepack pnpm check:repository`
+- `corepack pnpm check`
+- `corepack pnpm build`
+- `corepack pnpm benchmark:export`
+- `corepack pnpm test:e2e`
 
-## Límite actual
+## No objetivos
 
-La fase 8 requiere un dominio, Search Console y una cuenta Merchant reales. No se
-simula localmente. El checkout exclusivo por WhatsApp se presenta como riesgo de
-aprobación y no se oculta con reglas especiales.
+No se modifican contratos, catálogo, módulos, SEO ni movimiento. Lighthouse,
+axe, Firefox y WebKit permanecen reservados para la fase de hardening.
