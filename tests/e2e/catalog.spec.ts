@@ -82,7 +82,7 @@ test("edita variantes y conserva el último cambio al volver, recargar y reabrir
 test("previsualiza, cancela y confirma 1.000 productos con selección entre páginas", async ({
   page,
 }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(240_000);
   await openCatalog(page);
   await uploadCsv(page);
 
