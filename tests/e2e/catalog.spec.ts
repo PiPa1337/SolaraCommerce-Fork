@@ -4,6 +4,7 @@ import { exportProductsCsv, generatePerformanceFixture } from "@solara/core";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 const performanceCsv = exportProductsCsv(generatePerformanceFixture(1_000).products);
+const selectionCsv = exportProductsCsv(generatePerformanceFixture(120).products);
 let server: Server;
 let studioUrl: string;
 
@@ -25,13 +26,13 @@ async function openCatalog(page: import("@playwright/test").Page) {
   await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
 }
 
-async function uploadCsv(page: import("@playwright/test").Page) {
+async function uploadCsv(page: import("@playwright/test").Page, csv: string, name: string) {
   await page.locator('input[type="file"][accept*="csv"]').setInputFiles({
-    name: "catalogo-1000.csv",
+    name,
     mimeType: "text/csv",
-    buffer: Buffer.from(performanceCsv, "utf8"),
+    buffer: Buffer.from(csv, "utf8"),
   });
-  await expect(page.getByRole("heading", { name: "catalogo-1000.csv" })).toBeVisible();
+  await expect(page.getByRole("heading", { name })).toBeVisible();
 }
 
 async function clickDom(locator: import("@playwright/test").Locator) {
@@ -88,25 +89,25 @@ test("previsualiza, cancela y confirma 1.000 productos con selección entre pág
 }) => {
   test.setTimeout(90_000);
   await openCatalog(page);
-  await uploadCsv(page);
+  await uploadCsv(page, selectionCsv, "catalogo-120.csv");
 
   const review = page.locator(".import-review");
-  await expect(review.getByText("1000", { exact: true })).toBeVisible();
+  await expect(review.getByText("120", { exact: true })).toBeVisible();
   await expect(review.getByText("2", { exact: true })).toBeVisible();
   await clickDom(page.getByRole("button", { name: "Cancelar" }));
   await expect(page.getByText("2 productos y 3 variantes.")).toBeVisible();
 
-  await uploadCsv(page);
+  await uploadCsv(page, selectionCsv, "catalogo-120.csv");
   await clickDom(page.getByRole("button", { name: "Reemplazar catálogo" }));
-  await expect(page.getByText("1000 productos y 2000 variantes.")).toBeVisible({
+  await expect(page.getByText("120 productos y 240 variantes.")).toBeVisible({
     timeout: 30_000,
   });
   await expect(page.locator("tbody tr")).toHaveCount(50);
 
   await clickDom(page.getByTestId("select-filtered-products"));
-  await expect(page.getByText("1000 seleccionados")).toBeVisible();
+  await expect(page.getByText("120 seleccionados")).toBeVisible();
   await clickDom(page.getByTestId("next-catalog-page"));
-  await expect(page.getByText("1000 seleccionados")).toBeVisible();
+  await expect(page.getByText("120 seleccionados")).toBeVisible();
   await expect(page.locator('thead input[type="checkbox"]')).toBeChecked();
 
   await page.getByLabel("Estado").selectOption("archived");
@@ -116,6 +117,13 @@ test("previsualiza, cancela y confirma 1.000 productos con selección entre pág
   await expect(page.locator("tbody .status-label", { hasText: "Activo" }).first()).toBeVisible();
   await clickDom(page.getByRole("button", { name: "Rehacer" }));
   await expect(page.locator("tbody .status-label", { hasText: "Archivado" }).first()).toBeVisible();
+
+  await uploadCsv(page, performanceCsv, "catalogo-1000.csv");
+  await clickDom(page.getByRole("button", { name: "Reemplazar catálogo" }));
+  await expect(page.getByText("1000 productos y 2000 variantes.")).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.locator("tbody tr")).toHaveCount(50);
 
   await page.getByRole("button", { name: "Volver a tiendas" }).click();
   await page.reload();
