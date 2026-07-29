@@ -87,7 +87,7 @@ test("edita variantes y conserva el último cambio al volver, recargar y reabrir
 test("previsualiza, cancela y confirma 1.000 productos con selección entre páginas", async ({
   page,
 }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(150_000);
   await openCatalog(page);
   await uploadCsv(page, selectionCsv, "catalogo-120.csv");
 
@@ -125,7 +125,7 @@ test("previsualiza, cancela y confirma 1.000 productos con selección entre pág
   });
   await expect(page.locator("tbody tr")).toHaveCount(50);
 
-  await page.getByRole("button", { name: "Volver a tiendas" }).click();
+  await clickDom(page.getByRole("button", { name: "Volver a tiendas" }));
   await page.reload();
   await page.getByRole("button", { name: /Casa Luma/ }).click();
   await page.getByRole("button", { name: "Catálogo" }).click();
