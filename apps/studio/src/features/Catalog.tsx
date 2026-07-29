@@ -473,6 +473,7 @@ export function Catalog({ project, onCommand }: CatalogProps) {
           <span>{selectedIds.length} seleccionados</span>
           {filteredRows.length > 0 ? (
             <Button
+              data-testid="select-filtered-products"
               variant="quiet"
               onClick={() =>
                 setSelection((current) => ({
@@ -511,6 +512,7 @@ export function Catalog({ project, onCommand }: CatalogProps) {
                 </select>
               </Field>
               <Button
+                data-testid="apply-bulk-status"
                 onClick={() =>
                   onCommand({
                     type: "products.setStatus",
@@ -713,6 +715,7 @@ export function Catalog({ project, onCommand }: CatalogProps) {
             </Field>
             <div>
               <Button
+                data-testid="next-catalog-page"
                 variant="quiet"
                 icon={CaretLeft}
                 disabled={!table.getCanPreviousPage()}

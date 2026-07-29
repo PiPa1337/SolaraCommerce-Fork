@@ -103,14 +103,14 @@ test("previsualiza, cancela y confirma 1.000 productos con selección entre pág
   });
   await expect(page.locator("tbody tr")).toHaveCount(50);
 
-  await clickDom(page.getByRole("button", { name: "Seleccionar 1000 filtrados" }));
+  await clickDom(page.getByTestId("select-filtered-products"));
   await expect(page.getByText("1000 seleccionados")).toBeVisible();
-  await clickDom(page.getByRole("button", { name: "Siguiente" }));
+  await clickDom(page.getByTestId("next-catalog-page"));
   await expect(page.getByText("1000 seleccionados")).toBeVisible();
   await expect(page.locator('thead input[type="checkbox"]')).toBeChecked();
 
   await page.getByLabel("Estado").selectOption("archived");
-  await clickDom(page.getByRole("button", { name: "Aplicar estado" }));
+  await clickDom(page.getByTestId("apply-bulk-status"));
   await expect(page.locator("tbody .status-label", { hasText: "Archivado" }).first()).toBeVisible();
   await clickDom(page.getByRole("button", { name: "Deshacer" }));
   await expect(page.locator("tbody .status-label", { hasText: "Activo" }).first()).toBeVisible();
