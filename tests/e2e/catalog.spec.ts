@@ -97,10 +97,14 @@ test("previsualiza, cancela y confirma 1.000 productos con selección entre pág
   await expect(page.getByText("1000 productos y 2000 variantes.")).toBeVisible();
   await expect(page.locator("tbody tr")).toHaveCount(50);
 
-  await page.locator('thead input[type="checkbox"]').dispatchEvent("click");
+  await page
+    .locator('thead input[type="checkbox"]')
+    .evaluate((element: HTMLInputElement) => element.click());
   await expect(page.getByText("50 seleccionados")).toBeVisible();
   await page.getByRole("button", { name: "Siguiente" }).click();
-  await page.locator('thead input[type="checkbox"]').dispatchEvent("click");
+  await page
+    .locator('thead input[type="checkbox"]')
+    .evaluate((element: HTMLInputElement) => element.click());
   await expect(page.getByText("100 seleccionados")).toBeVisible();
 
   await page.getByLabel("Estado").selectOption("archived");
