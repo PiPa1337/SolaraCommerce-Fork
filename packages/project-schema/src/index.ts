@@ -253,7 +253,9 @@ function addMissingReferenceIssue(
 }
 
 function sameMembers(left: readonly string[], right: readonly string[]): boolean {
-  return left.length === right.length && left.every((value) => right.includes(value));
+  if (left.length !== right.length) return false;
+  const rightMembers = new Set(right);
+  return left.every((value) => rightMembers.has(value));
 }
 
 export const StoreProjectV1Schema = StoreProjectV1ShapeSchema.superRefine((project, context) => {
