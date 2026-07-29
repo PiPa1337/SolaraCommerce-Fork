@@ -84,10 +84,8 @@ test("edita variantes y conserva el último cambio al volver, recargar y reabrir
   await expect(page.getByRole("dialog").locator(".variant-editor")).toHaveCount(2);
 });
 
-test("previsualiza, cancela y confirma 1.000 productos con selección entre páginas", async ({
-  page,
-}) => {
-  test.setTimeout(240_000);
+test("previsualiza, cancela y edita en masa entre páginas", async ({ page }) => {
+  test.setTimeout(90_000);
   await openCatalog(page);
   await uploadCsv(page, selectionCsv, "catalogo-120.csv");
 
@@ -117,7 +115,11 @@ test("previsualiza, cancela y confirma 1.000 productos con selección entre pág
   await expect(page.locator("tbody .status-label", { hasText: "Activo" }).first()).toBeVisible();
   await clickDom(page.getByRole("button", { name: "Rehacer" }));
   await expect(page.locator("tbody .status-label", { hasText: "Archivado" }).first()).toBeVisible();
+});
 
+test("importa, guarda y reabre 1.000 productos", async ({ page }) => {
+  test.setTimeout(150_000);
+  await openCatalog(page);
   await uploadCsv(page, performanceCsv, "catalogo-1000.csv");
   await clickDom(page.getByRole("button", { name: "Reemplazar catálogo" }));
   await expect(page.getByText("1000 productos y 2000 variantes.")).toBeVisible({
