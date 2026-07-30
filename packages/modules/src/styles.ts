@@ -3,14 +3,16 @@ export const STORE_BASE_STYLES = `
   color: var(--solara-text);
   background: var(--solara-background);
   font-family: var(--solara-font-body);
-  line-height: 1.5;
+  font-size: calc(1rem * var(--solara-type-scale, 1));
+  line-height: 1.58;
+  min-width: 0;
 }
 [data-solara-store][data-color-mode="dark"] {
-  --solara-background: #151917;
-  --solara-surface: #202622;
-  --solara-text: #edf1ef;
-  --solara-muted: #aeb9b3;
-  --solara-border: #3a443e;
+  --solara-background: #1d1e19;
+  --solara-surface: #292a23;
+  --solara-text: #f3eee4;
+  --solara-muted: #b8b2a5;
+  --solara-border: #47483d;
 }
 [data-solara-store] *,
 [data-solara-store] *::before,
@@ -33,6 +35,22 @@ export const STORE_BASE_STYLES = `
   font: inherit;
 }
 [data-solara-store] button,
+[data-solara-store] a {
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+[data-solara-store] button:disabled,
+[data-solara-store] input:disabled,
+[data-solara-store] select:disabled,
+[data-solara-store] textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+[data-solara-store] button,
 [data-solara-store] summary,
 [data-solara-store] a {
   -webkit-tap-highlight-color: transparent;
@@ -52,9 +70,10 @@ export const STORE_BASE_STYLES = `
 [data-solara-store] h2,
 [data-solara-store] h3 {
   font-family: var(--solara-font-display);
-  font-weight: 620;
-  letter-spacing: -0.035em;
-  line-height: 1.02;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+  text-wrap: balance;
 }
 [data-solara-store] .solara-primary-action,
 [data-solara-store] .solara-secondary-action {
@@ -76,6 +95,14 @@ export const STORE_BASE_STYLES = `
 [data-solara-store] .solara-secondary-action {
   border-color: var(--solara-border);
 }
+[data-solara-store] .solara-primary-action:hover {
+  filter: brightness(0.94);
+  transform: translateY(-1px);
+}
+[data-solara-store] .solara-secondary-action:hover {
+  background: var(--solara-surface);
+  border-color: var(--solara-muted);
+}
 [data-solara-store] .solara-primary-action:active,
 [data-solara-store] .solara-secondary-action:active,
 [data-solara-store] button:active {
@@ -83,11 +110,19 @@ export const STORE_BASE_STYLES = `
 }
 @media (prefers-color-scheme: dark) {
   [data-solara-store][data-color-mode="auto"] {
-    --solara-background: #151917;
-    --solara-surface: #202622;
-    --solara-text: #edf1ef;
-    --solara-muted: #aeb9b3;
-    --solara-border: #3a443e;
+    --solara-background: #1d1e19;
+    --solara-surface: #292a23;
+    --solara-text: #f3eee4;
+    --solara-muted: #b8b2a5;
+    --solara-border: #47483d;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-solara-store] *,
+  [data-solara-store] *::before,
+  [data-solara-store] *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }
 `;
@@ -101,13 +136,16 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-module="announcement-bar"] .solara-announcement {
   align-items: center;
   display: flex;
-  font-size: 0.82rem;
+  font-size: 0.72rem;
+  font-weight: 650;
   gap: 1rem;
   justify-content: center;
   margin: 0 auto;
   max-width: var(--solara-container);
   min-height: 36px;
   padding: 0.4rem 1rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
 }
 [data-solara-module="announcement-bar"] a {
   font-weight: 700;
@@ -115,7 +153,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 `,
   "editorial-header": `
 [data-solara-module="editorial-header"] {
-  background: color-mix(in srgb, var(--solara-background), transparent 4%);
+  background: color-mix(in srgb, var(--solara-background), transparent 2%);
   border-bottom: 1px solid var(--solara-border);
   position: relative;
   z-index: 10;
@@ -127,13 +165,13 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   grid-template-columns: minmax(8rem, 1fr) auto auto;
   margin: 0 auto;
   max-width: var(--solara-container);
-  min-height: 72px;
+  min-height: 80px;
   padding: 0 1.25rem;
 }
 [data-solara-module="editorial-header"] .solara-brand {
   font-family: var(--solara-font-display);
-  font-size: 1.25rem;
-  font-weight: 720;
+  font-size: 1.45rem;
+  font-weight: 500;
   letter-spacing: -0.04em;
   text-decoration: none;
 }
@@ -152,9 +190,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   color: var(--solara-muted);
   font-size: 0.9rem;
   text-decoration: none;
+  text-underline-offset: 0.45rem;
 }
 [data-solara-module="editorial-header"] .solara-desktop-nav a:hover {
   color: var(--solara-text);
+  text-decoration: underline;
 }
 [data-solara-module="editorial-header"] .solara-cart-trigger {
   background: var(--solara-text);
@@ -163,7 +203,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   color: var(--solara-background);
   cursor: pointer;
   min-height: 42px;
-  padding: 0.55rem 0.9rem;
+  padding: 0.55rem 1rem;
   white-space: nowrap;
 }
 [data-solara-module="editorial-header"] .solara-mobile-nav {
@@ -183,10 +223,12 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     grid-column: 3;
     grid-row: 1;
   }
-  [data-solara-module="editorial-header"] .solara-mobile-nav summary {
+[data-solara-module="editorial-header"] .solara-mobile-nav summary {
     cursor: pointer;
     font-weight: 650;
     list-style: none;
+    min-height: 42px;
+    padding: 0.6rem 0;
   }
   [data-solara-module="editorial-header"] .solara-mobile-nav nav {
     background: var(--solara-background);
@@ -199,6 +241,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     right: 1rem;
     top: 58px;
     width: min(18rem, calc(100vw - 2rem));
+    box-shadow: 0 18px 48px rgb(37 39 31 / 0.16);
   }
   [data-solara-module="editorial-header"] .solara-cart-trigger {
     grid-column: 2;
@@ -208,12 +251,12 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 `,
   "split-hero": `
 [data-solara-module="split-hero"] {
-  padding: calc(2rem * var(--solara-space)) 1.25rem;
+  padding: calc(2.5rem * var(--solara-space)) 1.25rem clamp(4rem, 7vw, 7rem);
 }
 [data-solara-module="split-hero"] .solara-split-hero {
   align-items: stretch;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  grid-template-columns: minmax(18rem, 0.82fr) minmax(0, 1.18fr);
   margin: 0 auto;
   max-width: var(--solara-container);
   min-height: min(760px, calc(100dvh - 130px));
@@ -230,19 +273,20 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: clamp(2rem, 3vw, 2.5rem);
+  background: var(--solara-surface);
+  padding: clamp(2.5rem, 5vw, 5.5rem);
 }
 [data-solara-module="split-hero"] .solara-eyebrow {
   color: var(--solara-muted);
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.14em;
-  margin-bottom: 1.4rem;
+  margin-bottom: clamp(2rem, 4vw, 4rem);
   text-transform: uppercase;
 }
 [data-solara-module="split-hero"] h1 {
-  font-size: clamp(2.8rem, 4.2vw, 4.5rem);
-  max-width: 17ch;
+  font-size: clamp(3rem, 5.2vw, 5.6rem);
+  max-width: 10ch;
 }
 [data-solara-module="split-hero"] .solara-hero-body {
   color: var(--solara-muted);
@@ -255,14 +299,18 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 [data-solara-module="split-hero"] .solara-hero-media {
   background: var(--solara-surface);
-  border-radius: var(--solara-radius);
+  border-radius: 0;
   min-height: 28rem;
   overflow: hidden;
 }
 [data-solara-module="split-hero"] .solara-hero-image {
   height: 100%;
   object-fit: cover;
+  transition: transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
   width: 100%;
+}
+[data-solara-module="split-hero"] .solara-split-hero:hover .solara-hero-image {
+  transform: scale(1.012);
 }
 @media (max-width: 767px) {
   [data-solara-module="split-hero"] {
@@ -280,7 +328,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     grid-row: auto;
   }
   [data-solara-module="split-hero"] .solara-hero-copy {
-    padding: 3rem 0.4rem;
+    padding: 3rem 1.5rem 3.5rem;
   }
   [data-solara-module="split-hero"] h1 {
     font-size: clamp(2.5rem, 13vw, 4.2rem);
@@ -292,7 +340,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 `,
   "editorial-hero": `
 [data-solara-module="editorial-hero"] {
-  padding: clamp(3rem, 8vw, 7rem) 1.25rem 2rem;
+  padding: clamp(4rem, 10vw, 9rem) 1.25rem clamp(2rem, 4vw, 4rem);
 }
 [data-solara-module="editorial-hero"] .solara-editorial-hero {
   display: grid;
@@ -303,8 +351,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-module="editorial-hero"] .solara-editorial-head {
   align-items: end;
   display: grid;
-  gap: 1.5rem;
-  grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.32fr);
+  gap: 2rem clamp(2rem, 8vw, 9rem);
+  grid-template-columns: minmax(0, 1fr) minmax(17rem, 0.28fr);
 }
 [data-solara-module="editorial-hero"] .solara-eyebrow {
   color: var(--solara-muted);
@@ -315,8 +363,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   text-transform: uppercase;
 }
 [data-solara-module="editorial-hero"] h1 {
-  font-size: clamp(3.4rem, 8vw, 8rem);
-  max-width: 10ch;
+  font-size: clamp(4rem, 10vw, 10.5rem);
+  max-width: 9ch;
 }
 [data-solara-module="editorial-hero"] .solara-editorial-head > p:not(.solara-eyebrow) {
   color: var(--solara-muted);
@@ -327,8 +375,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   justify-self: start;
 }
 [data-solara-module="editorial-hero"] figure {
-  border-radius: var(--solara-radius);
-  height: clamp(28rem, 66vw, 52rem);
+  height: clamp(30rem, 58vw, 50rem);
+  margin-left: clamp(0rem, 8vw, 9rem);
   overflow: hidden;
 }
 [data-solara-module="editorial-hero"] .solara-hero-image {
@@ -349,6 +397,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
   [data-solara-module="editorial-hero"] figure {
     height: 58vh;
+    margin-left: 0;
   }
 }
 `,
@@ -362,7 +411,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 [data-solara-module="collection-grid"] h2 {
   font-size: clamp(2rem, 4vw, 3.8rem);
-  margin-bottom: 2.5rem;
+  margin-bottom: clamp(2.5rem, 5vw, 4.5rem);
+  max-width: 14ch;
 }
 [data-solara-module="collection-grid"] .solara-collection-grid {
   display: grid;
@@ -400,7 +450,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   gap: 0.4rem;
 }
 [data-solara-module="collection-grid"] .solara-collection-card h3 {
-  font-size: 1.5rem;
+  font-size: clamp(1.45rem, 2.2vw, 2rem);
 }
 [data-solara-module="collection-grid"] .solara-collection-card p {
   color: var(--solara-muted);
@@ -431,15 +481,23 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 [data-solara-module="editorial-product-grid"] h2 {
   font-size: clamp(2rem, 4vw, 3.8rem);
-  margin-bottom: 2.5rem;
+  margin-bottom: clamp(2.5rem, 5vw, 4.5rem);
 }
 [data-solara-module="editorial-product-grid"] .solara-editorial-products {
   display: grid;
   gap: clamp(2rem, 4vw, 4rem) clamp(1rem, 2.5vw, 2.5rem);
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
 }
 [data-solara-module="editorial-product-grid"] .solara-product-card:nth-child(5n + 1) {
-  grid-column: span 2;
+  grid-column: span 7;
+}
+[data-solara-module="editorial-product-grid"] .solara-product-card {
+  grid-column: span 5;
+}
+[data-solara-module="editorial-product-grid"] .solara-product-card:nth-child(5n + 3),
+[data-solara-module="editorial-product-grid"] .solara-product-card:nth-child(5n + 4) {
+  grid-column: span 6;
 }
 [data-solara-module="editorial-product-grid"] .solara-product-media {
   aspect-ratio: 4 / 5;
@@ -494,8 +552,13 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   [data-solara-module="editorial-product-grid"] .solara-editorial-products {
     grid-template-columns: 1fr 1fr;
   }
-  [data-solara-module="editorial-product-grid"] .solara-product-card:nth-child(5n + 1) {
+[data-solara-module="editorial-product-grid"] .solara-product-card:nth-child(5n + 1) {
     grid-column: 1 / -1;
+  }
+  [data-solara-module="editorial-product-grid"] .solara-product-card,
+  [data-solara-module="editorial-product-grid"] .solara-product-card:nth-child(5n + 3),
+  [data-solara-module="editorial-product-grid"] .solara-product-card:nth-child(5n + 4) {
+    grid-column: span 1;
   }
   [data-solara-module="editorial-product-grid"] .solara-product-copy {
     display: grid;
@@ -504,6 +567,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 `,
   "compact-product-grid": `
 [data-solara-module="compact-product-grid"] {
+  border-top: 1px solid var(--solara-border);
   padding: clamp(3rem, 7vw, 6rem) 1.25rem;
 }
 [data-solara-module="compact-product-grid"] .solara-section-shell {
@@ -516,11 +580,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 [data-solara-module="compact-product-grid"] .solara-compact-products {
   display: grid;
-  gap: 2.25rem 1rem;
+  gap: 2rem 0.85rem;
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 [data-solara-module="compact-product-grid"] .solara-product-media {
-  aspect-ratio: 4 / 5;
+  aspect-ratio: 1 / 1;
   background: var(--solara-surface);
   border-radius: var(--solara-radius);
   display: block;
@@ -529,7 +593,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-module="compact-product-grid"] .solara-product-image {
   height: 100%;
   object-fit: cover;
+  transition: opacity 180ms ease;
   width: 100%;
+}
+[data-solara-module="compact-product-grid"] .solara-product-media:hover .solara-product-image {
+  opacity: 0.86;
 }
 [data-solara-module="compact-product-grid"] .solara-product-copy {
   display: grid;
@@ -582,7 +650,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 [data-solara-module="product-detail"] .solara-product-detail > figure {
   background: var(--solara-surface);
-  border-radius: var(--solara-radius);
+  border-radius: calc(var(--solara-radius) * 2);
   overflow: hidden;
 }
 [data-solara-module="product-detail"] .solara-product-image {
@@ -598,6 +666,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   color: var(--solara-muted);
   font-size: 0.82rem;
   font-weight: 650;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
 }
 [data-solara-module="product-detail"] h1 {
   font-size: clamp(2.7rem, 5vw, 5rem);
@@ -607,6 +677,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   font-size: 1.25rem;
   font-weight: 700;
   margin-top: 1.5rem;
+  font-variant-numeric: tabular-nums;
 }
 [data-solara-module="product-detail"] .solara-detail-price del {
   color: var(--solara-muted);
@@ -631,7 +702,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 [data-solara-module="product-detail"] form input,
 [data-solara-module="product-detail"] form select {
-  background: var(--solara-background);
+  background: color-mix(in srgb, var(--solara-background), var(--solara-surface) 24%);
   border: 1px solid var(--solara-border);
   border-radius: var(--solara-radius);
   min-height: 48px;
@@ -646,6 +717,27 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   font-weight: 700;
   margin-top: 0.75rem;
   min-height: 52px;
+}
+[data-solara-module="product-detail"] form button:hover {
+  filter: brightness(0.94);
+  transform: translateY(-1px);
+}
+[data-solara-module="product-detail"] .solara-variant-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+[data-solara-module="product-detail"] .solara-variant-links a {
+  border-bottom: 1px solid var(--solara-border);
+  color: var(--solara-muted);
+  font-size: 0.78rem;
+  padding: 0.2rem 0;
+  text-decoration: none;
+}
+[data-solara-module="product-detail"] .solara-variant-links a:hover {
+  border-color: var(--solara-text);
+  color: var(--solara-text);
 }
 [data-solara-module="product-detail"] .solara-delivery-note {
   color: var(--solara-muted);
@@ -679,7 +771,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   align-items: center;
   display: grid;
   gap: clamp(2rem, 7vw, 8rem);
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1.1fr) minmax(18rem, 0.9fr);
   margin: 0 auto;
   max-width: var(--solara-container);
 }
@@ -692,7 +784,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 [data-solara-module="image-text-content"] figure {
   background: var(--solara-surface);
-  border-radius: var(--solara-radius);
+  border-radius: calc(var(--solara-radius) * 2);
   min-height: 32rem;
   overflow: hidden;
 }
@@ -709,6 +801,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   color: var(--solara-muted);
   margin-top: 1.5rem;
   max-width: 56ch;
+  line-height: 1.75;
 }
 [data-solara-module="image-text-content"] .solara-rich-text > * + * {
   margin-top: 1rem;
@@ -735,6 +828,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 `,
   "trust-strip": `
 [data-solara-module="trust-strip"] {
+  background: color-mix(in srgb, var(--solara-surface), var(--solara-background) 58%);
   border-top: 1px solid var(--solara-border);
   padding: clamp(4rem, 8vw, 7rem) 1.25rem;
 }
@@ -754,14 +848,14 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-module="trust-strip"] article {
   border-left: 1px solid var(--solara-border);
   min-height: 11rem;
-  padding: 1.2rem clamp(1rem, 3vw, 2.5rem);
+  padding: 0.25rem clamp(1rem, 3vw, 2.5rem) 1.2rem;
 }
 [data-solara-module="trust-strip"] article:first-child {
   border-left: 0;
   padding-left: 0;
 }
 [data-solara-module="trust-strip"] h3 {
-  font-size: 1.2rem;
+  font-size: 1.35rem;
 }
 [data-solara-module="trust-strip"] article p {
   color: var(--solara-muted);
@@ -787,21 +881,23 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 `,
   "cart-drawer": `
 [data-solara-module="cart-drawer"] .solara-cart-backdrop {
-  background: rgb(15 18 16 / 0.54);
+  background: rgb(29 30 25 / 0.62);
+  backdrop-filter: blur(2px);
   inset: 0;
   position: fixed;
   z-index: 40;
 }
 [data-solara-module="cart-drawer"] .solara-cart-drawer {
   background: var(--solara-background);
-  box-shadow: -18px 0 70px rgb(18 32 25 / 0.22);
+  border-left: 1px solid var(--solara-border);
+  box-shadow: -24px 0 80px rgb(38 35 27 / 0.24);
   display: grid;
   gap: 1.5rem;
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   height: 100dvh;
   max-width: 30rem;
   overflow-y: auto;
-  padding: 1.25rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
   position: fixed;
   right: 0;
   top: 0;
@@ -821,7 +917,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   padding-bottom: 1rem;
 }
 [data-solara-module="cart-drawer"] .solara-cart-drawer > header h2 {
-  font-size: 1.7rem;
+  font-size: 2rem;
 }
 [data-solara-module="cart-drawer"] .solara-cart-drawer > header button {
   background: transparent;
@@ -854,7 +950,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 [data-solara-module="cart-drawer"] form input,
 [data-solara-module="cart-drawer"] form textarea {
-  background: var(--solara-background);
+  background: color-mix(in srgb, var(--solara-background), var(--solara-surface) 24%);
   border: 1px solid var(--solara-border);
   border-radius: var(--solara-radius);
   min-height: 46px;
@@ -874,6 +970,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   margin-top: 0.75rem;
   min-height: 52px;
 }
+[data-solara-module="cart-drawer"] form button:hover {
+  filter: brightness(0.94);
+}
 @media (prefers-reduced-motion: reduce) {
   [data-solara-module="cart-drawer"] .solara-cart-drawer {
     transition: none;
@@ -882,21 +981,21 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 `,
   "editorial-footer": `
 [data-solara-module="editorial-footer"] {
-  background: var(--solara-surface);
+  background: color-mix(in srgb, var(--solara-surface), var(--solara-background) 22%);
   border-top: 1px solid var(--solara-border);
   padding: clamp(3rem, 7vw, 6rem) 1.25rem 2rem;
 }
 [data-solara-module="editorial-footer"] .solara-footer {
   display: grid;
-  gap: 3rem;
-  grid-template-columns: minmax(16rem, 1.4fr) 0.8fr 0.8fr;
+  gap: clamp(3rem, 7vw, 8rem);
+  grid-template-columns: minmax(18rem, 1.6fr) 0.7fr 0.7fr;
   margin: 0 auto;
   max-width: var(--solara-container);
 }
 [data-solara-module="editorial-footer"] .solara-brand {
   font-family: var(--solara-font-display);
   font-size: clamp(2rem, 5vw, 4.5rem);
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: -0.05em;
   text-decoration: none;
 }
@@ -921,6 +1020,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-module="editorial-footer"] nav a,
 [data-solara-module="editorial-footer"] address a {
   text-decoration: none;
+}
+[data-solara-module="editorial-footer"] nav a:hover,
+[data-solara-module="editorial-footer"] address a:hover {
+  color: var(--solara-accent);
 }
 [data-solara-module="editorial-footer"] address span {
   color: var(--solara-muted);

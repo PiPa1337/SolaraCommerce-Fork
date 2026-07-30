@@ -1,30 +1,28 @@
-# Fase 3 completada: constructor modular consolidado
+# Fase 4 completada: sistema visual premium editorial
 
 ## Objetivo
 
-Mantener una única implementación de los contratos modulares y demostrar que
-Studio, persistencia, preview y exportación producen una tienda consistente.
+Unificar Studio y el storefront de referencia bajo una dirección editorial
+cálida sin cambiar contratos, comportamiento ni dependencias.
 
 ## Entregado
 
-- Metadata tipada de campos para los doce módulos oficiales.
-- Inspector generado exclusivamente desde el contrato del módulo.
-- Errores por campo sin confirmar settings inválidos.
-- Creación, defaults, compatibilidad y reemplazo centralizados en `@solara/modules`.
-- Validación completa antes del historial, IndexedDB y límites públicos del exporter.
-- CSS determinista y deduplicado para módulos habilitados.
-- Exclusión de HTML y estilos exclusivos de secciones ocultas.
-- Paridad semántica entre preview y home exportado.
-- E2E de edición, preview, autosave, recarga, orden, duplicado, reemplazo,
-  visibilidad, undo/redo y eliminación.
+- Tokens marfil, tinta y musgo con superficies, bordes, radios y sombras jerárquicos.
+- Tipografía serif nativa para títulos y sans para controles y datos.
+- Modos claro y oscuro, foco visible y movimiento reducido.
+- Dashboard editorial, creación de tienda jerarquizada y proyectos en formato ledger.
+- Topbar, navegación, preview, constructor, catálogo y paneles secundarios refinados.
+- Undo/redo preservado en móvil y acciones del constructor con targets accesibles.
+- Doce módulos oficiales rediseñados con CSS aislado.
+- Heroes dividido/editorial y grillas editorial/compacta visualmente diferenciados.
+- Fixture Casa Luma actualizado sólo en sus tokens visuales.
+- QA Playwright a 1440, 1024 y 390 px, storefront desktop/móvil y cinco capturas de revisión.
 
 ## Contratos
 
-- `ModuleDefinition` incorpora `settingsFields`.
-- Zod sigue siendo la autoridad de validación.
-- `StoreProjectV1`, `schemaVersion: 1`, ZIP público y `.solara.zip` no cambian.
-- El runtime de storefront continúa siendo único porque también gestiona
-  comportamiento global y movimiento progresivo.
+- `StoreProjectV1`, `ModuleDefinition`, settings, IDs y schemas no cambian.
+- HTML semántico, SEO, carrito, WhatsApp y formatos ZIP no cambian.
+- No se agregan dependencias, fuentes web, imágenes ni presets de movimiento.
 
 ## Verificación de cierre
 
@@ -35,5 +33,5 @@ Studio, persistencia, preview y exportación producen una tienda consistente.
 
 ## Próxima fase
 
-Rediseño premium de Studio y del primer sistema visual, sin ampliar antes el
-catálogo, SEO ni el sistema de movimiento.
+Pipeline de imágenes responsive en Web Worker con caché por hash, sin ampliar
+todavía SEO, movimiento ni publicación.

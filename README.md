@@ -52,6 +52,16 @@ El reemplazo conserva únicamente contenido compatible. Preview y ZIP usan el
 mismo renderer semántico, deduplican estilos de módulos activos y rechazan un
 proyecto inválido antes de guardarlo o exportarlo.
 
+## Sistema visual
+
+Studio y el storefront de referencia comparten una dirección editorial cálida:
+marfil, tinta, verde musgo, títulos serif y controles sans. El sistema conserva
+modo oscuro, foco visible, movimiento reducido y layouts responsive sin fuentes
+ni recursos externos.
+
+Los heroes dividido y editorial, junto con las grillas editorial y compacta,
+ofrecen tratamientos realmente distintos sobre el mismo contenido.
+
 ## Verificación
 
 ```bash

@@ -35,22 +35,22 @@ export const referenceStore = StoreProjectV1Schema.parse({
   theme: {
     colorMode: "auto",
     colors: {
-      background: "#f4f3ee",
-      surface: "#e9e7df",
-      text: "#17211c",
-      muted: "#667069",
-      accent: "#2e6b4f",
-      accentText: "#f7f5ef",
-      border: "#c9cec8",
+      background: "#f5f0e6",
+      surface: "#e9e1d3",
+      text: "#25271f",
+      muted: "#6e6b5f",
+      accent: "#4b6246",
+      accentText: "#fbf7ee",
+      border: "#cec5b5",
     },
     typography: {
-      display: "Georgia, 'Times New Roman', serif",
-      body: "'Segoe UI', Arial, sans-serif",
+      display: "Palatino, 'Palatino Linotype', Georgia, serif",
+      body: "'Segoe UI', Aptos, Arial, sans-serif",
       scale: 1,
     },
     spacingScale: 1,
-    radius: 6,
-    container: 1320,
+    radius: 4,
+    container: 1360,
   },
   policies: {
     shipping: {

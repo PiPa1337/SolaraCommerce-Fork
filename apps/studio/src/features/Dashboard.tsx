@@ -37,6 +37,7 @@ export function Dashboard({ projects, onCreate, onOpen, onDuplicate, onArchive }
   return (
     <main className="dashboard-page">
       <div className="dashboard-wrap">
+        <p className="dashboard-kicker">SolaraCommerce · Estudio local</p>
         <SectionHeader
           title="Tus tiendas"
           description="Cada tienda vive en este dispositivo y se puede respaldar como archivo Solara."
@@ -68,6 +69,10 @@ export function Dashboard({ projects, onCreate, onOpen, onDuplicate, onArchive }
             void submit();
           }}
         >
+          <div className="create-store__intro">
+            <span>Nuevo proyecto</span>
+            <p>Empezá con una tienda completa y personalizala desde el constructor.</p>
+          </div>
           <Field label="Nueva tienda">
             <input
               value={name}
@@ -93,6 +98,10 @@ export function Dashboard({ projects, onCreate, onOpen, onDuplicate, onArchive }
           />
         ) : (
           <div className="store-list">
+            <header className="store-list__header">
+              <span>{view === "active" ? "Proyectos activos" : "Archivo"}</span>
+              <span>{visible.length.toString().padStart(2, "0")}</span>
+            </header>
             {visible.map((record, index) => (
               <motion.article
                 className="store-row"
