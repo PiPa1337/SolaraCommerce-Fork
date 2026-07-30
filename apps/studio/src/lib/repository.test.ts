@@ -30,6 +30,11 @@ describe("repositorio local", () => {
     expect(records[0]?.name).toBe(referenceStore.name);
   });
 
+  it("rechaza proyectos inválidos antes de escribir en IndexedDB", async () => {
+    await expect(saveProject({ ...referenceStore, baseUrl: "url-inválida" })).rejects.toThrow();
+    expect(await listProjects()).toHaveLength(0);
+  });
+
   it("duplica, archiva y restaura tiendas sin alterar el original", async () => {
     await saveProject(referenceStore);
     const duplicate = await duplicateProject(referenceStore.id);

@@ -81,8 +81,9 @@ export async function getProject(id: string): Promise<StoreProjectV1 | undefined
 }
 
 export async function saveProject(project: StoreProjectV1): Promise<void> {
+  const validProject = StoreProjectV1Schema.parse(project);
   await database.transaction("rw", database.projects, async () => {
-    await database.projects.put(toRecord(project));
+    await database.projects.put(toRecord(validProject));
   });
 }
 

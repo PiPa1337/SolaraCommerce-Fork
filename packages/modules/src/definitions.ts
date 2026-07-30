@@ -54,6 +54,11 @@ export const announcementBar: ModuleDefinition<z.infer<typeof announcementSettin
     compatibleSettings: ["text", "linkLabel", "linkHref"],
   },
   settingsSchema: announcementSettings,
+  settingsFields: [
+    { key: "text", type: "text", label: "Mensaje" },
+    { key: "linkLabel", type: "text", label: "Texto del enlace" },
+    { key: "linkHref", type: "url", label: "Destino del enlace" },
+  ],
   motionZones: revealZone,
   styleAsset: scopedAssetId("announcement-bar"),
   render(context) {
@@ -88,6 +93,12 @@ export const editorialHeader: ModuleDefinition<z.infer<typeof headerSettings>> =
     compatibleSettings: ["catalogLabel", "catalogHref", "showCategories", "cartLabel"],
   },
   settingsSchema: headerSettings,
+  settingsFields: [
+    { key: "catalogLabel", type: "text", label: "Texto del catálogo" },
+    { key: "catalogHref", type: "url", label: "Destino del catálogo" },
+    { key: "showCategories", type: "boolean", label: "Mostrar categorías" },
+    { key: "cartLabel", type: "text", label: "Texto del carrito" },
+  ],
   motionZones: revealZone,
   clientAsset: "storefront-cart" as AssetId,
   styleAsset: scopedAssetId("editorial-header"),
@@ -147,6 +158,23 @@ export const splitHero: ModuleDefinition<z.infer<typeof heroSettings>> = {
     ],
   },
   settingsSchema: heroSettings,
+  settingsFields: [
+    { key: "eyebrow", type: "text", label: "Antetítulo" },
+    { key: "title", type: "text", label: "Título" },
+    { key: "body", type: "text", label: "Descripción" },
+    { key: "actionLabel", type: "text", label: "Texto de la acción" },
+    { key: "actionHref", type: "url", label: "Destino de la acción" },
+    { key: "imageId", type: "asset", label: "Imagen" },
+    {
+      key: "imagePosition",
+      type: "select",
+      label: "Posición de la imagen",
+      options: [
+        { value: "left", label: "Izquierda" },
+        { value: "right", label: "Derecha" },
+      ],
+    },
+  ],
   motionZones: [
     ...revealZone,
     {
@@ -206,6 +234,23 @@ export const editorialHero: ModuleDefinition<z.infer<typeof heroSettings>> = {
     ],
   },
   settingsSchema: heroSettings,
+  settingsFields: [
+    { key: "eyebrow", type: "text", label: "Antetítulo" },
+    { key: "title", type: "text", label: "Título" },
+    { key: "body", type: "text", label: "Descripción" },
+    { key: "actionLabel", type: "text", label: "Texto de la acción" },
+    { key: "actionHref", type: "url", label: "Destino de la acción" },
+    { key: "imageId", type: "asset", label: "Imagen" },
+    {
+      key: "imagePosition",
+      type: "select",
+      label: "Posición de la imagen",
+      options: [
+        { value: "left", label: "Izquierda" },
+        { value: "right", label: "Derecha" },
+      ],
+    },
+  ],
   motionZones: [
     ...revealZone,
     {
@@ -259,6 +304,10 @@ export const collectionGrid: ModuleDefinition<z.infer<typeof collectionSettings>
     compatibleSettings: ["title", "limit"],
   },
   settingsSchema: collectionSettings,
+  settingsFields: [
+    { key: "title", type: "text", label: "Título" },
+    { key: "limit", type: "number", label: "Cantidad", min: 1, max: 12, step: 1 },
+  ],
   motionZones: staggerZone,
   styleAsset: scopedAssetId("collection-grid"),
   render(context) {
@@ -301,6 +350,10 @@ export const editorialProductGrid: ModuleDefinition<z.infer<typeof productGridSe
     compatibleSettings: ["title", "limit"],
   },
   settingsSchema: productGridSettings,
+  settingsFields: [
+    { key: "title", type: "text", label: "Título" },
+    { key: "limit", type: "number", label: "Cantidad", min: 1, max: 48, step: 1 },
+  ],
   motionZones: staggerZone,
   styleAsset: scopedAssetId("editorial-product-grid"),
   render(context) {
@@ -326,6 +379,10 @@ export const compactProductGrid: ModuleDefinition<z.infer<typeof productGridSett
     compatibleSettings: ["title", "limit"],
   },
   settingsSchema: productGridSettings,
+  settingsFields: [
+    { key: "title", type: "text", label: "Título" },
+    { key: "limit", type: "number", label: "Cantidad", min: 1, max: 48, step: 1 },
+  ],
   motionZones: staggerZone,
   styleAsset: scopedAssetId("compact-product-grid"),
   render(context) {
@@ -358,6 +415,12 @@ export const productDetail: ModuleDefinition<z.infer<typeof productDetailSetting
     compatibleSettings: ["actionLabel", "showDescription", "showCompareAtPrice", "deliveryNote"],
   },
   settingsSchema: productDetailSettings,
+  settingsFields: [
+    { key: "actionLabel", type: "text", label: "Texto de la acción" },
+    { key: "showDescription", type: "boolean", label: "Mostrar descripción" },
+    { key: "showCompareAtPrice", type: "boolean", label: "Mostrar precio anterior" },
+    { key: "deliveryNote", type: "text", label: "Nota de entrega" },
+  ],
   motionZones: revealZone,
   clientAsset: "storefront-cart" as AssetId,
   styleAsset: scopedAssetId("product-detail"),
@@ -436,6 +499,22 @@ export const imageTextContent: ModuleDefinition<z.infer<typeof imageTextSettings
     compatibleSettings: ["title", "body", "imageId", "imageSide", "actionLabel", "actionHref"],
   },
   settingsSchema: imageTextSettings,
+  settingsFields: [
+    { key: "title", type: "text", label: "Título" },
+    { key: "body", type: "rich-text", label: "Contenido" },
+    { key: "imageId", type: "asset", label: "Imagen" },
+    {
+      key: "imageSide",
+      type: "select",
+      label: "Posición de la imagen",
+      options: [
+        { value: "left", label: "Izquierda" },
+        { value: "right", label: "Derecha" },
+      ],
+    },
+    { key: "actionLabel", type: "text", label: "Texto de la acción" },
+    { key: "actionHref", type: "url", label: "Destino de la acción" },
+  ],
   motionZones: [
     ...revealZone,
     {
@@ -493,6 +572,12 @@ export const trustStrip: ModuleDefinition<z.infer<typeof trustSettings>> = {
     compatibleSettings: ["title", "deliveryTitle", "returnsTitle", "contactTitle"],
   },
   settingsSchema: trustSettings,
+  settingsFields: [
+    { key: "title", type: "text", label: "Título" },
+    { key: "deliveryTitle", type: "text", label: "Título de entrega" },
+    { key: "returnsTitle", type: "text", label: "Título de cambios" },
+    { key: "contactTitle", type: "text", label: "Título de contacto" },
+  ],
   motionZones: staggerZone,
   styleAsset: scopedAssetId("trust-strip"),
   render(context) {
@@ -527,6 +612,11 @@ export const cartDrawer: ModuleDefinition<z.infer<typeof cartSettings>> = {
     compatibleSettings: ["title", "emptyText", "checkoutLabel"],
   },
   settingsSchema: cartSettings,
+  settingsFields: [
+    { key: "title", type: "text", label: "Título" },
+    { key: "emptyText", type: "text", label: "Mensaje de carrito vacío" },
+    { key: "checkoutLabel", type: "text", label: "Texto de checkout" },
+  ],
   motionZones: revealZone,
   clientAsset: "storefront-cart" as AssetId,
   styleAsset: scopedAssetId("cart-drawer"),
@@ -572,6 +662,10 @@ export const editorialFooter: ModuleDefinition<z.infer<typeof footerSettings>> =
     compatibleSettings: ["note", "showPolicies"],
   },
   settingsSchema: footerSettings,
+  settingsFields: [
+    { key: "note", type: "text", label: "Nota" },
+    { key: "showPolicies", type: "boolean", label: "Mostrar políticas" },
+  ],
   motionZones: revealZone,
   styleAsset: scopedAssetId("editorial-footer"),
   render(context) {

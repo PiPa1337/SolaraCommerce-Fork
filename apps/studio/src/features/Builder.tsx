@@ -1,22 +1,13 @@
 import { ArrowDown, ArrowUp, Copy, Eye, EyeSlash, Plus, Swap, Trash } from "@phosphor-icons/react";
-import { moduleRegistry } from "@solara/modules";
+import {
+  createModuleSection,
+  moduleRegistry,
+  type RegisteredModule,
+  replaceModuleInSection,
+} from "@solara/modules";
 import type { StoreProjectV1, StoreSection } from "@solara/project-schema";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button, EmptyState, Field, IconButton, SectionHeader } from "../components/Ui";
-
-interface ModuleChoice {
-  manifest: {
-    id: string;
-    name: string;
-    description: string;
-    slots: StoreSection["slot"][];
-    compatibleSettings?: string[];
-  };
-  settingsSchema: {
-    parse(value: unknown): Record<string, unknown>;
-  };
-  motionZones?: Array<{ id: string; label: string; allowedPresets: readonly string[] }>;
-}
 
 const slotLabels: Record<StoreSection["slot"], string> = {
   announcement: "Aviso",
@@ -30,75 +21,8 @@ const slotLabels: Record<StoreSection["slot"], string> = {
   footer: "Pie",
 };
 
-const settingLabels: Record<string, string> = {
-  actionHref: "Destino de la acción",
-  actionLabel: "Texto de la acción",
-  body: "Contenido",
-  cartLabel: "Texto del carrito",
-  catalogHref: "Destino del catálogo",
-  catalogLabel: "Texto del catálogo",
-  checkoutLabel: "Texto para finalizar",
-  contactTitle: "Título de contacto",
-  deliveryNote: "Nota de entrega",
-  deliveryTitle: "Título de entrega",
-  emptyText: "Mensaje de carrito vacío",
-  eyebrow: "Texto superior",
-  imageId: "Imagen",
-  imagePosition: "Posición de imagen",
-  imageSide: "Lado de imagen",
-  limit: "Cantidad máxima",
-  linkHref: "Destino del enlace",
-  linkLabel: "Texto del enlace",
-  note: "Nota",
-  returnsTitle: "Título de cambios",
-  showCategories: "Mostrar categorías",
-  showCompareAtPrice: "Mostrar precio anterior",
-  showDescription: "Mostrar descripción",
-  showPolicies: "Mostrar políticas",
-  text: "Texto",
-  title: "Título",
-};
-
-function availableModules(): ModuleChoice[] {
-  const source: unknown = moduleRegistry;
-  const values =
-    source instanceof Map
-      ? [...source.values()]
-      : Array.isArray(source)
-        ? source
-        : typeof source === "object" && source !== null
-          ? Object.values(source)
-          : [];
-  return values.filter(
-    (candidate): candidate is ModuleChoice =>
-      typeof candidate === "object" &&
-      candidate !== null &&
-      "manifest" in candidate &&
-      "settingsSchema" in candidate,
-  );
-}
-
-function defaultsFor(module: ModuleChoice): Record<string, unknown> {
-  try {
-    return module.settingsSchema.parse({});
-  } catch {
-    return {};
-  }
-}
-
-function defaultMotion(): StoreSection["motion"] {
-  return {
-    preset: "none",
-    intensity: 0,
-    direction: "up",
-    distance: 24,
-    duration: 0.55,
-    delay: 0,
-    stagger: 0.08,
-    easing: "cubic-bezier(.16,1,.3,1)",
-    entryPoint: 0.25,
-    once: true,
-  };
+function availableModules(): RegisteredModule[] {
+  return Object.values(moduleRegistry);
 }
 
 interface BuilderProps {
@@ -138,32 +62,18 @@ export function Builder({ project, onChange }: BuilderProps) {
   const addSection = () => {
     const module = modules.find((candidate) => candidate.manifest.slots.includes(slotToAdd));
     if (!module) return;
-    const section: StoreSection = {
+    const section = createModuleSection({
       id: `section-${crypto.randomUUID()}` as StoreSection["id"],
       slot: slotToAdd,
       moduleId: module.manifest.id,
-      enabled: true,
-      settings: defaultsFor(module),
-      motion: defaultMotion(),
-    };
+    });
     replaceSections([...project.sections, section]);
     setSelectedId(section.id);
   };
 
   const replaceModule = (moduleId: string) => {
     if (!selected) return;
-    const nextModule = modules.find((module) => module.manifest.id === moduleId);
-    if (!nextModule) return;
-    const defaults = defaultsFor(nextModule);
-    const compatible = new Set(nextModule.manifest.compatibleSettings ?? Object.keys(defaults));
-    const preserved = Object.fromEntries(
-      Object.entries(selected.settings).filter(([key]) => compatible.has(key)),
-    );
-    updateSection(selected.id, (section) => ({
-      ...section,
-      moduleId,
-      settings: { ...defaults, ...preserved },
-    }));
+    updateSection(selected.id, (section) => replaceModuleInSection(section, moduleId));
   };
 
   return (
@@ -295,7 +205,10 @@ export function Builder({ project, onChange }: BuilderProps) {
               <fieldset>
                 <legend>Contenido</legend>
                 <SettingsInspector
+                  key={`${selected.id}:${selected.moduleId}`}
                   values={selected.settings}
+                  fields={selectedModule?.settingsFields ?? []}
+                  schema={selectedModule?.settingsSchema}
                   project={project}
                   onChange={(settings) =>
                     updateSection(selected.id, (section) => ({ ...section, settings }))
@@ -404,53 +317,89 @@ export function Builder({ project, onChange }: BuilderProps) {
 
 function SettingsInspector({
   values,
+  fields,
+  schema,
   project,
   onChange,
 }: {
   values: Record<string, unknown>;
+  fields: RegisteredModule["settingsFields"];
+  schema: RegisteredModule["settingsSchema"] | undefined;
   project: StoreProjectV1;
   onChange(values: Record<string, unknown>): void;
 }) {
-  const entries = Object.entries(values);
-  if (entries.length === 0) {
+  const [draft, setDraft] = useState(values);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setDraft(values);
+    setErrors({});
+  }, [values]);
+
+  if (fields.length === 0) {
     return <p className="inspector-note">Este módulo no requiere configuración.</p>;
   }
+
+  const setValue = (key: string, next: unknown) => {
+    const candidate = { ...draft, [key]: next };
+    setDraft(candidate);
+    if (!schema) return;
+    const result = schema.safeParse(candidate);
+    if (result.success) {
+      setErrors({});
+      onChange(result.data as Record<string, unknown>);
+      return;
+    }
+    setErrors(
+      Object.fromEntries(
+        result.error.issues.map((issue) => [String(issue.path[0] ?? key), issue.message]),
+      ),
+    );
+  };
+
   return (
     <div className="settings-fields">
-      {entries.map(([key, value]) => {
-        const label =
-          settingLabels[key] ??
-          key.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
-        const setValue = (next: unknown) => onChange({ ...values, [key]: next });
-        if (typeof value === "boolean") {
+      {fields.map((field) => {
+        const value = draft[field.key];
+        const error = errors[field.key];
+        const hint = error ?? field.description;
+        if (field.type === "boolean") {
           return (
-            <label className="check-field" key={key}>
-              <input
-                type="checkbox"
-                checked={value}
-                onChange={(event) => setValue(event.target.checked)}
-              />
-              {label}
-            </label>
+            <div key={field.key}>
+              <label className="check-field">
+                <input
+                  type="checkbox"
+                  checked={Boolean(value)}
+                  onChange={(event) => setValue(field.key, event.target.checked)}
+                />
+                {field.label}
+              </label>
+              {error ? <small className="field-error">{error}</small> : null}
+            </div>
           );
         }
-        if (typeof value === "number") {
+        if (field.type === "number") {
           return (
-            <Field label={label} key={key}>
+            <Field label={field.label} {...(error ? { hint: error } : {})} key={field.key}>
               <input
                 type="number"
-                value={value}
-                onChange={(event) => setValue(Number(event.target.value))}
+                value={String(value ?? "")}
+                min={field.min}
+                max={field.max}
+                step={field.step}
+                aria-invalid={Boolean(error)}
+                onChange={(event) => setValue(field.key, Number(event.target.value))}
               />
             </Field>
           );
         }
-        if (/imageId$/i.test(key)) {
+        if (field.type === "asset") {
           return (
-            <Field label={label} key={key}>
+            <Field label={field.label} {...(error ? { hint: error } : {})} key={field.key}>
               <select
                 value={String(value ?? "")}
-                onChange={(event) => setValue(event.target.value)}
+                aria-invalid={Boolean(error)}
+                onChange={(event) => setValue(field.key, event.target.value)}
               >
                 <option value="">Sin imagen</option>
                 {project.assets.map((asset) => (
@@ -462,13 +411,47 @@ function SettingsInspector({
             </Field>
           );
         }
+        if (field.type === "select") {
+          return (
+            <Field label={field.label} {...(error ? { hint: error } : {})} key={field.key}>
+              <select
+                value={String(value ?? "")}
+                aria-invalid={Boolean(error)}
+                onChange={(event) => setValue(field.key, event.target.value)}
+              >
+                {field.options.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          );
+        }
         const text = String(value ?? "");
         return (
-          <Field label={label} key={key}>
-            {text.length > 90 || /body|description|text/i.test(key) ? (
-              <textarea value={text} rows={4} onChange={(event) => setValue(event.target.value)} />
+          <Field
+            label={field.label}
+            {...(hint ? { hint } : {})}
+            key={field.key}
+            className={error ? "field--error" : ""}
+          >
+            {field.type === "rich-text" ? (
+              <textarea
+                value={text}
+                rows={4}
+                placeholder={field.placeholder}
+                aria-invalid={Boolean(error)}
+                onChange={(event) => setValue(field.key, event.target.value)}
+              />
             ) : (
-              <input value={text} onChange={(event) => setValue(event.target.value)} />
+              <input
+                type={field.type === "url" ? "url" : "text"}
+                value={text}
+                placeholder={field.placeholder}
+                aria-invalid={Boolean(error)}
+                onChange={(event) => setValue(field.key, event.target.value)}
+              />
             )}
           </Field>
         );

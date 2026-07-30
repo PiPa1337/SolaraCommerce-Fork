@@ -28,6 +28,61 @@ describe("exporter", () => {
     expect(preview).toContain('<script type="application/ld+json">');
   });
 
+  it("usa el mismo árbol semántico de módulos en preview y home exportado", () => {
+    const preview = renderPreviewHtml(referenceStore);
+    const exported = String(
+      exportProject(referenceStore, { mode: "draft" }).files.get("index.html"),
+    );
+    const moduleTree = (html: string) =>
+      [...html.matchAll(/data-solara-module="([^"]+)"/g)].map((match) => match[1]);
+
+    expect(moduleTree(preview)).toEqual(moduleTree(exported));
+  });
+
+  it("incluye estilos una sola vez y excluye assets de módulos deshabilitados", () => {
+    const source = referenceStore.sections.find((section) => section.moduleId === "trust-strip");
+    if (!source) throw new Error("Fixture incompleto");
+    const project = {
+      ...referenceStore,
+      sections: [
+        ...referenceStore.sections,
+        { ...source, id: "section-trust-copy", enabled: true },
+        {
+          ...source,
+          id: "section-disabled-content",
+          slot: "content",
+          moduleId: "image-text-content",
+          enabled: false,
+        },
+      ],
+    };
+    const result = exportProject(project as typeof referenceStore, { mode: "draft" });
+    const baseline = exportProject(referenceStore, { mode: "draft" });
+    const css = String(result.files.get("assets/storefront.css"));
+    const html = String(result.files.get("index.html"));
+
+    expect(css).toBe(baseline.files.get("assets/storefront.css"));
+    expect(css).not.toContain('[data-solara-module="image-text-content"]');
+    expect(html).not.toContain('data-solara-module="image-text-content"');
+    expect([...result.files.keys()].filter((path) => path === "assets/storefront.js")).toHaveLength(
+      1,
+    );
+  });
+
+  it("rechaza proyectos inválidos con una ruta accionable en cada límite público", () => {
+    const invalid = { ...referenceStore, baseUrl: "no-es-una-url" };
+
+    expect(() => exportProject(invalid as typeof referenceStore, { mode: "draft" })).toThrow(
+      /exportar.*baseUrl/i,
+    );
+    expect(() => renderPreviewHtml(invalid as typeof referenceStore)).toThrow(
+      /vista previa.*baseUrl/i,
+    );
+    expect(() => createProjectArchive(invalid as typeof referenceStore)).toThrow(
+      /archivo del proyecto.*baseUrl/i,
+    );
+  });
+
   it("excluye feed y agrega noindex en borrador", () => {
     const result = exportProject(referenceStore, { mode: "draft" });
     expect(result.files.has("google-merchant.xml")).toBe(false);

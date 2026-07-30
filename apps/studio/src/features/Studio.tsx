@@ -19,7 +19,7 @@ import {
   redo,
   undo,
 } from "@solara/core";
-import type { StoreProjectV1 } from "@solara/project-schema";
+import { type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
 import { motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { IconButton } from "../components/Ui";
@@ -57,6 +57,7 @@ export function Studio({
   const [history, setHistory] = useState<HistoryState>(() => createHistory(initialProject));
   const [tab, setTab] = useState<StudioTab>("overview");
   const [saveState, setSaveState] = useState<AutosaveState>("saved");
+  const [validationError, setValidationError] = useState("");
   const [leaving, setLeaving] = useState(false);
   const [autosave] = useState(() => new AutosaveQueue(saveProject, 550));
   const lastProjectRef = useRef(initialProject);
@@ -98,9 +99,17 @@ export function Studio({
   };
 
   const replaceProject = useCallback((next: StoreProjectV1) => {
+    const result = StoreProjectV1Schema.safeParse(next);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      const path = issue?.path.join(".") || "project";
+      setValidationError(`${path}: ${issue?.message ?? "Proyecto inválido."}`);
+      return;
+    }
+    setValidationError("");
     setHistory((current) => {
-      if (next === current.present) return current;
-      return { past: [...current.past, current.present], present: next, future: [] };
+      if (result.data === current.present) return current;
+      return { past: [...current.past, current.present], present: result.data, future: [] };
     });
   }, []);
 
@@ -155,6 +164,15 @@ export function Studio({
           </div>
         </div>
         <div className="save-status">
+          {validationError ? (
+            <output
+              className="save-indicator save-indicator--error"
+              aria-live="assertive"
+              title={validationError}
+            >
+              Cambio inválido
+            </output>
+          ) : null}
           <output className={`save-indicator save-indicator--${saveState}`} aria-live="polite">
             <FloppyDisk aria-hidden size={16} />
             {saveState === "saved"

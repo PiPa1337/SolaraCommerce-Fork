@@ -1389,6 +1389,12 @@ tbody tr[data-selected="true"] {
   gap: 11px;
 }
 
+.field-error {
+  color: var(--danger);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
 .inspector-split {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

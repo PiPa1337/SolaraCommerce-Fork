@@ -1,4 +1,9 @@
-import { getModuleDefinition, MODULE_STYLES, renderSections } from "@solara/modules";
+import {
+  getModuleDefinition,
+  MODULE_STYLE_BLOCKS,
+  renderSections,
+  STORE_BASE_STYLES,
+} from "@solara/modules";
 import type {
   Category,
   ImageAsset,
@@ -45,6 +50,16 @@ interface PageDescriptor {
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const stableMtime = new Date("2000-01-01T12:00:00.000Z");
+
+function parseProject(projectInput: StoreProjectV1, operation: string): StoreProjectV1 {
+  const result = StoreProjectV1Schema.safeParse(projectInput);
+  if (result.success) return result.data;
+
+  const details = result.error.issues
+    .map((issue) => `${issue.path.join(".") || "project"}: ${issue.message}`)
+    .join("; ");
+  throw new Error(`No se puede ${operation}: el proyecto es inválido. ${details}`);
+}
 
 function escapeHtml(value: string): string {
   return value.replace(
@@ -187,6 +202,30 @@ function renderProjectSections(
       ...(pageContext.product ? { product: pageContext.product } : {}),
       ...(pageContext.category ? { category: pageContext.category } : {}),
     }),
+  );
+}
+
+function moduleStylesForSections(
+  sections: readonly StoreSection[],
+  additionalModuleIds: readonly string[] = [],
+): string {
+  const moduleIds = new Set([
+    ...sections.filter((section) => section.enabled).map((section) => section.moduleId),
+    ...additionalModuleIds,
+  ]);
+  const blocks = [...moduleIds].map((moduleId) => {
+    const definition = getModuleDefinition(moduleId);
+    if (!definition) throw new Error(`Módulo desconocido: ${moduleId}.`);
+    const styleKey = String(definition.styleAsset).replace(/^module-style-/, "");
+    return MODULE_STYLE_BLOCKS[styleKey] ?? "";
+  });
+  return `${STORE_BASE_STYLES}\n${blocks.filter(Boolean).join("\n")}`;
+}
+
+function exportedModuleStyles(project: StoreProjectV1): string {
+  return moduleStylesForSections(
+    project.sections,
+    project.products.some((product) => product.status === "active") ? ["product-detail"] : [],
   );
 }
 
@@ -740,7 +779,7 @@ function buildFiles(project: StoreProjectV1, mode: ExportMode): Map<string, stri
   });
   files.set(
     "assets/storefront.css",
-    `${themeCss(publicProject)}\n${MODULE_STYLES}\n${STOREFRONT_RUNTIME_CSS}`,
+    `${themeCss(publicProject)}\n${exportedModuleStyles(publicProject)}\n${STOREFRONT_RUNTIME_CSS}`,
   );
   files.set("assets/storefront.js", STOREFRONT_RUNTIME_JS);
   files.set(
@@ -795,7 +834,7 @@ function zipFiles(files: ReadonlyMap<string, string | Uint8Array>): Uint8Array {
 }
 
 export function exportProject(projectInput: StoreProjectV1, options: ExportOptions): ExportResult {
-  const project = StoreProjectV1Schema.parse(projectInput);
+  const project = parseProject(projectInput, "exportar");
   const audit = auditProject(project);
   const critical = audit.filter((issue) => issue.severity === "critical");
   if (options.mode === "production" && critical.length > 0) {
@@ -814,7 +853,7 @@ export function renderPreviewHtml(
   projectInput: StoreProjectV1,
   mode: ExportMode = "draft",
 ): string {
-  const project = StoreProjectV1Schema.parse(projectInput);
+  const project = parseProject(projectInput, "renderizar la vista previa");
   const page = buildPages(project)[0];
   if (!page) throw new Error("No se pudo renderizar la página inicial.");
   return renderDocument(project, page, mode)
@@ -826,7 +865,7 @@ export function renderPreviewHtml(
     .replace(
       "data:text/css;base64,PREVIEW_STYLE",
       `data:text/css;base64,${toBase64(
-        `${themeCss(project)}\n${MODULE_STYLES}\n${STOREFRONT_RUNTIME_CSS}`,
+        `${themeCss(project)}\n${moduleStylesForSections(project.sections)}\n${STOREFRONT_RUNTIME_CSS}`,
       )}`,
     );
 }
@@ -844,7 +883,7 @@ function toBase64(value: string): string {
 }
 
 export function createProjectArchive(projectInput: StoreProjectV1): Uint8Array {
-  const project = StoreProjectV1Schema.parse(projectInput);
+  const project = parseProject(projectInput, "crear el archivo del proyecto");
   const files = new Map<string, string | Uint8Array>([
     ["project.json", JSON.stringify(project, null, 2)],
   ]);

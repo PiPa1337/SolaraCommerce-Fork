@@ -1,42 +1,39 @@
-# Fase activa: catálogo local-first confiable
+# Fase 3 completada: constructor modular consolidado
 
 ## Objetivo
 
-Garantizar que el catálogo, las operaciones masivas, la importación CSV y el
-autosave preservan siempre un proyecto válido y el último cambio confirmado.
+Mantener una única implementación de los contratos modulares y demostrar que
+Studio, persistencia, preview y exportación producen una tienda consistente.
 
-## Alcance
+## Entregado
 
-- Integridad semántica de IDs, slugs, referencias, asignaciones y fechas.
-- Comandos atómicos y reemplazo completo del catálogo con undo/redo.
-- Editor de productos y todas sus variantes.
-- Acciones masivas de estado, precios, categorías, colecciones y tags.
-- Tabla paginada con 25, 50 o 100 filas.
-- Selección independiente de página y resultados filtrados.
-- Importación CSV con resumen, confirmación y cancelación sin cambios.
-- Autosave serializado con debounce, coalescing, reintento y `flush()`.
-- Tests de IndexedDB mediante `fake-indexeddb`.
+- Metadata tipada de campos para los doce módulos oficiales.
+- Inspector generado exclusivamente desde el contrato del módulo.
+- Errores por campo sin confirmar settings inválidos.
+- Creación, defaults, compatibilidad y reemplazo centralizados en `@solara/modules`.
+- Validación completa antes del historial, IndexedDB y límites públicos del exporter.
+- CSS determinista y deduplicado para módulos habilitados.
+- Exclusión de HTML y estilos exclusivos de secciones ocultas.
+- Paridad semántica entre preview y home exportado.
+- E2E de edición, preview, autosave, recarga, orden, duplicado, reemplazo,
+  visibilidad, undo/redo y eliminación.
 
 ## Contratos
 
-- `StoreProjectV1` mantiene `schemaVersion: 1` y la misma forma serializada.
-- `Product.categoryIds` y `Product.collectionIds` son la fuente canónica.
-- Los índices inversos de categorías y colecciones son derivados.
-- `DomainCommand` suma únicamente `products.replaceAll`.
-- `ModuleDefinition`, ZIP público, `.solara.zip` y columnas CSV no cambian.
+- `ModuleDefinition` incorpora `settingsFields`.
+- Zod sigue siendo la autoridad de validación.
+- `StoreProjectV1`, `schemaVersion: 1`, ZIP público y `.solara.zip` no cambian.
+- El runtime de storefront continúa siendo único porque también gestiona
+  comportamiento global y movimiento progresivo.
 
-## Verificación
+## Verificación de cierre
 
 - `corepack pnpm check`
 - `corepack pnpm build`
 - `corepack pnpm benchmark:export`
 - `corepack pnpm test:e2e`
 
-Los E2E cubren edición y persistencia de variantes, cancelación y confirmación
-de CSV, 1.000 productos, selección entre páginas y undo/redo.
+## Próxima fase
 
-## No objetivos
-
-No se modifican módulos, constructor, recursos, SEO, Merchant, storefront,
-animaciones ni formatos de exportación. Recuperación avanzada, alertas de cuota,
-merge CSV, virtualización, backend y sincronización permanecen fuera de alcance.
+Rediseño premium de Studio y del primer sistema visual, sin ampliar antes el
+catálogo, SEO ni el sistema de movimiento.

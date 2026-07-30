@@ -42,6 +42,16 @@ tags, disponibilidad e identificadores comerciales. El catálogo ofrece:
 `StoreProjectV1` valida IDs, slugs, referencias e índices derivados. Una operación
 inválida se rechaza completa y no deja cambios parciales.
 
+## Constructor modular
+
+Las secciones se agregan, ordenan, duplican, ocultan, reemplazan y eliminan desde
+Studio. Cada módulo oficial declara su schema Zod y la metadata tipada que genera
+el inspector; Studio no infiere controles ni mantiene defaults paralelos.
+
+El reemplazo conserva únicamente contenido compatible. Preview y ZIP usan el
+mismo renderer semántico, deduplican estilos de módulos activos y rechazan un
+proyecto inválido antes de guardarlo o exportarlo.
+
 ## Verificación
 
 ```bash

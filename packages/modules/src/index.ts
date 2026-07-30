@@ -8,6 +8,7 @@ import type {
   Category,
   Collection,
   Product,
+  SectionId,
   StoreProjectV1,
   StoreSection,
 } from "@solara/project-schema";
@@ -67,6 +68,50 @@ export function getModuleDefinition(id: string): RegisteredModule | undefined {
   return moduleRegistry[id];
 }
 
+function requireCompatibleModule(moduleId: string, slot: StoreSection["slot"]): RegisteredModule {
+  const definition = getModuleDefinition(moduleId);
+  if (!definition) {
+    throw new Error(`Módulo desconocido: ${moduleId}.`);
+  }
+  if (!definition.manifest.slots.includes(slot)) {
+    throw new Error(`El módulo ${moduleId} no es compatible con el slot ${slot}.`);
+  }
+  return definition;
+}
+
+export function defaultSettingsForModule(moduleId: string): Record<string, unknown> {
+  const definition = getModuleDefinition(moduleId);
+  if (!definition) {
+    throw new Error(`Módulo desconocido: ${moduleId}.`);
+  }
+  return definition.settingsSchema.parse({}) as Record<string, unknown>;
+}
+
+export function createModuleSection(input: {
+  id: SectionId;
+  slot: StoreSection["slot"];
+  moduleId: string;
+}): StoreSection {
+  const definition = requireCompatibleModule(input.moduleId, input.slot);
+  return {
+    ...input,
+    enabled: true,
+    settings: definition.settingsSchema.parse({}) as Record<string, unknown>,
+    motion: {
+      preset: "none",
+      intensity: 0,
+      direction: "up",
+      distance: 24,
+      duration: 0.55,
+      delay: 0,
+      stagger: 0.08,
+      easing: "cubic-bezier(.16,1,.3,1)",
+      entryPoint: 0.25,
+      once: true,
+    },
+  };
+}
+
 export function renderSections(
   project: StoreProjectV1,
   sections: readonly StoreSection[] = project.sections,
@@ -76,15 +121,7 @@ export function renderSections(
     sections
       .filter((section) => section.enabled)
       .map((section) => {
-        const definition = getModuleDefinition(section.moduleId);
-        if (!definition) {
-          throw new Error(`Módulo desconocido: ${section.moduleId}.`);
-        }
-        if (!definition.manifest.slots.includes(section.slot)) {
-          throw new Error(
-            `El módulo ${section.moduleId} no es compatible con el slot ${section.slot}.`,
-          );
-        }
+        const definition = requireCompatibleModule(section.moduleId, section.slot);
 
         const settings = definition.settingsSchema.parse(section.settings);
         return definition.render({
@@ -105,15 +142,16 @@ export function replaceModuleInSection(
   section: StoreSection,
   targetModuleId: string,
 ): StoreSection {
-  const target = getModuleDefinition(targetModuleId);
-  if (!target) {
-    throw new Error(`Módulo desconocido: ${targetModuleId}.`);
-  }
-  if (!target.manifest.slots.includes(section.slot)) {
-    throw new Error(`El módulo ${targetModuleId} no es compatible con el slot ${section.slot}.`);
-  }
-
-  const settings = target.settingsSchema.parse(section.settings) as Record<string, unknown>;
+  const target = requireCompatibleModule(targetModuleId, section.slot);
+  const defaults = target.settingsSchema.parse({}) as Record<string, unknown>;
+  const compatible = new Set(target.manifest.compatibleSettings);
+  const preserved = Object.fromEntries(
+    Object.entries(section.settings).filter(([key]) => compatible.has(key)),
+  );
+  const settings = target.settingsSchema.parse({
+    ...defaults,
+    ...preserved,
+  }) as Record<string, unknown>;
   return {
     ...section,
     moduleId: targetModuleId,

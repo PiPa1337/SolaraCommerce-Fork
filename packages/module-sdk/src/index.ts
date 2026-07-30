@@ -53,9 +53,35 @@ export interface RenderContext<Settings> {
   products?: readonly Product[];
 }
 
+interface SettingsFieldBase<Settings> {
+  key: Extract<keyof Settings, string>;
+  label: string;
+  description?: string;
+}
+
+export type SettingsFieldDefinition<Settings> =
+  | (SettingsFieldBase<Settings> & {
+      type: "text" | "rich-text" | "url" | "asset";
+      placeholder?: string;
+    })
+  | (SettingsFieldBase<Settings> & {
+      type: "number";
+      min?: number;
+      max?: number;
+      step?: number;
+    })
+  | (SettingsFieldBase<Settings> & {
+      type: "boolean";
+    })
+  | (SettingsFieldBase<Settings> & {
+      type: "select";
+      options: readonly { value: string; label: string }[];
+    });
+
 export interface ModuleDefinition<Settings> {
   manifest: ModuleManifest;
   settingsSchema: ZodType<Settings>;
+  settingsFields: readonly SettingsFieldDefinition<Settings>[];
   motionZones: readonly MotionZoneDefinition[];
   render(context: RenderContext<Settings>): SafeHtml;
   clientAsset?: AssetId;
