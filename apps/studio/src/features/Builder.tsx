@@ -30,27 +30,46 @@ interface BuilderProps {
   onChange(project: StoreProjectV1): void;
 }
 
+type EditablePageKind = StoreProjectV1["pages"][number]["kind"];
+
 export function Builder({ project, onChange }: BuilderProps) {
   const modules = useMemo(availableModules, []);
+  const [pageKind, setPageKind] = useState<EditablePageKind>("home");
   const [selectedId, setSelectedId] = useState(project.sections[0]?.id ?? "");
   const [slotToAdd, setSlotToAdd] = useState<StoreSection["slot"]>("content");
-  const selected = project.sections.find((section) => section.id === selectedId);
+  const editablePage = project.pages.find((page) => page.kind === pageKind);
+  const pageSections = pageKind === "home" ? project.sections : (editablePage?.sections ?? []);
+  const selected = pageSections.find((section) => section.id === selectedId);
   const selectedModule = modules.find((module) => module.manifest.id === selected?.moduleId);
 
+  useEffect(() => {
+    if (!pageSections.some((section) => section.id === selectedId)) {
+      setSelectedId(pageSections[0]?.id ?? "");
+    }
+  }, [pageSections, selectedId]);
+
   const replaceSections = (sections: StoreSection[]) => {
-    onChange({ ...project, sections, updatedAt: new Date().toISOString() });
+    onChange({
+      ...project,
+      ...(pageKind === "home"
+        ? { sections }
+        : {
+            pages: project.pages.map((page) =>
+              page.kind === pageKind ? { ...page, sections } : page,
+            ),
+          }),
+      updatedAt: new Date().toISOString(),
+    });
   };
 
   const updateSection = (id: string, update: (section: StoreSection) => StoreSection) => {
-    replaceSections(
-      project.sections.map((section) => (section.id === id ? update(section) : section)),
-    );
+    replaceSections(pageSections.map((section) => (section.id === id ? update(section) : section)));
   };
 
   const move = (index: number, delta: -1 | 1) => {
     const target = index + delta;
-    if (target < 0 || target >= project.sections.length) return;
-    const sections = [...project.sections];
+    if (target < 0 || target >= pageSections.length) return;
+    const sections = [...pageSections];
     const current = sections[index];
     const sibling = sections[target];
     if (!current || !sibling) return;
@@ -67,9 +86,14 @@ export function Builder({ project, onChange }: BuilderProps) {
       slot: slotToAdd,
       moduleId: module.manifest.id,
     });
-    replaceSections([...project.sections, section]);
+    replaceSections([...pageSections, section]);
     setSelectedId(section.id);
   };
+
+  const pageSlotLabels =
+    pageKind === "home"
+      ? Object.entries(slotLabels)
+      : Object.entries(slotLabels).filter(([slot]) => ["catalog", "content"].includes(slot));
 
   const replaceModule = (moduleId: string) => {
     if (!selected) return;
@@ -84,11 +108,27 @@ export function Builder({ project, onChange }: BuilderProps) {
         actions={
           <div className="add-section">
             <select
+              aria-label="Página de edición"
+              value={pageKind}
+              onChange={(event) => {
+                const next = event.target.value as EditablePageKind;
+                setPageKind(next);
+                const nextPage = project.pages.find((page) => page.kind === next);
+                const nextSections =
+                  next === "home" ? project.sections : (nextPage?.sections ?? []);
+                setSelectedId(nextSections[0]?.id ?? "");
+              }}
+            >
+              <option value="home">Home</option>
+              <option value="about">Nosotros</option>
+              <option value="contact">Contacto</option>
+            </select>
+            <select
               aria-label="Tipo de sección"
               value={slotToAdd}
               onChange={(event) => setSlotToAdd(event.target.value as StoreSection["slot"])}
             >
-              {Object.entries(slotLabels).map(([value, label]) => (
+              {pageSlotLabels.map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
@@ -103,7 +143,7 @@ export function Builder({ project, onChange }: BuilderProps) {
 
       <div className="builder-grid">
         <ul className="section-stack" aria-label="Secciones de la tienda">
-          {project.sections.map((section, index) => {
+          {pageSections.map((section, index) => {
             const definition = modules.find((module) => module.manifest.id === section.moduleId);
             return (
               <li
@@ -129,7 +169,7 @@ export function Builder({ project, onChange }: BuilderProps) {
                   <IconButton
                     icon={ArrowDown}
                     label="Mover abajo"
-                    disabled={index === project.sections.length - 1}
+                    disabled={index === pageSections.length - 1}
                     onClick={() => move(index, 1)}
                   />
                   <IconButton
@@ -150,7 +190,7 @@ export function Builder({ project, onChange }: BuilderProps) {
                         ...structuredClone(section),
                         id: `section-${crypto.randomUUID()}` as StoreSection["id"],
                       };
-                      const sections = [...project.sections];
+                      const sections = [...pageSections];
                       sections.splice(index + 1, 0, duplicate);
                       replaceSections(sections);
                       setSelectedId(duplicate.id);
@@ -160,10 +200,8 @@ export function Builder({ project, onChange }: BuilderProps) {
                     icon={Trash}
                     label="Eliminar sección"
                     onClick={() => {
-                      replaceSections(project.sections.filter((item) => item.id !== section.id));
-                      setSelectedId(
-                        project.sections.find((item) => item.id !== section.id)?.id ?? "",
-                      );
+                      replaceSections(pageSections.filter((item) => item.id !== section.id));
+                      setSelectedId(pageSections.find((item) => item.id !== section.id)?.id ?? "");
                     }}
                   />
                 </div>
@@ -330,10 +368,12 @@ function SettingsInspector({
 }) {
   const [draft, setDraft] = useState(values);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [rawArrays, setRawArrays] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setDraft(values);
     setErrors({});
+    setRawArrays({});
   }, [values]);
 
   if (fields.length === 0) {
@@ -347,6 +387,11 @@ function SettingsInspector({
     const result = schema.safeParse(candidate);
     if (result.success) {
       setErrors({});
+      setRawArrays((current) => {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      });
       onChange(result.data as Record<string, unknown>);
       return;
     }
@@ -444,13 +489,16 @@ function SettingsInspector({
           return (
             <Field label={field.label} {...(hint ? { hint } : {})} key={field.key}>
               <textarea
-                value={JSON.stringify(value ?? [], null, 2)}
+                value={rawArrays[field.key] ?? JSON.stringify(value ?? [], null, 2)}
                 rows={6}
                 aria-invalid={Boolean(error)}
                 onChange={(event) => {
                   try {
-                    setValue(field.key, JSON.parse(event.target.value));
+                    const parsed = JSON.parse(event.target.value);
+                    setValue(field.key, parsed);
                   } catch {
+                    setDraft((current) => ({ ...current, [field.key]: event.target.value }));
+                    setRawArrays((current) => ({ ...current, [field.key]: event.target.value }));
                     setErrors((current) => ({ ...current, [field.key]: "JSON inválido." }));
                   }
                 }}

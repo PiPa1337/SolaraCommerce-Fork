@@ -56,7 +56,8 @@ export function productCard(
   const image = productImage(project, product);
   const href = `/productos/${escapeAttribute(product.slug)}/`;
 
-  return safeHtml(`<article class="solara-product-card solara-product-card--${variant}" data-product-card data-product-title="${escapeAttribute(product.title)}" data-product-price="${price}" data-product-available="${String(available)}" data-product-tags="${escapeAttribute(product.tags.join(" "))}">
+  const variantValues = product.variants.flatMap((item) => Object.values(item.optionValues));
+  return safeHtml(`<article class="solara-product-card solara-product-card--${variant}" data-product-card data-product-title="${escapeAttribute(product.title)}" data-product-price="${price}" data-product-available="${String(available)}" data-product-tags="${escapeAttribute(product.tags.join(" "))}" data-product-variants="${escapeAttribute(variantValues.join(" "))}">
     <a class="solara-product-media" href="${href}" aria-label="${escapeAttribute(`Ver ${product.title}`)}">
       ${image}
     </a>

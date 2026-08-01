@@ -83,6 +83,8 @@ function storefrontBoot(): void {
     unitPrice: number;
     quantity: number;
     imageUrl?: string;
+    imageWidth?: number;
+    imageHeight?: number;
     available?: boolean;
   };
 
@@ -129,6 +131,7 @@ function storefrontBoot(): void {
   };
 
   let cart = parseCart();
+  let lastCartTrigger: HTMLElement | null = null;
 
   const pageType = document.querySelector<HTMLElement>("[data-solara-store]")?.dataset.pageType;
 
@@ -155,7 +158,7 @@ function storefrontBoot(): void {
           (line) => `
             <article class="solara-cart-line">
               <div>
-                ${line.imageUrl ? `<img src="${escapeAttribute(line.imageUrl)}" alt="" loading="lazy">` : ""}
+                ${line.imageUrl ? `<img src="${escapeAttribute(line.imageUrl)}" alt=""${line.imageWidth ? ` width="${line.imageWidth}"` : ""}${line.imageHeight ? ` height="${line.imageHeight}"` : ""} loading="lazy">` : ""}
                 <div>
                 <strong>${escapeText(line.title)}</strong>
                 <small>${escapeText(line.variantTitle)}</small>
@@ -166,6 +169,7 @@ function storefrontBoot(): void {
                 <span class="sr-only">Cantidad de ${escapeText(line.title)}</span>
                 <input data-cart-quantity="${escapeAttribute(line.variantId)}" type="number" min="0" max="99" value="${line.quantity}"${line.available === false ? " disabled" : ""}>
               </label>
+              <button type="button" data-cart-remove="${escapeAttribute(line.variantId)}" aria-label="Eliminar ${escapeAttribute(line.title)}">Eliminar</button>
               <span>${money.format((line.unitPrice * line.quantity) / 100)}</span>
             </article>`,
         )
@@ -196,6 +200,7 @@ function storefrontBoot(): void {
   const openCart = (): void => {
     const drawer = document.querySelector<HTMLElement>("[data-cart-drawer]");
     if (!drawer) return;
+    lastCartTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     if (drawer instanceof HTMLDialogElement) {
       if (!drawer.open) drawer.showModal();
     } else {
@@ -208,6 +213,13 @@ function storefrontBoot(): void {
           backdrop.hidden = false;
         });
     }
+    window.setTimeout(() => {
+      drawer
+        .querySelector<HTMLElement>(
+          'button, input, select, textarea, a, [tabindex]:not([tabindex="-1"])',
+        )
+        ?.focus();
+    }, 0);
   };
 
   const closeCart = (): void => {
@@ -225,6 +237,8 @@ function storefrontBoot(): void {
           backdrop.hidden = true;
         });
     }
+    if (lastCartTrigger?.isConnected) lastCartTrigger.focus();
+    lastCartTrigger = null;
   };
 
   const selectedVariant = (productRoot: HTMLElement): HTMLElement | null => {
@@ -235,6 +249,24 @@ function storefrontBoot(): void {
       : null;
   };
 
+  const selectGalleryImage = (productRoot: HTMLElement, imageId?: string): void => {
+    const figures = Array.from(
+      productRoot.querySelectorAll<HTMLElement>("[data-gallery-image-id]"),
+    );
+    if (figures.length === 0) return;
+    const target =
+      figures.find((figure) => figure.dataset.galleryImageId === imageId) ?? figures[0];
+    figures.forEach((figure) => {
+      figure.dataset.galleryActive = String(figure === target);
+    });
+    productRoot.querySelectorAll<HTMLElement>("[data-gallery-thumb]").forEach((thumb) => {
+      thumb.setAttribute(
+        "aria-current",
+        String(thumb.dataset.galleryThumb === target?.dataset.galleryImageId),
+      );
+    });
+  };
+
   const syncVariant = (productRoot: HTMLElement): void => {
     const variant = selectedVariant(productRoot);
     if (!variant) return;
@@ -242,7 +274,20 @@ function storefrontBoot(): void {
     const available = variant.dataset.available === "true";
     const button = productRoot.querySelector<HTMLButtonElement>("[data-add-to-cart]");
     const priceElement = productRoot.querySelector<HTMLElement>("[data-product-price]");
+    const compareElement = productRoot.querySelector<HTMLElement>("[data-product-compare]");
+    const skuElement = productRoot.querySelector<HTMLElement>("[data-product-sku]");
+    const availabilityElement = productRoot.querySelector<HTMLElement>(
+      "[data-product-availability]",
+    );
+    selectGalleryImage(productRoot, variant.dataset.imageId);
     if (priceElement) priceElement.textContent = money.format(price / 100);
+    if (skuElement) skuElement.textContent = variant.dataset.sku ?? "";
+    if (availabilityElement) availabilityElement.textContent = available ? "Disponible" : "Agotado";
+    if (compareElement) {
+      const compareAt = Number(variant.dataset.compareAt ?? "0");
+      compareElement.textContent = compareAt > 0 ? money.format(compareAt / 100) : "";
+      compareElement.hidden = !(compareAt > price);
+    }
     if (button) {
       button.disabled = !available;
       button.textContent = available ? "Agregar al carrito" : "Sin stock";
@@ -278,6 +323,13 @@ function storefrontBoot(): void {
     const target = event.target;
     if (!(target instanceof Element)) return;
 
+    const galleryThumb = target.closest<HTMLElement>("[data-gallery-thumb]");
+    if (galleryThumb) {
+      const productRoot = galleryThumb.closest<HTMLElement>("[data-product]");
+      if (productRoot) selectGalleryImage(productRoot, galleryThumb.dataset.galleryThumb);
+      return;
+    }
+
     const addButton = target.closest<HTMLElement>("[data-add-to-cart]");
     if (addButton) {
       event.preventDefault();
@@ -300,6 +352,11 @@ function storefrontBoot(): void {
           sku: variant.dataset.sku ?? "",
           unitPrice: Number(variant.dataset.price ?? "0"),
           quantity,
+          ...(variant.dataset.imageUrl ? { imageUrl: variant.dataset.imageUrl } : {}),
+          ...(variant.dataset.imageWidth ? { imageWidth: Number(variant.dataset.imageWidth) } : {}),
+          ...(variant.dataset.imageHeight
+            ? { imageHeight: Number(variant.dataset.imageHeight) }
+            : {}),
           available: true,
         });
       }
@@ -312,12 +369,61 @@ function storefrontBoot(): void {
     if (target.closest("[data-close-cart]")) {
       closeCart();
     }
+
+    const removeButton = target.closest<HTMLElement>("[data-cart-remove]");
+    if (removeButton) {
+      const variantId = removeButton.dataset.cartRemove;
+      cart = cart.filter((line) => line.variantId !== variantId);
+      renderCart();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    const drawer = document.querySelector<HTMLElement>("[data-cart-drawer]");
+    const drawerOpen =
+      drawer instanceof HTMLDialogElement ? drawer.open : drawer?.dataset.open === "true";
+    if (!drawer || !drawerOpen) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeCart();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = Array.from(
+      drawer.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((element) => !element.hidden && element.getAttribute("aria-hidden") !== "true");
+    if (focusable.length === 0) {
+      event.preventDefault();
+      drawer.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
   });
 
   document.querySelectorAll<HTMLFormElement>("[data-checkout-form]").forEach((form) => {
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       if (cart.length === 0 || !form.reportValidity()) return;
+      const unavailable = cart.filter((line) => line.available === false);
+      if (unavailable.length > 0) {
+        const preview = form.querySelector<HTMLElement>("[data-order-preview]");
+        if (preview) {
+          preview.textContent =
+            "RetirÃ¡ los productos agotados del carrito antes de enviar el pedido.";
+          preview.setAttribute("role", "alert");
+        }
+        return;
+      }
 
       const data = new FormData(form);
       const itemLines = cart.map((line) => {
@@ -371,6 +477,8 @@ function storefrontBoot(): void {
             price: number;
             available: boolean;
             imageUrl?: string;
+            imageWidth?: number;
+            imageHeight?: number;
           }>
         >;
       })
@@ -388,6 +496,8 @@ function storefrontBoot(): void {
             sku: current.sku,
             unitPrice: current.price,
             ...(current.imageUrl ? { imageUrl: current.imageUrl } : {}),
+            ...(current.imageWidth ? { imageWidth: current.imageWidth } : {}),
+            ...(current.imageHeight ? { imageHeight: current.imageHeight } : {}),
             available: current.available,
           });
         }
@@ -437,16 +547,41 @@ function storefrontBoot(): void {
     )
     .forEach((menu) => {
       const trigger = menu.querySelector<HTMLElement>(":scope > summary");
+      const focusable = (): HTMLElement[] =>
+        Array.from(
+          menu.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          ),
+        ).filter((element) => !element.hidden && element.getClientRects().length > 0);
       menu.addEventListener("keydown", (event) => {
-        if (event.key !== "Escape" || !menu.open) return;
-        event.preventDefault();
-        menu.open = false;
-        trigger?.focus();
+        if (!menu.open) return;
+        if (event.key === "Escape") {
+          event.preventDefault();
+          menu.open = false;
+          trigger?.focus();
+          return;
+        }
+        if (event.key !== "Tab") return;
+        const items = focusable();
+        if (items.length === 0) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
       });
       menu.addEventListener("toggle", () => {
         if (menu.open) {
-          menu.querySelector<HTMLElement>("nav a, ul a")?.focus();
+          focusable()[0]?.focus();
         }
+      });
+      menu.addEventListener("click", (event) => {
+        if (!(event.target instanceof Element) || !event.target.closest("a")) return;
+        menu.open = false;
       });
     });
 
@@ -484,10 +619,12 @@ function storefrontBoot(): void {
     const action = copy?.querySelector<HTMLAnchorElement>(".solara-primary-action");
     let activeIndex = 0;
     let timer = 0;
+    let interactionPaused = false;
     const setSlide = (nextIndex: number): void => {
       activeIndex = (nextIndex + panels.length) % panels.length;
       panels.forEach((panel, index) => {
         panel.setAttribute("data-hero-active", String(index === activeIndex));
+        panel.setAttribute("aria-hidden", String(index !== activeIndex));
       });
       const panel = panels[activeIndex];
       if (!panel) return;
@@ -524,24 +661,33 @@ function storefrontBoot(): void {
     };
     hero.querySelector<HTMLElement>("[data-hero-prev]")?.addEventListener("click", () => {
       setSlide(activeIndex - 1);
+      interactionPaused = true;
       stopAutoplay();
     });
     hero.querySelector<HTMLElement>("[data-hero-next]")?.addEventListener("click", () => {
       setSlide(activeIndex + 1);
+      interactionPaused = true;
       stopAutoplay();
     });
     hero.querySelectorAll<HTMLElement>("[data-hero-slide]").forEach((indicator) => {
       indicator.addEventListener("click", () => {
         setSlide(Number(indicator.dataset.heroSlide ?? "0"));
+        interactionPaused = true;
         stopAutoplay();
       });
     });
     hero.addEventListener("pointerenter", stopAutoplay);
     hero.addEventListener("focusin", stopAutoplay);
-    hero.addEventListener("pointerleave", startAutoplay);
+    hero.addEventListener("pointerdown", () => {
+      interactionPaused = true;
+      stopAutoplay();
+    });
+    hero.addEventListener("pointerleave", () => {
+      if (!interactionPaused) startAutoplay();
+    });
     document.addEventListener(
       "visibilitychange",
-      () => (document.hidden ? stopAutoplay() : startAutoplay()),
+      () => (document.hidden ? stopAutoplay() : interactionPaused ? undefined : startAutoplay()),
       { passive: true },
     );
     startAutoplay();
@@ -565,92 +711,143 @@ function storefrontBoot(): void {
       const terms = normalizeSearch(query);
       if (terms.join(" ").length < 2) {
         searchResults.innerHTML = "<p>Escribí al menos 2 caracteres para buscar.</p>";
-        return;
-      }
-      const controller = new AbortController();
-      searchResults.innerHTML = "<p>Cargando resultados…</p>";
-      fetch("/search-index.json", { signal: controller.signal })
-        .then((response) => {
-          if (!response.ok) throw new Error("No se pudo cargar el índice de búsqueda.");
-          return response.json() as Promise<
-            Array<{
-              title: string;
-              brand: string;
-              description: string;
-              tags?: string[];
-              categoryIds?: string[];
-              collectionIds?: string[];
-              path: string;
-              imageUrl?: string;
-              priceMin: number;
-              available: boolean;
-            }>
-          >;
-        })
-        .then((entries) => {
-          const ranked = entries
-            .map((entry) => {
-              const title = normalizeSearch(entry.title).join(" ");
-              const brand = normalizeSearch(entry.brand).join(" ");
-              const tags = normalizeSearch((entry.tags ?? []).join(" ")).join(" ");
-              const categories = normalizeSearch(
-                `${(entry.categoryIds ?? []).join(" ")} ${(entry.collectionIds ?? []).join(" ")}`,
-              ).join(" ");
-              const description = normalizeSearch(entry.description).join(" ");
-              const score = terms.reduce(
-                (total, term) =>
-                  total +
-                  (title.includes(term)
-                    ? 6
-                    : brand.includes(term)
-                      ? 4
-                      : tags.includes(term)
-                        ? 3
-                        : categories.includes(term)
-                          ? 2
-                          : description.includes(term)
-                            ? 1
-                            : 0),
-                0,
+      } else {
+        const controller = new AbortController();
+        searchResults.innerHTML = "<p>Cargando resultados…</p>";
+        fetch("/search-index.json", { signal: controller.signal })
+          .then((response) => {
+            if (!response.ok) throw new Error("No se pudo cargar el índice de búsqueda.");
+            return response.json() as Promise<
+              Array<{
+                title: string;
+                brand: string;
+                description: string;
+                tags?: string[];
+                categoryIds?: string[];
+                collectionIds?: string[];
+                categoryNames?: string[];
+                collectionNames?: string[];
+                path: string;
+                imageUrl?: string;
+                imageWidth?: number;
+                imageHeight?: number;
+                priceMin: number;
+                available: boolean;
+              }>
+            >;
+          })
+          .then((entries) => {
+            const ranked = entries
+              .map((entry) => {
+                const title = normalizeSearch(entry.title).join(" ");
+                const brand = normalizeSearch(entry.brand).join(" ");
+                const tags = normalizeSearch((entry.tags ?? []).join(" ")).join(" ");
+                const categories = normalizeSearch(
+                  `${(entry.categoryIds ?? []).join(" ")} ${(entry.collectionIds ?? []).join(" ")} ${(entry.categoryNames ?? []).join(" ")} ${(entry.collectionNames ?? []).join(" ")}`,
+                ).join(" ");
+                const description = normalizeSearch(entry.description).join(" ");
+                const score = terms.reduce(
+                  (total, term) =>
+                    total +
+                    (title.includes(term)
+                      ? 6
+                      : brand.includes(term)
+                        ? 4
+                        : tags.includes(term)
+                          ? 3
+                          : categories.includes(term)
+                            ? 2
+                            : description.includes(term)
+                              ? 1
+                              : 0),
+                  0,
+                );
+                return { entry, score };
+              })
+              .filter((item) => item.score > 0)
+              .sort(
+                (left, right) =>
+                  right.score - left.score || left.entry.title.localeCompare(right.entry.title),
               );
-              return { entry, score };
-            })
-            .filter((item) => item.score > 0)
-            .sort(
-              (left, right) =>
-                right.score - left.score || left.entry.title.localeCompare(right.entry.title),
-            );
-          if (ranked.length === 0) {
-            searchResults.innerHTML = "<p>No encontramos productos para esa búsqueda.</p>";
-            return;
-          }
-          searchResults.innerHTML = `<div class="solara-search-results-grid">${ranked
-            .slice(0, 48)
-            .map(
-              ({ entry }) =>
-                `<article class="solara-search-result"><a href="${escapeAttribute(entry.path)}">${entry.imageUrl ? `<img src="${escapeAttribute(entry.imageUrl)}" alt="" loading="lazy">` : ""}<div><h2>${escapeText(entry.title)}</h2><p>${escapeText(entry.brand)}</p><strong>${money.format(entry.priceMin / 100)}</strong></div></a></article>`,
-            )
-            .join("")}</div>`;
-        })
-        .catch(() => {
-          searchResults.innerHTML =
-            '<p role="alert">No se pudo cargar la búsqueda. Intentá nuevamente.</p>';
-        });
-      window.addEventListener("pagehide", () => controller.abort(), { once: true });
+            if (ranked.length === 0) {
+              searchResults.innerHTML = "<p>No encontramos productos para esa búsqueda.</p>";
+              return;
+            }
+            searchResults.innerHTML = `<div class="solara-search-results-grid">${ranked
+              .slice(0, 48)
+              .map(
+                ({ entry }) =>
+                  `<article class="solara-search-result"><a href="${escapeAttribute(entry.path)}">${entry.imageUrl ? `<img src="${escapeAttribute(entry.imageUrl)}" alt="${escapeAttribute(entry.title)}" width="${entry.imageWidth ?? 1}" height="${entry.imageHeight ?? 1}" loading="lazy">` : ""}<div><h2>${escapeText(entry.title)}</h2><p>${escapeText(entry.brand)}</p><strong>${money.format(entry.priceMin / 100)}</strong></div></a></article>`,
+              )
+              .join("")}</div>`;
+          })
+          .catch(() => {
+            searchResults.innerHTML =
+              '<p role="alert">No se pudo cargar la búsqueda. Intentá nuevamente.</p>';
+          });
+        window.addEventListener("pagehide", () => controller.abort(), { once: true });
+      }
     }
   }
+
+  searchInput?.addEventListener("keydown", (event) => {
+    if (event.key !== "ArrowDown") return;
+    const firstResult = searchResults?.querySelector<HTMLElement>(".solara-search-result a");
+    if (!firstResult) return;
+    event.preventDefault();
+    firstResult.focus();
+  });
+  searchResults?.addEventListener("keydown", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement) || !target.matches(".solara-search-result a")) return;
+    const links = Array.from(
+      searchResults.querySelectorAll<HTMLElement>(".solara-search-result a"),
+    );
+    const currentIndex = links.indexOf(target);
+    if (event.key === "ArrowDown" && links[currentIndex + 1]) {
+      event.preventDefault();
+      links[currentIndex + 1]?.focus();
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      (links[currentIndex - 1] ?? searchInput)?.focus();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      searchInput?.focus();
+    }
+  });
 
   document.querySelectorAll<HTMLSelectElement>("[data-category-sort]").forEach((sort) => {
     const scope = sort.closest<HTMLElement>("main");
     const grid = scope?.querySelector<HTMLElement>("[data-category-grid]");
     const availableOnly = scope?.querySelector<HTMLInputElement>("[data-category-available]");
+    const tagFilter = scope?.querySelector<HTMLSelectElement>("[data-category-tag]");
+    const minPrice = scope?.querySelector<HTMLInputElement>("[data-category-min-price]");
+    const maxPrice = scope?.querySelector<HTMLInputElement>("[data-category-max-price]");
     const resultCount = scope?.querySelector<HTMLElement>("[data-category-result-count]");
     if (!grid) return;
     const cards = Array.from(grid.querySelectorAll<HTMLElement>("[data-product-card]"));
+    const filterEmpty = document.createElement("p");
+    filterEmpty.className = "solara-empty-state";
+    filterEmpty.textContent = "No hay productos que coincidan con estos filtros.";
+    filterEmpty.hidden = true;
+    grid.insertAdjacentElement("afterend", filterEmpty);
     const render = (): void => {
-      const visible = cards.filter(
-        (card) => !availableOnly?.checked || card.dataset.productAvailable === "true",
-      );
+      const visible = cards.filter((card) => {
+        const price = Number(card.dataset.productPrice ?? "0");
+        const min = Number(minPrice?.value ?? "") * 100;
+        const max = Number(maxPrice?.value ?? "") * 100;
+        const selectedTag = tagFilter?.value.trim().toLocaleLowerCase("es-AR") ?? "";
+        const tags =
+          `${card.dataset.productTags ?? ""} ${card.dataset.productVariants ?? ""}`.toLocaleLowerCase(
+            "es-AR",
+          );
+        return (
+          (!availableOnly?.checked || card.dataset.productAvailable === "true") &&
+          (!selectedTag || tags.includes(selectedTag)) &&
+          (!minPrice?.value || price >= min) &&
+          (!maxPrice?.value || price <= max)
+        );
+      });
       const sorted = [...visible];
       if (sort.value === "price-asc" || sort.value === "price-desc") {
         sorted.sort((left, right) => {
@@ -668,10 +865,14 @@ function storefrontBoot(): void {
       cards.forEach((card) => {
         card.hidden = !visible.includes(card);
       });
+      filterEmpty.hidden = visible.length > 0;
       if (resultCount) resultCount.textContent = `${visible.length} productos`;
     };
     sort.addEventListener("change", render);
     availableOnly?.addEventListener("change", render);
+    tagFilter?.addEventListener("change", render);
+    minPrice?.addEventListener("input", render);
+    maxPrice?.addEventListener("input", render);
   });
 
   const queryVariant = new URLSearchParams(window.location.search).get("variant");
@@ -787,11 +988,25 @@ export const STOREFRONT_RUNTIME_CSS = `
 
 .solara-cart-line {
   display: grid;
-  grid-template-columns: 1fr 4rem auto;
+  grid-template-columns: minmax(0, 1fr) 4rem auto auto;
   align-items: center;
   gap: 1rem;
   padding-block: 1rem;
   border-bottom: 1px solid var(--solara-border);
+}
+
+.solara-cart-line button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--solara-muted);
+  cursor: pointer;
+  font-size: 0.78rem;
+  text-decoration: underline;
+}
+
+.solara-cart-line button:hover {
+  color: var(--solara-text);
 }
 
 .solara-cart-line > div:first-child {
@@ -821,6 +1036,18 @@ export const STOREFRONT_RUNTIME_CSS = `
 .solara-cart-line input {
   width: 100%;
   min-height: 2.5rem;
+}
+
+@media (max-width: 520px) {
+  .solara-cart-line {
+    grid-template-columns: minmax(0, 1fr) 4rem;
+  }
+
+  .solara-cart-line > button,
+  .solara-cart-line > span:last-child {
+    grid-column: 2;
+    justify-self: end;
+  }
 }
 
 html[data-motion-ready="true"] [data-motion-root]:not([data-motion-preset="none"]):not([data-motion-visible="true"]) [data-motion-zone] {

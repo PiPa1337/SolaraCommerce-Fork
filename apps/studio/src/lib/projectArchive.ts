@@ -67,7 +67,9 @@ export function readProjectArchive(input: Uint8Array): StoreProjectV2 {
     throw new Error("El manifest del respaldo está corrupto.");
   }
   if (manifest.format !== "solara-project" || manifest.version !== 2) {
-    throw new Error("La versión del archivo Solara no es compatible con esta versión de Studio.");
+    throw new Error(
+      "Este respaldo pertenece a una version anterior y no es compatible. Conserva el ZIP original y crea una nueva tienda con el sistema actual.",
+    );
   }
 
   let project: unknown;

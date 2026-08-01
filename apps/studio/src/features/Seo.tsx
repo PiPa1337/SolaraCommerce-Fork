@@ -99,6 +99,33 @@ export function Seo({
           </Field>
         </fieldset>
 
+        <fieldset>
+          <legend>Imagen social</legend>
+          <Field
+            label="Recurso para compartir"
+            hint="Se usa para Open Graph y compartir la tienda."
+          >
+            <select
+              value={project.seo.socialImageId ?? ""}
+              onChange={(event) =>
+                commit({
+                  ...project.seo,
+                  socialImageId: event.target.value
+                    ? (event.target.value as StoreProjectV1["assets"][number]["id"])
+                    : undefined,
+                })
+              }
+            >
+              <option value="">Usar la primera imagen disponible</option>
+              {project.assets.map((asset) => (
+                <option key={asset.id} value={asset.id}>
+                  {asset.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </fieldset>
+
         <div className="audit-panel">
           <header>
             <div>

@@ -55,3 +55,29 @@ editorial. Studio, preview y ZIP siguen usando el mismo renderer.
 Auditar manualmente las composiciones del nuevo storefront, añadir escenarios
 Playwright específicos de navbar, hero audiovisual y páginas públicas, y luego
 pasar el gate release con Lighthouse, axe y Firefox/WebKit.
+
+## Cierre de la integracion v2
+
+La integracion actual tambien cubre el selector de rutas del preview, la
+edicion de Home, Nosotros y Contacto desde el constructor, el ordenamiento de
+enlaces del navbar, y la visibilidad configurable del shell. Preview y ZIP
+comparten las mismas secciones, estilos deduplicados y metadatos audiovisuales.
+
+El storefront incluye galeria de producto, filtros client-side de categoria,
+productos relacionados, estados vacios, foco restaurado en carrito y menu,
+trampa de foco, Escape, navegacion por teclado y validacion de media y destinos
+internos antes de exportar.
+
+El gate local final verificado para este cambio es:
+
+```text
+corepack pnpm check
+corepack pnpm build
+corepack pnpm check:budgets
+corepack pnpm benchmark:export
+corepack pnpm pilot:preflight
+corepack pnpm test:e2e
+```
+
+La matriz release con Firefox/WebKit requiere Node 22 en CI; este entorno local
+usa Node 24 y por eso no se presenta como una ejecucion release exitosa.

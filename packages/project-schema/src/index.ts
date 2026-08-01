@@ -402,8 +402,9 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
     "ID de video",
     context,
   );
+  const editablePageSections = project.pages.flatMap((page) => page.sections);
   addDuplicateIssues(
-    project.sections.map((section) => section.id),
+    [...project.sections, ...editablePageSections].map((section) => section.id),
     ["sections"],
     "ID de sección",
     context,
@@ -416,7 +417,7 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
 
   const categoryIds = new Set(project.categories.map((category) => category.id));
   const collectionIds = new Set(project.collections.map((collection) => collection.id));
-  const assetIds = new Set(project.assets.map((asset) => asset.id));
+  const assetIds = new Set<string>(project.assets.map((asset) => asset.id));
   const mediaIds = new Set([...assetIds, ...project.videos.map((asset) => asset.id)]);
 
   project.products.forEach((product, productIndex) => {
@@ -498,6 +499,59 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
     }
   });
 
+  const validateSectionMedia = (
+    section: z.infer<typeof StoreSectionSchema>,
+    path: Array<string | number>,
+  ): void => {
+    const settings = section.settings;
+    for (const key of ["imageId", "posterAssetId"]) {
+      const value = settings[key];
+      if (typeof value === "string" && value.length > 0) {
+        addMissingReferenceIssue(
+          assetIds.has(value),
+          [...path, "settings", key],
+          `Recurso de la secciÃ³n ${section.id}`,
+          value,
+          context,
+        );
+      }
+    }
+    const videoId = settings.videoAssetId;
+    if (typeof videoId === "string" && videoId.length > 0) {
+      addMissingReferenceIssue(
+        project.videos.some((video) => video.id === videoId),
+        [...path, "settings", "videoAssetId"],
+        `Video de la secciÃ³n ${section.id}`,
+        videoId,
+        context,
+      );
+    }
+    const slides = settings.slides;
+    if (Array.isArray(slides)) {
+      slides.forEach((slide, slideIndex) => {
+        if (typeof slide !== "object" || slide === null) return;
+        const imageId = (slide as { imageId?: unknown }).imageId;
+        if (typeof imageId !== "string" || imageId.length === 0) return;
+        addMissingReferenceIssue(
+          assetIds.has(imageId),
+          [...path, "settings", "slides", slideIndex, "imageId"],
+          `Imagen del slide de la secciÃ³n ${section.id}`,
+          imageId,
+          context,
+        );
+      });
+    }
+  };
+
+  project.sections.forEach((section, sectionIndex) => {
+    validateSectionMedia(section, ["sections", sectionIndex]);
+  });
+  project.pages.forEach((page, pageIndex) => {
+    page.sections.forEach((section, sectionIndex) => {
+      validateSectionMedia(section, ["pages", pageIndex, "sections", sectionIndex]);
+    });
+  });
+
   const validateNavigation = (
     items: readonly z.infer<typeof NavigationItemSchema>[],
     path: Array<string | number>,
@@ -537,15 +591,18 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
   const knownCollectionSlugs = new Set<string>(
     project.collections.map((collection) => collection.slug),
   );
-  const knownProductSlugs = new Set<string>(project.products.map((product) => product.slug));
+  const knownProductSlugs = new Set<string>(
+    project.products
+      .filter((product) => product.status === "active")
+      .map((product) => product.slug),
+  );
   const validInternalDestination = (href: string): boolean => {
     if (!href.startsWith("/") || href.startsWith("//")) return true;
     const pathname = href.split(/[?#]/, 1)[0] ?? "/";
-    if (
-      pathname === "/" ||
-      ["/contacto/", "/nosotros/", "/buscar/", "/carrito/", "/compra/"].includes(pathname)
-    )
-      return true;
+    if (pathname === "/" || pathname === "/contacto/" || pathname === "/nosotros/") return true;
+    if (pathname === "/buscar/") return project.commerceTemplates.search.enabled;
+    if (pathname === "/carrito/") return project.commerceTemplates.cart.enabled;
+    if (pathname === "/compra/") return project.commerceTemplates.checkout.enabled;
     if (["/envios/", "/devoluciones/", "/privacidad/", "/terminos/"].includes(pathname))
       return true;
     const categoryMatch = /^\/categorias\/([^/]+)\/$/.exec(pathname);
@@ -553,7 +610,12 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
     const collectionMatch = /^\/colecciones\/([^/]+)\/$/.exec(pathname);
     if (collectionMatch?.[1] && knownCollectionSlugs.has(collectionMatch[1])) return true;
     const productMatch = /^\/productos\/([^/]+)\/$/.exec(pathname);
-    if (productMatch?.[1] && knownProductSlugs.has(productMatch[1])) return true;
+    if (productMatch?.[1] && knownProductSlugs.has(productMatch[1])) {
+      const variantId = new URLSearchParams(href.split("?")[1] ?? "").get("variant");
+      if (!variantId) return true;
+      const product = project.products.find((candidate) => candidate.slug === productMatch[1]);
+      return Boolean(product?.variants.some((variant) => variant.id === variantId));
+    }
     return pathname === "/paginas/" || [...knownPageSlugs].some((slug) => pathname === `/${slug}/`);
   };
   const allNavigationIds = project.navigation.items.flatMap((item) => [

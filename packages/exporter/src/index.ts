@@ -103,7 +103,8 @@ interface PageDescriptor {
     | "search"
     | "cart"
     | "checkout"
-    | "legal";
+    | "legal"
+    | "not-found";
   body: string;
   structuredData: unknown[];
   image?: string;
@@ -363,6 +364,80 @@ button, input, select, textarea, a { outline-offset: 3px; }
 `.trim();
 }
 
+function shellSectionEnabled(project: StoreProjectV1, section: StoreSection): boolean {
+  if (section.slot === "announcement") return project.siteShell.announcement;
+  if (section.slot === "header") return project.siteShell.header;
+  if (section.slot === "footer") return project.siteShell.footer;
+  if (section.slot === "cart") return project.siteShell.cart;
+  return true;
+}
+
+function activeProjectSections(
+  project: StoreProjectV1,
+  sections: readonly StoreSection[],
+): StoreSection[] {
+  return sections.filter((section) => shellSectionEnabled(project, section));
+}
+
+function publicMediaUsage(project: StoreProjectV1): {
+  assetIds: Set<string>;
+  videoIds: Set<string>;
+} {
+  const assetIds = new Set<string>();
+  const videoIds = new Set<string>();
+  const knownAssetIds = new Set<string>(project.assets.map((asset) => asset.id));
+  const knownVideoIds = new Set<string>(project.videos.map((video) => video.id));
+  const addValue = (value: unknown): void => {
+    if (typeof value !== "string") return;
+    if (knownAssetIds.has(value)) assetIds.add(value);
+    if (knownVideoIds.has(value)) videoIds.add(value);
+  };
+  const scan = (value: unknown): void => {
+    if (typeof value === "string") {
+      addValue(value);
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach(scan);
+      return;
+    }
+    if (typeof value === "object" && value !== null) {
+      Object.values(value).forEach(scan);
+    }
+  };
+
+  addValue(project.identity.logoAssetId);
+  addValue(project.seo.socialImageId);
+  project.products.forEach((product) => {
+    product.imageIds.forEach(addValue);
+    product.variants.forEach((variant) => {
+      addValue(variant.imageId);
+    });
+  });
+  project.categories.forEach((category) => {
+    addValue(category.imageId);
+  });
+  project.collections.forEach((collection) => {
+    addValue(collection.imageId);
+  });
+  [...project.sections, ...project.pages.flatMap((page) => page.sections)]
+    .filter((section) => section.enabled && shellSectionEnabled(project, section))
+    .forEach((section) => {
+      scan(section.settings);
+    });
+
+  project.videos.forEach((video) => {
+    if (videoIds.has(video.id)) addValue(video.posterAssetId);
+  });
+  if (project.assets[0]) assetIds.add(project.assets[0].id);
+  return { assetIds, videoIds };
+}
+
+function effectiveHomeSections(project: StoreProjectV1): readonly StoreSection[] {
+  const home = project.pages.find((page) => page.kind === "home");
+  return home?.sections.length ? home.sections : project.sections;
+}
+
 function renderProjectSections(
   project: StoreProjectV1,
   sections: StoreSection[],
@@ -371,15 +446,20 @@ function renderProjectSections(
     product?: Product;
     category?: Category;
     collection?: StoreProjectV1["collections"][number];
+    products?: readonly Product[];
   },
 ): string {
-  const modulePageType = pageContext.pageType === "legal" ? "content" : pageContext.pageType;
+  const modulePageType =
+    pageContext.pageType === "legal" || pageContext.pageType === "not-found"
+      ? "content"
+      : pageContext.pageType;
   return String(
-    renderSections(project, sections, {
+    renderSections(project, activeProjectSections(project, sections), {
       pageType: modulePageType,
       ...(pageContext.product ? { product: pageContext.product } : {}),
       ...(pageContext.category ? { category: pageContext.category } : {}),
       ...(pageContext.collection ? { collection: pageContext.collection } : {}),
+      ...(pageContext.products ? { products: pageContext.products } : {}),
     }),
   );
 }
@@ -403,8 +483,17 @@ function moduleStylesForSections(
 }
 
 function exportedModuleStyles(project: StoreProjectV1): string {
+  const pageSections = project.pages.flatMap((page) => page.sections);
   return moduleStylesForSections(
-    project.sections,
+    activeProjectSections(project, [...project.sections, ...pageSections]),
+    project.products.some((product) => product.status === "active") ? ["product-detail"] : [],
+  );
+}
+
+function previewModuleStyles(project: StoreProjectV1): string {
+  const pageSections = project.pages.flatMap((page) => page.sections);
+  return moduleStylesForSections(
+    activeProjectSections(project, [...project.sections, ...pageSections]),
     project.products.some((product) => product.status === "active") ? ["product-detail"] : [],
   );
 }
@@ -444,10 +533,16 @@ function productDetailSection(project: StoreProjectV1, product: Product): string
 
 function storeStructuredData(project: StoreProjectV1): unknown[] {
   const logo = imageUrl(project, project.identity.logoAssetId);
-  const hero = project.sections.find((section) => section.slot === "hero" && section.enabled);
+  const hero = effectiveHomeSections(project).find(
+    (section) => section.slot === "hero" && section.enabled,
+  );
   const heroVideoId =
     typeof hero?.settings.videoAssetId === "string" ? hero.settings.videoAssetId : undefined;
   const heroVideo = videoFor(project, heroVideoId);
+  const heroPosterId =
+    typeof hero?.settings.posterAssetId === "string"
+      ? hero.settings.posterAssetId
+      : heroVideo?.posterAssetId;
   const structured: unknown[] = [
     {
       "@context": "https://schema.org",
@@ -463,7 +558,7 @@ function storeStructuredData(project: StoreProjectV1): unknown[] {
       legalName: project.identity.legalName,
       url: normalizeBaseUrl(project.baseUrl),
       description: project.identity.description,
-      ...(logo ? { logo } : {}),
+      ...(logo ? { logo: absoluteResourceUrl(project, logo) } : {}),
       email: project.identity.email || undefined,
       telephone: project.identity.phone,
       address: project.identity.address,
@@ -483,12 +578,9 @@ function storeStructuredData(project: StoreProjectV1): unknown[] {
       name: heroVideo.name,
       description: heroVideo.alt || heroVideo.name,
       contentUrl: absoluteResourceUrl(project, videoUrl(project, heroVideo.id) ?? ""),
-      ...(heroVideo.posterAssetId
+      ...(heroPosterId
         ? {
-            thumbnailUrl: absoluteResourceUrl(
-              project,
-              imageUrl(project, heroVideo.posterAssetId) ?? "",
-            ),
+            thumbnailUrl: absoluteResourceUrl(project, imageUrl(project, heroPosterId) ?? ""),
           }
         : {}),
       duration: `PT${Math.round(heroVideo.durationSeconds)}S`,
@@ -622,6 +714,7 @@ function productStructuredData(
 
 function renderDocument(project: StoreProjectV1, page: PageDescriptor, mode: ExportMode): string {
   const canonical = absoluteUrl(project, page.canonicalPath);
+  const socialImage = page.image ? absoluteResourceUrl(project, page.image) : undefined;
   const robots = mode === "draft" ? "noindex,nofollow" : "index,follow,max-image-preview:large";
   const verification = [
     project.seo.searchConsoleVerification
@@ -655,7 +748,7 @@ function renderDocument(project: StoreProjectV1, page: PageDescriptor, mode: Exp
   <meta property="og:title" content="${escapeHtml(page.title)}">
   <meta property="og:description" content="${escapeHtml(page.description)}">
   <meta property="og:url" content="${escapeHtml(canonical)}">
-  ${page.image ? `<meta property="og:image" content="${escapeHtml(page.image)}">` : ""}
+  ${socialImage ? `<meta property="og:image" content="${escapeHtml(socialImage)}">` : ""}
   ${verification}
   <link rel="stylesheet" href="/assets/storefront.css">
   ${structuredData}
@@ -717,17 +810,32 @@ function buildPages(
     for (let offset = 0; offset < Math.max(products.length, 1); offset += pageSize) {
       const pageNumber = Math.floor(offset / pageSize) + 1;
       const paginated = products.slice(offset, offset + pageSize);
-      const categorySections = project.sections.filter((section) => section.slot === "catalog");
+      const categoryAsset = imageFor(project, category.imageId);
+      const categoryImage = imageUrl(project, category.imageId);
+      const categoryMedia =
+        categoryAsset && categoryImage
+          ? `<img src="${escapeAttribute(categoryImage)}" alt="${escapeAttribute(categoryAsset.alt || category.title)}" width="${categoryAsset.width}" height="${categoryAsset.height}" loading="eager">`
+          : "";
+      const categorySections = project.sections.filter(
+        (section) =>
+          section.slot === "catalog" &&
+          ["editorial-product-grid", "compact-product-grid"].includes(section.moduleId),
+      );
+      const filterTags = [...new Set(paginated.flatMap((product) => product.tags))].slice(0, 12);
+      const tagOptions = filterTags
+        .map((tag) => `<option value="${escapeAttribute(tag)}">${escapeHtml(tag)}</option>`)
+        .join("");
       const body = [
         renderProjectSections(project, sharedHeader, { pageType: "category", category }),
         `<main class="solara-container">
-          <header>
+          <header class="solara-category-hero">
             <h1>${escapeHtml(category.title)}</h1>
             <p>${escapeHtml(category.description)}</p>
+            ${categoryMedia}
           </header>
           <div class="solara-category-toolbar" data-category-toolbar>
             <span data-category-result-count>${paginated.length} productos</span>
-            <details><summary>Filtrar</summary><label><input type="checkbox" data-category-available> Sólo disponibles</label></details>
+            <details><summary>Filtrar</summary><div><label><input type="checkbox" data-category-available> Sólo disponibles</label><label>Etiqueta <select data-category-tag><option value="">Todas</option>${tagOptions}</select></label><label>Precio mínimo <input type="number" min="0" step="1" data-category-min-price inputmode="decimal"></label><label>Precio máximo <input type="number" min="0" step="1" data-category-max-price inputmode="decimal"></label></div></details>
             <label>Ordenar <select data-category-sort><option value="recommended">Recomendados</option><option value="price-asc">Precio menor</option><option value="price-desc">Precio mayor</option><option value="name">Nombre</option></select></label>
           </div>
           ${renderProjectSections(project, categorySections, {
@@ -742,8 +850,6 @@ function buildPages(
         pageNumber === 1
           ? `/categorias/${category.slug}/`
           : `/categorias/${category.slug}/pagina/${pageNumber}/`;
-      const categoryImage = imageUrl(project, category.imageId);
-
       pages.push({
         path:
           pageNumber === 1
@@ -778,7 +884,11 @@ function buildPages(
     for (let offset = 0; offset < Math.max(products.length, 1); offset += pageSize) {
       const pageNumber = Math.floor(offset / pageSize) + 1;
       const paginated = products.slice(offset, offset + pageSize);
-      const collectionSections = project.sections.filter((section) => section.slot === "catalog");
+      const collectionSections = project.sections.filter(
+        (section) =>
+          section.slot === "catalog" &&
+          ["editorial-product-grid", "compact-product-grid"].includes(section.moduleId),
+      );
       const body = [
         renderProjectSections(project, sharedHeader, { pageType: "collection", collection }),
         `<main class="solara-container">
@@ -825,9 +935,28 @@ function buildPages(
     .filter((product) => product.status === "active")
     .map((product): PageDescriptor => {
       const productImage = imageUrl(project, product.imageIds[0]);
+      const relatedProducts = project.products
+        .filter(
+          (candidate) =>
+            candidate.status === "active" &&
+            candidate.id !== product.id &&
+            (candidate.categoryIds.some((id) => product.categoryIds.includes(id)) ||
+              candidate.collectionIds.some((id) => product.collectionIds.includes(id))),
+        )
+        .slice(0, 4);
+      const relatedSections = project.commerceTemplates.product.showRelated
+        ? project.sections.filter(
+            (section) =>
+              section.slot === "catalog" &&
+              ["editorial-product-grid", "compact-product-grid"].includes(section.moduleId),
+          )
+        : [];
       const body = [
         renderProjectSections(project, sharedHeader, { pageType: "product", product }),
         `<main>${productDetailSection(project, product)}</main>`,
+        relatedProducts.length && relatedSections.length
+          ? `<section class="solara-related-products"><div class="solara-container"><h2>También puede interesarte</h2>${renderProjectSections(project, relatedSections, { pageType: "product", products: relatedProducts })}</div></section>`
+          : "",
         renderProjectSections(project, sharedFooter, { pageType: "product", product }),
       ].join("");
       return {
@@ -955,6 +1084,16 @@ function buildPages(
     structuredData: [],
   };
 
+  const notFoundPage: PageDescriptor = {
+    path: "404.html",
+    title: `Página no encontrada | ${project.identity.brandName}`,
+    description: "La página que buscás no existe.",
+    canonicalPath: "/404.html",
+    pageType: "not-found",
+    body: `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container solara-error-page"><p class="solara-eyebrow">404</p><h1>No encontramos esa página.</h1><p>Podés volver al inicio o explorar nuestras colecciones.</p><a class="solara-primary-action" href="/">Volver al inicio</a></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
+    structuredData: [],
+  };
+
   const legalPages: PageDescriptor[] = [
     {
       path: "envios/index.html",
@@ -998,9 +1137,10 @@ function buildPages(
     home,
     aboutPage,
     contactPage,
-    searchPage,
-    cartPage,
-    checkoutPage,
+    ...(project.commerceTemplates.search.enabled ? [searchPage] : []),
+    ...(project.commerceTemplates.cart.enabled ? [cartPage] : []),
+    ...(project.commerceTemplates.checkout.enabled ? [checkoutPage] : []),
+    notFoundPage,
     ...categories,
     ...collections,
     ...products,
@@ -1013,7 +1153,7 @@ function buildPages(
 
 function buildSitemap(project: StoreProjectV1, pages: PageDescriptor[]): string {
   const urls = pages
-    .filter((page) => !["search", "cart", "checkout"].includes(page.pageType))
+    .filter((page) => !["search", "cart", "checkout", "not-found"].includes(page.pageType))
     .map(
       (page) => `<url>
   <loc>${escapeXml(absoluteUrl(project, page.canonicalPath))}</loc>
@@ -1028,19 +1168,53 @@ ${urls.join("\n")}
 }
 
 function buildImageSitemap(project: StoreProjectV1): string {
-  const urls = project.products
+  const byPage = new Map<string, Array<{ url: string; caption: string }>>();
+  const add = (pagePath: string, url: string | undefined, caption: string): void => {
+    if (!url) return;
+    const entries = byPage.get(pagePath) ?? [];
+    if (!entries.some((entry) => entry.url === url)) entries.push({ url, caption });
+    byPage.set(pagePath, entries);
+  };
+  project.products
     .filter((product) => product.status === "active")
-    .flatMap((product) =>
-      productImagePaths(project, product).map(
-        (url) => `<url>
-  <loc>${escapeXml(absoluteUrl(project, `/productos/${product.slug}/`))}</loc>
-  <image:image>
-    <image:loc>${escapeXml(absoluteResourceUrl(project, url))}</image:loc>
-    <image:caption>${escapeXml(product.title)}</image:caption>
-  </image:image>
-</url>`,
-      ),
+    .forEach((product) => {
+      productImagePaths(project, product).forEach((url) => {
+        add(`/productos/${product.slug}/`, url, product.title);
+      });
+    });
+  project.categories.forEach((category) => {
+    add(`/categorias/${category.slug}/`, imageUrl(project, category.imageId), category.title);
+  });
+  project.collections.forEach((collection) => {
+    add(
+      `/colecciones/${collection.slug}/`,
+      imageUrl(project, collection.imageId),
+      collection.title,
     );
+  });
+  const homeHero = effectiveHomeSections(project).find(
+    (section) => section.slot === "hero" && section.enabled,
+  );
+  const homeImage =
+    (typeof homeHero?.settings.posterAssetId === "string"
+      ? imageUrl(project, homeHero.settings.posterAssetId)
+      : undefined) ??
+    imageUrl(project, project.seo.socialImageId) ??
+    imageUrl(project, project.assets[0]?.id);
+  add("/", homeImage, project.identity.brandName);
+  const urls = [...byPage.entries()].map(
+    ([pagePath, entries]) => `<url>
+  <loc>${escapeXml(absoluteUrl(project, pagePath))}</loc>
+  ${entries
+    .map(
+      (entry) => `<image:image>
+    <image:loc>${escapeXml(absoluteResourceUrl(project, entry.url))}</image:loc>
+    <image:caption>${escapeXml(entry.caption)}</image:caption>
+  </image:image>`,
+    )
+    .join("\n  ")}
+</url>`,
+  );
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${urls.join("\n")}
@@ -1048,14 +1222,20 @@ ${urls.join("\n")}
 }
 
 function buildVideoSitemap(project: StoreProjectV1): string {
-  const hero = project.sections.find((section) => section.slot === "hero" && section.enabled);
+  const hero = effectiveHomeSections(project).find(
+    (section) => section.slot === "hero" && section.enabled,
+  );
   const videoId =
     typeof hero?.settings.videoAssetId === "string" ? hero.settings.videoAssetId : undefined;
   const video = videoFor(project, videoId);
   if (!video) {
     return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"></urlset>`;
   }
-  const poster = imageUrl(project, video.posterAssetId);
+  const poster =
+    imageUrl(project, video.posterAssetId) ??
+    (typeof hero?.settings.posterAssetId === "string"
+      ? imageUrl(project, hero.settings.posterAssetId)
+      : undefined);
   const content = videoUrl(project, video.id);
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
@@ -1111,6 +1291,7 @@ function buildSearchIndex(project: StoreProjectV1): string {
     .map((product) => {
       const prices = product.variants.map((variant) => variant.price);
       const image = imageUrl(project, product.imageIds[0]);
+      const imageAsset = imageFor(project, product.imageIds[0]);
       return {
         id: product.id,
         slug: product.slug,
@@ -1120,7 +1301,14 @@ function buildSearchIndex(project: StoreProjectV1): string {
         tags: product.tags,
         categoryIds: product.categoryIds,
         collectionIds: product.collectionIds,
+        categoryNames: product.categoryIds
+          .map((id) => project.categories.find((category) => category.id === id)?.title)
+          .filter((value): value is string => Boolean(value)),
+        collectionNames: product.collectionIds
+          .map((id) => project.collections.find((collection) => collection.id === id)?.title)
+          .filter((value): value is string => Boolean(value)),
         ...(image ? { imageUrl: image } : {}),
+        ...(imageAsset ? { imageWidth: imageAsset.width, imageHeight: imageAsset.height } : {}),
         priceMin: Math.min(...prices),
         available: product.variants.some((variant) => variant.available),
         path: `/productos/${product.slug}/`,
@@ -1133,18 +1321,21 @@ function buildCatalogIndex(project: StoreProjectV1): string {
   const entries = project.products
     .filter((product) => product.status === "active")
     .flatMap((product) =>
-      product.variants.map((variant) => ({
-        productId: product.id,
-        variantId: variant.id,
-        title: product.title,
-        variantTitle: variant.title,
-        sku: variant.sku,
-        price: variant.price,
-        available: variant.available,
-        ...(imageUrl(project, variant.imageId ?? product.imageIds[0])
-          ? { imageUrl: imageUrl(project, variant.imageId ?? product.imageIds[0]) }
-          : {}),
-      })),
+      product.variants.map((variant) => {
+        const asset = imageFor(project, variant.imageId ?? product.imageIds[0]);
+        const image = imageUrl(project, variant.imageId ?? product.imageIds[0]);
+        return {
+          productId: product.id,
+          variantId: variant.id,
+          title: product.title,
+          variantTitle: variant.title,
+          sku: variant.sku,
+          price: variant.price,
+          available: variant.available,
+          ...(image ? { imageUrl: image } : {}),
+          ...(asset ? { imageWidth: asset.width, imageHeight: asset.height } : {}),
+        };
+      }),
     );
   return JSON.stringify(entries);
 }
@@ -1231,12 +1422,31 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
   });
 
   project.videos.forEach((video, videoIndex) => {
-    if (!video.posterAssetId) {
+    const heroPoster = effectiveHomeSections(project).some(
+      (section) =>
+        section.enabled &&
+        section.slot === "hero" &&
+        section.settings.videoAssetId === video.id &&
+        typeof section.settings.posterAssetId === "string" &&
+        section.settings.posterAssetId.length > 0,
+    );
+    if (!video.posterAssetId && !heroPoster) {
       issues.push({
         code: "video.poster",
         severity: "critical",
         message: `${video.name} necesita un poster para mantener un primer paint estable.`,
         path: `videos.${videoIndex}.posterAssetId`,
+        area: "content",
+        fixTarget: "assets",
+      });
+    }
+    const videoBytes = dataUrlBytes(video.source);
+    if (videoBytes && videoBytes.byteLength > 30 * 1024 * 1024) {
+      issues.push({
+        code: "video.size",
+        severity: "critical",
+        message: `${video.name} supera el lÃ­mite inicial de 30 MB.`,
+        path: `videos.${videoIndex}.source`,
         area: "content",
         fixTarget: "assets",
       });
@@ -1437,6 +1647,7 @@ export function auditReport(project: StoreProjectV1): AuditReport {
 
 function buildFiles(project: StoreProjectV1, mode: ExportMode): Map<string, string | Uint8Array> {
   const publicProject = projectWithPublicAssetUrls(project);
+  const mediaUsage = publicMediaUsage(project);
   const snapshot = buildCommerceSnapshot(publicProject);
   const pages = buildPages(publicProject, snapshot);
   const files = new Map<string, string | Uint8Array>();
@@ -1464,7 +1675,7 @@ function buildFiles(project: StoreProjectV1, mode: ExportMode): Map<string, stri
   if (mode === "production") {
     files.set("sitemap.xml", buildSitemap(publicProject, pages));
     files.set("image-sitemap.xml", buildImageSitemap(publicProject));
-    if (publicProject.videos.length > 0)
+    if (mediaUsage.videoIds.size > 0)
       files.set("video-sitemap.xml", buildVideoSitemap(publicProject));
   }
   if (mode === "production") {
@@ -1480,30 +1691,34 @@ function buildFiles(project: StoreProjectV1, mode: ExportMode): Map<string, stri
     );
   }
 
-  project.assets.forEach((asset) => {
-    const bytes = dataUrlBytes(asset.source);
-    if (bytes) files.set(publicAssetPath(asset, "primary", asset.source).slice(1), bytes);
-    const fallbackBytes = asset.fallbackSource ? dataUrlBytes(asset.fallbackSource) : undefined;
-    if (fallbackBytes) {
-      files.set(
-        publicAssetPath(asset, "fallback", asset.fallbackSource ?? "").slice(1),
-        fallbackBytes,
-      );
-    }
-    asset.responsiveSources?.forEach((source) => {
-      const responsiveBytes = dataUrlBytes(source.source);
-      if (responsiveBytes) {
+  project.assets
+    .filter((asset) => mediaUsage.assetIds.has(asset.id))
+    .forEach((asset) => {
+      const bytes = dataUrlBytes(asset.source);
+      if (bytes) files.set(publicAssetPath(asset, "primary", asset.source).slice(1), bytes);
+      const fallbackBytes = asset.fallbackSource ? dataUrlBytes(asset.fallbackSource) : undefined;
+      if (fallbackBytes) {
         files.set(
-          publicAssetPath(asset, "primary", source.source, source.width).slice(1),
-          responsiveBytes,
+          publicAssetPath(asset, "fallback", asset.fallbackSource ?? "").slice(1),
+          fallbackBytes,
         );
       }
+      asset.responsiveSources?.forEach((source) => {
+        const responsiveBytes = dataUrlBytes(source.source);
+        if (responsiveBytes) {
+          files.set(
+            publicAssetPath(asset, "primary", source.source, source.width).slice(1),
+            responsiveBytes,
+          );
+        }
+      });
     });
-  });
-  project.videos.forEach((video) => {
-    const bytes = dataUrlBytes(video.source);
-    if (bytes) files.set(`assets/${video.hash}.${assetExtension(video)}`, bytes);
-  });
+  project.videos
+    .filter((video) => mediaUsage.videoIds.has(video.id))
+    .forEach((video) => {
+      const bytes = dataUrlBytes(video.source);
+      if (bytes) files.set(`assets/${video.hash}.${assetExtension(video)}`, bytes);
+    });
   return files;
 }
 
@@ -1554,7 +1769,7 @@ export function renderPreviewHtml(
     .replace(
       "data:text/css;base64,PREVIEW_STYLE",
       `data:text/css;base64,${toBase64(
-        `${themeCss(project)}\n${moduleStylesForSections(project.sections)}\n${STOREFRONT_RUNTIME_CSS}`,
+        `${themeCss(project)}\n${previewModuleStyles(project)}\n${STOREFRONT_RUNTIME_CSS}`,
       )}`,
     );
 }

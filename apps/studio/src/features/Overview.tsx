@@ -1,6 +1,15 @@
-import { Globe, List, Storefront, Trash, WhatsappLogo } from "@phosphor-icons/react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Globe,
+  List,
+  Storefront,
+  Trash,
+  WhatsappLogo,
+} from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
-import { Field, SectionHeader } from "../components/Ui";
+import { type InputHTMLAttributes, useEffect, useState } from "react";
+import { Field, IconButton, SectionHeader } from "../components/Ui";
 
 export function Overview({
   project,
@@ -22,6 +31,32 @@ export function Overview({
         item.id === itemId ? { ...item, ...patch } : item,
       ),
     });
+  const moveNavigationItem = (itemId: string, delta: -1 | 1) => {
+    const index = project.navigation.items.findIndex((item) => item.id === itemId);
+    const target = index + delta;
+    if (index < 0 || target < 0 || target >= project.navigation.items.length) return;
+    const items = [...project.navigation.items];
+    const current = items[index];
+    const next = items[target];
+    if (!current || !next) return;
+    items[index] = next;
+    items[target] = current;
+    updateNavigation({ items });
+  };
+  const moveNavigationChild = (itemId: string, childId: string, delta: -1 | 1) => {
+    const parent = project.navigation.items.find((item) => item.id === itemId);
+    if (!parent?.children) return;
+    const index = parent.children.findIndex((child) => child.id === childId);
+    const target = index + delta;
+    if (index < 0 || target < 0 || target >= parent.children.length) return;
+    const children = [...parent.children];
+    const current = children[index];
+    const next = children[target];
+    if (!current || !next) return;
+    children[index] = next;
+    children[target] = current;
+    updateNavigationItem(itemId, { children });
+  };
   const updatePage = (pageId: string, patch: Partial<StoreProjectV1["pages"][number]>) =>
     commit({
       pages: project.pages.map((page) => (page.id === pageId ? { ...page, ...patch } : page)),
@@ -184,6 +219,27 @@ export function Overview({
                 </label>
               ))}
             </div>
+            <div className="navigation-switches field--wide">
+              {(
+                [
+                  ["announcement", "Mostrar barra informativa"],
+                  ["header", "Mostrar encabezado"],
+                  ["footer", "Mostrar pie"],
+                  ["cart", "Mostrar carrito lateral"],
+                ] as const
+              ).map(([key, label]) => (
+                <label className="check-field" key={key}>
+                  <input
+                    type="checkbox"
+                    checked={project.siteShell[key]}
+                    onChange={(event) =>
+                      commit({ siteShell: { ...project.siteShell, [key]: event.target.checked } })
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
             <div className="navigation-editor field--wide">
               {project.navigation.items.map((item, index) => (
                 <div className="navigation-editor-item" key={item.id}>
@@ -203,14 +259,26 @@ export function Overview({
                       />
                     </Field>
                     <Field label="Destino">
-                      <input
+                      <DraftInput
                         type="url"
                         value={item.href ?? ""}
-                        onChange={(event) =>
-                          updateNavigationItem(item.id, { href: event.target.value })
-                        }
+                        onCommit={(value) => updateNavigationItem(item.id, { href: value })}
                       />
                     </Field>
+                  </div>
+                  <div className="navigation-reorder">
+                    <IconButton
+                      icon={ArrowUp}
+                      label={`Mover ${item.label} arriba`}
+                      disabled={index === 0}
+                      onClick={() => moveNavigationItem(item.id, -1)}
+                    />
+                    <IconButton
+                      icon={ArrowDown}
+                      label={`Mover ${item.label} abajo`}
+                      disabled={index === project.navigation.items.length - 1}
+                      onClick={() => moveNavigationItem(item.id, 1)}
+                    />
                   </div>
                   <div className="navigation-children">
                     <span className="navigation-children-title">Subenlaces</span>
@@ -231,20 +299,32 @@ export function Overview({
                           />
                         </Field>
                         <Field label="Destino">
-                          <input
+                          <DraftInput
                             type="url"
                             value={child.href ?? ""}
-                            onChange={(event) =>
+                            onCommit={(value) =>
                               updateNavigationItem(item.id, {
                                 children: (item.children ?? []).map((current) =>
-                                  current.id === child.id
-                                    ? { ...current, href: event.target.value }
-                                    : current,
+                                  current.id === child.id ? { ...current, href: value } : current,
                                 ),
                               })
                             }
                           />
                         </Field>
+                        <div className="navigation-reorder">
+                          <IconButton
+                            icon={ArrowUp}
+                            label={`Mover ${child.label} arriba`}
+                            disabled={childIndex === 0}
+                            onClick={() => moveNavigationChild(item.id, child.id, -1)}
+                          />
+                          <IconButton
+                            icon={ArrowDown}
+                            label={`Mover ${child.label} abajo`}
+                            disabled={childIndex === (item.children?.length ?? 0) - 1}
+                            onClick={() => moveNavigationChild(item.id, child.id, 1)}
+                          />
+                        </div>
                         <button
                           className="icon-button"
                           type="button"
@@ -355,5 +435,31 @@ export function Overview({
         </fieldset>
       </div>
     </section>
+  );
+}
+
+function DraftInput({
+  value,
+  onCommit,
+  ...props
+}: Omit<InputHTMLAttributes<HTMLInputElement>, "value"> & {
+  value: string;
+  onCommit(value: string): void;
+}) {
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  return (
+    <input
+      {...props}
+      value={draft}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={() => {
+        if (draft !== value) onCommit(draft);
+      }}
+    />
   );
 }

@@ -141,10 +141,93 @@ describe("exporter", () => {
     expect(result.files.has("buscar/index.html")).toBe(true);
     expect(result.files.has("carrito/index.html")).toBe(true);
     expect(result.files.has("compra/index.html")).toBe(true);
+    expect(result.files.has("404.html")).toBe(true);
     expect(result.files.has("catalog-index.json")).toBe(true);
     expect(sitemap).not.toContain("/buscar/");
     expect(sitemap).not.toContain("/carrito/");
     expect(sitemap).not.toContain("/compra/");
+    expect(sitemap).not.toContain("/404.html");
+  });
+
+  it("respeta el shell desactivado y no incluye sus estilos", () => {
+    const project = {
+      ...referenceStore,
+      siteShell: {
+        ...referenceStore.siteShell,
+        announcement: false,
+        header: false,
+        footer: false,
+        cart: false,
+      },
+    };
+    const result = exportProject(project, { mode: "draft" });
+    const html = String(result.files.get("index.html"));
+    const css = String(result.files.get("assets/storefront.css"));
+
+    expect(html).not.toContain('data-solara-module="announcement-bar"');
+    expect(html).not.toContain('data-solara-module="editorial-header"');
+    expect(html).not.toContain('data-solara-module="cart-drawer"');
+    expect(html).not.toContain('data-solara-module="editorial-footer"');
+    expect(css).not.toContain('[data-solara-module="editorial-header"]');
+    expect(css).not.toContain('[data-solara-module="cart-drawer"]');
+  });
+
+  it("omite media que solo pertenece a una seccion deshabilitada", () => {
+    const baseAsset = referenceStore.assets[0];
+    if (!baseAsset) throw new Error("Fixture incompleto");
+    const unusedAsset = {
+      ...baseAsset,
+      id: "asset-disabled-hero" as typeof baseAsset.id,
+      name: "Poster deshabilitado",
+      source: "data:image/png;base64,AA==",
+      width: 1,
+      height: 1,
+      hash: "disabled-hero",
+    };
+    const project = {
+      ...referenceStore,
+      assets: [...referenceStore.assets, unusedAsset],
+      sections: referenceStore.sections.map((section) =>
+        section.slot === "hero"
+          ? {
+              ...section,
+              enabled: false,
+              settings: { ...section.settings, posterAssetId: unusedAsset.id },
+            }
+          : section,
+      ),
+    };
+    const result = exportProject(project, { mode: "draft" });
+
+    expect(result.files.has("assets/disabled-hero.png")).toBe(false);
+  });
+
+  it("renderiza rutas comerciales en el preview compartido", () => {
+    const category = renderPreviewHtml(referenceStore, "draft", "/categorias/textiles/");
+    const product = renderPreviewHtml(referenceStore, "draft", "/productos/manta-bruma/");
+
+    expect(category).toContain("Textiles");
+    expect(product).toContain("Manta Bruma");
+  });
+
+  it("incluye estilos de las secciones editoriales en preview y ZIP", () => {
+    const source = referenceStore.sections.find((section) => section.slot === "content");
+    if (!source) throw new Error("Fixture incompleto");
+    const project = {
+      ...referenceStore,
+      pages: referenceStore.pages.map((page) =>
+        page.kind === "about"
+          ? { ...page, sections: [{ ...structuredClone(source), id: "about-story" }] }
+          : page,
+      ),
+    } as typeof referenceStore;
+    const preview = renderPreviewHtml(project, "draft", "/nosotros/");
+    const exported = String(
+      exportProject(project, { mode: "draft" }).files.get("nosotros/index.html"),
+    );
+
+    expect(preview).toContain('data-solara-module="image-text-content"');
+    expect(exported).toContain('data-solara-module="image-text-content"');
   });
 
   it("mantiene el poster y el video audiovisual autocontenidos", () => {

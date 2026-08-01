@@ -122,5 +122,29 @@ describe("StoreProjectV2Schema", () => {
       if (item) item.href = "/categorias/no-existe/";
     });
     expect(() => StoreProjectV2Schema.parse(invalidNavigation)).toThrow("no existe en el proyecto");
+
+    const disabledTemplate = invalidProject((project) => {
+      project.commerceTemplates.search.enabled = false;
+      const item = project.navigation.items[0];
+      if (item) item.href = "/buscar/";
+    });
+    expect(() => StoreProjectV2Schema.parse(disabledTemplate)).toThrow("no existe en el proyecto");
+  });
+
+  it("rechaza referencias audiovisuales inexistentes en secciones editables", () => {
+    const invalidHero = invalidProject((project) => {
+      const hero = project.sections.find((section) => section.slot === "hero");
+      if (hero) hero.settings = { ...hero.settings, posterAssetId: "missing-poster" };
+    });
+    expect(() => StoreProjectV2Schema.parse(invalidHero)).toThrow("Recurso de la secciÃ³n");
+
+    const invalidPage = invalidProject((project) => {
+      const page = project.pages.find((candidate) => candidate.kind === "about");
+      const source = project.sections.find((section) => section.slot === "content");
+      if (page && source) {
+        page.sections = [{ ...structuredClone(source), settings: { imageId: "missing-image" } }];
+      }
+    });
+    expect(() => StoreProjectV2Schema.parse(invalidPage)).toThrow("Recurso de la secciÃ³n");
   });
 });

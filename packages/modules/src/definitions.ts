@@ -7,6 +7,7 @@ import {
   moduleRoot,
   renderImage,
   renderVideo,
+  safeAssetUrl,
   safeHtml,
   safeUrl,
   sanitizeRichText,
@@ -15,7 +16,6 @@ import type { AssetId } from "@solara/project-schema";
 import { z } from "zod";
 import {
   lowestPrice,
-  productImage,
   renderBrand,
   renderProductCards,
   scopedAssetId,
@@ -131,9 +131,11 @@ export const editorialHeader: ModuleDefinition<z.infer<typeof headerSettings>> =
     const cartCurrent = ["cart", "checkout"].includes(context.pageType)
       ? ' aria-current="page"'
       : "";
-    const catalog = `<details class="solara-nav-dropdown"><summary${catalogCurrent}>${escapeHtml(navigation.catalogLabel || context.settings.catalogLabel)}</summary><ul>${nestedItems || `<li><a href="${escapeAttribute(safeUrl(context.settings.catalogHref))}">${escapeHtml(context.settings.catalogLabel)}</a></li>`}</ul></details>`;
+    const catalog = context.settings.showCategories
+      ? `<details class="solara-nav-dropdown"><summary${catalogCurrent}>${escapeHtml(navigation.catalogLabel || context.settings.catalogLabel)}</summary><ul>${nestedItems || `<li><a href="${escapeAttribute(safeUrl(context.settings.catalogHref))}">${escapeHtml(context.settings.catalogLabel)}</a></li>`}</ul></details>`
+      : `<a href="${escapeAttribute(safeUrl(context.settings.catalogHref))}"${catalogCurrent}>${escapeHtml(navigation.catalogLabel || context.settings.catalogLabel)}</a>`;
     const nav = `${navigation.showHome ? `<a href="/"${homeCurrent}>Inicio</a>` : ""}${catalog}${navigation.showContact ? `<a href="/contacto/"${contactCurrent}>Contacto</a>` : ""}${navigation.showAbout ? `<a href="/nosotros/"${aboutCurrent}>Nosotros</a>` : ""}`;
-    const actions = `${navigation.showSearch ? `<a class="solara-search-trigger" href="/buscar/" aria-label="Buscar productos"${searchCurrent}>Buscar</a>` : ""}${navigation.showCart ? `<button class="solara-cart-trigger" type="button" data-solara-cart-open data-open-cart aria-controls="solara-cart"${cartCurrent}>${escapeHtml(context.settings.cartLabel)} <span data-solara-cart-count data-cart-count aria-live="polite">0</span></button>` : ""}`;
+    const actions = `${navigation.showSearch && context.project.commerceTemplates.search.enabled ? `<a class="solara-search-trigger" href="/buscar/" aria-label="Buscar productos"${searchCurrent}>Buscar</a>` : ""}${navigation.showCart && context.project.siteShell.cart && (context.project.commerceTemplates.cart.enabled || context.project.commerceTemplates.checkout.enabled) ? `<button class="solara-cart-trigger" type="button" data-solara-cart-open data-open-cart aria-controls="solara-cart"${cartCurrent}>${escapeHtml(context.settings.cartLabel)} <span data-solara-cart-count data-cart-count aria-live="polite">0</span></button>` : ""}`;
     return moduleRoot(
       "editorial-header",
       context.section,
@@ -296,7 +298,8 @@ export const heroMedia: ModuleDefinition<z.infer<typeof heroMediaSettings>> = {
         ? renderVideo(context.project, settings.videoAssetId, {
             className: "solara-hero-media-video",
             posterAssetId: settings.posterAssetId,
-            preload: "metadata",
+            preload: "none",
+            autoplay: settings.autoplay,
             fallbackAlt: title,
           })
         : "";
@@ -321,14 +324,14 @@ export const heroMedia: ModuleDefinition<z.infer<typeof heroMediaSettings>> = {
           sizes: "100vw",
           fallbackAlt: item.title,
         });
-        return `<div class="solara-hero-slide-panel" data-hero-slide-panel="${index}" data-hero-active="${String(index === 0)}" data-hero-title="${escapeAttribute(item.title)}" data-hero-body="${escapeAttribute(item.body)}" data-hero-eyebrow="${escapeAttribute(item.eyebrow)}" data-hero-action-label="${escapeAttribute(item.actionLabel)}" data-hero-action-href="${escapeAttribute(safeUrl(item.actionHref))}">${slideImage}</div>`;
+        return `<div id="hero-slide-${escapeAttribute(context.section.id)}-${index}" class="solara-hero-slide-panel" data-hero-slide-panel="${index}" data-hero-active="${String(index === 0)}" aria-hidden="${String(index !== 0)}" data-hero-title="${escapeAttribute(item.title)}" data-hero-body="${escapeAttribute(item.body)}" data-hero-eyebrow="${escapeAttribute(item.eyebrow)}" data-hero-action-label="${escapeAttribute(item.actionLabel)}" data-hero-action-href="${escapeAttribute(safeUrl(item.actionHref))}">${slideImage}</div>`;
       })
       .join("");
     const indicators = slides.length
       ? `<div class="solara-hero-indicators" role="tablist" aria-label="Slides del hero">${slides
           .map(
             (_item, index) =>
-              `<button type="button" data-hero-slide="${index}" role="tab" aria-label="Ir al slide ${index + 1}" aria-selected="${index === 0 ? "true" : "false"}"></button>`,
+              `<button type="button" data-hero-slide="${index}" role="tab" aria-controls="hero-slide-${escapeAttribute(context.section.id)}-${index}" aria-label="Ir al slide ${index + 1}" aria-selected="${index === 0 ? "true" : "false"}"></button>`,
           )
           .join("")}</div>`
       : "";
@@ -509,7 +512,8 @@ export const collectionGrid: ModuleDefinition<z.infer<typeof collectionSettings>
   motionZones: staggerZone,
   styleAsset: scopedAssetId("collection-grid"),
   render(context) {
-    const items = context.project.collections.slice(0, context.settings.limit).map((collection) => {
+    const collections = context.project.collections.slice(0, context.settings.limit);
+    const items = collections.map((collection) => {
       const image = renderImage(context.project, collection.imageId, {
         className: "solara-collection-image",
         sizes: "(max-width: 767px) 92vw, 48vw",
@@ -527,7 +531,7 @@ export const collectionGrid: ModuleDefinition<z.infer<typeof collectionSettings>
       context.section,
       safeHtml(`<div class="solara-section-shell">
         <h2>${escapeHtml(context.settings.title)}</h2>
-        <div class="solara-collection-grid" data-motion-zone="items">${items.join("")}</div>
+        <div class="solara-collection-grid" data-motion-zone="items">${items.join("") || '<p class="solara-empty-state">Todavía no hay colecciones publicadas.</p>'}</div>
       </div>`),
     );
   },
@@ -561,7 +565,7 @@ export const editorialProductGrid: ModuleDefinition<z.infer<typeof productGridSe
       context.section,
       safeHtml(`<div class="solara-section-shell" id="productos">
         <h2>${escapeHtml(context.settings.title)}</h2>
-        <div class="solara-editorial-products" data-motion-zone="items"${context.pageType === "category" ? " data-category-grid" : ""}>${renderProductCards(context.project, products, "editorial")}</div>
+        <div class="solara-editorial-products" data-motion-zone="items"${context.pageType === "category" ? " data-category-grid" : ""}>${renderProductCards(context.project, products, "editorial") || '<p class="solara-empty-state">No hay productos para mostrar.</p>'}</div>
       </div>`),
     );
   },
@@ -590,7 +594,7 @@ export const compactProductGrid: ModuleDefinition<z.infer<typeof productGridSett
       context.section,
       safeHtml(`<div class="solara-section-shell" id="productos">
         <h2>${escapeHtml(context.settings.title)}</h2>
-        <div class="solara-compact-products" data-motion-zone="items"${context.pageType === "category" ? " data-category-grid" : ""}>${renderProductCards(context.project, products, "compact")}</div>
+        <div class="solara-compact-products" data-motion-zone="items"${context.pageType === "category" ? " data-category-grid" : ""}>${renderProductCards(context.project, products, "compact") || '<p class="solara-empty-state">No hay productos para mostrar.</p>'}</div>
       </div>`),
     );
   },
@@ -632,11 +636,45 @@ export const productDetail: ModuleDefinition<z.infer<typeof productDetailSetting
       );
     }
     const firstVariant = product.variants[0];
+    const galleryAssetIds = [
+      ...product.variants.map((variant) => variant.imageId),
+      ...product.imageIds,
+    ].filter(
+      (assetId, index, all): assetId is AssetId =>
+        Boolean(assetId) && all.indexOf(assetId) === index,
+    );
+    const galleryFigures = galleryAssetIds
+      .map((assetId, index) => {
+        const image = renderImage(context.project, assetId, {
+          className: "solara-product-gallery-image",
+          loading: index === 0 ? "eager" : "lazy",
+          sizes: "(max-width: 767px) 92vw, 58vw",
+          fallbackAlt: product.title,
+        });
+        return `<figure data-gallery-image-id="${escapeAttribute(assetId)}" data-gallery-active="${String(index === 0)}">${image}</figure>`;
+      })
+      .join("");
+    const galleryThumbs = galleryAssetIds
+      .map((assetId, index) => {
+        const image = renderImage(context.project, assetId, {
+          className: "solara-product-gallery-thumb",
+          loading: "lazy",
+          sizes: "5rem",
+          fallbackAlt: `${product.title}, imagen ${index + 1}`,
+        });
+        return `<button type="button" data-gallery-thumb="${escapeAttribute(assetId)}" aria-label="Ver imagen ${index + 1}" aria-current="${String(index === 0)}">${image}</button>`;
+      })
+      .join("");
+    const gallery = galleryAssetIds.length
+      ? `<div class="solara-product-gallery" data-product-gallery><div class="solara-product-gallery-main">${galleryFigures}</div><div class="solara-product-gallery-thumbs" role="list" aria-label="Imágenes del producto">${galleryThumbs}</div></div>`
+      : '<p class="solara-empty-state">Este producto todavía no tiene imágenes.</p>';
     const variants = product.variants
-      .map(
-        (variant) =>
-          `<option value="${escapeAttribute(variant.id)}" data-variant-data="${escapeAttribute(variant.id)}" data-variant-id="${escapeAttribute(variant.id)}" data-variant-title="${escapeAttribute(variant.title)}" data-sku="${escapeAttribute(variant.sku)}" data-price="${variant.price}" data-available="${String(variant.available)}" ${variant.available ? "" : "disabled"}>${escapeHtml(variant.title)} - ${escapeHtml(formatMoney(variant.price))}${variant.available ? "" : " - Agotado"}</option>`,
-      )
+      .map((variant) => {
+        const variantImage = context.project.assets.find(
+          (asset) => asset.id === (variant.imageId ?? product.imageIds[0]),
+        );
+        return `<option value="${escapeAttribute(variant.id)}" data-variant-data="${escapeAttribute(variant.id)}" data-variant-id="${escapeAttribute(variant.id)}" data-variant-title="${escapeAttribute(variant.title)}" data-sku="${escapeAttribute(variant.sku)}" data-image-id="${escapeAttribute(variant.imageId ?? product.imageIds[0] ?? "")}"${variantImage ? ` data-image-url="${escapeAttribute(safeAssetUrl(variantImage.source, ""))}" data-image-width="${variantImage.width}" data-image-height="${variantImage.height}"` : ""} data-price="${variant.price}" data-compare-at="${variant.compareAtPrice ?? ""}" data-available="${String(variant.available)}" ${variant.available ? "" : "disabled"}>${escapeHtml(variant.title)} - ${escapeHtml(formatMoney(variant.price))}${variant.available ? "" : " - Agotado"}</option>`;
+      })
       .join("");
     const variantLinks = product.variants
       .map(
@@ -646,7 +684,7 @@ export const productDetail: ModuleDefinition<z.infer<typeof productDetailSetting
       .join("");
     const compareAt =
       context.settings.showCompareAtPrice && firstVariant?.compareAtPrice
-        ? `<del>${escapeHtml(formatMoney(firstVariant.compareAtPrice))}</del>`
+        ? formatMoney(firstVariant.compareAtPrice)
         : "";
     const description = context.settings.showDescription
       ? `<div class="solara-rich-text">${product.richDescription ? sanitizeRichText(product.richDescription) : `<p>${escapeHtml(product.description)}</p>`}</div>`
@@ -656,11 +694,11 @@ export const productDetail: ModuleDefinition<z.infer<typeof productDetailSetting
       "product-detail",
       context.section,
       safeHtml(`<div class="solara-product-detail" data-motion-zone="content" data-product data-product-id="${escapeAttribute(product.id)}" data-product-title="${escapeAttribute(product.title)}" data-default-variant="${escapeAttribute(firstVariant?.id ?? "")}">
-        <figure>${productImage(context.project, product, true)}</figure>
+        ${gallery}
         <div class="solara-product-info">
           <p class="solara-product-brand">${escapeHtml(product.brand)}</p>
           <h1>${escapeHtml(product.title)}</h1>
-          <p class="solara-detail-price" data-solara-product-price data-product-price>${escapeHtml(formatMoney(lowestPrice(product)))} ${compareAt}</p>
+          <p class="solara-detail-price" data-solara-product-price><span data-product-price>${escapeHtml(formatMoney(lowestPrice(product)))}</span><del data-product-compare${compareAt ? "" : " hidden"}>${escapeHtml(compareAt)}</del></p>
           ${description}
           <form action="/carrito/" method="get" data-solara-add-form>
             <input type="hidden" name="product" value="${escapeAttribute(product.id)}">
@@ -672,6 +710,14 @@ export const productDetail: ModuleDefinition<z.infer<typeof productDetailSetting
           </form>
           <nav class="solara-variant-links" aria-label="Enlaces directos a variantes">${variantLinks}</nav>
           <p class="solara-delivery-note">${escapeHtml(context.settings.deliveryNote)}</p>
+          <dl class="solara-product-specs">
+            <div><dt>SKU</dt><dd data-product-sku>${escapeHtml(firstVariant?.sku ?? "")}</dd></div>
+            <div><dt>Disponibilidad</dt><dd data-product-availability>${firstVariant?.available ? "Disponible" : "Agotado"}</dd></div>
+          </dl>
+          <div class="solara-product-policies">
+            <details><summary>EnvÃ­os</summary><p>${escapeHtml(context.project.policies.shipping.details)}</p></details>
+            <details><summary>Cambios y devoluciones</summary><p>${escapeHtml(context.project.policies.returns.details)}</p></details>
+          </div>
         </div>
       </div>`),
     );
@@ -823,7 +869,7 @@ export const cartDrawer: ModuleDefinition<z.infer<typeof cartSettings>> = {
       "cart-drawer",
       context.section,
       safeHtml(`<div class="solara-cart-backdrop" data-solara-cart-close data-close-cart hidden></div>
-        <aside id="solara-cart" class="solara-cart-drawer" data-cart-drawer aria-label="${escapeAttribute(context.settings.title)}" aria-hidden="true" inert>
+        <aside id="solara-cart" class="solara-cart-drawer" data-cart-drawer aria-label="${escapeAttribute(context.settings.title)}" aria-hidden="true" inert tabindex="-1">
           <header><h2>${escapeHtml(context.settings.title)}</h2><button type="button" data-solara-cart-close data-close-cart aria-label="Cerrar carrito">Cerrar</button></header>
           <div data-solara-cart-items data-cart-lines><p class="solara-empty-state">${escapeHtml(context.settings.emptyText)}</p></div>
           <div class="solara-cart-total"><span>Total</span><strong data-solara-cart-total data-cart-total>${escapeHtml(formatMoney(0))}</strong></div>
@@ -871,13 +917,22 @@ export const editorialFooter: ModuleDefinition<z.infer<typeof footerSettings>> =
       ? '<nav aria-label="Políticas"><a href="/envios/">Envíos</a><a href="/devoluciones/">Devoluciones</a><a href="/privacidad/">Privacidad</a><a href="/terminos/">Términos</a></nav>'
       : "";
     const note = context.settings.note || context.project.identity.description;
+    const email = context.project.identity.email
+      ? `<a href="mailto:${escapeAttribute(context.project.identity.email)}">${escapeHtml(context.project.identity.email)}</a>`
+      : "";
+    const phone = context.project.identity.phone
+      ? `<a href="tel:${escapeAttribute(context.project.identity.phone)}">${escapeHtml(context.project.identity.phone)}</a>`
+      : "";
+    const address = context.project.identity.address
+      ? `<span>${escapeHtml(context.project.identity.address)}</span>`
+      : "";
     return moduleRoot(
       "editorial-footer",
       context.section,
       safeHtml(`<div class="solara-footer" data-motion-zone="content">
         <div><a class="solara-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div>
         ${policies}
-        <address><a href="mailto:${escapeAttribute(context.project.identity.email)}">${escapeHtml(context.project.identity.email)}</a><a href="tel:${escapeAttribute(context.project.identity.phone)}">${escapeHtml(context.project.identity.phone)}</a><span>${escapeHtml(context.project.identity.address)}</span></address>
+        <address>${email}${phone}${address}</address>
         <small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)}</small>
       </div>`),
       { tag: "footer" },

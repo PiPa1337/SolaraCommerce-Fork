@@ -959,6 +959,12 @@ legend {
   background: var(--surface-raised);
 }
 
+.navigation-reorder {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .navigation-children {
   display: grid;
   grid-column: 1 / -1;
@@ -977,7 +983,7 @@ legend {
 
 .navigation-child-editor {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto;
   align-items: end;
   gap: 10px;
 }
@@ -2338,6 +2344,11 @@ tbody tr {
 
   .navigation-child-editor {
     grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .navigation-child-editor .navigation-reorder {
+    grid-column: 2;
+    grid-row: 1;
   }
 
   .navigation-child-editor .field:nth-child(2) {

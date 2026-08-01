@@ -194,6 +194,7 @@ export function renderVideo(
     className?: string;
     posterAssetId?: AssetId | string;
     preload?: "none" | "metadata" | "auto";
+    autoplay?: boolean;
     fallbackAlt?: string;
   } = {},
 ): SafeHtml {
@@ -203,8 +204,9 @@ export function renderVideo(
   const poster = assetUrl(project, options.posterAssetId ?? video.posterAssetId, "");
   const source = safeAssetUrl(video.source, "");
   if (!source) return safeHtml("");
+  const autoplay = options.autoplay === false ? "" : " autoplay";
   return safeHtml(
-    `<video${className} width="${video.width}" height="${video.height}"${poster ? ` poster="${escapeAttribute(poster)}"` : ""} preload="${options.preload ?? "none"}" muted loop playsinline autoplay aria-label="${escapeAttribute(video.alt || options.fallbackAlt || video.name)}"><source src="${escapeAttribute(source)}" type="${escapeAttribute(video.mimeType)}"><span>${escapeHtml(video.alt || options.fallbackAlt || video.name)}</span></video>`,
+    `<video${className} width="${video.width}" height="${video.height}"${poster ? ` poster="${escapeAttribute(poster)}"` : ""} preload="${options.preload ?? "none"}" muted loop playsinline${autoplay} aria-label="${escapeAttribute(video.alt || options.fallbackAlt || video.name)}"><source src="${escapeAttribute(source)}" type="${escapeAttribute(video.mimeType)}"><span>${escapeHtml(video.alt || options.fallbackAlt || video.name)}</span></video>`,
   );
 }
 
