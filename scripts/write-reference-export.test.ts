@@ -9,6 +9,7 @@ const root = resolve(import.meta.dirname, "..");
 const outputDirectory = resolve(root, ".release/reference-site");
 
 test("escribe el sitio de referencia para auditorías de release", () => {
+  mkdirSync(resolve(root, ".release"), { recursive: true });
   rmSync(outputDirectory, { recursive: true, force: true });
   const exported = exportProject(referenceStore, { mode: "production" });
   writeFileSync(resolve(root, ".release/site.zip"), exported.zip);
