@@ -1,5 +1,5 @@
 import { CheckCircle, Info, MagnifyingGlass, WarningCircle, XCircle } from "@phosphor-icons/react";
-import { auditProject } from "@solara/exporter";
+import { auditReport } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { useMemo } from "react";
 import { Field, SectionHeader } from "../components/Ui";
@@ -9,6 +9,8 @@ interface AuditIssue {
   severity: "error" | "warning" | "info";
   title: string;
   message: string;
+  area?: string;
+  fixTarget?: string;
 }
 
 function normalizeIssues(value: unknown): AuditIssue[] {
@@ -33,6 +35,8 @@ function normalizeIssues(value: unknown): AuditIssue[] {
       severity,
       title: String(record.title ?? record.label ?? "Revisión SEO"),
       message: String(record.message ?? record.description ?? record.detail ?? ""),
+      ...(typeof record.area === "string" ? { area: record.area } : {}),
+      ...(typeof record.fixTarget === "string" ? { fixTarget: record.fixTarget } : {}),
     };
   });
 }
@@ -44,11 +48,12 @@ export function Seo({
   project: StoreProjectV1;
   onChange(project: StoreProjectV1): void;
 }) {
-  const issues = useMemo(() => normalizeIssues(auditProject(project)), [project]);
+  const report = useMemo(() => auditReport(project), [project]);
+  const issues = useMemo(() => normalizeIssues(report.issues), [report]);
   const commit = (seo: StoreProjectV1["seo"]) =>
     onChange({ ...project, seo, updatedAt: new Date().toISOString() });
-  const errors = issues.filter((issue) => issue.severity === "error").length;
-  const warnings = issues.filter((issue) => issue.severity === "warning").length;
+  const errors = report.criticalCount;
+  const warnings = report.warningCount;
 
   return (
     <section className="workspace-section">
@@ -101,6 +106,12 @@ export function Seo({
               <p>
                 {errors} errores críticos, {warnings} advertencias.
               </p>
+              {report.merchantMode === "experimental-whatsapp" ? (
+                <p className="audit-note">
+                  Merchant en modo experimental: el checkout final por WhatsApp puede no cumplir los
+                  requisitos de Google.
+                </p>
+              ) : null}
             </div>
             {errors === 0 ? (
               <span className="audit-ready">
@@ -132,6 +143,13 @@ export function Seo({
                     <div>
                       <strong>{issue.title}</strong>
                       {issue.message ? <p>{issue.message}</p> : null}
+                      {issue.area || issue.fixTarget ? (
+                        <small>
+                          {issue.area ? `Área: ${issue.area}` : ""}
+                          {issue.area && issue.fixTarget ? " · " : ""}
+                          {issue.fixTarget ? `Resolver en: ${issue.fixTarget}` : ""}
+                        </small>
+                      ) : null}
                     </div>
                   </article>
                 );

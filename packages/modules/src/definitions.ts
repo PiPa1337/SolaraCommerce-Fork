@@ -672,7 +672,7 @@ export const editorialFooter: ModuleDefinition<z.infer<typeof footerSettings>> =
   styleAsset: scopedAssetId("editorial-footer"),
   render(context) {
     const policies = context.settings.showPolicies
-      ? '<nav aria-label="Políticas"><a href="/politicas/envios/">Envíos</a><a href="/politicas/devoluciones/">Devoluciones</a><a href="/politicas/privacidad/">Privacidad</a><a href="/politicas/terminos/">Términos</a></nav>'
+      ? '<nav aria-label="Políticas"><a href="/envios/">Envíos</a><a href="/devoluciones/">Devoluciones</a><a href="/privacidad/">Privacidad</a><a href="/terminos/">Términos</a></nav>'
       : "";
     const note = context.settings.note || context.project.identity.description;
     return moduleRoot(

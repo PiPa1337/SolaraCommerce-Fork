@@ -5,7 +5,7 @@ import {
   UploadSimple,
   WarningCircle,
 } from "@phosphor-icons/react";
-import { auditProject } from "@solara/exporter";
+import { auditReport } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { useMemo, useRef, useState } from "react";
 import { Button, InlineError, SectionHeader } from "../components/Ui";
@@ -15,20 +15,6 @@ import {
   exportSiteInWorker,
   readProjectArchiveInWorker,
 } from "../lib/workers";
-
-function criticalCount(result: unknown): number {
-  const issues = Array.isArray(result)
-    ? result
-    : typeof result === "object" && result !== null && "issues" in result
-      ? (result as { issues: unknown }).issues
-      : [];
-  if (!Array.isArray(issues)) return 0;
-  return issues.filter((issue) => {
-    if (typeof issue !== "object" || issue === null) return false;
-    const severity = (issue as Record<string, unknown>).severity;
-    return severity === "error" || severity === "critical";
-  }).length;
-}
 
 export function ExportPanel({
   project,
@@ -40,7 +26,7 @@ export function ExportPanel({
   const importRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<"draft" | "production" | "project" | "import" | "">("");
   const [error, setError] = useState("");
-  const critical = useMemo(() => criticalCount(auditProject(project)), [project]);
+  const critical = useMemo(() => auditReport(project).criticalCount, [project]);
 
   const exportSite = async (mode: "draft" | "production") => {
     setBusy(mode);

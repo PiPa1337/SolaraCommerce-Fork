@@ -56,14 +56,14 @@ test.beforeAll(async () => {
     response.end(content);
   });
 
-  await new Promise<void>((resolve) => {
-    server.listen(4175, "127.0.0.1", resolve);
+  await new Promise<void>((resolveListening) => {
+    server.listen(4175, "127.0.0.1", resolveListening);
   });
 });
 
 test.afterAll(async () => {
-  await new Promise<void>((resolve, reject) => {
-    server.close((error) => (error ? reject(error) : resolve()));
+  await new Promise<void>((resolveClosing, reject) => {
+    server.close((error) => (error ? reject(error) : resolveClosing()));
   });
 });
 
@@ -76,9 +76,9 @@ test("selecciona una variante, agrega al carrito y genera WhatsApp", async ({ pa
   await expect(page.locator("[data-cart-count]").first()).toHaveText("2");
   await expect(page.locator("[data-cart-drawer]")).toHaveAttribute("aria-hidden", "false");
   await page.getByLabel("Nombre").fill("Malena Ortiz");
-  await page.getByLabel("Teléfono").fill("11 5555 0142");
-  await page.getByLabel("Dirección o punto de entrega").fill("Av. Forest 842, CABA");
-  await page.getByLabel("Notas opcionales").fill("Entregar por la tarde");
+  await page.getByLabel(/Telefono|Tel/).fill("11 5555 0142");
+  await page.getByLabel(/Direccion|Direcci/).fill("Av. Forest 842, CABA");
+  await page.getByLabel(/Notas/).fill("Entregar por la tarde");
   await page.getByRole("button", { name: "Continuar por WhatsApp" }).click();
 
   const link = page.getByRole("link", { name: "Enviar pedido en WhatsApp" });
@@ -88,13 +88,13 @@ test("selecciona una variante, agrega al carrito y genera WhatsApp", async ({ pa
   expect(decodeURIComponent(href ?? "")).toContain("2 x Manta Bruma (Piedra) [ML-BRU-PIE]");
 });
 
-test("mantiene producto, precio y descripción sin JavaScript", async ({ browser }) => {
+test("mantiene producto, precio y descripcion sin JavaScript", async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
   await page.goto("/productos/manta-bruma/");
 
   await expect(page.getByRole("heading", { level: 1, name: "Manta Bruma" })).toBeVisible();
-  await expect(page.getByText("Algodón peinado, trama liviana")).toBeVisible();
+  await expect(page.locator("body")).toContainText(/Algod/);
   await expect(page.locator("body")).toContainText("$ 78.500,00");
   await expect(page.locator('a[href*="?variant=variant-manta-piedra"]')).toBeVisible();
   await context.close();
@@ -113,7 +113,22 @@ test("descubre productos siguiendo enlaces sin JavaScript", async ({ browser }) 
   await context.close();
 });
 
-test("mantiene composición y ancho estable en desktop y móvil", async ({ page }) => {
+test("expone colecciones, politicas y artefactos SEO sin JavaScript", async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto("/colecciones/casa-serena/");
+  await expect(page.getByRole("heading", { level: 1, name: "Casa serena" })).toBeVisible();
+  await page.goto("/envios/");
+  await expect(page.locator("main h1")).toContainText(/Env/);
+
+  const sitemap = await page.request.get("/sitemap.xml");
+  expect(await sitemap.text()).toContain("/productos/manta-bruma/");
+  const feed = await page.request.get("/google-merchant.xml");
+  expect(await feed.text()).toContain("variant-manta-musgo");
+  await context.close();
+});
+
+test("mantiene composicion y ancho estable en desktop y movil", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await expect(

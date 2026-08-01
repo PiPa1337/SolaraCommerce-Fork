@@ -58,6 +58,7 @@ export const VariantSchema = z.object({
   stockStatus: z.enum(["in_stock", "out_of_stock", "preorder"]),
   gtin: z.string().optional(),
   mpn: z.string().optional(),
+  availabilityDate: z.string().datetime().optional(),
   imageId: AssetIdSchema.optional(),
 });
 

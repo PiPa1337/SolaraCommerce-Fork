@@ -1,50 +1,60 @@
-# Fase 5 completada: pipeline de imágenes responsive
+# Fase 6 completada: SEO tecnico y Google Merchant
 
 ## Objetivo
 
-Procesar imágenes fuera del hilo principal, generar variantes responsive
-deterministas, conservar transparencia, reutilizar transformaciones por hash y
-exportar únicamente los binarios que utiliza la tienda.
+Producir tiendas estaticas rastreables con rutas consistentes, HTML inicial
+completo, datos estructurados, sitemaps y un feed Merchant generado desde el
+mismo snapshot comercial.
 
 ## Entregado
 
-- Worker con receta estable de anchos 480, 768, 1200 y 1800 px, sin upscaling.
-- Validación de MIME y firma binaria para JPEG, PNG y WebP.
-- Límites de 25 MB por archivo y 50 megapíxeles por imagen.
-- Corrección de orientación mediante `createImageBitmap` y liberación segura de
-  `ImageBitmap`.
-- WebP como formato principal y fallback PNG para imágenes con transparencia o
-  JPEG para imágenes opacas.
-- Caché Dexie v2 con clave hash + versión de receta y `lastUsedAt`.
-- Limpieza segura de caché regenerable y advertencia de cuota local.
-- Progreso de lote, duplicados omitidos, reutilización de caché y errores por
-  archivo sin abortar el lote válido.
-- Renderer con `sizes`, `fetchpriority`, `decoding` y `<source>` por MIME real.
-- Exporter con extensiones reales, rutas deterministas por hash y deduplicación
-  de binarios.
+- Snapshot comercial determinista con productos activos y una oferta por variante.
+- URLs directas de variantes con `?variant={variantId}` y agrupacion por producto.
+- Paginas de inicio, categorias paginadas, colecciones paginadas, productos y
+  politicas publicas en rutas estables.
+- Enlaces de paginacion `rel=prev` y `rel=next` cuando corresponde.
+- `WebSite`, `OnlineStore`, `BreadcrumbList`, `Product`, `ProductGroup` y
+  `Offer` en el HTML inicial.
+- `sitemap.xml`, sitemap de imagenes, `robots.txt` y
+  `google-merchant.xml` de produccion.
+- Feed con IDs de variante, `item_group_id`, precios enteros convertidos a
+  moneda, disponibilidad, imagenes absolutas, marca e identificadores reales.
+- Auditoria con severidad, area, entidad y destino de correccion para dominio,
+  contenido, slugs, politicas, variantes preorder y paridad Merchant.
+- Studio muestra el resumen de auditoria y advierte que el checkout actual por
+  WhatsApp es experimental para Merchant.
 
 ## Contratos preservados
 
-- `StoreProjectV1`, `schemaVersion`, `ImageAsset` y formatos públicos no cambian.
-- La migración Dexie sólo descarta caché regenerable antigua.
-- `.solara.zip` y `site.zip` siguen siendo formatos distintos.
-- Preview, renderer y ZIP usan las mismas rutas públicas.
-- SEO, carrito, WhatsApp y movimiento quedan fuera de esta fase.
+- `StoreProjectV1` sigue en `schemaVersion: 1`.
+- `availabilityDate` es opcional y mantiene compatibilidad con proyectos
+  anteriores.
+- No cambian IDs, formatos de ZIP, carrito, WhatsApp ni el renderer modular.
+- Preview y ZIP usan el mismo renderer y los mismos datos de proyecto.
+- El feed no se incluye en exportaciones draft y el sitio draft conserva
+  `noindex,nofollow`.
 
-## Verificación de cierre
+## Verificacion de cierre
 
-- Tests del Worker para receta, dimensiones, MIME, firmas y alpha.
-- Tests de repositorio para versionado, reutilización y limpieza de caché.
-- Tests de renderer para responsive sources y atributos de prioridad.
-- Tests de exporter para fallback PNG, responsive JPEG y deduplicación.
+- Unit tests del schema para fechas opcionales y del exporter para snapshot,
+  variantes, colecciones, rutas legales, sitemaps, feed y auditoria.
+- Playwright verifica descubrimiento sin JavaScript de productos, colecciones,
+  politicas, sitemap y feed.
 - Gate de fase:
   - `corepack pnpm check`
   - `corepack pnpm build`
   - `corepack pnpm benchmark:export`
   - `corepack pnpm test:e2e`
 
-## Próxima fase
+## Limitacion Merchant
 
-SEO técnico, JSON-LD, sitemaps, auditoría de coherencia y feed Merchant
-experimental. El checkout continuará finalizando en WhatsApp y se informará la
-limitación de elegibilidad de Google.
+El checkout final por WhatsApp no equivale a un checkout convencional dentro
+del sitio. La auditoria lo deja visible y la exportacion no afirma elegibilidad
+automatica para Merchant. Para un piloto se debe validar manualmente la cuenta,
+el dominio, las politicas y el flujo de compra antes de enviar el feed.
+
+## Proxima fase
+
+Animaciones premium accesibles: presets declarados por modulo, `inView`, scroll
+progress y layer stack sin cambiar el HTML SEO ni bloquear el contenido cuando
+JavaScript falla.

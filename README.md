@@ -118,3 +118,17 @@ La especificación funcional y el alcance están en
 La operación segura está documentada en
 [`docs/backup-and-recovery.md`](docs/backup-and-recovery.md), y el piloto real en
 [`docs/pilot-checklist.md`](docs/pilot-checklist.md).
+
+## SEO y Google Merchant (Fase 6)
+
+La exportacion genera HTML inicial rastreable para inicio, categorias,
+colecciones, productos y politicas. Cada producto activo tiene una URL
+canonical, enlaces de variante, JSON-LD y presencia en `sitemap.xml`; cada
+variante vendible aparece una sola vez en `google-merchant.xml`.
+
+El panel SEO compara dominio, metadata, imagenes, identificadores, precio,
+disponibilidad, JSON-LD y feed, y muestra el destino de correccion. El feed solo
+se publica en modo production; el draft usa `noindex` y no incluye Merchant.
+
+El checkout v1 termina en WhatsApp. Esto se marca como modo experimental porque
+Google puede exigir una finalizacion de compra convencional dentro del sitio.

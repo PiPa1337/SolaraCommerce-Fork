@@ -2,6 +2,7 @@ import { referenceStore } from "@solara/project-schema/fixture";
 import { describe, expect, it } from "vitest";
 import {
   auditProject,
+  buildCommerceSnapshot,
   createProjectArchive,
   exportProject,
   readProjectArchive,
@@ -19,6 +20,47 @@ describe("exporter", () => {
     expect(productHtml).toContain('"@type":"ProductGroup"');
     expect(feed.match(/<item>/g)).toHaveLength(3);
     expect(feed).toContain("<g:price>78500.00 ARS</g:price>");
+  });
+
+  it("usa un snapshot comercial para HTML, variantes, sitemap y feed", () => {
+    const snapshot = buildCommerceSnapshot(referenceStore);
+    const result = exportProject(referenceStore, { mode: "production" });
+    const productHtml = String(result.files.get("productos/manta-bruma/index.html"));
+    const collectionHtml = String(result.files.get("colecciones/casa-serena/index.html"));
+    const sitemap = String(result.files.get("sitemap.xml"));
+    const imageSitemap = String(result.files.get("image-sitemap.xml"));
+    const feed = String(result.files.get("google-merchant.xml"));
+
+    expect(snapshot.offers).toHaveLength(3);
+    expect(new Set(snapshot.offers.map((offer) => offer.variantId)).size).toBe(3);
+    expect(snapshot.offers[0]?.variantPath).toBe(
+      "/productos/manta-bruma/?variant=variant-manta-musgo",
+    );
+    expect(productHtml).toContain("https://casa-luma.example/fixtures/manta-bruma.png");
+    expect(productHtml).toContain("https://schema.org/color");
+    expect(collectionHtml).toContain("Casa serena");
+    expect(sitemap).toContain("https://casa-luma.example/colecciones/casa-serena/");
+    expect(sitemap).toContain("https://casa-luma.example/envios/");
+    expect(imageSitemap).toContain("https://casa-luma.example/fixtures/manta-bruma.png");
+    expect(feed).toContain(
+      "<g:image_link>https://casa-luma.example/fixtures/manta-bruma.png</g:image_link>",
+    );
+    expect(feed).toContain("<g:mpn>JD-12-CRU</g:mpn>");
+    const noIdentifierProject = {
+      ...referenceStore,
+      products: referenceStore.products.map((product) => ({
+        ...product,
+        variants: product.variants.map((variant) => ({
+          ...variant,
+          gtin: undefined,
+          mpn: undefined,
+        })),
+      })),
+    };
+    const noIdentifierFeed = String(
+      exportProject(noIdentifierProject, { mode: "production" }).files.get("google-merchant.xml"),
+    );
+    expect(noIdentifierFeed).toContain("<g:identifier_exists>no</g:identifier_exists>");
   });
 
   it("mantiene contenido y SEO en el HTML inicial", () => {
@@ -181,6 +223,33 @@ describe("exporter", () => {
   it("advierte el riesgo Merchant del checkout por WhatsApp", () => {
     expect(auditProject(referenceStore)).toContainEqual(
       expect.objectContaining({ code: "merchant.whatsapp-checkout", severity: "warning" }),
+    );
+  });
+
+  it("detecta rutas reservadas y preorder sin fecha", () => {
+    const project = {
+      ...referenceStore,
+      products: referenceStore.products.map((product, index) =>
+        index === 0
+          ? {
+              ...product,
+              slug: "envios" as typeof product.slug,
+              variants: product.variants.map((variant) => ({
+                ...variant,
+                stockStatus: "preorder" as const,
+                availabilityDate: undefined,
+              })),
+            }
+          : product,
+      ),
+    };
+    const issues = auditProject(project as typeof referenceStore);
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "slug.reserved", severity: "critical" }),
+        expect.objectContaining({ code: "variant.availability-date", severity: "critical" }),
+      ]),
     );
   });
 });

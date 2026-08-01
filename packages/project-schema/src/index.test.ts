@@ -19,6 +19,17 @@ describe("StoreProjectV1Schema", () => {
     expect(StoreProjectV1Schema.parse(referenceStore)).toEqual(referenceStore);
   });
 
+  it("acepta fecha de disponibilidad opcional sin cambiar schemaVersion", () => {
+    const project = structuredClone(referenceStore);
+    const variant = project.products[0]?.variants[0];
+    if (!variant) throw new Error("Fixture incompleto");
+    variant.availabilityDate = "2026-09-01T00:00:00.000Z";
+
+    const parsed = StoreProjectV1Schema.parse(project);
+    expect(parsed.schemaVersion).toBe(1);
+    expect(parsed.products[0]?.variants[0]?.availabilityDate).toBe("2026-09-01T00:00:00.000Z");
+  });
+
   it("rechaza dinero fraccionario y slugs inválidos", () => {
     expect(MoneySchema.safeParse(19.99).success).toBe(false);
     expect(SlugSchema.safeParse("Manta Bruma").success).toBe(false);

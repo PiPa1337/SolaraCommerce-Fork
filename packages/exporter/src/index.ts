@@ -18,12 +18,63 @@ import { strToU8, unzipSync, type Zippable, zipSync } from "fflate";
 
 export type ExportMode = "draft" | "production";
 export type AuditSeverity = "critical" | "warning" | "info";
+export type AuditArea = "technical" | "content" | "structured-data" | "merchant";
+export type AuditFixTarget = "summary" | "catalog" | "assets" | "seo" | "export";
 
 export interface AuditIssue {
   code: string;
   severity: AuditSeverity;
+  area?: AuditArea;
   message: string;
   path?: string;
+  entity?: {
+    type: "store" | "product" | "variant" | "category" | "collection" | "asset";
+    id: string;
+    label: string;
+  };
+  fixTarget?: AuditFixTarget;
+  documentationUrl?: string;
+}
+
+export interface CommerceOfferSnapshot {
+  productId: string;
+  variantId: string;
+  itemGroupId: string;
+  canonicalPath: string;
+  variantPath: string;
+  title: string;
+  description: string;
+  brand: string;
+  sku: string;
+  gtin?: string;
+  mpn?: string;
+  priceMinor: number;
+  currency: string;
+  availability: "in_stock" | "out_of_stock" | "preorder";
+  availabilityDate?: string;
+  imageUrls: readonly string[];
+}
+
+export interface CommerceProductSnapshot {
+  productId: string;
+  canonicalPath: string;
+  title: string;
+  imageUrls: readonly string[];
+  offers: readonly CommerceOfferSnapshot[];
+}
+
+export interface CommerceSnapshot {
+  baseUrl: string;
+  updatedAt: string;
+  products: readonly CommerceProductSnapshot[];
+  offers: readonly CommerceOfferSnapshot[];
+}
+
+export interface AuditReport {
+  issues: readonly AuditIssue[];
+  criticalCount: number;
+  warningCount: number;
+  merchantMode: "experimental-whatsapp";
 }
 
 export interface ExportOptions {
@@ -41,7 +92,7 @@ interface PageDescriptor {
   title: string;
   description: string;
   canonicalPath: string;
-  pageType: "home" | "category" | "product" | "legal";
+  pageType: "home" | "category" | "collection" | "product" | "legal";
   body: string;
   structuredData: unknown[];
   image?: string;
@@ -91,6 +142,10 @@ function absoluteUrl(project: StoreProjectV1, path: string): string {
   return `${normalizeBaseUrl(project.baseUrl)}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+function absoluteResourceUrl(project: StoreProjectV1, value: string): string {
+  return /^https?:\/\//i.test(value) ? value : absoluteUrl(project, value);
+}
+
 function imageFor(project: StoreProjectV1, assetId: string | undefined): ImageAsset | undefined {
   return project.assets.find((asset) => asset.id === assetId);
 }
@@ -100,6 +155,65 @@ function imageUrl(project: StoreProjectV1, assetId: string | undefined): string 
   if (!asset) return undefined;
   if (asset.source.startsWith("data:")) return `/assets/${asset.hash}.${assetExtension(asset)}`;
   return asset.source;
+}
+
+function productImagePaths(project: StoreProjectV1, product: Product, variant?: Variant): string[] {
+  const ids = [variant?.imageId, ...product.imageIds].filter((id): id is NonNullable<typeof id> =>
+    Boolean(id),
+  );
+  return [...new Set(ids)]
+    .map((assetId) => imageUrl(project, assetId))
+    .filter((url): url is string => Boolean(url));
+}
+
+function offerAvailability(variant: Variant): CommerceOfferSnapshot["availability"] {
+  return variant.stockStatus;
+}
+
+export function buildCommerceSnapshot(project: StoreProjectV1): CommerceSnapshot {
+  const products = project.products
+    .filter((product) => product.status === "active")
+    .map((product) => {
+      const canonicalPath = `/productos/${product.slug}/`;
+      const productImages = productImagePaths(project, product);
+      const offers = product.variants.map(
+        (variant) =>
+          ({
+            productId: product.id,
+            variantId: variant.id,
+            itemGroupId: product.id,
+            canonicalPath,
+            variantPath: `${canonicalPath}?variant=${encodeURIComponent(variant.id)}`,
+            title: `${product.title} - ${variant.title}`,
+            description: product.description,
+            brand: product.brand,
+            sku: variant.sku,
+            ...(variant.gtin ? { gtin: variant.gtin } : {}),
+            ...(variant.mpn ? { mpn: variant.mpn } : {}),
+            priceMinor: variant.price,
+            currency: project.currency,
+            availability: offerAvailability(variant),
+            ...(variant.availabilityDate ? { availabilityDate: variant.availabilityDate } : {}),
+            imageUrls: productImagePaths(project, product, variant).map((url) =>
+              absoluteResourceUrl(project, url),
+            ),
+          }) satisfies CommerceOfferSnapshot,
+      );
+      return {
+        productId: product.id,
+        canonicalPath,
+        title: product.title,
+        imageUrls: productImages.map((url) => absoluteResourceUrl(project, url)),
+        offers,
+      } satisfies CommerceProductSnapshot;
+    });
+
+  return {
+    baseUrl: normalizeBaseUrl(project.baseUrl),
+    updatedAt: project.updatedAt,
+    products,
+    offers: products.flatMap((product) => product.offers),
+  };
 }
 
 function assetExtension(asset: ImageAsset): string {
@@ -211,7 +325,12 @@ button, input, select, textarea, a { outline-offset: 3px; }
 function renderProjectSections(
   project: StoreProjectV1,
   sections: StoreSection[],
-  pageContext: { pageType: PageDescriptor["pageType"]; product?: Product; category?: Category },
+  pageContext: {
+    pageType: PageDescriptor["pageType"];
+    product?: Product;
+    category?: Category;
+    collection?: StoreProjectV1["collections"][number];
+  },
 ): string {
   const modulePageType = pageContext.pageType === "legal" ? "content" : pageContext.pageType;
   return String(
@@ -219,6 +338,7 @@ function renderProjectSections(
       pageType: modulePageType,
       ...(pageContext.product ? { product: pageContext.product } : {}),
       ...(pageContext.category ? { category: pageContext.category } : {}),
+      ...(pageContext.collection ? { collection: pageContext.collection } : {}),
     }),
   );
 }
@@ -328,18 +448,19 @@ function breadcrumbData(
   };
 }
 
-function offerData(project: StoreProjectV1, product: Product, variant: Variant): unknown {
+function offerData(project: StoreProjectV1, offer: CommerceOfferSnapshot): unknown {
   return {
     "@type": "Offer",
-    url: absoluteUrl(project, `/productos/${product.slug}/?variant=${variant.id}`),
-    priceCurrency: project.currency,
-    price: (variant.price / 100).toFixed(2),
+    url: absoluteUrl(project, offer.variantPath),
+    priceCurrency: offer.currency,
+    price: (offer.priceMinor / 100).toFixed(2),
     availability:
-      variant.stockStatus === "in_stock"
+      offer.availability === "in_stock"
         ? "https://schema.org/InStock"
-        : variant.stockStatus === "preorder"
+        : offer.availability === "preorder"
           ? "https://schema.org/PreOrder"
           : "https://schema.org/OutOfStock",
+    ...(offer.availabilityDate ? { availabilityStarts: offer.availabilityDate } : {}),
     itemCondition: "https://schema.org/NewCondition",
     seller: { "@type": "Organization", name: project.identity.brandName },
     shippingDetails: {
@@ -367,16 +488,41 @@ function offerData(project: StoreProjectV1, product: Product, variant: Variant):
   };
 }
 
-function productStructuredData(project: StoreProjectV1, product: Product): unknown {
-  const productImage = imageUrl(project, product.imageIds[0]);
-  const variantNodes = product.variants.map((variant) => ({
+function schemaOptionName(value: string): string {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  const aliases: Record<string, string> = {
+    color: "color",
+    colour: "color",
+    coloracion: "color",
+    talle: "size",
+    tamano: "size",
+    size: "size",
+    material: "material",
+    patron: "pattern",
+    pattern: "pattern",
+  };
+  return aliases[normalized] ?? normalized.replace(/[^a-z0-9]+/g, "");
+}
+
+function productStructuredData(
+  project: StoreProjectV1,
+  product: Product,
+  snapshot: CommerceSnapshot,
+): unknown {
+  const productSnapshot = snapshot.products.find((item) => item.productId === product.id);
+  if (!productSnapshot) return {};
+  const variantNodes = productSnapshot.offers.map((offer) => ({
     "@type": "Product",
-    name: `${product.title} - ${variant.title}`,
-    sku: variant.sku,
-    ...(variant.gtin ? { gtin13: variant.gtin } : {}),
-    ...(variant.mpn ? { mpn: variant.mpn } : {}),
-    ...(productImage ? { image: [productImage] } : {}),
-    offers: offerData(project, product, variant),
+    name: offer.title,
+    sku: offer.sku || undefined,
+    ...(offer.gtin ? { gtin13: offer.gtin } : {}),
+    ...(offer.mpn ? { mpn: offer.mpn } : {}),
+    ...(offer.imageUrls.length ? { image: offer.imageUrls } : {}),
+    offers: offerData(project, offer),
   }));
 
   if (product.variants.length === 1) {
@@ -386,13 +532,13 @@ function productStructuredData(project: StoreProjectV1, product: Product): unkno
       name: product.title,
       description: product.description,
       brand: { "@type": "Brand", name: product.brand },
-      url: absoluteUrl(project, `/productos/${product.slug}/`),
+      url: absoluteUrl(project, productSnapshot.canonicalPath),
     };
   }
 
   const variesBy = Array.from(
     new Set(product.variants.flatMap((variant) => Object.keys(variant.optionValues))),
-  ).map((option) => `https://schema.org/${option}`);
+  ).map((option) => `https://schema.org/${schemaOptionName(option)}`);
 
   return {
     "@context": "https://schema.org",
@@ -402,7 +548,7 @@ function productStructuredData(project: StoreProjectV1, product: Product): unkno
     description: product.description,
     brand: { "@type": "Brand", name: product.brand },
     url: absoluteUrl(project, `/productos/${product.slug}/`),
-    ...(productImage ? { image: [productImage] } : {}),
+    ...(productSnapshot.imageUrls.length ? { image: productSnapshot.imageUrls } : {}),
     variesBy,
     hasVariant: variantNodes,
   };
@@ -454,7 +600,20 @@ function renderDocument(project: StoreProjectV1, page: PageDescriptor, mode: Exp
 </html>`;
 }
 
-function buildPages(project: StoreProjectV1): PageDescriptor[] {
+function paginationNavigation(basePath: string, pageNumber: number, totalPages: number): string {
+  if (totalPages <= 1) return "";
+  const pathFor = (page: number) => (page === 1 ? `${basePath}/` : `${basePath}/pagina/${page}/`);
+  return `<nav class="solara-pagination" aria-label="Paginación">
+    ${pageNumber > 1 ? `<a rel="prev" href="${escapeHtml(pathFor(pageNumber - 1))}">Anterior</a>` : ""}
+    <span>Página ${pageNumber} de ${totalPages}</span>
+    ${pageNumber < totalPages ? `<a rel="next" href="${escapeHtml(pathFor(pageNumber + 1))}">Siguiente</a>` : ""}
+  </nav>`;
+}
+
+function buildPages(
+  project: StoreProjectV1,
+  snapshot = buildCommerceSnapshot(project),
+): PageDescriptor[] {
   const sharedHeader = project.sections.filter((section) =>
     ["announcement", "header"].includes(section.slot),
   );
@@ -481,6 +640,7 @@ function buildPages(project: StoreProjectV1): PageDescriptor[] {
       .filter((product): product is Product => Boolean(product && product.status === "active"));
     const pages: PageDescriptor[] = [];
 
+    const totalPages = Math.max(1, Math.ceil(products.length / 24));
     for (let offset = 0; offset < Math.max(products.length, 1); offset += 24) {
       const pageNumber = Math.floor(offset / 24) + 1;
       const paginated = products.slice(offset, offset + 24);
@@ -496,6 +656,7 @@ function buildPages(project: StoreProjectV1): PageDescriptor[] {
             pageType: "category",
             category: { ...category, productIds: paginated.map((product) => product.id) },
           })}
+          ${paginationNavigation(`/categorias/${category.slug}`, pageNumber, totalPages)}
         </main>`,
         renderProjectSections(project, sharedFooter, { pageType: "category", category }),
       ].join("");
@@ -528,6 +689,59 @@ function buildPages(project: StoreProjectV1): PageDescriptor[] {
     return pages;
   });
 
+  const collections = project.collections.flatMap((collection) => {
+    const products = collection.productIds
+      .map((id) => project.products.find((product) => product.id === id))
+      .filter((product): product is Product => Boolean(product && product.status === "active"));
+    const pages: PageDescriptor[] = [];
+    const totalPages = Math.max(1, Math.ceil(products.length / 24));
+
+    for (let offset = 0; offset < Math.max(products.length, 1); offset += 24) {
+      const pageNumber = Math.floor(offset / 24) + 1;
+      const paginated = products.slice(offset, offset + 24);
+      const collectionSections = project.sections.filter((section) => section.slot === "catalog");
+      const body = [
+        renderProjectSections(project, sharedHeader, { pageType: "collection", collection }),
+        `<main class="solara-container">
+          <header>
+            <h1>${escapeHtml(collection.title)}</h1>
+            <p>${escapeHtml(collection.description)}</p>
+          </header>
+          ${renderProjectSections(project, collectionSections, {
+            pageType: "collection",
+            collection: { ...collection, productIds: paginated.map((product) => product.id) },
+          })}
+          ${paginationNavigation(`/colecciones/${collection.slug}`, pageNumber, totalPages)}
+        </main>`,
+        renderProjectSections(project, sharedFooter, { pageType: "collection", collection }),
+      ].join("");
+      const canonicalPath =
+        pageNumber === 1
+          ? `/colecciones/${collection.slug}/`
+          : `/colecciones/${collection.slug}/pagina/${pageNumber}/`;
+      const collectionImage = imageUrl(project, collection.imageId);
+      pages.push({
+        path:
+          pageNumber === 1
+            ? `colecciones/${collection.slug}/index.html`
+            : `colecciones/${collection.slug}/pagina/${pageNumber}/index.html`,
+        title: `${collection.title} | ${project.identity.brandName}`,
+        description: collection.description || project.seo.description,
+        canonicalPath,
+        pageType: "collection",
+        body,
+        structuredData: [
+          breadcrumbData(project, [
+            { name: "Inicio", path: "/" },
+            { name: collection.title, path: `/colecciones/${collection.slug}/` },
+          ]),
+        ],
+        ...(collectionImage ? { image: collectionImage } : {}),
+      });
+    }
+    return pages;
+  });
+
   const products = project.products
     .filter((product) => product.status === "active")
     .map((product): PageDescriptor => {
@@ -550,7 +764,7 @@ function buildPages(project: StoreProjectV1): PageDescriptor[] {
             { name: "Productos", path: "/" },
             { name: product.title, path: `/productos/${product.slug}/` },
           ]),
-          productStructuredData(project, product),
+          productStructuredData(project, product, snapshot),
         ],
         ...(productImage ? { image: productImage } : {}),
       };
@@ -558,44 +772,44 @@ function buildPages(project: StoreProjectV1): PageDescriptor[] {
 
   const legalPages: PageDescriptor[] = [
     {
-      path: "politicas/envios/index.html",
+      path: "envios/index.html",
       title: `Envíos | ${project.identity.brandName}`,
       description: project.policies.shipping.summary,
-      canonicalPath: "/politicas/envios/",
+      canonicalPath: "/envios/",
       pageType: "legal",
       body: `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>Envíos</h1><p>${escapeHtml(project.policies.shipping.details)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
       structuredData: [],
     },
     {
-      path: "politicas/devoluciones/index.html",
+      path: "devoluciones/index.html",
       title: `Cambios y devoluciones | ${project.identity.brandName}`,
       description: project.policies.returns.summary,
-      canonicalPath: "/politicas/devoluciones/",
+      canonicalPath: "/devoluciones/",
       pageType: "legal",
       body: `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>Cambios y devoluciones</h1><p>${escapeHtml(project.policies.returns.details)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
       structuredData: [],
     },
     {
-      path: "politicas/privacidad/index.html",
+      path: "privacidad/index.html",
       title: `Privacidad | ${project.identity.brandName}`,
       description: "Cómo usamos los datos compartidos al realizar un pedido.",
-      canonicalPath: "/politicas/privacidad/",
+      canonicalPath: "/privacidad/",
       pageType: "legal",
       body: `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>Privacidad</h1><p>${escapeHtml(project.policies.privacy)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
       structuredData: [],
     },
     {
-      path: "politicas/terminos/index.html",
+      path: "terminos/index.html",
       title: `Términos | ${project.identity.brandName}`,
       description: "Condiciones comerciales de la tienda.",
-      canonicalPath: "/politicas/terminos/",
+      canonicalPath: "/terminos/",
       pageType: "legal",
       body: `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>Términos</h1><p>${escapeHtml(project.policies.terms)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
       structuredData: [],
     },
   ];
 
-  return [home, ...categories, ...products, ...legalPages].map((page) => ({
+  return [home, ...categories, ...collections, ...products, ...legalPages].map((page) => ({
     ...page,
     body: page.body || `<main><p>No hay contenido publicado.</p></main>`,
   }));
@@ -606,7 +820,7 @@ function buildSitemap(project: StoreProjectV1, pages: PageDescriptor[]): string 
     (page) => `<url>
   <loc>${escapeXml(absoluteUrl(project, page.canonicalPath))}</loc>
   <lastmod>${project.updatedAt.slice(0, 10)}</lastmod>
-  ${page.image ? `<image:image><image:loc>${escapeXml(page.image)}</image:loc></image:image>` : ""}
+  ${page.image ? `<image:image><image:loc>${escapeXml(absoluteResourceUrl(project, page.image))}</image:loc></image:image>` : ""}
 </url>`,
   );
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -619,18 +833,15 @@ function buildImageSitemap(project: StoreProjectV1): string {
   const urls = project.products
     .filter((product) => product.status === "active")
     .flatMap((product) =>
-      product.imageIds
-        .map((assetId) => imageUrl(project, assetId))
-        .filter((url): url is string => Boolean(url))
-        .map(
-          (url) => `<url>
+      productImagePaths(project, product).map(
+        (url) => `<url>
   <loc>${escapeXml(absoluteUrl(project, `/productos/${product.slug}/`))}</loc>
   <image:image>
-    <image:loc>${escapeXml(url)}</image:loc>
+    <image:loc>${escapeXml(absoluteResourceUrl(project, url))}</image:loc>
     <image:caption>${escapeXml(product.title)}</image:caption>
   </image:image>
 </url>`,
-        ),
+      ),
     );
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
@@ -638,39 +849,36 @@ ${urls.join("\n")}
 </urlset>`;
 }
 
-function buildMerchantFeed(project: StoreProjectV1): string {
-  const items = project.products
-    .filter((product) => product.status === "active")
-    .flatMap((product) =>
-      product.variants.map((variant) => {
-        const image = imageUrl(project, variant.imageId ?? product.imageIds[0]) ?? "";
-        const identifier = variant.gtin
-          ? `<g:gtin>${escapeXml(variant.gtin)}</g:gtin>`
-          : variant.mpn
-            ? `<g:mpn>${escapeXml(variant.mpn)}</g:mpn>`
-            : "<g:identifier_exists>no</g:identifier_exists>";
-        const availability =
-          variant.stockStatus === "in_stock"
-            ? "in_stock"
-            : variant.stockStatus === "preorder"
-              ? "preorder"
-              : "out_of_stock";
-        return `<item>
-  <g:id>${escapeXml(variant.id)}</g:id>
-  <g:item_group_id>${escapeXml(product.id)}</g:item_group_id>
-  <title>${escapeXml(`${product.title} - ${variant.title}`)}</title>
-  <description>${escapeXml(product.description)}</description>
-  <link>${escapeXml(absoluteUrl(project, `/productos/${product.slug}/?variant=${variant.id}`))}</link>
-  <g:image_link>${escapeXml(image)}</g:image_link>
-  <g:availability>${availability}</g:availability>
-  <g:price>${(variant.price / 100).toFixed(2)} ${project.currency}</g:price>
+function buildMerchantFeed(
+  project: StoreProjectV1,
+  snapshot = buildCommerceSnapshot(project),
+): string {
+  const items = snapshot.offers.map((offer) => {
+    const identifier = offer.gtin
+      ? `<g:gtin>${escapeXml(offer.gtin)}</g:gtin>`
+      : offer.mpn
+        ? `<g:mpn>${escapeXml(offer.mpn)}</g:mpn>`
+        : "<g:identifier_exists>no</g:identifier_exists>";
+    const additionalImages = offer.imageUrls
+      .slice(1)
+      .map((image) => `<g:additional_image_link>${escapeXml(image)}</g:additional_image_link>`)
+      .join("\n  ");
+    return `<item>
+  <g:id>${escapeXml(offer.variantId)}</g:id>
+  <g:item_group_id>${escapeXml(offer.itemGroupId)}</g:item_group_id>
+  <title>${escapeXml(offer.title)}</title>
+  <description>${escapeXml(offer.description)}</description>
+  <link>${escapeXml(absoluteUrl(project, offer.variantPath))}</link>
+  <g:image_link>${escapeXml(offer.imageUrls[0] ?? "")}</g:image_link>
+  ${additionalImages}
+  <g:availability>${offer.availability}</g:availability>
+  ${offer.availabilityDate ? `<g:availability_date>${escapeXml(offer.availabilityDate)}</g:availability_date>` : ""}
+  <g:price>${(offer.priceMinor / 100).toFixed(2)} ${offer.currency}</g:price>
   <g:condition>new</g:condition>
-  <g:brand>${escapeXml(product.brand)}</g:brand>
-  <g:mpn>${escapeXml(variant.mpn ?? variant.sku)}</g:mpn>
+  <g:brand>${escapeXml(offer.brand)}</g:brand>
   ${identifier}
 </item>`;
-      }),
-    );
+  });
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
@@ -687,6 +895,18 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
   const issues: AuditIssue[] = [];
   const productSlugs = new Map<string, number>();
   const categorySlugs = new Map<string, number>();
+  const collectionSlugs = new Map<string, number>();
+  const snapshot = buildCommerceSnapshot(project);
+  const reservedSlugs = new Set([
+    "assets",
+    "categorias",
+    "colecciones",
+    "productos",
+    "envios",
+    "devoluciones",
+    "privacidad",
+    "terminos",
+  ]);
 
   if (!project.baseUrl.startsWith("https://")) {
     issues.push({
@@ -750,6 +970,9 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
   project.categories.forEach((category) => {
     categorySlugs.set(category.slug, (categorySlugs.get(category.slug) ?? 0) + 1);
   });
+  project.collections.forEach((collection) => {
+    collectionSlugs.set(collection.slug, (collectionSlugs.get(collection.slug) ?? 0) + 1);
+  });
 
   productSlugs.forEach((count, slug) => {
     if (count > 1) {
@@ -769,6 +992,116 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
       });
     }
   });
+  collectionSlugs.forEach((count, slug) => {
+    if (count > 1) {
+      issues.push({
+        code: "collection.slug.duplicate",
+        severity: "critical",
+        message: `El slug de colección "${slug}" está repetido.`,
+        area: "technical",
+        fixTarget: "catalog",
+      });
+    }
+  });
+
+  [...productSlugs.keys(), ...categorySlugs.keys(), ...collectionSlugs.keys()].forEach((slug) => {
+    if (reservedSlugs.has(slug)) {
+      issues.push({
+        code: "slug.reserved",
+        severity: "critical",
+        message: `El slug "${slug}" está reservado por una ruta pública.`,
+        area: "technical",
+        fixTarget: "catalog",
+      });
+    }
+  });
+
+  if (project.policies.shipping.handlingDaysMin > project.policies.shipping.handlingDaysMax) {
+    issues.push({
+      code: "shipping.handling-range",
+      severity: "critical",
+      message: "El rango de preparación de envíos es inválido.",
+      area: "content",
+      fixTarget: "summary",
+    });
+  }
+  if (project.policies.shipping.transitDaysMin > project.policies.shipping.transitDaysMax) {
+    issues.push({
+      code: "shipping.transit-range",
+      severity: "critical",
+      message: "El rango de tránsito de envíos es inválido.",
+      area: "content",
+      fixTarget: "summary",
+    });
+  }
+  if (!project.identity.phone.trim() || !project.identity.address.trim()) {
+    issues.push({
+      code: "identity.contact",
+      severity: "warning",
+      message: "La tienda debería publicar teléfono y dirección comercial.",
+      area: "content",
+      fixTarget: "summary",
+    });
+  }
+
+  project.products.forEach((product, productIndex) => {
+    if (product.status !== "active") return;
+    if (!product.brand.trim()) {
+      issues.push({
+        code: "product.brand",
+        severity: "warning",
+        message: `${product.title} no tiene marca comercial.`,
+        area: "merchant",
+        path: `products.${productIndex}.brand`,
+        fixTarget: "catalog",
+        entity: { type: "product", id: product.id, label: product.title },
+      });
+    }
+    product.variants.forEach((variant, variantIndex) => {
+      if (variant.stockStatus === "preorder" && !variant.availabilityDate) {
+        issues.push({
+          code: "variant.availability-date",
+          severity: "critical",
+          message: `${product.title}, ${variant.title} necesita fecha de disponibilidad para preorder.`,
+          area: "merchant",
+          path: `products.${productIndex}.variants.${variantIndex}.availabilityDate`,
+          fixTarget: "catalog",
+          entity: { type: "variant", id: variant.id, label: `${product.title} - ${variant.title}` },
+        });
+      }
+      if (variant.stockStatus !== "preorder" && variant.availabilityDate) {
+        issues.push({
+          code: "variant.availability-date.unused",
+          severity: "warning",
+          message: `${product.title}, ${variant.title} tiene una fecha que sólo aplica a preorder.`,
+          area: "merchant",
+          path: `products.${productIndex}.variants.${variantIndex}.availabilityDate`,
+          fixTarget: "catalog",
+        });
+      }
+    });
+  });
+
+  const feed = buildMerchantFeed(project, snapshot);
+  snapshot.offers.forEach((offer) => {
+    const idMarkup = `<g:id>${escapeXml(offer.variantId)}</g:id>`;
+    const priceMarkup = `<g:price>${(offer.priceMinor / 100).toFixed(2)} ${offer.currency}</g:price>`;
+    const availabilityMarkup = `<g:availability>${offer.availability}</g:availability>`;
+    if (
+      !feed.includes(idMarkup) ||
+      !feed.includes(priceMarkup) ||
+      !feed.includes(availabilityMarkup)
+    ) {
+      issues.push({
+        code: "merchant.snapshot-mismatch",
+        severity: "critical",
+        message: `La oferta ${offer.variantId} no coincide con el snapshot comercial.`,
+        area: "merchant",
+        fixTarget: "export",
+        entity: { type: "variant", id: offer.variantId, label: offer.title },
+      });
+    }
+  });
 
   if (!project.policies.shipping.details.trim() || !project.policies.returns.details.trim()) {
     issues.push({
@@ -785,12 +1118,41 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
       "Google Merchant puede rechazar una tienda cuyo pedido se completa únicamente por WhatsApp.",
   });
 
-  return issues;
+  return issues.map((issue) => ({
+    ...issue,
+    area:
+      issue.area ??
+      (issue.code.startsWith("merchant") || issue.code.startsWith("variant.")
+        ? "merchant"
+        : issue.code.startsWith("domain") || issue.code.includes("slug")
+          ? "technical"
+          : issue.code.startsWith("image") || issue.code.startsWith("product")
+            ? "content"
+            : "structured-data"),
+    fixTarget:
+      issue.fixTarget ??
+      (issue.code.startsWith("image")
+        ? "assets"
+        : issue.code.startsWith("variant")
+          ? "catalog"
+          : "seo"),
+  }));
+}
+
+export function auditReport(project: StoreProjectV1): AuditReport {
+  const issues = auditProject(project);
+  return {
+    issues,
+    criticalCount: issues.filter((issue) => issue.severity === "critical").length,
+    warningCount: issues.filter((issue) => issue.severity === "warning").length,
+    merchantMode: "experimental-whatsapp",
+  };
 }
 
 function buildFiles(project: StoreProjectV1, mode: ExportMode): Map<string, string | Uint8Array> {
   const publicProject = projectWithPublicAssetUrls(project);
-  const pages = buildPages(publicProject);
+  const snapshot = buildCommerceSnapshot(publicProject);
+  const pages = buildPages(publicProject, snapshot);
   const files = new Map<string, string | Uint8Array>();
   pages.forEach((page) => {
     files.set(page.path, renderDocument(publicProject, page, mode));
@@ -809,7 +1171,7 @@ function buildFiles(project: StoreProjectV1, mode: ExportMode): Map<string, stri
   files.set("sitemap.xml", buildSitemap(publicProject, pages));
   files.set("image-sitemap.xml", buildImageSitemap(publicProject));
   if (mode === "production") {
-    files.set("google-merchant.xml", buildMerchantFeed(publicProject));
+    files.set("google-merchant.xml", buildMerchantFeed(publicProject, snapshot));
     files.set(
       "_headers",
       `/*
