@@ -2,10 +2,15 @@ import "fake-indexeddb/auto";
 import { referenceStore } from "@solara/project-schema/fixture";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import {
+  ASSET_CACHE_RECIPE_VERSION,
+  clearAssetCache,
+  createAssetCacheKey,
   database,
   duplicateProject,
+  getCachedAsset,
   getProject,
   listProjects,
+  putCachedAsset,
   saveProject,
   setProjectArchived,
 } from "./repository";
@@ -54,6 +59,51 @@ describe("repositorio local", () => {
     database.close();
     await database.open();
 
+    expect(await getProject(referenceStore.id)).toEqual(referenceStore);
+  });
+
+  it("identifica la caché por hash y versión de receta", () => {
+    expect(createAssetCacheKey("abc")).toBe(`abc:recipe-${ASSET_CACHE_RECIPE_VERSION}`);
+    expect(createAssetCacheKey("abc", 2)).not.toBe(createAssetCacheKey("abc", 1));
+  });
+
+  it("guarda y recupera assets compatibles sin reutilizar otras recetas", async () => {
+    await putCachedAsset({
+      hash: "hash-asset",
+      originalName: "producto.jpg",
+      mimeType: "image/webp",
+      width: 960,
+      height: 640,
+      primary: "data:image/webp;base64,cHJpbWFyeQ==",
+      fallback: "data:image/jpeg;base64,ZmFsbGJhY2s=",
+      responsive: [{ width: 480, source: "data:image/webp;base64,cmVzcG9uc2l2ZQ==" }],
+      createdAt: "2026-08-01T00:00:00.000Z",
+    });
+
+    const cached = await getCachedAsset("hash-asset");
+    expect(cached?.cacheKey).toBe(createAssetCacheKey("hash-asset"));
+    expect(cached?.recipeVersion).toBe(ASSET_CACHE_RECIPE_VERSION);
+    expect(cached?.lastUsedAt).toBeTruthy();
+    expect(await getCachedAsset("hash-asset", ASSET_CACHE_RECIPE_VERSION + 1)).toBeUndefined();
+  });
+
+  it("puede limpiar la caché regenerable sin tocar proyectos", async () => {
+    await saveProject(referenceStore);
+    await putCachedAsset({
+      hash: "hash-cache",
+      originalName: "producto.webp",
+      mimeType: "image/webp",
+      width: 480,
+      height: 320,
+      primary: "data:image/webp;base64,cA==",
+      fallback: "data:image/jpeg;base64,Zg==",
+      responsive: [],
+      createdAt: "2026-08-01T00:00:00.000Z",
+    });
+
+    await clearAssetCache();
+
+    expect(await getCachedAsset("hash-cache")).toBeUndefined();
     expect(await getProject(referenceStore.id)).toEqual(referenceStore);
   });
 });

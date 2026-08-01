@@ -1,5 +1,6 @@
+import { referenceStore } from "@solara/project-schema/fixture";
 import { describe, expect, it } from "vitest";
-import { escapeHtml, safeAssetUrl, safeUrl, sanitizeRichText } from "./index";
+import { escapeHtml, renderImage, safeAssetUrl, safeUrl, sanitizeRichText } from "./index";
 
 describe("HTML safety", () => {
   it("escapes text and attributes", () => {
@@ -25,5 +26,38 @@ describe("HTML safety", () => {
       "blob:https://studio.local/image-id",
     );
     expect(safeAssetUrl("data:text/html,bad")).toBe("");
+  });
+
+  it("renderiza imágenes responsive con prioridad y atributos escapados", () => {
+    const asset = referenceStore.assets[0];
+    if (!asset) throw new Error("Fixture incompleto");
+    const project = {
+      ...referenceStore,
+      assets: [
+        {
+          ...asset,
+          responsiveSources: [
+            { width: 480, source: "data:image/webp;base64,AA==" },
+            { width: 960, source: "/assets/fixture-960.jpg" },
+          ],
+        },
+        ...referenceStore.assets.slice(1),
+      ],
+    };
+    const html = renderImage(project, asset.id, {
+      loading: "eager",
+      fetchPriority: "high",
+      decoding: "async",
+      sizes: "(max-width: 720px) 100vw, 50vw",
+      fallbackAlt: 'Imagen "principal"',
+    });
+
+    expect(html).toContain('loading="eager"');
+    expect(html).toContain('fetchpriority="high"');
+    expect(html).toContain('decoding="async"');
+    expect(html).toContain('sizes="(max-width: 720px) 100vw, 50vw"');
+    expect(html).toContain('<source type="image/webp"');
+    expect(html).toContain('<source type="image/jpeg"');
+    expect(html).not.toContain("<script");
   });
 });

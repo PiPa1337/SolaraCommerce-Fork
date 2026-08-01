@@ -248,12 +248,25 @@ export function formatMoney(amount: number, locale = "es-AR", currency = "ARS"):
   }).format(amount / 100);
 }
 
+function imageMimeType(source: string): "image/webp" | "image/jpeg" | "image/png" {
+  const dataMime = /^data:(image\/(?:webp|jpeg|png));/i.exec(source)?.[1]?.toLowerCase();
+  if (dataMime === "image/jpeg" || dataMime === "image/png" || dataMime === "image/webp") {
+    return dataMime;
+  }
+  const extension = source.split(/[?#]/, 1)[0]?.split(".").pop()?.toLowerCase();
+  if (extension === "jpg" || extension === "jpeg") return "image/jpeg";
+  if (extension === "png") return "image/png";
+  return "image/webp";
+}
+
 export function renderImage(
   project: StoreProjectV1,
   assetId: AssetId | string | undefined,
   options: {
     className?: string;
     loading?: "eager" | "lazy";
+    fetchPriority?: "high" | "low" | "auto";
+    decoding?: "async" | "sync" | "auto";
     sizes?: string;
     fallbackAlt?: string;
   } = {},
@@ -265,17 +278,26 @@ export function renderImage(
 
   const className = options.className ? ` class="${escapeAttribute(options.className)}"` : "";
   const sizes = options.sizes ? ` sizes="${escapeAttribute(options.sizes)}"` : "";
-  const fallbackSource = safeAssetUrl(asset.fallbackSource ?? asset.source, "");
-  const responsiveSources = asset.responsiveSources?.length
-    ? asset.responsiveSources
-        .map((source) => `${escapeAttribute(safeAssetUrl(source.source, ""))} ${source.width}w`)
-        .join(", ")
+  const fetchPriority = options.fetchPriority
+    ? ` fetchpriority="${escapeAttribute(options.fetchPriority)}"`
     : "";
-  const image = `<img${className} src="${escapeAttribute(fallbackSource)}" alt="${escapeAttribute(asset.alt || options.fallbackAlt || "")}" width="${asset.width}" height="${asset.height}" loading="${options.loading ?? "lazy"}" decoding="async"${sizes}>`;
+  const decoding = ` decoding="${escapeAttribute(options.decoding ?? "async")}"`;
+  const fallbackSource = safeAssetUrl(asset.fallbackSource ?? asset.source, "");
+  const responsiveByMime = new Map<string, string[]>();
+  asset.responsiveSources?.forEach((source) => {
+    const safeSource = safeAssetUrl(source.source, "");
+    if (!safeSource) return;
+    const mime = imageMimeType(source.source);
+    const entries = responsiveByMime.get(mime) ?? [];
+    entries.push(`${escapeAttribute(safeSource)} ${source.width}w`);
+    responsiveByMime.set(mime, entries);
+  });
+  const responsiveSources = [...responsiveByMime.entries()]
+    .map(([mime, sources]) => `<source type="${mime}" srcset="${sources.join(", ")}"${sizes}>`)
+    .join("");
+  const image = `<img${className} src="${escapeAttribute(fallbackSource)}" alt="${escapeAttribute(asset.alt || options.fallbackAlt || "")}" width="${asset.width}" height="${asset.height}" loading="${options.loading ?? "lazy"}"${fetchPriority}${decoding}${sizes}>`;
   if (responsiveSources) {
-    return safeHtml(
-      `<picture><source type="image/webp" srcset="${responsiveSources}"${sizes}>${image}</picture>`,
-    );
+    return safeHtml(`<picture>${responsiveSources}${image}</picture>`);
   }
   return safeHtml(image);
 }

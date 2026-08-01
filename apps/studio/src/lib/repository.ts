@@ -12,7 +12,9 @@ export interface StoredProject {
 }
 
 export interface CachedAsset {
+  cacheKey: string;
   hash: string;
+  recipeVersion: number;
   originalName: string;
   mimeType: string;
   width: number;
@@ -21,11 +23,21 @@ export interface CachedAsset {
   fallback: string;
   responsive: Array<{ width: number; source: string }>;
   createdAt: string;
+  lastUsedAt: string;
+}
+
+export const ASSET_CACHE_RECIPE_VERSION = 1;
+
+export function createAssetCacheKey(
+  hash: string,
+  recipeVersion = ASSET_CACHE_RECIPE_VERSION,
+): string {
+  return `${hash}:recipe-${recipeVersion}`;
 }
 
 class SolaraDatabase extends Dexie {
   projects!: EntityTable<StoredProject, "id">;
-  assetCache!: EntityTable<CachedAsset, "hash">;
+  assetCache!: EntityTable<CachedAsset, "cacheKey">;
 
   constructor() {
     super("solara-commerce-studio");
@@ -33,6 +45,15 @@ class SolaraDatabase extends Dexie {
       projects: "id, status, updatedAt, name",
       assetCache: "hash, createdAt",
     });
+    this.version(2)
+      .stores({
+        projects: "id, status, updatedAt, name",
+        assetCache: "cacheKey, hash, recipeVersion, createdAt, lastUsedAt",
+      })
+      .upgrade(async (transaction) => {
+        // La caché es regenerable; descartarla evita reutilizar resultados de una receta anterior.
+        await transaction.table("assetCache").clear();
+      });
   }
 }
 
@@ -152,12 +173,57 @@ export async function setProjectArchived(id: string, archived: boolean): Promise
   );
 }
 
-export async function putCachedAsset(asset: CachedAsset): Promise<void> {
-  await database.assetCache.put(asset);
+export async function putCachedAsset(
+  asset: Omit<CachedAsset, "cacheKey" | "recipeVersion" | "lastUsedAt"> &
+    Partial<Pick<CachedAsset, "recipeVersion" | "lastUsedAt">>,
+): Promise<void> {
+  const recipeVersion = asset.recipeVersion ?? ASSET_CACHE_RECIPE_VERSION;
+  const timestamp = asset.lastUsedAt ?? new Date().toISOString();
+  await database.assetCache.put({
+    ...asset,
+    cacheKey: createAssetCacheKey(asset.hash, recipeVersion),
+    recipeVersion,
+    lastUsedAt: timestamp,
+  });
 }
 
-export async function getCachedAsset(hash: string): Promise<CachedAsset | undefined> {
-  return database.assetCache.get(hash);
+export async function getCachedAsset(
+  hash: string,
+  recipeVersion = ASSET_CACHE_RECIPE_VERSION,
+): Promise<CachedAsset | undefined> {
+  const cacheKey = createAssetCacheKey(hash, recipeVersion);
+  const cached = await database.assetCache.get(cacheKey);
+  if (!cached) return undefined;
+  const lastUsedAt = new Date().toISOString();
+  await database.assetCache.update(cacheKey, { lastUsedAt });
+  return { ...cached, lastUsedAt };
+}
+
+export interface StorageEstimate {
+  usage: number;
+  quota: number;
+  ratio: number;
+}
+
+export async function getStorageEstimate(): Promise<StorageEstimate | undefined> {
+  if (typeof navigator === "undefined" || !navigator.storage?.estimate) return undefined;
+  const estimate = await navigator.storage.estimate();
+  const usage = estimate.usage ?? 0;
+  const quota = estimate.quota ?? 0;
+  return {
+    usage,
+    quota,
+    ratio: quota > 0 ? usage / quota : 0,
+  };
+}
+
+export async function requestPersistentStorage(): Promise<boolean> {
+  if (typeof navigator === "undefined" || !navigator.storage?.persist) return false;
+  return navigator.storage.persist();
+}
+
+export async function clearAssetCache(): Promise<void> {
+  await database.assetCache.clear();
 }
 
 export function slugify(value: string, fallback = "tienda"): string {

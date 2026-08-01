@@ -197,6 +197,7 @@ export const splitHero: ModuleDefinition<z.infer<typeof heroSettings>> = {
     const image = renderImage(context.project, imageId, {
       className: "solara-hero-image",
       loading: "eager",
+      fetchPriority: "high",
       sizes: "(max-width: 767px) 100vw, 55vw",
       fallbackAlt: context.settings.title,
     });
@@ -270,6 +271,7 @@ export const editorialHero: ModuleDefinition<z.infer<typeof heroSettings>> = {
     const image = renderImage(context.project, imageId, {
       className: "solara-hero-image",
       loading: "eager",
+      fetchPriority: "high",
       sizes: "(max-width: 767px) 100vw, 64vw",
       fallbackAlt: context.settings.title,
     });

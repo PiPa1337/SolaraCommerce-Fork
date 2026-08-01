@@ -103,8 +103,19 @@ function imageUrl(project: StoreProjectV1, assetId: string | undefined): string 
 }
 
 function assetExtension(asset: ImageAsset): string {
-  const extension = asset.mimeType.split("/")[1]?.replace("jpeg", "jpg");
+  const extension = mimeTypeExtension(asset.mimeType);
   return extension || "bin";
+}
+
+function mimeTypeExtension(mimeType: string | undefined): string | undefined {
+  const subtype = mimeType?.split("/")[1]?.split(";")[0]?.toLowerCase();
+  if (!subtype) return undefined;
+  return subtype === "jpeg" ? "jpg" : subtype;
+}
+
+function sourceExtension(source: string, fallback: string): string {
+  const mimeType = /^data:([^;,]+)/i.exec(source)?.[1];
+  return mimeTypeExtension(mimeType) ?? fallback;
 }
 
 function dataUrlBytes(source: string): Uint8Array | undefined {
@@ -121,9 +132,14 @@ function dataUrlBytes(source: string): Uint8Array | undefined {
   return encoder.encode(decodeURIComponent(payload));
 }
 
-function publicAssetPath(asset: ImageAsset, kind: "primary" | "fallback", width?: number): string {
+function publicAssetPath(
+  asset: ImageAsset,
+  kind: "primary" | "fallback",
+  source: string,
+  width?: number,
+): string {
   const suffix = width ? `-${width}` : kind === "fallback" ? "-fallback" : "";
-  const extension = kind === "fallback" ? "jpg" : assetExtension(asset);
+  const extension = sourceExtension(source, assetExtension(asset));
   return `/assets/${asset.hash}${suffix}.${extension}`;
 }
 
@@ -132,11 +148,13 @@ function projectWithPublicAssetUrls(project: StoreProjectV1): StoreProjectV1 {
     ...project,
     assets: project.assets.map((asset) => ({
       ...asset,
-      source: asset.source.startsWith("data:") ? publicAssetPath(asset, "primary") : asset.source,
+      source: asset.source.startsWith("data:")
+        ? publicAssetPath(asset, "primary", asset.source)
+        : asset.source,
       ...(asset.fallbackSource
         ? {
             fallbackSource: asset.fallbackSource.startsWith("data:")
-              ? publicAssetPath(asset, "fallback")
+              ? publicAssetPath(asset, "fallback", asset.fallbackSource)
               : asset.fallbackSource,
           }
         : {}),
@@ -145,7 +163,7 @@ function projectWithPublicAssetUrls(project: StoreProjectV1): StoreProjectV1 {
             responsiveSources: asset.responsiveSources.map((source) => ({
               ...source,
               source: source.source.startsWith("data:")
-                ? publicAssetPath(asset, "primary", source.width)
+                ? publicAssetPath(asset, "primary", source.source, source.width)
                 : source.source,
             })),
           }
@@ -805,15 +823,21 @@ function buildFiles(project: StoreProjectV1, mode: ExportMode): Map<string, stri
 
   project.assets.forEach((asset) => {
     const bytes = dataUrlBytes(asset.source);
-    if (bytes) files.set(publicAssetPath(asset, "primary").slice(1), bytes);
+    if (bytes) files.set(publicAssetPath(asset, "primary", asset.source).slice(1), bytes);
     const fallbackBytes = asset.fallbackSource ? dataUrlBytes(asset.fallbackSource) : undefined;
     if (fallbackBytes) {
-      files.set(publicAssetPath(asset, "fallback").slice(1), fallbackBytes);
+      files.set(
+        publicAssetPath(asset, "fallback", asset.fallbackSource ?? "").slice(1),
+        fallbackBytes,
+      );
     }
     asset.responsiveSources?.forEach((source) => {
       const responsiveBytes = dataUrlBytes(source.source);
       if (responsiveBytes) {
-        files.set(publicAssetPath(asset, "primary", source.width).slice(1), responsiveBytes);
+        files.set(
+          publicAssetPath(asset, "primary", source.source, source.width).slice(1),
+          responsiveBytes,
+        );
       }
     });
   });

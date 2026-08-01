@@ -62,6 +62,14 @@ ni recursos externos.
 Los heroes dividido y editorial, junto con las grillas editorial y compacta,
 ofrecen tratamientos realmente distintos sobre el mismo contenido.
 
+## Imágenes responsive
+
+Los recursos se procesan en un Web Worker con una receta determinista de anchos
+480, 768, 1200 y 1800 px. Solara valida el formato, corrige la orientación,
+conserva transparencia, reutiliza transformaciones por hash y deduplica los
+binarios del ZIP público. La caché es regenerable y puede limpiarse sin tocar
+los proyectos guardados.
+
 ## Verificación
 
 ```bash

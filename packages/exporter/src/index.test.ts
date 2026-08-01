@@ -129,6 +129,55 @@ describe("exporter", () => {
     expect(html).toContain("/assets/fixture-manta-480.webp 480w");
   });
 
+  it("usa la extensión del MIME real para fallback y variantes responsive", () => {
+    const firstAsset = referenceStore.assets[0];
+    if (!firstAsset) throw new Error("Fixture incompleto");
+    const project = {
+      ...referenceStore,
+      assets: [
+        {
+          ...firstAsset,
+          mimeType: "image/webp",
+          source: "data:image/webp;base64,AA==",
+          fallbackSource: "data:image/png;base64,AQ==",
+          responsiveSources: [{ width: 480, source: "data:image/jpeg;base64,Ag==" }],
+        },
+        ...referenceStore.assets.slice(1),
+      ],
+    };
+
+    const result = exportProject(project, { mode: "draft" });
+    const html = String(result.files.get("index.html"));
+
+    expect(result.files.has("assets/fixture-manta-fallback.png")).toBe(true);
+    expect(result.files.has("assets/fixture-manta-480.jpg")).toBe(true);
+    expect(result.files.has("assets/fixture-manta-fallback.jpg")).toBe(false);
+    expect(html).toContain("/assets/fixture-manta-fallback.png");
+    expect(html).toContain("/assets/fixture-manta-480.jpg 480w");
+  });
+
+  it("deduplica rutas y binarios de assets con el mismo hash", () => {
+    const firstAsset = referenceStore.assets[0];
+    if (!firstAsset) throw new Error("Fixture incompleto");
+    const duplicate = {
+      ...firstAsset,
+      id: "asset-duplicate",
+      source: "data:image/webp;base64,AA==",
+      mimeType: "image/webp",
+      hash: "shared-content-hash",
+    };
+    const project = {
+      ...referenceStore,
+      assets: [{ ...duplicate, id: firstAsset.id }, duplicate, ...referenceStore.assets.slice(1)],
+    };
+
+    const result = exportProject(project as typeof referenceStore, { mode: "draft" });
+
+    expect(
+      [...result.files.keys()].filter((path) => path === "assets/shared-content-hash.webp"),
+    ).toHaveLength(1);
+  });
+
   it("advierte el riesgo Merchant del checkout por WhatsApp", () => {
     expect(auditProject(referenceStore)).toContainEqual(
       expect.objectContaining({ code: "merchant.whatsapp-checkout", severity: "warning" }),

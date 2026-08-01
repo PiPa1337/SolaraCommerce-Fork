@@ -80,13 +80,19 @@ export async function hashFile(file: File): Promise<string> {
 }
 
 export async function processImageInWorker(file: File): Promise<ProcessedImage> {
+  const supportedTypes = ["image/jpeg", "image/png", "image/webp"];
+  if (!supportedTypes.includes(file.type)) {
+    throw new Error("Formato no compatible. Usá una imagen JPEG, PNG o WebP.");
+  }
+  if (file.size === 0) throw new Error("La imagen está vacía.");
+  if (file.size > 25 * 1024 * 1024) throw new Error("La imagen supera el límite de 25 MB.");
   const buffer = await file.arrayBuffer();
   return requestWorker(
     getImageWorker(),
     {
       buffer,
       name: file.name,
-      type: file.type || "image/jpeg",
+      type: file.type,
       maxWidth: 1800,
     },
     [buffer],
