@@ -27,17 +27,47 @@ export function createProjectArchive(project: StoreProjectV1): Uint8Array {
 }
 
 export function readProjectArchive(input: Uint8Array): StoreProjectV1 {
-  const files = unzipSync(input);
+  let files: Record<string, Uint8Array>;
+  try {
+    files = unzipSync(input);
+  } catch {
+    throw new Error("El respaldo está corrupto o no es un ZIP válido.");
+  }
   const manifestFile = files["manifest.json"];
   const projectFile = files["project.json"];
   if (!manifestFile || !projectFile) {
-    throw new Error("El archivo no es un proyecto Solara válido.");
+    throw new Error("El respaldo no contiene manifest.json y project.json.");
   }
-  const manifest = JSON.parse(strFromU8(manifestFile)) as Partial<ArchiveManifest>;
+
+  let manifest: Partial<ArchiveManifest>;
+  try {
+    manifest = JSON.parse(strFromU8(manifestFile)) as Partial<ArchiveManifest>;
+  } catch {
+    throw new Error("El manifest del respaldo está corrupto.");
+  }
   if (manifest.format !== "solara-project" || manifest.version !== 1) {
-    throw new Error("La versión del archivo Solara no es compatible.");
+    throw new Error("La versión del archivo Solara no es compatible con esta versión de Studio.");
   }
-  return StoreProjectV1Schema.parse(JSON.parse(strFromU8(projectFile)));
+
+  let project: unknown;
+  try {
+    project = JSON.parse(strFromU8(projectFile));
+  } catch {
+    throw new Error("El proyecto dentro del respaldo está corrupto.");
+  }
+  const parsed = StoreProjectV1Schema.safeParse(project);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const path = issue?.path.join(".") || "project";
+    throw new Error(
+      "El proyecto no es compatible: " +
+        path +
+        ": " +
+        (issue?.message ?? "validación fallida") +
+        ". Conservá el archivo original.",
+    );
+  }
+  return parsed.data;
 }
 
 export type DownloadData = string | Blob | Uint8Array;

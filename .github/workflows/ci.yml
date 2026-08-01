@@ -51,6 +51,9 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Revisar budgets de bundles
+        run: pnpm check:budgets
+
       - name: Benchmark de exportación
         run: pnpm benchmark:export
 

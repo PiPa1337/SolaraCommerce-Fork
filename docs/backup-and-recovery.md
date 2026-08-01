@@ -36,6 +36,13 @@ registrar el mensaje exacto. Probar primero una copia anterior en un perfil de
 navegador separado. Si la versión del proyecto es posterior a la soportada,
 actualizar Studio antes de reintentar; no editar el JSON interno a mano.
 
+Cuando Studio detecta un registro incompatible al iniciar, lo muestra en el
+dashboard bajo “proyectos que requieren recuperación” sin bloquear las tiendas
+válidas. Usá `Importar respaldo` en esa advertencia para seleccionar un
+`.solara.zip`; la importación reemplaza el registro sólo después de validar el
+ZIP, el manifest y `StoreProjectV1`. Conservá siempre el archivo original y
+confirmá que productos, secciones y recursos estén presentes después de abrirlo.
+
 ## Cuota local
 
 Imágenes y variantes responsive consumen la mayor parte del almacenamiento. Si

@@ -9,29 +9,42 @@ import {
   duplicateProject,
   ensureFirstProject,
   getProject,
-  listProjects,
+  listProjectsWithRecovery,
+  type ProjectRecoveryIssue,
   type StoredProject,
   saveProject,
   setProjectArchived,
 } from "./lib/repository";
+import { readProjectArchiveInWorker } from "./lib/workers";
 
 export function App() {
   const [projects, setProjects] = useState<StoredProject[]>([]);
   const [active, setActive] = useState<StoreProjectV1>();
+  const [recovery, setRecovery] = useState<ProjectRecoveryIssue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const refresh = useCallback(async () => {
-    setProjects(await listProjects());
+    const result = await listProjectsWithRecovery();
+    setProjects(result.projects);
+    setRecovery(result.recovery);
+    return result;
   }, []);
 
   useEffect(() => {
-    void ensureFirstProject()
-      .then(refresh)
-      .catch((reason) =>
-        setError(reason instanceof Error ? reason.message : "No se pudo abrir Studio."),
-      )
-      .finally(() => setLoading(false));
+    void (async () => {
+      try {
+        const result = await refresh();
+        if (result.projects.length === 0 && result.recovery.length === 0) {
+          await ensureFirstProject();
+          await refresh();
+        }
+      } catch (reason) {
+        setError(reason instanceof Error ? reason.message : "No se pudo abrir Studio.");
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [refresh]);
 
   const guard = async (action: () => Promise<void>) => {
@@ -41,6 +54,15 @@ export function App() {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "La operación no pudo completarse.");
     }
+  };
+
+  const importRecoveryArchive = async (file: File) => {
+    await guard(async () => {
+      const project = await readProjectArchiveInWorker(file);
+      await saveProject(project);
+      await refresh();
+      setActive(project);
+    });
   };
 
   if (loading) {
@@ -90,6 +112,37 @@ export function App() {
           <button type="button" onClick={() => setError("")} aria-label="Cerrar mensaje">
             <WarningCircle aria-hidden size={17} />
           </button>
+        </div>
+      ) : null}
+      {recovery.length > 0 ? (
+        <div className="global-warning" aria-live="polite">
+          <div>
+            <strong>{recovery.length} proyecto(s) requieren recuperación.</strong>
+            <p>
+              Studio no los abrió porque no cumplen el schema actual. Conservá el archivo original y
+              recuperá una copia compatible desde un respaldo .solara.zip.
+            </p>
+            <ul>
+              {recovery.map((item) => (
+                <li key={item.id}>
+                  {item.name}: {item.message}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <label className="button button--primary">
+            Importar respaldo
+            <input
+              className="visually-hidden"
+              type="file"
+              accept=".zip,.solara.zip,application/zip"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void importRecoveryArchive(file);
+                event.target.value = "";
+              }}
+            />
+          </label>
         </div>
       ) : null}
       <Dashboard

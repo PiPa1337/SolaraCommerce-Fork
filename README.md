@@ -141,3 +141,19 @@ El storefront activa `inView` con `IntersectionObserver`; `parallax` y
 `scroll-progress` usan CSS Scroll-driven Animations con fallback de un solo frame
 pasivo. `prefers-reduced-motion`, pantallas pequenas y JavaScript desactivado
 conservan el estado final visible.
+
+## Hardening y recuperación (Fase 8)
+
+Studio valida cada proyecto al abrirlo y separa los registros incompatibles para
+que una tienda dañada no impida abrir las demás. El dashboard muestra la causa,
+conserva el registro original y permite reemplazarlo importando un respaldo
+`.solara.zip`; el ZIP se valida antes de persistirse.
+
+La pantalla de Recursos muestra el uso de cuota de IndexedDB y sólo permite
+limpiar la caché regenerable de imágenes. El exportador genera `_headers` con
+CSP, Referrer-Policy, Permissions-Policy y protección contra framing.
+
+El gate incluye `corepack pnpm check:budgets`, que bloquea bundles iniciales de
+Studio por encima de 260 KiB gzip de JavaScript o 100 KiB gzip de CSS. La matriz
+multinavegador y Lighthouse se ejecutan en el gate de release, no en cada cambio
+local.

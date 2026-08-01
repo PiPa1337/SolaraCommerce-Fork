@@ -132,6 +132,15 @@ describe("exporter", () => {
     expect(result.files.get("index.html")).toContain("noindex,nofollow");
   });
 
+  it("publica headers de seguridad compatibles con variables de movimiento", () => {
+    const headers = String(
+      exportProject(referenceStore, { mode: "production" }).files.get("_headers"),
+    );
+    expect(headers).toContain("Content-Security-Policy");
+    expect(headers).toContain("style-src-attr 'unsafe-inline'");
+    expect(headers).toContain("script-src 'self'");
+  });
+
   it("recupera un archivo de proyecto sin cambios", () => {
     expect(readProjectArchive(createProjectArchive(referenceStore))).toEqual(referenceStore);
   });

@@ -9,6 +9,7 @@
   "scripts": {
     "benchmark:export": "vitest run scripts/export-benchmark.test.ts --testTimeout=30000",
     "build": "corepack pnpm -r --if-present build",
+    "check:budgets": "node scripts/check-budgets.mjs",
     "check": "corepack pnpm check:repository && corepack pnpm format:check && corepack pnpm typecheck && corepack pnpm test",
     "check:repository": "node scripts/check-repository.mjs",
     "dev": "corepack pnpm --filter @solara/studio dev",

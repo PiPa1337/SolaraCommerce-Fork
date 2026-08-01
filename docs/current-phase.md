@@ -1,51 +1,47 @@
-# Fase 7 completada: movimiento premium accesible
+# Fase 8 completada: hardening y release candidate
 
 ## Objetivo
 
-Agregar movimiento declarativo sin alterar el HTML indexable, sin ocultar
-contenido cuando falla JavaScript y sin introducir una dependencia de timelines.
+Endurecer Studio y el storefront frente a datos corruptos, respaldos
+incompatibles, políticas de seguridad y regresiones de bundle sin cambiar los
+contratos persistidos ni el formato público.
 
 ## Entregado
 
-- Cada root de modulo publica preset, intensidad, distancia, punto de entrada y
-  politica `once` como atributos y variables CSS deterministas.
-- `IntersectionObserver` activa las zonas cuando alcanzan su punto de entrada y
-  repite el estado cuando `once` esta desactivado.
-- `scroll-progress` y `parallax` usan CSS Scroll-driven Animations cuando el
-  navegador las soporta.
-- Fallback JS de parallax/progreso con un solo `requestAnimationFrame` pendiente,
-  listeners pasivos y sin scroll-jacking.
-- Intensidad aplicada a fade-up, slide y scale mediante variables CSS.
-- Reduccion automatica de parallax y layer-stack en pantallas pequenas.
-- `prefers-reduced-motion` deja todos los estados finales visibles y detiene
-  progreso, parallax y transiciones.
-- La salida sin JavaScript conserva el contenido visible porque el estado
-  inicial no depende de `data-motion-ready`.
+- La lista de tiendas valida cada registro con `StoreProjectV1Schema` y separa
+  proyectos recuperables de registros incompatibles.
+- Studio muestra los registros que requieren recuperación, conserva el original
+  y permite importar un respaldo `.solara.zip` compatible desde el dashboard.
+- La apertura de una tienda corrupta y la lectura de un ZIP inválido devuelven
+  mensajes accionables sin sobrescribir datos.
+- La importación valida ZIP, manifest, versión y proyecto antes de persistirlo.
+- La pantalla de Recursos informa el uso de cuota local y permite limpiar sólo
+  la caché regenerable de imágenes.
+- El exportador publica `_headers` con CSP, Referrer-Policy, permisos mínimos y
+  protección contra framing; `style-src-attr` queda limitado a las variables de
+  movimiento declarativas del storefront.
+- `check:budgets` mide el gzip de los bundles iniciales de Studio y bloquea el
+  gate si supera 260 KiB de JavaScript o 100 KiB de CSS.
+- El benchmark determinista conserva el stress test de 1.000 productos.
 
 ## Contratos preservados
 
-- No cambian `StoreProjectV1`, `schemaVersion`, `ModuleDefinition`, settings ni
-  formatos de exportacion.
-- Las zonas animables siguen declaradas por cada modulo; no existe seleccion
-  arbitraria de DOM ni editor libre de timelines.
-- Carrito, variantes, WhatsApp, SEO, sitemaps y feed conservan su comportamiento.
-- El runtime continua por debajo del presupuesto de 35 KB gzip.
+- No cambian `StoreProjectV1`, `schemaVersion`, `DomainCommand`,
+  `ModuleDefinition`, IDs ni formatos `.solara.zip` y `site.zip`.
+- No se agregan dependencias de runtime ni servicios externos.
+- El checkout, WhatsApp, SEO, Merchant, preview, undo/redo y exportación
+  mantienen el comportamiento de las fases anteriores.
 
-## Verificacion de cierre
+## Verificación de cierre
 
-- Tests del SDK para atributos declarativos de movimiento.
-- Tests del runtime para IntersectionObserver, scroll pasivo, RAF, CSS y reduced
-  motion.
-- Playwright verifica intensidad, punto de entrada, inView y contenido visible
-  con movimiento reducido en storefront.
-- Gate de fase:
-  - `corepack pnpm check`
-  - `corepack pnpm build`
-  - `corepack pnpm benchmark:export`
-  - `corepack pnpm test:e2e` (17/17 Chromium)
+- `corepack pnpm check`
+- `corepack pnpm build`
+- `corepack pnpm check:budgets`
+- `corepack pnpm benchmark:export`
+- `corepack pnpm test:e2e` (17/17 Chromium)
 
-## Proxima fase
+## Próxima fase
 
-Hardening de release candidate: recuperacion de proyectos, sanitizacion en
-fronteras, CSP, accesibilidad, stress de 1.000 productos, bundle budgets,
-Lighthouse CI y matriz de navegadores.
+Release candidate reproducible: matriz opcional de navegadores, auditoría de
+accesibilidad y Lighthouse, manifiesto de release, backups documentados y
+pruebas finales antes del piloto real.

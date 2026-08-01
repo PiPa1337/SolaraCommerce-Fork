@@ -11,6 +11,18 @@ export interface StoredProject {
   project: StoreProjectV1;
 }
 
+export interface ProjectRecoveryIssue {
+  id: string;
+  name: string;
+  updatedAt: string;
+  message: string;
+}
+
+export interface ProjectListResult {
+  projects: StoredProject[];
+  recovery: ProjectRecoveryIssue[];
+}
+
 export interface CachedAsset {
   cacheKey: string;
   hash: string;
@@ -93,12 +105,48 @@ async function embedFixtureAssets(project: StoreProjectV1): Promise<StoreProject
 }
 
 export async function listProjects(): Promise<StoredProject[]> {
-  return database.projects.orderBy("updatedAt").reverse().toArray();
+  return (await listProjectsWithRecovery()).projects;
+}
+
+function schemaErrorMessage(error: {
+  issues?: Array<{ path: PropertyKey[]; message: string }>;
+}): string {
+  const first = error.issues?.[0];
+  if (!first) return "El proyecto no supera la validación actual.";
+  const path = first.path.map(String).join(".") || "project";
+  return `${path}: ${first.message}`;
+}
+
+export async function listProjectsWithRecovery(): Promise<ProjectListResult> {
+  const records = await database.projects.orderBy("updatedAt").reverse().toArray();
+  const projects: StoredProject[] = [];
+  const recovery: ProjectRecoveryIssue[] = [];
+  for (const record of records) {
+    const parsed = StoreProjectV1Schema.safeParse(record.project);
+    if (parsed.success) {
+      projects.push({ ...record, project: parsed.data });
+    } else {
+      recovery.push({
+        id: record.id,
+        name: record.name,
+        updatedAt: record.updatedAt,
+        message: schemaErrorMessage(parsed.error),
+      });
+    }
+  }
+  return { projects, recovery };
 }
 
 export async function getProject(id: string): Promise<StoreProjectV1 | undefined> {
   const record = await database.projects.get(id);
-  return record ? StoreProjectV1Schema.parse(record.project) : undefined;
+  if (!record) return undefined;
+  const parsed = StoreProjectV1Schema.safeParse(record.project);
+  if (!parsed.success) {
+    throw new Error(
+      `La tienda "${record.name}" no se puede abrir. Exportá un respaldo anterior y recuperala desde Importar respaldo. ${schemaErrorMessage(parsed.error)}`,
+    );
+  }
+  return parsed.data;
 }
 
 export async function saveProject(project: StoreProjectV1): Promise<void> {

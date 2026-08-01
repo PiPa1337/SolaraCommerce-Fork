@@ -489,6 +489,40 @@ input[type="color"] {
   color: var(--danger);
 }
 
+.global-warning {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 18px clamp(18px, 5vw, 72px) 0;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--warning) 42%, var(--line));
+  border-radius: var(--radius-panel);
+  color: var(--ink);
+  background: var(--warning-soft);
+}
+
+.global-warning p,
+.global-warning ul {
+  margin: 6px 0 0;
+}
+
+.global-warning ul {
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.global-warning .button {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 680px) {
+  .global-warning {
+    flex-direction: column;
+  }
+}
+
 .boot-screen {
   display: grid;
   min-height: 100dvh;

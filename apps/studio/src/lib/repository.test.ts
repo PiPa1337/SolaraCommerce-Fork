@@ -10,6 +10,7 @@ import {
   getCachedAsset,
   getProject,
   listProjects,
+  listProjectsWithRecovery,
   putCachedAsset,
   saveProject,
   setProjectArchived,
@@ -38,6 +39,26 @@ describe("repositorio local", () => {
   it("rechaza proyectos inválidos antes de escribir en IndexedDB", async () => {
     await expect(saveProject({ ...referenceStore, baseUrl: "url-inválida" })).rejects.toThrow();
     expect(await listProjects()).toHaveLength(0);
+  });
+
+  it("separa registros corruptos y deja una ruta de recuperacion accionable", async () => {
+    await database.projects.put({
+      id: referenceStore.id,
+      name: referenceStore.name,
+      status: referenceStore.status,
+      updatedAt: referenceStore.updatedAt,
+      project: { ...referenceStore, baseUrl: "invalid" },
+    } as never);
+
+    const result = await listProjectsWithRecovery();
+    expect(result.projects).toHaveLength(0);
+    expect(result.recovery).toEqual([
+      expect.objectContaining({
+        id: referenceStore.id,
+        message: expect.stringContaining("baseUrl"),
+      }),
+    ]);
+    await expect(getProject(referenceStore.id)).rejects.toThrow(/Importar respaldo/);
   });
 
   it("duplica, archiva y restaura tiendas sin alterar el original", async () => {
