@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { expect, test } from "vitest";
+import { createProjectArchive } from "../apps/studio/src/lib/projectArchive";
 import { exportProject } from "../packages/exporter/src/index";
 import { referenceStore } from "../packages/project-schema/src/fixture";
 
@@ -11,6 +12,10 @@ test("escribe el sitio de referencia para auditorías de release", () => {
   rmSync(outputDirectory, { recursive: true, force: true });
   const exported = exportProject(referenceStore, { mode: "production" });
   writeFileSync(resolve(root, ".release/site.zip"), exported.zip);
+  writeFileSync(
+    resolve(root, ".release/reference.solara.zip"),
+    createProjectArchive(referenceStore),
+  );
   for (const [path, content] of exported.files) {
     const destination = resolve(outputDirectory, path);
     mkdirSync(dirname(destination), { recursive: true });

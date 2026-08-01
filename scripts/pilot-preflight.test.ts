@@ -1,10 +1,17 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { expect, test } from "vitest";
+import { readProjectArchive } from "../apps/studio/src/lib/projectArchive";
 import { buildCommerceSnapshot, exportProject } from "../packages/exporter/src/index";
 import { referenceStore } from "../packages/project-schema/src/fixture";
 
 test("valida el paquete production antes del piloto real", () => {
-  const snapshot = buildCommerceSnapshot(referenceStore);
-  const result = exportProject(referenceStore, { mode: "production" });
+  const archivePath = process.env.SOLARA_PILOT_PROJECT_ARCHIVE;
+  const project = archivePath
+    ? readProjectArchive(new Uint8Array(readFileSync(resolve(archivePath))))
+    : referenceStore;
+  const snapshot = buildCommerceSnapshot(project);
+  const result = exportProject(project, { mode: "production" });
   const home = String(result.files.get("index.html"));
   const product = String(result.files.get("productos/manta-bruma/index.html"));
   const sitemap = String(result.files.get("sitemap.xml"));
@@ -25,7 +32,11 @@ test("valida el paquete production antes del piloto real", () => {
   }
   expect(headers).toContain("Content-Security-Policy");
 
-  const second = exportProject(referenceStore, { mode: "production" });
+  const second = exportProject(project, { mode: "production" });
   expect(second.zip).toEqual(result.zip);
-  console.log({ pages: result.files.size, offers: snapshot.offers.length });
+  console.log({
+    source: archivePath ? resolve(archivePath) : "reference fixture",
+    pages: result.files.size,
+    offers: snapshot.offers.length,
+  });
 });

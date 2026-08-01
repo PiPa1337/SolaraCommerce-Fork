@@ -17,6 +17,8 @@ por WhatsApp sin cambiar el schema ni agregar módulos durante la observación.
 - `pilot:preflight` comprueba que production no tenga errores críticos, que cada
   oferta del snapshot aparezca una vez en Merchant, que sitemap, JSON-LD,
   canonical, robots y headers estén presentes y que el ZIP sea reproducible.
+- `SOLARA_PILOT_PROJECT_ARCHIVE` permite repetir el mismo preflight sobre un
+  `.solara.zip` real; sin la variable se usa el fixture de referencia.
 - `pilot-checklist.md` contiene los pasos externos que no se pueden simular
   localmente: dominio, HTTPS, Search Console, Merchant Center y diagnóstico de
   Rich Results.

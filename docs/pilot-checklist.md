@@ -14,6 +14,10 @@
   corepack pnpm reference:export
   ```
 
+  Para validar una tienda real desde su respaldo editable, usar
+  `SOLARA_PILOT_PROJECT_ARCHIVE=ruta/a/tienda.solara.zip corepack pnpm
+  pilot:preflight`. Sin esa variable el comando usa el fixture de referencia.
+
 - Usar exportación `production` con dominio HTTPS definitivo.
 - Resolver todos los errores críticos del panel SEO.
 - Comprobar títulos, descripciones, canonical, alt, precios y disponibilidad.
