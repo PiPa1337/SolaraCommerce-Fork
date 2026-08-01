@@ -178,9 +178,15 @@ publicación, verificación de dominio, Search Console y Merchant Center quedan
 manuales porque requieren credenciales y autorización del usuario; el checklist
 está en [`docs/pilot-checklist.md`](docs/pilot-checklist.md).
 
-Para validar una tienda concreta, definir
-`SOLARA_PILOT_PROJECT_ARCHIVE` con su respaldo `.solara.zip`; sin esa variable se
-usa el fixture Casa Luma.
+Para validar una tienda concreta, definir `SOLARA_PILOT_PROJECT_ARCHIVE` con su
+respaldo `.solara.zip`. En PowerShell:
+
+```powershell
+$env:SOLARA_PILOT_PROJECT_ARCHIVE = "C:\ruta\tienda.solara.zip"
+corepack pnpm pilot:preflight
+```
+
+Sin esa variable se usa el fixture Casa Luma.
 
 Con ese mismo respaldo, `corepack pnpm pilot:export` genera el `site.zip`
 production y la carpeta `.release/pilot-site/` listos para publicar.

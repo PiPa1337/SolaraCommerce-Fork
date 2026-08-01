@@ -14,14 +14,25 @@
   corepack pnpm reference:export
   ```
 
-  Para validar una tienda real desde su respaldo editable, usar
-  `SOLARA_PILOT_PROJECT_ARCHIVE=ruta/a/tienda.solara.zip corepack pnpm
-  pilot:preflight`. Sin esa variable el comando usa el fixture de referencia.
+  Para validar una tienda real desde su respaldo editable, en PowerShell usar:
 
-  Para generar el paquete production de esa misma tienda:
+  ```powershell
+  $env:SOLARA_PILOT_PROJECT_ARCHIVE = "C:\ruta\tienda.solara.zip"
+  corepack pnpm pilot:preflight
+  ```
 
-  ```bash
-  SOLARA_PILOT_PROJECT_ARCHIVE=ruta/a/tienda.solara.zip corepack pnpm pilot:export
+  En `cmd.exe` se puede usar:
+
+  ```bat
+  set "SOLARA_PILOT_PROJECT_ARCHIVE=C:\ruta\tienda.solara.zip"
+  corepack pnpm pilot:preflight
+  ```
+  Sin esa variable el preflight usa el fixture de referencia.
+
+  Para generar el paquete production de esa misma tienda en PowerShell:
+
+  ```powershell
+  corepack pnpm pilot:export
   ```
 
   El comando deja `.release/site.zip` y `.release/pilot-site/` listos para
