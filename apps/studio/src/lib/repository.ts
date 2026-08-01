@@ -1,6 +1,7 @@
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { StoreProjectV1Schema } from "@solara/project-schema";
 import { referenceStore } from "@solara/project-schema/fixture";
+import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 import Dexie, { type EntityTable } from "dexie";
 
 export interface StoredProject {
@@ -74,6 +75,8 @@ class SolaraDatabase extends Dexie {
 export const database = new SolaraDatabase();
 
 export const PROJECT_STORAGE_VERSION = "2";
+export const SCALE_DEMO_PROJECT_ID = catalogScaleStore.id;
+export const SCALE_DEMO_PROJECT_NAME = "Demo catálogo jerárquico";
 const STORAGE_SENTINEL = "solara-studio-storage-version";
 let storageReady: Promise<void> | undefined;
 let storageReset = false;
@@ -227,6 +230,20 @@ export async function ensureFirstProject(): Promise<StoreProjectV1> {
   );
   await saveProject(initial);
   return initial;
+}
+
+export async function ensureScaleDemoProject(): Promise<boolean> {
+  await ready();
+  if (await database.projects.get(SCALE_DEMO_PROJECT_ID)) return false;
+
+  const demo = StoreProjectV1Schema.parse({
+    ...structuredClone(catalogScaleStore),
+    name: SCALE_DEMO_PROJECT_NAME,
+    slug: "demo-catalogo-jerarquico",
+    updatedAt: "2026-07-29T12:00:01.000Z",
+  });
+  await saveProject(await embedFixtureAssets(demo));
+  return true;
 }
 
 export async function duplicateProject(id: string): Promise<StoreProjectV1> {

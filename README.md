@@ -27,6 +27,11 @@ corepack pnpm dev
 La aplicación guarda los proyectos en IndexedDB. Las tiendas públicas se exportan
 como ZIP estáticos, sin backend ni runtime de inteligencia artificial.
 
+En el primer arranque Studio conserva la tienda Casa Luma y agrega una vez el
+proyecto `Demo catálogo jerárquico`, con 10 raíces, 16 categorías, 50 productos
+y 60 variantes. Se puede abrir desde el dashboard para revisar la navegación,
+paginación y edición masiva; no se vuelve a duplicar en los siguientes arranques.
+
 ## Catálogo
 
 Cada tienda admite productos con múltiples variantes, categorías, colecciones,

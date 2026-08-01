@@ -9,6 +9,7 @@ import {
   createProject,
   duplicateProject,
   ensureFirstProject,
+  ensureScaleDemoProject,
   getProject,
   listProjectsWithRecovery,
   type ProjectRecoveryIssue,
@@ -44,8 +45,16 @@ export function App() {
         }
         if (result.projects.length === 0 && result.recovery.length === 0) {
           await ensureFirstProject();
-          await refresh();
         }
+        const demoCreated = await ensureScaleDemoProject();
+        if (demoCreated) {
+          setNotice((current) =>
+            current
+              ? `${current} También se agregó un proyecto demo con 50 productos para explorar la escala del catálogo.`
+              : "Se agregó un proyecto demo con 50 productos para explorar la escala del catálogo.",
+          );
+        }
+        await refresh();
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : "No se pudo abrir Studio.");
       } finally {

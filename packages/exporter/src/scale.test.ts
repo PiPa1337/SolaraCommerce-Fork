@@ -23,7 +23,9 @@ describe("exporter con catálogo jerárquico de escala", () => {
     expect(String(exported.files.get("categorias/novedades/index.html"))).toContain('rel="next"');
 
     const sitemap = String(exported.files.get("sitemap.xml"));
-    const locations = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+    const locations = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)]
+      .map((match) => match[1])
+      .filter((location): location is string => Boolean(location));
     expect(new Set(locations).size).toBe(locations.length);
     expect(locations.filter((location) => location.includes("/categorias/")).length).toBe(17);
     expect(locations.filter((location) => location.includes("/productos/")).length).toBe(50);

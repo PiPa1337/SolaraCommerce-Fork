@@ -45,6 +45,8 @@ sus descendientes y las hijas mantienen su propia página.
   categoría con bloqueo de ciclos y profundidad inválida.
 - El escenario Chromium cubre navbar, subcategorías, paginación, producto 50,
   búsqueda por ancestro y layout móvil.
+- Studio crea de forma idempotente `Demo catálogo jerárquico` al iniciar y lo
+  muestra en el dashboard con 50 productos y 60 variantes.
 
 El fixture se exporta desde `@solara/project-schema/scale-fixture` y se mantiene
 separado del fixture visual pequeño y del benchmark de 1.000 productos.
