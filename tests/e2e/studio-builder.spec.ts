@@ -2,6 +2,10 @@ import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
+// Este recorrido cambia el proyecto varias veces y regenera el preview completo.
+// El runner Windows compartido de CI puede necesitar más margen que el bucle local.
+test.setTimeout(process.env.CI ? 60_000 : 30_000);
+
 let server: Server;
 let studioUrl: string;
 
