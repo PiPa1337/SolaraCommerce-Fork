@@ -1,5 +1,6 @@
 import "fake-indexeddb/auto";
 import { referenceStore } from "@solara/project-schema/fixture";
+import Dexie from "dexie";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import {
   ASSET_CACHE_RECIPE_VERSION,
@@ -81,6 +82,32 @@ describe("repositorio local", () => {
     await database.open();
 
     expect(await getProject(referenceStore.id)).toEqual(referenceStore);
+  });
+
+  it("migra la caché v1 sin cambiar su clave primaria", async () => {
+    const databaseName = `solara-commerce-migration-${crypto.randomUUID()}`;
+    const legacy = new Dexie(databaseName);
+    legacy.version(1).stores({ assetCache: "hash, createdAt" });
+    await legacy.open();
+    await legacy.table("assetCache").put({
+      hash: "legacy-hash",
+      createdAt: "2026-08-01T00:00:00.000Z",
+    });
+    legacy.close();
+
+    const upgraded = new Dexie(databaseName);
+    upgraded.version(1).stores({ assetCache: "hash, createdAt" });
+    upgraded
+      .version(2)
+      .stores({ assetCache: "hash, cacheKey, recipeVersion, createdAt, lastUsedAt" })
+      .upgrade(async (transaction) => {
+        await transaction.table("assetCache").clear();
+      });
+    await upgraded.open();
+
+    expect(await upgraded.table("assetCache").get("legacy-hash")).toBeUndefined();
+    upgraded.close();
+    await Dexie.delete(databaseName);
   });
 
   it("identifica la caché por hash y versión de receta", () => {

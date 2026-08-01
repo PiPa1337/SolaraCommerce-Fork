@@ -49,7 +49,7 @@ export function createAssetCacheKey(
 
 class SolaraDatabase extends Dexie {
   projects!: EntityTable<StoredProject, "id">;
-  assetCache!: EntityTable<CachedAsset, "cacheKey">;
+  assetCache!: EntityTable<CachedAsset, "hash">;
 
   constructor() {
     super("solara-commerce-studio");
@@ -60,7 +60,9 @@ class SolaraDatabase extends Dexie {
     this.version(2)
       .stores({
         projects: "id, status, updatedAt, name",
-        assetCache: "cacheKey, hash, recipeVersion, createdAt, lastUsedAt",
+        // IndexedDB no permite cambiar la clave primaria durante una migración.
+        // `hash` se conserva como clave desde la versión 1 y la caché se regenera.
+        assetCache: "hash, cacheKey, recipeVersion, createdAt, lastUsedAt",
       })
       .upgrade(async (transaction) => {
         // La caché es regenerable; descartarla evita reutilizar resultados de una receta anterior.
@@ -239,11 +241,10 @@ export async function getCachedAsset(
   hash: string,
   recipeVersion = ASSET_CACHE_RECIPE_VERSION,
 ): Promise<CachedAsset | undefined> {
-  const cacheKey = createAssetCacheKey(hash, recipeVersion);
-  const cached = await database.assetCache.get(cacheKey);
-  if (!cached) return undefined;
+  const cached = await database.assetCache.get(hash);
+  if (!cached || cached.recipeVersion !== recipeVersion) return undefined;
   const lastUsedAt = new Date().toISOString();
-  await database.assetCache.update(cacheKey, { lastUsedAt });
+  await database.assetCache.update(hash, { lastUsedAt });
   return { ...cached, lastUsedAt };
 }
 
