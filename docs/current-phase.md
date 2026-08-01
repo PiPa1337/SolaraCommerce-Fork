@@ -19,6 +19,8 @@ por WhatsApp sin cambiar el schema ni agregar módulos durante la observación.
   canonical, robots y headers estén presentes y que el ZIP sea reproducible.
 - `SOLARA_PILOT_PROJECT_ARCHIVE` permite repetir el mismo preflight sobre un
   `.solara.zip` real; sin la variable se usa el fixture de referencia.
+- `pilot:export` toma ese respaldo real y genera `.release/site.zip` junto con
+  `.release/pilot-site/`, sin tocar el proyecto ni publicar nada.
 - `pilot-checklist.md` contiene los pasos externos que no se pueden simular
   localmente: dominio, HTTPS, Search Console, Merchant Center y diagnóstico de
   Rich Results.

@@ -18,6 +18,15 @@
   `SOLARA_PILOT_PROJECT_ARCHIVE=ruta/a/tienda.solara.zip corepack pnpm
   pilot:preflight`. Sin esa variable el comando usa el fixture de referencia.
 
+  Para generar el paquete production de esa misma tienda:
+
+  ```bash
+  SOLARA_PILOT_PROJECT_ARCHIVE=ruta/a/tienda.solara.zip corepack pnpm pilot:export
+  ```
+
+  El comando deja `.release/site.zip` y `.release/pilot-site/` listos para
+  cargar en el hosting elegido.
+
 - Usar exportación `production` con dominio HTTPS definitivo.
 - Resolver todos los errores críticos del panel SEO.
 - Comprobar títulos, descripciones, canonical, alt, precios y disponibilidad.

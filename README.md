@@ -181,3 +181,6 @@ está en [`docs/pilot-checklist.md`](docs/pilot-checklist.md).
 Para validar una tienda concreta, definir
 `SOLARA_PILOT_PROJECT_ARCHIVE` con su respaldo `.solara.zip`; sin esa variable se
 usa el fixture Casa Luma.
+
+Con ese mismo respaldo, `corepack pnpm pilot:export` genera el `site.zip`
+production y la carpeta `.release/pilot-site/` listos para publicar.
