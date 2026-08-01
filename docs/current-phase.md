@@ -1,60 +1,51 @@
-# Fase 6 completada: SEO tecnico y Google Merchant
+# Fase 7 completada: movimiento premium accesible
 
 ## Objetivo
 
-Producir tiendas estaticas rastreables con rutas consistentes, HTML inicial
-completo, datos estructurados, sitemaps y un feed Merchant generado desde el
-mismo snapshot comercial.
+Agregar movimiento declarativo sin alterar el HTML indexable, sin ocultar
+contenido cuando falla JavaScript y sin introducir una dependencia de timelines.
 
 ## Entregado
 
-- Snapshot comercial determinista con productos activos y una oferta por variante.
-- URLs directas de variantes con `?variant={variantId}` y agrupacion por producto.
-- Paginas de inicio, categorias paginadas, colecciones paginadas, productos y
-  politicas publicas en rutas estables.
-- Enlaces de paginacion `rel=prev` y `rel=next` cuando corresponde.
-- `WebSite`, `OnlineStore`, `BreadcrumbList`, `Product`, `ProductGroup` y
-  `Offer` en el HTML inicial.
-- `sitemap.xml`, sitemap de imagenes, `robots.txt` y
-  `google-merchant.xml` de produccion.
-- Feed con IDs de variante, `item_group_id`, precios enteros convertidos a
-  moneda, disponibilidad, imagenes absolutas, marca e identificadores reales.
-- Auditoria con severidad, area, entidad y destino de correccion para dominio,
-  contenido, slugs, politicas, variantes preorder y paridad Merchant.
-- Studio muestra el resumen de auditoria y advierte que el checkout actual por
-  WhatsApp es experimental para Merchant.
+- Cada root de modulo publica preset, intensidad, distancia, punto de entrada y
+  politica `once` como atributos y variables CSS deterministas.
+- `IntersectionObserver` activa las zonas cuando alcanzan su punto de entrada y
+  repite el estado cuando `once` esta desactivado.
+- `scroll-progress` y `parallax` usan CSS Scroll-driven Animations cuando el
+  navegador las soporta.
+- Fallback JS de parallax/progreso con un solo `requestAnimationFrame` pendiente,
+  listeners pasivos y sin scroll-jacking.
+- Intensidad aplicada a fade-up, slide y scale mediante variables CSS.
+- Reduccion automatica de parallax y layer-stack en pantallas pequenas.
+- `prefers-reduced-motion` deja todos los estados finales visibles y detiene
+  progreso, parallax y transiciones.
+- La salida sin JavaScript conserva el contenido visible porque el estado
+  inicial no depende de `data-motion-ready`.
 
 ## Contratos preservados
 
-- `StoreProjectV1` sigue en `schemaVersion: 1`.
-- `availabilityDate` es opcional y mantiene compatibilidad con proyectos
-  anteriores.
-- No cambian IDs, formatos de ZIP, carrito, WhatsApp ni el renderer modular.
-- Preview y ZIP usan el mismo renderer y los mismos datos de proyecto.
-- El feed no se incluye en exportaciones draft y el sitio draft conserva
-  `noindex,nofollow`.
+- No cambian `StoreProjectV1`, `schemaVersion`, `ModuleDefinition`, settings ni
+  formatos de exportacion.
+- Las zonas animables siguen declaradas por cada modulo; no existe seleccion
+  arbitraria de DOM ni editor libre de timelines.
+- Carrito, variantes, WhatsApp, SEO, sitemaps y feed conservan su comportamiento.
+- El runtime continua por debajo del presupuesto de 35 KB gzip.
 
 ## Verificacion de cierre
 
-- Unit tests del schema para fechas opcionales y del exporter para snapshot,
-  variantes, colecciones, rutas legales, sitemaps, feed y auditoria.
-- Playwright verifica descubrimiento sin JavaScript de productos, colecciones,
-  politicas, sitemap y feed.
+- Tests del SDK para atributos declarativos de movimiento.
+- Tests del runtime para IntersectionObserver, scroll pasivo, RAF, CSS y reduced
+  motion.
+- Playwright verifica intensidad, punto de entrada, inView y contenido visible
+  con movimiento reducido en storefront.
 - Gate de fase:
   - `corepack pnpm check`
   - `corepack pnpm build`
   - `corepack pnpm benchmark:export`
-  - `corepack pnpm test:e2e`
-
-## Limitacion Merchant
-
-El checkout final por WhatsApp no equivale a un checkout convencional dentro
-del sitio. La auditoria lo deja visible y la exportacion no afirma elegibilidad
-automatica para Merchant. Para un piloto se debe validar manualmente la cuenta,
-el dominio, las politicas y el flujo de compra antes de enviar el feed.
+  - `corepack pnpm test:e2e` (17/17 Chromium)
 
 ## Proxima fase
 
-Animaciones premium accesibles: presets declarados por modulo, `inView`, scroll
-progress y layer stack sin cambiar el HTML SEO ni bloquear el contenido cuando
-JavaScript falla.
+Hardening de release candidate: recuperacion de proyectos, sanitizacion en
+fronteras, CSP, accesibilidad, stress de 1.000 productos, bundle budgets,
+Lighthouse CI y matriz de navegadores.

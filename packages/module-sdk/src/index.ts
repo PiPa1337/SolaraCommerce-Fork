@@ -233,7 +233,10 @@ export function moduleRoot(
     `data-motion-preset="${escapeAttribute(motion.preset)}"`,
     `data-motion-once="${String(motion.once)}"`,
     `data-motion-direction="${escapeAttribute(motion.direction)}"`,
-    `style="--motion-distance:${motion.distance}px;--motion-duration:${motion.duration * 1000}ms;--motion-delay:${motion.delay * 1000}ms;--motion-stagger:${motion.stagger * 1000}ms;--motion-easing:${escapeAttribute(motion.easing)}"`,
+    `data-motion-intensity="${motion.intensity / 10}"`,
+    `data-motion-entry="${motion.entryPoint}"`,
+    `data-motion-distance="${motion.distance}"`,
+    `style="--motion-distance:${motion.distance}px;--motion-duration:${motion.duration * 1000}ms;--motion-delay:${motion.delay * 1000}ms;--motion-stagger:${motion.stagger * 1000}ms;--motion-intensity:${motion.intensity / 10};--motion-entry:${motion.entryPoint};--motion-easing:${escapeAttribute(motion.easing)}"`,
   ].join(" ");
   return safeHtml(
     `<${tag} data-solara-module="${escapeAttribute(moduleId)}" data-solara-section="${escapeAttribute(section.id)}" ${motionAttributes}${className}>${content}</${tag}>`,

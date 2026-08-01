@@ -1,6 +1,14 @@
 import { referenceStore } from "@solara/project-schema/fixture";
 import { describe, expect, it } from "vitest";
-import { escapeHtml, renderImage, safeAssetUrl, safeUrl, sanitizeRichText } from "./index";
+import {
+  escapeHtml,
+  moduleRoot,
+  renderImage,
+  safeAssetUrl,
+  safeHtml,
+  safeUrl,
+  sanitizeRichText,
+} from "./index";
 
 describe("HTML safety", () => {
   it("escapes text and attributes", () => {
@@ -59,5 +67,15 @@ describe("HTML safety", () => {
     expect(html).toContain('<source type="image/webp"');
     expect(html).toContain('<source type="image/jpeg"');
     expect(html).not.toContain("<script");
+  });
+
+  it("expone controles de movimiento declarativos en el root", () => {
+    const section = referenceStore.sections[0];
+    if (!section) throw new Error("Fixture incompleto");
+    const html = moduleRoot("test-motion", section, safeHtml("<p>Contenido</p>"));
+
+    expect(html).toContain('data-motion-root="true"');
+    expect(html).toContain(`data-motion-intensity="${section.motion.intensity / 10}"`);
+    expect(html).toContain(`data-motion-entry="${section.motion.entryPoint}"`);
   });
 });

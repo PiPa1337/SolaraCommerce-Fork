@@ -149,3 +149,25 @@ test("mantiene composicion y ancho estable en desktop y movil", async ({ page })
   );
   await page.screenshot({ path: "test-results/storefront-mobile.png", fullPage: true });
 });
+
+test("mantiene el contenido visible con movimiento reducido y activa inView", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+  const hero = page.locator('[data-solara-module="split-hero"]');
+  await expect(hero).toHaveAttribute("data-motion-intensity", "0.5");
+  await expect(hero).toHaveAttribute("data-motion-entry", "0.25");
+  await hero.scrollIntoViewIfNeeded();
+  await expect(hero).toHaveAttribute("data-motion-visible", "true");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload();
+  await expect(hero).toHaveAttribute("data-motion-visible", "true");
+  expect(
+    await page
+      .locator('[data-solara-module="split-hero"] [data-motion-zone]')
+      .first()
+      .evaluate((element) => {
+        return getComputedStyle(element).opacity;
+      }),
+  ).toBe("1");
+});

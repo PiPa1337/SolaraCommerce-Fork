@@ -347,27 +347,69 @@ function storefrontBoot(): void {
     });
   }
 
+  const motionRoots = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-motion-root]"),
+  ).filter((element) => element.dataset.motionPreset !== "none");
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (!reduceMotion && "IntersectionObserver" in window) {
     root.dataset.motionReady = "true";
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
           const element = entry.target as HTMLElement;
-          element.dataset.motionVisible = "true";
-          if (element.dataset.motionOnce !== "false") observer.unobserve(element);
+          const entryPoint = Number(element.dataset.motionEntry ?? "0.18");
+          const triggerLine = window.innerHeight * (1 - Math.max(0, Math.min(1, entryPoint)));
+          if (entry.isIntersecting && entry.boundingClientRect.top <= triggerLine) {
+            element.dataset.motionVisible = "true";
+            if (element.dataset.motionOnce !== "false") observer.unobserve(element);
+          } else if (element.dataset.motionOnce === "false") {
+            delete element.dataset.motionVisible;
+          }
         });
       },
-      { threshold: 0.18 },
+      { threshold: [0, 0.01] },
     );
-    document.querySelectorAll<HTMLElement>("[data-motion-root]").forEach((element) => {
-      if (element.dataset.motionPreset !== "none") observer.observe(element);
+    motionRoots.forEach((element) => {
+      observer.observe(element);
     });
   } else {
-    document.querySelectorAll<HTMLElement>("[data-motion-root]").forEach((element) => {
+    motionRoots.forEach((element) => {
       element.dataset.motionVisible = "true";
     });
+  }
+
+  const progressRoots = motionRoots.filter((element) =>
+    ["parallax", "scroll-progress"].includes(element.dataset.motionPreset ?? ""),
+  );
+  if (!reduceMotion && progressRoots.length > 0) {
+    let progressFrame = 0;
+    const updateProgress = (): void => {
+      progressFrame = 0;
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+      progressRoots.forEach((element) => {
+        const rect = element.getBoundingClientRect();
+        const progress = Math.max(
+          0,
+          Math.min(1, (viewportHeight - rect.top) / Math.max(1, viewportHeight + rect.height)),
+        );
+        element.style.setProperty("--motion-progress", progress.toFixed(4));
+        if (element.dataset.motionPreset === "parallax") {
+          const distance = Number(element.dataset.motionDistance ?? "24");
+          const intensity = Number(element.dataset.motionIntensity ?? "1");
+          element.style.setProperty(
+            "--motion-parallax-y",
+            `${((0.5 - progress) * distance * intensity).toFixed(2)}px`,
+          );
+        }
+      });
+    };
+    const scheduleProgress = (): void => {
+      if (progressFrame !== 0) return;
+      progressFrame = window.requestAnimationFrame(updateProgress);
+    };
+    window.addEventListener("scroll", scheduleProgress, { passive: true });
+    window.addEventListener("resize", scheduleProgress, { passive: true });
+    scheduleProgress();
   }
 
   renderCart();
@@ -430,7 +472,7 @@ html[data-motion-ready="true"] [data-motion-root]:not([data-motion-preset="none"
 
 html[data-motion-ready="true"] [data-motion-root][data-motion-preset="fade-up"]:not([data-motion-visible="true"]) [data-motion-zone],
 html[data-motion-ready="true"] [data-motion-root][data-motion-preset="stagger"]:not([data-motion-visible="true"]) [data-motion-zone] > * {
-  transform: translate3d(0, var(--motion-distance, 24px), 0);
+  transform: translate3d(0, calc(var(--motion-distance, 24px) * var(--motion-intensity, 1)), 0);
 }
 
 html[data-motion-ready="true"] [data-motion-root][data-motion-preset="stagger"]:not([data-motion-visible="true"]) [data-motion-zone] > * {
@@ -438,23 +480,23 @@ html[data-motion-ready="true"] [data-motion-root][data-motion-preset="stagger"]:
 }
 
 html[data-motion-ready="true"] [data-motion-root][data-motion-preset="slide"]:not([data-motion-visible="true"]) [data-motion-zone] {
-  transform: translate3d(var(--motion-distance, 24px), 0, 0);
+  transform: translate3d(calc(var(--motion-distance, 24px) * var(--motion-intensity, 1)), 0, 0);
 }
 
 html[data-motion-ready="true"] [data-motion-root][data-motion-preset="slide"][data-motion-direction="left"]:not([data-motion-visible="true"]) [data-motion-zone] {
-  transform: translate3d(calc(var(--motion-distance, 24px) * -1), 0, 0);
+  transform: translate3d(calc(var(--motion-distance, 24px) * var(--motion-intensity, 1) * -1), 0, 0);
 }
 
 html[data-motion-ready="true"] [data-motion-root][data-motion-preset="slide"][data-motion-direction="up"]:not([data-motion-visible="true"]) [data-motion-zone] {
-  transform: translate3d(0, var(--motion-distance, 24px), 0);
+  transform: translate3d(0, calc(var(--motion-distance, 24px) * var(--motion-intensity, 1)), 0);
 }
 
 html[data-motion-ready="true"] [data-motion-root][data-motion-preset="slide"][data-motion-direction="down"]:not([data-motion-visible="true"]) [data-motion-zone] {
-  transform: translate3d(0, calc(var(--motion-distance, 24px) * -1), 0);
+  transform: translate3d(0, calc(var(--motion-distance, 24px) * var(--motion-intensity, 1) * -1), 0);
 }
 
 html[data-motion-ready="true"] [data-motion-root][data-motion-preset="scale"]:not([data-motion-visible="true"]) [data-motion-zone] {
-  transform: scale(0.97);
+  transform: scale(calc(1 - (0.03 * var(--motion-intensity, 1))));
 }
 
 [data-motion-root][data-motion-visible="true"] [data-motion-zone] {
@@ -490,6 +532,17 @@ html[data-motion-ready="true"] [data-motion-root][data-motion-preset="scale"]:no
     animation: solara-progress linear both;
     animation-timeline: view();
     animation-range: entry 0% cover 100%;
+  }
+}
+
+@supports not (animation-timeline: view()) {
+  [data-motion-root][data-motion-preset="parallax"][data-motion-visible="true"] [data-motion-zone] {
+    transform: translate3d(0, var(--motion-parallax-y, 0px), 0);
+  }
+
+  [data-motion-root][data-motion-preset="scroll-progress"] {
+    transform-origin: left center;
+    transform: scaleX(var(--motion-progress, 1));
   }
 }
 
@@ -531,6 +584,10 @@ html[data-motion-ready="true"] [data-motion-root][data-motion-preset="scale"]:no
   [data-motion-root][data-motion-preset="layer-stack"] {
     position: static;
     animation: none;
+    transform: none;
+  }
+
+  [data-motion-root][data-motion-preset="parallax"] [data-motion-zone] {
     transform: none;
   }
 }

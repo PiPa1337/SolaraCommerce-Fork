@@ -132,3 +132,12 @@ se publica en modo production; el draft usa `noindex` y no incluye Merchant.
 
 El checkout v1 termina en WhatsApp. Esto se marca como modo experimental porque
 Google puede exigir una finalizacion de compra convencional dentro del sitio.
+
+## Movimiento premium (Fase 7)
+
+Los modulos declaran sus zonas animables y Studio controla preset, intensidad,
+distancia, duracion, delay, stagger, easing, punto de entrada y ejecucion unica.
+El storefront activa `inView` con `IntersectionObserver`; `parallax` y
+`scroll-progress` usan CSS Scroll-driven Animations con fallback de un solo frame
+pasivo. `prefers-reduced-motion`, pantallas pequenas y JavaScript desactivado
+conservan el estado final visible.

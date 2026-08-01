@@ -6,6 +6,7 @@ import {
   buildWhatsAppMessage,
   buildWhatsAppUrl,
   formatMoney,
+  STOREFRONT_RUNTIME_CSS,
   STOREFRONT_RUNTIME_JS,
 } from "./index";
 
@@ -32,9 +33,17 @@ describe("storefront runtime", () => {
     expect(url).toBe("https://wa.me/5491123456789?text=Pedido%0AManta");
   });
 
-  it("no usa listeners de scroll por frame", () => {
-    expect(STOREFRONT_RUNTIME_JS).not.toContain('addEventListener("scroll"');
+  it("usa un controlador de scroll pasivo con un solo frame pendiente", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain('addEventListener("scroll"');
+    expect(STOREFRONT_RUNTIME_JS).toContain("requestAnimationFrame");
+    expect(STOREFRONT_RUNTIME_JS).toContain("passive: true");
     expect(STOREFRONT_RUNTIME_JS).toContain("IntersectionObserver");
+  });
+
+  it("declara intensidad y punto de entrada sin bloquear HTML", () => {
+    expect(STOREFRONT_RUNTIME_CSS).toContain("--motion-intensity");
+    expect(STOREFRONT_RUNTIME_CSS).toContain("prefers-reduced-motion");
+    expect(STOREFRONT_RUNTIME_JS).toContain("motionEntry");
   });
 
   it("mantiene el runtime por debajo de 35 KB gzip", () => {
