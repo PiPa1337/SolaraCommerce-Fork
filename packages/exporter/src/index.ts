@@ -13,7 +13,12 @@ import type {
   Variant,
   VideoAsset,
 } from "@solara/project-schema";
-import { StoreProjectV1Schema } from "@solara/project-schema";
+import {
+  getCategoryAncestors,
+  getCategoryBreadcrumb,
+  getCategoryProductIds,
+  StoreProjectV1Schema,
+} from "@solara/project-schema";
 import { STOREFRONT_RUNTIME_CSS, STOREFRONT_RUNTIME_JS } from "@solara/storefront-runtime";
 import { strToU8, unzipSync, type Zippable, zipSync } from "fflate";
 
@@ -771,6 +776,60 @@ function paginationNavigation(basePath: string, pageNumber: number, totalPages: 
   </nav>`;
 }
 
+function categoryProducts(project: StoreProjectV1, category: Category): Product[] {
+  const productIds = new Set(getCategoryProductIds(project, category.id));
+  return project.products.filter(
+    (product) => product.status === "active" && productIds.has(product.id),
+  );
+}
+
+function categoryChildrenMarkup(project: StoreProjectV1, category: Category): string {
+  const children = project.categories.filter((candidate) => candidate.parentId === category.id);
+  if (children.length === 0) return "";
+  return `<nav class="solara-category-children" aria-label="Subcategorías de ${escapeAttribute(category.title)}"><h2>Explorar ${escapeHtml(category.title)}</h2><ul>${children
+    .map(
+      (child) =>
+        `<li><a href="/categorias/${escapeAttribute(child.slug)}/"><span>${escapeHtml(child.title)}</span><small>${getCategoryProductIds(project, child.id).length} productos</small></a></li>`,
+    )
+    .join("")}</ul></nav>`;
+}
+
+function categoryBreadcrumbItems(
+  project: StoreProjectV1,
+  category: Category,
+): Array<{ name: string; path: string }> {
+  return [
+    { name: "Inicio", path: "/" },
+    ...getCategoryBreadcrumb(project, category.id).map((item) => ({
+      name: item.title,
+      path: `/categorias/${item.slug}/`,
+    })),
+  ];
+}
+
+function categoryBreadcrumbMarkup(project: StoreProjectV1, category: Category): string {
+  const items = categoryBreadcrumbItems(project, category);
+  return `<nav class="solara-breadcrumbs" aria-label="Migas de pan">${items
+    .map((item, index) => {
+      const current = index === items.length - 1;
+      return `${index > 0 ? '<span aria-hidden="true">/</span>' : ""}${
+        current
+          ? `<span aria-current="page">${escapeHtml(item.name)}</span>`
+          : `<a href="${escapeAttribute(item.path)}">${escapeHtml(item.name)}</a>`
+      }`;
+    })
+    .join("")}</nav>`;
+}
+
+function productCategoryScope(project: StoreProjectV1, product: Product): Set<string> {
+  return new Set(
+    product.categoryIds.flatMap((categoryId) => [
+      categoryId,
+      ...getCategoryAncestors(project, categoryId as Category["id"]).map((category) => category.id),
+    ]),
+  );
+}
+
 function buildPages(
   project: StoreProjectV1,
   snapshot = buildCommerceSnapshot(project),
@@ -800,9 +859,7 @@ function buildPages(
   };
 
   const categories = project.categories.flatMap((category) => {
-    const products = category.productIds
-      .map((id) => project.products.find((product) => product.id === id))
-      .filter((product): product is Product => Boolean(product && product.status === "active"));
+    const products = categoryProducts(project, category);
     const pages: PageDescriptor[] = [];
 
     const pageSize = project.commerceTemplates.category.productsPerPage;
@@ -828,13 +885,15 @@ function buildPages(
       const body = [
         renderProjectSections(project, sharedHeader, { pageType: "category", category }),
         `<main class="solara-container">
+          ${categoryBreadcrumbMarkup(project, category)}
           <header class="solara-category-hero">
             <h1>${escapeHtml(category.title)}</h1>
             <p>${escapeHtml(category.description)}</p>
             ${categoryMedia}
           </header>
+          ${categoryChildrenMarkup(project, category)}
           <div class="solara-category-toolbar" data-category-toolbar>
-            <span data-category-result-count>${paginated.length} productos</span>
+            <span data-category-result-count>${products.length} productos</span>
             <details><summary>Filtrar</summary><div><label><input type="checkbox" data-category-available> Sólo disponibles</label><label>Etiqueta <select data-category-tag><option value="">Todas</option>${tagOptions}</select></label><label>Precio mínimo <input type="number" min="0" step="1" data-category-min-price inputmode="decimal"></label><label>Precio máximo <input type="number" min="0" step="1" data-category-max-price inputmode="decimal"></label></div></details>
             <label>Ordenar <select data-category-sort><option value="recommended">Recomendados</option><option value="price-asc">Precio menor</option><option value="price-desc">Precio mayor</option><option value="name">Nombre</option></select></label>
           </div>
@@ -860,12 +919,7 @@ function buildPages(
         canonicalPath,
         pageType: "category",
         body,
-        structuredData: [
-          breadcrumbData(project, [
-            { name: "Inicio", path: "/" },
-            { name: category.title, path: `/categorias/${category.slug}/` },
-          ]),
-        ],
+        structuredData: [breadcrumbData(project, categoryBreadcrumbItems(project, category))],
         ...(categoryImage ? { image: categoryImage } : {}),
       });
     }
@@ -935,14 +989,16 @@ function buildPages(
     .filter((product) => product.status === "active")
     .map((product): PageDescriptor => {
       const productImage = imageUrl(project, product.imageIds[0]);
+      const productCategoryIds = productCategoryScope(project, product);
       const relatedProducts = project.products
-        .filter(
-          (candidate) =>
-            candidate.status === "active" &&
-            candidate.id !== product.id &&
-            (candidate.categoryIds.some((id) => product.categoryIds.includes(id)) ||
-              candidate.collectionIds.some((id) => product.collectionIds.includes(id))),
-        )
+        .filter((candidate) => {
+          if (candidate.status !== "active" || candidate.id === product.id) return false;
+          const candidateCategoryIds = productCategoryScope(project, candidate);
+          return (
+            [...candidateCategoryIds].some((id) => productCategoryIds.has(id)) ||
+            candidate.collectionIds.some((id) => product.collectionIds.includes(id))
+          );
+        })
         .slice(0, 4);
       const relatedSections = project.commerceTemplates.product.showRelated
         ? project.sections.filter(
@@ -1292,6 +1348,7 @@ function buildSearchIndex(project: StoreProjectV1): string {
       const prices = product.variants.map((variant) => variant.price);
       const image = imageUrl(project, product.imageIds[0]);
       const imageAsset = imageFor(project, product.imageIds[0]);
+      const categoryIds = [...productCategoryScope(project, product)];
       return {
         id: product.id,
         slug: product.slug,
@@ -1299,9 +1356,9 @@ function buildSearchIndex(project: StoreProjectV1): string {
         brand: product.brand,
         description: product.description,
         tags: product.tags,
-        categoryIds: product.categoryIds,
+        categoryIds,
         collectionIds: product.collectionIds,
-        categoryNames: product.categoryIds
+        categoryNames: categoryIds
           .map((id) => project.categories.find((category) => category.id === id)?.title)
           .filter((value): value is string => Boolean(value)),
         collectionNames: product.collectionIds

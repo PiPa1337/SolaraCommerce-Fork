@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./fixture": "./src/fixture.ts"
+    "./fixture": "./src/fixture.ts",
+    "./scale-fixture": "./src/scale-fixture.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",

@@ -12,7 +12,13 @@ import {
   UploadSimple,
 } from "@phosphor-icons/react";
 import type { DomainCommand } from "@solara/core";
-import type { Product, StoreProjectV1 } from "@solara/project-schema";
+import {
+  type Category,
+  getCategoryDescendants,
+  getCategoryProductIds,
+  type Product,
+  type StoreProjectV1,
+} from "@solara/project-schema";
 import {
   type ColumnDef,
   flexRender,
@@ -50,6 +56,29 @@ type EditorState = { mode: "create" | "edit"; product: Product } | undefined;
 type BusyState = "import" | "export" | "";
 
 const now = () => new Date().toISOString();
+
+function categoryTree(project: StoreProjectV1): Category[] {
+  const roots = project.categories.filter((category) => category.parentId === undefined);
+  const childrenByParent = new Map<string, Category[]>();
+  project.categories.forEach((category) => {
+    if (!category.parentId) return;
+    childrenByParent.set(category.parentId, [
+      ...(childrenByParent.get(category.parentId) ?? []),
+      category,
+    ]);
+  });
+  const ordered: Category[] = [];
+  const visit = (category: Category): void => {
+    ordered.push(category);
+    (childrenByParent.get(category.id) ?? []).forEach(visit);
+  };
+  roots.forEach(visit);
+  return ordered;
+}
+
+function categoryLabel(category: Category): string {
+  return category.parentId ? `↳ ${category.title}` : category.title;
+}
 
 function blankProduct(project: StoreProjectV1): Product {
   const stamp = now();
@@ -118,6 +147,9 @@ export function Catalog({ project, onCommand }: CatalogProps) {
   const [priceKind, setPriceKind] = useState<"percentage" | "amount">("percentage");
   const [priceAdjustment, setPriceAdjustment] = useState("10");
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [categoryFilterId, setCategoryFilterId] = useState("");
+  const [reparentCategoryId, setReparentCategoryId] = useState("");
+  const [reparentParentId, setReparentParentId] = useState("");
   const [collectionIds, setCollectionIds] = useState<string[]>([]);
   const [tags, setTags] = useState("");
   const [editor, setEditor] = useState<EditorState>();
@@ -288,8 +320,14 @@ export function Catalog({ project, onCommand }: CatalogProps) {
     [onCommand],
   );
 
+  const categoryFilteredProducts = useMemo(() => {
+    if (!categoryFilterId) return project.products;
+    const productIds = new Set(getCategoryProductIds(project, categoryFilterId as Category["id"]));
+    return project.products.filter((product) => productIds.has(product.id));
+  }, [categoryFilterId, project]);
+
   const table = useReactTable({
-    data: project.products,
+    data: categoryFilteredProducts,
     columns,
     state: { rowSelection: selection, sorting, globalFilter: filter, pagination },
     onRowSelectionChange: setSelection,
@@ -309,6 +347,23 @@ export function Catalog({ project, onCommand }: CatalogProps) {
     .filter(([, selected]) => selected)
     .map(([id]) => id as Product["id"]);
   const filteredRows = table.getFilteredRowModel().rows;
+  const orderedCategories = categoryTree(project);
+  const selectedReparentCategory = project.categories.find(
+    (category) => category.id === reparentCategoryId,
+  );
+  const blockedParentIds = new Set(
+    selectedReparentCategory
+      ? [
+          selectedReparentCategory.id,
+          ...getCategoryDescendants(project, selectedReparentCategory.id).map(
+            (category) => category.id,
+          ),
+        ]
+      : [],
+  );
+  const reparentParents = project.categories.filter(
+    (category) => !blockedParentIds.has(category.id),
+  );
 
   const importCsv = async (file: File) => {
     setBusy("import");
@@ -464,6 +519,23 @@ export function Catalog({ project, onCommand }: CatalogProps) {
             placeholder="Buscar por producto, marca o estado"
           />
         </label>
+        <label className="catalog-category-filter">
+          <span>Filtrar categoría</span>
+          <select
+            value={categoryFilterId}
+            onChange={(event) => {
+              setCategoryFilterId(event.target.value);
+              setPagination((current) => ({ ...current, pageIndex: 0 }));
+            }}
+          >
+            <option value="">Todas las categorías</option>
+            {orderedCategories.map((category) => (
+              <option value={category.id} key={category.id}>
+                {categoryLabel(category)}
+              </option>
+            ))}
+          </select>
+        </label>
         <div className="selection-summary">
           <span>{selectedIds.length} seleccionados</span>
           {filteredRows.length > 0 ? (
@@ -554,9 +626,9 @@ export function Catalog({ project, onCommand }: CatalogProps) {
                     )
                   }
                 >
-                  {project.categories.map((category) => (
+                  {orderedCategories.map((category) => (
                     <option value={category.id} key={category.id}>
-                      {category.title}
+                      {categoryLabel(category)}
                     </option>
                   ))}
                 </select>
@@ -624,6 +696,93 @@ export function Catalog({ project, onCommand }: CatalogProps) {
           </div>
         </section>
       ) : null}
+
+      <section className="category-tree-panel" aria-label="Árbol de categorías">
+        <header>
+          <div>
+            <span className="eyebrow">Organización</span>
+            <h2>Categorías</h2>
+            <p>Las categorías padre agregan automáticamente los productos de sus hijas.</p>
+          </div>
+        </header>
+        <ul className="category-tree" aria-label="Categorías ordenadas">
+          {orderedCategories.map((category) => {
+            const directCount = project.products.filter((product) =>
+              product.categoryIds.includes(category.id),
+            ).length;
+            const totalCount = getCategoryProductIds(project, category.id).length;
+            return (
+              <li key={category.id} data-depth={category.parentId ? "1" : "0"}>
+                <strong>{categoryLabel(category)}</strong>
+                <span>
+                  {directCount} directos · {totalCount} totales
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="category-reparent">
+          <Field label="Categoría a reubicar">
+            <select
+              value={reparentCategoryId}
+              onChange={(event) => {
+                setReparentCategoryId(event.target.value);
+                setReparentParentId("");
+              }}
+            >
+              <option value="">Seleccionar categoría</option>
+              {orderedCategories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {categoryLabel(category)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Nuevo padre">
+            <select
+              value={reparentParentId}
+              onChange={(event) => setReparentParentId(event.target.value)}
+              disabled={!selectedReparentCategory}
+            >
+              <option value="">Sin padre (raíz)</option>
+              {reparentParents
+                .filter(
+                  (category) =>
+                    category.parentId === undefined &&
+                    category.id !== selectedReparentCategory?.parentId,
+                )
+                .map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {categoryLabel(category)}
+                  </option>
+                ))}
+            </select>
+          </Field>
+          <Button
+            disabled={!selectedReparentCategory}
+            onClick={() => {
+              if (!selectedReparentCategory) return;
+              const nextLabel = reparentParentId
+                ? project.categories.find((category) => category.id === reparentParentId)?.title
+                : "raíz";
+              if (
+                !window.confirm(
+                  `Reubicar ${selectedReparentCategory.title} bajo ${nextLabel ?? "raíz"}?`,
+                )
+              )
+                return;
+              onCommand({
+                type: "category.reparent",
+                categoryId: selectedReparentCategory.id,
+                ...(reparentParentId ? { parentId: reparentParentId as Category["id"] } : {}),
+                at: now(),
+              });
+            }}
+          >
+            Reubicar categoría
+          </Button>
+        </div>
+      </section>
 
       {project.products.length === 0 ? (
         <EmptyState

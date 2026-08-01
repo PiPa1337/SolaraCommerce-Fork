@@ -131,8 +131,12 @@ export const editorialHeader: ModuleDefinition<z.infer<typeof headerSettings>> =
     const cartCurrent = ["cart", "checkout"].includes(context.pageType)
       ? ' aria-current="page"'
       : "";
+    const catalogClass =
+      navigation.items.length > 6
+        ? "solara-nav-dropdown solara-nav-dropdown--wide"
+        : "solara-nav-dropdown";
     const catalog = context.settings.showCategories
-      ? `<details class="solara-nav-dropdown"><summary${catalogCurrent}>${escapeHtml(navigation.catalogLabel || context.settings.catalogLabel)}</summary><ul>${nestedItems || `<li><a href="${escapeAttribute(safeUrl(context.settings.catalogHref))}">${escapeHtml(context.settings.catalogLabel)}</a></li>`}</ul></details>`
+      ? `<details class="${catalogClass}"><summary${catalogCurrent}>${escapeHtml(navigation.catalogLabel || context.settings.catalogLabel)}</summary><ul>${nestedItems || `<li><a href="${escapeAttribute(safeUrl(context.settings.catalogHref))}">${escapeHtml(context.settings.catalogLabel)}</a></li>`}</ul></details>`
       : `<a href="${escapeAttribute(safeUrl(context.settings.catalogHref))}"${catalogCurrent}>${escapeHtml(navigation.catalogLabel || context.settings.catalogLabel)}</a>`;
     const nav = `${navigation.showHome ? `<a href="/"${homeCurrent}>Inicio</a>` : ""}${catalog}${navigation.showContact ? `<a href="/contacto/"${contactCurrent}>Contacto</a>` : ""}${navigation.showAbout ? `<a href="/nosotros/"${aboutCurrent}>Nosotros</a>` : ""}`;
     const actions = `${navigation.showSearch && context.project.commerceTemplates.search.enabled ? `<a class="solara-search-trigger" href="/buscar/" aria-label="Buscar productos"${searchCurrent}>Buscar</a>` : ""}${navigation.showCart && context.project.siteShell.cart && (context.project.commerceTemplates.cart.enabled || context.project.commerceTemplates.checkout.enabled) ? `<button class="solara-cart-trigger" type="button" data-solara-cart-open data-open-cart aria-controls="solara-cart"${cartCurrent}>${escapeHtml(context.settings.cartLabel)} <span data-solara-cart-count data-cart-count aria-live="polite">0</span></button>` : ""}`;
@@ -559,7 +563,10 @@ export const editorialProductGrid: ModuleDefinition<z.infer<typeof productGridSe
   motionZones: staggerZone,
   styleAsset: scopedAssetId("editorial-product-grid"),
   render(context) {
-    const products = visibleProducts(context).slice(0, context.settings.limit);
+    const listing = ["category", "collection"].includes(context.pageType);
+    const products = listing
+      ? visibleProducts(context)
+      : visibleProducts(context).slice(0, context.settings.limit);
     return moduleRoot(
       "editorial-product-grid",
       context.section,
@@ -588,7 +595,10 @@ export const compactProductGrid: ModuleDefinition<z.infer<typeof productGridSett
   motionZones: staggerZone,
   styleAsset: scopedAssetId("compact-product-grid"),
   render(context) {
-    const products = visibleProducts(context).slice(0, context.settings.limit);
+    const listing = ["category", "collection"].includes(context.pageType);
+    const products = listing
+      ? visibleProducts(context)
+      : visibleProducts(context).slice(0, context.settings.limit);
     return moduleRoot(
       "compact-product-grid",
       context.section,

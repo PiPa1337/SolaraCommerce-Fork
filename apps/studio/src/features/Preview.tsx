@@ -5,19 +5,39 @@ import { useEffect, useMemo, useState } from "react";
 import { IconButton } from "../components/Ui";
 
 type PreviewSize = "desktop" | "tablet" | "mobile";
+
 export function Preview({ project }: { project: StoreProjectV1 }) {
   const [size, setSize] = useState<PreviewSize>("desktop");
   const [route, setRoute] = useState("/");
   const [html, setHtml] = useState("");
   const [error, setError] = useState("");
-  const previewRoutes = useMemo(
-    () => [
+  const previewRoutes = useMemo(() => {
+    const firstRoot = project.categories.find((category) => category.parentId === undefined);
+    const firstChild = project.categories.find((category) => category.parentId !== undefined);
+    const paginatedCategory = project.categories.find(
+      (category) => category.productIds.length > project.commerceTemplates.category.productsPerPage,
+    );
+    const firstProduct = project.products[0];
+    const lastProduct = project.products.at(-1);
+    return [
       { path: "/", label: "Home" },
-      ...(project.categories[0]
-        ? [{ path: `/categorias/${project.categories[0].slug}/`, label: "Categoría" }]
+      ...(firstRoot
+        ? [{ path: `/categorias/${firstRoot.slug}/`, label: `Categoría: ${firstRoot.title}` }]
         : []),
-      ...(project.products[0]
-        ? [{ path: `/productos/${project.products[0].slug}/`, label: "Producto" }]
+      ...(firstChild
+        ? [{ path: `/categorias/${firstChild.slug}/`, label: `Subcategoría: ${firstChild.title}` }]
+        : []),
+      ...(paginatedCategory
+        ? [
+            {
+              path: `/categorias/${paginatedCategory.slug}/pagina/2/`,
+              label: `Categoría página 2: ${paginatedCategory.title}`,
+            },
+          ]
+        : []),
+      ...(firstProduct ? [{ path: `/productos/${firstProduct.slug}/`, label: "Producto" }] : []),
+      ...(lastProduct && lastProduct.id !== firstProduct?.id
+        ? [{ path: `/productos/${lastProduct.slug}/`, label: "Producto final" }]
         : []),
       ...(project.commerceTemplates.search.enabled ? [{ path: "/buscar/", label: "Buscar" }] : []),
       { path: "/contacto/", label: "Contacto" },
@@ -26,15 +46,15 @@ export function Preview({ project }: { project: StoreProjectV1 }) {
       ...(project.commerceTemplates.checkout.enabled
         ? [{ path: "/compra/", label: "Compra" }]
         : []),
-    ],
-    [
-      project.categories,
-      project.products,
-      project.commerceTemplates.search.enabled,
-      project.commerceTemplates.cart.enabled,
-      project.commerceTemplates.checkout.enabled,
-    ],
-  );
+    ];
+  }, [
+    project.categories,
+    project.products,
+    project.commerceTemplates.category.productsPerPage,
+    project.commerceTemplates.search.enabled,
+    project.commerceTemplates.cart.enabled,
+    project.commerceTemplates.checkout.enabled,
+  ]);
 
   useEffect(() => {
     if (!previewRoutes.some((item) => item.path === route)) setRoute("/");

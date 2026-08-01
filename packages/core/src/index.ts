@@ -1,6 +1,7 @@
 import {
   type CategoryId,
   type CollectionId,
+  getCategoryProductIds,
   type Product,
   type ProductId,
   ProductSchema,
@@ -86,7 +87,15 @@ export type DomainCommand =
   | (CommandMetadata & {
       type: "products.replaceAll";
       products: Product[];
-    });
+    })
+  | CategoryCommand;
+
+// La reubicaciÃ³n conserva las asignaciones de productos y recalcula Ã­ndices heredados.
+export type CategoryCommand = CommandMetadata & {
+  type: "category.reparent";
+  categoryId: CategoryId;
+  parentId?: CategoryId;
+};
 
 const unique = <Value>(values: readonly Value[]): Value[] => [...new Set(values)];
 
@@ -139,9 +148,7 @@ export function adjustPrice(price: number, adjustment: PriceAdjustment): number 
 function synchronizeAssignments(project: StoreProjectV1): StoreProjectV1 {
   const categories = project.categories.map((category) => ({
     ...category,
-    productIds: project.products
-      .filter((product) => product.categoryIds.includes(category.id))
-      .map((product) => product.id),
+    productIds: getCategoryProductIds(project, category.id),
   }));
   const collections = project.collections.map((collection) => ({
     ...collection,
@@ -212,6 +219,21 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
     Date.parse(command.at) < Date.parse(project.updatedAt) ? project.updatedAt : command.at;
 
   switch (command.type) {
+    case "category.reparent": {
+      const category = project.categories.find((candidate) => candidate.id === command.categoryId);
+      if (!category) throw new Error(`La categorÃ­a no existe: ${command.categoryId}.`);
+      if (category.parentId === command.parentId) return project;
+      const categories = project.categories.map((candidate) =>
+        candidate.id === category.id ? { ...candidate, parentId: command.parentId } : candidate,
+      );
+      return parseProject(
+        synchronizeAssignments({
+          ...project,
+          categories,
+          updatedAt: at,
+        }),
+      );
+    }
     case "product.create": {
       if (project.products.some((product) => product.id === command.product.id)) {
         throw new Error(`Ya existe el producto ${command.product.id}.`);

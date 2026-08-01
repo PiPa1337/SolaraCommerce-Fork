@@ -28,6 +28,27 @@ editorial. Studio, preview y ZIP siguen usando el mismo renderer.
 - Preview con selector de ruta además de los marcos desktop, tablet y móvil.
 - Estados empty/error/loading, foco visible, skip link y CSS responsive editorial.
 
+## Escenario de escala jerárquico
+
+El fixture complementario `catalogScaleStore` mantiene el mismo `schemaVersion: 2`
+y prueba una tienda realista de catálogo: 10 categorías raíz, seis hijas bajo
+Casa y Cocina, 50 productos activos y 60 variantes. `parentId` es opcional para
+conservar compatibilidad con proyectos planos; los padres agregan productos de
+sus descendientes y las hijas mantienen su propia página.
+
+- Helpers compartidos: `getCategoryAncestors`, `getCategoryDescendants`,
+  `getCategoryProductIds` y `getCategoryBreadcrumb`.
+- Novedades contiene 35 productos y genera una segunda página rastreable.
+- Búsqueda indexa los nombres e IDs de categorías ancestrales.
+- El exporter deduplica assets y mantiene la misma semántica en preview y ZIP.
+- Studio muestra el árbol, cantidades directas/heredadas y permite reubicar una
+  categoría con bloqueo de ciclos y profundidad inválida.
+- El escenario Chromium cubre navbar, subcategorías, paginación, producto 50,
+  búsqueda por ancestro y layout móvil.
+
+El fixture se exporta desde `@solara/project-schema/scale-fixture` y se mantiene
+separado del fixture visual pequeño y del benchmark de 1.000 productos.
+
 ## Verificación ejecutada
 
 - `corepack pnpm typecheck`

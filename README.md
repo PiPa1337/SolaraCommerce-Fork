@@ -39,6 +39,17 @@ tags, disponibilidad e identificadores comerciales. El catálogo ofrece:
 - CSV procesado en Web Worker con revisión antes de reemplazar datos;
 - undo/redo y autosave serializado antes de salir de Studio.
 
+La jerarquía de categorías es opcional y admite raíces con un nivel de hijas.
+Los padres muestran el conjunto agregado de sus descendientes, mientras que cada
+hoja conserva su URL, breadcrumb y metadata. Studio visualiza el árbol con
+cantidades directas/heredadas y bloquea ciclos o reubicaciones inválidas.
+
+Para probar la escala de navegación sin mezclarla con el fixture visual, el
+paquete `@solara/project-schema/scale-fixture` expone `catalogScaleStore`: 10
+raíces, 16 categorías totales, 50 productos activos, 60 variantes y una categoría
+de 35 productos que pagina en dos documentos. Reutiliza los tres assets binarios
+existentes y mantiene todos los IDs, slugs y fechas deterministas.
+
 `StoreProjectV2` valida IDs, slugs, referencias, navegación y páginas editables. Una operación
 inválida se rechaza completa y no deja cambios parciales.
 

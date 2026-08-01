@@ -155,6 +155,7 @@ export const CategorySchema = z.object({
   title: z.string().min(1),
   description: z.string(),
   imageId: AssetIdSchema.optional(),
+  parentId: CategoryIdSchema.optional(),
   productIds: z.array(ProductIdSchema),
 });
 
@@ -353,6 +354,78 @@ function sameMembers(left: readonly string[], right: readonly string[]): boolean
   return left.every((value) => rightMembers.has(value));
 }
 
+interface CategoryRelation {
+  id: string;
+  parentId?: string | undefined;
+}
+
+function categoryRelationsById(
+  categories: readonly CategoryRelation[],
+): Map<string, CategoryRelation> {
+  return new Map(categories.map((category) => [category.id, category]));
+}
+
+function categoryDescendantIds(
+  categories: readonly CategoryRelation[],
+  categoryId: string,
+): string[] {
+  const childrenByParent = new Map<string, string[]>();
+  for (const category of categories) {
+    if (!category.parentId) continue;
+    const children = childrenByParent.get(category.parentId) ?? [];
+    children.push(category.id);
+    childrenByParent.set(category.parentId, children);
+  }
+
+  const descendants: string[] = [];
+  const visited = new Set<string>([categoryId]);
+  const visit = (parentId: string): void => {
+    for (const childId of childrenByParent.get(parentId) ?? []) {
+      if (visited.has(childId)) continue;
+      visited.add(childId);
+      descendants.push(childId);
+      visit(childId);
+    }
+  };
+  visit(categoryId);
+  return descendants;
+}
+
+function categoryAncestorIds(
+  categories: readonly CategoryRelation[],
+  categoryId: string,
+): string[] {
+  const byId = categoryRelationsById(categories);
+  const ancestors: string[] = [];
+  const seen = new Set<string>();
+  let current = byId.get(categoryId)?.parentId;
+  while (current) {
+    if (seen.has(current)) break;
+    seen.add(current);
+    ancestors.unshift(current);
+    current = byId.get(current)?.parentId;
+  }
+  return ancestors;
+}
+
+function categoryScopeIds(
+  categories: readonly CategoryRelation[],
+  categoryId: string,
+): Set<string> {
+  return new Set([categoryId, ...categoryDescendantIds(categories, categoryId)]);
+}
+
+function categoryProductIds(
+  categories: readonly CategoryRelation[],
+  products: readonly { id: string; categoryIds: readonly string[] }[],
+  categoryId: string,
+): string[] {
+  const scope = categoryScopeIds(categories, categoryId);
+  return products
+    .filter((product) => product.categoryIds.some((id) => scope.has(id)))
+    .map((product) => product.id);
+}
+
 export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((project, context) => {
   addDuplicateIssues(
     project.products.map((product) => product.id),
@@ -419,6 +492,45 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
   const collectionIds = new Set(project.collections.map((collection) => collection.id));
   const assetIds = new Set<string>(project.assets.map((asset) => asset.id));
   const mediaIds = new Set([...assetIds, ...project.videos.map((asset) => asset.id)]);
+
+  project.categories.forEach((category, categoryIndex) => {
+    if (category.parentId === undefined) return;
+    if (!categoryIds.has(category.parentId)) {
+      context.addIssue({
+        code: "custom",
+        message: `El padre de la categorÃ­a ${category.id} no existe: ${category.parentId}.`,
+        path: ["categories", categoryIndex, "parentId"],
+      });
+      return;
+    }
+
+    const visited = new Set<string>([category.id]);
+    let currentId: string | undefined = category.parentId;
+    let depth = 1;
+    while (currentId) {
+      if (visited.has(currentId)) {
+        context.addIssue({
+          code: "custom",
+          message: `La jerarquÃ­a de categorÃ­as contiene un ciclo en ${category.id}.`,
+          path: ["categories", categoryIndex, "parentId"],
+        });
+        break;
+      }
+      visited.add(currentId);
+      const parent = project.categories.find((candidate) => candidate.id === currentId);
+      if (!parent?.parentId) break;
+      depth += 1;
+      if (depth > 1) {
+        context.addIssue({
+          code: "custom",
+          message: "Las categorÃ­as sÃ³lo pueden tener un nivel de subcategorÃ­as.",
+          path: ["categories", categoryIndex, "parentId"],
+        });
+        break;
+      }
+      currentId = parent.parentId;
+    }
+  });
 
   project.products.forEach((product, productIndex) => {
     addDuplicateIssues(
@@ -667,9 +779,7 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
       `Producto de la categoría ${category.id}`,
       context,
     );
-    const expected = project.products
-      .filter((product) => product.categoryIds.includes(category.id))
-      .map((product) => product.id);
+    const expected = categoryProductIds(project.categories, project.products, category.id);
     if (!sameMembers(category.productIds, expected)) {
       context.addIssue({
         code: "custom",
@@ -762,6 +872,45 @@ export type StoreProjectV2 = z.infer<typeof StoreProjectV2Schema>;
 // Alias temporal para los paquetes existentes; el contrato persistido ya es v2.
 export type StoreProjectV1 = StoreProjectV2;
 export const StoreProjectV1Schema = StoreProjectV2Schema;
+
+export function getCategoryAncestors(
+  project: Pick<StoreProjectV2, "categories">,
+  categoryId: CategoryId,
+): Category[] {
+  const byId = new Map<string, Category>(
+    project.categories.map((category) => [category.id, category]),
+  );
+  return categoryAncestorIds(project.categories, categoryId)
+    .map((id) => byId.get(id))
+    .filter((category): category is Category => Boolean(category));
+}
+
+export function getCategoryDescendants(
+  project: Pick<StoreProjectV2, "categories">,
+  categoryId: CategoryId,
+): Category[] {
+  const byId = new Map<string, Category>(
+    project.categories.map((category) => [category.id, category]),
+  );
+  return categoryDescendantIds(project.categories, categoryId)
+    .map((id) => byId.get(id))
+    .filter((category): category is Category => Boolean(category));
+}
+
+export function getCategoryProductIds(
+  project: Pick<StoreProjectV2, "categories" | "products">,
+  categoryId: CategoryId,
+): ProductId[] {
+  return categoryProductIds(project.categories, project.products, categoryId) as ProductId[];
+}
+
+export function getCategoryBreadcrumb(
+  project: Pick<StoreProjectV2, "categories">,
+  categoryId: CategoryId,
+): Category[] {
+  const category = project.categories.find((candidate) => candidate.id === categoryId);
+  return category ? [...getCategoryAncestors(project, categoryId), category] : [];
+}
 
 export function parseProject(input: unknown): StoreProjectV2 {
   return StoreProjectV2Schema.parse(input);

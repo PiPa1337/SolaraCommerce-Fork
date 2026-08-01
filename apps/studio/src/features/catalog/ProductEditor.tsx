@@ -48,6 +48,24 @@ function setOptionalText(value: string): string | undefined {
   return trimmed || undefined;
 }
 
+function orderedCategories(categories: Category[]): Category[] {
+  const childrenByParent = new Map<string, Category[]>();
+  categories.forEach((category) => {
+    if (!category.parentId) return;
+    childrenByParent.set(category.parentId, [
+      ...(childrenByParent.get(category.parentId) ?? []),
+      category,
+    ]);
+  });
+  const ordered: Category[] = [];
+  const visit = (category: Category): void => {
+    ordered.push(category);
+    (childrenByParent.get(category.id) ?? []).forEach(visit);
+  };
+  categories.filter((category) => !category.parentId).forEach(visit);
+  return ordered;
+}
+
 export function ProductEditor({
   product,
   categories,
@@ -220,7 +238,7 @@ export function ProductEditor({
           <div className="assignment-grid">
             <div>
               <strong>Categorías</strong>
-              {categories.map((category) => (
+              {orderedCategories(categories).map((category) => (
                 <label className="check-field" key={category.id}>
                   <input
                     type="checkbox"
@@ -234,7 +252,7 @@ export function ProductEditor({
                       }))
                     }
                   />
-                  {category.title}
+                  {category.parentId ? `↳ ${category.title}` : category.title}
                 </label>
               ))}
             </div>
