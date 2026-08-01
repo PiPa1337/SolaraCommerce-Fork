@@ -1,28 +1,25 @@
-# Fase 8 completada: hardening y release candidate
+# Fase 10 en curso: piloto real controlado
 
 ## Objetivo
 
-Endurecer Studio y el storefront frente a datos corruptos, respaldos
-incompatibles, políticas de seguridad y regresiones de bundle sin cambiar los
-contratos persistidos ni el formato público.
+Publicar una sola tienda production en un dominio HTTPS, verificar el recorrido
+de indexación y Merchant en servicios reales y registrar límites del checkout
+por WhatsApp sin cambiar el schema ni agregar módulos durante la observación.
 
-## Entregado
+## Fases anteriores cerradas
 
-- La lista de tiendas valida cada registro con `StoreProjectV1Schema` y separa
-  proyectos recuperables de registros incompatibles.
-- Studio muestra los registros que requieren recuperación, conserva el original
-  y permite importar un respaldo `.solara.zip` compatible desde el dashboard.
-- La apertura de una tienda corrupta y la lectura de un ZIP inválido devuelven
-  mensajes accionables sin sobrescribir datos.
-- La importación valida ZIP, manifest, versión y proyecto antes de persistirlo.
-- La pantalla de Recursos informa el uso de cuota local y permite limpiar sólo
-  la caché regenerable de imágenes.
-- El exportador publica `_headers` con CSP, Referrer-Policy, permisos mínimos y
-  protección contra framing; `style-src-attr` queda limitado a las variables de
-  movimiento declarativas del storefront.
-- `check:budgets` mide el gzip de los bundles iniciales de Studio y bloquea el
-  gate si supera 260 KiB de JavaScript o 100 KiB de CSS.
-- El benchmark determinista conserva el stress test de 1.000 productos.
+- Fase 8: recuperación, CSP, budgets y stress de 1.000 productos.
+- Fase 9: release candidate, matriz de navegadores, auditoría de accesibilidad,
+  Lighthouse, manifiesto y exportación de referencia.
+
+## Preflight implementado
+
+- `pilot:preflight` comprueba que production no tenga errores críticos, que cada
+  oferta del snapshot aparezca una vez en Merchant, que sitemap, JSON-LD,
+  canonical, robots y headers estén presentes y que el ZIP sea reproducible.
+- `pilot-checklist.md` contiene los pasos externos que no se pueden simular
+  localmente: dominio, HTTPS, Search Console, Merchant Center y diagnóstico de
+  Rich Results.
 
 ## Contratos preservados
 
@@ -32,16 +29,20 @@ contratos persistidos ni el formato público.
 - El checkout, WhatsApp, SEO, Merchant, preview, undo/redo y exportación
   mantienen el comportamiento de las fases anteriores.
 
-## Verificación de cierre
+## Verificación de fase
 
 - `corepack pnpm check`
 - `corepack pnpm build`
 - `corepack pnpm check:budgets`
 - `corepack pnpm benchmark:export`
-- `corepack pnpm test:e2e` (17/17 Chromium)
+- `corepack pnpm pilot:preflight`
 
-## Próxima fase
+La publicación real requiere el dominio y las credenciales del usuario. No se
+automatiza desde este repositorio para evitar enviar datos a una cuenta o
+dominio no autorizados.
 
-Release candidate reproducible: matriz opcional de navegadores, auditoría de
-accesibilidad y Lighthouse, manifiesto de release, backups documentados y
-pruebas finales antes del piloto real.
+## Próximo paso manual
+
+Elegir el dominio y hosting, publicar `.release/site.zip`, ejecutar el checklist
+y devolver los diagnósticos observados. Después se congela `schemaVersion: 1` y
+se decide si la limitación de WhatsApp impide la aprobación Merchant.

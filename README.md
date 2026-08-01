@@ -157,3 +157,23 @@ El gate incluye `corepack pnpm check:budgets`, que bloquea bundles iniciales de
 Studio por encima de 260 KiB gzip de JavaScript o 100 KiB gzip de CSS. La matriz
 multinavegador y Lighthouse se ejecutan en el gate de release, no en cada cambio
 local.
+
+## Release candidate (Fase 9)
+
+El bucle local ejecuta Chromium. `corepack pnpm test:e2e:release` activa la
+matriz Chromium, Firefox y WebKit; el workflow separado se dispara manualmente
+o con tags `v*` y conserva sus diagnósticos durante 14 días. `release:manifest`
+genera metadata del commit y artefactos en `.release/`, fuera del repositorio.
+
+La auditoría Lighthouse usa `.lighthouserc.json` contra un `site.zip` de
+producción servido localmente o en el dominio piloto. Se ejecuta con
+`corepack pnpm dlx @lhci/cli autorun --config=.lighthouserc.json` para no sumar
+una dependencia pesada al Studio ni al storefront.
+
+## Piloto real (Fase 10)
+
+`corepack pnpm pilot:preflight` valida el paquete production antes de publicar:
+feed, sitemap, JSON-LD, canonical, robots, headers y ZIP reproducible. La
+publicación, verificación de dominio, Search Console y Merchant Center quedan
+manuales porque requieren credenciales y autorización del usuario; el checklist
+está en [`docs/pilot-checklist.md`](docs/pilot-checklist.md).

@@ -2,16 +2,30 @@
 
 ## Antes de publicar
 
+- Ejecutar desde Node 22:
+
+  ```bash
+  corepack pnpm install --frozen-lockfile
+  corepack pnpm check
+  corepack pnpm build
+  corepack pnpm check:budgets
+  corepack pnpm benchmark:export
+  corepack pnpm pilot:preflight
+  corepack pnpm reference:export
+  ```
+
 - Usar exportación `production` con dominio HTTPS definitivo.
 - Resolver todos los errores críticos del panel SEO.
 - Comprobar títulos, descripciones, canonical, alt, precios y disponibilidad.
 - Revisar políticas de entrega, devoluciones, contacto y privacidad.
-- Ejecutar `check`, `build`, Playwright, benchmark, Lighthouse y la matriz de
-  navegadores de release.
+- Ejecutar el release candidate completo, incluyendo la matriz de navegadores y
+  Lighthouse, antes de publicar.
 
 ## Publicación
 
-1. Publicar un único `site.zip` sin modificar sus archivos.
+1. Exportar la tienda elegida en modo `production` desde Studio y publicar un
+   único `site.zip` sin modificar sus archivos. `.release/site.zip` del
+   preflight sólo es el fixture de referencia.
 2. Verificar el dominio en Search Console.
 3. Enviar `/sitemap.xml` e inspeccionar home, categoría, producto y variante.
 4. Crear una subcuenta Merchant para el dominio.

@@ -6,6 +6,8 @@ playwright-report/
 test-results/
 .vite/
 .solara-runtime/
+.release/
+.lighthouseci/
 .env
 .env.*
 !.env.example

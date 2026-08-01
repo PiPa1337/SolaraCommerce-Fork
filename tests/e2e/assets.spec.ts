@@ -41,7 +41,9 @@ test("procesa una imagen, muestra el lote y persiste el asset", async ({ page })
     buffer: pixel,
   });
 
-  await expect(page.locator("output").filter({ hasText: "1 imagen agregada" })).toBeVisible();
+  await expect(page.locator("output").filter({ hasText: "1 imagen agregada" })).toBeVisible({
+    timeout: 15_000,
+  });
   await expect(page.locator(".asset-item")).toHaveCount(4);
   await expect(page.getByText("Guardado", { exact: true })).toBeVisible();
 

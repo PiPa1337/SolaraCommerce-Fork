@@ -31,3 +31,10 @@ procesamiento de imágenes.
 Las zonas animables pertenecen al contrato del módulo. Se usan CSS, Web Animations
 API e IntersectionObserver, con estado final visible por defecto y reducción de
 movimiento obligatoria.
+
+## ADR-007: release por capas
+
+Chromium valida cada cambio; Firefox, WebKit y Lighthouse sólo se ejecutan en el
+release candidate. Así se conserva feedback rápido sin renunciar a una matriz
+final reproducible. Los manifiestos de release viven fuera del control de
+versiones y describen el commit y los artefactos sin incluir datos privados.

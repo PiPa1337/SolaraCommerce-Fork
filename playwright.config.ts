@@ -12,10 +12,22 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:4175",
     trace: "retain-on-failure",
   },
-  projects: [
-    {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
-    },
-  ],
+  projects:
+    process.env.PLAYWRIGHT_MULTI_BROWSER === "1"
+      ? [
+          { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+          {
+            name: "firefox",
+            testIgnore:
+              /[/\\](assets|catalog|release-a11y|studio-builder|studio-visual)\.spec\.ts$/,
+            use: { ...devices["Desktop Firefox"] },
+          },
+          {
+            name: "webkit",
+            testIgnore:
+              /[/\\](assets|catalog|release-a11y|studio-builder|studio-visual)\.spec\.ts$/,
+            use: { ...devices["Desktop Safari"] },
+          },
+        ]
+      : [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });

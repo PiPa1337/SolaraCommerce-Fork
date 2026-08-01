@@ -1,0 +1,94 @@
+name: Release candidate
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release, Node 22, Chromium Firefox WebKit
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      CI: true
+      SOLARA_SKIP_E2E_BUILD: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+          run_install: false
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Gate unitario
+        run: pnpm check
+
+      - name: Build y budgets
+        run: |
+          pnpm build
+          pnpm check:budgets
+
+      - name: Benchmark de exportación
+        run: pnpm benchmark:export
+
+      - name: Instalar navegadores de release
+        run: pnpm playwright:install:release
+
+      - name: Playwright matriz completa
+        run: pnpm test:e2e:release
+
+      - name: Preparar sitio de referencia
+        run: pnpm reference:export
+
+      - name: Preflight del piloto
+        run: pnpm pilot:preflight
+
+      - name: Crear manifiesto de release
+        run: pnpm release:manifest
+
+      - name: Lighthouse CI
+        shell: pwsh
+        run: |
+          $server = Start-Process -FilePath "node" -ArgumentList @("packages/exporter/scripts/serve.mjs", ".release/reference-site", "4174") -PassThru -WindowStyle Hidden
+          try {
+            Start-Sleep -Seconds 2
+            pnpm dlx @lhci/cli@0.15.1 autorun --config=.lighthouserc.json
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally {
+            Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Publicar manifiesto y diagnósticos
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: solara-release-${{ github.run_id }}
+          path: |
+            .release/release-manifest.json
+            .lighthouseci/
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
