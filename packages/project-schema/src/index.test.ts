@@ -4,19 +4,19 @@ import {
   MoneySchema,
   migrateProject,
   SlugSchema,
-  type StoreProjectV1,
-  StoreProjectV1Schema,
+  type StoreProjectV2,
+  StoreProjectV2Schema,
 } from "./index";
 
-function invalidProject(mutator: (project: StoreProjectV1) => void): StoreProjectV1 {
+function invalidProject(mutator: (project: StoreProjectV2) => void): StoreProjectV2 {
   const project = structuredClone(referenceStore);
   mutator(project);
   return project;
 }
 
-describe("StoreProjectV1Schema", () => {
+describe("StoreProjectV2Schema", () => {
   it("valida el fixture compartido", () => {
-    expect(StoreProjectV1Schema.parse(referenceStore)).toEqual(referenceStore);
+    expect(StoreProjectV2Schema.parse(referenceStore)).toEqual(referenceStore);
   });
 
   it("acepta fecha de disponibilidad opcional sin cambiar schemaVersion", () => {
@@ -25,8 +25,8 @@ describe("StoreProjectV1Schema", () => {
     if (!variant) throw new Error("Fixture incompleto");
     variant.availabilityDate = "2026-09-01T00:00:00.000Z";
 
-    const parsed = StoreProjectV1Schema.parse(project);
-    expect(parsed.schemaVersion).toBe(1);
+    const parsed = StoreProjectV2Schema.parse(project);
+    expect(parsed.schemaVersion).toBe(2);
     expect(parsed.products[0]?.variants[0]?.availabilityDate).toBe("2026-09-01T00:00:00.000Z");
   });
 
@@ -36,7 +36,7 @@ describe("StoreProjectV1Schema", () => {
   });
 
   it("rechaza versiones sin migración", () => {
-    expect(() => migrateProject({ ...referenceStore, schemaVersion: 2 })).toThrow(
+    expect(() => migrateProject({ ...referenceStore, schemaVersion: 1 })).toThrow(
       "Versión de proyecto incompatible",
     );
   });
@@ -46,20 +46,20 @@ describe("StoreProjectV1Schema", () => {
       const first = project.products[0];
       if (first) project.products.push(structuredClone(first));
     });
-    expect(() => StoreProjectV1Schema.parse(duplicateProduct)).toThrow("ID de producto duplicado");
+    expect(() => StoreProjectV2Schema.parse(duplicateProduct)).toThrow("ID de producto duplicado");
 
     const duplicateVariant = invalidProject((project) => {
       const firstVariant = project.products[0]?.variants[0];
       const secondVariant = project.products[1]?.variants[0];
       if (firstVariant && secondVariant) secondVariant.id = firstVariant.id;
     });
-    expect(() => StoreProjectV1Schema.parse(duplicateVariant)).toThrow("ID de variante duplicado");
+    expect(() => StoreProjectV2Schema.parse(duplicateVariant)).toThrow("ID de variante duplicado");
 
     const duplicateSection = invalidProject((project) => {
       const first = project.sections[0];
       if (first) project.sections.push(structuredClone(first));
     });
-    expect(() => StoreProjectV1Schema.parse(duplicateSection)).toThrow("ID de sección duplicado");
+    expect(() => StoreProjectV2Schema.parse(duplicateSection)).toThrow("ID de sección duplicado");
   });
 
   it("rechaza slugs duplicados por familia", () => {
@@ -68,7 +68,7 @@ describe("StoreProjectV1Schema", () => {
       const second = project.products[1];
       if (first && second) second.slug = first.slug;
     });
-    expect(() => StoreProjectV1Schema.parse(duplicateProductSlug)).toThrow(
+    expect(() => StoreProjectV2Schema.parse(duplicateProductSlug)).toThrow(
       "Slug de producto duplicado",
     );
 
@@ -77,7 +77,7 @@ describe("StoreProjectV1Schema", () => {
       const second = project.categories[1];
       if (first && second) second.slug = first.slug;
     });
-    expect(() => StoreProjectV1Schema.parse(duplicateCategorySlug)).toThrow(
+    expect(() => StoreProjectV2Schema.parse(duplicateCategorySlug)).toThrow(
       "Slug de categoría duplicado",
     );
   });
@@ -89,20 +89,20 @@ describe("StoreProjectV1Schema", () => {
       if (product && existing)
         product.categoryIds = [`${existing.id}-missing` as typeof existing.id];
     });
-    expect(() => StoreProjectV1Schema.parse(missingCategory)).toThrow("Categoría del producto");
+    expect(() => StoreProjectV2Schema.parse(missingCategory)).toThrow("Categoría del producto");
 
     const missingAsset = invalidProject((project) => {
       const product = project.products[0];
       const existing = project.assets[0];
       if (product && existing) product.imageIds = [`${existing.id}-missing` as typeof existing.id];
     });
-    expect(() => StoreProjectV1Schema.parse(missingAsset)).toThrow("Imagen del producto");
+    expect(() => StoreProjectV2Schema.parse(missingAsset)).toThrow("Imagen del producto");
 
     const inconsistentIndex = invalidProject((project) => {
       const category = project.categories[0];
       if (category) category.productIds = [];
     });
-    expect(() => StoreProjectV1Schema.parse(inconsistentIndex)).toThrow(
+    expect(() => StoreProjectV2Schema.parse(inconsistentIndex)).toThrow(
       "no coincide con las asignaciones",
     );
   });
@@ -111,8 +111,16 @@ describe("StoreProjectV1Schema", () => {
     const invalidTimestamp = invalidProject((project) => {
       project.updatedAt = "2020-01-01T00:00:00.000Z";
     });
-    expect(() => StoreProjectV1Schema.parse(invalidTimestamp)).toThrow(
+    expect(() => StoreProjectV2Schema.parse(invalidTimestamp)).toThrow(
       "updatedAt anterior a createdAt",
     );
+  });
+
+  it("rechaza destinos internos de navegación que no existen", () => {
+    const invalidNavigation = invalidProject((project) => {
+      const item = project.navigation.items[0];
+      if (item) item.href = "/categorias/no-existe/";
+    });
+    expect(() => StoreProjectV2Schema.parse(invalidNavigation)).toThrow("no existe en el proyecto");
   });
 });

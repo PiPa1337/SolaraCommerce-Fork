@@ -1,32 +1,53 @@
-import type { StoreProjectV1 } from "@solara/project-schema";
-import { StoreProjectV1Schema } from "@solara/project-schema";
+import type { StoreProjectV2 } from "@solara/project-schema";
+import { StoreProjectV2Schema } from "@solara/project-schema";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 
 interface ArchiveManifest {
   format: "solara-project";
-  version: 1;
+  version: 2;
   projectId: string;
   exportedAt: string;
 }
 
-export function createProjectArchive(project: StoreProjectV1): Uint8Array {
-  const parsed = StoreProjectV1Schema.parse(project);
+function dataUrlBytes(source: string): Uint8Array | undefined {
+  const match = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(source);
+  if (!match) return undefined;
+  if (match[2]) {
+    const binary = atob(match[3] ?? "");
+    return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  }
+  return new TextEncoder().encode(decodeURIComponent(match[3] ?? ""));
+}
+
+function extension(mimeType: string): string {
+  const subtype = mimeType.split("/")[1]?.split(";")[0] ?? "bin";
+  return subtype === "jpeg" ? "jpg" : subtype;
+}
+
+export function createProjectArchive(project: StoreProjectV2): Uint8Array {
+  const parsed = StoreProjectV2Schema.parse(project);
   const manifest: ArchiveManifest = {
     format: "solara-project",
-    version: 1,
+    version: 2,
     projectId: parsed.id,
     exportedAt: new Date().toISOString(),
   };
-  return zipSync(
-    {
-      "manifest.json": strToU8(JSON.stringify(manifest, null, 2)),
-      "project.json": strToU8(JSON.stringify(parsed, null, 2)),
-    },
-    { level: 6 },
-  );
+  const files: Record<string, Uint8Array> = {
+    "manifest.json": strToU8(JSON.stringify(manifest, null, 2)),
+    "project.json": strToU8(JSON.stringify(parsed, null, 2)),
+  };
+  parsed.assets.forEach((asset) => {
+    const bytes = dataUrlBytes(asset.source);
+    if (bytes) files[`assets/${asset.hash}.${extension(asset.mimeType)}`] = bytes;
+  });
+  parsed.videos.forEach((video) => {
+    const bytes = dataUrlBytes(video.source);
+    if (bytes) files[`assets/${video.hash}.${extension(video.mimeType)}`] = bytes;
+  });
+  return zipSync(files, { level: 6 });
 }
 
-export function readProjectArchive(input: Uint8Array): StoreProjectV1 {
+export function readProjectArchive(input: Uint8Array): StoreProjectV2 {
   let files: Record<string, Uint8Array>;
   try {
     files = unzipSync(input);
@@ -45,7 +66,7 @@ export function readProjectArchive(input: Uint8Array): StoreProjectV1 {
   } catch {
     throw new Error("El manifest del respaldo está corrupto.");
   }
-  if (manifest.format !== "solara-project" || manifest.version !== 1) {
+  if (manifest.format !== "solara-project" || manifest.version !== 2) {
     throw new Error("La versión del archivo Solara no es compatible con esta versión de Studio.");
   }
 
@@ -55,7 +76,7 @@ export function readProjectArchive(input: Uint8Array): StoreProjectV1 {
   } catch {
     throw new Error("El proyecto dentro del respaldo está corrupto.");
   }
-  const parsed = StoreProjectV1Schema.safeParse(project);
+  const parsed = StoreProjectV2Schema.safeParse(project);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     const path = issue?.path.join(".") || "project";

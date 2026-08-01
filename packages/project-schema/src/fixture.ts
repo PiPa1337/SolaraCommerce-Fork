@@ -1,9 +1,9 @@
-import { StoreProjectV1Schema } from "./index";
+import { StoreProjectV2Schema } from "./index";
 
 const now = "2026-07-29T12:00:00.000Z";
 
-export const referenceStore = StoreProjectV1Schema.parse({
-  schemaVersion: 1,
+export const referenceStore = StoreProjectV2Schema.parse({
+  schemaVersion: 2,
   id: "store-casa-luma",
   name: "Casa Luma",
   slug: "casa-luma",
@@ -52,6 +52,62 @@ export const referenceStore = StoreProjectV1Schema.parse({
     radius: 4,
     container: 1360,
   },
+  navigation: {
+    catalogLabel: "Colecciones",
+    showHome: true,
+    showContact: true,
+    showAbout: true,
+    showSearch: true,
+    showCart: true,
+    items: [
+      {
+        id: "nav-casa",
+        label: "Casa",
+        href: "/categorias/mesa/",
+        children: [
+          { id: "nav-textiles", label: "Textiles", href: "/categorias/textiles/" },
+          { id: "nav-mesa", label: "Mesa", href: "/categorias/mesa/" },
+        ],
+      },
+    ],
+  },
+  siteShell: { announcement: true, header: true, footer: true, cart: true },
+  commerceTemplates: {
+    category: { productsPerPage: 24 },
+    search: { enabled: true },
+    product: { showRelated: true },
+    cart: { enabled: true },
+    checkout: { enabled: true },
+  },
+  pages: [
+    {
+      id: "page-home",
+      kind: "home",
+      slug: "inicio",
+      title: "Una casa con materia y calma.",
+      seoTitle: "Casa Luma | Objetos para todos los días",
+      seoDescription: "Objetos de mesa, textiles y piezas de autor seleccionadas en Buenos Aires.",
+      sections: [],
+    },
+    {
+      id: "page-about",
+      kind: "about",
+      slug: "nosotros",
+      title: "Elegimos objetos para vivirlos.",
+      seoTitle: "Nosotros | Casa Luma",
+      seoDescription: "Conocé la mirada detrás de Casa Luma y las piezas que elegimos.",
+      sections: [],
+    },
+    {
+      id: "page-contact",
+      kind: "contact",
+      slug: "contacto",
+      title: "Estamos para ayudarte.",
+      seoTitle: "Contacto | Casa Luma",
+      seoDescription: "Escribinos por WhatsApp, email o teléfono para coordinar tu pedido.",
+      sections: [],
+    },
+  ],
   policies: {
     shipping: {
       summary: "Envíos a todo el país.",
@@ -78,6 +134,7 @@ export const referenceStore = StoreProjectV1Schema.parse({
   },
   assets: [
     {
+      kind: "image",
       id: "asset-manta",
       name: "Manta Bruma",
       alt: "Manta de algodón verde sobre un sillón claro",
@@ -88,6 +145,7 @@ export const referenceStore = StoreProjectV1Schema.parse({
       hash: "fixture-manta",
     },
     {
+      kind: "image",
       id: "asset-jarra",
       name: "Jarra Delta",
       alt: "Jarra de cerámica sobre una mesa de madera",
@@ -98,6 +156,7 @@ export const referenceStore = StoreProjectV1Schema.parse({
       hash: "fixture-jarra",
     },
     {
+      kind: "image",
       id: "asset-hero",
       name: "Mesa Casa Luma",
       alt: "Mesa servida con objetos de Casa Luma",
@@ -108,6 +167,7 @@ export const referenceStore = StoreProjectV1Schema.parse({
       hash: "fixture-hero",
     },
   ],
+  videos: [],
   products: [
     {
       id: "product-manta-bruma",
@@ -246,7 +306,7 @@ export const referenceStore = StoreProjectV1Schema.parse({
     {
       id: "section-hero",
       slot: "hero",
-      moduleId: "split-hero",
+      moduleId: "hero-media",
       enabled: true,
       settings: {
         eyebrow: "Objetos elegidos con tiempo",
@@ -254,7 +314,13 @@ export const referenceStore = StoreProjectV1Schema.parse({
         body: "Piezas honestas para usar todos los días.",
         actionLabel: "Ver colección",
         actionHref: "/categorias/textiles/",
-        imageId: "asset-hero",
+        mode: "image",
+        posterAssetId: "asset-hero",
+        overlay: "dark",
+        alignment: "left",
+        autoplay: false,
+        intervalMs: 6000,
+        slides: [],
       },
       motion: {
         preset: "fade-up",
@@ -302,6 +368,32 @@ export const referenceStore = StoreProjectV1Schema.parse({
         duration: 0.55,
         delay: 0,
         stagger: 0.07,
+        easing: "cubic-bezier(.16,1,.3,1)",
+        entryPoint: 0.2,
+        once: true,
+      },
+    },
+    {
+      id: "section-story",
+      slot: "content",
+      moduleId: "image-text-content",
+      enabled: true,
+      settings: {
+        title: "La materia también cuenta una historia.",
+        body: "<p>Una selección precisa para usar, regalar y volver a elegir.</p>",
+        imageId: "asset-jarra",
+        imageSide: "right",
+        actionLabel: "Conocé nuestra mirada",
+        actionHref: "/nosotros/",
+      },
+      motion: {
+        preset: "fade-up",
+        intensity: 4,
+        direction: "up",
+        distance: 24,
+        duration: 0.6,
+        delay: 0,
+        stagger: 0,
         easing: "cubic-bezier(.16,1,.3,1)",
         entryPoint: 0.2,
         once: true,

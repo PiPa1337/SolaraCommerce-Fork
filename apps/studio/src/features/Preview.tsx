@@ -5,28 +5,47 @@ import { useEffect, useState } from "react";
 import { IconButton } from "../components/Ui";
 
 type PreviewSize = "desktop" | "tablet" | "mobile";
+const previewRoutes = [
+  { path: "/", label: "Home" },
+  { path: "/contacto/", label: "Contacto" },
+  { path: "/nosotros/", label: "Nosotros" },
+  { path: "/buscar/", label: "Buscar" },
+  { path: "/carrito/", label: "Carrito" },
+  { path: "/compra/", label: "Compra" },
+];
 
 export function Preview({ project }: { project: StoreProjectV1 }) {
   const [size, setSize] = useState<PreviewSize>("desktop");
+  const [route, setRoute] = useState("/");
   const [html, setHtml] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       try {
-        setHtml(renderPreviewHtml(project, "draft"));
+        setHtml(renderPreviewHtml(project, "draft", route));
         setError("");
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : "No se pudo generar la vista previa.");
       }
     }, 140);
     return () => window.clearTimeout(timeout);
-  }, [project]);
+  }, [project, route]);
 
   return (
     <aside className="preview-pane" aria-label="Vista previa de la tienda">
       <header>
         <strong>Vista previa</strong>
+        <label className="preview-route">
+          <span className="visually-hidden">Ruta de vista previa</span>
+          <select value={route} onChange={(event) => setRoute(event.target.value)}>
+            {previewRoutes.map((item) => (
+              <option key={item.path} value={item.path}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <fieldset className="preview-sizes">
           <legend className="visually-hidden">Tamaño de vista previa</legend>
           <IconButton

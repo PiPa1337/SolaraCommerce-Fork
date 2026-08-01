@@ -28,6 +28,7 @@ export type Money = z.infer<typeof MoneySchema>;
 export type Slug = z.infer<typeof SlugSchema>;
 
 export const ImageAssetSchema = z.object({
+  kind: z.literal("image").default("image"),
   id: AssetIdSchema,
   name: z.string().min(1),
   alt: z.string(),
@@ -45,6 +46,75 @@ export const ImageAssetSchema = z.object({
   width: z.number().int().positive(),
   height: z.number().int().positive(),
   hash: z.string().min(1),
+});
+
+export const VideoAssetSchema = z.object({
+  kind: z.literal("video"),
+  id: AssetIdSchema,
+  name: z.string().min(1),
+  alt: z.string().default(""),
+  mimeType: z.enum(["video/mp4", "video/webm"]),
+  source: z.string().min(1),
+  posterAssetId: AssetIdSchema.optional(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  durationSeconds: z.number().positive().max(60),
+  hash: z.string().min(1),
+});
+
+export const MediaAssetSchema = z.union([ImageAssetSchema, VideoAssetSchema]);
+
+export const NavigationItemSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1).max(80),
+  href: z.string().optional(),
+  children: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        label: z.string().min(1).max(80),
+        href: z.string().optional(),
+      }),
+    )
+    .max(12)
+    .optional(),
+});
+
+export const NavigationConfigSchema = z.object({
+  catalogLabel: z.string().min(1).max(40).default("Colecciones"),
+  items: z.array(NavigationItemSchema).max(20).default([]),
+  showHome: z.boolean().default(true),
+  showContact: z.boolean().default(true),
+  showAbout: z.boolean().default(true),
+  showSearch: z.boolean().default(true),
+  showCart: z.boolean().default(true),
+});
+
+export const EditablePageSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(["home", "about", "contact"]),
+  slug: SlugSchema,
+  title: z.string().min(1),
+  seoTitle: z.string().min(1).max(70),
+  seoDescription: z.string().min(1).max(180),
+  sections: z.array(z.lazy(() => StoreSectionSchema)).default([]),
+});
+
+export const CommerceTemplatesSchema = z.object({
+  category: z
+    .object({ productsPerPage: z.number().int().min(1).max(48).default(24) })
+    .default({ productsPerPage: 24 }),
+  search: z.object({ enabled: z.boolean().default(true) }).default({ enabled: true }),
+  product: z.object({ showRelated: z.boolean().default(true) }).default({ showRelated: true }),
+  cart: z.object({ enabled: z.boolean().default(true) }).default({ enabled: true }),
+  checkout: z.object({ enabled: z.boolean().default(true) }).default({ enabled: true }),
+});
+
+export const SiteShellSchema = z.object({
+  announcement: z.boolean().default(true),
+  header: z.boolean().default(true),
+  footer: z.boolean().default(true),
+  cart: z.boolean().default(true),
 });
 
 export const VariantSchema = z.object({
@@ -173,8 +243,8 @@ export const CommercePolicySchema = z.object({
   returnDays: z.number().int().nonnegative(),
 });
 
-const StoreProjectV1ShapeSchema = z.object({
-  schemaVersion: z.literal(1),
+const StoreProjectV2ShapeSchema = z.object({
+  schemaVersion: z.literal(2),
   id: StoreIdSchema,
   name: z.string().min(1),
   slug: SlugSchema,
@@ -206,6 +276,29 @@ const StoreProjectV1ShapeSchema = z.object({
     socialImageId: AssetIdSchema.optional(),
   }),
   theme: ThemeSchema,
+  navigation: NavigationConfigSchema.default({
+    catalogLabel: "Colecciones",
+    items: [],
+    showHome: true,
+    showContact: true,
+    showAbout: true,
+    showSearch: true,
+    showCart: true,
+  }),
+  siteShell: SiteShellSchema.default({
+    announcement: true,
+    header: true,
+    footer: true,
+    cart: true,
+  }),
+  pages: z.array(EditablePageSchema).default([]),
+  commerceTemplates: CommerceTemplatesSchema.default({
+    category: { productsPerPage: 24 },
+    search: { enabled: true },
+    product: { showRelated: true },
+    cart: { enabled: true },
+    checkout: { enabled: true },
+  }),
   policies: z.object({
     shipping: CommercePolicySchema,
     returns: CommercePolicySchema,
@@ -216,6 +309,7 @@ const StoreProjectV1ShapeSchema = z.object({
   categories: z.array(CategorySchema),
   collections: z.array(CollectionSchema),
   assets: z.array(ImageAssetSchema),
+  videos: z.array(VideoAssetSchema).default([]),
   sections: z.array(StoreSectionSchema),
 });
 
@@ -259,7 +353,7 @@ function sameMembers(left: readonly string[], right: readonly string[]): boolean
   return left.every((value) => rightMembers.has(value));
 }
 
-export const StoreProjectV1Schema = StoreProjectV1ShapeSchema.superRefine((project, context) => {
+export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((project, context) => {
   addDuplicateIssues(
     project.products.map((product) => product.id),
     ["products"],
@@ -303,6 +397,12 @@ export const StoreProjectV1Schema = StoreProjectV1ShapeSchema.superRefine((proje
     context,
   );
   addDuplicateIssues(
+    project.videos.map((asset) => asset.id),
+    ["videos"],
+    "ID de video",
+    context,
+  );
+  addDuplicateIssues(
     project.sections.map((section) => section.id),
     ["sections"],
     "ID de sección",
@@ -317,6 +417,7 @@ export const StoreProjectV1Schema = StoreProjectV1ShapeSchema.superRefine((proje
   const categoryIds = new Set(project.categories.map((category) => category.id));
   const collectionIds = new Set(project.collections.map((collection) => collection.id));
   const assetIds = new Set(project.assets.map((asset) => asset.id));
+  const mediaIds = new Set([...assetIds, ...project.videos.map((asset) => asset.id)]);
 
   project.products.forEach((product, productIndex) => {
     addDuplicateIssues(
@@ -385,6 +486,118 @@ export const StoreProjectV1Schema = StoreProjectV1ShapeSchema.superRefine((proje
     }
   });
 
+  project.videos.forEach((video, videoIndex) => {
+    if (video.posterAssetId !== undefined) {
+      addMissingReferenceIssue(
+        assetIds.has(video.posterAssetId),
+        ["videos", videoIndex, "posterAssetId"],
+        `Poster del video ${video.id}`,
+        video.posterAssetId,
+        context,
+      );
+    }
+  });
+
+  const validateNavigation = (
+    items: readonly z.infer<typeof NavigationItemSchema>[],
+    path: Array<string | number>,
+  ): void => {
+    const ids = items.map((item) => item.id);
+    addDuplicateIssues(ids, path, "ID de navegación", context);
+    items.forEach((item, index) => {
+      const validateHref = (href: string | undefined, hrefPath: Array<string | number>): void => {
+        if (!href) return;
+        const internal = href.startsWith("/") && !href.startsWith("//");
+        let allowed = internal;
+        if (!allowed) {
+          try {
+            allowed = ["http:", "https:", "mailto:", "tel:"].includes(new URL(href).protocol);
+          } catch {
+            allowed = false;
+          }
+        }
+        if (!allowed) {
+          context.addIssue({
+            code: "custom",
+            message: "La navegación contiene un enlace inseguro.",
+            path: hrefPath,
+          });
+        }
+      };
+      validateHref(item.href, [...path, index, "href"]);
+      for (const [childIndex, child] of (item.children ?? []).entries()) {
+        validateHref(child.href, [...path, index, "children", childIndex, "href"]);
+      }
+    });
+  };
+  validateNavigation(project.navigation.items, ["navigation", "items"]);
+
+  const knownPageSlugs = new Set<string>(project.pages.map((page) => page.slug));
+  const knownCategorySlugs = new Set<string>(project.categories.map((category) => category.slug));
+  const knownCollectionSlugs = new Set<string>(
+    project.collections.map((collection) => collection.slug),
+  );
+  const knownProductSlugs = new Set<string>(project.products.map((product) => product.slug));
+  const validInternalDestination = (href: string): boolean => {
+    if (!href.startsWith("/") || href.startsWith("//")) return true;
+    const pathname = href.split(/[?#]/, 1)[0] ?? "/";
+    if (
+      pathname === "/" ||
+      ["/contacto/", "/nosotros/", "/buscar/", "/carrito/", "/compra/"].includes(pathname)
+    )
+      return true;
+    if (["/envios/", "/devoluciones/", "/privacidad/", "/terminos/"].includes(pathname))
+      return true;
+    const categoryMatch = /^\/categorias\/([^/]+)\/$/.exec(pathname);
+    if (categoryMatch?.[1] && knownCategorySlugs.has(categoryMatch[1])) return true;
+    const collectionMatch = /^\/colecciones\/([^/]+)\/$/.exec(pathname);
+    if (collectionMatch?.[1] && knownCollectionSlugs.has(collectionMatch[1])) return true;
+    const productMatch = /^\/productos\/([^/]+)\/$/.exec(pathname);
+    if (productMatch?.[1] && knownProductSlugs.has(productMatch[1])) return true;
+    return pathname === "/paginas/" || [...knownPageSlugs].some((slug) => pathname === `/${slug}/`);
+  };
+  const allNavigationIds = project.navigation.items.flatMap((item) => [
+    item.id,
+    ...(item.children ?? []).map((child) => child.id),
+  ]);
+  addDuplicateIssues(allNavigationIds, ["navigation", "items"], "ID de navegaciÃ³n", context);
+  const validateNavigationTargets = (
+    items: readonly z.infer<typeof NavigationItemSchema>[],
+    path: Array<string | number>,
+  ): void => {
+    items.forEach((item, index) => {
+      if (item.href?.startsWith("/") && !validInternalDestination(item.href)) {
+        context.addIssue({
+          code: "custom",
+          message: "El destino interno de navegaciÃ³n no existe en el proyecto.",
+          path: [...path, index, "href"],
+        });
+      }
+      if (item.children) validateNavigationTargets(item.children, [...path, index, "children"]);
+    });
+  };
+  validateNavigationTargets(project.navigation.items, ["navigation", "items"]);
+
+  if (project.pages.filter((page) => page.kind === "home").length !== 1) {
+    context.addIssue({
+      code: "custom",
+      message: "El proyecto debe tener exactamente una página home.",
+      path: ["pages"],
+    });
+  }
+  addDuplicateIssues(
+    project.pages.map((page) => page.id),
+    ["pages"],
+    "ID de página",
+    context,
+  );
+  addDuplicateIssues(
+    project.pages.map((page) => page.slug),
+    ["pages"],
+    "Slug de página",
+    context,
+  );
+
   project.categories.forEach((category, categoryIndex) => {
     addDuplicateIssues(
       category.productIds,
@@ -443,7 +656,7 @@ export const StoreProjectV1Schema = StoreProjectV1ShapeSchema.superRefine((proje
 
   if (project.identity.logoAssetId !== undefined) {
     addMissingReferenceIssue(
-      assetIds.has(project.identity.logoAssetId),
+      mediaIds.has(project.identity.logoAssetId),
       ["identity", "logoAssetId"],
       "Logo",
       project.identity.logoAssetId,
@@ -452,7 +665,7 @@ export const StoreProjectV1Schema = StoreProjectV1ShapeSchema.superRefine((proje
   }
   if (project.seo.socialImageId !== undefined) {
     addMissingReferenceIssue(
-      assetIds.has(project.seo.socialImageId),
+      mediaIds.has(project.seo.socialImageId),
       ["seo", "socialImageId"],
       "Imagen social",
       project.seo.socialImageId,
@@ -469,6 +682,13 @@ export const StoreProjectV1Schema = StoreProjectV1ShapeSchema.superRefine((proje
 });
 
 export type ImageAsset = z.infer<typeof ImageAssetSchema>;
+export type VideoAsset = z.infer<typeof VideoAssetSchema>;
+export type MediaAsset = z.infer<typeof MediaAssetSchema>;
+export type NavigationItem = z.infer<typeof NavigationItemSchema>;
+export type NavigationConfig = z.infer<typeof NavigationConfigSchema>;
+export type EditablePage = z.infer<typeof EditablePageSchema>;
+export type CommerceTemplates = z.infer<typeof CommerceTemplatesSchema>;
+export type SiteShell = z.infer<typeof SiteShellSchema>;
 export type Variant = z.infer<typeof VariantSchema>;
 export type Product = z.infer<typeof ProductSchema>;
 export type Category = z.infer<typeof CategorySchema>;
@@ -476,19 +696,22 @@ export type Collection = z.infer<typeof CollectionSchema>;
 export type MotionSettings = z.infer<typeof MotionSettingsSchema>;
 export type StoreSection = z.infer<typeof StoreSectionSchema>;
 export type Theme = z.infer<typeof ThemeSchema>;
-export type StoreProjectV1 = z.infer<typeof StoreProjectV1Schema>;
+export type StoreProjectV2 = z.infer<typeof StoreProjectV2Schema>;
+// Alias temporal para los paquetes existentes; el contrato persistido ya es v2.
+export type StoreProjectV1 = StoreProjectV2;
+export const StoreProjectV1Schema = StoreProjectV2Schema;
 
-export function parseProject(input: unknown): StoreProjectV1 {
-  return StoreProjectV1Schema.parse(input);
+export function parseProject(input: unknown): StoreProjectV2 {
+  return StoreProjectV2Schema.parse(input);
 }
 
-export function migrateProject(input: unknown): StoreProjectV1 {
+export function migrateProject(input: unknown): StoreProjectV2 {
   if (typeof input !== "object" || input === null) {
     throw new Error("El proyecto no tiene un formato válido.");
   }
 
   const version = "schemaVersion" in input ? input.schemaVersion : undefined;
-  if (version !== 1) {
+  if (version !== 2) {
     throw new Error(`Versión de proyecto incompatible: ${String(version)}.`);
   }
 

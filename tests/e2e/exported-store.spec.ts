@@ -153,7 +153,7 @@ test("mantiene composicion y ancho estable en desktop y movil", async ({ page })
 test("mantiene el contenido visible con movimiento reducido y activa inView", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/");
-  const hero = page.locator('[data-solara-module="split-hero"]');
+  const hero = page.locator('[data-solara-module="hero-media"]');
   await expect(hero).toHaveAttribute("data-motion-intensity", "0.5");
   await expect(hero).toHaveAttribute("data-motion-entry", "0.25");
   await hero.scrollIntoViewIfNeeded();
@@ -164,7 +164,7 @@ test("mantiene el contenido visible con movimiento reducido y activa inView", as
   await expect(hero).toHaveAttribute("data-motion-visible", "true");
   expect(
     await page
-      .locator('[data-solara-module="split-hero"] [data-motion-zone]')
+      .locator('[data-solara-module="hero-media"] [data-motion-zone]')
       .first()
       .evaluate((element) => {
         return getComputedStyle(element).opacity;

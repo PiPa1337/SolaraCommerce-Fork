@@ -40,7 +40,7 @@ Cuando Studio detecta un registro incompatible al iniciar, lo muestra en el
 dashboard bajo “proyectos que requieren recuperación” sin bloquear las tiendas
 válidas. Usá `Importar respaldo` en esa advertencia para seleccionar un
 `.solara.zip`; la importación reemplaza el registro sólo después de validar el
-ZIP, el manifest y `StoreProjectV1`. Conservá siempre el archivo original y
+ZIP, el manifest y `StoreProjectV2`. Conservá siempre el archivo original y
 confirmá que productos, secciones y recursos estén presentes después de abrirlo.
 
 ## Cuota local

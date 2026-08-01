@@ -1,4 +1,4 @@
-import { Globe, Storefront, WhatsappLogo } from "@phosphor-icons/react";
+import { Globe, List, Storefront, Trash, WhatsappLogo } from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { Field, SectionHeader } from "../components/Ui";
 
@@ -11,6 +11,21 @@ export function Overview({
 }) {
   const commit = (patch: Partial<StoreProjectV1>) =>
     onChange({ ...project, ...patch, updatedAt: new Date().toISOString() });
+  const updateNavigation = (patch: Partial<StoreProjectV1["navigation"]>) =>
+    commit({ navigation: { ...project.navigation, ...patch } });
+  const updateNavigationItem = (
+    itemId: string,
+    patch: Partial<StoreProjectV1["navigation"]["items"][number]>,
+  ) =>
+    updateNavigation({
+      items: project.navigation.items.map((item) =>
+        item.id === itemId ? { ...item, ...patch } : item,
+      ),
+    });
+  const updatePage = (pageId: string, patch: Partial<StoreProjectV1["pages"][number]>) =>
+    commit({
+      pages: project.pages.map((page) => (page.id === pageId ? { ...page, ...patch } : page)),
+    });
 
   return (
     <section className="workspace-section">
@@ -135,6 +150,207 @@ export function Overview({
             <Field label="Slug interno">
               <input value={project.slug} readOnly aria-readonly />
             </Field>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>
+            <List aria-hidden size={19} /> NavegaciÃ³n pÃºblica
+          </legend>
+          <div className="form-grid">
+            <Field label="Nombre del catÃ¡logo">
+              <input
+                value={project.navigation.catalogLabel}
+                onChange={(event) => updateNavigation({ catalogLabel: event.target.value })}
+              />
+            </Field>
+            <div className="navigation-switches">
+              {(
+                [
+                  ["showHome", "Mostrar Inicio"],
+                  ["showContact", "Mostrar Contacto"],
+                  ["showAbout", "Mostrar Nosotros"],
+                  ["showSearch", "Mostrar bÃºsqueda"],
+                  ["showCart", "Mostrar carrito"],
+                ] as const
+              ).map(([key, label]) => (
+                <label className="check-field" key={key}>
+                  <input
+                    type="checkbox"
+                    checked={project.navigation[key]}
+                    onChange={(event) => updateNavigation({ [key]: event.target.checked })}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+            <div className="navigation-editor field--wide">
+              {project.navigation.items.map((item, index) => (
+                <div className="navigation-editor-item" key={item.id}>
+                  <div className="form-grid">
+                    <Field label={`Enlace ${index + 1}`}>
+                      <input
+                        value={item.label}
+                        onChange={(event) =>
+                          updateNavigation({
+                            items: project.navigation.items.map((current) =>
+                              current.id === item.id
+                                ? { ...current, label: event.target.value }
+                                : current,
+                            ),
+                          })
+                        }
+                      />
+                    </Field>
+                    <Field label="Destino">
+                      <input
+                        type="url"
+                        value={item.href ?? ""}
+                        onChange={(event) =>
+                          updateNavigationItem(item.id, { href: event.target.value })
+                        }
+                      />
+                    </Field>
+                  </div>
+                  <div className="navigation-children">
+                    <span className="navigation-children-title">Subenlaces</span>
+                    {(item.children ?? []).map((child, childIndex) => (
+                      <div className="navigation-child-editor" key={child.id}>
+                        <Field label={`Subenlace ${childIndex + 1}`}>
+                          <input
+                            value={child.label}
+                            onChange={(event) =>
+                              updateNavigationItem(item.id, {
+                                children: (item.children ?? []).map((current) =>
+                                  current.id === child.id
+                                    ? { ...current, label: event.target.value }
+                                    : current,
+                                ),
+                              })
+                            }
+                          />
+                        </Field>
+                        <Field label="Destino">
+                          <input
+                            type="url"
+                            value={child.href ?? ""}
+                            onChange={(event) =>
+                              updateNavigationItem(item.id, {
+                                children: (item.children ?? []).map((current) =>
+                                  current.id === child.id
+                                    ? { ...current, href: event.target.value }
+                                    : current,
+                                ),
+                              })
+                            }
+                          />
+                        </Field>
+                        <button
+                          className="icon-button"
+                          type="button"
+                          aria-label={`Eliminar subenlace ${child.label}`}
+                          onClick={() =>
+                            updateNavigationItem(item.id, {
+                              children: (item.children ?? []).filter(
+                                (current) => current.id !== child.id,
+                              ),
+                            })
+                          }
+                        >
+                          <Trash aria-hidden size={16} />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      className="button button--secondary"
+                      type="button"
+                      onClick={() =>
+                        updateNavigationItem(item.id, {
+                          children: [
+                            ...(item.children ?? []),
+                            {
+                              id: `nav-${crypto.randomUUID()}`,
+                              label: "Nuevo subenlace",
+                              href: project.categories[0]
+                                ? `/categorias/${project.categories[0].slug}/`
+                                : "/",
+                            },
+                          ],
+                        })
+                      }
+                    >
+                      Añadir subenlace
+                    </button>
+                  </div>
+                  <button
+                    className="icon-button"
+                    type="button"
+                    aria-label={`Eliminar enlace ${item.label}`}
+                    onClick={() =>
+                      updateNavigation({
+                        items: project.navigation.items.filter((current) => current.id !== item.id),
+                      })
+                    }
+                  >
+                    <Trash aria-hidden size={18} />
+                  </button>
+                </div>
+              ))}
+              <button
+                className="button button--secondary"
+                type="button"
+                onClick={() =>
+                  updateNavigation({
+                    items: [
+                      ...project.navigation.items,
+                      {
+                        id: `nav-${crypto.randomUUID()}`,
+                        label: "Nueva categorÃ­a",
+                        href: project.categories[0]
+                          ? `/categorias/${project.categories[0].slug}/`
+                          : "/",
+                      },
+                    ],
+                  })
+                }
+              >
+                AÃ±adir enlace de catÃ¡logo
+              </button>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>PÃ¡ginas editoriales</legend>
+          <div className="form-grid">
+            {project.pages.map((page) => (
+              <div className="page-editor" key={page.id}>
+                <strong>
+                  {page.kind === "home" ? "Home" : page.kind === "about" ? "Nosotros" : "Contacto"}
+                </strong>
+                <Field label="TÃ­tulo visible">
+                  <input
+                    value={page.title}
+                    onChange={(event) => updatePage(page.id, { title: event.target.value })}
+                  />
+                </Field>
+                <Field label="SEO title">
+                  <input
+                    value={page.seoTitle}
+                    onChange={(event) => updatePage(page.id, { seoTitle: event.target.value })}
+                  />
+                </Field>
+                <Field label="SEO description">
+                  <textarea
+                    rows={2}
+                    value={page.seoDescription}
+                    onChange={(event) =>
+                      updatePage(page.id, { seoDescription: event.target.value })
+                    }
+                  />
+                </Field>
+              </div>
+            ))}
           </div>
         </fieldset>
       </div>

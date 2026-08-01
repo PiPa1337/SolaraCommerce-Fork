@@ -21,6 +21,7 @@ import {
   editorialHeader,
   editorialHero,
   editorialProductGrid,
+  heroMedia,
   imageTextContent,
   officialModules,
   productDetail,
@@ -38,6 +39,7 @@ export {
   editorialHeader,
   editorialHero,
   editorialProductGrid,
+  heroMedia,
   imageTextContent,
   MODULE_STYLES,
   MODULE_STYLE_BLOCKS,
@@ -148,6 +150,14 @@ export function replaceModuleInSection(
   const preserved = Object.fromEntries(
     Object.entries(section.settings).filter(([key]) => compatible.has(key)),
   );
+  if (compatible.has("imageId") && !("imageId" in preserved)) {
+    const posterAssetId = section.settings.posterAssetId;
+    if (typeof posterAssetId === "string") preserved.imageId = posterAssetId;
+  }
+  if (compatible.has("posterAssetId") && !("posterAssetId" in preserved)) {
+    const imageId = section.settings.imageId;
+    if (typeof imageId === "string") preserved.posterAssetId = imageId;
+  }
   const settings = target.settingsSchema.parse({
     ...defaults,
     ...preserved,

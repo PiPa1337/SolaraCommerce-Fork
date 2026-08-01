@@ -5,6 +5,7 @@ import { InlineError, Skeleton } from "./components/Ui";
 import { Dashboard } from "./features/Dashboard";
 import { Studio } from "./features/Studio";
 import {
+  consumeStorageResetNotice,
   createProject,
   duplicateProject,
   ensureFirstProject,
@@ -23,6 +24,7 @@ export function App() {
   const [recovery, setRecovery] = useState<ProjectRecoveryIssue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   const refresh = useCallback(async () => {
     const result = await listProjectsWithRecovery();
@@ -35,6 +37,11 @@ export function App() {
     void (async () => {
       try {
         const result = await refresh();
+        if (consumeStorageResetNotice()) {
+          setNotice(
+            "Se reinició la base local para activar el contrato de tienda v2. Los respaldos y exportaciones no fueron modificados.",
+          );
+        }
         if (result.projects.length === 0 && result.recovery.length === 0) {
           await ensureFirstProject();
           await refresh();
@@ -113,6 +120,14 @@ export function App() {
             <WarningCircle aria-hidden size={17} />
           </button>
         </div>
+      ) : null}
+      {notice ? (
+        <output className="global-notice">
+          <span>{notice}</span>
+          <button type="button" onClick={() => setNotice("")} aria-label="Cerrar aviso">
+            <WarningCircle aria-hidden size={17} />
+          </button>
+        </output>
       ) : null}
       {recovery.length > 0 ? (
         <div className="global-warning" aria-live="polite">

@@ -1,52 +1,57 @@
-# Fase 10 en curso: piloto real controlado
+# Rediseño integral del storefront v2
 
-## Objetivo
+## Estado
 
-Publicar una sola tienda production en un dominio HTTPS, verificar el recorrido
-de indexación y Merchant en servicios reales y registrar límites del checkout
-por WhatsApp sin cambiar el schema ni agregar módulos durante la observación.
+Implementado el contrato v2 y la primera integración completa del storefront
+editorial. Studio, preview y ZIP siguen usando el mismo renderer.
 
-## Fases anteriores cerradas
+## Cambios entregados
 
-- Fase 8: recuperación, CSP, budgets y stress de 1.000 productos.
-- Fase 9: release candidate, matriz de navegadores, auditoría de accesibilidad,
-  Lighthouse, manifiesto y exportación de referencia.
+- `StoreProjectV2Schema` con navegación curada, páginas editables, templates
+  comerciales y assets de video locales.
+- `schemaVersion: 2` y reset controlado de únicamente
+  `solara-commerce-studio` mediante `localStorage["solara-studio-storage-version"]`.
+- Respaldos `.solara.zip` con manifest v2; los respaldos v1 se rechazan sin
+  modificar el archivo original.
+- Navbar con Inicio, Colecciones de hasta dos niveles, Contacto, Nosotros,
+  búsqueda y carrito.
+- Resumen de Studio para editar el nombre del catálogo, enlaces curados,
+  visibilidad de acciones y metadata SEO de Home, Nosotros y Contacto.
+- Hero audiovisual con modos imagen, carrusel y video local, poster obligatorio,
+  autoplay silencioso, pausa visible, `Save-Data` y movimiento reducido.
+- Páginas estáticas para home, contacto, nosotros, categorías paginadas,
+  búsqueda lazy, producto, carrito, compra y políticas.
+- `search-index.json`, `catalog-index.json`, JSON-LD de páginas y productos,
+  sitemap de imágenes y video sitemap cuando el hero usa video. El sitemap de
+  producción excluye búsqueda, carrito y compra; el draft no publica sitemaps.
+- Videos MP4/WebM en Recursos, deduplicados por hash y embebidos en el ZIP.
+- Preview con selector de ruta además de los marcos desktop, tablet y móvil.
+- Estados empty/error/loading, foco visible, skip link y CSS responsive editorial.
 
-## Preflight implementado
+## Verificación ejecutada
 
-- `pilot:preflight` comprueba que production no tenga errores críticos, que cada
-  oferta del snapshot aparezca una vez en Merchant, que sitemap, JSON-LD,
-  canonical, robots y headers estén presentes y que el ZIP sea reproducible.
-- `SOLARA_PILOT_PROJECT_ARCHIVE` permite repetir el mismo preflight sobre un
-  `.solara.zip` real; sin la variable se usa el fixture de referencia.
-- `pilot:export` toma ese respaldo real y genera `.release/site.zip` junto con
-  `.release/pilot-site/`, sin tocar el proyecto ni publicar nada.
-- `pilot-checklist.md` contiene los pasos externos que no se pueden simular
-  localmente: dominio, HTTPS, Search Console, Merchant Center y diagnóstico de
-  Rich Results.
-
-## Contratos preservados
-
-- No cambian `StoreProjectV1`, `schemaVersion`, `DomainCommand`,
-  `ModuleDefinition`, IDs ni formatos `.solara.zip` y `site.zip`.
-- No se agregan dependencias de runtime ni servicios externos.
-- El checkout, WhatsApp, SEO, Merchant, preview, undo/redo y exportación
-  mantienen el comportamiento de las fases anteriores.
-
-## Verificación de fase
-
-- `corepack pnpm check`
+- `corepack pnpm typecheck`
+- `corepack pnpm test`
 - `corepack pnpm build`
-- `corepack pnpm check:budgets`
 - `corepack pnpm benchmark:export`
+- `corepack pnpm test:e2e` (Chromium)
+- `corepack pnpm check:budgets`
 - `corepack pnpm pilot:preflight`
+- La matriz manual con Node 24 permite Chromium y WebKit, pero Firefox no puede
+  crear páginas con Playwright 1.55. El script release exige Node 22, por lo
+  que la matriz oficial queda para CI con Node 22.
 
-La publicación real requiere el dominio y las credenciales del usuario. No se
-automatiza desde este repositorio para evitar enviar datos a una cuenta o
-dominio no autorizados.
+## Riesgos y límites conocidos
 
-## Próximo paso manual
+- El video se guarda autocontenido como data URL y no se transcodifica en el
+  navegador; el límite inicial es 30 MB.
+- El checkout sigue terminando en WhatsApp, por lo que la elegibilidad Merchant
+  se mantiene como advertencia.
+- La publicación real, dominio y credenciales de Google continúan fuera del
+  runtime local.
 
-Elegir el dominio y hosting, publicar `.release/site.zip`, ejecutar el checklist
-y devolver los diagnósticos observados. Después se congela `schemaVersion: 1` y
-se decide si la limitación de WhatsApp impide la aprobación Merchant.
+## Próximo trabajo
+
+Auditar manualmente las composiciones del nuevo storefront, añadir escenarios
+Playwright específicos de navbar, hero audiovisual y páginas públicas, y luego
+pasar el gate release con Lighthouse, axe y Firefox/WebKit.

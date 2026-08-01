@@ -5,6 +5,7 @@ import type {
   Product,
   StoreProjectV1,
   StoreSection,
+  VideoAsset,
 } from "@solara/project-schema";
 import type { ZodType } from "zod";
 
@@ -14,7 +15,17 @@ export type SafeHtml = string & { readonly [safeHtmlBrand]: true };
 
 export type ModuleSlot = StoreSection["slot"];
 
-export type RenderPageType = "home" | "category" | "collection" | "product" | "content" | "cart";
+export type RenderPageType =
+  | "home"
+  | "category"
+  | "collection"
+  | "product"
+  | "content"
+  | "about"
+  | "contact"
+  | "search"
+  | "cart"
+  | "checkout";
 
 export interface ModuleManifest {
   id: string;
@@ -61,7 +72,7 @@ interface SettingsFieldBase<Settings> {
 
 export type SettingsFieldDefinition<Settings> =
   | (SettingsFieldBase<Settings> & {
-      type: "text" | "rich-text" | "url" | "asset";
+      type: "text" | "rich-text" | "url" | "asset" | "array";
       placeholder?: string;
     })
   | (SettingsFieldBase<Settings> & {
@@ -137,7 +148,11 @@ export function safeAssetUrl(value: unknown, fallback = ""): string {
   if (candidate.startsWith("blob:")) {
     return candidate;
   }
-  if (/^data:image\/(?:avif|gif|jpeg|png|webp);base64,[a-z0-9+/=\s]+$/i.test(candidate)) {
+  if (
+    /^data:(?:image|video)\/(?:avif|gif|jpeg|jpg|png|webp|mp4|webm);base64,[a-z0-9+/=\s]+$/i.test(
+      candidate,
+    )
+  ) {
     return candidate;
   }
   return safeUrl(candidate, fallback);
@@ -154,6 +169,43 @@ export function assetUrl(
 ): string {
   const source = findAsset(project, assetId)?.source;
   return source ? safeAssetUrl(source, fallback) : fallback;
+}
+
+export function findVideo(
+  project: StoreProjectV1,
+  assetId?: AssetId | string,
+): VideoAsset | undefined {
+  return assetId ? project.videos.find((video) => video.id === assetId) : undefined;
+}
+
+export function videoUrl(
+  project: StoreProjectV1,
+  assetId?: AssetId | string,
+  fallback = "",
+): string {
+  const source = findVideo(project, assetId)?.source;
+  return source ? safeAssetUrl(source, fallback) : fallback;
+}
+
+export function renderVideo(
+  project: StoreProjectV1,
+  assetId: AssetId | string | undefined,
+  options: {
+    className?: string;
+    posterAssetId?: AssetId | string;
+    preload?: "none" | "metadata" | "auto";
+    fallbackAlt?: string;
+  } = {},
+): SafeHtml {
+  const video = findVideo(project, assetId);
+  if (!video) return safeHtml("");
+  const className = options.className ? ` class="${escapeAttribute(options.className)}"` : "";
+  const poster = assetUrl(project, options.posterAssetId ?? video.posterAssetId, "");
+  const source = safeAssetUrl(video.source, "");
+  if (!source) return safeHtml("");
+  return safeHtml(
+    `<video${className} width="${video.width}" height="${video.height}"${poster ? ` poster="${escapeAttribute(poster)}"` : ""} preload="${options.preload ?? "none"}" muted loop playsinline autoplay aria-label="${escapeAttribute(video.alt || options.fallbackAlt || video.name)}"><source src="${escapeAttribute(source)}" type="${escapeAttribute(video.mimeType)}"><span>${escapeHtml(video.alt || options.fallbackAlt || video.name)}</span></video>`,
+  );
 }
 
 const ALLOWED_RICH_TAGS = new Set([

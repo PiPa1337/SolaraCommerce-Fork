@@ -8,6 +8,7 @@ export interface CartLine {
   sku: string;
   unitPrice: number;
   quantity: number;
+  imageUrl?: string;
 }
 
 export interface CustomerDetails {
@@ -81,6 +82,8 @@ function storefrontBoot(): void {
     sku: string;
     unitPrice: number;
     quantity: number;
+    imageUrl?: string;
+    available?: boolean;
   };
 
   const root = document.documentElement;
@@ -100,21 +103,34 @@ function storefrontBoot(): void {
   const parseCart = (): BrowserCartLine[] => {
     try {
       const stored = JSON.parse(localStorage.getItem(storageKey) ?? "[]") as unknown;
-      return Array.isArray(stored)
-        ? stored.filter(
-            (line): line is BrowserCartLine =>
-              typeof line === "object" &&
-              line !== null &&
-              typeof (line as BrowserCartLine).variantId === "string" &&
-              typeof (line as BrowserCartLine).quantity === "number",
-          )
-        : [];
+      if (!Array.isArray(stored)) {
+        localStorage.removeItem(storageKey);
+        return [];
+      }
+      return stored.filter(
+        (line): line is BrowserCartLine =>
+          typeof line === "object" &&
+          line !== null &&
+          typeof (line as BrowserCartLine).variantId === "string" &&
+          (line as BrowserCartLine).variantId.length > 0 &&
+          typeof (line as BrowserCartLine).quantity === "number" &&
+          Number.isFinite((line as BrowserCartLine).quantity) &&
+          (line as BrowserCartLine).quantity >= 1 &&
+          (line as BrowserCartLine).quantity <= 99,
+      );
     } catch {
+      try {
+        localStorage.removeItem(storageKey);
+      } catch {
+        // Storage can be unavailable in private browsing contexts.
+      }
       return [];
     }
   };
 
   let cart = parseCart();
+
+  const pageType = document.querySelector<HTMLElement>("[data-solara-store]")?.dataset.pageType;
 
   const renderCart = (): void => {
     try {
@@ -139,12 +155,16 @@ function storefrontBoot(): void {
           (line) => `
             <article class="solara-cart-line">
               <div>
+                ${line.imageUrl ? `<img src="${escapeAttribute(line.imageUrl)}" alt="" loading="lazy">` : ""}
+                <div>
                 <strong>${escapeText(line.title)}</strong>
                 <small>${escapeText(line.variantTitle)}</small>
+                ${line.available === false ? '<small class="solara-cart-line-warning">Agotado</small>' : ""}
+                </div>
               </div>
               <label>
                 <span class="sr-only">Cantidad de ${escapeText(line.title)}</span>
-                <input data-cart-quantity="${escapeAttribute(line.variantId)}" type="number" min="0" max="99" value="${line.quantity}">
+                <input data-cart-quantity="${escapeAttribute(line.variantId)}" type="number" min="0" max="99" value="${line.quantity}"${line.available === false ? " disabled" : ""}>
               </label>
               <span>${money.format((line.unitPrice * line.quantity) / 100)}</span>
             </article>`,
@@ -280,6 +300,7 @@ function storefrontBoot(): void {
           sku: variant.dataset.sku ?? "",
           unitPrice: Number(variant.dataset.price ?? "0"),
           quantity,
+          available: true,
         });
       }
       renderCart();
@@ -334,6 +355,323 @@ function storefrontBoot(): void {
         link.focus();
       }
     });
+  });
+
+  if (pageType === "cart" || pageType === "checkout") {
+    fetch("/catalog-index.json")
+      .then((response) => {
+        if (!response.ok) throw new Error("No se pudo cargar el catálogo actual.");
+        return response.json() as Promise<
+          Array<{
+            productId: string;
+            variantId: string;
+            title: string;
+            variantTitle: string;
+            sku: string;
+            price: number;
+            available: boolean;
+            imageUrl?: string;
+          }>
+        >;
+      })
+      .then((catalog) => {
+        const byVariant = new Map(catalog.map((entry) => [entry.variantId, entry]));
+        const reconciled: BrowserCartLine[] = [];
+        for (const line of cart) {
+          const current = byVariant.get(line.variantId);
+          if (!current) continue;
+          reconciled.push({
+            ...line,
+            productId: current.productId,
+            title: current.title,
+            variantTitle: current.variantTitle,
+            sku: current.sku,
+            unitPrice: current.price,
+            ...(current.imageUrl ? { imageUrl: current.imageUrl } : {}),
+            available: current.available,
+          });
+        }
+        cart = reconciled;
+        renderCart();
+      })
+      .catch(() => undefined);
+  }
+
+  const updateChromeHeight = (): void => {
+    const chrome = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        '[data-solara-module="announcement-bar"], [data-solara-module="editorial-header"]',
+      ),
+    ).reduce((total, element) => total + element.getBoundingClientRect().height, 0);
+    root.style.setProperty("--solara-chrome-height", `${Math.ceil(chrome)}px`);
+  };
+  updateChromeHeight();
+  if ("ResizeObserver" in window) {
+    const chromeObserver = new ResizeObserver(updateChromeHeight);
+    document
+      .querySelectorAll<HTMLElement>(
+        '[data-solara-module="announcement-bar"], [data-solara-module="editorial-header"]',
+      )
+      .forEach((element) => {
+        chromeObserver.observe(element);
+      });
+  }
+
+  const headers = Array.from(
+    document.querySelectorAll<HTMLElement>('[data-solara-module="editorial-header"]'),
+  );
+  if (headers.length > 0) {
+    const updateHeaderState = (): void => {
+      const scrolled = window.scrollY > 8;
+      headers.forEach((header) => {
+        header.dataset.scrolled = String(scrolled);
+      });
+    };
+    updateHeaderState();
+    window.addEventListener("scroll", updateHeaderState, { passive: true });
+  }
+
+  document
+    .querySelectorAll<HTMLDetailsElement>(
+      '[data-solara-module="editorial-header"] .solara-mobile-nav, [data-solara-module="editorial-header"] .solara-nav-dropdown',
+    )
+    .forEach((menu) => {
+      const trigger = menu.querySelector<HTMLElement>(":scope > summary");
+      menu.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape" || !menu.open) return;
+        event.preventDefault();
+        menu.open = false;
+        trigger?.focus();
+      });
+      menu.addEventListener("toggle", () => {
+        if (menu.open) {
+          menu.querySelector<HTMLElement>("nav a, ul a")?.focus();
+        }
+      });
+    });
+
+  document.querySelectorAll<HTMLElement>("[data-hero-mode]").forEach((hero) => {
+    const video = hero.querySelector<HTMLVideoElement>("video");
+    const toggle = hero.querySelector<HTMLButtonElement>("[data-hero-video-toggle]");
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const saveData = Boolean(
+      (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData,
+    );
+    if (video && (reduceMotion || saveData)) {
+      video.pause();
+      video.removeAttribute("autoplay");
+      video.preload = "none";
+    }
+    toggle?.addEventListener("click", () => {
+      if (!video) return;
+      if (video.paused) {
+        void video.play();
+        toggle.textContent = "Pausar video";
+        toggle.setAttribute("aria-pressed", "false");
+      } else {
+        video.pause();
+        toggle.textContent = "Reanudar video";
+        toggle.setAttribute("aria-pressed", "true");
+      }
+    });
+
+    const panels = Array.from(hero.querySelectorAll<HTMLElement>("[data-hero-slide-panel]"));
+    if (panels.length === 0) return;
+    const copy = hero.querySelector<HTMLElement>(".solara-hero-media-copy");
+    const eyebrow = copy?.querySelector<HTMLElement>(".solara-eyebrow");
+    const heading = copy?.querySelector<HTMLElement>("h1");
+    const body = copy?.querySelector<HTMLElement>(".solara-hero-body");
+    const action = copy?.querySelector<HTMLAnchorElement>(".solara-primary-action");
+    let activeIndex = 0;
+    let timer = 0;
+    const setSlide = (nextIndex: number): void => {
+      activeIndex = (nextIndex + panels.length) % panels.length;
+      panels.forEach((panel, index) => {
+        panel.setAttribute("data-hero-active", String(index === activeIndex));
+      });
+      const panel = panels[activeIndex];
+      if (!panel) return;
+      const nextEyebrow = panel.dataset.heroEyebrow ?? "";
+      if (eyebrow) {
+        eyebrow.textContent = nextEyebrow;
+        eyebrow.hidden = !nextEyebrow;
+      }
+      if (heading) heading.textContent = panel.dataset.heroTitle ?? "";
+      if (body) body.textContent = panel.dataset.heroBody ?? "";
+      if (action) {
+        action.textContent = panel.dataset.heroActionLabel ?? "Ver colección";
+        action.href = panel.dataset.heroActionHref ?? "/";
+      }
+      hero.querySelectorAll<HTMLElement>("[data-hero-slide]").forEach((indicator) => {
+        indicator.setAttribute(
+          "aria-selected",
+          indicator.dataset.heroSlide === String(activeIndex) ? "true" : "false",
+        );
+      });
+    };
+    setSlide(0);
+    const stopAutoplay = (): void => {
+      if (timer !== 0) window.clearInterval(timer);
+      timer = 0;
+    };
+    const startAutoplay = (): void => {
+      stopAutoplay();
+      if (reduceMotion || hero.dataset.heroAutoplay !== "true" || panels.length < 2) return;
+      timer = window.setInterval(
+        () => setSlide(activeIndex + 1),
+        Number(hero.dataset.heroInterval ?? "6000"),
+      );
+    };
+    hero.querySelector<HTMLElement>("[data-hero-prev]")?.addEventListener("click", () => {
+      setSlide(activeIndex - 1);
+      stopAutoplay();
+    });
+    hero.querySelector<HTMLElement>("[data-hero-next]")?.addEventListener("click", () => {
+      setSlide(activeIndex + 1);
+      stopAutoplay();
+    });
+    hero.querySelectorAll<HTMLElement>("[data-hero-slide]").forEach((indicator) => {
+      indicator.addEventListener("click", () => {
+        setSlide(Number(indicator.dataset.heroSlide ?? "0"));
+        stopAutoplay();
+      });
+    });
+    hero.addEventListener("pointerenter", stopAutoplay);
+    hero.addEventListener("focusin", stopAutoplay);
+    hero.addEventListener("pointerleave", startAutoplay);
+    document.addEventListener(
+      "visibilitychange",
+      () => (document.hidden ? stopAutoplay() : startAutoplay()),
+      { passive: true },
+    );
+    startAutoplay();
+  });
+
+  const normalizeSearch = (value: string): string[] =>
+    value
+      .toLocaleLowerCase("es-AR")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+  const searchInput = document.querySelector<HTMLInputElement>("#solara-search-input");
+  const searchResults = document.querySelector<HTMLElement>("[data-search-results]");
+  if (searchInput && searchResults) {
+    const query = new URLSearchParams(window.location.search).get("q") ?? "";
+    searchInput.value = query;
+    if (query) {
+      document.querySelector('meta[name="robots"]')?.setAttribute("content", "noindex,follow");
+      const terms = normalizeSearch(query);
+      if (terms.join(" ").length < 2) {
+        searchResults.innerHTML = "<p>Escribí al menos 2 caracteres para buscar.</p>";
+        return;
+      }
+      const controller = new AbortController();
+      searchResults.innerHTML = "<p>Cargando resultados…</p>";
+      fetch("/search-index.json", { signal: controller.signal })
+        .then((response) => {
+          if (!response.ok) throw new Error("No se pudo cargar el índice de búsqueda.");
+          return response.json() as Promise<
+            Array<{
+              title: string;
+              brand: string;
+              description: string;
+              tags?: string[];
+              categoryIds?: string[];
+              collectionIds?: string[];
+              path: string;
+              imageUrl?: string;
+              priceMin: number;
+              available: boolean;
+            }>
+          >;
+        })
+        .then((entries) => {
+          const ranked = entries
+            .map((entry) => {
+              const title = normalizeSearch(entry.title).join(" ");
+              const brand = normalizeSearch(entry.brand).join(" ");
+              const tags = normalizeSearch((entry.tags ?? []).join(" ")).join(" ");
+              const categories = normalizeSearch(
+                `${(entry.categoryIds ?? []).join(" ")} ${(entry.collectionIds ?? []).join(" ")}`,
+              ).join(" ");
+              const description = normalizeSearch(entry.description).join(" ");
+              const score = terms.reduce(
+                (total, term) =>
+                  total +
+                  (title.includes(term)
+                    ? 6
+                    : brand.includes(term)
+                      ? 4
+                      : tags.includes(term)
+                        ? 3
+                        : categories.includes(term)
+                          ? 2
+                          : description.includes(term)
+                            ? 1
+                            : 0),
+                0,
+              );
+              return { entry, score };
+            })
+            .filter((item) => item.score > 0)
+            .sort(
+              (left, right) =>
+                right.score - left.score || left.entry.title.localeCompare(right.entry.title),
+            );
+          if (ranked.length === 0) {
+            searchResults.innerHTML = "<p>No encontramos productos para esa búsqueda.</p>";
+            return;
+          }
+          searchResults.innerHTML = `<div class="solara-search-results-grid">${ranked
+            .slice(0, 48)
+            .map(
+              ({ entry }) =>
+                `<article class="solara-search-result"><a href="${escapeAttribute(entry.path)}">${entry.imageUrl ? `<img src="${escapeAttribute(entry.imageUrl)}" alt="" loading="lazy">` : ""}<div><h2>${escapeText(entry.title)}</h2><p>${escapeText(entry.brand)}</p><strong>${money.format(entry.priceMin / 100)}</strong></div></a></article>`,
+            )
+            .join("")}</div>`;
+        })
+        .catch(() => {
+          searchResults.innerHTML =
+            '<p role="alert">No se pudo cargar la búsqueda. Intentá nuevamente.</p>';
+        });
+      window.addEventListener("pagehide", () => controller.abort(), { once: true });
+    }
+  }
+
+  document.querySelectorAll<HTMLSelectElement>("[data-category-sort]").forEach((sort) => {
+    const scope = sort.closest<HTMLElement>("main");
+    const grid = scope?.querySelector<HTMLElement>("[data-category-grid]");
+    const availableOnly = scope?.querySelector<HTMLInputElement>("[data-category-available]");
+    const resultCount = scope?.querySelector<HTMLElement>("[data-category-result-count]");
+    if (!grid) return;
+    const cards = Array.from(grid.querySelectorAll<HTMLElement>("[data-product-card]"));
+    const render = (): void => {
+      const visible = cards.filter(
+        (card) => !availableOnly?.checked || card.dataset.productAvailable === "true",
+      );
+      const sorted = [...visible];
+      if (sort.value === "price-asc" || sort.value === "price-desc") {
+        sorted.sort((left, right) => {
+          const difference = Number(left.dataset.productPrice) - Number(right.dataset.productPrice);
+          return sort.value === "price-asc" ? difference : -difference;
+        });
+      } else if (sort.value === "name") {
+        sorted.sort((left, right) =>
+          (left.dataset.productTitle ?? "").localeCompare(right.dataset.productTitle ?? ""),
+        );
+      }
+      sorted.forEach((card) => {
+        grid.append(card);
+      });
+      cards.forEach((card) => {
+        card.hidden = !visible.includes(card);
+      });
+      if (resultCount) resultCount.textContent = `${visible.length} productos`;
+    };
+    sort.addEventListener("change", render);
+    availableOnly?.addEventListener("change", render);
   });
 
   const queryVariant = new URLSearchParams(window.location.search).get("variant");
@@ -456,9 +794,28 @@ export const STOREFRONT_RUNTIME_CSS = `
   border-bottom: 1px solid var(--solara-border);
 }
 
+.solara-cart-line > div:first-child {
+  display: grid;
+  grid-template-columns: 3.4rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.solara-cart-line > div:first-child > img {
+  width: 3.4rem;
+  height: 4.2rem;
+  object-fit: cover;
+  background: var(--solara-surface);
+}
+
 .solara-cart-line small {
   display: block;
   color: var(--solara-muted);
+}
+
+.solara-cart-line-warning {
+  color: #9a3f2f !important;
+  font-weight: 650;
 }
 
 .solara-cart-line input {

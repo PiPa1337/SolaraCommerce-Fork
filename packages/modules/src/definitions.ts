@@ -1,10 +1,12 @@
 import {
   escapeAttribute,
   escapeHtml,
+  findVideo,
   formatMoney,
   type ModuleDefinition,
   moduleRoot,
   renderImage,
+  renderVideo,
   safeHtml,
   safeUrl,
   sanitizeRichText,
@@ -103,23 +105,42 @@ export const editorialHeader: ModuleDefinition<z.infer<typeof headerSettings>> =
   clientAsset: "storefront-cart" as AssetId,
   styleAsset: scopedAssetId("editorial-header"),
   render(context) {
-    const categoryLinks = context.settings.showCategories
-      ? context.project.categories
-          .slice(0, 4)
-          .map(
-            (category) =>
-              `<a href="/categorias/${escapeAttribute(category.slug)}/">${escapeHtml(category.title)}</a>`,
-          )
-          .join("")
+    const navigation = context.project.navigation;
+    const nestedItems = navigation.items
+      .map(
+        (item) =>
+          `<li><a href="${escapeAttribute(safeUrl(item.href ?? "#"))}">${escapeHtml(item.label)}</a>${
+            item.children?.length
+              ? `<ul>${item.children
+                  .map(
+                    (child) =>
+                      `<li><a href="${escapeAttribute(safeUrl(child.href ?? "#"))}">${escapeHtml(child.label)}</a></li>`,
+                  )
+                  .join("")}</ul>`
+              : ""
+          }</li>`,
+      )
+      .join("");
+    const homeCurrent = context.pageType === "home" ? ' aria-current="page"' : "";
+    const catalogCurrent = ["category", "collection"].includes(context.pageType)
+      ? ' aria-current="page"'
       : "";
-    const nav = `<a href="${escapeAttribute(safeUrl(context.settings.catalogHref))}">${escapeHtml(context.settings.catalogLabel)}</a>${categoryLinks}`;
+    const contactCurrent = context.pageType === "contact" ? ' aria-current="page"' : "";
+    const aboutCurrent = context.pageType === "about" ? ' aria-current="page"' : "";
+    const searchCurrent = context.pageType === "search" ? ' aria-current="page"' : "";
+    const cartCurrent = ["cart", "checkout"].includes(context.pageType)
+      ? ' aria-current="page"'
+      : "";
+    const catalog = `<details class="solara-nav-dropdown"><summary${catalogCurrent}>${escapeHtml(navigation.catalogLabel || context.settings.catalogLabel)}</summary><ul>${nestedItems || `<li><a href="${escapeAttribute(safeUrl(context.settings.catalogHref))}">${escapeHtml(context.settings.catalogLabel)}</a></li>`}</ul></details>`;
+    const nav = `${navigation.showHome ? `<a href="/"${homeCurrent}>Inicio</a>` : ""}${catalog}${navigation.showContact ? `<a href="/contacto/"${contactCurrent}>Contacto</a>` : ""}${navigation.showAbout ? `<a href="/nosotros/"${aboutCurrent}>Nosotros</a>` : ""}`;
+    const actions = `${navigation.showSearch ? `<a class="solara-search-trigger" href="/buscar/" aria-label="Buscar productos"${searchCurrent}>Buscar</a>` : ""}${navigation.showCart ? `<button class="solara-cart-trigger" type="button" data-solara-cart-open data-open-cart aria-controls="solara-cart"${cartCurrent}>${escapeHtml(context.settings.cartLabel)} <span data-solara-cart-count data-cart-count aria-live="polite">0</span></button>` : ""}`;
     return moduleRoot(
       "editorial-header",
       context.section,
       safeHtml(`<div class="solara-header" data-motion-zone="content">
         <a class="solara-brand" href="/" aria-label="${escapeAttribute(`Inicio de ${context.project.identity.brandName}`)}">${renderBrand(context.project)}</a>
         <nav class="solara-desktop-nav" aria-label="Navegación principal">${nav}</nav>
-        <button class="solara-cart-trigger" type="button" data-solara-cart-open data-open-cart aria-controls="solara-cart">${escapeHtml(context.settings.cartLabel)} <span data-solara-cart-count data-cart-count aria-live="polite">0</span></button>
+        <div class="solara-header-actions">${actions}</div>
         <details class="solara-mobile-nav">
           <summary>Menú</summary>
           <nav aria-label="Navegación móvil">${nav}</nav>
@@ -139,6 +160,199 @@ const heroSettings = z.object({
   imageId: z.string().default(""),
   imagePosition: z.enum(["left", "right"]).default("right"),
 });
+
+const heroSlideSchema = z.object({
+  id: z.string().min(1),
+  eyebrow: z.string().default(""),
+  title: z.string().min(1),
+  body: z.string().default(""),
+  actionLabel: z.string().default("Ver colección"),
+  actionHref: z.string().default("/categorias/mesa/"),
+  imageId: z.string().default(""),
+});
+
+const heroMediaSettings = z.object({
+  mode: z.enum(["image", "carousel", "video"]).default("image"),
+  eyebrow: z.string().default(""),
+  title: z.string().default("Objetos hechos para acompañarte"),
+  body: z.string().default("Una selección precisa para el uso cotidiano."),
+  actionLabel: z.string().default("Ver colección"),
+  actionHref: z.string().default("/categorias/mesa/"),
+  posterAssetId: z.string().default(""),
+  videoAssetId: z.string().default(""),
+  slides: z.array(heroSlideSchema).default([]),
+  autoplay: z.boolean().default(true),
+  intervalMs: z.number().int().min(3000).max(15000).default(6000),
+  overlay: z.enum(["light", "dark", "none"]).default("dark"),
+  alignment: z.enum(["left", "center"]).default("left"),
+});
+
+export const heroMedia: ModuleDefinition<z.infer<typeof heroMediaSettings>> = {
+  manifest: {
+    id: "hero-media",
+    name: "Hero audiovisual",
+    description: "Hero editorial con imagen, carrusel o video local autocontenido.",
+    version: 1,
+    slots: ["hero"],
+    compatibleSettings: [
+      "mode",
+      "eyebrow",
+      "title",
+      "body",
+      "actionLabel",
+      "actionHref",
+      "posterAssetId",
+      "videoAssetId",
+      "slides",
+      "autoplay",
+      "intervalMs",
+      "overlay",
+      "alignment",
+    ],
+  },
+  settingsSchema: heroMediaSettings,
+  settingsFields: [
+    {
+      key: "mode",
+      type: "select",
+      label: "Modo del hero",
+      options: [
+        { value: "image", label: "Imagen" },
+        { value: "carousel", label: "Carrusel" },
+        { value: "video", label: "Video local" },
+      ],
+    },
+    { key: "eyebrow", type: "text", label: "Antetítulo" },
+    { key: "title", type: "text", label: "Título" },
+    { key: "body", type: "text", label: "Descripción" },
+    { key: "actionLabel", type: "text", label: "Texto de la acción" },
+    { key: "actionHref", type: "url", label: "Destino de la acción" },
+    { key: "posterAssetId", type: "asset", label: "Poster / imagen" },
+    { key: "videoAssetId", type: "asset", label: "Video local" },
+    { key: "slides", type: "array", label: "Slides del carrusel" },
+    { key: "autoplay", type: "boolean", label: "Reproducción automática" },
+    {
+      key: "intervalMs",
+      type: "number",
+      label: "Intervalo (ms)",
+      min: 3000,
+      max: 15000,
+      step: 500,
+    },
+    {
+      key: "overlay",
+      type: "select",
+      label: "Overlay",
+      options: [
+        { value: "light", label: "Claro" },
+        { value: "dark", label: "Oscuro" },
+        { value: "none", label: "Sin overlay" },
+      ],
+    },
+    {
+      key: "alignment",
+      type: "select",
+      label: "Alineación",
+      options: [
+        { value: "left", label: "Izquierda" },
+        { value: "center", label: "Centro" },
+      ],
+    },
+  ],
+  motionZones: [
+    ...revealZone,
+    {
+      id: "media",
+      label: "Media",
+      selector: '[data-motion-zone="media"]',
+      allowedPresets: ["none", "fade", "scale", "parallax"] as const,
+    },
+  ],
+  clientAsset: "storefront-hero" as AssetId,
+  styleAsset: scopedAssetId("hero-media"),
+  render(context) {
+    const settings = context.settings;
+    const fallbackImageId =
+      settings.posterAssetId ||
+      context.project.seo.socialImageId ||
+      context.project.collections[0]?.imageId ||
+      context.project.products[0]?.imageIds[0];
+    const slide = settings.slides[0];
+    const title = slide?.title || settings.title;
+    const body = slide?.body || settings.body;
+    const eyebrow = slide?.eyebrow || settings.eyebrow;
+    const actionLabel = slide?.actionLabel || settings.actionLabel;
+    const actionHref = slide?.actionHref || settings.actionHref;
+    const imageId = slide?.imageId || fallbackImageId;
+    const image = renderImage(context.project, imageId, {
+      className: "solara-hero-media-image",
+      loading: "eager",
+      fetchPriority: "high",
+      sizes: "100vw",
+      fallbackAlt: title,
+    });
+    const video =
+      settings.mode === "video"
+        ? renderVideo(context.project, settings.videoAssetId, {
+            className: "solara-hero-media-video",
+            posterAssetId: settings.posterAssetId,
+            preload: "metadata",
+            fallbackAlt: title,
+          })
+        : "";
+    const videoAsset = findVideo(context.project, settings.videoAssetId);
+    const posterImage =
+      settings.mode === "video"
+        ? renderImage(context.project, settings.posterAssetId || videoAsset?.posterAssetId, {
+            className: "solara-hero-media-poster",
+            loading: "eager",
+            fetchPriority: "high",
+            sizes: "100vw",
+            fallbackAlt: title,
+          })
+        : "";
+    const media = settings.mode === "video" && video ? safeHtml(`${posterImage}${video}`) : image;
+    const slides = settings.mode === "carousel" ? settings.slides : [];
+    const slidePanels = slides
+      .map((item, index) => {
+        const slideImage = renderImage(context.project, item.imageId || fallbackImageId, {
+          className: "solara-hero-media-image",
+          loading: index === 0 ? "eager" : "lazy",
+          sizes: "100vw",
+          fallbackAlt: item.title,
+        });
+        return `<div class="solara-hero-slide-panel" data-hero-slide-panel="${index}" data-hero-active="${String(index === 0)}" data-hero-title="${escapeAttribute(item.title)}" data-hero-body="${escapeAttribute(item.body)}" data-hero-eyebrow="${escapeAttribute(item.eyebrow)}" data-hero-action-label="${escapeAttribute(item.actionLabel)}" data-hero-action-href="${escapeAttribute(safeUrl(item.actionHref))}">${slideImage}</div>`;
+      })
+      .join("");
+    const indicators = slides.length
+      ? `<div class="solara-hero-indicators" role="tablist" aria-label="Slides del hero">${slides
+          .map(
+            (_item, index) =>
+              `<button type="button" data-hero-slide="${index}" role="tab" aria-label="Ir al slide ${index + 1}" aria-selected="${index === 0 ? "true" : "false"}"></button>`,
+          )
+          .join("")}</div>`
+      : "";
+    const controls =
+      slides.length > 1
+        ? `<div class="solara-hero-controls"><button type="button" data-hero-prev aria-label="Slide anterior">Anterior</button><button type="button" data-hero-next aria-label="Slide siguiente">Siguiente</button>${indicators}</div>`
+        : "";
+    return moduleRoot(
+      "hero-media",
+      context.section,
+      safeHtml(`<div class="solara-hero-media-shell solara-hero-media-shell--${settings.alignment} solara-hero-media-shell--overlay-${settings.overlay}" data-hero-mode="${settings.mode}" data-hero-autoplay="${String(settings.autoplay)}" data-hero-interval="${settings.intervalMs}" data-motion-zone="media"${slides.length > 1 ? ' role="region" aria-roledescription="carousel" aria-label="Carrusel principal"' : ""}>
+        <div class="solara-hero-media-backdrop">${settings.mode === "carousel" && slidePanels ? slidePanels : media}</div>
+        <div class="solara-hero-media-copy" data-motion-zone="content">
+          ${eyebrow ? `<p class="solara-eyebrow">${escapeHtml(eyebrow)}</p>` : ""}
+          <h1>${escapeHtml(title)}</h1>
+          <p class="solara-hero-body">${escapeHtml(body)}</p>
+          <a class="solara-primary-action" href="${escapeAttribute(safeUrl(actionHref))}">${escapeHtml(actionLabel)}</a>
+        </div>
+        ${settings.mode === "video" && video ? '<button type="button" class="solara-hero-video-toggle" data-hero-video-toggle aria-pressed="false">Pausar video</button>' : ""}
+        ${controls}
+      </div>`),
+    );
+  },
+};
 
 export const splitHero: ModuleDefinition<z.infer<typeof heroSettings>> = {
   manifest: {
@@ -186,33 +400,15 @@ export const splitHero: ModuleDefinition<z.infer<typeof heroSettings>> = {
   ],
   styleAsset: scopedAssetId("split-hero"),
   render(context) {
-    const eyebrow = context.settings.eyebrow
-      ? `<p class="solara-eyebrow">${escapeHtml(context.settings.eyebrow)}</p>`
-      : "";
-    const imageId =
-      context.settings.imageId ||
-      context.project.seo.socialImageId ||
-      context.project.collections[0]?.imageId ||
-      context.project.products[0]?.imageIds[0];
-    const image = renderImage(context.project, imageId, {
-      className: "solara-hero-image",
-      loading: "eager",
-      fetchPriority: "high",
-      sizes: "(max-width: 767px) 100vw, 55vw",
-      fallbackAlt: context.settings.title,
+    const heroSettings = heroMedia.settingsSchema.parse({
+      ...context.settings,
+      posterAssetId: context.settings.imageId,
+      alignment: context.settings.imagePosition === "left" ? "left" : "left",
     });
     return moduleRoot(
       "split-hero",
       context.section,
-      safeHtml(`<div class="solara-split-hero solara-split-hero--${context.settings.imagePosition}">
-        <div class="solara-hero-copy" data-motion-zone="content">
-          ${eyebrow}
-          <h1>${escapeHtml(context.settings.title)}</h1>
-          <p class="solara-hero-body">${escapeHtml(context.settings.body)}</p>
-          <a class="solara-primary-action" href="${escapeAttribute(safeUrl(context.settings.actionHref))}">${escapeHtml(context.settings.actionLabel)}</a>
-        </div>
-        <figure class="solara-hero-media" data-motion-zone="media">${image}</figure>
-      </div>`),
+      safeHtml(String(heroMedia.render({ ...context, settings: heroSettings }))),
     );
   },
 };
@@ -365,7 +561,7 @@ export const editorialProductGrid: ModuleDefinition<z.infer<typeof productGridSe
       context.section,
       safeHtml(`<div class="solara-section-shell" id="productos">
         <h2>${escapeHtml(context.settings.title)}</h2>
-        <div class="solara-editorial-products" data-motion-zone="items">${renderProductCards(context.project, products, "editorial")}</div>
+        <div class="solara-editorial-products" data-motion-zone="items"${context.pageType === "category" ? " data-category-grid" : ""}>${renderProductCards(context.project, products, "editorial")}</div>
       </div>`),
     );
   },
@@ -394,7 +590,7 @@ export const compactProductGrid: ModuleDefinition<z.infer<typeof productGridSett
       context.section,
       safeHtml(`<div class="solara-section-shell" id="productos">
         <h2>${escapeHtml(context.settings.title)}</h2>
-        <div class="solara-compact-products" data-motion-zone="items">${renderProductCards(context.project, products, "compact")}</div>
+        <div class="solara-compact-products" data-motion-zone="items"${context.pageType === "category" ? " data-category-grid" : ""}>${renderProductCards(context.project, products, "compact")}</div>
       </div>`),
     );
   },
@@ -632,14 +828,14 @@ export const cartDrawer: ModuleDefinition<z.infer<typeof cartSettings>> = {
           <div data-solara-cart-items data-cart-lines><p class="solara-empty-state">${escapeHtml(context.settings.emptyText)}</p></div>
           <div class="solara-cart-total"><span>Total</span><strong data-solara-cart-total data-cart-total>${escapeHtml(formatMoney(0))}</strong></div>
           <form data-solara-checkout data-checkout-form>
-            <label for="solara-customer-name">Nombre</label>
-            <input id="solara-customer-name" name="name" autocomplete="name" required>
-            <label for="solara-customer-phone">Teléfono</label>
-            <input id="solara-customer-phone" name="phone" autocomplete="tel" inputmode="tel" required>
-            <label for="solara-customer-address">Dirección o punto de entrega</label>
-            <textarea id="solara-customer-address" name="address" autocomplete="street-address" required></textarea>
-            <label for="solara-customer-notes">Notas opcionales</label>
-            <textarea id="solara-customer-notes" name="notes"></textarea>
+            <label for="solara-drawer-customer-name">Nombre</label>
+            <input id="solara-drawer-customer-name" name="name" autocomplete="name" required>
+            <label for="solara-drawer-customer-phone">Teléfono</label>
+            <input id="solara-drawer-customer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="Ingresá un teléfono válido" required>
+            <label for="solara-drawer-customer-address">Dirección o punto de entrega</label>
+            <textarea id="solara-drawer-customer-address" name="address" autocomplete="street-address" required></textarea>
+            <label for="solara-drawer-customer-notes">Notas opcionales</label>
+            <textarea id="solara-drawer-customer-notes" name="notes"></textarea>
             <button type="submit">${escapeHtml(context.settings.checkoutLabel)}</button>
             <pre data-order-preview aria-live="polite"></pre>
             <a data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>Enviar pedido en WhatsApp</a>
@@ -692,6 +888,7 @@ export const editorialFooter: ModuleDefinition<z.infer<typeof footerSettings>> =
 export const officialModules = [
   announcementBar,
   editorialHeader,
+  heroMedia,
   splitHero,
   editorialHero,
   collectionGrid,

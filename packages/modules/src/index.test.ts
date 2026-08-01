@@ -17,6 +17,7 @@ describe("official module system", () => {
       expect.arrayContaining([
         "announcement-bar",
         "editorial-header",
+        "hero-media",
         "split-hero",
         "editorial-hero",
         "collection-grid",
@@ -36,16 +37,16 @@ describe("official module system", () => {
     const section = createModuleSection({
       id: "section-created" as StoreSection["id"],
       slot: "hero",
-      moduleId: "split-hero",
+      moduleId: "hero-media",
     });
 
-    expect(section.settings).toEqual(getModuleDefinition("split-hero")?.settingsSchema.parse({}));
+    expect(section.settings).toEqual(getModuleDefinition("hero-media")?.settingsSchema.parse({}));
     expect(section.enabled).toBe(true);
     expect(() =>
       createModuleSection({
         id: "section-invalid" as StoreSection["id"],
         slot: "footer",
-        moduleId: "split-hero",
+        moduleId: "hero-media",
       }),
     ).toThrow(/no es compatible/i);
   });
@@ -85,7 +86,7 @@ describe("official module system", () => {
   });
 
   it("preserves compatible hero settings when replacing its visual treatment", () => {
-    const hero = referenceStore.sections.find((section) => section.moduleId === "split-hero");
+    const hero = referenceStore.sections.find((section) => section.moduleId === "hero-media");
     expect(hero).toBeDefined();
     const source = {
       ...hero,
@@ -96,7 +97,7 @@ describe("official module system", () => {
 
     expect(replacement.moduleId).toBe("editorial-hero");
     expect(replacement.settings.title).toBe(source.settings.title);
-    expect(replacement.settings.imageId).toBe(source.settings.imageId);
+    expect(replacement.settings.imageId).toBe(source.settings.posterAssetId);
     expect(replacement.settings).not.toHaveProperty("editorOnlyValue");
   });
 
@@ -147,7 +148,7 @@ describe("official module system", () => {
 
     expect(html).toContain("&lt;Casa segura&gt;");
     expect(html).not.toContain("<Casa segura>");
-    expect(html).toContain('data-solara-module="split-hero"');
+    expect(html).toContain('data-solara-module="hero-media"');
     expect(html).toContain(referenceStore.products[0]?.title);
   });
 });

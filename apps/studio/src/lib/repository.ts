@@ -73,6 +73,38 @@ class SolaraDatabase extends Dexie {
 
 export const database = new SolaraDatabase();
 
+export const PROJECT_STORAGE_VERSION = "2";
+const STORAGE_SENTINEL = "solara-studio-storage-version";
+let storageReady: Promise<void> | undefined;
+let storageReset = false;
+
+async function ensureStorageVersion(): Promise<void> {
+  if (typeof localStorage === "undefined") return;
+  if (localStorage.getItem(STORAGE_SENTINEL) === PROJECT_STORAGE_VERSION) return;
+  try {
+    database.close();
+    await Dexie.delete("solara-commerce-studio");
+    await database.open();
+    localStorage.setItem(STORAGE_SENTINEL, PROJECT_STORAGE_VERSION);
+    storageReset = true;
+  } catch {
+    throw new Error(
+      "No se pudo reiniciar la base local. Cerrá otras pestañas de SolaraCommerce y volvé a abrir la app.",
+    );
+  }
+}
+
+async function ready(): Promise<void> {
+  storageReady ??= ensureStorageVersion();
+  await storageReady;
+}
+
+export function consumeStorageResetNotice(): boolean {
+  const wasReset = storageReset;
+  storageReset = false;
+  return wasReset;
+}
+
 function toRecord(project: StoreProjectV1): StoredProject {
   return {
     id: project.id,
@@ -120,6 +152,7 @@ function schemaErrorMessage(error: {
 }
 
 export async function listProjectsWithRecovery(): Promise<ProjectListResult> {
+  await ready();
   const records = await database.projects.orderBy("updatedAt").reverse().toArray();
   const projects: StoredProject[] = [];
   const recovery: ProjectRecoveryIssue[] = [];
@@ -140,6 +173,7 @@ export async function listProjectsWithRecovery(): Promise<ProjectListResult> {
 }
 
 export async function getProject(id: string): Promise<StoreProjectV1 | undefined> {
+  await ready();
   const record = await database.projects.get(id);
   if (!record) return undefined;
   const parsed = StoreProjectV1Schema.safeParse(record.project);
@@ -152,6 +186,7 @@ export async function getProject(id: string): Promise<StoreProjectV1 | undefined
 }
 
 export async function saveProject(project: StoreProjectV1): Promise<void> {
+  await ready();
   const validProject = StoreProjectV1Schema.parse(project);
   await database.transaction("rw", database.projects, async () => {
     await database.projects.put(toRecord(validProject));
@@ -184,6 +219,7 @@ export async function createProject(name: string): Promise<StoreProjectV1> {
 }
 
 export async function ensureFirstProject(): Promise<StoreProjectV1> {
+  await ready();
   const first = await database.projects.orderBy("updatedAt").reverse().first();
   if (first) return StoreProjectV1Schema.parse(first.project);
   const initial = await embedFixtureAssets(
@@ -227,6 +263,7 @@ export async function putCachedAsset(
   asset: Omit<CachedAsset, "cacheKey" | "recipeVersion" | "lastUsedAt"> &
     Partial<Pick<CachedAsset, "recipeVersion" | "lastUsedAt">>,
 ): Promise<void> {
+  await ready();
   const recipeVersion = asset.recipeVersion ?? ASSET_CACHE_RECIPE_VERSION;
   const timestamp = asset.lastUsedAt ?? new Date().toISOString();
   await database.assetCache.put({
@@ -241,6 +278,7 @@ export async function getCachedAsset(
   hash: string,
   recipeVersion = ASSET_CACHE_RECIPE_VERSION,
 ): Promise<CachedAsset | undefined> {
+  await ready();
   const cached = await database.assetCache.get(hash);
   if (!cached || cached.recipeVersion !== recipeVersion) return undefined;
   const lastUsedAt = new Date().toISOString();
@@ -272,6 +310,7 @@ export async function requestPersistentStorage(): Promise<boolean> {
 }
 
 export async function clearAssetCache(): Promise<void> {
+  await ready();
   await database.assetCache.clear();
 }
 

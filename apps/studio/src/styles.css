@@ -502,6 +502,35 @@ input[type="color"] {
   background: var(--warning-soft);
 }
 
+.global-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px auto 0;
+  width: min(1180px, calc(100% - 32px));
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-input);
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.global-notice button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-height: 34px;
+  min-width: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
 .global-warning p,
 .global-warning ul {
   margin: 6px 0 0;
@@ -904,6 +933,60 @@ legend {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+}
+
+.navigation-switches {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 8px 14px;
+}
+
+.navigation-editor,
+.page-editor {
+  display: grid;
+  gap: 12px;
+}
+
+.navigation-editor-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-raised);
+}
+
+.navigation-children {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 8px;
+  padding: 10px 0 0 18px;
+  border-top: 1px solid var(--line);
+}
+
+.navigation-children-title {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.navigation-child-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.page-editor {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-raised);
 }
 
 .catalog-toolbar {
@@ -2246,10 +2329,19 @@ tbody tr {
   }
 
   .form-grid,
+  .navigation-switches,
   .builder-grid,
   .color-grid,
   .inspector-split {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .navigation-child-editor {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .navigation-child-editor .field:nth-child(2) {
+    grid-column: 1 / -1;
   }
 
   .builder-grid {

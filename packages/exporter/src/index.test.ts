@@ -93,7 +93,7 @@ describe("exporter", () => {
           ...source,
           id: "section-disabled-content",
           slot: "content",
-          moduleId: "image-text-content",
+          moduleId: "editorial-hero",
           enabled: false,
         },
       ],
@@ -104,8 +104,8 @@ describe("exporter", () => {
     const html = String(result.files.get("index.html"));
 
     expect(css).toBe(baseline.files.get("assets/storefront.css"));
-    expect(css).not.toContain('[data-solara-module="image-text-content"]');
-    expect(html).not.toContain('data-solara-module="image-text-content"');
+    expect(css).not.toContain('[data-solara-module="editorial-hero"]');
+    expect(html).not.toContain('data-solara-module="editorial-hero"');
     expect([...result.files.keys()].filter((path) => path === "assets/storefront.js")).toHaveLength(
       1,
     );
@@ -128,8 +128,72 @@ describe("exporter", () => {
   it("excluye feed y agrega noindex en borrador", () => {
     const result = exportProject(referenceStore, { mode: "draft" });
     expect(result.files.has("google-merchant.xml")).toBe(false);
+    expect(result.files.has("sitemap.xml")).toBe(false);
     expect(result.files.get("robots.txt")).toContain("Disallow: /");
     expect(result.files.get("index.html")).toContain("noindex,nofollow");
+  });
+
+  it("publica rutas editoriales, catálogo reconciliable y sitemaps sin checkout", () => {
+    const result = exportProject(referenceStore, { mode: "production" });
+    const sitemap = String(result.files.get("sitemap.xml"));
+    expect(result.files.has("nosotros/index.html")).toBe(true);
+    expect(result.files.has("contacto/index.html")).toBe(true);
+    expect(result.files.has("buscar/index.html")).toBe(true);
+    expect(result.files.has("carrito/index.html")).toBe(true);
+    expect(result.files.has("compra/index.html")).toBe(true);
+    expect(result.files.has("catalog-index.json")).toBe(true);
+    expect(sitemap).not.toContain("/buscar/");
+    expect(sitemap).not.toContain("/carrito/");
+    expect(sitemap).not.toContain("/compra/");
+  });
+
+  it("mantiene el poster y el video audiovisual autocontenidos", () => {
+    const project = {
+      ...referenceStore,
+      videos: [
+        {
+          kind: "video" as const,
+          id: "video-fixture",
+          name: "Hero Casa Luma",
+          alt: "Mesa Casa Luma en movimiento",
+          mimeType: "video/mp4" as const,
+          source: "data:video/mp4;base64,AA==",
+          posterAssetId: referenceStore.assets[0]?.id,
+          width: 1280,
+          height: 720,
+          durationSeconds: 5,
+          hash: "fixture-video",
+        },
+      ],
+      sections: referenceStore.sections.map((section) =>
+        section.slot === "hero"
+          ? {
+              ...section,
+              moduleId: "hero-media",
+              settings: {
+                mode: "video",
+                title: "Una casa con materia y calma.",
+                body: "Piezas honestas para usar todos los días.",
+                actionLabel: "Ver colección",
+                actionHref: "/categorias/textiles/",
+                posterAssetId: referenceStore.assets[0]?.id,
+                videoAssetId: "video-fixture",
+                slides: [],
+                autoplay: true,
+                intervalMs: 6000,
+                overlay: "dark",
+                alignment: "left",
+              },
+            }
+          : section,
+      ),
+    } as typeof referenceStore;
+    const result = exportProject(project, { mode: "production" });
+    const home = String(result.files.get("index.html"));
+    expect(home).toContain('data-hero-mode="video"');
+    expect(home).toContain('class="solara-hero-media-poster"');
+    expect(result.files.has("assets/fixture-video.mp4")).toBe(true);
+    expect(String(result.files.get("video-sitemap.xml"))).toContain("fixture-video.mp4");
   });
 
   it("publica headers de seguridad compatibles con variables de movimiento", () => {

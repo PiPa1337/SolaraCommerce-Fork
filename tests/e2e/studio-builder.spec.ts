@@ -41,7 +41,7 @@ async function openBuilder(page: Page) {
 
 test("edita el contenido, actualiza el preview y persiste tras recargar", async ({ page }) => {
   await openBuilder(page);
-  const hero = page.getByRole("listitem").filter({ hasText: "Hero dividido" });
+  const hero = page.getByRole("listitem").filter({ hasText: "Hero audiovisual" });
   await hero.getByRole("button").first().click();
 
   const title = page.getByRole("textbox", { name: "Título", exact: true });
@@ -58,7 +58,7 @@ test("edita el contenido, actualiza el preview y persiste tras recargar", async 
   await page.getByRole("button", { name: "Constructor" }).click();
   await page
     .getByRole("listitem")
-    .filter({ hasText: "Hero dividido" })
+    .filter({ hasText: "Hero audiovisual" })
     .getByRole("button")
     .first()
     .click();
@@ -77,6 +77,10 @@ test("agrega, ordena, duplica, oculta, reemplaza, deshace y elimina secciones", 
   await openBuilder(page);
   const sections = page.getByRole("list", { name: "Secciones de la tienda" });
   const initialCount = await sections.getByRole("listitem").count();
+  const initialContentCount = await sections
+    .getByRole("listitem")
+    .filter({ hasText: "Contenido imagen y texto" })
+    .count();
 
   await page.getByLabel("Tipo de sección").selectOption("content");
   await page.getByRole("button", { name: "Agregar sección" }).click();
@@ -96,7 +100,7 @@ test("agrega, ordena, duplica, oculta, reemplaza, deshace y elimina secciones", 
   await selectedAdded.getByRole("button", { name: "Duplicar sección" }).click();
   await expect(
     sections.getByRole("listitem").filter({ hasText: "Contenido imagen y texto" }),
-  ).toHaveCount(2);
+  ).toHaveCount(initialContentCount + 2);
 
   const duplicate = sections
     .getByRole("listitem")
@@ -105,9 +109,9 @@ test("agrega, ordena, duplica, oculta, reemplaza, deshace y elimina secciones", 
   await duplicate.getByRole("button", { name: "Eliminar sección" }).click();
   await expect(
     sections.getByRole("listitem").filter({ hasText: "Contenido imagen y texto" }),
-  ).toHaveCount(1);
+  ).toHaveCount(initialContentCount + 1);
 
-  const hero = sections.getByRole("listitem").filter({ hasText: "Hero dividido" });
+  const hero = sections.getByRole("listitem").filter({ hasText: "Hero audiovisual" });
   await hero.getByRole("button").first().click();
   await page.getByLabel("Módulo").selectOption({ label: "Hero editorial" });
   const replacedHero = sections.getByRole("listitem").filter({ hasText: "Hero editorial" });
@@ -130,7 +134,10 @@ test("agrega, ordena, duplica, oculta, reemplaza, deshace y elimina secciones", 
     page.frameLocator("iframe").getByRole("heading", { name: "Una casa con materia y calma." }),
   ).toHaveCount(0);
 
-  const addedAgain = sections.getByRole("listitem").filter({ hasText: "Contenido imagen y texto" });
+  const addedAgain = sections
+    .getByRole("listitem")
+    .filter({ hasText: "Contenido imagen y texto" })
+    .last();
   await addedAgain.getByRole("button", { name: "Eliminar sección" }).click();
   await expect(sections.getByRole("listitem")).toHaveCount(initialCount);
 });

@@ -39,7 +39,7 @@ tags, disponibilidad e identificadores comerciales. El catálogo ofrece:
 - CSV procesado en Web Worker con revisión antes de reemplazar datos;
 - undo/redo y autosave serializado antes de salir de Studio.
 
-`StoreProjectV1` valida IDs, slugs, referencias e índices derivados. Una operación
+`StoreProjectV2` valida IDs, slugs, referencias, navegación y páginas editables. Una operación
 inválida se rechaza completa y no deja cambios parciales.
 
 ## Constructor modular
@@ -59,8 +59,20 @@ marfil, tinta, verde musgo, títulos serif y controles sans. El sistema conserva
 modo oscuro, foco visible, movimiento reducido y layouts responsive sin fuentes
 ni recursos externos.
 
-Los heroes dividido y editorial, junto con las grillas editorial y compacta,
-ofrecen tratamientos realmente distintos sobre el mismo contenido.
+El hero audiovisual admite imagen, carrusel y video local; los tratamientos
+editorial y compacto de grilla ofrecen ritmos realmente distintos sobre el mismo contenido.
+
+El storefront v2 usa una navbar curada con Inicio, Colecciones, Contacto,
+Nosotros, búsqueda y carrito. El hero puede trabajar con imagen, carrusel o
+video local autocontenido. El exporter genera también `/contacto/`, `/nosotros/`,
+`/buscar/`, `/carrito/` y `/compra/`, manteniendo HTML útil sin JavaScript.
+
+La búsqueda descarga `search-index.json` sólo al abrirse y el carrito reconcilia
+sus líneas contra `catalog-index.json` únicamente en sus rutas propias. Los videos
+aceptan MP4 o WebM de hasta 30 MB, requieren poster y se deduplican por hash dentro del ZIP.
+Al activar v2 Studio reinicia únicamente la base IndexedDB
+`solara-commerce-studio`; no elimina respaldos `.solara.zip`, exportaciones ni
+archivos del repositorio. Los respaldos v1 se rechazan sin conversión automática.
 
 ## Imágenes responsive
 
@@ -78,11 +90,15 @@ corepack pnpm check
 corepack pnpm build
 corepack pnpm test:e2e
 corepack pnpm benchmark:export
+corepack pnpm check:budgets
+corepack pnpm pilot:preflight
 ```
 
 El benchmark exporta el fixture determinista de 1.000 productos y falla si supera
 30 segundos. Playwright usa Chromium para el bucle local; la matriz completa y
-Lighthouse se reservan para el gate de release.
+Lighthouse se reservan para el gate de release. El gate release requiere Node
+22 (igual que CI) y ejecuta Chromium, Firefox y WebKit; en equipos con otra
+versiÃ³n de Node, ejecutalo dentro del entorno de CI.
 
 Los tests de Studio usan una IndexedDB en memoria para comprobar guardado,
 reapertura, duplicación, archivo, restauración y ráfagas de autosave sin depender

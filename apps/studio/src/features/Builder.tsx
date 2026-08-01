@@ -394,6 +394,7 @@ function SettingsInspector({
           );
         }
         if (field.type === "asset") {
+          const acceptsVideo = field.key.toLowerCase().includes("video");
           return (
             <Field label={field.label} {...(error ? { hint: error } : {})} key={field.key}>
               <select
@@ -402,11 +403,22 @@ function SettingsInspector({
                 onChange={(event) => setValue(field.key, event.target.value)}
               >
                 <option value="">Sin imagen</option>
-                {project.assets.map((asset) => (
-                  <option key={asset.id} value={asset.id}>
-                    {asset.name}
-                  </option>
-                ))}
+                {!acceptsVideo
+                  ? project.assets.map((asset) => (
+                      <option key={asset.id} value={asset.id}>
+                        {asset.name}
+                      </option>
+                    ))
+                  : null}
+                {acceptsVideo && project.videos.length > 0 ? (
+                  <optgroup label="Videos">
+                    {project.videos.map((video) => (
+                      <option key={video.id} value={video.id}>
+                        {video.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
               </select>
             </Field>
           );
@@ -425,6 +437,24 @@ function SettingsInspector({
                   </option>
                 ))}
               </select>
+            </Field>
+          );
+        }
+        if (field.type === "array") {
+          return (
+            <Field label={field.label} {...(hint ? { hint } : {})} key={field.key}>
+              <textarea
+                value={JSON.stringify(value ?? [], null, 2)}
+                rows={6}
+                aria-invalid={Boolean(error)}
+                onChange={(event) => {
+                  try {
+                    setValue(field.key, JSON.parse(event.target.value));
+                  } catch {
+                    setErrors((current) => ({ ...current, [field.key]: "JSON inválido." }));
+                  }
+                }}
+              />
             </Field>
           );
         }

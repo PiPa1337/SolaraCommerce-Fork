@@ -11,6 +11,7 @@ import type {
   StoreProjectV1,
   StoreSection,
   Variant,
+  VideoAsset,
 } from "@solara/project-schema";
 import { StoreProjectV1Schema } from "@solara/project-schema";
 import { STOREFRONT_RUNTIME_CSS, STOREFRONT_RUNTIME_JS } from "@solara/storefront-runtime";
@@ -92,7 +93,17 @@ interface PageDescriptor {
   title: string;
   description: string;
   canonicalPath: string;
-  pageType: "home" | "category" | "collection" | "product" | "legal";
+  pageType:
+    | "home"
+    | "category"
+    | "collection"
+    | "product"
+    | "about"
+    | "contact"
+    | "search"
+    | "cart"
+    | "checkout"
+    | "legal";
   body: string;
   structuredData: unknown[];
   image?: string;
@@ -126,6 +137,14 @@ function escapeHtml(value: string): string {
   );
 }
 
+const escapeAttribute = escapeHtml;
+
+function formatMoney(amount: number): string {
+  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(
+    amount / 100,
+  );
+}
+
 function escapeXml(value: string): string {
   return escapeHtml(value);
 }
@@ -146,12 +165,27 @@ function absoluteResourceUrl(project: StoreProjectV1, value: string): string {
   return /^https?:\/\//i.test(value) ? value : absoluteUrl(project, value);
 }
 
+function buildWhatsAppLink(project: StoreProjectV1, message: string): string {
+  return `https://wa.me/${project.whatsapp.phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
+}
+
 function imageFor(project: StoreProjectV1, assetId: string | undefined): ImageAsset | undefined {
   return project.assets.find((asset) => asset.id === assetId);
 }
 
 function imageUrl(project: StoreProjectV1, assetId: string | undefined): string | undefined {
   const asset = imageFor(project, assetId);
+  if (!asset) return undefined;
+  if (asset.source.startsWith("data:")) return `/assets/${asset.hash}.${assetExtension(asset)}`;
+  return asset.source;
+}
+
+function videoFor(project: StoreProjectV1, assetId: string | undefined): VideoAsset | undefined {
+  return project.videos.find((video) => video.id === assetId);
+}
+
+function videoUrl(project: StoreProjectV1, assetId: string | undefined): string | undefined {
+  const asset = videoFor(project, assetId);
   if (!asset) return undefined;
   if (asset.source.startsWith("data:")) return `/assets/${asset.hash}.${assetExtension(asset)}`;
   return asset.source;
@@ -216,7 +250,7 @@ export function buildCommerceSnapshot(project: StoreProjectV1): CommerceSnapshot
   };
 }
 
-function assetExtension(asset: ImageAsset): string {
+function assetExtension(asset: ImageAsset | VideoAsset): string {
   const extension = mimeTypeExtension(asset.mimeType);
   return extension || "bin";
 }
@@ -283,6 +317,12 @@ function projectWithPublicAssetUrls(project: StoreProjectV1): StoreProjectV1 {
           }
         : {}),
     })),
+    videos: project.videos.map((video) => ({
+      ...video,
+      source: video.source.startsWith("data:")
+        ? `/assets/${video.hash}.${assetExtension(video)}`
+        : video.source,
+    })),
   };
 }
 
@@ -307,6 +347,7 @@ function themeCss(project: StoreProjectV1): string {
   --solara-space: ${spacingScale};
   --solara-radius: ${radius}px;
   --solara-container: ${container}px;
+  --solara-chrome-height: 116px;
 }
 
 * { box-sizing: border-box; }
@@ -351,6 +392,7 @@ function moduleStylesForSections(
     ...sections.filter((section) => section.enabled).map((section) => section.moduleId),
     ...additionalModuleIds,
   ]);
+  if (moduleIds.has("split-hero")) moduleIds.add("hero-media");
   const blocks = [...moduleIds].map((moduleId) => {
     const definition = getModuleDefinition(moduleId);
     if (!definition) throw new Error(`Módulo desconocido: ${moduleId}.`);
@@ -402,7 +444,11 @@ function productDetailSection(project: StoreProjectV1, product: Product): string
 
 function storeStructuredData(project: StoreProjectV1): unknown[] {
   const logo = imageUrl(project, project.identity.logoAssetId);
-  return [
+  const hero = project.sections.find((section) => section.slot === "hero" && section.enabled);
+  const heroVideoId =
+    typeof hero?.settings.videoAssetId === "string" ? hero.settings.videoAssetId : undefined;
+  const heroVideo = videoFor(project, heroVideoId);
+  const structured: unknown[] = [
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
@@ -430,6 +476,26 @@ function storeStructuredData(project: StoreProjectV1): unknown[] {
       },
     },
   ];
+  if (heroVideo) {
+    structured.push({
+      "@context": "https://schema.org",
+      "@type": "VideoObject",
+      name: heroVideo.name,
+      description: heroVideo.alt || heroVideo.name,
+      contentUrl: absoluteResourceUrl(project, videoUrl(project, heroVideo.id) ?? ""),
+      ...(heroVideo.posterAssetId
+        ? {
+            thumbnailUrl: absoluteResourceUrl(
+              project,
+              imageUrl(project, heroVideo.posterAssetId) ?? "",
+            ),
+          }
+        : {}),
+      duration: `PT${Math.round(heroVideo.durationSeconds)}S`,
+      uploadDate: project.updatedAt,
+    });
+  }
+  return structured;
 }
 
 function breadcrumbData(
@@ -582,6 +648,7 @@ function renderDocument(project: StoreProjectV1, page: PageDescriptor, mode: Exp
   <meta name="description" content="${escapeHtml(page.description)}">
   <meta name="robots" content="${robots}">
   <link rel="canonical" href="${escapeHtml(canonical)}">
+  <meta name="theme-color" content="${escapeHtml(project.theme.colors.background)}">
   <meta property="og:type" content="${page.pageType === "product" ? "product" : "website"}">
   <meta property="og:locale" content="es_AR">
   <meta property="og:site_name" content="${escapeHtml(project.identity.brandName)}">
@@ -594,7 +661,8 @@ function renderDocument(project: StoreProjectV1, page: PageDescriptor, mode: Exp
   ${structuredData}
 </head>
 <body>
-  <div class="solara-page" data-solara-store data-color-mode="${project.theme.colorMode}">${page.body}</div>
+  <a class="solara-skip-link" href="#solara-main">Ir al contenido</a>
+  <div class="solara-page" data-solara-store data-page-type="${page.pageType}" data-color-mode="${project.theme.colorMode}">${page.body.replace("<main", '<main id="solara-main"')}</div>
   <script src="/assets/storefront.js" defer></script>
 </body>
 </html>`;
@@ -622,14 +690,18 @@ function buildPages(
   );
   const socialImage =
     imageUrl(project, project.seo.socialImageId) ?? imageUrl(project, project.assets[0]?.id);
+  const homeConfig = project.pages.find((page) => page.kind === "home");
+  const homeSections = homeConfig?.sections.length
+    ? [...sharedHeader, ...homeConfig.sections, ...sharedFooter]
+    : project.sections;
 
   const home: PageDescriptor = {
     path: "index.html",
-    title: project.seo.title,
-    description: project.seo.description,
+    title: homeConfig?.seoTitle ?? project.seo.title,
+    description: homeConfig?.seoDescription ?? project.seo.description,
     canonicalPath: "/",
     pageType: "home",
-    body: renderProjectSections(project, project.sections, { pageType: "home" }),
+    body: `<main class="solara-home">${renderProjectSections(project, homeSections, { pageType: "home" })}</main>`,
     structuredData: storeStructuredData(project),
     ...(socialImage ? { image: socialImage } : {}),
   };
@@ -640,10 +712,11 @@ function buildPages(
       .filter((product): product is Product => Boolean(product && product.status === "active"));
     const pages: PageDescriptor[] = [];
 
-    const totalPages = Math.max(1, Math.ceil(products.length / 24));
-    for (let offset = 0; offset < Math.max(products.length, 1); offset += 24) {
-      const pageNumber = Math.floor(offset / 24) + 1;
-      const paginated = products.slice(offset, offset + 24);
+    const pageSize = project.commerceTemplates.category.productsPerPage;
+    const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
+    for (let offset = 0; offset < Math.max(products.length, 1); offset += pageSize) {
+      const pageNumber = Math.floor(offset / pageSize) + 1;
+      const paginated = products.slice(offset, offset + pageSize);
       const categorySections = project.sections.filter((section) => section.slot === "catalog");
       const body = [
         renderProjectSections(project, sharedHeader, { pageType: "category", category }),
@@ -652,6 +725,11 @@ function buildPages(
             <h1>${escapeHtml(category.title)}</h1>
             <p>${escapeHtml(category.description)}</p>
           </header>
+          <div class="solara-category-toolbar" data-category-toolbar>
+            <span data-category-result-count>${paginated.length} productos</span>
+            <details><summary>Filtrar</summary><label><input type="checkbox" data-category-available> Sólo disponibles</label></details>
+            <label>Ordenar <select data-category-sort><option value="recommended">Recomendados</option><option value="price-asc">Precio menor</option><option value="price-desc">Precio mayor</option><option value="name">Nombre</option></select></label>
+          </div>
           ${renderProjectSections(project, categorySections, {
             pageType: "category",
             category: { ...category, productIds: paginated.map((product) => product.id) },
@@ -694,11 +772,12 @@ function buildPages(
       .map((id) => project.products.find((product) => product.id === id))
       .filter((product): product is Product => Boolean(product && product.status === "active"));
     const pages: PageDescriptor[] = [];
-    const totalPages = Math.max(1, Math.ceil(products.length / 24));
+    const pageSize = project.commerceTemplates.category.productsPerPage;
 
-    for (let offset = 0; offset < Math.max(products.length, 1); offset += 24) {
-      const pageNumber = Math.floor(offset / 24) + 1;
-      const paginated = products.slice(offset, offset + 24);
+    const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
+    for (let offset = 0; offset < Math.max(products.length, 1); offset += pageSize) {
+      const pageNumber = Math.floor(offset / pageSize) + 1;
+      const paginated = products.slice(offset, offset + pageSize);
       const collectionSections = project.sections.filter((section) => section.slot === "catalog");
       const body = [
         renderProjectSections(project, sharedHeader, { pageType: "collection", collection }),
@@ -770,6 +849,112 @@ function buildPages(
       };
     });
 
+  const aboutConfig = project.pages.find((page) => page.kind === "about");
+  const contactConfig = project.pages.find((page) => page.kind === "contact");
+  const editableSections = (kind: "about" | "contact") =>
+    project.pages.find((page) => page.kind === kind)?.sections ?? [];
+  const aboutPage: PageDescriptor = {
+    path: "nosotros/index.html",
+    title: aboutConfig?.seoTitle ?? `Nosotros | ${project.identity.brandName}`,
+    description: aboutConfig?.seoDescription ?? project.identity.description,
+    canonicalPath: "/nosotros/",
+    pageType: "about",
+    body: [
+      renderProjectSections(project, sharedHeader, { pageType: "about" }),
+      `<main class="solara-editorial-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><span>Nosotros</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Nuestra mirada</p><h1>${escapeHtml(aboutConfig?.title ?? "Elegimos objetos para vivirlos.")}</h1><p>${escapeHtml(project.identity.description)}</p></header><section class="solara-story-grid"><div><h2>Lo que nos guía</h2><p>${escapeHtml(project.identity.description)}</p></div><div><h2>Información clara</h2><p>${escapeHtml(project.policies.shipping.summary)}</p><a class="solara-secondary-action" href="/contacto/">Conocé cómo contactarnos</a></div></section><section class="solara-values-grid"><article><h2>Selección</h2><p>${escapeHtml(project.collections[0]?.description ?? "Conocé nuestras colecciones.")}</p></article><article><h2>Entrega</h2><p>${escapeHtml(project.policies.shipping.summary)}</p></article><article><h2>Atención directa</h2><p>${escapeHtml(project.identity.email || project.identity.phone || "Escribinos para recibir asesoramiento.")}</p></article></section></main>`,
+      editableSections("about").length
+        ? renderProjectSections(project, editableSections("about"), { pageType: "about" })
+        : "",
+      renderProjectSections(project, sharedFooter, { pageType: "about" }),
+    ].join(""),
+    structuredData: [
+      {
+        "@context": "https://schema.org",
+        "@type": "AboutPage",
+        name: aboutConfig?.title ?? "Nosotros",
+        url: absoluteUrl(project, "/nosotros/"),
+        description: aboutConfig?.seoDescription ?? project.identity.description,
+      },
+      breadcrumbData(project, [
+        { name: "Inicio", path: "/" },
+        { name: "Nosotros", path: "/nosotros/" },
+      ]),
+    ],
+    ...(socialImage ? { image: socialImage } : {}),
+  };
+
+  const contactPage: PageDescriptor = {
+    path: "contacto/index.html",
+    title: contactConfig?.seoTitle ?? `Contacto | ${project.identity.brandName}`,
+    description: contactConfig?.seoDescription ?? "Escribinos para coordinar tu pedido.",
+    canonicalPath: "/contacto/",
+    pageType: "contact",
+    body: [
+      renderProjectSections(project, sharedHeader, { pageType: "contact" }),
+      `<main class="solara-contact-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><span>Contacto</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Hablemos</p><h1>${escapeHtml(contactConfig?.title ?? "Estamos para ayudarte.")}</h1><p>Respondemos consultas, disponibilidad y detalles de entrega por canales directos.</p></header><section class="solara-contact-grid"><div class="solara-contact-details">${project.identity.email ? `<a href="mailto:${escapeAttribute(project.identity.email)}"><span>Email</span><strong>${escapeHtml(project.identity.email)}</strong></a>` : ""}${project.identity.phone ? `<a href="tel:${escapeAttribute(project.identity.phone)}"><span>Teléfono</span><strong>${escapeHtml(project.identity.phone)}</strong></a>` : ""}<a href="${escapeAttribute(buildWhatsAppLink(project, `Hola ${project.identity.brandName}, quiero hacer una consulta.`))}" target="_blank" rel="noopener noreferrer"><span>WhatsApp</span><strong>Escribir por WhatsApp</strong></a>${project.identity.address ? `<div><span>Dirección</span><strong>${escapeHtml(project.identity.address)}</strong></div>` : ""}</div><aside class="solara-contact-cta"><h2>Coordinemos tu compra</h2><p>Si ya elegiste una pieza, podés escribirnos y te confirmamos disponibilidad, envío y pago.</p><a class="solara-primary-action" href="${escapeAttribute(buildWhatsAppLink(project, `Hola ${project.identity.brandName}, quiero coordinar una compra.`))}" target="_blank" rel="noopener noreferrer">Escribir por WhatsApp</a></aside></section></main>`,
+      editableSections("contact").length
+        ? renderProjectSections(project, editableSections("contact"), { pageType: "contact" })
+        : "",
+      renderProjectSections(project, sharedFooter, { pageType: "contact" }),
+    ].join(""),
+    structuredData: [
+      {
+        "@context": "https://schema.org",
+        "@type": "ContactPage",
+        name: contactConfig?.title ?? "Contacto",
+        url: absoluteUrl(project, "/contacto/"),
+        mainEntity: {
+          "@type": "Organization",
+          name: project.identity.brandName,
+          email: project.identity.email || undefined,
+          telephone: project.identity.phone || undefined,
+        },
+      },
+      breadcrumbData(project, [
+        { name: "Inicio", path: "/" },
+        { name: "Contacto", path: "/contacto/" },
+      ]),
+    ],
+    ...(socialImage ? { image: socialImage } : {}),
+  };
+
+  const searchPage: PageDescriptor = {
+    path: "buscar/index.html",
+    title: `Buscar productos | ${project.identity.brandName}`,
+    description: "Encontrá productos por nombre, marca, categoría o etiqueta.",
+    canonicalPath: "/buscar/",
+    pageType: "search",
+    body: `${renderProjectSections(project, sharedHeader, { pageType: "search" })}<main class="solara-search-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><span>Buscar</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Catálogo</p><h1>Buscar productos</h1><p>Buscá por nombre, marca, categoría o etiqueta.</p></header><form class="solara-search-form" role="search" action="/buscar/" method="get"><label for="solara-search-input">Buscar productos</label><div><input id="solara-search-input" name="q" type="search" autocomplete="off"><button class="solara-primary-action" type="submit">Buscar</button></div></form><section class="solara-search-results" data-search-results aria-live="polite"><p>Escribí una búsqueda para ver resultados.</p></section></main>${renderProjectSections(project, sharedFooter, { pageType: "search" })}`,
+    structuredData: [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        name: "Buscar productos",
+        url: absoluteUrl(project, "/buscar/"),
+      },
+    ],
+  };
+
+  const cartPage: PageDescriptor = {
+    path: "carrito/index.html",
+    title: `Carrito | ${project.identity.brandName}`,
+    description: "Revisá tus productos antes de coordinar el pedido.",
+    canonicalPath: "/carrito/",
+    pageType: "cart",
+    body: `${renderProjectSections(project, sharedHeader, { pageType: "cart" })}<main class="solara-cart-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><span>Carrito</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Tu selección</p><h1>Carrito</h1></header><section class="solara-cart-page-grid"><div data-cart-lines><p class="solara-empty-state">Tu carrito está vacío. Elegí una pieza para comenzar.</p></div><aside><p>Total estimado</p><strong data-cart-total>${escapeHtml(formatMoney(0))}</strong><a class="solara-primary-action" href="/compra/">Continuar a compra</a></aside></section></main>${renderProjectSections(project, sharedFooter, { pageType: "cart" })}`,
+    structuredData: [],
+  };
+
+  const checkoutPage: PageDescriptor = {
+    path: "compra/index.html",
+    title: `Compra por WhatsApp | ${project.identity.brandName}`,
+    description: "Completá tus datos para enviar el pedido por WhatsApp.",
+    canonicalPath: "/compra/",
+    pageType: "checkout",
+    body: `${renderProjectSections(project, sharedHeader, { pageType: "checkout" })}<main class="solara-checkout-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><a href="/carrito/">Carrito</a><span aria-hidden="true">/</span><span>Compra</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Pedido directo</p><h1>Coordinar compra</h1><p>Dejanos tus datos y abrí el mensaje preparado en WhatsApp.</p></header><form class="solara-checkout-form" data-checkout-form><label for="solara-customer-name">Nombre</label><input id="solara-customer-name" name="name" autocomplete="name" required><label for="solara-customer-phone">Teléfono</label><input id="solara-customer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="Ingresá un teléfono válido" required><label for="solara-customer-address">Dirección o punto de entrega</label><textarea id="solara-customer-address" name="address" autocomplete="street-address" required></textarea><label for="solara-customer-notes">Notas opcionales</label><textarea id="solara-customer-notes" name="notes"></textarea><button class="solara-primary-action" type="submit">Preparar pedido</button><pre data-order-preview aria-live="polite"></pre><a class="solara-secondary-action" data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>Enviar pedido en WhatsApp</a></form></main>${renderProjectSections(project, sharedFooter, { pageType: "checkout" })}`,
+    structuredData: [],
+  };
+
   const legalPages: PageDescriptor[] = [
     {
       path: "envios/index.html",
@@ -809,20 +994,33 @@ function buildPages(
     },
   ];
 
-  return [home, ...categories, ...collections, ...products, ...legalPages].map((page) => ({
+  return [
+    home,
+    aboutPage,
+    contactPage,
+    searchPage,
+    cartPage,
+    checkoutPage,
+    ...categories,
+    ...collections,
+    ...products,
+    ...legalPages,
+  ].map((page) => ({
     ...page,
     body: page.body || `<main><p>No hay contenido publicado.</p></main>`,
   }));
 }
 
 function buildSitemap(project: StoreProjectV1, pages: PageDescriptor[]): string {
-  const urls = pages.map(
-    (page) => `<url>
+  const urls = pages
+    .filter((page) => !["search", "cart", "checkout"].includes(page.pageType))
+    .map(
+      (page) => `<url>
   <loc>${escapeXml(absoluteUrl(project, page.canonicalPath))}</loc>
   <lastmod>${project.updatedAt.slice(0, 10)}</lastmod>
   ${page.image ? `<image:image><image:loc>${escapeXml(absoluteResourceUrl(project, page.image))}</image:loc></image:image>` : ""}
 </url>`,
-  );
+    );
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${urls.join("\n")}
@@ -846,6 +1044,22 @@ function buildImageSitemap(project: StoreProjectV1): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${urls.join("\n")}
+</urlset>`;
+}
+
+function buildVideoSitemap(project: StoreProjectV1): string {
+  const hero = project.sections.find((section) => section.slot === "hero" && section.enabled);
+  const videoId =
+    typeof hero?.settings.videoAssetId === "string" ? hero.settings.videoAssetId : undefined;
+  const video = videoFor(project, videoId);
+  if (!video) {
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"></urlset>`;
+  }
+  const poster = imageUrl(project, video.posterAssetId);
+  const content = videoUrl(project, video.id);
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+  <url><loc>${escapeXml(absoluteUrl(project, "/"))}</loc><video:video><video:thumbnail_loc>${escapeXml(absoluteResourceUrl(project, poster ?? ""))}</video:thumbnail_loc><video:title>${escapeXml(video.name)}</video:title><video:description>${escapeXml(video.alt || video.name)}</video:description><video:content_loc>${escapeXml(absoluteResourceUrl(project, content ?? ""))}</video:content_loc><video:duration>${Math.round(video.durationSeconds)}</video:duration></video:video></url>
 </urlset>`;
 }
 
@@ -891,6 +1105,50 @@ function buildMerchantFeed(
 </rss>`;
 }
 
+function buildSearchIndex(project: StoreProjectV1): string {
+  const entries = project.products
+    .filter((product) => product.status === "active")
+    .map((product) => {
+      const prices = product.variants.map((variant) => variant.price);
+      const image = imageUrl(project, product.imageIds[0]);
+      return {
+        id: product.id,
+        slug: product.slug,
+        title: product.title,
+        brand: product.brand,
+        description: product.description,
+        tags: product.tags,
+        categoryIds: product.categoryIds,
+        collectionIds: product.collectionIds,
+        ...(image ? { imageUrl: image } : {}),
+        priceMin: Math.min(...prices),
+        available: product.variants.some((variant) => variant.available),
+        path: `/productos/${product.slug}/`,
+      };
+    });
+  return JSON.stringify(entries);
+}
+
+function buildCatalogIndex(project: StoreProjectV1): string {
+  const entries = project.products
+    .filter((product) => product.status === "active")
+    .flatMap((product) =>
+      product.variants.map((variant) => ({
+        productId: product.id,
+        variantId: variant.id,
+        title: product.title,
+        variantTitle: variant.title,
+        sku: variant.sku,
+        price: variant.price,
+        available: variant.available,
+        ...(imageUrl(project, variant.imageId ?? product.imageIds[0])
+          ? { imageUrl: imageUrl(project, variant.imageId ?? product.imageIds[0]) }
+          : {}),
+      })),
+    );
+  return JSON.stringify(entries);
+}
+
 export function auditProject(project: StoreProjectV1): AuditIssue[] {
   const issues: AuditIssue[] = [];
   const productSlugs = new Map<string, number>();
@@ -906,6 +1164,11 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
     "devoluciones",
     "privacidad",
     "terminos",
+    "contacto",
+    "nosotros",
+    "buscar",
+    "carrito",
+    "compra",
   ]);
 
   if (!project.baseUrl.startsWith("https://")) {
@@ -965,6 +1228,29 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
         });
       }
     });
+  });
+
+  project.videos.forEach((video, videoIndex) => {
+    if (!video.posterAssetId) {
+      issues.push({
+        code: "video.poster",
+        severity: "critical",
+        message: `${video.name} necesita un poster para mantener un primer paint estable.`,
+        path: `videos.${videoIndex}.posterAssetId`,
+        area: "content",
+        fixTarget: "assets",
+      });
+    }
+    if (video.durationSeconds > 15) {
+      issues.push({
+        code: "video.duration",
+        severity: "warning",
+        message: `${video.name} supera la duración recomendada de 15 segundos.`,
+        path: `videos.${videoIndex}.durationSeconds`,
+        area: "content",
+        fixTarget: "assets",
+      });
+    }
   });
 
   project.categories.forEach((category) => {
@@ -1162,14 +1448,25 @@ function buildFiles(project: StoreProjectV1, mode: ExportMode): Map<string, stri
     `${themeCss(publicProject)}\n${exportedModuleStyles(publicProject)}\n${STOREFRONT_RUNTIME_CSS}`,
   );
   files.set("assets/storefront.js", STOREFRONT_RUNTIME_JS);
+  if (publicProject.commerceTemplates.search.enabled)
+    files.set("search-index.json", buildSearchIndex(publicProject));
+  if (
+    publicProject.commerceTemplates.cart.enabled ||
+    publicProject.commerceTemplates.checkout.enabled
+  )
+    files.set("catalog-index.json", buildCatalogIndex(publicProject));
   files.set(
     "robots.txt",
     mode === "draft"
       ? "User-agent: *\nDisallow: /\n"
       : `User-agent: *\nAllow: /\nSitemap: ${absoluteUrl(publicProject, "/sitemap.xml")}\n`,
   );
-  files.set("sitemap.xml", buildSitemap(publicProject, pages));
-  files.set("image-sitemap.xml", buildImageSitemap(publicProject));
+  if (mode === "production") {
+    files.set("sitemap.xml", buildSitemap(publicProject, pages));
+    files.set("image-sitemap.xml", buildImageSitemap(publicProject));
+    if (publicProject.videos.length > 0)
+      files.set("video-sitemap.xml", buildVideoSitemap(publicProject));
+  }
   if (mode === "production") {
     files.set("google-merchant.xml", buildMerchantFeed(publicProject, snapshot));
     files.set(
@@ -1202,6 +1499,10 @@ function buildFiles(project: StoreProjectV1, mode: ExportMode): Map<string, stri
         );
       }
     });
+  });
+  project.videos.forEach((video) => {
+    const bytes = dataUrlBytes(video.source);
+    if (bytes) files.set(`assets/${video.hash}.${assetExtension(video)}`, bytes);
   });
   return files;
 }
@@ -1238,9 +1539,11 @@ export function exportProject(projectInput: StoreProjectV1, options: ExportOptio
 export function renderPreviewHtml(
   projectInput: StoreProjectV1,
   mode: ExportMode = "draft",
+  path = "/",
 ): string {
   const project = parseProject(projectInput, "renderizar la vista previa");
-  const page = buildPages(project)[0];
+  const pages = buildPages(project);
+  const page = pages.find((candidate) => candidate.canonicalPath === path) ?? pages[0];
   if (!page) throw new Error("No se pudo renderizar la página inicial.");
   return renderDocument(project, page, mode)
     .replace('href="/assets/storefront.css"', 'href="data:text/css;base64,PREVIEW_STYLE"')
@@ -1271,18 +1574,44 @@ function toBase64(value: string): string {
 export function createProjectArchive(projectInput: StoreProjectV1): Uint8Array {
   const project = parseProject(projectInput, "crear el archivo del proyecto");
   const files = new Map<string, string | Uint8Array>([
+    [
+      "manifest.json",
+      JSON.stringify({
+        format: "solara-project",
+        version: 2,
+        projectId: project.id,
+        exportedAt: new Date().toISOString(),
+      }),
+    ],
     ["project.json", JSON.stringify(project, null, 2)],
   ]);
   project.assets.forEach((asset) => {
     const bytes = dataUrlBytes(asset.source);
     if (bytes) files.set(`assets/${asset.hash}.${assetExtension(asset)}`, bytes);
   });
+  project.videos.forEach((video) => {
+    const bytes = dataUrlBytes(video.source);
+    if (bytes) files.set(`assets/${video.hash}.${assetExtension(video)}`, bytes);
+  });
   return zipFiles(files);
 }
 
 export function readProjectArchive(archive: Uint8Array): StoreProjectV1 {
   const files = unzipSync(archive);
+  const manifestBytes = files["manifest.json"];
   const projectBytes = files["project.json"];
-  if (!projectBytes) throw new Error("El archivo no contiene project.json.");
+  if (!manifestBytes || !projectBytes)
+    throw new Error("El archivo no contiene manifest.json y project.json.");
+  let manifest: { format?: string; version?: number };
+  try {
+    manifest = JSON.parse(decoder.decode(manifestBytes)) as { format?: string; version?: number };
+  } catch {
+    throw new Error("El manifest del respaldo está corrupto.");
+  }
+  if (manifest.format !== "solara-project" || manifest.version !== 2) {
+    throw new Error(
+      "Este respaldo pertenece a una versión anterior. Conservá el ZIP original y creá una nueva tienda con el sistema actual.",
+    );
+  }
   return StoreProjectV1Schema.parse(JSON.parse(decoder.decode(projectBytes)));
 }

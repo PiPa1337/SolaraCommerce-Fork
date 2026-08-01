@@ -7,7 +7,7 @@ y pruebas, pero la aplicación se construye y distribuye como una unidad.
 
 ## ADR-002: schema como fuente única
 
-`StoreProjectV1Schema` define tipos, validación, persistencia, importación y
+`StoreProjectV2Schema` define tipos, validación, persistencia, importación y
 exportación. Todo cambio incompatible requiere una migración probada.
 
 ## ADR-003: HTML estático Light DOM
