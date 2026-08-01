@@ -11,7 +11,7 @@ import {
   Plus,
   UploadSimple,
 } from "@phosphor-icons/react";
-import { type DomainCommand, reduceProject } from "@solara/core";
+import type { DomainCommand } from "@solara/core";
 import type { Product, StoreProjectV1 } from "@solara/project-schema";
 import {
   type ColumnDef,
@@ -316,11 +316,6 @@ export function Catalog({ project, onCommand }: CatalogProps) {
     setPendingImport(undefined);
     try {
       const products = await importCsvInWorker(await file.text());
-      reduceProject(project, {
-        type: "products.replaceAll",
-        products,
-        at: now(),
-      });
       setPendingImport(summarizeImport(file.name, project.products, products));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo importar el CSV.");
