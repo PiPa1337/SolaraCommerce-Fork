@@ -145,6 +145,13 @@ function storefrontBoot(): void {
     document.querySelectorAll<HTMLElement>("[data-cart-count]").forEach((element) => {
       element.textContent = String(count);
     });
+    document.querySelectorAll<HTMLElement>("[data-solara-cart-open]").forEach((element) => {
+      const label = element.dataset.cartLabel ?? "Carrito";
+      element.setAttribute(
+        "aria-label",
+        count === 0 ? `${label} vacío` : `${label}, ${count} productos`,
+      );
+    });
 
     document.querySelectorAll<HTMLElement>("[data-cart-lines]").forEach((container) => {
       if (cart.length === 0) {
@@ -419,7 +426,7 @@ function storefrontBoot(): void {
         const preview = form.querySelector<HTMLElement>("[data-order-preview]");
         if (preview) {
           preview.textContent =
-            "RetirÃ¡ los productos agotados del carrito antes de enviar el pedido.";
+            "Retirá los productos agotados del carrito antes de enviar el pedido.";
           preview.setAttribute("role", "alert");
         }
         return;
@@ -527,6 +534,21 @@ function storefrontBoot(): void {
       });
   }
 
+  const viewportTasks = new Set<() => void>();
+  let viewportFrame = 0;
+  const runViewportTasks = (): void => {
+    viewportFrame = 0;
+    viewportTasks.forEach((task) => {
+      task();
+    });
+  };
+  const scheduleViewportTasks = (): void => {
+    if (viewportFrame !== 0) return;
+    viewportFrame = window.requestAnimationFrame(runViewportTasks);
+  };
+  window.addEventListener("scroll", scheduleViewportTasks, { passive: true });
+  window.addEventListener("resize", scheduleViewportTasks, { passive: true });
+
   const headers = Array.from(
     document.querySelectorAll<HTMLElement>('[data-solara-module="editorial-header"]'),
   );
@@ -538,7 +560,7 @@ function storefrontBoot(): void {
       });
     };
     updateHeaderState();
-    window.addEventListener("scroll", updateHeaderState, { passive: true });
+    viewportTasks.add(updateHeaderState);
   }
 
   document
@@ -921,9 +943,7 @@ function storefrontBoot(): void {
     ["parallax", "scroll-progress"].includes(element.dataset.motionPreset ?? ""),
   );
   if (!reduceMotion && progressRoots.length > 0) {
-    let progressFrame = 0;
     const updateProgress = (): void => {
-      progressFrame = 0;
       const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
       progressRoots.forEach((element) => {
         const rect = element.getBoundingClientRect();
@@ -942,13 +962,8 @@ function storefrontBoot(): void {
         }
       });
     };
-    const scheduleProgress = (): void => {
-      if (progressFrame !== 0) return;
-      progressFrame = window.requestAnimationFrame(updateProgress);
-    };
-    window.addEventListener("scroll", scheduleProgress, { passive: true });
-    window.addEventListener("resize", scheduleProgress, { passive: true });
-    scheduleProgress();
+    viewportTasks.add(updateProgress);
+    updateProgress();
   }
 
   renderCart();
@@ -1131,8 +1146,18 @@ html[data-motion-ready="true"] [data-motion-root][data-motion-preset="scale"]:no
 }
 
 [data-motion-root][data-motion-preset="layer-stack"] {
+  position: relative;
+}
+
+[data-motion-root][data-motion-preset="layer-stack"] [data-motion-zone] {
   position: sticky;
   top: var(--layer-top, 5rem);
+  z-index: 1;
+}
+
+[data-motion-root][data-motion-preset="layer-stack"] [data-motion-zone] > * {
+  position: relative;
+  z-index: 1;
 }
 
 @keyframes solara-parallax {

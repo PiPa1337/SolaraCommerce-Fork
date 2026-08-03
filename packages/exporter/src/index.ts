@@ -334,9 +334,10 @@ function projectWithPublicAssetUrls(project: StoreProjectV1): StoreProjectV1 {
 
 function themeCss(project: StoreProjectV1): string {
   const { colors, typography, spacingScale, radius, container } = project.theme;
+  const rootColorScheme = project.theme.colorMode === "dark" ? "dark" : "light";
   return `
 :root {
-  color-scheme: light dark;
+  color-scheme: ${rootColorScheme};
   --solara-background: ${colors.background};
   --solara-surface: ${colors.surface};
   --solara-text: ${colors.text};
@@ -359,6 +360,10 @@ function themeCss(project: StoreProjectV1): string {
 * { box-sizing: border-box; }
 html { background: var(--solara-background); color: var(--solara-text); }
 body { margin: 0; min-width: 320px; font-family: var(--solara-body); line-height: 1.5; }
+.solara-page[data-color-mode="dark"] { color-scheme: dark; }
+@media (prefers-color-scheme: dark) {
+  .solara-page[data-color-mode="auto"] { color-scheme: dark; }
+}
 img { display: block; max-width: 100%; height: auto; }
 a { color: inherit; }
 button, input, select, textarea { font: inherit; }
@@ -1502,7 +1507,7 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
       issues.push({
         code: "video.size",
         severity: "critical",
-        message: `${video.name} supera el lÃ­mite inicial de 30 MB.`,
+        message: `${video.name} supera el límite inicial de 30 MB.`,
         path: `videos.${videoIndex}.source`,
         area: "content",
         fixTarget: "assets",

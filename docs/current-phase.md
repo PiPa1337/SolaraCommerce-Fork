@@ -27,6 +27,19 @@ editorial. Studio, preview y ZIP siguen usando el mismo renderer.
 - Videos MP4/WebM en Recursos, deduplicados por hash y embebidos en el ZIP.
 - Preview con selector de ruta además de los marcos desktop, tablet y móvil.
 - Estados empty/error/loading, foco visible, skip link y CSS responsive editorial.
+- La home conserva el hero y coloca una grilla compacta de 12 productos debajo;
+  el fixture de escala mantiene 50 productos y categorías paginadas para probar
+  la densidad real del catálogo.
+- Se corrigieron los renderizadores de `split-hero` y `editorial-hero`, incluyendo la
+  posición de imagen y el aislamiento de sus clases.
+- Studio usa un árbol de categorías contraíble, una toolbar de catálogo que no
+  colapsa el buscador y un selector de preview compacto.
+- El runtime comparte un scheduler de viewport para header y progreso de scroll;
+  la grilla, búsqueda y paginación tienen estilos aislados.
+- Los beneficios de confianza sin datos se omiten y se corrigieron textos fuente
+  con codificación UTF-8 dañada.
+- El inspector del hero ofrece edición visual de slides, incluyendo orden,
+  duplicado, eliminación, media, copy y CTA.
 
 ## Escenario de escala jerárquico
 
@@ -75,9 +88,10 @@ separado del fixture visual pequeño y del benchmark de 1.000 productos.
 
 ## Próximo trabajo
 
-Auditar manualmente las composiciones del nuevo storefront, añadir escenarios
-Playwright específicos de navbar, hero audiovisual y páginas públicas, y luego
-pasar el gate release con Lighthouse, axe y Firefox/WebKit.
+Auditar manualmente las composiciones del nuevo storefront con foco en la grilla
+de productos posterior al hero, añadir escenarios Playwright específicos de
+densidad responsive y luego pasar el gate release con Lighthouse, axe y
+Firefox/WebKit.
 
 ## Cierre de la integracion v2
 

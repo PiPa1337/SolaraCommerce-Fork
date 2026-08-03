@@ -498,7 +498,7 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
     if (!categoryIds.has(category.parentId)) {
       context.addIssue({
         code: "custom",
-        message: `El padre de la categorÃ­a ${category.id} no existe: ${category.parentId}.`,
+        message: `El padre de la categoría ${category.id} no existe: ${category.parentId}.`,
         path: ["categories", categoryIndex, "parentId"],
       });
       return;
@@ -511,7 +511,7 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
       if (visited.has(currentId)) {
         context.addIssue({
           code: "custom",
-          message: `La jerarquÃ­a de categorÃ­as contiene un ciclo en ${category.id}.`,
+          message: `La jerarquía de categorías contiene un ciclo en ${category.id}.`,
           path: ["categories", categoryIndex, "parentId"],
         });
         break;
@@ -523,7 +523,7 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
       if (depth > 1) {
         context.addIssue({
           code: "custom",
-          message: "Las categorÃ­as sÃ³lo pueden tener un nivel de subcategorÃ­as.",
+          message: "Las categorías sólo pueden tener un nivel de subcategorías.",
           path: ["categories", categoryIndex, "parentId"],
         });
         break;
@@ -622,7 +622,7 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
         addMissingReferenceIssue(
           assetIds.has(value),
           [...path, "settings", key],
-          `Recurso de la secciÃ³n ${section.id}`,
+          `Recurso de la sección ${section.id}`,
           value,
           context,
         );
@@ -633,7 +633,7 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
       addMissingReferenceIssue(
         project.videos.some((video) => video.id === videoId),
         [...path, "settings", "videoAssetId"],
-        `Video de la secciÃ³n ${section.id}`,
+        `Video de la sección ${section.id}`,
         videoId,
         context,
       );
@@ -647,7 +647,7 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
         addMissingReferenceIssue(
           assetIds.has(imageId),
           [...path, "settings", "slides", slideIndex, "imageId"],
-          `Imagen del slide de la secciÃ³n ${section.id}`,
+          `Imagen del slide de la sección ${section.id}`,
           imageId,
           context,
         );
@@ -734,7 +734,7 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
     item.id,
     ...(item.children ?? []).map((child) => child.id),
   ]);
-  addDuplicateIssues(allNavigationIds, ["navigation", "items"], "ID de navegaciÃ³n", context);
+  addDuplicateIssues(allNavigationIds, ["navigation", "items"], "ID de navegación", context);
   const validateNavigationTargets = (
     items: readonly z.infer<typeof NavigationItemSchema>[],
     path: Array<string | number>,
@@ -743,7 +743,7 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
       if (item.href?.startsWith("/") && !validInternalDestination(item.href)) {
         context.addIssue({
           code: "custom",
-          message: "El destino interno de navegaciÃ³n no existe en el proyecto.",
+          message: "El destino interno de navegación no existe en el proyecto.",
           path: [...path, index, "href"],
         });
       }

@@ -71,6 +71,26 @@ test("edita el contenido, actualiza el preview y persiste tras recargar", async 
   ).toBeVisible();
 });
 
+test("edita slides del hero con controles visuales", async ({ page }) => {
+  await openBuilder(page);
+  const hero = page.getByRole("listitem").filter({ hasText: "Hero audiovisual" });
+  await hero.getByRole("button").first().click();
+
+  await page.getByRole("button", { name: "Agregar slide" }).click();
+  await page.getByRole("button", { name: "Agregar slide" }).click();
+  await expect(page.locator(".slide-card")).toHaveCount(2);
+  await page.getByRole("textbox", { name: "Título del slide 1", exact: true }).fill("Primero");
+  await page.getByRole("textbox", { name: "Título del slide 2", exact: true }).fill("Segundo");
+  await page.getByRole("button", { name: "Mover slide abajo" }).first().click();
+  await expect(page.getByRole("textbox", { name: "Título del slide 1", exact: true })).toHaveValue(
+    "Segundo",
+  );
+  await page.getByRole("button", { name: "Duplicar slide" }).first().click();
+  await expect(page.locator(".slide-card")).toHaveCount(3);
+  await page.getByRole("button", { name: "Eliminar slide" }).first().click();
+  await expect(page.locator(".slide-card")).toHaveCount(2);
+});
+
 test("agrega, ordena, duplica, oculta, reemplaza, deshace y elimina secciones", async ({
   page,
 }) => {

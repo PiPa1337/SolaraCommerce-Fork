@@ -136,7 +136,7 @@ describe("StoreProjectV2Schema", () => {
       const hero = project.sections.find((section) => section.slot === "hero");
       if (hero) hero.settings = { ...hero.settings, posterAssetId: "missing-poster" };
     });
-    expect(() => StoreProjectV2Schema.parse(invalidHero)).toThrow("Recurso de la secciÃ³n");
+    expect(() => StoreProjectV2Schema.parse(invalidHero)).toThrow("Recurso de la sección");
 
     const invalidPage = invalidProject((project) => {
       const page = project.pages.find((candidate) => candidate.kind === "about");
@@ -145,6 +145,6 @@ describe("StoreProjectV2Schema", () => {
         page.sections = [{ ...structuredClone(source), settings: { imageId: "missing-image" } }];
       }
     });
-    expect(() => StoreProjectV2Schema.parse(invalidPage)).toThrow("Recurso de la secciÃ³n");
+    expect(() => StoreProjectV2Schema.parse(invalidPage)).toThrow("Recurso de la sección");
   });
 });

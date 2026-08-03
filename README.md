@@ -78,6 +78,11 @@ ni recursos externos.
 El hero audiovisual admite imagen, carrusel y video local; los tratamientos
 editorial y compacto de grilla ofrecen ritmos realmente distintos sobre el mismo contenido.
 
+La home conserva el hero, pero prioriza el catálogo inmediatamente después: la
+fixture de escala muestra 12 productos en una grilla compacta de cuatro, tres o
+dos columnas según el viewport. Las categorías mantienen páginas de 24 productos
+para explorar catálogos extensos sin convertir la home en una lista interminable.
+
 El storefront v2 usa una navbar curada con Inicio, Colecciones, Contacto,
 Nosotros, búsqueda y carrito. El hero puede trabajar con imagen, carrusel o
 video local autocontenido. El exporter genera también `/contacto/`, `/nosotros/`,
@@ -114,7 +119,7 @@ El benchmark exporta el fixture determinista de 1.000 productos y falla si super
 30 segundos. Playwright usa Chromium para el bucle local; la matriz completa y
 Lighthouse se reservan para el gate de release. El gate release requiere Node
 22 (igual que CI) y ejecuta Chromium, Firefox y WebKit; en equipos con otra
-versiÃ³n de Node, ejecutalo dentro del entorno de CI.
+versión de Node, ejecutalo dentro del entorno de CI.
 
 Los tests de Studio usan una IndexedDB en memoria para comprobar guardado,
 reapertura, duplicación, archivo, restauración y ráfagas de autosave sin depender

@@ -59,6 +59,11 @@ describe("exporter con catálogo jerárquico de escala", () => {
     const home = String(exported.files.get("index.html"));
 
     expect(search).toHaveLength(50);
+    expect(home.match(/data-product-card/g) ?? []).toHaveLength(12);
+    expect(home).not.toMatch(/[\u00c3\u00c2\ufffd]/);
+    expect(home.indexOf('data-solara-module="compact-product-grid"')).toBeLessThan(
+      home.indexOf('data-solara-module="collection-grid"'),
+    );
     expect(search.find((entry) => entry.title === "Pieza de escala 01")?.categoryNames).toContain(
       "Casa",
     );

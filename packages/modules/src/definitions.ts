@@ -5,6 +5,7 @@ import {
   formatMoney,
   type ModuleDefinition,
   moduleRoot,
+  type RenderContext,
   renderImage,
   renderVideo,
   safeAssetUrl,
@@ -139,7 +140,7 @@ export const editorialHeader: ModuleDefinition<z.infer<typeof headerSettings>> =
       ? `<details class="${catalogClass}"><summary${catalogCurrent}>${escapeHtml(navigation.catalogLabel || context.settings.catalogLabel)}</summary><ul>${nestedItems || `<li><a href="${escapeAttribute(safeUrl(context.settings.catalogHref))}">${escapeHtml(context.settings.catalogLabel)}</a></li>`}</ul></details>`
       : `<a href="${escapeAttribute(safeUrl(context.settings.catalogHref))}"${catalogCurrent}>${escapeHtml(navigation.catalogLabel || context.settings.catalogLabel)}</a>`;
     const nav = `${navigation.showHome ? `<a href="/"${homeCurrent}>Inicio</a>` : ""}${catalog}${navigation.showContact ? `<a href="/contacto/"${contactCurrent}>Contacto</a>` : ""}${navigation.showAbout ? `<a href="/nosotros/"${aboutCurrent}>Nosotros</a>` : ""}`;
-    const actions = `${navigation.showSearch && context.project.commerceTemplates.search.enabled ? `<a class="solara-search-trigger" href="/buscar/" aria-label="Buscar productos"${searchCurrent}>Buscar</a>` : ""}${navigation.showCart && context.project.siteShell.cart && (context.project.commerceTemplates.cart.enabled || context.project.commerceTemplates.checkout.enabled) ? `<button class="solara-cart-trigger" type="button" data-solara-cart-open data-open-cart aria-controls="solara-cart"${cartCurrent}>${escapeHtml(context.settings.cartLabel)} <span data-solara-cart-count data-cart-count aria-live="polite">0</span></button>` : ""}`;
+    const actions = `${navigation.showSearch && context.project.commerceTemplates.search.enabled ? `<a class="solara-search-trigger" href="/buscar/" aria-label="Buscar productos"${searchCurrent}>Buscar</a>` : ""}${navigation.showCart && context.project.siteShell.cart && (context.project.commerceTemplates.cart.enabled || context.project.commerceTemplates.checkout.enabled) ? `<button class="solara-cart-trigger" type="button" data-solara-cart-open data-open-cart data-cart-label="${escapeAttribute(context.settings.cartLabel)}" aria-controls="solara-cart"${cartCurrent}>${escapeHtml(context.settings.cartLabel)} <span data-solara-cart-count data-cart-count aria-live="polite">0</span></button>` : ""}`;
     return moduleRoot(
       "editorial-header",
       context.section,
@@ -192,6 +193,37 @@ const heroMediaSettings = z.object({
   overlay: z.enum(["light", "dark", "none"]).default("dark"),
   alignment: z.enum(["left", "center"]).default("left"),
 });
+
+type HeroSettings = z.infer<typeof heroSettings>;
+
+function heroFallbackImageId(context: RenderContext<HeroSettings>): string | undefined {
+  return (
+    context.settings.imageId ||
+    context.project.seo.socialImageId ||
+    context.project.collections[0]?.imageId ||
+    context.project.products[0]?.imageIds[0]
+  );
+}
+
+function renderHeroCopy(settings: HeroSettings, className = "solara-hero-copy"): string {
+  return `<div class="${className}" data-motion-zone="content">
+    ${settings.eyebrow ? `<p class="solara-eyebrow">${escapeHtml(settings.eyebrow)}</p>` : ""}
+    <h1>${escapeHtml(settings.title)}</h1>
+    <p class="solara-hero-body">${escapeHtml(settings.body)}</p>
+    <a class="solara-primary-action" href="${escapeAttribute(safeUrl(settings.actionHref))}">${escapeHtml(settings.actionLabel)}</a>
+  </div>`;
+}
+
+function renderEditorialHeroMedia(context: RenderContext<HeroSettings>): string {
+  const image = renderImage(context.project, heroFallbackImageId(context), {
+    className: "solara-hero-image",
+    loading: "eager",
+    fetchPriority: "high",
+    sizes: "(max-width: 767px) 100vw, 64vw",
+    fallbackAlt: context.settings.title,
+  });
+  return `<figure class="solara-hero-media" data-motion-zone="media">${image}</figure>`;
+}
 
 export const heroMedia: ModuleDefinition<z.infer<typeof heroMediaSettings>> = {
   manifest: {
@@ -407,15 +439,16 @@ export const splitHero: ModuleDefinition<z.infer<typeof heroSettings>> = {
   ],
   styleAsset: scopedAssetId("split-hero"),
   render(context) {
-    const heroSettings = heroMedia.settingsSchema.parse({
-      ...context.settings,
-      posterAssetId: context.settings.imageId,
-      alignment: context.settings.imagePosition === "left" ? "left" : "left",
-    });
+    const media = renderEditorialHeroMedia(context);
+    const copy = renderHeroCopy(context.settings);
+    const content =
+      context.settings.imagePosition === "left" ? `${media}${copy}` : `${copy}${media}`;
     return moduleRoot(
       "split-hero",
       context.section,
-      safeHtml(String(heroMedia.render({ ...context, settings: heroSettings }))),
+      safeHtml(
+        `<div class="solara-split-hero solara-split-hero--${context.settings.imagePosition}">${content}</div>`,
+      ),
     );
   },
 };
@@ -466,30 +499,16 @@ export const editorialHero: ModuleDefinition<z.infer<typeof heroSettings>> = {
   ],
   styleAsset: scopedAssetId("editorial-hero"),
   render(context) {
-    const imageId =
-      context.settings.imageId ||
-      context.project.seo.socialImageId ||
-      context.project.collections[0]?.imageId ||
-      context.project.products[0]?.imageIds[0];
-    const image = renderImage(context.project, imageId, {
-      className: "solara-hero-image",
-      loading: "eager",
-      fetchPriority: "high",
-      sizes: "(max-width: 767px) 100vw, 64vw",
-      fallbackAlt: context.settings.title,
-    });
+    const media = renderEditorialHeroMedia(context);
+    const copy = renderHeroCopy(context.settings, "solara-editorial-head");
+    const content =
+      context.settings.imagePosition === "left" ? `${media}${copy}` : `${copy}${media}`;
     return moduleRoot(
       "editorial-hero",
       context.section,
-      safeHtml(`<div class="solara-editorial-hero">
-        <div class="solara-editorial-head" data-motion-zone="content">
-          ${context.settings.eyebrow ? `<p class="solara-eyebrow">${escapeHtml(context.settings.eyebrow)}</p>` : ""}
-          <h1>${escapeHtml(context.settings.title)}</h1>
-          <p>${escapeHtml(context.settings.body)}</p>
-          <a class="solara-primary-action" href="${escapeAttribute(safeUrl(context.settings.actionHref))}">${escapeHtml(context.settings.actionLabel)}</a>
-        </div>
-        <figure data-motion-zone="media">${image}</figure>
-      </div>`),
+      safeHtml(
+        `<div class="solara-editorial-hero solara-editorial-hero--${context.settings.imagePosition}">${content}</div>`,
+      ),
     );
   },
 };
@@ -725,7 +744,7 @@ export const productDetail: ModuleDefinition<z.infer<typeof productDetailSetting
             <div><dt>Disponibilidad</dt><dd data-product-availability>${firstVariant?.available ? "Disponible" : "Agotado"}</dd></div>
           </dl>
           <div class="solara-product-policies">
-            <details><summary>EnvÃ­os</summary><p>${escapeHtml(context.project.policies.shipping.details)}</p></details>
+            <details><summary>Envíos</summary><p>${escapeHtml(context.project.policies.shipping.details)}</p></details>
             <details><summary>Cambios y devoluciones</summary><p>${escapeHtml(context.project.policies.returns.details)}</p></details>
           </div>
         </div>
@@ -835,15 +854,39 @@ export const trustStrip: ModuleDefinition<z.infer<typeof trustSettings>> = {
   motionZones: staggerZone,
   styleAsset: scopedAssetId("trust-strip"),
   render(context) {
+    const contactDetails = [context.project.identity.email, context.project.identity.phone]
+      .filter(Boolean)
+      .join(" · ");
+    const benefits = [
+      {
+        title: context.settings.deliveryTitle,
+        body: context.project.policies.shipping.summary,
+      },
+      {
+        title: context.settings.returnsTitle,
+        body: context.project.policies.returns.summary,
+      },
+      {
+        title: context.settings.contactTitle,
+        body: contactDetails,
+      },
+    ].filter((benefit) => benefit.title.trim() && benefit.body.trim());
+    if (benefits.length === 0) {
+      return moduleRoot("trust-strip", context.section, safeHtml(""));
+    }
+    const benefitMarkup = benefits
+      .map(
+        (benefit) =>
+          `<article><h3>${escapeHtml(benefit.title)}</h3><p>${escapeHtml(benefit.body)}</p></article>`,
+      )
+      .join("");
     return moduleRoot(
       "trust-strip",
       context.section,
       safeHtml(`<div class="solara-trust">
         <h2>${escapeHtml(context.settings.title)}</h2>
         <div class="solara-trust-grid" data-motion-zone="items">
-          <article><h3>${escapeHtml(context.settings.deliveryTitle)}</h3><p>${escapeHtml(context.project.policies.shipping.summary)}</p></article>
-          <article><h3>${escapeHtml(context.settings.returnsTitle)}</h3><p>${escapeHtml(context.project.policies.returns.summary)}</p></article>
-          <article><h3>${escapeHtml(context.settings.contactTitle)}</h3><p>Confirmamos disponibilidad y detalles antes del pago.</p></article>
+          ${benefitMarkup}
         </div>
       </div>`),
     );

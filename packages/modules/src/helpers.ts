@@ -40,7 +40,8 @@ export function productImage(project: StoreProjectV1, product: Product, eager = 
   return renderImage(project, assetId, {
     className: "solara-product-image",
     loading: eager ? "eager" : "lazy",
-    sizes: "(max-width: 720px) 92vw, (max-width: 1100px) 45vw, 30vw",
+    fetchPriority: eager ? "high" : "auto",
+    sizes: "(max-width: 640px) 44vw, (max-width: 1024px) 30vw, (max-width: 1280px) 23vw, 280px",
     fallbackAlt: product.title,
   });
 }
@@ -49,11 +50,12 @@ export function productCard(
   project: StoreProjectV1,
   product: Product,
   variant: "editorial" | "compact",
+  eager = false,
 ): SafeHtml {
   const price = lowestPrice(product);
   const hasRange = product.variants.some((item) => item.price !== price);
   const available = product.variants.some((item) => item.available);
-  const image = productImage(project, product);
+  const image = productImage(project, product, eager);
   const href = `/productos/${escapeAttribute(product.slug)}/`;
 
   const variantValues = product.variants.flatMap((item) => Object.values(item.optionValues));
@@ -78,7 +80,9 @@ export function renderProductCards(
   products: readonly Product[],
   variant: "editorial" | "compact",
 ): SafeHtml {
-  return joinHtml(products.map((product) => productCard(project, product, variant)));
+  return joinHtml(
+    products.map((product, index) => productCard(project, product, variant, index < 4)),
+  );
 }
 
 export function renderBrand(project: StoreProjectV1): SafeHtml {

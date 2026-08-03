@@ -190,10 +190,10 @@ export function Overview({
 
         <fieldset>
           <legend>
-            <List aria-hidden size={19} /> NavegaciÃ³n pÃºblica
+            <List aria-hidden size={19} /> Navegación pública
           </legend>
           <div className="form-grid">
-            <Field label="Nombre del catÃ¡logo">
+            <Field label="Nombre del catálogo">
               <input
                 value={project.navigation.catalogLabel}
                 onChange={(event) => updateNavigation({ catalogLabel: event.target.value })}
@@ -205,7 +205,7 @@ export function Overview({
                   ["showHome", "Mostrar Inicio"],
                   ["showContact", "Mostrar Contacto"],
                   ["showAbout", "Mostrar Nosotros"],
-                  ["showSearch", "Mostrar bÃºsqueda"],
+                  ["showSearch", "Mostrar búsqueda"],
                   ["showCart", "Mostrar carrito"],
                 ] as const
               ).map(([key, label]) => (
@@ -385,7 +385,7 @@ export function Overview({
                       ...project.navigation.items,
                       {
                         id: `nav-${crypto.randomUUID()}`,
-                        label: "Nueva categorÃ­a",
+                        label: "Nueva categoría",
                         href: project.categories[0]
                           ? `/categorias/${project.categories[0].slug}/`
                           : "/",
@@ -394,21 +394,21 @@ export function Overview({
                   })
                 }
               >
-                AÃ±adir enlace de catÃ¡logo
+                Añadir enlace de catálogo
               </button>
             </div>
           </div>
         </fieldset>
 
         <fieldset>
-          <legend>PÃ¡ginas editoriales</legend>
+          <legend>Páginas editoriales</legend>
           <div className="form-grid">
             {project.pages.map((page) => (
               <div className="page-editor" key={page.id}>
                 <strong>
                   {page.kind === "home" ? "Home" : page.kind === "about" ? "Nosotros" : "Contacto"}
                 </strong>
-                <Field label="TÃ­tulo visible">
+                <Field label="Título visible">
                   <input
                     value={page.title}
                     onChange={(event) => updatePage(page.id, { title: event.target.value })}

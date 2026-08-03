@@ -90,7 +90,7 @@ export type DomainCommand =
     })
   | CategoryCommand;
 
-// La reubicaciÃ³n conserva las asignaciones de productos y recalcula Ã­ndices heredados.
+// La reubicación conserva las asignaciones de productos y recalcula índices heredados.
 export type CategoryCommand = CommandMetadata & {
   type: "category.reparent";
   categoryId: CategoryId;
@@ -221,7 +221,7 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
   switch (command.type) {
     case "category.reparent": {
       const category = project.categories.find((candidate) => candidate.id === command.categoryId);
-      if (!category) throw new Error(`La categorÃ­a no existe: ${command.categoryId}.`);
+      if (!category) throw new Error(`La categoría no existe: ${command.categoryId}.`);
       if (category.parentId === command.parentId) return project;
       const categories = project.categories.map((candidate) =>
         candidate.id === category.id ? { ...candidate, parentId: command.parentId } : candidate,

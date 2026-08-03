@@ -1,5 +1,6 @@
 import type { StoreSection } from "@solara/project-schema";
 import { referenceStore } from "@solara/project-schema/fixture";
+import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 import { describe, expect, it } from "vitest";
 import {
   createModuleSection,
@@ -150,5 +151,57 @@ describe("official module system", () => {
     expect(html).not.toContain("<Casa segura>");
     expect(html).toContain('data-solara-module="hero-media"');
     expect(html).toContain(referenceStore.products[0]?.title);
+  });
+
+  it("mantiene el hero dividido y editorial con media y clases propias", () => {
+    const source = referenceStore.sections.find((section) => section.moduleId === "hero-media");
+    if (!source) throw new Error("Fixture sin hero");
+    const split = replaceModuleInSection(
+      { ...source, settings: { ...source.settings, imagePosition: "left" } },
+      "split-hero",
+    );
+    const editorial = replaceModuleInSection(
+      { ...source, settings: { ...source.settings, imagePosition: "right" } },
+      "editorial-hero",
+    );
+    const splitHtml = renderSections(referenceStore, [split]);
+    const editorialHtml = renderSections(referenceStore, [editorial]);
+
+    expect(splitHtml).toContain('data-solara-module="split-hero"');
+    expect(splitHtml).toContain("solara-split-hero--left");
+    expect(splitHtml).toContain("solara-hero-copy");
+    expect(splitHtml).toContain("solara-hero-media");
+    expect(editorialHtml).toContain('data-solara-module="editorial-hero"');
+    expect(editorialHtml).toContain("solara-editorial-hero--right");
+    expect(editorialHtml).toContain("solara-editorial-head");
+  });
+
+  it("muestra doce productos en la grilla principal de la home de escala", () => {
+    const html = renderSections(catalogScaleStore, catalogScaleStore.sections, {
+      pageType: "home",
+    });
+    const productCards = html.match(/data-product-card/g) ?? [];
+    expect(productCards).toHaveLength(12);
+    expect(html.indexOf('data-solara-module="compact-product-grid"')).toBeLessThan(
+      html.indexOf('data-solara-module="collection-grid"'),
+    );
+  });
+
+  it("omite beneficios de confianza sin datos configurados", () => {
+    const project = {
+      ...referenceStore,
+      identity: { ...referenceStore.identity, email: "", phone: "" },
+      policies: {
+        ...referenceStore.policies,
+        shipping: { ...referenceStore.policies.shipping, summary: "" },
+        returns: { ...referenceStore.policies.returns, summary: "" },
+      },
+    };
+    const trust = referenceStore.sections.find((section) => section.moduleId === "trust-strip");
+    if (!trust) throw new Error("Fixture sin trust strip");
+    const html = renderSections(project, [trust]);
+
+    expect(html).not.toContain("solara-trust-grid");
+    expect(html).not.toContain("Confirmamos disponibilidad");
   });
 });

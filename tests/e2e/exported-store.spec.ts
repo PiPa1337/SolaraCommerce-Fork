@@ -74,6 +74,10 @@ test("selecciona una variante, agrega al carrito y genera WhatsApp", async ({ pa
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
 
   await expect(page.locator("[data-cart-count]").first()).toHaveText("2");
+  await expect(page.locator("[data-solara-cart-open]").first()).toHaveAttribute(
+    "aria-label",
+    "Carrito, 2 productos",
+  );
   await expect(page.locator("[data-cart-drawer]")).toHaveAttribute("aria-hidden", "false");
   await page.getByLabel("Nombre").fill("Malena Ortiz");
   await page.getByLabel(/Telefono|Tel/).fill("11 5555 0142");

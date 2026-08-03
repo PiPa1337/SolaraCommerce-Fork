@@ -65,9 +65,14 @@ describe("exporter", () => {
 
   it("mantiene contenido y SEO en el HTML inicial", () => {
     const preview = renderPreviewHtml(referenceStore);
+    const css = String(
+      exportProject(referenceStore, { mode: "draft" }).files.get("assets/storefront.css"),
+    );
     expect(preview).toContain("Una casa con materia y calma.");
     expect(preview).toContain('<meta name="description"');
     expect(preview).toContain('<script type="application/ld+json">');
+    expect(css).not.toContain("color-scheme: light dark");
+    expect(css).toContain('.solara-page[data-color-mode="auto"] { color-scheme: dark; }');
   });
 
   it("usa el mismo árbol semántico de módulos en preview y home exportado", () => {

@@ -64,6 +64,49 @@ test.afterAll(async () => {
   });
 });
 
+test("prioriza doce productos después del hero y conserva densidad responsive", async ({
+  page,
+}) => {
+  for (const viewport of [
+    { width: 1440, height: 900, columns: 4 },
+    { width: 1024, height: 768, columns: 3 },
+    { width: 390, height: 844, columns: 2 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto("http://127.0.0.1:4176/");
+    const grid = page.locator(
+      '[data-solara-module="compact-product-grid"] .solara-compact-products',
+    );
+    await expect(grid.locator("[data-product-card]")).toHaveCount(12);
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const element = document.querySelector(
+            '[data-solara-module="compact-product-grid"] .solara-compact-products',
+          );
+          return element ? getComputedStyle(element).gridTemplateColumns.split(" ").length : 0;
+        }),
+      )
+      .toBe(viewport.columns);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+  }
+});
+
+test("la home de escala conserva sus enlaces de producto sin JavaScript", async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto("http://127.0.0.1:4176/");
+  await expect(
+    page.locator('[data-solara-module="compact-product-grid"] [data-product-card]'),
+  ).toHaveCount(12);
+  await expect(
+    page.locator('[data-solara-module="compact-product-grid"] a[href^="/productos/"]'),
+  ).toHaveCount(24);
+  await context.close();
+});
+
 test("navega diez raíces y las subcategorías de Casa y Cocina", async ({ page }) => {
   await page.goto("http://127.0.0.1:4176/");
   await page.locator(".solara-desktop-nav .solara-nav-dropdown > summary").click();

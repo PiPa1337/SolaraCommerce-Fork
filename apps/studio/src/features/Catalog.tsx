@@ -77,7 +77,7 @@ function categoryTree(project: StoreProjectV1): Category[] {
 }
 
 function categoryLabel(category: Category): string {
-  return category.parentId ? `↳ ${category.title}` : category.title;
+  return category.parentId ? `  ${category.title}` : category.title;
 }
 
 function blankProduct(project: StoreProjectV1): Product {
@@ -148,6 +148,7 @@ export function Catalog({ project, onCommand }: CatalogProps) {
   const [priceAdjustment, setPriceAdjustment] = useState("10");
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [categoryFilterId, setCategoryFilterId] = useState("");
+  const [collapsedCategoryIds, setCollapsedCategoryIds] = useState<Set<string>>(new Set());
   const [reparentCategoryId, setReparentCategoryId] = useState("");
   const [reparentParentId, setReparentParentId] = useState("");
   const [collectionIds, setCollectionIds] = useState<string[]>([]);
@@ -348,6 +349,26 @@ export function Catalog({ project, onCommand }: CatalogProps) {
     .map(([id]) => id as Product["id"]);
   const filteredRows = table.getFilteredRowModel().rows;
   const orderedCategories = categoryTree(project);
+  const categoryChildren = useMemo(() => {
+    const children = new Map<string, Category[]>();
+    project.categories.forEach((category) => {
+      if (!category.parentId) return;
+      children.set(category.parentId, [...(children.get(category.parentId) ?? []), category]);
+    });
+    return children;
+  }, [project.categories]);
+  const visibleCategories = useMemo(
+    () =>
+      orderedCategories.filter((category) => {
+        let parentId = category.parentId;
+        while (parentId) {
+          if (collapsedCategoryIds.has(parentId)) return false;
+          parentId = project.categories.find((item) => item.id === parentId)?.parentId;
+        }
+        return true;
+      }),
+    [collapsedCategoryIds, orderedCategories, project.categories],
+  );
   const selectedReparentCategory = project.categories.find(
     (category) => category.id === reparentCategoryId,
   );
@@ -706,14 +727,42 @@ export function Catalog({ project, onCommand }: CatalogProps) {
           </div>
         </header>
         <ul className="category-tree" aria-label="Categorías ordenadas">
-          {orderedCategories.map((category) => {
+          {visibleCategories.map((category) => {
             const directCount = project.products.filter((product) =>
               product.categoryIds.includes(category.id),
             ).length;
             const totalCount = getCategoryProductIds(project, category.id).length;
+            const hasChildren = (categoryChildren.get(category.id)?.length ?? 0) > 0;
+            const expanded = !collapsedCategoryIds.has(category.id);
             return (
               <li key={category.id} data-depth={category.parentId ? "1" : "0"}>
-                <strong>{categoryLabel(category)}</strong>
+                <div className="category-tree-name">
+                  {hasChildren ? (
+                    <button
+                      className="category-tree-toggle"
+                      type="button"
+                      aria-label={`${expanded ? "Contraer" : "Expandir"} ${category.title}`}
+                      aria-expanded={expanded}
+                      onClick={() =>
+                        setCollapsedCategoryIds((current) => {
+                          const next = new Set(current);
+                          if (next.has(category.id)) next.delete(category.id);
+                          else next.add(category.id);
+                          return next;
+                        })
+                      }
+                    >
+                      <CaretRight
+                        aria-hidden
+                        size={14}
+                        style={{ transform: expanded ? "rotate(90deg)" : undefined }}
+                      />
+                    </button>
+                  ) : (
+                    <span className="category-tree-spacer" aria-hidden />
+                  )}
+                  <strong>{category.title}</strong>
+                </div>
                 <span>
                   {directCount} directos · {totalCount} totales
                 </span>
