@@ -11,12 +11,21 @@ if (!existsSync(directoryPath)) {
 }
 
 const files = readdirSync(directoryPath);
-const javascript = files.find((file) => /^index-[^./]+\.js$/.test(file));
+const javascriptCandidates = files.filter((file) => /^index-[^./]+\.js$/.test(file));
 const stylesheet = files.find((file) => /^index-[^./]+\.css$/.test(file));
-if (!javascript || !stylesheet) {
+if (javascriptCandidates.length === 0 || !stylesheet) {
   console.error("No se encontraron los bundles iniciales de Studio.");
   process.exit(1);
 }
+
+// Vite puede separar Preview/SEO en chunks `index-*`; el entry inicial es el
+// mayor de esos chunks y no debe elegirse por el orden del sistema de archivos.
+const javascript = javascriptCandidates.reduce((largest, file) =>
+  readFileSync(new URL(`./${file}`, assetsDirectory)).byteLength >
+  readFileSync(new URL(`./${largest}`, assetsDirectory)).byteLength
+    ? file
+    : largest,
+);
 
 const checks = [
   {

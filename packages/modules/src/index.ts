@@ -13,6 +13,20 @@ import type {
   StoreSection,
 } from "@solara/project-schema";
 import {
+  catalogAnnouncement,
+  catalogBrandStrip,
+  catalogCartDrawer,
+  catalogCategoryBento,
+  catalogFooter,
+  catalogHeader,
+  catalogHero,
+  catalogModernModules,
+  catalogNewsletterCta,
+  catalogProductDetail,
+  catalogProductGrid,
+  catalogTestimonials,
+} from "./catalog-modern";
+import {
   announcementBar,
   cartDrawer,
   collectionGrid,
@@ -48,15 +62,43 @@ export {
   splitHero,
   STORE_BASE_STYLES,
   trustStrip,
+  catalogAnnouncement,
+  catalogBrandStrip,
+  catalogCategoryBento,
+  catalogFooter,
+  catalogHeader,
+  catalogHero,
+  catalogModernModules,
+  catalogNewsletterCta,
+  catalogCartDrawer,
+  catalogProductDetail,
+  catalogProductGrid,
+  catalogTestimonials,
 };
+export type { RepeaterItemField } from "@solara/module-sdk";
 
 // The registry is intentionally heterogeneous because each module owns its settings schema.
 // biome-ignore lint/suspicious/noExplicitAny: a runtime registry cannot retain each generic member separately
 export type RegisteredModule = ModuleDefinition<any>;
 
 export const moduleRegistry: Record<string, RegisteredModule> = Object.fromEntries(
-  officialModules.map((definition) => [definition.manifest.id, definition]),
+  [...officialModules, ...catalogModernModules].map((definition) => [
+    definition.manifest.id,
+    definition,
+  ]),
 );
+
+export function isLegacyModule(definition: RegisteredModule): boolean {
+  return (definition.manifest.family ?? "legacy-editorial-v1") === "legacy-editorial-v1";
+}
+
+export function isCatalogModernModule(definition: RegisteredModule): boolean {
+  return definition.manifest.family === "catalog-modern-v1";
+}
+
+export function isAddableModule(definition: RegisteredModule): boolean {
+  return (definition.manifest.availability ?? "compatibility-only") === "default";
+}
 
 export interface PageRenderContext {
   pageType?: RenderPageType;

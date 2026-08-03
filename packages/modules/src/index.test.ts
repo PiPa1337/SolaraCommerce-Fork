@@ -80,7 +80,12 @@ describe("official module system", () => {
       expect(selectors.length).toBeGreaterThan(0);
       for (const selectorGroup of selectors) {
         for (const selector of selectorGroup.split(",")) {
-          expect(selector.trim().startsWith(`[data-solara-module="${moduleId}"]`)).toBe(true);
+          const trimmed = selector.trim();
+          const scoped =
+            moduleId === "catalog-modern"
+              ? trimmed.startsWith("[data-solara-store].catalog-modern")
+              : trimmed.startsWith(`[data-solara-module="${moduleId}"]`);
+          expect(scoped).toBe(true);
         }
       }
     }

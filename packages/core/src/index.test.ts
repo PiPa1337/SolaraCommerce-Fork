@@ -165,6 +165,31 @@ describe("historial", () => {
     expect(undo(changed).present).toEqual(referenceStore);
     expect(redo(undo(changed)).present.products).toEqual(replacement);
   });
+
+  it("normaliza referencias de otra tienda al importar un catálogo", () => {
+    const foreignProducts = generatePerformanceFixture(2).products.map((product) => ({
+      ...product,
+      categoryIds: ["category-externa"] as typeof product.categoryIds,
+      collectionIds: ["collection-externa"] as typeof product.collectionIds,
+      imageIds: ["asset-externo"] as typeof product.imageIds,
+      variants: product.variants.map((variant) => ({
+        ...variant,
+        imageId: "asset-externo" as NonNullable<typeof variant.imageId>,
+      })),
+    }));
+
+    const changed = executeCommand(createHistory(referenceStore), {
+      type: "products.replaceAll",
+      products: foreignProducts,
+      at: timestamp,
+    });
+
+    expect(changed.present.products).toHaveLength(2);
+    expect(changed.present.products[0]?.categoryIds).toEqual([]);
+    expect(changed.present.products[0]?.collectionIds).toEqual([]);
+    expect(changed.present.products[0]?.imageIds).toEqual([]);
+    expect(changed.present.products[0]?.variants[0]?.imageId).toBeUndefined();
+  });
 });
 
 describe("CSV", () => {

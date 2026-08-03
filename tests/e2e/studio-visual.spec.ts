@@ -94,7 +94,7 @@ async function expectNoHorizontalOverflow(page: Page, context: string) {
 async function openProject(page: Page) {
   await page.goto(studioUrl);
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.getByRole("button", { name: /Casa Luma/ }).click();
+  await page.getByRole("button", { name: /^Modo Sur/ }).click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
 }
 

@@ -1,9 +1,12 @@
-# Rediseño integral del storefront v2
+# Tienda base `catalog-modern-v1` y rediseño del storefront
 
 ## Estado
 
-Implementado el contrato v2 y la primera integración completa del storefront
-editorial. Studio, preview y ZIP siguen usando el mismo renderer.
+Implementado el contrato v2 y una tienda base de catálogo moderno inspirada en
+las referencias SHOP.CO compartidas: navegación compacta, hero editorial,
+grillas densas de productos, categorías explorables, reviews estáticas,
+newsletter y footer operativo. Studio, preview y ZIP siguen usando el mismo
+renderer.
 
 ## Cambios entregados
 
@@ -27,9 +30,9 @@ editorial. Studio, preview y ZIP siguen usando el mismo renderer.
 - Videos MP4/WebM en Recursos, deduplicados por hash y embebidos en el ZIP.
 - Preview con selector de ruta además de los marcos desktop, tablet y móvil.
 - Estados empty/error/loading, foco visible, skip link y CSS responsive editorial.
-- La home conserva el hero y coloca una grilla compacta de 12 productos debajo;
-  el fixture de escala mantiene 50 productos y categorías paginadas para probar
-  la densidad real del catálogo.
+- La home moderna conserva el hero y coloca grillas de 12 y 8 productos debajo;
+  el fixture `catalogModernStore` mantiene 50 productos, 16 categorías y 60
+  variantes para probar la densidad real del catálogo.
 - Se corrigieron los renderizadores de `split-hero` y `editorial-hero`, incluyendo la
   posición de imagen y el aislamiento de sus clases.
 - Studio usa un árbol de categorías contraíble, una toolbar de catálogo que no
@@ -40,6 +43,31 @@ editorial. Studio, preview y ZIP siguen usando el mismo renderer.
   con codificación UTF-8 dañada.
 - El inspector del hero ofrece edición visual de slides, incluyendo orden,
   duplicado, eliminación, media, copy y CTA.
+
+## Familias visuales y tienda de referencia
+
+La familia `catalog-modern-v1` es la base editable para nuevas tiendas. Usa
+tokens monocromáticos, tipografía display pesada disponible localmente, tarjetas
+de producto con imagen cuadrada, precio y disponibilidad, y una densidad cercana
+al catálogo de las referencias. La primera pantalla prioriza la propuesta de
+valor y la entrada al catálogo; la sección de productos no depende de JavaScript.
+
+Incluye módulos nuevos para anuncio, header, hero audiovisual, marcas, grillas,
+detalle de producto, bento de categorías, testimonios, newsletter, carrito y
+footer. Las secciones anteriores permanecen como `legacy-editorial-v1` de
+compatibilidad: no se muestran como opciones nuevas, pero siguen renderizando
+proyectos que las usan.
+
+El renderer de exportación se carga como chunk diferido cuando Studio necesita
+Preview, SEO o Exportar. El bundle inicial conserva el presupuesto de JavaScript;
+el worker de exportación y el renderer público no bloquean el arranque del editor.
+
+`catalogModernStore` es la fixture de referencia que se crea por defecto y que
+debe actualizarse junto con cualquier cambio de estos módulos. `Modo Sur` y su
+demo separada prueban edición de copy, slides, CTA, productos, variantes,
+categorías y exportación sin recursos binarios nuevos.
+En instalaciones que ya tenían otra tienda, el arranque agrega `Modo Sur` de
+forma idempotente sin sobrescribir los proyectos existentes.
 
 ## Escenario de escala jerárquico
 
@@ -58,8 +86,8 @@ sus descendientes y las hijas mantienen su propia página.
   categoría con bloqueo de ciclos y profundidad inválida.
 - El escenario Chromium cubre navbar, subcategorías, paginación, producto 50,
   búsqueda por ancestro y layout móvil.
-- Studio crea de forma idempotente `Demo catálogo jerárquico` al iniciar y lo
-  muestra en el dashboard con 50 productos y 60 variantes.
+- Studio crea de forma idempotente `Demo Modo Sur, catálogo moderno` al iniciar y
+  lo muestra en el dashboard con 50 productos y 60 variantes.
 
 El fixture se exporta desde `@solara/project-schema/scale-fixture` y se mantiene
 separado del fixture visual pequeño y del benchmark de 1.000 productos.
@@ -91,7 +119,8 @@ separado del fixture visual pequeño y del benchmark de 1.000 productos.
 Auditar manualmente las composiciones del nuevo storefront con foco en la grilla
 de productos posterior al hero, añadir escenarios Playwright específicos de
 densidad responsive y luego pasar el gate release con Lighthouse, axe y
-Firefox/WebKit.
+Firefox/WebKit. Después se puede continuar con mejoras de edición de imágenes y
+SEO avanzado sin reintroducir módulos legacy en la base.
 
 ## Cierre de la integracion v2
 

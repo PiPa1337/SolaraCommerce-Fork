@@ -1,7 +1,6 @@
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { StoreProjectV1Schema } from "@solara/project-schema";
-import { referenceStore } from "@solara/project-schema/fixture";
-import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
+import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import Dexie, { type EntityTable } from "dexie";
 
 export interface StoredProject {
@@ -75,8 +74,8 @@ class SolaraDatabase extends Dexie {
 export const database = new SolaraDatabase();
 
 export const PROJECT_STORAGE_VERSION = "2";
-export const SCALE_DEMO_PROJECT_ID = catalogScaleStore.id;
-export const SCALE_DEMO_PROJECT_NAME = "Demo catálogo jerárquico";
+export const SCALE_DEMO_PROJECT_ID = "store-modo-sur-demo";
+export const SCALE_DEMO_PROJECT_NAME = "Demo Modo Sur, catálogo moderno";
 const STORAGE_SENTINEL = "solara-studio-storage-version";
 let storageReady: Promise<void> | undefined;
 let storageReset = false;
@@ -202,7 +201,7 @@ export async function createProject(name: string): Promise<StoreProjectV1> {
   const normalizedName = name.trim() || "Nueva tienda";
   const project = await embedFixtureAssets(
     StoreProjectV1Schema.parse({
-      ...structuredClone(referenceStore),
+      ...structuredClone(catalogModernStore),
       id: `store-${suffix}`,
       name: normalizedName,
       slug: slugify(normalizedName, suffix.slice(0, 6)),
@@ -211,7 +210,7 @@ export async function createProject(name: string): Promise<StoreProjectV1> {
       createdAt: timestamp,
       updatedAt: timestamp,
       identity: {
-        ...structuredClone(referenceStore.identity),
+        ...structuredClone(catalogModernStore.identity),
         legalName: normalizedName,
         brandName: normalizedName,
       },
@@ -226,10 +225,20 @@ export async function ensureFirstProject(): Promise<StoreProjectV1> {
   const first = await database.projects.orderBy("updatedAt").reverse().first();
   if (first) return StoreProjectV1Schema.parse(first.project);
   const initial = await embedFixtureAssets(
-    StoreProjectV1Schema.parse(structuredClone(referenceStore)),
+    StoreProjectV1Schema.parse(structuredClone(catalogModernStore)),
   );
   await saveProject(initial);
   return initial;
+}
+
+export async function ensureModernBaseProject(): Promise<boolean> {
+  await ready();
+  if (await database.projects.get(catalogModernStore.id)) return false;
+
+  await saveProject(
+    await embedFixtureAssets(StoreProjectV1Schema.parse(structuredClone(catalogModernStore))),
+  );
+  return true;
 }
 
 export async function ensureScaleDemoProject(): Promise<boolean> {
@@ -237,7 +246,8 @@ export async function ensureScaleDemoProject(): Promise<boolean> {
   if (await database.projects.get(SCALE_DEMO_PROJECT_ID)) return false;
 
   const demo = StoreProjectV1Schema.parse({
-    ...structuredClone(catalogScaleStore),
+    ...structuredClone(catalogModernStore),
+    id: SCALE_DEMO_PROJECT_ID,
     name: SCALE_DEMO_PROJECT_NAME,
     slug: "demo-catalogo-jerarquico",
     updatedAt: "2026-07-29T12:00:01.000Z",

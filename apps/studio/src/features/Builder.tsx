@@ -1,6 +1,8 @@
 import { ArrowDown, ArrowUp, Copy, Eye, EyeSlash, Plus, Swap, Trash } from "@phosphor-icons/react";
+import type { RepeaterItemField } from "@solara/modules";
 import {
   createModuleSection,
+  isAddableModule,
   moduleRegistry,
   type RegisteredModule,
   replaceModuleInSection,
@@ -33,14 +35,24 @@ interface BuilderProps {
 type EditablePageKind = StoreProjectV1["pages"][number]["kind"];
 
 export function Builder({ project, onChange }: BuilderProps) {
-  const modules = useMemo(availableModules, []);
+  const allModules = useMemo(availableModules, []);
+  const modules = useMemo(() => allModules.filter(isAddableModule), [allModules]);
   const [pageKind, setPageKind] = useState<EditablePageKind>("home");
   const [selectedId, setSelectedId] = useState(project.sections[0]?.id ?? "");
   const [slotToAdd, setSlotToAdd] = useState<StoreSection["slot"]>("content");
   const editablePage = project.pages.find((page) => page.kind === pageKind);
   const pageSections = pageKind === "home" ? project.sections : (editablePage?.sections ?? []);
   const selected = pageSections.find((section) => section.id === selectedId);
-  const selectedModule = modules.find((module) => module.manifest.id === selected?.moduleId);
+  const selectedModule = allModules.find((module) => module.manifest.id === selected?.moduleId);
+  const replacementModules =
+    selectedModule && !isAddableModule(selectedModule)
+      ? [
+          selectedModule,
+          ...modules.filter((module) =>
+            module.manifest.slots.includes(selected?.slot ?? "content"),
+          ),
+        ]
+      : modules.filter((module) => module.manifest.slots.includes(selected?.slot ?? "content"));
 
   useEffect(() => {
     if (!pageSections.some((section) => section.id === selectedId)) {
@@ -144,7 +156,7 @@ export function Builder({ project, onChange }: BuilderProps) {
       <div className="builder-grid">
         <ul className="section-stack" aria-label="Secciones de la tienda">
           {pageSections.map((section, index) => {
-            const definition = modules.find((module) => module.manifest.id === section.moduleId);
+            const definition = allModules.find((module) => module.manifest.id === section.moduleId);
             return (
               <li
                 className="section-row"
@@ -230,13 +242,12 @@ export function Builder({ project, onChange }: BuilderProps) {
                   value={selected.moduleId}
                   onChange={(event) => replaceModule(event.target.value)}
                 >
-                  {modules
-                    .filter((module) => module.manifest.slots.includes(selected.slot))
-                    .map((module) => (
-                      <option key={module.manifest.id} value={module.manifest.id}>
-                        {module.manifest.name}
-                      </option>
-                    ))}
+                  {replacementModules.map((module, index) => (
+                    <option key={module.manifest.id} value={module.manifest.id}>
+                      {module.manifest.name}
+                      {index === 0 && !isAddableModule(module) ? " (compatibilidad)" : ""}
+                    </option>
+                  ))}
                 </select>
               </Field>
 
@@ -517,6 +528,22 @@ function SettingsInspector({
             </Field>
           );
         }
+        if (field.type === "repeater") {
+          return (
+            <RepeaterEditor
+              key={field.key}
+              label={field.label}
+              value={value}
+              fields={field.fields}
+              {...(field.minItems === undefined ? {} : { minItems: field.minItems })}
+              {...(field.maxItems === undefined ? {} : { maxItems: field.maxItems })}
+              {...(field.itemLabelKey === undefined ? {} : { itemLabelKey: field.itemLabelKey })}
+              {...(error === undefined ? {} : { error })}
+              project={project}
+              onChange={(next) => setValue(field.key, next)}
+            />
+          );
+        }
         const text = String(value ?? "");
         return (
           <Field
@@ -546,6 +573,191 @@ function SettingsInspector({
         );
       })}
     </div>
+  );
+}
+
+function RepeaterEditor({
+  label,
+  value,
+  fields,
+  minItems,
+  maxItems,
+  itemLabelKey,
+  error,
+  project,
+  onChange,
+}: {
+  label: string;
+  value: unknown;
+  fields: readonly RepeaterItemField[];
+  minItems?: number;
+  maxItems?: number;
+  itemLabelKey?: string;
+  error?: string;
+  project: StoreProjectV1;
+  onChange(next: unknown[]): void;
+}) {
+  const items = Array.isArray(value)
+    ? value.filter((item): item is Record<string, unknown> =>
+        Boolean(item && typeof item === "object"),
+      )
+    : [];
+  const defaults = () =>
+    Object.fromEntries(
+      fields.map((field) => [
+        field.key,
+        field.type === "boolean"
+          ? false
+          : field.type === "number"
+            ? (field.min ?? 0)
+            : field.type === "select"
+              ? (field.options?.[0]?.value ?? "")
+              : field.key === "id"
+                ? `item-${crypto.randomUUID()}`
+                : field.key === itemLabelKey || field.key === "title"
+                  ? "Nuevo elemento"
+                  : field.key === "author"
+                    ? "Nueva persona"
+                    : field.key === "body"
+                      ? "Texto editable"
+                      : field.key === "categoryId"
+                        ? (project.categories[0]?.id ?? "")
+                        : field.key === "actionLabel"
+                          ? "Ver más"
+                          : field.key === "actionHref"
+                            ? "/"
+                            : "",
+      ]),
+    );
+  const update = (index: number, key: string, next: unknown) =>
+    onChange(
+      items.map((item, itemIndex) => (itemIndex === index ? { ...item, [key]: next } : item)),
+    );
+  const move = (index: number, delta: -1 | 1) => {
+    const target = index + delta;
+    if (target < 0 || target >= items.length) return;
+    const next = [...items];
+    const current = next[index];
+    const sibling = next[target];
+    if (!current || !sibling) return;
+    next[index] = sibling;
+    next[target] = current;
+    onChange(next);
+  };
+  return (
+    <fieldset className="repeater-editor">
+      <legend>{label}</legend>
+      {items.map((item, index) => (
+        <article className="repeater-editor__item" key={String(item.id ?? index)}>
+          <header>
+            <strong>
+              {String((itemLabelKey && item[itemLabelKey]) || `${label} ${index + 1}`)}
+            </strong>
+            <div>
+              <button
+                type="button"
+                onClick={() => move(index, -1)}
+                disabled={index === 0}
+                aria-label="Subir elemento"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                onClick={() => move(index, 1)}
+                disabled={index === items.length - 1}
+                aria-label="Bajar elemento"
+              >
+                ↓
+              </button>
+              <button
+                type="button"
+                onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}
+                disabled={items.length <= (minItems ?? 0)}
+                aria-label="Eliminar elemento"
+              >
+                Eliminar
+              </button>
+            </div>
+          </header>
+          {fields.map((field) => {
+            const current = item[field.key];
+            if (field.type === "boolean") {
+              return (
+                <label className="check-field" key={field.key}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(current)}
+                    onChange={(event) => update(index, field.key, event.target.checked)}
+                  />
+                  {field.label}
+                </label>
+              );
+            }
+            if (field.type === "asset") {
+              return (
+                <Field label={field.label} key={field.key}>
+                  <select
+                    value={String(current ?? "")}
+                    onChange={(event) => update(index, field.key, event.target.value)}
+                  >
+                    <option value="">Sin asset</option>
+                    {project.assets.map((asset) => (
+                      <option key={asset.id} value={asset.id}>
+                        {asset.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              );
+            }
+            if (field.type === "select") {
+              return (
+                <Field label={field.label} key={field.key}>
+                  <select
+                    value={String(current ?? "")}
+                    onChange={(event) => update(index, field.key, event.target.value)}
+                  >
+                    {field.options?.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              );
+            }
+            return (
+              <Field label={field.label} key={field.key}>
+                <input
+                  type={field.type === "number" ? "number" : field.type === "url" ? "url" : "text"}
+                  value={String(current ?? "")}
+                  min={field.min}
+                  max={field.max}
+                  step={field.step}
+                  onChange={(event) =>
+                    update(
+                      index,
+                      field.key,
+                      field.type === "number" ? Number(event.target.value) : event.target.value,
+                    )
+                  }
+                />
+              </Field>
+            );
+          })}
+        </article>
+      ))}
+      <button
+        type="button"
+        className="secondary-button"
+        onClick={() => onChange([...items, defaults()])}
+        disabled={maxItems !== undefined && items.length >= maxItems}
+      >
+        Agregar elemento
+      </button>
+      {error ? <small className="field-error">{error}</small> : null}
+    </fieldset>
   );
 }
 

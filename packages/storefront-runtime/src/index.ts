@@ -607,6 +607,91 @@ function storefrontBoot(): void {
       });
     });
 
+  const modernMenu =
+    document.querySelector<HTMLElement>("[data-catalog-mobile-menu]") ??
+    document.querySelector<HTMLElement>("#catalog-mobile-menu");
+  const modernMenuOpen = document.querySelector<HTMLButtonElement>("[data-catalog-menu-open]");
+  const modernMenuClose = modernMenu?.querySelector<HTMLButtonElement>("[data-catalog-menu-close]");
+  const closeModernMenu = (): void => {
+    if (!modernMenu) return;
+    modernMenu.hidden = true;
+    modernMenuOpen?.setAttribute("aria-expanded", "false");
+    modernMenuOpen?.focus();
+  };
+  modernMenuOpen?.addEventListener("click", () => {
+    if (!modernMenu) return;
+    modernMenu.hidden = false;
+    modernMenuOpen.setAttribute("aria-expanded", "true");
+    modernMenuClose?.focus();
+  });
+  modernMenuClose?.addEventListener("click", closeModernMenu);
+  modernMenu?.addEventListener("click", (event) => {
+    if (event.target instanceof Element && event.target.closest("a")) closeModernMenu();
+  });
+  modernMenu?.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeModernMenu();
+    }
+  });
+
+  document
+    .querySelectorAll<HTMLElement>('[data-solara-module="catalog-hero"] .catalog-hero-inner')
+    .forEach((hero) => {
+      const slides = Array.from(
+        hero.querySelectorAll<HTMLElement>("[data-catalog-hero-slide-panel]"),
+      );
+      if (slides.length < 2) return;
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const copy = hero.querySelector<HTMLElement>(".catalog-hero-copy");
+      const title = copy?.querySelector<HTMLElement>("h1");
+      const body = copy?.querySelector<HTMLElement>(".catalog-hero-body");
+      const action = copy?.querySelector<HTMLAnchorElement>(".catalog-primary-action");
+      let active = 0;
+      let timer = 0;
+      const setSlide = (index: number): void => {
+        active = (index + slides.length) % slides.length;
+        slides.forEach((slide, slideIndex) => {
+          const selected = slideIndex === active;
+          slide.hidden = !selected;
+          slide.setAttribute("aria-hidden", String(!selected));
+          hero
+            .querySelector(`[data-catalog-hero-slide="${slideIndex}"]`)
+            ?.setAttribute("aria-selected", String(selected));
+        });
+        const selected = slides[active];
+        if (!selected) return;
+        if (title) title.textContent = selected.dataset.title ?? "";
+        if (body) body.textContent = selected.dataset.body ?? "";
+        if (action) {
+          action.textContent = selected.dataset.actionLabel ?? "Ver colección";
+          action.href = selected.dataset.actionHref ?? "/";
+        }
+      };
+      const stop = (): void => {
+        if (timer) window.clearInterval(timer);
+        timer = 0;
+      };
+      const start = (): void => {
+        stop();
+        if (reduceMotion || hero.dataset.autoplay !== "true") return;
+        timer = window.setInterval(
+          () => setSlide(active + 1),
+          Number(hero.dataset.interval ?? "6000"),
+        );
+      };
+      hero.querySelectorAll<HTMLElement>("[data-catalog-hero-slide]").forEach((indicator) => {
+        indicator.addEventListener("click", () => {
+          setSlide(Number(indicator.dataset.catalogHeroSlide ?? "0"));
+          stop();
+        });
+      });
+      hero.addEventListener("pointerenter", stop);
+      hero.addEventListener("focusin", stop);
+      setSlide(0);
+      start();
+    });
+
   document.querySelectorAll<HTMLElement>("[data-hero-mode]").forEach((hero) => {
     const video = hero.querySelector<HTMLVideoElement>("video");
     const toggle = hero.querySelector<HTMLButtonElement>("[data-hero-video-toggle]");

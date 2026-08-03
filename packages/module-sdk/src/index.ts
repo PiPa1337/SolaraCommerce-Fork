@@ -15,6 +15,9 @@ export type SafeHtml = string & { readonly [safeHtmlBrand]: true };
 
 export type ModuleSlot = StoreSection["slot"];
 
+export type ModuleFamily = "legacy-editorial-v1" | "catalog-modern-v1";
+export type ModuleAvailability = "default" | "compatibility-only";
+
 export type RenderPageType =
   | "home"
   | "category"
@@ -34,6 +37,10 @@ export interface ModuleManifest {
   version: 1;
   slots: readonly ModuleSlot[];
   compatibleSettings: readonly string[];
+  /** Omitted by pre-catalog modules; the registry treats those as Legacy. */
+  family?: ModuleFamily;
+  /** Omitted by pre-catalog modules; the registry treats those as compatibility-only. */
+  availability?: ModuleAvailability;
 }
 
 export interface MotionZoneDefinition {
@@ -70,6 +77,16 @@ interface SettingsFieldBase<Settings> {
   description?: string;
 }
 
+export interface RepeaterItemField {
+  key: string;
+  label: string;
+  type: "text" | "rich-text" | "url" | "asset" | "number" | "boolean" | "select";
+  options?: readonly { value: string; label: string }[];
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
 export type SettingsFieldDefinition<Settings> =
   | (SettingsFieldBase<Settings> & {
       type: "text" | "rich-text" | "url" | "asset" | "array";
@@ -87,6 +104,13 @@ export type SettingsFieldDefinition<Settings> =
   | (SettingsFieldBase<Settings> & {
       type: "select";
       options: readonly { value: string; label: string }[];
+    })
+  | (SettingsFieldBase<Settings> & {
+      type: "repeater";
+      minItems?: number;
+      maxItems?: number;
+      itemLabelKey?: string;
+      fields: readonly RepeaterItemField[];
     });
 
 export interface ModuleDefinition<Settings> {

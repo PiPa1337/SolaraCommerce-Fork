@@ -27,10 +27,14 @@ corepack pnpm dev
 La aplicación guarda los proyectos en IndexedDB. Las tiendas públicas se exportan
 como ZIP estáticos, sin backend ni runtime de inteligencia artificial.
 
-En el primer arranque Studio conserva la tienda Casa Luma y agrega una vez el
-proyecto `Demo catálogo jerárquico`, con 10 raíces, 16 categorías, 50 productos
-y 60 variantes. Se puede abrir desde el dashboard para revisar la navegación,
-paginación y edición masiva; no se vuelve a duplicar en los siguientes arranques.
+En el primer arranque Studio crea la tienda base `Modo Sur` y agrega una vez el
+proyecto `Demo Modo Sur, catálogo moderno`. Ambos usan la familia visual
+`catalog-modern-v1`, con 10 raíces, 16 categorías, 50 productos y 60 variantes.
+La demo se puede abrir desde el dashboard para revisar navegación, paginación,
+edición masiva y el diseño de catálogo; no se vuelve a duplicar en los siguientes
+arranques.
+Si ya existía una instalación anterior, Studio agrega esta tienda base sin borrar
+las tiendas locales que el usuario haya creado.
 
 ## Catálogo
 
@@ -49,11 +53,13 @@ Los padres muestran el conjunto agregado de sus descendientes, mientras que cada
 hoja conserva su URL, breadcrumb y metadata. Studio visualiza el árbol con
 cantidades directas/heredadas y bloquea ciclos o reubicaciones inválidas.
 
-Para probar la escala de navegación sin mezclarla con el fixture visual, el
+Para probar la escala de navegación sin mezclarla con el contrato visual, el
 paquete `@solara/project-schema/scale-fixture` expone `catalogScaleStore`: 10
 raíces, 16 categorías totales, 50 productos activos, 60 variantes y una categoría
-de 35 productos que pagina en dos documentos. Reutiliza los tres assets binarios
-existentes y mantiene todos los IDs, slugs y fechas deterministas.
+de 35 productos que pagina en dos documentos. La fixture pública
+`@solara/project-schema/catalog-modern-fixture` expone `catalogModernStore`, la
+tienda base editable que reutiliza los tres assets binarios existentes y mantiene
+IDs, slugs y fechas deterministas.
 
 `StoreProjectV2` valida IDs, slugs, referencias, navegación y páginas editables. Una operación
 inválida se rechaza completa y no deja cambios parciales.
@@ -83,14 +89,23 @@ fixture de escala muestra 12 productos en una grilla compacta de cuatro, tres o
 dos columnas según el viewport. Las categorías mantienen páginas de 24 productos
 para explorar catálogos extensos sin convertir la home en una lista interminable.
 
-El storefront v2 usa una navbar curada con Inicio, Colecciones, Contacto,
+El storefront moderno usa una navbar curada con Inicio, Tienda, Contacto,
 Nosotros, búsqueda y carrito. El hero puede trabajar con imagen, carrusel o
-video local autocontenido. El exporter genera también `/contacto/`, `/nosotros/`,
-`/buscar/`, `/carrito/` y `/compra/`, manteniendo HTML útil sin JavaScript.
+video local autocontenido. La home prioriza novedades, más elegidos y categorías;
+el exporter genera también `/contacto/`, `/nosotros/`, `/buscar/`, `/carrito/` y
+`/compra/`, manteniendo HTML útil sin JavaScript.
+
+Los módulos anteriores quedan registrados como `legacy-editorial-v1` y sólo se
+conservan para abrir o editar proyectos existentes. Los módulos
+`catalog-modern-v1` son los únicos que aparecen como nuevas opciones del
+constructor. Sus textos, productos, categorías, navegación, testimonios y CTA
+se editan desde Studio mediante schemas Zod y metadata tipada.
 
 La búsqueda descarga `search-index.json` sólo al abrirse y el carrito reconcilia
 sus líneas contra `catalog-index.json` únicamente en sus rutas propias. Los videos
 aceptan MP4 o WebM de hasta 30 MB, requieren poster y se deduplican por hash dentro del ZIP.
+Studio carga el renderer de exportación en un chunk diferido al abrir Preview, SEO o
+Exportar; el bundle inicial queda separado del renderer y del worker de ZIP.
 Al activar v2 Studio reinicia únicamente la base IndexedDB
 `solara-commerce-studio`; no elimina respaldos `.solara.zip`, exportaciones ni
 archivos del repositorio. Los respaldos v1 se rechazan sin conversión automática.
@@ -223,7 +238,7 @@ $env:SOLARA_PILOT_PROJECT_ARCHIVE = "C:\ruta\tienda.solara.zip"
 corepack pnpm pilot:preflight
 ```
 
-Sin esa variable se usa el fixture Casa Luma.
+Sin esa variable se usa el fixture base Modo Sur.
 
 Con ese mismo respaldo, `corepack pnpm pilot:export` genera el `site.zip`
 production y la carpeta `.release/pilot-site/` listos para publicar.

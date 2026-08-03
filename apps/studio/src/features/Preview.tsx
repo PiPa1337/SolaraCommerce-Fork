@@ -1,5 +1,4 @@
 import { Desktop, DeviceMobile, DeviceTablet, EyeSlash } from "@phosphor-icons/react";
-import { renderPreviewHtml } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { useEffect, useMemo, useState } from "react";
 import { IconButton } from "../components/Ui";
@@ -61,15 +60,34 @@ export function Preview({ project }: { project: StoreProjectV1 }) {
   }, [previewRoutes, route]);
 
   useEffect(() => {
+    let active = true;
     const timeout = window.setTimeout(() => {
-      try {
-        setHtml(renderPreviewHtml(project, "draft", route));
-        setError("");
-      } catch (reason) {
-        setError(reason instanceof Error ? reason.message : "No se pudo generar la vista previa.");
-      }
+      void import("@solara/exporter")
+        .then(({ renderPreviewHtml }) => {
+          if (!active) return;
+          try {
+            setHtml(renderPreviewHtml(project, "draft", route));
+            setError("");
+          } catch (reason) {
+            setError(
+              reason instanceof Error ? reason.message : "No se pudo generar la vista previa.",
+            );
+          }
+        })
+        .catch((reason: unknown) => {
+          if (active) {
+            setError(
+              reason instanceof Error
+                ? reason.message
+                : "No se pudo cargar el renderer de preview.",
+            );
+          }
+        });
     }, 140);
-    return () => window.clearTimeout(timeout);
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
   }, [project, route]);
 
   return (

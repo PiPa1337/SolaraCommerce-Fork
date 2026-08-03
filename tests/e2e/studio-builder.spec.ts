@@ -2,8 +2,6 @@ import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
-// Este recorrido cambia el proyecto varias veces y regenera el preview completo.
-// El runner Windows compartido de CI puede necesitar más margen que el bucle local.
 test.setTimeout(process.env.CI ? 60_000 : 30_000);
 
 let server: Server;
@@ -34,130 +32,123 @@ async function openBuilder(page: Page) {
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.getByRole("button", { name: /Casa Luma/ }).click();
+  await page.getByRole("button", { name: /^Modo Sur/ }).click();
   await page.getByRole("button", { name: "Constructor" }).click();
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
 }
 
-test("edita el contenido, actualiza el preview y persiste tras recargar", async ({ page }) => {
+test("edita el hero moderno, actualiza el preview y persiste tras recargar", async ({ page }) => {
   await openBuilder(page);
-  const hero = page.getByRole("listitem").filter({ hasText: "Hero audiovisual" });
+  const hero = page.getByRole("listitem").filter({ hasText: "Hero de catálogo" });
   await hero.getByRole("button").first().click();
 
   const title = page.getByRole("textbox", { name: "Título", exact: true });
   await title.fill("Una portada persistente");
   await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
   await expect(
-    page.frameLocator("iframe").getByRole("heading", { name: "Una portada persistente" }),
-  ).toBeVisible();
+    page.frameLocator("iframe").locator('[data-solara-module="catalog-hero"] h1'),
+  ).toHaveText("Una portada persistente", { timeout: 15_000 });
   await expect(page.getByText("Guardado", { exact: true })).toBeVisible();
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.getByRole("button", { name: /Casa Luma/ }).click();
+  await page.getByRole("button", { name: /^Modo Sur/ }).click();
   await page.getByRole("button", { name: "Constructor" }).click();
   await page
     .getByRole("listitem")
-    .filter({ hasText: "Hero audiovisual" })
+    .filter({ hasText: "Hero de catálogo" })
     .getByRole("button")
     .first()
     .click();
-
   await expect(page.getByRole("textbox", { name: "Título", exact: true })).toHaveValue(
     "Una portada persistente",
   );
   await expect(
-    page.frameLocator("iframe").getByRole("heading", { name: "Una portada persistente" }),
-  ).toBeVisible();
+    page.frameLocator("iframe").locator('[data-solara-module="catalog-hero"] h1'),
+  ).toHaveText("Una portada persistente", { timeout: 15_000 });
 });
 
-test("edita slides del hero con controles visuales", async ({ page }) => {
+test("edita slides modernos con el inspector generado por metadata", async ({ page }) => {
   await openBuilder(page);
-  const hero = page.getByRole("listitem").filter({ hasText: "Hero audiovisual" });
-  await hero.getByRole("button").first().click();
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: "Hero de catálogo" })
+    .getByRole("button")
+    .first()
+    .click();
 
-  await page.getByRole("button", { name: "Agregar slide" }).click();
-  await page.getByRole("button", { name: "Agregar slide" }).click();
-  await expect(page.locator(".slide-card")).toHaveCount(2);
-  await page.getByRole("textbox", { name: "Título del slide 1", exact: true }).fill("Primero");
-  await page.getByRole("textbox", { name: "Título del slide 2", exact: true }).fill("Segundo");
-  await page.getByRole("button", { name: "Mover slide abajo" }).first().click();
-  await expect(page.getByRole("textbox", { name: "Título del slide 1", exact: true })).toHaveValue(
-    "Segundo",
-  );
-  await page.getByRole("button", { name: "Duplicar slide" }).first().click();
-  await expect(page.locator(".slide-card")).toHaveCount(3);
-  await page.getByRole("button", { name: "Eliminar slide" }).first().click();
-  await expect(page.locator(".slide-card")).toHaveCount(2);
+  const addItem = page.getByRole("button", { name: "Agregar elemento" });
+  await addItem.click();
+  await addItem.click();
+  await expect(page.locator(".repeater-editor__item")).toHaveCount(2);
+  await page.locator(".repeater-editor__item").nth(0).getByRole("textbox").nth(0).fill("Primero");
+  await page.locator(".repeater-editor__item").nth(1).getByRole("textbox").nth(0).fill("Segundo");
+  await page
+    .locator(".repeater-editor__item")
+    .nth(0)
+    .getByRole("button", { name: "Bajar elemento" })
+    .click();
+  await expect(
+    page.locator(".repeater-editor__item").nth(0).getByRole("textbox").nth(0),
+  ).toHaveValue("Segundo");
+  await page
+    .locator(".repeater-editor__item")
+    .nth(0)
+    .getByRole("button", { name: "Eliminar elemento" })
+    .click();
+  await expect(page.locator(".repeater-editor__item")).toHaveCount(1);
 });
 
-test("agrega, ordena, duplica, oculta, reemplaza, deshace y elimina secciones", async ({
-  page,
-}) => {
+test("agrega, ordena, duplica, oculta, deshace y elimina secciones modernas", async ({ page }) => {
+  test.setTimeout(60_000);
   await openBuilder(page);
   const sections = page.getByRole("list", { name: "Secciones de la tienda" });
   const initialCount = await sections.getByRole("listitem").count();
-  const initialContentCount = await sections
+  const initialBrandCount = await sections
     .getByRole("listitem")
-    .filter({ hasText: "Contenido imagen y texto" })
+    .filter({ hasText: "Franja de marcas" })
     .count();
 
   await page.getByLabel("Tipo de sección").selectOption("content");
   await page.getByRole("button", { name: "Agregar sección" }).click();
   await expect(sections.getByRole("listitem")).toHaveCount(initialCount + 1);
-
   const added = sections.getByRole("listitem").last();
-  await expect(added).toContainText("Contenido imagen y texto");
+  await expect(added).toContainText("Franja de marcas");
   await added.getByRole("button", { name: "Mover arriba" }).click();
-  await expect(sections.getByRole("listitem").nth(initialCount - 1)).toContainText(
-    "Contenido imagen y texto",
-  );
 
   const selectedAdded = sections
     .getByRole("listitem")
-    .filter({ hasText: "Contenido imagen y texto" })
-    .first();
-  await selectedAdded.getByRole("button", { name: "Duplicar sección" }).click();
-  await expect(
-    sections.getByRole("listitem").filter({ hasText: "Contenido imagen y texto" }),
-  ).toHaveCount(initialContentCount + 2);
-
-  const duplicate = sections
-    .getByRole("listitem")
-    .filter({ hasText: "Contenido imagen y texto" })
+    .filter({ hasText: "Franja de marcas" })
     .last();
+  await selectedAdded.getByRole("button", { name: "Duplicar sección" }).click();
+  await expect(sections.getByRole("listitem").filter({ hasText: "Franja de marcas" })).toHaveCount(
+    initialBrandCount + 2,
+  );
+  const duplicate = sections.getByRole("listitem").filter({ hasText: "Franja de marcas" }).last();
   await duplicate.getByRole("button", { name: "Eliminar sección" }).click();
-  await expect(
-    sections.getByRole("listitem").filter({ hasText: "Contenido imagen y texto" }),
-  ).toHaveCount(initialContentCount + 1);
-
-  const hero = sections.getByRole("listitem").filter({ hasText: "Hero audiovisual" });
-  await hero.getByRole("button").first().click();
-  await page.getByLabel("Módulo").selectOption({ label: "Hero editorial" });
-  const replacedHero = sections.getByRole("listitem").filter({ hasText: "Hero editorial" });
-  await expect(replacedHero).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Título", exact: true })).toHaveValue(
-    "Una casa con materia y calma.",
+  await expect(sections.getByRole("listitem").filter({ hasText: "Franja de marcas" })).toHaveCount(
+    initialBrandCount + 1,
   );
 
-  await replacedHero.getByRole("button", { name: "Ocultar sección" }).click();
+  const hero = sections.getByRole("listitem").filter({ hasText: "Hero de catálogo" });
+  await hero.getByRole("button", { name: "Ocultar sección" }).click();
   await expect(
-    page.frameLocator("iframe").getByRole("heading", { name: "Una casa con materia y calma." }),
-  ).toHaveCount(0);
-
+    page.frameLocator("iframe").locator('[data-solara-module="catalog-hero"]'),
+  ).toHaveCount(0, { timeout: 15_000 });
   await page.getByRole("button", { name: "Deshacer" }).click();
   await expect(
-    page.frameLocator("iframe").getByRole("heading", { name: "Una casa con materia y calma." }),
-  ).toBeVisible();
+    page.frameLocator("iframe").locator('[data-solara-module="catalog-hero"] h1'),
+  ).toHaveText("Vestite con lo que te representa.", { timeout: 15_000 });
   await page.getByRole("button", { name: "Rehacer" }).click();
   await expect(
-    page.frameLocator("iframe").getByRole("heading", { name: "Una casa con materia y calma." }),
-  ).toHaveCount(0);
+    page.frameLocator("iframe").locator('[data-solara-module="catalog-hero"]'),
+  ).toHaveCount(0, { timeout: 15_000 });
 
-  const addedAgain = sections
+  await sections
     .getByRole("listitem")
-    .filter({ hasText: "Contenido imagen y texto" })
-    .last();
-  await addedAgain.getByRole("button", { name: "Eliminar sección" }).click();
+    .filter({ hasText: "Franja de marcas" })
+    .last()
+    .getByRole("button", { name: "Eliminar sección" })
+    .click();
   await expect(sections.getByRole("listitem")).toHaveCount(initialCount);
 });

@@ -1,7 +1,7 @@
 import { CheckCircle, Info, MagnifyingGlass, WarningCircle, XCircle } from "@phosphor-icons/react";
-import { auditReport } from "@solara/exporter";
+import type { AuditReport } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Field, SectionHeader } from "../components/Ui";
 
 interface AuditIssue {
@@ -48,8 +48,24 @@ export function Seo({
   project: StoreProjectV1;
   onChange(project: StoreProjectV1): void;
 }) {
-  const report = useMemo(() => auditReport(project), [project]);
-  const issues = useMemo(() => normalizeIssues(report.issues), [report]);
+  const [report, setReport] = useState<AuditReport>({
+    issues: [],
+    criticalCount: 0,
+    warningCount: 0,
+    merchantMode: "experimental-whatsapp",
+  });
+  useEffect(() => {
+    let active = true;
+    void import("@solara/exporter")
+      .then(({ auditReport }) => {
+        if (active) setReport(auditReport(project));
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [project]);
+  const issues = normalizeIssues(report.issues);
   const commit = (seo: StoreProjectV1["seo"]) =>
     onChange({ ...project, seo, updatedAt: new Date().toISOString() });
   const errors = report.criticalCount;

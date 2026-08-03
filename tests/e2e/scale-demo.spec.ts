@@ -6,7 +6,7 @@ test("muestra y abre el proyecto demo de escala al iniciar Studio", async ({ pag
   try {
     await page.goto(running.url);
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-    const demo = page.getByRole("button", { name: /Demo catálogo jerárquico/ });
+    const demo = page.getByRole("button", { name: /Demo Modo Sur/ });
     await expect(demo).toBeVisible();
     await expect(demo).toContainText("50 productos");
 
@@ -15,15 +15,15 @@ test("muestra y abre el proyecto demo de escala al iniciar Studio", async ({ pag
     await page.getByRole("button", { name: "Catálogo", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
     await expect(page.getByText("50 productos y 60 variantes.")).toBeVisible();
-    const collapseCasa = page.getByRole("button", { name: "Contraer Casa" });
-    await expect(collapseCasa).toHaveAttribute("aria-expanded", "true");
-    await collapseCasa.click();
-    await expect(page.locator(".category-tree strong", { hasText: "Textiles" })).toBeHidden();
-    await page.getByRole("button", { name: "Expandir Casa" }).click();
-    await expect(page.locator(".category-tree strong", { hasText: "Textiles" })).toBeVisible();
+    const collapseRemeras = page.getByRole("button", { name: "Contraer Remeras" });
+    await expect(collapseRemeras).toHaveAttribute("aria-expanded", "true");
+    await collapseRemeras.click();
+    await expect(page.locator(".category-tree strong", { hasText: "Básicas" })).toBeHidden();
+    await page.getByRole("button", { name: "Expandir Remeras" }).click();
+    await expect(page.locator(".category-tree strong", { hasText: "Básicas" })).toBeVisible();
 
     await page.goto(running.url);
-    await expect(page.getByRole("button", { name: /Demo catálogo jerárquico/ })).toHaveCount(1);
+    await expect(page.getByRole("button", { name: /Demo Modo Sur/ })).toHaveCount(1);
   } finally {
     await stopStudioServer(running.server);
   }

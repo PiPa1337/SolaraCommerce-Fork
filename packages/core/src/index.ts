@@ -160,6 +160,27 @@ function synchronizeAssignments(project: StoreProjectV1): StoreProjectV1 {
   return { ...project, categories, collections };
 }
 
+function normalizeImportedProductReferences(
+  project: StoreProjectV1,
+  products: readonly Product[],
+): Product[] {
+  const categoryIds = new Set(project.categories.map((category) => category.id));
+  const collectionIds = new Set(project.collections.map((collection) => collection.id));
+  const assetIds = new Set(project.assets.map((asset) => asset.id));
+
+  return products.map((product) => ({
+    ...product,
+    categoryIds: product.categoryIds.filter((categoryId) => categoryIds.has(categoryId)),
+    collectionIds: product.collectionIds.filter((collectionId) => collectionIds.has(collectionId)),
+    imageIds: product.imageIds.filter((assetId) => assetIds.has(assetId)),
+    variants: product.variants.map((variant) =>
+      variant.imageId === undefined || assetIds.has(variant.imageId)
+        ? variant
+        : { ...variant, imageId: undefined },
+    ),
+  }));
+}
+
 function updateSelectedProducts(
   project: StoreProjectV1,
   productIds: readonly ProductId[],
@@ -315,7 +336,10 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
         status: command.status,
       }));
     case "products.replaceAll": {
-      const products = command.products.map((product) => ProductSchema.parse(product));
+      const products = normalizeImportedProductReferences(
+        project,
+        command.products.map((product) => ProductSchema.parse(product)),
+      );
       if (JSON.stringify(products) === JSON.stringify(project.products)) {
         return project;
       }

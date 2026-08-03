@@ -5,9 +5,8 @@ import {
   UploadSimple,
   WarningCircle,
 } from "@phosphor-icons/react";
-import { auditReport } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, InlineError, SectionHeader } from "../components/Ui";
 import { downloadBlob } from "../lib/projectArchive";
 import {
@@ -26,7 +25,19 @@ export function ExportPanel({
   const importRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<"draft" | "production" | "project" | "import" | "">("");
   const [error, setError] = useState("");
-  const critical = useMemo(() => auditReport(project).criticalCount, [project]);
+  const [critical, setCritical] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    void import("@solara/exporter")
+      .then(({ auditReport }) => {
+        if (active) setCritical(auditReport(project).criticalCount);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [project]);
 
   const exportSite = async (mode: "draft" | "production") => {
     setBusy(mode);

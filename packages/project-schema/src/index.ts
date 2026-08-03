@@ -101,6 +101,7 @@ export const EditablePageSchema = z.object({
 });
 
 export const CommerceTemplatesSchema = z.object({
+  designFamily: z.enum(["legacy-editorial-v1", "catalog-modern-v1"]).optional(),
   category: z
     .object({ productsPerPage: z.number().int().min(1).max(48).default(24) })
     .default({ productsPerPage: 24 }),
@@ -132,6 +133,18 @@ export const VariantSchema = z.object({
   imageId: AssetIdSchema.optional(),
 });
 
+export const ProductReviewSchema = z.object({
+  id: z.string().min(1),
+  authorName: z.string().min(1).max(120),
+  title: z.string().max(160).optional(),
+  body: z.string().min(1).max(1000),
+  rating: z.number().int().min(1).max(5),
+  publishedAt: z.string().datetime(),
+  verifiedPurchase: z.boolean(),
+  origin: z.enum(["example", "merchant"]),
+  visible: z.boolean(),
+});
+
 export const ProductSchema = z.object({
   id: ProductIdSchema,
   slug: SlugSchema,
@@ -145,6 +158,7 @@ export const ProductSchema = z.object({
   tags: z.array(z.string()),
   imageIds: z.array(AssetIdSchema),
   variants: z.array(VariantSchema).min(1),
+  reviews: z.array(ProductReviewSchema).optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -862,6 +876,7 @@ export type EditablePage = z.infer<typeof EditablePageSchema>;
 export type CommerceTemplates = z.infer<typeof CommerceTemplatesSchema>;
 export type SiteShell = z.infer<typeof SiteShellSchema>;
 export type Variant = z.infer<typeof VariantSchema>;
+export type ProductReview = z.infer<typeof ProductReviewSchema>;
 export type Product = z.infer<typeof ProductSchema>;
 export type Category = z.infer<typeof CategorySchema>;
 export type Collection = z.infer<typeof CollectionSchema>;

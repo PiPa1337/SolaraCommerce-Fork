@@ -360,6 +360,7 @@ function themeCss(project: StoreProjectV1): string {
 * { box-sizing: border-box; }
 html { background: var(--solara-background); color: var(--solara-text); }
 body { margin: 0; min-width: 320px; font-family: var(--solara-body); line-height: 1.5; }
+@font-face { font-family: "Archivo"; src: local("Arial"); font-display: swap; font-weight: 400 900; }
 .solara-page[data-color-mode="dark"] { color-scheme: dark; }
 @media (prefers-color-scheme: dark) {
   .solara-page[data-color-mode="auto"] { color-scheme: dark; }
@@ -387,6 +388,10 @@ function activeProjectSections(
   sections: readonly StoreSection[],
 ): StoreSection[] {
   return sections.filter((section) => shellSectionEnabled(project, section));
+}
+
+function isModernProject(project: StoreProjectV1): boolean {
+  return project.commerceTemplates.designFamily === "catalog-modern-v1";
 }
 
 function publicMediaUsage(project: StoreProjectV1): {
@@ -494,27 +499,30 @@ function moduleStylesForSections(
 
 function exportedModuleStyles(project: StoreProjectV1): string {
   const pageSections = project.pages.flatMap((page) => page.sections);
+  const productModule = isModernProject(project) ? "catalog-product-detail" : "product-detail";
   return moduleStylesForSections(
     activeProjectSections(project, [...project.sections, ...pageSections]),
-    project.products.some((product) => product.status === "active") ? ["product-detail"] : [],
+    project.products.some((product) => product.status === "active") ? [productModule] : [],
   );
 }
 
 function previewModuleStyles(project: StoreProjectV1): string {
   const pageSections = project.pages.flatMap((page) => page.sections);
+  const productModule = isModernProject(project) ? "catalog-product-detail" : "product-detail";
   return moduleStylesForSections(
     activeProjectSections(project, [...project.sections, ...pageSections]),
-    project.products.some((product) => product.status === "active") ? ["product-detail"] : [],
+    project.products.some((product) => product.status === "active") ? [productModule] : [],
   );
 }
 
 function productDetailSection(project: StoreProjectV1, product: Product): string {
-  const definition = getModuleDefinition("product-detail");
+  const moduleId = isModernProject(project) ? "catalog-product-detail" : "product-detail";
+  const definition = getModuleDefinition(moduleId);
   if (!definition) throw new Error("Falta el módulo product-detail.");
   const section: StoreSection = {
-    id: `product-detail-${product.id}` as StoreSection["id"],
+    id: `${moduleId}-${product.id}` as StoreSection["id"],
     slot: "product",
-    moduleId: "product-detail",
+    moduleId,
     enabled: true,
     settings: {},
     motion: {
@@ -539,6 +547,36 @@ function productDetailSection(project: StoreProjectV1, product: Product): string
     product,
   });
   return String(rendered);
+}
+
+function listingSections(
+  project: StoreProjectV1,
+  pageType: "category" | "collection" | "related",
+  limit: number,
+): StoreSection[] {
+  const source = project.sections.find(
+    (section) =>
+      section.slot === "catalog" &&
+      (isModernProject(project)
+        ? section.moduleId === "catalog-product-grid"
+        : ["editorial-product-grid", "compact-product-grid"].includes(section.moduleId)),
+  );
+  if (!source) return [];
+  if (!isModernProject(project)) return [source];
+  return [
+    {
+      ...source,
+      id: `${source.id}-${pageType}` as StoreSection["id"],
+      settings: {
+        ...source.settings,
+        source: "all",
+        sourceId: "",
+        limit,
+        showViewAll: pageType === "related" ? false : source.settings.showViewAll,
+        ...(pageType === "related" ? { title: "También puede interesarte" } : {}),
+      },
+    },
+  ];
 }
 
 function storeStructuredData(project: StoreProjectV1): unknown[] {
@@ -765,7 +803,7 @@ function renderDocument(project: StoreProjectV1, page: PageDescriptor, mode: Exp
 </head>
 <body>
   <a class="solara-skip-link" href="#solara-main">Ir al contenido</a>
-  <div class="solara-page" data-solara-store data-page-type="${page.pageType}" data-color-mode="${project.theme.colorMode}">${page.body.replace("<main", '<main id="solara-main"')}</div>
+  <div class="solara-page${isModernProject(project) ? " catalog-modern" : ""}" data-solara-store data-design-family="${escapeHtml(project.commerceTemplates.designFamily ?? "legacy-editorial-v1")}" data-page-type="${page.pageType}" data-color-mode="${project.theme.colorMode}">${page.body.replace("<main", '<main id="solara-main"')}</div>
   <script src="/assets/storefront.js" defer></script>
 </body>
 </html>`;
@@ -878,11 +916,7 @@ function buildPages(
         categoryAsset && categoryImage
           ? `<img src="${escapeAttribute(categoryImage)}" alt="${escapeAttribute(categoryAsset.alt || category.title)}" width="${categoryAsset.width}" height="${categoryAsset.height}" loading="eager">`
           : "";
-      const categorySections = project.sections.filter(
-        (section) =>
-          section.slot === "catalog" &&
-          ["editorial-product-grid", "compact-product-grid"].includes(section.moduleId),
-      );
+      const categorySections = listingSections(project, "category", pageSize);
       const filterTags = [...new Set(paginated.flatMap((product) => product.tags))].slice(0, 12);
       const tagOptions = filterTags
         .map((tag) => `<option value="${escapeAttribute(tag)}">${escapeHtml(tag)}</option>`)
@@ -905,6 +939,7 @@ function buildPages(
           ${renderProjectSections(project, categorySections, {
             pageType: "category",
             category: { ...category, productIds: paginated.map((product) => product.id) },
+            products: paginated,
           })}
           ${paginationNavigation(`/categorias/${category.slug}`, pageNumber, totalPages)}
         </main>`,
@@ -943,11 +978,7 @@ function buildPages(
     for (let offset = 0; offset < Math.max(products.length, 1); offset += pageSize) {
       const pageNumber = Math.floor(offset / pageSize) + 1;
       const paginated = products.slice(offset, offset + pageSize);
-      const collectionSections = project.sections.filter(
-        (section) =>
-          section.slot === "catalog" &&
-          ["editorial-product-grid", "compact-product-grid"].includes(section.moduleId),
-      );
+      const collectionSections = listingSections(project, "collection", pageSize);
       const body = [
         renderProjectSections(project, sharedHeader, { pageType: "collection", collection }),
         `<main class="solara-container">
@@ -958,6 +989,7 @@ function buildPages(
           ${renderProjectSections(project, collectionSections, {
             pageType: "collection",
             collection: { ...collection, productIds: paginated.map((product) => product.id) },
+            products: paginated,
           })}
           ${paginationNavigation(`/colecciones/${collection.slug}`, pageNumber, totalPages)}
         </main>`,
@@ -1006,17 +1038,13 @@ function buildPages(
         })
         .slice(0, 4);
       const relatedSections = project.commerceTemplates.product.showRelated
-        ? project.sections.filter(
-            (section) =>
-              section.slot === "catalog" &&
-              ["editorial-product-grid", "compact-product-grid"].includes(section.moduleId),
-          )
+        ? listingSections(project, "related", 4)
         : [];
       const body = [
         renderProjectSections(project, sharedHeader, { pageType: "product", product }),
         `<main>${productDetailSection(project, product)}</main>`,
         relatedProducts.length && relatedSections.length
-          ? `<section class="solara-related-products"><div class="solara-container"><h2>También puede interesarte</h2>${renderProjectSections(project, relatedSections, { pageType: "product", products: relatedProducts })}</div></section>`
+          ? `<section class="solara-related-products"><div class="solara-container">${renderProjectSections(project, relatedSections, { pageType: "product", products: relatedProducts })}</div></section>`
           : "",
         renderProjectSections(project, sharedFooter, { pageType: "product", product }),
       ].join("");

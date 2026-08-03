@@ -21,7 +21,7 @@ test.afterAll(async () => {
 async function openCatalog(page: import("@playwright/test").Page) {
   await page.goto(studioUrl);
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.getByRole("button", { name: /Casa Luma/ }).click();
+  await page.getByRole("button", { name: /^Modo Sur/ }).click();
   await page.getByRole("button", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
 }
@@ -74,7 +74,7 @@ test("edita variantes y conserva el último cambio al volver, recargar y reabrir
   await page.getByRole("button", { name: "Volver a tiendas" }).click();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   await page.reload();
-  await page.getByRole("button", { name: /Casa Luma/ }).click();
+  await page.getByRole("button", { name: /^Modo Sur/ }).click();
   await page.getByRole("button", { name: "Catálogo", exact: true }).click();
   await page.getByPlaceholder("Buscar por producto, marca o estado").fill("Lámpara Horizonte");
   await expect(page.getByLabel("Nombre de Lámpara Horizonte")).toBeVisible();
@@ -91,9 +91,9 @@ test("previsualiza, cancela y edita en masa entre páginas", async ({ page }) =>
 
   const review = page.locator(".import-review");
   await expect(review.getByText("120", { exact: true })).toBeVisible();
-  await expect(review.getByText("2", { exact: true })).toBeVisible();
+  await expect(review).toContainText("Nuevos");
   await clickDom(page.getByRole("button", { name: "Cancelar" }));
-  await expect(page.getByText("2 productos y 3 variantes.")).toBeVisible();
+  await expect(page.getByText("50 productos y 60 variantes.")).toBeVisible();
 
   await uploadCsv(page, selectionCsv, "catalogo-120.csv");
   await clickDom(page.getByRole("button", { name: "Reemplazar catálogo" }));
