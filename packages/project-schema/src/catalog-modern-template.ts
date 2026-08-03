@@ -126,7 +126,7 @@ function cleanProject(options: BuildCatalogModernProjectOptions): StoreProjectV2
     navigation: {
       ...project.navigation,
       mode: "automatic",
-      catalogLabel: "Colecciones",
+      catalogLabel: "Categorías",
       items: [],
     },
     pages: project.pages.map((page) => ({

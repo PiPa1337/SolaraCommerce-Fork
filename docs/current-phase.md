@@ -16,7 +16,7 @@ renderer.
   `solara-commerce-studio` mediante `localStorage["solara-studio-storage-version"]`.
 - Respaldos `.solara.zip` con manifest v2; los respaldos v1 se rechazan sin
   modificar el archivo original.
-- Navbar con Inicio, Colecciones de hasta dos niveles, Contacto, Nosotros,
+- Navbar con Inicio, Categorías de hasta dos niveles, Contacto, Nosotros,
   búsqueda y carrito.
 - Resumen de Studio para editar el nombre del catálogo, enlaces curados,
   visibilidad de acciones y metadata SEO de Home, Nosotros y Contacto.

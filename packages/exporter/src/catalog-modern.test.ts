@@ -19,6 +19,10 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(productPages).toHaveLength(50);
     expect(categoryPages).toHaveLength(17);
     expect(home).toContain('data-design-family="catalog-modern-v1"');
+    expect(home).toContain(">Categorías</summary>");
+    expect(home).toContain('class="catalog-mega-menu__groups"');
+    expect(home).toContain('class="catalog-mega-group catalog-mega-group--has-children"');
+    expect(home).not.toContain(">Tienda</summary>");
     expect(home).not.toMatch(/[ÃÂ�]/);
     expect(home).toContain('data-solara-module="catalog-product-grid"');
     expect(home).toContain("/fixtures/modo-sur-hero.png");

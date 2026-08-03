@@ -1881,28 +1881,39 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-announcement-inner a { text-decoration: underline; text-underline-offset: .2em; }
 [data-solara-store].catalog-modern .catalog-announcement-inner button { position: absolute; right: 1rem; width: 28px; height: 28px; padding: 0; border: 0; background: transparent; color: inherit; font-size: 1.2rem; line-height: 1; cursor: pointer; }
 [data-solara-store].catalog-modern .catalog-header-inner {
-  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 1.5rem; width: min(calc(100% - 2rem), var(--solara-container)); min-height: 72px; margin-inline: auto; border-bottom: 1px solid var(--catalog-border);
+  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 1.5rem; width: min(calc(100% - 2rem), var(--solara-container)); min-height: 72px; margin-inline: auto; border-bottom: 1px solid var(--catalog-border); -webkit-user-select: none; user-select: none;
 }
 [data-solara-store].catalog-modern .catalog-brand { display: inline-flex; align-items: center; min-width: max-content; font-size: 1.55rem; font-weight: 900; letter-spacing: -.08em; text-decoration: none; }
 [data-solara-store].catalog-modern .catalog-wordmark { font-weight: 900; }
 [data-solara-store].catalog-modern .catalog-desktop-nav { display: flex; align-items: center; justify-content: center; gap: clamp(.7rem, 1.7vw, 1.35rem); min-width: 0; font-size: .86rem; }
 [data-solara-store].catalog-modern .catalog-desktop-nav > a,
-[data-solara-store].catalog-modern .catalog-desktop-nav summary { padding: .55rem 0; text-decoration: none; white-space: nowrap; cursor: pointer; }
+[data-solara-store].catalog-modern .catalog-desktop-nav summary { padding: .55rem 0; text-decoration: none; white-space: nowrap; cursor: pointer; -webkit-user-select: none; user-select: none; }
 [data-solara-store].catalog-modern .catalog-desktop-nav > a:hover,
 [data-solara-store].catalog-modern .catalog-desktop-nav summary:hover { color: var(--catalog-muted); }
+[data-solara-store].catalog-modern .catalog-desktop-nav > a:focus-visible,
+[data-solara-store].catalog-modern .catalog-desktop-nav summary:focus-visible,
+[data-solara-store].catalog-modern .catalog-search-link:focus-visible,
+[data-solara-store].catalog-modern .catalog-cart-link:focus-visible { outline: 2px solid var(--catalog-ink); outline-offset: 4px; }
 [data-solara-store].catalog-modern .catalog-nav-menu { position: relative; }
-[data-solara-store].catalog-modern .catalog-nav-menu summary { list-style: none; }
+[data-solara-store].catalog-modern .catalog-nav-menu summary { display: inline-flex; align-items: center; list-style: none; }
 [data-solara-store].catalog-modern .catalog-nav-menu summary::-webkit-details-marker { display: none; }
-[data-solara-store].catalog-modern .catalog-nav-menu summary::after { content: "⌄"; margin-left: .35rem; font-size: .75rem; }
-[data-solara-store].catalog-modern .catalog-mega-menu { position: absolute; z-index: 20; top: calc(100% + .4rem); left: 50%; width: min(600px, 80vw); transform: translateX(-50%); padding: 1.25rem; border: 1px solid var(--catalog-border); border-radius: 16px; background: var(--catalog-paper); box-shadow: 0 18px 50px rgb(11 11 12 / .12); }
-[data-solara-store].catalog-modern .catalog-mega-menu ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem 1.5rem; margin: 0; padding: 0; list-style: none; }
-[data-solara-store].catalog-modern .catalog-mega-menu > ul > li { display: grid; gap: .3rem; font-weight: 700; }
-[data-solara-store].catalog-modern .catalog-mega-menu li ul { display: grid; gap: .25rem; padding-left: .75rem; font-size: .82rem; font-weight: 400; }
-[data-solara-store].catalog-modern .catalog-mega-menu a { display: block; padding: .35rem .45rem; text-decoration: none; }
-[data-solara-store].catalog-modern .catalog-mega-menu a:hover { background: var(--catalog-surface); border-radius: 8px; }
+[data-solara-store].catalog-modern .catalog-nav-menu summary::after { content: "⌄"; margin-left: .45rem; color: var(--catalog-muted); font-size: .75rem; transition: transform 180ms ease; }
+[data-solara-store].catalog-modern .catalog-nav-menu[open] summary::after { transform: rotate(180deg); }
+[data-solara-store].catalog-modern .catalog-mega-menu { position: absolute; z-index: 20; top: calc(100% + .7rem); left: 50%; width: min(760px, calc(100vw - 2rem)); max-height: min(70vh, 560px); overflow: auto; transform: translateX(-50%); padding: .8rem; border: 1px solid var(--catalog-border); border-radius: 18px; background: var(--catalog-paper); box-shadow: 0 22px 58px rgb(11 11 12 / .14); -webkit-user-select: none; user-select: none; }
+[data-solara-store].catalog-modern .catalog-mega-menu__groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: max-content; align-items: start; gap: .6rem; margin: 0; padding: 0; list-style: none; }
+[data-solara-store].catalog-modern .catalog-mega-group { min-width: 0; padding: .7rem; border: 1px solid var(--catalog-border); border-radius: 12px; background: var(--catalog-surface); }
+[data-solara-store].catalog-modern .catalog-mega-group__link { display: flex; align-items: center; justify-content: space-between; gap: .5rem; min-height: 2.2rem; color: var(--catalog-ink); font-size: .86rem; font-weight: 800; text-decoration: none; }
+[data-solara-store].catalog-modern .catalog-mega-group__link:hover,
+[data-solara-store].catalog-modern .catalog-mega-group__link:focus-visible { color: var(--catalog-muted); }
+[data-solara-store].catalog-modern .catalog-mega-group__link:focus-visible,
+[data-solara-store].catalog-modern .catalog-mega-group__children a:focus-visible { outline: 2px solid var(--catalog-ink); outline-offset: 2px; border-radius: 6px; }
+[data-solara-store].catalog-modern .catalog-mega-group--has-children .catalog-mega-group__link::after { content: "↗"; color: var(--catalog-muted); font-size: .8rem; }
+[data-solara-store].catalog-modern .catalog-mega-group__children { display: grid; gap: .15rem; margin: .35rem 0 0; padding: .35rem 0 0 .55rem; border-left: 1px solid var(--catalog-border); list-style: none; }
+[data-solara-store].catalog-modern .catalog-mega-group__children a { display: block; min-height: 2rem; padding: .38rem .45rem; color: var(--catalog-muted); font-size: .78rem; font-weight: 500; text-decoration: none; }
+[data-solara-store].catalog-modern .catalog-mega-group__children a:hover { border-radius: 6px; background: var(--catalog-paper); color: var(--catalog-ink); }
 [data-solara-store].catalog-modern .catalog-header-actions { display: flex; align-items: center; justify-content: end; gap: .65rem; min-width: 0; }
 [data-solara-store].catalog-modern .catalog-search-link,
-[data-solara-store].catalog-modern .catalog-cart-link { display: inline-flex; align-items: center; gap: .35rem; min-height: 44px; border: 0; background: transparent; font-size: .82rem; text-decoration: none; cursor: pointer; }
+[data-solara-store].catalog-modern .catalog-cart-link { display: inline-flex; align-items: center; gap: .35rem; min-height: 44px; border: 0; background: transparent; font-size: .82rem; text-decoration: none; cursor: pointer; -webkit-user-select: none; user-select: none; }
 [data-solara-store].catalog-modern .catalog-search-link { max-width: 190px; padding: .55rem .75rem; border-radius: 999px; background: var(--catalog-surface); color: var(--catalog-muted); overflow: hidden; }
 [data-solara-store].catalog-modern .catalog-search-link span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 [data-solara-store].catalog-modern .catalog-cart-link strong { display: inline-grid; place-items: center; min-width: 1.25rem; min-height: 1.25rem; padding-inline: .25rem; border-radius: 999px; background: var(--catalog-ink); color: white; font-size: .7rem; }
@@ -2144,23 +2155,30 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   [data-solara-store].catalog-modern .catalog-search-link span:last-child { display: none; }
   [data-solara-store].catalog-modern .catalog-product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+@media (max-width: 959px) and (min-width: 768px) {
+  [data-solara-store].catalog-modern .catalog-mega-menu__groups { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 767px) {
   [data-solara-store].catalog-modern .catalog-header-inner { grid-template-columns: auto 1fr auto; gap: .7rem; min-height: 64px; }
-  [data-solara-store].catalog-modern .catalog-mobile-menu-button { display: inline-grid; place-items: center; width: 44px; height: 44px; border: 0; background: transparent; font-size: 1.15rem; }
+  [data-solara-store].catalog-modern .catalog-mobile-menu-button { display: inline-grid; place-items: center; width: 44px; height: 44px; border: 0; background: transparent; font-size: 1.15rem; -webkit-user-select: none; user-select: none; }
   [data-solara-store].catalog-modern .catalog-desktop-nav { display: none; }
   [data-solara-store].catalog-modern .catalog-header-actions { gap: .25rem; }
   [data-solara-store].catalog-modern .catalog-cart-link span { display: none; }
   [data-solara-store].catalog-modern .catalog-mobile-menu[hidden] { display: none; }
-  [data-solara-store].catalog-modern .catalog-mobile-menu { position: fixed; z-index: 40; inset: 0; display: block; padding: 5rem 1rem 2rem; overflow: auto; background: var(--catalog-paper); }
-  [data-solara-store].catalog-modern .catalog-mobile-menu > button { position: absolute; top: 1rem; right: 1rem; min-height: 44px; padding: .5rem .8rem; border: 1px solid var(--catalog-border); border-radius: 999px; background: transparent; }
+  [data-solara-store].catalog-modern .catalog-mobile-menu { position: fixed; z-index: 40; inset: 0; display: block; padding: 5rem 1rem 2rem; overflow: auto; background: var(--catalog-paper); -webkit-user-select: none; user-select: none; }
+  [data-solara-store].catalog-modern .catalog-mobile-menu > button { position: absolute; top: 1rem; right: 1rem; min-height: 44px; padding: .5rem .8rem; border: 1px solid var(--catalog-border); border-radius: 999px; background: transparent; cursor: pointer; -webkit-user-select: none; user-select: none; }
+  [data-solara-store].catalog-modern .catalog-mobile-menu > button:focus-visible,
+  [data-solara-store].catalog-modern .catalog-mobile-menu-button:focus-visible { outline: 2px solid var(--catalog-ink); outline-offset: 4px; }
   [data-solara-store].catalog-modern .catalog-mobile-menu nav { display: grid; gap: .5rem; }
-  [data-solara-store].catalog-modern .catalog-mobile-menu nav a,
-  [data-solara-store].catalog-modern .catalog-mobile-menu nav summary { min-height: 44px; padding: .7rem 0; border-bottom: 1px solid var(--catalog-border); text-decoration: none; }
+  [data-solara-store].catalog-modern .catalog-mobile-menu nav > a,
+  [data-solara-store].catalog-modern .catalog-mobile-menu nav > .catalog-nav-menu > summary { min-height: 44px; padding: .7rem 0; border-bottom: 1px solid var(--catalog-border); text-decoration: none; }
   [data-solara-store].catalog-modern .catalog-mobile-menu .catalog-nav-menu { display: grid; }
-  [data-solara-store].catalog-modern .catalog-mobile-menu .catalog-nav-menu .catalog-mega-menu { position: static; width: auto; transform: none; padding: .25rem 0 .5rem .8rem; border: 0; box-shadow: none; }
-  [data-solara-store].catalog-modern .catalog-mobile-menu .catalog-mega-menu ul { display: grid; grid-template-columns: 1fr; gap: .15rem; }
-  [data-solara-store].catalog-modern .catalog-mobile-menu .catalog-mega-menu > ul > li { font-weight: 600; }
-  [data-solara-store].catalog-modern .catalog-mobile-menu .catalog-mega-menu li ul { font-weight: 400; }
+  [data-solara-store].catalog-modern .catalog-mobile-menu .catalog-nav-menu .catalog-mega-menu { position: static; width: auto; max-height: none; transform: none; padding: .35rem 0 .5rem .65rem; border: 0; box-shadow: none; background: transparent; }
+  [data-solara-store].catalog-modern .catalog-mobile-menu .catalog-mega-menu__groups { grid-template-columns: 1fr; gap: .25rem; }
+  [data-solara-store].catalog-modern .catalog-mobile-menu .catalog-mega-group { padding: .15rem 0 .15rem .65rem; border: 0; border-left: 1px solid var(--catalog-border); border-radius: 0; background: transparent; }
+  [data-solara-store].catalog-modern .catalog-mobile-menu .catalog-mega-group__link { min-height: 42px; padding: .55rem .4rem; border-bottom: 1px solid var(--catalog-border); font-size: .88rem; }
+  [data-solara-store].catalog-modern .catalog-mobile-menu .catalog-mega-group__children { margin: .1rem 0 .25rem; padding: 0 0 0 .55rem; border-left: 0; }
+  [data-solara-store].catalog-modern .catalog-mobile-menu .catalog-mega-group__children a { min-height: 40px; padding: .5rem .4rem; border-bottom: 1px solid var(--catalog-border); font-size: .8rem; }
   [data-solara-store].catalog-modern .catalog-hero-inner { display: flex; flex-direction: column; min-height: calc(100svh - 96px); margin-top: .75rem; border-radius: 16px; }
   [data-solara-store].catalog-modern .catalog-hero-copy { padding: 2rem 1.25rem 1.5rem; }
   [data-solara-store].catalog-modern .catalog-hero-copy h1 { max-width: 11ch; font-size: clamp(2.7rem, 13vw, 4.5rem); }

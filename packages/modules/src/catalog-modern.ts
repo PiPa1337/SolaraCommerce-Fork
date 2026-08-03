@@ -134,27 +134,31 @@ export const catalogHeader: ModuleDefinition<z.infer<typeof headerSettings>> = {
     const navigationItems = navigation.mode === "automatic" ? automaticItems : navigation.items;
     const menuItems = navigationItems
       .map((item) => {
-        const children = item.children?.length
-          ? `<ul>${item.children
-              .map(
+        const hasChildren = Boolean(item.children?.length);
+        const children = hasChildren
+          ? `<ul class="catalog-mega-group__children" aria-label="${escapeAttribute(`Subcategorías de ${item.label}`)}">${item.children
+              ?.map(
                 (child) =>
                   `<li><a href="${escapeAttribute(safeUrl(child.href ?? "#"))}">${escapeHtml(child.label)}</a></li>`,
               )
               .join("")}</ul>`
           : "";
-        return `<li${children ? ' class="has-children"' : ""}><a href="${escapeAttribute(safeUrl(item.href ?? "#"))}">${escapeHtml(item.label)}</a>${children}</li>`;
+        return `<li class="catalog-mega-group${hasChildren ? " catalog-mega-group--has-children" : ""}"><a class="catalog-mega-group__link" href="${escapeAttribute(safeUrl(item.href ?? "#"))}">${escapeHtml(item.label)}</a>${children}</li>`;
       })
       .join("");
     const current = (types: string[]) =>
       types.includes(context.pageType ?? "") ? ' aria-current="page"' : "";
     const catalog = navigationItems.length
-      ? `<details class="catalog-nav-menu"><summary${current(["category", "collection"])}>${escapeHtml(navigation.catalogLabel || "Tienda")}</summary><div class="catalog-mega-menu"><ul>${menuItems}</ul></div></details>`
+      ? `<details class="catalog-nav-menu"><summary class="catalog-nav-trigger" aria-controls="catalog-category-menu" aria-haspopup="true"${current(["category", "collection"])}>${escapeHtml(navigation.catalogLabel || "Categorías")}</summary><div id="catalog-category-menu" class="catalog-mega-menu" role="group" aria-label="Categorías"><ul class="catalog-mega-menu__groups">${menuItems}</ul></div></details>`
       : "";
     const nav = `${navigation.showHome ? `<a href="/"${current(["home"])}>Inicio</a>` : ""}${catalog}${navigation.showContact ? `<a href="/contacto/"${current(["contact"])}>Contacto</a>` : ""}${navigation.showAbout ? `<a href="/nosotros/"${current(["about"])}>Nosotros</a>` : ""}`;
-    const mobileNav = nav.replace(
-      '<details class="catalog-nav-menu">',
-      '<details class="catalog-nav-menu" open>',
-    );
+    const mobileNav = nav
+      .replace('<details class="catalog-nav-menu">', '<details class="catalog-nav-menu" open>')
+      .replace(
+        'aria-controls="catalog-category-menu"',
+        'aria-controls="catalog-category-menu-mobile"',
+      )
+      .replace('id="catalog-category-menu"', 'id="catalog-category-menu-mobile"');
     const search =
       navigation.showSearch && context.project.commerceTemplates.search.enabled
         ? `<a class="catalog-search-link" href="/buscar/" aria-label="${escapeAttribute(context.settings.searchLabel)}"${current(["search"])}><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><span>${escapeHtml(context.settings.searchLabel)}</span></a>`

@@ -255,6 +255,7 @@ export const catalogScaleStore = StoreProjectV2Schema.parse({
   },
   navigation: {
     ...referenceStore.navigation,
+    catalogLabel: "Categorías",
     items: navigationItems,
   },
   products,

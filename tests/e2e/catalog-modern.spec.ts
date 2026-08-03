@@ -162,6 +162,48 @@ test("la categoría moderna mantiene filtros, densidad y pie comercial", async (
 test("la navegación, el detalle moderno y las variantes siguen siendo rastreables", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  const catalogTrigger = page.locator(".catalog-desktop-nav .catalog-nav-trigger");
+  await expect(catalogTrigger).toHaveText("Categorías");
+  await catalogTrigger.click();
+  const megaMenu = page.locator(".catalog-desktop-nav .catalog-mega-menu");
+  await expect(megaMenu).toBeVisible();
+  await expect(megaMenu.locator(".catalog-mega-group")).toHaveCount(10);
+  await expect(
+    megaMenu.locator(".catalog-mega-group").filter({ hasText: "Remeras" }),
+  ).toContainText("Básicas");
+  await expect(
+    megaMenu.locator(".catalog-mega-group").filter({ hasText: "Pantalones" }),
+  ).toContainText("Jeans");
+  expect(
+    await page
+      .locator(".catalog-header-inner")
+      .evaluate((element) => getComputedStyle(element).userSelect),
+  ).toBe("none");
+  expect(await catalogTrigger.evaluate((element) => getComputedStyle(element).userSelect)).toBe(
+    "none",
+  );
+  expect(
+    await megaMenu
+      .locator(".catalog-mega-menu__groups")
+      .evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length),
+  ).toBe(3);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
+    false,
+  );
+  await page.setViewportSize({ width: 768, height: 900 });
+  await page.goto("/");
+  await page.locator(".catalog-desktop-nav .catalog-nav-trigger").click();
+  expect(
+    await page
+      .locator(".catalog-desktop-nav .catalog-mega-menu__groups")
+      .evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length),
+  ).toBe(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
+    false,
+  );
+
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await page.getByRole("button", { name: /Abrir/ }).click();

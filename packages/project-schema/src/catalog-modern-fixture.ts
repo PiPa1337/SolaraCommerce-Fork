@@ -397,7 +397,11 @@ export const catalogModernStore = StoreProjectV2Schema.parse({
     container: 1240,
   },
   assets: catalogModernAssets,
-  navigation: { ...catalogScaleStore.navigation, catalogLabel: "Tienda", items: navigationItems },
+  navigation: {
+    ...catalogScaleStore.navigation,
+    catalogLabel: "Categorías",
+    items: navigationItems,
+  },
   commerceTemplates: {
     ...catalogScaleStore.commerceTemplates,
     designFamily: "catalog-modern-v1",
