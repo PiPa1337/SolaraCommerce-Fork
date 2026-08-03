@@ -1947,11 +1947,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-newsletter-action:hover { transform: translateY(-1px); background: #252527; }
 [data-solara-store].catalog-modern .catalog-secondary-action:hover { background: white; border-color: var(--catalog-ink); }
 [data-solara-store].catalog-modern .catalog-hero-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin-top: 2.5rem; }
-[data-solara-store].catalog-modern .catalog-hero-stats div { min-width: 0; min-height: 4.6rem; padding: .1rem 1rem 0 0; border-right: 1px solid var(--catalog-border); }
+[data-solara-store].catalog-modern .catalog-hero-stats div { display: grid; grid-template-rows: auto minmax(2.5em, auto); align-content: start; min-width: 0; min-height: 4.6rem; padding: .1rem 1rem 0 0; border-right: 1px solid var(--catalog-border); }
 [data-solara-store].catalog-modern .catalog-hero-stats div + div { padding-left: 1rem; }
 [data-solara-store].catalog-modern .catalog-hero-stats div:last-child { border-right: 0; }
 [data-solara-store].catalog-modern .catalog-hero-stats dt { font-variant-numeric: tabular-nums; font-size: clamp(1.1rem, 2.2vw, 1.55rem); font-weight: 900; letter-spacing: -.04em; line-height: 1.05; white-space: nowrap; }
-[data-solara-store].catalog-modern .catalog-hero-stats dd { max-width: 12ch; margin-top: .35rem; color: var(--catalog-muted); font-size: .72rem; line-height: 1.25; }
+[data-solara-store].catalog-modern .catalog-hero-stats dd { max-width: 12ch; margin: .35rem 0 0; color: var(--catalog-muted); font-size: .72rem; line-height: 1.25; }
 [data-solara-store].catalog-modern .catalog-hero-media { min-height: 100%; background: var(--catalog-surface); }
 [data-solara-store].catalog-modern .catalog-hero-image,
 [data-solara-store].catalog-modern .catalog-hero-video { width: 100%; height: 100%; min-height: 100%; object-fit: cover; }
@@ -1996,9 +1996,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-category-bento-item { position: relative; display: flex; min-height: 180px; overflow: hidden; grid-column: span 1; border-radius: 16px; background: white; text-decoration: none; }
 [data-solara-store].catalog-modern .catalog-category-bento-item--feature { min-height: 22rem; grid-column: span 2; grid-row: span 2; }
 [data-solara-store].catalog-modern .catalog-category-bento-item--wide { grid-column: span 2; }
-[data-solara-store].catalog-modern .catalog-category-bento-item span { position: relative; z-index: 1; margin: 1.25rem; color: var(--catalog-ink); font-size: 1.25rem; font-weight: 800; }
-[data-solara-store].catalog-modern .catalog-category-bento-item small { position: absolute; z-index: 1; right: 1.25rem; bottom: 1.1rem; color: var(--catalog-muted); font-size: .72rem; }
-[data-solara-store].catalog-modern .catalog-category-bento-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .78; transition: transform 280ms cubic-bezier(.16,1,.3,1); }
+[data-solara-store].catalog-modern .catalog-category-bento-item span { position: relative; z-index: 2; margin: 1.25rem; color: var(--catalog-ink); font-size: 1.25rem; font-weight: 800; }
+[data-solara-store].catalog-modern .catalog-category-bento-item small { position: absolute; z-index: 2; right: 1rem; bottom: .9rem; padding: .3rem .55rem; border: 1px solid rgb(11 11 12 / .1); border-radius: 999px; background: rgb(252 252 251 / .92); box-shadow: 0 1px 2px rgb(11 11 12 / .08); color: var(--catalog-ink); font-size: .72rem; font-weight: 700; line-height: 1; }
+[data-solara-store].catalog-modern .catalog-category-bento-item::after { position: absolute; z-index: 1; inset: 0; content: ""; background: linear-gradient(to top, rgb(11 11 12 / .16), transparent 42%); pointer-events: none; }
+[data-solara-store].catalog-modern .catalog-category-bento-image { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .78; transition: transform 280ms cubic-bezier(.16,1,.3,1); }
 [data-solara-store].catalog-modern .catalog-category-bento-item:hover .catalog-category-bento-image { transform: scale(1.02); }
 [data-solara-store].catalog-modern .catalog-category-bento-all { border-bottom: 1px solid currentColor; font-size: .82rem; text-decoration: none; }
 [data-solara-store].catalog-modern .catalog-testimonials-track { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(280px, 1fr); gap: .8rem; overflow-x: auto; overscroll-behavior-inline: contain; scroll-snap-type: x proximity; padding-bottom: .5rem; }

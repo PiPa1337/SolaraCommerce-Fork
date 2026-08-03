@@ -91,6 +91,24 @@ test("la home moderna prioriza el catálogo y conserva su densidad responsive", 
   await expect(page.locator('[data-stat="products"] dt')).toHaveText("50");
   await expect(page.locator('[data-stat="categories"] dt')).toHaveText("10");
   await expect(page.locator('[data-stat="whatsapp"] dt')).toHaveText("WhatsApp");
+  const statLayout = await page.locator(".catalog-hero-stats > div").evaluateAll((cells) => {
+    const rects = cells.map((cell) => {
+      const value = cell.querySelector("dt")?.getBoundingClientRect();
+      const label = cell.querySelector("dd")?.getBoundingClientRect();
+      return {
+        height: cell.getBoundingClientRect().height,
+        leftDelta: value && label ? Math.abs(value.left - label.left) : Number.POSITIVE_INFINITY,
+      };
+    });
+    return {
+      heightRange:
+        Math.max(...rects.map((rect) => rect.height)) -
+        Math.min(...rects.map((rect) => rect.height)),
+      maxLeftDelta: Math.max(...rects.map((rect) => rect.leftDelta)),
+    };
+  });
+  expect(statLayout.heightRange).toBeLessThanOrEqual(1);
+  expect(statLayout.maxLeftDelta).toBeLessThanOrEqual(1);
   await page.getByRole("button", { name: "Cerrar anuncio" }).click();
   await expect(page.locator('[data-solara-module="catalog-announcement"]')).toBeHidden();
   const firstGrid = page.locator(".catalog-product-grid").first();
@@ -264,6 +282,13 @@ test("las cards, el bento y la búsqueda moderna usan contenido real", async ({ 
   await expect(bento.locator(".catalog-category-bento-item")).toHaveCount(6);
   await expect(bento).toContainText("Remeras");
   await expect(bento).toContainText("Camisas");
+  await expect(bento.locator(".catalog-category-bento-item small").first()).toBeVisible();
+  expect(
+    await bento
+      .locator(".catalog-category-bento-item small")
+      .first()
+      .evaluate((element) => getComputedStyle(element).backgroundColor),
+  ).not.toBe("rgba(0, 0, 0, 0)");
   await expect(bento.getByRole("link", { name: "Ver todo el catálogo" })).toHaveAttribute(
     "href",
     "/buscar/",
