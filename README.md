@@ -58,8 +58,8 @@ paquete `@solara/project-schema/scale-fixture` expone `catalogScaleStore`: 10
 raíces, 16 categorías totales, 50 productos activos, 60 variantes y una categoría
 de 35 productos que pagina en dos documentos. La fixture pública
 `@solara/project-schema/catalog-modern-fixture` expone `catalogModernStore`, la
-tienda base editable que reutiliza los tres assets binarios existentes y mantiene
-IDs, slugs y fechas deterministas.
+tienda base editable con cuatro assets de moda reutilizados entre productos y
+mantiene IDs, slugs y fechas deterministas.
 
 `StoreProjectV2` valida IDs, slugs, referencias, navegación y páginas editables. Una operación
 inválida se rechaza completa y no deja cambios parciales.
@@ -242,3 +242,6 @@ Sin esa variable se usa el fixture base Modo Sur.
 
 Con ese mismo respaldo, `corepack pnpm pilot:export` genera el `site.zip`
 production y la carpeta `.release/pilot-site/` listos para publicar.
+
+En Preview, los assets embebidos se transportan una sola vez y se reutilizan como
+URLs `blob:` compartidas; esto evita repetir la misma base64 en cada tarjeta.

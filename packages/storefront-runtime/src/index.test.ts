@@ -33,16 +33,19 @@ describe("storefront runtime", () => {
     expect(url).toBe("https://wa.me/5491123456789?text=Pedido%0AManta");
   });
 
-  it("usa un controlador de scroll pasivo con un solo frame pendiente", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain('addEventListener("scroll"');
-    expect(STOREFRONT_RUNTIME_JS).toContain("requestAnimationFrame");
-    expect(STOREFRONT_RUNTIME_JS).toContain("passive: true");
+  it("usa observadores sin instalar listeners globales de scroll", () => {
+    expect(STOREFRONT_RUNTIME_JS).not.toContain('addEventListener("scroll"');
+    expect(STOREFRONT_RUNTIME_JS).not.toContain("scrollY");
     expect(STOREFRONT_RUNTIME_JS).toContain("IntersectionObserver");
   });
 
-  it("declara intensidad y punto de entrada sin bloquear HTML", () => {
+  it("declara motion progresivo sin bloquear el HTML inicial", () => {
     expect(STOREFRONT_RUNTIME_CSS).toContain("--motion-intensity");
     expect(STOREFRONT_RUNTIME_CSS).toContain("prefers-reduced-motion");
+    expect(STOREFRONT_RUNTIME_CSS).toContain("@keyframes solara-motion-fade-up");
+    expect(STOREFRONT_RUNTIME_CSS).not.toContain(
+      'html[data-motion-ready="true"] [data-motion-root]:not',
+    );
     expect(STOREFRONT_RUNTIME_JS).toContain("motionEntry");
   });
 

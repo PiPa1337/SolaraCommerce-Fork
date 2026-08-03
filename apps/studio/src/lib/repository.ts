@@ -117,6 +117,23 @@ function toRecord(project: StoreProjectV1): StoredProject {
   };
 }
 
+function repairModernGreeting(project: StoreProjectV1): StoreProjectV1 {
+  if (
+    project.commerceTemplates.designFamily !== "catalog-modern-v1" ||
+    project.whatsapp.greeting !== "Hola Casa Luma, quiero hacer este pedido:"
+  ) {
+    return project;
+  }
+
+  return StoreProjectV1Schema.parse({
+    ...project,
+    whatsapp: {
+      ...project.whatsapp,
+      greeting: `Hola ${project.identity.brandName}, quiero hacer este pedido:`,
+    },
+  });
+}
+
 async function sourceAsDataUrl(source: string): Promise<string> {
   const response = await fetch(source);
   if (!response.ok) throw new Error(`No se pudo cargar el recurso inicial ${source}.`);
@@ -223,7 +240,12 @@ export async function createProject(name: string): Promise<StoreProjectV1> {
 export async function ensureFirstProject(): Promise<StoreProjectV1> {
   await ready();
   const first = await database.projects.orderBy("updatedAt").reverse().first();
-  if (first) return StoreProjectV1Schema.parse(first.project);
+  if (first) {
+    const parsed = StoreProjectV1Schema.parse(first.project);
+    const project = repairModernGreeting(parsed);
+    if (project.whatsapp.greeting !== parsed.whatsapp.greeting) await saveProject(project);
+    return project;
+  }
   const initial = await embedFixtureAssets(
     StoreProjectV1Schema.parse(structuredClone(catalogModernStore)),
   );
@@ -233,7 +255,13 @@ export async function ensureFirstProject(): Promise<StoreProjectV1> {
 
 export async function ensureModernBaseProject(): Promise<boolean> {
   await ready();
-  if (await database.projects.get(catalogModernStore.id)) return false;
+  const existing = await database.projects.get(catalogModernStore.id);
+  if (existing) {
+    const parsed = StoreProjectV1Schema.parse(existing.project);
+    const project = repairModernGreeting(parsed);
+    if (project.whatsapp.greeting !== parsed.whatsapp.greeting) await saveProject(project);
+    return false;
+  }
 
   await saveProject(
     await embedFixtureAssets(StoreProjectV1Schema.parse(structuredClone(catalogModernStore))),
@@ -243,7 +271,13 @@ export async function ensureModernBaseProject(): Promise<boolean> {
 
 export async function ensureScaleDemoProject(): Promise<boolean> {
   await ready();
-  if (await database.projects.get(SCALE_DEMO_PROJECT_ID)) return false;
+  const existing = await database.projects.get(SCALE_DEMO_PROJECT_ID);
+  if (existing) {
+    const parsed = StoreProjectV1Schema.parse(existing.project);
+    const project = repairModernGreeting(parsed);
+    if (project.whatsapp.greeting !== parsed.whatsapp.greeting) await saveProject(project);
+    return false;
+  }
 
   const demo = StoreProjectV1Schema.parse({
     ...structuredClone(catalogModernStore),

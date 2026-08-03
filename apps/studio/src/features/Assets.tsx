@@ -401,7 +401,7 @@ export function Assets({
                   />
                 </label>
                 <label>
-                  <span>Poster</span>
+                  <span>Imagen de portada</span>
                   <select
                     defaultValue={video.posterAssetId ?? ""}
                     onChange={(event) =>

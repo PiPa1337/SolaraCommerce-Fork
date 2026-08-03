@@ -30,6 +30,7 @@ test("procesa una imagen, muestra el lote y persiste el asset", async ({ page })
   await page.getByRole("button", { name: /^Modo Sur/ }).click();
   await page.getByRole("button", { name: "Recursos", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Recursos" })).toBeVisible();
+  const initialAssetCount = await page.locator(".asset-item").count();
 
   const pixel = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -44,11 +45,11 @@ test("procesa una imagen, muestra el lote y persiste el asset", async ({ page })
   await expect(page.locator("output").filter({ hasText: "1 imagen agregada" })).toBeVisible({
     timeout: 15_000,
   });
-  await expect(page.locator(".asset-item")).toHaveCount(4);
+  await expect(page.locator(".asset-item")).toHaveCount(initialAssetCount + 1);
   await expect(page.getByText("Guardado", { exact: true })).toBeVisible();
 
   await page.reload();
   await page.getByRole("button", { name: /^Modo Sur/ }).click();
   await page.getByRole("button", { name: "Recursos", exact: true }).click();
-  await expect(page.locator(".asset-item")).toHaveCount(4);
+  await expect(page.locator(".asset-item")).toHaveCount(initialAssetCount + 1);
 });

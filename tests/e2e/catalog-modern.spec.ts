@@ -8,16 +8,20 @@ import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixtur
 const exported = exportProject(catalogModernStore, { mode: "production" });
 const fixtureFiles = new Map<string, Uint8Array>([
   [
-    "fixtures/casa-luma-hero.png",
-    readFileSync(resolve("apps/studio/public/fixtures/casa-luma-hero.png")),
+    "fixtures/modo-sur-hero.png",
+    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-hero.png")),
   ],
   [
-    "fixtures/manta-bruma.png",
-    readFileSync(resolve("apps/studio/public/fixtures/manta-bruma.png")),
+    "fixtures/modo-sur-remera.png",
+    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-remera.png")),
   ],
   [
-    "fixtures/jarra-delta.png",
-    readFileSync(resolve("apps/studio/public/fixtures/jarra-delta.png")),
+    "fixtures/modo-sur-jean.png",
+    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-jean.png")),
+  ],
+  [
+    "fixtures/modo-sur-camisa.png",
+    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-camisa.png")),
   ],
 ]);
 
@@ -75,8 +79,20 @@ test("la home moderna prioriza el catálogo y conserva su densidad responsive", 
   await expect(
     page.getByRole("heading", { level: 1, name: "Vestite con lo que te representa." }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Cerrar anuncio" }).click();
+  await expect(page.locator('[data-solara-module="catalog-announcement"]')).toBeHidden();
   const firstGrid = page.locator(".catalog-product-grid").first();
   await expect(firstGrid.locator(".catalog-product-card")).toHaveCount(12);
+  await expect(firstGrid.locator(".catalog-product-card").first()).toBeVisible();
+  expect(
+    await firstGrid
+      .locator(".catalog-product-card")
+      .first()
+      .evaluate((element) => ({
+        opacity: getComputedStyle(element).opacity,
+        visibility: getComputedStyle(element).visibility,
+      })),
+  ).toEqual({ opacity: "1", visibility: "visible" });
   expect(
     await firstGrid.evaluate(
       (element) => getComputedStyle(element).gridTemplateColumns.split(" ").length,
@@ -112,7 +128,7 @@ test("la navegación, el detalle moderno y las variantes siguen siendo rastreabl
   await page.getByRole("button", { name: /Abrir/ }).click();
   await expect(page.locator("#catalog-mobile-menu")).toBeVisible();
   await expect(page.locator('#catalog-mobile-menu a[href="/categorias/remeras/"]')).toBeVisible();
-  await page.getByRole("button", { name: /Cerrar/ }).click();
+  await page.getByRole("button", { name: "Cerrar menú" }).click();
 
   await page.goto("/productos/remera-esencial-de-algodon/");
   await expect(

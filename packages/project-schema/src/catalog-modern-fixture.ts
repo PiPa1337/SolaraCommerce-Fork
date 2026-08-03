@@ -12,7 +12,7 @@ const rootDefinitions = [
   ["tejidos", "Tejidos", "Texturas suaves para días tranquilos."],
   ["calzado", "Calzado", "Piezas cómodas para moverte."],
   ["accesorios", "Accesorios", "Detalles que completan tu manera de vestir."],
-  ["sale", "Sale", "Últimas unidades y precios especiales."],
+  ["sale", "Liquidación", "Últimas unidades y precios especiales."],
   ["novedades", "Novedades", "Lo nuevo de Modo Sur."],
 ] as const;
 
@@ -69,7 +69,7 @@ const primaryRoots = [
   "sale",
   "novedades",
 ];
-const imageIds = ["asset-manta", "asset-jarra", "asset-hero"] as const;
+const imageIds = ["asset-manta", "asset-jarra", "asset-modo-camisa"] as const;
 const brands = ["Modo Sur", "Línea Norte", "Taller del Río", "Estudio Liso", "Bruma"];
 const productNames = [
   "Remera esencial de algodón",
@@ -297,6 +297,53 @@ const motion = (preset: "none" | "fade-up" | "stagger") => ({
   once: true,
 });
 
+const catalogModernAssets = [
+  {
+    kind: "image" as const,
+    id: "asset-hero",
+    name: "Campaña Modo Sur",
+    alt: "Dos personas con prendas negras de Modo Sur frente a una pared clara",
+    mimeType: "image/png",
+    source: "/fixtures/modo-sur-hero.png",
+    width: 1536,
+    height: 1024,
+    hash: "fixture-modo-sur-hero",
+  },
+  {
+    kind: "image" as const,
+    id: "asset-manta",
+    name: "Remera esencial negra",
+    alt: "Remera negra de algodón sobre fondo gris claro",
+    mimeType: "image/png",
+    source: "/fixtures/modo-sur-remera.png",
+    width: 1254,
+    height: 1254,
+    hash: "fixture-modo-sur-remera",
+  },
+  {
+    kind: "image" as const,
+    id: "asset-jarra",
+    name: "Jean recto azul",
+    alt: "Jean recto azul sobre fondo gris claro",
+    mimeType: "image/png",
+    source: "/fixtures/modo-sur-jean.png",
+    width: 1254,
+    height: 1254,
+    hash: "fixture-modo-sur-jean",
+  },
+  {
+    kind: "image" as const,
+    id: "asset-modo-camisa",
+    name: "Camisa a cuadros",
+    alt: "Camisa a cuadros roja y azul sobre fondo gris claro",
+    mimeType: "image/png",
+    source: "/fixtures/modo-sur-camisa.png",
+    width: 1254,
+    height: 1254,
+    hash: "fixture-modo-sur-camisa",
+  },
+] as const;
+
 export const catalogModernStore = StoreProjectV2Schema.parse({
   ...structuredClone(catalogScaleStore),
   id: "store-modo-sur",
@@ -312,6 +359,12 @@ export const catalogModernStore = StoreProjectV2Schema.parse({
     email: "hola@modo-sur.example",
     phone: "5491123456789",
     address: "Buenos Aires, Argentina",
+  },
+  whatsapp: {
+    ...catalogScaleStore.whatsapp,
+    phone: "5491123456789",
+    greeting: "Hola Modo Sur, quiero hacer este pedido:",
+    includeSku: true,
   },
   seo: {
     ...catalogScaleStore.seo,
@@ -338,6 +391,7 @@ export const catalogModernStore = StoreProjectV2Schema.parse({
     radius: 16,
     container: 1240,
   },
+  assets: catalogModernAssets,
   navigation: { ...catalogScaleStore.navigation, catalogLabel: "Tienda", items: navigationItems },
   commerceTemplates: {
     ...catalogScaleStore.commerceTemplates,

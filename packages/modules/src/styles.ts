@@ -1876,9 +1876,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
 }
 [data-solara-store].catalog-modern .catalog-announcement-inner {
-  display: flex; align-items: center; justify-content: center; gap: .6rem; min-height: 32px; padding: .35rem 1rem; background: var(--catalog-ink); color: white; font-size: .72rem; text-align: center;
+  position: relative; display: flex; align-items: center; justify-content: center; gap: .6rem; min-height: 32px; padding: .35rem 3rem; background: var(--catalog-ink); color: white; font-size: .72rem; text-align: center;
 }
 [data-solara-store].catalog-modern .catalog-announcement-inner a { text-decoration: underline; text-underline-offset: .2em; }
+[data-solara-store].catalog-modern .catalog-announcement-inner button { position: absolute; right: 1rem; width: 28px; height: 28px; padding: 0; border: 0; background: transparent; color: inherit; font-size: 1.2rem; line-height: 1; cursor: pointer; }
 [data-solara-store].catalog-modern .catalog-header-inner {
   position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 1.5rem; width: min(calc(100% - 2rem), var(--solara-container)); min-height: 72px; margin-inline: auto; border-bottom: 1px solid var(--catalog-border);
 }
@@ -1915,8 +1916,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-hero-actions { display: flex; flex-wrap: wrap; gap: .65rem; margin-top: 1.5rem; }
 [data-solara-store].catalog-modern .catalog-primary-action,
 [data-solara-store].catalog-modern .catalog-secondary-action,
-[data-solara-store].catalog-modern .catalog-newsletter-action { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: .75rem 1.25rem; border-radius: 999px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+[data-solara-store].catalog-modern .catalog-newsletter-action,
+[data-solara-store].catalog-modern .solara-primary-action { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: .75rem 1.25rem; border-radius: 999px; font-weight: 700; text-decoration: none; white-space: nowrap; }
 [data-solara-store].catalog-modern .catalog-primary-action { background: var(--catalog-ink); color: white; }
+[data-solara-store].catalog-modern .solara-primary-action { background: var(--catalog-ink); color: white; }
 [data-solara-store].catalog-modern .catalog-secondary-action { border: 1px solid var(--catalog-border); background: transparent; }
 [data-solara-store].catalog-modern .catalog-primary-action:hover,
 [data-solara-store].catalog-modern .catalog-newsletter-action:hover { transform: translateY(-1px); background: #252527; }
@@ -2086,6 +2089,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .solara-search-form input { flex: 1; min-height: 48px; padding: .7rem .8rem; border: 1px solid var(--catalog-border); border-radius: 999px; background: var(--catalog-paper); }
 [data-solara-store].catalog-modern .solara-cart-page-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 2rem; padding: 2rem 0 5rem; }
 [data-solara-store].catalog-modern .solara-cart-page-grid > aside { align-self: start; padding: 1.25rem; border-radius: 16px; background: var(--catalog-surface); }
+[data-solara-store].catalog-modern .solara-cart-page-grid > aside .solara-primary-action { width: 100%; }
 [data-solara-store].catalog-modern .solara-cart-page-grid [data-cart-lines] .solara-cart-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .6rem; padding: 1rem 0; border-bottom: 1px solid var(--catalog-border); }
 @media (max-width: 1199px) {
   [data-solara-store].catalog-modern .catalog-desktop-nav { gap: .8rem; }

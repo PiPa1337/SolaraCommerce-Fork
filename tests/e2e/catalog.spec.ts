@@ -20,6 +20,15 @@ test.afterAll(async () => {
 
 async function openCatalog(page: import("@playwright/test").Page) {
   await page.goto(studioUrl);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolveDelete, reject) => {
+        const request = indexedDB.deleteDatabase("solara-commerce-studio");
+        request.addEventListener("success", () => resolveDelete());
+        request.addEventListener("error", () => reject(request.error));
+      }),
+  );
+  await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   await page.getByRole("button", { name: /^Modo Sur/ }).click();
   await page.getByRole("button", { name: "Catálogo", exact: true }).click();
@@ -38,6 +47,19 @@ async function uploadCsv(page: import("@playwright/test").Page, csv: string, nam
 async function clickDom(locator: import("@playwright/test").Locator) {
   await locator.evaluate((element: HTMLElement) => element.click());
 }
+
+test("importa y pagina 1.000 productos", async ({ page }) => {
+  test.setTimeout(150_000);
+  await openCatalog(page);
+  await uploadCsv(page, performanceCsv, "catalogo-1000.csv");
+  await clickDom(page.getByRole("button", { name: "Reemplazar catálogo" }));
+  await expect(page.getByText("1000 productos y 2000 variantes.")).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.locator("tbody tr")).toHaveCount(50);
+
+  expect(await page.locator("tbody tr").count()).toBeLessThanOrEqual(100);
+});
 
 test("edita variantes y conserva el último cambio al volver, recargar y reabrir", async ({
   page,
@@ -115,17 +137,4 @@ test("previsualiza, cancela y edita en masa entre páginas", async ({ page }) =>
   await expect(page.locator("tbody .status-label", { hasText: "Activo" }).first()).toBeVisible();
   await clickDom(page.getByRole("button", { name: "Rehacer" }));
   await expect(page.locator("tbody .status-label", { hasText: "Archivado" }).first()).toBeVisible();
-});
-
-test("importa y pagina 1.000 productos", async ({ page }) => {
-  test.setTimeout(150_000);
-  await openCatalog(page);
-  await uploadCsv(page, performanceCsv, "catalogo-1000.csv");
-  await clickDom(page.getByRole("button", { name: "Reemplazar catálogo" }));
-  await expect(page.getByText("1000 productos y 2000 variantes.")).toBeVisible({
-    timeout: 30_000,
-  });
-  await expect(page.locator("tbody tr")).toHaveCount(50);
-
-  expect(await page.locator("tbody tr").count()).toBeLessThanOrEqual(100);
 });

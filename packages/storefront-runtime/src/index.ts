@@ -534,33 +534,37 @@ function storefrontBoot(): void {
       });
   }
 
-  const viewportTasks = new Set<() => void>();
-  let viewportFrame = 0;
-  const runViewportTasks = (): void => {
-    viewportFrame = 0;
-    viewportTasks.forEach((task) => {
-      task();
+  document
+    .querySelectorAll<HTMLButtonElement>("[data-catalog-announcement-close]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        const announcement = button.closest<HTMLElement>(
+          '[data-solara-module="catalog-announcement"]',
+        );
+        if (!announcement) return;
+        announcement.hidden = true;
+        updateChromeHeight();
+      });
     });
-  };
-  const scheduleViewportTasks = (): void => {
-    if (viewportFrame !== 0) return;
-    viewportFrame = window.requestAnimationFrame(runViewportTasks);
-  };
-  window.addEventListener("scroll", scheduleViewportTasks, { passive: true });
-  window.addEventListener("resize", scheduleViewportTasks, { passive: true });
 
   const headers = Array.from(
     document.querySelectorAll<HTMLElement>('[data-solara-module="editorial-header"]'),
   );
-  if (headers.length > 0) {
-    const updateHeaderState = (): void => {
-      const scrolled = window.scrollY > 8;
+  if (headers.length > 0 && "IntersectionObserver" in window) {
+    // A sentinel lets the sticky header react to scroll without a global scroll listener.
+    const sentinel = document.createElement("span");
+    sentinel.dataset.solaraScrollSentinel = "true";
+    sentinel.setAttribute("aria-hidden", "true");
+    sentinel.style.cssText =
+      "position:absolute;top:0;left:0;width:1px;height:1px;pointer-events:none;opacity:0";
+    document.body.prepend(sentinel);
+    const headerObserver = new IntersectionObserver(([entry]) => {
+      const scrolled = entry ? !entry.isIntersecting : false;
       headers.forEach((header) => {
         header.dataset.scrolled = String(scrolled);
       });
-    };
-    updateHeaderState();
-    viewportTasks.add(updateHeaderState);
+    });
+    headerObserver.observe(sentinel);
   }
 
   document
@@ -1024,33 +1028,6 @@ function storefrontBoot(): void {
     });
   }
 
-  const progressRoots = motionRoots.filter((element) =>
-    ["parallax", "scroll-progress"].includes(element.dataset.motionPreset ?? ""),
-  );
-  if (!reduceMotion && progressRoots.length > 0) {
-    const updateProgress = (): void => {
-      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-      progressRoots.forEach((element) => {
-        const rect = element.getBoundingClientRect();
-        const progress = Math.max(
-          0,
-          Math.min(1, (viewportHeight - rect.top) / Math.max(1, viewportHeight + rect.height)),
-        );
-        element.style.setProperty("--motion-progress", progress.toFixed(4));
-        if (element.dataset.motionPreset === "parallax") {
-          const distance = Number(element.dataset.motionDistance ?? "24");
-          const intensity = Number(element.dataset.motionIntensity ?? "1");
-          element.style.setProperty(
-            "--motion-parallax-y",
-            `${((0.5 - progress) * distance * intensity).toFixed(2)}px`,
-          );
-        }
-      });
-    };
-    viewportTasks.add(updateProgress);
-    updateProgress();
-  }
-
   renderCart();
   document.querySelectorAll<HTMLElement>("[data-product]").forEach(syncVariant);
 }
@@ -1150,59 +1127,36 @@ export const STOREFRONT_RUNTIME_CSS = `
   }
 }
 
-html[data-motion-ready="true"] [data-motion-root]:not([data-motion-preset="none"]):not([data-motion-visible="true"]) [data-motion-zone] {
-  opacity: 0;
+/* Progressive motion: content remains visible while the observer is idle or unavailable. */
+[data-motion-root][data-motion-visible="true"][data-motion-preset="fade"] [data-motion-zone] {
+  animation: solara-motion-fade var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
 }
 
-html[data-motion-ready="true"] [data-motion-root][data-motion-preset="fade-up"]:not([data-motion-visible="true"]) [data-motion-zone],
-html[data-motion-ready="true"] [data-motion-root][data-motion-preset="stagger"]:not([data-motion-visible="true"]) [data-motion-zone] > * {
-  transform: translate3d(0, calc(var(--motion-distance, 24px) * var(--motion-intensity, 1)), 0);
+[data-motion-root][data-motion-visible="true"][data-motion-preset="fade-up"] [data-motion-zone] {
+  animation: solara-motion-fade-up var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
 }
 
-html[data-motion-ready="true"] [data-motion-root][data-motion-preset="stagger"]:not([data-motion-visible="true"]) [data-motion-zone] > * {
-  opacity: 0;
+[data-motion-root][data-motion-visible="true"][data-motion-preset="slide"] [data-motion-zone] {
+  --motion-slide-x: calc(var(--motion-distance, 24px) * var(--motion-intensity, 1));
+  animation: solara-motion-slide var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
 }
 
-html[data-motion-ready="true"] [data-motion-root][data-motion-preset="slide"]:not([data-motion-visible="true"]) [data-motion-zone] {
-  transform: translate3d(calc(var(--motion-distance, 24px) * var(--motion-intensity, 1)), 0, 0);
+[data-motion-root][data-motion-visible="true"][data-motion-preset="slide"][data-motion-direction="left"] [data-motion-zone] {
+  --motion-slide-x: calc(var(--motion-distance, 24px) * var(--motion-intensity, 1) * -1);
 }
 
-html[data-motion-ready="true"] [data-motion-root][data-motion-preset="slide"][data-motion-direction="left"]:not([data-motion-visible="true"]) [data-motion-zone] {
-  transform: translate3d(calc(var(--motion-distance, 24px) * var(--motion-intensity, 1) * -1), 0, 0);
+[data-motion-root][data-motion-visible="true"][data-motion-preset="scale"] [data-motion-zone] {
+  animation: solara-motion-scale var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
 }
 
-html[data-motion-ready="true"] [data-motion-root][data-motion-preset="slide"][data-motion-direction="up"]:not([data-motion-visible="true"]) [data-motion-zone] {
-  transform: translate3d(0, calc(var(--motion-distance, 24px) * var(--motion-intensity, 1)), 0);
+[data-motion-root][data-motion-visible="true"][data-motion-preset="stagger"] [data-motion-zone] > * {
+  animation: solara-motion-fade-up var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) both;
 }
 
-html[data-motion-ready="true"] [data-motion-root][data-motion-preset="slide"][data-motion-direction="down"]:not([data-motion-visible="true"]) [data-motion-zone] {
-  transform: translate3d(0, calc(var(--motion-distance, 24px) * var(--motion-intensity, 1) * -1), 0);
-}
-
-html[data-motion-ready="true"] [data-motion-root][data-motion-preset="scale"]:not([data-motion-visible="true"]) [data-motion-zone] {
-  transform: scale(calc(1 - (0.03 * var(--motion-intensity, 1))));
-}
-
-[data-motion-root][data-motion-visible="true"] [data-motion-zone] {
-  opacity: 1;
-  transform: none;
-  transition:
-    opacity var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms),
-    transform var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms);
-}
-
-[data-motion-root][data-motion-preset="stagger"][data-motion-visible="true"] [data-motion-zone] > * {
-  opacity: 1;
-  transform: none;
-  transition:
-    opacity var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)),
-    transform var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1));
-}
-
-[data-motion-root][data-motion-preset="stagger"][data-motion-visible="true"] [data-motion-zone] > :nth-child(2) { transition-delay: calc(var(--motion-delay, 0ms) + var(--motion-stagger, 80ms)); }
-[data-motion-root][data-motion-preset="stagger"][data-motion-visible="true"] [data-motion-zone] > :nth-child(3) { transition-delay: calc(var(--motion-delay, 0ms) + var(--motion-stagger, 80ms) + var(--motion-stagger, 80ms)); }
-[data-motion-root][data-motion-preset="stagger"][data-motion-visible="true"] [data-motion-zone] > :nth-child(4) { transition-delay: calc(var(--motion-delay, 0ms) + var(--motion-stagger, 80ms) + var(--motion-stagger, 80ms) + var(--motion-stagger, 80ms)); }
-[data-motion-root][data-motion-preset="stagger"][data-motion-visible="true"] [data-motion-zone] > :nth-child(n+5) { transition-delay: calc(var(--motion-delay, 0ms) + var(--motion-stagger, 80ms) + var(--motion-stagger, 80ms) + var(--motion-stagger, 80ms) + var(--motion-stagger, 80ms)); }
+[data-motion-root][data-motion-preset="stagger"][data-motion-visible="true"] [data-motion-zone] > :nth-child(2) { animation-delay: var(--motion-stagger, 80ms); }
+[data-motion-root][data-motion-preset="stagger"][data-motion-visible="true"] [data-motion-zone] > :nth-child(3) { animation-delay: calc(var(--motion-stagger, 80ms) * 2); }
+[data-motion-root][data-motion-preset="stagger"][data-motion-visible="true"] [data-motion-zone] > :nth-child(4) { animation-delay: calc(var(--motion-stagger, 80ms) * 3); }
+[data-motion-root][data-motion-preset="stagger"][data-motion-visible="true"] [data-motion-zone] > :nth-child(n+5) { animation-delay: calc(var(--motion-stagger, 80ms) * 4); }
 
 @supports (animation-timeline: view()) {
   [data-motion-root][data-motion-preset="parallax"] [data-motion-zone] {
@@ -1220,13 +1174,13 @@ html[data-motion-ready="true"] [data-motion-root][data-motion-preset="scale"]:no
 }
 
 @supports not (animation-timeline: view()) {
-  [data-motion-root][data-motion-preset="parallax"][data-motion-visible="true"] [data-motion-zone] {
-    transform: translate3d(0, var(--motion-parallax-y, 0px), 0);
+  [data-motion-root][data-motion-preset="parallax"] [data-motion-zone] {
+    transform: none;
   }
 
   [data-motion-root][data-motion-preset="scroll-progress"] {
     transform-origin: left center;
-    transform: scaleX(var(--motion-progress, 1));
+    transform: scaleX(1);
   }
 }
 
@@ -1248,6 +1202,26 @@ html[data-motion-ready="true"] [data-motion-root][data-motion-preset="scale"]:no
 @keyframes solara-parallax {
   from { transform: translate3d(0, -2%, 0) scale(1.03); }
   to { transform: translate3d(0, 2%, 0) scale(1.03); }
+}
+
+@keyframes solara-motion-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes solara-motion-fade-up {
+  from { opacity: 0; transform: translate3d(0, calc(var(--motion-distance, 24px) * var(--motion-intensity, 1)), 0); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes solara-motion-slide {
+  from { opacity: 0; transform: translate3d(var(--motion-slide-x, 24px), 0, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes solara-motion-scale {
+  from { opacity: 0; transform: scale(calc(1 - (0.03 * var(--motion-intensity, 1)))); }
+  to { opacity: 1; transform: none; }
 }
 
 @keyframes solara-progress {

@@ -145,6 +145,20 @@ test("preview diferencia escritorio, tablet y móvil", async ({ page }) => {
       "true",
     );
     await expect(page.locator(`iframe[title="${size.title}"]`)).toBeVisible();
+    if (size.title === "Vista previa desktop") {
+      const frame = page.frameLocator(`iframe[title="${size.title}"]`);
+      await expect
+        .poll(() =>
+          frame
+            .locator("img")
+            .first()
+            .evaluate((image) => image.naturalWidth),
+        )
+        .toBeGreaterThan(0);
+      expect(
+        await frame.locator("html").evaluate((element) => element.outerHTML.length),
+      ).toBeLessThan(14_000_000);
+    }
   }
 });
 

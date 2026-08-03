@@ -332,6 +332,105 @@ function projectWithPublicAssetUrls(project: StoreProjectV1): StoreProjectV1 {
   };
 }
 
+const PREVIEW_ASSET_PREFIX = "/__solara-preview-assets/";
+
+interface PreviewAssetBundle {
+  project: StoreProjectV1;
+  sources: ReadonlyMap<string, string>;
+}
+
+function createPreviewAssetBundle(project: StoreProjectV1): PreviewAssetBundle {
+  const sources = new Map<string, string>();
+  const addSource = (asset: ImageAsset | VideoAsset, source: string, suffix = ""): string => {
+    if (!source.startsWith("data:")) return source;
+    const path = `${PREVIEW_ASSET_PREFIX}${asset.hash}${suffix}.${assetExtension(asset)}`;
+    sources.set(path, source);
+    return path;
+  };
+
+  return {
+    project: {
+      ...project,
+      assets: project.assets.map((asset) => ({
+        ...asset,
+        source: addSource(asset, asset.source),
+        ...(asset.fallbackSource
+          ? { fallbackSource: addSource(asset, asset.fallbackSource, "-fallback") }
+          : {}),
+        ...(asset.responsiveSources
+          ? {
+              responsiveSources: asset.responsiveSources.map((responsive) => ({
+                ...responsive,
+                source: addSource(asset, responsive.source, `-${responsive.width}`),
+              })),
+            }
+          : {}),
+      })),
+      videos: project.videos.map((video) => ({
+        ...video,
+        source: addSource(video, video.source),
+      })),
+    },
+    sources,
+  };
+}
+
+function previewAssetMarkup(sources: ReadonlyMap<string, string>): string {
+  if (sources.size === 0) return "";
+  const serialized = jsonForScript(Object.fromEntries(sources));
+  return `<script type="application/json" id="solara-preview-assets">${serialized}</script>
+<script>
+ (async () => {
+  const payload = document.getElementById("solara-preview-assets");
+  if (!payload) return;
+  try {
+    const sources = JSON.parse(payload.textContent || "{}");
+    const objectUrls = new Map();
+    const sourceFor = async (value) => {
+      const source = sources[value];
+      if (!source) return "";
+      const cached = objectUrls.get(value);
+      if (cached) return cached;
+      try {
+        const response = await fetch(source);
+        const objectUrl = URL.createObjectURL(await response.blob());
+        objectUrls.set(value, objectUrl);
+        return objectUrl;
+      } catch {
+        objectUrls.set(value, source);
+        return source;
+      }
+    };
+    const values = [...new Set(Object.keys(sources))];
+    await Promise.all(values.map(async (value) => sourceFor(value)));
+    document.querySelectorAll("[src]").forEach((element) => {
+      const source = objectUrls.get(element.getAttribute("src") || "");
+      if (source) element.setAttribute("src", source);
+    });
+    document.querySelectorAll("[srcset]").forEach((element) => {
+      const srcset = element.getAttribute("srcset") || "";
+      const hydrated = srcset
+        .split(",")
+        .map((entry) => {
+          const parts = entry.trim().split(/\\s+/);
+          const source = objectUrls.get(parts.shift() || "");
+          return source ? [source, ...parts].join(" ") : entry;
+        })
+        .join(",");
+      element.setAttribute("srcset", hydrated);
+    });
+    document.querySelectorAll("[poster]").forEach((element) => {
+      const source = objectUrls.get(element.getAttribute("poster") || "");
+      if (source) element.setAttribute("poster", source);
+    });
+    payload.remove();
+  } catch {
+    // A preview asset must never prevent the storefront from rendering.
+  }
+})();
+</script>`;
+}
+
 function themeCss(project: StoreProjectV1): string {
   const { colors, typography, spacingScale, radius, container } = project.theme;
   const rootColorScheme = project.theme.colorMode === "dark" ? "dark" : "light";
@@ -1847,10 +1946,16 @@ export function renderPreviewHtml(
   path = "/",
 ): string {
   const project = parseProject(projectInput, "renderizar la vista previa");
-  const pages = buildPages(project);
+  const previewAssets = createPreviewAssetBundle(project);
+  const pages = buildPages(previewAssets.project);
   const page = pages.find((candidate) => candidate.canonicalPath === path) ?? pages[0];
   if (!page) throw new Error("No se pudo renderizar la página inicial.");
-  return renderDocument(project, page, mode)
+  const document = renderDocument(previewAssets.project, page, mode);
+  const usedSources = new Map(
+    [...previewAssets.sources].filter(([path]) => document.includes(path)),
+  );
+  return document
+    .replace("</body>", `${previewAssetMarkup(usedSources)}\n</body>`)
     .replace('href="/assets/storefront.css"', 'href="data:text/css;base64,PREVIEW_STYLE"')
     .replace(
       'src="/assets/storefront.js"',

@@ -414,13 +414,13 @@ export function Overview({
                     onChange={(event) => updatePage(page.id, { title: event.target.value })}
                   />
                 </Field>
-                <Field label="SEO title">
+                <Field label="Título SEO">
                   <input
                     value={page.seoTitle}
                     onChange={(event) => updatePage(page.id, { seoTitle: event.target.value })}
                   />
                 </Field>
-                <Field label="SEO description">
+                <Field label="Descripción SEO">
                   <textarea
                     rows={2}
                     value={page.seoDescription}

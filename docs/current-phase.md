@@ -37,8 +37,9 @@ renderer.
   posición de imagen y el aislamiento de sus clases.
 - Studio usa un árbol de categorías contraíble, una toolbar de catálogo que no
   colapsa el buscador y un selector de preview compacto.
-- El runtime comparte un scheduler de viewport para header y progreso de scroll;
-  la grilla, búsqueda y paginación tienen estilos aislados.
+- El runtime usa IntersectionObserver para el header y las entradas en viewport;
+  los presets de progreso usan CSS scroll-timeline cuando existe, sin listeners
+  globales de scroll. La grilla, búsqueda y paginación tienen estilos aislados.
 - Los beneficios de confianza sin datos se omiten y se corrigieron textos fuente
   con codificación UTF-8 dañada.
 - El inspector del hero ofrece edición visual de slides, incluyendo orden,
@@ -65,7 +66,8 @@ el worker de exportación y el renderer público no bloquean el arranque del edi
 `catalogModernStore` es la fixture de referencia que se crea por defecto y que
 debe actualizarse junto con cualquier cambio de estos módulos. `Modo Sur` y su
 demo separada prueban edición de copy, slides, CTA, productos, variantes,
-categorías y exportación sin recursos binarios nuevos.
+categorías y exportación con cuatro assets de moda reutilizados; no se crea un
+archivo por producto.
 En instalaciones que ya tenían otra tienda, el arranque agrega `Modo Sur` de
 forma idempotente sin sobrescribir los proyectos existentes.
 
@@ -147,3 +149,6 @@ corepack pnpm test:e2e
 
 La matriz release con Firefox/WebKit requiere Node 22 en CI; este entorno local
 usa Node 24 y por eso no se presenta como una ejecucion release exitosa.
+
+El preview deduplica assets embebidos: cada fuente se transporta una sola vez y
+las imagenes repetidas usan URLs `blob:` compartidas, evitando iframes gigantes.

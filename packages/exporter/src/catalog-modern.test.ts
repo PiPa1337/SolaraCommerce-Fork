@@ -20,6 +20,8 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(home).toContain('data-design-family="catalog-modern-v1"');
     expect(home).not.toMatch(/[ÃÂ�]/);
     expect(home).toContain('data-solara-module="catalog-product-grid"');
+    expect(home).toContain("/fixtures/modo-sur-hero.png");
+    expect(home).toContain("/fixtures/modo-sur-remera.png");
     expect(home.match(/data-product-card/g) ?? []).toHaveLength(20);
     expect(product).toContain('data-solara-module="catalog-product-detail"');
     expect(product).toContain("Lo que dicen quienes compraron");
@@ -40,5 +42,22 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(String(exported.files.get("sitemap.xml"))).toContain(
       "/productos/remera-esencial-de-algodon/",
     );
+    expect(catalogModernStore.whatsapp.greeting).toBe("Hola Modo Sur, quiero hacer este pedido:");
+  });
+
+  it("deduplica fuentes de assets embebidos en el preview", () => {
+    const payload = "A".repeat(100_000);
+    const embedded = {
+      ...catalogModernStore,
+      assets: catalogModernStore.assets.map((asset) => ({
+        ...asset,
+        source: `data:image/png;base64,${payload}`,
+      })),
+    };
+    const preview = renderPreviewHtml(embedded, "draft", "/");
+
+    expect(preview).toContain('id="solara-preview-assets"');
+    expect(preview).toContain("__solara-preview-assets");
+    expect(preview.length).toBeLessThan(2_000_000);
   });
 });
