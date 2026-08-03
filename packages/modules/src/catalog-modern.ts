@@ -490,16 +490,23 @@ export const catalogProductGrid: ModuleDefinition<z.infer<typeof productGridSett
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const products = modernProducts(context, context.settings);
+    const categoryGrid = context.pageType === "category" ? " data-category-grid" : "";
     const cards = products
-      .map((product, index) =>
-        modernProductCard(context, product, index, context.settings.showRating),
-      )
+      .map((product, index) => {
+        const card = modernProductCard(context, product, index, context.settings.showRating);
+        // El runtime reutiliza estos datos para filtros y ordenamiento sin duplicar el catálogo.
+        const attributes = ` data-product-price="${lowestPrice(product)}" data-product-tags="${escapeAttribute(product.tags.join(" "))}" data-product-variants="${escapeAttribute(product.variants.map((variant) => variant.title).join(" "))}" data-product-available="${String(product.variants.some((variant) => variant.available))}"`;
+        return card.replace(
+          `data-product-title="${escapeAttribute(product.title)}"`,
+          `data-product-title="${escapeAttribute(product.title)}"${attributes}`,
+        );
+      })
       .join("");
     return moduleRoot(
       "catalog-product-grid",
       context.section,
       safeHtml(
-        `<div class="catalog-product-grid-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${context.settings.showViewAll ? `<a class="catalog-view-all" href="${escapeAttribute(safeUrl(context.settings.viewAllHref))}">Ver todos</a>` : ""}</header><div class="catalog-product-grid" data-motion-zone="items">${cards || '<p class="catalog-empty">No hay productos para mostrar.</p>'}</div></div>`,
+        `<div class="catalog-product-grid-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${context.settings.showViewAll ? `<a class="catalog-view-all" href="${escapeAttribute(safeUrl(context.settings.viewAllHref))}">Ver todos</a>` : ""}</header><div class="catalog-product-grid" data-motion-zone="items"${categoryGrid}>${cards || '<p class="catalog-empty">No hay productos para mostrar.</p>'}</div></div>`,
       ),
     );
   },

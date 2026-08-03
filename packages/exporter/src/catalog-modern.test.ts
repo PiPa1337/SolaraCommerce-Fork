@@ -45,6 +45,19 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(catalogModernStore.whatsapp.greeting).toBe("Hola Modo Sur, quiero hacer este pedido:");
   });
 
+  it("construye la categoría moderna con filtros y pie comercial", () => {
+    const category = String(exported.files.get("categorias/remeras/index.html"));
+
+    expect(category).toContain('class="solara-container catalog-category-page"');
+    expect(category).toContain('class="catalog-category-filters"');
+    expect(category).toContain('class="catalog-category-layout"');
+    expect(category).toContain('data-solara-module="catalog-product-grid"');
+    expect(category).toContain("data-category-grid");
+    expect(category).toContain("data-product-price=");
+    expect(category).toContain('data-solara-module="catalog-newsletter-cta"');
+    expect(category).not.toContain('data-solara-module="catalog-testimonials"');
+  });
+
   it("deduplica fuentes de assets embebidos en el preview", () => {
     const payload = "A".repeat(100_000);
     const embedded = {

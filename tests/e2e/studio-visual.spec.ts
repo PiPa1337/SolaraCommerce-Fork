@@ -160,6 +160,20 @@ test("preview diferencia escritorio, tablet y móvil", async ({ page }) => {
             .evaluate((image) => image.naturalWidth),
         )
         .toBeGreaterThan(0);
+      const previewImages = frame.locator("img");
+      await expect
+        .poll(async () => {
+          const states = await Promise.all(
+            (await previewImages.all()).map((image) =>
+              image.evaluate((element) => ({
+                loaded: (element as HTMLImageElement).naturalWidth > 0,
+                eager: element.getAttribute("loading") === "eager",
+              })),
+            ),
+          );
+          return states.length > 0 && states.every((state) => state.loaded && state.eager);
+        })
+        .toBe(true);
       expect(
         await frame.locator("html").evaluate((element) => element.outerHTML.length),
       ).toBeLessThan(14_000_000);

@@ -402,24 +402,37 @@ function previewAssetMarkup(
         return source;
       }
     };
+    const hydrateImage = (element) => {
+      // Preview images use object URLs and must not wait for an iframe scroll
+      // before decoding. Public exports keep their native lazy-loading policy.
+      if (element.tagName === "IMG") {
+        element.setAttribute("loading", "eager");
+        element.setAttribute("fetchpriority", "high");
+      }
+    };
+    document.querySelectorAll("img").forEach(hydrateImage);
     await Promise.all(paths.map((value) => sourceFor(value)));
-    document.querySelectorAll("[src]").forEach((element) => {
-      const source = objectUrls.get(element.getAttribute("src") || "");
-      if (source) element.setAttribute("src", source);
-    });
-    document.querySelectorAll("[srcset]").forEach((element) => {
+    await Promise.all([...document.querySelectorAll("[src]")].map(async (element) => {
+      const source = await sourceFor(element.getAttribute("src") || "");
+      if (source) {
+        hydrateImage(element);
+        element.setAttribute("src", source);
+      }
+    }));
+    await Promise.all([...document.querySelectorAll("[srcset]")].map(async (element) => {
       const srcset = element.getAttribute("srcset") || "";
-      const hydrated = srcset.split(",").map((entry) => {
+      const entries = srcset.split(",");
+      const hydrated = await Promise.all(entries.map(async (entry) => {
         const parts = entry.trim().split(/\\s+/);
-        const source = objectUrls.get(parts.shift() || "");
+        const source = await sourceFor(parts.shift() || "");
         return source ? [source, ...parts].join(" ") : entry;
-      }).join(",");
-      element.setAttribute("srcset", hydrated);
-    });
-    document.querySelectorAll("[poster]").forEach((element) => {
-      const source = objectUrls.get(element.getAttribute("poster") || "");
+      }));
+      if (hydrated.length > 0) element.setAttribute("srcset", hydrated.join(","));
+    }));
+    await Promise.all([...document.querySelectorAll("[poster]")].map(async (element) => {
+      const source = await sourceFor(element.getAttribute("poster") || "");
       if (source) element.setAttribute("poster", source);
-    });
+    }));
   };
   window.addEventListener("message", (event) => {
     if (event.data?.type !== "solara-preview-assets-response") return;
@@ -453,11 +466,18 @@ function previewAssetMarkup(
         return source;
       }
     };
+    document.querySelectorAll("img").forEach((element) => {
+      element.setAttribute("loading", "eager");
+      element.setAttribute("fetchpriority", "high");
+    });
     const values = [...new Set(Object.keys(sources))];
     await Promise.all(values.map(async (value) => sourceFor(value)));
     document.querySelectorAll("[src]").forEach((element) => {
       const source = objectUrls.get(element.getAttribute("src") || "");
-      if (source) element.setAttribute("src", source);
+      if (source) {
+        element.setAttribute("loading", "eager");
+        element.setAttribute("src", source);
+      }
     });
     document.querySelectorAll("[srcset]").forEach((element) => {
       const srcset = element.getAttribute("srcset") || "";
@@ -988,6 +1008,14 @@ function categoryChildrenMarkup(project: StoreProjectV1, category: Category): st
     .join("")}</ul></nav>`;
 }
 
+function modernCategoryFilters(products: readonly Product[]): string {
+  const tags = [...new Set(products.flatMap((product) => product.tags))].slice(0, 12);
+  const tagOptions = tags
+    .map((tag) => `<option value="${escapeAttribute(tag)}">${escapeHtml(tag)}</option>`)
+    .join("");
+  return `<aside class="catalog-category-filters" aria-label="Filtros del catálogo"><details open><summary>Filtros</summary><div class="catalog-filter-groups"><fieldset><legend>Disponibilidad</legend><label><input type="checkbox" data-category-available> Sólo disponibles</label></fieldset><fieldset><legend>Etiqueta</legend><label><span class="sr-only">Filtrar por etiqueta</span><select data-category-tag><option value="">Todas</option>${tagOptions}</select></label></fieldset><fieldset><legend>Precio</legend><div class="catalog-price-fields"><label><span>Mínimo</span><input type="number" min="0" step="1" data-category-min-price inputmode="decimal"></label><label><span>Máximo</span><input type="number" min="0" step="1" data-category-max-price inputmode="decimal"></label></div></fieldset></div></details></aside>`;
+}
+
 function categoryBreadcrumbItems(
   project: StoreProjectV1,
   category: Category,
@@ -1032,7 +1060,9 @@ function buildPages(
     ["announcement", "header"].includes(section.slot),
   );
   const sharedFooter = project.sections.filter((section) =>
-    ["trust", "cart", "footer"].includes(section.slot),
+    isModernProject(project)
+      ? ["cart", "footer"].includes(section.slot) || section.moduleId === "catalog-newsletter-cta"
+      : ["trust", "cart", "footer"].includes(section.slot),
   );
   const socialImage =
     imageUrl(project, project.seo.socialImageId) ?? imageUrl(project, project.assets[0]?.id);
@@ -1068,13 +1098,9 @@ function buildPages(
           ? `<img src="${escapeAttribute(categoryImage)}" alt="${escapeAttribute(categoryAsset.alt || category.title)}" width="${categoryAsset.width}" height="${categoryAsset.height}" loading="eager">`
           : "";
       const categorySections = listingSections(project, "category", pageSize);
-      const filterTags = [...new Set(paginated.flatMap((product) => product.tags))].slice(0, 12);
-      const tagOptions = filterTags
-        .map((tag) => `<option value="${escapeAttribute(tag)}">${escapeHtml(tag)}</option>`)
-        .join("");
       const body = [
         renderProjectSections(project, sharedHeader, { pageType: "category", category }),
-        `<main class="solara-container">
+        `<main class="solara-container catalog-category-page">
           ${categoryBreadcrumbMarkup(project, category)}
           <header class="solara-category-hero">
             <h1>${escapeHtml(category.title)}</h1>
@@ -1082,16 +1108,20 @@ function buildPages(
             ${categoryMedia}
           </header>
           ${categoryChildrenMarkup(project, category)}
-          <div class="solara-category-toolbar" data-category-toolbar>
-            <span data-category-result-count>${products.length} productos</span>
-            <details><summary>Filtrar</summary><div><label><input type="checkbox" data-category-available> Sólo disponibles</label><label>Etiqueta <select data-category-tag><option value="">Todas</option>${tagOptions}</select></label><label>Precio mínimo <input type="number" min="0" step="1" data-category-min-price inputmode="decimal"></label><label>Precio máximo <input type="number" min="0" step="1" data-category-max-price inputmode="decimal"></label></div></details>
-            <label>Ordenar <select data-category-sort><option value="recommended">Recomendados</option><option value="price-asc">Precio menor</option><option value="price-desc">Precio mayor</option><option value="name">Nombre</option></select></label>
+          <div class="catalog-category-layout">
+            ${modernCategoryFilters(products)}
+            <div class="catalog-category-results">
+              <div class="solara-category-toolbar" data-category-toolbar>
+                <span data-category-result-count>${products.length} productos</span>
+                <label>Ordenar <select data-category-sort><option value="recommended">Recomendados</option><option value="price-asc">Precio menor</option><option value="price-desc">Precio mayor</option><option value="name">Nombre</option></select></label>
+              </div>
+              ${renderProjectSections(project, categorySections, {
+                pageType: "category",
+                category: { ...category, productIds: paginated.map((product) => product.id) },
+                products: paginated,
+              })}
+            </div>
           </div>
-          ${renderProjectSections(project, categorySections, {
-            pageType: "category",
-            category: { ...category, productIds: paginated.map((product) => product.id) },
-            products: paginated,
-          })}
           ${paginationNavigation(`/categorias/${category.slug}`, pageNumber, totalPages)}
         </main>`,
         renderProjectSections(project, sharedFooter, { pageType: "category", category }),

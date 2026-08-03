@@ -246,4 +246,6 @@ production y la carpeta `.release/pilot-site/` listos para publicar.
 En Preview, los assets embebidos no se serializan dentro del `srcdoc`: el iframe
 los solicita por `postMessage`, los hidrata una sola vez y reutiliza sus URLs
 `blob:` locales. Esto evita repetir la misma base64 en cada tarjeta y mantiene
-el sandbox del preview.
+el sandbox del preview. Durante esa hidratación, las imágenes del preview se
+marcan como eager para que el editor no dependa de desplazar el iframe; el ZIP
+público conserva `loading="lazy"` donde corresponde.

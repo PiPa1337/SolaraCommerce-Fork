@@ -120,6 +120,45 @@ test("la home moderna prioriza el catálogo y conserva su densidad responsive", 
   );
 });
 
+test("la categoría moderna mantiene filtros, densidad y pie comercial", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/categorias/remeras/");
+
+  await expect(page.locator(".catalog-category-page")).toBeVisible();
+  await expect(page.locator(".catalog-category-filters")).toBeVisible();
+  await expect(page.locator('[data-solara-module="catalog-testimonials"]')).toHaveCount(0);
+  await expect(page.locator('[data-solara-module="catalog-newsletter-cta"]')).toBeVisible();
+  const desktopGrid = page.locator(".catalog-category-results .catalog-product-grid");
+  expect(await desktopGrid.count()).toBe(1);
+  expect(
+    await desktopGrid.evaluate(
+      (element) => getComputedStyle(element).gridTemplateColumns.split(" ").length,
+    ),
+  ).toBe(3);
+  const tagFilter = page.locator("[data-category-tag]");
+  expect(await tagFilter.count()).toBe(1);
+  await tagFilter.selectOption("nuevo");
+  await expect(
+    page.locator(".catalog-category-results .catalog-product-card:not([hidden])"),
+  ).toHaveCount(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
+    false,
+  );
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/categorias/remeras/");
+  await expect(page.locator(".catalog-category-filters summary")).toBeVisible();
+  const mobileGrid = page.locator(".catalog-category-results .catalog-product-grid");
+  expect(
+    await mobileGrid.evaluate(
+      (element) => getComputedStyle(element).gridTemplateColumns.split(" ").length,
+    ),
+  ).toBe(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
+    false,
+  );
+});
+
 test("la navegación, el detalle moderno y las variantes siguen siendo rastreables", async ({
   page,
 }) => {
@@ -137,7 +176,7 @@ test("la navegación, el detalle moderno y las variantes siguen siendo rastreabl
   await expect(page.getByLabel("Elegí talle y color")).toBeVisible();
   await expect(page.getByText("Lo que dicen quienes compraron")).toBeVisible();
   await page.getByLabel("Elegí talle y color").selectOption({ index: 1 });
-  await expect(page.locator("[data-product-price]")).toBeVisible();
+  await expect(page.locator(".catalog-product-info [data-product-price]")).toBeVisible();
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
   await expect(page.locator("[data-cart-count]").first()).toHaveText("1");
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
