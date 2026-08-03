@@ -30,7 +30,7 @@ async function openCatalog(page: import("@playwright/test").Page) {
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.getByRole("button", { name: /^Modo Sur/ }).click();
+  await page.getByRole("button", { name: /Demo Modo Sur/ }).click();
   await page.getByRole("button", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
 }
@@ -96,7 +96,7 @@ test("edita variantes y conserva el último cambio al volver, recargar y reabrir
   await page.getByRole("button", { name: "Volver a tiendas" }).click();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   await page.reload();
-  await page.getByRole("button", { name: /^Modo Sur/ }).click();
+  await page.getByRole("button", { name: /Demo Modo Sur/ }).click();
   await page.getByRole("button", { name: "Catálogo", exact: true }).click();
   await page.getByPlaceholder("Buscar por producto, marca o estado").fill("Lámpara Horizonte");
   await expect(page.getByLabel("Nombre de Lámpara Horizonte")).toBeVisible();

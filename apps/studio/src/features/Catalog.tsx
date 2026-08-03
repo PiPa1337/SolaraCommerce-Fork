@@ -35,7 +35,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Button, EmptyState, Field, InlineError, SectionHeader } from "../components/Ui";
 import { formatCurrency } from "../lib/format";
 import { downloadBlob } from "../lib/projectArchive";
-import { exportCsvInWorker, importCsvInWorker } from "../lib/workers";
+import { exportCommercialCsvInWorker, exportCsvInWorker, importCsvInWorker } from "../lib/workers";
 import { ProductEditor } from "./catalog/ProductEditor";
 
 interface CatalogProps {
@@ -391,7 +391,11 @@ export function Catalog({ project, onCommand }: CatalogProps) {
     setError("");
     setPendingImport(undefined);
     try {
-      const products = await importCsvInWorker(await file.text());
+      const products = await importCsvInWorker(await file.text(), {
+        categories: project.categories,
+        collections: project.collections,
+        assets: project.assets.map((asset) => ({ id: asset.id })),
+      });
       setPendingImport(summarizeImport(file.name, project.products, products));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo importar el CSV.");
@@ -408,6 +412,19 @@ export function Catalog({ project, onCommand }: CatalogProps) {
       downloadBlob(csv, `${project.slug}-productos.csv`, "text/csv;charset=utf-8");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo exportar el CSV.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const exportCommercialCsv = async () => {
+    setBusy("export");
+    setError("");
+    try {
+      const csv = await exportCommercialCsvInWorker(project);
+      downloadBlob(csv, `${project.slug}-catalogo-comercial.csv`, "text/csv;charset=utf-8");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "No se pudo exportar el CSV comercial.");
     } finally {
       setBusy("");
     }
@@ -468,6 +485,13 @@ export function Catalog({ project, onCommand }: CatalogProps) {
             </Button>
             <Button icon={DownloadSimple} onClick={() => void exportCsv()} disabled={Boolean(busy)}>
               {busy === "export" ? "Generando" : "Exportar CSV"}
+            </Button>
+            <Button
+              icon={DownloadSimple}
+              onClick={() => void exportCommercialCsv()}
+              disabled={Boolean(busy)}
+            >
+              {busy === "export" ? "Generando" : "CSV comercial"}
             </Button>
             <Button
               variant="primary"

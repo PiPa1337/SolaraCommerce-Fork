@@ -1,4 +1,5 @@
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
+import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
 import { describe, expect, it } from "vitest";
 import { exportProject, renderPreviewHtml } from "./index";
 
@@ -24,7 +25,16 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(home).toContain("/fixtures/modo-sur-remera.png");
     expect(home.match(/data-product-card/g) ?? []).toHaveLength(20);
     expect(product).toContain('data-solara-module="catalog-product-detail"');
+    expect(product).toContain("catalog-option-pill");
     expect(product).toContain("Lo que dicen quienes compraron");
+  });
+
+  it("bloquea production en la plantilla limpia hasta reemplazar placeholders", () => {
+    const draft = exportProject(catalogModernCleanStore, { mode: "draft" });
+    expect(draft.audit.some((issue) => issue.code === "template.placeholder")).toBe(true);
+    expect(() => exportProject(catalogModernCleanStore, { mode: "production" })).toThrow(
+      "imágenes de plantilla",
+    );
   });
 
   it("mantiene la paridad entre preview y ZIP y el índice de búsqueda", () => {
@@ -77,6 +87,8 @@ describe("tienda base catalog-modern de 50 productos", () => {
       assetTransport: "parent",
     });
     expect(transported).toContain("solara-preview-assets-request");
+    expect(transported).toContain("data-solara-preview-src");
+    expect(transported).not.toMatch(/\ssrc="\/__solara-preview-assets\//);
     expect(transported).not.toContain(payload);
     expect(transported.length).toBeLessThan(2_000_000);
   });

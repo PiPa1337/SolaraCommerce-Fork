@@ -9,7 +9,6 @@ import {
   createProject,
   duplicateProject,
   ensureFirstProject,
-  ensureModernBaseProject,
   ensureScaleDemoProject,
   getProject,
   listProjectsWithRecovery,
@@ -46,14 +45,6 @@ export function App() {
         }
         if (result.projects.length === 0 && result.recovery.length === 0) {
           await ensureFirstProject();
-        }
-        const baseCreated = await ensureModernBaseProject();
-        if (baseCreated) {
-          setNotice((current) =>
-            current
-              ? `${current} Se agregó la tienda base Modo Sur con el sistema visual moderno.`
-              : "Se agregó la tienda base Modo Sur con el sistema visual moderno.",
-          );
         }
         const demoCreated = await ensureScaleDemoProject();
         if (demoCreated) {
@@ -180,9 +171,9 @@ export function App() {
       ) : null}
       <Dashboard
         projects={projects}
-        onCreate={(name) =>
+        onCreate={(input) =>
           guard(async () => {
-            const project = await createProject(name);
+            const project = await createProject(input);
             await refresh();
             setActive(project);
           })

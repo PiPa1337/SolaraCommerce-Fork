@@ -2035,6 +2035,17 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-product-policies details { padding: .8rem 0; border-bottom: 1px solid var(--catalog-border); }
 [data-solara-store].catalog-modern .catalog-product-policies summary { cursor: pointer; font-weight: 700; }
 [data-solara-store].catalog-modern .catalog-product-policies p { margin-top: .6rem; color: var(--catalog-muted); font-size: .82rem; }
+[data-solara-store].catalog-modern .catalog-variant-options { display: grid; gap: .8rem; margin-top: .45rem; }
+[data-solara-store].catalog-modern .catalog-option-group { display: grid; gap: .45rem; margin: 0; padding: 0; border: 0; }
+[data-solara-store].catalog-modern .catalog-option-group legend { font-size: .78rem; font-weight: 700; }
+[data-solara-store].catalog-modern .catalog-option-group > div { display: flex; flex-wrap: wrap; gap: .45rem; }
+[data-solara-store].catalog-modern .catalog-option-pill { min-height: 42px; padding: .55rem .8rem; border: 1px solid var(--catalog-border); border-radius: 999px; background: var(--catalog-paper); color: var(--catalog-ink); cursor: pointer; font: inherit; font-size: .78rem; }
+[data-solara-store].catalog-modern .catalog-option-pill:hover,
+[data-solara-store].catalog-modern .catalog-option-pill[aria-pressed="true"] { border-color: var(--catalog-ink); background: var(--catalog-ink); color: white; }
+[data-solara-store].catalog-modern .catalog-option-pill:disabled { cursor: not-allowed; opacity: .45; text-decoration: line-through; }
+[data-solara-store].catalog-modern .catalog-search-link svg,
+[data-solara-store].catalog-modern .catalog-mobile-menu-button svg { width: 1.05rem; height: 1.05rem; fill: none; stroke: currentcolor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+[data-solara-store].catalog-modern .catalog-product-info select { min-height: 42px; }
 [data-solara-store].catalog-modern .catalog-product-reviews { width: min(calc(100% - 2rem), var(--solara-container)); margin: 0 auto; padding: 2rem 0 4rem; border-top: 1px solid var(--catalog-border); }
 [data-solara-store].catalog-modern .catalog-product-reviews > header { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
 [data-solara-store].catalog-modern .catalog-product-reviews h2 { max-width: 18ch; margin-top: .3rem; font-size: clamp(1.8rem, 3vw, 3rem); font-weight: 900; letter-spacing: -.08em; line-height: .95; }

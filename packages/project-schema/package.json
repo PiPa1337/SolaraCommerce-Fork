@@ -7,7 +7,8 @@
     ".": "./src/index.ts",
     "./fixture": "./src/fixture.ts",
     "./scale-fixture": "./src/scale-fixture.ts",
-    "./catalog-modern-fixture": "./src/catalog-modern-fixture.ts"
+    "./catalog-modern-fixture": "./src/catalog-modern-fixture.ts",
+    "./catalog-modern-template": "./src/catalog-modern-template.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",

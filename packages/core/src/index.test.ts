@@ -4,8 +4,10 @@ import {
   adjustPrice,
   createHistory,
   executeCommand,
+  exportCatalogCsv,
   exportProductsCsv,
   generatePerformanceFixture,
+  importCatalogCsv,
   importProductsCsv,
   redo,
   reduceProject,
@@ -225,6 +227,13 @@ describe("CSV", () => {
   it("preserva 1.000 productos y 2.000 variantes", () => {
     const products = generatePerformanceFixture(1_000).products;
     expect(importProductsCsv(exportProductsCsv(products))).toEqual(products);
+  });
+
+  it("exporta e importa el CSV comercial con variantes agrupadas", () => {
+    const csv = exportCatalogCsv(referenceStore);
+    expect(csv.split("\r\n", 1)[0]).toContain("categorias");
+    const imported = importCatalogCsv(csv, referenceStore);
+    expect(imported).toEqual(referenceStore.products);
   });
 });
 

@@ -626,6 +626,202 @@ export function importProductsCsv(csv: string): Product[] {
   );
 }
 
+const catalogCsvColumns = [
+  "producto_id",
+  "variante_id",
+  "slug",
+  "titulo",
+  "descripcion",
+  "marca",
+  "estado",
+  "categorias",
+  "colecciones",
+  "etiquetas",
+  "imagenes",
+  "variante",
+  "sku",
+  "opciones",
+  "precio_centavos",
+  "precio_anterior_centavos",
+  "disponible",
+  "estado_stock",
+  "gtin",
+  "mpn",
+  "imagen_variante",
+  "creado_en",
+  "actualizado_en",
+] as const;
+
+type CatalogCsvColumn = (typeof catalogCsvColumns)[number];
+type CatalogCsvRecord = Record<CatalogCsvColumn, string>;
+
+function pipeValues(value: readonly string[]): string {
+  return value.join("|");
+}
+
+function parsePipeValues(value: string): string[] {
+  return value
+    .split("|")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function optionValuesText(values: Record<string, string>): string {
+  return Object.entries(values)
+    .map(([key, value]) => `${key}=${value}`)
+    .join("|");
+}
+
+function parseOptionValues(value: string, row: number): Record<string, string> {
+  const entries = parsePipeValues(value);
+  const result: Record<string, string> = {};
+  for (const entry of entries) {
+    const separator = entry.indexOf("=");
+    if (separator <= 0) throw new Error(`Opción inválida en opciones, fila ${row}.`);
+    const key = entry.slice(0, separator).trim();
+    const option = entry.slice(separator + 1).trim();
+    if (!key || !option) throw new Error(`Opción inválida en opciones, fila ${row}.`);
+    result[key] = option;
+  }
+  return result;
+}
+
+export function exportCatalogCsv(
+  project: Pick<StoreProjectV1, "products" | "categories" | "collections">,
+): string {
+  const categorySlugs = new Map(project.categories.map((category) => [category.id, category.slug]));
+  const collectionSlugs = new Map(
+    project.collections.map((collection) => [collection.id, collection.slug]),
+  );
+  const rows = project.products.flatMap((product) =>
+    product.variants.map((variant) => {
+      const record: CatalogCsvRecord = {
+        producto_id: product.id,
+        variante_id: variant.id,
+        slug: product.slug,
+        titulo: product.title,
+        descripcion: product.description,
+        marca: product.brand,
+        estado: product.status,
+        categorias: pipeValues(product.categoryIds.map((id) => categorySlugs.get(id) ?? id)),
+        colecciones: pipeValues(product.collectionIds.map((id) => collectionSlugs.get(id) ?? id)),
+        etiquetas: pipeValues(product.tags),
+        imagenes: pipeValues(product.imageIds),
+        variante: variant.title,
+        sku: variant.sku,
+        opciones: optionValuesText(variant.optionValues),
+        precio_centavos: String(variant.price),
+        precio_anterior_centavos: variant.compareAtPrice?.toString() ?? "",
+        disponible: String(variant.available),
+        estado_stock: variant.stockStatus,
+        gtin: variant.gtin ?? "",
+        mpn: variant.mpn ?? "",
+        imagen_variante: variant.imageId ?? "",
+        creado_en: product.createdAt,
+        actualizado_en: product.updatedAt,
+      };
+      return catalogCsvColumns.map((column) => encodeCsvCell(record[column])).join(",");
+    }),
+  );
+  return [catalogCsvColumns.join(","), ...rows].join("\r\n");
+}
+
+export interface CatalogCsvContext {
+  categories: readonly { id: string; slug: string }[];
+  collections: readonly { id: string; slug: string }[];
+  assets: readonly { id: string }[];
+}
+
+export function importCatalogCsv(csv: string, context: CatalogCsvContext): Product[] {
+  const rows = parseCsvRows(csv.replace(/^\uFEFF/, ""));
+  const header = rows[0];
+  if (!header) return [];
+  if (
+    header.length !== catalogCsvColumns.length ||
+    catalogCsvColumns.some((column, index) => header[index] !== column)
+  ) {
+    throw new Error("Las columnas del CSV comercial no coinciden con la plantilla Catalog Modern.");
+  }
+  const categoryIds = new Map<string, string>(
+    context.categories.map((category) => [String(category.slug), String(category.id)]),
+  );
+  const collectionIds = new Map<string, string>(
+    context.collections.map((collection) => [String(collection.slug), String(collection.id)]),
+  );
+  const assetIds = new Set<string>(context.assets.map((asset) => String(asset.id)));
+  const grouped = new Map<string, { base: Omit<Product, "variants">; variants: unknown[] }>();
+
+  rows.slice(1).forEach((values, rowIndex) => {
+    const row = rowIndex + 2;
+    if (values.length !== catalogCsvColumns.length) {
+      throw new Error(`Cantidad de columnas inválida en la fila ${row}.`);
+    }
+    const record = Object.fromEntries(
+      catalogCsvColumns.map((column, index) => [column, values[index] ?? ""]),
+    ) as CatalogCsvRecord;
+    const productId = record.producto_id || `product-${record.slug}`;
+    const categoryValues = parsePipeValues(record.categorias);
+    const collectionValues = parsePipeValues(record.colecciones);
+    const imageIds = parsePipeValues(record.imagenes);
+    const categoryIdsForProduct = categoryValues.map((value) => categoryIds.get(value) ?? value);
+    const collectionIdsForProduct = collectionValues.map(
+      (value) => collectionIds.get(value) ?? value,
+    );
+    if (imageIds.some((assetId) => !assetIds.has(assetId))) {
+      throw new Error(`Imagen inexistente en imagenes, fila ${row}.`);
+    }
+    const base = {
+      id: productId,
+      slug: record.slug,
+      title: record.titulo,
+      description: record.descripcion,
+      status: record.estado,
+      brand: record.marca,
+      categoryIds: categoryIdsForProduct,
+      collectionIds: collectionIdsForProduct,
+      tags: parsePipeValues(record.etiquetas),
+      imageIds,
+      createdAt: record.creado_en,
+      updatedAt: record.actualizado_en,
+    };
+    const existing = grouped.get(productId);
+    if (existing && JSON.stringify(existing.base) !== JSON.stringify(base)) {
+      throw new Error(`Las filas del producto ${productId} no comparten los mismos datos.`);
+    }
+    const available =
+      record.disponible === "true" ? true : record.disponible === "false" ? false : undefined;
+    if (available === undefined) throw new Error(`Booleano inválido en disponible, fila ${row}.`);
+    const variant = {
+      id: record.variante_id || `${productId}-variante-${(existing?.variants.length ?? 0) + 1}`,
+      title: record.variante,
+      sku: record.sku,
+      optionValues: parseOptionValues(record.opciones, row),
+      price: parseInteger(record.precio_centavos, "precio_centavos", row),
+      ...(record.precio_anterior_centavos
+        ? {
+            compareAtPrice: parseInteger(
+              record.precio_anterior_centavos,
+              "precio_anterior_centavos",
+              row,
+            ),
+          }
+        : {}),
+      available,
+      stockStatus: record.estado_stock,
+      ...(record.gtin ? { gtin: record.gtin } : {}),
+      ...(record.mpn ? { mpn: record.mpn } : {}),
+      ...(record.imagen_variante ? { imageId: record.imagen_variante } : {}),
+    };
+    const group = existing ?? { base: base as Omit<Product, "variants">, variants: [] };
+    group.variants.push(variant);
+    grouped.set(productId, group);
+  });
+
+  return [...grouped.values()].map((group) =>
+    ProductSchema.parse({ ...group.base, variants: group.variants }),
+  );
+}
+
 export function generatePerformanceFixture(productCount = 1_000): StoreProjectV1 {
   if (!Number.isInteger(productCount) || productCount < 0) {
     throw new Error("La cantidad de productos debe ser un entero no negativo.");

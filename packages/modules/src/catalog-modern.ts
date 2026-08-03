@@ -117,7 +117,22 @@ export const catalogHeader: ModuleDefinition<z.infer<typeof headerSettings>> = {
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const navigation = context.project.navigation;
-    const menuItems = navigation.items
+    const automaticItems = context.project.categories
+      .filter((category) => !category.parentId)
+      .map((category) => ({
+        id: `automatic-nav-${category.id}`,
+        label: category.title,
+        href: `/categorias/${category.slug}/`,
+        children: context.project.categories
+          .filter((child) => child.parentId === category.id)
+          .map((child) => ({
+            id: `automatic-nav-${child.id}`,
+            label: child.title,
+            href: `/categorias/${child.slug}/`,
+          })),
+      }));
+    const navigationItems = navigation.mode === "automatic" ? automaticItems : navigation.items;
+    const menuItems = navigationItems
       .map((item) => {
         const children = item.children?.length
           ? `<ul>${item.children
@@ -132,10 +147,9 @@ export const catalogHeader: ModuleDefinition<z.infer<typeof headerSettings>> = {
       .join("");
     const current = (types: string[]) =>
       types.includes(context.pageType ?? "") ? ' aria-current="page"' : "";
-    const catalog =
-      navigation.showSearch || navigation.items.length
-        ? `<details class="catalog-nav-menu"><summary${current(["category", "collection"])}>${escapeHtml(navigation.catalogLabel || "Tienda")}</summary><div class="catalog-mega-menu"><ul>${menuItems}</ul></div></details>`
-        : "";
+    const catalog = navigationItems.length
+      ? `<details class="catalog-nav-menu"><summary${current(["category", "collection"])}>${escapeHtml(navigation.catalogLabel || "Tienda")}</summary><div class="catalog-mega-menu"><ul>${menuItems}</ul></div></details>`
+      : "";
     const nav = `${navigation.showHome ? `<a href="/"${current(["home"])}>Inicio</a>` : ""}${catalog}${navigation.showContact ? `<a href="/contacto/"${current(["contact"])}>Contacto</a>` : ""}${navigation.showAbout ? `<a href="/nosotros/"${current(["about"])}>Nosotros</a>` : ""}`;
     const mobileNav = nav.replace(
       '<details class="catalog-nav-menu">',
@@ -143,7 +157,7 @@ export const catalogHeader: ModuleDefinition<z.infer<typeof headerSettings>> = {
     );
     const search =
       navigation.showSearch && context.project.commerceTemplates.search.enabled
-        ? `<a class="catalog-search-link" href="/buscar/" aria-label="${escapeAttribute(context.settings.searchLabel)}"${current(["search"])}><span aria-hidden="true">⌕</span><span>${escapeHtml(context.settings.searchLabel)}</span></a>`
+        ? `<a class="catalog-search-link" href="/buscar/" aria-label="${escapeAttribute(context.settings.searchLabel)}"${current(["search"])}><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><span>${escapeHtml(context.settings.searchLabel)}</span></a>`
         : "";
     const cart =
       navigation.showCart && context.project.siteShell.cart
@@ -153,7 +167,7 @@ export const catalogHeader: ModuleDefinition<z.infer<typeof headerSettings>> = {
       "catalog-header",
       context.section,
       safeHtml(`<div class="catalog-header-inner" data-motion-zone="content">
-        <button class="catalog-mobile-menu-button" type="button" data-catalog-menu-open aria-controls="catalog-mobile-menu" aria-expanded="false"><span class="sr-only">Abrir menú</span><span aria-hidden="true">☰</span></button>
+        <button class="catalog-mobile-menu-button" type="button" data-catalog-menu-open aria-controls="catalog-mobile-menu" aria-expanded="false"><span class="sr-only">Abrir menú</span><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
         <a class="catalog-brand" href="/" aria-label="Inicio de ${escapeAttribute(context.project.identity.brandName)}">${renderBrand(context.project)}</a>
         <nav class="catalog-desktop-nav" aria-label="Navegación principal">${nav}</nav>
         <div class="catalog-header-actions">${search}${cart}</div>
@@ -590,6 +604,31 @@ export const catalogProductDetail: ModuleDefinition<z.infer<typeof productDetail
         return `<option value="${escapeAttribute(variant.id)}" data-variant-data="${escapeAttribute(variant.id)}" data-variant-id="${escapeAttribute(variant.id)}" data-variant-title="${escapeAttribute(variant.title)}" data-sku="${escapeAttribute(variant.sku)}" data-image-id="${escapeAttribute(variant.imageId ?? product.imageIds[0] ?? "")}"${imageUrl ? ` data-image-url="${escapeAttribute(imageUrl)}" data-image-width="${variantImage?.width ?? ""}" data-image-height="${variantImage?.height ?? ""}"` : ""} data-price="${variant.price}" data-compare-at="${variant.compareAtPrice ?? ""}" data-available="${String(variant.available)}"${variant.available ? "" : " disabled"}>${escapeHtml(variant.title)} · ${escapeHtml(formatMoney(variant.price))}${variant.available ? "" : " · Agotado"}</option>`;
       })
       .join("");
+    const optionNames = [
+      ...new Set(product.variants.flatMap((variant) => Object.keys(variant.optionValues))),
+    ];
+    const optionControls = optionNames
+      .map((optionName) => {
+        const values = [
+          ...new Set(
+            product.variants
+              .map((variant) => variant.optionValues[optionName])
+              .filter((value): value is string => Boolean(value)),
+          ),
+        ];
+        const controls = values
+          .map((value) => {
+            const matching = product.variants.filter(
+              (variant) => variant.optionValues[optionName] === value,
+            );
+            const selected = matching[0];
+            const available = matching.some((variant) => variant.available);
+            return `<button type="button" class="catalog-option-pill" data-variant-option data-option-key="${escapeAttribute(optionName)}" data-option-value="${escapeAttribute(value)}" data-variant-id="${escapeAttribute(selected?.id ?? "")}" aria-pressed="${String(selected?.id === firstVariant?.id)}"${available ? "" : " disabled"}>${escapeHtml(value)}</button>`;
+          })
+          .join("");
+        return `<fieldset class="catalog-option-group"><legend>${escapeHtml(optionName)}</legend><div>${controls}</div></fieldset>`;
+      })
+      .join("");
     const variantLinks = product.variants
       .map(
         (variant) =>
@@ -623,6 +662,7 @@ export const catalogProductDetail: ModuleDefinition<z.infer<typeof productDetail
             <input type="hidden" name="product" value="${escapeAttribute(product.id)}">
             <label for="catalog-variant-${escapeAttribute(context.section.id)}">Elegí talle y color</label>
             <select id="catalog-variant-${escapeAttribute(context.section.id)}" name="variant" data-variant-select required>${variants}</select>
+            ${optionControls ? `<div class="catalog-variant-options" aria-label="Opciones del producto">${optionControls}</div>` : ""}
             <div class="catalog-quantity-row"><label for="catalog-quantity-${escapeAttribute(context.section.id)}">Cantidad</label><input id="catalog-quantity-${escapeAttribute(context.section.id)}" name="quantity" type="number" min="1" max="99" value="1" inputmode="numeric"></div>
             <button class="catalog-product-add" type="submit" data-add-to-cart>${escapeHtml(context.settings.actionLabel)}</button>
           </form>

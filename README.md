@@ -27,14 +27,17 @@ corepack pnpm dev
 La aplicación guarda los proyectos en IndexedDB. Las tiendas públicas se exportan
 como ZIP estáticos, sin backend ni runtime de inteligencia artificial.
 
-En el primer arranque Studio crea la tienda base `Modo Sur` y agrega una vez el
-proyecto `Demo Modo Sur, catálogo moderno`. Ambos usan la familia visual
-`catalog-modern-v1`, con 10 raíces, 16 categorías, 50 productos y 60 variantes.
-La demo se puede abrir desde el dashboard para revisar navegación, paginación,
-edición masiva y el diseño de catálogo; no se vuelve a duplicar en los siguientes
-arranques.
-Si ya existía una instalación anterior, Studio agrega esta tienda base sin borrar
-las tiendas locales que el usuario haya creado.
+En el primer arranque Studio crea `Mi primera tienda` con la plantilla
+`catalog-modern-v1`: el diseño está listo, pero el catálogo empieza vacío para
+que cargues tus propios productos, imágenes y textos. También agrega una vez el
+proyecto `Demo Modo Sur, catálogo moderno`, generado por la misma fábrica, con
+10 raíces, 16 categorías, 50 productos y 60 variantes. La demo sirve para revisar
+navegación, paginación, edición masiva y densidad del catálogo; no se duplica en
+los siguientes arranques ni borra tiendas locales existentes.
+
+El botón `Crear tienda` abre un flujo guiado de cuatro pasos (marca, identidad,
+contacto y revisión). El modo avanzado del constructor sigue disponible para
+reordenar o reemplazar secciones cuando haga falta.
 
 ## Catálogo
 
@@ -46,6 +49,8 @@ tags, disponibilidad e identificadores comerciales. El catálogo ofrece:
 - paginación de 25, 50 o 100 filas;
 - selección entre páginas y resultados filtrados;
 - CSV procesado en Web Worker con revisión antes de reemplazar datos;
+- CSV comercial opcional con una fila por variante, categorías y colecciones por
+  slug, opciones agrupadas e imágenes por ID;
 - undo/redo y autosave serializado antes de salir de Studio.
 
 La jerarquía de categorías es opcional y admite raíces con un nivel de hijas.
@@ -58,8 +63,10 @@ paquete `@solara/project-schema/scale-fixture` expone `catalogScaleStore`: 10
 raíces, 16 categorías totales, 50 productos activos, 60 variantes y una categoría
 de 35 productos que pagina en dos documentos. La fixture pública
 `@solara/project-schema/catalog-modern-fixture` expone `catalogModernStore`, la
-tienda base editable con cuatro assets de moda reutilizados entre productos y
-mantiene IDs, slugs y fechas deterministas.
+demo visual con cuatro assets reutilizados entre productos y mantiene IDs, slugs
+y fechas deterministas. La fábrica `buildCatalogModernProject` también expone
+la semilla `clean` para crear tiendas sin productos y la semilla `demo` para la
+tienda de escala.
 
 `StoreProjectV2` valida IDs, slugs, referencias, navegación y páginas editables. Una operación
 inválida se rechaza completa y no deja cambios parciales.

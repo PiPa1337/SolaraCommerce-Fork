@@ -184,6 +184,9 @@ function storefrontBoot(): void {
     });
 
     const total = cart.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
+    document.querySelectorAll<HTMLElement>("[data-cart-subtotal]").forEach((element) => {
+      element.textContent = money.format(total / 100);
+    });
     document.querySelectorAll<HTMLElement>("[data-cart-total]").forEach((element) => {
       element.textContent = money.format(total / 100);
     });
@@ -286,6 +289,12 @@ function storefrontBoot(): void {
     const availabilityElement = productRoot.querySelector<HTMLElement>(
       "[data-product-availability]",
     );
+    productRoot.querySelectorAll<HTMLButtonElement>("[data-variant-option]").forEach((option) => {
+      option.setAttribute(
+        "aria-pressed",
+        String(option.dataset.variantId === variant.dataset.variantId),
+      );
+    });
     selectGalleryImage(productRoot, variant.dataset.imageId);
     if (priceElement) priceElement.textContent = money.format(price / 100);
     if (skuElement) skuElement.textContent = variant.dataset.sku ?? "";
@@ -334,6 +343,18 @@ function storefrontBoot(): void {
     if (galleryThumb) {
       const productRoot = galleryThumb.closest<HTMLElement>("[data-product]");
       if (productRoot) selectGalleryImage(productRoot, galleryThumb.dataset.galleryThumb);
+      return;
+    }
+
+    const variantOption = target.closest<HTMLButtonElement>("[data-variant-option]");
+    if (variantOption && !variantOption.disabled) {
+      const productRoot = variantOption.closest<HTMLElement>("[data-product]");
+      const select = productRoot?.querySelector<HTMLSelectElement>("[data-variant-select]");
+      const variantId = variantOption.dataset.variantId;
+      if (productRoot && select && variantId) {
+        select.value = variantId;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      }
       return;
     }
 

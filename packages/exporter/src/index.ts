@@ -412,15 +412,15 @@ function previewAssetMarkup(
     };
     document.querySelectorAll("img").forEach(hydrateImage);
     await Promise.all(paths.map((value) => sourceFor(value)));
-    await Promise.all([...document.querySelectorAll("[src]")].map(async (element) => {
-      const source = await sourceFor(element.getAttribute("src") || "");
+    await Promise.all([...document.querySelectorAll("[data-solara-preview-src]")].map(async (element) => {
+      const source = await sourceFor(element.getAttribute("data-solara-preview-src") || "");
       if (source) {
         hydrateImage(element);
         element.setAttribute("src", source);
       }
     }));
-    await Promise.all([...document.querySelectorAll("[srcset]")].map(async (element) => {
-      const srcset = element.getAttribute("srcset") || "";
+    await Promise.all([...document.querySelectorAll("[data-solara-preview-srcset]")].map(async (element) => {
+      const srcset = element.getAttribute("data-solara-preview-srcset") || "";
       const entries = srcset.split(",");
       const hydrated = await Promise.all(entries.map(async (entry) => {
         const parts = entry.trim().split(/\\s+/);
@@ -429,8 +429,8 @@ function previewAssetMarkup(
       }));
       if (hydrated.length > 0) element.setAttribute("srcset", hydrated.join(","));
     }));
-    await Promise.all([...document.querySelectorAll("[poster]")].map(async (element) => {
-      const source = await sourceFor(element.getAttribute("poster") || "");
+    await Promise.all([...document.querySelectorAll("[data-solara-preview-poster]")].map(async (element) => {
+      const source = await sourceFor(element.getAttribute("data-solara-preview-poster") || "");
       if (source) element.setAttribute("poster", source);
     }));
   };
@@ -472,15 +472,15 @@ function previewAssetMarkup(
     });
     const values = [...new Set(Object.keys(sources))];
     await Promise.all(values.map(async (value) => sourceFor(value)));
-    document.querySelectorAll("[src]").forEach((element) => {
-      const source = objectUrls.get(element.getAttribute("src") || "");
+    document.querySelectorAll("[data-solara-preview-src]").forEach((element) => {
+      const source = objectUrls.get(element.getAttribute("data-solara-preview-src") || "");
       if (source) {
         element.setAttribute("loading", "eager");
         element.setAttribute("src", source);
       }
     });
-    document.querySelectorAll("[srcset]").forEach((element) => {
-      const srcset = element.getAttribute("srcset") || "";
+    document.querySelectorAll("[data-solara-preview-srcset]").forEach((element) => {
+      const srcset = element.getAttribute("data-solara-preview-srcset") || "";
       const hydrated = srcset
         .split(",")
         .map((entry) => {
@@ -491,8 +491,8 @@ function previewAssetMarkup(
         .join(",");
       element.setAttribute("srcset", hydrated);
     });
-    document.querySelectorAll("[poster]").forEach((element) => {
-      const source = objectUrls.get(element.getAttribute("poster") || "");
+    document.querySelectorAll("[data-solara-preview-poster]").forEach((element) => {
+      const source = objectUrls.get(element.getAttribute("data-solara-preview-poster") || "");
       if (source) element.setAttribute("poster", source);
     });
     payload.remove();
@@ -501,6 +501,22 @@ function previewAssetMarkup(
   }
 })();
 </script>`;
+}
+
+function deferPreviewAssetMarkup(document: string, sources: ReadonlyMap<string, string>): string {
+  if (sources.size === 0) return document;
+  const isPreviewPath = (value: string): boolean => sources.has(value);
+  const deferAttribute = (html: string, attribute: "src" | "poster"): string =>
+    html.replace(new RegExp(`\\s${attribute}="([^"]+)"`, "g"), (match, value: string) =>
+      isPreviewPath(value) ? ` data-solara-preview-${attribute}="${value}"` : match,
+    );
+  let deferred = deferAttribute(deferAttribute(document, "src"), "poster");
+  deferred = deferred.replace(/\ssrcset="([^"]+)"/g, (match, value: string) =>
+    value.split(",").some((entry: string) => isPreviewPath(entry.trim().split(/\s+/)[0] ?? ""))
+      ? ` data-solara-preview-srcset="${value}"`
+      : match,
+  );
+  return deferred;
 }
 
 function themeCss(project: StoreProjectV1): string {
@@ -1642,6 +1658,23 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
     });
   }
 
+  if (project.origin?.seed === "clean") {
+    const placeholders = project.assets.filter(
+      (asset) =>
+        asset.name === "Imagen de plantilla" || asset.alt === "Imagen de ejemplo para reemplazar",
+    );
+    if (placeholders.length > 0) {
+      issues.push({
+        code: "template.placeholder",
+        severity: "critical",
+        message: "Reemplazá las imágenes de plantilla antes de publicar esta tienda.",
+        path: "assets",
+        area: "content",
+        fixTarget: "assets",
+      });
+    }
+  }
+
   project.products.forEach((product, productIndex) => {
     productSlugs.set(product.slug, (productSlugs.get(product.slug) ?? 0) + 1);
     if (product.status !== "active") return;
@@ -2033,10 +2066,13 @@ export function renderPreviewHtml(
   const pages = buildPages(previewAssets.project);
   const page = pages.find((candidate) => candidate.canonicalPath === path) ?? pages[0];
   if (!page) throw new Error("No se pudo renderizar la página inicial.");
-  const document = renderDocument(previewAssets.project, page, mode);
+  let document = renderDocument(previewAssets.project, page, mode);
   const usedSources = new Map(
     [...previewAssets.sources].filter(([path]) => document.includes(path)),
   );
+  if (options.assetTransport === "parent") {
+    document = deferPreviewAssetMarkup(document, usedSources);
+  }
   return document
     .replace("</body>", `${previewAssetMarkup(usedSources, options.assetTransport)}\n</body>`)
     .replace('href="/assets/storefront.css"', 'href="data:text/css;base64,PREVIEW_STYLE"')

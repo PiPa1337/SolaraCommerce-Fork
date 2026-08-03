@@ -1,3 +1,4 @@
+import type { CatalogCsvContext } from "@solara/core";
 import type { AuditIssue, ExportMode } from "@solara/exporter";
 import type { Product, StoreProjectV1 } from "@solara/project-schema";
 
@@ -66,12 +67,21 @@ function getExportWorker(): Worker {
   return exportWorker;
 }
 
-export function importCsvInWorker(csv: string): Promise<Product[]> {
-  return requestWorker(getCsvWorker(), { type: "import", csv });
+export function importCsvInWorker(csv: string, context?: CatalogCsvContext): Promise<Product[]> {
+  return requestWorker(
+    getCsvWorker(),
+    context ? { type: "import", csv, context } : { type: "import", csv },
+  );
 }
 
 export function exportCsvInWorker(products: Product[]): Promise<string> {
   return requestWorker(getCsvWorker(), { type: "export", products });
+}
+
+export function exportCommercialCsvInWorker(
+  project: Pick<StoreProjectV1, "products" | "categories" | "collections">,
+): Promise<string> {
+  return requestWorker(getCsvWorker(), { type: "export-commercial", project });
 }
 
 export async function hashFile(file: File): Promise<string> {

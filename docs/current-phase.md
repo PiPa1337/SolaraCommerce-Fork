@@ -44,6 +44,9 @@ renderer.
   con codificación UTF-8 dañada.
 - El inspector del hero ofrece edición visual de slides, incluyendo orden,
   duplicado, eliminación, media, copy y CTA.
+- Catálogo ofrece un CSV comercial separado: agrupa variantes por producto y
+  conserva categorías, colecciones, opciones, identificadores e imágenes; se
+  procesa en el mismo Web Worker del CSV técnico.
 
 ## Familias visuales y tienda de referencia
 
@@ -63,13 +66,15 @@ El renderer de exportación se carga como chunk diferido cuando Studio necesita
 Preview, SEO o Exportar. El bundle inicial conserva el presupuesto de JavaScript;
 el worker de exportación y el renderer público no bloquean el arranque del editor.
 
-`catalogModernStore` es la fixture de referencia que se crea por defecto y que
-debe actualizarse junto con cualquier cambio de estos módulos. `Modo Sur` y su
-demo separada prueban edición de copy, slides, CTA, productos, variantes,
-categorías y exportación con cuatro assets de moda reutilizados; no se crea un
-archivo por producto.
-En instalaciones que ya tenían otra tienda, el arranque agrega `Modo Sur` de
-forma idempotente sin sobrescribir los proyectos existentes.
+`buildCatalogModernProject({ seed: "clean" | "demo" })` es la fábrica única de
+la plantilla. Las tiendas nuevas usan `clean`: conservan el shell, la home y
+los estados vacíos, pero empiezan sin productos, categorías ni colecciones. La
+semilla `demo` alimenta `catalogModernStore` y el proyecto separado `Demo Modo
+Sur, catálogo moderno`, que prueban copy, variantes, categorías y exportación
+con cuatro assets reutilizados; no se crea un archivo por producto.
+El dashboard abre una creación guiada en cuatro pasos y conserva un modo
+avanzado para editar secciones. El origen y la versión de plantilla quedan en
+`project.origin` sin cambiar `schemaVersion: 2`.
 
 ## Escenario de escala jerárquico
 
@@ -150,9 +155,10 @@ corepack pnpm test:e2e
 La matriz release con Firefox/WebKit requiere Node 22 en CI; este entorno local
 usa Node 24 y por eso no se presenta como una ejecucion release exitosa.
 
-En el preview, las imagenes se hidratan como eager para que no aparezcan
-vacias hasta desplazar el iframe; la exportacion publica mantiene
-lazy-loading para no aumentar la carga inicial.
+En el preview, las imágenes no reciben `src` temporal: se declaran como datos
+pendientes, el iframe las solicita por `postMessage` y recién entonces asigna
+URLs `blob:` eager. Así no hay 404 iniciales ni dependencia de desplazar el
+iframe; la exportación pública mantiene lazy-loading para no aumentar la carga.
 
 El preview deduplica assets embebidos: el `srcdoc` sólo contiene las rutas de
 los recursos usados. El iframe los solicita por `postMessage`, los convierte a

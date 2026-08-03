@@ -83,6 +83,7 @@ export const NavigationItemSchema = z.object({
 export const NavigationConfigSchema = z.object({
   catalogLabel: z.string().min(1).max(40).default("Colecciones"),
   items: z.array(NavigationItemSchema).max(20).default([]),
+  mode: z.enum(["automatic", "curated"]).default("curated"),
   showHome: z.boolean().default(true),
   showContact: z.boolean().default(true),
   showAbout: z.boolean().default(true),
@@ -117,6 +118,14 @@ export const SiteShellSchema = z.object({
   footer: z.boolean().default(true),
   cart: z.boolean().default(true),
 });
+
+export const ProjectOriginSchema = z
+  .object({
+    templateId: z.literal("catalog-modern"),
+    templateVersion: z.number().int().positive(),
+    seed: z.enum(["clean", "demo", "duplicate"]),
+  })
+  .optional();
 
 export const VariantSchema = z.object({
   id: VariantIdSchema,
@@ -269,6 +278,7 @@ const StoreProjectV2ShapeSchema = z.object({
   baseUrl: z.string().url(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  origin: ProjectOriginSchema,
   identity: z.object({
     legalName: z.string().min(1),
     brandName: z.string().min(1),
@@ -294,6 +304,7 @@ const StoreProjectV2ShapeSchema = z.object({
   navigation: NavigationConfigSchema.default({
     catalogLabel: "Colecciones",
     items: [],
+    mode: "curated",
     showHome: true,
     showContact: true,
     showAbout: true,
@@ -883,6 +894,7 @@ export type Collection = z.infer<typeof CollectionSchema>;
 export type MotionSettings = z.infer<typeof MotionSettingsSchema>;
 export type StoreSection = z.infer<typeof StoreSectionSchema>;
 export type Theme = z.infer<typeof ThemeSchema>;
+export type ProjectOrigin = z.infer<typeof ProjectOriginSchema>;
 export type StoreProjectV2 = z.infer<typeof StoreProjectV2Schema>;
 // Alias temporal para los paquetes existentes; el contrato persistido ya es v2.
 export type StoreProjectV1 = StoreProjectV2;

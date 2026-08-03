@@ -94,7 +94,7 @@ async function expectNoHorizontalOverflow(page: Page, context: string) {
 async function openProject(page: Page) {
   await page.goto(studioUrl);
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.getByRole("button", { name: /^Modo Sur/ }).click();
+  await page.getByRole("button", { name: "Mi primera tienda" }).click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
 }
 
@@ -115,7 +115,7 @@ test("catálogo y constructor conservan jerarquía responsive", async ({ page })
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     await page.getByRole("button", { name: "Catálogo", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
     await expectNoHorizontalOverflow(page, `Catálogo ${viewport.name}`);
     if (viewport.name === "desktop") {
       await page.screenshot({ path: "test-results/catalog.png", fullPage: true });
@@ -151,6 +151,9 @@ test("preview diferencia escritorio, tablet y móvil", async ({ page }) => {
           .locator(`iframe[title="${size.title}"]`)
           .evaluate((frame) => frame.srcdoc.length),
       ).toBeLessThan(2_000_000);
+      expect(
+        await page.locator(`iframe[title="${size.title}"]`).evaluate((frame) => frame.srcdoc),
+      ).not.toMatch(/\ssrc="\/__solara-preview-assets\//);
       const frame = page.frameLocator(`iframe[title="${size.title}"]`);
       await expect
         .poll(() =>

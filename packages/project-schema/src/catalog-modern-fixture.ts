@@ -352,6 +352,11 @@ export const catalogModernStore = StoreProjectV2Schema.parse({
   baseUrl: "https://modo-sur.example",
   createdAt: fixedDate,
   updatedAt: fixedDate,
+  origin: {
+    templateId: "catalog-modern",
+    templateVersion: 1,
+    seed: "demo",
+  },
   identity: {
     legalName: "Modo Sur Estudio SRL",
     brandName: "Modo Sur",

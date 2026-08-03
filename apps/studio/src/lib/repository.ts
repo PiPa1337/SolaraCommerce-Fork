@@ -1,6 +1,9 @@
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { StoreProjectV1Schema } from "@solara/project-schema";
-import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
+import {
+  buildCatalogModernProject,
+  catalogModernCleanStore,
+} from "@solara/project-schema/catalog-modern-template";
 import Dexie, { type EntityTable } from "dexie";
 
 export interface StoredProject {
@@ -212,25 +215,43 @@ export async function saveProject(project: StoreProjectV1): Promise<void> {
   });
 }
 
-export async function createProject(name: string): Promise<StoreProjectV1> {
+export interface CreateProjectOptions {
+  name: string;
+  brandName?: string;
+  email?: string;
+  phone?: string;
+}
+
+export async function createProject(input: string | CreateProjectOptions): Promise<StoreProjectV1> {
   const timestamp = new Date().toISOString();
   const suffix = crypto.randomUUID();
-  const normalizedName = name.trim() || "Nueva tienda";
+  const options = typeof input === "string" ? { name: input } : input;
+  const normalizedName = options.name.trim() || "Nueva tienda";
+  const slug = slugify(normalizedName, suffix.slice(0, 6));
+  const phone = (options.phone ?? "").replace(/\D/g, "");
+  const template = buildCatalogModernProject({
+    seed: "clean",
+    id: `store-${suffix}`,
+    name: normalizedName,
+    brandName: options.brandName?.trim() || normalizedName,
+    slug,
+    baseUrl: `https://${slug}.example`,
+  });
   const project = await embedFixtureAssets(
     StoreProjectV1Schema.parse({
-      ...structuredClone(catalogModernStore),
-      id: `store-${suffix}`,
-      name: normalizedName,
-      slug: slugify(normalizedName, suffix.slice(0, 6)),
+      ...template,
+      identity: {
+        ...template.identity,
+        email: options.email?.trim() || "",
+        phone,
+      },
+      whatsapp: {
+        ...template.whatsapp,
+        phone: phone.length >= 8 && phone.length <= 15 ? phone : "5491100000000",
+      },
       status: "active",
-      baseUrl: `https://${slugify(normalizedName, suffix.slice(0, 6))}.example`,
       createdAt: timestamp,
       updatedAt: timestamp,
-      identity: {
-        ...structuredClone(catalogModernStore.identity),
-        legalName: normalizedName,
-        brandName: normalizedName,
-      },
     }),
   );
   await saveProject(project);
@@ -247,7 +268,18 @@ export async function ensureFirstProject(): Promise<StoreProjectV1> {
     return project;
   }
   const initial = await embedFixtureAssets(
-    StoreProjectV1Schema.parse(structuredClone(catalogModernStore)),
+    StoreProjectV1Schema.parse({
+      ...structuredClone(catalogModernCleanStore),
+      id: "store-catalog-modern-clean-default",
+      name: "Mi primera tienda",
+      slug: "mi-primera-tienda",
+      baseUrl: "https://mi-primera-tienda.example",
+      origin: {
+        templateId: "catalog-modern",
+        templateVersion: 1,
+        seed: "clean",
+      },
+    }),
   );
   await saveProject(initial);
   return initial;
@@ -255,7 +287,7 @@ export async function ensureFirstProject(): Promise<StoreProjectV1> {
 
 export async function ensureModernBaseProject(): Promise<boolean> {
   await ready();
-  const existing = await database.projects.get(catalogModernStore.id);
+  const existing = await database.projects.get(catalogModernCleanStore.id);
   if (existing) {
     const parsed = StoreProjectV1Schema.parse(existing.project);
     const project = repairModernGreeting(parsed);
@@ -264,7 +296,7 @@ export async function ensureModernBaseProject(): Promise<boolean> {
   }
 
   await saveProject(
-    await embedFixtureAssets(StoreProjectV1Schema.parse(structuredClone(catalogModernStore))),
+    await embedFixtureAssets(StoreProjectV1Schema.parse(structuredClone(catalogModernCleanStore))),
   );
   return true;
 }
@@ -279,13 +311,15 @@ export async function ensureScaleDemoProject(): Promise<boolean> {
     return false;
   }
 
-  const demo = StoreProjectV1Schema.parse({
-    ...structuredClone(catalogModernStore),
-    id: SCALE_DEMO_PROJECT_ID,
-    name: SCALE_DEMO_PROJECT_NAME,
-    slug: "demo-catalogo-jerarquico",
-    updatedAt: "2026-07-29T12:00:01.000Z",
-  });
+  const demo = StoreProjectV1Schema.parse(
+    buildCatalogModernProject({
+      seed: "demo",
+      id: SCALE_DEMO_PROJECT_ID,
+      name: SCALE_DEMO_PROJECT_NAME,
+      slug: "demo-catalogo-jerarquico",
+      baseUrl: "https://demo-catalogo-jerarquico.example",
+    }),
+  );
   await saveProject(await embedFixtureAssets(demo));
   return true;
 }

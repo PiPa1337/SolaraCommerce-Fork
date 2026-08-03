@@ -32,7 +32,7 @@ async function openBuilder(page: Page) {
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.getByRole("button", { name: /^Modo Sur/ }).click();
+  await page.getByRole("button", { name: /Demo Modo Sur/ }).click();
   await page.getByRole("button", { name: "Constructor" }).click();
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
 }
@@ -52,7 +52,7 @@ test("edita el hero moderno, actualiza el preview y persiste tras recargar", asy
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.getByRole("button", { name: /^Modo Sur/ }).click();
+  await page.getByRole("button", { name: /Demo Modo Sur/ }).click();
   await page.getByRole("button", { name: "Constructor" }).click();
   await page
     .getByRole("listitem")
