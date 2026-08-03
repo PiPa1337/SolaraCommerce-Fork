@@ -691,6 +691,58 @@ function storefrontBoot(): void {
     }
   });
 
+  const modernSearchDialog = document.querySelector<HTMLDialogElement>(
+    "[data-catalog-search-dialog]",
+  );
+  const modernSearchOpeners = Array.from(
+    document.querySelectorAll<HTMLButtonElement>("[data-catalog-search-open]"),
+  );
+  const modernSearchInput =
+    modernSearchDialog?.querySelector<HTMLInputElement>("#catalog-search-input");
+  let lastModernSearchTrigger: HTMLButtonElement | null = null;
+  const closeModernSearch = (): void => {
+    if (!modernSearchDialog) return;
+    if (modernSearchDialog.open) modernSearchDialog.close();
+    modernSearchOpeners.forEach((opener) => {
+      opener.setAttribute("aria-expanded", "false");
+    });
+    document.documentElement.classList.remove("catalog-search-open");
+    lastModernSearchTrigger?.focus();
+  };
+  modernSearchOpeners.forEach((opener) => {
+    opener.addEventListener("click", () => {
+      if (!modernSearchDialog) return;
+      lastModernSearchTrigger = opener;
+      modernSearchOpeners.forEach((item) => {
+        item.setAttribute("aria-expanded", "false");
+      });
+      opener.setAttribute("aria-expanded", "true");
+      if (typeof modernSearchDialog.showModal === "function") {
+        if (!modernSearchDialog.open) modernSearchDialog.showModal();
+      } else {
+        modernSearchDialog.setAttribute("open", "true");
+      }
+      document.documentElement.classList.add("catalog-search-open");
+      window.requestAnimationFrame(() => modernSearchInput?.focus());
+    });
+  });
+  modernSearchDialog
+    ?.querySelector<HTMLButtonElement>("[data-catalog-search-close]")
+    ?.addEventListener("click", closeModernSearch);
+  modernSearchDialog?.addEventListener("click", (event) => {
+    if (event.target === modernSearchDialog) closeModernSearch();
+  });
+  modernSearchDialog?.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeModernSearch();
+  });
+  modernSearchDialog?.addEventListener("close", () => {
+    modernSearchOpeners.forEach((opener) => {
+      opener.setAttribute("aria-expanded", "false");
+    });
+    document.documentElement.classList.remove("catalog-search-open");
+  });
+
   document
     .querySelectorAll<HTMLElement>('[data-solara-module="catalog-hero"] .catalog-hero-inner')
     .forEach((hero) => {
@@ -864,7 +916,9 @@ function storefrontBoot(): void {
       .trim()
       .split(/\s+/)
       .filter(Boolean);
-  const searchInput = document.querySelector<HTMLInputElement>("#solara-search-input");
+  const searchInput = document.querySelector<HTMLInputElement>(
+    "#catalog-search-input, #solara-search-input",
+  );
   const searchResults = document.querySelector<HTMLElement>("[data-search-results]");
   if (searchInput && searchResults) {
     const query = new URLSearchParams(window.location.search).get("q") ?? "";
@@ -936,7 +990,7 @@ function storefrontBoot(): void {
               searchResults.innerHTML = "<p>No encontramos productos para esa búsqueda.</p>";
               return;
             }
-            searchResults.innerHTML = `<div class="solara-search-results-grid">${ranked
+            searchResults.innerHTML = `<p class="solara-search-summary">Resultados para “${escapeText(query)}”</p><div class="solara-search-results-grid">${ranked
               .slice(0, 48)
               .map(
                 ({ entry }) =>

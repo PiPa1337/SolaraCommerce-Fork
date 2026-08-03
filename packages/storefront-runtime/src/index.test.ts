@@ -49,6 +49,14 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("motionEntry");
   });
 
+  it("incluye comportamiento accesible para el popup de búsqueda", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("data-catalog-search-dialog");
+    expect(STOREFRONT_RUNTIME_JS).toContain("data-catalog-search-open");
+    expect(STOREFRONT_RUNTIME_JS).toContain("showModal");
+    expect(STOREFRONT_RUNTIME_JS).toContain("data-catalog-search-close");
+    expect(STOREFRONT_RUNTIME_JS).toContain("catalog-search-open");
+  });
+
   it("mantiene el runtime por debajo de 35 KB gzip", () => {
     expect(gzipSync(STOREFRONT_RUNTIME_JS).byteLength).toBeLessThanOrEqual(35 * 1024);
   });

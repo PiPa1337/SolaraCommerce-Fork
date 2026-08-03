@@ -11,7 +11,14 @@ import {
   safeUrl,
   sanitizeRichText,
 } from "@solara/module-sdk";
-import type { AssetId, Product, ProductReview } from "@solara/project-schema";
+import {
+  type AssetId,
+  type CategoryId,
+  getCategoryBreadcrumb,
+  getCategoryProductIds,
+  type Product,
+  type ProductReview,
+} from "@solara/project-schema";
 import { z } from "zod";
 import { lowestPrice, renderBrand, scopedAssetId } from "./helpers";
 
@@ -161,7 +168,7 @@ export const catalogHeader: ModuleDefinition<z.infer<typeof headerSettings>> = {
       .replace('id="catalog-category-menu"', 'id="catalog-category-menu-mobile"');
     const search =
       navigation.showSearch && context.project.commerceTemplates.search.enabled
-        ? `<a class="catalog-search-link" href="/buscar/" aria-label="${escapeAttribute(context.settings.searchLabel)}"${current(["search"])}><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><span>${escapeHtml(context.settings.searchLabel)}</span></a>`
+        ? `<button class="catalog-search-link" type="button" data-catalog-search-open aria-controls="catalog-search-dialog" aria-expanded="false" aria-label="${escapeAttribute(context.settings.searchLabel)}"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><span>${escapeHtml(context.settings.searchLabel)}</span></button><noscript><a class="catalog-search-noscript" href="/buscar/">${escapeHtml(context.settings.searchLabel)}</a></noscript>`
         : "";
     const cart =
       navigation.showCart && context.project.siteShell.cart
@@ -176,6 +183,13 @@ export const catalogHeader: ModuleDefinition<z.infer<typeof headerSettings>> = {
         <nav class="catalog-desktop-nav" aria-label="Navegación principal">${nav}</nav>
         <div class="catalog-header-actions">${search}${cart}</div>
         <aside id="catalog-mobile-menu" class="catalog-mobile-menu" data-catalog-menu hidden aria-label="Navegación móvil"><button type="button" data-catalog-menu-close aria-label="Cerrar menú">Cerrar</button><nav>${mobileNav}</nav></aside>
+        <dialog id="catalog-search-dialog" class="catalog-search-dialog" data-catalog-search-dialog aria-labelledby="catalog-search-title">
+          <form class="catalog-search-dialog-form" action="/buscar/" method="get" role="search">
+            <div class="catalog-search-dialog-heading"><div><p class="catalog-eyebrow">Catálogo</p><h2 id="catalog-search-title">Buscar productos</h2></div><button type="button" data-catalog-search-close aria-label="Cerrar búsqueda">Cerrar</button></div>
+            <label for="catalog-search-input">Buscar por nombre, marca, categoría o etiqueta</label>
+            <div class="catalog-search-dialog-controls"><input id="catalog-search-input" name="q" type="search" autocomplete="off" enterkeyhint="search"><button class="catalog-primary-action" type="submit">Buscar</button></div>
+          </form>
+        </dialog>
       </div>`),
       { tag: "header" },
     );
@@ -346,7 +360,7 @@ export const catalogHero: ModuleDefinition<z.infer<typeof heroSettings>> = {
       ? `<div class="catalog-hero-slide-stage">${slidePanels}</div>`
       : String(media);
     const stats = settings.showCatalogStats
-      ? `<dl class="catalog-hero-stats"><div><dt>${context.project.products.filter((product) => product.status === "active").length}</dt><dd>productos activos</dd></div><div><dt>${context.project.categories.filter((category) => !category.parentId).length}</dt><dd>categorías</dd></div><div><dt>WhatsApp</dt><dd>pedido directo</dd></div></dl>`
+      ? `<dl class="catalog-hero-stats" aria-label="Resumen del catálogo"><div data-stat="products"><dt>${context.project.products.filter((product) => product.status === "active").length}</dt><dd>productos activos</dd></div><div data-stat="categories"><dt>${context.project.categories.filter((category) => !category.parentId).length}</dt><dd>categorías</dd></div><div data-stat="whatsapp"><dt>${context.project.whatsapp.phone ? "WhatsApp" : "Contacto"}</dt><dd>${context.project.whatsapp.phone ? "pedido directo" : "consultas"}</dd></div></dl>`
       : "";
     const slides =
       settings.mode === "carousel"
@@ -441,23 +455,33 @@ function modernProducts(
   return products.slice(0, settings.limit);
 }
 
-function reviewAverage(product: Product): number | undefined {
-  const reviews = product.reviews?.filter((review) => review.visible) ?? [];
-  return reviews.length
-    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
-    : undefined;
+function productCategory(
+  context: Parameters<NonNullable<(typeof catalogProductGrid)["render"]>>[0],
+  product: Product,
+): { id: string; title: string } | undefined {
+  const categories = product.categoryIds
+    .map((categoryId) => context.project.categories.find((category) => category.id === categoryId))
+    .filter((category): category is (typeof context.project.categories)[number] =>
+      Boolean(category),
+    );
+  return [...categories].sort((left, right) => {
+    const depthDifference =
+      getCategoryBreadcrumb(context.project, right.id).length -
+      getCategoryBreadcrumb(context.project, left.id).length;
+    if (depthDifference !== 0) return depthDifference;
+    return context.project.categories.indexOf(left) - context.project.categories.indexOf(right);
+  })[0];
 }
 
 function modernProductCard(
   context: Parameters<NonNullable<(typeof catalogProductGrid)["render"]>>[0],
   product: Product,
   index: number,
-  showRating: boolean,
 ): string {
   const variant = product.variants.find((item) => item.available) ?? product.variants[0];
   const price = lowestPrice(product);
   const compare = variant?.compareAtPrice;
-  const average = reviewAverage(product);
+  const category = productCategory(context, product);
   const imageId = variant?.imageId ?? product.imageIds[0];
   const image = renderImage(context.project, imageId, {
     className: "catalog-product-card-image",
@@ -466,7 +490,7 @@ function modernProductCard(
     sizes: "(max-width: 640px) 44vw, (max-width: 1024px) 30vw, 280px",
     fallbackAlt: product.title,
   });
-  return `<article class="catalog-product-card" data-product-card data-product-id="${escapeAttribute(product.id)}" data-product-title="${escapeAttribute(product.title)}"><a class="catalog-product-media" href="/productos/${escapeAttribute(product.slug)}/" aria-label="Ver ${escapeAttribute(product.title)}">${image}</a><div class="catalog-product-card-copy"><p class="catalog-product-brand">${escapeHtml(product.brand)}</p><h3><a href="/productos/${escapeAttribute(product.slug)}/">${escapeHtml(product.title)}</a></h3>${showRating && average ? `<p class="catalog-product-rating" aria-label="${average.toFixed(1)} de 5">${"★".repeat(Math.round(average))}<span>${average.toFixed(1)}/5</span></p>` : ""}<p class="catalog-product-price"><strong>${escapeHtml(formatMoney(price))}</strong>${compare && compare > price ? ` <del>${escapeHtml(formatMoney(compare))}</del><span class="catalog-discount">-${Math.round((1 - price / compare) * 100)}%</span>` : ""}</p><p class="catalog-product-availability">${variant?.available ? "Disponible" : "Agotado"}</p></div></article>`;
+  return `<article class="catalog-product-card" data-product-card data-product-id="${escapeAttribute(product.id)}" data-product-title="${escapeAttribute(product.title)}"${category ? ` data-product-category="${escapeAttribute(category.id)}"` : ""}><a class="catalog-product-media" href="/productos/${escapeAttribute(product.slug)}/" aria-label="Ver ${escapeAttribute(product.title)}">${image}</a><div class="catalog-product-card-copy">${category ? `<p class="catalog-product-category">${escapeHtml(category.title)}</p>` : ""}<h3><a href="/productos/${escapeAttribute(product.slug)}/">${escapeHtml(product.title)}</a></h3><p class="catalog-product-price"><strong>${escapeHtml(formatMoney(price))}</strong>${compare && compare > price ? ` <del>${escapeHtml(formatMoney(compare))}</del><span class="catalog-discount">-${Math.round((1 - price / compare) * 100)}%</span>` : ""}</p></div></article>`;
 }
 
 export const catalogProductGrid: ModuleDefinition<z.infer<typeof productGridSettings>> = {
@@ -511,7 +535,7 @@ export const catalogProductGrid: ModuleDefinition<z.infer<typeof productGridSett
     const categoryGrid = context.pageType === "category" ? " data-category-grid" : "";
     const cards = products
       .map((product, index) => {
-        const card = modernProductCard(context, product, index, context.settings.showRating);
+        const card = modernProductCard(context, product, index);
         // El runtime reutiliza estos datos para filtros y ordenamiento sin duplicar el catálogo.
         const optionValues = [
           ...new Set(
@@ -741,19 +765,59 @@ export const catalogCategoryBento: ModuleDefinition<z.infer<typeof categoryBento
   motionZones: modernItemsZone,
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
-    const items = context.settings.items
-      .map((item) => {
+    const activeProducts = new Set(
+      context.project.products
+        .filter((product) => product.status === "active")
+        .map((product) => product.id),
+    );
+    const hasProducts = (categoryId: string): boolean =>
+      getCategoryProductIds(context.project, categoryId as CategoryId).some((productId) =>
+        activeProducts.has(productId),
+      );
+    const automaticItems = context.project.categories
+      .filter((category) => !category.parentId && hasProducts(category.id))
+      .slice(0, 6)
+      .map((category) => ({ categoryId: category.id, imageId: "", size: "wide" as const }));
+    const configuredItems = context.settings.items
+      .filter((item) =>
+        context.project.categories.some((category) => category.id === item.categoryId),
+      )
+      .filter(
+        (item, index, items) =>
+          items.findIndex((candidate) => candidate.categoryId === item.categoryId) === index,
+      );
+    const sourceItems = configuredItems.length ? configuredItems : automaticItems;
+    const items = sourceItems
+      .map((item, index) => {
         const category = context.project.categories.find(
           (candidate) => candidate.id === item.categoryId,
         );
         if (!category) return "";
-        const image = renderImage(context.project, item.imageId || category.imageId, {
-          className: "catalog-category-bento-image",
-          loading: "lazy",
-          sizes: "(max-width: 767px) 92vw, 45vw",
-          fallbackAlt: category.title,
-        });
-        return `<a class="catalog-category-bento-item catalog-category-bento-item--${item.size}" href="/categorias/${escapeAttribute(category.slug)}/"><span>${escapeHtml(category.title)}</span>${image}</a>`;
+        const categoryProduct = context.project.products.find(
+          (product) =>
+            product.status === "active" &&
+            getCategoryProductIds(context.project, category.id as CategoryId).includes(product.id),
+        );
+        const fallbackImageId =
+          categoryProduct?.variants.find((variant) => variant.available)?.imageId ??
+          categoryProduct?.imageIds[0] ??
+          modernFallbackAsset(context, "");
+        const image = renderImage(
+          context.project,
+          item.imageId || category.imageId || fallbackImageId,
+          {
+            className: "catalog-category-bento-image",
+            loading: "lazy",
+            sizes: "(max-width: 767px) 92vw, (max-width: 1199px) 45vw, 30vw",
+            fallbackAlt: category.title,
+          },
+        );
+        const layout = index === 0 ? "feature" : index === 1 ? "wide" : item.size;
+        const productCount = getCategoryProductIds(
+          context.project,
+          category.id as CategoryId,
+        ).filter((id) => activeProducts.has(id)).length;
+        return `<a class="catalog-category-bento-item catalog-category-bento-item--${layout}" href="/categorias/${escapeAttribute(category.slug)}/" aria-label="Explorar ${escapeAttribute(category.title)}"><span>${escapeHtml(category.title)}</span>${productCount ? `<small>${productCount} productos</small>` : ""}${image}</a>`;
       })
       .filter(Boolean)
       .join("");
@@ -761,7 +825,7 @@ export const catalogCategoryBento: ModuleDefinition<z.infer<typeof categoryBento
       "catalog-category-bento",
       context.section,
       safeHtml(
-        `<div class="catalog-category-bento-section"><h2>${escapeHtml(context.settings.title)}</h2><div class="catalog-category-bento-grid" data-motion-zone="items">${items || '<p class="catalog-empty">No hay categorías configuradas.</p>'}</div></div>`,
+        `<div class="catalog-category-bento-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${items ? '<a class="catalog-category-bento-all" href="/buscar/">Ver todo el catálogo</a>' : ""}</header><div class="catalog-category-bento-grid" data-motion-zone="items">${items || '<p class="catalog-empty">Todavía no hay categorías para mostrar.</p>'}</div></div>`,
       ),
     );
   },

@@ -1354,13 +1354,16 @@ function buildPages(
     ...(socialImage ? { image: socialImage } : {}),
   };
 
+  const searchControls = isModernProject(project)
+    ? `<button class="solara-search-page-trigger" type="button" data-catalog-search-open aria-controls="catalog-search-dialog" aria-expanded="false">Nueva búsqueda</button><noscript><form class="solara-search-form" role="search" action="/buscar/" method="get"><label for="solara-search-input-noscript">Buscar productos</label><div><input id="solara-search-input-noscript" name="q" type="search" autocomplete="off"><button class="solara-primary-action" type="submit">Buscar</button></div></form></noscript>`
+    : `<form class="solara-search-form" role="search" action="/buscar/" method="get"><label for="solara-search-input">Buscar productos</label><div><input id="solara-search-input" name="q" type="search" autocomplete="off"><button class="solara-primary-action" type="submit">Buscar</button></div></form>`;
   const searchPage: PageDescriptor = {
     path: "buscar/index.html",
     title: `Buscar productos | ${project.identity.brandName}`,
     description: "Encontrá productos por nombre, marca, categoría o etiqueta.",
     canonicalPath: "/buscar/",
     pageType: "search",
-    body: `${renderProjectSections(project, sharedHeader, { pageType: "search" })}<main class="solara-search-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><span>Buscar</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Catálogo</p><h1>Buscar productos</h1><p>Buscá por nombre, marca, categoría o etiqueta.</p></header><form class="solara-search-form" role="search" action="/buscar/" method="get"><label for="solara-search-input">Buscar productos</label><div><input id="solara-search-input" name="q" type="search" autocomplete="off"><button class="solara-primary-action" type="submit">Buscar</button></div></form><section class="solara-search-results" data-search-results aria-live="polite"><p>Escribí una búsqueda para ver resultados.</p></section></main>${renderProjectSections(project, sharedFooter, { pageType: "search" })}`,
+    body: `${renderProjectSections(project, sharedHeader, { pageType: "search" })}<main class="solara-search-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><span>Buscar</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Catálogo</p><h1>Buscar productos</h1><p>Buscá por nombre, marca, categoría o etiqueta.</p>${searchControls}</header><section class="solara-search-results" data-search-results aria-live="polite"><p>Elegí una búsqueda para ver resultados.</p></section></main>${renderProjectSections(project, sharedFooter, { pageType: "search" })}`,
     structuredData: [
       {
         "@context": "https://schema.org",

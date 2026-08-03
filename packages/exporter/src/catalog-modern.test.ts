@@ -25,9 +25,15 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(home).not.toContain(">Tienda</summary>");
     expect(home).not.toMatch(/[ÃÂ�]/);
     expect(home).toContain('data-solara-module="catalog-product-grid"');
+    expect(home).toContain("data-catalog-search-dialog");
+    expect(home).toContain("data-catalog-search-open");
     expect(home).toContain("/fixtures/modo-sur-hero.png");
     expect(home).toContain("/fixtures/modo-sur-remera.png");
     expect(home.match(/data-product-card/g) ?? []).toHaveLength(20);
+    expect(home).not.toContain("catalog-product-rating");
+    expect(home).not.toContain("catalog-product-availability");
+    expect(home).toContain("Remeras");
+    expect(home).toContain("Camisas");
     expect(product).toContain('data-solara-module="catalog-product-detail"');
     expect(product).toContain("catalog-option-pill");
     expect(product).toContain('role="tablist"');
@@ -70,11 +76,23 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(category).toContain("data-category-grid");
     expect(category).toContain("data-category-option");
     expect(category).toContain("data-product-price=");
+    expect(category).not.toContain("catalog-product-rating");
+    expect(category).not.toContain("catalog-product-availability");
     expect(category).toContain('data-solara-module="catalog-newsletter-cta"');
     expect(category).not.toContain('data-solara-module="catalog-testimonials"');
     const cart = String(exported.files.get("carrito/index.html"));
     expect(cart).toContain("data-cart-subtotal");
     expect(cart).toContain("Entrega");
+  });
+
+  it("mantiene la página de búsqueda compacta y los resultados fuera del diálogo", () => {
+    const search = String(exported.files.get("buscar/index.html"));
+
+    expect(search).toContain("data-catalog-search-dialog");
+    expect(search).toContain("data-catalog-search-open");
+    expect(search).toContain('class="solara-search-results" data-search-results');
+    expect(search).toContain("Nueva búsqueda");
+    expect(search).not.toContain('id="solara-search-input"');
   });
 
   it("deduplica fuentes de assets embebidos en el preview", () => {

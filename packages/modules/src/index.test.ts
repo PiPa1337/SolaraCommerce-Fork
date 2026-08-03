@@ -1,4 +1,5 @@
 import type { StoreSection } from "@solara/project-schema";
+import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { referenceStore } from "@solara/project-schema/fixture";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 import { describe, expect, it } from "vitest";
@@ -190,6 +191,37 @@ describe("official module system", () => {
     expect(html.indexOf('data-solara-module="compact-product-grid"')).toBeLessThan(
       html.indexOf('data-solara-module="collection-grid"'),
     );
+  });
+
+  it("renderiza cards Catalog Modern con categoría y sin reseñas ni disponibilidad", () => {
+    const html = renderSections(catalogModernStore, catalogModernStore.sections, {
+      pageType: "home",
+    });
+    const firstGrid = html.slice(
+      html.indexOf('data-solara-module="catalog-product-grid"'),
+      html.indexOf(
+        'data-solara-module="catalog-product-grid"',
+        html.indexOf('data-solara-module="catalog-product-grid"') + 1,
+      ),
+    );
+
+    expect(firstGrid).toContain('class="catalog-product-category"');
+    expect(firstGrid).not.toContain("catalog-product-rating");
+    expect(firstGrid).not.toContain("catalog-product-availability");
+  });
+
+  it("deriva el bento desde las categorías reales del proyecto", () => {
+    const html = renderSections(catalogModernStore, catalogModernStore.sections, {
+      pageType: "home",
+    });
+    const bento = html.slice(html.indexOf('data-solara-module="catalog-category-bento"'));
+    const roots = catalogModernStore.categories.filter((category) => !category.parentId);
+
+    expect(bento.match(/class="catalog-category-bento-item /g) ?? []).toHaveLength(6);
+    expect(bento).toContain(roots[0]?.title);
+    expect(bento).toContain(roots[5]?.title);
+    expect(bento).toContain("Ver todo el catálogo");
+    expect(bento).toContain('href="/categorias/');
   });
 
   it("omite beneficios de confianza sin datos configurados", () => {
