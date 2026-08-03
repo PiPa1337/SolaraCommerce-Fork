@@ -1,6 +1,6 @@
 import { Desktop, DeviceMobile, DeviceTablet, EyeSlash } from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { IconButton } from "../components/Ui";
 
 type PreviewSize = "desktop" | "tablet" | "mobile";
@@ -10,6 +10,8 @@ export function Preview({ project }: { project: StoreProjectV1 }) {
   const [route, setRoute] = useState("/");
   const [html, setHtml] = useState("");
   const [error, setError] = useState("");
+  const previewAssetSources = useRef<ReadonlyMap<string, string>>(new Map());
+  const previewFrame = useRef<HTMLIFrameElement>(null);
   const previewRoutes = useMemo(() => {
     const firstRoot = project.categories.find((category) => category.parentId === undefined);
     const firstChild = project.categories.find((category) => category.parentId !== undefined);
@@ -56,37 +58,51 @@ export function Preview({ project }: { project: StoreProjectV1 }) {
   ]);
 
   useEffect(() => {
+    const handlePreviewAssetRequest = (event: MessageEvent<unknown>) => {
+      if (event.source !== previewFrame.current?.contentWindow) return;
+      if (!event.data || typeof event.data !== "object") return;
+      const message = event.data as { type?: unknown; paths?: unknown };
+      if (message.type !== "solara-preview-assets-request" || !Array.isArray(message.paths)) return;
+      const sources: Record<string, string> = {};
+      message.paths.forEach((path) => {
+        if (typeof path !== "string") return;
+        const source = previewAssetSources.current.get(path);
+        if (source) sources[path] = source;
+      });
+      event.source?.postMessage({ type: "solara-preview-assets-response", sources }, "*");
+    };
+    window.addEventListener("message", handlePreviewAssetRequest);
+    return () => window.removeEventListener("message", handlePreviewAssetRequest);
+  }, []);
+
+  useEffect(() => {
     if (!previewRoutes.some((item) => item.path === route)) setRoute("/");
   }, [previewRoutes, route]);
 
   useEffect(() => {
     let active = true;
-    const timeout = window.setTimeout(() => {
-      void import("@solara/exporter")
-        .then(({ renderPreviewHtml }) => {
-          if (!active) return;
-          try {
-            setHtml(renderPreviewHtml(project, "draft", route));
-            setError("");
-          } catch (reason) {
-            setError(
-              reason instanceof Error ? reason.message : "No se pudo generar la vista previa.",
-            );
-          }
-        })
-        .catch((reason: unknown) => {
-          if (active) {
-            setError(
-              reason instanceof Error
-                ? reason.message
-                : "No se pudo cargar el renderer de preview.",
-            );
-          }
-        });
-    }, 140);
+    void import("@solara/exporter")
+      .then(({ getPreviewAssetSources, renderPreviewHtml }) => {
+        if (!active) return;
+        try {
+          previewAssetSources.current = getPreviewAssetSources(project);
+          setHtml(renderPreviewHtml(project, "draft", route, { assetTransport: "parent" }));
+          setError("");
+        } catch (reason) {
+          setError(
+            reason instanceof Error ? reason.message : "No se pudo generar la vista previa.",
+          );
+        }
+      })
+      .catch((reason: unknown) => {
+        if (active) {
+          setError(
+            reason instanceof Error ? reason.message : "No se pudo cargar el renderer de preview.",
+          );
+        }
+      });
     return () => {
       active = false;
-      window.clearTimeout(timeout);
     };
   }, [project, route]);
 
@@ -133,8 +149,14 @@ export function Preview({ project }: { project: StoreProjectV1 }) {
             <strong>La vista previa necesita atención</strong>
             <p>{error}</p>
           </div>
+        ) : !html ? (
+          <output className="preview-loading" aria-live="polite">
+            <strong>Preparando vista previa</strong>
+            <p>Optimizando recursos de esta tienda...</p>
+          </output>
         ) : (
           <iframe
+            ref={previewFrame}
             title={`Vista previa ${size}`}
             srcDoc={html}
             sandbox="allow-forms allow-scripts"

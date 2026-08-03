@@ -897,6 +897,25 @@ input[type="color"] {
   text-align: center;
 }
 
+.preview-loading {
+  display: grid;
+  max-width: 340px;
+  justify-items: center;
+  gap: 8px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.preview-loading strong {
+  color: var(--ink);
+}
+
+.preview-loading p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .preview-error strong {
   color: var(--ink);
 }

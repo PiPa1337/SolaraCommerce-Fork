@@ -375,8 +375,60 @@ function createPreviewAssetBundle(project: StoreProjectV1): PreviewAssetBundle {
   };
 }
 
-function previewAssetMarkup(sources: ReadonlyMap<string, string>): string {
+function previewAssetMarkup(
+  sources: ReadonlyMap<string, string>,
+  transport: "inline" | "parent" = "inline",
+): string {
   if (sources.size === 0) return "";
+  if (transport === "parent") {
+    const paths = JSON.stringify([...sources.keys()]);
+    return `<script>
+(() => {
+  const paths = ${paths};
+  const hydrate = async (sources) => {
+    const objectUrls = new Map();
+    const sourceFor = async (value) => {
+      const source = sources[value];
+      if (!source) return "";
+      const cached = objectUrls.get(value);
+      if (cached) return cached;
+      try {
+        const response = await fetch(source);
+        const objectUrl = URL.createObjectURL(await response.blob());
+        objectUrls.set(value, objectUrl);
+        return objectUrl;
+      } catch {
+        objectUrls.set(value, source);
+        return source;
+      }
+    };
+    await Promise.all(paths.map((value) => sourceFor(value)));
+    document.querySelectorAll("[src]").forEach((element) => {
+      const source = objectUrls.get(element.getAttribute("src") || "");
+      if (source) element.setAttribute("src", source);
+    });
+    document.querySelectorAll("[srcset]").forEach((element) => {
+      const srcset = element.getAttribute("srcset") || "";
+      const hydrated = srcset.split(",").map((entry) => {
+        const parts = entry.trim().split(/\\s+/);
+        const source = objectUrls.get(parts.shift() || "");
+        return source ? [source, ...parts].join(" ") : entry;
+      }).join(",");
+      element.setAttribute("srcset", hydrated);
+    });
+    document.querySelectorAll("[poster]").forEach((element) => {
+      const source = objectUrls.get(element.getAttribute("poster") || "");
+      if (source) element.setAttribute("poster", source);
+    });
+  };
+  window.addEventListener("message", (event) => {
+    if (event.data?.type !== "solara-preview-assets-response") return;
+    void hydrate(event.data.sources || {});
+  });
+  window.parent.postMessage({ type: "solara-preview-assets-request", paths }, "*");
+})();
+</script>`;
+  }
   const serialized = jsonForScript(Object.fromEntries(sources));
   return `<script type="application/json" id="solara-preview-assets">${serialized}</script>
 <script>
@@ -1944,6 +1996,7 @@ export function renderPreviewHtml(
   projectInput: StoreProjectV1,
   mode: ExportMode = "draft",
   path = "/",
+  options: { assetTransport?: "inline" | "parent" } = {},
 ): string {
   const project = parseProject(projectInput, "renderizar la vista previa");
   const previewAssets = createPreviewAssetBundle(project);
@@ -1955,7 +2008,7 @@ export function renderPreviewHtml(
     [...previewAssets.sources].filter(([path]) => document.includes(path)),
   );
   return document
-    .replace("</body>", `${previewAssetMarkup(usedSources)}\n</body>`)
+    .replace("</body>", `${previewAssetMarkup(usedSources, options.assetTransport)}\n</body>`)
     .replace('href="/assets/storefront.css"', 'href="data:text/css;base64,PREVIEW_STYLE"')
     .replace(
       'src="/assets/storefront.js"',
@@ -1967,6 +2020,11 @@ export function renderPreviewHtml(
         `${themeCss(project)}\n${previewModuleStyles(project)}\n${STOREFRONT_RUNTIME_CSS}`,
       )}`,
     );
+}
+
+export function getPreviewAssetSources(projectInput: StoreProjectV1): ReadonlyMap<string, string> {
+  const project = parseProject(projectInput, "preparar los recursos de la vista previa");
+  return createPreviewAssetBundle(project).sources;
 }
 
 function toBase64(value: string): string {

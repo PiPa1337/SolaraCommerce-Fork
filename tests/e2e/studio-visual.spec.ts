@@ -146,6 +146,11 @@ test("preview diferencia escritorio, tablet y móvil", async ({ page }) => {
     );
     await expect(page.locator(`iframe[title="${size.title}"]`)).toBeVisible();
     if (size.title === "Vista previa desktop") {
+      expect(
+        await page
+          .locator(`iframe[title="${size.title}"]`)
+          .evaluate((frame) => frame.srcdoc.length),
+      ).toBeLessThan(2_000_000);
       const frame = page.frameLocator(`iframe[title="${size.title}"]`);
       await expect
         .poll(() =>

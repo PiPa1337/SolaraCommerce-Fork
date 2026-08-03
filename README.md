@@ -243,5 +243,7 @@ Sin esa variable se usa el fixture base Modo Sur.
 Con ese mismo respaldo, `corepack pnpm pilot:export` genera el `site.zip`
 production y la carpeta `.release/pilot-site/` listos para publicar.
 
-En Preview, los assets embebidos se transportan una sola vez y se reutilizan como
-URLs `blob:` compartidas; esto evita repetir la misma base64 en cada tarjeta.
+En Preview, los assets embebidos no se serializan dentro del `srcdoc`: el iframe
+los solicita por `postMessage`, los hidrata una sola vez y reutiliza sus URLs
+`blob:` locales. Esto evita repetir la misma base64 en cada tarjeta y mantiene
+el sandbox del preview.

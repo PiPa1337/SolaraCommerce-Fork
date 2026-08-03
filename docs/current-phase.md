@@ -150,5 +150,7 @@ corepack pnpm test:e2e
 La matriz release con Firefox/WebKit requiere Node 22 en CI; este entorno local
 usa Node 24 y por eso no se presenta como una ejecucion release exitosa.
 
-El preview deduplica assets embebidos: cada fuente se transporta una sola vez y
-las imagenes repetidas usan URLs `blob:` compartidas, evitando iframes gigantes.
+El preview deduplica assets embebidos: el `srcdoc` sólo contiene las rutas de
+los recursos usados. El iframe los solicita por `postMessage`, los convierte a
+URLs `blob:` dentro de su propio sandbox y evita iframes gigantes sin relajar
+la política de aislamiento.

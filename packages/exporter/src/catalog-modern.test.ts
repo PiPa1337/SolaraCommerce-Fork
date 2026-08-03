@@ -59,5 +59,12 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(preview).toContain('id="solara-preview-assets"');
     expect(preview).toContain("__solara-preview-assets");
     expect(preview.length).toBeLessThan(2_000_000);
+
+    const transported = renderPreviewHtml(embedded, "draft", "/", {
+      assetTransport: "parent",
+    });
+    expect(transported).toContain("solara-preview-assets-request");
+    expect(transported).not.toContain(payload);
+    expect(transported.length).toBeLessThan(2_000_000);
   });
 });
