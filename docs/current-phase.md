@@ -47,6 +47,12 @@ renderer.
 - Catálogo ofrece un CSV comercial separado: agrupa variantes por producto y
   conserva categorías, colecciones, opciones, identificadores e imágenes; se
   procesa en el mismo Web Worker del CSV técnico.
+- La matriz de revisión visual de Catalog Modern cubre home, categoría,
+  producto, carrito y preview en [`docs/design-references/catalog-modern/comparison-matrix.md`](design-references/catalog-modern/comparison-matrix.md).
+- Las categorías modernas generan filtros de opciones desde
+  `Variant.optionValues`; el producto tiene tabs progresivos de detalles,
+  políticas y reseñas; el carrito muestra subtotal, entrega a coordinar y
+  total estimado desde la misma fuente local.
 
 ## Familias visuales y tienda de referencia
 
@@ -118,6 +124,10 @@ separado del fixture visual pequeño y del benchmark de 1.000 productos.
   navegador; el límite inicial es 30 MB.
 - El checkout sigue terminando en WhatsApp, por lo que la elegibilidad Merchant
   se mantiene como advertencia.
+- El release multibrowser requiere ejecutar Node 22; el entorno local actual
+  usa Node 24. La fuente Archivo Variable y un sprite SVG empaquetado quedan
+  fuera hasta disponer de los assets de distribución definitivos; mientras
+  tanto se conserva la pila local sin descargas remotas.
 - La publicación real, dominio y credenciales de Google continúan fuera del
   runtime local.
 

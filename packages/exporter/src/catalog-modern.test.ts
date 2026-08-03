@@ -26,6 +26,7 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(home.match(/data-product-card/g) ?? []).toHaveLength(20);
     expect(product).toContain('data-solara-module="catalog-product-detail"');
     expect(product).toContain("catalog-option-pill");
+    expect(product).toContain('role="tablist"');
     expect(product).toContain("Lo que dicen quienes compraron");
   });
 
@@ -63,9 +64,13 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(category).toContain('class="catalog-category-layout"');
     expect(category).toContain('data-solara-module="catalog-product-grid"');
     expect(category).toContain("data-category-grid");
+    expect(category).toContain("data-category-option");
     expect(category).toContain("data-product-price=");
     expect(category).toContain('data-solara-module="catalog-newsletter-cta"');
     expect(category).not.toContain('data-solara-module="catalog-testimonials"');
+    const cart = String(exported.files.get("carrito/index.html"));
+    expect(cart).toContain("data-cart-subtotal");
+    expect(cart).toContain("Entrega");
   });
 
   it("deduplica fuentes de assets embebidos en el preview", () => {

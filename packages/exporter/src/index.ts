@@ -1029,7 +1029,28 @@ function modernCategoryFilters(products: readonly Product[]): string {
   const tagOptions = tags
     .map((tag) => `<option value="${escapeAttribute(tag)}">${escapeHtml(tag)}</option>`)
     .join("");
-  return `<aside class="catalog-category-filters" aria-label="Filtros del catálogo"><details open><summary>Filtros</summary><div class="catalog-filter-groups"><fieldset><legend>Disponibilidad</legend><label><input type="checkbox" data-category-available> Sólo disponibles</label></fieldset><fieldset><legend>Etiqueta</legend><label><span class="sr-only">Filtrar por etiqueta</span><select data-category-tag><option value="">Todas</option>${tagOptions}</select></label></fieldset><fieldset><legend>Precio</legend><div class="catalog-price-fields"><label><span>Mínimo</span><input type="number" min="0" step="1" data-category-min-price inputmode="decimal"></label><label><span>Máximo</span><input type="number" min="0" step="1" data-category-max-price inputmode="decimal"></label></div></fieldset></div></details></aside>`;
+  const optionGroups = new Map<string, Set<string>>();
+  products.forEach((product) => {
+    product.variants.forEach((variant) => {
+      Object.entries(variant.optionValues).forEach(([key, value]) => {
+        const values = optionGroups.get(key) ?? new Set<string>();
+        values.add(value);
+        optionGroups.set(key, values);
+      });
+    });
+  });
+  const optionFilters = [...optionGroups.entries()]
+    .slice(0, 6)
+    .map(([key, values]) => {
+      const options = [...values]
+        .sort((left, right) => left.localeCompare(right, "es-AR"))
+        .slice(0, 16)
+        .map((value) => `<option value="${escapeAttribute(value)}">${escapeHtml(value)}</option>`)
+        .join("");
+      return `<fieldset><legend>${escapeHtml(key)}</legend><label><span class="sr-only">Filtrar por ${escapeHtml(key)}</span><select data-category-option data-category-option-key="${escapeAttribute(key)}"><option value="">Todas</option>${options}</select></label></fieldset>`;
+    })
+    .join("");
+  return `<aside class="catalog-category-filters" aria-label="Filtros del catálogo"><details open><summary>Filtros</summary><div class="catalog-filter-groups"><fieldset><legend>Disponibilidad</legend><label><input type="checkbox" data-category-available> Sólo disponibles</label></fieldset><fieldset><legend>Etiqueta</legend><label><span class="sr-only">Filtrar por etiqueta</span><select data-category-tag><option value="">Todas</option>${tagOptions}</select></label></fieldset>${optionFilters}<fieldset><legend>Precio</legend><div class="catalog-price-fields"><label><span>Mínimo</span><input type="number" min="0" step="1" data-category-min-price inputmode="decimal"></label><label><span>Máximo</span><input type="number" min="0" step="1" data-category-max-price inputmode="decimal"></label></div></fieldset></div></details></aside>`;
 }
 
 function categoryBreadcrumbItems(
@@ -1356,7 +1377,7 @@ function buildPages(
     description: "Revisá tus productos antes de coordinar el pedido.",
     canonicalPath: "/carrito/",
     pageType: "cart",
-    body: `${renderProjectSections(project, sharedHeader, { pageType: "cart" })}<main class="solara-cart-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><span>Carrito</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Tu selección</p><h1>Carrito</h1></header><section class="solara-cart-page-grid"><div data-cart-lines><p class="solara-empty-state">Tu carrito está vacío. Elegí una pieza para comenzar.</p></div><aside><p>Total estimado</p><strong data-cart-total>${escapeHtml(formatMoney(0))}</strong><a class="solara-primary-action" href="/compra/">Continuar a compra</a></aside></section></main>${renderProjectSections(project, sharedFooter, { pageType: "cart" })}`,
+    body: `${renderProjectSections(project, sharedHeader, { pageType: "cart" })}<main class="solara-cart-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><span>Carrito</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Tu selección</p><h1>Carrito</h1></header><section class="solara-cart-page-grid"><div data-cart-lines><p class="solara-empty-state">Tu carrito está vacío. Elegí una pieza para comenzar.</p></div><aside class="solara-cart-summary"><p><span>Subtotal</span><strong data-cart-subtotal>${escapeHtml(formatMoney(0))}</strong></p><p><span>Entrega</span><strong>A coordinar</strong></p><p><span>Total estimado</span><strong data-cart-total>${escapeHtml(formatMoney(0))}</strong></p><a class="solara-primary-action" href="/compra/">Continuar a compra</a></aside></section></main>${renderProjectSections(project, sharedFooter, { pageType: "cart" })}`,
     structuredData: [],
   };
 

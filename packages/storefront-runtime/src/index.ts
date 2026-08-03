@@ -310,6 +310,37 @@ function storefrontBoot(): void {
     }
   };
 
+  const syncProductTabs = (root: HTMLElement, active: string): void => {
+    root.querySelectorAll<HTMLElement>("[data-product-tab-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.productTabPanel !== active;
+    });
+    root.querySelectorAll<HTMLButtonElement>("[data-product-tab]").forEach((tab) => {
+      tab.setAttribute("aria-selected", String(tab.dataset.productTab === active));
+    });
+  };
+
+  document.querySelectorAll<HTMLElement>("[data-product-tabs]").forEach((root) => {
+    const firstTab = root.querySelector<HTMLButtonElement>("[data-product-tab]");
+    if (!firstTab) return;
+    syncProductTabs(root, firstTab.dataset.productTab ?? "details");
+    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-product-tab]"));
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        syncProductTabs(root, tab.dataset.productTab ?? "details");
+      });
+      tab.addEventListener("keydown", (event) => {
+        if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+        event.preventDefault();
+        const index = tabs.indexOf(tab);
+        const nextIndex =
+          event.key === "ArrowRight"
+            ? (index + 1) % tabs.length
+            : (index - 1 + tabs.length) % tabs.length;
+        tabs[nextIndex]?.focus();
+      });
+    });
+  });
+
   document.addEventListener("change", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
@@ -955,6 +986,9 @@ function storefrontBoot(): void {
     const tagFilter = scope?.querySelector<HTMLSelectElement>("[data-category-tag]");
     const minPrice = scope?.querySelector<HTMLInputElement>("[data-category-min-price]");
     const maxPrice = scope?.querySelector<HTMLInputElement>("[data-category-max-price]");
+    const optionFilters = Array.from(
+      scope?.querySelectorAll<HTMLSelectElement>("[data-category-option]") ?? [],
+    );
     const resultCount = scope?.querySelector<HTMLElement>("[data-category-result-count]");
     if (!grid) return;
     const cards = Array.from(grid.querySelectorAll<HTMLElement>("[data-product-card]"));
@@ -973,9 +1007,18 @@ function storefrontBoot(): void {
           `${card.dataset.productTags ?? ""} ${card.dataset.productVariants ?? ""}`.toLocaleLowerCase(
             "es-AR",
           );
+        const options = (card.dataset.productOptions ?? "")
+          .split("|")
+          .map((value) => value.trim().toLocaleLowerCase("es-AR"));
+        const selectedOptionsMatch = optionFilters.every((filter) => {
+          const value = filter.value.trim().toLocaleLowerCase("es-AR");
+          const key = filter.dataset.categoryOptionKey?.trim().toLocaleLowerCase("es-AR");
+          return !value || !key || options.includes(`${key}=${value}`);
+        });
         return (
           (!availableOnly?.checked || card.dataset.productAvailable === "true") &&
           (!selectedTag || tags.includes(selectedTag)) &&
+          selectedOptionsMatch &&
           (!minPrice?.value || price >= min) &&
           (!maxPrice?.value || price <= max)
         );
@@ -1003,6 +1046,9 @@ function storefrontBoot(): void {
     sort.addEventListener("change", render);
     availableOnly?.addEventListener("change", render);
     tagFilter?.addEventListener("change", render);
+    optionFilters.forEach((filter) => {
+      filter.addEventListener("change", render);
+    });
     minPrice?.addEventListener("input", render);
     maxPrice?.addEventListener("input", render);
   });

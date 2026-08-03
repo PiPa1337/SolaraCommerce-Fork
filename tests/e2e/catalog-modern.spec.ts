@@ -174,11 +174,14 @@ test("la navegación, el detalle moderno y las variantes siguen siendo rastreabl
     page.getByRole("heading", { level: 1, name: "Remera esencial de algodón" }),
   ).toBeVisible();
   await expect(page.getByLabel("Elegí talle y color")).toBeVisible();
+  await page.getByRole("tab", { name: "Reseñas" }).click();
   await expect(page.getByText("Lo que dicen quienes compraron")).toBeVisible();
   await page.getByLabel("Elegí talle y color").selectOption({ index: 1 });
   await expect(page.locator(".catalog-product-info [data-product-price]")).toBeVisible();
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
   await expect(page.locator("[data-cart-count]").first()).toHaveText("1");
+  await expect(page.locator("[data-cart-subtotal]").first()).toBeVisible();
+  await expect(page.locator("[data-cart-drawer]")).toContainText("Entrega");
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
     false,
   );

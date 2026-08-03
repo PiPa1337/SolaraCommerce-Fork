@@ -2046,6 +2046,12 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-search-link svg,
 [data-solara-store].catalog-modern .catalog-mobile-menu-button svg { width: 1.05rem; height: 1.05rem; fill: none; stroke: currentcolor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 [data-solara-store].catalog-modern .catalog-product-info select { min-height: 42px; }
+[data-solara-store].catalog-modern .catalog-product-tabs { display: flex; gap: .35rem; width: min(calc(100% - 2rem), var(--solara-container)); margin: 1.4rem auto 0; border-bottom: 1px solid var(--catalog-border); overflow-x: auto; }
+[data-solara-store].catalog-modern .catalog-product-tabs button { min-height: 44px; padding: .65rem .8rem; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--catalog-muted); cursor: pointer; font: inherit; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+[data-solara-store].catalog-modern .catalog-product-tabs button:hover,
+[data-solara-store].catalog-modern .catalog-product-tabs button[aria-selected="true"] { border-bottom-color: var(--catalog-ink); color: var(--catalog-ink); }
+[data-solara-store].catalog-modern .catalog-product-tabs button:focus-visible { outline: 2px solid var(--catalog-ink); outline-offset: -2px; }
+[data-solara-store].catalog-modern [data-product-tab-panel][hidden] { display: none; }
 [data-solara-store].catalog-modern .catalog-product-reviews { width: min(calc(100% - 2rem), var(--solara-container)); margin: 0 auto; padding: 2rem 0 4rem; border-top: 1px solid var(--catalog-border); }
 [data-solara-store].catalog-modern .catalog-product-reviews > header { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
 [data-solara-store].catalog-modern .catalog-product-reviews h2 { max-width: 18ch; margin-top: .3rem; font-size: clamp(1.8rem, 3vw, 3rem); font-weight: 900; letter-spacing: -.08em; line-height: .95; }
@@ -2069,7 +2075,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-cart-items .solara-cart-line label { grid-column: 1; grid-row: 2; }
 [data-solara-store].catalog-modern .catalog-cart-items .solara-cart-line input { width: 5rem; min-height: 36px; padding: .35rem; border: 1px solid var(--catalog-border); border-radius: 8px; }
 [data-solara-store].catalog-modern .catalog-cart-items .solara-cart-line button { grid-column: 2; grid-row: 2; justify-self: end; border: 0; background: transparent; color: var(--catalog-sale); cursor: pointer; }
-[data-solara-store].catalog-modern .catalog-cart-total { display: flex; justify-content: space-between; padding: 1rem 0; border-top: 1px solid var(--catalog-border); font-size: 1.1rem; }
+[data-solara-store].catalog-modern .catalog-cart-summary { display: grid; gap: .55rem; padding: 1rem 0; border-top: 1px solid var(--catalog-border); }
+[data-solara-store].catalog-modern .catalog-cart-summary > p { display: flex; justify-content: space-between; gap: 1rem; margin: 0; color: var(--catalog-muted); font-size: .85rem; }
+[data-solara-store].catalog-modern .catalog-cart-summary > p strong { color: var(--catalog-ink); }
+[data-solara-store].catalog-modern .catalog-cart-total { padding-top: .7rem; border-top: 1px solid var(--catalog-border); font-size: 1.1rem; }
 [data-solara-store].catalog-modern .catalog-checkout-form { display: grid; gap: .45rem; padding-top: .5rem; }
 [data-solara-store].catalog-modern .catalog-checkout-form label { margin-top: .4rem; font-size: .78rem; font-weight: 700; }
 [data-solara-store].catalog-modern .catalog-checkout-form textarea { min-height: 76px; resize: vertical; }
@@ -2124,6 +2133,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .solara-search-form input { flex: 1; min-height: 48px; padding: .7rem .8rem; border: 1px solid var(--catalog-border); border-radius: 999px; background: var(--catalog-paper); }
 [data-solara-store].catalog-modern .solara-cart-page-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 2rem; padding: 2rem 0 5rem; }
 [data-solara-store].catalog-modern .solara-cart-page-grid > aside { align-self: start; padding: 1.25rem; border-radius: 16px; background: var(--catalog-surface); }
+[data-solara-store].catalog-modern .solara-cart-summary { display: grid; gap: .7rem; }
+[data-solara-store].catalog-modern .solara-cart-summary > p { display: flex; justify-content: space-between; gap: 1rem; margin: 0; color: var(--catalog-muted); font-size: .85rem; }
+[data-solara-store].catalog-modern .solara-cart-summary > p strong { color: var(--catalog-ink); }
+[data-solara-store].catalog-modern .solara-cart-summary > p:nth-of-type(3) { padding-top: .75rem; border-top: 1px solid var(--catalog-border); font-size: 1rem; }
 [data-solara-store].catalog-modern .solara-cart-page-grid > aside .solara-primary-action { width: 100%; }
 [data-solara-store].catalog-modern .solara-cart-page-grid [data-cart-lines] .solara-cart-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .6rem; padding: 1rem 0; border-bottom: 1px solid var(--catalog-border); }
 @media (max-width: 1199px) {

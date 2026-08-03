@@ -51,6 +51,9 @@ tags, disponibilidad e identificadores comerciales. El catálogo ofrece:
 - CSV procesado en Web Worker con revisión antes de reemplazar datos;
 - CSV comercial opcional con una fila por variante, categorías y colecciones por
   slug, opciones agrupadas e imágenes por ID;
+- las categorías modernas filtran disponibilidad, precio, etiquetas y opciones
+  de variantes; el producto ofrece tabs progresivos y el carrito separa
+  subtotal, entrega a coordinar y total estimado;
 - undo/redo y autosave serializado antes de salir de Studio.
 
 La jerarquía de categorías es opcional y admite raíces con un nivel de hijas.

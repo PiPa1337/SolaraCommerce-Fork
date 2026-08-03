@@ -509,7 +509,14 @@ export const catalogProductGrid: ModuleDefinition<z.infer<typeof productGridSett
       .map((product, index) => {
         const card = modernProductCard(context, product, index, context.settings.showRating);
         // El runtime reutiliza estos datos para filtros y ordenamiento sin duplicar el catálogo.
-        const attributes = ` data-product-price="${lowestPrice(product)}" data-product-tags="${escapeAttribute(product.tags.join(" "))}" data-product-variants="${escapeAttribute(product.variants.map((variant) => variant.title).join(" "))}" data-product-available="${String(product.variants.some((variant) => variant.available))}"`;
+        const optionValues = [
+          ...new Set(
+            product.variants.flatMap((variant) =>
+              Object.entries(variant.optionValues).map(([key, value]) => `${key}=${value}`),
+            ),
+          ),
+        ];
+        const attributes = ` data-product-price="${lowestPrice(product)}" data-product-tags="${escapeAttribute(product.tags.join(" "))}" data-product-variants="${escapeAttribute(product.variants.map((variant) => variant.title).join(" "))}" data-product-options="${escapeAttribute(optionValues.join("|"))}" data-product-available="${String(product.variants.some((variant) => variant.available))}"`;
         return card.replace(
           `data-product-title="${escapeAttribute(product.title)}"`,
           `data-product-title="${escapeAttribute(product.title)}"${attributes}`,
@@ -640,17 +647,21 @@ export const catalogProductDetail: ModuleDefinition<z.infer<typeof productDetail
         ? formatMoney(firstVariant.compareAtPrice)
         : "";
     const description = context.settings.showDescription
-      ? `<div class="catalog-rich-text">${product.richDescription ? sanitizeRichText(product.richDescription) : `<p>${escapeHtml(product.description)}</p>`}</div>`
+      ? `<div class="catalog-rich-text" data-product-tab-panel="details">${product.richDescription ? sanitizeRichText(product.richDescription) : `<p>${escapeHtml(product.description)}</p>`}</div>`
       : "";
     const reviewSummary = catalogReviewSummary(product);
     const reviews = (product.reviews ?? []).filter((review) => review.visible).slice(0, 6);
+    const detailsPanelId = `catalog-product-details-${context.section.id}`;
+    const policiesPanelId = `catalog-product-policies-${context.section.id}`;
+    const reviewsPanelId = `catalog-product-reviews-${context.section.id}`;
     const reviewSection = reviews.length
-      ? `<section class="catalog-product-reviews" data-motion-zone="items"><header><div><p class="catalog-eyebrow">Experiencias reales</p><h2>Lo que dicen quienes compraron</h2></div>${reviewSummary ? `<p class="catalog-review-average"><strong>${reviewSummary.average.toFixed(1)}</strong> / 5 · ${reviewSummary.count} reseñas</p>` : ""}</header><div class="catalog-review-grid">${reviews.map((review) => `<article class="catalog-review"><p class="catalog-product-rating" aria-label="${review.rating} de 5">${"★".repeat(review.rating)}</p><h3>${escapeHtml(review.authorName)}</h3>${review.title ? `<strong>${escapeHtml(review.title)}</strong>` : ""}<blockquote>${escapeHtml(review.body)}</blockquote><small>${review.verifiedPurchase ? "Compra verificada · " : ""}${escapeHtml(new Intl.DateTimeFormat("es-AR", { dateStyle: "medium" }).format(new Date(review.publishedAt)))}</small></article>`).join("")}</div></section>`
+      ? `<section id="${escapeAttribute(reviewsPanelId)}" class="catalog-product-reviews" data-product-tab-panel="reviews" data-motion-zone="items"><header><div><p class="catalog-eyebrow">Experiencias reales</p><h2>Lo que dicen quienes compraron</h2></div>${reviewSummary ? `<p class="catalog-review-average"><strong>${reviewSummary.average.toFixed(1)}</strong> / 5 · ${reviewSummary.count} reseñas</p>` : ""}</header><div class="catalog-review-grid">${reviews.map((review) => `<article class="catalog-review"><p class="catalog-product-rating" aria-label="${review.rating} de 5">${"★".repeat(review.rating)}</p><h3>${escapeHtml(review.authorName)}</h3>${review.title ? `<strong>${escapeHtml(review.title)}</strong>` : ""}<blockquote>${escapeHtml(review.body)}</blockquote><small>${review.verifiedPurchase ? "Compra verificada · " : ""}${escapeHtml(new Intl.DateTimeFormat("es-AR", { dateStyle: "medium" }).format(new Date(review.publishedAt)))}</small></article>`).join("")}</div></section>`
       : "";
+    const productTabs = `<nav class="catalog-product-tabs" role="tablist" aria-label="Información del producto"><button type="button" role="tab" data-product-tab="details" aria-controls="${escapeAttribute(detailsPanelId)}" aria-selected="true">Detalles</button><button type="button" role="tab" data-product-tab="policies" aria-controls="${escapeAttribute(policiesPanelId)}" aria-selected="false">Envíos y cambios</button>${reviews.length ? `<button type="button" role="tab" data-product-tab="reviews" aria-controls="${escapeAttribute(reviewsPanelId)}" aria-selected="false">Reseñas</button>` : ""}</nav>`;
     return moduleRoot(
       "catalog-product-detail",
       context.section,
-      safeHtml(`<div class="catalog-product-detail-inner" data-motion-zone="content" data-product data-product-id="${escapeAttribute(product.id)}" data-product-title="${escapeAttribute(product.title)}" data-default-variant="${escapeAttribute(firstVariant?.id ?? "")}" >
+      safeHtml(`<div class="catalog-product-detail-shell" data-product-tabs><div class="catalog-product-detail-inner" data-motion-zone="content" data-product data-product-id="${escapeAttribute(product.id)}" data-product-title="${escapeAttribute(product.title)}" data-default-variant="${escapeAttribute(firstVariant?.id ?? "")}" >
         ${gallery}
         <div class="catalog-product-info">
           <p class="catalog-product-brand">${escapeHtml(product.brand)}</p>
@@ -668,10 +679,10 @@ export const catalogProductDetail: ModuleDefinition<z.infer<typeof productDetail
           </form>
           <nav class="catalog-variant-links" aria-label="Enlaces directos a variantes">${variantLinks}</nav>
           <p class="catalog-delivery-note">${escapeHtml(context.settings.deliveryNote)}</p>
-          <dl class="catalog-product-specs"><div><dt>SKU</dt><dd data-product-sku>${escapeHtml(firstVariant?.sku ?? "")}</dd></div><div><dt>Disponibilidad</dt><dd data-product-availability>${firstVariant?.available ? "Disponible" : "Agotado"}</dd></div></dl>
-          <div class="catalog-product-policies"><details><summary>Envíos</summary><p>${escapeHtml(context.project.policies.shipping.details)}</p></details><details><summary>Cambios y devoluciones</summary><p>${escapeHtml(context.project.policies.returns.details)}</p></details></div>
+          <dl id="${escapeAttribute(detailsPanelId)}" class="catalog-product-specs" data-product-tab-panel="details"><div><dt>SKU</dt><dd data-product-sku>${escapeHtml(firstVariant?.sku ?? "")}</dd></div><div><dt>Disponibilidad</dt><dd data-product-availability>${firstVariant?.available ? "Disponible" : "Agotado"}</dd></div></dl>
+          <div id="${escapeAttribute(policiesPanelId)}" class="catalog-product-policies" data-product-tab-panel="policies"><details><summary>Envíos</summary><p>${escapeHtml(context.project.policies.shipping.details)}</p></details><details><summary>Cambios y devoluciones</summary><p>${escapeHtml(context.project.policies.returns.details)}</p></details></div>
         </div>
-      </div>${reviewSection}`),
+      </div>${productTabs}${reviewSection}</div>`),
     );
   },
 };
@@ -915,7 +926,7 @@ export const catalogCartDrawer: ModuleDefinition<z.infer<typeof modernCartSettin
       "catalog-cart-drawer",
       context.section,
       safeHtml(
-        `<div class="solara-cart-backdrop catalog-cart-backdrop" data-solara-cart-close data-close-cart hidden></div><aside id="solara-cart" class="catalog-cart-drawer" data-cart-drawer aria-label="${escapeAttribute(context.settings.title)}" aria-hidden="true" inert tabindex="-1"><header><h2>${escapeHtml(context.settings.title)}</h2><button type="button" data-solara-cart-close data-close-cart aria-label="Cerrar carrito">Cerrar</button></header><div class="catalog-cart-items" data-solara-cart-items data-cart-lines><p class="catalog-empty">${escapeHtml(context.settings.emptyText)}</p></div><div class="catalog-cart-total"><span>Total</span><strong data-solara-cart-total data-cart-total>${escapeHtml(formatMoney(0))}</strong></div><form class="catalog-checkout-form" data-solara-checkout data-checkout-form><label for="catalog-drawer-name">Nombre</label><input id="catalog-drawer-name" name="name" autocomplete="name" required><label for="catalog-drawer-phone">Teléfono</label><input id="catalog-drawer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="Ingresá un teléfono válido" required><label for="catalog-drawer-address">Dirección o punto de entrega</label><textarea id="catalog-drawer-address" name="address" autocomplete="street-address" required></textarea><label for="catalog-drawer-notes">Notas opcionales</label><textarea id="catalog-drawer-notes" name="notes"></textarea><button class="catalog-primary-action" type="submit">${escapeHtml(context.settings.checkoutLabel)}</button><pre data-order-preview aria-live="polite"></pre><a data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>Enviar pedido en WhatsApp</a></form></aside>`,
+        `<div class="solara-cart-backdrop catalog-cart-backdrop" data-solara-cart-close data-close-cart hidden></div><aside id="solara-cart" class="catalog-cart-drawer" data-cart-drawer aria-label="${escapeAttribute(context.settings.title)}" aria-hidden="true" inert tabindex="-1"><header><h2>${escapeHtml(context.settings.title)}</h2><button type="button" data-solara-cart-close data-close-cart aria-label="Cerrar carrito">Cerrar</button></header><div class="catalog-cart-items" data-solara-cart-items data-cart-lines><p class="catalog-empty">${escapeHtml(context.settings.emptyText)}</p></div><div class="catalog-cart-summary"><p><span>Subtotal</span><strong data-cart-subtotal>${escapeHtml(formatMoney(0))}</strong></p><p><span>Entrega</span><strong> A coordinar</strong></p><p class="catalog-cart-total"><span>Total estimado</span><strong data-solara-cart-total data-cart-total>${escapeHtml(formatMoney(0))}</strong></p></div><form class="catalog-checkout-form" data-solara-checkout data-checkout-form><label for="catalog-drawer-name">Nombre</label><input id="catalog-drawer-name" name="name" autocomplete="name" required><label for="catalog-drawer-phone">Teléfono</label><input id="catalog-drawer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="Ingresá un teléfono válido" required><label for="catalog-drawer-address">Dirección o punto de entrega</label><textarea id="catalog-drawer-address" name="address" autocomplete="street-address" required></textarea><label for="catalog-drawer-notes">Notas opcionales</label><textarea id="catalog-drawer-notes" name="notes"></textarea><button class="catalog-primary-action" type="submit">${escapeHtml(context.settings.checkoutLabel)}</button><pre data-order-preview aria-live="polite"></pre><a data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>Enviar pedido en WhatsApp</a></form></aside>`,
       ),
     );
   },
