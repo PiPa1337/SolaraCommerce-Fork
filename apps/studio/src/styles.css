@@ -2563,6 +2563,79 @@ tbody tr[data-selected="true"] {
   width: min(1180px, 100%);
 }
 
+.dashboard-session-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.shutdown-status {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  margin: -18px 0 28px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-input);
+  background: var(--surface-raised);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.shutdown-status strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.shutdown-dialog {
+  width: min(440px, calc(100% - 32px));
+  margin: auto;
+  padding: 26px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-panel);
+  background: var(--surface-raised);
+  color: var(--ink);
+  box-shadow: var(--shadow-panel);
+}
+
+.shutdown-dialog::backdrop {
+  background: rgb(24 28 24 / 0.38);
+  backdrop-filter: blur(2px);
+}
+
+.shutdown-dialog__eyebrow {
+  margin-bottom: 8px;
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.shutdown-dialog h2 {
+  margin-bottom: 10px;
+  font-size: clamp(1.7rem, 5vw, 2.25rem);
+}
+
+.shutdown-dialog form > p:not(.shutdown-dialog__eyebrow) {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.shutdown-dialog .inline-error {
+  margin-top: 14px;
+}
+
+.shutdown-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+}
+
 .dashboard-kicker {
   margin: 0 0 16px;
   color: var(--accent);
@@ -3039,6 +3112,16 @@ tbody tr {
 
   .section-actions {
     justify-content: flex-start;
+  }
+
+  .dashboard-session-actions {
+    justify-content: flex-start;
+  }
+
+  .shutdown-status {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
   }
 
   .create-store {

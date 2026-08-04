@@ -1,7 +1,14 @@
-import { Archive, ArrowCounterClockwise, Copy, Plus, Storefront } from "@phosphor-icons/react";
+import {
+  Archive,
+  ArrowCounterClockwise,
+  Copy,
+  Plus,
+  Power,
+  Storefront,
+} from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
-import { useMemo, useState } from "react";
-import { Button, EmptyState, Field, SectionHeader } from "../components/Ui";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Button, EmptyState, Field, InlineError, SectionHeader } from "../components/Ui";
 import { formatDate } from "../lib/format";
 import type { StoredProject } from "../lib/repository";
 
@@ -21,11 +28,62 @@ export function Dashboard({ projects, onCreate, onOpen, onDuplicate, onArchive }
   const [brandName, setBrandName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [shutdownState, setShutdownState] = useState<
+    "checking" | "unavailable" | "available" | "closing" | "closed"
+  >("checking");
+  const [shutdownDialogOpen, setShutdownDialogOpen] = useState(false);
+  const [shutdownError, setShutdownError] = useState("");
+  const shutdownDialogRef = useRef<HTMLDialogElement>(null);
   const reduceMotion = useReducedMotion();
   const visible = useMemo(
     () => projects.filter((record) => record.status === view),
     [projects, view],
   );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch("/__solara/session", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) return false;
+        const body = (await response.json()) as { managed?: boolean };
+        return body.managed === true;
+      })
+      .then((managed) => setShutdownState(managed ? "available" : "unavailable"))
+      .catch((reason: unknown) => {
+        if (reason instanceof DOMException && reason.name === "AbortError") return;
+        setShutdownState("unavailable");
+      });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const dialog = shutdownDialogRef.current;
+    if (!dialog) return;
+    if (shutdownDialogOpen && !dialog.open) dialog.showModal();
+    if (!shutdownDialogOpen && dialog.open) dialog.close();
+  }, [shutdownDialogOpen]);
+
+  const requestShutdown = async () => {
+    setShutdownState("closing");
+    setShutdownError("");
+    try {
+      const response = await fetch("/__solara/shutdown", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) throw new Error("El servidor no aceptó el cierre.");
+      setShutdownDialogOpen(false);
+      setShutdownState("closed");
+    } catch {
+      setShutdownState("available");
+      setShutdownError("No se pudo detener el servidor local.");
+    }
+  };
 
   const submit = async () => {
     if (step < 4) {
@@ -54,25 +112,46 @@ export function Dashboard({ projects, onCreate, onOpen, onDuplicate, onArchive }
           title="Tus tiendas"
           description="Cada tienda vive en este dispositivo y se puede respaldar como archivo Solara."
           actions={
-            <fieldset className="segmented">
-              <legend className="visually-hidden">Estado de tiendas</legend>
-              <button
-                type="button"
-                aria-pressed={view === "active"}
-                onClick={() => setView("active")}
-              >
-                Activas
-              </button>
-              <button
-                type="button"
-                aria-pressed={view === "archived"}
-                onClick={() => setView("archived")}
-              >
-                Archivadas
-              </button>
-            </fieldset>
+            <div className="dashboard-session-actions">
+              <fieldset className="segmented">
+                <legend className="visually-hidden">Estado de tiendas</legend>
+                <button
+                  type="button"
+                  aria-pressed={view === "active"}
+                  onClick={() => setView("active")}
+                >
+                  Activas
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={view === "archived"}
+                  onClick={() => setView("archived")}
+                >
+                  Archivadas
+                </button>
+              </fieldset>
+              {shutdownState === "available" ? (
+                <Button
+                  variant="danger"
+                  icon={Power}
+                  onClick={() => {
+                    setShutdownError("");
+                    setShutdownDialogOpen(true);
+                  }}
+                >
+                  Cerrar app
+                </Button>
+              ) : null}
+            </div>
           }
         />
+
+        {shutdownState === "closed" ? (
+          <output className="shutdown-status">
+            <strong>Servidor local detenido.</strong>
+            <span>Podés cerrar esta pestaña del navegador.</span>
+          </output>
+        ) : null}
 
         <form
           className="create-store"
@@ -241,6 +320,40 @@ export function Dashboard({ projects, onCreate, onOpen, onDuplicate, onArchive }
           </div>
         )}
       </div>
+      <dialog
+        ref={shutdownDialogRef}
+        className="shutdown-dialog"
+        onCancel={(event) => {
+          event.preventDefault();
+          if (shutdownState !== "closing") setShutdownDialogOpen(false);
+        }}
+      >
+        <form
+          method="dialog"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (shutdownState !== "closing") void requestShutdown();
+          }}
+        >
+          <p className="shutdown-dialog__eyebrow">Sesión local</p>
+          <h2>¿Cerrar SolaraCommerce?</h2>
+          <p>Se detendrá el servidor local. Tus tiendas y respaldos no se borran.</p>
+          {shutdownError ? <InlineError>{shutdownError}</InlineError> : null}
+          <div className="shutdown-dialog__actions">
+            <Button
+              variant="quiet"
+              type="button"
+              disabled={shutdownState === "closing"}
+              onClick={() => setShutdownDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button variant="danger" type="submit" disabled={shutdownState === "closing"}>
+              {shutdownState === "closing" ? "Cerrando…" : "Cerrar y detener"}
+            </Button>
+          </div>
+        </form>
+      </dialog>
     </main>
   );
 }

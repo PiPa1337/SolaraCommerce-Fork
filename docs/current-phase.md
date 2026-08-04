@@ -1,5 +1,14 @@
 # Tienda base `catalog-modern` y flujo guiado editable
 
+## Cierre del servidor local
+
+El lanzador de Windows inicia un servidor Node administrado con una sesión local
+de un solo uso. En la pantalla principal de Studio, `Cerrar app` aparece sólo
+cuando esa sesión está disponible. La confirmación detiene el proceso Node que
+registró el lanzador y deja intactos IndexedDB, respaldos y exportaciones. El
+servidor manual de desarrollo no expone el endpoint, así que Studio no puede
+detener procesos que no inició.
+
 ## Flujo guiado de creación
 
 La experiencia principal comienza en `Preparar`, no en un canvas libre. Cada

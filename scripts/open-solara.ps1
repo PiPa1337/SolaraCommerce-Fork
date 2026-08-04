@@ -23,6 +23,20 @@ function Test-SolaraServer {
   }
 }
 
+function Test-SolaraManagedServer {
+  param([int]$Port)
+
+  try {
+    $response = Invoke-WebRequest `
+      -Uri "http://127.0.0.1:$Port/__solara/session" `
+      -UseBasicParsing `
+      -TimeoutSec 1
+    return $response.StatusCode -eq 200 -and $response.Content.Contains('"managed":true')
+  } catch {
+    return $false
+  }
+}
+
 function Test-PortAvailable {
   param([int]$Port)
 
@@ -87,13 +101,19 @@ try {
       $existing = Get-Content -LiteralPath $runtimeFile -Raw | ConvertFrom-Json
       $existingProcess = Get-Process -Id ([int]$existing.processId) -ErrorAction SilentlyContinue
       if ($existingProcess -and (Test-SolaraServer -Port ([int]$existing.port))) {
-        $existingUrl = "http://127.0.0.1:$($existing.port)"
-        if ($NoBrowser) {
-          Write-Output $existingUrl
-        } else {
-          Start-Process $existingUrl
+        if (Test-SolaraManagedServer -Port ([int]$existing.port)) {
+          $existingUrl = "http://127.0.0.1:$($existing.port)"
+          if ($NoBrowser) {
+            Write-Output $existingUrl
+          } else {
+            Start-Process $existingUrl
+          }
+          exit 0
         }
-        exit 0
+        if ($existing.projectRoot -eq $projectRoot) {
+          Stop-Process -Id $existingProcess.Id -Force -ErrorAction SilentlyContinue
+          Start-Sleep -Milliseconds 150
+        }
       }
     } catch {
       # Un registro viejo no debe impedir iniciar una instancia nueva.
@@ -107,10 +127,19 @@ try {
   }
 
   $nodePath = (Get-Command node).Source
+  $random = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+  try {
+    $tokenBytes = New-Object byte[] 32
+    $random.GetBytes($tokenBytes)
+  } finally {
+    $random.Dispose()
+  }
+  $shutdownToken = [Convert]::ToBase64String($tokenBytes).TrimEnd("=").Replace("+", "-").Replace("/", "_")
   $serverArguments = @(
     "`"$serverScript`"",
     "`"$studioDist`"",
-    "$port"
+    "$port",
+    "`"$shutdownToken`""
   )
   $serverProcess = Start-Process `
     -FilePath $nodePath `
@@ -124,6 +153,7 @@ try {
     processId = $serverProcess.Id
     port = $port
     projectRoot = $projectRoot
+    managed = $true
   } |
     ConvertTo-Json |
     Set-Content -LiteralPath $runtimeFile -Encoding UTF8

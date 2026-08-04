@@ -9,6 +9,13 @@ Hacer doble clic en [`Abrir SolaraCommerce.cmd`](Abrir%20SolaraCommerce.cmd). El
 lanzador prepara la aplicación si hace falta, inicia el servidor local y abre el
 navegador predeterminado.
 
+Cuando la aplicación fue abierta con ese lanzador, el dashboard muestra `Cerrar
+app`. Después de confirmar, el control detiene únicamente el servidor Node local
+que inició SolaraCommerce; no borra tiendas, respaldos ni exportaciones. El
+navegador puede mantener la pestaña abierta, por lo que el último mensaje indica
+que ya se puede cerrar. Si Studio se sirve con Vite, Playwright u otro servidor,
+el control no aparece y no intenta detener procesos ajenos.
+
 ## Requisitos
 
 - Node.js 22 o posterior
