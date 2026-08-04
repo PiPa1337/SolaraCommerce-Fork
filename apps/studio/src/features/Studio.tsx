@@ -23,7 +23,7 @@ import {
 } from "@solara/core";
 import { type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
 import { motion } from "motion/react";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { IconButton } from "../components/Ui";
 import { AutosaveQueue, type AutosaveState } from "../lib/autosave";
 import { downloadBlob } from "../lib/projectArchive";
@@ -35,7 +35,7 @@ import { Catalog } from "./Catalog";
 import { ExportPanel } from "./Export";
 import { GuidedOverview } from "./GuidedOverview";
 import { Overview } from "./Overview";
-import { Preview } from "./Preview";
+import { getPreviewRoutes, Preview, type PreviewSize, PreviewToolbar } from "./Preview";
 import { Seo } from "./Seo";
 import { ThemeEditor } from "./ThemeEditor";
 
@@ -71,6 +71,8 @@ export function Studio({
   const [history, setHistory] = useState<HistoryState>(() => createHistory(initialProject));
   const [tab, setTab] = useState<StudioTab>("guided");
   const [editorOpen, setEditorOpen] = useState(false);
+  const [previewRoute, setPreviewRoute] = useState("/");
+  const [previewSize, setPreviewSize] = useState<PreviewSize>("desktop");
   const [advancedMode, setAdvancedMode] = useState(false);
   const [saveState, setSaveState] = useState<AutosaveState>("saved");
   const [validationError, setValidationError] = useState("");
@@ -79,6 +81,11 @@ export function Studio({
   const editorPaneId = useId();
   const lastProjectRef = useRef(initialProject);
   const project = history.present;
+  const previewRoutes = useMemo(() => getPreviewRoutes(project), [project]);
+
+  useEffect(() => {
+    if (!previewRoutes.some((item) => item.path === previewRoute)) setPreviewRoute("/");
+  }, [previewRoutes, previewRoute]);
 
   useEffect(() => {
     return autosave.subscribe(setSaveState);
@@ -215,49 +222,59 @@ export function Studio({
             <small>{project.baseUrl}</small>
           </div>
         </div>
-        <div className="save-status">
-          {validationError ? (
-            <output
-              className="save-indicator save-indicator--error"
-              aria-live="assertive"
-              title={validationError}
-            >
-              Cambio inválido
+        <PreviewToolbar
+          routes={previewRoutes}
+          route={previewRoute}
+          size={previewSize}
+          onRouteChange={setPreviewRoute}
+          onSizeChange={setPreviewSize}
+          onOpenEditor={() => setEditorOpen(true)}
+        />
+        <div className="studio-topbar-actions">
+          <div className="save-status">
+            {validationError ? (
+              <output
+                className="save-indicator save-indicator--error"
+                aria-live="assertive"
+                title={validationError}
+              >
+                Cambio inválido
+              </output>
+            ) : null}
+            <output className={`save-indicator save-indicator--${saveState}`} aria-live="polite">
+              <FloppyDisk aria-hidden size={16} />
+              {saveState === "saved"
+                ? "Guardado"
+                : saveState === "pending"
+                  ? "Cambios pendientes"
+                  : saveState === "saving"
+                    ? "Guardando"
+                    : "Error al guardar"}
             </output>
-          ) : null}
-          <output className={`save-indicator save-indicator--${saveState}`} aria-live="polite">
-            <FloppyDisk aria-hidden size={16} />
-            {saveState === "saved"
-              ? "Guardado"
-              : saveState === "pending"
-                ? "Cambios pendientes"
-                : saveState === "saving"
-                  ? "Guardando"
-                  : "Error al guardar"}
-          </output>
-          {saveState === "error" ? (
-            <button
-              type="button"
-              className="save-retry"
-              onClick={() => void autosave.flush().catch(() => undefined)}
-            >
-              Reintentar
-            </button>
-          ) : null}
-        </div>
-        <div className="history-actions">
-          <IconButton
-            icon={ArrowUDownLeft}
-            label="Deshacer"
-            disabled={history.past.length === 0}
-            onClick={() => setHistory((current) => undo(current))}
-          />
-          <IconButton
-            icon={ArrowUDownRight}
-            label="Rehacer"
-            disabled={history.future.length === 0}
-            onClick={() => setHistory((current) => redo(current))}
-          />
+            {saveState === "error" ? (
+              <button
+                type="button"
+                className="save-retry"
+                onClick={() => void autosave.flush().catch(() => undefined)}
+              >
+                Reintentar
+              </button>
+            ) : null}
+          </div>
+          <div className="history-actions">
+            <IconButton
+              icon={ArrowUDownLeft}
+              label="Deshacer"
+              disabled={history.past.length === 0}
+              onClick={() => setHistory((current) => undo(current))}
+            />
+            <IconButton
+              icon={ArrowUDownRight}
+              label="Rehacer"
+              disabled={history.future.length === 0}
+              onClick={() => setHistory((current) => redo(current))}
+            />
+          </div>
         </div>
       </header>
 
@@ -300,7 +317,7 @@ export function Studio({
           />
           {renderTab()}
         </motion.main>
-        <Preview project={project} onOpenEditor={() => setEditorOpen(true)} />
+        <Preview project={project} route={previewRoute} size={previewSize} />
       </div>
     </div>
   );

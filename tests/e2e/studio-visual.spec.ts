@@ -193,6 +193,8 @@ test("el panel de trabajo se despliega desde la izquierda y deja crecer el previ
   const editor = page.locator("[data-studio-editor-pane]");
   const preview = page.locator(".preview-pane");
   await expect(editor).toHaveClass(/editor-pane--closed/);
+  await expect(page.locator(".studio-topbar .preview-toolbar")).toBeVisible();
+  await expect(page.locator(".preview-pane > header")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Abrir panel de edición" })).toBeVisible();
 
   await page.getByRole("button", { name: "Preparar", exact: true }).click();
@@ -208,6 +210,8 @@ test("el panel de trabajo se despliega desde la izquierda y deja crecer el previ
   expect(workspaceBox).not.toBeNull();
   expect(previewBox).not.toBeNull();
   expect(previewBox?.width).toBeCloseTo(workspaceBox?.width ?? 0, -1);
+  expect(previewBox?.height).toBeCloseTo(workspaceBox?.height ?? 0, -1);
+  expect(previewBox?.y).toBeCloseTo(workspaceBox?.y ?? 0, -1);
 
   await page.getByRole("button", { name: "Abrir panel de edición" }).click();
   await expect(editor).toHaveClass(/editor-pane--open/);

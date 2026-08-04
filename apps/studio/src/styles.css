@@ -2729,6 +2729,7 @@ tbody tr[data-selected="true"] {
 
 .studio-topbar {
   padding-inline: 16px 18px;
+  grid-template-columns: minmax(190px, 1fr) minmax(0, auto) minmax(190px, 1fr);
   border-bottom-color: var(--line-strong);
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   box-shadow: 0 1px 0 color-mix(in srgb, white 45%, transparent) inset;
@@ -2745,6 +2746,47 @@ tbody tr[data-selected="true"] {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--surface-raised);
+}
+
+.studio-topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  gap: 8px;
+}
+
+.preview-heading {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+}
+
+.preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  gap: 14px;
+}
+
+.preview-toolbar .preview-heading {
+  flex: 0 0 auto;
+}
+
+.preview-toolbar .preview-route {
+  min-width: 0;
+}
+
+.preview-toolbar .preview-route select {
+  width: min(210px, 26vw);
+  min-height: 36px;
+  padding-block: 6px;
+}
+
+.preview-toolbar .preview-sizes {
+  flex: 0 0 auto;
 }
 
 .studio-nav {
@@ -2812,13 +2854,6 @@ tbody tr[data-selected="true"] {
   box-shadow: var(--shadow-float);
 }
 
-.preview-heading {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 8px;
-}
-
 .workspace-section {
   gap: 26px;
   padding: 34px clamp(24px, 3vw, 42px) 76px;
@@ -2826,34 +2861,18 @@ tbody tr[data-selected="true"] {
 
 .preview-pane {
   height: 100%;
-  grid-template-rows: 54px minmax(0, 1fr);
-  background:
-    linear-gradient(color-mix(in srgb, var(--line) 42%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--line) 42%, transparent) 1px, transparent 1px),
-    var(--surface-strong);
-  background-size: 24px 24px;
-}
-
-.preview-pane > header {
-  padding-inline: 18px;
-  border-bottom-color: var(--line-strong);
-  background: var(--surface);
-}
-
-.preview-pane > header strong {
-  font-family: var(--font-display);
-  font-size: 14px;
-  font-weight: 600;
+  grid-template-rows: minmax(0, 1fr);
+  background: var(--surface-raised);
 }
 
 .preview-stage {
-  padding: clamp(18px, 3vw, 34px);
+  padding: 0;
 }
 
 .preview-stage iframe {
-  border-color: color-mix(in srgb, var(--line-strong) 78%, var(--ink));
-  border-radius: 3px;
-  box-shadow: 0 30px 90px rgb(45 39 30 / 0.2);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .form-clusters > fieldset,
@@ -3195,6 +3214,31 @@ tbody tr {
   .studio-topbar .save-status {
     grid-column: 2;
     grid-row: 1;
+  }
+
+  .preview-toolbar {
+    gap: 4px;
+  }
+
+  .preview-toolbar .preview-route,
+  .preview-toolbar .preview-heading strong {
+    display: none;
+  }
+
+  .preview-toolbar .preview-heading .icon-button,
+  .preview-toolbar .preview-sizes .icon-button {
+    width: 32px;
+    min-width: 32px;
+  }
+
+  .studio-topbar-actions {
+    gap: 2px;
+  }
+
+  .studio-topbar-actions .save-status {
+    padding: 0;
+    border: 0;
+    background: transparent;
   }
 
   .studio-brand small {

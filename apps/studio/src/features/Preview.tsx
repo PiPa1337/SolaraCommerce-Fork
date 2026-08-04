@@ -6,68 +6,126 @@ import {
   SidebarSimple,
 } from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { IconButton } from "../components/Ui";
 
-type PreviewSize = "desktop" | "tablet" | "mobile";
+export type PreviewSize = "desktop" | "tablet" | "mobile";
+export type PreviewRoute = { path: string; label: string };
+
+export function getPreviewRoutes(project: StoreProjectV1): PreviewRoute[] {
+  const firstRoot = project.categories.find((category) => category.parentId === undefined);
+  const firstChild = project.categories.find((category) => category.parentId !== undefined);
+  const paginatedCategory = project.categories.find(
+    (category) => category.productIds.length > project.commerceTemplates.category.productsPerPage,
+  );
+  const firstProduct = project.products[0];
+  const lastProduct = project.products.at(-1);
+  return [
+    { path: "/", label: "Home" },
+    ...(firstRoot
+      ? [{ path: `/categorias/${firstRoot.slug}/`, label: `Categor\u00eda: ${firstRoot.title}` }]
+      : []),
+    ...(firstChild
+      ? [
+          {
+            path: `/categorias/${firstChild.slug}/`,
+            label: `Subcategor\u00eda: ${firstChild.title}`,
+          },
+        ]
+      : []),
+    ...(paginatedCategory
+      ? [
+          {
+            path: `/categorias/${paginatedCategory.slug}/pagina/2/`,
+            label: `Categor\u00eda p\u00e1gina 2: ${paginatedCategory.title}`,
+          },
+        ]
+      : []),
+    ...(firstProduct ? [{ path: `/productos/${firstProduct.slug}/`, label: "Producto" }] : []),
+    ...(lastProduct && lastProduct.id !== firstProduct?.id
+      ? [{ path: `/productos/${lastProduct.slug}/`, label: "Producto final" }]
+      : []),
+    ...(project.commerceTemplates.search.enabled ? [{ path: "/buscar/", label: "Buscar" }] : []),
+    { path: "/contacto/", label: "Contacto" },
+    { path: "/nosotros/", label: "Nosotros" },
+    ...(project.commerceTemplates.cart.enabled ? [{ path: "/carrito/", label: "Carrito" }] : []),
+    ...(project.commerceTemplates.checkout.enabled ? [{ path: "/compra/", label: "Compra" }] : []),
+  ];
+}
+
+export function PreviewToolbar({
+  routes,
+  route,
+  size,
+  onRouteChange,
+  onSizeChange,
+  onOpenEditor,
+}: {
+  routes: PreviewRoute[];
+  route: string;
+  size: PreviewSize;
+  onRouteChange(route: string): void;
+  onSizeChange(size: PreviewSize): void;
+  onOpenEditor(): void;
+}) {
+  return (
+    <div className="preview-toolbar">
+      <div className="preview-heading">
+        <IconButton
+          icon={SidebarSimple}
+          label={"Abrir panel de edici\u00f3n"}
+          onClick={onOpenEditor}
+        />
+        <strong>Vista previa</strong>
+      </div>
+      <label className="preview-route">
+        <span className="visually-hidden">Ruta de vista previa</span>
+        <select value={route} onChange={(event) => onRouteChange(event.target.value)}>
+          {routes.map((item) => (
+            <option key={item.path} value={item.path}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <fieldset className="preview-sizes">
+        <legend className="visually-hidden">{"Tama\u00f1o de vista previa"}</legend>
+        <IconButton
+          icon={Desktop}
+          label="Vista de escritorio"
+          aria-pressed={size === "desktop"}
+          onClick={() => onSizeChange("desktop")}
+        />
+        <IconButton
+          icon={DeviceTablet}
+          label="Vista de tablet"
+          aria-pressed={size === "tablet"}
+          onClick={() => onSizeChange("tablet")}
+        />
+        <IconButton
+          icon={DeviceMobile}
+          label={"Vista m\u00f3vil"}
+          aria-pressed={size === "mobile"}
+          onClick={() => onSizeChange("mobile")}
+        />
+      </fieldset>
+    </div>
+  );
+}
 
 export function Preview({
   project,
-  onOpenEditor,
+  route,
+  size,
 }: {
   project: StoreProjectV1;
-  onOpenEditor?: () => void;
+  route: string;
+  size: PreviewSize;
 }) {
-  const [size, setSize] = useState<PreviewSize>("desktop");
-  const [route, setRoute] = useState("/");
   const [html, setHtml] = useState("");
   const [error, setError] = useState("");
   const previewAssetSources = useRef<ReadonlyMap<string, string>>(new Map());
   const previewFrame = useRef<HTMLIFrameElement>(null);
-  const previewRoutes = useMemo(() => {
-    const firstRoot = project.categories.find((category) => category.parentId === undefined);
-    const firstChild = project.categories.find((category) => category.parentId !== undefined);
-    const paginatedCategory = project.categories.find(
-      (category) => category.productIds.length > project.commerceTemplates.category.productsPerPage,
-    );
-    const firstProduct = project.products[0];
-    const lastProduct = project.products.at(-1);
-    return [
-      { path: "/", label: "Home" },
-      ...(firstRoot
-        ? [{ path: `/categorias/${firstRoot.slug}/`, label: `Categoría: ${firstRoot.title}` }]
-        : []),
-      ...(firstChild
-        ? [{ path: `/categorias/${firstChild.slug}/`, label: `Subcategoría: ${firstChild.title}` }]
-        : []),
-      ...(paginatedCategory
-        ? [
-            {
-              path: `/categorias/${paginatedCategory.slug}/pagina/2/`,
-              label: `Categoría página 2: ${paginatedCategory.title}`,
-            },
-          ]
-        : []),
-      ...(firstProduct ? [{ path: `/productos/${firstProduct.slug}/`, label: "Producto" }] : []),
-      ...(lastProduct && lastProduct.id !== firstProduct?.id
-        ? [{ path: `/productos/${lastProduct.slug}/`, label: "Producto final" }]
-        : []),
-      ...(project.commerceTemplates.search.enabled ? [{ path: "/buscar/", label: "Buscar" }] : []),
-      { path: "/contacto/", label: "Contacto" },
-      { path: "/nosotros/", label: "Nosotros" },
-      ...(project.commerceTemplates.cart.enabled ? [{ path: "/carrito/", label: "Carrito" }] : []),
-      ...(project.commerceTemplates.checkout.enabled
-        ? [{ path: "/compra/", label: "Compra" }]
-        : []),
-    ];
-  }, [
-    project.categories,
-    project.products,
-    project.commerceTemplates.category.productsPerPage,
-    project.commerceTemplates.search.enabled,
-    project.commerceTemplates.cart.enabled,
-    project.commerceTemplates.checkout.enabled,
-  ]);
 
   useEffect(() => {
     const handlePreviewAssetRequest = (event: MessageEvent<unknown>) => {
@@ -86,10 +144,6 @@ export function Preview({
     window.addEventListener("message", handlePreviewAssetRequest);
     return () => window.removeEventListener("message", handlePreviewAssetRequest);
   }, []);
-
-  useEffect(() => {
-    if (!previewRoutes.some((item) => item.path === route)) setRoute("/");
-  }, [previewRoutes, route]);
 
   useEffect(() => {
     let active = true;
@@ -120,54 +174,11 @@ export function Preview({
 
   return (
     <aside className="preview-pane" aria-label="Vista previa de la tienda">
-      <header>
-        <div className="preview-heading">
-          {onOpenEditor ? (
-            <IconButton
-              icon={SidebarSimple}
-              label="Abrir panel de edición"
-              onClick={onOpenEditor}
-            />
-          ) : null}
-          <strong>Vista previa</strong>
-        </div>
-        <label className="preview-route">
-          <span className="visually-hidden">Ruta de vista previa</span>
-          <select value={route} onChange={(event) => setRoute(event.target.value)}>
-            {previewRoutes.map((item) => (
-              <option key={item.path} value={item.path}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <fieldset className="preview-sizes">
-          <legend className="visually-hidden">Tamaño de vista previa</legend>
-          <IconButton
-            icon={Desktop}
-            label="Vista de escritorio"
-            aria-pressed={size === "desktop"}
-            onClick={() => setSize("desktop")}
-          />
-          <IconButton
-            icon={DeviceTablet}
-            label="Vista de tablet"
-            aria-pressed={size === "tablet"}
-            onClick={() => setSize("tablet")}
-          />
-          <IconButton
-            icon={DeviceMobile}
-            label="Vista móvil"
-            aria-pressed={size === "mobile"}
-            onClick={() => setSize("mobile")}
-          />
-        </fieldset>
-      </header>
       <div className={`preview-stage preview-stage--${size}`}>
         {error ? (
           <div className="preview-error">
             <EyeSlash aria-hidden size={28} />
-            <strong>La vista previa necesita atención</strong>
+            <strong>{"La vista previa necesita atenci\u00f3n"}</strong>
             <p>{error}</p>
           </div>
         ) : !html ? (
