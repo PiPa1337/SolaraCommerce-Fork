@@ -1,4 +1,34 @@
-# Tienda base `catalog-modern-v1` y rediseño del storefront
+# Tienda base `catalog-modern` y flujo guiado editable
+
+## Flujo guiado de creación
+
+La experiencia principal comienza en `Preparar`, no en un canvas libre. Cada
+tienda nueva se crea con `buildCatalogModernProject({ seed: "clean" })`: conserva
+el shell, la home, la navegación y los estados vacíos, pero no copia productos,
+categorías ni colecciones de la demo. La checklist calcula requisitos desde el
+mismo proyecto que usa el renderer y lleva a `Resumen`, `Recursos`, `Catálogo`,
+`SEO` o `Exportar` según el pendiente.
+
+- `Resumen` concentra marca, contacto, WhatsApp, navegación y textos de Home,
+  Nosotros y Contacto.
+- `Recursos` procesa imágenes fuera del hilo principal, deduplica por hash y
+  separa la carga de videos para evitar lotes ambiguos.
+- `Catálogo` permite crear productos uno a uno con pasos de datos, imágenes,
+  organización y variantes, o importar un ZIP comercial con `productos.csv` e
+  `imagenes/`. La importación crea categorías y colecciones faltantes, agrupa
+  variantes, muestra una revisión y se aplica como una sola operación reversible.
+- El primer producto activo o la primera importación activa automáticamente las
+  grillas base intactas; no se habilitan módulos opcionales por sorpresa.
+- `Modo avanzado` permite editar la secuencia completa y agregar módulos extra.
+  En tiendas limpias las secciones esenciales quedan protegidas hasta que el
+  usuario elige explícitamente ese modo.
+- Si llega una versión nueva de la plantilla, `Preparar` muestra un plan con
+  cambios seguros y conflictos. Antes de adoptar cambios se descarga un
+  respaldo `.solara.zip` y se conservan los settings del usuario.
+
+El demo `Demo Modo Sur, catálogo moderno` sigue siendo un proyecto separado y
+se genera con la misma fábrica para conservar una referencia de 50 productos,
+16 categorías y 60 variantes.
 
 ## Estado
 
@@ -78,9 +108,10 @@ los estados vacíos, pero empiezan sin productos, categorías ni colecciones. La
 semilla `demo` alimenta `catalogModernStore` y el proyecto separado `Demo Modo
 Sur, catálogo moderno`, que prueban copy, variantes, categorías y exportación
 con cuatro assets reutilizados; no se crea un archivo por producto.
-El dashboard abre una creación guiada en cuatro pasos y conserva un modo
-avanzado para editar secciones. El origen y la versión de plantilla quedan en
-`project.origin` sin cambiar `schemaVersion: 2`.
+El dashboard abre el estudio directamente en `Preparar`: la base limpia conserva
+un modo guiado para completar marca, recursos, catálogo y publicación. El modo
+avanzado permite editar secciones y agregar módulos extra. El origen y la
+versión de plantilla quedan en `project.origin` sin cambiar `schemaVersion: 2`.
 
 ## Escenario de escala jerárquico
 

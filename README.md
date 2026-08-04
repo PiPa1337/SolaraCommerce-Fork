@@ -35,9 +35,29 @@ proyecto `Demo Modo Sur, catálogo moderno`, generado por la misma fábrica, con
 navegación, paginación, edición masiva y densidad del catálogo; no se duplica en
 los siguientes arranques ni borra tiendas locales existentes.
 
-El botón `Crear tienda` abre un flujo guiado de cuatro pasos (marca, identidad,
-contacto y revisión). El modo avanzado del constructor sigue disponible para
-reordenar o reemplazar secciones cuando haga falta.
+`Crear tienda` abre la base editable `Catalog Modern` con un catálogo vacío. La
+pestaña `Preparar` funciona como guía principal: muestra el porcentaje de
+contenido listo, separa pendientes críticos de recomendaciones y lleva a cada
+editor. La base visual queda protegida; `Modo avanzado` habilita el constructor
+libre para agregar, reordenar o reemplazar módulos cuando haga falta.
+
+El flujo recomendado es completar marca y textos en `Resumen`, cargar imágenes
+en `Recursos`, importar un ZIP comercial con `productos.csv` e `imagenes/` o
+crear productos desde `Catálogo`, revisar la checklist y exportar. El editor
+manual permite asignar imágenes al producto y a sus variantes. Las
+importaciones se revisan antes de guardar y se aplican como una única operación
+reversible.
+
+El ZIP comercial agrupa variantes por producto. Las categorías aceptan rutas de
+hasta dos niveles como `Casa>Textiles`; las imágenes pueden referenciar rutas
+como `imagenes/taza.webp`. El procesamiento ocurre en Web Worker, con
+deduplicación por hash y los mismos assets para preview y exportación.
+
+Las actualizaciones de la plantilla se muestran como cambios revisables. Antes
+de adoptar cambios seguros Studio descarga automáticamente un respaldo
+`.solara.zip`; los textos, productos e imágenes del usuario no se sobrescriben.
+El demo de 50 productos permanece separado para probar densidad, jerarquía y
+exportación.
 
 ## Catálogo
 

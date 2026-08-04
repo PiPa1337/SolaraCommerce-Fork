@@ -1,3 +1,4 @@
+import { buildCatalogModernProject } from "@solara/project-schema/catalog-modern-template";
 import { referenceStore } from "@solara/project-schema/fixture";
 import { describe, expect, it } from "vitest";
 import {
@@ -47,6 +48,63 @@ describe("reduceProject", () => {
       at: "2026-07-30T11:00:00.000Z",
     });
     expect(restored.products[0]?.status).toBe("active");
+  });
+
+  it("aplica una importación de catálogo como una sola operación", () => {
+    const imported = structuredClone(referenceStore);
+    const first = imported.products[0];
+    const category = imported.categories[0];
+    if (!first || !category) throw new Error("El fixture debe tener producto y categoría.");
+    first.categoryIds = [category.id];
+    const result = reduceProject(referenceStore, {
+      type: "catalog.applyImport",
+      products: imported.products,
+      categories: imported.categories,
+      collections: imported.collections,
+      at: timestamp,
+    });
+    expect(result.products[0]?.categoryIds).toEqual([category.id]);
+    expect(result.categories.find((item) => item.id === category.id)?.productIds).toContain(
+      first.id,
+    );
+    expect(result.updatedAt).toBe(timestamp);
+  });
+
+  it("activa sólo las secciones base intactas al cargar el primer catálogo", () => {
+    const clean = buildCatalogModernProject({ seed: "clean" });
+    const demo = buildCatalogModernProject({ seed: "demo" });
+    const result = reduceProject(clean, {
+      type: "catalog.applyImport",
+      products: demo.products.slice(0, 1),
+      categories: demo.categories,
+      collections: demo.collections,
+      at: timestamp,
+    });
+    expect(result.sections.find((section) => section.id === "modo-section-new")?.enabled).toBe(
+      true,
+    );
+    expect(
+      result.sections.find((section) => section.id === "modo-section-categories")?.enabled,
+    ).toBe(true);
+  });
+
+  it("activa la grilla base al crear manualmente el primer producto activo", () => {
+    const clean = buildCatalogModernProject({ seed: "clean" });
+    const demo = buildCatalogModernProject({ seed: "demo" });
+    const product = structuredClone(demo.products[0]);
+    if (!product) throw new Error("La demo debe tener un producto.");
+    product.categoryIds = [];
+    product.collectionIds = [];
+    product.imageIds = [];
+    product.variants = product.variants.map((variant) => ({ ...variant, imageId: undefined }));
+    const result = reduceProject(clean, {
+      type: "product.create",
+      product,
+      at: timestamp,
+    });
+    expect(result.sections.find((section) => section.id === "modo-section-new")?.enabled).toBe(
+      true,
+    );
   });
 
   it("ajusta precios masivos con enteros y redondeo estable", () => {

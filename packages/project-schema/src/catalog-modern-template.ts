@@ -1,8 +1,9 @@
 import { catalogModernStore } from "./catalog-modern-fixture";
+import { CATALOG_MODERN_GUIDANCE_VERSION } from "./catalog-modern-guidance";
 import { type StoreProjectV2, StoreProjectV2Schema } from "./index";
 
 /** Version of the guided Catalog Modern template. Increase only when its persisted shape changes. */
-export const CATALOG_MODERN_TEMPLATE_VERSION = 1 as const;
+export const CATALOG_MODERN_TEMPLATE_VERSION = CATALOG_MODERN_GUIDANCE_VERSION;
 
 export type CatalogModernSeed = "clean" | "demo";
 

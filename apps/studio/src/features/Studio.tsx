@@ -3,6 +3,7 @@ import {
   ArrowUDownLeft,
   ArrowUDownRight,
   BoxArrowDown,
+  ClipboardText,
   FloppyDisk,
   Image,
   Layout,
@@ -24,18 +25,30 @@ import { motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { IconButton } from "../components/Ui";
 import { AutosaveQueue, type AutosaveState } from "../lib/autosave";
+import { downloadBlob } from "../lib/projectArchive";
 import { saveProject } from "../lib/repository";
+import { createProjectArchiveInWorker } from "../lib/workers";
 import { Assets } from "./Assets";
 import { Builder } from "./Builder";
 import { Catalog } from "./Catalog";
 import { ExportPanel } from "./Export";
+import { GuidedOverview } from "./GuidedOverview";
 import { Overview } from "./Overview";
 import { Preview } from "./Preview";
 import { Seo } from "./Seo";
 import { ThemeEditor } from "./ThemeEditor";
 
-type StudioTab = "overview" | "catalog" | "builder" | "theme" | "assets" | "seo" | "export";
+type StudioTab =
+  | "guided"
+  | "overview"
+  | "catalog"
+  | "builder"
+  | "theme"
+  | "assets"
+  | "seo"
+  | "export";
 const tabs: Array<{ id: StudioTab; label: string; icon: typeof Storefront }> = [
+  { id: "guided", label: "Preparar", icon: ClipboardText },
   { id: "overview", label: "Resumen", icon: Storefront },
   { id: "catalog", label: "Catálogo", icon: Package },
   { id: "builder", label: "Constructor", icon: Layout },
@@ -55,7 +68,8 @@ export function Studio({
   onProjectImported(project: StoreProjectV1): Promise<void>;
 }) {
   const [history, setHistory] = useState<HistoryState>(() => createHistory(initialProject));
-  const [tab, setTab] = useState<StudioTab>("overview");
+  const [tab, setTab] = useState<StudioTab>("guided");
+  const [advancedMode, setAdvancedMode] = useState(false);
   const [saveState, setSaveState] = useState<AutosaveState>("saved");
   const [validationError, setValidationError] = useState("");
   const [leaving, setLeaving] = useState(false);
@@ -119,12 +133,48 @@ export function Studio({
 
   const renderTab = () => {
     switch (tab) {
+      case "guided":
+        return (
+          <GuidedOverview
+            project={project}
+            onNavigate={(destination) => {
+              if (destination === "builder") setAdvancedMode(true);
+              setTab(destination);
+            }}
+            onApplyUpgrade={(nextProject) => {
+              void (async () => {
+                try {
+                  await autosave.flush();
+                  const archive = await createProjectArchiveInWorker(project);
+                  downloadBlob(
+                    archive,
+                    `${project.slug}-antes-de-actualizar.solara.zip`,
+                    "application/zip",
+                  );
+                  replaceProject(nextProject);
+                } catch (reason) {
+                  setValidationError(
+                    reason instanceof Error
+                      ? `No se pudo crear el respaldo: ${reason.message}`
+                      : "No se pudo crear el respaldo antes de actualizar.",
+                  );
+                }
+              })();
+            }}
+          />
+        );
       case "overview":
         return <Overview project={project} onChange={replaceProject} />;
       case "catalog":
-        return <Catalog project={project} onCommand={runCommand} />;
+        return <Catalog project={project} onCommand={runCommand} onChange={replaceProject} />;
       case "builder":
-        return <Builder project={project} onChange={replaceProject} />;
+        return (
+          <Builder
+            project={project}
+            onChange={replaceProject}
+            protectedBase={!advancedMode && project.origin?.seed === "clean"}
+          />
+        );
       case "theme":
         return <ThemeEditor project={project} onChange={replaceProject} />;
       case "assets":
@@ -215,7 +265,11 @@ export function Studio({
             type="button"
             key={id}
             aria-current={tab === id ? "page" : undefined}
-            onClick={() => setTab(id)}
+            onClick={() => {
+              if (id !== "guided") setAdvancedMode(true);
+              else setAdvancedMode(false);
+              setTab(id);
+            }}
           >
             <Icon aria-hidden size={19} weight={tab === id ? "fill" : "regular"} />
             <span>{label}</span>

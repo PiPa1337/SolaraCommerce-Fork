@@ -24,6 +24,17 @@ export interface ProcessedImage {
   responsive: Array<{ width: number; source: string }>;
 }
 
+export interface CatalogPackageImage {
+  path: string;
+  type: string;
+  buffer: ArrayBuffer;
+}
+
+export interface CatalogPackageContents {
+  csv: string;
+  images: CatalogPackageImage[];
+}
+
 function requestWorker<Request extends object, Result>(
   worker: Worker,
   request: Request,
@@ -45,6 +56,7 @@ function requestWorker<Request extends object, Result>(
 let csvWorker: Worker | undefined;
 let imageWorker: Worker | undefined;
 let exportWorker: Worker | undefined;
+let catalogPackageWorker: Worker | undefined;
 
 function getCsvWorker(): Worker {
   csvWorker ??= new Worker(new URL("../workers/csv.worker.ts", import.meta.url), {
@@ -67,11 +79,29 @@ function getExportWorker(): Worker {
   return exportWorker;
 }
 
+function getCatalogPackageWorker(): Worker {
+  catalogPackageWorker ??= new Worker(
+    new URL("../workers/catalog-package.worker.ts", import.meta.url),
+    {
+      type: "module",
+    },
+  );
+  return catalogPackageWorker;
+}
+
 export function importCsvInWorker(csv: string, context?: CatalogCsvContext): Promise<Product[]> {
   return requestWorker(
     getCsvWorker(),
     context ? { type: "import", csv, context } : { type: "import", csv },
   );
+}
+
+export function readCatalogPackageInWorker(file: File): Promise<CatalogPackageContents> {
+  return file
+    .arrayBuffer()
+    .then((buffer) =>
+      requestWorker(getCatalogPackageWorker(), { type: "catalog-package", buffer }, [buffer]),
+    );
 }
 
 export function exportCsvInWorker(products: Product[]): Promise<string> {

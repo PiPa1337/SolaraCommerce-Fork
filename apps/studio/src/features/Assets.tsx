@@ -20,7 +20,8 @@ export function Assets({
   project: StoreProjectV1;
   onChange(project: StoreProjectV1): void;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [batchStatus, setBatchStatus] = useState("");
@@ -34,6 +35,15 @@ export function Assets({
       .then(setStorage)
       .catch(() => undefined);
   }, []);
+
+  const asFileList = (files: File[]): FileList => {
+    const transfer = new DataTransfer();
+    files.forEach((file) => {
+      transfer.items.add(file);
+    });
+    return transfer.files;
+  };
+
   const updateAsset = (assetId: ImageAsset["id"], changes: Partial<ImageAsset>) => {
     onChange({
       ...project,
@@ -61,14 +71,6 @@ export function Assets({
       reader.addEventListener("error", () => reject(new Error("No se pudo leer el video.")));
       reader.readAsDataURL(file);
     });
-
-  const asFileList = (files: File[]): FileList => {
-    const transfer = new DataTransfer();
-    files.forEach((file) => {
-      transfer.items.add(file);
-    });
-    return transfer.files;
-  };
 
   const addFiles = async (files: FileList) => {
     const selectedFiles = [...files];
@@ -240,10 +242,10 @@ export function Assets({
           <>
             <input
               className="visually-hidden"
-              ref={inputRef}
+              ref={imageInputRef}
               type="file"
               multiple
-              accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
+              accept="image/jpeg,image/png,image/webp"
               onChange={(event) => {
                 if (event.target.files) {
                   const selected = [...event.target.files];
@@ -260,11 +262,22 @@ export function Assets({
                 event.target.value = "";
               }}
             />
+            <input
+              className="visually-hidden"
+              ref={videoInputRef}
+              type="file"
+              multiple
+              accept="video/mp4,video/webm"
+              onChange={(event) => {
+                if (event.target.files) void addVideos(event.target.files);
+                event.target.value = "";
+              }}
+            />
             <Button
               variant="primary"
               icon={UploadSimple}
               disabled={busy}
-              onClick={() => inputRef.current?.click()}
+              onClick={() => imageInputRef.current?.click()}
             >
               {busy ? `Procesando ${progress.current}/${progress.total}` : "Cargar imágenes"}
             </Button>
@@ -272,7 +285,7 @@ export function Assets({
               variant="secondary"
               icon={VideoCamera}
               disabled={busy}
-              onClick={() => inputRef.current?.click()}
+              onClick={() => videoInputRef.current?.click()}
             >
               Cargar video
             </Button>

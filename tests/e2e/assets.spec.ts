@@ -36,7 +36,7 @@ test("procesa una imagen, muestra el lote y persiste el asset", async ({ page })
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
     "base64",
   );
-  await page.locator('input[type="file"]').setInputFiles({
+  await page.locator('input[type="file"][accept*="image/"]').setInputFiles({
     name: "pixel.png",
     mimeType: "image/png",
     buffer: pixel,

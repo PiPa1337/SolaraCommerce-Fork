@@ -2,6 +2,7 @@ import type { StoreProjectV1 } from "@solara/project-schema";
 import { StoreProjectV1Schema } from "@solara/project-schema";
 import {
   buildCatalogModernProject,
+  CATALOG_MODERN_TEMPLATE_VERSION,
   catalogModernCleanStore,
 } from "@solara/project-schema/catalog-modern-template";
 import Dexie, { type EntityTable } from "dexie";
@@ -276,7 +277,7 @@ export async function ensureFirstProject(): Promise<StoreProjectV1> {
       baseUrl: "https://mi-primera-tienda.example",
       origin: {
         templateId: "catalog-modern",
-        templateVersion: 1,
+        templateVersion: CATALOG_MODERN_TEMPLATE_VERSION,
         seed: "clean",
       },
     }),

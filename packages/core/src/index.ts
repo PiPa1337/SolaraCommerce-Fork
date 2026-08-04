@@ -1,6 +1,10 @@
 import {
+  type Category,
   type CategoryId,
+  CategorySchema,
+  type Collection,
   type CollectionId,
+  CollectionSchema,
   getCategoryProductIds,
   type Product,
   type ProductId,
@@ -88,6 +92,12 @@ export type DomainCommand =
       type: "products.replaceAll";
       products: Product[];
     })
+  | (CommandMetadata & {
+      type: "catalog.applyImport";
+      products: Product[];
+      categories: Category[];
+      collections: Collection[];
+    })
   | CategoryCommand;
 
 // La reubicación conserva las asignaciones de productos y recalcula índices heredados.
@@ -158,6 +168,37 @@ function synchronizeAssignments(project: StoreProjectV1): StoreProjectV1 {
   }));
 
   return { ...project, categories, collections };
+}
+
+function activateCatalogModernDefaults(project: StoreProjectV1): StoreProjectV1 {
+  if (project.origin?.templateId !== "catalog-modern" || project.origin.seed !== "clean") {
+    return project;
+  }
+  const hasActiveProducts = project.products.some((product) => product.status === "active");
+  const hasCategories = project.categories.length > 0;
+  if (!hasActiveProducts && !hasCategories) return project;
+  let changed = false;
+  const sections = project.sections.map((section) => {
+    const settings = section.settings;
+    const isProductDefault =
+      section.id === "modo-section-new" &&
+      section.moduleId === "catalog-product-grid" &&
+      settings.title === "Productos" &&
+      settings.source === "all" &&
+      settings.limit === 12;
+    const isCategoryDefault =
+      section.id === "modo-section-categories" &&
+      section.moduleId === "catalog-category-bento" &&
+      Array.isArray(settings.items) &&
+      settings.items.length === 0;
+    if (section.enabled || (!isProductDefault && !isCategoryDefault)) return section;
+    if ((isProductDefault && !hasActiveProducts) || (isCategoryDefault && !hasCategories)) {
+      return section;
+    }
+    changed = true;
+    return { ...section, enabled: true };
+  });
+  return changed ? { ...project, sections } : project;
 }
 
 function normalizeImportedProductReferences(
@@ -268,11 +309,13 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
         updatedAt: at,
       });
       return parseProject(
-        synchronizeAssignments({
-          ...project,
-          products: [...project.products, product],
-          updatedAt: at,
-        }),
+        activateCatalogModernDefaults(
+          synchronizeAssignments({
+            ...project,
+            products: [...project.products, product],
+            updatedAt: at,
+          }),
+        ),
       );
     }
     case "product.update":
@@ -285,10 +328,12 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
         status: "archived",
       }));
     case "product.restore":
-      return updateSelectedProducts(project, [command.productId], at, (product) => ({
-        ...product,
-        status: command.status ?? "active",
-      }));
+      return activateCatalogModernDefaults(
+        updateSelectedProducts(project, [command.productId], at, (product) => ({
+          ...product,
+          status: command.status ?? "active",
+        })),
+      );
     case "products.bulkUpdate":
       return updateSelectedProducts(project, command.productIds, at, (product) =>
         applyProductPatch(product, command.changes),
@@ -344,12 +389,35 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
         return project;
       }
       return parseProject(
-        synchronizeAssignments({
-          ...project,
-          products,
-          updatedAt: latestTimestamp(at, ...products.map((product) => product.updatedAt)),
-        }),
+        activateCatalogModernDefaults(
+          synchronizeAssignments({
+            ...project,
+            products,
+            updatedAt: latestTimestamp(at, ...products.map((product) => product.updatedAt)),
+          }),
+        ),
       );
+    }
+    case "catalog.applyImport": {
+      const categories = command.categories.map((category) => CategorySchema.parse(category));
+      const collections = command.collections.map((collection) =>
+        CollectionSchema.parse(collection),
+      );
+      const candidate = { ...project, categories, collections };
+      const products = normalizeImportedProductReferences(
+        candidate,
+        command.products.map((product) => ProductSchema.parse(product)),
+      );
+      const next = parseProject(
+        activateCatalogModernDefaults(
+          synchronizeAssignments({
+            ...candidate,
+            products,
+            updatedAt: latestTimestamp(at, ...products.map((product) => product.updatedAt)),
+          }),
+        ),
+      );
+      return JSON.stringify(next) === JSON.stringify(project) ? project : next;
     }
   }
 }
@@ -536,10 +604,11 @@ function parseJson(value: string, label: string, row: number): unknown {
 }
 
 function parseInteger(value: string, label: string, row: number): number {
-  if (!/^-?\d+$/.test(value)) {
+  const normalized = value.trim();
+  if (!/^-?\d+$/.test(normalized)) {
     throw new Error(`Entero inválido en ${label}, fila ${row}.`);
   }
-  const parsed = Number(value);
+  const parsed = Number(normalized);
   assertInteger(parsed, `${label} de la fila ${row}`);
   return parsed;
 }
@@ -626,7 +695,7 @@ export function importProductsCsv(csv: string): Product[] {
   );
 }
 
-const catalogCsvColumns = [
+export const catalogCsvColumns = [
   "producto_id",
   "variante_id",
   "slug",
@@ -653,7 +722,7 @@ const catalogCsvColumns = [
 ] as const;
 
 type CatalogCsvColumn = (typeof catalogCsvColumns)[number];
-type CatalogCsvRecord = Record<CatalogCsvColumn, string>;
+export type CatalogCsvRecord = Record<CatalogCsvColumn, string>;
 
 function pipeValues(value: readonly string[]): string {
   return value.join("|");
@@ -684,6 +753,27 @@ function parseOptionValues(value: string, row: number): Record<string, string> {
     result[key] = option;
   }
   return result;
+}
+
+export function parseCatalogCsvRecords(csv: string): CatalogCsvRecord[] {
+  const rows = parseCsvRows(csv.replace(/^\uFEFF/, ""));
+  const header = rows[0];
+  if (!header) return [];
+  if (
+    header.length !== catalogCsvColumns.length ||
+    catalogCsvColumns.some((column, index) => header[index] !== column)
+  ) {
+    throw new Error("Las columnas del CSV comercial no coinciden con la plantilla Catalog Modern.");
+  }
+  return rows.slice(1).map((values, rowIndex) => {
+    const row = rowIndex + 2;
+    if (values.length !== catalogCsvColumns.length) {
+      throw new Error(`Cantidad de columnas inválida en la fila ${row}.`);
+    }
+    return Object.fromEntries(
+      catalogCsvColumns.map((column, index) => [column, values[index] ?? ""]),
+    ) as CatalogCsvRecord;
+  });
 }
 
 export function exportCatalogCsv(
@@ -730,11 +820,35 @@ export interface CatalogCsvContext {
   categories: readonly { id: string; slug: string }[];
   collections: readonly { id: string; slug: string }[];
   assets: readonly { id: string }[];
+  assetPathToId?: Readonly<Record<string, string>>;
+  categoryPathToId?: Readonly<Record<string, string>>;
+  collectionNameToId?: Readonly<Record<string, string>>;
+  defaultTimestamp?: string;
+  defaultBrand?: string;
+}
+
+function resolveCatalogAssetRef(value: string, context: CatalogCsvContext): string {
+  const normalized = value.replaceAll("\\", "/").replace(/^\.\//, "");
+  return context.assetPathToId?.[normalized] ?? value;
+}
+
+function resolveCatalogCategoryRef(value: string, context: CatalogCsvContext): string {
+  const normalized = value.trim().replaceAll("\\", "/");
+  return context.categoryPathToId?.[normalized] ?? value;
+}
+
+function resolveCatalogCollectionRef(value: string, context: CatalogCsvContext): string {
+  const normalized = value.trim();
+  return context.collectionNameToId?.[normalized] ?? value;
 }
 
 export function importCatalogCsv(csv: string, context: CatalogCsvContext): Product[] {
-  const rows = parseCsvRows(csv.replace(/^\uFEFF/, ""));
-  const header = rows[0];
+  const records = parseCatalogCsvRecords(csv);
+  const rows = [
+    catalogCsvColumns,
+    ...records.map((record) => catalogCsvColumns.map((column) => record[column])),
+  ];
+  const header = records.length > 0 ? catalogCsvColumns : undefined;
   if (!header) return [];
   if (
     header.length !== catalogCsvColumns.length ||
@@ -762,11 +876,17 @@ export function importCatalogCsv(csv: string, context: CatalogCsvContext): Produ
     const productId = record.producto_id || `product-${record.slug}`;
     const categoryValues = parsePipeValues(record.categorias);
     const collectionValues = parsePipeValues(record.colecciones);
-    const imageIds = parsePipeValues(record.imagenes);
-    const categoryIdsForProduct = categoryValues.map((value) => categoryIds.get(value) ?? value);
-    const collectionIdsForProduct = collectionValues.map(
-      (value) => collectionIds.get(value) ?? value,
+    const imageIds = parsePipeValues(record.imagenes).map((value) =>
+      resolveCatalogAssetRef(value, context),
     );
+    const categoryIdsForProduct = categoryValues.map((value) => {
+      const resolved = resolveCatalogCategoryRef(value, context);
+      return categoryIds.get(resolved) ?? resolved;
+    });
+    const collectionIdsForProduct = collectionValues.map((value) => {
+      const resolved = resolveCatalogCollectionRef(value, context);
+      return collectionIds.get(resolved) ?? resolved;
+    });
     if (imageIds.some((assetId) => !assetIds.has(assetId))) {
       throw new Error(`Imagen inexistente en imagenes, fila ${row}.`);
     }
@@ -775,25 +895,24 @@ export function importCatalogCsv(csv: string, context: CatalogCsvContext): Produ
       slug: record.slug,
       title: record.titulo,
       description: record.descripcion,
-      status: record.estado,
-      brand: record.marca,
+      status: record.estado.trim() || "active",
+      brand: record.marca.trim() || context.defaultBrand || "",
       categoryIds: categoryIdsForProduct,
       collectionIds: collectionIdsForProduct,
       tags: parsePipeValues(record.etiquetas),
       imageIds,
-      createdAt: record.creado_en,
-      updatedAt: record.actualizado_en,
+      createdAt: record.creado_en.trim() || context.defaultTimestamp || "",
+      updatedAt: record.actualizado_en.trim() || context.defaultTimestamp || "",
     };
     const existing = grouped.get(productId);
     if (existing && JSON.stringify(existing.base) !== JSON.stringify(base)) {
       throw new Error(`Las filas del producto ${productId} no comparten los mismos datos.`);
     }
-    const available =
-      record.disponible === "true" ? true : record.disponible === "false" ? false : undefined;
+    const available = record.disponible.trim() !== "false";
     if (available === undefined) throw new Error(`Booleano inválido en disponible, fila ${row}.`);
     const variant = {
       id: record.variante_id || `${productId}-variante-${(existing?.variants.length ?? 0) + 1}`,
-      title: record.variante,
+      title: record.variante || "Única",
       sku: record.sku,
       optionValues: parseOptionValues(record.opciones, row),
       price: parseInteger(record.precio_centavos, "precio_centavos", row),
@@ -806,11 +925,13 @@ export function importCatalogCsv(csv: string, context: CatalogCsvContext): Produ
             ),
           }
         : {}),
-      available,
-      stockStatus: record.estado_stock,
+      available: available ?? true,
+      stockStatus: record.estado_stock.trim() || "in_stock",
       ...(record.gtin ? { gtin: record.gtin } : {}),
       ...(record.mpn ? { mpn: record.mpn } : {}),
-      ...(record.imagen_variante ? { imageId: record.imagen_variante } : {}),
+      ...(record.imagen_variante
+        ? { imageId: resolveCatalogAssetRef(record.imagen_variante, context) }
+        : {}),
     };
     const group = existing ?? { base: base as Omit<Product, "variants">, variants: [] };
     group.variants.push(variant);

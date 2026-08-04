@@ -1,3 +1,4 @@
+import { CATALOG_MODERN_GUIDANCE_VERSION } from "./catalog-modern-guidance";
 import { StoreProjectV2Schema } from "./index";
 import { catalogScaleStore } from "./scale-fixture";
 
@@ -354,7 +355,7 @@ export const catalogModernStore = StoreProjectV2Schema.parse({
   updatedAt: fixedDate,
   origin: {
     templateId: "catalog-modern",
-    templateVersion: 1,
+    templateVersion: CATALOG_MODERN_GUIDANCE_VERSION,
     seed: "demo",
   },
   identity: {

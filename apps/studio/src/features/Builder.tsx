@@ -8,6 +8,7 @@ import {
   replaceModuleInSection,
 } from "@solara/modules";
 import type { StoreProjectV1, StoreSection } from "@solara/project-schema";
+import { catalogModernTemplateManifest } from "@solara/project-schema/catalog-modern-guidance";
 import { useEffect, useId, useMemo, useState } from "react";
 import { Button, EmptyState, Field, IconButton, SectionHeader } from "../components/Ui";
 
@@ -30,11 +31,12 @@ function availableModules(): RegisteredModule[] {
 interface BuilderProps {
   project: StoreProjectV1;
   onChange(project: StoreProjectV1): void;
+  protectedBase?: boolean;
 }
 
 type EditablePageKind = StoreProjectV1["pages"][number]["kind"];
 
-export function Builder({ project, onChange }: BuilderProps) {
+export function Builder({ project, onChange, protectedBase = false }: BuilderProps) {
   const allModules = useMemo(availableModules, []);
   const modules = useMemo(() => allModules.filter(isAddableModule), [allModules]);
   const [pageKind, setPageKind] = useState<EditablePageKind>("home");
@@ -44,6 +46,10 @@ export function Builder({ project, onChange }: BuilderProps) {
   const pageSections = pageKind === "home" ? project.sections : (editablePage?.sections ?? []);
   const selected = pageSections.find((section) => section.id === selectedId);
   const selectedModule = allModules.find((module) => module.manifest.id === selected?.moduleId);
+  const isProtected = (section: StoreSection): boolean =>
+    protectedBase &&
+    pageKind === "home" &&
+    catalogModernTemplateManifest.protectedSectionIds.includes(section.id);
   const replacementModules =
     selectedModule && !isAddableModule(selectedModule)
       ? [
@@ -85,12 +91,16 @@ export function Builder({ project, onChange }: BuilderProps) {
     const current = sections[index];
     const sibling = sections[target];
     if (!current || !sibling) return;
+    if (protectedBase && pageKind === "home" && (isProtected(current) || isProtected(sibling))) {
+      return;
+    }
     sections[index] = sibling;
     sections[target] = current;
     replaceSections(sections);
   };
 
   const addSection = () => {
+    if (protectedBase && pageKind === "home") return;
     const module = modules.find((candidate) => candidate.manifest.slots.includes(slotToAdd));
     if (!module) return;
     const section = createModuleSection({
@@ -108,7 +118,7 @@ export function Builder({ project, onChange }: BuilderProps) {
       : Object.entries(slotLabels).filter(([slot]) => ["catalog", "content"].includes(slot));
 
   const replaceModule = (moduleId: string) => {
-    if (!selected) return;
+    if (!selected || isProtected(selected)) return;
     updateSection(selected.id, (section) => replaceModuleInSection(section, moduleId));
   };
 
@@ -116,7 +126,11 @@ export function Builder({ project, onChange }: BuilderProps) {
     <section className="workspace-section builder">
       <SectionHeader
         title="Constructor"
-        description="Ordená secciones y cambiá su módulo sin alterar el contenido compatible."
+        description={
+          protectedBase
+            ? "La estructura base está protegida. Activá Modo avanzado para agregar o reordenar módulos."
+            : "Ordená secciones y cambiá su módulo sin alterar el contenido compatible."
+        }
         actions={
           <div className="add-section">
             <select
@@ -146,7 +160,12 @@ export function Builder({ project, onChange }: BuilderProps) {
                 </option>
               ))}
             </select>
-            <Button variant="primary" icon={Plus} onClick={addSection}>
+            <Button
+              variant="primary"
+              icon={Plus}
+              onClick={addSection}
+              disabled={protectedBase && pageKind === "home"}
+            >
               Agregar sección
             </Button>
           </div>
@@ -175,18 +194,19 @@ export function Builder({ project, onChange }: BuilderProps) {
                   <IconButton
                     icon={ArrowUp}
                     label="Mover arriba"
-                    disabled={index === 0}
+                    disabled={index === 0 || isProtected(section)}
                     onClick={() => move(index, -1)}
                   />
                   <IconButton
                     icon={ArrowDown}
                     label="Mover abajo"
-                    disabled={index === pageSections.length - 1}
+                    disabled={index === pageSections.length - 1 || isProtected(section)}
                     onClick={() => move(index, 1)}
                   />
                   <IconButton
                     icon={section.enabled ? Eye : EyeSlash}
                     label={section.enabled ? "Ocultar sección" : "Mostrar sección"}
+                    disabled={isProtected(section)}
                     onClick={() =>
                       updateSection(section.id, (current) => ({
                         ...current,
@@ -197,6 +217,7 @@ export function Builder({ project, onChange }: BuilderProps) {
                   <IconButton
                     icon={Copy}
                     label="Duplicar sección"
+                    disabled={isProtected(section)}
                     onClick={() => {
                       const duplicate: StoreSection = {
                         ...structuredClone(section),
@@ -211,6 +232,7 @@ export function Builder({ project, onChange }: BuilderProps) {
                   <IconButton
                     icon={Trash}
                     label="Eliminar sección"
+                    disabled={isProtected(section)}
                     onClick={() => {
                       replaceSections(pageSections.filter((item) => item.id !== section.id));
                       setSelectedId(pageSections.find((item) => item.id !== section.id)?.id ?? "");
@@ -240,6 +262,7 @@ export function Builder({ project, onChange }: BuilderProps) {
               <Field label="Módulo">
                 <select
                   value={selected.moduleId}
+                  disabled={isProtected(selected)}
                   onChange={(event) => replaceModule(event.target.value)}
                 >
                   {replacementModules.map((module, index) => (

@@ -939,6 +939,8 @@ export function getCategoryBreadcrumb(
   return category ? [...getCategoryAncestors(project, categoryId), category] : [];
 }
 
+export * from "./catalog-modern-guidance";
+
 export function parseProject(input: unknown): StoreProjectV2 {
   return StoreProjectV2Schema.parse(input);
 }

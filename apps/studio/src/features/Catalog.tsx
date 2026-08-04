@@ -11,13 +11,14 @@ import {
   Plus,
   UploadSimple,
 } from "@phosphor-icons/react";
-import type { DomainCommand } from "@solara/core";
+import { type DomainCommand, reduceProject } from "@solara/core";
 import {
   type Category,
   getCategoryDescendants,
   getCategoryProductIds,
   type Product,
   type StoreProjectV1,
+  StoreProjectV1Schema,
 } from "@solara/project-schema";
 import {
   type ColumnDef,
@@ -33,6 +34,7 @@ import {
 } from "@tanstack/react-table";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Button, EmptyState, Field, InlineError, SectionHeader } from "../components/Ui";
+import { buildCatalogPackagePlan, type CatalogPackagePlan } from "../lib/catalogPackage";
 import { formatCurrency } from "../lib/format";
 import { downloadBlob } from "../lib/projectArchive";
 import { exportCommercialCsvInWorker, exportCsvInWorker, importCsvInWorker } from "../lib/workers";
@@ -41,6 +43,7 @@ import { ProductEditor } from "./catalog/ProductEditor";
 interface CatalogProps {
   project: StoreProjectV1;
   onCommand(command: DomainCommand): void;
+  onChange(project: StoreProjectV1): void;
 }
 
 interface ImportSummary {
@@ -53,7 +56,7 @@ interface ImportSummary {
 }
 
 type EditorState = { mode: "create" | "edit"; product: Product } | undefined;
-type BusyState = "import" | "export" | "";
+type BusyState = "import" | "package" | "export" | "";
 
 const now = () => new Date().toISOString();
 
@@ -138,7 +141,7 @@ function summarizeImport(
   };
 }
 
-export function Catalog({ project, onCommand }: CatalogProps) {
+export function Catalog({ project, onCommand, onChange }: CatalogProps) {
   const [selection, setSelection] = useState<RowSelectionState>({});
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 50 });
@@ -155,10 +158,13 @@ export function Catalog({ project, onCommand }: CatalogProps) {
   const [tags, setTags] = useState("");
   const [editor, setEditor] = useState<EditorState>();
   const [pendingImport, setPendingImport] = useState<ImportSummary>();
+  const [pendingPackage, setPendingPackage] = useState<CatalogPackagePlan>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<BusyState>("");
   const importRef = useRef<HTMLInputElement>(null);
   const importReviewTitleId = useId();
+  const packageInputId = useId();
+  const packageReviewTitleId = useId();
 
   useEffect(() => {
     const validIds = new Set<string>(project.products.map((product) => product.id));
@@ -404,6 +410,44 @@ export function Catalog({ project, onCommand }: CatalogProps) {
     }
   };
 
+  const importPackage = async (file: File) => {
+    setBusy("package");
+    setError("");
+    setPendingPackage(undefined);
+    try {
+      setPendingPackage(await buildCatalogPackagePlan(file, project));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "No se pudo leer el ZIP del catálogo.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const applyPackage = () => {
+    if (!pendingPackage) return;
+    try {
+      const at = now();
+      const candidate = StoreProjectV1Schema.parse({
+        ...project,
+        assets: pendingPackage.assets,
+        updatedAt: at,
+      });
+      const next = reduceProject(candidate, {
+        type: "catalog.applyImport",
+        products: pendingPackage.products,
+        categories: pendingPackage.categories,
+        collections: pendingPackage.collections,
+        at,
+      });
+      onChange(next);
+      setPendingPackage(undefined);
+      setSelection({});
+      setPagination((current) => ({ ...current, pageIndex: 0 }));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "No se pudo aplicar el catálogo.");
+    }
+  };
+
   const exportCsv = async () => {
     setBusy("export");
     setError("");
@@ -476,6 +520,24 @@ export function Catalog({ project, onCommand }: CatalogProps) {
                 event.target.value = "";
               }}
             />
+            <input
+              className="visually-hidden"
+              id={packageInputId}
+              type="file"
+              accept=".zip,application/zip"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void importPackage(file);
+                event.target.value = "";
+              }}
+            />
+            <Button
+              icon={UploadSimple}
+              onClick={() => document.getElementById(packageInputId)?.click()}
+              disabled={Boolean(busy)}
+            >
+              {busy === "package" ? "Leyendo ZIP" : "Importar ZIP + imágenes"}
+            </Button>
             <Button
               icon={UploadSimple}
               onClick={() => importRef.current?.click()}
@@ -549,6 +611,54 @@ export function Catalog({ project, onCommand }: CatalogProps) {
               }}
             >
               Reemplazar catálogo
+            </Button>
+          </div>
+        </section>
+      ) : null}
+
+      {pendingPackage ? (
+        <section
+          className="import-review catalog-package-review"
+          aria-labelledby={packageReviewTitleId}
+        >
+          <div>
+            <span>Revisión de catálogo e imágenes</span>
+            <h3 id={packageReviewTitleId}>{pendingPackage.summary.filename}</h3>
+            <p>El proyecto no cambiará hasta que confirmes la fusión.</p>
+          </div>
+          <dl>
+            <div>
+              <dt>Productos nuevos</dt>
+              <dd>{pendingPackage.summary.productsAdded}</dd>
+            </div>
+            <div>
+              <dt>Productos actualizados</dt>
+              <dd>{pendingPackage.summary.productsUpdated}</dd>
+            </div>
+            <div>
+              <dt>Categorías nuevas</dt>
+              <dd>{pendingPackage.summary.categoriesAdded}</dd>
+            </div>
+            <div>
+              <dt>Imágenes procesadas</dt>
+              <dd>{pendingPackage.summary.imagesAdded}</dd>
+            </div>
+            <div>
+              <dt>Imágenes reutilizadas</dt>
+              <dd>{pendingPackage.summary.imagesReused}</dd>
+            </div>
+          </dl>
+          {pendingPackage.summary.unmatchedImages.length > 0 ? (
+            <InlineError>
+              No se encontraron: {pendingPackage.summary.unmatchedImages.join(", ")}
+            </InlineError>
+          ) : null}
+          <div className="import-review__actions">
+            <Button variant="quiet" onClick={() => setPendingPackage(undefined)}>
+              Cancelar
+            </Button>
+            <Button variant="primary" onClick={applyPackage}>
+              Agregar y actualizar
             </Button>
           </div>
         </section>
@@ -969,6 +1079,7 @@ export function Catalog({ project, onCommand }: CatalogProps) {
           mode={editor.mode}
           categories={project.categories}
           collections={project.collections}
+          assets={project.assets}
           existingSlugs={project.products
             .filter((product) => product.id !== editor.product.id)
             .map((product) => product.slug)}

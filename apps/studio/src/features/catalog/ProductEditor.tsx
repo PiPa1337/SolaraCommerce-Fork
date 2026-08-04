@@ -2,6 +2,7 @@ import { Copy, Plus, Trash, X } from "@phosphor-icons/react";
 import {
   type Category,
   type Collection,
+  type ImageAsset,
   type Product,
   ProductSchema,
   type Variant,
@@ -13,11 +14,21 @@ interface ProductEditorProps {
   product: Product;
   categories: Category[];
   collections: Collection[];
+  assets: ImageAsset[];
   existingSlugs: string[];
   mode: "create" | "edit";
   onCancel(): void;
   onSave(product: Product): void;
 }
+
+type EditorStep = "details" | "media" | "organization" | "variants";
+
+const editorSteps: Array<{ id: EditorStep; label: string }> = [
+  { id: "details", label: "Datos" },
+  { id: "media", label: "Imágenes" },
+  { id: "organization", label: "Organización" },
+  { id: "variants", label: "Variantes" },
+];
 
 function optionsText(options: Record<string, string>): string {
   return Object.entries(options)
@@ -70,6 +81,7 @@ export function ProductEditor({
   product,
   categories,
   collections,
+  assets,
   existingSlugs,
   mode,
   onCancel,
@@ -84,7 +96,15 @@ export function ProductEditor({
   );
   const [tags, setTags] = useState(product.tags.join(", "));
   const [error, setError] = useState("");
+  const [activeStep, setActiveStep] = useState<EditorStep>("details");
+  const stepRefs = useRef<Record<EditorStep, HTMLFieldSetElement | null>>({
+    details: null,
+    media: null,
+    organization: null,
+    variants: null,
+  });
   const titleId = useId();
+  const stepIdPrefix = useId();
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -152,6 +172,11 @@ export function ProductEditor({
     }
   };
 
+  const goToStep = (step: EditorStep) => {
+    setActiveStep(step);
+    stepRefs.current[step]?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <dialog
       ref={dialogRef}
@@ -173,7 +198,32 @@ export function ProductEditor({
       <div className="product-dialog__body">
         {error ? <InlineError>{error}</InlineError> : null}
 
-        <fieldset className="editor-group">
+        <nav className="product-editor-steps" aria-label="Pasos del producto">
+          <span className="product-editor-steps__label">Edición guiada</span>
+          <ol>
+            {editorSteps.map((step, index) => (
+              <li key={step.id}>
+                <button
+                  type="button"
+                  className={activeStep === step.id ? "is-active" : undefined}
+                  aria-current={activeStep === step.id ? "step" : undefined}
+                  onClick={() => goToStep(step.id)}
+                >
+                  <span aria-hidden>{index + 1}</span>
+                  {step.label}
+                </button>
+              </li>
+            ))}
+          </ol>
+        </nav>
+
+        <fieldset
+          className="editor-group"
+          id={`${stepIdPrefix}-details`}
+          ref={(element) => {
+            stepRefs.current.details = element;
+          }}
+        >
           <legend>Información comercial</legend>
           <div className="form-grid">
             <Field label="Título">
@@ -233,7 +283,52 @@ export function ProductEditor({
           </div>
         </fieldset>
 
-        <fieldset className="editor-group">
+        <fieldset
+          className="editor-group"
+          id={`${stepIdPrefix}-media`}
+          ref={(element) => {
+            stepRefs.current.media = element;
+          }}
+        >
+          <legend>Imágenes del producto</legend>
+          {assets.length === 0 ? (
+            <p className="editor-empty-hint">
+              Todavía no hay recursos cargados. Podés agregarlos desde Recursos o importar un ZIP.
+            </p>
+          ) : (
+            <div className="product-asset-picker">
+              {assets.map((asset) => (
+                <label className="product-asset-option" key={asset.id}>
+                  <input
+                    type="checkbox"
+                    checked={draft.imageIds.includes(asset.id)}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        imageIds: event.target.checked
+                          ? [...current.imageIds, asset.id]
+                          : current.imageIds.filter((id) => id !== asset.id),
+                      }))
+                    }
+                  />
+                  <img src={asset.source} alt="" width={asset.width} height={asset.height} />
+                  <span>
+                    <strong>{asset.name}</strong>
+                    <small>{asset.alt || "Sin texto alternativo"}</small>
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+        </fieldset>
+
+        <fieldset
+          className="editor-group"
+          id={`${stepIdPrefix}-organization`}
+          ref={(element) => {
+            stepRefs.current.organization = element;
+          }}
+        >
           <legend>Organización</legend>
           <div className="assignment-grid">
             <div>
@@ -279,7 +374,13 @@ export function ProductEditor({
           </div>
         </fieldset>
 
-        <fieldset className="editor-group">
+        <fieldset
+          className="editor-group"
+          id={`${stepIdPrefix}-variants`}
+          ref={(element) => {
+            stepRefs.current.variants = element;
+          }}
+        >
           <legend>Variantes</legend>
           <div className="variant-list">
             {draft.variants.map((variant, index) => (
@@ -413,6 +514,28 @@ export function ProductEditor({
                         }))
                       }
                     />
+                  </Field>
+                  <Field label="Imagen de variante">
+                    <select
+                      value={variant.imageId ?? ""}
+                      onChange={(event) =>
+                        updateVariant(variant.id, (current) => ({
+                          ...current,
+                          imageId: event.target.value
+                            ? (event.target.value as ImageAsset["id"])
+                            : undefined,
+                        }))
+                      }
+                    >
+                      <option value="">Usar imagen principal</option>
+                      {assets
+                        .filter((asset) => draft.imageIds.includes(asset.id))
+                        .map((asset) => (
+                          <option value={asset.id} key={asset.id}>
+                            {asset.name}
+                          </option>
+                        ))}
+                    </select>
                   </Field>
                   <label className="check-field">
                     <input
