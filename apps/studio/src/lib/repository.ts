@@ -2,7 +2,6 @@ import type { StoreProjectV1 } from "@solara/project-schema";
 import { StoreProjectV1Schema } from "@solara/project-schema";
 import {
   buildCatalogModernProject,
-  CATALOG_MODERN_TEMPLATE_VERSION,
   catalogModernCleanStore,
 } from "@solara/project-schema/catalog-modern-template";
 import Dexie, { type EntityTable } from "dexie";
@@ -79,7 +78,10 @@ export const database = new SolaraDatabase();
 
 export const PROJECT_STORAGE_VERSION = "2";
 export const SCALE_DEMO_PROJECT_ID = "store-modo-sur-demo";
-export const SCALE_DEMO_PROJECT_NAME = "Demo Modo Sur, catálogo moderno";
+export const SCALE_DEMO_PROJECT_NAME = "Predeterminado";
+const LEGACY_SCALE_DEMO_PROJECT_NAME = "Demo Modo Sur, catálogo moderno";
+const LEGACY_CLEAN_PROJECT_ID = "store-catalog-modern-clean-default";
+const LEGACY_CLEAN_PROJECT_NAME = "Mi primera tienda";
 const STORAGE_SENTINEL = "solara-studio-storage-version";
 let storageReady: Promise<void> | undefined;
 let storageReset = false;
@@ -269,18 +271,15 @@ export async function ensureFirstProject(): Promise<StoreProjectV1> {
     return project;
   }
   const initial = await embedFixtureAssets(
-    StoreProjectV1Schema.parse({
-      ...structuredClone(catalogModernCleanStore),
-      id: "store-catalog-modern-clean-default",
-      name: "Mi primera tienda",
-      slug: "mi-primera-tienda",
-      baseUrl: "https://mi-primera-tienda.example",
-      origin: {
-        templateId: "catalog-modern",
-        templateVersion: CATALOG_MODERN_TEMPLATE_VERSION,
-        seed: "clean",
-      },
-    }),
+    StoreProjectV1Schema.parse(
+      buildCatalogModernProject({
+        seed: "demo",
+        id: SCALE_DEMO_PROJECT_ID,
+        name: SCALE_DEMO_PROJECT_NAME,
+        slug: "demo-catalogo-jerarquico",
+        baseUrl: "https://demo-catalogo-jerarquico.example",
+      }),
+    ),
   );
   await saveProject(initial);
   return initial;
@@ -304,11 +303,39 @@ export async function ensureModernBaseProject(): Promise<boolean> {
 
 export async function ensureScaleDemoProject(): Promise<boolean> {
   await ready();
+  const legacyCleanRecord = await database.projects.get(LEGACY_CLEAN_PROJECT_ID);
+  if (legacyCleanRecord) {
+    const legacyClean = StoreProjectV1Schema.safeParse(legacyCleanRecord.project);
+    if (
+      legacyClean.success &&
+      legacyClean.data.name === LEGACY_CLEAN_PROJECT_NAME &&
+      legacyClean.data.slug === "mi-primera-tienda" &&
+      legacyClean.data.origin?.seed === "clean" &&
+      legacyClean.data.products.length === 0 &&
+      legacyClean.data.categories.length === 0 &&
+      legacyClean.data.collections.length === 0 &&
+      legacyClean.data.updatedAt === legacyClean.data.createdAt
+    ) {
+      const archivedAt = new Date().toISOString();
+      await saveProject({
+        ...legacyClean.data,
+        name: "Base limpia anterior",
+        status: "archived",
+        updatedAt: archivedAt,
+      });
+    }
+  }
   const existing = await database.projects.get(SCALE_DEMO_PROJECT_ID);
   if (existing) {
     const parsed = StoreProjectV1Schema.parse(existing.project);
-    const project = repairModernGreeting(parsed);
-    if (project.whatsapp.greeting !== parsed.whatsapp.greeting) await saveProject(project);
+    const project = repairModernGreeting(
+      parsed.name === LEGACY_SCALE_DEMO_PROJECT_NAME
+        ? { ...parsed, name: SCALE_DEMO_PROJECT_NAME }
+        : parsed,
+    );
+    if (project.name !== parsed.name || project.whatsapp.greeting !== parsed.whatsapp.greeting) {
+      await saveProject(project);
+    }
     return false;
   }
 

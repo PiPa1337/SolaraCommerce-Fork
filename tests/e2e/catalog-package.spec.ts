@@ -1,6 +1,7 @@
 import type { Server } from "node:http";
 import { expect, test } from "@playwright/test";
 import { strToU8, zipSync } from "fflate";
+import { createCleanStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 60_000 : 30_000);
@@ -30,7 +31,7 @@ test("importa un ZIP comercial con imagen y crea categorías faltantes", async (
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.getByRole("button", { name: "Mi primera tienda" }).click();
+  await createCleanStore(page, "Tienda de importación");
   await page.getByRole("button", { name: /Cat/ }).click();
 
   const csv = [

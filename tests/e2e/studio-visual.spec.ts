@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { referenceStore } from "@solara/project-schema/fixture";
+import { createCleanStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 const viewports = [
@@ -93,9 +94,7 @@ async function expectNoHorizontalOverflow(page: Page, context: string) {
 
 async function openProject(page: Page) {
   await page.goto(studioUrl);
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.getByRole("button", { name: "Mi primera tienda" }).click();
-  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+  await createCleanStore(page, "Tienda visual");
 }
 
 test("dashboard responde en desktop, tablet y móvil", async ({ page }) => {

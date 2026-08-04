@@ -27,16 +27,17 @@ corepack pnpm dev
 La aplicación guarda los proyectos en IndexedDB. Las tiendas públicas se exportan
 como ZIP estáticos, sin backend ni runtime de inteligencia artificial.
 
-En el primer arranque Studio crea `Mi primera tienda` con la plantilla
-`catalog-modern-v1`: el diseño está listo, pero el catálogo empieza vacío para
-que cargues tus propios productos, imágenes y textos. También agrega una vez el
-proyecto `Demo Modo Sur, catálogo moderno`, generado por la misma fábrica, con
-10 raíces, 16 categorías, 50 productos y 60 variantes. La demo sirve para revisar
-navegación, paginación, edición masiva y densidad del catálogo; no se duplica en
-los siguientes arranques ni borra tiendas locales existentes.
+En el primer arranque Studio crea `Predeterminado` con la tienda ficticia de
+Catalog Modern, generada por la misma fábrica, con 10 raíces, 16 categorías,
+50 productos y 60 variantes. Sirve para revisar navegación, paginación, edición
+masiva y densidad del catálogo; no se duplica en los siguientes arranques ni
+borra tiendas locales existentes.
 
-`Crear tienda` abre la base editable `Catalog Modern` con un catálogo vacío. La
-pestaña `Preparar` funciona como guía principal: muestra el porcentaje de
+`Crear tienda` abre una base limpia con el mismo diseño, sin productos,
+categorías ni colecciones, para que cargues tus propios textos, imágenes y
+catálogo desde cero.
+
+La pestaña `Preparar` funciona como guía principal: muestra el porcentaje de
 contenido listo, separa pendientes críticos de recomendaciones y lleva a cada
 editor. La base visual queda protegida; `Modo avanzado` habilita el constructor
 libre para agregar, reordenar o reemplazar módulos cuando haga falta.
@@ -56,8 +57,8 @@ deduplicación por hash y los mismos assets para preview y exportación.
 Las actualizaciones de la plantilla se muestran como cambios revisables. Antes
 de adoptar cambios seguros Studio descarga automáticamente un respaldo
 `.solara.zip`; los textos, productos e imágenes del usuario no se sobrescriben.
-El demo de 50 productos permanece separado para probar densidad, jerarquía y
-exportación.
+`Predeterminado` permanece como referencia de 50 productos para probar
+densidad, jerarquía y exportación.
 
 ## Catálogo
 

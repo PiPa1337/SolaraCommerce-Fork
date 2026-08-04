@@ -1,5 +1,6 @@
 import type { Server } from "node:http";
 import { expect, test } from "@playwright/test";
+import { createCleanStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 60_000 : 30_000);
@@ -30,7 +31,7 @@ test("abre la base limpia en Preparar y ofrece edición manual por pasos", async
   );
   await page.reload();
 
-  await page.getByRole("button", { name: "Mi primera tienda" }).click();
+  await createCleanStore(page, "Tienda guiada");
   await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
   await expect(page.getByText(/ de .* requisitos listos/)).toBeVisible();
 

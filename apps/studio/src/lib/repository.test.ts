@@ -1,4 +1,6 @@
 import "fake-indexeddb/auto";
+import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
+import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
 import { referenceStore } from "@solara/project-schema/fixture";
 import Dexie from "dexie";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
@@ -8,6 +10,7 @@ import {
   createAssetCacheKey,
   database,
   duplicateProject,
+  ensureScaleDemoProject,
   getCachedAsset,
   getProject,
   listProjects,
@@ -153,5 +156,27 @@ describe("repositorio local", () => {
 
     expect(await getCachedAsset("hash-cache")).toBeUndefined();
     expect(await getProject(referenceStore.id)).toEqual(referenceStore);
+  });
+
+  it("regenera Predeterminado sin sobrescribir una base limpia anterior", async () => {
+    const legacyClean = {
+      ...structuredClone(catalogModernCleanStore),
+      id: "store-catalog-modern-clean-default" as typeof catalogModernCleanStore.id,
+      name: "Mi primera tienda",
+      slug: "mi-primera-tienda" as typeof catalogModernCleanStore.slug,
+      baseUrl: "https://mi-primera-tienda.example",
+    };
+    const legacyDemo = {
+      ...structuredClone(catalogModernStore),
+      id: "store-modo-sur-demo" as typeof catalogModernStore.id,
+      name: "Demo Modo Sur, catálogo moderno",
+    };
+    await saveProject(legacyClean);
+    await saveProject(legacyDemo);
+
+    expect(await ensureScaleDemoProject()).toBe(false);
+    expect((await getProject(legacyDemo.id))?.name).toBe("Predeterminado");
+    expect((await getProject(legacyClean.id))?.status).toBe("archived");
+    expect((await getProject(legacyClean.id))?.name).toBe("Base limpia anterior");
   });
 });

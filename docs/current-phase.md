@@ -26,9 +26,9 @@ mismo proyecto que usa el renderer y lleva a `Resumen`, `Recursos`, `Catálogo`,
   cambios seguros y conflictos. Antes de adoptar cambios se descarga un
   respaldo `.solara.zip` y se conservan los settings del usuario.
 
-El demo `Demo Modo Sur, catálogo moderno` sigue siendo un proyecto separado y
-se genera con la misma fábrica para conservar una referencia de 50 productos,
-16 categorías y 60 variantes.
+`Predeterminado` es la tienda ficticia de referencia y se genera con la misma
+fábrica para conservar una referencia de 50 productos, 16 categorías y 60
+variantes. `Crear tienda` continúa usando la semilla limpia.
 
 ## Estado
 
@@ -105,9 +105,9 @@ el worker de exportación y el renderer público no bloquean el arranque del edi
 `buildCatalogModernProject({ seed: "clean" | "demo" })` es la fábrica única de
 la plantilla. Las tiendas nuevas usan `clean`: conservan el shell, la home y
 los estados vacíos, pero empiezan sin productos, categorías ni colecciones. La
-semilla `demo` alimenta `catalogModernStore` y el proyecto separado `Demo Modo
-Sur, catálogo moderno`, que prueban copy, variantes, categorías y exportación
-con cuatro assets reutilizados; no se crea un archivo por producto.
+semilla `demo` alimenta `catalogModernStore` y la tienda `Predeterminado`, que
+prueba copy, variantes, categorías y exportación con cuatro assets reutilizados;
+no se crea un archivo por producto.
 El dashboard abre el estudio directamente en `Preparar`: la base limpia conserva
 un modo guiado para completar marca, recursos, catálogo y publicación. El modo
 avanzado permite editar secciones y agregar módulos extra. El origen y la
@@ -130,8 +130,10 @@ sus descendientes y las hijas mantienen su propia página.
   categoría con bloqueo de ciclos y profundidad inválida.
 - El escenario Chromium cubre navbar, subcategorías, paginación, producto 50,
   búsqueda por ancestro y layout móvil.
-- Studio crea de forma idempotente `Demo Modo Sur, catálogo moderno` al iniciar y
-  lo muestra en el dashboard con 50 productos y 60 variantes.
+- Studio crea de forma idempotente `Predeterminado` al iniciar y lo muestra en
+  el dashboard con 50 productos y 60 variantes. Si existe la base limpia
+  anterior sin cambios, la archiva como `Base limpia anterior` antes de crear
+  la referencia; nunca sobrescribe una tienda que el usuario haya editado.
 
 El fixture se exporta desde `@solara/project-schema/scale-fixture` y se mantiene
 separado del fixture visual pequeño y del benchmark de 1.000 productos.

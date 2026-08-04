@@ -1,5 +1,6 @@
 import type { Server } from "node:http";
 import { expect, test } from "@playwright/test";
+import { createCleanStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 let server: Server;
@@ -27,7 +28,7 @@ test("procesa una imagen, muestra el lote y persiste el asset", async ({ page })
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.getByRole("button", { name: "Mi primera tienda" }).click();
+  await createCleanStore(page, "Tienda de recursos");
   await page.getByRole("button", { name: "Recursos", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Recursos" })).toBeVisible();
   const initialAssetCount = await page.locator(".asset-item").count();
@@ -49,7 +50,7 @@ test("procesa una imagen, muestra el lote y persiste el asset", async ({ page })
   await expect(page.getByText("Guardado", { exact: true })).toBeVisible();
 
   await page.reload();
-  await page.getByRole("button", { name: "Mi primera tienda" }).click();
+  await page.getByRole("button", { name: "Tienda de recursos" }).click();
   await page.getByRole("button", { name: "Recursos", exact: true }).click();
   await expect(page.locator(".asset-item")).toHaveCount(initialAssetCount + 1);
 });

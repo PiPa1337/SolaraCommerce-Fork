@@ -50,8 +50,8 @@ export function App() {
         if (demoCreated) {
           setNotice((current) =>
             current
-              ? `${current} También se agregó un proyecto demo con 50 productos para explorar la escala del catálogo.`
-              : "Se agregó un proyecto demo con 50 productos para explorar la escala del catálogo.",
+              ? `${current} También se agregó la tienda Predeterminado con 50 productos para explorar la escala del catálogo.`
+              : "Se agregó la tienda Predeterminado con 50 productos para explorar la escala del catálogo.",
           );
         }
         await refresh();

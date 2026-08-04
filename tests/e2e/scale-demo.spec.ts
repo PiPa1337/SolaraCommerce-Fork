@@ -1,12 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
-test("muestra y abre el proyecto demo de escala al iniciar Studio", async ({ page }) => {
+test("muestra y abre Predeterminado al iniciar Studio", async ({ page }) => {
   const running = await startStudioServer();
   try {
     await page.goto(running.url);
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-    const demo = page.getByRole("button", { name: /Demo Modo Sur/ });
+    const demo = page.getByRole("button", { name: /Predeterminado/ });
     await expect(demo).toBeVisible();
     await expect(demo).toContainText("50 productos");
 
@@ -23,7 +23,7 @@ test("muestra y abre el proyecto demo de escala al iniciar Studio", async ({ pag
     await expect(page.locator(".category-tree strong", { hasText: "Básicas" })).toBeVisible();
 
     await page.goto(running.url);
-    await expect(page.getByRole("button", { name: /Demo Modo Sur/ })).toHaveCount(1);
+    await expect(page.getByRole("button", { name: /Predeterminado/ })).toHaveCount(1);
   } finally {
     await stopStudioServer(running.server);
   }

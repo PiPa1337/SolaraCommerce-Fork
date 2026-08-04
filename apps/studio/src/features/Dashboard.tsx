@@ -204,7 +204,7 @@ export function Dashboard({ projects, onCreate, onOpen, onDuplicate, onArchive }
                     <span className="store-row__template">
                       {record.project.origin?.seed === "clean"
                         ? "Plantilla guiada · catálogo listo para cargar"
-                        : "Demo Catalog Modern · 50 productos"}
+                        : "Predeterminado · tienda ficticia con 50 productos"}
                     </span>
                   </span>
                 </button>
