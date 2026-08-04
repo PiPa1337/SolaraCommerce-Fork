@@ -101,6 +101,16 @@ function storefrontBoot(): void {
     currency,
     minimumFractionDigits: 2,
   });
+  const declaredRuntimeFeatures = root.dataset.solaraRuntimeFeatures;
+  const runtimeFeatures = new Set(
+    (declaredRuntimeFeatures === undefined
+      ? "cart,checkout,product,category,search,hero,motion,variants,filters,video"
+      : declaredRuntimeFeatures
+    )
+      .split(",")
+      .filter(Boolean),
+  );
+  const hasFeature = (feature: string): boolean => runtimeFeatures.has(feature);
 
   const parseCart = (): BrowserCartLine[] => {
     try {
@@ -123,14 +133,12 @@ function storefrontBoot(): void {
     } catch {
       try {
         localStorage.removeItem(storageKey);
-      } catch {
-        // Storage can be unavailable in private browsing contexts.
-      }
+      } catch {}
       return [];
     }
   };
 
-  let cart = parseCart();
+  let cart = hasFeature("cart") || hasFeature("checkout") ? parseCart() : [];
   let lastCartTrigger: HTMLElement | null = null;
 
   const pageType = document.querySelector<HTMLElement>("[data-solara-store]")?.dataset.pageType;
@@ -138,9 +146,7 @@ function storefrontBoot(): void {
   const renderCart = (): void => {
     try {
       localStorage.setItem(storageKey, JSON.stringify(cart));
-    } catch {
-      // The cart remains usable in memory when storage is blocked or full.
-    }
+    } catch {}
     const count = cart.reduce((sum, line) => sum + line.quantity, 0);
     document.querySelectorAll<HTMLElement>("[data-cart-count]").forEach((element) => {
       element.textContent = String(count);
@@ -319,29 +325,32 @@ function storefrontBoot(): void {
     });
   };
 
-  document.querySelectorAll<HTMLElement>("[data-product-tabs]").forEach((root) => {
-    const firstTab = root.querySelector<HTMLButtonElement>("[data-product-tab]");
-    if (!firstTab) return;
-    syncProductTabs(root, firstTab.dataset.productTab ?? "details");
-    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-product-tab]"));
-    tabs.forEach((tab) => {
-      tab.addEventListener("click", () => {
-        syncProductTabs(root, tab.dataset.productTab ?? "details");
-      });
-      tab.addEventListener("keydown", (event) => {
-        if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
-        event.preventDefault();
-        const index = tabs.indexOf(tab);
-        const nextIndex =
-          event.key === "ArrowRight"
-            ? (index + 1) % tabs.length
-            : (index - 1 + tabs.length) % tabs.length;
-        tabs[nextIndex]?.focus();
+  if (hasFeature("product")) {
+    document.querySelectorAll<HTMLElement>("[data-product-tabs]").forEach((root) => {
+      const firstTab = root.querySelector<HTMLButtonElement>("[data-product-tab]");
+      if (!firstTab) return;
+      syncProductTabs(root, firstTab.dataset.productTab ?? "details");
+      const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-product-tab]"));
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          syncProductTabs(root, tab.dataset.productTab ?? "details");
+        });
+        tab.addEventListener("keydown", (event) => {
+          if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+          event.preventDefault();
+          const index = tabs.indexOf(tab);
+          const nextIndex =
+            event.key === "ArrowRight"
+              ? (index + 1) % tabs.length
+              : (index - 1 + tabs.length) % tabs.length;
+          tabs[nextIndex]?.focus();
+        });
       });
     });
-  });
+  }
 
   document.addEventListener("change", (event) => {
+    if (!hasFeature("product") && !hasFeature("cart")) return;
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
 
@@ -367,6 +376,7 @@ function storefrontBoot(): void {
   });
 
   document.addEventListener("click", (event) => {
+    if (!hasFeature("product") && !hasFeature("cart")) return;
     const target = event.target;
     if (!(target instanceof Element)) return;
 
@@ -438,6 +448,7 @@ function storefrontBoot(): void {
   });
 
   document.addEventListener("keydown", (event) => {
+    if (!hasFeature("cart")) return;
     const drawer = document.querySelector<HTMLElement>("[data-cart-drawer]");
     const drawerOpen =
       drawer instanceof HTMLDialogElement ? drawer.open : drawer?.dataset.open === "true";
@@ -603,7 +614,6 @@ function storefrontBoot(): void {
     document.querySelectorAll<HTMLElement>('[data-solara-module="editorial-header"]'),
   );
   if (headers.length > 0 && "IntersectionObserver" in window) {
-    // A sentinel lets the sticky header react to scroll without a global scroll listener.
     const sentinel = document.createElement("span");
     sentinel.dataset.solaraScrollSentinel = "true";
     sentinel.setAttribute("aria-hidden", "true");
@@ -1034,6 +1044,7 @@ function storefrontBoot(): void {
   });
 
   document.querySelectorAll<HTMLSelectElement>("[data-category-sort]").forEach((sort) => {
+    if (!hasFeature("category")) return;
     const scope = sort.closest<HTMLElement>("main");
     const grid = scope?.querySelector<HTMLElement>("[data-category-grid]");
     const availableOnly = scope?.querySelector<HTMLInputElement>("[data-category-available]");
@@ -1108,7 +1119,7 @@ function storefrontBoot(): void {
   });
 
   const queryVariant = new URLSearchParams(window.location.search).get("variant");
-  if (queryVariant) {
+  if (queryVariant && hasFeature("variants")) {
     document.querySelectorAll<HTMLSelectElement>("[data-variant-select]").forEach((select) => {
       if (Array.from(select.options).some((option) => option.value === queryVariant)) {
         select.value = queryVariant;
@@ -1118,9 +1129,11 @@ function storefrontBoot(): void {
     });
   }
 
-  const motionRoots = Array.from(
-    document.querySelectorAll<HTMLElement>("[data-motion-root]"),
-  ).filter((element) => element.dataset.motionPreset !== "none");
+  const motionRoots = hasFeature("motion")
+    ? Array.from(document.querySelectorAll<HTMLElement>("[data-motion-root]")).filter(
+        (element) => element.dataset.motionPreset !== "none",
+      )
+    : [];
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (!reduceMotion && "IntersectionObserver" in window) {
     root.dataset.motionReady = "true";
@@ -1149,8 +1162,10 @@ function storefrontBoot(): void {
     });
   }
 
-  renderCart();
-  document.querySelectorAll<HTMLElement>("[data-product]").forEach(syncVariant);
+  if (hasFeature("cart") || hasFeature("checkout")) renderCart();
+  if (hasFeature("variants")) {
+    document.querySelectorAll<HTMLElement>("[data-product]").forEach(syncVariant);
+  }
 }
 
 export const STOREFRONT_RUNTIME_JS = `(${storefrontBoot.toString()})();`;

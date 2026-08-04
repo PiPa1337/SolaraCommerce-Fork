@@ -50,6 +50,14 @@ describe("site optimizer", () => {
     expect(parsed.contact.email).toBe("hola@modo-sur.example");
   });
 
+  it("puede serializar el contexto AI en modo compacto para producción", () => {
+    const pretty = buildAiContext(catalogModernStore);
+    const compact = buildAiContext(catalogModernStore, { compact: true });
+
+    expect(compact.length).toBeLessThan(pretty.length);
+    expect(JSON.parse(compact)).toEqual(JSON.parse(pretty));
+  });
+
   it("no presenta contexto publico como publicado en modo draft", () => {
     const report = optimizeProject(catalogModernStore, {
       mode: "draft",

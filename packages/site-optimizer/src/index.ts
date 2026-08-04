@@ -1,5 +1,6 @@
 import {
   type Category,
+  getCategoryAncestors,
   getCategoryProductIds,
   type ImageAsset,
   type Product,
@@ -667,7 +668,10 @@ function cleanText(value: string): string {
     .trim();
 }
 
-export function buildAiContext(project: StoreProjectV1): string {
+export function buildAiContext(
+  project: StoreProjectV1,
+  options: { compact?: boolean } = {},
+): string {
   const routes = buildRoutes(project).filter((item) => item.indexable);
   const products = project.products
     .filter((product) => product.status === "active")
@@ -678,7 +682,15 @@ export function buildAiContext(project: StoreProjectV1): string {
       brand: product.brand,
       description: cleanText(product.description),
       categories: product.categoryIds
-        .map((id) => project.categories.find((category) => category.id === id)?.title)
+        .flatMap((id) => [
+          project.categories.find((category) => category.id === id),
+          ...getCategoryAncestors(project, id as Category["id"]),
+        ])
+        .filter(
+          (category, index, all) =>
+            category && all.findIndex((item) => item?.id === category.id) === index,
+        )
+        .map((category) => category?.title)
         .filter((title): title is string => Boolean(title)),
       offers: product.variants.map((variant) => ({
         id: variant.id,
@@ -693,47 +705,45 @@ export function buildAiContext(project: StoreProjectV1): string {
         ),
       })),
     }));
-  return JSON.stringify(
-    {
-      schemaVersion: 1,
-      site: {
-        name: project.identity.brandName,
-        legalName: project.identity.legalName,
-        description: cleanText(project.identity.description),
-        url: publicUrl(project, "/"),
-        locale: project.locale,
-        currency: project.currency,
-      },
-      contact: {
-        email: project.identity.email || undefined,
-        phone: project.identity.phone || undefined,
-        address: project.identity.address || undefined,
-        whatsapp: project.whatsapp.phone || undefined,
-      },
-      pages: routes.map(({ path, pageType, canonicalPath, title, description }) => ({
-        path,
-        pageType,
-        canonicalUrl: publicUrl(project, canonicalPath),
-        title,
-        description: cleanText(description),
-      })),
-      categories: project.categories.map((category) => ({
-        id: category.id,
-        name: category.title,
-        url: publicUrl(project, `/categorias/${category.slug}/`),
-        description: cleanText(category.description),
-        productCount: getCategoryProductIds(project, category.id).length,
-      })),
-      policies: {
-        shipping: cleanText(project.policies.shipping.details),
-        returns: cleanText(project.policies.returns.details),
-      },
-      products,
-      snapshot: project.updatedAt,
+  const context = {
+    schemaVersion: 1,
+    site: {
+      name: project.identity.brandName,
+      legalName: project.identity.legalName,
+      description: cleanText(project.identity.description),
+      url: publicUrl(project, "/"),
+      locale: project.locale,
+      currency: project.currency,
     },
-    null,
-    2,
-  );
+    contact: {
+      email: project.identity.email || undefined,
+      phone: project.identity.phone || undefined,
+      address: project.identity.address || undefined,
+      whatsapp: project.whatsapp.phone || undefined,
+    },
+    pages: routes.map(({ path, pageType, canonicalPath, title, description }) => ({
+      path,
+      pageType,
+      canonicalUrl: publicUrl(project, canonicalPath),
+      title,
+      description: cleanText(description),
+    })),
+    categories: project.categories.map((category) => ({
+      id: category.id,
+      name: category.title,
+      ...(category.parentId ? { parentId: category.parentId } : {}),
+      url: publicUrl(project, `/categorias/${category.slug}/`),
+      description: cleanText(category.description),
+      productCount: getCategoryProductIds(project, category.id).length,
+    })),
+    policies: {
+      shipping: cleanText(project.policies.shipping.details),
+      returns: cleanText(project.policies.returns.details),
+    },
+    products,
+    snapshot: project.updatedAt,
+  };
+  return options.compact ? JSON.stringify(context) : JSON.stringify(context, null, 2);
 }
 
 export function buildLlmsTxt(project: StoreProjectV1): string {
@@ -751,6 +761,12 @@ export function buildLlmsTxt(project: StoreProjectV1): string {
         (item) =>
           `- [${cleanText(item.title)}](${publicUrl(project, item.canonicalPath)}): ${cleanText(item.description)}`,
       ),
+    "",
+    "## Categorias",
+    ...project.categories.map(
+      (category) =>
+        `- [${cleanText(category.title)}](${publicUrl(project, `/categorias/${category.slug}/`)}): ${cleanText(category.description)}`,
+    ),
     "",
     "## Productos",
     ...products.map(

@@ -4,6 +4,7 @@ import {
   auditProject,
   buildCommerceSnapshot,
   createProjectArchive,
+  createPublicExportManifest,
   exportProject,
   readProjectArchive,
   renderPreviewHtml,
@@ -76,7 +77,7 @@ describe("exporter", () => {
     expect(preview).toContain('<meta name="description"');
     expect(preview).toContain('<script type="application/ld+json">');
     expect(css).not.toContain("color-scheme: light dark");
-    expect(css).toContain('.solara-page[data-color-mode="auto"] { color-scheme: dark; }');
+    expect(css).toContain('.solara-page[data-color-mode="auto"]{color-scheme:dark}');
   });
 
   it("usa el mismo árbol semántico de módulos en preview y home exportado", () => {
@@ -140,6 +141,37 @@ describe("exporter", () => {
     expect(result.files.has("sitemap.xml")).toBe(false);
     expect(result.files.get("robots.txt")).toContain("Disallow: /");
     expect(result.files.get("index.html")).toContain("noindex,nofollow");
+  });
+
+  it("declara capacidades públicas y noindexa rutas transaccionales", () => {
+    const result = exportProject(referenceStore, { mode: "production" });
+    const manifest = createPublicExportManifest(referenceStore);
+    const search = String(result.files.get("buscar/index.html"));
+    const cart = String(result.files.get("carrito/index.html"));
+    const checkout = String(result.files.get("compra/index.html"));
+    const home = String(result.files.get("index.html"));
+
+    expect(manifest.searchEnabled).toBe(true);
+    expect(manifest.cartEnabled).toBe(true);
+    expect(manifest.runtimeFeatures).toContain("cart");
+    expect(manifest.runtimeFeatures).toContain("motion");
+    expect(home).toContain('data-solara-runtime-features="');
+    expect(search).toContain('<meta name="robots" content="noindex,follow">');
+    expect(cart).toContain('<meta name="robots" content="noindex,follow">');
+    expect(checkout).toContain('<meta name="robots" content="noindex,follow">');
+  });
+
+  it("precarga sólo la imagen crítica de cada ruta y conserva headers de cache", () => {
+    const result = exportProject(referenceStore, { mode: "production" });
+    const home = String(result.files.get("index.html"));
+    const product = String(result.files.get("productos/manta-bruma/index.html"));
+    const headers = String(result.files.get("_headers"));
+
+    expect(home.match(/<link rel="preload" as="image"/g)).toHaveLength(1);
+    expect(product.match(/<link rel="preload" as="image"/g)).toHaveLength(1);
+    expect(headers).toContain("/assets/*");
+    expect(headers).toContain("max-age=31536000, immutable");
+    expect(headers).toContain("/ai-context.json");
   });
 
   it("publica rutas editoriales, catálogo reconciliable y sitemaps sin checkout", () => {
@@ -295,6 +327,7 @@ describe("exporter", () => {
     expect(headers).toContain("Content-Security-Policy");
     expect(headers).toContain("style-src-attr 'unsafe-inline'");
     expect(headers).toContain("script-src 'self'");
+    expect(headers).toContain("connect-src 'self'");
   });
 
   it("recupera un archivo de proyecto sin cambios", () => {

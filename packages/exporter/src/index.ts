@@ -112,7 +112,7 @@ export interface ExportResult {
   optimization: OptimizationReport;
 }
 
-interface PageDescriptor {
+export interface PageDescriptor {
   path: string;
   title: string;
   description: string;
@@ -132,6 +132,20 @@ interface PageDescriptor {
   body: string;
   structuredData: unknown[];
   image?: string;
+  /** Image that is critical for this route, if one exists. Social images stay lazy. */
+  preloadImage?: string;
+}
+
+export interface PublicExportManifest {
+  pages: readonly PageDescriptor[];
+  activeModules: readonly string[];
+  usedAssetIds: readonly string[];
+  usedVideoIds: readonly string[];
+  runtimeFeatures: readonly string[];
+  indexableRoutes: readonly string[];
+  searchEnabled: boolean;
+  cartEnabled: boolean;
+  checkoutEnabled: boolean;
 }
 
 const encoder = new TextEncoder();
@@ -194,8 +208,17 @@ function buildWhatsAppLink(project: StoreProjectV1, message: string): string {
   return `https://wa.me/${project.whatsapp.phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
 }
 
+const imageLookupCache = new WeakMap<object, ReadonlyMap<string, ImageAsset>>();
+const videoLookupCache = new WeakMap<object, ReadonlyMap<string, VideoAsset>>();
+
 function imageFor(project: StoreProjectV1, assetId: string | undefined): ImageAsset | undefined {
-  return project.assets.find((asset) => asset.id === assetId);
+  if (!assetId) return undefined;
+  let lookup = imageLookupCache.get(project);
+  if (!lookup) {
+    lookup = new Map(project.assets.map((asset) => [asset.id, asset]));
+    imageLookupCache.set(project, lookup);
+  }
+  return lookup.get(assetId);
 }
 
 function imageUrl(project: StoreProjectV1, assetId: string | undefined): string | undefined {
@@ -206,7 +229,13 @@ function imageUrl(project: StoreProjectV1, assetId: string | undefined): string 
 }
 
 function videoFor(project: StoreProjectV1, assetId: string | undefined): VideoAsset | undefined {
-  return project.videos.find((video) => video.id === assetId);
+  if (!assetId) return undefined;
+  let lookup = videoLookupCache.get(project);
+  if (!lookup) {
+    lookup = new Map(project.videos.map((video) => [video.id, video]));
+    videoLookupCache.set(project, lookup);
+  }
+  return lookup.get(assetId);
 }
 
 function videoUrl(project: StoreProjectV1, assetId: string | undefined): string | undefined {
@@ -581,6 +610,26 @@ button, input, select, textarea, a { outline-offset: 3px; }
 `.trim();
 }
 
+/** Remove CSS transport whitespace while preserving quoted content and calc spacing. */
+function minifyCss(value: string): string {
+  const quoted: string[] = [];
+  const protectedValue = value.replace(/("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g, (match) => {
+    const token = `__SOLARA_CSS_STRING_${quoted.length}__`;
+    quoted.push(match);
+    return token;
+  });
+  let minified = protectedValue
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\s+/g, " ")
+    .replace(/\s*([{};,:>+~])\s*/g, "$1")
+    .replace(/;}/g, "}")
+    .trim();
+  quoted.forEach((match, index) => {
+    minified = minified.replace(`__SOLARA_CSS_STRING_${index}__`, match);
+  });
+  return minified;
+}
+
 function shellSectionEnabled(project: StoreProjectV1, section: StoreSection): boolean {
   if (section.slot === "announcement") return project.siteShell.announcement;
   if (section.slot === "header") return project.siteShell.header;
@@ -629,12 +678,14 @@ function publicMediaUsage(project: StoreProjectV1): {
 
   addValue(project.identity.logoAssetId);
   addValue(project.seo.socialImageId);
-  project.products.forEach((product) => {
-    product.imageIds.forEach(addValue);
-    product.variants.forEach((variant) => {
-      addValue(variant.imageId);
+  project.products
+    .filter((product) => product.status === "active")
+    .forEach((product) => {
+      product.imageIds.forEach(addValue);
+      product.variants.forEach((variant) => {
+        addValue(variant.imageId);
+      });
     });
-  });
   project.categories.forEach((category) => {
     addValue(category.imageId);
   });
@@ -650,8 +701,60 @@ function publicMediaUsage(project: StoreProjectV1): {
   project.videos.forEach((video) => {
     if (videoIds.has(video.id)) addValue(video.posterAssetId);
   });
-  if (project.assets[0]) assetIds.add(project.assets[0].id);
+  const socialAsset = project.assets.find((asset) => asset.id === project.seo.socialImageId);
+  if (!socialAsset && project.assets[0]) assetIds.add(project.assets[0].id);
   return { assetIds, videoIds };
+}
+
+/**
+ * Resolve the public export graph once so every derived file uses the same
+ * page/module/media decisions. This is intentionally not persisted.
+ */
+export function createPublicExportManifest(
+  project: StoreProjectV1,
+  pages: readonly PageDescriptor[] = buildPages(project),
+): PublicExportManifest {
+  const sections = activeProjectSections(project, [
+    ...project.sections,
+    ...project.pages.flatMap((page) => page.sections),
+  ]);
+  const activeModules = [...new Set(sections.map((section) => section.moduleId))].sort();
+  const media = publicMediaUsage(project);
+  const runtimeFeatures = new Set<string>();
+
+  if (project.siteShell.header && activeModules.some((moduleId) => moduleId.includes("header"))) {
+    runtimeFeatures.add("header");
+  }
+  if (project.commerceTemplates.search.enabled) runtimeFeatures.add("search");
+  if (project.commerceTemplates.cart.enabled || project.siteShell.cart) runtimeFeatures.add("cart");
+  if (project.commerceTemplates.checkout.enabled) runtimeFeatures.add("checkout");
+  if (pages.some((page) => page.pageType === "category")) runtimeFeatures.add("category");
+  if (pages.some((page) => page.pageType === "product")) runtimeFeatures.add("product");
+  if (activeModules.some((moduleId) => moduleId.includes("hero"))) runtimeFeatures.add("hero");
+  if (media.videoIds.size > 0) runtimeFeatures.add("video");
+  if (activeModules.some((moduleId) => moduleId.includes("motion")) || sections.length > 0) {
+    runtimeFeatures.add("motion");
+  }
+  if (pages.some((page) => page.pageType === "product" && page.body.includes("data-variant"))) {
+    runtimeFeatures.add("variants");
+  }
+  if (pages.some((page) => page.pageType === "category" && page.body.includes("data-category"))) {
+    runtimeFeatures.add("filters");
+  }
+
+  return {
+    pages,
+    activeModules,
+    usedAssetIds: [...media.assetIds].sort(),
+    usedVideoIds: [...media.videoIds].sort(),
+    runtimeFeatures: [...runtimeFeatures].sort(),
+    indexableRoutes: pages
+      .filter((page) => !["search", "cart", "checkout", "not-found"].includes(page.pageType))
+      .map((page) => page.canonicalPath),
+    searchEnabled: project.commerceTemplates.search.enabled,
+    cartEnabled: project.commerceTemplates.cart.enabled,
+    checkoutEnabled: project.commerceTemplates.checkout.enabled,
+  };
 }
 
 function effectiveHomeSections(project: StoreProjectV1): readonly StoreSection[] {
@@ -971,13 +1074,17 @@ function renderDocument(
   page: PageDescriptor,
   mode: ExportMode,
   publicAiContext = false,
+  manifest?: PublicExportManifest,
 ): string {
   const canonical = absoluteUrl(project, page.canonicalPath);
   const socialImage = page.image ? absoluteResourceUrl(project, page.image) : undefined;
+  const nonIndexablePage = ["search", "cart", "checkout", "not-found"].includes(page.pageType);
   const robots =
     mode === "draft"
       ? "noindex,nofollow"
-      : "index,follow,max-image-preview:large,max-video-preview:-1,max-snippet:-1";
+      : nonIndexablePage
+        ? "noindex,follow"
+        : "index,follow,max-image-preview:large,max-video-preview:-1,max-snippet:-1";
   const verification = [
     project.seo.searchConsoleVerification
       ? `<meta name="google-site-verification" content="${escapeHtml(project.seo.searchConsoleVerification)}">`
@@ -993,17 +1100,20 @@ function renderDocument(
     .join("\n");
   const colorMode =
     project.theme.colorMode === "auto" ? "" : ` data-theme="${project.theme.colorMode}"`;
-  const lcpPreload = page.image
-    ? `<link rel="preload" as="image" href="${escapeAttribute(socialImage ?? page.image)}" fetchpriority="high">`
+  const criticalImage = page.preloadImage
+    ? absoluteResourceUrl(project, page.preloadImage)
+    : undefined;
+  const lcpPreload = criticalImage
+    ? `<link rel="preload" as="image" href="${escapeAttribute(criticalImage)}" fetchpriority="high">`
     : "";
   const aiContextLinks =
-    mode === "production" && publicAiContext
+    mode === "production" && publicAiContext && !nonIndexablePage
       ? `<link rel="alternate" type="application/json" title="Contexto publico para agentes" href="/ai-context.json">
   <link rel="alternate" type="text/plain" title="Resumen publico para agentes" href="/llms.txt">`
       : "";
 
   return `<!doctype html>
-<html lang="${project.locale}" data-store-id="${escapeHtml(project.id)}" data-currency="${project.currency}" data-whatsapp="${escapeHtml(project.whatsapp.phone)}" data-whatsapp-greeting="${escapeHtml(project.whatsapp.greeting)}" data-whatsapp-include-sku="${String(project.whatsapp.includeSku)}"${colorMode}>
+<html lang="${project.locale}" data-store-id="${escapeHtml(project.id)}" data-currency="${project.currency}" data-whatsapp="${escapeHtml(project.whatsapp.phone)}" data-whatsapp-greeting="${escapeHtml(project.whatsapp.greeting)}" data-whatsapp-include-sku="${String(project.whatsapp.includeSku)}" data-solara-runtime-features="${escapeAttribute((manifest?.runtimeFeatures ?? []).join(","))}"${colorMode}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1140,6 +1250,13 @@ function buildPages(
   );
   const socialImage =
     imageUrl(project, project.seo.socialImageId) ?? imageUrl(project, project.assets[0]?.id);
+  const homeHero = effectiveHomeSections(project).find(
+    (section) => section.enabled && section.slot === "hero",
+  );
+  const homePreloadImage =
+    (typeof homeHero?.settings.posterAssetId === "string"
+      ? imageUrl(project, homeHero.settings.posterAssetId)
+      : undefined) ?? socialImage;
   const homeConfig = project.pages.find((page) => page.kind === "home");
   const homeSections = homeConfig?.sections.length
     ? [...sharedHeader, ...homeConfig.sections, ...sharedFooter]
@@ -1154,6 +1271,7 @@ function buildPages(
     body: `<main class="solara-home">${renderProjectSections(project, homeSections, { pageType: "home" })}</main>`,
     structuredData: storeStructuredData(project),
     ...(socialImage ? { image: socialImage } : {}),
+    ...(homePreloadImage ? { preloadImage: homePreloadImage } : {}),
   };
 
   const categories = project.categories.flatMap((category) => {
@@ -1216,6 +1334,7 @@ function buildPages(
         body,
         structuredData: [breadcrumbData(project, categoryBreadcrumbItems(project, category))],
         ...(categoryImage ? { image: categoryImage } : {}),
+        ...(categoryImage ? { preloadImage: categoryImage } : {}),
       });
     }
 
@@ -1272,6 +1391,7 @@ function buildPages(
           ]),
         ],
         ...(collectionImage ? { image: collectionImage } : {}),
+        ...(collectionImage ? { preloadImage: collectionImage } : {}),
       });
     }
     return pages;
@@ -1319,6 +1439,7 @@ function buildPages(
           productStructuredData(project, product, snapshot),
         ],
         ...(productImage ? { image: productImage } : {}),
+        ...(productImage ? { preloadImage: productImage } : {}),
       };
     });
 
@@ -1498,9 +1619,19 @@ function buildPages(
   }));
 }
 
-function buildSitemap(project: StoreProjectV1, pages: PageDescriptor[]): string {
+function buildSitemap(
+  project: StoreProjectV1,
+  pages: PageDescriptor[],
+  manifest?: PublicExportManifest,
+): string {
+  const indexableRoutes = new Set(
+    manifest?.indexableRoutes ??
+      pages
+        .filter((page) => !["search", "cart", "checkout", "not-found"].includes(page.pageType))
+        .map((page) => page.canonicalPath),
+  );
   const urls = pages
-    .filter((page) => !["search", "cart", "checkout", "not-found"].includes(page.pageType))
+    .filter((page) => indexableRoutes.has(page.canonicalPath))
     .map(
       (page) => `<url>
   <loc>${escapeXml(absoluteUrl(project, page.canonicalPath))}</loc>
@@ -2030,24 +2161,26 @@ function buildFiles(
   publicAiContext: boolean,
 ): Map<string, string | Uint8Array> {
   const publicProject = projectWithPublicAssetUrls(project);
-  const mediaUsage = publicMediaUsage(project);
   const snapshot = buildCommerceSnapshot(publicProject);
   const pages = buildPages(publicProject, snapshot);
+  const manifest = createPublicExportManifest(publicProject, pages);
+  const mediaUsage = {
+    assetIds: new Set(manifest.usedAssetIds),
+    videoIds: new Set(manifest.usedVideoIds),
+  };
   const files = new Map<string, string | Uint8Array>();
   pages.forEach((page) => {
-    files.set(page.path, renderDocument(publicProject, page, mode, publicAiContext));
+    files.set(page.path, renderDocument(publicProject, page, mode, publicAiContext, manifest));
   });
   files.set(
     "assets/storefront.css",
-    `${themeCss(publicProject)}\n${exportedModuleStyles(publicProject)}\n${STOREFRONT_RUNTIME_CSS}`,
+    minifyCss(
+      `${themeCss(publicProject)}\n${exportedModuleStyles(publicProject)}\n${STOREFRONT_RUNTIME_CSS}`,
+    ),
   );
   files.set("assets/storefront.js", STOREFRONT_RUNTIME_JS);
-  if (publicProject.commerceTemplates.search.enabled)
-    files.set("search-index.json", buildSearchIndex(publicProject));
-  if (
-    publicProject.commerceTemplates.cart.enabled ||
-    publicProject.commerceTemplates.checkout.enabled
-  )
+  if (manifest.searchEnabled) files.set("search-index.json", buildSearchIndex(publicProject));
+  if (manifest.cartEnabled || manifest.checkoutEnabled)
     files.set("catalog-index.json", buildCatalogIndex(publicProject));
   files.set(
     "robots.txt",
@@ -2056,24 +2189,53 @@ function buildFiles(
       : `User-agent: *\nAllow: /\nSitemap: ${absoluteUrl(publicProject, "/sitemap.xml")}\n`,
   );
   if (mode === "production") {
-    files.set("sitemap.xml", buildSitemap(publicProject, pages));
+    files.set("sitemap.xml", buildSitemap(publicProject, pages, manifest));
     files.set("image-sitemap.xml", buildImageSitemap(publicProject));
-    if (mediaUsage.videoIds.size > 0)
+    if (manifest.usedVideoIds.length > 0)
       files.set("video-sitemap.xml", buildVideoSitemap(publicProject));
   }
   if (mode === "production") {
     files.set("google-merchant.xml", buildMerchantFeed(publicProject, snapshot));
     if (publicAiContext) {
-      files.set("ai-context.json", buildAiContext(publicProject));
+      files.set("ai-context.json", buildAiContext(publicProject, { compact: true }));
       files.set("llms.txt", buildLlmsTxt(publicProject));
     }
     files.set(
       "_headers",
       `/*
-  Content-Security-Policy: default-src 'self'; img-src 'self' data: https:; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+  Cache-Control: public, max-age=0, must-revalidate
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: https:; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
   Referrer-Policy: strict-origin-when-cross-origin
   X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
   Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/sitemap.xml
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/image-sitemap.xml
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/video-sitemap.xml
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/google-merchant.xml
+  Cache-Control: public, max-age=900, must-revalidate
+
+/ai-context.json
+  Cache-Control: public, max-age=900, must-revalidate
+
+/llms.txt
+  Cache-Control: public, max-age=900, must-revalidate
+
+/search-index.json
+  Cache-Control: public, max-age=900, must-revalidate
+
+/catalog-index.json
+  Cache-Control: public, max-age=900, must-revalidate
 `,
     );
   }
@@ -2180,9 +2342,10 @@ export function renderPreviewHtml(
   const project = parseProject(projectInput, "renderizar la vista previa");
   const previewAssets = createPreviewAssetBundle(project);
   const pages = buildPages(previewAssets.project);
+  const manifest = createPublicExportManifest(previewAssets.project, pages);
   const page = pages.find((candidate) => candidate.canonicalPath === path) ?? pages[0];
   if (!page) throw new Error("No se pudo renderizar la página inicial.");
-  let document = renderDocument(previewAssets.project, page, mode);
+  let document = renderDocument(previewAssets.project, page, mode, false, manifest);
   const usedSources = new Map(
     [...previewAssets.sources].filter(([path]) => document.includes(path)),
   );
@@ -2199,7 +2362,9 @@ export function renderPreviewHtml(
     .replace(
       "data:text/css;base64,PREVIEW_STYLE",
       `data:text/css;base64,${toBase64(
-        `${themeCss(project)}\n${previewModuleStyles(project)}\n${STOREFRONT_RUNTIME_CSS}`,
+        minifyCss(
+          `${themeCss(project)}\n${previewModuleStyles(project)}\n${STOREFRONT_RUNTIME_CSS}`,
+        ),
       )}`,
     );
 }

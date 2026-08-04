@@ -373,7 +373,17 @@ export function renderImage(
     entries.push(`${escapeAttribute(safeSource)} ${source.width}w`);
     responsiveByMime.set(mime, entries);
   });
+  const primarySource = safeAssetUrl(asset.source, "");
+  const primaryMime = imageMimeType(asset.source);
+  if (primarySource && primarySource !== fallbackSource && !responsiveByMime.has(primaryMime)) {
+    responsiveByMime.set(primaryMime, [`${escapeAttribute(primarySource)} ${asset.width}w`]);
+  }
   const responsiveSources = [...responsiveByMime.entries()]
+    .sort(([left], [right]) => {
+      if (left === "image/webp") return -1;
+      if (right === "image/webp") return 1;
+      return left.localeCompare(right);
+    })
     .map(([mime, sources]) => `<source type="${mime}" srcset="${sources.join(", ")}"${sizes}>`)
     .join("");
   const image = `<img${className} src="${escapeAttribute(fallbackSource)}" alt="${escapeAttribute(asset.alt || options.fallbackAlt || "")}" width="${asset.width}" height="${asset.height}" loading="${options.loading ?? "lazy"}"${fetchPriority}${decoding}${sizes}>`;

@@ -69,6 +69,28 @@ describe("HTML safety", () => {
     expect(html).not.toContain("<script");
   });
 
+  it("prioriza WebP y conserva fallback cuando no hay variantes responsive", () => {
+    const asset = referenceStore.assets[0];
+    if (!asset) throw new Error("Fixture incompleto");
+    const project = {
+      ...referenceStore,
+      assets: [
+        {
+          ...asset,
+          mimeType: "image/webp" as const,
+          source: "data:image/webp;base64,AA==",
+          fallbackSource: "data:image/jpeg;base64,AQ==",
+          responsiveSources: [],
+        },
+        ...referenceStore.assets.slice(1),
+      ],
+    };
+    const html = renderImage(project, asset.id);
+
+    expect(html).toContain('<source type="image/webp"');
+    expect(html).toContain('src="data:image/jpeg;base64,AQ=="');
+  });
+
   it("expone controles de movimiento declarativos en el root", () => {
     const section = referenceStore.sections[0];
     if (!section) throw new Error("Fixture incompleto");
