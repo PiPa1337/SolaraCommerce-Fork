@@ -16,6 +16,7 @@
     "@solara/module-sdk": "workspace:*",
     "@solara/modules": "workspace:*",
     "@solara/project-schema": "workspace:*",
+    "@solara/site-optimizer": "workspace:*",
     "@solara/storefront-runtime": "workspace:*",
     "fflate": "0.8.2"
   }

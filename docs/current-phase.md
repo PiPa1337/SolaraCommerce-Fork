@@ -139,6 +139,43 @@ densidad responsive y luego pasar el gate release con Lighthouse, axe y
 Firefox/WebKit. Después se puede continuar con mejoras de edición de imágenes y
 SEO avanzado sin reintroducir módulos legacy en la base.
 
+## Optimizacion automatica post-generacion
+
+La fase activa incorpora `packages/site-optimizer` como auditoria pura y
+determinista. Recibe un `StoreProjectV1`, no muta el proyecto y devuelve un
+`OptimizationReport` con hash del snapshot, score, hallazgos por area, rutas
+indexables, cobertura factual, metricas de media y optimizaciones aplicadas por
+el exporter.
+
+El exporter usa el informe antes de construir archivos. HTML inicial, JSON-LD,
+sitemap, `google-merchant.xml`, `ai-context.json` y `llms.txt` parten del mismo
+proyecto validado. En modo production los errores criticos bloquean el ZIP; en
+draft se muestran para poder corregirlos sin publicar.
+
+Los artefactos publicos para agentes son opcionales y se controlan con
+`ExportOptions.publicAiContext` (activado por defecto en Studio):
+
+- `ai-context.json`: entidades, paginas, categorias, productos, ofertas y
+  politicas publicas, sin data URLs.
+- `llms.txt`: resumen legible con enlaces canonicos a paginas y productos.
+
+La auditoria no intenta fabricar datos faltantes ni contenido SEO en masa. Los
+hallazgos apuntan a la ruta del editor para que la correccion conserve la verdad
+del catalogo. La verificacion local es:
+
+```text
+corepack pnpm check:optimization
+```
+
+Este comando cubre la demo de 50 productos, `catalogScaleStore` (10 raices,
+16 categorias y paginacion) y la plantilla limpia sin inventario. `corepack pnpm
+check` lo ejecuta como parte del gate general.
+
+El gate de budgets comprueba además el runtime storefront con los límites v1:
+35 KiB gzip de JavaScript y 30 KiB gzip de CSS. La medición usa las constantes
+que realmente se insertan en `storefront.js` y `storefront.css`, no un bundle de
+referencia separado.
+
 ## Cierre de la integracion v2
 
 La integracion actual tambien cubre el selector de rutas del preview, la

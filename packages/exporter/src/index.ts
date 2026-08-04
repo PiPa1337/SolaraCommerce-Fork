@@ -19,12 +19,27 @@ import {
   getCategoryProductIds,
   StoreProjectV1Schema,
 } from "@solara/project-schema";
+import {
+  buildAiContext,
+  buildLlmsTxt,
+  type OptimizationOptions,
+  type OptimizationReport,
+  optimizeProject,
+} from "@solara/site-optimizer";
 import { STOREFRONT_RUNTIME_CSS, STOREFRONT_RUNTIME_JS } from "@solara/storefront-runtime";
 import { strToU8, unzipSync, type Zippable, zipSync } from "fflate";
 
+export type { OptimizationReport } from "@solara/site-optimizer";
+
 export type ExportMode = "draft" | "production";
 export type AuditSeverity = "critical" | "warning" | "info";
-export type AuditArea = "technical" | "content" | "structured-data" | "merchant";
+export type AuditArea =
+  | "technical"
+  | "content"
+  | "structured-data"
+  | "merchant"
+  | "performance"
+  | "ai";
 export type AuditFixTarget = "summary" | "catalog" | "assets" | "seo" | "export";
 
 export interface AuditIssue {
@@ -81,16 +96,20 @@ export interface AuditReport {
   criticalCount: number;
   warningCount: number;
   merchantMode: "experimental-whatsapp";
+  optimization?: OptimizationReport;
 }
 
 export interface ExportOptions {
   mode: ExportMode;
+  publicAiContext?: boolean;
+  optimizationProfile?: OptimizationOptions["profile"];
 }
 
 export interface ExportResult {
   files: ReadonlyMap<string, string | Uint8Array>;
   zip: Uint8Array;
   audit: AuditIssue[];
+  optimization: OptimizationReport;
 }
 
 interface PageDescriptor {
@@ -947,10 +966,18 @@ function productStructuredData(
   };
 }
 
-function renderDocument(project: StoreProjectV1, page: PageDescriptor, mode: ExportMode): string {
+function renderDocument(
+  project: StoreProjectV1,
+  page: PageDescriptor,
+  mode: ExportMode,
+  publicAiContext = false,
+): string {
   const canonical = absoluteUrl(project, page.canonicalPath);
   const socialImage = page.image ? absoluteResourceUrl(project, page.image) : undefined;
-  const robots = mode === "draft" ? "noindex,nofollow" : "index,follow,max-image-preview:large";
+  const robots =
+    mode === "draft"
+      ? "noindex,nofollow"
+      : "index,follow,max-image-preview:large,max-video-preview:-1,max-snippet:-1";
   const verification = [
     project.seo.searchConsoleVerification
       ? `<meta name="google-site-verification" content="${escapeHtml(project.seo.searchConsoleVerification)}">`
@@ -966,6 +993,14 @@ function renderDocument(project: StoreProjectV1, page: PageDescriptor, mode: Exp
     .join("\n");
   const colorMode =
     project.theme.colorMode === "auto" ? "" : ` data-theme="${project.theme.colorMode}"`;
+  const lcpPreload = page.image
+    ? `<link rel="preload" as="image" href="${escapeAttribute(socialImage ?? page.image)}" fetchpriority="high">`
+    : "";
+  const aiContextLinks =
+    mode === "production" && publicAiContext
+      ? `<link rel="alternate" type="application/json" title="Contexto publico para agentes" href="/ai-context.json">
+  <link rel="alternate" type="text/plain" title="Resumen publico para agentes" href="/llms.txt">`
+      : "";
 
   return `<!doctype html>
 <html lang="${project.locale}" data-store-id="${escapeHtml(project.id)}" data-currency="${project.currency}" data-whatsapp="${escapeHtml(project.whatsapp.phone)}" data-whatsapp-greeting="${escapeHtml(project.whatsapp.greeting)}" data-whatsapp-include-sku="${String(project.whatsapp.includeSku)}"${colorMode}>
@@ -985,6 +1020,8 @@ function renderDocument(project: StoreProjectV1, page: PageDescriptor, mode: Exp
   <meta property="og:url" content="${escapeHtml(canonical)}">
   ${socialImage ? `<meta property="og:image" content="${escapeHtml(socialImage)}">` : ""}
   ${verification}
+  ${lcpPreload}
+  ${aiContextLinks}
   <link rel="stylesheet" href="/assets/storefront.css">
   ${structuredData}
 </head>
@@ -1964,23 +2001,41 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
 }
 
 export function auditReport(project: StoreProjectV1): AuditReport {
-  const issues = auditProject(project);
+  const baseIssues = auditProject(project);
+  const optimization = optimizeProject(project, { mode: "draft", publicAiContext: false });
+  const existingPaths = new Set(baseIssues.map((issue) => issue.path).filter(Boolean));
+  const optimizationIssues: AuditIssue[] = optimization.findings
+    .filter((finding) => !finding.path || !existingPaths.has(finding.path))
+    .map((finding) => ({
+      code: finding.code,
+      severity: finding.severity,
+      area: finding.area,
+      message: finding.message,
+      ...(finding.path ? { path: finding.path } : {}),
+      ...(finding.entity ? { entity: finding.entity } : {}),
+    }));
+  const issues = [...baseIssues, ...optimizationIssues];
   return {
     issues,
     criticalCount: issues.filter((issue) => issue.severity === "critical").length,
     warningCount: issues.filter((issue) => issue.severity === "warning").length,
     merchantMode: "experimental-whatsapp",
+    optimization,
   };
 }
 
-function buildFiles(project: StoreProjectV1, mode: ExportMode): Map<string, string | Uint8Array> {
+function buildFiles(
+  project: StoreProjectV1,
+  mode: ExportMode,
+  publicAiContext: boolean,
+): Map<string, string | Uint8Array> {
   const publicProject = projectWithPublicAssetUrls(project);
   const mediaUsage = publicMediaUsage(project);
   const snapshot = buildCommerceSnapshot(publicProject);
   const pages = buildPages(publicProject, snapshot);
   const files = new Map<string, string | Uint8Array>();
   pages.forEach((page) => {
-    files.set(page.path, renderDocument(publicProject, page, mode));
+    files.set(page.path, renderDocument(publicProject, page, mode, publicAiContext));
   });
   files.set(
     "assets/storefront.css",
@@ -2008,6 +2063,10 @@ function buildFiles(project: StoreProjectV1, mode: ExportMode): Map<string, stri
   }
   if (mode === "production") {
     files.set("google-merchant.xml", buildMerchantFeed(publicProject, snapshot));
+    if (publicAiContext) {
+      files.set("ai-context.json", buildAiContext(publicProject));
+      files.set("llms.txt", buildLlmsTxt(publicProject));
+    }
     files.set(
       "_headers",
       `/*
@@ -2065,7 +2124,25 @@ function zipFiles(files: ReadonlyMap<string, string | Uint8Array>): Uint8Array {
 
 export function exportProject(projectInput: StoreProjectV1, options: ExportOptions): ExportResult {
   const project = parseProject(projectInput, "exportar");
-  const audit = auditProject(project);
+  const publicAiContext = options.publicAiContext ?? true;
+  const optimization = optimizeProject(project, {
+    mode: options.mode,
+    profile: options.optimizationProfile ?? "safe",
+    publicAiContext,
+  });
+  const baseAudit = auditProject(project);
+  const existingPaths = new Set(baseAudit.map((issue) => issue.path).filter(Boolean));
+  const optimizationAudit: AuditIssue[] = optimization.findings
+    .filter((finding) => !finding.path || !existingPaths.has(finding.path))
+    .map((finding) => ({
+      code: finding.code,
+      severity: finding.severity,
+      area: finding.area,
+      message: finding.message,
+      ...(finding.path ? { path: finding.path } : {}),
+      ...(finding.entity ? { entity: finding.entity } : {}),
+    }));
+  const audit = [...baseAudit, ...optimizationAudit];
   const critical = audit.filter((issue) => issue.severity === "critical");
   if (options.mode === "production" && critical.length > 0) {
     throw new Error(
@@ -2075,8 +2152,23 @@ export function exportProject(projectInput: StoreProjectV1, options: ExportOptio
     );
   }
 
-  const files = buildFiles(project, options.mode);
-  return { files, zip: zipFiles(files), audit };
+  const files = buildFiles(project, options.mode, publicAiContext);
+  return { files, zip: zipFiles(files), audit, optimization };
+}
+
+export function buildOptimizationReport(
+  projectInput: StoreProjectV1,
+  options: Pick<ExportOptions, "mode" | "publicAiContext" | "optimizationProfile"> = {
+    mode: "draft",
+    publicAiContext: true,
+  },
+): OptimizationReport {
+  const project = parseProject(projectInput, "auditar la optimizacion");
+  return optimizeProject(project, {
+    mode: options.mode,
+    profile: options.optimizationProfile ?? "safe",
+    publicAiContext: options.publicAiContext ?? true,
+  });
 }
 
 export function renderPreviewHtml(

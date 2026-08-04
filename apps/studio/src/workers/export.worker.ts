@@ -1,4 +1,5 @@
-import { exportProject } from "@solara/exporter";
+import type { AuditIssue } from "@solara/exporter";
+import { exportProject, type OptimizationReport } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { createProjectArchive, readProjectArchive } from "../lib/projectArchive";
 
@@ -8,6 +9,7 @@ type ExportRequest =
       type: "site";
       project: StoreProjectV1;
       mode: "draft" | "production";
+      options: { publicAiContext?: boolean; optimizationProfile?: "safe" | "strict" };
     }
   | {
       id: string;
@@ -30,9 +32,14 @@ self.onmessage = (event: MessageEvent<ExportRequest>) => {
   try {
     const request = event.data;
     if (request.type === "site") {
-      const result = exportProject(request.project, { mode: request.mode });
+      const result = exportProject(
+        { ...request.project },
+        { mode: request.mode, ...request.options },
+      );
       const zip = transferableBytes(result.zip);
-      self.postMessage({ id: request.id, ok: true, result: { zip, audit: result.audit } }, [
+      const optimization: OptimizationReport = result.optimization;
+      const audit: AuditIssue[] = result.audit;
+      self.postMessage({ id: request.id, ok: true, result: { zip, audit, optimization } }, [
         zip.buffer,
       ]);
       return;

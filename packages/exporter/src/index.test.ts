@@ -20,6 +20,10 @@ describe("exporter", () => {
     expect(productHtml).toContain('"@type":"ProductGroup"');
     expect(feed.match(/<item>/g)).toHaveLength(3);
     expect(feed).toContain("<g:price>78500.00 ARS</g:price>");
+    expect(result.files.has("ai-context.json")).toBe(true);
+    expect(result.files.has("llms.txt")).toBe(true);
+    expect(result.optimization.aiReadiness.structuredDataSource).toBe("shared-snapshot");
+    expect(productHtml).toContain('href="/ai-context.json"');
   });
 
   it("usa un snapshot comercial para HTML, variantes, sitemap y feed", () => {
@@ -385,6 +389,17 @@ describe("exporter", () => {
     expect(auditProject(referenceStore)).toContainEqual(
       expect.objectContaining({ code: "merchant.whatsapp-checkout", severity: "warning" }),
     );
+  });
+
+  it("permite exportar sin contexto publico para agentes", () => {
+    const result = exportProject(referenceStore, {
+      mode: "production",
+      publicAiContext: false,
+    });
+    expect(result.files.has("ai-context.json")).toBe(false);
+    expect(result.files.has("llms.txt")).toBe(false);
+    expect(result.optimization.aiReadiness.publicContextAvailable).toBe(false);
+    expect(String(result.files.get("index.html"))).not.toContain('href="/ai-context.json"');
   });
 
   it("detecta rutas reservadas y preorder sin fecha", () => {

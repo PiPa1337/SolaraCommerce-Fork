@@ -1,8 +1,16 @@
-import { CheckCircle, Info, MagnifyingGlass, WarningCircle, XCircle } from "@phosphor-icons/react";
-import type { AuditReport } from "@solara/exporter";
+import {
+  CheckCircle,
+  DownloadSimple,
+  Info,
+  MagnifyingGlass,
+  WarningCircle,
+  XCircle,
+} from "@phosphor-icons/react";
+import type { AuditReport, OptimizationReport } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { useEffect, useState } from "react";
-import { Field, SectionHeader } from "../components/Ui";
+import { Button, Field, SectionHeader } from "../components/Ui";
+import { downloadBlob } from "../lib/projectArchive";
 
 interface AuditIssue {
   id: string;
@@ -54,11 +62,17 @@ export function Seo({
     warningCount: 0,
     merchantMode: "experimental-whatsapp",
   });
+  const [optimization, setOptimization] = useState<OptimizationReport | null>(null);
   useEffect(() => {
     let active = true;
     void import("@solara/exporter")
-      .then(({ auditReport }) => {
-        if (active) setReport(auditReport(project));
+      .then(({ auditReport, buildOptimizationReport }) => {
+        if (active) {
+          setReport(auditReport(project));
+          setOptimization(
+            buildOptimizationReport(project, { mode: "draft", publicAiContext: true }),
+          );
+        }
       })
       .catch(() => undefined);
     return () => {
@@ -200,6 +214,57 @@ export function Seo({
             </div>
           )}
         </div>
+        {optimization ? (
+          <div className="optimization-panel">
+            <header>
+              <div>
+                <h3>Optimización automática</h3>
+                <p>Snapshot {optimization.snapshotHash}. Las correcciones no inventan contenido.</p>
+              </div>
+              <div className="optimization-actions">
+                <strong
+                  className={
+                    optimization.counts.critical === 0
+                      ? "optimization-score optimization-score--ready"
+                      : "optimization-score"
+                  }
+                >
+                  {optimization.score}/100
+                </strong>
+                <Button
+                  icon={DownloadSimple}
+                  onClick={() =>
+                    downloadBlob(
+                      `${JSON.stringify(optimization, null, 2)}\n`,
+                      `${project.slug}-optimization.json`,
+                      "application/json",
+                    )
+                  }
+                >
+                  Descargar informe
+                </Button>
+              </div>
+            </header>
+            <section className="optimization-metrics" aria-label="Resumen de optimización">
+              <span>
+                <strong>{optimization.counts.indexable}</strong> rutas indexables
+              </span>
+              <span>
+                <strong>
+                  {Math.round(optimization.aiReadiness.factualProductCoverage * 100)}%
+                </strong>{" "}
+                productos con contexto
+              </span>
+              <span>
+                <strong>{optimization.performance.largeImages}</strong> imágenes grandes
+              </span>
+              <span>
+                <strong>{optimization.aiReadiness.publicContextAvailable ? "Sí" : "No"}</strong>{" "}
+                contexto IA público
+              </span>
+            </section>
+          </div>
+        ) : null}
       </div>
     </section>
   );

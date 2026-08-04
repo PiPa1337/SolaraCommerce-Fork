@@ -173,6 +173,8 @@ traces y resultados disponibles. Una ejecución exitosa no publica artefactos.
 - `packages/modules`: módulos oficiales.
 - `packages/storefront-runtime`: carrito, WhatsApp y movimiento progresivo.
 - `packages/exporter`: HTML, SEO, feed Merchant y archivos ZIP.
+- `packages/site-optimizer`: auditoría determinista de rutas, contenido, media,
+  Merchant, rendimiento y contexto público para agentes.
 
 La especificación funcional y el alcance están en
 [`docs/product-spec.md`](docs/product-spec.md).
@@ -231,6 +233,39 @@ La auditoría Lighthouse usa `.lighthouserc.json` contra un `site.zip` de
 producción servido localmente o en el dominio piloto. Se ejecuta con
 `corepack pnpm dlx @lhci/cli autorun --config=.lighthouserc.json` para no sumar
 una dependencia pesada al Studio ni al storefront.
+
+## Optimizacion automatica post-generacion
+
+Cada exportacion ejecuta `@solara/site-optimizer` sobre el mismo snapshot que
+usa el HTML, JSON-LD, sitemap y feed. El informe es determinista e incluye:
+
+- rutas indexables, canonicals, slugs reservados y productos huerfanos;
+- cobertura de descripcion, imagenes, precios e identificadores comerciales;
+- peso de imagenes y videos, variantes responsive y candidatos eager;
+- entidad de marca, politicas, enlaces publicos y cobertura factual para agentes;
+- hash del snapshot, score 0-100 y hallazgos criticos, warnings e informativos.
+
+En produccion se generan opcionalmente `ai-context.json` y `llms.txt` desde el
+mismo snapshot. No contienen data URLs ni datos personales privados. La casilla
+esta disponible en Exportar y queda activada por defecto; se puede desactivar
+para una exportacion sin contexto publico. El boton de produccion sigue
+bloqueado ante errores criticos.
+
+El panel SEO muestra la salud del proyecto antes de exportar. El gate local
+incluye una comprobacion determinista de la demo de 50 productos, la escala de
+50 productos y 16 categorias, y la plantilla limpia:
+
+```text
+corepack pnpm check:optimization
+```
+
+El contexto para agentes es una ayuda de descubrimiento, no un reemplazo del
+SEO fundamental: el contenido HTML sigue siendo rastreable, semantico y util
+sin JavaScript.
+
+`corepack pnpm check:budgets` tambien comprueba el runtime publico: JavaScript
+<= 35 KiB gzip y CSS <= 30 KiB gzip, ademas de los limites del bundle inicial de
+Studio.
 
 ## Piloto real (Fase 10)
 

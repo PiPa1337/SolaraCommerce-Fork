@@ -1,5 +1,5 @@
 import type { CatalogCsvContext } from "@solara/core";
-import type { AuditIssue, ExportMode } from "@solara/exporter";
+import type { AuditIssue, ExportMode, OptimizationReport } from "@solara/exporter";
 import type { Product, StoreProjectV1 } from "@solara/project-schema";
 
 interface WorkerSuccess<Result> {
@@ -112,8 +112,9 @@ export async function processImageInWorker(file: File): Promise<ProcessedImage> 
 export function exportSiteInWorker(
   project: StoreProjectV1,
   mode: ExportMode,
-): Promise<{ zip: Uint8Array; audit: AuditIssue[] }> {
-  return requestWorker(getExportWorker(), { type: "site", project, mode });
+  options: { publicAiContext?: boolean; optimizationProfile?: "safe" | "strict" } = {},
+): Promise<{ zip: Uint8Array; audit: AuditIssue[]; optimization: OptimizationReport }> {
+  return requestWorker(getExportWorker(), { type: "site", project, mode, options });
 }
 
 export function createProjectArchiveInWorker(project: StoreProjectV1): Promise<Uint8Array> {

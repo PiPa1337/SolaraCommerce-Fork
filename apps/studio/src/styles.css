@@ -1945,6 +1945,82 @@ tbody tr[data-selected="true"] {
   font-size: 12px;
 }
 
+.optimization-panel {
+  grid-column: 1 / -1;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface-raised);
+  overflow: hidden;
+}
+
+.optimization-panel > header,
+.optimization-export-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.optimization-panel > header {
+  justify-content: space-between;
+  padding: 15px;
+  border-bottom: 1px solid var(--line);
+}
+
+.optimization-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.optimization-panel h3 {
+  margin: 0 0 3px;
+  font-size: 16px;
+}
+
+.optimization-panel header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.optimization-score {
+  color: var(--warning);
+  font-family: var(--font-display);
+  font-size: 24px;
+}
+
+.optimization-score--ready {
+  color: var(--accent);
+}
+
+.optimization-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+}
+
+.optimization-metrics span {
+  min-height: 54px;
+  padding: 12px 15px;
+  border-right: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.optimization-metrics span:last-child {
+  border-right: 0;
+}
+
+.optimization-metrics strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 17px;
+}
+
 .export-options {
   border-top: 1px solid var(--line-strong);
 }
@@ -1989,6 +2065,36 @@ tbody tr[data-selected="true"] {
   color: var(--danger);
   font-size: 10px;
   font-weight: 700;
+}
+
+.export-ai-context {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.export-ai-context input {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.optimization-export-summary {
+  flex-wrap: wrap;
+  margin: 0 0 18px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface-raised);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.optimization-export-summary strong {
+  color: var(--ink);
 }
 
 /* Phase 4: warm editorial system */
@@ -2663,6 +2769,18 @@ tbody tr {
   .export-actions {
     grid-column: 1 / -1;
     justify-content: stretch;
+  }
+
+  .optimization-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .optimization-metrics span:nth-child(2) {
+    border-right: 0;
+  }
+
+  .optimization-metrics span:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
   }
 
   .export-actions .button,

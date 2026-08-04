@@ -93,6 +93,9 @@ importers:
       '@solara/project-schema':
         specifier: workspace:*
         version: link:../project-schema
+      '@solara/site-optimizer':
+        specifier: workspace:*
+        version: link:../site-optimizer
       '@solara/storefront-runtime':
         specifier: workspace:*
         version: link:../storefront-runtime
@@ -126,6 +129,12 @@ importers:
       zod:
         specifier: 4.1.5
         version: 4.1.5
+
+  packages/site-optimizer:
+    dependencies:
+      '@solara/project-schema':
+        specifier: workspace:*
+        version: link:../project-schema
 
   packages/storefront-runtime:
     dependencies:

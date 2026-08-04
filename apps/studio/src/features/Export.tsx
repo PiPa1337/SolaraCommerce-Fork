@@ -5,6 +5,7 @@ import {
   UploadSimple,
   WarningCircle,
 } from "@phosphor-icons/react";
+import type { OptimizationReport } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { useEffect, useRef, useState } from "react";
 import { Button, InlineError, SectionHeader } from "../components/Ui";
@@ -26,24 +27,35 @@ export function ExportPanel({
   const [busy, setBusy] = useState<"draft" | "production" | "project" | "import" | "">("");
   const [error, setError] = useState("");
   const [critical, setCritical] = useState(0);
+  const [publicAiContext, setPublicAiContext] = useState(true);
+  const [optimization, setOptimization] = useState<OptimizationReport | null>(null);
 
   useEffect(() => {
     let active = true;
     void import("@solara/exporter")
-      .then(({ auditReport }) => {
-        if (active) setCritical(auditReport(project).criticalCount);
+      .then(({ auditReport, buildOptimizationReport }) => {
+        if (active) {
+          setCritical(auditReport(project).criticalCount);
+          setOptimization(
+            buildOptimizationReport(project, { mode: "production", publicAiContext }),
+          );
+        }
       })
       .catch(() => undefined);
     return () => {
       active = false;
     };
-  }, [project]);
+  }, [project, publicAiContext]);
 
   const exportSite = async (mode: "draft" | "production") => {
     setBusy(mode);
     setError("");
     try {
-      const result = await exportSiteInWorker(project, mode);
+      const result = await exportSiteInWorker(project, mode, {
+        publicAiContext,
+        optimizationProfile: "safe",
+      });
+      setOptimization(result.optimization);
       downloadBlob(result.zip, `${project.slug}-${mode}.zip`, "application/zip");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo exportar la tienda.");
@@ -87,6 +99,22 @@ export function ExportPanel({
         description="El respaldo editable y el sitio público son archivos distintos."
       />
       {error ? <InlineError>{error}</InlineError> : null}
+      <label className="export-ai-context">
+        <input
+          type="checkbox"
+          checked={publicAiContext}
+          onChange={(event) => setPublicAiContext(event.target.checked)}
+        />
+        Publicar contexto público para agentes (`llms.txt` y `ai-context.json`)
+      </label>
+      {optimization ? (
+        <output className="optimization-export-summary">
+          <strong>Salud de exportación: {optimization.score}/100</strong>
+          <span>{optimization.counts.critical} críticos</span>
+          <span>{optimization.counts.warnings} advertencias</span>
+          <span>{optimization.counts.indexable} rutas indexables</span>
+        </output>
+      ) : null}
       <div className="export-options">
         <article>
           <FileArchive aria-hidden size={25} />
