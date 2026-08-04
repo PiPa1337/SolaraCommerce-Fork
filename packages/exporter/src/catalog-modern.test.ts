@@ -1,3 +1,4 @@
+import { StoreProjectV2Schema } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
 import { describe, expect, it } from "vitest";
@@ -19,7 +20,7 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(productPages).toHaveLength(50);
     expect(categoryPages).toHaveLength(17);
     expect(home).toContain('data-design-family="catalog-modern-v1"');
-    expect(home).toContain(">Categorías</summary>");
+    expect(home).toMatch(/>Categorías<span class="catalog-nav-chevron"/);
     expect(home).toContain('class="catalog-mega-menu__groups"');
     expect(home).toContain('class="catalog-mega-group catalog-mega-group--has-children"');
     expect(home).not.toContain(">Tienda</summary>");
@@ -118,5 +119,31 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(transported).not.toMatch(/\ssrc="\/__solara-preview-assets\//);
     expect(transported).not.toContain(payload);
     expect(transported.length).toBeLessThan(2_000_000);
+  });
+
+  it("calcula el navbar moderno para cantidades de categorías variables", () => {
+    const custom = StoreProjectV2Schema.parse({
+      ...structuredClone(catalogModernStore),
+      navigation: {
+        ...catalogModernStore.navigation,
+        catalogLabel: "Explorar",
+        items: [
+          { id: "nav-one", label: "Una categoría", href: "/categorias/remeras/" },
+          {
+            id: "nav-two",
+            label: "Otra categoría",
+            href: "/categorias/pantalones/",
+            children: [{ id: "nav-child", label: "Subcategoría", href: "/categorias/jeans/" }],
+          },
+        ],
+      },
+    });
+    const html = renderPreviewHtml(custom, "draft", "/");
+
+    expect(html).toContain('>Explorar<span class="catalog-nav-chevron"');
+    expect(html).toContain("Una categoría");
+    expect(html).toContain("Subcategoría");
+    expect(html).toContain('class="catalog-mobile-categories"');
+    expect(html).not.toContain(">Tienda</summary>");
   });
 });

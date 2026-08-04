@@ -678,16 +678,26 @@ function storefrontBoot(): void {
     document.querySelector<HTMLElement>("#catalog-mobile-menu");
   const modernMenuOpen = document.querySelector<HTMLButtonElement>("[data-catalog-menu-open]");
   const modernMenuClose = modernMenu?.querySelector<HTMLButtonElement>("[data-catalog-menu-close]");
+  const modernMenuFocusable = (): HTMLElement[] =>
+    modernMenu
+      ? Array.from(
+          modernMenu.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), input:not([disabled]), summary, select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          ),
+        ).filter((element) => !element.hidden && element.getClientRects().length > 0)
+      : [];
   const closeModernMenu = (): void => {
     if (!modernMenu) return;
     modernMenu.hidden = true;
     modernMenuOpen?.setAttribute("aria-expanded", "false");
+    document.documentElement.classList.remove("catalog-mobile-menu-open");
     modernMenuOpen?.focus();
   };
   modernMenuOpen?.addEventListener("click", () => {
     if (!modernMenu) return;
     modernMenu.hidden = false;
     modernMenuOpen.setAttribute("aria-expanded", "true");
+    document.documentElement.classList.add("catalog-mobile-menu-open");
     modernMenuClose?.focus();
   });
   modernMenuClose?.addEventListener("click", closeModernMenu);
@@ -698,7 +708,45 @@ function storefrontBoot(): void {
     if (event.key === "Escape") {
       event.preventDefault();
       closeModernMenu();
+      return;
     }
+    if (event.key !== "Tab") return;
+    const focusable = modernMenuFocusable();
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  });
+  modernMenu?.querySelectorAll<HTMLDetailsElement>("details").forEach((details) => {
+    details.addEventListener("toggle", () => {
+      details
+        .querySelector<HTMLElement>(":scope > summary")
+        ?.setAttribute("aria-expanded", String(details.open));
+    });
+  });
+
+  const modernNavMenu = document.querySelector<HTMLDetailsElement>(
+    '[data-solara-module="catalog-header"] .catalog-nav-menu',
+  );
+  const modernNavSummary = modernNavMenu?.querySelector<HTMLElement>(":scope > summary");
+  modernNavMenu?.addEventListener("toggle", () => {
+    modernNavSummary?.setAttribute("aria-expanded", String(modernNavMenu.open));
+  });
+  modernNavMenu?.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    modernNavMenu.open = false;
+    modernNavSummary?.focus();
+  });
+  document.addEventListener("click", (event) => {
+    if (!modernNavMenu?.open || !(event.target instanceof Node)) return;
+    if (!modernNavMenu.contains(event.target)) modernNavMenu.open = false;
   });
 
   const modernSearchDialog = document.querySelector<HTMLDialogElement>(

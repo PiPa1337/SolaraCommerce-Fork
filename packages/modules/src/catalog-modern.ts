@@ -139,7 +139,31 @@ export const catalogHeader: ModuleDefinition<z.infer<typeof headerSettings>> = {
           })),
       }));
     const navigationItems = navigation.mode === "automatic" ? automaticItems : navigation.items;
-    const menuItems = navigationItems
+    const current = (types: string[]) =>
+      types.includes(context.pageType ?? "") ? ' aria-current="page"' : "";
+    const configuredCatalogLabel = navigation.catalogLabel.trim();
+    // "Tienda" was the previous default; keep it readable while preserving other custom labels.
+    const catalogLabel =
+      configuredCatalogLabel && configuredCatalogLabel.toLowerCase() !== "tienda"
+        ? configuredCatalogLabel
+        : "Categorías";
+    const icon = (name: "home" | "categories" | "contact" | "about"): string => {
+      const paths = {
+        home: '<path d="m3.5 10.5 8.5-7 8.5 7v9a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z"></path>',
+        categories:
+          '<path d="m4 7 8-4 8 4-8 4z"></path><path d="m4 12 8 4 8-4"></path><path d="m4 17 8 4 8-4"></path>',
+        contact:
+          '<rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m4 7 8 6 8-6"></path>',
+        about:
+          '<circle cx="8" cy="8" r="3"></circle><circle cx="17" cy="9" r="2.5"></circle><path d="M2.5 19a5.5 5.5 0 0 1 11 0"></path><path d="M13 18a4.5 4.5 0 0 1 8.5 1"></path>',
+      } as const;
+      return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[name]}</svg>`;
+    };
+    const chevron =
+      '<span class="catalog-nav-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m6 9 6 6 6-6"></path></svg></span>';
+    const forwardChevron =
+      '<span class="catalog-nav-chevron catalog-nav-chevron--forward" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m9 6 6 6-6 6"></path></svg></span>';
+    const desktopMenuItems = navigationItems
       .map((item) => {
         const hasChildren = Boolean(item.children?.length);
         const children = hasChildren
@@ -150,22 +174,39 @@ export const catalogHeader: ModuleDefinition<z.infer<typeof headerSettings>> = {
               )
               .join("")}</ul>`
           : "";
-        return `<li class="catalog-mega-group${hasChildren ? " catalog-mega-group--has-children" : ""}"><a class="catalog-mega-group__link" href="${escapeAttribute(safeUrl(item.href ?? "#"))}">${escapeHtml(item.label)}</a>${children}</li>`;
+        return `<li class="catalog-mega-group${hasChildren ? " catalog-mega-group--has-children" : ""}"><a class="catalog-mega-group__link" href="${escapeAttribute(safeUrl(item.href ?? "#"))}"><span>${escapeHtml(item.label)}</span></a>${children}</li>`;
       })
       .join("");
-    const current = (types: string[]) =>
-      types.includes(context.pageType ?? "") ? ' aria-current="page"' : "";
-    const catalog = navigationItems.length
-      ? `<details class="catalog-nav-menu"><summary class="catalog-nav-trigger" aria-controls="catalog-category-menu" aria-haspopup="true"${current(["category", "collection"])}>${escapeHtml(navigation.catalogLabel || "Categorías")}</summary><div id="catalog-category-menu" class="catalog-mega-menu" role="group" aria-label="Categorías"><ul class="catalog-mega-menu__groups">${menuItems}</ul></div></details>`
+    const desktopMenu = navigationItems.length
+      ? `<div id="catalog-category-menu" class="catalog-mega-menu" role="group" aria-label="Categorías"><ul class="catalog-mega-menu__groups">${desktopMenuItems}</ul><a class="catalog-mega-menu__all" href="/buscar/">Ver todos los productos <span aria-hidden="true">→</span></a></div>`
       : "";
+    const catalog = navigationItems.length
+      ? `<details class="catalog-nav-menu"><summary class="catalog-nav-trigger" aria-controls="catalog-category-menu" aria-haspopup="true" aria-expanded="false"${current(["category", "collection"])}>${escapeHtml(catalogLabel)}${chevron}</summary>${desktopMenu}</details>`
+      : `<a class="catalog-nav-empty" href="/buscar/"${current(["category", "collection"])}>${escapeHtml(catalogLabel)}</a>`;
+    const firstExpandableIndex = navigationItems.findIndex((item) =>
+      Boolean(item.children?.length),
+    );
+    const mobileCategoryItems = navigationItems
+      .map((item, index) => {
+        const children = item.children ?? [];
+        if (children.length === 0) {
+          return `<a class="catalog-mobile-category-link" href="${escapeAttribute(safeUrl(item.href ?? "#"))}"><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("categories")}</span><span>${escapeHtml(item.label)}</span>${forwardChevron}</a>`;
+        }
+        const panelId = `catalog-mobile-category-${index}-panel`;
+        const isOpen = index === firstExpandableIndex;
+        return `<details class="catalog-mobile-category"${isOpen ? " open" : ""}><summary aria-controls="${panelId}" aria-expanded="${String(isOpen)}"><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("categories")}</span><span>${escapeHtml(item.label)}</span>${chevron}</summary><ul id="${panelId}" class="catalog-mobile-category__children"><li><a class="catalog-mobile-category__parent" href="${escapeAttribute(safeUrl(item.href ?? "#"))}">Ver ${escapeHtml(item.label)}</a></li>${children
+          .map(
+            (child) =>
+              `<li><a href="${escapeAttribute(safeUrl(child.href ?? "#"))}">${escapeHtml(child.label)}</a></li>`,
+          )
+          .join("")}</ul></details>`;
+      })
+      .join("");
+    const mobileCategories = navigationItems.length
+      ? `<details class="catalog-mobile-categories" open><summary aria-controls="catalog-mobile-categories-panel" aria-expanded="true"><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("categories")}</span><span>${escapeHtml(catalogLabel)}</span>${chevron}</summary><div id="catalog-mobile-categories-panel" class="catalog-mobile-categories__panel">${mobileCategoryItems}</div></details>`
+      : `<a class="catalog-mobile-nav-link" href="/buscar/"><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("categories")}</span><span>${escapeHtml(catalogLabel)}</span>${forwardChevron}</a>`;
     const nav = `${navigation.showHome ? `<a href="/"${current(["home"])}>Inicio</a>` : ""}${catalog}${navigation.showContact ? `<a href="/contacto/"${current(["contact"])}>Contacto</a>` : ""}${navigation.showAbout ? `<a href="/nosotros/"${current(["about"])}>Nosotros</a>` : ""}`;
-    const mobileNav = nav
-      .replace('<details class="catalog-nav-menu">', '<details class="catalog-nav-menu" open>')
-      .replace(
-        'aria-controls="catalog-category-menu"',
-        'aria-controls="catalog-category-menu-mobile"',
-      )
-      .replace('id="catalog-category-menu"', 'id="catalog-category-menu-mobile"');
+    const mobileNav = `${navigation.showHome ? `<a class="catalog-mobile-nav-link" href="/"${current(["home"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("home")}</span><span>Inicio</span>${forwardChevron}</a>` : ""}${mobileCategories}${navigation.showContact ? `<a class="catalog-mobile-nav-link" href="/contacto/"${current(["contact"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("contact")}</span><span>Contacto</span>${forwardChevron}</a>` : ""}${navigation.showAbout ? `<a class="catalog-mobile-nav-link" href="/nosotros/"${current(["about"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("about")}</span><span>Nosotros</span>${forwardChevron}</a>` : ""}`;
     const search =
       navigation.showSearch && context.project.commerceTemplates.search.enabled
         ? `<button class="catalog-search-link" type="button" data-catalog-search-open aria-controls="catalog-search-dialog" aria-expanded="false" aria-label="${escapeAttribute(context.settings.searchLabel)}"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><span>${escapeHtml(context.settings.searchLabel)}</span></button><noscript><a class="catalog-search-noscript" href="/buscar/">${escapeHtml(context.settings.searchLabel)}</a></noscript>`
@@ -182,7 +223,7 @@ export const catalogHeader: ModuleDefinition<z.infer<typeof headerSettings>> = {
         <a class="catalog-brand" href="/" aria-label="Inicio de ${escapeAttribute(context.project.identity.brandName)}">${renderBrand(context.project)}</a>
         <nav class="catalog-desktop-nav" aria-label="Navegación principal">${nav}</nav>
         <div class="catalog-header-actions">${search}${cart}</div>
-        <aside id="catalog-mobile-menu" class="catalog-mobile-menu" data-catalog-menu hidden aria-label="Navegación móvil"><button type="button" data-catalog-menu-close aria-label="Cerrar menú">Cerrar</button><nav>${mobileNav}</nav></aside>
+        <aside id="catalog-mobile-menu" class="catalog-mobile-menu" data-catalog-menu hidden role="dialog" aria-modal="true" aria-label="Navegación móvil"><div class="catalog-mobile-menu__header"><a class="catalog-mobile-brand" href="/" aria-label="Inicio de ${escapeAttribute(context.project.identity.brandName)}">${renderBrand(context.project)}</a><button type="button" class="catalog-mobile-menu__close" data-catalog-menu-close aria-label="Cerrar menú"><span class="sr-only">Cerrar menú</span><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="m6 6 12 12M18 6 6 18"></path></svg></button></div><form class="catalog-mobile-search" action="/buscar/" method="get" role="search"><label class="sr-only" for="catalog-mobile-search-input">Buscar productos</label><div class="catalog-mobile-search__field"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><input id="catalog-mobile-search-input" name="q" type="search" placeholder="Buscar productos..." autocomplete="off"><button type="submit" aria-label="Buscar"><span aria-hidden="true">→</span></button></div></form><nav aria-label="Navegación móvil">${mobileNav}</nav></aside>
         <dialog id="catalog-search-dialog" class="catalog-search-dialog" data-catalog-search-dialog aria-labelledby="catalog-search-title">
           <form class="catalog-search-dialog-form" action="/buscar/" method="get" role="search">
             <div class="catalog-search-dialog-heading"><div><p class="catalog-eyebrow">Catálogo</p><h2 id="catalog-search-title">Buscar productos</h2></div><button type="button" data-catalog-search-close aria-label="Cerrar búsqueda">Cerrar</button></div>

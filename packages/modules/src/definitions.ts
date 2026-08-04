@@ -80,7 +80,7 @@ export const announcementBar: ModuleDefinition<z.infer<typeof announcementSettin
 };
 
 const headerSettings = z.object({
-  catalogLabel: z.string().default("Tienda"),
+  catalogLabel: z.string().default("Categorías"),
   catalogHref: z.string().default("/#productos"),
   showCategories: z.boolean().default(true),
   cartLabel: z.string().default("Carrito"),

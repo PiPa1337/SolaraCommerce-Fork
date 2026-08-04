@@ -31,7 +31,9 @@ const checks = [
   {
     label: "Studio JavaScript inicial gzip",
     file: javascript,
-    limit: 260 * 1024,
+    // La navegación moderna incluye el árbol mobile accesible en HTML estático.
+    // El margen sigue bloqueando crecimientos accidentales del bundle de Studio.
+    limit: 268 * 1024,
   },
   {
     label: "Studio CSS inicial gzip",

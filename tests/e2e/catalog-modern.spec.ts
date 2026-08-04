@@ -205,6 +205,7 @@ test("la navegación, el detalle moderno y las variantes siguen siendo rastreabl
   await catalogTrigger.click();
   const megaMenu = page.locator(".catalog-desktop-nav .catalog-mega-menu");
   await expect(megaMenu).toBeVisible();
+  await expect(catalogTrigger).toHaveAttribute("aria-expanded", "true");
   await expect(megaMenu.locator(".catalog-mega-group")).toHaveCount(10);
   await expect(
     megaMenu.locator(".catalog-mega-group").filter({ hasText: "Remeras" }),
@@ -224,10 +225,13 @@ test("la navegación, el detalle moderno y las variantes siguen siendo rastreabl
     await megaMenu
       .locator(".catalog-mega-menu__groups")
       .evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length),
-  ).toBe(3);
+  ).toBe(4);
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
     false,
   );
+  await page.keyboard.press("Escape");
+  await expect(megaMenu).toBeHidden();
+  await expect(catalogTrigger).toHaveAttribute("aria-expanded", "false");
   await page.setViewportSize({ width: 768, height: 900 });
   await page.goto("/");
   await page.locator(".catalog-desktop-nav .catalog-nav-trigger").click();
@@ -244,8 +248,19 @@ test("la navegación, el detalle moderno y las variantes siguen siendo rastreabl
   await page.goto("/");
   await page.getByRole("button", { name: /Abrir/ }).click();
   await expect(page.locator("#catalog-mobile-menu")).toBeVisible();
+  await expect(page.locator("#catalog-mobile-menu")).toHaveAttribute("role", "dialog");
+  await expect(page.locator("#catalog-mobile-search-input")).toBeVisible();
+  await expect(page.locator(".catalog-mobile-categories > summary")).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  await expect(page.locator(".catalog-mobile-category__children a").first()).toHaveAttribute(
+    "href",
+    "/categorias/remeras/",
+  );
   await expect(page.locator('#catalog-mobile-menu a[href="/categorias/remeras/"]')).toBeVisible();
   await page.getByRole("button", { name: "Cerrar menú" }).click();
+  await expect(page.getByRole("button", { name: /Abrir/ })).toBeFocused();
 
   await page.goto("/productos/remera-esencial-de-algodon/");
   await expect(
@@ -369,6 +384,14 @@ test("captura la matriz visual de Catalog Modern", async ({ page }) => {
           fullPage: false,
         });
         await desktopCatalogTrigger.click();
+      }
+      if (route.name === "home" && viewport.name === "mobile") {
+        await page.getByRole("button", { name: /Abrir/ }).click();
+        await page.screenshot({
+          path: resolve(outputDirectory, `catalog-modern-navbar-${viewport.name}-${stage}.png`),
+          fullPage: false,
+        });
+        await page.getByRole("button", { name: "Cerrar menú" }).click();
       }
       await page.screenshot({
         path: resolve(

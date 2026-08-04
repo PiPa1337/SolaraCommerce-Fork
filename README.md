@@ -127,7 +127,7 @@ fixture de escala muestra 12 productos en una grilla compacta de cuatro, tres o
 dos columnas según el viewport. Las categorías mantienen páginas de 24 productos
 para explorar catálogos extensos sin convertir la home en una lista interminable.
 
-El storefront moderno usa una navbar curada con Inicio, Tienda, Contacto,
+El storefront moderno usa una navbar curada con Inicio, Categorías, Contacto,
 Nosotros, búsqueda y carrito. El hero puede trabajar con imagen, carrusel o
 video local autocontenido. La home prioriza novedades, más elegidos y categorías;
 el exporter genera también `/contacto/`, `/nosotros/`, `/buscar/`, `/carrito/` y
@@ -246,7 +246,7 @@ limpiar la caché regenerable de imágenes. El exportador genera `_headers` con
 CSP, Referrer-Policy, Permissions-Policy y protección contra framing.
 
 El gate incluye `corepack pnpm check:budgets`, que bloquea bundles iniciales de
-Studio por encima de 260 KiB gzip de JavaScript o 100 KiB gzip de CSS. La matriz
+Studio por encima de 268 KiB gzip de JavaScript o 100 KiB gzip de CSS. La matriz
 multinavegador y Lighthouse se ejecutan en el gate de release, no en cada cambio
 local.
 
