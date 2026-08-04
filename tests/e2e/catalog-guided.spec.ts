@@ -32,6 +32,7 @@ test("abre la base limpia en Preparar y ofrece edición manual por pasos", async
   await page.reload();
 
   await createCleanStore(page, "Tienda guiada");
+  await page.getByRole("button", { name: "Preparar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
   await expect(page.getByText(/ de .* requisitos listos/)).toBeVisible();
 

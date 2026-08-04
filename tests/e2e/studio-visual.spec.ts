@@ -183,6 +183,37 @@ test("preview diferencia escritorio, tablet y móvil", async ({ page }) => {
   }
 });
 
+test("el panel de trabajo se despliega desde la izquierda y deja crecer el preview", async ({
+  page,
+}) => {
+  await page.setViewportSize(viewports[0]);
+  await openProject(page);
+
+  const workspace = page.locator(".studio-workspace");
+  const editor = page.locator("[data-studio-editor-pane]");
+  const preview = page.locator(".preview-pane");
+  await expect(editor).toHaveClass(/editor-pane--closed/);
+  await expect(page.getByRole("button", { name: "Abrir panel de edición" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Preparar", exact: true }).click();
+  await expect(editor).toHaveClass(/editor-pane--open/);
+  await expect(page.getByRole("button", { name: "Cerrar panel de edición" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Cerrar panel de edición" }).click();
+  await expect(editor).toHaveClass(/editor-pane--closed/);
+  await expect(page.getByRole("button", { name: "Abrir panel de edición" })).toBeVisible();
+
+  const workspaceBox = await workspace.boundingBox();
+  const previewBox = await preview.boundingBox();
+  expect(workspaceBox).not.toBeNull();
+  expect(previewBox).not.toBeNull();
+  expect(previewBox?.width).toBeCloseTo(workspaceBox?.width ?? 0, -1);
+
+  await page.getByRole("button", { name: "Abrir panel de edición" }).click();
+  await expect(editor).toHaveClass(/editor-pane--open/);
+  await expect(page.getByRole("button", { name: "Cerrar panel de edición" })).toBeVisible();
+});
+
 test("Studio respeta foco, modo oscuro y movimiento reducido", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
   await page.goto(studioUrl);

@@ -1,11 +1,23 @@
-import { Desktop, DeviceMobile, DeviceTablet, EyeSlash } from "@phosphor-icons/react";
+import {
+  Desktop,
+  DeviceMobile,
+  DeviceTablet,
+  EyeSlash,
+  SidebarSimple,
+} from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { IconButton } from "../components/Ui";
 
 type PreviewSize = "desktop" | "tablet" | "mobile";
 
-export function Preview({ project }: { project: StoreProjectV1 }) {
+export function Preview({
+  project,
+  onOpenEditor,
+}: {
+  project: StoreProjectV1;
+  onOpenEditor?: () => void;
+}) {
   const [size, setSize] = useState<PreviewSize>("desktop");
   const [route, setRoute] = useState("/");
   const [html, setHtml] = useState("");
@@ -109,7 +121,16 @@ export function Preview({ project }: { project: StoreProjectV1 }) {
   return (
     <aside className="preview-pane" aria-label="Vista previa de la tienda">
       <header>
-        <strong>Vista previa</strong>
+        <div className="preview-heading">
+          {onOpenEditor ? (
+            <IconButton
+              icon={SidebarSimple}
+              label="Abrir panel de edición"
+              onClick={onOpenEditor}
+            />
+          ) : null}
+          <strong>Vista previa</strong>
+        </div>
         <label className="preview-route">
           <span className="visually-hidden">Ruta de vista previa</span>
           <select value={route} onChange={(event) => setRoute(event.target.value)}>

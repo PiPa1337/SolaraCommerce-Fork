@@ -11,6 +11,7 @@ import {
   Package,
   PaintBrush,
   Storefront,
+  X,
 } from "@phosphor-icons/react";
 import {
   createHistory,
@@ -21,8 +22,8 @@ import {
   undo,
 } from "@solara/core";
 import { type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
-import { motion, useReducedMotion } from "motion/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { motion } from "motion/react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { IconButton } from "../components/Ui";
 import { AutosaveQueue, type AutosaveState } from "../lib/autosave";
 import { downloadBlob } from "../lib/projectArchive";
@@ -69,13 +70,14 @@ export function Studio({
 }) {
   const [history, setHistory] = useState<HistoryState>(() => createHistory(initialProject));
   const [tab, setTab] = useState<StudioTab>("guided");
+  const [editorOpen, setEditorOpen] = useState(false);
   const [advancedMode, setAdvancedMode] = useState(false);
   const [saveState, setSaveState] = useState<AutosaveState>("saved");
   const [validationError, setValidationError] = useState("");
   const [leaving, setLeaving] = useState(false);
   const [autosave] = useState(() => new AutosaveQueue(saveProject, 550));
+  const editorPaneId = useId();
   const lastProjectRef = useRef(initialProject);
-  const reduceMotion = useReducedMotion();
   const project = history.present;
 
   useEffect(() => {
@@ -265,10 +267,13 @@ export function Studio({
             type="button"
             key={id}
             aria-current={tab === id ? "page" : undefined}
+            aria-controls={editorPaneId}
+            aria-expanded={tab === id ? editorOpen : false}
             onClick={() => {
               if (id !== "guided") setAdvancedMode(true);
               else setAdvancedMode(false);
               setTab(id);
+              setEditorOpen(true);
             }}
           >
             <Icon aria-hidden size={19} weight={tab === id ? "fill" : "regular"} />
@@ -279,15 +284,23 @@ export function Studio({
 
       <div className="studio-workspace">
         <motion.main
-          className="editor-pane"
+          id={editorPaneId}
+          data-studio-editor-pane
+          aria-label="Panel de edición"
+          aria-hidden={!editorOpen}
+          className={`editor-pane${editorOpen ? " editor-pane--open" : " editor-pane--closed"}`}
           key={tab}
-          initial={reduceMotion ? false : { opacity: 0, x: -5 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.18 }}
+          initial={false}
         >
+          <IconButton
+            className="editor-pane-close"
+            icon={X}
+            label="Cerrar panel de edición"
+            onClick={() => setEditorOpen(false)}
+          />
           {renderTab()}
         </motion.main>
-        <Preview project={project} />
+        <Preview project={project} onOpenEditor={() => setEditorOpen(true)} />
       </div>
     </div>
   );
