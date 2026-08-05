@@ -54,6 +54,20 @@ function statusLabel(status: StoredProject["status"]): string {
   return status === "archived" ? "Archivada" : "Activa";
 }
 
+function formatCompactDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Sin fecha";
+  const parts = new Intl.DateTimeFormat("es-AR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).formatToParts(date);
+  const day = parts.find((part) => part.type === "day")?.value ?? "";
+  const month = parts.find((part) => part.type === "month")?.value.replaceAll(".", "") ?? "";
+  const year = parts.find((part) => part.type === "year")?.value ?? "";
+  return [day, month, year].filter(Boolean).join(" ");
+}
+
 export function Dashboard({
   projects,
   onCreate,
@@ -358,6 +372,7 @@ export function Dashboard({
                 visible.map((record, index) => {
                   const metrics = getProjectMetrics(record.project);
                   const isSelected = record.id === selectedId;
+                  const updatedLabel = formatDate(record.updatedAt);
                   return (
                     <motion.article
                       className={`dashboard-store-card${isSelected ? " is-selected" : ""}`}
@@ -385,9 +400,13 @@ export function Dashboard({
                         <span className="dashboard-store-card__meta">
                           {metrics.activeProducts.toLocaleString("es-AR")} productos
                         </span>
-                        <span className="dashboard-store-card__meta">
-                          Actualizada {formatDate(record.updatedAt)}
-                        </span>
+                        <time
+                          className="dashboard-store-card__meta"
+                          dateTime={record.updatedAt}
+                          title={`Actualizada ${updatedLabel}`}
+                        >
+                          {formatCompactDate(record.updatedAt)}
+                        </time>
                       </button>
                     </motion.article>
                   );
@@ -432,7 +451,9 @@ export function Dashboard({
                     </div>
                     <div>
                       <dt>Actualizada</dt>
-                      <dd>{formatDate(selected.updatedAt)}</dd>
+                      <dd title={formatDate(selected.updatedAt)}>
+                        {formatCompactDate(selected.updatedAt)}
+                      </dd>
                     </div>
                     <div>
                       <dt>Productos</dt>

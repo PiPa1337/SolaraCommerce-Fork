@@ -119,6 +119,7 @@ test("dashboard cosmic muestra datos reales y creación guiada", async ({ page }
     .toBeGreaterThan(0);
   await expect(page.getByText("50", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Productos activos", { exact: true })).toBeVisible();
+  await expect(page.locator(".dashboard-store-card__meta").last()).toHaveText("29 jul 2026");
   await expect(page.locator(".cosmic-background canvas")).toHaveCount(1);
   await expectNoHorizontalOverflow(page, "Dashboard cosmic");
 

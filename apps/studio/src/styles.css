@@ -665,7 +665,7 @@ input[type="color"] {
   isolation: isolate;
   min-height: calc(100dvh - 72px);
   overflow: hidden;
-  padding: clamp(30px, 5vw, 64px) clamp(16px, 3vw, 36px) 52px;
+  padding: clamp(18px, 2.5vw, 28px) clamp(16px, 3vw, 36px) 24px;
   background: var(--cosmic-bg);
   color: var(--cosmic-ink);
 }
@@ -720,12 +720,12 @@ input[type="color"] {
   grid-template-columns: minmax(0, 1fr) minmax(440px, 0.92fr);
   align-items: end;
   gap: clamp(24px, 5vw, 84px);
-  padding-bottom: 28px;
+  padding-bottom: 14px;
 }
 
 .dashboard-cosmic-kicker {
   display: block;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   color: var(--cosmic-amber);
   font-size: 10px;
   font-weight: 750;
@@ -734,10 +734,10 @@ input[type="color"] {
 }
 
 .dashboard-cosmic-hero h1 {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   color: var(--cosmic-ink);
   font-family: var(--font-display);
-  font-size: clamp(3rem, 7vw, 6.5rem);
+  font-size: clamp(2.7rem, 5.2vw, 4.8rem);
   font-weight: 600;
   letter-spacing: -0.07em;
   line-height: 0.9;
@@ -745,10 +745,10 @@ input[type="color"] {
 
 .dashboard-cosmic-hero p {
   max-width: 46ch;
-  margin-bottom: 22px;
+  margin-bottom: 12px;
   color: var(--cosmic-muted);
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.45;
 }
 
 .dashboard-cosmic .button--primary {
@@ -768,7 +768,7 @@ input[type="color"] {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   align-self: end;
-  padding: 17px 8px;
+  padding: 10px 6px;
   border: 1px solid var(--cosmic-line-strong);
   border-radius: 16px;
   background: rgb(12 15 22 / 0.78);
@@ -780,10 +780,10 @@ input[type="color"] {
 
 .dashboard-cosmic-metrics > div {
   display: grid;
-  min-height: 66px;
+  min-height: 58px;
   align-content: center;
   gap: 4px;
-  padding: 0 16px;
+  padding: 0 10px;
   border-right: 1px solid var(--cosmic-line);
 }
 
@@ -836,7 +836,7 @@ input[type="color"] {
   align-items: end;
   justify-content: space-between;
   gap: 14px;
-  padding: 22px 22px 18px;
+  padding: 13px 16px 11px;
   border-bottom: 1px solid var(--cosmic-line);
 }
 
@@ -864,7 +864,7 @@ input[type="color"] {
   grid-template-columns: minmax(220px, 1.5fr) minmax(142px, 0.7fr) minmax(190px, 0.8fr) auto;
   align-items: center;
   gap: 8px;
-  padding: 14px 16px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--cosmic-line);
 }
 
@@ -949,7 +949,7 @@ input[type="color"] {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 270px;
   gap: 12px;
-  padding: 12px;
+  padding: 8px;
 }
 
 .dashboard-cosmic-store-grid {
@@ -989,11 +989,11 @@ input[type="color"] {
   position: relative;
   display: grid;
   width: 100%;
-  min-height: 162px;
+  min-height: 138px;
   align-content: start;
   justify-items: center;
-  gap: 7px;
-  padding: 15px 12px 13px;
+  gap: 5px;
+  padding: 12px 10px 10px;
   border: 0;
   border-radius: inherit;
   background: transparent;
@@ -1086,8 +1086,8 @@ input[type="color"] {
   position: sticky;
   top: 14px;
   align-self: start;
-  min-height: 100%;
-  padding: 16px;
+  min-height: 0;
+  padding: 12px;
   border: 1px solid var(--cosmic-line-strong);
   border-radius: 14px;
   background: rgb(14 17 24 / 0.9);
@@ -1106,7 +1106,7 @@ input[type="color"] {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding-bottom: 14px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--cosmic-line);
   color: var(--cosmic-muted);
   font-size: 11px;
@@ -1120,36 +1120,37 @@ input[type="color"] {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 22px 0;
+  padding: 10px 0;
 }
 
 .dashboard-store-detail__mark {
-  width: 52px;
-  height: 52px;
+  width: 46px;
+  height: 46px;
   border-color: rgb(231 170 61 / 0.72);
   box-shadow: 0 0 22px rgb(231 170 61 / 0.18);
 }
 
 .dashboard-store-detail__identity h3 {
-  margin: 0 0 7px;
+  margin: 0 0 5px;
   color: var(--cosmic-ink);
   font-family: var(--font-ui);
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 650;
 }
 
 .dashboard-store-detail__facts {
   display: grid;
-  gap: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 14px;
   margin: 0;
   border-top: 1px solid var(--cosmic-line);
 }
 
 .dashboard-store-detail__facts div {
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 10px 0;
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 6px 0;
   border-bottom: 1px solid var(--cosmic-line);
 }
 
@@ -1167,20 +1168,29 @@ input[type="color"] {
 .dashboard-store-detail__facts dd {
   overflow: hidden;
   color: var(--cosmic-ink);
-  text-align: right;
+  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .dashboard-store-detail__actions {
   display: grid;
-  gap: 7px;
-  margin-top: 20px;
+  grid-template-columns: 1.25fr 0.9fr 0.9fr;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.dashboard-store-detail__actions .button:first-child {
+  grid-column: 1 / -1;
 }
 
 .dashboard-store-detail__actions .button {
+  min-width: 0;
+  min-height: 34px;
+  padding-inline: 8px;
   justify-content: center;
   width: 100%;
+  font-size: 10px;
 }
 
 .dashboard-store-detail__empty {
@@ -4416,7 +4426,15 @@ tbody tr {
 }
 
 .app-root--dashboard-cosmic .global-notice {
+  margin-top: 8px;
+  padding: 8px 12px;
   color: #d9e5dc;
+  font-size: 11px;
+}
+
+.app-root--dashboard-cosmic .global-notice button {
+  min-height: 28px;
+  min-width: 28px;
 }
 
 .app-root--dashboard-cosmic .global-warning strong,
