@@ -313,6 +313,20 @@ test("preview diferencia escritorio, tablet y móvil", async ({ page }) => {
         await frame.locator("html").evaluate((element) => element.outerHTML.length),
       ).toBeLessThan(14_000_000);
     }
+
+    const frame = page.frameLocator(`iframe[title="${size.title}"]`);
+    await expect
+      .poll(() =>
+        frame.locator("html").evaluate((element) => {
+          const style = getComputedStyle(element);
+          return {
+            policy: style.getPropertyValue("--solara-preview-scrollbar-policy").trim(),
+            scrollable: style.overflowY !== "hidden" && element.scrollHeight > element.clientHeight,
+            webkitDisplay: getComputedStyle(element, "::-webkit-scrollbar").display,
+          };
+        }),
+      )
+      .toEqual({ policy: "hidden", scrollable: true, webkitDisplay: "none" });
   }
 });
 

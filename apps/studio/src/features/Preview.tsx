@@ -12,6 +12,28 @@ import { IconButton } from "../components/Ui";
 export type PreviewSize = "desktop" | "tablet" | "mobile";
 export type PreviewRoute = { path: string; label: string };
 
+const PREVIEW_SCROLLBAR_STYLE = `<style data-solara-preview-scrollbar>
+html,
+body {
+  --solara-preview-scrollbar-policy: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+</style>`;
+
+function addPreviewScrollbarPolicy(document: string): string {
+  const headEnd = document.indexOf("</head>");
+  if (headEnd === -1) return `${PREVIEW_SCROLLBAR_STYLE}${document}`;
+  return `${document.slice(0, headEnd)}${PREVIEW_SCROLLBAR_STYLE}\n${document.slice(headEnd)}`;
+}
+
 export function getPreviewRoutes(project: StoreProjectV1): PreviewRoute[] {
   const firstRoot = project.categories.find((category) => category.parentId === undefined);
   const firstChild = project.categories.find((category) => category.parentId !== undefined);
@@ -152,7 +174,11 @@ export function Preview({
         if (!active) return;
         try {
           previewAssetSources.current = getPreviewAssetSources(project);
-          setHtml(renderPreviewHtml(project, "draft", route, { assetTransport: "parent" }));
+          setHtml(
+            addPreviewScrollbarPolicy(
+              renderPreviewHtml(project, "draft", route, { assetTransport: "parent" }),
+            ),
+          );
           setError("");
         } catch (reason) {
           setError(
