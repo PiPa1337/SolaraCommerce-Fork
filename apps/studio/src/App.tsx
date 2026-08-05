@@ -197,13 +197,19 @@ export function App() {
       ) : null}
       <Dashboard
         projects={projects}
-        onCreate={(input) =>
-          guard(async () => {
+        onCreate={async (input) => {
+          setError("");
+          try {
             const project = await createProject(input);
             await refresh();
             setActive(project);
-          })
-        }
+          } catch (reason) {
+            const message =
+              reason instanceof Error ? reason.message : "No se pudo crear la tienda.";
+            setError(message);
+            throw new Error(message);
+          }
+        }}
         onOpen={(id) =>
           void guard(async () => {
             const project = await getProject(id);

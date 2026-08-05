@@ -132,6 +132,61 @@ test("dashboard cosmic muestra datos reales y creación guiada", async ({ page }
   await expect(createDialog).toBeHidden();
 });
 
+test("dashboard permite abrir, buscar, cambiar vista, respaldar y administrar una tienda", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(studioUrl);
+
+  const card = page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }).first();
+  await card.locator(".dashboard-store-card__button").click();
+  await expect(
+    page.getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" }),
+  ).toBeVisible();
+
+  await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+  await page.getByRole("button", { name: "Volver a tiendas" }).click();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+
+  const listButton = page.getByRole("button", { name: "Vista en lista" });
+  await listButton.click();
+  await expect(page.locator(".dashboard-cosmic-results--list")).toBeVisible();
+
+  const search = page.getByRole("searchbox", { name: "Buscar tienda" });
+  await search.fill("predeterminado");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  await search.fill("no existe");
+  await expect(page.getByText("No hay coincidencias")).toBeVisible();
+  await search.fill("");
+
+  const selectedCard = page
+    .locator(".dashboard-store-card")
+    .filter({ hasText: "Predeterminado" })
+    .first();
+  const selectedButton = selectedCard.locator(".dashboard-store-card__button");
+  await selectedButton.click();
+  const detail = page.getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" });
+  await detail.getByRole("button", { name: "Cerrar detalle" }).click();
+  await expect(selectedButton).toBeFocused();
+  await selectedButton.click();
+
+  const downloadPromise = page.waitForEvent("download");
+  await detail.getByRole("button", { name: "Respaldo ahora" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/\.solara\.zip$/);
+
+  await detail.getByRole("button", { name: "Duplicar" }).click();
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+
+  await detail.getByRole("button", { name: "Archivar" }).click();
+  await expect(detail.getByRole("button", { name: "Restaurar" })).toBeVisible();
+  await page.locator(".dashboard-cosmic-select select").first().selectOption("archived");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  await detail.getByRole("button", { name: "Restaurar" }).click();
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
+});
+
 test("catálogo y constructor conservan jerarquía responsive", async ({ page }) => {
   await openProject(page);
   for (const viewport of viewports) {

@@ -100,6 +100,9 @@ export function Dashboard({
   const shutdownDialogRef = useRef<HTMLDialogElement>(null);
   const selectedPanelRef = useRef<HTMLElement>(null);
   const createButtonRef = useRef<HTMLButtonElement>(null);
+  const cardButtonRefs = useRef(new Map<string, HTMLButtonElement>());
+  const lastSelectedIdRef = useRef<string | undefined>(undefined);
+  const selectionInitializedRef = useRef(false);
   const reduceMotion = useReducedMotion();
   const dashboardTitleId = useId();
   const libraryTitleId = useId();
@@ -113,8 +116,18 @@ export function Dashboard({
   const selected = projects.find((record) => record.id === selectedId);
 
   useEffect(() => {
-    if (selectedId && visible.some((record) => record.id === selectedId)) return;
-    setSelectedId(visible[0]?.id);
+    const selectedIsVisible = selectedId
+      ? visible.some((record) => record.id === selectedId)
+      : false;
+    if (selectedIsVisible) return;
+    if (selectedId) {
+      setSelectedId(visible[0]?.id);
+      return;
+    }
+    if (!selectionInitializedRef.current && visible[0]) {
+      selectionInitializedRef.current = true;
+      setSelectedId(visible[0].id);
+    }
   }, [selectedId, visible]);
 
   useEffect(() => {
@@ -162,8 +175,19 @@ export function Dashboard({
   }, []);
 
   useEffect(() => {
-    if (!selected) return;
-    selectedPanelRef.current?.focus();
+    if (selected) {
+      lastSelectedIdRef.current = selected.id;
+      selectedPanelRef.current?.focus();
+      return;
+    }
+    const lastSelectedId = lastSelectedIdRef.current;
+    if (!lastSelectedId) return;
+    requestAnimationFrame(() => {
+      const card =
+        cardButtonRefs.current.get(lastSelectedId) ??
+        document.querySelector<HTMLButtonElement>(`[data-store-card-id="${lastSelectedId}"]`);
+      card?.focus();
+    });
   }, [selected]);
 
   const openCreate = () => {
@@ -385,6 +409,11 @@ export function Dashboard({
                         className="dashboard-store-card__button"
                         type="button"
                         aria-pressed={isSelected}
+                        data-store-card-id={record.id}
+                        ref={(element) => {
+                          if (element) cardButtonRefs.current.set(record.id, element);
+                          else cardButtonRefs.current.delete(record.id);
+                        }}
                         onClick={() => setSelectedId(record.id)}
                         onDoubleClick={() => onOpen(record.id)}
                       >
@@ -407,6 +436,14 @@ export function Dashboard({
                         >
                           {formatCompactDate(record.updatedAt)}
                         </time>
+                      </button>
+                      <button
+                        className="dashboard-store-card__open"
+                        type="button"
+                        aria-label="Abrir esta tienda"
+                        onClick={() => onOpen(record.id)}
+                      >
+                        Abrir <ArrowUpRight aria-hidden size={13} />
                       </button>
                     </motion.article>
                   );
