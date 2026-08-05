@@ -24,6 +24,74 @@ export interface ProcessedImage {
   responsive: Array<{ width: number; source: string }>;
 }
 
+const IMAGE_WIDTHS = [480, 768, 1200, 1800] as const;
+
+function fallbackImagePlan(sourceWidth: number, sourceHeight: number, maxWidth = 1800) {
+  const width = Math.min(sourceWidth, Math.max(1, Math.min(Math.floor(maxWidth), 1800)));
+  const responsiveWidths = [
+    ...new Set([...IMAGE_WIDTHS.filter((candidate) => candidate < width), width]),
+  ].sort((left, right) => left - right);
+  return {
+    width,
+    height: Math.max(1, Math.round((sourceHeight / sourceWidth) * width)),
+    responsiveWidths,
+  };
+}
+
+function canvasDataUrl(
+  image: HTMLImageElement,
+  width: number,
+  mimeType: "image/webp" | "image/jpeg" | "image/png",
+  preserveAlpha: boolean,
+): string {
+  const height = Math.max(1, Math.round((image.naturalHeight / image.naturalWidth) * width));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d", { alpha: preserveAlpha });
+  if (!context) throw new Error("El navegador no pudo procesar la imagen.");
+  if (!preserveAlpha) {
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+  }
+  context.drawImage(image, 0, 0, width, height);
+  const quality = mimeType === "image/webp" ? 0.82 : mimeType === "image/jpeg" ? 0.88 : undefined;
+  return quality === undefined ? canvas.toDataURL(mimeType) : canvas.toDataURL(mimeType, quality);
+}
+
+async function processImageOnMainThread(file: File, buffer: ArrayBuffer): Promise<ProcessedImage> {
+  if (typeof document === "undefined") {
+    throw new Error("El navegador no pudo procesar la imagen.");
+  }
+  const objectUrl = URL.createObjectURL(new Blob([buffer], { type: file.type }));
+  const image = new Image();
+  image.decoding = "async";
+  try {
+    image.src = objectUrl;
+    await image.decode();
+    if (image.naturalWidth < 1 || image.naturalHeight < 1) {
+      throw new Error("La imagen no tiene dimensiones vÃ¡lidas.");
+    }
+    const plan = fallbackImagePlan(image.naturalWidth, image.naturalHeight);
+    const preserveAlpha = file.type !== "image/jpeg";
+    const responsive = plan.responsiveWidths.map((width) => ({
+      width,
+      source: canvasDataUrl(image, width, "image/webp", preserveAlpha),
+    }));
+    const primary = responsive.at(-1)?.source;
+    if (!primary) throw new Error("No se pudo generar la imagen principal.");
+    const fallbackType = preserveAlpha ? "image/png" : "image/jpeg";
+    return {
+      ...plan,
+      primary,
+      fallback: canvasDataUrl(image, plan.width, fallbackType, preserveAlpha),
+      responsive,
+    };
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 export interface CatalogPackageImage {
   path: string;
   type: string;
@@ -127,16 +195,23 @@ export async function processImageInWorker(file: File): Promise<ProcessedImage> 
   if (file.size === 0) throw new Error("La imagen está vacía.");
   if (file.size > 25 * 1024 * 1024) throw new Error("La imagen supera el límite de 25 MB.");
   const buffer = await file.arrayBuffer();
-  return requestWorker(
-    getImageWorker(),
-    {
-      buffer,
-      name: file.name,
-      type: file.type,
-      maxWidth: 1800,
-    },
-    [buffer],
-  );
+  const workerBuffer = buffer.slice(0);
+  try {
+    return await requestWorker(
+      getImageWorker(),
+      {
+        buffer: workerBuffer,
+        name: file.name,
+        type: file.type,
+        maxWidth: 1800,
+      },
+      [workerBuffer],
+    );
+  } catch (reason) {
+    const message = reason instanceof Error ? reason.message : String(reason);
+    if (!/OffscreenCanvas|createImageBitmap/i.test(message)) throw reason;
+    return processImageOnMainThread(file, buffer);
+  }
 }
 
 export function exportSiteInWorker(

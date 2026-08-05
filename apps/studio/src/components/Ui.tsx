@@ -3,6 +3,7 @@ import { WarningCircle } from "@phosphor-icons/react";
 import {
   type ButtonHTMLAttributes,
   cloneElement,
+  forwardRef,
   type HTMLAttributes,
   isValidElement,
   type ReactNode,
@@ -21,22 +22,20 @@ export function IconButton({
   );
 }
 
-export function Button({
-  icon: IconComponent,
-  children,
-  variant = "secondary",
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & {
-  icon?: Icon;
-  variant?: "primary" | "secondary" | "quiet" | "danger";
-}) {
+export const Button = forwardRef<
+  HTMLButtonElement,
+  ButtonHTMLAttributes<HTMLButtonElement> & {
+    icon?: Icon;
+    variant?: "primary" | "secondary" | "quiet" | "danger";
+  }
+>(function Button({ icon: IconComponent, children, variant = "secondary", ...props }, ref) {
   return (
-    <button className={`button button--${variant}`} type="button" {...props}>
+    <button ref={ref} className={`button button--${variant}`} type="button" {...props}>
       {IconComponent ? <IconComponent aria-hidden size={17} weight="regular" /> : null}
       <span>{children}</span>
     </button>
   );
-}
+});
 
 export function EmptyState({
   icon: IconComponent,

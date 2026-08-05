@@ -40,6 +40,14 @@ Catalog Modern, generada por la misma fábrica, con 10 raíces, 16 categorías,
 masiva y densidad del catálogo; no se duplica en los siguientes arranques ni
 borra tiendas locales existentes.
 
+El inicio de Studio usa un dashboard oscuro de SolaraCommerce: el fondo orbital
+se dibuja con WebGL nativo, el logo se sirve en variantes locales optimizadas y
+las métricas de la portada se calculan únicamente desde los proyectos guardados.
+La biblioteca permite buscar, filtrar, ordenar, alternar grilla/lista, seleccionar
+una tienda y abrir sus acciones de editar, duplicar, archivar, restaurar o crear
+un respaldo. `Nueva tienda` abre el flujo guiado de cuatro pasos y conserva la
+base Catalog Modern limpia.
+
 `Crear tienda` abre una base limpia con el mismo diseño, sin productos,
 categorías ni colecciones, para que cargues tus propios textos, imágenes y
 catálogo desde cero.

@@ -122,6 +122,22 @@ un modo guiado para completar marca, recursos, catálogo y publicación. El modo
 avanzado permite editar secciones y agregar módulos extra. El origen y la
 versión de plantilla quedan en `project.origin` sin cambiar `schemaVersion: 2`.
 
+### Dashboard local Cosmic
+
+La pantalla de selección de tiendas se aisló visualmente del storefront y del
+Studio de edición. Usa una superficie dark-tech cósmica, el logo orbital local y
+un fondo procedural WebGL sin video ni dependencias nuevas. La cuadrícula de
+proyectos muestra sólo datos reales del snapshot local: estado, productos
+activos, categorías, colecciones, recursos y fecha de actualización. El panel
+lateral concentra abrir, respaldar, duplicar y archivar/restaurar; la selección
+no modifica ningún proyecto hasta que se ejecuta una acción explícita.
+
+El toolbar permite búsqueda tolerante a acentos, filtro por estado, orden por
+nombre/fecha/productos y vista de grilla o lista. El fondo baja a un fallback
+CSS si WebGL no está disponible y pausa su render cuando la página no está
+visible o el usuario prefiere movimiento reducido. El botón `Cerrar app` sólo
+detiene el servidor local administrado por el lanzador; nunca borra datos.
+
 ## Escenario de escala jerárquico
 
 El fixture complementario `catalogScaleStore` mantiene el mismo `schemaVersion: 2`

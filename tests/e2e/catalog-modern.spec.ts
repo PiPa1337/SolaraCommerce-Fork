@@ -214,13 +214,17 @@ test("la navegación, el detalle moderno y las variantes siguen siendo rastreabl
     megaMenu.locator(".catalog-mega-group").filter({ hasText: "Pantalones" }),
   ).toContainText("Jeans");
   expect(
-    await page
-      .locator(".catalog-header-inner")
-      .evaluate((element) => getComputedStyle(element).userSelect),
+    await page.locator(".catalog-header-inner").evaluate((element) => {
+      const style = getComputedStyle(element);
+      return style.userSelect || style.getPropertyValue("-webkit-user-select");
+    }),
   ).toBe("none");
-  expect(await catalogTrigger.evaluate((element) => getComputedStyle(element).userSelect)).toBe(
-    "none",
-  );
+  expect(
+    await catalogTrigger.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return style.userSelect || style.getPropertyValue("-webkit-user-select");
+    }),
+  ).toBe("none");
   expect(
     await megaMenu
       .locator(".catalog-mega-menu__groups")

@@ -51,6 +51,7 @@ test("procesa una imagen, muestra el lote y persiste el asset", async ({ page })
 
   await page.reload();
   await page.getByRole("button", { name: "Tienda de recursos" }).click();
+  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await page.getByRole("button", { name: "Recursos", exact: true }).click();
   await expect(page.locator(".asset-item")).toHaveCount(initialAssetCount + 1);
 });

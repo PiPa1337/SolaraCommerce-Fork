@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { InlineError, Skeleton } from "./components/Ui";
 import { Dashboard } from "./features/Dashboard";
 import { Studio } from "./features/Studio";
+import { downloadBlob } from "./lib/projectArchive";
 import {
   consumeStorageResetNotice,
   createProject,
@@ -17,7 +18,7 @@ import {
   saveProject,
   setProjectArchived,
 } from "./lib/repository";
-import { readProjectArchiveInWorker } from "./lib/workers";
+import { createProjectArchiveInWorker, readProjectArchiveInWorker } from "./lib/workers";
 
 export function App() {
   const [projects, setProjects] = useState<StoredProject[]>([]);
@@ -26,6 +27,7 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [sessionManaged, setSessionManaged] = useState(false);
 
   const refresh = useCallback(async () => {
     const result = await listProjectsWithRecovery();
@@ -112,15 +114,39 @@ export function App() {
   }
 
   return (
-    <div className="app-root">
-      <header className="app-header">
+    <div className="app-root app-root--dashboard-cosmic">
+      <header className="app-header app-header--dashboard-cosmic">
         <a className="app-wordmark" href="/" aria-label="SolaraCommerce, inicio">
-          <span className="brand-mark" aria-hidden>
-            S
-          </span>
+          <img
+            className="app-wordmark__logo"
+            src="/branding/solara-orbit-64.png"
+            alt="Logo de SolaraCommerce"
+            width="64"
+            height="64"
+            srcSet="/branding/solara-orbit-32.png 32w, /branding/solara-orbit-64.png 64w, /branding/solara-orbit-128.png 128w, /branding/solara-orbit-256.png 256w"
+            sizes="40px"
+            decoding="async"
+          />
           <span>SolaraCommerce</span>
         </a>
-        <p>Studio local</p>
+        <nav className="app-header__nav" aria-label="Sección actual">
+          <a href="#tiendas" aria-current="page">
+            Tiendas
+          </a>
+        </nav>
+        <div className="app-header__actions">
+          <span className="app-local-status">Studio local</span>
+          <span className="app-local-indicator" aria-hidden />
+          {sessionManaged ? (
+            <button
+              className="app-shutdown-button"
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("solara:open-shutdown"))}
+            >
+              Cerrar app
+            </button>
+          ) : null}
+        </div>
       </header>
       {error ? (
         <div className="global-error">
@@ -197,6 +223,15 @@ export function App() {
             await refresh();
           })
         }
+        onBackup={(id) =>
+          guard(async () => {
+            const project = await getProject(id);
+            if (!project) throw new Error("No se encontró la tienda.");
+            const archive = await createProjectArchiveInWorker(project);
+            downloadBlob(archive, `${project.slug}-respaldo.solara.zip`, "application/zip");
+          })
+        }
+        onSessionManaged={setSessionManaged}
       />
     </div>
   );

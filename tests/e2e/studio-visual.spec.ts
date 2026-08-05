@@ -109,6 +109,28 @@ test("dashboard responde en desktop, tablet y móvil", async ({ page }) => {
   }
 });
 
+test("dashboard cosmic muestra datos reales y creación guiada", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(studioUrl);
+  const logo = page.locator(".app-wordmark__logo");
+  await expect(logo).toHaveAttribute("src", /solara-orbit-64/);
+  await expect
+    .poll(() => logo.evaluate((image) => (image as HTMLImageElement).naturalWidth))
+    .toBeGreaterThan(0);
+  await expect(page.getByText("50", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Productos activos", { exact: true })).toBeVisible();
+  await expect(page.locator(".cosmic-background canvas")).toHaveCount(1);
+  await expectNoHorizontalOverflow(page, "Dashboard cosmic");
+
+  await page.getByRole("button", { name: "Nueva tienda", exact: true }).click();
+  const createDialog = page.getByRole("dialog", { name: "Crear tienda" });
+  await expect(createDialog).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Crear tienda" })).toBeVisible();
+  await page.getByLabel("Nueva tienda").fill("Tienda guiada");
+  await page.getByRole("button", { name: "Cerrar creación" }).click();
+  await expect(createDialog).toBeHidden();
+});
+
 test("catálogo y constructor conservan jerarquía responsive", async ({ page }) => {
   await openProject(page);
   for (const viewport of viewports) {

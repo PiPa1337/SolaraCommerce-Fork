@@ -11,6 +11,7 @@ test("muestra y abre Predeterminado al iniciar Studio", async ({ page }) => {
     await expect(demo).toContainText("50 productos");
 
     await demo.click();
+    await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
     await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
     await page.getByRole("button", { name: "Catálogo", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();

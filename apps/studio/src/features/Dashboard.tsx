@@ -1,16 +1,36 @@
 import {
   Archive,
   ArrowCounterClockwise,
+  ArrowUpRight,
+  CheckCircle,
+  CloudArrowDown,
   Copy,
+  Funnel,
+  GridFour,
+  List,
+  MagnifyingGlass,
+  Package,
   Plus,
-  Power,
+  SortAscending,
   Storefront,
+  X,
 } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, EmptyState, Field, InlineError, SectionHeader } from "../components/Ui";
+import { lazy, Suspense, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Button, EmptyState, Field, IconButton, InlineError } from "../components/Ui";
+import {
+  type DashboardSort,
+  type DashboardStatusFilter,
+  filterDashboardProjects,
+  getDashboardStats,
+  getProjectMetrics,
+} from "../lib/dashboardModel";
 import { formatDate } from "../lib/format";
 import type { StoredProject } from "../lib/repository";
+
+const CosmicBackground = lazy(() =>
+  import("./CosmicBackground").then(({ CosmicBackground: component }) => ({ default: component })),
+);
 
 interface DashboardProps {
   projects: StoredProject[];
@@ -18,27 +38,84 @@ interface DashboardProps {
   onOpen(id: string): void;
   onDuplicate(id: string): Promise<void>;
   onArchive(id: string, archived: boolean): Promise<void>;
+  onBackup(id: string): Promise<void>;
+  onSessionManaged?(managed: boolean): void;
 }
 
-export function Dashboard({ projects, onCreate, onOpen, onDuplicate, onArchive }: DashboardProps) {
-  const [view, setView] = useState<"active" | "archived">("active");
+type DashboardView = "grid" | "list";
+
+const statusLabels: Record<DashboardStatusFilter, string> = {
+  all: "Todas",
+  active: "Activas",
+  archived: "Archivadas",
+};
+
+function statusLabel(status: StoredProject["status"]): string {
+  return status === "archived" ? "Archivada" : "Activa";
+}
+
+export function Dashboard({
+  projects,
+  onCreate,
+  onOpen,
+  onDuplicate,
+  onArchive,
+  onBackup,
+  onSessionManaged,
+}: DashboardProps) {
+  const [statusFilter, setStatusFilter] = useState<DashboardStatusFilter>("all");
+  const [sort, setSort] = useState<DashboardSort>("updated");
+  const [view, setView] = useState<DashboardView>("grid");
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState<string>();
   const [creating, setCreating] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [name, setName] = useState("");
   const [brandName, setBrandName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [createError, setCreateError] = useState("");
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [backupId, setBackupId] = useState<string>();
   const [shutdownState, setShutdownState] = useState<
     "checking" | "unavailable" | "available" | "closing" | "closed"
   >("checking");
   const [shutdownDialogOpen, setShutdownDialogOpen] = useState(false);
   const [shutdownError, setShutdownError] = useState("");
+  const createDialogRef = useRef<HTMLDialogElement>(null);
   const shutdownDialogRef = useRef<HTMLDialogElement>(null);
+  const selectedPanelRef = useRef<HTMLElement>(null);
+  const createButtonRef = useRef<HTMLButtonElement>(null);
   const reduceMotion = useReducedMotion();
+  const dashboardTitleId = useId();
+  const libraryTitleId = useId();
+  const createStoreTitleId = useId();
+
   const visible = useMemo(
-    () => projects.filter((record) => record.status === view),
-    [projects, view],
+    () => filterDashboardProjects(projects, query, statusFilter, sort),
+    [projects, query, sort, statusFilter],
   );
+  const stats = useMemo(() => getDashboardStats(projects), [projects]);
+  const selected = projects.find((record) => record.id === selectedId);
+
+  useEffect(() => {
+    if (selectedId && visible.some((record) => record.id === selectedId)) return;
+    setSelectedId(visible[0]?.id);
+  }, [selectedId, visible]);
+
+  useEffect(() => {
+    const dialog = createDialogRef.current;
+    if (!dialog) return;
+    if (creating && !dialog.open) dialog.showModal();
+    if (!creating && dialog.open) dialog.close();
+  }, [creating]);
+
+  useEffect(() => {
+    const dialog = shutdownDialogRef.current;
+    if (!dialog) return;
+    if (shutdownDialogOpen && !dialog.open) dialog.showModal();
+    if (!shutdownDialogOpen && dialog.open) dialog.close();
+  }, [shutdownDialogOpen]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -52,20 +129,70 @@ export function Dashboard({ projects, onCreate, onOpen, onDuplicate, onArchive }
         const body = (await response.json()) as { managed?: boolean };
         return body.managed === true;
       })
-      .then((managed) => setShutdownState(managed ? "available" : "unavailable"))
+      .then((managed) => {
+        setShutdownState(managed ? "available" : "unavailable");
+        onSessionManaged?.(managed);
+      })
       .catch((reason: unknown) => {
         if (reason instanceof DOMException && reason.name === "AbortError") return;
         setShutdownState("unavailable");
+        onSessionManaged?.(false);
       });
     return () => controller.abort();
+  }, [onSessionManaged]);
+
+  useEffect(() => {
+    const openShutdown = () => setShutdownDialogOpen(true);
+    window.addEventListener("solara:open-shutdown", openShutdown);
+    return () => window.removeEventListener("solara:open-shutdown", openShutdown);
   }, []);
 
   useEffect(() => {
-    const dialog = shutdownDialogRef.current;
-    if (!dialog) return;
-    if (shutdownDialogOpen && !dialog.open) dialog.showModal();
-    if (!shutdownDialogOpen && dialog.open) dialog.close();
-  }, [shutdownDialogOpen]);
+    if (!selected) return;
+    selectedPanelRef.current?.focus();
+  }, [selected]);
+
+  const openCreate = () => {
+    setStep(1);
+    setName("");
+    setBrandName("");
+    setEmail("");
+    setPhone("");
+    setCreateError("");
+    setCreating(true);
+  };
+
+  const closeCreate = () => {
+    if (creatingProject) return;
+    setCreating(false);
+    createButtonRef.current?.focus();
+  };
+
+  const submit = async () => {
+    setCreateError("");
+    if (step < 4) {
+      if (step === 1 && !name.trim()) {
+        setCreateError("Escribí un nombre para continuar.");
+        return;
+      }
+      setStep((current) => (current + 1) as 1 | 2 | 3 | 4);
+      return;
+    }
+    if (!name.trim()) {
+      setCreateError("Escribí un nombre para crear la tienda.");
+      return;
+    }
+    setCreatingProject(true);
+    try {
+      await onCreate({ name, brandName: brandName || name, email, phone });
+      setCreating(false);
+      setStep(1);
+    } catch (reason) {
+      setCreateError(reason instanceof Error ? reason.message : "No se pudo crear la tienda.");
+    } finally {
+      setCreatingProject(false);
+    }
+  };
 
   const requestShutdown = async () => {
     setShutdownState("closing");
@@ -85,99 +212,328 @@ export function Dashboard({ projects, onCreate, onOpen, onDuplicate, onArchive }
     }
   };
 
-  const submit = async () => {
-    if (step < 4) {
-      setStep((current) => (current + 1) as 1 | 2 | 3 | 4);
-      return;
-    }
-    if (!name.trim()) return;
-    setCreating(true);
+  const createBackup = async (id: string) => {
+    setBackupId(id);
     try {
-      await onCreate({ name, brandName: brandName || name, email, phone });
-      setName("");
-      setBrandName("");
-      setEmail("");
-      setPhone("");
-      setStep(1);
+      await onBackup(id);
     } finally {
-      setCreating(false);
+      setBackupId(undefined);
     }
   };
 
   return (
-    <main className="dashboard-page">
-      <div className="dashboard-wrap">
-        <p className="dashboard-kicker">SolaraCommerce · Estudio local</p>
-        <SectionHeader
-          title="Tus tiendas"
-          description="Cada tienda vive en este dispositivo y se puede respaldar como archivo Solara."
-          actions={
-            <div className="dashboard-session-actions">
-              <fieldset className="segmented">
-                <legend className="visually-hidden">Estado de tiendas</legend>
-                <button
-                  type="button"
-                  aria-pressed={view === "active"}
-                  onClick={() => setView("active")}
-                >
-                  Activas
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={view === "archived"}
-                  onClick={() => setView("archived")}
-                >
-                  Archivadas
-                </button>
-              </fieldset>
-              {shutdownState === "available" ? (
-                <Button
-                  variant="danger"
-                  icon={Power}
-                  onClick={() => {
-                    setShutdownError("");
-                    setShutdownDialogOpen(true);
-                  }}
-                >
-                  Cerrar app
-                </Button>
-              ) : null}
+    <main id={"tiendas"} className="dashboard-page dashboard-cosmic">
+      <Suspense
+        fallback={<div className="cosmic-background cosmic-background--fallback" aria-hidden />}
+      >
+        <CosmicBackground intensity="normal" />
+      </Suspense>
+      <div className="dashboard-cosmic__scrim" aria-hidden />
+      <div className="dashboard-wrap dashboard-cosmic__content">
+        <section className="dashboard-cosmic-hero" aria-labelledby={dashboardTitleId}>
+          <div className="dashboard-cosmic-hero__copy">
+            <span className="dashboard-cosmic-kicker">Espacio local</span>
+            <h1 id={dashboardTitleId}>Tus tiendas</h1>
+            <p>Gestioná tus proyectos, catálogos y respaldos desde un solo lugar.</p>
+            <Button ref={createButtonRef} variant="primary" icon={Plus} onClick={openCreate}>
+              Nueva tienda
+            </Button>
+          </div>
+          <section className="dashboard-cosmic-metrics" aria-label="Resumen de tiendas">
+            <div>
+              <strong>{stats.totalStores}</strong>
+              <span>Tiendas totales</span>
             </div>
-          }
-        />
+            <div>
+              <strong>{stats.activeStores}</strong>
+              <span>Tiendas activas</span>
+            </div>
+            <div>
+              <strong>{stats.activeProducts.toLocaleString("es-AR")}</strong>
+              <span>Productos activos</span>
+            </div>
+            <div>
+              <strong>{stats.archivedStores}</strong>
+              <span>Archivadas</span>
+            </div>
+          </section>
+        </section>
 
         {shutdownState === "closed" ? (
-          <output className="shutdown-status">
-            <strong>Servidor local detenido.</strong>
-            <span>Podés cerrar esta pestaña del navegador.</span>
+          <output className="shutdown-status shutdown-status--cosmic">
+            <CheckCircle aria-hidden size={18} />
+            <span>
+              <strong>Servidor local detenido.</strong> Podés cerrar esta pestaña del navegador.
+            </span>
           </output>
         ) : null}
 
+        <section className="dashboard-cosmic-library" aria-labelledby={libraryTitleId}>
+          <header className="dashboard-cosmic-library__header">
+            <div>
+              <span className="dashboard-cosmic-kicker">Biblioteca</span>
+              <h2 id={libraryTitleId}>Proyectos guardados</h2>
+            </div>
+            <span className="dashboard-cosmic-count">{visible.length} visibles</span>
+          </header>
+
+          <div className="dashboard-cosmic-toolbar">
+            <label className="dashboard-cosmic-search">
+              <MagnifyingGlass aria-hidden size={18} />
+              <span className="visually-hidden">Buscar tienda</span>
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar tienda..."
+                aria-label="Buscar tienda"
+                type="search"
+              />
+              {query ? (
+                <IconButton icon={X} label="Limpiar búsqueda" onClick={() => setQuery("")} />
+              ) : null}
+            </label>
+            <label className="dashboard-cosmic-select">
+              <Funnel aria-hidden size={16} />
+              <span className="visually-hidden">Estado</span>
+              <select
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value as DashboardStatusFilter)}
+              >
+                {(Object.keys(statusLabels) as DashboardStatusFilter[]).map((status) => (
+                  <option key={status} value={status}>
+                    Estado: {statusLabels[status]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="dashboard-cosmic-select">
+              <SortAscending aria-hidden size={16} />
+              <span className="visually-hidden">Ordenar</span>
+              <select
+                value={sort}
+                onChange={(event) => setSort(event.target.value as DashboardSort)}
+              >
+                <option value="updated">Última modificación</option>
+                <option value="name">Nombre A-Z</option>
+                <option value="products">Más productos</option>
+              </select>
+            </label>
+            <fieldset className="dashboard-cosmic-view-toggle">
+              <legend className="visually-hidden">Vista de proyectos</legend>
+              <IconButton
+                icon={GridFour}
+                label="Vista en grilla"
+                aria-pressed={view === "grid"}
+                onClick={() => setView("grid")}
+              />
+              <IconButton
+                icon={List}
+                label="Vista en lista"
+                aria-pressed={view === "list"}
+                onClick={() => setView("list")}
+              />
+            </fieldset>
+          </div>
+
+          <div className={`dashboard-cosmic-results dashboard-cosmic-results--${view}`}>
+            <div className="dashboard-cosmic-store-grid" aria-live="polite">
+              {visible.length === 0 ? (
+                <EmptyState
+                  icon={Storefront}
+                  title={projects.length === 0 ? "Todavía no hay tiendas" : "No hay coincidencias"}
+                  body={
+                    projects.length === 0
+                      ? "Creá una tienda para empezar a organizar tu catálogo."
+                      : "Probá con otra búsqueda o limpiá los filtros activos."
+                  }
+                  action={
+                    projects.length === 0 ? (
+                      <Button variant="primary" icon={Plus} onClick={openCreate}>
+                        Crear primera tienda
+                      </Button>
+                    ) : null
+                  }
+                />
+              ) : (
+                visible.map((record, index) => {
+                  const metrics = getProjectMetrics(record.project);
+                  const isSelected = record.id === selectedId;
+                  return (
+                    <motion.article
+                      className={`dashboard-store-card${isSelected ? " is-selected" : ""}`}
+                      key={record.id}
+                      initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, delay: Math.min(index * 0.025, 0.25) }}
+                    >
+                      <button
+                        className="dashboard-store-card__button"
+                        type="button"
+                        aria-pressed={isSelected}
+                        onClick={() => setSelectedId(record.id)}
+                        onDoubleClick={() => onOpen(record.id)}
+                      >
+                        <span className="dashboard-store-card__index">{index + 1}</span>
+                        <span className="dashboard-store-card__mark" aria-hidden>
+                          {record.name.slice(0, 2).toUpperCase()}
+                        </span>
+                        <strong>{record.name}</strong>
+                        <span className={`dashboard-store-card__status is-${record.status}`}>
+                          <span aria-hidden />
+                          {statusLabel(record.status)}
+                        </span>
+                        <span className="dashboard-store-card__meta">
+                          {metrics.activeProducts.toLocaleString("es-AR")} productos
+                        </span>
+                        <span className="dashboard-store-card__meta">
+                          Actualizada {formatDate(record.updatedAt)}
+                        </span>
+                      </button>
+                    </motion.article>
+                  );
+                })
+              )}
+            </div>
+
+            <aside
+              ref={selectedPanelRef}
+              className={`dashboard-store-detail${selected ? " is-open" : ""}`}
+              aria-label={
+                selected ? `Tienda seleccionada: ${selected.name}` : "Tienda seleccionada"
+              }
+              tabIndex={-1}
+            >
+              {selected ? (
+                <>
+                  <header className="dashboard-store-detail__header">
+                    <span>Tienda seleccionada</span>
+                    <IconButton
+                      icon={X}
+                      label="Cerrar detalle"
+                      onClick={() => setSelectedId(undefined)}
+                    />
+                  </header>
+                  <div className="dashboard-store-detail__identity">
+                    <span className="dashboard-store-detail__mark" aria-hidden>
+                      {selected.name.slice(0, 2).toUpperCase()}
+                    </span>
+                    <div>
+                      <h3>{selected.name}</h3>
+                      <span className={`dashboard-store-card__status is-${selected.status}`}>
+                        <span aria-hidden />
+                        {statusLabel(selected.status)}
+                      </span>
+                    </div>
+                  </div>
+                  <dl className="dashboard-store-detail__facts">
+                    <div>
+                      <dt>ID</dt>
+                      <dd>{selected.id}</dd>
+                    </div>
+                    <div>
+                      <dt>Actualizada</dt>
+                      <dd>{formatDate(selected.updatedAt)}</dd>
+                    </div>
+                    <div>
+                      <dt>Productos</dt>
+                      <dd>{getProjectMetrics(selected.project).activeProducts}</dd>
+                    </div>
+                    <div>
+                      <dt>Categorías</dt>
+                      <dd>{getProjectMetrics(selected.project).categories}</dd>
+                    </div>
+                    <div>
+                      <dt>Colecciones</dt>
+                      <dd>{getProjectMetrics(selected.project).collections}</dd>
+                    </div>
+                    <div>
+                      <dt>Recursos</dt>
+                      <dd>{getProjectMetrics(selected.project).assets}</dd>
+                    </div>
+                  </dl>
+                  <div className="dashboard-store-detail__actions">
+                    <Button
+                      variant="primary"
+                      icon={ArrowUpRight}
+                      onClick={() => onOpen(selected.id)}
+                    >
+                      Abrir tienda
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      icon={CloudArrowDown}
+                      disabled={backupId === selected.id}
+                      onClick={() => void createBackup(selected.id)}
+                    >
+                      {backupId === selected.id ? "Preparando respaldo" : "Respaldo ahora"}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      icon={Copy}
+                      onClick={() => void onDuplicate(selected.id)}
+                    >
+                      Duplicar
+                    </Button>
+                    <Button
+                      variant={selected.status === "archived" ? "secondary" : "danger"}
+                      icon={selected.status === "archived" ? ArrowCounterClockwise : Archive}
+                      onClick={() => void onArchive(selected.id, selected.status !== "archived")}
+                    >
+                      {selected.status === "archived" ? "Restaurar" : "Archivar"}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="dashboard-store-detail__empty">
+                  <Package aria-hidden size={26} />
+                  <strong>Seleccioná una tienda</strong>
+                  <p>Elegí un proyecto para ver sus datos y acciones.</p>
+                </div>
+              )}
+            </aside>
+          </div>
+        </section>
+      </div>
+
+      <dialog
+        ref={createDialogRef}
+        className="dashboard-cosmic-dialog"
+        aria-labelledby={createStoreTitleId}
+        onCancel={(event) => {
+          event.preventDefault();
+          closeCreate();
+        }}
+      >
         <form
-          className="create-store"
+          method="dialog"
           onSubmit={(event) => {
             event.preventDefault();
             void submit();
           }}
         >
-          <div className="create-store__intro">
-            <span>Nuevo proyecto</span>
-            <p>Empezá con una tienda completa y personalizala desde el constructor.</p>
-          </div>
-          <Field label="Nueva tienda">
-            <input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Nombre comercial"
-              autoComplete="organization"
-            />
-          </Field>
+          <header className="dashboard-cosmic-dialog__header">
+            <div>
+              <span className="dashboard-cosmic-kicker">Nuevo proyecto</span>
+              <h2 id={createStoreTitleId}>Crear tienda</h2>
+            </div>
+            <IconButton icon={X} label="Cerrar creación" onClick={closeCreate} />
+          </header>
           <ol className="create-store__steps" aria-label="Pasos para preparar la tienda">
             <li className={step >= 1 ? "is-active" : ""}>1 Marca</li>
             <li className={step >= 2 ? "is-active" : ""}>2 Identidad y assets</li>
             <li className={step >= 3 ? "is-active" : ""}>3 Catálogo</li>
             <li className={step >= 4 ? "is-active" : ""}>4 Revisión</li>
           </ol>
+          {createError ? <InlineError>{createError}</InlineError> : null}
+          <Field label="Nueva tienda">
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Nombre comercial"
+              autoComplete="organization"
+              autoFocus
+            />
+          </Field>
           {step >= 2 ? (
             <Field label="Nombre visible de la marca">
               <input
@@ -189,9 +545,8 @@ export function Dashboard({ projects, onCreate, onOpen, onDuplicate, onArchive }
             </Field>
           ) : null}
           {step === 2 ? (
-            <p className="create-store__summary">
+            <p className="dashboard-cosmic-dialog__summary">
               La plantilla deja listos los textos, la navegación y los espacios para tus imágenes.
-              Después podrás reemplazar logo, media y copy desde Recursos y Constructor.
             </p>
           ) : null}
           {step >= 3 ? (
@@ -214,20 +569,19 @@ export function Dashboard({ projects, onCreate, onOpen, onDuplicate, onArchive }
                   inputMode="tel"
                 />
               </Field>
-              <p className="create-store__summary">
-                El catálogo comienza vacío. Al entrar a Catálogo podrás cargar productos uno a uno o
-                importar el CSV comercial con variantes, categorías, colecciones e imágenes.
+              <p className="dashboard-cosmic-dialog__summary">
+                El catálogo comienza vacío. Después podrás importar un CSV o cargar productos
+                manualmente.
               </p>
             </div>
           ) : null}
           {step === 4 ? (
-            <p className="create-store__summary" aria-live="polite">
-              Vas a crear una tienda vacía con el diseño Catalog Modern. Después podrás cargar
-              productos, imágenes y textos desde Studio. La demo de 50 productos queda disponible
-              como proyecto separado.
+            <p className="dashboard-cosmic-dialog__summary" aria-live="polite">
+              Vas a crear una tienda vacía con el diseño Catalog Modern. La demo de 50 productos
+              queda disponible como proyecto separado.
             </p>
           ) : null}
-          <div className="create-store__actions">
+          <footer className="dashboard-cosmic-dialog__actions">
             {step > 1 ? (
               <Button
                 variant="quiet"
@@ -237,92 +591,16 @@ export function Dashboard({ projects, onCreate, onOpen, onDuplicate, onArchive }
                 Atrás
               </Button>
             ) : null}
-            <Button variant="primary" icon={Plus} disabled={!name.trim() || creating} type="submit">
-              {creating ? "Creando" : step === 4 ? "Crear tienda vacía" : "Continuar"}
+            <Button variant="primary" icon={Plus} disabled={creatingProject} type="submit">
+              {creatingProject ? "Creando" : step === 4 ? "Crear tienda vacía" : "Continuar"}
             </Button>
-          </div>
-          <p className="create-store__seed-note">
-            Plantilla: Catalog Modern · catálogo vacío guiado
-          </p>
+          </footer>
         </form>
+      </dialog>
 
-        {visible.length === 0 ? (
-          <EmptyState
-            icon={view === "active" ? Storefront : Archive}
-            title={view === "active" ? "No hay tiendas activas" : "No hay tiendas archivadas"}
-            body={
-              view === "active"
-                ? "Creá una tienda para empezar a organizar catálogo, diseño y exportación."
-                : "Las tiendas archivadas aparecen acá y se pueden restaurar."
-            }
-          />
-        ) : (
-          <div className="store-list">
-            <header className="store-list__header">
-              <span>{view === "active" ? "Proyectos activos" : "Archivo"}</span>
-              <span>{visible.length.toString().padStart(2, "0")}</span>
-            </header>
-            {visible.map((record, index) => (
-              <motion.article
-                className="store-row"
-                key={record.id}
-                initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.24, delay: index * 0.035 }}
-              >
-                <button className="store-open" type="button" onClick={() => onOpen(record.id)}>
-                  <span className="store-monogram" aria-hidden>
-                    {record.name.slice(0, 1).toUpperCase()}
-                  </span>
-                  <span>
-                    <strong>{record.name}</strong>
-                    <small>
-                      {record.project.products.length} productos, guardada{" "}
-                      {formatDate(record.updatedAt)}
-                    </small>
-                    <span className="store-row__template">
-                      {record.project.origin?.seed === "clean"
-                        ? "Plantilla guiada · catálogo listo para cargar"
-                        : "Predeterminado · tienda ficticia con 50 productos"}
-                    </span>
-                  </span>
-                </button>
-                <div className="row-actions">
-                  {view === "active" ? (
-                    <>
-                      <Button
-                        variant="quiet"
-                        icon={Copy}
-                        onClick={() => void onDuplicate(record.id)}
-                      >
-                        Duplicar
-                      </Button>
-                      <Button
-                        variant="quiet"
-                        icon={Archive}
-                        onClick={() => void onArchive(record.id, true)}
-                      >
-                        Archivar
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      variant="quiet"
-                      icon={ArrowCounterClockwise}
-                      onClick={() => void onArchive(record.id, false)}
-                    >
-                      Restaurar
-                    </Button>
-                  )}
-                </div>
-              </motion.article>
-            ))}
-          </div>
-        )}
-      </div>
       <dialog
         ref={shutdownDialogRef}
-        className="shutdown-dialog"
+        className="shutdown-dialog shutdown-dialog--cosmic"
         onCancel={(event) => {
           event.preventDefault();
           if (shutdownState !== "closing") setShutdownDialogOpen(false);
@@ -349,7 +627,7 @@ export function Dashboard({ projects, onCreate, onOpen, onDuplicate, onArchive }
               Cancelar
             </Button>
             <Button variant="danger" type="submit" disabled={shutdownState === "closing"}>
-              {shutdownState === "closing" ? "Cerrando…" : "Cerrar y detener"}
+              {shutdownState === "closing" ? "Cerrando..." : "Cerrar y detener"}
             </Button>
           </div>
         </form>
