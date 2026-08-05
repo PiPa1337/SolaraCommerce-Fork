@@ -14,13 +14,15 @@ describe("exporter con catálogo jerárquico de escala", () => {
     );
 
     expect(productPages).toHaveLength(50);
-    expect(categoryPages).toHaveLength(17);
-    expect(exported.files.has("categorias/novedades/index.html")).toBe(true);
-    expect(exported.files.has("categorias/novedades/pagina/2/index.html")).toBe(true);
-    expect(String(exported.files.get("categorias/novedades/pagina/2/index.html"))).toContain(
+    expect(categoryPages).toHaveLength(16);
+    expect(exported.files.has("categorias/casa/index.html")).toBe(true);
+    expect(exported.files.has("categorias/casa/pagina/2/index.html")).toBe(true);
+    expect(String(exported.files.get("categorias/casa/pagina/2/index.html"))).toContain(
       'rel="prev"',
     );
-    expect(String(exported.files.get("categorias/novedades/index.html"))).toContain('rel="next"');
+    expect(String(exported.files.get("categorias/casa/index.html"))).toContain('rel="next"');
+    expect(exported.files.has("categorias/novedades/index.html")).toBe(false);
+    expect(exported.files.has("categorias/sale/index.html")).toBe(false);
 
     const sitemap = String(exported.files.get("sitemap.xml"));
     const home = String(exported.files.get("index.html"));
@@ -29,7 +31,7 @@ describe("exporter con catálogo jerárquico de escala", () => {
       .map((match) => match[1])
       .filter((location): location is string => Boolean(location));
     expect(new Set(locations).size).toBe(locations.length);
-    expect(locations.filter((location) => location.includes("/categorias/")).length).toBe(17);
+    expect(locations.filter((location) => location.includes("/categorias/")).length).toBe(16);
     expect(locations.filter((location) => location.includes("/productos/")).length).toBe(50);
   });
 
@@ -83,14 +85,14 @@ describe("exporter con catálogo jerárquico de escala", () => {
     const pageTwoPreview = renderPreviewHtml(
       catalogScaleStore,
       "draft",
-      "/categorias/novedades/pagina/2/",
+      "/categorias/casa/pagina/2/",
     );
-    const pageTwoExport = String(exported.files.get("categorias/novedades/pagina/2/index.html"));
+    const pageTwoExport = String(exported.files.get("categorias/casa/pagina/2/index.html"));
 
     expect(moduleTree(childPreview)).toEqual(moduleTree(childExport));
     expect(moduleTree(pageTwoPreview)).toEqual(moduleTree(pageTwoExport));
     expect(childPreview).toContain("Casa");
-    expect(pageTwoPreview).toContain("Novedades");
+    expect(pageTwoPreview).toContain("Casa");
     expect(exportProject(catalogScaleStore, { mode: "production" }).zip).toEqual(exported.zip);
   });
 });

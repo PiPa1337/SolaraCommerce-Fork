@@ -107,7 +107,7 @@ test("la home de escala conserva sus enlaces de producto sin JavaScript", async 
   await context.close();
 });
 
-test("navega diez raíces y las subcategorías de Casa y Cocina", async ({ page }) => {
+test("navega nueve raíces y las subcategorías de Casa y Cocina", async ({ page }) => {
   await page.goto("http://127.0.0.1:4176/");
   await page.locator(".solara-desktop-nav .solara-nav-dropdown > summary").click();
   await expect(page.getByRole("link", { name: "Casa", exact: true })).toBeVisible();
@@ -120,13 +120,13 @@ test("navega diez raíces y las subcategorías de Casa y Cocina", async ({ page 
   await expect(page.getByRole("link", { name: "Casa", exact: true })).toBeVisible();
 });
 
-test("agrega descendientes, pagina Novedades y expone el producto 50", async ({ page }) => {
+test("agrega descendientes, pagina Casa y expone el producto 50", async ({ page }) => {
   await page.goto("http://127.0.0.1:4176/categorias/casa/");
-  await expect(page.locator("[data-category-result-count]")).toHaveText("5 productos");
+  await expect(page.locator("[data-category-result-count]")).toHaveText("28 productos");
   await expect(page.getByRole("heading", { level: 2, name: "Explorar Casa" })).toBeVisible();
-  await page.goto("http://127.0.0.1:4176/categorias/novedades/pagina/2/");
+  await page.goto("http://127.0.0.1:4176/categorias/casa/pagina/2/");
   await expect(page.getByRole("link", { name: "Anterior" })).toBeVisible();
-  await expect(page.locator("body")).toContainText("Pieza de escala 50");
+  await expect(page.locator("body")).toContainText("Pieza de escala 28");
   await page.goto("http://127.0.0.1:4176/productos/pieza-escala-50/");
   await expect(page.getByRole("heading", { level: 1, name: "Pieza de escala 50" })).toBeVisible();
 });

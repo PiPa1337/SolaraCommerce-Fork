@@ -38,11 +38,9 @@ test("la escala de catálogo conserva padres, hojas y paginación en el inventar
   const categoryRoutes = report.routes.filter((route) => route.pageType === "category");
 
   expect(catalogScaleStore.products).toHaveLength(50);
-  expect(catalogScaleStore.categories).toHaveLength(16);
-  expect(categoryRoutes).toHaveLength(17);
-  expect(categoryRoutes.some((route) => route.path === "/categorias/novedades/pagina/2/")).toBe(
-    true,
-  );
+  expect(catalogScaleStore.categories).toHaveLength(15);
+  expect(categoryRoutes).toHaveLength(16);
+  expect(categoryRoutes.some((route) => route.path === "/categorias/casa/pagina/2/")).toBe(true);
   expect(
     new Set(report.routes.filter((route) => route.indexable).map((route) => route.canonicalPath))
       .size,

@@ -1,4 +1,5 @@
 import "fake-indexeddb/auto";
+import { getCategoryProductIds, StoreProjectV1Schema } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
 import { referenceStore } from "@solara/project-schema/fixture";
@@ -8,8 +9,10 @@ import {
   ASSET_CACHE_RECIPE_VERSION,
   clearAssetCache,
   createAssetCacheKey,
+  DEPRECATED_CATEGORY_CLEANUP_SENTINEL,
   database,
   duplicateProject,
+  ensureDeprecatedCategoriesRemoved,
   ensureScaleDemoProject,
   getCachedAsset,
   getProject,
@@ -24,6 +27,9 @@ describe("repositorio local", () => {
   beforeEach(async () => {
     await database.projects.clear();
     await database.assetCache.clear();
+    if (typeof localStorage !== "undefined") {
+      localStorage.removeItem(DEPRECATED_CATEGORY_CLEANUP_SENTINEL);
+    }
   });
 
   afterAll(async () => {
@@ -178,5 +184,76 @@ describe("repositorio local", () => {
     expect((await getProject(legacyDemo.id))?.name).toBe("Predeterminado");
     expect((await getProject(legacyClean.id))?.status).toBe("archived");
     expect((await getProject(legacyClean.id))?.name).toBe("Base limpia anterior");
+  });
+
+  it("retira Sale y Novedades de todos los proyectos sin perder productos", async () => {
+    const firstProduct = catalogModernStore.products[0];
+    if (!firstProduct) throw new Error("Fixture moderno incompleto");
+    const stale = StoreProjectV1Schema.parse({
+      ...structuredClone(catalogModernStore),
+      id: "store-stale-categories",
+      categories: [
+        ...structuredClone(catalogModernStore.categories),
+        {
+          id: "category-sale",
+          slug: "sale",
+          title: "Sale",
+          description: "Categoria temporal",
+          imageId: "asset-hero",
+          productIds: [firstProduct.id],
+        },
+        {
+          id: "category-novedades",
+          slug: "novedades",
+          title: "Novedades",
+          description: "Categoria temporal",
+          imageId: "asset-hero",
+          productIds: [firstProduct.id],
+        },
+      ],
+      products: catalogModernStore.products.map((product, index) =>
+        index === 0
+          ? {
+              ...product,
+              categoryIds: [...product.categoryIds, "category-sale", "category-novedades"],
+              tags: [...product.tags, "sale", "novedades"],
+            }
+          : product,
+      ),
+      navigation: {
+        ...catalogModernStore.navigation,
+        items: [
+          ...catalogModernStore.navigation.items,
+          { id: "nav-sale", label: "Sale", href: "/categorias/sale/" },
+          { id: "nav-novedades", label: "Novedades", href: "/categorias/novedades/" },
+        ],
+      },
+      sections: catalogModernStore.sections.map((section) =>
+        section.moduleId === "catalog-hero"
+          ? { ...section, settings: { ...section.settings, actionHref: "/categorias/novedades/" } }
+          : section,
+      ),
+    });
+    await saveProject(stale);
+
+    expect(await ensureDeprecatedCategoriesRemoved()).toBe(true);
+    const cleaned = await getProject(stale.id);
+    if (!cleaned) throw new Error("Proyecto migrado inexistente");
+    expect(
+      cleaned.categories.some((category) => ["sale", "novedades"].includes(category.slug)),
+    ).toBe(false);
+    expect(cleaned.products.every((product) => product.categoryIds.length > 0)).toBe(true);
+    expect(
+      cleaned.products.every(
+        (product) => !product.tags.some((tag) => ["sale", "novedades"].includes(tag)),
+      ),
+    ).toBe(true);
+    expect(JSON.stringify(cleaned.navigation)).not.toContain("categorias/sale");
+    expect(JSON.stringify(cleaned.navigation)).not.toContain("categorias/novedades");
+    expect(JSON.stringify(cleaned.sections)).not.toContain("categorias/novedades");
+    const firstCategory = cleaned.categories[0];
+    if (!firstCategory) throw new Error("Proyecto sin categorias");
+    expect(firstCategory.productIds).toEqual(getCategoryProductIds(cleaned, firstCategory.id));
+    expect(await ensureDeprecatedCategoriesRemoved()).toBe(false);
   });
 });

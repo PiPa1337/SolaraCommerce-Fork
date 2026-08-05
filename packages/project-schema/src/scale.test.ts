@@ -9,21 +9,22 @@ import {
 import { catalogScaleStore } from "./scale-fixture";
 
 describe("fixture de catálogo jerárquico", () => {
-  it("mantiene 50 productos, 16 categorías y 60 variantes", () => {
+  it("mantiene 50 productos, 15 categorías y 60 variantes", () => {
     expect(catalogScaleStore.products).toHaveLength(50);
-    expect(catalogScaleStore.categories).toHaveLength(16);
-    expect(catalogScaleStore.categories.filter((category) => !category.parentId)).toHaveLength(10);
+    expect(catalogScaleStore.categories).toHaveLength(15);
+    expect(catalogScaleStore.categories.filter((category) => !category.parentId)).toHaveLength(9);
     expect(catalogScaleStore.categories.filter((category) => category.parentId)).toHaveLength(6);
     expect(catalogScaleStore.products.flatMap((product) => product.variants)).toHaveLength(60);
 
-    const novedades = catalogScaleStore.categories.find(
-      (category) => category.slug === "novedades",
-    );
     const casa = catalogScaleStore.categories.find((category) => category.slug === "casa");
     const textiles = catalogScaleStore.categories.find((category) => category.slug === "textiles");
-    if (!novedades || !casa || !textiles) throw new Error("Fixture de escala incompleto");
+    if (!casa || !textiles) throw new Error("Fixture de escala incompleto");
 
-    expect(novedades.productIds).toHaveLength(35);
+    expect(
+      catalogScaleStore.categories.some((category) =>
+        ["sale", "novedades"].includes(category.slug),
+      ),
+    ).toBe(false);
     expect(
       getCategoryDescendants(catalogScaleStore, casa.id).map((category) => category.slug),
     ).toEqual(["textiles", "decoracion", "iluminacion"]);
@@ -33,7 +34,7 @@ describe("fixture de catálogo jerárquico", () => {
     expect(
       getCategoryBreadcrumb(catalogScaleStore, textiles.id).map((category) => category.slug),
     ).toEqual(["casa", "textiles"]);
-    expect(getCategoryProductIds(catalogScaleStore, casa.id)).toHaveLength(5);
+    expect(getCategoryProductIds(catalogScaleStore, casa.id)).toHaveLength(28);
   });
 
   it("rechaza padres inexistentes, ciclos y más de un nivel", () => {

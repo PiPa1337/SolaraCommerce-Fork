@@ -1,5 +1,5 @@
-import type { StoreProjectV1 } from "@solara/project-schema";
-import { StoreProjectV1Schema } from "@solara/project-schema";
+import type { NavigationItem, StoreProjectV1 } from "@solara/project-schema";
+import { getCategoryProductIds, StoreProjectV1Schema } from "@solara/project-schema";
 import {
   buildCatalogModernProject,
   catalogModernCleanStore,
@@ -83,6 +83,8 @@ const LEGACY_SCALE_DEMO_PROJECT_NAME = "Demo Modo Sur, catálogo moderno";
 const LEGACY_CLEAN_PROJECT_ID = "store-catalog-modern-clean-default";
 const LEGACY_CLEAN_PROJECT_NAME = "Mi primera tienda";
 const STORAGE_SENTINEL = "solara-studio-storage-version";
+export const DEPRECATED_CATEGORY_CLEANUP_SENTINEL = "solara-deprecated-category-cleanup";
+const DEPRECATED_CATEGORY_CLEANUP_VERSION = "1";
 let storageReady: Promise<void> | undefined;
 let storageReset = false;
 
@@ -161,6 +163,144 @@ async function embedFixtureAssets(project: StoreProjectV1): Promise<StoreProject
     ),
   );
   return StoreProjectV1Schema.parse({ ...project, assets });
+}
+
+function isDeprecatedCategoryPath(value: string): boolean {
+  const pathname = value.split(/[?#]/, 1)[0] ?? value;
+  return /^\/categorias\/(?:sale|novedades)(?:\/pagina\/\d+)?\/?$/.test(pathname);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function replaceDeprecatedRoutes(value: unknown, fallbackHref: string): unknown {
+  if (typeof value === "string") {
+    return isDeprecatedCategoryPath(value) ? fallbackHref : value;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => replaceDeprecatedRoutes(item, fallbackHref));
+  }
+  if (!isRecord(value)) return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [key, replaceDeprecatedRoutes(item, fallbackHref)]),
+  );
+}
+
+function cleanNavigationItems(items: NavigationItem[], fallbackHref: string): NavigationItem[] {
+  return items.flatMap((item) => {
+    const children = (item.children ?? []).filter(
+      (child) => !child.href || !isDeprecatedCategoryPath(child.href),
+    );
+    const next = { ...item };
+    if (next.href && isDeprecatedCategoryPath(next.href)) {
+      next.href = children.length > 0 ? fallbackHref : undefined;
+    }
+    if (children.length > 0) next.children = children;
+    else delete next.children;
+    return next.href || next.children ? [next] : [];
+  });
+}
+
+function fallbackCatalogHref(project: StoreProjectV1): string {
+  const activeProductIds = new Set(
+    project.products.filter((product) => product.status === "active").map((product) => product.id),
+  );
+  const collection = project.collections.find((candidate) =>
+    candidate.productIds.some((productId) => activeProductIds.has(productId)),
+  );
+  if (collection) return `/colecciones/${collection.slug}/`;
+  const category = project.categories.find(
+    (candidate) =>
+      !candidate.parentId && candidate.productIds.some((id) => activeProductIds.has(id)),
+  );
+  return category ? `/categorias/${category.slug}/` : "/buscar/";
+}
+
+/** Removes the retired demo categories while preserving products and discoverability. */
+export function removeDeprecatedCatalogCategories(project: StoreProjectV1): StoreProjectV1 {
+  const deprecatedIds = new Set(
+    project.categories
+      .filter((category) => category.slug === "sale" || category.slug === "novedades")
+      .map((category) => category.id),
+  );
+  const categories = project.categories
+    .filter((category) => !deprecatedIds.has(category.id))
+    .map((category): StoreProjectV1["categories"][number] => {
+      if (!category.parentId || !deprecatedIds.has(category.parentId)) return category;
+      return { ...category, parentId: undefined };
+    });
+  const fallbackHref = fallbackCatalogHref({ ...project, categories });
+  const fallbackCategory = categories.find((category) => !category.parentId)?.id;
+  const products = project.products.map((product) => {
+    const categoryIds = product.categoryIds.filter((categoryId) => !deprecatedIds.has(categoryId));
+    return {
+      ...product,
+      categoryIds: categoryIds.length || !fallbackCategory ? categoryIds : [fallbackCategory],
+      tags: product.tags.filter((tag) => tag !== "sale" && tag !== "novedades"),
+    };
+  });
+  const workingProject = {
+    ...project,
+    products,
+    categories: categories.map((category) => ({ ...category, productIds: [] })),
+    navigation: {
+      ...project.navigation,
+      items: cleanNavigationItems(project.navigation.items, fallbackHref),
+    },
+    sections: project.sections.map((section) => ({
+      ...section,
+      settings: replaceDeprecatedRoutes(section.settings, fallbackHref) as typeof section.settings,
+    })),
+    pages: project.pages.map((page) => ({
+      ...page,
+      sections: page.sections.map((section) => ({
+        ...section,
+        settings: replaceDeprecatedRoutes(
+          section.settings,
+          fallbackHref,
+        ) as typeof section.settings,
+      })),
+    })),
+  };
+  const finalizedCategories = workingProject.categories.map((category) => ({
+    ...category,
+    productIds: getCategoryProductIds(workingProject, category.id),
+  }));
+  return StoreProjectV1Schema.parse({ ...workingProject, categories: finalizedCategories });
+}
+
+export async function ensureDeprecatedCategoriesRemoved(): Promise<boolean> {
+  await ready();
+  if (
+    typeof localStorage !== "undefined" &&
+    localStorage.getItem(DEPRECATED_CATEGORY_CLEANUP_SENTINEL) ===
+      DEPRECATED_CATEGORY_CLEANUP_VERSION
+  ) {
+    return false;
+  }
+
+  const records = await database.projects.toArray();
+  const updates: StoredProject[] = [];
+  let hasInvalidRecord = false;
+  for (const record of records) {
+    const parsed = StoreProjectV1Schema.safeParse(record.project);
+    if (!parsed.success) {
+      hasInvalidRecord = true;
+      continue;
+    }
+    const cleaned = removeDeprecatedCatalogCategories(parsed.data);
+    if (JSON.stringify(cleaned) !== JSON.stringify(parsed.data)) updates.push(toRecord(cleaned));
+  }
+  if (updates.length > 0) {
+    await database.transaction("rw", database.projects, async () => {
+      for (const record of updates) await database.projects.put(record);
+    });
+  }
+  if (typeof localStorage !== "undefined" && !hasInvalidRecord) {
+    localStorage.setItem(DEPRECATED_CATEGORY_CLEANUP_SENTINEL, DEPRECATED_CATEGORY_CLEANUP_VERSION);
+  }
+  return updates.length > 0;
 }
 
 export async function listProjects(): Promise<StoredProject[]> {

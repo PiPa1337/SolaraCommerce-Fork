@@ -20,11 +20,11 @@ describe("plantilla Catalog Modern", () => {
     expect(JSON.stringify(catalogModernCleanStore)).not.toContain("Modo Sur");
   });
 
-  it("mantiene la demo de 50 productos y 16 categorías desde la misma plantilla", () => {
+  it("mantiene la demo de 50 productos y 14 categorías desde la misma plantilla", () => {
     const demo = buildCatalogModernProject({ seed: "demo" });
     expect(demo.origin?.seed).toBe("demo");
     expect(demo.products).toHaveLength(50);
-    expect(demo.categories).toHaveLength(16);
+    expect(demo.categories).toHaveLength(14);
     expect(demo.products.flatMap((product) => product.variants)).toHaveLength(60);
   });
 

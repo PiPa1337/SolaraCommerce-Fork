@@ -36,7 +36,7 @@ mismo proyecto que usa el renderer y lleva a `Resumen`, `Recursos`, `Catálogo`,
   respaldo `.solara.zip` y se conservan los settings del usuario.
 
 `Predeterminado` es la tienda ficticia de referencia y se genera con la misma
-fábrica para conservar una referencia de 50 productos, 16 categorías y 60
+fábrica para conservar una referencia de 50 productos, 14 categorías y 60
 variantes. `Crear tienda` continúa usando la semilla limpia.
 
 ## Estado
@@ -70,7 +70,7 @@ renderer.
 - Preview con selector de ruta además de los marcos desktop, tablet y móvil.
 - Estados empty/error/loading, foco visible, skip link y CSS responsive editorial.
 - La home moderna conserva el hero y coloca grillas de 12 y 8 productos debajo;
-  el fixture `catalogModernStore` mantiene 50 productos, 16 categorías y 60
+  el fixture `catalogModernStore` mantiene 50 productos, 14 categorías y 60
   variantes para probar la densidad real del catálogo.
 - Se corrigieron los renderizadores de `split-hero` y `editorial-hero`, incluyendo la
   posición de imagen y el aislamiento de sus clases.
@@ -141,14 +141,14 @@ detiene el servidor local administrado por el lanzador; nunca borra datos.
 ## Escenario de escala jerárquico
 
 El fixture complementario `catalogScaleStore` mantiene el mismo `schemaVersion: 2`
-y prueba una tienda realista de catálogo: 10 categorías raíz, seis hijas bajo
+y prueba una tienda realista de catálogo: 9 categorías raíz, seis hijas bajo
 Casa y Cocina, 50 productos activos y 60 variantes. `parentId` es opcional para
 conservar compatibilidad con proyectos planos; los padres agregan productos de
 sus descendientes y las hijas mantienen su propia página.
 
 - Helpers compartidos: `getCategoryAncestors`, `getCategoryDescendants`,
   `getCategoryProductIds` y `getCategoryBreadcrumb`.
-- Novedades contiene 35 productos y genera una segunda página rastreable.
+- Casa contiene 28 productos y genera una segunda página rastreable sin categorías de campaña.
 - Búsqueda indexa los nombres e IDs de categorías ancestrales.
 - El exporter deduplica assets y mantiene la misma semántica en preview y ZIP.
 - Studio muestra el árbol, cantidades directas/heredadas y permite reubicar una
@@ -225,8 +225,8 @@ del catalogo. La verificacion local es:
 corepack pnpm check:optimization
 ```
 
-Este comando cubre la demo de 50 productos, `catalogScaleStore` (10 raices,
-16 categorias y paginacion) y la plantilla limpia sin inventario. `corepack pnpm
+Este comando cubre la demo de 50 productos, `catalogScaleStore` (9 raices,
+15 categorias y paginacion) y la plantilla limpia sin inventario. `corepack pnpm
 check` lo ejecuta como parte del gate general.
 
 El gate de budgets comprueba además el runtime storefront con los límites v1:

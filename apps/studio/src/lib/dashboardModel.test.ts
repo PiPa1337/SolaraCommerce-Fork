@@ -19,7 +19,7 @@ describe("modelo del dashboard", () => {
     const metrics = getProjectMetrics(catalogModernStore);
 
     expect(metrics.activeProducts).toBe(50);
-    expect(metrics.categories).toBe(16);
+    expect(metrics.categories).toBe(14);
     expect(metrics.collections).toBeGreaterThan(0);
     expect(metrics.assets).toBeGreaterThan(0);
   });

@@ -9,6 +9,7 @@ import {
   consumeStorageResetNotice,
   createProject,
   duplicateProject,
+  ensureDeprecatedCategoriesRemoved,
   ensureFirstProject,
   ensureScaleDemoProject,
   getProject,
@@ -54,6 +55,14 @@ export function App() {
             current
               ? `${current} También se agregó la tienda Predeterminado con 50 productos para explorar la escala del catálogo.`
               : "Se agregó la tienda Predeterminado con 50 productos para explorar la escala del catálogo.",
+          );
+        }
+        const deprecatedCategoriesRemoved = await ensureDeprecatedCategoriesRemoved();
+        if (deprecatedCategoriesRemoved) {
+          setNotice((current) =>
+            current
+              ? `${current} Se retiraron las categorias Sale y Novedades; los productos y sus precios se conservaron.`
+              : "Se retiraron las categorias Sale y Novedades; los productos y sus precios se conservaron.",
           );
         }
         await refresh();

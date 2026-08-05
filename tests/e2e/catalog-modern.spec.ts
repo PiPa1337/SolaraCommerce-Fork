@@ -89,7 +89,7 @@ test("la home moderna prioriza el catálogo y conserva su densidad responsive", 
   expect(heroMetrics.scrollHeight - heroMetrics.clientHeight).toBeLessThanOrEqual(8);
   await expect(page.locator(".catalog-hero-stats > div")).toHaveCount(3);
   await expect(page.locator('[data-stat="products"] dt')).toHaveText("50");
-  await expect(page.locator('[data-stat="categories"] dt')).toHaveText("10");
+  await expect(page.locator('[data-stat="categories"] dt')).toHaveText("8");
   await expect(page.locator('[data-stat="whatsapp"] dt')).toHaveText("WhatsApp");
   const statLayout = await page.locator(".catalog-hero-stats > div").evaluateAll((cells) => {
     const rects = cells.map((cell) => {
@@ -160,7 +160,7 @@ test("la categoría moderna mantiene filtros, densidad y pie comercial", async (
   await expect(page.locator('[data-solara-module="catalog-newsletter-cta"]')).toBeVisible();
   const desktopGrid = page.locator(".catalog-category-results .catalog-product-grid");
   expect(await desktopGrid.count()).toBe(1);
-  await expect(desktopGrid.locator(".catalog-product-card")).toHaveCount(5);
+  await expect(desktopGrid.locator(".catalog-product-card")).toHaveCount(7);
   expect(
     await desktopGrid
       .locator("img")
@@ -176,7 +176,7 @@ test("la categoría moderna mantiene filtros, densidad y pie comercial", async (
   await tagFilter.selectOption("nuevo");
   await expect(
     page.locator(".catalog-category-results .catalog-product-card:not([hidden])"),
-  ).toHaveCount(2);
+  ).toHaveCount(3);
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
     false,
   );
@@ -206,7 +206,7 @@ test("la navegación, el detalle moderno y las variantes siguen siendo rastreabl
   const megaMenu = page.locator(".catalog-desktop-nav .catalog-mega-menu");
   await expect(megaMenu).toBeVisible();
   await expect(catalogTrigger).toHaveAttribute("aria-expanded", "true");
-  await expect(megaMenu.locator(".catalog-mega-group")).toHaveCount(10);
+  await expect(megaMenu.locator(".catalog-mega-group")).toHaveCount(8);
   await expect(
     megaMenu.locator(".catalog-mega-group").filter({ hasText: "Remeras" }),
   ).toContainText("Básicas");
@@ -298,7 +298,7 @@ test("las cards, el bento y la búsqueda moderna usan contenido real", async ({ 
   await expect(firstCard.locator(".catalog-product-availability")).toHaveCount(0);
 
   const bento = page.locator(".catalog-category-bento-section");
-  await expect(bento.locator(".catalog-category-bento-item")).toHaveCount(6);
+  await expect(bento.locator(".catalog-category-bento-item")).toHaveCount(14);
   await expect(bento).toContainText("Remeras");
   await expect(bento).toContainText("Camisas");
   await expect(bento.locator(".catalog-category-bento-item small").first()).toBeVisible();

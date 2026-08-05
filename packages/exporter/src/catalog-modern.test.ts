@@ -18,7 +18,7 @@ describe("tienda base catalog-modern de 50 productos", () => {
     const product = String(exported.files.get("productos/remera-esencial-de-algodon/index.html"));
 
     expect(productPages).toHaveLength(50);
-    expect(categoryPages).toHaveLength(17);
+    expect(categoryPages).toHaveLength(14);
     expect(home).toContain('data-design-family="catalog-modern-v1"');
     expect(home).toMatch(/>Categorías<span class="catalog-nav-chevron"/);
     expect(home).toContain('class="catalog-mega-menu__groups"');
@@ -58,9 +58,8 @@ describe("tienda base catalog-modern de 50 productos", () => {
 
     expect(moduleTree(preview)).toEqual(moduleTree(exportedHome));
     expect(search).toHaveLength(50);
-    expect(String(exported.files.get("categorias/novedades/pagina/2/index.html"))).toContain(
-      'rel="prev"',
-    );
+    expect(exported.files.has("categorias/novedades/index.html")).toBe(false);
+    expect(exported.files.has("categorias/sale/index.html")).toBe(false);
     expect(String(exported.files.get("sitemap.xml"))).toContain(
       "/productos/remera-esencial-de-algodon/",
     );

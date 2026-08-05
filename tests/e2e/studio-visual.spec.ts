@@ -210,10 +210,22 @@ test("dashboard permite abrir, buscar, cambiar vista, respaldar y administrar un
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
 
   await detail.getByRole("button", { name: "Archivar" }).click();
-  await expect(detail.getByRole("button", { name: "Restaurar" })).toBeVisible();
   await page.locator(".dashboard-cosmic-select select").first().selectOption("archived");
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
-  await detail.getByRole("button", { name: "Restaurar" }).click();
+  const archivedCard = page
+    .locator(".dashboard-store-card")
+    .filter({ hasText: "Predeterminado" })
+    .first();
+  await archivedCard.locator(".dashboard-store-card__button").click();
+  await expect(
+    page
+      .getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" })
+      .getByRole("button", { name: "Restaurar" }),
+  ).toBeVisible();
+  await page
+    .getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" })
+    .getByRole("button", { name: "Restaurar" })
+    .click();
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
 });
 

@@ -215,11 +215,11 @@ describe("official module system", () => {
       pageType: "home",
     });
     const bento = html.slice(html.indexOf('data-solara-module="catalog-category-bento"'));
-    const roots = catalogModernStore.categories.filter((category) => !category.parentId);
-
-    expect(bento.match(/class="catalog-category-bento-item /g) ?? []).toHaveLength(6);
-    expect(bento).toContain(roots[0]?.title);
-    expect(bento).toContain(roots[5]?.title);
+    expect(bento.match(/class="catalog-category-bento-item /g) ?? []).toHaveLength(
+      catalogModernStore.categories.length,
+    );
+    expect(bento).toContain(catalogModernStore.categories[0]?.title);
+    expect(bento).toContain(catalogModernStore.categories.at(-1)?.title);
     expect(bento).toContain("Ver todo el catálogo");
     expect(bento).toContain('href="/categorias/');
   });

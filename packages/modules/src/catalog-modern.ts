@@ -251,8 +251,8 @@ const heroSettings = z.object({
   eyebrow: z.string().default("Nueva temporada"),
   title: z.string().default("Vestite con lo que te representa."),
   body: z.string().default("Prendas elegidas para acompañarte todos los días."),
-  actionLabel: z.string().default("Ver novedades"),
-  actionHref: z.string().default("/categorias/novedades/"),
+  actionLabel: z.string().default("Explorar cat\u00e1logo"),
+  actionHref: z.string().default("/buscar/"),
   secondaryActionLabel: z.string().default("Explorar tienda"),
   secondaryActionHref: z.string().default("/categorias/remeras/"),
   posterAssetId: z.string().default(""),
@@ -469,7 +469,7 @@ const productGridSettings = z.object({
   limit: z.number().int().min(1).max(48).default(12),
   showRating: z.boolean().default(true),
   showViewAll: z.boolean().default(true),
-  viewAllHref: z.string().default("/categorias/novedades/"),
+  viewAllHref: z.string().default("/buscar/"),
 });
 
 function modernProducts(
@@ -767,7 +767,6 @@ const categoryBentoSettings = z.object({
         size: z.enum(["wide", "compact"]).default("wide"),
       }),
     )
-    .max(8)
     .default([]),
 });
 
@@ -786,7 +785,6 @@ export const catalogCategoryBento: ModuleDefinition<z.infer<typeof categoryBento
       key: "items",
       type: "repeater",
       label: "Categorías",
-      maxItems: 8,
       itemLabelKey: "categoryId",
       fields: [
         { key: "categoryId", label: "ID de categoría", type: "text" },
@@ -811,14 +809,11 @@ export const catalogCategoryBento: ModuleDefinition<z.infer<typeof categoryBento
         .filter((product) => product.status === "active")
         .map((product) => product.id),
     );
-    const hasProducts = (categoryId: string): boolean =>
-      getCategoryProductIds(context.project, categoryId as CategoryId).some((productId) =>
-        activeProducts.has(productId),
-      );
-    const automaticItems = context.project.categories
-      .filter((category) => !category.parentId && hasProducts(category.id))
-      .slice(0, 6)
-      .map((category) => ({ categoryId: category.id, imageId: "", size: "wide" as const }));
+    const automaticItems = context.project.categories.map((category, index) => ({
+      categoryId: category.id,
+      imageId: "",
+      size: (index === 1 || index % 4 === 0 ? "wide" : "compact") as "wide" | "compact",
+    }));
     const configuredItems = context.settings.items
       .filter((item) =>
         context.project.categories.some((category) => category.id === item.categoryId),
@@ -996,11 +991,26 @@ export const catalogFooter: ModuleDefinition<z.infer<typeof modernFooterSettings
     ]
       .filter(Boolean)
       .join("");
+    const activeProductIds = new Set(
+      context.project.products
+        .filter((product) => product.status === "active")
+        .map((product) => product.id),
+    );
+    const firstCollection = context.project.collections.find((collection) =>
+      collection.productIds.some((productId) => activeProductIds.has(productId)),
+    );
+    const firstCategory = context.project.categories.find((category) => !category.parentId);
+    const catalogLink = firstCollection
+      ? { label: firstCollection.title, href: `/colecciones/${firstCollection.slug}/` }
+      : firstCategory
+        ? { label: firstCategory.title, href: `/categorias/${firstCategory.slug}/` }
+        : { label: context.project.navigation.catalogLabel, href: "/buscar/" };
+    const catalogLinkMarkup = `<a href="${escapeAttribute(catalogLink.href)}">${escapeHtml(catalogLink.label)}</a>`;
     return moduleRoot(
       "catalog-footer",
       context.section,
       safeHtml(
-        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div><nav aria-label="Catálogo"><a href="/">Inicio</a><a href="/categorias/novedades/">Novedades</a><a href="/buscar/">Buscar</a></nav><nav aria-label="Ayuda"><a href="/contacto/">Contacto</a><a href="/nosotros/">Nosotros</a>${policyLinks}</nav><address>${contact}</address><small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)}</small></div>`,
+        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div><nav aria-label="Catálogo"><a href="/">Inicio</a>${catalogLinkMarkup}<a href="/buscar/">Buscar</a></nav><nav aria-label="Ayuda"><a href="/contacto/">Contacto</a><a href="/nosotros/">Nosotros</a>${policyLinks}</nav><address>${contact}</address><small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)}</small></div>`,
       ),
       { tag: "footer" },
     );

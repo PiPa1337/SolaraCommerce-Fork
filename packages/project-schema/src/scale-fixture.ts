@@ -58,12 +58,6 @@ const roots = [
     title: "Organización",
     description: "Orden útil para la vida diaria.",
   },
-  {
-    id: "category-novedades",
-    slug: "novedades",
-    title: "Novedades",
-    description: "Lo nuevo de Casa Luma.",
-  },
 ] as const;
 
 const childGroups = {
@@ -117,6 +111,14 @@ function categoryIdsForRoot(rootId: string, localIndex: number): string[] {
   return [children[localIndex % children.length]?.id ?? children[0].id];
 }
 
+function categoryIdsForProduct(productNumber: number): string[] {
+  if (productNumber <= 28) return categoryIdsForRoot("category-casa", productNumber - 1);
+  if (productNumber <= 40) return categoryIdsForRoot("category-cocina", productNumber - 29);
+  const remainingRoots = roots.slice(2);
+  const root = remainingRoots[(productNumber - 41) % remainingRoots.length];
+  return root ? categoryIdsForRoot(root.id, productNumber - 41) : ["category-casa"];
+}
+
 function categoryScopeIds(
   categories: readonly { id: string; parentId?: string }[],
   id: string,
@@ -152,67 +154,61 @@ const categories = [
   ),
 ];
 
-const products = roots.flatMap((root, rootIndex) =>
-  Array.from({ length: 5 }, (_, localIndex) => {
-    const productNumber = rootIndex * 5 + localIndex + 1;
-    const productId = `scale-product-${String(productNumber).padStart(2, "0")}`;
-    const imageId = imageIds[(productNumber - 1) % imageIds.length];
-    const primaryCategoryIds = categoryIdsForRoot(root.id, localIndex);
-    const categoryIds =
-      root.id === "category-novedades" || productNumber > 30
-        ? primaryCategoryIds
-        : [...primaryCategoryIds, "category-novedades"];
-    const hasSecondVariant = productNumber % 5 === 0;
-    const basePrice = 1200000 + productNumber * 25000;
-    const variants = [
-      {
-        id: `scale-variant-${String(productNumber).padStart(2, "0")}-a`,
-        sku: `CL-SCL-${String(productNumber).padStart(3, "0")}-A`,
-        title: "Natural",
-        optionValues: { Color: "Natural" },
-        price: basePrice,
-        compareAtPrice: productNumber % 4 === 0 ? basePrice + 150000 : undefined,
-        available: true,
-        stockStatus: "in_stock" as const,
-        mpn: `CL-${String(productNumber).padStart(4, "0")}`,
-        imageId,
-      },
-      ...(hasSecondVariant
-        ? [
-            {
-              id: `scale-variant-${String(productNumber).padStart(2, "0")}-b`,
-              sku: `CL-SCL-${String(productNumber).padStart(3, "0")}-B`,
-              title: "Musgo",
-              optionValues: { Color: "Musgo" },
-              price: basePrice + 50000,
-              available: productNumber % 10 !== 0,
-              stockStatus: (productNumber % 10 === 0 ? "out_of_stock" : "in_stock") as
-                | "in_stock"
-                | "out_of_stock",
-              mpn: `CL-${String(productNumber).padStart(4, "0")}-B`,
-              imageId,
-            },
-          ]
-        : []),
-    ];
+const products = Array.from({ length: 50 }, (_, index) => {
+  const productNumber = index + 1;
+  const productId = `scale-product-${String(productNumber).padStart(2, "0")}`;
+  const imageId = imageIds[(productNumber - 1) % imageIds.length];
+  const categoryIds = categoryIdsForProduct(productNumber);
+  const hasSecondVariant = productNumber % 5 === 0;
+  const basePrice = 1200000 + productNumber * 25000;
+  const variants = [
+    {
+      id: `scale-variant-${String(productNumber).padStart(2, "0")}-a`,
+      sku: `CL-SCL-${String(productNumber).padStart(3, "0")}-A`,
+      title: "Natural",
+      optionValues: { Color: "Natural" },
+      price: basePrice,
+      compareAtPrice: productNumber % 4 === 0 ? basePrice + 150000 : undefined,
+      available: true,
+      stockStatus: "in_stock" as const,
+      mpn: `CL-${String(productNumber).padStart(4, "0")}`,
+      imageId,
+    },
+    ...(hasSecondVariant
+      ? [
+          {
+            id: `scale-variant-${String(productNumber).padStart(2, "0")}-b`,
+            sku: `CL-SCL-${String(productNumber).padStart(3, "0")}-B`,
+            title: "Musgo",
+            optionValues: { Color: "Musgo" },
+            price: basePrice + 50000,
+            available: productNumber % 10 !== 0,
+            stockStatus: (productNumber % 10 === 0 ? "out_of_stock" : "in_stock") as
+              | "in_stock"
+              | "out_of_stock",
+            mpn: `CL-${String(productNumber).padStart(4, "0")}-B`,
+            imageId,
+          },
+        ]
+      : []),
+  ];
 
-    return {
-      id: productId,
-      slug: `pieza-escala-${String(productNumber).padStart(2, "0")}`,
-      title: `Pieza de escala ${String(productNumber).padStart(2, "0")}`,
-      description: `Producto de prueba ${productNumber} para validar navegación, búsqueda y grillas de catálogo.`,
-      status: "active" as const,
-      brand: productNumber % 2 === 0 ? "Casa Luma" : "Taller Nadir",
-      categoryIds,
-      collectionIds: ["collection-casa-serena"],
-      tags: ["escala", productNumber % 2 === 0 ? "casa" : "uso-diario"],
-      imageIds: [imageId],
-      variants,
-      createdAt: fixedDate,
-      updatedAt: fixedDate,
-    };
-  }),
-);
+  return {
+    id: productId,
+    slug: `pieza-escala-${String(productNumber).padStart(2, "0")}`,
+    title: `Pieza de escala ${String(productNumber).padStart(2, "0")}`,
+    description: `Producto de prueba ${productNumber} para validar navegación, búsqueda y grillas de catálogo.`,
+    status: "active" as const,
+    brand: productNumber % 2 === 0 ? "Casa Luma" : "Taller Nadir",
+    categoryIds,
+    collectionIds: ["collection-casa-serena"],
+    tags: ["escala", productNumber % 2 === 0 ? "casa" : "uso-diario"],
+    imageIds: [imageId],
+    variants,
+    createdAt: fixedDate,
+    updatedAt: fixedDate,
+  };
+});
 
 const categoryProductIds = (categoryId: string): string[] => {
   const scope = categoryScopeIds(categories, categoryId);

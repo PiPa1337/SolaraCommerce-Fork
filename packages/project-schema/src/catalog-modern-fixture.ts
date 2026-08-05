@@ -13,8 +13,6 @@ const rootDefinitions = [
   ["tejidos", "Tejidos", "Texturas suaves para días tranquilos."],
   ["calzado", "Calzado", "Piezas cómodas para moverte."],
   ["accesorios", "Accesorios", "Detalles que completan tu manera de vestir."],
-  ["sale", "Liquidación", "Últimas unidades y precios especiales."],
-  ["novedades", "Novedades", "Lo nuevo de Modo Sur."],
 ] as const;
 
 const childDefinitions = [
@@ -67,8 +65,6 @@ const primaryRoots = [
   "tejidos",
   "calzado",
   "accesorios",
-  "sale",
-  "novedades",
 ];
 const imageIds = ["asset-manta", "asset-jarra", "asset-modo-camisa"] as const;
 const brands = ["Modo Sur", "Línea Norte", "Taller del Río", "Estudio Liso", "Bruma"];
@@ -184,7 +180,7 @@ function optionVariants(productNumber: number, imageId: string) {
 
 const products = productNames.map((title, index) => {
   const productNumber = index + 1;
-  const rootSlug = primaryRoots[index % primaryRoots.length] ?? primaryRoots[0] ?? "novedades";
+  const rootSlug = primaryRoots[index % primaryRoots.length] ?? primaryRoots[0] ?? "remeras";
   const childCategory =
     rootSlug === "remeras"
       ? ["basicas", "graficas", "manga-larga"][index % 3]
@@ -192,10 +188,6 @@ const products = productNames.map((title, index) => {
         ? ["jeans", "sastreros", "shorts"][index % 3]
         : undefined;
   const categoryIds = [`category-${childCategory ?? rootSlug}`];
-  if (productNumber <= 35 && !categoryIds.includes("category-novedades"))
-    categoryIds.push("category-novedades");
-  if (productNumber % 7 === 0 && !categoryIds.includes("category-sale"))
-    categoryIds.push("category-sale");
   const imageId = imageIds[index % imageIds.length] ?? imageIds[0];
   const reviews =
     productNumber <= 6
@@ -268,7 +260,7 @@ const finalizedCategories = categories.map((category) => ({
   ...category,
   productIds: categoryProductIds(category.id),
 }));
-const navigationItems = rootDefinitions.map(([slug, title]) => ({
+const navigationItems = roots.map(({ slug, title }) => ({
   id: `modo-nav-${slug}`,
   label: title,
   href: `/categorias/${slug}/`,
@@ -525,8 +517,8 @@ export const catalogModernStore = StoreProjectV2Schema.parse({
         eyebrow: "Nueva temporada",
         title: "Vestite con lo que te representa.",
         body: "Prendas elegidas para acompañarte todos los días.",
-        actionLabel: "Ver novedades",
-        actionHref: "/categorias/novedades/",
+        actionLabel: "Ver reci\u00e9n llegados",
+        actionHref: "/colecciones/recien-llegados/",
         secondaryActionLabel: "Explorar tienda",
         secondaryActionHref: "/categorias/remeras/",
         posterAssetId: "asset-hero",

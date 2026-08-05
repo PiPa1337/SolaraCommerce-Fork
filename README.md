@@ -35,7 +35,7 @@ La aplicación guarda los proyectos en IndexedDB. Las tiendas públicas se expor
 como ZIP estáticos, sin backend ni runtime de inteligencia artificial.
 
 En el primer arranque Studio crea `Predeterminado` con la tienda ficticia de
-Catalog Modern, generada por la misma fábrica, con 10 raíces, 16 categorías,
+Catalog Modern, generada por la misma fábrica, con 8 raíces, 14 categorías,
 50 productos y 60 variantes. Sirve para revisar navegación, paginación, edición
 masiva y densidad del catálogo; no se duplica en los siguientes arranques ni
 borra tiendas locales existentes.
@@ -98,9 +98,9 @@ hoja conserva su URL, breadcrumb y metadata. Studio visualiza el árbol con
 cantidades directas/heredadas y bloquea ciclos o reubicaciones inválidas.
 
 Para probar la escala de navegación sin mezclarla con el contrato visual, el
-paquete `@solara/project-schema/scale-fixture` expone `catalogScaleStore`: 10
-raíces, 16 categorías totales, 50 productos activos, 60 variantes y una categoría
-de 35 productos que pagina en dos documentos. La fixture pública
+paquete `@solara/project-schema/scale-fixture` expone `catalogScaleStore`: 9
+raíces, 15 categorías totales, 50 productos activos, 60 variantes y una categoría
+Casa de 28 productos que pagina en dos documentos. La fixture pública
 `@solara/project-schema/catalog-modern-fixture` expone `catalogModernStore`, la
 demo visual con cuatro assets reutilizados entre productos y mantiene IDs, slugs
 y fechas deterministas. La fábrica `buildCatalogModernProject` también expone
@@ -137,7 +137,7 @@ para explorar catálogos extensos sin convertir la home en una lista interminabl
 
 El storefront moderno usa una navbar curada con Inicio, Categorías, Contacto,
 Nosotros, búsqueda y carrito. El hero puede trabajar con imagen, carrusel o
-video local autocontenido. La home prioriza novedades, más elegidos y categorías;
+video local autocontenido. La home prioriza recién llegados, más elegidos y categorías;
 el exporter genera también `/contacto/`, `/nosotros/`, `/buscar/`, `/carrito/` y
 `/compra/`, manteniendo HTML útil sin JavaScript.
 
@@ -289,7 +289,7 @@ bloqueado ante errores criticos.
 
 El panel SEO muestra la salud del proyecto antes de exportar. El gate local
 incluye una comprobacion determinista de la demo de 50 productos, la escala de
-50 productos y 16 categorias, y la plantilla limpia:
+50 productos y 15 categorias, y la plantilla limpia:
 
 ```text
 corepack pnpm check:optimization

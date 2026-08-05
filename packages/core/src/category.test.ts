@@ -20,7 +20,7 @@ describe("jerarquía de categorías en el dominio", () => {
       cocina.id,
     );
     expect(moved.categories.find((category) => category.id === casa.id)?.productIds).toHaveLength(
-      3,
+      18,
     );
     expect(
       moved.categories.find((category) => category.id === cocina.id)?.productIds.length,
