@@ -77,7 +77,7 @@ export function Dashboard({
   onBackup,
   onSessionManaged,
 }: DashboardProps) {
-  const [statusFilter, setStatusFilter] = useState<DashboardStatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<DashboardStatusFilter>("active");
   const [sort, setSort] = useState<DashboardSort>("updated");
   const [view, setView] = useState<DashboardView>("grid");
   const [query, setQuery] = useState("");
