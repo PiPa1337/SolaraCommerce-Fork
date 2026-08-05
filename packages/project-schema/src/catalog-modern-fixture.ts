@@ -178,6 +178,39 @@ function optionVariants(productNumber: number, imageId: string) {
   ];
 }
 
+const reviewSeeds = [
+  {
+    authorName: "Sof\u00eda M.",
+    body: "La prenda lleg\u00f3 r\u00e1pido y el calce es tal como se ve\u00eda. La uso much\u00edsimo.",
+    rating: 5,
+  },
+  {
+    authorName: "Juli\u00e1n R.",
+    body: "Buen material, colores f\u00e1ciles de combinar y una atenci\u00f3n muy clara.",
+    rating: 4,
+  },
+  {
+    authorName: "Clara P.",
+    body: "La textura se siente muy bien y el tama\u00f1o coincide con la gu\u00eda.",
+    rating: 5,
+  },
+  {
+    authorName: "Mart\u00edn L.",
+    body: "Una pieza vers\u00e1til para todos los d\u00edas. Volver\u00eda a elegirla.",
+    rating: 4,
+  },
+  {
+    authorName: "Valentina C.",
+    body: "Lleg\u00f3 muy bien presentada y el color es igual al de las fotos.",
+    rating: 5,
+  },
+  {
+    authorName: "Nicol\u00e1s G.",
+    body: "C\u00f3moda, liviana y f\u00e1cil de combinar. La recomiendo.",
+    rating: 5,
+  },
+] as const;
+
 const products = productNames.map((title, index) => {
   const productNumber = index + 1;
   const rootSlug = primaryRoots[index % primaryRoots.length] ?? primaryRoots[0] ?? "remeras";
@@ -191,28 +224,14 @@ const products = productNames.map((title, index) => {
   const imageId = imageIds[index % imageIds.length] ?? imageIds[0];
   const reviews =
     productNumber <= 6
-      ? [
-          {
-            id: `modo-review-${productNumber}-1`,
-            authorName: "Sofía M.",
-            body: "La prenda llegó rápido y el calce es tal como se veía. La uso muchísimo.",
-            rating: 5,
-            publishedAt: fixedDate,
-            verifiedPurchase: false,
-            origin: "example" as const,
-            visible: true,
-          },
-          {
-            id: `modo-review-${productNumber}-2`,
-            authorName: "Julián R.",
-            body: "Buen material, colores fáciles de combinar y una atención muy clara.",
-            rating: 4,
-            publishedAt: fixedDate,
-            verifiedPurchase: false,
-            origin: "example" as const,
-            visible: true,
-          },
-        ]
+      ? reviewSeeds.map((review, reviewIndex) => ({
+          ...review,
+          id: `modo-review-${productNumber}-${reviewIndex + 1}`,
+          publishedAt: fixedDate,
+          verifiedPurchase: reviewIndex % 2 === 0,
+          origin: "example" as const,
+          visible: true,
+        }))
       : undefined;
   return {
     id: `modo-product-${String(productNumber).padStart(2, "0")}`,

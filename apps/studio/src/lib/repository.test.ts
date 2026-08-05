@@ -12,6 +12,7 @@ import {
   DEPRECATED_CATEGORY_CLEANUP_SENTINEL,
   database,
   duplicateProject,
+  ensureCatalogModernDemoReviews,
   ensureDeprecatedCategoriesRemoved,
   ensureScaleDemoProject,
   getCachedAsset,
@@ -19,6 +20,7 @@ import {
   listProjects,
   listProjectsWithRecovery,
   putCachedAsset,
+  SCALE_DEMO_PROJECT_ID,
   saveProject,
   setProjectArchived,
 } from "./repository";
@@ -255,5 +257,22 @@ describe("repositorio local", () => {
     if (!firstCategory) throw new Error("Proyecto sin categorias");
     expect(firstCategory.productIds).toEqual(getCategoryProductIds(cleaned, firstCategory.id));
     expect(await ensureDeprecatedCategoriesRemoved()).toBe(false);
+  });
+
+  it("amplía las reseñas del demo sin tocar otras tiendas", async () => {
+    const staleDemo = StoreProjectV1Schema.parse({
+      ...structuredClone(catalogModernStore),
+      id: SCALE_DEMO_PROJECT_ID,
+      products: catalogModernStore.products.map((product, index) =>
+        index === 0 ? { ...product, reviews: product.reviews?.slice(0, 2) } : product,
+      ),
+    });
+    await saveProject(staleDemo);
+    await saveProject(referenceStore);
+
+    expect(await ensureCatalogModernDemoReviews()).toBe(true);
+    expect((await getProject(staleDemo.id))?.products[0]?.reviews).toHaveLength(6);
+    expect(await getProject(referenceStore.id)).toEqual(referenceStore);
+    expect(await ensureCatalogModernDemoReviews()).toBe(false);
   });
 });

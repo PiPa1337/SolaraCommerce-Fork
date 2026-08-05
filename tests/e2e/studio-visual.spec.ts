@@ -244,6 +244,19 @@ test("catálogo y constructor conservan jerarquía responsive", async ({ page })
     await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
     await expect(page.getByRole("complementary", { name: "Inspector de sección" })).toBeVisible();
     await expectNoHorizontalOverflow(page, `Constructor ${viewport.name}`);
+    if (viewport.name !== "desktop") {
+      await expect
+        .poll(() =>
+          page.locator("[data-studio-editor-pane]").evaluate((element) => {
+            const style = getComputedStyle(element);
+            return {
+              overflowY: style.overflowY,
+              scrollbarVisibility: style.getPropertyValue("--studio-scrollbar-visibility").trim(),
+            };
+          }),
+        )
+        .toEqual({ overflowY: "auto", scrollbarVisibility: "hidden" });
+    }
     if (viewport.name === "desktop") {
       await page.screenshot({ path: "test-results/constructor.png", fullPage: true });
     }

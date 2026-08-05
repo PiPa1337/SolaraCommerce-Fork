@@ -492,6 +492,33 @@ export async function ensureScaleDemoProject(): Promise<boolean> {
   return true;
 }
 
+export async function ensureCatalogModernDemoReviews(): Promise<boolean> {
+  await ready();
+  const record = await database.projects.get(SCALE_DEMO_PROJECT_ID);
+  if (!record) return false;
+  const parsed = StoreProjectV1Schema.parse(record.project);
+  if (parsed.id !== SCALE_DEMO_PROJECT_ID) return false;
+
+  const reference = buildCatalogModernProject({ seed: "demo" });
+  const referenceReviews = new Map(
+    reference.products.map((product) => [product.id, product.reviews ?? []]),
+  );
+  let changed = false;
+  const products = parsed.products.map((product) => {
+    const desired = referenceReviews.get(product.id);
+    if (!desired?.length || (product.reviews?.length ?? 0) >= desired.length) return product;
+    const existing = product.reviews ?? [];
+    const existingIds = new Set(existing.map((review) => review.id));
+    const additions = desired.filter((review) => !existingIds.has(review.id));
+    const reviews = [...existing, ...additions].slice(0, desired.length);
+    changed = true;
+    return { ...product, reviews };
+  });
+  if (!changed) return false;
+  await saveProject(StoreProjectV1Schema.parse({ ...parsed, products }));
+  return true;
+}
+
 export async function duplicateProject(id: string): Promise<StoreProjectV1> {
   const source = await getProject(id);
   if (!source) throw new Error("No se encontró la tienda para duplicar.");

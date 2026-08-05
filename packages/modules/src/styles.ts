@@ -1909,12 +1909,12 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-mega-group { min-width: 0; padding: 0; }
 [data-solara-store].catalog-modern .catalog-mega-group + .catalog-mega-group { padding-inline-start: 1.5rem; border-inline-start: 1px solid var(--catalog-border); }
 [data-solara-store].catalog-modern .catalog-mega-group__link { display: block; color: var(--catalog-ink); font-size: 1rem; font-weight: 700; text-decoration: none; }
-[data-solara-store].catalog-modern .catalog-mega-group__link::after { display: block; width: 2.1rem; height: 2px; margin-top: .65rem; background: currentcolor; content: ""; opacity: .65; }
+[data-solara-store].catalog-modern .catalog-mega-group__link::after { display: none; }
 [data-solara-store].catalog-modern .catalog-mega-group__link:hover,
 [data-solara-store].catalog-modern .catalog-mega-group__link:focus-visible { color: var(--catalog-muted); }
 [data-solara-store].catalog-modern .catalog-mega-group__link:focus-visible,
 [data-solara-store].catalog-modern .catalog-mega-group__children a:focus-visible { outline: 2px solid var(--catalog-ink); outline-offset: 2px; border-radius: 6px; }
-[data-solara-store].catalog-modern .catalog-mega-group__children { display: grid; gap: .3rem; margin: .85rem 0 0; padding: 0; list-style: none; }
+[data-solara-store].catalog-modern .catalog-mega-group__children { display: grid; gap: .3rem; margin: .55rem 0 0; padding: 0; list-style: none; }
 [data-solara-store].catalog-modern .catalog-mega-group__children a { display: block; min-height: 2.25rem; padding: .35rem 0; color: var(--catalog-muted); font-size: .9rem; font-weight: 500; text-decoration: none; }
 [data-solara-store].catalog-modern .catalog-mega-group__children a:hover { color: var(--catalog-ink); text-decoration: underline; text-underline-offset: .25em; }
 [data-solara-store].catalog-modern .catalog-mega-menu__all { display: inline-flex; align-items: center; gap: .55rem; margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--catalog-border); color: var(--catalog-ink); font-size: .9rem; text-decoration: underline; text-underline-offset: .25em; }

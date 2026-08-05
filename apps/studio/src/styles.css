@@ -4133,6 +4133,22 @@ tbody tr {
     --nav-width: 62px;
   }
 
+  .studio-nav,
+  .editor-pane,
+  .preview-stage {
+    --studio-scrollbar-visibility: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .studio-nav::-webkit-scrollbar,
+  .editor-pane::-webkit-scrollbar,
+  .preview-stage::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
   .studio-nav button {
     justify-content: center;
   }

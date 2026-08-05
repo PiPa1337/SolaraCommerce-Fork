@@ -9,6 +9,7 @@ import {
   consumeStorageResetNotice,
   createProject,
   duplicateProject,
+  ensureCatalogModernDemoReviews,
   ensureDeprecatedCategoriesRemoved,
   ensureFirstProject,
   ensureScaleDemoProject,
@@ -55,6 +56,14 @@ export function App() {
             current
               ? `${current} También se agregó la tienda Predeterminado con 50 productos para explorar la escala del catálogo.`
               : "Se agregó la tienda Predeterminado con 50 productos para explorar la escala del catálogo.",
+          );
+        }
+        const demoReviewsExpanded = await ensureCatalogModernDemoReviews();
+        if (demoReviewsExpanded) {
+          setNotice((current) =>
+            current
+              ? `${current} Se actualizaron las reseñas de Predeterminado.`
+              : "Se actualizaron las reseñas de Predeterminado.",
           );
         }
         const deprecatedCategoriesRemoved = await ensureDeprecatedCategoriesRemoved();

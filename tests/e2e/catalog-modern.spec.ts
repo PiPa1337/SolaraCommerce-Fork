@@ -214,6 +214,12 @@ test("la navegación, el detalle moderno y las variantes siguen siendo rastreabl
     megaMenu.locator(".catalog-mega-group").filter({ hasText: "Pantalones" }),
   ).toContainText("Jeans");
   expect(
+    await megaMenu
+      .locator(".catalog-mega-group__link")
+      .first()
+      .evaluate((element) => getComputedStyle(element, "::after").display),
+  ).toBe("none");
+  expect(
     await page.locator(".catalog-header-inner").evaluate((element) => {
       const style = getComputedStyle(element);
       return style.userSelect || style.getPropertyValue("-webkit-user-select");
@@ -254,10 +260,19 @@ test("la navegación, el detalle moderno y las variantes siguen siendo rastreabl
   await expect(page.locator("#catalog-mobile-menu")).toBeVisible();
   await expect(page.locator("#catalog-mobile-menu")).toHaveAttribute("role", "dialog");
   await expect(page.locator("#catalog-mobile-search-input")).toBeVisible();
-  await expect(page.locator(".catalog-mobile-categories > summary")).toHaveAttribute(
+  const mobileCategories = page.locator(".catalog-mobile-categories");
+  await expect(mobileCategories).not.toHaveAttribute("open", "");
+  await expect(mobileCategories.locator(":scope > summary")).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await expect(page.locator(".catalog-mobile-category__children").first()).toBeHidden();
+  await mobileCategories.locator(":scope > summary").click();
+  await expect(mobileCategories.locator(":scope > summary")).toHaveAttribute(
     "aria-expanded",
     "true",
   );
+  await page.locator(".catalog-mobile-category").first().locator(":scope > summary").click();
   await expect(page.locator(".catalog-mobile-category__children a").first()).toHaveAttribute(
     "href",
     "/categorias/remeras/",
@@ -273,6 +288,7 @@ test("la navegación, el detalle moderno y las variantes siguen siendo rastreabl
   await expect(page.getByLabel("Elegí talle y color")).toBeVisible();
   await page.getByRole("tab", { name: "Reseñas" }).click();
   await expect(page.getByText("Lo que dicen quienes compraron")).toBeVisible();
+  await expect(page.locator(".catalog-review")).toHaveCount(6);
   await page.getByLabel("Elegí talle y color").selectOption({ index: 1 });
   await expect(page.locator(".catalog-product-info [data-product-price]")).toBeVisible();
   await page.getByRole("button", { name: "Agregar al carrito" }).click();

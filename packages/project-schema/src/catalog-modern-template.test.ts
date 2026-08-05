@@ -26,6 +26,8 @@ describe("plantilla Catalog Modern", () => {
     expect(demo.products).toHaveLength(50);
     expect(demo.categories).toHaveLength(14);
     expect(demo.products.flatMap((product) => product.variants)).toHaveLength(60);
+    expect(demo.products.slice(0, 6).every((product) => product.reviews?.length === 6)).toBe(true);
+    expect(demo.products.slice(6).every((product) => !product.reviews)).toBe(true);
   });
 
   it("permite personalizar la identidad sin cambiar el contrato", () => {

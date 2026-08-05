@@ -183,9 +183,6 @@ export const catalogHeader: ModuleDefinition<z.infer<typeof headerSettings>> = {
     const catalog = navigationItems.length
       ? `<details class="catalog-nav-menu"><summary class="catalog-nav-trigger" aria-controls="catalog-category-menu" aria-haspopup="true" aria-expanded="false"${current(["category", "collection"])}>${escapeHtml(catalogLabel)}${chevron}</summary>${desktopMenu}</details>`
       : `<a class="catalog-nav-empty" href="/buscar/"${current(["category", "collection"])}>${escapeHtml(catalogLabel)}</a>`;
-    const firstExpandableIndex = navigationItems.findIndex((item) =>
-      Boolean(item.children?.length),
-    );
     const mobileCategoryItems = navigationItems
       .map((item, index) => {
         const children = item.children ?? [];
@@ -193,8 +190,7 @@ export const catalogHeader: ModuleDefinition<z.infer<typeof headerSettings>> = {
           return `<a class="catalog-mobile-category-link" href="${escapeAttribute(safeUrl(item.href ?? "#"))}"><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("categories")}</span><span>${escapeHtml(item.label)}</span>${forwardChevron}</a>`;
         }
         const panelId = `catalog-mobile-category-${index}-panel`;
-        const isOpen = index === firstExpandableIndex;
-        return `<details class="catalog-mobile-category"${isOpen ? " open" : ""}><summary aria-controls="${panelId}" aria-expanded="${String(isOpen)}"><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("categories")}</span><span>${escapeHtml(item.label)}</span>${chevron}</summary><ul id="${panelId}" class="catalog-mobile-category__children"><li><a class="catalog-mobile-category__parent" href="${escapeAttribute(safeUrl(item.href ?? "#"))}">Ver ${escapeHtml(item.label)}</a></li>${children
+        return `<details class="catalog-mobile-category"><summary aria-controls="${panelId}" aria-expanded="false"><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("categories")}</span><span>${escapeHtml(item.label)}</span>${chevron}</summary><ul id="${panelId}" class="catalog-mobile-category__children"><li><a class="catalog-mobile-category__parent" href="${escapeAttribute(safeUrl(item.href ?? "#"))}">Ver ${escapeHtml(item.label)}</a></li>${children
           .map(
             (child) =>
               `<li><a href="${escapeAttribute(safeUrl(child.href ?? "#"))}">${escapeHtml(child.label)}</a></li>`,
@@ -203,7 +199,7 @@ export const catalogHeader: ModuleDefinition<z.infer<typeof headerSettings>> = {
       })
       .join("");
     const mobileCategories = navigationItems.length
-      ? `<details class="catalog-mobile-categories" open><summary aria-controls="catalog-mobile-categories-panel" aria-expanded="true"><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("categories")}</span><span>${escapeHtml(catalogLabel)}</span>${chevron}</summary><div id="catalog-mobile-categories-panel" class="catalog-mobile-categories__panel">${mobileCategoryItems}</div></details>`
+      ? `<details class="catalog-mobile-categories"><summary aria-controls="catalog-mobile-categories-panel" aria-expanded="false"><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("categories")}</span><span>${escapeHtml(catalogLabel)}</span>${chevron}</summary><div id="catalog-mobile-categories-panel" class="catalog-mobile-categories__panel">${mobileCategoryItems}</div></details>`
       : `<a class="catalog-mobile-nav-link" href="/buscar/"><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("categories")}</span><span>${escapeHtml(catalogLabel)}</span>${forwardChevron}</a>`;
     const nav = `${navigation.showHome ? `<a href="/"${current(["home"])}>Inicio</a>` : ""}${catalog}${navigation.showContact ? `<a href="/contacto/"${current(["contact"])}>Contacto</a>` : ""}${navigation.showAbout ? `<a href="/nosotros/"${current(["about"])}>Nosotros</a>` : ""}`;
     const mobileNav = `${navigation.showHome ? `<a class="catalog-mobile-nav-link" href="/"${current(["home"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("home")}</span><span>Inicio</span>${forwardChevron}</a>` : ""}${mobileCategories}${navigation.showContact ? `<a class="catalog-mobile-nav-link" href="/contacto/"${current(["contact"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("contact")}</span><span>Contacto</span>${forwardChevron}</a>` : ""}${navigation.showAbout ? `<a class="catalog-mobile-nav-link" href="/nosotros/"${current(["about"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("about")}</span><span>Nosotros</span>${forwardChevron}</a>` : ""}`;
