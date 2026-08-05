@@ -22,16 +22,19 @@ void main() {
   vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
   float radius = length(uv);
   float angle = atan(uv.y, uv.x);
-  float drift = time * 0.055;
-  float ring = exp(-pow((radius - 0.72 - sin(angle * 2.0 + drift) * 0.025) * 13.0, 2.0));
+  float drift = time * 0.24;
+  float wobble = sin(angle * 2.0 + drift) * 0.045 + sin(angle * 5.0 - drift * 0.7) * 0.018;
+  float ring = exp(-pow((radius - 0.72 - wobble) * 12.0, 2.0));
   float inner = exp(-pow(radius * 6.0, 2.0));
-  float swirl = exp(-pow((radius - 0.53 + sin(angle * 3.0 - drift) * 0.045) * 10.0, 2.0));
-  float stars = step(0.9974, hash21(floor(uv * 22.0 + time * 0.02)));
+  float swirl = exp(-pow((radius - 0.53 + sin(angle * 3.0 - drift) * 0.065) * 10.0, 2.0));
+  float hotArc = pow(max(0.0, cos(angle - drift * 1.15)), 14.0);
+  float stars = step(0.9968, hash21(floor(uv * 22.0 + time * 0.08)));
   vec3 base = vec3(0.004, 0.006, 0.012);
   vec3 amber = vec3(1.0, 0.43, 0.075);
   vec3 violet = vec3(0.24, 0.09, 0.29);
-  vec3 glow = amber * (ring * 0.28 + swirl * 0.08) + violet * (0.12 * exp(-radius * 1.5));
-  glow += vec3(1.0, 0.7, 0.22) * stars * 0.38;
+  vec3 glow = amber * (ring * (0.42 + hotArc * 1.15) + swirl * 0.14);
+  glow += violet * (0.16 * exp(-radius * 1.5));
+  glow += vec3(1.0, 0.7, 0.22) * stars * (0.42 + hotArc * 0.6);
   glow *= smoothstep(1.65, 0.05, radius);
   glow *= 1.0 - inner * 0.8;
   color = vec4(base + glow, 1.0);
@@ -90,7 +93,6 @@ export function CosmicBackground({ intensity = "normal" }: { intensity?: "subtle
     let buffer: WebGLBuffer | undefined;
     let frame = 0;
     let lastFrame = 0;
-    let visible = true;
     let pageVisible = !document.hidden;
     let destroyed = false;
 
@@ -124,19 +126,15 @@ export function CosmicBackground({ intensity = "normal" }: { intensity?: "subtle
     };
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
-    const visibilityObserver = new IntersectionObserver(([entry]) => {
-      visible = entry?.isIntersecting ?? true;
-    });
-    visibilityObserver.observe(canvas);
-
     const render = (timestamp: number) => {
       if (destroyed) return;
-      if (visible && pageVisible && (reducedMotion.matches || timestamp - lastFrame >= 33)) {
+      if (pageVisible && (reducedMotion.matches || timestamp - lastFrame >= 33)) {
         lastFrame = timestamp;
         activateProgram(program);
         gl.uniform2f(resolution, canvas.width, canvas.height);
         gl.uniform1f(time, reducedMotion.matches ? 0 : timestamp * 0.001);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
+        gl.flush();
       }
       if (!reducedMotion.matches) frame = requestAnimationFrame(render);
     };
@@ -162,7 +160,6 @@ export function CosmicBackground({ intensity = "normal" }: { intensity?: "subtle
       reducedMotion.removeEventListener("change", onMotionChange);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       observer.disconnect();
-      visibilityObserver.disconnect();
       if (program) gl.deleteProgram(program);
       if (buffer) gl.deleteBuffer(buffer);
     };

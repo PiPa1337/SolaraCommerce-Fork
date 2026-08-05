@@ -132,6 +132,35 @@ test("dashboard cosmic muestra datos reales y creación guiada", async ({ page }
   await expect(createDialog).toBeHidden();
 });
 
+test("el fondo cosmic mantiene movimiento perceptible y un fallback visible", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(studioUrl);
+
+  const background = page.locator(".cosmic-background");
+  const canvas = background.locator("canvas");
+  await expect(background).toBeVisible();
+  await expect.poll(() => canvas.getAttribute("data-webgl")).toMatch(/^(ready|fallback)$/);
+
+  const cssAnimation = await background.evaluate((element) => {
+    const orbit = getComputedStyle(element, "::before");
+    return { name: orbit.animationName, duration: orbit.animationDuration };
+  });
+  expect(cssAnimation.name).toBe("cosmic-orbit");
+  expect(cssAnimation.duration).toBe("8s");
+
+  const initialTransform = await background.evaluate(
+    (element) => getComputedStyle(element, "::before").transform,
+  );
+  await page.waitForTimeout(400);
+  const nextTransform = await background.evaluate(
+    (element) => getComputedStyle(element, "::before").transform,
+  );
+  expect(nextTransform).not.toBe(initialTransform);
+
+  expect(await canvas.getAttribute("data-webgl")).toMatch(/^(ready|fallback)$/);
+});
+
 test("dashboard permite abrir, buscar, cambiar vista, respaldar y administrar una tienda", async ({
   page,
 }) => {
