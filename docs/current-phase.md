@@ -269,3 +269,36 @@ El preview deduplica assets embebidos: el `srcdoc` sólo contiene las rutas de
 los recursos usados. El iframe los solicita por `postMessage`, los convierte a
 URLs `blob:` dentro de su propio sandbox y evita iframes gigantes sin relajar
 la política de aislamiento.
+
+## Persistencia local en disco
+
+La fase activa agrega un segundo nivel de persistencia para el uso mediante
+`Abrir SolaraCommerce.cmd`:
+
+- `proyectos/<slug-inicial>--<id-corto>/` es la carpeta estable de cada tienda.
+- `manifest.json` apunta a la única versión editable actual y a la última
+  exportación pública válida.
+- `actual/` conserva el `.solara.zip` confirmado más reciente; las versiones
+  anteriores pasan a `respaldos/` y nunca se eliminan automáticamente.
+- `sitios/` contiene cada exportación production descomprimida, lista para
+  hosting estático.
+- `respaldos-manuales/` recibe copias explícitas sin consumir una nueva versión.
+
+El servidor Node local recibe la raíz de la aplicación y sólo escucha en
+`127.0.0.1`. Las rutas de almacenamiento requieren la cookie `HttpOnly` de la
+sesión y el mismo origen. Los uploads son streams binarios con SHA-256; el
+servidor valida el respaldo v2, limita tamaño y archivos, evita Zip Slip y usa
+staging más rename atómico para el manifiesto. Los guardados simultáneos de una
+tienda se bloquean y un conflicto de versión devuelve `409`.
+
+Studio ya no trata el autosave como confirmación de disco cuando el servidor
+administrado está disponible. Cada edición crea un `RecoveryDraft` temporal en
+IndexedDB y el botón `Guardar` (también `Ctrl+S`) confirma la versión completa.
+Si la exportación production falla, el `.solara.zip` se guarda igualmente y el
+manifest queda `site-outdated`, conservando intacto el último sitio público.
+Al abrir una tienda desde disco se valida el hash y se ofrece recuperar un
+borrador divergente; rechazarlo lo descarta sin modificar el archivo confirmado.
+
+El dashboard permite crear respaldos manuales y abrir el último sitio válido en
+un servidor estático temporal local. El servidor temporal se cierra junto con
+SolaraCommerce y nunca expone archivos del editor.

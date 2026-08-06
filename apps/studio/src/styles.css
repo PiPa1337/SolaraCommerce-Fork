@@ -2107,6 +2107,35 @@ input[type="color"] {
   color: var(--danger);
 }
 
+.save-indicator--site-outdated {
+  color: var(--warning);
+}
+
+.save-button {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-input);
+  background: var(--accent-soft);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.save-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--surface-raised);
+}
+
+.save-button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
 .save-retry {
   justify-self: start;
   padding: 3px 7px;

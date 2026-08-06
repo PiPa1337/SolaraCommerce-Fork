@@ -31,8 +31,18 @@ corepack pnpm check
 corepack pnpm dev
 ```
 
-La aplicación guarda los proyectos en IndexedDB. Las tiendas públicas se exportan
-como ZIP estáticos, sin backend ni runtime de inteligencia artificial.
+Cuando se abre con `Abrir SolaraCommerce.cmd`, `proyectos/` es la fuente de verdad
+en disco. IndexedDB queda como caché de recuperación para cambios aún no
+confirmados. `Guardar` crea una versión editable `.solara.zip`, conserva los
+respaldos anteriores y extrae el sitio público en `proyectos/<tienda>/sitios/`.
+Las tiendas públicas se pueden abrir en un servidor local temporal o alojar
+directamente como archivos estáticos; no requieren backend ni runtime de IA.
+
+El servidor local sólo escucha en `127.0.0.1`, valida la cookie de sesión y
+acepta escrituras dentro de `proyectos/`. Cada guardado usa staging, SHA-256,
+validación del respaldo, extracción protegida contra Zip Slip y un manifiesto
+actualizado con rename atómico. Si production no puede exportarse, el respaldo
+editable se conserva y el último sitio público válido no se reemplaza.
 
 En el primer arranque Studio crea `Predeterminado` con la tienda ficticia de
 Catalog Modern, generada por la misma fábrica, con 8 raíces, 14 categorías,

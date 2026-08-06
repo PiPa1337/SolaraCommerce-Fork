@@ -139,7 +139,8 @@ try {
     "`"$serverScript`"",
     "`"$studioDist`"",
     "$port",
-    "`"$shutdownToken`""
+    "`"$shutdownToken`"",
+    "`"$projectRoot`""
   )
   $serverProcess = Start-Process `
     -FilePath $nodePath `

@@ -8,6 +8,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import {
   ASSET_CACHE_RECIPE_VERSION,
   clearAssetCache,
+  clearRecoveryDraft,
   createAssetCacheKey,
   DEPRECATED_CATEGORY_CLEANUP_SENTINEL,
   database,
@@ -17,11 +18,13 @@ import {
   ensureScaleDemoProject,
   getCachedAsset,
   getProject,
+  getRecoveryDraft,
   listProjects,
   listProjectsWithRecovery,
   putCachedAsset,
   SCALE_DEMO_PROJECT_ID,
   saveProject,
+  saveRecoveryDraft,
   setProjectArchived,
 } from "./repository";
 
@@ -29,6 +32,7 @@ describe("repositorio local", () => {
   beforeEach(async () => {
     await database.projects.clear();
     await database.assetCache.clear();
+    await database.recoveryDrafts.clear();
     if (typeof localStorage !== "undefined") {
       localStorage.removeItem(DEPRECATED_CATEGORY_CLEANUP_SENTINEL);
     }
@@ -46,6 +50,24 @@ describe("repositorio local", () => {
     const records = await listProjects();
     expect(records).toHaveLength(1);
     expect(records[0]?.name).toBe(referenceStore.name);
+  });
+
+  it("mantiene un borrador de recuperación separado del proyecto confirmado", async () => {
+    const edited = StoreProjectV1Schema.parse({
+      ...referenceStore,
+      name: "Borrador local",
+      updatedAt: "2026-08-06T12:00:00.000Z",
+    });
+    await saveProject(referenceStore);
+    await saveRecoveryDraft(edited, 4);
+
+    expect(await getProject(referenceStore.id)).toEqual(referenceStore);
+    expect(await getRecoveryDraft(referenceStore.id)).toMatchObject({
+      baseDiskVersion: 4,
+      project: edited,
+    });
+    await clearRecoveryDraft(referenceStore.id);
+    expect(await getRecoveryDraft(referenceStore.id)).toBeUndefined();
   });
 
   it("rechaza proyectos inválidos antes de escribir en IndexedDB", async () => {

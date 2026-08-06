@@ -5,6 +5,7 @@ import {
   CheckCircle,
   CloudArrowDown,
   Copy,
+  DownloadSimple,
   Funnel,
   GridFour,
   List,
@@ -39,6 +40,8 @@ interface DashboardProps {
   onDuplicate(id: string): Promise<void>;
   onArchive(id: string, archived: boolean): Promise<void>;
   onBackup(id: string): Promise<void>;
+  onDownloadBackup?(id: string): Promise<void>;
+  onOpenSite?(id: string): Promise<void>;
   onSessionManaged?(managed: boolean): void;
 }
 
@@ -75,6 +78,8 @@ export function Dashboard({
   onDuplicate,
   onArchive,
   onBackup,
+  onDownloadBackup,
+  onOpenSite,
   onSessionManaged,
 }: DashboardProps) {
   const [statusFilter, setStatusFilter] = useState<DashboardStatusFilter>("active");
@@ -91,6 +96,7 @@ export function Dashboard({
   const [createError, setCreateError] = useState("");
   const [creatingProject, setCreatingProject] = useState(false);
   const [backupId, setBackupId] = useState<string>();
+  const [siteOpeningId, setSiteOpeningId] = useState<string>();
   const [shutdownState, setShutdownState] = useState<
     "checking" | "unavailable" | "available" | "closing" | "closed"
   >("checking");
@@ -256,6 +262,16 @@ export function Dashboard({
       await onBackup(id);
     } finally {
       setBackupId(undefined);
+    }
+  };
+
+  const openSite = async (id: string) => {
+    if (!onOpenSite) return;
+    setSiteOpeningId(id);
+    try {
+      await onOpenSite(id);
+    } finally {
+      setSiteOpeningId(undefined);
     }
   };
 
@@ -508,6 +524,22 @@ export function Dashboard({
                       <dt>Recursos</dt>
                       <dd>{getProjectMetrics(selected.project).assets}</dd>
                     </div>
+                    {selected.diskVersion !== undefined ? (
+                      <div>
+                        <dt>Versión en disco</dt>
+                        <dd>v{selected.diskVersion}</dd>
+                      </div>
+                    ) : null}
+                    {selected.diskSiteStatus ? (
+                      <div>
+                        <dt>Sitio público</dt>
+                        <dd>
+                          {selected.diskSiteStatus === "synced"
+                            ? "Actualizado"
+                            : "Anterior conservado"}
+                        </dd>
+                      </div>
+                    ) : null}
                   </dl>
                   <div className="dashboard-store-detail__actions">
                     <Button
@@ -517,6 +549,16 @@ export function Dashboard({
                     >
                       Abrir tienda
                     </Button>
+                    {onOpenSite ? (
+                      <Button
+                        variant="secondary"
+                        icon={ArrowUpRight}
+                        disabled={siteOpeningId === selected.id}
+                        onClick={() => void openSite(selected.id)}
+                      >
+                        {siteOpeningId === selected.id ? "Abriendo sitio" : "Abrir sitio público"}
+                      </Button>
+                    ) : null}
                     <Button
                       variant="secondary"
                       icon={CloudArrowDown}
@@ -525,6 +567,15 @@ export function Dashboard({
                     >
                       {backupId === selected.id ? "Preparando respaldo" : "Respaldo ahora"}
                     </Button>
+                    {onDownloadBackup ? (
+                      <Button
+                        variant="secondary"
+                        icon={DownloadSimple}
+                        onClick={() => void onDownloadBackup(selected.id)}
+                      >
+                        Descargar respaldo
+                      </Button>
+                    ) : null}
                     <Button
                       variant="secondary"
                       icon={Copy}

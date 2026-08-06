@@ -1,11 +1,12 @@
 import { WarningCircle } from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { InlineError, Skeleton } from "./components/Ui";
 import { Dashboard } from "./features/Dashboard";
-import { Studio } from "./features/Studio";
+import type { LocalStorageStatus } from "./lib/localStorage";
 import { downloadBlob } from "./lib/projectArchive";
 import {
+  clearRecoveryDraft,
   consumeStorageResetNotice,
   createProject,
   duplicateProject,
@@ -14,13 +15,21 @@ import {
   ensureFirstProject,
   ensureScaleDemoProject,
   getProject,
+  getRecoveryDraft,
   listProjectsWithRecovery,
   type ProjectRecoveryIssue,
   type StoredProject,
   saveProject,
+  saveRecoveryDraft,
   setProjectArchived,
 } from "./lib/repository";
 import { createProjectArchiveInWorker, readProjectArchiveInWorker } from "./lib/workers";
+
+const loadLocalStorage = () => import("./lib/localStorage");
+const loadLocalProjectRepository = () => import("./lib/localProjectRepository");
+const Studio = lazy(() =>
+  import("./features/Studio").then(({ Studio: Component }) => ({ default: Component })),
+);
 
 export function App() {
   const [projects, setProjects] = useState<StoredProject[]>([]);
@@ -30,18 +39,80 @@ export function App() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [sessionManaged, setSessionManaged] = useState(false);
+  const [localStorageStatus, setLocalStorageStatus] = useState<LocalStorageStatus>({
+    managed: false,
+    writable: false,
+  });
+  const [activeDiskVersion, setActiveDiskVersion] = useState<number | null>(null);
+  const [activeDiskBaseProject, setActiveDiskBaseProject] = useState<StoreProjectV1 | undefined>();
+  const storageModeRef = useRef(false);
 
-  const refresh = useCallback(async () => {
+  const refreshBrowser = useCallback(async () => {
     const result = await listProjectsWithRecovery();
     setProjects(result.projects);
     setRecovery(result.recovery);
     return result;
   }, []);
 
+  const refreshDisk = useCallback(async () => {
+    const { loadAllDiskProjects } = await loadLocalProjectRepository();
+    const result = await loadAllDiskProjects();
+    setProjects(result.projects);
+    setRecovery(result.recovery);
+    return result;
+  }, []);
+
+  const refresh = useCallback(
+    async () => (storageModeRef.current ? refreshDisk() : refreshBrowser()),
+    [refreshBrowser, refreshDisk],
+  );
+
+  const persistToDisk = useCallback(
+    async (project: StoreProjectV1, expectedVersion: number | null) => {
+      const { persistProjectToDisk } = await loadLocalProjectRepository();
+      const result = await persistProjectToDisk(project, expectedVersion);
+      await clearRecoveryDraft(project.id);
+      if (result.siteError) {
+        setNotice(`Proyecto guardado · sitio público pendiente: ${result.siteError}`);
+      }
+      return result;
+    },
+    [],
+  );
+
   useEffect(() => {
     void (async () => {
       try {
-        const result = await refresh();
+        const { getLocalStorageStatus } = await loadLocalStorage();
+        const detectedStorage = await getLocalStorageStatus().catch(() => ({
+          managed: false,
+          writable: false,
+        }));
+        storageModeRef.current = detectedStorage.managed;
+        setLocalStorageStatus(detectedStorage);
+        const diskListing = detectedStorage.managed
+          ? await (await loadLocalProjectRepository()).loadAllDiskProjects()
+          : undefined;
+        if (diskListing?.projects.length) {
+          if (detectedStorage.writable) {
+            const browserProjects = await listProjectsWithRecovery();
+            const diskById = new Map(diskListing.projects.map((item) => [item.id, item]));
+            for (const stored of browserProjects.projects) {
+              const diskProject = diskById.get(stored.id);
+              if (!diskProject) {
+                await persistToDisk(stored.project, null);
+                continue;
+              }
+              if (JSON.stringify(stored.project) !== JSON.stringify(diskProject.project)) {
+                await saveRecoveryDraft(stored.project, diskProject.diskVersion ?? 0);
+              }
+            }
+          }
+          await refreshDisk();
+          return;
+        }
+
+        const result = await refreshBrowser();
         if (consumeStorageResetNotice()) {
           setNotice(
             "Se reinició la base local para activar el contrato de tienda v2. Los respaldos y exportaciones no fueron modificados.",
@@ -74,14 +145,25 @@ export function App() {
               : "Se retiraron las categorias Sale y Novedades; los productos y sus precios se conservaron.",
           );
         }
-        await refresh();
+        const browserResult = await refreshBrowser();
+        if (detectedStorage.managed && detectedStorage.writable) {
+          for (const stored of browserResult.projects) {
+            await persistToDisk(stored.project, null);
+          }
+          await refreshDisk();
+          setNotice((current) =>
+            current
+              ? `${current} Se migraron las tiendas locales a proyectos/.`
+              : "Las tiendas locales se migraron a proyectos/.",
+          );
+        }
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : "No se pudo abrir Studio.");
       } finally {
         setLoading(false);
       }
     })();
-  }, [refresh]);
+  }, [persistToDisk, refreshBrowser, refreshDisk]);
 
   const guard = async (action: () => Promise<void>) => {
     setError("");
@@ -95,7 +177,16 @@ export function App() {
   const importRecoveryArchive = async (file: File) => {
     await guard(async () => {
       const project = await readProjectArchiveInWorker(file);
-      await saveProject(project);
+      if (storageModeRef.current) {
+        const existing = projects.find((item) => item.id === project.id) as
+          | (StoredProject & { diskVersion?: number })
+          | undefined;
+        const result = await persistToDisk(project, existing?.diskVersion ?? null);
+        setActiveDiskVersion(result.receipt.version);
+        setActiveDiskBaseProject(project);
+      } else {
+        await saveProject(project);
+      }
       await refresh();
       setActive(project);
     });
@@ -115,19 +206,45 @@ export function App() {
 
   if (active) {
     return (
-      <Studio
-        key={`${active.id}:${active.updatedAt}`}
-        initialProject={active}
-        onBack={() => {
-          setActive(undefined);
-          void refresh();
-        }}
-        onProjectImported={async (project) => {
-          await saveProject(project);
-          setActive(project);
-          await refresh();
-        }}
-      />
+      <Suspense
+        fallback={
+          <main className="boot-screen">
+            <span className="brand-mark" aria-hidden>
+              S
+            </span>
+            <h1>SolaraCommerce</h1>
+            <Skeleton lines={3} />
+          </main>
+        }
+      >
+        <Studio
+          key={`${active.id}:${active.updatedAt}`}
+          initialProject={active}
+          managedStorage={localStorageStatus.managed && localStorageStatus.writable}
+          diskVersion={activeDiskVersion}
+          {...(activeDiskBaseProject ? { diskBaseProject: activeDiskBaseProject } : {})}
+          onDiskSaved={(receipt) => setActiveDiskVersion(receipt.version)}
+          onBack={() => {
+            setActive(undefined);
+            setActiveDiskVersion(null);
+            setActiveDiskBaseProject(undefined);
+            void refresh();
+          }}
+          onProjectImported={async (project) => {
+            if (storageModeRef.current) {
+              const existing = projects.find((item) => item.id === project.id) as
+                | (StoredProject & { diskVersion?: number })
+                | undefined;
+              await persistToDisk(project, existing?.diskVersion ?? null);
+              setActiveDiskBaseProject(project);
+            } else {
+              await saveProject(project);
+            }
+            setActive(project);
+            await refresh();
+          }}
+        />
+      </Suspense>
     );
   }
 
@@ -219,7 +336,9 @@ export function App() {
           setError("");
           try {
             const project = await createProject(input);
+            if (storageModeRef.current) await persistToDisk(project, null);
             await refresh();
+            if (storageModeRef.current) setActiveDiskVersion(1);
             setActive(project);
           } catch (reason) {
             const message =
@@ -230,31 +349,109 @@ export function App() {
         }}
         onOpen={(id) =>
           void guard(async () => {
-            const project = await getProject(id);
+            let project: StoreProjectV1 | undefined;
+            if (storageModeRef.current) {
+              const result = await refreshDisk();
+              const selected = result.projects.find((item) => item.id === id) as
+                | (StoredProject & { diskVersion?: number })
+                | undefined;
+              const diskProject = selected?.project;
+              project = diskProject;
+              setActiveDiskVersion(selected?.diskVersion ?? null);
+              setActiveDiskBaseProject(diskProject);
+              if (diskProject) {
+                const draft = await getRecoveryDraft(diskProject.id);
+                if (draft && JSON.stringify(draft.project) !== JSON.stringify(diskProject)) {
+                  const recover = window.confirm(
+                    "Hay un borrador sin guardar de esta tienda. ¿Querés recuperarlo?",
+                  );
+                  if (recover) {
+                    project = draft.project;
+                    setNotice("Se recuperó el borrador local. Guardalo para confirmarlo en disco.");
+                  } else {
+                    await clearRecoveryDraft(diskProject.id);
+                  }
+                }
+              }
+            } else {
+              project = await getProject(id);
+              setActiveDiskVersion(null);
+              setActiveDiskBaseProject(undefined);
+            }
             if (!project) throw new Error("No se encontró la tienda.");
             setActive(project);
           })
         }
         onDuplicate={(id) =>
           guard(async () => {
-            await duplicateProject(id);
+            const duplicate = await duplicateProject(id);
+            if (storageModeRef.current) await persistToDisk(duplicate, null);
             await refresh();
           })
         }
         onArchive={(id, archived) =>
           guard(async () => {
             await setProjectArchived(id, archived);
+            if (storageModeRef.current) {
+              const project = await getProject(id);
+              if (project) {
+                const selected = projects.find((item) => item.id === id) as
+                  | (StoredProject & { diskVersion?: number })
+                  | undefined;
+                await persistToDisk(project, selected?.diskVersion ?? null);
+              }
+            }
             await refresh();
           })
         }
         onBackup={(id) =>
           guard(async () => {
+            if (storageModeRef.current) {
+              const { createLocalManualBackup } = await loadLocalStorage();
+              await createLocalManualBackup(id);
+              setNotice("Se creó un respaldo manual en proyectos/.");
+              return;
+            }
             const project = await getProject(id);
             if (!project) throw new Error("No se encontró la tienda.");
             const archive = await createProjectArchiveInWorker(project);
             downloadBlob(archive, `${project.slug}-respaldo.solara.zip`, "application/zip");
           })
         }
+        {...(localStorageStatus.managed
+          ? {
+              onDownloadBackup: (id: string) =>
+                guard(async () => {
+                  const selected = projects.find((item) => item.id === id);
+                  const { readLocalProject } = await loadLocalStorage();
+                  const bytes = await readLocalProject(id);
+                  const version = selected?.diskVersion ? `-v${selected.diskVersion}` : "";
+                  downloadBlob(
+                    bytes,
+                    `${selected?.project.slug ?? "tienda"}${version}.solara.zip`,
+                    "application/zip",
+                  );
+                }),
+            }
+          : {})}
+        {...(localStorageStatus.managed
+          ? {
+              onOpenSite: async (id: string) => {
+                const popup = window.open("about:blank", "_blank");
+                await guard(async () => {
+                  try {
+                    const { openLocalSite } = await loadLocalStorage();
+                    const url = await openLocalSite(id);
+                    if (popup) popup.location.href = url;
+                    else window.open(url, "_blank");
+                  } catch (reason) {
+                    popup?.close();
+                    throw reason;
+                  }
+                });
+              },
+            }
+          : {})}
         onSessionManaged={setSessionManaged}
       />
     </div>

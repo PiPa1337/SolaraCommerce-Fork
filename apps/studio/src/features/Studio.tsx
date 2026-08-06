@@ -23,9 +23,10 @@ import {
 } from "@solara/core";
 import { type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
 import { motion } from "motion/react";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { IconButton } from "../components/Ui";
 import { AutosaveQueue, type AutosaveState } from "../lib/autosave";
+import type { LocalSaveReceipt } from "../lib/localStorage";
 import { downloadBlob } from "../lib/projectArchive";
 import { saveProject } from "../lib/repository";
 import { createProjectArchiveInWorker } from "../lib/workers";
@@ -38,6 +39,12 @@ import { Overview } from "./Overview";
 import { getPreviewRoutes, Preview, type PreviewSize, PreviewToolbar } from "./Preview";
 import { Seo } from "./Seo";
 import { ThemeEditor } from "./ThemeEditor";
+
+const ManagedPersistenceControls = lazy(() =>
+  import("./ManagedPersistenceControls").then(({ ManagedPersistenceControls: Component }) => ({
+    default: Component,
+  })),
+);
 
 type StudioTab =
   | "guided"
@@ -63,10 +70,18 @@ export function Studio({
   initialProject,
   onBack,
   onProjectImported,
+  managedStorage = false,
+  diskVersion = null,
+  diskBaseProject,
+  onDiskSaved,
 }: {
   initialProject: StoreProjectV1;
   onBack(): void;
   onProjectImported(project: StoreProjectV1): Promise<void>;
+  managedStorage?: boolean;
+  diskVersion?: number | null;
+  diskBaseProject?: StoreProjectV1;
+  onDiskSaved?(receipt: LocalSaveReceipt): void;
 }) {
   const [history, setHistory] = useState<HistoryState>(() => createHistory(initialProject));
   const [tab, setTab] = useState<StudioTab>("guided");
@@ -77,6 +92,7 @@ export function Studio({
   const [saveState, setSaveState] = useState<AutosaveState>("saved");
   const [validationError, setValidationError] = useState("");
   const [leaving, setLeaving] = useState(false);
+  const [managedDirty, setManagedDirty] = useState(false);
   const [autosave] = useState(() => new AutosaveQueue(saveProject, 550));
   const editorPaneId = useId();
   const lastProjectRef = useRef(initialProject);
@@ -94,12 +110,13 @@ export function Studio({
   useEffect(() => {
     if (project === lastProjectRef.current) return;
     lastProjectRef.current = project;
-    autosave.schedule(project);
-  }, [autosave, project]);
+    if (!managedStorage) autosave.schedule(project);
+  }, [autosave, managedStorage, project]);
 
   useEffect(() => {
     const warnBeforeClose = (event: BeforeUnloadEvent) => {
-      if (!autosave.hasUnsavedChanges) return;
+      const hasChanges = managedStorage ? managedDirty : autosave.hasUnsavedChanges;
+      if (!hasChanges) return;
       event.preventDefault();
       event.returnValue = "";
     };
@@ -108,9 +125,16 @@ export function Studio({
       window.removeEventListener("beforeunload", warnBeforeClose);
       autosave.dispose();
     };
-  }, [autosave]);
+  }, [autosave, managedDirty, managedStorage]);
 
   const leaveStudio = async () => {
+    if (
+      managedStorage &&
+      managedDirty &&
+      !window.confirm("Hay cambios sin guardar. ¿Salir sin guardar?")
+    ) {
+      return;
+    }
     setLeaving(true);
     try {
       await autosave.flush();
@@ -231,36 +255,50 @@ export function Studio({
           onOpenEditor={() => setEditorOpen(true)}
         />
         <div className="studio-topbar-actions">
-          <div className="save-status">
-            {validationError ? (
-              <output
-                className="save-indicator save-indicator--error"
-                aria-live="assertive"
-                title={validationError}
-              >
-                Cambio inválido
+          {managedStorage ? (
+            <Suspense
+              fallback={
+                <div className="save-status">
+                  <output className="save-indicator save-indicator--saved" aria-live="polite">
+                    <FloppyDisk aria-hidden size={16} />
+                    Guardado
+                  </output>
+                </div>
+              }
+            >
+              <ManagedPersistenceControls
+                project={project}
+                diskVersion={diskVersion}
+                {...(diskBaseProject ? { diskBaseProject } : {})}
+                validationError={validationError}
+                onDirtyChange={setManagedDirty}
+                onError={setValidationError}
+                {...(onDiskSaved ? { onSaved: onDiskSaved } : {})}
+              />
+            </Suspense>
+          ) : (
+            <div className="save-status">
+              <output className={`save-indicator save-indicator--${saveState}`} aria-live="polite">
+                <FloppyDisk aria-hidden size={16} />
+                {saveState === "saved"
+                  ? "Guardado"
+                  : saveState === "pending"
+                    ? "Cambios pendientes"
+                    : saveState === "saving"
+                      ? "Guardando"
+                      : "Error al guardar"}
               </output>
-            ) : null}
-            <output className={`save-indicator save-indicator--${saveState}`} aria-live="polite">
-              <FloppyDisk aria-hidden size={16} />
-              {saveState === "saved"
-                ? "Guardado"
-                : saveState === "pending"
-                  ? "Cambios pendientes"
-                  : saveState === "saving"
-                    ? "Guardando"
-                    : "Error al guardar"}
-            </output>
-            {saveState === "error" ? (
-              <button
-                type="button"
-                className="save-retry"
-                onClick={() => void autosave.flush().catch(() => undefined)}
-              >
-                Reintentar
-              </button>
-            ) : null}
-          </div>
+              {saveState === "error" ? (
+                <button
+                  type="button"
+                  className="save-retry"
+                  onClick={() => void autosave.flush().catch(() => undefined)}
+                >
+                  Reintentar
+                </button>
+              ) : null}
+            </div>
+          )}
           <div className="history-actions">
             <IconButton
               icon={ArrowUDownLeft}

@@ -230,3 +230,11 @@ export async function readProjectArchiveInWorker(file: File): Promise<StoreProje
   const buffer = await file.arrayBuffer();
   return requestWorker(getExportWorker(), { type: "project-read", buffer }, [buffer]);
 }
+
+export function readProjectArchiveBytesInWorker(bytes: Uint8Array): Promise<StoreProjectV1> {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return requestWorker(getExportWorker(), { type: "project-read", buffer: copy.buffer }, [
+    copy.buffer,
+  ]);
+}

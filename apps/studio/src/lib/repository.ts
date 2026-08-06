@@ -12,6 +12,8 @@ export interface StoredProject {
   status: StoreProjectV1["status"];
   updatedAt: string;
   project: StoreProjectV1;
+  diskVersion?: number;
+  diskSiteStatus?: "synced" | "site-outdated";
 }
 
 export interface ProjectRecoveryIssue {
@@ -41,6 +43,13 @@ export interface CachedAsset {
   lastUsedAt: string;
 }
 
+export interface RecoveryDraft {
+  projectId: string;
+  baseDiskVersion: number;
+  updatedAt: string;
+  project: StoreProjectV1;
+}
+
 export const ASSET_CACHE_RECIPE_VERSION = 1;
 
 export function createAssetCacheKey(
@@ -53,6 +62,7 @@ export function createAssetCacheKey(
 class SolaraDatabase extends Dexie {
   projects!: EntityTable<StoredProject, "id">;
   assetCache!: EntityTable<CachedAsset, "hash">;
+  recoveryDrafts!: EntityTable<RecoveryDraft, "projectId">;
 
   constructor() {
     super("solara-commerce-studio");
@@ -71,6 +81,11 @@ class SolaraDatabase extends Dexie {
         // La caché es regenerable; descartarla evita reutilizar resultados de una receta anterior.
         await transaction.table("assetCache").clear();
       });
+    this.version(3).stores({
+      projects: "id, status, updatedAt, name",
+      assetCache: "hash, cacheKey, recipeVersion, createdAt, lastUsedAt",
+      recoveryDrafts: "projectId, updatedAt",
+    });
   }
 }
 
@@ -356,6 +371,33 @@ export async function saveProject(project: StoreProjectV1): Promise<void> {
   await database.transaction("rw", database.projects, async () => {
     await database.projects.put(toRecord(validProject));
   });
+}
+
+export async function saveRecoveryDraft(
+  project: StoreProjectV1,
+  baseDiskVersion = 0,
+): Promise<void> {
+  await ready();
+  const validProject = StoreProjectV1Schema.parse(project);
+  await database.recoveryDrafts.put({
+    projectId: validProject.id,
+    baseDiskVersion,
+    updatedAt: new Date().toISOString(),
+    project: validProject,
+  });
+}
+
+export async function getRecoveryDraft(projectId: string): Promise<RecoveryDraft | undefined> {
+  await ready();
+  const draft = await database.recoveryDrafts.get(projectId);
+  if (!draft) return undefined;
+  const parsed = StoreProjectV1Schema.safeParse(draft.project);
+  return parsed.success ? { ...draft, project: parsed.data } : undefined;
+}
+
+export async function clearRecoveryDraft(projectId: string): Promise<void> {
+  await ready();
+  await database.recoveryDrafts.delete(projectId);
 }
 
 export interface CreateProjectOptions {
