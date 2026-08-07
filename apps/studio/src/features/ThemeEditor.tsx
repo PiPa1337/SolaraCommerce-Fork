@@ -1,3 +1,4 @@
+/** Inspector de tokens visuales persistidos; no introduce estilos públicos paralelos. */
 import { PaintBrush, TextT, Wrench } from "@phosphor-icons/react";
 import type { StoreProjectV1, Theme } from "@solara/project-schema";
 import { Field, SectionHeader } from "../components/Ui";

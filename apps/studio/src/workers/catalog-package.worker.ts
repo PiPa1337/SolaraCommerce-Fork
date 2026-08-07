@@ -1,3 +1,4 @@
+/** Procesa el paquete comercial fuera de UI y devuelve una importación revisable. */
 import { strFromU8, unzipSync } from "fflate";
 
 interface CatalogPackageRequest {

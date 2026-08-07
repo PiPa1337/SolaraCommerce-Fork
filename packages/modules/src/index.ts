@@ -1,3 +1,8 @@
+/**
+ * Registro de módulos oficiales y renderer de secciones. Mantiene separadas las
+ * familias legacy y Catalog Modern y concentra defaults/reemplazos para que
+ * Builder y exporter no tengan implementaciones duplicadas.
+ */
 import {
   joinHtml,
   type ModuleDefinition,

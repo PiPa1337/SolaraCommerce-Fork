@@ -1,3 +1,4 @@
+/** Transformaciones de imagen deterministas compartidas por caché y exportación. */
 export const IMAGE_RECIPE = {
   widths: [480, 768, 1200, 1800] as const,
   maxBytes: 25 * 1024 * 1024,

@@ -1,3 +1,7 @@
+/**
+ * Auditoría pura del snapshot público. Calcula problemas SEO, media, Merchant,
+ * rendimiento y contexto IA sin descargar recursos ni modificar el proyecto.
+ */
 import {
   type Category,
   getCategoryAncestors,
@@ -568,6 +572,7 @@ function normalizeForHash(value: unknown): string {
   return JSON.stringify(value);
 }
 
+/** Produce hallazgos deterministas y contexto público opcional para un snapshot. */
 export function optimizeProject(
   project: StoreProjectV1,
   options: OptimizationOptions = { mode: "production", publicAiContext: true },
@@ -668,6 +673,7 @@ function cleanText(value: string): string {
     .trim();
 }
 
+/** Construye contexto factual opcional sin agregar requests al runtime. */
 export function buildAiContext(
   project: StoreProjectV1,
   options: { compact?: boolean } = {},

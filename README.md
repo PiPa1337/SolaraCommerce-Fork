@@ -22,6 +22,41 @@ el control no aparece y no intenta detener procesos ajenos.
 - Corepack
 - pnpm 10.15.1, fijado por el repositorio
 
+## Para quien forkea el repositorio
+
+La lectura inicial recomendada es [`AGENTS.md`](AGENTS.md), seguida por el
+[`mapa del proyecto`](docs/PROJECT_MAP.md) y la
+[`arquitectura`](docs/ARCHITECTURE.md). El estado y los riesgos conocidos están
+en [`HANDOFF.md`](HANDOFF.md); el modelo, las integraciones y la estrategia de
+tests están en [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md),
+[`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md) y
+[`docs/TESTING.md`](docs/TESTING.md).
+
+El checkout no necesita servicios externos ni credenciales. Copiá
+`.env.example` a `.env` sólo si necesitás cambiar un valor local. Los archivos
+`.env`, `proyectos/`, `.solara-runtime/`, `.release/` y los reportes de tests
+están ignorados deliberadamente y no deben entrar al commit.
+
+## Variables de entorno
+
+Todas son opcionales; no hay secretos ni claves remotas:
+
+| Variable | Por defecto | Uso |
+| --- | --- | --- |
+| `SOLARA_PORT` | `4174` | Puerto del servidor local ejecutado directamente. |
+| `SOLARA_PILOT_PROJECT_ARCHIVE` | fixture de referencia | ZIP usado por `pilot:preflight` y `pilot:export`. |
+| `SOLARA_SKIP_E2E_BUILD` | build habilitado | Permite a release-e2e reutilizar la build ya creada. |
+| `PLAYWRIGHT_MULTI_BROWSER` | sólo Chromium | Activa Firefox y WebKit en release. |
+| `VISUAL_REVIEW_STAGE` | desactivado | Activa capturas visuales manuales. |
+| `CI` | provista por CI | Ajusta reporter y timeouts de Playwright. |
+
+Si falta `SOLARA_PILOT_PROJECT_ARCHIVE`, el piloto usa un fixture. Si falta
+`SOLARA_PORT`, se usa el puerto 4174. Las demás variables sólo cambian cómo se
+ejecutan validaciones y no afectan la tienda exportada.
+
+`NODE_PATH` lo arma internamente el script de release y `import.meta.env.PROD`
+es una bandera propia de Vite; no se configuran en `.env`.
+
 ## Desarrollo
 
 ```bash
@@ -185,6 +220,36 @@ corepack pnpm benchmark:export
 corepack pnpm check:budgets
 corepack pnpm pilot:preflight
 ```
+
+Comandos adicionales útiles:
+
+```powershell
+corepack pnpm format          # formatea el workspace con Biome
+corepack pnpm format:check    # verifica formato sin escribir
+corepack pnpm typecheck       # TypeScript de todos los paquetes
+corepack pnpm test:e2e:ci     # E2E sin reconstruir Studio
+corepack pnpm test:e2e:release
+```
+
+`corepack pnpm build` genera los artefactos de cada workspace. La carpeta
+`dist/` de Studio no se versiona. Para publicar, exportá un ZIP production o
+usá la carpeta versionada de `proyectos/<tienda>/sitios/` y copiala a un host
+estático; no hace falta un proceso Node en el sitio público.
+
+## Resolución de problemas
+
+- **El launcher no abre:** verificá Node 22+, Corepack y que el puerto 4173–4180
+  no esté ocupado. El launcher registra el estado en `.solara-runtime/`.
+- **No aparece Guardar en disco:** Studio no detectó el servidor gestionado;
+  abrí la aplicación con `Abrir SolaraCommerce.cmd`, no con Vite directo.
+- **Hay un conflicto al guardar:** otra pestaña confirmó una versión. Elegí
+  recargar la versión de disco, conservar el borrador o duplicar la tienda.
+- **Una tienda no abre:** revisá el manifest y el `.solara.zip` actual en
+  `proyectos/`; no borres respaldos hasta recuperar o exportar una copia.
+- **Falla Playwright:** instalá Chromium con
+  `corepack pnpm playwright:install:chromium` y revisá `playwright-report/`.
+- **Falla el gate de release:** ejecutalo con Node 22 y los tres navegadores;
+  el entorno local con Node 24 puede diferir de CI.
 
 El benchmark exporta el fixture determinista de 1.000 productos y falla si supera
 30 segundos. Playwright usa Chromium para el bucle local; la matriz completa y

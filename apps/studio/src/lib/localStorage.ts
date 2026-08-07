@@ -1,3 +1,8 @@
+/**
+ * Cliente del API loopback de persistencia. Centraliza sesión, streams binarios,
+ * hashes y errores de conflicto para que Studio no construya rutas de disco ni
+ * envíe proyectos grandes como JSON/base64.
+ */
 export interface LocalStorageStatus {
   managed: boolean;
   writable: boolean;
@@ -138,6 +143,7 @@ async function uploadBytes(url: string, bytes: Uint8Array, contentType: string):
   if (!response.ok) return readError(response);
 }
 
+/** Sube el proyecto/sitio staged y confirma el commit atómico en disco. */
 export async function saveLocalProject(
   metadata: LocalSaveMetadata,
   projectArchive: Uint8Array,

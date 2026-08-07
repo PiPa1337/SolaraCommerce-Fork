@@ -1,3 +1,4 @@
+/** Valida archive/export fuera de React y conserva paridad con el exporter. */
 import type { AuditIssue } from "@solara/exporter";
 import { exportProject, type OptimizationReport } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";

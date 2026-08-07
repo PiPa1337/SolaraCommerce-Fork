@@ -1,3 +1,4 @@
+/** Auditoría previa a exportación para metadata, JSON-LD, sitemap, Merchant y contexto IA. */
 import {
   CheckCircle,
   DownloadSimple,

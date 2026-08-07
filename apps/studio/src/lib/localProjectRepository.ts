@@ -1,3 +1,8 @@
+/**
+ * Orquestador de Guardar: valida y archiva el snapshot en Worker, intenta
+ * exportar production y envía proyecto/sitio a una transacción local. Un fallo
+ * del sitio no debe descartar el respaldo editable ni el último sitio válido.
+ */
 import type { StoreProjectV1 } from "@solara/project-schema";
 import {
   type LocalProjectSummary,
@@ -66,6 +71,7 @@ export async function loadAllDiskProjects(): Promise<{
   return { projects, recovery };
 }
 
+/** Crea artefactos y delega el commit versionado al API loopback. */
 export async function persistProjectToDisk(
   project: StoreProjectV1,
   expectedVersion: number | null,

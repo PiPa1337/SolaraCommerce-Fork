@@ -1,3 +1,8 @@
+/**
+ * Repositorio local Dexie y recovery. Es cache regenerable cuando el servidor
+ * gestionado está activo y fallback de desarrollo cuando Studio corre sólo con
+ * Vite; el código de UI no debe asumir que IndexedDB es siempre autoridad.
+ */
 import type { NavigationItem, StoreProjectV1 } from "@solara/project-schema";
 import { getCategoryProductIds, StoreProjectV1Schema } from "@solara/project-schema";
 import {

@@ -1,3 +1,8 @@
+/**
+ * Administración de productos, variantes y categorías. La UI transforma las
+ * acciones del usuario en DomainCommand y deja al core recalcular índices y
+ * validar jerarquías; el CSV pesado se procesa en Web Worker.
+ */
 import {
   ArrowDown,
   ArrowUp,

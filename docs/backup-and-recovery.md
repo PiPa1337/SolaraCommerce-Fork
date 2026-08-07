@@ -1,11 +1,39 @@
 # Respaldo y recuperación
 
+## Autoridad según cómo se inicia
+
+Cuando se abre con `Abrir SolaraCommerce.cmd`, la autoridad persistente es la
+carpeta `proyectos/` en la raíz del repositorio. Cada tienda tiene un
+`manifest.json`, una versión editable `.solara.zip`, respaldos y sitios públicos
+versionados. IndexedDB conserva sólo caché y `RecoveryDraft` para cambios aún no
+confirmados con Guardar.
+
+Si se ejecuta Vite directamente con `corepack pnpm dev`, no hay servidor de
+archivos gestionado: Dexie es el almacenamiento local de desarrollo. En ambos
+casos conviene descargar una copia fuera del dispositivo; el navegador no es un
+backup remoto.
+
+## Estructura de disco gestionada
+
+```text
+proyectos/<slug--id>/
+├── manifest.json
+├── actual/<slug-fecha-vNNNNNN>.solara.zip
+├── respaldos/
+├── respaldos-manuales/
+└── sitios/<slug-fecha-vNNNNNN>/
+```
+
+`manifest.json` es el puntero autoritativo: hashes, versión y estado deben
+coincidir. El guardado usa staging, bloqueo por tienda y rename atómico; una
+interrupción no debe reemplazar el manifest anterior. Los respaldos y sitios
+confirmados no se borran automáticamente.
+
 ## Qué se debe respaldar
 
-Cada tienda vive en IndexedDB dentro del perfil del navegador. No existe una
-copia remota automática. Desde `Exportar`, descargar periódicamente
-`{tienda}.solara.zip`; ese archivo contiene el proyecto editable y es distinto
-del `site.zip` público.
+Desde `Exportar`, descargar periódicamente `{tienda}.solara.zip`; contiene el
+proyecto editable y es distinto del sitio público. `Respaldo ahora` copia la
+versión actual a `respaldos-manuales/` sin cambiar su número.
 
 Crear un respaldo antes de:
 
@@ -17,7 +45,16 @@ Crear un respaldo antes de:
 
 Guardar al menos una copia fuera del dispositivo.
 
-## Recuperación normal
+## Recuperación normal desde disco
+
+1. Abrir la aplicación con `Abrir SolaraCommerce.cmd`.
+2. Seleccionar la tienda; Studio lee siempre el `current` indicado por el
+   manifest y vuelve a validar el ZIP y su SHA-256.
+3. Si hay un `RecoveryDraft` más nuevo, elegir recuperar, descartar o
+   exportarlo antes de descartarlo.
+4. Editar y pulsar `Guardar` para crear una versión nueva y un sitio público.
+
+## Recuperación normal desde un respaldo
 
 1. Abrir una tienda o crear una vacía.
 2. Ir a `Exportar`.
@@ -27,7 +64,9 @@ Guardar al menos una copia fuera del dispositivo.
 6. Generar un nuevo respaldo para confirmar el ciclo completo.
 
 La importación valida la versión y el schema antes de reemplazar el proyecto
-abierto. Un ZIP público no puede importarse como proyecto editable.
+abierto. Un ZIP público no puede importarse como proyecto editable. Si el ID ya
+existe en disco, se requiere una acción explícita y se crea una nueva versión;
+no se sobreescribe silenciosamente el historial.
 
 ## Archivo corrupto o incompatible
 
@@ -42,6 +81,13 @@ válidas. Usá `Importar respaldo` en esa advertencia para seleccionar un
 `.solara.zip`; la importación reemplaza el registro sólo después de validar el
 ZIP, el manifest y `StoreProjectV2`. Conservá siempre el archivo original y
 confirmá que productos, secciones y recursos estén presentes después de abrirlo.
+
+Si una exportación production falla al guardar, el `.solara.zip` editable se
+confirma igualmente con estado `site-outdated`; `lastValidSite` permanece
+intacto. Corregí los errores críticos y guardá otra versión antes de publicar.
+
+Si otra pestaña guardó primero, el servicio devuelve `409 Conflict`. No hay
+merge automático: recargá el disco, conservá el borrador o duplicá la tienda.
 
 ## Cuota local
 

@@ -1,3 +1,4 @@
+/** Mantiene CSV fuera del hilo del editor cuando el catálogo es grande. */
 import {
   type CatalogCsvContext,
   exportCatalogCsv,

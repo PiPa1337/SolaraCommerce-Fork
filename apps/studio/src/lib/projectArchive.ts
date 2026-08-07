@@ -1,3 +1,8 @@
+/**
+ * Formato de transporte `.solara.zip`: manifest de proyecto, JSON validado y
+ * assets. La lectura trata el archivo como entrada no confiable y valida schema
+ * y rutas antes de incorporarlo al estado del editor.
+ */
 import type { StoreProjectV2 } from "@solara/project-schema";
 import { StoreProjectV2Schema } from "@solara/project-schema";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";

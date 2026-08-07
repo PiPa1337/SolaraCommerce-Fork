@@ -1,3 +1,8 @@
+/**
+ * Mejora progresiva del storefront: carrito local, variantes, búsqueda, menú,
+ * movimiento y WhatsApp. Se activa por capacidades presentes en el HTML y debe
+ * dejar contenido y navegación utilizables cuando JavaScript falla.
+ */
 import type { Product, StoreProjectV1, Variant } from "@solara/project-schema";
 
 export interface CartLine {
@@ -38,6 +43,10 @@ export function buildCartLine(product: Product, variant: Variant, quantity = 1):
   };
 }
 
+/**
+ * Formats a stable customer/order message from reconciled cart lines; callers
+ * should never pass prices read only from localStorage.
+ */
 export function buildWhatsAppMessage(
   project: Pick<StoreProjectV1, "currency" | "locale" | "whatsapp">,
   lines: CartLine[],

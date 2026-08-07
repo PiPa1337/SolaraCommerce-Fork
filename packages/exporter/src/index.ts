@@ -1,3 +1,8 @@
+/**
+ * Exporter público compartido por Preview y ZIP. Construye un snapshot una vez,
+ * renderiza páginas y metadatos rastreables, deduplica assets y produce el sitio
+ * estático sin incluir estado interno del editor.
+ */
 import {
   getModuleDefinition,
   MODULE_STYLE_BLOCKS,
@@ -2284,6 +2289,10 @@ function zipFiles(files: ReadonlyMap<string, string | Uint8Array>): Uint8Array {
   return zipSync(zippable);
 }
 
+/**
+ * Builds the complete public artifact from one parsed snapshot. Keep all
+ * generated files here so Preview, ZIP, SEO and Merchant cannot drift apart.
+ */
 export function exportProject(projectInput: StoreProjectV1, options: ExportOptions): ExportResult {
   const project = parseProject(projectInput, "exportar");
   const publicAiContext = options.publicAiContext ?? true;
@@ -2333,6 +2342,7 @@ export function buildOptimizationReport(
   });
 }
 
+/** Renderiza el mismo árbol de exportProject sin escribir archivos. */
 export function renderPreviewHtml(
   projectInput: StoreProjectV1,
   mode: ExportMode = "draft",

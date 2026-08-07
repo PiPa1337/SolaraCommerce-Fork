@@ -1,3 +1,4 @@
+/** Checklist de preparación que guía una tienda limpia sin alterar el constructor avanzado. */
 import { ArrowRight, CheckCircle, ClipboardText, WarningCircle } from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import {

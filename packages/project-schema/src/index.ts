@@ -1,3 +1,8 @@
+/**
+ * Contrato persistido de una tienda. Zod es la autoridad para IDs, referencias,
+ * jerarquía, assets, páginas y schemaVersion; exporter, core y Studio importan
+ * estos tipos para evitar modelos paralelos.
+ */
 import { z } from "zod";
 
 const brandedId = <Brand extends string>(_brand: Brand) => z.string().min(1).brand<Brand>();
@@ -900,6 +905,7 @@ export type StoreProjectV2 = z.infer<typeof StoreProjectV2Schema>;
 export type StoreProjectV1 = StoreProjectV2;
 export const StoreProjectV1Schema = StoreProjectV2Schema;
 
+/** Devuelve la cadena raíz-padre sin mutar el proyecto. */
 export function getCategoryAncestors(
   project: Pick<StoreProjectV2, "categories">,
   categoryId: CategoryId,
@@ -924,6 +930,10 @@ export function getCategoryDescendants(
     .filter((category): category is Category => Boolean(category));
 }
 
+/**
+ * Resolves direct products plus descendants for a parent category. This is the
+ * shared rule used by breadcrumbs, search, exporter and Studio counts.
+ */
 export function getCategoryProductIds(
   project: Pick<StoreProjectV2, "categories" | "products">,
   categoryId: CategoryId,
@@ -941,6 +951,7 @@ export function getCategoryBreadcrumb(
 
 export * from "./catalog-modern-guidance";
 
+/** Valida una entrada desconocida y agrega contexto al error de schema. */
 export function parseProject(input: unknown): StoreProjectV2 {
   return StoreProjectV2Schema.parse(input);
 }

@@ -1,3 +1,8 @@
+/**
+ * Dominio puro de catálogo. Reduce DomainCommand sobre StoreProjectV2,
+ * recalcula índices derivados y ofrece historial/CSV sin depender del navegador
+ * para que la misma operación sea determinista en Studio y tests.
+ */
 import {
   type Category,
   type CategoryId,
@@ -275,6 +280,10 @@ function applyProductPatch(product: Product, changes: ProductPatch): Product {
   });
 }
 
+/**
+ * Applies one deterministic domain command, recalculates derived indexes and
+ * rejects the whole operation if the resulting project fails the schema.
+ */
 export function reduceProject(project: StoreProjectV1, command: DomainCommand): StoreProjectV1 {
   assertTimestamp(command.at);
   const at =

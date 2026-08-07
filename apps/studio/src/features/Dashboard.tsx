@@ -1,3 +1,7 @@
+/**
+ * Biblioteca de tiendas: consulta la fuente disponible, aplica filtros y
+ * expone creación, duplicado, archivo, respaldos y cierre del servidor propio.
+ */
 import {
   Archive,
   ArrowCounterClockwise,

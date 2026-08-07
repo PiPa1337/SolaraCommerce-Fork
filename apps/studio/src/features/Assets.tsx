@@ -1,3 +1,4 @@
+/** Gestor de media: conserva hashes, metadata y asociación de assets sin bloquear la UI. */
 import { Check, Copy, Image, Trash, UploadSimple, VideoCamera } from "@phosphor-icons/react";
 import type { ImageAsset, StoreProjectV1, VideoAsset } from "@solara/project-schema";
 import { useEffect, useRef, useState } from "react";

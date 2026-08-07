@@ -1,3 +1,8 @@
+/**
+ * Servicio de filesystem para el modo launcher. Sólo opera dentro de
+ * `proyectos/`, recibe streams, verifica hashes y publica staging con un
+ * manifest atómico; no es una API remota ni debe exponerse fuera de loopback.
+ */
 import { createHash, randomBytes } from "node:crypto";
 import {
   copyFile,

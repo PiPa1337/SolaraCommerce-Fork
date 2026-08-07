@@ -1,3 +1,9 @@
+/**
+ * Punto de composición de Studio: detecta el servidor local, carga la tienda
+ * desde disco o Dexie, ofrece recovery drafts y entrega el proyecto al shell.
+ * Las nuevas fuentes de persistencia deben integrarse aquí sin duplicar la
+ * decisión de autoridad ni la inicialización de fixtures.
+ */
 import { WarningCircle } from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";

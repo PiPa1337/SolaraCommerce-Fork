@@ -1,3 +1,8 @@
+/**
+ * Fachada tipada para los Web Workers de CSV, imágenes, exportación y ZIP. Su
+ * responsabilidad es serializar mensajes y errores; la lógica de negocio vive
+ * en paquetes compartidos para que tests y preview no diverjan.
+ */
 import type { CatalogCsvContext } from "@solara/core";
 import type { AuditIssue, ExportMode, OptimizationReport } from "@solara/exporter";
 import type { Product, StoreProjectV1 } from "@solara/project-schema";

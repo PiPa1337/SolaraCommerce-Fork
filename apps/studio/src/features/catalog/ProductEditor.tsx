@@ -1,3 +1,4 @@
+/** Edición de producto y variantes; entrega snapshots validados al reducer del catálogo. */
 import { Copy, Plus, Trash, X } from "@phosphor-icons/react";
 import {
   type Category,

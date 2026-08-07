@@ -1,3 +1,8 @@
+/**
+ * Constructor por secciones. Usa metadata declarada por ModuleDefinition para
+ * generar el inspector y conserva compatibilidad entre módulos al reemplazar
+ * una sección; cambiar esa regla afecta preview, historial y exportación.
+ */
 import { ArrowDown, ArrowUp, Copy, Eye, EyeSlash, Plus, Swap, Trash } from "@phosphor-icons/react";
 import type { RepeaterItemField } from "@solara/modules";
 import {

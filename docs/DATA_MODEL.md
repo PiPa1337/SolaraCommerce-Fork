@@ -1,0 +1,151 @@
+# Modelo de datos
+
+Este documento describe el contrato que circula entre Studio, el dominio y el
+exporter. La fuente de verdad ejecutable es
+[`packages/project-schema/src/index.ts`](../packages/project-schema/src/index.ts):
+este texto orienta a una persona, pero no reemplaza a Zod.
+
+## Versionado y validación
+
+El proyecto comercial actual es `StoreProjectV2` y contiene
+`schemaVersion: 2`. `StoreProjectV1` es un alias histórico que se mantiene para
+compatibilidad de nombres internos. `parseProject` valida el objeto completo y
+`migrateProject` sólo acepta la versión 2; no se debe cambiar el literal sin
+crear primero una migración y sus pruebas.
+
+El dinero siempre es un entero en centavos (`Money`). Los IDs son strings
+brandeados (`StoreId`, `ProductId`, `VariantId`, `CategoryId`, `CollectionId`,
+`AssetId`) para evitar mezclar entidades por accidente.
+
+## Forma general
+
+```text
+StoreProjectV2
+├── schemaVersion
+├── id, identity, seo, theme
+├── navigation, siteShell, pages, commerceTemplates
+├── products, categories, collections
+├── assets.images, assets.videos
+└── policies, whatsapp, delivery, metadata de origen
+```
+
+Las secciones de páginas (`StoreSection`) guardan `moduleId`, `slot`, `settings`
+y, cuando corresponde, movimiento declarado. El contenido persistido sólo
+contiene configuración; el HTML lo genera el registro de módulos.
+
+## Entidades principales
+
+### Identidad, SEO y tema
+
+- `identity`: nombre de marca, descripción, logo y datos de contacto.
+- `seo`: título, descripción, URL base, imagen social, robots y verificación.
+- `theme`: tokens de color, tipografía, espaciado, radios y modo visual.
+- `navigation`: etiqueta de catálogo, enlaces curados y sus hijos (máximo un
+  nivel adicional), además de búsqueda y carrito.
+- `siteShell`: configuración de announcement, header, footer y drawer de carrito.
+- `pages`: páginas editables `home`, `about` y `contact`.
+- `commerceTemplates`: configuración para categorías, búsqueda, producto,
+  carrito y compra; son templates generados desde datos, no HTML arbitrario.
+
+### Producto y variante
+
+Un `Product` contiene título, slug, marca opcional, descripción, tags,
+`categoryIds`, `collectionIds`, imágenes, estado y un array de `Variant`.
+Cada variante tiene un ID, SKU opcional, `optionValues`, precio entero en
+centavos, precio comparativo opcional, disponibilidad e imagen opcional.
+
+El precio de una tarjeta o página nunca se toma de un carrito almacenado: se
+resuelve de nuevo desde el snapshot validado. Las líneas del carrito son una
+proyección temporal y no una fuente comercial.
+
+### Categoría y colección
+
+Una `Category` tiene `id`, `name`, `slug`, descripción, `parentId` opcional,
+imagen y `productIds`. `productIds` es un índice derivado: las asignaciones
+editables están en los productos y el dominio lo recalcula. Las categorías
+permiten una raíz y un nivel de hijos; los helpers
+`getCategoryAncestors`, `getCategoryDescendants`, `getCategoryProductIds` y
+`getCategoryBreadcrumb` centralizan la jerarquía.
+
+Una `Collection` es una agrupación editorial de productos con `productIds`,
+slug, descripción e imagen. No debe confundirse con una categoría: las
+colecciones no forman árbol.
+
+### Assets
+
+`MediaAsset` es discriminado por `kind`: las imágenes guardan MIME, ancho,
+alto, alt, variantes responsive y datos binarios; los videos guardan MIME,
+duración, dimensiones y poster. El asset se referencia por ID y se deduplica
+por hash durante la exportación. Los datos URL se aceptan para fixtures y
+persistencia local, pero el ZIP público los convierte en archivos normales.
+
+### Carrito y pedido por WhatsApp
+
+El runtime usa `solara-cart:{storeId}` en `localStorage`. Una `CartLine` guarda
+IDs, títulos, variante, SKU, cantidad, precio resuelto e imagen. Al leerla se
+eliminan JSON inválido, cantidades fuera de rango, productos ausentes y precios
+obsoletos.
+
+`CustomerDetails` vive sólo durante el flujo de compra. `buildWhatsAppMessage`
+genera un texto determinista con cliente, líneas y subtotal; no se guardan
+datos personales en IndexedDB ni en el proyecto exportado.
+
+## Ejemplo no sensible
+
+```json
+{
+  "schemaVersion": 2,
+  "id": "store-demo",
+  "identity": {
+    "brandName": "Tienda de ejemplo",
+    "description": "Objetos seleccionados para todos los días."
+  },
+  "products": [{
+    "id": "prod-001",
+    "title": "Remera esencial",
+    "slug": "remera-esencial",
+    "categoryIds": ["cat-remeras"],
+    "variants": [{
+      "id": "variant-001",
+      "title": "Única",
+      "price": 285000,
+      "available": true
+    }]
+  }],
+  "categories": [{
+    "id": "cat-remeras",
+    "name": "Remeras",
+    "slug": "remeras",
+    "productIds": ["prod-001"]
+  }]
+}
+```
+
+En un objeto real los nombres siguen los schemas y los IDs son válidos; el
+fragmento sólo muestra las relaciones esenciales.
+
+## Persistencia y migraciones
+
+- En modo Vite sin servidor gestionado, Dexie (`SolaraDatabase`) conserva
+  proyectos y borradores de recuperación en IndexedDB.
+- Con `Abrir SolaraCommerce.cmd`, `proyectos/` en disco es la autoridad. Cada
+  tienda tiene `manifest.json`, el `.solara.zip` actual, respaldos y sitios
+  públicos versionados. IndexedDB queda como recovery draft y caché.
+- `RecoveryDraft` registra `projectId`, `baseDiskVersion`, `updatedAt` y el
+  proyecto pendiente. Al reabrir, Studio compara la base de disco y ofrece
+  recuperar, descartar o exportar el borrador.
+- La importación de un ZIP exige `manifest.json` de proyecto con versión 2 y
+  valida `project.json` contra `StoreProjectV2Schema`.
+- No existe conversión automática desde un contrato comercial anterior. Toda
+  futura versión debe agregar una migración explícita y pruebas de round-trip.
+
+## Qué modificar para extender el modelo
+
+1. Cambiar primero el schema y sus fixtures en `project-schema`.
+2. Agregar o actualizar comandos y recalculado en `packages/core`.
+3. Actualizar archive, repository, exporter y workers en ese orden.
+4. Añadir tests unitarios antes de tocar Studio.
+5. Mantener `catalogModernStore`, `catalogScaleStore` y el fixture limpio
+   coherentes con el contrato.
+6. No escribir propiedades desconocidas desde un módulo: la metadata del SDK
+   controla el inspector y Zod controla la validez.

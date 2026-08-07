@@ -1,3 +1,9 @@
+/**
+ * Shell del editor: coordina historial undo/redo, navegación entre herramientas,
+ * preview y guardado. Los editores de cada pestaña modifican el proyecto a
+ * través de este estado; no deben persistir directamente por fuera de sus
+ * contratos de comandos o del controlador de guardado.
+ */
 import {
   ArrowLeft,
   ArrowUDownLeft,

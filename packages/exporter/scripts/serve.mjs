@@ -1,3 +1,8 @@
+/**
+ * Servidor loopback que entrega Studio, archivos estáticos y endpoints de
+ * persistencia local. Mantiene la sesión privada y delega validación de disco
+ * en local-project-storage; el storefront exportado nunca reutiliza esta API.
+ */
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";

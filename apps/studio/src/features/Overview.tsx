@@ -1,3 +1,4 @@
+/** Editor de identidad, contacto, navegación y copy que completa la plantilla base. */
 import {
   ArrowDown,
   ArrowUp,

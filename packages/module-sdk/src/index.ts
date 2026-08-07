@@ -1,3 +1,8 @@
+/**
+ * SDK seguro de módulos. Define manifest, settings, metadata del inspector y
+ * helpers de escape/URLs/assets; los módulos devuelven SafeHtml y no ejecutan
+ * código arbitrario del usuario dentro del exporter.
+ */
 import type {
   AssetId,
   Category,

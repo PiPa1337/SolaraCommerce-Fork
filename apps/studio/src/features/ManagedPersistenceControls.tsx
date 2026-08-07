@@ -1,3 +1,8 @@
+/**
+ * Control explícito de persistencia cuando existe servidor local: mantiene el
+ * RecoveryDraft como red de seguridad y sólo marca la versión como guardada
+ * después del commit confirmado por disco.
+ */
 import { FloppyDisk } from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { useCallback, useEffect, useRef, useState } from "react";

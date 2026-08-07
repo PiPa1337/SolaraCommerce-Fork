@@ -1,3 +1,4 @@
+/** Panel de exportación que distingue draft/production y muestra bloqueos accionables. */
 import {
   DownloadSimple,
   FileArchive,
