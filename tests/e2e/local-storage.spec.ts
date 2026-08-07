@@ -58,13 +58,8 @@ function seedDiskStore(applicationRoot: string): void {
       projectUpdatedAt: project.updatedAt,
     },
   };
-  writeFileSync(
-    join(storeRoot, "manifest.json"),
-    `${JSON.stringify(manifest, null, 2)}\n`,
-    "utf8",
-  );
+  writeFileSync(join(storeRoot, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 }
-
 
 test("el lanzador persiste el proyecto y el sitio fuera de IndexedDB", async ({ page }) => {
   const applicationRoot = mkdtempSync(join(tmpdir(), "solara-managed-e2e-"));
@@ -99,7 +94,7 @@ test("el lanzador persiste el proyecto y el sitio fuera de IndexedDB", async ({ 
       .locator('article:has([data-store-card-id="store-modo-sur-demo"])')
       .getByRole("button", { name: "Abrir esta tienda" })
       .click();
-    await page.getByRole("button", { name: "Resumen" }).click();
+    await page.getByRole("tab", { name: "Resumen" }).click();
     const name = page.getByLabel("Nombre de la tienda");
     await name.fill("Predeterminado editado");
     await page.locator("[data-studio-save]").click();

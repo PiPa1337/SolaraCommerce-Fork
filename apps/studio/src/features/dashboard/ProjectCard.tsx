@@ -67,7 +67,7 @@ export function ProjectCard({
       ref={detailRef}
       className={`dashboard-store-detail${project ? " is-open" : ""}`}
       aria-label={project ? `Tienda seleccionada: ${project.name}` : "Tienda seleccionada"}
-      tabIndex={-1}
+      tabIndex={project ? 0 : -1}
     >
       {project ? (
         <>

@@ -71,6 +71,7 @@ export function Dashboard({
   const [shutdownError, setShutdownError] = useState("");
   const createDialogRef = useRef<HTMLDialogElement>(null);
   const shutdownDialogRef = useRef<HTMLDialogElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const selectedPanelRef = useRef<HTMLElement>(null);
   const createButtonRef = useRef<HTMLButtonElement>(null);
   const cardButtonRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -80,6 +81,7 @@ export function Dashboard({
   const dashboardTitleId = useId();
   const libraryTitleId = useId();
   const createStoreTitleId = useId();
+  const shutdownTitleId = useId();
 
   const visible = useMemo(
     () => filterDashboardProjects(projects, query, statusFilter, sort),
@@ -106,7 +108,10 @@ export function Dashboard({
   useEffect(() => {
     const dialog = createDialogRef.current;
     if (!dialog) return;
-    if (creating && !dialog.open) dialog.showModal();
+    if (creating && !dialog.open) {
+      dialog.showModal();
+      requestAnimationFrame(() => nameInputRef.current?.focus());
+    }
     if (!creating && dialog.open) dialog.close();
   }, [creating]);
 
@@ -243,7 +248,7 @@ export function Dashboard({
   };
 
   return (
-    <main id={"tiendas"} className="dashboard-page dashboard-cosmic">
+    <main id={"tiendas"} tabIndex={-1} className="dashboard-page dashboard-cosmic">
       <Suspense
         fallback={<div className="cosmic-background cosmic-background--fallback" aria-hidden />}
       >
@@ -295,7 +300,9 @@ export function Dashboard({
               <span className="dashboard-cosmic-kicker">Biblioteca</span>
               <h2 id={libraryTitleId}>Proyectos guardados</h2>
             </div>
-            <span className="dashboard-cosmic-count">{visible.length} visibles</span>
+            <span className="dashboard-cosmic-count" aria-live="polite" aria-atomic="true">
+              {visible.length} visibles
+            </span>
           </header>
 
           <DashboardToolbar
@@ -376,6 +383,7 @@ export function Dashboard({
                       <button
                         className="dashboard-store-card__open"
                         type="button"
+                        data-testid="ui-card-open"
                         aria-label="Abrir esta tienda"
                         onClick={() => onOpen(record.id)}
                       >
@@ -437,11 +445,11 @@ export function Dashboard({
           {createError ? <InlineError>{createError}</InlineError> : null}
           <Field label="Nueva tienda">
             <input
+              ref={nameInputRef}
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Nombre comercial"
               autoComplete="organization"
-              autoFocus
             />
           </Field>
           {step >= 2 ? (
@@ -511,6 +519,7 @@ export function Dashboard({
       <dialog
         ref={shutdownDialogRef}
         className="shutdown-dialog shutdown-dialog--cosmic"
+        aria-labelledby={shutdownTitleId}
         onCancel={(event) => {
           event.preventDefault();
           if (shutdownState !== "closing") setShutdownDialogOpen(false);
@@ -524,7 +533,7 @@ export function Dashboard({
           }}
         >
           <p className="shutdown-dialog__eyebrow">Sesión local</p>
-          <h2>¿Cerrar SolaraCommerce?</h2>
+          <h2 id={shutdownTitleId}>¿Cerrar SolaraCommerce?</h2>
           <p>Se detendrá el servidor local. Tus tiendas y respaldos no se borran.</p>
           {shutdownError ? <InlineError>{shutdownError}</InlineError> : null}
           <div className="shutdown-dialog__actions">

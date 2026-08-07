@@ -233,14 +233,14 @@ test("catálogo y constructor conservan jerarquía responsive", async ({ page })
   await openProject(page);
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
-    await page.getByRole("button", { name: "Catálogo", exact: true }).click();
+    await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
     await expectNoHorizontalOverflow(page, `Catálogo ${viewport.name}`);
     if (viewport.name === "desktop") {
       await page.screenshot({ path: "test-results/catalog.png", fullPage: true });
     }
 
-    await page.getByRole("button", { name: "Constructor", exact: true }).click();
+    await page.getByRole("tab", { name: "Constructor", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
     await expect(page.getByRole("complementary", { name: "Inspector de sección" })).toBeVisible();
     await expectNoHorizontalOverflow(page, `Constructor ${viewport.name}`);
@@ -344,7 +344,7 @@ test("el panel de trabajo se despliega desde la izquierda y deja crecer el previ
   await expect(page.locator(".preview-pane > header")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Abrir panel de edición" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Preparar", exact: true }).click();
+  await page.getByRole("tab", { name: "Preparar", exact: true }).click();
   await expect(editor).toHaveClass(/editor-pane--open/);
   await expect(page.getByRole("button", { name: "Cerrar panel de edición" })).toBeVisible();
 

@@ -5,7 +5,7 @@
  * decisión de autoridad ni la inicialización de fixtures.
  */
 import { WarningCircle } from "@phosphor-icons/react";
-import type { StoreProjectV1 } from "@solara/project-schema";
+import { type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { InlineError, Skeleton } from "./components/Ui";
 import { Dashboard } from "./features/Dashboard";
@@ -32,6 +32,7 @@ import {
   saveProject,
   saveRecoveryDraft,
   setProjectArchived,
+  slugify,
 } from "./lib/repository";
 import { createProjectArchiveInWorker, readProjectArchiveInWorker } from "./lib/workers";
 
@@ -281,6 +282,43 @@ export function App() {
             setActive(project);
             await refresh();
           }}
+          onReloadFromDisk={async () => {
+            const result = await refreshDisk();
+            const selected = result.projects.find((item) => item.id === active?.id) as
+              | (StoredProject & { diskVersion?: number })
+              | undefined;
+            if (!selected?.project) {
+              setNotice("La tienda ya no existe en disco. Tu borrador se conservó.");
+              return;
+            }
+            await clearRecoveryDraft(selected.id);
+            setActiveDiskVersion(selected.diskVersion ?? null);
+            setActiveDiskBaseProject(selected.project);
+            setActive(selected.project);
+          }}
+          onDuplicateDraft={async (draft) => {
+            const timestamp = new Date().toISOString();
+            const suffix = crypto.randomUUID();
+            const duplicate = StoreProjectV1Schema.parse({
+              ...structuredClone(draft),
+              id: `store-${suffix}`,
+              name: `${draft.name} copia`,
+              slug: slugify(`${draft.slug}-copia`, suffix.slice(0, 6)),
+              status: "active",
+              createdAt: timestamp,
+              updatedAt: timestamp,
+            });
+            await saveProject(duplicate);
+            if (storageModeRef.current) {
+              const result = await persistToDisk(duplicate, null);
+              setActiveDiskVersion(result.receipt.version);
+            } else {
+              setActiveDiskVersion(null);
+            }
+            await refresh();
+            setActiveDiskBaseProject(duplicate);
+            setActive(duplicate);
+          }}
         />
       </Suspense>
     );
@@ -288,6 +326,9 @@ export function App() {
 
   return (
     <div className="app-root app-root--dashboard-cosmic">
+      <a className="skip-link" href="#tiendas">
+        Saltar al contenido
+      </a>
       <header className="app-header app-header--dashboard-cosmic">
         <a className="app-wordmark" href="/" aria-label="SolaraCommerce, inicio">
           <img
@@ -330,7 +371,7 @@ export function App() {
         </div>
       ) : null}
       {notice ? (
-        <output className="global-notice">
+        <output className="global-notice" aria-live="polite">
           <span>{notice}</span>
           <button type="button" onClick={() => setNotice("")} aria-label="Cerrar aviso">
             <WarningCircle aria-hidden size={17} />

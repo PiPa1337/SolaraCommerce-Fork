@@ -29,7 +29,7 @@ test("procesa una imagen, muestra el lote y persiste el asset", async ({ page })
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   await createCleanStore(page, "Tienda de recursos");
-  await page.getByRole("button", { name: "Recursos", exact: true }).click();
+  await page.getByRole("tab", { name: "Recursos", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Recursos" })).toBeVisible();
   const initialAssetCount = await page.locator(".asset-item").count();
 
@@ -52,6 +52,6 @@ test("procesa una imagen, muestra el lote y persiste el asset", async ({ page })
   await page.reload();
   await page.getByRole("button", { name: "Tienda de recursos" }).click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
-  await page.getByRole("button", { name: "Recursos", exact: true }).click();
+  await page.getByRole("tab", { name: "Recursos", exact: true }).click();
   await expect(page.locator(".asset-item")).toHaveCount(initialAssetCount + 1);
 });

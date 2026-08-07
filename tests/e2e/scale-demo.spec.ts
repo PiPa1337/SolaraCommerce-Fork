@@ -13,7 +13,7 @@ test("muestra y abre Predeterminado al iniciar Studio", async ({ page }) => {
     await demo.click();
     await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
     await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
-    await page.getByRole("button", { name: "Catálogo", exact: true }).click();
+    await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
     await expect(page.getByText("50 productos y 60 variantes.")).toBeVisible();
     const collapseRemeras = page.getByRole("button", { name: "Contraer Remeras" });

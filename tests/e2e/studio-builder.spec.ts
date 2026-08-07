@@ -34,7 +34,7 @@ async function openBuilder(page: Page) {
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
-  await page.getByRole("button", { name: "Constructor" }).click();
+  await page.getByRole("tab", { name: "Constructor" }).click();
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
 }
 
@@ -55,7 +55,7 @@ test("edita el hero moderno, actualiza el preview y persiste tras recargar", asy
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
-  await page.getByRole("button", { name: "Constructor" }).click();
+  await page.getByRole("tab", { name: "Constructor" }).click();
   await page
     .getByRole("listitem")
     .filter({ hasText: "Hero de catálogo" })

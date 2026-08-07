@@ -224,6 +224,25 @@ input[type="color"] {
   border: 0;
 }
 
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 120;
+  padding: 9px 14px;
+  border-radius: var(--radius-input);
+  background: var(--ink);
+  color: var(--surface-raised);
+  font-size: 13px;
+  font-weight: 650;
+  transform: translateY(-220%);
+  transition: transform 140ms ease;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
 .button,
 .icon-button {
   display: inline-flex;

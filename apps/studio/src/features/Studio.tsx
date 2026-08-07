@@ -29,10 +29,20 @@ import {
 } from "@solara/core";
 import { type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
 import { motion } from "motion/react";
-import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { IconButton } from "../components/Ui";
+import {
+  type KeyboardEvent,
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Button, IconButton } from "../components/Ui";
 import { AutosaveQueue, type AutosaveState } from "../lib/autosave";
-import type { LocalSaveReceipt } from "../lib/localStorage";
+import type { LocalSaveReceipt, LocalStorageError } from "../lib/localStorage";
 import { downloadBlob } from "../lib/projectArchive";
 import { saveProject } from "../lib/repository";
 import { createProjectArchiveInWorker } from "../lib/workers";
@@ -80,6 +90,8 @@ export function Studio({
   diskVersion = null,
   diskBaseProject,
   onDiskSaved,
+  onReloadFromDisk,
+  onDuplicateDraft,
 }: {
   initialProject: StoreProjectV1;
   onBack(): void;
@@ -88,6 +100,8 @@ export function Studio({
   diskVersion?: number | null;
   diskBaseProject?: StoreProjectV1;
   onDiskSaved?(receipt: LocalSaveReceipt): void;
+  onReloadFromDisk?(): Promise<void>;
+  onDuplicateDraft?(project: StoreProjectV1): Promise<void>;
 }) {
   const [history, setHistory] = useState<HistoryState>(() => createHistory(initialProject));
   const [tab, setTab] = useState<StudioTab>("guided");
@@ -97,10 +111,13 @@ export function Studio({
   const [advancedMode, setAdvancedMode] = useState(false);
   const [saveState, setSaveState] = useState<AutosaveState>("saved");
   const [validationError, setValidationError] = useState("");
+  const [conflict, setConflict] = useState<LocalStorageError | null>(null);
+  const [notice, setNotice] = useState("");
   const [leaving, setLeaving] = useState(false);
   const [managedDirty, setManagedDirty] = useState(false);
   const [autosave] = useState(() => new AutosaveQueue(saveProject, 550));
   const editorPaneId = useId();
+  const conflictTitleId = useId();
   const lastProjectRef = useRef(initialProject);
   const project = history.present;
   const previewRoutes = useMemo(() => getPreviewRoutes(project), [project]);
@@ -170,6 +187,30 @@ export function Studio({
     setHistory((current) => executeCommand(current, command));
   }, []);
 
+  const selectTab = useCallback((nextId: StudioTab, focusTab = false) => {
+    if (nextId !== "guided") setAdvancedMode(true);
+    else setAdvancedMode(false);
+    setTab(nextId);
+    setEditorOpen(true);
+    if (focusTab) {
+      requestAnimationFrame(() => {
+        document.getElementById(`studio-tab-${nextId}`)?.focus();
+      });
+    }
+  }, []);
+
+  const moveTabFocus = (event: KeyboardEvent<HTMLDivElement>) => {
+    const isHorizontal = event.key === "ArrowLeft" || event.key === "ArrowRight";
+    const isVertical = event.key === "ArrowUp" || event.key === "ArrowDown";
+    if (!isHorizontal && !isVertical) return;
+    event.preventDefault();
+    const index = tabs.findIndex((item) => item.id === tab);
+    const direction = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1;
+    const next = tabs[(index + direction + tabs.length) % tabs.length];
+    if (!next) return;
+    selectTab(next.id, true);
+  };
+
   const renderTab = () => {
     switch (tab) {
       case "guided":
@@ -236,6 +277,9 @@ export function Studio({
 
   return (
     <div className="studio-shell">
+      <a className="skip-link" href={`#${editorPaneId}`}>
+        Saltar al panel de edición
+      </a>
       <header className="studio-topbar">
         <div className="studio-brand">
           <IconButton
@@ -279,6 +323,7 @@ export function Studio({
                 validationError={validationError}
                 onDirtyChange={setManagedDirty}
                 onError={setValidationError}
+                onConflict={setConflict}
                 {...(onDiskSaved ? { onSaved: onDiskSaved } : {})}
               />
             </Suspense>
@@ -323,32 +368,47 @@ export function Studio({
       </header>
 
       <nav className="studio-nav" aria-label="Áreas de la tienda">
-        {tabs.map(({ id, label, icon: Icon }) => (
-          <button
-            type="button"
-            key={id}
-            aria-current={tab === id ? "page" : undefined}
-            aria-controls={editorPaneId}
-            aria-expanded={tab === id ? editorOpen : false}
-            onClick={() => {
-              if (id !== "guided") setAdvancedMode(true);
-              else setAdvancedMode(false);
-              setTab(id);
-              setEditorOpen(true);
-            }}
-          >
-            <Icon aria-hidden size={19} weight={tab === id ? "fill" : "regular"} />
-            <span>{label}</span>
-          </button>
-        ))}
+        <div
+          role="tablist"
+          aria-label="Áreas de la tienda"
+          aria-orientation="vertical"
+          onKeyDown={moveTabFocus}
+        >
+          {tabs.map(({ id, label, icon: Icon }) => (
+            <button
+              type="button"
+              key={id}
+              id={`studio-tab-${id}`}
+              data-testid="ui-tab"
+              role="tab"
+              aria-selected={tab === id}
+              aria-controls={editorPaneId}
+              aria-expanded={tab === id ? editorOpen : false}
+              tabIndex={tab === id ? 0 : -1}
+              onClick={() => selectTab(id)}
+            >
+              <Icon aria-hidden size={19} weight={tab === id ? "fill" : "regular"} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
       </nav>
+
+      {notice ? (
+        <output className="studio-notice" data-testid="ui-studio-notice">
+          <span>{notice}</span>
+          <IconButton icon={X} label="Cerrar aviso" onClick={() => setNotice("")} />
+        </output>
+      ) : null}
 
       <div className="studio-workspace">
         <motion.main
           id={editorPaneId}
           data-studio-editor-pane
-          aria-label="Panel de edición"
+          role="tabpanel"
+          aria-labelledby={`studio-tab-${tab}`}
           aria-hidden={!editorOpen}
+          tabIndex={-1}
           className={`editor-pane${editorOpen ? " editor-pane--open" : " editor-pane--closed"}`}
           key={tab}
           initial={false}
@@ -363,6 +423,57 @@ export function Studio({
         </motion.main>
         <Preview project={project} route={previewRoute} size={previewSize} />
       </div>
+
+      {conflict ? (
+        <div
+          className="conflict-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={conflictTitleId}
+          data-testid="ui-conflict-dialog"
+        >
+          <div className="conflict-dialog">
+            <h3 id={conflictTitleId}>La tienda cambió en otra pestaña</h3>
+            <p>
+              {conflict.message} Tu borrador quedó guardado en este navegador. Elegí cómo seguir:
+            </p>
+            <div className="conflict-dialog__options">
+              <Button
+                variant="quiet"
+                data-testid="ui-conflict-keep"
+                onClick={() => {
+                  setConflict(null);
+                  setNotice(
+                    "Borrador conservado en este navegador. Al abrir la tienda otra vez podés recuperarlo, o duplicar el borrador para continuar en una copia.",
+                  );
+                }}
+              >
+                Conservar borrador
+              </Button>
+              <Button
+                variant="secondary"
+                data-testid="ui-conflict-reload"
+                onClick={() => {
+                  setConflict(null);
+                  void onReloadFromDisk?.().catch(() => undefined);
+                }}
+              >
+                Recargar desde disco
+              </Button>
+              <Button
+                variant="primary"
+                data-testid="ui-conflict-duplicate"
+                onClick={() => {
+                  setConflict(null);
+                  void onDuplicateDraft?.(project).catch(() => undefined);
+                }}
+              >
+                Duplicar con mi borrador
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

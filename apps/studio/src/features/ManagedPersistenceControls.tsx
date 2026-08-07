@@ -7,7 +7,7 @@ import { FloppyDisk } from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AutosaveQueue } from "../lib/autosave";
-import type { LocalSaveReceipt } from "../lib/localStorage";
+import { type LocalSaveReceipt, LocalStorageError } from "../lib/localStorage";
 import { clearRecoveryDraft, saveRecoveryDraft } from "../lib/repository";
 
 type DiskSaveState = "saved" | "saving" | "site-outdated" | "error";
@@ -19,6 +19,7 @@ export function ManagedPersistenceControls({
   validationError,
   onDirtyChange,
   onError,
+  onConflict,
   onSaved,
 }: {
   project: StoreProjectV1;
@@ -27,6 +28,7 @@ export function ManagedPersistenceControls({
   validationError: string;
   onDirtyChange(dirty: boolean): void;
   onError(message: string): void;
+  onConflict?(reason: LocalStorageError): void;
   onSaved?(receipt: LocalSaveReceipt): void;
 }) {
   const [state, setState] = useState<DiskSaveState>("saved");
@@ -74,12 +76,19 @@ export function ManagedPersistenceControls({
       setState(result.siteError ? "site-outdated" : "saved");
       if (result.siteError) onError(result.siteError);
     } catch (reason) {
-      setState("error");
-      onError(reason instanceof Error ? reason.message : "No se pudo guardar la tienda en disco.");
+      if (reason instanceof LocalStorageError && reason.code === "VERSION_CONFLICT") {
+        setState("error");
+        onConflict?.(reason);
+      } else {
+        setState("error");
+        onError(
+          reason instanceof Error ? reason.message : "No se pudo guardar la tienda en disco.",
+        );
+      }
     } finally {
       saveInFlightRef.current = false;
     }
-  }, [dirty, draftQueue, onError, onSaved, project]);
+  }, [dirty, draftQueue, onConflict, onError, onSaved, project]);
 
   useEffect(() => {
     saveRef.current = save;
@@ -112,7 +121,7 @@ export function ManagedPersistenceControls({
       </button>
       {validationError ? (
         <output className="save-indicator save-indicator--error" aria-live="assertive">
-          Cambio inválido
+          {validationError}
         </output>
       ) : null}
       <output className={`save-indicator save-indicator--${state}`} aria-live="polite">

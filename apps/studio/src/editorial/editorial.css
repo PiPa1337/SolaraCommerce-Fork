@@ -309,7 +309,7 @@
   border-radius: 5px;
 }
 
-.studio-nav button[aria-current="page"] {
+.studio-nav button[aria-selected="true"] {
   border-color: transparent;
   background: var(--ink);
   color: var(--surface-raised);
