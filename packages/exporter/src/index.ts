@@ -743,6 +743,9 @@ export function createPublicExportManifest(
   if (pages.some((page) => page.pageType === "category" && page.body.includes("data-category"))) {
     runtimeFeatures.add("filters");
   }
+  // `micro` es autocontenido en el runtime: se activa solo con pointer fino,
+  // sin reduced-motion y cuando el documento declara los marcadores.
+  runtimeFeatures.add("micro");
 
   return {
     pages,
@@ -799,12 +802,16 @@ function moduleStylesForSections(
     ...additionalModuleIds,
   ]);
   if (moduleIds.has("split-hero")) moduleIds.add("hero-media");
-  const blocks = [...moduleIds].map((moduleId) => {
-    const definition = getModuleDefinition(moduleId);
-    if (!definition) throw new Error(`Módulo desconocido: ${moduleId}.`);
-    const styleKey = String(definition.styleAsset).replace(/^module-style-/, "");
-    return MODULE_STYLE_BLOCKS[styleKey] ?? "";
-  });
+  const styleKeys = [
+    ...new Set(
+      [...moduleIds].map((moduleId) => {
+        const definition = getModuleDefinition(moduleId);
+        if (!definition) throw new Error(`Módulo desconocido: ${moduleId}.`);
+        return String(definition.styleAsset).replace(/^module-style-/, "");
+      }),
+    ),
+  ];
+  const blocks = styleKeys.map((styleKey) => MODULE_STYLE_BLOCKS[styleKey] ?? "");
   return `${STORE_BASE_STYLES}\n${blocks.filter(Boolean).join("\n")}`;
 }
 

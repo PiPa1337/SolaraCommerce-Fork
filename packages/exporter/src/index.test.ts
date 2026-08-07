@@ -1,3 +1,4 @@
+import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { referenceStore } from "@solara/project-schema/fixture";
 import { describe, expect, it } from "vitest";
 import {
@@ -121,6 +122,16 @@ describe("exporter", () => {
     );
   });
 
+  it("deduplica el bloque catalog-modern por style key en la exportación", () => {
+    const css = String(
+      exportProject(catalogModernStore, { mode: "production" }).files.get("assets/storefront.css"),
+    );
+    const distinctive = "[data-solara-store].catalog-modern .catalog-faq-list";
+
+    expect(css.split(distinctive).length - 1).toBe(1);
+    expect(new Blob([css]).size).toBeLessThan(300_000);
+  });
+
   it("rechaza proyectos inválidos con una ruta accionable en cada límite público", () => {
     const invalid = { ...referenceStore, baseUrl: "no-es-una-url" };
 
@@ -155,7 +166,9 @@ describe("exporter", () => {
     expect(manifest.cartEnabled).toBe(true);
     expect(manifest.runtimeFeatures).toContain("cart");
     expect(manifest.runtimeFeatures).toContain("motion");
+    expect(manifest.runtimeFeatures).toContain("micro");
     expect(home).toContain('data-solara-runtime-features="');
+    expect(home).toMatch(/data-solara-runtime-features="[^"]*\bmicro\b[^"]*"/);
     expect(search).toContain('<meta name="robots" content="noindex,follow">');
     expect(cart).toContain('<meta name="robots" content="noindex,follow">');
     expect(checkout).toContain('<meta name="robots" content="noindex,follow">');
