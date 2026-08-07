@@ -45,6 +45,12 @@ import { downloadBlob } from "../lib/projectArchive";
 import { exportCommercialCsvInWorker, exportCsvInWorker, importCsvInWorker } from "../lib/workers";
 import { ProductEditor } from "./catalog/ProductEditor";
 
+declare module "react" {
+  interface InputHTMLAttributes<T> {
+    webkitdirectory?: string;
+  }
+}
+
 interface CatalogProps {
   project: StoreProjectV1;
   onCommand(command: DomainCommand): void;
@@ -415,14 +421,16 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
     }
   };
 
-  const importPackage = async (file: File) => {
+  const importPackage = async (files: File[]) => {
     setBusy("package");
     setError("");
     setPendingPackage(undefined);
     try {
-      setPendingPackage(await buildCatalogPackagePlan(file, project));
+      setPendingPackage(await buildCatalogPackagePlan(files, project));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "No se pudo leer el ZIP del catálogo.");
+      setError(
+        reason instanceof Error ? reason.message : "No se pudo leer la carpeta del catálogo.",
+      );
     } finally {
       setBusy("");
     }
@@ -529,10 +537,11 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
               className="visually-hidden"
               id={packageInputId}
               type="file"
-              accept=".zip,application/zip"
+              webkitdirectory="true"
+              multiple
               onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) void importPackage(file);
+                const files = Array.from(event.target.files ?? []);
+                if (files.length > 0) void importPackage(files);
                 event.target.value = "";
               }}
             />
@@ -541,7 +550,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
               onClick={() => document.getElementById(packageInputId)?.click()}
               disabled={Boolean(busy)}
             >
-              {busy === "package" ? "Leyendo ZIP" : "Importar ZIP + imágenes"}
+              {busy === "package" ? "Leyendo carpeta" : "Importar carpeta + imágenes"}
             </Button>
             <Button
               icon={UploadSimple}

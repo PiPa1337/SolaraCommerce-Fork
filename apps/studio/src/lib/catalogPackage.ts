@@ -10,7 +10,7 @@ import {
   hashFile,
   importCsvInWorker,
   processImageInWorker,
-  readCatalogPackageInWorker,
+  readCatalogPackageInFolder,
 } from "./workers";
 
 interface PackageImageInput {
@@ -298,10 +298,12 @@ async function buildAssets(
 }
 
 export async function buildCatalogPackagePlan(
-  file: File,
+  files: File[],
   project: StoreProjectV1,
 ): Promise<CatalogPackagePlan> {
-  const contents = await readCatalogPackageInWorker(file);
+  const contents = await readCatalogPackageInFolder(files);
+  const folderName =
+    files[0]?.webkitRelativePath?.split("/")[0] ?? files[0]?.name?.split(".")[0] ?? "carpeta";
   const records = parseCatalogCsvRecords(contents.csv);
   const timestamp = new Date().toISOString();
   const categoryPlan = buildCategories(project, csvCategoryPaths(records));
@@ -336,7 +338,7 @@ export async function buildCatalogPackagePlan(
     collections: collectionPlan.collections,
     assets: assetPlan.assets,
     summary: {
-      filename: file.name,
+      filename: folderName,
       productsAdded: merged.added,
       productsUpdated: merged.updated,
       productsUnchanged: merged.unchanged,

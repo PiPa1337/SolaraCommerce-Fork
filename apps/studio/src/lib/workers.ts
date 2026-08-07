@@ -169,12 +169,17 @@ export function importCsvInWorker(csv: string, context?: CatalogCsvContext): Pro
   );
 }
 
-export function readCatalogPackageInWorker(file: File): Promise<CatalogPackageContents> {
-  return file
-    .arrayBuffer()
-    .then((buffer) =>
-      requestWorker(getCatalogPackageWorker(), { type: "catalog-package", buffer }, [buffer]),
-    );
+export function readCatalogPackageInFolder(files: File[]): Promise<CatalogPackageContents> {
+  const root = files[0]?.webkitRelativePath?.split("/")[0];
+  const payload = files.map((file) => {
+    const rawPath = file.webkitRelativePath || file.name;
+    const path = root && rawPath.startsWith(`${root}/`) ? rawPath.slice(root.length + 1) : rawPath;
+    return { path, type: file.type, buffer: file.arrayBuffer() };
+  });
+  return Promise.all(payload.map(async (entry) => ({ ...entry, buffer: await entry.buffer }))).then(
+    (entries) =>
+      requestWorker(getCatalogPackageWorker(), { type: "catalog-package", files: entries }),
+  );
 }
 
 export function exportCsvInWorker(products: Product[]): Promise<string> {

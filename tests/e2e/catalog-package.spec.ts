@@ -1,6 +1,5 @@
 import type { Server } from "node:http";
 import { expect, test } from "@playwright/test";
-import { strToU8, zipSync } from "fflate";
 import { createCleanStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
@@ -19,7 +18,7 @@ test.afterAll(async () => {
   await stopStudioServer(server);
 });
 
-test("importa un ZIP comercial con imagen y crea categorías faltantes", async ({ page }) => {
+test("importa una carpeta comercial con imagen y crea categorías faltantes", async ({ page }) => {
   await page.goto(studioUrl);
   await page.evaluate(
     () =>
@@ -42,14 +41,21 @@ test("importa un ZIP comercial con imagen y crea categorías faltantes", async (
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
     "base64",
   );
-  const archive = zipSync({ "productos.csv": strToU8(csv), "imagenes/taza.png": pixel });
-  await page.locator('input[type="file"][accept=".zip,application/zip"]').setInputFiles({
-    name: "catalogo.zip",
-    mimeType: "application/zip",
-    buffer: Buffer.from(archive),
-  });
+  const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const packageDirectory = mkdtempSync(join(tmpdir(), "solara-catalog-package-"));
+  try {
+    mkdirSync(join(packageDirectory, "imagenes"), { recursive: true });
+    writeFileSync(join(packageDirectory, "productos.csv"), csv, "utf8");
+    writeFileSync(join(packageDirectory, "imagenes", "taza.png"), pixel);
+    await page.locator('input[type="file"][webkitdirectory]').setInputFiles(packageDirectory);
+  } finally {
+    rmSync(packageDirectory, { recursive: true, force: true });
+  }
 
-  await expect(page.getByRole("heading", { name: "catalogo.zip" })).toBeVisible({
+  const folderName = packageDirectory.split(/[\\/]/).pop() ?? "carpeta";
+  await expect(page.getByRole("heading", { name: folderName })).toBeVisible({
     timeout: 15_000,
   });
   await expect(page.getByText("Productos nuevos").locator("..")).toContainText("1");

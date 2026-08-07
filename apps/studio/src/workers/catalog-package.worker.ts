@@ -1,10 +1,8 @@
-/** Procesa el paquete comercial fuera de UI y devuelve una importación revisable. */
-import { strFromU8, unzipSync } from "fflate";
-
+/** Procesa la carpeta comercial fuera de UI y devuelve una importación revisable. */
 interface CatalogPackageRequest {
   id: string;
   type: "catalog-package";
-  buffer: ArrayBuffer;
+  files: Array<{ path: string; type: string; buffer: ArrayBuffer }>;
 }
 
 function mimeType(path: string): string {
@@ -19,40 +17,53 @@ function normalizePath(path: string): string {
   return path.replaceAll("\\", "/").replace(/^\.\//, "");
 }
 
+function entryBytes(entry: { buffer: ArrayBuffer }): Uint8Array {
+  const view = new Uint8Array(entry.buffer.byteLength);
+  view.set(new Uint8Array(entry.buffer));
+  return view;
+}
+
 self.onmessage = (event: MessageEvent<CatalogPackageRequest>) => {
   try {
-    if (event.data.buffer.byteLength > 250 * 1024 * 1024) {
-      throw new Error("El ZIP supera el máximo de 250 MB.");
+    const files = event.data.files;
+    if (!Array.isArray(files)) throw new Error("La carpeta no contiene archivos.");
+    const totalInputBytes = files.reduce((sum, file) => sum + file.buffer.byteLength, 0);
+    if (totalInputBytes > 250 * 1024 * 1024) {
+      throw new Error("La carpeta supera el máximo de 250 MB.");
     }
-    const files = unzipSync(new Uint8Array(event.data.buffer));
-    const csvEntry = files["productos.csv"] ?? files["catalogo.csv"];
-    if (!csvEntry) throw new Error("El ZIP debe contener productos.csv.");
-
-    const imageEntries = Object.entries(files).filter(([rawPath]) =>
-      normalizePath(rawPath).startsWith("imagenes/"),
+    const csvEntry = files.find(
+      (file) =>
+        normalizePath(file.path) === "productos.csv" || normalizePath(file.path) === "catalogo.csv",
     );
-    const unsupported = imageEntries.filter(([rawPath]) => mimeType(rawPath) === "");
+    if (!csvEntry) throw new Error("La carpeta debe contener productos.csv.");
+
+    const imageEntries = files.filter((file) => normalizePath(file.path).startsWith("imagenes/"));
+    const unsupported = imageEntries.filter((file) => mimeType(file.path) === "");
     const images = imageEntries
-      .map(([rawPath, bytes]) => ({ path: normalizePath(rawPath), bytes, type: mimeType(rawPath) }))
+      .map((file) => ({
+        path: normalizePath(file.path),
+        bytes: entryBytes(file),
+        type: mimeType(file.path),
+      }))
       .filter((entry) => entry.path.startsWith("imagenes/") && entry.type !== "");
 
     if (unsupported.length > 0) {
-      throw new Error("El ZIP contiene archivos no compatibles dentro de imagenes/.");
+      throw new Error("La carpeta contiene archivos no compatibles dentro de imagenes/.");
     }
 
-    const invalidEntries = Object.keys(files).filter((rawPath) => {
-      const path = normalizePath(rawPath);
-      return path.includes("../") || path.startsWith("/") || path.includes(":");
-    });
-    if (invalidEntries.length > 0) throw new Error("El ZIP contiene una ruta de archivo insegura.");
+    const invalidEntries = files
+      .map((file) => normalizePath(file.path))
+      .filter((path) => path.includes("../") || path.startsWith("/") || path.includes(":"));
+    if (invalidEntries.length > 0)
+      throw new Error("La carpeta contiene una ruta de archivo insegura.");
 
-    if (images.length > 500) throw new Error("El ZIP supera el máximo de 500 imágenes.");
+    if (images.length > 500) throw new Error("La carpeta supera el máximo de 500 imágenes.");
     if (images.some((image) => image.bytes.byteLength > 20 * 1024 * 1024)) {
-      throw new Error("Una imagen del ZIP supera el límite de 20 MB.");
+      throw new Error("Una imagen de la carpeta supera el límite de 20 MB.");
     }
     const totalBytes = images.reduce((sum, image) => sum + image.bytes.byteLength, 0);
     if (totalBytes > 500 * 1024 * 1024) {
-      throw new Error("El contenido de imágenes del ZIP supera los 500 MB.");
+      throw new Error("El contenido de imágenes de la carpeta supera los 500 MB.");
     }
 
     const transferableImages = images.map((image) => ({
@@ -60,7 +71,10 @@ self.onmessage = (event: MessageEvent<CatalogPackageRequest>) => {
       type: image.type,
       buffer: image.bytes.buffer,
     }));
-    const result = { csv: strFromU8(csvEntry), images: transferableImages };
+    const result = {
+      csv: new TextDecoder().decode(entryBytes(csvEntry)),
+      images: transferableImages,
+    };
     self.postMessage({ id: event.data.id, ok: true, result }, [
       ...transferableImages.map((image) => image.buffer),
     ]);
@@ -68,7 +82,7 @@ self.onmessage = (event: MessageEvent<CatalogPackageRequest>) => {
     self.postMessage({
       id: event.data.id,
       ok: false,
-      error: error instanceof Error ? error.message : "No se pudo leer el ZIP del catálogo.",
+      error: error instanceof Error ? error.message : "No se pudo leer la carpeta del catálogo.",
     });
   }
 };
