@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
@@ -370,6 +370,185 @@ describe("almacenamiento local de proyectos", () => {
       await expect(storage.commit(transaction.transactionId)).rejects.toThrow(/duplicadas/i);
       expect((await storage.list()).projects).toHaveLength(0);
       await storage.abort(transaction.transactionId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("simula disco lleno al escribir el manifest sin reemplazar la versión anterior", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-enospc-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      const first = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, first.transactionId, "project", projectJson());
+      await upload(
+        storage,
+        first.transactionId,
+        "site",
+        siteMap([{ path: "index.html", encoding: "utf8", data: "<main>v1</main>" }]),
+      );
+      const firstReceipt = await storage.commit(first.transactionId);
+
+      let failingOp = "";
+      const guarded = createLocalProjectStorage({
+        applicationRoot: root,
+        writeGuard: async ({ op }) => {
+          if (op === failingOp) {
+            const error = new Error(`escritura rechazada: ${op}`);
+            error.code = "ENOSPC";
+            throw error;
+          }
+        },
+      });
+      const attempt = await guarded.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T11:00:00.000Z",
+        expectedVersion: firstReceipt.version,
+      });
+      await upload(guarded, attempt.transactionId, "project", projectJson("v2"));
+      failingOp = "write-manifest";
+      await expect(guarded.commit(attempt.transactionId)).rejects.toThrow(/escritura rechazada/i);
+      const listing = await storage.list();
+      expect(listing.projects[0]).toMatchObject({ version: 1, siteVersion: 1 });
+      expect((await storage.readCurrent(projectId)).manifest.current.version).toBe(1);
+      await guarded.abort(attempt.transactionId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("simula permisos revocados al escribir el sitio sin dejar carpetas huérfanas", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-eacces-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      const first = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, first.transactionId, "project", projectJson());
+      await upload(
+        storage,
+        first.transactionId,
+        "site",
+        siteMap([{ path: "index.html", encoding: "utf8", data: "<main>v1</main>" }]),
+      );
+      const firstReceipt = await storage.commit(first.transactionId);
+
+      let failingOp = "";
+      const guarded = createLocalProjectStorage({
+        applicationRoot: root,
+        writeGuard: async ({ op }) => {
+          if (op === failingOp) {
+            const error = new Error(`escritura rechazada: ${op}`);
+            error.code = "EACCES";
+            throw error;
+          }
+        },
+      });
+      const attempt = await guarded.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T11:00:00.000Z",
+        expectedVersion: firstReceipt.version,
+      });
+      await upload(guarded, attempt.transactionId, "project", projectJson("v2"));
+      await upload(
+        guarded,
+        attempt.transactionId,
+        "site",
+        siteMap([{ path: "index.html", encoding: "utf8", data: "<main>v2</main>" }]),
+      );
+      failingOp = "write-site-files";
+      await expect(guarded.commit(attempt.transactionId)).rejects.toThrow(/escritura rechazada/i);
+      const sitesRoot = join(
+        root,
+        "proyectos",
+        (await storage.list()).projects[0].folder,
+        "sitios",
+      );
+      const siteDirs = (await readdir(sitesRoot)).filter((name) => !name.startsWith("."));
+      expect(siteDirs).toHaveLength(1);
+      expect(siteDirs[0]).toBe(firstReceipt.key);
+      await guarded.abort(attempt.transactionId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("permite reintentar después de un fallo transitorio de escritura", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-retry-"));
+    try {
+      let failingOp = "";
+      const storage = createLocalProjectStorage({
+        applicationRoot: root,
+        writeGuard: async ({ op }) => {
+          if (op === failingOp) throw new Error(`escritura rechazada: ${op}`);
+        },
+      });
+      const first = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, first.transactionId, "project", projectJson());
+      await upload(
+        storage,
+        first.transactionId,
+        "site",
+        siteMap([{ path: "index.html", encoding: "utf8", data: "<main>v1</main>" }]),
+      );
+      const firstReceipt = await storage.commit(first.transactionId);
+
+      failingOp = "rename-site";
+      const attempt = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T11:00:00.000Z",
+        expectedVersion: firstReceipt.version,
+      });
+      await upload(storage, attempt.transactionId, "project", projectJson("v2"));
+      await upload(
+        storage,
+        attempt.transactionId,
+        "site",
+        siteMap([{ path: "index.html", encoding: "utf8", data: "<main>v2</main>" }]),
+      );
+      await expect(storage.commit(attempt.transactionId)).rejects.toThrow(/escritura rechazada/i);
+      await storage.abort(attempt.transactionId);
+
+      failingOp = "";
+      const retry = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T11:00:00.000Z",
+        expectedVersion: firstReceipt.version,
+      });
+      await upload(storage, retry.transactionId, "project", projectJson("v2"));
+      await upload(
+        storage,
+        retry.transactionId,
+        "site",
+        siteMap([{ path: "index.html", encoding: "utf8", data: "<main>v2</main>" }]),
+      );
+      const receipt = await storage.commit(retry.transactionId);
+      expect(receipt).toMatchObject({ version: 2, status: "synced" });
+      expect(receipt.site?.version).toBe(2);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -100,13 +100,14 @@ async function writeJsonAtomic(pathname, value) {
   await rename(temporary, pathname);
 }
 
-async function streamToFile(request, pathname, maxBytes) {
+async function streamToFile(request, pathname, maxBytes, guardWrite) {
   const temporary = `${pathname}.upload-${randomBytes(8).toString("hex")}`;
   await mkdir(dirname(pathname), { recursive: true });
   const handle = await open(temporary, "w");
   const hash = createHash("sha256");
   let bytes = 0;
   try {
+    await guardWrite?.("write-upload", pathname);
     for await (const chunk of request) {
       const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
       bytes += buffer.byteLength;
@@ -219,6 +220,13 @@ export function createLocalProjectStorage(options = {}) {
     typeof options.faultInjector === "function" ? options.faultInjector : undefined;
   const checkpoint = async (stage) => {
     await faultInjector?.(stage);
+  };
+  // Sólo los tests inyectan fallos de escritura deterministas (disco lleno o
+  // permisos revocados). El handler nunca inyecta la guarda; se usa para
+  // comprobar que una escritura fallida no reemplaza el manifest anterior.
+  const writeGuard = typeof options.writeGuard === "function" ? options.writeGuard : undefined;
+  const guardWrite = async (op, pathname) => {
+    await writeGuard?.({ op, pathname });
   };
   const transactions = new Map();
   const projectLocks = new Set();
@@ -391,7 +399,7 @@ export function createLocalProjectStorage(options = {}) {
     if (kind !== "project" && kind !== "site") throw new Error("Tipo de archivo inválido.");
     const filename = kind === "project" ? "project.json" : "site-map.json";
     const pathname = join(transaction.root, filename);
-    const result = await streamToFile(request, pathname, maxUploadBytes);
+    const result = await streamToFile(request, pathname, maxUploadBytes, guardWrite);
     const expectedHash = request.headers?.["x-solara-sha256"];
     if (typeof expectedHash === "string" && expectedHash !== result.sha256) {
       await rm(pathname, { force: true });
@@ -435,12 +443,14 @@ export function createLocalProjectStorage(options = {}) {
       await rm(temporarySite, { recursive: true, force: true });
       try {
         await checkpoint("before-site-extract");
+        await guardWrite("write-site-files", temporarySite);
         siteInfo = await writeSiteFiles(join(transaction.root, "site-map.json"), temporarySite, {
           maxFiles,
           maxExtractedBytes,
           maxFileBytes,
         });
         await checkpoint("before-site-rename");
+        await guardWrite("rename-site", finalSite);
         await rename(temporarySite, finalSite);
       } catch (error) {
         await rm(temporarySite, { recursive: true, force: true });
@@ -459,6 +469,7 @@ export function createLocalProjectStorage(options = {}) {
     // Se publica el respaldo editable sólo después de validar el sitio opcional.
     // Así un mapa inválido no deja archivos huérfanos en `actual/`.
     await checkpoint("before-project-archive");
+    await guardWrite("copy-archive", temporaryArchivePath);
     await copyFile(join(transaction.root, "project.json"), temporaryArchivePath);
     await rename(temporaryArchivePath, archivePath);
 
@@ -491,10 +502,12 @@ export function createLocalProjectStorage(options = {}) {
       ...(lastValidSite ? { lastValidSite } : {}),
     };
     await checkpoint("before-manifest");
+    await guardWrite("write-manifest", join(storeRoot, "manifest.json"));
     await writeJsonAtomic(join(storeRoot, "manifest.json"), manifest);
     if (previous?.current?.projectPath) {
       const oldCurrent = manifestPath(storeRoot, previous.current.projectPath);
       if ((await fileExists(oldCurrent)) && oldCurrent !== archivePath) {
+        await guardWrite("remove-old-current", oldCurrent);
         await rm(oldCurrent, { force: true });
       }
     }
