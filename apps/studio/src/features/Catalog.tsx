@@ -339,6 +339,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
     .filter(([, selected]) => selected)
     .map(([id]) => id as Product["id"]);
   const filteredRows = table.getFilteredRowModel().rows;
+  const hasProducts = project.products.length > 0;
 
   const importCsv = async (file: File) => {
     setBusy("import");
@@ -619,6 +620,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
         project={project}
         table={table}
         filteredRows={filteredRows}
+        hasProducts={hasProducts}
         selectedIds={selectedIds}
         filter={filter}
         setFilter={setFilter}

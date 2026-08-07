@@ -13,6 +13,7 @@ interface CatalogToolbarProps {
   project: StoreProjectV1;
   table: Table<Product>;
   filteredRows: Row<Product>[];
+  hasProducts: boolean;
   selectedIds: Product["id"][];
   filter: string;
   setFilter: Dispatch<SetStateAction<string>>;
@@ -41,6 +42,7 @@ export function CatalogToolbar({
   project,
   table,
   filteredRows,
+  hasProducts,
   selectedIds,
   filter,
   setFilter,
@@ -255,42 +257,45 @@ export function CatalogToolbar({
         </section>
       ) : null}
 
-      <nav className="table-pagination" aria-label="Paginación del catálogo">
-        <span>
-          Página {table.getState().pagination.pageIndex + 1} de {Math.max(1, table.getPageCount())}
-        </span>
-        <Field label="Filas">
-          <select
-            value={table.getState().pagination.pageSize}
-            onChange={(event) => table.setPageSize(Number(event.target.value))}
-          >
-            {[25, 50, 100].map((pageSize) => (
-              <option value={pageSize} key={pageSize}>
-                {pageSize}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <div>
-          <Button
-            data-testid="next-catalog-page"
-            variant="quiet"
-            icon={CaretLeft}
-            disabled={!table.getCanPreviousPage()}
-            onClick={() => table.previousPage()}
-          >
-            Anterior
-          </Button>
-          <Button
-            variant="quiet"
-            icon={CaretRight}
-            disabled={!table.getCanNextPage()}
-            onClick={() => table.nextPage()}
-          >
-            Siguiente
-          </Button>
-        </div>
-      </nav>
+      {hasProducts ? (
+        <nav className="table-pagination" aria-label="Paginación del catálogo">
+          <span>
+            Página {table.getState().pagination.pageIndex + 1} de{" "}
+            {Math.max(1, table.getPageCount())}
+          </span>
+          <Field label="Filas">
+            <select
+              value={table.getState().pagination.pageSize}
+              onChange={(event) => table.setPageSize(Number(event.target.value))}
+            >
+              {[25, 50, 100].map((pageSize) => (
+                <option value={pageSize} key={pageSize}>
+                  {pageSize}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <div>
+            <Button
+              data-testid="next-catalog-page"
+              variant="quiet"
+              icon={CaretLeft}
+              disabled={!table.getCanPreviousPage()}
+              onClick={() => table.previousPage()}
+            >
+              Anterior
+            </Button>
+            <Button
+              variant="quiet"
+              icon={CaretRight}
+              disabled={!table.getCanNextPage()}
+              onClick={() => table.nextPage()}
+            >
+              Siguiente
+            </Button>
+          </div>
+        </nav>
+      ) : null}
     </>
   );
 }
