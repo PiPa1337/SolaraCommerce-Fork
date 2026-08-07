@@ -18,8 +18,11 @@ substring > fuzzy, con pesos por campo: título, marca, etiquetas, categorías
 y descripción), bonifica los productos que coinciden en varios términos,
 prioriza los disponibles y sugiere una corrección cuando no hay resultados.
 El índice `search-index.json` ahora incluye tokens precomputados y
-normalizados; el presupuesto del runtime público se mantiene en ≤ 52 KiB
-crudos.
+normalizados (39.7 KiB con tokens, +12.9 KiB sobre el baseline de 26.8 KiB);
+el presupuesto del runtime público se mantiene en ≤ 52 KiB crudos (44.8 KiB
+medidos). La serialización del runtime se verifica también a nivel build
+(`check:runtime-serialization`) para que un cambio de toolchain no rompa la
+búsqueda en producción.
 
 ### Limpieza de referencias ZIP obsoletas (2026-08-07)
 

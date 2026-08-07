@@ -138,7 +138,7 @@ export function scoreEntry(queryTerms: readonly string[], entry: SearchEntryToke
     let termScore = 0;
     for (const field of Object.keys(entry) as (keyof SearchEntryTokens)[]) {
       let best: TokenMatch = null;
-      for (const token of entry[field]) {
+      for (const token of entry[field] ?? []) {
         const m = match(term, token);
         if (m !== null && (best === null || MATCH_WEIGHT[m] > MATCH_WEIGHT[best])) {
           best = m;
