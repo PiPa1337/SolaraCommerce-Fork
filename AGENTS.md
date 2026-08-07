@@ -210,6 +210,10 @@ La guía de distribución autocontenida está en
       se toca storefront.
 - [ ] Ejecutar `git diff --check` y `corepack pnpm check:repository`.
 - [ ] Revisar que no entren secretos, builds, reportes, `proyectos/` ni runtime.
+- [ ] Reconstruir los ejecutables al cerrar trabajo que afecte la app o el shell:
+      `corepack pnpm build`, `corepack pnpm desktop:build`, `corepack pnpm desktop:package`
+      y `corepack pnpm portable:smoke`. Los artefactos nunca deben quedar atrasados
+      respecto del código (`.release/` y `dist/` son regenerables y no se commitean).
 - [ ] Actualizar [`CHANGELOG.md`](CHANGELOG.md) con los cambios notables de la
       sesión (formato Keep a Changelog, en español).
 - [ ] Actualizar documentación y [`HANDOFF.md`](HANDOFF.md) si cambia una decisión.
