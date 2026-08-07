@@ -10,6 +10,7 @@ import {
   CloudArrowDown,
   Copy,
   DownloadSimple,
+  FolderOpen,
   Funnel,
   GridFour,
   List,
@@ -46,6 +47,7 @@ interface DashboardProps {
   onBackup(id: string): Promise<void>;
   onDownloadBackup?(id: string): Promise<void>;
   onOpenSite?(id: string): Promise<void>;
+  onOpenFolder?(id: string): Promise<void>;
   onSessionManaged?(managed: boolean): void;
 }
 
@@ -84,6 +86,7 @@ export function Dashboard({
   onBackup,
   onDownloadBackup,
   onOpenSite,
+  onOpenFolder,
   onSessionManaged,
 }: DashboardProps) {
   const [statusFilter, setStatusFilter] = useState<DashboardStatusFilter>("active");
@@ -561,6 +564,15 @@ export function Dashboard({
                         onClick={() => void openSite(selected.id)}
                       >
                         {siteOpeningId === selected.id ? "Abriendo sitio" : "Abrir sitio público"}
+                      </Button>
+                    ) : null}
+                    {onOpenFolder ? (
+                      <Button
+                        variant="secondary"
+                        icon={FolderOpen}
+                        onClick={() => void onOpenFolder(selected.id)}
+                      >
+                        Abrir carpeta
                       </Button>
                     ) : null}
                     <Button

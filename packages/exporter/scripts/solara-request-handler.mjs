@@ -5,6 +5,7 @@
  * Node HTTP como desde el protocolo privilegiado `solara://`. No conoce
  * ventanas, puertos ni Electron; sólo devuelve una respuesta serializable.
  */
+import { spawn } from "node:child_process";
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
@@ -106,6 +107,12 @@ function storageErrorStatus(error) {
   return error?.code === "VERSION_CONFLICT" ? 409 : 400;
 }
 
+function defaultOpenFolderInExplorer(folderPath) {
+  if (process.platform !== "win32") return false;
+  spawn("explorer", [folderPath], { detached: true, stdio: "ignore" }).unref();
+  return true;
+}
+
 function safeStaticPath(root, pathname) {
   const decoded = decodeURIComponent(new URL(pathname, "http://solara.local").pathname);
   const normalized = normalize(decoded).replace(/^([/\\])+/, "");
@@ -187,6 +194,7 @@ export function createSolaraRequestHandler({
   allowProtocolOrigin = false,
   storage: providedStorage,
   onShutdown,
+  openFolderInExplorer = defaultOpenFolderInExplorer,
 } = {}) {
   const storage =
     providedStorage ??
@@ -284,6 +292,21 @@ export function createSolaraRequestHandler({
         const result = { server: siteServer, url: `http://127.0.0.1:${address.port}` };
         siteServers.set(projectId, result);
         return jsonResponse(200, { ok: true, url: result.url }, sessionHeaders);
+      }
+      const openFolderMatch = /^\/__solara\/storage\/projects\/([^/]+)\/open-folder$/.exec(
+        pathname,
+      );
+      if (openFolderMatch && request.method === "POST") {
+        const result = await storage.openFolder(decodeURIComponent(openFolderMatch[1]));
+        if (!result) {
+          return jsonResponse(
+            404,
+            { ok: false, error: "La tienda no existe en disco." },
+            sessionHeaders,
+          );
+        }
+        openFolderInExplorer(result.path);
+        return jsonResponse(200, { ok: true, folder: result.folder }, sessionHeaders);
       }
       if (pathname === "/__solara/storage/saves" && request.method === "POST") {
         return jsonResponse(

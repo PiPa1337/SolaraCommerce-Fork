@@ -462,6 +462,16 @@ export function App() {
               },
             }
           : {})}
+        {...(localStorageStatus.managed
+          ? {
+              onOpenFolder: async (id: string) => {
+                await guard(async () => {
+                  const { openLocalProjectFolder } = await loadLocalStorage();
+                  await openLocalProjectFolder(id);
+                });
+              },
+            }
+          : {})}
         onSessionManaged={setSessionManaged}
       />
     </div>

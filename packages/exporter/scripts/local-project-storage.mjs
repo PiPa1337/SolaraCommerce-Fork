@@ -576,6 +576,12 @@ export function createLocalProjectStorage(options = {}) {
     return directory;
   }
 
+  async function openFolder(projectId) {
+    const found = await findManifest(projectId);
+    if (!found) return undefined;
+    return { folder: found.folder, path: found.root };
+  }
+
   async function manualBackup(projectId) {
     const found = await findManifest(projectId);
     if (!found) throw new Error("La tienda no existe en disco.");
@@ -628,6 +634,7 @@ export function createLocalProjectStorage(options = {}) {
     commit,
     readCurrent,
     getLastValidSiteDirectory,
+    openFolder,
     manualBackup,
     abort,
     cleanupStaging,

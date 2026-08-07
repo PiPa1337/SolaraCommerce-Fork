@@ -199,3 +199,10 @@ export async function openLocalSite(projectId: string): Promise<string> {
   if (!result.url) throw new LocalStorageError("El servidor no devolvió una URL para el sitio.");
   return result.url;
 }
+
+export async function openLocalProjectFolder(projectId: string): Promise<{ folder: string }> {
+  return requestJson<{ folder: string }>(
+    `/__solara/storage/projects/${encodeURIComponent(projectId)}/open-folder`,
+    { method: "POST", headers: { Accept: "application/json" } },
+  );
+}
