@@ -220,13 +220,17 @@ La guía de distribución autocontenida está en
 
 ## Entrega y Git
 
-Cuando una implementación solicitada está completa y verificada:
-
-1. crear un commit breve y descriptivo en español;
-2. enviar el commit a `origin/main` sólo después de superar los gates;
-3. no crear commits para una conversación de planificación, una tarea incompleta
-   o una verificación fallida;
-4. respetar una instrucción explícita del usuario de no publicar un cambio.
+- `origin` = `PiPa1337/SolaraCommerce-Fork` (privado): es el repositorio de
+  trabajo donde se sube nuestra versión local, siempre adelantada respecto del
+  upstream.
+- `upstream` = `PiPa1337/SolaraCommerce` (público): referencia únicamente. NO
+  se hace fetch/pull/merge desde upstream: nuestra versión es un fork propio
+  que no debe descargar nada de allí.
+- Crear un commit breve y descriptivo en español;
+- enviar el commit a `origin/main` sólo después de superar los gates;
+- no crear commits para una conversación de planificación, una tarea incompleta
+  o una verificación fallida;
+- respetar una instrucción explícita del usuario de no publicar un cambio.
 
 La documentación de arquitectura, datos, integraciones, testing, deuda y mapa
 está indexada desde [`HANDOFF.md`](HANDOFF.md).
