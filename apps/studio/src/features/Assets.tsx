@@ -25,6 +25,7 @@ export function Assets({
   const videoInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [assetFailures, setAssetFailures] = useState<Array<{ file: string; message: string }>>([]);
   const [batchStatus, setBatchStatus] = useState("");
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [storage, setStorage] = useState<Awaited<ReturnType<typeof getStorageEstimate>>>();
@@ -77,11 +78,12 @@ export function Assets({
     const selectedFiles = [...files];
     setBusy(true);
     setError("");
+    setAssetFailures([]);
     setBatchStatus("");
     setProgress({ current: 0, total: selectedFiles.length });
     try {
       const additions: ImageAsset[] = [];
-      const failures: string[] = [];
+      const failures: Array<{ file: string; message: string }> = [];
       const knownHashes = new Set(project.assets.map((asset) => asset.hash).filter(Boolean));
       let duplicates = 0;
       let reused = 0;
@@ -129,9 +131,10 @@ export function Assets({
           });
           knownHashes.add(hash);
         } catch (reason) {
-          failures.push(
-            `${file.name}: ${reason instanceof Error ? reason.message : "no se pudo procesar"}`,
-          );
+          failures.push({
+            file: file.name,
+            message: reason instanceof Error ? reason.message : "no se pudo procesar",
+          });
         } finally {
           setProgress({ current: index + 1, total: selectedFiles.length });
         }
@@ -152,7 +155,7 @@ export function Assets({
         reused > 0 ? `${reused} recuperadas de caché` : "",
       ].filter(Boolean);
       setBatchStatus(details.join(" · "));
-      if (failures.length > 0) setError(failures.join("\n"));
+      if (failures.length > 0) setAssetFailures(failures);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudieron agregar las imágenes.");
     } finally {
@@ -278,6 +281,7 @@ export function Assets({
               variant="primary"
               icon={UploadSimple}
               disabled={busy}
+              data-testid="ui-asset-upload"
               onClick={() => imageInputRef.current?.click()}
             >
               {busy ? `Procesando ${progress.current}/${progress.total}` : "Cargar imágenes"}
@@ -294,7 +298,26 @@ export function Assets({
         }
       />
       {error ? <InlineError>{error}</InlineError> : null}
-      {batchStatus ? <output>{batchStatus}</output> : null}
+      {assetFailures.length > 0 ? (
+        <div className="asset-errors" data-testid="ui-asset-errors">
+          <p className="asset-errors__title">Estas imágenes no se agregaron:</p>
+          <ul>
+            {assetFailures.map((failure, index) => (
+              <li
+                className="asset-error-item"
+                data-testid="ui-asset-error"
+                key={`${failure.file}-${index}`}
+              >
+                <strong>{failure.file}</strong>: {failure.message}
+              </li>
+            ))}
+          </ul>
+          <p className="asset-errors__hint">
+            Usá imágenes JPEG, PNG o WebP de hasta 25 MB; el resto del lote se conservó.
+          </p>
+        </div>
+      ) : null}
+      {batchStatus ? <output data-testid="ui-asset-batch-status">{batchStatus}</output> : null}
       {storage && storage.quota > 0 && storage.ratio >= 0.75 ? (
         <output className="asset-storage-warning">
           El almacenamiento local está al {Math.round(storage.ratio * 100)} % (

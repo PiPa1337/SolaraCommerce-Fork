@@ -31,7 +31,7 @@ test("importa una carpeta comercial con imagen y crea categorías faltantes", as
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   await createCleanStore(page, "Tienda de importación");
-  await page.getByRole("button", { name: /Cat/ }).click();
+  await page.getByRole("tab", { name: /Cat/ }).click();
 
   const csv = [
     "producto_id,variante_id,slug,titulo,descripcion,marca,estado,categorias,colecciones,etiquetas,imagenes,variante,sku,opciones,precio_centavos,precio_anterior_centavos,disponible,estado_stock,gtin,mpn,imagen_variante,creado_en,actualizado_en",

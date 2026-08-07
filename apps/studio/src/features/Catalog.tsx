@@ -37,7 +37,13 @@ import { Button, EmptyState, InlineError, SectionHeader } from "../components/Ui
 import { buildCatalogPackagePlan, type CatalogPackagePlan } from "../lib/catalogPackage";
 import { formatCurrency } from "../lib/format";
 import { downloadBlob } from "../lib/projectArchive";
-import { exportCommercialCsvInWorker, exportCsvInWorker, importCsvInWorker } from "../lib/workers";
+import {
+  type CsvRowError,
+  diagnoseCsvInWorker,
+  exportCommercialCsvInWorker,
+  exportCsvInWorker,
+  importCsvInWorker,
+} from "../lib/workers";
 import { CatalogToolbar } from "./catalog/CatalogToolbar";
 import { CategoryTree } from "./catalog/CategoryTree";
 import { ProductEditor } from "./catalog/ProductEditor";
@@ -146,6 +152,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
   const [pendingImport, setPendingImport] = useState<ImportSummary>();
   const [pendingPackage, setPendingPackage] = useState<CatalogPackagePlan>();
   const [error, setError] = useState("");
+  const [csvErrors, setCsvErrors] = useState<CsvRowError[]>([]);
   const [busy, setBusy] = useState<BusyState>("");
   const importRef = useRef<HTMLInputElement>(null);
   const importReviewTitleId = useId();
@@ -345,16 +352,22 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
   const importCsv = async (file: File) => {
     setBusy("import");
     setError("");
+    setCsvErrors([]);
     setPendingImport(undefined);
+    const context = {
+      categories: project.categories,
+      collections: project.collections,
+      assets: project.assets.map((asset) => ({ id: asset.id })),
+    };
     try {
-      const products = await importCsvInWorker(await file.text(), {
-        categories: project.categories,
-        collections: project.collections,
-        assets: project.assets.map((asset) => ({ id: asset.id })),
-      });
+      const csv = await file.text();
+      const products = await importCsvInWorker(csv, context);
       setPendingImport(summarizeImport(file.name, project.products, products));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo importar el CSV.");
+      const csvText = await file.text();
+      const errors = await diagnoseCsvInWorker(csvText, context).catch(() => []);
+      setCsvErrors(errors);
     } finally {
       setBusy("");
     }
@@ -363,6 +376,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
   const importPackage = async (files: File[]) => {
     setBusy("package");
     setError("");
+    setCsvErrors([]);
     setPendingPackage(undefined);
     try {
       setPendingPackage(await buildCatalogPackagePlan(files, project));
@@ -493,6 +507,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
             </Button>
             <Button
               icon={UploadSimple}
+              data-testid="ui-csv-import"
               onClick={() => importRef.current?.click()}
               disabled={Boolean(busy)}
             >
@@ -519,7 +534,32 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
         }
       />
 
-      {error ? <InlineError>{error}</InlineError> : null}
+      {error && csvErrors.length === 0 ? <InlineError>{error}</InlineError> : null}
+
+      {csvErrors.length > 0 ? (
+        <div className="csv-errors" data-testid="ui-csv-errors">
+          <p className="csv-errors__title">
+            El archivo no se pudo importar. Corregí las filas marcadas y volvé a cargarlo.
+          </p>
+          <ul>
+            {csvErrors.map((entry) => (
+              <li
+                className="csv-error-item"
+                data-testid="ui-csv-error"
+                key={`${entry.row}-${entry.message}`}
+              >
+                <strong>Fila {entry.row}</strong>: {entry.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {busy === "import" || busy === "package" ? (
+        <output className="catalog-progress" aria-live="polite" data-testid="ui-catalog-progress">
+          {busy === "import" ? "Procesando CSV…" : "Leyendo carpeta e imágenes…"}
+        </output>
+      ) : null}
 
       {pendingImport ? (
         <section className="import-review" aria-labelledby={importReviewTitleId}>

@@ -3000,6 +3000,14 @@ tbody tr[data-selected="true"] {
   font-weight: 750;
 }
 
+.csv-errors ul,
+.asset-errors ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+}
+
 .csv-error-item,
 .asset-error-item {
   margin: 0;

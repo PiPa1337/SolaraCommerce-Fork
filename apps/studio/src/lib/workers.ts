@@ -169,6 +169,22 @@ export function importCsvInWorker(csv: string, context?: CatalogCsvContext): Pro
   );
 }
 
+export interface CsvRowError {
+  row: number;
+  message: string;
+}
+
+/** Diagnostica un CSV fallido y reporta el error de cada fila inválida. */
+export function diagnoseCsvInWorker(
+  csv: string,
+  context?: CatalogCsvContext,
+): Promise<CsvRowError[]> {
+  return requestWorker(
+    getCsvWorker(),
+    context ? { type: "diagnose", csv, context } : { type: "diagnose", csv },
+  );
+}
+
 export function readCatalogPackageInFolder(files: File[]): Promise<CatalogPackageContents> {
   const root = files[0]?.webkitRelativePath?.split("/")[0];
   const payload = files.map((file) => {

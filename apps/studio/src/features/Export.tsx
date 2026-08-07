@@ -104,7 +104,22 @@ export function ExportPanel({
         description="El respaldo editable y el sitio público son archivos distintos."
       />
       {error ? <InlineError>{error}</InlineError> : null}
-      {notice ? <output className="export-notice">{notice}</output> : null}
+      {busy ? (
+        <output className="export-progress" aria-live="polite" data-testid="ui-export-progress">
+          {busy === "draft"
+            ? "Generando sitio borrador…"
+            : busy === "production"
+              ? "Generando sitio de producción…"
+              : busy === "project"
+                ? "Creando respaldo del proyecto…"
+                : "Importando respaldo…"}
+        </output>
+      ) : null}
+      {notice ? (
+        <output className="export-notice" data-testid="ui-export-result">
+          {notice}
+        </output>
+      ) : null}
       <label className="export-ai-context">
         <input
           type="checkbox"
@@ -159,7 +174,11 @@ export function ExportPanel({
             <h3>Sitio borrador</h3>
             <p>Incluye noindex y excluye el feed de Merchant para revisión privada.</p>
           </div>
-          <Button onClick={() => void exportSite("draft")} disabled={Boolean(busy)}>
+          <Button
+            data-testid="ui-export-draft"
+            onClick={() => void exportSite("draft")}
+            disabled={Boolean(busy)}
+          >
             {busy === "draft" ? "Generando" : "Exportar borrador"}
           </Button>
         </article>
@@ -177,6 +196,7 @@ export function ExportPanel({
           </div>
           <Button
             variant="primary"
+            data-testid="ui-export-production"
             onClick={() => void exportSite("production")}
             disabled={Boolean(busy) || critical > 0}
           >
