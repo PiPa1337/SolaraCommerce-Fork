@@ -12,6 +12,14 @@ export interface RunningStudioServer {
 export async function startStudioServer(): Promise<RunningStudioServer> {
   const server = createServer((request, response) => {
     const requested = decodeURIComponent(new URL(request.url ?? "/", "http://localhost").pathname);
+    // El launcher real siempre responde /__solara/session; el servidor de
+    // pruebas emula el host no gestionado para que el editor no reciba un 404
+    // en su sondeo de modo de persistencia (que Chromium loguea como error).
+    if (requested === "/__solara/session") {
+      response.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      response.end(JSON.stringify({ managed: false }));
+      return;
+    }
     const normalized = normalize(requested).replace(/^([/\\])+/, "");
     let file = resolve(join(studioRoot, normalized));
 
