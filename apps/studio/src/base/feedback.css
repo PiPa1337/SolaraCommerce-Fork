@@ -1,0 +1,53 @@
+/* biome-ignore-all lint/style/noDescendingSpecificity: legacy and cosmic dashboard shells share selectors by design. */
+/* Keep global feedback and secondary actions inside the cosmic dashboard language. */
+.app-root--dashboard-cosmic .button--secondary {
+  border-color: var(--cosmic-line-strong);
+  background: rgb(22 25 34 / 0.94);
+  color: var(--cosmic-ink);
+}
+
+.app-root--dashboard-cosmic .button--secondary:hover {
+  border-color: var(--cosmic-amber);
+  background: rgb(46 37 25 / 0.94);
+}
+
+.app-root--dashboard-cosmic .button--quiet {
+  color: var(--cosmic-muted);
+}
+
+.app-root--dashboard-cosmic .button--quiet:hover {
+  background: rgb(255 255 255 / 0.08);
+  color: var(--cosmic-ink);
+}
+
+.app-root--dashboard-cosmic .button--danger {
+  border-color: rgb(237 110 112 / 0.65);
+  background: rgb(128 45 48 / 0.94);
+  color: #fff7f7;
+}
+
+.app-root--dashboard-cosmic .global-notice,
+.app-root--dashboard-cosmic .global-error,
+.app-root--dashboard-cosmic .global-warning {
+  border-color: var(--cosmic-line-strong);
+  background: rgb(16 19 27 / 0.94);
+  color: var(--cosmic-muted);
+  box-shadow: 0 16px 50px rgb(0 0 0 / 0.22);
+}
+
+.app-root--dashboard-cosmic .global-notice {
+  margin-top: 8px;
+  padding: 8px 12px;
+  color: #d9e5dc;
+  font-size: 11px;
+}
+
+.app-root--dashboard-cosmic .global-notice button {
+  min-height: 28px;
+  min-width: 28px;
+}
+
+.app-root--dashboard-cosmic .global-warning strong,
+.app-root--dashboard-cosmic .global-error strong {
+  color: var(--cosmic-ink);
+}
