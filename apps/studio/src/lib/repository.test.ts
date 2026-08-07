@@ -18,9 +18,11 @@ import {
   ensureScaleDemoProject,
   getCachedAsset,
   getProject,
+  getProjectMigration,
   getRecoveryDraft,
   listProjects,
   listProjectsWithRecovery,
+  markProjectMigration,
   putCachedAsset,
   SCALE_DEMO_PROJECT_ID,
   saveProject,
@@ -296,5 +298,28 @@ describe("repositorio local", () => {
     expect((await getProject(staleDemo.id))?.products[0]?.reviews).toHaveLength(6);
     expect(await getProject(referenceStore.id)).toEqual(referenceStore);
     expect(await ensureCatalogModernDemoReviews()).toBe(false);
+  });
+});
+
+describe("sentinel de migración a disco", () => {
+  beforeEach(async () => {
+    // El afterAll del primer describe cierra y elimina la base compartida;
+    // Dexie no la reabre solo, así que se recrea con el esquema vigente aquí.
+    await database.open();
+    await database.migrations.clear();
+  });
+
+  it("registra el estado pending y done por proyecto", async () => {
+    await markProjectMigration("store-sentinel", "pending");
+    expect((await getProjectMigration("store-sentinel"))?.status).toBe("pending");
+    await markProjectMigration("store-sentinel", "done");
+    expect((await getProjectMigration("store-sentinel"))?.status).toBe("done");
+  });
+
+  it("no mezcla registros de proyectos distintos", async () => {
+    await markProjectMigration("store-a", "done");
+    await markProjectMigration("store-b", "pending");
+    expect((await getProjectMigration("store-a"))?.status).toBe("done");
+    expect((await getProjectMigration("store-b"))?.status).toBe("pending");
   });
 });

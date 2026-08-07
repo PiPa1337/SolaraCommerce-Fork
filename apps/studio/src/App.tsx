@@ -21,8 +21,10 @@ import {
   ensureFirstProject,
   ensureScaleDemoProject,
   getProject,
+  getProjectMigration,
   getRecoveryDraft,
   listProjectsWithRecovery,
+  markProjectMigration,
   type ProjectRecoveryIssue,
   type StoredProject,
   saveProject,
@@ -106,8 +108,13 @@ export function App() {
             for (const stored of browserProjects.projects) {
               const diskProject = diskById.get(stored.id);
               if (!diskProject) {
+                await markProjectMigration(stored.id, "pending");
                 await persistToDisk(stored.project, null);
+                await markProjectMigration(stored.id, "done");
                 continue;
+              }
+              if (await getProjectMigration(diskProject.id)) {
+                await markProjectMigration(diskProject.id, "done");
               }
               if (JSON.stringify(stored.project) !== JSON.stringify(diskProject.project)) {
                 await saveRecoveryDraft(stored.project, diskProject.diskVersion ?? 0);
@@ -154,7 +161,9 @@ export function App() {
         const browserResult = await refreshBrowser();
         if (detectedStorage.managed && detectedStorage.writable) {
           for (const stored of browserResult.projects) {
+            await markProjectMigration(stored.id, "pending");
             await persistToDisk(stored.project, null);
+            await markProjectMigration(stored.id, "done");
           }
           await refreshDisk();
           setNotice((current) =>

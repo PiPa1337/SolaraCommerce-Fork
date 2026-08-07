@@ -55,6 +55,12 @@ export interface RecoveryDraft {
   project: StoreProjectV1;
 }
 
+export interface ProjectMigrationRecord {
+  projectId: string;
+  status: "pending" | "done";
+  updatedAt: string;
+}
+
 export const ASSET_CACHE_RECIPE_VERSION = 1;
 
 export function createAssetCacheKey(
@@ -68,6 +74,7 @@ class SolaraDatabase extends Dexie {
   projects!: EntityTable<StoredProject, "id">;
   assetCache!: EntityTable<CachedAsset, "hash">;
   recoveryDrafts!: EntityTable<RecoveryDraft, "projectId">;
+  migrations!: EntityTable<ProjectMigrationRecord, "projectId">;
 
   constructor() {
     super("solara-commerce-studio");
@@ -90,6 +97,12 @@ class SolaraDatabase extends Dexie {
       projects: "id, status, updatedAt, name",
       assetCache: "hash, cacheKey, recipeVersion, createdAt, lastUsedAt",
       recoveryDrafts: "projectId, updatedAt",
+    });
+    this.version(4).stores({
+      projects: "id, status, updatedAt, name",
+      assetCache: "hash, cacheKey, recipeVersion, createdAt, lastUsedAt",
+      recoveryDrafts: "projectId, updatedAt",
+      migrations: "projectId, status, updatedAt",
     });
   }
 }
@@ -403,6 +416,19 @@ export async function getRecoveryDraft(projectId: string): Promise<RecoveryDraft
 export async function clearRecoveryDraft(projectId: string): Promise<void> {
   await ready();
   await database.recoveryDrafts.delete(projectId);
+}
+
+export async function markProjectMigration(
+  projectId: string,
+  status: ProjectMigrationRecord["status"],
+): Promise<void> {
+  await database.migrations.put({ projectId, status, updatedAt: new Date().toISOString() });
+}
+
+export async function getProjectMigration(
+  projectId: string,
+): Promise<ProjectMigrationRecord | undefined> {
+  return database.migrations.get(projectId);
 }
 
 export interface CreateProjectOptions {
