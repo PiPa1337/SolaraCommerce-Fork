@@ -50,7 +50,7 @@ test("el lanzador persiste el proyecto y el sitio fuera de IndexedDB", async ({ 
       .toBe(true);
 
     await page
-      .locator('[data-store-card-id="store-modo-sur-demo"]')
+      .locator('article:has([data-store-card-id="store-modo-sur-demo"])')
       .getByRole("button", { name: "Abrir esta tienda" })
       .click();
     await page.getByRole("button", { name: "Resumen" }).click();
