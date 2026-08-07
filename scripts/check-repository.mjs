@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { lstatSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { extname, resolve } from "node:path";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const secretPatterns = [
@@ -27,6 +27,31 @@ const secretPatterns = [
   },
 ];
 
+const zipPatterns = [
+  {
+    label: "compresión ZIP reintroducida",
+    pattern: /\b(?:fflate|zipSync|unzipSync|gzipSync)\b/,
+  },
+  {
+    label: "archivo ZIP del producto",
+    pattern: /\.solara\.zip\b|site\.zip\b/,
+  },
+];
+const zipExemptPaths = new Set([
+  "packages/exporter/scripts/legacy-zip-migration.mjs",
+  "packages/exporter/src/legacy-zip-migration.test.mjs",
+  "scripts/check-repository.mjs",
+]);
+const sourceDirectories = ["apps/", "packages/", "scripts/", "tests/"];
+const sourceExtensions = new Set([".cjs", ".css", ".html", ".js", ".mjs", ".ts", ".tsx"]);
+
+function isSourcePath(path) {
+  return (
+    sourceDirectories.some((directory) => path.startsWith(directory)) &&
+    sourceExtensions.has(extname(path))
+  );
+}
+
 function repositoryFiles() {
   const output = execFileSync(
     "git",
@@ -44,7 +69,7 @@ function isBinary(buffer) {
   return false;
 }
 
-function checkFile(path) {
+function checkFile(path, explicit = false) {
   const absolutePath = resolve(path);
   const stat = lstatSync(absolutePath);
   if (!stat.isFile()) return [];
@@ -63,6 +88,12 @@ function checkFile(path) {
   for (const { label, pattern } of secretPatterns) {
     if (pattern.test(text)) issues.push(`${path}: posible ${label}.`);
   }
+  if (zipExemptPaths.has(path)) return issues;
+  if (explicit || isSourcePath(path)) {
+    for (const { label, pattern } of zipPatterns) {
+      if (pattern.test(text)) issues.push(`${path}: ${label} (formato eliminado).`);
+    }
+  }
   return issues;
 }
 
@@ -72,7 +103,7 @@ const issues = [];
 
 for (const path of paths) {
   try {
-    issues.push(...checkFile(path));
+    issues.push(...checkFile(path, requestedPaths.length > 0));
   } catch (error) {
     issues.push(`${path}: no se pudo revisar (${error instanceof Error ? error.message : error}).`);
   }
@@ -83,5 +114,7 @@ if (issues.length > 0) {
   for (const issue of issues) console.error(`- ${issue}`);
   process.exitCode = 1;
 } else {
-  console.log(`Repositorio verificado: ${paths.length} archivos sin secretos ni archivos grandes.`);
+  console.log(
+    `Repositorio verificado: ${paths.length} archivos sin secretos, archivos grandes ni formatos ZIP.`,
+  );
 }

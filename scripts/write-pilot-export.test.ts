@@ -12,7 +12,7 @@ test("exporta production desde el respaldo elegido para el piloto", () => {
   const archivePath = process.env.SOLARA_PILOT_PROJECT_ARCHIVE;
   if (!archivePath) {
     throw new Error(
-      "Definí SOLARA_PILOT_PROJECT_ARCHIVE con la ruta a un respaldo .solara.zip antes de exportar el piloto.",
+      "Definí SOLARA_PILOT_PROJECT_ARCHIVE con la ruta a un respaldo .solara.json antes de exportar el piloto.",
     );
   }
 

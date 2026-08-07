@@ -99,9 +99,12 @@ test("HTTP y solara comparten sesión, archivos y autorización", async () => {
   }
 });
 
-test("un manifest con archivePath absoluto se reporta como recuperación", async () => {
+test("un manifest V1 no migrable se reporta como recuperación", async () => {
   const root = await temporaryRoot("Solara Manifest");
   try {
+    // El archivePath absoluto es incidental: la migración legacy descarta este
+    // manifest V1 antes de tocar la ruta, por lo que el motivo real de la
+    // recuperación es la incompatibilidad del manifest.
     const projectRoot = join(root, "proyectos", "demo--12345678");
     await mkdir(projectRoot, { recursive: true });
     await writeFile(
@@ -117,7 +120,7 @@ test("un manifest con archivePath absoluto se reporta como recuperación", async
         current: {
           version: 1,
           key: "demo-v1",
-          archivePath: "C:/fuera/project.solara.zip",
+          archivePath: "C:/fuera/project.solara",
           sha256: "0",
           savedAt: new Date().toISOString(),
           projectUpdatedAt: new Date().toISOString(),
@@ -129,7 +132,7 @@ test("un manifest con archivePath absoluto se reporta como recuperación", async
     const listing = await storage.list();
     assert.equal(listing.projects.length, 0);
     assert.equal(listing.recovery.length, 1);
-    assert.match(listing.recovery[0].message, /Ruta|archivo|versi/i);
+    assert.match(listing.recovery[0].message, /incompatible/i);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
