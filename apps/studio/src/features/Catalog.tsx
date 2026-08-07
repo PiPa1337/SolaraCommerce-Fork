@@ -43,6 +43,7 @@ import { CategoryTree } from "./catalog/CategoryTree";
 import { ProductEditor } from "./catalog/ProductEditor";
 
 declare module "react" {
+  /* biome-ignore lint/correctness/noUnusedVariables: la fusión exige el nombre `T` de @types/react. */
   interface InputHTMLAttributes<T> {
     webkitdirectory?: string;
   }

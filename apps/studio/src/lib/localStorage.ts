@@ -201,8 +201,11 @@ export async function openLocalSite(projectId: string): Promise<string> {
 }
 
 export async function openLocalProjectFolder(projectId: string): Promise<{ folder: string }> {
-  return requestJson<{ folder: string }>(
+  const result = await requestJson<{ folder?: string }>(
     `/__solara/storage/projects/${encodeURIComponent(projectId)}/open-folder`,
     { method: "POST", headers: { Accept: "application/json" } },
   );
+  if (!result.folder)
+    throw new LocalStorageError("El servidor no devolvió la carpeta de la tienda.");
+  return { folder: result.folder };
 }

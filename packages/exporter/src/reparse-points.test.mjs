@@ -27,6 +27,11 @@ describe.runIf(process.platform === "win32")("reparse points en Windows", () => 
       const listing = await storage.list();
       expect(listing.projects).toHaveLength(0);
       expect(listing.recovery).toHaveLength(0);
+      // `list()`/`findManifest` saltan las entradas que no son directorios: un
+      // junction no se descubre y no admite escrituras (las escrituras fluyen
+      // sólo por manifests descubiertos). `assertNoReparsePoints` directo sí lo
+      // rechaza. Si se cambia este comportamiento, romper intencionalmente este
+      // test y actualizar la fila P1 de docs/TECHNICAL_DEBT.md.
       await expect(assertNoReparsePoints(projects, escaped)).rejects.toThrow(/enlace simbólico/i);
     } finally {
       await rm(root, { recursive: true, force: true });

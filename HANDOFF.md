@@ -75,8 +75,9 @@ servirse en un hosting estático. El pedido se deriva a WhatsApp.
 Se ejecutaron con resultado exitoso:
 
 - `corepack pnpm check`: scan de repository, formato, typecheck, tests de todos
-  los paquetes y optimizer (19 project-schema, 23 core, 6 module-sdk, 6
-  storefront-runtime, 6 site-optimizer, 13 modules, 38 exporter y 29 Studio).
+  los paquetes y optimizer (22 project-schema, 23 core, 6 module-sdk, 6
+  storefront-runtime, 6 site-optimizer, 16 modules, 57 exporter y 1 omitido en
+  Windows, 42 Studio, 3 Desktop y 4 del optimizer en 2 archivos).
 - `corepack pnpm build`: TypeScript y build Vite de Studio.
 - `corepack pnpm test:e2e`: 38 tests Chromium pasaron y 1 prueba visual opcional
   fue omitida por no definir `VISUAL_REVIEW_STAGE`.

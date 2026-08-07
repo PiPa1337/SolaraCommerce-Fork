@@ -109,7 +109,9 @@ function storageErrorStatus(error) {
 
 function defaultOpenFolderInExplorer(folderPath) {
   if (process.platform !== "win32") return false;
-  spawn("explorer", [folderPath], { detached: true, stdio: "ignore" }).unref();
+  const child = spawn("explorer", [folderPath], { detached: true, stdio: "ignore" });
+  child.on("error", () => {}); // Explorer ausente o bloqueado: no tumbar el servidor.
+  child.unref();
   return true;
 }
 
