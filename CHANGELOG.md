@@ -10,6 +10,15 @@ versión publicada.
 
 ## [Unreleased]
 
+### Corrección de encoding UTF-8 (2026-08-07)
+
+Se detectaron y corrigieron archivos con texto mojibake (acentos dañados por
+ediciones que leyeron UTF-8 como ANSI): el mensaje de error de imagen en
+Studio, los textos y nombres de carpetas del E2E portable, el fixture CSV de
+importación de catálogo y un test canario del exporter. Se agregó un gate en
+`check:repository` que rechaza U+FFFD y secuencias mojibake en código fuente
+para que no vuelva a ocurrir.
+
 ### Eliminación de ZIP y gzip (2026-08-07)
 
 El producto dejó de usar compresión ZIP (y gzip incluso como medición) en

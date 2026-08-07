@@ -42,6 +42,20 @@ const zipExemptPaths = new Set([
   "packages/exporter/src/legacy-zip-migration.test.mjs",
   "scripts/check-repository.mjs",
 ]);
+// Texto con encoding dañado: secuencias UTF-8 leídas como ANSI y reescritas
+// ("á" → "Ã¡", "ó" → "Ã³", "β" → "Î²") o caracteres perdidos (U+FFFD). Los
+// archivos del producto deben permanecer UTF-8 limpio.
+const mojibakePatterns = [
+  {
+    label: "carácter de reemplazo U+FFFD",
+    pattern: /\uFFFD/,
+  },
+  {
+    label: "texto mojibake (encoding dañado)",
+    pattern:
+      /Ã[¡¢£¤¥¦§¨©ª«¬­®¯°±²³´µ¶·¸¹º»¼½¾¿À-ß]|Â[\x80-\xFF]|â€[\x9C\x9D\x9E\x9F\x93\x94\x95\x96\x97]|Î[\x80-\xFF]|Å[\x80-\xFF]/,
+  },
+];
 const sourceDirectories = ["apps/", "packages/", "scripts/", "tests/"];
 const sourceExtensions = new Set([".cjs", ".css", ".html", ".js", ".mjs", ".ts", ".tsx"]);
 
@@ -92,6 +106,9 @@ function checkFile(path, explicit = false) {
   if (explicit || isSourcePath(path)) {
     for (const { label, pattern } of zipPatterns) {
       if (pattern.test(text)) issues.push(`${path}: ${label} (formato eliminado).`);
+    }
+    for (const { label, pattern } of mojibakePatterns) {
+      if (pattern.test(text)) issues.push(`${path}: ${label}.`);
     }
   }
   return issues;

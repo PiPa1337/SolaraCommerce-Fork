@@ -35,7 +35,7 @@ test("importa una carpeta comercial con imagen y crea categorías faltantes", as
 
   const csv = [
     "producto_id,variante_id,slug,titulo,descripcion,marca,estado,categorias,colecciones,etiquetas,imagenes,variante,sku,opciones,precio_centavos,precio_anterior_centavos,disponible,estado_stock,gtin,mpn,imagen_variante,creado_en,actualizado_en",
-    ",,taza-nueva,Taza nueva,Taza para todos los dÃ­as,,active,Cocina>Favoritos,,casa,imagenes/taza.png,Ãšnica,TAZA-001,,125000,,, ,,,imagenes/taza.png,,",
+    ",,taza-nueva,Taza nueva,Taza para todos los días,,active,Cocina>Favoritos,,casa,imagenes/taza.png,Única,TAZA-001,,125000,,, ,,,imagenes/taza.png,,",
   ].join("\r\n");
   const pixel = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",

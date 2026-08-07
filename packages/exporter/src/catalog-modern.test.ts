@@ -24,7 +24,7 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(home).toContain('class="catalog-mega-menu__groups"');
     expect(home).toContain('class="catalog-mega-group catalog-mega-group--has-children"');
     expect(home).not.toContain(">Tienda</summary>");
-    expect(home).not.toMatch(/[ÃÂ�]/);
+    expect(home).not.toMatch(/[\u00C3\u00C2\uFFFD]/);
     expect(home).toContain('data-solara-module="catalog-product-grid"');
     expect(home).toContain("data-catalog-search-dialog");
     expect(home).toContain("data-catalog-search-open");

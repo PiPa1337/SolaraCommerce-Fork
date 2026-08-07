@@ -75,7 +75,7 @@ async function processImageOnMainThread(file: File, buffer: ArrayBuffer): Promis
     image.src = objectUrl;
     await image.decode();
     if (image.naturalWidth < 1 || image.naturalHeight < 1) {
-      throw new Error("La imagen no tiene dimensiones vÃ¡lidas.");
+      throw new Error("La imagen no tiene dimensiones válidas.");
     }
     const plan = fallbackImagePlan(image.naturalWidth, image.naturalHeight);
     const preserveAlpha = file.type !== "image/jpeg";

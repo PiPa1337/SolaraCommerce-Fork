@@ -1,6 +1,6 @@
 /**
  * Smoke E2E del shell Electron: dos copias aisladas, Guardar real y traslado.
- * Requiere una distribuciÃ³n creada por `pnpm desktop:package`.
+ * Requiere una distribución creada por `pnpm desktop:package`.
  */
 
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
@@ -14,13 +14,13 @@ const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const source = resolve(root, ".release/portable/SolaraCommerce-Portable");
 const sourceExecutable = join(source, "SolaraCommerce.exe");
 if (!existsSync(sourceExecutable)) {
-  throw new Error("No existe la distribuciÃ³n portable. EjecutÃ¡ `pnpm desktop:package` primero.");
+  throw new Error("No existe la distribución portable. Ejecutá `pnpm desktop:package` primero.");
 }
 
 const testRoot = mkdtempSync(join(tmpdir(), "solara-portable-e2e-"));
-const copyA = join(testRoot, "Copia A - Ã¡rbol");
-const copyB = join(testRoot, "Copia B - Î²eta");
-const movedA = join(testRoot, "Copia movida - espacio y Ã¼");
+const copyA = join(testRoot, "Copia A - árbol");
+const copyB = join(testRoot, "Copia B - βeta");
+const movedA = join(testRoot, "Copia movida - espacio y ü");
 
 async function openPortable(folder) {
   const app = await electron.launch({
@@ -92,13 +92,13 @@ try {
 
   const savedA = JSON.parse(readFileSync(manifestAPath, "utf8"));
   if (savedA.current.version <= initialA.current.version) {
-    throw new Error("Guardar no incrementÃ³ la versiÃ³n en la copia A.");
+    throw new Error("Guardar no incrementó la versión en la copia A.");
   }
   if (!savedA.lastValidSite?.directoryPath) {
-    throw new Error("Guardar no conservÃ³ un sitio pÃºblico vÃ¡lido en la copia A.");
+    throw new Error("Guardar no conservó un sitio público válido en la copia A.");
   }
   if (!existsSync(join(copyA, savedA.lastValidSite.directoryPath, "index.html"))) {
-    throw new Error("El sitio pÃºblico confirmado de A no contiene index.html.");
+    throw new Error("El sitio público confirmado de A no contiene index.html.");
   }
 
   const publicSiteUrl = await instanceA.page.evaluate((projectId) => {
@@ -107,11 +107,11 @@ try {
   }, initialA.projectId);
   const publicResponse = await fetch(publicSiteUrl);
   if (!publicResponse.ok || !(await publicResponse.text()).includes("<!doctype html>")) {
-    throw new Error("El servidor temporal no devolviÃ³ el sitio pÃºblico guardado.");
+    throw new Error("El servidor temporal no devolvió el sitio público guardado.");
   }
   const outsideResponse = await fetch(`${publicSiteUrl}/../manifest.json`);
   if (outsideResponse.status !== 404 && outsideResponse.status !== 403) {
-    throw new Error("El servidor temporal permitiÃ³ leer fuera de la carpeta pÃºblica.");
+    throw new Error("El servidor temporal permitió leer fuera de la carpeta pública.");
   }
 
   const bodyB = await instanceB.page.locator("body").innerText();
@@ -120,7 +120,7 @@ try {
   }
   const unchangedB = JSON.parse(readFileSync(manifestBPath, "utf8"));
   if (unchangedB.current.version !== initialB.current.version) {
-    throw new Error("La copia B cambiÃ³ su versiÃ³n al guardar A.");
+    throw new Error("La copia B cambió su versión al guardar A.");
   }
 
   await closePortable(instanceA);
@@ -132,7 +132,7 @@ try {
   try {
     const movedBody = await moved.page.locator("body").innerText();
     if (!movedBody.includes("Predeterminado portable A")) {
-      throw new Error("La copia movida no recuperÃ³ el proyecto guardado.");
+      throw new Error("La copia movida no recuperó el proyecto guardado.");
     }
   } finally {
     await closePortable(moved);
