@@ -10,6 +10,49 @@ versión publicada.
 
 ## [Unreleased]
 
+### Revamp de movimiento (2026-08-07)
+
+Nueva capa de movimiento del storefront Catalog Modern, verificada por el
+recorrido `revamp-motion.spec.ts` (FAQ, stats, presets con reduced-motion,
+sin JavaScript, matriz de viewports y puntero fino). El contrato de tienda
+(`StoreProjectV2Schema`, `schemaVersion: 2`) no cambió: todo es opt-in por
+capability y se apaga con `prefers-reduced-motion`.
+
+**Añadido**
+
+- Presets de entrada `zoom-in` y `blur-in` en el schema de movimiento, además
+  de los existentes.
+- Capability `micro` en el runtime público (desktop-only y respetuosa de
+  `prefers-reduced-motion`): tilt 3D en las cards de producto, botones
+  magnéticos, spotlight que sigue al puntero, parallax del hero con mouse
+  (capas con profundidad), back-to-top con anillo de progreso SVG y kinetic
+  typography con entrada por palabra.
+- Efectos de hover y ambientales en los módulos Catalog Modern: elevación con
+  glow, shine sweep en los CTAs, shimmer en imágenes, marquee animado de
+  marcas (con copia `aria-hidden`), noise overlay, pulse rings, scrollbar
+  personalizada y anuncio luminoso con degradado en movimiento.
+- Scroll-reveal con CSS scroll-driven (`animation-timeline: view()`) para
+  títulos y medios, con fallback estático en navegadores sin soporte.
+- Módulos `catalog-faq` (acordeón con exclusividad operable por teclado) y
+  `catalog-stats` (contadores con valores finales declarados).
+- Tienda candidata "Predeterminado Revamp" en el dashboard, creada en la
+  primera ejecución para comparar la nueva experiencia de movimiento. La
+  tienda "Predeterminado" actual no cambia su contenido.
+- Deduplicación de estilos de módulo por style key en el exporter: el
+  `storefront.css` público pasó de ~775 KB a ~92 KB (91.8 KB medidos).
+- Techo del runtime público documentado en 56 KiB de JavaScript crudos
+  (53.2 KB medidos) y 8 KiB de CSS (7.7 KB medidos); `storefront.css` tiene
+  un tope de 780 KiB y Studio mantiene sus budgets existentes.
+
+**Cambiado**
+
+- Los módulos Catalog Modern emiten los atributos del contrato
+  (`data-magnetic`, `data-product-card`, `data-hero-parallax`,
+  `data-parallax-layer`, `data-parallax-depth`, `data-kinetic-title`,
+  `data-back-to-top`, `data-faq-root`, `data-stat-value`) que consume el
+  runtime, siempre bajo la capability `micro` declarada en
+  `data-solara-runtime-features`.
+
 ### Búsqueda con relevancia (2026-08-07)
 
 La búsqueda del storefront ahora tolera errores de tipeo (hasta 2 ediciones
