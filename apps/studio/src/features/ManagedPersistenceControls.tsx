@@ -3,12 +3,14 @@
  * RecoveryDraft como red de seguridad y sólo marca la versión como guardada
  * después del commit confirmado por disco.
  */
-import { FloppyDisk } from "@phosphor-icons/react";
+import { CheckCircle, FloppyDisk } from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { InlineError } from "../components/Ui";
 import { AutosaveQueue } from "../lib/autosave";
 import { type LocalSaveReceipt, LocalStorageError } from "../lib/localStorage";
 import { clearRecoveryDraft, saveRecoveryDraft } from "../lib/repository";
+import { formatSaveTime } from "../lib/saveTime";
 
 type DiskSaveState = "saved" | "saving" | "site-outdated" | "error";
 
@@ -32,6 +34,7 @@ export function ManagedPersistenceControls({
   onSaved?(receipt: LocalSaveReceipt): void;
 }) {
   const [state, setState] = useState<DiskSaveState>("saved");
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   const savedProjectRef = useRef(diskBaseProject ?? project);
   const lastProjectRef = useRef(project);
   const diskVersionRef = useRef(diskVersion);
@@ -72,6 +75,7 @@ export function ManagedPersistenceControls({
       await clearRecoveryDraft(project.id);
       savedProjectRef.current = project;
       diskVersionRef.current = result.receipt.version;
+      setSavedAt(Date.now());
       onSaved?.(result.receipt);
       setState(result.siteError ? "site-outdated" : "saved");
       if (result.siteError) onError(result.siteError);
@@ -119,21 +123,27 @@ export function ManagedPersistenceControls({
         <FloppyDisk aria-hidden size={16} />
         Guardar
       </button>
-      {validationError ? (
-        <output className="save-indicator save-indicator--error" aria-live="assertive">
-          {validationError}
-        </output>
-      ) : null}
       <output className={`save-indicator save-indicator--${state}`} aria-live="polite">
-        <FloppyDisk aria-hidden size={16} />
+        {state === "saving" ? (
+          <span className="save-spinner" aria-hidden />
+        ) : state === "saved" ? (
+          <CheckCircle className="save-check" aria-hidden size={16} />
+        ) : (
+          <FloppyDisk aria-hidden size={16} />
+        )}
         {state === "saved"
-          ? "Guardado"
+          ? savedAt
+            ? `Guardado ${formatSaveTime(savedAt)}`
+            : "Guardado"
           : state === "saving"
-            ? "Guardando en disco"
+            ? "Guardando…"
             : state === "site-outdated"
               ? "Sitio anterior conservado"
-              : "Error al guardar"}
+              : ""}
       </output>
+      {validationError || state === "error" ? (
+        <InlineError>{validationError || "Error al guardar"}</InlineError>
+      ) : null}
       {state === "error" ? (
         <button type="button" className="save-retry" onClick={() => void save()}>
           Reintentar

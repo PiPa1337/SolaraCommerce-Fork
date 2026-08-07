@@ -116,7 +116,9 @@ test("el editor recorre dashboard, tabs y acciones clave sin errores de consola"
 
   await page.getByRole("button", { name: "Vista de tablet" }).click();
   await expect(page.locator('iframe[title="Vista previa tablet"]')).toBeVisible();
-  await page.getByLabel("Ruta de vista previa").selectOption({ label: "Contacto" });
+  const routeInput = page.getByLabel("Ruta de vista previa");
+  await routeInput.fill("/contacto/");
+  await routeInput.press("Enter");
   await expect(page.locator('iframe[title="Vista previa tablet"]')).toBeVisible();
   await page.getByRole("button", { name: "Vista de escritorio" }).click();
   await expect(page.locator('iframe[title="Vista previa desktop"]')).toBeVisible();

@@ -6,17 +6,22 @@
  */
 import {
   ArrowLeft,
+  ArrowsInSimple,
+  ArrowsOutSimple,
   ArrowUDownLeft,
   ArrowUDownRight,
   BoxArrowDown,
+  CheckCircle,
   ClipboardText,
   FloppyDisk,
   Image,
   Layout,
   MagnifyingGlass,
+  Moon,
   Package,
   PaintBrush,
   Storefront,
+  Sun,
   X,
 } from "@phosphor-icons/react";
 import {
@@ -28,7 +33,7 @@ import {
   undo,
 } from "@solara/core";
 import { type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import {
   type KeyboardEvent,
   lazy,
@@ -40,11 +45,13 @@ import {
   useRef,
   useState,
 } from "react";
-import { Button, IconButton } from "../components/Ui";
+import { Button, IconButton, InlineError } from "../components/Ui";
 import { AutosaveQueue, type AutosaveState } from "../lib/autosave";
+import { formatDate } from "../lib/format";
 import type { LocalSaveReceipt, LocalStorageError } from "../lib/localStorage";
 import { downloadBlob } from "../lib/projectArchive";
 import { saveProject } from "../lib/repository";
+import { formatSaveTime } from "../lib/saveTime";
 import { createProjectArchiveInWorker } from "../lib/workers";
 import { Assets } from "./Assets";
 import { Builder } from "./Builder";
@@ -52,7 +59,13 @@ import { Catalog } from "./Catalog";
 import { ExportPanel } from "./Export";
 import { GuidedOverview } from "./GuidedOverview";
 import { Overview } from "./Overview";
-import { getPreviewRoutes, Preview, type PreviewSize, PreviewToolbar } from "./Preview";
+import {
+  getPreviewRoutes,
+  Preview,
+  type PreviewSize,
+  PreviewToolbar,
+  type PreviewZoom,
+} from "./Preview";
 import { Seo } from "./Seo";
 import { ThemeEditor } from "./ThemeEditor";
 
@@ -82,6 +95,11 @@ const tabs: Array<{ id: StudioTab; label: string; icon: typeof Storefront }> = [
   { id: "export", label: "Exportar", icon: BoxArrowDown },
 ];
 
+function formatStatusDate(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : formatDate(value);
+}
+
 export function Studio({
   initialProject,
   onBack,
@@ -101,13 +119,30 @@ export function Studio({
   diskBaseProject?: StoreProjectV1;
   onDiskSaved?(receipt: LocalSaveReceipt): void;
   onReloadFromDisk?(): Promise<{ ok: true } | { ok: false; message: string }>;
-  onDuplicateDraft?(project: StoreProjectV1): Promise<{ ok: true } | { ok: false; message: string }>;
+  onDuplicateDraft?(
+    project: StoreProjectV1,
+  ): Promise<{ ok: true } | { ok: false; message: string }>;
 }) {
   const [history, setHistory] = useState<HistoryState>(() => createHistory(initialProject));
   const [tab, setTab] = useState<StudioTab>("guided");
-  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorOpen, setEditorOpen] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem(`solara-editor-pane:${initialProject.id}`) === "open";
+    } catch {
+      return false;
+    }
+  });
   const [previewRoute, setPreviewRoute] = useState("/");
   const [previewSize, setPreviewSize] = useState<PreviewSize>("desktop");
+  const [previewZoom, setPreviewZoom] = useState<PreviewZoom>(() => {
+    try {
+      const stored = Number(window.sessionStorage.getItem("solara-preview-zoom"));
+      if (stored === 100 || stored === 75 || stored === 50) return stored;
+    } catch {
+      // Sesión no disponible: el zoom arranca en 100%.
+    }
+    return 100;
+  });
   const [advancedMode, setAdvancedMode] = useState(false);
   const [saveState, setSaveState] = useState<AutosaveState>("saved");
   const [validationError, setValidationError] = useState("");
@@ -115,12 +150,61 @@ export function Studio({
   const [notice, setNotice] = useState("");
   const [leaving, setLeaving] = useState(false);
   const [managedDirty, setManagedDirty] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
+  const [lastExportedAt, setLastExportedAt] = useState("");
+  const [lastVisitedAt, setLastVisitedAt] = useState<Partial<Record<StudioTab, string>>>(() =>
+    tabs.reduce(
+      (acc, item) => {
+        acc[item.id] = initialProject.updatedAt;
+        return acc;
+      },
+      {} as Partial<Record<StudioTab, string>>,
+    ),
+  );
+  const [theme, setTheme] = useState<"light" | "dark" | null>(() => {
+    try {
+      const stored = window.localStorage.getItem("solara-studio-theme");
+      return stored === "dark" ? "dark" : stored === "light" ? "light" : null;
+    } catch {
+      return null;
+    }
+  });
   const [autosave] = useState(() => new AutosaveQueue(saveProject, 550));
   const editorPaneId = useId();
   const conflictTitleId = useId();
+  const focusToggleId = useId();
+  const focusExitId = useId();
   const lastProjectRef = useRef(initialProject);
+  const previousSaveStateRef = useRef<AutosaveState>("saved");
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const project = history.present;
   const previewRoutes = useMemo(() => getPreviewRoutes(project), [project]);
+  const paneStorageKey = useMemo(
+    () => `solara-editor-pane:${initialProject.id}`,
+    [initialProject.id],
+  );
+  const reduceMotion = useReducedMotion();
+
+  const setPaneOpen = useCallback(
+    (open: boolean) => {
+      setEditorOpen(open);
+      try {
+        window.localStorage.setItem(paneStorageKey, open ? "open" : "closed");
+      } catch {
+        // Almacenamiento bloqueado: el colapso se conserva sólo en memoria.
+      }
+    },
+    [paneStorageKey],
+  );
+
+  const changePreviewZoom = useCallback((zoom: PreviewZoom) => {
+    setPreviewZoom(zoom);
+    try {
+      window.sessionStorage.setItem("solara-preview-zoom", String(zoom));
+    } catch {
+      // Sesión no disponible: el zoom se conserva sólo en memoria.
+    }
+  }, []);
 
   useEffect(() => {
     if (!previewRoutes.some((item) => item.path === previewRoute)) setPreviewRoute("/");
@@ -129,6 +213,69 @@ export function Studio({
   useEffect(() => {
     return autosave.subscribe(setSaveState);
   }, [autosave]);
+
+  useEffect(() => {
+    const wasWorking =
+      previousSaveStateRef.current === "saving" || previousSaveStateRef.current === "pending";
+    previousSaveStateRef.current = saveState;
+    if (wasWorking && saveState === "saved") setLastSavedAt(Date.now());
+  }, [saveState]);
+
+  useEffect(() => {
+    const handlePaneShortcut = (event: globalThis.KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.key !== "\\") return;
+      event.preventDefault();
+      setEditorOpen((current) => {
+        const next = !current;
+        try {
+          window.localStorage.setItem(paneStorageKey, next ? "open" : "closed");
+        } catch {
+          // Almacenamiento bloqueado: el colapso se conserva sólo en memoria.
+        }
+        return next;
+      });
+    };
+    window.addEventListener("keydown", handlePaneShortcut);
+    return () => window.removeEventListener("keydown", handlePaneShortcut);
+  }, [paneStorageKey]);
+
+  const dirtyTabs = useMemo(() => {
+    const updatedAt = project.updatedAt;
+    return new Set(
+      tabs
+        .filter((item) => item.id !== tab && (lastVisitedAt[item.id] ?? "") < updatedAt)
+        .map((item) => item.id),
+    );
+  }, [lastVisitedAt, project.updatedAt, tab]);
+
+  useEffect(() => {
+    setLastVisitedAt((current) => {
+      if (current[tab] === project.updatedAt) return current;
+      return { ...current, [tab]: project.updatedAt };
+    });
+  }, [project.updatedAt, tab]);
+
+  useEffect(() => {
+    const saved = managedStorage ? !managedDirty : saveState === "saved";
+    if (!saved) return;
+    setLastVisitedAt((current) => {
+      let changed = false;
+      const next = { ...current };
+      for (const item of tabs) {
+        if (next[item.id] !== project.updatedAt) {
+          next[item.id] = project.updatedAt;
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [managedDirty, managedStorage, project.updatedAt, saveState]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === null) root.removeAttribute("data-studio-theme");
+    else root.setAttribute("data-studio-theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     if (project === lastProjectRef.current) return;
@@ -187,19 +334,83 @@ export function Studio({
     setHistory((current) => executeCommand(current, command));
   }, []);
 
-  const selectTab = useCallback((nextId: StudioTab, focusTab = false) => {
-    if (nextId !== "guided") setAdvancedMode(true);
-    else setAdvancedMode(false);
-    setTab(nextId);
-    setEditorOpen(true);
-    if (focusTab) {
+  const selectTab = useCallback(
+    (nextId: StudioTab, focusTab = false) => {
+      if (nextId !== "guided") setAdvancedMode(true);
+      else setAdvancedMode(false);
+      setTab(nextId);
+      setLastVisitedAt((current) => ({ ...current, [nextId]: project.updatedAt }));
+      setPaneOpen(true);
+      if (focusTab) {
+        requestAnimationFrame(() => {
+          const tabElement = document.getElementById(`studio-tab-${nextId}`);
+          tabElement?.focus();
+          tabElement?.scrollIntoView({ block: "nearest", inline: "nearest" });
+        });
+      }
+    },
+    [project.updatedAt, setPaneOpen],
+  );
+
+  const toggleFocusMode = useCallback(() => {
+    if (focusMode) {
+      setFocusMode(false);
       requestAnimationFrame(() => {
-        document.getElementById(`studio-tab-${nextId}`)?.focus();
+        document.getElementById(focusToggleId)?.focus();
+      });
+    } else {
+      setFocusMode(true);
+      requestAnimationFrame(() => {
+        document.getElementById(focusExitId)?.focus();
       });
     }
-  }, []);
+  }, [focusExitId, focusMode, focusToggleId]);
+
+  const toggleTheme = useCallback(() => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    try {
+      window.localStorage.setItem("solara-studio-theme", next);
+    } catch {
+      // Almacenamiento bloqueado: el tema se conserva sólo en memoria.
+    }
+  }, [theme]);
+
+  const handleDiskSaved = useCallback(
+    (receipt: LocalSaveReceipt) => {
+      if (receipt.site?.savedAt) setLastExportedAt(receipt.site.savedAt);
+      onDiskSaved?.(receipt);
+    },
+    [onDiskSaved],
+  );
+
+  useEffect(() => {
+    const handleKey = (event: globalThis.KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        toggleFocusMode();
+        return;
+      }
+      if (focusMode && event.key === "Escape") {
+        event.preventDefault();
+        setFocusMode(false);
+        requestAnimationFrame(() => {
+          document.getElementById(focusToggleId)?.focus();
+        });
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [focusMode, focusToggleId, toggleFocusMode]);
 
   const moveTabFocus = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      const next = event.key === "Home" ? tabs[0] : tabs[tabs.length - 1];
+      if (next) selectTab(next.id, true);
+      return;
+    }
     const isHorizontal = event.key === "ArrowLeft" || event.key === "ArrowRight";
     const isVertical = event.key === "ArrowUp" || event.key === "ArrowDown";
     if (!isHorizontal && !isVertical) return;
@@ -291,8 +502,23 @@ export function Studio({
           <span className="brand-mark" aria-hidden>
             S
           </span>
-          <div>
-            <strong>{project.name}</strong>
+          <div className="studio-brand-info">
+            <nav className="studio-breadcrumb" aria-label="Navegación">
+              <button
+                type="button"
+                className="studio-breadcrumb__link"
+                disabled={leaving}
+                onClick={() => void leaveStudio()}
+              >
+                Tiendas
+              </button>
+              <span className="studio-breadcrumb__sep" aria-hidden>
+                /
+              </span>
+              <strong className="studio-breadcrumb__current" aria-current="page">
+                {project.name}
+              </strong>
+            </nav>
             <small>{project.baseUrl}</small>
           </div>
         </div>
@@ -300,9 +526,11 @@ export function Studio({
           routes={previewRoutes}
           route={previewRoute}
           size={previewSize}
+          zoom={previewZoom}
           onRouteChange={setPreviewRoute}
           onSizeChange={setPreviewSize}
-          onOpenEditor={() => setEditorOpen(true)}
+          onZoomChange={changePreviewZoom}
+          onOpenEditor={() => setPaneOpen(true)}
         />
         <div className="studio-topbar-actions">
           {managedStorage ? (
@@ -324,32 +552,58 @@ export function Studio({
                 onDirtyChange={setManagedDirty}
                 onError={setValidationError}
                 onConflict={setConflict}
-                {...(onDiskSaved ? { onSaved: onDiskSaved } : {})}
+                onSaved={handleDiskSaved}
               />
             </Suspense>
           ) : (
             <div className="save-status">
               <output className={`save-indicator save-indicator--${saveState}`} aria-live="polite">
-                <FloppyDisk aria-hidden size={16} />
+                {saveState === "saving" ? (
+                  <span className="save-spinner" aria-hidden />
+                ) : saveState === "saved" ? (
+                  <CheckCircle className="save-check" aria-hidden size={16} />
+                ) : (
+                  <FloppyDisk aria-hidden size={16} />
+                )}
                 {saveState === "saved"
-                  ? "Guardado"
+                  ? lastSavedAt
+                    ? `Guardado ${formatSaveTime(lastSavedAt)}`
+                    : "Guardado"
                   : saveState === "pending"
                     ? "Cambios pendientes"
                     : saveState === "saving"
-                      ? "Guardando"
-                      : "Error al guardar"}
+                      ? "Guardando…"
+                      : ""}
               </output>
               {saveState === "error" ? (
-                <button
-                  type="button"
-                  className="save-retry"
-                  onClick={() => void autosave.flush().catch(() => undefined)}
-                >
-                  Reintentar
-                </button>
+                <>
+                  <InlineError>Error al guardar</InlineError>
+                  <button
+                    type="button"
+                    className="save-retry"
+                    onClick={() => void autosave.flush().catch(() => undefined)}
+                  >
+                    Reintentar
+                  </button>
+                </>
               ) : null}
             </div>
           )}
+          <IconButton
+            id={focusToggleId}
+            icon={focusMode ? ArrowsInSimple : ArrowsOutSimple}
+            label={focusMode ? "Salir del modo foco" : "Modo foco de la vista previa"}
+            aria-pressed={focusMode}
+            data-testid="ui-focus-toggle"
+            onClick={toggleFocusMode}
+          />
+          <IconButton
+            icon={theme === "dark" ? Sun : Moon}
+            label={theme === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
+            aria-pressed={theme === "dark"}
+            data-testid="ui-theme-toggle"
+            onClick={toggleTheme}
+          />
           <div className="history-actions">
             <IconButton
               icon={ArrowUDownLeft}
@@ -388,6 +642,24 @@ export function Studio({
             >
               <Icon aria-hidden size={19} weight={tab === id ? "fill" : "regular"} />
               <span>{label}</span>
+              {dirtyTabs.has(id) ? (
+                <span
+                  className="studio-tab-dirty"
+                  data-testid="ui-tab-dirty"
+                  aria-hidden="true"
+                  title={`${label} tiene cambios sin revisar`}
+                />
+              ) : null}
+              {tab === id ? (
+                <motion.span
+                  layoutId="studio-nav-indicator"
+                  className="studio-nav-indicator"
+                  aria-hidden
+                  transition={
+                    reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34 }
+                  }
+                />
+              ) : null}
             </button>
           ))}
         </div>
@@ -404,6 +676,7 @@ export function Studio({
         <motion.main
           id={editorPaneId}
           data-studio-editor-pane
+          data-tab={tab}
           role="tabpanel"
           aria-labelledby={`studio-tab-${tab}`}
           aria-hidden={!editorOpen}
@@ -416,12 +689,34 @@ export function Studio({
             className="editor-pane-close"
             icon={X}
             label="Cerrar panel de edición"
-            onClick={() => setEditorOpen(false)}
+            onClick={() => setPaneOpen(false)}
           />
           {renderTab()}
         </motion.main>
-        <Preview project={project} route={previewRoute} size={previewSize} />
+        <Preview project={project} route={previewRoute} size={previewSize} zoom={previewZoom} />
       </div>
+
+      {focusMode ? (
+        <IconButton
+          id={focusExitId}
+          className="studio-focus-exit"
+          icon={ArrowsInSimple}
+          label="Salir del modo foco"
+          data-testid="ui-focus-exit"
+          onClick={() => {
+            setFocusMode(false);
+            requestAnimationFrame(() => {
+              document.getElementById(focusToggleId)?.focus();
+            });
+          }}
+        />
+      ) : null}
+
+      <footer className="studio-statusbar" data-testid="ui-status-bar">
+        <span>Esquema v{project.schemaVersion}</span>
+        <span>Última exportación: {lastExportedAt ? formatStatusDate(lastExportedAt) : "—"}</span>
+        <span>Persistencia: {managedStorage ? "Disco" : "IndexedDB"}</span>
+      </footer>
 
       {conflict ? (
         <div

@@ -183,7 +183,7 @@ test("el preview y su toolbar responden en los 5 viewports", async ({ page }) =>
     await expectNoHorizontalOverflow(page, `Preview iframe ${viewport.name}`);
 
     if (viewport.width <= 680) {
-      const routeVisible = await page.locator(".preview-route select").isVisible();
+      const routeVisible = await page.locator(".preview-route input").isVisible();
       expect(routeVisible, `Selector de ruta plegado en ${viewport.name}`).toBe(false);
     }
   }

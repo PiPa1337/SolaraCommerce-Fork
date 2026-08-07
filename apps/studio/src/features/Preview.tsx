@@ -11,11 +11,18 @@ import {
   SidebarSimple,
 } from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
-import { useEffect, useRef, useState } from "react";
-import { IconButton } from "../components/Ui";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { Button, IconButton } from "../components/Ui";
 
 export type PreviewSize = "desktop" | "tablet" | "mobile";
+export type PreviewZoom = 100 | 75 | 50;
 export type PreviewRoute = { path: string; label: string };
+
+const ZOOM_OPTIONS: Array<{ value: PreviewZoom; label: string }> = [
+  { value: 100, label: "100%" },
+  { value: 75, label: "75%" },
+  { value: 50, label: "50%" },
+];
 
 const PREVIEW_SCROLLBAR_STYLE = `<style data-solara-preview-scrollbar>
 html,
@@ -94,17 +101,36 @@ export function PreviewToolbar({
   routes,
   route,
   size,
+  zoom,
   onRouteChange,
   onSizeChange,
+  onZoomChange,
   onOpenEditor,
 }: {
   routes: PreviewRoute[];
   route: string;
   size: PreviewSize;
+  zoom: PreviewZoom;
   onRouteChange(route: string): void;
   onSizeChange(size: PreviewSize): void;
+  onZoomChange(zoom: PreviewZoom): void;
   onOpenEditor(): void;
 }) {
+  const routeListId = useId();
+  const [routeDraft, setRouteDraft] = useState(route);
+  useEffect(() => {
+    setRouteDraft(route);
+  }, [route]);
+
+  const commitRoute = useCallback(() => {
+    const next = routeDraft.trim();
+    if (!next) {
+      setRouteDraft(route);
+      return;
+    }
+    if (next !== route) onRouteChange(next);
+  }, [onRouteChange, route, routeDraft]);
+
   return (
     <div className="preview-toolbar">
       <div className="preview-heading">
@@ -115,20 +141,53 @@ export function PreviewToolbar({
         />
         <strong>Vista previa</strong>
       </div>
+      <output
+        className="preview-route-announce visually-hidden"
+        aria-live="polite"
+        data-testid="ui-preview-route-announce"
+      >
+        {`Vista previa: ${route}`}
+      </output>
       <label className="preview-route">
         <span className="visually-hidden">Ruta de vista previa</span>
-        <select
+        <input
           data-testid="ui-preview-route"
-          value={route}
-          onChange={(event) => onRouteChange(event.target.value)}
-        >
-          {routes.map((item) => (
-            <option key={item.path} value={item.path}>
-              {item.label}
-            </option>
-          ))}
-        </select>
+          type="text"
+          list={routeListId}
+          aria-label="Ruta de vista previa"
+          autoComplete="off"
+          spellCheck={false}
+          value={routeDraft}
+          onChange={(event) => setRouteDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            commitRoute();
+          }}
+          onBlur={commitRoute}
+        />
       </label>
+      <datalist id={routeListId}>
+        {routes.map((item) => (
+          <option key={item.path} value={item.path}>
+            {item.label}
+          </option>
+        ))}
+      </datalist>
+      <fieldset className="preview-zoom">
+        <legend className="visually-hidden">{"Zoom de vista previa"}</legend>
+        {ZOOM_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className="preview-zoom__button"
+            aria-pressed={zoom === option.value}
+            onClick={() => onZoomChange(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </fieldset>
       <fieldset className="preview-sizes">
         <legend className="visually-hidden">{"Tama\u00f1o de vista previa"}</legend>
         <IconButton
@@ -158,13 +217,17 @@ export function Preview({
   project,
   route,
   size,
+  zoom,
 }: {
   project: StoreProjectV1;
   route: string;
   size: PreviewSize;
+  zoom: PreviewZoom;
 }) {
   const [html, setHtml] = useState("");
   const [error, setError] = useState("");
+  const [renderToken, setRenderToken] = useState(0);
+  const [iframeReady, setIframeReady] = useState(false);
   const previewAssetSources = useRef<ReadonlyMap<string, string>>(new Map());
   const previewFrame = useRef<HTMLIFrameElement>(null);
 
@@ -186,6 +249,7 @@ export function Preview({
     return () => window.removeEventListener("message", handlePreviewAssetRequest);
   }, []);
 
+  /* biome-ignore lint/correctness/useExhaustiveDependencies: renderToken es la clave de reintento del render. */
   useEffect(() => {
     let active = true;
     void import("@solara/exporter")
@@ -200,6 +264,7 @@ export function Preview({
               ),
             ),
           );
+          setIframeReady(false);
           setError("");
         } catch (reason) {
           setError(
@@ -217,7 +282,7 @@ export function Preview({
     return () => {
       active = false;
     };
-  }, [project, route]);
+  }, [project, route, renderToken]);
 
   return (
     <aside className="preview-pane" aria-label="Vista previa de la tienda">
@@ -227,6 +292,9 @@ export function Preview({
             <EyeSlash aria-hidden size={28} />
             <strong>{"La vista previa necesita atenci\u00f3n"}</strong>
             <p>{error}</p>
+            <Button variant="secondary" onClick={() => setRenderToken((token) => token + 1)}>
+              Recargar vista previa
+            </Button>
           </div>
         ) : !html ? (
           <output className="preview-loading" aria-live="polite">
@@ -234,12 +302,22 @@ export function Preview({
             <p>Optimizando recursos de esta tienda...</p>
           </output>
         ) : (
-          <iframe
-            ref={previewFrame}
-            title={`Vista previa ${size}`}
-            srcDoc={html}
-            sandbox="allow-forms allow-scripts"
-          />
+          <>
+            <iframe
+              ref={previewFrame}
+              title={`Vista previa ${size}`}
+              srcDoc={html}
+              sandbox="allow-forms allow-scripts"
+              style={zoom !== 100 ? { zoom: zoom / 100 } : undefined}
+              onLoad={() => setIframeReady(true)}
+            />
+            {!iframeReady ? (
+              <output className="preview-overlay" data-testid="ui-preview-loading">
+                <span className="save-spinner" aria-hidden />
+                Cargando vista previa
+              </output>
+            ) : null}
+          </>
         )}
       </div>
     </aside>
