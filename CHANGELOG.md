@@ -10,6 +10,17 @@ versión publicada.
 
 ## [Unreleased]
 
+### Búsqueda con relevancia (2026-08-07)
+
+La búsqueda del storefront ahora tolera errores de tipeo (hasta 2 ediciones
+según la longitud), ordena por relevancia (coincidencia exacta > prefijo >
+substring > fuzzy, con pesos por campo: título, marca, etiquetas, categorías
+y descripción), bonifica los productos que coinciden en varios términos,
+prioriza los disponibles y sugiere una corrección cuando no hay resultados.
+El índice `search-index.json` ahora incluye tokens precomputados y
+normalizados; el presupuesto del runtime público se mantiene en ≤ 52 KiB
+crudos.
+
 ### Limpieza de referencias ZIP obsoletas (2026-08-07)
 
 Se eliminaron los últimos textos y comentarios que mencionaban ZIP en la UI
