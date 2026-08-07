@@ -11,6 +11,23 @@ import { strFromU8, unzipSync } from "fflate";
 const STATE_FORMAT = "solara-migration";
 const STATE_VERSION = 1;
 
+function assertRelativeArchivePath(pathname) {
+  if (typeof pathname !== "string" || pathname.length === 0 || pathname.length > 240) {
+    throw new Error("Ruta de archivo inválida.");
+  }
+  const normalized = pathname.replaceAll("\\", "/");
+  if (
+    normalized.startsWith("/") ||
+    /^[a-z]:\//i.test(normalized) ||
+    normalized.includes("../") ||
+    normalized.includes("/..")
+  ) {
+    throw new Error("El archivo contiene una ruta insegura.");
+  }
+  if (normalized.includes("\0")) throw new Error("El archivo contiene un byte inválido.");
+  return normalized;
+}
+
 async function readJson(pathname, fallback) {
   try {
     return JSON.parse(await readFile(pathname, "utf8"));
@@ -39,11 +56,14 @@ export async function runLegacyZipMigration({
   const failed = [];
   const { readdir } = await import("node:fs/promises");
   let entries = [];
+  let scanFailed = false;
   try {
     entries = await readdir(projectsRoot, { withFileTypes: true });
   } catch {
+    scanFailed = true;
     entries = [];
   }
+  if (scanFailed) return { converted, failed };
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     const storeRoot = join(projectsRoot, entry.name);
@@ -52,7 +72,8 @@ export async function runLegacyZipMigration({
       if (!manifest || manifest.manifestVersion !== 1) continue;
       const archivePath = manifest.current?.archivePath;
       if (typeof archivePath !== "string" || !archivePath.endsWith(".solara.zip")) continue;
-      const sourcePath = join(storeRoot, ...archivePath.split("/"));
+      const normalizedArchivePath = assertRelativeArchivePath(archivePath);
+      const sourcePath = join(storeRoot, ...normalizedArchivePath.split("/"));
       const zip = unzipSync(await readFile(sourcePath));
       const projectBytes = zip["project.json"];
       const manifestBytes = zip["manifest.json"];
@@ -65,6 +86,9 @@ export async function runLegacyZipMigration({
       if (project.id !== manifest.projectId)
         throw new Error("El proyecto no coincide con la tienda.");
       const key = manifest.current.key;
+      if (typeof key !== "string" || !/^[a-z0-9][a-z0-9_-]{0,95}$/i.test(key)) {
+        throw new Error("Clave de versión inválida.");
+      }
       const jsonName = `${key}.solara.json`;
       const jsonText = `${JSON.stringify(
         {
@@ -82,7 +106,7 @@ export async function runLegacyZipMigration({
       await mkdir(join(storeRoot, "actual"), { recursive: true });
       await writeFile(join(storeRoot, "actual", jsonName), jsonText, "utf8");
       await mkdir(join(storeRoot, "respaldos"), { recursive: true });
-      const backupPath = join(storeRoot, "respaldos", archivePath.split("/").pop());
+      const backupPath = join(storeRoot, "respaldos", normalizedArchivePath.split("/").pop());
       const { copyFile } = await import("node:fs/promises");
       try {
         await copyFile(sourcePath, backupPath);
@@ -108,6 +132,7 @@ export async function runLegacyZipMigration({
     version: STATE_VERSION,
     convertedAt: new Date().toISOString(),
     projectIds: converted,
+    failed,
   });
   return { converted, failed };
 }

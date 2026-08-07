@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
@@ -300,6 +300,74 @@ describe("almacenamiento local de proyectos", () => {
         siteMap([{ path: "index.html", encoding: "utf8", data: "x".repeat(8 * 1024) }]),
       );
       await expect(storage.commit(transaction.transactionId)).rejects.toThrow(/límite/i);
+      expect((await storage.list()).projects).toHaveLength(0);
+      await storage.abort(transaction.transactionId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("sigue funcionando cuando la migración falla al escribir su marca", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-migration-"));
+    try {
+      await mkdir(join(root, ".solara-runtime", "migration.json"), { recursive: true });
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      const listing = await storage.list();
+      expect(listing.projects).toEqual([]);
+      expect(listing.recovery).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rechaza un mapa de sitio con datos no textuales", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-data-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      const transaction = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, transaction.transactionId, "project", projectJson());
+      await upload(
+        storage,
+        transaction.transactionId,
+        "site",
+        siteMap([{ path: "index.html", encoding: "utf8", data: 123 }]),
+      );
+      await expect(storage.commit(transaction.transactionId)).rejects.toThrow(/inválidas/i);
+      expect((await storage.list()).projects).toHaveLength(0);
+      await storage.abort(transaction.transactionId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rechaza un mapa de sitio con rutas duplicadas", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-dupes-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      const transaction = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, transaction.transactionId, "project", projectJson());
+      await upload(
+        storage,
+        transaction.transactionId,
+        "site",
+        siteMap([
+          { path: "index.html", encoding: "utf8", data: "<main>a</main>" },
+          { path: "index.html", encoding: "utf8", data: "<main>b</main>" },
+        ]),
+      );
+      await expect(storage.commit(transaction.transactionId)).rejects.toThrow(/duplicadas/i);
       expect((await storage.list()).projects).toHaveLength(0);
       await storage.abort(transaction.transactionId);
     } finally {

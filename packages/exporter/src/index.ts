@@ -2274,7 +2274,7 @@ function buildFiles(
 
 /**
  * Builds the complete public artifact from one parsed snapshot. Keep all
- * generated files here so Preview, ZIP, SEO and Merchant cannot drift apart.
+ * generated files here so Preview, public site, SEO and Merchant cannot drift apart.
  */
 export function exportProject(projectInput: StoreProjectV1, options: ExportOptions): ExportResult {
   const project = parseProject(projectInput, "exportar");

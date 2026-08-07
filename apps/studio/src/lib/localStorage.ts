@@ -47,7 +47,7 @@ export interface LocalSaveReceipt {
   key: string;
   status: "synced" | "site-outdated";
   folder: string;
-  archivePath: string;
+  projectPath: string;
   site: {
     version: number;
     key: string;

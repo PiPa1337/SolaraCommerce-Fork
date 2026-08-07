@@ -3,15 +3,19 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
+import { runLegacyZipMigration } from "../scripts/legacy-zip-migration.mjs";
 import { createLocalProjectStorage } from "../scripts/local-project-storage.mjs";
 
 const projectId = "store-legacy";
-const project = { schemaVersion: 2, id: projectId, name: "Antigua", slug: "antigua" };
 
-function legacyArchive() {
+function legacyArchive(projectIdValue = projectId) {
   return zipSync({
-    "manifest.json": strToU8(JSON.stringify({ format: "solara-project", version: 2, projectId })),
-    "project.json": strToU8(JSON.stringify(project)),
+    "manifest.json": strToU8(
+      JSON.stringify({ format: "solara-project", version: 2, projectId: projectIdValue }),
+    ),
+    "project.json": strToU8(
+      JSON.stringify({ schemaVersion: 2, id: projectIdValue, name: "Antigua", slug: "antigua" }),
+    ),
   });
 }
 
@@ -121,6 +125,79 @@ describe("migración única de respaldos .solara.zip", () => {
       );
       expect(JSON.parse(await readFile(jsonPath, "utf8")).project.id).toBe(projectId);
       expect(second.recovery.length).toBeGreaterThanOrEqual(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("no escribe la marca cuando el directorio de proyectos no se puede leer", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-migration-scan-"));
+    try {
+      const projectsFile = join(root, "proyectos");
+      await writeFile(projectsFile, "no es un directorio");
+      const statePath = join(root, "migration.json");
+      const result = await runLegacyZipMigration({
+        applicationRoot: root,
+        projectsRoot: projectsFile,
+        migrationStatePath: statePath,
+      });
+      expect(result).toEqual({ converted: [], failed: [] });
+      await expect(readFile(statePath, "utf8")).rejects.toThrow();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("no migra tiendas con rutas o claves inseguras", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-migration-unsafe-"));
+    try {
+      const zipRoot = join(root, "proyectos", "ruta--insegura");
+      await mkdir(join(zipRoot, "actual"), { recursive: true });
+      await writeFile(
+        join(zipRoot, "manifest.json"),
+        `${JSON.stringify(
+          {
+            ...legacyManifest(),
+            projectId: "store-ruta",
+            current: { ...legacyManifest().current, archivePath: "../boom.solara.zip" },
+          },
+          null,
+          2,
+        )}\n`,
+        "utf8",
+      );
+      const keyRoot = join(root, "proyectos", "clave--insegura");
+      await mkdir(join(keyRoot, "actual"), { recursive: true });
+      await writeFile(
+        join(keyRoot, "manifest.json"),
+        `${JSON.stringify(
+          {
+            ...legacyManifest(),
+            projectId: "store-clave",
+            current: {
+              ...legacyManifest().current,
+              archivePath: "actual/seguro.solara.zip",
+              key: "../../boom",
+            },
+          },
+          null,
+          2,
+        )}\n`,
+        "utf8",
+      );
+      await writeFile(join(keyRoot, "actual", "seguro.solara.zip"), legacyArchive("store-clave"));
+
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      const listing = await storage.list();
+      expect(listing.projects).toHaveLength(0);
+      expect(listing.recovery.length).toBe(2);
+
+      const marker = JSON.parse(
+        await readFile(join(root, ".solara-runtime", "migration.json"), "utf8"),
+      );
+      expect(marker.projectIds).toEqual([]);
+      expect([...marker.failed].sort()).toEqual(["clave--insegura", "ruta--insegura"]);
+      await expect(readFile(join(root, "boom.solara.json"), "utf8")).rejects.toThrow();
     } finally {
       await rm(root, { recursive: true, force: true });
     }

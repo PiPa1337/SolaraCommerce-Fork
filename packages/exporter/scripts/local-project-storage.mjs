@@ -150,23 +150,27 @@ async function writeSiteFiles(siteMapPath, destination, limits) {
   if (entries.length > limits.maxFiles) throw new Error("El sitio contiene demasiados archivos.");
   let totalBytes = 0;
   let hasIndex = false;
+  const seen = new Set();
   const prepared = [];
   for (const entry of entries) {
     if (
       typeof entry?.path !== "string" ||
+      typeof entry?.data !== "string" ||
       (entry.encoding !== "utf8" && entry.encoding !== "base64")
     ) {
       throw new Error("El mapa del sitio contiene entradas inválidas.");
     }
     const pathname = assertRelativeArchivePath(entry.path);
+    if (seen.has(pathname)) throw new Error("El mapa del sitio contiene rutas duplicadas.");
+    seen.add(pathname);
     const output = assertInside(destination, join(destination, pathname));
-    const payload = Buffer.from(entry.data ?? "", entry.encoding);
+    const payload = Buffer.from(entry.data, entry.encoding);
     if (payload.byteLength > limits.maxFileBytes) {
-      throw new Error("El contenido descomprimido supera el límite permitido.");
+      throw new Error("El contenido supera el límite permitido.");
     }
     totalBytes += payload.byteLength;
     if (totalBytes > limits.maxExtractedBytes) {
-      throw new Error("El contenido descomprimido supera el límite permitido.");
+      throw new Error("El contenido supera el límite permitido.");
     }
     if (pathname === "index.html") hasIndex = true;
     prepared.push({ output, payload });
@@ -222,14 +226,19 @@ export function createLocalProjectStorage(options = {}) {
   async function ensureRoots() {
     await mkdir(projectsRoot, { recursive: true });
     await mkdir(stagingRoot, { recursive: true });
-    const { runLegacyZipMigration } = await import("./legacy-zip-migration.mjs");
-    await runLegacyZipMigration({
-      applicationRoot,
-      projectsRoot,
-      migrationStatePath: join(stagingRoot, "..", "migration.json"),
-    });
     await assertNoReparsePoints(applicationRoot, projectsRoot);
     await assertNoReparsePoints(applicationRoot, stagingRoot);
+    try {
+      const { runLegacyZipMigration } = await import("./legacy-zip-migration.mjs");
+      await runLegacyZipMigration({
+        applicationRoot,
+        projectsRoot,
+        migrationStatePath: join(stagingRoot, "..", "migration.json"),
+      });
+    } catch {
+      // La migración es una mejora: si falla (OneDrive, permisos, AV), las
+      // tiendas V1 quedan en recovery y el próximo arranque reintenta.
+    }
   }
 
   async function findManifest(projectId) {
