@@ -133,3 +133,33 @@ reglas responsive: el diálogo de creación aún las usa.
   de la ola.
 - `tests/e2e/editor-console.spec.ts`: verde (recorrido completo sin
   errores/warnings de consola).
+
+## T3.8 — Dark mode del editor (decisión de la ola 2)
+
+**Decisión: implementado.** La auditoría previa mostró que las superficies del
+editor están tokenizadas en `base.css` (`--bg`, `--surface`, `--surface-strong`,
+`--surface-raised`, `--ink`, `--muted`, `--faint`, `--line`, `--line-strong`,
+`--accent*`, `--danger*`, `--warning*`, `--info*`, `--shadow-*`); los únicos
+colores hardcodeados fuera de las definiciones de tokens son:
+
+- `editorial/editorial.css:94` y `:242` — overlays translúcidos (backdrop del
+  diálogo y sombra del panel) neutros a ambos temas;
+- `base/feedback.css` — toasts/overlays oscuros por diseño (ya legibles sobre
+  fondo claro y oscuro);
+- `dashboard/cosmic.css` — paleta propia del shell cosmic (`--cosmic-*` y
+  colores de su fondo oscuro intencional), fuera del alcance del toggle.
+
+Con menos de 20 valores no tokenizados y todos neutrales, el costo era bajo:
+
+- `base/base.css`: bloque `:root[data-studio-theme="dark"]` con la paleta
+  oscura existente del media query de sistema (misma paleta, un solo lugar de
+  autoridad); el media query quedó como `:root:not([data-studio-theme="light"])`
+  para que la preferencia manual gane sobre la del sistema.
+- `Studio.tsx`: toggle `IconButton` (`data-testid="ui-theme-toggle"`) que
+  escribe `data-studio-theme` en `<html>` y persiste en
+  `localStorage["solara-studio-theme"]` ("light" | "dark" | sin clave = seguir
+  al sistema).
+- **Deuda conocida:** los dos bloques de paleta oscura (media query + atributo)
+  deben mantenerse en sincronía; están comentados para ello. Si en el futuro se
+  introduce otro color hardcodeado para superficies del editor, debe salir de
+  los tokens para no romper el tema.
