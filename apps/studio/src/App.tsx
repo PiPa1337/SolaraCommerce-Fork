@@ -311,7 +311,7 @@ export function App() {
             <strong>{recovery.length} proyecto(s) requieren recuperación.</strong>
             <p>
               Studio no los abrió porque no cumplen el schema actual. Conservá el archivo original y
-              recuperá una copia compatible desde un respaldo .solara.zip.
+              recuperá una copia compatible desde un respaldo .solara.json.
             </p>
             <ul>
               {recovery.map((item) => (
@@ -326,7 +326,7 @@ export function App() {
             <input
               className="visually-hidden"
               type="file"
-              accept=".zip,.solara.zip,application/zip"
+              accept=".json,.solara.json,application/json"
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 if (file) void importRecoveryArchive(file);
@@ -421,7 +421,11 @@ export function App() {
             const project = await getProject(id);
             if (!project) throw new Error("No se encontró la tienda.");
             const archive = await createProjectArchiveInWorker(project);
-            downloadBlob(archive, `${project.slug}-respaldo.solara.zip`, "application/zip");
+            downloadBlob(
+              archive,
+              `${project.slug}-respaldo.solara.json`,
+              "application/vnd.solara.project+json",
+            );
           })
         }
         {...(localStorageStatus.managed
@@ -434,8 +438,8 @@ export function App() {
                   const version = selected?.diskVersion ? `-v${selected.diskVersion}` : "";
                   downloadBlob(
                     bytes,
-                    `${selected?.project.slug ?? "tienda"}${version}.solara.zip`,
-                    "application/zip",
+                    `${selected?.project.slug ?? "tienda"}${version}.solara.json`,
+                    "application/vnd.solara.project+json",
                   );
                 }),
             }

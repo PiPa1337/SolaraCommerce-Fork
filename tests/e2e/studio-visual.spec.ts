@@ -204,7 +204,7 @@ test("dashboard permite abrir, buscar, cambiar vista, respaldar y administrar un
   const downloadPromise = page.waitForEvent("download");
   await detail.getByRole("button", { name: "Respaldo ahora" }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/\.solara\.zip$/);
+  expect(download.suggestedFilename()).toMatch(/\.solara\.json$/);
 
   await detail.getByRole("button", { name: "Duplicar" }).click();
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");

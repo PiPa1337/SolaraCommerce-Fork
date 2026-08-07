@@ -23,12 +23,6 @@ type ExportRequest =
       buffer: ArrayBuffer;
     };
 
-function transferableBytes(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
-  const copy = new Uint8Array(bytes.byteLength);
-  copy.set(bytes);
-  return copy;
-}
-
 self.onmessage = (event: MessageEvent<ExportRequest>) => {
   try {
     const request = event.data;
@@ -48,18 +42,18 @@ self.onmessage = (event: MessageEvent<ExportRequest>) => {
     }
 
     if (request.type === "project-write") {
-      const archive = transferableBytes(createProjectArchive(request.project));
-      self.postMessage({ id: request.id, ok: true, result: archive }, [archive.buffer]);
+      self.postMessage({ id: request.id, ok: true, result: createProjectArchive(request.project) });
       return;
     }
 
-    const project = readProjectArchive(new Uint8Array(request.buffer));
+    const project = readProjectArchive(new TextDecoder().decode(new Uint8Array(request.buffer)));
     self.postMessage({ id: request.id, ok: true, result: project });
   } catch (error) {
     self.postMessage({
       id: event.data.id,
       ok: false,
-      error: error instanceof Error ? error.message : "No se pudo procesar el archivo ZIP.",
+      error:
+        error instanceof Error ? error.message : "No se pudo procesar el respaldo del proyecto.",
     });
   }
 };

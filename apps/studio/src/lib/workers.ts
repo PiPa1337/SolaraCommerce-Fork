@@ -231,7 +231,7 @@ export function exportSiteInWorker(
   return requestWorker(getExportWorker(), { type: "site", project, mode, options });
 }
 
-export function createProjectArchiveInWorker(project: StoreProjectV1): Promise<Uint8Array> {
+export function createProjectArchiveInWorker(project: StoreProjectV1): Promise<string> {
   return requestWorker(getExportWorker(), { type: "project-write", project });
 }
 

@@ -27,6 +27,7 @@ export function ExportPanel({
   const importRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<"draft" | "production" | "project" | "import" | "">("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [critical, setCritical] = useState(0);
   const [publicAiContext, setPublicAiContext] = useState(true);
   const [optimization, setOptimization] = useState<OptimizationReport | null>(null);
@@ -51,12 +52,16 @@ export function ExportPanel({
   const exportSite = async (mode: "draft" | "production") => {
     setBusy(mode);
     setError("");
+    setNotice("");
     try {
       const result = await exportSiteInWorker(project, mode, {
         publicAiContext,
         optimizationProfile: "safe",
       });
       setOptimization(result.optimization);
+      setNotice(
+        "Exportación correcta. El sitio público se guarda en proyectos/<tienda>/sitios/ al guardar con el lanzador; podés abrirlo desde el dashboard.",
+      );
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo exportar la tienda.");
     } finally {
@@ -70,8 +75,8 @@ export function ExportPanel({
     try {
       downloadBlob(
         await createProjectArchiveInWorker(project),
-        `${project.slug}.solara.zip`,
-        "application/vnd.solara.project+zip",
+        `${project.slug}.solara.json`,
+        "application/vnd.solara.project+json",
       );
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo crear el respaldo.");
@@ -99,6 +104,7 @@ export function ExportPanel({
         description="El respaldo editable y el sitio público son archivos distintos."
       />
       {error ? <InlineError>{error}</InlineError> : null}
+      {notice ? <output className="export-notice">{notice}</output> : null}
       <label className="export-ai-context">
         <input
           type="checkbox"
@@ -124,13 +130,13 @@ export function ExportPanel({
           </div>
           <div className="export-actions">
             <Button icon={DownloadSimple} onClick={() => void backup()} disabled={Boolean(busy)}>
-              Descargar .solara.zip
+              Descargar .solara.json
             </Button>
             <input
               ref={importRef}
               className="visually-hidden"
               type="file"
-              accept=".zip,.solara.zip,application/zip"
+              accept=".json,.solara.json,application/json"
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 if (file) void importArchive(file);

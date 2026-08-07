@@ -3571,6 +3571,20 @@ tbody tr[data-selected="true"] {
   font-weight: 700;
 }
 
+.export-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-radius: var(--radius-input);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .export-ai-context {
   display: flex;
   align-items: flex-start;

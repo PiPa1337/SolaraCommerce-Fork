@@ -1,89 +1,50 @@
 /**
- * Formato de transporte `.solara.zip`: manifest de proyecto, JSON validado y
- * assets. La lectura trata el archivo como entrada no confiable y valida schema
- * y rutas antes de incorporarlo al estado del editor.
+ * Formato de transporte `.solara.json`: envelope de proyecto sin compresión.
+ * La lectura trata el archivo como entrada no confiable y valida schema antes
+ * de incorporarlo al estado del editor.
  */
 import type { StoreProjectV2 } from "@solara/project-schema";
 import { StoreProjectV2Schema } from "@solara/project-schema";
-import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 
-interface ArchiveManifest {
+interface ArchiveEnvelope {
   format: "solara-project";
   version: 2;
   projectId: string;
   exportedAt: string;
+  project: StoreProjectV2;
 }
 
-function dataUrlBytes(source: string): Uint8Array | undefined {
-  const match = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(source);
-  if (!match) return undefined;
-  if (match[2]) {
-    const binary = atob(match[3] ?? "");
-    return Uint8Array.from(binary, (character) => character.charCodeAt(0));
-  }
-  return new TextEncoder().encode(decodeURIComponent(match[3] ?? ""));
-}
-
-function extension(mimeType: string): string {
-  const subtype = mimeType.split("/")[1]?.split(";")[0] ?? "bin";
-  return subtype === "jpeg" ? "jpg" : subtype;
-}
-
-export function createProjectArchive(project: StoreProjectV2): Uint8Array {
+export function createProjectArchive(project: StoreProjectV2): string {
   const parsed = StoreProjectV2Schema.parse(project);
-  const manifest: ArchiveManifest = {
+  const envelope: ArchiveEnvelope = {
     format: "solara-project",
     version: 2,
     projectId: parsed.id,
     exportedAt: new Date().toISOString(),
+    project: parsed,
   };
-  const files: Record<string, Uint8Array> = {
-    "manifest.json": strToU8(JSON.stringify(manifest, null, 2)),
-    "project.json": strToU8(JSON.stringify(parsed, null, 2)),
-  };
-  parsed.assets.forEach((asset) => {
-    const bytes = dataUrlBytes(asset.source);
-    if (bytes) files[`assets/${asset.hash}.${extension(asset.mimeType)}`] = bytes;
-  });
-  parsed.videos.forEach((video) => {
-    const bytes = dataUrlBytes(video.source);
-    if (bytes) files[`assets/${video.hash}.${extension(video.mimeType)}`] = bytes;
-  });
-  return zipSync(files, { level: 6 });
+  return `${JSON.stringify(envelope, null, 2)}\n`;
 }
 
-export function readProjectArchive(input: Uint8Array): StoreProjectV2 {
-  let files: Record<string, Uint8Array>;
+export function readProjectArchive(input: string | Uint8Array): StoreProjectV2 {
+  let text: string;
+  if (typeof input === "string") {
+    text = input;
+  } else {
+    text = new TextDecoder().decode(input);
+  }
+  let envelope: Partial<ArchiveEnvelope>;
   try {
-    files = unzipSync(input);
+    envelope = JSON.parse(text) as Partial<ArchiveEnvelope>;
   } catch {
-    throw new Error("El respaldo está corrupto o no es un ZIP válido.");
+    throw new Error("El respaldo está corrupto o no es JSON válido.");
   }
-  const manifestFile = files["manifest.json"];
-  const projectFile = files["project.json"];
-  if (!manifestFile || !projectFile) {
-    throw new Error("El respaldo no contiene manifest.json y project.json.");
-  }
-
-  let manifest: Partial<ArchiveManifest>;
-  try {
-    manifest = JSON.parse(strFromU8(manifestFile)) as Partial<ArchiveManifest>;
-  } catch {
-    throw new Error("El manifest del respaldo está corrupto.");
-  }
-  if (manifest.format !== "solara-project" || manifest.version !== 2) {
+  if (envelope.format !== "solara-project" || envelope.version !== 2) {
     throw new Error(
-      "Este respaldo pertenece a una version anterior y no es compatible. Conserva el ZIP original y crea una nueva tienda con el sistema actual.",
+      "Este respaldo pertenece a una version anterior y no es compatible. Conserva el archivo original y crea una nueva tienda con el sistema actual.",
     );
   }
-
-  let project: unknown;
-  try {
-    project = JSON.parse(strFromU8(projectFile));
-  } catch {
-    throw new Error("El proyecto dentro del respaldo está corrupto.");
-  }
-  const parsed = StoreProjectV2Schema.safeParse(project);
+  const parsed = StoreProjectV2Schema.safeParse(envelope.project);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     const path = issue?.path.join(".") || "project";
@@ -114,22 +75,4 @@ export function downloadBlob(data: DownloadData, filename: string, mimeType: str
   anchor.download = filename;
   anchor.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
-}
-
-export function normalizePublicExport(result: unknown): DownloadData {
-  if (result instanceof Blob || result instanceof Uint8Array || typeof result === "string") {
-    return result;
-  }
-  if (typeof result === "object" && result !== null) {
-    const record = result as Record<string, unknown>;
-    const candidate = record.zip ?? record.bytes ?? record.data;
-    if (
-      candidate instanceof Blob ||
-      candidate instanceof Uint8Array ||
-      typeof candidate === "string"
-    ) {
-      return candidate;
-    }
-  }
-  throw new Error("El exportador no devolvió un ZIP válido.");
 }

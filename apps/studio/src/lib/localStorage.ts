@@ -120,7 +120,7 @@ export async function listLocalProjects(): Promise<LocalProjectManifestSummary> 
 export async function readLocalProject(projectId: string): Promise<Uint8Array> {
   const response = await fetch(
     `/__solara/storage/projects/${encodeURIComponent(projectId)}/current`,
-    { credentials: "same-origin", headers: { Accept: "application/vnd.solara.project+zip" } },
+    { credentials: "same-origin", headers: { Accept: "application/vnd.solara.project+json" } },
   );
   if (!response.ok) return readError(response);
   return new Uint8Array(await response.arrayBuffer());
@@ -146,8 +146,8 @@ async function uploadBytes(url: string, bytes: Uint8Array, contentType: string):
 /** Sube el proyecto/sitio staged y confirma el commit atómico en disco. */
 export async function saveLocalProject(
   metadata: LocalSaveMetadata,
-  projectArchive: Uint8Array,
-  siteArchive?: Uint8Array,
+  projectJson: string,
+  siteMap?: string,
 ): Promise<LocalSaveReceipt> {
   const started = await requestJson<
     { transactionId: string } & Pick<LocalSaveReceipt, "version" | "folder">
@@ -159,14 +159,14 @@ export async function saveLocalProject(
   try {
     await uploadBytes(
       `/__solara/storage/saves/${encodeURIComponent(started.transactionId)}/project`,
-      projectArchive,
-      "application/vnd.solara.project+zip",
+      new TextEncoder().encode(projectJson),
+      "application/vnd.solara.project+json",
     );
-    if (siteArchive) {
+    if (siteMap) {
       await uploadBytes(
         `/__solara/storage/saves/${encodeURIComponent(started.transactionId)}/site`,
-        siteArchive,
-        "application/zip",
+        new TextEncoder().encode(siteMap),
+        "application/json",
       );
     }
     return await requestJson<LocalSaveReceipt>(

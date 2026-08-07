@@ -23,6 +23,25 @@ export interface DiskProject extends StoredProject {
   diskStatus: "synced" | "site-outdated";
 }
 
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.byteLength; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+  return btoa(binary);
+}
+
+export function serializeSiteFiles(files: ReadonlyMap<string, string | Uint8Array>): string {
+  return JSON.stringify(
+    [...files.entries()].map(([path, value]) =>
+      typeof value === "string"
+        ? { path, encoding: "utf8", data: value }
+        : { path, encoding: "base64", data: bytesToBase64(value) },
+    ),
+  );
+}
+
 export async function loadDiskProject(summary: LocalProjectSummary): Promise<DiskProject> {
   const archive = await readLocalProject(summary.projectId);
   const project = await readProjectArchiveBytesInWorker(archive);
@@ -77,14 +96,17 @@ export async function persistProjectToDisk(
   expectedVersion: number | null,
 ): Promise<{ receipt: LocalSaveReceipt; siteError?: string }> {
   const projectArchive = await createProjectArchiveInWorker(project);
-  const verifiedProject = await readProjectArchiveBytesInWorker(projectArchive);
+  const verifiedProject = await readProjectArchiveBytesInWorker(
+    new TextEncoder().encode(projectArchive),
+  );
   if (verifiedProject.id !== project.id) {
     throw new Error("El respaldo generado no coincide con la tienda actual.");
   }
-  let siteArchive: Uint8Array | undefined;
+  let siteMap: string | undefined;
   let siteError: string | undefined;
   try {
-    await exportSiteInWorker(project, "production");
+    const site = await exportSiteInWorker(project, "production");
+    siteMap = serializeSiteFiles(site.files);
   } catch (error) {
     siteError =
       error instanceof Error ? error.message : "La exportación de producción no pudo completarse.";
@@ -98,7 +120,7 @@ export async function persistProjectToDisk(
       expectedVersion,
     },
     projectArchive,
-    siteArchive,
+    siteMap,
   );
   return { receipt, ...(siteError ? { siteError } : {}) };
 }

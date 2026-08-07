@@ -187,8 +187,8 @@ export function Studio({
                   const archive = await createProjectArchiveInWorker(project);
                   downloadBlob(
                     archive,
-                    `${project.slug}-antes-de-actualizar.solara.zip`,
-                    "application/zip",
+                    `${project.slug}-antes-de-actualizar.solara.json`,
+                    "application/vnd.solara.project+json",
                   );
                   replaceProject(nextProject);
                 } catch (reason) {
