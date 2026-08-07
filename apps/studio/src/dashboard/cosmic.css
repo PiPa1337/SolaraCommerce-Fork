@@ -959,6 +959,10 @@
     min-height: 0;
     overflow: auto;
   }
+
+  .dashboard-store-detail:not(.is-open) {
+    display: none;
+  }
 }
 
 @media (max-width: 560px) {

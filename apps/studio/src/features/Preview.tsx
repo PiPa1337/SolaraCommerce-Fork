@@ -107,7 +107,11 @@ export function PreviewToolbar({
       </div>
       <label className="preview-route">
         <span className="visually-hidden">Ruta de vista previa</span>
-        <select value={route} onChange={(event) => onRouteChange(event.target.value)}>
+        <select
+          data-testid="ui-preview-route"
+          value={route}
+          onChange={(event) => onRouteChange(event.target.value)}
+        >
           {routes.map((item) => (
             <option key={item.path} value={item.path}>
               {item.label}

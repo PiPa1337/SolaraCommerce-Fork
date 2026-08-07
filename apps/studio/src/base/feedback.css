@@ -26,6 +26,11 @@
   color: #fff7f7;
 }
 
+.app-root--dashboard-cosmic .button--danger:hover {
+  border-color: rgb(241 133 135 / 0.9);
+  background: rgb(150 52 56 / 0.96);
+}
+
 .app-root--dashboard-cosmic .global-notice,
 .app-root--dashboard-cosmic .global-error,
 .app-root--dashboard-cosmic .global-warning {

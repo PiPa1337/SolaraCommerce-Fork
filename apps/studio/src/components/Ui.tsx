@@ -16,7 +16,14 @@ export function IconButton({
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { icon: Icon; label: string }) {
   return (
-    <button className="icon-button" type="button" aria-label={label} title={label} {...props}>
+    <button
+      className="icon-button"
+      type="button"
+      data-testid="ui-icon-button"
+      aria-label={label}
+      title={label}
+      {...props}
+    >
       <IconComponent aria-hidden size={18} weight="regular" />
     </button>
   );
@@ -30,7 +37,13 @@ export const Button = forwardRef<
   }
 >(function Button({ icon: IconComponent, children, variant = "secondary", ...props }, ref) {
   return (
-    <button ref={ref} className={`button button--${variant}`} type="button" {...props}>
+    <button
+      ref={ref}
+      className={`button button--${variant}`}
+      type="button"
+      data-testid="ui-button"
+      {...props}
+    >
       {IconComponent ? <IconComponent aria-hidden size={17} weight="regular" /> : null}
       <span>{children}</span>
     </button>
@@ -49,7 +62,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="empty-state">
+    <div className="empty-state" data-testid="ui-empty-state">
       <IconComponent aria-hidden size={30} weight="regular" />
       <h3>{title}</h3>
       <p>{body}</p>
@@ -60,7 +73,7 @@ export function EmptyState({
 
 export function InlineError({ children }: { children: ReactNode }) {
   return (
-    <div className="inline-error" role="alert">
+    <div className="inline-error" role="alert" data-testid="ui-inline-error">
       <WarningCircle aria-hidden size={18} />
       <span>{children}</span>
     </div>
