@@ -210,6 +210,8 @@ La guía de distribución autocontenida está en
       se toca storefront.
 - [ ] Ejecutar `git diff --check` y `corepack pnpm check:repository`.
 - [ ] Revisar que no entren secretos, builds, reportes, `proyectos/` ni runtime.
+- [ ] Actualizar [`CHANGELOG.md`](CHANGELOG.md) con los cambios notables de la
+      sesión (formato Keep a Changelog, en español).
 - [ ] Actualizar documentación y [`HANDOFF.md`](HANDOFF.md) si cambia una decisión.
 
 ## Entrega y Git
