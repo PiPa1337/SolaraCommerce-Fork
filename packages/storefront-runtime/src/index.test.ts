@@ -1,4 +1,3 @@
-import { gzipSync } from "node:zlib";
 import { referenceStore } from "@solara/project-schema/fixture";
 import { describe, expect, it } from "vitest";
 import {
@@ -57,7 +56,8 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("catalog-search-open");
   });
 
-  it("mantiene el runtime por debajo de 35 KB gzip", () => {
-    expect(gzipSync(STOREFRONT_RUNTIME_JS).byteLength).toBeLessThanOrEqual(35 * 1024);
+  it("mantiene el runtime por debajo de 52 KB crudos", () => {
+    // Medición Task 6 (Step 1): runtime JS 41.475 B en bytes crudos (sin gzip).
+    expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(52 * 1024);
   });
 });

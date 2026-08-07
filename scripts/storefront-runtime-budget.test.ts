@@ -1,18 +1,19 @@
-import { gzipSync } from "node:zlib";
 import { expect, test } from "vitest";
 import {
   STOREFRONT_RUNTIME_CSS,
   STOREFRONT_RUNTIME_JS,
 } from "../packages/storefront-runtime/src/index";
 
-test("mantiene el runtime storefront dentro del presupuesto gzip", () => {
-  const javascriptBytes = gzipSync(Buffer.from(STOREFRONT_RUNTIME_JS, "utf8")).byteLength;
-  const cssBytes = gzipSync(Buffer.from(STOREFRONT_RUNTIME_CSS, "utf8")).byteLength;
+test("mantiene el runtime storefront dentro del presupuesto en bytes crudos", () => {
+  const javascriptBytes = Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8");
+  const cssBytes = Buffer.byteLength(STOREFRONT_RUNTIME_CSS, "utf8");
 
+  // Medición Task 6 (Step 1): runtime JS 41.475 B, runtime CSS 6.608 B.
+  // Topes crudos con margen ~20-28% sobre la medición.
   console.log({
-    storefrontRuntimeJavascriptGzip: javascriptBytes,
-    storefrontRuntimeCssGzip: cssBytes,
+    storefrontRuntimeJavascriptRaw: javascriptBytes,
+    storefrontRuntimeCssRaw: cssBytes,
   });
-  expect(javascriptBytes).toBeLessThanOrEqual(35 * 1024);
-  expect(cssBytes).toBeLessThanOrEqual(30 * 1024);
+  expect(javascriptBytes).toBeLessThanOrEqual(52 * 1024);
+  expect(cssBytes).toBeLessThanOrEqual(8 * 1024);
 });

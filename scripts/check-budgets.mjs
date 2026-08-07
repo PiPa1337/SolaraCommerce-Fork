@@ -1,6 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { gzipSync } from "node:zlib";
 
 const assetsDirectory = new URL("../apps/studio/dist/assets/", import.meta.url);
 const directoryPath = fileURLToPath(assetsDirectory);
@@ -27,24 +26,26 @@ const javascript = javascriptCandidates.reduce((largest, file) =>
     : largest,
 );
 
+// Topes en bytes crudos (sin compresión), fijados con margen sobre la medición
+// de la Task 6 (Step 1): JS inicial 589.731 B, CSS inicial 68.769 B. Un servidor
+// web puede comprimir; estos topes bloquean crecimientos accidentales del bundle
+// de Studio.
 const checks = [
   {
-    label: "Studio JavaScript inicial gzip",
+    label: "Studio JavaScript inicial crudo",
     file: javascript,
-    // La navegación moderna incluye el árbol mobile accesible en HTML estático.
-    // El margen sigue bloqueando crecimientos accidentales del bundle de Studio.
-    limit: 268 * 1024,
+    limit: 700 * 1024,
   },
   {
-    label: "Studio CSS inicial gzip",
+    label: "Studio CSS inicial crudo",
     file: stylesheet,
-    limit: 100 * 1024,
+    limit: 84 * 1024,
   },
 ];
 
 let failed = false;
 for (const check of checks) {
-  const bytes = gzipSync(readFileSync(new URL(`./${check.file}`, assetsDirectory))).byteLength;
+  const bytes = readFileSync(new URL(`./${check.file}`, assetsDirectory)).byteLength;
   const status = bytes <= check.limit ? "OK" : "EXCEDE";
   console.log(`${status} ${check.label}: ${bytes} B / ${check.limit} B`);
   if (bytes > check.limit) failed = true;
