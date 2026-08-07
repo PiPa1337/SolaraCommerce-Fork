@@ -17,11 +17,16 @@ test("exporta 1.000 productos dentro del presupuesto", () => {
   expect(result.files.has("google-merchant.xml")).toBe(true);
   expect(elapsedMs).toBeLessThan(30_000);
 
+  const filesBytes = [...result.files.values()].reduce(
+    (total, value) =>
+      total + (typeof value === "string" ? Buffer.byteLength(value, "utf8") : value.byteLength),
+    0,
+  );
   console.log({
     products: project.products.length,
     activeProductPages: productPages,
     files: result.files.size,
-    zipBytes: result.zip.byteLength,
+    filesBytes,
     elapsedMs: Math.round(elapsedMs),
   });
 });

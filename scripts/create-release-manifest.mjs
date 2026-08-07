@@ -23,7 +23,7 @@ const manifest = {
   sourceCommit,
   node: process.version,
   packageManager: packageJson.packageManager,
-  artifacts: ["apps/studio/dist", ".release/site.zip"],
+  artifacts: ["apps/studio/dist", ".release/reference-site"],
 };
 
 const output = resolve(root, ".release/release-manifest.json");

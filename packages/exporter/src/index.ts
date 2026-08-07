@@ -32,7 +32,6 @@ import {
   optimizeProject,
 } from "@solara/site-optimizer";
 import { STOREFRONT_RUNTIME_CSS, STOREFRONT_RUNTIME_JS } from "@solara/storefront-runtime";
-import { strToU8, unzipSync, type Zippable, zipSync } from "fflate";
 
 export type { OptimizationReport } from "@solara/site-optimizer";
 
@@ -112,7 +111,6 @@ export interface ExportOptions {
 
 export interface ExportResult {
   files: ReadonlyMap<string, string | Uint8Array>;
-  zip: Uint8Array;
   audit: AuditIssue[];
   optimization: OptimizationReport;
 }
@@ -154,8 +152,6 @@ export interface PublicExportManifest {
 }
 
 const encoder = new TextEncoder();
-const decoder = new TextDecoder();
-const stableMtime = new Date("2000-01-01T12:00:00.000Z");
 
 function parseProject(projectInput: StoreProjectV1, operation: string): StoreProjectV1 {
   const result = StoreProjectV1Schema.safeParse(projectInput);
@@ -2276,19 +2272,6 @@ function buildFiles(
   return files;
 }
 
-function zipFiles(files: ReadonlyMap<string, string | Uint8Array>): Uint8Array {
-  const zippable: Zippable = {};
-  [...files.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
-    .forEach(([path, value]) => {
-      zippable[path] = [
-        typeof value === "string" ? strToU8(value) : value,
-        { level: 6, mtime: stableMtime },
-      ];
-    });
-  return zipSync(zippable);
-}
-
 /**
  * Builds the complete public artifact from one parsed snapshot. Keep all
  * generated files here so Preview, ZIP, SEO and Merchant cannot drift apart.
@@ -2324,7 +2307,7 @@ export function exportProject(projectInput: StoreProjectV1, options: ExportOptio
   }
 
   const files = buildFiles(project, options.mode, publicAiContext);
-  return { files, zip: zipFiles(files), audit, optimization };
+  return { files, audit, optimization };
 }
 
 export function buildOptimizationReport(
@@ -2396,47 +2379,36 @@ function toBase64(value: string): string {
   return Buffer.from(value, "utf8").toString("base64");
 }
 
-export function createProjectArchive(projectInput: StoreProjectV1): Uint8Array {
+export function createProjectArchive(projectInput: StoreProjectV1): string {
   const project = parseProject(projectInput, "crear el archivo del proyecto");
-  const files = new Map<string, string | Uint8Array>([
-    [
-      "manifest.json",
-      JSON.stringify({
-        format: "solara-project",
-        version: 2,
-        projectId: project.id,
-        exportedAt: new Date().toISOString(),
-      }),
-    ],
-    ["project.json", JSON.stringify(project, null, 2)],
-  ]);
-  project.assets.forEach((asset) => {
-    const bytes = dataUrlBytes(asset.source);
-    if (bytes) files.set(`assets/${asset.hash}.${assetExtension(asset)}`, bytes);
-  });
-  project.videos.forEach((video) => {
-    const bytes = dataUrlBytes(video.source);
-    if (bytes) files.set(`assets/${video.hash}.${assetExtension(video)}`, bytes);
-  });
-  return zipFiles(files);
+  return `${JSON.stringify(
+    {
+      format: "solara-project",
+      version: 2,
+      projectId: project.id,
+      exportedAt: new Date().toISOString(),
+      project,
+    },
+    null,
+    2,
+  )}\n`;
 }
 
-export function readProjectArchive(archive: Uint8Array): StoreProjectV1 {
-  const files = unzipSync(archive);
-  const manifestBytes = files["manifest.json"];
-  const projectBytes = files["project.json"];
-  if (!manifestBytes || !projectBytes)
-    throw new Error("El archivo no contiene manifest.json y project.json.");
-  let manifest: { format?: string; version?: number };
+export function readProjectArchive(input: string): StoreProjectV1 {
+  let envelope: {
+    format?: string;
+    version?: number;
+    project?: unknown;
+  };
   try {
-    manifest = JSON.parse(decoder.decode(manifestBytes)) as { format?: string; version?: number };
+    envelope = JSON.parse(input) as { format?: string; version?: number; project?: unknown };
   } catch {
-    throw new Error("El manifest del respaldo está corrupto.");
+    throw new Error("El respaldo está corrupto o no es JSON válido.");
   }
-  if (manifest.format !== "solara-project" || manifest.version !== 2) {
+  if (envelope.format !== "solara-project" || envelope.version !== 2 || !envelope.project) {
     throw new Error(
-      "Este respaldo pertenece a una versión anterior. Conservá el ZIP original y creá una nueva tienda con el sistema actual.",
+      "Este respaldo pertenece a una versión anterior. Conservá el archivo original y creá una nueva tienda con el sistema actual.",
     );
   }
-  return StoreProjectV1Schema.parse(JSON.parse(decoder.decode(projectBytes)));
+  return parseProject(envelope.project as StoreProjectV1, "leer el respaldo del proyecto");
 }

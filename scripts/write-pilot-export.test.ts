@@ -24,11 +24,10 @@ test("exporta production desde el respaldo elegido para el piloto", () => {
   const project = readProjectArchive(new Uint8Array(readFileSync(source)));
   const exported = exportProject(project, { mode: "production" });
   const repeated = exportProject(project, { mode: "production" });
-  expect(repeated.zip).toEqual(exported.zip);
+  expect(repeated.files).toEqual(exported.files);
 
   mkdirSync(outputRoot, { recursive: true });
   rmSync(outputDirectory, { recursive: true, force: true });
-  writeFileSync(resolve(outputRoot, "site.zip"), exported.zip);
 
   for (const [path, content] of exported.files) {
     const destination = resolve(outputDirectory, path);
@@ -39,5 +38,5 @@ test("exporta production desde el respaldo elegido para el piloto", () => {
   expect(exported.files.has("index.html")).toBe(true);
   expect(exported.files.has("sitemap.xml")).toBe(true);
   expect(exported.files.has("google-merchant.xml")).toBe(true);
-  console.log({ source, output: resolve(outputRoot, "site.zip"), files: exported.files.size });
+  console.log({ source, output: outputDirectory, files: exported.files.size });
 });

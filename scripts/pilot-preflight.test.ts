@@ -72,7 +72,7 @@ test("valida el paquete production antes del piloto real", () => {
   const result = exportProject(project, { mode: "production" });
   const snapshot = buildCommerceSnapshot(project);
   const second = exportProject(project, { mode: "production" });
-  expect(second.zip).toEqual(result.zip);
+  expect(second.files).toEqual(result.files);
   console.log({
     source: archivePath ? resolve(archivePath) : "reference fixture",
     pages: result.files.size,

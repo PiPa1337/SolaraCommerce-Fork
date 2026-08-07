@@ -334,9 +334,9 @@ describe("exporter", () => {
     expect(readProjectArchive(createProjectArchive(referenceStore))).toEqual(referenceStore);
   });
 
-  it("produce un ZIP reproducible para el mismo snapshot", () => {
-    const first = exportProject(referenceStore, { mode: "production" }).zip;
-    const second = exportProject(referenceStore, { mode: "production" }).zip;
+  it("produce archivos reproducibles para el mismo snapshot", () => {
+    const first = exportProject(referenceStore, { mode: "production" }).files;
+    const second = exportProject(referenceStore, { mode: "production" }).files;
     expect(second).toEqual(first);
   });
 

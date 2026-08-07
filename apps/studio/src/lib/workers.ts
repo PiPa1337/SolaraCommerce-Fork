@@ -223,7 +223,11 @@ export function exportSiteInWorker(
   project: StoreProjectV1,
   mode: ExportMode,
   options: { publicAiContext?: boolean; optimizationProfile?: "safe" | "strict" } = {},
-): Promise<{ zip: Uint8Array; audit: AuditIssue[]; optimization: OptimizationReport }> {
+): Promise<{
+  files: ReadonlyMap<string, string | Uint8Array>;
+  audit: AuditIssue[];
+  optimization: OptimizationReport;
+}> {
   return requestWorker(getExportWorker(), { type: "site", project, mode, options });
 }
 

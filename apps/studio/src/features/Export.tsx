@@ -57,7 +57,6 @@ export function ExportPanel({
         optimizationProfile: "safe",
       });
       setOptimization(result.optimization);
-      downloadBlob(result.zip, `${project.slug}-${mode}.zip`, "application/zip");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo exportar la tienda.");
     } finally {

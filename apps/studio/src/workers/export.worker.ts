@@ -37,12 +37,13 @@ self.onmessage = (event: MessageEvent<ExportRequest>) => {
         { ...request.project },
         { mode: request.mode, ...request.options },
       );
-      const zip = transferableBytes(result.zip);
       const optimization: OptimizationReport = result.optimization;
       const audit: AuditIssue[] = result.audit;
-      self.postMessage({ id: request.id, ok: true, result: { zip, audit, optimization } }, [
-        zip.buffer,
-      ]);
+      self.postMessage({
+        id: request.id,
+        ok: true,
+        result: { files: result.files, audit, optimization },
+      });
       return;
     }
 

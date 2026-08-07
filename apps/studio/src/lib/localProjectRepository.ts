@@ -84,7 +84,7 @@ export async function persistProjectToDisk(
   let siteArchive: Uint8Array | undefined;
   let siteError: string | undefined;
   try {
-    siteArchive = (await exportSiteInWorker(project, "production")).zip;
+    await exportSiteInWorker(project, "production");
   } catch (error) {
     siteError =
       error instanceof Error ? error.message : "La exportación de producción no pudo completarse.";

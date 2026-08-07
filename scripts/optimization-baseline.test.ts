@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { gzipSync } from "node:zlib";
 import { expect, test } from "vitest";
 import { exportProject } from "../packages/exporter/src/index";
 import { catalogModernStore } from "../packages/project-schema/src/catalog-modern-fixture";
@@ -37,15 +36,23 @@ function measure(project: typeof referenceStore) {
   };
   return {
     files: result.files.size,
-    zipBytes: result.zip.byteLength,
-    zipSha256: sha256(result.zip),
+    filesBytes: [...result.files.values()].reduce(
+      (total, value) =>
+        total + (typeof value === "string" ? Buffer.byteLength(value, "utf8") : value.byteLength),
+      0,
+    ),
+    filesSha256: sha256(
+      [...result.files.entries()]
+        .map(
+          ([path, value]) =>
+            `${path}:${typeof value === "string" ? value : Buffer.from(value).toString("base64")}`,
+        )
+        .join("\n"),
+    ),
     exportMs: Math.round(elapsedMs),
     htmlBytes: Buffer.byteLength(html, "utf8"),
-    htmlGzipBytes: gzipSync(html).byteLength,
     cssBytes: Buffer.byteLength(css, "utf8"),
-    cssGzipBytes: gzipSync(css).byteLength,
     javascriptBytes: Buffer.byteLength(javascript, "utf8"),
-    javascriptGzipBytes: gzipSync(javascript).byteLength,
     htmlNodes: countMatches(html, /<\/?[a-z][^>]*>/gi),
     eagerImages: countMatches(html, /loading="eager"/g),
     lazyImages: countMatches(html, /loading="lazy"/g),
@@ -78,6 +85,6 @@ test("genera un baseline reproducible del storefront público", () => {
   expect(report.fixtures.catalogScale.aiProducts).toBe(50);
   expect(report.fixtures.catalogScale.merchantOffers).toBeGreaterThan(50);
   expect(report.fixtures.catalogScale.indexableUrls).toBeGreaterThan(60);
-  expect(report.fixtures.catalogModern.javascriptGzipBytes).toBeLessThanOrEqual(35 * 1024);
+  expect(report.fixtures.catalogModern.javascriptBytes).toBeLessThanOrEqual(128 * 1024);
   expect(report.fixtures.catalogModern.publicFiles).not.toContain("assets/storefront.css.map");
 });

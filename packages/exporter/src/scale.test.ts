@@ -93,6 +93,6 @@ describe("exporter con catálogo jerárquico de escala", () => {
     expect(moduleTree(pageTwoPreview)).toEqual(moduleTree(pageTwoExport));
     expect(childPreview).toContain("Casa");
     expect(pageTwoPreview).toContain("Casa");
-    expect(exportProject(catalogScaleStore, { mode: "production" }).zip).toEqual(exported.zip);
+    expect(exportProject(catalogScaleStore, { mode: "production" }).files).toEqual(exported.files);
   });
 });
