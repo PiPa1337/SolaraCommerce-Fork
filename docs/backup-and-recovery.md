@@ -4,7 +4,7 @@
 
 Cuando se abre con `Abrir SolaraCommerce.cmd`, la autoridad persistente es la
 carpeta `proyectos/` en la raíz del repositorio. Cada tienda tiene un
-`manifest.json`, una versión editable `.solara.zip`, respaldos y sitios públicos
+`manifest.json`, una versión editable `.solara.json`, respaldos y sitios públicos
 versionados. IndexedDB conserva sólo caché y `RecoveryDraft` para cambios aún no
 confirmados con Guardar.
 
@@ -18,7 +18,7 @@ backup remoto.
 ```text
 proyectos/<slug--id>/
 ├── manifest.json
-├── actual/<slug-fecha-vNNNNNN>.solara.zip
+├── actual/<slug-fecha-vNNNNNN>.solara.json
 ├── respaldos/
 ├── respaldos-manuales/
 └── sitios/<slug-fecha-vNNNNNN>/
@@ -31,7 +31,7 @@ confirmados no se borran automáticamente.
 
 ## Qué se debe respaldar
 
-Desde `Exportar`, descargar periódicamente `{tienda}.solara.zip`; contiene el
+Desde `Exportar`, descargar periódicamente `{tienda}.solara.json`; contiene el
 proyecto editable y es distinto del sitio público. `Respaldo ahora` copia la
 versión actual a `respaldos-manuales/` sin cambiar su número.
 
@@ -49,7 +49,7 @@ Guardar al menos una copia fuera del dispositivo.
 
 1. Abrir la aplicación con `Abrir SolaraCommerce.cmd`.
 2. Seleccionar la tienda; Studio lee siempre el `current` indicado por el
-   manifest y vuelve a validar el ZIP y su SHA-256.
+   manifest y vuelve a validar el `.solara.json` y su SHA-256.
 3. Si hay un `RecoveryDraft` más nuevo, elegir recuperar, descartar o
    exportarlo antes de descartarlo.
 4. Editar y pulsar `Guardar` para crear una versión nueva y un sitio público.
@@ -59,14 +59,15 @@ Guardar al menos una copia fuera del dispositivo.
 1. Abrir una tienda o crear una vacía.
 2. Ir a `Exportar`.
 3. Elegir `Importar respaldo`.
-4. Seleccionar el archivo `.solara.zip`.
+4. Seleccionar el archivo `.solara.json`.
 5. Verificar nombre, productos, secciones e imágenes antes de continuar.
 6. Generar un nuevo respaldo para confirmar el ciclo completo.
 
-La importación valida la versión y el schema antes de reemplazar el proyecto
-abierto. Un ZIP público no puede importarse como proyecto editable. Si el ID ya
-existe en disco, se requiere una acción explícita y se crea una nueva versión;
-no se sobreescribe silenciosamente el historial.
+La importación valida el envelope (`format: "solara-project"`, versión 2) y el
+schema antes de reemplazar el proyecto abierto. La carpeta pública `sitios/` no
+puede importarse como proyecto editable. Si el ID ya existe en disco, se
+requiere una acción explícita y se crea una nueva versión; no se sobreescribe
+silenciosamente el historial.
 
 ## Archivo corrupto o incompatible
 
@@ -78,11 +79,11 @@ actualizar Studio antes de reintentar; no editar el JSON interno a mano.
 Cuando Studio detecta un registro incompatible al iniciar, lo muestra en el
 dashboard bajo “proyectos que requieren recuperación” sin bloquear las tiendas
 válidas. Usá `Importar respaldo` en esa advertencia para seleccionar un
-`.solara.zip`; la importación reemplaza el registro sólo después de validar el
-ZIP, el manifest y `StoreProjectV2`. Conservá siempre el archivo original y
+`.solara.json`; la importación reemplaza el registro sólo después de validar el
+envelope, el manifest y `StoreProjectV2`. Conservá siempre el archivo original y
 confirmá que productos, secciones y recursos estén presentes después de abrirlo.
 
-Si una exportación production falla al guardar, el `.solara.zip` editable se
+Si una exportación production falla al guardar, el `.solara.json` editable se
 confirma igualmente con estado `site-outdated`; `lastValidSite` permanece
 intacto. Corregí los errores críticos y guardá otra versión antes de publicar.
 
@@ -94,4 +95,4 @@ merge automático: recargá el disco, conservá el borrador o duplicá la tienda
 Imágenes y variantes responsive consumen la mayor parte del almacenamiento. Si
 el navegador informa falta de cuota, exportar el respaldo, eliminar recursos no
 usados desde la tienda y reintentar. No limpiar IndexedDB ni los datos del sitio
-hasta haber comprobado que el `.solara.zip` puede volver a importarse.
+hasta haber comprobado que el `.solara.json` puede volver a importarse.

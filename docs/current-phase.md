@@ -23,8 +23,8 @@ mismo proyecto que usa el renderer y lleva a `Resumen`, `Recursos`, `Catálogo`,
 - `Recursos` procesa imágenes fuera del hilo principal, deduplica por hash y
   separa la carga de videos para evitar lotes ambiguos.
 - `Catálogo` permite crear productos uno a uno con pasos de datos, imágenes,
-  organización y variantes, o importar un ZIP comercial con `productos.csv` e
-  `imagenes/`. La importación crea categorías y colecciones faltantes, agrupa
+  organización y variantes, o importar una carpeta comercial con `productos.csv`
+  e `imagenes/`. La importación crea categorías y colecciones faltantes, agrupa
   variantes, muestra una revisión y se aplica como una sola operación reversible.
 - El primer producto activo o la primera importación activa automáticamente las
   grillas base intactas; no se habilitan módulos opcionales por sorpresa.
@@ -33,7 +33,7 @@ mismo proyecto que usa el renderer y lleva a `Resumen`, `Recursos`, `Catálogo`,
   usuario elige explícitamente ese modo.
 - Si llega una versión nueva de la plantilla, `Preparar` muestra un plan con
   cambios seguros y conflictos. Antes de adoptar cambios se descarga un
-  respaldo `.solara.zip` y se conservan los settings del usuario.
+  respaldo `.solara.json` y se conservan los settings del usuario.
 
 `Predeterminado` es la tienda ficticia de referencia y se genera con la misma
 fábrica para conservar una referencia de 50 productos, 14 categorías y 60
@@ -44,8 +44,8 @@ variantes. `Crear tienda` continúa usando la semilla limpia.
 Implementado el contrato v2 y una tienda base de catálogo moderno inspirada en
 las referencias SHOP.CO compartidas: navegación compacta, hero editorial,
 grillas densas de productos, categorías explorables, reviews estáticas,
-newsletter y footer operativo. Studio, preview y ZIP siguen usando el mismo
-renderer.
+newsletter y footer operativo. Studio, preview y exportación siguen usando el
+mismo renderer.
 
 ## Cambios entregados
 
@@ -53,7 +53,7 @@ renderer.
   comerciales y assets de video locales.
 - `schemaVersion: 2` y reset controlado de únicamente
   `solara-commerce-studio` mediante `localStorage["solara-studio-storage-version"]`.
-- Respaldos `.solara.zip` con manifest v2; los respaldos v1 se rechazan sin
+- Respaldos `.solara.json` con manifest v2; los respaldos v1 se rechazan sin
   modificar el archivo original.
 - Navbar con Inicio, Categorías de hasta dos niveles, Contacto, Nosotros,
   búsqueda y carrito.
@@ -66,7 +66,8 @@ renderer.
 - `search-index.json`, `catalog-index.json`, JSON-LD de páginas y productos,
   sitemap de imágenes y video sitemap cuando el hero usa video. El sitemap de
   producción excluye búsqueda, carrito y compra; el draft no publica sitemaps.
-- Videos MP4/WebM en Recursos, deduplicados por hash y embebidos en el ZIP.
+- Videos MP4/WebM en Recursos, deduplicados por hash e incluidos en la
+  exportación.
 - Preview con selector de ruta además de los marcos desktop, tablet y móvil.
 - Estados empty/error/loading, foco visible, skip link y CSS responsive editorial.
 - La home moderna conserva el hero y coloca grillas de 12 y 8 productos debajo;
@@ -150,7 +151,8 @@ sus descendientes y las hijas mantienen su propia página.
   `getCategoryProductIds` y `getCategoryBreadcrumb`.
 - Casa contiene 28 productos y genera una segunda página rastreable sin categorías de campaña.
 - Búsqueda indexa los nombres e IDs de categorías ancestrales.
-- El exporter deduplica assets y mantiene la misma semántica en preview y ZIP.
+- El exporter deduplica assets y mantiene la misma semántica en preview y
+  exportación.
 - Studio muestra el árbol, cantidades directas/heredadas y permite reubicar una
   categoría con bloqueo de ciclos y profundidad inválida.
 - El escenario Chromium cubre navbar, subcategorías, paginación, producto 50,
@@ -207,8 +209,8 @@ el exporter.
 
 El exporter usa el informe antes de construir archivos. HTML inicial, JSON-LD,
 sitemap, `google-merchant.xml`, `ai-context.json` y `llms.txt` parten del mismo
-proyecto validado. En modo production los errores criticos bloquean el ZIP; en
-draft se muestran para poder corregirlos sin publicar.
+proyecto validado. En modo production los errores criticos bloquean la
+exportación; en draft se muestran para poder corregirlos sin publicar.
 
 Los artefactos publicos para agentes son opcionales y se controlan con
 `ExportOptions.publicAiContext` (activado por defecto en Studio):
@@ -229,17 +231,18 @@ Este comando cubre la demo de 50 productos, `catalogScaleStore` (9 raices,
 15 categorias y paginacion) y la plantilla limpia sin inventario. `corepack pnpm
 check` lo ejecuta como parte del gate general.
 
-El gate de budgets comprueba además el runtime storefront con los límites v1:
-35 KiB gzip de JavaScript y 30 KiB gzip de CSS. La medición usa las constantes
-que realmente se insertan en `storefront.js` y `storefront.css`, no un bundle de
-referencia separado.
+El gate de budgets comprueba además el runtime storefront con los límites
+actuales en bytes crudos (sin gzip): 52 KiB de JavaScript y 8 KiB de CSS. La
+medición usa las constantes que realmente se insertan en `storefront.js` y
+`storefront.css`, no un bundle de referencia separado.
 
 ## Cierre de la integracion v2
 
 La integracion actual tambien cubre el selector de rutas del preview, la
 edicion de Home, Nosotros y Contacto desde el constructor, el ordenamiento de
-enlaces del navbar, y la visibilidad configurable del shell. Preview y ZIP
-comparten las mismas secciones, estilos deduplicados y metadatos audiovisuales.
+enlaces del navbar, y la visibilidad configurable del shell. Preview y
+exportación comparten las mismas secciones, estilos deduplicados y metadatos
+audiovisuales.
 
 El storefront incluye galeria de producto, filtros client-side de categoria,
 productos relacionados, estados vacios, foco restaurado en carrito y menu,
@@ -278,24 +281,26 @@ La fase activa agrega un segundo nivel de persistencia para el uso mediante
 - `proyectos/<slug-inicial>--<id-corto>/` es la carpeta estable de cada tienda.
 - `manifest.json` apunta a la única versión editable actual y a la última
   exportación pública válida.
-- `actual/` conserva el `.solara.zip` confirmado más reciente; las versiones
+- `actual/` conserva el `.solara.json` confirmado más reciente; las versiones
   anteriores pasan a `respaldos/` y nunca se eliminan automáticamente.
-- `sitios/` contiene cada exportación production descomprimida, lista para
+- `sitios/` contiene cada exportación production como carpeta, lista para
   hosting estático.
 - `respaldos-manuales/` recibe copias explícitas sin consumir una nueva versión.
 
 El servidor Node local recibe la raíz de la aplicación y sólo escucha en
 `127.0.0.1`. Las rutas de almacenamiento requieren la cookie `HttpOnly` de la
-sesión y el mismo origen. Los uploads son streams binarios con SHA-256; el
-servidor valida el respaldo v2, limita tamaño y archivos, evita Zip Slip y usa
-staging más rename atómico para el manifiesto. Los guardados simultáneos de una
-tienda se bloquean y un conflicto de versión devuelve `409`.
+sesión y el mismo origen. Los uploads son streams de JSON (respaldo editable y
+mapa del sitio) con SHA-256; el servidor valida el respaldo v2, limita tamaño y
+archivos, valida rutas relativas del mapa del sitio y usa staging más rename
+atómico para el manifiesto. Los guardados simultáneos de una tienda se bloquean
+y un conflicto de versión devuelve `409`.
 
 Studio ya no trata el autosave como confirmación de disco cuando el servidor
 administrado está disponible. Cada edición crea un `RecoveryDraft` temporal en
 IndexedDB y el botón `Guardar` (también `Ctrl+S`) confirma la versión completa.
-Si la exportación production falla, el `.solara.zip` se guarda igualmente y el
-manifest queda `site-outdated`, conservando intacto el último sitio público.
+Si la exportación production falla, el respaldo `.solara.json` se guarda
+igualmente y el manifest queda `site-outdated`, conservando intacto el último
+sitio público.
 Al abrir una tienda desde disco se valida el hash y se ofrece recuperar un
 borrador divergente; rechazarlo lo descarta sin modificar el archivo confirmado.
 

@@ -149,3 +149,39 @@ paths absolutos y recuperación ante límites/interrupción de guardado). El E2E
 Electron comprueba diagnósticos dentro de la raíz, guarda una tienda en una
 copia, sirve el sitio público sin permitir traversal, confirma el aislamiento
 de la segunda, reabre desde disco y valida el traslado de la carpeta.
+
+## Eliminación de ZIP (2026-08-07)
+
+El producto ya no usa ZIP ni gzip en ningún flujo. El trabajo se cerró en ocho
+tareas (spec `docs/superpowers/specs/2026-08-07-eliminar-zip-design.md` y plan
+`docs/superpowers/plans/2026-08-07-eliminar-zip.md`):
+
+1. Storage local V2: el respaldo editable es `.solara.json` (envelope
+   `{ format, version: 2, projectId, exportedAt, project }`, imágenes como
+   data URLs) y el sitio se sube como mapa de archivos JSON que el servidor
+   escribe directo en `sitios/<versión>/` (sin descompresión; manifest V2 con
+   `current.projectPath`).
+2. Migración única: `packages/exporter/scripts/legacy-zip-migration.mjs`
+   convierte una sola vez los `.solara.zip` existentes (marca idempotente en
+   `.solara-runtime/migration.json`; los ZIP viejos se conservan en
+   `respaldos/`). Este módulo y la dependencia `fflate` son temporales: se
+   eliminan en un release posterior.
+3. Exporter sin ZIP: `exportProject` devuelve `{ files, audit, optimization }`.
+4. Transporte de Studio en JSON (`.solara.json`, MIME
+   `application/vnd.solara.project+json`).
+5. Importación de catálogo por carpeta (`webkitdirectory` con `productos.csv`
+   e `imagenes/`).
+6. Budgets en bytes crudos (sin gzip): Studio JS ≤ 700 KiB, CSS ≤ 84 KiB,
+   storefront.js ≤ 52 KiB, storefront.css ≤ 780 KiB, runtime JS ≤ 52 KiB,
+   CSS ≤ 8 KiB (medidos 589,7 / 68,8 / 41,5 / 634,1 / 41,5 / 6,6 KiB).
+7. Gate anti-ZIP: `check:repository` falla si reaparecen `fflate`, `zipSync`,
+   `unzipSync`, `gzipSync`, `.solara.zip` o `site.zip` en fuentes (sólo exime
+   al módulo de migración, su test y el propio gate).
+8. Documentación actualizada y gate completo verde: `check`, `build`,
+   `check:budgets`, `benchmark:export` y `test:e2e` (38 Chromium, 1 opcional
+   omitida).
+
+Publicar un sitio = copiar `proyectos/<tienda>/sitios/<versión>/` a un hosting
+estático; no existe descarga de ZIP. `SOLARA_PILOT_PROJECT_ARCHIVE` apunta a un
+`.solara.json`; `reference:export` y `pilot:export` escriben carpetas.
+`StoreProjectV2Schema` y `schemaVersion: 2` no cambiaron.

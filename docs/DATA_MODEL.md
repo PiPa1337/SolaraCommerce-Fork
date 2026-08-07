@@ -76,8 +76,8 @@ colecciones no forman árbol.
 `MediaAsset` es discriminado por `kind`: las imágenes guardan MIME, ancho,
 alto, alt, variantes responsive y datos binarios; los videos guardan MIME,
 duración, dimensiones y poster. El asset se referencia por ID y se deduplica
-por hash durante la exportación. Los datos URL se aceptan para fixtures y
-persistencia local, pero el ZIP público los convierte en archivos normales.
+por hash durante la exportación. Los data URLs se aceptan para fixtures y
+persistencia local; el sitio exportado los materializa como archivos normales.
 
 ### Carrito y pedido por WhatsApp
 
@@ -129,15 +129,58 @@ fragmento sólo muestra las relaciones esenciales.
 - En modo Vite sin servidor gestionado, Dexie (`SolaraDatabase`) conserva
   proyectos y borradores de recuperación en IndexedDB.
 - Con `Abrir SolaraCommerce.cmd`, `proyectos/` en disco es la autoridad. Cada
-  tienda tiene `manifest.json`, el `.solara.zip` actual, respaldos y sitios
-  públicos versionados. IndexedDB queda como recovery draft y caché.
+  tienda tiene `manifest.json` (`manifestVersion: 2`), el `.solara.json` actual
+  en `actual/`, respaldos en `respaldos/` y `respaldos-manuales/`, y los sitios
+  públicos versionados en `sitios/`. IndexedDB queda como recovery draft y
+  caché.
 - `RecoveryDraft` registra `projectId`, `baseDiskVersion`, `updatedAt` y el
   proyecto pendiente. Al reabrir, Studio compara la base de disco y ofrece
   recuperar, descartar o exportar el borrador.
-- La importación de un ZIP exige `manifest.json` de proyecto con versión 2 y
-  valida `project.json` contra `StoreProjectV2Schema`.
+- La importación de un respaldo `.solara.json` exige el envelope
+  `{ format: "solara-project", version: 2, projectId, exportedAt, project }` y
+  valida `project` contra `StoreProjectV2Schema`.
 - No existe conversión automática desde un contrato comercial anterior. Toda
   futura versión debe agregar una migración explícita y pruebas de round-trip.
+
+## Formato de transporte `.solara.json`
+
+El respaldo editable que circula entre Studio, el servidor local y el piloto es
+un JSON con envelope:
+
+```json
+{
+  "format": "solara-project",
+  "version": 2,
+  "projectId": "store-demo",
+  "exportedAt": "2026-08-07T10:00:00.000Z",
+  "project": { "schemaVersion": 2, "id": "store-demo", "name": "Tienda demo" }
+}
+```
+
+- `project` es el objeto validado por `StoreProjectV2Schema`; las imágenes se
+  conservan como data URLs dentro de `project.assets`, sin carpeta de assets
+  separada.
+- `createProjectArchive`/`readProjectArchive` (Studio y exporter) validan el
+  envelope completo; el servidor local lo guarda como
+  `actual/<clave>.solara.json` y lo sirve con
+  `Content-Type: application/vnd.solara.project+json`.
+- El sitio público no se empaqueta: Studio envía un mapa de archivos JSON
+  (`Array<{ path, encoding: "utf8" | "base64", data }>`) y el servidor escribe
+  la carpeta `sitios/<versión>/` validando rutas relativas y límites de tamaño
+  y cantidad (`writeSiteFiles`).
+
+## Migración única de respaldos `.solara.zip`
+
+| Formato anterior | Ubicación | Migración | Marca idempotente |
+| --- | --- | --- | --- |
+| `.solara.zip` con manifest V1 (`current.archivePath`) | `actual/` y `respaldos/` de una tienda | `packages/exporter/scripts/legacy-zip-migration.mjs`, única y server-side | `.solara-runtime/migration.json` (`{ format: "solara-migration", version: 1 }`); si está presente, la migración no vuelve a correr |
+| `.solara.json` con manifest V2 (`current.projectPath`) | `actual/` | No requiere migración | — |
+
+La migración convierte el ZIP al envelope JSON con el mismo `projectId`,
+conserva el `.solara.zip` original en `respaldos/` y actualiza el manifest a
+`manifestVersion: 2` con `current.projectPath`. El módulo y `fflate` son
+temporales: se eliminan en un release posterior (ver
+[`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md)).
 
 ## Qué modificar para extender el modelo
 

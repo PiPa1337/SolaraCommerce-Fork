@@ -10,7 +10,7 @@ jerarquía, densidad, contenido real, accesibilidad y comportamiento responsive.
 | Categoría | `category-desktop.png` | Breadcrumb, filtros, toolbar, grilla y paginación | Sidebar y 3 columnas | Drawer/accordion y 2 columnas | Filtros no alteran URLs rastreables |
 | Producto | `product-desktop.png`, `product-mobile.png` | Galería, precio, opciones, cantidad, compra, políticas, reseñas y relacionados | Galería + resumen en dos áreas | Galería apilada y controles táctiles | Variante directa, precio y disponibilidad coherentes |
 | Carrito | `cart-mobile.png` | Líneas, cantidades, subtotal, entrega a coordinar y total estimado | Panel estable | Una columna sin desborde | Persistencia local y WhatsApp determinista |
-| Preview Studio | Referencias públicas reutilizadas | Mismo árbol semántico que el ZIP | Marcos desktop/tablet | Marco mobile | Sin `src` temporal, imágenes cargadas antes de inspección |
+| Preview Studio | Referencias públicas reutilizadas | Mismo árbol semántico que la exportación | Marcos desktop/tablet | Marco mobile | Sin `src` temporal, imágenes cargadas antes de inspección |
 
 ## Puntos de control comunes
 

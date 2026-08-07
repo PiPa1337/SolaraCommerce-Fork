@@ -26,15 +26,16 @@ WebKit para cubrir Safari y Firefox sin convertir el procesamiento local de
 imágenes en un requisito de esos navegadores.
 
 `release:manifest` escribe `.release/release-manifest.json`, que no se versiona.
-`reference:export` también deja `.release/site.zip` para revisar o publicar sin
-modificar sus archivos. El manifiesto incluye versión, schema, commit, Node,
-pnpm y los artefactos esperados; no incluye secretos ni datos de clientes.
+`reference:export` también deja `.release/reference-site/` y
+`.release/reference.solara.json` para revisar o publicar sin modificar sus
+archivos. El manifiesto incluye versión, schema, commit, Node, pnpm y los
+artefactos esperados; no incluye secretos ni datos de clientes.
 
 ## Lighthouse
 
-Lighthouse se ejecuta sobre un `site.zip` de producción ya servido, no sobre el
-editor local. Para mantener el runtime y la instalación base pequeños, el CLI
-de Lighthouse no es una dependencia de Studio. En el equipo de release:
+Lighthouse se ejecuta sobre la carpeta exportada de producción ya servida, no
+sobre el editor local. Para mantener el runtime y la instalación base pequeños,
+el CLI de Lighthouse no es una dependencia de Studio. En el equipo de release:
 
 ```bash
 corepack pnpm reference:export

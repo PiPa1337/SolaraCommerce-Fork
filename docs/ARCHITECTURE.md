@@ -14,11 +14,11 @@ flowchart LR
   Studio --> History[HistoryState<br/>undo/redo]
   History --> Core[@solara/core<br/>DomainCommand reducer]
   History --> Schema[@solara/project-schema<br/>Zod StoreProjectV2]
-  Studio --> Workers[Web Workers<br/>CSV / imágenes / ZIP]
+  Studio --> Workers[Web Workers<br/>CSV / imágenes / exportación]
   Workers --> Exporter[@solara/exporter]
   Exporter --> Modules[@solara/modules + module-sdk]
   Exporter --> Runtime[@solara/storefront-runtime]
-  Exporter --> Public[HTML/CSS/JS + SEO + ZIP]
+  Exporter --> Public[HTML/CSS/JS + SEO + mapa de archivos]
   Studio --> Dexie[Dexie / IndexedDB<br/>cache + RecoveryDraft]
   Studio --> LocalAPI[Servidor local Node<br/>127.0.0.1]
   LocalAPI --> Disk[proyectos/<br/>manifest + versiones + sitios]
@@ -108,13 +108,14 @@ StoreProjectV2
   -> buildPages
   -> renderDocument + renderSections
   -> buildFiles
-  -> zipFiles
 ```
 
 `buildPages` genera home, categorías paginadas, colecciones, productos, búsqueda,
-contacto, nosotros, carrito, compra y políticas. `buildFiles` añade CSS, runtime,
-assets, `robots.txt`, sitemaps, JSON-LD, Merchant y contexto público opcional.
-Production bloquea errores críticos; draft mantiene `noindex` y permite revisar.
+contacto, nosotros, carrito, compra y políticas. `buildFiles` produce el mapa de
+archivos del sitio (CSS, runtime, assets, `robots.txt`, sitemaps, JSON-LD,
+Merchant y contexto público opcional); Studio lo envía al servidor local, que
+escribe la carpeta `sitios/<versión>/`. Production bloquea errores críticos;
+draft mantiene `noindex` y permite revisar.
 
 `renderPreviewHtml` usa las mismas páginas y módulos con un transporte especial de
 assets para el iframe. No debe crearse un renderer alternativo dentro de Studio.
@@ -149,7 +150,7 @@ sequenceDiagram
   D->>S: Abrir o crear tienda
   S->>L: Consultar sesión y proyectos (si launcher administrado)
   alt disco administrado disponible
-    L->>F: Leer manifest y actual/*.solara.zip
+    L->>F: Leer manifest y actual/*.solara.json
     F-->>S: Snapshot validado
     S->>I: Cachear snapshot y detectar RecoveryDraft
   else desarrollo/manual
@@ -159,10 +160,10 @@ sequenceDiagram
   S->>I: Guardar RecoveryDraft con debounce
   S->>W: Crear respaldo y exportar sitio
   W->>E: Validar y renderizar snapshot
-  E-->>W: ZIP, auditoría y reportes
+  E-->>W: Mapa de archivos, auditoría y reportes
   W-->>S: Bytes verificados
   S->>L: Abrir transacción y subir streams
-  L->>F: Staging, extracción, versiones y manifest atómico
+  L->>F: Staging, mapa de archivos, versiones y manifest atómico
   F-->>S: Recibo de commit
 ```
 
@@ -184,8 +185,8 @@ pueden existir borradores o caché.
 
 `ManagedPersistenceControls` distingue cambios confirmados de borradores. El flujo
 no informa “Guardado” hasta recibir el recibo del servidor. Si production falla,
-se confirma el ZIP editable y el manifest queda `site-outdated`, sin reemplazar el
-último sitio válido.
+se confirma el respaldo `.solara.json` y el manifest queda `site-outdated`, sin
+reemplazar el último sitio válido.
 
 ## Persistencia
 
@@ -194,15 +195,16 @@ En modo administrado, la estructura es:
 ```text
 proyectos/<slug-inicial>--<id-corto>/
 ├── manifest.json
-├── actual/<version>.solara.zip
-├── respaldos/<version>.solara.zip
+├── actual/<version>.solara.json
+├── respaldos/<version>.solara.json
 ├── respaldos-manuales/
 └── sitios/<version>/index.html ...
 ```
 
 `manifest.json` es el puntero autoritativo. El servidor usa staging bajo
-`.solara-runtime/storage`, hashes SHA-256, límites de tamaño/archivos y rename
-atómico del manifest. La explicación de endpoints está en
+`.solara-runtime/storage`, hashes SHA-256, límites de tamaño/archivos del mapa
+del sitio, validación de rutas relativas y rename atómico del manifest. La
+explicación de endpoints está en
 [`docs/INTEGRATIONS.md`](INTEGRATIONS.md); recovery y rollback, en
 [`docs/backup-and-recovery.md`](backup-and-recovery.md).
 
@@ -221,8 +223,8 @@ Las decisiones históricas están en [`architecture-decisions.md`](architecture-
 ## Puntos de extensión futuros
 
 - Añadir migraciones explícitas después de `schemaVersion: 2`.
-- Extraer un servicio de archivos streaming si los ZIP dejan de caber cómodamente
-  en memoria.
+- Revisar los límites del mapa de archivos del sitio si una exportación deja de
+  caber cómodamente en memoria.
 - Añadir sincronización remota sólo como una capa nueva, sin convertirla en
   requisito del storefront.
 - Incorporar nuevos módulos mediante el SDK y no mediante HTML arbitrario.

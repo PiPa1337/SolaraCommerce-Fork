@@ -92,11 +92,12 @@ versiona.
 
 ## Estrategia futura
 
-La suite local cubre límites de upload/extracción, Zip Slip, interrupción antes
-de publicar el manifest y recuperación de la versión anterior. La simulación
-de disco lleno, permisos revocados y ZIP bombs grandes queda reservada para un
-job Windows de release, donde puede aislarse el volumen temporal sin tocar
-proyectos confirmados.
+La suite local cubre límites de upload y del mapa de archivos del sitio,
+rechazo de rutas relativas inválidas (traversal), interrupción antes de
+publicar el manifest y recuperación de la versión anterior. La simulación
+de disco lleno y permisos revocados queda reservada para un job Windows de
+release, donde puede aislarse el volumen temporal sin tocar proyectos
+confirmados.
 
 ## Portable Windows
 

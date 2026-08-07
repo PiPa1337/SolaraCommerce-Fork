@@ -10,7 +10,7 @@ que siguen son locales o están incluidas en el sitio exportado.
 `127.0.0.1`. El proceso sirve Studio, archivos estáticos y la API de persistencia
 en disco. La cookie `solara_shutdown` es `HttpOnly`; el servidor verifica
 origen, método y token de sesión. El servidor no se expone a la red y no forma
-parte del ZIP público.
+parte del sitio público.
 
 ### Sesión y estado
 
@@ -29,15 +29,26 @@ ruta de filesystem enviada por el navegador.
 | Método | Ruta | Uso |
 | --- | --- | --- |
 | POST | `/__solara/storage/saves` | Abrir transacción con `expectedVersion` |
-| PUT | `/__solara/storage/saves/{transactionId}/project` | Subir `.solara.zip` editable |
-| PUT | `/__solara/storage/saves/{transactionId}/site` | Subir ZIP temporal del sitio |
+| PUT | `/__solara/storage/saves/{transactionId}/project` | Subir el respaldo `.solara.json` editable |
+| PUT | `/__solara/storage/saves/{transactionId}/site` | Subir el mapa JSON del sitio |
 | POST | `/__solara/storage/saves/{transactionId}/commit` | Validar y publicar versión |
 | POST | `/__solara/storage/saves/{transactionId}/abort` | Cancelar y limpiar staging |
 
-Los cuerpos binarios se transmiten como streams. El cliente envía SHA-256 y el
-servidor vuelve a calcularlo. Un conflicto de versión responde `409`; Studio no
-hace merge automático. Un fallo de exportación puede confirmar el proyecto
-editable y conservar el último sitio público válido.
+El respaldo editable se sube con `Content-Type: application/vnd.solara.project+json`
+(envelope `{ format, version, projectId, exportedAt, project }`) y el sitio como
+mapa JSON `Array<{ path, encoding, data }>` con `application/json`. Ambos se
+transmiten como streams con SHA-256 en `X-Solara-SHA256`; el servidor vuelve a
+calcularlo. Un conflicto de versión responde `409`; Studio no hace merge
+automático. Un fallo de exportación puede confirmar el proyecto editable y
+conservar el último sitio público válido.
+
+### Migración única desde `.solara.zip`
+
+En el arranque, el servidor ejecuta una sola vez
+`packages/exporter/scripts/legacy-zip-migration.mjs`: convierte las tiendas con
+manifest V1 (respaldo `.solara.zip`) al formato `.solara.json` y registra el
+estado en `.solara-runtime/migration.json` (idempotente). El módulo y `fflate`
+son temporales y se eliminan en un release posterior.
 
 ### Operaciones auxiliares
 
@@ -87,12 +98,13 @@ Playwright y los navegadores de tests son dependencias de desarrollo. Ver
 - `401/403`: sesión, origen o token no válidos.
 - `404`: tienda, transacción o recurso inexistente.
 - `409`: versión de disco obsoleta o transacción concurrente.
-- `413`: límites de ZIP, archivo o extracción superados.
+- `413`: límites de respaldo, mapa de archivos o extracción superados.
 - `500`: error de filesystem, permisos o exportación; la versión confirmada
   anterior debe permanecer intacta.
 
 Para reemplazar el servidor local hay que conservar el contrato de
-`LocalProjectManifestV1`, los hashes, el bloqueo por tienda y el commit atómico.
+`manifest.json` (`format: "solara-local-project"`, `manifestVersion: 2` con
+`current.projectPath`), los hashes, el bloqueo por tienda y el commit atómico.
 No se debe conectar el storefront directamente a estas rutas.
 
 ## Transporte portable

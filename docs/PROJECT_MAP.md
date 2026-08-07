@@ -10,7 +10,7 @@ buscá sus tests con `rg`.
 | Flujo de edición | `apps/studio/src/features/Studio.tsx` | `ManagedPersistenceControls.tsx`, `HistoryState` | Undo/redo, drafts y guardado en disco son flujos sensibles. |
 | Tienda guiada | `apps/studio/src/features/GuidedOverview.tsx` | `catalog-modern-guidance`, `catalog-modern-template` | No copiar el fixture demo al crear una tienda limpia. |
 | Constructor de secciones | `apps/studio/src/features/Builder.tsx` | `@solara/modules`, `module-sdk`, `project-schema` | Zod valida settings; módulos legacy y Catalog Modern tienen familias distintas. |
-| Preview | `apps/studio/src/features/Preview.tsx` | `renderPreviewHtml`, workers, iframe messages | Preview y ZIP deben producir el mismo árbol semántico. |
+| Preview | `apps/studio/src/features/Preview.tsx` | `renderPreviewHtml`, workers, iframe messages | Preview y exportación deben producir el mismo árbol semántico. |
 | Productos y variantes | `apps/studio/src/features/Catalog.tsx`, `catalog/` | `@solara/core`, CSV worker, schema | Precios en centavos; usar comandos del dominio para índices derivados. |
 | Categorías y jerarquía | `packages/project-schema/src/index.ts` | `core`, exporter, búsqueda, navbar | `parentId` máximo a un nivel y `productIds` derivado. |
 | Navbar público | `packages/modules/src/index.ts` y estilos | `storefront-runtime`, navigation schema | Mantener enlaces rastreables, teclado, focus return y fallback sin JS. |
@@ -19,11 +19,11 @@ buscá sus tests con `rg`.
 | Tema, colores y tipografías | `apps/studio/src/features/ThemeEditor.tsx`, `packages/modules` | `styles.css`, theme schema | Tokens son el contrato; evitar hardcodear colores en módulos. |
 | Imágenes y videos | `apps/studio/src/features/Assets.tsx` | `image.worker.ts`, `workers.ts`, exporter | Conservar hash, dimensiones, alt, WebP/fallback y no bloquear UI. |
 | SEO y auditoría | `apps/studio/src/features/Seo.tsx` | exporter, site-optimizer | HTML, JSON-LD, sitemap y feed deben salir del mismo snapshot. |
-| Exportación ZIP/sitio | `packages/exporter/src/index.ts` | modules, runtime, `export.worker.ts` | No introducir datos del editor en la carpeta pública; mantener reproducibilidad. |
+| Exportación del sitio | `packages/exporter/src/index.ts` | modules, runtime, `export.worker.ts` | No introducir datos del editor en la carpeta pública; mantener reproducibilidad. |
 | Carrito y WhatsApp | `packages/storefront-runtime/src/index.ts` | exporter runtime, product templates | Reconciliar precios desde proyecto; no guardar datos personales. |
 | Persistencia IndexedDB | `apps/studio/src/lib/repository.ts` | Dexie, recovery drafts | Es caché/recovery cuando el servidor gestionado está activo. |
 | Guardado local en disco | `apps/studio/src/lib/localStorage.ts`, `localProjectRepository.ts` | `local-project-storage.mjs`, `serve.mjs` | Streams, SHA-256, `409`, staging y commit atómico son obligatorios. |
-| Archivo `.solara.zip` | `apps/studio/src/lib/projectArchive.ts` | exporter, workers, schema | Validar manifest y schema; no asumir que un ZIP externo es confiable. |
+| Respaldo `.solara.json` | `apps/studio/src/lib/projectArchive.ts` | exporter, workers, schema | Validar envelope y schema; no asumir que un archivo externo es confiable. |
 | Servidor local | `packages/exporter/scripts/serve.mjs` | `local-project-storage.mjs`, launcher | Loopback solamente; proteger sesión, rutas y shutdown. |
 | Fixtures | `packages/project-schema/src/catalog-modern-fixture.ts`, `scale-fixture.ts` | templates, tests, benchmark | Deterministas; no cambiar silenciosamente Predeterminado administrado. |
 | Tests unitarios | Cada paquete `src/*.test.ts` | Vitest | Ejecutar paquete afectado y luego `pnpm check`. |

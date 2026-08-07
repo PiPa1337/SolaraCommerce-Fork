@@ -1,6 +1,6 @@
 # Referencia visual Catalog Modern
 
-Estas capturas son referencias internas para el sistema `catalog-modern-v1`. No se incluyen en el storefront ni en los ZIP de producción.
+Estas capturas son referencias internas para el sistema `catalog-modern-v1`. No se incluyen en el storefront ni en la exportación de producción.
 
 ## Archivos
 

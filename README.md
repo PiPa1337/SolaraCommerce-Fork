@@ -44,7 +44,7 @@ Todas son opcionales; no hay secretos ni claves remotas:
 | Variable | Por defecto | Uso |
 | --- | --- | --- |
 | `SOLARA_PORT` | `4174` | Puerto del servidor local ejecutado directamente. |
-| `SOLARA_PILOT_PROJECT_ARCHIVE` | fixture de referencia | ZIP usado por `pilot:preflight` y `pilot:export`. |
+| `SOLARA_PILOT_PROJECT_ARCHIVE` | fixture de referencia | Respaldo `.solara.json` usado por `pilot:preflight` y `pilot:export`. |
 | `SOLARA_SKIP_E2E_BUILD` | build habilitado | Permite a release-e2e reutilizar la build ya creada. |
 | `PLAYWRIGHT_MULTI_BROWSER` | sólo Chromium | Activa Firefox y WebKit en release. |
 | `VISUAL_REVIEW_STAGE` | desactivado | Activa capturas visuales manuales. |
@@ -68,16 +68,18 @@ corepack pnpm dev
 
 Cuando se abre con `Abrir SolaraCommerce.cmd`, `proyectos/` es la fuente de verdad
 en disco. IndexedDB queda como caché de recuperación para cambios aún no
-confirmados. `Guardar` crea una versión editable `.solara.zip`, conserva los
-respaldos anteriores y extrae el sitio público en `proyectos/<tienda>/sitios/`.
-Las tiendas públicas se pueden abrir en un servidor local temporal o alojar
-directamente como archivos estáticos; no requieren backend ni runtime de IA.
+confirmados. `Guardar` crea una versión editable `.solara.json`, conserva los
+respaldos anteriores y el servidor escribe el sitio público como carpeta en
+`proyectos/<tienda>/sitios/`. Las tiendas públicas se pueden abrir en un
+servidor local temporal o alojar directamente como archivos estáticos; no
+requieren backend ni runtime de IA.
 
 El servidor local sólo escucha en `127.0.0.1`, valida la cookie de sesión y
 acepta escrituras dentro de `proyectos/`. Cada guardado usa staging, SHA-256,
-validación del respaldo, extracción protegida contra Zip Slip y un manifiesto
-actualizado con rename atómico. Si production no puede exportarse, el respaldo
-editable se conserva y el último sitio público válido no se reemplaza.
+validación del respaldo y del mapa de archivos del sitio (rutas relativas y
+límites de tamaño y cantidad) y un manifiesto actualizado con rename atómico.
+Si production no puede exportarse, el respaldo editable se conserva y el último
+sitio público válido no se reemplaza.
 
 En el primer arranque Studio crea `Predeterminado` con la tienda ficticia de
 Catalog Modern, generada por la misma fábrica, con 8 raíces, 14 categorías,
@@ -103,20 +105,20 @@ editor. La base visual queda protegida; `Modo avanzado` habilita el constructor
 libre para agregar, reordenar o reemplazar módulos cuando haga falta.
 
 El flujo recomendado es completar marca y textos en `Resumen`, cargar imágenes
-en `Recursos`, importar un ZIP comercial con `productos.csv` e `imagenes/` o
-crear productos desde `Catálogo`, revisar la checklist y exportar. El editor
+en `Recursos`, importar una carpeta comercial con `productos.csv` e `imagenes/`
+o crear productos desde `Catálogo`, revisar la checklist y exportar. El editor
 manual permite asignar imágenes al producto y a sus variantes. Las
 importaciones se revisan antes de guardar y se aplican como una única operación
 reversible.
 
-El ZIP comercial agrupa variantes por producto. Las categorías aceptan rutas de
-hasta dos niveles como `Casa>Textiles`; las imágenes pueden referenciar rutas
-como `imagenes/taza.webp`. El procesamiento ocurre en Web Worker, con
+El catálogo comercial agrupa variantes por producto. Las categorías aceptan
+rutas de hasta dos niveles como `Casa>Textiles`; las imágenes pueden referenciar
+rutas como `imagenes/taza.webp`. El procesamiento ocurre en Web Worker, con
 deduplicación por hash y los mismos assets para preview y exportación.
 
 Las actualizaciones de la plantilla se muestran como cambios revisables. Antes
 de adoptar cambios seguros Studio descarga automáticamente un respaldo
-`.solara.zip`; los textos, productos e imágenes del usuario no se sobrescriben.
+`.solara.json`; los textos, productos e imágenes del usuario no se sobrescriben.
 `Predeterminado` permanece como referencia de 50 productos para probar
 densidad, jerarquía y exportación.
 
@@ -161,9 +163,9 @@ Las secciones se agregan, ordenan, duplican, ocultan, reemplazan y eliminan desd
 Studio. Cada módulo oficial declara su schema Zod y la metadata tipada que genera
 el inspector; Studio no infiere controles ni mantiene defaults paralelos.
 
-El reemplazo conserva únicamente contenido compatible. Preview y ZIP usan el
-mismo renderer semántico, deduplican estilos de módulos activos y rechazan un
-proyecto inválido antes de guardarlo o exportarlo.
+El reemplazo conserva únicamente contenido compatible. Preview y exportación
+usan el mismo renderer semántico, deduplican estilos de módulos activos y
+rechazan un proyecto inválido antes de guardarlo o exportarlo.
 
 ## Sistema visual
 
@@ -194,19 +196,20 @@ se editan desde Studio mediante schemas Zod y metadata tipada.
 
 La búsqueda descarga `search-index.json` sólo al abrirse y el carrito reconcilia
 sus líneas contra `catalog-index.json` únicamente en sus rutas propias. Los videos
-aceptan MP4 o WebM de hasta 30 MB, requieren poster y se deduplican por hash dentro del ZIP.
-Studio carga el renderer de exportación en un chunk diferido al abrir Preview, SEO o
-Exportar; el bundle inicial queda separado del renderer y del worker de ZIP.
-Al activar v2 Studio reinicia únicamente la base IndexedDB
-`solara-commerce-studio`; no elimina respaldos `.solara.zip`, exportaciones ni
-archivos del repositorio. Los respaldos v1 se rechazan sin conversión automática.
+aceptan MP4 o WebM de hasta 30 MB, requieren poster y se deduplican por hash
+dentro de la exportación. Studio carga el renderer de exportación en un chunk
+diferido al abrir Preview, SEO o Exportar; el bundle inicial queda separado del
+renderer y del worker de exportación. Al activar v2 Studio reinicia únicamente
+la base IndexedDB `solara-commerce-studio`; no elimina respaldos `.solara.json`,
+exportaciones ni archivos del repositorio. Los respaldos v1 se rechazan sin
+conversión automática.
 
 ## Imágenes responsive
 
 Los recursos se procesan en un Web Worker con una receta determinista de anchos
 480, 768, 1200 y 1800 px. Solara valida el formato, corrige la orientación,
 conserva transparencia, reutiliza transformaciones por hash y deduplica los
-binarios del ZIP público. La caché es regenerable y puede limpiarse sin tocar
+binarios del sitio público. La caché es regenerable y puede limpiarse sin tocar
 los proyectos guardados.
 
 ## Verificación
@@ -232,9 +235,9 @@ corepack pnpm test:e2e:release
 ```
 
 `corepack pnpm build` genera los artefactos de cada workspace. La carpeta
-`dist/` de Studio no se versiona. Para publicar, exportá un ZIP production o
-usá la carpeta versionada de `proyectos/<tienda>/sitios/` y copiala a un host
-estático; no hace falta un proceso Node en el sitio público.
+`dist/` de Studio no se versiona. Para publicar, copiá la carpeta versionada de
+`proyectos/<tienda>/sitios/` a un host estático; no hace falta un proceso Node
+en el sitio público.
 
 ## Resolución de problemas
 
@@ -244,7 +247,7 @@ estático; no hace falta un proceso Node en el sitio público.
   abrí la aplicación con `Abrir SolaraCommerce.cmd`, no con Vite directo.
 - **Hay un conflicto al guardar:** otra pestaña confirmó una versión. Elegí
   recargar la versión de disco, conservar el borrador o duplicar la tienda.
-- **Una tienda no abre:** revisá el manifest y el `.solara.zip` actual en
+- **Una tienda no abre:** revisá el manifest y el `.solara.json` actual en
   `proyectos/`; no borres respaldos hasta recuperar o exportar una copia.
 - **Falla Playwright:** instalá Chromium con
   `corepack pnpm playwright:install:chromium` y revisá `playwright-report/`.
@@ -283,7 +286,7 @@ traces y resultados disponibles. Una ejecución exitosa no publica artefactos.
 - `packages/module-sdk`: contrato seguro para módulos visuales.
 - `packages/modules`: módulos oficiales.
 - `packages/storefront-runtime`: carrito, WhatsApp y movimiento progresivo.
-- `packages/exporter`: HTML, SEO, feed Merchant y archivos ZIP.
+- `packages/exporter`: HTML, SEO, feed Merchant y sitio estático.
 - `packages/site-optimizer`: auditoría determinista de rutas, contenido, media,
   Merchant, rendimiento y contexto público para agentes.
 
@@ -322,16 +325,16 @@ conservan el estado final visible.
 Studio valida cada proyecto al abrirlo y separa los registros incompatibles para
 que una tienda dañada no impida abrir las demás. El dashboard muestra la causa,
 conserva el registro original y permite reemplazarlo importando un respaldo
-`.solara.zip`; el ZIP se valida antes de persistirse.
+`.solara.json`; el envelope se valida antes de persistirse.
 
 La pantalla de Recursos muestra el uso de cuota de IndexedDB y sólo permite
 limpiar la caché regenerable de imágenes. El exportador genera `_headers` con
 CSP, Referrer-Policy, Permissions-Policy y protección contra framing.
 
 El gate incluye `corepack pnpm check:budgets`, que bloquea bundles iniciales de
-Studio por encima de 268 KiB gzip de JavaScript o 100 KiB gzip de CSS. La matriz
-multinavegador y Lighthouse se ejecutan en el gate de release, no en cada cambio
-local.
+Studio por encima de 700 KiB crudos de JavaScript o 84 KiB crudos de CSS. La
+matriz multinavegador y Lighthouse se ejecutan en el gate de release, no en
+cada cambio local.
 
 ## Release candidate (Fase 9)
 
@@ -340,8 +343,8 @@ matriz Chromium, Firefox y WebKit; el workflow separado se dispara manualmente
 o con tags `v*` y conserva sus diagnósticos durante 14 días. `release:manifest`
 genera metadata del commit y artefactos en `.release/`, fuera del repositorio.
 
-La auditoría Lighthouse usa `.lighthouserc.json` contra un `site.zip` de
-producción servido localmente o en el dominio piloto. Se ejecuta con
+La auditoría Lighthouse usa `.lighthouserc.json` contra la carpeta exportada de
+producción servida localmente o en el dominio piloto. Se ejecuta con
 `corepack pnpm dlx @lhci/cli autorun --config=.lighthouserc.json` para no sumar
 una dependencia pesada al Studio ni al storefront.
 
@@ -375,36 +378,36 @@ SEO fundamental: el contenido HTML sigue siendo rastreable, semantico y util
 sin JavaScript.
 
 `corepack pnpm check:budgets` tambien comprueba el runtime publico: JavaScript
-<= 35 KiB gzip y CSS <= 30 KiB gzip, ademas de los limites del bundle inicial de
-Studio.
+<= 52 KiB crudos y CSS <= 8 KiB crudos, ademas de los limites del bundle
+inicial de Studio.
 
 ## Piloto real (Fase 10)
 
 `corepack pnpm pilot:preflight` valida el paquete production antes de publicar:
-feed, sitemap, JSON-LD, canonical, robots, headers y ZIP reproducible. La
+feed, sitemap, JSON-LD, canonical, robots, headers y sitio reproducible. La
 publicación, verificación de dominio, Search Console y Merchant Center quedan
 manuales porque requieren credenciales y autorización del usuario; el checklist
 está en [`docs/pilot-checklist.md`](docs/pilot-checklist.md).
 
 Para validar una tienda concreta, definir `SOLARA_PILOT_PROJECT_ARCHIVE` con su
-respaldo `.solara.zip`. En PowerShell:
+respaldo `.solara.json`. En PowerShell:
 
 ```powershell
-$env:SOLARA_PILOT_PROJECT_ARCHIVE = "C:\ruta\tienda.solara.zip"
+$env:SOLARA_PILOT_PROJECT_ARCHIVE = "C:\ruta\tienda.solara.json"
 corepack pnpm pilot:preflight
 ```
 
 Sin esa variable se usa el fixture base Modo Sur.
 
-Con ese mismo respaldo, `corepack pnpm pilot:export` genera el `site.zip`
-production y la carpeta `.release/pilot-site/` listos para publicar.
+Con ese mismo respaldo, `corepack pnpm pilot:export` genera la carpeta
+`.release/pilot-site/` lista para publicar.
 
 En Preview, los assets embebidos no se serializan dentro del `srcdoc`: el iframe
 los solicita por `postMessage`, los hidrata una sola vez y reutiliza sus URLs
 `blob:` locales. Esto evita repetir la misma base64 en cada tarjeta y mantiene
 el sandbox del preview. Durante esa hidratación, las imágenes del preview se
-marcan como eager para que el editor no dependa de desplazar el iframe; el ZIP
-público conserva `loading="lazy"` donde corresponde.
+marcan como eager para que el editor no dependa de desplazar el iframe; el sitio público
+conserva `loading="lazy"` donde corresponde.
 
 ## Distribución portable para Windows
 

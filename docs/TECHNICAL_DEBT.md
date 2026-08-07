@@ -6,7 +6,8 @@ el comportamiento del producto.
 
 | Prioridad | Problema y ubicación | Riesgo/impacto | Recomendación |
 | --- | --- | --- | --- |
-| P1 | `packages/exporter/scripts/local-project-storage.mjs` extrae ZIP con `fflate.unzipSync`. El archive de Studio usa la misma estrategia. | El consumo de memoria crece con el ZIP y la extracción no es streaming. | Evaluar extracción streaming con límites de tamaño, archivos y compresión; conservar protección Zip Slip y pruebas de corrupción. |
+| P1 | `packages/exporter/scripts/legacy-zip-migration.mjs` y `fflate` siguen en el repositorio para la migración única de respaldos `.solara.zip` (manifest V1). | Son la única lectura de ZIP permitida por `check:repository`; si se conservan más de lo necesario, la dependencia y el código de lectura ZIP quedan como superficie de riesgo. | Eliminarlos en un release posterior, cuando no queden tiendas V1 sin migrar; `check:repository` ya bloquea cualquier otra aparición. |
+| P1 | Resuelto: la extracción streaming de ZIP ya no aplica. El formato ZIP se eliminó del producto (plan `docs/superpowers/plans/2026-08-07-eliminar-zip.md`): el respaldo editable es `.solara.json` y el sitio se escribe como carpeta desde un mapa de archivos JSON con rutas relativas y límites de tamaño/cantidad. | — | Conservar la validación del mapa de archivos en `writeSiteFiles` (`packages/exporter/scripts/local-project-storage.mjs`). |
 | P1 | El servicio local todavía no simula fallos reales de disco lleno o permisos revocados; sí tiene checkpoints de interrupción determinista y límites de upload/extracción en `packages/exporter/src/local-project-storage.test.mjs`. | Un cambio específico del sistema de archivos podría no quedar cubierto por Vitest. | Ejecutar una matriz Windows con volumen temporal de espacio limitado y permisos revocados, sin modificar proyectos confirmados. |
 | P1 | La comprobación de symlinks y rutas está implementada defensivamente, pero no tiene una matriz dedicada de enlaces reparse de Windows. | Riesgo de escapar de `proyectos/` en entornos con enlaces especiales. | Agregar pruebas Windows específicas antes de ampliar el servicio. |
 | P2 | `StoreProjectV1` es un alias de `StoreProjectV2`. | Puede inducir a crear una migración inexistente o leer un formato v1 que ya no se acepta. | Mantener el alias por compatibilidad y documentar cualquier renombrado futuro con deprecación. |
@@ -19,7 +20,7 @@ el comportamiento del producto.
 | P3 | El release exige Node 22; el desarrollo local puede usar Node 24 por `engines: >=22`. | Diferencias de runtime pueden ocultar problemas de CI. | Mantener Node 22 como referencia de release y probar localmente con la misma versión cuando sea posible. |
 | P3 | El checkout depende de WhatsApp y no es un pago convencional. | Algunas aprobaciones Merchant pueden rechazar el flujo. | Mostrar la limitación en auditoría y no prometer aprobación automática. |
 | P3 | La publicación es manual; no hay backend, colaboración ni sincronización remota. | El usuario debe copiar la carpeta pública a un hosting. | Mantener esta decisión explícita hasta definir requisitos de seguridad y operación. |
-| P2 | La prueba portable cubre dos copias, Guardar, traslado, servidor público y aislamiento de rutas; la corrupción de ZIP se valida en el storage test, pero la matriz de fallos del sistema operativo no corre en cada E2E. | Una regresión de recuperación ante fallos muy específicos de Windows podría pasar el E2E feliz. | Mantener la matriz determinista en Vitest y ejecutarla como job Windows de release cuando cambie el servicio de disco. |
+| P2 | La prueba portable cubre dos copias, Guardar, traslado, servidor público y aislamiento de rutas; la corrupción del `.solara.json` y del mapa del sitio se valida en el storage test, pero la matriz de fallos del sistema operativo no corre en cada E2E. | Una regresión de recuperación ante fallos muy específicos de Windows podría pasar el E2E feliz. | Mantener la matriz determinista en Vitest y ejecutarla como job Windows de release cuando cambie el servicio de disco. |
 
 ## Código potencialmente muerto o duplicado
 
@@ -32,6 +33,6 @@ quitarse; este documento no autoriza una limpieza automática.
 
 1. Reproducir el caso con un fixture determinista.
 2. Añadir una prueba que fije el comportamiento actual.
-3. Cambiar una capa por vez y verificar preview, ZIP y persisted data.
+3. Cambiar una capa por vez y verificar preview, sitio exportado y persisted data.
 4. Mantener `schemaVersion: 2` y añadir migración antes de cambiar datos.
 5. Medir memoria/tiempo antes de introducir abstracciones o dependencias.

@@ -30,9 +30,9 @@ SolaraCommerce-Portable/
 `proyectos/` es la fuente de verdad de las tiendas confirmadas en disco. El
 perfil de Electron contiene IndexedDB, localStorage, caché y Service Workers
 del origen portable; no se comparte con Chrome ni con otra copia de la carpeta.
-Los archivos confirmados y el formato `LocalProjectManifestV1` siguen siendo
-los mismos: `.solara.zip`, `actual/`, `respaldos/`, `respaldos-manuales/` y
-`sitios/`.
+Los archivos confirmados y el formato de manifest (`manifestVersion: 2` con
+`current.projectPath`) son los mismos que en desarrollo: `.solara.json`,
+`actual/`, `respaldos/`, `respaldos-manuales/` y `sitios/`.
 
 `instance.json` sólo identifica el formato local y la versión del layout. No
 guarda rutas absolutas ni identificadores del equipo.
@@ -78,7 +78,7 @@ Para actualizar una copia portable:
 5. iniciá la nueva versión y revisá el estado de las tiendas.
 
 No se migran automáticamente datos del IndexedDB del navegador del sistema.
-Para traer una tienda antigua, exportá su `.solara.zip` e importala desde la
+Para traer una tienda antigua, exportá su `.solara.json` e importala desde la
 instalación portable.
 
 ## Protocolo y seguridad
@@ -120,9 +120,9 @@ modo soportado para búsqueda, índices o mejoras JavaScript que requieren HTTP.
 - Si `portable:smoke` falla, revisá `.solara-runtime/logs/main.log` dentro de la
   copia temporal y ejecutá de nuevo `desktop:package`.
 - Si una tienda no aparece, comprobá `proyectos/<tienda>/manifest.json` y que
-  `current.archivePath` sea relativo y que su SHA-256 coincida.
+  `current.projectPath` sea relativo y que su SHA-256 coincida.
 - Si necesitás recuperar una copia, conservá toda la carpeta `proyectos/` y los
-  `.solara.zip` de `actual/` o `respaldos/`; no borres staging durante una
+  `.solara.json` de `actual/` o `respaldos/`; no borres staging durante una
   transacción activa.
 
 ## Archivos de implementación

@@ -13,7 +13,7 @@ componer páginas con secciones intercambiables, administrar catálogos de hasta
 3. Ordenar secciones y configurar su contenido.
 4. Revisar la tienda en desktop, tablet o móvil.
 5. Resolver errores críticos de la auditoría.
-6. Exportar un ZIP de borrador o producción.
+6. Exportar un sitio de borrador o producción.
 7. Publicar el contenido en un hosting estático.
 
 ## Compra
