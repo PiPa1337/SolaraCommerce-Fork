@@ -1867,6 +1867,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   --catalog-border: #dededa;
   --catalog-sale: #d94a55;
   --catalog-rating: #d99a12;
+  --catalog-shadow: rgba(11, 11, 12, 0.18);
   background: var(--catalog-paper);
   color: var(--catalog-ink);
   font-family: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
@@ -2308,6 +2309,315 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 @media (prefers-reduced-motion: reduce) {
   [data-solara-store].catalog-modern * { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
   [data-solara-store].catalog-modern .catalog-hero-video { display: none; }
+}
+/* Revamp: efectos de movimiento */
+@property --solara-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+[data-solara-store].catalog-modern .catalog-product-card,
+[data-solara-store].catalog-modern .solara-card-lift {
+  transition: transform 450ms cubic-bezier(.22, 1, .36, 1), box-shadow 450ms cubic-bezier(.22, 1, .36, 1), border-color 300ms;
+}
+[data-solara-store].catalog-modern .catalog-product-card:hover,
+[data-solara-store].catalog-modern .solara-card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 40px -12px var(--catalog-shadow);
+}
+[data-solara-store].catalog-modern .solara-card-glow { position: relative; }
+[data-solara-store].catalog-modern .solara-card-glow::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: conic-gradient(from var(--solara-angle, 0deg), transparent 62%, color-mix(in srgb, var(--catalog-ink) 55%, transparent) 78%, transparent 90%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: solara-angle-spin 6s linear infinite;
+  pointer-events: none;
+}
+@keyframes solara-angle-spin { to { --solara-angle: 360deg; } }
+[data-solara-store].catalog-modern .solara-spotlight { position: relative; }
+[data-solara-store].catalog-modern .solara-spotlight::before {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  border-radius: 16px;
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, .08), transparent 65%);
+  opacity: 0;
+  transition: opacity 300ms;
+  pointer-events: none;
+}
+[data-solara-store].catalog-modern .solara-spotlight:hover::before { opacity: 1; }
+[data-solara-store].catalog-modern [data-magnetic],
+[data-solara-store].catalog-modern [data-magnetic]:hover {
+  position: relative;
+  transform: translate(var(--mx, 0), var(--my, 0));
+  transition: transform 200ms cubic-bezier(.34, 1.56, .64, 1);
+}
+[data-solara-store].catalog-modern .solara-btn-shine { position: relative; }
+[data-solara-store].catalog-modern .solara-btn-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(105deg, transparent 42%, color-mix(in srgb, currentColor 14%, transparent) 50%, transparent 58%);
+  transform: translateX(-130%);
+  pointer-events: none;
+}
+[data-solara-store].catalog-modern .solara-btn-shine:hover::after {
+  transform: translateX(130%);
+  transition: transform 600ms cubic-bezier(.22, 1, .36, 1) 150ms;
+}
+[data-solara-store].catalog-modern .catalog-primary-action:hover,
+[data-solara-store].catalog-modern .solara-primary-action:hover,
+[data-solara-store].catalog-modern .catalog-newsletter-action:hover {
+  box-shadow: 0 10px 28px -10px color-mix(in srgb, var(--catalog-ink) 50%, transparent);
+}
+[data-solara-store].catalog-modern .catalog-secondary-action:hover {
+  box-shadow: 0 10px 28px -12px color-mix(in srgb, var(--catalog-ink) 35%, transparent);
+}
+[data-solara-store].catalog-modern .catalog-desktop-nav > a { position: relative; }
+[data-solara-store].catalog-modern .catalog-desktop-nav > a::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: .25rem;
+  left: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--catalog-ink), var(--catalog-muted));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 350ms cubic-bezier(.22, 1, .36, 1);
+}
+[data-solara-store].catalog-modern .catalog-desktop-nav > a:hover::after,
+[data-solara-store].catalog-modern .catalog-desktop-nav > a:focus-visible::after { transform: scaleX(1); }
+[data-solara-store].catalog-modern .catalog-category-bento-item { transition: transform 500ms cubic-bezier(.22, 1, .36, 1); }
+[data-solara-store].catalog-modern .catalog-category-bento-item:hover { transform: scale(1.03); }
+[data-solara-store].catalog-modern .catalog-category-bento-item::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: linear-gradient(to top, rgb(11 11 12 / .28), transparent 55%);
+  opacity: 0;
+  transition: opacity 300ms;
+  pointer-events: none;
+}
+[data-solara-store].catalog-modern .catalog-category-bento-item:hover::before { opacity: 1; }
+[data-solara-store].catalog-modern .catalog-testimonial {
+  transition: transform 450ms cubic-bezier(.22, 1, .36, 1), box-shadow 450ms cubic-bezier(.22, 1, .36, 1), border-color 300ms;
+}
+[data-solara-store].catalog-modern .catalog-testimonial:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--catalog-ink) 22%, var(--catalog-border));
+  box-shadow: 0 18px 40px -12px var(--catalog-shadow);
+}
+[data-solara-store].catalog-modern .catalog-newsletter-inner { transition: transform 450ms cubic-bezier(.22, 1, .36, 1), box-shadow 450ms cubic-bezier(.22, 1, .36, 1); }
+[data-solara-store].catalog-modern .catalog-newsletter-inner:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 40px -12px color-mix(in srgb, var(--catalog-ink) 45%, transparent);
+}
+[data-solara-store].catalog-modern .solara-image-pan img { transition: transform 800ms cubic-bezier(.22, 1, .36, 1); }
+[data-solara-store].catalog-modern .solara-image-pan:hover img { transform: scale(1.08); }
+[data-solara-store].catalog-modern .catalog-category-bento-item--feature.solara-image-pan:hover img { transform: scale(1.12); }
+[data-solara-store].catalog-modern :focus-visible {
+  outline: 2px solid var(--solara-accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--solara-accent) 25%, transparent);
+}
+[data-solara-store].catalog-modern::after {
+  content: "";
+  position: fixed;
+  z-index: 9999;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  opacity: .04;
+  pointer-events: none;
+  animation: solara-grain 8s steps(4) infinite;
+}
+@keyframes solara-grain {
+  0%, 100% { background-position: 0 0; }
+  25% { background-position: -30px 18px; }
+  50% { background-position: 20px -26px; }
+  75% { background-position: -14px -10px; }
+}
+[data-solara-store].catalog-modern .catalog-brand-strip-inner { overflow: hidden; }
+[data-solara-store].catalog-modern .solara-marquee-track {
+  display: flex;
+  width: max-content;
+  margin: 1rem 0 0;
+  animation: solara-marquee 28s linear infinite;
+}
+[data-solara-store].catalog-modern .solara-marquee-track:hover { animation-play-state: paused; }
+[data-solara-store].catalog-modern .solara-marquee-track ul {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 2.5rem;
+  margin: 0;
+  padding: 0 2.5rem 0 0;
+  list-style: none;
+  font-size: clamp(1rem, 2vw, 1.4rem);
+  font-weight: 800;
+  white-space: nowrap;
+}
+@keyframes solara-marquee { to { transform: translateX(-50%); } }
+@supports (background-clip: text) {
+  [data-solara-store].catalog-modern .solara-gradient-text {
+    background: linear-gradient(90deg, var(--catalog-ink) 25%, var(--catalog-muted) 50%, var(--catalog-ink) 75%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: solara-gradient-shift 6s ease-in-out infinite alternate;
+  }
+}
+@keyframes solara-gradient-shift { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+[data-solara-store].catalog-modern .solara-pulse-ring { position: relative; }
+[data-solara-store].catalog-modern .solara-pulse-ring::before,
+[data-solara-store].catalog-modern .solara-pulse-ring::after,
+[data-solara-store].catalog-modern .solara-pulse-ring .solara-pulse-ring-dot {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  animation: solara-pulse 3s ease-out infinite;
+}
+[data-solara-store].catalog-modern .solara-pulse-ring::before { animation-delay: .8s; }
+[data-solara-store].catalog-modern .solara-pulse-ring::after { animation-delay: 1.6s; }
+@keyframes solara-pulse {
+  0% { transform: scale(.6); opacity: .5; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+[data-solara-store].catalog-modern .solara-dot {
+  animation: solara-dot 2.4s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * .2s);
+}
+@keyframes solara-dot {
+  0%, 100% { opacity: .35; transform: scale(.85); }
+  50% { opacity: 1; transform: scale(1); }
+}
+[data-solara-store].catalog-modern .solara-shimmer,
+[data-solara-store].catalog-modern .solara-shimmer--hover { position: relative; overflow: hidden; }
+[data-solara-store].catalog-modern .solara-shimmer::after,
+[data-solara-store].catalog-modern .solara-shimmer--hover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, .25) 50%, transparent 60%);
+  transform: translateX(-130%);
+  pointer-events: none;
+}
+[data-solara-store].catalog-modern .solara-shimmer::after { animation: solara-shimmer 1.2s ease-in-out infinite; }
+[data-solara-store].catalog-modern .solara-shimmer--hover:hover::after { animation: solara-shimmer 1.2s ease-in-out; }
+@keyframes solara-shimmer { to { transform: translateX(130%); } }
+html:has([data-solara-store].catalog-modern) { scrollbar-color: var(--solara-accent) transparent; }
+html:has([data-solara-store].catalog-modern)::-webkit-scrollbar { width: 10px; }
+html:has([data-solara-store].catalog-modern)::-webkit-scrollbar-thumb { background: linear-gradient(var(--solara-accent), color-mix(in srgb, var(--solara-accent) 55%, transparent)); border-radius: 999px; }
+html:has([data-solara-store].catalog-modern)::-webkit-scrollbar-thumb:hover { box-shadow: 0 0 12px color-mix(in srgb, var(--solara-accent) 55%, transparent); }
+[data-solara-store].catalog-modern ::selection {
+  background: color-mix(in srgb, var(--solara-accent) 30%, transparent);
+}
+[data-solara-store].catalog-modern .solara-announcement { position: relative; }
+[data-solara-store].catalog-modern .solara-announcement::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, white 65%, transparent), transparent);
+  background-size: 200% 100%;
+  animation: solara-gradient-shift 6s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@supports (animation-timeline: view()) {
+  [data-solara-store].catalog-modern .solara-scroll-title {
+    animation: solara-reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 10% cover 30%;
+  }
+  [data-solara-store].catalog-modern .solara-clip-reveal {
+    animation: solara-clip linear both;
+    animation-timeline: view();
+    animation-range: entry 5% cover 35%;
+  }
+}
+@keyframes solara-reveal { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes solara-clip { from { clip-path: inset(12% 6% 12% 6%); transform: scale(1.05); } to { clip-path: inset(0); transform: scale(1); } }
+[data-solara-store].catalog-modern .solara-kinetic-word {
+  display: inline-block;
+  opacity: 0;
+  transform: rotate(2deg);
+  animation: solara-word-in 500ms cubic-bezier(.22, 1, .36, 1) forwards;
+  animation-delay: calc(var(--word-index, 0) * 40ms);
+}
+@keyframes solara-word-in { to { opacity: 1; transform: rotate(0); } }
+@media (hover: hover) and (pointer: fine) {
+  [data-solara-store].catalog-modern [data-product-card] {
+    transform: perspective(800px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+    transition: transform 200ms cubic-bezier(.22, 1, .36, 1);
+  }
+  [data-solara-store].catalog-modern [data-product-card]:hover {
+    transform: perspective(800px) translateY(-4px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+    box-shadow: 0 18px 40px -12px var(--catalog-shadow);
+  }
+}
+[data-solara-store].catalog-modern .solara-back-to-top {
+  position: fixed;
+  z-index: 45;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 1px solid var(--catalog-border);
+  border-radius: 999px;
+  background: var(--catalog-paper);
+  color: var(--catalog-ink);
+  box-shadow: 0 12px 32px -12px rgb(11 11 12 / .35);
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 300ms, visibility 300ms;
+}
+[data-solara-store].catalog-modern .solara-back-to-top[hidden] {
+  display: grid;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+[data-solara-store].catalog-modern .solara-back-to-top svg { width: 48px; height: 48px; }
+[data-solara-store].catalog-modern .solara-back-to-top circle { transition: stroke-dashoffset 200ms linear; }
+@media (prefers-reduced-motion: reduce) {
+  [data-solara-store].catalog-modern .solara-marquee-track,
+  [data-solara-store].catalog-modern .solara-card-glow::before,
+  [data-solara-store].catalog-modern .solara-pulse-ring::before,
+  [data-solara-store].catalog-modern .solara-pulse-ring::after,
+  [data-solara-store].catalog-modern .solara-pulse-ring .solara-pulse-ring-dot,
+  [data-solara-store].catalog-modern .solara-dot,
+  [data-solara-store].catalog-modern .solara-shimmer::after,
+  [data-solara-store].catalog-modern .solara-shimmer--hover::after,
+  [data-solara-store].catalog-modern .solara-gradient-text,
+  [data-solara-store].catalog-modern .solara-announcement::after,
+  [data-solara-store].catalog-modern::after {
+    animation: none !important;
+  }
+  [data-solara-store].catalog-modern .solara-kinetic-title,
+  [data-solara-store].catalog-modern .solara-kinetic-title .solara-kinetic-word,
+  [data-solara-store].catalog-modern .solara-scroll-title,
+  [data-solara-store].catalog-modern .solara-clip-reveal { animation: none !important; }
+  [data-solara-store].catalog-modern .solara-kinetic-word { opacity: 1 !important; transform: none !important; }
+  [data-solara-store].catalog-modern .solara-marquee-track ul[aria-hidden="true"] { display: none; }
 }
 `,
 };

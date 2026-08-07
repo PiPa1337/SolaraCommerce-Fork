@@ -226,6 +226,28 @@ describe("official module system", () => {
     expect(bento).toContain('href="/categorias/');
   });
 
+  it("incluye los efectos revamp en el CSS del sitio y sus marcadores", () => {
+    const css = MODULE_STYLE_BLOCKS["catalog-modern"];
+    expect(css).toContain(".solara-card-lift");
+    expect(css).toContain("@keyframes solara-marquee");
+    expect(css).toContain("@property --solara-angle");
+    expect(css).toContain("prefers-reduced-motion");
+
+    const html = renderSections(catalogModernStore, catalogModernStore.sections, {
+      pageType: "home",
+    });
+    expect(html).toContain("data-hero-parallax");
+    expect(html.match(/data-parallax-layer=/g) ?? []).toHaveLength(3);
+    expect(html).toContain("data-kinetic-title");
+    expect(html).toContain("data-magnetic");
+    expect(html).toContain("data-back-to-top");
+
+    const brandStrip = html.slice(html.indexOf('data-solara-module="catalog-brand-strip"'));
+    expect(brandStrip.match(/<ul/g) ?? []).toHaveLength(2);
+    expect(brandStrip).toContain('aria-hidden="true"');
+    expect(brandStrip).toContain("solara-marquee-track");
+  });
+
   it("omite beneficios de confianza sin datos configurados", () => {
     const project = {
       ...referenceStore,

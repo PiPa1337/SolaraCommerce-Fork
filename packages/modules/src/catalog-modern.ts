@@ -91,13 +91,13 @@ export const catalogAnnouncement: ModuleDefinition<
   render(context) {
     const link =
       context.settings.linkLabel && context.settings.linkHref
-        ? `<a href="${escapeAttribute(safeUrl(context.settings.linkHref))}">${escapeHtml(context.settings.linkLabel)}</a>`
+        ? `<a href="${escapeAttribute(safeUrl(context.settings.linkHref))}" data-magnetic>${escapeHtml(context.settings.linkLabel)}</a>`
         : "";
     return moduleRoot(
       "catalog-announcement",
       context.section,
       safeHtml(
-        `<div class="catalog-announcement-inner" data-motion-zone="content"><span>${escapeHtml(context.settings.text)}</span>${link}<button type="button" data-catalog-announcement-close aria-label="Cerrar anuncio">×</button></div>`,
+        `<div class="catalog-announcement-inner solara-announcement" data-motion-zone="content"><span>${escapeHtml(context.settings.text)}</span>${link}<button type="button" data-catalog-announcement-close aria-label="Cerrar anuncio">×</button></div>`,
       ),
       { tag: "header" },
     );
@@ -407,7 +407,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
         ? settings.slides
             .map(
               (slide, index) =>
-                `<button type="button" data-catalog-hero-slide="${index}" aria-label="Mostrar ${escapeAttribute(slide.title)}" aria-selected="${String(index === 0)}"></button>`,
+                `<button type="button" class="solara-dot" style="--i:${index}" data-catalog-hero-slide="${index}" aria-label="Mostrar ${escapeAttribute(slide.title)}" aria-selected="${String(index === 0)}"></button>`,
             )
             .join("")
         : "";
@@ -415,7 +415,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
       "catalog-hero",
       context.section,
       safeHtml(
-        `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}"><div class="catalog-hero-copy"><p class="catalog-eyebrow">${escapeHtml(settings.eyebrow)}</p><h1>${escapeHtml(title)}</h1><p class="catalog-hero-body">${escapeHtml(body)}</p><div class="catalog-hero-actions"><a class="catalog-primary-action" href="${escapeAttribute(safeUrl(actionHref))}">${escapeHtml(actionLabel)}</a>${settings.secondaryActionLabel ? `<a class="catalog-secondary-action" href="${escapeAttribute(safeUrl(settings.secondaryActionHref))}">${escapeHtml(settings.secondaryActionLabel)}</a>` : ""}</div>${stats}</div><figure class="catalog-hero-media" data-motion-zone="media">${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>`,
+        `<div class="catalog-hero-inner" data-hero-parallax data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}"><div class="catalog-hero-copy"><p class="catalog-eyebrow solara-gradient-text" data-parallax-layer="3" data-parallax-depth="6">${escapeHtml(settings.eyebrow)}</p><h1 class="solara-kinetic-title" data-kinetic-title data-parallax-layer="2" data-parallax-depth="8">${escapeHtml(title)}</h1><p class="catalog-hero-body">${escapeHtml(body)}</p><div class="catalog-hero-actions"><a class="catalog-primary-action solara-btn-shine" data-magnetic href="${escapeAttribute(safeUrl(actionHref))}">${escapeHtml(actionLabel)}</a>${settings.secondaryActionLabel ? `<a class="catalog-secondary-action solara-pulse-ring" data-magnetic href="${escapeAttribute(safeUrl(settings.secondaryActionHref))}"><span class="solara-pulse-ring-dot" aria-hidden="true"></span>${escapeHtml(settings.secondaryActionLabel)}</a>` : ""}</div>${stats}</div><figure class="catalog-hero-media solara-shimmer solara-clip-reveal" data-motion-zone="media" data-parallax-layer="1" data-parallax-depth="12">${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>`,
       ),
     );
   },
@@ -454,11 +454,13 @@ export const catalogBrandStrip: ModuleDefinition<
       ),
     ].slice(0, context.settings.limit);
     if (!brands.length) return moduleRoot("catalog-brand-strip", context.section, safeHtml(""));
+    const brandItems = (ariaHidden: boolean) =>
+      `<ul${ariaHidden ? ' aria-hidden="true"' : ' data-motion-zone="items"'}>${brands.map((brand) => `<li>${escapeHtml(brand)}</li>`).join("")}</ul>`;
     return moduleRoot(
       "catalog-brand-strip",
       context.section,
       safeHtml(
-        `<div class="catalog-brand-strip-inner"><h2>${escapeHtml(context.settings.title)}</h2><ul data-motion-zone="items">${brands.map((brand) => `<li>${escapeHtml(brand)}</li>`).join("")}</ul></div>`,
+        `<div class="catalog-brand-strip-inner"><h2>${escapeHtml(context.settings.title)}</h2><div class="solara-marquee-track">${brandItems(false)}${brandItems(true)}</div></div>`,
       ),
     );
   },
@@ -533,7 +535,7 @@ function modernProductCard(
     sizes: "(max-width: 640px) 44vw, (max-width: 1024px) 30vw, 280px",
     fallbackAlt: product.title,
   });
-  return `<article class="catalog-product-card" data-product-card data-product-id="${escapeAttribute(product.id)}" data-product-title="${escapeAttribute(product.title)}"${category ? ` data-product-category="${escapeAttribute(category.id)}"` : ""}><a class="catalog-product-media" href="/productos/${escapeAttribute(product.slug)}/" aria-label="Ver ${escapeAttribute(product.title)}">${image}</a><div class="catalog-product-card-copy">${category ? `<p class="catalog-product-category">${escapeHtml(category.title)}</p>` : ""}<h3><a href="/productos/${escapeAttribute(product.slug)}/">${escapeHtml(product.title)}</a></h3><p class="catalog-product-price"><strong>${escapeHtml(formatMoney(price))}</strong>${compare && compare > price ? ` <del>${escapeHtml(formatMoney(compare))}</del><span class="catalog-discount">-${Math.round((1 - price / compare) * 100)}%</span>` : ""}</p></div></article>`;
+  return `<article class="catalog-product-card solara-card-lift solara-spotlight" data-product-card data-product-id="${escapeAttribute(product.id)}" data-product-title="${escapeAttribute(product.title)}"${category ? ` data-product-category="${escapeAttribute(category.id)}"` : ""}><a class="catalog-product-media solara-image-pan solara-shimmer--hover solara-card-glow" href="/productos/${escapeAttribute(product.slug)}/" aria-label="Ver ${escapeAttribute(product.title)}">${image}</a><div class="catalog-product-card-copy">${category ? `<p class="catalog-product-category">${escapeHtml(category.title)}</p>` : ""}<h3><a href="/productos/${escapeAttribute(product.slug)}/">${escapeHtml(product.title)}</a></h3><p class="catalog-product-price"><strong>${escapeHtml(formatMoney(price))}</strong>${compare && compare > price ? ` <del>${escapeHtml(formatMoney(compare))}</del><span class="catalog-discount">-${Math.round((1 - price / compare) * 100)}%</span>` : ""}</p></div></article>`;
 }
 
 export const catalogProductGrid: ModuleDefinition<
@@ -601,7 +603,7 @@ export const catalogProductGrid: ModuleDefinition<
       "catalog-product-grid",
       context.section,
       safeHtml(
-        `<div class="catalog-product-grid-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${context.settings.showViewAll ? `<a class="catalog-view-all" href="${escapeAttribute(safeUrl(context.settings.viewAllHref))}">Ver todos</a>` : ""}</header><div class="catalog-product-grid" data-motion-zone="items"${categoryGrid}>${cards || '<p class="catalog-empty">No hay productos para mostrar.</p>'}</div></div>`,
+        `<div class="catalog-product-grid-section"><header><h2 class="solara-scroll-title">${escapeHtml(context.settings.title)}</h2>${context.settings.showViewAll ? `<a class="catalog-view-all" href="${escapeAttribute(safeUrl(context.settings.viewAllHref))}">Ver todos</a>` : ""}</header><div class="catalog-product-grid" data-motion-zone="items"${categoryGrid}>${cards || '<p class="catalog-empty">No hay productos para mostrar.</p>'}</div></div>`,
       ),
     );
   },
@@ -864,7 +866,7 @@ export const catalogCategoryBento: ModuleDefinition<
           context.project,
           category.id as CategoryId,
         ).filter((id) => activeProducts.has(id)).length;
-        return `<a class="catalog-category-bento-item catalog-category-bento-item--${layout}" href="/categorias/${escapeAttribute(category.slug)}/" aria-label="Explorar ${escapeAttribute(category.title)}"><span>${escapeHtml(category.title)}</span>${productCount ? `<small>${productCount} productos</small>` : ""}${image}</a>`;
+        return `<a class="catalog-category-bento-item catalog-category-bento-item--${layout} solara-image-pan" href="/categorias/${escapeAttribute(category.slug)}/" aria-label="Explorar ${escapeAttribute(category.title)}"><span>${escapeHtml(category.title)}</span>${productCount ? `<small>${productCount} productos</small>` : ""}${image}</a>`;
       })
       .filter(Boolean)
       .join("");
@@ -872,7 +874,7 @@ export const catalogCategoryBento: ModuleDefinition<
       "catalog-category-bento",
       context.section,
       safeHtml(
-        `<div class="catalog-category-bento-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${items ? '<a class="catalog-category-bento-all" href="/buscar/">Ver todo el catálogo</a>' : ""}</header><div class="catalog-category-bento-grid" data-motion-zone="items">${items || '<p class="catalog-empty">Todavía no hay categorías para mostrar.</p>'}</div></div>`,
+        `<div class="catalog-category-bento-section"><header><h2 class="solara-scroll-title">${escapeHtml(context.settings.title)}</h2>${items ? '<a class="catalog-category-bento-all" href="/buscar/">Ver todo el catálogo</a>' : ""}</header><div class="catalog-category-bento-grid" data-motion-zone="items">${items || '<p class="catalog-empty">Todavía no hay categorías para mostrar.</p>'}</div></div>`,
       ),
     );
   },
@@ -929,7 +931,7 @@ export const catalogTestimonials: ModuleDefinition<
       "catalog-testimonials",
       context.section,
       safeHtml(
-        `<div class="catalog-testimonials-section"><header><h2>${escapeHtml(context.settings.title)}</h2><div class="catalog-testimonials-controls"><button type="button" data-testimonials-prev aria-label="Testimonio anterior">←</button><button type="button" data-testimonials-next aria-label="Testimonio siguiente">→</button></div></header><div class="catalog-testimonials-track" data-motion-zone="items">${items.map((item) => `<article class="catalog-testimonial"><p class="catalog-testimonial-rating" aria-label="${item.rating} de 5">${"★".repeat(item.rating)}</p><h3>${escapeHtml(item.author)}</h3>${item.context ? `<p class="catalog-testimonial-context">${escapeHtml(item.context)}</p>` : ""}<blockquote>“${escapeHtml(item.body)}”</blockquote></article>`).join("")}</div></div>`,
+        `<div class="catalog-testimonials-section"><header><h2 class="solara-scroll-title">${escapeHtml(context.settings.title)}</h2><div class="catalog-testimonials-controls"><button type="button" data-testimonials-prev aria-label="Testimonio anterior">←</button><button type="button" data-testimonials-next aria-label="Testimonio siguiente">→</button></div></header><div class="catalog-testimonials-track" data-motion-zone="items">${items.map((item) => `<article class="catalog-testimonial"><p class="catalog-testimonial-rating" aria-label="${item.rating} de 5">${"★".repeat(item.rating)}</p><h3>${escapeHtml(item.author)}</h3>${item.context ? `<p class="catalog-testimonial-context">${escapeHtml(item.context)}</p>` : ""}<blockquote>“${escapeHtml(item.body)}”</blockquote></article>`).join("")}</div></div>`,
       ),
     );
   },
@@ -967,7 +969,7 @@ export const catalogNewsletterCta: ModuleDefinition<
       "catalog-newsletter-cta",
       context.section,
       safeHtml(
-        `<div class="catalog-newsletter-inner" data-motion-zone="content"><div><h2>${escapeHtml(context.settings.title)}</h2><p>${escapeHtml(context.settings.body)}</p></div><a class="catalog-newsletter-action" href="${escapeAttribute(safeUrl(context.settings.actionHref))}">${escapeHtml(context.settings.actionLabel)}</a></div>`,
+        `<div class="catalog-newsletter-inner" data-motion-zone="content"><div><h2 class="solara-scroll-title">${escapeHtml(context.settings.title)}</h2><p>${escapeHtml(context.settings.body)}</p></div><a class="catalog-newsletter-action solara-btn-shine" data-magnetic href="${escapeAttribute(safeUrl(context.settings.actionHref))}">${escapeHtml(context.settings.actionLabel)}</a></div>`,
       ),
     );
   },
@@ -1030,7 +1032,7 @@ export const catalogFooter: ModuleDefinition<
       "catalog-footer",
       context.section,
       safeHtml(
-        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div><nav aria-label="Catálogo"><a href="/">Inicio</a>${catalogLinkMarkup}<a href="/buscar/">Buscar</a></nav><nav aria-label="Ayuda"><a href="/contacto/">Contacto</a><a href="/nosotros/">Nosotros</a>${policyLinks}</nav><address>${contact}</address><small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)}</small></div>`,
+        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div><nav aria-label="Catálogo"><a href="/">Inicio</a>${catalogLinkMarkup}<a href="/buscar/">Buscar</a></nav><nav aria-label="Ayuda"><a href="/contacto/">Contacto</a><a href="/nosotros/">Nosotros</a>${policyLinks}</nav><address>${contact}</address><small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)}</small></div><button type="button" class="solara-back-to-top" data-back-to-top hidden aria-label="Volver arriba"><svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true" focusable="false"><circle cx="24" cy="24" r="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="132" stroke-dashoffset="132" data-back-to-top-ring></circle><path d="M24 31V17m-7 7 7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="sr-only">Volver arriba</span></button>`,
       ),
       { tag: "footer" },
     );
