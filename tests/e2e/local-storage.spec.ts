@@ -1,9 +1,10 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { randomBytes } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { createHash, randomBytes } from "node:crypto";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import { buildCatalogModernProject } from "@solara/project-schema/catalog-modern-template";
 
 async function waitForServer(url: string): Promise<void> {
   await expect
@@ -19,6 +20,51 @@ async function waitForServer(url: string): Promise<void> {
     )
     .toBe(200);
 }
+
+function seedDiskStore(applicationRoot: string): void {
+  const project = buildCatalogModernProject({
+    seed: "clean",
+    id: "store-preexistente",
+    name: "Tienda previa",
+    slug: "tienda-previa",
+  });
+  const key = "tienda-previa-2026-08-07T10-00-00-000Z-v000001";
+  const storeRoot = join(applicationRoot, "proyectos", "tienda-previa--preexistente");
+  const actualRoot = join(storeRoot, "actual");
+  mkdirSync(actualRoot, { recursive: true });
+  const envelope = {
+    format: "solara-project",
+    version: 2,
+    projectId: project.id,
+    exportedAt: "2026-08-07T10:00:00.000Z",
+    project,
+  };
+  const json = `${JSON.stringify(envelope, null, 2)}\n`;
+  writeFileSync(join(actualRoot, `${key}.solara.json`), json, "utf8");
+  const manifest = {
+    format: "solara-local-project",
+    manifestVersion: 2,
+    projectId: project.id,
+    storeName: project.name,
+    slug: project.slug,
+    schemaVersion: 2,
+    status: "synced",
+    current: {
+      version: 1,
+      key,
+      projectPath: `actual/${key}.solara.json`,
+      sha256: createHash("sha256").update(json).digest("hex"),
+      savedAt: "2026-08-07T10:00:00.000Z",
+      projectUpdatedAt: project.updatedAt,
+    },
+  };
+  writeFileSync(
+    join(storeRoot, "manifest.json"),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+    "utf8",
+  );
+}
+
 
 test("el lanzador persiste el proyecto y el sitio fuera de IndexedDB", async ({ page }) => {
   const applicationRoot = mkdtempSync(join(tmpdir(), "solara-managed-e2e-"));
@@ -101,6 +147,50 @@ test("el lanzador persiste el proyecto y el sitio fuera de IndexedDB", async ({ 
     await popup.waitForLoadState("domcontentloaded");
     await expect(popup).toHaveTitle(/Modo Sur|Predeterminado/i);
     await popup.close();
+  } finally {
+    if (serverProcess.exitCode === null) serverProcess.kill();
+    rmSync(applicationRoot, { recursive: true, force: true });
+  }
+});
+
+test("con proyectos existentes en disco, la candidata revamp se agrega al dashboard", async ({
+  page,
+}) => {
+  const applicationRoot = mkdtempSync(join(tmpdir(), "solara-managed-seeded-"));
+  const port = 4500 + Math.floor(Math.random() * 100);
+  const token = randomBytes(24).toString("base64url");
+  const url = `http://127.0.0.1:${port}`;
+  seedDiskStore(applicationRoot);
+  const serverProcess: ChildProcess = spawn(
+    process.execPath,
+    [
+      resolve("packages/exporter/scripts/serve.mjs"),
+      resolve("apps/studio/dist"),
+      String(port),
+      token,
+      applicationRoot,
+    ],
+    { cwd: resolve("."), stdio: "ignore" },
+  );
+
+  try {
+    await waitForServer(url);
+    await page.goto(url);
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(
+      page.locator(".dashboard-store-card").getByText("Predeterminado Revamp", { exact: true }),
+    ).toBeVisible({
+      timeout: 30_000,
+    });
+    const listing = await page.evaluate(async () => {
+      const response = await fetch("/__solara/storage/projects", { credentials: "same-origin" });
+      return response.json();
+    });
+    const ids = listing.projects.map((project: { projectId: string }) => project.projectId);
+    expect(ids).toContain("store-preexistente");
+    expect(ids).toContain("store-modo-sur-revamp");
   } finally {
     if (serverProcess.exitCode === null) serverProcess.kill();
     rmSync(applicationRoot, { recursive: true, force: true });

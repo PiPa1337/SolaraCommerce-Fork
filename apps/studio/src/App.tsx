@@ -27,6 +27,7 @@ import {
   listProjectsWithRecovery,
   markProjectMigration,
   type ProjectRecoveryIssue,
+  REVAMP_DEMO_PROJECT_ID,
   type StoredProject,
   saveProject,
   saveRecoveryDraft,
@@ -120,6 +121,19 @@ export function App() {
               if (JSON.stringify(stored.project) !== JSON.stringify(diskProject.project)) {
                 await saveRecoveryDraft(stored.project, diskProject.diskVersion ?? 0);
               }
+            }
+          }
+          const revampOnDisk = diskListing.projects.some(
+            (item) => item.id === REVAMP_DEMO_PROJECT_ID,
+          );
+          if (!revampOnDisk && detectedStorage.writable) {
+            await ensureRevampDemoProject();
+            const revamp = await getProject(REVAMP_DEMO_PROJECT_ID);
+            if (revamp) {
+              await persistToDisk(revamp, null);
+              setNotice(
+                "Se agregó la tienda Predeterminado Revamp para comparar la nueva experiencia de movimiento.",
+              );
             }
           }
           await refreshDisk();
