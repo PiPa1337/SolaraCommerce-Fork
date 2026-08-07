@@ -2,25 +2,7 @@
  * Biblioteca de tiendas: consulta la fuente disponible, aplica filtros y
  * expone creación, duplicado, archivo, respaldos y cierre del servidor propio.
  */
-import {
-  Archive,
-  ArrowCounterClockwise,
-  ArrowUpRight,
-  CheckCircle,
-  CloudArrowDown,
-  Copy,
-  DownloadSimple,
-  FolderOpen,
-  Funnel,
-  GridFour,
-  List,
-  MagnifyingGlass,
-  Package,
-  Plus,
-  SortAscending,
-  Storefront,
-  X,
-} from "@phosphor-icons/react";
+import { ArrowUpRight, CheckCircle, Plus, Storefront, X } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
 import { lazy, Suspense, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Button, EmptyState, Field, IconButton, InlineError } from "../components/Ui";
@@ -33,6 +15,8 @@ import {
 } from "../lib/dashboardModel";
 import { formatDate } from "../lib/format";
 import type { StoredProject } from "../lib/repository";
+import { DashboardToolbar } from "./dashboard/DashboardToolbar";
+import { formatCompactDate, ProjectCard, statusLabel } from "./dashboard/ProjectCard";
 
 const CosmicBackground = lazy(() =>
   import("./CosmicBackground").then(({ CosmicBackground: component }) => ({ default: component })),
@@ -52,30 +36,6 @@ interface DashboardProps {
 }
 
 type DashboardView = "grid" | "list";
-
-const statusLabels: Record<DashboardStatusFilter, string> = {
-  all: "Todas",
-  active: "Activas",
-  archived: "Archivadas",
-};
-
-function statusLabel(status: StoredProject["status"]): string {
-  return status === "archived" ? "Archivada" : "Activa";
-}
-
-function formatCompactDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Sin fecha";
-  const parts = new Intl.DateTimeFormat("es-AR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).formatToParts(date);
-  const day = parts.find((part) => part.type === "day")?.value ?? "";
-  const month = parts.find((part) => part.type === "month")?.value.replaceAll(".", "") ?? "";
-  const year = parts.find((part) => part.type === "year")?.value ?? "";
-  return [day, month, year].filter(Boolean).join(" ");
-}
 
 export function Dashboard({
   projects,
@@ -338,63 +298,16 @@ export function Dashboard({
             <span className="dashboard-cosmic-count">{visible.length} visibles</span>
           </header>
 
-          <div className="dashboard-cosmic-toolbar">
-            <label className="dashboard-cosmic-search">
-              <MagnifyingGlass aria-hidden size={18} />
-              <span className="visually-hidden">Buscar tienda</span>
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Buscar tienda..."
-                aria-label="Buscar tienda"
-                type="search"
-              />
-              {query ? (
-                <IconButton icon={X} label="Limpiar búsqueda" onClick={() => setQuery("")} />
-              ) : null}
-            </label>
-            <label className="dashboard-cosmic-select">
-              <Funnel aria-hidden size={16} />
-              <span className="visually-hidden">Estado</span>
-              <select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value as DashboardStatusFilter)}
-              >
-                {(Object.keys(statusLabels) as DashboardStatusFilter[]).map((status) => (
-                  <option key={status} value={status}>
-                    Estado: {statusLabels[status]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="dashboard-cosmic-select">
-              <SortAscending aria-hidden size={16} />
-              <span className="visually-hidden">Ordenar</span>
-              <select
-                value={sort}
-                onChange={(event) => setSort(event.target.value as DashboardSort)}
-              >
-                <option value="updated">Última modificación</option>
-                <option value="name">Nombre A-Z</option>
-                <option value="products">Más productos</option>
-              </select>
-            </label>
-            <fieldset className="dashboard-cosmic-view-toggle">
-              <legend className="visually-hidden">Vista de proyectos</legend>
-              <IconButton
-                icon={GridFour}
-                label="Vista en grilla"
-                aria-pressed={view === "grid"}
-                onClick={() => setView("grid")}
-              />
-              <IconButton
-                icon={List}
-                label="Vista en lista"
-                aria-pressed={view === "list"}
-                onClick={() => setView("list")}
-              />
-            </fieldset>
-          </div>
+          <DashboardToolbar
+            query={query}
+            statusFilter={statusFilter}
+            sort={sort}
+            view={view}
+            onQueryChange={setQuery}
+            onStatusFilterChange={setStatusFilter}
+            onSortChange={setSort}
+            onViewChange={setView}
+          />
 
           <div className={`dashboard-cosmic-results dashboard-cosmic-results--${view}`}>
             <div className="dashboard-cosmic-store-grid" aria-live="polite">
@@ -474,148 +387,20 @@ export function Dashboard({
               )}
             </div>
 
-            <aside
-              ref={selectedPanelRef}
-              className={`dashboard-store-detail${selected ? " is-open" : ""}`}
-              aria-label={
-                selected ? `Tienda seleccionada: ${selected.name}` : "Tienda seleccionada"
-              }
-              tabIndex={-1}
-            >
-              {selected ? (
-                <>
-                  <header className="dashboard-store-detail__header">
-                    <span>Tienda seleccionada</span>
-                    <IconButton
-                      icon={X}
-                      label="Cerrar detalle"
-                      onClick={() => setSelectedId(undefined)}
-                    />
-                  </header>
-                  <div className="dashboard-store-detail__identity">
-                    <span className="dashboard-store-detail__mark" aria-hidden>
-                      {selected.name.slice(0, 2).toUpperCase()}
-                    </span>
-                    <div>
-                      <h3>{selected.name}</h3>
-                      <span className={`dashboard-store-card__status is-${selected.status}`}>
-                        <span aria-hidden />
-                        {statusLabel(selected.status)}
-                      </span>
-                    </div>
-                  </div>
-                  <dl className="dashboard-store-detail__facts">
-                    <div>
-                      <dt>ID</dt>
-                      <dd>{selected.id}</dd>
-                    </div>
-                    <div>
-                      <dt>Actualizada</dt>
-                      <dd title={formatDate(selected.updatedAt)}>
-                        {formatCompactDate(selected.updatedAt)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Productos</dt>
-                      <dd>{getProjectMetrics(selected.project).activeProducts}</dd>
-                    </div>
-                    <div>
-                      <dt>Categorías</dt>
-                      <dd>{getProjectMetrics(selected.project).categories}</dd>
-                    </div>
-                    <div>
-                      <dt>Colecciones</dt>
-                      <dd>{getProjectMetrics(selected.project).collections}</dd>
-                    </div>
-                    <div>
-                      <dt>Recursos</dt>
-                      <dd>{getProjectMetrics(selected.project).assets}</dd>
-                    </div>
-                    {selected.diskVersion !== undefined ? (
-                      <div>
-                        <dt>Versión en disco</dt>
-                        <dd>v{selected.diskVersion}</dd>
-                      </div>
-                    ) : null}
-                    {selected.diskSiteStatus ? (
-                      <div>
-                        <dt>Sitio público</dt>
-                        <dd>
-                          {selected.diskSiteStatus === "synced"
-                            ? "Actualizado"
-                            : "Anterior conservado"}
-                        </dd>
-                      </div>
-                    ) : null}
-                  </dl>
-                  <div className="dashboard-store-detail__actions">
-                    <Button
-                      variant="primary"
-                      icon={ArrowUpRight}
-                      onClick={() => onOpen(selected.id)}
-                    >
-                      Abrir tienda
-                    </Button>
-                    {onOpenSite ? (
-                      <Button
-                        variant="secondary"
-                        icon={ArrowUpRight}
-                        disabled={siteOpeningId === selected.id}
-                        onClick={() => void openSite(selected.id)}
-                      >
-                        {siteOpeningId === selected.id ? "Abriendo sitio" : "Abrir sitio público"}
-                      </Button>
-                    ) : null}
-                    {onOpenFolder ? (
-                      <Button
-                        variant="secondary"
-                        icon={FolderOpen}
-                        onClick={() => void onOpenFolder(selected.id)}
-                      >
-                        Abrir carpeta
-                      </Button>
-                    ) : null}
-                    <Button
-                      variant="secondary"
-                      icon={CloudArrowDown}
-                      disabled={backupId === selected.id}
-                      onClick={() => void createBackup(selected.id)}
-                    >
-                      {backupId === selected.id ? "Preparando respaldo" : "Respaldo ahora"}
-                    </Button>
-                    {onDownloadBackup ? (
-                      <Button
-                        variant="secondary"
-                        icon={DownloadSimple}
-                        onClick={() => void onDownloadBackup(selected.id)}
-                      >
-                        Descargar respaldo
-                      </Button>
-                    ) : null}
-                    <Button
-                      variant="secondary"
-                      icon={Copy}
-                      onClick={() => void onDuplicate(selected.id)}
-                    >
-                      Duplicar
-                    </Button>
-                    <Button
-                      variant={selected.status === "archived" ? "secondary" : "danger"}
-                      icon={selected.status === "archived" ? ArrowCounterClockwise : Archive}
-                      onClick={() => void onArchive(selected.id, selected.status !== "archived")}
-                    >
-                      {selected.status === "archived" ? "Restaurar" : "Archivar"}
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <div className="dashboard-store-detail__empty">
-                  <Package aria-hidden size={26} />
-                  <strong>Seleccioná una tienda</strong>
-                  <p>Elegí un proyecto para ver sus datos y acciones.</p>
-                </div>
-              )}
-            </aside>
+            <ProjectCard
+              project={selected}
+              detailRef={selectedPanelRef}
+              backupId={backupId}
+              siteOpeningId={siteOpeningId}
+              onClose={() => setSelectedId(undefined)}
+              onOpen={onOpen}
+              onOpenSite={onOpenSite ? openSite : undefined}
+              onOpenFolder={onOpenFolder}
+              onBackup={createBackup}
+              onDownloadBackup={onDownloadBackup}
+              onDuplicate={onDuplicate}
+              onArchive={onArchive}
+            />
           </div>
         </section>
       </div>
