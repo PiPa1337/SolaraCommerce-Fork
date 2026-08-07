@@ -83,8 +83,22 @@ export {
 export type { RepeaterItemField } from "@solara/module-sdk";
 
 // The registry is intentionally heterogeneous because each module owns its settings schema.
+// Settings = any conserva la varianza previa: con el default unknown, settingsFields no sería
+// asignable desde los miembros concretos y moduleRegistry dejaría de tipar.
 // biome-ignore lint/suspicious/noExplicitAny: a runtime registry cannot retain each generic member separately
-export type RegisteredModule = ModuleDefinition<any>;
+export type RegisteredModule = ModuleDefinition<any, any>;
+
+export type AnyLegacyModule = (typeof officialModules)[number];
+export type AnyCatalogModernModule = (typeof catalogModernModules)[number];
+export type AnyModule = AnyLegacyModule | AnyCatalogModernModule;
+export type ModuleId = AnyModule["manifest"]["id"];
+export type ModuleById = { [Id in ModuleId]: Extract<AnyModule, { manifest: { id: Id } }> };
+
+export function getTypedModule<Id extends ModuleId>(id: Id): ModuleById[Id] | undefined;
+export function getTypedModule(id: string): AnyModule | undefined;
+export function getTypedModule(id: string): RegisteredModule | undefined {
+  return moduleRegistry[id] as RegisteredModule | undefined;
+}
 
 export const moduleRegistry: Record<string, RegisteredModule> = Object.fromEntries(
   [...officialModules, ...catalogModernModules].map((definition) => [

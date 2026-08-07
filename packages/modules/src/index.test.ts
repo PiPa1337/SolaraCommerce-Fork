@@ -2,10 +2,12 @@ import type { StoreSection } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { referenceStore } from "@solara/project-schema/fixture";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import {
+  catalogModernModules,
   createModuleSection,
   getModuleDefinition,
+  getTypedModule,
   MODULE_STYLE_BLOCKS,
   moduleRegistry,
   officialModules,
@@ -240,5 +242,30 @@ describe("official module system", () => {
 
     expect(html).not.toContain("solara-trust-grid");
     expect(html).not.toContain("Confirmamos disponibilidad");
+  });
+});
+
+describe("registro de módulos tipado", () => {
+  it("resuelve el módulo exacto por id", () => {
+    const hero = getTypedModule("catalog-hero");
+    expect(hero?.manifest.id).toBe("catalog-hero");
+    expect(getTypedModule("no-existe")).toBeUndefined();
+  });
+
+  it("afina el tipo por id del módulo", () => {
+    const hero = getTypedModule("catalog-hero");
+    expectTypeOf(hero).toMatchTypeOf<{ manifest: { id: "catalog-hero" } } | undefined>();
+    expectTypeOf(hero).not.toMatchTypeOf<{ manifest: { id: "split-hero" } }>();
+    expectTypeOf(getTypedModule("split-hero")).toMatchTypeOf<
+      { manifest: { id: "split-hero" } } | undefined
+    >();
+  });
+
+  it("mantiene ids únicos en el registro", () => {
+    const ids = [...officialModules, ...catalogModernModules].map(
+      (definition) => definition.manifest.id,
+    );
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toContain("catalog-hero");
   });
 });

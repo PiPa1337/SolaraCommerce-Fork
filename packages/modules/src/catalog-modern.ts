@@ -40,8 +40,8 @@ const modernItemsZone = [
   },
 ] as const;
 
-const modernManifest = (input: {
-  id: string;
+const modernManifest = <Id extends string>(input: {
+  id: Id;
   name: string;
   description: string;
   slots: readonly (
@@ -69,7 +69,10 @@ const announcementSettings = z.object({
   linkHref: z.string().default(""),
 });
 
-export const catalogAnnouncement: ModuleDefinition<z.infer<typeof announcementSettings>> = {
+export const catalogAnnouncement: ModuleDefinition<
+  "catalog-announcement",
+  z.infer<typeof announcementSettings>
+> = {
   manifest: modernManifest({
     id: "catalog-announcement",
     name: "Barra informativa moderna",
@@ -106,7 +109,7 @@ const headerSettings = z.object({
   searchLabel: z.string().default("Buscar productos"),
 });
 
-export const catalogHeader: ModuleDefinition<z.infer<typeof headerSettings>> = {
+export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof headerSettings>> = {
   manifest: modernManifest({
     id: "catalog-header",
     name: "Navbar de catálogo",
@@ -293,7 +296,7 @@ function renderCatalogHeroMedia(
   });
 }
 
-export const catalogHero: ModuleDefinition<z.infer<typeof heroSettings>> = {
+export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSettings>> = {
   manifest: modernManifest({
     id: "catalog-hero",
     name: "Hero de catálogo",
@@ -423,7 +426,10 @@ const brandStripSettings = z.object({
   limit: z.number().int().min(1).max(12).default(5),
 });
 
-export const catalogBrandStrip: ModuleDefinition<z.infer<typeof brandStripSettings>> = {
+export const catalogBrandStrip: ModuleDefinition<
+  "catalog-brand-strip",
+  z.infer<typeof brandStripSettings>
+> = {
   manifest: modernManifest({
     id: "catalog-brand-strip",
     name: "Franja de marcas",
@@ -530,7 +536,10 @@ function modernProductCard(
   return `<article class="catalog-product-card" data-product-card data-product-id="${escapeAttribute(product.id)}" data-product-title="${escapeAttribute(product.title)}"${category ? ` data-product-category="${escapeAttribute(category.id)}"` : ""}><a class="catalog-product-media" href="/productos/${escapeAttribute(product.slug)}/" aria-label="Ver ${escapeAttribute(product.title)}">${image}</a><div class="catalog-product-card-copy">${category ? `<p class="catalog-product-category">${escapeHtml(category.title)}</p>` : ""}<h3><a href="/productos/${escapeAttribute(product.slug)}/">${escapeHtml(product.title)}</a></h3><p class="catalog-product-price"><strong>${escapeHtml(formatMoney(price))}</strong>${compare && compare > price ? ` <del>${escapeHtml(formatMoney(compare))}</del><span class="catalog-discount">-${Math.round((1 - price / compare) * 100)}%</span>` : ""}</p></div></article>`;
 }
 
-export const catalogProductGrid: ModuleDefinition<z.infer<typeof productGridSettings>> = {
+export const catalogProductGrid: ModuleDefinition<
+  "catalog-product-grid",
+  z.infer<typeof productGridSettings>
+> = {
   manifest: modernManifest({
     id: "catalog-product-grid",
     name: "Grilla moderna de productos",
@@ -605,7 +614,10 @@ const productDetailSettings = z.object({
   deliveryNote: z.string().default("Coordinamos entrega y pago por WhatsApp."),
 });
 
-export const catalogProductDetail: ModuleDefinition<z.infer<typeof productDetailSettings>> = {
+export const catalogProductDetail: ModuleDefinition<
+  "catalog-product-detail",
+  z.infer<typeof productDetailSettings>
+> = {
   manifest: modernManifest({
     id: "catalog-product-detail",
     name: "Detalle moderno de producto",
@@ -766,7 +778,10 @@ const categoryBentoSettings = z.object({
     .default([]),
 });
 
-export const catalogCategoryBento: ModuleDefinition<z.infer<typeof categoryBentoSettings>> = {
+export const catalogCategoryBento: ModuleDefinition<
+  "catalog-category-bento",
+  z.infer<typeof categoryBentoSettings>
+> = {
   manifest: modernManifest({
     id: "catalog-category-bento",
     name: "Mosaico de categorías",
@@ -876,7 +891,10 @@ const testimonialSettings = z.object({
   items: z.array(testimonialSchema).max(8).default([]),
 });
 
-export const catalogTestimonials: ModuleDefinition<z.infer<typeof testimonialSettings>> = {
+export const catalogTestimonials: ModuleDefinition<
+  "catalog-testimonials",
+  z.infer<typeof testimonialSettings>
+> = {
   manifest: modernManifest({
     id: "catalog-testimonials",
     name: "Testimonios",
@@ -924,7 +942,10 @@ const newsletterSettings = z.object({
   actionHref: z.string().default("/contacto/"),
 });
 
-export const catalogNewsletterCta: ModuleDefinition<z.infer<typeof newsletterSettings>> = {
+export const catalogNewsletterCta: ModuleDefinition<
+  "catalog-newsletter-cta",
+  z.infer<typeof newsletterSettings>
+> = {
   manifest: modernManifest({
     id: "catalog-newsletter-cta",
     name: "CTA de novedades",
@@ -957,7 +978,10 @@ const modernFooterSettings = z.object({
   showPolicies: z.boolean().default(true),
 });
 
-export const catalogFooter: ModuleDefinition<z.infer<typeof modernFooterSettings>> = {
+export const catalogFooter: ModuleDefinition<
+  "catalog-footer",
+  z.infer<typeof modernFooterSettings>
+> = {
   manifest: modernManifest({
     id: "catalog-footer",
     name: "Footer de catálogo",
@@ -1019,7 +1043,10 @@ const modernCartSettings = z.object({
   checkoutLabel: z.string().default("Continuar por WhatsApp"),
 });
 
-export const catalogCartDrawer: ModuleDefinition<z.infer<typeof modernCartSettings>> = {
+export const catalogCartDrawer: ModuleDefinition<
+  "catalog-cart-drawer",
+  z.infer<typeof modernCartSettings>
+> = {
   manifest: modernManifest({
     id: "catalog-cart-drawer",
     name: "Carrito moderno",

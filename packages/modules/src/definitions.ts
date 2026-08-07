@@ -47,7 +47,10 @@ const announcementSettings = z.object({
   linkHref: z.string().default(""),
 });
 
-export const announcementBar: ModuleDefinition<z.infer<typeof announcementSettings>> = {
+export const announcementBar: ModuleDefinition<
+  "announcement-bar",
+  z.infer<typeof announcementSettings>
+> = {
   manifest: {
     id: "announcement-bar",
     name: "Barra informativa",
@@ -86,7 +89,10 @@ const headerSettings = z.object({
   cartLabel: z.string().default("Carrito"),
 });
 
-export const editorialHeader: ModuleDefinition<z.infer<typeof headerSettings>> = {
+export const editorialHeader: ModuleDefinition<
+  "editorial-header",
+  z.infer<typeof headerSettings>
+> = {
   manifest: {
     id: "editorial-header",
     name: "Header editorial",
@@ -225,7 +231,7 @@ function renderEditorialHeroMedia(context: RenderContext<HeroSettings>): string 
   return `<figure class="solara-hero-media" data-motion-zone="media">${image}</figure>`;
 }
 
-export const heroMedia: ModuleDefinition<z.infer<typeof heroMediaSettings>> = {
+export const heroMedia: ModuleDefinition<"hero-media", z.infer<typeof heroMediaSettings>> = {
   manifest: {
     id: "hero-media",
     name: "Hero audiovisual",
@@ -393,7 +399,7 @@ export const heroMedia: ModuleDefinition<z.infer<typeof heroMediaSettings>> = {
   },
 };
 
-export const splitHero: ModuleDefinition<z.infer<typeof heroSettings>> = {
+export const splitHero: ModuleDefinition<"split-hero", z.infer<typeof heroSettings>> = {
   manifest: {
     id: "split-hero",
     name: "Hero dividido",
@@ -453,7 +459,7 @@ export const splitHero: ModuleDefinition<z.infer<typeof heroSettings>> = {
   },
 };
 
-export const editorialHero: ModuleDefinition<z.infer<typeof heroSettings>> = {
+export const editorialHero: ModuleDefinition<"editorial-hero", z.infer<typeof heroSettings>> = {
   manifest: {
     id: "editorial-hero",
     name: "Hero editorial",
@@ -518,7 +524,10 @@ const collectionSettings = z.object({
   limit: z.number().int().min(1).max(12).default(6),
 });
 
-export const collectionGrid: ModuleDefinition<z.infer<typeof collectionSettings>> = {
+export const collectionGrid: ModuleDefinition<
+  "collection-grid",
+  z.infer<typeof collectionSettings>
+> = {
   manifest: {
     id: "collection-grid",
     name: "Grilla de colecciones",
@@ -565,7 +574,10 @@ const productGridSettings = z.object({
   limit: z.number().int().min(1).max(48).default(12),
 });
 
-export const editorialProductGrid: ModuleDefinition<z.infer<typeof productGridSettings>> = {
+export const editorialProductGrid: ModuleDefinition<
+  "editorial-product-grid",
+  z.infer<typeof productGridSettings>
+> = {
   manifest: {
     id: "editorial-product-grid",
     name: "Grilla editorial de productos",
@@ -597,7 +609,10 @@ export const editorialProductGrid: ModuleDefinition<z.infer<typeof productGridSe
   },
 };
 
-export const compactProductGrid: ModuleDefinition<z.infer<typeof productGridSettings>> = {
+export const compactProductGrid: ModuleDefinition<
+  "compact-product-grid",
+  z.infer<typeof productGridSettings>
+> = {
   manifest: {
     id: "compact-product-grid",
     name: "Grilla compacta de productos",
@@ -636,7 +651,10 @@ const productDetailSettings = z.object({
   deliveryNote: z.string().default("Coordinamos entrega y pago por WhatsApp."),
 });
 
-export const productDetail: ModuleDefinition<z.infer<typeof productDetailSettings>> = {
+export const productDetail: ModuleDefinition<
+  "product-detail",
+  z.infer<typeof productDetailSettings>
+> = {
   manifest: {
     id: "product-detail",
     name: "Detalle de producto",
@@ -762,7 +780,10 @@ const imageTextSettings = z.object({
   actionHref: z.string().default(""),
 });
 
-export const imageTextContent: ModuleDefinition<z.infer<typeof imageTextSettings>> = {
+export const imageTextContent: ModuleDefinition<
+  "image-text-content",
+  z.infer<typeof imageTextSettings>
+> = {
   manifest: {
     id: "image-text-content",
     name: "Contenido imagen y texto",
@@ -835,7 +856,7 @@ const trustSettings = z.object({
   contactTitle: z.string().default("Atención directa"),
 });
 
-export const trustStrip: ModuleDefinition<z.infer<typeof trustSettings>> = {
+export const trustStrip: ModuleDefinition<"trust-strip", z.infer<typeof trustSettings>> = {
   manifest: {
     id: "trust-strip",
     name: "Beneficios y confianza",
@@ -899,7 +920,7 @@ const cartSettings = z.object({
   checkoutLabel: z.string().default("Continuar por WhatsApp"),
 });
 
-export const cartDrawer: ModuleDefinition<z.infer<typeof cartSettings>> = {
+export const cartDrawer: ModuleDefinition<"cart-drawer", z.infer<typeof cartSettings>> = {
   manifest: {
     id: "cart-drawer",
     name: "Carrito lateral",
@@ -949,7 +970,10 @@ const footerSettings = z.object({
   showPolicies: z.boolean().default(true),
 });
 
-export const editorialFooter: ModuleDefinition<z.infer<typeof footerSettings>> = {
+export const editorialFooter: ModuleDefinition<
+  "editorial-footer",
+  z.infer<typeof footerSettings>
+> = {
   manifest: {
     id: "editorial-footer",
     name: "Footer editorial",

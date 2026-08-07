@@ -35,8 +35,8 @@ export type RenderPageType =
   | "cart"
   | "checkout";
 
-export interface ModuleManifest {
-  id: string;
+export interface ModuleManifest<Id extends string = string> {
+  id: Id;
   name: string;
   description: string;
   version: 1;
@@ -118,8 +118,8 @@ export type SettingsFieldDefinition<Settings> =
       fields: readonly RepeaterItemField[];
     });
 
-export interface ModuleDefinition<Settings> {
-  manifest: ModuleManifest;
+export interface ModuleDefinition<Id extends string = string, Settings = unknown> {
+  manifest: ModuleManifest<Id>;
   settingsSchema: ZodType<Settings>;
   settingsFields: readonly SettingsFieldDefinition<Settings>[];
   motionZones: readonly MotionZoneDefinition[];
