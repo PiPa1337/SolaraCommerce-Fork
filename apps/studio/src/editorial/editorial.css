@@ -2,8 +2,7 @@
 /* Phase 4: warm editorial system */
 .button,
 .icon-button,
-.studio-nav button,
-.store-open {
+.studio-nav button {
   transition:
     color 180ms ease,
     background 180ms ease,
@@ -14,8 +13,7 @@
 
 .button:not(:disabled):active,
 .icon-button:not(:disabled):active,
-.studio-nav button:not(:disabled):active,
-.store-open:not(:disabled):active {
+.studio-nav button:not(:disabled):active {
   transform: translateY(1px) scale(0.99);
 }
 

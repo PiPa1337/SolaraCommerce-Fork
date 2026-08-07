@@ -288,13 +288,16 @@ export function App() {
               | (StoredProject & { diskVersion?: number })
               | undefined;
             if (!selected?.project) {
-              setNotice("La tienda ya no existe en disco. Tu borrador se conservó.");
-              return;
+              return {
+                ok: false as const,
+                message: "La tienda ya no existe en disco. Tu borrador se conservó en este navegador.",
+              };
             }
             await clearRecoveryDraft(selected.id);
             setActiveDiskVersion(selected.diskVersion ?? null);
             setActiveDiskBaseProject(selected.project);
             setActive(selected.project);
+            return { ok: true as const };
           }}
           onDuplicateDraft={async (draft) => {
             const timestamp = new Date().toISOString();
@@ -318,6 +321,7 @@ export function App() {
             await refresh();
             setActiveDiskBaseProject(duplicate);
             setActive(duplicate);
+            return { ok: true as const };
           }}
         />
       </Suspense>

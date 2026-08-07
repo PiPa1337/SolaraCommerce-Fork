@@ -65,6 +65,7 @@ const tabActions: Array<{ tab: string; heading: string; action: string }> = [
   { tab: "Constructor", heading: "Constructor", action: "Agregar sección" },
   { tab: "Recursos", heading: "Recursos", action: "Cargar imágenes" },
   { tab: "SEO", heading: "SEO y Google", action: "Descargar informe" },
+  { tab: "Tema", heading: "Tema", action: "Modo" },
   { tab: "Exportar", heading: "Exportar", action: "Exportar borrador" },
 ];
 
@@ -137,7 +138,7 @@ test("cada pestaña del Studio no desborda y conserva su acción principal", asy
       await expectNoHorizontalOverflow(page, `Pestaña ${tab} ${viewport.name}`);
       await expectActionUsable(
         page,
-        page.getByRole("button", { name: action, exact: true }),
+        page.getByRole(tab === "Tema" ? "combobox" : "button", { name: action, exact: true }),
         action,
       );
     }

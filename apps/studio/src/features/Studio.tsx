@@ -100,8 +100,8 @@ export function Studio({
   diskVersion?: number | null;
   diskBaseProject?: StoreProjectV1;
   onDiskSaved?(receipt: LocalSaveReceipt): void;
-  onReloadFromDisk?(): Promise<void>;
-  onDuplicateDraft?(project: StoreProjectV1): Promise<void>;
+  onReloadFromDisk?(): Promise<{ ok: true } | { ok: false; message: string }>;
+  onDuplicateDraft?(project: StoreProjectV1): Promise<{ ok: true } | { ok: false; message: string }>;
 }) {
   const [history, setHistory] = useState<HistoryState>(() => createHistory(initialProject));
   const [tab, setTab] = useState<StudioTab>("guided");
@@ -383,7 +383,6 @@ export function Studio({
               role="tab"
               aria-selected={tab === id}
               aria-controls={editorPaneId}
-              aria-expanded={tab === id ? editorOpen : false}
               tabIndex={tab === id ? 0 : -1}
               onClick={() => selectTab(id)}
             >
@@ -455,7 +454,17 @@ export function Studio({
                 data-testid="ui-conflict-reload"
                 onClick={() => {
                   setConflict(null);
-                  void onReloadFromDisk?.().catch(() => undefined);
+                  void onReloadFromDisk?.()
+                    .then((outcome) => {
+                      if (outcome && !outcome.ok) setNotice(outcome.message);
+                    })
+                    .catch((reason) =>
+                      setNotice(
+                        reason instanceof Error
+                          ? reason.message
+                          : "No se pudo recargar desde disco.",
+                      ),
+                    );
                 }}
               >
                 Recargar desde disco
@@ -465,7 +474,17 @@ export function Studio({
                 data-testid="ui-conflict-duplicate"
                 onClick={() => {
                   setConflict(null);
-                  void onDuplicateDraft?.(project).catch(() => undefined);
+                  void onDuplicateDraft?.(project)
+                    .then((outcome) => {
+                      if (outcome && !outcome.ok) setNotice(outcome.message);
+                    })
+                    .catch((reason) =>
+                      setNotice(
+                        reason instanceof Error
+                          ? reason.message
+                          : "No se pudo duplicar el borrador.",
+                      ),
+                    );
                 }}
               >
                 Duplicar con mi borrador
