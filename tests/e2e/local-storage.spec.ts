@@ -40,7 +40,11 @@ test("el lanzador persiste el proyecto y el sitio fuera de IndexedDB", async ({ 
   try {
     await waitForServer(url);
     await page.goto(url);
-    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+    // La primera ejecución crea Predeterminado y Predeterminado Revamp y
+    // exporta el sitio de cada una antes de mostrar el dashboard.
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+      timeout: 20_000,
+    });
     await expect
       .poll(() => existsSync(join(applicationRoot, "proyectos")), { timeout: 15_000 })
       .toBe(true);
@@ -56,10 +60,14 @@ test("el lanzador persiste el proyecto y el sitio fuera de IndexedDB", async ({ 
       const response = await fetch("/__solara/storage/projects", { credentials: "same-origin" });
       return response.json();
     });
-    expect(manifests.projects).toHaveLength(1);
-    expect(manifests.projects[0].version).toBe(2);
+    expect(manifests.projects).toHaveLength(2);
+    const demoProject = manifests.projects.find(
+      (project) => project.projectId === "store-modo-sur-demo",
+    );
+    expect(demoProject, "el proyecto editado debe estar en disco").toBeTruthy();
+    expect(demoProject?.version).toBe(2);
 
-    const folder = manifests.projects[0].folder as string;
+    const folder = demoProject?.folder as string;
     const manifest = JSON.parse(
       readFileSync(join(applicationRoot, "proyectos", folder, "manifest.json"), "utf8"),
     ) as { current: { version: number }; lastValidSite?: { directoryPath: string } };
@@ -76,7 +84,11 @@ test("el lanzador persiste el proyecto y el sitio fuera de IndexedDB", async ({ 
       const response = await fetch("/__solara/storage/projects", { credentials: "same-origin" });
       return response.json();
     });
-    expect(shortcutListing.projects[0].version).toBe(3);
+    expect(shortcutListing.projects).toHaveLength(2);
+    const demoShortcut = shortcutListing.projects.find(
+      (project) => project.projectId === "store-modo-sur-demo",
+    );
+    expect(demoShortcut?.version).toBe(3);
 
     await page.getByRole("button", { name: "Volver a tiendas" }).click();
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();

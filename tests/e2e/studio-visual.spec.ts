@@ -185,7 +185,7 @@ test("dashboard permite abrir, buscar, cambiar vista, respaldar y administrar un
 
   const search = page.getByRole("searchbox", { name: "Buscar tienda" });
   await search.fill("predeterminado");
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
   await search.fill("no existe");
   await expect(page.getByText("No hay coincidencias")).toBeVisible();
   await search.fill("");
@@ -207,7 +207,7 @@ test("dashboard permite abrir, buscar, cambiar vista, respaldar y administrar un
   expect(download.suggestedFilename()).toMatch(/\.solara\.json$/);
 
   await detail.getByRole("button", { name: "Duplicar" }).click();
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("3 visibles");
 
   await detail.getByRole("button", { name: "Archivar" }).click();
   await page.locator(".dashboard-cosmic-select select").first().selectOption("archived");

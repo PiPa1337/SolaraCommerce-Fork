@@ -86,7 +86,14 @@ test("la home moderna prioriza el catálogo y conserva su densidad responsive", 
     overflow: getComputedStyle(element).overflow,
   }));
   expect(heroMetrics.overflow).toBe("visible");
-  expect(heroMetrics.scrollHeight - heroMetrics.clientHeight).toBeLessThanOrEqual(8);
+  // La entrada cinética (palabras rotadas 2° con stagger) extiende
+  // temporalmente el scrollHeight; la densidad se mide sobre el layout
+  // asentado, que es el que se conserva tras la animación.
+  await expect
+    .poll(() => heroTitle.evaluate((element) => element.scrollHeight - element.clientHeight), {
+      message: "el título del hero debe asentarse sin desbordar su caja",
+    })
+    .toBeLessThanOrEqual(8);
   await expect(page.locator(".catalog-hero-stats > div")).toHaveCount(3);
   await expect(page.locator('[data-stat="products"] dt')).toHaveText("50");
   await expect(page.locator('[data-stat="categories"] dt')).toHaveText("8");
