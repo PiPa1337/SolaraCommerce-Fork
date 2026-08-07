@@ -18,6 +18,11 @@ import {
 } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { strFromU8, unzipSync } from "fflate";
+import {
+  assertNoReparsePoints,
+  resolvePortableLayout,
+  resolvePortablePath,
+} from "./portable-layout.mjs";
 
 const MANIFEST_FORMAT = "solara-local-project";
 const MANIFEST_VERSION = 1;
@@ -196,11 +201,13 @@ async function fileExists(pathname) {
 }
 
 export function createLocalProjectStorage(options = {}) {
-  const applicationRoot = resolve(options.applicationRoot ?? process.cwd());
-  const projectsRoot = resolve(options.projectsRoot ?? join(applicationRoot, "proyectos"));
-  const stagingRoot = resolve(
-    options.stagingRoot ?? join(applicationRoot, ".solara-runtime", "storage"),
-  );
+  const defaultLayout = resolvePortableLayout({
+    mode: "development",
+    cwd: options.applicationRoot ?? process.cwd(),
+  });
+  const applicationRoot = resolve(options.applicationRoot ?? defaultLayout.portableRoot);
+  const projectsRoot = resolve(options.projectsRoot ?? defaultLayout.projectsRoot);
+  const stagingRoot = resolve(options.stagingRoot ?? defaultLayout.transactionRoot);
   const maxUploadBytes = options.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES;
   const maxExtractedBytes = options.maxExtractedBytes ?? DEFAULT_MAX_EXTRACTED_BYTES;
   const maxFiles = options.maxFiles ?? DEFAULT_MAX_FILES;
@@ -210,6 +217,8 @@ export function createLocalProjectStorage(options = {}) {
   async function ensureRoots() {
     await mkdir(projectsRoot, { recursive: true });
     await mkdir(stagingRoot, { recursive: true });
+    await assertNoReparsePoints(applicationRoot, projectsRoot);
+    await assertNoReparsePoints(applicationRoot, stagingRoot);
   }
 
   async function findManifest(projectId) {
@@ -220,6 +229,7 @@ export function createLocalProjectStorage(options = {}) {
       if (!entry.isDirectory()) continue;
       const manifestPath = join(projectsRoot, entry.name, "manifest.json");
       try {
+        await assertNoReparsePoints(projectsRoot, join(projectsRoot, entry.name));
         const manifest = await readJson(manifestPath);
         if (manifest.format === MANIFEST_FORMAT && manifest.projectId === projectId) {
           return {
@@ -245,12 +255,18 @@ export function createLocalProjectStorage(options = {}) {
       if (!entry.isDirectory()) continue;
       const root = join(projectsRoot, entry.name);
       try {
+        await assertNoReparsePoints(projectsRoot, root);
         const manifest = await readJson(join(root, "manifest.json"));
         if (manifest.format !== MANIFEST_FORMAT || manifest.manifestVersion !== MANIFEST_VERSION) {
           throw new Error("Manifest local incompatible.");
         }
         const currentPath = manifestPath(root, manifest.current.archivePath);
         if (!(await fileExists(currentPath))) throw new Error("No existe la versión actual.");
+        if (manifest.lastValidSite?.directoryPath) {
+          // Los manifests se pueden copiar entre equipos, por eso sólo se
+          // aceptan rutas relativas a la raíz de la instalación portable.
+          resolvePortablePath(applicationRoot, manifest.lastValidSite.directoryPath);
+        }
         projects.push({
           projectId: manifest.projectId,
           name: manifest.storeName,
@@ -381,6 +397,7 @@ export function createLocalProjectStorage(options = {}) {
       mkdir(manualBackupsRoot, { recursive: true }),
       mkdir(sitesRoot, { recursive: true }),
     ]);
+    await assertNoReparsePoints(projectsRoot, storeRoot);
     const savedAt = new Date();
     const key = versionKey(metadata.slug, savedAt, metadata.version);
     const archiveName = `${key}.solara.zip`;
@@ -483,9 +500,10 @@ export function createLocalProjectStorage(options = {}) {
     if (!found || !found.manifest.lastValidSite?.directoryPath) return undefined;
     const directory = assertInside(
       applicationRoot,
-      resolve(applicationRoot, found.manifest.lastValidSite.directoryPath),
+      resolvePortablePath(applicationRoot, found.manifest.lastValidSite.directoryPath),
     );
     if (!(await directoryExists(directory))) return undefined;
+    await assertNoReparsePoints(applicationRoot, directory);
     return directory;
   }
 

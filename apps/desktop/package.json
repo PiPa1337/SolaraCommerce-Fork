@@ -1,0 +1,21 @@
+{
+  "name": "@solara/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SolaraCommerce Portable para Windows",
+  "author": "SolaraCommerce",
+  "type": "module",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "package": "corepack pnpm run build && node scripts/package.mjs",
+    "typecheck": "node --check src/main.mjs && node --check src/preload.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "@solara/studio": "workspace:*",
+    "electron": "37.3.1",
+    "electron-builder": "26.0.12",
+    "vite": "7.1.3"
+  }
+}

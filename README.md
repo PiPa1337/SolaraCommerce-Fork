@@ -405,3 +405,32 @@ los solicita por `postMessage`, los hidrata una sola vez y reutiliza sus URLs
 el sandbox del preview. Durante esa hidratación, las imágenes del preview se
 marcan como eager para que el editor no dependa de desplazar el iframe; el ZIP
 público conserva `loading="lazy"` donde corresponde.
+
+## Distribución portable para Windows
+
+El checkout sigue siendo el modo de desarrollo. Para crear una carpeta que se
+pueda copiar a otro equipo sin Node, pnpm ni el navegador del sistema:
+
+```powershell
+corepack pnpm install --frozen-lockfile
+corepack pnpm desktop:build
+corepack pnpm desktop:package
+corepack pnpm portable:smoke
+corepack pnpm test:e2e:portable
+```
+
+La salida es `.release/portable/SolaraCommerce-Portable/`. Incluye Electron,
+Chromium, Studio compilado y el shell `solara://studio/`. `proyectos/` es la
+fuente de verdad de las tiendas; `.solara-runtime/` contiene el perfil aislado,
+logs y transacciones regenerables. Copiá la carpeta completa, no sólo el `.exe`.
+
+`Abrir SolaraCommerce.cmd` abre el `.exe` adyacente cuando existe y conserva el
+servidor HTTP de desarrollo como fallback cuando se ejecuta desde un checkout.
+La distribución puede moverse a rutas con espacios o Unicode y dos copias en
+carpetas distintas pueden ejecutarse simultáneamente. Los sitios exportados se
+abren mediante un servidor efímero loopback; `file://` no es el modo soportado
+para índices, búsqueda y mejoras JavaScript.
+
+La arquitectura, los límites de seguridad y la actualización de una copia están
+en [`docs/PORTABILITY.md`](docs/PORTABILITY.md). `portable:clean` elimina sólo
+la salida generada bajo `.release/portable/`.

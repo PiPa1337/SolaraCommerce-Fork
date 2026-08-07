@@ -1,0 +1,64 @@
+/** Smoke test determinista para una carpeta portable ya empaquetada. */
+
+import { spawn } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { cp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
+const source = resolve(root, ".release/portable/SolaraCommerce-Portable");
+const executable = join(source, "SolaraCommerce.exe");
+if (!existsSync(executable)) throw new Error("No existe la distribución portable para probar.");
+
+const testRoot = mkdtempSync(join(tmpdir(), "solara-portable-smoke-"));
+const copies = [
+  join(testRoot, "Copia A con espacios - á"),
+  join(testRoot, "Copia B con espacios - β"),
+];
+try {
+  await Promise.all(copies.map((copy) => cp(source, copy, { recursive: true })));
+  const children = copies.map((copy) => {
+    const child = spawn(join(copy, "SolaraCommerce.exe"), ["--solara-smoke"], {
+      cwd: copy,
+      env: { ...process.env, SOLARA_PORTABLE_SMOKE: "1" },
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    return new Promise((resolveExit, reject) => {
+      const timer = setTimeout(() => {
+        child.kill();
+        reject(new Error("Una copia portable no finalizó el smoke test a tiempo."));
+      }, 20_000);
+      child.once("error", reject);
+      child.once("exit", (code) => {
+        clearTimeout(timer);
+        resolveExit(code ?? 1);
+      });
+    });
+  });
+  const exitCodes = await Promise.all(children);
+  if (exitCodes.some((code) => code !== 0)) {
+    throw new Error(`Una copia portable terminó con códigos ${exitCodes.join(", ")}.`);
+  }
+  for (const copy of copies) {
+    const instance = join(copy, ".solara-runtime", "instance.json");
+    if (!existsSync(instance)) throw new Error("El smoke test no creó instance.json.");
+    const parsed = JSON.parse(readFileSync(instance, "utf8"));
+    if (parsed.format !== "solara-portable-instance" || parsed.layoutVersion !== 1) {
+      throw new Error("instance.json no tiene el contrato portable esperado.");
+    }
+    if (!existsSync(join(copy, "proyectos")))
+      throw new Error("La copia no tiene proyectos aislados.");
+  }
+  if (
+    join(copies[0], ".solara-runtime", "electron-user-data") ===
+    join(copies[1], ".solara-runtime", "electron-user-data")
+  ) {
+    throw new Error("Las copias portable comparten perfil.");
+  }
+  console.log("portable smoke: OK");
+} finally {
+  rmSync(testRoot, { recursive: true, force: true });
+}

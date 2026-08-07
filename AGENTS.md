@@ -165,10 +165,16 @@ corepack pnpm build
 corepack pnpm benchmark:export
 corepack pnpm test:e2e
 corepack pnpm test:e2e:release       # Node 22 + navegadores instalados
+corepack pnpm desktop:build
+corepack pnpm desktop:package
+corepack pnpm portable:smoke
+corepack pnpm test:e2e:portable
 ```
 
 Otros gates están documentados en [`docs/TESTING.md`](docs/TESTING.md). El
 lanzador de Windows es [`Abrir SolaraCommerce.cmd`](Abrir%20SolaraCommerce.cmd).
+La guía de distribución autocontenida está en
+[`docs/PORTABILITY.md`](docs/PORTABILITY.md).
 
 ## Zonas sensibles y límites conocidos
 
@@ -181,6 +187,11 @@ lanzador de Windows es [`Abrir SolaraCommerce.cmd`](Abrir%20SolaraCommerce.cmd).
 - El servidor local usa `unzipSync` para validar/extraer ZIP; uploads y límites
   están protegidos, pero la extracción todavía consume memoria proporcional al
   archivo. Ver [`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md).
+- El shell Electron portable y el launcher HTTP comparten el handler de
+  `packages/exporter/scripts/solara-request-handler.mjs`; cualquier cambio de
+  endpoints debe probar ambos transportes.
+- El artefacto portable es una carpeta `win-unpacked`, no un instalador. No se
+  deben mover `proyectos/` o `.solara-runtime/` fuera de la carpeta del `.exe`.
 - La matriz release exige Node 22. El desarrollo puede ejecutarse con una versión
   posterior, pero no debe presentarse como validación release.
 - El checkout termina en WhatsApp y puede limitar la elegibilidad de Merchant.

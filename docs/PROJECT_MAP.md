@@ -30,6 +30,9 @@ buscá sus tests con `rg`.
 | Tests E2E | `tests/e2e/` | `studio-server.ts`, helpers | Chromium local; release habilita Firefox/WebKit. |
 | CI/release | `.github/workflows/`, `scripts/` | package scripts | CI usa Node 22 y pnpm 10.15.1; no introducir comandos no documentados. |
 | Launcher Windows | `Abrir SolaraCommerce.cmd`, `scripts/open-solara.ps1` | `serve.mjs`, `.solara-runtime` | No matar procesos ajenos; revisar puertos 4173–4180. |
+| Shell portable Windows | `apps/desktop/src/main.mjs` | `preload.mjs`, `vite.config.mjs`, `electron-builder.yml` | Usa `solara://studio`, perfil junto al ejecutable y lock por carpeta. |
+| Layout portable | `packages/exporter/scripts/portable-layout.mjs` | `local-project-storage.mjs`, `docs/PORTABILITY.md` | No aceptar rutas absolutas ni escribir fuera de `proyectos/`/`.solara-runtime/`. |
+| Handler HTTP/protocolo | `packages/exporter/scripts/solara-request-handler.mjs` | `serve.mjs`, Electron main, storage | Mantener paridad de endpoints y autorización entre ambos adaptadores. |
 
 ## Orden recomendado para una funcionalidad
 

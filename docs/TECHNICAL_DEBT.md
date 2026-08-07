@@ -19,6 +19,7 @@ el comportamiento del producto.
 | P3 | El release exige Node 22; el desarrollo local puede usar Node 24 por `engines: >=22`. | Diferencias de runtime pueden ocultar problemas de CI. | Mantener Node 22 como referencia de release y probar localmente con la misma versión cuando sea posible. |
 | P3 | El checkout depende de WhatsApp y no es un pago convencional. | Algunas aprobaciones Merchant pueden rechazar el flujo. | Mostrar la limitación en auditoría y no prometer aprobación automática. |
 | P3 | La publicación es manual; no hay backend, colaboración ni sincronización remota. | El usuario debe copiar la carpeta pública a un hosting. | Mantener esta decisión explícita hasta definir requisitos de seguridad y operación. |
+| P2 | La prueba portable cubre dos copias, Guardar y traslado, pero todavía no inyecta fallos de disco lleno, permisos, ZIP corrupto o interrupciones en cada etapa. | Una regresión de recuperación ante fallos del sistema de archivos podría pasar el E2E feliz. | Añadir fault injection controlado en un runner Windows sin alterar proyectos confirmados. |
 
 ## Código potencialmente muerto o duplicado
 

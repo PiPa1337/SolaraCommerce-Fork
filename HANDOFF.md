@@ -116,3 +116,33 @@ Lighthouse quedan por confirmar en CI/Node 22.
 3. `docs/ARCHITECTURE.md` y `docs/DATA_MODEL.md`.
 4. El documento específico del cambio y sus tests.
 5. `docs/TECHNICAL_DEBT.md` sólo para riesgos relevantes al trabajo.
+
+## Portabilidad Windows
+
+La distribución portable está implementada en `apps/desktop`. Electron carga
+Studio desde `solara://studio/`, con `contextIsolation` y `nodeIntegration: false`.
+Electron 37 en Windows no completa la navegación de este protocolo con sandbox
+activado, por lo que el shell lo deja desactivado de forma explícita y debe
+revisarse al actualizar Electron. El proceso principal configura `userData` y `sessionData` dentro de
+`.solara-runtime/`, usa un lock por carpeta y llama al mismo handler de requests
+que el servidor HTTP de desarrollo. `proyectos/` continúa siendo la autoridad
+de disco y no se cambió `StoreProjectV2`, `schemaVersion` ni `.solara.zip`.
+
+Los nuevos puntos de extensión son:
+
+- `packages/exporter/scripts/portable-layout.mjs`: paths, instance.json y
+  validación de rutas relativas;
+- `packages/exporter/scripts/solara-request-handler.mjs`: API y archivos
+  estáticos compartidos por HTTP/Electron;
+- `apps/desktop/src/main.mjs` y `preload.mjs`: shell, protocolo e IPC mínimo;
+- `apps/desktop/electron-builder.yml`: distribución `win-unpacked`;
+- `scripts/create-portable-distribution.mjs`, `portable-smoke.mjs` y
+  `portable-e2e.mjs`: salida y verificación de carpeta copiable.
+
+Ver [`docs/PORTABILITY.md`](docs/PORTABILITY.md) antes de modificar el shell.
+
+En este cambio se verificaron `desktop:build`, `desktop:package`,
+`portable:smoke`, `test:e2e:portable` y tres tests unitarios de portabilidad
+(rutas con espacios/Unicode, paridad HTTP/protocolo y rechazo de manifests con
+paths absolutos). El E2E Electron guarda una tienda en una copia, confirma el
+aislamiento de la segunda, reabre desde disco y valida el traslado de la carpeta.

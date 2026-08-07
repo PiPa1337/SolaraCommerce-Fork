@@ -64,6 +64,12 @@ jobs:
         id: e2e
         run: pnpm test:e2e:ci
 
+      - name: Construir shell portable
+        run: pnpm desktop:package
+
+      - name: E2E portable
+        run: pnpm test:e2e:portable
+
       - name: Publicar diagnóstico E2E
         if: ${{ failure() && steps.e2e.outcome == 'failure' }}
         uses: actions/upload-artifact@v4

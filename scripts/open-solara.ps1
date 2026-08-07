@@ -3,6 +3,21 @@ param([switch]$NoBrowser)
 $ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
+$portableExecutable = Join-Path $projectRoot "SolaraCommerce.exe"
+
+# Una distribución portable se inicia sin Node ni Corepack. El fallback de
+# desarrollo se conserva debajo para que el mismo launcher siga funcionando en
+# un checkout del repositorio.
+if (Test-Path -LiteralPath $portableExecutable) {
+  try {
+    Start-Process -FilePath $portableExecutable -WorkingDirectory $projectRoot
+    exit 0
+  } catch {
+    Write-Host "ERROR: no se pudo abrir SolaraCommerce.exe: $($_.Exception.Message)" -ForegroundColor Red
+    exit 1
+  }
+}
+
 $studioDist = Join-Path $projectRoot "apps\studio\dist"
 $studioIndex = Join-Path $studioDist "index.html"
 $serverScript = Join-Path $projectRoot "packages\exporter\scripts\serve.mjs"

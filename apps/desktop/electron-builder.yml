@@ -1,0 +1,15 @@
+appId: com.solara.commerce
+productName: SolaraCommerce
+asar: true
+electronDist: node_modules/electron/dist
+directories:
+  output: ../../.release/portable/build
+files:
+  - dist/**
+  - package.json
+win:
+  signAndEditExecutable: false
+  target:
+    - target: dir
+      arch:
+        - x64

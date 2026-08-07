@@ -94,3 +94,16 @@ Playwright y los navegadores de tests son dependencias de desarrollo. Ver
 Para reemplazar el servidor local hay que conservar el contrato de
 `LocalProjectManifestV1`, los hashes, el bloqueo por tienda y el commit atómico.
 No se debe conectar el storefront directamente a estas rutas.
+
+## Transporte portable
+
+La distribución Electron no abre Studio desde HTTP. El proceso principal registra
+`solara://studio/` y adapta cada request al mismo
+`packages/exporter/scripts/solara-request-handler.mjs` usado por `serve.mjs`.
+Los endpoints, payloads y respuestas no cambian. El origen `solara://studio` se
+autoriza únicamente dentro del protocolo privilegiado; el renderer no recibe
+acceso a Node o filesystem.
+
+El sitio público continúa usando un servidor HTTP efímero en loopback cuando se
+elige “abrir sitio”. Ese servidor sólo recibe la carpeta pública validada de la
+tienda seleccionada y se cierra al cerrar la instancia Electron.

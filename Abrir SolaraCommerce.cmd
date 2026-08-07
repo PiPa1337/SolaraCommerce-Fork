@@ -2,6 +2,11 @@
 setlocal
 title Abrir SolaraCommerce
 
+if exist "%~dp0SolaraCommerce.exe" (
+  start "SolaraCommerce" "%~dp0SolaraCommerce.exe"
+  exit /b 0
+)
+
 powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\open-solara.ps1"
 
 if errorlevel 1 (

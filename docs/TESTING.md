@@ -96,3 +96,27 @@ Todavía no hay pruebas de fault injection para disco lleno, permisos revocados,
 interrupciones durante rename ni ZIP bombs grandes. Antes de convertir el
 guardado local en un servicio remoto se deben agregar esos escenarios y una
 prueba de recuperación de `manifest.json`.
+
+## Portable Windows
+
+El bucle mínimo del shell Electron es:
+
+```powershell
+corepack pnpm --filter @solara/desktop typecheck
+corepack pnpm --filter @solara/desktop test
+corepack pnpm desktop:build
+corepack pnpm desktop:package
+corepack pnpm test:e2e:portable
+```
+
+Los tests de `apps/desktop/tests/portable.test.mjs` cubren layout movible,
+espacios/Unicode, paridad del handler HTTP/protocolo y rechazo de manifests con
+rutas absolutas. `portable:smoke` abre dos instancias silenciosas y comprueba
+perfiles, locks y `instance.json`. `scripts/portable-e2e.mjs` usa Playwright
+Electron para abrir dos copias, guardar una tienda, comprobar que la otra no la
+vea, verificar el sitio público confirmado, cerrar y reabrir desde disco y mover
+la copia a una ruta con espacios y Unicode.
+
+La inyección de disco lleno, permisos y ZIP corruptos continúa como prueba de
+release pendiente; no se simula en cada cambio para evitar modificar proyectos
+reales o ralentizar el bucle local.

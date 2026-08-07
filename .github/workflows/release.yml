@@ -65,6 +65,12 @@ jobs:
       - name: Preflight del piloto
         run: pnpm pilot:preflight
 
+      - name: Empaquetar portable Windows
+        run: pnpm desktop:package
+
+      - name: E2E portable
+        run: pnpm test:e2e:portable
+
       - name: Crear manifiesto de release
         run: pnpm release:manifest
 
@@ -87,6 +93,7 @@ jobs:
           name: solara-release-${{ github.run_id }}
           path: |
             .release/release-manifest.json
+            .release/portable/SolaraCommerce-Portable/
             .lighthouseci/
             playwright-report/
             test-results/
