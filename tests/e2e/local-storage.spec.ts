@@ -49,7 +49,10 @@ test("el lanzador persiste el proyecto y el sitio fuera de IndexedDB", async ({ 
       .poll(() => existsSync(join(applicationRoot, "proyectos")), { timeout: 15_000 })
       .toBe(true);
 
-    await page.getByRole("button", { name: "Abrir esta tienda" }).first().click();
+    await page
+      .locator('[data-store-card-id="store-modo-sur-demo"]')
+      .getByRole("button", { name: "Abrir esta tienda" })
+      .click();
     await page.getByRole("button", { name: "Resumen" }).click();
     const name = page.getByLabel("Nombre de la tienda");
     await name.fill("Predeterminado editado");

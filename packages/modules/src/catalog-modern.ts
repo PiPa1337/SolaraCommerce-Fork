@@ -279,7 +279,7 @@ function renderCatalogHeroMedia(
   const fallback = modernFallbackAsset(context, settings.posterAssetId);
   if (settings.mode === "video" && settings.videoAssetId) {
     const video = renderVideo(context.project, settings.videoAssetId, {
-      className: "catalog-hero-video",
+      className: "catalog-hero-video solara-clip-reveal",
       posterAssetId: settings.posterAssetId,
       preload: "none",
       autoplay: settings.autoplay,
@@ -288,7 +288,7 @@ function renderCatalogHeroMedia(
     if (video) return video;
   }
   return renderImage(context.project, fallback, {
-    className: "catalog-hero-image",
+    className: "catalog-hero-image solara-clip-reveal",
     loading: "eager",
     fetchPriority: "high",
     sizes: "(max-width: 767px) 100vw, 52vw",
@@ -385,7 +385,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
                 context.project,
                 slide.imageId || modernFallbackAsset(context, settings.posterAssetId),
                 {
-                  className: "catalog-hero-image",
+                  className: "catalog-hero-image solara-clip-reveal",
                   loading: index === 0 ? "eager" : "lazy",
                   fetchPriority: index === 0 ? "high" : "auto",
                   sizes: "(max-width: 767px) 100vw, 52vw",
@@ -411,11 +411,15 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
             )
             .join("")
         : "";
+    const kineticTitle =
+      context.section.motion?.preset && context.section.motion.preset !== "none"
+        ? " data-kinetic-title"
+        : "";
     return moduleRoot(
       "catalog-hero",
       context.section,
       safeHtml(
-        `<div class="catalog-hero-inner" data-hero-parallax data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}"><div class="catalog-hero-copy"><p class="catalog-eyebrow solara-gradient-text" data-parallax-layer="3" data-parallax-depth="6">${escapeHtml(settings.eyebrow)}</p><h1 class="solara-kinetic-title" data-kinetic-title data-parallax-layer="2" data-parallax-depth="8">${escapeHtml(title)}</h1><p class="catalog-hero-body">${escapeHtml(body)}</p><div class="catalog-hero-actions"><a class="catalog-primary-action solara-btn-shine" data-magnetic href="${escapeAttribute(safeUrl(actionHref))}">${escapeHtml(actionLabel)}</a>${settings.secondaryActionLabel ? `<a class="catalog-secondary-action solara-pulse-ring" data-magnetic href="${escapeAttribute(safeUrl(settings.secondaryActionHref))}"><span class="solara-pulse-ring-dot" aria-hidden="true"></span>${escapeHtml(settings.secondaryActionLabel)}</a>` : ""}</div>${stats}</div><figure class="catalog-hero-media solara-shimmer solara-clip-reveal" data-motion-zone="media" data-parallax-layer="1" data-parallax-depth="12">${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>`,
+        `<div class="catalog-hero-inner" data-hero-parallax data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}"><div class="catalog-hero-copy"><p class="catalog-eyebrow solara-gradient-text" data-parallax-layer="3" data-parallax-depth="6">${escapeHtml(settings.eyebrow)}</p><h1 class="solara-kinetic-title"${kineticTitle} data-parallax-layer="2" data-parallax-depth="8">${escapeHtml(title)}</h1><p class="catalog-hero-body">${escapeHtml(body)}</p><div class="catalog-hero-actions"><a class="catalog-primary-action solara-btn-shine" data-magnetic href="${escapeAttribute(safeUrl(actionHref))}">${escapeHtml(actionLabel)}</a>${settings.secondaryActionLabel ? `<a class="catalog-secondary-action solara-pulse-ring" data-magnetic href="${escapeAttribute(safeUrl(settings.secondaryActionHref))}"><span class="solara-pulse-ring-dot" aria-hidden="true"></span>${escapeHtml(settings.secondaryActionLabel)}</a>` : ""}</div>${stats}</div><figure class="catalog-hero-media solara-shimmer" data-motion-zone="media" data-parallax-layer="1" data-parallax-depth="12">${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>`,
       ),
     );
   },

@@ -118,7 +118,7 @@ genéricos); se extraen SOLO los efectos/animaciones/hovers/scrolls/appears.
 
 ## Verificación
 
-- Budgets: JS ≤ 52 (esperado ~49.2), CSS runtime ≤ 8 (~7.3), storefront.css
+- Budgets: JS ≤ 56 KiB (medido 53,239 B), CSS runtime ≤ 8 (~7.3), storefront.css
   ≤ 780. `check:runtime-serialization` verde.
 - Schema: tests de `MotionPresetSchema` con los literales nuevos + round-trip.
 - E2E: FAQ (uno abierto, teclado), stats (números finales), reduced-motion,

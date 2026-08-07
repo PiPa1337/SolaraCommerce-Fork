@@ -1631,11 +1631,11 @@ export const STOREFRONT_RUNTIME_CSS = `
 }
 
 @keyframes solara-motion-zoom-in {
-  from { opacity: 0; transform: scale(calc(1 + (0.06 * var(--motion-intensity, 1)))); }
+  from { opacity: 0; transform: scale(calc(1 + (0.06 * min(var(--motion-intensity, 1), 1)))); }
 }
 
 @keyframes solara-motion-blur-in {
-  from { opacity: 0; filter: blur(calc(10px * var(--motion-intensity, 1))); }
+  from { opacity: 0; filter: blur(calc(10px * min(var(--motion-intensity, 1), 1))); }
 }
 
 @keyframes solara-progress {

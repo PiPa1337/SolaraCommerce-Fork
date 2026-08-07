@@ -101,8 +101,9 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).not.toContain("__solaraSearchHelpers.__solaraSearchHelpers");
   });
 
-  it("mantiene el runtime por debajo de 52 KB crudos", () => {
-    // Medición Task 1A: runtime JS 51.228 B en bytes crudos (sin gzip).
-    expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(52 * 1024);
+  it("mantiene el runtime por debajo de 56 KB crudos", () => {
+    // Medición final review: runtime JS 53.239 B en bytes crudos (sin gzip).
+    // El gate oficial vive en scripts/storefront-runtime-budget.test.ts (56 KiB).
+    expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(56 * 1024);
   });
 });

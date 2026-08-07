@@ -608,7 +608,7 @@ export async function ensureRevampDemoProject(): Promise<boolean> {
   const sections = [...project.sections];
   const footerIndex = sections.findIndex((section) => section.moduleId === "catalog-footer");
   if (footerIndex < 0) {
-    throw new Error("La candidata revamp necesita la sección catalog-footer.");
+    return false;
   }
   sections.splice(
     footerIndex,

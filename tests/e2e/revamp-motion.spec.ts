@@ -317,6 +317,24 @@ test("tilt y botones magnéticos responden al puntero fino", async ({ page }) =>
   expect(magneticVars.my).not.toBe("");
   expect(magneticVars.my).not.toBe("0px");
 
+  const parallaxLayer = page.locator('[data-hero-parallax] [data-parallax-layer="1"]');
+  await expect(parallaxLayer).toBeVisible();
+  await page.waitForTimeout(160);
+  const parallaxStyle = await parallaxLayer.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const matrix = style.transform.match(/^matrix\((.+)\)$/);
+    if (!matrix) return { transform: style.transform, tx: 0, ty: 0 };
+    const values = matrix[1].split(", ").map(Number);
+    return { transform: style.transform, tx: values[4] ?? 0, ty: values[5] ?? 0 };
+  });
+  expect(
+    Math.abs(parallaxStyle.tx) + Math.abs(parallaxStyle.ty),
+    `la capa media del parallax debe traducirse con el puntero (transform: ${parallaxStyle.transform})`,
+  ).toBeGreaterThan(0);
+  await expect(
+    page.locator("[data-hero-parallax] .catalog-hero-media .catalog-hero-image"),
+  ).toHaveClass(/solara-clip-reveal/);
+
   const card = page.locator("[data-product-card]").first();
   await card.evaluate((element) => element.scrollIntoView({ block: "center" }));
   await expect(card).toBeVisible();

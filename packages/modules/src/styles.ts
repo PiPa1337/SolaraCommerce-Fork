@@ -2353,7 +2353,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   position: absolute;
   z-index: 3;
   inset: 0;
-  border-radius: 16px;
+  border-radius: inherit;
   background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, .08), transparent 65%);
   opacity: 0;
   transition: opacity 300ms;
@@ -2622,7 +2622,7 @@ html:has([data-solara-store].catalog-modern)::-webkit-scrollbar-thumb:hover { bo
 [data-solara-store].catalog-modern .solara-faq-item summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 56px; padding: .9rem 1.15rem; cursor: pointer; font-weight: 700; list-style: none; }
 [data-solara-store].catalog-modern .solara-faq-item summary::-webkit-details-marker { display: none; }
 [data-solara-store].catalog-modern .solara-faq-item summary::after { content: "+"; font-size: 1.3rem; line-height: 1; transition: transform 200ms cubic-bezier(.16, 1, .3, 1); }
-[data-solara-store].catalog-modern .solara-faq-item[open] summary::after { transform: rotate(180deg); }
+[data-solara-store].catalog-modern .solara-faq-item[open] summary::after { transform: rotate(45deg); }
 [data-solara-store].catalog-modern .solara-faq-item > div { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 320ms cubic-bezier(.16, 1, .3, 1); }
 [data-solara-store].catalog-modern .solara-faq-item > div > p { min-height: 0; margin: 0; padding: 0 1.15rem; overflow: hidden; color: var(--catalog-muted); font-size: .92rem; line-height: 1.6; }
 [data-solara-store].catalog-modern .solara-faq-item[open] > div { grid-template-rows: 1fr; }

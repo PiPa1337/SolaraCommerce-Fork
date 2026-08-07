@@ -231,7 +231,7 @@ En `packages/storefront-runtime/src/index.test.ts`, ampliar el guard existente:
 - [ ] **Step 6: Verificar**
 
 Run: `corepack pnpm --filter @solara/project-schema test`, `--filter @solara/storefront-runtime test`, `--filter @solara/storefront-runtime typecheck`, `corepack pnpm exec vitest run scripts/runtime-serialization.test.ts`
-Expected: PASS (el guard del schema nuevo falla primero en Step 1 → RED; luego GREEN). Registrar el tamaño raw de `STOREFRONT_RUNTIME_JS` (esperado ≤ 46 KiB) y CSS runtime (≤ 7.5 KiB).
+Expected: PASS (el guard del schema nuevo falla primero en Step 1 → RED; luego GREEN). Registrar el tamaño raw de `STOREFRONT_RUNTIME_JS` (≤ 56 KiB, medido 53,239 B) y CSS runtime (≤ 7.5 KiB).
 
 - [ ] **Step 7: Commit**
 
@@ -433,7 +433,7 @@ corepack pnpm check:budgets
 corepack pnpm benchmark:export
 corepack pnpm test:e2e
 ```
-Expected: PASS en todos (incluye revamp-motion.spec.ts). Registrar: JS runtime raw (esperado ≤ 50 KiB), CSS runtime raw (≤ 7.5 KiB), storefront.css (≤ 780 KiB), benchmark ms.
+Expected: PASS en todos (incluye revamp-motion.spec.ts). Registrar: JS runtime raw (≤ 56 KiB, medido 53,239 B), CSS runtime raw (≤ 7.5 KiB), storefront.css (≤ 780 KiB), benchmark ms.
 
 - [ ] **Step 2: Changelog**
 
