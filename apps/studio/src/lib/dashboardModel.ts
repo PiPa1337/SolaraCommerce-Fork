@@ -17,6 +17,24 @@ export interface ProjectMetrics {
   assets: number;
 }
 
+export interface PinnedPartition<T> {
+  pinned: T[];
+  rest: T[];
+}
+
+export function partitionPinnedProjects<T extends { id: string }>(
+  projects: readonly T[],
+  pinnedIds: readonly string[],
+): PinnedPartition<T> {
+  const pinnedSet = new Set(pinnedIds);
+  const pinned: T[] = [];
+  const rest: T[] = [];
+  for (const project of projects) {
+    (pinnedSet.has(project.id) ? pinned : rest).push(project);
+  }
+  return { pinned, rest };
+}
+
 export function getProjectMetrics(project: StoredProject["project"]): ProjectMetrics {
   return {
     activeProducts: project.products.filter((product) => product.status === "active").length,

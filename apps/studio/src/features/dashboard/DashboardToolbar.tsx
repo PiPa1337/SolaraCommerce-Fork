@@ -1,4 +1,5 @@
 import { Funnel, GridFour, List, MagnifyingGlass, SortAscending, X } from "@phosphor-icons/react";
+import type { RefObject } from "react";
 import { IconButton } from "../../components/Ui";
 import type { DashboardSort, DashboardStatusFilter } from "../../lib/dashboardModel";
 
@@ -13,6 +14,7 @@ export interface DashboardToolbarProps {
   statusFilter: DashboardStatusFilter;
   sort: DashboardSort;
   view: "grid" | "list";
+  searchRef: RefObject<HTMLInputElement | null>;
   onQueryChange(query: string): void;
   onStatusFilterChange(filter: DashboardStatusFilter): void;
   onSortChange(sort: DashboardSort): void;
@@ -24,6 +26,7 @@ export function DashboardToolbar({
   statusFilter,
   sort,
   view,
+  searchRef,
   onQueryChange,
   onStatusFilterChange,
   onSortChange,
@@ -35,10 +38,12 @@ export function DashboardToolbar({
         <MagnifyingGlass aria-hidden size={18} />
         <span className="visually-hidden">Buscar tienda</span>
         <input
+          ref={searchRef}
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
           placeholder="Buscar tienda..."
           aria-label="Buscar tienda"
+          title="Atajo: /"
           type="search"
         />
         {query ? (

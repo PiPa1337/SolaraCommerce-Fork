@@ -38,6 +38,9 @@ export interface ProjectCardProps {
   detailRef: RefObject<HTMLElement | null>;
   backupId: string | undefined;
   siteOpeningId: string | undefined;
+  folderOpeningId: string | undefined;
+  downloadingId: string | undefined;
+  actionNotice: string | undefined;
   onClose(): void;
   onOpen(id: string): void;
   onOpenSite?: ((id: string) => Promise<void>) | undefined;
@@ -53,6 +56,9 @@ export function ProjectCard({
   detailRef,
   backupId,
   siteOpeningId,
+  folderOpeningId,
+  downloadingId,
+  actionNotice,
   onClose,
   onOpen,
   onOpenSite,
@@ -68,6 +74,12 @@ export function ProjectCard({
       className={`dashboard-store-detail${project ? " is-open" : ""}`}
       aria-label={project ? `Tienda seleccionada: ${project.name}` : "Tienda seleccionada"}
       tabIndex={project ? 0 : -1}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          onClose();
+        }
+      }}
     >
       {project ? (
         <>
@@ -145,9 +157,10 @@ export function ProjectCard({
               <Button
                 variant="secondary"
                 icon={FolderOpen}
+                disabled={folderOpeningId === project.id}
                 onClick={() => void onOpenFolder(project.id)}
               >
-                Abrir carpeta
+                {folderOpeningId === project.id ? "Abriendo carpeta" : "Abrir carpeta"}
               </Button>
             ) : null}
             <Button
@@ -162,9 +175,10 @@ export function ProjectCard({
               <Button
                 variant="secondary"
                 icon={DownloadSimple}
+                disabled={downloadingId === project.id}
                 onClick={() => void onDownloadBackup(project.id)}
               >
-                Descargar respaldo
+                {downloadingId === project.id ? "Descargando respaldo" : "Descargar respaldo"}
               </Button>
             ) : null}
             <Button variant="secondary" icon={Copy} onClick={() => void onDuplicate(project.id)}>
@@ -178,6 +192,15 @@ export function ProjectCard({
               {project.status === "archived" ? "Restaurar" : "Archivar"}
             </Button>
           </div>
+          {actionNotice ? (
+            <output
+              className="dashboard-store-detail__notice"
+              aria-live="polite"
+              data-testid="ui-detail-notice"
+            >
+              {actionNotice}
+            </output>
+          ) : null}
         </>
       ) : (
         <div className="dashboard-store-detail__empty">

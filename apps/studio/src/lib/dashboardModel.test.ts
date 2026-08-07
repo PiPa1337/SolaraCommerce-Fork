@@ -1,7 +1,12 @@
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
 import { describe, expect, it } from "vitest";
-import { filterDashboardProjects, getDashboardStats, getProjectMetrics } from "./dashboardModel";
+import {
+  filterDashboardProjects,
+  getDashboardStats,
+  getProjectMetrics,
+  partitionPinnedProjects,
+} from "./dashboardModel";
 import type { StoredProject } from "./repository";
 
 function record(
@@ -59,5 +64,23 @@ describe("modelo del dashboard", () => {
       "archived",
       "alpha",
     ]);
+  });
+
+  it("particiona las fijadas al inicio conservando el orden del resto", () => {
+    const projects = [
+      record("zeta", "Álamo", "2026-08-01T00:00:00.000Z"),
+      record("alpha", "Casa Sur", "2026-08-03T00:00:00.000Z"),
+      record("archived", "Casa Antigua", "2026-08-02T00:00:00.000Z", "archived"),
+    ];
+
+    expect(partitionPinnedProjects(projects, ["alpha"]).pinned.map((item) => item.id)).toEqual([
+      "alpha",
+    ]);
+    expect(partitionPinnedProjects(projects, ["alpha"]).rest.map((item) => item.id)).toEqual([
+      "zeta",
+      "archived",
+    ]);
+    expect(partitionPinnedProjects(projects, []).pinned).toHaveLength(0);
+    expect(partitionPinnedProjects(projects, ["alpha", "missing"]).pinned).toHaveLength(1);
   });
 });
