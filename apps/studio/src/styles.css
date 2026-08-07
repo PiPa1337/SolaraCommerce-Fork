@@ -1,5 +1,6 @@
 /* biome-ignore-all lint/style/noDescendingSpecificity: legacy and cosmic dashboard shells share selectors by design. */
 @import "./base/base.css";
+@import "./base/components.css";
 @import "./dashboard/cosmic.css";
 @import "./editorial/editorial.css";
 @import "./base/feedback.css";

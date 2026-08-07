@@ -13,9 +13,15 @@ import {
 export function IconButton({
   icon: IconComponent,
   label,
+  tooltip,
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { icon: Icon; label: string }) {
-  return (
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  icon: Icon;
+  label: string;
+  /** Tooltip visual (CSS nativo con data-tip); `title` sigue como fallback. */
+  tooltip?: string;
+}) {
+  const button = (
     <button
       className="icon-button"
       type="button"
@@ -27,6 +33,13 @@ export function IconButton({
       <IconComponent aria-hidden size={18} weight="regular" />
     </button>
   );
+  return tooltip ? (
+    <span className="ui-tooltip" data-tip={tooltip}>
+      {button}
+    </span>
+  ) : (
+    button
+  );
 }
 
 export const Button = forwardRef<
@@ -34,17 +47,36 @@ export const Button = forwardRef<
   ButtonHTMLAttributes<HTMLButtonElement> & {
     icon?: Icon;
     variant?: "primary" | "secondary" | "quiet" | "danger";
+    size?: "sm" | "md";
+    loading?: boolean;
   }
->(function Button({ icon: IconComponent, children, variant = "secondary", ...props }, ref) {
+>(function Button(
+  {
+    icon: IconComponent,
+    children,
+    variant = "secondary",
+    size = "md",
+    loading = false,
+    disabled,
+    ...props
+  },
+  ref,
+) {
   return (
     <button
       ref={ref}
-      className={`button button--${variant}`}
+      className={`button button--${variant} button--${size}${loading ? " button--loading" : ""}`}
       type="button"
       data-testid="ui-button"
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
       {...props}
     >
-      {IconComponent ? <IconComponent aria-hidden size={17} weight="regular" /> : null}
+      {loading ? (
+        <span className="spinner" aria-hidden />
+      ) : IconComponent ? (
+        <IconComponent aria-hidden size={17} weight="regular" />
+      ) : null}
       <span>{children}</span>
     </button>
   );
@@ -83,29 +115,55 @@ export function InlineError({ children }: { children: ReactNode }) {
 export function Field({
   label,
   hint,
+  error,
   children,
   className = "",
 }: {
   label: string;
   hint?: string;
+  /** Mensaje de error inline: borde danger, texto y aria-describedby. */
+  error?: string;
   children: ReactNode;
   className?: string;
 }) {
   const labelId = useId();
-  const labeledChild =
-    isValidElement<{ "aria-label"?: string; "aria-labelledby"?: string }>(children) &&
+  const hintId = useId();
+  const errorId = useId();
+  const isNativeControl =
+    isValidElement<Record<string, unknown>>(children) &&
     typeof children.type === "string" &&
-    ["input", "select", "textarea"].includes(children.type) &&
-    children.props["aria-label"] === undefined &&
-    children.props["aria-labelledby"] === undefined
-      ? cloneElement(children, { "aria-labelledby": labelId })
-      : children;
+    ["input", "select", "textarea"].includes(children.type);
+  const patches: Record<string, string | boolean> = {};
+  if (isNativeControl) {
+    if (
+      children.props["aria-label"] === undefined &&
+      children.props["aria-labelledby"] === undefined
+    ) {
+      patches["aria-labelledby"] = labelId;
+    }
+    if (error) {
+      patches["aria-describedby"] = errorId;
+      patches["aria-invalid"] = true;
+    } else if (hint) {
+      patches["aria-describedby"] = hintId;
+    }
+  }
+  const labeledChild =
+    isNativeControl && Object.keys(patches).length > 0 ? cloneElement(children, patches) : children;
 
   return (
-    <fieldset className={`field ${className}`}>
+    <fieldset
+      className={`field ${error ? "field--error" : ""} ${className}`}
+      aria-invalid={error ? true : undefined}
+    >
       <legend id={labelId}>{label}</legend>
       {labeledChild}
-      {hint ? <small>{hint}</small> : null}
+      {hint ? <small id={hintId}>{hint}</small> : null}
+      {error ? (
+        <small id={errorId} className="field-error" role="alert" data-testid="ui-field-error">
+          {error}
+        </small>
+      ) : null}
     </fieldset>
   );
 }

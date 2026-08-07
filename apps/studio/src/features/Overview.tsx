@@ -10,7 +10,21 @@ import {
 } from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { type InputHTMLAttributes, useEffect, useState } from "react";
-import { Field, IconButton, SectionHeader } from "../components/Ui";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import { StatusBadge, Toggle } from "../components/primitives";
+import { useToast } from "../components/Toast";
+import { Button, Field, IconButton, SectionHeader } from "../components/Ui";
+
+const PHONE_PATTERN = /^\d{8,15}$/;
+
+function isValidUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 export function Overview({
   project,
@@ -19,6 +33,25 @@ export function Overview({
   project: StoreProjectV1;
   onChange(project: StoreProjectV1): void;
 }) {
+  const [pendingNavDelete, setPendingNavDelete] = useState<string | null>(null);
+  const { success } = useToast();
+  const pendingNavItem = pendingNavDelete
+    ? project.navigation.items.find((item) => item.id === pendingNavDelete)
+    : undefined;
+  const phoneValue = project.whatsapp.phone;
+  const phoneError =
+    phoneValue && !PHONE_PATTERN.test(phoneValue)
+      ? "Usá entre 8 y 15 dígitos con código de país y área."
+      : undefined;
+  const urlValue = project.baseUrl;
+  const urlError =
+    urlValue && !isValidUrl(urlValue) ? "Ingresá una URL válida con http(s)." : undefined;
+  const deleteNavItem = (itemId: string) => {
+    updateNavigation({
+      items: project.navigation.items.filter((current) => current.id !== itemId),
+    });
+    success("Enlace de navegación eliminado");
+  };
   const commit = (patch: Partial<StoreProjectV1>) =>
     onChange({ ...project, ...patch, updatedAt: new Date().toISOString() });
   const updateNavigation = (patch: Partial<StoreProjectV1["navigation"]>) =>
@@ -133,10 +166,18 @@ export function Overview({
 
         <fieldset>
           <legend>
-            <WhatsappLogo aria-hidden size={19} /> Pedido por WhatsApp
+            <WhatsappLogo aria-hidden size={19} /> Pedido por WhatsApp{" "}
+            <StatusBadge
+              status={phoneError ? "warning" : phoneValue ? "ok" : "idle"}
+              label={phoneError ? "Revisar formato" : phoneValue ? "Formato correcto" : "Pendiente"}
+            />
           </legend>
           <div className="form-grid">
-            <Field label="Número internacional" hint="Sólo números, con código de país y área.">
+            <Field
+              label="Número internacional"
+              hint="Sólo números, con código de país y área."
+              {...(phoneError ? { error: phoneError } : {})}
+            >
               <input
                 inputMode="tel"
                 value={project.whatsapp.phone}
@@ -155,16 +196,13 @@ export function Overview({
                 }
               />
             </Field>
-            <label className="check-field">
-              <input
-                type="checkbox"
-                checked={project.whatsapp.includeSku}
-                onChange={(event) =>
-                  commit({ whatsapp: { ...project.whatsapp, includeSku: event.target.checked } })
-                }
-              />
-              Incluir SKU en el mensaje
-            </label>
+            <Toggle
+              checked={project.whatsapp.includeSku}
+              onChange={(checked) =>
+                commit({ whatsapp: { ...project.whatsapp, includeSku: checked } })
+              }
+              label="Incluir SKU en el mensaje"
+            />
           </div>
         </fieldset>
 
@@ -176,6 +214,7 @@ export function Overview({
             <Field
               label="URL pública"
               hint="La exportación de producción usa esta URL para canonical y feeds."
+              {...(urlError ? { error: urlError } : {})}
             >
               <input
                 type="url"
@@ -210,14 +249,12 @@ export function Overview({
                   ["showCart", "Mostrar carrito"],
                 ] as const
               ).map(([key, label]) => (
-                <label className="check-field" key={key}>
-                  <input
-                    type="checkbox"
-                    checked={project.navigation[key]}
-                    onChange={(event) => updateNavigation({ [key]: event.target.checked })}
-                  />
-                  {label}
-                </label>
+                <Toggle
+                  key={key}
+                  checked={project.navigation[key]}
+                  onChange={(checked) => updateNavigation({ [key]: checked })}
+                  label={label}
+                />
               ))}
             </div>
             <div className="navigation-switches field--wide">
@@ -229,16 +266,14 @@ export function Overview({
                   ["cart", "Mostrar carrito lateral"],
                 ] as const
               ).map(([key, label]) => (
-                <label className="check-field" key={key}>
-                  <input
-                    type="checkbox"
-                    checked={project.siteShell[key]}
-                    onChange={(event) =>
-                      commit({ siteShell: { ...project.siteShell, [key]: event.target.checked } })
-                    }
-                  />
-                  {label}
-                </label>
+                <Toggle
+                  key={key}
+                  checked={project.siteShell[key]}
+                  onChange={(checked) =>
+                    commit({ siteShell: { ...project.siteShell, [key]: checked } })
+                  }
+                  label={label}
+                />
               ))}
             </div>
             <div className="navigation-editor field--wide">
@@ -326,10 +361,10 @@ export function Overview({
                             onClick={() => moveNavigationChild(item.id, child.id, 1)}
                           />
                         </div>
-                        <button
-                          className="icon-button"
-                          type="button"
-                          aria-label={`Eliminar subenlace ${child.label}`}
+                        <IconButton
+                          icon={Trash}
+                          label={`Eliminar subenlace ${child.label}`}
+                          tooltip="Eliminar subenlace"
                           onClick={() =>
                             updateNavigationItem(item.id, {
                               children: (item.children ?? []).filter(
@@ -337,14 +372,11 @@ export function Overview({
                               ),
                             })
                           }
-                        >
-                          <Trash aria-hidden size={16} />
-                        </button>
+                        />
                       </div>
                     ))}
-                    <button
-                      className="button button--secondary"
-                      type="button"
+                    <Button
+                      variant="secondary"
                       onClick={() =>
                         updateNavigationItem(item.id, {
                           children: [
@@ -361,25 +393,21 @@ export function Overview({
                       }
                     >
                       Añadir subenlace
-                    </button>
+                    </Button>
                   </div>
-                  <button
-                    className="icon-button"
-                    type="button"
-                    aria-label={`Eliminar enlace ${item.label}`}
-                    onClick={() =>
-                      updateNavigation({
-                        items: project.navigation.items.filter((current) => current.id !== item.id),
-                      })
-                    }
-                  >
-                    <Trash aria-hidden size={18} />
-                  </button>
+                  <IconButton
+                    icon={Trash}
+                    label={`Eliminar enlace ${item.label}`}
+                    tooltip="Eliminar enlace"
+                    onClick={() => {
+                      if ((item.children?.length ?? 0) > 0) setPendingNavDelete(item.id);
+                      else deleteNavItem(item.id);
+                    }}
+                  />
                 </div>
               ))}
-              <button
-                className="button button--secondary"
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={() =>
                   updateNavigation({
                     items: [
@@ -396,7 +424,7 @@ export function Overview({
                 }
               >
                 Añadir enlace de catálogo
-              </button>
+              </Button>
             </div>
           </div>
         </fieldset>
@@ -435,6 +463,25 @@ export function Overview({
           </div>
         </fieldset>
       </div>
+      {pendingNavItem ? (
+        <ConfirmDialog
+          title="Eliminar enlace de navegación"
+          body={
+            <>
+              Se eliminará «{pendingNavItem.label}» junto con sus{" "}
+              {pendingNavItem.children?.length ?? 0} subenlace(s). Podés deshacerlo desde la barra
+              del editor.
+            </>
+          }
+          confirmLabel="Eliminar enlace"
+          danger
+          onConfirm={() => {
+            deleteNavItem(pendingNavItem.id);
+            setPendingNavDelete(null);
+          }}
+          onCancel={() => setPendingNavDelete(null)}
+        />
+      ) : null}
     </section>
   );
 }
