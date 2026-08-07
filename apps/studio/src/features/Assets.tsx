@@ -341,6 +341,16 @@ export function Assets({
           icon={Image}
           title="No hay imágenes"
           body="Cargá archivos JPG, PNG o WebP. Solara conserva una versión de respaldo por hash."
+          action={
+            <Button
+              variant="primary"
+              icon={UploadSimple}
+              disabled={busy}
+              onClick={() => imageInputRef.current?.click()}
+            >
+              Cargar imágenes
+            </Button>
+          }
         />
       ) : (
         <div className="asset-grid">

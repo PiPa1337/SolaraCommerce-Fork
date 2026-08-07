@@ -34,10 +34,40 @@
   --shadow-float: 0 12px 35px rgb(54 47 36 / 0.1);
   --topbar-height: 68px;
   --nav-width: 148px;
+  /* Tokens `--ui-*`: contrato nuevo de la UI del editor. Los componentes de
+  Ui.tsx y las fases 1-3 consumen estos tokens; los nombres legacy quedan
+  como sinónimos hasta migrar por completo. */
+  --ui-bg: var(--bg);
+  --ui-surface: var(--surface);
+  --ui-surface-raised: var(--surface-raised);
+  --ui-surface-strong: var(--surface-strong);
+  --ui-border: var(--line);
+  --ui-border-strong: var(--line-strong);
+  --ui-text: var(--ink);
+  --ui-text-muted: var(--muted);
+  --ui-text-faint: var(--faint);
+  --ui-accent: var(--accent);
+  --ui-accent-hover: var(--accent-hover);
+  --ui-accent-soft: var(--accent-soft);
+  --ui-accent-contrast: var(--accent-contrast);
+  --ui-danger: var(--danger);
+  --ui-danger-soft: var(--danger-soft);
+  --ui-danger-contrast: #fff7f7;
+  --ui-warning: var(--warning);
+  --ui-warning-soft: var(--warning-soft);
+  --ui-info: var(--info);
+  --ui-info-soft: var(--info-soft);
+  --ui-radius: var(--radius-input);
+  --ui-radius-md: var(--radius-panel);
+  --ui-radius-lg: var(--radius-large);
+  --ui-radius-full: 999px;
+  --ui-shadow-sm: var(--shadow-float);
+  --ui-shadow-md: var(--shadow-panel);
+  --ui-focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-studio-theme="light"]) {
     color-scheme: dark;
     --bg: #171a17;
     --surface: #1f231f;
@@ -61,6 +91,36 @@
     --shadow-panel: 0 26px 70px rgb(0 0 0 / 0.34);
     --shadow-float: 0 14px 38px rgb(0 0 0 / 0.26);
   }
+}
+
+/* Tema oscuro explícito del editor (T3.8): el toggle de Studio escribe
+   `data-studio-theme` en <html> y `localStorage["solara-studio-theme"]`.
+   Mantener este bloque en sincronía con la paleta del media query superior;
+   el atributo tiene mayor especificidad y gana sobre la preferencia del
+   sistema. */
+:root[data-studio-theme="dark"] {
+  color-scheme: dark;
+  --bg: #171a17;
+  --surface: #1f231f;
+  --surface-strong: #292e29;
+  --surface-raised: #242924;
+  --ink: #f0ede5;
+  --muted: #b6b6ad;
+  --faint: #858980;
+  --line: #3a4039;
+  --line-strong: #535b52;
+  --accent: #8eb29c;
+  --accent-hover: #a3c2ae;
+  --accent-soft: #2d4135;
+  --accent-contrast: #172019;
+  --danger: #f09a9a;
+  --danger-soft: #4a2929;
+  --warning: #efc270;
+  --warning-soft: #44371f;
+  --info: #8fc3dc;
+  --info-soft: #203945;
+  --shadow-panel: 0 26px 70px rgb(0 0 0 / 0.34);
+  --shadow-float: 0 14px 38px rgb(0 0 0 / 0.26);
 }
 
 * {
@@ -177,8 +237,8 @@ textarea:hover {
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: var(--ui-accent);
+  box-shadow: var(--ui-focus-ring);
   outline: none;
 }
 
@@ -303,9 +363,9 @@ input[type="color"] {
 }
 
 .button--danger {
-  border-color: var(--danger);
-  background: var(--danger);
-  color: #fff7f7;
+  border-color: var(--ui-danger);
+  background: var(--ui-danger);
+  color: var(--ui-danger-contrast);
 }
 
 .icon-button {
@@ -320,6 +380,24 @@ input[type="color"] {
 .icon-button[aria-pressed="true"] {
   border-color: var(--line);
   background: var(--surface-strong);
+}
+
+/* Normalización de iconos (T1.7): escala 16 sm / 18 md / 20 lg / 24 xl.
+Las reglas CSS fijan el tamaño real pintado aunque el atributo `size` del
+ícono difiera, manteniendo una sola fuente de verdad para los botones. */
+.button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.empty-state > svg {
+  width: 24px;
+  height: 24px;
 }
 
 .field {
@@ -499,7 +577,7 @@ input[type="color"] {
   display: flex;
   align-items: center;
   gap: 4px;
-  box-shadow: var(--shadow-panel);
+  box-shadow: var(--ui-shadow-md);
 }
 
 .global-error button {

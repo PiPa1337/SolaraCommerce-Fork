@@ -1,5 +1,5 @@
 /** Árbol de categorías colapsable con cantidades directas/heredadas y reubicación segura. */
-import { CaretRight } from "@phosphor-icons/react";
+import { CaretRight, TreeStructure } from "@phosphor-icons/react";
 import type { DomainCommand } from "@solara/core";
 import {
   type Category,
@@ -9,7 +9,7 @@ import {
 } from "@solara/project-schema";
 import type { Dispatch, SetStateAction } from "react";
 import { useMemo } from "react";
-import { Button, Field } from "../../components/Ui";
+import { Button, EmptyState, Field } from "../../components/Ui";
 
 export function categoryTree(project: StoreProjectV1): Category[] {
   const roots = project.categories.filter((category) => category.parentId === undefined);
@@ -104,50 +104,58 @@ export function CategoryTree({
           <p>Las categorías padre agregan automáticamente los productos de sus hijas.</p>
         </div>
       </header>
-      <ul className="category-tree" aria-label="Categorías ordenadas">
-        {visibleCategories.map((category) => {
-          const directCount = project.products.filter((product) =>
-            product.categoryIds.includes(category.id),
-          ).length;
-          const totalCount = getCategoryProductIds(project, category.id).length;
-          const hasChildren = (categoryChildren.get(category.id)?.length ?? 0) > 0;
-          const expanded = !collapsedCategoryIds.has(category.id);
-          return (
-            <li key={category.id} data-depth={category.parentId ? "1" : "0"}>
-              <div className="category-tree-name">
-                {hasChildren ? (
-                  <button
-                    className="category-tree-toggle"
-                    type="button"
-                    aria-label={`${expanded ? "Contraer" : "Expandir"} ${category.title}`}
-                    aria-expanded={expanded}
-                    onClick={() =>
-                      setCollapsedCategoryIds((current) => {
-                        const next = new Set(current);
-                        if (next.has(category.id)) next.delete(category.id);
-                        else next.add(category.id);
-                        return next;
-                      })
-                    }
-                  >
-                    <CaretRight
-                      aria-hidden
-                      size={14}
-                      style={{ transform: expanded ? "rotate(90deg)" : undefined }}
-                    />
-                  </button>
-                ) : (
-                  <span className="category-tree-spacer" aria-hidden />
-                )}
-                <strong>{category.title}</strong>
-              </div>
-              <span>
-                {directCount} directos · {totalCount} totales
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+      {orderedCategories.length === 0 ? (
+        <EmptyState
+          icon={TreeStructure}
+          title="No hay categorías"
+          body="Las categorías llegan con la plantilla de la tienda o se importan con el CSV del catálogo; después podés reubicarlas aquí."
+        />
+      ) : (
+        <ul className="category-tree" aria-label="Categorías ordenadas">
+          {visibleCategories.map((category) => {
+            const directCount = project.products.filter((product) =>
+              product.categoryIds.includes(category.id),
+            ).length;
+            const totalCount = getCategoryProductIds(project, category.id).length;
+            const hasChildren = (categoryChildren.get(category.id)?.length ?? 0) > 0;
+            const expanded = !collapsedCategoryIds.has(category.id);
+            return (
+              <li key={category.id} data-depth={category.parentId ? "1" : "0"}>
+                <div className="category-tree-name">
+                  {hasChildren ? (
+                    <button
+                      className="category-tree-toggle"
+                      type="button"
+                      aria-label={`${expanded ? "Contraer" : "Expandir"} ${category.title}`}
+                      aria-expanded={expanded}
+                      onClick={() =>
+                        setCollapsedCategoryIds((current) => {
+                          const next = new Set(current);
+                          if (next.has(category.id)) next.delete(category.id);
+                          else next.add(category.id);
+                          return next;
+                        })
+                      }
+                    >
+                      <CaretRight
+                        aria-hidden
+                        size={14}
+                        style={{ transform: expanded ? "rotate(90deg)" : undefined }}
+                      />
+                    </button>
+                  ) : (
+                    <span className="category-tree-spacer" aria-hidden />
+                  )}
+                  <strong>{category.title}</strong>
+                </div>
+                <span>
+                  {directCount} directos · {totalCount} totales
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
       <div className="category-reparent">
         <Field label="Categoría a reubicar">
           <select

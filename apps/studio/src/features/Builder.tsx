@@ -255,6 +255,17 @@ export function Builder({ project, onChange, protectedBase = false }: BuilderPro
               icon={Swap}
               title="Seleccioná una sección"
               body="El inspector muestra contenido, módulo y movimiento de la sección activa."
+              action={
+                pageSections.length > 0 ? (
+                  <Button
+                    variant="primary"
+                    icon={ArrowDown}
+                    onClick={() => setSelectedId(pageSections[0]?.id ?? "")}
+                  >
+                    Seleccionar la primera sección
+                  </Button>
+                ) : undefined
+              }
             />
           ) : (
             <>

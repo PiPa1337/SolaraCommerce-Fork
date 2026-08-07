@@ -1,0 +1,115 @@
+/* Galería de componentes (T1.8): ruta oculta /__studio/components.
+Importada sólo por el chunk lazy de la galería (cssCodeSplit): no suma al
+CSS inicial del editor y no toca el gate de budgets. */
+.component-gallery {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 28px clamp(16px, 4vw, 48px) 80px;
+}
+
+.component-gallery__intro h1 {
+  margin: 0 0 6px;
+  font-size: clamp(26px, 4vw, 38px);
+}
+
+.component-gallery__intro p {
+  margin: 0 0 4px;
+  color: var(--ui-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.component-gallery__route {
+  display: inline-block;
+  margin-bottom: 24px;
+  padding: 4px 10px;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  background: var(--ui-surface);
+  color: var(--ui-text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.component-gallery__section {
+  margin-top: 34px;
+}
+
+.component-gallery__section > h2 {
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+
+.component-gallery__section > p {
+  margin: 0 0 14px;
+  color: var(--ui-text-muted);
+  font-size: 13px;
+}
+
+.component-gallery__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+}
+
+.component-gallery__cell {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-surface-raised);
+  box-shadow: var(--ui-shadow-sm);
+}
+
+.component-gallery__cell > h3 {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  letter-spacing: 0;
+}
+
+.component-gallery__cell > small {
+  color: var(--ui-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.component-gallery__demo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.component-gallery__token-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.component-gallery__swatch {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border: 1px solid var(--ui-border-strong);
+  border-radius: var(--ui-radius);
+}
+
+.component-gallery__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 18px;
+  color: var(--ui-text-muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.component-gallery__back:hover {
+  color: var(--ui-accent);
+}
