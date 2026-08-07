@@ -1021,3 +1021,14 @@ export function generatePerformanceFixture(productCount = 1_000): StoreProjectV1
     })),
   });
 }
+
+/** Normaliza texto de búsqueda: minúsculas es-AR, sin diacríticos, tokens. */
+export function normalizeSearchTokens(value: string): string[] {
+  return String(value ?? "")
+    .toLocaleLowerCase("es-AR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}

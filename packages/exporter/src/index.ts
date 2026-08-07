@@ -3,6 +3,7 @@
  * snapshot una vez, renderiza páginas y metadatos rastreables, deduplica assets
  * y produce el sitio estático sin incluir estado interno del editor.
  */
+import { normalizeSearchTokens } from "@solara/core";
 import {
   getModuleDefinition,
   MODULE_STYLE_BLOCKS,
@@ -1772,6 +1773,12 @@ function buildSearchIndex(project: StoreProjectV1): string {
       const image = imageUrl(project, product.imageIds[0]);
       const imageAsset = imageFor(project, product.imageIds[0]);
       const categoryIds = [...productCategoryScope(project, product)];
+      const categoryNames = categoryIds
+        .map((id) => project.categories.find((category) => category.id === id)?.title)
+        .filter((value): value is string => Boolean(value));
+      const collectionNames = product.collectionIds
+        .map((id) => project.collections.find((collection) => collection.id === id)?.title)
+        .filter((value): value is string => Boolean(value));
       return {
         id: product.id,
         slug: product.slug,
@@ -1781,17 +1788,20 @@ function buildSearchIndex(project: StoreProjectV1): string {
         tags: product.tags,
         categoryIds,
         collectionIds: product.collectionIds,
-        categoryNames: categoryIds
-          .map((id) => project.categories.find((category) => category.id === id)?.title)
-          .filter((value): value is string => Boolean(value)),
-        collectionNames: product.collectionIds
-          .map((id) => project.collections.find((collection) => collection.id === id)?.title)
-          .filter((value): value is string => Boolean(value)),
+        categoryNames,
+        collectionNames,
         ...(image ? { imageUrl: image } : {}),
         ...(imageAsset ? { imageWidth: imageAsset.width, imageHeight: imageAsset.height } : {}),
         priceMin: Math.min(...prices),
         available: product.variants.some((variant) => variant.available),
         path: `/productos/${product.slug}/`,
+        tokens: {
+          title: normalizeSearchTokens(product.title),
+          brand: normalizeSearchTokens(product.brand),
+          tags: normalizeSearchTokens((product.tags ?? []).join(" ")),
+          categories: normalizeSearchTokens([...categoryNames, ...collectionNames].join(" ")),
+          description: normalizeSearchTokens(product.description),
+        },
       };
     });
   return JSON.stringify(entries);

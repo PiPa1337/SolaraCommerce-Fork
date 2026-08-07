@@ -54,10 +54,25 @@ describe("tienda base catalog-modern de 50 productos", () => {
     const exportedHome = String(exported.files.get("index.html"));
     const moduleTree = (html: string) =>
       [...html.matchAll(/data-solara-module="([^"]+)"/g)].map((match) => match[1]);
-    const search = JSON.parse(String(exported.files.get("search-index.json"))) as unknown[];
+    const search = JSON.parse(String(exported.files.get("search-index.json"))) as Array<{
+      title: string;
+      tokens?: {
+        title: string[];
+        brand: string[];
+        tags: string[];
+        categories: string[];
+        description: string[];
+      };
+    }>;
+    const remera = search.find((entry) => entry.title === "Remera esencial de algodón");
 
     expect(moduleTree(preview)).toEqual(moduleTree(exportedHome));
     expect(search).toHaveLength(50);
+    expect(remera?.tokens?.title).toContain("remera");
+    expect(remera?.tokens?.title).toContain("algodon");
+    expect(remera?.tokens?.description).toContain("prenda");
+    expect(remera?.tokens?.categories).toContain("basicas");
+    expect(search.every((entry) => Array.isArray(entry.tokens?.title))).toBe(true);
     expect(exported.files.has("categorias/novedades/index.html")).toBe(false);
     expect(exported.files.has("categorias/sale/index.html")).toBe(false);
     expect(String(exported.files.get("sitemap.xml"))).toContain(
