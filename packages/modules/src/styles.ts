@@ -2263,7 +2263,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   [data-solara-store].catalog-modern .catalog-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.1rem .65rem; }
   [data-solara-store].catalog-modern .catalog-product-grid-section,
   [data-solara-store].catalog-modern .catalog-category-bento-section,
-  [data-solara-store].catalog-modern .catalog-testimonials-section { width: min(calc(100% - 2rem), var(--solara-container)); padding: 3.25rem 0; }
+  [data-solara-store].catalog-modern .catalog-testimonials-section,
+  [data-solara-store].catalog-modern .catalog-faq-section,
+  [data-solara-store].catalog-modern .catalog-stats-section { width: min(calc(100% - 2rem), var(--solara-container)); padding: 3.25rem 0; }
   [data-solara-store].catalog-modern .catalog-product-grid-section > header,
   [data-solara-store].catalog-modern .catalog-testimonials-section > header { align-items: start; flex-direction: column; }
   [data-solara-store].catalog-modern .catalog-category-bento-section { padding: 1.25rem; }
@@ -2271,6 +2273,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   [data-solara-store].catalog-modern .catalog-category-bento-item,
   [data-solara-store].catalog-modern .catalog-category-bento-item--feature,
   [data-solara-store].catalog-modern .catalog-category-bento-item--wide { min-height: 160px; grid-column: 1; grid-row: auto; }
+  [data-solara-store].catalog-modern .catalog-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   [data-solara-store].catalog-modern .catalog-search-dialog-controls { grid-template-columns: 1fr; }
   [data-solara-store].catalog-modern .catalog-search-dialog-controls .catalog-primary-action { width: 100%; }
   [data-solara-store].catalog-modern .catalog-newsletter-inner { align-items: stretch; flex-direction: column; margin-bottom: 2rem; }
@@ -2598,6 +2601,26 @@ html:has([data-solara-store].catalog-modern)::-webkit-scrollbar-thumb:hover { bo
 }
 [data-solara-store].catalog-modern .solara-back-to-top svg { width: 48px; height: 48px; }
 [data-solara-store].catalog-modern .solara-back-to-top circle { transition: stroke-dashoffset 200ms linear; }
+[data-solara-store].catalog-modern .catalog-faq-section,
+[data-solara-store].catalog-modern .catalog-stats-section { width: min(calc(100% - 2rem), var(--solara-container)); margin: 0 auto; padding: clamp(3.5rem, 7vw, 7rem) 0; }
+[data-solara-store].catalog-modern .catalog-faq-section h2,
+[data-solara-store].catalog-modern .catalog-stats-section h2 { max-width: 16ch; margin-bottom: 1.5rem; font-size: clamp(2rem, 4vw, 3.4rem); font-weight: 900; letter-spacing: -.08em; }
+[data-solara-store].catalog-modern .catalog-faq-list { display: grid; gap: .75rem; }
+[data-solara-store].catalog-modern .solara-faq-item { border: 1px solid var(--catalog-border); border-radius: 16px; background: var(--catalog-paper); }
+[data-solara-store].catalog-modern .solara-faq-item summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 56px; padding: .9rem 1.15rem; cursor: pointer; font-weight: 700; list-style: none; }
+[data-solara-store].catalog-modern .solara-faq-item summary::-webkit-details-marker { display: none; }
+[data-solara-store].catalog-modern .solara-faq-item summary::after { content: "+"; font-size: 1.3rem; line-height: 1; transition: transform 200ms cubic-bezier(.16, 1, .3, 1); }
+[data-solara-store].catalog-modern .solara-faq-item[open] summary::after { transform: rotate(180deg); }
+[data-solara-store].catalog-modern .solara-faq-item > div { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 320ms cubic-bezier(.16, 1, .3, 1); }
+[data-solara-store].catalog-modern .solara-faq-item > div > p { min-height: 0; margin: 0; padding: 0 1.15rem; overflow: hidden; color: var(--catalog-muted); font-size: .92rem; line-height: 1.6; }
+[data-solara-store].catalog-modern .solara-faq-item[open] > div { grid-template-rows: 1fr; }
+[data-solara-store].catalog-modern .solara-faq-item[open] > div > p { padding-bottom: 1.05rem; }
+[data-solara-store].catalog-modern .catalog-stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; overflow: hidden; border: 1px solid var(--catalog-border); border-radius: 20px; background: var(--catalog-border); }
+[data-solara-store].catalog-modern .catalog-stat { display: grid; align-content: start; gap: .1rem; min-height: 10rem; padding: 1.6rem 1.4rem; background: var(--catalog-paper); }
+[data-solara-store].catalog-modern .catalog-stat strong { font-size: clamp(2.4rem, 5vw, 4rem); font-weight: 900; letter-spacing: -.06em; line-height: 1; font-variant-numeric: tabular-nums; }
+[data-solara-store].catalog-modern .catalog-stat-suffix { font-size: 1.4rem; font-weight: 800; }
+[data-solara-store].catalog-modern .catalog-stat p { margin-top: .4rem; color: var(--catalog-muted); font-size: .82rem; }
+[data-solara-store].catalog-modern .catalog-stats-section + .catalog-faq-section { padding-top: 0; }
 @media (prefers-reduced-motion: reduce) {
   [data-solara-store].catalog-modern .solara-marquee-track,
   [data-solara-store].catalog-modern .solara-card-glow::before,

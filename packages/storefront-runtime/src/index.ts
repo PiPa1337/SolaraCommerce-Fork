@@ -1356,6 +1356,57 @@ function storefrontBoot(): void {
     });
   };
   initMicroInteractions();
+
+  const initFAQStats = (): void => {
+    if (!hasFeature("micro")) return;
+    document.querySelectorAll<HTMLElement>("[data-faq-root]").forEach((root) => {
+      const items = Array.from(root.querySelectorAll<HTMLDetailsElement>(".solara-faq-item"));
+      items.forEach((item) => {
+        item.addEventListener("toggle", () => {
+          if (!item.open) return;
+          items.forEach((other) => {
+            if (other !== item) other.open = false;
+          });
+        });
+      });
+    });
+    if (!("IntersectionObserver" in window)) return;
+    const animateCounter = (target: HTMLElement): void => {
+      const valueElement = target.querySelector<HTMLElement>("[data-stat-value]");
+      const targetValue = Number(target.dataset.statTarget ?? "0");
+      if (!valueElement || !Number.isFinite(targetValue)) return;
+      const format = (value: number): string => value.toLocaleString("es-AR");
+      if (reduceMotion) {
+        valueElement.textContent = format(targetValue);
+        return;
+      }
+      const startedAt = performance.now();
+      const duration = 1200;
+      const step = (now: number): void => {
+        const progress = Math.min(1, (now - startedAt) / duration);
+        const eased = 1 - 2 ** (-10 * progress);
+        const value = progress === 1 ? targetValue : Math.round(targetValue * eased);
+        valueElement.textContent = format(value);
+        if (progress < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    };
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const target = entry.target as HTMLElement;
+          animateCounter(target);
+          observer.unobserve(target);
+        });
+      },
+      { threshold: 0.5 },
+    );
+    document.querySelectorAll<HTMLElement>("[data-stat-target]").forEach((target) => {
+      observer.observe(target);
+    });
+  };
+  initFAQStats();
 }
 
 const SEARCH_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unknown]> = [

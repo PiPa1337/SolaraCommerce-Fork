@@ -56,6 +56,15 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("data-back-to-top");
   });
 
+  it("incluye FAQ con exclusividad y contadores de stats autocontenidos", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("initFAQStats");
+    expect(STOREFRONT_RUNTIME_JS).toContain("data-faq-root");
+    expect(STOREFRONT_RUNTIME_JS).toContain("data-stat-target");
+    expect(STOREFRONT_RUNTIME_JS).toContain("toLocaleString");
+    expect(STOREFRONT_RUNTIME_JS).toContain('hasFeature("micro")');
+    expect(STOREFRONT_RUNTIME_JS).not.toContain("initMicroInteractions.initFAQStats");
+  });
+
   it("incluye comportamiento accesible para el popup de búsqueda", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("data-catalog-search-dialog");
     expect(STOREFRONT_RUNTIME_JS).toContain("data-catalog-search-open");

@@ -937,6 +937,144 @@ export const catalogTestimonials: ModuleDefinition<
   },
 };
 
+const faqSettings = z.object({
+  title: z.string().default("Preguntas frecuentes"),
+  items: z
+    .array(
+      z.object({
+        question: z.string().min(1),
+        answer: z.string().min(1),
+      }),
+    )
+    .max(8)
+    .default([
+      {
+        question: "¿Hacen envíos a todo el país?",
+        answer: "Sí, coordinamos el envío y su costo antes de confirmar el pedido por WhatsApp.",
+      },
+      {
+        question: "¿Cómo hago un pedido?",
+        answer:
+          "Elegí tus productos, completá el carrito y escribinos por WhatsApp para coordinar entrega y pago.",
+      },
+      {
+        question: "¿Puedo cambiar o devolver un producto?",
+        answer:
+          "Sí, dentro de los 10 días de recibido si conserva su estado original y no presenta señales de uso.",
+      },
+      {
+        question: "¿Cuáles son los medios de pago?",
+        answer: "Aceptamos transferencia, efectivo y Mercado Pago; lo acordamos por WhatsApp.",
+      },
+    ]),
+});
+
+export const catalogFaq: ModuleDefinition<"catalog-faq", z.infer<typeof faqSettings>> = {
+  manifest: modernManifest({
+    id: "catalog-faq",
+    name: "Preguntas frecuentes",
+    description: "Accordion de preguntas y respuestas con una sola abierta a la vez.",
+    slots: ["content", "trust"],
+    compatibleSettings: ["title", "items"],
+  }),
+  settingsSchema: faqSettings,
+  settingsFields: [
+    { key: "title", type: "text", label: "Título" },
+    {
+      key: "items",
+      type: "repeater",
+      label: "Preguntas",
+      maxItems: 8,
+      itemLabelKey: "question",
+      fields: [
+        { key: "question", label: "Pregunta", type: "text" },
+        { key: "answer", label: "Respuesta", type: "text" },
+      ],
+    },
+  ],
+  motionZones: modernRevealZone,
+  styleAsset: scopedAssetId("catalog-modern"),
+  render(context) {
+    const items = context.settings.items;
+    if (!items.length) return moduleRoot("catalog-faq", context.section, safeHtml(""));
+    return moduleRoot(
+      "catalog-faq",
+      context.section,
+      safeHtml(
+        `<div class="catalog-faq-section" data-faq-root data-motion-zone="content"><header><h2 class="solara-scroll-title">${escapeHtml(context.settings.title)}</h2></header><div class="catalog-faq-list">${items
+          .map(
+            (item) =>
+              `<details class="solara-faq-item"><summary>${escapeHtml(item.question)}</summary><div class="solara-faq-answer"><p>${escapeHtml(item.answer)}</p></div></details>`,
+          )
+          .join("")}</div></div>`,
+      ),
+    );
+  },
+};
+
+const statsItemSchema = z.object({
+  value: z.number().int().min(0),
+  suffix: z.string(),
+  label: z.string(),
+});
+
+const statsSettings = z.object({
+  title: z.string().default("Nuestra tienda en números"),
+  items: z
+    .array(statsItemSchema)
+    .max(6)
+    .default([
+      { value: 50, suffix: "", label: "productos activos" },
+      { value: 14, suffix: "", label: "categorías" },
+      { value: 60, suffix: "", label: "variantes" },
+      { value: 1, suffix: "", label: "tienda lista" },
+    ]),
+});
+
+export const catalogStats: ModuleDefinition<"catalog-stats", z.infer<typeof statsSettings>> = {
+  manifest: modernManifest({
+    id: "catalog-stats",
+    name: "Estadísticas",
+    description: "Contadores del negocio con valores estáticos accesibles.",
+    slots: ["content", "trust"],
+    compatibleSettings: ["title", "items"],
+  }),
+  settingsSchema: statsSettings,
+  settingsFields: [
+    { key: "title", type: "text", label: "Título" },
+    {
+      key: "items",
+      type: "repeater",
+      label: "Valores",
+      maxItems: 6,
+      itemLabelKey: "label",
+      fields: [
+        { key: "value", label: "Valor", type: "number", min: 0, step: 1 },
+        { key: "suffix", label: "Sufijo", type: "text" },
+        { key: "label", label: "Etiqueta", type: "text" },
+      ],
+    },
+  ],
+  motionZones: modernRevealZone,
+  styleAsset: scopedAssetId("catalog-modern"),
+  render(context) {
+    const items = context.settings.items;
+    if (!items.length) return moduleRoot("catalog-stats", context.section, safeHtml(""));
+    return moduleRoot(
+      "catalog-stats",
+      context.section,
+      safeHtml(
+        `<div class="catalog-stats-section" data-motion-zone="content"><header><h2 class="solara-scroll-title">${escapeHtml(context.settings.title)}</h2></header><div class="catalog-stats-grid" data-stats-root>${items
+          .map(
+            (item) =>
+              `<div class="catalog-stat" data-stat-target="${item.value}"><strong data-stat-value="${item.value}">${escapeHtml(item.value.toLocaleString("es-AR"))}</strong>${item.suffix ? `<span class="catalog-stat-suffix">${escapeHtml(item.suffix)}</span>` : ""}<p>${escapeHtml(item.label)}</p></div>`,
+          )
+          .join("")}</div></div>`,
+      ),
+    );
+  },
+};
+
 const newsletterSettings = z.object({
   title: z.string().default("Recibí las próximas novedades"),
   body: z.string().default("Escribinos y te avisamos cuando llegue una nueva selección."),
@@ -1085,6 +1223,8 @@ export const catalogModernModules = [
   catalogProductDetail,
   catalogCategoryBento,
   catalogTestimonials,
+  catalogFaq,
+  catalogStats,
   catalogNewsletterCta,
   catalogCartDrawer,
   catalogFooter,
