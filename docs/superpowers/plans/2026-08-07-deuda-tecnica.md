@@ -528,19 +528,19 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
-import { strToU8, zipSync } from "fflate";
 import { describe, expect, it, vi } from "vitest";
 import { createSolaraRequestHandler } from "../scripts/solara-request-handler.mjs";
 
 const projectId = "store-open-folder";
 const shutdownCookieName = "solara_shutdown";
 
-function projectArchive() {
-  return zipSync({
-    "manifest.json": strToU8(JSON.stringify({ format: "solara-project", version: 2, projectId })),
-    "project.json": strToU8(
-      JSON.stringify({ schemaVersion: 2, id: projectId, name: "Prueba", slug: "prueba" }),
-    ),
+function projectJson() {
+  return JSON.stringify({
+    format: "solara-project",
+    version: 2,
+    projectId,
+    exportedAt: "2026-08-07T10:00:00.000Z",
+    project: { schemaVersion: 2, id: projectId, name: "Prueba", slug: "prueba" },
   });
 }
 
@@ -571,7 +571,7 @@ async function createProject(handler) {
   await storage.upload(
     transaction.transactionId,
     "project",
-    Readable.from([Buffer.from(projectArchive())]),
+    Readable.from([Buffer.from(projectJson())]),
   );
   return storage.commit(transaction.transactionId);
 }
@@ -1208,7 +1208,7 @@ Vite procesa los `@import` en orden en el build; el orden de cascada queda idén
 - [ ] **Step 3: Verificar build, budgets y E2E visual**
 
 Run: `corepack pnpm --filter @solara/studio build` y `corepack pnpm check:budgets`
-Expected: PASS con los mismos tamaños (CSS gzip 13.061 B) porque el bundle final es el mismo conjunto de reglas.
+Expected: PASS con los mismos tamaños (CSS sin comprimir, medido en crudo) porque el bundle final es el mismo conjunto de reglas.
 
 Luego: `corepack pnpm test:e2e` (Chromium) para confirmar que el dashboard y el estudio renderizan igual.
 
@@ -1224,7 +1224,7 @@ git commit -m "Divide el CSS del estudio por secciones con cascada preservada"
 ### Task 13: Documentación y cierre
 
 **Files:**
-- Modify: `docs/TECHNICAL_DEBT.md`, `docs/HANDOFF.md`, `docs/DATA_MODEL.md`, `docs/INTEGRATIONS.md`, `docs/ARCHITECTURE.md`
+- Modify: `docs/TECHNICAL_DEBT.md`, `HANDOFF.md` (raíz), `docs/DATA_MODEL.md`, `docs/INTEGRATIONS.md`, `docs/ARCHITECTURE.md`
 
 **Interfaces:**
 - Consumes: los resultados de todas las tasks anteriores (nombres de endpoint, tabla de migración, mediciones de la Task 8).
@@ -1241,7 +1241,7 @@ Marcar como resueltas (con referencia a la task) las filas: extracción ZIP sín
 - [ ] **Step 3: Actualizar ARCHITECTURE.md y HANDOFF.md**
 
 - `docs/ARCHITECTURE.md`: en la sección de persistencia, mencionar extracción streaming con límites y el diagnóstico persistido.
-- `docs/HANDOFF.md`: agregar una sección "Resolución de deuda técnica" que resuma las 13 tasks, las verificaciones ejecutadas y los pendientes de release.
+- `HANDOFF.md` (raíz): agregar una sección "Resolución de deuda técnica" que resuma las 13 tasks, las verificaciones ejecutadas y los pendientes de release.
 
 - [ ] **Step 4: Ejecutar el gate completo**
 
@@ -1258,7 +1258,7 @@ Expected: PASS en todos. NO ejecutar `test:e2e:release` (exige Node 22).
 - [ ] **Step 5: Commit final**
 
 ```bash
-git add docs/TECHNICAL_DEBT.md docs/HANDOFF.md docs/DATA_MODEL.md docs/INTEGRATIONS.md docs/ARCHITECTURE.md
+git add docs/TECHNICAL_DEBT.md HANDOFF.md docs/DATA_MODEL.md docs/INTEGRATIONS.md docs/ARCHITECTURE.md
 git commit -m "Documenta la resolución de deuda técnica"
 ```
 
@@ -1268,4 +1268,4 @@ git commit -m "Documenta la resolución de deuda técnica"
 
 - **Cobertura:** cada fila de `docs/TECHNICAL_DEBT.md` tiene tarea (1→Task 1, 2→Task 2, 3→Task 3, 4 y 12→Task 13, 5→Tasks 9–12, 6→Task 7, 7→Task 8, 8→Task 6, 9→Task 4, 10→Task 5, 11→Task 13, 13→Tasks 2–3). Los huecos de producto (cupones, impuestos, stock, i18n, pedidos, analytics) quedan fuera por decisión explícita del usuario: "después miramos los huecos".
 - **Sin placeholders:** todos los pasos tienen código o instrucciones de movimiento textuales exactas; las tasks mecánicas (9–12) definen rangos de líneas y verificaciones.
-- **Consistencia de tipos:** `streamZip` devuelve `{ files, bytes }` y `extractSiteArchive` lo propaga; `parseProjectArchive(archivePath, expectedProjectId, limits)` es la única firma nueva; `openFolder`/`openFolderInExplorer`/`openLocalProjectFolder` usan los mismos nombres en storage, handler y cliente.
+- **Consistencia de tipos:** `openFolder`/`openFolderInExplorer`/`openLocalProjectFolder` usan los mismos nombres en storage, handler y cliente; los tests del storage usan los helpers JSON actuales (`projectJson`/`siteMap`) y las ops de `writeGuard` del storage V2 (`write-upload`, `write-site-files`, `rename-site`, `copy-archive`, `write-manifest`, `remove-old-current`).
