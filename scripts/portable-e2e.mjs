@@ -42,6 +42,24 @@ async function closePortable(instance) {
   await instance.app.close();
 }
 
+async function assertPortableDiagnostics(instance, folder) {
+  const diagnostics = await instance.page.evaluate(() => window.solaraDesktop?.diagnostics?.());
+  if (!diagnostics?.portableRoot || !diagnostics?.profileRoot) {
+    throw new Error("El shell no expuso diagnósticos portables.");
+  }
+  const expectedRoot = resolve(folder);
+  if (resolve(diagnostics.portableRoot) !== expectedRoot) {
+    throw new Error("La instancia resolvió una raíz portable distinta a su carpeta.");
+  }
+  if (
+    !resolve(diagnostics.profileRoot).startsWith(
+      `${expectedRoot}${process.platform === "win32" ? "\\" : "/"}`,
+    )
+  ) {
+    throw new Error("El perfil Electron quedó fuera de la raíz portable.");
+  }
+}
+
 try {
   await Promise.all([
     cp(source, copyA, { recursive: true }),
@@ -49,6 +67,10 @@ try {
   ]);
 
   const [instanceA, instanceB] = await Promise.all([openPortable(copyA), openPortable(copyB)]);
+  await Promise.all([
+    assertPortableDiagnostics(instanceA, copyA),
+    assertPortableDiagnostics(instanceB, copyB),
+  ]);
   const manifestFolder = (folder) => {
     const projectFolder = readdirSync(join(folder, "proyectos"), { withFileTypes: true }).find(
       (entry) => entry.isDirectory(),
@@ -77,6 +99,19 @@ try {
   }
   if (!existsSync(join(copyA, savedA.lastValidSite.directoryPath, "index.html"))) {
     throw new Error("El sitio pÃºblico confirmado de A no contiene index.html.");
+  }
+
+  const publicSiteUrl = await instanceA.page.evaluate((projectId) => {
+    if (!window.solaraDesktop?.openSite) throw new Error("Falta el puente para abrir el sitio.");
+    return window.solaraDesktop.openSite(projectId);
+  }, initialA.projectId);
+  const publicResponse = await fetch(publicSiteUrl);
+  if (!publicResponse.ok || !(await publicResponse.text()).includes("<!doctype html>")) {
+    throw new Error("El servidor temporal no devolviÃ³ el sitio pÃºblico guardado.");
+  }
+  const outsideResponse = await fetch(`${publicSiteUrl}/../manifest.json`);
+  if (outsideResponse.status !== 404 && outsideResponse.status !== 403) {
+    throw new Error("El servidor temporal permitiÃ³ leer fuera de la carpeta pÃºblica.");
   }
 
   const bodyB = await instanceB.page.locator("body").innerText();

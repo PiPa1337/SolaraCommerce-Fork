@@ -134,7 +134,8 @@ Los nuevos puntos de extensión son:
   validación de rutas relativas;
 - `packages/exporter/scripts/solara-request-handler.mjs`: API y archivos
   estáticos compartidos por HTTP/Electron;
-- `apps/desktop/src/main.mjs` y `preload.mjs`: shell, protocolo e IPC mínimo;
+- `apps/desktop/src/main.mjs` y `preload.mjs`: shell, protocolo, IPC mínimo y
+  rutas locales de perfil/logs;
 - `apps/desktop/electron-builder.yml`: distribución `win-unpacked`;
 - `scripts/create-portable-distribution.mjs`, `portable-smoke.mjs` y
   `portable-e2e.mjs`: salida y verificación de carpeta copiable.
@@ -142,7 +143,9 @@ Los nuevos puntos de extensión son:
 Ver [`docs/PORTABILITY.md`](docs/PORTABILITY.md) antes de modificar el shell.
 
 En este cambio se verificaron `desktop:build`, `desktop:package`,
-`portable:smoke`, `test:e2e:portable` y tres tests unitarios de portabilidad
-(rutas con espacios/Unicode, paridad HTTP/protocolo y rechazo de manifests con
-paths absolutos). El E2E Electron guarda una tienda en una copia, confirma el
-aislamiento de la segunda, reabre desde disco y valida el traslado de la carpeta.
+`portable:smoke`, `test:e2e:portable` y cuatro tests unitarios de portabilidad
+(rutas con espacios/Unicode, paridad HTTP/protocolo, rechazo de manifests con
+paths absolutos y recuperación ante límites/interrupción de guardado). El E2E
+Electron comprueba diagnósticos dentro de la raíz, guarda una tienda en una
+copia, sirve el sitio público sin permitir traversal, confirma el aislamiento
+de la segunda, reabre desde disco y valida el traslado de la carpeta.

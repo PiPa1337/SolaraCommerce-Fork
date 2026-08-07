@@ -99,9 +99,11 @@ simbólicos y manifests con paths absolutos. Esta excepción está aislada al
 shell portable y debe revisarse al actualizar Electron.
 
 Cada copia configura su propio `userData`, `sessionData`, lock de instancia,
-logs y servidor temporal de sitios. Dos carpetas diferentes pueden ejecutarse al
-mismo tiempo. Una segunda apertura de la misma carpeta enfoca la instancia
-existente en lugar de crear otra.
+logs de Electron y servidor temporal de sitios. La ruta de logs se fija con
+`app.setAppLogsPath()` dentro de `.solara-runtime/logs`, para no dejar
+diagnósticos en AppData. Dos carpetas diferentes pueden ejecutarse al mismo
+tiempo. Una segunda apertura de la misma carpeta enfoca la instancia existente
+en lugar de crear otra.
 
 ## Sitios exportados
 

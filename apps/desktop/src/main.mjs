@@ -6,7 +6,6 @@
  * contrato `/__solara/*` que el launcher HTTP de desarrollo.
  */
 
-import { mkdirSync } from "node:fs";
 import { appendFile, mkdir } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -54,12 +53,16 @@ let mainWindow;
 let requestHandler;
 let shuttingDown = false;
 
-// Electron necesita que estas carpetas existan antes de crear el perfil.
-mkdirSync(layout.runtimeRoot, { recursive: true });
-mkdirSync(layout.profileRoot, { recursive: true });
+// Los paths se fijan antes de `ready`, pero las carpetas se crean dentro de
+// `start()` para que un disco sin permisos termine en el diálogo accionable de
+// arranque en vez de provocar una excepción síncrona del proceso principal.
 app.setPath("userData", layout.profileRoot);
 app.setPath("sessionData", join(layout.profileRoot, "session"));
 app.setPath("crashDumps", join(layout.runtimeRoot, "crash-dumps"));
+// Electron puede guardar sus logs de aplicación fuera de `userData` si no se
+// fija explícitamente. Mantenerlos dentro del runtime hace que una copia
+// portable no deje rastros en AppData ni mezcle diagnósticos entre copias.
+app.setAppLogsPath(layout.logsRoot);
 // La distribución debe iniciar también en equipos sin un controlador GPU
 // compatible. Chromium conserva composición acelerada en el navegador externo;
 // Studio prioriza una apertura determinista dentro de la carpeta portable.

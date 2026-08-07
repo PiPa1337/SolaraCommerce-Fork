@@ -211,6 +211,14 @@ export function createLocalProjectStorage(options = {}) {
   const maxUploadBytes = options.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES;
   const maxExtractedBytes = options.maxExtractedBytes ?? DEFAULT_MAX_EXTRACTED_BYTES;
   const maxFiles = options.maxFiles ?? DEFAULT_MAX_FILES;
+  // Sólo los tests inyectan fallos deterministas. Mantener el hook fuera del
+  // handler HTTP permite comprobar que una interrupción no reemplaza el
+  // manifest anterior sin agregar una ruta de producción ni una dependencia.
+  const faultInjector =
+    typeof options.faultInjector === "function" ? options.faultInjector : undefined;
+  const checkpoint = async (stage) => {
+    await faultInjector?.(stage);
+  };
   const transactions = new Map();
   const projectLocks = new Set();
 
@@ -391,6 +399,7 @@ export function createLocalProjectStorage(options = {}) {
     const backupsRoot = join(storeRoot, "respaldos");
     const manualBackupsRoot = join(storeRoot, "respaldos-manuales");
     const sitesRoot = join(storeRoot, "sitios");
+    await checkpoint("before-publish-preparation");
     await Promise.all([
       mkdir(actualRoot, { recursive: true }),
       mkdir(backupsRoot, { recursive: true }),
@@ -410,10 +419,12 @@ export function createLocalProjectStorage(options = {}) {
       const finalSite = join(sitesRoot, key);
       await rm(temporarySite, { recursive: true, force: true });
       try {
+        await checkpoint("before-site-extract");
         siteInfo = await extractSiteArchive(join(transaction.root, "site.zip"), temporarySite, {
           maxFiles,
           maxExtractedBytes,
         });
+        await checkpoint("before-site-rename");
         await rename(temporarySite, finalSite);
       } catch (error) {
         await rm(temporarySite, { recursive: true, force: true });
@@ -431,6 +442,7 @@ export function createLocalProjectStorage(options = {}) {
 
     // Se publica el respaldo editable sólo después de validar el sitio opcional.
     // Así un ZIP inválido no deja archivos huérfanos en `actual/`.
+    await checkpoint("before-project-archive");
     await copyFile(join(transaction.root, "project.zip"), temporaryArchivePath);
     await rename(temporaryArchivePath, archivePath);
 
@@ -462,6 +474,7 @@ export function createLocalProjectStorage(options = {}) {
       },
       ...(lastValidSite ? { lastValidSite } : {}),
     };
+    await checkpoint("before-manifest");
     await writeJsonAtomic(join(storeRoot, "manifest.json"), manifest);
     if (previous?.current?.archivePath) {
       const oldCurrent = manifestPath(storeRoot, previous.current.archivePath);

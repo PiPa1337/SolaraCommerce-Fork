@@ -155,4 +155,60 @@ describe("almacenamiento local de proyectos", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("conserva el manifest anterior ante una interrupción y limita el upload", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-fault-"));
+    try {
+      let failingStage = "";
+      const storage = createLocalProjectStorage({
+        applicationRoot: root,
+        faultInjector: async (stage) => {
+          if (stage === failingStage) throw new Error(`fallo simulado: ${stage}`);
+        },
+      });
+      const first = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-06T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, first.transactionId, "project", projectArchive());
+      await upload(storage, first.transactionId, "site", siteArchive("<main>v1</main>"));
+      const firstReceipt = await storage.commit(first.transactionId);
+
+      const limitedStorage = createLocalProjectStorage({
+        applicationRoot: root,
+        maxUploadBytes: 32,
+      });
+      const limited = await limitedStorage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-06T11:00:00.000Z",
+        expectedVersion: firstReceipt.version,
+      });
+      await expect(
+        upload(limitedStorage, limited.transactionId, "project", projectArchive("archivo mayor")),
+      ).rejects.toThrow(/límite/i);
+      await limitedStorage.abort(limited.transactionId);
+
+      const interrupted = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-06T12:00:00.000Z",
+        expectedVersion: firstReceipt.version,
+      });
+      await upload(storage, interrupted.transactionId, "project", projectArchive("v2"));
+      failingStage = "before-manifest";
+      await expect(storage.commit(interrupted.transactionId)).rejects.toThrow(/simulado/i);
+      const listing = await storage.list();
+      expect(listing.projects[0]).toMatchObject({ version: 1, siteVersion: 1 });
+      expect((await storage.readCurrent(projectId)).manifest.current.version).toBe(1);
+      await storage.abort(interrupted.transactionId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

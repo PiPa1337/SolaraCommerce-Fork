@@ -92,10 +92,11 @@ versiona.
 
 ## Estrategia futura
 
-Todavía no hay pruebas de fault injection para disco lleno, permisos revocados,
-interrupciones durante rename ni ZIP bombs grandes. Antes de convertir el
-guardado local en un servicio remoto se deben agregar esos escenarios y una
-prueba de recuperación de `manifest.json`.
+La suite local cubre límites de upload/extracción, Zip Slip, interrupción antes
+de publicar el manifest y recuperación de la versión anterior. La simulación
+de disco lleno, permisos revocados y ZIP bombs grandes queda reservada para un
+job Windows de release, donde puede aislarse el volumen temporal sin tocar
+proyectos confirmados.
 
 ## Portable Windows
 
@@ -117,6 +118,7 @@ Electron para abrir dos copias, guardar una tienda, comprobar que la otra no la
 vea, verificar el sitio público confirmado, cerrar y reabrir desde disco y mover
 la copia a una ruta con espacios y Unicode.
 
-La inyección de disco lleno, permisos y ZIP corruptos continúa como prueba de
-release pendiente; no se simula en cada cambio para evitar modificar proyectos
-reales o ralentizar el bucle local.
+La suite no simula disco lleno ni permisos revocados del sistema operativo en
+cada cambio; esos casos quedan documentados como matriz de release. El E2E
+portable sí valida dos copias, Guardar, aislamiento, sitio público, traslado y
+recuperación desde disco.
