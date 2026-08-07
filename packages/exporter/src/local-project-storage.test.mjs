@@ -2,23 +2,25 @@ import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
-import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { createLocalProjectStorage } from "../scripts/local-project-storage.mjs";
 
 const projectId = "store-storage-test";
 
-function projectArchive(name = "Prueba") {
-  return zipSync({
-    "manifest.json": strToU8(JSON.stringify({ format: "solara-project", version: 2, projectId })),
-    "project.json": strToU8(
-      JSON.stringify({ schemaVersion: 2, id: projectId, name, slug: name.toLowerCase() }),
-    ),
+function projectJson(name = "Prueba") {
+  return JSON.stringify({
+    format: "solara-project",
+    version: 2,
+    projectId,
+    exportedAt: "2026-08-07T10:00:00.000Z",
+    project: { schemaVersion: 2, id: projectId, name, slug: name.toLowerCase() },
   });
 }
 
-function siteArchive(body = "<main>sitio</main>") {
-  return zipSync({ "index.html": strToU8(`<!doctype html>${body}`) });
+function siteMap(
+  entries = [{ path: "index.html", encoding: "utf8", data: "<!doctype html><main>sitio</main>" }],
+) {
+  return JSON.stringify(entries);
 }
 
 function requestFrom(bytes) {
@@ -41,8 +43,8 @@ describe("almacenamiento local de proyectos", () => {
         projectUpdatedAt: "2026-08-06T10:00:00.000Z",
         expectedVersion: null,
       });
-      await upload(storage, transaction.transactionId, "project", projectArchive());
-      await upload(storage, transaction.transactionId, "site", siteArchive());
+      await upload(storage, transaction.transactionId, "project", projectJson());
+      await upload(storage, transaction.transactionId, "site", siteMap());
       const receipt = await storage.commit(transaction.transactionId);
 
       expect(receipt.version).toBe(1);
@@ -78,8 +80,13 @@ describe("almacenamiento local de proyectos", () => {
         projectUpdatedAt: "2026-08-06T10:00:00.000Z",
         expectedVersion: null,
       });
-      await upload(storage, first.transactionId, "project", projectArchive());
-      await upload(storage, first.transactionId, "site", siteArchive("<main>v1</main>"));
+      await upload(storage, first.transactionId, "project", projectJson());
+      await upload(
+        storage,
+        first.transactionId,
+        "site",
+        siteMap([{ path: "index.html", encoding: "utf8", data: "<main>v1</main>" }]),
+      );
       const firstReceipt = await storage.commit(first.transactionId);
 
       const second = await storage.beginSave({
@@ -89,7 +96,7 @@ describe("almacenamiento local de proyectos", () => {
         projectUpdatedAt: "2026-08-06T11:00:00.000Z",
         expectedVersion: 1,
       });
-      await upload(storage, second.transactionId, "project", projectArchive("Prueba nueva"));
+      await upload(storage, second.transactionId, "project", projectJson("Prueba nueva"));
       const secondReceipt = await storage.commit(second.transactionId);
 
       expect(secondReceipt).toMatchObject({ version: 2, status: "site-outdated" });
@@ -103,10 +110,37 @@ describe("almacenamiento local de proyectos", () => {
             "proyectos",
             listing.projects[0].folder,
             "respaldos",
-            `${firstReceipt.key}.solara.zip`,
+            `${firstReceipt.key}.solara.json`,
           ),
         ),
       ).toBeTruthy();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rechaza un respaldo cuyo projectId no coincide con la transacción", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      const transaction = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(
+        storage,
+        transaction.transactionId,
+        "project",
+        projectJson().replaceAll(projectId, "store-otra"),
+      );
+      await expect(storage.commit(transaction.transactionId)).rejects.toThrow(
+        /no coincide con la tienda/i,
+      );
+      expect((await storage.list()).projects).toHaveLength(0);
+      await storage.abort(transaction.transactionId);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -123,7 +157,7 @@ describe("almacenamiento local de proyectos", () => {
         projectUpdatedAt: "2026-08-06T10:00:00.000Z",
         expectedVersion: null,
       });
-      await upload(storage, first.transactionId, "project", projectArchive());
+      await upload(storage, first.transactionId, "project", projectJson());
       await storage.commit(first.transactionId);
       await expect(
         storage.beginSave({
@@ -142,12 +176,12 @@ describe("almacenamiento local de proyectos", () => {
         projectUpdatedAt: "2026-08-06T12:00:00.000Z",
         expectedVersion: 1,
       });
-      await upload(storage, malicious.transactionId, "project", projectArchive());
+      await upload(storage, malicious.transactionId, "project", projectJson());
       await upload(
         storage,
         malicious.transactionId,
         "site",
-        zipSync({ "../fuera.txt": strToU8("no") }),
+        siteMap([{ path: "../fuera.txt", encoding: "utf8", data: "no" }]),
       );
       await expect(storage.commit(malicious.transactionId)).rejects.toThrow(/ruta insegura/i);
       expect((await storage.list()).projects[0].version).toBe(1);
@@ -173,8 +207,13 @@ describe("almacenamiento local de proyectos", () => {
         projectUpdatedAt: "2026-08-06T10:00:00.000Z",
         expectedVersion: null,
       });
-      await upload(storage, first.transactionId, "project", projectArchive());
-      await upload(storage, first.transactionId, "site", siteArchive("<main>v1</main>"));
+      await upload(storage, first.transactionId, "project", projectJson());
+      await upload(
+        storage,
+        first.transactionId,
+        "site",
+        siteMap([{ path: "index.html", encoding: "utf8", data: "<main>v1</main>" }]),
+      );
       const firstReceipt = await storage.commit(first.transactionId);
 
       const limitedStorage = createLocalProjectStorage({
@@ -189,7 +228,7 @@ describe("almacenamiento local de proyectos", () => {
         expectedVersion: firstReceipt.version,
       });
       await expect(
-        upload(limitedStorage, limited.transactionId, "project", projectArchive("archivo mayor")),
+        upload(limitedStorage, limited.transactionId, "project", projectJson("archivo mayor")),
       ).rejects.toThrow(/límite/i);
       await limitedStorage.abort(limited.transactionId);
 
@@ -200,13 +239,69 @@ describe("almacenamiento local de proyectos", () => {
         projectUpdatedAt: "2026-08-06T12:00:00.000Z",
         expectedVersion: firstReceipt.version,
       });
-      await upload(storage, interrupted.transactionId, "project", projectArchive("v2"));
+      await upload(storage, interrupted.transactionId, "project", projectJson("v2"));
       failingStage = "before-manifest";
       await expect(storage.commit(interrupted.transactionId)).rejects.toThrow(/simulado/i);
       const listing = await storage.list();
       expect(listing.projects[0]).toMatchObject({ version: 1, siteVersion: 1 });
       expect((await storage.readCurrent(projectId)).manifest.current.version).toBe(1);
       await storage.abort(interrupted.transactionId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rechaza un mapa de sitio con demasiados archivos", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-files-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root, maxFiles: 2 });
+      const transaction = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, transaction.transactionId, "project", projectJson());
+      await upload(
+        storage,
+        transaction.transactionId,
+        "site",
+        siteMap([
+          { path: "index.html", encoding: "utf8", data: "<main>a</main>" },
+          { path: "catalog-index.json", encoding: "utf8", data: "{}" },
+          { path: "search-index.json", encoding: "utf8", data: "{}" },
+        ]),
+      );
+      await expect(storage.commit(transaction.transactionId)).rejects.toThrow(/archivos/i);
+      expect((await storage.list()).projects).toHaveLength(0);
+      await storage.abort(transaction.transactionId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rechaza un archivo individual del sitio demasiado grande", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-file-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root, maxFileBytes: 4 * 1024 });
+      const transaction = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, transaction.transactionId, "project", projectJson());
+      await upload(
+        storage,
+        transaction.transactionId,
+        "site",
+        siteMap([{ path: "index.html", encoding: "utf8", data: "x".repeat(8 * 1024) }]),
+      );
+      await expect(storage.commit(transaction.transactionId)).rejects.toThrow(/límite/i);
+      expect((await storage.list()).projects).toHaveLength(0);
+      await storage.abort(transaction.transactionId);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

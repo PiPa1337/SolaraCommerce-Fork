@@ -17,7 +17,6 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
-import { strFromU8, unzipSync } from "fflate";
 import {
   assertNoReparsePoints,
   resolvePortableLayout,
@@ -25,7 +24,7 @@ import {
 } from "./portable-layout.mjs";
 
 const MANIFEST_FORMAT = "solara-local-project";
-const MANIFEST_VERSION = 1;
+const MANIFEST_VERSION = 2;
 const DEFAULT_MAX_UPLOAD_BYTES = 1024 * 1024 * 1024;
 const DEFAULT_MAX_EXTRACTED_BYTES = 4 * 1024 * 1024 * 1024;
 const DEFAULT_MAX_FILES = 25_000;
@@ -123,27 +122,15 @@ async function streamToFile(request, pathname, maxBytes) {
   return { bytes, sha256: hash.digest("hex") };
 }
 
-function parseProjectArchive(bytes, expectedProjectId) {
-  let files;
+function parseProjectJson(bytes, expectedProjectId) {
+  let envelope;
   try {
-    files = unzipSync(bytes);
+    envelope = JSON.parse(bytes.toString("utf8"));
   } catch {
-    throw new Error("El respaldo de la tienda está corrupto o no es un ZIP válido.");
+    throw new Error("El respaldo de la tienda está corrupto o no es JSON válido.");
   }
-  const manifestFile = files["manifest.json"];
-  const projectFile = files["project.json"];
-  if (!manifestFile || !projectFile) {
-    throw new Error("El respaldo no contiene manifest.json y project.json.");
-  }
-  let manifest;
-  let project;
-  try {
-    manifest = JSON.parse(strFromU8(manifestFile));
-    project = JSON.parse(strFromU8(projectFile));
-  } catch {
-    throw new Error("El respaldo contiene JSON inválido.");
-  }
-  if (manifest.format !== "solara-project" || manifest.version !== 2) {
+  const project = envelope?.project;
+  if (envelope?.format !== "solara-project" || envelope?.version !== 2 || !project) {
     throw new Error("El respaldo no pertenece al formato de proyecto actual.");
   }
   if (project.schemaVersion !== 2 || project.id !== expectedProjectId) {
@@ -152,36 +139,42 @@ function parseProjectArchive(bytes, expectedProjectId) {
   return project;
 }
 
-async function extractSiteArchive(archivePath, destination, limits) {
-  const bytes = await readFile(archivePath);
-  let files;
+async function writeSiteFiles(siteMapPath, destination, limits) {
+  let entries;
   try {
-    files = unzipSync(bytes);
+    entries = JSON.parse(await readFile(siteMapPath, "utf8"));
   } catch {
-    throw new Error("La exportación del sitio está corrupta o no es un ZIP válido.");
+    throw new Error("El mapa del sitio está corrupto o no es JSON válido.");
   }
-  const entries = Object.entries(files);
+  if (!Array.isArray(entries)) throw new Error("El mapa del sitio debe ser una lista.");
   if (entries.length > limits.maxFiles) throw new Error("El sitio contiene demasiados archivos.");
   let totalBytes = 0;
   let hasIndex = false;
-  await mkdir(destination, { recursive: true });
-  for (const [rawPath, content] of entries) {
-    const pathname = assertRelativeArchivePath(rawPath);
+  const prepared = [];
+  for (const entry of entries) {
+    if (typeof entry?.path !== "string" || (entry.encoding !== "utf8" && entry.encoding !== "base64")) {
+      throw new Error("El mapa del sitio contiene entradas inválidas.");
+    }
+    const pathname = assertRelativeArchivePath(entry.path);
     const output = assertInside(destination, join(destination, pathname));
-    if (pathname === "index.html") hasIndex = true;
-    totalBytes += content.byteLength;
+    const payload = Buffer.from(entry.data ?? "", entry.encoding);
+    if (payload.byteLength > limits.maxFileBytes) {
+      throw new Error("El contenido descomprimido supera el límite permitido.");
+    }
+    totalBytes += payload.byteLength;
     if (totalBytes > limits.maxExtractedBytes) {
-      throw new Error("La exportación descomprimida supera el límite permitido.");
+      throw new Error("El contenido descomprimido supera el límite permitido.");
     }
-    if (rawPath.endsWith("/")) {
-      await mkdir(output, { recursive: true });
-      continue;
-    }
-    await mkdir(resolve(output, ".."), { recursive: true });
-    await writeFile(output, content);
+    if (pathname === "index.html") hasIndex = true;
+    prepared.push({ output, payload });
+  }
+  await mkdir(destination, { recursive: true });
+  for (const { output, payload } of prepared) {
+    await mkdir(dirname(output), { recursive: true });
+    await writeFile(output, payload);
   }
   if (!hasIndex) throw new Error("La exportación del sitio no contiene index.html.");
-  return { files: entries.length, bytes: totalBytes };
+  return { files: prepared.length, bytes: totalBytes };
 }
 
 async function directoryExists(pathname) {
@@ -210,6 +203,7 @@ export function createLocalProjectStorage(options = {}) {
   const stagingRoot = resolve(options.stagingRoot ?? defaultLayout.transactionRoot);
   const maxUploadBytes = options.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES;
   const maxExtractedBytes = options.maxExtractedBytes ?? DEFAULT_MAX_EXTRACTED_BYTES;
+  const maxFileBytes = options.maxFileBytes ?? DEFAULT_MAX_EXTRACTED_BYTES;
   const maxFiles = options.maxFiles ?? DEFAULT_MAX_FILES;
   // Sólo los tests inyectan fallos deterministas. Mantener el hook fuera del
   // handler HTTP permite comprobar que una interrupción no reemplaza el
@@ -268,7 +262,7 @@ export function createLocalProjectStorage(options = {}) {
         if (manifest.format !== MANIFEST_FORMAT || manifest.manifestVersion !== MANIFEST_VERSION) {
           throw new Error("Manifest local incompatible.");
         }
-        const currentPath = manifestPath(root, manifest.current.archivePath);
+        const currentPath = manifestPath(root, manifest.current.projectPath);
         if (!(await fileExists(currentPath))) throw new Error("No existe la versión actual.");
         if (manifest.lastValidSite?.directoryPath) {
           // Los manifests se pueden copiar entre equipos, por eso sólo se
@@ -377,7 +371,8 @@ export function createLocalProjectStorage(options = {}) {
   async function upload(transactionId, kind, request) {
     const transaction = await getTransaction(transactionId);
     if (kind !== "project" && kind !== "site") throw new Error("Tipo de archivo inválido.");
-    const pathname = join(transaction.root, `${kind}.zip`);
+    const filename = kind === "project" ? "project.json" : "site-map.json";
+    const pathname = join(transaction.root, filename);
     const result = await streamToFile(request, pathname, maxUploadBytes);
     const expectedHash = request.headers?.["x-solara-sha256"];
     if (typeof expectedHash === "string" && expectedHash !== result.sha256) {
@@ -392,8 +387,10 @@ export function createLocalProjectStorage(options = {}) {
     const transaction = await getTransaction(transactionId);
     if (!transaction.project) throw new Error("Falta el respaldo editable de la tienda.");
     const { metadata } = transaction;
-    const projectBytes = await readFile(join(transaction.root, "project.zip"));
-    const project = parseProjectArchive(projectBytes, metadata.projectId);
+    const project = parseProjectJson(
+      await readFile(join(transaction.root, "project.json")),
+      metadata.projectId,
+    );
     const storeRoot = join(projectsRoot, metadata.folder);
     const actualRoot = join(storeRoot, "actual");
     const backupsRoot = join(storeRoot, "respaldos");
@@ -409,7 +406,7 @@ export function createLocalProjectStorage(options = {}) {
     await assertNoReparsePoints(projectsRoot, storeRoot);
     const savedAt = new Date();
     const key = versionKey(metadata.slug, savedAt, metadata.version);
-    const archiveName = `${key}.solara.zip`;
+    const archiveName = `${key}.solara.json`;
     const archivePath = join(actualRoot, archiveName);
     const temporaryArchivePath = join(actualRoot, `.${archiveName}.${transaction.id}.tmp`);
 
@@ -420,9 +417,10 @@ export function createLocalProjectStorage(options = {}) {
       await rm(temporarySite, { recursive: true, force: true });
       try {
         await checkpoint("before-site-extract");
-        siteInfo = await extractSiteArchive(join(transaction.root, "site.zip"), temporarySite, {
+        siteInfo = await writeSiteFiles(join(transaction.root, "site-map.json"), temporarySite, {
           maxFiles,
           maxExtractedBytes,
+          maxFileBytes,
         });
         await checkpoint("before-site-rename");
         await rename(temporarySite, finalSite);
@@ -441,14 +439,14 @@ export function createLocalProjectStorage(options = {}) {
     }
 
     // Se publica el respaldo editable sólo después de validar el sitio opcional.
-    // Así un ZIP inválido no deja archivos huérfanos en `actual/`.
+    // Así un mapa inválido no deja archivos huérfanos en `actual/`.
     await checkpoint("before-project-archive");
-    await copyFile(join(transaction.root, "project.zip"), temporaryArchivePath);
+    await copyFile(join(transaction.root, "project.json"), temporaryArchivePath);
     await rename(temporaryArchivePath, archivePath);
 
     const previous = metadata.previous;
-    if (previous?.current?.archivePath) {
-      const oldCurrent = manifestPath(storeRoot, previous.current.archivePath);
+    if (previous?.current?.projectPath) {
+      const oldCurrent = manifestPath(storeRoot, previous.current.projectPath);
       if ((await fileExists(oldCurrent)) && oldCurrent !== archivePath) {
         const oldBackup = join(backupsRoot, oldCurrent.split(sep).at(-1));
         if (!(await fileExists(oldBackup))) await copyFile(oldCurrent, oldBackup);
@@ -467,7 +465,7 @@ export function createLocalProjectStorage(options = {}) {
       current: {
         version: metadata.version,
         key,
-        archivePath: join("actual", archiveName).replaceAll("\\", "/"),
+        projectPath: join("actual", archiveName).replaceAll("\\", "/"),
         sha256: transaction.project.sha256,
         savedAt: savedAt.toISOString(),
         projectUpdatedAt: project.updatedAt,
@@ -476,8 +474,8 @@ export function createLocalProjectStorage(options = {}) {
     };
     await checkpoint("before-manifest");
     await writeJsonAtomic(join(storeRoot, "manifest.json"), manifest);
-    if (previous?.current?.archivePath) {
-      const oldCurrent = manifestPath(storeRoot, previous.current.archivePath);
+    if (previous?.current?.projectPath) {
+      const oldCurrent = manifestPath(storeRoot, previous.current.projectPath);
       if ((await fileExists(oldCurrent)) && oldCurrent !== archivePath) {
         await rm(oldCurrent, { force: true });
       }
@@ -491,7 +489,7 @@ export function createLocalProjectStorage(options = {}) {
       key: manifest.current.key,
       status: manifest.status,
       folder: metadata.folder,
-      archivePath: manifest.current.archivePath,
+      projectPath: manifest.current.projectPath,
       site: manifest.lastValidSite ?? null,
     };
   }
@@ -499,7 +497,7 @@ export function createLocalProjectStorage(options = {}) {
   async function readCurrent(projectId) {
     const found = await findManifest(projectId);
     if (!found) return undefined;
-    const path = manifestPath(found.root, found.manifest.current.archivePath);
+    const path = manifestPath(found.root, found.manifest.current.projectPath);
     const bytes = await readFile(path);
     const actualHash = createHash("sha256").update(bytes).digest("hex");
     if (actualHash !== found.manifest.current.sha256) {
@@ -523,11 +521,11 @@ export function createLocalProjectStorage(options = {}) {
   async function manualBackup(projectId) {
     const found = await findManifest(projectId);
     if (!found) throw new Error("La tienda no existe en disco.");
-    const source = manifestPath(found.root, found.manifest.current.archivePath);
+    const source = manifestPath(found.root, found.manifest.current.projectPath);
     const target = join(
       found.root,
       "respaldos-manuales",
-      `${found.manifest.current.key}-manual-${timestampKey()}-${randomBytes(4).toString("hex")}.solara.zip`,
+      `${found.manifest.current.key}-manual-${timestampKey()}-${randomBytes(4).toString("hex")}.solara.json`,
     );
     await mkdir(join(found.root, "respaldos-manuales"), { recursive: true });
     await copyFile(source, target);

@@ -244,7 +244,7 @@ export function createSolaraRequestHandler({
         return response(200, result.bytes, {
           ...sessionHeaders,
           "Cache-Control": "no-store",
-          "Content-Type": "application/vnd.solara.project+zip",
+          "Content-Type": "application/vnd.solara.project+json",
           "X-Solara-Project-Version": String(result.manifest.current.version),
         });
       }
