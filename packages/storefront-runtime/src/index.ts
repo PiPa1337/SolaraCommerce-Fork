@@ -1306,21 +1306,26 @@ function storefrontBoot(): void {
       let targetY = 0;
       let currentX = 0;
       let currentY = 0;
+      let frame = 0;
+      const tick = (): void => {
+        frame = 0;
+        currentX += (targetX - currentX) * 0.08;
+        currentY += (targetY - currentY) * 0.08;
+        layers.forEach((el) => {
+          const depth = Number(el.dataset.parallaxDepth ?? "1");
+          const dx = Math.max(-12, Math.min(12, currentX * 12 * depth));
+          const dy = Math.max(-12, Math.min(12, currentY * 12 * depth));
+          el.style.setProperty("--px", `${dx.toFixed(2)}px`);
+          el.style.setProperty("--py", `${dy.toFixed(2)}px`);
+        });
+        if (Math.abs(targetX - currentX) < 0.01 && Math.abs(targetY - currentY) < 0.01) return;
+        frame = requestAnimationFrame(tick);
+      };
       root.addEventListener("pointermove", (event) => {
         targetX = (event.clientX / window.innerWidth - 0.5) * 2;
         targetY = (event.clientY / window.innerHeight - 0.5) * 2;
+        frame = frame || requestAnimationFrame(tick);
       });
-      const tick = (): void => {
-        currentX += (targetX - currentX) * 0.08;
-        currentY += (targetY - currentY) * 0.08;
-        layers.forEach((layer, index) => {
-          const depth = Number(layer.dataset.parallaxDepth ?? "1");
-          layer.style.setProperty("--px", `${(currentX * 12 * depth * (index + 1)).toFixed(2)}px`);
-          layer.style.setProperty("--py", `${(currentY * 12 * depth * (index + 1)).toFixed(2)}px`);
-        });
-        requestAnimationFrame(tick);
-      };
-      tick();
     });
 
     const backToTop = document.querySelector<HTMLElement>("[data-back-to-top]");
@@ -1516,17 +1521,22 @@ export const STOREFRONT_RUNTIME_CSS = `
 }
 
 /* Progressive motion: content remains visible while the observer is idle or unavailable. */
+/* Los reveals de entrada usan backwards y no both: both congela el "to"
+   (transform: none) para siempre al terminar la animación y sobrescribe los
+   hovers de autor (lift, tilt, escala); backwards conserva el estado oculto
+   durante el delay (igual que both) y al terminar el elemento vuelve a sus
+   estilos naturales, que coinciden con el "to" implícito. */
 [data-motion-root][data-motion-visible="true"][data-motion-preset="fade"] [data-motion-zone] {
-  animation: solara-motion-fade var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
+  animation: solara-motion-fade var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
 }
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="fade-up"] [data-motion-zone] {
-  animation: solara-motion-fade-up var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
+  animation: solara-motion-fade-up var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
 }
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="slide"] [data-motion-zone] {
   --motion-slide-x: calc(var(--motion-distance, 24px) * var(--motion-intensity, 1));
-  animation: solara-motion-slide var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
+  animation: solara-motion-slide var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
 }
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="slide"][data-motion-direction="left"] [data-motion-zone] {
@@ -1534,19 +1544,19 @@ export const STOREFRONT_RUNTIME_CSS = `
 }
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="scale"] [data-motion-zone] {
-  animation: solara-motion-scale var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
+  animation: solara-motion-scale var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
 }
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="zoom-in"] [data-motion-zone] {
-  animation: solara-motion-zoom-in var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
+  animation: solara-motion-zoom-in var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
 }
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="blur-in"] [data-motion-zone] {
-  animation: solara-motion-blur-in var(--motion-duration, 700ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
+  animation: solara-motion-blur-in var(--motion-duration, 700ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
 }
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="stagger"] [data-motion-zone] > * {
-  animation: solara-motion-fade-up var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) both;
+  animation: solara-motion-fade-up var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) backwards;
 }
 
 [data-motion-root][data-motion-preset="stagger"][data-motion-visible="true"] [data-motion-zone] > :nth-child(2) { animation-delay: var(--motion-stagger, 80ms); }

@@ -2314,6 +2314,12 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   [data-solara-store].catalog-modern .catalog-hero-video { display: none; }
 }
 /* Revamp: efectos de movimiento */
+@media (hover: hover) and (pointer: fine) {
+  [data-solara-store].catalog-modern [data-parallax-layer] {
+    transform: translate3d(var(--px, 0px), var(--py, 0px), 0);
+    transition: transform 120ms linear;
+  }
+}
 @property --solara-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
 [data-solara-store].catalog-modern .catalog-product-card,
 [data-solara-store].catalog-modern .solara-card-lift {
@@ -2360,7 +2366,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   transform: translate(var(--mx, 0), var(--my, 0));
   transition: transform 200ms cubic-bezier(.34, 1.56, .64, 1);
 }
-[data-solara-store].catalog-modern .solara-btn-shine { position: relative; }
+[data-solara-store].catalog-modern .solara-btn-shine { position: relative; overflow: hidden; }
 [data-solara-store].catalog-modern .solara-btn-shine::after {
   content: "";
   position: absolute;
@@ -2425,8 +2431,14 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   box-shadow: 0 18px 40px -12px color-mix(in srgb, var(--catalog-ink) 45%, transparent);
 }
 [data-solara-store].catalog-modern .solara-image-pan img { transition: transform 800ms cubic-bezier(.22, 1, .36, 1); }
-[data-solara-store].catalog-modern .solara-image-pan:hover img { transform: scale(1.08); }
-[data-solara-store].catalog-modern .catalog-category-bento-item--feature.solara-image-pan:hover img { transform: scale(1.12); }
+/* Especificidad (0,5,1): replica las cadenas de hover pre-existentes
+   (.catalog-product-card:hover .catalog-product-card-image y
+   .catalog-category-bento-item:hover .catalog-category-bento-image, (0,5,0))
+   agregando el elemento img a la clase, para que el pan gane sobre el
+   scale(1.02) de esos selectores. */
+[data-solara-store].catalog-modern .catalog-product-card:hover img.catalog-product-card-image { transform: scale(1.08); }
+[data-solara-store].catalog-modern .catalog-category-bento-item:hover img.catalog-category-bento-image { transform: scale(1.08); }
+[data-solara-store].catalog-modern .catalog-category-bento-item--feature:hover img.catalog-category-bento-image { transform: scale(1.12); }
 [data-solara-store].catalog-modern :focus-visible {
   outline: 2px solid var(--solara-accent);
   outline-offset: 2px;

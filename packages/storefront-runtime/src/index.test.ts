@@ -34,11 +34,12 @@ describe("storefront runtime", () => {
 
   it("usa observadores para motion y limita los listeners de scroll a uno pasivo", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("IntersectionObserver");
-    expect(STOREFRONT_RUNTIME_JS).not.toContain('addEventListener("scroll", ()');
-    expect(STOREFRONT_RUNTIME_JS).not.toContain('addEventListener("scroll", function');
-    expect(STOREFRONT_RUNTIME_JS).toContain(
-      'window.addEventListener("scroll", update, { passive: true })',
-    );
+    const scrollListenerCount = STOREFRONT_RUNTIME_JS.split('addEventListener("scroll"').length - 1;
+    expect(scrollListenerCount, "Debe existir un único listener de scroll").toBe(1);
+    expect(
+      STOREFRONT_RUNTIME_JS,
+      "El único listener de scroll debe ser el pasivo de back-to-top",
+    ).toContain('window.addEventListener("scroll", update, { passive: true })');
   });
 
   it("declara motion progresivo sin bloquear el HTML inicial", () => {
@@ -61,7 +62,10 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("data-faq-root");
     expect(STOREFRONT_RUNTIME_JS).toContain("data-stat-target");
     expect(STOREFRONT_RUNTIME_JS).toContain("toLocaleString");
-    expect(STOREFRONT_RUNTIME_JS).toContain('hasFeature("micro")');
+    // El observador de stats usa un threshold propio (0.5); el string
+    // `hasFeature("micro")` ya lo aporta initMicroInteractions, así que la
+    // marca distintiva del bloque FAQ/stats es este umbral.
+    expect(STOREFRONT_RUNTIME_JS).toContain("threshold: 0.5");
     expect(STOREFRONT_RUNTIME_JS).not.toContain("initMicroInteractions.initFAQStats");
   });
 

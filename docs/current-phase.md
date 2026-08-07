@@ -232,7 +232,7 @@ Este comando cubre la demo de 50 productos, `catalogScaleStore` (9 raices,
 check` lo ejecuta como parte del gate general.
 
 El gate de budgets comprueba además el runtime storefront con los límites
-actuales en bytes crudos (sin gzip): 52 KiB de JavaScript y 8 KiB de CSS. La
+actuales en bytes crudos (sin gzip): 56 KiB de JavaScript y 8 KiB de CSS. La
 medición usa las constantes que realmente se insertan en `storefront.js` y
 `storefront.css`, no un bundle de referencia separado.
 

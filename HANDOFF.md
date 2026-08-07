@@ -85,8 +85,8 @@ Se ejecutaron con resultado exitoso:
   25.693.443 bytes de sitio sin empaquetado (carpeta directa).
 - `corepack pnpm check:budgets` (bytes crudos): Studio JS 593.892 B y CSS
   68.769 B (techos 700 KiB y 84 KiB); runtime público JS 41.475 B y CSS 6.608 B
-  (techos 52 KiB y 8 KiB); storefront.js y storefront.css dentro de 52 KiB y
-  780 KiB.
+   (techos 52 KiB y 8 KiB); storefront.js dentro de 52 KiB y storefront.css
+   dentro de 780 KiB.
 - `corepack pnpm pilot:preflight`: fixture de referencia, 27 páginas y 3
   ofertas.
 - `corepack pnpm check:repository`, `corepack pnpm format:check` y
@@ -179,8 +179,9 @@ tareas (spec `docs/superpowers/specs/2026-08-07-eliminar-zip-design.md` y plan
 5. Importación de catálogo por carpeta (`webkitdirectory` con `productos.csv`
    e `imagenes/`).
 6. Budgets en bytes crudos (sin gzip): Studio JS ≤ 700 KiB, CSS ≤ 84 KiB,
-   storefront.js ≤ 52 KiB, storefront.css ≤ 780 KiB, runtime JS ≤ 52 KiB,
-   CSS ≤ 8 KiB (medidos 589,7 / 68,8 / 41,5 / 634,1 / 41,5 / 6,6 KiB).
+   storefront.js ≤ 52 KiB, storefront.css ≤ 780 KiB, runtime JS ≤ 56 KiB
+   (subido de 52 el 2026-08-07 para el alcance de búsqueda + movimiento),
+   CSS ≤ 8 KiB (medidos 589,7 / 68,8 / 41,5 / 634,1 / 53,2 / 7,7 KiB).
 7. Gate anti-ZIP: `check:repository` falla si reaparecen `fflate`, `zipSync`,
    `unzipSync`, `gzipSync`, `.solara.zip` o `site.zip` en fuentes (sólo exime
    al módulo de migración, su test y el propio gate).
@@ -230,7 +231,7 @@ ZIP; las 11 tasks de implementación y sus verificaciones:
 **Gate completo (cierre):** `check`, `build`, `check:budgets`,
 `benchmark:export` y `test:e2e` (Chromium) pasaron juntos. Budgets en bytes
 crudos: Studio JS ≤ 700 KiB y CSS ≤ 84 KiB; storefront.js ≤ 52 KiB y
-storefront.css ≤ 780 KiB; runtime JS ≤ 52 KiB y CSS ≤ 8 KiB.
+storefront.css ≤ 780 KiB; runtime JS ≤ 56 KiB y CSS ≤ 8 KiB.
 
 **Pendientes documentados** en `docs/TECHNICAL_DEBT.md`: matriz OS real
 (disco lleno/permisos a nivel de volumen) como job de release, release con
