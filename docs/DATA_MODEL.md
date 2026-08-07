@@ -136,6 +136,15 @@ fragmento sólo muestra las relaciones esenciales.
 - `RecoveryDraft` registra `projectId`, `baseDiskVersion`, `updatedAt` y el
   proyecto pendiente. Al reabrir, Studio compara la base de disco y ofrece
   recuperar, descartar o exportar el borrador.
+- `SolaraDatabase` (Dexie) incluye la tabla `migrations`, sentinel por
+  proyecto de la migración a disco: `{ projectId, status: "pending" | "done",
+  updatedAt }`. Un flujo interrumpido se retoma de forma idempotente al reabrir
+  (`markProjectMigration`/`getProjectMigration`).
+- El servidor local persiste el diagnóstico de una tienda con manifest dañado
+  en el sidecar `recovery.json` de su carpeta
+  (`{ format: "solara-local-recovery", folder, message, detectedAt }`). El
+  listado devuelve mensajes estables entre llamadas y elimina el sidecar cuando
+  la carpeta vuelve a estar sana.
 - La importación de un respaldo `.solara.json` exige el envelope
   `{ format: "solara-project", version: 2, projectId, exportedAt, project }` y
   valida `project` contra `StoreProjectV2Schema`.

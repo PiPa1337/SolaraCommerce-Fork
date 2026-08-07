@@ -56,10 +56,13 @@ son temporales y se eliminan en un release posterior.
 | --- | --- | --- |
 | POST | `/__solara/storage/projects/{projectId}/manual-backup` | Copiar la versión actual a respaldos manuales |
 | POST | `/__solara/storage/projects/{projectId}/open-site` | Levantar un servidor estático temporal |
+| POST | `/__solara/storage/projects/{projectId}/open-folder` | Abrir la carpeta de la tienda en Explorer (Windows); en otras plataformas confirma la ruta sin abrirla (`200 { ok, folder }`, `404` si no existe) |
 | POST | `/__solara/shutdown` | Cerrar el proceso local tras confirmar el token |
 
 El servidor de sitio temporal sólo expone la carpeta pública seleccionada. Las
-rutas permanecen separadas del editor.
+rutas permanecen separadas del editor. `open-folder` sólo devuelve la carpeta
+que el propio servidor administra; nunca acepta una ruta enviada por el
+navegador.
 
 ## Persistencia del navegador
 

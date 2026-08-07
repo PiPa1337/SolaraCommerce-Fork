@@ -72,6 +72,53 @@ todos sus flujos. El contrato de la tienda (`StoreProjectV2Schema`,
 - `LocalSaveReceipt` declara `projectPath` (el servidor nunca devolvió
   `archivePath` en V2).
 
+### Resolución de deuda técnica (2026-08-07)
+
+Cierre del plan de deuda: once tasks de implementación
+(`docs/superpowers/plans/2026-08-07-deuda-tecnica.md`). El contrato de la
+tienda no cambió; las filas correspondientes de `docs/TECHNICAL_DEBT.md`
+quedaron marcadas como resueltas.
+
+**Añadido**
+
+- Guarda determinista de escritura en el almacenamiento local (`writeGuard`,
+  sólo tests): simula disco lleno, permisos revocados y reintento tras fallo
+  transitorio en `write-upload`, `write-site-files`, `rename-site`,
+  `copy-archive`, `write-manifest` y `remove-old-current`.
+- Matriz de reparse points (junctions Windows y symlinks POSIX) que fija el
+  rechazo defensivo de enlaces dentro de `proyectos/`.
+- Sidecar `recovery.json` por tienda: el servidor persiste el diagnóstico de
+  un manifest dañado entre reinicios y lo elimina cuando la carpeta vuelve a
+  estar sana.
+- Endpoint `POST /__solara/storage/projects/{projectId}/open-folder` con el
+  botón "Abrir carpeta" en el Dashboard: abre la carpeta en Explorer en
+  Windows; en otras plataformas confirma la ruta sin abrirla.
+- Sentinel de migración a disco: tabla `migrations` de Dexie con
+  `status: "pending" | "done"` por proyecto, para retomar migraciones
+  interrumpidas de forma idempotente.
+- Registro de módulos con tipos discriminados (`ModuleId`, `ModuleById` y
+  `getTypedModule`) sin cambiar el registry runtime heterogéneo.
+- Presupuesto medido de fixtures (`fixture-budget.test.ts`):
+  `catalogModernStore` 56.3 KiB, `catalogScaleStore` 46.5 KiB y
+  `referenceStore` 8.7 KiB; los data URLs se conservan por decisión registrada.
+
+**Cambiado**
+
+- `Builder.tsx` se dividió en inspector y editores por responsabilidad;
+  `Catalog.tsx` en toolbar y árbol de categorías; `Dashboard.tsx` en tarjeta y
+  toolbar; `styles.css` en cuatro `@import` (base, cosmic, editorial, feedback)
+  con la misma cascada. Sin cambios de comportamiento: el bundle final es
+  byte-idéntico.
+
+**Arreglado**
+
+- La paginación del catálogo vuelve a ocultarse en catálogos vacíos
+  (regresión detectada al dividir Catalog).
+- Los sidecars `recovery.json` sin manifest asociado se descartan durante el
+  listado de tiendas.
+- El plan de deuda conservaba referencias ZIP residuales; la documentación
+  quedó alineada con el formato `.solara.json` sin compresión.
+
 ## Historial anterior (resumen)
 
 Antes de este changelog, el repositorio acumuló las siguientes fases

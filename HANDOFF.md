@@ -35,12 +35,14 @@ servirse en un hosting estático. El pedido se deriva a WhatsApp.
   publicación automática;
 - la aprobación de Merchant con checkout sólo por WhatsApp debe verificarse en
   el dominio real;
-- no hay fault injection completo para disco lleno, permisos revocados o
-  interrupciones del filesystem;
+- los fallos de escritura se simulan de forma determinista (writeGuard) y la
+  matriz de reparse points corre en Vitest; la matriz OS real (disco lleno,
+  permisos revocados a nivel de volumen) queda como job de release;
 - release multi-browser y Lighthouse dependen de Node 22 y navegadores
   instalados; no se ejecutan necesariamente en cada cambio local;
-- algunos componentes grandes permanecen como
-  deuda documentada en [`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md).
+- la deuda documentada en [`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md)
+  se resolvió en su mayoría (ver "Resolución de deuda técnica"); quedan
+  pendientes decisiones de producto y matrices de release.
 
 ## Decisiones que no deben romperse
 
@@ -78,10 +80,12 @@ Se ejecutaron con resultado exitoso:
 - `corepack pnpm build`: TypeScript y build Vite de Studio.
 - `corepack pnpm test:e2e`: 38 tests Chromium pasaron y 1 prueba visual opcional
   fue omitida por no definir `VISUAL_REVIEW_STAGE`.
-- `corepack pnpm benchmark:export`: 1.000 productos en 1.211 ms, 998 archivos,
-  ZIP de 4.872.032 bytes.
-- `corepack pnpm check:budgets`: Studio JS gzip 183.180 B, CSS gzip 13.061 B,
-  runtime público JS gzip 9.499 B y CSS gzip 1.497 B.
+- `corepack pnpm benchmark:export`: 1.000 productos en 891 ms, 998 archivos,
+  25.693.443 bytes de sitio sin empaquetado (carpeta directa).
+- `corepack pnpm check:budgets` (bytes crudos): Studio JS 593.892 B y CSS
+  68.769 B (techos 700 KiB y 84 KiB); runtime público JS 41.475 B y CSS 6.608 B
+  (techos 52 KiB y 8 KiB); storefront.js y storefront.css dentro de 52 KiB y
+  780 KiB.
 - `corepack pnpm pilot:preflight`: fixture de referencia, 27 páginas y 3
   ofertas.
 - `corepack pnpm check:repository`, `corepack pnpm format:check` y
@@ -95,15 +99,17 @@ Lighthouse quedan por confirmar en CI/Node 22.
 
 - El entorno local puede tener Node 24 aunque CI/release fija Node 22.
 - La carpeta `proyectos/` y reportes locales son deliberadamente ignorados.
-- Las pruebas de interrupción del filesystem requieren trabajo posterior (la
-  extracción ZIP ya no existe).
+- Los fallos de escritura se simulan de forma determinista (writeGuard); la
+  matriz OS real (disco lleno/permisos a nivel de volumen) queda como job de
+  release.
 - Un conflicto de guardado entre pestañas devuelve 409 y no se combina solo.
 
 ## Próximos pasos recomendados
 
 1. Ejecutar el ciclo real del launcher en un perfil limpio y confirmar recuperar
    `Predeterminado` desde `proyectos/`.
-2. Añadir fault injection del servicio local antes de cambiar su seguridad.
+2. Ejecutar la matriz OS real (disco lleno y permisos a nivel de volumen) como
+   job Windows de release antes de volver a cambiar el servicio de disco.
 3. Probar release con Node 22, Firefox, WebKit y Lighthouse.
 4. Medir exportación de 1.000 productos antes de introducir cache incremental.
 5. Si se necesita cloud, diseñar una capa nueva sin convertirla en requisito del
@@ -185,3 +191,48 @@ Publicar un sitio = copiar `proyectos/<tienda>/sitios/<versión>/` a un hosting
 estático; no existe descarga de ZIP. `SOLARA_PILOT_PROJECT_ARCHIVE` apunta a un
 `.solara.json`; `reference:export` y `pilot:export` escriben carpetas.
 `StoreProjectV2Schema` y `schemaVersion: 2` no cambiaron.
+
+## Resolución de deuda técnica (2026-08-07)
+
+Cierre del plan [`docs/superpowers/plans/2026-08-07-deuda-tecnica.md`](docs/superpowers/plans/2026-08-07-deuda-tecnica.md).
+La Task 1 (extracción streaming de ZIP) quedó resuelta por la eliminación de
+ZIP; las 11 tasks de implementación y sus verificaciones:
+
+1. **Fallos de escritura deterministas** (Task 2): opción `writeGuard` del
+   storage local (sólo tests) con ops `write-upload`, `write-site-files`,
+   `rename-site`, `copy-archive`, `write-manifest`, `remove-old-current`;
+   cubre disco lleno, permisos revocados y reintento tras fallo transitorio.
+2. **Matriz de reparse points** (Task 3): `reparse-points.test.mjs` fija el
+   rechazo de junctions Windows y symlinks POSIX dentro de `proyectos/`.
+3. **Diagnóstico de recovery persistido** (Task 4): sidecar `recovery.json`
+   por carpeta con mensajes estables entre listados; las carpetas sanas lo
+   eliminan. Fix posterior: sidecars huérfanos sin manifest se descartan.
+4. **Endpoint `open-folder`** (Task 5): `POST
+   /__solara/storage/projects/{projectId}/open-folder` abre la carpeta en
+   Explorer en Windows (en otras plataformas confirma la ruta); botón
+   "Abrir carpeta" en el Dashboard.
+5. **Sentinel de migración** (Task 6): tabla `migrations` de Dexie con
+   `status: "pending" | "done"` por proyecto; la migración a disco es
+   idempotente ante interrupciones.
+6. **Registro de módulos tipado** (Task 7): `ModuleId`, `ModuleById` y
+   `getTypedModule(id)` sin romper el registry runtime heterogéneo.
+7. **Budgets de fixtures** (Task 8): `fixture-budget.test.ts` registra la
+   medición `catalogModernStore` 56.3 KiB, `catalogScaleStore` 46.5 KiB y
+   `referenceStore` 8.7 KiB; se conservan los data URLs por decisión.
+8. **Split de Builder** (Task 9): inspector y editores por responsabilidad.
+9. **Split de Catalog** (Task 10): toolbar y árbol de categorías; fix de la
+   paginación en catálogos vacíos.
+10. **Split de Dashboard** (Task 11): tarjeta y toolbar.
+11. **Split de styles.css** (Task 12): cuatro `@import` (base, cosmic,
+    editorial, feedback) con cascada idéntica y bundle byte-idéntico.
+
+**Gate completo (cierre):** `check`, `build`, `check:budgets`,
+`benchmark:export` y `test:e2e` (Chromium) pasaron juntos. Budgets en bytes
+crudos: Studio JS ≤ 700 KiB y CSS ≤ 84 KiB; storefront.js ≤ 52 KiB y
+storefront.css ≤ 780 KiB; runtime JS ≤ 52 KiB y CSS ≤ 8 KiB.
+
+**Pendientes documentados** en `docs/TECHNICAL_DEBT.md`: matriz OS real
+(disco lleno/permisos a nivel de volumen) como job de release, release con
+Node 22 (Firefox/WebKit/Lighthouse), aprobación Merchant con checkout por
+WhatsApp, publicación manual y la migración temporal `legacy-zip-migration.mjs`
+con `fflate`, que se elimina en un release posterior.

@@ -94,10 +94,13 @@ versiona.
 
 La suite local cubre límites de upload y del mapa de archivos del sitio,
 rechazo de rutas relativas inválidas (traversal), interrupción antes de
-publicar el manifest y recuperación de la versión anterior. La simulación
-de disco lleno y permisos revocados queda reservada para un job Windows de
-release, donde puede aislarse el volumen temporal sin tocar proyectos
-confirmados.
+publicar el manifest y recuperación de la versión anterior. Los fallos de
+escritura se simulan de forma determinista con `writeGuard` (disco lleno,
+permisos revocados y reintento tras fallo transitorio) y la matriz de reparse
+points fija el rechazo de junctions/symlinks dentro de `proyectos/`. La
+simulación OS real (disco lleno y permisos a nivel de volumen) queda reservada
+para un job Windows de release, donde puede aislarse el volumen temporal sin
+tocar proyectos confirmados.
 
 ## Portable Windows
 

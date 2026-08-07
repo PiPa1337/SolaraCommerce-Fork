@@ -195,6 +195,7 @@ En modo administrado, la estructura es:
 ```text
 proyectos/<slug-inicial>--<id-corto>/
 ├── manifest.json
+├── recovery.json             (sidecar de diagnóstico, sólo si hay error)
 ├── actual/<version>.solara.json
 ├── respaldos/<version>.solara.json
 ├── respaldos-manuales/
@@ -203,8 +204,25 @@ proyectos/<slug-inicial>--<id-corto>/
 
 `manifest.json` es el puntero autoritativo. El servidor usa staging bajo
 `.solara-runtime/storage`, hashes SHA-256, límites de tamaño/archivos del mapa
-del sitio, validación de rutas relativas y rename atómico del manifest. La
-explicación de endpoints está en
+del sitio, validación de rutas relativas y rename atómico del manifest. El
+sitio se escribe desde un mapa de archivos JSON sin descompresión, por lo que
+no existe superficie Zip Slip. El almacenamiento expone además:
+
+- `writeGuard` (sólo tests): simula fallos deterministas de escritura
+  (disco lleno, permisos, reintento) sobre las ops `write-upload`,
+  `write-site-files`, `rename-site`, `copy-archive`, `write-manifest` y
+  `remove-old-current`; el handler nunca lo inyecta.
+- matriz de reparse points: `assertNoReparsePoints` rechaza junctions/symlinks
+  dentro de `proyectos/`, fijada por `reparse-points.test.mjs`.
+- sidecar `recovery.json` por carpeta: persiste el diagnóstico de un manifest
+  dañado entre reinicios y se elimina cuando la carpeta vuelve a estar sana.
+- `POST /__solara/storage/projects/{projectId}/open-folder`: devuelve la
+  carpeta de la tienda; el handler la abre en Explorer en Windows y en otras
+  plataformas sólo confirma la ruta.
+- sentinel de migración a disco: la tabla `migrations` de Dexie registra
+  `pending`/`done` por proyecto para retomar migraciones interrumpidas.
+
+La explicación de endpoints está en
 [`docs/INTEGRATIONS.md`](INTEGRATIONS.md); recovery y rollback, en
 [`docs/backup-and-recovery.md`](backup-and-recovery.md).
 
