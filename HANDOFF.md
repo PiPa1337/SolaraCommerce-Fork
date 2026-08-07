@@ -10,9 +10,9 @@ copia sus productos.
 
 La aplicación funciona sin backend remoto. Cuando se abre con
 `Abrir SolaraCommerce.cmd`, el servidor loopback guarda versiones en
-`proyectos/`; IndexedDB queda como borrador de recuperación y caché. El ZIP de
-proyecto se puede volver a importar y la carpeta pública puede servirse en un
-hosting estático. El pedido se deriva a WhatsApp.
+`proyectos/`; IndexedDB queda como borrador de recuperación y caché. El
+respaldo `.solara.json` se puede volver a importar y la carpeta pública puede
+servirse en un hosting estático. El pedido se deriva a WhatsApp.
 
 ## Funcionalidades terminadas
 
@@ -22,7 +22,7 @@ hosting estático. El pedido se deriva a WhatsApp.
 - reducer de comandos, undo/redo, importación/exportación CSV y fixture de
   rendimiento;
 - módulos legacy y familia Catalog Modern con renderer compartido;
-- preview responsive y exportación HTML/CSS/JS/ZIP;
+- preview responsive y exportación HTML/CSS/JS a carpeta;
 - SEO inicial, JSON-LD, sitemap, image/video sitemap, Merchant y contexto IA
   opcional;
 - carrito local, selección de variantes y pedido determinista por WhatsApp;
@@ -39,13 +39,13 @@ hosting estático. El pedido se deriva a WhatsApp.
   interrupciones del filesystem;
 - release multi-browser y Lighthouse dependen de Node 22 y navegadores
   instalados; no se ejecutan necesariamente en cada cambio local;
-- algunos componentes grandes y la extracción ZIP síncrona permanecen como
+- algunos componentes grandes permanecen como
   deuda documentada en [`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md).
 
 ## Decisiones que no deben romperse
 
 1. `StoreProjectV2Schema` y `schemaVersion: 2` son el contrato persistido.
-2. Preview y ZIP llaman al mismo renderer de `@solara/exporter`.
+2. Preview y sitio público llaman al mismo renderer de `@solara/exporter`.
 3. `productIds` derivados se recalculan desde comandos/helpers, no a mano en UI.
 4. Precios en centavos enteros; nunca floats comerciales.
 5. Assets y proyectos son datos no confiables: validar, escapar y deduplicar.
@@ -95,8 +95,8 @@ Lighthouse quedan por confirmar en CI/Node 22.
 
 - El entorno local puede tener Node 24 aunque CI/release fija Node 22.
 - La carpeta `proyectos/` y reportes locales son deliberadamente ignorados.
-- La extracción ZIP síncrona y las pruebas de interrupción requieren trabajo
-  posterior.
+- Las pruebas de interrupción del filesystem requieren trabajo posterior (la
+  extracción ZIP ya no existe).
 - Un conflicto de guardado entre pestañas devuelve 409 y no se combina solo.
 
 ## Próximos pasos recomendados

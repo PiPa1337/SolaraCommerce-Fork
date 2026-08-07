@@ -19,7 +19,7 @@ El flujo principal es:
 3. editar identidad, textos, imágenes, productos, categorías y SEO;
 4. revisar las rutas en Preview;
 5. guardar en disco cuando se usa `Abrir SolaraCommerce.cmd`;
-6. exportar un ZIP draft o production y publicar sus archivos en un hosting estático.
+6. exportar un sitio draft o production como carpeta (`proyectos/<tienda>/sitios/`) y publicar sus archivos en un hosting estático.
 
 ## Reglas no negociables
 
@@ -27,7 +27,7 @@ El flujo principal es:
   `2` hasta que exista una migración explícita y testeada.
 - `StoreProjectV1` es un alias temporal de `StoreProjectV2` para compatibilidad de
   nombres internos; no significa que exista un contrato v1 adicional.
-- El preview y el ZIP público deben usar el mismo renderer de `@solara/exporter`.
+- El preview y el sitio público deben usar el mismo renderer de `@solara/exporter`.
 - Los módulos `legacy-editorial-v1` se conservan sólo para compatibilidad. Las
   nuevas opciones pertenecen a `catalog-modern-v1`.
 - Los `productIds` de categorías y colecciones son índices derivados: después de
@@ -37,7 +37,7 @@ El flujo principal es:
   precios, descuentos o subtotales.
 - Los assets del proyecto son datos; no incorporar binarios generados, `dist/`,
   `proyectos/`, `.solara-runtime/`, `.release/` ni reportes al commit.
-- No agregar dependencias de runtime sin justificar impacto en el ZIP público y
+- No agregar dependencias de runtime sin justificar impacto en el sitio público y
   en los budgets existentes.
 - No enviar el catálogo completo a una IA: usar el schema, fixtures pequeñas o
   muestras deterministas.
@@ -54,7 +54,7 @@ El flujo principal es:
 - Dexie/IndexedDB como caché y recovery draft del navegador.
 - Un servidor Node local en loopback para persistencia en `proyectos/` cuando se
   inicia mediante `Abrir SolaraCommerce.cmd`.
-- `fflate` para ZIP y `motion` para las transiciones del Studio; el storefront
+- `motion` para las transiciones del Studio; el storefront
   recibe un runtime embebido sin dependencias externas.
 
 La separación completa está en [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
@@ -67,7 +67,7 @@ packages/project-schema/      StoreProjectV2, Zod, helpers, fixtures y plantilla
 packages/core/                Reducer de comandos, undo/redo y CSV de catálogo
 packages/module-sdk/          Contrato seguro y helpers de módulos
 packages/modules/             Registro, módulos legacy y Catalog Modern
-packages/exporter/            Renderer, SEO, ZIP, servidor local y persistencia en disco
+packages/exporter/            Renderer, SEO, servidor local y persistencia en disco
 packages/storefront-runtime/  Runtime público de carrito, variantes, búsqueda y motion
 packages/site-optimizer/      Auditoría pura de SEO, media, Merchant y contexto IA
 scripts/                      Budgets, benchmarks, preflight, release y lanzador
@@ -110,7 +110,7 @@ y [`docs/backup-and-recovery.md`](docs/backup-and-recovery.md).
 `Preview.tsx` llama a `renderPreviewHtml` y solicita los assets al padre mediante
 `postMessage`. `export.worker.ts` ejecuta `exportProject` fuera del hilo de UI.
 El exporter genera páginas, metadata, JSON-LD, sitemaps, Merchant, contexto para
-agentes y el ZIP reproducible a partir de un snapshot validado.
+agentes y el sitio público reproducible a partir de un snapshot validado.
 
 ### Storefront
 
@@ -127,7 +127,7 @@ JavaScript desactivado.
 2. actualizar fixtures y defaults de `buildCatalogModernProject`;
 3. definir migración o rechazo explícito si cambia la persistencia;
 4. conectar el editor y el renderer;
-5. agregar tests de validación, round-trip de ZIP y exportación;
+5. agregar tests de validación, round-trip del respaldo `.solara.json` y exportación;
 6. actualizar [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md).
 
 ### Nuevo módulo visual
@@ -137,7 +137,7 @@ JavaScript desactivado.
 3. aislar CSS bajo el atributo raíz del módulo;
 4. usar helpers de `@solara/module-sdk` para escape, URLs y assets;
 5. registrarlo en `catalogModernModules` sólo si es una opción nueva;
-6. probar defaults, slots, reemplazo, sanitización, preview y ZIP.
+6. probar defaults, slots, reemplazo, sanitización, preview y exportación.
 
 ### Nueva ruta pública
 
@@ -181,12 +181,13 @@ La guía de distribución autocontenida está en
 - El schema, el alias v1, los IDs de módulos y los IDs de secciones son contratos
   persistidos.
 - `packages/exporter/src/index.ts` concentra muchas decisiones de URL, SEO y
-  semántica; un cambio allí afecta preview, ZIP y tests de rutas.
+  semántica; un cambio allí afecta preview, el sitio público y tests de rutas.
 - El runtime público es un string grande y el budget se mide sobre el resultado
   serializado, no sólo sobre TypeScript.
-- El servidor local usa `unzipSync` para validar/extraer ZIP; uploads y límites
-  están protegidos, pero la extracción todavía consume memoria proporcional al
-  archivo. Ver [`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md).
+- El respaldo editable es un JSON sin compresión (`.solara.json`); el servidor
+  local valida rutas y límites sobre el mapa de archivos del sitio. La migración
+  única de `.solara.zip` antiguos usa `fflate` de forma temporal hasta un
+  release posterior. Ver [`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md).
 - El shell Electron portable y el launcher HTTP comparten el handler de
   `packages/exporter/scripts/solara-request-handler.mjs`; cualquier cambio de
   endpoints debe probar ambos transportes.

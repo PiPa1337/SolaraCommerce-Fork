@@ -98,7 +98,7 @@ Playwright y los navegadores de tests son dependencias de desarrollo. Ver
 - `401/403`: sesión, origen o token no válidos.
 - `404`: tienda, transacción o recurso inexistente.
 - `409`: versión de disco obsoleta o transacción concurrente.
-- `413`: límites de respaldo, mapa de archivos o extracción superados.
+- `413`: límites de respaldo, mapa de archivos o escritura superados.
 - `500`: error de filesystem, permisos o exportación; la versión confirmada
   anterior debe permanecer intacta.
 
