@@ -295,6 +295,8 @@ export function createLocalProjectStorage(options = {}) {
           // aceptan rutas relativas a la raíz de la instalación portable.
           resolvePortablePath(applicationRoot, manifest.lastValidSite.directoryPath);
         }
+        // La carpeta es una tienda sana: se elimina cualquier diagnóstico viejo.
+        await rm(join(root, "recovery.json"), { force: true });
         projects.push({
           projectId: manifest.projectId,
           name: manifest.storeName,
@@ -308,10 +310,35 @@ export function createLocalProjectStorage(options = {}) {
           siteOutdated: manifest.status === "site-outdated",
         });
       } catch (error) {
-        recovery.push({
-          folder: entry.name,
-          message: error instanceof Error ? error.message : "No se pudo leer el manifest local.",
-        });
+        const message =
+          error instanceof Error ? error.message : "No se pudo leer el manifest local.";
+        const diagnosticPath = join(root, "recovery.json");
+        try {
+          const existing = await readJson(diagnosticPath);
+          if (typeof existing?.message === "string") {
+            recovery.push({ folder: entry.name, message: existing.message });
+          } else {
+            throw new Error("Diagnóstico sin mensaje.");
+          }
+        } catch {
+          if (error?.code === "ENOENT") {
+            // Sin manifest no hay tienda: se descarta la carpeta y se limpia
+            // un diagnóstico viejo que ya no corresponde a ninguna tienda.
+            await rm(diagnosticPath, { force: true });
+            continue;
+          }
+          recovery.push({ folder: entry.name, message });
+        }
+        try {
+          await writeJsonAtomic(diagnosticPath, {
+            format: "solara-local-recovery",
+            folder: entry.name,
+            message,
+            detectedAt: new Date().toISOString(),
+          });
+        } catch {
+          // Carpeta de solo lectura: se conserva el diagnóstico anterior si existe.
+        }
       }
     }
     projects.sort((left, right) => right.savedAt.localeCompare(left.savedAt));

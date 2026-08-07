@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readdir, readFile, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
@@ -549,6 +549,32 @@ describe("almacenamiento local de proyectos", () => {
       const receipt = await storage.commit(retry.transactionId);
       expect(receipt).toMatchObject({ version: 2, status: "synced" });
       expect(receipt.site?.version).toBe(2);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("persiste el diagnóstico de recovery entre listados", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-recovery-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      await storage.ensureRoots();
+      const brokenRoot = join(root, "proyectos", "tienda-rota");
+      await mkdir(brokenRoot, { recursive: true });
+      await writeFile(join(brokenRoot, "manifest.json"), "{ esto no es json", "utf8");
+
+      const first = await storage.list();
+      expect(first.recovery).toHaveLength(1);
+      expect(first.recovery[0].message.length).toBeGreaterThan(0);
+      const second = await storage.list();
+      expect(second.recovery[0].message).toBe(first.recovery[0].message);
+
+      const sidecar = join(brokenRoot, "recovery.json");
+      expect(JSON.parse(await readFile(sidecar, "utf8")).format).toBe("solara-local-recovery");
+
+      await rm(join(brokenRoot, "manifest.json"), { force: true });
+      await rm(sidecar, { force: true });
+      expect((await storage.list()).recovery).toHaveLength(0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
