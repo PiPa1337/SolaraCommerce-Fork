@@ -19,6 +19,7 @@ import {
   ensureCatalogModernDemoReviews,
   ensureDeprecatedCategoriesRemoved,
   ensureFirstProject,
+  ensureRevampDemoProject,
   ensureScaleDemoProject,
   getProject,
   getProjectMigration,
@@ -140,6 +141,14 @@ export function App() {
             current
               ? `${current} También se agregó la tienda Predeterminado con 50 productos para explorar la escala del catálogo.`
               : "Se agregó la tienda Predeterminado con 50 productos para explorar la escala del catálogo.",
+          );
+        }
+        const revampCreated = await ensureRevampDemoProject();
+        if (revampCreated) {
+          setNotice((current) =>
+            current
+              ? `${current} Se agregó la tienda Predeterminado Revamp para comparar la nueva experiencia de movimiento.`
+              : "Se agregó la tienda Predeterminado Revamp para comparar la nueva experiencia de movimiento.",
           );
         }
         const demoReviewsExpanded = await ensureCatalogModernDemoReviews();

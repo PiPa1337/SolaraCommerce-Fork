@@ -1,11 +1,11 @@
 import { catalogModernStore } from "./catalog-modern-fixture";
 import { CATALOG_MODERN_GUIDANCE_VERSION } from "./catalog-modern-guidance";
-import { type StoreProjectV2, StoreProjectV2Schema } from "./index";
+import { type StoreProjectV2, StoreProjectV2Schema, type StoreSection } from "./index";
 
 /** Version of the guided Catalog Modern template. Increase only when its persisted shape changes. */
 export const CATALOG_MODERN_TEMPLATE_VERSION = CATALOG_MODERN_GUIDANCE_VERSION;
 
-export type CatalogModernSeed = "clean" | "demo";
+export type CatalogModernSeed = "clean" | "demo" | "revamp";
 
 export interface BuildCatalogModernProjectOptions {
   seed: CatalogModernSeed;
@@ -15,6 +15,55 @@ export interface BuildCatalogModernProjectOptions {
   baseUrl?: string;
   brandName?: string;
 }
+
+const REVAMP_OVERSHOOT_EASING = "cubic-bezier(.34,1.56,.64,1)";
+
+const revampBaseMotion: StoreSection["motion"] = {
+  preset: "fade-up",
+  intensity: 4,
+  direction: "up",
+  distance: 16,
+  duration: 0.45,
+  delay: 0,
+  stagger: 0,
+  easing: "cubic-bezier(.16,1,.3,1)",
+  entryPoint: 0.2,
+  once: true,
+};
+
+type RevampMotion = StoreSection["motion"];
+
+const REVAMP_MOTION_OVERRIDES: Record<string, RevampMotion> = {
+  "catalog-hero": {
+    ...revampBaseMotion,
+    preset: "layer-stack",
+    distance: 24,
+    duration: 0.6,
+    easing: REVAMP_OVERSHOOT_EASING,
+  },
+  "catalog-product-grid": {
+    ...revampBaseMotion,
+    preset: "stagger",
+    distance: 20,
+    stagger: 0.07,
+  },
+  "catalog-category-bento": {
+    ...revampBaseMotion,
+    preset: "scale",
+    distance: 0,
+    duration: 0.5,
+  },
+  "catalog-testimonials": {
+    ...revampBaseMotion,
+    preset: "fade-up",
+    distance: 22,
+  },
+  "catalog-brand-strip": {
+    ...revampBaseMotion,
+    preset: "fade",
+    duration: 0.4,
+  },
+};
 
 function cleanProject(options: BuildCatalogModernProjectOptions): StoreProjectV2 {
   const name = options.name?.trim() || "Nueva tienda";
@@ -158,6 +207,13 @@ export function buildCatalogModernProject(
 ): StoreProjectV2 {
   if (options.seed === "clean") return cleanProject(options);
   const project = structuredClone(catalogModernStore);
+  const sections =
+    options.seed === "revamp"
+      ? project.sections.map((section) => ({
+          ...section,
+          motion: { ...(REVAMP_MOTION_OVERRIDES[section.moduleId] ?? revampBaseMotion) },
+        }))
+      : project.sections;
   return StoreProjectV2Schema.parse({
     ...project,
     ...(options.id ? { id: options.id } : {}),
@@ -167,8 +223,9 @@ export function buildCatalogModernProject(
     origin: {
       templateId: "catalog-modern",
       templateVersion: CATALOG_MODERN_TEMPLATE_VERSION,
-      seed: "demo",
+      seed: options.seed,
     },
+    sections,
   });
 }
 

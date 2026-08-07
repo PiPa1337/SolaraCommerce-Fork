@@ -4,7 +4,7 @@ import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixtur
 import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
 import { referenceStore } from "@solara/project-schema/fixture";
 import Dexie from "dexie";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ASSET_CACHE_RECIPE_VERSION,
   clearAssetCache,
@@ -15,6 +15,7 @@ import {
   duplicateProject,
   ensureCatalogModernDemoReviews,
   ensureDeprecatedCategoriesRemoved,
+  ensureRevampDemoProject,
   ensureScaleDemoProject,
   getCachedAsset,
   getProject,
@@ -24,6 +25,7 @@ import {
   listProjectsWithRecovery,
   markProjectMigration,
   putCachedAsset,
+  REVAMP_DEMO_PROJECT_ID,
   SCALE_DEMO_PROJECT_ID,
   saveProject,
   saveRecoveryDraft,
@@ -44,6 +46,35 @@ describe("repositorio local", () => {
     database.close();
     await database.delete();
   });
+
+  async function stubFixtureAssets(): Promise<void> {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        blob: async () => new Blob(["fixture"], { type: "image/png" }),
+      })) as unknown as typeof fetch,
+    );
+    class FileReaderStub {
+      result: string | null = null;
+      onload: ((event: unknown) => void) | null = null;
+      onerror: ((event: unknown) => void) | null = null;
+      addEventListener(type: string, handler: (event: unknown) => void): void {
+        if (type === "load") this.onload = handler;
+        if (type === "error") this.onerror = handler;
+      }
+      readAsDataURL(blob: Blob): void {
+        blob
+          .arrayBuffer()
+          .then((buffer) => {
+            this.result = `data:image/png;base64,${Buffer.from(buffer).toString("base64")}`;
+            this.onload?.(null);
+          })
+          .catch((reason) => this.onerror?.(reason));
+      }
+    }
+    vi.stubGlobal("FileReader", FileReaderStub);
+  }
 
   it("guarda, obtiene y lista un proyecto validado", async () => {
     await saveProject(referenceStore);
@@ -210,6 +241,59 @@ describe("repositorio local", () => {
     expect((await getProject(legacyDemo.id))?.name).toBe("Predeterminado");
     expect((await getProject(legacyClean.id))?.status).toBe("archived");
     expect((await getProject(legacyClean.id))?.name).toBe("Base limpia anterior");
+  });
+
+  it("crea la candidata Predeterminado Revamp una vez y es idempotente", async () => {
+    await stubFixtureAssets();
+    try {
+      expect(await ensureRevampDemoProject()).toBe(true);
+      const project = await getProject(REVAMP_DEMO_PROJECT_ID);
+      expect(project).toBeDefined();
+      expect(project?.name).toBe("Predeterminado Revamp");
+      expect(project?.slug).toBe("predeterminado-revamp");
+      expect(project?.origin?.seed).toBe("revamp");
+      expect(project?.products).toHaveLength(50);
+
+      const sections = project?.sections ?? [];
+      const footerIndex = sections.findIndex((section) => section.moduleId === "catalog-footer");
+      const statsIndex = sections.findIndex((section) => section.moduleId === "catalog-stats");
+      const faqIndex = sections.findIndex((section) => section.moduleId === "catalog-faq");
+      expect(statsIndex).toBeGreaterThan(-1);
+      expect(faqIndex).toBeGreaterThan(-1);
+      expect(statsIndex).toBeLessThan(faqIndex);
+      expect(faqIndex).toBeLessThan(footerIndex);
+      for (const index of [statsIndex, faqIndex]) {
+        expect(sections[index]?.motion).toMatchObject({ preset: "fade-up", distance: 16 });
+      }
+      const faqSettings = sections[faqIndex]?.settings as { items?: Array<{ question: string }> };
+      expect(faqSettings.items?.length ?? 0).toBeGreaterThanOrEqual(4);
+      expect(sections[statsIndex]?.settings).toMatchObject({
+        items: [
+          { value: 50, suffix: "", label: "productos activos" },
+          { value: 14, suffix: "", label: "categorías" },
+          { value: 60, suffix: "", label: "variantes" },
+          { value: 1, suffix: "", label: "tienda lista" },
+        ],
+      });
+
+      expect(await ensureRevampDemoProject()).toBe(false);
+      expect(await getProject(REVAMP_DEMO_PROJECT_ID)).toEqual(project);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("la candidata revamp valida contra el schema sin tocar Predeterminado", async () => {
+    await stubFixtureAssets();
+    try {
+      await ensureRevampDemoProject();
+      const record = await database.projects.get(REVAMP_DEMO_PROJECT_ID);
+      expect(record).toBeDefined();
+      expect(StoreProjectV1Schema.safeParse(record?.project).success).toBe(true);
+      expect(await getProject(SCALE_DEMO_PROJECT_ID)).toBeUndefined();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("retira Sale y Novedades de todos los proyectos sin perder productos", async () => {

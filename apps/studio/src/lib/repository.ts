@@ -3,6 +3,7 @@
  * gestionado está activo y fallback de desarrollo cuando Studio corre sólo con
  * Vite; el código de UI no debe asumir que IndexedDB es siempre autoridad.
  */
+
 import type { NavigationItem, StoreProjectV1 } from "@solara/project-schema";
 import { getCategoryProductIds, StoreProjectV1Schema } from "@solara/project-schema";
 import {
@@ -112,6 +113,8 @@ export const database = new SolaraDatabase();
 export const PROJECT_STORAGE_VERSION = "2";
 export const SCALE_DEMO_PROJECT_ID = "store-modo-sur-demo";
 export const SCALE_DEMO_PROJECT_NAME = "Predeterminado";
+export const REVAMP_DEMO_PROJECT_ID = "store-modo-sur-revamp";
+export const REVAMP_DEMO_PROJECT_NAME = "Predeterminado Revamp";
 const LEGACY_SCALE_DEMO_PROJECT_NAME = "Demo Modo Sur, catálogo moderno";
 const LEGACY_CLEAN_PROJECT_ID = "store-catalog-modern-clean-default";
 const LEGACY_CLEAN_PROJECT_NAME = "Mi primera tienda";
@@ -562,6 +565,55 @@ export async function ensureScaleDemoProject(): Promise<boolean> {
     }),
   );
   await saveProject(await embedFixtureAssets(demo));
+  return true;
+}
+
+export async function ensureRevampDemoProject(): Promise<boolean> {
+  await ready();
+  const existing = await database.projects.get(REVAMP_DEMO_PROJECT_ID);
+  if (existing) return false;
+
+  // Import dinámico: @solara/modules vive en chunks diferidos (Builder/workers);
+  // un import estático lo arrastraría al entry del dashboard y rompería su budget.
+  const { createModuleSection } = await import("@solara/modules");
+
+  const project = StoreProjectV1Schema.parse(
+    buildCatalogModernProject({
+      seed: "revamp",
+      id: REVAMP_DEMO_PROJECT_ID,
+      name: REVAMP_DEMO_PROJECT_NAME,
+      slug: "predeterminado-revamp",
+      baseUrl: "https://predeterminado-revamp.example",
+    }),
+  );
+  const makeSection = (
+    id: string,
+    slot: StoreProjectV1["sections"][number]["slot"],
+    moduleId: string,
+  ): StoreProjectV1["sections"][number] => ({
+    ...createModuleSection({ id: id as StoreProjectV1["sections"][number]["id"], slot, moduleId }),
+    motion: {
+      preset: "fade-up",
+      intensity: 4,
+      direction: "up",
+      distance: 16,
+      duration: 0.45,
+      delay: 0,
+      stagger: 0,
+      easing: "cubic-bezier(.16,1,.3,1)",
+      entryPoint: 0.2,
+      once: true,
+    },
+  });
+  const sections = [...project.sections];
+  const footerIndex = sections.findIndex((section) => section.moduleId === "catalog-footer");
+  sections.splice(
+    footerIndex,
+    0,
+    makeSection("revamp-section-stats", "content", "catalog-stats"),
+    makeSection("revamp-section-faq", "content", "catalog-faq"),
+  );
+  await saveProject(await embedFixtureAssets(StoreProjectV1Schema.parse({ ...project, sections })));
   return true;
 }
 
