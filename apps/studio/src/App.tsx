@@ -38,11 +38,40 @@ import { createProjectArchiveInWorker, readProjectArchiveInWorker } from "./lib/
 
 const loadLocalStorage = () => import("./lib/localStorage");
 const loadLocalProjectRepository = () => import("./lib/localProjectRepository");
+const ComponentGallery = lazy(() =>
+  import("./debug/ComponentGallery").then(({ ComponentGallery: Gallery }) => ({
+    default: Gallery,
+  })),
+);
 const Studio = lazy(() =>
   import("./features/Studio").then(({ Studio: Component }) => ({ default: Component })),
 );
 
 export function App() {
+  // Ruta oculta de desarrollo: galería de componentes del editor. No existe en
+  // el sitio público; se detecta por pathname antes de montar el dashboard.
+  // App no declara hooks: la rama de la galería devuelve sin montar el shell.
+  if (typeof window !== "undefined" && window.location.pathname === "/__studio/components") {
+    return (
+      <Suspense
+        fallback={
+          <main className="boot-screen">
+            <span className="brand-mark" aria-hidden>
+              S
+            </span>
+            <h1>SolaraCommerce</h1>
+            <Skeleton lines={3} />
+          </main>
+        }
+      >
+        <ComponentGallery />
+      </Suspense>
+    );
+  }
+  return <StudioShell />;
+}
+
+function StudioShell() {
   const [projects, setProjects] = useState<StoredProject[]>([]);
   const [active, setActive] = useState<StoreProjectV1>();
   const [recovery, setRecovery] = useState<ProjectRecoveryIssue[]>([]);
