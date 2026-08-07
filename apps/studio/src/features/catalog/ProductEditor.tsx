@@ -294,7 +294,8 @@ export function ProductEditor({
           <legend>Imágenes del producto</legend>
           {assets.length === 0 ? (
             <p className="editor-empty-hint">
-              Todavía no hay recursos cargados. Podés agregarlos desde Recursos o importar un ZIP.
+              Todavía no hay recursos cargados. Podés agregarlos desde Recursos o importar una
+              carpeta.
             </p>
           ) : (
             <div className="product-asset-picker">

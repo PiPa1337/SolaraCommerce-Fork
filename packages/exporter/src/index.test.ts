@@ -251,7 +251,7 @@ describe("exporter", () => {
     expect(product).toContain("Manta Bruma");
   });
 
-  it("incluye estilos de las secciones editoriales en preview y ZIP", () => {
+  it("incluye estilos de las secciones editoriales en preview y exportación", () => {
     const source = referenceStore.sections.find((section) => section.slot === "content");
     if (!source) throw new Error("Fixture incompleto");
     const project = {

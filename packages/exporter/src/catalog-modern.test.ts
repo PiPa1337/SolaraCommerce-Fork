@@ -49,7 +49,7 @@ describe("tienda base catalog-modern de 50 productos", () => {
     );
   });
 
-  it("mantiene la paridad entre preview y ZIP y el índice de búsqueda", () => {
+  it("mantiene la paridad entre preview y exportación y el índice de búsqueda", () => {
     const preview = renderPreviewHtml(catalogModernStore, "draft", "/");
     const exportedHome = String(exported.files.get("index.html"));
     const moduleTree = (html: string) =>

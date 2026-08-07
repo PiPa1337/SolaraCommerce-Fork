@@ -1,7 +1,7 @@
 /**
- * Exporter público compartido por Preview y ZIP. Construye un snapshot una vez,
- * renderiza páginas y metadatos rastreables, deduplica assets y produce el sitio
- * estático sin incluir estado interno del editor.
+ * Exporter público compartido por Preview y el sitio exportado. Construye un
+ * snapshot una vez, renderiza páginas y metadatos rastreables, deduplica assets
+ * y produce el sitio estático sin incluir estado interno del editor.
  */
 import {
   getModuleDefinition,

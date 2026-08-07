@@ -1,7 +1,7 @@
 /**
  * Preview del storefront. Renderiza HTML mediante el mismo exporter que genera
- * el ZIP y sólo hidrata assets del iframe por postMessage; no debe convertirse
- * en una segunda implementación visual.
+ * el sitio público y sólo hidrata assets del iframe por postMessage; no debe
+ * convertirse en una segunda implementación visual.
  */
 import {
   Desktop,

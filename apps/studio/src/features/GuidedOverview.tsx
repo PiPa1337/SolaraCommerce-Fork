@@ -216,7 +216,7 @@ export function GuidedOverview({ project, onNavigate, onApplyUpgrade }: GuidedOv
         </button>
         <button type="button" onClick={() => onNavigate("catalog")}>
           <strong>Cargar catálogo</strong>
-          <span>Importá un ZIP o agregá productos manualmente</span>
+          <span>Importá una carpeta con CSV e imágenes o agregá productos manualmente</span>
           <ArrowRight aria-hidden size={18} />
         </button>
         <button type="button" onClick={() => onNavigate("assets")}>

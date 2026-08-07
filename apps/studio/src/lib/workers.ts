@@ -1,5 +1,5 @@
 /**
- * Fachada tipada para los Web Workers de CSV, imágenes, exportación y ZIP. Su
+ * Fachada tipada para los Web Workers de CSV, imágenes y exportación. Su
  * responsabilidad es serializar mensajes y errores; la lógica de negocio vive
  * en paquetes compartidos para que tests y preview no diverjan.
  */
