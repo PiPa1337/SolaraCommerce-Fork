@@ -4,6 +4,13 @@
  * dejar contenido y navegación utilizables cuando JavaScript falla.
  */
 import type { Product, StoreProjectV1, Variant } from "@solara/project-schema";
+import {
+  levenshtein,
+  matchToken,
+  normalizeSearchTokens,
+  type SearchEntryTokens,
+  scoreEntry,
+} from "./search";
 
 export interface CartLine {
   productId: string;
@@ -975,24 +982,54 @@ function storefrontBoot(): void {
     startAutoplay();
   });
 
-  const normalizeSearch = (value: string): string[] =>
-    value
-      .toLocaleLowerCase("es-AR")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
   const searchInput = document.querySelector<HTMLInputElement>(
     "#catalog-search-input, #solara-search-input",
   );
   const searchResults = document.querySelector<HTMLElement>("[data-search-results]");
   if (searchInput && searchResults) {
+    type SearchEntryWithTokens = {
+      title: string;
+      brand: string;
+      description: string;
+      tags?: string[];
+      categoryIds?: string[];
+      collectionIds?: string[];
+      categoryNames?: string[];
+      collectionNames?: string[];
+      path: string;
+      imageUrl?: string;
+      imageWidth?: number;
+      imageHeight?: number;
+      priceMin: number;
+      available: boolean;
+      tokens?: SearchEntryTokens;
+    };
+    const suggestCorrection = (
+      terms: string[],
+      entries: SearchEntryWithTokens[],
+    ): string | undefined => {
+      let best: { term: string; distance: number } | undefined;
+      for (const term of terms) {
+        for (const entry of entries) {
+          const candidates = [
+            ...(entry.tokens?.title ?? normalizeSearchTokens(entry.title)),
+            ...(entry.tokens?.brand ?? normalizeSearchTokens(entry.brand)),
+          ];
+          for (const token of candidates) {
+            const distance = levenshtein(term, token);
+            if (distance <= 2 && (!best || distance < best.distance)) {
+              best = { term: token, distance };
+            }
+          }
+        }
+      }
+      return best?.term;
+    };
     const query = new URLSearchParams(window.location.search).get("q") ?? "";
     searchInput.value = query;
     if (query) {
       document.querySelector('meta[name="robots"]')?.setAttribute("content", "noindex,follow");
-      const terms = normalizeSearch(query);
+      const terms = normalizeSearchTokens(query);
       if (terms.join(" ").length < 2) {
         searchResults.innerHTML = "<p>Escribí al menos 2 caracteres para buscar.</p>";
       } else {
@@ -1001,59 +1038,39 @@ function storefrontBoot(): void {
         fetch("/search-index.json", { signal: controller.signal })
           .then((response) => {
             if (!response.ok) throw new Error("No se pudo cargar el índice de búsqueda.");
-            return response.json() as Promise<
-              Array<{
-                title: string;
-                brand: string;
-                description: string;
-                tags?: string[];
-                categoryIds?: string[];
-                collectionIds?: string[];
-                categoryNames?: string[];
-                collectionNames?: string[];
-                path: string;
-                imageUrl?: string;
-                imageWidth?: number;
-                imageHeight?: number;
-                priceMin: number;
-                available: boolean;
-              }>
-            >;
+            return response.json() as Promise<SearchEntryWithTokens[]>;
           })
           .then((entries) => {
             const ranked = entries
-              .map((entry) => {
-                const title = normalizeSearch(entry.title).join(" ");
-                const brand = normalizeSearch(entry.brand).join(" ");
-                const tags = normalizeSearch((entry.tags ?? []).join(" ")).join(" ");
-                const categories = normalizeSearch(
-                  `${(entry.categoryIds ?? []).join(" ")} ${(entry.collectionIds ?? []).join(" ")} ${(entry.categoryNames ?? []).join(" ")} ${(entry.collectionNames ?? []).join(" ")}`,
-                ).join(" ");
-                const description = normalizeSearch(entry.description).join(" ");
-                const score = terms.reduce(
-                  (total, term) =>
-                    total +
-                    (title.includes(term)
-                      ? 6
-                      : brand.includes(term)
-                        ? 4
-                        : tags.includes(term)
-                          ? 3
-                          : categories.includes(term)
-                            ? 2
-                            : description.includes(term)
-                              ? 1
-                              : 0),
-                  0,
-                );
-                return { entry, score };
-              })
+              .map((entry) => ({
+                entry,
+                score: scoreEntry(
+                  terms,
+                  entry.tokens ?? {
+                    title: normalizeSearchTokens(entry.title),
+                    brand: normalizeSearchTokens(entry.brand),
+                    tags: normalizeSearchTokens((entry.tags ?? []).join(" ")),
+                    categories: normalizeSearchTokens(
+                      `${(entry.categoryIds ?? []).join(" ")} ${(entry.collectionIds ?? []).join(" ")} ${(entry.categoryNames ?? []).join(" ")} ${(entry.collectionNames ?? []).join(" ")}`,
+                    ),
+                    description: normalizeSearchTokens(entry.description),
+                  },
+                ),
+              }))
               .filter((item) => item.score > 0)
               .sort(
                 (left, right) =>
-                  right.score - left.score || left.entry.title.localeCompare(right.entry.title),
+                  right.score - left.score ||
+                  Number(right.entry.available) - Number(left.entry.available) ||
+                  left.entry.title.localeCompare(right.entry.title),
               );
             if (ranked.length === 0) {
+              const suggestion = suggestCorrection(terms, entries);
+              if (suggestion) {
+                const url = `/buscar/?q=${encodeURIComponent(suggestion)}`;
+                searchResults.innerHTML = `<p class="solara-search-summary">No encontramos resultados para “${escapeText(query)}”. ¿Quisiste decir <a href="${escapeAttribute(url)}">${escapeText(suggestion)}</a>?</p>`;
+                return;
+              }
               searchResults.innerHTML = "<p>No encontramos productos para esa búsqueda.</p>";
               return;
             }
@@ -1225,7 +1242,9 @@ function storefrontBoot(): void {
   }
 }
 
-export const STOREFRONT_RUNTIME_JS = `(${storefrontBoot.toString()})();`;
+export const STOREFRONT_RUNTIME_JS = `${[normalizeSearchTokens, levenshtein, matchToken, scoreEntry]
+  .map((fn) => fn.toString())
+  .join("\n")}\n(${storefrontBoot.toString()})();`;
 
 export const STOREFRONT_RUNTIME_CSS = `
 .sr-only {

@@ -56,22 +56,22 @@ export interface SearchEntryTokens {
   description: string[];
 }
 
-const MATCH_WEIGHT: Record<Exclude<TokenMatch, null>, number> = {
-  exact: 10,
-  prefix: 7,
-  substring: 5,
-  fuzzy: 3,
-};
-
-const FIELD_WEIGHT: Record<keyof SearchEntryTokens, number> = {
-  title: 3,
-  brand: 2,
-  tags: 1.5,
-  categories: 1,
-  description: 0.5,
-};
-
 export function scoreEntry(queryTerms: readonly string[], entry: SearchEntryTokens): number {
+  // Estos pesos deben permanecer dentro de la función: el runtime público
+  // serializa el fuente de las funciones y no incluiría las consts de módulo.
+  const MATCH_WEIGHT: Record<Exclude<TokenMatch, null>, number> = {
+    exact: 10,
+    prefix: 7,
+    substring: 5,
+    fuzzy: 3,
+  };
+  const FIELD_WEIGHT: Record<keyof SearchEntryTokens, number> = {
+    title: 3,
+    brand: 2,
+    tags: 1.5,
+    categories: 1,
+    description: 0.5,
+  };
   let total = 0;
   let matchedTerms = 0;
   for (const term of queryTerms) {

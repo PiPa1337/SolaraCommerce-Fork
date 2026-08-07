@@ -56,6 +56,14 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("catalog-search-open");
   });
 
+  it("serializa los helpers de búsqueda dentro del runtime público", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("function levenshtein");
+    expect(STOREFRONT_RUNTIME_JS).toContain("function matchToken");
+    expect(STOREFRONT_RUNTIME_JS).toContain("function scoreEntry");
+    expect(STOREFRONT_RUNTIME_JS).toContain("function normalizeSearchTokens");
+    expect(STOREFRONT_RUNTIME_JS).toContain("storefrontBoot");
+  });
+
   it("mantiene el runtime por debajo de 52 KB crudos", () => {
     // Medición Task 6 (Step 1): runtime JS 41.475 B en bytes crudos (sin gzip).
     expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(52 * 1024);
