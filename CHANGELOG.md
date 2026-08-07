@@ -10,6 +10,14 @@ versión publicada.
 
 ## [Unreleased]
 
+### Limpieza de referencias ZIP obsoletas (2026-08-07)
+
+Se eliminaron los últimos textos y comentarios que mencionaban ZIP en la UI
+(GuidedOverview, ProductEditor), cabeceras de Preview/workers/exporter y
+nombres de tests. El código ya no genera ZIP en ningún flujo: exportar un
+sitio escribe la carpeta `proyectos/<tienda>/sitios/<versión>/` (o muestra el
+aviso en el panel Exportar); el respaldo descargable es `.solara.json`.
+
 ### Corrección de encoding UTF-8 (2026-08-07)
 
 Se detectaron y corrigieron archivos con texto mojibake (acentos dañados por
