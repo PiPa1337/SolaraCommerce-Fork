@@ -40,12 +40,38 @@ export function levenshtein(a: string, b: string): number {
 export type TokenMatch = "exact" | "prefix" | "substring" | "fuzzy" | null;
 
 export function matchToken(term: string, token: string): TokenMatch {
+  // Función autocontenida a propósito: el runtime público se serializa con
+  // fn.toString() (STOREFRONT_RUNTIME_JS) y esbuild renombra las referencias
+  // cruzadas al minificar, dejando nombres mangled sin enlazar en el string
+  // serializado. `distance` es una copia privada del algoritmo de levenshtein.
+  const distance = (a: string, b: string): number => {
+    if (a === b) return 0;
+    const shorter = a.length <= b.length ? a : b;
+    const longer = a.length <= b.length ? b : a;
+    if (longer.length - shorter.length > 2) return longer.length;
+    const previous = Array.from({ length: shorter.length + 1 }, (_, index) => index);
+    const current = new Array<number>(shorter.length + 1);
+    for (let i = 1; i <= longer.length; i++) {
+      current[0] = i;
+      for (let j = 1; j <= shorter.length; j++) {
+        const cost = longer[i - 1] === shorter[j - 1] ? 0 : 1;
+        current[j] = Math.min(
+          (current[j - 1] as number) + 1,
+          (previous[j] as number) + 1,
+          (previous[j - 1] as number) + cost,
+        );
+      }
+      for (let j = 0; j <= shorter.length; j++) previous[j] = current[j] as number;
+    }
+    return current[shorter.length] as number;
+  };
+
   if (term === token) return "exact";
   if (token.startsWith(term)) return "prefix";
   if (token.includes(term)) return "substring";
   if (term.length < 3 || token.length < 3) return null;
   const limit = token.length <= 4 ? 1 : 2;
-  return levenshtein(term, token) <= limit ? "fuzzy" : null;
+  return distance(term, token) <= limit ? "fuzzy" : null;
 }
 
 export interface SearchEntryTokens {
@@ -57,6 +83,40 @@ export interface SearchEntryTokens {
 }
 
 export function scoreEntry(queryTerms: readonly string[], entry: SearchEntryTokens): number {
+  // Copias privadas autocontenidas (distance + match) por el mismo motivo que
+  // en matchToken: el runtime público serializa fn.toString() y esbuild
+  // renombraría las referencias a levenshtein/matchToken al minificar.
+  // Los límites fuzzy deben ser idénticos a matchToken: token/term < 3 → null;
+  // token <= 4 → límite 1, si no → límite 2.
+  const distance = (a: string, b: string): number => {
+    if (a === b) return 0;
+    const shorter = a.length <= b.length ? a : b;
+    const longer = a.length <= b.length ? b : a;
+    if (longer.length - shorter.length > 2) return longer.length;
+    const previous = Array.from({ length: shorter.length + 1 }, (_, index) => index);
+    const current = new Array<number>(shorter.length + 1);
+    for (let i = 1; i <= longer.length; i++) {
+      current[0] = i;
+      for (let j = 1; j <= shorter.length; j++) {
+        const cost = longer[i - 1] === shorter[j - 1] ? 0 : 1;
+        current[j] = Math.min(
+          (current[j - 1] as number) + 1,
+          (previous[j] as number) + 1,
+          (previous[j - 1] as number) + cost,
+        );
+      }
+      for (let j = 0; j <= shorter.length; j++) previous[j] = current[j] as number;
+    }
+    return current[shorter.length] as number;
+  };
+  const match = (term: string, token: string): TokenMatch => {
+    if (term === token) return "exact";
+    if (token.startsWith(term)) return "prefix";
+    if (token.includes(term)) return "substring";
+    if (term.length < 3 || token.length < 3) return null;
+    const limit = token.length <= 4 ? 1 : 2;
+    return distance(term, token) <= limit ? "fuzzy" : null;
+  };
   // Estos pesos deben permanecer dentro de la función: el runtime público
   // serializa el fuente de las funciones y no incluiría las consts de módulo.
   const MATCH_WEIGHT: Record<Exclude<TokenMatch, null>, number> = {
@@ -79,9 +139,9 @@ export function scoreEntry(queryTerms: readonly string[], entry: SearchEntryToke
     for (const field of Object.keys(entry) as (keyof SearchEntryTokens)[]) {
       let best: TokenMatch = null;
       for (const token of entry[field]) {
-        const match = matchToken(term, token);
-        if (match !== null && (best === null || MATCH_WEIGHT[match] > MATCH_WEIGHT[best])) {
-          best = match;
+        const m = match(term, token);
+        if (m !== null && (best === null || MATCH_WEIGHT[m] > MATCH_WEIGHT[best])) {
+          best = m;
         }
       }
       if (best !== null) termScore = Math.max(termScore, MATCH_WEIGHT[best] * FIELD_WEIGHT[field]);

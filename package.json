@@ -11,7 +11,8 @@
     "build": "corepack pnpm -r --if-present build",
     "check:budgets": "node scripts/check-budgets.mjs && vitest run scripts/storefront-runtime-budget.test.ts scripts/public-storefront-budget.test.ts",
     "check:optimization": "vitest run scripts/site-optimizer-check.test.ts scripts/optimization-baseline.test.ts",
-    "check": "corepack pnpm check:repository && corepack pnpm format:check && corepack pnpm typecheck && corepack pnpm test && corepack pnpm check:optimization",
+    "check:runtime-serialization": "vitest run scripts/runtime-serialization.test.ts",
+    "check": "corepack pnpm check:repository && corepack pnpm format:check && corepack pnpm typecheck && corepack pnpm test && corepack pnpm check:optimization && corepack pnpm check:runtime-serialization",
     "check:repository": "node scripts/check-repository.mjs",
     "dev": "corepack pnpm --filter @solara/studio dev",
     "desktop:build": "corepack pnpm --filter @solara/desktop build",
@@ -37,6 +38,7 @@
     "@biomejs/biome": "2.2.2",
     "@playwright/test": "1.55.0",
     "@types/node": "24.3.0",
+    "esbuild": "0.25.12",
     "typescript": "5.9.2",
     "vitest": "3.2.4"
   }
