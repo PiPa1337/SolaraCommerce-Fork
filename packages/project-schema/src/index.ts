@@ -206,6 +206,8 @@ export const MotionPresetSchema = z.enum([
   "parallax",
   "scroll-progress",
   "layer-stack",
+  "zoom-in",
+  "blur-in",
 ]);
 
 export const MotionSettingsSchema = z.object({

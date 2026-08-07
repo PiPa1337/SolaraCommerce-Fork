@@ -32,10 +32,13 @@ describe("storefront runtime", () => {
     expect(url).toBe("https://wa.me/5491123456789?text=Pedido%0AManta");
   });
 
-  it("usa observadores sin instalar listeners globales de scroll", () => {
-    expect(STOREFRONT_RUNTIME_JS).not.toContain('addEventListener("scroll"');
-    expect(STOREFRONT_RUNTIME_JS).not.toContain("scrollY");
+  it("usa observadores para motion y limita los listeners de scroll a uno pasivo", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("IntersectionObserver");
+    expect(STOREFRONT_RUNTIME_JS).not.toContain('addEventListener("scroll", ()');
+    expect(STOREFRONT_RUNTIME_JS).not.toContain('addEventListener("scroll", function');
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      'window.addEventListener("scroll", update, { passive: true })',
+    );
   });
 
   it("declara motion progresivo sin bloquear el HTML inicial", () => {
@@ -46,6 +49,11 @@ describe("storefront runtime", () => {
       'html[data-motion-ready="true"] [data-motion-root]:not',
     );
     expect(STOREFRONT_RUNTIME_JS).toContain("motionEntry");
+  });
+
+  it("serializa las microinteracciones dentro del boot", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("initMicroInteractions");
+    expect(STOREFRONT_RUNTIME_JS).toContain("data-back-to-top");
   });
 
   it("incluye comportamiento accesible para el popup de búsqueda", () => {
@@ -81,7 +89,7 @@ describe("storefront runtime", () => {
   });
 
   it("mantiene el runtime por debajo de 52 KB crudos", () => {
-    // Medición Task 6 (Step 1): runtime JS 41.475 B en bytes crudos (sin gzip).
+    // Medición Task 1A: runtime JS 51.228 B en bytes crudos (sin gzip).
     expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(52 * 1024);
   });
 });

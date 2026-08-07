@@ -128,7 +128,7 @@ function storefrontBoot(): void {
   const declaredRuntimeFeatures = root.dataset.solaraRuntimeFeatures;
   const runtimeFeatures = new Set(
     (declaredRuntimeFeatures === undefined
-      ? "cart,checkout,product,category,search,hero,motion,variants,filters,video"
+      ? "cart,checkout,product,category,search,hero,motion,variants,filters,video,micro"
       : declaredRuntimeFeatures
     )
       .split(",")
@@ -1254,6 +1254,108 @@ function storefrontBoot(): void {
   if (hasFeature("variants")) {
     document.querySelectorAll<HTMLElement>("[data-product]").forEach(syncVariant);
   }
+
+  const initMicroInteractions = (): void => {
+    if (!hasFeature("micro")) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    if (reduce || !fine) return;
+
+    document.querySelectorAll<HTMLElement>("[data-product-card]").forEach((card) => {
+      let frame = 0;
+      card.addEventListener("pointermove", (event) => {
+        const rect = card.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width - 0.5;
+        const y = (event.clientY - rect.top) / rect.height - 0.5;
+        card.style.setProperty("--mx", `${((x + 0.5) * 100).toFixed(2)}%`);
+        card.style.setProperty("--my", `${((y + 0.5) * 100).toFixed(2)}%`);
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(() => {
+          card.style.setProperty("--rx", `${(-y * 6).toFixed(2)}deg`);
+          card.style.setProperty("--ry", `${(x * 6).toFixed(2)}deg`);
+        });
+      });
+      card.addEventListener("pointerleave", () => {
+        cancelAnimationFrame(frame);
+        card.style.setProperty("--rx", "0deg");
+        card.style.setProperty("--ry", "0deg");
+      });
+    });
+
+    document.querySelectorAll<HTMLElement>("[data-magnetic]").forEach((button) => {
+      button.addEventListener("pointermove", (event) => {
+        const rect = button.getBoundingClientRect();
+        const x = event.clientX - (rect.left + rect.width / 2);
+        const y = event.clientY - (rect.top + rect.height / 2);
+        const distance = Math.hypot(x, y);
+        const pull = Math.min(8, distance * 0.15);
+        const angle = Math.atan2(y, x);
+        button.style.setProperty("--mx", `${(Math.cos(angle) * pull).toFixed(1)}px`);
+        button.style.setProperty("--my", `${(Math.sin(angle) * pull).toFixed(1)}px`);
+      });
+      button.addEventListener("pointerleave", () => {
+        button.style.setProperty("--mx", "0px");
+        button.style.setProperty("--my", "0px");
+      });
+    });
+
+    document.querySelectorAll<HTMLElement>("[data-hero-parallax]").forEach((root) => {
+      const layers = Array.from(root.querySelectorAll<HTMLElement>("[data-parallax-layer]"));
+      if (layers.length === 0) return;
+      let targetX = 0;
+      let targetY = 0;
+      let currentX = 0;
+      let currentY = 0;
+      root.addEventListener("pointermove", (event) => {
+        targetX = (event.clientX / window.innerWidth - 0.5) * 2;
+        targetY = (event.clientY / window.innerHeight - 0.5) * 2;
+      });
+      const tick = (): void => {
+        currentX += (targetX - currentX) * 0.08;
+        currentY += (targetY - currentY) * 0.08;
+        layers.forEach((layer, index) => {
+          const depth = Number(layer.dataset.parallaxDepth ?? "1");
+          layer.style.setProperty("--px", `${(currentX * 12 * depth * (index + 1)).toFixed(2)}px`);
+          layer.style.setProperty("--py", `${(currentY * 12 * depth * (index + 1)).toFixed(2)}px`);
+        });
+        requestAnimationFrame(tick);
+      };
+      tick();
+    });
+
+    const backToTop = document.querySelector<HTMLElement>("[data-back-to-top]");
+    if (backToTop) {
+      const ring = backToTop.querySelector<SVGCircleElement>("[data-back-to-top-ring]");
+      const update = (): void => {
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        const progress = max > 0 ? Math.min(1, window.scrollY / max) : 0;
+        backToTop.hidden = window.scrollY < 600;
+        if (ring && ring.r?.baseVal.value > 0) {
+          const circumference = 2 * Math.PI * ring.r.baseVal.value;
+          ring.style.strokeDashoffset = `${(circumference * (1 - progress)).toFixed(2)}`;
+        }
+      };
+      window.addEventListener("scroll", update, { passive: true });
+      update();
+      backToTop.addEventListener("click", () => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    }
+
+    document.querySelectorAll<HTMLElement>("[data-kinetic-title]").forEach((title) => {
+      const words = title.textContent?.split(/\s+/).filter(Boolean) ?? [];
+      if (words.length < 2 || words.length > 14) return;
+      title.textContent = "";
+      words.forEach((word, index) => {
+        const span = document.createElement("span");
+        span.className = "solara-kinetic-word";
+        span.textContent = word;
+        span.style.setProperty("--word-index", String(index));
+        title.append(span, " ");
+      });
+    });
+  };
+  initMicroInteractions();
 }
 
 const SEARCH_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unknown]> = [
@@ -1384,6 +1486,14 @@ export const STOREFRONT_RUNTIME_CSS = `
   animation: solara-motion-scale var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
 }
 
+[data-motion-root][data-motion-visible="true"][data-motion-preset="zoom-in"] [data-motion-zone] {
+  animation: solara-motion-zoom-in var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
+}
+
+[data-motion-root][data-motion-visible="true"][data-motion-preset="blur-in"] [data-motion-zone] {
+  animation: solara-motion-blur-in var(--motion-duration, 700ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
+}
+
 [data-motion-root][data-motion-visible="true"][data-motion-preset="stagger"] [data-motion-zone] > * {
   animation: solara-motion-fade-up var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) both;
 }
@@ -1457,6 +1567,14 @@ export const STOREFRONT_RUNTIME_CSS = `
 @keyframes solara-motion-scale {
   from { opacity: 0; transform: scale(calc(1 - (0.03 * var(--motion-intensity, 1)))); }
   to { opacity: 1; transform: none; }
+}
+
+@keyframes solara-motion-zoom-in {
+  from { opacity: 0; transform: scale(calc(1 + (0.06 * var(--motion-intensity, 1)))); }
+}
+
+@keyframes solara-motion-blur-in {
+  from { opacity: 0; filter: blur(calc(10px * var(--motion-intensity, 1))); }
 }
 
 @keyframes solara-progress {
