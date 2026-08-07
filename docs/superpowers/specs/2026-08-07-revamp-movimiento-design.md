@@ -21,7 +21,7 @@ genéricos); se extraen SOLO los efectos/animaciones/hovers/scrolls/appears.
 - Paleta actual (marfil/tinta/verde musgo) — sin dark-tech.
 - Sin cursor custom, sin preloader, sin partículas canvas, sin Three.js/GSAP,
   sin CDN ni deps externas.
-- Techo runtime JS: 52 KiB (núcleo curado + FAQ/stats ≈ 49.2 KiB).
+- Techo runtime JS: 56 KiB (subido de 52 el 2026-08-07; medido 53,2 KiB con el alcance aprobado).
 - Presets nuevos en el motor: `zoom-in` y `blur-in`.
 - Micro-interacciones JS: tilt 3D, botones magnéticos, spotlight, hero
   parallax con mouse, back-to-top con anillo, kinetic typography.
@@ -41,7 +41,7 @@ genéricos); se extraen SOLO los efectos/animaciones/hovers/scrolls/appears.
 - Static-first: HTML útil sin JS; estados finales visibles; `prefers-reduced-motion`
   desactiva todo efecto; teclado/foco intactos; `transform/opacity/filter`
   solamente (sin layout).
-- Budgets: JS runtime ≤ 52 KiB; CSS runtime ≤ 8 KiB; storefront.css ≤ 780 KiB.
+- Budgets: JS runtime ≤ 56 KiB; CSS runtime ≤ 8 KiB; storefront.css ≤ 780 KiB.
 - Sin CDN, sin fuentes externas (tipografías locales existentes).
 
 ## Catálogo de efectos (con detalle de calidad)
