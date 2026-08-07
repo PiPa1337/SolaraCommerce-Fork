@@ -64,6 +64,22 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("storefrontBoot");
   });
 
+  it("expone los helpers de búsqueda por un nombre canónico estable", () => {
+    // La cadena debe definir bindings con nombre fijo (sobreviven minificación y
+    // transpilación CJS) y el boot debe accederlos vía globalThis, nunca a
+    // través de referencias de módulo que se reescriben al serializar.
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      "const normalizeSearchTokens = function normalizeSearchTokens",
+    );
+    expect(STOREFRONT_RUNTIME_JS).toContain("const scoreEntry = function scoreEntry");
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      "globalThis.__solaraSearchHelpers = { normalizeSearchTokens, levenshtein, matchToken, scoreEntry }",
+    );
+    expect(STOREFRONT_RUNTIME_JS).toContain("searchApi.normalizeSearchTokens");
+    expect(STOREFRONT_RUNTIME_JS).toContain("searchApi.scoreEntry");
+    expect(STOREFRONT_RUNTIME_JS).not.toContain("__solaraSearchHelpers.__solaraSearchHelpers");
+  });
+
   it("mantiene el runtime por debajo de 52 KB crudos", () => {
     // Medición Task 6 (Step 1): runtime JS 41.475 B en bytes crudos (sin gzip).
     expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(52 * 1024);

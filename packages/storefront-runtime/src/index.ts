@@ -10,7 +10,15 @@ import {
   normalizeSearchTokens,
   type SearchEntryTokens,
   scoreEntry,
+  type TokenMatch,
 } from "./search";
+
+interface SearchApi {
+  normalizeSearchTokens: (value: string) => string[];
+  levenshtein: (a: string, b: string) => number;
+  matchToken: (term: string, token: string) => TokenMatch;
+  scoreEntry: (queryTerms: readonly string[], entry: SearchEntryTokens) => number;
+}
 
 export interface CartLine {
   productId: string;
@@ -987,6 +995,11 @@ function storefrontBoot(): void {
   );
   const searchResults = document.querySelector<HTMLElement>("[data-search-results]");
   if (searchInput && searchResults) {
+    const searchApi = (
+      globalThis as typeof globalThis & {
+        __solaraSearchHelpers: SearchApi;
+      }
+    ).__solaraSearchHelpers;
     type SearchEntryWithTokens = {
       title: string;
       brand: string;
@@ -1010,13 +1023,14 @@ function storefrontBoot(): void {
     ): string | undefined => {
       let best: { term: string; distance: number } | undefined;
       for (const term of terms) {
+        if (term.length < 3) continue;
         for (const entry of entries) {
           const candidates = [
-            ...(entry.tokens?.title ?? normalizeSearchTokens(entry.title)),
-            ...(entry.tokens?.brand ?? normalizeSearchTokens(entry.brand)),
+            ...(entry.tokens?.title ?? searchApi.normalizeSearchTokens(entry.title)),
+            ...(entry.tokens?.brand ?? searchApi.normalizeSearchTokens(entry.brand)),
           ];
           for (const token of candidates) {
-            const distance = levenshtein(term, token);
+            const distance = searchApi.levenshtein(term, token);
             if (distance <= 2 && (!best || distance < best.distance)) {
               best = { term: token, distance };
             }
@@ -1029,7 +1043,7 @@ function storefrontBoot(): void {
     searchInput.value = query;
     if (query) {
       document.querySelector('meta[name="robots"]')?.setAttribute("content", "noindex,follow");
-      const terms = normalizeSearchTokens(query);
+      const terms = searchApi.normalizeSearchTokens(query);
       if (terms.join(" ").length < 2) {
         searchResults.innerHTML = "<p>Escribí al menos 2 caracteres para buscar.</p>";
       } else {
@@ -1044,16 +1058,16 @@ function storefrontBoot(): void {
             const ranked = entries
               .map((entry) => ({
                 entry,
-                score: scoreEntry(
+                score: searchApi.scoreEntry(
                   terms,
                   entry.tokens ?? {
-                    title: normalizeSearchTokens(entry.title),
-                    brand: normalizeSearchTokens(entry.brand),
-                    tags: normalizeSearchTokens((entry.tags ?? []).join(" ")),
-                    categories: normalizeSearchTokens(
+                    title: searchApi.normalizeSearchTokens(entry.title),
+                    brand: searchApi.normalizeSearchTokens(entry.brand),
+                    tags: searchApi.normalizeSearchTokens((entry.tags ?? []).join(" ")),
+                    categories: searchApi.normalizeSearchTokens(
                       `${(entry.categoryIds ?? []).join(" ")} ${(entry.collectionIds ?? []).join(" ")} ${(entry.categoryNames ?? []).join(" ")} ${(entry.collectionNames ?? []).join(" ")}`,
                     ),
-                    description: normalizeSearchTokens(entry.description),
+                    description: searchApi.normalizeSearchTokens(entry.description),
                   },
                 ),
               }))
@@ -1242,9 +1256,18 @@ function storefrontBoot(): void {
   }
 }
 
-export const STOREFRONT_RUNTIME_JS = `${[normalizeSearchTokens, levenshtein, matchToken, scoreEntry]
-  .map((fn) => fn.toString())
-  .join("\n")}\n(${storefrontBoot.toString()})();`;
+const SEARCH_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unknown]> = [
+  ["normalizeSearchTokens", normalizeSearchTokens],
+  ["levenshtein", levenshtein],
+  ["matchToken", matchToken],
+  ["scoreEntry", scoreEntry],
+];
+
+export const STOREFRONT_RUNTIME_JS = `${SEARCH_HELPERS.map(
+  ([name, fn]) => `const ${name} = ${fn.toString()};`,
+).join("\n")}
+globalThis.__solaraSearchHelpers = { ${SEARCH_HELPERS.map(([name]) => name).join(", ")} };
+(${storefrontBoot.toString()})();`;
 
 export const STOREFRONT_RUNTIME_CSS = `
 .sr-only {
