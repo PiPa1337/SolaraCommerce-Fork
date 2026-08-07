@@ -145,3 +145,10 @@ test("busca por ancestro y conserva el layout en móvil", async ({ page }) => {
     page.locator(".solara-mobile-nav").getByRole("link", { name: "Casa", exact: true }),
   ).toBeVisible();
 });
+
+test("la búsqueda tolera errores de tipeo en la escala", async ({ page }) => {
+  await page.goto("http://127.0.0.1:4176/buscar/?q=Csa");
+  await expect(page.locator("[data-search-results]")).toContainText("Pieza de escala 01", {
+    timeout: 15_000,
+  });
+});

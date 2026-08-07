@@ -371,6 +371,21 @@ test("las cards, el bento y la búsqueda moderna usan contenido real", async ({ 
   );
 });
 
+test("la búsqueda tolera errores de tipeo y sugiere correcciones", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/buscar/?q=Remra");
+  await expect(page.locator("[data-search-results] .solara-search-result").first()).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(page.locator("[data-search-results]")).toContainText("Remera");
+
+  await page.goto("/buscar/?q=grixk");
+  await expect(page.locator("[data-search-results]")).toContainText("¿Quisiste decir", {
+    timeout: 15_000,
+  });
+  await expect(page.locator("[data-search-results]")).toContainText("gris");
+});
+
 test("captura la matriz visual de Catalog Modern", async ({ page }) => {
   const stage = process.env.VISUAL_REVIEW_STAGE;
   test.skip(!stage, "La revisión visual se ejecuta sólo con VISUAL_REVIEW_STAGE");
