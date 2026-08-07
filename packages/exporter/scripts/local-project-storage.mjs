@@ -152,7 +152,10 @@ async function writeSiteFiles(siteMapPath, destination, limits) {
   let hasIndex = false;
   const prepared = [];
   for (const entry of entries) {
-    if (typeof entry?.path !== "string" || (entry.encoding !== "utf8" && entry.encoding !== "base64")) {
+    if (
+      typeof entry?.path !== "string" ||
+      (entry.encoding !== "utf8" && entry.encoding !== "base64")
+    ) {
       throw new Error("El mapa del sitio contiene entradas inválidas.");
     }
     const pathname = assertRelativeArchivePath(entry.path);
@@ -219,6 +222,12 @@ export function createLocalProjectStorage(options = {}) {
   async function ensureRoots() {
     await mkdir(projectsRoot, { recursive: true });
     await mkdir(stagingRoot, { recursive: true });
+    const { runLegacyZipMigration } = await import("./legacy-zip-migration.mjs");
+    await runLegacyZipMigration({
+      applicationRoot,
+      projectsRoot,
+      migrationStatePath: join(stagingRoot, "..", "migration.json"),
+    });
     await assertNoReparsePoints(applicationRoot, projectsRoot);
     await assertNoReparsePoints(applicationRoot, stagingRoot);
   }
