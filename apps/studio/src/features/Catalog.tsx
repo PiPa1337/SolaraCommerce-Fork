@@ -6,11 +6,7 @@
 import {
   ArrowDown,
   ArrowUp,
-  CaretLeft,
-  CaretRight,
-  CheckSquare,
   DownloadSimple,
-  MagnifyingGlass,
   Package,
   PencilSimple,
   Plus,
@@ -19,7 +15,6 @@ import {
 import { type DomainCommand, reduceProject } from "@solara/core";
 import {
   type Category,
-  getCategoryDescendants,
   getCategoryProductIds,
   type Product,
   type StoreProjectV1,
@@ -38,11 +33,13 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Button, EmptyState, Field, InlineError, SectionHeader } from "../components/Ui";
+import { Button, EmptyState, InlineError, SectionHeader } from "../components/Ui";
 import { buildCatalogPackagePlan, type CatalogPackagePlan } from "../lib/catalogPackage";
 import { formatCurrency } from "../lib/format";
 import { downloadBlob } from "../lib/projectArchive";
 import { exportCommercialCsvInWorker, exportCsvInWorker, importCsvInWorker } from "../lib/workers";
+import { CatalogToolbar } from "./catalog/CatalogToolbar";
+import { CategoryTree } from "./catalog/CategoryTree";
 import { ProductEditor } from "./catalog/ProductEditor";
 
 declare module "react" {
@@ -70,29 +67,6 @@ type EditorState = { mode: "create" | "edit"; product: Product } | undefined;
 type BusyState = "import" | "package" | "export" | "";
 
 const now = () => new Date().toISOString();
-
-function categoryTree(project: StoreProjectV1): Category[] {
-  const roots = project.categories.filter((category) => category.parentId === undefined);
-  const childrenByParent = new Map<string, Category[]>();
-  project.categories.forEach((category) => {
-    if (!category.parentId) return;
-    childrenByParent.set(category.parentId, [
-      ...(childrenByParent.get(category.parentId) ?? []),
-      category,
-    ]);
-  });
-  const ordered: Category[] = [];
-  const visit = (category: Category): void => {
-    ordered.push(category);
-    (childrenByParent.get(category.id) ?? []).forEach(visit);
-  };
-  roots.forEach(visit);
-  return ordered;
-}
-
-function categoryLabel(category: Category): string {
-  return category.parentId ? `  ${category.title}` : category.title;
-}
 
 function blankProduct(project: StoreProjectV1): Product {
   const stamp = now();
@@ -365,43 +339,6 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
     .filter(([, selected]) => selected)
     .map(([id]) => id as Product["id"]);
   const filteredRows = table.getFilteredRowModel().rows;
-  const orderedCategories = categoryTree(project);
-  const categoryChildren = useMemo(() => {
-    const children = new Map<string, Category[]>();
-    project.categories.forEach((category) => {
-      if (!category.parentId) return;
-      children.set(category.parentId, [...(children.get(category.parentId) ?? []), category]);
-    });
-    return children;
-  }, [project.categories]);
-  const visibleCategories = useMemo(
-    () =>
-      orderedCategories.filter((category) => {
-        let parentId = category.parentId;
-        while (parentId) {
-          if (collapsedCategoryIds.has(parentId)) return false;
-          parentId = project.categories.find((item) => item.id === parentId)?.parentId;
-        }
-        return true;
-      }),
-    [collapsedCategoryIds, orderedCategories, project.categories],
-  );
-  const selectedReparentCategory = project.categories.find(
-    (category) => category.id === reparentCategoryId,
-  );
-  const blockedParentIds = new Set(
-    selectedReparentCategory
-      ? [
-          selectedReparentCategory.id,
-          ...getCategoryDescendants(project, selectedReparentCategory.id).map(
-            (category) => category.id,
-          ),
-        ]
-      : [],
-  );
-  const reparentParents = project.categories.filter(
-    (category) => !blockedParentIds.has(category.id),
-  );
 
   const importCsv = async (file: File) => {
     setBusy("import");
@@ -678,308 +615,44 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
         </section>
       ) : null}
 
-      <div className="catalog-toolbar">
-        <label className="search-box">
-          <MagnifyingGlass aria-hidden size={18} />
-          <span className="visually-hidden">Buscar productos</span>
-          <input
-            value={filter}
-            onChange={(event) => setFilter(event.target.value)}
-            placeholder="Buscar por producto, marca o estado"
-          />
-        </label>
-        <label className="catalog-category-filter">
-          <span>Filtrar categoría</span>
-          <select
-            value={categoryFilterId}
-            onChange={(event) => {
-              setCategoryFilterId(event.target.value);
-              setPagination((current) => ({ ...current, pageIndex: 0 }));
-            }}
-          >
-            <option value="">Todas las categorías</option>
-            {orderedCategories.map((category) => (
-              <option value={category.id} key={category.id}>
-                {categoryLabel(category)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="selection-summary">
-          <span>{selectedIds.length} seleccionados</span>
-          {filteredRows.length > 0 ? (
-            <Button
-              data-testid="select-filtered-products"
-              variant="quiet"
-              onClick={() =>
-                setSelection((current) => ({
-                  ...current,
-                  ...Object.fromEntries(filteredRows.map((row) => [row.id, true])),
-                }))
-              }
-            >
-              Seleccionar {filteredRows.length} filtrados
-            </Button>
-          ) : null}
-          {selectedIds.length > 0 ? (
-            <Button variant="quiet" onClick={() => setSelection({})}>
-              Limpiar
-            </Button>
-          ) : null}
-        </div>
-      </div>
+      <CatalogToolbar
+        project={project}
+        table={table}
+        filteredRows={filteredRows}
+        selectedIds={selectedIds}
+        filter={filter}
+        setFilter={setFilter}
+        categoryFilterId={categoryFilterId}
+        setCategoryFilterId={setCategoryFilterId}
+        setPagination={setPagination}
+        setSelection={setSelection}
+        status={status}
+        setStatus={setStatus}
+        priceKind={priceKind}
+        setPriceKind={setPriceKind}
+        priceAdjustment={priceAdjustment}
+        setPriceAdjustment={setPriceAdjustment}
+        categoryIds={categoryIds}
+        setCategoryIds={setCategoryIds}
+        collectionIds={collectionIds}
+        setCollectionIds={setCollectionIds}
+        tags={tags}
+        setTags={setTags}
+        onCommand={onCommand}
+        applyPriceAdjustment={applyPriceAdjustment}
+        applyTags={applyTags}
+      />
 
-      {selectedIds.length > 0 ? (
-        <section className="bulk-panel" aria-label="Acciones masivas">
-          <header>
-            <CheckSquare aria-hidden size={20} />
-            <strong>{selectedIds.length} productos seleccionados</strong>
-          </header>
-          <div className="bulk-grid">
-            <div className="bulk-action">
-              <Field label="Estado">
-                <select
-                  value={status}
-                  onChange={(event) => setStatus(event.target.value as Product["status"])}
-                >
-                  <option value="active">Activo</option>
-                  <option value="hidden">Oculto</option>
-                  <option value="archived">Archivado</option>
-                </select>
-              </Field>
-              <Button
-                data-testid="apply-bulk-status"
-                onClick={() =>
-                  onCommand({
-                    type: "products.setStatus",
-                    productIds: selectedIds,
-                    status,
-                    at: now(),
-                  })
-                }
-              >
-                Aplicar estado
-              </Button>
-            </div>
-
-            <div className="bulk-action">
-              <Field label="Ajuste">
-                <select
-                  value={priceKind}
-                  onChange={(event) => setPriceKind(event.target.value as "percentage" | "amount")}
-                >
-                  <option value="percentage">Porcentaje</option>
-                  <option value="amount">Centavos</option>
-                </select>
-              </Field>
-              <Field label={priceKind === "percentage" ? "Valor %" : "Centavos"}>
-                <input
-                  type="number"
-                  value={priceAdjustment}
-                  onChange={(event) => setPriceAdjustment(event.target.value)}
-                  step={priceKind === "percentage" ? "0.1" : "1"}
-                />
-              </Field>
-              <Button onClick={applyPriceAdjustment}>Ajustar precios</Button>
-            </div>
-
-            <div className="bulk-action">
-              <Field label="Categorías">
-                <select
-                  multiple
-                  size={Math.min(4, Math.max(2, project.categories.length))}
-                  value={categoryIds}
-                  onChange={(event) =>
-                    setCategoryIds(
-                      Array.from(event.target.selectedOptions, (option) => option.value),
-                    )
-                  }
-                >
-                  {orderedCategories.map((category) => (
-                    <option value={category.id} key={category.id}>
-                      {categoryLabel(category)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Button
-                onClick={() =>
-                  onCommand({
-                    type: "products.setCategories",
-                    productIds: selectedIds,
-                    categoryIds: project.categories
-                      .filter((category) => categoryIds.includes(category.id))
-                      .map((category) => category.id),
-                    at: now(),
-                  })
-                }
-              >
-                Establecer categorías
-              </Button>
-            </div>
-
-            <div className="bulk-action">
-              <Field label="Colecciones">
-                <select
-                  multiple
-                  size={Math.min(4, Math.max(2, project.collections.length))}
-                  value={collectionIds}
-                  onChange={(event) =>
-                    setCollectionIds(
-                      Array.from(event.target.selectedOptions, (option) => option.value),
-                    )
-                  }
-                >
-                  {project.collections.map((collection) => (
-                    <option value={collection.id} key={collection.id}>
-                      {collection.title}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Button
-                onClick={() =>
-                  onCommand({
-                    type: "products.setCollections",
-                    productIds: selectedIds,
-                    collectionIds: project.collections
-                      .filter((collection) => collectionIds.includes(collection.id))
-                      .map((collection) => collection.id),
-                    at: now(),
-                  })
-                }
-              >
-                Establecer colecciones
-              </Button>
-            </div>
-
-            <div className="bulk-action bulk-action--tags">
-              <Field label="Tags" hint="Separados por comas.">
-                <input value={tags} onChange={(event) => setTags(event.target.value)} />
-              </Field>
-              <Button onClick={() => applyTags("products.addTags")}>Agregar tags</Button>
-              <Button variant="quiet" onClick={() => applyTags("products.removeTags")}>
-                Quitar tags
-              </Button>
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      <section className="category-tree-panel" aria-label="Árbol de categorías">
-        <header>
-          <div>
-            <span className="eyebrow">Organización</span>
-            <h2>Categorías</h2>
-            <p>Las categorías padre agregan automáticamente los productos de sus hijas.</p>
-          </div>
-        </header>
-        <ul className="category-tree" aria-label="Categorías ordenadas">
-          {visibleCategories.map((category) => {
-            const directCount = project.products.filter((product) =>
-              product.categoryIds.includes(category.id),
-            ).length;
-            const totalCount = getCategoryProductIds(project, category.id).length;
-            const hasChildren = (categoryChildren.get(category.id)?.length ?? 0) > 0;
-            const expanded = !collapsedCategoryIds.has(category.id);
-            return (
-              <li key={category.id} data-depth={category.parentId ? "1" : "0"}>
-                <div className="category-tree-name">
-                  {hasChildren ? (
-                    <button
-                      className="category-tree-toggle"
-                      type="button"
-                      aria-label={`${expanded ? "Contraer" : "Expandir"} ${category.title}`}
-                      aria-expanded={expanded}
-                      onClick={() =>
-                        setCollapsedCategoryIds((current) => {
-                          const next = new Set(current);
-                          if (next.has(category.id)) next.delete(category.id);
-                          else next.add(category.id);
-                          return next;
-                        })
-                      }
-                    >
-                      <CaretRight
-                        aria-hidden
-                        size={14}
-                        style={{ transform: expanded ? "rotate(90deg)" : undefined }}
-                      />
-                    </button>
-                  ) : (
-                    <span className="category-tree-spacer" aria-hidden />
-                  )}
-                  <strong>{category.title}</strong>
-                </div>
-                <span>
-                  {directCount} directos · {totalCount} totales
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-        <div className="category-reparent">
-          <Field label="Categoría a reubicar">
-            <select
-              value={reparentCategoryId}
-              onChange={(event) => {
-                setReparentCategoryId(event.target.value);
-                setReparentParentId("");
-              }}
-            >
-              <option value="">Seleccionar categoría</option>
-              {orderedCategories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {categoryLabel(category)}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Nuevo padre">
-            <select
-              value={reparentParentId}
-              onChange={(event) => setReparentParentId(event.target.value)}
-              disabled={!selectedReparentCategory}
-            >
-              <option value="">Sin padre (raíz)</option>
-              {reparentParents
-                .filter(
-                  (category) =>
-                    category.parentId === undefined &&
-                    category.id !== selectedReparentCategory?.parentId,
-                )
-                .map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {categoryLabel(category)}
-                  </option>
-                ))}
-            </select>
-          </Field>
-          <Button
-            disabled={!selectedReparentCategory}
-            onClick={() => {
-              if (!selectedReparentCategory) return;
-              const nextLabel = reparentParentId
-                ? project.categories.find((category) => category.id === reparentParentId)?.title
-                : "raíz";
-              if (
-                !window.confirm(
-                  `Reubicar ${selectedReparentCategory.title} bajo ${nextLabel ?? "raíz"}?`,
-                )
-              )
-                return;
-              onCommand({
-                type: "category.reparent",
-                categoryId: selectedReparentCategory.id,
-                ...(reparentParentId ? { parentId: reparentParentId as Category["id"] } : {}),
-                at: now(),
-              });
-            }}
-          >
-            Reubicar categoría
-          </Button>
-        </div>
-      </section>
+      <CategoryTree
+        project={project}
+        collapsedCategoryIds={collapsedCategoryIds}
+        setCollapsedCategoryIds={setCollapsedCategoryIds}
+        reparentCategoryId={reparentCategoryId}
+        setReparentCategoryId={setReparentCategoryId}
+        reparentParentId={reparentParentId}
+        setReparentParentId={setReparentParentId}
+        onCommand={onCommand}
+      />
 
       {project.products.length === 0 ? (
         <EmptyState
@@ -997,94 +670,54 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
           }
         />
       ) : (
-        <>
-          <div className="table-shell">
-            <table>
-              <thead>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <th key={header.id}>
-                        {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                          <button
-                            className="table-sort"
-                            type="button"
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {header.column.getIsSorted() === "asc" ? (
-                              <ArrowUp aria-label="Orden ascendente" size={14} />
-                            ) : header.column.getIsSorted() === "desc" ? (
-                              <ArrowDown aria-label="Orden descendente" size={14} />
-                            ) : null}
-                          </button>
-                        ) : (
-                          flexRender(header.column.columnDef.header, header.getContext())
-                        )}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
-                {table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} data-selected={row.getIsSelected()}>
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-                {table.getRowModel().rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={columns.length} className="table-empty">
-                      No hay productos que coincidan con la búsqueda.
+        <div className="table-shell">
+          <table>
+            <thead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <th key={header.id}>
+                      {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                        <button
+                          className="table-sort"
+                          type="button"
+                          onClick={header.column.getToggleSortingHandler()}
+                        >
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {header.column.getIsSorted() === "asc" ? (
+                            <ArrowUp aria-label="Orden ascendente" size={14} />
+                          ) : header.column.getIsSorted() === "desc" ? (
+                            <ArrowDown aria-label="Orden descendente" size={14} />
+                          ) : null}
+                        </button>
+                      ) : (
+                        flexRender(header.column.columnDef.header, header.getContext())
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {table.getRowModel().rows.map((row) => (
+                <tr key={row.id} data-selected={row.getIsSelected()}>
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-
-          <nav className="table-pagination" aria-label="Paginación del catálogo">
-            <span>
-              Página {table.getState().pagination.pageIndex + 1} de{" "}
-              {Math.max(1, table.getPageCount())}
-            </span>
-            <Field label="Filas">
-              <select
-                value={table.getState().pagination.pageSize}
-                onChange={(event) => table.setPageSize(Number(event.target.value))}
-              >
-                {[25, 50, 100].map((pageSize) => (
-                  <option value={pageSize} key={pageSize}>
-                    {pageSize}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <div>
-              <Button
-                data-testid="next-catalog-page"
-                variant="quiet"
-                icon={CaretLeft}
-                disabled={!table.getCanPreviousPage()}
-                onClick={() => table.previousPage()}
-              >
-                Anterior
-              </Button>
-              <Button
-                variant="quiet"
-                icon={CaretRight}
-                disabled={!table.getCanNextPage()}
-                onClick={() => table.nextPage()}
-              >
-                Siguiente
-              </Button>
-            </div>
-          </nav>
-        </>
+                  ))}
+                </tr>
+              ))}
+              {table.getRowModel().rows.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length} className="table-empty">
+                    No hay productos que coincidan con la búsqueda.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {editor ? (
