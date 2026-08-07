@@ -579,4 +579,31 @@ describe("almacenamiento local de proyectos", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("descarta la carpeta con sidecar huérfano y sin manifest", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-orphan-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      await storage.ensureRoots();
+      const orphanRoot = join(root, "proyectos", "tienda-huerfana");
+      await mkdir(orphanRoot, { recursive: true });
+      const sidecar = join(orphanRoot, "recovery.json");
+      await writeFile(
+        sidecar,
+        JSON.stringify({
+          format: "solara-local-recovery",
+          folder: "tienda-huerfana",
+          message: "diagnóstico viejo de una tienda que ya no existe",
+          detectedAt: "2026-01-01T00:00:00.000Z",
+        }),
+        "utf8",
+      );
+
+      const listing = await storage.list();
+      expect(listing.recovery).toHaveLength(0);
+      await expect(readFile(sidecar, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

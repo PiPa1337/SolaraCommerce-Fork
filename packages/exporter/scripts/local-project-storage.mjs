@@ -310,6 +310,16 @@ export function createLocalProjectStorage(options = {}) {
           siteOutdated: manifest.status === "site-outdated",
         });
       } catch (error) {
+        if (error?.code === "ENOENT") {
+          // Sin manifest no hay tienda: se descarta la carpeta y se limpia
+          // un diagnóstico viejo que ya no corresponde a ninguna tienda.
+          try {
+            await rm(join(root, "recovery.json"), { force: true });
+          } catch {
+            // Carpeta de solo lectura: no se puede limpiar el diagnóstico viejo.
+          }
+          continue;
+        }
         const message =
           error instanceof Error ? error.message : "No se pudo leer el manifest local.";
         const diagnosticPath = join(root, "recovery.json");
@@ -321,12 +331,6 @@ export function createLocalProjectStorage(options = {}) {
             throw new Error("Diagnóstico sin mensaje.");
           }
         } catch {
-          if (error?.code === "ENOENT") {
-            // Sin manifest no hay tienda: se descarta la carpeta y se limpia
-            // un diagnóstico viejo que ya no corresponde a ninguna tienda.
-            await rm(diagnosticPath, { force: true });
-            continue;
-          }
           recovery.push({ folder: entry.name, message });
         }
         try {
