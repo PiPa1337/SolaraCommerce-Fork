@@ -64,8 +64,8 @@ reduced-motion global; QA de cierre con 122 tests E2E pasando (1 omitido).
   ProductEditor) usan `ConfirmDialog` en lugar de `window.confirm`; specs
   actualizados en consecuencia.
 - QA: 13 specs E2E del editor (smoke, consola, estados, responsive, a11y,
-  perf, workers, persistencia, catálogo, producto, builder, motion, visual)
-  con 122 tests pasando en Chromium.
+  perf, workers, persistencia, catálogo, producto, builder, motion,
+  dashboard-actions) con 122 tests pasando en Chromium.
 
 **Cambiado**
 
@@ -75,14 +75,20 @@ reduced-motion global; QA de cierre con 122 tests E2E pasando (1 omitido).
   alcance aprobado. JS inicial se mantiene en ≤ 700 KiB.
 - `prefers-reduced-motion` desactiva las transiciones y animaciones del
   editor salvo opacidad y foco.
+- La sobreescritura por importación de respaldo usa una única confirmación
+  de riesgo (decisión deliberada de la revisión final): el diálogo describe
+  el reemplazo y el respaldo original se conserva como archivo, por lo que se
+  descartó la doble confirmación por fricción sin ganancia real de seguridad.
 
 **Corregido**
 
 - Consola limpia en todo el recorrido del editor (sin errores ni warnings de
   la app); responsive sin overflow horizontal en 390-1920 px; foco visible,
   skip-link, roles de tabs y diálogos accesibles; progreso honesto al
-  reemplazar imágenes; referencias de assets en slides/posters de secciones
-  contadas en los usos; mediciones de presupuesto del catálogo documentadas.
+  reemplazar imágenes; usos de assets que descienden por arrays y objetos
+  anidados (slides de carrusel del hero y posters de secciones), de modo que
+  el guard de eliminación queda deshabilitado mientras exista un uso;
+  mediciones de presupuesto del catálogo documentadas.
 
 ### Revamp de movimiento (2026-08-07)
 

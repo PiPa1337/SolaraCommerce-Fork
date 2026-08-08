@@ -30,6 +30,7 @@ export function ConfirmDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
   const busyRef = useRef(busy);
   const onConfirmRef = useRef(onConfirm);
@@ -55,8 +56,14 @@ export function ConfirmDialog({
         onCancelRef.current();
       } else if (event.key === "Enter" && !busyRef.current) {
         event.preventDefault();
-        if (document.activeElement === cancelRef.current) onCancelRef.current();
-        else onConfirmRef.current();
+        if (
+          document.activeElement === cancelRef.current ||
+          document.activeElement === closeRef.current
+        ) {
+          onCancelRef.current();
+        } else {
+          onConfirmRef.current();
+        }
       }
     };
     dialog.addEventListener("cancel", handleCancel);
@@ -80,6 +87,7 @@ export function ConfirmDialog({
         <header className="confirm-dialog__header">
           <h3 id={titleId}>{title}</h3>
           <button
+            ref={closeRef}
             className="icon-button"
             type="button"
             aria-label="Cerrar diálogo"

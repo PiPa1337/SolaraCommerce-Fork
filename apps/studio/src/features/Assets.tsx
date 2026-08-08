@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ProgressBar } from "../components/primitives";
 import { Button, EmptyState, IconButton, InlineError, SectionHeader } from "../components/Ui";
+import { assetUses } from "../lib/assetUses";
 import { bytesToSize } from "../lib/format";
 import {
   ASSET_CACHE_RECIPE_VERSION,
@@ -24,67 +25,6 @@ import {
   requestPersistentStorage,
 } from "../lib/repository";
 import { hashFile, type ProcessedImage, processImageInWorker } from "../lib/workers";
-
-interface AssetUse {
-  label: string;
-  detail: string;
-}
-
-/** Referencias de imagen dentro de un valor de settings (slides, posters, etc.). */
-function collectSettingAssetIds(value: unknown, collected: string[]): void {
-  if (typeof value === "string") {
-    collected.push(value);
-    return;
-  }
-  if (Array.isArray(value)) {
-    for (const item of value) collectSettingAssetIds(item, collected);
-    return;
-  }
-  if (value && typeof value === "object") {
-    for (const [key, item] of Object.entries(value)) {
-      if (key === "imageId" || key === "posterAssetId") collectSettingAssetIds(item, collected);
-    }
-  }
-}
-
-/** Usos de una imagen: productos (incluidas variantes), portadas, categorías, colecciones y secciones. */
-function assetUses(project: StoreProjectV1, assetId: ImageAsset["id"]): AssetUse[] {
-  const uses: AssetUse[] = [];
-  for (const product of project.products) {
-    if (product.imageIds.includes(assetId)) {
-      uses.push({ label: product.title, detail: "Imagen de producto" });
-    }
-    for (const variant of product.variants) {
-      if (variant.imageId === assetId) {
-        uses.push({ label: product.title, detail: `Imagen de variante ${variant.title}` });
-        break;
-      }
-    }
-  }
-  for (const video of project.videos) {
-    if (video.posterAssetId === assetId) {
-      uses.push({ label: video.name, detail: "Portada de video" });
-    }
-  }
-  for (const category of project.categories) {
-    if (category.imageId === assetId) {
-      uses.push({ label: category.title, detail: "Imagen de categoría" });
-    }
-  }
-  for (const collection of project.collections) {
-    if (collection.imageId === assetId) {
-      uses.push({ label: collection.title, detail: "Imagen de colección" });
-    }
-  }
-  for (const section of project.sections) {
-    const referenced: string[] = [];
-    collectSettingAssetIds(section.settings, referenced);
-    if (referenced.includes(assetId)) {
-      uses.push({ label: section.moduleId, detail: `Sección ${section.slot}` });
-    }
-  }
-  return [...new Map(uses.map((use) => [`${use.label}|${use.detail}`, use])).values()];
-}
 
 export function Assets({
   project,

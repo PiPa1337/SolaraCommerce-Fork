@@ -720,7 +720,9 @@ export function Studio({
 
       <footer className="studio-statusbar" data-testid="ui-status-bar">
         <span>Esquema v{project.schemaVersion}</span>
-        <span>Última exportación: {lastExportedAt ? formatStatusDate(lastExportedAt) : "—"}</span>
+        {managedStorage ? (
+          <span>Última exportación: {lastExportedAt ? formatStatusDate(lastExportedAt) : "—"}</span>
+        ) : null}
         <span>Persistencia: {managedStorage ? "Disco" : "IndexedDB"}</span>
       </footer>
 

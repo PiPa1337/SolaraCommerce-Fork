@@ -55,3 +55,34 @@ test("procesa una imagen, muestra el lote y persiste el asset", async ({ page })
   await page.getByRole("tab", { name: "Recursos", exact: true }).click();
   await expect(page.locator(".asset-item")).toHaveCount(initialAssetCount + 1);
 });
+
+test("el asset del hero de Predeterminado muestra su uso y no se puede borrar", async ({
+  page,
+}) => {
+  await page.goto(studioUrl);
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 20_000,
+  });
+  const card = page
+    .locator(".dashboard-store-card")
+    .filter({ has: page.getByText("Predeterminado", { exact: true }) });
+  await expect(card).toBeVisible();
+  await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+  await page.getByRole("tab", { name: "Recursos", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Recursos" })).toBeVisible();
+
+  // El hero de la demo usa posterAssetId "asset-hero" (Campaña Modo Sur).
+  const heroAsset = page.locator(".asset-item").filter({
+    has: page.locator('input[value="Campaña Modo Sur"]'),
+  });
+  await expect(heroAsset).toBeVisible();
+  await heroAsset.getByTestId("ui-asset-detail-open").click();
+
+  const detail = page.getByTestId("ui-asset-detail");
+  await expect(detail).toBeVisible();
+  await expect(detail.getByTestId("ui-asset-use").first()).toBeVisible();
+  await expect(detail).toContainText("catalog-hero");
+  await expect(detail).toContainText("Sección hero");
+  await expect(page.getByTestId("ui-asset-delete")).toBeDisabled();
+});
