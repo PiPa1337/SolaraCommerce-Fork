@@ -1,7 +1,13 @@
 /** Editor de identidad, contacto, navegación y copy que completa la plantilla base. */
+
+import type { Icon } from "@phosphor-icons/react";
 import {
   ArrowDown,
   ArrowUp,
+  Article,
+  CaretDown,
+  CheckCircle,
+  FloppyDisk,
   Globe,
   List,
   Storefront,
@@ -9,7 +15,7 @@ import {
   WhatsappLogo,
 } from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
-import { type InputHTMLAttributes, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { StatusBadge, Toggle } from "../components/primitives";
 import { useToast } from "../components/Toast";
@@ -26,6 +32,75 @@ function isValidUrl(value: string): boolean {
   }
 }
 
+/** Destino de navegación: URL http(s) o ruta interna relativa (ej. /contacto/). */
+function isValidDestination(value: string): boolean {
+  if (value.trim().startsWith("/")) return true;
+  return isValidUrl(value);
+}
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function destinationError(href: string): string | undefined {
+  return href.trim() !== "" && !isValidDestination(href)
+    ? "Usá http(s) o una ruta interna (ej. /contacto/)."
+    : undefined;
+}
+
+/** Sección plegable del formulario (T4.2): encabezado botón + panel con animación. */
+function AccordionSection({
+  sectionKey,
+  label,
+  icon: IconComponent,
+  badge,
+  collapsed,
+  onToggle,
+  children,
+}: {
+  sectionKey: string;
+  label: string;
+  icon: Icon;
+  badge?: ReactNode;
+  collapsed: boolean;
+  onToggle(): void;
+  children: ReactNode;
+}) {
+  const toggleId = useId();
+  const panelId = useId();
+  return (
+    <section
+      className="overview-accordion"
+      data-testid="ui-accordion"
+      data-accordion-id={sectionKey}
+    >
+      <h3 className="overview-accordion__heading">
+        <button
+          type="button"
+          id={toggleId}
+          className="overview-accordion__toggle"
+          aria-expanded={!collapsed}
+          aria-controls={panelId}
+          onClick={onToggle}
+        >
+          <IconComponent aria-hidden size={19} />
+          <span>{label}</span>
+          {badge}
+          <CaretDown aria-hidden size={16} className="overview-accordion__caret" />
+        </button>
+      </h3>
+      <section
+        className="overview-accordion__panel"
+        id={panelId}
+        aria-labelledby={toggleId}
+        hidden={collapsed}
+      >
+        {children}
+      </section>
+    </section>
+  );
+}
+
 export function Overview({
   project,
   onChange,
@@ -34,26 +109,86 @@ export function Overview({
   onChange(project: StoreProjectV1): void;
 }) {
   const [pendingNavDelete, setPendingNavDelete] = useState<string | null>(null);
+  const [collapsedSections, setCollapsedSections] = useState<ReadonlySet<string>>(() => new Set());
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [fieldDrafts, setFieldDrafts] = useState<Record<string, string>>({});
+  const [unsaved, setUnsaved] = useState(false);
+  const unsavedTimer = useRef<number | undefined>(undefined);
   const { success } = useToast();
   const pendingNavItem = pendingNavDelete
     ? project.navigation.items.find((item) => item.id === pendingNavDelete)
     : undefined;
-  const phoneValue = project.whatsapp.phone;
-  const phoneError =
-    phoneValue && !PHONE_PATTERN.test(phoneValue)
+
+  /** Valor visible de un campo validado: el borrador local prima sobre el proyecto. */
+  const fieldValue = (key: string, projectValue: string) => fieldDrafts[key] ?? projectValue;
+  /** Guarda el borrador local y commitea sólo cuando es válido para el schema. */
+  const updateField = (
+    key: string,
+    next: string,
+    isValid: (value: string) => boolean,
+    onCommit: (value: string) => void,
+  ) => {
+    markUnsaved();
+    setFieldDrafts((current) => ({ ...current, [key]: next }));
+    if (isValid(next)) onCommit(next);
+  };
+
+  const phoneDisplay = fieldValue("phone", project.whatsapp.phone);
+  const phoneMissing = phoneDisplay === "";
+  const phoneInvalid = phoneDisplay !== "" && !PHONE_PATTERN.test(phoneDisplay);
+  const phoneError = phoneMissing
+    ? "Falta completar el número de WhatsApp."
+    : phoneInvalid
       ? "Usá entre 8 y 15 dígitos con código de país y área."
       : undefined;
-  const urlValue = project.baseUrl;
+  const urlDisplay = fieldValue("baseUrl", project.baseUrl);
   const urlError =
-    urlValue && !isValidUrl(urlValue) ? "Ingresá una URL válida con http(s)." : undefined;
+    urlDisplay && !isValidUrl(urlDisplay) ? "Ingresá una URL válida con http(s)." : undefined;
+  const nameDisplay = fieldValue("name", project.name);
+  const nameError = nameDisplay.trim() === "" ? "Completá el nombre de la tienda." : undefined;
+  const descriptionError =
+    project.identity.description.trim() === "" ? "Completá la descripción de la marca." : undefined;
+  const catalogLabelDisplay = fieldValue("catalogLabel", project.navigation.catalogLabel);
+  const catalogLabelError =
+    catalogLabelDisplay.trim() === "" ? "Completá el nombre del catálogo." : undefined;
+  const emailDisplay = fieldValue("email", project.identity.email);
+  const emailError =
+    emailDisplay.trim() !== "" && !isValidEmail(emailDisplay)
+      ? "Ingresá un email válido."
+      : undefined;
+
+  const markUnsaved = useCallback(() => {
+    setUnsaved(true);
+    window.clearTimeout(unsavedTimer.current);
+    unsavedTimer.current = window.setTimeout(() => setUnsaved(false), 1200);
+  }, []);
+
+  useEffect(() => () => window.clearTimeout(unsavedTimer.current), []);
+
+  /* biome-ignore lint/correctness/useExhaustiveDependencies: resetear borradores es el efecto deseado al cambiar updatedAt. */
+  useEffect(() => {
+    setDrafts({});
+    setFieldDrafts({});
+  }, [project.updatedAt]);
+
+  const toggleSection = (sectionId: string) =>
+    setCollapsedSections((current) => {
+      const next = new Set(current);
+      if (next.has(sectionId)) next.delete(sectionId);
+      else next.add(sectionId);
+      return next;
+    });
+
   const deleteNavItem = (itemId: string) => {
     updateNavigation({
       items: project.navigation.items.filter((current) => current.id !== itemId),
     });
     success("Enlace de navegación eliminado");
   };
-  const commit = (patch: Partial<StoreProjectV1>) =>
+  const commit = (patch: Partial<StoreProjectV1>) => {
+    markUnsaved();
     onChange({ ...project, ...patch, updatedAt: new Date().toISOString() });
+  };
   const updateNavigation = (patch: Partial<StoreProjectV1["navigation"]>) =>
     commit({ navigation: { ...project.navigation, ...patch } });
   const updateNavigationItem = (
@@ -96,26 +231,60 @@ export function Overview({
       pages: project.pages.map((page) => (page.id === pageId ? { ...page, ...patch } : page)),
     });
 
+  /** Input con borrador local: edita sin commitear y confirma al salir del campo. */
+  const destinationInput = (key: string, value: string, onCommit: (next: string) => void) => (
+    <input
+      type="url"
+      value={drafts[key] ?? value}
+      onChange={(event) => setDrafts((current) => ({ ...current, [key]: event.target.value }))}
+      onBlur={() => {
+        const next = drafts[key] ?? value;
+        if (next !== value) onCommit(next);
+      }}
+    />
+  );
+
+  const saveIndicator = (extraClass = "", testId: string | null = null) => (
+    <output
+      className={`overview-save-indicator${unsaved ? " overview-save-indicator--unsaved" : ""} ${extraClass}`}
+      aria-live="polite"
+      {...(testId ? { "data-testid": testId } : {})}
+    >
+      {unsaved ? <FloppyDisk aria-hidden size={15} /> : <CheckCircle aria-hidden size={15} />}
+      <span>{unsaved ? "Sin guardar" : "Cambios guardados"}</span>
+    </output>
+  );
+
   return (
     <section className="workspace-section">
       <SectionHeader
         title="Resumen"
         description="Datos comerciales compartidos por la tienda, el pedido y la exportación."
+        actions={saveIndicator("", "ui-save-indicator")}
       />
       <div className="form-clusters">
-        <fieldset>
-          <legend>
-            <Storefront aria-hidden size={19} /> Identidad
-          </legend>
+        <AccordionSection
+          sectionKey="identity"
+          label="Identidad"
+          icon={Storefront}
+          collapsed={collapsedSections.has("identity")}
+          onToggle={() => toggleSection("identity")}
+        >
           <div className="form-grid">
-            <Field label="Nombre de la tienda">
+            <Field label="Nombre de la tienda" {...(nameError ? { error: nameError } : {})}>
               <input
-                value={project.name}
+                value={nameDisplay}
                 onChange={(event) =>
-                  commit({
-                    name: event.target.value,
-                    identity: { ...project.identity, brandName: event.target.value },
-                  })
+                  updateField(
+                    "name",
+                    event.target.value,
+                    (next) => next.trim() !== "",
+                    (next) =>
+                      commit({
+                        name: next,
+                        identity: { ...project.identity, brandName: next },
+                      }),
+                  )
                 }
               />
             </Field>
@@ -127,7 +296,11 @@ export function Overview({
                 }
               />
             </Field>
-            <Field label="Descripción" className="field--wide">
+            <Field
+              label="Descripción"
+              className="field--wide"
+              {...(descriptionError ? { error: descriptionError } : {})}
+            >
               <textarea
                 rows={4}
                 value={project.identity.description}
@@ -136,12 +309,17 @@ export function Overview({
                 }
               />
             </Field>
-            <Field label="Email">
+            <Field label="Email" {...(emailError ? { error: emailError } : {})}>
               <input
                 type="email"
-                value={project.identity.email}
+                value={emailDisplay}
                 onChange={(event) =>
-                  commit({ identity: { ...project.identity, email: event.target.value } })
+                  updateField(
+                    "email",
+                    event.target.value,
+                    (next) => next === "" || isValidEmail(next),
+                    (next) => commit({ identity: { ...project.identity, email: next } }),
+                  )
                 }
               />
             </Field>
@@ -162,16 +340,23 @@ export function Overview({
               />
             </Field>
           </div>
-        </fieldset>
+        </AccordionSection>
 
-        <fieldset>
-          <legend>
-            <WhatsappLogo aria-hidden size={19} /> Pedido por WhatsApp{" "}
+        <AccordionSection
+          sectionKey="whatsapp"
+          label="Pedido por WhatsApp"
+          icon={WhatsappLogo}
+          badge={
             <StatusBadge
-              status={phoneError ? "warning" : phoneValue ? "ok" : "idle"}
-              label={phoneError ? "Revisar formato" : phoneValue ? "Formato correcto" : "Pendiente"}
+              status={phoneInvalid ? "warning" : phoneMissing ? "idle" : "ok"}
+              label={
+                phoneInvalid ? "Revisar formato" : phoneMissing ? "Pendiente" : "Formato correcto"
+              }
             />
-          </legend>
+          }
+          collapsed={collapsedSections.has("whatsapp")}
+          onToggle={() => toggleSection("whatsapp")}
+        >
           <div className="form-grid">
             <Field
               label="Número internacional"
@@ -180,11 +365,14 @@ export function Overview({
             >
               <input
                 inputMode="tel"
-                value={project.whatsapp.phone}
+                value={phoneDisplay}
                 onChange={(event) =>
-                  commit({
-                    whatsapp: { ...project.whatsapp, phone: event.target.value.replace(/\D/g, "") },
-                  })
+                  updateField(
+                    "phone",
+                    event.target.value.replace(/\D/g, ""),
+                    (next) => next !== "" && PHONE_PATTERN.test(next),
+                    (next) => commit({ whatsapp: { ...project.whatsapp, phone: next } }),
+                  )
                 }
               />
             </Field>
@@ -204,12 +392,15 @@ export function Overview({
               label="Incluir SKU en el mensaje"
             />
           </div>
-        </fieldset>
+        </AccordionSection>
 
-        <fieldset>
-          <legend>
-            <Globe aria-hidden size={19} /> Dominio
-          </legend>
+        <AccordionSection
+          sectionKey="domain"
+          label="Dominio"
+          icon={Globe}
+          collapsed={collapsedSections.has("domain")}
+          onToggle={() => toggleSection("domain")}
+        >
           <div className="form-grid">
             <Field
               label="URL pública"
@@ -218,25 +409,45 @@ export function Overview({
             >
               <input
                 type="url"
-                value={project.baseUrl}
-                onChange={(event) => commit({ baseUrl: event.target.value })}
+                value={urlDisplay}
+                onChange={(event) =>
+                  updateField(
+                    "baseUrl",
+                    event.target.value,
+                    (next) => next === "" || isValidUrl(next),
+                    (next) => commit({ baseUrl: next }),
+                  )
+                }
               />
             </Field>
             <Field label="Slug interno">
               <input value={project.slug} readOnly aria-readonly />
             </Field>
           </div>
-        </fieldset>
+        </AccordionSection>
 
-        <fieldset>
-          <legend>
-            <List aria-hidden size={19} /> Navegación pública
-          </legend>
+        <AccordionSection
+          sectionKey="navigation"
+          label="Navegación pública"
+          icon={List}
+          collapsed={collapsedSections.has("navigation")}
+          onToggle={() => toggleSection("navigation")}
+        >
           <div className="form-grid">
-            <Field label="Nombre del catálogo">
+            <Field
+              label="Nombre del catálogo"
+              {...(catalogLabelError ? { error: catalogLabelError } : {})}
+            >
               <input
-                value={project.navigation.catalogLabel}
-                onChange={(event) => updateNavigation({ catalogLabel: event.target.value })}
+                value={catalogLabelDisplay}
+                onChange={(event) =>
+                  updateField(
+                    "catalogLabel",
+                    event.target.value,
+                    (next) => next.trim() !== "",
+                    (next) => updateNavigation({ catalogLabel: next }),
+                  )
+                }
               />
             </Field>
             <div className="navigation-switches">
@@ -277,135 +488,143 @@ export function Overview({
               ))}
             </div>
             <div className="navigation-editor field--wide">
-              {project.navigation.items.map((item, index) => (
-                <div className="navigation-editor-item" key={item.id}>
-                  <div className="form-grid">
-                    <Field label={`Enlace ${index + 1}`}>
-                      <input
-                        value={item.label}
-                        onChange={(event) =>
-                          updateNavigation({
-                            items: project.navigation.items.map((current) =>
-                              current.id === item.id
-                                ? { ...current, label: event.target.value }
-                                : current,
-                            ),
-                          })
-                        }
-                      />
-                    </Field>
-                    <Field label="Destino">
-                      <DraftInput
-                        type="url"
-                        value={item.href ?? ""}
-                        onCommit={(value) => updateNavigationItem(item.id, { href: value })}
-                      />
-                    </Field>
-                  </div>
-                  <div className="navigation-reorder">
-                    <IconButton
-                      icon={ArrowUp}
-                      label={`Mover ${item.label} arriba`}
-                      disabled={index === 0}
-                      onClick={() => moveNavigationItem(item.id, -1)}
-                    />
-                    <IconButton
-                      icon={ArrowDown}
-                      label={`Mover ${item.label} abajo`}
-                      disabled={index === project.navigation.items.length - 1}
-                      onClick={() => moveNavigationItem(item.id, 1)}
-                    />
-                  </div>
-                  <div className="navigation-children">
-                    <span className="navigation-children-title">Subenlaces</span>
-                    {(item.children ?? []).map((child, childIndex) => (
-                      <div className="navigation-child-editor" key={child.id}>
-                        <Field label={`Subenlace ${childIndex + 1}`}>
-                          <input
-                            value={child.label}
-                            onChange={(event) =>
-                              updateNavigationItem(item.id, {
-                                children: (item.children ?? []).map((current) =>
-                                  current.id === child.id
-                                    ? { ...current, label: event.target.value }
-                                    : current,
-                                ),
-                              })
-                            }
-                          />
-                        </Field>
-                        <Field label="Destino">
-                          <DraftInput
-                            type="url"
-                            value={child.href ?? ""}
-                            onCommit={(value) =>
-                              updateNavigationItem(item.id, {
-                                children: (item.children ?? []).map((current) =>
-                                  current.id === child.id ? { ...current, href: value } : current,
-                                ),
-                              })
-                            }
-                          />
-                        </Field>
-                        <div className="navigation-reorder">
-                          <IconButton
-                            icon={ArrowUp}
-                            label={`Mover ${child.label} arriba`}
-                            disabled={childIndex === 0}
-                            onClick={() => moveNavigationChild(item.id, child.id, -1)}
-                          />
-                          <IconButton
-                            icon={ArrowDown}
-                            label={`Mover ${child.label} abajo`}
-                            disabled={childIndex === (item.children?.length ?? 0) - 1}
-                            onClick={() => moveNavigationChild(item.id, child.id, 1)}
-                          />
-                        </div>
-                        <IconButton
-                          icon={Trash}
-                          label={`Eliminar subenlace ${child.label}`}
-                          tooltip="Eliminar subenlace"
-                          onClick={() =>
-                            updateNavigationItem(item.id, {
-                              children: (item.children ?? []).filter(
-                                (current) => current.id !== child.id,
+              {project.navigation.items.map((item, index) => {
+                const itemHrefError = destinationError(item.href ?? "");
+                return (
+                  <div className="navigation-editor-item" key={item.id}>
+                    <div className="form-grid">
+                      <Field label={`Enlace ${index + 1}`}>
+                        <input
+                          value={item.label}
+                          onChange={(event) =>
+                            updateNavigation({
+                              items: project.navigation.items.map((current) =>
+                                current.id === item.id
+                                  ? { ...current, label: event.target.value }
+                                  : current,
                               ),
                             })
                           }
                         />
-                      </div>
-                    ))}
-                    <Button
-                      variant="secondary"
-                      onClick={() =>
-                        updateNavigationItem(item.id, {
-                          children: [
-                            ...(item.children ?? []),
-                            {
-                              id: `nav-${crypto.randomUUID()}`,
-                              label: "Nuevo subenlace",
-                              href: project.categories[0]
-                                ? `/categorias/${project.categories[0].slug}/`
-                                : "/",
-                            },
-                          ],
-                        })
-                      }
-                    >
-                      Añadir subenlace
-                    </Button>
+                      </Field>
+                      <Field label="Destino" {...(itemHrefError ? { error: itemHrefError } : {})}>
+                        {destinationInput(`nav-${item.id}`, item.href ?? "", (next) =>
+                          updateNavigationItem(item.id, { href: next }),
+                        )}
+                      </Field>
+                    </div>
+                    <div className="navigation-reorder">
+                      <IconButton
+                        icon={ArrowUp}
+                        label={`Mover ${item.label} arriba`}
+                        disabled={index === 0}
+                        onClick={() => moveNavigationItem(item.id, -1)}
+                      />
+                      <IconButton
+                        icon={ArrowDown}
+                        label={`Mover ${item.label} abajo`}
+                        disabled={index === project.navigation.items.length - 1}
+                        onClick={() => moveNavigationItem(item.id, 1)}
+                      />
+                    </div>
+                    <div className="navigation-children">
+                      <span className="navigation-children-title">Subenlaces</span>
+                      {(item.children ?? []).map((child, childIndex) => {
+                        const childHrefError = destinationError(child.href ?? "");
+                        return (
+                          <div className="navigation-child-editor" key={child.id}>
+                            <Field label={`Subenlace ${childIndex + 1}`}>
+                              <input
+                                value={child.label}
+                                onChange={(event) =>
+                                  updateNavigationItem(item.id, {
+                                    children: (item.children ?? []).map((current) =>
+                                      current.id === child.id
+                                        ? { ...current, label: event.target.value }
+                                        : current,
+                                    ),
+                                  })
+                                }
+                              />
+                            </Field>
+                            <Field
+                              label="Destino"
+                              {...(childHrefError ? { error: childHrefError } : {})}
+                            >
+                              {destinationInput(
+                                `nav-${item.id}-${child.id}`,
+                                child.href ?? "",
+                                (next) =>
+                                  updateNavigationItem(item.id, {
+                                    children: (item.children ?? []).map((current) =>
+                                      current.id === child.id
+                                        ? { ...current, href: next }
+                                        : current,
+                                    ),
+                                  }),
+                              )}
+                            </Field>
+                            <div className="navigation-reorder">
+                              <IconButton
+                                icon={ArrowUp}
+                                label={`Mover ${child.label} arriba`}
+                                disabled={childIndex === 0}
+                                onClick={() => moveNavigationChild(item.id, child.id, -1)}
+                              />
+                              <IconButton
+                                icon={ArrowDown}
+                                label={`Mover ${child.label} abajo`}
+                                disabled={childIndex === (item.children?.length ?? 0) - 1}
+                                onClick={() => moveNavigationChild(item.id, child.id, 1)}
+                              />
+                            </div>
+                            <IconButton
+                              icon={Trash}
+                              label={`Eliminar subenlace ${child.label}`}
+                              tooltip="Eliminar subenlace"
+                              onClick={() =>
+                                updateNavigationItem(item.id, {
+                                  children: (item.children ?? []).filter(
+                                    (current) => current.id !== child.id,
+                                  ),
+                                })
+                              }
+                            />
+                          </div>
+                        );
+                      })}
+                      <Button
+                        variant="secondary"
+                        onClick={() =>
+                          updateNavigationItem(item.id, {
+                            children: [
+                              ...(item.children ?? []),
+                              {
+                                id: `nav-${crypto.randomUUID()}`,
+                                label: "Nuevo subenlace",
+                                href: project.categories[0]
+                                  ? `/categorias/${project.categories[0].slug}/`
+                                  : "/",
+                              },
+                            ],
+                          })
+                        }
+                      >
+                        Añadir subenlace
+                      </Button>
+                    </div>
+                    <IconButton
+                      icon={Trash}
+                      label={`Eliminar enlace ${item.label}`}
+                      tooltip="Eliminar enlace"
+                      onClick={() => {
+                        if ((item.children?.length ?? 0) > 0) setPendingNavDelete(item.id);
+                        else deleteNavItem(item.id);
+                      }}
+                    />
                   </div>
-                  <IconButton
-                    icon={Trash}
-                    label={`Eliminar enlace ${item.label}`}
-                    tooltip="Eliminar enlace"
-                    onClick={() => {
-                      if ((item.children?.length ?? 0) > 0) setPendingNavDelete(item.id);
-                      else deleteNavItem(item.id);
-                    }}
-                  />
-                </div>
-              ))}
+                );
+              })}
               <Button
                 variant="secondary"
                 onClick={() =>
@@ -427,41 +646,71 @@ export function Overview({
               </Button>
             </div>
           </div>
-        </fieldset>
+        </AccordionSection>
 
-        <fieldset>
-          <legend>Páginas editoriales</legend>
+        <AccordionSection
+          sectionKey="pages"
+          label="Páginas editoriales"
+          icon={Article}
+          collapsed={collapsedSections.has("pages")}
+          onToggle={() => toggleSection("pages")}
+        >
           <div className="form-grid">
-            {project.pages.map((page) => (
-              <div className="page-editor" key={page.id}>
-                <strong>
-                  {page.kind === "home" ? "Home" : page.kind === "about" ? "Nosotros" : "Contacto"}
-                </strong>
-                <Field label="Título visible">
-                  <input
-                    value={page.title}
-                    onChange={(event) => updatePage(page.id, { title: event.target.value })}
-                  />
-                </Field>
-                <Field label="Título SEO">
-                  <input
-                    value={page.seoTitle}
-                    onChange={(event) => updatePage(page.id, { seoTitle: event.target.value })}
-                  />
-                </Field>
-                <Field label="Descripción SEO">
-                  <textarea
-                    rows={2}
-                    value={page.seoDescription}
-                    onChange={(event) =>
-                      updatePage(page.id, { seoDescription: event.target.value })
-                    }
-                  />
-                </Field>
-              </div>
-            ))}
+            {project.pages.map((page) => {
+              const pageTitleDisplay = fieldValue(`page-title-${page.id}`, page.title);
+              const pageTitleError =
+                pageTitleDisplay.trim() === "" ? "Completá el título visible." : undefined;
+              return (
+                <div className="page-editor" key={page.id}>
+                  <strong>
+                    {page.kind === "home"
+                      ? "Home"
+                      : page.kind === "about"
+                        ? "Nosotros"
+                        : "Contacto"}
+                  </strong>
+                  <Field
+                    label="Título visible"
+                    {...(pageTitleError ? { error: pageTitleError } : {})}
+                  >
+                    <input
+                      value={pageTitleDisplay}
+                      onChange={(event) =>
+                        updateField(
+                          `page-title-${page.id}`,
+                          event.target.value,
+                          (next) => next.trim() !== "",
+                          (next) => updatePage(page.id, { title: next }),
+                        )
+                      }
+                    />
+                  </Field>
+                  <Field label="Título SEO">
+                    <input
+                      value={page.seoTitle}
+                      onChange={(event) => updatePage(page.id, { seoTitle: event.target.value })}
+                    />
+                  </Field>
+                  <Field label="Descripción SEO">
+                    <textarea
+                      rows={2}
+                      value={page.seoDescription}
+                      onChange={(event) =>
+                        updatePage(page.id, { seoDescription: event.target.value })
+                      }
+                    />
+                  </Field>
+                </div>
+              );
+            })}
           </div>
-        </fieldset>
+        </AccordionSection>
+      </div>
+      <div className="overview-savebar" data-testid="ui-overview-savebar">
+        {saveIndicator()}
+        <span className="overview-savebar__note">
+          Los cambios se guardan automáticamente en tu máquina.
+        </span>
       </div>
       {pendingNavItem ? (
         <ConfirmDialog
@@ -483,31 +732,5 @@ export function Overview({
         />
       ) : null}
     </section>
-  );
-}
-
-function DraftInput({
-  value,
-  onCommit,
-  ...props
-}: Omit<InputHTMLAttributes<HTMLInputElement>, "value"> & {
-  value: string;
-  onCommit(value: string): void;
-}) {
-  const [draft, setDraft] = useState(value);
-
-  useEffect(() => {
-    setDraft(value);
-  }, [value]);
-
-  return (
-    <input
-      {...props}
-      value={draft}
-      onChange={(event) => setDraft(event.target.value)}
-      onBlur={() => {
-        if (draft !== value) onCommit(draft);
-      }}
-    />
   );
 }

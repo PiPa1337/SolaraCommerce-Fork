@@ -1,8 +1,15 @@
 /** Checklist de preparación que guía una tienda limpia sin alterar el constructor avanzado. */
-import { ArrowRight, CheckCircle, ClipboardText, WarningCircle } from "@phosphor-icons/react";
+import {
+  ArrowRight,
+  CheckCircle,
+  ClipboardText,
+  WarningCircle,
+  XCircle,
+} from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import {
   type ContentRequirement,
+  type ContentStatus,
   evaluateCatalogModernReadiness,
 } from "@solara/project-schema/catalog-modern-guidance";
 import {
@@ -50,15 +57,24 @@ function statusLabel(status: ContentRequirement["status"]): string {
   return "Listo";
 }
 
+/** Icono por estado del requisito: ok (check), error (invalid) o pendiente. */
+function RequirementStatusIcon({ status }: { status: ContentStatus }) {
+  if (status === "ready") return <CheckCircle size={18} />;
+  if (status === "invalid") return <XCircle size={18} />;
+  return <WarningCircle size={18} />;
+}
+
 export function GuidedOverview({ project, onNavigate, onApplyUpgrade }: GuidedOverviewProps) {
   const titleId = useId();
   const checklistId = useId();
   const readiness = evaluateCatalogModernReadiness(project);
   const pending = readiness.requirements.filter((requirement) => requirement.status !== "ready");
+  const ready = readiness.requirements.filter((requirement) => requirement.status === "ready");
   const visiblePending = pending.slice(0, 12);
   const productCount = project.products.filter((product) => product.status === "active").length;
   const imageCount = project.assets.length;
   const upgrade = planCatalogModernUpgrade(project);
+  const nextPending = pending[0];
 
   return (
     <section className="guided-overview workspace-section" aria-labelledby={titleId}>
@@ -89,6 +105,17 @@ export function GuidedOverview({ project, onNavigate, onApplyUpgrade }: GuidedOv
               ? `${readiness.criticalPending} pendientes bloquean producción.`
               : "La tienda puede pasar a revisión de publicación."}
           </span>
+          {nextPending ? (
+            <Button
+              variant="primary"
+              size="sm"
+              icon={ArrowRight}
+              data-testid="ui-guided-next"
+              onClick={() => onNavigate(destinationFor(nextPending.scope))}
+            >
+              Siguiente: {nextPending.label}
+            </Button>
+          ) : null}
         </div>
         <div
           className="guided-progress__meter"
@@ -97,6 +124,7 @@ export function GuidedOverview({ project, onNavigate, onApplyUpgrade }: GuidedOv
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={readiness.percent}
+          data-testid="ui-guided-progress"
         >
           <span style={{ width: `${readiness.percent}%` }} />
         </div>
@@ -154,6 +182,12 @@ export function GuidedOverview({ project, onNavigate, onApplyUpgrade }: GuidedOv
         </section>
       ) : null}
 
+      {readiness.requirements.length === 0 ? (
+        <div className="guided-empty">
+          No hay requisitos de preparación para esta tienda. Podés pasar a revisar el preview.
+        </div>
+      ) : null}
+
       {visiblePending.length > 0 ? (
         <section className="guided-checklist" aria-labelledby={checklistId}>
           <div className="guided-checklist__header">
@@ -169,13 +203,18 @@ export function GuidedOverview({ project, onNavigate, onApplyUpgrade }: GuidedOv
           </div>
           <ul>
             {visiblePending.map((requirement) => (
-              <li key={requirement.id}>
+              <li
+                key={requirement.id}
+                data-testid="ui-guided-requirement"
+                data-requirement-id={requirement.id}
+                data-requirement-status={requirement.status}
+              >
                 <span
                   className="guided-checklist__status"
                   data-status={requirement.status}
                   aria-hidden
                 >
-                  <WarningCircle size={18} />
+                  <RequirementStatusIcon status={requirement.status} />
                 </span>
                 <span className="guided-checklist__text">
                   <strong>{requirement.label}</strong>
@@ -194,9 +233,32 @@ export function GuidedOverview({ project, onNavigate, onApplyUpgrade }: GuidedOv
               </li>
             ))}
           </ul>
+          {ready.length > 0 ? (
+            <details className="guided-checklist__done" data-testid="ui-guided-done">
+              <summary>Requisitos listos ({ready.length})</summary>
+              <ul>
+                {ready.map((requirement) => (
+                  <li
+                    key={requirement.id}
+                    data-testid="ui-guided-requirement"
+                    data-requirement-id={requirement.id}
+                    data-requirement-status="ready"
+                  >
+                    <span className="guided-checklist__status" data-status="ready" aria-hidden>
+                      <RequirementStatusIcon status="ready" />
+                    </span>
+                    <span className="guided-checklist__text">
+                      <strong>{requirement.label}</strong>
+                      <small>{scopeLabels[requirement.scope]}</small>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
         </section>
       ) : (
-        <div className="guided-ready">
+        <div className="guided-ready" data-testid="ui-guided-ready">
           <CheckCircle aria-hidden size={24} />
           <div>
             <strong>La base está lista para revisar</strong>
