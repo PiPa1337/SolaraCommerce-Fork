@@ -238,3 +238,31 @@ storefront.css ≤ 780 KiB; runtime JS ≤ 56 KiB y CSS ≤ 8 KiB.
 Node 22 (Firefox/WebKit/Lighthouse), aprobación Merchant con checkout por
 WhatsApp, publicación manual y la migración temporal `legacy-zip-migration.mjs`
 con `fflate`, que se elimina en un release posterior.
+
+## Editor UI/UX (2026-08-07)
+
+Sesión completa del plan
+[`docs/superpowers/plans/2026-08-07-editor-uiux.md`](docs/superpowers/plans/2026-08-07-editor-uiux.md)
+(olas 0-4). El editor ganó un sistema de componentes (`Ui.tsx` +
+`components/primitives.tsx` + `ConfirmDialog` + `Toast`, tokens `--ui-*`,
+galería `/__studio/components`), un dashboard con micro-interacciones, atajos,
+pinned, comparación y respaldo masivo, un shell con tabs ARIA, guardado con
+estados animados, preview con rutas/zoom, paneles persistidos, modo foco, dark
+mode y barra de estado, y flujos con validación accionable (Preparar, Resumen,
+Catálogo, ProductEditor, Builder, Tema, Recursos, SEO, Exportar). Motion del
+editor con reduced-motion global; 13 specs E2E nuevos y 122 tests verdes en
+Chromium. Se cerraron también los últimos `window.confirm` (archivar tienda,
+archivar productos, reubicar categoría, recuperar/descartar borrador y salir
+sin guardar) con `ConfirmDialog`, los usos de assets incluyen slides/posters de
+secciones, el reemplazo de imágenes muestra progreso honesto y el checklist
+post-export permite abrir el sitio con el lanzador.
+
+**Decisión de budgets:** el techo de CSS de Studio subió de 84 a 96 y luego a
+100 KiB crudos el mismo día (medido ~98.6 KiB; `check-budgets.mjs` documenta
+la razón); JS inicial se mantiene en ≤ 700 KiB. Nada cambió en
+`StoreProjectV2Schema`, el renderer compartido ni el storefront público.
+
+Gate de cierre: `check`, `build`, `check:budgets`, `benchmark:export` y
+`test:e2e` verdes; ejecutables reconstruidos (`desktop:build`,
+`desktop:package`, `portable:smoke`) y commit enviado a `origin/main`.
+Detalle por ola y reportes en `.superpowers/sdd/ola*-report.md`.

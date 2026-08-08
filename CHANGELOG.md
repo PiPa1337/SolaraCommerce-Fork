@@ -10,6 +10,80 @@ versión publicada.
 
 ## [Unreleased]
 
+### Editor UI/UX (2026-08-07)
+
+Auditoría y mejora integral del editor (plan
+[`docs/superpowers/plans/2026-08-07-editor-uiux.md`](docs/superpowers/plans/2026-08-07-editor-uiux.md),
+olas 0-4): consola limpia en todos los flujos, estados coherentes, responsive,
+accesibilidad, rendimiento, workers y persistencia verificados con specs E2E
+nuevos; sistema de componentes unificado; dashboard con acciones y atajos;
+shell del Studio con navegación, guardado y preview mejorados; flujos de
+Preparar, Resumen, Catálogo, ProductEditor, Builder, Tema, Recursos, SEO y
+Exportar con validación y feedback accionable; motion del editor con
+reduced-motion global; QA de cierre con 122 tests E2E pasando (1 omitido).
+
+**Añadido**
+
+- Sistema de componentes con `Button` (variants, loading, sizes), `Field` con
+  error inline (`aria-describedby`), primitivas (`Toggle`, `Badge`, `Tooltip`,
+  `ProgressBar`, `Pagination`, `SegmentedControl`, `StatusBadge`),
+  `ConfirmDialog` (foco inicial, Escape cancela, Enter acepta, focus return),
+  `Toast` con `role=status/alert` y auto-cierre, empty states con acción y
+  skeletons; tokens `--ui-*` para superficies, texto, acento y focus.
+- Galería de componentes en `/__studio/components` (solo entorno gestionado)
+  y documentación en `apps/studio/docs/components.md`.
+- Dashboard: cards con micro-interacciones y stagger, toolbar con filtros
+  combinados y contador `aria-live`, panel de detalle con estados de carga,
+  tiendas fijadas (pinned), restauración de la última selección, navegación
+  por teclado (flechas, Enter, Espacio, Supr), archivar con deshacer,
+  comparación de dos tiendas, duplicar con diálogo y progreso, respaldo
+  masivo, sumario de salud y grilla responsive de 1 a 4 columnas.
+- Shell del Studio: tabs con roles ARIA, Home/End y flechas, atajos Ctrl+1..n
+  y Ctrl+\\, estados de guardado animados (Guardando/Guardado/Error con
+  reintento), breadcrumb, toolbar de preview con rutas (datalist), dispositivos
+  y zoom persistido, paneles colapsables persistidos por tienda, barra de
+  estado (schema, última exportación, persistencia), modo foco (Ctrl+Shift+F),
+  dots de cambios sin revisar por pestaña y dark mode del editor.
+- Flujos: Preparar con checklist y progreso animado; Resumen con validación en
+  vivo, secciones plegables y autosave; Catálogo con sort por columnas,
+  columnas configurables, edición inline de precio/estado, vista de tarjetas,
+  paginación, barra masiva fija y atajos (e/d/Supr); ProductEditor con
+  validación por campo, variantes y mini-preview; Builder con picker con
+  búsqueda, restaurar defaults, reorden por teclado y errores de schema en el
+  inspector; Tema con presets de paleta y check de contraste; Recursos con
+  drag & drop, usos por asset (incluye slides y posters de secciones) y
+  reemplazo conservando el ID; SEO con checklist interactivo y previews;
+  Exportar con etapas, historial y checklist post-export accionable (abrir el
+  sitio con el lanzador).
+- Motion del editor: micro-interacciones (hover de filas/cards, press de
+  botones), indicador de guardado animado, stagger con respeto a
+  `prefers-reduced-motion` y bloque global `@media (prefers-reduced-motion:
+  reduce)`; `React.memo` en filas de tabla y debounce en búsquedas.
+- Diálogos unificados: archivar tienda, archivar productos, reubicar
+  categorías, recuperar/descartar borrador y salir sin guardar (Studio y
+  ProductEditor) usan `ConfirmDialog` en lugar de `window.confirm`; specs
+  actualizados en consecuencia.
+- QA: 13 specs E2E del editor (smoke, consola, estados, responsive, a11y,
+  perf, workers, persistencia, catálogo, producto, builder, motion, visual)
+  con 122 tests pasando en Chromium.
+
+**Cambiado**
+
+- El techo del CSS de Studio subió de 84 KiB a 96 KiB y luego a 100 KiB
+  (crudos) el mismo día: componentes, tokens, dashboard, shell, flujos y
+  motion llevan el bundle a ~98.6 KiB; 100 KiB deja margen sin recortar el
+  alcance aprobado. JS inicial se mantiene en ≤ 700 KiB.
+- `prefers-reduced-motion` desactiva las transiciones y animaciones del
+  editor salvo opacidad y foco.
+
+**Corregido**
+
+- Consola limpia en todo el recorrido del editor (sin errores ni warnings de
+  la app); responsive sin overflow horizontal en 390-1920 px; foco visible,
+  skip-link, roles de tabs y diálogos accesibles; progreso honesto al
+  reemplazar imágenes; referencias de assets en slides/posters de secciones
+  contadas en los usos; mediciones de presupuesto del catálogo documentadas.
+
 ### Revamp de movimiento (2026-08-07)
 
 Nueva capa de movimiento del storefront Catalog Modern, verificada por el
