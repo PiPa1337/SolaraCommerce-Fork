@@ -1,5 +1,5 @@
 /** Edición de producto y variantes; entrega snapshots validados al reducer del catálogo. */
-import { Copy, Plus, Trash, X } from "@phosphor-icons/react";
+import { ArrowDown, ArrowUp, Copy, Plus, Trash, X } from "@phosphor-icons/react";
 import {
   type Category,
   type Collection,
@@ -30,6 +30,103 @@ const editorSteps: Array<{ id: EditorStep; label: string }> = [
   { id: "organization", label: "Organización" },
   { id: "variants", label: "Variantes" },
 ];
+
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+const STATUS_LABELS: Record<Product["status"], string> = {
+  active: "Activo",
+  hidden: "Oculto",
+  archived: "Archivado",
+};
+
+/** Slug local desde el título: minúsculas, números y guiones (NFD quita acentos). */
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120);
+}
+
+function formatCents(cents: number): string {
+  return `$${cents.toLocaleString("es-AR")}`;
+}
+
+function slugErrorFor(slug: string, existingSlugs: string[]): string | undefined {
+  if (!slug) return "Escribí un slug o se generará desde el título.";
+  if (slug.length > 120) return "El slug no puede superar los 120 caracteres.";
+  if (!SLUG_PATTERN.test(slug)) {
+    return "Solo minúsculas, números y guiones (ejemplo: lampara-horizonte).";
+  }
+  if (existingSlugs.includes(slug)) return "Ya existe otro producto con este slug.";
+  return undefined;
+}
+
+/** Índice de paso objetivo para navegación con teclado (flechas, Home/End). */
+function stepTarget(index: number, key: string): number | undefined {
+  if (key === "Home") return 0;
+  if (key === "End") return editorSteps.length - 1;
+  if (key === "ArrowRight") return Math.min(editorSteps.length - 1, index + 1);
+  if (key === "ArrowLeft") return Math.max(0, index - 1);
+  return undefined;
+}
+
+interface VariantFieldErrors {
+  title: string | undefined;
+  price: string | undefined;
+  options: string | undefined;
+}
+
+interface DraftErrors {
+  title: string | undefined;
+  slugError: string | undefined;
+  slugAvailable: boolean;
+  variantErrors: VariantFieldErrors[];
+}
+
+/** Props de feedback del campo slug: error inline o estado "Disponible". */
+function slugFieldFeedback(errors: DraftErrors): {
+  hint: string;
+  error?: string;
+  className?: string;
+} {
+  if (errors.slugError) return { hint: "", error: errors.slugError };
+  return {
+    hint: errors.slugAvailable ? "Disponible" : "Minúsculas, números y guiones.",
+    ...(errors.slugAvailable ? { className: "field--slug-available" } : {}),
+  };
+}
+
+function validateDraft(
+  draft: Product,
+  optionValues: Record<string, string>,
+  existingSlugs: string[],
+): DraftErrors {
+  const slug = draft.slug.trim();
+  const slugError = slugErrorFor(slug, existingSlugs);
+  const variantErrors = draft.variants.map((variant) => {
+    const fieldErrors: VariantFieldErrors = { title: undefined, price: undefined, options: undefined };
+    if (!variant.title.trim()) fieldErrors.title = "Escribí un nombre para la variante.";
+    if (!Number.isInteger(variant.price) || variant.price < 0) {
+      fieldErrors.price = "El precio debe ser un número entero en centavos, mayor o igual a 0.";
+    }
+    try {
+      parseOptions(optionValues[variant.id] ?? "");
+    } catch (reason) {
+      fieldErrors.options =
+        reason instanceof Error ? reason.message : "Las opciones de la variante no son válidas.";
+    }
+    return fieldErrors;
+  });
+  return {
+    title: draft.title.trim() ? undefined : "Escribí un título para el producto.",
+    slugError,
+    slugAvailable: slug !== "" && slugError === undefined,
+    variantErrors,
+  };
+}
 
 function optionsText(options: Record<string, string>): string {
   return Object.entries(options)
@@ -98,11 +195,22 @@ export function ProductEditor({
   const [tags, setTags] = useState(product.tags.join(", "));
   const [error, setError] = useState("");
   const [activeStep, setActiveStep] = useState<EditorStep>("details");
+  const [slugTouched, setSlugTouched] = useState(
+    mode === "edit" && product.slug !== slugify(product.title),
+  );
   const stepRefs = useRef<Record<EditorStep, HTMLFieldSetElement | null>>({
     details: null,
     media: null,
     organization: null,
     variants: null,
+  });
+  const stepButtons = useRef<Array<HTMLButtonElement | null>>([]);
+  const pristine = useRef({
+    product: structuredClone(product),
+    tags: product.tags.join(", "),
+    optionValues: Object.fromEntries(
+      product.variants.map((variant) => [variant.id, optionsText(variant.optionValues)]),
+    ),
   });
   const titleId = useId();
   const stepIdPrefix = useId();
@@ -113,6 +221,24 @@ export function ProductEditor({
     dialog.showModal();
     return () => dialog.close();
   }, []);
+
+  const isDirty =
+    JSON.stringify(draft) !== JSON.stringify(pristine.current.product) ||
+    tags !== pristine.current.tags ||
+    JSON.stringify(optionValues) !== JSON.stringify(pristine.current.optionValues);
+
+  const errors = validateDraft(draft, optionValues, existingSlugs);
+
+  const firstImage = assets.find((asset) => asset.id === draft.imageIds[0]);
+  const minimumPrice =
+    draft.variants.length > 0 ? Math.min(...draft.variants.map((variant) => variant.price)) : 0;
+
+  const requestClose = () => {
+    if (isDirty && !window.confirm("Hay cambios sin guardar en el producto. ¿Salir sin guardar?")) {
+      return;
+    }
+    onCancel();
+  };
 
   const updateVariant = (id: string, update: (variant: Variant) => Variant) => {
     setDraft((current) => ({
@@ -138,13 +264,35 @@ export function ProductEditor({
     setOptionValues((current) => ({ ...current, [id]: optionsText(variant.optionValues) }));
   };
 
+  const moveVariant = (id: string, direction: -1 | 1) => {
+    setDraft((current) => {
+      const index = current.variants.findIndex((variant) => variant.id === id);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= current.variants.length) return current;
+      const variants = [...current.variants];
+      const [moved] = variants.splice(index, 1);
+      if (moved === undefined) return current;
+      variants.splice(target, 0, moved);
+      return { ...current, variants };
+    });
+  };
+
   const save = () => {
     setError("");
+    if (
+      errors.title !== undefined ||
+      errors.slugError !== undefined ||
+      errors.variantErrors.some(
+        (variant) =>
+          variant.title !== undefined ||
+          variant.price !== undefined ||
+          variant.options !== undefined,
+      )
+    ) {
+      return;
+    }
     try {
       const normalizedSlug = draft.slug.trim();
-      if (existingSlugs.includes(normalizedSlug)) {
-        throw new Error(`Ya existe otro producto con el slug "${normalizedSlug}".`);
-      }
       const parsed = ProductSchema.parse({
         ...draft,
         slug: normalizedSlug,
@@ -185,7 +333,7 @@ export function ProductEditor({
       aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
-        onCancel();
+        requestClose();
       }}
     >
       <div className="product-dialog__header">
@@ -193,7 +341,7 @@ export function ProductEditor({
           <span>{mode === "create" ? "Nuevo producto" : "Editar producto"}</span>
           <h2 id={titleId}>{draft.title || "Producto sin nombre"}</h2>
         </div>
-        <IconButton icon={X} label="Cerrar editor" onClick={onCancel} />
+        <IconButton icon={X} label="Cerrar editor" onClick={requestClose} />
       </div>
 
       <div className="product-dialog__body">
@@ -205,10 +353,22 @@ export function ProductEditor({
             {editorSteps.map((step, index) => (
               <li key={step.id}>
                 <button
+                  ref={(element) => {
+                    stepButtons.current[index] = element;
+                  }}
                   type="button"
                   className={activeStep === step.id ? "is-active" : undefined}
                   aria-current={activeStep === step.id ? "step" : undefined}
                   onClick={() => goToStep(step.id)}
+                  onKeyDown={(event) => {
+                    const target = stepTarget(index, event.key);
+                    if (target === undefined) return;
+                    const nextStep = editorSteps[target];
+                    if (nextStep === undefined) return;
+                    event.preventDefault();
+                    goToStep(nextStep.id);
+                    stepButtons.current[target]?.focus();
+                  }}
                 >
                   <span aria-hidden>{index + 1}</span>
                   {step.label}
@@ -227,23 +387,31 @@ export function ProductEditor({
         >
           <legend>Información comercial</legend>
           <div className="form-grid">
-            <Field label="Título">
+            <Field label="Título" {...(errors.title ? { error: errors.title } : {})}>
               <input
                 value={draft.title}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, title: event.target.value }))
-                }
+                onChange={(event) => {
+                  const title = event.target.value;
+                  setDraft((current) => {
+                    const next = { ...current, title };
+                    if (!slugTouched) {
+                      next.slug = slugify(title) as Product["slug"];
+                    }
+                    return next;
+                  });
+                }}
               />
             </Field>
-            <Field label="Slug" hint="Minúsculas, números y guiones.">
+            <Field label="Slug" {...slugFieldFeedback(errors)}>
               <input
                 value={draft.slug}
-                onChange={(event) =>
+                onChange={(event) => {
+                  setSlugTouched(true);
                   setDraft((current) => ({
                     ...current,
                     slug: event.target.value as Product["slug"],
-                  }))
-                }
+                  }));
+                }}
               />
             </Field>
             <Field label="Marca">
@@ -384,177 +552,233 @@ export function ProductEditor({
           }}
         >
           <legend>Variantes</legend>
+          <section className="product-mini-preview" data-testid="ui-product-mini-preview">
+            <span className="product-mini-preview__label">Vista previa del producto</span>
+            <div className="product-mini-preview__card">
+              {firstImage ? (
+                <img
+                  src={firstImage.source}
+                  alt=""
+                  width={firstImage.width}
+                  height={firstImage.height}
+                />
+              ) : (
+                <span className="product-mini-preview__placeholder" aria-hidden>
+                  Sin imagen
+                </span>
+              )}
+              <div className="product-mini-preview__info">
+                <strong>{draft.title.trim() || "Producto sin nombre"}</strong>
+                <span>Desde {formatCents(minimumPrice)}</span>
+                <span
+                  className={`product-mini-preview__status product-mini-preview__status--${draft.status}`}
+                >
+                  {STATUS_LABELS[draft.status]}
+                </span>
+              </div>
+            </div>
+          </section>
           <div className="variant-list">
-            {draft.variants.map((variant, index) => (
-              <article className="variant-editor" key={variant.id}>
-                <header>
-                  <strong>Variante {index + 1}</strong>
-                  <div>
-                    <IconButton
-                      icon={Copy}
-                      label={`Duplicar ${variant.title}`}
-                      onClick={() => addVariant(variant)}
-                    />
-                    <IconButton
-                      icon={Trash}
-                      label={`Eliminar ${variant.title}`}
-                      disabled={draft.variants.length === 1}
-                      onClick={() => {
-                        setDraft((current) => ({
-                          ...current,
-                          variants: current.variants.filter(
-                            (candidate) => candidate.id !== variant.id,
-                          ),
-                        }));
-                        setOptionValues((current) => {
-                          const next = { ...current };
-                          delete next[variant.id];
-                          return next;
-                        });
-                      }}
-                    />
+            {draft.variants.map((variant, index) => {
+              const variantError = errors.variantErrors[index] ?? {
+                title: undefined,
+                price: undefined,
+                options: undefined,
+              };
+              return (
+                <article className="variant-editor" key={variant.id}>
+                  <header>
+                    <strong>Variante {index + 1}</strong>
+                    <div className="variant-editor__actions">
+                      <IconButton
+                        icon={ArrowUp}
+                        label={`Subir ${variant.title}`}
+                        disabled={index === 0}
+                        onClick={() => moveVariant(variant.id, -1)}
+                      />
+                      <IconButton
+                        icon={ArrowDown}
+                        label={`Bajar ${variant.title}`}
+                        disabled={index === draft.variants.length - 1}
+                        onClick={() => moveVariant(variant.id, 1)}
+                      />
+                      <IconButton
+                        icon={Copy}
+                        label={`Duplicar ${variant.title}`}
+                        onClick={() => addVariant(variant)}
+                      />
+                      <IconButton
+                        icon={Trash}
+                        label={`Eliminar ${variant.title}`}
+                        disabled={draft.variants.length === 1}
+                        onClick={() => {
+                          setDraft((current) => ({
+                            ...current,
+                            variants: current.variants.filter(
+                              (candidate) => candidate.id !== variant.id,
+                            ),
+                          }));
+                          setOptionValues((current) => {
+                            const next = { ...current };
+                            delete next[variant.id];
+                            return next;
+                          });
+                        }}
+                      />
+                    </div>
+                  </header>
+                  <div className="form-grid">
+                    <Field
+                      label="Nombre"
+                      {...(variantError.title ? { error: variantError.title } : {})}
+                    >
+                      <input
+                        value={variant.title}
+                        onChange={(event) =>
+                          updateVariant(variant.id, (current) => ({
+                            ...current,
+                            title: event.target.value,
+                          }))
+                        }
+                      />
+                    </Field>
+                    <Field label="SKU">
+                      <input
+                        value={variant.sku}
+                        onChange={(event) =>
+                          updateVariant(variant.id, (current) => ({
+                            ...current,
+                            sku: event.target.value,
+                          }))
+                        }
+                      />
+                    </Field>
+                    <Field
+                      label="Opciones"
+                      {...(variantError.options
+                        ? { error: variantError.options }
+                        : { hint: "Ejemplo: Color=Azul, Talle=M" })}
+                    >
+                      <input
+                        value={optionValues[variant.id] ?? ""}
+                        onChange={(event) =>
+                          setOptionValues((current) => ({
+                            ...current,
+                            [variant.id]: event.target.value,
+                          }))
+                        }
+                      />
+                    </Field>
+                    <Field
+                      label="Precio en centavos"
+                      {...(variantError.price ? { error: variantError.price } : {})}
+                    >
+                      <input
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={variant.price}
+                        onChange={(event) =>
+                          updateVariant(variant.id, (current) => ({
+                            ...current,
+                            price: Number(event.target.value) as Variant["price"],
+                          }))
+                        }
+                      />
+                    </Field>
+                    <Field label="Precio anterior en centavos">
+                      <input
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={variant.compareAtPrice ?? ""}
+                        onChange={(event) =>
+                          updateVariant(variant.id, (current) => ({
+                            ...current,
+                            compareAtPrice:
+                              event.target.value === ""
+                                ? undefined
+                                : (Number(event.target.value) as Variant["price"]),
+                          }))
+                        }
+                      />
+                    </Field>
+                    <Field label="Stock">
+                      <select
+                        value={variant.stockStatus}
+                        onChange={(event) =>
+                          updateVariant(variant.id, (current) => ({
+                            ...current,
+                            stockStatus: event.target.value as Variant["stockStatus"],
+                          }))
+                        }
+                      >
+                        <option value="in_stock">Disponible</option>
+                        <option value="out_of_stock">Agotado</option>
+                        <option value="preorder">Preventa</option>
+                      </select>
+                    </Field>
+                    <Field label="GTIN">
+                      <input
+                        value={variant.gtin ?? ""}
+                        onChange={(event) =>
+                          updateVariant(variant.id, (current) => ({
+                            ...current,
+                            gtin: event.target.value,
+                          }))
+                        }
+                      />
+                    </Field>
+                    <Field label="MPN">
+                      <input
+                        value={variant.mpn ?? ""}
+                        onChange={(event) =>
+                          updateVariant(variant.id, (current) => ({
+                            ...current,
+                            mpn: event.target.value,
+                          }))
+                        }
+                      />
+                    </Field>
+                    <Field label="Imagen de variante">
+                      <select
+                        value={variant.imageId ?? ""}
+                        onChange={(event) =>
+                          updateVariant(variant.id, (current) => ({
+                            ...current,
+                            imageId: event.target.value
+                              ? (event.target.value as ImageAsset["id"])
+                              : undefined,
+                          }))
+                        }
+                      >
+                        <option value="">Usar imagen principal</option>
+                        {assets
+                          .filter((asset) => draft.imageIds.includes(asset.id))
+                          .map((asset) => (
+                            <option value={asset.id} key={asset.id}>
+                              {asset.name}
+                            </option>
+                          ))}
+                      </select>
+                    </Field>
+                    <label className="check-field">
+                      <input
+                        type="checkbox"
+                        checked={variant.available}
+                        onChange={(event) =>
+                          updateVariant(variant.id, (current) => ({
+                            ...current,
+                            available: event.target.checked,
+                          }))
+                        }
+                      />
+                      Disponible para vender
+                    </label>
                   </div>
-                </header>
-                <div className="form-grid">
-                  <Field label="Nombre">
-                    <input
-                      value={variant.title}
-                      onChange={(event) =>
-                        updateVariant(variant.id, (current) => ({
-                          ...current,
-                          title: event.target.value,
-                        }))
-                      }
-                    />
-                  </Field>
-                  <Field label="SKU">
-                    <input
-                      value={variant.sku}
-                      onChange={(event) =>
-                        updateVariant(variant.id, (current) => ({
-                          ...current,
-                          sku: event.target.value,
-                        }))
-                      }
-                    />
-                  </Field>
-                  <Field label="Opciones" hint="Ejemplo: Color=Azul, Talle=M">
-                    <input
-                      value={optionValues[variant.id] ?? ""}
-                      onChange={(event) =>
-                        setOptionValues((current) => ({
-                          ...current,
-                          [variant.id]: event.target.value,
-                        }))
-                      }
-                    />
-                  </Field>
-                  <Field label="Precio en centavos">
-                    <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={variant.price}
-                      onChange={(event) =>
-                        updateVariant(variant.id, (current) => ({
-                          ...current,
-                          price: Number(event.target.value) as Variant["price"],
-                        }))
-                      }
-                    />
-                  </Field>
-                  <Field label="Precio anterior en centavos">
-                    <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={variant.compareAtPrice ?? ""}
-                      onChange={(event) =>
-                        updateVariant(variant.id, (current) => ({
-                          ...current,
-                          compareAtPrice:
-                            event.target.value === ""
-                              ? undefined
-                              : (Number(event.target.value) as Variant["price"]),
-                        }))
-                      }
-                    />
-                  </Field>
-                  <Field label="Stock">
-                    <select
-                      value={variant.stockStatus}
-                      onChange={(event) =>
-                        updateVariant(variant.id, (current) => ({
-                          ...current,
-                          stockStatus: event.target.value as Variant["stockStatus"],
-                        }))
-                      }
-                    >
-                      <option value="in_stock">Disponible</option>
-                      <option value="out_of_stock">Agotado</option>
-                      <option value="preorder">Preventa</option>
-                    </select>
-                  </Field>
-                  <Field label="GTIN">
-                    <input
-                      value={variant.gtin ?? ""}
-                      onChange={(event) =>
-                        updateVariant(variant.id, (current) => ({
-                          ...current,
-                          gtin: event.target.value,
-                        }))
-                      }
-                    />
-                  </Field>
-                  <Field label="MPN">
-                    <input
-                      value={variant.mpn ?? ""}
-                      onChange={(event) =>
-                        updateVariant(variant.id, (current) => ({
-                          ...current,
-                          mpn: event.target.value,
-                        }))
-                      }
-                    />
-                  </Field>
-                  <Field label="Imagen de variante">
-                    <select
-                      value={variant.imageId ?? ""}
-                      onChange={(event) =>
-                        updateVariant(variant.id, (current) => ({
-                          ...current,
-                          imageId: event.target.value
-                            ? (event.target.value as ImageAsset["id"])
-                            : undefined,
-                        }))
-                      }
-                    >
-                      <option value="">Usar imagen principal</option>
-                      {assets
-                        .filter((asset) => draft.imageIds.includes(asset.id))
-                        .map((asset) => (
-                          <option value={asset.id} key={asset.id}>
-                            {asset.name}
-                          </option>
-                        ))}
-                    </select>
-                  </Field>
-                  <label className="check-field">
-                    <input
-                      type="checkbox"
-                      checked={variant.available}
-                      onChange={(event) =>
-                        updateVariant(variant.id, (current) => ({
-                          ...current,
-                          available: event.target.checked,
-                        }))
-                      }
-                    />
-                    Disponible para vender
-                  </label>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
           <Button icon={Plus} onClick={() => addVariant()}>
             Agregar variante
@@ -563,7 +787,7 @@ export function ProductEditor({
       </div>
 
       <div className="product-dialog__footer">
-        <Button variant="quiet" onClick={onCancel}>
+        <Button variant="quiet" onClick={requestClose}>
           Cancelar
         </Button>
         <Button variant="primary" onClick={save}>
