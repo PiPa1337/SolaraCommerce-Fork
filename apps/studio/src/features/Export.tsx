@@ -1,6 +1,7 @@
 /** Panel de exportación que distingue draft/production y muestra bloqueos accionables. */
 import {
   ArrowRight,
+  ArrowUpRight,
   CheckCircle,
   Circle,
   DownloadSimple,
@@ -94,9 +95,11 @@ function ExportStages({ done }: { done: boolean }) {
 export function ExportPanel({
   project,
   onImport,
+  onOpenSite,
 }: {
   project: StoreProjectV1;
   onImport(project: StoreProjectV1): Promise<void>;
+  onOpenSite?(id: string): Promise<void>;
 }) {
   const importRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<"draft" | "production" | "project" | "import" | "">("");
@@ -161,7 +164,11 @@ export function ExportPanel({
         optimizationProfile: "safe",
       });
       setOptimization(result.optimization);
-      recordHistory({ mode, score: result.optimization.score, critical: result.optimization.counts.critical });
+      recordHistory({
+        mode,
+        score: result.optimization.score,
+        critical: result.optimization.counts.critical,
+      });
       setExportDone(true);
       setPostDone(new Set());
       setNotice(
@@ -219,16 +226,31 @@ export function ExportPanel({
     {
       id: "site",
       title: "Abrir el sitio",
-      detail:
-        "Con el lanzador, el sitio queda en proyectos/<tienda>/sitios/ y se abre desde el dashboard.",
-      action: null,
+      detail: "Con el lanzador, el sitio queda en proyectos/<tienda>/sitios/ listo para publicar.",
+      action: onOpenSite ? (
+        <Button
+          variant="quiet"
+          size="sm"
+          icon={ArrowUpRight}
+          data-testid="ui-export-open-site"
+          onClick={() => void onOpenSite(project.id)}
+        >
+          Abrir sitio
+        </Button>
+      ) : null,
     },
     {
       id: "seo",
       title: "Revisar SEO",
       detail: "Verificá el checklist de publicación y la vista del crawler antes de producir.",
       action: (
-        <Button variant="quiet" size="sm" icon={ArrowRight} data-testid="ui-export-check-seo" onClick={navigateToSeo}>
+        <Button
+          variant="quiet"
+          size="sm"
+          icon={ArrowRight}
+          data-testid="ui-export-check-seo"
+          onClick={navigateToSeo}
+        >
           Ir a SEO
         </Button>
       ),
@@ -297,11 +319,7 @@ export function ExportPanel({
                     style={done ? { color: "var(--accent)" } : undefined}
                     aria-hidden
                   >
-                    {done ? (
-                      <CheckCircle size={18} weight="fill" />
-                    ) : (
-                      <Circle size={18} />
-                    )}
+                    {done ? <CheckCircle size={18} weight="fill" /> : <Circle size={18} />}
                   </span>
                   <span className="guided-checklist__text">
                     <strong>{item.title}</strong>
@@ -420,7 +438,12 @@ export function ExportPanel({
               <h3>Historial de exportaciones</h3>
               <p>Intentos exitosos registrados en este navegador.</p>
             </div>
-            <Button variant="quiet" size="sm" data-testid="ui-export-history-clear" onClick={clearHistory}>
+            <Button
+              variant="quiet"
+              size="sm"
+              data-testid="ui-export-history-clear"
+              onClick={clearHistory}
+            >
               Borrar historial
             </Button>
           </header>
@@ -454,8 +477,8 @@ export function ExportPanel({
           confirmLabel="Exportar producción"
           body={
             <p>
-              Se generará el HTML final con sitemap, datos estructurados y feed de Merchant.
-              Revisá el preview y el checklist SEO antes de continuar.
+              Se generará el HTML final con sitemap, datos estructurados y feed de Merchant. Revisá
+              el preview y el checklist SEO antes de continuar.
             </p>
           }
           onConfirm={() => {

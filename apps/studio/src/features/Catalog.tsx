@@ -36,6 +36,7 @@ import {
   type VisibilityState,
 } from "@tanstack/react-table";
 import { memo, useEffect, useId, useMemo, useRef, useState } from "react";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Button, EmptyState, Field, InlineError, SectionHeader } from "../components/Ui";
 import { buildCatalogPackagePlan, type CatalogPackagePlan } from "../lib/catalogPackage";
 import {
@@ -390,6 +391,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
   const [collectionIds, setCollectionIds] = useState<string[]>([]);
   const [tags, setTags] = useState("");
   const [editor, setEditor] = useState<EditorState>();
+  const [pendingArchiveIds, setPendingArchiveIds] = useState<Product["id"][] | null>(null);
   const [pendingImport, setPendingImport] = useState<ImportSummary>();
   const [pendingPackage, setPendingPackage] = useState<CatalogPackagePlan>();
   const [error, setError] = useState("");
@@ -658,18 +660,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
         return;
       }
       if (event.key === "Delete") {
-        const message =
-          selectedIds.length === 1
-            ? "¿Archivar el producto seleccionado?"
-            : `¿Archivar los ${selectedIds.length} productos seleccionados?`;
-        if (window.confirm(message)) {
-          onCommand({
-            type: "products.setStatus",
-            productIds: selectedIds,
-            status: "archived",
-            at: now(),
-          });
-        }
+        setPendingArchiveIds([...selectedIds]);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -1275,6 +1266,31 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
             }
             setEditor(undefined);
           }}
+        />
+      ) : null}
+
+      {pendingArchiveIds !== null && pendingArchiveIds.length > 0 ? (
+        <ConfirmDialog
+          title="Archivar productos"
+          body={
+            pendingArchiveIds.length === 1
+              ? "¿Archivar el producto seleccionado?"
+              : `¿Archivar los ${pendingArchiveIds.length} productos seleccionados?`
+          }
+          confirmLabel="Archivar"
+          cancelLabel="Cancelar"
+          danger
+          onConfirm={() => {
+            const ids = pendingArchiveIds;
+            setPendingArchiveIds(null);
+            onCommand({
+              type: "products.setStatus",
+              productIds: ids,
+              status: "archived",
+              at: now(),
+            });
+          }}
+          onCancel={() => setPendingArchiveIds(null)}
         />
       ) : null}
     </section>

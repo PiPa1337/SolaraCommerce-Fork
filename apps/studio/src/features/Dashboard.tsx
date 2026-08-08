@@ -26,6 +26,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Button, EmptyState, Field, IconButton, InlineError } from "../components/Ui";
 import {
   type DashboardSort,
@@ -270,6 +271,7 @@ export function Dashboard({
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [compareOpen, setCompareOpen] = useState(false);
   const [duplicateTarget, setDuplicateTarget] = useState<StoredProject>();
+  const [pendingArchiveId, setPendingArchiveId] = useState<string | null>(null);
   const [backingUp, setBackingUp] = useState<string>();
   const [criticalIssues, setCriticalIssues] = useState<number | null>(null);
   const [auditSkipped, setAuditSkipped] = useState(false);
@@ -462,17 +464,8 @@ export function Dashboard({
     toastTimerRef.current = window.setTimeout(() => setToast(undefined), 5000);
   }, []);
 
-  const handleArchive = useCallback(
+  const doArchive = useCallback(
     async (id: string, archived: boolean) => {
-      if (archived) {
-        const record = projects.find((item) => item.id === id);
-        const confirmed = window.confirm(
-          record
-            ? `¿Archivar la tienda "${record.name}"? Podés restaurarla después desde el filtro de archivadas.`
-            : "¿Archivar esta tienda? Podés restaurarla después.",
-        );
-        if (!confirmed) return;
-      }
       try {
         await onArchive(id, archived);
       } catch {
@@ -486,13 +479,26 @@ export function Dashboard({
           actionLabel: "Deshacer",
           onAction: () => {
             setToast(undefined);
-            void handleArchive(id, false);
+            void doArchive(id, false);
           },
         });
       }
     },
     [onArchive, projects, showToast],
   );
+
+  const handleArchive = useCallback(
+    (id: string, archived: boolean): Promise<void> => {
+      if (archived) {
+        setPendingArchiveId(id);
+        return Promise.resolve();
+      }
+      return doArchive(id, false);
+    },
+    [doArchive],
+  );
+
+  const pendingArchiveRecord = projects.find((item) => item.id === pendingArchiveId) ?? null;
 
   const visibleRef = useRef<StoredProject[]>(visible);
   visibleRef.current = visible;
@@ -583,7 +589,8 @@ export function Dashboard({
         shutdownDialogOpen ||
         shutdownState === "closing" ||
         duplicateTarget !== undefined ||
-        compareOpen
+        compareOpen ||
+        pendingArchiveId !== null
       ) {
         return;
       }
@@ -609,7 +616,15 @@ export function Dashboard({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [creating, openCreate, shutdownDialogOpen, shutdownState, duplicateTarget, compareOpen]);
+  }, [
+    creating,
+    openCreate,
+    shutdownDialogOpen,
+    shutdownState,
+    duplicateTarget,
+    compareOpen,
+    pendingArchiveId,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1226,6 +1241,22 @@ export function Dashboard({
           ) : null}
           <IconButton icon={X} label="Cerrar aviso" onClick={() => setToast(undefined)} />
         </output>
+      ) : null}
+
+      {pendingArchiveRecord ? (
+        <ConfirmDialog
+          title="Archivar tienda"
+          body={`¿Archivar la tienda "${pendingArchiveRecord.name}"? Podés restaurarla después desde el filtro de archivadas.`}
+          confirmLabel="Archivar"
+          cancelLabel="Cancelar"
+          danger
+          onConfirm={() => {
+            const id = pendingArchiveRecord.id;
+            setPendingArchiveId(null);
+            void doArchive(id, true);
+          }}
+          onCancel={() => setPendingArchiveId(null)}
+        />
       ) : null}
     </main>
   );

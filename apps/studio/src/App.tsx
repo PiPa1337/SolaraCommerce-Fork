@@ -7,6 +7,7 @@
 import { WarningCircle } from "@phosphor-icons/react";
 import { type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { ConfirmDialog } from "./components/ConfirmDialog";
 import { ToastProvider } from "./components/Toast";
 import { InlineError, Skeleton } from "./components/Ui";
 import { Dashboard } from "./features/Dashboard";
@@ -86,6 +87,11 @@ function StudioShell() {
   });
   const [activeDiskVersion, setActiveDiskVersion] = useState<number | null>(null);
   const [activeDiskBaseProject, setActiveDiskBaseProject] = useState<StoreProjectV1 | undefined>();
+  const [pendingRecover, setPendingRecover] = useState<{
+    projectId: string;
+    draft: StoreProjectV1;
+  } | null>(null);
+  const pendingRecoverResolverRef = useRef<((recover: boolean) => void) | null>(null);
   const storageModeRef = useRef(false);
 
   const refreshBrowser = useCallback(async () => {
@@ -244,6 +250,19 @@ function StudioShell() {
     }
   };
 
+  const openSite = useCallback(async (id: string) => {
+    const popup = window.open("about:blank", "_blank");
+    try {
+      const { openLocalSite } = await loadLocalStorage();
+      const url = await openLocalSite(id);
+      if (popup) popup.location.href = url;
+      else window.open(url, "_blank");
+    } catch (reason) {
+      popup?.close();
+      throw reason;
+    }
+  }, []);
+
   const importRecoveryArchive = async (file: File) => {
     await guard(async () => {
       const project = await readProjectArchiveInWorker(file);
@@ -316,6 +335,9 @@ function StudioShell() {
               setActive(project);
               await refresh();
             }}
+            {...(localStorageStatus.managed
+              ? { onOpenSite: (id: string) => guard(() => openSite(id)) }
+              : {})}
             onReloadFromDisk={async () => {
               const result = await refreshDisk();
               const selected = result.projects.find((item) => item.id === active?.id) as
@@ -482,9 +504,10 @@ function StudioShell() {
                 if (diskProject) {
                   const draft = await getRecoveryDraft(diskProject.id);
                   if (draft && JSON.stringify(draft.project) !== JSON.stringify(diskProject)) {
-                    const recover = window.confirm(
-                      "Hay un borrador sin guardar de esta tienda. ¿Querés recuperarlo?",
-                    );
+                    const recover = await new Promise<boolean>((resolve) => {
+                      pendingRecoverResolverRef.current = resolve;
+                      setPendingRecover({ projectId: diskProject.id, draft: draft.project });
+                    });
                     if (recover) {
                       project = draft.project;
                       setNotice(
@@ -569,20 +592,7 @@ function StudioShell() {
             : {})}
           {...(localStorageStatus.managed
             ? {
-                onOpenSite: async (id: string) => {
-                  const popup = window.open("about:blank", "_blank");
-                  await guard(async () => {
-                    try {
-                      const { openLocalSite } = await loadLocalStorage();
-                      const url = await openLocalSite(id);
-                      if (popup) popup.location.href = url;
-                      else window.open(url, "_blank");
-                    } catch (reason) {
-                      popup?.close();
-                      throw reason;
-                    }
-                  });
-                },
+                onOpenSite: (id: string) => guard(() => openSite(id)),
               }
             : {})}
           {...(localStorageStatus.managed
@@ -597,6 +607,25 @@ function StudioShell() {
             : {})}
           onSessionManaged={setSessionManaged}
         />
+
+        {pendingRecover ? (
+          <ConfirmDialog
+            title="Recuperar borrador"
+            body="Hay un borrador sin guardar de esta tienda. ¿Querés recuperarlo? Si lo descartás, se borra del navegador y se abre la versión del disco."
+            confirmLabel="Recuperar borrador"
+            cancelLabel="Descartar borrador"
+            onConfirm={() => {
+              pendingRecoverResolverRef.current?.(true);
+              pendingRecoverResolverRef.current = null;
+              setPendingRecover(null);
+            }}
+            onCancel={() => {
+              pendingRecoverResolverRef.current?.(false);
+              pendingRecoverResolverRef.current = null;
+              setPendingRecover(null);
+            }}
+          />
+        ) : null}
       </div>
     </ToastProvider>
   );

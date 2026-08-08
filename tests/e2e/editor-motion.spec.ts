@@ -11,8 +11,10 @@ test.setTimeout(process.env.CI ? 120_000 : 60_000);
 
 /**
  * Presupuesto de render de la tabla del catálogo con 50 productos, en
- * milisegundos. Se fijó midiendo una ejecución de referencia y aplicando un
- * margen de 1.5× (ver .superpowers/sdd/ola3-b-report.md).
+ * milisegundos. Metodología: medición con performance.now() sobre la tabla
+ * completa en una ejecución de referencia local (Chromium, misma máquina del
+ * plan), peor muestra ~1000 ms; budget = peor muestra × 1.5 = 1500 ms con
+ * margen de estabilidad para suites completas.
  */
 const CATALOG_TABLE_BUDGET_MS = 1500;
 
@@ -66,9 +68,7 @@ test("las filas del catálogo y las cards del dashboard responden al hover (T5.1
   // estilo justo después del hover devuelve el valor interpolado inicial y la
   // comparación falla. Se espera a que la transición se asiente.
   await expect
-    .poll(() =>
-      rows.nth(5).evaluate((element) => getComputedStyle(element).backgroundColor),
-    )
+    .poll(() => rows.nth(5).evaluate((element) => getComputedStyle(element).backgroundColor))
     .not.toBe(rowBackground);
 
   await page.getByRole("button", { name: "Volver a tiendas", exact: true }).click();
@@ -157,7 +157,9 @@ test("el indicador de guardado pulsa mientras guarda y anima el check al confirm
     observer.observe(indicator, { attributes: true, attributeFilter: ["class"] });
   });
 
-  await page.getByRole("textbox", { name: "Título", exact: true }).fill("Título con microinteracciones");
+  await page
+    .getByRole("textbox", { name: "Título", exact: true })
+    .fill("Título con microinteracciones");
   await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
   await expect(page.getByText(/^Guardado/)).toBeVisible();
 

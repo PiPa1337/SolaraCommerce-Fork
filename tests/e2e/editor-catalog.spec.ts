@@ -180,12 +180,15 @@ test("los atajos editan, duplican y archivan la selección sin tocar formularios
   await dialog.getByRole("button", { name: "Cancelar" }).click();
   await expect(dialog).toBeHidden();
 
-  const beforeDuplicate = await rows.count();
-  page.on("dialog", (alert) => void alert.accept());
   await page.keyboard.press("d");
   await expect(page.getByText(/51 productos y /)).toBeVisible();
 
+  // T4.12: archivar por Supr pasa por el diálogo de confirmación unificado.
   await page.keyboard.press("Delete");
+  const confirm = page.getByTestId("ui-confirm-dialog");
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole("button", { name: "Archivar", exact: true }).click();
+  await expect(confirm).toBeHidden();
   await expect(rows.nth(targetIndex).locator(".status-label")).toHaveText("Archivado");
 
   await page.getByPlaceholder("Buscar por producto, marca o estado").fill("e");

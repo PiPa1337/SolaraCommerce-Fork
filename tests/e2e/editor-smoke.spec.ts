@@ -138,8 +138,14 @@ test("archiva la tienda demo desde el dashboard y la restaura", async ({ page })
   const detail = page.getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" });
   await expect(detail).toBeVisible();
 
-  page.once("dialog", (dialog) => void dialog.accept());
+  // T4.12: el archivo de tienda confirma con el diálogo unificado en vez de
+  // window.confirm; el botón de aceptar usa el mismo nombre "Archivar".
   await detail.getByRole("button", { name: "Archivar" }).click();
+  const confirm = page.getByTestId("ui-confirm-dialog");
+  await expect(confirm).toBeVisible();
+  await expect(confirm).toContainText("Predeterminado");
+  await confirm.getByRole("button", { name: "Archivar", exact: true }).click();
+  await expect(confirm).toBeHidden();
   await page.locator(".dashboard-cosmic-select select").first().selectOption("archived");
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
 

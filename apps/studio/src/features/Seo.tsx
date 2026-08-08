@@ -257,9 +257,7 @@ export function Seo({
                 {seoTitle}
               </a>
               <span>{homepage}</span>
-              <p
-                style={{ color: "var(--ink)", fontSize: 11.5, lineHeight: 1.45, margin: 0 }}
-              >
+              <p style={{ color: "var(--ink)", fontSize: 11.5, lineHeight: 1.45, margin: 0 }}>
                 {seoDescription || "Sin descripción: completá la descripción SEO."}
               </p>
             </div>
@@ -315,9 +313,7 @@ export function Seo({
               <strong style={{ display: "block", fontSize: 13, lineHeight: 1.35 }}>
                 {project.identity.brandName}
               </strong>
-              <p
-                style={{ color: "var(--ink)", fontSize: 11.5, lineHeight: 1.45, margin: 0 }}
-              >
+              <p style={{ color: "var(--ink)", fontSize: 11.5, lineHeight: 1.45, margin: 0 }}>
                 {seoTitle} — {seoDescription || "Sin descripción"}
               </p>
               <span>{homepage}</span>
@@ -401,7 +397,11 @@ export function Seo({
             <ul>
               {groupedIssues.map(([area, areaIssues]) => (
                 <li key={area} data-testid="ui-seo-check-group" data-area={area}>
-                  <span className="guided-checklist__status" style={{ color: "var(--muted)" }} aria-hidden />
+                  <span
+                    className="guided-checklist__status"
+                    style={{ color: "var(--muted)" }}
+                    aria-hidden
+                  />
                   <span className="guided-checklist__text">
                     <strong
                       style={{
@@ -432,7 +432,9 @@ export function Seo({
                   >
                     <span
                       className="guided-checklist__status"
-                      data-status={done ? undefined : issue.severity === "error" ? "invalid" : undefined}
+                      data-status={
+                        done ? undefined : issue.severity === "error" ? "invalid" : undefined
+                      }
                       style={done ? { color: "var(--accent)" } : undefined}
                       aria-hidden
                     >

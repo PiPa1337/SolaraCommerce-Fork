@@ -5,7 +5,6 @@ import {
   Copy,
   Image,
   Info,
-  Trash,
   UploadSimple,
   VideoCamera,
   X,
@@ -24,11 +23,28 @@ import {
   putCachedAsset,
   requestPersistentStorage,
 } from "../lib/repository";
-import { hashFile, processImageInWorker, type ProcessedImage } from "../lib/workers";
+import { hashFile, type ProcessedImage, processImageInWorker } from "../lib/workers";
 
 interface AssetUse {
   label: string;
   detail: string;
+}
+
+/** Referencias de imagen dentro de un valor de settings (slides, posters, etc.). */
+function collectSettingAssetIds(value: unknown, collected: string[]): void {
+  if (typeof value === "string") {
+    collected.push(value);
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) collectSettingAssetIds(item, collected);
+    return;
+  }
+  if (value && typeof value === "object") {
+    for (const [key, item] of Object.entries(value)) {
+      if (key === "imageId" || key === "posterAssetId") collectSettingAssetIds(item, collected);
+    }
+  }
 }
 
 /** Usos de una imagen: productos (incluidas variantes), portadas, categorías, colecciones y secciones. */
@@ -61,7 +77,9 @@ function assetUses(project: StoreProjectV1, assetId: ImageAsset["id"]): AssetUse
     }
   }
   for (const section of project.sections) {
-    if (Object.values(section.settings).some((value) => value === assetId)) {
+    const referenced: string[] = [];
+    collectSettingAssetIds(section.settings, referenced);
+    if (referenced.includes(assetId)) {
       uses.push({ label: section.moduleId, detail: `Sección ${section.slot}` });
     }
   }
@@ -148,9 +166,7 @@ export function Assets({
     });
   };
 
-  const processImageFile = async (
-    file: File,
-  ): Promise<{ asset: ImageAsset; reused: boolean }> => {
+  const processImageFile = async (file: File): Promise<{ asset: ImageAsset; reused: boolean }> => {
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
       throw new Error("formato no compatible");
     }
@@ -255,6 +271,7 @@ export function Assets({
         height: outcome.asset.height,
         hash: outcome.asset.hash,
       });
+      setProgress({ current: 1, total: 1 });
       setBatchStatus(
         `Imagen reemplazada conservando el ID ${asset.id.slice("asset-".length, "asset-".length + 8)}…`,
       );
@@ -339,11 +356,9 @@ export function Assets({
     }
   };
 
-  const selectedAsset =
-    project.assets.find((asset) => asset.id === selectedAssetId) ?? null;
+  const selectedAsset = project.assets.find((asset) => asset.id === selectedAssetId) ?? null;
   const selectedUses = selectedAsset ? assetUses(project, selectedAsset.id) : [];
-  const confirmDeleteAsset =
-    project.assets.find((asset) => asset.id === confirmDeleteId) ?? null;
+  const confirmDeleteAsset = project.assets.find((asset) => asset.id === confirmDeleteId) ?? null;
 
   const handleDragEnter = () => {
     if (busy) return;
@@ -457,6 +472,7 @@ export function Assets({
           </>
         }
       />
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: zona de drop pasiva; el acceso por teclado y el foco usan los botones de carga de la cabecera. */}
       <div
         className={`asset-dropzone${dragging ? " asset-dropzone--active" : ""}`}
         data-testid="ui-assets-dropzone"
@@ -555,7 +571,11 @@ export function Assets({
                 </div>
               ) : (
                 selectedUses.map((use, index) => (
-                  <div className="audit-item" data-testid="ui-asset-use" key={`${use.label}-${index}`}>
+                  <div
+                    className="audit-item"
+                    data-testid="ui-asset-use"
+                    key={`${use.label}-${index}`}
+                  >
                     <Image aria-hidden size={18} />
                     <div>
                       <strong>{use.label}</strong>

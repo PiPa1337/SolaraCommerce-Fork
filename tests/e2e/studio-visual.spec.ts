@@ -213,8 +213,12 @@ test("dashboard permite abrir, buscar, cambiar vista, respaldar y administrar un
   await duplicateDialog.getByRole("button", { name: "Duplicar" }).click();
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("3 visibles");
 
-  page.once("dialog", (dialog) => void dialog.accept());
+  // T4.12: el archivo de tienda confirma con el diálogo unificado.
   await detail.getByRole("button", { name: "Archivar" }).click();
+  const archiveConfirm = page.getByTestId("ui-confirm-dialog");
+  await expect(archiveConfirm).toBeVisible();
+  await archiveConfirm.getByRole("button", { name: "Archivar", exact: true }).click();
+  await expect(archiveConfirm).toBeHidden();
   await page.locator(".dashboard-cosmic-select select").first().selectOption("archived");
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
   const archivedCard = page

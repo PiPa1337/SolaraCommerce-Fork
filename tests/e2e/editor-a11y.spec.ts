@@ -276,13 +276,14 @@ test("el ConfirmDialog de eliminar enlace enfoca, atrapa el foco, cancela con Es
 
   for (let tab = 0; tab < 8; tab += 1) await page.keyboard.press("Tab");
   await expect
-    .poll(() =>
-      page.evaluate(
-        () =>
-          document
-            .querySelector("[data-testid='ui-confirm-dialog']")
-            ?.contains(document.activeElement) ?? false,
-      ),
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            document
+              .querySelector("[data-testid='ui-confirm-dialog']")
+              ?.contains(document.activeElement) ?? false,
+        ),
       { message: "el foco no escapa del diálogo de confirmación" },
     )
     .toBe(true);

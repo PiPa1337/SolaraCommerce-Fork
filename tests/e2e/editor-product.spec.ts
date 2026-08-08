@@ -160,13 +160,13 @@ test("avisa al salir con cambios sin guardar y cierra directo en modo limpio", a
   await expect(dirtyDialog).toBeVisible();
   await dirtyDialog.getByRole("textbox", { name: "Título" }).fill("Cambio sin guardar");
 
-  let lastMessage = "";
-  page.once("dialog", (event) => {
-    lastMessage = event.message();
-    void event.accept();
-  });
+  // T4.12: la salida con cambios pasa por el diálogo unificado (ya no hay
+  // window.confirm nativo); confirmar cierra el editor.
   await dirtyDialog.getByRole("button", { name: "Cancelar" }).click();
-  expect(lastMessage).toContain("cambios sin guardar");
+  const confirm = page.getByTestId("ui-confirm-dialog");
+  await expect(confirm).toBeVisible();
+  await expect(confirm).toContainText("cambios sin guardar");
+  await confirm.getByRole("button", { name: "Salir sin guardar" }).click();
   await expect(dirtyDialog).toBeHidden();
 
   await page.getByRole("button", { name: "Agregar producto" }).first().click();
@@ -174,16 +174,21 @@ test("avisa al salir con cambios sin guardar y cierra directo en modo limpio", a
   await expect(escapeDialog).toBeVisible();
   await escapeDialog.getByRole("textbox", { name: "Título" }).fill("Escape con cambios");
 
-  page.once("dialog", (event) => {
-    lastMessage = event.message();
-    void event.dismiss();
-  });
+  // Escape abre el diálogo unificado; Escape de nuevo lo cancela y conserva el
+  // editor abierto; una confirmación explícita cierra el editor.
   await escapeDialog.press("Escape");
-  expect(lastMessage).toContain("cambios sin guardar");
+  const escapeConfirm = page.getByTestId("ui-confirm-dialog");
+  await expect(escapeConfirm).toBeVisible();
+  await escapeConfirm.press("Escape");
+  await expect(escapeConfirm).toBeHidden();
   await expect(escapeDialog).toBeVisible();
 
-  page.once("dialog", (event) => void event.accept());
   await escapeDialog.press("Escape");
+  await expect(page.getByTestId("ui-confirm-dialog")).toBeVisible();
+  await page
+    .getByTestId("ui-confirm-dialog")
+    .getByRole("button", { name: "Salir sin guardar" })
+    .click();
   await expect(escapeDialog).toBeHidden();
 });
 

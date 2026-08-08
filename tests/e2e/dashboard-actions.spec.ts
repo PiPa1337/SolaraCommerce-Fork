@@ -34,8 +34,13 @@ test("archivar confirma, muestra deshacer y restaura la tienda", async ({ page }
   await page.setViewportSize({ width: 1440, height: 900 });
   const detail = await openDemoDetail(page);
 
-  page.once("dialog", (dialog) => void dialog.accept());
+  // T4.12: el archivo de tienda confirma con el diálogo unificado (ya no hay
+  // window.confirm nativo).
   await detail.getByRole("button", { name: "Archivar" }).click();
+  const confirm = page.getByTestId("ui-confirm-dialog");
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole("button", { name: "Archivar", exact: true }).click();
+  await expect(confirm).toBeHidden();
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
 
   const toast = page.getByTestId("ui-dashboard-toast");

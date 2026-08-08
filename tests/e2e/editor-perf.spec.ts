@@ -10,7 +10,8 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
  * El presupuesto de cambio de pestaña se recalibró para el bundle de la ola 3:
  * la muestra aislada mide 76–84 ms, pero bajo suite completa (presión de
  * memoria del proceso Chromium compartido por ~50 contextos previos) la peor
- * muestra es 154.5 ms. 1.5× sobre esa peor muestra → 250 ms.
+ * muestra es 154.5 ms. 154.5 × 1.5 = 231.75 ms → budget 250 ms (redondeo a
+ * múltiplo cómodo con margen adicional).
  */
 const BOOT_BUDGET_MS = 800;
 const OPEN_STORE_BUDGET_MS = 700;

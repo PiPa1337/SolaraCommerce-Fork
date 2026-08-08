@@ -182,7 +182,10 @@ test("los flujos nuevos de la ola (tema, foco, zoom, diálogo, duplicado y archi
 
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Resumen" })).toBeVisible();
-  await page.getByRole("button", { name: /^Eliminar enlace / }).first().click();
+  await page
+    .getByRole("button", { name: /^Eliminar enlace / })
+    .first()
+    .click();
   const confirm = page.getByTestId("ui-confirm-dialog");
   await expect(confirm).toBeVisible();
   await confirm.getByRole("button", { name: "Cancelar" }).click();
@@ -213,8 +216,12 @@ test("los flujos nuevos de la ola (tema, foco, zoom, diálogo, duplicado y archi
   await duplicate.getByRole("button", { name: "Cancelar", exact: true }).click();
   await expect(duplicate).toBeHidden();
 
-  page.once("dialog", (dialog) => void dialog.accept());
+  // T4.12: el archivo de tienda confirma con el diálogo unificado.
   await demoDetail.getByRole("button", { name: "Archivar" }).click();
+  const archiveConfirm = page.getByTestId("ui-confirm-dialog");
+  await expect(archiveConfirm).toBeVisible();
+  await archiveConfirm.getByRole("button", { name: "Archivar", exact: true }).click();
+  await expect(archiveConfirm).toBeHidden();
   await page.locator(".dashboard-cosmic-select select").first().selectOption("archived");
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
   await page

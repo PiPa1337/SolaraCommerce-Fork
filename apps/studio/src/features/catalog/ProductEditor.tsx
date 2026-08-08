@@ -9,6 +9,7 @@ import {
   type Variant,
 } from "@solara/project-schema";
 import { useEffect, useId, useRef, useState } from "react";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { Button, Field, IconButton, InlineError } from "../../components/Ui";
 
 interface ProductEditorProps {
@@ -107,7 +108,11 @@ function validateDraft(
   const slug = draft.slug.trim();
   const slugError = slugErrorFor(slug, existingSlugs);
   const variantErrors = draft.variants.map((variant) => {
-    const fieldErrors: VariantFieldErrors = { title: undefined, price: undefined, options: undefined };
+    const fieldErrors: VariantFieldErrors = {
+      title: undefined,
+      price: undefined,
+      options: undefined,
+    };
     if (!variant.title.trim()) fieldErrors.title = "Escribí un nombre para la variante.";
     if (!Number.isInteger(variant.price) || variant.price < 0) {
       fieldErrors.price = "El precio debe ser un número entero en centavos, mayor o igual a 0.";
@@ -194,6 +199,7 @@ export function ProductEditor({
   );
   const [tags, setTags] = useState(product.tags.join(", "));
   const [error, setError] = useState("");
+  const [confirmClose, setConfirmClose] = useState(false);
   const [activeStep, setActiveStep] = useState<EditorStep>("details");
   const [slugTouched, setSlugTouched] = useState(
     mode === "edit" && product.slug !== slugify(product.title),
@@ -234,7 +240,8 @@ export function ProductEditor({
     draft.variants.length > 0 ? Math.min(...draft.variants.map((variant) => variant.price)) : 0;
 
   const requestClose = () => {
-    if (isDirty && !window.confirm("Hay cambios sin guardar en el producto. ¿Salir sin guardar?")) {
+    if (isDirty) {
+      setConfirmClose(true);
       return;
     }
     onCancel();
@@ -794,6 +801,21 @@ export function ProductEditor({
           {mode === "create" ? "Crear producto" : "Guardar producto"}
         </Button>
       </div>
+
+      {confirmClose ? (
+        <ConfirmDialog
+          title="Salir sin guardar"
+          body="Hay cambios sin guardar en el producto. ¿Querés salir sin guardar?"
+          confirmLabel="Salir sin guardar"
+          cancelLabel="Seguir editando"
+          danger
+          onConfirm={() => {
+            setConfirmClose(false);
+            onCancel();
+          }}
+          onCancel={() => setConfirmClose(false)}
+        />
+      ) : null}
     </dialog>
   );
 }

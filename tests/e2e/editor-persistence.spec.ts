@@ -137,21 +137,26 @@ test("dos pestañas: la segunda guardada genera 409 con opciones y conservar bor
       "Predeterminado A (borrador local)",
     );
 
-    const dialogs: string[] = [];
-    pageA.on("dialog", (dialog) => {
-      dialogs.push(dialog.message());
-      void dialog.accept();
-    });
+    // T4.12: la recuperación del borrador ya no usa window.confirm; el
+    // diálogo unificado (ui-confirm-dialog) pide confirmación explícita.
     await pageA.reload();
     await expect(pageA.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
       timeout: 30_000,
     });
-    await openDemoStore(pageA);
+    await pageA
+      .locator('article:has([data-store-card-id="store-modo-sur-demo"])')
+      .getByRole("button", { name: "Abrir esta tienda" })
+      .click();
+    const recovery = pageA.getByTestId("ui-confirm-dialog");
+    await expect(recovery).toBeVisible({ timeout: 30_000 });
+    await expect(recovery).toContainText("borrador");
+    await recovery.getByRole("button", { name: "Recuperar borrador" }).click();
+    await expect(pageA.getByRole("tab", { name: "Resumen" })).toBeVisible();
+    await pageA.getByRole("tab", { name: "Resumen" }).click();
     await expect(pageA.getByLabel("Nombre de la tienda")).toHaveValue(
       "Predeterminado A (borrador local)",
       { timeout: 30_000 },
     );
-    expect(dialogs.some((message) => /borrador/i.test(message))).toBe(true);
   } finally {
     await stopManagedServer(managed);
   }
@@ -229,20 +234,24 @@ test("al recargar con cambios sin guardar, el diálogo de borrador recupera la e
     await page.getByLabel("Nombre de la tienda").fill("Predeterminado borrador");
     await page.waitForTimeout(1_200);
 
-    const dialogs: string[] = [];
-    page.on("dialog", (dialog) => {
-      dialogs.push(dialog.message());
-      void dialog.accept();
-    });
+    // T4.12: la recuperación del borrador se confirma con el diálogo unificado.
     await page.reload();
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
       timeout: 30_000,
     });
-    await openDemoStore(page);
+    await page
+      .locator('article:has([data-store-card-id="store-modo-sur-demo"])')
+      .getByRole("button", { name: "Abrir esta tienda" })
+      .click();
+    const recovery = page.getByTestId("ui-confirm-dialog");
+    await expect(recovery).toBeVisible({ timeout: 30_000 });
+    await expect(recovery).toContainText("borrador");
+    await recovery.getByRole("button", { name: "Recuperar borrador" }).click();
+    await expect(page.getByRole("tab", { name: "Resumen" })).toBeVisible();
+    await page.getByRole("tab", { name: "Resumen" }).click();
     await expect(page.getByLabel("Nombre de la tienda")).toHaveValue("Predeterminado borrador", {
       timeout: 30_000,
     });
-    expect(dialogs.some((message) => /borrador/i.test(message))).toBe(true);
   } finally {
     await context.close();
     await stopManagedServer(managed);
@@ -271,7 +280,9 @@ test("el diálogo de conflicto 409 es modal, con nombre y opciones accesibles (T
     await expect(
       dialog.getByRole("heading", { name: "La tienda cambió en otra pestaña" }),
     ).toHaveId(labelledBy ?? "");
-    await expect(dialog.getByRole("heading", { name: "La tienda cambió en otra pestaña" })).toBeVisible();
+    await expect(
+      dialog.getByRole("heading", { name: "La tienda cambió en otra pestaña" }),
+    ).toBeVisible();
     await expect(dialog.getByRole("button", { name: "Conservar borrador" })).toBeVisible();
     await expect(dialog.getByRole("button", { name: "Recargar desde disco" })).toBeVisible();
     await expect(dialog.getByRole("button", { name: "Duplicar con mi borrador" })).toBeVisible();

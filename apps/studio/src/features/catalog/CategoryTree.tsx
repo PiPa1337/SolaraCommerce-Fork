@@ -8,7 +8,8 @@ import {
   type StoreProjectV1,
 } from "@solara/project-schema";
 import type { Dispatch, SetStateAction } from "react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { Button, EmptyState, Field } from "../../components/Ui";
 
 export function categoryTree(project: StoreProjectV1): Category[] {
@@ -94,6 +95,10 @@ export function CategoryTree({
   const reparentParents = project.categories.filter(
     (category) => !blockedParentIds.has(category.id),
   );
+  const [pendingReparent, setPendingReparent] = useState<{
+    category: Category;
+    parentId: string;
+  } | null>(null);
 
   return (
     <section className="category-tree-panel" aria-label="Árbol de categorías">
@@ -197,26 +202,40 @@ export function CategoryTree({
           disabled={!selectedReparentCategory}
           onClick={() => {
             if (!selectedReparentCategory) return;
-            const nextLabel = reparentParentId
-              ? project.categories.find((category) => category.id === reparentParentId)?.title
-              : "raíz";
-            if (
-              !window.confirm(
-                `Reubicar ${selectedReparentCategory.title} bajo ${nextLabel ?? "raíz"}?`,
-              )
-            )
-              return;
-            onCommand({
-              type: "category.reparent",
-              categoryId: selectedReparentCategory.id,
-              ...(reparentParentId ? { parentId: reparentParentId as Category["id"] } : {}),
-              at: now(),
+            setPendingReparent({
+              category: selectedReparentCategory,
+              parentId: reparentParentId,
             });
           }}
         >
           Reubicar categoría
         </Button>
       </div>
+
+      {pendingReparent ? (
+        <ConfirmDialog
+          title="Reubicar categoría"
+          body={`¿Reubicar ${pendingReparent.category.title} bajo ${
+            pendingReparent.parentId
+              ? (project.categories.find((category) => category.id === pendingReparent.parentId)
+                  ?.title ?? "raíz")
+              : "raíz"
+          }?`}
+          confirmLabel="Reubicar"
+          cancelLabel="Cancelar"
+          onConfirm={() => {
+            const target = pendingReparent;
+            setPendingReparent(null);
+            onCommand({
+              type: "category.reparent",
+              categoryId: target.category.id,
+              ...(target.parentId ? { parentId: target.parentId as Category["id"] } : {}),
+              at: now(),
+            });
+          }}
+          onCancel={() => setPendingReparent(null)}
+        />
+      ) : null}
     </section>
   );
 }

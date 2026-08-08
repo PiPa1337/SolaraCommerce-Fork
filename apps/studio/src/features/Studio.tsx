@@ -45,6 +45,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Button, IconButton, InlineError } from "../components/Ui";
 import { AutosaveQueue, type AutosaveState } from "../lib/autosave";
 import { formatDate } from "../lib/format";
@@ -110,6 +111,7 @@ export function Studio({
   onDiskSaved,
   onReloadFromDisk,
   onDuplicateDraft,
+  onOpenSite,
 }: {
   initialProject: StoreProjectV1;
   onBack(): void;
@@ -122,6 +124,7 @@ export function Studio({
   onDuplicateDraft?(
     project: StoreProjectV1,
   ): Promise<{ ok: true } | { ok: false; message: string }>;
+  onOpenSite?(id: string): Promise<void>;
 }) {
   const [history, setHistory] = useState<HistoryState>(() => createHistory(initialProject));
   const [tab, setTab] = useState<StudioTab>("guided");
@@ -149,6 +152,7 @@ export function Studio({
   const [conflict, setConflict] = useState<LocalStorageError | null>(null);
   const [notice, setNotice] = useState("");
   const [leaving, setLeaving] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const [managedDirty, setManagedDirty] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [lastExportedAt, setLastExportedAt] = useState("");
@@ -297,14 +301,7 @@ export function Studio({
     };
   }, [autosave, managedDirty, managedStorage]);
 
-  const leaveStudio = async () => {
-    if (
-      managedStorage &&
-      managedDirty &&
-      !window.confirm("Hay cambios sin guardar. ¿Salir sin guardar?")
-    ) {
-      return;
-    }
+  const performLeave = async () => {
     setLeaving(true);
     try {
       await autosave.flush();
@@ -313,6 +310,14 @@ export function Studio({
       setSaveState("error");
       setLeaving(false);
     }
+  };
+
+  const requestLeave = () => {
+    if (managedStorage && managedDirty) {
+      setConfirmLeave(true);
+      return;
+    }
+    void performLeave();
   };
 
   const replaceProject = useCallback((next: StoreProjectV1) => {
@@ -481,6 +486,7 @@ export function Studio({
               await onProjectImported(imported);
               setHistory(createHistory(imported));
             }}
+            {...(onOpenSite ? { onOpenSite } : {})}
           />
         );
     }
@@ -497,7 +503,7 @@ export function Studio({
             icon={ArrowLeft}
             label="Volver a tiendas"
             disabled={leaving}
-            onClick={() => void leaveStudio()}
+            onClick={() => requestLeave()}
           />
           <span className="brand-mark" aria-hidden>
             S
@@ -508,7 +514,7 @@ export function Studio({
                 type="button"
                 className="studio-breadcrumb__link"
                 disabled={leaving}
-                onClick={() => void leaveStudio()}
+                onClick={() => requestLeave()}
               >
                 Tiendas
               </button>
@@ -787,6 +793,21 @@ export function Studio({
             </div>
           </div>
         </div>
+      ) : null}
+
+      {confirmLeave ? (
+        <ConfirmDialog
+          title="Salir sin guardar"
+          body="Hay cambios sin guardar en esta tienda. ¿Querés salir de todos modos?"
+          confirmLabel="Salir sin guardar"
+          cancelLabel="Quedarme"
+          danger
+          onConfirm={() => {
+            setConfirmLeave(false);
+            void performLeave();
+          }}
+          onCancel={() => setConfirmLeave(false)}
+        />
       ) : null}
     </div>
   );
