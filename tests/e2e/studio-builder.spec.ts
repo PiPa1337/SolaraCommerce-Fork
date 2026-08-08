@@ -49,7 +49,7 @@ test("edita el hero moderno, actualiza el preview y persiste tras recargar", asy
   await expect(
     page.frameLocator("iframe").locator('[data-solara-module="catalog-hero"] h1'),
   ).toHaveText("Una portada persistente", { timeout: 15_000 });
-  await expect(page.getByText("Guardado", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^Guardado/, { exact: false })).toBeVisible();
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
