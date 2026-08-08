@@ -6,6 +6,7 @@
 import {
   ArrowDown,
   ArrowUp,
+  CheckSquare,
   DownloadSimple,
   Package,
   PencilSimple,
@@ -31,11 +32,21 @@ import {
   type RowSelectionState,
   type SortingState,
   useReactTable,
+  type VisibilityState,
 } from "@tanstack/react-table";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Button, EmptyState, InlineError, SectionHeader } from "../components/Ui";
+import { Button, EmptyState, Field, InlineError, SectionHeader } from "../components/Ui";
 import { buildCatalogPackagePlan, type CatalogPackagePlan } from "../lib/catalogPackage";
-import { formatCurrency } from "../lib/format";
+import {
+  duplicateProduct,
+  loadCatalogColumnVisibility,
+  loadCatalogView,
+  productCategoryTitles,
+  productStockLabel,
+  saveCatalogColumnVisibility,
+  saveCatalogView,
+} from "../lib/catalogTableModel";
+import { formatCurrency, formatDate } from "../lib/format";
 import { downloadBlob } from "../lib/projectArchive";
 import {
   type CsvRowError,
@@ -45,7 +56,7 @@ import {
   importCsvInWorker,
 } from "../lib/workers";
 import { CatalogToolbar } from "./catalog/CatalogToolbar";
-import { CategoryTree } from "./catalog/CategoryTree";
+import { CategoryTree, categoryLabel, categoryTree } from "./catalog/CategoryTree";
 import { ProductEditor } from "./catalog/ProductEditor";
 
 declare module "react" {
@@ -133,6 +144,207 @@ function summarizeImport(
   };
 }
 
+const statusText = (status: Product["status"]) =>
+  status === "active" ? "Activo" : status === "hidden" ? "Oculto" : "Archivado";
+
+/** Precio inline (T4.4): Enter confirma, Escape cancela, blur confirma; los
+ *  valores inválidos revierten con un aviso inline. */
+function PriceCell({
+  product,
+  onCommand,
+}: {
+  product: Product;
+  onCommand(command: DomainCommand): void;
+}) {
+  const first = product.variants[0];
+  const [draft, setDraft] = useState(() => String(first?.price ?? 0));
+  const [invalid, setInvalid] = useState(false);
+  const errorId = useId();
+  const timerRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => () => window.clearTimeout(timerRef.current), []);
+
+  if (!first) return null;
+
+  const flashInvalid = () => {
+    setInvalid(true);
+    window.clearTimeout(timerRef.current);
+    timerRef.current = window.setTimeout(() => setInvalid(false), 2500);
+  };
+
+  const parseDraft = () => {
+    const text = draft.trim();
+    if (text === "") return undefined;
+    const price = Number(text);
+    return Number.isSafeInteger(price) && price >= 0 ? price : undefined;
+  };
+
+  const commitPrice = (price: number) => {
+    if (price === first.price) return;
+    onCommand({
+      type: "product.update",
+      productId: product.id,
+      changes: {
+        variants: product.variants.map((variant, index) =>
+          index === 0
+            ? { ...variant, price: price as Product["variants"][number]["price"] }
+            : variant,
+        ),
+      },
+      at: now(),
+    });
+  };
+
+  return (
+    <div className={`price-cell${invalid ? " price-cell--invalid" : ""}`}>
+      <span>{formatCurrency(first.price)}</span>
+      <input
+        aria-label={`Precio en centavos de ${product.title}`}
+        type="number"
+        min={0}
+        step={1}
+        value={draft}
+        aria-invalid={invalid || undefined}
+        aria-describedby={invalid ? errorId : undefined}
+        data-testid="ui-price-edit"
+        onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            const price = parseDraft();
+            if (price === undefined) {
+              flashInvalid();
+            } else {
+              commitPrice(price);
+              event.currentTarget.blur();
+            }
+          } else if (event.key === "Escape") {
+            setDraft(String(first.price));
+            setInvalid(false);
+          }
+        }}
+        onBlur={() => {
+          const price = parseDraft();
+          if (price === undefined) {
+            setDraft(String(first.price));
+            flashInvalid();
+          } else {
+            commitPrice(price);
+          }
+        }}
+      />
+      {invalid ? (
+        <span
+          id={errorId}
+          className="catalog-price-error"
+          role="alert"
+          data-testid="ui-price-error"
+        >
+          Precio inválido: centavos enteros, 0 o más.
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/** Estado inline (T4.4): un clic convierte la etiqueta en un select que
+ *  confirma con el cambio y cancela con Escape o blur. */
+function StatusCell({
+  product,
+  onCommand,
+}: {
+  product: Product;
+  onCommand(command: DomainCommand): void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const selectRef = useRef<HTMLSelectElement>(null);
+
+  useEffect(() => {
+    if (editing) selectRef.current?.focus();
+  }, [editing]);
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        className={`status-label status-label--${product.status}`}
+        data-testid="ui-status-edit-trigger"
+        onClick={() => setEditing(true)}
+      >
+        {statusText(product.status)}
+      </button>
+    );
+  }
+
+  return (
+    <select
+      ref={selectRef}
+      className="catalog-status-select"
+      aria-label={`Estado de ${product.title}`}
+      data-testid="ui-status-edit"
+      value={product.status}
+      onChange={(event) => {
+        const status = event.target.value as Product["status"];
+        if (status !== product.status) {
+          onCommand({
+            type: "product.update",
+            productId: product.id,
+            changes: { status },
+            at: now(),
+          });
+        }
+        setEditing(false);
+      }}
+      onBlur={() => setEditing(false)}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") setEditing(false);
+      }}
+    >
+      <option value="active">Activo</option>
+      <option value="hidden">Oculto</option>
+      <option value="archived">Archivado</option>
+    </select>
+  );
+}
+
+/** Tarjeta de producto para la vista alterna (T4.4). */
+function CatalogCard({
+  product,
+  image,
+  onEdit,
+}: {
+  product: Product;
+  image: { source: string; alt: string } | undefined;
+  onEdit(): void;
+}) {
+  const first = product.variants[0];
+  return (
+    <article className="catalog-card" data-testid="ui-catalog-card">
+      <div className="catalog-card__image">
+        {image ? (
+          <img src={image.source} alt={image.alt || product.title} loading="lazy" />
+        ) : (
+          <Package aria-hidden size={26} />
+        )}
+      </div>
+      <div className="catalog-card__body">
+        <h3 title={product.title}>{product.title}</h3>
+        <div className="catalog-card__meta">
+          <span className={`status-label status-label--${product.status}`}>
+            {statusText(product.status)}
+          </span>
+          <span className="catalog-card__variants">
+            {product.variants.length} {product.variants.length === 1 ? "variante" : "variantes"}
+          </span>
+        </div>
+        {first ? <p className="catalog-card__price">{formatCurrency(first.price)}</p> : null}
+      </div>
+      <Button variant="quiet" icon={PencilSimple} onClick={onEdit}>
+        Editar
+      </Button>
+    </article>
+  );
+}
+
 export function Catalog({ project, onCommand, onChange }: CatalogProps) {
   const [selection, setSelection] = useState<RowSelectionState>({});
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -154,10 +366,19 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
   const [error, setError] = useState("");
   const [csvErrors, setCsvErrors] = useState<CsvRowError[]>([]);
   const [busy, setBusy] = useState<BusyState>("");
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() =>
+    loadCatalogColumnVisibility(project.id),
+  );
+  const [view, setView] = useState<"table" | "cards">(() => loadCatalogView(project.id));
   const importRef = useRef<HTMLInputElement>(null);
   const importReviewTitleId = useId();
   const packageInputId = useId();
   const packageReviewTitleId = useId();
+
+  useEffect(() => {
+    setColumnVisibility(loadCatalogColumnVisibility(project.id));
+    setView(loadCatalogView(project.id));
+  }, [project.id]);
 
   useEffect(() => {
     const validIds = new Set<string>(project.products.map((product) => product.id));
@@ -243,6 +464,14 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
         ),
       },
       {
+        id: "categories",
+        accessorFn: (product) => productCategoryTitles(product, project),
+        header: "Categorías",
+        cell: ({ row }) => (
+          <span className="table-muted-cell">{productCategoryTitles(row.original, project)}</span>
+        ),
+      },
+      {
         id: "price",
         accessorFn: (product) => product.variants[0]?.price ?? 0,
         header: "Precio",
@@ -250,57 +479,39 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
           const first = row.original.variants[0];
           if (!first) return null;
           return (
-            <div className="price-cell">
-              <span>{formatCurrency(first.price)}</span>
-              <input
-                aria-label={`Precio en centavos de ${row.original.title}`}
-                type="number"
-                min={0}
-                step={1}
-                defaultValue={first.price}
-                key={`${first.id}-${first.price}`}
-                onBlur={(event) => {
-                  const price = Number(event.target.value);
-                  if (Number.isSafeInteger(price) && price >= 0 && price !== first.price) {
-                    onCommand({
-                      type: "product.update",
-                      productId: row.original.id,
-                      changes: {
-                        variants: row.original.variants.map((variant, index) =>
-                          index === 0
-                            ? {
-                                ...variant,
-                                price: price as Product["variants"][number]["price"],
-                              }
-                            : variant,
-                        ),
-                      },
-                      at: now(),
-                    });
-                  }
-                }}
-              />
-            </div>
+            <PriceCell
+              key={`${row.original.id}-${first.price}`}
+              product={row.original}
+              onCommand={onCommand}
+            />
           );
         },
       },
       {
         accessorKey: "status",
         header: "Estado",
+        cell: ({ row }) => <StatusCell product={row.original} onCommand={onCommand} />,
+      },
+      {
+        id: "stock",
+        accessorFn: productStockLabel,
+        header: "Stock",
         cell: ({ row }) => (
-          <span className={`status-label status-label--${row.original.status}`}>
-            {row.original.status === "active"
-              ? "Activo"
-              : row.original.status === "hidden"
-                ? "Oculto"
-                : "Archivado"}
-          </span>
+          <span className="table-muted-cell">{productStockLabel(row.original)}</span>
         ),
       },
       {
         id: "variants",
         header: "Variantes",
         accessorFn: (product) => product.variants.length,
+      },
+      {
+        id: "updated",
+        accessorFn: (product) => product.updatedAt,
+        header: "Actualizado",
+        cell: ({ row }) => (
+          <span className="table-muted-cell">{formatDate(row.original.updatedAt)}</span>
+        ),
       },
       {
         id: "actions",
@@ -317,7 +528,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
         ),
       },
     ],
-    [onCommand],
+    [onCommand, project],
   );
 
   const categoryFilteredProducts = useMemo(() => {
@@ -329,11 +540,18 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
   const table = useReactTable({
     data: categoryFilteredProducts,
     columns,
-    state: { rowSelection: selection, sorting, globalFilter: filter, pagination },
+    state: {
+      rowSelection: selection,
+      sorting,
+      globalFilter: filter,
+      pagination,
+      columnVisibility,
+    },
     onRowSelectionChange: setSelection,
     onSortingChange: setSorting,
     onGlobalFilterChange: setFilter,
     onPaginationChange: setPagination,
+    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -348,6 +566,78 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
     .map(([id]) => id as Product["id"]);
   const filteredRows = table.getFilteredRowModel().rows;
   const hasProducts = project.products.length > 0;
+
+  const toggleColumn = (id: string) => {
+    setColumnVisibility((current) => {
+      const next = { ...current, [id]: !current[id] };
+      saveCatalogColumnVisibility(project.id, next);
+      return next;
+    });
+  };
+
+  const changeView = (next: "table" | "cards") => {
+    setView(next);
+    saveCatalogView(project.id, next);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const tagName = target.tagName;
+      if (
+        tagName === "INPUT" ||
+        tagName === "SELECT" ||
+        tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+      if (editor || selectedIds.length === 0) return;
+      if (event.key === "e" || event.key === "E") {
+        if (selectedIds.length === 1) {
+          const product = project.products.find((candidate) => candidate.id === selectedIds[0]);
+          if (product) {
+            event.preventDefault();
+            setEditor({ mode: "edit", product: structuredClone(product) });
+          }
+        }
+        return;
+      }
+      if (event.key === "d" || event.key === "D") {
+        event.preventDefault();
+        const taken = new Set(project.products.map((product) => product.slug));
+        selectedIds.forEach((productId) => {
+          const product = project.products.find((candidate) => candidate.id === productId);
+          if (product) {
+            onCommand({
+              type: "product.create",
+              product: duplicateProduct(product, taken),
+              at: now(),
+            });
+          }
+        });
+        return;
+      }
+      if (event.key === "Delete") {
+        const message =
+          selectedIds.length === 1
+            ? "¿Archivar el producto seleccionado?"
+            : `¿Archivar los ${selectedIds.length} productos seleccionados?`;
+        if (window.confirm(message)) {
+          onCommand({
+            type: "products.setStatus",
+            productIds: selectedIds,
+            status: "archived",
+            at: now(),
+          });
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [editor, onCommand, project.products, selectedIds]);
 
   const importCsv = async (file: File) => {
     setBusy("import");
@@ -657,111 +947,252 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
         </section>
       ) : null}
 
-      <CatalogToolbar
-        project={project}
-        table={table}
-        filteredRows={filteredRows}
-        hasProducts={hasProducts}
-        selectedIds={selectedIds}
-        filter={filter}
-        setFilter={setFilter}
-        categoryFilterId={categoryFilterId}
-        setCategoryFilterId={setCategoryFilterId}
-        setPagination={setPagination}
-        setSelection={setSelection}
-        status={status}
-        setStatus={setStatus}
-        priceKind={priceKind}
-        setPriceKind={setPriceKind}
-        priceAdjustment={priceAdjustment}
-        setPriceAdjustment={setPriceAdjustment}
-        categoryIds={categoryIds}
-        setCategoryIds={setCategoryIds}
-        collectionIds={collectionIds}
-        setCollectionIds={setCollectionIds}
-        tags={tags}
-        setTags={setTags}
-        onCommand={onCommand}
-        applyPriceAdjustment={applyPriceAdjustment}
-        applyTags={applyTags}
-      />
-
-      <CategoryTree
-        project={project}
-        collapsedCategoryIds={collapsedCategoryIds}
-        setCollapsedCategoryIds={setCollapsedCategoryIds}
-        reparentCategoryId={reparentCategoryId}
-        setReparentCategoryId={setReparentCategoryId}
-        reparentParentId={reparentParentId}
-        setReparentParentId={setReparentParentId}
-        onCommand={onCommand}
-      />
-
-      {project.products.length === 0 ? (
-        <EmptyState
-          icon={Package}
-          title="El catálogo está vacío"
-          body="Agregá el primer producto o importá un CSV con el formato de SolaraCommerce."
-          action={
-            <Button
-              variant="primary"
-              icon={Plus}
-              onClick={() => setEditor({ mode: "create", product: blankProduct(project) })}
-            >
-              Agregar producto
-            </Button>
-          }
+      <div className="catalog-layout">
+        <CatalogToolbar
+          project={project}
+          table={table}
+          filteredRows={filteredRows}
+          hasProducts={hasProducts}
+          selectedIds={selectedIds}
+          filter={filter}
+          setFilter={setFilter}
+          categoryFilterId={categoryFilterId}
+          setCategoryFilterId={setCategoryFilterId}
+          setPagination={setPagination}
+          setSelection={setSelection}
+          visibleColumns={columnVisibility}
+          onToggleColumn={toggleColumn}
+          view={view}
+          onViewChange={changeView}
         />
-      ) : (
-        <div className="table-shell">
-          <table>
-            <thead>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <th key={header.id}>
-                      {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                        <button
-                          className="table-sort"
-                          type="button"
-                          onClick={header.column.getToggleSortingHandler()}
-                        >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {header.column.getIsSorted() === "asc" ? (
-                            <ArrowUp aria-label="Orden ascendente" size={14} />
-                          ) : header.column.getIsSorted() === "desc" ? (
-                            <ArrowDown aria-label="Orden descendente" size={14} />
-                          ) : null}
-                        </button>
-                      ) : (
-                        flexRender(header.column.columnDef.header, header.getContext())
-                      )}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody>
-              {table.getRowModel().rows.map((row) => (
-                <tr key={row.id} data-selected={row.getIsSelected()}>
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+
+        <CategoryTree
+          project={project}
+          collapsedCategoryIds={collapsedCategoryIds}
+          setCollapsedCategoryIds={setCollapsedCategoryIds}
+          reparentCategoryId={reparentCategoryId}
+          setReparentCategoryId={setReparentCategoryId}
+          reparentParentId={reparentParentId}
+          setReparentParentId={setReparentParentId}
+          onCommand={onCommand}
+        />
+
+        {project.products.length === 0 ? (
+          <EmptyState
+            icon={Package}
+            title="El catálogo está vacío"
+            body="Agregá el primer producto o importá un CSV con el formato de SolaraCommerce."
+            action={
+              <Button
+                variant="primary"
+                icon={Plus}
+                onClick={() => setEditor({ mode: "create", product: blankProduct(project) })}
+              >
+                Agregar producto
+              </Button>
+            }
+          />
+        ) : view === "cards" ? (
+          <div className="catalog-card-grid" data-testid="ui-catalog-cards">
+            {table.getRowModel().rows.map((row) => (
+              <CatalogCard
+                key={row.id}
+                product={row.original}
+                image={project.assets.find((asset) => asset.id === row.original.imageIds[0])}
+                onEdit={() => setEditor({ mode: "edit", product: structuredClone(row.original) })}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="table-shell">
+            <table>
+              <thead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <th key={header.id}>
+                        {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                          <button
+                            className="table-sort"
+                            type="button"
+                            onClick={header.column.getToggleSortingHandler()}
+                          >
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            {header.column.getIsSorted() === "asc" ? (
+                              <ArrowUp aria-label="Orden ascendente" size={14} />
+                            ) : header.column.getIsSorted() === "desc" ? (
+                              <ArrowDown aria-label="Orden descendente" size={14} />
+                            ) : null}
+                          </button>
+                        ) : (
+                          flexRender(header.column.columnDef.header, header.getContext())
+                        )}
+                      </th>
+                    ))}
+                  </tr>
+                ))}
+              </thead>
+              <tbody>
+                {table.getRowModel().rows.map((row) => (
+                  <tr key={row.id} data-selected={row.getIsSelected()}>
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+                {table.getRowModel().rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={columns.length} className="table-empty">
+                      No hay productos que coincidan con la búsqueda.
                     </td>
-                  ))}
-                </tr>
-              ))}
-              {table.getRowModel().rows.length === 0 ? (
-                <tr>
-                  <td colSpan={columns.length} className="table-empty">
-                    No hay productos que coincidan con la búsqueda.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      )}
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {selectedIds.length > 0 ? (
+          <section className="bulk-panel bulk-panel--sticky" aria-label="Acciones masivas">
+            <header>
+              <CheckSquare aria-hidden size={20} />
+              <strong>{selectedIds.length} productos seleccionados</strong>
+            </header>
+            <div className="bulk-grid">
+              <div className="bulk-action">
+                <Field label="Estado">
+                  <select
+                    value={status}
+                    onChange={(event) => setStatus(event.target.value as Product["status"])}
+                  >
+                    <option value="active">Activo</option>
+                    <option value="hidden">Oculto</option>
+                    <option value="archived">Archivado</option>
+                  </select>
+                </Field>
+                <Button
+                  data-testid="apply-bulk-status"
+                  onClick={() =>
+                    onCommand({
+                      type: "products.setStatus",
+                      productIds: selectedIds,
+                      status,
+                      at: now(),
+                    })
+                  }
+                >
+                  Aplicar estado
+                </Button>
+              </div>
+
+              <div className="bulk-action">
+                <Field label="Ajuste">
+                  <select
+                    value={priceKind}
+                    onChange={(event) =>
+                      setPriceKind(event.target.value as "percentage" | "amount")
+                    }
+                  >
+                    <option value="percentage">Porcentaje</option>
+                    <option value="amount">Centavos</option>
+                  </select>
+                </Field>
+                <Field label={priceKind === "percentage" ? "Valor %" : "Centavos"}>
+                  <input
+                    type="number"
+                    value={priceAdjustment}
+                    onChange={(event) => setPriceAdjustment(event.target.value)}
+                    step={priceKind === "percentage" ? "0.1" : "1"}
+                  />
+                </Field>
+                <Button onClick={applyPriceAdjustment}>Ajustar precios</Button>
+              </div>
+
+              <div className="bulk-action">
+                <Field label="Categorías">
+                  <select
+                    multiple
+                    size={Math.min(4, Math.max(2, project.categories.length))}
+                    value={categoryIds}
+                    onChange={(event) =>
+                      setCategoryIds(
+                        Array.from(event.target.selectedOptions, (option) => option.value),
+                      )
+                    }
+                  >
+                    {categoryTree(project).map((category) => (
+                      <option value={category.id} key={category.id}>
+                        {categoryLabel(category)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Button
+                  onClick={() =>
+                    onCommand({
+                      type: "products.setCategories",
+                      productIds: selectedIds,
+                      categoryIds: project.categories
+                        .filter((category) => categoryIds.includes(category.id))
+                        .map((category) => category.id),
+                      at: now(),
+                    })
+                  }
+                >
+                  Establecer categorías
+                </Button>
+              </div>
+
+              <div className="bulk-action">
+                <Field label="Colecciones">
+                  <select
+                    multiple
+                    size={Math.min(4, Math.max(2, project.collections.length))}
+                    value={collectionIds}
+                    onChange={(event) =>
+                      setCollectionIds(
+                        Array.from(event.target.selectedOptions, (option) => option.value),
+                      )
+                    }
+                  >
+                    {project.collections.map((collection) => (
+                      <option value={collection.id} key={collection.id}>
+                        {collection.title}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Button
+                  onClick={() =>
+                    onCommand({
+                      type: "products.setCollections",
+                      productIds: selectedIds,
+                      collectionIds: project.collections
+                        .filter((collection) => collectionIds.includes(collection.id))
+                        .map((collection) => collection.id),
+                      at: now(),
+                    })
+                  }
+                >
+                  Establecer colecciones
+                </Button>
+              </div>
+
+              <div className="bulk-action bulk-action--tags">
+                <Field label="Tags" hint="Separados por comas.">
+                  <input value={tags} onChange={(event) => setTags(event.target.value)} />
+                </Field>
+                <Button onClick={() => applyTags("products.addTags")}>Agregar tags</Button>
+                <Button variant="quiet" onClick={() => applyTags("products.removeTags")}>
+                  Quitar tags
+                </Button>
+              </div>
+            </div>
+          </section>
+        ) : null}
+      </div>
 
       {editor ? (
         <ProductEditor

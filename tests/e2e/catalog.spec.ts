@@ -128,7 +128,9 @@ test("previsualiza, cancela y edita en masa entre páginas", async ({ page }) =>
 
   await clickDom(page.getByTestId("select-filtered-products"));
   await expect(page.getByText("120 seleccionados")).toBeVisible();
-  await clickDom(page.getByTestId("next-catalog-page"));
+  // T4.3: la paginación nativa se reemplazó por el componente Pagination
+  // compartido (T1.3), que no expone el testid anterior.
+  await clickDom(page.getByRole("button", { name: "Siguiente", exact: true }));
   await expect(page.getByText("120 seleccionados")).toBeVisible();
   await expect(page.locator('thead input[type="checkbox"]')).toBeChecked();
 
