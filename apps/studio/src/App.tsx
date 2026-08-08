@@ -240,6 +240,7 @@ function StudioShell() {
       await action();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "La operación no pudo completarse.");
+      throw reason;
     }
   };
 
@@ -442,7 +443,7 @@ function StudioShell() {
                 accept=".json,.solara.json,application/json"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
-                  if (file) void importRecoveryArchive(file);
+                  if (file) void importRecoveryArchive(file).catch(() => undefined);
                   event.target.value = "";
                 }}
               />
@@ -501,7 +502,7 @@ function StudioShell() {
               }
               if (!project) throw new Error("No se encontró la tienda.");
               setActive(project);
-            })
+            }).catch(() => undefined)
           }
           onDuplicate={(id, name) =>
             guard(async () => {

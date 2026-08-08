@@ -88,6 +88,7 @@
     --warning-soft: #44371f;
     --info: #8fc3dc;
     --info-soft: #203945;
+    --ui-danger-contrast: #4a2929;
     --shadow-panel: 0 26px 70px rgb(0 0 0 / 0.34);
     --shadow-float: 0 14px 38px rgb(0 0 0 / 0.26);
   }
@@ -119,6 +120,7 @@
   --warning-soft: #44371f;
   --info: #8fc3dc;
   --info-soft: #203945;
+  --ui-danger-contrast: #4a2929;
   --shadow-panel: 0 26px 70px rgb(0 0 0 / 0.34);
   --shadow-float: 0 14px 38px rgb(0 0 0 / 0.26);
 }

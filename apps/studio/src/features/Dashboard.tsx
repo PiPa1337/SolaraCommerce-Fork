@@ -35,6 +35,7 @@ import {
 } from "../lib/dashboardModel";
 import { formatDate } from "../lib/format";
 import type { StoredProject } from "../lib/repository";
+import { bulkBackupToastMessage } from "./dashboard/bulkBackupModel";
 import { CompareView } from "./dashboard/CompareView";
 import { DashboardToolbar } from "./dashboard/DashboardToolbar";
 import { DuplicateDialog } from "./dashboard/DuplicateDialog";
@@ -395,9 +396,7 @@ export function Dashboard({
     if (event.key === "Delete" || event.key === "Backspace") {
       if (record.status === "archived") return;
       event.preventDefault();
-      if (window.confirm(`¿Archivar la tienda "${record.name}"?`)) {
-        void onArchive(record.id, true);
-      }
+      void handleArchive(record.id, true);
       return;
     }
     if (event.key.startsWith("Arrow")) {
@@ -408,7 +407,15 @@ export function Dashboard({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (creating || shutdownDialogOpen || shutdownState === "closing") return;
+      if (
+        creating ||
+        shutdownDialogOpen ||
+        shutdownState === "closing" ||
+        duplicateTarget !== undefined ||
+        compareOpen
+      ) {
+        return;
+      }
       const target = event.target;
       if (
         target instanceof HTMLInputElement ||
@@ -431,7 +438,7 @@ export function Dashboard({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [creating, openCreate, shutdownDialogOpen, shutdownState]);
+  }, [creating, openCreate, shutdownDialogOpen, shutdownState, duplicateTarget, compareOpen]);
 
   const announceAction = useCallback((message: string) => {
     setActionNotice(message);
@@ -530,6 +537,8 @@ export function Dashboard({
     try {
       await onBackup(id);
       announceAction("Se creó un respaldo.");
+    } catch {
+      // el error ya quedó visible en el banner global del dashboard
     } finally {
       setBackupId(undefined);
     }
@@ -540,6 +549,8 @@ export function Dashboard({
     setSiteOpeningId(id);
     try {
       await onOpenSite(id);
+    } catch {
+      // el error ya quedó visible en el banner global del dashboard
     } finally {
       setSiteOpeningId(undefined);
     }
@@ -557,7 +568,12 @@ export function Dashboard({
       );
       if (!confirmed) return;
     }
-    await onArchive(id, archived);
+    try {
+      await onArchive(id, archived);
+    } catch {
+      // el error ya quedó visible en el banner global del dashboard
+      return;
+    }
     if (archived) {
       const record = projects.find((item) => item.id === id);
       showToast({
@@ -565,7 +581,7 @@ export function Dashboard({
         actionLabel: "Deshacer",
         onAction: () => {
           setToast(undefined);
-          void onArchive(id, false);
+          void handleArchive(id, false);
         },
       });
     }
@@ -583,7 +599,12 @@ export function Dashboard({
   };
 
   const confirmDuplicate = async (id: string, name: string) => {
-    await onDuplicate(id, name);
+    try {
+      await onDuplicate(id, name);
+    } catch (reason) {
+      // el DuplicateDialog muestra el error inline y mantiene el diálogo abierto
+      throw reason instanceof Error ? reason : new Error("No se pudo duplicar la tienda.");
+    }
     setDuplicateTarget(undefined);
     showToast({ message: "Tienda duplicada." });
   };
@@ -611,16 +632,32 @@ export function Dashboard({
     const targets = projects.filter((record) => record.status === "active");
     if (targets.length === 0) return;
     setBackingUp(`1 de ${targets.length}`);
+    let failed = 0;
+    let firstError = "";
     try {
       for (let index = 0; index < targets.length; index += 1) {
         setBackingUp(`${index + 1} de ${targets.length}`);
         const target = targets[index];
-        if (target) await onBackup(target.id);
+        if (!target) continue;
+        try {
+          await onBackup(target.id);
+        } catch (reason) {
+          failed += 1;
+          if (!firstError) {
+            firstError = reason instanceof Error ? reason.message : "No se pudo crear el respaldo.";
+          }
+        }
       }
-      showToast({ message: `Se crearon ${targets.length} respaldos en proyectos/.` });
     } finally {
       setBackingUp(undefined);
     }
+    showToast({
+      message: bulkBackupToastMessage({
+        total: targets.length,
+        failed,
+        ...(firstError ? { firstError } : {}),
+      }),
+    });
   };
 
   const openFolder = async (id: string) => {
@@ -628,6 +665,8 @@ export function Dashboard({
     setFolderOpeningId(id);
     try {
       await onOpenFolder(id);
+    } catch {
+      // el error ya quedó visible en el banner global del dashboard
     } finally {
       setFolderOpeningId(undefined);
     }
@@ -639,6 +678,8 @@ export function Dashboard({
     try {
       await onDownloadBackup(id);
       announceAction("Respaldo descargado.");
+    } catch {
+      // el error ya quedó visible en el banner global del dashboard
     } finally {
       setDownloadingId(undefined);
     }

@@ -72,6 +72,31 @@ test("duplicar pasa por el diálogo y aplica el nombre elegido", async ({ page }
   await expect(page.getByTestId("ui-dashboard-toast")).toContainText("Tienda duplicada");
 });
 
+test("duplicar falla sin cerrar el diálogo ni anunciar éxito", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addInitScript(() => {
+    Object.defineProperty(Crypto.prototype, "randomUUID", {
+      configurable: true,
+      value: () => {
+        throw new Error("UUID no disponible (simulación de fallo)");
+      },
+    });
+  });
+  const detail = await openDemoDetail(page);
+
+  await detail.getByRole("button", { name: "Duplicar" }).click();
+  const dialog = page.getByRole("dialog", { name: "Duplicar tienda" });
+  await expect(dialog).toBeVisible();
+
+  await dialog.getByRole("button", { name: "Duplicar", exact: true }).click();
+  await expect(dialog).toContainText("UUID no disponible");
+  await expect(dialog).toBeVisible();
+  await expect(page.getByTestId("ui-dashboard-toast")).toHaveCount(0);
+
+  await dialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(dialog).toBeHidden();
+});
+
 test("el modo comparar exige dos tiendas y muestra los diffs de secciones y motion", async ({
   page,
 }) => {

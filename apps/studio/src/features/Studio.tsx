@@ -487,7 +487,7 @@ export function Studio({
   };
 
   return (
-    <div className="studio-shell">
+    <div className="studio-shell" data-studio-focus={focusMode || undefined}>
       <a className="skip-link" href={`#${editorPaneId}`}>
         Saltar al panel de edición
       </a>
