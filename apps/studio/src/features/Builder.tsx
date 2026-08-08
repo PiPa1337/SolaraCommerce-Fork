@@ -3,18 +3,38 @@
  * generar el inspector y conserva compatibilidad entre módulos al reemplazar
  * una sección; cambiar esa regla afecta preview, historial y exportación.
  */
-import { ArrowDown, ArrowUp, Copy, Eye, EyeSlash, Plus, Swap, Trash } from "@phosphor-icons/react";
+import {
+  ArrowCounterClockwise,
+  ArrowDown,
+  ArrowUp,
+  Copy,
+  Eye,
+  EyeSlash,
+  Plus,
+  Swap,
+  Trash,
+} from "@phosphor-icons/react";
 import {
   createModuleSection,
+  defaultSettingsForModule,
   isAddableModule,
+  isLegacyModule,
   moduleRegistry,
   type RegisteredModule,
   replaceModuleInSection,
 } from "@solara/modules";
 import type { StoreProjectV1, StoreSection } from "@solara/project-schema";
 import { catalogModernTemplateManifest } from "@solara/project-schema/catalog-modern-guidance";
-import { useEffect, useMemo, useState } from "react";
-import { Button, EmptyState, Field, IconButton, SectionHeader } from "../components/Ui";
+import { motion, useReducedMotion } from "motion/react";
+import { type KeyboardEvent, type RefObject, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Button,
+  EmptyState,
+  Field,
+  IconButton,
+  InlineError,
+  SectionHeader,
+} from "../components/Ui";
 import { SettingsInspector } from "./builder/SettingsInspector";
 
 const slotLabels: Record<StoreSection["slot"], string> = {
@@ -33,6 +53,136 @@ function availableModules(): RegisteredModule[] {
   return Object.values(moduleRegistry);
 }
 
+function formatIssuePaths(issues: Array<{ path: readonly PropertyKey[] }>): string {
+  return [...new Set(issues.map((issue) => issue.path.join(".") || "settings"))].join(", ");
+}
+
+interface ModulePickerProps {
+  modules: RegisteredModule[];
+  slot: StoreSection["slot"];
+  query: string;
+  pickerRef: RefObject<HTMLDivElement | null>;
+  onQueryChange(query: string): void;
+  onPick(module: RegisteredModule): void;
+  onClose(): void;
+}
+
+/**
+ * Picker de módulos: búsqueda por nombre/descripción, agrupado por familia y
+ * estado de compatibilidad de slot explícito. Lista los módulos agregables;
+ * los legacy sólo son reemplazos (compatibilidad) y no se ofrecen como nuevos.
+ */
+function ModulePicker({
+  modules,
+  slot,
+  query,
+  pickerRef,
+  onQueryChange,
+  onPick,
+  onClose,
+}: ModulePickerProps) {
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    searchRef.current?.focus();
+  }, []);
+
+  const normalized = query.trim().toLowerCase();
+  const filtered = useMemo(
+    () =>
+      modules.filter(
+        (module) =>
+          normalized.length === 0 ||
+          `${module.manifest.name} ${module.manifest.description}`
+            .toLowerCase()
+            .includes(normalized),
+      ),
+    [modules, normalized],
+  );
+  const groups = useMemo(() => {
+    const modern = filtered.filter((module) => !isLegacyModule(module));
+    const legacy = filtered.filter(isLegacyModule);
+    return [
+      ...(modern.length > 0 ? [{ label: "Nuevas · Catalog Modern", modules: modern }] : []),
+      ...(legacy.length > 0 ? [{ label: "Legacy · Compatibilidad", modules: legacy }] : []),
+    ];
+  }, [filtered]);
+
+  return (
+    <div
+      ref={pickerRef}
+      className="module-picker"
+      data-testid="ui-module-picker"
+      role="dialog"
+      aria-label="Elegir módulo de sección"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") onClose();
+      }}
+    >
+      <label className="module-picker__search">
+        <span className="visually-hidden">Buscar módulo</span>
+        <input
+          data-testid="ui-module-search"
+          type="search"
+          placeholder="Buscar módulo por nombre"
+          autoComplete="off"
+          ref={searchRef}
+          value={query}
+          onChange={(event) => onQueryChange(event.target.value)}
+        />
+      </label>
+      {filtered.length === 0 ? (
+        <p className="module-picker__empty">No hay módulos que coincidan con «{query}».</p>
+      ) : (
+        <ul className="module-picker__list">
+          {groups.map((group) => (
+            <li className="module-picker__group" key={group.label}>
+              <span className="module-picker__group-label">{group.label}</span>
+              <ul className="module-picker__items">
+                {group.modules.map((module) => {
+                  const compatible = module.manifest.slots.includes(slot);
+                  return (
+                    <li key={module.manifest.id}>
+                      <button
+                        type="button"
+                        className="module-picker__option"
+                        data-testid="ui-module-option"
+                        disabled={!compatible}
+                        onClick={() => onPick(module)}
+                      >
+                        <strong>{module.manifest.name}</strong>
+                        <small>{module.manifest.description}</small>
+                        <span className="module-picker__meta">
+                          <span
+                            className={`module-picker__badge${isLegacyModule(module) ? "" : " module-picker__badge--new"}`}
+                          >
+                            {isLegacyModule(module) ? "Compatibilidad" : "Nuevo"}
+                          </span>
+                          {compatible ? (
+                            module.manifest.slots.map((compatibleSlot) => (
+                              <span className="module-picker__slot-chip" key={compatibleSlot}>
+                                {slotLabels[compatibleSlot]}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="module-picker__hint">
+                              No compatible con «{slotLabels[slot]}»
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 interface BuilderProps {
   project: StoreProjectV1;
   onChange(project: StoreProjectV1): void;
@@ -47,6 +197,11 @@ export function Builder({ project, onChange, protectedBase = false }: BuilderPro
   const [pageKind, setPageKind] = useState<EditablePageKind>("home");
   const [selectedId, setSelectedId] = useState(project.sections[0]?.id ?? "");
   const [slotToAdd, setSlotToAdd] = useState<StoreSection["slot"]>("content");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState("");
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
   const editablePage = project.pages.find((page) => page.kind === pageKind);
   const pageSections = pageKind === "home" ? project.sections : (editablePage?.sections ?? []);
   const selected = pageSections.find((section) => section.id === selectedId);
@@ -70,6 +225,23 @@ export function Builder({ project, onChange, protectedBase = false }: BuilderPro
       setSelectedId(pageSections[0]?.id ?? "");
     }
   }, [pageSections, selectedId]);
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const handleOutside = (event: MouseEvent) => {
+      if (pickerRef.current?.contains(event.target as Node)) return;
+      if (addButtonRef.current?.contains(event.target as Node)) return;
+      setPickerOpen(false);
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [pickerOpen]);
+
+  const closePicker = () => {
+    setPickerOpen(false);
+    setPickerQuery("");
+    addButtonRef.current?.focus();
+  };
 
   const replaceSections = (sections: StoreSection[]) => {
     onChange({
@@ -104,10 +276,9 @@ export function Builder({ project, onChange, protectedBase = false }: BuilderPro
     replaceSections(sections);
   };
 
-  const addSection = () => {
+  const addSectionWith = (module: RegisteredModule) => {
     if (protectedBase && pageKind === "home") return;
-    const module = modules.find((candidate) => candidate.manifest.slots.includes(slotToAdd));
-    if (!module) return;
+    if (!module.manifest.slots.includes(slotToAdd)) return;
     const section = createModuleSection({
       id: `section-${crypto.randomUUID()}` as StoreSection["id"],
       slot: slotToAdd,
@@ -115,6 +286,18 @@ export function Builder({ project, onChange, protectedBase = false }: BuilderPro
     });
     replaceSections([...pageSections, section]);
     setSelectedId(section.id);
+    closePicker();
+  };
+
+  const handleSectionHeaderKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      move(index, -1);
+    } else if (event.key === "ArrowDown") {
+      event.preventDefault();
+      move(index, 1);
+    }
   };
 
   const pageSlotLabels =
@@ -126,6 +309,20 @@ export function Builder({ project, onChange, protectedBase = false }: BuilderPro
     if (!selected || isProtected(selected)) return;
     updateSection(selected.id, (section) => replaceModuleInSection(section, moduleId));
   };
+
+  const restoreDefaults = () => {
+    if (!selected || isProtected(selected) || !selectedModule) return;
+    updateSection(selected.id, (section) => ({
+      ...section,
+      settings: defaultSettingsForModule(selectedModule.manifest.id),
+    }));
+  };
+
+  const savedSettingsError = useMemo(() => {
+    if (!selected || !selectedModule) return "";
+    const result = selectedModule.settingsSchema.safeParse(selected.settings);
+    return result.success ? "" : formatIssuePaths(result.error.issues);
+  }, [selected, selectedModule]);
 
   return (
     <section className="workspace-section builder">
@@ -166,13 +363,29 @@ export function Builder({ project, onChange, protectedBase = false }: BuilderPro
               ))}
             </select>
             <Button
+              ref={addButtonRef}
               variant="primary"
               icon={Plus}
-              onClick={addSection}
+              aria-expanded={pickerOpen}
+              onClick={() => {
+                setPickerOpen((current) => !current);
+                setPickerQuery("");
+              }}
               disabled={protectedBase && pageKind === "home"}
             >
               Agregar sección
             </Button>
+            {pickerOpen ? (
+              <ModulePicker
+                modules={modules}
+                slot={slotToAdd}
+                query={pickerQuery}
+                pickerRef={pickerRef}
+                onQueryChange={setPickerQuery}
+                onPick={addSectionWith}
+                onClose={closePicker}
+              />
+            ) : null}
           </div>
         }
       />
@@ -182,15 +395,21 @@ export function Builder({ project, onChange, protectedBase = false }: BuilderPro
           {pageSections.map((section, index) => {
             const definition = allModules.find((module) => module.manifest.id === section.moduleId);
             return (
-              <li
+              <motion.li
                 className="section-row"
                 data-selected={section.id === selectedId}
                 key={section.id}
+                layout
+                transition={
+                  reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34 }
+                }
               >
                 <button
                   className="section-select"
                   type="button"
+                  aria-keyshortcuts="ArrowUp ArrowDown"
                   onClick={() => setSelectedId(section.id)}
+                  onKeyDown={(event) => handleSectionHeaderKeyDown(event, index)}
                 >
                   <span>{slotLabels[section.slot]}</span>
                   <strong>{definition?.manifest.name ?? section.moduleId}</strong>
@@ -244,7 +463,7 @@ export function Builder({ project, onChange, protectedBase = false }: BuilderPro
                     }}
                   />
                 </div>
-              </li>
+              </motion.li>
             );
           })}
         </ul>
@@ -275,6 +494,16 @@ export function Builder({ project, onChange, protectedBase = false }: BuilderPro
                 <p>{selectedModule?.manifest.description}</p>
               </header>
 
+              {savedSettingsError ? (
+                <div data-testid="ui-section-schema-error">
+                  <InlineError>
+                    La configuración guardada de esta sección no es válida ({savedSettingsError}).
+                    Corregí los campos marcados en el inspector para volver a guardar con valores
+                    válidos.
+                  </InlineError>
+                </div>
+              ) : null}
+
               <Field label="Módulo">
                 <select
                   value={selected.moduleId}
@@ -289,6 +518,17 @@ export function Builder({ project, onChange, protectedBase = false }: BuilderPro
                   ))}
                 </select>
               </Field>
+
+              <Button
+                variant="quiet"
+                size="sm"
+                icon={ArrowCounterClockwise}
+                disabled={isProtected(selected)}
+                data-testid="ui-restore-defaults"
+                onClick={restoreDefaults}
+              >
+                Restaurar valores por defecto
+              </Button>
 
               <fieldset>
                 <legend>Contenido</legend>

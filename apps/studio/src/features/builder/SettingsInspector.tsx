@@ -1,9 +1,13 @@
 import type { RegisteredModule } from "@solara/modules";
 import type { StoreProjectV1 } from "@solara/project-schema";
-import { useEffect, useState } from "react";
-import { Field } from "../../components/Ui";
+import { useEffect, useMemo, useState } from "react";
+import { Field, InlineError } from "../../components/Ui";
 import { HeroSlidesEditor } from "./HeroSlidesEditor";
 import { RepeaterEditor } from "./RepeaterEditor";
+
+function formatIssuePaths(issues: Array<{ path: readonly PropertyKey[] }>): string {
+  return [...new Set(issues.map((issue) => issue.path.join(".") || "settings"))].join(", ");
+}
 
 export function SettingsInspector({
   values,
@@ -27,6 +31,18 @@ export function SettingsInspector({
     setErrors({});
     setRawArrays({});
   }, [values]);
+
+  /**
+   * Errores de esquema del borrador actual: sólo cuando el usuario desvió el
+   * draft de los valores confirmados (que ya son válidos). Si el proyecto
+   * cargó con settings inválidos, el error lo reporta Builder con el estado
+   * confirmado y el panel sigue disponible para corregirlo.
+   */
+  const draftError = useMemo(() => {
+    if (!schema || draft === values) return "";
+    const result = schema.safeParse(draft);
+    return result.success ? "" : formatIssuePaths(result.error.issues);
+  }, [draft, schema, values]);
 
   if (fields.length === 0) {
     return <p className="inspector-note">Este módulo no requiere configuración.</p>;
@@ -56,6 +72,14 @@ export function SettingsInspector({
 
   return (
     <div className="settings-fields">
+      {draftError ? (
+        <div data-testid="ui-schema-errors">
+          <InlineError>
+            Errores de configuración en: {draftError}. Corregí los campos marcados para aplicar los
+            cambios.
+          </InlineError>
+        </div>
+      ) : null}
       {fields.map((field) => {
         const value = draft[field.key];
         const error = errors[field.key];

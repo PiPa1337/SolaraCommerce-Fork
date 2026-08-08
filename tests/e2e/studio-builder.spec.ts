@@ -113,6 +113,10 @@ test("agrega, ordena, duplica, oculta, deshace y elimina secciones modernas", as
 
   await page.getByLabel("Tipo de sección").selectOption("content");
   await page.getByRole("button", { name: "Agregar sección" }).click();
+  const picker = page.getByTestId("ui-module-picker");
+  await expect(picker).toBeVisible();
+  await picker.getByRole("button", { name: /Franja de marcas/ }).click();
+  await expect(picker).toBeHidden();
   await expect(sections.getByRole("listitem")).toHaveCount(initialCount + 1);
   const added = sections.getByRole("listitem").last();
   await expect(added).toContainText("Franja de marcas");
