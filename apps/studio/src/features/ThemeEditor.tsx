@@ -292,8 +292,14 @@ export function ThemeEditor({
           <div className="contrast-check" aria-live="polite">
             <strong className="contrast-check__title">Contraste (WCAG)</strong>
             {contrastChecks.map((check) => {
-              const passing = check.ratio === null || check.ratio >= CONTRAST_THRESHOLD;
-              const testid = passing ? "ui-contrast-ok" : "ui-contrast-warning";
+              const ratio = check.ratio;
+              const invalid = ratio === null;
+              const passing = !invalid && ratio >= CONTRAST_THRESHOLD;
+              const testid = invalid
+                ? "ui-contrast-warn"
+                : passing
+                  ? "ui-contrast-ok"
+                  : "ui-contrast-warning";
               return (
                 <div
                   className={`contrast-check__row${passing ? "" : " is-failing"}`}

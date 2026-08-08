@@ -73,7 +73,10 @@ export function CatalogToolbar({
           <span className="visually-hidden">Buscar productos</span>
           <input
             value={filter}
-            onChange={(event) => setFilter(event.target.value)}
+            onChange={(event) => {
+              setFilter(event.target.value);
+              setPagination((current) => ({ ...current, pageIndex: 0 }));
+            }}
             placeholder="Buscar por producto, marca o estado"
           />
         </label>

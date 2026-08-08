@@ -475,6 +475,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
         id: "price",
         accessorFn: (product) => product.variants[0]?.price ?? 0,
         header: "Precio",
+        sortDescFirst: false,
         cell: ({ row }) => {
           const first = row.original.variants[0];
           if (!first) return null;
@@ -504,6 +505,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
         id: "variants",
         header: "Variantes",
         accessorFn: (product) => product.variants.length,
+        sortDescFirst: false,
       },
       {
         id: "updated",
@@ -590,6 +592,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
         tagName === "INPUT" ||
         tagName === "SELECT" ||
         tagName === "TEXTAREA" ||
+        tagName === "BUTTON" ||
         target.isContentEditable
       ) {
         return;
@@ -1010,7 +1013,16 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id}>
                     {headerGroup.headers.map((header) => (
-                      <th key={header.id}>
+                      <th
+                        key={header.id}
+                        aria-sort={
+                          header.column.getIsSorted() === "asc"
+                            ? "ascending"
+                            : header.column.getIsSorted() === "desc"
+                              ? "descending"
+                              : undefined
+                        }
+                      >
                         {header.isPlaceholder ? null : header.column.getCanSort() ? (
                           <button
                             className="table-sort"
@@ -1019,9 +1031,9 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
                           >
                             {flexRender(header.column.columnDef.header, header.getContext())}
                             {header.column.getIsSorted() === "asc" ? (
-                              <ArrowUp aria-label="Orden ascendente" size={14} />
+                              <ArrowUp aria-hidden size={14} />
                             ) : header.column.getIsSorted() === "desc" ? (
-                              <ArrowDown aria-label="Orden descendente" size={14} />
+                              <ArrowDown aria-hidden size={14} />
                             ) : null}
                           </button>
                         ) : (
