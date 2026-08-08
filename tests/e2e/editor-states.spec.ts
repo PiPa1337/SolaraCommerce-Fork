@@ -1,5 +1,6 @@
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { createCleanStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 /**
@@ -266,4 +267,84 @@ test("el inventario ui-* mantiene estilos coherentes por estado en todas las pan
   await page.getByRole("tab", { name: "Constructor", exact: true }).click();
   const inspectorInput = page.locator(".inspector input, .inspector select").first();
   await expectFocusRing(inspectorInput, "Input del inspector");
+});
+
+test("los empty states ofrecen una acción concreta y funcional (T6.2)", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(studioUrl);
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+
+  const search = page.getByRole("searchbox", { name: "Buscar tienda" });
+  await search.fill("no-existe-ninguna-tienda-qa");
+  await expect(page.getByTestId("ui-empty-state")).toContainText("No hay coincidencias");
+  await search.fill("");
+  await expect(page.getByTestId("ui-empty-state")).toBeHidden();
+
+  await createCleanStore(page, "Tienda vacía QA");
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+
+  await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
+  // En una tienda limpia el tab muestra dos empty states legítimos: el panel de
+  // categorías ("No hay categorías") y el área de productos. Se apunta al de
+  // productos para ejercitar su acción.
+  const catalogEmpty = page.getByTestId("ui-empty-state").filter({
+    hasText: "El catálogo está vacío",
+  });
+  await expect(catalogEmpty).toContainText("El catálogo está vacío");
+  const addProduct = catalogEmpty.getByRole("button", { name: "Agregar producto" });
+  await expectEnabledButton(addProduct, "Agregar producto del empty state");
+  await addProduct.click();
+  await expect(page.locator("dialog.product-dialog")).toBeVisible();
+  await page.locator("dialog.product-dialog").getByRole("button", { name: "Cancelar" }).click();
+  await expect(page.locator("dialog.product-dialog")).toBeHidden();
+  // La plantilla limpia conserva las imágenes de plantilla (renombradas como
+  // "Imagen de plantilla"), por lo que el empty state de Recursos ("No hay
+  // imágenes") no es alcanzable: sólo aparece al borrar todos los assets.
+});
+
+test("el formulario de Resumen valida con errores inline y aria-describedby (T6.2)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  // openStore sólo abre el panel de detalle; el tab Resumen vive en el Studio.
+  await openStudio(page);
+  await page.getByRole("tab", { name: "Resumen", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
+
+  const fieldsetOf = (input: Locator) =>
+    input.locator("xpath=ancestor::fieldset[contains(@class, 'field')]");
+
+  const name = page.getByLabel("Nombre de la tienda");
+  const originalName = await name.inputValue();
+  await name.fill("");
+  const nameField = fieldsetOf(name);
+  await expect(nameField.getByTestId("ui-field-error")).toContainText(
+    "Completá el nombre de la tienda.",
+  );
+  await expect(name).toHaveAttribute("aria-invalid", "true");
+  const nameDescribedBy = await name.getAttribute("aria-describedby");
+  expect(nameDescribedBy, "el input de nombre referencia el mensaje").not.toBeNull();
+  await expect(page.locator(`#${nameDescribedBy}`)).toHaveText("Completá el nombre de la tienda.");
+  await name.fill(originalName);
+  await expect(nameField.getByTestId("ui-field-error")).toHaveCount(0);
+
+  const phone = page.getByLabel("Número internacional");
+  const originalPhone = await phone.inputValue();
+  await phone.fill("12");
+  const phoneField = fieldsetOf(phone);
+  await expect(phoneField.getByTestId("ui-field-error")).toContainText("Usá entre 8 y 15 dígitos");
+  await expect(phone).toHaveAttribute("aria-invalid", "true");
+  await phone.fill(originalPhone);
+  await expect(phoneField.getByTestId("ui-field-error")).toHaveCount(0);
+
+  const url = page.getByLabel("URL pública");
+  const originalUrl = await url.inputValue();
+  await url.fill("no-es-una-url");
+  const urlField = fieldsetOf(url);
+  await expect(urlField.getByTestId("ui-field-error")).toContainText(
+    "Ingresá una URL válida con http(s).",
+  );
+  await url.fill(originalUrl);
+  await expect(urlField.getByTestId("ui-field-error")).toHaveCount(0);
 });

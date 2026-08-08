@@ -113,6 +113,14 @@ test("edita el precio inline, rechaza valores inválidos y persiste tras recarga
   await page.getByTestId("ui-price-edit").first().press("Escape");
   await expect(page.getByTestId("ui-price-edit").first()).toHaveValue(next);
 
+  // El autosave debouncea 550 ms; recargar dentro de esa ventana pierde el
+  // snapshot pendiente (beforeunload sólo avisa y la escritura IndexedDB no
+  // sobrevive el teardown). Se espera a que el indicador confirme el guardado
+  // antes de recargar para ejercitar la persistencia, no la carrera del timer.
+  await expect(page.locator(".save-indicator")).toHaveClass(/save-indicator--saved/, {
+    timeout: 15_000,
+  });
+
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   await reopenCatalog(page);

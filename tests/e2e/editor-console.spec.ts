@@ -162,3 +162,70 @@ test("el dashboard busca, selecciona y respalda sin errores de consola", async (
 
   expect(problems, problems.join("\n")).toEqual([]);
 });
+
+test("los flujos nuevos de la ola (tema, foco, zoom, diálogo, duplicado y archivo) no producen errores de consola (T6.5)", async ({
+  page,
+}) => {
+  test.setTimeout(150_000);
+  const problems = trackConsoleProblems(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openDemoStore(page);
+
+  const themeToggle = page.getByTestId("ui-theme-toggle");
+  await themeToggle.click();
+  await themeToggle.click();
+
+  await page.getByTestId("ui-focus-toggle").click();
+  await expect(page.locator(".studio-shell")).toHaveAttribute("data-studio-focus", "true");
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".studio-shell")).not.toHaveAttribute("data-studio-focus", "true");
+
+  await page.getByRole("tab", { name: "Resumen", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Resumen" })).toBeVisible();
+  await page.getByRole("button", { name: /^Eliminar enlace / }).first().click();
+  const confirm = page.getByTestId("ui-confirm-dialog");
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole("button", { name: "Cancelar" }).click();
+  await expect(confirm).toBeHidden();
+
+  await page.getByRole("button", { name: "75%", exact: true }).click();
+  await expect(page.getByRole("button", { name: "75%", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.getByRole("button", { name: "100%", exact: true }).click();
+
+  await page.getByRole("button", { name: "Volver a tiendas" }).click();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+
+  const card = page.locator('[data-store-card-id="store-modo-sur-demo"]');
+  // data-store-card-id está en el botón de selección; el descendiente
+  // .dashboard-store-card__button no existe (es el propio elemento).
+  await card.click();
+  const demoDetail = page.getByRole("complementary", {
+    name: "Tienda seleccionada: Predeterminado",
+  });
+  await demoDetail.getByRole("button", { name: "Duplicar" }).click();
+  const duplicate = page.getByTestId("ui-duplicate-dialog");
+  await expect(duplicate).toBeVisible();
+  // La cabecera del diálogo tiene un botón "Cancelar duplicado" (aria-label que
+  // contiene "Cancelar"); el botón de pie usa el nombre exacto.
+  await duplicate.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(duplicate).toBeHidden();
+
+  page.once("dialog", (dialog) => void dialog.accept());
+  await demoDetail.getByRole("button", { name: "Archivar" }).click();
+  await page.locator(".dashboard-cosmic-select select").first().selectOption("archived");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  await page
+    .locator(".dashboard-store-card")
+    .filter({ hasText: "Predeterminado" })
+    .first()
+    .locator(".dashboard-store-card__button")
+    .click();
+  await page.getByRole("button", { name: "Restaurar" }).click();
+  await page.locator(".dashboard-cosmic-select select").first().selectOption("active");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+
+  expect(problems, problems.join("\n")).toEqual([]);
+});

@@ -252,3 +252,54 @@ async function unlabeledControls(page: Page): Promise<string[]> {
         .map((element) => element.outerHTML.slice(0, 160)),
     );
 }
+
+test("el ConfirmDialog de eliminar enlace enfoca, atrapa el foco, cancela con Escape y devuelve el foco (T6.4)", async ({
+  page,
+}) => {
+  await openDefaultStore(page);
+  await page.getByRole("tab", { name: "Resumen", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Resumen" })).toBeVisible();
+
+  const deleteLink = page.getByRole("button", { name: /^Eliminar enlace / }).first();
+  // El primer enlace eliminado puede no ser el primero de la lista; se recuerda
+  // su nombre accesible para verificar que ese enlace desapareció.
+  const deletedLabel = (await deleteLink.getAttribute("aria-label")) ?? "";
+  await deleteLink.click();
+
+  const dialog = page.getByRole("dialog", { name: "Eliminar enlace de navegación" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAttribute("data-testid", "ui-confirm-dialog");
+
+  const cancel = dialog.getByRole("button", { name: "Cancelar" });
+  const confirm = dialog.getByRole("button", { name: "Eliminar enlace" });
+  await expect(cancel, "en un diálogo peligroso el foco inicial va a Cancelar").toBeFocused();
+
+  for (let tab = 0; tab < 8; tab += 1) await page.keyboard.press("Tab");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          document
+            .querySelector("[data-testid='ui-confirm-dialog']")
+            ?.contains(document.activeElement) ?? false,
+      ),
+      { message: "el foco no escapa del diálogo de confirmación" },
+    )
+    .toBe(true);
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(deleteLink, "Escape devuelve el foco al botón que abrió el diálogo").toBeFocused();
+
+  await deleteLink.click();
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Tab");
+  await expect(confirm).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(dialog).toBeHidden();
+  await expect(page.getByTestId("ui-toast")).toContainText("Enlace de navegación eliminado");
+  await expect(page.getByRole("button", { name: deletedLabel })).not.toBeVisible();
+
+  await page.getByRole("button", { name: "Deshacer" }).click();
+  await expect(page.getByRole("button", { name: deletedLabel })).toBeVisible();
+});

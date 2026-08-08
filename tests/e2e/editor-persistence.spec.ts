@@ -248,3 +248,38 @@ test("al recargar con cambios sin guardar, el diálogo de borrador recupera la e
     await stopManagedServer(managed);
   }
 });
+
+test("el diálogo de conflicto 409 es modal, con nombre y opciones accesibles (T6.8)", async ({
+  browser,
+}) => {
+  const managed = await startManagedServer();
+  try {
+    const { pageA } = await createConflict(
+      browser,
+      managed.url,
+      "Predeterminado G",
+      "Predeterminado H",
+    );
+    const dialog = pageA.getByTestId("ui-conflict-dialog");
+    await expect(dialog).toHaveAttribute("role", "dialog");
+    await expect(dialog).toHaveAttribute("aria-modal", "true");
+    // React 19 genera ids de useId() con formato «r0», sin el prefijo
+    // "conflict"; el contrato accesible es que aria-labelledby apunte al
+    // título del diálogo.
+    const labelledBy = await dialog.getAttribute("aria-labelledby");
+    expect(labelledBy, "el diálogo referencia su título por id").not.toBeNull();
+    await expect(
+      dialog.getByRole("heading", { name: "La tienda cambió en otra pestaña" }),
+    ).toHaveId(labelledBy ?? "");
+    await expect(dialog.getByRole("heading", { name: "La tienda cambió en otra pestaña" })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Conservar borrador" })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Recargar desde disco" })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Duplicar con mi borrador" })).toBeVisible();
+
+    await dialog.getByRole("button", { name: "Conservar borrador" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(pageA.getByTestId("ui-studio-notice")).toContainText("Borrador conservado");
+  } finally {
+    await stopManagedServer(managed);
+  }
+});

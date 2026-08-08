@@ -209,9 +209,12 @@ test("exporta el borrador con estado generando y resultado de éxito", async ({ 
   await expect(draftButton).toBeDisabled();
   await expect(draftButton).toContainText("Generando");
   await expect(page.getByTestId("ui-export-progress")).toContainText("sitio borrador");
+  await expect(page.getByTestId("ui-export-stage")).toHaveCount(3);
+  await expect(page.getByTestId("ui-export-stage").first()).toContainText("Validando proyecto");
   await expect(page.getByTestId("ui-export-result")).toContainText("Exportación correcta", {
     timeout: 60_000,
   });
+  await expect(page.getByTestId("ui-export-stage").first()).toHaveAttribute("data-done", "true");
 });
 
 test("bloquea la exportación de producción cuando hay errores críticos visibles", async ({
@@ -228,4 +231,49 @@ test("bloquea la exportación de producción cuando hay errores críticos visibl
     timeout: 30_000,
   });
   await expect(page.getByTestId("ui-export-production")).toBeDisabled();
+});
+
+test("el respaldo del proyecto muestra progreso y deshabilita las acciones (T6.7)", async ({
+  page,
+}) => {
+  await openDemoCatalog(page);
+  await page.getByRole("tab", { name: "Exportar", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible();
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Descargar .solara.json" }).click();
+  await expect(page.getByTestId("ui-export-progress")).toContainText("Creando respaldo");
+  await expect(page.getByTestId("ui-export-draft")).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Importar respaldo" })).toBeDisabled();
+
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/\.solara\.json$/);
+  await expect(page.getByTestId("ui-export-progress")).toHaveCount(0);
+});
+
+test("importar un respaldo inválido pide confirmación y muestra un error accionable (T6.7)", async ({
+  page,
+}) => {
+  await openDemoCatalog(page);
+  await page.getByRole("tab", { name: "Exportar", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible();
+
+  // El lector distingue por el envelope (format/version): un JSON válido sin
+  // envelope se reporta como "versión anterior". Para ejercitar el error de
+  // respaldo corrupto el fixture debe ser JSON inválido.
+  await page.locator('input[type="file"][accept*="json"]').setInputFiles({
+    name: "respaldo-invalido.json",
+    mimeType: "application/json",
+    buffer: Buffer.from("{no es un respaldo solara", "utf8"),
+  });
+  const confirm = page.getByTestId("ui-confirm-dialog");
+  await expect(confirm).toBeVisible();
+  await expect(confirm).toContainText("Importar y reemplazar");
+  await confirm.getByRole("button", { name: "Importar y reemplazar" }).click();
+  await expect(confirm).toBeHidden();
+  await expect(page.getByTestId("ui-inline-error")).toBeVisible();
+  await expect(page.getByTestId("ui-inline-error")).toContainText(
+    "El respaldo está corrupto o no es JSON válido.",
+  );
+  await expect(page.getByTestId("ui-export-draft")).toBeEnabled();
 });

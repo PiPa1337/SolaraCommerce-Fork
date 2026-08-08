@@ -188,3 +188,44 @@ test("el preview y su toolbar responden en los 5 viewports", async ({ page }) =>
     }
   }
 });
+
+test("el recorrido clave del smoke no desborda en los 5 viewports (T6.3)", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(studioUrl);
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  const card = page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }).first();
+  await card.locator(".dashboard-store-card__button").click();
+  await page
+    .getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" })
+    .getByRole("button", { name: "Abrir tienda" })
+    .click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+
+    await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
+    await expectNoHorizontalOverflow(page, `Catálogo ${viewport.name}`);
+
+    await page.getByRole("button", { name: "Agregar producto" }).first().click();
+    const dialog = page.locator("dialog.product-dialog");
+    await expect(dialog).toBeVisible();
+    await expectNoHorizontalOverflow(page, `Diálogo de producto ${viewport.name}`);
+    await expectActionUsable(
+      page,
+      dialog.getByRole("button", { name: "Cancelar" }),
+      "Cancelar del diálogo de producto",
+    );
+    await dialog.getByRole("button", { name: "Cancelar" }).click();
+    await expect(dialog).toBeHidden();
+
+    await page.getByRole("tab", { name: "Constructor", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
+    await expectNoHorizontalOverflow(page, `Constructor ${viewport.name}`);
+
+    await page.getByRole("tab", { name: "Exportar", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Exportar", exact: true })).toBeVisible();
+    await expectNoHorizontalOverflow(page, `Exportar ${viewport.name}`);
+  }
+});

@@ -319,18 +319,23 @@ test("tilt y botones magnéticos responden al puntero fino", async ({ page }) =>
 
   const parallaxLayer = page.locator('[data-hero-parallax] [data-parallax-layer="1"]');
   await expect(parallaxLayer).toBeVisible();
-  await page.waitForTimeout(160);
-  const parallaxStyle = await parallaxLayer.evaluate((element) => {
-    const style = getComputedStyle(element);
-    const matrix = style.transform.match(/^matrix\((.+)\)$/);
-    if (!matrix) return { transform: style.transform, tx: 0, ty: 0 };
-    const values = matrix[1].split(", ").map(Number);
-    return { transform: style.transform, tx: values[4] ?? 0, ty: values[5] ?? 0 };
-  });
-  expect(
-    Math.abs(parallaxStyle.tx) + Math.abs(parallaxStyle.ty),
-    `la capa media del parallax debe traducirse con el puntero (transform: ${parallaxStyle.transform})`,
-  ).toBeGreaterThan(0);
+  // El parallax normaliza el puntero contra el centro del viewport: si el CTA
+  // quedó en (720, 450) de 1440x900, el target es (0, 0) y la capa no se
+  // traduce. Se mueve el puntero a un punto descentrado y se espera a que el
+  // easing acumule desplazamiento (no un tiempo fijo: depende de los frames).
+  await page.mouse.move(240, 260);
+  await expect
+    .poll(async () => {
+      const style = await parallaxLayer.evaluate((element) => {
+        const computed = getComputedStyle(element);
+        const matrix = computed.transform.match(/^matrix\((.+)\)$/);
+        if (!matrix) return { tx: 0, ty: 0 };
+        const values = matrix[1].split(", ").map(Number);
+        return { tx: values[4] ?? 0, ty: values[5] ?? 0 };
+      });
+      return Math.abs(style.tx) + Math.abs(style.ty);
+    })
+    .toBeGreaterThan(0);
   await expect(
     page.locator("[data-hero-parallax] .catalog-hero-media .catalog-hero-image"),
   ).toHaveClass(/solara-clip-reveal/);

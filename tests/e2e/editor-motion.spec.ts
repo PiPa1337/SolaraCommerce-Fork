@@ -1,0 +1,201 @@
+/**
+ * T5.1-T5.4 — Micro-interacciones del editor: hover de filas/cards, indicador
+ * de guardado animado, reduced-motion global y presupuesto de render del
+ * catálogo con la tienda demo (50 productos).
+ */
+import type { Server } from "node:http";
+import { expect, type Page, test } from "@playwright/test";
+import { startStudioServer, stopStudioServer } from "./studio-server";
+
+test.setTimeout(process.env.CI ? 120_000 : 60_000);
+
+/**
+ * Presupuesto de render de la tabla del catálogo con 50 productos, en
+ * milisegundos. Se fijó midiendo una ejecución de referencia y aplicando un
+ * margen de 1.5× (ver .superpowers/sdd/ola3-b-report.md).
+ */
+const CATALOG_TABLE_BUDGET_MS = 1500;
+
+let server: Server;
+let studioUrl: string;
+
+test.beforeAll(async () => {
+  const running = await startStudioServer();
+  server = running.server;
+  studioUrl = running.url;
+});
+
+test.afterAll(async () => {
+  await stopStudioServer(server);
+});
+
+async function openStore(page: Page, tab: string) {
+  await page.goto(studioUrl);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolveDelete, reject) => {
+        const request = indexedDB.deleteDatabase("solara-commerce-studio");
+        request.addEventListener("success", () => resolveDelete());
+        request.addEventListener("error", () => reject(request.error));
+      }),
+  );
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
+  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await page.getByRole("tab", { name: tab, exact: true }).click();
+  await expect(page.getByRole("heading", { name: tab })).toBeVisible();
+}
+
+test("las filas del catálogo y las cards del dashboard responden al hover (T5.1)", async ({
+  page,
+}) => {
+  await openStore(page, "Catálogo");
+  const rows = page.locator("tbody tr");
+  await expect(rows).toHaveCount(50);
+
+  // La primera fila puede quedar bajo el encabezado sticky de la tabla;
+  // se usa una fila más abajo y se la fuerza a viewport (el scroll del
+  // catálogo es un contenedor interno, no la ventana).
+  const rowBackground = await rows
+    .nth(5)
+    .evaluate((element) => getComputedStyle(element).backgroundColor);
+  await rows.nth(5).scrollIntoViewIfNeeded();
+  await rows.nth(5).hover();
+  // El hover de fila usa una transición CSS de 160 ms (background); leer el
+  // estilo justo después del hover devuelve el valor interpolado inicial y la
+  // comparación falla. Se espera a que la transición se asiente.
+  await expect
+    .poll(() =>
+      rows.nth(5).evaluate((element) => getComputedStyle(element).backgroundColor),
+    )
+    .not.toBe(rowBackground);
+
+  await page.getByRole("button", { name: "Volver a tiendas", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  const card = page.locator(".dashboard-store-card").first();
+  await expect(card).toBeVisible();
+  await card.scrollIntoViewIfNeeded();
+  const cardTransform = await card.evaluate((element) => getComputedStyle(element).transform);
+  await card.hover();
+  // Igual que la fila: la elevación usa una transición de 160 ms y leer el
+  // transform inmediatamente devuelve el valor inicial ("none").
+  await expect
+    .poll(() => card.evaluate((element) => getComputedStyle(element).transform))
+    .not.toBe(cardTransform);
+});
+
+test("con reduced-motion las transiciones y animaciones del editor quedan anuladas (T5.3)", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(studioUrl);
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+
+  const card = page.locator(".dashboard-store-card").first();
+  await expect(card).toBeVisible();
+  // La card usa estilos inline de motion; bajo reduced-motion el transform de
+  // hover queda anulado por el bloque CSS global (T5.3).
+  await card.hover();
+  expect(await card.evaluate((element) => getComputedStyle(element).transform)).toBe("none");
+
+  const spinnerAnimation = await page.evaluate(() => {
+    const spinner = document.createElement("span");
+    spinner.className = "save-spinner";
+    document.body.append(spinner);
+    const name = getComputedStyle(spinner).animationName;
+    spinner.remove();
+    return name;
+  });
+  expect(spinnerAnimation).toBe("none");
+
+  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
+  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
+
+  expect(
+    await page
+      .locator("tbody tr")
+      .first()
+      .evaluate((element) => getComputedStyle(element).transitionDuration),
+  ).toBe("0s");
+  // El editor-pane usa estilos inline de motion; los elementos CSS-driven
+  // (botones, filas, cards) son los que el bloque reduced-motion anula.
+  expect(
+    await page
+      .getByRole("button", { name: "Agregar producto" })
+      .evaluate((element) => getComputedStyle(element).transitionDuration),
+  ).toBe("0s");
+
+  await page.getByRole("button", { name: "Tarjetas", exact: true }).click();
+  expect(
+    await page
+      .locator(".catalog-card")
+      .first()
+      .evaluate((element) => getComputedStyle(element).transitionDuration),
+  ).toBe("0s");
+});
+
+test("el indicador de guardado pulsa mientras guarda y anima el check al confirmar (T5.2)", async ({
+  page,
+}) => {
+  await openStore(page, "Constructor");
+  const hero = page.getByRole("listitem").filter({ hasText: "Hero de catálogo" });
+  await hero.getByRole("button").first().click();
+
+  await page.evaluate(() => {
+    const probe = window as Window & { __solaraSawSaving?: boolean };
+    probe.__solaraSawSaving = false;
+    const indicator = document.querySelector(".save-indicator");
+    if (!(indicator instanceof Element)) return;
+    const observer = new MutationObserver(() => {
+      if (indicator.classList.contains("save-indicator--saving")) {
+        probe.__solaraSawSaving = true;
+      }
+    });
+    observer.observe(indicator, { attributes: true, attributeFilter: ["class"] });
+  });
+
+  await page.getByRole("textbox", { name: "Título", exact: true }).fill("Título con microinteracciones");
+  await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^Guardado/)).toBeVisible();
+
+  const sawSaving = await page.evaluate(
+    () => (window as { __solaraSawSaving?: boolean }).__solaraSawSaving === true,
+  );
+  expect(sawSaving).toBe(true);
+
+  const checkAnimation = await page.evaluate(() => {
+    const check = document.querySelector(".save-indicator--saved .save-check");
+    return check instanceof Element ? getComputedStyle(check).animationName : "";
+  });
+  expect(checkAnimation).toBe("save-check-in");
+});
+
+test("el catálogo con 50 productos renderiza la tabla dentro del presupuesto (T5.4)", async ({
+  page,
+}) => {
+  await openStore(page, "Resumen");
+  const elapsed = await page.evaluate(async () => {
+    const waitFor = async (predicate: () => boolean, timeoutMs = 30_000): Promise<boolean> => {
+      const deadline = performance.now() + timeoutMs;
+      while (!predicate()) {
+        if (performance.now() > deadline) return false;
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      }
+      return true;
+    };
+    const tab = [...document.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find(
+      (element) => element.textContent?.trim() === "Catálogo",
+    );
+    const start = performance.now();
+    tab?.click();
+    const ready = await waitFor(() => [...document.querySelectorAll("tbody tr")].length === 50);
+    return ready ? performance.now() - start : Number.POSITIVE_INFINITY;
+  });
+  console.log(
+    `perf: catálogo 50 filas ${elapsed.toFixed(0)} ms (budget ${CATALOG_TABLE_BUDGET_MS} ms)`,
+  );
+  expect(elapsed).toBeLessThanOrEqual(CATALOG_TABLE_BUDGET_MS);
+});
