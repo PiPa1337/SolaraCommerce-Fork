@@ -29,12 +29,13 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   type PaginationState,
+  type Row,
   type RowSelectionState,
   type SortingState,
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Button, EmptyState, Field, InlineError, SectionHeader } from "../components/Ui";
 import { buildCatalogPackagePlan, type CatalogPackagePlan } from "../lib/catalogPackage";
 import {
@@ -345,10 +346,38 @@ function CatalogCard({
   );
 }
 
+/** Fila de tabla memoizada (T5.4): al cambiar la selección o filtrar, sólo
+ *  se re-renderizan las filas cuyo estado propio cambió; las celdas leen el
+ *  contexto fresco en cada render de la fila. */
+const CatalogRow = memo(
+  function CatalogRow({
+    row,
+    selected,
+    columnVisibility: _columnVisibility,
+  }: {
+    row: Row<Product>;
+    selected: boolean;
+    columnVisibility: VisibilityState;
+  }) {
+    return (
+      <tr data-selected={selected}>
+        {row.getVisibleCells().map((cell) => (
+          <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+        ))}
+      </tr>
+    );
+  },
+  (prev, next) =>
+    prev.row === next.row &&
+    prev.selected === next.selected &&
+    prev.columnVisibility === next.columnVisibility,
+);
+
 export function Catalog({ project, onCommand, onChange }: CatalogProps) {
   const [selection, setSelection] = useState<RowSelectionState>({});
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 50 });
+  const [filterDraft, setFilterDraft] = useState("");
   const [filter, setFilter] = useState("");
   const [status, setStatus] = useState<Product["status"]>("active");
   const [priceKind, setPriceKind] = useState<"percentage" | "amount">("percentage");
@@ -390,6 +419,11 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
       return Object.fromEntries(entries);
     });
   }, [project.products]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setFilter(filterDraft), 300);
+    return () => window.clearTimeout(timer);
+  }, [filterDraft]);
 
   const columns = useMemo<ColumnDef<Product>[]>(
     () => [
@@ -957,8 +991,8 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
           filteredRows={filteredRows}
           hasProducts={hasProducts}
           selectedIds={selectedIds}
-          filter={filter}
-          setFilter={setFilter}
+          filter={filterDraft}
+          setFilter={setFilterDraft}
           categoryFilterId={categoryFilterId}
           setCategoryFilterId={setCategoryFilterId}
           setPagination={setPagination}
@@ -1046,13 +1080,12 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
               </thead>
               <tbody>
                 {table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} data-selected={row.getIsSelected()}>
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
+                  <CatalogRow
+                    key={row.id}
+                    row={row}
+                    selected={row.getIsSelected()}
+                    columnVisibility={columnVisibility}
+                  />
                 ))}
                 {table.getRowModel().rows.length === 0 ? (
                   <tr>

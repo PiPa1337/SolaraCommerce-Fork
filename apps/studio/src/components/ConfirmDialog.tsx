@@ -5,7 +5,7 @@
  * El padre debe montarlo condicionalmente (sólo mientras sea visible).
  */
 import { X } from "@phosphor-icons/react";
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useId, useRef } from "react";
 import { Button } from "./Ui";
 
 export function ConfirmDialog({
@@ -30,6 +30,7 @@ export function ConfirmDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
   const busyRef = useRef(busy);
   const onConfirmRef = useRef(onConfirm);
   const onCancelRef = useRef(onCancel);
@@ -69,10 +70,15 @@ export function ConfirmDialog({
   }, [danger]);
 
   return (
-    <dialog className="confirm-dialog" ref={dialogRef} data-testid="ui-confirm-dialog">
+    <dialog
+      className="confirm-dialog"
+      ref={dialogRef}
+      data-testid="ui-confirm-dialog"
+      aria-labelledby={titleId}
+    >
       <div className="confirm-dialog__panel">
         <header className="confirm-dialog__header">
-          <h3>{title}</h3>
+          <h3 id={titleId}>{title}</h3>
           <button
             className="icon-button"
             type="button"

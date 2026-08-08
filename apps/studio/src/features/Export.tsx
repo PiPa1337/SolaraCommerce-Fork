@@ -1,5 +1,8 @@
 /** Panel de exportación que distingue draft/production y muestra bloqueos accionables. */
 import {
+  ArrowRight,
+  CheckCircle,
+  Circle,
   DownloadSimple,
   FileArchive,
   ShieldCheck,
@@ -9,13 +12,84 @@ import {
 import type { OptimizationReport } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { useEffect, useRef, useState } from "react";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Button, InlineError, SectionHeader } from "../components/Ui";
+import { formatDate } from "../lib/format";
 import { downloadBlob } from "../lib/projectArchive";
 import {
   createProjectArchiveInWorker,
   exportSiteInWorker,
   readProjectArchiveInWorker,
 } from "../lib/workers";
+
+interface ExportHistoryEntry {
+  at: string;
+  mode: "draft" | "production";
+  score: number;
+  critical: number;
+}
+
+const EXPORT_STAGES = [
+  { id: "validate", label: "Validando proyecto" },
+  { id: "render", label: "Renderizando páginas" },
+  { id: "package", label: "Empaquetando archivos" },
+] as const;
+
+const HISTORY_KEY_PREFIX = "solara-export-history:";
+
+function loadHistory(slug: string): ExportHistoryEntry[] {
+  try {
+    const raw = window.localStorage.getItem(`${HISTORY_KEY_PREFIX}${slug}`);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as ExportHistoryEntry[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function ExportStages({ done }: { done: boolean }) {
+  return (
+    <section
+      className="guided-checklist"
+      data-testid="ui-export-stages"
+      aria-label="Etapas de exportación"
+    >
+      <div className="guided-checklist__header">
+        <div>
+          <span className="guided-kicker">Exportación</span>
+          <h3>Etapas de generación</h3>
+        </div>
+        {!done ? (
+          <span className="guided-checklist__more">
+            El worker informa el resultado final; las etapas se marcan al completar.
+          </span>
+        ) : null}
+      </div>
+      <ul>
+        {EXPORT_STAGES.map((stage) => (
+          <li key={stage.id} data-testid="ui-export-stage" data-stage={stage.id} data-done={done}>
+            <span
+              className="guided-checklist__status"
+              style={done ? { color: "var(--accent)" } : undefined}
+              aria-hidden
+            >
+              {done ? (
+                <CheckCircle size={18} weight="fill" />
+              ) : (
+                <span className="spinner" aria-hidden />
+              )}
+            </span>
+            <span className="guided-checklist__text">
+              <strong>{stage.label}</strong>
+              <small>{done ? "Completado" : "En curso…"}</small>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 export function ExportPanel({
   project,
@@ -31,6 +105,11 @@ export function ExportPanel({
   const [critical, setCritical] = useState(0);
   const [publicAiContext, setPublicAiContext] = useState(true);
   const [optimization, setOptimization] = useState<OptimizationReport | null>(null);
+  const [exportDone, setExportDone] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<"production" | "import" | "">("");
+  const [pendingImport, setPendingImport] = useState<File | null>(null);
+  const [history, setHistory] = useState<ExportHistoryEntry[]>(() => loadHistory(project.slug));
+  const [postDone, setPostDone] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
@@ -49,16 +128,42 @@ export function ExportPanel({
     };
   }, [project, publicAiContext]);
 
+  const recordHistory = (entry: Omit<ExportHistoryEntry, "at">) => {
+    const next: ExportHistoryEntry[] = [
+      { at: new Date().toISOString(), ...entry },
+      ...history,
+    ].slice(0, 8);
+    setHistory(next);
+    try {
+      window.localStorage.setItem(`${HISTORY_KEY_PREFIX}${project.slug}`, JSON.stringify(next));
+    } catch {
+      // Almacenamiento bloqueado: el historial vive sólo en memoria.
+    }
+  };
+
+  const clearHistory = () => {
+    setHistory([]);
+    try {
+      window.localStorage.removeItem(`${HISTORY_KEY_PREFIX}${project.slug}`);
+    } catch {
+      // Almacenamiento bloqueado: nada que limpiar.
+    }
+  };
+
   const exportSite = async (mode: "draft" | "production") => {
     setBusy(mode);
     setError("");
     setNotice("");
+    setExportDone(false);
     try {
       const result = await exportSiteInWorker(project, mode, {
         publicAiContext,
         optimizationProfile: "safe",
       });
       setOptimization(result.optimization);
+      recordHistory({ mode, score: result.optimization.score, critical: result.optimization.counts.critical });
+      setExportDone(true);
+      setPostDone(new Set());
       setNotice(
         "Exportación correcta. El sitio público se guarda en proyectos/<tienda>/sitios/ al guardar con el lanzador; podés abrirlo desde el dashboard.",
       );
@@ -97,6 +202,45 @@ export function ExportPanel({
     }
   };
 
+  const togglePostItem = (id: string) => {
+    setPostDone((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const navigateToSeo = () => {
+    document.getElementById("studio-tab-seo")?.click();
+  };
+
+  const postItems = [
+    {
+      id: "site",
+      title: "Abrir el sitio",
+      detail:
+        "Con el lanzador, el sitio queda en proyectos/<tienda>/sitios/ y se abre desde el dashboard.",
+      action: null,
+    },
+    {
+      id: "seo",
+      title: "Revisar SEO",
+      detail: "Verificá el checklist de publicación y la vista del crawler antes de producir.",
+      action: (
+        <Button variant="quiet" size="sm" icon={ArrowRight} data-testid="ui-export-check-seo" onClick={navigateToSeo}>
+          Ir a SEO
+        </Button>
+      ),
+    },
+    {
+      id: "production",
+      title: "Exportar producción",
+      detail: "Cuando no queden errores críticos, generá el sitio final desde la opción de arriba.",
+      action: null,
+    },
+  ];
+
   return (
     <section className="workspace-section">
       <SectionHeader
@@ -119,6 +263,67 @@ export function ExportPanel({
         <output className="export-notice" data-testid="ui-export-result">
           {notice}
         </output>
+      ) : null}
+      {busy === "draft" || busy === "production" ? (
+        <ExportStages done={false} />
+      ) : exportDone ? (
+        <ExportStages done />
+      ) : null}
+      {exportDone ? (
+        <section
+          className="guided-checklist"
+          data-testid="ui-export-checklist"
+          aria-label="Después de exportar"
+        >
+          <div className="guided-checklist__header">
+            <div>
+              <span className="guided-kicker">Siguiente</span>
+              <h3>Revisar la exportación</h3>
+            </div>
+            <span className="guided-checklist__more">Pasos opcionales</span>
+          </div>
+          <ul>
+            {postItems.map((item) => {
+              const done = postDone.has(item.id);
+              return (
+                <li
+                  key={item.id}
+                  data-testid="ui-export-check-item"
+                  data-check-id={item.id}
+                  data-done={done}
+                >
+                  <span
+                    className="guided-checklist__status"
+                    style={done ? { color: "var(--accent)" } : undefined}
+                    aria-hidden
+                  >
+                    {done ? (
+                      <CheckCircle size={18} weight="fill" />
+                    ) : (
+                      <Circle size={18} />
+                    )}
+                  </span>
+                  <span className="guided-checklist__text">
+                    <strong>{item.title}</strong>
+                    <small>{item.detail}</small>
+                  </span>
+                  {item.action ?? (
+                    <Button
+                      variant="quiet"
+                      size="sm"
+                      icon={done ? CheckCircle : Circle}
+                      aria-pressed={done}
+                      data-testid="ui-export-check-toggle"
+                      onClick={() => togglePostItem(item.id)}
+                    >
+                      {done ? "Listo" : "Marcar"}
+                    </Button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       ) : null}
       <label className="export-ai-context">
         <input
@@ -154,7 +359,10 @@ export function ExportPanel({
               accept=".json,.solara.json,application/json"
               onChange={(event) => {
                 const file = event.target.files?.[0];
-                if (file) void importArchive(file);
+                if (file) {
+                  setPendingImport(file);
+                  setConfirmAction("import");
+                }
                 event.target.value = "";
               }}
             />
@@ -197,13 +405,89 @@ export function ExportPanel({
           <Button
             variant="primary"
             data-testid="ui-export-production"
-            onClick={() => void exportSite("production")}
+            onClick={() => setConfirmAction("production")}
             disabled={Boolean(busy) || critical > 0}
           >
             {busy === "production" ? "Generando" : "Exportar producción"}
           </Button>
         </article>
       </div>
+
+      {history.length > 0 ? (
+        <div className="audit-panel" data-testid="ui-export-history">
+          <header>
+            <div>
+              <h3>Historial de exportaciones</h3>
+              <p>Intentos exitosos registrados en este navegador.</p>
+            </div>
+            <Button variant="quiet" size="sm" data-testid="ui-export-history-clear" onClick={clearHistory}>
+              Borrar historial
+            </Button>
+          </header>
+          <div className="audit-list">
+            {history.map((entry, index) => (
+              <article
+                className="audit-item"
+                data-testid="ui-export-history-item"
+                data-mode={entry.mode}
+                key={`${entry.at}-${index}`}
+              >
+                <CheckCircle aria-hidden size={18} />
+                <div>
+                  <strong>
+                    {entry.mode === "production" ? "Producción" : "Borrador"} ·{" "}
+                    {formatDate(entry.at)}
+                  </strong>
+                  <p>
+                    Salud {entry.score}/100 · {entry.critical} críticos
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {confirmAction === "production" ? (
+        <ConfirmDialog
+          title="Exportar sitio de producción"
+          confirmLabel="Exportar producción"
+          body={
+            <p>
+              Se generará el HTML final con sitemap, datos estructurados y feed de Merchant.
+              Revisá el preview y el checklist SEO antes de continuar.
+            </p>
+          }
+          onConfirm={() => {
+            setConfirmAction("");
+            void exportSite("production");
+          }}
+          onCancel={() => setConfirmAction("")}
+        />
+      ) : null}
+      {confirmAction === "import" ? (
+        <ConfirmDialog
+          title="Importar respaldo"
+          danger
+          confirmLabel="Importar y reemplazar"
+          body={
+            <p>
+              El respaldo reemplazará el proyecto actual y los cambios sin guardar se perderán.
+              ¿Continuar?
+            </p>
+          }
+          onConfirm={() => {
+            const file = pendingImport;
+            setConfirmAction("");
+            setPendingImport(null);
+            if (file) void importArchive(file);
+          }}
+          onCancel={() => {
+            setConfirmAction("");
+            setPendingImport(null);
+          }}
+        />
+      ) : null}
     </section>
   );
 }

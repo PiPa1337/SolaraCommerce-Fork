@@ -533,7 +533,18 @@ th {
 }
 
 tbody tr {
-  transition: background 160ms ease;
+  transition:
+    background 160ms ease,
+    transform 140ms ease;
+}
+
+tbody tr:hover {
+  transform: translateY(-1px);
+  background: var(--ui-surface-raised, var(--surface, transparent));
+}
+
+.table-sort:hover {
+  color: var(--accent);
 }
 
 .builder-grid {
@@ -614,9 +625,15 @@ tbody tr {
     display: grid;
   }
 
+  .workspace-section > *,
+  .section-header > * {
+    min-width: 0;
+  }
+
   .section-actions,
   .add-section {
     justify-content: flex-start;
+    min-width: 0;
   }
 
   .catalog-toolbar {
@@ -982,16 +999,8 @@ tbody tr {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto;
-    animation-duration: 0.01ms;
-    animation-iteration-count: 1;
-    transition-duration: 0.01ms;
-  }
-}
+/* El bloque global de reduced-motion vive al final del archivo para vencer
+   por orden a los shorthands de clase. */
 
 .create-store__steps {
   display: flex;
@@ -1510,8 +1519,44 @@ button.status-label:focus-visible {
   }
 }
 
+/* --- T5.3: reduced-motion global. El catch-all `*` cubre animaciones; la
+   lista anula los shorthands de clase (mayor especificidad que `*`). --- */
+
 @media (prefers-reduced-motion: reduce) {
-  .catalog-card {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto;
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
+  }
+
+  input,
+  select,
+  textarea,
+  .skip-link,
+  .studio-nav button,
+  .button,
+  .editor-pane,
+  tbody tr,
+  .section-row-actions,
+  .catalog-card,
+  .overview-accordion__caret,
+  .overview-accordion__panel:not([hidden]),
+  .overview-save-indicator--unsaved svg,
+  .dashboard-store-card__open,
+  .guided-progress__meter span,
+  .category-tree-toggle,
+  .category-tree-toggle svg,
+  .preview-stage iframe {
+    animation: none;
     transition: none;
+  }
+
+  tbody tr:hover,
+  .dashboard-store-card:hover,
+  .button:hover {
+    transform: none;
   }
 }

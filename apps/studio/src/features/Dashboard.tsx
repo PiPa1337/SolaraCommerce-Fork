@@ -15,7 +15,9 @@ import {
 import { motion, useReducedMotion } from "motion/react";
 import {
   lazy,
+  memo,
   type KeyboardEvent as ReactKeyboardEvent,
+  type RefObject,
   Suspense,
   useCallback,
   useEffect,
@@ -100,6 +102,122 @@ interface DashboardProps {
   onOpenFolder?(id: string): Promise<void>;
   onSessionManaged?(managed: boolean): void;
 }
+
+interface DashboardStoreCardProps {
+  record: StoredProject;
+  index: number;
+  isSelected: boolean;
+  isPinned: boolean;
+  compareMode: boolean;
+  isCompared: boolean;
+  reduceMotion: boolean | null;
+  cardButtonRefs: RefObject<Map<string, HTMLButtonElement>>;
+  onOpen(id: string): void;
+  onSelect(id: string): void;
+  onPin(id: string): void;
+  onToggleCompare(id: string): void;
+  onKeyDown(event: ReactKeyboardEvent<HTMLElement>, record: StoredProject): void;
+}
+
+/** Card de tienda memoizada (T5.4): los handlers son useCallback estables y
+ *  los datos vienen por referencia, así la selección/fijación sólo re-renderiza
+ *  las cards afectadas mientras se escribe en la búsqueda. */
+const DashboardStoreCard = memo(function DashboardStoreCard({
+  record,
+  index,
+  isSelected,
+  isPinned,
+  compareMode,
+  isCompared,
+  reduceMotion,
+  cardButtonRefs,
+  onOpen,
+  onSelect,
+  onPin,
+  onToggleCompare,
+  onKeyDown,
+}: DashboardStoreCardProps) {
+  const metrics = getProjectMetrics(record.project);
+  const updatedLabel = formatDate(record.updatedAt);
+  return (
+    <motion.article
+      className={`dashboard-store-card${isSelected ? " is-selected" : ""}${
+        compareMode ? " is-compare-mode" : ""
+      }`}
+      initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2, delay: Math.min(index * 0.025, 0.25) }}
+      // La elevación al hover debe pasar por motion: la animación de entrada
+      // deja un transform inline y el CSS `:hover` no puede pisarlo (T5.1).
+      {...(reduceMotion
+        ? {}
+        : { whileHover: { y: -2, transition: { duration: 0.16, delay: 0 } } as const })}
+      onKeyDown={(event) => onKeyDown(event, record)}
+    >
+      {compareMode ? (
+        <input
+          type="checkbox"
+          className="dashboard-store-card__compare"
+          data-testid="ui-card-compare"
+          aria-label={`Comparar ${record.name}`}
+          checked={isCompared}
+          onChange={() => onToggleCompare(record.id)}
+        />
+      ) : null}
+      <button
+        type="button"
+        className="dashboard-store-card__pin"
+        aria-pressed={isPinned}
+        aria-label={isPinned ? "Quitar de fijadas" : "Fijar tienda"}
+        data-testid="ui-card-pin"
+        onClick={() => onPin(record.id)}
+      >
+        <Star aria-hidden size={16} weight={isPinned ? "fill" : "regular"} />
+      </button>
+      <button
+        className="dashboard-store-card__button"
+        type="button"
+        aria-pressed={isSelected}
+        data-store-card-id={record.id}
+        ref={(element) => {
+          if (element) cardButtonRefs.current.set(record.id, element);
+          else cardButtonRefs.current.delete(record.id);
+        }}
+        onClick={() => onSelect(record.id)}
+        onDoubleClick={() => onOpen(record.id)}
+      >
+        <span className="dashboard-store-card__index">{index + 1}</span>
+        <span className="dashboard-store-card__mark" aria-hidden>
+          {record.name.slice(0, 2).toUpperCase()}
+        </span>
+        <strong>{record.name}</strong>
+        <span className={`dashboard-store-card__status is-${record.status}`}>
+          <span aria-hidden />
+          {statusLabel(record.status)}
+        </span>
+        <span className="dashboard-store-card__meta">
+          {metrics.activeProducts.toLocaleString("es-AR")} productos
+        </span>
+        <time
+          className="dashboard-store-card__meta"
+          dateTime={record.updatedAt}
+          title={`Actualizada ${updatedLabel}`}
+        >
+          {formatCompactDate(record.updatedAt)}
+        </time>
+      </button>
+      <button
+        className="dashboard-store-card__open"
+        type="button"
+        data-testid="ui-card-open"
+        aria-label="Abrir esta tienda"
+        onClick={() => onOpen(record.id)}
+      >
+        Abrir <ArrowUpRight aria-hidden size={13} />
+      </button>
+    </motion.article>
+  );
+});
 
 type DashboardView = "grid" | "list";
 
@@ -332,78 +450,131 @@ export function Dashboard({
     });
   }, []);
 
-  const moveCardSelection = (key: string, fromId: string) => {
-    const ids = visible.map((record) => record.id);
-    if (ids.length === 0) return;
-    const fromIndex = ids.indexOf(fromId);
-    if (fromIndex === -1) return;
-    if (key !== "ArrowUp" && key !== "ArrowDown") {
-      const delta = key === "ArrowRight" ? 1 : -1;
-      const nextId = ids[(fromIndex + delta + ids.length) % ids.length];
-      if (nextId) selectCard(nextId, { focusCard: true });
-      return;
-    }
-    const goingDown = key === "ArrowDown";
-    const fromRect = cardButtonRefs.current.get(fromId)?.getBoundingClientRect();
-    if (!fromRect) return;
-    let bestIndex = -1;
-    let bestScore = Number.POSITIVE_INFINITY;
-    for (let index = 0; index < ids.length; index++) {
-      if (index === fromIndex) continue;
-      const candidateId = ids[index];
-      if (!candidateId) continue;
-      const rect = cardButtonRefs.current.get(candidateId)?.getBoundingClientRect();
-      if (!rect) continue;
-      const deltaY = goingDown ? rect.top - fromRect.top : fromRect.top - rect.top;
-      if (deltaY < -4) continue;
-      const fromCenterX = fromRect.left + fromRect.width / 2;
-      const centerX = rect.left + rect.width / 2;
-      const score = Math.abs(centerX - fromCenterX) * 100 + Math.abs(deltaY);
-      if (score < bestScore) {
-        bestScore = score;
-        bestIndex = index;
-      }
-    }
-    const bestId = ids[bestIndex];
-    if (bestId) selectCard(bestId, { focusCard: true });
-  };
+  const announceAction = useCallback((message: string) => {
+    setActionNotice(message);
+    window.clearTimeout(actionNoticeTimerRef.current);
+    actionNoticeTimerRef.current = window.setTimeout(() => setActionNotice(""), 5000);
+  }, []);
 
-  const handleCardKeyDown = (event: ReactKeyboardEvent<HTMLElement>, record: StoredProject) => {
-    const target = event.target as HTMLElement;
-    if (event.key === "Escape") {
-      event.preventDefault();
-      setSelectedId(undefined);
-      return;
-    }
-    const onCardControl =
-      target.hasAttribute("data-store-card-id") ||
-      target.classList.contains("dashboard-store-card__open");
-    if (!onCardControl) return;
-    if (event.key === "Enter") {
-      if (target.hasAttribute("data-store-card-id")) {
-        event.preventDefault();
-        onOpen(record.id);
+  const showToast = useCallback((next: DashboardToast) => {
+    setToast(next);
+    window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => setToast(undefined), 5000);
+  }, []);
+
+  const handleArchive = useCallback(
+    async (id: string, archived: boolean) => {
+      if (archived) {
+        const record = projects.find((item) => item.id === id);
+        const confirmed = window.confirm(
+          record
+            ? `¿Archivar la tienda "${record.name}"? Podés restaurarla después desde el filtro de archivadas.`
+            : "¿Archivar esta tienda? Podés restaurarla después.",
+        );
+        if (!confirmed) return;
       }
-      return;
-    }
-    if (event.key === " ") {
-      if (target.classList.contains("dashboard-store-card__open")) {
-        event.preventDefault();
-        selectCard(record.id);
+      try {
+        await onArchive(id, archived);
+      } catch {
+        // el error ya quedó visible en el banner global del dashboard
+        return;
       }
-      return;
-    }
-    if (event.key === "Delete" || event.key === "Backspace") {
-      if (record.status === "archived") return;
-      event.preventDefault();
-      void handleArchive(record.id, true);
-      return;
-    }
-    if (event.key.startsWith("Arrow")) {
-      event.preventDefault();
-      moveCardSelection(event.key, record.id);
-    }
-  };
+      if (archived) {
+        const record = projects.find((item) => item.id === id);
+        showToast({
+          message: `Tienda "${record?.name ?? "archivada"}" archivada.`,
+          actionLabel: "Deshacer",
+          onAction: () => {
+            setToast(undefined);
+            void handleArchive(id, false);
+          },
+        });
+      }
+    },
+    [onArchive, projects, showToast],
+  );
+
+  const visibleRef = useRef<StoredProject[]>(visible);
+  visibleRef.current = visible;
+
+  const moveCardSelection = useCallback(
+    (key: string, fromId: string) => {
+      const ids = visibleRef.current.map((record) => record.id);
+      if (ids.length === 0) return;
+      const fromIndex = ids.indexOf(fromId);
+      if (fromIndex === -1) return;
+      if (key !== "ArrowUp" && key !== "ArrowDown") {
+        const delta = key === "ArrowRight" ? 1 : -1;
+        const nextId = ids[(fromIndex + delta + ids.length) % ids.length];
+        if (nextId) selectCard(nextId, { focusCard: true });
+        return;
+      }
+      const goingDown = key === "ArrowDown";
+      const fromRect = cardButtonRefs.current.get(fromId)?.getBoundingClientRect();
+      if (!fromRect) return;
+      let bestIndex = -1;
+      let bestScore = Number.POSITIVE_INFINITY;
+      for (let index = 0; index < ids.length; index++) {
+        if (index === fromIndex) continue;
+        const candidateId = ids[index];
+        if (!candidateId) continue;
+        const rect = cardButtonRefs.current.get(candidateId)?.getBoundingClientRect();
+        if (!rect) continue;
+        const deltaY = goingDown ? rect.top - fromRect.top : fromRect.top - rect.top;
+        if (deltaY < -4) continue;
+        const fromCenterX = fromRect.left + fromRect.width / 2;
+        const centerX = rect.left + rect.width / 2;
+        const score = Math.abs(centerX - fromCenterX) * 100 + Math.abs(deltaY);
+        if (score < bestScore) {
+          bestScore = score;
+          bestIndex = index;
+        }
+      }
+      const bestId = ids[bestIndex];
+      if (bestId) selectCard(bestId, { focusCard: true });
+    },
+    [selectCard],
+  );
+
+  const handleCardKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLElement>, record: StoredProject) => {
+      const target = event.target as HTMLElement;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setSelectedId(undefined);
+        return;
+      }
+      const onCardControl =
+        target.hasAttribute("data-store-card-id") ||
+        target.classList.contains("dashboard-store-card__open");
+      if (!onCardControl) return;
+      if (event.key === "Enter") {
+        if (target.hasAttribute("data-store-card-id")) {
+          event.preventDefault();
+          onOpen(record.id);
+        }
+        return;
+      }
+      if (event.key === " ") {
+        if (target.classList.contains("dashboard-store-card__open")) {
+          event.preventDefault();
+          selectCard(record.id);
+        }
+        return;
+      }
+      if (event.key === "Delete" || event.key === "Backspace") {
+        if (record.status === "archived") return;
+        event.preventDefault();
+        void handleArchive(record.id, true);
+        return;
+      }
+      if (event.key.startsWith("Arrow")) {
+        event.preventDefault();
+        moveCardSelection(event.key, record.id);
+      }
+    },
+    [handleArchive, moveCardSelection, onOpen, selectCard],
+  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -439,18 +610,6 @@ export function Dashboard({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [creating, openCreate, shutdownDialogOpen, shutdownState, duplicateTarget, compareOpen]);
-
-  const announceAction = useCallback((message: string) => {
-    setActionNotice(message);
-    window.clearTimeout(actionNoticeTimerRef.current);
-    actionNoticeTimerRef.current = window.setTimeout(() => setActionNotice(""), 5000);
-  }, []);
-
-  const showToast = useCallback((next: DashboardToast) => {
-    setToast(next);
-    window.clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = window.setTimeout(() => setToast(undefined), 5000);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -558,35 +717,6 @@ export function Dashboard({
 
   useEffect(() => () => window.clearTimeout(toastTimerRef.current), []);
 
-  const handleArchive = async (id: string, archived: boolean) => {
-    if (archived) {
-      const record = projects.find((item) => item.id === id);
-      const confirmed = window.confirm(
-        record
-          ? `¿Archivar la tienda "${record.name}"? Podés restaurarla después desde el filtro de archivadas.`
-          : "¿Archivar esta tienda? Podés restaurarla después.",
-      );
-      if (!confirmed) return;
-    }
-    try {
-      await onArchive(id, archived);
-    } catch {
-      // el error ya quedó visible en el banner global del dashboard
-      return;
-    }
-    if (archived) {
-      const record = projects.find((item) => item.id === id);
-      showToast({
-        message: `Tienda "${record?.name ?? "archivada"}" archivada.`,
-        actionLabel: "Deshacer",
-        onAction: () => {
-          setToast(undefined);
-          void handleArchive(id, false);
-        },
-      });
-    }
-  };
-
   const openDuplicate = async (id: string) => {
     setDuplicateTarget(projects.find((record) => record.id === id));
   };
@@ -619,13 +749,13 @@ export function Dashboard({
     setCompareMode(true);
   };
 
-  const toggleCompareId = (id: string) => {
+  const toggleCompareId = useCallback((id: string) => {
     setCompareIds((current) => {
       if (current.includes(id)) return current.filter((item) => item !== id);
       if (current.length >= 2) return current;
       return [...current, id];
     });
-  };
+  }, []);
 
   const backupAll = async () => {
     if (!managed || backingUp) return;
@@ -683,88 +813,6 @@ export function Dashboard({
     } finally {
       setDownloadingId(undefined);
     }
-  };
-
-  const renderCard = (record: StoredProject) => {
-    const metrics = getProjectMetrics(record.project);
-    const isSelected = record.id === selectedId;
-    const isPinned = pinnedIds.includes(record.id);
-    const index = visibleIndexById.get(record.id) ?? 0;
-    const updatedLabel = formatDate(record.updatedAt);
-    return (
-      <motion.article
-        className={`dashboard-store-card${isSelected ? " is-selected" : ""}${
-          compareMode ? " is-compare-mode" : ""
-        }`}
-        key={record.id}
-        initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2, delay: Math.min(index * 0.025, 0.25) }}
-        onKeyDown={(event) => handleCardKeyDown(event, record)}
-      >
-        {compareMode ? (
-          <input
-            type="checkbox"
-            className="dashboard-store-card__compare"
-            data-testid="ui-card-compare"
-            aria-label={`Comparar ${record.name}`}
-            checked={compareIds.includes(record.id)}
-            onChange={() => toggleCompareId(record.id)}
-          />
-        ) : null}
-        <button
-          type="button"
-          className="dashboard-store-card__pin"
-          aria-pressed={isPinned}
-          aria-label={isPinned ? "Quitar de fijadas" : "Fijar tienda"}
-          data-testid="ui-card-pin"
-          onClick={() => togglePin(record.id)}
-        >
-          <Star aria-hidden size={16} weight={isPinned ? "fill" : "regular"} />
-        </button>
-        <button
-          className="dashboard-store-card__button"
-          type="button"
-          aria-pressed={isSelected}
-          data-store-card-id={record.id}
-          ref={(element) => {
-            if (element) cardButtonRefs.current.set(record.id, element);
-            else cardButtonRefs.current.delete(record.id);
-          }}
-          onClick={() => selectCard(record.id)}
-          onDoubleClick={() => onOpen(record.id)}
-        >
-          <span className="dashboard-store-card__index">{index + 1}</span>
-          <span className="dashboard-store-card__mark" aria-hidden>
-            {record.name.slice(0, 2).toUpperCase()}
-          </span>
-          <strong>{record.name}</strong>
-          <span className={`dashboard-store-card__status is-${record.status}`}>
-            <span aria-hidden />
-            {statusLabel(record.status)}
-          </span>
-          <span className="dashboard-store-card__meta">
-            {metrics.activeProducts.toLocaleString("es-AR")} productos
-          </span>
-          <time
-            className="dashboard-store-card__meta"
-            dateTime={record.updatedAt}
-            title={`Actualizada ${updatedLabel}`}
-          >
-            {formatCompactDate(record.updatedAt)}
-          </time>
-        </button>
-        <button
-          className="dashboard-store-card__open"
-          type="button"
-          data-testid="ui-card-open"
-          aria-label="Abrir esta tienda"
-          onClick={() => onOpen(record.id)}
-        >
-          Abrir <ArrowUpRight aria-hidden size={13} />
-        </button>
-      </motion.article>
-    );
   };
 
   return (
@@ -946,14 +994,48 @@ export function Dashboard({
                     >
                       <h3 id={pinnedGroupTitleId}>Fijadas</h3>
                       <div className="dashboard-cosmic-store-grid">
-                        {pinnedVisible.map((record) => renderCard(record))}
+                        {pinnedVisible.map((record) => (
+                          <DashboardStoreCard
+                            key={record.id}
+                            record={record}
+                            index={visibleIndexById.get(record.id) ?? 0}
+                            isSelected={record.id === selectedId}
+                            isPinned={pinnedIds.includes(record.id)}
+                            compareMode={compareMode}
+                            isCompared={compareIds.includes(record.id)}
+                            reduceMotion={reduceMotion}
+                            cardButtonRefs={cardButtonRefs}
+                            onOpen={onOpen}
+                            onSelect={selectCard}
+                            onPin={togglePin}
+                            onToggleCompare={toggleCompareId}
+                            onKeyDown={handleCardKeyDown}
+                          />
+                        ))}
                       </div>
                     </section>
                   ) : null}
                   <section className="dashboard-cosmic-group">
                     {pinnedVisible.length > 0 ? <h3>Todas</h3> : null}
                     <div className="dashboard-cosmic-store-grid">
-                      {restVisible.map((record) => renderCard(record))}
+                      {restVisible.map((record) => (
+                        <DashboardStoreCard
+                          key={record.id}
+                          record={record}
+                          index={visibleIndexById.get(record.id) ?? 0}
+                          isSelected={record.id === selectedId}
+                          isPinned={pinnedIds.includes(record.id)}
+                          compareMode={compareMode}
+                          isCompared={compareIds.includes(record.id)}
+                          reduceMotion={reduceMotion}
+                          cardButtonRefs={cardButtonRefs}
+                          onOpen={onOpen}
+                          onSelect={selectCard}
+                          onPin={togglePin}
+                          onToggleCompare={toggleCompareId}
+                          onKeyDown={handleCardKeyDown}
+                        />
+                      ))}
                     </div>
                   </section>
                 </>
