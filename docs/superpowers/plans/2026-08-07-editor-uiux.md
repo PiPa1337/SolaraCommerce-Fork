@@ -220,6 +220,8 @@ Progreso por etapas (Validando → Renderizando → Assets → Empaquetando) via
 **Files:** `components/Ui.tsx` (ConfirmDialog), usos.
 Unificar confirmaciones: archivar tienda, eliminar producto, descartar draft, sobreescribir import, reemplazar respaldo — con ConfirmDialog (foco trap, Escape, Enter acepta, focus return). Doble confirmación solo en destructivos mayores (sobreescribir import). Verificación: spec de diálogo (Escape cancela, foco vuelve).
 
+> Decisión de la revisión final: la sobreescritura por import usa UNA única confirmación de riesgo (el diálogo describe el reemplazo y el respaldo original se conserva como archivo); se descartó la doble confirmación por fricción sin ganancia real. Ver CHANGELOG.
+
 ---
 
 ## FASE 5 — Animación del editor
