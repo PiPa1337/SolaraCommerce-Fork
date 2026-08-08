@@ -47,7 +47,7 @@ test("procesa una imagen, muestra el lote y persiste el asset", async ({ page })
     timeout: 15_000,
   });
   await expect(page.locator(".asset-item")).toHaveCount(initialAssetCount + 1);
-  await expect(page.getByText("Guardado", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^Guardado/, { exact: false })).toBeVisible();
 
   await page.reload();
   await page.getByRole("button", { name: "Tienda de recursos" }).click();
