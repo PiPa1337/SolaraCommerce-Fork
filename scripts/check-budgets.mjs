@@ -29,7 +29,10 @@ const javascript = javascriptCandidates.reduce((largest, file) =>
 // Topes en bytes crudos (sin compresión), fijados con margen sobre la medición
 // de la Task 6 (Step 1): JS inicial 589.731 B, CSS inicial 68.769 B. Un servidor
 // web puede comprimir; estos topes bloquean crecimientos accidentales del bundle
-// de Studio.
+// de Studio. El techo CSS subió de 84 a 96 KiB (2026-08-07): el plan de UI/UX
+// del editor agregó el sistema de componentes, tokens, dashboard y shell
+// (medido 88,5 KiB); 96 KiB deja margen sin obligar a recortar el alcance
+// aprobado.
 const checks = [
   {
     label: "Studio JavaScript inicial crudo",
@@ -39,7 +42,7 @@ const checks = [
   {
     label: "Studio CSS inicial crudo",
     file: stylesheet,
-    limit: 84 * 1024,
+    limit: 96 * 1024,
   },
 ];
 
