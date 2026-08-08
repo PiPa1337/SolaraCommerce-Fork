@@ -207,8 +207,13 @@ test("dashboard permite abrir, buscar, cambiar vista, respaldar y administrar un
   expect(download.suggestedFilename()).toMatch(/\.solara\.json$/);
 
   await detail.getByRole("button", { name: "Duplicar" }).click();
+  const duplicateDialog = page.getByRole("dialog", { name: "Duplicar tienda" });
+  await expect(duplicateDialog).toBeVisible();
+  await expect(page.getByTestId("ui-duplicate-name")).toHaveValue(/copia/);
+  await duplicateDialog.getByRole("button", { name: "Duplicar" }).click();
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("3 visibles");
 
+  page.once("dialog", (dialog) => void dialog.accept());
   await detail.getByRole("button", { name: "Archivar" }).click();
   await page.locator(".dashboard-cosmic-select select").first().selectOption("archived");
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
