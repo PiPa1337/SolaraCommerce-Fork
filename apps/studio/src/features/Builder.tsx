@@ -108,15 +108,41 @@ function ModulePicker({
     ];
   }, [filtered]);
 
+  // Trampa de Tab del picker: mismo patrón que trapConflictFocus en Studio.tsx,
+  // pero con todos los focables (input de búsqueda + opciones habilitadas).
+  const trapPickerFocus = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key !== "Tab" || !pickerRef.current) return;
+    const focusable = Array.from(
+      pickerRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((element) => {
+      const style = getComputedStyle(element);
+      return style.display !== "none" && style.visibility !== "hidden";
+    });
+    if (focusable.length === 0) return;
+    const first = focusable[0] as HTMLElement;
+    const last = focusable[focusable.length - 1] as HTMLElement;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
   return (
     <div
       ref={pickerRef}
       className="module-picker"
       data-testid="ui-module-picker"
       role="dialog"
+      aria-modal="true"
       aria-label="Elegir módulo de sección"
       onKeyDown={(event) => {
         if (event.key === "Escape") onClose();
+        trapPickerFocus(event);
       }}
     >
       <label className="module-picker__search">

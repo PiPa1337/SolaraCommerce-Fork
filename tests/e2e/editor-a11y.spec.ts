@@ -414,3 +414,94 @@ test("el tooltip bottom del toggle de tema aparece bajo el control con fallback 
     "la burbuja bottom comparte el eje horizontal con el control",
   ).toBe(true);
 });
+
+/** Abre el Constructor de la tienda demo (mismo arranque que editor-builder.spec.ts). */
+async function openBuilderForPicker(page: Page): Promise<void> {
+  await page.goto(studioUrl);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.deleteDatabase("solara-commerce-studio");
+        request.addEventListener("success", () => resolve());
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("blocked", () =>
+          reject(new Error("No se pudo limpiar la base de Studio.")),
+        );
+      }),
+  );
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 20_000,
+  });
+  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
+  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await page.getByRole("tab", { name: "Constructor" }).click();
+  await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
+}
+
+test("el selector de módulos es modal, enfoca la búsqueda y atrapa el foco (ST-B8)", async ({
+  page,
+}) => {
+  await openBuilderForPicker(page);
+  const addButton = page.getByRole("button", { name: "Agregar sección" });
+  await page.getByLabel("Tipo de sección").selectOption("content");
+  await addButton.click();
+
+  const picker = page.getByTestId("ui-module-picker");
+  await expect(picker).toBeVisible();
+  await expect(picker).toHaveAttribute("aria-modal", "true");
+  await expect(picker.getByLabel("Buscar módulo")).toBeFocused();
+
+  for (let tab = 0; tab < 25; tab += 1) await page.keyboard.press("Tab");
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            document
+              .querySelector("[data-testid='ui-module-picker']")
+              ?.contains(document.activeElement) ?? false,
+        ),
+      { message: "el foco no escapa del selector de módulos" },
+    )
+    .toBe(true);
+
+  await page.keyboard.press("Escape");
+  await expect(picker).toBeHidden();
+  await expect(addButton).toBeFocused();
+});
+
+test("vaciar un campo numérico del inspector no commitea 0 y muestra el error de esquema (ST-B12)", async ({
+  page,
+}) => {
+  await openBuilderForPicker(page);
+  const hero = page.getByRole("listitem").filter({ hasText: "Hero de catálogo" });
+  await hero.getByRole("button").first().click();
+
+  const interval = page.getByRole("spinbutton", { name: "Intervalo" });
+  await expect(interval).toHaveValue("6000");
+  await interval.fill("");
+  await expect(interval).toHaveValue("");
+  await expect(page.getByTestId("ui-schema-errors")).toContainText("intervalMs");
+  await expect(page.getByText("Cambios pendientes", { exact: true })).toHaveCount(0);
+});
+
+test("vaciar un número en un repeater no commitea 0 y muestra el error de esquema (ST-B12)", async ({
+  page,
+}) => {
+  await openBuilderForPicker(page);
+  await page.getByLabel("Tipo de sección").selectOption("content");
+  await page.getByRole("button", { name: "Agregar sección" }).click();
+  const picker = page.getByTestId("ui-module-picker");
+  await picker.getByLabel("Buscar módulo").fill("testimonios");
+  await picker.getByRole("button", { name: /Testimonios/ }).click();
+  await expect(picker).toBeHidden();
+
+  await page.getByRole("button", { name: "Agregar elemento" }).click();
+  const rating = page.getByRole("spinbutton", { name: "Valoración" });
+  await expect(rating).toHaveValue("1");
+  await rating.fill("");
+  await expect(rating).toHaveValue("");
+  await expect(page.getByTestId("ui-schema-errors")).toContainText("items");
+  await expect(page.getByText("Cambios pendientes", { exact: true })).toHaveCount(0);
+});

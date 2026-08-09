@@ -165,7 +165,11 @@ export function RepeaterEditor({
                     update(
                       index,
                       field.key,
-                      field.type === "number" ? Number(event.target.value) : event.target.value,
+                      field.type === "number"
+                        ? event.target.value.trim() === ""
+                          ? ""
+                          : Number(event.target.value)
+                        : event.target.value,
                     )
                   }
                 />

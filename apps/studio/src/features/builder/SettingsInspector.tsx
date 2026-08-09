@@ -109,7 +109,12 @@ export function SettingsInspector({
                 max={field.max}
                 step={field.step}
                 aria-invalid={Boolean(error)}
-                onChange={(event) => setValue(field.key, Number(event.target.value))}
+                onChange={(event) =>
+                  setValue(
+                    field.key,
+                    event.target.value.trim() === "" ? "" : Number(event.target.value),
+                  )
+                }
               />
             </Field>
           );
