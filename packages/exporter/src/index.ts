@@ -743,9 +743,6 @@ export function createPublicExportManifest(
   if (pages.some((page) => page.pageType === "category" && page.body.includes("data-category"))) {
     runtimeFeatures.add("filters");
   }
-  // `micro` es autocontenido en el runtime: se activa solo con pointer fino,
-  // sin reduced-motion y cuando el documento declara los marcadores.
-  runtimeFeatures.add("micro");
 
   return {
     pages,

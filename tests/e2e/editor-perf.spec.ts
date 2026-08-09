@@ -71,16 +71,12 @@ test("mide la apertura de Predeterminado hasta Resumen y el cambio a Catálogo",
 
     const cardReady = await waitFor(() => {
       const cards = [...document.querySelectorAll(".dashboard-store-card")];
-      return cards.some(
-        (card) =>
-          card.textContent?.includes("Predeterminado") && !card.textContent?.includes("Revamp"),
-      );
+      return cards.some((card) => card.textContent?.includes("Predeterminado"));
     });
     if (!cardReady) return { openMs: Number.POSITIVE_INFINITY, switchMs: Number.POSITIVE_INFINITY };
 
-    const card = [...document.querySelectorAll(".dashboard-store-card")].find(
-      (element) =>
-        element.textContent?.includes("Predeterminado") && !element.textContent?.includes("Revamp"),
+    const card = [...document.querySelectorAll(".dashboard-store-card")].find((element) =>
+      element.textContent?.includes("Predeterminado"),
     );
     const startOpen = performance.now();
     card?.querySelector<HTMLButtonElement>(".dashboard-store-card__open")?.click();

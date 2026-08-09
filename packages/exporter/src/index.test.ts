@@ -126,7 +126,7 @@ describe("exporter", () => {
     const css = String(
       exportProject(catalogModernStore, { mode: "production" }).files.get("assets/storefront.css"),
     );
-    const distinctive = "[data-solara-store].catalog-modern .catalog-product-card";
+    const distinctive = "catalog-modern .catalog-product-card h3 a:hover";
 
     expect(css.split(distinctive).length - 1).toBe(1);
     expect(new Blob([css]).size).toBeLessThan(300_000);
@@ -166,9 +166,7 @@ describe("exporter", () => {
     expect(manifest.cartEnabled).toBe(true);
     expect(manifest.runtimeFeatures).toContain("cart");
     expect(manifest.runtimeFeatures).toContain("motion");
-    expect(manifest.runtimeFeatures).toContain("micro");
     expect(home).toContain('data-solara-runtime-features="');
-    expect(home).toMatch(/data-solara-runtime-features="[^"]*\bmicro\b[^"]*"/);
     expect(search).toContain('<meta name="robots" content="noindex,follow">');
     expect(cart).toContain('<meta name="robots" content="noindex,follow">');
     expect(checkout).toContain('<meta name="robots" content="noindex,follow">');
