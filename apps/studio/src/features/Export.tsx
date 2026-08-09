@@ -92,6 +92,7 @@ export function ExportPanel({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [critical, setCritical] = useState(0);
+  const [auditReady, setAuditReady] = useState(false);
   const [publicAiContext, setPublicAiContext] = useState(true);
   const [optimization, setOptimization] = useState<OptimizationReport | null>(null);
   const [exportDone, setExportDone] = useState(false);
@@ -104,6 +105,7 @@ export function ExportPanel({
 
   useEffect(() => {
     let active = true;
+    setAuditReady(false);
     void import("@solara/exporter")
       .then(({ auditReport, buildOptimizationReport }) => {
         if (active) {
@@ -111,6 +113,7 @@ export function ExportPanel({
           setOptimization(
             buildOptimizationReport(project, { mode: "production", publicAiContext }),
           );
+          setAuditReady(true);
         }
       })
       .catch(() => undefined);
@@ -147,7 +150,9 @@ export function ExportPanel({
       setExportDone(true);
       setPostDone(new Set());
       setNotice(
-        "Exportación correcta. El sitio público se guarda en proyectos/<tienda>/sitios/ al guardar con el lanzador; podés abrirlo desde el dashboard.",
+        onOpenSite
+          ? "Exportación correcta. El sitio público se guarda en proyectos/<tienda>/sitios/ al guardar con el lanzador; podés abrirlo desde el dashboard."
+          : "Exportación correcta. En modo navegador el sitio generado no se conserva en disco; usá el lanzador de SolaraCommerce para guardarlo y abrirlo.",
       );
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo exportar la tienda.");
@@ -399,7 +404,7 @@ export function ExportPanel({
             variant="primary"
             data-testid="ui-export-production"
             onClick={() => setConfirmAction("production")}
-            disabled={Boolean(busy) || critical > 0}
+            disabled={Boolean(busy) || !auditReady || critical > 0}
           >
             {busy === "production" ? "Generando" : "Exportar producción"}
           </Button>
