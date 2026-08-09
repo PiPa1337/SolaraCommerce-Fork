@@ -1109,9 +1109,10 @@ function renderDocument(
   const criticalImage = page.preloadImage
     ? absoluteResourceUrl(project, page.preloadImage)
     : undefined;
-  const lcpPreload = criticalImage
-    ? `<link rel="preload" as="image" href="${escapeAttribute(criticalImage)}" fetchpriority="high">`
-    : "";
+  const lcpPreload =
+    mode === "production" && criticalImage
+      ? `<link rel="preload" as="image" href="${escapeAttribute(criticalImage)}" fetchpriority="high">`
+      : "";
   const aiContextLinks =
     mode === "production" && publicAiContext && !nonIndexablePage
       ? `<link rel="alternate" type="application/json" title="Contexto publico para agentes" href="/ai-context.json">

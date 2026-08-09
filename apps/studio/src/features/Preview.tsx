@@ -49,14 +49,10 @@ function addPreviewScrollbarPolicy(document: string): string {
 
 /**
  * La vista previa transporta los assets por postMessage y nunca resuelve el
- * dominio del proyecto; el preload absoluto del LCP dispararía una petición
- * real a la URL pública desde el iframe (con resolución DNS fallida en
- * dominios de demo). El export público conserva su propio preload.
+ * dominio del proyecto; el exporter emite el preload LCP absoluto sólo en
+ * modo producción, por lo que el iframe del preview no dispara peticiones
+ * reales a la URL pública del sitio.
  */
-function stripPreviewLcpPreload(document: string): string {
-  return document.replace(/<link rel="preload" as="image"[^>]*>/g, "");
-}
-
 export function getPreviewRoutes(project: StoreProjectV1): PreviewRoute[] {
   const firstRoot = project.categories.find((category) => category.parentId === undefined);
   const firstChild = project.categories.find((category) => category.parentId !== undefined);
@@ -268,9 +264,7 @@ export function Preview({
           previewAssetSources.current = getPreviewAssetSources(project);
           setHtml(
             addPreviewScrollbarPolicy(
-              stripPreviewLcpPreload(
-                renderPreviewHtml(project, "draft", route, { assetTransport: "parent" }),
-              ),
+              renderPreviewHtml(project, "draft", route, { assetTransport: "parent" }),
             ),
           );
           setIframeReady(false);

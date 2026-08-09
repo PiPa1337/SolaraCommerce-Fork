@@ -473,3 +473,18 @@ describe("exporter", () => {
     );
   });
 });
+
+describe("renderPreviewHtml sin preload absoluto", () => {
+  it("no emite preload de imagen cuando el transporte es parent", () => {
+    const html = renderPreviewHtml(catalogModernStore, "draft", "/", {
+      assetTransport: "parent",
+    });
+    expect(html).not.toMatch(/rel="preload" as="image"/);
+    expect(html).not.toMatch(/https?:\/\/[^"']+\/assets\//);
+  });
+
+  it("conserva el preload absoluto en producción", () => {
+    const html = renderPreviewHtml(catalogModernStore, "production", "/", {});
+    expect(html).toMatch(/rel="preload" as="image"/);
+  });
+});
