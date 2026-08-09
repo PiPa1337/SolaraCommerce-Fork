@@ -95,4 +95,3 @@ test("el lanzador persiste el proyecto y el sitio fuera de IndexedDB", async ({ 
     rmSync(applicationRoot, { recursive: true, force: true });
   }
 });
-

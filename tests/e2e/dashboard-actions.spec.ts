@@ -115,7 +115,11 @@ test("el modo comparar exige dos tiendas y muestra los diffs de secciones y moti
   await expect(duplicateDialog).toBeVisible();
   await duplicateDialog.getByRole("button", { name: "Duplicar" }).click();
   await expect(duplicateDialog).toBeHidden();
-  await page.locator(".dashboard-store-card").first().locator(".dashboard-store-card__button").click();
+  await page
+    .locator(".dashboard-store-card")
+    .first()
+    .locator(".dashboard-store-card__button")
+    .click();
 
   const toggle = page.getByRole("button", { name: "Comparar tiendas", exact: true });
   await toggle.click();

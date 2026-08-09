@@ -138,10 +138,7 @@ test("el dashboard distingue estados en sus controles", async ({ page }) => {
     .poll(() => card.evaluate((element) => getComputedStyle(element).transform))
     .not.toBe(cardTransform);
   await expectFocusRing(
-    page
-      .locator(".dashboard-store-card__button")
-      .filter({ hasText: "Predeterminado" })
-      .first(),
+    page.locator(".dashboard-store-card__button").filter({ hasText: "Predeterminado" }).first(),
     "Tarjeta de tienda",
   );
 });
@@ -353,4 +350,55 @@ test("el formulario de Resumen valida con errores inline y aria-describedby (T6.
   );
   await url.fill(originalUrl);
   await expect(urlField.getByTestId("ui-field-error")).toHaveCount(0);
+});
+
+test("los destinos de navegación validan el borrador con error inline y no commitean valores inválidos (F3)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStudio(page);
+  await page.getByRole("tab", { name: "Resumen", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
+
+  const fieldsetOf = (input: Locator) =>
+    input.locator("xpath=ancestor::fieldset[contains(@class, 'field')]");
+
+  const destination = page.getByLabel("Destino").first();
+  const original = await destination.inputValue();
+  const destinationField = fieldsetOf(destination);
+
+  // Un destino inválido muestra error inline del borrador y NO llega al schema
+  // (sin error global en la barra de guardado).
+  await destination.fill("foo");
+  await destination.blur();
+  await expect(destinationField.getByTestId("ui-field-error")).toContainText(
+    "Usá http(s) o una ruta interna",
+  );
+  await expect(destination).toHaveAttribute("aria-invalid", "true");
+  const destinationDescribedBy = await destination.getAttribute("aria-describedby");
+  expect(destinationDescribedBy, "el destino referencia el mensaje de error").not.toBeNull();
+  await expect(page.locator(`#${destinationDescribedBy}`)).toContainText(
+    "Usá http(s) o una ruta interna",
+  );
+  await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
+
+  // El borrador inválido sobrevive a editar otro campo (no se revierte ni se pierde).
+  const name = page.getByLabel("Nombre de la tienda");
+  const originalName = await name.inputValue();
+  await name.fill(`${originalName}x`);
+  await name.fill(originalName);
+  await expect(destination).toHaveValue("foo");
+  await expect(destinationField.getByTestId("ui-field-error")).toHaveCount(1);
+
+  // Un destino válido commitea al salir y limpia el error.
+  await destination.fill("https://ejemplo.com");
+  await destination.blur();
+  await expect(destinationField.getByTestId("ui-field-error")).toHaveCount(0);
+  await expect(destination).toHaveValue("https://ejemplo.com");
+
+  // Restaurar el enlace original para no alterar la tienda.
+  await destination.fill(original);
+  await destination.blur();
+  await expect(destination).toHaveValue(original);
+  await expect(destinationField.getByTestId("ui-field-error")).toHaveCount(0);
 });
