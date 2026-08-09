@@ -1043,6 +1043,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   color: var(--solara-muted);
   margin: 2.5rem 0;
 }
+[data-solara-module="editorial-product-grid"] [data-category-grid] + .solara-empty-state {
+  color: var(--solara-muted);
+  margin: 0;
+  padding: 2rem 0;
+}
 [data-solara-module="editorial-product-grid"] .solara-editorial-products {
   display: grid;
   gap: clamp(2rem, 4vw, 4rem) clamp(1rem, 2.5vw, 2.5rem);
@@ -1192,6 +1197,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-module="compact-product-grid"] .solara-empty-state {
   color: var(--solara-muted);
   margin: 2.5rem 0;
+}
+[data-solara-module="compact-product-grid"] [data-category-grid] + .solara-empty-state {
+  color: var(--solara-muted);
+  margin: 0;
+  padding: 2rem 0;
 }
 @media (max-width: 1100px) {
   [data-solara-module="compact-product-grid"] .solara-compact-products {
@@ -1645,6 +1655,12 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 [data-solara-module="cart-drawer"] form button:hover {
   filter: brightness(0.94);
+}
+@media print {
+  [data-solara-module="cart-drawer"] .solara-cart-backdrop,
+  [data-solara-module="cart-drawer"] [data-cart-drawer] {
+    display: none !important;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   [data-solara-module="cart-drawer"] .solara-cart-drawer {
@@ -2336,6 +2352,19 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   [data-solara-store].catalog-modern .solara-editorial-page .solara-story-grid { gap: 2.5rem; }
   [data-solara-store].catalog-modern .solara-editorial-page .solara-values-grid article { padding-inline: 0; }
   [data-solara-store].catalog-modern .solara-cart-page-grid { grid-template-columns: 1fr; padding-bottom: 3rem; }
+}
+@media print {
+  [data-solara-store].catalog-modern [data-cart-drawer],
+  [data-solara-store].catalog-modern .solara-cart-backdrop,
+  [data-solara-store].catalog-modern .catalog-cart-backdrop,
+  [data-solara-store].catalog-modern .catalog-mobile-menu,
+  [data-solara-store].catalog-modern .catalog-mobile-menu-button,
+  [data-solara-store].catalog-modern .catalog-search-dialog,
+  [data-solara-store].catalog-modern .catalog-search-dialog::backdrop { display: none !important; }
+  [data-solara-store].catalog-modern .catalog-mega-menu,
+  [data-solara-store].catalog-modern .catalog-cart-drawer,
+  [data-solara-store].catalog-modern .catalog-nav-chevron,
+  [data-solara-store].catalog-modern .catalog-mobile-categories[open] > summary .catalog-nav-chevron { transform: none !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   [data-solara-store].catalog-modern * { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }

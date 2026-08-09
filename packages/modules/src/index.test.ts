@@ -1,5 +1,6 @@
 import type { StoreSection } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
+import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
 import { referenceStore } from "@solara/project-schema/fixture";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 import { describe, expect, expectTypeOf, it } from "vitest";
@@ -387,5 +388,106 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     });
     expect(enabledHtml).toContain("/buscar/");
     expect(enabledHtml).toContain("catalog-search-dialog");
+  });
+
+  it("no emite /buscar/ en la plantilla limpia cuando la búsqueda está apagada", () => {
+    const project = structuredClone(catalogModernCleanStore);
+    project.commerceTemplates.search.enabled = false;
+
+    const html = renderSections(project, project.sections, { pageType: "home" });
+    expect(html).not.toContain("/buscar/");
+    expect(html).toContain('href="/categorias/"');
+
+    const enabledHtml = renderSections(catalogModernCleanStore, catalogModernCleanStore.sections, {
+      pageType: "home",
+    });
+    expect(enabledHtml).toContain('href="/buscar/"');
+  });
+
+  it("gates el botón de carrito moderno con los templates de carrito o checkout", () => {
+    const headerSection = createModuleSection({
+      id: "section-modern-header-cart-test" as StoreSection["id"],
+      slot: "header",
+      moduleId: "catalog-header",
+    });
+    const project = structuredClone(catalogModernStore);
+    project.commerceTemplates.cart.enabled = false;
+    project.commerceTemplates.checkout.enabled = false;
+
+    const disabledHtml = renderSections(project, [headerSection], { pageType: "home" });
+    expect(disabledHtml).not.toContain("data-solara-cart-open");
+
+    project.commerceTemplates.checkout.enabled = true;
+    const checkoutHtml = renderSections(project, [headerSection], { pageType: "home" });
+    expect(checkoutHtml).toContain("data-solara-cart-open");
+  });
+
+  it("marca la pill del valor del primer variante disponible aunque otro variante del mismo valor esté agotado", () => {
+    const project = structuredClone(catalogModernStore);
+    const product = project.products.find(
+      (candidate) => candidate.slug === "remera-esencial-de-algodon",
+    );
+    if (!product) throw new Error("Fixture sin remera esencial");
+    const [first, second, third] = product.variants;
+    if (!first || !second || !third) throw new Error("Fixture sin variantes");
+    product.variants = [
+      {
+        ...first,
+        title: "Negro / S",
+        optionValues: { Color: "Negro", Talle: "S" },
+        available: false,
+        stockStatus: "out_of_stock" as const,
+      },
+      {
+        ...second,
+        title: "Blanco / S",
+        optionValues: { Color: "Blanco", Talle: "S" },
+        available: true,
+        stockStatus: "in_stock" as const,
+      },
+      {
+        ...third,
+        title: "Negro / M",
+        optionValues: { Color: "Negro", Talle: "M" },
+        available: true,
+        stockStatus: "in_stock" as const,
+      },
+    ];
+
+    const html = renderSections(project, [modernDetailSection], {
+      pageType: "product",
+      product,
+    });
+    const optionsMarkup = html.slice(html.indexOf('class="catalog-variant-options"'));
+    const tallePills = optionsMarkup.match(/<button[^>]*data-option-key="Talle"[^>]*>/g) ?? [];
+    const sPill = tallePills.find((pill) => pill.includes('data-option-value="S"'));
+    const mPill = tallePills.find((pill) => pill.includes('data-option-value="M"'));
+
+    expect(sPill).toContain('aria-pressed="true"');
+    expect(sPill).toContain(`data-variant-id="${first.id}"`);
+    expect(mPill).toContain('aria-pressed="false"');
+  });
+
+  it("incluye reglas de impresión para drawer, backdrops y menú móvil", () => {
+    const modernStyles = MODULE_STYLE_BLOCKS["catalog-modern"];
+    if (!modernStyles) throw new Error("Falta el bloque de estilos catalog-modern");
+    const printBlock = modernStyles.slice(modernStyles.indexOf("@media print"));
+    expect(printBlock).toContain("[data-cart-drawer]");
+    expect(printBlock).toContain(".catalog-mobile-menu");
+    expect(printBlock).toContain("!important");
+    expect(printBlock).toContain("transform: none");
+
+    const legacyDrawerStyles = MODULE_STYLE_BLOCKS["cart-drawer"];
+    if (!legacyDrawerStyles) throw new Error("Falta el bloque de estilos cart-drawer");
+    const legacyPrintBlock = legacyDrawerStyles.slice(legacyDrawerStyles.indexOf("@media print"));
+    expect(legacyPrintBlock).toContain("[data-cart-drawer]");
+
+    const headerSection = createModuleSection({
+      id: "section-modern-header-print-test" as StoreSection["id"],
+      slot: "header",
+      moduleId: "catalog-header",
+    });
+    const headerHtml = renderSections(catalogModernStore, [headerSection], { pageType: "home" });
+    expect(headerHtml).toMatch(/<noscript>[\s\S]*@media print/);
   });
 });

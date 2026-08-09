@@ -215,7 +215,10 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
       ? `<button class="catalog-search-link" type="button" data-catalog-search-open aria-controls="catalog-search-dialog" aria-expanded="false" aria-label="${escapeAttribute(context.settings.searchLabel)}"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><span>${escapeHtml(context.settings.searchLabel)}</span></button><noscript><a class="catalog-search-noscript" href="/buscar/">${escapeHtml(context.settings.searchLabel)}</a></noscript>`
       : "";
     const cart =
-      navigation.showCart && context.project.siteShell.cart
+      navigation.showCart &&
+      context.project.siteShell.cart &&
+      (context.project.commerceTemplates.cart.enabled ||
+        context.project.commerceTemplates.checkout.enabled)
         ? `<button class="catalog-cart-link" type="button" data-solara-cart-open data-open-cart data-cart-label="${escapeAttribute(context.settings.cartLabel)}" aria-controls="solara-cart"><span>${escapeHtml(context.settings.cartLabel)}</span><strong data-solara-cart-count data-cart-count aria-live="polite">0</strong></button>`
         : "";
     return moduleRoot(
@@ -226,7 +229,7 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
         <a class="catalog-brand" href="/" aria-label="Inicio de ${escapeAttribute(context.project.identity.brandName)}">${renderBrand(context.project)}</a>
         <nav class="catalog-desktop-nav" aria-label="Navegación principal">${nav}</nav>
         <div class="catalog-header-actions">${search}${cart}</div>
-        <noscript><style>@media (max-width:767px){[data-solara-store].catalog-modern .catalog-mobile-menu[hidden]{display:block}}</style></noscript>
+        <noscript><style>@media (max-width:767px){[data-solara-store].catalog-modern .catalog-mobile-menu[hidden]{display:block}}@media print{[data-solara-store].catalog-modern .catalog-mobile-menu{display:none!important}}</style></noscript>
         <aside id="catalog-mobile-menu" class="catalog-mobile-menu" data-catalog-menu hidden role="dialog" aria-modal="true" aria-label="Navegación móvil"><div class="catalog-mobile-menu__header"><a class="catalog-mobile-brand" href="/" aria-label="Inicio de ${escapeAttribute(context.project.identity.brandName)}">${renderBrand(context.project)}</a><button type="button" class="catalog-mobile-menu__close" data-catalog-menu-close aria-label="Cerrar menú"><span class="sr-only">Cerrar menú</span><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="m6 6 12 12M18 6 6 18"></path></svg></button></div>${searchEnabled ? `<form class="catalog-mobile-search" action="/buscar/" method="get" role="search"><label class="sr-only" for="catalog-mobile-search-input">Buscar productos</label><div class="catalog-mobile-search__field"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><input id="catalog-mobile-search-input" name="q" type="search" placeholder="Buscar productos..." autocomplete="off"><button type="submit" aria-label="Buscar"><span aria-hidden="true">→</span></button></div></form>` : ""}<nav aria-label="Navegación móvil">${mobileNav}</nav></aside>
         ${
           searchEnabled
@@ -278,6 +281,10 @@ function modernFallbackAsset(
   return (
     requested || context.project.seo.socialImageId || context.project.products[0]?.imageIds[0] || ""
   );
+}
+
+function catalogSearchHref(searchEnabled: boolean, href: string): string {
+  return !searchEnabled && href.startsWith("/buscar") ? "/categorias/" : href;
 }
 
 function renderCatalogHeroMedia(
@@ -380,11 +387,16 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const settings = context.settings;
+    const searchEnabled =
+      context.project.navigation.showSearch && context.project.commerceTemplates.search.enabled;
     const activeSlide = settings.mode === "carousel" ? settings.slides[0] : undefined;
     const title = activeSlide?.title ?? settings.title;
     const body = activeSlide?.body ?? settings.body;
     const actionLabel = activeSlide?.actionLabel ?? settings.actionLabel;
-    const actionHref = activeSlide?.actionHref ?? settings.actionHref;
+    const actionHref = catalogSearchHref(
+      searchEnabled,
+      activeSlide?.actionHref ?? settings.actionHref,
+    );
     const media = renderCatalogHeroMedia(context, settings, title);
     const slidePanels =
       settings.mode === "carousel"
@@ -401,7 +413,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
                   fallbackAlt: slide.title,
                 },
               );
-              return `<figure data-catalog-hero-slide-panel data-title="${escapeAttribute(slide.title)}" data-body="${escapeAttribute(slide.body)}" data-action-label="${escapeAttribute(slide.actionLabel)}" data-action-href="${escapeAttribute(safeUrl(slide.actionHref))}"${index === 0 ? "" : " hidden"}>${slideImage}</figure>`;
+              return `<figure data-catalog-hero-slide-panel data-title="${escapeAttribute(slide.title)}" data-body="${escapeAttribute(slide.body)}" data-action-label="${escapeAttribute(slide.actionLabel)}" data-action-href="${escapeAttribute(safeUrl(catalogSearchHref(searchEnabled, slide.actionHref)))}"${index === 0 ? "" : " hidden"}>${slideImage}</figure>`;
             })
             .join("")
         : "";
@@ -587,6 +599,9 @@ export const catalogProductGrid: ModuleDefinition<
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const products = modernProducts(context, context.settings);
+    const searchEnabled =
+      context.project.navigation.showSearch && context.project.commerceTemplates.search.enabled;
+    const viewAllHref = catalogSearchHref(searchEnabled, context.settings.viewAllHref);
     const categoryGrid = context.pageType === "category" ? " data-category-grid" : "";
     const cards = products
       .map((product, index) => {
@@ -610,7 +625,7 @@ export const catalogProductGrid: ModuleDefinition<
       "catalog-product-grid",
       context.section,
       safeHtml(
-        `<div class="catalog-product-grid-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${context.settings.showViewAll ? `<a class="catalog-view-all" href="${escapeAttribute(safeUrl(context.settings.viewAllHref))}">Ver todos</a>` : ""}</header><div class="catalog-product-grid" data-motion-zone="items"${categoryGrid}>${cards || '<p class="catalog-empty">No hay productos para mostrar.</p>'}</div></div>`,
+        `<div class="catalog-product-grid-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${context.settings.showViewAll ? `<a class="catalog-view-all" href="${escapeAttribute(safeUrl(viewAllHref))}">Ver todos</a>` : ""}</header><div class="catalog-product-grid" data-motion-zone="items"${categoryGrid}>${cards || '<p class="catalog-empty">No hay productos para mostrar.</p>'}</div></div>`,
       ),
     );
   },
@@ -734,7 +749,7 @@ export const catalogProductDetail: ModuleDefinition<
             );
             const selected = matching[0];
             const available = matching.some((variant) => variant.available);
-            return `<button type="button" class="catalog-option-pill" data-variant-option data-option-key="${escapeAttribute(optionName)}" data-option-value="${escapeAttribute(value)}" data-variant-id="${escapeAttribute(selected?.id ?? "")}" aria-pressed="${String(selected?.id === firstVariant?.id)}"${available ? "" : " disabled"}>${escapeHtml(value)}</button>`;
+            return `<button type="button" class="catalog-option-pill" data-variant-option data-option-key="${escapeAttribute(optionName)}" data-option-value="${escapeAttribute(value)}" data-variant-id="${escapeAttribute(selected?.id ?? "")}" aria-pressed="${String(firstVariant?.optionValues[optionName] === value)}"${available ? "" : " disabled"}>${escapeHtml(value)}</button>`;
           })
           .join("");
         return `<fieldset class="catalog-option-group"><legend>${escapeHtml(optionName)}</legend><div>${controls}</div></fieldset>`;
