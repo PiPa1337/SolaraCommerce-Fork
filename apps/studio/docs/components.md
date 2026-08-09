@@ -74,8 +74,9 @@ Botón con variantes. Envuelve `<span>` al texto; los iconos se pasan con
 
 Botón sólo icono con `aria-label` + `title` obligatorios.
 
-- Props: `icon: Icon`, `label: string`, `tooltip?: string` (tooltip CSS
-  nativo; `title` sigue como fallback), resto de atributos de botón.
+- Props: `icon: Icon`, `label: string`, `tooltip?: string` (compone la
+  primitiva `Tooltip`; `title` sigue como fallback), resto de atributos de
+  botón.
 - Testid: `ui-icon-button`.
 - Estados: idle, hover, `aria-pressed="true"` (estado activo persistente),
   disabled.
@@ -160,11 +161,16 @@ Estado con punto de color; compone `Badge`.
 
 ### Tooltip
 
-Tooltip CSS nativo vía `data-tip`, sin librerías.
+Tooltip CSS nativo vía `data-tip`, sin librerías. Renderiza también `title`
+nativo como fallback para AT sin hover.
 
 - Props: `tip: string`, `children`, `position?: "top" | "bottom" | "left" | "right"`,
   `className?`.
-- Uso: envolver botones de toolbars; `IconButton` acepta `tooltip` directo.
+- Uso: toolbars del editor (Studio, Preview) y `IconButton` compone esta
+  primitiva vía `tooltip`. Para botones posicionados (`position: absolute`/
+  `fixed`, p. ej. `.editor-pane-close` y `.studio-focus-exit`), la geometría
+  se aplica al span contenedor (`.ui-tooltip.<clase>`) y el botón interno
+  vuelve a `position: static`; el botón conserva la clase para los visuales.
 
 ### ProgressBar
 

@@ -9,6 +9,7 @@ import {
   type ReactNode,
   useId,
 } from "react";
+import { Tooltip } from "./primitives";
 
 export function IconButton({
   icon: IconComponent,
@@ -18,7 +19,7 @@ export function IconButton({
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   icon: Icon;
   label: string;
-  /** Tooltip visual (CSS nativo con data-tip); `title` sigue como fallback. */
+  /** Tooltip visual (primitiva Tooltip con data-tip); `title` sigue como fallback. */
   tooltip?: string;
 }) {
   const button = (
@@ -33,13 +34,7 @@ export function IconButton({
       <IconComponent aria-hidden size={18} weight="regular" />
     </button>
   );
-  return tooltip ? (
-    <span className="ui-tooltip" data-tip={tooltip}>
-      {button}
-    </span>
-  ) : (
-    button
-  );
+  return tooltip ? <Tooltip tip={tooltip}>{button}</Tooltip> : button;
 }
 
 export const Button = forwardRef<

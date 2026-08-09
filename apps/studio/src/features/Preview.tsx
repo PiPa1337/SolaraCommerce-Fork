@@ -12,6 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { Tooltip } from "../components/primitives";
 import { Button, IconButton } from "../components/Ui";
 
 export type PreviewSize = "desktop" | "tablet" | "mobile";
@@ -134,11 +135,13 @@ export function PreviewToolbar({
   return (
     <div className="preview-toolbar">
       <div className="preview-heading">
-        <IconButton
-          icon={SidebarSimple}
-          label={"Abrir panel de edici\u00f3n"}
-          onClick={onOpenEditor}
-        />
+        <Tooltip tip="Abrir panel de edición" position="bottom">
+          <IconButton
+            icon={SidebarSimple}
+            label={"Abrir panel de edici\u00f3n"}
+            onClick={onOpenEditor}
+          />
+        </Tooltip>
         <strong>Vista previa</strong>
       </div>
       <output
@@ -190,24 +193,30 @@ export function PreviewToolbar({
       </fieldset>
       <fieldset className="preview-sizes">
         <legend className="visually-hidden">{"Tama\u00f1o de vista previa"}</legend>
-        <IconButton
-          icon={Desktop}
-          label="Vista de escritorio"
-          aria-pressed={size === "desktop"}
-          onClick={() => onSizeChange("desktop")}
-        />
-        <IconButton
-          icon={DeviceTablet}
-          label="Vista de tablet"
-          aria-pressed={size === "tablet"}
-          onClick={() => onSizeChange("tablet")}
-        />
-        <IconButton
-          icon={DeviceMobile}
-          label={"Vista m\u00f3vil"}
-          aria-pressed={size === "mobile"}
-          onClick={() => onSizeChange("mobile")}
-        />
+        <Tooltip tip="Vista de escritorio" position="bottom">
+          <IconButton
+            icon={Desktop}
+            label="Vista de escritorio"
+            aria-pressed={size === "desktop"}
+            onClick={() => onSizeChange("desktop")}
+          />
+        </Tooltip>
+        <Tooltip tip="Vista de tablet" position="bottom">
+          <IconButton
+            icon={DeviceTablet}
+            label="Vista de tablet"
+            aria-pressed={size === "tablet"}
+            onClick={() => onSizeChange("tablet")}
+          />
+        </Tooltip>
+        <Tooltip tip="Vista móvil" position="bottom">
+          <IconButton
+            icon={DeviceMobile}
+            label={"Vista m\u00f3vil"}
+            aria-pressed={size === "mobile"}
+            onClick={() => onSizeChange("mobile")}
+          />
+        </Tooltip>
       </fieldset>
     </div>
   );

@@ -46,8 +46,10 @@ import {
   useState,
 } from "react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { Tooltip } from "../components/primitives";
 import { Button, IconButton, InlineError } from "../components/Ui";
 import { AutosaveQueue, type AutosaveState } from "../lib/autosave";
+import { readExportHistory } from "../lib/exportHistory";
 import { formatDate } from "../lib/format";
 import type { LocalSaveReceipt, LocalStorageError } from "../lib/localStorage";
 import { downloadBlob } from "../lib/projectArchive";
@@ -222,6 +224,14 @@ export function Studio({
     [initialProject.id],
   );
   const reduceMotion = useReducedMotion();
+  const browserExportAt = readExportHistory(project.slug)[0]?.at ?? "";
+  const browserExportLabel = formatStatusDate(browserExportAt);
+  const lastExportLabel =
+    managedStorage && lastExportedAt
+      ? formatStatusDate(lastExportedAt)
+      : browserExportLabel === "—"
+        ? "—"
+        : `${browserExportLabel} (navegador)`;
 
   const setPaneOpen = useCallback(
     (open: boolean) => {
@@ -533,12 +543,14 @@ export function Studio({
       </a>
       <header className="studio-topbar">
         <div className="studio-brand">
-          <IconButton
-            icon={ArrowLeft}
-            label="Volver a tiendas"
-            disabled={leaving}
-            onClick={() => requestLeave()}
-          />
+          <Tooltip tip="Volver a tiendas" position="bottom">
+            <IconButton
+              icon={ArrowLeft}
+              label="Volver a tiendas"
+              disabled={leaving}
+              onClick={() => requestLeave()}
+            />
+          </Tooltip>
           <span className="brand-mark" aria-hidden>
             S
           </span>
@@ -629,34 +641,48 @@ export function Studio({
               ) : null}
             </div>
           )}
-          <IconButton
-            id={focusToggleId}
-            icon={focusMode ? ArrowsInSimple : ArrowsOutSimple}
-            label={focusMode ? "Salir del modo foco" : "Modo foco de la vista previa"}
-            aria-pressed={focusMode}
-            data-testid="ui-focus-toggle"
-            onClick={toggleFocusMode}
-          />
-          <IconButton
-            icon={theme === "dark" ? Sun : Moon}
-            label={theme === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
-            aria-pressed={theme === "dark"}
-            data-testid="ui-theme-toggle"
-            onClick={toggleTheme}
-          />
+          <Tooltip
+            tip={focusMode ? "Salir del modo foco" : "Modo foco de la vista previa"}
+            position="bottom"
+          >
+            <IconButton
+              id={focusToggleId}
+              icon={focusMode ? ArrowsInSimple : ArrowsOutSimple}
+              label={focusMode ? "Salir del modo foco" : "Modo foco de la vista previa"}
+              aria-pressed={focusMode}
+              data-testid="ui-focus-toggle"
+              onClick={toggleFocusMode}
+            />
+          </Tooltip>
+          <Tooltip
+            tip={theme === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
+            position="bottom"
+          >
+            <IconButton
+              icon={theme === "dark" ? Sun : Moon}
+              label={theme === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
+              aria-pressed={theme === "dark"}
+              data-testid="ui-theme-toggle"
+              onClick={toggleTheme}
+            />
+          </Tooltip>
           <div className="history-actions">
-            <IconButton
-              icon={ArrowUDownLeft}
-              label="Deshacer"
-              disabled={history.past.length === 0}
-              onClick={() => setHistory((current) => undo(current))}
-            />
-            <IconButton
-              icon={ArrowUDownRight}
-              label="Rehacer"
-              disabled={history.future.length === 0}
-              onClick={() => setHistory((current) => redo(current))}
-            />
+            <Tooltip tip="Deshacer" position="bottom">
+              <IconButton
+                icon={ArrowUDownLeft}
+                label="Deshacer"
+                disabled={history.past.length === 0}
+                onClick={() => setHistory((current) => undo(current))}
+              />
+            </Tooltip>
+            <Tooltip tip="Rehacer" position="bottom">
+              <IconButton
+                icon={ArrowUDownRight}
+                label="Rehacer"
+                disabled={history.future.length === 0}
+                onClick={() => setHistory((current) => redo(current))}
+              />
+            </Tooltip>
           </div>
         </div>
       </header>
@@ -725,38 +751,38 @@ export function Studio({
           key={tab}
           initial={false}
         >
-          <IconButton
-            className="editor-pane-close"
-            icon={X}
-            label="Cerrar panel de edición"
-            onClick={() => setPaneOpen(false)}
-          />
+          <Tooltip tip="Cerrar panel de edición" position="bottom" className="editor-pane-close">
+            <IconButton
+              icon={X}
+              label="Cerrar panel de edición"
+              onClick={() => setPaneOpen(false)}
+            />
+          </Tooltip>
           {renderTab()}
         </motion.main>
         <Preview project={project} route={previewRoute} size={previewSize} zoom={previewZoom} />
       </div>
 
       {focusMode ? (
-        <IconButton
-          id={focusExitId}
-          className="studio-focus-exit"
-          icon={ArrowsInSimple}
-          label="Salir del modo foco"
-          data-testid="ui-focus-exit"
-          onClick={() => {
-            setFocusMode(false);
-            requestAnimationFrame(() => {
-              document.getElementById(focusToggleId)?.focus();
-            });
-          }}
-        />
+        <Tooltip tip="Salir del modo foco" position="bottom" className="studio-focus-exit">
+          <IconButton
+            id={focusExitId}
+            icon={ArrowsInSimple}
+            label="Salir del modo foco"
+            data-testid="ui-focus-exit"
+            onClick={() => {
+              setFocusMode(false);
+              requestAnimationFrame(() => {
+                document.getElementById(focusToggleId)?.focus();
+              });
+            }}
+          />
+        </Tooltip>
       ) : null}
 
       <footer className="studio-statusbar" data-testid="ui-status-bar">
         <span>Esquema v{project.schemaVersion}</span>
-        {managedStorage ? (
-          <span>Última exportación: {lastExportedAt ? formatStatusDate(lastExportedAt) : "—"}</span>
-        ) : null}
+        <span>Última exportación: {lastExportLabel}</span>
         <span>Persistencia: {managedStorage ? "Disco" : "IndexedDB"}</span>
       </footer>
 

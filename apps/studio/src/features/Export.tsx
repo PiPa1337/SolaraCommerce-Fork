@@ -15,6 +15,12 @@ import type { StoreProjectV1 } from "@solara/project-schema";
 import { useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Button, InlineError, SectionHeader } from "../components/Ui";
+import {
+  clearExportHistory,
+  type ExportHistoryEntry,
+  readExportHistory,
+  recordExport,
+} from "../lib/exportHistory";
 import { formatDate } from "../lib/format";
 import { downloadBlob } from "../lib/projectArchive";
 import {
@@ -23,31 +29,11 @@ import {
   readProjectArchiveInWorker,
 } from "../lib/workers";
 
-interface ExportHistoryEntry {
-  at: string;
-  mode: "draft" | "production";
-  score: number;
-  critical: number;
-}
-
 const EXPORT_STAGES = [
   { id: "validate", label: "Validando proyecto" },
   { id: "render", label: "Renderizando páginas" },
   { id: "package", label: "Empaquetando archivos" },
 ] as const;
-
-const HISTORY_KEY_PREFIX = "solara-export-history:";
-
-function loadHistory(slug: string): ExportHistoryEntry[] {
-  try {
-    const raw = window.localStorage.getItem(`${HISTORY_KEY_PREFIX}${slug}`);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as ExportHistoryEntry[]) : [];
-  } catch {
-    return [];
-  }
-}
 
 function ExportStages({ done }: { done: boolean }) {
   return (
@@ -111,7 +97,9 @@ export function ExportPanel({
   const [exportDone, setExportDone] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"production" | "import" | "">("");
   const [pendingImport, setPendingImport] = useState<File | null>(null);
-  const [history, setHistory] = useState<ExportHistoryEntry[]>(() => loadHistory(project.slug));
+  const [history, setHistory] = useState<ExportHistoryEntry[]>(() =>
+    readExportHistory(project.slug),
+  );
   const [postDone, setPostDone] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -132,25 +120,12 @@ export function ExportPanel({
   }, [project, publicAiContext]);
 
   const recordHistory = (entry: Omit<ExportHistoryEntry, "at">) => {
-    const next: ExportHistoryEntry[] = [
-      { at: new Date().toISOString(), ...entry },
-      ...history,
-    ].slice(0, 8);
-    setHistory(next);
-    try {
-      window.localStorage.setItem(`${HISTORY_KEY_PREFIX}${project.slug}`, JSON.stringify(next));
-    } catch {
-      // Almacenamiento bloqueado: el historial vive sólo en memoria.
-    }
+    setHistory(recordExport(project.slug, entry.mode, entry));
   };
 
   const clearHistory = () => {
     setHistory([]);
-    try {
-      window.localStorage.removeItem(`${HISTORY_KEY_PREFIX}${project.slug}`);
-    } catch {
-      // Almacenamiento bloqueado: nada que limpiar.
-    }
+    clearExportHistory(project.slug);
   };
 
   const exportSite = async (mode: "draft" | "production") => {

@@ -7,7 +7,8 @@ import { ArrowLeft, ArrowRight, type Icon } from "@phosphor-icons/react";
 import { type ReactNode, useId } from "react";
 import { Button } from "./Ui";
 
-/** Tooltip CSS puro: envuelve el contenido y expone `tip` vía `data-tip`. */
+/** Tooltip CSS puro: envuelve el contenido y expone `tip` vía `data-tip`.
+ * `title` nativo se conserva como fallback para AT sin hover. */
 export function Tooltip({
   tip,
   children,
@@ -20,7 +21,7 @@ export function Tooltip({
   className?: string;
 }) {
   return (
-    <span className={`ui-tooltip ui-tooltip--${position} ${className}`} data-tip={tip}>
+    <span className={`ui-tooltip ui-tooltip--${position} ${className}`} data-tip={tip} title={tip}>
       {children}
     </span>
   );
