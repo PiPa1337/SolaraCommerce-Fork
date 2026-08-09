@@ -10,6 +10,24 @@ versión publicada.
 
 ## [Unreleased]
 
+### Revisión de bugfixes (2026-08-08)
+
+- Limpieza post-rollback: se eliminó la emisión de la feature `micro` del
+  runtime público (quedó como no-op tras el rollback del revamp) y sus
+  aserciones de test; se simplificaron filtros de specs que referenciaban la
+  tienda candidata retirada.
+- El diálogo de conflicto 409 ahora toma el foco inicial, atrapa el Tab dentro
+  de sus opciones y restaura el foco al estudio al elegir una opción
+  (accesibilidad de teclado).
+- Resumen (Overview): los destinos de navegación validan el borrador inline
+  (mismas reglas que el schema), los borradores por campo dejan de resetearse
+  en bloque al editar otro campo, y el estado vacío inalcanzable del flujo
+  guiado se eliminó.
+- Barrido de bugs del editor: sin `window.confirm` residuales, helpers de
+  spec sin uso removidos, primitivas sin uso documentadas y formato limpio.
+
+
+
 ### Rollback del revamp de movimiento (2026-08-08)
 
 Se revirtió por completo la sesión de revamp de movimiento (presets zoom-in/blur-in,
