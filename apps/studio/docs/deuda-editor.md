@@ -118,8 +118,9 @@ reglas responsive: el diálogo de creación aún las usa.
   considerar `assetTransport: "parent"`. El preview transporta los assets por
   postMessage y no debe resolver el dominio público (en tiendas demo el DNS
   falla y Chromium loguea `ERR_NAME_NOT_RESOLVED` + "preloaded but not used").
-  Fix aplicado en el Studio (`stripPreviewLcpPreload` en `Preview.tsx`); el
-  fix canónico debería ser en el exporter (no emitir preload en modo preview).
+  El parche `stripPreviewLcpPreload` del Studio se eliminó en la revisión de
+  bugfixes 1 (quedó huérfano al reescribirse `Preview.tsx`); el fix canónico
+  debería ser en el exporter (no emitir preload en modo preview).
 - **Proxy de dev para `/__solara/session`** (índice 23): en `pnpm dev` el
   sondeo 404a y Chromium lo loguea. El launcher real siempre responde el
   endpoint; el arreglo es infra de dev, no código del editor.

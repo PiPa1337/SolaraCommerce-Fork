@@ -85,8 +85,9 @@ Se ejecutaron con resultado exitoso:
   25.693.443 bytes de sitio sin empaquetado (carpeta directa).
 - `corepack pnpm check:budgets` (bytes crudos): Studio JS ≤ 700 KiB y CSS
   ≤ 100 KiB (CSS medido ~98.6 KiB); runtime público JS ≤ 52 KiB (medido
-  ~41 KiB) y CSS ≤ 8 KiB (medido ~6.6 KiB); storefront.js ≤ 52 KiB y
-  storefront.css ≤ 780 KiB (storefront.css deduplicado ~75 KiB).
+  48.512 B, ~47.4 KiB) y CSS ≤ 8 KiB (medido 7.486 B, ~7.3 KiB);
+  storefront.js ≤ 52 KiB y storefront.css ≤ 780 KiB (storefront.css
+  deduplicado ~75 KiB).
 - `corepack pnpm pilot:preflight`: fixture de referencia, 27 páginas y 3
   ofertas.
 - `corepack pnpm check:repository`, `corepack pnpm format:check` y
