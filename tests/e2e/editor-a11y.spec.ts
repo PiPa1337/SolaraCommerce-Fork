@@ -1,5 +1,10 @@
+import { type ChildProcess, spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
+import { mkdtempSync, rmSync } from "node:fs";
 import type { Server } from "node:http";
-import { expect, type Page, test } from "@playwright/test";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { type Browser, expect, type Page, test } from "@playwright/test";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 let server: Server;
@@ -404,7 +409,7 @@ test("el tooltip bottom del toggle de tema aparece bajo el control con fallback 
     height: 0,
   });
   const bubble = await tooltipBubbleRect(wrapper);
-  const gapBelow = bubble.y - (buttonBox.y + buttonBox.height);
+  const gapBelow = bubble.y - (buttonBox.y + bubble.height);
   expect(gapBelow, "la burbuja bottom queda bajo el control").toBeGreaterThanOrEqual(0);
   expect(gapBelow, "la burbuja bottom queda pegada al control (hueco de 7px)").toBeLessThanOrEqual(
     20,
@@ -504,4 +509,140 @@ test("vaciar un número en un repeater no commitea 0 y muestra el error de esque
   await expect(rating).toHaveValue("");
   await expect(page.getByTestId("ui-schema-errors")).toContainText("items");
   await expect(page.getByText("Cambios pendientes", { exact: true })).toHaveCount(0);
+});
+
+test("un cambio inválido en SEO anuncia el error de validación sin servidor (ST-B3)", async ({
+  page,
+}) => {
+  await openDefaultStore(page);
+  await page.getByRole("tab", { name: "SEO", exact: true }).click();
+  const title = page.getByRole("textbox", { name: "Título SEO" });
+  await expect(title).toBeVisible();
+  await title.fill("");
+  await title.blur();
+  await expect(page.getByTestId("ui-inline-error")).toBeVisible();
+  await expect(page.getByTestId("ui-inline-error")).toContainText("seo.title");
+  await expect(page.getByTestId("ui-status-bar")).toBeVisible();
+});
+
+async function waitForServer(url: string): Promise<void> {
+  await expect
+    .poll(
+      async () => {
+        try {
+          return (await fetch(`${url}/__solara/session`)).status;
+        } catch {
+          return 0;
+        }
+      },
+      { timeout: 10_000, intervals: [100, 250, 500] },
+    )
+    .toBe(200);
+}
+
+interface ManagedServer {
+  url: string;
+  root: string;
+  process: ChildProcess;
+}
+
+async function startManagedServer(): Promise<ManagedServer> {
+  const applicationRoot = mkdtempSync(join(tmpdir(), "solara-a11y-managed-"));
+  const port = 4900 + Math.floor(Math.random() * 200);
+  const token = randomBytes(24).toString("base64url");
+  const url = `http://127.0.0.1:${port}`;
+  const serverProcess: ChildProcess = spawn(
+    process.execPath,
+    [
+      resolve("packages/exporter/scripts/serve.mjs"),
+      resolve("apps/studio/dist"),
+      String(port),
+      token,
+      applicationRoot,
+    ],
+    { cwd: resolve("."), stdio: "ignore" },
+  );
+  try {
+    await waitForServer(url);
+  } catch (reason) {
+    serverProcess.kill();
+    rmSync(applicationRoot, { recursive: true, force: true });
+    throw reason;
+  }
+  return { url, root: applicationRoot, process: serverProcess };
+}
+
+async function stopManagedServer(managed: ManagedServer): Promise<void> {
+  if (managed.process.exitCode === null) managed.process.kill();
+  rmSync(managed.root, { recursive: true, force: true });
+}
+
+async function openDemoStoreManaged(page: Page): Promise<void> {
+  await page
+    .locator('article:has([data-store-card-id="store-modo-sur-demo"])')
+    .getByRole("button", { name: "Abrir esta tienda" })
+    .click();
+  await page.getByRole("tab", { name: "Resumen" }).click();
+  await expect(page.getByLabel("Nombre de la tienda")).toBeVisible();
+}
+
+async function renameAndSave(page: Page, name: string): Promise<void> {
+  await page.getByLabel("Nombre de la tienda").fill(name);
+  await page.locator("[data-studio-save]").click();
+  await expect(page.locator(".save-indicator")).toContainText("Guardado", { timeout: 60_000 });
+}
+
+async function openSecondTab(browser: Browser, url: string): Promise<Page> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto(url);
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 30_000,
+  });
+  return page;
+}
+
+async function createConflict(
+  browser: Browser,
+  url: string,
+  first: string,
+  second: string,
+): Promise<{ pageA: Page; pageB: Page }> {
+  const contextA = await browser.newContext();
+  const pageA = await contextA.newPage();
+  await pageA.goto(url);
+  await expect(pageA.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 30_000,
+  });
+  await openDemoStoreManaged(pageA);
+  await renameAndSave(pageA, first);
+
+  const pageB = await openSecondTab(browser, url);
+  await openDemoStoreManaged(pageB);
+  await renameAndSave(pageB, second);
+
+  await pageA.getByLabel("Nombre de la tienda").fill(`${first} (borrador local)`);
+  await pageA.locator("[data-studio-save]").click();
+  await expect(pageA.getByTestId("ui-conflict-dialog")).toBeVisible({ timeout: 60_000 });
+  return { pageA, pageB };
+}
+
+test("el diálogo 409 cierra con Escape conservando el borrador y el fondo es inert (ST-B9)", async ({
+  browser,
+}) => {
+  test.setTimeout(180_000);
+  const managed = await startManagedServer();
+  try {
+    const { pageA } = await createConflict(browser, managed.url, "A11y A", "A11y B");
+    const dialog = pageA.getByTestId("ui-conflict-dialog");
+    await expect(dialog).toBeVisible({ timeout: 60_000 });
+    await expect(pageA.locator(".studio-shell")).toHaveAttribute("inert", "");
+
+    await pageA.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(pageA.getByTestId("ui-studio-notice")).toContainText("Borrador conservado");
+    await expect(pageA.locator(".studio-shell")).not.toHaveAttribute("inert", "");
+  } finally {
+    await stopManagedServer(managed);
+  }
 });

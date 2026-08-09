@@ -165,7 +165,20 @@ export function Studio({
     conflictOpenerRef.current = null;
   }, [conflict]);
 
+  const keepConflictDraft = useCallback(() => {
+    setConflict(null);
+    setNotice(
+      "Borrador conservado en este navegador. Al abrir la tienda otra vez podés recuperarlo, o duplicar el borrador para continuar en una copia.",
+    );
+  }, []);
+
   const trapConflictFocus = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      keepConflictDraft();
+      return;
+    }
     if (event.key !== "Tab" || !conflictDialogRef.current) return;
     const focusable = Array.from(
       conflictDialogRef.current.querySelectorAll<HTMLElement>("button:not([disabled])"),
@@ -545,254 +558,268 @@ export function Studio({
   };
 
   return (
-    <div className="studio-shell" data-studio-focus={focusMode || undefined}>
-      <a className="skip-link" href={`#${editorPaneId}`}>
-        Saltar al panel de edición
-      </a>
-      <header className="studio-topbar">
-        <div className="studio-brand">
-          <Tooltip tip="Volver a tiendas" position="bottom">
-            <IconButton
-              icon={ArrowLeft}
-              label="Volver a tiendas"
-              disabled={leaving}
-              onClick={() => requestLeave()}
-            />
-          </Tooltip>
-          <span className="brand-mark" aria-hidden>
-            S
-          </span>
-          <div className="studio-brand-info">
-            <nav className="studio-breadcrumb" aria-label="Navegación">
-              <button
-                type="button"
-                className="studio-breadcrumb__link"
+    <>
+      <div
+        className="studio-shell"
+        data-studio-focus={focusMode || undefined}
+        inert={conflict ? true : undefined}
+      >
+        <a className="skip-link" href={`#${editorPaneId}`}>
+          Saltar al panel de edición
+        </a>
+        <header className="studio-topbar">
+          <div className="studio-brand">
+            <Tooltip tip="Volver a tiendas" position="bottom">
+              <IconButton
+                icon={ArrowLeft}
+                label="Volver a tiendas"
                 disabled={leaving}
                 onClick={() => requestLeave()}
-              >
-                Tiendas
-              </button>
-              <span className="studio-breadcrumb__sep" aria-hidden>
-                /
-              </span>
-              <strong className="studio-breadcrumb__current" aria-current="page">
-                {project.name}
-              </strong>
-            </nav>
-            <small>{project.baseUrl}</small>
-          </div>
-        </div>
-        <PreviewToolbar
-          routes={previewRoutes}
-          route={previewRoute}
-          size={previewSize}
-          zoom={previewZoom}
-          onRouteChange={setPreviewRoute}
-          onSizeChange={setPreviewSize}
-          onZoomChange={changePreviewZoom}
-          onOpenEditor={() => setPaneOpen(true)}
-        />
-        <div className="studio-topbar-actions">
-          {managedStorage ? (
-            <Suspense
-              fallback={
-                <div className="save-status">
-                  <output className="save-indicator save-indicator--saved" aria-live="polite">
-                    <FloppyDisk aria-hidden size={16} />
-                    Guardado
-                  </output>
-                </div>
-              }
-            >
-              <ManagedPersistenceControls
-                project={project}
-                diskVersion={diskVersion}
-                {...(diskBaseProject ? { diskBaseProject } : {})}
-                validationError={validationError}
-                onDirtyChange={setManagedDirty}
-                onError={setValidationError}
-                onConflict={setConflict}
-                onSaved={handleDiskSaved}
               />
-            </Suspense>
-          ) : (
-            <div className="save-status">
-              <output className={`save-indicator save-indicator--${saveState}`} aria-live="polite">
-                {saveState === "saving" ? (
-                  <span className="save-spinner" aria-hidden />
-                ) : saveState === "saved" ? (
-                  <CheckCircle className="save-check" aria-hidden size={16} />
-                ) : (
-                  <FloppyDisk aria-hidden size={16} />
-                )}
-                {saveState === "saved"
-                  ? lastSavedAt
-                    ? `Guardado ${formatSaveTime(lastSavedAt)}`
-                    : "Guardado"
-                  : saveState === "pending"
-                    ? "Cambios pendientes"
-                    : saveState === "saving"
-                      ? "Guardando…"
-                      : ""}
-              </output>
-              {saveState === "error" ? (
-                <>
-                  <InlineError>Error al guardar</InlineError>
-                  <button
-                    type="button"
-                    className="save-retry"
-                    onClick={() => void autosave.flush().catch(() => undefined)}
-                  >
-                    Reintentar
-                  </button>
-                </>
-              ) : null}
+            </Tooltip>
+            <span className="brand-mark" aria-hidden>
+              S
+            </span>
+            <div className="studio-brand-info">
+              <nav className="studio-breadcrumb" aria-label="Navegación">
+                <button
+                  type="button"
+                  className="studio-breadcrumb__link"
+                  disabled={leaving}
+                  onClick={() => requestLeave()}
+                >
+                  Tiendas
+                </button>
+                <span className="studio-breadcrumb__sep" aria-hidden>
+                  /
+                </span>
+                <strong className="studio-breadcrumb__current" aria-current="page">
+                  {project.name}
+                </strong>
+              </nav>
+              <small>{project.baseUrl}</small>
             </div>
-          )}
-          <Tooltip
-            tip={focusMode ? "Salir del modo foco" : "Modo foco de la vista previa"}
-            position="bottom"
-          >
-            <IconButton
-              id={focusToggleId}
-              icon={focusMode ? ArrowsInSimple : ArrowsOutSimple}
-              label={focusMode ? "Salir del modo foco" : "Modo foco de la vista previa"}
-              aria-pressed={focusMode}
-              data-testid="ui-focus-toggle"
-              onClick={toggleFocusMode}
-            />
-          </Tooltip>
-          <Tooltip
-            tip={theme === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
-            position="bottom"
-          >
-            <IconButton
-              icon={theme === "dark" ? Sun : Moon}
-              label={theme === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
-              aria-pressed={theme === "dark"}
-              data-testid="ui-theme-toggle"
-              onClick={toggleTheme}
-            />
-          </Tooltip>
-          <div className="history-actions">
-            <Tooltip tip="Deshacer" position="bottom">
-              <IconButton
-                icon={ArrowUDownLeft}
-                label="Deshacer"
-                disabled={history.past.length === 0}
-                onClick={() => setHistory((current) => undo(current))}
-              />
-            </Tooltip>
-            <Tooltip tip="Rehacer" position="bottom">
-              <IconButton
-                icon={ArrowUDownRight}
-                label="Rehacer"
-                disabled={history.future.length === 0}
-                onClick={() => setHistory((current) => redo(current))}
-              />
-            </Tooltip>
           </div>
-        </div>
-      </header>
-
-      <nav className="studio-nav" aria-label="Áreas de la tienda">
-        <div
-          role="tablist"
-          aria-label="Áreas de la tienda"
-          aria-orientation="vertical"
-          onKeyDown={moveTabFocus}
-        >
-          {tabs.map(({ id, label, icon: Icon }) => (
-            <button
-              type="button"
-              key={id}
-              id={`studio-tab-${id}`}
-              data-testid="ui-tab"
-              role="tab"
-              aria-selected={tab === id}
-              aria-controls={editorPaneId}
-              tabIndex={tab === id ? 0 : -1}
-              onClick={() => selectTab(id)}
+          <PreviewToolbar
+            routes={previewRoutes}
+            route={previewRoute}
+            size={previewSize}
+            zoom={previewZoom}
+            onRouteChange={setPreviewRoute}
+            onSizeChange={setPreviewSize}
+            onZoomChange={changePreviewZoom}
+            onOpenEditor={() => setPaneOpen(true)}
+          />
+          <div className="studio-topbar-actions">
+            {managedStorage ? (
+              <Suspense
+                fallback={
+                  <div className="save-status">
+                    <output className="save-indicator save-indicator--saved" aria-live="polite">
+                      <FloppyDisk aria-hidden size={16} />
+                      Guardado
+                    </output>
+                  </div>
+                }
+              >
+                <ManagedPersistenceControls
+                  project={project}
+                  diskVersion={diskVersion}
+                  {...(diskBaseProject ? { diskBaseProject } : {})}
+                  validationError={validationError}
+                  onDirtyChange={setManagedDirty}
+                  onError={setValidationError}
+                  onConflict={setConflict}
+                  onSaved={handleDiskSaved}
+                />
+              </Suspense>
+            ) : (
+              <>
+                <div className="save-status">
+                  <output
+                    className={`save-indicator save-indicator--${saveState}`}
+                    aria-live="polite"
+                  >
+                    {saveState === "saving" ? (
+                      <span className="save-spinner" aria-hidden />
+                    ) : saveState === "saved" ? (
+                      <CheckCircle className="save-check" aria-hidden size={16} />
+                    ) : (
+                      <FloppyDisk aria-hidden size={16} />
+                    )}
+                    {saveState === "saved"
+                      ? lastSavedAt
+                        ? `Guardado ${formatSaveTime(lastSavedAt)}`
+                        : "Guardado"
+                      : saveState === "pending"
+                        ? "Cambios pendientes"
+                        : saveState === "saving"
+                          ? "Guardando…"
+                          : ""}
+                  </output>
+                  {saveState === "error" ? (
+                    <>
+                      <InlineError>Error al guardar</InlineError>
+                      <button
+                        type="button"
+                        className="save-retry"
+                        onClick={() => void autosave.flush().catch(() => undefined)}
+                      >
+                        Reintentar
+                      </button>
+                    </>
+                  ) : null}
+                </div>
+                {validationError ? <InlineError>{validationError}</InlineError> : null}
+              </>
+            )}
+            <Tooltip
+              tip={focusMode ? "Salir del modo foco" : "Modo foco de la vista previa"}
+              position="bottom"
             >
-              <Icon aria-hidden size={19} weight={tab === id ? "fill" : "regular"} />
-              <span>{label}</span>
-              {dirtyTabs.has(id) ? (
-                <span
-                  className="studio-tab-dirty"
-                  data-testid="ui-tab-dirty"
-                  aria-hidden="true"
-                  title={`${label} tiene cambios sin revisar`}
+              <IconButton
+                id={focusToggleId}
+                icon={focusMode ? ArrowsInSimple : ArrowsOutSimple}
+                label={focusMode ? "Salir del modo foco" : "Modo foco de la vista previa"}
+                aria-pressed={focusMode}
+                data-testid="ui-focus-toggle"
+                onClick={toggleFocusMode}
+              />
+            </Tooltip>
+            <Tooltip
+              tip={theme === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
+              position="bottom"
+            >
+              <IconButton
+                icon={theme === "dark" ? Sun : Moon}
+                label={theme === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
+                aria-pressed={theme === "dark"}
+                data-testid="ui-theme-toggle"
+                onClick={toggleTheme}
+              />
+            </Tooltip>
+            <div className="history-actions">
+              <Tooltip tip="Deshacer" position="bottom">
+                <IconButton
+                  icon={ArrowUDownLeft}
+                  label="Deshacer"
+                  disabled={history.past.length === 0}
+                  onClick={() => setHistory((current) => undo(current))}
                 />
-              ) : null}
-              {tab === id ? (
-                <motion.span
-                  layoutId="studio-nav-indicator"
-                  className="studio-nav-indicator"
-                  aria-hidden
-                  transition={
-                    reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34 }
-                  }
+              </Tooltip>
+              <Tooltip tip="Rehacer" position="bottom">
+                <IconButton
+                  icon={ArrowUDownRight}
+                  label="Rehacer"
+                  disabled={history.future.length === 0}
+                  onClick={() => setHistory((current) => redo(current))}
                 />
-              ) : null}
-            </button>
-          ))}
+              </Tooltip>
+            </div>
+          </div>
+        </header>
+
+        <nav className="studio-nav" aria-label="Áreas de la tienda">
+          <div
+            role="tablist"
+            aria-label="Áreas de la tienda"
+            aria-orientation="vertical"
+            onKeyDown={moveTabFocus}
+          >
+            {tabs.map(({ id, label, icon: Icon }) => (
+              <button
+                type="button"
+                key={id}
+                id={`studio-tab-${id}`}
+                data-testid="ui-tab"
+                role="tab"
+                aria-selected={tab === id}
+                aria-controls={editorPaneId}
+                tabIndex={tab === id ? 0 : -1}
+                onClick={() => selectTab(id)}
+              >
+                <Icon aria-hidden size={19} weight={tab === id ? "fill" : "regular"} />
+                <span>{label}</span>
+                {dirtyTabs.has(id) ? (
+                  <span
+                    className="studio-tab-dirty"
+                    data-testid="ui-tab-dirty"
+                    aria-hidden="true"
+                    title={`${label} tiene cambios sin revisar`}
+                  />
+                ) : null}
+                {tab === id ? (
+                  <motion.span
+                    layoutId="studio-nav-indicator"
+                    className="studio-nav-indicator"
+                    aria-hidden
+                    transition={
+                      reduceMotion
+                        ? { duration: 0 }
+                        : { type: "spring", stiffness: 420, damping: 34 }
+                    }
+                  />
+                ) : null}
+              </button>
+            ))}
+          </div>
+        </nav>
+
+        {notice ? (
+          <output className="studio-notice" data-testid="ui-studio-notice">
+            <span>{notice}</span>
+            <IconButton icon={X} label="Cerrar aviso" onClick={() => setNotice("")} />
+          </output>
+        ) : null}
+
+        <div className="studio-workspace">
+          <motion.main
+            id={editorPaneId}
+            data-studio-editor-pane
+            data-tab={tab}
+            role="tabpanel"
+            aria-labelledby={`studio-tab-${tab}`}
+            aria-hidden={!editorOpen}
+            tabIndex={-1}
+            className={`editor-pane${editorOpen ? " editor-pane--open" : " editor-pane--closed"}`}
+            key={tab}
+            initial={false}
+          >
+            <Tooltip tip="Cerrar panel de edición" position="bottom" className="editor-pane-close">
+              <IconButton
+                icon={X}
+                label="Cerrar panel de edición"
+                onClick={() => setPaneOpen(false)}
+              />
+            </Tooltip>
+            {renderTab()}
+          </motion.main>
+          <Preview project={project} route={previewRoute} size={previewSize} zoom={previewZoom} />
         </div>
-      </nav>
 
-      {notice ? (
-        <output className="studio-notice" data-testid="ui-studio-notice">
-          <span>{notice}</span>
-          <IconButton icon={X} label="Cerrar aviso" onClick={() => setNotice("")} />
-        </output>
-      ) : null}
-
-      <div className="studio-workspace">
-        <motion.main
-          id={editorPaneId}
-          data-studio-editor-pane
-          data-tab={tab}
-          role="tabpanel"
-          aria-labelledby={`studio-tab-${tab}`}
-          aria-hidden={!editorOpen}
-          tabIndex={-1}
-          className={`editor-pane${editorOpen ? " editor-pane--open" : " editor-pane--closed"}`}
-          key={tab}
-          initial={false}
-        >
-          <Tooltip tip="Cerrar panel de edición" position="bottom" className="editor-pane-close">
+        {focusMode ? (
+          <Tooltip tip="Salir del modo foco" position="bottom" className="studio-focus-exit">
             <IconButton
-              icon={X}
-              label="Cerrar panel de edición"
-              onClick={() => setPaneOpen(false)}
+              id={focusExitId}
+              icon={ArrowsInSimple}
+              label="Salir del modo foco"
+              data-testid="ui-focus-exit"
+              onClick={() => {
+                setFocusMode(false);
+                requestAnimationFrame(() => {
+                  document.getElementById(focusToggleId)?.focus();
+                });
+              }}
             />
           </Tooltip>
-          {renderTab()}
-        </motion.main>
-        <Preview project={project} route={previewRoute} size={previewSize} zoom={previewZoom} />
+        ) : null}
+
+        <footer className="studio-statusbar" data-testid="ui-status-bar">
+          <span>Esquema v{project.schemaVersion}</span>
+          <span>Última exportación: {lastExportLabel}</span>
+          <span>Persistencia: {managedStorage ? "Disco" : "IndexedDB"}</span>
+        </footer>
       </div>
-
-      {focusMode ? (
-        <Tooltip tip="Salir del modo foco" position="bottom" className="studio-focus-exit">
-          <IconButton
-            id={focusExitId}
-            icon={ArrowsInSimple}
-            label="Salir del modo foco"
-            data-testid="ui-focus-exit"
-            onClick={() => {
-              setFocusMode(false);
-              requestAnimationFrame(() => {
-                document.getElementById(focusToggleId)?.focus();
-              });
-            }}
-          />
-        </Tooltip>
-      ) : null}
-
-      <footer className="studio-statusbar" data-testid="ui-status-bar">
-        <span>Esquema v{project.schemaVersion}</span>
-        <span>Última exportación: {lastExportLabel}</span>
-        <span>Persistencia: {managedStorage ? "Disco" : "IndexedDB"}</span>
-      </footer>
 
       {conflict ? (
         <div
@@ -809,16 +836,7 @@ export function Studio({
               {conflict.message} Tu borrador quedó guardado en este navegador. Elegí cómo seguir:
             </p>
             <div className="conflict-dialog__options">
-              <Button
-                variant="quiet"
-                data-testid="ui-conflict-keep"
-                onClick={() => {
-                  setConflict(null);
-                  setNotice(
-                    "Borrador conservado en este navegador. Al abrir la tienda otra vez podés recuperarlo, o duplicar el borrador para continuar en una copia.",
-                  );
-                }}
-              >
+              <Button variant="quiet" data-testid="ui-conflict-keep" onClick={keepConflictDraft}>
                 Conservar borrador
               </Button>
               <Button
@@ -880,6 +898,6 @@ export function Studio({
           onCancel={() => setConfirmLeave(false)}
         />
       ) : null}
-    </div>
+    </>
   );
 }
