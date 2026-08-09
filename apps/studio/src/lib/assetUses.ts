@@ -25,6 +25,12 @@ export function collectSettingAssetIds(value: unknown, collected: string[], key?
 /** Usos de una imagen: productos (incluidas variantes), portadas, categorías, colecciones y secciones. */
 export function assetUses(project: StoreProjectV1, assetId: ImageAsset["id"]): AssetUse[] {
   const uses: AssetUse[] = [];
+  if (project.identity.logoAssetId === assetId) {
+    uses.push({ label: "Logo de la tienda", detail: "Identidad" });
+  }
+  if (project.seo.socialImageId === assetId) {
+    uses.push({ label: "Imagen social", detail: "SEO" });
+  }
   for (const product of project.products) {
     if (product.imageIds.includes(assetId)) {
       uses.push({ label: product.title, detail: "Imagen de producto" });
