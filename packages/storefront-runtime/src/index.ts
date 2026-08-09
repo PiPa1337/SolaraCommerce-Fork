@@ -31,6 +31,34 @@ export interface CartLine {
   imageUrl?: string;
 }
 
+export interface StoredCartLine extends CartLine {
+  imageWidth?: number;
+  imageHeight?: number;
+  available?: boolean;
+}
+
+export function parseCart(stored: unknown): StoredCartLine[] {
+  if (!Array.isArray(stored)) return [];
+  return stored.filter(
+    (line): line is StoredCartLine =>
+      typeof line === "object" &&
+      line !== null &&
+      typeof (line as StoredCartLine).variantId === "string" &&
+      (line as StoredCartLine).variantId.length > 0 &&
+      typeof (line as StoredCartLine).title === "string" &&
+      typeof (line as StoredCartLine).variantTitle === "string" &&
+      typeof (line as StoredCartLine).sku === "string" &&
+      typeof (line as StoredCartLine).unitPrice === "number" &&
+      Number.isFinite((line as StoredCartLine).unitPrice) &&
+      typeof (line as StoredCartLine).quantity === "number" &&
+      Number.isFinite((line as StoredCartLine).quantity) &&
+      (line as StoredCartLine).quantity >= 1 &&
+      (line as StoredCartLine).quantity <= 99 &&
+      ((line as StoredCartLine).imageUrl === undefined ||
+        typeof (line as StoredCartLine).imageUrl === "string"),
+  );
+}
+
 export interface CustomerDetails {
   name: string;
   phone: string;
@@ -98,20 +126,6 @@ export function buildWhatsAppUrl(phone: string, message: string): string {
 }
 
 function storefrontBoot(): void {
-  type BrowserCartLine = {
-    productId: string;
-    variantId: string;
-    title: string;
-    variantTitle: string;
-    sku: string;
-    unitPrice: number;
-    quantity: number;
-    imageUrl?: string;
-    imageWidth?: number;
-    imageHeight?: number;
-    available?: boolean;
-  };
-
   const root = document.documentElement;
   const storeId = root.dataset.storeId ?? "solara";
   const currency = root.dataset.currency ?? "ARS";
@@ -136,24 +150,14 @@ function storefrontBoot(): void {
   );
   const hasFeature = (feature: string): boolean => runtimeFeatures.has(feature);
 
-  const parseCart = (): BrowserCartLine[] => {
+  const readStoredCart = (): StoredCartLine[] => {
     try {
       const stored = JSON.parse(localStorage.getItem(storageKey) ?? "[]") as unknown;
       if (!Array.isArray(stored)) {
         localStorage.removeItem(storageKey);
         return [];
       }
-      return stored.filter(
-        (line): line is BrowserCartLine =>
-          typeof line === "object" &&
-          line !== null &&
-          typeof (line as BrowserCartLine).variantId === "string" &&
-          (line as BrowserCartLine).variantId.length > 0 &&
-          typeof (line as BrowserCartLine).quantity === "number" &&
-          Number.isFinite((line as BrowserCartLine).quantity) &&
-          (line as BrowserCartLine).quantity >= 1 &&
-          (line as BrowserCartLine).quantity <= 99,
-      );
+      return parseCart(stored);
     } catch {
       try {
         localStorage.removeItem(storageKey);
@@ -162,12 +166,22 @@ function storefrontBoot(): void {
     }
   };
 
-  let cart = hasFeature("cart") || hasFeature("checkout") ? parseCart() : [];
+  let cart = hasFeature("cart") || hasFeature("checkout") ? readStoredCart() : [];
   let lastCartTrigger: HTMLElement | null = null;
+
+  const initialAddLabels = new Map<HTMLElement, string>();
+  document.querySelectorAll<HTMLElement>("[data-add-to-cart]").forEach((button) => {
+    initialAddLabels.set(button, button.textContent?.trim() || "Agregar al carrito");
+  });
 
   const pageType = document.querySelector<HTMLElement>("[data-solara-store]")?.dataset.pageType;
 
   const renderCart = (): void => {
+    const active = document.activeElement;
+    const focusedQuantity =
+      active instanceof HTMLElement && active.matches("[data-cart-quantity]")
+        ? active.dataset.cartQuantity
+        : undefined;
     try {
       localStorage.setItem(storageKey, JSON.stringify(cart));
     } catch {}
@@ -215,11 +229,18 @@ function storefrontBoot(): void {
 
     const total = cart.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
     document.querySelectorAll<HTMLElement>("[data-cart-subtotal]").forEach((element) => {
+      element.setAttribute("aria-live", "polite");
       element.textContent = money.format(total / 100);
     });
     document.querySelectorAll<HTMLElement>("[data-cart-total]").forEach((element) => {
+      element.setAttribute("aria-live", "polite");
       element.textContent = money.format(total / 100);
     });
+    if (focusedQuantity !== undefined) {
+      document
+        .querySelector<HTMLElement>(`[data-cart-quantity="${CSS.escape(focusedQuantity)}"]`)
+        ?.focus();
+    }
   };
 
   const escapeText = (value: string): string =>
@@ -237,9 +258,70 @@ function storefrontBoot(): void {
 
   const escapeAttribute = escapeText;
 
+  const syncCartToggleExpanded = (expanded: boolean): void => {
+    document.querySelectorAll<HTMLElement>("[data-solara-cart-open]").forEach((toggle) => {
+      toggle.setAttribute("aria-expanded", String(expanded));
+    });
+  };
+
+  type CatalogIndexEntry = {
+    productId: string;
+    variantId: string;
+    title: string;
+    variantTitle: string;
+    sku: string;
+    price: number;
+    available: boolean;
+    imageUrl?: string;
+    imageWidth?: number;
+    imageHeight?: number;
+  };
+
+  let freshCatalog: Promise<boolean> | null = null;
+
+  const applyCatalog = (catalog: CatalogIndexEntry[]): void => {
+    const byVariant = new Map(catalog.map((entry) => [entry.variantId, entry]));
+    const reconciled: StoredCartLine[] = [];
+    for (const line of cart) {
+      const current = byVariant.get(line.variantId);
+      if (!current) continue;
+      reconciled.push({
+        ...line,
+        productId: current.productId,
+        title: current.title,
+        variantTitle: current.variantTitle,
+        sku: current.sku,
+        unitPrice: current.price,
+        ...(current.imageUrl ? { imageUrl: current.imageUrl } : {}),
+        ...(current.imageWidth ? { imageWidth: current.imageWidth } : {}),
+        ...(current.imageHeight ? { imageHeight: current.imageHeight } : {}),
+        available: current.available,
+      });
+    }
+    cart = reconciled;
+    renderCart();
+  };
+
+  const reconcileCart = (): Promise<boolean> => {
+    if (freshCatalog) return freshCatalog;
+    freshCatalog = fetch("/catalog-index.json")
+      .then((response) => {
+        if (!response.ok) throw new Error("No se pudo cargar el catálogo actual.");
+        return response.json() as Promise<CatalogIndexEntry[]>;
+      })
+      .then((catalog) => {
+        applyCatalog(catalog);
+        return true;
+      })
+      .catch(() => false);
+    return freshCatalog;
+  };
+
   const openCart = (): void => {
     const drawer = document.querySelector<HTMLElement>("[data-cart-drawer]");
     if (!drawer) return;
+    syncCartToggleExpanded(true);
+    void reconcileCart();
     lastCartTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     if (drawer instanceof HTMLDialogElement) {
       if (!drawer.open) drawer.showModal();
@@ -265,6 +347,7 @@ function storefrontBoot(): void {
   const closeCart = (): void => {
     const drawer = document.querySelector<HTMLElement>("[data-cart-drawer]");
     if (!drawer) return;
+    syncCartToggleExpanded(false);
     if (drawer instanceof HTMLDialogElement) {
       drawer.close();
     } else {
@@ -336,7 +419,9 @@ function storefrontBoot(): void {
     }
     if (button) {
       button.disabled = !available;
-      button.textContent = available ? "Agregar al carrito" : "Sin stock";
+      button.textContent = available
+        ? (initialAddLabels.get(button) ?? "Agregar al carrito")
+        : "Sin stock";
     }
   };
 
@@ -391,13 +476,51 @@ function storefrontBoot(): void {
 
     if (target.matches("[data-cart-quantity]")) {
       const variantId = target.dataset.cartQuantity;
-      const quantity = Math.max(0, Math.min(99, Number((target as HTMLInputElement).value)));
-      cart = cart
-        .map((line) => (line.variantId === variantId ? { ...line, quantity } : line))
-        .filter((line) => line.quantity > 0);
+      const input = target as HTMLInputElement;
+      const previous = cart.find((line) => line.variantId === variantId);
+      if (!previous) return;
+      const raw = input.value.trim();
+      const parsed = Number(raw);
+      if (raw === "" || !Number.isFinite(parsed) || parsed <= 0) {
+        input.value = String(previous.quantity);
+        return;
+      }
+      const quantity = Math.min(99, Math.trunc(parsed));
+      cart = cart.map((line) => (line.variantId === variantId ? { ...line, quantity } : line));
       renderCart();
     }
   });
+
+  const addProductToCart = (productRoot: HTMLElement | null): void => {
+    const variant = productRoot ? selectedVariant(productRoot) : null;
+    if (!productRoot || !variant || variant.dataset.available !== "true") return;
+
+    const variantId = variant.dataset.variantId ?? "";
+    const quantityInput = productRoot.querySelector<HTMLInputElement>('input[name="quantity"]');
+    const quantity = Math.max(1, Math.min(99, Math.trunc(Number(quantityInput?.value ?? "1"))));
+    const existing = cart.find((line) => line.variantId === variantId);
+    if (existing) {
+      existing.quantity = Math.min(99, existing.quantity + quantity);
+    } else {
+      cart.push({
+        productId: productRoot.dataset.productId ?? "",
+        variantId,
+        title: productRoot.dataset.productTitle ?? "",
+        variantTitle: variant.dataset.variantTitle ?? "",
+        sku: variant.dataset.sku ?? "",
+        unitPrice: Number(variant.dataset.price ?? "0"),
+        quantity,
+        ...(variant.dataset.imageUrl ? { imageUrl: variant.dataset.imageUrl } : {}),
+        ...(variant.dataset.imageWidth ? { imageWidth: Number(variant.dataset.imageWidth) } : {}),
+        ...(variant.dataset.imageHeight
+          ? { imageHeight: Number(variant.dataset.imageHeight) }
+          : {}),
+        available: true,
+      });
+    }
+    renderCart();
+    openCart();
+  };
 
   document.addEventListener("click", (event) => {
     if (!hasFeature("product") && !hasFeature("cart")) return;
@@ -426,35 +549,7 @@ function storefrontBoot(): void {
     const addButton = target.closest<HTMLElement>("[data-add-to-cart]");
     if (addButton) {
       event.preventDefault();
-      const productRoot = addButton.closest<HTMLElement>("[data-product]");
-      const variant = productRoot ? selectedVariant(productRoot) : null;
-      if (!productRoot || !variant || variant.dataset.available !== "true") return;
-
-      const variantId = variant.dataset.variantId ?? "";
-      const quantityInput = productRoot.querySelector<HTMLInputElement>('input[name="quantity"]');
-      const quantity = Math.max(1, Math.min(99, Number(quantityInput?.value ?? "1")));
-      const existing = cart.find((line) => line.variantId === variantId);
-      if (existing) {
-        existing.quantity = Math.min(99, existing.quantity + quantity);
-      } else {
-        cart.push({
-          productId: productRoot.dataset.productId ?? "",
-          variantId,
-          title: productRoot.dataset.productTitle ?? "",
-          variantTitle: variant.dataset.variantTitle ?? "",
-          sku: variant.dataset.sku ?? "",
-          unitPrice: Number(variant.dataset.price ?? "0"),
-          quantity,
-          ...(variant.dataset.imageUrl ? { imageUrl: variant.dataset.imageUrl } : {}),
-          ...(variant.dataset.imageWidth ? { imageWidth: Number(variant.dataset.imageWidth) } : {}),
-          ...(variant.dataset.imageHeight
-            ? { imageHeight: Number(variant.dataset.imageHeight) }
-            : {}),
-          available: true,
-        });
-      }
-      renderCart();
-      openCart();
+      addProductToCart(addButton.closest<HTMLElement>("[data-product]"));
     }
 
     if (target.closest("[data-open-cart]")) openCart();
@@ -469,6 +564,14 @@ function storefrontBoot(): void {
       cart = cart.filter((line) => line.variantId !== variantId);
       renderCart();
     }
+  });
+
+  document.querySelectorAll<HTMLFormElement>("[data-solara-add-form]").forEach((form) => {
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (!hasFeature("product") && !hasFeature("cart")) return;
+      addProductToCart(form.closest<HTMLElement>("[data-product]"));
+    });
   });
 
   document.addEventListener("keydown", (event) => {
@@ -508,98 +611,59 @@ function storefrontBoot(): void {
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       if (cart.length === 0 || !form.reportValidity()) return;
-      const unavailable = cart.filter((line) => line.available === false);
-      if (unavailable.length > 0) {
-        const preview = form.querySelector<HTMLElement>("[data-order-preview]");
-        if (preview) {
-          preview.textContent =
-            "Retirá los productos agotados del carrito antes de enviar el pedido.";
-          preview.setAttribute("role", "alert");
+      void reconcileCart().then(() => {
+        if (cart.length === 0) return;
+        const unavailable = cart.filter((line) => line.available === false);
+        if (unavailable.length > 0) {
+          const preview = form.querySelector<HTMLElement>("[data-order-preview]");
+          if (preview) {
+            preview.textContent =
+              "Retirá los productos agotados del carrito antes de enviar el pedido.";
+            preview.setAttribute("role", "alert");
+          }
+          return;
         }
-        return;
-      }
 
-      const data = new FormData(form);
-      const itemLines = cart.map((line) => {
-        const sku = includeSku && line.sku ? ` [${line.sku}]` : "";
-        const total = money.format((line.unitPrice * line.quantity) / 100);
-        return `- ${line.quantity} x ${line.title} (${line.variantTitle})${sku}: ${total}`;
+        const data = new FormData(form);
+        const itemLines = cart.map((line) => {
+          const sku = includeSku && line.sku ? ` [${line.sku}]` : "";
+          const total = money.format((line.unitPrice * line.quantity) / 100);
+          return `- ${line.quantity} x ${line.title} (${line.variantTitle})${sku}: ${total}`;
+        });
+        const total = cart.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
+        const notes = String(data.get("notes") ?? "").trim();
+        const message = [
+          greeting.trim(),
+          "",
+          ...itemLines,
+          "",
+          `Total estimado: ${money.format(total / 100)}`,
+          "",
+          `Nombre: ${String(data.get("name") ?? "").trim()}`,
+          `Teléfono: ${String(data.get("phone") ?? "").trim()}`,
+          `Entrega: ${String(data.get("address") ?? "").trim()}`,
+          notes ? `Notas: ${notes}` : "",
+          "",
+          "Entiendo que precio, disponibilidad, envío y pago se confirman por este medio.",
+        ]
+          .filter((line, index, all) => line !== "" || all[index - 1] !== "")
+          .join("\n")
+          .trim();
+
+        const url = `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
+        const preview = form.querySelector<HTMLElement>("[data-order-preview]");
+        const link = form.querySelector<HTMLAnchorElement>("[data-whatsapp-link]");
+        if (preview) preview.textContent = message;
+        if (link) {
+          link.href = url;
+          link.hidden = false;
+          link.focus();
+        }
       });
-      const total = cart.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
-      const notes = String(data.get("notes") ?? "").trim();
-      const message = [
-        greeting.trim(),
-        "",
-        ...itemLines,
-        "",
-        `Total estimado: ${money.format(total / 100)}`,
-        "",
-        `Nombre: ${String(data.get("name") ?? "").trim()}`,
-        `Teléfono: ${String(data.get("phone") ?? "").trim()}`,
-        `Entrega: ${String(data.get("address") ?? "").trim()}`,
-        notes ? `Notas: ${notes}` : "",
-        "",
-        "Entiendo que precio, disponibilidad, envío y pago se confirman por este medio.",
-      ]
-        .filter((line, index, all) => line !== "" || all[index - 1] !== "")
-        .join("\n")
-        .trim();
-
-      const url = `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
-      const preview = form.querySelector<HTMLElement>("[data-order-preview]");
-      const link = form.querySelector<HTMLAnchorElement>("[data-whatsapp-link]");
-      if (preview) preview.textContent = message;
-      if (link) {
-        link.href = url;
-        link.hidden = false;
-        link.focus();
-      }
     });
   });
 
-  if (pageType === "cart" || pageType === "checkout") {
-    fetch("/catalog-index.json")
-      .then((response) => {
-        if (!response.ok) throw new Error("No se pudo cargar el catálogo actual.");
-        return response.json() as Promise<
-          Array<{
-            productId: string;
-            variantId: string;
-            title: string;
-            variantTitle: string;
-            sku: string;
-            price: number;
-            available: boolean;
-            imageUrl?: string;
-            imageWidth?: number;
-            imageHeight?: number;
-          }>
-        >;
-      })
-      .then((catalog) => {
-        const byVariant = new Map(catalog.map((entry) => [entry.variantId, entry]));
-        const reconciled: BrowserCartLine[] = [];
-        for (const line of cart) {
-          const current = byVariant.get(line.variantId);
-          if (!current) continue;
-          reconciled.push({
-            ...line,
-            productId: current.productId,
-            title: current.title,
-            variantTitle: current.variantTitle,
-            sku: current.sku,
-            unitPrice: current.price,
-            ...(current.imageUrl ? { imageUrl: current.imageUrl } : {}),
-            ...(current.imageWidth ? { imageWidth: current.imageWidth } : {}),
-            ...(current.imageHeight ? { imageHeight: current.imageHeight } : {}),
-            available: current.available,
-          });
-        }
-        cart = reconciled;
-        renderCart();
-      })
-      .catch(() => undefined);
-  }
+  if (pageType === "cart" || pageType === "checkout") void reconcileCart();
 
   const updateChromeHeight = (): void => {
     const chrome = Array.from(
@@ -1250,7 +1314,10 @@ function storefrontBoot(): void {
     });
   }
 
-  if (hasFeature("cart") || hasFeature("checkout")) renderCart();
+  if (hasFeature("cart") || hasFeature("checkout")) {
+    renderCart();
+    syncCartToggleExpanded(false);
+  }
   if (hasFeature("variants")) {
     document.querySelectorAll<HTMLElement>("[data-product]").forEach(syncVariant);
   }
@@ -1373,11 +1440,26 @@ export const STOREFRONT_RUNTIME_CSS = `
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="slide"] [data-motion-zone] {
   --motion-slide-x: calc(var(--motion-distance, 24px) * var(--motion-intensity, 1));
+  --motion-slide-y: 0px;
   animation: solara-motion-slide var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
 }
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="slide"][data-motion-direction="left"] [data-motion-zone] {
   --motion-slide-x: calc(var(--motion-distance, 24px) * var(--motion-intensity, 1) * -1);
+}
+
+[data-motion-root][data-motion-visible="true"][data-motion-preset="slide"][data-motion-direction="right"] [data-motion-zone] {
+  --motion-slide-x: calc(var(--motion-distance, 24px) * var(--motion-intensity, 1));
+}
+
+[data-motion-root][data-motion-visible="true"][data-motion-preset="slide"][data-motion-direction="up"] [data-motion-zone] {
+  --motion-slide-x: 0px;
+  --motion-slide-y: calc(var(--motion-distance, 24px) * var(--motion-intensity, 1));
+}
+
+[data-motion-root][data-motion-visible="true"][data-motion-preset="slide"][data-motion-direction="down"] [data-motion-zone] {
+  --motion-slide-x: 0px;
+  --motion-slide-y: calc(var(--motion-distance, 24px) * var(--motion-intensity, 1) * -1);
 }
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="scale"] [data-motion-zone] {
@@ -1449,8 +1531,9 @@ export const STOREFRONT_RUNTIME_CSS = `
   to { opacity: 1; transform: none; }
 }
 
+/* slide respeta data-motion-direction; fade-up conserva su subida vertical (direction no aplica ahí). */
 @keyframes solara-motion-slide {
-  from { opacity: 0; transform: translate3d(var(--motion-slide-x, 24px), 0, 0); }
+  from { opacity: 0; transform: translate3d(var(--motion-slide-x, 24px), var(--motion-slide-y, 0px), 0); }
   to { opacity: 1; transform: none; }
 }
 

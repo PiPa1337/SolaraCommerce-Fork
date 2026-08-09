@@ -5,6 +5,7 @@ import {
   buildWhatsAppMessage,
   buildWhatsAppUrl,
   formatMoney,
+  parseCart,
   STOREFRONT_RUNTIME_CSS,
   STOREFRONT_RUNTIME_JS,
 } from "./index";
@@ -114,5 +115,70 @@ describe("fill-mode de los presets de motion", () => {
 
   it("deja both sólo en las reglas scroll-driven", () => {
     expect(runtime.match(/\bboth\b/g)?.length).toBe(2);
+  });
+});
+
+describe("carrito robusto y checkout con precios frescos (C2/C3/C5/C9 + SF-B4/B5/B10)", () => {
+  it("parseCart descarta líneas corruptas sin lanzar (C3)", () => {
+    const lines = parseCart([
+      {
+        variantId: "v1",
+        quantity: 2,
+        title: "Manta Bruma",
+        variantTitle: "Musgo",
+        sku: "ML-BRU-MUS",
+        unitPrice: 100,
+      },
+      { variantId: "v2", quantity: 1 },
+      { variantId: "v3", quantity: 0 },
+      { variantId: "v4", quantity: "dos" },
+      "basura",
+      null,
+    ]);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toEqual(
+      expect.objectContaining({ variantId: "v1", quantity: 2, title: "Manta Bruma" }),
+    );
+  });
+
+  it("intercepta el submit del form de agregar para no recargar el carrito (C2)", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("data-solara-add-form");
+    expect(STOREFRONT_RUNTIME_JS).toContain('addEventListener("submit"');
+  });
+
+  it("sincroniza aria-expanded del toggle de carrito al abrir y cerrar (C5)", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("data-solara-cart-open");
+    expect(STOREFRONT_RUNTIME_JS).toContain("syncCartToggleExpanded");
+  });
+
+  it("anuncia los totales del carrito con aria-live (SF-B10)", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain('setAttribute("aria-live", "polite")');
+  });
+
+  it("conserva el label de acción custom del módulo en syncVariant (SF-B5)", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("initialAddLabels");
+    expect(STOREFRONT_RUNTIME_JS).toContain('"Sin stock"');
+  });
+
+  it("restaura la cantidad previa cuando el input queda vacío o en cero (C9)", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("value = String(previous.quantity)");
+  });
+
+  it("reconcilia el carrito compartido al abrir el drawer y al enviar (SF-B4)", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("reconcileCart");
+    expect(STOREFRONT_RUNTIME_JS).toContain("catalog-index.json");
+  });
+});
+
+describe("motion direction de slide (SF-B6)", () => {
+  it("slide respeta up, down y right además de left", () => {
+    expect(STOREFRONT_RUNTIME_CSS).toContain('[data-motion-direction="up"]');
+    expect(STOREFRONT_RUNTIME_CSS).toContain('[data-motion-direction="down"]');
+    expect(STOREFRONT_RUNTIME_CSS).toContain('[data-motion-direction="right"]');
+    expect(STOREFRONT_RUNTIME_CSS).toContain("--motion-slide-y");
+  });
+
+  it("fade-up conserva su movimiento vertical propio", () => {
+    expect(STOREFRONT_RUNTIME_CSS).toContain("@keyframes solara-motion-fade-up");
   });
 });
