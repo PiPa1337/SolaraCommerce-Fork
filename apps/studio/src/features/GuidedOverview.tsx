@@ -182,12 +182,6 @@ export function GuidedOverview({ project, onNavigate, onApplyUpgrade }: GuidedOv
         </section>
       ) : null}
 
-      {readiness.requirements.length === 0 ? (
-        <div className="guided-empty">
-          No hay requisitos de preparación para esta tienda. Podés pasar a revisar el preview.
-        </div>
-      ) : null}
-
       {visiblePending.length > 0 ? (
         <section className="guided-checklist" aria-labelledby={checklistId}>
           <div className="guided-checklist__header">

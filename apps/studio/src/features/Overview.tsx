@@ -32,10 +32,16 @@ function isValidUrl(value: string): boolean {
   }
 }
 
-/** Destino de navegación: URL http(s) o ruta interna relativa (ej. /contacto/). */
+/** Destino de navegación: ruta interna (ej. /contacto/, nunca //) o URL http(s), mailto o tel.
+ *  Espeja la validación del schema (`validateHref`): mailto:/tel: sólo si el commit lo acepta. */
 function isValidDestination(value: string): boolean {
-  if (value.trim().startsWith("/")) return true;
-  return isValidUrl(value);
+  const trimmed = value.trim();
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return true;
+  try {
+    return ["http:", "https:", "mailto:", "tel:"].includes(new URL(trimmed).protocol);
+  } catch {
+    return false;
+  }
 }
 
 function isValidEmail(value: string): boolean {
@@ -114,6 +120,7 @@ export function Overview({
   const [fieldDrafts, setFieldDrafts] = useState<Record<string, string>>({});
   const [unsaved, setUnsaved] = useState(false);
   const unsavedTimer = useRef<number | undefined>(undefined);
+  const lastEditedFieldRef = useRef<string | null>(null);
   const { success } = useToast();
   const pendingNavItem = pendingNavDelete
     ? project.navigation.items.find((item) => item.id === pendingNavDelete)
@@ -129,6 +136,7 @@ export function Overview({
     onCommit: (value: string) => void,
   ) => {
     markUnsaved();
+    lastEditedFieldRef.current = key;
     setFieldDrafts((current) => ({ ...current, [key]: next }));
     if (isValid(next)) onCommit(next);
   };
@@ -165,10 +173,17 @@ export function Overview({
 
   useEffect(() => () => window.clearTimeout(unsavedTimer.current), []);
 
-  /* biome-ignore lint/correctness/useExhaustiveDependencies: resetear borradores es el efecto deseado al cambiar updatedAt. */
+  /* biome-ignore lint/correctness/useExhaustiveDependencies: al cambiar el proyecto (commit o undo) limpiar sólo el borrador del campo recién editado, no todos. */
   useEffect(() => {
-    setDrafts({});
-    setFieldDrafts({});
+    const key = lastEditedFieldRef.current;
+    lastEditedFieldRef.current = null;
+    if (!key) return;
+    const withoutKey = (current: Record<string, string>) =>
+      key in current
+        ? Object.fromEntries(Object.entries(current).filter(([draftKey]) => draftKey !== key))
+        : current;
+    setDrafts(withoutKey);
+    setFieldDrafts(withoutKey);
   }, [project.updatedAt]);
 
   const toggleSection = (sectionId: string) =>
@@ -231,15 +246,18 @@ export function Overview({
       pages: project.pages.map((page) => (page.id === pageId ? { ...page, ...patch } : page)),
     });
 
-  /** Input con borrador local: edita sin commitear y confirma al salir del campo. */
+  /** Input con borrador local: edita sin commitear y confirma al salir sólo si el destino es válido. */
   const destinationInput = (key: string, value: string, onCommit: (next: string) => void) => (
     <input
       type="url"
       value={drafts[key] ?? value}
-      onChange={(event) => setDrafts((current) => ({ ...current, [key]: event.target.value }))}
+      onChange={(event) => {
+        lastEditedFieldRef.current = key;
+        setDrafts((current) => ({ ...current, [key]: event.target.value }));
+      }}
       onBlur={() => {
         const next = drafts[key] ?? value;
-        if (next !== value) onCommit(next);
+        if (next !== value && destinationError(next) === undefined) onCommit(next);
       }}
     />
   );
@@ -489,7 +507,8 @@ export function Overview({
             </div>
             <div className="navigation-editor field--wide">
               {project.navigation.items.map((item, index) => {
-                const itemHrefError = destinationError(item.href ?? "");
+                const itemHrefDraft = drafts[`nav-${item.id}`] ?? item.href ?? "";
+                const itemHrefError = destinationError(itemHrefDraft);
                 return (
                   <div className="navigation-editor-item" key={item.id}>
                     <div className="form-grid">
@@ -530,7 +549,9 @@ export function Overview({
                     <div className="navigation-children">
                       <span className="navigation-children-title">Subenlaces</span>
                       {(item.children ?? []).map((child, childIndex) => {
-                        const childHrefError = destinationError(child.href ?? "");
+                        const childHrefDraft =
+                          drafts[`nav-${item.id}-${child.id}`] ?? child.href ?? "";
+                        const childHrefError = destinationError(childHrefDraft);
                         return (
                           <div className="navigation-child-editor" key={child.id}>
                             <Field label={`Subenlace ${childIndex + 1}`}>

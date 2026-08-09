@@ -471,14 +471,6 @@
   border: 0;
 }
 
-.guided-empty {
-  padding: 20px;
-  border: 1px dashed var(--line);
-  border-radius: 18px;
-  color: var(--muted);
-  font-size: 13px;
-}
-
 @media (max-width: 560px) {
   .section-actions > .overview-save-indicator {
     display: none;
