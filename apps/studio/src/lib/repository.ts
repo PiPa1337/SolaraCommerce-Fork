@@ -422,12 +422,14 @@ export async function markProjectMigration(
   projectId: string,
   status: ProjectMigrationRecord["status"],
 ): Promise<void> {
+  await ready();
   await database.migrations.put({ projectId, status, updatedAt: new Date().toISOString() });
 }
 
 export async function getProjectMigration(
   projectId: string,
 ): Promise<ProjectMigrationRecord | undefined> {
+  await ready();
   return database.migrations.get(projectId);
 }
 
