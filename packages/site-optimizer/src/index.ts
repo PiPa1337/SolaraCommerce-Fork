@@ -492,6 +492,44 @@ function auditProject(
     }
   });
 
+  const categoryIds = new Set(project.categories.map((category) => category.id));
+  const collectionIds = new Set(project.collections.map((collection) => collection.id));
+  project.sections.forEach((section, sectionIndex) => {
+    const source = section.settings.source;
+    const sourceId = section.settings.sourceId;
+    if (typeof source !== "string" || typeof sourceId !== "string" || !sourceId) return;
+    const label =
+      typeof section.settings.title === "string" && section.settings.title.trim()
+        ? section.settings.title
+        : section.id;
+    if (
+      source === "collection" &&
+      !collectionIds.has(sourceId as StoreProjectV1["collections"][number]["id"])
+    ) {
+      addFinding(findings, {
+        code: "catalog.section.orphan-source",
+        severity: "warning",
+        area: "content",
+        message: `La seccion "${label}" apunta a la coleccion "${sourceId}" que no existe.`,
+        path: `sections.${sectionIndex}.settings.sourceId`,
+        entity: { type: "collection", id: sourceId, label },
+      });
+    }
+    if (
+      source === "category" &&
+      !categoryIds.has(sourceId as StoreProjectV1["categories"][number]["id"])
+    ) {
+      addFinding(findings, {
+        code: "catalog.section.orphan-source",
+        severity: "warning",
+        area: "content",
+        message: `La seccion "${label}" apunta a la categoria "${sourceId}" que no existe.`,
+        path: `sections.${sectionIndex}.settings.sourceId`,
+        entity: { type: "category", id: sourceId, label },
+      });
+    }
+  });
+
   const titles = new Map<string, string[]>();
   routes
     .filter((item) => item.indexable)

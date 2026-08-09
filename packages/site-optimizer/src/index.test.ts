@@ -74,4 +74,51 @@ describe("site optimizer", () => {
     expect(text).toContain("## Productos");
     expect(text.endsWith("\n")).toBe(true);
   });
+
+  it("advierte cuando una seccion de catalogo apunta a un origen inexistente", () => {
+    const project = structuredClone(catalogModernStore);
+    const section = project.sections.find(
+      (item) => item.moduleId === "catalog-product-grid" && item.slot === "catalog",
+    );
+    if (!section) throw new Error("Fixture sin seccion de catalogo");
+    project.sections = [
+      ...project.sections,
+      {
+        ...structuredClone(section),
+        id: "section-orphan-collection" as typeof section.id,
+        settings: {
+          ...section.settings,
+          title: "Origen roto",
+          source: "collection",
+          sourceId: "collection-inexistente",
+        },
+      },
+      {
+        ...structuredClone(section),
+        id: "section-orphan-category" as typeof section.id,
+        settings: {
+          ...section.settings,
+          title: "Categoria rota",
+          source: "category",
+          sourceId: "category-inexistente",
+        },
+      },
+    ];
+    const report = optimizeProject(project, { mode: "production" });
+
+    expect(report.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "catalog.section.orphan-source",
+          severity: "warning",
+          entity: { type: "collection", id: "collection-inexistente", label: "Origen roto" },
+        }),
+        expect.objectContaining({
+          code: "catalog.section.orphan-source",
+          severity: "warning",
+          entity: { type: "category", id: "category-inexistente", label: "Categoria rota" },
+        }),
+      ]),
+    );
+  });
 });

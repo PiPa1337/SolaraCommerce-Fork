@@ -77,6 +77,17 @@ describe("exporter con catálogo jerárquico de escala", () => {
     );
   });
 
+  it("no emite el layout ni los filtros de opciones modernos en categorías legacy", () => {
+    const casa = String(exported.files.get("categorias/casa/index.html"));
+
+    expect(casa).not.toContain("catalog-category-layout");
+    expect(casa).not.toContain("data-category-option");
+    expect(casa).toContain("solara-category-toolbar");
+    expect(casa).toContain("data-category-tag");
+    expect(casa).toContain("data-category-available");
+    expect(casa).toContain("data-category-sort");
+  });
+
   it("mantiene paridad entre preview y exportación en categoría hija y página 2", () => {
     const moduleTree = (html: string) =>
       [...html.matchAll(/data-solara-module="([^"]+)"/g)].map((match) => match[1]);

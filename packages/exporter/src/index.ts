@@ -906,6 +906,7 @@ function storeStructuredData(project: StoreProjectV1): unknown[] {
     typeof hero?.settings.posterAssetId === "string"
       ? hero.settings.posterAssetId
       : heroVideo?.posterAssetId;
+  const heroPosterUrl = heroPosterId ? imageUrl(project, heroPosterId) : undefined;
   const structured: unknown[] = [
     {
       "@context": "https://schema.org",
@@ -941,11 +942,7 @@ function storeStructuredData(project: StoreProjectV1): unknown[] {
       name: heroVideo.name,
       description: heroVideo.alt || heroVideo.name,
       contentUrl: absoluteResourceUrl(project, videoUrl(project, heroVideo.id) ?? ""),
-      ...(heroPosterId
-        ? {
-            thumbnailUrl: absoluteResourceUrl(project, imageUrl(project, heroPosterId) ?? ""),
-          }
-        : {}),
+      ...(heroPosterUrl ? { thumbnailUrl: absoluteResourceUrl(project, heroPosterUrl) } : {}),
       duration: `PT${Math.round(heroVideo.durationSeconds)}S`,
       uploadDate: project.updatedAt,
     });
@@ -1178,6 +1175,40 @@ function categoryChildrenMarkup(project: StoreProjectV1, category: Category): st
     .join("")}</ul></nav>`;
 }
 
+const categorySortSelect =
+  '<label>Ordenar <select data-category-sort><option value="recommended">Recomendados</option><option value="price-asc">Precio menor</option><option value="price-desc">Precio mayor</option><option value="name">Nombre</option></select></label>';
+
+function categoryListingMarkup(
+  project: StoreProjectV1,
+  products: readonly Product[],
+  paginated: readonly Product[],
+  grid: string,
+): string {
+  const resultCount = `<span data-category-result-count>${products.length} productos</span>`;
+  if (isModernProject(project)) {
+    return `<div class="catalog-category-layout">
+      ${modernCategoryFilters(products)}
+      <div class="catalog-category-results">
+        <div class="solara-category-toolbar" data-category-toolbar>
+          ${resultCount}
+          ${categorySortSelect}
+        </div>
+        ${grid}
+      </div>
+    </div>`;
+  }
+  const tagOptions = [...new Set(paginated.flatMap((product) => product.tags))]
+    .slice(0, 12)
+    .map((tag) => `<option value="${escapeAttribute(tag)}">${escapeHtml(tag)}</option>`)
+    .join("");
+  return `<div class="solara-category-toolbar" data-category-toolbar>
+    ${resultCount}
+    <details><summary>Filtrar</summary><div><label><input type="checkbox" data-category-available> Sólo disponibles</label><label>Etiqueta <select data-category-tag><option value="">Todas</option>${tagOptions}</select></label><label>Precio mínimo <input type="number" min="0" step="1" data-category-min-price inputmode="decimal"></label><label>Precio máximo <input type="number" min="0" step="1" data-category-max-price inputmode="decimal"></label></div></details>
+    ${categorySortSelect}
+  </div>
+  ${grid}`;
+}
+
 function modernCategoryFilters(products: readonly Product[]): string {
   const tags = [...new Set(products.flatMap((product) => product.tags))].slice(0, 12);
   const tagOptions = tags
@@ -1297,6 +1328,11 @@ function buildPages(
           ? `<img src="${escapeAttribute(categoryImage)}" alt="${escapeAttribute(categoryAsset.alt || category.title)}" width="${categoryAsset.width}" height="${categoryAsset.height}" loading="eager">`
           : "";
       const categorySections = listingSections(project, "category", pageSize);
+      const categoryGrid = renderProjectSections(project, categorySections, {
+        pageType: "category",
+        category: { ...category, productIds: paginated.map((product) => product.id) },
+        products: paginated,
+      });
       const body = [
         renderProjectSections(project, sharedHeader, { pageType: "category", category }),
         `<main class="solara-container catalog-category-page">
@@ -1307,20 +1343,7 @@ function buildPages(
             ${categoryMedia}
           </header>
           ${categoryChildrenMarkup(project, category)}
-          <div class="catalog-category-layout">
-            ${modernCategoryFilters(products)}
-            <div class="catalog-category-results">
-              <div class="solara-category-toolbar" data-category-toolbar>
-                <span data-category-result-count>${products.length} productos</span>
-                <label>Ordenar <select data-category-sort><option value="recommended">Recomendados</option><option value="price-asc">Precio menor</option><option value="price-desc">Precio mayor</option><option value="name">Nombre</option></select></label>
-              </div>
-              ${renderProjectSections(project, categorySections, {
-                pageType: "category",
-                category: { ...category, productIds: paginated.map((product) => product.id) },
-                products: paginated,
-              })}
-            </div>
-          </div>
+          ${categoryListingMarkup(project, products, paginated, categoryGrid)}
           ${paginationNavigation(`/categorias/${category.slug}`, pageNumber, totalPages)}
         </main>`,
         renderProjectSections(project, sharedFooter, { pageType: "category", category }),
@@ -1724,7 +1747,7 @@ function buildVideoSitemap(project: StoreProjectV1): string {
   const content = videoUrl(project, video.id);
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
-  <url><loc>${escapeXml(absoluteUrl(project, "/"))}</loc><video:video><video:thumbnail_loc>${escapeXml(absoluteResourceUrl(project, poster ?? ""))}</video:thumbnail_loc><video:title>${escapeXml(video.name)}</video:title><video:description>${escapeXml(video.alt || video.name)}</video:description><video:content_loc>${escapeXml(absoluteResourceUrl(project, content ?? ""))}</video:content_loc><video:duration>${Math.round(video.durationSeconds)}</video:duration></video:video></url>
+  <url><loc>${escapeXml(absoluteUrl(project, "/"))}</loc><video:video>${poster ? `<video:thumbnail_loc>${escapeXml(absoluteResourceUrl(project, poster))}</video:thumbnail_loc>` : ""}<video:title>${escapeXml(video.name)}</video:title><video:description>${escapeXml(video.alt || video.name)}</video:description><video:content_loc>${escapeXml(absoluteResourceUrl(project, content ?? ""))}</video:content_loc><video:duration>${Math.round(video.durationSeconds)}</video:duration></video:video></url>
 </urlset>`;
 }
 
@@ -2220,7 +2243,7 @@ function buildFiles(
       "_headers",
       `/*
   Cache-Control: public, max-age=0, must-revalidate
-  Content-Security-Policy: default-src 'self'; img-src 'self' data: https:; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: https: http:; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self'; media-src 'self' https: http:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
   Referrer-Policy: strict-origin-when-cross-origin
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY

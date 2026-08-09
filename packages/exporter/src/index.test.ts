@@ -331,6 +331,62 @@ describe("exporter", () => {
     expect(String(result.files.get("video-sitemap.xml"))).toContain("fixture-video.mp4");
   });
 
+  it("omite el thumbnail cuando el poster del hero no resuelve", () => {
+    const validPoster = referenceStore.assets[0]?.id;
+    const heroBase = referenceStore.sections.find((section) => section.slot === "hero");
+    if (!validPoster || !heroBase) throw new Error("Fixture incompleto");
+    const project = {
+      ...referenceStore,
+      videos: [
+        {
+          kind: "video" as const,
+          id: "video-fixture",
+          name: "Hero Casa Luma",
+          alt: "Mesa Casa Luma en movimiento",
+          mimeType: "video/mp4" as const,
+          source: "data:video/mp4;base64,AA==",
+          width: 1280,
+          height: 720,
+          durationSeconds: 5,
+          hash: "fixture-video",
+        },
+      ],
+      sections: [
+        ...referenceStore.sections.filter((section) => section.slot !== "hero"),
+        {
+          ...heroBase,
+          id: "section-hero-sin-poster",
+          settings: {
+            ...heroBase.settings,
+            mode: "video",
+            posterAssetId: "",
+            videoAssetId: "video-fixture",
+            slides: [],
+          },
+        },
+        {
+          ...heroBase,
+          id: "section-hero-poster-valido",
+          settings: {
+            ...heroBase.settings,
+            mode: "video",
+            posterAssetId: validPoster,
+            videoAssetId: "video-fixture",
+            slides: [],
+          },
+        },
+      ],
+    } as typeof referenceStore;
+    const result = exportProject(project, { mode: "production" });
+    const home = String(result.files.get("index.html"));
+    const videoSitemap = String(result.files.get("video-sitemap.xml"));
+
+    expect(home).not.toContain('"thumbnailUrl":"https://casa-luma.example/"');
+    expect(home).not.toContain('"thumbnailUrl":"https://casa-luma.example"');
+    expect(videoSitemap).not.toContain("<video:thumbnail_loc>");
+    expect(videoSitemap).toContain("fixture-video.mp4");
+  });
+
   it("publica headers de seguridad compatibles con variables de movimiento", () => {
     const headers = String(
       exportProject(referenceStore, { mode: "production" }).files.get("_headers"),
@@ -339,6 +395,14 @@ describe("exporter", () => {
     expect(headers).toContain("style-src-attr 'unsafe-inline'");
     expect(headers).toContain("script-src 'self'");
     expect(headers).toContain("connect-src 'self'");
+  });
+
+  it("permite media remota en la CSP del sitio público", () => {
+    const headers = String(
+      exportProject(referenceStore, { mode: "production" }).files.get("_headers"),
+    );
+    expect(headers).toContain("media-src 'self' https: http:");
+    expect(headers).toContain("img-src 'self' data: https: http:");
   });
 
   it("recupera un archivo de proyecto sin cambios", () => {
@@ -475,7 +539,7 @@ describe("exporter", () => {
 });
 
 describe("renderPreviewHtml sin preload absoluto", () => {
-  it("no emite preload de imagen cuando el transporte es parent", () => {
+  it("no emite preload de imagen cuando el modo es draft", () => {
     const html = renderPreviewHtml(catalogModernStore, "draft", "/", {
       assetTransport: "parent",
     });
