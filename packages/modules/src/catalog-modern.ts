@@ -180,12 +180,15 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
         return `<li class="catalog-mega-group${hasChildren ? " catalog-mega-group--has-children" : ""}"><a class="catalog-mega-group__link" href="${escapeAttribute(safeUrl(item.href ?? "#"))}"><span>${escapeHtml(item.label)}</span></a>${children}</li>`;
       })
       .join("");
+    const searchEnabled = navigation.showSearch && context.project.commerceTemplates.search.enabled;
     const desktopMenu = navigationItems.length
-      ? `<div id="catalog-category-menu" class="catalog-mega-menu" role="group" aria-label="Categorías"><ul class="catalog-mega-menu__groups">${desktopMenuItems}</ul><a class="catalog-mega-menu__all" href="/buscar/">Ver todos los productos <span aria-hidden="true">→</span></a></div>`
+      ? `<div id="catalog-category-menu" class="catalog-mega-menu" role="group" aria-label="Categorías"><ul class="catalog-mega-menu__groups">${desktopMenuItems}</ul>${searchEnabled ? `<a class="catalog-mega-menu__all" href="/buscar/">Ver todos los productos <span aria-hidden="true">→</span></a>` : ""}</div>`
       : "";
     const catalog = navigationItems.length
       ? `<details class="catalog-nav-menu"><summary class="catalog-nav-trigger" aria-controls="catalog-category-menu" aria-haspopup="true" aria-expanded="false"${current(["category", "collection"])}>${escapeHtml(catalogLabel)}${chevron}</summary>${desktopMenu}</details>`
-      : `<a class="catalog-nav-empty" href="/buscar/"${current(["category", "collection"])}>${escapeHtml(catalogLabel)}</a>`;
+      : searchEnabled
+        ? `<a class="catalog-nav-empty" href="/buscar/"${current(["category", "collection"])}>${escapeHtml(catalogLabel)}</a>`
+        : "";
     const mobileCategoryItems = navigationItems
       .map((item, index) => {
         const children = item.children ?? [];
@@ -203,13 +206,14 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
       .join("");
     const mobileCategories = navigationItems.length
       ? `<details class="catalog-mobile-categories"><summary aria-controls="catalog-mobile-categories-panel" aria-expanded="false"><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("categories")}</span><span>${escapeHtml(catalogLabel)}</span>${chevron}</summary><div id="catalog-mobile-categories-panel" class="catalog-mobile-categories__panel">${mobileCategoryItems}</div></details>`
-      : `<a class="catalog-mobile-nav-link" href="/buscar/"><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("categories")}</span><span>${escapeHtml(catalogLabel)}</span>${forwardChevron}</a>`;
+      : searchEnabled
+        ? `<a class="catalog-mobile-nav-link" href="/buscar/"><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("categories")}</span><span>${escapeHtml(catalogLabel)}</span>${forwardChevron}</a>`
+        : "";
     const nav = `${navigation.showHome ? `<a href="/"${current(["home"])}>Inicio</a>` : ""}${catalog}${navigation.showContact ? `<a href="/contacto/"${current(["contact"])}>Contacto</a>` : ""}${navigation.showAbout ? `<a href="/nosotros/"${current(["about"])}>Nosotros</a>` : ""}`;
     const mobileNav = `${navigation.showHome ? `<a class="catalog-mobile-nav-link" href="/"${current(["home"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("home")}</span><span>Inicio</span>${forwardChevron}</a>` : ""}${mobileCategories}${navigation.showContact ? `<a class="catalog-mobile-nav-link" href="/contacto/"${current(["contact"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("contact")}</span><span>Contacto</span>${forwardChevron}</a>` : ""}${navigation.showAbout ? `<a class="catalog-mobile-nav-link" href="/nosotros/"${current(["about"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("about")}</span><span>Nosotros</span>${forwardChevron}</a>` : ""}`;
-    const search =
-      navigation.showSearch && context.project.commerceTemplates.search.enabled
-        ? `<button class="catalog-search-link" type="button" data-catalog-search-open aria-controls="catalog-search-dialog" aria-expanded="false" aria-label="${escapeAttribute(context.settings.searchLabel)}"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><span>${escapeHtml(context.settings.searchLabel)}</span></button><noscript><a class="catalog-search-noscript" href="/buscar/">${escapeHtml(context.settings.searchLabel)}</a></noscript>`
-        : "";
+    const search = searchEnabled
+      ? `<button class="catalog-search-link" type="button" data-catalog-search-open aria-controls="catalog-search-dialog" aria-expanded="false" aria-label="${escapeAttribute(context.settings.searchLabel)}"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><span>${escapeHtml(context.settings.searchLabel)}</span></button><noscript><a class="catalog-search-noscript" href="/buscar/">${escapeHtml(context.settings.searchLabel)}</a></noscript>`
+      : "";
     const cart =
       navigation.showCart && context.project.siteShell.cart
         ? `<button class="catalog-cart-link" type="button" data-solara-cart-open data-open-cart data-cart-label="${escapeAttribute(context.settings.cartLabel)}" aria-controls="solara-cart"><span>${escapeHtml(context.settings.cartLabel)}</span><strong data-solara-cart-count data-cart-count aria-live="polite">0</strong></button>`
@@ -222,14 +226,19 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
         <a class="catalog-brand" href="/" aria-label="Inicio de ${escapeAttribute(context.project.identity.brandName)}">${renderBrand(context.project)}</a>
         <nav class="catalog-desktop-nav" aria-label="Navegación principal">${nav}</nav>
         <div class="catalog-header-actions">${search}${cart}</div>
-        <aside id="catalog-mobile-menu" class="catalog-mobile-menu" data-catalog-menu hidden role="dialog" aria-modal="true" aria-label="Navegación móvil"><div class="catalog-mobile-menu__header"><a class="catalog-mobile-brand" href="/" aria-label="Inicio de ${escapeAttribute(context.project.identity.brandName)}">${renderBrand(context.project)}</a><button type="button" class="catalog-mobile-menu__close" data-catalog-menu-close aria-label="Cerrar menú"><span class="sr-only">Cerrar menú</span><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="m6 6 12 12M18 6 6 18"></path></svg></button></div><form class="catalog-mobile-search" action="/buscar/" method="get" role="search"><label class="sr-only" for="catalog-mobile-search-input">Buscar productos</label><div class="catalog-mobile-search__field"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><input id="catalog-mobile-search-input" name="q" type="search" placeholder="Buscar productos..." autocomplete="off"><button type="submit" aria-label="Buscar"><span aria-hidden="true">→</span></button></div></form><nav aria-label="Navegación móvil">${mobileNav}</nav></aside>
-        <dialog id="catalog-search-dialog" class="catalog-search-dialog" data-catalog-search-dialog aria-labelledby="catalog-search-title">
+        <noscript><style>@media (max-width:767px){[data-solara-store].catalog-modern .catalog-mobile-menu[hidden]{display:block}}</style></noscript>
+        <aside id="catalog-mobile-menu" class="catalog-mobile-menu" data-catalog-menu hidden role="dialog" aria-modal="true" aria-label="Navegación móvil"><div class="catalog-mobile-menu__header"><a class="catalog-mobile-brand" href="/" aria-label="Inicio de ${escapeAttribute(context.project.identity.brandName)}">${renderBrand(context.project)}</a><button type="button" class="catalog-mobile-menu__close" data-catalog-menu-close aria-label="Cerrar menú"><span class="sr-only">Cerrar menú</span><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="m6 6 12 12M18 6 6 18"></path></svg></button></div>${searchEnabled ? `<form class="catalog-mobile-search" action="/buscar/" method="get" role="search"><label class="sr-only" for="catalog-mobile-search-input">Buscar productos</label><div class="catalog-mobile-search__field"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><input id="catalog-mobile-search-input" name="q" type="search" placeholder="Buscar productos..." autocomplete="off"><button type="submit" aria-label="Buscar"><span aria-hidden="true">→</span></button></div></form>` : ""}<nav aria-label="Navegación móvil">${mobileNav}</nav></aside>
+        ${
+          searchEnabled
+            ? `<dialog id="catalog-search-dialog" class="catalog-search-dialog" data-catalog-search-dialog aria-labelledby="catalog-search-title">
           <form class="catalog-search-dialog-form" action="/buscar/" method="get" role="search">
             <div class="catalog-search-dialog-heading"><div><p class="catalog-eyebrow">Catálogo</p><h2 id="catalog-search-title">Buscar productos</h2></div><button type="button" data-catalog-search-close aria-label="Cerrar búsqueda">Cerrar</button></div>
             <label for="catalog-search-input">Buscar por nombre, marca, categoría o etiqueta</label>
             <div class="catalog-search-dialog-controls"><input id="catalog-search-input" name="q" type="search" autocomplete="off" enterkeyhint="search"><button class="catalog-primary-action" type="submit">Buscar</button></div>
           </form>
-        </dialog>
+        </dialog>`
+            : ""
+        }
       </div>`),
       { tag: "header" },
     );
@@ -614,6 +623,24 @@ const productDetailSettings = z.object({
   deliveryNote: z.string().default("Coordinamos entrega y pago por WhatsApp."),
 });
 
+function buildWhatsAppInquiryLink(
+  context: Parameters<NonNullable<(typeof catalogProductDetail)["render"]>>[0],
+  product: Product,
+): string {
+  const phone = context.project.whatsapp.phone.replace(/\D/g, "");
+  if (!phone) return "";
+  const firstVariant = product.variants.find((variant) => variant.available) ?? product.variants[0];
+  const message = [
+    context.project.whatsapp.greeting,
+    `Producto: ${product.title}`,
+    firstVariant ? `Variante: ${firstVariant.title}` : "",
+    `Precio: ${formatMoney(firstVariant?.price ?? lowestPrice(product))}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+
 export const catalogProductDetail: ModuleDefinition<
   "catalog-product-detail",
   z.infer<typeof productDetailSettings>
@@ -685,7 +712,7 @@ export const catalogProductDetail: ModuleDefinition<
           (asset) => asset.id === (variant.imageId ?? product.imageIds[0]),
         );
         const imageUrl = variantImage ? safeAssetUrl(variantImage.source, "") : "";
-        return `<option value="${escapeAttribute(variant.id)}" data-variant-data="${escapeAttribute(variant.id)}" data-variant-id="${escapeAttribute(variant.id)}" data-variant-title="${escapeAttribute(variant.title)}" data-sku="${escapeAttribute(variant.sku)}" data-image-id="${escapeAttribute(variant.imageId ?? product.imageIds[0] ?? "")}"${imageUrl ? ` data-image-url="${escapeAttribute(imageUrl)}" data-image-width="${variantImage?.width ?? ""}" data-image-height="${variantImage?.height ?? ""}"` : ""} data-price="${variant.price}" data-compare-at="${variant.compareAtPrice ?? ""}" data-available="${String(variant.available)}"${variant.available ? "" : " disabled"}>${escapeHtml(variant.title)} · ${escapeHtml(formatMoney(variant.price))}${variant.available ? "" : " · Agotado"}</option>`;
+        return `<option value="${escapeAttribute(variant.id)}" data-variant-data="${escapeAttribute(variant.id)}" data-variant-id="${escapeAttribute(variant.id)}" data-variant-title="${escapeAttribute(variant.title)}" data-sku="${escapeAttribute(variant.sku)}" data-image-id="${escapeAttribute(variant.imageId ?? product.imageIds[0] ?? "")}"${imageUrl ? ` data-image-url="${escapeAttribute(imageUrl)}" data-image-width="${variantImage?.width ?? ""}" data-image-height="${variantImage?.height ?? ""}"` : ""} data-price="${variant.price}" data-compare-at="${variant.compareAtPrice ?? ""}" data-available="${String(variant.available)}"${variant.available ? "" : " disabled"}${variant.id === firstVariant?.id ? " selected" : ""}>${escapeHtml(variant.title)} · ${escapeHtml(formatMoney(variant.price))}${variant.available ? "" : " · Agotado"}</option>`;
       })
       .join("");
     const optionNames = [
@@ -719,6 +746,7 @@ export const catalogProductDetail: ModuleDefinition<
           `<a href="/productos/${escapeAttribute(product.slug)}/?variant=${escapeAttribute(variant.id)}">${escapeHtml(variant.title)}</a>`,
       )
       .join("");
+    const whatsappFallback = buildWhatsAppInquiryLink(context, product);
     const compareAt =
       context.settings.showCompareAtPrice && firstVariant?.compareAtPrice
         ? formatMoney(firstVariant.compareAtPrice)
@@ -753,6 +781,7 @@ export const catalogProductDetail: ModuleDefinition<
             ${optionControls ? `<div class="catalog-variant-options" aria-label="Opciones del producto">${optionControls}</div>` : ""}
             <div class="catalog-quantity-row"><label for="catalog-quantity-${escapeAttribute(context.section.id)}">Cantidad</label><input id="catalog-quantity-${escapeAttribute(context.section.id)}" name="quantity" type="number" min="1" max="99" value="1" inputmode="numeric"></div>
             <button class="catalog-product-add" type="submit" data-add-to-cart>${escapeHtml(context.settings.actionLabel)}</button>
+            ${whatsappFallback ? `<noscript><style>[data-solara-store].catalog-modern .catalog-add-form .catalog-add-fallback{display:inline-flex}[data-solara-store].catalog-modern .catalog-add-form .catalog-product-add{display:none}</style><a class="catalog-add-fallback" href="${escapeAttribute(whatsappFallback)}" target="_blank" rel="noopener noreferrer">Consultar por WhatsApp</a></noscript>` : ""}
           </form>
           <nav class="catalog-variant-links" aria-label="Enlaces directos a variantes">${variantLinks}</nav>
           <p class="catalog-delivery-note">${escapeHtml(context.settings.deliveryNote)}</p>
@@ -868,11 +897,13 @@ export const catalogCategoryBento: ModuleDefinition<
       })
       .filter(Boolean)
       .join("");
+    const searchEnabled =
+      context.project.navigation.showSearch && context.project.commerceTemplates.search.enabled;
     return moduleRoot(
       "catalog-category-bento",
       context.section,
       safeHtml(
-        `<div class="catalog-category-bento-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${items ? '<a class="catalog-category-bento-all" href="/buscar/">Ver todo el catálogo</a>' : ""}</header><div class="catalog-category-bento-grid" data-motion-zone="items">${items || '<p class="catalog-empty">Todavía no hay categorías para mostrar.</p>'}</div></div>`,
+        `<div class="catalog-category-bento-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${items && searchEnabled ? '<a class="catalog-category-bento-all" href="/buscar/">Ver todo el catálogo</a>' : ""}</header><div class="catalog-category-bento-grid" data-motion-zone="items">${items || '<p class="catalog-empty">Todavía no hay categorías para mostrar.</p>'}</div></div>`,
       ),
     );
   },
@@ -1020,17 +1051,24 @@ export const catalogFooter: ModuleDefinition<
       collection.productIds.some((productId) => activeProductIds.has(productId)),
     );
     const firstCategory = context.project.categories.find((category) => !category.parentId);
+    const searchEnabled =
+      context.project.navigation.showSearch && context.project.commerceTemplates.search.enabled;
     const catalogLink = firstCollection
       ? { label: firstCollection.title, href: `/colecciones/${firstCollection.slug}/` }
       : firstCategory
         ? { label: firstCategory.title, href: `/categorias/${firstCategory.slug}/` }
-        : { label: context.project.navigation.catalogLabel, href: "/buscar/" };
-    const catalogLinkMarkup = `<a href="${escapeAttribute(catalogLink.href)}">${escapeHtml(catalogLink.label)}</a>`;
+        : searchEnabled
+          ? { label: context.project.navigation.catalogLabel, href: "/buscar/" }
+          : undefined;
+    const catalogLinkMarkup = catalogLink
+      ? `<a href="${escapeAttribute(catalogLink.href)}">${escapeHtml(catalogLink.label)}</a>`
+      : "";
+    const searchLink = searchEnabled ? `<a href="/buscar/">Buscar</a>` : "";
     return moduleRoot(
       "catalog-footer",
       context.section,
       safeHtml(
-        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div><nav aria-label="Catálogo"><a href="/">Inicio</a>${catalogLinkMarkup}<a href="/buscar/">Buscar</a></nav><nav aria-label="Ayuda"><a href="/contacto/">Contacto</a><a href="/nosotros/">Nosotros</a>${policyLinks}</nav><address>${contact}</address><small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)}</small></div>`,
+        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div><nav aria-label="Catálogo"><a href="/">Inicio</a>${catalogLinkMarkup}${searchLink}</nav><nav aria-label="Ayuda"><a href="/contacto/">Contacto</a><a href="/nosotros/">Nosotros</a>${policyLinks}</nav><address>${contact}</address><small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)}</small></div>`,
       ),
       { tag: "footer" },
     );

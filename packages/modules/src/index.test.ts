@@ -269,3 +269,120 @@ describe("registro de módulos tipado", () => {
     expect(ids).toContain("catalog-hero");
   });
 });
+
+describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
+  const modernDetailSection = createModuleSection({
+    id: "section-modern-detail-test" as StoreSection["id"],
+    slot: "product",
+    moduleId: "catalog-product-detail",
+  });
+  const legacyDetailSection = createModuleSection({
+    id: "section-legacy-detail-test" as StoreSection["id"],
+    slot: "product",
+    moduleId: "product-detail",
+  });
+
+  it("ofrece consulta por WhatsApp sin JavaScript en el detalle moderno", () => {
+    const product = catalogModernStore.products.find(
+      (candidate) => candidate.slug === "remera-esencial-de-algodon",
+    );
+    const html = renderSections(catalogModernStore, [modernDetailSection], {
+      pageType: "product",
+      product,
+    });
+
+    expect(html).toContain("<noscript>");
+    expect(html).toContain('class="catalog-add-fallback"');
+    expect(html).toContain(".catalog-add-fallback{display:");
+    expect(html).toContain('href="https://wa.me/5491123456789?text=');
+    expect(html).toContain("Remera esencial de algodón");
+  });
+
+  it("ofrece consulta por WhatsApp sin JavaScript en el detalle legacy", () => {
+    const product = referenceStore.products[0];
+    const html = renderSections(referenceStore, [legacyDetailSection], {
+      pageType: "product",
+      product,
+    });
+
+    expect(html).toContain("<noscript>");
+    expect(html).toContain('class="solara-add-fallback"');
+    expect(html).toContain(".solara-add-fallback{display:");
+    expect(html).toContain("https://wa.me/");
+  });
+
+  it("inicializa el detalle moderno en la variante disponible aunque la primera esté agotada", () => {
+    const project = structuredClone(catalogModernStore);
+    const product = project.products.find(
+      (candidate) => candidate.slug === "remera-esencial-de-algodon",
+    );
+    if (!product) throw new Error("Fixture sin remera esencial");
+    const soldOut = product.variants.find((variant) => !variant.available);
+    if (!soldOut) throw new Error("Fixture sin variante agotada");
+    product.variants = [soldOut, ...product.variants.filter((variant) => variant !== soldOut)];
+    const available = product.variants.find((variant) => variant.available);
+    if (!available) throw new Error("Fixture sin variante disponible");
+
+    const html = renderSections(project, [modernDetailSection], {
+      pageType: "product",
+      product,
+    });
+    const selectHtml = html.slice(html.indexOf("data-variant-select"), html.indexOf("</select>"));
+    const optionTags = selectHtml.match(/<option[^>]*>/g) ?? [];
+    expect(optionTags[0]).toContain("disabled");
+    expect(optionTags[0]).not.toContain("selected");
+    const availableTag = optionTags.find((tag) => tag.includes(`value="${available.id}"`));
+    expect(availableTag).toContain("selected");
+  });
+
+  it("inicializa el detalle legacy en la variante disponible aunque la primera esté agotada", () => {
+    const project = structuredClone(referenceStore);
+    const product = project.products[0];
+    if (!product || product.variants.length < 2) throw new Error("Fixture sin variantes");
+    const [first, second] = product.variants;
+    product.variants = [{ ...second, available: false }, first];
+    const available = product.variants.find((variant) => variant.available);
+    if (!available) throw new Error("Fixture sin variante disponible");
+
+    const html = renderSections(project, [legacyDetailSection], {
+      pageType: "product",
+      product,
+    });
+    const selectHtml = html.slice(html.indexOf("data-variant-select"), html.indexOf("</select>"));
+    const optionTags = selectHtml.match(/<option[^>]*>/g) ?? [];
+    expect(optionTags[0]).toContain("disabled");
+    expect(optionTags[0]).not.toContain("selected");
+    const availableTag = optionTags.find((tag) => tag.includes(`value="${available.id}"`));
+    expect(availableTag).toContain("selected");
+  });
+
+  it("mantiene la navegación móvil accesible sin JavaScript", () => {
+    const headerSection = createModuleSection({
+      id: "section-modern-header-test" as StoreSection["id"],
+      slot: "header",
+      moduleId: "catalog-header",
+    });
+    const html = renderSections(catalogModernStore, [headerSection], { pageType: "home" });
+    const noscripts = [...html.matchAll(/<noscript>([\s\S]*?)<\/noscript>/g)].map(
+      (match) => match[1],
+    );
+
+    expect(noscripts.some((block) => block.includes(".catalog-mobile-menu[hidden]"))).toBe(true);
+  });
+
+  it("no emite rutas a /buscar/ cuando la búsqueda está deshabilitada", () => {
+    const project = structuredClone(catalogModernStore);
+    project.commerceTemplates.search.enabled = false;
+
+    const html = renderSections(project, project.sections, { pageType: "home" });
+    expect(html).not.toContain("/buscar/");
+    expect(html).not.toContain("catalog-search-dialog");
+    expect(html).not.toContain("catalog-mobile-search");
+
+    const enabledHtml = renderSections(catalogModernStore, catalogModernStore.sections, {
+      pageType: "home",
+    });
+    expect(enabledHtml).toContain("/buscar/");
+    expect(enabledHtml).toContain("catalog-search-dialog");
+  });
+});

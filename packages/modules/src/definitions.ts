@@ -13,7 +13,7 @@ import {
   safeUrl,
   sanitizeRichText,
 } from "@solara/module-sdk";
-import type { AssetId } from "@solara/project-schema";
+import type { AssetId, Product } from "@solara/project-schema";
 import { z } from "zod";
 import {
   lowestPrice,
@@ -651,6 +651,24 @@ const productDetailSettings = z.object({
   deliveryNote: z.string().default("Coordinamos entrega y pago por WhatsApp."),
 });
 
+function buildWhatsAppInquiryLink(
+  context: Parameters<NonNullable<(typeof productDetail)["render"]>>[0],
+  product: Product,
+): string {
+  const phone = context.project.whatsapp.phone.replace(/\D/g, "");
+  if (!phone) return "";
+  const firstVariant = product.variants.find((variant) => variant.available) ?? product.variants[0];
+  const message = [
+    context.project.whatsapp.greeting,
+    `Producto: ${product.title}`,
+    firstVariant ? `Variante: ${firstVariant.title}` : "",
+    `Precio: ${formatMoney(firstVariant?.price ?? lowestPrice(product))}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+
 export const productDetail: ModuleDefinition<
   "product-detail",
   z.infer<typeof productDetailSettings>
@@ -682,7 +700,8 @@ export const productDetail: ModuleDefinition<
         safeHtml('<p class="solara-empty-state">Este producto no está disponible.</p>'),
       );
     }
-    const firstVariant = product.variants[0];
+    const firstVariant =
+      product.variants.find((variant) => variant.available) ?? product.variants[0];
     const galleryAssetIds = [
       ...product.variants.map((variant) => variant.imageId),
       ...product.imageIds,
@@ -720,7 +739,7 @@ export const productDetail: ModuleDefinition<
         const variantImage = context.project.assets.find(
           (asset) => asset.id === (variant.imageId ?? product.imageIds[0]),
         );
-        return `<option value="${escapeAttribute(variant.id)}" data-variant-data="${escapeAttribute(variant.id)}" data-variant-id="${escapeAttribute(variant.id)}" data-variant-title="${escapeAttribute(variant.title)}" data-sku="${escapeAttribute(variant.sku)}" data-image-id="${escapeAttribute(variant.imageId ?? product.imageIds[0] ?? "")}"${variantImage ? ` data-image-url="${escapeAttribute(safeAssetUrl(variantImage.source, ""))}" data-image-width="${variantImage.width}" data-image-height="${variantImage.height}"` : ""} data-price="${variant.price}" data-compare-at="${variant.compareAtPrice ?? ""}" data-available="${String(variant.available)}" ${variant.available ? "" : "disabled"}>${escapeHtml(variant.title)} - ${escapeHtml(formatMoney(variant.price))}${variant.available ? "" : " - Agotado"}</option>`;
+        return `<option value="${escapeAttribute(variant.id)}" data-variant-data="${escapeAttribute(variant.id)}" data-variant-id="${escapeAttribute(variant.id)}" data-variant-title="${escapeAttribute(variant.title)}" data-sku="${escapeAttribute(variant.sku)}" data-image-id="${escapeAttribute(variant.imageId ?? product.imageIds[0] ?? "")}"${variantImage ? ` data-image-url="${escapeAttribute(safeAssetUrl(variantImage.source, ""))}" data-image-width="${variantImage.width}" data-image-height="${variantImage.height}"` : ""} data-price="${variant.price}" data-compare-at="${variant.compareAtPrice ?? ""}" data-available="${String(variant.available)}" ${variant.available ? "" : "disabled"}${variant.id === firstVariant?.id ? " selected" : ""}>${escapeHtml(variant.title)} - ${escapeHtml(formatMoney(variant.price))}${variant.available ? "" : " - Agotado"}</option>`;
       })
       .join("");
     const variantLinks = product.variants
@@ -729,6 +748,7 @@ export const productDetail: ModuleDefinition<
           `<a href="/productos/${escapeAttribute(product.slug)}/?variant=${escapeAttribute(variant.id)}">${escapeHtml(variant.title)}</a>`,
       )
       .join("");
+    const whatsappFallback = buildWhatsAppInquiryLink(context, product);
     const compareAt =
       context.settings.showCompareAtPrice && firstVariant?.compareAtPrice
         ? formatMoney(firstVariant.compareAtPrice)
@@ -754,6 +774,7 @@ export const productDetail: ModuleDefinition<
             <label for="quantity-${escapeAttribute(context.section.id)}">Cantidad</label>
             <input id="quantity-${escapeAttribute(context.section.id)}" name="quantity" type="number" min="1" max="99" value="1" inputmode="numeric">
             <button type="submit" data-add-to-cart>${escapeHtml(context.settings.actionLabel)}</button>
+            ${whatsappFallback ? `<noscript><style>[data-solara-add-form] .solara-add-fallback{display:inline-flex}[data-solara-add-form] [data-add-to-cart]{display:none}</style><a class="solara-add-fallback" href="${escapeAttribute(whatsappFallback)}" target="_blank" rel="noopener noreferrer">Consultar por WhatsApp</a></noscript>` : ""}
           </form>
           <nav class="solara-variant-links" aria-label="Enlaces directos a variantes">${variantLinks}</nav>
           <p class="solara-delivery-note">${escapeHtml(context.settings.deliveryNote)}</p>
