@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
@@ -602,6 +602,30 @@ describe("almacenamiento local de proyectos", () => {
       const listing = await storage.list();
       expect(listing.recovery).toHaveLength(0);
       await expect(readFile(sidecar, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reporta en recovery un junction/symlink dentro de proyectos/", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-junction-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      const outside = join(root, "fuera-de-proyectos");
+      await mkdir(outside, { recursive: true });
+      const projectsRoot = join(root, "proyectos");
+      await mkdir(projectsRoot, { recursive: true });
+      await symlink(
+        outside,
+        join(projectsRoot, "tienda-enlazada"),
+        process.platform === "win32" ? "junction" : "dir",
+      );
+
+      const listing = await storage.list();
+      const report = listing.recovery.find((r) => r.folder === "tienda-enlazada");
+      expect(report).toBeDefined();
+      expect(report.message).toMatch(/enlace simbólico|junction/i);
+      expect(listing.projects.some((p) => p.folder === "tienda-enlazada")).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

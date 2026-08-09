@@ -254,7 +254,7 @@ export function createLocalProjectStorage(options = {}) {
     await ensureRoots();
     const entries = await readdir(projectsRoot, { withFileTypes: true });
     for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
+      if (entry.isSymbolicLink() || !entry.isDirectory()) continue;
       const manifestPath = join(projectsRoot, entry.name, "manifest.json");
       try {
         await assertNoReparsePoints(projectsRoot, join(projectsRoot, entry.name));
@@ -280,6 +280,15 @@ export function createLocalProjectStorage(options = {}) {
     const projects = [];
     const recovery = [];
     for (const entry of entries) {
+      if (entry.isSymbolicLink()) {
+        // Un junction/symlink no es una tienda: se reporta en recovery para
+        // que el usuario lo vea y lo elimine o reemplace por una carpeta real.
+        recovery.push({
+          folder: entry.name,
+          message: "La carpeta es un enlace simbólico o junction y no se usa como tienda.",
+        });
+        continue;
+      }
       if (!entry.isDirectory()) continue;
       const root = join(projectsRoot, entry.name);
       try {
