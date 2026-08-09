@@ -2,6 +2,8 @@
  * T5.1-T5.4 — Micro-interacciones del editor: hover de filas/cards, indicador
  * de guardado animado, reduced-motion global y presupuesto de render del
  * catálogo con la tienda demo (50 productos).
+ * T1 — fill-mode de los presets de entrada del storefront: el hover de una
+ * card del preview sigue vivo después del reveal de la animación.
  */
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
@@ -200,4 +202,45 @@ test("el catálogo con 50 productos renderiza la tabla dentro del presupuesto (T
     `perf: catálogo 50 filas ${elapsed.toFixed(0)} ms (budget ${CATALOG_TABLE_BUDGET_MS} ms)`,
   );
   expect(elapsed).toBeLessThanOrEqual(CATALOG_TABLE_BUDGET_MS);
+});
+
+test("el hover de una card sobrevive al reveal del preset de entrada (T1)", async ({ page }) => {
+  await openStore(page, "Constructor");
+  // El panel de edición queda abierto sobre el preview y taparía el puntero;
+  // se cierra para que el iframe reciba el hover real.
+  await page.getByRole("button", { name: "Cerrar panel de edición", exact: true }).click();
+  const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
+
+  // El home de la tienda demo (Catalog Modern) usa el preset "stagger" en los
+  // grids de productos; se espera el reveal antes de probar el hover.
+  const grid = preview
+    .locator('[data-motion-root][data-motion-preset="stagger"] .catalog-product-grid')
+    .first();
+  await grid.scrollIntoViewIfNeeded();
+  const root = grid.locator("xpath=ancestor::*[@data-motion-root]").first();
+  await expect(root).toHaveAttribute("data-motion-visible", "true", { timeout: 15_000 });
+
+  const card = grid.locator(".catalog-product-card").first();
+  await card.evaluate(async (element) => {
+    const animations = element.getAnimations();
+    if (animations.length > 0) {
+      await Promise.race([
+        Promise.all(animations.map((animation) => animation.finished)),
+        new Promise((resolve) => setTimeout(resolve, 5_000)),
+      ]);
+    }
+  });
+
+  // El hover del módulo escala la imagen (transition de transform); con
+  // fill-mode "both" el keyframe final congelado no lo impide en este árbol,
+  // pero la animación queda aplicada para siempre sobre la card: se aserta
+  // además que no quede ninguna animación congelada tras el reveal.
+  const image = card.locator(".catalog-product-card-image");
+  const transformBefore = await image.evaluate((element) => getComputedStyle(element).transform);
+  await card.hover();
+  await expect
+    .poll(() => image.evaluate((element) => getComputedStyle(element).transform))
+    .not.toBe(transformBefore);
+
+  await expect.poll(() => card.evaluate((element) => element.getAnimations().length)).toBe(0);
 });

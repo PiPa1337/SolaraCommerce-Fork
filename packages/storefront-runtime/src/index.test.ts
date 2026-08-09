@@ -85,3 +85,34 @@ describe("storefront runtime", () => {
     expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(52 * 1024);
   });
 });
+
+describe("fill-mode de los presets de motion", () => {
+  const runtime = STOREFRONT_RUNTIME_CSS;
+  const motionShorthand = (keyframe: string, delay = true) =>
+    `animation: ${keyframe} var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1))${
+      delay ? " var(--motion-delay, 0ms)" : ""
+    } backwards;`;
+
+  it("los presets de entrada usan backwards y no congelan el hover", () => {
+    const entrance = new Map<string, string>([
+      ["fade", motionShorthand("solara-motion-fade")],
+      ["fade-up", motionShorthand("solara-motion-fade-up")],
+      ["slide", motionShorthand("solara-motion-slide")],
+      ["scale", motionShorthand("solara-motion-scale")],
+      // La regla de stagger no lleva delay en el shorthand.
+      ["stagger", motionShorthand("solara-motion-fade-up", false)],
+    ]);
+    for (const [preset, rule] of entrance) {
+      expect(runtime, `preset de entrada ${preset}`).toContain(rule);
+    }
+  });
+
+  it("los presets scroll-driven conservan both", () => {
+    expect(runtime).toContain("animation: solara-parallax linear both;");
+    expect(runtime).toContain("animation: solara-progress linear both;");
+  });
+
+  it("deja both sólo en las reglas scroll-driven", () => {
+    expect(runtime.match(/\bboth\b/g)?.length).toBe(2);
+  });
+});

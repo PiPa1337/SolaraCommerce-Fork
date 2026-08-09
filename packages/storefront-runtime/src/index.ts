@@ -1364,16 +1364,16 @@ export const STOREFRONT_RUNTIME_CSS = `
 
 /* Progressive motion: content remains visible while the observer is idle or unavailable. */
 [data-motion-root][data-motion-visible="true"][data-motion-preset="fade"] [data-motion-zone] {
-  animation: solara-motion-fade var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
+  animation: solara-motion-fade var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
 }
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="fade-up"] [data-motion-zone] {
-  animation: solara-motion-fade-up var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
+  animation: solara-motion-fade-up var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
 }
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="slide"] [data-motion-zone] {
   --motion-slide-x: calc(var(--motion-distance, 24px) * var(--motion-intensity, 1));
-  animation: solara-motion-slide var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
+  animation: solara-motion-slide var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
 }
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="slide"][data-motion-direction="left"] [data-motion-zone] {
@@ -1381,11 +1381,11 @@ export const STOREFRONT_RUNTIME_CSS = `
 }
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="scale"] [data-motion-zone] {
-  animation: solara-motion-scale var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
+  animation: solara-motion-scale var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
 }
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="stagger"] [data-motion-zone] > * {
-  animation: solara-motion-fade-up var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) both;
+  animation: solara-motion-fade-up var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) backwards;
 }
 
 [data-motion-root][data-motion-preset="stagger"][data-motion-visible="true"] [data-motion-zone] > :nth-child(2) { animation-delay: var(--motion-stagger, 80ms); }
