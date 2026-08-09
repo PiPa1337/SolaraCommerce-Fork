@@ -14,9 +14,9 @@ test("mantiene el presupuesto de la salida pública optimizada", () => {
     (path) => path.startsWith("assets/") && !path.includes("storefront."),
   );
 
-  // Medición Task 6 (Step 1) en bytes crudos: storefront.css 634.124 B,
-  // storefront.js 41.475 B. Topes con margen sobre la medición; el css incluye
-  // los estilos generados por página del sitio exportado.
+  // Mediciones reales al 2026-08-09 (bytes crudos tras dedupe y rollback):
+  // storefront.css ≈ 75.132 B, storefront.js ≈ 46.731 B. Topes con margen;
+  // el css incluye los estilos generados por página del sitio exportado.
   expect(Buffer.byteLength(css, "utf8")).toBeLessThanOrEqual(780 * 1024);
   expect(Buffer.byteLength(javascript, "utf8")).toBeLessThanOrEqual(52 * 1024);
   expect(html).not.toContain("data:image/");
