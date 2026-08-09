@@ -26,8 +26,6 @@ versión publicada.
 - Barrido de bugs del editor: sin `window.confirm` residuales, helpers de
   spec sin uso removidos, primitivas sin uso documentadas y formato limpio.
 
-
-
 ### Rollback del revamp de movimiento (2026-08-08)
 
 Se revirtió por completo la sesión de revamp de movimiento (presets zoom-in/blur-in,
@@ -37,10 +35,9 @@ vuelve a su apariencia y comportamiento previos, y la candidata fue eliminada
 del disco y de IndexedDB (con purga idempotente para que no reaparezca). Se
 conservan dos mejoras de ingeniería que no dependen del aspecto: la
 deduplicación de estilos de módulo por style key en el exporter (storefront.css
-~775 KB → ~92 KB) y los budgets documentados. El runtime público vuelve a ≤ 52
-KiB JS (medido 44,8 KiB) y el techo CSS del editor sigue en 100 KiB.
-
-
+pasa de ~775 KB a ~75 KB medidos) y los budgets documentados. El runtime
+público vuelve a ≤ 52 KiB JS (medido ~45,7 KiB) y el techo CSS del editor sigue
+en 100 KiB.
 
 ### Editor UI/UX (2026-08-07)
 

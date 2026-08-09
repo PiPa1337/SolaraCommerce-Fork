@@ -84,9 +84,9 @@ Se ejecutaron con resultado exitoso:
 - `corepack pnpm benchmark:export`: 1.000 productos en 891 ms, 998 archivos,
   25.693.443 bytes de sitio sin empaquetado (carpeta directa).
 - `corepack pnpm check:budgets` (bytes crudos): Studio JS 593.892 B y CSS
-  68.769 B (techos 700 KiB y 84 KiB); runtime público JS 41.475 B y CSS 6.608 B
-  (techos 52 KiB y 8 KiB); storefront.js y storefront.css dentro de 52 KiB y
-  780 KiB.
+  68.769 B (techos 700 KiB y 84 KiB); runtime público JS 46.758 B (~45.7 KiB)
+  y CSS 6.608 B (techos 52 KiB y 8 KiB); storefront.js y storefront.css dentro
+  de 52 KiB y 780 KiB (storefront.css deduplicado ~75 KB).
 - `corepack pnpm pilot:preflight`: fixture de referencia, 27 páginas y 3
   ofertas.
 - `corepack pnpm check:repository`, `corepack pnpm format:check` y
@@ -265,3 +265,16 @@ Gate de cierre: `check`, `build`, `check:budgets`, `benchmark:export` y
 `test:e2e` verdes; ejecutables reconstruidos (`desktop:build`,
 `desktop:package`, `portable:smoke`) y commit enviado a `origin/main`.
 Detalle por ola y reportes en `.superpowers/sdd/ola*-report.md`.
+
+## Rollback del revamp de movimiento (2026-08-08)
+
+La sesión de revamp del storefront (presets `zoom-in`/`blur-in`, capability
+`micro`, efectos de hover/ambiente, módulos FAQ/stats y la tienda candidata
+"Predeterminado Revamp") se revirtió por completo (commit `625f2c3`): la
+tienda Predeterminado vuelve al sistema de movimiento previo (presets
+`fade`/`fade-up`/`slide`/`scale`/`stagger`/`parallax`/`scroll-progress`/
+`layer-stack` con `IntersectionObserver` y CSS scroll-timeline) y la candidata
+fue eliminada del disco y de IndexedDB. Se conservaron la deduplicación de
+estilos de módulo por style key en el exporter (storefront.css ~75 KB medidos)
+y los budgets documentados. Registro completo en el
+[`CHANGELOG.md`](CHANGELOG.md), sección "Rollback del revamp de movimiento".

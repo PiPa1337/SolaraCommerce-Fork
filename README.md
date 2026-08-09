@@ -315,10 +315,17 @@ Google puede exigir una finalizacion de compra convencional dentro del sitio.
 
 Los modulos declaran sus zonas animables y Studio controla preset, intensidad,
 distancia, duracion, delay, stagger, easing, punto de entrada y ejecucion unica.
-El storefront activa `inView` con `IntersectionObserver`; `parallax` y
-`scroll-progress` usan CSS Scroll-driven Animations con fallback de un solo frame
-pasivo. `prefers-reduced-motion`, pantallas pequenas y JavaScript desactivado
-conservan el estado final visible.
+Los presets de entrada actuales son `fade`, `fade-up`, `slide`, `scale`,
+`stagger`, `parallax`, `scroll-progress` y `layer-stack`. El storefront activa
+`inView` con `IntersectionObserver`; `parallax` y `scroll-progress` usan CSS
+Scroll-driven Animations (scroll-timeline) con fallback de un solo frame pasivo.
+`prefers-reduced-motion`, pantallas pequenas y JavaScript desactivado conservan
+el estado final visible.
+
+El 2026-08-08 se revirtió por completo la sesión de revamp de movimiento
+(presets `zoom-in`/`blur-in`, capability `micro`, módulos FAQ/stats y la tienda
+candidata "Predeterminado Revamp"); la tienda Predeterminado vuelve al sistema
+descrito arriba. Detalle en el [`CHANGELOG`](CHANGELOG.md).
 
 ## Hardening y recuperación (Fase 8)
 
@@ -378,8 +385,8 @@ SEO fundamental: el contenido HTML sigue siendo rastreable, semantico y util
 sin JavaScript.
 
 `corepack pnpm check:budgets` tambien comprueba el runtime publico: JavaScript
-<= 52 KiB crudos y CSS <= 8 KiB crudos, ademas de los limites del bundle
-inicial de Studio.
+<= 52 KiB crudos (medido ~45,7 KiB) y CSS <= 8 KiB crudos, ademas de los limites
+del bundle inicial de Studio.
 
 ## Piloto real (Fase 10)
 

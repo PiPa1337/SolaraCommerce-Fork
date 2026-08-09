@@ -122,7 +122,7 @@ Sumario global: total de tiendas activas, productos totales, sitios desactualiza
 
 ### T2.8 — Comparación de dos tiendas
 **Files:** `Dashboard.tsx` + `features/dashboard/CompareView.tsx` (nuevo).
-Seleccionar 2 tiendas (checkboxes en cards) → botón "Comparar" → vista con diffs: productos (cantidad), categorías, tema (tokens distintos listados), motion por sección, sitios desactualizados. Sin diffs visuales de HTML. Verificación: spec con demo vs revamp (diferencias esperadas: motion de secciones, secciones faq/stats).
+Seleccionar 2 tiendas (checkboxes en cards) → botón "Comparar" → vista con diffs: productos (cantidad), categorías, tema (tokens distintos listados), motion por sección, sitios desactualizados. Sin diffs visuales de HTML. Verificación: spec con dos configuraciones demo (diferencias esperadas: motion de secciones, p. ej. `fade-up` vs `layer-stack`).
 
 ### T2.9 — Duplicar con progreso y backup masivo
 **Files:** `Dashboard.tsx`, `App.tsx` (handlers ya existen — envolver con UX).
