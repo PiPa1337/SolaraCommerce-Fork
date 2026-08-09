@@ -71,20 +71,30 @@ try {
     assertPortableDiagnostics(instanceA, copyA),
     assertPortableDiagnostics(instanceB, copyB),
   ]);
-  const manifestFolder = (folder) => {
+  const openedStoreId = async (page) => {
+    const id = await page.locator("[data-store-card-id]").first().getAttribute("data-store-card-id");
+    if (!id) throw new Error("El dashboard no expuso la tienda a abrir.");
+    return id;
+  };
+  const storeFolder = (folder, storeId) => {
     const projectFolder = readdirSync(join(folder, "proyectos"), { withFileTypes: true }).find(
-      (entry) => entry.isDirectory(),
+      (entry) =>
+        entry.isDirectory() &&
+        JSON.parse(readFileSync(join(folder, "proyectos", entry.name, "manifest.json"), "utf8"))
+          .projectId === storeId,
     );
-    if (!projectFolder) throw new Error("La copia portable no contiene una tienda.");
+    if (!projectFolder) throw new Error(`La copia portable no contiene la tienda ${storeId}.`);
     return join(folder, "proyectos", projectFolder.name);
   };
-  const manifestAPath = join(manifestFolder(copyA), "manifest.json");
-  const manifestBPath = join(manifestFolder(copyB), "manifest.json");
+  const projectIdA = await openedStoreId(instanceA.page);
+  const projectIdB = await openedStoreId(instanceB.page);
+  const manifestAPath = join(storeFolder(copyA, projectIdA), "manifest.json");
+  const manifestBPath = join(storeFolder(copyB, projectIdB), "manifest.json");
   const initialA = JSON.parse(readFileSync(manifestAPath, "utf8"));
   const initialB = JSON.parse(readFileSync(manifestBPath, "utf8"));
 
   await instanceA.page.getByRole("button", { name: "Abrir esta tienda" }).first().click();
-  await instanceA.page.getByRole("button", { name: "Resumen", exact: true }).click();
+  await instanceA.page.getByRole("tab", { name: "Resumen", exact: true }).click();
   const name = instanceA.page.getByLabel("Nombre de la tienda");
   await name.fill("Predeterminado portable A");
   await instanceA.page.locator("[data-studio-save]").click();
@@ -144,5 +154,17 @@ try {
     throw new Error("Los perfiles portables colisionan.");
   console.log("portable e2e: OK");
 } finally {
-  rmSync(testRoot, { recursive: true, force: true });
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      rmSync(testRoot, { recursive: true, force: true });
+      break;
+    } catch (error) {
+      const retriable = error?.code === "EPERM" || error?.code === "EBUSY";
+      if (!retriable || attempt === 5) {
+        console.warn(`portable e2e: limpieza de ${testRoot} incompleta (${error?.code ?? error})`);
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1_000 * attempt));
+    }
+  }
 }
