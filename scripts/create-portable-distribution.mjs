@@ -30,6 +30,10 @@ if (existsSync(sourceProjects)) {
 }
 
 await cp(resolve(root, "Abrir SolaraCommerce.cmd"), join(destination, "Abrir SolaraCommerce.cmd"));
+// El CMD referencia `scripts\open-solara.ps1`; la distribución portable debe
+// incluirlo para que el launcher siga funcionando si se quita el ejecutable.
+await mkdir(join(destination, "scripts"), { recursive: true });
+await cp(resolve(root, "scripts/open-solara.ps1"), join(destination, "scripts", "open-solara.ps1"));
 await writeFile(
   join(destination, "README-PORTABLE.txt"),
   [

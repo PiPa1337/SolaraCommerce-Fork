@@ -62,7 +62,18 @@ async function start() {
   });
 
   await new Promise((resolveListening, reject) => {
-    server.once("error", reject);
+    server.once("error", (error) => {
+      if (error?.code === "EADDRINUSE") {
+        const friendly = new Error(
+          `El puerto ${port} ya está en uso por otra instancia de SolaraCommerce. ` +
+            "Cerrá esa instancia o usá SOLARA_PORT para elegir otro puerto.",
+        );
+        friendly.code = "EADDRINUSE";
+        reject(friendly);
+        return;
+      }
+      reject(error);
+    });
     server.listen(port, "127.0.0.1", resolveListening);
   });
   console.log(`Solara export disponible en http://localhost:${port}`);
@@ -83,5 +94,6 @@ async function start() {
 
 start().catch((error) => {
   console.error(error instanceof Error ? error.message : error);
+  if (error?.code === "EADDRINUSE") process.exit(1);
   process.exitCode = 1;
 });

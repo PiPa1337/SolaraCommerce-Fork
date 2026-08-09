@@ -171,16 +171,6 @@ async function start() {
 }
 
 function registerIpc() {
-  ipcMain.handle("solara:status", async () => ({
-    portable: true,
-    writable: (await requestHandler.storage.status()).writable,
-    projectsRoot: layout.projectsRoot,
-    runtimeRoot: layout.runtimeRoot,
-  }));
-  ipcMain.handle("solara:close", async () => {
-    await shutdown();
-    return { ok: true };
-  });
   ipcMain.handle("solara:diagnostics", () => ({
     appVersion: app.getVersion(),
     portableRoot: layout.portableRoot,
@@ -226,6 +216,31 @@ function createWindow() {
       event.preventDefault();
       if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
     }
+  });
+  // Un renderer caído no debe terminar en un cierre silencioso: el usuario
+  // recibe un diálogo con la causa y la salida sugerida antes de recargar.
+  mainWindow.webContents.on("render-process-gone", (_event, details) => {
+    if (shuttingDown || !mainWindow) return;
+    void log(`El editor dejó de funcionar: ${details.reason}`);
+    dialog.showErrorBox(
+      "SolaraCommerce dejó de responder",
+      `El editor se detuvo inesperadamente (motivo: ${details.reason}).\n\n` +
+        "Aceptá para recargarlo, o cerrá la ventana y volvé a abrir " +
+        "SolaraCommerce. El progreso guardado en proyectos/ está a salvo.",
+    );
+    if (!mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+      mainWindow.webContents.reload();
+    }
+  });
+  mainWindow.webContents.on("unresponsive", () => {
+    if (shuttingDown || !mainWindow) return;
+    void log("El editor no responde");
+    dialog.showErrorBox(
+      "SolaraCommerce no responde",
+      "El editor dejó de responder.\n\n" +
+        "Si no se recupera en unos segundos, cerrá la ventana y volvé a abrir " +
+        "SolaraCommerce para recargarlo.",
+    );
   });
   mainWindow
     .loadURL("solara://studio/")
