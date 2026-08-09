@@ -91,9 +91,12 @@ mantienen su contrato. No se inicia un puerto HTTP para el editor portable.
 El renderer se ejecuta con `contextIsolation` y `nodeIntegration: false`. En la
 versión actual `sandbox` queda desactivado de forma deliberada: Electron 37 en
 Windows no completa la navegación del protocolo privilegiado `solara://` con el
-sandbox activado. El preload sigue exponiendo sólo `solaraDesktop` con acciones
-explícitas para estado, cierre, diagnóstico y apertura de un sitio; no expone
-filesystem ni APIs Node. Las rutas que llegan al storage se resuelven contra
+sandbox activado. El preload sigue exponiendo sólo `solaraDesktop` con dos
+acciones explícitas: `openSite` (abrir el sitio público exportado) y
+`diagnostics` (diagnóstico del entorno); los métodos `getStatus` y `close`
+se eliminaron por estar muertos (Task 11 de la revisión de bugfixes 2, commit
+`e217877`). No expone filesystem ni APIs Node. Las rutas que llegan al storage
+se resuelven contra
 `proyectos/` o `.solara-runtime/`; se rechazan absolutas, traversal, enlaces
 simbólicos y manifests con paths absolutos. Esta excepción está aislada al
 shell portable y debe revisarse al actualizar Electron.

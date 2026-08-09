@@ -10,6 +10,47 @@ versión publicada.
 
 ## [Unreleased]
 
+### Revisión de bugfixes 2 (2026-08-09)
+
+- Tres crashs corregidos: el editor ya no se desmonta en blanco al reubicar una
+  categoría con hijos bajo otra raíz ni al aplicar un ajuste de precio menor a
+  -100 % (validación previa y un límite de error que cubre toda la app); el
+  storefront ya no colapsa al leer líneas de carrito antiguas sin título o
+  variante.
+- El formulario de agregar al carrito responde también a Enter (antes un submit
+  nativo a `/carrito/` vaciaba el carrito).
+- Sin JavaScript, el botón "Agregar al carrito" y la navegación móvil ahora
+  funcionan con un fallback de consulta por WhatsApp y el menú móvil queda
+  visible.
+- El checkout del panel del carrito refresca los precios contra el catálogo al
+  abrir el panel y al enviar el pedido: deja de usar precios stale del
+  almacenamiento local.
+- La variante inicial de un producto es la primera disponible, no una agotada.
+- Cuando la búsqueda está deshabilitada ya no quedan enlaces ni formularios
+  muertos a `/buscar/` (botón, diálogo, menú móvil, pie, mega-menú y bento).
+- Los filtros de opciones ya no aparecen vacíos en las páginas de categoría de
+  tiendas legacy.
+- El guard de eliminación de assets considera ahora el logo de la tienda y la
+  imagen social.
+- El botón "Exportar producción" queda deshabilitado hasta que termina la
+  auditoría del sitio (sin carrera) y el aviso de guardado ya no menciona
+  `proyectos/` en modo navegador.
+- La auditoría de salud del dashboard salta sólo la tienda lenta y sigue
+  auditando el resto.
+- El selector de módulos atrapa el foco y marca `aria-modal`; los campos
+  numéricos vacíos dejan de commitear `0`.
+- El servidor local endurece los guardados: sin fugas de lock ante fallos, el
+  respaldo viejo se elimina sin romper un guardado ya confirmado, `sitios/`
+  conserva sólo el sitio vigente, no quedan archivos temporales ni estados
+  huérfanos y "Abrir sitio" muestra siempre la versión recién exportada.
+- El exportador y el optimizador refuerzan la salida pública: thumbnail sin
+  baseUrl desnuda cuando falta el poster, CSP con `media-src` para video remoto
+  y auditoría de secciones que apuntan a colecciones o categorías inexistentes.
+- El shell portable muestra un diálogo ante el crash del renderer, da un
+  mensaje claro si el puerto está ocupado y el launcher valida Node 22+.
+- Especs y documentación endurecidas (selectores exactos, puertos efímeros y
+  datos alineados con el schema).
+
 ### Revisión de bugfixes (2026-08-09)
 
 - El storefront usa `fill-mode: backwards` en los presets de entrada: los

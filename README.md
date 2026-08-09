@@ -339,7 +339,7 @@ limpiar la caché regenerable de imágenes. El exportador genera `_headers` con
 CSP, Referrer-Policy, Permissions-Policy y protección contra framing.
 
 El gate incluye `corepack pnpm check:budgets`, que bloquea bundles iniciales de
-Studio por encima de 700 KiB crudos de JavaScript o 84 KiB crudos de CSS. La
+Studio por encima de 700 KiB crudos de JavaScript o 100 KiB crudos de CSS. La
 matriz multinavegador y Lighthouse se ejecutan en el gate de release, no en
 cada cambio local.
 

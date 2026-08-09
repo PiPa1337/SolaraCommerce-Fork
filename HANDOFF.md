@@ -284,3 +284,12 @@ y los budgets documentados. Registro completo en el
 Ocho defectos documentados se corrigieron y verificaron (plan
 `docs/superpowers/plans/2026-08-09-bugfix-review.md`); detalle en el
 [`CHANGELOG.md`](CHANGELOG.md), sección "Revisión de bugfixes (2026-08-09)".
+
+## Revisión de bugfixes 2 (2026-08-09)
+
+Cierre de la revisión de bugfixes 2 (plan
+`docs/superpowers/plans/2026-08-09-bugfix-review-2.md`): 12 tareas que
+corrigieron ~30 defectos de editor, runtime, storage, shell y specs; la deuda
+cerrada y los diferidos quedaron registrados en
+[`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md) y detalle en el
+[`CHANGELOG.md`](CHANGELOG.md), sección "Revisión de bugfixes 2 (2026-08-09)".
