@@ -630,4 +630,40 @@ describe("almacenamiento local de proyectos", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("no deja un respaldo huérfano en actual/ si falla el manifest", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-orphan-"));
+    try {
+      let fail = false;
+      const storage = createLocalProjectStorage({
+        applicationRoot: root,
+        writeGuard: async ({ op }) => {
+          if (fail && op === "write-manifest") {
+            const error = new Error("escritura rechazada: write-manifest");
+            error.code = "ENOSPC";
+            throw error;
+          }
+        },
+      });
+      const attempt = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, attempt.transactionId, "project", projectJson());
+      fail = true;
+      await expect(storage.commit(attempt.transactionId)).rejects.toThrow(/escritura rechazada/i);
+
+      const projectsRoot = join(root, "proyectos");
+      const [folder] = (await readdir(projectsRoot)).filter((name) => name.startsWith("prueba-"));
+      expect(folder).toBeDefined();
+      const orphans = await readdir(join(projectsRoot, folder, "actual"));
+      expect(orphans.filter((name) => name.endsWith(".solara.json"))).toEqual([]);
+      await storage.abort(attempt.transactionId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

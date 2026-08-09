@@ -542,8 +542,13 @@ export function createLocalProjectStorage(options = {}) {
       ...(lastValidSite ? { lastValidSite } : {}),
     };
     await checkpoint("before-manifest");
-    await guardWrite("write-manifest", join(storeRoot, "manifest.json"));
-    await writeJsonAtomic(join(storeRoot, "manifest.json"), manifest);
+    try {
+      await guardWrite("write-manifest", join(storeRoot, "manifest.json"));
+      await writeJsonAtomic(join(storeRoot, "manifest.json"), manifest);
+    } catch (error) {
+      await rm(archivePath, { force: true });
+      throw error;
+    }
     if (previous?.current?.projectPath) {
       const oldCurrent = manifestPath(storeRoot, previous.current.projectPath);
       if ((await fileExists(oldCurrent)) && oldCurrent !== archivePath) {
