@@ -10,6 +10,21 @@ versión publicada.
 
 ## [Unreleased]
 
+### Revisión de bugfixes (2026-08-09)
+
+- El storefront usa `fill-mode: backwards` en los presets de entrada: los
+  hovers de las zonas animadas vuelven a funcionar al terminar el reveal
+  (los presets scroll-driven conservan `both`).
+- El preview del editor ya no emite el preload LCP absoluto del dominio;
+  la mitigación `stripPreviewLcpPreload` del Studio se eliminó (el sitio
+  público conserva el preload).
+- El tooltip del editor tiene las cuatro variantes posicionales.
+- Los junctions y symlinks dentro de `proyectos/` se reportan en recovery.
+- El sentinel de migración espera la apertura de Dexie.
+- La barra de estado refresca la última exportación al volver a la ventana.
+- Sin respaldos huérfanos en `actual/` cuando falla la escritura del manifest.
+- Mediciones del budget público actualizadas.
+
 ### Revisión de bugfixes (2026-08-08)
 
 - Limpieza post-rollback: se eliminó la emisión de la feature `micro` del

@@ -278,3 +278,9 @@ fue eliminada del disco y de IndexedDB. Se conservaron la deduplicación de
 estilos de módulo por style key en el exporter (storefront.css ~75 KB medidos)
 y los budgets documentados. Registro completo en el
 [`CHANGELOG.md`](CHANGELOG.md), sección "Rollback del revamp de movimiento".
+
+## Revisión de bugfixes (2026-08-09)
+
+Ocho defectos documentados se corrigieron y verificaron (plan
+`docs/superpowers/plans/2026-08-09-bugfix-review.md`); detalle en el
+[`CHANGELOG.md`](CHANGELOG.md), sección "Revisión de bugfixes (2026-08-09)".
