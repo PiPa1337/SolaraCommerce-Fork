@@ -150,6 +150,41 @@ export function Studio({
   const [saveState, setSaveState] = useState<AutosaveState>("saved");
   const [validationError, setValidationError] = useState("");
   const [conflict, setConflict] = useState<LocalStorageError | null>(null);
+
+  // Trampa de foco del diálogo de conflicto: foco inicial al abrir, ciclo de
+  // Tab dentro del diálogo y restauración al cerrar (T4.12/fix 409).
+  const conflictDialogRef = useRef<HTMLDivElement>(null);
+  const conflictOpenerRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!conflict) return;
+    conflictOpenerRef.current = document.activeElement as HTMLElement | null;
+    const firstFocusable = conflictDialogRef.current?.querySelector<HTMLElement>(
+      'button:not([disabled])',
+    );
+    (firstFocusable ?? conflictDialogRef.current)?.focus();
+  }, [conflict]);
+  useEffect(() => {
+    if (conflict) return;
+    conflictOpenerRef.current?.focus();
+    conflictOpenerRef.current = null;
+  }, [conflict]);
+
+  const trapConflictFocus = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key !== "Tab" || !conflictDialogRef.current) return;
+    const focusable = Array.from(
+      conflictDialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled])'),
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0] as HTMLElement;
+    const last = focusable[focusable.length - 1] as HTMLElement;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
   const [notice, setNotice] = useState("");
   const [leaving, setLeaving] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
@@ -733,8 +768,9 @@ export function Studio({
           aria-modal="true"
           aria-labelledby={conflictTitleId}
           data-testid="ui-conflict-dialog"
+          onKeyDown={trapConflictFocus}
         >
-          <div className="conflict-dialog">
+          <div className="conflict-dialog" ref={conflictDialogRef} tabIndex={-1}>
             <h3 id={conflictTitleId}>La tienda cambió en otra pestaña</h3>
             <p>
               {conflict.message} Tu borrador quedó guardado en este navegador. Elegí cómo seguir:

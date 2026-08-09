@@ -130,9 +130,35 @@ test("dos pestañas: la segunda guardada genera 409 con opciones y conservar bor
     );
     await expect(pageA.getByTestId("ui-conflict-dialog")).toContainText("otra pestaña");
 
+    // F2 (fix 409): el diálogo toma el foco inicial, el Tab queda atrapado
+    // dentro de sus opciones y al elegir una el foco vuelve al estudio.
+    await expect
+      .poll(async () => {
+        const focused = await pageA.evaluate(() => document.activeElement?.textContent ?? "");
+        return focused;
+      })
+      .toContain("Conservar borrador");
+    await pageA.keyboard.press("Tab");
+    await expect
+      .poll(async () => {
+        const focused = await pageA.evaluate(
+          () => document.activeElement?.closest("[data-testid='ui-conflict-dialog']") !== null,
+        );
+        return focused;
+      })
+      .toBe(true);
+
     await pageA.getByTestId("ui-conflict-keep").click();
     await expect(pageA.getByTestId("ui-conflict-dialog")).toHaveCount(0);
     await expect(pageA.getByTestId("ui-studio-notice")).toContainText("Borrador conservado");
+    await expect
+      .poll(async () => {
+        const focusedInsideDialog = await pageA.evaluate(
+          () => document.activeElement?.closest("[data-testid='ui-conflict-dialog']") !== null,
+        );
+        return focusedInsideDialog;
+      })
+      .toBe(false);
     await expect(pageA.getByLabel("Nombre de la tienda")).toHaveValue(
       "Predeterminado A (borrador local)",
     );
