@@ -286,6 +286,7 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     const product = catalogModernStore.products.find(
       (candidate) => candidate.slug === "remera-esencial-de-algodon",
     );
+    if (!product) throw new Error("Fixture sin remera esencial");
     const html = renderSections(catalogModernStore, [modernDetailSection], {
       pageType: "product",
       product,
@@ -300,6 +301,7 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
 
   it("ofrece consulta por WhatsApp sin JavaScript en el detalle legacy", () => {
     const product = referenceStore.products[0];
+    if (!product) throw new Error("Fixture sin producto");
     const html = renderSections(referenceStore, [legacyDetailSection], {
       pageType: "product",
       product,
@@ -340,6 +342,7 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     const product = project.products[0];
     if (!product || product.variants.length < 2) throw new Error("Fixture sin variantes");
     const [first, second] = product.variants;
+    if (!first || !second) throw new Error("Fixture sin variantes");
     product.variants = [{ ...second, available: false }, first];
     const available = product.variants.find((variant) => variant.available);
     if (!available) throw new Error("Fixture sin variante disponible");
@@ -367,7 +370,9 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
       (match) => match[1],
     );
 
-    expect(noscripts.some((block) => block.includes(".catalog-mobile-menu[hidden]"))).toBe(true);
+    expect(
+      noscripts.some((block) => block !== undefined && block.includes(".catalog-mobile-menu[hidden]")),
+    ).toBe(true);
   });
 
   it("no emite rutas a /buscar/ cuando la búsqueda está deshabilitada", () => {
