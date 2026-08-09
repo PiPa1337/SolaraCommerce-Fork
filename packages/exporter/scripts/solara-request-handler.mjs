@@ -9,7 +9,7 @@ import { spawn } from "node:child_process";
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import { extname, join, normalize, resolve, sep } from "node:path";
+import { basename, extname, join, normalize, resolve, sep } from "node:path";
 import { createLocalProjectStorage } from "./local-project-storage.mjs";
 
 export const publicContentTypes = {
@@ -271,15 +271,28 @@ export function createSolaraRequestHandler({
       const openSiteMatch = /^\/__solara\/storage\/projects\/([^/]+)\/open-site$/.exec(pathname);
       if (openSiteMatch && request.method === "POST") {
         const projectId = decodeURIComponent(openSiteMatch[1]);
-        const existing = siteServers.get(projectId);
-        if (existing) return jsonResponse(200, { ok: true, url: existing.url }, sessionHeaders);
         const siteRoot = await storage.getLastValidSiteDirectory(projectId);
         if (!siteRoot) {
+          if (siteServers.has(projectId)) {
+            await closeSiteServer(siteServers.get(projectId));
+            siteServers.delete(projectId);
+          }
           return jsonResponse(
             404,
             { ok: false, error: "La tienda no tiene un sitio público válido." },
             sessionHeaders,
           );
+        }
+        // El sitio vive en `sitios/<key>` y cada guardado crea un key nuevo;
+        // un servidor cacheado para otro key serviría una versión vieja.
+        const siteKey = basename(siteRoot);
+        const existing = siteServers.get(projectId);
+        if (existing?.key === siteKey) {
+          return jsonResponse(200, { ok: true, url: existing.url }, sessionHeaders);
+        }
+        if (existing) {
+          await closeSiteServer(existing);
+          siteServers.delete(projectId);
         }
         const siteServer = createServer((siteRequest, siteResponse) =>
           writeNodeFile(siteRoot, siteRequest, siteResponse),
@@ -291,7 +304,11 @@ export function createSolaraRequestHandler({
         const address = siteServer.address();
         if (!address || typeof address === "string")
           throw new Error("No se pudo abrir el sitio público.");
-        const result = { server: siteServer, url: `http://127.0.0.1:${address.port}` };
+        const result = {
+          server: siteServer,
+          url: `http://127.0.0.1:${address.port}`,
+          key: siteKey,
+        };
         siteServers.set(projectId, result);
         return jsonResponse(200, { ok: true, url: result.url }, sessionHeaders);
       }
@@ -407,16 +424,15 @@ export function createSolaraRequestHandler({
     return staticResponse(staticRoot, requestPath);
   }
 
+  function closeSiteServer({ server }) {
+    return new Promise((resolveClose) => {
+      server.close(() => resolveClose());
+      server.closeAllConnections?.();
+    });
+  }
+
   async function close() {
-    await Promise.all(
-      [...siteServers.values()].map(
-        ({ server }) =>
-          new Promise((resolveClose) => {
-            server.close(() => resolveClose());
-            server.closeAllConnections?.();
-          }),
-      ),
-    );
+    await Promise.all([...siteServers.values()].map(closeSiteServer));
     siteServers.clear();
   }
 

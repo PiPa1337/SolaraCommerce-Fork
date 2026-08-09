@@ -666,4 +666,196 @@ describe("almacenamiento local de proyectos", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("no deja un lock eterno si falla el marcador de la transacción", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-marker-"));
+    try {
+      let failMarker = true;
+      const storage = createLocalProjectStorage({
+        applicationRoot: root,
+        writeGuard: async ({ op }) => {
+          if (failMarker && op === "write-transaction-marker") {
+            const error = new Error("escritura rechazada: write-transaction-marker");
+            error.code = "ENOSPC";
+            throw error;
+          }
+        },
+      });
+      await expect(
+        storage.beginSave({
+          projectId,
+          name: "Prueba",
+          slug: "prueba",
+          projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+          expectedVersion: null,
+        }),
+      ).rejects.toThrow(/escritura rechazada/i);
+      failMarker = false;
+      const retry = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await storage.abort(retry.transactionId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("no hace fatal un fallo al borrar el respaldo anterior y libera el lock", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-oldcurrent-"));
+    try {
+      let failingOp = "";
+      const storage = createLocalProjectStorage({
+        applicationRoot: root,
+        writeGuard: async ({ op }) => {
+          if (op === failingOp) {
+            const error = new Error(`escritura rechazada: ${op}`);
+            error.code = "EACCES";
+            throw error;
+          }
+        },
+      });
+      const first = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, first.transactionId, "project", projectJson());
+      await upload(
+        storage,
+        first.transactionId,
+        "site",
+        siteMap([{ path: "index.html", encoding: "utf8", data: "<main>v1</main>" }]),
+      );
+      const firstReceipt = await storage.commit(first.transactionId);
+
+      failingOp = "remove-old-current";
+      const attempt = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T11:00:00.000Z",
+        expectedVersion: firstReceipt.version,
+      });
+      await upload(storage, attempt.transactionId, "project", projectJson("v2"));
+      await upload(
+        storage,
+        attempt.transactionId,
+        "site",
+        siteMap([{ path: "index.html", encoding: "utf8", data: "<main>v2</main>" }]),
+      );
+      const receipt = await storage.commit(attempt.transactionId);
+      expect(receipt).toMatchObject({ version: 2, status: "synced" });
+
+      const next = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T12:00:00.000Z",
+        expectedVersion: receipt.version,
+      });
+      await storage.abort(next.transactionId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("poda los sitios antiguos y conserva sólo el vigente tras un commit exitoso", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-prune-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      const timestamps = ["T10:00:00.000Z", "T11:00:00.000Z", "T12:00:00.000Z"];
+      const saves = [];
+      for (const index of [0, 1, 2]) {
+        const withSite = index < 2;
+        const transaction = await storage.beginSave({
+          projectId,
+          name: `Prueba ${index}`,
+          slug: "prueba",
+          projectUpdatedAt: `2026-08-07${timestamps[index]}`,
+          expectedVersion: index === 0 ? null : index,
+        });
+        await upload(storage, transaction.transactionId, "project", projectJson(`Prueba ${index}`));
+        if (withSite) {
+          await upload(
+            storage,
+            transaction.transactionId,
+            "site",
+            siteMap([{ path: "index.html", encoding: "utf8", data: `<main>v${index}</main>` }]),
+          );
+        }
+        saves.push(await storage.commit(transaction.transactionId));
+      }
+      const folder = (await storage.list()).projects[0].folder;
+      const sitesRoot = join(root, "proyectos", folder, "sitios");
+      const siteDirs = (await readdir(sitesRoot)).filter((name) => !name.startsWith("."));
+      expect(saves[2].site?.key).toBe(saves[1].key);
+      expect(siteDirs).toEqual([saves[1].key]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("no deja huérfanos en sitios/ ni en actual/ si falla tras renombrar el sitio", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-postrename-"));
+    try {
+      let failingStage = "";
+      const storage = createLocalProjectStorage({
+        applicationRoot: root,
+        faultInjector: async (stage) => {
+          if (stage === failingStage) throw new Error(`fallo simulado: ${stage}`);
+        },
+      });
+      const first = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, first.transactionId, "project", projectJson());
+      await upload(
+        storage,
+        first.transactionId,
+        "site",
+        siteMap([{ path: "index.html", encoding: "utf8", data: "<main>v1</main>" }]),
+      );
+      const firstReceipt = await storage.commit(first.transactionId);
+
+      failingStage = "after-site-rename";
+      const attempt = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T11:00:00.000Z",
+        expectedVersion: firstReceipt.version,
+      });
+      await upload(storage, attempt.transactionId, "project", projectJson("v2"));
+      await upload(
+        storage,
+        attempt.transactionId,
+        "site",
+        siteMap([{ path: "index.html", encoding: "utf8", data: "<main>v2</main>" }]),
+      );
+      await expect(storage.commit(attempt.transactionId)).rejects.toThrow(/simulado/i);
+
+      const storeRoot = join(root, "proyectos", (await storage.list()).projects[0].folder);
+      const siteDirs = (await readdir(join(storeRoot, "sitios"))).filter(
+        (name) => !name.startsWith("."),
+      );
+      expect(siteDirs).toEqual([firstReceipt.key]);
+      const archives = (await readdir(join(storeRoot, "actual"))).filter((name) =>
+        name.endsWith(".solara.json"),
+      );
+      expect(archives).toEqual([`${firstReceipt.key}.solara.json`]);
+      await storage.abort(attempt.transactionId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

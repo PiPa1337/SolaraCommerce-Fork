@@ -96,8 +96,14 @@ async function readJson(pathname) {
 
 async function writeJsonAtomic(pathname, value) {
   const temporary = `${pathname}.tmp-${randomBytes(8).toString("hex")}`;
-  await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, "utf8");
-  await rename(temporary, pathname);
+  try {
+    await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+    await rename(temporary, pathname);
+  } catch (error) {
+    // Un write fallido no debe dejar basura `.tmp-*` junto al destino.
+    await rm(temporary, { force: true });
+    throw error;
+  }
 }
 
 async function streamToFile(request, pathname, maxBytes, guardWrite) {
@@ -418,9 +424,17 @@ export function createLocalProjectStorage(options = {}) {
       project: undefined,
       site: undefined,
     };
+    // El marcador de la transacción se escribe ANTES de registrar el lock: si
+    // esa escritura falla, la tienda no queda bloqueada para siempre.
+    try {
+      await guardWrite("write-transaction-marker", join(transactionRoot, "transaction.json"));
+      await writeJsonAtomic(join(transactionRoot, "transaction.json"), transaction.metadata);
+    } catch (error) {
+      await rm(transactionRoot, { recursive: true, force: true });
+      throw error;
+    }
     projectLocks.add(meta.projectId);
     transactions.set(transactionId, transaction);
-    await writeJsonAtomic(join(transactionRoot, "transaction.json"), transaction.metadata);
     return {
       transactionId,
       version: transaction.metadata.version,
@@ -543,17 +557,60 @@ export function createLocalProjectStorage(options = {}) {
     };
     await checkpoint("before-manifest");
     try {
+      // Cubre la ventana post-rename → pre-manifest: un fallo aquí deja el
+      // sitio renombrado pero el manifest todavía apunta a la versión previa.
+      await checkpoint("after-site-rename");
       await guardWrite("write-manifest", join(storeRoot, "manifest.json"));
       await writeJsonAtomic(join(storeRoot, "manifest.json"), manifest);
     } catch (error) {
       await rm(archivePath, { force: true });
+      if (siteInfo?.key) {
+        await rm(join(sitesRoot, siteInfo.key), { recursive: true, force: true });
+      }
       throw error;
     }
+
+    // Poda de retención: `sitios/` sólo conserva el sitio vigente del
+    // manifest; las versiones anteriores ya no se referencian y sólo
+    // acumularían una carpeta por guardado.
+    const keepSiteKey = lastValidSite?.key;
+    if (typeof keepSiteKey === "string") {
+      try {
+        const siteEntries = await readdir(sitesRoot, { withFileTypes: true });
+        await Promise.all(
+          siteEntries
+            .filter(
+              (entry) =>
+                entry.isDirectory() && !entry.name.startsWith(".") && entry.name !== keepSiteKey,
+            )
+            .map(async (entry) => {
+              try {
+                await rm(join(sitesRoot, entry.name), { recursive: true, force: true });
+              } catch {
+                // OneDrive o el antivirus pueden bloquear el borrado; el
+                // próximo guardado exitoso reintenta la poda.
+              }
+            }),
+        );
+      } catch {
+        // Sin lectura de sitios/ no hay poda; el guardado ya quedó commiteado.
+      }
+    }
+
     if (previous?.current?.projectPath) {
       const oldCurrent = manifestPath(storeRoot, previous.current.projectPath);
       if ((await fileExists(oldCurrent)) && oldCurrent !== archivePath) {
-        await guardWrite("remove-old-current", oldCurrent);
-        await rm(oldCurrent, { force: true });
+        try {
+          await guardWrite("remove-old-current", oldCurrent);
+          await rm(oldCurrent, { force: true });
+        } catch (error) {
+          // El borrado del respaldo anterior no es fatal: el guardado ya
+          // quedó commiteado y el respaldo sigue disponible en `actual/`.
+          console.error(
+            `Solara: no se pudo quitar el respaldo anterior (${oldCurrent}):`,
+            error instanceof Error ? error.message : error,
+          );
+        }
       }
     }
     await transactions.delete(transactionId);

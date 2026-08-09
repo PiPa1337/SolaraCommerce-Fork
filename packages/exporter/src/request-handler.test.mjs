@@ -100,3 +100,66 @@ describe("handler: abrir carpeta de una tienda", () => {
     }
   });
 });
+
+describe("handler: abrir el sitio público", () => {
+  async function saveWithSite(storage, version, content) {
+    const transaction = await storage.beginSave({
+      projectId,
+      name: "Prueba",
+      slug: "prueba",
+      projectUpdatedAt: `2026-08-07T1${version}:00:00.000Z`,
+      expectedVersion: version === 1 ? null : version - 1,
+    });
+    await storage.upload(
+      transaction.transactionId,
+      "project",
+      Readable.from([Buffer.from(projectJson())]),
+    );
+    await storage.upload(
+      transaction.transactionId,
+      "site",
+      Readable.from([
+        Buffer.from(
+          JSON.stringify([
+            { path: "index.html", encoding: "utf8", data: `<main>${content}</main>` },
+          ]),
+        ),
+      ]),
+    );
+    return storage.commit(transaction.transactionId);
+  }
+
+  it("renueva el servidor del sitio tras un guardado con sitio nuevo", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-handler-site-"));
+    let handler;
+    try {
+      handler = createSolaraRequestHandler({
+        applicationRoot: root,
+        shutdownToken: "token-test",
+        onShutdown: () => {},
+      });
+      await saveWithSite(handler.storage, 1, "v1");
+      const open1 = await handler.handle(
+        request("POST", `/__solara/storage/projects/${projectId}/open-site`, {
+          cookie: `${shutdownCookieName}=token-test`,
+        }),
+      );
+      expect(open1.status).toBe(200);
+      const url1 = JSON.parse(open1.body).url;
+      await expect((await fetch(`${url1}/index.html`)).text()).resolves.toContain("v1");
+
+      await saveWithSite(handler.storage, 2, "v2");
+      const open2 = await handler.handle(
+        request("POST", `/__solara/storage/projects/${projectId}/open-site`, {
+          cookie: `${shutdownCookieName}=token-test`,
+        }),
+      );
+      expect(open2.status).toBe(200);
+      const url2 = JSON.parse(open2.body).url;
+      await expect((await fetch(`${url2}/index.html`)).text()).resolves.toContain("v2");
+    } finally {
+      await handler?.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
