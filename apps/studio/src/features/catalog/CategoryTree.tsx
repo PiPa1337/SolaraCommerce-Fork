@@ -82,6 +82,9 @@ export function CategoryTree({
   const selectedReparentCategory = project.categories.find(
     (category) => category.id === reparentCategoryId,
   );
+  const selectedReparentHasChildren = selectedReparentCategory
+    ? (categoryChildren.get(selectedReparentCategory.id)?.length ?? 0) > 0
+    : false;
   const blockedParentIds = new Set(
     selectedReparentCategory
       ? [
@@ -178,7 +181,12 @@ export function CategoryTree({
             ))}
           </select>
         </Field>
-        <Field label="Nuevo padre">
+        <Field
+          label="Nuevo padre"
+          {...(selectedReparentHasChildren
+            ? { hint: "Esta categoría tiene subcategorías y debe permanecer como raíz." }
+            : {})}
+        >
           <select
             value={reparentParentId}
             onChange={(event) => setReparentParentId(event.target.value)}
@@ -192,14 +200,18 @@ export function CategoryTree({
                   category.id !== selectedReparentCategory?.parentId,
               )
               .map((category) => (
-                <option key={category.id} value={category.id}>
+                <option
+                  key={category.id}
+                  value={category.id}
+                  disabled={selectedReparentHasChildren}
+                >
                   {categoryLabel(category)}
                 </option>
               ))}
           </select>
         </Field>
         <Button
-          disabled={!selectedReparentCategory}
+          disabled={!selectedReparentCategory || selectedReparentHasChildren}
           onClick={() => {
             if (!selectedReparentCategory) return;
             setPendingReparent({
@@ -226,6 +238,8 @@ export function CategoryTree({
           onConfirm={() => {
             const target = pendingReparent;
             setPendingReparent(null);
+            const targetHasChildren = (categoryChildren.get(target.category.id)?.length ?? 0) > 0;
+            if (targetHasChildren && target.parentId) return;
             onCommand({
               type: "category.reparent",
               categoryId: target.category.id,

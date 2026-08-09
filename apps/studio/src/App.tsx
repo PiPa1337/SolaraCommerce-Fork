@@ -6,7 +6,17 @@
  */
 import { WarningCircle } from "@phosphor-icons/react";
 import { type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import {
+  Component,
+  type ErrorInfo,
+  lazy,
+  type ReactNode,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { ToastProvider } from "./components/Toast";
 import { InlineError, Skeleton } from "./components/Ui";
@@ -49,6 +59,54 @@ const Studio = lazy(() =>
 );
 
 export function App() {
+  return (
+    <AppErrorBoundary>
+      <AppInner />
+    </AppErrorBoundary>
+  );
+}
+
+interface AppErrorBoundaryState {
+  error: Error | null;
+}
+
+/** Última red: un error no controlado no debe dejar la app en blanco. */
+class AppErrorBoundary extends Component<{ children: ReactNode }, AppErrorBoundaryState> {
+  override state: AppErrorBoundaryState = { error: null };
+
+  static getDerivedStateFromError(error: Error): AppErrorBoundaryState {
+    return { error };
+  }
+
+  override componentDidCatch(error: Error, info: ErrorInfo): void {
+    console.error("SolaraCommerce: error no controlado en la interfaz.", error, info);
+  }
+
+  override render() {
+    if (this.state.error === null) return this.props.children;
+    return (
+      <main className="boot-screen" role="alert" aria-live="assertive">
+        <span className="brand-mark" aria-hidden>
+          S
+        </span>
+        <h1>Algo salió mal</h1>
+        <p>
+          SolaraCommerce encontró un error inesperado y detuvo la edición para evitar perder
+          cambios. Recargá la app para continuar; tu borrador se conserva en este navegador.
+        </p>
+        <button
+          className="button button--primary"
+          type="button"
+          onClick={() => window.location.reload()}
+        >
+          Recargar
+        </button>
+      </main>
+    );
+  }
+}
+
+function AppInner() {
   // Ruta oculta de desarrollo: galería de componentes del editor. No existe en
   // el sitio público; se detecta por pathname antes de montar el dashboard.
   // App no declara hooks: la rama de la galería devuelve sin montar el shell.

@@ -760,6 +760,10 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
 
   const applyPriceAdjustment = () => {
     const numeric = Number(priceAdjustment);
+    if (priceKind === "percentage" && numeric < -100) {
+      setError("El porcentaje no puede reducir el precio por debajo de cero (mínimo -100%).");
+      return;
+    }
     const adjustment =
       priceKind === "amount"
         ? { type: "amount" as const, cents: numeric }
