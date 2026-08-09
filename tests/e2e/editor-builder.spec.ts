@@ -66,15 +66,15 @@ test("el picker de módulos filtra por nombre y agrega el módulo elegido", asyn
   const picker = page.getByTestId("ui-module-picker");
   await expect(picker).toBeVisible();
 
-  await picker.getByLabel("Buscar módulo").fill("preguntas");
+  await picker.getByLabel("Buscar módulo").fill("testimonios");
   await expect(picker.getByRole("button")).toHaveCount(1);
-  await expect(picker.getByRole("button")).toContainText("Preguntas frecuentes");
+  await expect(picker.getByRole("button")).toContainText("Testimonios");
   await expect(picker.getByRole("button")).toContainText("Nuevo");
 
-  await picker.getByRole("button", { name: /Preguntas frecuentes/ }).click();
+  await picker.getByRole("button", { name: /Testimonios/ }).click();
   await expect(picker).toBeHidden();
   await expect(sections.getByRole("listitem")).toHaveCount(initialCount + 1);
-  await expect(sections.getByRole("listitem").last()).toContainText("Preguntas frecuentes");
+  await expect(sections.getByRole("listitem").last()).toContainText("Testimonios");
 });
 
 test("el picker marca la incompatibilidad de slot de forma explícita", async ({ page }) => {

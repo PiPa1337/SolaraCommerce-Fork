@@ -128,7 +128,7 @@ function storefrontBoot(): void {
   const declaredRuntimeFeatures = root.dataset.solaraRuntimeFeatures;
   const runtimeFeatures = new Set(
     (declaredRuntimeFeatures === undefined
-      ? "cart,checkout,product,category,search,hero,motion,variants,filters,video,micro"
+      ? "cart,checkout,product,category,search,hero,motion,variants,filters,video"
       : declaredRuntimeFeatures
     )
       .split(",")
@@ -1254,164 +1254,6 @@ function storefrontBoot(): void {
   if (hasFeature("variants")) {
     document.querySelectorAll<HTMLElement>("[data-product]").forEach(syncVariant);
   }
-
-  const initMicroInteractions = (): void => {
-    if (!hasFeature("micro")) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-    if (reduce || !fine) return;
-
-    document.querySelectorAll<HTMLElement>("[data-product-card]").forEach((card) => {
-      let frame = 0;
-      card.addEventListener("pointermove", (event) => {
-        const rect = card.getBoundingClientRect();
-        const x = (event.clientX - rect.left) / rect.width - 0.5;
-        const y = (event.clientY - rect.top) / rect.height - 0.5;
-        card.style.setProperty("--mx", `${((x + 0.5) * 100).toFixed(2)}%`);
-        card.style.setProperty("--my", `${((y + 0.5) * 100).toFixed(2)}%`);
-        cancelAnimationFrame(frame);
-        frame = requestAnimationFrame(() => {
-          card.style.setProperty("--rx", `${(-y * 6).toFixed(2)}deg`);
-          card.style.setProperty("--ry", `${(x * 6).toFixed(2)}deg`);
-        });
-      });
-      card.addEventListener("pointerleave", () => {
-        cancelAnimationFrame(frame);
-        card.style.setProperty("--rx", "0deg");
-        card.style.setProperty("--ry", "0deg");
-      });
-    });
-
-    document.querySelectorAll<HTMLElement>("[data-magnetic]").forEach((button) => {
-      button.addEventListener("pointermove", (event) => {
-        const rect = button.getBoundingClientRect();
-        const x = event.clientX - (rect.left + rect.width / 2);
-        const y = event.clientY - (rect.top + rect.height / 2);
-        const distance = Math.hypot(x, y);
-        const pull = Math.min(8, distance * 0.15);
-        const angle = Math.atan2(y, x);
-        button.style.setProperty("--mx", `${(Math.cos(angle) * pull).toFixed(1)}px`);
-        button.style.setProperty("--my", `${(Math.sin(angle) * pull).toFixed(1)}px`);
-      });
-      button.addEventListener("pointerleave", () => {
-        button.style.setProperty("--mx", "0px");
-        button.style.setProperty("--my", "0px");
-      });
-    });
-
-    document.querySelectorAll<HTMLElement>("[data-hero-parallax]").forEach((root) => {
-      const layers = Array.from(root.querySelectorAll<HTMLElement>("[data-parallax-layer]"));
-      if (layers.length === 0) return;
-      let targetX = 0;
-      let targetY = 0;
-      let currentX = 0;
-      let currentY = 0;
-      let frame = 0;
-      const tick = (): void => {
-        frame = 0;
-        currentX += (targetX - currentX) * 0.08;
-        currentY += (targetY - currentY) * 0.08;
-        layers.forEach((el) => {
-          const depth = Number(el.dataset.parallaxDepth ?? "1");
-          const dx = Math.max(-12, Math.min(12, currentX * 12 * depth));
-          const dy = Math.max(-12, Math.min(12, currentY * 12 * depth));
-          el.style.setProperty("--px", `${dx.toFixed(2)}px`);
-          el.style.setProperty("--py", `${dy.toFixed(2)}px`);
-        });
-        if (Math.abs(targetX - currentX) < 0.01 && Math.abs(targetY - currentY) < 0.01) return;
-        frame = requestAnimationFrame(tick);
-      };
-      root.addEventListener("pointermove", (event) => {
-        targetX = (event.clientX / window.innerWidth - 0.5) * 2;
-        targetY = (event.clientY / window.innerHeight - 0.5) * 2;
-        frame = frame || requestAnimationFrame(tick);
-      });
-    });
-
-    const backToTop = document.querySelector<HTMLElement>("[data-back-to-top]");
-    if (backToTop) {
-      const ring = backToTop.querySelector<SVGCircleElement>("[data-back-to-top-ring]");
-      const update = (): void => {
-        const max = document.documentElement.scrollHeight - window.innerHeight;
-        const progress = max > 0 ? Math.min(1, window.scrollY / max) : 0;
-        backToTop.hidden = window.scrollY < 600;
-        if (ring && ring.r?.baseVal.value > 0) {
-          const circumference = 2 * Math.PI * ring.r.baseVal.value;
-          ring.style.strokeDashoffset = `${(circumference * (1 - progress)).toFixed(2)}`;
-        }
-      };
-      window.addEventListener("scroll", update, { passive: true });
-      update();
-      backToTop.addEventListener("click", () => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      });
-    }
-
-    document.querySelectorAll<HTMLElement>("[data-kinetic-title]").forEach((title) => {
-      const words = title.textContent?.split(/\s+/).filter(Boolean) ?? [];
-      if (words.length < 2 || words.length > 14) return;
-      title.textContent = "";
-      words.forEach((word, index) => {
-        const span = document.createElement("span");
-        span.className = "solara-kinetic-word";
-        span.textContent = word;
-        span.style.setProperty("--word-index", String(index));
-        title.append(span, " ");
-      });
-    });
-  };
-  initMicroInteractions();
-
-  const initFAQStats = (): void => {
-    if (!hasFeature("micro")) return;
-    document.querySelectorAll<HTMLElement>("[data-faq-root]").forEach((root) => {
-      const items = Array.from(root.querySelectorAll<HTMLDetailsElement>(".solara-faq-item"));
-      items.forEach((item) => {
-        item.addEventListener("toggle", () => {
-          if (!item.open) return;
-          items.forEach((other) => {
-            if (other !== item) other.open = false;
-          });
-        });
-      });
-    });
-    if (!("IntersectionObserver" in window)) return;
-    const animateCounter = (target: HTMLElement): void => {
-      const valueElement = target.querySelector<HTMLElement>("[data-stat-value]");
-      const targetValue = Number(target.dataset.statTarget ?? "0");
-      if (!valueElement || !Number.isFinite(targetValue)) return;
-      const format = (value: number): string => value.toLocaleString("es-AR");
-      if (reduceMotion) {
-        valueElement.textContent = format(targetValue);
-        return;
-      }
-      const startedAt = performance.now();
-      const duration = 1200;
-      const step = (now: number): void => {
-        const progress = Math.min(1, (now - startedAt) / duration);
-        const eased = 1 - 2 ** (-10 * progress);
-        const value = progress === 1 ? targetValue : Math.round(targetValue * eased);
-        valueElement.textContent = format(value);
-        if (progress < 1) requestAnimationFrame(step);
-      };
-      requestAnimationFrame(step);
-    };
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          const target = entry.target as HTMLElement;
-          animateCounter(target);
-          observer.unobserve(target);
-        });
-      },
-      { threshold: 0.5 },
-    );
-    document.querySelectorAll<HTMLElement>("[data-stat-target]").forEach((target) => {
-      observer.observe(target);
-    });
-  };
-  initFAQStats();
 }
 
 const SEARCH_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unknown]> = [
@@ -1521,22 +1363,17 @@ export const STOREFRONT_RUNTIME_CSS = `
 }
 
 /* Progressive motion: content remains visible while the observer is idle or unavailable. */
-/* Los reveals de entrada usan backwards y no both: both congela el "to"
-   (transform: none) para siempre al terminar la animación y sobrescribe los
-   hovers de autor (lift, tilt, escala); backwards conserva el estado oculto
-   durante el delay (igual que both) y al terminar el elemento vuelve a sus
-   estilos naturales, que coinciden con el "to" implícito. */
 [data-motion-root][data-motion-visible="true"][data-motion-preset="fade"] [data-motion-zone] {
-  animation: solara-motion-fade var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
+  animation: solara-motion-fade var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
 }
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="fade-up"] [data-motion-zone] {
-  animation: solara-motion-fade-up var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
+  animation: solara-motion-fade-up var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
 }
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="slide"] [data-motion-zone] {
   --motion-slide-x: calc(var(--motion-distance, 24px) * var(--motion-intensity, 1));
-  animation: solara-motion-slide var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
+  animation: solara-motion-slide var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
 }
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="slide"][data-motion-direction="left"] [data-motion-zone] {
@@ -1544,19 +1381,11 @@ export const STOREFRONT_RUNTIME_CSS = `
 }
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="scale"] [data-motion-zone] {
-  animation: solara-motion-scale var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
-}
-
-[data-motion-root][data-motion-visible="true"][data-motion-preset="zoom-in"] [data-motion-zone] {
-  animation: solara-motion-zoom-in var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
-}
-
-[data-motion-root][data-motion-visible="true"][data-motion-preset="blur-in"] [data-motion-zone] {
-  animation: solara-motion-blur-in var(--motion-duration, 700ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
+  animation: solara-motion-scale var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) both;
 }
 
 [data-motion-root][data-motion-visible="true"][data-motion-preset="stagger"] [data-motion-zone] > * {
-  animation: solara-motion-fade-up var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) backwards;
+  animation: solara-motion-fade-up var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) both;
 }
 
 [data-motion-root][data-motion-preset="stagger"][data-motion-visible="true"] [data-motion-zone] > :nth-child(2) { animation-delay: var(--motion-stagger, 80ms); }
@@ -1628,14 +1457,6 @@ export const STOREFRONT_RUNTIME_CSS = `
 @keyframes solara-motion-scale {
   from { opacity: 0; transform: scale(calc(1 - (0.03 * var(--motion-intensity, 1)))); }
   to { opacity: 1; transform: none; }
-}
-
-@keyframes solara-motion-zoom-in {
-  from { opacity: 0; transform: scale(calc(1 + (0.06 * min(var(--motion-intensity, 1), 1)))); }
-}
-
-@keyframes solara-motion-blur-in {
-  from { opacity: 0; filter: blur(calc(10px * min(var(--motion-intensity, 1), 1))); }
 }
 
 @keyframes solara-progress {

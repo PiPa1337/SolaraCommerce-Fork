@@ -161,6 +161,6 @@ test("archiva la tienda demo desde el dashboard y la restaura", async ({ page })
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
 
   await page.locator(".dashboard-cosmic-select select").first().selectOption("active");
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
   await expect(page.locator('[data-store-card-id="store-modo-sur-demo"]')).toBeVisible();
 });

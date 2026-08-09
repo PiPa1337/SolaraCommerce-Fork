@@ -19,17 +19,6 @@ describe("StoreProjectV2Schema", () => {
     expect(StoreProjectV2Schema.parse(referenceStore)).toEqual(referenceStore);
   });
 
-  it("acepta los presets zoom-in y blur-in en la validación", () => {
-    const project: unknown = structuredClone(referenceStore);
-    const section = (project as { sections: Array<{ motion: Record<string, unknown> }> })
-      .sections[0];
-    if (!section) throw new Error("Fixture incompleto");
-    section.motion.preset = "zoom-in";
-    expect(StoreProjectV2Schema.parse(project).sections[0]?.motion.preset).toBe("zoom-in");
-    section.motion.preset = "blur-in";
-    expect(StoreProjectV2Schema.parse(project).sections[0]?.motion.preset).toBe("blur-in");
-  });
-
   it("acepta fecha de disponibilidad opcional sin cambiar schemaVersion", () => {
     const project = structuredClone(referenceStore);
     const variant = project.products[0]?.variants[0];

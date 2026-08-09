@@ -216,7 +216,7 @@ test("el conflicto 409 permite duplicar con el borrador local y persiste la copi
     });
     const names = listing.projects.map((project: { name: string }) => project.name);
     expect(names).toContain("Predeterminado E (borrador local) copia");
-    expect(listing.projects).toHaveLength(3);
+    expect(listing.projects).toHaveLength(2);
   } finally {
     await stopManagedServer(managed);
   }

@@ -174,11 +174,11 @@ test("la búsqueda del dashboard anuncia resultados en una región aria-live", a
 
   const search = page.getByRole("searchbox", { name: "Buscar tienda" });
   await search.fill("predeterminado");
-  await expect(count).toHaveText("2 visibles");
+  await expect(count).toHaveText("1 visibles");
   await search.fill("no existe");
   await expect(page.getByText("No hay coincidencias")).toBeVisible();
   await search.fill("");
-  await expect(count).toHaveText("2 visibles");
+  await expect(count).toHaveText("1 visibles");
 });
 
 test("los avisos globales usan aria-live y el indicador de guardado también", async ({ page }) => {

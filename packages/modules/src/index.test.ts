@@ -1,7 +1,5 @@
 import type { StoreSection } from "@solara/project-schema";
-import { StoreProjectV1Schema } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
-import { buildCatalogModernProject } from "@solara/project-schema/catalog-modern-template";
 import { referenceStore } from "@solara/project-schema/fixture";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 import { describe, expect, expectTypeOf, it } from "vitest";
@@ -228,28 +226,6 @@ describe("official module system", () => {
     expect(bento).toContain('href="/categorias/');
   });
 
-  it("incluye los efectos revamp en el CSS del sitio y sus marcadores", () => {
-    const css = MODULE_STYLE_BLOCKS["catalog-modern"];
-    expect(css).toContain(".solara-card-lift");
-    expect(css).toContain("@keyframes solara-marquee");
-    expect(css).toContain("@property --solara-angle");
-    expect(css).toContain("prefers-reduced-motion");
-
-    const html = renderSections(catalogModernStore, catalogModernStore.sections, {
-      pageType: "home",
-    });
-    expect(html).toContain("data-hero-parallax");
-    expect(html.match(/data-parallax-layer=/g) ?? []).toHaveLength(3);
-    expect(html).toContain("data-kinetic-title");
-    expect(html).toContain("data-magnetic");
-    expect(html).toContain("data-back-to-top");
-
-    const brandStrip = html.slice(html.indexOf('data-solara-module="catalog-brand-strip"'));
-    expect(brandStrip.match(/<ul/g) ?? []).toHaveLength(2);
-    expect(brandStrip).toContain('aria-hidden="true"');
-    expect(brandStrip).toContain("solara-marquee-track");
-  });
-
   it("omite beneficios de confianza sin datos configurados", () => {
     const project = {
       ...referenceStore,
@@ -266,109 +242,6 @@ describe("official module system", () => {
 
     expect(html).not.toContain("solara-trust-grid");
     expect(html).not.toContain("Confirmamos disponibilidad");
-  });
-
-  it("registra y renderiza el accordion de preguntas frecuentes", () => {
-    const definition = getModuleDefinition("catalog-faq");
-    expect(definition).toBeDefined();
-    const defaults = definition?.settingsSchema.parse({}) as {
-      title: string;
-      items: Array<{ question: string; answer: string }>;
-    };
-    expect(defaults.title).toBeTruthy();
-    expect(defaults.items.length).toBeGreaterThanOrEqual(4);
-    expect(defaults.items.every((item) => item.question && item.answer)).toBe(true);
-
-    const section = createModuleSection({
-      id: "section-faq" as StoreSection["id"],
-      slot: "content",
-      moduleId: "catalog-faq",
-    });
-    const html = renderSections(catalogModernStore, [section]);
-
-    expect(html).toContain('data-solara-module="catalog-faq"');
-    expect(html).toContain("data-faq-root");
-    expect(html.match(/class="solara-faq-item"/g) ?? []).toHaveLength(defaults.items.length);
-    expect(html).toContain("<summary>");
-    expect(html).toContain("Preguntas frecuentes");
-  });
-
-  it("registra y renderiza las estadísticas con valores estáticos accesibles", () => {
-    const definition = getModuleDefinition("catalog-stats");
-    expect(definition).toBeDefined();
-    const defaults = definition?.settingsSchema.parse({}) as {
-      title: string;
-      items: Array<{ value: number; suffix: string; label: string }>;
-    };
-    expect(defaults.items.map((item) => item.value)).toEqual([50, 14, 60, 1]);
-
-    const section = createModuleSection({
-      id: "section-stats" as StoreSection["id"],
-      slot: "content",
-      moduleId: "catalog-stats",
-    });
-    const html = renderSections(catalogModernStore, [section]);
-
-    expect(html).toContain('data-solara-module="catalog-stats"');
-    expect(html).toContain("data-stats-root");
-    expect(html).toContain('data-stat-value="50"');
-    expect(html).toContain('data-stat-target="50"');
-    expect(html).toContain(">50<");
-  });
-
-  it("acota la cantidad de items de FAQ y stats con sus settingsSchema", () => {
-    const faq = getModuleDefinition("catalog-faq");
-    const stats = getModuleDefinition("catalog-stats");
-    expect(faq).toBeDefined();
-    expect(stats).toBeDefined();
-    const tooManyFaq = Array.from({ length: 9 }, (_, index) => ({
-      question: `Pregunta ${index}`,
-      answer: "Respuesta",
-    }));
-    const tooManyStats = Array.from({ length: 7 }, (_, index) => ({
-      value: index,
-      suffix: "",
-      label: `Etiqueta ${index}`,
-    }));
-    expect(faq?.settingsSchema.safeParse({ items: tooManyFaq }).success).toBe(false);
-    expect(stats?.settingsSchema.safeParse({ items: tooManyStats }).success).toBe(false);
-    expect(
-      stats?.settingsSchema.safeParse({ items: [{ value: -1, suffix: "", label: "" }] }).success,
-    ).toBe(false);
-  });
-
-  it("renderiza las secciones revamp de FAQ y stats antes del footer", () => {
-    const project = buildCatalogModernProject({
-      seed: "revamp",
-      id: "store-revamp-render-test",
-      name: "Revamp render",
-      slug: "revamp-render",
-    });
-    const sections = [...project.sections];
-    const footerIndex = sections.findIndex((section) => section.moduleId === "catalog-footer");
-    const faq = createModuleSection({
-      id: "revamp-section-faq" as StoreSection["id"],
-      slot: "content",
-      moduleId: "catalog-faq",
-    });
-    const stats = createModuleSection({
-      id: "revamp-section-stats" as StoreSection["id"],
-      slot: "content",
-      moduleId: "catalog-stats",
-    });
-    sections.splice(footerIndex, 0, stats, faq);
-    const html = renderSections(StoreProjectV1Schema.parse({ ...project, sections }), sections, {
-      pageType: "home",
-    });
-
-    expect(html).toContain('data-solara-module="catalog-faq"');
-    expect(html).toContain('data-solara-module="catalog-stats"');
-    expect(html.indexOf('data-solara-module="catalog-stats"')).toBeLessThan(
-      html.indexOf('data-solara-module="catalog-faq"'),
-    );
-    expect(html.indexOf('data-solara-module="catalog-faq"')).toBeLessThan(
-      html.indexOf('data-solara-module="catalog-footer"'),
-    );
   });
 });
 

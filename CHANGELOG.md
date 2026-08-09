@@ -10,6 +10,20 @@ versión publicada.
 
 ## [Unreleased]
 
+### Rollback del revamp de movimiento (2026-08-08)
+
+Se revirtió por completo la sesión de revamp de movimiento (presets zoom-in/blur-in,
+micro-interacciones, efectos de hover/ambiente, módulos FAQ y stats, tienda
+candidata "Predeterminado Revamp" y kinetic typography). La tienda Predeterminado
+vuelve a su apariencia y comportamiento previos, y la candidata fue eliminada
+del disco y de IndexedDB (con purga idempotente para que no reaparezca). Se
+conservan dos mejoras de ingeniería que no dependen del aspecto: la
+deduplicación de estilos de módulo por style key en el exporter (storefront.css
+~775 KB → ~92 KB) y los budgets documentados. El runtime público vuelve a ≤ 52
+KiB JS (medido 44,8 KiB) y el techo CSS del editor sigue en 100 KiB.
+
+
+
 ### Editor UI/UX (2026-08-07)
 
 Auditoría y mejora integral del editor (plan

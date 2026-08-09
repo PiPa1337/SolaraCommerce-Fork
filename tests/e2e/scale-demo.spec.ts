@@ -6,7 +6,7 @@ test("muestra y abre Predeterminado al iniciar Studio", async ({ page }) => {
   try {
     await page.goto(running.url);
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-    const demo = page.locator('[data-store-card-id="store-modo-sur-demo"]');
+    const demo = page.getByRole("button", { name: /Predeterminado/ });
     await expect(demo).toBeVisible();
     await expect(demo).toContainText("50 productos");
 
@@ -24,10 +24,7 @@ test("muestra y abre Predeterminado al iniciar Studio", async ({ page }) => {
     await expect(page.locator(".category-tree strong", { hasText: "Básicas" })).toBeVisible();
 
     await page.goto(running.url);
-    await expect(page.getByRole("button", { name: /Predeterminado/ })).toHaveCount(2);
-    await expect(page.locator('[data-store-card-id="store-modo-sur-revamp"]')).toContainText(
-      "50 productos",
-    );
+    await expect(page.getByRole("button", { name: /Predeterminado/ })).toHaveCount(1);
   } finally {
     await stopStudioServer(running.server);
   }

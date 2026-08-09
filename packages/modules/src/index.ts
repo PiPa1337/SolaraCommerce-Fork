@@ -22,7 +22,6 @@ import {
   catalogBrandStrip,
   catalogCartDrawer,
   catalogCategoryBento,
-  catalogFaq,
   catalogFooter,
   catalogHeader,
   catalogHero,
@@ -30,7 +29,6 @@ import {
   catalogNewsletterCta,
   catalogProductDetail,
   catalogProductGrid,
-  catalogStats,
   catalogTestimonials,
 } from "./catalog-modern";
 import {
@@ -72,7 +70,6 @@ export {
   catalogAnnouncement,
   catalogBrandStrip,
   catalogCategoryBento,
-  catalogFaq,
   catalogFooter,
   catalogHeader,
   catalogHero,
@@ -81,7 +78,6 @@ export {
   catalogCartDrawer,
   catalogProductDetail,
   catalogProductGrid,
-  catalogStats,
   catalogTestimonials,
 };
 export type { RepeaterItemField } from "@solara/module-sdk";

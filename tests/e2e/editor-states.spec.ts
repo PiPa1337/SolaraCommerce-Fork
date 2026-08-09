@@ -131,13 +131,19 @@ test("el dashboard distingue estados en sus controles", async ({ page }) => {
   await expectHoverChange(gridView, "Vista en grilla");
   await expect(gridView).toHaveAttribute("aria-pressed", "true");
 
-  const cardButton = page
-    .locator(".dashboard-store-card")
-    .filter({ hasText: "Predeterminado" })
-    .nth(1)
-    .locator(".dashboard-store-card__button");
-  await expectHoverChange(cardButton, "Tarjeta de tienda");
-  await expectFocusRing(cardButton, "Tarjeta de tienda");
+  const card = page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }).first();
+  const cardTransform = await card.evaluate((element) => getComputedStyle(element).transform);
+  await card.hover();
+  await expect
+    .poll(() => card.evaluate((element) => getComputedStyle(element).transform))
+    .not.toBe(cardTransform);
+  await expectFocusRing(
+    page
+      .locator(".dashboard-store-card__button")
+      .filter({ hasText: "Predeterminado" })
+      .first(),
+    "Tarjeta de tienda",
+  );
 });
 
 test("el detalle de tienda y el Studio distinguen disabled, hover y focus", async ({ page }) => {

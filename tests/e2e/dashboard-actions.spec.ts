@@ -41,14 +41,14 @@ test("archivar confirma, muestra deshacer y restaura la tienda", async ({ page }
   await expect(confirm).toBeVisible();
   await confirm.getByRole("button", { name: "Archivar", exact: true }).click();
   await expect(confirm).toBeHidden();
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
 
   const toast = page.getByTestId("ui-dashboard-toast");
   await expect(toast).toBeVisible();
   await expect(toast).toContainText("Deshacer");
   await toast.getByRole("button", { name: "Deshacer" }).click();
 
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
   await expect(page.getByTestId("ui-dashboard-toast")).toHaveCount(0);
   await expect(
     page
@@ -72,7 +72,7 @@ test("duplicar pasa por el diálogo y aplica el nombre elegido", async ({ page }
   await nameInput.fill("Copia de prueba");
   await dialog.getByRole("button", { name: "Duplicar" }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("3 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
   await expect(page.locator(".dashboard-store-card").getByText("Copia de prueba")).toBeVisible();
   await expect(page.getByTestId("ui-dashboard-toast")).toContainText("Tienda duplicada");
 });
@@ -106,8 +106,16 @@ test("el modo comparar exige dos tiendas y muestra los diffs de secciones y moti
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(studioUrl);
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  const detail = await openDemoDetail(page);
+
+  // Con una sola tienda demo, el modo comparar necesita una segunda: se
+  // duplica Predeterminado y se comparan las dos (idénticas).
+  await detail.getByRole("button", { name: "Duplicar" }).click();
+  const duplicateDialog = page.getByRole("dialog", { name: "Duplicar tienda" });
+  await expect(duplicateDialog).toBeVisible();
+  await duplicateDialog.getByRole("button", { name: "Duplicar" }).click();
+  await expect(duplicateDialog).toBeHidden();
+  await page.locator(".dashboard-store-card").first().locator(".dashboard-store-card__button").click();
 
   const toggle = page.getByRole("button", { name: "Comparar tiendas", exact: true });
   await toggle.click();
@@ -127,9 +135,8 @@ test("el modo comparar exige dos tiendas y muestra los diffs de secciones y moti
   await compareAction.click();
   const dialog = page.getByRole("dialog", { name: "Comparar tiendas" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByText("catalog-stats")).toBeVisible();
-  await expect(dialog.getByText("catalog-faq")).toBeVisible();
-  await expect(dialog.getByText("layer-stack")).toBeVisible();
+  await expect(dialog.getByText("Predeterminado", { exact: true }).first()).toBeVisible();
+  await expect(dialog.getByText("Predeterminado (copia)", { exact: true }).first()).toBeVisible();
 
   await dialog.getByRole("button", { name: "Cerrar", exact: true }).click();
   await expect(dialog).toBeHidden();

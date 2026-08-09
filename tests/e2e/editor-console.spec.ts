@@ -232,7 +232,7 @@ test("los flujos nuevos de la ola (tema, foco, zoom, diálogo, duplicado y archi
     .click();
   await page.getByRole("button", { name: "Restaurar" }).click();
   await page.locator(".dashboard-cosmic-select select").first().selectOption("active");
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
 
   expect(problems, problems.join("\n")).toEqual([]);
 });

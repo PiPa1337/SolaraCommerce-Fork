@@ -128,7 +128,7 @@ export const ProjectOriginSchema = z
   .object({
     templateId: z.literal("catalog-modern"),
     templateVersion: z.number().int().positive(),
-    seed: z.enum(["clean", "demo", "duplicate", "revamp"]),
+    seed: z.enum(["clean", "demo", "duplicate"]),
   })
   .optional();
 
@@ -206,8 +206,6 @@ export const MotionPresetSchema = z.enum([
   "parallax",
   "scroll-progress",
   "layer-stack",
-  "zoom-in",
-  "blur-in",
 ]);
 
 export const MotionSettingsSchema = z.object({

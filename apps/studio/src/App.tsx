@@ -21,7 +21,6 @@ import {
   ensureCatalogModernDemoReviews,
   ensureDeprecatedCategoriesRemoved,
   ensureFirstProject,
-  ensureRevampDemoProject,
   ensureScaleDemoProject,
   getProject,
   getProjectMigration,
@@ -29,7 +28,7 @@ import {
   listProjectsWithRecovery,
   markProjectMigration,
   type ProjectRecoveryIssue,
-  REVAMP_DEMO_PROJECT_ID,
+  purgeRolledBackDemoRecords,
   type StoredProject,
   saveProject,
   saveRecoveryDraft,
@@ -130,6 +129,7 @@ function StudioShell() {
   useEffect(() => {
     void (async () => {
       try {
+        await purgeRolledBackDemoRecords();
         const { getLocalStorageStatus } = await loadLocalStorage();
         const detectedStorage = await getLocalStorageStatus().catch(() => ({
           managed: false,
@@ -160,19 +160,6 @@ function StudioShell() {
               }
             }
           }
-          const revampOnDisk = diskListing.projects.some(
-            (item) => item.id === REVAMP_DEMO_PROJECT_ID,
-          );
-          if (!revampOnDisk && detectedStorage.writable) {
-            await ensureRevampDemoProject();
-            const revamp = await getProject(REVAMP_DEMO_PROJECT_ID);
-            if (revamp) {
-              await persistToDisk(revamp, null);
-              setNotice(
-                "Se agregó la tienda Predeterminado Revamp para comparar la nueva experiencia de movimiento.",
-              );
-            }
-          }
           await refreshDisk();
           return;
         }
@@ -192,14 +179,6 @@ function StudioShell() {
             current
               ? `${current} También se agregó la tienda Predeterminado con 50 productos para explorar la escala del catálogo.`
               : "Se agregó la tienda Predeterminado con 50 productos para explorar la escala del catálogo.",
-          );
-        }
-        const revampCreated = await ensureRevampDemoProject();
-        if (revampCreated) {
-          setNotice((current) =>
-            current
-              ? `${current} Se agregó la tienda Predeterminado Revamp para comparar la nueva experiencia de movimiento.`
-              : "Se agregó la tienda Predeterminado Revamp para comparar la nueva experiencia de movimiento.",
           );
         }
         const demoReviewsExpanded = await ensureCatalogModernDemoReviews();

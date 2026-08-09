@@ -16,7 +16,7 @@ function stored(project: StoreProjectV1): StoredProject {
 }
 
 describe("buildCompareReport", () => {
-  test("demo vs revamp difieren en secciones y motion, no en inventario ni tema", () => {
+  test("detecta diferencias de motion y secciones entre dos configuraciones", () => {
     const demo = stored(
       buildCatalogModernProject({
         seed: "demo",
@@ -26,20 +26,29 @@ describe("buildCompareReport", () => {
         baseUrl: "https://demo.example",
       }),
     );
-    const revamp = stored(
-      buildCatalogModernProject({
-        seed: "revamp",
-        id: "store-revamp",
-        name: "Predeterminado Revamp",
-        slug: "revamp",
-        baseUrl: "https://revamp.example",
-      }),
-    );
+    const alternateProject = buildCatalogModernProject({
+      seed: "demo",
+      id: "store-alternate",
+      name: "Predeterminado",
+      slug: "demo",
+      baseUrl: "https://demo.example",
+    });
+    const alternate = stored({
+      ...alternateProject,
+      sections: alternateProject.sections.map((section) =>
+        section.moduleId === "catalog-hero"
+          ? {
+              ...section,
+              motion: { ...section.motion, preset: "layer-stack" as const },
+            }
+          : section,
+      ),
+    });
 
-    const report = buildCompareReport(demo, revamp);
+    const report = buildCompareReport(demo, alternate);
 
     expect(report.leftName).toBe("Predeterminado");
-    expect(report.rightName).toBe("Predeterminado Revamp");
+    expect(report.rightName).toBe("Predeterminado");
     for (const row of report.counts) {
       expect(row.left, `inventario ${row.label} igual`).toBe(row.right);
     }
@@ -53,12 +62,6 @@ describe("buildCompareReport", () => {
     expect(hero).toBeDefined();
     expect(hero?.leftPreset).toBe("fade-up");
     expect(hero?.rightPreset).toBe("layer-stack");
-    const brands = report.motionDiffs.find((diff) => diff.moduleId === "catalog-brand-strip");
-    expect(brands?.rightPreset).toBe("fade");
-    expect(
-      report.motionDiffs.some((diff) => diff.moduleId === "catalog-product-grid"),
-      "el grid diferencia distancias y stagger",
-    ).toBe(true);
   });
 
   test("catalog modern vs referencia difieren en tema e inventario", () => {

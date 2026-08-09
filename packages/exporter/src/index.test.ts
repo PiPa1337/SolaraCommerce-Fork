@@ -126,7 +126,7 @@ describe("exporter", () => {
     const css = String(
       exportProject(catalogModernStore, { mode: "production" }).files.get("assets/storefront.css"),
     );
-    const distinctive = "[data-solara-store].catalog-modern .catalog-faq-list";
+    const distinctive = "[data-solara-store].catalog-modern .catalog-product-card";
 
     expect(css.split(distinctive).length - 1).toBe(1);
     expect(new Blob([css]).size).toBeLessThan(300_000);
