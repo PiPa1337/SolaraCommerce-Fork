@@ -29,6 +29,7 @@ import {
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Button, EmptyState, Field, IconButton, InlineError } from "../components/Ui";
 import {
+  auditStoreHealth,
   type DashboardSort,
   type DashboardStatusFilter,
   filterDashboardProjects,
@@ -274,7 +275,7 @@ export function Dashboard({
   const [pendingArchiveId, setPendingArchiveId] = useState<string | null>(null);
   const [backingUp, setBackingUp] = useState<string>();
   const [criticalIssues, setCriticalIssues] = useState<number | null>(null);
-  const [auditSkipped, setAuditSkipped] = useState(false);
+  const [auditSkipped, setAuditSkipped] = useState(0);
   const createDialogRef = useRef<HTMLDialogElement>(null);
   const shutdownDialogRef = useRef<HTMLDialogElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -629,34 +630,28 @@ export function Dashboard({
 
   useEffect(() => {
     let cancelled = false;
-    setAuditSkipped(false);
+    setAuditSkipped(0);
     setCriticalIssues(null);
     const active = projects.filter((record) => record.status === "active");
     if (active.length === 0) {
       setCriticalIssues(0);
       return;
     }
-    let total = 0;
     void import("@solara/exporter")
       .then(({ auditProject }) => {
-        for (const record of active) {
-          const startedAt = performance.now();
-          try {
-            const issues = auditProject(record.project);
-            total += issues.filter((issue) => issue.severity === "critical").length;
-          } catch {
-            // Una tienda puede no auditarse; el resto del sumario sigue disponible.
-          }
-          if (performance.now() - startedAt > 300) {
-            setAuditSkipped(true);
-            return;
-          }
-          if (cancelled) return;
-        }
-        if (!cancelled) setCriticalIssues(total);
+        const { critical, skipped } = auditStoreHealth(
+          active,
+          (project) =>
+            auditProject(project).filter((issue) => issue.severity === "critical").length,
+          300,
+          () => performance.now(),
+        );
+        if (cancelled) return;
+        setCriticalIssues(critical);
+        setAuditSkipped(skipped);
       })
       .catch(() => {
-        if (!cancelled) setAuditSkipped(true);
+        if (!cancelled) setAuditSkipped(active.length);
       });
     return () => {
       cancelled = true;
@@ -884,9 +879,11 @@ export function Dashboard({
               <span>Sitios desactualizados</span>
             </div>
             <div className={criticalIssues !== null && criticalIssues > 0 ? "is-warn" : ""}>
-              <strong>{auditSkipped ? "—" : (criticalIssues ?? "…")}</strong>
+              <strong>{criticalIssues ?? "…"}</strong>
               <span>
-                {auditSkipped ? "Auditoría omitida (catálogo grande)" : "Errores críticos"}
+                {auditSkipped > 0
+                  ? `Auditoría omitida en ${auditSkipped} ${auditSkipped === 1 ? "tienda" : "tiendas"} (catálogo grande)`
+                  : "Errores críticos"}
               </span>
             </div>
           </div>

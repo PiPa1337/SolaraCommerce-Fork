@@ -2,6 +2,7 @@ import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixtur
 import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
 import { describe, expect, it } from "vitest";
 import {
+  auditStoreHealth,
   filterDashboardProjects,
   getDashboardStats,
   getProjectMetrics,
@@ -82,5 +83,84 @@ describe("modelo del dashboard", () => {
     ]);
     expect(partitionPinnedProjects(projects, []).pinned).toHaveLength(0);
     expect(partitionPinnedProjects(projects, ["alpha", "missing"]).pinned).toHaveLength(1);
+  });
+
+  it("salta sólo la tienda lenta y sigue auditando el resto", () => {
+    let elapsed = 0;
+    let slow = true;
+    const now = () => elapsed;
+    const audit = (project: StoredProject["project"]) => {
+      expect(project).toBeDefined();
+      if (slow) {
+        slow = false;
+        elapsed += 400;
+      }
+      return 1;
+    };
+
+    const result = auditStoreHealth(
+      [
+        record("lenta", "Lenta", "2026-08-01T00:00:00.000Z"),
+        record("rapida", "Rápida", "2026-08-02T00:00:00.000Z"),
+      ],
+      audit,
+      300,
+      now,
+    );
+
+    expect(slow).toBe(false);
+    expect(result).toEqual({ critical: 1, skipped: 1 });
+  });
+
+  it("no cuenta la omisión cuando ninguna tienda excede el presupuesto", () => {
+    const now = () => 1_000;
+
+    const result = auditStoreHealth(
+      [
+        record("a", "Una", "2026-08-01T00:00:00.000Z"),
+        record("b", "Dos", "2026-08-02T00:00:00.000Z"),
+      ],
+      () => 3,
+      300,
+      now,
+    );
+
+    expect(result).toEqual({ critical: 6, skipped: 0 });
+  });
+
+  it("sigue con el resto cuando una tienda no puede auditarse", () => {
+    let threw = true;
+    const audit = (project: StoredProject["project"]) => {
+      if (threw) {
+        threw = false;
+        throw new Error("auditoría rota");
+      }
+      return project.assets.length + 1;
+    };
+
+    const result = auditStoreHealth(
+      [
+        record("rota", "Rota", "2026-08-01T00:00:00.000Z"),
+        record("sana", "Sana", "2026-08-02T00:00:00.000Z"),
+      ],
+      audit,
+      300,
+      () => 0,
+    );
+
+    expect(threw).toBe(false);
+    expect(result.skipped).toBe(0);
+    expect(result.critical).toBeGreaterThan(0);
+  });
+
+  it("devuelve sumario vacío sin tiendas", () => {
+    expect(
+      auditStoreHealth(
+        [],
+        () => 1,
+        300,
+        () => 0,
+      ),
+    ).toEqual({ critical: 0, skipped: 0 });
   });
 });

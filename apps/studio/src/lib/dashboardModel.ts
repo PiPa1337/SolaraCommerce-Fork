@@ -22,6 +22,36 @@ export interface PinnedPartition<T> {
   rest: T[];
 }
 
+export interface HealthAuditResult {
+  critical: number;
+  skipped: number;
+}
+
+export function auditStoreHealth(
+  projects: readonly StoredProject[],
+  audit: (project: StoredProject["project"]) => number,
+  timeoutMs: number,
+  now: () => number,
+): HealthAuditResult {
+  let critical = 0;
+  let skipped = 0;
+  for (const record of projects) {
+    const startedAt = now();
+    let issues: number | undefined;
+    try {
+      issues = audit(record.project);
+    } catch {
+      // Una tienda puede no auditarse; el resto del sumario sigue disponible.
+    }
+    if (now() - startedAt > timeoutMs) {
+      skipped += 1;
+    } else if (issues !== undefined) {
+      critical += issues;
+    }
+  }
+  return { critical, skipped };
+}
+
 export function partitionPinnedProjects<T extends { id: string }>(
   projects: readonly T[],
   pinnedIds: readonly string[],
