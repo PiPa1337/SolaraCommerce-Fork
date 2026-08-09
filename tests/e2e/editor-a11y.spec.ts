@@ -51,6 +51,47 @@ async function expectFocusVisible(
     .toBe(true);
 }
 
+/** Opacidad de la burbuja ::after del tooltip (1 con hover/foco). */
+async function tooltipBubbleOpacity(wrapper: import("@playwright/test").Locator): Promise<string> {
+  return wrapper.evaluate((element) => getComputedStyle(element, "::after").opacity);
+}
+
+/**
+ * Caja real de la burbuja ::after. Los pseudoelementos no tienen rect
+ * consultable; se reproduce su geometría con los valores usados de
+ * getComputedStyle (offsets, width/height y transform en px) en un elemento
+ * real dentro del mismo contenedor, y se mide su getBoundingClientRect.
+ */
+async function tooltipBubbleRect(
+  wrapper: import("@playwright/test").Locator,
+): Promise<{ x: number; y: number; width: number; height: number }> {
+  return wrapper.evaluate((element) => {
+    const style = getComputedStyle(element, "::after");
+    const clone = document.createElement("span");
+    clone.textContent = element.getAttribute("data-tip") ?? "";
+    clone.style.cssText = [
+      "position: absolute",
+      `top: ${style.top}`,
+      `left: ${style.left}`,
+      `right: ${style.right}`,
+      `bottom: ${style.bottom}`,
+      `width: ${style.width}`,
+      `height: ${style.height}`,
+      "margin: 0",
+      `padding: ${style.padding}`,
+      "border: 0",
+      `transform: ${style.transform}`,
+      `transform-origin: ${style.transformOrigin}`,
+      `box-sizing: ${style.boxSizing}`,
+      "pointer-events: none",
+    ].join(";");
+    element.appendChild(clone);
+    const rect = clone.getBoundingClientRect();
+    clone.remove();
+    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+  });
+}
+
 test("el skip-link del dashboard es el primer control y salta al contenido", async ({ page }) => {
   await openDashboard(page);
 
@@ -303,4 +344,73 @@ test("el ConfirmDialog de eliminar enlace enfoca, atrapa el foco, cancela con Es
 
   await page.getByRole("button", { name: "Deshacer" }).click();
   await expect(page.getByRole("button", { name: deletedLabel })).toBeVisible();
+});
+
+test("el tooltip top de un IconButton aparece sobre el botón con fallback de título (A13)", async ({
+  page,
+}) => {
+  await openDefaultStore(page);
+  await page.getByRole("tab", { name: "Resumen", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Resumen" })).toBeVisible();
+
+  // IconButton con `tooltip` (Overview.tsx) usa la variante top por defecto.
+  const deleteLink = page.getByRole("button", { name: /^Eliminar enlace / }).first();
+  const wrapper = deleteLink.locator("xpath=..");
+  await expect(wrapper).toHaveClass(/ui-tooltip--top/);
+  await expect(wrapper).toHaveAttribute("title", "Eliminar enlace");
+
+  await deleteLink.hover();
+  await expect
+    .poll(() => tooltipBubbleOpacity(wrapper), "la burbuja debe hacerse visible")
+    .toBe("1");
+
+  const buttonBox = (await deleteLink.boundingBox()) ?? { x: 0, y: 0, width: 0, height: 0 };
+  expect(buttonBox, "el botón debe tener caja medible").not.toEqual({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  });
+  const bubble = await tooltipBubbleRect(wrapper);
+  const gapAbove = buttonBox.y - (bubble.y + bubble.height);
+  expect(gapAbove, "la burbuja top queda completamente sobre el botón").toBeGreaterThanOrEqual(0);
+  expect(gapAbove, "la burbuja top queda pegada al botón (hueco de 7px)").toBeLessThanOrEqual(20);
+  expect(
+    bubble.x + bubble.width > buttonBox.x && bubble.x < buttonBox.x + buttonBox.width,
+    "la burbuja top comparte el eje horizontal con el botón",
+  ).toBe(true);
+});
+
+test("el tooltip bottom del toggle de tema aparece bajo el control con fallback de título (A13)", async ({
+  page,
+}) => {
+  await openDefaultStore(page);
+
+  const toggle = page.getByTestId("ui-theme-toggle");
+  const wrapper = toggle.locator("xpath=..");
+  await expect(wrapper).toHaveClass(/ui-tooltip--bottom/);
+  await expect(wrapper).toHaveAttribute("title", /^Usar tema (claro|oscuro)$/);
+
+  await toggle.hover();
+  await expect
+    .poll(() => tooltipBubbleOpacity(wrapper), "la burbuja debe hacerse visible")
+    .toBe("1");
+
+  const buttonBox = (await toggle.boundingBox()) ?? { x: 0, y: 0, width: 0, height: 0 };
+  expect(buttonBox, "el toggle debe tener caja medible").not.toEqual({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  });
+  const bubble = await tooltipBubbleRect(wrapper);
+  const gapBelow = bubble.y - (buttonBox.y + buttonBox.height);
+  expect(gapBelow, "la burbuja bottom queda bajo el control").toBeGreaterThanOrEqual(0);
+  expect(gapBelow, "la burbuja bottom queda pegada al control (hueco de 7px)").toBeLessThanOrEqual(
+    20,
+  );
+  expect(
+    bubble.x + bubble.width > buttonBox.x && bubble.x < buttonBox.x + buttonBox.width,
+    "la burbuja bottom comparte el eje horizontal con el control",
+  ).toBe(true);
 });

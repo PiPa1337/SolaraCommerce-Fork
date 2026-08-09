@@ -85,6 +85,9 @@
 .ui-tooltip {
   position: relative;
   display: inline-flex;
+  /* La burbuja se ancla al contenedor; si un contenedor flex lo estira,
+     el tooltip queda despegado del control (ancho de contenido real). */
+  width: fit-content;
 }
 
 .ui-tooltip::after {
@@ -114,10 +117,37 @@
   top: calc(100% + 7px);
 }
 
+.ui-tooltip--top::after {
+  top: auto;
+  bottom: calc(100% + 7px);
+}
+
+.ui-tooltip--left::after {
+  left: auto;
+  right: calc(100% + 7px);
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%) translateX(3px);
+}
+
+.ui-tooltip--right::after {
+  left: calc(100% + 7px);
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%) translateX(-3px);
+}
+
 .ui-tooltip:hover::after,
 .ui-tooltip:focus-within::after {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+}
+
+.ui-tooltip--left:hover::after,
+.ui-tooltip--left:focus-within::after,
+.ui-tooltip--right:hover::after,
+.ui-tooltip--right:focus-within::after {
+  transform: translateY(-50%) translateX(0);
 }
 
 /* --- Toggle --- */
