@@ -50,11 +50,11 @@ import { Tooltip } from "../components/primitives";
 import { Button, IconButton, InlineError } from "../components/Ui";
 import { AutosaveQueue, type AutosaveState } from "../lib/autosave";
 import { readExportHistory } from "../lib/exportHistory";
-import { formatDate } from "../lib/format";
 import type { LocalSaveReceipt, LocalStorageError } from "../lib/localStorage";
 import { downloadBlob } from "../lib/projectArchive";
 import { saveProject } from "../lib/repository";
 import { formatSaveTime } from "../lib/saveTime";
+import { formatLastExportLabel } from "../lib/statusBar";
 import { createProjectArchiveInWorker } from "../lib/workers";
 import { Assets } from "./Assets";
 import { Builder } from "./Builder";
@@ -97,11 +97,6 @@ const tabs: Array<{ id: StudioTab; label: string; icon: typeof Storefront }> = [
   { id: "seo", label: "SEO", icon: MagnifyingGlass },
   { id: "export", label: "Exportar", icon: BoxArrowDown },
 ];
-
-function formatStatusDate(value: string): string {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "—" : formatDate(value);
-}
 
 export function Studio({
   initialProject,
@@ -192,6 +187,7 @@ export function Studio({
   const [managedDirty, setManagedDirty] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [lastExportedAt, setLastExportedAt] = useState("");
+  const [exportTick, setExportTick] = useState(0);
   const [lastVisitedAt, setLastVisitedAt] = useState<Partial<Record<StudioTab, string>>>(() =>
     tabs.reduce(
       (acc, item) => {
@@ -224,14 +220,16 @@ export function Studio({
     [initialProject.id],
   );
   const reduceMotion = useReducedMotion();
-  const browserExportAt = readExportHistory(project.slug)[0]?.at ?? "";
-  const browserExportLabel = formatStatusDate(browserExportAt);
-  const lastExportLabel =
-    managedStorage && lastExportedAt
-      ? formatStatusDate(lastExportedAt)
-      : browserExportLabel === "—"
-        ? "—"
-        : `${browserExportLabel} (navegador)`;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: exportTick fuerza el recálculo del rótulo al volver a la ventana (focus y visibilitychange), así no queda viejo tras exportar.
+  const lastExportLabel = useMemo(
+    () =>
+      formatLastExportLabel(
+        readExportHistory(project.slug),
+        lastExportedAt || null,
+        new Date().toISOString(),
+      ),
+    [exportTick, lastExportedAt, project.slug],
+  );
 
   const setPaneOpen = useCallback(
     (open: boolean) => {
@@ -286,6 +284,16 @@ export function Studio({
     window.addEventListener("keydown", handlePaneShortcut);
     return () => window.removeEventListener("keydown", handlePaneShortcut);
   }, [paneStorageKey]);
+
+  useEffect(() => {
+    const bumpExportTick = () => setExportTick((current) => current + 1);
+    window.addEventListener("focus", bumpExportTick);
+    document.addEventListener("visibilitychange", bumpExportTick);
+    return () => {
+      window.removeEventListener("focus", bumpExportTick);
+      document.removeEventListener("visibilitychange", bumpExportTick);
+    };
+  }, []);
 
   const dirtyTabs = useMemo(() => {
     const updatedAt = project.updatedAt;
