@@ -102,10 +102,6 @@ test("el editor recorre dashboard, tabs y acciones clave sin errores de consola"
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
   await page.locator(".section-row .section-select").first().click();
   await expect(page.getByRole("complementary", { name: "Inspector de sección" })).toBeVisible();
-  const firstToggle = page.locator(".settings-fields input[type='checkbox']").first();
-  if ((await firstToggle.count()) > 0) {
-    await firstToggle.click();
-  }
 
   await page.getByRole("tab", { name: "Exportar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible();

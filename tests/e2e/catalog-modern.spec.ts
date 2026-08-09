@@ -26,10 +26,11 @@ const fixtureFiles = new Map<string, Uint8Array>([
 ]);
 
 let server: Server;
+let serverUrl: string;
 
 test.beforeAll(async () => {
   server = createServer((request, response) => {
-    const url = new URL(request.url ?? "/", "http://127.0.0.1:4175");
+    const url = new URL(request.url ?? "/", "http://127.0.0.1");
     const requested = decodeURIComponent(url.pathname).replace(/^\/+/, "");
     const path =
       requested === ""
@@ -61,9 +62,18 @@ test.beforeAll(async () => {
   });
 
   await new Promise<void>((resolveListening) => {
-    server.listen(4175, "127.0.0.1", resolveListening);
+    server.listen(0, "127.0.0.1", resolveListening);
   });
+  const address = server.address();
+  if (address === null || typeof address === "string") {
+    throw new Error("El servidor de pruebas no tiene una dirección TCP.");
+  }
+  serverUrl = `http://127.0.0.1:${address.port}`;
 });
+
+function storeUrl(path: string): string {
+  return new URL(path, serverUrl).toString();
+}
 
 test.afterAll(async () => {
   await new Promise<void>((resolveClosing, reject) => {
@@ -73,7 +83,7 @@ test.afterAll(async () => {
 
 test("la home moderna prioriza el catálogo y conserva su densidad responsive", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/");
+  await page.goto(storeUrl("/"));
 
   await expect(page.locator('[data-design-family="catalog-modern-v1"]')).toBeVisible();
   await expect(
@@ -152,7 +162,7 @@ test("la home moderna prioriza el catálogo y conserva su densidad responsive", 
 
 test("la categoría moderna mantiene filtros, densidad y pie comercial", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/categorias/remeras/");
+  await page.goto(storeUrl("/categorias/remeras/"));
 
   await expect(page.locator(".catalog-category-page")).toBeVisible();
   await expect(page.locator(".catalog-category-filters")).toBeVisible();
@@ -182,7 +192,7 @@ test("la categoría moderna mantiene filtros, densidad y pie comercial", async (
   );
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/categorias/remeras/");
+  await page.goto(storeUrl("/categorias/remeras/"));
   await expect(page.locator(".catalog-category-filters summary")).toBeVisible();
   const mobileGrid = page.locator(".catalog-category-results .catalog-product-grid");
   expect(
@@ -199,7 +209,7 @@ test("la navegación, el detalle moderno y las variantes siguen siendo rastreabl
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/");
+  await page.goto(storeUrl("/"));
   const catalogTrigger = page.locator(".catalog-desktop-nav .catalog-nav-trigger");
   await expect(catalogTrigger).toHaveText("Categorías");
   await catalogTrigger.click();
@@ -243,7 +253,7 @@ test("la navegación, el detalle moderno y las variantes siguen siendo rastreabl
   await expect(megaMenu).toBeHidden();
   await expect(catalogTrigger).toHaveAttribute("aria-expanded", "false");
   await page.setViewportSize({ width: 768, height: 900 });
-  await page.goto("/");
+  await page.goto(storeUrl("/"));
   await page.locator(".catalog-desktop-nav .catalog-nav-trigger").click();
   expect(
     await page
@@ -255,8 +265,8 @@ test("la navegación, el detalle moderno y las variantes siguen siendo rastreabl
   );
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
-  await page.getByRole("button", { name: /Abrir/ }).click();
+  await page.goto(storeUrl("/"));
+  await page.getByRole("button", { name: "Abrir menú" }).click();
   await expect(page.locator("#catalog-mobile-menu")).toBeVisible();
   await expect(page.locator("#catalog-mobile-menu")).toHaveAttribute("role", "dialog");
   await expect(page.locator("#catalog-mobile-search-input")).toBeVisible();
@@ -279,9 +289,9 @@ test("la navegación, el detalle moderno y las variantes siguen siendo rastreabl
   );
   await expect(page.locator('#catalog-mobile-menu a[href="/categorias/remeras/"]')).toBeVisible();
   await page.getByRole("button", { name: "Cerrar menú" }).click();
-  await expect(page.getByRole("button", { name: /Abrir/ })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Abrir menú" })).toBeFocused();
 
-  await page.goto("/productos/remera-esencial-de-algodon/");
+  await page.goto(storeUrl("/productos/remera-esencial-de-algodon/"));
   await expect(
     page.getByRole("heading", { level: 1, name: "Remera esencial de algodón" }),
   ).toBeVisible();
@@ -302,7 +312,7 @@ test("la navegación, el detalle moderno y las variantes siguen siendo rastreabl
 
 test("las cards, el bento y la búsqueda moderna usan contenido real", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/");
+  await page.goto(storeUrl("/"));
 
   const firstCard = page
     .locator(".catalog-product-grid")
@@ -352,7 +362,7 @@ test("las cards, el bento y la búsqueda moderna usan contenido real", async ({ 
   await expect(page.locator("[data-search-results] .solara-search-result").first()).toBeVisible();
   await expect(dialog).toBeHidden();
 
-  await page.goto("/nosotros/");
+  await page.goto(storeUrl("/nosotros/"));
   await expect(page.locator(".solara-editorial-page .solara-story-grid")).toBeVisible();
   expect(
     await page
@@ -360,7 +370,7 @@ test("las cards, el bento y la búsqueda moderna usan contenido real", async ({ 
       .evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length),
   ).toBe(2);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/nosotros/");
+  await page.goto(storeUrl("/nosotros/"));
   expect(
     await page
       .locator(".solara-editorial-page .solara-story-grid")
@@ -373,13 +383,13 @@ test("las cards, el bento y la búsqueda moderna usan contenido real", async ({ 
 
 test("la búsqueda tolera errores de tipeo y sugiere correcciones", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/buscar/?q=Remra");
+  await page.goto(storeUrl("/buscar/?q=Remra"));
   await expect(page.locator("[data-search-results] .solara-search-result").first()).toBeVisible({
     timeout: 15_000,
   });
   await expect(page.locator("[data-search-results]")).toContainText("Remera");
 
-  await page.goto("/buscar/?q=grixk");
+  await page.goto(storeUrl("/buscar/?q=grixk"));
   await expect(page.locator("[data-search-results]")).toContainText("¿Quisiste decir", {
     timeout: 15_000,
   });
@@ -408,7 +418,7 @@ test("captura la matriz visual de Catalog Modern", async ({ page }) => {
   for (const viewport of viewports) {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     for (const route of routes) {
-      await page.goto(route.path);
+      await page.goto(storeUrl(route.path));
       await page.evaluate(() => document.fonts?.ready);
       await page.waitForTimeout(700);
       if (route.name === "home" && viewport.name === "desktop") {
@@ -421,7 +431,7 @@ test("captura la matriz visual de Catalog Modern", async ({ page }) => {
         await desktopCatalogTrigger.click();
       }
       if (route.name === "home" && viewport.name === "mobile") {
-        await page.getByRole("button", { name: /Abrir/ }).click();
+        await page.getByRole("button", { name: "Abrir menú" }).click();
         await page.screenshot({
           path: resolve(outputDirectory, `catalog-modern-navbar-${viewport.name}-${stage}.png`),
           fullPage: false,

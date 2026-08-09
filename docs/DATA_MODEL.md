@@ -21,8 +21,8 @@ brandeados (`StoreId`, `ProductId`, `VariantId`, `CategoryId`, `CollectionId`,
 
 ```text
 StoreProjectV2
-├── schemaVersion
-├── id, identity, seo, theme
+├── schemaVersion, id, baseUrl
+├── identity, seo, theme
 ├── navigation, siteShell, pages, commerceTemplates
 ├── products, categories, collections
 ├── assets.images, assets.videos
@@ -37,8 +37,12 @@ contiene configuración; el HTML lo genera el registro de módulos.
 
 ### Identidad, SEO y tema
 
+- `baseUrl` es un campo del proyecto (no vive dentro de `seo`) y define la URL
+  canónica de la tienda publicada.
 - `identity`: nombre de marca, descripción, logo y datos de contacto.
-- `seo`: título, descripción, URL base, imagen social, robots y verificación.
+- `seo`: título, descripción, imagen social y verificaciones de Search Console
+  y Merchant. No tiene `robots` ni URL base: esas decisiones pertenecen al
+  proyecto y a las rutas exportadas.
 - `theme`: tokens de color, tipografía, espaciado, radios y modo visual.
 - `navigation`: etiqueta de catálogo, enlaces curados y sus hijos (máximo un
   nivel adicional), además de búsqueda y carrito.
@@ -60,7 +64,7 @@ proyección temporal y no una fuente comercial.
 
 ### Categoría y colección
 
-Una `Category` tiene `id`, `name`, `slug`, descripción, `parentId` opcional,
+Una `Category` tiene `id`, `title`, `slug`, descripción, `parentId` opcional,
 imagen y `productIds`. `productIds` es un índice derivado: las asignaciones
 editables están en los productos y el dominio lo recalcula. Las categorías
 permiten una raíz y un nivel de hijos; los helpers
@@ -114,7 +118,7 @@ datos personales en IndexedDB ni en el proyecto exportado.
   }],
   "categories": [{
     "id": "cat-remeras",
-    "name": "Remeras",
+    "title": "Remeras",
     "slug": "remeras",
     "productIds": ["prod-001"]
   }]

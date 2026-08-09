@@ -21,10 +21,11 @@ const fixtureFiles = new Map<string, Uint8Array>([
   ],
 ]);
 let server: Server;
+let serverUrl: string;
 
 test.beforeAll(async () => {
   server = createServer((request, response) => {
-    const url = new URL(request.url ?? "/", "http://127.0.0.1:4175");
+    const url = new URL(request.url ?? "/", "http://127.0.0.1");
     const requested = decodeURIComponent(url.pathname).replace(/^\/+/, "");
     const path =
       requested === ""
@@ -57,9 +58,18 @@ test.beforeAll(async () => {
   });
 
   await new Promise<void>((resolveListening) => {
-    server.listen(4175, "127.0.0.1", resolveListening);
+    server.listen(0, "127.0.0.1", resolveListening);
   });
+  const address = server.address();
+  if (address === null || typeof address === "string") {
+    throw new Error("El servidor de pruebas no tiene una dirección TCP.");
+  }
+  serverUrl = `http://127.0.0.1:${address.port}`;
 });
+
+function storeUrl(path: string): string {
+  return new URL(path, serverUrl).toString();
+}
 
 test.afterAll(async () => {
   await new Promise<void>((resolveClosing, reject) => {
@@ -68,7 +78,7 @@ test.afterAll(async () => {
 });
 
 test("selecciona una variante, agrega al carrito y genera WhatsApp", async ({ page }) => {
-  await page.goto("/productos/manta-bruma/");
+  await page.goto(storeUrl("/productos/manta-bruma/"));
   await page.getByLabel("Variante", { exact: true }).selectOption("variant-manta-piedra");
   await page.getByLabel("Cantidad").fill("2");
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
@@ -95,7 +105,7 @@ test("selecciona una variante, agrega al carrito y genera WhatsApp", async ({ pa
 test("mantiene producto, precio y descripcion sin JavaScript", async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
-  await page.goto("/productos/manta-bruma/");
+  await page.goto(storeUrl("/productos/manta-bruma/"));
 
   await expect(page.getByRole("heading", { level: 1, name: "Manta Bruma" })).toBeVisible();
   await expect(page.locator("body")).toContainText(/Algod/);
@@ -107,7 +117,7 @@ test("mantiene producto, precio y descripcion sin JavaScript", async ({ browser 
 test("descubre productos siguiendo enlaces sin JavaScript", async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
-  await page.goto("/");
+  await page.goto(storeUrl("/"));
 
   const productLink = page.locator('a[href="/productos/manta-bruma/"]').first();
   await expect(productLink).toBeVisible();
@@ -120,21 +130,21 @@ test("descubre productos siguiendo enlaces sin JavaScript", async ({ browser }) 
 test("expone colecciones, politicas y artefactos SEO sin JavaScript", async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
-  await page.goto("/colecciones/casa-serena/");
+  await page.goto(storeUrl("/colecciones/casa-serena/"));
   await expect(page.getByRole("heading", { level: 1, name: "Casa serena" })).toBeVisible();
-  await page.goto("/envios/");
+  await page.goto(storeUrl("/envios/"));
   await expect(page.locator("main h1")).toContainText(/Env/);
 
-  const sitemap = await page.request.get("/sitemap.xml");
+  const sitemap = await page.request.get(storeUrl("/sitemap.xml"));
   expect(await sitemap.text()).toContain("/productos/manta-bruma/");
-  const feed = await page.request.get("/google-merchant.xml");
+  const feed = await page.request.get(storeUrl("/google-merchant.xml"));
   expect(await feed.text()).toContain("variant-manta-musgo");
   await context.close();
 });
 
 test("mantiene composicion y ancho estable en desktop y movil", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/");
+  await page.goto(storeUrl("/"));
   await expect(
     page.getByRole("heading", { level: 1, name: "Una casa con materia y calma." }),
   ).toBeVisible();
@@ -156,7 +166,7 @@ test("mantiene composicion y ancho estable en desktop y movil", async ({ page })
 
 test("mantiene el contenido visible con movimiento reducido y activa inView", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  await page.goto("/");
+  await page.goto(storeUrl("/"));
   const hero = page.locator('[data-solara-module="hero-media"]');
   await expect(hero).toHaveAttribute("data-motion-intensity", "0.5");
   await expect(hero).toHaveAttribute("data-motion-entry", "0.25");

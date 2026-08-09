@@ -21,10 +21,11 @@ const fixtureFiles = new Map<string, Uint8Array>([
   ],
 ]);
 let server: Server;
+let serverUrl: string;
 
 test.beforeAll(async () => {
   server = createServer((request, response) => {
-    const url = new URL(request.url ?? "/", "http://127.0.0.1:4176");
+    const url = new URL(request.url ?? "/", "http://127.0.0.1");
     const requested = decodeURIComponent(url.pathname).replace(/^\/+/, "");
     const path =
       requested === ""
@@ -55,8 +56,17 @@ test.beforeAll(async () => {
     response.writeHead(200, { "Content-Type": contentType, "Cache-Control": "no-store" });
     response.end(content);
   });
-  await new Promise<void>((resolveListening) => server.listen(4176, "127.0.0.1", resolveListening));
+  await new Promise<void>((resolveListening) => server.listen(0, "127.0.0.1", resolveListening));
+  const address = server.address();
+  if (address === null || typeof address === "string") {
+    throw new Error("El servidor de pruebas no tiene una dirección TCP.");
+  }
+  serverUrl = `http://127.0.0.1:${address.port}`;
 });
+
+function storeUrl(path: string): string {
+  return new URL(path, serverUrl).toString();
+}
 
 test.afterAll(async () => {
   await new Promise<void>((resolveClosing, reject) => {
@@ -73,7 +83,7 @@ test("prioriza doce productos después del hero y conserva densidad responsive",
     { width: 390, height: 844, columns: 2 },
   ]) {
     await page.setViewportSize(viewport);
-    await page.goto("http://127.0.0.1:4176/");
+    await page.goto(storeUrl("/"));
     const grid = page.locator(
       '[data-solara-module="compact-product-grid"] .solara-compact-products',
     );
@@ -97,7 +107,7 @@ test("prioriza doce productos después del hero y conserva densidad responsive",
 test("la home de escala conserva sus enlaces de producto sin JavaScript", async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
-  await page.goto("http://127.0.0.1:4176/");
+  await page.goto(storeUrl("/"));
   await expect(
     page.locator('[data-solara-module="compact-product-grid"] [data-product-card]'),
   ).toHaveCount(12);
@@ -108,7 +118,7 @@ test("la home de escala conserva sus enlaces de producto sin JavaScript", async 
 });
 
 test("navega nueve raíces y las subcategorías de Casa y Cocina", async ({ page }) => {
-  await page.goto("http://127.0.0.1:4176/");
+  await page.goto(storeUrl("/"));
   await page.locator(".solara-desktop-nav .solara-nav-dropdown > summary").click();
   await expect(page.getByRole("link", { name: "Casa", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Cocina", exact: true })).toBeVisible();
@@ -121,21 +131,21 @@ test("navega nueve raíces y las subcategorías de Casa y Cocina", async ({ page
 });
 
 test("agrega descendientes, pagina Casa y expone el producto 50", async ({ page }) => {
-  await page.goto("http://127.0.0.1:4176/categorias/casa/");
+  await page.goto(storeUrl("/categorias/casa/"));
   await expect(page.locator("[data-category-result-count]")).toHaveText("28 productos");
   await expect(page.getByRole("heading", { level: 2, name: "Explorar Casa" })).toBeVisible();
-  await page.goto("http://127.0.0.1:4176/categorias/casa/pagina/2/");
+  await page.goto(storeUrl("/categorias/casa/pagina/2/"));
   await expect(page.getByRole("link", { name: "Anterior" })).toBeVisible();
   await expect(page.locator("body")).toContainText("Pieza de escala 28");
-  await page.goto("http://127.0.0.1:4176/productos/pieza-escala-50/");
+  await page.goto(storeUrl("/productos/pieza-escala-50/"));
   await expect(page.getByRole("heading", { level: 1, name: "Pieza de escala 50" })).toBeVisible();
 });
 
 test("busca por ancestro y conserva el layout en móvil", async ({ page }) => {
-  await page.goto("http://127.0.0.1:4176/buscar/?q=Casa");
+  await page.goto(storeUrl("/buscar/?q=Casa"));
   await expect(page.locator("[data-search-results]")).toContainText("Pieza de escala 01");
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("http://127.0.0.1:4176/");
+  await page.goto(storeUrl("/"));
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
     false,
   );
@@ -147,7 +157,7 @@ test("busca por ancestro y conserva el layout en móvil", async ({ page }) => {
 });
 
 test("la búsqueda tolera errores de tipeo en la escala", async ({ page }) => {
-  await page.goto("http://127.0.0.1:4176/buscar/?q=Csa");
+  await page.goto(storeUrl("/buscar/?q=Csa"));
   await expect(page.locator("[data-search-results]")).toContainText("Pieza de escala 01", {
     timeout: 15_000,
   });

@@ -60,17 +60,23 @@ test("ordena por precio y por producto sobre el conjunto filtrado", async ({ pag
   await page.getByRole("button", { name: "Precio", exact: true }).click();
   const ascending = await priceValues(page);
   expect(ascending.length).toBe(50);
-  expect(ascending[0]).toBeLessThanOrEqual(ascending[ascending.length - 1]);
+  expect(ascending).toEqual([...ascending].sort((a, b) => a - b));
 
   await page.getByRole("button", { name: "Precio", exact: true }).click();
   const descending = await priceValues(page);
-  expect(descending[0]).toBeGreaterThanOrEqual(descending[descending.length - 1]);
+  expect(descending).toEqual([...descending].sort((a, b) => b - a));
 
   await page.getByRole("button", { name: "Producto", exact: true }).click();
   const titles = await page
     .locator('tbody input[aria-label^="Nombre de"]')
     .evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).value));
-  expect(titles[0] <= titles[titles.length - 1]).toBe(true);
+  expect(titles).toEqual(
+    [...titles].sort((a, b) => {
+      const left = a.toLowerCase();
+      const right = b.toLowerCase();
+      return left === right ? 0 : left < right ? -1 : 1;
+    }),
+  );
 });
 
 test("oculta y persiste columnas configurables", async ({ page }) => {
