@@ -173,7 +173,17 @@ function writeNodeFile(siteRoot, request, reply) {
       "Cache-Control": "no-store",
       "Content-Type": publicContentTypes[extname(file)] ?? "application/octet-stream",
     });
-    createReadStream(file).pipe(reply);
+    createReadStream(file)
+      .on("error", () => {
+        // El archivo pudo desaparecer entre el stat y el stream (poda de
+        // sitios/ o antivirus): responder sin tumbar el servidor local.
+        if (reply.headersSent) {
+          reply.destroy();
+        } else {
+          reply.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not found");
+        }
+      })
+      .pipe(reply);
   } catch {
     reply.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Bad request");
   }
@@ -360,9 +370,12 @@ export function createSolaraRequestHandler({
           await storage.abort(transactionId);
           return jsonResponse(200, { ok: true }, sessionHeaders);
         }
+        // La poda de sitios/ no debe borrar el directorio que un preview
+        // abierto sigue sirviendo: se protegen las keys cacheadas.
+        const protectedSiteKeys = [...siteServers.values()].map((siteServer) => siteServer.key);
         return jsonResponse(
           200,
-          { ok: true, ...(await storage.commit(transactionId)) },
+          { ok: true, ...(await storage.commit(transactionId, { protectedSiteKeys })) },
           sessionHeaders,
         );
       }

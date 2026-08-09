@@ -1,4 +1,14 @@
-import { mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  stat,
+  symlink,
+  utimes,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
@@ -854,6 +864,175 @@ describe("almacenamiento local de proyectos", () => {
       );
       expect(archives).toEqual([`${firstReceipt.key}.solara.json`]);
       await storage.abort(attempt.transactionId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("libera el lock y el staging si el commit falla antes del manifest", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-copyarchive-"));
+    try {
+      let failingOp = "";
+      const storage = createLocalProjectStorage({
+        applicationRoot: root,
+        writeGuard: async ({ op }) => {
+          if (op === failingOp) throw new Error(`escritura rechazada: ${op}`);
+        },
+      });
+      const attempt = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, attempt.transactionId, "project", projectJson());
+      failingOp = "copy-archive";
+      await expect(storage.commit(attempt.transactionId)).rejects.toThrow(/escritura rechazada/i);
+
+      // El lock no queda retenido: un segundo guardado de la misma tienda
+      // puede empezar sin conflicto de versión.
+      failingOp = "";
+      const retry = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T11:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, retry.transactionId, "project", projectJson());
+      const receipt = await storage.commit(retry.transactionId);
+      expect(receipt.version).toBe(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("barre los temporales viejos de sitios/ y actual/ al commitear", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-tmpsweep-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      const first = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, first.transactionId, "project", projectJson());
+      await upload(
+        storage,
+        first.transactionId,
+        "site",
+        siteMap([{ path: "index.html", encoding: "utf8", data: "<main>v1</main>" }]),
+      );
+      await storage.commit(first.transactionId);
+      const folder = (await storage.list()).projects[0].folder;
+      const sitesRoot = join(root, "proyectos", folder, "sitios");
+      const actualRoot = join(root, "proyectos", folder, "actual");
+
+      // Restos de un commit interrumpido de hace más de un día.
+      const staleSite = join(sitesRoot, `.stale-${Date.now()}.tmp`);
+      await mkdir(staleSite, { recursive: true });
+      await writeFile(join(staleSite, "index.html"), "x", "utf8");
+      const staleArchive = join(actualRoot, ".stale.solara.json.tmp");
+      await writeFile(staleArchive, "{}", "utf8");
+      const old = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+      await utimes(staleSite, old, old);
+      await utimes(staleArchive, old, old);
+
+      const second = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T11:00:00.000Z",
+        expectedVersion: 1,
+      });
+      await upload(storage, second.transactionId, "project", projectJson("v2"));
+      await storage.commit(second.transactionId);
+
+      await expect(readFile(staleSite)).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(readFile(staleArchive)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("expira las transacciones de clientes muertos y libera sus locks", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-ttl-"));
+    try {
+      let clock = new Date("2026-08-07T10:00:00.000Z");
+      const storage = createLocalProjectStorage({ applicationRoot: root, now: () => clock });
+
+      // Un lock retenido por una transacción vencida no bloquea un nuevo
+      // guardado: beginSave barre las transacciones stale.
+      const first = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, first.transactionId, "project", projectJson());
+      clock = new Date("2026-08-07T10:45:00.000Z");
+      const second = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:45:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, second.transactionId, "project", projectJson());
+      const receipt = await storage.commit(second.transactionId);
+      expect(receipt.version).toBe(1);
+
+      // Una transacción vencida no puede commitear y libera el lock.
+      const third = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:46:00.000Z",
+        expectedVersion: 1,
+      });
+      await upload(storage, third.transactionId, "project", projectJson("v2"));
+      clock = new Date("2026-08-07T11:20:00.000Z");
+      await expect(storage.commit(third.transactionId)).rejects.toThrow(/expir/i);
+
+      const retry = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T11:20:00.000Z",
+        expectedVersion: 1,
+      });
+      await storage.abort(retry.transactionId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reporta en recovery una tienda cuyo respaldo actual no coincide con su hash", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-hash-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      const transaction = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, transaction.transactionId, "project", projectJson());
+      const receipt = await storage.commit(transaction.transactionId);
+
+      const folder = (await storage.list()).projects[0].folder;
+      const currentPath = join(root, "proyectos", folder, "actual", `${receipt.key}.solara.json`);
+      await writeFile(currentPath, projectJson("Modificada"), "utf8");
+
+      const listing = await storage.list();
+      expect(listing.projects).toHaveLength(0);
+      expect(listing.recovery).toHaveLength(1);
+      expect(listing.recovery[0].message).toMatch(/no coincide con su hash/i);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

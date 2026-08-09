@@ -28,6 +28,13 @@ const MANIFEST_VERSION = 2;
 const DEFAULT_MAX_UPLOAD_BYTES = 1024 * 1024 * 1024;
 const DEFAULT_MAX_EXTRACTED_BYTES = 4 * 1024 * 1024 * 1024;
 const DEFAULT_MAX_FILES = 25_000;
+// Una transacción más vieja que esto se considera de un cliente muerto:
+// libera el lock y deja de poder commitear.
+const TRANSACTION_TTL_MS = 30 * 60 * 1000;
+// Los temporales `.<key>.<tx>.tmp` de commits interrumpidos se barren en
+// el próximo commit exitoso; los de menos de un día se conservan por si
+// otro proceso todavía los está finalizando.
+const STALE_TMP_SWEEP_MS = 24 * 60 * 60 * 1000;
 
 function isSafeSegment(value) {
   return typeof value === "string" && /^[a-z0-9][a-z0-9_-]{0,95}$/i.test(value);
@@ -207,6 +214,30 @@ async function fileExists(pathname) {
   }
 }
 
+async function sweepStaleTmp(directory, maxAgeMs) {
+  let entries;
+  try {
+    entries = await readdir(directory, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  const threshold = Date.now() - maxAgeMs;
+  await Promise.all(
+    entries
+      .filter((entry) => entry.name.startsWith("."))
+      .map(async (entry) => {
+        const pathname = join(directory, entry.name);
+        try {
+          if ((await stat(pathname)).mtimeMs < threshold) {
+            await rm(pathname, { recursive: true, force: true });
+          }
+        } catch {
+          // El archivo pudo desaparecer entre el listado y el borrado.
+        }
+      }),
+  );
+}
+
 export function createLocalProjectStorage(options = {}) {
   const defaultLayout = resolvePortableLayout({
     mode: "development",
@@ -236,6 +267,19 @@ export function createLocalProjectStorage(options = {}) {
   };
   const transactions = new Map();
   const projectLocks = new Set();
+  // Sólo los tests inyectan un reloj para envejecer transacciones sin
+  // dormir; en producción siempre es la hora real.
+  const now = typeof options.now === "function" ? options.now : () => new Date();
+  const isExpiredTransaction = (transaction) =>
+    now().getTime() - Date.parse(transaction.createdAt) > TRANSACTION_TTL_MS;
+  const expireTransaction = async (transaction) => {
+    transactions.delete(transaction.id);
+    projectLocks.delete(transaction.metadata.projectId);
+    await rm(transaction.root, { recursive: true, force: true });
+  };
+  // Cada ruta se reporta una sola vez por proceso: un respaldo anterior
+  // bloqueado no debe loguear en cada reintento de guardado.
+  const loggedCleanupFailures = new Set();
 
   async function ensureRoots() {
     await mkdir(projectsRoot, { recursive: true });
@@ -305,6 +349,13 @@ export function createLocalProjectStorage(options = {}) {
         }
         const currentPath = manifestPath(root, manifest.current.projectPath);
         if (!(await fileExists(currentPath))) throw new Error("No existe la versión actual.");
+        const currentBytes = await readFile(currentPath);
+        const actualHash = createHash("sha256").update(currentBytes).digest("hex");
+        if (actualHash !== manifest.current.sha256) {
+          throw new Error(
+            "El respaldo actual no coincide con su hash. Recuperá una versión anterior.",
+          );
+        }
         if (manifest.lastValidSite?.directoryPath) {
           // Los manifests se pueden copiar entre equipos, por eso sólo se
           // aceptan rutas relativas a la raíz de la instalación portable.
@@ -386,9 +437,19 @@ export function createLocalProjectStorage(options = {}) {
     await ensureRoots();
     assertProjectId(meta.projectId);
     if (projectLocks.has(meta.projectId)) {
-      const error = new Error("Ya hay un guardado en curso para esta tienda.");
-      error.code = "VERSION_CONFLICT";
-      throw error;
+      // Un cliente muerto (Electron recargado, máquina suspendida) pudo
+      // dejar el lock retenido sin que su abort llegue nunca; si la
+      // transacción que lo mantiene ya expiró, se libera y se continúa.
+      const stale = [...transactions.values()].find(
+        (transaction) => transaction.metadata.projectId === meta.projectId,
+      );
+      if (stale && isExpiredTransaction(stale)) {
+        await expireTransaction(stale);
+      } else {
+        const error = new Error("Ya hay un guardado en curso para esta tienda.");
+        error.code = "VERSION_CONFLICT";
+        throw error;
+      }
     }
     if (typeof meta.slug !== "string" || meta.slug !== safeSlug(meta.slug)) {
       throw new Error("Slug de tienda inválido.");
@@ -413,7 +474,7 @@ export function createLocalProjectStorage(options = {}) {
     await mkdir(transactionRoot, { recursive: true });
     const transaction = {
       id: transactionId,
-      createdAt: new Date().toISOString(),
+      createdAt: now().toISOString(),
       metadata: {
         ...meta,
         version: currentVersion + 1,
@@ -445,6 +506,10 @@ export function createLocalProjectStorage(options = {}) {
   async function getTransaction(transactionId) {
     const transaction = transactions.get(transactionId);
     if (!transaction) throw new Error("La transacción de guardado no existe o expiró.");
+    if (isExpiredTransaction(transaction)) {
+      await expireTransaction(transaction);
+      throw new Error("La transacción de guardado expiró.");
+    }
     return transaction;
   }
 
@@ -463,168 +528,190 @@ export function createLocalProjectStorage(options = {}) {
     return result;
   }
 
-  async function commit(transactionId) {
+  async function commit(transactionId, options = {}) {
     const transaction = await getTransaction(transactionId);
-    if (!transaction.project) throw new Error("Falta el respaldo editable de la tienda.");
     const { metadata } = transaction;
-    const project = parseProjectJson(
-      await readFile(join(transaction.root, "project.json")),
-      metadata.projectId,
+    const protectedSiteKeys = new Set(
+      Array.isArray(options?.protectedSiteKeys) ? options.protectedSiteKeys : [],
     );
-    const storeRoot = join(projectsRoot, metadata.folder);
-    const actualRoot = join(storeRoot, "actual");
-    const backupsRoot = join(storeRoot, "respaldos");
-    const manualBackupsRoot = join(storeRoot, "respaldos-manuales");
-    const sitesRoot = join(storeRoot, "sitios");
-    await checkpoint("before-publish-preparation");
-    await Promise.all([
-      mkdir(actualRoot, { recursive: true }),
-      mkdir(backupsRoot, { recursive: true }),
-      mkdir(manualBackupsRoot, { recursive: true }),
-      mkdir(sitesRoot, { recursive: true }),
-    ]);
-    await assertNoReparsePoints(projectsRoot, storeRoot);
-    const savedAt = new Date();
-    const key = versionKey(metadata.slug, savedAt, metadata.version);
-    const archiveName = `${key}.solara.json`;
-    const archivePath = join(actualRoot, archiveName);
-    const temporaryArchivePath = join(actualRoot, `.${archiveName}.${transaction.id}.tmp`);
-
-    let siteInfo;
-    if (transaction.site) {
-      const temporarySite = join(sitesRoot, `.${key}.${transaction.id}.tmp`);
-      const finalSite = join(sitesRoot, key);
-      await rm(temporarySite, { recursive: true, force: true });
-      try {
-        await checkpoint("before-site-extract");
-        await guardWrite("write-site-files", temporarySite);
-        siteInfo = await writeSiteFiles(join(transaction.root, "site-map.json"), temporarySite, {
-          maxFiles,
-          maxExtractedBytes,
-          maxFileBytes,
-        });
-        await checkpoint("before-site-rename");
-        await guardWrite("rename-site", finalSite);
-        await rename(temporarySite, finalSite);
-      } catch (error) {
-        await rm(temporarySite, { recursive: true, force: true });
-        throw error;
-      }
-      siteInfo = {
-        ...siteInfo,
-        version: metadata.version,
-        key,
-        directoryPath: relative(applicationRoot, finalSite).replaceAll("\\", "/"),
-        sha256: transaction.site.sha256,
-        savedAt: savedAt.toISOString(),
-      };
-    }
-
-    // Se publica el respaldo editable sólo después de validar el sitio opcional.
-    // Así un mapa inválido no deja archivos huérfanos en `actual/`.
-    await checkpoint("before-project-archive");
-    await guardWrite("copy-archive", temporaryArchivePath);
-    await copyFile(join(transaction.root, "project.json"), temporaryArchivePath);
-    await rename(temporaryArchivePath, archivePath);
-
-    const previous = metadata.previous;
-    if (previous?.current?.projectPath) {
-      const oldCurrent = manifestPath(storeRoot, previous.current.projectPath);
-      if ((await fileExists(oldCurrent)) && oldCurrent !== archivePath) {
-        const oldBackup = join(backupsRoot, oldCurrent.split(sep).at(-1));
-        if (!(await fileExists(oldBackup))) await copyFile(oldCurrent, oldBackup);
-      }
-    }
-
-    const lastValidSite = siteInfo ?? previous?.lastValidSite;
-    const manifest = {
-      format: MANIFEST_FORMAT,
-      manifestVersion: MANIFEST_VERSION,
-      projectId: metadata.projectId,
-      storeName: project.name,
-      slug: project.slug,
-      schemaVersion: project.schemaVersion,
-      status: siteInfo ? "synced" : "site-outdated",
-      current: {
-        version: metadata.version,
-        key,
-        projectPath: join("actual", archiveName).replaceAll("\\", "/"),
-        sha256: transaction.project.sha256,
-        savedAt: savedAt.toISOString(),
-        projectUpdatedAt: project.updatedAt,
-      },
-      ...(lastValidSite ? { lastValidSite } : {}),
-    };
-    await checkpoint("before-manifest");
     try {
-      // Cubre la ventana post-rename → pre-manifest: un fallo aquí deja el
-      // sitio renombrado pero el manifest todavía apunta a la versión previa.
-      await checkpoint("after-site-rename");
-      await guardWrite("write-manifest", join(storeRoot, "manifest.json"));
-      await writeJsonAtomic(join(storeRoot, "manifest.json"), manifest);
-    } catch (error) {
-      await rm(archivePath, { force: true });
-      if (siteInfo?.key) {
-        await rm(join(sitesRoot, siteInfo.key), { recursive: true, force: true });
-      }
-      throw error;
-    }
+      if (!transaction.project) throw new Error("Falta el respaldo editable de la tienda.");
+      const project = parseProjectJson(
+        await readFile(join(transaction.root, "project.json")),
+        metadata.projectId,
+      );
+      const storeRoot = join(projectsRoot, metadata.folder);
+      const actualRoot = join(storeRoot, "actual");
+      const backupsRoot = join(storeRoot, "respaldos");
+      const manualBackupsRoot = join(storeRoot, "respaldos-manuales");
+      const sitesRoot = join(storeRoot, "sitios");
+      await checkpoint("before-publish-preparation");
+      await Promise.all([
+        mkdir(actualRoot, { recursive: true }),
+        mkdir(backupsRoot, { recursive: true }),
+        mkdir(manualBackupsRoot, { recursive: true }),
+        mkdir(sitesRoot, { recursive: true }),
+      ]);
+      await assertNoReparsePoints(projectsRoot, storeRoot);
+      const savedAt = now();
+      const key = versionKey(metadata.slug, savedAt, metadata.version);
+      const archiveName = `${key}.solara.json`;
+      const archivePath = join(actualRoot, archiveName);
+      const temporaryArchivePath = join(actualRoot, `.${archiveName}.${transaction.id}.tmp`);
 
-    // Poda de retención: `sitios/` sólo conserva el sitio vigente del
-    // manifest; las versiones anteriores ya no se referencian y sólo
-    // acumularían una carpeta por guardado.
-    const keepSiteKey = lastValidSite?.key;
-    if (typeof keepSiteKey === "string") {
-      try {
-        const siteEntries = await readdir(sitesRoot, { withFileTypes: true });
-        await Promise.all(
-          siteEntries
-            .filter(
-              (entry) =>
-                entry.isDirectory() && !entry.name.startsWith(".") && entry.name !== keepSiteKey,
-            )
-            .map(async (entry) => {
-              try {
-                await rm(join(sitesRoot, entry.name), { recursive: true, force: true });
-              } catch {
-                // OneDrive o el antivirus pueden bloquear el borrado; el
-                // próximo guardado exitoso reintenta la poda.
-              }
-            }),
-        );
-      } catch {
-        // Sin lectura de sitios/ no hay poda; el guardado ya quedó commiteado.
-      }
-    }
-
-    if (previous?.current?.projectPath) {
-      const oldCurrent = manifestPath(storeRoot, previous.current.projectPath);
-      if ((await fileExists(oldCurrent)) && oldCurrent !== archivePath) {
+      let siteInfo;
+      if (transaction.site) {
+        const temporarySite = join(sitesRoot, `.${key}.${transaction.id}.tmp`);
+        const finalSite = join(sitesRoot, key);
+        await rm(temporarySite, { recursive: true, force: true });
         try {
-          await guardWrite("remove-old-current", oldCurrent);
-          await rm(oldCurrent, { force: true });
+          await checkpoint("before-site-extract");
+          await guardWrite("write-site-files", temporarySite);
+          siteInfo = await writeSiteFiles(join(transaction.root, "site-map.json"), temporarySite, {
+            maxFiles,
+            maxExtractedBytes,
+            maxFileBytes,
+          });
+          await checkpoint("before-site-rename");
+          await guardWrite("rename-site", finalSite);
+          await rename(temporarySite, finalSite);
         } catch (error) {
-          // El borrado del respaldo anterior no es fatal: el guardado ya
-          // quedó commiteado y el respaldo sigue disponible en `actual/`.
-          console.error(
-            `Solara: no se pudo quitar el respaldo anterior (${oldCurrent}):`,
-            error instanceof Error ? error.message : error,
-          );
+          await rm(temporarySite, { recursive: true, force: true });
+          throw error;
+        }
+        siteInfo = {
+          ...siteInfo,
+          version: metadata.version,
+          key,
+          directoryPath: relative(applicationRoot, finalSite).replaceAll("\\", "/"),
+          sha256: transaction.site.sha256,
+          savedAt: savedAt.toISOString(),
+        };
+      }
+
+      // Se publica el respaldo editable sólo después de validar el sitio opcional.
+      // Así un mapa inválido no deja archivos huérfanos en `actual/`.
+      await checkpoint("before-project-archive");
+      await guardWrite("copy-archive", temporaryArchivePath);
+      await copyFile(join(transaction.root, "project.json"), temporaryArchivePath);
+      await rename(temporaryArchivePath, archivePath);
+
+      const previous = metadata.previous;
+      if (previous?.current?.projectPath) {
+        const oldCurrent = manifestPath(storeRoot, previous.current.projectPath);
+        if ((await fileExists(oldCurrent)) && oldCurrent !== archivePath) {
+          const oldBackup = join(backupsRoot, oldCurrent.split(sep).at(-1));
+          if (!(await fileExists(oldBackup))) await copyFile(oldCurrent, oldBackup);
         }
       }
+
+      const lastValidSite = siteInfo ?? previous?.lastValidSite;
+      const manifest = {
+        format: MANIFEST_FORMAT,
+        manifestVersion: MANIFEST_VERSION,
+        projectId: metadata.projectId,
+        storeName: project.name,
+        slug: project.slug,
+        schemaVersion: project.schemaVersion,
+        status: siteInfo ? "synced" : "site-outdated",
+        current: {
+          version: metadata.version,
+          key,
+          projectPath: join("actual", archiveName).replaceAll("\\", "/"),
+          sha256: transaction.project.sha256,
+          savedAt: savedAt.toISOString(),
+          projectUpdatedAt: project.updatedAt,
+        },
+        ...(lastValidSite ? { lastValidSite } : {}),
+      };
+      await checkpoint("before-manifest");
+      try {
+        // Cubre la ventana post-rename → pre-manifest: un fallo aquí deja el
+        // sitio renombrado pero el manifest todavía apunta a la versión previa.
+        await checkpoint("after-site-rename");
+        await guardWrite("write-manifest", join(storeRoot, "manifest.json"));
+        await writeJsonAtomic(join(storeRoot, "manifest.json"), manifest);
+      } catch (error) {
+        await rm(archivePath, { force: true });
+        if (siteInfo?.key) {
+          await rm(join(sitesRoot, siteInfo.key), { recursive: true, force: true });
+        }
+        throw error;
+      }
+
+      // Poda de retención: `sitios/` sólo conserva el sitio vigente del
+      // manifest; las versiones anteriores ya no se referencian y sólo
+      // acumularían una carpeta por guardado.
+      const keepSiteKey = lastValidSite?.key;
+      if (typeof keepSiteKey === "string") {
+        try {
+          const siteEntries = await readdir(sitesRoot, { withFileTypes: true });
+          await Promise.all(
+            siteEntries
+              .filter(
+                (entry) =>
+                  entry.isDirectory() &&
+                  !entry.name.startsWith(".") &&
+                  entry.name !== keepSiteKey &&
+                  !protectedSiteKeys.has(entry.name),
+              )
+              .map(async (entry) => {
+                try {
+                  await rm(join(sitesRoot, entry.name), { recursive: true, force: true });
+                } catch {
+                  // OneDrive o el antivirus pueden bloquear el borrado; el
+                  // próximo guardado exitoso reintenta la poda.
+                }
+              }),
+          );
+        } catch {
+          // Sin lectura de sitios/ no hay poda; el guardado ya quedó commiteado.
+        }
+      }
+
+      // Barrido de temporales huérfanos (`.<key>.<tx>.tmp`) que dejaron
+      // commits interrumpidos; los de menos de un día se conservan.
+      await Promise.all([
+        sweepStaleTmp(sitesRoot, STALE_TMP_SWEEP_MS),
+        sweepStaleTmp(actualRoot, STALE_TMP_SWEEP_MS),
+      ]);
+
+      if (previous?.current?.projectPath) {
+        const oldCurrent = manifestPath(storeRoot, previous.current.projectPath);
+        if ((await fileExists(oldCurrent)) && oldCurrent !== archivePath) {
+          try {
+            await guardWrite("remove-old-current", oldCurrent);
+            await rm(oldCurrent, { force: true });
+          } catch (error) {
+            // El borrado del respaldo anterior no es fatal: el guardado ya
+            // quedó commiteado y el respaldo sigue disponible en `actual/`.
+            if (!loggedCleanupFailures.has(oldCurrent)) {
+              loggedCleanupFailures.add(oldCurrent);
+              console.error(
+                `Solara: no se pudo quitar el respaldo anterior (${oldCurrent}):`,
+                error instanceof Error ? error.message : error,
+              );
+            }
+          }
+        }
+      }
+      return {
+        projectId: manifest.projectId,
+        version: manifest.current.version,
+        key: manifest.current.key,
+        status: manifest.status,
+        folder: metadata.folder,
+        projectPath: manifest.current.projectPath,
+        site: manifest.lastValidSite ?? null,
+      };
+    } finally {
+      // El éxito y cualquier fallo liberan el lock y el staging: un error
+      // antes del manifest (copias, respaldos, permisos) no debe retener
+      // la tienda bloqueada para siempre.
+      await transactions.delete(transactionId);
+      projectLocks.delete(metadata.projectId);
+      await rm(transaction.root, { recursive: true, force: true });
     }
-    await transactions.delete(transactionId);
-    projectLocks.delete(metadata.projectId);
-    await rm(transaction.root, { recursive: true, force: true });
-    return {
-      projectId: manifest.projectId,
-      version: manifest.current.version,
-      key: manifest.current.key,
-      status: manifest.status,
-      folder: metadata.folder,
-      projectPath: manifest.current.projectPath,
-      site: manifest.lastValidSite ?? null,
-    };
   }
 
   async function readCurrent(projectId) {

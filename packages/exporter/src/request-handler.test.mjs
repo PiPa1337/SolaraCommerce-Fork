@@ -1,9 +1,15 @@
+import { createReadStream } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
 import { createSolaraRequestHandler } from "../scripts/solara-request-handler.mjs";
+
+vi.mock("node:fs", async (importActual) => {
+  const actual = await importActual();
+  return { ...actual, createReadStream: vi.fn(actual.createReadStream) };
+});
 
 const projectId = "store-open-folder";
 const shutdownCookieName = "solara_shutdown";
@@ -157,6 +163,121 @@ describe("handler: abrir el sitio público", () => {
       expect(open2.status).toBe(200);
       const url2 = JSON.parse(open2.body).url;
       await expect((await fetch(`${url2}/index.html`)).text()).resolves.toContain("v2");
+    } finally {
+      await handler?.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("conserva el sitio que un preview abierto sigue sirviendo tras un guardado", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-handler-protected-"));
+    let handler;
+    try {
+      handler = createSolaraRequestHandler({
+        applicationRoot: root,
+        shutdownToken: "token-test",
+        onShutdown: () => {},
+      });
+      await saveWithSite(handler.storage, 1, "v1");
+      const open1 = await handler.handle(
+        request("POST", `/__solara/storage/projects/${projectId}/open-site`, {
+          cookie: `${shutdownCookieName}=token-test`,
+        }),
+      );
+      expect(open1.status).toBe(200);
+      const url1 = JSON.parse(open1.body).url;
+      await expect((await fetch(`${url1}/index.html`)).text()).resolves.toContain("v1");
+
+      // El guardado pasa por la ruta de commit del handler, que protege
+      // las keys que los servidores cacheados siguen sirviendo.
+      const transaction = await handler.storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T12:00:00.000Z",
+        expectedVersion: 1,
+      });
+      await handler.storage.upload(
+        transaction.transactionId,
+        "project",
+        Readable.from([Buffer.from(projectJson())]),
+      );
+      await handler.storage.upload(
+        transaction.transactionId,
+        "site",
+        Readable.from([
+          Buffer.from(
+            JSON.stringify([{ path: "index.html", encoding: "utf8", data: "<main>v2</main>" }]),
+          ),
+        ]),
+      );
+      const commitResponse = await handler.handle(
+        request("POST", `/__solara/storage/saves/${transaction.transactionId}/commit`, {
+          cookie: `${shutdownCookieName}=token-test`,
+        }),
+      );
+      expect(commitResponse.status).toBe(200);
+
+      // El preview abierto sigue funcionando aunque la poda borró las
+      // keys que ningún servidor cacheado protege.
+      await expect((await fetch(`${url1}/index.html`)).text()).resolves.toContain("v1");
+
+      // open-site de nuevo: cierra el server viejo y sirve la key nueva.
+      const open2 = await handler.handle(
+        request("POST", `/__solara/storage/projects/${projectId}/open-site`, {
+          cookie: `${shutdownCookieName}=token-test`,
+        }),
+      );
+      expect(open2.status).toBe(200);
+      const url2 = JSON.parse(open2.body).url;
+      await expect((await fetch(`${url2}/index.html`)).text()).resolves.toContain("v2");
+      await expect(fetch(`${url1}/index.html`)).rejects.toThrow();
+    } finally {
+      await handler?.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("no tumba el servidor si el archivo desaparece al servirlo", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-handler-stream-"));
+    let handler;
+    try {
+      handler = createSolaraRequestHandler({
+        applicationRoot: root,
+        shutdownToken: "token-test",
+        onShutdown: () => {},
+      });
+      await saveWithSite(handler.storage, 1, "v1");
+      const open1 = await handler.handle(
+        request("POST", `/__solara/storage/projects/${projectId}/open-site`, {
+          cookie: `${shutdownCookieName}=token-test`,
+        }),
+      );
+      const url1 = JSON.parse(open1.body).url;
+      await expect((await fetch(`${url1}/index.html`)).text()).resolves.toContain("v1");
+
+      // La próxima lectura falla como si el directorio hubiera sido
+      // podado entre el stat y el stream: la respuesta puede ser 404 o
+      // un socket cortado, pero nunca puede caer el servidor local.
+      const broken = new Readable({ read() {} });
+      vi.mocked(createReadStream).mockImplementationOnce(() => {
+        queueMicrotask(() =>
+          broken.emit("error", Object.assign(new Error("archivo borrado"), { code: "ENOENT" })),
+        );
+        return broken;
+      });
+      const outcome = await fetch(`${url1}/index.html`)
+        .then((response) => response.status)
+        .catch(() => 0);
+      expect([0, 404, 500]).toContain(outcome);
+
+      // El servidor local sigue respondiendo al almacenamiento.
+      const status = await handler.handle(
+        request("GET", "/__solara/storage/status", {
+          cookie: `${shutdownCookieName}=token-test`,
+        }),
+      );
+      expect(status.status).toBe(200);
     } finally {
       await handler?.close();
       await rm(root, { recursive: true, force: true });
