@@ -158,9 +158,8 @@ export function Studio({
   useEffect(() => {
     if (!conflict) return;
     conflictOpenerRef.current = document.activeElement as HTMLElement | null;
-    const firstFocusable = conflictDialogRef.current?.querySelector<HTMLElement>(
-      'button:not([disabled])',
-    );
+    const firstFocusable =
+      conflictDialogRef.current?.querySelector<HTMLElement>("button:not([disabled])");
     (firstFocusable ?? conflictDialogRef.current)?.focus();
   }, [conflict]);
   useEffect(() => {
@@ -172,7 +171,7 @@ export function Studio({
   const trapConflictFocus = (event: React.KeyboardEvent<HTMLDivElement>): void => {
     if (event.key !== "Tab" || !conflictDialogRef.current) return;
     const focusable = Array.from(
-      conflictDialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled])'),
+      conflictDialogRef.current.querySelectorAll<HTMLElement>("button:not([disabled])"),
     );
     if (focusable.length === 0) return;
     const first = focusable[0] as HTMLElement;
