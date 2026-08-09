@@ -370,9 +370,7 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
       (match) => match[1],
     );
 
-    expect(
-      noscripts.some((block) => block !== undefined && block.includes(".catalog-mobile-menu[hidden]")),
-    ).toBe(true);
+    expect(noscripts.some((block) => block?.includes(".catalog-mobile-menu[hidden]"))).toBe(true);
   });
 
   it("no emite rutas a /buscar/ cuando la búsqueda está deshabilitada", () => {
