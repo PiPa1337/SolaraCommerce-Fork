@@ -1,6 +1,5 @@
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { createCleanStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 /**
@@ -40,7 +39,21 @@ async function setupCleanStore(page: Page, name: string): Promise<void> {
       }),
   );
   await page.reload();
-  await createCleanStore(page, name);
+  // El borrado de la DB deja la app arrancando con lentitud en máquinas
+  // cargadas; los timeouts generosos evitan depender del helper compartido
+  // (que asume 5s por paso).
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 30_000,
+  });
+  await page.getByRole("button", { name: "Nueva tienda", exact: true }).click();
+  await page.getByLabel("Nueva tienda").fill(name);
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await page.getByRole("button", { name: "Crear tienda vacía", exact: true }).click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
+    timeout: 30_000,
+  });
 }
 
 async function openThemeTab(page: Page): Promise<void> {
@@ -54,6 +67,11 @@ function fieldsetOf(input: Locator): Locator {
 
 function previewRoot(page: Page): Locator {
   return page.frameLocator('iframe[title="Vista previa desktop"]').locator("html");
+}
+
+/** El div raíz del sitio público (lleva data-color-mode, data-design-family…). */
+function previewPage(page: Page): Locator {
+  return page.frameLocator('iframe[title="Vista previa desktop"]').locator(".solara-page");
 }
 
 function previewBackground(page: Page): () => Promise<string> {
@@ -74,7 +92,10 @@ function previewVar(page: Page, name: string): () => Promise<string> {
 async function pickNativeColor(locator: Locator, hex: string): Promise<void> {
   await locator.evaluate((element, value) => {
     const input = element as HTMLInputElement;
-    input.value = value;
+    // React rastrea el value con un descriptor propio; asignar la propiedad
+    // directamente no actualiza su tracker y el onChange nunca se dispara.
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    setter?.call(input, value);
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.dispatchEvent(new Event("change", { bubbles: true }));
   }, hex);
@@ -190,24 +211,28 @@ test("colorMode: Sistema cambia el preview y Oscuro está deshabilitado con avis
   await setupCleanStore(page, "A16 colorMode");
   await openThemeTab(page);
 
-  const modeSelect = page.getByLabel("Modo");
+  const modeSelect = page.getByLabel("Modo", { exact: true });
   const modeField = fieldsetOf(modeSelect);
-  await expect(modeSelect).toHaveValue("auto");
+  // La tienda nueva (fixture Catalog Modern) inicia en "light".
+  await expect(modeSelect).toHaveValue("light");
 
   // Opción deshabilitada: feedback del control sobre su propia limitación.
   const darkOption = modeSelect.locator("option[value='dark']");
   await expect(darkOption).toBeDisabled();
   await expect(modeField.getByText(/Oscuro está deshabilitado/)).toBeVisible();
 
-  await modeSelect.selectOption("light");
-  await expect(modeSelect).toHaveValue("light");
-  await expect.poll(previewRoot(page).getAttribute("data-color-mode"), { timeout: 15_000 }).toBe(
-    "light",
-  );
-
-  // "auto" sigue funcionando tras tocar el selector.
   await modeSelect.selectOption("auto");
   await expect(modeSelect).toHaveValue("auto");
+  await expect
+    .poll(() => previewPage(page).getAttribute("data-color-mode"), { timeout: 15_000 })
+    .toBe("auto");
+
+  // "light" sigue funcionando tras tocar el selector.
+  await modeSelect.selectOption("light");
+  await expect(modeSelect).toHaveValue("light");
+  await expect
+    .poll(() => previewPage(page).getAttribute("data-color-mode"), { timeout: 15_000 })
+    .toBe("light");
 });
 
 test("tipografía: familias y escala llegan a los tokens del preview", async ({ page }) => {
@@ -328,7 +353,7 @@ test("reset con borrador inválido: restaura el valor y limpia el error (A16-B2)
   const originalContainer = await container.inputValue();
   await container.click();
   await page.keyboard.press("ControlOrMeta+A");
-  await page.keyboard.type("999");
+  await page.keyboard.type("900");
   await expect(container).toHaveAttribute("aria-invalid", "true");
 
   await page.getByTestId("ui-reset-geometry").click();

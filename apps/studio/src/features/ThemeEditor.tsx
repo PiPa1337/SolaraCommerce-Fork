@@ -6,6 +6,9 @@ import { Button, Field, SectionHeader } from "../components/Ui";
 
 const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 const COLOR_ERROR = "Ingresá un color hex como #1a2b3c.";
+const CONTAINER_ERROR = "Ingresá un ancho de 960 a 1800 px.";
+const CONTAINER_MIN = 960;
+const CONTAINER_MAX = 1800;
 
 /** Normaliza a #rrggbb en minúsculas, el formato que acepta el input nativo. */
 function normalizeHexColor(color: string): string | null {
@@ -196,11 +199,25 @@ export function ThemeEditor({
     {},
   );
 
+  /**
+   * Borrador del ancho del contenedor: escribirlo tecleando pasa por valores
+   * inválidos a mitad de camino (p. ej. "1"), que el schema rechazaría y
+   * haría rebotar el input sin mostrar lo escrito. El draft sólo se commitea
+   * con un número dentro del rango del schema (mismo patrón que los colores).
+   */
+  const [containerDraft, setContainerDraft] = useState<string | null>(null);
+  const [containerError, setContainerError] = useState<boolean>(false);
+
   /* biome-ignore lint/correctness/useExhaustiveDependencies: al cambiar los colores confirmados (commit, preset o reset) los borradores de texto deben volver a partir de esos valores. */
   useEffect(() => {
     setColorDrafts({});
     setColorErrors({});
   }, [project.theme.colors]);
+
+  useEffect(() => {
+    setContainerDraft(null);
+    setContainerError(false);
+  }, [project.theme.container]);
 
   const updateTheme = (theme: Theme) =>
     onChange({ ...project, theme, updatedAt: new Date().toISOString() });
@@ -228,6 +245,11 @@ export function ThemeEditor({
   const resetGroup = (group: ThemeGroup) => {
     const base = originalTheme.current;
     if (group === "colors") {
+      // Limpiar borradores explícitamente: si los colores confirmados ya eran
+      // los de apertura, el efecto de [project.theme.colors] no se dispara y el
+      // texto inválido tecleado seguiría visible tras "Restaurar".
+      setColorDrafts({});
+      setColorErrors({});
       updateTheme({ ...project.theme, colors: base.colors, colorMode: base.colorMode });
       return;
     }
@@ -235,12 +257,34 @@ export function ThemeEditor({
       updateTheme({ ...project.theme, typography: base.typography });
       return;
     }
+    setContainerDraft(null);
+    setContainerError(false);
     updateTheme({
       ...project.theme,
       spacingScale: base.spacingScale,
       radius: base.radius,
       container: base.container,
     });
+  };
+
+  const commitContainer = (raw: string) => {
+    const next = Number(raw.trim());
+    if (raw.trim() === "" || !Number.isFinite(next)) {
+      setContainerDraft(raw);
+      setContainerError(true);
+      return;
+    }
+    const rounded = Math.round(next);
+    if (rounded < CONTAINER_MIN || rounded > CONTAINER_MAX) {
+      setContainerDraft(raw);
+      setContainerError(true);
+      return;
+    }
+    setContainerDraft(String(rounded));
+    setContainerError(false);
+    if (rounded !== project.theme.container) {
+      updateTheme({ ...project.theme, container: rounded });
+    }
   };
 
   const contrastChecks = CONTRAST_PAIRS.map((pair) => ({
@@ -477,16 +521,18 @@ export function ThemeEditor({
               }
             />
           </Field>
-          <Field label="Ancho del contenedor">
+          <Field
+            label="Ancho del contenedor"
+            {...(containerError ? { error: CONTAINER_ERROR } : {})}
+          >
             <input
               type="number"
-              min={960}
-              max={1800}
+              min={CONTAINER_MIN}
+              max={CONTAINER_MAX}
               step={20}
-              value={project.theme.container}
-              onChange={(event) =>
-                updateTheme({ ...project.theme, container: Number(event.target.value) })
-              }
+              value={containerDraft ?? String(project.theme.container)}
+              aria-invalid={containerError ? true : undefined}
+              onChange={(event) => commitContainer(event.target.value)}
             />
           </Field>
         </fieldset>
