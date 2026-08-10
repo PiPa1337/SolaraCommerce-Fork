@@ -1,8 +1,26 @@
 /** Inspector de tokens visuales persistidos; no introduce estilos públicos paralelos. */
 import { ArrowCounterClockwise, PaintBrush, TextT, Wrench } from "@phosphor-icons/react";
 import type { StoreProjectV1, Theme } from "@solara/project-schema";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, Field, SectionHeader } from "../components/Ui";
+
+const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+const COLOR_ERROR = "Ingresá un color hex como #1a2b3c.";
+
+/** Normaliza a #rrggbb en minúsculas, el formato que acepta el input nativo. */
+function normalizeHexColor(color: string): string | null {
+  const match = HEX_COLOR_RE.exec(color.trim());
+  if (!match) return null;
+  const channels = match[0].slice(1);
+  const expanded =
+    channels.length === 3
+      ? channels
+          .split("")
+          .map((channel) => channel + channel)
+          .join("")
+      : channels;
+  return `#${expanded.toLowerCase()}`;
+}
 
 const colorLabels: Record<keyof Theme["colors"], string> = {
   background: "Fondo",
@@ -166,8 +184,43 @@ export function ThemeEditor({
   /** El tema al abrir la pestaña es la referencia para los resets por grupo. */
   const originalTheme = useRef(project.theme);
 
+  /**
+   * Borradores de los campos de color: mientras el texto no es un hex válido
+   * no se commitea (patrón de SettingsInspector/Overview); el draft sobrevive
+   * a la escritura y se descarta al cambiar los colores confirmados.
+   */
+  const [colorDrafts, setColorDrafts] = useState<Partial<Record<keyof Theme["colors"], string>>>(
+    {},
+  );
+  const [colorErrors, setColorErrors] = useState<Partial<Record<keyof Theme["colors"], boolean>>>(
+    {},
+  );
+
+  /* biome-ignore lint/correctness/useExhaustiveDependencies: al cambiar los colores confirmados (commit, preset o reset) los borradores de texto deben volver a partir de esos valores. */
+  useEffect(() => {
+    setColorDrafts({});
+    setColorErrors({});
+  }, [project.theme.colors]);
+
   const updateTheme = (theme: Theme) =>
     onChange({ ...project, theme, updatedAt: new Date().toISOString() });
+
+  const commitColor = (key: keyof Theme["colors"], raw: string) => {
+    const next = normalizeHexColor(raw);
+    if (next === null) {
+      setColorDrafts((current) => ({ ...current, [key]: raw }));
+      setColorErrors((current) => ({ ...current, [key]: true }));
+      return;
+    }
+    setColorDrafts((current) => ({ ...current, [key]: next }));
+    setColorErrors((current) => ({ ...current, [key]: false }));
+    if (next !== project.theme.colors[key]) {
+      updateTheme({
+        ...project.theme,
+        colors: { ...project.theme.colors, [key]: next },
+      });
+    }
+  };
 
   const applyPreset = (preset: (typeof THEME_PRESETS)[number]) =>
     updateTheme({ ...project.theme, colors: preset.colors });
@@ -271,27 +324,24 @@ export function ThemeEditor({
           </Field>
           <div className="color-grid">
             {(Object.keys(colorLabels) as Array<keyof Theme["colors"]>).map((key) => (
-              <Field label={colorLabels[key]} key={key}>
+              <Field
+                label={colorLabels[key]}
+                key={key}
+                {...(colorErrors[key] ? { error: COLOR_ERROR } : {})}
+              >
                 <span className="color-input">
                   <input
                     type="color"
                     value={project.theme.colors[key]}
-                    onChange={(event) =>
-                      updateTheme({
-                        ...project.theme,
-                        colors: { ...project.theme.colors, [key]: event.target.value },
-                      })
-                    }
+                    data-testid={`ui-color-native-${key}`}
+                    onChange={(event) => commitColor(key, event.target.value)}
                   />
                   <input
                     type="text"
-                    value={project.theme.colors[key]}
-                    onChange={(event) =>
-                      updateTheme({
-                        ...project.theme,
-                        colors: { ...project.theme.colors, [key]: event.target.value },
-                      })
-                    }
+                    value={colorDrafts[key] ?? project.theme.colors[key]}
+                    aria-invalid={colorErrors[key] ? true : undefined}
+                    data-testid={`ui-color-text-${key}`}
+                    onChange={(event) => commitColor(key, event.target.value)}
                   />
                 </span>
               </Field>
