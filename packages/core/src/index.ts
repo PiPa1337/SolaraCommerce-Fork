@@ -59,11 +59,6 @@ export type DomainCommand =
       status?: Exclude<ProductStatus, "archived">;
     })
   | (CommandMetadata & {
-      type: "products.bulkUpdate";
-      productIds: ProductId[];
-      changes: ProductPatch;
-    })
-  | (CommandMetadata & {
       type: "products.adjustPrices";
       productIds: ProductId[];
       adjustment: PriceAdjustment;
@@ -294,7 +289,9 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
       const category = project.categories.find((candidate) => candidate.id === command.categoryId);
       if (!category) throw new Error(`La categoría no existe: ${command.categoryId}.`);
       if (category.parentId === command.parentId) return project;
-      const hasChildren = project.categories.some((candidate) => candidate.parentId === category.id);
+      const hasChildren = project.categories.some(
+        (candidate) => candidate.parentId === category.id,
+      );
       if (hasChildren && command.parentId !== undefined) {
         throw new Error(
           "Las categorías con subcategorías no pueden reubicarse bajo otra categoría.",
@@ -354,10 +351,6 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
           ...product,
           status: command.status ?? "active",
         })),
-      );
-    case "products.bulkUpdate":
-      return updateSelectedProducts(project, command.productIds, at, (product) =>
-        applyProductPatch(product, command.changes),
       );
     case "products.adjustPrices":
       return updateSelectedProducts(project, command.productIds, at, (product) =>
