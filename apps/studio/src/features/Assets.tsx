@@ -41,6 +41,7 @@ export function Assets({
   const [assetFailures, setAssetFailures] = useState<Array<{ file: string; message: string }>>([]);
   const [batchStatus, setBatchStatus] = useState("");
   const [progress, setProgress] = useState({ current: 0, total: 0 });
+  const [progressLabel, setProgressLabel] = useState("Procesando imágenes");
   const [storage, setStorage] = useState<Awaited<ReturnType<typeof getStorageEstimate>>>();
   const [copied, setCopied] = useState("");
   const [dragging, setDragging] = useState(false);
@@ -89,6 +90,56 @@ export function Assets({
       reader.addEventListener("load", () => resolve(String(reader.result)));
       reader.addEventListener("error", () => reject(new Error("No se pudo leer el video.")));
       reader.readAsDataURL(file);
+    });
+
+  const readVideoMetadata = (
+    file: File,
+  ): Promise<{ width: number; height: number; duration: number }> =>
+    new Promise((resolve, reject) => {
+      const element = document.createElement("video");
+      const objectUrl = URL.createObjectURL(file);
+      let settled = false;
+      let deadline: number | undefined;
+      const cleanup = () => {
+        if (deadline !== undefined) window.clearTimeout(deadline);
+        URL.revokeObjectURL(objectUrl);
+      };
+      const fail = (message: string) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(new Error(message));
+      };
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve({
+          width: element.videoWidth,
+          height: element.videoHeight,
+          duration: element.duration,
+        });
+      };
+      deadline = window.setTimeout(() => fail("No se pudo leer la metadata del video."), 5_000);
+      element.preload = "metadata";
+      element.onerror = () => fail("No se pudo leer la metadata del video.");
+      element.onloadedmetadata = () => {
+        if (Number.isFinite(element.duration) && element.duration > 0) {
+          finish();
+          return;
+        }
+        // WebM grabados (p. ej. MediaRecorder) reportan duration=Infinity en
+        // el metadata: forzar el cálculo buscando el final del archivo.
+        const onDurationChange = () => {
+          if (Number.isFinite(element.duration) && element.duration > 0) {
+            element.removeEventListener("durationchange", onDurationChange);
+            finish();
+          }
+        };
+        element.addEventListener("durationchange", onDurationChange);
+        element.currentTime = 1e12;
+      };
+      element.src = objectUrl;
     });
 
   const cacheProcessedImage = async (hash: string, file: File, processed: ProcessedImage) => {
@@ -140,6 +191,7 @@ export function Assets({
     setError("");
     setAssetFailures([]);
     setBatchStatus("");
+    setProgressLabel("Procesando imágenes");
     setProgress({ current: 0, total: selectedFiles.length });
     try {
       const additions: ImageAsset[] = [];
@@ -180,15 +232,24 @@ export function Assets({
         .catch(() => undefined);
       const details = [
         `${additions.length} ${additions.length === 1 ? "imagen agregada" : "imágenes agregadas"}`,
-        duplicates > 0 ? `${duplicates} duplicadas omitidas` : "",
-        reused > 0 ? `${reused} recuperadas de caché` : "",
+        duplicates === 1
+          ? "1 duplicada omitida"
+          : duplicates > 1
+            ? `${duplicates} duplicadas omitidas`
+            : "",
+        reused === 1 ? "1 recuperada de caché" : reused > 1 ? `${reused} recuperadas de caché` : "",
       ].filter(Boolean);
       setBatchStatus(details.join(" · "));
       if (failures.length > 0) setAssetFailures(failures);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudieron agregar las imágenes.");
     } finally {
-      setBusy(false);
+      // Pintar el 100 % antes de liberar la UI: el último setProgress debe
+      // commitearse en una tarea propia, o React lo fusiona con setBusy(false)
+      // y la barra se oculta sin mostrar el paso final.
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+      setProgress({ current: selectedFiles.length, total: selectedFiles.length });
+      window.setTimeout(() => setBusy(false), 0);
     }
   };
 
@@ -198,6 +259,7 @@ export function Assets({
     setError("");
     setAssetFailures([]);
     setBatchStatus("");
+    setProgressLabel("Procesando imagen");
     setProgress({ current: 0, total: 1 });
     try {
       const outcome = await processImageFile(file);
@@ -217,67 +279,72 @@ export function Assets({
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo reemplazar la imagen.");
     } finally {
-      setBusy(false);
+      // Dejar pintar el 100 % antes de liberar la UI (ver addFiles).
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+      setProgress({ current: 1, total: 1 });
+      window.setTimeout(() => setBusy(false), 0);
     }
   };
 
   const addVideos = async (files: FileList) => {
+    const selectedFiles = [...files];
     setBusy(true);
     setError("");
+    setAssetFailures([]);
+    setBatchStatus("");
+    setProgressLabel("Procesando videos");
+    setProgress({ current: 0, total: selectedFiles.length });
     try {
       const additions: VideoAsset[] = [];
+      const failures: Array<{ file: string; message: string }> = [];
       const knownHashes = new Set(project.videos.map((video) => video.hash));
-      for (const file of [...files]) {
-        if (!["video/mp4", "video/webm"].includes(file.type))
-          throw new Error(`${file.name}: sólo MP4 o WebM.`);
-        if (file.size > 30 * 1024 * 1024) throw new Error(`${file.name}: el video supera 30 MB.`);
-        const hash = await hashFile(file);
-        if (knownHashes.has(hash)) continue;
-        const source = await readFileAsDataUrl(file);
-        const metadata = await new Promise<{ width: number; height: number; duration: number }>(
-          (resolve, reject) => {
-            const element = document.createElement("video");
-            const objectUrl = URL.createObjectURL(file);
-            element.preload = "metadata";
-            element.onloadedmetadata = () => {
-              URL.revokeObjectURL(objectUrl);
-              resolve({
-                width: element.videoWidth,
-                height: element.videoHeight,
-                duration: element.duration,
-              });
-            };
-            element.onerror = () => {
-              URL.revokeObjectURL(objectUrl);
-              reject(new Error(`${file.name}: no se pudo leer la metadata.`));
-            };
-            element.src = objectUrl;
-          },
-        );
-        if (
-          !Number.isFinite(metadata.width) ||
-          !Number.isFinite(metadata.height) ||
-          !Number.isFinite(metadata.duration) ||
-          metadata.width < 1 ||
-          metadata.height < 1 ||
-          metadata.duration <= 0 ||
-          metadata.duration > 60
-        ) {
-          throw new Error(`${file.name}: el video debe durar entre 0 y 60 segundos.`);
+      let duplicates = 0;
+
+      for (const [index, file] of selectedFiles.entries()) {
+        try {
+          if (!["video/mp4", "video/webm"].includes(file.type))
+            throw new Error("Sólo se aceptan videos MP4 o WebM.");
+          if (file.size > 30 * 1024 * 1024)
+            throw new Error(`El video supera los 30 MB (${bytesToSize(file.size)}).`);
+          const hash = await hashFile(file);
+          if (knownHashes.has(hash)) {
+            duplicates += 1;
+            continue;
+          }
+          const source = await readFileAsDataUrl(file);
+          const metadata = await readVideoMetadata(file);
+          if (
+            !Number.isFinite(metadata.width) ||
+            !Number.isFinite(metadata.height) ||
+            !Number.isFinite(metadata.duration) ||
+            metadata.width < 1 ||
+            metadata.height < 1 ||
+            metadata.duration <= 0 ||
+            metadata.duration > 60
+          ) {
+            throw new Error("El video debe durar entre 0 y 60 segundos.");
+          }
+          additions.push({
+            kind: "video",
+            id: `video-${crypto.randomUUID()}` as VideoAsset["id"],
+            name: file.name.replace(/\.[^.]+$/, ""),
+            alt: "",
+            mimeType: file.type as "video/mp4" | "video/webm",
+            source,
+            width: metadata.width,
+            height: metadata.height,
+            durationSeconds: metadata.duration,
+            hash,
+          });
+          knownHashes.add(hash);
+        } catch (reason) {
+          failures.push({
+            file: file.name,
+            message: reason instanceof Error ? reason.message : "no se pudo procesar",
+          });
+        } finally {
+          setProgress({ current: index + 1, total: selectedFiles.length });
         }
-        additions.push({
-          kind: "video",
-          id: `video-${crypto.randomUUID()}` as VideoAsset["id"],
-          name: file.name.replace(/\.[^.]+$/, ""),
-          alt: "",
-          mimeType: file.type as "video/mp4" | "video/webm",
-          source,
-          width: metadata.width,
-          height: metadata.height,
-          durationSeconds: metadata.duration,
-          hash,
-        });
-        knownHashes.add(hash);
       }
       if (additions.length > 0)
         onChange({
@@ -285,19 +352,53 @@ export function Assets({
           videos: [...project.videos, ...additions],
           updatedAt: new Date().toISOString(),
         });
-      setBatchStatus(
+      const details = [
         `${additions.length} ${additions.length === 1 ? "video agregado" : "videos agregados"}`,
-      );
+        duplicates === 1
+          ? "1 duplicado omitido"
+          : duplicates > 1
+            ? `${duplicates} duplicados omitidos`
+            : "",
+      ].filter(Boolean);
+      setBatchStatus(details.join(" · "));
+      if (failures.length > 0) setAssetFailures(failures);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudieron agregar los videos.");
     } finally {
-      setBusy(false);
+      // Pintar el 100 % antes de liberar la UI (ver addFiles).
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+      setProgress({ current: selectedFiles.length, total: selectedFiles.length });
+      window.setTimeout(() => setBusy(false), 0);
     }
   };
 
   const selectedAsset = project.assets.find((asset) => asset.id === selectedAssetId) ?? null;
   const selectedUses = selectedAsset ? assetUses(project, selectedAsset.id) : [];
   const confirmDeleteAsset = project.assets.find((asset) => asset.id === confirmDeleteId) ?? null;
+
+  /** Enruta una selección (picker o drop) y reporta archivos no compatibles. */
+  const dispatchFiles = (files: File[]) => {
+    const images = files.filter((file) => file.type.startsWith("image/"));
+    const videos = files.filter((file) => file.type.startsWith("video/"));
+    const unsupported = files.filter(
+      (file) => !file.type.startsWith("image/") && !file.type.startsWith("video/"),
+    );
+    if (unsupported.length > 0) {
+      setError(
+        unsupported.length === 1 && unsupported[0]
+          ? `«${unsupported[0].name}» no es un archivo compatible: usá imágenes JPEG, PNG o WebP, o videos MP4 o WebM.`
+          : "Algunos archivos no son compatibles: usá imágenes JPEG, PNG o WebP, o videos MP4 o WebM.",
+      );
+      return;
+    }
+    if (images.length > 0 && videos.length > 0) {
+      setError("Cargá imágenes y videos en tandas separadas para conservar el lote.");
+    } else if (images.length > 0) {
+      void addFiles(asFileList(images));
+    } else if (videos.length > 0) {
+      void addVideos(asFileList(videos));
+    }
+  };
 
   const handleDragEnter = () => {
     if (busy) return;
@@ -325,17 +426,7 @@ export function Assets({
     if (busy) return;
     const dropped = [...event.dataTransfer.files];
     if (dropped.length === 0) return;
-    const images = dropped.filter((file) => file.type.startsWith("image/"));
-    const videos = dropped.filter((file) => file.type.startsWith("video/"));
-    if (images.length > 0 && videos.length > 0) {
-      setError("Cargá imágenes y videos en tandas separadas para conservar el lote.");
-    } else if (images.length > 0) {
-      void addFiles(asFileList(images));
-    } else if (videos.length > 0) {
-      void addVideos(asFileList(videos));
-    } else {
-      setError("Soltá imágenes JPEG, PNG o WebP, o videos MP4 o WebM.");
-    }
+    dispatchFiles(dropped);
   };
 
   const openReplacePicker = (asset: ImageAsset) => {
@@ -363,16 +454,7 @@ export function Assets({
                   if (file && target) void replaceAsset(target, file);
                   setReplaceTargetId(null);
                 } else if (event.target.files) {
-                  const selected = [...event.target.files];
-                  const images = selected.filter((file) => file.type.startsWith("image/"));
-                  const videos = selected.filter((file) => file.type.startsWith("video/"));
-                  if (images.length > 0 && videos.length > 0) {
-                    setError("Cargá imágenes y videos en tandas separadas para conservar el lote.");
-                  } else if (images.length > 0) {
-                    void addFiles(asFileList(images));
-                  } else if (videos.length > 0) {
-                    void addVideos(asFileList(videos));
-                  }
+                  dispatchFiles([...event.target.files]);
                 }
                 event.target.value = "";
               }}
@@ -427,11 +509,7 @@ export function Assets({
         ) : null}
         {busy && progress.total > 0 ? (
           <div data-testid="ui-assets-progress" aria-live="polite">
-            <ProgressBar
-              value={progress.current}
-              max={progress.total}
-              label="Procesando imágenes"
-            />
+            <ProgressBar value={progress.current} max={progress.total} label={progressLabel} />
             <output className="export-progress">
               Procesando {progress.current}/{progress.total} ·{" "}
               {Math.round((progress.current / progress.total) * 100)}%
@@ -441,7 +519,7 @@ export function Assets({
         {error ? <InlineError>{error}</InlineError> : null}
         {assetFailures.length > 0 ? (
           <div className="asset-errors" data-testid="ui-asset-errors">
-            <p className="asset-errors__title">Estas imágenes no se agregaron:</p>
+            <p className="asset-errors__title">Estos archivos no se agregaron:</p>
             <ul>
               {assetFailures.map((failure, index) => (
                 <li
@@ -454,7 +532,8 @@ export function Assets({
               ))}
             </ul>
             <p className="asset-errors__hint">
-              Usá imágenes JPEG, PNG o WebP de hasta 25 MB; el resto del lote se conservó.
+              Usá imágenes JPEG, PNG o WebP de hasta 25 MB o videos MP4 o WebM de hasta 30 MB; el
+              resto del lote se conservó.
             </p>
           </div>
         ) : null}
