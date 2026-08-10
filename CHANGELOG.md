@@ -10,6 +10,49 @@ versión publicada.
 
 ## [Unreleased]
 
+### Revisión de bugfixes 3 (2026-08-09)
+
+- El preview abierto sobrevive al guardado: la poda de `sitios/` protege el
+  sitio que el preview sigue sirviendo y el servidor local ya no cae al servir
+  un archivo podado.
+- Los guardados fallidos se liberan solos: los locks y las transacciones
+  expiran por tiempo (TTL de 30 minutos) y un fallo intermedio deja de retener
+  el lock; los temporales viejos se limpian.
+- `list()` verifica el hash del respaldo actual: una tienda con el
+  `.solara.json` alterado aparece en recuperación con su mensaje.
+- Si la auditoría previa al export falla al cargar, el panel muestra el error
+  con un botón "Reintentar auditoría" en vez de deshabilitar el export en
+  silencio.
+- Los filtros de las páginas legacy consideran toda la categoría, no sólo la
+  página visible.
+- La auditoría avisa cuando la `baseUrl` incluye una subcarpeta (las rutas
+  relativas a la raíz romperían los assets).
+- La página `/buscar/` mantiene su campo de búsqueda aunque el buscador esté
+  oculto en el encabezado.
+- El contexto para agentes incluye las colecciones paginadas y el
+  image-sitemap cubre todas las páginas.
+- Las líneas del carrito que ya no existen en el catálogo se muestran como
+  "Ya no disponible" y se pueden quitar; el carrito además sobrevive a una
+  recarga (el parser del carrito quedó dentro del runtime serializado).
+- Los contadores de categoría muestran el total real ("X de N productos").
+- El gating del carrito es coherente: sin plantillas de comercio habilitadas
+  no queda un botón ni un índice que abran un drawer muerto.
+- La plantilla limpia ya no apunta a `/buscar/` cuando la búsqueda está
+  deshabilitada.
+- Estilos de impresión para el storefront (drawer, backdrops y menú móvil
+  fuera de la impresión).
+- "Reemplazar catálogo" valida los duplicados por fila: un CSV con slugs o
+  variantes repetidas muestra el error sin recargar la app.
+- El precio de variante vacío deja de commitearse como 0 y los campos SEO de
+  Overview muestran contadores.
+- El modo oscuro del selector de tema queda deshabilitado con un hint (el
+  storefront lo sobreescribiría con colores fijos).
+- El foco vuelve al botón al cerrar el selector de módulos con click fuera y
+  el diálogo de salida queda inerte tras un conflicto de guardado.
+- El gate portable quedó reparado: las tabs del Studio se navegan por su rol
+  real y la limpieza tolera archivos ocupados.
+- Mediciones del runtime actualizadas.
+
 ### Revisión de bugfixes 2 (2026-08-09)
 
 - Tres crashs corregidos: el editor ya no se desmonta en blanco al reubicar una

@@ -385,7 +385,8 @@ SEO fundamental: el contenido HTML sigue siendo rastreable, semantico y util
 sin JavaScript.
 
 `corepack pnpm check:budgets` tambien comprueba el runtime publico: JavaScript
-<= 52 KiB crudos (medido ~45,7 KiB) y CSS <= 8 KiB crudos, ademas de los limites
+<= 52 KiB crudos (medido ~48,9 KiB) y CSS <= 8 KiB crudos (medido ~7,3 KiB),
+ademas de los limites
 del bundle inicial de Studio.
 
 ## Piloto real (Fase 10)
