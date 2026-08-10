@@ -146,9 +146,7 @@ test("slug duplicado en edición: error inline con aria, guardado bloqueado y sl
 
   // Contrato: el producto conserva su título y su ruta original (slug intacto).
   await expect(page.getByText(/50 productos y /)).toBeVisible();
-  await expect(
-    page.getByRole("textbox", { name: "Nombre de Camisa Rayas Finas" }),
-  ).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Nombre de Camisa Rayas Finas" })).toBeVisible();
   const routeInput = page.getByTestId("ui-preview-route");
   await routeInput.fill("/productos/camisa-rayas-finas/");
   await routeInput.press("Enter");
@@ -233,9 +231,7 @@ test("campos requeridos vacíos: título y nombre de variante marcados y guardad
   // Contrato: el producto nuevo existe en la fila y el contador creció.
   await expect(page.getByText(/51 productos y /)).toBeVisible();
   const row = await filterRow(page, "Sweep A06 Requerido");
-  await expect(
-    row.getByRole("textbox", { name: "Nombre de Sweep A06 Requerido" }),
-  ).toBeVisible();
+  await expect(row.getByRole("textbox", { name: "Nombre de Sweep A06 Requerido" })).toBeVisible();
 });
 
 test("guardar con errores simultáneos: bloqueado con la razón visible en cada campo", async ({
@@ -255,16 +251,18 @@ test("guardar con errores simultáneos: bloqueado con la razón visible en cada 
   await expect(dialog).toBeVisible();
 
   // Auto-feedback: cada campo marcado con su razón (role="alert" inline).
-  await expect(
-    dialog.getByRole("textbox", { name: "Título" }),
-  ).toHaveAttribute("aria-invalid", "true");
+  await expect(dialog.getByRole("textbox", { name: "Título" })).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
   await expect(dialog.getByRole("textbox", { name: "Slug" })).toHaveAttribute(
     "aria-invalid",
     "true",
   );
-  await expect(
-    dialog.getByRole("spinbutton", { name: "Precio en centavos" }),
-  ).toHaveAttribute("aria-invalid", "true");
+  await expect(dialog.getByRole("spinbutton", { name: "Precio en centavos" })).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
   await expect(dialog.locator('[data-testid="ui-field-error"]')).toHaveCount(3);
   await expect(page.getByText(/50 productos y /)).toBeVisible();
 
@@ -309,12 +307,10 @@ test("cancelar con cambios: prompt conserva con Seguir editando; confirmar desca
   await dialog.getByRole("button", { name: "Cancelar" }).click();
   await discardChanges(page);
   await expect(dialog).toBeHidden();
-  await expect(
-    page.getByRole("textbox", { name: `Nombre de ${originalTitle}` }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("textbox", { name: "Nombre de Camisa A06 MODIFICADA" }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("textbox", { name: `Nombre de ${originalTitle}` })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Nombre de Camisa A06 MODIFICADA" })).toHaveCount(
+    0,
+  );
   await expect(page.getByText(/50 productos y /)).toBeVisible();
 
   // Contrato: al reabrir, el formulario muestra el valor persistido (no el borrador).
@@ -339,18 +335,14 @@ test("cerrar con cambios: prompt por X y Escape conserva el estado; cerrar limpi
   await page.keyboard.press("Escape");
   await expect(confirm).toBeHidden();
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("textbox", { name: "Título" })).toHaveValue(
-    "Camisa A06 CERRAR",
-  );
+  await expect(dialog.getByRole("textbox", { name: "Título" })).toHaveValue("Camisa A06 CERRAR");
 
   // Escape en el diálogo: vuelve a preguntar (el estado sucio sigue presente).
   await page.keyboard.press("Escape");
   await expect(confirm).toBeVisible();
   await discardChanges(page);
   await expect(dialog).toBeHidden();
-  await expect(
-    page.getByRole("textbox", { name: `Nombre de ${originalTitle}` }),
-  ).toBeVisible();
+  await expect(page.getByRole("textbox", { name: `Nombre de ${originalTitle}` })).toBeVisible();
   await expect(page.getByText(/50 productos y /)).toBeVisible();
 
   // Sin cambios: Escape cierra directo, sin prompt.
@@ -371,9 +363,7 @@ test("la mini preview refleja en vivo título, precio mínimo y estado (edición
   await goToStep(dialog, "Variantes");
   const preview = dialog.getByTestId("ui-product-mini-preview");
   await expect(preview.locator("strong")).toHaveText("Camisa Rayas Finas");
-  await expect(preview.locator(".product-mini-preview__info")).toContainText(
-    "Desde $3.225.000",
-  );
+  await expect(preview.locator(".product-mini-preview__info")).toContainText("Desde $3.225.000");
   await expect(preview.locator(".product-mini-preview__status")).toHaveText("Activo");
   // La primera imagen del producto se renderiza (los assets del estudio llegan
   // como data URLs, así que el contrato es img presente y placeholder ausente).
@@ -411,9 +401,7 @@ test("la mini preview refleja en vivo título, precio mínimo y estado (edición
   await goToStep(create, "Variantes");
   const createPreview = create.getByTestId("ui-product-mini-preview");
   await expect(createPreview.locator("strong")).toHaveText("Nuevo producto");
-  await expect(createPreview.locator(".product-mini-preview__info")).toContainText(
-    "Desde $0",
-  );
+  await expect(createPreview.locator(".product-mini-preview__info")).toContainText("Desde $0");
   await expect(createPreview.locator(".product-mini-preview__status")).toHaveText("Oculto");
 
   await goToStep(create, "Datos");
@@ -421,16 +409,17 @@ test("la mini preview refleja en vivo título, precio mínimo y estado (edición
   await expect(createPreview.locator("strong")).toHaveText("Sweep A06 Mini");
   await goToStep(create, "Variantes");
   await create.getByRole("spinbutton", { name: "Precio en centavos" }).fill("2500");
-  await expect(createPreview.locator(".product-mini-preview__info")).toContainText(
-    "Desde $2.500",
-  );
+  await expect(createPreview.locator(".product-mini-preview__info")).toContainText("Desde $2.500");
 
-  // Descartar el borrador: nada se commitea.
+  // Descartar el borrador: nada se commitea. La tabla sin coincidencias muestra
+  // sólo su fila de estado vacío `tr > td.table-empty` (la clase vive en el td,
+  // no en el tr), nunca una fila de producto.
   await create.getByRole("button", { name: "Cerrar editor" }).click();
   await discardChanges(page);
   await expect(create).toBeHidden();
   await page.getByPlaceholder("Buscar por producto, marca o estado").fill("Sweep A06 Mini");
-  await expect(page.locator("tbody tr")).toHaveCount(0);
+  await expect(page.locator("tbody tr:not(:has(td.table-empty))")).toHaveCount(0);
+  await expect(page.getByText("No hay productos que coincidan con la búsqueda.")).toBeVisible();
   await expect(page.getByText(/50 productos y /)).toBeVisible();
 });
 
