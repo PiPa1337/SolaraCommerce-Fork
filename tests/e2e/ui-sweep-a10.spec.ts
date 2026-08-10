@@ -10,11 +10,14 @@
  *  - Búsqueda de módulos filtra y muestra el estado vacío.
  *  - Elegir un módulo lo agrega al slot elegido (label visible + preview).
  *  - Restricción de slot: incompatibles deshabilitados con motivo.
- *  - Cierre por Escape / click fuera: dialog cerrado + foco devuelto.
+ *  - Cierre por Cancelar / Escape / click fuera: dialog cerrado + foco devuelto.
  *  - Restaurar valores por defecto: feedback visible en inspector y preview.
- *  - Sección con esquema inválido: panel de error del Builder.
- *  - Regresiones: cambio de página reclama el slot del selector y el panel
- *    cubre también el motion fuera de rango.
+ *  - Sección con esquema inválido: panel de error del Builder (settings que no
+ *    superan el schema del módulo, seedeados vía IndexedDB) y limpieza al
+ *    corregir; el motion fuera de rango se rechaza en el borde del Studio con
+ *    error visible y sin commit.
+ *  - Regresiones: cambio de página reclama el slot del selector y el botón
+ *    Cancelar cierra el diálogo como las demás vías de cierre.
  */
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
@@ -84,6 +87,7 @@ test("agregar sección abre el picker como diálogo con aria-expanded coherente"
   const dialog = await openPicker(page);
   await expect(dialog).toHaveRole("dialog");
   await expect(dialog).toHaveAttribute("aria-modal", "true");
+  await expect(dialog).toHaveAttribute("aria-label", "Elegir módulo de sección");
   await expect(dialog.getByLabel("Buscar módulo")).toBeFocused();
   await expect(addButton(page)).toHaveAttribute("aria-expanded", "true");
 });
@@ -149,12 +153,25 @@ test("Escape cierra el picker y devuelve el foco al botón de agregar", async ({
   await expect(addButton(page)).toBeFocused();
 });
 
+test("Cancelar cierra el picker y devuelve el foco al botón de agregar", async ({ page }) => {
+  await openBuilder(page);
+  const dialog = await openPicker(page);
+  await dialog.getByLabel("Buscar módulo").fill("hero");
+
+  await dialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(addButton(page)).toHaveAttribute("aria-expanded", "false");
+  await expect(addButton(page)).toBeFocused();
+});
+
 test("un click fuera del picker lo cierra y devuelve el foco al botón", async ({ page }) => {
   await openBuilder(page);
-  await openPicker(page);
+  const dialog = await openPicker(page);
 
-  await sectionsList(page).getByRole("listitem").first().locator(".section-select").click();
-  await expect(picker(page)).toBeHidden();
+  // El overlay del picker cubre la parte derecha del encabezado; se usa el
+  // título del panel (fuera del picker y del botón) como objetivo neutral.
+  await page.getByRole("heading", { name: "Constructor" }).click();
+  await expect(dialog).toBeHidden();
   await expect(addButton(page)).toHaveAttribute("aria-expanded", "false");
   await expect(addButton(page)).toBeFocused();
 });
@@ -200,21 +217,105 @@ test("restaurar valores por defecto revierte la sección con feedback visible", 
   );
 });
 
-test("un motion fuera de rango aparece en el panel de error de esquema y se limpia", async ({
+test("un motion fuera de rango no se commitea y el studio avisa el error de schema", async ({
   page,
 }) => {
   await openBuilder(page);
   await selectHero(page);
-  await expect(page.getByTestId("ui-section-schema-error")).toHaveCount(0);
 
+  // El límite del proyecto (distancia máx. 160) se aplica en el borde del
+  // Studio: el commit se rechaza, el input vuelve al valor guardado (18 en el
+  // fixture) y el error de schema aparece sin marcar cambios pendientes.
   const distance = page.getByRole("spinbutton", { name: "Distancia" });
+  await expect(distance).toHaveValue("18");
   await distance.fill("999");
+  await expect(distance).toHaveValue("18");
+  await expect(
+    page.getByTestId("ui-inline-error").filter({ hasText: "motion.distance" }),
+  ).toBeVisible();
+  await expect(page.getByText("Cambios pendientes", { exact: true })).toHaveCount(0);
+});
 
+async function seedInvalidHeroSettings(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const openDatabase = () =>
+      new Promise<IDBDatabase>((resolve, reject) => {
+        // Sin versión fija: la base puede haber sido migrada por un release
+        // (p. ej. versión 40) y sólo escribimos en el store `projects`.
+        const request = indexedDB.open("solara-commerce-studio");
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    const read = async (db: IDBDatabase) =>
+      new Promise<Array<Record<string, unknown>>>((resolve, reject) => {
+        const request = db.transaction("projects", "readonly").objectStore("projects").getAll();
+        request.onsuccess = () => resolve(request.result as Array<Record<string, unknown>>);
+        request.onerror = () => reject(request.error);
+      });
+    const write = async (db: IDBDatabase, record: Record<string, unknown>) =>
+      new Promise<void>((resolve, reject) => {
+        const transaction = db.transaction("projects", "readwrite");
+        transaction.objectStore("projects").put(record);
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+      });
+
+    const database = await openDatabase();
+    const records = await read(database);
+    const demo = records.find((record) => record.id === "store-modo-sur-demo");
+    if (!demo) throw new Error("No se encontró la tienda demo para seedear.");
+    const project = demo.project as {
+      sections: Array<{ moduleId: string; settings: Record<string, unknown> }>;
+    };
+    const hero = project.sections.find((section) => section.moduleId === "catalog-hero");
+    if (!hero) throw new Error("No se encontró la sección hero para seedear.");
+    // Settings inválidos para el schema del módulo (pero válidos para el
+    // proyecto): el caso real de un respaldo que envejeció respecto del módulo.
+    hero.settings = { ...hero.settings, mode: "invalid-mode" };
+    await write(database, demo);
+    database.close();
+  });
+  await page.reload();
+}
+
+test("una sección con settings inválidos para su módulo muestra el panel de error y se limpia al corregir", async ({
+  page,
+}) => {
+  await page.goto(studioUrl);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.deleteDatabase("solara-commerce-studio");
+        request.addEventListener("success", () => resolve());
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("blocked", () =>
+          reject(new Error("No se pudo limpiar la base de Studio.")),
+        );
+      }),
+  );
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 20_000,
+  });
+  await seedInvalidHeroSettings(page);
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 20_000,
+  });
+
+  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
+  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await page.getByRole("tab", { name: "Constructor" }).click();
+  await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
+
+  await selectHero(page);
   const panel = page.getByTestId("ui-section-schema-error");
   await expect(panel).toBeVisible();
-  await expect(panel).toContainText("motion.distance");
-  await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
+  await expect(panel).toContainText("mode");
 
-  await distance.fill("24");
+  // Corregir el campo inválido valida la sección y limpia el panel.
+  await page.getByLabel("Modo", { exact: true }).selectOption("image");
   await expect(panel).toBeHidden();
+  await expect(previewFrame(page).locator('[data-solara-module="catalog-hero"]')).toBeVisible({
+    timeout: 15_000,
+  });
 });

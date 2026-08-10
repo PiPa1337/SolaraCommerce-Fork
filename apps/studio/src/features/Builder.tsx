@@ -23,7 +23,7 @@ import {
   type RegisteredModule,
   replaceModuleInSection,
 } from "@solara/modules";
-import type { StoreProjectV1, StoreSection } from "@solara/project-schema";
+import { type StoreProjectV1, type StoreSection, StoreSectionSchema } from "@solara/project-schema";
 import { catalogModernTemplateManifest } from "@solara/project-schema/catalog-modern-guidance";
 import { motion, useReducedMotion } from "motion/react";
 import {
@@ -217,6 +217,9 @@ function ModulePicker({
           ))}
         </ul>
       )}
+      <Button variant="quiet" size="sm" data-testid="ui-module-picker-cancel" onClick={onClose}>
+        Cancelar
+      </Button>
     </div>
   );
 }
@@ -358,8 +361,13 @@ export function Builder({ project, onChange, protectedBase = false }: BuilderPro
 
   const savedSettingsError = useMemo(() => {
     if (!selected || !selectedModule) return "";
-    const result = selectedModule.settingsSchema.safeParse(selected.settings);
-    return result.success ? "" : formatIssuePaths(result.error.issues);
+    const settingsResult = selectedModule.settingsSchema.safeParse(selected.settings);
+    if (!settingsResult.success) return formatIssuePaths(settingsResult.error.issues);
+    // Los controles de movimiento commitean valores sin recorte previo; un
+    // valor fuera de rango (p. ej. distancia > 160) vuelve inválida la sección
+    // completa y debe aparecer en el mismo panel de error de esquema.
+    const sectionResult = StoreSectionSchema.safeParse(selected);
+    return sectionResult.success ? "" : formatIssuePaths(sectionResult.error.issues);
   }, [selected, selectedModule]);
 
   return (
@@ -378,7 +386,15 @@ export function Builder({ project, onChange, protectedBase = false }: BuilderPro
               value={pageKind}
               onChange={(event) => {
                 const next = event.target.value as EditablePageKind;
+                // En páginas secundarias sólo existen los slots catalog/content;
+                // si el valor previo (elegido en Home) no está disponible, se
+                // recorta al primer slot válido (catalog) para que el select
+                // mostrado coincida con el estado.
+                const allowedSlots = (Object.keys(slotLabels) as StoreSection["slot"][]).filter(
+                  (slot) => next === "home" || slot === "catalog" || slot === "content",
+                );
                 setPageKind(next);
+                setSlotToAdd((current) => (allowedSlots.includes(current) ? current : "catalog"));
                 const nextPage = project.pages.find((page) => page.kind === next);
                 const nextSections =
                   next === "home" ? project.sections : (nextPage?.sections ?? []);
