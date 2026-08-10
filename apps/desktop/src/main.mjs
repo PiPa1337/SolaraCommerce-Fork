@@ -193,13 +193,20 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
-    minWidth: 960,
-    minHeight: 640,
+    // 1024×700 es el mínimo que mantiene el layout del editor sin romperse;
+    // por debajo los paneles laterales ya no entran. El default sigue en
+    // 1440×900, el tamaño en el que se desarrolló y verificó el Studio.
+    minWidth: 1024,
+    minHeight: 700,
     show: !smokeMode,
     backgroundColor: "#171b18",
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      // backgroundThrottling: true es el default de Electron (los timers y
+      // rAF del renderer se ralentizan con la ventana oculta o minimizada).
+      // Se declara explícito para que nadie lo desactive sin revisarlo.
+      backgroundThrottling: true,
       // Electron 37 en Windows no completa la navegación de un protocolo
       // privilegiado con sandbox=true. La superficie sigue aislada por
       // contextIsolation y nodeIntegration=false; se documenta esta excepción.
