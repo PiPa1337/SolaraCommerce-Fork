@@ -2,7 +2,7 @@
 import { Columns, List, MagnifyingGlass, SquaresFour } from "@phosphor-icons/react";
 import type { Product, StoreProjectV1 } from "@solara/project-schema";
 import type { PaginationState, Row, RowSelectionState, Table } from "@tanstack/react-table";
-import { type Dispatch, type SetStateAction, useEffect, useRef, useState } from "react";
+import { type Dispatch, type SetStateAction, useEffect, useId, useRef, useState } from "react";
 import { Pagination, SegmentedControl } from "../../components/primitives";
 import { Button } from "../../components/Ui";
 import { catalogColumns } from "../../lib/catalogTableModel";
@@ -46,6 +46,8 @@ export function CatalogToolbar({
   const orderedCategories = categoryTree(project);
   const [columnsOpen, setColumnsOpen] = useState(false);
   const columnsRef = useRef<HTMLDivElement>(null);
+  const columnsToggleRef = useRef<HTMLButtonElement>(null);
+  const columnsPopoverId = useId();
 
   useEffect(() => {
     if (!columnsOpen) return;
@@ -55,7 +57,10 @@ export function CatalogToolbar({
       }
     };
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setColumnsOpen(false);
+      if (event.key === "Escape") {
+        setColumnsOpen(false);
+        columnsToggleRef.current?.focus();
+      }
     };
     document.addEventListener("pointerdown", closeOnOutside);
     document.addEventListener("keydown", closeOnEscape);
@@ -110,18 +115,24 @@ export function CatalogToolbar({
           />
           <div className="catalog-columns" ref={columnsRef}>
             <Button
+              ref={columnsToggleRef}
               size="sm"
               variant="quiet"
               icon={Columns}
               aria-expanded={columnsOpen}
               aria-haspopup="true"
+              aria-controls={columnsPopoverId}
               data-testid="ui-columns-toggle"
               onClick={() => setColumnsOpen((open) => !open)}
             >
               Columnas
             </Button>
             {columnsOpen ? (
-              <fieldset className="catalog-columns__popover" data-testid="ui-columns-popover">
+              <fieldset
+                id={columnsPopoverId}
+                className="catalog-columns__popover"
+                data-testid="ui-columns-popover"
+              >
                 <legend className="visually-hidden">Columnas visibles</legend>
                 {catalogColumns.map((column) => (
                   <label className="catalog-columns__option" key={column.id}>
@@ -150,7 +161,8 @@ export function CatalogToolbar({
                   }))
                 }
               >
-                Seleccionar {filteredRows.length} filtrados
+                Seleccionar {filteredRows.length}{" "}
+                {filteredRows.length === 1 ? "filtrado" : "filtrados"}
               </Button>
             ) : null}
             {selectedIds.length > 0 ? (

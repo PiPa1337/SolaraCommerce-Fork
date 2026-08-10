@@ -185,7 +185,7 @@ export function Skeleton({ lines = 4 }: { lines?: number }) {
     <output className="skeleton" aria-label="Cargando">
       {Array.from({ length: lines }, (_, index) => (
         <span
-          key={`skeleton-${Math.max(42, 92 - index * 12)}`}
+          key={`skeleton-${92 - index * 12}`}
           style={{ width: `${Math.max(42, 92 - index * 12)}%` }}
         />
       ))}
