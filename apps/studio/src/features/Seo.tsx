@@ -251,13 +251,22 @@ export function Seo({
                   fontSize: 15,
                   fontWeight: 650,
                   lineHeight: 1.3,
+                  overflowWrap: "anywhere",
                   textDecoration: "none",
                 }}
               >
                 {seoTitle}
               </a>
-              <span>{homepage}</span>
-              <p style={{ color: "var(--ink)", fontSize: 11.5, lineHeight: 1.45, margin: 0 }}>
+              <span style={{ overflowWrap: "anywhere" }}>{homepage}</span>
+              <p
+                style={{
+                  color: "var(--ink)",
+                  fontSize: 11.5,
+                  lineHeight: 1.45,
+                  margin: 0,
+                  overflowWrap: "anywhere",
+                }}
+              >
                 {seoDescription || "Sin descripción: completá la descripción SEO."}
               </p>
             </div>
@@ -291,10 +300,17 @@ export function Seo({
               >
                 Open Graph
               </span>
-              <strong style={{ display: "block", fontSize: 13, lineHeight: 1.35 }}>
+              <strong
+                style={{
+                  display: "block",
+                  fontSize: 13,
+                  lineHeight: 1.35,
+                  overflowWrap: "anywhere",
+                }}
+              >
                 {seoTitle}
               </strong>
-              <span>{homepage}</span>
+              <span style={{ overflowWrap: "anywhere" }}>{homepage}</span>
             </div>
           </article>
 
@@ -310,13 +326,28 @@ export function Seo({
               >
                 WhatsApp
               </span>
-              <strong style={{ display: "block", fontSize: 13, lineHeight: 1.35 }}>
+              <strong
+                style={{
+                  display: "block",
+                  fontSize: 13,
+                  lineHeight: 1.35,
+                  overflowWrap: "anywhere",
+                }}
+              >
                 {project.identity.brandName}
               </strong>
-              <p style={{ color: "var(--ink)", fontSize: 11.5, lineHeight: 1.45, margin: 0 }}>
+              <p
+                style={{
+                  color: "var(--ink)",
+                  fontSize: 11.5,
+                  lineHeight: 1.45,
+                  margin: 0,
+                  overflowWrap: "anywhere",
+                }}
+              >
                 {seoTitle} — {seoDescription || "Sin descripción"}
               </p>
-              <span>{homepage}</span>
+              <span style={{ overflowWrap: "anywhere" }}>{homepage}</span>
             </div>
           </article>
         </div>
@@ -358,7 +389,7 @@ export function Seo({
                       weight={issue.severity === "info" ? "regular" : "fill"}
                     />
                     <div>
-                      <strong>{issue.title}</strong>
+                      <strong title={issue.title}>{issue.title}</strong>
                       {issue.message ? <p>{issue.message}</p> : null}
                       {issue.area || issue.fixTarget ? (
                         <small>
@@ -441,7 +472,7 @@ export function Seo({
                       {done ? <CheckCircle size={18} weight="fill" /> : <Icon size={19} />}
                     </span>
                     <span className="guided-checklist__text">
-                      <strong>{issue.title}</strong>
+                      <strong title={issue.title}>{issue.title}</strong>
                       <small>{issue.message}</small>
                     </span>
                     {issue.fixTarget ? (

@@ -396,6 +396,7 @@ export function ProductEditor({
           <div className="form-grid">
             <Field label="Título" {...(errors.title ? { error: errors.title } : {})}>
               <input
+                maxLength={120}
                 value={draft.title}
                 onChange={(event) => {
                   const title = event.target.value;
@@ -491,7 +492,9 @@ export function ProductEditor({
                   <img src={asset.source} alt="" width={asset.width} height={asset.height} />
                   <span>
                     <strong>{asset.name}</strong>
-                    <small>{asset.alt || "Sin texto alternativo"}</small>
+                    <small title={asset.alt || asset.name}>
+                      {asset.alt || "Sin texto alternativo"}
+                    </small>
                   </span>
                 </label>
               ))}
@@ -575,7 +578,9 @@ export function ProductEditor({
                 </span>
               )}
               <div className="product-mini-preview__info">
-                <strong>{draft.title.trim() || "Producto sin nombre"}</strong>
+                <strong title={draft.title.trim() || "Producto sin nombre"}>
+                  {draft.title.trim() || "Producto sin nombre"}
+                </strong>
                 <span>Desde {formatCents(minimumPrice)}</span>
                 <span
                   className={`product-mini-preview__status product-mini-preview__status--${draft.status}`}

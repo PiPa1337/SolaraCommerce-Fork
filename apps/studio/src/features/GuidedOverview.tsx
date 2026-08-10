@@ -211,7 +211,7 @@ export function GuidedOverview({ project, onNavigate, onApplyUpgrade }: GuidedOv
                   <RequirementStatusIcon status={requirement.status} />
                 </span>
                 <span className="guided-checklist__text">
-                  <strong>{requirement.label}</strong>
+                  <strong title={requirement.label}>{requirement.label}</strong>
                   <small>
                     {scopeLabels[requirement.scope]} · {statusLabel(requirement.status)}
                   </small>
@@ -242,7 +242,7 @@ export function GuidedOverview({ project, onNavigate, onApplyUpgrade }: GuidedOv
                       <RequirementStatusIcon status="ready" />
                     </span>
                     <span className="guided-checklist__text">
-                      <strong>{requirement.label}</strong>
+                      <strong title={requirement.label}>{requirement.label}</strong>
                       <small>{scopeLabels[requirement.scope]}</small>
                     </span>
                   </li>

@@ -184,8 +184,12 @@ function ModulePicker({
                         disabled={!compatible}
                         onClick={() => onPick(module)}
                       >
-                        <strong>{module.manifest.name}</strong>
-                        <small>{module.manifest.description}</small>
+                        <strong style={{ minWidth: 0 }} title={module.manifest.name}>
+                          {module.manifest.name}
+                        </strong>
+                        <small style={{ minWidth: 0 }} title={module.manifest.description}>
+                          {module.manifest.description}
+                        </small>
                         <span className="module-picker__meta">
                           <span
                             className={`module-picker__badge${isLegacyModule(module) ? "" : " module-picker__badge--new"}`}
@@ -446,7 +450,9 @@ export function Builder({ project, onChange, protectedBase = false }: BuilderPro
                   onKeyDown={(event) => handleSectionHeaderKeyDown(event, index)}
                 >
                   <span>{slotLabels[section.slot]}</span>
-                  <strong>{definition?.manifest.name ?? section.moduleId}</strong>
+                  <strong title={definition?.manifest.name ?? section.moduleId}>
+                    {definition?.manifest.name ?? section.moduleId}
+                  </strong>
                 </button>
                 <div className="section-row-actions">
                   <IconButton
