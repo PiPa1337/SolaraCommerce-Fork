@@ -115,13 +115,24 @@ function requestWorker<Request extends object, Result>(
 ): Promise<Result> {
   const id = crypto.randomUUID();
   return new Promise((resolve, reject) => {
+    const detach = () => {
+      worker.removeEventListener("message", handleMessage);
+      worker.removeEventListener("error", handleError);
+    };
     const handleMessage = (event: MessageEvent<WorkerResponse<Result>>) => {
       if (event.data.id !== id) return;
-      worker.removeEventListener("message", handleMessage);
+      detach();
       if (event.data.ok) resolve(event.data.result);
       else reject(new Error(event.data.error));
     };
+    const handleError = () => {
+      // Un worker caído no responderá: rechazar la petición y soltar ambos
+      // listeners evita promesas colgadas y acumulación de handlers.
+      detach();
+      reject(new Error("El worker no respondió."));
+    };
     worker.addEventListener("message", handleMessage);
+    worker.addEventListener("error", handleError);
     worker.postMessage({ ...request, id }, transfer);
   });
 }

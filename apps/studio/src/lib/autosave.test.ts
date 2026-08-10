@@ -80,4 +80,61 @@ describe("AutosaveQueue", () => {
     expect(queue.currentState).toBe("saved");
     expect(states).toContain("error");
   });
+
+  it("en reposo no programa timers: sólo corre cuando hay cambios pendientes", async () => {
+    vi.useFakeTimers();
+    const saved: number[] = [];
+    const queue = new AutosaveQueue<number>(async (value) => {
+      saved.push(value);
+    }, 550);
+
+    expect(vi.getTimerCount()).toBe(0);
+
+    queue.schedule(1);
+    expect(vi.getTimerCount()).toBe(1);
+
+    await vi.advanceTimersByTimeAsync(550);
+    expect(saved).toEqual([1]);
+    expect(vi.getTimerCount()).toBe(0);
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(saved).toEqual([1]);
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
+  });
+
+  it("dispose cancela el timer pendiente y no vuelve a guardar", async () => {
+    vi.useFakeTimers();
+    const saved: number[] = [];
+    const queue = new AutosaveQueue<number>(async (value) => {
+      saved.push(value);
+    }, 550);
+
+    queue.schedule(1);
+    queue.dispose();
+    expect(vi.getTimerCount()).toBe(0);
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(saved).toEqual([]);
+    vi.useRealTimers();
+  });
+
+  it("un fallo no reprograma el timer: no hay reintento en bucle en reposo", async () => {
+    vi.useFakeTimers();
+    const attempts: number[] = [];
+    const queue = new AutosaveQueue<number>(async () => {
+      attempts.push(1);
+      throw new Error("Cuota agotada");
+    }, 550);
+
+    queue.schedule(1);
+    await expect(queue.flush()).rejects.toThrow("Cuota agotada");
+    expect(queue.currentState).toBe("error");
+    expect(vi.getTimerCount()).toBe(0);
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(attempts).toEqual([1]);
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
+  });
 });
