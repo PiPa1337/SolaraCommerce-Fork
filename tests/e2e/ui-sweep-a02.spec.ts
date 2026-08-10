@@ -107,16 +107,16 @@ test.describe("A2 — Catálogo: selección", () => {
 
   test("seleccionar filtrados y limpiar conserva el feedback de conteo", async ({ page }) => {
     await openCatalog(page);
-    await page.getByPlaceholder("Buscar por producto, marca o estado").fill("Pieza de escala 0");
-    await expect(rows(page)).toHaveCount(9);
+    await page.getByPlaceholder("Buscar por producto, marca o estado").fill("Remera");
+    await expect(rows(page)).toHaveCount(6);
 
     await page.getByTestId("select-filtered-products").click();
-    await expectSelectedCount(page, 9);
-    await expect(page.locator('tbody input[type="checkbox"]:checked')).toHaveCount(9);
-    await expect(page.locator('tbody tr[data-selected="true"]')).toHaveCount(9);
+    await expectSelectedCount(page, 6);
+    await expect(page.locator('tbody input[type="checkbox"]:checked')).toHaveCount(6);
+    await expect(page.locator('tbody tr[data-selected="true"]')).toHaveCount(6);
 
     await rowCheckbox(page, 0).uncheck();
-    await expectSelectedCount(page, 8);
+    await expectSelectedCount(page, 5);
 
     await page.getByRole("button", { name: "Limpiar", exact: true }).click();
     await expect(page.getByText("0 seleccionados", { exact: true })).toBeVisible();
@@ -181,9 +181,9 @@ test.describe("A2 — Catálogo: acciones masivas", () => {
     await priceValueInput(page).fill("10");
     await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
 
-    await expect(priceInput(page, 0)).toHaveValue("1347500");
-    await expect(priceInput(page, 1)).toHaveValue("1375000");
-    await expect(priceInput(page, 2)).toHaveValue("1275000");
+    await expect(priceInput(page, 0)).toHaveValue("3173500");
+    await expect(priceInput(page, 1)).toHaveValue("3267000");
+    await expect(priceInput(page, 2)).toHaveValue("3055000");
     await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
   });
 
@@ -195,16 +195,16 @@ test.describe("A2 — Catálogo: acciones masivas", () => {
     await priceKindSelect(page).selectOption("amount");
     await priceValueInput(page).fill("100000");
     await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
-    await expect(priceInput(page, 0)).toHaveValue("1325000");
-    await expect(priceInput(page, 1)).toHaveValue("1250000");
-    await expect(priceInput(page, 2)).toHaveValue("1275000");
+    await expect(priceInput(page, 0)).toHaveValue("2985000");
+    await expect(priceInput(page, 1)).toHaveValue("3070000");
+    await expect(priceInput(page, 2)).toHaveValue("3055000");
 
     await priceKindSelect(page).selectOption("percentage");
     await priceValueInput(page).fill("-150");
     await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
     await expect(page.getByTestId("ui-inline-error")).toContainText("mínimo -100%");
-    await expect(priceInput(page, 0)).toHaveValue("1325000");
-    await expect(priceInput(page, 1)).toHaveValue("1250000");
+    await expect(priceInput(page, 0)).toHaveValue("2985000");
+    await expect(priceInput(page, 1)).toHaveValue("3070000");
   });
 
   test.fixme(
@@ -220,7 +220,7 @@ test.describe("A2 — Catálogo: acciones masivas", () => {
 
       await priceValueInput(page).fill("5");
       await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
-      await expect(priceInput(page, 0)).toHaveValue("1286250");
+      await expect(priceInput(page, 0)).toHaveValue("3134250");
       await expect(page.getByTestId("ui-inline-error")).toBeHidden();
     },
   );
@@ -232,7 +232,7 @@ test.describe("A2 — Catálogo: columnas y vista", () => {
   }) => {
     await openCatalog(page);
     const toggle = page.getByTestId("ui-columns-toggle");
-    const priceHeader = page.getByRole("columnheader", { name: "Precio" });
+    const priceHeader = page.locator("thead th").filter({ hasText: /^Precio$/ });
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
 
     await toggle.click();
