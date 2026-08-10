@@ -40,10 +40,12 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Button, EmptyState, Field, InlineError, SectionHeader } from "../components/Ui";
 import { buildCatalogPackagePlan, type CatalogPackagePlan } from "../lib/catalogPackage";
 import {
+  catalogGlobalFilter,
   duplicateProduct,
   loadCatalogColumnVisibility,
   loadCatalogView,
   productCategoryTitles,
+  productStatusLabel,
   productStockLabel,
   saveCatalogColumnVisibility,
   saveCatalogView,
@@ -145,9 +147,6 @@ function summarizeImport(
     removed: current.filter((product) => !incomingIds.has(product.id)).length,
   };
 }
-
-const statusText = (status: Product["status"]) =>
-  status === "active" ? "Activo" : status === "hidden" ? "Oculto" : "Archivado";
 
 /** Precio inline (T4.4): Enter confirma, Escape cancela, blur confirma; los
  *  valores inválidos revierten con un aviso inline. */
@@ -272,7 +271,7 @@ function StatusCell({
         data-testid="ui-status-edit-trigger"
         onClick={() => setEditing(true)}
       >
-        {statusText(product.status)}
+        {productStatusLabel(product.status)}
       </button>
     );
   }
@@ -332,7 +331,7 @@ function CatalogCard({
         <h3 title={product.title}>{product.title}</h3>
         <div className="catalog-card__meta">
           <span className={`status-label status-label--${product.status}`}>
-            {statusText(product.status)}
+            {productStatusLabel(product.status)}
           </span>
           <span className="catalog-card__variants">
             {product.variants.length} {product.variants.length === 1 ? "variante" : "variantes"}
@@ -594,6 +593,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    globalFilterFn: catalogGlobalFilter,
     getRowId: (product) => product.id,
     enableRowSelection: true,
     autoResetPageIndex: false,

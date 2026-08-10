@@ -5,6 +5,7 @@
  * para poder testearlos sin navegador.
  */
 import type { Product, StoreProjectV1 } from "@solara/project-schema";
+import { type FilterFn, filterFns } from "@tanstack/react-table";
 
 export interface CatalogColumnOption {
   id: string;
@@ -90,6 +91,26 @@ export function saveCatalogView(
 ): void {
   storage.setItem(catalogViewStorageKey(storeId), view);
 }
+
+/** Etiqueta visible (es-AR) del estado de un producto. */
+export const productStatusLabel = (status: Product["status"]): string =>
+  status === "active" ? "Activo" : status === "hidden" ? "Oculto" : "Archivado";
+
+/** Filtro global del catálogo (H4-S2): la columna de estado matchea tanto el
+ *  valor crudo (`active/hidden/archived`) como la etiqueta visible en español
+ *  (`Activo/Oculto/Archivado`); el resto de columnas conserva el
+ *  `includesString` por defecto de tanstack. */
+export const catalogGlobalFilter: FilterFn<Product> = (row, columnId, filterValue, addMeta) => {
+  if (columnId === "status") {
+    const status = row.getValue<Product["status"]>(columnId);
+    const query = String(filterValue).toLocaleLowerCase();
+    return (
+      status.toLocaleLowerCase().includes(query) ||
+      productStatusLabel(status).toLocaleLowerCase().includes(query)
+    );
+  }
+  return filterFns.includesString(row, columnId, filterValue, addMeta);
+};
 
 /** Resumen de stock del producto a partir de sus variantes. */
 export function productStockLabel(product: Product): string {
