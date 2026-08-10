@@ -8,6 +8,7 @@ import type { Row } from "@tanstack/react-table";
 import { describe, expect, it } from "vitest";
 import {
   catalogColumnIds,
+  catalogColumns,
   catalogColumnsStorageKey,
   catalogGlobalFilter,
   catalogViewStorageKey,
@@ -45,12 +46,13 @@ class MemoryStorage implements Storage {
 }
 
 describe("columnas configurables", () => {
-  it("devuelve las siete columnas por defecto visibles sin preferencia guardada", () => {
+  it("devuelve las ocho columnas por defecto visibles sin preferencia guardada", () => {
     expect(loadCatalogColumnVisibility("store-1", new MemoryStorage())).toEqual(
       defaultCatalogColumnVisibility,
     );
     expect(catalogColumnIds).toEqual([
       "title",
+      "brand",
       "categories",
       "price",
       "status",
@@ -95,12 +97,31 @@ describe("filtro global y etiquetas de estado (H4-S2)", () => {
   const base = project.products[0];
   if (!base) throw new Error("El fixture debe tener al menos un producto.");
 
-  const productWithStatus = (status: Product["status"]): Product => ({ ...base, status });
+  /** Reproduce el contrato de acceso de la tabla real (T7): la columna
+   *  `status` expone el valor crudo del producto; `categories`, `stock`,
+   *  `price`, `variants` y `updated` exponen el resultado de su accessorFn;
+   *  `title` y `brand` son accessorKey. */
   const rowFor = (product: Product): Row<Product> =>
     ({
-      getValue: (columnId: string) =>
-        columnId === "status" ? product.status : product[columnId as keyof Product],
+      getValue: (columnId: string) => {
+        switch (columnId) {
+          case "categories":
+            return productCategoryTitles(product, project);
+          case "stock":
+            return productStockLabel(product);
+          case "price":
+            return product.variants[0]?.price ?? 0;
+          case "variants":
+            return product.variants.length;
+          case "updated":
+            return product.updatedAt;
+          default:
+            return product[columnId as keyof Product];
+        }
+      },
     }) as unknown as Row<Product>;
+
+  const productWithStatus = (status: Product["status"]): Product => ({ ...base, status });
   const globalFilter = (row: Row<Product>, columnId: string, value: unknown) =>
     catalogGlobalFilter(row, columnId, value, () => undefined);
 
@@ -135,6 +156,34 @@ describe("filtro global y etiquetas de estado (H4-S2)", () => {
     expect(globalFilter(rowFor(base), "title", base.title.slice(0, 6))).toBe(true);
     expect(globalFilter(rowFor(base), "brand", base.brand.toLowerCase())).toBe(true);
     expect(globalFilter(rowFor(base), "title", "no-existe-xyz")).toBe(false);
+  });
+
+  it("matchea los valores derivados de cada accessorFn (T7)", () => {
+    expect(globalFilter(rowFor(base), "brand", "marca")).toBe(false);
+    expect(globalFilter(rowFor(base), "categories", "Textiles")).toBe(true);
+    expect(globalFilter(rowFor(base), "stock", "en stock")).toBe(true);
+    expect(globalFilter(rowFor(base), "price", String(base.variants[0]?.price ?? 0))).toBe(true);
+    expect(globalFilter(rowFor(base), "variants", String(base.variants.length))).toBe(true);
+    expect(globalFilter(rowFor(base), "updated", base.updatedAt.slice(0, 10))).toBe(true);
+  });
+
+  it("no crashea con columnas sin accessor (select/actions)", () => {
+    expect(globalFilter(rowFor(base), "select", "x")).toBe(false);
+    expect(globalFilter(rowFor(base), "actions", "x")).toBe(false);
+  });
+
+  it("el catálogo de columnas configurables cubre las columnas de datos de la tabla (T7)", () => {
+    expect(catalogColumnIds).toEqual([
+      "title",
+      "brand",
+      "categories",
+      "price",
+      "status",
+      "stock",
+      "variants",
+      "updated",
+    ]);
+    expect(catalogColumns.find((column) => column.id === "brand")?.label).toBe("Marca");
   });
 });
 

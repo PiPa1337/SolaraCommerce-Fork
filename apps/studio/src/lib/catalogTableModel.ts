@@ -14,6 +14,7 @@ export interface CatalogColumnOption {
 
 export const catalogColumns: CatalogColumnOption[] = [
   { id: "title", label: "Producto" },
+  { id: "brand", label: "Marca" },
   { id: "categories", label: "Categorías" },
   { id: "price", label: "Precio" },
   { id: "status", label: "Estado" },
