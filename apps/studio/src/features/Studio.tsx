@@ -155,6 +155,7 @@ export function Studio({
   useEffect(() => {
     if (!conflict) return;
     conflictOpenerRef.current = document.activeElement as HTMLElement | null;
+    setConfirmLeave(false);
     const firstFocusable =
       conflictDialogRef.current?.querySelector<HTMLElement>("button:not([disabled])");
     (firstFocusable ?? conflictDialogRef.current)?.focus();
@@ -884,7 +885,7 @@ export function Studio({
         </div>
       ) : null}
 
-      {confirmLeave ? (
+      {confirmLeave && !conflict ? (
         <ConfirmDialog
           title="Salir sin guardar"
           body="Hay cambios sin guardar en esta tienda. ¿Querés salir de todos modos?"

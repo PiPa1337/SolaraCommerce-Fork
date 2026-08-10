@@ -26,7 +26,15 @@ import {
 import type { StoreProjectV1, StoreSection } from "@solara/project-schema";
 import { catalogModernTemplateManifest } from "@solara/project-schema/catalog-modern-guidance";
 import { motion, useReducedMotion } from "motion/react";
-import { type KeyboardEvent, type RefObject, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type KeyboardEvent,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Button,
   EmptyState,
@@ -252,22 +260,22 @@ export function Builder({ project, onChange, protectedBase = false }: BuilderPro
     }
   }, [pageSections, selectedId]);
 
+  const closePicker = useCallback(() => {
+    setPickerOpen(false);
+    setPickerQuery("");
+    requestAnimationFrame(() => addButtonRef.current?.focus());
+  }, []);
+
   useEffect(() => {
     if (!pickerOpen) return;
     const handleOutside = (event: MouseEvent) => {
       if (pickerRef.current?.contains(event.target as Node)) return;
       if (addButtonRef.current?.contains(event.target as Node)) return;
-      setPickerOpen(false);
+      closePicker();
     };
     document.addEventListener("mousedown", handleOutside);
     return () => document.removeEventListener("mousedown", handleOutside);
-  }, [pickerOpen]);
-
-  const closePicker = () => {
-    setPickerOpen(false);
-    setPickerQuery("");
-    addButtonRef.current?.focus();
-  };
+  }, [closePicker, pickerOpen]);
 
   const replaceSections = (sections: StoreSection[]) => {
     onChange({

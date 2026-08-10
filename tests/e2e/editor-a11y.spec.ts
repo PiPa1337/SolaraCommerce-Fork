@@ -646,3 +646,81 @@ test("el diálogo 409 cierra con Escape conservando el borrador y el fondo es in
     await stopManagedServer(managed);
   }
 });
+
+test("cerrar el picker con click fuera devuelve el foco al botón y resetea la búsqueda (F-05/F8)", async ({
+  page,
+}) => {
+  await openBuilderForPicker(page);
+  const addButton = page.getByRole("button", { name: "Agregar sección" });
+  await page.getByLabel("Tipo de sección").selectOption("content");
+  await addButton.click();
+
+  const picker = page.getByTestId("ui-module-picker");
+  await expect(picker).toBeVisible();
+  await picker.getByLabel("Buscar módulo").fill("testimonios");
+
+  await page.getByRole("heading", { name: "Constructor" }).click();
+  await expect(picker).toBeHidden();
+  await expect(addButton).toBeFocused();
+
+  await addButton.click();
+  await expect(picker).toBeVisible();
+  await expect(picker.getByLabel("Buscar módulo")).toHaveValue("");
+  await expect(picker.getByRole("button", { name: /Testimonios/ })).toBeVisible();
+});
+
+test("el diálogo de salida sin guardar queda fuera del foco cuando llega el 409 (F-06)", async ({
+  browser,
+}) => {
+  test.setTimeout(180_000);
+  const managed = await startManagedServer();
+  try {
+    const contextA = await browser.newContext();
+    const pageA = await contextA.newPage();
+    await pageA.goto(managed.url);
+    await expect(pageA.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await openDemoStoreManaged(pageA);
+    await renameAndSave(pageA, "F06 A");
+
+    const pageB = await openSecondTab(browser, managed.url);
+    await openDemoStoreManaged(pageB);
+    await renameAndSave(pageB, "F06 B");
+
+    await pageA.getByLabel("Nombre de la tienda").fill("F06 A (borrador local)");
+    await pageA.route("**/__solara/storage/saves/*/commit", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+      await route.continue();
+    });
+
+    await pageA.locator("[data-studio-save]").click();
+    await pageA.getByRole("button", { name: "Volver a tiendas" }).click();
+
+    const leaveDialog = pageA.getByTestId("ui-confirm-dialog");
+    await expect(leaveDialog).toBeVisible();
+
+    const conflictDialog = pageA.getByTestId("ui-conflict-dialog");
+    await expect(conflictDialog).toBeVisible({ timeout: 60_000 });
+    await expect(leaveDialog).toHaveCount(0);
+
+    await expect(pageA.locator(".studio-shell")).toHaveAttribute("inert", "");
+    await expect(conflictDialog.getByRole("button", { name: "Conservar borrador" })).toBeFocused();
+
+    for (let tab = 0; tab < 6; tab += 1) await pageA.keyboard.press("Tab");
+    await expect
+      .poll(
+        () =>
+          pageA.evaluate(
+            () =>
+              document
+                .querySelector("[data-testid='ui-confirm-dialog']")
+                ?.contains(document.activeElement) ?? false,
+          ),
+        { message: "el foco no escapa del diálogo de conflicto hacia el de salida" },
+      )
+      .toBe(false);
+  } finally {
+    await stopManagedServer(managed);
+  }
+});
