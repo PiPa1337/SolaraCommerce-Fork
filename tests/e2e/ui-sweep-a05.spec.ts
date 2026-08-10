@@ -309,15 +309,20 @@ test("A05: opciones de variante persisten y validan con feedback inline", async 
   await expect(optionsInput).not.toHaveAttribute("aria-invalid", "true");
   await saveProduct(edit, false);
 
+  // El número de variantes no cambia: el poll espera el valor editado (el
+  // autosave tiene debounce de 550 ms, leer antes devolvería el snapshot viejo).
   await expect
-    .poll(() => readPersistedVariants(page, DEMO_VARIANTS_TITLE), { timeout: 10_000 })
-    .toHaveLength(8);
+    .poll(
+      async () => {
+        const persisted = await readPersistedVariants(page, DEMO_VARIANTS_TITLE);
+        return persisted?.[0]?.optionValues;
+      },
+      { timeout: 10_000 },
+    )
+    .toEqual({ Color: "Azul", Talle: "M" });
   const persisted = await readPersistedVariants(page, DEMO_VARIANTS_TITLE);
   expect(persisted).not.toBeNull();
-  expect((persisted as PersistedVariant[])[0]?.optionValues).toEqual({
-    Color: "Azul",
-    Talle: "M",
-  });
+  expect(persisted).toHaveLength(8);
 
   const reopened = await openEditDialog(page, DEMO_VARIANTS_TITLE);
   const reopenedRows = await variantsStep(reopened);
@@ -391,10 +396,20 @@ test("A05: stock y disponibilidad de variante persisten", async ({ page }) => {
   await saveProduct(edit, false);
 
   await expect
-    .poll(() => readPersistedVariants(page, DEMO_VARIANTS_TITLE), { timeout: 10_000 })
-    .toHaveLength(8);
+    .poll(
+      async () => {
+        const persisted = await readPersistedVariants(page, DEMO_VARIANTS_TITLE);
+        const first = persisted?.[0];
+        return first === undefined
+          ? undefined
+          : { stockStatus: first.stockStatus, available: first.available };
+      },
+      { timeout: 10_000 },
+    )
+    .toEqual({ stockStatus: "preorder", available: false });
   const persisted = await readPersistedVariants(page, DEMO_VARIANTS_TITLE);
   expect(persisted).not.toBeNull();
+  expect(persisted).toHaveLength(8);
   expect((persisted as PersistedVariant[])[0]).toMatchObject({
     stockStatus: "preorder",
     available: false,
@@ -427,11 +442,14 @@ test("A05: reordenar variantes intercambia filas y persiste el orden", async ({ 
   await expect(rows.nth(0).locator("header strong")).toHaveText("Variante 1");
   await expect(rows.nth(1).locator("header strong")).toHaveText("Variante 2");
 
-  // "Subir" restaura el orden original (feedback de estado de cada botón).
-  await rows.nth(0).getByRole("button", { name: "Subir Negro / M" }).click();
+  // "Subir" en la fila 1 restaura el orden original (tras el primer bajar, la
+  // fila 0 es "Negro / M" y su Subir queda deshabilitado: feedback de estado).
+  await rows.nth(1).getByRole("button", { name: "Subir Negro / S" }).click();
   rows = edit.locator(".variant-editor");
   await expect(nameOf(rows.nth(0))).toHaveValue("Negro / S");
   await expect(nameOf(rows.nth(1))).toHaveValue("Negro / M");
+  await expect(rows.nth(0).getByRole("button", { name: /^Subir/ })).toBeDisabled();
+  await expect(rows.nth(1).getByRole("button", { name: /^Subir/ })).toBeEnabled();
 
   // Borde: primera fila no sube y última no baja.
   await expect(rows.nth(0).getByRole("button", { name: /^Subir/ })).toBeDisabled();
@@ -440,12 +458,30 @@ test("A05: reordenar variantes intercambia filas y persiste el orden", async ({ 
   await rows.nth(0).getByRole("button", { name: "Bajar Negro / S" }).click();
   await saveProduct(edit, false);
 
+  // El número de variantes no cambia: el poll espera el orden editado (el
+  // autosave tiene debounce de 550 ms, leer antes devolvería el orden viejo).
   await expect
-    .poll(() => readPersistedVariants(page, DEMO_VARIANTS_TITLE), { timeout: 10_000 })
-    .toHaveLength(8);
+    .poll(
+      async () => {
+        const persisted = await readPersistedVariants(page, DEMO_VARIANTS_TITLE);
+        return persisted?.map((variant) => variant.title);
+      },
+      { timeout: 10_000 },
+    )
+    .toEqual([
+      "Negro / M",
+      "Negro / S",
+      "Negro / L",
+      "Negro / XL",
+      "Arena / S",
+      "Arena / M",
+      "Arena / L",
+      "Arena / XL",
+    ]);
   const persisted = await readPersistedVariants(page, DEMO_VARIANTS_TITLE);
   expect(persisted).not.toBeNull();
   const variants = persisted as PersistedVariant[];
+  expect(variants).toHaveLength(8);
   expect(variants[0]?.title).toBe("Negro / M");
   expect(variants[1]?.title).toBe("Negro / S");
   expect(variants[0]?.optionValues).toEqual({ Color: "Negro", Talle: "M" });
@@ -484,11 +520,32 @@ test("A05: precio anterior, GTIN, MPN e imagen de variante persisten", async ({ 
 
   await saveProduct(edit, false);
 
+  // El número de variantes no cambia: el poll espera los valores editados (el
+  // autosave tiene debounce de 550 ms, leer antes devolvería el snapshot viejo).
   await expect
-    .poll(() => readPersistedVariants(page, DEMO_VARIANTS_TITLE), { timeout: 10_000 })
-    .toHaveLength(8);
+    .poll(
+      async () => {
+        const persisted = await readPersistedVariants(page, DEMO_VARIANTS_TITLE);
+        const first = persisted?.[0];
+        if (first === undefined) return undefined;
+        return {
+          compareAtPrice: first.compareAtPrice,
+          gtin: first.gtin,
+          mpn: first.mpn,
+          imageId: first.imageId,
+        };
+      },
+      { timeout: 10_000 },
+    )
+    .toEqual({
+      compareAtPrice: 5000000,
+      gtin: "07771234567890",
+      mpn: "MPN-A05-01",
+      imageId: undefined,
+    });
   const persisted = await readPersistedVariants(page, DEMO_VARIANTS_TITLE);
   expect(persisted).not.toBeNull();
+  expect(persisted).toHaveLength(8);
   expect((persisted as PersistedVariant[])[0]).toMatchObject({
     compareAtPrice: 5000000,
     gtin: "07771234567890",
