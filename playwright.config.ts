@@ -4,7 +4,10 @@ export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
   retries: 0,
-  workers: 1,
+  // 4 workers: cada spec levanta su propio servidor en puerto aleatorio
+  // (listen(0) o rangos disjuntos por archivo), así que la paralelización es
+  // segura; la suite completa baja de ~9 min a ~3 min en una máquina 8C/16T.
+  workers: 4,
   reporter: process.env.CI
     ? [["line"], ["html", { open: "never", outputFolder: "playwright-report" }]]
     : "list",
