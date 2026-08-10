@@ -1,5 +1,6 @@
 import {
   parseProject,
+  type StoreProjectV1,
   StoreProjectV1Schema,
   StoreProjectV2Schema,
   type StoreSection,
@@ -411,7 +412,8 @@ describe("contrato con secciones (ids de ítems)", () => {
 
 describe("contrato Builder → gate de secciones", () => {
   const demoStore = buildCatalogModernProject({ seed: "demo" });
-  const newSectionId = (): StoreSection["id"] => `section-${crypto.randomUUID()}`;
+  const newSectionId = (): StoreSection["id"] =>
+    `section-${crypto.randomUUID()}` as StoreSection["id"];
   const gate = (project: StoreProjectV1) => StoreProjectV1Schema.safeParse(project);
   const testimonials = () =>
     demoStore.sections.find((section) => section.id === "modo-section-testimonials");
