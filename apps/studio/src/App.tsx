@@ -138,6 +138,9 @@ function StudioShell() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [sessionManaged, setSessionManaged] = useState(false);
+  // H7-B1: tras «Cerrar y detener» el cierre es terminal; App lo guarda para no
+  // ofrecer «Cerrar app» ni reintentar el cierre con el servidor muerto.
+  const [shutdownTerminal, setShutdownTerminal] = useState(false);
   const [localStorageStatus, setLocalStorageStatus] = useState<LocalStorageStatus>({
     managed: false,
     writable: false,
@@ -451,11 +454,14 @@ function StudioShell() {
           <div className="app-header__actions">
             <span className="app-local-status">Studio local</span>
             <span className="app-local-indicator" aria-hidden />
-            {sessionManaged ? (
+            {sessionManaged && !shutdownTerminal ? (
               <button
                 className="app-shutdown-button"
                 type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent("solara:open-shutdown"))}
+                onClick={() => {
+                  if (shutdownTerminal) return;
+                  window.dispatchEvent(new CustomEvent("solara:open-shutdown"));
+                }}
               >
                 Cerrar app
               </button>
@@ -643,6 +649,8 @@ function StudioShell() {
               }
             : {})}
           onSessionManaged={setSessionManaged}
+          shutdownTerminal={shutdownTerminal}
+          onShutdownTerminal={setShutdownTerminal}
         />
 
         {pendingRecover ? (
