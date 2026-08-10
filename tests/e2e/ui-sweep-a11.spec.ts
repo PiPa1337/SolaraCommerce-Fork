@@ -174,8 +174,10 @@ test("reemplazar módulo cambia el módulo y conserva sólo los settings compati
   // Reemplazo a Testimonios: compatibleSettings = ["title", "items"].
   await moduleSelect.selectOption("catalog-testimonials");
 
-  // Efecto real: fila, inspector, select y preview actualizados.
-  await expect(brands.locator(".section-select strong")).toHaveText("Testimonios");
+  // Efecto real: la fila en la misma posición, el inspector, el select y el
+  // preview se actualizan. La fila cambia de nombre, por eso se re-consulta
+  // por índice (posicional, igual que el id de sección).
+  await expect(rowName(page, 3)).resolves.toBe("Testimonios");
   await expect(page.locator(".inspector header h3")).toHaveText("Testimonios");
   await expect(moduleSelect).toHaveValue("catalog-testimonials");
   await expect(previewFrame(page).locator('[data-solara-module="catalog-testimonials"]')).toHaveCount(
@@ -196,14 +198,14 @@ test("reemplazar módulo cambia el módulo y conserva sólo los settings compati
 
   // Undo restaura el módulo anterior con sus valores.
   await undoButton(page).click();
-  await expect(brands.locator(".section-select strong")).toHaveText("Franja de marcas");
+  await expect(rowName(page, 3)).resolves.toBe("Franja de marcas");
   await expect(moduleSelect).toHaveValue("catalog-brand-strip");
   await expect(title).toHaveValue("Marcas que nos acompañan");
   await expect(page.getByRole("spinbutton", { name: "Cantidad" })).toHaveValue("5");
 
   // Redo vuelve a aplicar el reemplazo (historial completo).
   await redoButton(page).click();
-  await expect(brands.locator(".section-select strong")).toHaveText("Testimonios");
+  await expect(rowName(page, 3)).resolves.toBe("Testimonios");
   await expect(moduleSelect).toHaveValue("catalog-testimonials");
 });
 
@@ -232,8 +234,8 @@ test("mover abajo con botón reordena lista y preview y deshabilita en los lími
 
   // Mover la primera sección hacia abajo: intercambio real en lista y preview.
   await row(page, 0).getByRole("button", { name: "Mover abajo" }).click();
-  await expect(rowName(page, 0)).toBe(secondBefore);
-  await expect(rowName(page, 1)).toBe(firstBefore);
+  await expect(rowName(page, 0)).resolves.toBe(secondBefore);
+  await expect(rowName(page, 1)).resolves.toBe(firstBefore);
 
   const orderAfter = await previewModuleOrder(page);
   expect(orderAfter.indexOf(await previewModuleId(secondBefore))).toBeLessThan(
@@ -245,11 +247,11 @@ test("mover abajo con botón reordena lista y preview y deshabilita en los lími
 
   // Undo/redo de la operación de movimiento.
   await undoButton(page).click();
-  await expect(rowName(page, 0)).toBe(firstBefore);
-  await expect(rowName(page, 1)).toBe(secondBefore);
+  await expect(rowName(page, 0)).resolves.toBe(firstBefore);
+  await expect(rowName(page, 1)).resolves.toBe(secondBefore);
   await redoButton(page).click();
-  await expect(rowName(page, 0)).toBe(secondBefore);
-  await expect(rowName(page, 1)).toBe(firstBefore);
+  await expect(rowName(page, 0)).resolves.toBe(secondBefore);
+  await expect(rowName(page, 1)).resolves.toBe(firstBefore);
 });
 
 /** Resuelve el id de preview esperado para el nombre visible de una fila. */
@@ -279,20 +281,20 @@ test("mover con teclado respeta el orden y no sale de los límites", async ({ pa
   // ArrowUp en el borde superior: sin efecto (no reordena, no rompe).
   await row(page, 0).locator(".section-select").focus();
   await page.keyboard.press("ArrowUp");
-  await expect(rowName(page, 0)).toBe(firstBefore);
+  await expect(rowName(page, 0)).resolves.toBe(firstBefore);
 
   // ArrowUp sobre la segunda fila la sube una posición.
   await row(page, 1).locator(".section-select").focus();
   await page.keyboard.press("ArrowUp");
-  await expect(rowName(page, 0)).toBe(secondBefore);
-  await expect(rowName(page, 1)).toBe(firstBefore);
+  await expect(rowName(page, 0)).resolves.toBe(secondBefore);
+  await expect(rowName(page, 1)).resolves.toBe(firstBefore);
 
   // ArrowDown en el borde inferior: sin efecto.
   const lastIndex = (await sections.getByRole("listitem").count()) - 1;
   const lastBefore = await rowName(page, lastIndex);
   await row(page, lastIndex).locator(".section-select").focus();
   await page.keyboard.press("ArrowDown");
-  await expect(rowName(page, lastIndex)).toBe(lastBefore);
+  await expect(rowName(page, lastIndex)).resolves.toBe(lastBefore);
 });
 
 test("eliminar quita la sección del proyecto y del preview, salta la selección y undo la restaura", async ({
