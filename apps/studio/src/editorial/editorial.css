@@ -1517,6 +1517,33 @@ button.status-label:focus-visible {
   }
 }
 
+/* --- U3: los textos entran en sus cajas y el panel scrollea hacia adentro.
+   Las burbujas de tooltip con opacity 0 siguen ocupando el área de scroll del
+   panel; se sacan del layout hasta el hover/focus (display none no desactiva
+   la transición de opacity, que sigue animando al aparecer). --- */
+
+.editor-pane .ui-tooltip::after {
+  display: none;
+}
+
+.editor-pane .ui-tooltip:hover::after,
+.editor-pane .ui-tooltip:focus-within::after {
+  display: block;
+}
+
+/* Los fieldsets del tema con display grid + legends anidan fieldsets como
+   items de grid y Chromium los reparte en columnas implícitas que colapsan
+   a 8px (familia, escala, espaciado, contenedor). Con bloque clásico cada
+   campo ocupa el ancho completo. */
+
+.theme-layout fieldset {
+  display: block;
+}
+
+.theme-layout fieldset > * + * {
+  margin-top: 14px;
+}
+
 /* --- T5.3: reduced-motion global. El catch-all `*` cubre animaciones; la
    lista anula los shorthands de clase (mayor especificidad que `*`). --- */
 
