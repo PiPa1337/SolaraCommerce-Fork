@@ -37,6 +37,7 @@ import { motion, useReducedMotion } from "motion/react";
 import {
   type KeyboardEvent,
   lazy,
+  memo,
   Suspense,
   useCallback,
   useEffect,
@@ -97,6 +98,87 @@ const tabs: Array<{ id: StudioTab; label: string; icon: typeof Storefront }> = [
   { id: "seo", label: "SEO", icon: MagnifyingGlass },
   { id: "export", label: "Exportar", icon: BoxArrowDown },
 ];
+
+// Referencias estables para la transición del indicador de tab: el shell
+// recrea el objeto inline en cada render y obliga a motion a re-renderizar.
+const NAV_INDICATOR_TRANSITION = { type: "spring", stiffness: 420, damping: 34 } as const;
+const NAV_INDICATOR_TRANSITION_STILL = { duration: 0 } as const;
+
+interface StudioTabContentProps {
+  tab: StudioTab;
+  project: StoreProjectV1;
+  advancedMode: boolean;
+  replaceProject(next: StoreProjectV1): void;
+  runCommand(command: DomainCommand): void;
+  onNavigate(destination: StudioTab): void;
+  onApplyUpgrade(nextProject: StoreProjectV1): void;
+  onImport(project: StoreProjectV1): Promise<void>;
+  onOpenSite?: ((id: string) => Promise<void>) | undefined;
+}
+
+// El contenido de la pestaña activa sólo se recalcula cuando cambia su
+// entrada (proyecto, tab o modo). Los re-renders del shell por estado de
+// guardado, marca de sucio o avisos no vuelven a montar el editor completo.
+const StudioTabContent = memo(function StudioTabContent({
+  tab,
+  project,
+  advancedMode,
+  replaceProject,
+  runCommand,
+  onNavigate,
+  onApplyUpgrade,
+  onImport,
+  onOpenSite,
+}: StudioTabContentProps) {
+  switch (tab) {
+    case "guided":
+      return (
+        <GuidedOverview project={project} onNavigate={onNavigate} onApplyUpgrade={onApplyUpgrade} />
+      );
+    case "overview":
+      return <Overview project={project} onChange={replaceProject} />;
+    case "catalog":
+      return <Catalog project={project} onCommand={runCommand} onChange={replaceProject} />;
+    case "builder":
+      return (
+        <Builder
+          project={project}
+          onChange={replaceProject}
+          protectedBase={!advancedMode && project.origin?.seed === "clean"}
+        />
+      );
+    case "theme":
+      return <ThemeEditor project={project} onChange={replaceProject} />;
+    case "assets":
+      return <Assets project={project} onChange={replaceProject} />;
+    case "seo":
+      return <Seo project={project} onChange={replaceProject} />;
+    case "export":
+      return (
+        <ExportPanel
+          project={project}
+          onImport={onImport}
+          {...(onOpenSite ? { onOpenSite } : {})}
+        />
+      );
+  }
+});
+
+// El preview no se re-renderiza cuando el shell cambia estado (guardado,
+// avisos, ticks): su entrada es sólo el proyecto y la configuración de ruta.
+const MemoizedPreview = memo(function MemoizedPreview({
+  project,
+  route,
+  size,
+  zoom,
+}: {
+  project: StoreProjectV1;
+  route: string;
+  size: PreviewSize;
+  zoom: PreviewZoom;
+}) {
+  return <Preview project={project} route={route} size={size} zoom={zoom} />;
+});
 
 export function Studio({
   initialProject,
@@ -300,7 +382,12 @@ export function Studio({
   }, [paneStorageKey]);
 
   useEffect(() => {
-    const bumpExportTick = () => setExportTick((current) => current + 1);
+    const bumpExportTick = () => {
+      // Pestaña oculta: nada pinta ni necesita releer el historial de
+      // exportación. El rótulo se refresca al volver a ser visible.
+      if (document.visibilityState === "hidden") return;
+      setExportTick((current) => current + 1);
+    };
     window.addEventListener("focus", bumpExportTick);
     document.addEventListener("visibilitychange", bumpExportTick);
     return () => {
@@ -405,6 +492,44 @@ export function Studio({
     setHistory((current) => executeCommand(current, command));
   }, []);
 
+  const navigateFromGuided = useCallback((destination: StudioTab) => {
+    if (destination === "builder") setAdvancedMode(true);
+    setTab(destination);
+  }, []);
+
+  const applyGuidedUpgrade = useCallback(
+    (nextProject: StoreProjectV1) => {
+      void (async () => {
+        try {
+          await autosave.flush();
+          const archive = await createProjectArchiveInWorker(project);
+          downloadBlob(
+            archive,
+            `${project.slug}-antes-de-actualizar.solara.json`,
+            "application/vnd.solara.project+json",
+          );
+          replaceProject(nextProject);
+        } catch (reason) {
+          setValidationError(
+            reason instanceof Error
+              ? `No se pudo crear el respaldo: ${reason.message}`
+              : "No se pudo crear el respaldo antes de actualizar.",
+          );
+        }
+      })();
+    },
+    [autosave, project, replaceProject],
+  );
+
+  const importFromExport = useCallback(
+    async (imported: StoreProjectV1) => {
+      await autosave.flush();
+      await onProjectImported(imported);
+      setHistory(createHistory(imported));
+    },
+    [autosave, onProjectImported],
+  );
+
   const selectTab = useCallback(
     (nextId: StudioTab, focusTab = false) => {
       if (nextId !== "guided") setAdvancedMode(true);
@@ -491,71 +616,6 @@ export function Studio({
     const next = tabs[(index + direction + tabs.length) % tabs.length];
     if (!next) return;
     selectTab(next.id, true);
-  };
-
-  const renderTab = () => {
-    switch (tab) {
-      case "guided":
-        return (
-          <GuidedOverview
-            project={project}
-            onNavigate={(destination) => {
-              if (destination === "builder") setAdvancedMode(true);
-              setTab(destination);
-            }}
-            onApplyUpgrade={(nextProject) => {
-              void (async () => {
-                try {
-                  await autosave.flush();
-                  const archive = await createProjectArchiveInWorker(project);
-                  downloadBlob(
-                    archive,
-                    `${project.slug}-antes-de-actualizar.solara.json`,
-                    "application/vnd.solara.project+json",
-                  );
-                  replaceProject(nextProject);
-                } catch (reason) {
-                  setValidationError(
-                    reason instanceof Error
-                      ? `No se pudo crear el respaldo: ${reason.message}`
-                      : "No se pudo crear el respaldo antes de actualizar.",
-                  );
-                }
-              })();
-            }}
-          />
-        );
-      case "overview":
-        return <Overview project={project} onChange={replaceProject} />;
-      case "catalog":
-        return <Catalog project={project} onCommand={runCommand} onChange={replaceProject} />;
-      case "builder":
-        return (
-          <Builder
-            project={project}
-            onChange={replaceProject}
-            protectedBase={!advancedMode && project.origin?.seed === "clean"}
-          />
-        );
-      case "theme":
-        return <ThemeEditor project={project} onChange={replaceProject} />;
-      case "assets":
-        return <Assets project={project} onChange={replaceProject} />;
-      case "seo":
-        return <Seo project={project} onChange={replaceProject} />;
-      case "export":
-        return (
-          <ExportPanel
-            project={project}
-            onImport={async (imported) => {
-              await autosave.flush();
-              await onProjectImported(imported);
-              setHistory(createHistory(imported));
-            }}
-            {...(onOpenSite ? { onOpenSite } : {})}
-          />
-        );
-    }
   };
 
   return (
@@ -755,9 +815,7 @@ export function Studio({
                     className="studio-nav-indicator"
                     aria-hidden
                     transition={
-                      reduceMotion
-                        ? { duration: 0 }
-                        : { type: "spring", stiffness: 420, damping: 34 }
+                      reduceMotion ? NAV_INDICATOR_TRANSITION_STILL : NAV_INDICATOR_TRANSITION
                     }
                   />
                 ) : null}
@@ -793,9 +851,24 @@ export function Studio({
                 onClick={() => setPaneOpen(false)}
               />
             </Tooltip>
-            {renderTab()}
+            <StudioTabContent
+              tab={tab}
+              project={project}
+              advancedMode={advancedMode}
+              replaceProject={replaceProject}
+              runCommand={runCommand}
+              onNavigate={navigateFromGuided}
+              onApplyUpgrade={applyGuidedUpgrade}
+              onImport={importFromExport}
+              onOpenSite={onOpenSite}
+            />
           </motion.main>
-          <Preview project={project} route={previewRoute} size={previewSize} zoom={previewZoom} />
+          <MemoizedPreview
+            project={project}
+            route={previewRoute}
+            size={previewSize}
+            zoom={previewZoom}
+          />
         </div>
 
         {focusMode ? (
