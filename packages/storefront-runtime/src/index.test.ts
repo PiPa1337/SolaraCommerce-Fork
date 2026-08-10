@@ -288,3 +288,54 @@ describe("pausa y reanudación del runtime (contrato A3↔A4)", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("freshCatalog = null");
   });
 });
+
+describe("carrito y checkout del drawer (A29)", () => {
+  it("refleja el conteo en el badge y en el aria-label del trigger", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("element.textContent = String(count)");
+    expect(STOREFRONT_RUNTIME_JS).toContain("`${label} vacío`");
+    expect(STOREFRONT_RUNTIME_JS).toContain("`${label}, ${count} productos`");
+  });
+
+  it("cierra el drawer con Escape y devuelve el foco al trigger", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain('event.key === "Escape"');
+    expect(STOREFRONT_RUNTIME_JS).toContain("lastCartTrigger?.isConnected");
+    expect(STOREFRONT_RUNTIME_JS).toContain("lastCartTrigger.focus()");
+    expect(STOREFRONT_RUNTIME_JS).toContain("syncCartToggleExpanded(false)");
+  });
+
+  it("quita líneas por data-cart-remove y persiste el carrito", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      'data-cart-remove="${escapeAttribute(line.variantId)}"',
+    );
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      "cart = cart.filter((line) => line.variantId !== variantId)",
+    );
+  });
+
+  it("bloquea el checkout con role=alert y conserva la línea no disponible", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      "Retirá los productos no disponibles del carrito antes de enviar el pedido.",
+    );
+    expect(STOREFRONT_RUNTIME_JS).toContain('setAttribute("role", "alert")');
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      "if (cart.length === 0 || !form.reportValidity()) return;",
+    );
+  });
+
+  it("construye la URL wa.me con teléfono normalizado y totales en centavos", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      '`https://wa.me/${phone.replace(/\\D/g, "")}?text=${encodeURIComponent(message)}`',
+    );
+    expect(STOREFRONT_RUNTIME_JS).toContain("Total estimado: ${money.format(total / 100)}");
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      "Entiendo que precio, disponibilidad, envío y pago se confirman",
+    );
+  });
+
+  it("acota la cantidad editada y el agregado a 1–99", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("const quantity = Math.min(99, Math.trunc(parsed));");
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      'Math.max(1, Math.min(99, Math.trunc(Number(quantityInput?.value ?? "1"))))',
+    );
+  });
+});

@@ -119,10 +119,10 @@ async function seedCart(
   lines: Array<Record<string, unknown>>,
 ) {
   await page.goto(storeUrl("/"));
-  await page.evaluate(
-    ([key, value]) => localStorage.setItem(key, JSON.stringify(value)),
-    [STORAGE_KEY, lines] as const,
-  );
+  await page.evaluate(([key, value]) => localStorage.setItem(key, JSON.stringify(value)), [
+    STORAGE_KEY,
+    lines,
+  ] as const);
   await page.reload();
 }
 
@@ -294,7 +294,9 @@ test("checkout del drawer: URL wa.me con saludo, líneas, SKU y total en centavo
   expect(url.pathname).toBe("/5491123456789");
   const message = (url.searchParams.get("text") ?? "").replace(/[\u202F\u00A0]/g, " ");
   expect(message).toContain("Hola Modo Sur, quiero hacer este pedido:");
-  expect(message).toContain("- 2 x Remera esencial de algodón (Negro / S) [MS-001-NE-S]: $ 57.700,00");
+  expect(message).toContain(
+    "- 2 x Remera esencial de algodón (Negro / S) [MS-001-NE-S]: $ 57.700,00",
+  );
   expect(message).toContain("Total estimado: $ 57.700,00");
   expect(message).toContain("Nombre: Malena Ortiz");
   expect(message).toContain("Teléfono: 11 5555 0142");
@@ -317,6 +319,17 @@ test("línea no disponible: se conserva con aviso y el checkout la bloquea", asy
       imageUrl: "",
       available: true,
     },
+    {
+      productId: "modo-product-01",
+      variantId: VARIANT_ID,
+      title: "Remera esencial de algodón",
+      variantTitle: "Negro / S",
+      sku: "MS-001-NE-S",
+      unitPrice: 100,
+      quantity: 1,
+      imageUrl: "",
+      available: true,
+    },
   ]);
   await page.goto(storeUrl(PRODUCT_URL));
   await page.locator("[data-solara-cart-open]").first().click();
@@ -325,6 +338,14 @@ test("línea no disponible: se conserva con aviso y el checkout la bloquea", asy
   await expect(line).toContainText("Ya no disponible");
   await expect(line.locator("[data-cart-quantity]")).toBeDisabled();
   await expect(line.getByRole("button", { name: "Eliminar Remera retirada" })).toBeEnabled();
+
+  const stored = (await storedCart(page)) as Array<Record<string, unknown>>;
+  expect(
+    stored.some(
+      (item) =>
+        item.variantId === "modo-variant-99-99" && item.available === false && item.quantity === 1,
+    ),
+  ).toBe(true);
 
   await drawer.getByLabel("Nombre").fill("Malena Ortiz");
   await drawer.getByLabel("Teléfono").fill("11 5555 0142");
@@ -337,9 +358,20 @@ test("línea no disponible: se conserva con aviso y el checkout la bloquea", asy
   await expect(drawer.locator("[data-whatsapp-link]")).toBeHidden();
 
   await line.getByRole("button", { name: "Eliminar Remera retirada" }).click();
-  await expect(drawer.locator(".solara-cart-line")).toHaveCount(0);
+  await expect(drawer.locator(".solara-cart-line")).toHaveCount(1);
   await drawer.locator('button[type="submit"]').click();
-  await expect(drawer.locator("[data-whatsapp-link]")).toBeVisible();
+  const link = drawer.locator("[data-whatsapp-link]");
+  await expect(link).toBeVisible();
+  await expect(link).toBeFocused();
+  await expect(drawer.locator("[data-order-preview]")).toContainText("Total estimado: $ 28.850,00");
+  expect(((await storedCart(page)) as Array<Record<string, unknown>>)[0]).toEqual(
+    expect.objectContaining({
+      variantId: VARIANT_ID,
+      unitPrice: FRESH_PRICE,
+      quantity: 1,
+      available: true,
+    }),
+  );
 });
 
 test("página de carrito: reconciliación con precios frescos de catalog-index.json", async ({
@@ -358,11 +390,12 @@ test("página de carrito: reconciliación con precios frescos de catalog-index.j
     },
   ]);
   await page.goto(storeUrl("/carrito/"));
-  await expect(page.locator("[data-cart-subtotal]")).toHaveText("$ 57.700,00", {
+  const pageMain = page.locator("main.solara-cart-page");
+  await expect(pageMain.locator("[data-cart-subtotal]")).toHaveText("$ 57.700,00", {
     timeout: 15_000,
   });
-  await expect(page.locator("[data-cart-total]")).toHaveText("$ 57.700,00");
-  await expect(page.locator("[data-cart-lines]")).toContainText("Remera esencial de algodón");
+  await expect(pageMain.locator("[data-cart-total]")).toHaveText("$ 57.700,00");
+  await expect(pageMain.locator("[data-cart-lines]")).toContainText("Remera esencial de algodón");
 
   const stored = (await storedCart(page)) as Array<Record<string, unknown>>;
   expect(stored[0]).toEqual(
@@ -379,10 +412,7 @@ test("totales del carrito anuncian con aria-live", async ({ page }) => {
   await clearCart(page);
   await page.goto(storeUrl(PRODUCT_URL));
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
-  await expect(page.locator("[data-cart-subtotal]").first()).toHaveAttribute(
-    "aria-live",
-    "polite",
-  );
+  await expect(page.locator("[data-cart-subtotal]").first()).toHaveAttribute("aria-live", "polite");
   await expect(page.locator("[data-cart-total]").first()).toHaveAttribute("aria-live", "polite");
   await expect(page.locator("[data-cart-count]").first()).toHaveAttribute("aria-live", "polite");
 });
