@@ -53,7 +53,11 @@ function normalizeIssues(value: unknown): AuditIssue[] {
   });
 }
 
-/** Destinos de corrección: valor de fixTarget → id de pestaña del Studio. */
+/**
+ * Destinos de corrección: valor de fixTarget → id de pestaña del Studio. El
+ * destino `seo` no navega: el checklist vive en la pestaña SEO y los hallazgos
+ * que se resuelven ahí se marcan como revisados en lugar de ofrecer «Ir a SEO».
+ */
 const FIX_TABS: Record<string, string> = {
   summary: "overview",
   catalog: "catalog",
@@ -489,7 +493,7 @@ export function Seo({
                       <strong title={issue.title}>{issue.title}</strong>
                       <small>{issue.message}</small>
                     </span>
-                    {issue.fixTarget ? (
+                    {issue.fixTarget && issue.fixTarget !== "seo" ? (
                       <Button
                         variant="quiet"
                         size="sm"

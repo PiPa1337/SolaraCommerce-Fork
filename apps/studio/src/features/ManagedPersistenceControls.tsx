@@ -15,6 +15,26 @@ import { formatSaveTime } from "../lib/saveTime";
 type DiskSaveState = "saved" | "saving" | "site-outdated" | "error";
 
 /**
+ * Texto del indicador de guardado administrado. Con `dirty` y estado `saved`
+ * el editor tiene cambios pendientes: el rótulo debe anunciarlo y no decir
+ * «Guardado» (feedback coherente con la lógica del botón). En el estado
+ * `error` el rótulo lleva el mensaje: el bloque completo (InlineError +
+ * Reintentar) desborda el topbar fijo y queda tapado por el iframe del
+ * preview, dejando «Reintentar» sin click accesible.
+ */
+export function saveIndicatorLabel(
+  state: DiskSaveState,
+  dirty: boolean,
+  savedAt: number | null,
+): string {
+  if (state === "saving") return "Guardando…";
+  if (state === "saved" && dirty) return "Cambios pendientes";
+  if (state === "saved") return savedAt ? `Guardado ${formatSaveTime(savedAt)}` : "Guardado";
+  if (state === "site-outdated") return "Sitio anterior conservado";
+  return "Error al guardar";
+}
+
+/**
  * Devuelve la base de disco que corresponde al proyecto actual después de una
  * recarga (App entrega el mismo objeto en `project` y `diskBaseProject` tras
  * «Recargar desde disco»). Si coinciden, el editor quedó alineado con disco y
@@ -153,24 +173,14 @@ export function ManagedPersistenceControls({
       <output className={`save-indicator save-indicator--${state}`} aria-live="polite">
         {state === "saving" ? (
           <span className="save-spinner" aria-hidden />
-        ) : state === "saved" ? (
+        ) : state === "saved" && !dirty ? (
           <CheckCircle className="save-check" aria-hidden size={16} />
         ) : (
           <FloppyDisk aria-hidden size={16} />
         )}
-        {state === "saved"
-          ? savedAt
-            ? `Guardado ${formatSaveTime(savedAt)}`
-            : "Guardado"
-          : state === "saving"
-            ? "Guardando…"
-            : state === "site-outdated"
-              ? "Sitio anterior conservado"
-              : ""}
+        {saveIndicatorLabel(state, dirty, savedAt)}
       </output>
-      {validationError || state === "error" ? (
-        <InlineError>{validationError || "Error al guardar"}</InlineError>
-      ) : null}
+      {validationError ? <InlineError>{validationError}</InlineError> : null}
       {state === "error" ? (
         <button type="button" className="save-retry" onClick={() => void save()}>
           Reintentar
