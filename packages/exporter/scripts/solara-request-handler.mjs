@@ -346,8 +346,11 @@ export function createSolaraRequestHandler({
       }
       const uploadMatch = /^\/__solara\/storage\/saves\/([^/]+)\/(project|site)$/.exec(pathname);
       if (uploadMatch && request.method === "PUT") {
+        // El cliente envía `X-Solara-SHA256`; los transportes la normalizan a
+        // minúsculas, pero el contrato no debe depender de eso: la verificación
+        // de hash se hace sobre headers ya normalizados.
         const uploadRequest = {
-          headers: request.headers,
+          headers: normaliseHeaders(request.headers),
           [Symbol.asyncIterator]: () => toAsyncIterable(request.body)[Symbol.asyncIterator](),
         };
         return jsonResponse(

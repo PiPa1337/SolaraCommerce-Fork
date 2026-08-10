@@ -79,6 +79,65 @@ describe("almacenamiento local de proyectos", () => {
     }
   });
 
+  it("acepta slugs largos dentro del contrato del schema y trunca sólo las rutas", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-longslug-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      const longSlug = `${"a-".repeat(59)}b`; // 119 caracteres, válido para SlugSchema
+      expect(longSlug).toHaveLength(119);
+      const transaction = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: longSlug,
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      // La carpeta y el key usan safeSlug (64) para mantener rutas cortas…
+      expect(transaction.folder).toMatch(new RegExp(`^${longSlug.slice(0, 64)}--[a-f0-9]{8}$`));
+      await upload(
+        storage,
+        transaction.transactionId,
+        "project",
+        projectJson().replace('"slug": "prueba"', `"slug": "${longSlug}"`),
+      );
+      const receipt = await storage.commit(transaction.transactionId);
+      expect(receipt.key.startsWith(longSlug.slice(0, 64))).toBe(true);
+      // …pero el slug completo se conserva en el manifest y en el listado.
+      expect((await storage.list()).projects[0].slug).toBe(longSlug);
+      expect((await storage.readCurrent(projectId)).manifest.slug).toBe(longSlug);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rechaza slugs fuera del contrato del schema (largo o patrón)", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-badslug-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      const cases = [
+        `${"a-".repeat(60)}b`, // 121 caracteres: excede SlugSchema
+        "Tienda_A", // mayúsculas y guión bajo
+        "tienda--doble", // guiones consecutivos
+        "tienda-", // guión final
+        "",
+      ];
+      for (const slug of cases) {
+        await expect(
+          storage.beginSave({
+            projectId,
+            name: "Prueba",
+            slug,
+            projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+            expectedVersion: null,
+          }),
+        ).rejects.toThrow(/slug de tienda inválido/i);
+      }
+      expect((await storage.list()).projects).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("conserva el sitio válido cuando una versión posterior sólo cambia el proyecto", async () => {
     const root = await mkdtemp(join(tmpdir(), "solara-storage-"));
     try {

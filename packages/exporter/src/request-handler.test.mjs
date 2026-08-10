@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -101,6 +102,86 @@ describe("handler: abrir carpeta de una tienda", () => {
         request("POST", `/__solara/storage/projects/${projectId}/open-folder`),
       );
       expect(unauthorized.status).toBe(403);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("handler: transacción de guardado (begin-save/upload)", () => {
+  it("comienza una transacción con un slug largo válido del schema", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-handler-longslug-"));
+    try {
+      const handler = createSolaraRequestHandler({
+        applicationRoot: root,
+        shutdownToken: "token-test",
+        onShutdown: () => {},
+      });
+      const longSlug = `${"a-".repeat(59)}b`;
+      const response = await handler.handle(
+        request(
+          "POST",
+          "/__solara/storage/saves",
+          {
+            cookie: `${shutdownCookieName}=token-test`,
+            "Content-Type": "application/json",
+          },
+          JSON.stringify({
+            projectId: "store-slug-largo",
+            name: "Prueba",
+            slug: longSlug,
+            projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+            expectedVersion: null,
+          }),
+        ),
+      );
+      expect(response.status).toBe(201);
+      const body = JSON.parse(response.body);
+      expect(body.ok).toBe(true);
+      expect(typeof body.transactionId).toBe("string");
+      await handler.storage.abort(body.transactionId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("verifica el hash del upload aunque el header llegue con mayúsculas", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-handler-hashcase-"));
+    try {
+      const handler = createSolaraRequestHandler({
+        applicationRoot: root,
+        shutdownToken: "token-test",
+        onShutdown: () => {},
+      });
+      const transaction = await handler.storage.beginSave({
+        projectId: "store-hash-case",
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      const payload = Buffer.from(projectJson());
+      const path = `/__solara/storage/saves/${transaction.transactionId}/project`;
+      // El cliente envía `X-Solara-SHA256`; la verificación no puede depender
+      // de que el transporte normalice el nombre del header a minúsculas.
+      const wrong = await handler.handle(
+        request("PUT", path, {
+          cookie: `${shutdownCookieName}=token-test`,
+          "X-Solara-SHA256": "0".repeat(64),
+          "Content-Type": "application/vnd.solara.project+json",
+        }, payload),
+      );
+      expect(wrong.status).toBe(400);
+      expect(JSON.parse(wrong.body).error).toMatch(/hash/i);
+      const correct = await handler.handle(
+        request("PUT", path, {
+          cookie: `${shutdownCookieName}=token-test`,
+          "X-Solara-SHA256": createHash("sha256").update(payload).digest("hex"),
+          "Content-Type": "application/vnd.solara.project+json",
+        }, payload),
+      );
+      expect(correct.status).toBe(200);
+      await handler.storage.abort(transaction.transactionId);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

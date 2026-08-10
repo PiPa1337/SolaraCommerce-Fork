@@ -14,6 +14,22 @@ import { formatSaveTime } from "../lib/saveTime";
 
 type DiskSaveState = "saved" | "saving" | "site-outdated" | "error";
 
+/**
+ * Devuelve la base de disco que corresponde al proyecto actual después de una
+ * recarga (App entrega el mismo objeto en `project` y `diskBaseProject` tras
+ * «Recargar desde disco»). Si coinciden, el editor quedó alineado con disco y
+ * el indicador debe volver a `saved` sin re-guardar contenido idéntico.
+ */
+export function resolveDiskRebase(
+  project: StoreProjectV1,
+  diskBaseProject: StoreProjectV1 | undefined,
+): { base: StoreProjectV1; synced: boolean } {
+  if (diskBaseProject && project === diskBaseProject) {
+    return { base: diskBaseProject, synced: true };
+  }
+  return { base: project, synced: false };
+}
+
 export function ManagedPersistenceControls({
   project,
   diskVersion,
@@ -52,6 +68,17 @@ export function ManagedPersistenceControls({
   useEffect(() => {
     diskVersionRef.current = diskVersion;
   }, [diskVersion]);
+
+  // Una recarga desde disco (App cambia `project` y `diskBaseProject` juntos)
+  // deja el editor alineado con disco: no debe quedar el indicador en «error»
+  // ni exigir re-guardar contenido idéntico para volver a `saved`.
+  useEffect(() => {
+    const rebase = resolveDiskRebase(project, diskBaseProject);
+    if (rebase.synced) {
+      savedProjectRef.current = rebase.base;
+      setState("saved");
+    }
+  }, [diskBaseProject, project]);
 
   useEffect(() => {
     if (project === lastProjectRef.current) return;

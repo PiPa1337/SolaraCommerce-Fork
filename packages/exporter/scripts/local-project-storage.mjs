@@ -51,6 +51,13 @@ function safeSlug(value) {
   return normalized || "tienda";
 }
 
+// El slug llega validado por SlugSchema del proyecto (`^[a-z0-9]+(?:-[a-z0-9]+)*$`,
+// hasta 120 caracteres). `safeSlug` trunca a 64 porque construye rutas; la
+// validación de entrada debe respetar el contrato del schema, no el límite de
+// nombres de archivo.
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const MAX_SLUG_LENGTH = 120;
+
 function shortProjectKey(projectId) {
   return createHash("sha256").update(projectId).digest("hex").slice(0, 8);
 }
@@ -451,7 +458,12 @@ export function createLocalProjectStorage(options = {}) {
         throw error;
       }
     }
-    if (typeof meta.slug !== "string" || meta.slug !== safeSlug(meta.slug)) {
+    if (
+      typeof meta.slug !== "string" ||
+      meta.slug.length === 0 ||
+      meta.slug.length > MAX_SLUG_LENGTH ||
+      !SLUG_PATTERN.test(meta.slug)
+    ) {
       throw new Error("Slug de tienda inválido.");
     }
     if (!Number.isInteger(meta.expectedVersion) && meta.expectedVersion !== null) {
