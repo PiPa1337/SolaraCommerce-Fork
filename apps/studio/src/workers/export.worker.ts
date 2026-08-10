@@ -38,10 +38,13 @@ self.onmessage = (event: MessageEvent<ExportRequest>) => {
   try {
     const request = event.data;
     if (request.type === "site") {
-      const result = exportProject(
-        { ...request.project },
-        { mode: request.mode, ...request.options },
-      );
+      const project = { ...request.project };
+      const options = { mode: request.mode, ...request.options };
+      auditReport(project);
+      self.postMessage({ id: request.id, kind: "export-stage", stage: "validate" });
+      const result = exportProject(project, options);
+      self.postMessage({ id: request.id, kind: "export-stage", stage: "render" });
+      self.postMessage({ id: request.id, kind: "export-stage", stage: "package" });
       const optimization: OptimizationReport = result.optimization;
       const audit: AuditIssue[] = result.audit;
       self.postMessage({

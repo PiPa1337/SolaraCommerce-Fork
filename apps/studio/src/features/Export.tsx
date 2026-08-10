@@ -36,7 +36,7 @@ const EXPORT_STAGES = [
   { id: "package", label: "Empaquetando archivos" },
 ] as const;
 
-function ExportStages({ done }: { done: boolean }) {
+function ExportStages({ done }: { done: ReadonlySet<string> }) {
   return (
     <section
       className="guided-checklist"
@@ -48,32 +48,40 @@ function ExportStages({ done }: { done: boolean }) {
           <span className="guided-kicker">Exportación</span>
           <h3>Etapas de generación</h3>
         </div>
-        {!done ? (
+        {done.size < EXPORT_STAGES.length ? (
           <span className="guided-checklist__more">
-            El worker informa el resultado final; las etapas se marcan al completar.
+            El worker informa cada etapa a medida que la completa.
           </span>
         ) : null}
       </div>
       <ul>
-        {EXPORT_STAGES.map((stage) => (
-          <li key={stage.id} data-testid="ui-export-stage" data-stage={stage.id} data-done={done}>
-            <span
-              className="guided-checklist__status"
-              style={done ? { color: "var(--accent)" } : undefined}
-              aria-hidden
+        {EXPORT_STAGES.map((stage) => {
+          const stageDone = done.has(stage.id);
+          return (
+            <li
+              key={stage.id}
+              data-testid="ui-export-stage"
+              data-stage={stage.id}
+              data-done={stageDone}
             >
-              {done ? (
-                <CheckCircle size={18} weight="fill" />
-              ) : (
-                <span className="spinner" aria-hidden />
-              )}
-            </span>
-            <span className="guided-checklist__text">
-              <strong>{stage.label}</strong>
-              <small>{done ? "Completado" : "En curso…"}</small>
-            </span>
-          </li>
-        ))}
+              <span
+                className="guided-checklist__status"
+                style={stageDone ? { color: "var(--accent)" } : undefined}
+                aria-hidden
+              >
+                {stageDone ? (
+                  <CheckCircle size={18} weight="fill" />
+                ) : (
+                  <span className="spinner" aria-hidden />
+                )}
+              </span>
+              <span className="guided-checklist__text">
+                <strong>{stage.label}</strong>
+                <small>{stageDone ? "Completado" : "En curso…"}</small>
+              </span>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
@@ -99,6 +107,7 @@ export function ExportPanel({
   const [publicAiContext, setPublicAiContext] = useState(true);
   const [optimization, setOptimization] = useState<OptimizationReport | null>(null);
   const [exportDone, setExportDone] = useState(false);
+  const [doneStages, setDoneStages] = useState<ReadonlySet<string>>(new Set());
   const [confirmAction, setConfirmAction] = useState<"production" | "import" | "">("");
   const [pendingImport, setPendingImport] = useState<File | null>(null);
   const [history, setHistory] = useState<ExportHistoryEntry[]>(() =>
@@ -148,11 +157,24 @@ export function ExportPanel({
     setError("");
     setNotice("");
     setExportDone(false);
+    setDoneStages(new Set());
     try {
-      const result = await exportSiteInWorker(project, mode, {
-        publicAiContext,
-        optimizationProfile: "safe",
-      });
+      const result = await exportSiteInWorker(
+        project,
+        mode,
+        {
+          publicAiContext,
+          optimizationProfile: "safe",
+        },
+        (stage) => {
+          setDoneStages((current) => {
+            if (current.has(stage)) return current;
+            const next = new Set(current);
+            next.add(stage);
+            return next;
+          });
+        },
+      );
       setOptimization(result.optimization);
       recordHistory({
         mode,
@@ -160,6 +182,7 @@ export function ExportPanel({
         critical: result.optimization.counts.critical,
       });
       setExportDone(true);
+      setDoneStages(new Set(EXPORT_STAGES.map((stage) => stage.id)));
       setPostDone(new Set());
       setNotice(
         onOpenSite
@@ -301,9 +324,9 @@ export function ExportPanel({
         </div>
       ) : null}
       {busy === "draft" || busy === "production" ? (
-        <ExportStages done={false} />
+        <ExportStages done={doneStages} />
       ) : exportDone ? (
-        <ExportStages done />
+        <ExportStages done={doneStages} />
       ) : null}
       {exportDone ? (
         <section
@@ -368,7 +391,7 @@ export function ExportPanel({
       {optimization ? (
         <output className="optimization-export-summary">
           <strong>Salud de exportación: {optimization.score}/100</strong>
-          <span>{optimization.counts.critical} críticos</span>
+          <span>{critical} críticos</span>
           <span>{optimization.counts.warnings} advertencias</span>
           <span>{optimization.counts.indexable} rutas indexables</span>
         </output>

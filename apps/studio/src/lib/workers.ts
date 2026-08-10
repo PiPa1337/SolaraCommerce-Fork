@@ -255,12 +255,56 @@ export function exportSiteInWorker(
   project: StoreProjectV1,
   mode: ExportMode,
   options: { publicAiContext?: boolean; optimizationProfile?: "safe" | "strict" } = {},
+  onStage?: (stage: ExportStageId) => void,
 ): Promise<{
   files: ReadonlyMap<string, string | Uint8Array>;
   audit: AuditIssue[];
   optimization: OptimizationReport;
 }> {
-  return requestWorker(getExportWorker(), { type: "site", project, mode, options });
+  return requestWorkerWithStages(
+    getExportWorker(),
+    { type: "site", project, mode, options },
+    onStage,
+  );
+}
+
+export type ExportStageId = "validate" | "render" | "package";
+
+export interface ExportStageMessage {
+  id: string;
+  kind: "export-stage";
+  stage: ExportStageId;
+}
+
+function requestWorkerWithStages<Request extends object, Result>(
+  worker: Worker,
+  request: Request,
+  onStage?: (stage: ExportStageId) => void,
+): Promise<Result> {
+  const id = crypto.randomUUID();
+  return new Promise((resolve, reject) => {
+    const detach = () => {
+      worker.removeEventListener("message", handleMessage);
+      worker.removeEventListener("error", handleError);
+    };
+    const handleMessage = (event: MessageEvent<WorkerResponse<Result> | ExportStageMessage>) => {
+      if (event.data.id !== id) return;
+      if ("kind" in event.data) {
+        onStage?.(event.data.stage);
+        return;
+      }
+      detach();
+      if (event.data.ok) resolve(event.data.result);
+      else reject(new Error(event.data.error));
+    };
+    const handleError = () => {
+      detach();
+      reject(new Error("El worker no respondió."));
+    };
+    worker.addEventListener("message", handleMessage);
+    worker.addEventListener("error", handleError);
+    worker.postMessage({ ...request, id });
+  });
 }
 
 export function createProjectArchiveInWorker(project: StoreProjectV1): Promise<string> {
