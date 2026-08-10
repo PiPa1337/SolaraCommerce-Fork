@@ -66,7 +66,13 @@ export function matchToken(term: string, token: string): TokenMatch {
     return current[shorter.length] as number;
   };
 
+  // Términos vacíos o de 1 carácter no matchean por prefijo/substring/fuzzy:
+  // un término de 1 carácter como substring casaría TODO token que contenga
+  // esa letra y el ranking se degradaría a ruido (el runtime pide al menos 2
+  // caracteres por término).
+  if (term === "" || token === "") return null;
   if (term === token) return "exact";
+  if (term.length === 1) return null;
   if (token.startsWith(term)) return "prefix";
   if (token.includes(term)) return "substring";
   if (term.length < 3 || token.length < 3) return null;
@@ -86,8 +92,9 @@ export function scoreEntry(queryTerms: readonly string[], entry: SearchEntryToke
   // Copias privadas autocontenidas (distance + match) por el mismo motivo que
   // en matchToken: el runtime público serializa fn.toString() y esbuild
   // renombraría las referencias a levenshtein/matchToken al minificar.
-  // Los límites fuzzy deben ser idénticos a matchToken: token/term < 3 → null;
-  // token <= 4 → límite 1, si no → límite 2.
+  // Los límites deben ser idénticos a matchToken: término/token vacío o de 1
+  // carácter → null; token/term < 3 → null para fuzzy; token <= 4 → límite 1,
+  // si no → límite 2.
   const distance = (a: string, b: string): number => {
     if (a === b) return 0;
     const shorter = a.length <= b.length ? a : b;
@@ -110,7 +117,9 @@ export function scoreEntry(queryTerms: readonly string[], entry: SearchEntryToke
     return current[shorter.length] as number;
   };
   const match = (term: string, token: string): TokenMatch => {
+    if (term === "" || token === "") return null;
     if (term === token) return "exact";
+    if (term.length === 1) return null;
     if (token.startsWith(term)) return "prefix";
     if (token.includes(term)) return "substring";
     if (term.length < 3 || token.length < 3) return null;
