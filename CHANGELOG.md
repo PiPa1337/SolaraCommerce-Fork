@@ -10,6 +10,69 @@ versión publicada.
 
 ## [Unreleased]
 
+### Auditoría funcional de controles y traza de datos (2026-08-10)
+
+La caza conductual clickeó cada control de la UI con Playwright (H1-H8) y
+encontró 15 hallazgos BUG que se agrupan en 12 controles rotos (el reemplazo
+de assets cuenta dos hallazgos del mismo control y el cableado del shell otros
+dos), todos corregidos con su aserción de regresión:
+
+- **Constructor (repeater):** "Agregar elemento" en Testimonios/Bento/Slides
+  generaba ítems sin `id` que el schema rechazaba: el cambio quedaba en el
+  draft sin commitear ni guardar; ahora cada ítem nace con `item-<uuid>`.
+- **Shell (5):** el punto de sucio de las pestañas casi nunca aparecía; el
+  scroll del panel se perdía al cambiar de pestaña; el panel cerrado se
+  reabría con cada `selectTab`; Ctrl+S no guardaba en modo navegador; y
+  Ctrl+Z/Ctrl+Shift+Z no deshacían/rehacían fuera de un campo de texto.
+- **Catálogo:** la búsqueda prometía filtrar "por estado" pero sólo matcheaba
+  los valores crudos en inglés: ahora encuentra `Activo/Oculto/Archivado`.
+- **Assets:** reemplazar una imagen sobrescribía el nombre editado con el del
+  archivo nuevo y la grilla mostraba el valor viejo: el reemplazo conserva
+  nombre y alt, y la grilla refleja el cambio.
+- **Export:** el resumen "Salud de exportación" mostraba 0 críticos mientras
+  el botón se bloqueaba por 1 (dos fuentes de verdad) y las tres etapas se
+  marcaban juntas al final: contador unificado y etapas que avanzan de a una.
+- **Dashboard:** tras "Cerrar y detener" el servidor muerto podía volver a
+  "available" con el botón activo y los respaldos habilitados: el cierre es
+  ahora un estado terminal en la App.
+- **Tema:** los campos de color persistían valores no hex ("zzz", "#12345"):
+  el texto valida el formato y no commitea inválidos.
+- **Base protegida del Constructor:** era inalcanzable porque todo camino a la
+  pestaña activaba Modo avanzado: en una tienda limpia ahora se muestra el
+  banner y se bloquea "Agregar sección" hasta activar el modo.
+- **Navegación guiada:** con el panel colapsado, "Siguiente"/"Editar" cambiaban
+  de pestaña sin abrir el panel: ahora lo reabre como el tab normal.
+
+La traza de datos por código (T1-T20) siguió el dato de cada control hasta su
+receptor y corrigió los desajustes de contrato reales:
+
+- Paridad de validación de slug: el servidor rechazaba slugs de 65-110
+  caracteres que el schema admite (límite 120).
+- Header `X-Solara-SHA256` leído sin distinguir mayúsculas.
+- El indicador de guardado rebasea el borrador de disco sólo si el proyecto no
+  fue editado (sin pisar ediciones locales).
+- El modelo de tabla lee exactamente las claves que el toolbar escribe
+  (columna `brand`).
+- Se eliminó el comando `bulkUpdate` muerto (declarado y con `case`, sin
+  despachador).
+- `category.reparent` rechaza reubicar una raíz con hijos bajo otra categoría y
+  omite la clave `parentId` al volver a raíz.
+- El guard de borrado de assets cuenta los usos en `project.pages[].sections`,
+  no sólo en `project.sections`.
+- El historial de export usa `criticalCount` del auditor (misma fuente que el
+  panel y el bloqueo), entregado por el worker.
+- El preview del SEO coincide con el `<title>` exportado por página.
+- El teléfono de la plantilla limpia se trata como "no configurado" en el flujo
+  guiado (estado único).
+- Descartar la selección del dashboard limpia `solara-dashboard-selected` y la
+  selección cerrada no reaparece.
+- Los atajos invocan los mismos caminos que los botones (undo/redo, flush y
+  guardado managed) con tests de contrato y cobertura E2E nueva.
+
+Nuevos gates E2E de la matriz de interacción: `ui-matriz-interaccion` (13
+tests de efecto real), `ui-shell`, `ui-categorias`, `ui-guiado`, `ui-producto`,
+`ui-assets`, `ui-export`, `ui-catalogo`, `ui-tema-seo` y `ui-shutdown`.
+
 ### Fondo del dashboard: adiós al agujero negro (2026-08-09)
 
 - El fondo animado WebGL (`CosmicBackground`) se eliminó por completo: el

@@ -329,3 +329,44 @@ Residuales documentados en [`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md)
 (márgenes de budget, recalibración de umbrales del harness, receta headed para
 pestaña oculta, `requestWorker` sin reintento, fetch de `search-index.json` sin
 gate, detalle móvil dentro de la región).
+
+## Auditoría de controles y traza de datos (2026-08-10)
+
+Cierre del plan
+[`docs/superpowers/plans/2026-08-10-auditoria-controles.md`](docs/superpowers/plans/2026-08-10-auditoria-controles.md):
+la caza conductual (H1-H8) recorrió 199 chequeos con clicks reales y encontró
+15 hallazgos BUG agrupados en 12 controles rotos, corregidos por F1-F14 (más
+los commits de shell/categorías/matriz) con spec de regresión propio por área;
+la traza estática (T1-T20) verificó el camino completo del dato de cada
+control y corrigió 13 desajustes de contrato reales. Detalle por hallazgo en
+[`CHANGELOG.md`](CHANGELOG.md) y en los reportes de `.superpowers/sdd/`.
+
+Matriz conductual (`.superpowers/sdd/acciones-hN-report.md`):
+
+| Área | Chequeos | OK | BUG |
+| --- | --- | --- | --- |
+| H1 Builder: picker e inspector | 19 | 19 | 0 |
+| H2 Builder: operaciones de sección | 62 | 61 | 1 |
+| H3 Shell del Studio | 20 | 15 | 5 |
+| H4 Catálogo | 24 | 23 | 1 |
+| H5 Assets | 17 | 12 | 2 (3 gaps) |
+| H6 Export | 15 | 12 | 2 (1 no probado) |
+| H7 Dashboard | 13 | 12 | 1 |
+| H8 SEO/Tema/Overview/Guided | 29 | 26 | 3 |
+| **Total** | **199** | **180** | **15** |
+
+Traza de datos (`.superpowers/sdd/traza-tN-report.md`): T1 18/18 OK · T2 sin
+desajustes (7 tests de contrato) · T3 sin desajustes (4 tests) · T4 1 fix ·
+T5 18/18 OK · T6 3 fixes (slug, SHA256, rebase) · T7 1 fix (brand) · T8 1 fix
+(bulkUpdate muerto) · T9 1 corrección de diseño (enums) · T10 2 fixes
+(reparent) · T11 sin desajustes · T12 1 fix (usos en páginas) · T13 1 fix
+(criticalCount) · T14 10/10 OK · T15 sin desajustes (hook `data-theme` inerte,
+documentado) · T16 1 fix (preview SEO) · T17 1 fix (teléfono) · T18 sin
+desajustes · T19 sin desajustes funcionales (limitación iframe documentada) ·
+T20 1 fix (dashboard-selected).
+
+Nuevos gates E2E: `ui-matriz-interaccion` (13), `ui-shell` (10),
+`ui-categorias` (3), `ui-guiado` (3), `ui-producto` (5), `ui-assets` (2),
+`ui-export` (2), `ui-catalogo` (1), `ui-tema-seo` (4), `ui-shutdown` (1).
+Residuales y notas de proceso (stashes `stash@{0..2}`, `.playwright-cli/`) en
+[`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md).
