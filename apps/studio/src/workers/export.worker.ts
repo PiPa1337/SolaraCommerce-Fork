@@ -1,6 +1,11 @@
 /** Valida archive/export fuera de React y conserva paridad con el exporter. */
 import type { AuditIssue } from "@solara/exporter";
-import { exportProject, type OptimizationReport } from "@solara/exporter";
+import {
+  auditReport,
+  buildOptimizationReport,
+  exportProject,
+  type OptimizationReport,
+} from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { createProjectArchive, readProjectArchive } from "../lib/projectArchive";
 
@@ -11,6 +16,12 @@ type ExportRequest =
       project: StoreProjectV1;
       mode: "draft" | "production";
       options: { publicAiContext?: boolean; optimizationProfile?: "safe" | "strict" };
+    }
+  | {
+      id: string;
+      type: "audit";
+      project: StoreProjectV1;
+      publicAiContext: boolean;
     }
   | {
       id: string;
@@ -37,6 +48,21 @@ self.onmessage = (event: MessageEvent<ExportRequest>) => {
         id: request.id,
         ok: true,
         result: { files: result.files, audit, optimization },
+      });
+      return;
+    }
+
+    if (request.type === "audit") {
+      self.postMessage({
+        id: request.id,
+        ok: true,
+        result: {
+          criticalCount: auditReport(request.project).criticalCount,
+          optimization: buildOptimizationReport(request.project, {
+            mode: "production",
+            publicAiContext: request.publicAiContext,
+          }),
+        },
       });
       return;
     }

@@ -24,6 +24,7 @@ import {
 import { formatDate } from "../lib/format";
 import { downloadBlob } from "../lib/projectArchive";
 import {
+  auditProjectInWorker,
   createProjectArchiveInWorker,
   exportSiteInWorker,
   readProjectArchiveInWorker,
@@ -93,6 +94,8 @@ export function ExportPanel({
   const [notice, setNotice] = useState("");
   const [critical, setCritical] = useState(0);
   const [auditReady, setAuditReady] = useState(false);
+  const [auditError, setAuditError] = useState("");
+  const [auditAttempt, setAuditAttempt] = useState(0);
   const [publicAiContext, setPublicAiContext] = useState(true);
   const [optimization, setOptimization] = useState<OptimizationReport | null>(null);
   const [exportDone, setExportDone] = useState(false);
@@ -103,24 +106,33 @@ export function ExportPanel({
   );
   const [postDone, setPostDone] = useState<Set<string>>(new Set());
 
+  /* biome-ignore lint/correctness/useExhaustiveDependencies: auditAttempt es la clave de reintento de la auditoría tras un fallo. */
   useEffect(() => {
     let active = true;
     setAuditReady(false);
-    void import("@solara/exporter")
-      .then(({ auditReport, buildOptimizationReport }) => {
+    setAuditError("");
+    void auditProjectInWorker(project, publicAiContext)
+      .then(({ criticalCount, optimization }) => {
         if (active) {
-          setCritical(auditReport(project).criticalCount);
-          setOptimization(
-            buildOptimizationReport(project, { mode: "production", publicAiContext }),
-          );
+          setCritical(criticalCount);
+          setOptimization(optimization);
           setAuditReady(true);
         }
       })
-      .catch(() => undefined);
+      .catch((reason: unknown) => {
+        if (active) {
+          const detail = reason instanceof Error ? reason.message : "";
+          setAuditError(
+            detail
+              ? `No se pudo cargar la auditoría: ${detail}`
+              : "No se pudo cargar la auditoría.",
+          );
+        }
+      });
     return () => {
       active = false;
     };
-  }, [project, publicAiContext]);
+  }, [project, publicAiContext, auditAttempt]);
 
   const recordHistory = (entry: Omit<ExportHistoryEntry, "at">) => {
     setHistory(recordExport(project.slug, entry.mode, entry));
@@ -265,6 +277,28 @@ export function ExportPanel({
         <output className="export-notice" data-testid="ui-export-result">
           {notice}
         </output>
+      ) : null}
+      {auditError ? (
+        <div
+          data-testid="ui-audit-error"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+            gap: "8px",
+            margin: "0 0 12px",
+          }}
+        >
+          <InlineError>{auditError}</InlineError>
+          <Button
+            variant="quiet"
+            size="sm"
+            data-testid="ui-audit-retry"
+            onClick={() => setAuditAttempt((attempt) => attempt + 1)}
+          >
+            Reintentar auditoría
+          </Button>
+        </div>
       ) : null}
       {busy === "draft" || busy === "production" ? (
         <ExportStages done={false} />

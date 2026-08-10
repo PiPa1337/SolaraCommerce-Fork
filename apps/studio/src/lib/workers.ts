@@ -268,3 +268,42 @@ export function readProjectArchiveBytesInWorker(bytes: Uint8Array): Promise<Stor
     copy.buffer,
   ]);
 }
+
+export interface AuditResult {
+  criticalCount: number;
+  optimization: OptimizationReport;
+}
+
+/**
+ * Ejecuta la auditoría de exportación en el worker del exportador: el worker
+ * tiene su propio mapa de módulos, así que si la carga del chunk falla se
+ * puede reintentar recreándolo (el mapa de módulos de la página no lo
+ * permite). Si el worker muere, se termina y se olvida para la próxima
+ * llamada.
+ */
+export function auditProjectInWorker(
+  project: StoreProjectV1,
+  publicAiContext: boolean,
+): Promise<AuditResult> {
+  const worker = getExportWorker();
+  return new Promise((resolve, reject) => {
+    const handleError = () => {
+      exportWorker?.terminate();
+      exportWorker = undefined;
+      reject(new Error("el worker del exportador no respondió"));
+    };
+    worker.addEventListener("error", handleError);
+    requestWorker<
+      { type: "audit"; project: StoreProjectV1; publicAiContext: boolean },
+      AuditResult
+    >(worker, { type: "audit", project, publicAiContext })
+      .then((result) => {
+        worker.removeEventListener("error", handleError);
+        resolve(result);
+      })
+      .catch((reason) => {
+        worker.removeEventListener("error", handleError);
+        reject(reason);
+      });
+  });
+}
