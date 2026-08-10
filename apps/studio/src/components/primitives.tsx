@@ -177,22 +177,32 @@ export function Pagination({
   className?: string;
 }) {
   const perPage = pageSize ?? 10;
-  const first = totalItems !== undefined && totalItems > 0 ? (page - 1) * perPage + 1 : 0;
-  const last = totalItems !== undefined ? Math.min(page * perPage, totalItems) : 0;
+  // `current` clampa la página a un rango coherente: si el receptor entrega
+  // una página fuera del rango (p. ej. tras reducir el tamaño de página), el
+  // resumen y la marca activa describen un estado válido en vez de rangos
+  // invertidos ("276–120 de 120") o páginas fantasma. Con `totalItems`
+  // conocido, la última página efectiva se deriva de los datos.
+  const maxPage =
+    totalItems !== undefined
+      ? Math.min(Math.max(1, totalPages), Math.max(1, Math.ceil(totalItems / perPage)))
+      : Math.max(1, totalPages);
+  const current = Math.min(Math.max(1, page), maxPage);
+  const first = totalItems !== undefined && totalItems > 0 ? (current - 1) * perPage + 1 : 0;
+  const last = totalItems !== undefined ? Math.min(current * perPage, totalItems) : 0;
   const go = (target: number) => {
     if (!disabled && target >= 1 && target <= totalPages && target !== page) onChange(target);
   };
   const entries: Array<number | "ellipsis-start" | "ellipsis-end"> = [];
-  if (totalPages <= 7) {
-    for (let index = 1; index <= totalPages; index += 1) entries.push(index);
+  if (maxPage <= 7) {
+    for (let index = 1; index <= maxPage; index += 1) entries.push(index);
   } else {
     entries.push(1);
-    const start = Math.max(2, page - 1);
-    const end = Math.min(totalPages - 1, page + 1);
+    const start = Math.max(2, current - 1);
+    const end = Math.min(maxPage - 1, current + 1);
     if (start > 2) entries.push("ellipsis-start");
     for (let index = start; index <= end; index += 1) entries.push(index);
-    if (end < totalPages - 1) entries.push("ellipsis-end");
-    entries.push(totalPages);
+    if (end < maxPage - 1) entries.push("ellipsis-end");
+    entries.push(maxPage);
   }
   return (
     <nav
@@ -210,7 +220,7 @@ export function Pagination({
           variant="secondary"
           size="sm"
           icon={ArrowLeft}
-          disabled={disabled || page <= 1}
+          disabled={disabled || current <= 1}
           onClick={() => go(page - 1)}
         >
           Anterior
@@ -224,8 +234,8 @@ export function Pagination({
             ) : (
               <button
                 type="button"
-                className={`ui-pagination__page${entry === page ? " ui-pagination__page--active" : ""}`}
-                aria-current={entry === page ? "page" : undefined}
+                className={`ui-pagination__page${entry === current ? " ui-pagination__page--active" : ""}`}
+                aria-current={entry === current ? "page" : undefined}
                 disabled={disabled}
                 onClick={() => go(entry)}
                 key={entry}
@@ -239,7 +249,7 @@ export function Pagination({
           variant="secondary"
           size="sm"
           icon={ArrowRight}
-          disabled={disabled || page >= totalPages}
+          disabled={disabled || current >= maxPage}
           onClick={() => go(page + 1)}
         >
           Siguiente
