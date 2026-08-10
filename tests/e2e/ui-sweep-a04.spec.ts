@@ -6,7 +6,9 @@
  * → reducer (round-trip al reabrir el editor).
  *
  * Regresión incluida: el campo de precio en centavos permite vaciarse y
- * retipear desde cero sin "rebotar" al valor previo (bug corregido en A04).
+ * retipear desde cero sin "rebotar" al valor previo (bug corregido en A04);
+ * el texto no entero también se conserva como escrito con su error; y el
+ * cambio de sólo texto de precio marca el borrador como pendiente (dirty).
  */
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
@@ -99,7 +101,9 @@ test("título, slug y descripción reflejan la edición en preview, fila y al re
   await expect(slugInput).toHaveValue("camisa-rayas-finas-a04");
   await expect(slugInput).not.toHaveAttribute("aria-invalid", "true");
   await expect(
-    slugInput.locator("xpath=ancestor::fieldset[contains(@class, 'field')]").getByText("Disponible", { exact: true }),
+    slugInput
+      .locator("xpath=ancestor::fieldset[contains(@class, 'field')]")
+      .getByText("Disponible", { exact: true }),
   ).toBeVisible();
   await expect(previewCard(dialog).locator("strong")).toHaveText("Camisa Rayas Finas A04");
 
@@ -112,7 +116,9 @@ test("título, slug y descripción reflejan la edición en preview, fila y al re
   await saveDialog(dialog, false);
 
   const row = await filterRow(page, "Camisa Rayas Finas A04 BIS");
-  await expect(row.getByRole("textbox", { name: "Nombre de Camisa Rayas Finas A04 BIS" })).toBeVisible();
+  await expect(
+    row.getByRole("textbox", { name: "Nombre de Camisa Rayas Finas A04 BIS" }),
+  ).toBeVisible();
 
   // Datos: el guardado round-tripea el snapshot validado (round-trip al reabrir).
   const reopened = await openEditDialog(page, "Camisa Rayas Finas A04 BIS");
@@ -147,9 +153,7 @@ test("el picker de imágenes cambia la imagen del mini preview y persiste", asyn
   await expect(previewImg).toBeVisible();
 
   // Quitar la imagen principal: el preview pasa al placeholder (efecto real).
-  const jeanOption = dialog
-    .locator(".product-asset-option")
-    .filter({ hasText: "Jean recto azul" });
+  const jeanOption = dialog.locator(".product-asset-option").filter({ hasText: "Jean recto azul" });
   const jeanInput = jeanOption.locator("input");
   await expect(jeanInput).toBeChecked();
   await jeanInput.uncheck();
@@ -169,9 +173,17 @@ test("el picker de imágenes cambia la imagen del mini preview y persiste", asyn
   const reopened = await openEditDialog(page, "Camisa Rayas Finas");
   await reopened.getByRole("button", { name: "Variantes", exact: true }).click();
   await expect(
-    reopened.locator(".product-asset-option").filter({ hasText: "Camisa a cuadros" }).locator("input"),
+    reopened
+      .locator(".product-asset-option")
+      .filter({ hasText: "Camisa a cuadros" })
+      .locator("input"),
   ).toBeChecked();
-  await expect(reopened.locator(".product-asset-option").filter({ hasText: "Jean recto azul" }).locator("input")).not.toBeChecked();
+  await expect(
+    reopened
+      .locator(".product-asset-option")
+      .filter({ hasText: "Jean recto azul" })
+      .locator("input"),
+  ).not.toBeChecked();
 });
 
 test("el precio en centavos vacío da error inline con aria, bloquea y permite retipear (regresión)", async ({
@@ -198,6 +210,18 @@ test("el precio en centavos vacío da error inline con aria, bloquea y permite r
   await expect(price).toHaveAttribute("aria-describedby", /./);
 
   // Guardar bloqueado: el diálogo permanece abierto.
+  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  await expect(dialog).toBeVisible();
+
+  // Texto no entero: error específico visible + aria, sin rebote al valor previo.
+  await price.fill("12.5");
+  await expect(price).toHaveValue("12.5");
+  const integerError = dialog.locator("[data-testid='ui-field-error']").filter({
+    hasText: "El precio debe ser un número entero en centavos",
+  });
+  await expect(integerError).toBeVisible();
+  await expect(integerError).toHaveAttribute("role", "alert");
+  await expect(price).toHaveAttribute("aria-invalid", "true");
   await dialog.getByRole("button", { name: "Crear producto" }).click();
   await expect(dialog).toBeVisible();
 
@@ -228,9 +252,9 @@ test("el select de estado muestra el actual, el preview lo refleja y persiste", 
   const statusSelect = dialog.getByLabel("Estado");
   const initial = (await statusSelect.inputValue()) as "active" | "hidden" | "archived";
   await expect(statusSelect).toHaveValue(initial);
-  await expect(
-    previewCard(dialog).locator(".product-mini-preview__status"),
-  ).toHaveText(STATUS_LABEL[initial]);
+  await expect(previewCard(dialog).locator(".product-mini-preview__status")).toHaveText(
+    STATUS_LABEL[initial],
+  );
 
   await statusSelect.selectOption("archived");
   await expect(statusSelect).toHaveValue("archived");
@@ -250,9 +274,7 @@ test("el select de estado muestra el actual, el preview lo refleja y persiste", 
   await expect(reopened.getByLabel("Estado")).toHaveValue("archived");
 });
 
-test("la disponibilidad de la variante arranca marcada y persiste al reabrir", async ({
-  page,
-}) => {
+test("la disponibilidad de la variante arranca marcada y persiste al reabrir", async ({ page }) => {
   test.setTimeout(120_000);
   await openCatalog(page);
   const dialog = await openCreateDialog(page);
@@ -298,6 +320,26 @@ test("cancelar sin cambios cierra directo; con cambios pide confirmación y desc
   await expect(
     page.getByRole("textbox", { name: "Nombre de Camisa Rayas Finas CAMBIADA" }),
   ).toHaveCount(0);
+
+  // Sólo texto de precio (sin tocar el draft): el cambio se detecta como
+  // pendiente y el cancelar pide confirmación (regresión dirty de A04).
+  dialog = await openEditDialog(page, "Camisa Rayas Finas");
+  await dialog.getByRole("button", { name: "Variantes", exact: true }).click();
+  const price = dialog.getByRole("spinbutton", { name: "Precio en centavos" });
+  const originalPrice = await price.inputValue();
+  await price.fill("");
+  await dialog.getByRole("button", { name: "Cancelar" }).click();
+  const priceConfirm = page.getByTestId("ui-confirm-dialog");
+  await expect(priceConfirm).toBeVisible();
+  await priceConfirm.getByRole("button", { name: "Salir sin guardar" }).click();
+  await expect(dialog).toBeHidden();
+
+  // La edición se descartó entera: el precio original sigue persistido.
+  const reopened = await openEditDialog(page, "Camisa Rayas Finas");
+  await reopened.getByRole("button", { name: "Variantes", exact: true }).click();
+  await expect(reopened.getByRole("spinbutton", { name: "Precio en centavos" })).toHaveValue(
+    originalPrice,
+  );
 });
 
 test("el título vacío muestra error inline visible con aria y bloquea el guardado", async ({
@@ -322,4 +364,50 @@ test("el título vacío muestra error inline visible con aria y bloquea el guard
   await titleInput.fill("Título válido A04");
   await expect(titleInput).not.toHaveAttribute("aria-invalid", "true");
   await saveDialog(dialog, true);
+});
+
+test("el slug inválido y el duplicado muestran error inline con aria y bloquean el guardado", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await openCatalog(page);
+  const dialog = await openEditDialog(page, "Camisa Rayas Finas");
+
+  const slugInput = dialog.getByRole("textbox", { name: "Slug" });
+  const slugField = slugInput.locator("xpath=ancestor::fieldset[contains(@class, 'field')]");
+
+  // Slug inválido (mayúsculas y espacios): error visible + aria; sin hint "Disponible".
+  await slugInput.fill("Camisa Rayas");
+  const patternError = dialog.locator("[data-testid='ui-field-error']").filter({
+    hasText: "Solo minúsculas, números y guiones",
+  });
+  await expect(patternError).toBeVisible();
+  await expect(patternError).toHaveAttribute("role", "alert");
+  await expect(slugInput).toHaveAttribute("aria-invalid", "true");
+  await expect(slugField.getByText("Disponible", { exact: true })).toHaveCount(0);
+
+  await dialog.getByRole("button", { name: "Guardar producto" }).click();
+  await expect(dialog).toBeVisible();
+
+  // Slug duplicado (otro producto del catálogo): error específico y bloqueo.
+  await slugInput.fill("camisa-oxford-liviana");
+  const duplicateError = dialog.locator("[data-testid='ui-field-error']").filter({
+    hasText: "Ya existe otro producto con este slug.",
+  });
+  await expect(duplicateError).toBeVisible();
+  await expect(slugInput).toHaveAttribute("aria-invalid", "true");
+
+  await dialog.getByRole("button", { name: "Guardar producto" }).click();
+  await expect(dialog).toBeVisible();
+
+  // Al corregir, el slug vuelve a estar disponible y el guardado persiste.
+  await slugInput.fill("camisa-rayas-finas-a04");
+  await expect(slugInput).not.toHaveAttribute("aria-invalid", "true");
+  await expect(slugField.getByText("Disponible", { exact: true })).toBeVisible();
+  await saveDialog(dialog, false);
+
+  const reopened = await openEditDialog(page, "Camisa Rayas Finas");
+  await expect(reopened.getByRole("textbox", { name: "Slug" })).toHaveValue(
+    "camisa-rayas-finas-a04",
+  );
 });

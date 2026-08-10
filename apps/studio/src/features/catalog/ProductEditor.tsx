@@ -86,6 +86,16 @@ function setOptionalText(value: string): string | undefined {
   return trimmed || undefined;
 }
 
+/** Error del precio en centavos según el texto local del campo (vacío incluido). */
+function priceErrorFor(text: string): string | undefined {
+  if (text === "") return "Escribí el precio en centavos.";
+  const value = Number(text);
+  if (!Number.isInteger(value) || value < 0) {
+    return "El precio debe ser un número entero en centavos, mayor o igual a 0.";
+  }
+  return undefined;
+}
+
 function orderedCategories(categories: Category[]): Category[] {
   const childrenByParent = new Map<string, Category[]>();
   categories.forEach((category) => {
@@ -121,6 +131,9 @@ export function ProductEditor({
       product.variants.map((variant) => [variant.id, optionsText(variant.optionValues)]),
     ),
   );
+  const [priceText, setPriceText] = useState<Record<string, string>>(() =>
+    Object.fromEntries(product.variants.map((variant) => [variant.id, String(variant.price)])),
+  );
   const [tags, setTags] = useState(product.tags.join(", "));
   const [error, setError] = useState("");
   const [confirmClose, setConfirmClose] = useState(false);
@@ -141,6 +154,9 @@ export function ProductEditor({
     optionValues: Object.fromEntries(
       product.variants.map((variant) => [variant.id, optionsText(variant.optionValues)]),
     ),
+    priceText: Object.fromEntries(
+      product.variants.map((variant) => [variant.id, String(variant.price)]),
+    ),
   });
   const titleId = useId();
   const stepIdPrefix = useId();
@@ -155,13 +171,28 @@ export function ProductEditor({
   const isDirty =
     JSON.stringify(draft) !== JSON.stringify(pristine.current.product) ||
     tags !== pristine.current.tags ||
-    JSON.stringify(optionValues) !== JSON.stringify(pristine.current.optionValues);
+    JSON.stringify(optionValues) !== JSON.stringify(pristine.current.optionValues) ||
+    JSON.stringify(priceText) !== JSON.stringify(pristine.current.priceText);
 
   const errors = validateDraft(draft, optionValues, existingSlugs);
 
+  const variantErrors = errors.variantErrors.map((fieldErrors, index) => {
+    const variant = draft.variants[index];
+    if (variant === undefined) return fieldErrors;
+    const price = priceErrorFor(priceText[variant.id] ?? String(variant.price));
+    return price === undefined ? fieldErrors : { ...fieldErrors, price };
+  });
+
   const firstImage = assets.find((asset) => asset.id === draft.imageIds[0]);
   const minimumPrice =
-    draft.variants.length > 0 ? Math.min(...draft.variants.map((variant) => variant.price)) : 0;
+    draft.variants.length > 0
+      ? Math.min(
+          ...draft.variants.map((variant) => {
+            const parsed = Number(priceText[variant.id] ?? "");
+            return Number.isInteger(parsed) && parsed >= 0 ? parsed : variant.price;
+          }),
+        )
+      : 0;
 
   const requestClose = () => {
     if (isDirty) {
@@ -182,6 +213,7 @@ export function ProductEditor({
     const variant = source ? duplicateVariant(source) : createBlankVariant();
     setDraft((current) => ({ ...current, variants: [...current.variants, variant] }));
     setOptionValues((current) => ({ ...current, [variant.id]: optionsText(variant.optionValues) }));
+    setPriceText((current) => ({ ...current, [variant.id]: String(variant.price) }));
   };
 
   const moveVariant = (id: string, direction: -1 | 1) => {
@@ -202,7 +234,7 @@ export function ProductEditor({
     if (
       errors.title !== undefined ||
       errors.slugError !== undefined ||
-      errors.variantErrors.some(
+      variantErrors.some(
         (variant) =>
           variant.title !== undefined ||
           variant.price !== undefined ||
@@ -507,7 +539,7 @@ export function ProductEditor({
           </section>
           <div className="variant-list">
             {draft.variants.map((variant, index) => {
-              const variantError = errors.variantErrors[index] ?? {
+              const variantError = variantErrors[index] ?? {
                 title: undefined,
                 price: undefined,
                 options: undefined,
@@ -546,6 +578,11 @@ export function ProductEditor({
                             ),
                           }));
                           setOptionValues((current) => {
+                            const next = { ...current };
+                            delete next[variant.id];
+                            return next;
+                          });
+                          setPriceText((current) => {
                             const next = { ...current };
                             delete next[variant.id];
                             return next;
@@ -604,16 +641,20 @@ export function ProductEditor({
                         type="number"
                         min={0}
                         step={1}
-                        value={variant.price}
-                        onChange={(event) =>
-                          updateVariant(variant.id, (current) => ({
-                            ...current,
-                            price:
-                              event.target.value === ""
-                                ? current.price
-                                : (Number(event.target.value) as Variant["price"]),
-                          }))
-                        }
+                        value={priceText[variant.id] ?? String(variant.price)}
+                        onChange={(event) => {
+                          const text = event.target.value;
+                          setPriceText((current) => ({ ...current, [variant.id]: text }));
+                          if (text !== "") {
+                            const value = Number(text);
+                            if (Number.isInteger(value) && value >= 0) {
+                              updateVariant(variant.id, (current) => ({
+                                ...current,
+                                price: value as Variant["price"],
+                              }));
+                            }
+                          }
+                        }}
                       />
                     </Field>
                     <Field label="Precio anterior en centavos">
