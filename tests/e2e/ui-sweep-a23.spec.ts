@@ -177,15 +177,28 @@ test("el diálogo precarga el nombre sugerido, enfoca el campo y confirma con En
   await openDashboard(page);
   const { dialog } = await openDuplicateDialog(page);
   const nameInput = page.getByTestId("ui-duplicate-name");
+  const originalButton = page
+    .locator(".dashboard-store-card")
+    .filter({ hasText: "Predeterminado" })
+    .first()
+    .locator(".dashboard-store-card__button");
 
+  await expect(nameInput).toHaveAttribute("aria-labelledby", /.+/);
   await expect(nameInput).toHaveValue("Predeterminado (copia)");
   await expect(nameInput).toBeFocused();
+  const originalId = await originalButton.getAttribute("data-store-card-id");
+  expect(originalId).toBeTruthy();
 
   await nameInput.fill("Copia Enter");
   await nameInput.press("Enter");
   await expect(dialog).toBeHidden();
   await expect(storeCount(page)).toHaveText("2 visibles");
-  await expect(page.locator(".dashboard-store-card").getByText("Copia Enter")).toBeVisible();
+  const copyCard = page.locator(".dashboard-store-card").filter({ hasText: "Copia Enter" });
+  await expect(copyCard).toBeVisible();
+  await expect(copyCard.locator(".dashboard-store-card__button")).not.toHaveAttribute(
+    "data-store-card-id",
+    originalId ?? "",
+  );
   await expect(page.getByTestId("ui-dashboard-toast")).toContainText("Tienda duplicada.");
 });
 

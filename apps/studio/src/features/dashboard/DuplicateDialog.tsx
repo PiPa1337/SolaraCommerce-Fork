@@ -18,6 +18,7 @@ export interface DuplicateDialogProps {
 export function DuplicateDialog({ project, onClose, onDuplicate, onDone }: DuplicateDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const lastFocusedRef = useRef<HTMLElement | null>(null);
   const titleId = useId();
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -28,13 +29,27 @@ export function DuplicateDialog({ project, onClose, onDuplicate, onDone }: Dupli
     const dialog = dialogRef.current;
     if (!dialog) return;
     if (open && !dialog.open) {
-      setName(`${project.name} (copia)`);
+      lastFocusedRef.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      setName(`${project.name} (copia)`.slice(0, 60));
       setError("");
       dialog.showModal();
       requestAnimationFrame(() => nameInputRef.current?.focus());
     }
     if (!open && dialog.open) dialog.close();
   }, [open, project]);
+
+  useEffect(() => {
+    if (open) return;
+    const previous = lastFocusedRef.current;
+    lastFocusedRef.current = null;
+    if (!previous) return;
+    // El cierre desde Dashboard agenda su propio requestAnimationFrame (foco en
+    // la card). Encolar la restauración acá garantiza que el foco vuelva al
+    // disparador (botón Duplicar) aunque ese rAF haya corrido antes.
+    const frame = requestAnimationFrame(() => previous.focus({ preventScroll: true }));
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
 
   const confirm = async () => {
     if (!project || busy) return;

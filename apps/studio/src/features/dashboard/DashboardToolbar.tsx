@@ -47,7 +47,14 @@ export function DashboardToolbar({
           type="search"
         />
         {query ? (
-          <IconButton icon={X} label="Limpiar búsqueda" onClick={() => onQueryChange("")} />
+          <IconButton
+            icon={X}
+            label="Limpiar búsqueda"
+            onClick={() => {
+              onQueryChange("");
+              requestAnimationFrame(() => searchRef.current?.focus());
+            }}
+          />
         ) : null}
       </label>
       <label className="dashboard-cosmic-select">
