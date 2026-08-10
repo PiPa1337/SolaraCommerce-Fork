@@ -614,6 +614,12 @@ export function Studio({
     [onDiskSaved],
   );
 
+  // Atajos globales del shell (H3-B4/B5): Ctrl+S (modo navegador), Ctrl+Z y
+  // Ctrl+Shift+Z. Escuchan en `window` y se re-registran con cleanup, así que
+  // no hay doble bind. Limitación conocida (T19): el preview es un iframe con
+  // su propio documento; los keydown con foco dentro del iframe no cruzan al
+  // documento del Studio, por lo que los atajos no operan sobre el editor
+  // mientras el foco está en el preview (el sitio público no conoce atajos).
   useEffect(() => {
     const handleKey = (event: globalThis.KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "f") {

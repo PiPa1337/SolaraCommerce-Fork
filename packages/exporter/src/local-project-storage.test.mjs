@@ -98,7 +98,7 @@ describe("almacenamiento local de proyectos", () => {
         storage,
         transaction.transactionId,
         "project",
-        projectJson().replace('"slug": "prueba"', `"slug": "${longSlug}"`),
+        projectJson().replace('"slug":"prueba"', `"slug":"${longSlug}"`),
       );
       const receipt = await storage.commit(transaction.transactionId);
       expect(receipt.key.startsWith(longSlug.slice(0, 64))).toBe(true);

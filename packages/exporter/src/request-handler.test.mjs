@@ -165,20 +165,30 @@ describe("handler: transacción de guardado (begin-save/upload)", () => {
       // El cliente envía `X-Solara-SHA256`; la verificación no puede depender
       // de que el transporte normalice el nombre del header a minúsculas.
       const wrong = await handler.handle(
-        request("PUT", path, {
-          cookie: `${shutdownCookieName}=token-test`,
-          "X-Solara-SHA256": "0".repeat(64),
-          "Content-Type": "application/vnd.solara.project+json",
-        }, payload),
+        request(
+          "PUT",
+          path,
+          {
+            cookie: `${shutdownCookieName}=token-test`,
+            "X-Solara-SHA256": "0".repeat(64),
+            "Content-Type": "application/vnd.solara.project+json",
+          },
+          payload,
+        ),
       );
       expect(wrong.status).toBe(400);
       expect(JSON.parse(wrong.body).error).toMatch(/hash/i);
       const correct = await handler.handle(
-        request("PUT", path, {
-          cookie: `${shutdownCookieName}=token-test`,
-          "X-Solara-SHA256": createHash("sha256").update(payload).digest("hex"),
-          "Content-Type": "application/vnd.solara.project+json",
-        }, payload),
+        request(
+          "PUT",
+          path,
+          {
+            cookie: `${shutdownCookieName}=token-test`,
+            "X-Solara-SHA256": createHash("sha256").update(payload).digest("hex"),
+            "Content-Type": "application/vnd.solara.project+json",
+          },
+          payload,
+        ),
       );
       expect(correct.status).toBe(200);
       await handler.storage.abort(transaction.transactionId);

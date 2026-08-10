@@ -9,6 +9,8 @@
  *    texto, y no secuestran el undo nativo dentro de un campo.
  * 6. La base protegida es alcanzable en tiendas limpias (banner + bloqueo de
  *    "Agregar sección"), y el Modo avanzado la desactiva.
+ * 7. (T19) El skip de campos cubre también la búsqueda del catálogo; los
+ *    atajos no cruzan el iframe del preview (limitación documentada).
  */
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
@@ -194,6 +196,54 @@ test("Ctrl+Z dentro de un campo de texto deja el undo nativo (H3-B5)", async ({ 
   // editor (el undo nativo del navegador actúa sobre el campo).
   await page.keyboard.press("Control+z");
   await expect(page.getByRole("button", { name: "Deshacer" })).toBeEnabled();
+});
+
+test("Ctrl+Z dentro de la búsqueda del catálogo deja el undo nativo (T19)", async ({ page }) => {
+  await openDemoStore(page);
+  await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
+
+  const undoButton = page.getByRole("button", { name: "Deshacer" });
+  await expect(undoButton).toBeDisabled();
+
+  // El buscador es un input común: con el foco dentro, Ctrl+Z debe actuar
+  // sobre el texto del campo y no consumir el historial del editor.
+  const search = page.getByPlaceholder("Buscar por producto, marca o estado");
+  await search.click();
+  await search.pressSequentially("zapatos");
+  await expect(search).toHaveValue("zapatos");
+
+  await page.keyboard.press("Control+z");
+  await expect(undoButton).toBeDisabled();
+  await expect(search).not.toHaveValue("zapatos");
+});
+
+test("los atajos no se cruzan con el foco dentro del iframe del preview (T19)", async ({
+  page,
+}) => {
+  await page.clock.install({ time: FAKE_START });
+  await openDemoStore(page);
+  await openHeroInspector(page);
+  await page.clock.pauseAt(FAKE_PAUSE);
+
+  const title = page.getByRole("textbox", { name: "Título", exact: true });
+  await title.fill("Cambio para foco en preview");
+  await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
+
+  const undoButton = page.getByRole("button", { name: "Deshacer" });
+  await expect(undoButton).toBeEnabled();
+
+  // El keydown del iframe no cruza al documento del Studio: ni Ctrl+S ni
+  // Ctrl+Z deben dispararse mientras el foco está en el preview (limitación
+  // documentada: el sitio público no conoce los atajos del editor).
+  const preview = page.locator('iframe[title="Vista previa desktop"]');
+  await preview.focus();
+
+  await page.keyboard.press("Control+s");
+  await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
+
+  await page.keyboard.press("Control+z");
+  await expect(undoButton).toBeEnabled();
 });
 
 test("la estructura protegida es alcanzable en una tienda limpia (F13)", async ({ page }) => {

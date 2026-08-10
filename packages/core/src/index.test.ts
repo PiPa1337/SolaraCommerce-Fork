@@ -146,6 +146,32 @@ describe("reduceProject", () => {
     expect(referenceStore).toEqual(before);
   });
 
+  it("muta sólo los ids listados: con 2 productos, cambia 1 y el otro queda intacto", () => {
+    const two = generatePerformanceFixture(2);
+    const first = two.products[0];
+    const second = two.products[1];
+    if (!first || !second) throw new Error("El fixture debe tener 2 productos.");
+    const result = reduceProject(two, {
+      type: "products.setStatus",
+      productIds: [first.id],
+      status: "archived",
+      at: timestamp,
+    });
+    expect(result.products).toHaveLength(2);
+    expect(result.products[0]?.status).toBe("archived");
+    expect(result.products[0]?.updatedAt).toBe(timestamp);
+    expect(result.products[1]).toEqual(second);
+    expect(result.products[1]?.status).toBe(second.status);
+    expect(result.products[1]?.updatedAt).toBe(second.updatedAt);
+  });
+
+  it("usa -10_000 basisPoints como piso: -100% llega a 0 y menos queda fuera", () => {
+    expect(adjustPrice(500, { type: "percentage", basisPoints: -10_000 })).toBe(0);
+    expect(() =>
+      adjustPrice(500, { type: "percentage", basisPoints: -10_001 }),
+    ).toThrow("El porcentaje no puede reducir el precio por debajo de cero.");
+  });
+
   it("mantiene la misma referencia para operaciones sin cambios", () => {
     const unchanged = reduceProject(referenceStore, {
       type: "products.setStatus",
