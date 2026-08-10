@@ -605,6 +605,20 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
   const filteredRows = table.getFilteredRowModel().rows;
   const hasProducts = project.products.length > 0;
 
+  // Si el conjunto filtrado encoge (acciones masivas, importaciones) y el
+  // pageIndex quedó fuera de rango, volvemos a la última página válida para
+  // que el conteo del resumen y la página marcada nunca mientan.
+  const pageCount = table.getPageCount();
+  useEffect(() => {
+    setPagination((current) => {
+      if (current.pageIndex === 0) return current;
+      const lastValidPage = Math.max(0, pageCount - 1);
+      return current.pageIndex <= lastValidPage
+        ? current
+        : { ...current, pageIndex: lastValidPage };
+    });
+  }, [pageCount]);
+
   const toggleColumn = (id: string) => {
     setColumnVisibility((current) => {
       const next = { ...current, [id]: !current[id] };
