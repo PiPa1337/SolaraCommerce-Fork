@@ -600,6 +600,106 @@ describe("exporter", () => {
     expect(String(result.files.get("index.html"))).not.toContain('href="/ai-context.json"');
   });
 
+  it("las páginas editables mandan sobre el seo global en su ruta", () => {
+    const project = {
+      ...referenceStore,
+      seo: {
+        ...referenceStore.seo,
+        title: "Título global de la tienda",
+        description: "Descripción global de la tienda.",
+      },
+      pages: referenceStore.pages.map((page) => {
+        if (page.kind === "home")
+          return {
+            ...page,
+            seoTitle: "Título exclusivo del Home",
+            seoDescription: "Descripción exclusiva del Home.",
+          };
+        if (page.kind === "about")
+          return {
+            ...page,
+            seoTitle: "Título exclusivo de Nosotros",
+            seoDescription: "Descripción exclusiva de Nosotros.",
+          };
+        if (page.kind === "contact")
+          return {
+            ...page,
+            seoTitle: "Título exclusivo de Contacto",
+            seoDescription: "Descripción exclusiva de Contacto.",
+          };
+        return page;
+      }),
+    };
+    const result = exportProject(project as typeof referenceStore, { mode: "production" });
+
+    expect(String(result.files.get("index.html"))).toContain(
+      "<title>Título exclusivo del Home</title>",
+    );
+    expect(String(result.files.get("index.html"))).toContain(
+      '<meta name="description" content="Descripción exclusiva del Home.">',
+    );
+    expect(String(result.files.get("nosotros/index.html"))).toContain(
+      "<title>Título exclusivo de Nosotros</title>",
+    );
+    expect(String(result.files.get("contacto/index.html"))).toContain(
+      "<title>Título exclusivo de Contacto</title>",
+    );
+    expect(String(result.files.get("index.html"))).not.toContain("Título global de la tienda");
+  });
+
+  it("usa el seo global como fallback en rutas sin página editable", () => {
+    const project = {
+      ...referenceStore,
+      seo: {
+        ...referenceStore.seo,
+        title: "Título global de la tienda",
+        description: "Descripción global de la tienda.",
+      },
+      categories: referenceStore.categories.map((category, index) =>
+        index === 0 ? { ...category, description: "" } : category,
+      ),
+    };
+    const categoryHtml = String(
+      exportProject(project as typeof referenceStore, { mode: "production" }).files.get(
+        "categorias/textiles/index.html",
+      ),
+    );
+    expect(categoryHtml).toContain(
+      '<meta name="description" content="Descripción global de la tienda.">',
+    );
+  });
+
+  it("og:image sale de project.seo.socialImageId", () => {
+    const project = {
+      ...referenceStore,
+      seo: { ...referenceStore.seo, socialImageId: "asset-jarra" as const },
+    };
+    const homeHtml = String(
+      exportProject(project as typeof referenceStore, { mode: "draft" }).files.get("index.html"),
+    );
+    expect(homeHtml).toContain(
+      '<meta property="og:image" content="https://casa-luma.example/fixtures/jarra-delta.png">',
+    );
+  });
+
+  it("emite la verificación de Search Console y de Merchant Center", () => {
+    const project = {
+      ...referenceStore,
+      seo: {
+        ...referenceStore.seo,
+        searchConsoleVerification: "search-console-code",
+        merchantVerification: "merchant-code",
+      },
+    };
+    const homeHtml = String(
+      exportProject(project as typeof referenceStore, { mode: "draft" }).files.get("index.html"),
+    );
+    expect(homeHtml).toContain(
+      '<meta name="google-site-verification" content="search-console-code">',
+    );
+    expect(homeHtml).toContain('<meta name="google-site-verification" content="merchant-code">');
+  });
+
   it("detecta rutas reservadas y preorder sin fecha", () => {
     const project = {
       ...referenceStore,

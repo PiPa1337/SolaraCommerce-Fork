@@ -80,6 +80,21 @@ const AREA_LABELS: Record<string, string> = {
   general: "General",
 };
 
+/**
+ * Resuelve el título y la descripción que el exporter renderiza en la ruta de
+ * Home: la página editable manda, luego el seo global y por último la identidad.
+ */
+export function homepageSeoPreview(project: StoreProjectV1): {
+  title: string;
+  description: string;
+} {
+  const home = project.pages.find((page) => page.kind === "home");
+  return {
+    title: home?.seoTitle ?? (project.seo.title || project.identity.brandName),
+    description: home?.seoDescription ?? (project.seo.description || project.identity.description),
+  };
+}
+
 /** Navega a la pestaña que corrige el hallazgo usando los ids estables del shell. */
 function navigateToFix(target: string): void {
   const tabId = FIX_TABS[target];
@@ -142,8 +157,7 @@ export function Seo({
   const socialAsset =
     project.assets.find((asset) => asset.id === project.seo.socialImageId) ?? project.assets[0];
   const homepage = `${project.baseUrl.replace(/\/+$/, "")}/`;
-  const seoTitle = project.seo.title || project.identity.brandName;
-  const seoDescription = project.seo.description || project.identity.description;
+  const previewSeo = homepageSeoPreview(project);
   const routeLimit = 24;
 
   const toggleIssue = (id: string) => {
@@ -255,7 +269,7 @@ export function Seo({
                   textDecoration: "none",
                 }}
               >
-                {seoTitle}
+                {previewSeo.title}
               </a>
               <span style={{ overflowWrap: "anywhere" }}>{homepage}</span>
               <p
@@ -267,7 +281,7 @@ export function Seo({
                   overflowWrap: "anywhere",
                 }}
               >
-                {seoDescription || "Sin descripción: completá la descripción SEO."}
+                {previewSeo.description || "Sin descripción: completá la descripción SEO."}
               </p>
             </div>
           </article>
@@ -308,7 +322,7 @@ export function Seo({
                   overflowWrap: "anywhere",
                 }}
               >
-                {seoTitle}
+                {previewSeo.title}
               </strong>
               <span style={{ overflowWrap: "anywhere" }}>{homepage}</span>
             </div>
@@ -345,7 +359,7 @@ export function Seo({
                   overflowWrap: "anywhere",
                 }}
               >
-                {seoTitle} — {seoDescription || "Sin descripción"}
+                {previewSeo.title} — {previewSeo.description || "Sin descripción"}
               </p>
               <span style={{ overflowWrap: "anywhere" }}>{homepage}</span>
             </div>
