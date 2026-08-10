@@ -518,11 +518,14 @@ export function Studio({
     setHistory((current) => executeCommand(current, command));
   }, []);
 
-  const navigateFromGuided = useCallback((destination: StudioTab) => {
-    if (destination === "builder") setAdvancedMode(true);
-    setTab(destination);
-    setPaneOpen(true);
-  }, []);
+  const navigateFromGuided = useCallback(
+    (destination: StudioTab) => {
+      if (destination === "builder") setAdvancedMode(true);
+      setTab(destination);
+      setPaneOpen(true);
+    },
+    [setPaneOpen],
+  );
 
   const applyGuidedUpgrade = useCallback(
     (nextProject: StoreProjectV1) => {
