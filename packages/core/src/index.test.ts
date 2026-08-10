@@ -1,3 +1,4 @@
+import { parseProject } from "@solara/project-schema";
 import { buildCatalogModernProject } from "@solara/project-schema/catalog-modern-template";
 import { referenceStore } from "@solara/project-schema/fixture";
 import { describe, expect, it } from "vitest";
@@ -195,6 +196,75 @@ describe("reduceProject", () => {
       at: "2026-07-30T10:03:00.000Z",
     });
     expect(cleaned.products[0]?.tags).not.toContain("nuevo");
+  });
+});
+
+describe("contrato con secciones (ids de ítems)", () => {
+  const demoStore = buildCatalogModernProject({ seed: "demo" });
+  const firstDemoProduct = demoStore.products[0];
+
+  it("preserva los settings de secciones y los ids de ítems ante comandos del dominio", () => {
+    if (firstDemoProduct === undefined) {
+      throw new Error("La demo debe tener al menos un producto.");
+    }
+    const sectionsJson = JSON.stringify(demoStore.sections);
+
+    const adjusted = reduceProject(demoStore, {
+      type: "products.adjustPrices",
+      productIds: [firstDemoProduct.id],
+      adjustment: { type: "amount", cents: 1_000 },
+      at: timestamp,
+    });
+    const changed = reduceProject(adjusted, {
+      type: "products.setStatus",
+      productIds: [firstDemoProduct.id],
+      status: "hidden",
+      at: "2026-07-30T10:01:00.000Z",
+    });
+
+    expect(JSON.stringify(changed.sections)).toBe(sectionsJson);
+    const testimonials = changed.sections.find(
+      (section) => section.id === "modo-section-testimonials",
+    );
+    const items = testimonials?.settings.items as Array<{ id: string }> | undefined;
+    expect(items?.map((item) => item.id)).toEqual([
+      "modo-testimonial-1",
+      "modo-testimonial-2",
+      "modo-testimonial-3",
+    ]);
+  });
+
+  it("no valida ni repara ids de ítems: el gate vive en el schema del módulo", () => {
+    if (firstDemoProduct === undefined) {
+      throw new Error("La demo debe tener al menos un producto.");
+    }
+    const withMissingId = structuredClone(demoStore);
+    const testimonials = withMissingId.sections.find(
+      (section) => section.id === "modo-section-testimonials",
+    );
+    if (testimonials === undefined) {
+      throw new Error("La demo debe tener la sección de testimonios.");
+    }
+    const items = testimonials.settings.items as Array<Record<string, unknown>>;
+    const item = items[0];
+    if (item === undefined) {
+      throw new Error("La demo debe tener ítems de testimonios.");
+    }
+    delete item.id;
+    const sectionsJson = JSON.stringify(withMissingId.sections);
+
+    expect(() => parseProject(withMissingId)).not.toThrow();
+
+    const changed = reduceProject(withMissingId, {
+      type: "products.adjustPrices",
+      productIds: [firstDemoProduct.id],
+      adjustment: { type: "amount", cents: 500 },
+      at: timestamp,
+    });
+    expect(JSON.stringify(changed.sections)).toBe(sectionsJson);
+    const after = changed.sections.find((section) => section.id === "modo-section-testimonials");
+    const afterItems = after?.settings.items as Array<Record<string, unknown>> | undefined;
+    expect(afterItems?.[0]).not.toHaveProperty("id");
   });
 });
 
