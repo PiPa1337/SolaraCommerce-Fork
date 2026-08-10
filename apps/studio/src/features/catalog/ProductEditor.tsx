@@ -11,6 +11,15 @@ import {
 import { useEffect, useId, useRef, useState } from "react";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { Button, Field, IconButton, InlineError } from "../../components/Ui";
+import {
+  createBlankVariant,
+  type DraftErrors,
+  duplicateVariant,
+  optionsText,
+  parseOptions,
+  slugify,
+  validateDraft,
+} from "./product/productEditorModel";
 
 interface ProductEditorProps {
   product: Product;
@@ -32,37 +41,14 @@ const editorSteps: Array<{ id: EditorStep; label: string }> = [
   { id: "variants", label: "Variantes" },
 ];
 
-const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
 const STATUS_LABELS: Record<Product["status"], string> = {
   active: "Activo",
   hidden: "Oculto",
   archived: "Archivado",
 };
 
-/** Slug local desde el título: minúsculas, números y guiones (NFD quita acentos). */
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 120);
-}
-
 function formatCents(cents: number): string {
   return `$${cents.toLocaleString("es-AR")}`;
-}
-
-function slugErrorFor(slug: string, existingSlugs: string[]): string | undefined {
-  if (!slug) return "Escribí un slug o se generará desde el título.";
-  if (slug.length > 120) return "El slug no puede superar los 120 caracteres.";
-  if (!SLUG_PATTERN.test(slug)) {
-    return "Solo minúsculas, números y guiones (ejemplo: lampara-horizonte).";
-  }
-  if (existingSlugs.includes(slug)) return "Ya existe otro producto con este slug.";
-  return undefined;
 }
 
 /** Índice de paso objetivo para navegación con teclado (flechas, Home/End). */
@@ -72,19 +58,6 @@ function stepTarget(index: number, key: string): number | undefined {
   if (key === "ArrowRight") return Math.min(editorSteps.length - 1, index + 1);
   if (key === "ArrowLeft") return Math.max(0, index - 1);
   return undefined;
-}
-
-interface VariantFieldErrors {
-  title: string | undefined;
-  price: string | undefined;
-  options: string | undefined;
-}
-
-interface DraftErrors {
-  title: string | undefined;
-  slugError: string | undefined;
-  slugAvailable: boolean;
-  variantErrors: VariantFieldErrors[];
 }
 
 /** Props de feedback del campo slug: error inline o estado "Disponible". */
@@ -98,63 +71,6 @@ function slugFieldFeedback(errors: DraftErrors): {
     hint: errors.slugAvailable ? "Disponible" : "Minúsculas, números y guiones.",
     ...(errors.slugAvailable ? { className: "field--slug-available" } : {}),
   };
-}
-
-function validateDraft(
-  draft: Product,
-  optionValues: Record<string, string>,
-  existingSlugs: string[],
-): DraftErrors {
-  const slug = draft.slug.trim();
-  const slugError = slugErrorFor(slug, existingSlugs);
-  const variantErrors = draft.variants.map((variant) => {
-    const fieldErrors: VariantFieldErrors = {
-      title: undefined,
-      price: undefined,
-      options: undefined,
-    };
-    if (!variant.title.trim()) fieldErrors.title = "Escribí un nombre para la variante.";
-    if (!Number.isInteger(variant.price) || variant.price < 0) {
-      fieldErrors.price = "El precio debe ser un número entero en centavos, mayor o igual a 0.";
-    }
-    try {
-      parseOptions(optionValues[variant.id] ?? "");
-    } catch (reason) {
-      fieldErrors.options =
-        reason instanceof Error ? reason.message : "Las opciones de la variante no son válidas.";
-    }
-    return fieldErrors;
-  });
-  return {
-    title: draft.title.trim() ? undefined : "Escribí un título para el producto.",
-    slugError,
-    slugAvailable: slug !== "" && slugError === undefined,
-    variantErrors,
-  };
-}
-
-function optionsText(options: Record<string, string>): string {
-  return Object.entries(options)
-    .map(([name, value]) => `${name}=${value}`)
-    .join(", ");
-}
-
-function parseOptions(value: string): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const item of value
-    .split(",")
-    .map((candidate) => candidate.trim())
-    .filter(Boolean)) {
-    const separator = item.indexOf("=");
-    if (separator <= 0 || separator === item.length - 1) {
-      throw new Error(`La opción "${item}" debe usar el formato Nombre=Valor.`);
-    }
-    const name = item.slice(0, separator).trim();
-    const optionValue = item.slice(separator + 1).trim();
-    if (name in result) throw new Error(`La opción "${name}" está repetida.`);
-    result[name] = optionValue;
-  }
-  return result;
 }
 
 function setOptionalText(value: string): string | undefined {
@@ -255,20 +171,9 @@ export function ProductEditor({
   };
 
   const addVariant = (source?: Variant) => {
-    const id = `variant-${crypto.randomUUID()}` as Variant["id"];
-    const variant: Variant = source
-      ? { ...structuredClone(source), id, title: `${source.title} copia` }
-      : {
-          id,
-          sku: "",
-          title: "Nueva variante",
-          optionValues: {},
-          price: 0 as Variant["price"],
-          available: true,
-          stockStatus: "in_stock",
-        };
+    const variant = source ? duplicateVariant(source) : createBlankVariant();
     setDraft((current) => ({ ...current, variants: [...current.variants, variant] }));
-    setOptionValues((current) => ({ ...current, [id]: optionsText(variant.optionValues) }));
+    setOptionValues((current) => ({ ...current, [variant.id]: optionsText(variant.optionValues) }));
   };
 
   const moveVariant = (id: string, direction: -1 | 1) => {
