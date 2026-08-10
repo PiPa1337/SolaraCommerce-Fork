@@ -10,6 +10,34 @@ versión publicada.
 
 ## [Unreleased]
 
+### Optimización de rendimiento y UI (2026-08-09)
+
+- El fondo cosmic dejó de dominar la CPU: dibuja a 30 fps con la ventana
+  enfocada, baja a 12 fps sin foco y se pausa por completo con la pestaña
+  oculta o el canvas fuera de viewport; con "reducir movimiento" hace un único
+  dibujo estático, escala al 1.0 (menos píxeles por frame) y usa GPU low-power.
+- Los timers y los listeners duermen cuando la app está en reposo: el autosave
+  no programa trabajo con la cola vacía, los workers liberan sus listeners
+  aunque fallen y el shell del editor no re-renderiza el contenido mientras la
+  pestaña está oculta.
+- El preview se pausa cuando no se ve (pestaña oculta o fuera de pantalla) y el
+  runtime del storefront también: por mensaje del preview y por visibilidad,
+  con listeners pasivos y sin fetches ni animaciones en reposo.
+- Nueva medición de CPU con presupuesto (`perf-idle`): el Studio en reposo
+  verifica el trabajo del hilo principal por caso (dashboard, editor con
+  preview y editor oculto) y los frames de animación por segundo.
+- Los textos entran en sus cajas: componentes (botones, badges, toggles,
+  segmented, paginación, tooltips, diálogos y toasts), dashboard, editor
+  (campos, errores, paneles), features (SEO, constructor, recursos, guiado) y
+  storefront público (cards, header, footer, filtros, carrito y hero).
+- Sin scroll vertical de página: el dashboard y el editor caben en el viewport
+  en 1366×768 y superiores (con scroll interno por panel), y en móvil el
+  dashboard scrollea dentro de su propia región, no la página.
+- Verificación multi-viewport nueva (`layout-fit`): el dashboard y las pestañas
+  del editor se comprueban sin scroll vertical de página ni desborde
+  horizontal en 1366×768, 1440×900 y 1920×1080, y los specs visuales
+  existentes exigen el mismo contrato.
+
 ### Revisión de bugfixes 3 (2026-08-09)
 
 - El preview abierto sobrevive al guardado: la poda de `sitios/` protege el

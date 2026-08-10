@@ -294,3 +294,38 @@ corrigieron ~30 defectos de editor, runtime, storage, shell y specs; la deuda
 cerrada y los diferidos quedaron registrados en
 [`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md) y detalle en el
 [`CHANGELOG.md`](CHANGELOG.md), sección "Revisión de bugfixes 2 (2026-08-09)".
+
+## Optimización de rendimiento y UI (2026-08-09)
+
+Cierre del plan
+`docs/superpowers/plans/2026-08-09-optimizacion-rendimiento-ui.md` (olas A1-A8
+y U1-U7/U11). Objetivo: reducir el ~30 % de un core (reportado en una máquina
+9800X3D) que la app abierta consumía en reposo y garantizar que los textos
+entren en sus cajas sin scroll vertical de página.
+
+Números de referencia del harness `perf-idle` (A5, `tests/e2e/perf-idle.spec.ts`,
+CDP `Performance.getMetrics`, Chromium headless con SwiftShader, settle 3 s +
+muestreo 5 s):
+
+- **Baseline (mid-flight):** dashboard con cosmic visible → ScriptDuration
+  1.4-1.5 ms/s, **TaskDuration 196-226 ms/s (~200 ms/s ≈ 30 % de un core)**,
+  rAF 20.7-22.7/s; editor con preview → Script 0.0, Task 0.9-1.7 ms/s; editor
+  oculto (emulado) → Script 0.0, Task 1.0-1.3 ms/s. El coste del cosmic se ve
+  en TaskDuration (el GL corre por SwiftShader en headless), no en
+  ScriptDuration.
+- **Objetivo del plan:** ScriptDuration < 100 ms/s visible y < 25 ms/s oculto
+  (~1/3 del baseline); el spec presupuesta ambas métricas (dashboard
+  100/300 ms/s + 500 rAF/s, editor 100/100, oculto 25/100) con umbrales
+  provisionales a recalibrar sobre TaskDuration en el gate T10.
+- **Viewports verificados (layout-fit, 15/15):** 1366×768, 1440×900 y
+  1920×1080 sobre dashboard, Catálogo, Preparar, Resumen y Exportar (sin
+  scroll vertical de página ni desborde horizontal); `editor-responsive` cubre
+  390/844, 768/1024, 1024/768, 1440/900 y 1920/1080; en móvil el dashboard
+  scrollea dentro de su región, no la página.
+- Budgets tras la ola: runtime JS 52 644 B (tope 52 KiB, margen 604 B) y CSS
+  inicial del Studio 101 610 B / 102 400 B (margen ~790 B).
+
+Residuales documentados en [`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md)
+(márgenes de budget, recalibración de umbrales del harness, receta headed para
+pestaña oculta, `requestWorker` sin reintento, fetch de `search-index.json` sin
+gate, detalle móvil dentro de la región).
