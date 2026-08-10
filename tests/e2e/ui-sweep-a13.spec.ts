@@ -1,0 +1,502 @@
+import { type ChildProcess, spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { createServer } from "node:net";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { expect, type Locator, type Page, test } from "@playwright/test";
+import {
+  startStudioServer,
+  stopStudioServer,
+  type RunningStudioServer,
+} from "./studio-server";
+
+/**
+ * Barrido A13 — Diálogos y acciones del dashboard (slice de auditoría;
+ * Dashboard.tsx no se edita, los bugs quedan como fixme nombrando a A12).
+ *
+ * Contrato por control: (1) efecto real, (2) auto-feedback del control,
+ * (3) contrato de datos (payload -> receptor).
+ */
+
+let studioServer: RunningStudioServer;
+
+test.beforeAll(async () => {
+  studioServer = await startStudioServer();
+});
+
+test.afterAll(async () => {
+  await stopStudioServer(studioServer.server);
+});
+
+test.setTimeout(90_000);
+
+async function openDashboard(page: Page): Promise<void> {
+  await page.goto(studioServer.url);
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+}
+
+function cardByName(page: Page, name: string): Locator {
+  return page.locator(".dashboard-store-card").filter({ hasText: name }).first();
+}
+
+async function selectStore(page: Page, name: string): Promise<Locator> {
+  const card = cardByName(page, name);
+  await card.locator(".dashboard-store-card__button").click();
+  const detail = page.getByRole("complementary", { name: `Tienda seleccionada: ${name}` });
+  await expect(detail).toBeVisible();
+  return detail;
+}
+
+async function openCreateDialog(page: Page): Promise<Locator> {
+  await page.getByRole("button", { name: "Nueva tienda", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Crear tienda" });
+  await expect(dialog).toBeVisible();
+  return dialog;
+}
+
+test("A13: crear — diálogo con foco, validación de nombre y pasos con indicador activo", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  const dialog = await openCreateDialog(page);
+
+  // Auto-feedback: foco inicial en el nombre y pasos en «1 Marca».
+  await expect(page.getByLabel("Nueva tienda")).toBeFocused();
+  const steps = dialog.locator(".create-store__steps li");
+  await expect(steps).toHaveCount(4);
+  await expect(steps.nth(0)).toHaveClass(/is-active/);
+
+  // Validación: Continuar sin nombre no avanza.
+  await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByTestId("ui-inline-error")).toContainText("Escribí un nombre");
+
+  // Paso 2: aparece el campo de marca y el indicador lo marca activo.
+  await page.getByLabel("Nueva tienda").fill("Tienda A13");
+  await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByLabel("Nombre visible de la marca")).toBeVisible();
+  await expect(steps.nth(1)).toHaveClass(/is-active/);
+
+  // Atrás vuelve al paso 1 y el indicador retrocede.
+  await dialog.getByRole("button", { name: "Atrás", exact: true }).click();
+  await expect(page.getByLabel("Nombre visible de la marca")).toHaveCount(0);
+  await expect(steps.nth(0)).toHaveClass(/is-active/);
+  await expect(steps.nth(1)).not.toHaveClass(/is-active/);
+
+  // Avance completo: paso 3 (email/WhatsApp) y paso 4 (revisión con botón final).
+  for (let step = 1; step <= 2; step += 1) {
+    await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
+  }
+  await expect(page.getByLabel("Email de contacto (opcional)")).toBeVisible();
+  await expect(page.getByLabel("WhatsApp (opcional)")).toBeVisible();
+  await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(steps.nth(3)).toHaveClass(/is-active/);
+  await expect(dialog).toContainText("diseño Catalog Modern");
+  await expect(dialog.getByRole("button", { name: "Crear tienda vacía" })).toBeVisible();
+});
+
+test("A13: crear — cancelar con Escape y con X devuelve el foco al botón", async ({ page }) => {
+  await openDashboard(page);
+  const createButton = page.getByRole("button", { name: "Nueva tienda", exact: true });
+
+  await openCreateDialog(page);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Crear tienda" })).toHaveCount(0);
+  await expect(createButton).toBeFocused();
+
+  await openCreateDialog(page);
+  await page.getByRole("button", { name: "Cerrar creación" }).click();
+  await expect(page.getByRole("dialog", { name: "Crear tienda" })).toHaveCount(0);
+  await expect(createButton).toBeFocused();
+});
+
+test("A13: crear — el contrato de datos agrega la card con su id y persiste", async ({ page }) => {
+  await openDashboard(page);
+
+  const dialog = await openCreateDialog(page);
+  await page.getByLabel("Nueva tienda").fill("Tienda A13");
+  await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
+  await page.getByLabel("Nombre visible de la marca").fill("Marca A13");
+  await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
+  await page.getByLabel("Email de contacto (opcional)").fill("hola@a13.test");
+  await page.getByLabel("WhatsApp (opcional)").fill("5491100000000");
+  await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
+  await dialog.getByRole("button", { name: "Crear tienda vacía" }).click();
+
+  // Efecto real: la creación navega al editor con la tienda nueva activa.
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Volver a tiendas" }).click();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+  await expect(cardByName(page, "Tienda A13")).toBeVisible();
+
+  // Contrato de datos: la card nueva abre un detalle con id generado `store-*`.
+  const detail = await selectStore(page, "Tienda A13");
+  await expect(detail.locator("dd").first()).toHaveText(/^store-/);
+
+  // Persistencia: tras recargar, la tienda creada sigue en la biblioteca.
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+  await expect(cardByName(page, "Tienda A13")).toBeVisible();
+});
+
+test("A13: duplicar — id nuevo, nombre elegido, cancelar y toast", async ({ page }) => {
+  await openDashboard(page);
+  const originalDetail = await selectStore(page, "Predeterminado");
+  const originalId = (await originalDetail.locator("dd").first().textContent()) ?? "";
+  expect(originalId).toMatch(/^store-/);
+
+  // Cancelar no crea nada y el foco vuelve a la card de origen.
+  await originalDetail.getByRole("button", { name: "Duplicar" }).click();
+  const duplicateDialog = page.getByTestId("ui-duplicate-dialog");
+  await expect(duplicateDialog).toBeVisible();
+  await expect(page.getByTestId("ui-duplicate-name")).toHaveValue("Predeterminado (copia)");
+  await expect(page.getByTestId("ui-duplicate-name")).toBeFocused();
+  await duplicateDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(duplicateDialog).toBeHidden();
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  await expect(page.locator('[data-store-card-id="store-modo-sur-demo"]')).toBeFocused();
+
+  // Confirmación con nombre propio: la card nueva aparece con ese nombre.
+  await originalDetail.getByRole("button", { name: "Duplicar" }).click();
+  await expect(duplicateDialog).toBeVisible();
+  await page.getByTestId("ui-duplicate-name").fill("Copia A13");
+  await duplicateDialog.getByRole("button", { name: "Duplicar", exact: true }).click();
+  await expect(duplicateDialog).toBeHidden();
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+  await expect(cardByName(page, "Copia A13")).toBeVisible();
+  await expect(page.getByTestId("ui-dashboard-toast")).toContainText("Tienda duplicada");
+
+  // Contrato de datos: la copia recibe un id nuevo, distinto del original.
+  const copyDetail = await selectStore(page, "Copia A13");
+  await expect(copyDetail.locator("dd").first()).toHaveText(/^store-/);
+  expect((await copyDetail.locator("dd").first().textContent()) ?? "").not.toBe(originalId);
+});
+
+test.fixme(
+  "A12: el diálogo de duplicado no devuelve el foco a la card tras duplicar con éxito",
+  async ({ page }) => {
+    await openDashboard(page);
+    const detail = await selectStore(page, "Predeterminado");
+    await detail.getByRole("button", { name: "Duplicar" }).click();
+    const duplicateDialog = page.getByTestId("ui-duplicate-dialog");
+    await expect(duplicateDialog).toBeVisible();
+    await duplicateDialog.getByRole("button", { name: "Duplicar", exact: true }).click();
+    await expect(duplicateDialog).toBeHidden();
+    // El camino de cancelar restaura el foco a la card; el de éxito no lo hace.
+    await expect(page.locator('[data-store-card-id="store-modo-sur-demo"]')).toBeFocused();
+  },
+);
+
+test("A13: archivar — confirmación, cancelar y deshacer", async ({ page }) => {
+  await openDashboard(page);
+  const detail = await selectStore(page, "Predeterminado");
+
+  // La confirmación es un diálogo propio con foco en Cancelar (destructivo).
+  await detail.getByRole("button", { name: "Archivar", exact: true }).click();
+  const confirm = page.getByTestId("ui-confirm-dialog");
+  await expect(confirm).toBeVisible();
+  await expect(confirm).toContainText("Archivar tienda");
+  await expect(confirm).toContainText('"Predeterminado"');
+  await expect(confirm.getByRole("button", { name: "Cancelar", exact: true })).toBeFocused();
+
+  // Cancelar no archiva.
+  await confirm.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(confirm).toHaveCount(0);
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+
+  // Confirmar archiva: la card sale de Activas y el toast ofrece Deshacer.
+  await detail.getByRole("button", { name: "Archivar", exact: true }).click();
+  await expect(confirm).toBeVisible();
+  await confirm.getByTestId("ui-confirm-accept").click();
+  await expect(confirm).toHaveCount(0);
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
+
+  const toast = page.getByTestId("ui-dashboard-toast");
+  await expect(toast).toContainText("archivada");
+  await toast.getByRole("button", { name: "Deshacer" }).click();
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  await expect(cardByName(page, "Predeterminado").locator(".dashboard-store-card__status")).toHaveText(
+    "Activa",
+  );
+});
+
+test("A13: archivar — restaurar desde el filtro de archivadas", async ({ page }) => {
+  await openDashboard(page);
+  const detail = await selectStore(page, "Predeterminado");
+  await detail.getByRole("button", { name: "Archivar", exact: true }).click();
+  await page.getByTestId("ui-confirm-dialog").getByTestId("ui-confirm-accept").click();
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
+
+  // La card vive en Archivadas con su estado reflejado.
+  await page.getByLabel("Estado").selectOption("archived");
+  await expect(cardByName(page, "Predeterminado").locator(".dashboard-store-card__status")).toHaveText(
+    "Archivada",
+  );
+
+  // Restaurar la vuelve a Activas (botón del detalle alterna el estado).
+  const archivedDetail = await selectStore(page, "Predeterminado");
+  await archivedDetail.getByRole("button", { name: "Restaurar", exact: true }).click();
+  await expect(cardByName(page, "Predeterminado").locator(".dashboard-store-card__status")).toHaveText(
+    "Activa",
+  );
+  await archivedDetail.getByRole("button", { name: "Archivar", exact: true }).toBeVisible();
+
+  await page.getByLabel("Estado").selectOption("active");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+});
+
+test("A13: respaldo ahora — descarga real de un .solara.json con el proyecto", async ({ page }) => {
+  await openDashboard(page);
+  await selectStore(page, "Predeterminado");
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Respaldo ahora" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("predeterminado-respaldo.solara.json");
+
+  const envelope = JSON.parse(
+    readFileSync((await download.path()) ?? "", "utf8"),
+  ) as { format: string; version: number; project: { schemaVersion: number; id: string } };
+  expect(envelope.format).toBe("solara-project");
+  expect(envelope.version).toBe(2);
+  expect(envelope.project.schemaVersion).toBe(2);
+  expect(envelope.project.id).toBe("store-modo-sur-demo");
+
+  // Auto-feedback del panel de detalle tras la operación.
+  await expect(page.getByTestId("ui-detail-notice")).toContainText("Se creó un respaldo.");
+});
+
+test("A13: abrir tienda — la card y el detalle navegan al editor", async ({ page }) => {
+  await openDashboard(page);
+  await cardByName(page, "Predeterminado")
+    .getByRole("button", { name: "Abrir esta tienda" })
+    .click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Volver a tiendas" }).click();
+  const detail = await selectStore(page, "Predeterminado");
+  await detail.getByRole("button", { name: "Abrir tienda" }).click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+});
+
+// ---------------------------------------------------------------- modo gestionado
+
+async function findFreePort(): Promise<number> {
+  const probe = createServer();
+  await new Promise<void>((resolveListening, reject) => {
+    probe.once("error", reject);
+    probe.listen(0, "127.0.0.1", () => resolveListening());
+  });
+  const address = probe.address();
+  await new Promise<void>((resolveClosing, reject) => {
+    probe.close((error) => (error ? reject(error) : resolveClosing()));
+  });
+  if (!address || typeof address === "string") throw new Error("No se pudo reservar un puerto.");
+  return address.port;
+}
+
+async function waitForServer(url: string): Promise<void> {
+  await expect
+    .poll(
+      async () => {
+        try {
+          return (await fetch(url)).status;
+        } catch {
+          return 0;
+        }
+      },
+      { timeout: 10_000, intervals: [100, 250, 500] },
+    )
+    .toBe(200);
+}
+
+async function startManagedServer(): Promise<{ process: ChildProcess; url: string; root: string }> {
+  const applicationRoot = mkdtempSync(join(tmpdir(), "solara-a13-managed-"));
+  const port = 4300 + Math.floor(Math.random() * 200);
+  const token = randomBytes(24).toString("base64url");
+  const url = `http://127.0.0.1:${port}`;
+  const serverProcess: ChildProcess = spawn(
+    process.execPath,
+    [
+      resolve("packages/exporter/scripts/serve.mjs"),
+      resolve("apps/studio/dist"),
+      String(port),
+      token,
+      applicationRoot,
+    ],
+    { cwd: resolve("."), stdio: "ignore" },
+  );
+  await waitForServer(url);
+  return { process: serverProcess, url, root: applicationRoot };
+}
+
+async function stopManagedServer(process: ChildProcess, root: string): Promise<void> {
+  if (process.exitCode === null) process.kill();
+  rmSync(root, { recursive: true, force: true });
+}
+
+test("A13: panel gestionado — descargar, respaldo, sitio público y carpeta", async ({ page }) => {
+  test.setTimeout(240_000);
+  const managed = await startManagedServer();
+  try {
+    await page.goto(managed.url);
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole("button", { name: "Respaldar todo" })).toBeEnabled({
+      timeout: 15_000,
+    });
+
+    const detail = await selectStore(page, "Predeterminado");
+
+    // Descargar respaldo: archivo real desde disco, con versión del manifest.
+    const downloadPromise = page.waitForEvent("download");
+    await detail.getByRole("button", { name: "Descargar respaldo" }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/^predeterminado-v1\.solara\.json$/);
+
+    // Respaldo ahora: respaldo manual en disco, aviso en el panel.
+    await detail.getByRole("button", { name: "Respaldo ahora" }).click();
+    await expect(page.getByTestId("ui-detail-notice")).toContainText("Se creó un respaldo.");
+
+    // Abrir sitio público sin sitio exportado: error visible, sin popup.
+    await detail.getByRole("button", { name: "Abrir sitio público" }).click();
+    await expect(page.locator(".global-error")).toContainText("no tiene un sitio público válido");
+    await page.getByRole("button", { name: "Cerrar mensaje" }).click();
+
+    // Se exporta el sitio desde el editor y el botón abre el popup público.
+    await detail.getByRole("button", { name: "Abrir tienda" }).click();
+    await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+    await page.locator("[data-studio-save]").click();
+    await expect(page.locator(".save-indicator")).toContainText("Guardado", { timeout: 120_000 });
+    await page.getByRole("button", { name: "Volver a tiendas" }).click();
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+
+    const openedDetail = await selectStore(page, "Predeterminado");
+    const popupPromise = page.waitForEvent("popup");
+    await openedDetail.getByRole("button", { name: "Abrir sitio público" }).click();
+    const popup = await popupPromise;
+    await popup.waitForURL(/^http:\/\/127\.0\.0\.1:\d+/);
+    await expect(popup).toHaveTitle(/Predeterminado/i);
+    await popup.close();
+
+    // Abrir carpeta: el POST llega al endpoint local con el id correcto; la
+    // apertura del explorador queda fuera del entorno de pruebas.
+    let folderRequestUrl = "";
+    await page.route("**/open-folder", async (route) => {
+      folderRequestUrl = route.request().url();
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, folder: "e2e" }),
+      });
+    });
+    await openedDetail.getByRole("button", { name: "Abrir carpeta" }).click();
+    expect(folderRequestUrl).toContain("/storage/projects/store-modo-sur-demo/open-folder");
+    await expect(openedDetail.getByRole("button", { name: "Abrir carpeta" })).toBeEnabled();
+    await expect(page.locator(".global-error")).toHaveCount(0);
+  } finally {
+    await stopManagedServer(managed.process, managed.root);
+  }
+});
+
+test("A13: cierre del servidor — cancelar, estado cerrando y terminal con banner", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const managed = await startManagedServer();
+  try {
+    await page.goto(managed.url);
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+      timeout: 15_000,
+    });
+    const closeButton = page.getByRole("button", { name: "Cerrar app" });
+    await expect(closeButton).toBeVisible({ timeout: 15_000 });
+
+    // Cancelar mantiene el servidor vivo.
+    await closeButton.click();
+    const shutdownDialog = page.getByRole("dialog", { name: "¿Cerrar SolaraCommerce?" });
+    await expect(shutdownDialog).toBeVisible();
+    await shutdownDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+    await expect(shutdownDialog).toBeHidden();
+    await expect.poll(async () => (await fetch(managed.url)).status, { timeout: 5_000 }).toBe(200);
+
+    // Cierre confirmado: el diálogo queda en «Cerrando...» con todo deshabilitado
+    // mientras el servidor responde (respuesta demorada para poder observarlo).
+    let delayShutdown = true;
+    await page.route("**/__solara/shutdown", async (route) => {
+      if (delayShutdown) await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_500));
+      await route.continue();
+    });
+    await closeButton.click();
+    await expect(shutdownDialog).toBeVisible();
+    await shutdownDialog.getByRole("button", { name: "Cerrar y detener" }).click();
+    const closing = shutdownDialog.getByRole("button", { name: "Cerrando..." });
+    await expect(closing).toBeVisible();
+    await expect(closing).toBeDisabled();
+    await expect(shutdownDialog.getByRole("button", { name: "Cancelar" })).toBeDisabled();
+
+    // Terminal: banner persistente y servidor detenido.
+    await expect(page.locator(".shutdown-status")).toContainText("Servidor local detenido", {
+      timeout: 15_000,
+    });
+    await expect.poll(() => managed.process.exitCode, { timeout: 10_000 }).toBe(0);
+    await expect(page.getByRole("button", { name: "Cerrar app" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Respaldar todo" })).toBeDisabled();
+
+    // El estado terminal no se revierte: ni diálogo ni banner nuevo.
+    delayShutdown = false;
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent("solara:open-shutdown"));
+    });
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator(".shutdown-status")).toContainText("Servidor local detenido");
+  } finally {
+    await stopManagedServer(managed.process, managed.root);
+  }
+});
+
+test.fixme("A12: el diálogo de cierre no restaura el foco a «Cerrar app» al cancelar", async ({
+  page,
+}) => {
+  const managed = await startManagedServer();
+  try {
+    await page.goto(managed.url);
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+      timeout: 15_000,
+    });
+    const closeButton = page.getByRole("button", { name: "Cerrar app" });
+    await expect(closeButton).toBeVisible({ timeout: 15_000 });
+    await closeButton.click();
+    const shutdownDialog = page.getByRole("dialog", { name: "¿Cerrar SolaraCommerce?" });
+    await expect(shutdownDialog).toBeVisible();
+    await shutdownDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+    await expect(shutdownDialog).toBeHidden();
+    await expect(closeButton).toBeFocused();
+  } finally {
+    await stopManagedServer(managed.process, managed.root);
+  }
+});
+
+test.fixme("A12: la «X» de creación no se deshabilita mientras la tienda se crea", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  const dialog = await openCreateDialog(page);
+  await page.getByLabel("Nueva tienda").fill("Tienda A13 X");
+  for (let step = 1; step <= 3; step += 1) {
+    await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
+  }
+  const closeCreation = page.getByRole("button", { name: "Cerrar creación" });
+  const submit = dialog.getByRole("button", { name: "Crear tienda vacía" });
+  await expect(submit).toBeEnabled();
+  await Promise.all([
+    submit.click(),
+    // El submit queda deshabilitado mientras crea; la X debería seguirlo.
+    expect(submit).toBeDisabled(),
+  ]);
+  await expect(closeCreation).toBeDisabled();
+});
