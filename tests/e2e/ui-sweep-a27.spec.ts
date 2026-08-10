@@ -44,13 +44,17 @@ const galleryStore = structuredClone(catalogModernStore);
 }
 
 function fileText(content: string | Uint8Array | undefined): string {
-  return typeof content === "string" ? content : new TextDecoder().decode(content ?? new Uint8Array());
+  return typeof content === "string"
+    ? content
+    : new TextDecoder().decode(content ?? new Uint8Array());
 }
 
 const baseExport = exportProject(catalogModernStore, { mode: "production" });
 const galleryExport = exportProject(galleryStore, { mode: "production" });
 const baseIndexHtml = fileText(baseExport.files.get("index.html"));
-const productHtml = fileText(baseExport.files.get("productos/remera-esencial-de-algodon/index.html"));
+const productHtml = fileText(
+  baseExport.files.get("productos/remera-esencial-de-algodon/index.html"),
+);
 
 function startServer(exported: typeof baseExport): Promise<number> {
   return new Promise((resolveListening) => {
@@ -95,7 +99,10 @@ let basePort = 0;
 let galleryPort = 0;
 
 test.beforeAll(async () => {
-  [basePort, galleryPort] = await Promise.all([startServer(baseExport), startServer(galleryExport)]);
+  [basePort, galleryPort] = await Promise.all([
+    startServer(baseExport),
+    startServer(galleryExport),
+  ]);
 });
 
 test.afterAll(async () => {
@@ -177,17 +184,23 @@ test("C2: agregar al carrito crea la línea, actualiza contador y subtotales con
   await expect(drawer.locator("[data-cart-total]")).toHaveText("$ 57.700,00");
   await expect(line).toContainText("$ 57.700,00");
 
+  await page.keyboard.press("Escape");
+  await expect(drawer).not.toHaveAttribute("data-open", "true");
+  await page.locator('input[name="quantity"]').fill("1");
   await addButton.click();
+  await expect(drawer).toHaveAttribute("data-open", "true");
   await expect(toggle.locator("[data-cart-count]")).toHaveText("3");
   await expect(drawer.locator("[data-cart-total]")).toHaveText("$ 86.550,00");
 
   const quantityInput = drawer.locator("[data-cart-quantity]").first();
   await quantityInput.fill("150");
+  await quantityInput.blur();
   await expect(quantityInput).toHaveValue("99");
   await expect(toggle.locator("[data-cart-count]")).toHaveText("99");
   await expect(drawer.locator("[data-cart-total]")).toHaveText("$ 2.856.150,00");
 
   await quantityInput.fill("0");
+  await quantityInput.blur();
   await expect(quantityInput).toHaveValue("99");
   await expect(toggle.locator("[data-cart-count]")).toHaveText("99");
 
@@ -272,7 +285,7 @@ test("C5: el menú móvil abre con aria-expanded, cierra con foco y navega por s
     'data-catalog-menu-open aria-controls="catalog-mobile-menu" aria-expanded="false"',
   );
 
-  const openButton = page.getByRole("button", { name: "Abrir menú" });
+  const openButton = page.locator("[data-catalog-menu-open]");
   const menu = page.locator("#catalog-mobile-menu");
   await expect(openButton).toHaveAttribute("aria-expanded", "false");
   await expect(menu).toHaveAttribute("aria-hidden", "true");
@@ -296,7 +309,6 @@ test("C5: el menú móvil abre con aria-expanded, cierra con foco y navega por s
   await expect(openButton).toBeFocused();
 
   await openButton.click();
-  await page.locator(".catalog-mobile-category").first().locator(":scope > summary").click();
   await page.locator('.catalog-mobile-category__parent[href="/categorias/remeras/"]').click();
   await expect(page).toHaveURL(/\/categorias\/remeras\/$/);
   await expect(page.getByRole("heading", { level: 1, name: "Remeras" })).toBeVisible();
@@ -479,9 +491,7 @@ test("C9b: un producto con todas las variantes agotadas inicia el botón deshabi
   await expect(addButton).toHaveText("Sin stock");
   await expect(page.locator("[data-product-availability]")).toHaveText("Agotado");
   await expect(page.locator("[data-variant-select] option")).toBeDisabled();
-  await expect(
-    page.locator('[data-variant-option][data-option-value="Único"]'),
-  ).toBeDisabled();
+  await expect(page.locator('[data-variant-option][data-option-value="Único"]')).toBeDisabled();
 });
 
 test("C10: el checkout del drawer moderno genera el enlace de WhatsApp con el pedido", async ({
@@ -514,6 +524,20 @@ test("C10: el checkout del drawer moderno genera el enlace de WhatsApp con el pe
   await expect(drawer.locator("[data-order-preview]")).toContainText("11 5555 0142");
 });
 
+test.fixme(
+  "A29: el drawer de carrito abierto inertea a los hermanos de la página (como el menú móvil)",
+  async ({ page }) => {
+    test
+      .info()
+      .annotations.push({ type: "contrato", description: "A27 · fixme A29 · drawer inert" });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(storeUrl(basePort, "/"));
+
+    await page.locator("[data-solara-cart-open]").click();
+    await expect(page.locator('[data-solara-module="catalog-hero"]')).toHaveAttribute("inert", "");
+  },
+);
+
 test("C11: el contrato del detalle moderno declara los atributos que lee el runtime", async () => {
   test.info().annotations.push({ type: "contrato", description: "A27 · C11 · markup contract" });
   expect(productHtml).toContain('data-product data-product-id="modo-product-01"');
@@ -530,4 +554,16 @@ test("C11: el contrato del detalle moderno declara los atributos que lee el runt
   expect(productHtml).toContain('data-variant-option data-option-key="Talle"');
   expect(productHtml).toContain('href="https://wa.me/5491123456789?text=');
   expect(productHtml).toContain('name="quantity" type="number" min="1" max="99"');
+  expect(productHtml).toContain(
+    'data-product-tab="details" aria-controls="catalog-product-description-',
+  );
+  expect(productHtml).toContain("catalog-product-description-");
+  expect(baseIndexHtml).toContain('aria-controls="solara-cart" aria-expanded="false"');
+  expect(baseIndexHtml).toContain(
+    'id="catalog-mobile-menu" class="catalog-mobile-menu" data-catalog-menu hidden role="dialog" aria-modal="true" aria-hidden="true"',
+  );
+  expect(baseIndexHtml).toContain(
+    'id="solara-cart" class="catalog-cart-drawer" data-cart-drawer aria-label="Tu carrito" aria-modal="true" aria-hidden="true" inert',
+  );
+  expect(baseIndexHtml).toContain("catalog-search-noscript");
 });
