@@ -209,6 +209,8 @@ function storefrontBoot(): void {
 
   let cart = hasFeature("cart") || hasFeature("checkout") ? readStoredCart() : [];
   let lastCartTrigger: HTMLElement | null = null;
+  let paused = false;
+  const heroAutoplayControls: Array<{ stop: () => void; start: () => void }> = [];
 
   const initialAddLabels = new Map<HTMLElement, string>();
   document.querySelectorAll<HTMLElement>("[data-add-to-cart]").forEach((button) => {
@@ -313,6 +315,7 @@ function storefrontBoot(): void {
   };
 
   const reconcileCart = (): Promise<boolean> => {
+    if (paused) return Promise.resolve(false);
     if (freshCatalog) return freshCatalog;
     freshCatalog = fetch("/catalog-index.json")
       .then((response) => {
@@ -676,6 +679,7 @@ function storefrontBoot(): void {
   if (pageType === "cart" || pageType === "checkout") void reconcileCart();
 
   const updateChromeHeight = (): void => {
+    if (paused) return;
     const chrome = Array.from(
       document.querySelectorAll<HTMLElement>(
         '[data-solara-module="announcement-bar"], [data-solara-module="editorial-header"]',
@@ -683,17 +687,21 @@ function storefrontBoot(): void {
     ).reduce((total, element) => total + element.getBoundingClientRect().height, 0);
     root.style.setProperty("--solara-chrome-height", `${Math.ceil(chrome)}px`);
   };
-  updateChromeHeight();
-  if ("ResizeObserver" in window) {
-    const chromeObserver = new ResizeObserver(updateChromeHeight);
+  let chromeObserver: ResizeObserver | null = null;
+  const connectChromeObserver = (): void => {
+    if (!("ResizeObserver" in window)) return;
+    const observer = new ResizeObserver(updateChromeHeight);
     document
       .querySelectorAll<HTMLElement>(
         '[data-solara-module="announcement-bar"], [data-solara-module="editorial-header"]',
       )
       .forEach((element) => {
-        chromeObserver.observe(element);
+        observer.observe(element);
       });
-  }
+    chromeObserver = observer;
+  };
+  updateChromeHeight();
+  connectChromeObserver();
 
   document
     .querySelectorAll<HTMLButtonElement>("[data-catalog-announcement-close]")
@@ -711,20 +719,38 @@ function storefrontBoot(): void {
   const headers = Array.from(
     document.querySelectorAll<HTMLElement>('[data-solara-module="editorial-header"]'),
   );
-  if (headers.length > 0 && "IntersectionObserver" in window) {
-    const sentinel = document.createElement("span");
-    sentinel.dataset.solaraScrollSentinel = "true";
-    sentinel.setAttribute("aria-hidden", "true");
-    sentinel.style.cssText =
-      "position:absolute;top:0;left:0;width:1px;height:1px;pointer-events:none;opacity:0";
-    document.body.prepend(sentinel);
-    const headerObserver = new IntersectionObserver(([entry]) => {
+  const sentinel = document.createElement("span");
+  let headerObserver: IntersectionObserver | null = null;
+  const connectHeaderObserver = (): void => {
+    if (headers.length === 0 || !("IntersectionObserver" in window)) return;
+    const observer = new IntersectionObserver(([entry]) => {
       const scrolled = entry ? !entry.isIntersecting : false;
       headers.forEach((header) => {
         header.dataset.scrolled = String(scrolled);
       });
     });
-    headerObserver.observe(sentinel);
+    observer.observe(sentinel);
+    headerObserver = observer;
+  };
+  const hasIntersectionObserver = "IntersectionObserver" in window;
+  if (headers.length > 0) {
+    sentinel.dataset.solaraScrollSentinel = "true";
+    sentinel.setAttribute("aria-hidden", "true");
+    sentinel.style.cssText =
+      "position:absolute;top:0;left:0;width:1px;height:1px;pointer-events:none;opacity:0";
+    if (hasIntersectionObserver) {
+      document.body.prepend(sentinel);
+      connectHeaderObserver();
+    } else {
+      const syncScrolled = (): void => {
+        const scrolled = document.documentElement.scrollTop > 0;
+        headers.forEach((header) => {
+          header.dataset.scrolled = String(scrolled);
+        });
+      };
+      window.addEventListener("scroll", syncScrolled, { passive: true });
+      syncScrolled();
+    }
   }
 
   document
@@ -968,6 +994,7 @@ function storefrontBoot(): void {
       });
       hero.addEventListener("pointerenter", stop);
       hero.addEventListener("focusin", stop);
+      heroAutoplayControls.push({ stop, start });
       setSlide(0);
       start();
     });
@@ -1077,6 +1104,12 @@ function storefrontBoot(): void {
       () => (document.hidden ? stopAutoplay() : interactionPaused ? undefined : startAutoplay()),
       { passive: true },
     );
+    heroAutoplayControls.push({
+      stop: stopAutoplay,
+      start: () => {
+        if (!interactionPaused) startAutoplay();
+      },
+    });
     startAutoplay();
   });
 
@@ -1320,27 +1353,34 @@ function storefrontBoot(): void {
       )
     : [];
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let motionObserver: IntersectionObserver | null = null;
+  const connectMotion = (): void => {
+    if (!reduceMotion && "IntersectionObserver" in window) {
+      root.dataset.motionReady = "true";
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            const element = entry.target as HTMLElement;
+            const entryPoint = Number(element.dataset.motionEntry ?? "0.18");
+            const triggerLine = window.innerHeight * (1 - Math.max(0, Math.min(1, entryPoint)));
+            if (entry.isIntersecting && entry.boundingClientRect.top <= triggerLine) {
+              element.dataset.motionVisible = "true";
+              if (element.dataset.motionOnce !== "false") observer.unobserve(element);
+            } else if (element.dataset.motionOnce === "false") {
+              delete element.dataset.motionVisible;
+            }
+          });
+        },
+        { threshold: [0, 0.01] },
+      );
+      motionRoots.forEach((element) => {
+        observer.observe(element);
+      });
+      motionObserver = observer;
+    }
+  };
   if (!reduceMotion && "IntersectionObserver" in window) {
-    root.dataset.motionReady = "true";
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const element = entry.target as HTMLElement;
-          const entryPoint = Number(element.dataset.motionEntry ?? "0.18");
-          const triggerLine = window.innerHeight * (1 - Math.max(0, Math.min(1, entryPoint)));
-          if (entry.isIntersecting && entry.boundingClientRect.top <= triggerLine) {
-            element.dataset.motionVisible = "true";
-            if (element.dataset.motionOnce !== "false") observer.unobserve(element);
-          } else if (element.dataset.motionOnce === "false") {
-            delete element.dataset.motionVisible;
-          }
-        });
-      },
-      { threshold: [0, 0.01] },
-    );
-    motionRoots.forEach((element) => {
-      observer.observe(element);
-    });
+    connectMotion();
   } else {
     motionRoots.forEach((element) => {
       element.dataset.motionVisible = "true";
@@ -1354,6 +1394,51 @@ function storefrontBoot(): void {
   if (hasFeature("variants")) {
     document.querySelectorAll<HTMLElement>("[data-product]").forEach(syncVariant);
   }
+
+  const pauseRuntime = (): void => {
+    if (paused) return;
+    paused = true;
+    motionObserver?.disconnect();
+    motionObserver = null;
+    headerObserver?.disconnect();
+    headerObserver = null;
+    chromeObserver?.disconnect();
+    chromeObserver = null;
+    heroAutoplayControls.forEach((control) => {
+      control.stop();
+    });
+  };
+
+  const resumeRuntime = (): void => {
+    if (!paused) return;
+    paused = false;
+    connectMotion();
+    connectHeaderObserver();
+    connectChromeObserver();
+    heroAutoplayControls.forEach((control) => {
+      control.start();
+    });
+    if (hasFeature("variants")) {
+      document.querySelectorAll<HTMLElement>("[data-product]").forEach(syncVariant);
+    }
+    if (pageType === "cart" || pageType === "checkout") {
+      freshCatalog = null;
+      void reconcileCart();
+    }
+  };
+
+  const onVisibility = (): void => {
+    if (document.hidden) pauseRuntime();
+    else resumeRuntime();
+  };
+  document.addEventListener("visibilitychange", onVisibility, { passive: true });
+  window.addEventListener("message", (event) => {
+    if (event.source !== window.parent) return;
+    const type = (event.data as { type?: unknown } | undefined)?.type;
+    if (type === "solara-pause") pauseRuntime();
+    else if (type === "solara-resume") resumeRuntime();
+  });
+  if (document.hidden) pauseRuntime();
 }
 
 const SEARCH_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unknown]> = [

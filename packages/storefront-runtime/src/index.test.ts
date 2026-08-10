@@ -34,9 +34,10 @@ describe("storefront runtime", () => {
     expect(url).toBe("https://wa.me/5491123456789?text=Pedido%0AManta");
   });
 
-  it("usa observadores sin instalar listeners globales de scroll", () => {
-    expect(STOREFRONT_RUNTIME_JS).not.toContain('addEventListener("scroll"');
+  it("usa observadores sin listeners táctiles ni scrollY para el estado de scroll", () => {
     expect(STOREFRONT_RUNTIME_JS).not.toContain("scrollY");
+    expect(STOREFRONT_RUNTIME_JS).not.toContain('addEventListener("wheel"');
+    expect(STOREFRONT_RUNTIME_JS).not.toContain('addEventListener("touchstart"');
     expect(STOREFRONT_RUNTIME_JS).toContain("IntersectionObserver");
   });
 
@@ -259,5 +260,31 @@ describe("motion direction de slide (SF-B6)", () => {
 
   it("fade-up conserva su movimiento vertical propio", () => {
     expect(STOREFRONT_RUNTIME_CSS).toContain("@keyframes solara-motion-fade-up");
+  });
+});
+
+describe("pausa y reanudación del runtime (contrato A3↔A4)", () => {
+  it("se pausa y reanuda con mensajes postMessage del padre", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain('"solara-pause"');
+    expect(STOREFRONT_RUNTIME_JS).toContain('"solara-resume"');
+    expect(STOREFRONT_RUNTIME_JS).toContain('addEventListener("message"');
+    expect(STOREFRONT_RUNTIME_JS).toContain("event.source !== window.parent");
+  });
+
+  it("pausa el trabajo con la visibilidad del documento con un listener pasivo", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      'addEventListener("visibilitychange", onVisibility, { passive: true })',
+    );
+  });
+
+  it("registra los listeners de scroll como pasivos", () => {
+    const registration = STOREFRONT_RUNTIME_JS.match(/addEventListener\("scroll",[^;]*\)/)?.[0];
+    expect(registration).toBeDefined();
+    expect(registration).toContain("{ passive: true }");
+  });
+
+  it("re-sincroniza variantes y carrito al reanudar", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("connectMotion()");
+    expect(STOREFRONT_RUNTIME_JS).toContain("freshCatalog = null");
   });
 });
