@@ -14,7 +14,6 @@ import {
 } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
 import {
-  lazy,
   memo,
   type KeyboardEvent as ReactKeyboardEvent,
   type RefObject,
@@ -45,10 +44,6 @@ import { CompareView } from "./dashboard/CompareView";
 import { DashboardToolbar } from "./dashboard/DashboardToolbar";
 import { DuplicateDialog } from "./dashboard/DuplicateDialog";
 import { formatCompactDate, ProjectCard, statusLabel } from "./dashboard/ProjectCard";
-
-const CosmicBackground = lazy(() =>
-  import("./CosmicBackground").then(({ CosmicBackground: component }) => ({ default: component })),
-);
 
 const PINNED_STORAGE_KEY = "solara-dashboard-pinned";
 const SELECTED_STORAGE_KEY = "solara-dashboard-selected";
@@ -829,12 +824,6 @@ export function Dashboard({
 
   return (
     <main id={"tiendas"} tabIndex={-1} className="dashboard-page dashboard-cosmic">
-      <Suspense
-        fallback={<div className="cosmic-background cosmic-background--fallback" aria-hidden />}
-      >
-        <CosmicBackground intensity="normal" />
-      </Suspense>
-      <div className="dashboard-cosmic__scrim" aria-hidden />
       <div className="dashboard-wrap dashboard-cosmic__content">
         <section className="dashboard-cosmic-hero" aria-labelledby={dashboardTitleId}>
           <div className="dashboard-cosmic-hero__copy">

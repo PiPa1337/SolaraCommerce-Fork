@@ -17,9 +17,10 @@ test.afterAll(async () => {
 
 /**
  * Mensajes del driver GL de Chromium headless (SwiftShader, sin GPU física).
- * El fondo cosmic usa WebGL2 legítimamente; en un navegador con GPU estos
- * avisos no existen y no representan un bug del editor. Se excluyen con
- * patrones exactos y documentados.
+ * Se conservan por compatibilidad con builds antiguos que usaban WebGL2 en el
+ * fondo del dashboard (eliminado: hoy es un gradiente estático); en un
+ * navegador con GPU estos avisos no existen y no representan un bug del
+ * editor. Se excluyen con patrones exactos y documentados.
  */
 const HEADLESS_GL_DRIVER_PATTERNS = [
   /Automatic fallback to software WebGL has been deprecated/,

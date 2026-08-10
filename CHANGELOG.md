@@ -10,6 +10,15 @@ versión publicada.
 
 ## [Unreleased]
 
+### Fondo del dashboard: adiós al agujero negro (2026-08-09)
+
+- El fondo animado WebGL (`CosmicBackground`) se eliminó por completo: el
+  dashboard usa ahora un **gradiente radial estático** (CSS puro, sin canvas,
+  sin animación, sin WebGL). Medido con el harness CDP: dashboard en reposo
+  pasa de ~208 ms/s de TaskDuration con loop continuo a **0.5 ms/s con rAF 0**
+  incluso en primer plano; oculto 0.3 ms/s. El presupuesto de reposo visible
+  se endureció de 260 a 100 ms/s y el CSS del Studio bajó de 101.6 a 99.2 KiB.
+
 ### Optimización de rendimiento y UI (2026-08-09)
 
 - El fondo cosmic dejó de dominar la CPU: dibuja a 30 fps con la ventana

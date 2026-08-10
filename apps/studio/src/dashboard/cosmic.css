@@ -1,5 +1,5 @@
 /* biome-ignore-all lint/style/noDescendingSpecificity: legacy and cosmic dashboard shells share selectors by design. */
-/* Cosmic dashboard: an isolated shell for managing local stores. */
+/* Dashboard: un shell aislado para administrar tiendas locales. */
 .app-root--dashboard-cosmic {
   --cosmic-bg: #03050b;
   --cosmic-surface: rgb(13 16 24 / 0.82);
@@ -15,7 +15,11 @@
   --cosmic-red: #ed6e70;
   position: relative;
   min-height: 100dvh;
-  background: var(--cosmic-bg);
+  /* Gradiente estático (sin WebGL ni animación): el fondo del dashboard. */
+  background:
+    radial-gradient(1200px 780px at 82% -8%, rgb(40 49 88 / 0.95), transparent 62%),
+    radial-gradient(1000px 720px at -6% 108%, rgb(78 36 18 / 0.9), transparent 56%),
+    var(--cosmic-bg);
   color: var(--cosmic-ink);
 }
 
@@ -123,7 +127,7 @@
   min-height: calc(100dvh - 72px);
   overflow: hidden;
   padding: clamp(12px, 1.2vw, 18px) clamp(16px, 3vw, 36px) 16px;
-  background: var(--cosmic-bg);
+  background: transparent;
   color: var(--cosmic-ink);
 }
 
@@ -131,156 +135,6 @@
   position: relative;
   z-index: 2;
   width: min(1540px, 100%);
-}
-
-.cosmic-background,
-.dashboard-cosmic__scrim {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.cosmic-background {
-  position: absolute;
-  z-index: -3;
-  display: block;
-  overflow: hidden;
-  opacity: 0.92;
-}
-
-.cosmic-background::before,
-.cosmic-background::after {
-  position: absolute;
-  display: block;
-  pointer-events: none;
-  content: "";
-}
-
-.cosmic-background::before {
-  z-index: 1;
-  width: min(76vw, 1120px);
-  aspect-ratio: 2.55;
-  top: 8%;
-  left: 36%;
-  border: 2px solid rgb(255 190 73 / 0.78);
-  border-radius: 50%;
-  background: conic-gradient(
-    from 12deg,
-    transparent 0 18%,
-    rgb(255 193 71 / 0.7) 23%,
-    transparent 31% 58%,
-    rgb(222 112 28 / 0.46) 66%,
-    transparent 76% 100%
-  );
-  box-shadow:
-    0 0 12px rgb(255 185 57 / 0.75),
-    0 0 42px rgb(196 82 20 / 0.44),
-    inset 0 0 28px rgb(255 172 47 / 0.28);
-  opacity: 0.7;
-  transform: translate(-50%, 0) rotate(-12deg);
-  transform-origin: 50% 50%;
-  will-change: transform;
-  -webkit-mask: radial-gradient(ellipse at center, transparent 0 56%, #000 58% 100%);
-  mask: radial-gradient(ellipse at center, transparent 0 56%, #000 58% 100%);
-  mix-blend-mode: screen;
-}
-
-.cosmic-background::after {
-  z-index: 2;
-  width: min(28vw, 360px);
-  aspect-ratio: 1;
-  top: 14%;
-  left: 36%;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgb(255 192 71 / 0.42) 0,
-    rgb(233 112 27 / 0.18) 24%,
-    transparent 68%
-  );
-  filter: blur(10px);
-  opacity: 0.64;
-  transform: translate(-50%, 0) scale(0.82);
-  will-change: opacity, transform;
-}
-
-.cosmic-background > canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.cosmic-background--subtle {
-  opacity: 0.62;
-}
-
-.cosmic-background--fallback {
-  z-index: -3;
-  background:
-    radial-gradient(circle at 38% 14%, rgb(184 86 23 / 0.28), transparent 32%),
-    radial-gradient(circle at 70% 70%, rgb(58 19 73 / 0.2), transparent 38%), #03050b;
-}
-
-.cosmic-background[data-webgl="fallback"] {
-  background:
-    radial-gradient(circle at 38% 14%, rgb(222 117 28 / 0.34), transparent 32%),
-    radial-gradient(circle at 70% 70%, rgb(92 35 112 / 0.24), transparent 38%), #03050b;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .cosmic-background::before {
-    animation: cosmic-orbit 8s linear infinite;
-  }
-
-  .cosmic-background::after {
-    animation: cosmic-pulse 3.6s ease-in-out infinite;
-  }
-}
-
-@keyframes cosmic-orbit {
-  0% {
-    transform: translate(-50%, 0) rotate(-12deg) scale(0.96);
-  }
-
-  50% {
-    transform: translate(-50%, 1.5%) rotate(8deg) scale(1.04);
-  }
-
-  100% {
-    transform: translate(-50%, 0) rotate(28deg) scale(0.96);
-  }
-}
-
-@keyframes cosmic-pulse {
-  0%,
-  100% {
-    opacity: 0.28;
-    transform: translate(-50%, 0) scale(0.78);
-  }
-
-  50% {
-    opacity: 0.62;
-    transform: translate(-50%, 2%) scale(1.08);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cosmic-background::before {
-    opacity: 0.34;
-  }
-
-  .cosmic-background::after {
-    opacity: 0.34;
-  }
-}
-
-.dashboard-cosmic__scrim {
-  z-index: -2;
-  background:
-    linear-gradient(90deg, rgb(3 5 11 / 0.74), rgb(3 5 11 / 0.24) 44%, rgb(3 5 11 / 0.66)),
-    linear-gradient(180deg, rgb(3 5 11 / 0.18), rgb(3 5 11 / 0.78));
 }
 
 .dashboard-cosmic-hero {

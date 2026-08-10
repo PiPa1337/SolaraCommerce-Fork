@@ -121,7 +121,13 @@ test("dashboard cosmic muestra datos reales y creación guiada", async ({ page }
   await expect(page.getByText("Productos activos", { exact: true })).toBeVisible();
   await expect(page.locator(".dashboard-cosmic-select select").first()).toHaveValue("active");
   await expect(page.locator(".dashboard-store-card__meta").last()).toHaveText("29 jul 2026");
-  await expect(page.locator(".cosmic-background canvas")).toHaveCount(1);
+  await expect
+    .poll(() =>
+      page
+        .locator(".app-root--dashboard-cosmic")
+        .evaluate((element) => getComputedStyle(element).backgroundImage),
+    )
+    .toContain("radial-gradient");
   await expectNoHorizontalOverflow(page, "Dashboard cosmic");
 
   await page.getByRole("button", { name: "Nueva tienda", exact: true }).click();
@@ -133,33 +139,29 @@ test("dashboard cosmic muestra datos reales y creación guiada", async ({ page }
   await expect(createDialog).toBeHidden();
 });
 
-test("el fondo cosmic mantiene movimiento perceptible y un fallback visible", async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: "no-preference" });
+test("el fondo del dashboard es un gradiente estático sin canvas ni animación", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(studioUrl);
 
-  const background = page.locator(".cosmic-background");
-  const canvas = background.locator("canvas");
-  await expect(background).toBeVisible();
-  await expect.poll(() => canvas.getAttribute("data-webgl")).toMatch(/^(ready|fallback)$/);
+  // El agujero negro (WebGL) se eliminó: no debe quedar canvas ni wrapper.
+  await expect(page.locator(".cosmic-background")).toHaveCount(0);
+  await expect(page.locator("canvas")).toHaveCount(0);
 
-  const cssAnimation = await background.evaluate((element) => {
-    const orbit = getComputedStyle(element, "::before");
-    return { name: orbit.animationName, duration: orbit.animationDuration };
-  });
-  expect(cssAnimation.name).toBe("cosmic-orbit");
-  expect(cssAnimation.duration).toBe("8s");
+  // El fondo es un gradiente radial estático sobre la base oscura.
+  await expect
+    .poll(() =>
+      page
+        .locator(".app-root--dashboard-cosmic")
+        .evaluate((element) => getComputedStyle(element).backgroundImage),
+    )
+    .toContain("radial-gradient");
 
-  const initialTransform = await background.evaluate(
-    (element) => getComputedStyle(element, "::before").transform,
-  );
-  await page.waitForTimeout(400);
-  const nextTransform = await background.evaluate(
-    (element) => getComputedStyle(element, "::before").transform,
-  );
-  expect(nextTransform).not.toBe(initialTransform);
-
-  expect(await canvas.getAttribute("data-webgl")).toMatch(/^(ready|fallback)$/);
+  // Estático: ninguna animación CSS corriendo tras el settle.
+  await page.waitForTimeout(600);
+  const runningAnimations = await page.evaluate(() => document.getAnimations().length);
+  expect(runningAnimations).toBe(0);
 });
 
 test("dashboard permite abrir, buscar, cambiar vista, respaldar y administrar una tienda", async ({

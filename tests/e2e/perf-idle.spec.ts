@@ -8,7 +8,7 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
  * `Performance.getMetrics` durante 5 segundos y lo expresa en ms/s.
  *
  * Casos:
- *   a) dashboard abierto con el fondo cosmic visible;
+ *   a) dashboard abierto (fondo de gradiente estático);
  *   b) editor abierto con el preview corriendo;
  *   c) editor con preview en pestaña oculta (emulación de visibilidad);
  *   d) probe de registros requestAnimationFrame por segundo (sumado a
@@ -25,18 +25,17 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
  *
  * Los umbrales fueron recalibrados en el cierre (2026-08-09) con mediciones
  * post-fixes. Contrato honesto:
- *   - visible + foco: el fondo cosmic anima por diseño (30 fps) → el umbral
- *     de TaskDuration (260 ms/s) es de REGRESIÓN (un segundo loop rAF o un
- *     render loop de React lo haría saltar), no un objetivo de reducción.
- *   - oculto / sin foco / fuera de viewport: el trabajo debe ser ~0 (cosmic
- *     0 fps, runtime del preview pausado) → umbrales estrictos (25 ms/s de
- *     Task, rAF ≈ 0). Es el fix del ~30% reportado.
+ *   - el fondo del dashboard es ahora un GRADIENTE ESTÁTICO (el agujero negro
+ *     WebGL se eliminó): los casos visibles son guardas de REGRESIÓN estrictas
+ *     (un segundo loop rAF o un render loop de React los haría saltar).
+ *   - oculto: el trabajo debe ser ~0; umbrales estrictos (25 ms/s de Task,
+ *     rAF ≈ 0).
  */
 const SETTLE_MS = 3_000;
 const SAMPLE_MS = 5_000;
 
 const DASHBOARD_SCRIPT_BUDGET_MS_PER_S = 100;
-const DASHBOARD_TASK_BUDGET_MS_PER_S = 260;
+const DASHBOARD_TASK_BUDGET_MS_PER_S = 100;
 const EDITOR_SCRIPT_BUDGET_MS_PER_S = 100;
 const EDITOR_TASK_BUDGET_MS_PER_S = 100;
 const HIDDEN_SCRIPT_BUDGET_MS_PER_S = 25;
@@ -158,12 +157,10 @@ async function openEditor(page: Page): Promise<void> {
   await expect(page.locator(".preview-pane iframe").first()).toBeVisible();
 }
 
-test("dashboard en reposo: el cosmic visible queda bajo el presupuesto", async ({ page }) => {
+test("dashboard en reposo: el gradiente estático no deja trabajo", async ({ page }) => {
   await installRafProbe(page);
   await openDashboard(page);
-  await expect(page.locator(".cosmic-background canvas")).toHaveCount(1);
   await page.waitForTimeout(SETTLE_MS);
-  const webgl = await page.locator(".cosmic-background canvas").first().getAttribute("data-webgl");
 
   const idle = await measureIdle(page);
   const raf = await rafPerSecondAllFrames(page);
@@ -171,8 +168,7 @@ test("dashboard en reposo: el cosmic visible queda bajo el presupuesto", async (
   console.log(
     `perf-idle: dashboard ScriptDuration ${idle.scriptMsPerSecond.toFixed(1)} ms/s, ` +
       `TaskDuration ${idle.taskMsPerSecond.toFixed(1)} ms/s, rAF ${raf.toFixed(1)}/s ` +
-      `(webgl ${webgl ?? "unknown"}, presupuesto provisional ` +
-      `${DASHBOARD_SCRIPT_BUDGET_MS_PER_S}/${DASHBOARD_TASK_BUDGET_MS_PER_S} ms/s, ${RAF_BUDGET_PER_S}/s)`,
+      `(presupuesto ${DASHBOARD_SCRIPT_BUDGET_MS_PER_S}/${DASHBOARD_TASK_BUDGET_MS_PER_S} ms/s, ${RAF_BUDGET_PER_S}/s)`,
   );
   expect(idle.scriptMsPerSecond).toBeLessThanOrEqual(DASHBOARD_SCRIPT_BUDGET_MS_PER_S);
   expect(idle.taskMsPerSecond).toBeLessThanOrEqual(DASHBOARD_TASK_BUDGET_MS_PER_S);
@@ -220,11 +216,10 @@ test("editor con preview oculto: la pestaña escondida no trabaja", async ({ pag
   expect(raf).toBeLessThanOrEqual(HIDDEN_RAF_BUDGET_PER_S);
 });
 
-test("dashboard oculto: el cosmic no dibuja con la pestaña escondida", async ({ page }) => {
+test("dashboard oculto: el fondo estático no deja trabajo", async ({ page }) => {
   await installRafProbe(page);
   await installVisibilityEmulation(page);
   await openDashboard(page);
-  await expect(page.locator(".cosmic-background canvas")).toHaveCount(1);
   await page.waitForTimeout(SETTLE_MS);
 
   const visible = await measureIdle(page);
