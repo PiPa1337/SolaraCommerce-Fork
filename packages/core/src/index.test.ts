@@ -167,9 +167,9 @@ describe("reduceProject", () => {
 
   it("usa -10_000 basisPoints como piso: -100% llega a 0 y menos queda fuera", () => {
     expect(adjustPrice(500, { type: "percentage", basisPoints: -10_000 })).toBe(0);
-    expect(() =>
-      adjustPrice(500, { type: "percentage", basisPoints: -10_001 }),
-    ).toThrow("El porcentaje no puede reducir el precio por debajo de cero.");
+    expect(() => adjustPrice(500, { type: "percentage", basisPoints: -10_001 })).toThrow(
+      "El porcentaje no puede reducir el precio por debajo de cero.",
+    );
   });
 
   it("mantiene la misma referencia para operaciones sin cambios", () => {

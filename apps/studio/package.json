@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "@solara/studio",
   "version": "0.1.0",
   "private": true,
@@ -29,4 +29,3 @@
     "vite": "7.1.3"
   }
 }
-

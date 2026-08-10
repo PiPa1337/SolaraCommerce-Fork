@@ -16,3 +16,4 @@ proyectos/
 *.tsbuildinfo
 .DS_Store
 .superpowers/sdd/
+.playwright-cli/

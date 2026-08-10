@@ -1,4 +1,4 @@
-import { StoreProjectV1Schema, type ImageAsset } from "@solara/project-schema";
+import { type ImageAsset, StoreProjectV1Schema } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { describe, expect, it } from "vitest";
 import { assetUses } from "./assetUses";

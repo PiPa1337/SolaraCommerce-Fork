@@ -180,43 +180,40 @@ test.describe("Shell", () => {
   test("cambiar de pestaña cambia el panel del editor y su tab queda seleccionada", async ({
     page,
   }) => {
-      await openDemoStore(page);
-      const pane = page.locator("[data-studio-editor-pane]");
-      await expect(pane).toHaveAttribute("data-tab", "guided");
+    await openDemoStore(page);
+    const pane = page.locator("[data-studio-editor-pane]");
+    await expect(pane).toHaveAttribute("data-tab", "guided");
 
-      await page.getByRole("tab", { name: "Resumen", exact: true }).click();
-      await expect(pane).toHaveAttribute("data-tab", "overview");
-      await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
-      await expect(page.getByRole("tab", { name: "Resumen", exact: true })).toHaveAttribute(
-        "aria-selected",
-        "true",
-      );
-    },
-  );
+    await page.getByRole("tab", { name: "Resumen", exact: true }).click();
+    await expect(pane).toHaveAttribute("data-tab", "overview");
+    await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Resumen", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
 
   test("el toggle de tema cambia data-studio-theme en el documento", async ({ page }) => {
-      await openDemoStore(page);
-      const themeBefore = await page.evaluate(() =>
-        document.documentElement.getAttribute("data-studio-theme"),
-      );
-      await page.getByTestId("ui-theme-toggle").click();
-      await expect(page.locator("html")).toHaveAttribute(
-        "data-studio-theme",
-        themeBefore === "dark" ? "light" : "dark",
-      );
-    },
-  );
+    await openDemoStore(page);
+    const themeBefore = await page.evaluate(() =>
+      document.documentElement.getAttribute("data-studio-theme"),
+    );
+    await page.getByTestId("ui-theme-toggle").click();
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-studio-theme",
+      themeBefore === "dark" ? "light" : "dark",
+    );
+  });
 
   test("guardar en el navegador pasa por Cambios pendientes y llega a Guardado", async ({
     page,
   }) => {
-      await openDemoTab(page, "Constructor", "Constructor");
-      await selectHero(page);
-      await page.getByRole("textbox", { name: "Título", exact: true }).fill("Guardado Matriz F14");
-      await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
-      await expect(page.getByText(/^Guardado/)).toBeVisible({ timeout: 15_000 });
-    },
-  );
+    await openDemoTab(page, "Constructor", "Constructor");
+    await selectHero(page);
+    await page.getByRole("textbox", { name: "Título", exact: true }).fill("Guardado Matriz F14");
+    await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
+    await expect(page.getByText(/^Guardado/)).toBeVisible({ timeout: 15_000 });
+  });
 });
 
 test.describe("Catálogo", () => {

@@ -57,10 +57,7 @@ export function assetUses(project: StoreProjectV1, assetId: ImageAsset["id"]): A
       uses.push({ label: collection.title, detail: "Imagen de colección" });
     }
   }
-  const sectionPages = [
-    ...project.sections,
-    ...project.pages.flatMap((page) => page.sections),
-  ];
+  const sectionPages = [...project.sections, ...project.pages.flatMap((page) => page.sections)];
   for (const section of sectionPages) {
     const referenced: string[] = [];
     collectSettingAssetIds(section.settings, referenced);

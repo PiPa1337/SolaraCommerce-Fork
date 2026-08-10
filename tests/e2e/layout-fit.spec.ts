@@ -37,12 +37,6 @@ const viewports = [
   { name: "1920x1080", width: 1920, height: 1080 },
 ] as const;
 
-/**
- * Violaciones conocidas en el estado de mitad de ola: [área, viewport] → motivo.
- * Cerradas por U2 (d50c943): el dashboard ya ajusta los tres viewports.
- */
-const KNOWN_VIOLATIONS: Record<string, string> = {};
-
 /** Nombres de área para los mensajes del reporte. */
 const AREA_NAMES: Record<string, string> = {
   dashboard: "dashboard",

@@ -3,6 +3,7 @@
   "files": {
     "includes": [
       "**",
+      "!.superpowers/sdd",
       "!**/.solara-runtime",
       "!**/dist",
       "!**/coverage",
