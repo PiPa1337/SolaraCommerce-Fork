@@ -308,6 +308,16 @@ export function Studio({
   const focusExitId = useId();
   const lastProjectRef = useRef(initialProject);
   const previousSaveStateRef = useRef<AutosaveState>("saved");
+  // El pane sólo se reabre por un cambio de pestaña cuando el usuario no lo
+  // cerró explícitamente en esta sesión (H3-B3: el estado cerrado se conserva).
+  const paneClosedByUserRef = useRef(false);
+  // Scroll por pestaña del panel de edición (H3-B2): el pane no se remonta y
+  // cada pestaña recupera su posición al volver.
+  const paneScrollPositionsRef = useRef<Partial<Record<StudioTab, number>>>({});
+  const paneRef = useRef<HTMLElement | null>(null);
+  // Transición sucio → guardado: la marca de "todo visitado" sólo se aplica
+  // cuando un guardado termina, nunca en el commit del cambio (H3-B1).
+  const dirtyRef = useRef(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const project = history.present;
   const previewRoutes = useMemo(() => getPreviewRoutes(project), [project]);
@@ -329,6 +339,7 @@ export function Studio({
 
   const setPaneOpen = useCallback(
     (open: boolean) => {
+      paneClosedByUserRef.current = !open;
       setEditorOpen(open);
       try {
         window.localStorage.setItem(paneStorageKey, open ? "open" : "closed");
@@ -369,6 +380,7 @@ export function Studio({
       event.preventDefault();
       setEditorOpen((current) => {
         const next = !current;
+        paneClosedByUserRef.current = !next;
         try {
           window.localStorage.setItem(paneStorageKey, next ? "open" : "closed");
         } catch {
@@ -412,9 +424,23 @@ export function Studio({
     });
   }, [project.updatedAt, tab]);
 
+  // El panel no se remonta al cambiar de pestaña (H3-B2): conserva el DOM y
+  // su scroll; al volver a una pestaña se restaura la posición guardada.
   useEffect(() => {
-    const saved = managedStorage ? !managedDirty : saveState === "saved";
-    if (!saved) return;
+    const pane = paneRef.current;
+    if (!pane) return;
+    pane.scrollTop = paneScrollPositionsRef.current[tab] ?? 0;
+  }, [tab]);
+
+  useEffect(() => {
+    const dirty = managedStorage ? managedDirty : saveState !== "saved";
+    const wasDirty = dirtyRef.current;
+    dirtyRef.current = dirty;
+    // La marca de "todo visitado" se aplica sólo en la transición
+    // sucio → guardado. En el commit del cambio (mismo render con saveState
+    // todavía "saved", antes del aviso de schedule) no hay transición, así el
+    // wipe no borra el punto antes de que renderice.
+    if (!wasDirty || dirty) return;
     setLastVisitedAt((current) => {
       let changed = false;
       const next = { ...current };
@@ -532,11 +558,15 @@ export function Studio({
 
   const selectTab = useCallback(
     (nextId: StudioTab, focusTab = false) => {
-      if (nextId !== "guided") setAdvancedMode(true);
-      else setAdvancedMode(false);
+      // El tab Constructor no fuerza el Modo avanzado: en tiendas limpias la
+      // estructura protegida es el estado por defecto (F13). El Modo avanzado
+      // se activa sólo desde el flujo guiado (navigateFromGuided).
+      if (nextId === "guided") setAdvancedMode(false);
       setTab(nextId);
       setLastVisitedAt((current) => ({ ...current, [nextId]: project.updatedAt }));
-      setPaneOpen(true);
+      // El pane conserva su estado al cambiar de pestaña (H3-B3): sólo se
+      // abre si el usuario no lo cerró explícitamente en esta sesión.
+      if (!paneClosedByUserRef.current) setPaneOpen(true);
       if (focusTab) {
         requestAnimationFrame(() => {
           const tabElement = document.getElementById(`studio-tab-${nextId}`);
@@ -593,11 +623,46 @@ export function Studio({
         requestAnimationFrame(() => {
           document.getElementById(focusToggleId)?.focus();
         });
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      const editingText =
+        target !== null &&
+        (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+        // En modo managed el atajo vive en ManagedPersistenceControls; acá
+        // sólo existe el flush del autosave del modo navegador (H3-B4).
+        if (managedStorage) return;
+        event.preventDefault();
+        void autosave.flush().catch(() => undefined);
+        return;
+      }
+      if (!editingText && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+        // Dentro de un campo de texto manda el undo nativo del navegador;
+        // fuera de él, el historial del editor (H3-B5). Sin historial no se
+        // secuestra el atajo.
+        if (event.shiftKey) {
+          if (history.future.length === 0) return;
+          event.preventDefault();
+          setHistory((current) => redo(current));
+        } else {
+          if (history.past.length === 0) return;
+          event.preventDefault();
+          setHistory((current) => undo(current));
+        }
       }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [focusMode, focusToggleId, toggleFocusMode]);
+  }, [
+    autosave,
+    focusMode,
+    focusToggleId,
+    history.future.length,
+    history.past.length,
+    managedStorage,
+    toggleFocusMode,
+  ]);
 
   const moveTabFocus = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
@@ -833,6 +898,7 @@ export function Studio({
 
         <div className="studio-workspace">
           <motion.main
+            ref={paneRef}
             id={editorPaneId}
             data-studio-editor-pane
             data-tab={tab}
@@ -841,8 +907,10 @@ export function Studio({
             aria-hidden={!editorOpen}
             tabIndex={-1}
             className={`editor-pane${editorOpen ? " editor-pane--open" : " editor-pane--closed"}`}
-            key={tab}
             initial={false}
+            onScroll={(event) => {
+              paneScrollPositionsRef.current[tab] = event.currentTarget.scrollTop;
+            }}
           >
             <Tooltip tip="Cerrar panel de edición" position="bottom" className="editor-pane-close">
               <IconButton
