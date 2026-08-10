@@ -71,6 +71,9 @@ function createProgram(gl: WebGL2RenderingContext): WebGLProgram {
   return program;
 }
 
+const FRAME_30_MS = 1000 / 30;
+const FRAME_12_MS = 1000 / 12;
+
 export function CosmicBackground({ intensity = "normal" }: { intensity?: "subtle" | "normal" }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -94,6 +97,8 @@ export function CosmicBackground({ intensity = "normal" }: { intensity?: "subtle
     let frame = 0;
     let lastFrame = 0;
     let pageVisible = !document.hidden;
+    let canvasVisible = true;
+    let windowFocused = document.hasFocus();
     let destroyed = false;
 
     try {
@@ -117,49 +122,73 @@ export function CosmicBackground({ intensity = "normal" }: { intensity?: "subtle
 
     const resolution = gl.getUniformLocation(program, "resolution");
     const time = gl.getUniformLocation(program, "time");
+    const isActive = () => pageVisible && canvasVisible;
+    const draw = (timestamp: number) => {
+      activateProgram(program);
+      gl.uniform2f(resolution, canvas.width, canvas.height);
+      gl.uniform1f(time, timestamp * 0.001);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.flush();
+    };
+    const render = (timestamp: number) => {
+      if (destroyed) return;
+      if (!isActive()) return;
+      const interval = windowFocused ? FRAME_30_MS : FRAME_12_MS;
+      if (timestamp - lastFrame >= interval) {
+        lastFrame = timestamp;
+        draw(timestamp);
+      }
+      frame = requestAnimationFrame(render);
+    };
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = 0;
+      if (!isActive()) return;
+      if (reducedMotion.matches) {
+        draw(0);
+        return;
+      }
+      frame = requestAnimationFrame(render);
+    };
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
-      const scale = Math.min(window.devicePixelRatio || 1, 1.25);
+      const scale = Math.min(window.devicePixelRatio || 1, 1);
       canvas.width = Math.max(1, Math.round(rect.width * scale));
       canvas.height = Math.max(1, Math.round(rect.height * scale));
       gl.viewport(0, 0, canvas.width, canvas.height);
+      schedule();
     };
-    const observer = new ResizeObserver(resize);
-    observer.observe(canvas);
-    const render = (timestamp: number) => {
-      if (destroyed) return;
-      if (pageVisible && (reducedMotion.matches || timestamp - lastFrame >= 33)) {
-        lastFrame = timestamp;
-        activateProgram(program);
-        gl.uniform2f(resolution, canvas.width, canvas.height);
-        gl.uniform1f(time, reducedMotion.matches ? 0 : timestamp * 0.001);
-        gl.drawArrays(gl.TRIANGLES, 0, 3);
-        gl.flush();
-      }
-      if (!reducedMotion.matches) frame = requestAnimationFrame(render);
-    };
-    const onMotionChange = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(render);
-    };
+    const resizeObserver = new ResizeObserver(resize);
+    resizeObserver.observe(canvas);
+    const onMotionChange = () => schedule();
     const onVisibilityChange = () => {
       pageVisible = !document.hidden;
-      if (pageVisible && !reducedMotion.matches) {
-        cancelAnimationFrame(frame);
-        frame = requestAnimationFrame(render);
-      }
+      schedule();
     };
+    const onFocusChange = () => {
+      windowFocused = document.hasFocus();
+      schedule();
+    };
+    const intersectionObserver = new IntersectionObserver((entries) => {
+      for (const entry of entries) canvasVisible = entry.isIntersecting;
+      schedule();
+    });
+    intersectionObserver.observe(canvas);
     reducedMotion.addEventListener("change", onMotionChange);
     document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", onFocusChange);
+    window.addEventListener("blur", onFocusChange);
     resize();
-    frame = requestAnimationFrame(render);
 
     return () => {
       destroyed = true;
       cancelAnimationFrame(frame);
       reducedMotion.removeEventListener("change", onMotionChange);
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      observer.disconnect();
+      window.removeEventListener("focus", onFocusChange);
+      window.removeEventListener("blur", onFocusChange);
+      intersectionObserver.disconnect();
+      resizeObserver.disconnect();
       if (program) gl.deleteProgram(program);
       if (buffer) gl.deleteBuffer(buffer);
     };
