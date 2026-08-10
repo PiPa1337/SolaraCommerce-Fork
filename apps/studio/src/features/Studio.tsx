@@ -521,6 +521,7 @@ export function Studio({
   const navigateFromGuided = useCallback((destination: StudioTab) => {
     if (destination === "builder") setAdvancedMode(true);
     setTab(destination);
+    setPaneOpen(true);
   }, []);
 
   const applyGuidedUpgrade = useCallback(

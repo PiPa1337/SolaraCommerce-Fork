@@ -64,10 +64,7 @@ async function dispatchGuidedClick(locator: ReturnType<Page["getByTestId"]>): Pr
   await locator.dispatchEvent("click");
 }
 
-// TODO(F2): el fix vive en `navigateFromGuided` (Studio.tsx:495-498): debe
-// llamar `setPaneOpen(true)` como `selectTab` (Studio.tsx:539). Hasta que F2
-// lo aterrice este test queda en fixme; al aterrizar, quitar `.fixme`.
-test.fixme("la navegación guiada reabre el panel de edición cerrado (H8-B3)", async ({ page }) => {
+test("la navegación guiada reabre el panel de edición cerrado (H8-B3)", async ({ page }) => {
   await setupCleanStore(page, "Tienda panel guiado");
 
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
@@ -88,7 +85,10 @@ test.fixme("la navegación guiada reabre el panel de edición cerrado (H8-B3)", 
   await expectPaneClosed(page);
 
   const firstRequirement = page.getByTestId("ui-guided-requirement").first();
-  const editButton = firstRequirement.getByRole("button", { name: /^Editar / });
+  // Con el panel cerrado el contenido queda fuera del árbol de accesibilidad:
+  // el botón "Editar" se resuelve por CSS para poder despachar el clic.
+  const editButton = firstRequirement.locator('button[aria-label^="Editar "]');
+  await expect(editButton).toHaveCount(1);
   await dispatchGuidedClick(editButton);
   await expectPaneOpen(page);
   await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();

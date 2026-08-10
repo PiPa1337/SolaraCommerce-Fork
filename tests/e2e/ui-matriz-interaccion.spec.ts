@@ -177,9 +177,9 @@ test.describe("Builder", () => {
 });
 
 test.describe("Shell", () => {
-  test.fixme(
-    "cambiar de pestaña cambia el panel del editor y su tab queda seleccionada (pendiente de F2)",
-    async ({ page }) => {
+  test("cambiar de pestaña cambia el panel del editor y su tab queda seleccionada", async ({
+    page,
+  }) => {
       await openDemoStore(page);
       const pane = page.locator("[data-studio-editor-pane]");
       await expect(pane).toHaveAttribute("data-tab", "guided");
@@ -194,9 +194,7 @@ test.describe("Shell", () => {
     },
   );
 
-  test.fixme(
-    "el toggle de tema cambia data-studio-theme en el documento (pendiente de F2)",
-    async ({ page }) => {
+  test("el toggle de tema cambia data-studio-theme en el documento", async ({ page }) => {
       await openDemoStore(page);
       const themeBefore = await page.evaluate(() =>
         document.documentElement.getAttribute("data-studio-theme"),
@@ -209,9 +207,9 @@ test.describe("Shell", () => {
     },
   );
 
-  test.fixme(
-    "guardar en el navegador pasa por Cambios pendientes y llega a Guardado (pendiente de F2)",
-    async ({ page }) => {
+  test("guardar en el navegador pasa por Cambios pendientes y llega a Guardado", async ({
+    page,
+  }) => {
       await openDemoTab(page, "Constructor", "Constructor");
       await selectHero(page);
       await page.getByRole("textbox", { name: "Título", exact: true }).fill("Guardado Matriz F14");
