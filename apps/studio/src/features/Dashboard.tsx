@@ -874,7 +874,15 @@ export function Dashboard({
                   <button
                     type="button"
                     data-testid="ui-health-chip"
-                    onClick={() => setSelectedId(record.id)}
+                    onClick={() => {
+                      // Los chips listan tiendas activas: para que la selección
+                      // no sea anulada por el efecto de sincronización con la
+                      // lista visible, se limpian búsqueda y filtro y se pasa
+                      // por el mismo receptor que las cards (persistencia).
+                      setQuery("");
+                      setStatusFilter("active");
+                      selectCard(record.id, { focusCard: true });
+                    }}
                   >
                     {record.name}
                   </button>
