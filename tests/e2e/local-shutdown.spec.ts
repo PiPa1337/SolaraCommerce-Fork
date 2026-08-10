@@ -49,7 +49,9 @@ test("el dashboard puede detener el servidor iniciado por el lanzador", async ({
     await page.goto(url);
     // El arranque del dashboard (lista + hash de tiendas + auditorías) tarda
     // más bajo la carga de la suite completa que aislado; tolerancia de 15 s.
-    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+      timeout: 15_000,
+    });
     const closeButton = page.getByRole("button", { name: "Cerrar app" });
     await expect(closeButton).toBeVisible({ timeout: 15_000 });
     await closeButton.click();
