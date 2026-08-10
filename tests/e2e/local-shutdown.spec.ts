@@ -47,12 +47,13 @@ test("el dashboard puede detener el servidor iniciado por el lanzador", async ({
   try {
     await waitForServer(url);
     await page.goto(url);
-    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-
+    // El arranque del dashboard (lista + hash de tiendas + auditorías) tarda
+    // más bajo la carga de la suite completa que aislado; tolerancia de 15 s.
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({ timeout: 15_000 });
     const closeButton = page.getByRole("button", { name: "Cerrar app" });
-    await expect(closeButton).toBeVisible();
+    await expect(closeButton).toBeVisible({ timeout: 15_000 });
     await closeButton.click();
-    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "Cerrar y detener" }).click();
     await expect(page.locator(".shutdown-status")).toContainText("Servidor local detenido");
     await expect.poll(() => serverProcess.exitCode, { timeout: 5_000 }).toBe(0);
