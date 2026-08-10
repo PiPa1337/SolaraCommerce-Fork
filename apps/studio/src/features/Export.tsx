@@ -383,6 +383,7 @@ export function ExportPanel({
       <label className="export-ai-context">
         <input
           type="checkbox"
+          data-testid="ui-export-ai-context"
           checked={publicAiContext}
           onChange={(event) => setPublicAiContext(event.target.checked)}
         />
@@ -404,7 +405,12 @@ export function ExportPanel({
             <p>Conserva catálogo, diseño, SEO, configuración y recursos del proyecto.</p>
           </div>
           <div className="export-actions">
-            <Button icon={DownloadSimple} onClick={() => void backup()} disabled={Boolean(busy)}>
+            <Button
+              icon={DownloadSimple}
+              data-testid="ui-export-backup"
+              onClick={() => void backup()}
+              disabled={Boolean(busy)}
+            >
               Descargar .solara.json
             </Button>
             <input
@@ -423,6 +429,7 @@ export function ExportPanel({
             />
             <Button
               icon={UploadSimple}
+              data-testid="ui-export-import"
               onClick={() => importRef.current?.click()}
               disabled={Boolean(busy)}
             >
