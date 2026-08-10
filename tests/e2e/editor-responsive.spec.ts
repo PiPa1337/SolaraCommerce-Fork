@@ -84,11 +84,7 @@ test("el dashboard no desborda y mantiene acciones usables en los 5 viewports", 
     await page.setViewportSize(viewport);
     await page.goto(studioUrl);
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-    // TODO U2: el dashboard compacto (Dashboard.tsx) debe eliminar el scroll
-    // vertical de página (superficie principal y detalle, el detalle se
-    // autoabre al cargar); habilitar checkVertical cuando aterrice el fix
-    // (violaciones reportadas en .superpowers/sdd/ui-t11-report.md).
-    await expectNoPageOverflow(page, `Dashboard ${viewport.name}`, false);
+    await expectNoPageOverflow(page, `Dashboard ${viewport.name}`);
 
     await expectActionUsable(
       page,

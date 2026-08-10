@@ -39,25 +39,9 @@ const viewports = [
 
 /**
  * Violaciones conocidas en el estado de mitad de ola: [área, viewport] → motivo.
- * TODO de cierre (U8/U9/T10): tras los fixes de la ola 2, quitar estas entradas
- * y verificar con el gate duro (12 casos de editor ya son aserciones duras).
- * Asignaciones: U2 (Dashboard.tsx) con CSS de dashboard en
- * apps/studio/src/dashboard/cosmic.css (A1, ya commiteado) → coordinar.
+ * Cerradas por U2 (d50c943): el dashboard ya ajusta los tres viewports.
  */
-const KNOWN_VIOLATIONS: Record<string, string> = {
-  // Scroll vertical de página en el dashboard (sin desborde horizontal):
-  // el contenido de main#tiendas es más alto que el viewport y el documento
-  // queda scrollable (scrollTop 200/72/0 al montar). Selectores:
-  //   main.dashboard-page.dashboard-cosmic (Dashboard.tsx:830) → bottom 801/933/1134
-  //   .app-root--dashboard-cosmic (App.tsx:428, cosmic.css:3) → altura del contenido
-  //   .dashboard-cosmic-library (cosmic.css) → sección que crece con el contenido
-  "dashboard@1366x768":
-    "scrollHeight 1001 > clientHeight 768 (exceso 233 px): main#tiendas bottom=801, .dashboard-cosmic-library bottom=777",
-  "dashboard@1440x900":
-    "scrollHeight 1005 > clientHeight 900 (exceso 105 px): main#tiendas bottom=933",
-  "dashboard@1920x1080":
-    "scrollHeight 1134 > clientHeight 1080 (exceso 54 px): main#tiendas bottom=1134",
-};
+const KNOWN_VIOLATIONS: Record<string, string> = {};
 
 /** Nombres de área para los mensajes del reporte. */
 const AREA_NAMES: Record<string, string> = {
