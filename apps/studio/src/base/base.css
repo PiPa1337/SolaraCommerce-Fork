@@ -118,10 +118,16 @@
   box-sizing: border-box;
 }
 
+/* Regla maestra del no-scroll de página (U4): altura completa en el viewport;
+   el shell del editor contiene su altura (100dvh) y scrollea por paneles
+   (reglas en editorial.css), así que en ese contexto el body no scrollea. El
+   dashboard cosmic se contiene por contenido (el fit lo ajusta U2) y la
+   galería de componentes es una página de desarrollo que scrollea completa:
+   ambos conservan el scroll de página hasta contener su contenido. */
 html,
 body,
 #root {
-  min-height: 100%;
+  height: 100%;
   margin: 0;
 }
 
@@ -131,6 +137,10 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-ui);
+}
+
+body:has(.studio-shell) {
+  overflow: hidden;
 }
 
 button,
@@ -396,6 +406,7 @@ Las reglas CSS fijan el tamaño real pintado aunque el atributo `size` del
   gap: 6px;
   align-content: start;
   min-width: 0;
+  overflow-wrap: anywhere;
   color: var(--ink);
   font-size: 12px;
   font-weight: 650;
@@ -422,6 +433,7 @@ Las reglas CSS fijan el tamaño real pintado aunque el atributo `size` del
   align-items: center;
   gap: 8px;
   min-height: 36px;
+  overflow-wrap: anywhere;
   color: var(--ink);
   font-size: 13px;
   font-weight: 550;
@@ -461,6 +473,7 @@ Las reglas CSS fijan el tamaño real pintado aunque el atributo `size` del
   display: flex;
   align-items: flex-start;
   gap: 8px;
+  min-width: 0;
   padding: 10px 12px;
   border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--line));
   border-radius: var(--radius-input);
@@ -470,12 +483,27 @@ Las reglas CSS fijan el tamaño real pintado aunque el atributo `size` del
   line-height: 1.4;
 }
 
+.inline-error svg {
+  flex: 0 0 auto;
+}
+
+.inline-error > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.field-error {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .empty-state {
   display: grid;
   justify-items: start;
   max-width: 440px;
   gap: 8px;
   padding: 38px 0;
+  overflow-wrap: anywhere;
   color: var(--muted);
 }
 
@@ -568,12 +596,14 @@ Las reglas CSS fijan el tamaño real pintado aunque el atributo `size` del
   display: flex;
   align-items: center;
   gap: 4px;
+  max-width: min(560px, calc(100vw - 36px));
   box-shadow: var(--ui-shadow-md);
 }
 
 .global-error button {
   width: 34px;
   height: 34px;
+  flex: 0 0 auto;
   border: 0;
   background: transparent;
   color: var(--danger);
@@ -592,6 +622,11 @@ Las reglas CSS fijan el tamaño real pintado aunque el atributo `size` del
   background: var(--warning-soft);
 }
 
+.global-warning > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .global-notice {
   display: flex;
   align-items: center;
@@ -605,6 +640,11 @@ Las reglas CSS fijan el tamaño real pintado aunque el atributo `size` del
   background: var(--accent-soft);
   color: var(--ink);
   font-size: 12px;
+}
+
+.global-notice > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .global-notice button {
