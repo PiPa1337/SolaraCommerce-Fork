@@ -6,6 +6,7 @@ import {
 } from "@solara/project-schema";
 import { buildCatalogModernProject } from "@solara/project-schema/catalog-modern-template";
 import { referenceStore } from "@solara/project-schema/fixture";
+import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 import { describe, expect, it } from "vitest";
 import {
   adjustPrice,
@@ -201,6 +202,115 @@ describe("reduceProject", () => {
       at: "2026-07-30T10:03:00.000Z",
     });
     expect(cleaned.products[0]?.tags).not.toContain("nuevo");
+  });
+
+  it("persiste el payload completo del editor con los mismos ids de producto y variantes", () => {
+    const source = referenceStore.products[0];
+    if (!source) throw new Error("El fixture debe contener productos.");
+    const original = source.variants[0];
+    if (!original) throw new Error("El fixture debe tener variantes.");
+    const result = reduceProject(referenceStore, {
+      type: "product.update",
+      productId: source.id,
+      changes: {
+        slug: source.slug,
+        title: "Remera editada desde el editor",
+        description: source.description,
+        richDescription: source.richDescription,
+        status: source.status,
+        brand: source.brand,
+        categoryIds: source.categoryIds,
+        collectionIds: source.collectionIds,
+        tags: [...source.tags, "editada"],
+        imageIds: source.imageIds,
+        variants: source.variants.map((variant, index) =>
+          index === 0
+            ? {
+                ...variant,
+                title: `${variant.title} copia`,
+                price: (variant.price + 100) as typeof variant.price,
+              }
+            : variant,
+        ),
+      },
+      at: timestamp,
+    });
+    const updated = result.products.find((product) => product.id === source.id);
+    expect(updated?.id).toBe(source.id);
+    expect(updated?.title).toBe("Remera editada desde el editor");
+    expect(updated?.createdAt).toBe(source.createdAt);
+    expect(updated?.variants.map((variant) => variant.id)).toEqual(
+      source.variants.map((variant) => variant.id),
+    );
+    expect(updated?.variants[0]?.title).toBe(`${original.title} copia`);
+    expect(updated?.variants[0]?.price).toBe(original.price + 100);
+    expect(() => StoreProjectV2Schema.parse(result)).not.toThrow();
+  });
+
+  it("acepta una variante duplicada con id nuevo y conserva los ids existentes", () => {
+    const source = referenceStore.products[0];
+    if (!source) throw new Error("El fixture debe contener productos.");
+    const original = source.variants[0];
+    if (!original) throw new Error("El fixture debe tener variantes.");
+    const copy = {
+      ...original,
+      id: "variant-copia-editor" as typeof original.id,
+      title: `${original.title} copia`,
+      sku: "",
+    };
+    const result = reduceProject(referenceStore, {
+      type: "product.update",
+      productId: source.id,
+      changes: { variants: [...source.variants, copy] },
+      at: timestamp,
+    });
+    expect(result.products[0]?.variants.map((variant) => variant.id)).toEqual([
+      ...source.variants.map((variant) => variant.id),
+      copy.id,
+    ]);
+    expect(() => StoreProjectV2Schema.parse(result)).not.toThrow();
+  });
+
+  it("crea con el payload del editor sin regenerar el id del borrador", () => {
+    if (!firstProduct) throw new Error("El fixture debe contener productos.");
+    const stamp = "2026-07-30T09:00:00.000Z";
+    const result = reduceProject(referenceStore, {
+      type: "product.create",
+      product: {
+        ...firstProduct,
+        id: "producto-nuevo-editor" as typeof firstProduct.id,
+        slug: "producto-nuevo-editor" as typeof firstProduct.slug,
+        title: "Producto nuevo del editor",
+        status: "hidden" as const,
+        variants: firstProduct.variants.map((variant, index) => ({
+          ...variant,
+          id: `variant-producto-nuevo-editor-${index}` as typeof variant.id,
+          imageId: undefined,
+        })),
+        createdAt: stamp,
+        updatedAt: stamp,
+      },
+      at: timestamp,
+    });
+    const created = result.products.find((product) => product.id === "producto-nuevo-editor");
+    expect(created?.id).toBe("producto-nuevo-editor");
+    expect(created?.createdAt).toBe(timestamp);
+    expect(created?.updatedAt).toBe(timestamp);
+    expect(() => StoreProjectV2Schema.parse(result)).not.toThrow();
+  });
+
+  it("volver una categoría a la raíz omite la clave parentId y el resultado pasa el schema", () => {
+    const textiles = catalogScaleStore.categories.find((category) => category.slug === "textiles");
+    if (!textiles) throw new Error("El fixture debe tener la categoría textiles.");
+    const moved = reduceProject(catalogScaleStore, {
+      type: "category.reparent",
+      categoryId: textiles.id,
+      at: timestamp,
+    });
+    const root = moved.categories.find((category) => category.id === textiles.id);
+    expect(root?.parentId).toBeUndefined();
+    expect("parentId" in (root ?? {})).toBe(false);
+    expect(() => StoreProjectV2Schema.parse(moved)).not.toThrow();
   });
 });
 
@@ -428,6 +538,61 @@ describe("historial", () => {
     expect(changed.present.products).toEqual(replacement);
     expect(undo(changed).present).toEqual(referenceStore);
     expect(redo(undo(changed)).present.products).toEqual(replacement);
+  });
+
+  it("deshacer tras un reemplazo devuelve exactamente el estado anterior", () => {
+    const changed = executeCommand(createHistory(referenceStore), {
+      type: "products.replaceAll",
+      products: referenceStore.products.slice(0, 1),
+      at: timestamp,
+    });
+    expect(changed.past[0]).toBe(referenceStore);
+    expect(undo(changed).present).toBe(referenceStore);
+  });
+
+  it("un comando nuevo tras deshacer trunca el futuro", () => {
+    const changed = executeCommand(createHistory(referenceStore), {
+      type: "product.update",
+      productId: firstProduct.id,
+      changes: { title: "Título editado" },
+      at: timestamp,
+    });
+    const undone = undo(changed);
+    expect(undone.future).toHaveLength(1);
+
+    const diverged = executeCommand(undone, {
+      type: "product.update",
+      productId: firstProduct.id,
+      changes: { title: "Título divergente" },
+      at: "2026-07-30T10:01:00.000Z",
+    });
+    expect(diverged.future).toHaveLength(0);
+    expect(diverged.present.products[0]?.title).toBe("Título divergente");
+  });
+
+  it("un comando sin cambios no empuja al pasado ni borra el futuro", () => {
+    const changed = executeCommand(createHistory(referenceStore), {
+      type: "product.update",
+      productId: firstProduct.id,
+      changes: { title: "Título editado" },
+      at: timestamp,
+    });
+    const undone = undo(changed);
+    const noop = executeCommand(undone, {
+      type: "products.setStatus",
+      productIds: [firstProduct.id],
+      status: firstProduct.status,
+      at: timestamp,
+    });
+    expect(noop).toBe(undone);
+    expect(noop.future).toHaveLength(1);
+  });
+
+  it("undo y redo sobre pilas vacías devuelven el mismo estado", () => {
+    const initial = createHistory(referenceStore);
+    expect(undo(initial)).toBe(initial);
+    expect(redo(initial)).toBe(initial);
+    expect(undo(redo(initial))).toBe(initial);
   });
 
   it("normaliza referencias de otra tienda al importar un catálogo", () => {

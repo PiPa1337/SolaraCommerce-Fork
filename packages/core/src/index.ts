@@ -294,8 +294,20 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
       const category = project.categories.find((candidate) => candidate.id === command.categoryId);
       if (!category) throw new Error(`La categoría no existe: ${command.categoryId}.`);
       if (category.parentId === command.parentId) return project;
+      const hasChildren = project.categories.some((candidate) => candidate.parentId === category.id);
+      if (hasChildren && command.parentId !== undefined) {
+        throw new Error(
+          "Las categorías con subcategorías no pueden reubicarse bajo otra categoría.",
+        );
+      }
       const categories = project.categories.map((candidate) =>
-        candidate.id === category.id ? { ...candidate, parentId: command.parentId } : candidate,
+        candidate.id === category.id
+          ? command.parentId === undefined
+            ? (Object.fromEntries(
+                Object.entries(candidate).filter(([key]) => key !== "parentId"),
+              ) as Category)
+            : { ...candidate, parentId: command.parentId }
+          : candidate,
       );
       return parseProject(
         synchronizeAssignments({
