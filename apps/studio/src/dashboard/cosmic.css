@@ -1452,6 +1452,21 @@
   }
 }
 
+/* Viewport acotado (móvil ≤ 640px, o escritorio bajo ≤ 1120×820): el
+ * dashboard pasa a ser una región con scroll interno; la página nunca
+ * scrollea y el header queda anclado. La altura usa calc(100dvh - header);
+ * en ≤ 560px el min-height (header de 62px) de la regla superior supera al
+ * height de esta regla y gana la cascada. Los viewports 1366/1440/1920 del
+ * fit de U2 quedan fuera de ambas condiciones y conservan su ajuste. */
+@media (max-width: 640px), (max-width: 1120px) and (max-height: 820px) {
+  .dashboard-page.dashboard-cosmic {
+    height: calc(100dvh - 72px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dashboard-cosmic .dashboard-store-card,
   .dashboard-cosmic .button--primary {
