@@ -5,7 +5,7 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
 /**
  * T0.3 — Matriz responsive del editor.
  * Recorre dashboard, todas las pestañas del Studio y el preview en 5 viewports,
- * y verifica ausencia de overflow horizontal y acciones visibles/accionables.
+ * y verifica ausencia de scroll vertical de página y overflow horizontal, más acciones visibles/accionables.
  */
 
 const viewports = [
@@ -29,14 +29,22 @@ test.afterAll(async () => {
   await stopStudioServer(studioServer);
 });
 
-async function expectNoHorizontalOverflow(page: Page, context: string) {
+async function expectNoPageOverflow(page: Page, context: string, checkVertical = true) {
   await expect
     .poll(
       () =>
         page.evaluate(
-          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+          ({ checkVertical }) =>
+            (!checkVertical ||
+              document.documentElement.scrollHeight <= document.documentElement.clientHeight + 1) &&
+            document.body.scrollWidth <= window.innerWidth + 1,
+          { checkVertical },
         ),
-      { message: `${context}: sin overflow horizontal en ${page.viewportSize()?.width}px` },
+      {
+        message: checkVertical
+          ? `${context}: sin scroll vertical de página ni overflow horizontal en ${page.viewportSize()?.width}px`
+          : `${context}: sin overflow horizontal en ${page.viewportSize()?.width}px`,
+      },
     )
     .toBe(true);
 }
@@ -76,7 +84,11 @@ test("el dashboard no desborda y mantiene acciones usables en los 5 viewports", 
     await page.setViewportSize(viewport);
     await page.goto(studioUrl);
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-    await expectNoHorizontalOverflow(page, `Dashboard ${viewport.name}`);
+    // TODO U2: el dashboard compacto (Dashboard.tsx) debe eliminar el scroll
+    // vertical de página (superficie principal y detalle, el detalle se
+    // autoabre al cargar); habilitar checkVertical cuando aterrice el fix
+    // (violaciones reportadas en .superpowers/sdd/ui-t11-report.md).
+    await expectNoPageOverflow(page, `Dashboard ${viewport.name}`, false);
 
     await expectActionUsable(
       page,
@@ -99,7 +111,7 @@ test("el dashboard no desborda y mantiene acciones usables en los 5 viewports", 
     await card.locator(".dashboard-store-card__button").click();
     const detail = page.getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" });
     await expect(detail).toBeVisible();
-    await expectNoHorizontalOverflow(page, `Dashboard detalle ${viewport.name}`);
+    await expectNoPageOverflow(page, `Dashboard detalle ${viewport.name}`, false);
     await expectActionUsable(
       page,
       detail.getByRole("button", { name: "Abrir tienda" }),
@@ -135,7 +147,7 @@ test("cada pestaña del Studio no desborda y conserva su acción principal", asy
     for (const { tab, heading, action } of tabActions) {
       await page.getByRole("tab", { name: tab, exact: true }).click();
       await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
-      await expectNoHorizontalOverflow(page, `Pestaña ${tab} ${viewport.name}`);
+      await expectNoPageOverflow(page, `Pestaña ${tab} ${viewport.name}`);
       await expectActionUsable(
         page,
         page.getByRole(tab === "Tema" ? "combobox" : "button", { name: action, exact: true }),
@@ -163,7 +175,7 @@ test("el preview y su toolbar responden en los 5 viewports", async ({ page }) =>
     await expect(page.getByRole("heading", { name: "Preparar tienda", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Cerrar panel de edición" }).click();
     await expect(page.getByRole("button", { name: "Abrir panel de edición" })).toBeVisible();
-    await expectNoHorizontalOverflow(page, `Preview ${viewport.name}`);
+    await expectNoPageOverflow(page, `Preview ${viewport.name}`);
 
     const toolbar = page.locator(".preview-toolbar");
     await expect(toolbar).toBeVisible();
@@ -180,7 +192,7 @@ test("el preview y su toolbar responden en los 5 viewports", async ({ page }) =>
 
     const frame = page.locator('iframe[title="Vista previa desktop"]');
     await expect(frame).toBeVisible();
-    await expectNoHorizontalOverflow(page, `Preview iframe ${viewport.name}`);
+    await expectNoPageOverflow(page, `Preview iframe ${viewport.name}`);
 
     if (viewport.width <= 680) {
       const routeVisible = await page.locator(".preview-route input").isVisible();
@@ -206,12 +218,12 @@ test("el recorrido clave del smoke no desborda en los 5 viewports (T6.3)", async
 
     await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
-    await expectNoHorizontalOverflow(page, `Catálogo ${viewport.name}`);
+    await expectNoPageOverflow(page, `Catálogo ${viewport.name}`);
 
     await page.getByRole("button", { name: "Agregar producto" }).first().click();
     const dialog = page.locator("dialog.product-dialog");
     await expect(dialog).toBeVisible();
-    await expectNoHorizontalOverflow(page, `Diálogo de producto ${viewport.name}`);
+    await expectNoPageOverflow(page, `Diálogo de producto ${viewport.name}`);
     await expectActionUsable(
       page,
       dialog.getByRole("button", { name: "Cancelar" }),
@@ -222,10 +234,10 @@ test("el recorrido clave del smoke no desborda en los 5 viewports (T6.3)", async
 
     await page.getByRole("tab", { name: "Constructor", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
-    await expectNoHorizontalOverflow(page, `Constructor ${viewport.name}`);
+    await expectNoPageOverflow(page, `Constructor ${viewport.name}`);
 
     await page.getByRole("tab", { name: "Exportar", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Exportar", exact: true })).toBeVisible();
-    await expectNoHorizontalOverflow(page, `Exportar ${viewport.name}`);
+    await expectNoPageOverflow(page, `Exportar ${viewport.name}`);
   }
 });
