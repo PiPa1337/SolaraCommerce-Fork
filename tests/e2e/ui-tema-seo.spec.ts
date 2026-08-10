@@ -68,6 +68,32 @@ test("los presets de Tema aplican la paleta real al preview (H8-09)", async ({ p
   await expect.poll(background, { timeout: 15_000 }).toBe("rgb(250, 246, 242)");
 });
 
+test("el preset aplicado queda marcado como seleccionado en el panel (feedback visible)", async ({
+  page,
+}) => {
+  await setupCleanStore(page, "Tienda selección");
+  await openThemeTab(page);
+
+  const presets = page.getByTestId("ui-theme-preset");
+
+  await page.getByRole("button", { name: "Aplicar paleta Tinta profunda" }).click();
+
+  const deepInk = presets.filter({ hasText: "Tinta profunda" });
+  await expect(deepInk).toHaveAttribute("aria-pressed", "true");
+  await expect(deepInk).toHaveAttribute("data-active", "true");
+  // La marca "✓ Aplicada" vive en el pseudo-elemento ::after.
+  await expect
+    .poll(() => deepInk.evaluate((el) => getComputedStyle(el, "::after").content))
+    .toContain("Aplicada");
+
+  const editorial = presets.filter({ hasText: "Editorial cálido" });
+  await expect(editorial).toHaveAttribute("aria-pressed", "false");
+
+  // El preview y el input de fondo reflejan la paleta aplicada.
+  await expect(page.getByTestId("ui-color-text-background")).toHaveValue("#16151a");
+  await expect.poll(previewBackground(page), { timeout: 15_000 }).toBe("rgb(22, 21, 26)");
+});
+
 test("Restaurar colores vuelve a los valores de apertura de la pestaña (H8-10)", async ({
   page,
 }) => {

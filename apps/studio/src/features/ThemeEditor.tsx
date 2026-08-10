@@ -261,28 +261,37 @@ export function ThemeEditor({
       <fieldset className="theme-presets-panel">
         <legend>Paletas</legend>
         <div className="theme-presets">
-          {THEME_PRESETS.map((preset) => (
-            <button
-              type="button"
-              key={preset.id}
-              className="theme-preset"
-              data-testid="ui-theme-preset"
-              aria-label={`Aplicar paleta ${preset.name}`}
-              onClick={() => applyPreset(preset)}
-            >
-              <span className="theme-preset__swatches" aria-hidden>
-                {PRESET_SWATCH_KEYS.map((key) => (
-                  <span
-                    key={key}
-                    className="theme-preset__swatch"
-                    style={{ background: preset.colors[key] }}
-                  />
-                ))}
-              </span>
-              <strong>{preset.name}</strong>
-              <small>{preset.description}</small>
-            </button>
-          ))}
+          {THEME_PRESETS.map((preset) => {
+            const active = Object.keys(preset.colors).every(
+              (key) =>
+                project.theme.colors[key as keyof Theme["colors"]] ===
+                preset.colors[key as keyof Theme["colors"]],
+            );
+            return (
+              <button
+                type="button"
+                key={preset.id}
+                className="theme-preset"
+                data-testid="ui-theme-preset"
+                aria-label={`Aplicar paleta ${preset.name}`}
+                aria-pressed={active}
+                data-active={active || undefined}
+                onClick={() => applyPreset(preset)}
+              >
+                <span className="theme-preset__swatches" aria-hidden>
+                  {PRESET_SWATCH_KEYS.map((key) => (
+                    <span
+                      key={key}
+                      className="theme-preset__swatch"
+                      style={{ background: preset.colors[key] }}
+                    />
+                  ))}
+                </span>
+                <strong>{preset.name}</strong>
+                <small>{preset.description}</small>
+              </button>
+            );
+          })}
         </div>
       </fieldset>
 

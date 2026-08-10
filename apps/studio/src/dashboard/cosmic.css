@@ -3267,6 +3267,24 @@ tbody tr[data-selected="true"] {
   transform: translateY(-1px);
 }
 
+/* Preset activo: la paleta que el proyecto tiene aplicada (feedback visible
+ * de la selección — el clic sin estado previo parecía no hacer nada). */
+.theme-preset[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow:
+    inset 0 0 0 1px var(--accent),
+    var(--shadow-float);
+}
+
+.theme-preset[aria-pressed="true"]::after {
+  content: "✓ Aplicada";
+  justify-self: start;
+  margin-top: 2px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 650;
+}
+
 .theme-preset__swatches {
   display: flex;
   gap: 5px;
