@@ -168,6 +168,10 @@ test("el preview y su toolbar responden en los 5 viewports", async ({ page }) =>
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     await page.getByRole("tab", { name: "Preparar", exact: true }).click();
+    // El pane cerrado por el usuario ya no se reabre al cambiar de pestaña
+    // (fix de controles): si está cerrado, se abre explícitamente.
+    const openPane = page.getByRole("button", { name: "Abrir panel de edición" });
+    if (await openPane.isVisible().catch(() => false)) await openPane.click();
     await expect(page.getByRole("heading", { name: "Preparar tienda", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Cerrar panel de edición" }).click();
     await expect(page.getByRole("button", { name: "Abrir panel de edición" })).toBeVisible();
