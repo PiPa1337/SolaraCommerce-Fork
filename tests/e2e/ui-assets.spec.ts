@@ -1,0 +1,133 @@
+import type { Server } from "node:http";
+import { expect, test } from "@playwright/test";
+import { createCleanStore } from "./project-helpers";
+import { startStudioServer, stopStudioServer } from "./studio-server";
+
+let server: Server;
+let studioUrl: string;
+
+test.beforeAll(async () => {
+  const running = await startStudioServer();
+  server = running.server;
+  studioUrl = running.url;
+});
+
+test.afterAll(async () => {
+  await stopStudioServer(server);
+});
+
+const PIXEL_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+  "base64",
+);
+
+// PNG 2x2 teal: contenido distinto del pixel 1x1 para que el hash cambie al reemplazar.
+const PIXEL_TEAL_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAASSURBVBhXY2BoaPgPxhBGw38AQfQH/dpeE7AAAAAASUVORK5CYII=",
+  "base64",
+);
+
+const IMAGE_INPUT = 'input[type="file"][accept*="image/"]';
+
+async function openAssetsTab(page: import("@playwright/test").Page): Promise<void> {
+  await page.getByRole("tab", { name: "Recursos", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Recursos" })).toBeVisible();
+}
+
+async function replaceSelectedAsset(
+  page: import("@playwright/test").Page,
+  fileName: string,
+): Promise<void> {
+  await page.getByTestId("ui-asset-replace").click();
+  await page.locator(IMAGE_INPUT).setInputFiles({
+    name: fileName,
+    mimeType: "image/png",
+    buffer: PIXEL_TEAL_PNG,
+  });
+  await expect(page.locator("output").filter({ hasText: "Imagen reemplazada" })).toBeVisible({
+    timeout: 15_000,
+  });
+}
+
+test("subir y reemplazar un asset conserva su nombre en la grilla y el detalle", async ({
+  page,
+}) => {
+  await page.goto(studioUrl);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolveDelete, reject) => {
+        const request = indexedDB.deleteDatabase("solara-commerce-studio");
+        request.addEventListener("success", () => resolveDelete());
+        request.addEventListener("error", () => reject(request.error));
+      }),
+  );
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 20_000,
+  });
+  await createCleanStore(page, "Tienda de recursos F7");
+  await openAssetsTab(page);
+
+  await page.locator(IMAGE_INPUT).setInputFiles({
+    name: "pixel.png",
+    mimeType: "image/png",
+    buffer: PIXEL_PNG,
+  });
+  await expect(page.locator("output").filter({ hasText: "1 imagen agregada" })).toBeVisible({
+    timeout: 15_000,
+  });
+
+  const assetItem = page.locator(".asset-item").filter({
+    has: page.locator('input[value="pixel"]'),
+  });
+  await expect(assetItem).toBeVisible();
+  await assetItem.getByTestId("ui-asset-detail-open").click();
+  const detail = page.getByTestId("ui-asset-detail");
+  await expect(detail).toBeVisible();
+
+  await replaceSelectedAsset(page, "pixel-teal.png");
+
+  // El archivo cambió (2x2) pero el nombre editado por el usuario se conserva.
+  await expect(detail).toContainText("2 × 2");
+  await expect(detail.getByRole("heading")).toHaveText("pixel");
+  await expect(assetItem.locator("input").first()).toHaveValue("pixel");
+});
+
+test("reemplazar un asset en uso conserva usos y el guard de borrado lo bloquea", async ({
+  page,
+}) => {
+  await page.goto(studioUrl);
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 20_000,
+  });
+  const card = page
+    .locator(".dashboard-store-card")
+    .filter({ has: page.getByText("Predeterminado", { exact: true }) });
+  await expect(card).toBeVisible();
+  await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+  await openAssetsTab(page);
+
+  // El hero de la demo usa posterAssetId "asset-hero" (Campaña Modo Sur).
+  const heroAsset = page.locator(".asset-item").filter({
+    has: page.locator('input[value="Campaña Modo Sur"]'),
+  });
+  await expect(heroAsset).toBeVisible();
+  await heroAsset.getByTestId("ui-asset-detail-open").click();
+  const detail = page.getByTestId("ui-asset-detail");
+  await expect(detail).toBeVisible();
+
+  await replaceSelectedAsset(page, "pixel-teal.png");
+
+  await expect(detail).toContainText("2 × 2");
+  await expect(detail.getByRole("heading")).toHaveText("Campaña Modo Sur");
+  await expect(heroAsset.locator("input").first()).toHaveValue("Campaña Modo Sur");
+
+  // El ID se conserva: los usos del hero siguen vivos y el borrado queda bloqueado.
+  await expect(detail).toContainText("catalog-hero");
+  await expect(page.getByTestId("ui-asset-delete")).toBeDisabled();
+  await expect(page.getByTestId("ui-asset-delete")).toHaveAttribute(
+    "title",
+    "Sólo se puede eliminar una imagen que no esté en uso",
+  );
+});

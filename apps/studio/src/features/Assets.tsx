@@ -202,7 +202,6 @@ export function Assets({
     try {
       const outcome = await processImageFile(file);
       updateAsset(asset.id, {
-        name: outcome.asset.name,
         mimeType: outcome.asset.mimeType,
         source: outcome.asset.source,
         fallbackSource: outcome.asset.fallbackSource,
@@ -580,6 +579,7 @@ export function Assets({
                   <label>
                     <span>Nombre</span>
                     <input
+                      key={`${asset.id}-${asset.hash}`}
                       defaultValue={asset.name}
                       onBlur={(event) => {
                         const name = event.target.value.trim();
