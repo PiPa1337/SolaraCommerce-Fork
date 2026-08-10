@@ -97,6 +97,23 @@ try {
   const initialB = JSON.parse(readFileSync(manifestBPath, "utf8"));
 
   await instanceA.page.getByRole("button", { name: "Abrir esta tienda" }).first().click();
+  // El arranque puede guardar un RecoveryDraft cuando el demo de IndexedDB
+  // difiere del seed en disco (App.tsx); este gate quiere la verdad del disco:
+  // espera el tab del editor y, si el diálogo de recuperación aparece, lo
+  // descarta. Bucle tolerante a la latencia de aparición del diálogo.
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const tab = instanceA.page.getByRole("tab", { name: "Resumen", exact: true });
+    if (await tab.isVisible({ timeout: 500 }).catch(() => false)) break;
+    const dialog = instanceA.page.getByRole("dialog").first();
+    if (await dialog.isVisible({ timeout: 500 }).catch(() => false)) {
+      const discard = dialog.getByRole("button", { name: "Descartar borrador" });
+      if (await discard.count()) {
+        await discard.click();
+        continue;
+      }
+    }
+    await instanceA.page.waitForTimeout(1_000);
+  }
   await instanceA.page.getByRole("tab", { name: "Resumen", exact: true }).click();
   const name = instanceA.page.getByLabel("Nombre de la tienda");
   await name.fill("Predeterminado portable A");
