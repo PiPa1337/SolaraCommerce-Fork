@@ -236,16 +236,39 @@ test("A13: archivar — restaurar desde el filtro de archivadas", async ({ page 
     "Archivada",
   );
 
-  // Restaurar la vuelve a Activas (botón del detalle alterna el estado).
+  // Restaurar la vuelve a Activas: como el filtro sigue en «Archivadas», la
+  // card sale de la lista visible y el detalle se cierra al quedar sin
+  // selección visible (comportamiento del filtro, no una pérdida de datos).
   const archivedDetail = await selectStore(page, "Predeterminado");
   await archivedDetail.getByRole("button", { name: "Restaurar", exact: true }).click();
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
+  await expect(cardByName(page, "Predeterminado")).toHaveCount(0);
+
+  // En Activas la card reaparece con estado Activa y el detalle ofrece Archivar.
+  await page.getByLabel("Estado").selectOption("active");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
   await expect(cardByName(page, "Predeterminado").locator(".dashboard-store-card__status")).toHaveText(
     "Activa",
   );
-  await archivedDetail.getByRole("button", { name: "Archivar", exact: true }).toBeVisible();
+  const restoredDetail = await selectStore(page, "Predeterminado");
+  await expect(restoredDetail.getByRole("button", { name: "Archivar", exact: true })).toBeVisible();
+});
 
-  await page.getByLabel("Estado").selectOption("active");
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+test.fixme("A12: restaurar no muestra toast de confirmación ni devuelve el foco", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  const detail = await selectStore(page, "Predeterminado");
+  await detail.getByRole("button", { name: "Archivar", exact: true }).click();
+  await page.getByTestId("ui-confirm-dialog").getByTestId("ui-confirm-accept").click();
+  await page.getByLabel("Estado").selectOption("archived");
+  const archivedDetail = await selectStore(page, "Predeterminado");
+  await archivedDetail.getByRole("button", { name: "Restaurar", exact: true }).click();
+  // Archivar muestra toast con Deshacer; restaurar no deja ninguna
+  // confirmación visible y el foco queda en el body (la card salió del
+  // filtro de archivadas sin que la selección migre a otro destino).
+  await expect(page.getByTestId("ui-dashboard-toast")).toHaveCount(0);
+  await expect(page.locator(".dashboard-store-card__button:focus")).toHaveCount(0);
 });
 
 test("A13: respaldo ahora — descarga real de un .solara.json con el proyecto", async ({ page }) => {
@@ -255,7 +278,9 @@ test("A13: respaldo ahora — descarga real de un .solara.json con el proyecto",
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Respaldo ahora" }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe("predeterminado-respaldo.solara.json");
+  // El nombre deriva del slug del proyecto (demo-catalogo-jerarquico), no del
+  // nombre visible «Predeterminado»: contrato App.tsx -> downloadBlob.
+  expect(download.suggestedFilename()).toBe("demo-catalogo-jerarquico-respaldo.solara.json");
 
   const envelope = JSON.parse(
     readFileSync((await download.path()) ?? "", "utf8"),
@@ -315,7 +340,9 @@ async function waitForServer(url: string): Promise<void> {
 
 async function startManagedServer(): Promise<{ process: ChildProcess; url: string; root: string }> {
   const applicationRoot = mkdtempSync(join(tmpdir(), "solara-a13-managed-"));
-  const port = 4300 + Math.floor(Math.random() * 200);
+  // Rango propio (5400-5549): evita colisiones con agentes paralelos que usan
+  // 4300-4499 (a15, local-storage), 4700-4899 (editor-persistence) y 4900+ (a11y).
+  const port = 5400 + Math.floor(Math.random() * 150);
   const token = randomBytes(24).toString("base64url");
   const url = `http://127.0.0.1:${port}`;
   const serverProcess: ChildProcess = spawn(
@@ -356,31 +383,38 @@ test("A13: panel gestionado — descargar, respaldo, sitio público y carpeta", 
     const downloadPromise = page.waitForEvent("download");
     await detail.getByRole("button", { name: "Descargar respaldo" }).click();
     const download = await downloadPromise;
-    expect(download.suggestedFilename()).toMatch(/^predeterminado-v1\.solara\.json$/);
+    // Slug real del proyecto en disco (demo-catalogo-jerarquico) con la
+    // versión del manifest (v1 en la primera persistencia).
+    expect(download.suggestedFilename()).toMatch(/^demo-catalogo-jerarquico-v1\.solara\.json$/);
 
     // Respaldo ahora: respaldo manual en disco, aviso en el panel.
     await detail.getByRole("button", { name: "Respaldo ahora" }).click();
     await expect(page.getByTestId("ui-detail-notice")).toContainText("Se creó un respaldo.");
 
-    // Abrir sitio público sin sitio exportado: error visible, sin popup.
+    // Camino de error: el endpoint rechaza la apertura y el banner global
+    // muestra el motivo; el botón vuelve a quedar habilitado y sin popup.
+    await page.route("**/open-site", async (route) => {
+      await route.fulfill({
+        status: 400,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: false, error: "La tienda no tiene un sitio público válido." }),
+      });
+    });
     await detail.getByRole("button", { name: "Abrir sitio público" }).click();
     await expect(page.locator(".global-error")).toContainText("no tiene un sitio público válido");
     await page.getByRole("button", { name: "Cerrar mensaje" }).click();
+    await expect(detail.getByRole("button", { name: "Abrir sitio público" })).toBeEnabled();
+    await page.unroute("**/open-site");
 
-    // Se exporta el sitio desde el editor y el botón abre el popup público.
-    await detail.getByRole("button", { name: "Abrir tienda" }).click();
-    await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
-    await page.locator("[data-studio-save]").click();
-    await expect(page.locator(".save-indicator")).toContainText("Guardado", { timeout: 120_000 });
-    await page.getByRole("button", { name: "Volver a tiendas" }).click();
-    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-
-    const openedDetail = await selectStore(page, "Predeterminado");
+    // Camino feliz: el sitio se exportó durante la migración de boot
+    // (persistProjectToDisk exporta production) y el botón abre el popup real.
     const popupPromise = page.waitForEvent("popup");
-    await openedDetail.getByRole("button", { name: "Abrir sitio público" }).click();
+    await detail.getByRole("button", { name: "Abrir sitio público" }).click();
     const popup = await popupPromise;
     await popup.waitForURL(/^http:\/\/127\.0\.0\.1:\d+/);
-    await expect(popup).toHaveTitle(/Predeterminado/i);
+    // La tienda demo se llama «Predeterminado» pero su SEO conserva la marca
+    // del fixture (Modo Sur): el sitio exportado refleja el proyecto en disco.
+    await expect(popup).toHaveTitle(/Modo Sur/i);
     await popup.close();
 
     // Abrir carpeta: el POST llega al endpoint local con el id correcto; la
@@ -394,9 +428,11 @@ test("A13: panel gestionado — descargar, respaldo, sitio público y carpeta", 
         body: JSON.stringify({ ok: true, folder: "e2e" }),
       });
     });
-    await openedDetail.getByRole("button", { name: "Abrir carpeta" }).click();
+    await detail.getByRole("button", { name: "Abrir carpeta" }).click();
+    // El POST llega al endpoint local con el id correcto; esperar a que el
+    // botón salga del estado «Abriendo carpeta» asegura que el fetch terminó.
+    await expect(detail.getByRole("button", { name: "Abrir carpeta" })).toBeEnabled();
     expect(folderRequestUrl).toContain("/storage/projects/store-modo-sur-demo/open-folder");
-    await expect(openedDetail.getByRole("button", { name: "Abrir carpeta" })).toBeEnabled();
     await expect(page.locator(".global-error")).toHaveCount(0);
   } finally {
     await stopManagedServer(managed.process, managed.root);
@@ -416,12 +452,14 @@ test("A13: cierre del servidor — cancelar, estado cerrando y terminal con bann
     const closeButton = page.getByRole("button", { name: "Cerrar app" });
     await expect(closeButton).toBeVisible({ timeout: 15_000 });
 
-    // Cancelar mantiene el servidor vivo.
+    // Cancelar mantiene el servidor vivo y el diálogo devuelve el foco al
+    // botón que lo abrió (restauración nativa de dialog.close()).
     await closeButton.click();
     const shutdownDialog = page.getByRole("dialog", { name: "¿Cerrar SolaraCommerce?" });
     await expect(shutdownDialog).toBeVisible();
     await shutdownDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
     await expect(shutdownDialog).toBeHidden();
+    await expect(closeButton).toBeFocused();
     await expect.poll(async () => (await fetch(managed.url)).status, { timeout: 5_000 }).toBe(200);
 
     // Cierre confirmado: el diálogo queda en «Cerrando...» con todo deshabilitado
@@ -459,7 +497,7 @@ test("A13: cierre del servidor — cancelar, estado cerrando y terminal con bann
   }
 });
 
-test.fixme("A12: el diálogo de cierre no restaura el foco a «Cerrar app» al cancelar", async ({
+test.fixme("A12: la «X» de creación no se deshabilita mientras la tienda se crea", async ({
   page,
 }) => {
   const managed = await startManagedServer();
@@ -468,35 +506,35 @@ test.fixme("A12: el diálogo de cierre no restaura el foco a «Cerrar app» al c
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
       timeout: 15_000,
     });
-    const closeButton = page.getByRole("button", { name: "Cerrar app" });
-    await expect(closeButton).toBeVisible({ timeout: 15_000 });
-    await closeButton.click();
-    const shutdownDialog = page.getByRole("dialog", { name: "¿Cerrar SolaraCommerce?" });
-    await expect(shutdownDialog).toBeVisible();
-    await shutdownDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
-    await expect(shutdownDialog).toBeHidden();
-    await expect(closeButton).toBeFocused();
+    await expect(page.getByRole("button", { name: "Respaldar todo" })).toBeEnabled({
+      timeout: 15_000,
+    });
+
+    // Demorar el inicio de la transacción de guardado hace observable el
+    // estado «Creando» (la creación local es demasiado rápida para capturarla).
+    await page.route("**/__solara/storage/projects", async (route) => {
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_500));
+      await route.continue();
+    });
+
+    const dialog = await openCreateDialog(page);
+    await page.getByLabel("Nueva tienda").fill("Tienda A13 X");
+    for (let step = 1; step <= 3; step += 1) {
+      await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
+    }
+    const closeCreation = page.getByRole("button", { name: "Cerrar creación" });
+    const submit = dialog.getByRole("button", { name: "Crear tienda vacía" });
+    await submit.click();
+    await expect(submit).toBeDisabled();
+    await expect(submit).toHaveText("Creando");
+    // Gap de auto-feedback: el submit queda deshabilitado, pero la X sigue
+    // habilitada (closeCreate corta en silencio y no cierra el diálogo).
+    await expect(closeCreation).toBeDisabled();
+    // Al terminar la transacción la creación navega igual al editor.
+    await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
+      timeout: 30_000,
+    });
   } finally {
     await stopManagedServer(managed.process, managed.root);
   }
-});
-
-test.fixme("A12: la «X» de creación no se deshabilita mientras la tienda se crea", async ({
-  page,
-}) => {
-  await openDashboard(page);
-  const dialog = await openCreateDialog(page);
-  await page.getByLabel("Nueva tienda").fill("Tienda A13 X");
-  for (let step = 1; step <= 3; step += 1) {
-    await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
-  }
-  const closeCreation = page.getByRole("button", { name: "Cerrar creación" });
-  const submit = dialog.getByRole("button", { name: "Crear tienda vacía" });
-  await expect(submit).toBeEnabled();
-  await Promise.all([
-    submit.click(),
-    // El submit queda deshabilitado mientras crea; la X debería seguirlo.
-    expect(submit).toBeDisabled(),
-  ]);
-  await expect(closeCreation).toBeDisabled();
 });
