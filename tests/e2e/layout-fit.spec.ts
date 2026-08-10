@@ -235,13 +235,6 @@ for (const viewport of viewports) {
     test(`ajuste al viewport sin scroll ni desbordes: ${fitCase.title} · ${viewport.name}`, async ({
       page,
     }) => {
-      const key = `${fitCase.area}@${viewport.name}`;
-      const known = KNOWN_VIOLATIONS[key];
-      if (known) {
-        // Violación conocida del estado de mitad de ola; el cierre (U8/U9/T10)
-        // la valida contra el TODO de .superpowers/sdd/ui-t7-report.md.
-        test.skip(true, `violación conocida: ${known}`);
-      }
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       await fitCase.open(page);
       await assertLayoutFit(page, viewport, `${AREA_NAMES[fitCase.area]} · ${viewport.name}`);

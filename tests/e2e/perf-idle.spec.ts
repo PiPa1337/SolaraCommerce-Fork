@@ -23,19 +23,25 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
  * handlers cooperativos del Studio (A1-A4) sin depender del throttling del
  * navegador, que en headless no es accionable por CDP.
  *
- * Los umbrales son PROVISIONALES: se calibraron sobre el baseline crudo del
- * agente A5 y el cierre del plan los recalcula con las mediciones finales.
- * Objetivos del plan: 100 ms/s (casos visibles), 25 ms/s (oculto).
+ * Los umbrales fueron recalibrados en el cierre (2026-08-09) con mediciones
+ * post-fixes. Contrato honesto:
+ *   - visible + foco: el fondo cosmic anima por diseño (30 fps) → el umbral
+ *     de TaskDuration (260 ms/s) es de REGRESIÓN (un segundo loop rAF o un
+ *     render loop de React lo haría saltar), no un objetivo de reducción.
+ *   - oculto / sin foco / fuera de viewport: el trabajo debe ser ~0 (cosmic
+ *     0 fps, runtime del preview pausado) → umbrales estrictos (25 ms/s de
+ *     Task, rAF ≈ 0). Es el fix del ~30% reportado.
  */
 const SETTLE_MS = 3_000;
 const SAMPLE_MS = 5_000;
 
 const DASHBOARD_SCRIPT_BUDGET_MS_PER_S = 100;
-const DASHBOARD_TASK_BUDGET_MS_PER_S = 300;
+const DASHBOARD_TASK_BUDGET_MS_PER_S = 260;
 const EDITOR_SCRIPT_BUDGET_MS_PER_S = 100;
 const EDITOR_TASK_BUDGET_MS_PER_S = 100;
 const HIDDEN_SCRIPT_BUDGET_MS_PER_S = 25;
-const HIDDEN_TASK_BUDGET_MS_PER_S = 100;
+const HIDDEN_TASK_BUDGET_MS_PER_S = 25;
+const HIDDEN_RAF_BUDGET_PER_S = 2;
 const RAF_BUDGET_PER_S = 500;
 
 let server: Server;
@@ -207,9 +213,33 @@ test("editor con preview oculto: la pestaña escondida no trabaja", async ({ pag
     `perf-idle: editor oculto ScriptDuration ${hidden.scriptMsPerSecond.toFixed(1)} ms/s ` +
       `(visible antes ${visible.scriptMsPerSecond.toFixed(1)} ms/s), ` +
       `TaskDuration ${hidden.taskMsPerSecond.toFixed(1)} ms/s, rAF ${raf.toFixed(1)}/s ` +
-      `(presupuesto provisional ${HIDDEN_SCRIPT_BUDGET_MS_PER_S}/${HIDDEN_TASK_BUDGET_MS_PER_S} ms/s, ${RAF_BUDGET_PER_S}/s)`,
+      `(presupuesto ${HIDDEN_SCRIPT_BUDGET_MS_PER_S}/${HIDDEN_TASK_BUDGET_MS_PER_S} ms/s, ${HIDDEN_RAF_BUDGET_PER_S}/s)`,
   );
   expect(hidden.scriptMsPerSecond).toBeLessThanOrEqual(HIDDEN_SCRIPT_BUDGET_MS_PER_S);
   expect(hidden.taskMsPerSecond).toBeLessThanOrEqual(HIDDEN_TASK_BUDGET_MS_PER_S);
-  expect(raf).toBeLessThanOrEqual(RAF_BUDGET_PER_S);
+  expect(raf).toBeLessThanOrEqual(HIDDEN_RAF_BUDGET_PER_S);
+});
+
+test("dashboard oculto: el cosmic no dibuja con la pestaña escondida", async ({ page }) => {
+  await installRafProbe(page);
+  await installVisibilityEmulation(page);
+  await openDashboard(page);
+  await expect(page.locator(".cosmic-background canvas")).toHaveCount(1);
+  await page.waitForTimeout(SETTLE_MS);
+
+  const visible = await measureIdle(page);
+  await setHiddenInAllFrames(page, true);
+  await page.waitForTimeout(1_000);
+  const hidden = await measureIdle(page);
+  const raf = await rafPerSecondAllFrames(page);
+
+  console.log(
+    `perf-idle: dashboard oculto ScriptDuration ${hidden.scriptMsPerSecond.toFixed(1)} ms/s ` +
+      `(visible antes ${visible.scriptMsPerSecond.toFixed(1)} ms/s), ` +
+      `TaskDuration ${hidden.taskMsPerSecond.toFixed(1)} ms/s, rAF ${raf.toFixed(1)}/s ` +
+      `(presupuesto ${HIDDEN_SCRIPT_BUDGET_MS_PER_S}/${HIDDEN_TASK_BUDGET_MS_PER_S} ms/s, rAF ${HIDDEN_RAF_BUDGET_PER_S}/s)`,
+  );
+  expect(hidden.scriptMsPerSecond).toBeLessThanOrEqual(HIDDEN_SCRIPT_BUDGET_MS_PER_S);
+  expect(hidden.taskMsPerSecond).toBeLessThanOrEqual(HIDDEN_TASK_BUDGET_MS_PER_S);
+  expect(raf).toBeLessThanOrEqual(HIDDEN_RAF_BUDGET_PER_S);
 });
