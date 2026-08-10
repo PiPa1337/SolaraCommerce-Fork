@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, Copy, Plus, Trash } from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import { Button, Field, IconButton } from "../../components/Ui";
 
 type HeroSlideDraft = {
@@ -44,6 +44,25 @@ export function HeroSlidesEditor({
 }) {
   const titleId = useId();
   const slides = Array.isArray(value) ? value.map(normalizeSlide) : [];
+
+  /**
+   * Slides heredadas (respaldo envejecido) pueden no tener `id`, que el schema
+   * exige: sin ese id el proyecto completo queda inválido y el preview no
+   * renderiza. Al montar el editor se backfillean los ids faltantes con el
+   * mismo formato de agregar/duplicar para sanear el dato una sola vez.
+   */
+  useEffect(() => {
+    if (!Array.isArray(value)) return;
+    const missing = value.some((slide) => slideValue(slide, "id") === "");
+    if (!missing) return;
+    onChange(
+      (value as unknown[]).map((slide) => ({
+        ...(slide && typeof slide === "object" ? (slide as Record<string, unknown>) : {}),
+        id: slideValue(slide, "id") || `slide-${crypto.randomUUID()}`,
+      })) as HeroSlideDraft[],
+    );
+  }, [value, onChange]);
+
   const updateSlide = (index: number, key: keyof HeroSlideDraft, next: string) => {
     onChange(
       slides.map((slide, slideIndex) => (slideIndex === index ? { ...slide, [key]: next } : slide)),
