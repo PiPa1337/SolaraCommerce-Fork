@@ -241,6 +241,9 @@ export function ProductEditor({
           variant.options !== undefined,
       )
     ) {
+      dialogRef.current
+        ?.querySelector("[data-testid='ui-field-error']")
+        ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       return;
     }
     try {
@@ -283,6 +286,7 @@ export function ProductEditor({
       ref={dialogRef}
       className="product-dialog"
       aria-labelledby={titleId}
+      data-dirty={isDirty ? "true" : undefined}
       onCancel={(event) => {
         event.preventDefault();
         requestClose();

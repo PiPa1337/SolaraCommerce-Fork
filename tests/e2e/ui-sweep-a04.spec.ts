@@ -411,3 +411,42 @@ test("el slug inválido y el duplicado muestran error inline con aria y bloquean
     "camisa-rayas-finas-a04",
   );
 });
+
+test("guardar con error en otro paso acerca la razón al primer error (regresión A6)", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await openCatalog(page);
+  const dialog = await openCreateDialog(page);
+  await dialog.getByRole("textbox", { name: "Título" }).fill("Scroll A04");
+  await dialog.getByRole("button", { name: "Variantes", exact: true }).click();
+  const price = dialog.getByRole("spinbutton", { name: "Precio en centavos" });
+  await price.fill("-100");
+  const priceError = price
+    .locator("xpath=ancestor::fieldset[contains(@class, 'field')]")
+    .getByTestId("ui-field-error");
+  await expect(priceError).toBeVisible();
+  // Volver a Datos deja el error de precio fuera del área visible del diálogo.
+  await dialog.getByRole("button", { name: "Datos", exact: true }).click();
+  await expect(priceError).not.toBeInViewport();
+
+  // Al intentar guardar, la razón debe hacerse visible (scroll al primer error).
+  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  await expect(dialog).toBeVisible();
+  await expect
+    .poll(() => dialog.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0);
+  await expect(priceError).toBeInViewport();
+});
+
+test("el diálogo expone data-dirty cuando el formulario tiene cambios (regresión A6)", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await openCatalog(page);
+  const dialog = await openEditDialog(page, "Camisa Rayas Finas");
+  await expect(dialog).not.toHaveAttribute("data-dirty", "true");
+
+  await dialog.getByRole("textbox", { name: "Título" }).fill("Camisa A04 Sucia");
+  await expect(dialog).toHaveAttribute("data-dirty", "true");
+});
