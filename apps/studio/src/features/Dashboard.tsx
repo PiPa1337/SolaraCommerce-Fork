@@ -36,6 +36,18 @@ import {
   getProjectMetrics,
   partitionPinnedProjects,
 } from "../lib/dashboardModel";
+import {
+  clearStoredSelectedId,
+  type DashboardView,
+  readPinnedIds,
+  readStoredSelectedId,
+  readStoredSort,
+  readStoredView,
+  writePinnedIds,
+  writeStoredSelectedId,
+  writeStoredSort,
+  writeStoredView,
+} from "../lib/dashboardStorage";
 import { formatDate } from "../lib/format";
 import type { StoredProject } from "../lib/repository";
 import { bulkBackupToastMessage } from "./dashboard/bulkBackupModel";
@@ -43,49 +55,6 @@ import { CompareView } from "./dashboard/CompareView";
 import { DashboardToolbar } from "./dashboard/DashboardToolbar";
 import { DuplicateDialog } from "./dashboard/DuplicateDialog";
 import { formatCompactDate, ProjectCard, statusLabel } from "./dashboard/ProjectCard";
-
-const PINNED_STORAGE_KEY = "solara-dashboard-pinned";
-const SELECTED_STORAGE_KEY = "solara-dashboard-selected";
-const SORT_STORAGE_KEY = "solara-dashboard-sort";
-const VIEW_STORAGE_KEY = "solara-dashboard-view";
-
-function readLocalStorage(key: string): string | null {
-  try {
-    return window.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function writeLocalStorage(key: string, value: string): void {
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {
-    // almacenamiento no disponible (modo privado, cuota)
-  }
-}
-
-function readPinnedIds(): string[] {
-  const raw = readLocalStorage(PINNED_STORAGE_KEY);
-  if (!raw) return [];
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((item): item is string => typeof item === "string");
-  } catch {
-    return [];
-  }
-}
-
-function readStoredSort(): DashboardSort {
-  const value = readLocalStorage(SORT_STORAGE_KEY);
-  return value === "name" || value === "updated" || value === "products" ? value : "updated";
-}
-
-function readStoredView(): DashboardView {
-  const value = readLocalStorage(VIEW_STORAGE_KEY);
-  return value === "list" || value === "grid" ? value : "grid";
-}
 
 interface DashboardProps {
   projects: StoredProject[];
@@ -220,8 +189,6 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
   );
 });
 
-type DashboardView = "grid" | "list";
-
 interface DashboardToast {
   message: string;
   actionLabel?: string;
@@ -246,9 +213,7 @@ export function Dashboard({
   const [sort, setSort] = useState<DashboardSort>(readStoredSort);
   const [view, setView] = useState<DashboardView>(readStoredView);
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | undefined>(() => {
-    return readLocalStorage(SELECTED_STORAGE_KEY) ?? undefined;
-  });
+  const [selectedId, setSelectedId] = useState<string | undefined>(readStoredSelectedId);
   const [pinnedIds, setPinnedIds] = useState<string[]>(readPinnedIds);
   const [creating, setCreating] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -441,24 +406,29 @@ export function Dashboard({
 
   const selectCard = useCallback((id: string, options?: { focusCard?: boolean }) => {
     if (options?.focusCard) focusCardOnSelectRef.current = true;
-    writeLocalStorage(SELECTED_STORAGE_KEY, id);
+    writeStoredSelectedId(id);
     setSelectedId(id);
   }, []);
 
+  const clearSelected = useCallback(() => {
+    clearStoredSelectedId();
+    setSelectedId(undefined);
+  }, []);
+
   const changeSort = useCallback((next: DashboardSort) => {
-    writeLocalStorage(SORT_STORAGE_KEY, next);
+    writeStoredSort(next);
     setSort(next);
   }, []);
 
   const changeView = useCallback((next: DashboardView) => {
-    writeLocalStorage(VIEW_STORAGE_KEY, next);
+    writeStoredView(next);
     setView(next);
   }, []);
 
   const togglePin = useCallback((id: string) => {
     setPinnedIds((current) => {
       const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
-      writeLocalStorage(PINNED_STORAGE_KEY, JSON.stringify(next));
+      writePinnedIds(next);
       return next;
     });
   }, []);
@@ -558,7 +528,7 @@ export function Dashboard({
       const target = event.target as HTMLElement;
       if (event.key === "Escape") {
         event.preventDefault();
-        setSelectedId(undefined);
+        clearSelected();
         return;
       }
       const onCardControl =
@@ -590,7 +560,7 @@ export function Dashboard({
         moveCardSelection(event.key, record.id);
       }
     },
-    [handleArchive, moveCardSelection, onOpen, selectCard],
+    [clearSelected, handleArchive, moveCardSelection, onOpen, selectCard],
   );
 
   useEffect(() => {
@@ -1070,7 +1040,7 @@ export function Dashboard({
               folderOpeningId={folderOpeningId}
               downloadingId={downloadingId}
               actionNotice={actionNotice}
-              onClose={() => setSelectedId(undefined)}
+              onClose={clearSelected}
               onOpen={onOpen}
               onOpenSite={onOpenSite ? openSite : undefined}
               onOpenFolder={onOpenFolder ? openFolder : undefined}
