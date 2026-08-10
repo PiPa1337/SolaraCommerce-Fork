@@ -111,7 +111,9 @@ export function StatusBadge({
       className={`ui-status-badge ui-status-badge--${status} ${className}`}
     >
       <span className="ui-status-badge__dot" aria-hidden />
-      <span className="ui-status-badge__label">{label}</span>
+      <span className="ui-status-badge__label" title={label}>
+        {label}
+      </span>
     </Badge>
   );
 }
