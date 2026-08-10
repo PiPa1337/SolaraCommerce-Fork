@@ -6,6 +6,7 @@ import {
   buildWhatsAppUrl,
   formatMoney,
   parseCart,
+  reconcileCartLines,
   STOREFRONT_RUNTIME_CSS,
   STOREFRONT_RUNTIME_JS,
 } from "./index";
@@ -167,6 +168,84 @@ describe("carrito robusto y checkout con precios frescos (C2/C3/C5/C9 + SF-B4/B5
   it("reconcilia el carrito compartido al abrir el drawer y al enviar (SF-B4)", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("reconcileCart");
     expect(STOREFRONT_RUNTIME_JS).toContain("catalog-index.json");
+  });
+});
+
+describe("carrito sin líneas fantasma y conteos honestos (F-04, SF-B7, SF-B8, C6, NG-4)", () => {
+  it("reconcilia sin descartar: la línea sin variante en el catálogo queda marcada no disponible (F-04)", () => {
+    const line = {
+      productId: "p1",
+      variantId: "v-retirada",
+      title: "Manta Bruma",
+      variantTitle: "Musgo",
+      sku: "ML-BRU-MUS",
+      unitPrice: 157000,
+      quantity: 2,
+    };
+    const reconciled = reconcileCartLines(
+      [line],
+      [
+        {
+          productId: "p2",
+          variantId: "v-activa",
+          title: "Manta Luna",
+          variantTitle: "Sombra",
+          sku: "ML-BRU-LUN",
+          price: 165000,
+          available: true,
+        },
+      ],
+    );
+    expect(reconciled).toHaveLength(1);
+    expect(reconciled[0]).toEqual(
+      expect.objectContaining({ variantId: "v-retirada", available: false, quantity: 2 }),
+    );
+    const refreshed = reconcileCartLines(
+      [{ ...line, variantId: "v-activa" }],
+      [
+        {
+          productId: "p2",
+          variantId: "v-activa",
+          title: "Manta Luna",
+          variantTitle: "Sombra",
+          sku: "ML-BRU-LUN",
+          price: 165000,
+          available: true,
+        },
+      ],
+    );
+    expect(refreshed[0]).toEqual(
+      expect.objectContaining({ variantId: "v-activa", available: true, unitPrice: 165000 }),
+    );
+    expect(STOREFRONT_RUNTIME_JS).toContain("Ya no disponible");
+    expect(STOREFRONT_RUNTIME_JS).not.toContain("line.variantId in byVariant");
+  });
+
+  it("el conteo de categoría usa data-category-total sin pisar el total (SF-B8)", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain('getAttribute("data-category-total")');
+    expect(STOREFRONT_RUNTIME_JS).toContain("de ${total} productos");
+  });
+
+  it("la búsqueda avisa cuando el ranking se corta en 48 resultados (SF-B7)", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("Mostrando 48 de ");
+    expect(STOREFRONT_RUNTIME_JS).toContain("Refiná tu búsqueda");
+    expect(STOREFRONT_RUNTIME_JS).toContain("slice(0, 48)");
+  });
+
+  it("la trampa del drawer atiende carrito o checkout (C6)", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      'if (!hasFeature("cart") && !hasFeature("checkout")) return;',
+    );
+  });
+
+  it("el input de cantidad del drawer arranca en 1 (NG-4)", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain('type="number" min="1" max="99"');
+  });
+
+  it("el menú móvil inertea a sus hermanos al abrir y los libera al cerrar (SF-B13)", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("modernMenuSiblings");
+    expect(STOREFRONT_RUNTIME_JS).toContain('sibling.setAttribute("inert", "")');
+    expect(STOREFRONT_RUNTIME_JS).toContain('sibling.removeAttribute("inert")');
   });
 });
 

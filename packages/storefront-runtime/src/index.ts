@@ -37,6 +37,47 @@ export interface StoredCartLine extends CartLine {
   available?: boolean;
 }
 
+export interface CatalogIndexEntry {
+  productId: string;
+  variantId: string;
+  title: string;
+  variantTitle: string;
+  sku: string;
+  price: number;
+  available: boolean;
+  imageUrl?: string;
+  imageWidth?: number;
+  imageHeight?: number;
+}
+
+/**
+ * Reconciles stored cart lines against the current catalog index. Lines whose
+ * variant no longer exists are kept but marked unavailable so the buyer can
+ * see and remove them; found lines get fresh identity, price and availability.
+ */
+export function reconcileCartLines(
+  cart: StoredCartLine[],
+  catalog: CatalogIndexEntry[],
+): StoredCartLine[] {
+  const byVariant = new Map(catalog.map((entry) => [entry.variantId, entry]));
+  return cart.map((line) => {
+    const current = byVariant.get(line.variantId);
+    if (!current) return { ...line, available: false };
+    return {
+      ...line,
+      productId: current.productId,
+      title: current.title,
+      variantTitle: current.variantTitle,
+      sku: current.sku,
+      unitPrice: current.price,
+      ...(current.imageUrl ? { imageUrl: current.imageUrl } : {}),
+      ...(current.imageWidth ? { imageWidth: current.imageWidth } : {}),
+      ...(current.imageHeight ? { imageHeight: current.imageHeight } : {}),
+      available: current.available,
+    };
+  });
+}
+
 export function parseCart(stored: unknown): StoredCartLine[] {
   if (!Array.isArray(stored)) return [];
   return stored.filter(
@@ -213,12 +254,12 @@ function storefrontBoot(): void {
                 <div>
                 <strong>${escapeText(line.title)}</strong>
                 <small>${escapeText(line.variantTitle)}</small>
-                ${line.available === false ? '<small class="solara-cart-line-warning">Agotado</small>' : ""}
+                ${line.available === false ? '<small class="solara-cart-line-warning">Ya no disponible</small>' : ""}
                 </div>
               </div>
               <label>
                 <span class="sr-only">Cantidad de ${escapeText(line.title)}</span>
-                <input data-cart-quantity="${escapeAttribute(line.variantId)}" type="number" min="0" max="99" value="${line.quantity}"${line.available === false ? " disabled" : ""}>
+                <input data-cart-quantity="${escapeAttribute(line.variantId)}" type="number" min="1" max="99" value="${line.quantity}"${line.available === false ? " disabled" : ""}>
               </label>
               <button type="button" data-cart-remove="${escapeAttribute(line.variantId)}" aria-label="Eliminar ${escapeAttribute(line.title)}">Eliminar</button>
               <span>${money.format((line.unitPrice * line.quantity) / 100)}</span>
@@ -264,41 +305,10 @@ function storefrontBoot(): void {
     });
   };
 
-  type CatalogIndexEntry = {
-    productId: string;
-    variantId: string;
-    title: string;
-    variantTitle: string;
-    sku: string;
-    price: number;
-    available: boolean;
-    imageUrl?: string;
-    imageWidth?: number;
-    imageHeight?: number;
-  };
-
   let freshCatalog: Promise<boolean> | null = null;
 
   const applyCatalog = (catalog: CatalogIndexEntry[]): void => {
-    const byVariant = new Map(catalog.map((entry) => [entry.variantId, entry]));
-    const reconciled: StoredCartLine[] = [];
-    for (const line of cart) {
-      const current = byVariant.get(line.variantId);
-      if (!current) continue;
-      reconciled.push({
-        ...line,
-        productId: current.productId,
-        title: current.title,
-        variantTitle: current.variantTitle,
-        sku: current.sku,
-        unitPrice: current.price,
-        ...(current.imageUrl ? { imageUrl: current.imageUrl } : {}),
-        ...(current.imageWidth ? { imageWidth: current.imageWidth } : {}),
-        ...(current.imageHeight ? { imageHeight: current.imageHeight } : {}),
-        available: current.available,
-      });
-    }
-    cart = reconciled;
+    cart = reconcileCartLines(cart, catalog);
     renderCart();
   };
 
@@ -575,7 +585,7 @@ function storefrontBoot(): void {
   });
 
   document.addEventListener("keydown", (event) => {
-    if (!hasFeature("cart")) return;
+    if (!hasFeature("cart") && !hasFeature("checkout")) return;
     const drawer = document.querySelector<HTMLElement>("[data-cart-drawer]");
     const drawerOpen =
       drawer instanceof HTMLDialogElement ? drawer.open : drawer?.dataset.open === "true";
@@ -618,7 +628,7 @@ function storefrontBoot(): void {
           const preview = form.querySelector<HTMLElement>("[data-order-preview]");
           if (preview) {
             preview.textContent =
-              "Retirá los productos agotados del carrito antes de enviar el pedido.";
+              "Retirá los productos no disponibles del carrito antes de enviar el pedido.";
             preview.setAttribute("role", "alert");
           }
           return;
@@ -774,9 +784,20 @@ function storefrontBoot(): void {
           ),
         ).filter((element) => !element.hidden && element.getClientRects().length > 0)
       : [];
+  const modernMenuSiblings = (): HTMLElement[] =>
+    modernMenu?.parentElement
+      ? Array.from(modernMenu.parentElement.children).filter(
+          (child): child is HTMLElement => child !== modernMenu,
+        )
+      : [];
   const closeModernMenu = (): void => {
     if (!modernMenu) return;
     modernMenu.hidden = true;
+    modernMenu.setAttribute("inert", "");
+    modernMenu.setAttribute("aria-hidden", "true");
+    modernMenuSiblings().forEach((sibling) => {
+      sibling.removeAttribute("inert");
+    });
     modernMenuOpen?.setAttribute("aria-expanded", "false");
     document.documentElement.classList.remove("catalog-mobile-menu-open");
     modernMenuOpen?.focus();
@@ -784,6 +805,11 @@ function storefrontBoot(): void {
   modernMenuOpen?.addEventListener("click", () => {
     if (!modernMenu) return;
     modernMenu.hidden = false;
+    modernMenu.removeAttribute("inert");
+    modernMenu.setAttribute("aria-hidden", "false");
+    modernMenuSiblings().forEach((sibling) => {
+      sibling.setAttribute("inert", "");
+    });
     modernMenuOpen.setAttribute("aria-expanded", "true");
     document.documentElement.classList.add("catalog-mobile-menu-open");
     modernMenuClose?.focus();
@@ -1152,8 +1178,12 @@ function storefrontBoot(): void {
               searchResults.innerHTML = "<p>No encontramos productos para esa búsqueda.</p>";
               return;
             }
-            searchResults.innerHTML = `<p class="solara-search-summary">Resultados para “${escapeText(query)}”</p><div class="solara-search-results-grid">${ranked
-              .slice(0, 48)
+            const shown = ranked.slice(0, 48);
+            const cutNotice =
+              ranked.length > 48
+                ? `<p class="solara-search-summary">Mostrando 48 de ${ranked.length} resultados. Refiná tu búsqueda…</p>`
+                : "";
+            searchResults.innerHTML = `<p class="solara-search-summary">Resultados para “${escapeText(query)}”</p>${cutNotice}<div class="solara-search-results-grid">${shown
               .map(
                 ({ entry }) =>
                   `<article class="solara-search-result"><a href="${escapeAttribute(entry.path)}">${entry.imageUrl ? `<img src="${escapeAttribute(entry.imageUrl)}" alt="${escapeAttribute(entry.title)}" width="${entry.imageWidth ?? 1}" height="${entry.imageHeight ?? 1}" loading="lazy">` : ""}<div><h2>${escapeText(entry.title)}</h2><p>${escapeText(entry.brand)}</p><strong>${money.format(entry.priceMin / 100)}</strong></div></a></article>`,
@@ -1258,7 +1288,10 @@ function storefrontBoot(): void {
         card.hidden = !visible.includes(card);
       });
       filterEmpty.hidden = visible.length > 0;
-      if (resultCount) resultCount.textContent = `${visible.length} productos`;
+      if (resultCount) {
+        const total = resultCount.getAttribute("data-category-total") ?? String(visible.length);
+        resultCount.textContent = `${visible.length} de ${total} productos`;
+      }
     };
     sort.addEventListener("change", render);
     availableOnly?.addEventListener("change", render);
@@ -1330,7 +1363,13 @@ const SEARCH_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unkn
   ["scoreEntry", scoreEntry],
 ];
 
-export const STOREFRONT_RUNTIME_JS = `${SEARCH_HELPERS.map(
+const RUNTIME_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unknown]> = [
+  ...SEARCH_HELPERS,
+  ["parseCart", parseCart],
+  ["reconcileCartLines", reconcileCartLines],
+];
+
+export const STOREFRONT_RUNTIME_JS = `${RUNTIME_HELPERS.map(
   ([name, fn]) => `const ${name} = ${fn.toString()};`,
 ).join("\n")}
 globalThis.__solaraSearchHelpers = { ${SEARCH_HELPERS.map(([name]) => name).join(", ")} };
