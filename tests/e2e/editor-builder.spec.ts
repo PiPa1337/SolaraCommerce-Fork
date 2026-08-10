@@ -176,6 +176,45 @@ test("un preset de tema aplica los colores y el preview los refleja", async ({ p
     .toBe("#f5f7f4");
 });
 
+test("agregar un testimonio genera un ítem válido que commitea y persiste en el preview", async ({
+  page,
+}) => {
+  await openBuilder(page);
+  const sections = page.getByRole("list", { name: "Secciones de la tienda" });
+  const initialCount = await sections.getByRole("listitem").count();
+
+  await page.getByLabel("Tipo de sección").selectOption("content");
+  await page.getByRole("button", { name: "Agregar sección" }).click();
+  await page
+    .getByTestId("ui-module-picker")
+    .getByRole("button", { name: /Testimonios/ })
+    .click();
+  await expect(sections.getByRole("listitem")).toHaveCount(initialCount + 1);
+
+  await page.getByRole("button", { name: "Agregar elemento" }).click();
+  await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("ui-schema-errors")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Deshacer" })).toBeEnabled();
+  const newTestimonial = page
+    .frameLocator("iframe")
+    .locator('[data-solara-module="catalog-testimonials"]')
+    .last()
+    .locator(".catalog-testimonial h3");
+  await expect(newTestimonial).toHaveText("Nuevo elemento", { timeout: 15_000 });
+
+  await expect(page.getByText(/^Guardado/)).toBeVisible({ timeout: 15_000 });
+  await page.reload();
+  await reopenStore(page);
+  await sections
+    .getByRole("listitem")
+    .filter({ hasText: "Testimonios" })
+    .last()
+    .locator(".section-select")
+    .click();
+  await expect(page.getByTestId("ui-schema-errors")).toHaveCount(0);
+  await expect(newTestimonial).toHaveText("Nuevo elemento", { timeout: 15_000 });
+});
+
 test("un par de bajo contraste muestra la advertencia y el reset por grupo la limpia", async ({
   page,
 }) => {

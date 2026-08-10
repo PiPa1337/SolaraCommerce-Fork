@@ -73,6 +73,54 @@ describe("official module system", () => {
     }
   });
 
+  it("los ítems de repeater requieren id propio y aceptan los defaults del editor", () => {
+    for (const definition of [...officialModules, ...catalogModernModules]) {
+      for (const field of definition.settingsFields) {
+        if (field.type !== "repeater") continue;
+        const defaults = definition.settingsSchema.parse({});
+        const editorItem = {
+          id: `item-${crypto.randomUUID()}`,
+          ...Object.fromEntries(
+            field.fields.map((itemField) => [
+              itemField.key,
+              itemField.type === "boolean"
+                ? false
+                : itemField.type === "number"
+                  ? (itemField.min ?? 0)
+                  : itemField.type === "select"
+                    ? (itemField.options?.[0]?.value ?? "")
+                    : itemField.key === "id"
+                      ? `item-${crypto.randomUUID()}`
+                      : itemField.key === field.itemLabelKey || itemField.key === "title"
+                        ? "Nuevo elemento"
+                        : itemField.key === "author"
+                          ? "Nueva persona"
+                          : itemField.key === "body"
+                            ? "Texto editable"
+                            : itemField.key === "categoryId"
+                              ? (catalogModernStore.categories[0]?.id ?? "")
+                              : itemField.key === "actionLabel"
+                                ? "Ver más"
+                                : itemField.key === "actionHref"
+                                  ? "/"
+                                  : "",
+            ]),
+          ),
+        };
+        const withItem = definition.settingsSchema.safeParse({
+          ...defaults,
+          [field.key]: [editorItem],
+        });
+        expect(withItem.success, definition.manifest.id).toBe(true);
+        const withoutId = definition.settingsSchema.safeParse({
+          ...defaults,
+          [field.key]: [{ ...editorItem, id: "" }],
+        });
+        expect(withoutId.success, `${definition.manifest.id} exige id en el ítem`).toBe(false);
+      }
+    }
+  });
+
   it("isolates every module style selector under its module root", () => {
     for (const [moduleId, styles] of Object.entries(MODULE_STYLE_BLOCKS)) {
       const selectors = styles

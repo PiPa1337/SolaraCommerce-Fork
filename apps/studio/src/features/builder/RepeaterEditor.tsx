@@ -1,6 +1,7 @@
 import type { RepeaterItemField } from "@solara/modules";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { Field } from "../../components/Ui";
+import { defaultRepeaterItem } from "./repeaterDefaults";
 
 export function RepeaterEditor({
   label,
@@ -28,33 +29,7 @@ export function RepeaterEditor({
         Boolean(item && typeof item === "object"),
       )
     : [];
-  const defaults = () =>
-    Object.fromEntries(
-      fields.map((field) => [
-        field.key,
-        field.type === "boolean"
-          ? false
-          : field.type === "number"
-            ? (field.min ?? 0)
-            : field.type === "select"
-              ? (field.options?.[0]?.value ?? "")
-              : field.key === "id"
-                ? `item-${crypto.randomUUID()}`
-                : field.key === itemLabelKey || field.key === "title"
-                  ? "Nuevo elemento"
-                  : field.key === "author"
-                    ? "Nueva persona"
-                    : field.key === "body"
-                      ? "Texto editable"
-                      : field.key === "categoryId"
-                        ? (project.categories[0]?.id ?? "")
-                        : field.key === "actionLabel"
-                          ? "Ver más"
-                          : field.key === "actionHref"
-                            ? "/"
-                            : "",
-      ]),
-    );
+  const defaults = () => defaultRepeaterItem(fields, project, itemLabelKey);
   const update = (index: number, key: string, next: unknown) =>
     onChange(
       items.map((item, itemIndex) => (itemIndex === index ? { ...item, [key]: next } : item)),
