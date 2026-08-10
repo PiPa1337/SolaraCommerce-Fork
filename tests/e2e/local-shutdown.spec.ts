@@ -59,6 +59,15 @@ test("el dashboard puede detener el servidor iniciado por el lanzador", async ({
     await page.getByRole("button", { name: "Cerrar y detener" }).click();
     await expect(page.locator(".shutdown-status")).toContainText("Servidor local detenido");
     await expect.poll(() => serverProcess.exitCode, { timeout: 5_000 }).toBe(0);
+
+    // H7-B1 (F9): el cierre es terminal — "Respaldar todo" queda deshabilitado
+    // y ni el banner ni el diálogo pueden revivir el estado "available".
+    await expect(page.getByRole("button", { name: "Respaldar todo" })).toBeDisabled();
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent("solara:open-shutdown"));
+    });
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator(".shutdown-status")).toContainText("Servidor local detenido");
   } finally {
     if (serverProcess.exitCode === null) serverProcess.kill();
   }

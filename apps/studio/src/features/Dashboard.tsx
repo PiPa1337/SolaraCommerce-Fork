@@ -17,7 +17,6 @@ import {
   memo,
   type KeyboardEvent as ReactKeyboardEvent,
   type RefObject,
-  Suspense,
   useCallback,
   useEffect,
   useId,
@@ -99,6 +98,10 @@ interface DashboardProps {
   onOpenSite?(id: string): Promise<void>;
   onOpenFolder?(id: string): Promise<void>;
   onSessionManaged?(managed: boolean): void;
+  /** App confirmó el cierre del servidor: estado terminal que no se revierte. */
+  shutdownTerminal?: boolean;
+  /** Notifica a App cuando el cierre del servidor queda confirmado. */
+  onShutdownTerminal?(terminal: boolean): void;
 }
 
 interface DashboardStoreCardProps {
@@ -236,6 +239,8 @@ export function Dashboard({
   onOpenSite,
   onOpenFolder,
   onSessionManaged,
+  shutdownTerminal,
+  onShutdownTerminal,
 }: DashboardProps) {
   const [statusFilter, setStatusFilter] = useState<DashboardStatusFilter>("active");
   const [sort, setSort] = useState<DashboardSort>(readStoredSort);
@@ -274,6 +279,7 @@ export function Dashboard({
   const [auditSkipped, setAuditSkipped] = useState(0);
   const createDialogRef = useRef<HTMLDialogElement>(null);
   const shutdownDialogRef = useRef<HTMLDialogElement>(null);
+  const shutdownTerminalRef = useRef(shutdownTerminal === true);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const selectedPanelRef = useRef<HTMLElement>(null);
   const createButtonRef = useRef<HTMLButtonElement>(null);
@@ -305,7 +311,8 @@ export function Dashboard({
     () => new Map(visible.map((record, index) => [record.id, index])),
     [visible],
   );
-  const managed = shutdownState === "available";
+  const isShutdownTerminal = shutdownTerminal === true || shutdownState === "closed";
+  const managed = shutdownState === "available" && !isShutdownTerminal;
   const outdatedStores = useMemo(
     () =>
       projects.filter(
@@ -357,6 +364,10 @@ export function Dashboard({
   }, [shutdownDialogOpen]);
 
   useEffect(() => {
+    if (shutdownTerminal === true) shutdownTerminalRef.current = true;
+  }, [shutdownTerminal]);
+
+  useEffect(() => {
     const controller = new AbortController();
     void fetch("/__solara/session", {
       credentials: "same-origin",
@@ -381,7 +392,10 @@ export function Dashboard({
   }, [onSessionManaged]);
 
   useEffect(() => {
-    const openShutdown = () => setShutdownDialogOpen(true);
+    const openShutdown = () => {
+      if (shutdownTerminalRef.current) return;
+      setShutdownDialogOpen(true);
+    };
     window.addEventListener("solara:open-shutdown", openShutdown);
     return () => window.removeEventListener("solara:open-shutdown", openShutdown);
   }, []);
@@ -681,6 +695,7 @@ export function Dashboard({
   };
 
   const requestShutdown = async () => {
+    if (shutdownTerminalRef.current) return;
     setShutdownState("closing");
     setShutdownError("");
     try {
@@ -690,10 +705,12 @@ export function Dashboard({
         headers: { Accept: "application/json" },
       });
       if (!response.ok) throw new Error("El servidor no aceptó el cierre.");
+      shutdownTerminalRef.current = true;
       setShutdownDialogOpen(false);
       setShutdownState("closed");
+      onShutdownTerminal?.(true);
     } catch {
-      setShutdownState("available");
+      if (!shutdownTerminalRef.current) setShutdownState("available");
       setShutdownError("No se pudo detener el servidor local.");
     }
   };
@@ -897,7 +914,7 @@ export function Dashboard({
           ) : null}
         </section>
 
-        {shutdownState === "closed" ? (
+        {isShutdownTerminal ? (
           <output className="shutdown-status shutdown-status--cosmic">
             <CheckCircle aria-hidden size={18} />
             <span>
