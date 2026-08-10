@@ -66,7 +66,7 @@ describe("settingsFields <-> settingsSchema contrato", () => {
     });
     it(`${id}: toda clave del schema sin default tiene control en settingsFields`, () => {
       const shape = objectShape(module.settingsSchema);
-      const fieldKeys = new Set(module.settingsFields.map((field) => field.key));
+      const fieldKeys = new Set<string>(module.settingsFields.map((field) => field.key));
       const missing = Object.entries(shape)
         .filter(([key, value]) => isRequired(value) && !fieldKeys.has(key))
         .map(([key]) => key);

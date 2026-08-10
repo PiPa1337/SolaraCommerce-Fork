@@ -7,7 +7,10 @@ const GLOBAL_DESCRIPTION = "Descripción global de la tienda.";
 const PAGE_TITLE = "Título exclusivo del Home";
 const PAGE_DESCRIPTION = "Descripción exclusiva del Home.";
 
-function withSeo(pages: typeof referenceStore.pages, seo: Partial<typeof referenceStore.seo>) {
+function withSeo(
+  pages: Array<Partial<(typeof referenceStore.pages)[number]>>,
+  seo: Partial<typeof referenceStore.seo>,
+) {
   return {
     ...referenceStore,
     seo: { ...referenceStore.seo, ...seo },
