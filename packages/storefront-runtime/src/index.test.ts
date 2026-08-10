@@ -223,7 +223,7 @@ describe("carrito sin líneas fantasma y conteos honestos (F-04, SF-B7, SF-B8, C
 
   it("el conteo de categoría usa data-category-total sin pisar el total (SF-B8)", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain('getAttribute("data-category-total")');
-    expect(STOREFRONT_RUNTIME_JS).toContain("de ${total} productos");
+    expect(STOREFRONT_RUNTIME_JS).toContain(`de \${total} productos`);
   });
 
   it("la búsqueda avisa cuando el ranking se corta en 48 resultados (SF-B7)", () => {

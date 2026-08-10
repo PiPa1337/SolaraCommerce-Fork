@@ -72,7 +72,10 @@ try {
     assertPortableDiagnostics(instanceB, copyB),
   ]);
   const openedStoreId = async (page) => {
-    const id = await page.locator("[data-store-card-id]").first().getAttribute("data-store-card-id");
+    const id = await page
+      .locator("[data-store-card-id]")
+      .first()
+      .getAttribute("data-store-card-id");
     if (!id) throw new Error("El dashboard no expuso la tienda a abrir.");
     return id;
   };
