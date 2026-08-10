@@ -9,9 +9,15 @@
  * en Catalog.tsx se reporta como `test.fixme` nombrando al OWNER (A1).
  * El diálogo de reubicación de categorías vive en CategoryTree.tsx (bin A24).
  *
- * El feedback de ocupado (label "Generando"/"Procesando", progress) se hace
- * determinista con throttling de red por CDP (Chromium): retrasa la descarga
- * del worker de CSV, no el render.
+ * El feedback de ocupado (label "Generando"/"Procesando", progress) dura
+ * cientos de milisegundos y el fetch del worker no pasa por `page.route` ni
+ * por el throttle CDP; se observa con un único `expect.poll` de alta
+ * cadencia que verifica conteo + disabled + texto de progress en una sola
+ * evaluación, sin depender de dos aserciones secuenciales.
+ *
+ * Casos documentados para A1 (fixme): el resumen "No se encontraron" de la
+ * revisión de paquete es inalcanzable porque importCatalogCsv rechaza antes
+ * cualquier referencia de imagen sin resolver.
  */
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import type { Server } from "node:http";
@@ -93,7 +99,7 @@ function filaPaquete(precio: string): string {
     "Cocina>Favoritos",
     "",
     "casa",
-    "imagenes/taza.png|imagenes/faltante.png",
+    "imagenes/taza.png",
     "Única",
     "TAZA-001",
     "",
@@ -136,17 +142,37 @@ async function uploadCsv(page: Page, csv: string, name: string): Promise<void> {
   });
 }
 
-/** Throttling de red por CDP: retrasa la descarga del worker para que el
- *  feedback de ocupado sea observable de forma determinista (sólo Chromium). */
-async function throttleNetwork(page: Page, latencyMs = 400): Promise<void> {
-  const session = await page.context().newCDPSession(page);
-  await session.send("Network.enable");
-  await session.send("Network.emulateNetworkConditions", {
-    offline: false,
-    latency: latencyMs,
-    downloadThroughput: -1,
-    uploadThroughput: -1,
-  });
+/** Observa la ventana de busy con una única evaluación por poll: el conteo de
+ *  botones con el label de ocupado, que estén deshabilitados y el texto del
+ *  progress. `progressText` nulo exige que el progress no esté presente. */
+async function assertBusyFeedback(
+  page: Page,
+  buttonLabel: string,
+  progressText: string | null,
+  expectedCount = 1,
+): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          ({ label, expected, count }) => {
+            const busy = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).filter(
+              (button) => (button.textContent ?? "").trim() === label,
+            );
+            const progress = document.querySelector('[data-testid="ui-catalog-progress"]');
+            return {
+              ok:
+                busy.length === count &&
+                busy.every((button) => button.disabled) &&
+                (progress?.textContent ?? null) === expected,
+              seen: `${busy.length}×"${label}"${busy.every((button) => button.disabled) ? " disabled" : ""}; progress=${progress?.textContent ?? "—"}`,
+            };
+          },
+          { label: buttonLabel, expected: progressText, count: expectedCount },
+        ),
+      { timeout: 5_000, intervals: [25, 50, 100, 150] },
+    )
+    .toMatchObject({ ok: true });
 }
 
 async function readDownload(download: Download): Promise<string> {
@@ -173,17 +199,14 @@ async function assertAppAlive(page: Page): Promise<void> {
 }
 
 test("Exportar CSV descarga el catálogo completo con feedback de ocupado", async ({ page }) => {
-  test.skip(({ browserName }) => browserName !== "chromium", "El throttling por CDP es Chromium.");
   await openCatalog(page);
-  await throttleNetwork(page);
 
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Exportar CSV", exact: true }).click();
 
   // Auto-feedback: ambos botones de exportación marcan "Generando" y quedan
   // deshabilitados mientras el worker serializa el catálogo.
-  await expect(page.getByRole("button", { name: "Generando" })).toHaveCount(2);
-  await expect(page.getByRole("button", { name: "Generando" }).first()).toBeDisabled();
+  await assertBusyFeedback(page, "Generando", null, 2);
 
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe("demo-catalogo-jerarquico-productos.csv");
@@ -199,14 +222,12 @@ test("Exportar CSV descarga el catálogo completo con feedback de ocupado", asyn
 });
 
 test("CSV comercial descarga el catálogo comercial con cabecera y títulos", async ({ page }) => {
-  test.skip(({ browserName }) => browserName !== "chromium", "El throttling por CDP es Chromium.");
   await openCatalog(page);
-  await throttleNetwork(page);
 
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "CSV comercial", exact: true }).click();
 
-  await expect(page.getByRole("button", { name: "Generando" }).first()).toBeDisabled();
+  await assertBusyFeedback(page, "Generando", null, 2);
 
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe("demo-catalogo-jerarquico-catalogo-comercial.csv");
@@ -217,9 +238,7 @@ test("CSV comercial descarga el catálogo comercial con cabecera y títulos", as
 });
 
 test("Importar CSV válido: progreso, revisión con resumen y reemplazo real", async ({ page }) => {
-  test.skip(({ browserName }) => browserName !== "chromium", "El throttling por CDP es Chromium.");
   await openCatalog(page);
-  await throttleNetwork(page);
 
   const csv = [
     commercialHeader,
@@ -229,10 +248,7 @@ test("Importar CSV válido: progreso, revisión con resumen y reemplazo real", a
   await uploadCsv(page, csv, "catalogo-a03.csv");
 
   // Auto-feedback: progress aria-live y botón "Procesando" durante el importe.
-  const progress = page.getByTestId("ui-catalog-progress");
-  await expect(progress).toBeVisible();
-  await expect(progress).toHaveText("Procesando CSV…");
-  await expect(page.getByRole("button", { name: "Procesando" })).toBeDisabled();
+  await assertBusyFeedback(page, "Procesando", "Procesando CSV…", 1);
 
   // Revisión de importación: resumen del worker leído por la UI.
   const review = page.locator(".import-review");
@@ -301,12 +317,10 @@ test("Cancelar la revisión de importación no toca el catálogo", async ({ page
   await assertAppAlive(page);
 });
 
-test("Importar carpeta con imágenes: revisión de fusión, aviso de faltantes, aplicar y reimportar", async ({
+test("Importar carpeta con imágenes: revisión de fusión, aplicar y reimportar", async ({
   page,
 }) => {
-  test.skip(({ browserName }) => browserName !== "chromium", "El throttling por CDP es Chromium.");
   await openCatalog(page);
-  await throttleNetwork(page);
 
   const firstFolder = await makePackageFolder("125000");
   const secondFolder = await makePackageFolder("130000");
@@ -315,10 +329,7 @@ test("Importar carpeta con imágenes: revisión de fusión, aviso de faltantes, 
     const folderName = firstFolder.split(/[\\/]/).pop() ?? "carpeta";
 
     // Auto-feedback: progress y botón con label de ocupado.
-    const progress = page.getByTestId("ui-catalog-progress");
-    await expect(progress).toBeVisible();
-    await expect(progress).toHaveText("Leyendo carpeta e imágenes…");
-    await expect(page.getByRole("button", { name: "Leyendo carpeta" })).toBeDisabled();
+    await assertBusyFeedback(page, "Leyendo carpeta", "Leyendo carpeta e imágenes…", 1);
 
     // Revisión de catálogo e imágenes: resumen del plan leído por la UI.
     const review = page.locator(".catalog-package-review");
@@ -330,7 +341,6 @@ test("Importar carpeta con imágenes: revisión de fusión, aviso de faltantes, 
     await expect(review.getByText("Categorías nuevas").locator("..")).toContainText("2");
     await expect(review.getByText("Imágenes procesadas").locator("..")).toContainText("1");
     await expect(review.getByText("Imágenes reutilizadas").locator("..")).toContainText("0");
-    await expect(review.getByText(/No se encontraron: imagenes\/faltante\.png/)).toBeVisible();
 
     await review.getByRole("button", { name: "Agregar y actualizar" }).click();
 
@@ -387,6 +397,81 @@ test("Cancelar la revisión de carpeta no cambia nada", async ({ page }) => {
   }
 });
 
+test("Carpeta sin productos.csv: error visible, sin revisión y app viva", async ({ page }) => {
+  await openCatalog(page);
+  const directory = mkdtempSync(join(tmpdir(), "solara-a03-paquete-invalido-"));
+  try {
+    writeFileSync(join(directory, "nota.txt"), "sin catalogo", "utf8");
+    await page.locator('input[type="file"][webkitdirectory]').setInputFiles(directory);
+
+    // Auto-feedback: el error del worker llega como alerta visible y el botón
+    // vuelve a su label de reposo (busy se limpia).
+    const alert = page.getByTestId("ui-inline-error");
+    await expect(alert).toBeVisible();
+    await expect(alert).toContainText("La carpeta debe contener productos.csv.");
+    await expect(page.getByRole("button", { name: "Importar carpeta + imágenes" })).toBeEnabled();
+
+    // Sin revisión ni cambios: el catálogo queda intacto.
+    await expect(page.locator(".catalog-package-review")).toHaveCount(0);
+    await expect(page.getByText(catalogHeading)).toBeVisible();
+    await assertAppAlive(page);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("Carpeta con imagen faltante: error por fila visible y catálogo intacto", async ({ page }) => {
+  test.fixme(
+    true,
+    "A1: el aviso 'No se encontraron' de la revisión de paquete es inalcanzable. " +
+      "importCatalogCsv (packages/core) lanza 'Imagen inexistente en imagenes, fila N' cuando " +
+      "una referencia no resuelve a un asset del contexto, así que la revisión nunca muestra " +
+      "la advertencia; en su lugar el plan entero falla con InlineError. Decidir: tolerar la " +
+      "referencia faltante en la revisión (advertencia) o eliminar el resumen unmatchedImages.",
+  );
+  await openCatalog(page);
+  const directory = mkdtempSync(join(tmpdir(), "solara-a03-paquete-faltante-"));
+  try {
+    mkdirSync(join(directory, "imagenes"), { recursive: true });
+    const csv = [
+      commercialHeader,
+      [
+        "",
+        "",
+        "taza-faltante",
+        "Taza con imagen faltante",
+        "",
+        "Marca A03",
+        "active",
+        "",
+        "",
+        "",
+        "imagenes/faltante.png",
+        "Única",
+        "TAZA-002",
+        "",
+        "125000",
+        "",
+        "true",
+        "in_stock",
+        "",
+        "",
+        "imagenes/faltante.png",
+        fecha,
+        fecha,
+      ].join(","),
+    ].join("\r\n");
+    writeFileSync(join(directory, "productos.csv"), csv, "utf8");
+    await page.locator('input[type="file"][webkitdirectory]').setInputFiles(directory);
+
+    const review = page.locator(".catalog-package-review");
+    await expect(review).toBeVisible();
+    await expect(review.getByText(/No se encontraron: imagenes\/faltante\.png/)).toBeVisible();
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("Diálogo de archivar: abre con conteo, Escape cancela y confirmar archiva", async ({
   page,
 }) => {
@@ -396,8 +481,10 @@ test("Diálogo de archivar: abre con conteo, Escape cancela y confirmar archiva"
   await rows.nth(0).locator('input[type="checkbox"]').check();
   await rows.nth(1).locator('input[type="checkbox"]').check();
   // El foco debe salir de un control editable para que la tecla Delete
-  // dispare la confirmación.
-  await rows.nth(0).locator("td").nth(3).click();
+  // dispare la confirmación. Con 2 seleccionados el bulk panel sticky cubre
+  // la tabla; el resumen de selección de la toolbar es el punto no
+  // interactivo disponible (clickearlo devuelve el foco al body).
+  await page.getByText("2 seleccionados").click();
   await page.keyboard.press("Delete");
 
   const dialog = page.getByTestId("ui-confirm-dialog");
@@ -412,7 +499,7 @@ test("Diálogo de archivar: abre con conteo, Escape cancela y confirmar archiva"
   await expect(rows.nth(0).locator(".status-label")).toHaveText("Activo");
 
   await rows.nth(1).locator('input[type="checkbox"]').uncheck();
-  await rows.nth(0).locator("td").nth(3).click();
+  await page.getByText("1 seleccionados").click();
   await page.keyboard.press("Delete");
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText("¿Archivar el producto seleccionado?");
