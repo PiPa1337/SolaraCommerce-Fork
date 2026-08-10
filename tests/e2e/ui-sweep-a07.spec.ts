@@ -13,7 +13,8 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
  *      (progressbar + aria-valuenow);
  *  (3) datos: payload del campo → ruta del schema (identity.brandName,
  *      whatsapp.phone, navigation.catalogLabel, pages.title, ...).
- * Incluye la regresión del borrador inválido que otro commit destruía.
+ * Incluye la regresión del borrador inválido que otro commit destruía y el
+ * toggle guiado/manual (Modo avanzado): la vista cambia y el estado persiste.
  */
 
 test.setTimeout(process.env.CI ? 60_000 : 30_000);
@@ -43,6 +44,11 @@ async function setupCleanStore(page: Page, name: string): Promise<void> {
       }),
   );
   await page.reload();
+  // El arranque del dashboard compite con otros workers del barrido: dar
+  // presupuesto de boot sin relajar la aserción (es dura, sólo más paciente).
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 20_000,
+  });
   await createCleanStore(page, name);
 }
 
@@ -62,6 +68,12 @@ async function expectUnsaved(page: Page): Promise<void> {
   });
 }
 
+/** Error inline por su texto exacto: en Resumen conviven varios errores
+ *  (p. ej. el WhatsApp pendiente de una tienda limpia siempre está presente). */
+function fieldError(page: Page, text: string) {
+  return page.getByTestId("ui-field-error").filter({ hasText: text });
+}
+
 interface StoredRecord {
   name: string;
   project: {
@@ -73,8 +85,10 @@ interface StoredRecord {
   };
 }
 
-/** Lee el proyecto autoservado en IndexedDB (receptor del payload commiteado). */
-async function readStoredProject(page: Page, storeName: string): Promise<StoredRecord | null> {
+/** Lee el proyecto autoservado en IndexedDB (receptor del payload commiteado).
+ *  El registro se re-guarda con el nombre del proyecto: buscarlo por
+ *  `project.name` (no por la tienda de origen, que puede haberse renombrado). */
+async function readStoredProject(page: Page, projectName: string): Promise<StoredRecord | null> {
   return page.evaluate(
     ([name]) =>
       new Promise<StoredRecord | null>((resolve, reject) => {
@@ -85,12 +99,12 @@ async function readStoredProject(page: Page, storeName: string): Promise<StoredR
           const all = db.transaction("projects").objectStore("projects").getAll();
           all.addEventListener("success", () => {
             const records = all.result as StoredRecord[];
-            resolve(records.find((record) => record.name === name) ?? null);
+            resolve(records.find((record) => record.project.name === name) ?? null);
           });
           all.addEventListener("error", () => reject(all.error));
         });
       }),
-    [storeName],
+    [projectName],
   );
 }
 
@@ -112,9 +126,10 @@ test("los campos guiados commitean, dan feedback de guardado y persisten (capa 1
   await openStudioTab(page, "Resumen");
   await expectSaved(page);
 
-  // Nombre de la tienda → project.name + identity.brandName.
+  // Nombre de la tienda → project.name + identity.brandName. Se escribe un
+  // valor DISTINTO al de creación: el input commitea sólo ante un cambio real.
   const nameInput = page.getByLabel("Nombre de la tienda", { exact: true });
-  await nameInput.fill("Tienda Aurora");
+  await nameInput.fill("Aurora Commerce");
   await expectUnsaved(page);
   await expectSaved(page);
 
@@ -128,7 +143,7 @@ test("los campos guiados commitean, dan feedback de guardado y persisten (capa 1
   // Ida y vuelta de pestañas: el valor visible persiste (receptor = historial validado).
   await openStudioTab(page, "Preparar");
   await openStudioTab(page, "Resumen");
-  await expect(nameInput).toHaveValue("Tienda Aurora");
+  await expect(nameInput).toHaveValue("Aurora Commerce");
   await expect(page.getByLabel("Descripción", { exact: true })).toHaveValue(
     "Indumentaria pensada para la ciudad.",
   );
@@ -138,18 +153,20 @@ test("los campos guiados commitean, dan feedback de guardado y persisten (capa 1
   );
   await expect(page.getByLabel("Nombre del catálogo", { exact: true })).toHaveValue("La Colección");
 
-  // Capa 3: el payload commiteado llega al proyecto autoservado.
+  // Capa 3: el payload commiteado llega al proyecto autoservado (bajo project).
   await expect
-    .poll(async () => readStoredProject(page, storeName), { timeout: 15_000 })
+    .poll(async () => readStoredProject(page, "Aurora Commerce"), { timeout: 15_000 })
     .toMatchObject({
-      name: "Tienda Aurora",
-      identity: {
-        brandName: "Tienda Aurora",
-        description: "Indumentaria pensada para la ciudad.",
-        email: "hola@aurora.example",
+      project: {
+        name: "Aurora Commerce",
+        identity: {
+          brandName: "Aurora Commerce",
+          description: "Indumentaria pensada para la ciudad.",
+          email: "hola@aurora.example",
+        },
+        whatsapp: { phone: "5491123456789" },
+        navigation: { catalogLabel: "La Colección" },
       },
-      whatsapp: { phone: "5491123456789" },
-      navigation: { catalogLabel: "La Colección" },
     });
 });
 
@@ -164,17 +181,17 @@ test("el borrador inválido de un campo sobrevive al commit de otro campo (regre
   const emailInput = page.getByLabel("Email", { exact: true });
   await emailInput.fill("abc@");
   await expect(emailInput).toHaveValue("abc@");
-  await expect(page.getByTestId("ui-field-error")).toContainText("Ingresá un email válido.");
+  await expect(fieldError(page, "Ingresá un email válido.")).toBeVisible();
 
   // Un commit de OTRO campo no debe destruir el borrador pendiente.
   await page.getByLabel("Descripción", { exact: true }).fill("Descripción que sí commitea");
   await expect(emailInput).toHaveValue("abc@");
-  await expect(page.getByTestId("ui-field-error")).toContainText("Ingresá un email válido.");
+  await expect(fieldError(page, "Ingresá un email válido.")).toBeVisible();
 
   // Corrección: el campo válido commitea y el error desaparece.
   await emailInput.fill("hola@aurora.example");
   await expect(emailInput).toHaveValue("hola@aurora.example");
-  await expect(page.getByTestId("ui-field-error")).toHaveCount(0);
+  await expect(fieldError(page, "Ingresá un email válido.")).toHaveCount(0);
 });
 
 test("el progreso guiado anuncia por aria-live, sube al completar y marca el paso activo", async ({
@@ -235,20 +252,23 @@ test("los acordeones y switches reflejan su estado y persisten (capa 2)", async 
   await expect(identityToggle).toHaveAttribute("aria-expanded", "true");
   await expect(identityPanel).toBeVisible();
 
-  // Switches: aria-checked y persistencia entre pestañas.
-  const skuSwitch = page.getByRole("switch", { name: "Incluir SKU en el mensaje" });
-  const searchSwitch = page.getByRole("switch", { name: "Mostrar búsqueda" });
-  const cartSwitch = page.getByRole("switch", { name: "Mostrar carrito" });
-  await expect(skuSwitch).toHaveAttribute("aria-checked", "false");
+  // Switches: la plantilla limpia arranca con includeSku y búsqueda activados;
+  // alternar refleja aria-checked y el cambio persiste entre pestañas.
+  // Nota: los nombres usan exact:true — "Mostrar carrito" es substring de
+  // "Mostrar carrito lateral" y getByRole matchea por substring por defecto.
+  const skuSwitch = page.getByRole("switch", { name: "Incluir SKU en el mensaje", exact: true });
+  const searchSwitch = page.getByRole("switch", { name: "Mostrar búsqueda", exact: true });
+  const cartSwitch = page.getByRole("switch", { name: "Mostrar carrito", exact: true });
+  await expect(skuSwitch).toHaveAttribute("aria-checked", "true");
   await expect(searchSwitch).toHaveAttribute("aria-checked", "true");
   await skuSwitch.click();
   await searchSwitch.click();
-  await expect(skuSwitch).toHaveAttribute("aria-checked", "true");
+  await expect(skuSwitch).toHaveAttribute("aria-checked", "false");
   await expect(searchSwitch).toHaveAttribute("aria-checked", "false");
 
   await openStudioTab(page, "Preparar");
   await openStudioTab(page, "Resumen");
-  await expect(skuSwitch).toHaveAttribute("aria-checked", "true");
+  await expect(skuSwitch).toHaveAttribute("aria-checked", "false");
   await expect(searchSwitch).toHaveAttribute("aria-checked", "false");
   await expect(cartSwitch).toHaveAttribute("aria-checked", "true");
 });
@@ -273,13 +293,17 @@ test("el editor de navegación valida destinos, reordena y borra con confirmaci�
   await firstDestination.fill("https://ejemplo.com/tienda");
   await firstDestination.press("Tab");
 
-  // Destino inválido: error visible y borrador conservado al salir.
+  // Destino inválido: error visible (acotado a este ítem) y borrador conservado al salir.
   const secondDestination = secondItem.getByLabel("Destino", { exact: true });
   await secondDestination.fill("no es una url");
-  await expect(page.getByTestId("ui-field-error")).toContainText("Usá http(s) o una ruta interna");
+  await expect(secondItem.getByTestId("ui-field-error")).toContainText(
+    "Usá http(s) o una ruta interna",
+  );
   await secondDestination.press("Tab");
   await expect(secondDestination).toHaveValue("no es una url");
-  await expect(page.getByTestId("ui-field-error")).toContainText("Usá http(s) o una ruta interna");
+  await expect(secondItem.getByTestId("ui-field-error")).toContainText(
+    "Usá http(s) o una ruta interna",
+  );
 
   // Reordenar: los botones mueven el ítem y reflejan límites con disabled.
   await expect(
@@ -331,9 +355,11 @@ test("las páginas editoriales persisten títulos y cuentan el SEO (capa 2+3)", 
   await homeTitle.fill("Aurora en casa");
   await expectSaved(page);
 
-  // El título vacío da error inline (aria-invalid + role=alert).
+  // El título vacío da error inline (aria-invalid + role=alert), acotado a la página.
   await homeTitle.fill("");
-  await expect(page.getByTestId("ui-field-error")).toContainText("Completá el título visible.");
+  await expect(homeEditor.getByTestId("ui-field-error")).toContainText(
+    "Completá el título visible.",
+  );
   await homeTitle.fill("Aurora en casa");
 
   // Contadores SEO: hint del campo refleja el largo efectivo.
@@ -350,4 +376,34 @@ test("las páginas editoriales persisten títulos y cuentan el SEO (capa 2+3)", 
   await expect(homeTitle).toHaveValue("Aurora en casa");
   await expect(homeSeoTitle).toHaveValue("A".repeat(70));
   await expect(homeSeoDescription).toHaveValue("B".repeat(180));
+});
+
+test("el toggle guiado/manual cambia la vista y persiste el estado", async ({ page }) => {
+  await setupCleanStore(page, "Tienda modo");
+
+  // Vista guiada: Constructor protegido (base limpia) hasta activar Modo avanzado.
+  await openStudioTab(page, "Preparar");
+  await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
+  await openStudioTab(page, "Constructor");
+  await expect(page.getByRole("button", { name: "Agregar sección" })).toBeDisabled();
+
+  // Manual: "Modo avanzado" abre Constructor, marca la pestaña y desprotege la base.
+  await openStudioTab(page, "Preparar");
+  await page.getByRole("button", { name: "Modo avanzado" }).click();
+  await expect(page.getByRole("tab", { name: "Constructor", exact: true })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(page.getByRole("button", { name: "Agregar sección" })).toBeEnabled();
+
+  // El estado persiste al recorrer otras pestañas (no se resetea al salir).
+  await openStudioTab(page, "Resumen");
+  await openStudioTab(page, "Constructor");
+  await expect(page.getByRole("button", { name: "Agregar sección" })).toBeEnabled();
+
+  // Volver al flujo guiado restaura la vista guiada y la protección de la base.
+  await openStudioTab(page, "Preparar");
+  await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
+  await openStudioTab(page, "Constructor");
+  await expect(page.getByRole("button", { name: "Agregar sección" })).toBeDisabled();
 });

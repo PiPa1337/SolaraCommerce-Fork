@@ -121,7 +121,10 @@ export function Overview({
   const [fieldDrafts, setFieldDrafts] = useState<Record<string, string>>({});
   const [unsaved, setUnsaved] = useState(false);
   const unsavedTimer = useRef<number | undefined>(undefined);
-  const lastEditedFieldRef = useRef<string | null>(null);
+  /** Último campo que SÍ commiteó (no el último editado): sólo su borrador se
+   *  limpia cuando el proyecto cambia. Un borrador inválido sin commitear no
+   *  debe ser destruido por un commit de otro campo. */
+  const lastCommittedFieldRef = useRef<string | null>(null);
   const { success } = useToast();
   const pendingNavItem = pendingNavDelete
     ? project.navigation.items.find((item) => item.id === pendingNavDelete)
@@ -137,9 +140,11 @@ export function Overview({
     onCommit: (value: string) => void,
   ) => {
     markUnsaved();
-    lastEditedFieldRef.current = key;
     setFieldDrafts((current) => ({ ...current, [key]: next }));
-    if (isValid(next)) onCommit(next);
+    if (isValid(next)) {
+      lastCommittedFieldRef.current = key;
+      onCommit(next);
+    }
   };
 
   const phoneDisplay = fieldValue("phone", catalogModernPhoneValue(project.whatsapp.phone));
@@ -174,10 +179,10 @@ export function Overview({
 
   useEffect(() => () => window.clearTimeout(unsavedTimer.current), []);
 
-  /* biome-ignore lint/correctness/useExhaustiveDependencies: al cambiar el proyecto (commit o undo) limpiar sólo el borrador del campo recién editado, no todos. */
+  /* biome-ignore lint/correctness/useExhaustiveDependencies: al cambiar el proyecto (commit o undo) limpiar sólo el borrador del campo que commiteó, no todos ni el último editado. */
   useEffect(() => {
-    const key = lastEditedFieldRef.current;
-    lastEditedFieldRef.current = null;
+    const key = lastCommittedFieldRef.current;
+    lastCommittedFieldRef.current = null;
     if (!key) return;
     const withoutKey = (current: Record<string, string>) =>
       key in current
@@ -253,12 +258,14 @@ export function Overview({
       type="url"
       value={drafts[key] ?? value}
       onChange={(event) => {
-        lastEditedFieldRef.current = key;
         setDrafts((current) => ({ ...current, [key]: event.target.value }));
       }}
       onBlur={() => {
         const next = drafts[key] ?? value;
-        if (next !== value && destinationError(next) === undefined) onCommit(next);
+        if (next !== value && destinationError(next) === undefined) {
+          lastCommittedFieldRef.current = key;
+          onCommit(next);
+        }
       }}
     />
   );
