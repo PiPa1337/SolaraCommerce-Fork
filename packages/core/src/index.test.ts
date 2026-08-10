@@ -1,4 +1,9 @@
-import { parseProject } from "@solara/project-schema";
+import {
+  parseProject,
+  StoreProjectV1Schema,
+  StoreProjectV2Schema,
+  type StoreSection,
+} from "@solara/project-schema";
 import { buildCatalogModernProject } from "@solara/project-schema/catalog-modern-template";
 import { referenceStore } from "@solara/project-schema/fixture";
 import { describe, expect, it } from "vitest";
@@ -265,6 +270,135 @@ describe("contrato con secciones (ids de ítems)", () => {
     const after = changed.sections.find((section) => section.id === "modo-section-testimonials");
     const afterItems = after?.settings.items as Array<Record<string, unknown>> | undefined;
     expect(afterItems?.[0]).not.toHaveProperty("id");
+  });
+});
+
+describe("contrato Builder → gate de secciones", () => {
+  const demoStore = buildCatalogModernProject({ seed: "demo" });
+  const newSectionId = (): StoreSection["id"] => `section-${crypto.randomUUID()}`;
+  const gate = (project: StoreProjectV1) => StoreProjectV1Schema.safeParse(project);
+  const testimonials = () =>
+    demoStore.sections.find((section) => section.id === "modo-section-testimonials");
+  const withSections = (sections: StoreSection[]): StoreProjectV1 => ({
+    ...demoStore,
+    sections,
+    updatedAt: demoStore.updatedAt,
+  });
+
+  it("acepta agregar una sección como lo envía Builder (spread + id nuevo)", () => {
+    const template = testimonials();
+    if (template === undefined) throw new Error("La demo debe tener testimonios.");
+    const added: StoreSection = { ...structuredClone(template), id: newSectionId() };
+
+    const result = gate(withSections([...demoStore.sections, added]));
+    expect(result.success).toBe(true);
+    expect(result.data?.sections).toHaveLength(demoStore.sections.length + 1);
+  });
+
+  it("acepta duplicar con id nuevo y el gate rechaza ids colisionados", () => {
+    const first = demoStore.sections[0];
+    if (first === undefined) throw new Error("La demo debe tener secciones.");
+
+    const duplicate: StoreSection = { ...structuredClone(first), id: newSectionId() };
+    expect(gate(withSections([first, duplicate, ...demoStore.sections.slice(1)])).success).toBe(
+      true,
+    );
+
+    const collision = { ...first, settings: { ...first.settings, title: "Colisión" } };
+    const rejected = gate(withSections([first, collision, ...demoStore.sections.slice(1)]));
+    expect(rejected.success).toBe(false);
+    expect(rejected.error?.issues[0]?.message).toContain("ID de sección duplicado");
+  });
+
+  it("acepta mover una sección sin alterar el resto del payload", () => {
+    const sections = [...demoStore.sections];
+    const [moved] = sections.splice(1, 1);
+    if (moved === undefined) throw new Error("La demo debe tener al menos dos secciones.");
+    sections.unshift(moved);
+
+    const result = gate(withSections(sections));
+    expect(result.success).toBe(true);
+    expect(result.data?.sections[0]?.id).toBe(moved.id);
+    expect(result.data?.sections.map((section) => section.id)).toEqual(
+      sections.map((section) => section.id),
+    );
+  });
+
+  it("acepta eliminar una sección por id y sólo elimina esa", () => {
+    const target = demoStore.sections[2];
+    if (target === undefined) throw new Error("La demo debe tener al menos tres secciones.");
+
+    const result = gate(
+      withSections(demoStore.sections.filter((section) => section.id !== target.id)),
+    );
+    expect(result.success).toBe(true);
+    expect(result.data?.sections.some((section) => section.id === target.id)).toBe(false);
+    expect(result.data?.sections).toHaveLength(demoStore.sections.length - 1);
+  });
+
+  it("acepta actualizar settings sin perder los valores que no se tocaron", () => {
+    const target = testimonials();
+    if (target === undefined) throw new Error("La demo debe tener testimonios.");
+    const settings = { ...target.settings, title: "Título editado" };
+
+    const result = gate(
+      withSections(
+        demoStore.sections.map((section) =>
+          section.id === target.id ? { ...section, settings } : section,
+        ),
+      ),
+    );
+    expect(result.success).toBe(true);
+    const parsed = result.data?.sections.find((section) => section.id === target.id);
+    expect(parsed?.settings).toEqual(settings);
+    expect(parsed?.settings.title).toBe("Título editado");
+  });
+
+  it("acepta payloads de secciones en páginas (spread de pages como envía Builder)", () => {
+    const source = demoStore.sections.find((section) => section.slot === "content");
+    if (source === undefined) throw new Error("La demo debe tener una sección de contenido.");
+    const pageSection: StoreSection = { ...structuredClone(source), id: newSectionId() };
+    const payload: StoreProjectV1 = {
+      ...demoStore,
+      pages: demoStore.pages.map((page) =>
+        page.kind === "about" ? { ...page, sections: [pageSection] } : page,
+      ),
+      updatedAt: demoStore.updatedAt,
+    };
+
+    const result = gate(payload);
+    expect(result.success).toBe(true);
+    expect(
+      result.data?.pages
+        .find((page) => page.kind === "about")
+        ?.sections.map((section) => section.id),
+    ).toEqual([pageSection.id]);
+  });
+
+  it("reduceProject conserva las secciones de páginas intactas", () => {
+    const source = demoStore.sections.find((section) => section.slot === "content");
+    if (source === undefined) throw new Error("La demo debe tener una sección de contenido.");
+    const seeded: StoreProjectV1 = {
+      ...demoStore,
+      pages: demoStore.pages.map((page) =>
+        page.kind === "about"
+          ? { ...page, sections: [{ ...structuredClone(source), id: newSectionId() }] }
+          : page,
+      ),
+    };
+    const pagesJson = JSON.stringify(seeded.pages);
+    const firstDemoProduct = seeded.products[0];
+    if (firstDemoProduct === undefined) {
+      throw new Error("La demo debe tener al menos un producto.");
+    }
+
+    const changed = reduceProject(seeded, {
+      type: "products.adjustPrices",
+      productIds: [firstDemoProduct.id],
+      adjustment: { type: "amount", cents: 700 },
+      at: timestamp,
+    });
+    expect(JSON.stringify(changed.pages)).toBe(pagesJson);
   });
 });
 

@@ -50,7 +50,12 @@ self.onmessage = (event: MessageEvent<ExportRequest>) => {
       self.postMessage({
         id: request.id,
         ok: true,
-        result: { files: result.files, audit, optimization },
+        result: {
+          files: result.files,
+          audit,
+          optimization,
+          criticalCount: audit.filter((issue) => issue.severity === "critical").length,
+        },
       });
       return;
     }

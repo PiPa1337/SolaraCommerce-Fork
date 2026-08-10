@@ -5,6 +5,7 @@ import {
   readExportHistory,
   recordExport,
 } from "./exportHistory";
+import { formatLastExportLabel } from "./statusBar";
 
 type MockStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
@@ -38,6 +39,28 @@ describe("exportHistory", () => {
     expect(next[0]).toMatchObject({ mode: "production", score: 92, critical: 0 });
     expect(() => new Date(next[0]?.at ?? "").toISOString()).not.toThrow();
     expect(readExportHistory("tienda-a")).toEqual(next);
+  });
+
+  it("escribe exactamente los campos que leen el historial y la barra de estado", () => {
+    vi.stubGlobal("localStorage", memoryStorage());
+    const nowIso = new Date().toISOString();
+    const next = recordExport("tienda-a", "draft", { score: 71, critical: 2 });
+    const entry = next[0];
+    expect(entry).toEqual({
+      at: expect.any(String) as string,
+      mode: "draft",
+      score: 71,
+      critical: 2,
+    });
+    expect(entry?.at).toBeDefined();
+    expect(Date.parse(entry?.at ?? "")).not.toBeNaN();
+    expect(formatLastExportLabel(readExportHistory("tienda-a"), null, nowIso)).toBe(
+      new Date(entry?.at ?? "").toLocaleTimeString("es-AR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      }),
+    );
   });
 
   it("permite registrar sin métricas con valores por defecto", () => {

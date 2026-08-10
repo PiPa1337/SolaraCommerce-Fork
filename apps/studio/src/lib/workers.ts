@@ -260,6 +260,7 @@ export function exportSiteInWorker(
   files: ReadonlyMap<string, string | Uint8Array>;
   audit: AuditIssue[];
   optimization: OptimizationReport;
+  criticalCount: number;
 }> {
   return requestWorkerWithStages(
     getExportWorker(),

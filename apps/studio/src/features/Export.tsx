@@ -179,7 +179,7 @@ export function ExportPanel({
       recordHistory({
         mode,
         score: result.optimization.score,
-        critical: result.optimization.counts.critical,
+        critical: result.criticalCount,
       });
       setExportDone(true);
       setDoneStages(new Set(EXPORT_STAGES.map((stage) => stage.id)));
