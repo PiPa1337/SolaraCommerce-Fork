@@ -15,6 +15,7 @@ import {
   WhatsappLogo,
 } from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
+import { catalogModernPhoneValue } from "@solara/project-schema";
 import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { StatusBadge, Toggle } from "../components/primitives";
@@ -141,7 +142,7 @@ export function Overview({
     if (isValid(next)) onCommit(next);
   };
 
-  const phoneDisplay = fieldValue("phone", project.whatsapp.phone);
+  const phoneDisplay = fieldValue("phone", catalogModernPhoneValue(project.whatsapp.phone));
   const phoneMissing = phoneDisplay === "";
   const phoneInvalid = phoneDisplay !== "" && !PHONE_PATTERN.test(phoneDisplay);
   const phoneError = phoneMissing

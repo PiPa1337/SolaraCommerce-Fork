@@ -18,8 +18,7 @@ import {
 } from "@solara/project-schema/catalog-modern-upgrade";
 import { useId } from "react";
 import { Button, SectionHeader } from "../components/Ui";
-
-type GuidedDestination = "overview" | "catalog" | "assets" | "builder" | "seo" | "export";
+import { destinationFor, type GuidedDestination } from "../lib/guidedDestinations";
 
 interface GuidedOverviewProps {
   project: StoreProjectV1;
@@ -39,16 +38,6 @@ const scopeLabels: Record<ContentRequirement["scope"], string> = {
   asset: "Imágenes",
   policy: "Políticas",
 };
-
-function destinationFor(scope: ContentRequirement["scope"]): GuidedDestination {
-  if (scope === "product" || scope === "category") return "catalog";
-  if (scope === "asset") return "assets";
-  if (scope === "seo") return "seo";
-  if (scope === "identity" || scope === "navigation" || scope === "about" || scope === "contact") {
-    return "overview";
-  }
-  return "builder";
-}
 
 function statusLabel(status: ContentRequirement["status"]): string {
   if (status === "placeholder") return "Reemplazar texto de plantilla";

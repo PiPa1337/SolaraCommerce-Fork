@@ -57,6 +57,14 @@ export interface CatalogModernTemplateManifest {
 
 export const CATALOG_MODERN_GUIDANCE_VERSION = 2 as const;
 
+/** Número de WhatsApp con el que nace la plantilla limpia: la guía lo trata como no configurado. */
+export const CATALOG_MODERN_PLACEHOLDER_PHONE = "5491100000000" as const;
+
+/** Valor visible del teléfono para la guía: el placeholder de la plantilla equivale a vacío. */
+export function catalogModernPhoneValue(phone: string): string {
+  return phone === CATALOG_MODERN_PLACEHOLDER_PHONE ? "" : phone;
+}
+
 export const catalogModernTemplateManifest: CatalogModernTemplateManifest = {
   id: "catalog-modern",
   version: CATALOG_MODERN_GUIDANCE_VERSION,
@@ -204,7 +212,7 @@ export function getCatalogModernContentRequirements(project: StoreProjectV2): Co
       label: "WhatsApp de pedidos",
       target: "whatsapp.phone",
       severity: "critical",
-      value: project.whatsapp.phone === "5491100000000" ? "" : project.whatsapp.phone,
+      value: catalogModernPhoneValue(project.whatsapp.phone),
     }),
     requirement(project, {
       id: "navigation.catalog-label",
