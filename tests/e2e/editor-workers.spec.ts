@@ -243,8 +243,13 @@ test("el respaldo del proyecto muestra progreso y deshabilita las acciones (T6.7
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Descargar .solara.json" }).click();
   await expect(page.getByTestId("ui-export-progress")).toContainText("Creando respaldo");
-  await expect(page.getByTestId("ui-export-draft")).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Importar respaldo" })).toBeDisabled();
+  // El respaldo del demo completa en milisegundos con el worker caliente: las
+  // dos aserciones de deshabilitado arrancan en el mismo tick para no perder
+  // la ventana (bajo carga de suite el worker ya está arrancado).
+  await Promise.all([
+    expect(page.getByTestId("ui-export-draft")).toBeDisabled(),
+    expect(page.getByRole("button", { name: "Importar respaldo" })).toBeDisabled(),
+  ]);
 
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/\.solara\.json$/);
