@@ -235,6 +235,64 @@ export function Preview({
   const [iframeReady, setIframeReady] = useState(false);
   const previewAssetSources = useRef<ReadonlyMap<string, string>>(new Map());
   const previewFrame = useRef<HTMLIFrameElement>(null);
+  const previewObserver = useRef<IntersectionObserver | null>(null);
+  const pausedRef = useRef(false);
+  const intersectingRef = useRef(true);
+  const visibleRef = useRef(!document.hidden);
+
+  /**
+   * Contrato con el runtime del storefront (Task A4): un postMessage
+   * { type: "solara-pause" } detiene observadores, animaciones y scroll-work;
+   * { type: "solara-resume" } los reanuda. El preview pausa cuando la pestaña
+   * está oculta o el iframe queda fuera de viewport.
+   */
+  const setPaused = useCallback((paused: boolean) => {
+    if (paused === pausedRef.current) return;
+    pausedRef.current = paused;
+    previewFrame.current?.contentWindow?.postMessage(
+      { type: paused ? "solara-pause" : "solara-resume" },
+      "*",
+    );
+  }, []);
+
+  const evaluatePause = useCallback(() => {
+    setPaused(!visibleRef.current || !intersectingRef.current);
+  }, [setPaused]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      visibleRef.current = !document.hidden;
+      evaluatePause();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [evaluatePause]);
+
+  /* El observer sigue al iframe (condicional según html/error): al montar el
+     nodo observa, al desmontar desconecta y limpia la referencia. */
+  const attachPreviewObserver = useCallback(
+    (node: HTMLIFrameElement | null) => {
+      previewObserver.current?.disconnect();
+      previewObserver.current = null;
+      previewFrame.current = node;
+      if (!node) return;
+      const observer = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          intersectingRef.current = entry.isIntersecting;
+          evaluatePause();
+        }
+      });
+      observer.observe(node);
+      previewObserver.current = observer;
+    },
+    [evaluatePause],
+  );
+
+  useEffect(() => {
+    return () => {
+      previewFrame.current?.contentWindow?.postMessage({ type: "solara-pause" }, "*");
+    };
+  }, []);
 
   useEffect(() => {
     const handlePreviewAssetRequest = (event: MessageEvent<unknown>) => {
@@ -307,12 +365,17 @@ export function Preview({
         ) : (
           <>
             <iframe
-              ref={previewFrame}
+              ref={attachPreviewObserver}
               title={`Vista previa ${size}`}
               srcDoc={html}
               sandbox="allow-forms allow-scripts"
               style={zoom !== 100 ? { zoom: zoom / 100 } : undefined}
-              onLoad={() => setIframeReady(true)}
+              onLoad={() => {
+                setIframeReady(true);
+                if (pausedRef.current) {
+                  previewFrame.current?.contentWindow?.postMessage({ type: "solara-pause" }, "*");
+                }
+              }}
             />
             {!iframeReady ? (
               <output className="preview-overlay" data-testid="ui-preview-loading">
