@@ -301,6 +301,21 @@ export function Studio({
       return null;
     }
   });
+  // El tema efectivo resuelve el override almacenado contra la preferencia del
+  // sistema: sin override el chrome sigue al media query y el toggle debe
+  // ofrecer (y reflejar) el tema que realmente está aplicado (A14).
+  const [systemPrefersDark, setSystemPrefersDark] = useState(() =>
+    typeof window.matchMedia === "function"
+      ? window.matchMedia("(prefers-color-scheme: dark)").matches
+      : false,
+  );
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = (event: MediaQueryListEvent) => setSystemPrefersDark(event.matches);
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
+  const resolvedTheme: "light" | "dark" = theme ?? (systemPrefersDark ? "dark" : "light");
   const [autosave] = useState(() => new AutosaveQueue(saveProject, 550));
   const editorPaneId = useId();
   const conflictTitleId = useId();
@@ -431,6 +446,18 @@ export function Studio({
     if (!pane) return;
     pane.scrollTop = paneScrollPositionsRef.current[tab] ?? 0;
   }, [tab]);
+
+  // Cerrar el pane no puede dejar el foco en contenido oculto: si el foco
+  // estaba dentro del panel cuando se cierra (X o Ctrl+\) se devuelve al tab
+  // activo, dueño del panel según aria-controls (A14).
+  useEffect(() => {
+    if (editorOpen) return;
+    const pane = paneRef.current;
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && pane !== null && pane.contains(active)) {
+      document.getElementById(`studio-tab-${tab}`)?.focus();
+    }
+  }, [editorOpen, tab]);
 
   useEffect(() => {
     const dirty = managedStorage ? managedDirty : saveState !== "saved";
@@ -597,14 +624,14 @@ export function Studio({
   }, [focusExitId, focusMode, focusToggleId]);
 
   const toggleTheme = useCallback(() => {
-    const next = theme === "dark" ? "light" : "dark";
+    const next = resolvedTheme === "dark" ? "light" : "dark";
     setTheme(next);
     try {
       window.localStorage.setItem("solara-studio-theme", next);
     } catch {
       // Almacenamiento bloqueado: el tema se conserva sólo en memoria.
     }
-  }, [theme]);
+  }, [resolvedTheme]);
 
   const handleDiskSaved = useCallback(
     (receipt: LocalSaveReceipt) => {
@@ -823,13 +850,13 @@ export function Studio({
               />
             </Tooltip>
             <Tooltip
-              tip={theme === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
+              tip={resolvedTheme === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
               position="bottom"
             >
               <IconButton
-                icon={theme === "dark" ? Sun : Moon}
-                label={theme === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
-                aria-pressed={theme === "dark"}
+                icon={resolvedTheme === "dark" ? Sun : Moon}
+                label={resolvedTheme === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
+                aria-pressed={resolvedTheme === "dark"}
                 data-testid="ui-theme-toggle"
                 onClick={toggleTheme}
               />
