@@ -105,22 +105,13 @@ reglas responsive: el diálogo de creación aún las usa.
 | 19 | `features/*` y `features/catalog/*` | `key` faltantes en listas JSX | ninguno (los `.map` marcados son datos) |
 | 20 | `tests/e2e/studio-server.ts` | 404 de `/__solara/session` (2 sondeos por boot) | corregido: el servidor de pruebas emula el endpoint |
 | 21 | `features/Preview.tsx` | Preload absoluto del LCP en la vista previa | corregido: se elimina en modo preview |
-| 22 | `packages/exporter/src/index.ts:1112–1117` | `renderPreviewHtml` emite preload absoluto con dominio del proyecto | diferido (paquete compartido; ver abajo) |
+| 22 | `packages/exporter/src/index.ts:1112–1117` | `renderPreviewHtml` emite preload absoluto con dominio del proyecto | resuelto (32036a7: sin preload absoluto en modo draft; el parche `stripPreviewLcpPreload` del Studio se eliminó en la revisión 1) |
 | 23 | `vite.config.ts` | Sin proxy de `/__solara/session` en dev (ruido 404 en consola) | diferido (solo afecta dev) |
 | 24 | `features/CosmicBackground.tsx` | WebGL2 en headless genera avisos del driver de Chromium | ambiente de test; allowlist documentada en el spec |
 | 25 | `tests/e2e/studio-server.ts` | `server.close()` puede colgar con conexiones keep-alive | diferido (infra; no afecta specs actuales) |
 
 ## Diferidos a olas posteriores
 
-- **`packages/exporter` — preload del preview (índice 22).** La causa raíz del
-  error de consola del preview vive en `renderPreviewHtml`: emite
-  `<link rel="preload" as="image" href="{dominio-del-proyecto}/…">` sin
-  considerar `assetTransport: "parent"`. El preview transporta los assets por
-  postMessage y no debe resolver el dominio público (en tiendas demo el DNS
-  falla y Chromium loguea `ERR_NAME_NOT_RESOLVED` + "preloaded but not used").
-  El parche `stripPreviewLcpPreload` del Studio se eliminó en la revisión de
-  bugfixes 1 (quedó huérfano al reescribirse `Preview.tsx`); el fix canónico
-  debería ser en el exporter (no emitir preload en modo preview).
 - **Proxy de dev para `/__solara/session`** (índice 23): en `pnpm dev` el
   sondeo 404a y Chromium lo loguea. El launcher real siempre responde el
   endpoint; el arreglo es infra de dev, no código del editor.

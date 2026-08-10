@@ -69,12 +69,14 @@ CSS inicial del editor y no toca el gate de budgets. */
   font-family: var(--font-ui);
   font-size: 14px;
   letter-spacing: 0;
+  overflow-wrap: anywhere;
 }
 
 .component-gallery__cell > small {
   color: var(--ui-text-muted);
   font-size: 11px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .component-gallery__demo {
@@ -82,14 +84,43 @@ CSS inicial del editor y no toca el gate de budgets. */
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+}
+
+.component-gallery__demo > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.component-gallery__demo .button {
+  white-space: normal;
+}
+
+.component-gallery__demo .button > span {
+  overflow-wrap: anywhere;
+}
+
+.component-gallery__demo .section-header {
+  flex-wrap: wrap;
 }
 
 .component-gallery__token-row {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
   font-family: var(--font-mono);
   font-size: 12px;
+}
+
+.component-gallery__token-row code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.component-gallery .ui-tooltip::after {
+  max-width: min(280px, 90vw);
+  white-space: normal;
 }
 
 .component-gallery__swatch {
