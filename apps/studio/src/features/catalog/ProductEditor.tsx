@@ -16,8 +16,10 @@ import {
   type DraftErrors,
   duplicateVariant,
   optionsText,
+  PRODUCT_STATUS_OPTIONS,
   parseOptions,
   slugify,
+  VARIANT_STOCK_OPTIONS,
   validateDraft,
 } from "./product/productEditorModel";
 
@@ -45,6 +47,12 @@ const STATUS_LABELS: Record<Product["status"], string> = {
   active: "Activo",
   hidden: "Oculto",
   archived: "Archivado",
+};
+
+const STOCK_LABELS: Record<Variant["stockStatus"], string> = {
+  in_stock: "Disponible",
+  out_of_stock: "Agotado",
+  preorder: "Preventa",
 };
 
 function formatCents(cents: number): string {
@@ -345,9 +353,11 @@ export function ProductEditor({
                   }))
                 }
               >
-                <option value="active">Activo</option>
-                <option value="hidden">Oculto</option>
-                <option value="archived">Archivado</option>
+                {PRODUCT_STATUS_OPTIONS.map((status) => (
+                  <option value={status} key={status}>
+                    {STATUS_LABELS[status]}
+                  </option>
+                ))}
               </select>
             </Field>
             <Field label="Descripción" className="field--wide">
@@ -633,9 +643,11 @@ export function ProductEditor({
                           }))
                         }
                       >
-                        <option value="in_stock">Disponible</option>
-                        <option value="out_of_stock">Agotado</option>
-                        <option value="preorder">Preventa</option>
+                        {VARIANT_STOCK_OPTIONS.map((stockStatus) => (
+                          <option value={stockStatus} key={stockStatus}>
+                            {STOCK_LABELS[stockStatus]}
+                          </option>
+                        ))}
                       </select>
                     </Field>
                     <Field label="GTIN">

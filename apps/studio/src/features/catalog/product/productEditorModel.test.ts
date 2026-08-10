@@ -3,15 +3,17 @@
  * validación de slug/título/precios/opciones, duplicado de variantes y el
  * comportamiento documentado de SKU vacío/duplicado (SCH2 diferido).
  */
-import type { Product, Variant } from "@solara/project-schema";
+import { type Product, ProductSchema, type Variant, VariantSchema } from "@solara/project-schema";
 import { describe, expect, it } from "vitest";
 import {
   createBlankVariant,
   duplicateVariant,
   optionsText,
+  PRODUCT_STATUS_OPTIONS,
   parseOptions,
   slugErrorFor,
   slugify,
+  VARIANT_STOCK_OPTIONS,
   validateDraft,
 } from "./productEditorModel";
 
@@ -186,5 +188,37 @@ describe("parseOptions / optionsText", () => {
     expect(() => parseOptions("Color=Azul, Color=Rojo")).toThrow("está repetida");
     expect(() => parseOptions("Color=")).toThrow("formato Nombre=Valor");
     expect(() => parseOptions("=Azul")).toThrow("formato Nombre=Valor");
+  });
+});
+
+describe("contrato con el schema del editor (T9)", () => {
+  it("expone exactamente los estados y stocks que valida el schema", () => {
+    expect(PRODUCT_STATUS_OPTIONS).toEqual(ProductSchema.shape.status.options);
+    expect(VARIANT_STOCK_OPTIONS).toEqual(VariantSchema.shape.stockStatus.options);
+  });
+
+  it("el payload de guardado conserva los ids del draft y los campos del schema", () => {
+    const draft = baseProduct({ brand: "  Marca con espacios  " });
+    const parsed = ProductSchema.parse({
+      ...draft,
+      slug: draft.slug.trim(),
+      title: draft.title.trim(),
+      brand: draft.brand.trim(),
+      tags: [...new Set(["destacado", "destacado", "nuevo"])],
+      variants: draft.variants.map((variant) => ({
+        ...variant,
+        title: variant.title.trim(),
+        sku: variant.sku.trim(),
+        optionValues: parseOptions(optionsText(variant.optionValues)),
+        gtin: variant.gtin?.trim() || undefined,
+        mpn: variant.mpn?.trim() || undefined,
+      })),
+    });
+    expect(parsed.id).toBe(draft.id);
+    expect(parsed.brand).toBe("Marca con espacios");
+    expect(parsed.tags).toEqual(["destacado", "nuevo"]);
+    expect(parsed.variants.map((variant) => variant.id)).toEqual(
+      draft.variants.map((variant) => variant.id),
+    );
   });
 });

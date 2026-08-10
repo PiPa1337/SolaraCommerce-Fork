@@ -4,6 +4,20 @@
  */
 import type { Product, Variant } from "@solara/project-schema";
 
+/** Estados de producto que el schema valida; el editor no debe divergir. */
+export const PRODUCT_STATUS_OPTIONS: readonly Product["status"][] = [
+  "active",
+  "hidden",
+  "archived",
+];
+
+/** Estados de stock de variante que el schema valida. */
+export const VARIANT_STOCK_OPTIONS: readonly Variant["stockStatus"][] = [
+  "in_stock",
+  "out_of_stock",
+  "preorder",
+];
+
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /** Slug local desde el título: minúsculas, números y guiones (NFD quita acentos). */
