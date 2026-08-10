@@ -78,10 +78,14 @@ interface StoredRecord {
   name: string;
   project: {
     name: string;
+    baseUrl?: string;
     identity: { brandName?: string; description?: string; email?: string };
     whatsapp: { phone?: string; includeSku?: boolean };
-    navigation: { catalogLabel?: string };
-    pages: Array<{ kind: string; title: string }>;
+    navigation: {
+      catalogLabel?: string;
+      items?: Array<{ id: string; label?: string }>;
+    };
+    pages: Array<{ kind: string; title: string; seoTitle?: string }>;
   };
 }
 
@@ -192,6 +196,68 @@ test("el borrador inválido de un campo sobrevive al commit de otro campo (regre
   await emailInput.fill("hola@aurora.example");
   await expect(emailInput).toHaveValue("hola@aurora.example");
   await expect(fieldError(page, "Ingresá un email válido.")).toHaveCount(0);
+});
+
+test("los vacíos de campos obligatorios dan error inline sin rechazo global (regresión B1)", async ({
+  page,
+}) => {
+  await setupCleanStore(page, "Tienda vacíos B1");
+
+  await openStudioTab(page, "Resumen");
+
+  // Label de enlace: vaciarlo no commitea y avisa en el campo, sin InlineError global.
+  await page.getByRole("button", { name: "Añadir enlace de catálogo" }).click();
+  const item = page.locator(".navigation-editor-item").first();
+  const labelInput = item.getByLabel("Enlace 1", { exact: true });
+  await labelInput.fill("Mi enlace");
+  await expect(labelInput).toHaveValue("Mi enlace");
+  await labelInput.fill("");
+  await expect(item.getByTestId("ui-field-error")).toContainText(
+    "Completá el nombre del enlace.",
+  );
+  await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
+  await expect
+    .poll(
+      async () =>
+        (await readStoredProject(page, "Tienda vacíos B1"))?.project.navigation.items?.[0]?.label,
+      { timeout: 15_000 },
+    )
+    .toBe("Mi enlace");
+
+  // URL pública: el vacío conserva el valor previo commiteado y avisa en el campo.
+  const urlInput = page.getByLabel("URL pública", { exact: true });
+  const initialUrl = await urlInput.inputValue();
+  expect(initialUrl).toMatch(/^https:\/\/.*\.example$/);
+  await urlInput.fill("");
+  await expect(
+    page.locator('[data-accordion-id="domain"]').getByTestId("ui-field-error"),
+  ).toContainText("Completá la URL pública.");
+  await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
+  await expect
+    .poll(
+      async () => (await readStoredProject(page, "Tienda vacíos B1"))?.project.baseUrl,
+      { timeout: 15_000 },
+    )
+    .toBe(initialUrl);
+
+  // Título SEO: el vacío no commitea y conserva el valor previo en el proyecto.
+  const homeEditor = page.locator(".page-editor", { hasText: "Home" });
+  const seoInput = homeEditor.getByLabel("Título SEO", { exact: true });
+  const seoInitial = await seoInput.inputValue();
+  await seoInput.fill("");
+  await expect(homeEditor.getByTestId("ui-field-error")).toContainText(
+    "Completá el título SEO.",
+  );
+  await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
+  await expect
+    .poll(
+      async () =>
+        (await readStoredProject(page, "Tienda vacíos B1"))?.project.pages.find(
+          (p) => p.kind === "home",
+        )?.seoTitle,
+      { timeout: 15_000 },
+    )
+    .toBe(seoInitial);
 });
 
 test("el progreso guiado anuncia por aria-live, sube al completar y marca el paso activo", async ({

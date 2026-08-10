@@ -157,7 +157,11 @@ export function Overview({
       : undefined;
   const urlDisplay = fieldValue("baseUrl", project.baseUrl);
   const urlError =
-    urlDisplay && !isValidUrl(urlDisplay) ? "Ingresá una URL válida con http(s)." : undefined;
+    urlDisplay.trim() === ""
+      ? "Completá la URL pública."
+      : !isValidUrl(urlDisplay)
+        ? "Ingresá una URL válida con http(s)."
+        : undefined;
   const nameDisplay = fieldValue("name", project.name);
   const nameError = nameDisplay.trim() === "" ? "Completá el nombre de la tienda." : undefined;
   const descriptionError =
@@ -440,7 +444,7 @@ export function Overview({
                   updateField(
                     "baseUrl",
                     event.target.value,
-                    (next) => next === "" || isValidUrl(next),
+                    (next) => next.trim() !== "" && isValidUrl(next),
                     (next) => commit({ baseUrl: next }),
                   )
                 }
@@ -517,20 +521,33 @@ export function Overview({
               {project.navigation.items.map((item, index) => {
                 const itemHrefDraft = drafts[`nav-${item.id}`] ?? item.href ?? "";
                 const itemHrefError = destinationError(itemHrefDraft);
+                const itemLabelKey = `nav-label-${item.id}`;
+                const itemLabelDisplay = fieldValue(itemLabelKey, item.label);
+                const itemLabelError =
+                  itemLabelDisplay.trim() === "" ? "Completá el nombre del enlace." : undefined;
                 return (
                   <div className="navigation-editor-item" key={item.id}>
                     <div className="form-grid">
-                      <Field label={`Enlace ${index + 1}`}>
+                      <Field
+                        label={`Enlace ${index + 1}`}
+                        {...(itemLabelError ? { error: itemLabelError } : {})}
+                      >
                         <input
-                          value={item.label}
+                          value={itemLabelDisplay}
                           onChange={(event) =>
-                            updateNavigation({
-                              items: project.navigation.items.map((current) =>
-                                current.id === item.id
-                                  ? { ...current, label: event.target.value }
-                                  : current,
-                              ),
-                            })
+                            updateField(
+                              itemLabelKey,
+                              event.target.value,
+                              (next) => next.trim() !== "",
+                              (next) =>
+                                updateNavigation({
+                                  items: project.navigation.items.map((current) =>
+                                    current.id === item.id
+                                      ? { ...current, label: next }
+                                      : current,
+                                  ),
+                                }),
+                            )
                           }
                         />
                       </Field>
@@ -560,19 +577,34 @@ export function Overview({
                         const childHrefDraft =
                           drafts[`nav-${item.id}-${child.id}`] ?? child.href ?? "";
                         const childHrefError = destinationError(childHrefDraft);
+                        const childLabelKey = `nav-child-label-${child.id}`;
+                        const childLabelDisplay = fieldValue(childLabelKey, child.label);
+                        const childLabelError =
+                          childLabelDisplay.trim() === ""
+                            ? "Completá el nombre del subenlace."
+                            : undefined;
                         return (
                           <div className="navigation-child-editor" key={child.id}>
-                            <Field label={`Subenlace ${childIndex + 1}`}>
+                            <Field
+                              label={`Subenlace ${childIndex + 1}`}
+                              {...(childLabelError ? { error: childLabelError } : {})}
+                            >
                               <input
-                                value={child.label}
+                                value={childLabelDisplay}
                                 onChange={(event) =>
-                                  updateNavigationItem(item.id, {
-                                    children: (item.children ?? []).map((current) =>
-                                      current.id === child.id
-                                        ? { ...current, label: event.target.value }
-                                        : current,
-                                    ),
-                                  })
+                                  updateField(
+                                    childLabelKey,
+                                    event.target.value,
+                                    (next) => next.trim() !== "",
+                                    (next) =>
+                                      updateNavigationItem(item.id, {
+                                        children: (item.children ?? []).map((current) =>
+                                          current.id === child.id
+                                            ? { ...current, label: next }
+                                            : current,
+                                        ),
+                                      }),
+                                  )
                                 }
                               />
                             </Field>
@@ -689,6 +721,16 @@ export function Overview({
               const pageTitleDisplay = fieldValue(`page-title-${page.id}`, page.title);
               const pageTitleError =
                 pageTitleDisplay.trim() === "" ? "Completá el título visible." : undefined;
+              const seoTitleKey = `page-seo-title-${page.id}`;
+              const seoTitleDisplay = fieldValue(seoTitleKey, page.seoTitle);
+              const seoTitleError =
+                seoTitleDisplay.trim() === "" ? "Completá el título SEO." : undefined;
+              const seoDescriptionKey = `page-seo-desc-${page.id}`;
+              const seoDescriptionDisplay = fieldValue(seoDescriptionKey, page.seoDescription);
+              const seoDescriptionError =
+                seoDescriptionDisplay.trim() === ""
+                  ? "Completá la descripción SEO."
+                  : undefined;
               return (
                 <div className="page-editor" key={page.id}>
                   <strong>
@@ -714,23 +756,40 @@ export function Overview({
                       }
                     />
                   </Field>
-                  <Field label="Título SEO" hint={`${page.seoTitle.length}/70 caracteres`}>
+                  <Field
+                    label="Título SEO"
+                    hint={`${seoTitleDisplay.length}/70 caracteres`}
+                    {...(seoTitleError ? { error: seoTitleError } : {})}
+                  >
                     <input
                       maxLength={70}
-                      value={page.seoTitle}
-                      onChange={(event) => updatePage(page.id, { seoTitle: event.target.value })}
+                      value={seoTitleDisplay}
+                      onChange={(event) =>
+                        updateField(
+                          seoTitleKey,
+                          event.target.value,
+                          (next) => next.trim() !== "",
+                          (next) => updatePage(page.id, { seoTitle: next }),
+                        )
+                      }
                     />
                   </Field>
                   <Field
                     label="Descripción SEO"
-                    hint={`${page.seoDescription.length}/180 caracteres`}
+                    hint={`${seoDescriptionDisplay.length}/180 caracteres`}
+                    {...(seoDescriptionError ? { error: seoDescriptionError } : {})}
                   >
                     <textarea
                       rows={2}
                       maxLength={180}
-                      value={page.seoDescription}
+                      value={seoDescriptionDisplay}
                       onChange={(event) =>
-                        updatePage(page.id, { seoDescription: event.target.value })
+                        updateField(
+                          seoDescriptionKey,
+                          event.target.value,
+                          (next) => next.trim() !== "",
+                          (next) => updatePage(page.id, { seoDescription: next }),
+                        )
                       }
                     />
                   </Field>
