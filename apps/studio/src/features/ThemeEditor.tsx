@@ -16,8 +16,11 @@ const colorLabels: Record<keyof Theme["colors"], string> = {
 
 /**
  * Paletas curadas derivadas de los tokens existentes. Sólo aplican colores:
- * cambiar colorMode a "dark" dispararía overrides hardcodeados del storefront
- * público y el preview dejaría de reflejar la paleta elegida.
+ * el storefront público sobreescribe fondo, superficie, texto, secundario y
+ * borde con valores fijos cuando colorMode es "dark" (styles.ts), así que el
+ * preview y el sitio dejarían de reflejar la paleta elegida. Por eso la opción
+ * "Oscuro" del selector está deshabilitada y las paletas oscuras se consiguen
+ * con colores (ej. "Tinta profunda") sin cambiar colorMode.
  */
 const THEME_PRESETS: Array<{
   id: string;
@@ -246,7 +249,10 @@ export function ThemeEditor({
               Restaurar colores
             </Button>
           </div>
-          <Field label="Modo">
+          <Field
+            label="Modo"
+            hint="Oscuro está deshabilitado: el sitio lo sobreescribiría con colores fijos. Usá la paleta Tinta profunda."
+          >
             <select
               value={project.theme.colorMode}
               onChange={(event) =>
@@ -258,7 +264,9 @@ export function ThemeEditor({
             >
               <option value="auto">Sistema</option>
               <option value="light">Claro</option>
-              <option value="dark">Oscuro</option>
+              <option value="dark" disabled>
+                Oscuro
+              </option>
             </select>
           </Field>
           <div className="color-grid">

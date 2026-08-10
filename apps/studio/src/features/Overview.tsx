@@ -706,15 +706,20 @@ export function Overview({
                       }
                     />
                   </Field>
-                  <Field label="Título SEO">
+                  <Field label="Título SEO" hint={`${page.seoTitle.length}/70 caracteres`}>
                     <input
+                      maxLength={70}
                       value={page.seoTitle}
                       onChange={(event) => updatePage(page.id, { seoTitle: event.target.value })}
                     />
                   </Field>
-                  <Field label="Descripción SEO">
+                  <Field
+                    label="Descripción SEO"
+                    hint={`${page.seoDescription.length}/180 caracteres`}
+                  >
                     <textarea
                       rows={2}
+                      maxLength={180}
                       value={page.seoDescription}
                       onChange={(event) =>
                         updatePage(page.id, { seoDescription: event.target.value })

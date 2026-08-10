@@ -915,14 +915,20 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
             <Button
               variant="primary"
               onClick={() => {
-                onCommand({
-                  type: "products.replaceAll",
-                  products: pendingImport.products,
-                  at: now(),
-                });
-                setPendingImport(undefined);
-                setSelection({});
-                setPagination((current) => ({ ...current, pageIndex: 0 }));
+                try {
+                  onCommand({
+                    type: "products.replaceAll",
+                    products: pendingImport.products,
+                    at: now(),
+                  });
+                  setPendingImport(undefined);
+                  setSelection({});
+                  setPagination((current) => ({ ...current, pageIndex: 0 }));
+                } catch (reason) {
+                  setError(
+                    reason instanceof Error ? reason.message : "No se pudo reemplazar el catálogo.",
+                  );
+                }
               }}
             >
               Reemplazar catálogo

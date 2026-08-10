@@ -1,5 +1,6 @@
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { referenceStore } from "@solara/project-schema/fixture";
+import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 import { describe, expect, it } from "vitest";
 import {
   auditProject,
@@ -491,6 +492,95 @@ describe("exporter", () => {
     expect(
       [...result.files.keys()].filter((path) => path === "assets/shared-content-hash.webp"),
     ).toHaveLength(1);
+  });
+
+  it("advierte una baseUrl con subcarpeta para assets root-relativos", () => {
+    const project = {
+      ...referenceStore,
+      baseUrl: "https://casa-luma.example/tienda/",
+    };
+
+    expect(auditProject(project)).toContainEqual(
+      expect.objectContaining({
+        code: "domain.baseurl-path",
+        severity: "warning",
+        path: "baseUrl",
+      }),
+    );
+  });
+
+  it("publica catalog-index.json cuando el drawer de carrito está activo sin templates", () => {
+    const project = {
+      ...referenceStore,
+      commerceTemplates: {
+        ...referenceStore.commerceTemplates,
+        cart: { enabled: false },
+        checkout: { enabled: false },
+      },
+    };
+
+    const result = exportProject(project, { mode: "production" });
+
+    expect(result.files.has("catalog-index.json")).toBe(true);
+  });
+
+  it("incluye rutas paginadas en el image-sitemap", () => {
+    const legacy = exportProject(catalogScaleStore, { mode: "production" });
+    const legacyImageSitemap = String(legacy.files.get("image-sitemap.xml"));
+    const modern = exportProject(catalogModernStore, { mode: "production" });
+    const modernImageSitemap = String(modern.files.get("image-sitemap.xml"));
+
+    expect(legacyImageSitemap).toContain(
+      "<loc>https://casa-luma-scale.example/categorias/casa/pagina/2/</loc>",
+    );
+    expect(legacyImageSitemap).not.toContain(
+      "<loc>https://casa-luma-scale.example/categorias/casa/pagina/3/</loc>",
+    );
+    expect(modernImageSitemap).toContain(
+      "<loc>https://modo-sur.example/colecciones/esenciales/pagina/2/</loc>",
+    );
+  });
+
+  it("mantiene la política CSP exacta en _headers", () => {
+    const headers = String(
+      exportProject(referenceStore, { mode: "production" }).files.get("_headers"),
+    );
+
+    expect(headers).toBe(`/*
+  Cache-Control: public, max-age=0, must-revalidate
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: https: http:; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self'; media-src 'self' https: http:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/sitemap.xml
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/image-sitemap.xml
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/video-sitemap.xml
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/google-merchant.xml
+  Cache-Control: public, max-age=900, must-revalidate
+
+/ai-context.json
+  Cache-Control: public, max-age=900, must-revalidate
+
+/llms.txt
+  Cache-Control: public, max-age=900, must-revalidate
+
+/search-index.json
+  Cache-Control: public, max-age=900, must-revalidate
+
+/catalog-index.json
+  Cache-Control: public, max-age=900, must-revalidate
+`);
   });
 
   it("advierte el riesgo Merchant del checkout por WhatsApp", () => {

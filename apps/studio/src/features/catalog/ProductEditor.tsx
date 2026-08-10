@@ -688,7 +688,10 @@ export function ProductEditor({
                         onChange={(event) =>
                           updateVariant(variant.id, (current) => ({
                             ...current,
-                            price: Number(event.target.value) as Variant["price"],
+                            price:
+                              event.target.value === ""
+                                ? current.price
+                                : (Number(event.target.value) as Variant["price"]),
                           }))
                         }
                       />

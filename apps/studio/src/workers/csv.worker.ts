@@ -43,21 +43,148 @@ function encodeCsvCell(value: string): string {
   return value;
 }
 
+/** Divide el CSV en líneas respetando campos entre comillas con saltos internos. */
+function splitCsvLines(csv: string): string[] {
+  const lines: string[] = [];
+  let buffer = "";
+  let quoted = false;
+  for (let index = 0; index < csv.length; index += 1) {
+    const character = csv[index];
+    if (character === '"') {
+      if (quoted && csv[index + 1] === '"') {
+        buffer += '""';
+        index += 1;
+      } else {
+        quoted = !quoted;
+      }
+    } else if (character === "\n" && !quoted) {
+      lines.push(buffer.replace(/\r$/, ""));
+      buffer = "";
+    } else {
+      buffer += character;
+    }
+  }
+  if (buffer.trim() !== "") lines.push(buffer.replace(/\r$/, ""));
+  return lines;
+}
+
+interface CsvRowEntry {
+  row: number;
+  productId: string;
+  slug: string;
+  variantId: string;
+}
+
+/** Devuelve slug y variante de cada fila del archivo con su número de línea. */
+function csvRowEntries(csv: string, commercial: boolean): CsvRowEntry[] {
+  if (commercial) {
+    return parseCatalogCsvRecords(csv).map((record, index) => ({
+      row: index + 2,
+      productId: record.producto_id || `product-${record.slug}`,
+      slug: record.slug,
+      variantId: record.variante_id,
+    }));
+  }
+  const lines = splitCsvLines(csv);
+  const header = lines[0];
+  if (!header) return [];
+  const entries: CsvRowEntry[] = [];
+  lines.slice(1).forEach((line, index) => {
+    if (line.trim() === "") return;
+    try {
+      const [product] = importProductsCsv(`${header}\r\n${line}`);
+      if (!product) return;
+      entries.push({
+        row: index + 2,
+        productId: product.id,
+        slug: product.slug,
+        variantId: product.variants[0]?.id ?? "",
+      });
+    } catch {
+      // La fila tiene otro error; el diagnóstico principal lo reporta.
+    }
+  });
+  return entries;
+}
+
+function formatRowList(rows: number[]): string {
+  const sorted = [...new Set(rows)].sort((left, right) => left - right);
+  if (sorted.length <= 1) return String(sorted[0] ?? "");
+  return `${sorted.slice(0, -1).join(", ")} y ${sorted.at(-1)}`;
+}
+
+/**
+ * Detecta slugs y variantes repetidos tras el parseo: un CSV que el schema
+ * rechazaría con ZodError al reemplazar el catálogo se reporta por fila antes
+ * de llegar al dominio, para no tumbar el editor ni perder el historial.
+ */
+function duplicateRowErrors(csv: string, commercial: boolean): CsvRowError[] {
+  let entries: CsvRowEntry[];
+  try {
+    entries = csvRowEntries(csv, commercial);
+  } catch {
+    return [];
+  }
+  const errors: CsvRowError[] = [];
+  const bySlug = new Map<string, CsvRowEntry[]>();
+  const byVariant = new Map<string, CsvRowEntry[]>();
+  for (const entry of entries) {
+    const slugGroup = bySlug.get(entry.slug) ?? [];
+    slugGroup.push(entry);
+    bySlug.set(entry.slug, slugGroup);
+    if (entry.variantId === "") continue;
+    const variantGroup = byVariant.get(entry.variantId) ?? [];
+    variantGroup.push(entry);
+    byVariant.set(entry.variantId, variantGroup);
+  }
+  for (const [slug, group] of bySlug) {
+    if (new Set(group.map((entry) => entry.productId)).size < 2) continue;
+    const message = `El slug "${slug}" está repetido en las filas ${formatRowList(
+      group.map((entry) => entry.row),
+    )}.`;
+    group.forEach((entry) => {
+      errors.push({ row: entry.row, message });
+    });
+  }
+  for (const [variantId, group] of byVariant) {
+    if (group.length < 2) continue;
+    const message = `La variante "${variantId}" está repetida en las filas ${formatRowList(
+      group.map((entry) => entry.row),
+    )}.`;
+    group.forEach((entry) => {
+      errors.push({ row: entry.row, message });
+    });
+  }
+  return errors;
+}
+
+/** Importa el CSV y rechaza con error por fila si el archivo repite slugs o variantes. */
+function importCsvRejectingDuplicates(csv: string, context?: CatalogCsvContext): Product[] {
+  const commercial = isCommercialCsv(csv);
+  const products = commercial && context ? importCatalogCsv(csv, context) : importProductsCsv(csv);
+  const duplicates = duplicateRowErrors(csv, commercial);
+  if (duplicates.length > 0) {
+    throw new Error(duplicates.map((entry) => `Fila ${entry.row}: ${entry.message}`).join(" "));
+  }
+  return products;
+}
+
 /** Reporta los errores de importación por fila sin descartar el resto del archivo. */
 function diagnoseCsv(csv: string, context?: CatalogCsvContext): CsvRowError[] {
   const commercial = isCommercialCsv(csv);
-  const importAll = () =>
-    commercial && context ? importCatalogCsv(csv, context) : importProductsCsv(csv);
 
   try {
-    importAll();
+    importCsvRejectingDuplicates(csv, context);
     return [];
   } catch {
     // El importe completo falló; se busca cuáles filas lo causan.
   }
 
+  const duplicates = duplicateRowErrors(csv, commercial);
+  if (duplicates.length > 0) return duplicates;
+
   if (!commercial || !context) {
-    return [fullImportError(importAll)];
+    return [fullImportError(() => importCsvRejectingDuplicates(csv, context))];
   }
 
   let records: ReturnType<typeof parseCatalogCsvRecords>;
@@ -86,7 +213,7 @@ function diagnoseCsv(csv: string, context?: CatalogCsvContext): CsvRowError[] {
     }
   });
   if (errors.length > 0) return errors;
-  return [fullImportError(importAll)];
+  return [fullImportError(() => importCsvRejectingDuplicates(csv, context))];
 }
 
 function fullImportError(importAll: () => unknown): CsvRowError {
@@ -106,9 +233,7 @@ self.onmessage = (event: MessageEvent<CsvRequest>) => {
       event.data.type === "diagnose"
         ? diagnoseCsv(event.data.csv, event.data.context)
         : event.data.type === "import"
-          ? event.data.context && isCommercialCsv(event.data.csv)
-            ? importCatalogCsv(event.data.csv, event.data.context)
-            : importProductsCsv(event.data.csv)
+          ? importCsvRejectingDuplicates(event.data.csv, event.data.context)
           : event.data.type === "export-commercial"
             ? exportCatalogCsv(event.data.project)
             : exportProductsCsv(event.data.products);

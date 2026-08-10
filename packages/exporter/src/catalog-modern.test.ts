@@ -100,14 +100,38 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(cart).toContain("Entrega");
   });
 
-  it("mantiene la página de búsqueda compacta y los resultados fuera del diálogo", () => {
+  it("mantiene la página de búsqueda compacta con input persistente y resultados fuera del diálogo", () => {
     const search = String(exported.files.get("buscar/index.html"));
 
     expect(search).toContain("data-catalog-search-dialog");
     expect(search).toContain("data-catalog-search-open");
     expect(search).toContain('class="solara-search-results" data-search-results');
-    expect(search).toContain("Nueva búsqueda");
-    expect(search).not.toContain('id="solara-search-input"');
+    expect(search).toContain('<form class="solara-search-form" role="search" action="/buscar/"');
+    expect(search).toContain('<label for="solara-search-input">Buscar productos</label>');
+    expect(search).toContain('<input id="solara-search-input" name="q" type="search"');
+  });
+
+  it("conserva la búsqueda de la página cuando el header la oculta", () => {
+    const project = {
+      ...catalogModernStore,
+      navigation: { ...catalogModernStore.navigation, showSearch: false },
+    };
+    const search = String(exportProject(project, { mode: "draft" }).files.get("buscar/index.html"));
+
+    expect(search).not.toContain("data-catalog-search-dialog");
+    expect(search).not.toContain("data-catalog-search-open");
+    expect(search).toContain('<label for="solara-search-input">Buscar productos</label>');
+    expect(search).toContain('<input id="solara-search-input" name="q" type="search"');
+  });
+
+  it("emite el total real de la categoría en el contador de resultados", () => {
+    const remeras = String(exported.files.get("categorias/remeras/index.html"));
+
+    expect(remeras).toMatch(/data-category-result-count data-category-total="\d+">\d+ productos/);
+    const totalMatch = remeras.match(
+      /data-category-result-count data-category-total="(\d+)">\1 productos/,
+    );
+    expect(totalMatch).not.toBeNull();
   });
 
   it("deduplica fuentes de assets embebidos en el preview", () => {

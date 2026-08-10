@@ -77,6 +77,20 @@ describe("exporter con catálogo jerárquico de escala", () => {
     );
   });
 
+  it("ofrece en legacy las etiquetas de productos de otras páginas de la categoría", () => {
+    const project = structuredClone(catalogScaleStore);
+    project.products.slice(24, 28).forEach((product) => {
+      product.tags = [...product.tags, "etiqueta-pagina-dos"];
+    });
+    const result = exportProject(project, { mode: "production" });
+    const pageOne = String(result.files.get("categorias/casa/index.html"));
+    const pageTwo = String(result.files.get("categorias/casa/pagina/2/index.html"));
+
+    expect(pageOne).toContain('<option value="etiqueta-pagina-dos">');
+    expect(pageTwo).toContain("Pieza de escala 25");
+    expect(pageTwo).not.toContain("Pieza de escala 01");
+  });
+
   it("no emite el layout ni los filtros de opciones modernos en categorías legacy", () => {
     const casa = String(exported.files.get("categorias/casa/index.html"));
 

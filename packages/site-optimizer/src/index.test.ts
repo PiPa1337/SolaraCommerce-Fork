@@ -121,4 +121,71 @@ describe("site optimizer", () => {
       ]),
     );
   });
+
+  it("advierte un origen huérfano dentro de las secciones de una página", () => {
+    const project = structuredClone(catalogModernStore);
+    const section = project.sections.find(
+      (item) => item.moduleId === "catalog-product-grid" && item.slot === "catalog",
+    );
+    if (!section) throw new Error("Fixture sin seccion de catalogo");
+    project.pages = project.pages.map((page) =>
+      page.kind === "home"
+        ? {
+            ...page,
+            sections: [
+              {
+                ...structuredClone(section),
+                id: "page-orphan-collection" as typeof section.id,
+                settings: {
+                  ...section.settings,
+                  title: "Origen roto en página",
+                  source: "collection",
+                  sourceId: "collection-inexistente",
+                },
+              },
+            ],
+          }
+        : page,
+    );
+    const report = optimizeProject(project, { mode: "production" });
+
+    expect(report.findings).toContainEqual(
+      expect.objectContaining({
+        code: "catalog.section.orphan-source",
+        severity: "warning",
+        path: "pages.0.sections.0.settings.sourceId",
+        entity: {
+          type: "collection",
+          id: "collection-inexistente",
+          label: "Origen roto en página",
+        },
+      }),
+    );
+  });
+
+  it("incluye la paginación de colecciones en rutas, llms.txt y contexto AI", () => {
+    const report = optimizeProject(catalogModernStore, { mode: "production" });
+    const collectionRoutes = report.routes.filter(
+      (route) => route.pageType === "collection" && route.path.includes("/pagina/"),
+    );
+    const llms = buildLlmsTxt(catalogModernStore);
+    const context = JSON.parse(buildAiContext(catalogModernStore)) as {
+      pages: Array<{ path: string; canonicalUrl: string }>;
+    };
+
+    expect(collectionRoutes).toEqual([
+      expect.objectContaining({
+        path: "/colecciones/esenciales/pagina/2/",
+        canonicalPath: "/colecciones/esenciales/pagina/2/",
+        indexable: true,
+      }),
+    ]);
+    expect(llms).toContain("modo-sur.example/colecciones/esenciales/pagina/2/");
+    expect(context.pages.some((page) => page.path === "/colecciones/esenciales/pagina/2/")).toBe(
+      true,
+    );
+    expect(
+      context.pages.some((page) => page.path === "/colecciones/recien-llegados/pagina/2/"),
+    ).toBe(false);
+  });
 });

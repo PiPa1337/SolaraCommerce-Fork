@@ -9,6 +9,7 @@ import {
   type ImageAsset,
   type Product,
   type StoreProjectV1,
+  type StoreSection,
 } from "@solara/project-schema";
 
 export type OptimizationSeverity = "critical" | "warning" | "info";
@@ -286,18 +287,25 @@ function buildRoutes(project: StoreProjectV1): OptimizationRoute[] {
   });
 
   project.collections.forEach((collection) => {
-    const path = `/colecciones/${collection.slug}/`;
-    routes.push(
-      route(
-        path,
-        "collection",
-        true,
-        path,
-        `${collection.title} | ${project.identity.brandName}`,
-        collection.description,
-        true,
-      ),
-    );
+    const products = collection.productIds
+      .map((id) => project.products.find((product) => product.id === id))
+      .filter((product): product is Product => Boolean(product && product.status === "active"));
+    const pages = Math.max(1, Math.ceil(products.length / pageSize));
+    for (let page = 1; page <= pages; page += 1) {
+      const suffix = page === 1 ? "" : `pagina/${page}/`;
+      const path = `/colecciones/${collection.slug}/${suffix}`;
+      routes.push(
+        route(
+          path,
+          "collection",
+          true,
+          path,
+          `${collection.title} | ${project.identity.brandName}`,
+          collection.description,
+          page === 1,
+        ),
+      );
+    }
   });
 
   project.products
@@ -494,7 +502,22 @@ function auditProject(
 
   const categoryIds = new Set(project.categories.map((category) => category.id));
   const collectionIds = new Set(project.collections.map((collection) => collection.id));
-  project.sections.forEach((section, sectionIndex) => {
+  const orphanCandidates: Array<{
+    section: StoreSection;
+    path: string;
+  }> = [
+    ...project.sections.map((section, sectionIndex) => ({
+      section,
+      path: `sections.${sectionIndex}`,
+    })),
+    ...project.pages.flatMap((page, pageIndex) =>
+      page.sections.map((section, sectionIndex) => ({
+        section,
+        path: `pages.${pageIndex}.sections.${sectionIndex}`,
+      })),
+    ),
+  ];
+  orphanCandidates.forEach(({ section, path }) => {
     const source = section.settings.source;
     const sourceId = section.settings.sourceId;
     if (typeof source !== "string" || typeof sourceId !== "string" || !sourceId) return;
@@ -511,7 +534,7 @@ function auditProject(
         severity: "warning",
         area: "content",
         message: `La seccion "${label}" apunta a la coleccion "${sourceId}" que no existe.`,
-        path: `sections.${sectionIndex}.settings.sourceId`,
+        path: `${path}.settings.sourceId`,
         entity: { type: "collection", id: sourceId, label },
       });
     }
@@ -524,7 +547,7 @@ function auditProject(
         severity: "warning",
         area: "content",
         message: `La seccion "${label}" apunta a la categoria "${sourceId}" que no existe.`,
-        path: `sections.${sectionIndex}.settings.sourceId`,
+        path: `${path}.settings.sourceId`,
         entity: { type: "category", id: sourceId, label },
       });
     }

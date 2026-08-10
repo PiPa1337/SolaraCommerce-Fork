@@ -1181,10 +1181,9 @@ const categorySortSelect =
 function categoryListingMarkup(
   project: StoreProjectV1,
   products: readonly Product[],
-  paginated: readonly Product[],
   grid: string,
 ): string {
-  const resultCount = `<span data-category-result-count>${products.length} productos</span>`;
+  const resultCount = `<span data-category-result-count data-category-total="${products.length}">${products.length} productos</span>`;
   if (isModernProject(project)) {
     return `<div class="catalog-category-layout">
       ${modernCategoryFilters(products)}
@@ -1197,7 +1196,7 @@ function categoryListingMarkup(
       </div>
     </div>`;
   }
-  const tagOptions = [...new Set(paginated.flatMap((product) => product.tags))]
+  const tagOptions = [...new Set(products.flatMap((product) => product.tags))]
     .slice(0, 12)
     .map((tag) => `<option value="${escapeAttribute(tag)}">${escapeHtml(tag)}</option>`)
     .join("");
@@ -1343,7 +1342,7 @@ function buildPages(
             ${categoryMedia}
           </header>
           ${categoryChildrenMarkup(project, category)}
-          ${categoryListingMarkup(project, products, paginated, categoryGrid)}
+          ${categoryListingMarkup(project, products, categoryGrid)}
           ${paginationNavigation(`/categorias/${category.slug}`, pageNumber, totalPages)}
         </main>`,
         renderProjectSections(project, sharedFooter, { pageType: "category", category }),
@@ -1542,9 +1541,7 @@ function buildPages(
     ...(socialImage ? { image: socialImage } : {}),
   };
 
-  const searchControls = isModernProject(project)
-    ? `<button class="solara-search-page-trigger" type="button" data-catalog-search-open aria-controls="catalog-search-dialog" aria-expanded="false">Nueva búsqueda</button><noscript><form class="solara-search-form" role="search" action="/buscar/" method="get"><label for="solara-search-input-noscript">Buscar productos</label><div><input id="solara-search-input-noscript" name="q" type="search" autocomplete="off"><button class="solara-primary-action" type="submit">Buscar</button></div></form></noscript>`
-    : `<form class="solara-search-form" role="search" action="/buscar/" method="get"><label for="solara-search-input">Buscar productos</label><div><input id="solara-search-input" name="q" type="search" autocomplete="off"><button class="solara-primary-action" type="submit">Buscar</button></div></form>`;
+  const searchControls = `<form class="solara-search-form" role="search" action="/buscar/" method="get"><label for="solara-search-input">Buscar productos</label><div><input id="solara-search-input" name="q" type="search" autocomplete="off"><button class="solara-primary-action" type="submit">Buscar</button></div></form>`;
   const searchPage: PageDescriptor = {
     path: "buscar/index.html",
     title: `Buscar productos | ${project.identity.brandName}`,
@@ -1683,6 +1680,7 @@ function buildImageSitemap(project: StoreProjectV1): string {
     if (!entries.some((entry) => entry.url === url)) entries.push({ url, caption });
     byPage.set(pagePath, entries);
   };
+  const pageSize = project.commerceTemplates.category.productsPerPage;
   project.products
     .filter((product) => product.status === "active")
     .forEach((product) => {
@@ -1691,14 +1689,34 @@ function buildImageSitemap(project: StoreProjectV1): string {
       });
     });
   project.categories.forEach((category) => {
-    add(`/categorias/${category.slug}/`, imageUrl(project, category.imageId), category.title);
+    const totalPages = Math.max(
+      1,
+      Math.ceil(categoryProducts(project, category).length / pageSize),
+    );
+    for (let page = 1; page <= totalPages; page += 1) {
+      add(
+        page === 1
+          ? `/categorias/${category.slug}/`
+          : `/categorias/${category.slug}/pagina/${page}/`,
+        imageUrl(project, category.imageId),
+        category.title,
+      );
+    }
   });
   project.collections.forEach((collection) => {
-    add(
-      `/colecciones/${collection.slug}/`,
-      imageUrl(project, collection.imageId),
-      collection.title,
-    );
+    const products = collection.productIds
+      .map((id) => project.products.find((product) => product.id === id))
+      .filter((product): product is Product => Boolean(product && product.status === "active"));
+    const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
+    for (let page = 1; page <= totalPages; page += 1) {
+      add(
+        page === 1
+          ? `/colecciones/${collection.slug}/`
+          : `/colecciones/${collection.slug}/pagina/${page}/`,
+        imageUrl(project, collection.imageId),
+        collection.title,
+      );
+    }
   });
   const homeHero = effectiveHomeSections(project).find(
     (section) => section.slot === "hero" && section.enabled,
@@ -1885,6 +1903,22 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
       code: "domain.https",
       severity: "critical",
       message: "El dominio de producción debe usar HTTPS.",
+      path: "baseUrl",
+    });
+  }
+
+  let baseUrlPathname = "/";
+  try {
+    baseUrlPathname = new URL(project.baseUrl).pathname;
+  } catch {
+    baseUrlPathname = "/";
+  }
+  if (baseUrlPathname !== "/") {
+    issues.push({
+      code: "domain.baseurl-path",
+      severity: "warning",
+      message:
+        "El sitio usa rutas relativas a la raíz; una baseUrl con subcarpeta rompe los assets.",
       path: "baseUrl",
     });
   }
@@ -2219,7 +2253,7 @@ function buildFiles(
   );
   files.set("assets/storefront.js", STOREFRONT_RUNTIME_JS);
   if (manifest.searchEnabled) files.set("search-index.json", buildSearchIndex(publicProject));
-  if (manifest.cartEnabled || manifest.checkoutEnabled)
+  if (manifest.cartEnabled || manifest.checkoutEnabled || publicProject.siteShell.cart)
     files.set("catalog-index.json", buildCatalogIndex(publicProject));
   files.set(
     "robots.txt",
