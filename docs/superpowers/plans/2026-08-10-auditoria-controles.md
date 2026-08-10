@@ -1,8 +1,8 @@
 # Auditoría funcional de botones del editor y la app — 2026-08-10 — Implementation Plan
 
-> **Para agentes:** SUB-SKILL REQUERIDA: `superpowers:subagent-driven-development` o `superpowers:executing-plans`. **Ejecución: ola 1 = 8 agentes de caza en simultáneo; ola 2 = ~14 agentes de fix en simultáneo; cierre = verificación, docs, gates, push.**
+> **Para agentes:** SUB-SKILL REQUERIDA: `superpowers:subagent-driven-development` o `superpowers:executing-plans`. **Ejecución: ola 1 = 8 agentes de caza (completada: 12 BUGs); ola 2 = 15 agentes de fix en simultáneo (incluye re-despacho H1); ola 3 = 20 agentes de TRAZA DE DATOS en simultáneo; cierre = verificación, docs, gates, push.**
 
-**Goal:** Garantizar que TODOS los controles de la UI (editor de páginas/Builder y el resto de la app) funcionen: cada botón, toggle, select y checkbox debe ser accionable y producir el cambio que promete, con aserción de regresión por área.
+**Goal:** Garantizar que TODOS los controles de la UI funcionen (cada botón/toggle/select produce el cambio que promete — auditoría conductual con Playwright) Y que el flujo de datos de cada control sea correcto por código (el dato que envía el botón llega exactamente donde la lógica lo espera — auditoría estática de contratos, distinta de Playwright).
 
 **Architecture:** (1) Caza conductual con 8 agentes — cada uno CLICKEA cada control de su área con Playwright contra el dev server y produce la matriz botón → efecto esperado → efecto real → veredicto, marcando cobertura E2E existente; (2) 14 agentes de fix por propiedad de archivos, cada uno corrige TODOS los hallazgos de su área y agrega una aserción de regresión (spec propio); (3) verificación: spec de matriz de interacción + revisión final + gates.
 
@@ -81,6 +81,39 @@ Revisar `planBase..HEAD` contra el plan; verificar: cada BUG de la caza tiene su
 
 ### Task C3 — Gates y publicación — [Controlador]
 `corepack pnpm check` · `build` · `check:budgets` · `benchmark:export` · `test:e2e` (incluye `ui-matriz-interaccion` y los specs nuevos) · `test:e2e:portable` · `git diff --check` · `check:repository` · ejecutables (`desktop:build`, `desktop:package`, `portable:smoke`) · push.
+
+---
+
+## FASE B — TRAZA DE DATOS POR CÓDIGO (20 agentes, simultáneos)
+
+Auditoría ESTÁTICA de contratos (distinta de Playwright): para cada control, seguir en el código el camino completo del dato — ORIGEN (payload del onClick / value del control) → ENVÍO (dispatch/handler/postMessage/localStorage/endpoint) → RECEPTOR (lo que la lógica lee) → EFECTO (mutación/render/persistencia). Entregable: MATRIZ DE CONTRATO | # | Control | Dato enviado (file:line) | Ruta | Receptor espera (file:line) | ¿Coincide? | Veredicto |. Un desajuste = el botón manda X pero la lógica lee Y (o no lo lee). Cada agente CORRIGE los desajustes de su dominio (con test) y verifica con el spec conductual de su área.
+
+Reglas: no cambiar contratos persistidos (`StoreProjectV2Schema`, claves IDB/localStorage con datos viejos — si una clave está mal, corregir el ESCRIBIR y tolerar el LEER, o documentar); mensajes de worker y endpoints HTTP se verifican en AMBOS lados; cada desajuste corregido lleva su aserción.
+
+| # | Dominio de traza (archivos EXCLUSIVOS) | Qué trazar |
+|---|---|---|
+| T1 | `features/Builder.tsx` + `features/builder/**` | Inspector → `settings.*`: cada tipo de control escribe la clave que `packages/modules` y el exporter leen; repeater/ids; restore-defaults |
+| T2 | `features/Builder.tsx` + `packages/core` | Comandos de sección (duplicate/replace/move/delete/slots): payload vs casos del reducer vs history |
+| T3 | `features/Studio.tsx` + `components/*` | Undo/redo: botones → `executeCommand`/undo/redo → history → re-render; disabled vs posiciones |
+| T4 | `features/Studio.tsx` | Tabs/paneles: `tab` id → contenido; estado por pestaña (dirty, scroll, pane); `navigateFromGuided` vs `selectTab` |
+| T5 | `lib/autosave.ts` + `features/Studio.tsx` | Guardar browser: botón → flush → `saveRecoveryDraft` → clave IDB → indicador; Ctrl+S ambos modos |
+| T6 | `lib/localProjectRepository.ts` + `lib/localStorage.ts` + handler | Guardar managed: begin/upload/commit HTTP (URLs, métodos, bodies) → `solara-request-handler.mjs` → storage: campos que el servidor parsea = campos que el cliente envía |
+| T7 | `features/catalog/CatalogToolbar.tsx` + `lib/catalogTableModel.ts` | Búsqueda/filtros/orden/columnas: value → modelo → tabla (labels vs valores crudos, bug H4-S2) |
+| T8 | `features/Catalog.tsx` + `packages/core` | Bulk (precios/estado/archivar): payload del comando vs reducer vs filas afectadas |
+| T9 | `features/catalog/ProductEditor.tsx` + `packages/core` | Guardar producto/variantes: draft → `validateDraft` → `products.update` payload → reducer → fila+preview |
+| T10 | `features/catalog/CategoryTree.tsx` + `packages/core` | Reparent: payload → reducer → recálculo de `productIds` derivados |
+| T11 | `workers/csv.worker.ts` + `features/Catalog.tsx` | CSV: contrato `postMessage` emisor↔receptor; errores por fila |
+| T12 | `features/Assets.tsx` + `workers/image.worker.ts` + `lib/assetUses.ts` | Upload/replace/delete: mensajes del worker, payload del replace (¿preserva nombre? — H5), guard de usos |
+| T13 | `features/Export.tsx` + `workers/export.worker.ts` | Export: `exportSite` → mensajes del worker (¿etapas individuales? — H6-B2) → resultados; contadores (H6-B1) |
+| T14 | `features/Dashboard.tsx` + `App.tsx` | Acciones del dashboard: payload → App handlers → repository/IDB → estado (incl. shutdown — H7-B1) |
+| T15 | `features/ThemeEditor.tsx` + exporter | Tema: controles → `project.theme.*` → variables CSS del exporter (¿mismos nombres de token?) |
+| T16 | `features/Seo.tsx` + exporter | SEO: campos → `project.pages[].seo.*` → meta del HTML exportado (¿mismas rutas?) |
+| T17 | `features/Overview.tsx` + `GuidedOverview.tsx` | Guiado: requisitos → checks del modelo → actualización del proyecto (upgrade/templateVersion) |
+| T18 | `components/*` (Ui, primitives, Toast, ConfirmDialog) | Contratos de props: cada uso pasa lo que el componente consume (sin props ignoradas ni requeridas ausentes) |
+| T19 | `features/Studio.tsx` + `ManagedPersistenceControls.tsx` | Atajos: Ctrl+S/Ctrl+Z/Ctrl+Shift+Z ambos modos → handlers reales (H3-B4/B5) |
+| T20 | `lib/**` + `App.tsx` | Round-trip de persistencia: claves IDB y localStorage — todo lo que se escribe se lee con la MISMA clave/forma; migraciones tolerantes |
+
+Cierre: hallazgos de FASE B → CHANGELOG/deuda; la verificación final corre la matriz conductual (F14) + los tests de contrato nuevos.
 
 ---
 
