@@ -13,9 +13,21 @@
   --cosmic-green: #7bd98a;
   --cosmic-yellow: #f6c75e;
   --cosmic-red: #ed6e70;
+  position: relative;
   min-height: 100dvh;
   background: var(--cosmic-bg);
   color: var(--cosmic-ink);
+}
+
+/* El aviso global de sesión flota como un toast sobre el hero: en flujo
+ * empuja todo el dashboard 54 px hacia abajo y desborda el viewport. */
+.app-root--dashboard-cosmic .global-notice {
+  position: absolute;
+  z-index: 25;
+  top: 84px;
+  left: 50%;
+  width: min(560px, calc(100vw - 28px));
+  transform: translateX(-50%);
 }
 
 .app-header--dashboard-cosmic {
@@ -110,7 +122,7 @@
   isolation: isolate;
   min-height: calc(100dvh - 72px);
   overflow: hidden;
-  padding: clamp(18px, 2.5vw, 28px) clamp(16px, 3vw, 36px) 24px;
+  padding: clamp(12px, 1.2vw, 18px) clamp(16px, 3vw, 36px) 16px;
   background: var(--cosmic-bg);
   color: var(--cosmic-ink);
 }
@@ -276,7 +288,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(440px, 0.92fr);
   align-items: end;
   gap: clamp(24px, 5vw, 84px);
-  padding-bottom: 14px;
+  padding-bottom: 10px;
 }
 
 .dashboard-cosmic-kicker {
@@ -293,10 +305,10 @@
   margin-bottom: 8px;
   color: var(--cosmic-ink);
   font-family: var(--font-display);
-  font-size: clamp(2.7rem, 5.2vw, 4.8rem);
+  font-size: clamp(1.75rem, 3.2vw, 3.4rem);
   font-weight: 600;
   letter-spacing: -0.07em;
-  line-height: 0.9;
+  line-height: 1.25;
 }
 
 .dashboard-cosmic-hero p {
@@ -306,6 +318,9 @@
   font-size: 14px;
   line-height: 1.45;
 }
+
+/* Viewports bajos: el hero cede el espacio al panel de tiendas. (Las reglas
+ * compactas viven al final del archivo para ganar la cascada.) */
 
 .dashboard-cosmic .button--primary {
   border-color: #f3c35e;
@@ -324,7 +339,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   align-self: end;
-  padding: 10px 6px;
+  padding: 8px 6px;
   border: 1px solid var(--cosmic-line-strong);
   border-radius: 16px;
   background: rgb(12 15 22 / 0.78);
@@ -336,7 +351,7 @@
 
 .dashboard-cosmic-metrics > div {
   display: grid;
-  min-height: 58px;
+  min-height: 54px;
   align-content: center;
   gap: 4px;
   padding: 0 10px;
@@ -349,7 +364,7 @@
 
 .dashboard-cosmic-metrics strong {
   color: var(--cosmic-ink);
-  font-size: clamp(1.35rem, 2vw, 2rem);
+  font-size: clamp(1.15rem, 1.6vw, 1.6rem);
   font-weight: 650;
   letter-spacing: -0.04em;
 }
@@ -392,7 +407,7 @@
   align-items: end;
   justify-content: space-between;
   gap: 14px;
-  padding: 13px 16px 11px;
+  padding: 9px 14px 8px;
   border-bottom: 1px solid var(--cosmic-line);
 }
 
@@ -400,13 +415,14 @@
   margin: 0;
   color: var(--cosmic-ink);
   font-family: var(--font-ui);
-  font-size: 19px;
+  font-size: 16px;
   font-weight: 650;
   letter-spacing: -0.035em;
+  line-height: 1.2;
 }
 
 .dashboard-cosmic-library__header .dashboard-cosmic-kicker {
-  margin-bottom: 6px;
+  margin-bottom: 3px;
   color: var(--cosmic-faint);
 }
 
@@ -420,7 +436,7 @@
   grid-template-columns: minmax(220px, 1.5fr) minmax(142px, 0.7fr) minmax(190px, 0.8fr) auto;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 6px 10px;
   border-bottom: 1px solid var(--cosmic-line);
 }
 
@@ -430,7 +446,7 @@
   min-width: 0;
   align-items: center;
   gap: 8px;
-  min-height: 38px;
+  min-height: 32px;
   padding: 0 10px;
   border: 1px solid var(--cosmic-line);
   border-radius: 9px;
@@ -519,7 +535,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) 270px;
   gap: 12px;
-  padding: 8px;
+  padding: 6px;
 }
 
 .dashboard-cosmic-store-grid {
@@ -579,11 +595,11 @@
   position: relative;
   display: grid;
   width: 100%;
-  min-height: 138px;
+  min-height: 118px;
   align-content: start;
   justify-items: center;
-  gap: 5px;
-  padding: 12px 10px 10px;
+  gap: 4px;
+  padding: 10px 8px 8px;
   border: 0;
   border-radius: inherit;
   background: transparent;
@@ -632,8 +648,8 @@
 .dashboard-store-detail__mark {
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   border: 1px solid rgb(255 255 255 / 0.26);
   border-radius: 50%;
   background: radial-gradient(circle at 35% 28%, #514e47, #14161a 68%);
@@ -707,10 +723,10 @@
 
 .dashboard-store-detail {
   position: sticky;
-  top: 14px;
+  top: 10px;
   align-self: start;
   min-height: 0;
-  padding: 12px;
+  padding: 10px;
   border: 1px solid var(--cosmic-line-strong);
   border-radius: 14px;
   background: rgb(14 17 24 / 0.9);
@@ -729,7 +745,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding-bottom: 10px;
+  padding-bottom: 6px;
   border-bottom: 1px solid var(--cosmic-line);
   color: var(--cosmic-muted);
   font-size: 11px;
@@ -743,22 +759,29 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 0;
+  padding: 6px 0;
 }
 
 .dashboard-store-detail__mark {
-  width: 46px;
-  height: 46px;
+  width: 42px;
+  height: 42px;
   border-color: rgb(231 170 61 / 0.72);
   box-shadow: 0 0 22px rgb(231 170 61 / 0.18);
 }
 
 .dashboard-store-detail__identity h3 {
-  margin: 0 0 5px;
+  display: -webkit-box;
+  min-width: 0;
+  margin: 0 0 4px;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   color: var(--cosmic-ink);
   font-family: var(--font-ui);
   font-size: 17px;
   font-weight: 650;
+  line-height: 1.2;
 }
 
 .dashboard-store-detail__facts {
@@ -771,9 +794,9 @@
 
 .dashboard-store-detail__facts div {
   display: grid;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
-  padding: 6px 0;
+  padding: 4px 0;
   border-bottom: 1px solid var(--cosmic-line);
 }
 
@@ -781,7 +804,8 @@
 .dashboard-store-detail__facts dd {
   min-width: 0;
   margin: 0;
-  font-size: 11px;
+  font-size: 10px;
+  line-height: 1.3;
 }
 
 .dashboard-store-detail__facts dt {
@@ -800,7 +824,7 @@
   display: grid;
   grid-template-columns: 1.25fr 0.9fr 0.9fr;
   gap: 5px;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .dashboard-store-detail__actions .button:first-child {
@@ -809,7 +833,7 @@
 
 .dashboard-store-detail__actions .button {
   min-width: 0;
-  min-height: 34px;
+  min-height: 28px;
   padding-inline: 8px;
   justify-content: center;
   width: 100%;
@@ -818,7 +842,7 @@
 
 .dashboard-store-detail__empty {
   display: grid;
-  min-height: 190px;
+  min-height: 170px;
   align-content: center;
   justify-items: center;
   gap: 8px;
@@ -947,8 +971,8 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 12px 18px;
-  margin: 0 0 14px;
-  padding: 10px 12px;
+  margin: 0 0 10px;
+  padding: 7px 12px;
   border: 1px solid var(--cosmic-line);
   border-radius: 12px;
   background: rgb(8 10 16 / 0.64);
@@ -982,7 +1006,7 @@
 }
 
 .dashboard-cosmic-health__stats strong {
-  font-size: 17px;
+  font-size: 15px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1005,8 +1029,8 @@
 }
 
 .dashboard-cosmic-health__chips button {
-  min-height: 28px;
-  padding: 4px 10px;
+  min-height: 24px;
+  padding: 3px 10px;
   border: 1px solid rgb(246 199 94 / 0.45);
   border-radius: 999px;
   background: rgb(246 199 94 / 0.1);
@@ -1027,12 +1051,12 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 5px 10px;
   border-bottom: 1px solid var(--cosmic-line);
 }
 
 .dashboard-cosmic-actions .button {
-  min-height: 34px;
+  min-height: 28px;
   font-size: 12px;
 }
 
@@ -1440,6 +1464,87 @@
 
   .dashboard-toast {
     animation: none;
+  }
+}
+
+/* Viewports bajos (escritorio de poca altura): las secciones del dashboard
+ * se compactan para que todo el contenido quepa sin scroll de página.
+ * Va al final del archivo para ganar la cascada sobre las reglas base. */
+@media (max-height: 820px) and (min-width: 700px) {
+  .dashboard-cosmic-hero {
+    padding-bottom: 8px;
+  }
+
+  .dashboard-cosmic-hero .dashboard-cosmic-kicker {
+    margin-bottom: 2px;
+  }
+
+  .dashboard-cosmic-hero p {
+    display: none;
+  }
+
+  .dashboard-cosmic-hero h1 {
+    font-size: clamp(1.3rem, 1.9vw, 1.6rem);
+  }
+
+  .dashboard-cosmic-results {
+    padding: 5px;
+  }
+
+  .dashboard-cosmic-library__header {
+    padding: 8px 14px 7px;
+  }
+
+  .dashboard-cosmic-search,
+  .dashboard-cosmic-select {
+    min-height: 30px;
+  }
+
+  .dashboard-cosmic-health {
+    padding: 6px 12px;
+  }
+
+  .dashboard-store-detail {
+    padding: 9px;
+  }
+
+  .dashboard-store-detail__header {
+    padding-bottom: 5px;
+  }
+
+  .dashboard-store-detail__identity {
+    gap: 10px;
+    padding: 5px 0;
+  }
+
+  .dashboard-store-detail__identity .dashboard-store-detail__mark {
+    width: 40px;
+    height: 40px;
+  }
+
+  .dashboard-store-detail__identity h3 {
+    margin-bottom: 2px;
+    font-size: 15px;
+  }
+
+  .dashboard-store-detail__facts div {
+    gap: 1px;
+    padding: 3px 0;
+  }
+
+  .dashboard-store-detail__facts dt,
+  .dashboard-store-detail__facts dd {
+    font-size: 9px;
+    line-height: 1.15;
+  }
+
+  .dashboard-store-detail__actions {
+    gap: 4px;
+    margin-top: 3px;
+  }
+
+  .dashboard-store-detail__actions .button {
+    min-height: 24px;
   }
 }
 

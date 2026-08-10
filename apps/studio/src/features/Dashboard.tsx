@@ -26,6 +26,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Button, EmptyState, Field, IconButton, InlineError } from "../components/Ui";
 import {
@@ -192,7 +193,7 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
         <span className="dashboard-store-card__mark" aria-hidden>
           {record.name.slice(0, 2).toUpperCase()}
         </span>
-        <strong>{record.name}</strong>
+        <strong title={record.name}>{record.name}</strong>
         <span className={`dashboard-store-card__status is-${record.status}`}>
           <span aria-hidden />
           {statusLabel(record.status)}
@@ -1229,17 +1230,20 @@ export function Dashboard({
         onDone={() => setDuplicateTarget(undefined)}
       />
 
-      {toast ? (
-        <output className="dashboard-toast" data-testid="ui-dashboard-toast">
-          <span>{toast.message}</span>
-          {toast.actionLabel && toast.onAction ? (
-            <Button variant="quiet" onClick={() => toast.onAction?.()}>
-              {toast.actionLabel}
-            </Button>
-          ) : null}
-          <IconButton icon={X} label="Cerrar aviso" onClick={() => setToast(undefined)} />
-        </output>
-      ) : null}
+      {toast
+        ? createPortal(
+            <output className="dashboard-toast" data-testid="ui-dashboard-toast">
+              <span>{toast.message}</span>
+              {toast.actionLabel && toast.onAction ? (
+                <Button variant="quiet" onClick={() => toast.onAction?.()}>
+                  {toast.actionLabel}
+                </Button>
+              ) : null}
+              <IconButton icon={X} label="Cerrar aviso" onClick={() => setToast(undefined)} />
+            </output>,
+            document.body,
+          )
+        : null}
 
       {pendingArchiveRecord ? (
         <ConfirmDialog
