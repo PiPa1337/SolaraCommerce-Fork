@@ -662,6 +662,6 @@ contexto de teclado después de `Cancelar`, `Escape`, guardado o descarte
 confirmado; si el disparador ya no existe, no intenta enfocar un nodo
 desconectado.
 
-La regresión está en `tests/e2e/ui-sweep-a06.spec.ts`: A06 queda en 10/10 en
+La regresión está en `tests/e2e/ui-sweep-a06.spec.ts`: A06 queda en 11/11 en
 Chromium. No se modificó `schemaVersion`, el contrato de catálogo ni
 `catalogScaleStore`.

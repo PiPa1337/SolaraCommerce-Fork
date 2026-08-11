@@ -361,6 +361,27 @@ test("cerrar el editor sin cambios devuelve el foco al disparador de la fila", a
   await expect(editButton).toBeFocused();
 });
 
+test("descartar cambios confirmados devuelve el foco al disparador de la fila", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await openCatalog(page);
+  const row = await filterRow(page, "Camisa Rayas Finas");
+  const editButton = row.getByRole("button", { name: "Editar" });
+  await editButton.click();
+
+  const dialog = page.locator("dialog.product-dialog");
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("textbox", { name: "Título" }).fill("Producto descartable A06");
+  await dialog.getByRole("button", { name: "Cancelar" }).click();
+
+  const confirm = page.getByTestId("ui-confirm-dialog");
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole("button", { name: "Salir sin guardar" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(editButton).toBeFocused();
+});
+
 test("la mini preview refleja en vivo título, precio mínimo y estado (edición y creación)", async ({
   page,
 }) => {

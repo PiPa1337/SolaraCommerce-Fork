@@ -14,8 +14,9 @@ versión publicada.
 
 - `ProductEditor` conserva el control que abrió el diálogo y devuelve el foco
   al cerrarlo, incluyendo el cierre limpio por `Cancelar` o `Escape`.
-- A06 verifica el foco restaurado sobre el botón `Editar` de la fila sin
-  cambiar el modelo persistido ni el fixture determinista.
+- A06 verifica el foco restaurado sobre el botón `Editar` de la fila tanto al
+  cerrar directamente como al descartar cambios confirmados, sin cambiar el
+  modelo persistido ni el fixture determinista.
 
 ### Ruta inexistente en Preview (2026-08-11)
 
