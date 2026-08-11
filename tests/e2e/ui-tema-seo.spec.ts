@@ -201,3 +201,18 @@ test("SEO comunica el estado de auditoría y prioriza el diagnóstico sobre las 
     .evaluate((grid) => Array.from(grid.children).map((child) => child.className));
   expect(semanticOrder.indexOf("audit-panel")).toBeLessThan(semanticOrder.indexOf("seo-previews"));
 });
+
+test("los accesos de auditoría SEO navegan y devuelven el foco al tab destino", async ({
+  page,
+}) => {
+  await setupCleanStore(page, "Tienda SEO foco");
+  await page.getByRole("tab", { name: "SEO", exact: true }).click();
+
+  const fix = page.getByTestId("ui-seo-audit-fix").first();
+  await expect(fix).toBeVisible();
+  await fix.click();
+
+  const assetsTab = page.getByRole("tab", { name: "Recursos", exact: true });
+  await expect(assetsTab).toHaveAttribute("aria-selected", "true");
+  await expect(assetsTab).toBeFocused();
+});

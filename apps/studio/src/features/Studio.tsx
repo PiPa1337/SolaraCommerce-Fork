@@ -164,7 +164,7 @@ const StudioTabContent = memo(function StudioTabContent({
     case "assets":
       return <Assets project={project} onChange={replaceProject} />;
     case "seo":
-      return <Seo project={project} onChange={replaceProject} />;
+      return <Seo project={project} onChange={replaceProject} onNavigate={onNavigate} />;
     case "export":
       return (
         <ExportPanel

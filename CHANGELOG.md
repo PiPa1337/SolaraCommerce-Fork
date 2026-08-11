@@ -31,6 +31,8 @@ versión publicada.
   previews y checklist.
 - Preparar deja de heredar el grid del checklist SEO: en móvil recupera una sola
   columna y mantiene legible el CTA del siguiente paso.
+- Los accesos de corrección de la auditoría SEO navegan mediante el shell y
+  devuelven el foco visible al tab de destino.
 
 ### Auditoría total de la pestaña Preparar (2026-08-10)
 

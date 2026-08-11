@@ -26,6 +26,8 @@ interface AuditIssue {
   fixTarget?: string;
 }
 
+type SeoNavigationTarget = "overview" | "catalog" | "assets" | "seo" | "export";
+
 function normalizeIssues(value: unknown): AuditIssue[] {
   const candidate = Array.isArray(value)
     ? value
@@ -59,7 +61,7 @@ function normalizeIssues(value: unknown): AuditIssue[] {
  * destino `seo` no navega: el checklist vive en la pestaña SEO y los hallazgos
  * que se resuelven ahí se marcan como revisados en lugar de ofrecer «Ir a SEO».
  */
-const FIX_TABS: Record<string, string> = {
+const FIX_TABS: Record<string, SeoNavigationTarget> = {
   summary: "overview",
   catalog: "catalog",
   assets: "assets",
@@ -101,18 +103,26 @@ export function homepageSeoPreview(project: StoreProjectV1): {
 }
 
 /** Navega a la pestaña que corrige el hallazgo usando los ids estables del shell. */
-function navigateToFix(target: string): void {
+function navigateToFix(
+  target: string,
+  onNavigate: (destination: SeoNavigationTarget) => void,
+): void {
   const tabId = FIX_TABS[target];
   if (!tabId) return;
-  document.getElementById(`studio-tab-${tabId}`)?.click();
+  onNavigate(tabId);
+  requestAnimationFrame(() => {
+    document.getElementById(`studio-tab-${tabId}`)?.focus();
+  });
 }
 
 export function Seo({
   project,
   onChange,
+  onNavigate,
 }: {
   project: StoreProjectV1;
   onChange(project: StoreProjectV1): void;
+  onNavigate(destination: SeoNavigationTarget): void;
 }) {
   const [report, setReport] = useState<AuditReport>({
     issues: [],
@@ -358,7 +368,7 @@ export function Seo({
                         size="sm"
                         icon={ArrowRight}
                         data-testid="ui-seo-audit-fix"
-                        onClick={() => navigateToFix(issue.fixTarget ?? "")}
+                        onClick={() => navigateToFix(issue.fixTarget ?? "", onNavigate)}
                       >
                         Ir a {FIX_LABELS[issue.fixTarget] ?? "corregir"}
                       </Button>
@@ -564,7 +574,7 @@ export function Seo({
                         size="sm"
                         icon={ArrowRight}
                         data-testid="ui-seo-check-fix"
-                        onClick={() => navigateToFix(issue.fixTarget ?? "")}
+                        onClick={() => navigateToFix(issue.fixTarget ?? "", onNavigate)}
                       >
                         Ir a {FIX_LABELS[issue.fixTarget] ?? "corregir"}
                       </Button>
