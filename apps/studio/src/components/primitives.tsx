@@ -4,11 +4,11 @@
  * tooltip usa CSS nativo con `data-tip` y el resto estados accesibles.
  */
 import { ArrowLeft, ArrowRight, type Icon } from "@phosphor-icons/react";
-import { type ReactNode, useId } from "react";
+import { cloneElement, isValidElement, type ReactElement, type ReactNode, useId } from "react";
 import { Button } from "./Ui";
 
-/** Tooltip CSS puro: envuelve el contenido y expone `tip` vía `data-tip`.
- * `title` nativo se conserva como fallback para AT sin hover. */
+/** Tooltip visual con descripción accesible: evita el `title` nativo duplicado y
+ * conecta el contenido con el control mediante `aria-describedby`. */
 export function Tooltip({
   tip,
   children,
@@ -20,9 +20,27 @@ export function Tooltip({
   position?: "top" | "bottom" | "left" | "right";
   className?: string;
 }) {
+  const descriptionId = useId();
+  const describedChildren = isValidElement<{
+    "aria-describedby"?: string;
+    title?: string | undefined;
+  }>(children)
+    ? cloneElement(
+        children as ReactElement<{ "aria-describedby"?: string; title?: string | undefined }>,
+        {
+          "aria-describedby": [children.props["aria-describedby"], descriptionId]
+            .filter(Boolean)
+            .join(" "),
+          title: undefined,
+        },
+      )
+    : children;
   return (
-    <span className={`ui-tooltip ui-tooltip--${position} ${className}`} data-tip={tip} title={tip}>
-      {children}
+    <span className={`ui-tooltip ui-tooltip--${position} ${className}`} data-tip={tip}>
+      <span id={descriptionId} className="ui-tooltip__description" role="tooltip">
+        {tip}
+      </span>
+      {describedChildren}
     </span>
   );
 }

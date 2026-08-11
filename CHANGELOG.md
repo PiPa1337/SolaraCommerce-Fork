@@ -10,6 +10,13 @@ versión publicada.
 
 ## [Unreleased]
 
+### Tooltips y cobertura responsive (2026-08-11)
+
+- Los tooltips del Studio conservan la burbuja visual, exponen una descripción
+  accesible con `aria-describedby` y dejan de duplicarse con el `title` nativo.
+- La auditoría responsive cubre las ocho pestañas del Studio en 390, 768, 1024,
+  1366, 1440 y 1920 px, verificando que la página no genere overflow horizontal.
+
 ### Foco explícito en diálogos del Dashboard (2026-08-11)
 
 - Comparar tiendas conserva el foco del botón que abrió el diálogo al cerrarlo,

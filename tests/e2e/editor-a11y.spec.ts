@@ -402,7 +402,7 @@ test("el ConfirmDialog de eliminar enlace enfoca, atrapa el foco, cancela con Es
   await expect(page.getByRole("button", { name: deletedLabel })).toBeVisible();
 });
 
-test("el tooltip top de un IconButton aparece sobre el botón con fallback de título (A13)", async ({
+test("el tooltip top de un IconButton aparece sobre el botón con descripción accesible (A13)", async ({
   page,
 }) => {
   await openDefaultStore(page);
@@ -413,7 +413,15 @@ test("el tooltip top de un IconButton aparece sobre el botón con fallback de t�
   const deleteLink = page.getByRole("button", { name: /^Eliminar enlace / }).first();
   const wrapper = deleteLink.locator("xpath=..");
   await expect(wrapper).toHaveClass(/ui-tooltip--top/);
-  await expect(wrapper).toHaveAttribute("title", "Eliminar enlace");
+  await expect(wrapper).toHaveAttribute("data-tip", "Eliminar enlace");
+  const description = wrapper.locator('[role="tooltip"]');
+  await expect(description).toHaveText("Eliminar enlace");
+  await expect(deleteLink).toHaveAttribute(
+    "aria-describedby",
+    await description.getAttribute("id"),
+  );
+  await expect(wrapper).not.toHaveAttribute("title");
+  await expect(deleteLink).not.toHaveAttribute("title");
 
   await deleteLink.hover();
   await expect
@@ -437,7 +445,7 @@ test("el tooltip top de un IconButton aparece sobre el botón con fallback de t�
   ).toBe(true);
 });
 
-test("el tooltip bottom del toggle de tema aparece bajo el control con fallback de título (A13)", async ({
+test("el tooltip bottom del toggle de tema aparece bajo el control con descripción accesible (A13)", async ({
   page,
 }) => {
   await openDefaultStore(page);
@@ -445,7 +453,12 @@ test("el tooltip bottom del toggle de tema aparece bajo el control con fallback 
   const toggle = page.getByTestId("ui-theme-toggle");
   const wrapper = toggle.locator("xpath=..");
   await expect(wrapper).toHaveClass(/ui-tooltip--bottom/);
-  await expect(wrapper).toHaveAttribute("title", /^Usar tema (claro|oscuro)$/);
+  await expect(wrapper).toHaveAttribute("data-tip", /^Usar tema (claro|oscuro)$/);
+  const description = wrapper.locator('[role="tooltip"]');
+  await expect(description).toHaveText(/^Usar tema (claro|oscuro)$/);
+  await expect(toggle).toHaveAttribute("aria-describedby", await description.getAttribute("id"));
+  await expect(wrapper).not.toHaveAttribute("title");
+  await expect(toggle).not.toHaveAttribute("title");
 
   await toggle.hover();
   await expect

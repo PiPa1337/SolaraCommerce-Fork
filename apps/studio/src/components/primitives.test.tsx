@@ -114,14 +114,16 @@ describe("StatusBadge", () => {
 });
 
 describe("Tooltip", () => {
-  it("expone el tip en data-tip y conserva title como fallback", () => {
+  it("expone el tip visual y una descripción accesible sin title nativo duplicado", () => {
     const markup = renderToStaticMarkup(
       <Tooltip tip="Guarda los cambios" position="bottom">
         <button type="button">Guardar</button>
       </Tooltip>,
     );
     expect(markup).toContain('data-tip="Guarda los cambios"');
-    expect(markup).toContain('title="Guarda los cambios"');
+    expect(markup).toContain('role="tooltip"');
+    expect(markup).toMatch(/aria-describedby="[^"]+"/);
+    expect(markup).not.toContain('title="Guarda los cambios"');
     expect(markup).toContain("ui-tooltip");
     expect(markup).toContain("ui-tooltip--bottom");
     expect(markup).toContain("Guardar");

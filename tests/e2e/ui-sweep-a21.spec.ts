@@ -256,6 +256,51 @@ async function failRendererChunk(page: Page): Promise<void> {
   });
 }
 
+test("el Studio mantiene el ancho de página en sus ocho pestañas y viewports", async ({ page }) => {
+  await openDemoStore(page);
+
+  const viewports = [
+    { width: 390, height: 844 },
+    { width: 768, height: 1024 },
+    { width: 1024, height: 768 },
+    { width: 1366, height: 768 },
+    { width: 1440, height: 900 },
+    { width: 1920, height: 1080 },
+  ];
+  const tabs = [
+    "Preparar",
+    "Resumen",
+    "Catálogo",
+    "Constructor",
+    "Tema",
+    "Recursos",
+    "SEO",
+    "Exportar",
+  ];
+
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    for (const tab of tabs) {
+      await page.getByRole("tab", { name: tab, exact: true }).click();
+      await expect(page.getByRole("tab", { name: tab, exact: true })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+      const metrics = await page.evaluate(() => ({
+        documentWidth: document.documentElement.scrollWidth,
+        bodyWidth: document.body.scrollWidth,
+        viewportWidth: window.innerWidth,
+      }));
+      expect(metrics.documentWidth, `${tab} @ ${viewport.width}px`).toBeLessThanOrEqual(
+        metrics.viewportWidth,
+      );
+      expect(metrics.bodyWidth, `${tab} @ ${viewport.width}px`).toBeLessThanOrEqual(
+        metrics.viewportWidth,
+      );
+    }
+  }
+});
+
 // --------------------------------------------------------------- SEO: global
 
 test("A21.1 los campos globales limitan con maxLength, cuentan caracteres y persisten entre pestañas", async ({

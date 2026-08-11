@@ -19,7 +19,8 @@ export function IconButton({
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   icon: Icon;
   label: string;
-  /** Tooltip visual (primitiva Tooltip con data-tip); `title` sigue como fallback. */
+  /** Tooltip visual opcional; la primitiva conecta la descripción accesible y
+   * evita el `title` nativo duplicado cuando está presente. */
   tooltip?: string;
 }) {
   const button = (

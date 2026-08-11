@@ -101,6 +101,18 @@
   width: fit-content;
 }
 
+.ui-tooltip__description {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+  clip: rect(0 0 0 0);
+}
+
 .ui-tooltip::after {
   content: attr(data-tip);
   position: absolute;

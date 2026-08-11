@@ -726,3 +726,18 @@ La cobertura específica está en `tests/e2e/ui-sweep-a20.spec.ts`,
 `tests/e2e/dashboard-actions.spec.ts` y `tests/e2e/ui-sweep-a13.spec.ts`.
 Los recorridos de comparación y A13 mantienen sus regresiones de foco y pasan en
 Chromium junto con las acciones del Dashboard.
+
+## Tooltips accesibles y baseline responsive (2026-08-11)
+
+`Tooltip` conserva la burbuja CSS para hover y foco, pero ahora renderiza una
+descripción con `role="tooltip"` y conecta el control mediante
+`aria-describedby`. Al clonar el control elimina el `title` nativo del wrapper
+y del botón, evitando avisos duplicados sin perder el nombre o la descripción
+para tecnologías asistivas.
+
+La regresión de `tests/e2e/editor-a11y.spec.ts` cubre las variantes top y bottom;
+`tests/e2e/ui-sweep-a26.spec.ts` cubre hover, foco y las cuatro posiciones. El
+baseline responsive de `tests/e2e/ui-sweep-a21.spec.ts` recorre Preparar,
+Resumen, Catálogo, Constructor, Tema, Recursos, SEO y Exportar en los seis
+viewports del plan y verifica que `document` y `body` no creen overflow
+horizontal.
