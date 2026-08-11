@@ -148,7 +148,8 @@ test("A13: duplicar — id nuevo, nombre elegido, cancelar y toast", async ({ pa
   const originalId = (await originalDetail.locator("dd").first().textContent()) ?? "";
   expect(originalId).toMatch(/^store-/);
 
-  // Cancelar no crea nada y el foco vuelve a la card de origen.
+  // Cancelar no crea nada y el foco vuelve al disparador del diálogo (el
+  // botón Duplicar del panel): restauración nativa del diálogo, no a la card.
   await originalDetail.getByRole("button", { name: "Duplicar" }).click();
   const duplicateDialog = page.getByTestId("ui-duplicate-dialog");
   await expect(duplicateDialog).toBeVisible();
@@ -157,7 +158,7 @@ test("A13: duplicar — id nuevo, nombre elegido, cancelar y toast", async ({ pa
   await duplicateDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
   await expect(duplicateDialog).toBeHidden();
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
-  await expect(page.locator('[data-store-card-id="store-modo-sur-demo"]')).toBeFocused();
+  await expect(originalDetail.getByRole("button", { name: "Duplicar", exact: true })).toBeFocused();
 
   // Confirmación con nombre propio: la card nueva aparece con ese nombre.
   await originalDetail.getByRole("button", { name: "Duplicar" }).click();
@@ -175,8 +176,8 @@ test("A13: duplicar — id nuevo, nombre elegido, cancelar y toast", async ({ pa
   expect((await copyDetail.locator("dd").first().textContent()) ?? "").not.toBe(originalId);
 });
 
-test.fixme(
-  "A12: el diálogo de duplicado no devuelve el foco a la card tras duplicar con éxito",
+test(
+  "A12: duplicar con éxito devuelve el foco a la card de origen",
   async ({ page }) => {
     await openDashboard(page);
     const detail = await selectStore(page, "Predeterminado");
@@ -185,7 +186,8 @@ test.fixme(
     await expect(duplicateDialog).toBeVisible();
     await duplicateDialog.getByRole("button", { name: "Duplicar", exact: true }).click();
     await expect(duplicateDialog).toBeHidden();
-    // El camino de cancelar restaura el foco a la card; el de éxito no lo hace.
+    // El camino de cancelar restaura el foco al disparador del diálogo; el de
+    // éxito ahora también devuelve el foco a la card de origen (fix A12).
     await expect(page.locator('[data-store-card-id="store-modo-sur-demo"]')).toBeFocused();
   },
 );
@@ -254,7 +256,7 @@ test("A13: archivar — restaurar desde el filtro de archivadas", async ({ page 
   await expect(restoredDetail.getByRole("button", { name: "Archivar", exact: true })).toBeVisible();
 });
 
-test.fixme("A12: restaurar no muestra toast de confirmación ni devuelve el foco", async ({
+test("A12: restaurar muestra el toast de confirmación y no deja foco en una card", async ({
   page,
 }) => {
   await openDashboard(page);
@@ -264,10 +266,13 @@ test.fixme("A12: restaurar no muestra toast de confirmación ni devuelve el foco
   await page.getByLabel("Estado").selectOption("archived");
   const archivedDetail = await selectStore(page, "Predeterminado");
   await archivedDetail.getByRole("button", { name: "Restaurar", exact: true }).click();
-  // Archivar muestra toast con Deshacer; restaurar no deja ninguna
-  // confirmación visible y el foco queda en el body (la card salió del
-  // filtro de archivadas sin que la selección migre a otro destino).
-  await expect(page.getByTestId("ui-dashboard-toast")).toHaveCount(0);
+  // Archivar muestra toast con Deshacer; restaurar muestra una confirmación
+  // propia sin acción de deshacer (fix A12) aunque la card salga del filtro.
+  const toast = page.getByTestId("ui-dashboard-toast");
+  await expect(toast).toContainText("restaurada");
+  await expect(toast).not.toContainText("Deshacer");
+  // La card restaurada ya no está en el filtro «Archivadas»: ninguna card
+  // queda enfocada (la selección no migra a otro destino visible).
   await expect(page.locator(".dashboard-store-card__button:focus")).toHaveCount(0);
 });
 
@@ -497,7 +502,7 @@ test("A13: cierre del servidor — cancelar, estado cerrando y terminal con bann
   }
 });
 
-test.fixme("A12: la «X» de creación no se deshabilita mientras la tienda se crea", async ({
+test("A12: la «X» de creación se deshabilita mientras la tienda se crea", async ({
   page,
 }) => {
   const managed = await startManagedServer();
@@ -523,12 +528,14 @@ test.fixme("A12: la «X» de creación no se deshabilita mientras la tienda se c
       await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
     }
     const closeCreation = page.getByRole("button", { name: "Cerrar creación" });
-    const submit = dialog.getByRole("button", { name: "Crear tienda vacía" });
+    // El nombre cambia a «Creando» durante la transacción: el locator por regex
+    // resuelve en ambos estados.
+    const submit = dialog.getByRole("button", { name: /Crear tienda vacía|Creando/ });
     await submit.click();
     await expect(submit).toBeDisabled();
     await expect(submit).toHaveText("Creando");
-    // Gap de auto-feedback: el submit queda deshabilitado, pero la X sigue
-    // habilitada (closeCreate corta en silencio y no cierra el diálogo).
+    // Auto-feedback: la X queda deshabilitada mientras `creatingProject`;
+    // closeCreate no hace nada y el diálogo no queda a medias.
     await expect(closeCreation).toBeDisabled();
     // Al terminar la transacción la creación navega igual al editor.
     await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
