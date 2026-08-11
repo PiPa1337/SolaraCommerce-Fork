@@ -978,7 +978,6 @@ export const catalogTestimonials: ModuleDefinition<
         { key: "context", label: "Contexto", type: "text" },
         { key: "body", label: "Texto", type: "text" },
         { key: "rating", label: "Valoración", type: "number", min: 1, max: 5, step: 1 },
-        { key: "example", label: "Contenido de ejemplo", type: "boolean" },
       ],
     },
   ],

@@ -295,6 +295,20 @@ describe("official module system", () => {
     expect(firstGrid).toContain("4.7 / 5 · 6 reseñas");
   });
 
+  it("mantiene la marca interna de testimonios fuera del inspector", () => {
+    const testimonials = catalogModernModules.find(
+      (definition) => definition.manifest.id === "catalog-testimonials",
+    );
+    if (!testimonials) throw new Error("Falta el módulo catalog-testimonials");
+    const repeater = testimonials.settingsFields.find((field) => field.type === "repeater");
+    if (!repeater || repeater.type !== "repeater") {
+      throw new Error("Falta el repeater de testimonios");
+    }
+
+    expect(repeater.fields.map((field) => field.key)).not.toContain("example");
+    expect(testimonials.settingsSchema.parse({}).items).toEqual([]);
+  });
+
   it("omite beneficios de confianza sin datos configurados", () => {
     const project = {
       ...referenceStore,

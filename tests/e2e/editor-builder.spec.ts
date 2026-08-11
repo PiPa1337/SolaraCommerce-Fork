@@ -207,6 +207,7 @@ test("agregar un testimonio genera un ítem válido que commitea y persiste en e
   await expect(sections.getByRole("listitem")).toHaveCount(initialCount + 1);
 
   await page.getByRole("button", { name: "Agregar elemento" }).click();
+  await expect(page.getByRole("checkbox", { name: "Contenido de ejemplo" })).toHaveCount(0);
   await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
   await expect(page.getByTestId("ui-schema-errors")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Deshacer" })).toBeEnabled();

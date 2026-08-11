@@ -10,6 +10,14 @@ versión publicada.
 
 ## [Unreleased]
 
+### Marca interna de testimonios fuera del inspector (2026-08-11)
+
+- `Contenido de ejemplo` era una marca interna sin consumidor en el renderer;
+  dejó de exponerse como checkbox del editor para no prometer un efecto que no
+  existe. El campo persistido se conserva para compatibilidad.
+- El flujo de agregar testimonios verifica que el ítem siga siendo válido y que
+  el inspector no muestre un control muerto.
+
 ### Valoración configurable en cards de productos (2026-08-11)
 
 - `Mostrar valoración` del módulo `catalog-product-grid` ahora controla de

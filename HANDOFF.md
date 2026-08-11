@@ -702,3 +702,15 @@ La cobertura está en `packages/modules/src/index.test.ts` (33/33),
 `tests/e2e/ui-sweep-a11.spec.ts` (11/11 en Chromium), incluyendo activación,
 desactivación, feedback del inspector y undo. El build de Studio pasó y no se
 modificaron `schemaVersion`, datos persistidos ni la forma de `catalogScaleStore`.
+
+## Marca interna de testimonios fuera del inspector (2026-08-11)
+
+Los ítems de `catalog-testimonials` conservan `example` en el schema para no
+alterar proyectos guardados, pero el renderer nunca lo consumió. Por eso se
+retiró `Contenido de ejemplo` de los campos editables del repeater: una marca
+interna queda compatible en los datos, sin aparecer como un checkbox cuyo
+resultado no se puede observar.
+
+La cobertura está en `packages/modules/src/index.test.ts` y
+`tests/e2e/editor-builder.spec.ts`; agregar un testimonio sigue generando un
+ítem válido y el inspector ya no expone el control muerto.
