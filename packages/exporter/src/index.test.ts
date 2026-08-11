@@ -747,7 +747,9 @@ describe("tema: carga real de fuentes y vars sin duplicados", () => {
   const decodePreviewCss = (preview: string): string => {
     const match = /data:text\/css;base64,([^"]+)/.exec(preview);
     if (!match) throw new Error("CSS del preview no encontrado");
-    return Buffer.from(match[1]!, "base64").toString("utf8");
+    const encoded = match[1];
+    if (!encoded) throw new Error("CSS del preview no encontrado");
+    return Buffer.from(encoded, "base64").toString("utf8");
   };
 
   it("emite @font-face self-host cuando la familia es Google Fonts y agrega el woff2", () => {

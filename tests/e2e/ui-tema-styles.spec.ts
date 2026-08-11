@@ -10,7 +10,7 @@
  * producen estilos computados visibles.
  */
 import { readFileSync } from "node:fs";
-import { createServer, type Server } from "node:http";
+import { createServer } from "node:http";
 import { resolve } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
@@ -37,7 +37,10 @@ type ThemeOverride = {
   radius: number;
 };
 
-function exportWith(theme: ThemeOverride): { files: Map<string, string | Uint8Array>; css: string } {
+function exportWith(theme: ThemeOverride): {
+  files: Map<string, string | Uint8Array>;
+  css: string;
+} {
   const store = structuredClone(catalogModernStore);
   store.theme = { ...store.theme, ...theme };
   const files = exportProject(store, { mode: "production" }).files;
@@ -71,7 +74,11 @@ async function serve(
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
     const requested = decodeURIComponent(url.pathname).replace(/^\/+/, "");
     const path =
-      requested === "" ? "index.html" : requested.endsWith("/") ? `${requested}index.html` : requested;
+      requested === ""
+        ? "index.html"
+        : requested.endsWith("/")
+          ? `${requested}index.html`
+          : requested;
     const content = files.get(path) ?? fixtureFiles.get(path);
     if (content === undefined) {
       response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not found");
@@ -91,7 +98,9 @@ async function serve(
     response.writeHead(200, { "Content-Type": contentType, "Cache-Control": "no-store" });
     response.end(content);
   });
-  await new Promise<void>((resolveListening) => siteServer.listen(0, "127.0.0.1", resolveListening));
+  await new Promise<void>((resolveListening) =>
+    siteServer.listen(0, "127.0.0.1", resolveListening),
+  );
   const address = siteServer.address();
   if (address === null || typeof address === "string") {
     throw new Error("El servidor de pruebas no tiene una dirección TCP.");
@@ -126,29 +135,32 @@ test("colores: los 7 tokens del editor pintan las superficies modernas del sitio
   const site = await serve(exportResult.files);
   try {
     await gotoStore(page, site.url);
-    const computed = await page.locator("[data-solara-store]").first().evaluate((root) => {
-      const colorOf = (selector: string): string => {
-        const element = root.querySelector(selector);
-        if (!element) throw new Error(`No existe ${selector} en el sitio moderno`);
-        return getComputedStyle(element).color;
-      };
-      const backgroundOf = (selector: string): string => {
-        const element = root.querySelector(selector);
-        if (!element) throw new Error(`No existe ${selector} en el sitio moderno`);
-        return getComputedStyle(element).backgroundColor;
-      };
-      return {
-        brand: colorOf(".catalog-brand"),
-        eyebrow: colorOf(".catalog-eyebrow"),
-        actionText: colorOf(".catalog-primary-action"),
-        actionBackground: backgroundOf(".catalog-primary-action"),
-        searchBorder: (() => {
-          const element = root.querySelector(".catalog-search-link");
-          if (!element) throw new Error("No existe .catalog-search-link");
-          return getComputedStyle(element).borderColor;
-        })(),
-      };
-    });
+    const computed = await page
+      .locator("[data-solara-store]")
+      .first()
+      .evaluate((root) => {
+        const colorOf = (selector: string): string => {
+          const element = root.querySelector(selector);
+          if (!element) throw new Error(`No existe ${selector} en el sitio moderno`);
+          return getComputedStyle(element).color;
+        };
+        const backgroundOf = (selector: string): string => {
+          const element = root.querySelector(selector);
+          if (!element) throw new Error(`No existe ${selector} en el sitio moderno`);
+          return getComputedStyle(element).backgroundColor;
+        };
+        return {
+          brand: colorOf(".catalog-brand"),
+          eyebrow: colorOf(".catalog-eyebrow"),
+          actionText: colorOf(".catalog-primary-action"),
+          actionBackground: backgroundOf(".catalog-primary-action"),
+          searchBorder: (() => {
+            const element = root.querySelector(".catalog-search-link");
+            if (!element) throw new Error("No existe .catalog-search-link");
+            return getComputedStyle(element).borderColor;
+          })(),
+        };
+      });
 
     expect(computed.brand).toBe("rgb(221, 238, 255)");
     expect(computed.eyebrow).toBe("rgb(136, 153, 170)");
@@ -174,18 +186,21 @@ test("radio: las superficies modernas siguen el slider y las pills conservan 999
   const site40 = await serve(radius40.files);
   try {
     await gotoStore(page, site40.url);
-    const metrics = await page.locator("[data-solara-store]").first().evaluate((root) => {
-      const radiusOf = (selector: string): string => {
-        const element = root.querySelector(selector);
-        if (!element) throw new Error(`No existe ${selector}`);
-        return getComputedStyle(element).borderRadius;
-      };
-      return {
-        media: radiusOf(".catalog-product-media"),
-        hero: radiusOf(".catalog-hero-inner"),
-        pill: radiusOf(".catalog-search-link"),
-      };
-    });
+    const metrics = await page
+      .locator("[data-solara-store]")
+      .first()
+      .evaluate((root) => {
+        const radiusOf = (selector: string): string => {
+          const element = root.querySelector(selector);
+          if (!element) throw new Error(`No existe ${selector}`);
+          return getComputedStyle(element).borderRadius;
+        };
+        return {
+          media: radiusOf(".catalog-product-media"),
+          hero: radiusOf(".catalog-hero-inner"),
+          pill: radiusOf(".catalog-search-link"),
+        };
+      });
     expect(metrics.media).toBe("40px");
     expect(metrics.hero).toBe("40px");
     expect(metrics.pill).toBe("999px");
@@ -224,16 +239,19 @@ test("fuentes: la familia de texto llega a la raíz y la de títulos a h1 y a la
   const site = await serve(exportResult.files);
   try {
     await gotoStore(page, site.url);
-    const families = await page.locator("[data-solara-store]").first().evaluate((root) => {
-      const heading = root.querySelector("h1");
-      const brand = root.querySelector(".catalog-brand");
-      if (!heading || !brand) throw new Error("Faltan títulos o marca");
-      return {
-        root: getComputedStyle(root).fontFamily,
-        heading: getComputedStyle(heading).fontFamily,
-        brand: getComputedStyle(brand).fontFamily,
-      };
-    });
+    const families = await page
+      .locator("[data-solara-store]")
+      .first()
+      .evaluate((root) => {
+        const heading = root.querySelector("h1");
+        const brand = root.querySelector(".catalog-brand");
+        if (!heading || !brand) throw new Error("Faltan títulos o marca");
+        return {
+          root: getComputedStyle(root).fontFamily,
+          heading: getComputedStyle(heading).fontFamily,
+          brand: getComputedStyle(brand).fontFamily,
+        };
+      });
     expect(families.root).toContain("Georgia");
     expect(families.root).not.toContain("Archivo");
     expect(families.heading).toContain("Georgia");
@@ -257,16 +275,19 @@ test("espaciado: el slider escala los gaps y paddings de las grillas principales
   const site = await serve(spaced.files);
   try {
     await gotoStore(page, site.url);
-    const gaps = await page.locator("[data-solara-store]").first().evaluate((root) => {
-      const grid = root.querySelector(".catalog-product-grid");
-      const footer = root.querySelector(".catalog-footer-inner");
-      if (!grid || !footer) throw new Error("Faltan grillas modernas");
-      return {
-        gridGap: getComputedStyle(grid).columnGap,
-        footerGap: getComputedStyle(footer).columnGap,
-        footerPaddingTop: getComputedStyle(footer).paddingTop,
-      };
-    });
+    const gaps = await page
+      .locator("[data-solara-store]")
+      .first()
+      .evaluate((root) => {
+        const grid = root.querySelector(".catalog-product-grid");
+        const footer = root.querySelector(".catalog-footer-inner");
+        if (!grid || !footer) throw new Error("Faltan grillas modernas");
+        return {
+          gridGap: getComputedStyle(grid).columnGap,
+          footerGap: getComputedStyle(footer).columnGap,
+          footerPaddingTop: getComputedStyle(footer).paddingTop,
+        };
+      });
     expect(gaps.gridGap).toBe("30px");
     expect(gaps.footerGap).toBe("48px");
     expect(gaps.footerPaddingTop).toBe("72px");

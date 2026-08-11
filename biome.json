@@ -4,6 +4,7 @@
     "includes": [
       "**",
       "!.superpowers/sdd",
+      "!packages/exporter/src/fonts.ts",
       "!**/.solara-runtime",
       "!**/dist",
       "!**/coverage",
