@@ -134,6 +134,41 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(totalMatch).not.toBeNull();
   });
 
+  it("mantiene showRating alineado entre preview y exportacion", () => {
+    const withRatings = {
+      ...catalogModernStore,
+      sections: catalogModernStore.sections.map((section) =>
+        section.moduleId === "catalog-product-grid"
+          ? { ...section, settings: { ...section.settings, showRating: true } }
+          : section,
+      ),
+    };
+    const preview = renderPreviewHtml(withRatings, "draft", "/");
+    const exportedHome = String(
+      exportProject(withRatings, { mode: "draft" }).files.get("index.html"),
+    );
+
+    expect(preview).toContain('class="catalog-product-rating"');
+    expect(exportedHome).toContain('class="catalog-product-rating"');
+    expect(preview).toContain("4.7 / 5 · 6 reseñas");
+    expect(exportedHome).toContain("4.7 / 5 · 6 reseñas");
+
+    const withoutRatings = {
+      ...withRatings,
+      sections: withRatings.sections.map((section) =>
+        section.moduleId === "catalog-product-grid"
+          ? { ...section, settings: { ...section.settings, showRating: false } }
+          : section,
+      ),
+    };
+    expect(renderPreviewHtml(withoutRatings, "draft", "/")).not.toContain(
+      'class="catalog-product-rating"',
+    );
+    expect(
+      String(exportProject(withoutRatings, { mode: "draft" }).files.get("index.html")),
+    ).not.toContain('class="catalog-product-rating"');
+  });
+
   it("deduplica fuentes de assets embebidos en el preview", () => {
     const payload = "A".repeat(100_000);
     const embedded = {

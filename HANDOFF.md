@@ -688,3 +688,17 @@ tecnologías asistivas sin introducir locators o textos visibles nuevos.
 
 La cobertura está en `tests/e2e/studio-builder.spec.ts` y
 `tests/e2e/ui-sweep-a18.spec.ts`: 3/3 y 13/13 pasan en Chromium.
+
+## Valoración configurable en cards de productos (2026-08-11)
+
+El inspector del módulo `catalog-product-grid` ya exponía `Mostrar valoración`,
+pero `modernProductCard` no leía ese setting. Ahora el renderer consulta los
+resúmenes de reseñas visibles y, cuando la opción está activa, muestra promedio,
+cantidad y una etiqueta accesible en la card; cuando está desactivada, no emite
+el bloque. El mismo contrato se mantiene en Preview y exportación.
+
+La cobertura está en `packages/modules/src/index.test.ts` (33/33),
+`packages/exporter/src/catalog-modern.test.ts` (109/109, 1 skipped) y
+`tests/e2e/ui-sweep-a11.spec.ts` (11/11 en Chromium), incluyendo activación,
+desactivación, feedback del inspector y undo. El build de Studio pasó y no se
+modificaron `schemaVersion`, datos persistidos ni la forma de `catalogScaleStore`.

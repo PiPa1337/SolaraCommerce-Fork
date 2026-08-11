@@ -252,6 +252,42 @@ test("mover abajo con botón reordena lista y preview y deshabilita en los lími
   await expect(rowName(page, 1)).resolves.toBe(firstBefore);
 });
 
+test("mostrar valoración controla las reseñas de las cards, actualiza el preview y admite undo", async ({
+  page,
+}) => {
+  await openBuilder(page);
+  const grid = rowByName(page, "Grilla moderna de productos").first();
+  await grid.locator(".section-select").click();
+
+  const rating = page.getByRole("checkbox", { name: "Mostrar valoración" });
+  const previewGrid = previewFrame(page)
+    .locator('[data-solara-module="catalog-product-grid"]')
+    .first();
+
+  await expect(rating).not.toBeChecked();
+  await expect(previewGrid.locator(".catalog-product-rating")).toHaveCount(0);
+
+  await rating.check();
+  await expect(rating).toBeChecked();
+  await expect(previewGrid.locator(".catalog-product-rating").first()).toContainText(
+    "4.7 / 5 · 6 reseñas",
+    { timeout: 15_000 },
+  );
+
+  await rating.uncheck();
+  await expect(rating).not.toBeChecked();
+  await expect(previewGrid.locator(".catalog-product-rating")).toHaveCount(0, {
+    timeout: 15_000,
+  });
+
+  await undoButton(page).click();
+  await expect(rating).toBeChecked();
+  await expect(previewGrid.locator(".catalog-product-rating").first()).toContainText(
+    "4.7 / 5 · 6 reseñas",
+    { timeout: 15_000 },
+  );
+});
+
 /** Resuelve el id de preview esperado para el nombre visible de una fila. */
 async function previewModuleId(rowLabel: string | null): Promise<string> {
   const mapping: Record<string, string> = {

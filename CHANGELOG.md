@@ -10,6 +10,15 @@ versión publicada.
 
 ## [Unreleased]
 
+### Valoración configurable en cards de productos (2026-08-11)
+
+- `Mostrar valoración` del módulo `catalog-product-grid` ahora controla de
+  verdad las reseñas visibles en cada card, con promedio, cantidad y etiqueta
+  accesible; el estado apagado sigue ocultando el bloque.
+- La salida quedó cubierta en renderer, Preview y exportación, y A11 verifica
+  el cambio desde el Constructor, su feedback visual y la recuperación con
+  Deshacer. No se modificó el schema persistido ni `catalogScaleStore`.
+
 ### Contexto accesible para controles repetidos del Constructor (2026-08-11)
 
 - Los controles de ordenar, duplicar y eliminar elementos repetidos anuncian

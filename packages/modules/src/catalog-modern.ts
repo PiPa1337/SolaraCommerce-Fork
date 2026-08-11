@@ -548,11 +548,13 @@ function modernProductCard(
   context: Parameters<NonNullable<(typeof catalogProductGrid)["render"]>>[0],
   product: Product,
   index: number,
+  showRating: boolean,
 ): string {
   const variant = product.variants.find((item) => item.available) ?? product.variants[0];
   const price = lowestPrice(product);
   const compare = variant?.compareAtPrice;
   const category = productCategory(context, product);
+  const reviewSummary = showRating ? catalogReviewSummary(product) : undefined;
   const imageId = variant?.imageId ?? product.imageIds[0];
   const image = renderImage(context.project, imageId, {
     className: "catalog-product-card-image",
@@ -561,7 +563,7 @@ function modernProductCard(
     sizes: "(max-width: 640px) 44vw, (max-width: 1024px) 30vw, 280px",
     fallbackAlt: product.title,
   });
-  return `<article class="catalog-product-card" data-product-card data-product-id="${escapeAttribute(product.id)}" data-product-title="${escapeAttribute(product.title)}"${category ? ` data-product-category="${escapeAttribute(category.id)}"` : ""}><a class="catalog-product-media" href="/productos/${escapeAttribute(product.slug)}/" aria-label="Ver ${escapeAttribute(product.title)}">${image}</a><div class="catalog-product-card-copy">${category ? `<p class="catalog-product-category">${escapeHtml(category.title)}</p>` : ""}<h3><a href="/productos/${escapeAttribute(product.slug)}/">${escapeHtml(product.title)}</a></h3><p class="catalog-product-price"><strong>${escapeHtml(formatMoney(price))}</strong>${compare && compare > price ? ` <del>${escapeHtml(formatMoney(compare))}</del><span class="catalog-discount">-${Math.round((1 - price / compare) * 100)}%</span>` : ""}</p></div></article>`;
+  return `<article class="catalog-product-card" data-product-card data-product-id="${escapeAttribute(product.id)}" data-product-title="${escapeAttribute(product.title)}"${category ? ` data-product-category="${escapeAttribute(category.id)}"` : ""}><a class="catalog-product-media" href="/productos/${escapeAttribute(product.slug)}/" aria-label="Ver ${escapeAttribute(product.title)}">${image}</a><div class="catalog-product-card-copy">${category ? `<p class="catalog-product-category">${escapeHtml(category.title)}</p>` : ""}<h3><a href="/productos/${escapeAttribute(product.slug)}/">${escapeHtml(product.title)}</a></h3>${reviewSummary ? `<p class="catalog-product-rating" aria-label="${reviewSummary.average.toFixed(1)} de 5">${"★".repeat(Math.round(reviewSummary.average))}<span>${reviewSummary.average.toFixed(1)} / 5 · ${reviewSummary.count} reseñas</span></p>` : ""}<p class="catalog-product-price"><strong>${escapeHtml(formatMoney(price))}</strong>${compare && compare > price ? ` <del>${escapeHtml(formatMoney(compare))}</del><span class="catalog-discount">-${Math.round((1 - price / compare) * 100)}%</span>` : ""}</p></div></article>`;
 }
 
 export const catalogProductGrid: ModuleDefinition<
@@ -612,7 +614,7 @@ export const catalogProductGrid: ModuleDefinition<
     const categoryGrid = context.pageType === "category" ? " data-category-grid" : "";
     const cards = products
       .map((product, index) => {
-        const card = modernProductCard(context, product, index);
+        const card = modernProductCard(context, product, index, context.settings.showRating);
         // El runtime reutiliza estos datos para filtros y ordenamiento sin duplicar el catálogo.
         const optionValues = [
           ...new Set(

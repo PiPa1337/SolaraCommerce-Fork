@@ -275,6 +275,26 @@ describe("official module system", () => {
     expect(bento).toContain('href="/categorias/');
   });
 
+  it("respeta showRating en las cards y expone el resumen de reseñas visible", () => {
+    const sections = catalogModernStore.sections.map((section) =>
+      section.id === "modo-section-new"
+        ? { ...section, settings: { ...section.settings, showRating: true } }
+        : section,
+    );
+    const html = renderSections(catalogModernStore, sections, { pageType: "home" });
+    const firstGrid = html.slice(
+      html.indexOf('data-solara-module="catalog-product-grid"'),
+      html.indexOf(
+        'data-solara-module="catalog-product-grid"',
+        html.indexOf('data-solara-module="catalog-product-grid"') + 1,
+      ),
+    );
+
+    expect(firstGrid.match(/class="catalog-product-rating"/g) ?? []).toHaveLength(6);
+    expect(firstGrid).toContain('aria-label="4.7 de 5"');
+    expect(firstGrid).toContain("4.7 / 5 · 6 reseñas");
+  });
+
   it("omite beneficios de confianza sin datos configurados", () => {
     const project = {
       ...referenceStore,
