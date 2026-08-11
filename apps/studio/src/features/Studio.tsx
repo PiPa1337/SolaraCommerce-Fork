@@ -231,12 +231,24 @@ export function Studio({
   const [conflict, setConflict] = useState<LocalStorageError | null>(null);
 
   // Trampa de foco del diálogo de conflicto: foco inicial al abrir, ciclo de
-  // Tab dentro del diálogo y restauración al cerrar (T4.12/fix 409).
+  // Tab dentro del diálogo y restauración al cerrar (T4.12/fix 409). El
+  // navegador desenfoca el botón Guardar cuando pasa a disabled durante el
+  // guardado y el activeElement capturado sería body: se recupera el opener
+  // real (botón Guardar) como respaldo para que el restauro nunca caiga en
+  // body (fixme A21/A14).
   const conflictDialogRef = useRef<HTMLDivElement>(null);
   const conflictOpenerRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (!conflict) return;
-    conflictOpenerRef.current = document.activeElement as HTMLElement | null;
+    const active = document.activeElement;
+    const saveButton = document.querySelector<HTMLElement>("[data-studio-save]:not([disabled])");
+    conflictOpenerRef.current =
+      active instanceof HTMLElement &&
+      active !== document.body &&
+      !active.hasAttribute("disabled") &&
+      !active.hasAttribute("inert")
+        ? active
+        : saveButton;
     setConfirmLeave(false);
     const firstFocusable =
       conflictDialogRef.current?.querySelector<HTMLElement>("button:not([disabled])");
@@ -335,6 +347,11 @@ export function Studio({
   const dirtyRef = useRef(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const project = history.present;
+  // La ruta del preview no se descarta en silencio cuando sale de la muestra
+  // de getPreviewRoutes: renderPreviewHtml resuelve cualquier página real del
+  // sitio (p. ej. /envios/ fuera del datalist) y cae a la página inicial para
+  // rutas inexistentes (fixme A20/A14). Sin efecto de reset, la ruta
+  // commiteada en el selector se conserva y el srcdoc la renderiza.
   const previewRoutes = useMemo(() => getPreviewRoutes(project), [project]);
   const paneStorageKey = useMemo(
     () => `solara-editor-pane:${initialProject.id}`,
@@ -373,10 +390,6 @@ export function Studio({
       // Sesión no disponible: el zoom se conserva sólo en memoria.
     }
   }, []);
-
-  useEffect(() => {
-    if (!previewRoutes.some((item) => item.path === previewRoute)) setPreviewRoute("/");
-  }, [previewRoutes, previewRoute]);
 
   useEffect(() => {
     return autosave.subscribe(setSaveState);
@@ -818,22 +831,18 @@ export function Studio({
                         ? "Cambios pendientes"
                         : saveState === "saving"
                           ? "Guardando…"
-                          : ""}
+                          : "Error al guardar"}
                   </output>
                   {saveState === "error" ? (
-                    <>
-                      <InlineError>Error al guardar</InlineError>
-                      <button
-                        type="button"
-                        className="save-retry"
-                        onClick={() => void autosave.flush().catch(() => undefined)}
-                      >
-                        Reintentar
-                      </button>
-                    </>
+                    <button
+                      type="button"
+                      className="save-retry"
+                      onClick={() => void autosave.flush().catch(() => undefined)}
+                    >
+                      Reintentar
+                    </button>
                   ) : null}
                 </div>
-                {validationError ? <InlineError>{validationError}</InlineError> : null}
               </>
             )}
             <Tooltip
@@ -997,6 +1006,7 @@ export function Studio({
           <span>Esquema v{project.schemaVersion}</span>
           <span>Última exportación: {lastExportLabel}</span>
           <span>Persistencia: {managedStorage ? "Disco" : "IndexedDB"}</span>
+          {validationError ? <InlineError>{validationError}</InlineError> : null}
         </footer>
       </div>
 

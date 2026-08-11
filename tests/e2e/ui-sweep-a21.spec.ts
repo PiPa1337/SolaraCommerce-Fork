@@ -565,10 +565,10 @@ test("A21.9 el conflicto abre el diálogo con trampa de foco y Conservar/Escape 
     await expect(pageB.getByTestId("ui-conflict-dialog")).toBeHidden();
     await expect(pageB.getByTestId("ui-studio-notice")).toContainText("Borrador conservado");
     await expect(pageB.getByTestId("ui-conflict-dialog")).toHaveCount(0);
-    // El foco queda fuera del diálogo y accesible por teclado (ver fixme A14
-    // sobre el restauro al botón Guardar: queda deshabilitado durante el
-    // guardado y el navegador lo desenfoca antes de capturar el opener).
-    await expect(pageB.locator("body")).toBeFocused();
+    // El restauro recupera el botón Guardar: el navegador lo desenfocó durante
+    // el guardado (disabled) y el shell lo captura por selector como opener
+    // (fixme A14 resuelto; antes el foco caía en body).
+    await expect(pageB.locator("[data-studio-save]")).toBeFocused();
 
     // El indicador conserva el error: el guardado no se confirmó en disco.
     await expect(pageB.locator("output.save-indicator")).toHaveClass(/save-indicator--error/);

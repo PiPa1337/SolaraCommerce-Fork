@@ -15,7 +15,13 @@
  * incluida la preferencia del sistema), breadcrumb volver y teclado de tabs
  * (flechas con wrap, Home/End).
  */
+import type { ChildProcess } from "node:child_process";
+import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
+import { mkdtempSync, rmSync } from "node:fs";
 import type { Server } from "node:http";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
@@ -78,6 +84,116 @@ const pane = (page: Page): Locator => page.locator("[data-studio-editor-pane]");
 
 const tabByName = (page: Page, name: string): Locator =>
   page.getByRole("tab", { name, exact: true });
+
+/** Instala un probe que registra si el indicador llegó a estado "saving". */
+async function installSavingProbe(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const win = window as Window & {
+      __solaraA14Probe?: { savingClass: boolean; savingText: boolean; spinner: boolean };
+    };
+    win.__solaraA14Probe = { savingClass: false, savingText: false, spinner: false };
+    const indicator = document.querySelector(".save-indicator");
+    if (!(indicator instanceof Element)) return;
+    const update = () => {
+      if (!win.__solaraA14Probe) return;
+      if (indicator.classList.contains("save-indicator--saving")) {
+        win.__solaraA14Probe.savingClass = true;
+      }
+      if (indicator.textContent?.includes("Guardando\u2026")) {
+        win.__solaraA14Probe.savingText = true;
+      }
+      if (indicator.querySelector(".save-spinner") !== null) {
+        win.__solaraA14Probe.spinner = true;
+      }
+    };
+    const observer = new MutationObserver(update);
+    observer.observe(indicator, {
+      attributes: true,
+      attributeFilter: ["class"],
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+    update();
+  });
+}
+
+function readProbe(
+  page: Page,
+): Promise<{ savingClass: boolean; savingText: boolean; spinner: boolean }> {
+  return page.evaluate(() => {
+    const probe = (
+      window as Window & {
+        __solaraA14Probe?: { savingClass: boolean; savingText: boolean; spinner: boolean };
+      }
+    ).__solaraA14Probe;
+    return {
+      savingClass: probe?.savingClass ?? false,
+      savingText: probe?.savingText ?? false,
+      spinner: probe?.spinner ?? false,
+    };
+  });
+}
+
+/** Arranca el servidor gestionado (loopback con token) contra el dist actual. */
+async function startManagedServer(portRange = 5700): Promise<{
+  url: string;
+  root: string;
+  process: ChildProcess;
+}> {
+  const applicationRoot = mkdtempSync(join(tmpdir(), "solara-a14-managed-"));
+  // Rangos por test para que los servidores gestionados no colisionen entre
+  // workers en paralelo (a15 usa 4300-4499, a21 5400-5699, a14 5700+).
+  const port = portRange + Math.floor(Math.random() * 180);
+  const token = randomBytes(24).toString("base64url");
+  const url = `http://127.0.0.1:${port}`;
+  const serverProcess: ChildProcess = spawn(
+    process.execPath,
+    [
+      resolve("packages/exporter/scripts/serve.mjs"),
+      resolve("apps/studio/dist"),
+      String(port),
+      token,
+      applicationRoot,
+    ],
+    { cwd: resolve("."), stdio: "ignore" },
+  );
+  await expect
+    .poll(
+      async () => {
+        try {
+          return (await fetch(`${url}/__solara/session`)).status;
+        } catch {
+          return 0;
+        }
+      },
+      { timeout: 15_000, intervals: [100, 250, 500] },
+    )
+    .toBe(200);
+  return { url, root: applicationRoot, process: serverProcess };
+}
+
+async function stopManagedServer(managed: {
+  root: string;
+  process: ChildProcess;
+}): Promise<void> {
+  if (managed.process.exitCode === null) managed.process.kill();
+  rmSync(managed.root, { recursive: true, force: true });
+}
+
+async function openDemoStoreManaged(page: Page, url: string): Promise<void> {
+  await page.goto(url);
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 120_000,
+  });
+  await page
+    .locator(`article:has([data-store-card-id="${DEMO_STORE_ID}"])`)
+    .getByRole("button", { name: "Abrir esta tienda" })
+    .click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
+    timeout: 120_000,
+  });
+}
 
 test("A14.1 tabs — el click cambia el panel, aria-selected, roving tabindex y el contrato de datos del pane", async ({
   page,
@@ -437,6 +553,176 @@ test("A14.10 teclado de tabs — flechas con wrap, Home y End mueven foco y sele
   await expect(tabByName(page, "Preparar")).toBeFocused();
   await expect(tabByName(page, "Preparar")).toHaveAttribute("aria-selected", "true");
   await expect(tablist.locator('[role="tab"][tabindex="0"]')).toHaveCount(1);
+});
+
+// -------------------------------------------------- fixmes del barrido (A14)
+// Regresión de los fixmes A15/A20/A21 en Studio.tsx: el error de guardado
+// anuncia el fallo y Reintentar queda accesible, el error de validación vive
+// en la barra de estado, las rutas fuera de la muestra renderizan su página y
+// el diálogo de conflicto restaura el foco al botón Guardar.
+
+test("A14.11 error de guardado — el indicador anuncia el fallo y Reintentar es accesible (fixme A15)", async ({
+  page,
+}) => {
+  // Sabotea las escrituras a IndexedDB (sólo la store de proyectos) después
+  // del arranque: el autosave falla de forma real y el shell entra en error.
+  await page.addInitScript(() => {
+    const originalPut = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function (
+      this: IDBObjectStore,
+      ...args: [unknown, unknown?]
+    ) {
+      const win = window as Window & { __solaraA14BlockWrites?: boolean };
+      if (win.__solaraA14BlockWrites && this.name === "projects") {
+        throw new Error("Escritura bloqueada por el probe A14.");
+      }
+      return originalPut.apply(this, args);
+    };
+  });
+  await openDemoStore(page);
+  await openHeroInspector(page);
+
+  const indicator = page.locator("output.save-indicator");
+  await expect(indicator).toHaveClass(/save-indicator--saved/);
+
+  await page.evaluate(() => {
+    (window as Window & { __solaraA14BlockWrites?: boolean }).__solaraA14BlockWrites = true;
+  });
+
+  const title = page.getByRole("textbox", { name: "Título", exact: true });
+  await title.fill("Cambio que falla A14");
+  await expect(indicator).toHaveClass(/save-indicator--error/, { timeout: 15_000 });
+  // El indicador (aria-live) anuncia el fallo; el botón Reintentar queda en
+  // el DOM del topbar, visible, habilitado y enfocable por teclado.
+  await expect(indicator).toContainText("Error al guardar");
+
+  const retry = page.getByRole("button", { name: "Reintentar" });
+  await expect(retry).toBeVisible();
+  await expect(retry).toBeEnabled();
+  await retry.focus();
+  await expect(retry).toBeFocused();
+
+  // No queda tapado por el iframe del preview: el centro del botón es el
+  // elemento superior en ese punto (el click real lo alcanza).
+  const hitTest = await retry.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const top = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    return top === element || element.contains(top);
+  });
+  expect(hitTest).toBe(true);
+
+  // Reintentar dispara un intento real: Guardando… y vuelta al error.
+  await installSavingProbe(page);
+  await retry.click();
+  await expect
+    .poll(() => readProbe(page), { timeout: 15_000 })
+    .toMatchObject({ savingClass: true, savingText: true, spinner: true });
+  await expect(indicator).toHaveClass(/save-indicator--error/, { timeout: 15_000 });
+});
+
+test("A14.12 preview — una ruta válida fuera de la muestra renderiza su página (fixme A20)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openDemoStore(page);
+
+  const routeInput = page.getByTestId("ui-preview-route");
+  await routeInput.fill("/envios/");
+  await routeInput.press("Enter");
+
+  // /envios/ es una página real (buildPages la genera) aunque no esté en el
+  // datalist de la muestra: el srcdoc debe renderizar Envíos y no el home.
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const frame = document.querySelector(".preview-stage iframe");
+          return frame?.getAttribute("srcdoc") ?? "";
+        }),
+      { timeout: 20_000 },
+    )
+    .toContain("<title>Env\u00edos | Modo Sur</title>");
+  await expect(routeInput).toHaveValue("/envios/");
+  await expect(page.getByTestId("ui-preview-route-announce")).toContainText(
+    "Vista previa: /envios/",
+  );
+});
+
+test("A14.13 guardado gestionado — el error de validación se muestra en la barra de estado (fixme A15)", async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  const managed = await startManagedServer(5700);
+  try {
+    await openDemoStoreManaged(page, managed.url);
+
+    // El commit a disco falla: el shell recibe el mensaje en validationError.
+    await page.route("**/__solara/storage/**", (route) =>
+      route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "Error de prueba A14" }),
+      }),
+    );
+
+    await page.getByRole("tab", { name: "Resumen", exact: true }).click();
+    const nameInput = page.getByLabel("Nombre de la tienda");
+    await expect(nameInput).toBeVisible();
+    await nameInput.fill("A14 fallo de disco");
+    await page.locator("[data-studio-save]").click();
+
+    // El mensaje de validación vive en la statusbar (no queda tapado por el
+    // preview como el bloque desbordado del topbar).
+    await expect(page.getByTestId("ui-status-bar")).toContainText("Error de prueba A14", {
+      timeout: 90_000,
+    });
+    await expect(page.locator("output.save-indicator")).toHaveClass(/save-indicator--error/);
+  } finally {
+    await stopManagedServer(managed);
+  }
+});
+
+test("A14.14 conflicto — Escape conserva el borrador y restaura el foco al botón Guardar (fixme A21)", async ({
+  context,
+  page,
+}) => {
+  test.setTimeout(300_000);
+  const managed = await startManagedServer(5900);
+  try {
+    const pageB = await context.newPage();
+    for (const target of [page, pageB]) {
+      await openDemoStoreManaged(target, managed.url);
+      await target.getByRole("tab", { name: "Resumen", exact: true }).click();
+      await expect(target.getByLabel("Nombre de la tienda")).toBeVisible();
+    }
+
+    await page.getByLabel("Nombre de la tienda").fill("Guardado por pestaña A");
+    await page.locator("[data-studio-save]").click();
+    await expect(page.locator("output.save-indicator")).toContainText("Guardado", {
+      timeout: 90_000,
+    });
+
+    await pageB.getByLabel("Nombre de la tienda").fill("Borrador de la pestaña B");
+    await pageB.locator("[data-studio-save]").click();
+    const dialog = pageB.getByTestId("ui-conflict-dialog");
+    await expect(dialog).toBeVisible({ timeout: 90_000 });
+    await expect(pageB.getByTestId("ui-conflict-keep")).toBeFocused();
+
+    // Escape equivale a Conservar: el botón Guardar quedó desenfocado durante
+    // el guardado (disabled) y el restauro debe recuperarlo, no caer en body.
+    await pageB.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(pageB.getByTestId("ui-studio-notice")).toContainText("Borrador conservado");
+    await expect(pageB.locator("[data-studio-save]")).toBeFocused();
+    await expect(pageB.locator("[data-studio-save]")).toBeEnabled();
+
+    // El indicador conserva el error y Reintentar vuelve a abrir el conflicto.
+    await expect(pageB.locator("output.save-indicator")).toHaveClass(/save-indicator--error/);
+    await pageB.getByRole("button", { name: "Reintentar" }).click();
+    await expect(dialog).toBeVisible({ timeout: 90_000 });
+  } finally {
+    await stopManagedServer(managed);
+  }
 });
 
 test.fixme(
