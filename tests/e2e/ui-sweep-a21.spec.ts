@@ -284,6 +284,10 @@ test("A21.3 el picker de imagen social cambia el campo y el preview de Open Grap
   const panel = seoPanel(page);
   const select = panel.getByLabel("Recurso para compartir");
   const ogImage = page.getByTestId("ui-seo-preview-og").locator("img");
+  const whatsappPreview = page.getByTestId("ui-seo-preview-whatsapp");
+
+  await expect(whatsappPreview).toContainText("Modo Sur");
+  await expect(whatsappPreview).toContainText("Indumentaria y accesorios para todos los días");
 
   await expect(select.locator('option[value=""]')).toContainText(
     "Usar la primera imagen disponible",
@@ -426,6 +430,7 @@ test("A21.7 «Descargar informe» baja el JSON de optimización con el slug de l
   await openDemoStore(page);
   await goToSeoTab(page);
   await expect(page.getByTestId("ui-seo-crawler")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("ui-seo-route").first()).toContainText("/");
 
   const downloadPromise = page.waitForEvent("download", { timeout: 30_000 });
   await page.getByRole("button", { name: "Descargar informe" }).click();

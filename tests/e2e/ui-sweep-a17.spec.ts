@@ -215,6 +215,35 @@ test("el dropzone acepta el drop, separa tandas mixtas y reporta archivos no com
   await expect(page.locator(".asset-item")).toHaveCount(initialCount + 1);
 });
 
+test("el dropzone comunica el estado activo y permite limpiar la caché regenerable", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const storage = {
+      estimate: async () => ({ usage: 900, quota: 1_000 }),
+      persist: async () => true,
+    };
+    Object.defineProperty(window.navigator, "storage", {
+      configurable: true,
+      value: storage,
+    });
+  });
+  await page.goto(studioUrl);
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({ timeout: 20_000 });
+  await createCleanStore(page, "Tienda barrido A17 feedback");
+  await openAssetsTab(page);
+
+  await page.dispatchEvent(DROPZONE, "dragenter");
+  await expect(page.getByTestId("ui-assets-drop-hint")).toBeVisible();
+  await page.dispatchEvent(DROPZONE, "dragleave");
+  await expect(page.getByTestId("ui-assets-drop-hint")).not.toBeVisible();
+
+  const clearCache = page.getByRole("button", { name: "Limpiar caché regenerable", exact: true });
+  await expect(clearCache).toBeVisible();
+  await clearCache.click();
+  await expect(page.getByTestId("ui-asset-cache-status")).toHaveText("Caché regenerable limpiada.");
+});
+
 test("el detalle muestra usos coherentes con las referencias del proyecto", async ({ page }) => {
   await page.goto(studioUrl);
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({ timeout: 20_000 });

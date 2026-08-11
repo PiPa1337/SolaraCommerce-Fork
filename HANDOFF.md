@@ -135,6 +135,16 @@ hay JavaScript. La regresión E2E usa el viewport móvil y activa ambos controle
 mediante teclado. El presupuesto crudo del runtime se ajustó a 53 KiB para
 incluir este comportamiento sin agregar dependencias.
 
+## Cobertura condicional auditada (2026-08-11)
+
+La segunda pasada de la auditoría agregó regresiones E2E para estados que no
+aparecen en el recorrido inicial: el dropzone de Recursos comunica su estado
+activo y vuelve a un estado limpio; el aviso de cuota alta permite limpiar la
+caché regenerable y anuncia el resultado; SEO verifica la preview de WhatsApp y
+la primera ruta del crawler. El sweep dedicado de Recursos quedó en 9/9 y el de
+SEO en 12/12. Estos tests cubren feedback y datos visibles, pero no sustituyen
+una prueba con lector de pantalla real.
+
 ## Portabilidad Windows
 
 La distribución portable está implementada en `apps/desktop`. Electron carga

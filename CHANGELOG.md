@@ -15,6 +15,11 @@ versión publicada.
 - Los controles de testimonios de Catalog Modern ahora desplazan su fila real.
 - El desplazamiento funciona también con teclado y respeta el overflow horizontal responsive.
 
+### Cobertura condicional de la auditoría (2026-08-11)
+
+- Recursos verifica el feedback de drag-and-drop, cuota alta y limpieza de la caché regenerable.
+- SEO verifica también la preview de WhatsApp y la lista de rutas detectadas.
+
 ### Auditoría UI/UX de SEO (2026-08-11)
 
 - la pestaña SEO comunica el estado de su auditoría local, incluyendo carga,
