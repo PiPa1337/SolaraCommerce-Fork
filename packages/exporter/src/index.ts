@@ -20,6 +20,7 @@ import type {
   VideoAsset,
 } from "@solara/project-schema";
 import {
+  CATALOG_MODERN_PLACEHOLDER_PHONE,
   getCategoryAncestors,
   getCategoryBreadcrumb,
   getCategoryProductIds,
@@ -209,8 +210,16 @@ function absoluteResourceUrl(project: StoreProjectV1, value: string): string {
   return /^https?:\/\//i.test(value) ? value : absoluteUrl(project, value);
 }
 
+function publicWhatsAppPhone(project: StoreProjectV1): string {
+  const phone = project.whatsapp.phone.trim();
+  if (!phone || phone === CATALOG_MODERN_PLACEHOLDER_PHONE) return "";
+  return phone;
+}
+
 function buildWhatsAppLink(project: StoreProjectV1, message: string): string {
-  return `https://wa.me/${project.whatsapp.phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
+  const phone = publicWhatsAppPhone(project).replace(/\D/g, "");
+  if (!phone) return "";
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
 const imageLookupCache = new WeakMap<object, ReadonlyMap<string, ImageAsset>>();
@@ -351,8 +360,13 @@ function publicAssetPath(
 }
 
 function projectWithPublicAssetUrls(project: StoreProjectV1): StoreProjectV1 {
+  const whatsAppPhone = publicWhatsAppPhone(project);
   return {
     ...project,
+    whatsapp: {
+      ...project.whatsapp,
+      phone: whatsAppPhone,
+    },
     assets: project.assets.map((asset) => ({
       ...asset,
       source: asset.source.startsWith("data:")
@@ -924,8 +938,8 @@ function storeStructuredData(project: StoreProjectV1): unknown[] {
       description: project.identity.description,
       ...(logo ? { logo: absoluteResourceUrl(project, logo) } : {}),
       email: project.identity.email || undefined,
-      ...(project.whatsapp.phone || project.identity.phone
-        ? { telephone: project.whatsapp.phone || project.identity.phone }
+      ...(publicWhatsAppPhone(project) || project.identity.phone
+        ? { telephone: publicWhatsAppPhone(project) || project.identity.phone }
         : {}),
       ...(project.identity.address ? { address: project.identity.address } : {}),
       hasMerchantReturnPolicy: {
@@ -1105,6 +1119,10 @@ function renderDocument(
     .join("\n");
   const colorMode =
     project.theme.colorMode === "auto" ? "" : ` data-theme="${project.theme.colorMode}"`;
+  const whatsAppPhone = publicWhatsAppPhone(project);
+  const whatsAppAttributes = whatsAppPhone
+    ? ` data-whatsapp="${escapeHtml(whatsAppPhone)}" data-whatsapp-greeting="${escapeHtml(project.whatsapp.greeting)}" data-whatsapp-include-sku="${String(project.whatsapp.includeSku)}"`
+    : "";
   const criticalImage = page.preloadImage
     ? absoluteResourceUrl(project, page.preloadImage)
     : undefined;
@@ -1119,7 +1137,7 @@ function renderDocument(
       : "";
 
   return `<!doctype html>
-<html lang="${project.locale}" data-store-id="${escapeHtml(project.id)}" data-currency="${project.currency}" data-whatsapp="${escapeHtml(project.whatsapp.phone)}" data-whatsapp-greeting="${escapeHtml(project.whatsapp.greeting)}" data-whatsapp-include-sku="${String(project.whatsapp.includeSku)}" data-solara-runtime-features="${escapeAttribute((manifest?.runtimeFeatures ?? []).join(","))}"${colorMode}>
+<html lang="${project.locale}" data-store-id="${escapeHtml(project.id)}" data-currency="${project.currency}"${whatsAppAttributes} data-solara-runtime-features="${escapeAttribute((manifest?.runtimeFeatures ?? []).join(","))}"${colorMode}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1509,6 +1527,14 @@ function buildPages(
     ...(socialImage ? { image: socialImage } : {}),
   };
 
+  const whatsAppContactLink = buildWhatsAppLink(
+    project,
+    `Hola ${project.identity.brandName}, quiero hacer una consulta.`,
+  );
+  const whatsAppPurchaseLink = buildWhatsAppLink(
+    project,
+    `Hola ${project.identity.brandName}, quiero coordinar una compra.`,
+  );
   const contactPage: PageDescriptor = {
     path: "contacto/index.html",
     title: contactConfig?.seoTitle ?? `Contacto | ${project.identity.brandName}`,
@@ -1517,7 +1543,7 @@ function buildPages(
     pageType: "contact",
     body: [
       renderProjectSections(project, sharedHeader, { pageType: "contact" }),
-      `<main class="solara-contact-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><span>Contacto</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Hablemos</p><h1>${escapeHtml(contactConfig?.title ?? "Estamos para ayudarte.")}</h1><p>Respondemos consultas, disponibilidad y detalles de entrega por canales directos.</p></header><section class="solara-contact-grid"><div class="solara-contact-details">${project.identity.email ? `<a href="mailto:${escapeAttribute(project.identity.email)}"><span>Email</span><strong>${escapeHtml(project.identity.email)}</strong></a>` : ""}${project.identity.phone ? `<a href="tel:${escapeAttribute(project.identity.phone)}"><span>Teléfono</span><strong>${escapeHtml(project.identity.phone)}</strong></a>` : ""}<a href="${escapeAttribute(buildWhatsAppLink(project, `Hola ${project.identity.brandName}, quiero hacer una consulta.`))}" target="_blank" rel="noopener noreferrer"><span>WhatsApp</span><strong>Escribir por WhatsApp</strong></a>${project.identity.address ? `<div><span>Dirección</span><strong>${escapeHtml(project.identity.address)}</strong></div>` : ""}</div><aside class="solara-contact-cta"><h2>Coordinemos tu compra</h2><p>Si ya elegiste una pieza, podés escribirnos y te confirmamos disponibilidad, envío y pago.</p><a class="solara-primary-action" href="${escapeAttribute(buildWhatsAppLink(project, `Hola ${project.identity.brandName}, quiero coordinar una compra.`))}" target="_blank" rel="noopener noreferrer">Escribir por WhatsApp</a></aside></section></main>`,
+      `<main class="solara-contact-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><span>Contacto</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Hablemos</p><h1>${escapeHtml(contactConfig?.title ?? "Estamos para ayudarte.")}</h1><p>Respondemos consultas, disponibilidad y detalles de entrega por canales directos.</p></header><section class="solara-contact-grid"><div class="solara-contact-details">${project.identity.email ? `<a href="mailto:${escapeAttribute(project.identity.email)}"><span>Email</span><strong>${escapeHtml(project.identity.email)}</strong></a>` : ""}${project.identity.phone ? `<a href="tel:${escapeAttribute(project.identity.phone)}"><span>Teléfono</span><strong>${escapeHtml(project.identity.phone)}</strong></a>` : ""}${whatsAppContactLink ? `<a href="${escapeAttribute(whatsAppContactLink)}" target="_blank" rel="noopener noreferrer"><span>WhatsApp</span><strong>Escribir por WhatsApp</strong></a>` : ""}${project.identity.address ? `<div><span>Dirección</span><strong>${escapeHtml(project.identity.address)}</strong></div>` : ""}</div><aside class="solara-contact-cta"><h2>Coordinemos tu compra</h2><p>Si ya elegiste una pieza, podés escribirnos y te confirmamos disponibilidad, envío y pago.</p>${whatsAppPurchaseLink ? `<a class="solara-primary-action" href="${escapeAttribute(whatsAppPurchaseLink)}" target="_blank" rel="noopener noreferrer">Escribir por WhatsApp</a>` : ""}</aside></section></main>`,
       editableSections("contact").length
         ? renderProjectSections(project, editableSections("contact"), { pageType: "contact" })
         : "",
@@ -1572,13 +1598,16 @@ function buildPages(
     structuredData: [],
   };
 
+  const checkoutWhatsAppLink = whatsAppContactLink
+    ? `<a class="solara-secondary-action" data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>Enviar pedido en WhatsApp</a>`
+    : "";
   const checkoutPage: PageDescriptor = {
     path: "compra/index.html",
     title: `Compra por WhatsApp | ${project.identity.brandName}`,
     description: "Completá tus datos para enviar el pedido por WhatsApp.",
     canonicalPath: "/compra/",
     pageType: "checkout",
-    body: `${renderProjectSections(project, sharedHeader, { pageType: "checkout" })}<main class="solara-checkout-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><a href="/carrito/">Carrito</a><span aria-hidden="true">/</span><span>Compra</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Pedido directo</p><h1>Coordinar compra</h1><p>Dejanos tus datos y abrí el mensaje preparado en WhatsApp.</p></header><form class="solara-checkout-form" data-checkout-form><label for="solara-customer-name">Nombre</label><input id="solara-customer-name" name="name" autocomplete="name" required><label for="solara-customer-phone">Teléfono</label><input id="solara-customer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="Ingresá un teléfono válido" required><label for="solara-customer-address">Dirección o punto de entrega</label><textarea id="solara-customer-address" name="address" autocomplete="street-address" required></textarea><label for="solara-customer-notes">Notas opcionales</label><textarea id="solara-customer-notes" name="notes"></textarea><button class="solara-primary-action" type="submit">Preparar pedido</button><pre data-order-preview aria-live="polite"></pre><a class="solara-secondary-action" data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>Enviar pedido en WhatsApp</a></form></main>${renderProjectSections(project, sharedFooter, { pageType: "checkout" })}`,
+    body: `${renderProjectSections(project, sharedHeader, { pageType: "checkout" })}<main class="solara-checkout-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><a href="/carrito/">Carrito</a><span aria-hidden="true">/</span><span>Compra</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Pedido directo</p><h1>Coordinar compra</h1><p>Dejanos tus datos y abrí el mensaje preparado en WhatsApp.</p></header><form class="solara-checkout-form" data-checkout-form><label for="solara-customer-name">Nombre</label><input id="solara-customer-name" name="name" autocomplete="name" required><label for="solara-customer-phone">Teléfono</label><input id="solara-customer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="Ingresá un teléfono válido" required><label for="solara-customer-address">Dirección o punto de entrega</label><textarea id="solara-customer-address" name="address" autocomplete="street-address" required></textarea><label for="solara-customer-notes">Notas opcionales</label><textarea id="solara-customer-notes" name="notes"></textarea><button class="solara-primary-action" type="submit">Preparar pedido</button><pre data-order-preview aria-live="polite"></pre>${checkoutWhatsAppLink}</form></main>${renderProjectSections(project, sharedFooter, { pageType: "checkout" })}`,
     structuredData: [],
   };
 

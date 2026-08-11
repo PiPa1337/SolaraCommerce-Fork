@@ -1,3 +1,4 @@
+import { CATALOG_MODERN_PLACEHOLDER_PHONE } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { referenceStore } from "@solara/project-schema/fixture";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
@@ -687,6 +688,47 @@ describe("exporter", () => {
     expect(JSON.stringify(store)).not.toContain("address");
   });
 
+  it("no publica el teléfono de plantilla (sentinel) en ningún archivo del sitio", () => {
+    const project = {
+      ...referenceStore,
+      whatsapp: { ...referenceStore.whatsapp, phone: CATALOG_MODERN_PLACEHOLDER_PHONE },
+    };
+    for (const mode of ["draft", "production"] as const) {
+      const result = exportProject(project as typeof referenceStore, { mode });
+      for (const [path, content] of result.files) {
+        expect(String(content), `archivo ${path} (${mode})`).not.toContain(
+          CATALOG_MODERN_PLACEHOLDER_PHONE,
+        );
+      }
+      const homeHtml = String(result.files.get("index.html"));
+      expect(homeHtml, `home ${mode}`).not.toContain("data-whatsapp=");
+      expect(homeHtml, `home ${mode}`).not.toContain("data-whatsapp-greeting=");
+      expect(homeHtml, `home ${mode}`).not.toContain("data-whatsapp-include-sku=");
+      const store = onlineStoreJsonLd(homeHtml);
+      expect(store.telephone).toBe(referenceStore.identity.phone);
+      const contactHtml = String(result.files.get("contacto/index.html"));
+      expect(contactHtml, `contacto ${mode}`).not.toContain("wa.me");
+      expect(contactHtml, `contacto ${mode}`).not.toContain("Escribir por WhatsApp");
+      const checkoutHtml = String(result.files.get("compra/index.html"));
+      expect(checkoutHtml, `compra ${mode}`).not.toContain("data-whatsapp-link");
+      const cartHtml = String(result.files.get("carrito/index.html"));
+      expect(cartHtml, `carrito ${mode}`).not.toContain("wa.me");
+      const productHtml = String(result.files.get("productos/manta-bruma/index.html"));
+      expect(productHtml, `producto ${mode}`).not.toContain("wa.me");
+      expect(productHtml, `producto ${mode}`).not.toContain("catalog-add-fallback");
+    }
+  });
+
+  it("con teléfono válido el sitio expone data-whatsapp y los enlaces de contacto", () => {
+    const result = exportProject(referenceStore, { mode: "draft" });
+    const homeHtml = String(result.files.get("index.html"));
+    expect(homeHtml).toContain(`data-whatsapp="${referenceStore.whatsapp.phone}"`);
+    expect(homeHtml).toContain(`data-whatsapp-greeting="${referenceStore.whatsapp.greeting}"`);
+    const contactHtml = String(result.files.get("contacto/index.html"));
+    expect(contactHtml).toContain(`wa.me/${referenceStore.whatsapp.phone}`);
+    expect(contactHtml).toContain("Escribir por WhatsApp");
+  });
+
   it("la meta description de Home prefiere la página y el seo global antes que la identidad", () => {
     const project = {
       ...referenceStore,
@@ -702,6 +744,27 @@ describe("exporter", () => {
     expect(homeMetaDescription(homeHtml)).toBe("Descripción de la página Home.");
     expect(homeHtml).toContain(
       '<meta property="og:description" content="Descripción de la página Home.">',
+    );
+  });
+
+  it("la meta de Home respeta la página y las rutas sin página editable caen a la identidad", () => {
+    // Contrato del schema: la Home siempre existe y define su seoDescription, así
+    // que la cadena seoDescription ?? seo.description ?? identity.description
+    // protege a proyectos sin página editable (el tramo identity.description es
+    // alcanzable en las rutas about/contact que no son obligatorias).
+    const project = {
+      ...referenceStore,
+      pages: referenceStore.pages.filter((page) => page.kind === "home"),
+    };
+    const result = exportProject(project as typeof referenceStore, { mode: "draft" });
+    const homeHtml = String(result.files.get("index.html"));
+    expect(homeMetaDescription(homeHtml)).toBe(referenceStore.pages[0]?.seoDescription);
+    const aboutHtml = String(result.files.get("nosotros/index.html"));
+    expect(aboutHtml).toContain(
+      `<meta name="description" content="${referenceStore.identity.description}">`,
+    );
+    expect(aboutHtml).not.toContain(
+      `<meta name="description" content="${referenceStore.pages[1]?.seoDescription}">`,
     );
   });
 

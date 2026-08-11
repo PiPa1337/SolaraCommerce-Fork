@@ -1,4 +1,4 @@
-import type { StoreSection } from "@solara/project-schema";
+import { CATALOG_MODERN_PLACEHOLDER_PHONE, type StoreSection } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
 import { referenceStore } from "@solara/project-schema/fixture";
@@ -346,6 +346,23 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     expect(html).toContain(".catalog-add-fallback{display:");
     expect(html).toContain('href="https://wa.me/5491123456789?text=');
     expect(html).toContain("Remera esencial de algodón");
+  });
+
+  it("no ofrece consulta por WhatsApp cuando el teléfono es el sentinel de plantilla", () => {
+    const project = structuredClone(catalogModernStore);
+    project.whatsapp = { ...project.whatsapp, phone: CATALOG_MODERN_PLACEHOLDER_PHONE };
+    const product = project.products.find(
+      (candidate) => candidate.slug === "remera-esencial-de-algodon",
+    );
+    if (!product) throw new Error("Fixture sin remera esencial");
+    const html = renderSections(project, [modernDetailSection], {
+      pageType: "product",
+      product,
+    });
+
+    expect(html).not.toContain("wa.me");
+    expect(html).not.toContain("catalog-add-fallback");
+    expect(html).not.toContain(CATALOG_MODERN_PLACEHOLDER_PHONE);
   });
 
   it("ofrece consulta por WhatsApp sin JavaScript en el detalle legacy", () => {

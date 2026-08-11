@@ -13,6 +13,7 @@ import {
 } from "@solara/module-sdk";
 import {
   type AssetId,
+  CATALOG_MODERN_PLACEHOLDER_PHONE,
   type CategoryId,
   getCategoryBreadcrumb,
   getCategoryProductIds,
@@ -644,12 +645,18 @@ const productDetailSettings = z.object({
   deliveryNote: z.string().default("Coordinamos entrega y pago por WhatsApp."),
 });
 
+function hasPublicWhatsApp(whatsapp: { phone: string }): boolean {
+  const rawPhone = whatsapp.phone;
+  return rawPhone !== CATALOG_MODERN_PLACEHOLDER_PHONE && rawPhone.replace(/\D/g, "").length > 0;
+}
+
 function buildWhatsAppInquiryLink(
   context: Parameters<NonNullable<(typeof catalogProductDetail)["render"]>>[0],
   product: Product,
 ): string {
-  const phone = context.project.whatsapp.phone.replace(/\D/g, "");
-  if (!phone) return "";
+  const rawPhone = context.project.whatsapp.phone;
+  const phone = rawPhone.replace(/\D/g, "");
+  if (!phone || rawPhone === CATALOG_MODERN_PLACEHOLDER_PHONE) return "";
   const firstVariant = product.variants.find((variant) => variant.available) ?? product.variants[0];
   const message = [
     context.project.whatsapp.greeting,
@@ -1127,11 +1134,14 @@ export const catalogCartDrawer: ModuleDefinition<
   clientAsset: "storefront-cart" as AssetId,
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
+    const checkoutLinkMarkup = hasPublicWhatsApp(context.project.whatsapp)
+      ? `<a data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>Enviar pedido en WhatsApp</a>`
+      : "";
     return moduleRoot(
       "catalog-cart-drawer",
       context.section,
       safeHtml(
-        `<div class="solara-cart-backdrop catalog-cart-backdrop" data-solara-cart-close data-close-cart hidden></div><aside id="solara-cart" class="catalog-cart-drawer" data-cart-drawer aria-label="${escapeAttribute(context.settings.title)}" aria-modal="true" aria-hidden="true" inert tabindex="-1"><header><h2>${escapeHtml(context.settings.title)}</h2><button type="button" data-solara-cart-close data-close-cart aria-label="Cerrar carrito">Cerrar</button></header><div class="catalog-cart-items" data-solara-cart-items data-cart-lines><p class="catalog-empty">${escapeHtml(context.settings.emptyText)}</p></div><div class="catalog-cart-summary"><p><span>Subtotal</span><strong data-cart-subtotal>${escapeHtml(formatMoney(0))}</strong></p><p><span>Entrega</span><strong> A coordinar</strong></p><p class="catalog-cart-total"><span>Total estimado</span><strong data-solara-cart-total data-cart-total>${escapeHtml(formatMoney(0))}</strong></p></div><form class="catalog-checkout-form" data-solara-checkout data-checkout-form><label for="catalog-drawer-name">Nombre</label><input id="catalog-drawer-name" name="name" autocomplete="name" required><label for="catalog-drawer-phone">Teléfono</label><input id="catalog-drawer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="Ingresá un teléfono válido" required><label for="catalog-drawer-address">Dirección o punto de entrega</label><textarea id="catalog-drawer-address" name="address" autocomplete="street-address" required></textarea><label for="catalog-drawer-notes">Notas opcionales</label><textarea id="catalog-drawer-notes" name="notes"></textarea><button class="catalog-primary-action" type="submit">${escapeHtml(context.settings.checkoutLabel)}</button><pre data-order-preview aria-live="polite"></pre><a data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>Enviar pedido en WhatsApp</a></form></aside>`,
+        `<div class="solara-cart-backdrop catalog-cart-backdrop" data-solara-cart-close data-close-cart hidden></div><aside id="solara-cart" class="catalog-cart-drawer" data-cart-drawer aria-label="${escapeAttribute(context.settings.title)}" aria-modal="true" aria-hidden="true" inert tabindex="-1"><header><h2>${escapeHtml(context.settings.title)}</h2><button type="button" data-solara-cart-close data-close-cart aria-label="Cerrar carrito">Cerrar</button></header><div class="catalog-cart-items" data-solara-cart-items data-cart-lines><p class="catalog-empty">${escapeHtml(context.settings.emptyText)}</p></div><div class="catalog-cart-summary"><p><span>Subtotal</span><strong data-cart-subtotal>${escapeHtml(formatMoney(0))}</strong></p><p><span>Entrega</span><strong> A coordinar</strong></p><p class="catalog-cart-total"><span>Total estimado</span><strong data-solara-cart-total data-cart-total>${escapeHtml(formatMoney(0))}</strong></p></div><form class="catalog-checkout-form" data-solara-checkout data-checkout-form><label for="catalog-drawer-name">Nombre</label><input id="catalog-drawer-name" name="name" autocomplete="name" required><label for="catalog-drawer-phone">Teléfono</label><input id="catalog-drawer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="Ingresá un teléfono válido" required><label for="catalog-drawer-address">Dirección o punto de entrega</label><textarea id="catalog-drawer-address" name="address" autocomplete="street-address" required></textarea><label for="catalog-drawer-notes">Notas opcionales</label><textarea id="catalog-drawer-notes" name="notes"></textarea><button class="catalog-primary-action" type="submit">${escapeHtml(context.settings.checkoutLabel)}</button><pre data-order-preview aria-live="polite"></pre>${checkoutLinkMarkup}</form></aside>`,
       ),
     );
   },

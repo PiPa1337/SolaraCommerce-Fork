@@ -13,7 +13,11 @@ import {
   safeUrl,
   sanitizeRichText,
 } from "@solara/module-sdk";
-import type { AssetId, Product } from "@solara/project-schema";
+import {
+  type AssetId,
+  CATALOG_MODERN_PLACEHOLDER_PHONE,
+  type Product,
+} from "@solara/project-schema";
 import { z } from "zod";
 import {
   lowestPrice,
@@ -651,12 +655,18 @@ const productDetailSettings = z.object({
   deliveryNote: z.string().default("Coordinamos entrega y pago por WhatsApp."),
 });
 
+function hasPublicWhatsApp(whatsapp: { phone: string }): boolean {
+  const rawPhone = whatsapp.phone;
+  return rawPhone !== CATALOG_MODERN_PLACEHOLDER_PHONE && rawPhone.replace(/\D/g, "").length > 0;
+}
+
 function buildWhatsAppInquiryLink(
   context: Parameters<NonNullable<(typeof productDetail)["render"]>>[0],
   product: Product,
 ): string {
-  const phone = context.project.whatsapp.phone.replace(/\D/g, "");
-  if (!phone) return "";
+  const rawPhone = context.project.whatsapp.phone;
+  const phone = rawPhone.replace(/\D/g, "");
+  if (!phone || rawPhone === CATALOG_MODERN_PLACEHOLDER_PHONE) return "";
   const firstVariant = product.variants.find((variant) => variant.available) ?? product.variants[0];
   const message = [
     context.project.whatsapp.greeting,
@@ -960,6 +970,9 @@ export const cartDrawer: ModuleDefinition<"cart-drawer", z.infer<typeof cartSett
   clientAsset: "storefront-cart" as AssetId,
   styleAsset: scopedAssetId("cart-drawer"),
   render(context) {
+    const checkoutLinkMarkup = hasPublicWhatsApp(context.project.whatsapp)
+      ? `<a data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>Enviar pedido en WhatsApp</a>`
+      : "";
     return moduleRoot(
       "cart-drawer",
       context.section,
@@ -979,7 +992,7 @@ export const cartDrawer: ModuleDefinition<"cart-drawer", z.infer<typeof cartSett
             <textarea id="solara-drawer-customer-notes" name="notes"></textarea>
             <button type="submit">${escapeHtml(context.settings.checkoutLabel)}</button>
             <pre data-order-preview aria-live="polite"></pre>
-            <a data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>Enviar pedido en WhatsApp</a>
+            ${checkoutLinkMarkup}
           </form>
         </aside>`),
     );
