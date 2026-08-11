@@ -180,12 +180,12 @@ test("completar un campo marca el requisito listo, el progreso avanza y Siguient
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
 
-  // Estado inicial real de la plantilla limpia: 4 de 17 requisitos listos (24%).
+  // Estado inicial real de la plantilla limpia: 5 de 18 requisitos listos (28%).
   // El único bloqueo real del exporter es template.placeholder (auditReport),
   // no los 11 pendientes que la guía declaraba antes del fix R7-F1.
   const before = await readProgress(page);
-  expect(before.text).toBe("4 de 17 requisitos listos");
-  expect(before.percent).toBe(24);
+  expect(before.text).toBe("5 de 18 requisitos listos");
+  expect(before.percent).toBe(28);
   await expect(page.locator(".guided-progress__copy > span")).toHaveText(
     "1 pendiente bloquea producción.",
     { timeout: 20_000 },
@@ -223,9 +223,9 @@ test("completar un campo marca el requisito listo, el progreso avanza y Siguient
 
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
   const after = await readProgress(page);
-  expect(after.text).toBe("5 de 17 requisitos listos");
+  expect(after.text).toBe("6 de 18 requisitos listos");
   expect(after.percent).toBeGreaterThan(before.percent);
-  expect(after.percent).toBe(29);
+  expect(after.percent).toBe(33);
 
   // El requisito completado figura como "listo" y salió de los pendientes.
   await expect(pendingRequirements(page)).toHaveCount(12);
@@ -238,7 +238,7 @@ test("completar un campo marca el requisito listo, el progreso avanza y Siguient
   );
   await expect(doneItem).toHaveAttribute("data-requirement-status", "ready");
   await expect(page.getByTestId("ui-guided-done").locator("summary")).toHaveText(
-    "Requisitos listos (5)",
+    "Requisitos listos (6)",
   );
 
   // Modo avanzado cambia al Constructor y Preparar restaura el guiado con el progreso intacto.
@@ -250,7 +250,7 @@ test("completar un campo marca el requisito listo, el progreso avanza y Siguient
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
   await expect(page.locator(".guided-progress__copy > strong")).toHaveText(
-    "5 de 17 requisitos listos",
+    "6 de 18 requisitos listos",
   );
 });
 
@@ -357,7 +357,7 @@ test("el sentinel de WhatsApp pendiente NO bloquea producción y la guía ya no 
     { timeout: 20_000 },
   );
   await expect(page.getByTestId("ui-guided-done").locator("summary")).toHaveText(
-    "Requisitos listos (16)",
+    "Requisitos listos (17)",
   );
 
   // Coherencia con el gate real: el audit del exporter NO considera el sentinel

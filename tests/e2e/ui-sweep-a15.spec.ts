@@ -341,8 +341,9 @@ test("A15.6 el Modo avanzado desactiva la base protegida y se reinicia al volver
   await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
   await builderTab.click();
   await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
-  await expect(page.getByText(/estructura base está protegida/)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Agregar sección", exact: true })).toBeDisabled();
+  // El modo avanzado persiste en la sesión (fix PT4-Q4): la base sigue desprotegida.
+  await expect(page.getByText(/estructura base está protegida/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Agregar sección", exact: true })).toBeEnabled();
 });
 
 test("A15.7 el guardado gestionado versiona en disco y actualiza la barra de estado", async ({
