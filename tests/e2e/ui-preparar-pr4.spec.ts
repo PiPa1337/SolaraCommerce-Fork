@@ -306,12 +306,8 @@ test("los scopes producto, categoría e imagen (casos raros) llevan a Catálogo 
   await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
 
   // La tienda demo es la única que produce requisitos de producto, categoría e
-  // imagen; con los 3 pendientes sembrados, el orden del modelo es exacto.
-  const expectedPending = [
-    "product.modo-product-01.description",
-    "category.category-remeras.description",
-    "asset.asset-hero.alt",
-  ];
+  // imagen; con los 2 pendientes sembrados, el orden del modelo es exacto.
+  const expectedPending = ["product.modo-product-01.description", "asset.asset-hero.alt"];
   const visibleIds = await pendingRequirements(page).evaluateAll((items) =>
     items.map((item) => item.getAttribute("data-requirement-id")),
   );
@@ -331,7 +327,7 @@ test("los scopes producto, categoría e imagen (casos raros) llevan a Catálogo 
   await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
   await page.getByRole("button", { name: "Cerrar panel de edición" }).click();
   await expectPaneClosed(page);
-  const categoryEdit = requirement(page, "category.category-remeras.description").locator(
+  const categoryEdit = requirement(page, "product.modo-product-01.description").locator(
     'button[aria-label^="Editar "]',
   );
   await expect(categoryEdit).toHaveCount(1);

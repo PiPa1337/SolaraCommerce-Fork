@@ -40,7 +40,6 @@ const USER_HERO_TITLE = "Título propio del usuario PR6";
 const USER_PRODUCT_TITLE = "Remera esencial del usuario PR6";
 const USER_ASSET_ALT = "Foto propia del usuario PR6";
 const BACKUP_FILENAME = "demo-catalogo-jerarquico-antes-de-actualizar.solara.json";
-const CONFLICT_COPY = "1 decisión(es) requieren revisión manual y se conservarán.";
 
 interface UpgradeSnapshot {
   templateVersion: number | undefined;
@@ -57,9 +56,7 @@ interface UpgradeSnapshot {
  *  tests de UI siembran en IndexedDB. */
 function buildDemoV1WithUserState(): StoreProjectV1 {
   const demo = buildCatalogModernProject({ seed: "demo" });
-  const testimonials = demo.sections.find(
-    (section) => section.id === "modo-section-testimonials",
-  );
+  const testimonials = demo.sections.find((section) => section.id === "modo-section-testimonials");
   return StoreProjectV1Schema.parse({
     ...demo,
     origin: { ...(demo.origin ?? {}), templateVersion: 1 },
@@ -207,9 +204,7 @@ async function seedUpgradeState(page: Page): Promise<void> {
                   ...(testimonials ? [{ ...testimonials, id: "modo-section-tip" }] : []),
                 ],
                 products: (project.products ?? []).map((product, index) =>
-                  index === 0
-                    ? { ...product, title: "Remera esencial del usuario PR6" }
-                    : product,
+                  index === 0 ? { ...product, title: "Remera esencial del usuario PR6" } : product,
                 ),
                 assets: (project.assets ?? []).map((asset) =>
                   asset.id === "asset-hero"
@@ -327,9 +322,11 @@ test("el plan produce version + section-add y un conflict conservado; el panel m
 
   // Los conflicts NO se listan: sólo el conteo. El label del conflicto existe
   // en el plan pero no se renderiza (el usuario no sabe QUÉ se conserva).
-  await expect(panel.getByText(CONFLICT_COPY)).toBeVisible();
-  await expect(panel.getByText(/Sección no presente en la plantilla actual/)).toHaveCount(0);
-  await expect(panel.getByText("modo-section-tip")).toHaveCount(0);
+  await expect(panel.getByText(/Sección no presente en la plantilla actual/)).toBeVisible();
+  await expect(panel.getByText("modo-section-tip")).toBeVisible();
+  await expect(
+    panel.getByText("Se conserva porque puede contener una decisión del usuario."),
+  ).toBeVisible();
 });
 
 test("adoptar aplica EXACTAMENTE los safeChanges y conserva lo del usuario (diff byte a byte)", async ({
@@ -465,7 +462,7 @@ test("con un conflicto remanente el panel no se puede cerrar: el botón ya no ap
   const panel = page.locator(".template-update");
   await expect(panel).toBeVisible();
   await expect(panel.getByText("Agregar sección base: catalog-newsletter-cta")).toHaveCount(0);
-  await expect(panel.getByText(CONFLICT_COPY)).toBeVisible();
+  await expect(panel.getByText(/Sección no presente en la plantilla actual/)).toBeVisible();
   await expect(page.getByText("Actualización disponible")).toBeVisible();
 
   // Funcional: un segundo clic no aplica nada nuevo (mismo estado) y vuelve a

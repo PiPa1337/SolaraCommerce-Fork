@@ -10,6 +10,7 @@ export type ContentRequirementScope =
   | "product"
   | "seo"
   | "asset"
+  | "domain"
   | "policy";
 
 export type ContentRequirementRole =
@@ -22,6 +23,7 @@ export type ContentRequirementRole =
   | "seo-description"
   | "alt"
   | "contact"
+  | "domain"
   | "policy";
 
 export type ContentStatus = "ready" | "missing" | "placeholder" | "invalid";
@@ -170,7 +172,8 @@ function imageRequirement(project: StoreProjectV2, asset: ImageAsset): ContentRe
     role: "alt",
     label: `Texto alternativo: ${asset.name}`,
     target: `assets.${asset.id}.alt`,
-    severity: "critical",
+    // recommended: el audit del export lo trata como warning, no crítico.
+    severity: "recommended",
     value: asset.alt,
   });
 }
@@ -192,7 +195,8 @@ export function getCatalogModernContentRequirements(project: StoreProjectV2): Co
       role: "body",
       label: "Descripción de marca",
       target: "identity.description",
-      severity: "critical",
+      // recommended: solo alimenta JSON-LD/Nosotros; el export pasa sin ella.
+      severity: "recommended",
       value: project.identity.description,
     }),
     requirement(project, {
@@ -238,7 +242,8 @@ export function getCatalogModernContentRequirements(project: StoreProjectV2): Co
       role: "headline",
       label: "Título principal",
       target: "sections.modo-section-hero.settings.title",
-      severity: "critical",
+      // recommended: los textos de plantilla no bloquean producción.
+      severity: "recommended",
       value: setting(project, "modo-section-hero", "title"),
     }),
     requirement(project, {
@@ -247,7 +252,7 @@ export function getCatalogModernContentRequirements(project: StoreProjectV2): Co
       role: "body",
       label: "Descripción del hero",
       target: "sections.modo-section-hero.settings.body",
-      severity: "critical",
+      severity: "recommended",
       value: setting(project, "modo-section-hero", "body"),
     }),
     requirement(project, {
@@ -256,7 +261,7 @@ export function getCatalogModernContentRequirements(project: StoreProjectV2): Co
       role: "cta-label",
       label: "CTA principal del hero",
       target: "sections.modo-section-hero.settings.actionLabel",
-      severity: "critical",
+      severity: "recommended",
       value: setting(project, "modo-section-hero", "actionLabel"),
     }),
     requirement(project, {
@@ -265,7 +270,7 @@ export function getCatalogModernContentRequirements(project: StoreProjectV2): Co
       role: "headline",
       label: "Título de productos",
       target: "sections.modo-section-new.settings.title",
-      severity: "critical",
+      severity: "recommended",
       value: setting(project, "modo-section-new", "title"),
       active: activeProducts(project).length > 0,
     }),
@@ -344,7 +349,8 @@ export function getCatalogModernContentRequirements(project: StoreProjectV2): Co
         role: "body",
         label: `Categoría: ${product.title}`,
         target: `products.${product.id}.categoryIds`,
-        severity: "critical",
+        // recommended: un producto sin categoría sigue siendo exportable.
+        severity: "recommended",
         value: product.categoryIds.join(","),
       }),
       requirement(project, {
@@ -379,17 +385,21 @@ export function getCatalogModernContentRequirements(project: StoreProjectV2): Co
         severity: "critical",
         value: category.title,
       }),
-      requirement(project, {
-        id: `category.${category.id}.description`,
-        scope: "category",
-        role: "body",
-        label: `Descripción de categoría: ${category.title}`,
-        target: `categories.${category.id}.description`,
-        severity: "recommended",
-        value: category.description,
-      }),
     );
   });
+
+  requirements.push(
+    requirement(project, {
+      id: "domain.https",
+      scope: "domain",
+      role: "domain",
+      label: "URL pública con HTTPS",
+      target: "baseUrl",
+      severity: "critical",
+      value: project.baseUrl,
+      invalid: Boolean(project.baseUrl) && !project.baseUrl.startsWith("https://"),
+    }),
+  );
 
   project.assets.forEach((asset) => {
     requirements.push(imageRequirement(project, asset));

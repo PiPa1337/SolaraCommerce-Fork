@@ -7,9 +7,12 @@ import { type StoreProjectV2, StoreProjectV2Schema, type StoreSection } from "./
 export interface TemplateChange {
   id: string;
   label: string;
-  kind: "version" | "section-add";
+  kind: "version" | "section-add" | "field";
   sectionId?: string;
   next?: StoreSection;
+  path?: string;
+  from?: string;
+  to?: string;
 }
 
 export interface TemplateConflict {
@@ -41,6 +44,24 @@ export function planCatalogModernUpgrade(project: StoreProjectV2): TemplateUpgra
       id: "template.version",
       label: `Actualizar Catalog Modern a la versión ${CATALOG_MODERN_TEMPLATE_VERSION}`,
       kind: "version",
+    });
+  }
+
+  // Diferencia real v1→v2: el nombre del catálogo sembrado cambió de
+  // "Colecciones" a "Categorías". Solo se ofrece cuando el valor actual es el
+  // default v1 (el usuario no lo personalizó).
+  if (
+    project.origin?.seed !== undefined &&
+    project.navigation.catalogLabel === "Colecciones" &&
+    latest.navigation.catalogLabel !== "Colecciones"
+  ) {
+    safeChanges.push({
+      id: "template.field.navigation.catalogLabel",
+      label: `Nombre del catálogo: "${project.navigation.catalogLabel}" → "${latest.navigation.catalogLabel}"`,
+      kind: "field",
+      path: "navigation.catalogLabel",
+      from: project.navigation.catalogLabel,
+      to: latest.navigation.catalogLabel,
     });
   }
 
@@ -89,14 +110,20 @@ export function applyCatalogModernUpgrade(
   const plan = planCatalogModernUpgrade(project);
   const accepted = new Set(acceptedChangeIds);
   const sections = [...project.sections];
+  let navigation = project.navigation;
   for (const change of plan.safeChanges) {
-    if (!accepted.has(change.id) || change.kind !== "section-add" || !change.next) continue;
-    if (sections.some((section) => section.id === change.next?.id)) continue;
-    sections.push(structuredClone(change.next));
+    if (!accepted.has(change.id)) continue;
+    if (change.kind === "section-add" && change.next) {
+      if (sections.some((section) => section.id === change.next?.id)) continue;
+      sections.push(structuredClone(change.next));
+    }
+    if (change.kind === "field" && change.path === "navigation.catalogLabel" && change.to) {
+      navigation = { ...navigation, catalogLabel: change.to };
+    }
   }
   const origin =
     accepted.has("template.version") && project.origin
       ? { ...project.origin, templateVersion: plan.toVersion }
       : project.origin;
-  return StoreProjectV2Schema.parse({ ...project, origin, sections });
+  return StoreProjectV2Schema.parse({ ...project, origin, sections, navigation });
 }

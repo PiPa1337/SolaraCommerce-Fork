@@ -42,6 +42,7 @@ const expectedDestination: Record<ContentRequirementScope, StudioTab> = {
   product: "catalog",
   seo: "seo",
   asset: "assets",
+  domain: "overview",
   policy: "builder",
 };
 

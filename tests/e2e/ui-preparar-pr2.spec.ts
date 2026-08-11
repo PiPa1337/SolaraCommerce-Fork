@@ -398,13 +398,13 @@ test("paridad tienda limpia: las imágenes de plantilla pendientes bloquean prod
   expect(storeKey).toBeDefined();
   const cleanStoreKey = storeKey as string;
 
-  // 1. La tienda limpia: 4 de 17 requisitos listos y los assets en estado
+  // 1. La tienda limpia: 5 de 18 requisitos listos y los assets en estado
   // "Reemplazar texto de plantilla" (el checklist muestra 12 y oculta el resto).
   await openPrepararTab(page);
   const placeholderAssets = page.locator(
     '[data-testid="ui-guided-requirement"][data-requirement-id^="asset."][data-requirement-status="placeholder"]',
   );
-  await expect(page.getByText("4 de 17 requisitos listos")).toBeVisible();
+  await expect(page.getByText("5 de 18 requisitos listos")).toBeVisible();
   await expect(placeholderAssets).toHaveCount(3);
   await expect(page.getByText("+1 más")).toBeVisible();
   await expect(page.getByText("1 pendiente bloquea producción.")).toBeVisible();

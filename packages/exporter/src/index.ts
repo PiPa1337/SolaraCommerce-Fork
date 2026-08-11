@@ -2203,7 +2203,9 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
   if (!project.policies.shipping.details.trim() || !project.policies.returns.details.trim()) {
     issues.push({
       code: "policies.incomplete",
-      severity: "critical",
+      // warning: el Studio no tiene editor de políticas; un crítico sin UI
+      // para resolverlo bloquearía producción de forma inalcanzable.
+      severity: "warning",
       message: "Las políticas de envío y devoluciones deben estar completas.",
     });
   }

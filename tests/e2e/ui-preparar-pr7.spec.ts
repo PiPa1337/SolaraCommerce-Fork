@@ -182,8 +182,8 @@ test("PR7-2: matriz del checklist: marca placeholder todo texto de plantilla sal
   // 4 listos). El sentinel de WhatsApp es "missing" en el modelo y la UI lo
   // reasigna a "placeholder" (GuidedOverview.tsx:69-75).
   const readiness = evaluateCatalogModernReadiness(catalogModernCleanStore);
-  expect(readiness.requirements).toHaveLength(17);
-  expect(readiness.ready).toBe(4);
+  expect(readiness.requirements).toHaveLength(18);
+  expect(readiness.ready).toBe(5);
   const modelStatus = new Map(readiness.requirements.map((item) => [item.id, item.status]));
   expect(modelStatus.get("home.hero.title")).toBe("placeholder");
   expect(modelStatus.get("identity.description")).toBe("placeholder");
@@ -197,8 +197,8 @@ test("PR7-2: matriz del checklist: marca placeholder todo texto de plantilla sal
   await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
 
   const before = await readProgress(page);
-  expect(before.text).toBe("4 de 17 requisitos listos");
-  expect(before.percent).toBe(24);
+  expect(before.text).toBe("5 de 18 requisitos listos");
+  expect(before.percent).toBe(28);
 
   // Todos los textos de plantilla marcados "placeholder" en el checklist.
   const placeholderIds = [

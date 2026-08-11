@@ -109,20 +109,20 @@ test("completar un requisito sube X/N, el percent real y el contenido de la regi
   await expect(page.locator("section.guided-overview [aria-live]")).toHaveCount(1);
 
   // La barra es un progressbar con nombre y rango, y su valor es el percent real
-  // del modelo: 4 de 17 = round(4/17*100) = 24.
+  // del modelo: 5 de 18 = round(5/18*100) = 28.
   const bar = progressBar(page);
   await expect(bar).toHaveAttribute("role", "progressbar");
   await expect(bar).toHaveAttribute("aria-label", "Progreso de preparación");
   await expect(bar).toHaveAttribute("aria-valuemin", "0");
   await expect(bar).toHaveAttribute("aria-valuemax", "100");
-  await expect(bar).toHaveAttribute("aria-valuenow", "24");
-  await expect(bar.locator("span")).toHaveAttribute("style", "width: 24%;");
+  await expect(bar).toHaveAttribute("aria-valuenow", "28");
+  await expect(bar.locator("span")).toHaveAttribute("style", "width: 28%;");
 
   // Funcional/datos: la copia X/N coincide con el modelo y con la barra.
-  expect(await readProgressText(page)).toEqual({ ready: 4, total: 17 });
-  expect(Math.round((4 / 17) * 100)).toBe(24);
+  expect(await readProgressText(page)).toEqual({ ready: 5, total: 18 });
+  expect(Math.round((5 / 18) * 100)).toBe(28);
   await expect(page.locator(".guided-progress__copy > strong")).toHaveText(
-    "4 de 17 requisitos listos",
+    "5 de 18 requisitos listos",
   );
 
   // Gate real (fix 237fed0 vigente): la plantilla limpia tiene exactamente 1
@@ -133,7 +133,7 @@ test("completar un requisito sube X/N, el percent real y el contenido de la regi
   );
 
   const beforeText = await live.innerText();
-  expect(beforeText).toContain("4 de 17 requisitos listos");
+  expect(beforeText).toContain("5 de 18 requisitos listos");
 
   // Completa UN requisito (Descripción de marca) desde el Resumen.
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
@@ -151,18 +151,18 @@ test("completar un requisito sube X/N, el percent real y el contenido de la regi
   // X/N sube 4 → 5, y la barra pasa a round(5/17*100) = 29 (percent real, no
   // un redondeo a mano).
   const after = await readProgressText(page);
-  expect(after).toEqual({ ready: 5, total: 17 });
-  expect(Math.round((5 / 17) * 100)).toBe(29);
+  expect(after).toEqual({ ready: 6, total: 18 });
+  expect(Math.round((6 / 18) * 100)).toBe(33);
   await expect(page.locator(".guided-progress__copy > strong")).toHaveText(
-    "5 de 17 requisitos listos",
+    "6 de 18 requisitos listos",
   );
-  await expect(bar).toHaveAttribute("aria-valuenow", "29");
-  await expect(bar.locator("span")).toHaveAttribute("style", "width: 29%;");
+  await expect(bar).toHaveAttribute("aria-valuenow", "33");
+  await expect(bar.locator("span")).toHaveAttribute("style", "width: 33%;");
 
   // La región viva anuncia el nuevo estado: su contenido cambió y lleva el X/N.
   const afterText = await live.innerText();
   expect(afterText).not.toBe(beforeText);
-  expect(afterText).toContain("5 de 17 requisitos listos");
+  expect(afterText).toContain("6 de 18 requisitos listos");
 
   // Checklist: el requisito completado salió de pendientes (12 visibles, sin
   // "+N más") y figura como listo con su estado y conteo reales; pendientes +
@@ -170,7 +170,7 @@ test("completar un requisito sube X/N, el percent real y el contenido de la regi
   await expect(pendingRequirements(page)).toHaveCount(12);
   await expect(page.locator(".guided-checklist__more")).toHaveCount(0);
   await expect(page.getByTestId("ui-guided-done").locator("summary")).toHaveText(
-    "Requisitos listos (5)",
+    "Requisitos listos (6)",
   );
   await expect(doneRequirement(page, "identity.description")).toHaveAttribute(
     "data-requirement-status",
@@ -256,7 +256,7 @@ test("iconos y labels del checklist por estado, anunciados a lectores de pantall
   // Los listos: icono CheckCircle (data-status=ready, aria-hidden), scope y el
   // conteo real en el summary; el detalle se anuncia al abrirlo.
   await expect(page.getByTestId("ui-guided-done").locator("summary")).toHaveText(
-    "Requisitos listos (4)",
+    "Requisitos listos (5)",
   );
   await page.getByTestId("ui-guided-done").locator("summary").click();
   const readyBrand = page.locator(
@@ -280,7 +280,7 @@ test("iconos y labels del checklist por estado, anunciados a lectores de pantall
   const snapshot = await page.locator("section.guided-checklist").ariaSnapshot();
   expect(snapshot).toContain("Falta completar");
   expect(snapshot).toContain("Reemplazar texto de plantilla");
-  expect(snapshot).toContain("Requisitos listos (4)");
+  expect(snapshot).toContain("Requisitos listos (5)");
 });
 
 test("el gate de producción usa la auditoría real: singular, plural y paridad 1:1 con Exportar (PR3-3)", async ({
@@ -358,13 +358,13 @@ test("el percent del modelo es el percent de la UI y `invalid` es defensivo (PR3
   // Datos: percent = round(ready/total*100) con los fixtures reales; la UI
   // muestra esos mismos valores (PR3-1: 24 → 29 sobre 17 requisitos).
   const cleanReadiness = evaluateCatalogModernReadiness(clean);
-  expect(cleanReadiness.requirements).toHaveLength(17);
-  expect(cleanReadiness.ready).toBe(4);
-  expect(cleanReadiness.percent).toBe(24);
-  expect(cleanReadiness.percent).toBe(Math.round((4 / 17) * 100));
+  expect(cleanReadiness.requirements).toHaveLength(18);
+  expect(cleanReadiness.ready).toBe(5);
+  expect(cleanReadiness.percent).toBe(28);
+  expect(cleanReadiness.percent).toBe(Math.round((5 / 18) * 100));
 
   const demoReadiness = evaluateCatalogModernReadiness(demo);
-  expect(demoReadiness.ready).toBe(297);
+  expect(demoReadiness.ready).toBe(284);
   expect(demoReadiness.pending).toBe(0);
   expect(demoReadiness.percent).toBe(100);
 
@@ -373,8 +373,8 @@ test("el percent del modelo es el percent de la UI y `invalid` es defensivo (PR3
   const completed = structuredClone(clean);
   completed.identity.description = "Textiles artesanales de estación para todos los días.";
   const completedReadiness = evaluateCatalogModernReadiness(completed);
-  expect(completedReadiness.ready).toBe(5);
-  expect(completedReadiness.percent).toBe(29);
+  expect(completedReadiness.ready).toBe(6);
+  expect(completedReadiness.percent).toBe(33);
 
   // `invalid` existe en el modelo sólo como defensa: el dato que lo produce
   // (email sin @) es rechazado por el schema, así que un proyecto persistido

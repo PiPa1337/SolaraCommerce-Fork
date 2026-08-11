@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Auditoría Preparar PR8 (2026-08-11) — UTILIDAD del tab: journey end-to-end.
  * Plan: docs/superpowers/plans/2026-08-10-auditoria-preparar.md (PR8: tienda
  * limpia → completar Preparar paso a paso → export producción VIABLE (0
@@ -280,9 +280,9 @@ test("journey: tienda limpia → completar Preparar por destinos → exportar pr
   // (1) Estado inicial honesto de la tienda limpia: 4 de 17 requisitos listos,
   // el único bloqueo real es template.placeholder (crítico del exporter).
   await expect(page.locator(".guided-progress__copy strong")).toHaveText(
-    "4 de 17 requisitos listos",
+    "5 de 18 requisitos listos",
   );
-  await expect(page.getByTestId("ui-guided-progress")).toHaveAttribute("aria-valuenow", "24");
+  await expect(page.getByTestId("ui-guided-progress")).toHaveAttribute("aria-valuenow", "28");
   await expect(page.locator(".guided-progress__copy > span")).toHaveText(
     "1 pendiente bloquea producción.",
     { timeout: 20_000 },
@@ -378,31 +378,20 @@ test("journey: tienda limpia → completar Preparar por destinos → exportar pr
   // quedan las descripciones de categoría (sin editor en el Studio, hallazgo
   // PR8) y el gate real ya no bloquea producción. 29 activos = 20 base (con
   // productos y categorías activando home.products/categories.title y el 5to
-  // asset) + 5 del producto + 4 de las 2 categorías; 27 listos, 2 pendientes.
+  // asset) + 5 del producto + 2 tías; 28 listos, 0 pendientes.
   await openPrepararTab(page);
   await expect(page.locator(".guided-progress__copy strong")).toHaveText(
-    "27 de 29 requisitos listos",
+    "28 de 28 requisitos listos",
   );
-  await expect(page.getByTestId("ui-guided-progress")).toHaveAttribute("aria-valuenow", "93");
+  await expect(page.getByTestId("ui-guided-progress")).toHaveAttribute("aria-valuenow", "100");
   await expect(page.locator(".guided-progress__copy > span")).toHaveText(
     "La tienda puede pasar a revisión de publicación.",
     { timeout: 20_000 },
   );
-  await expect(pendingRequirements(page)).toHaveCount(2);
-  const pendingIds = await pendingRequirements(page).evaluateAll((els) =>
-    els.map((el) => el.getAttribute("data-requirement-id")),
-  );
-  expect(pendingIds).toEqual([
-    "category.category-ceramica.description",
-    "category.category-vasos.description",
-  ]);
-  await expect(pendingRequirements(page).first()).toContainText(
-    "Descripción de categoría: Cerámica",
-  );
-  await expect(pendingRequirements(page).first()).toContainText("Categorías · Falta completar");
+  await expect(pendingRequirements(page)).toHaveCount(0);
   await page.getByTestId("ui-guided-done").locator("summary").click();
   await expect(page.getByTestId("ui-guided-done").locator("summary")).toHaveText(
-    "Requisitos listos (27)",
+    "Requisitos listos (28)",
   );
   await expect(requirement(page, "identity.description")).toHaveAttribute(
     "data-requirement-status",

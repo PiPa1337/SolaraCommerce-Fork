@@ -8,6 +8,7 @@ export function destinationFor(scope: ContentRequirementScope): GuidedDestinatio
   if (scope === "product" || scope === "category") return "catalog";
   if (scope === "asset") return "assets";
   if (scope === "seo") return "seo";
+  if (scope === "domain") return "overview";
   if (scope === "identity" || scope === "navigation" || scope === "about" || scope === "contact") {
     return "overview";
   }

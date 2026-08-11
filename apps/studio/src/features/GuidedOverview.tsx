@@ -4,6 +4,7 @@ import {
   CheckCircle,
   ClipboardText,
   WarningCircle,
+  X,
   XCircle,
 } from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
@@ -40,6 +41,7 @@ const scopeLabels: Record<ContentRequirement["scope"], string> = {
   product: "Productos",
   seo: "SEO",
   asset: "Imágenes",
+  domain: "Dominio",
   policy: "Políticas",
 };
 
@@ -91,6 +93,10 @@ export function GuidedOverview({
    *  incompleto sí (R7-F1). Mientras la auditoría no responde, la copia evita
    *  afirmar nada. */
   const [blockingCount, setBlockingCount] = useState<number | null>(null);
+  // El panel de actualización se puede descartar en la sesión (PR6-F1): antes,
+  // con conflictos remanentes, no había forma de cerrarlo y el botón repetía
+  // la adopción en cada clic.
+  const [upgradeDismissed, setUpgradeDismissed] = useState(false);
   useEffect(() => {
     let active = true;
     void auditProjectInWorker(project, true)
@@ -186,14 +192,25 @@ export function GuidedOverview({
         </div>
       </div>
 
-      {upgrade.safeChanges.length > 0 || upgrade.conflicts.length > 0 ? (
+      {!upgradeDismissed && (upgrade.safeChanges.length > 0 || upgrade.conflicts.length > 0) ? (
         <section className="template-update" aria-labelledby={`${titleId}-update`}>
-          <div>
-            <span className="guided-kicker">Actualización disponible</span>
-            <h3 id={`${titleId}-update`}>Catalog Modern {upgrade.toVersion}</h3>
-            <p>
-              Revisá los cambios de la plantilla. Tus textos, productos e imágenes se conservan.
-            </p>
+          <div className="template-update__heading">
+            <div>
+              <span className="guided-kicker">Actualización disponible</span>
+              <h3 id={`${titleId}-update`}>Catalog Modern {upgrade.toVersion}</h3>
+              <p>
+                Revisá los cambios de la plantilla. Tus textos, productos e imágenes se conservan.
+              </p>
+            </div>
+            <Button
+              variant="quiet"
+              size="sm"
+              icon={X}
+              aria-label="Cerrar aviso de actualización"
+              onClick={() => setUpgradeDismissed(true)}
+            >
+              Cerrar
+            </Button>
           </div>
           {upgrade.safeChanges.length > 0 ? (
             <ul>
@@ -203,9 +220,16 @@ export function GuidedOverview({
             </ul>
           ) : null}
           {upgrade.conflicts.length > 0 ? (
-            <p className="template-update__conflict">
-              {upgrade.conflicts.length} decisión(es) requieren revisión manual y se conservarán.
-            </p>
+            <ul className="template-update__conflicts">
+              {upgrade.conflicts.map((conflict) => (
+                <li key={conflict.id}>
+                  <strong>{conflict.label}</strong>
+                  <small>
+                    {conflict.path} — {conflict.reason}
+                  </small>
+                </li>
+              ))}
+            </ul>
           ) : null}
           <Button
             variant="primary"
@@ -223,6 +247,9 @@ export function GuidedOverview({
         </section>
       ) : null}
 
+      {/* El checklist (pendientes + "Requisitos listos") se muestra también
+          cuando no quedan pendientes: el estado "todo listo" necesita su
+          feedback (PR8 — antes desaparecía con 0 pendientes). */}
       {visiblePending.length > 0 ? (
         <section className="guided-checklist" aria-labelledby={checklistId}>
           <div className="guided-checklist__header">
@@ -293,16 +320,41 @@ export function GuidedOverview({
           ) : null}
         </section>
       ) : (
-        <div className="guided-ready" data-testid="ui-guided-ready">
-          <CheckCircle aria-hidden size={24} />
-          <div>
-            <strong>La base está lista para revisar</strong>
-            <p>Podés abrir el preview o pasar a la exportación de producción.</p>
+        <>
+          <div className="guided-ready" data-testid="ui-guided-ready">
+            <CheckCircle aria-hidden size={24} />
+            <div>
+              <strong>La base está lista para revisar</strong>
+              <p>Podés abrir el preview o pasar a la exportación de producción.</p>
+            </div>
+            <Button variant="primary" onClick={() => onNavigate("export")}>
+              Revisar publicación
+            </Button>
           </div>
-          <Button variant="primary" onClick={() => onNavigate("export")}>
-            Revisar publicación
-          </Button>
-        </div>
+          {ready.length > 0 ? (
+            <details className="guided-checklist__done" data-testid="ui-guided-done">
+              <summary>Requisitos listos ({ready.length})</summary>
+              <ul>
+                {ready.map((requirement) => (
+                  <li
+                    key={requirement.id}
+                    data-testid="ui-guided-requirement"
+                    data-requirement-id={requirement.id}
+                    data-requirement-status="ready"
+                  >
+                    <span className="guided-checklist__status" data-status="ready" aria-hidden>
+                      <RequirementStatusIcon status="ready" />
+                    </span>
+                    <span className="guided-checklist__text">
+                      <strong title={requirement.label}>{requirement.label}</strong>
+                      <small>{scopeLabels[requirement.scope]}</small>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
+        </>
       )}
 
       <div className="guided-actions">

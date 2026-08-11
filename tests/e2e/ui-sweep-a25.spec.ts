@@ -389,15 +389,15 @@ test("el progreso es coherente con el proyecto y sube al completar un requisito"
   await expect(progress).toHaveAttribute("aria-valuemax", "100");
   await expect(page.locator("output.guided-progress")).toHaveAttribute("aria-live", "polite");
 
-  // Contrato de la plantilla limpia: 4/17 listos (24%) con 1 crítico real del
+  // Contrato de la plantilla limpia: 5/18 listos (28%) con 1 crítico real del
   // exporter (template.placeholder); el resto de los pendientes no bloquea.
-  await expect(page.getByText("4 de 17 requisitos listos")).toBeVisible();
-  await expect(progress).toHaveAttribute("aria-valuenow", "24");
+  await expect(page.getByText("5 de 18 requisitos listos")).toBeVisible();
+  await expect(progress).toHaveAttribute("aria-valuenow", "28");
   await expect(page.getByText("1 pendiente bloquea producción.")).toBeVisible({
     timeout: 20_000,
   });
 
-  // Completar el WhatsApp (crítico) desde Resumen sube el progreso a 5/17 (29%).
+  // Completar el WhatsApp (crítico) desde Resumen sube el progreso a 6/18 (33%).
   await studioTab(page, "Resumen").click();
   await page.getByLabel("Número internacional", { exact: true }).fill("5491123456789");
   await expect(page.getByTestId("ui-save-indicator")).toContainText("Cambios guardados", {
@@ -409,8 +409,8 @@ test("el progreso es coherente con el proyecto y sube al completar un requisito"
     "data-requirement-status",
     "ready",
   );
-  await expect(page.getByText("5 de 17 requisitos listos")).toBeVisible();
-  await expect(progress).toHaveAttribute("aria-valuenow", "29");
+  await expect(page.getByText("6 de 18 requisitos listos")).toBeVisible();
+  await expect(progress).toHaveAttribute("aria-valuenow", "33");
   // El bloqueo real (imágenes de plantilla) no cambió: la copia sigue honesta.
   await expect(page.getByText("1 pendiente bloquea producción.")).toBeVisible({
     timeout: 20_000,
@@ -436,8 +436,8 @@ test("la tienda demo lista muestra el estado listo y Revisar publicación abre E
   expect(ready).toBeGreaterThan(0);
   expect(ready).toBe(total);
   await expect(page.getByTestId("ui-guided-progress")).toHaveAttribute("aria-valuenow", "100");
-  // Con todo listo el checklist no se muestra: queda sólo el banner listo.
-  await expect(page.getByTestId("ui-guided-done")).toHaveCount(0);
+  // Con todo listo queda el banner listo + el detalle de los listos (PR8).
+  await expect(page.getByTestId("ui-guided-done")).toHaveCount(1);
 
   await page.getByRole("button", { name: "Revisar publicación" }).click();
   await expect(studioTab(page, "Exportar")).toHaveAttribute("aria-selected", "true");

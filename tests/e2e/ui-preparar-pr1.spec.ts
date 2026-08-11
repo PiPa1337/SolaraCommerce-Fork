@@ -327,7 +327,9 @@ async function expectChecklistUiMatches(page: Page, project: ProjectRecord): Pro
   if (pending.length === 0) {
     // Sin pendientes no se renderiza la lista: sólo el bloque "base lista".
     await expect(page.getByTestId("ui-guided-ready")).toBeVisible();
-    await expect(page.locator('[data-testid="ui-guided-requirement"]')).toHaveCount(0);
+    // El checklist ahora muestra la lista de listos cuando no hay pendientes (PR8):
+    // los 284 requisitos de la demo aparecen en el detalle colapsado.
+    await expect(page.locator('[data-testid="ui-guided-done"]')).toBeVisible();
     await expect(page.locator(".guided-checklist__more")).toHaveCount(0);
   } else {
     const hiddenIds = new Set(pending.slice(12).map((requirement) => requirement.id));
@@ -363,7 +365,7 @@ async function expectChecklistUiMatches(page: Page, project: ProjectRecord): Pro
   );
 }
 
-test("demo: los 297 requisitos leen datos reales y están todos listos (1:1 con IndexedDB)", async ({
+test("demo: los 284 requisitos leen datos reales y están todos listos (1:1 con IndexedDB)", async ({
   page,
 }) => {
   await resetIndexedDb(page);
@@ -378,8 +380,8 @@ test("demo: los 297 requisitos leen datos reales y están todos listos (1:1 con 
   expect(project.products.every((product) => product.status === "active")).toBe(true);
   expect(project.categories.length).toBe(14);
   expect(project.assets.length).toBe(4);
-  expect(readiness.requirements.length).toBe(297);
-  expect(readiness.ready).toBe(297);
+  expect(readiness.requirements.length).toBe(284);
+  expect(readiness.ready).toBe(284);
   expect(readiness.pending).toBe(0);
   expect(readiness.percent).toBe(100);
 
@@ -424,13 +426,14 @@ test("limpia: cada requisito refleja su dato real (missing/placeholder/ready) y 
     ["asset.asset-hero.alt", "placeholder"],
     ["asset.asset-manta.alt", "placeholder"],
     ["asset.asset-jarra.alt", "placeholder"],
+    ["domain.https", "ready"],
   ]);
 
   const readiness = evaluateCatalogModernReadiness(clean as unknown as StoreProjectV2);
-  expect(readiness.requirements.length).toBe(17);
-  expect(readiness.ready).toBe(4);
+  expect(readiness.requirements.length).toBe(18);
+  expect(readiness.ready).toBe(5);
   expect(readiness.pending).toBe(13);
-  expect(readiness.percent).toBe(24);
+  expect(readiness.percent).toBe(28);
 
   // Divergencia documentada modelo/UI (R7-F2): el modelo deriva "missing"
   // para el sentinel; la UI lo muestra "placeholder".
@@ -487,9 +490,9 @@ test("limpia: cada requisito refleja su dato real (missing/placeholder/ready) y 
 
   // Progreso honesto sobre 17 requisitos activos (4 listos de 17, 24%).
   await expect(page.locator(".guided-progress__copy strong")).toHaveText(
-    "4 de 17 requisitos listos",
+    "5 de 18 requisitos listos",
   );
-  await expect(page.getByTestId("ui-guided-progress")).toHaveAttribute("aria-valuenow", "24");
+  await expect(page.getByTestId("ui-guided-progress")).toHaveAttribute("aria-valuenow", "28");
 });
 
 test("mutación: vaciar descripción y precio 0 → los requisitos pasan a missing (el estado sigue al dato real)", async ({
@@ -507,8 +510,8 @@ test("mutación: vaciar descripción y precio 0 → los requisitos pasan a missi
   const readiness = evaluateCatalogModernReadiness(project as unknown as StoreProjectV2);
   expect(project.products[0]?.description).toBe("");
   expect(project.products[1]?.variants[0]?.price).toBe(0);
-  expect(readiness.requirements.length).toBe(297);
-  expect(readiness.ready).toBe(295);
+  expect(readiness.requirements.length).toBe(284);
+  expect(readiness.ready).toBe(282);
   expect(readiness.pending).toBe(2);
   expect(readiness.percent).toBe(99);
 
@@ -533,7 +536,7 @@ test("mutación: vaciar descripción y precio 0 → los requisitos pasan a missi
     ),
   ).toContainText("Precio: Remera gráfica Horizonte");
   await expect(page.locator(".guided-progress__copy strong")).toHaveText(
-    "295 de 297 requisitos listos",
+    "282 de 284 requisitos listos",
   );
   await expect(page.getByTestId("ui-guided-progress")).toHaveAttribute("aria-valuenow", "99");
   await expect(page.getByTestId("ui-guided-next")).toHaveText(
