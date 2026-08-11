@@ -141,8 +141,7 @@ function metricsOf(record: StoredProjectRecord): {
   assets: number;
 } {
   return {
-    activeProducts: record.project.products.filter((product) => product.status === "active")
-      .length,
+    activeProducts: record.project.products.filter((product) => product.status === "active").length,
     categories: record.project.categories.length,
     collections: record.project.collections.length,
     assets: record.project.assets.length,
@@ -213,15 +212,18 @@ test("el click en la card selecciona, abre el detalle con datos reales y da feed
   const facts = panel.locator(".dashboard-store-detail__facts dd");
   await expect(facts).toHaveCount(6);
   await expect(facts.nth(0)).toHaveText(DEMO_STORE_ID);
-  await expect(facts.nth(1)).toHaveAttribute("title", /^\d{1,2} [a-z]{3} \d{4}, \d{1,2}:\d{2} a\.\s*m\.$/i);
+  await expect(facts.nth(1)).toHaveAttribute(
+    "title",
+    /^\d{1,2} [a-z]{3} \d{4}, \d{1,2}:\d{2} a\.\s*m\.$/i,
+  );
   await expect(facts.nth(1)).toHaveText(/^\d{1,2} [a-z]{3} \d{4}$/);
   await expect(facts.nth(2)).toHaveText(String(metrics.activeProducts));
   await expect(facts.nth(3)).toHaveText(String(metrics.categories));
   await expect(facts.nth(4)).toHaveText(String(metrics.collections));
   await expect(facts.nth(5)).toHaveText(String(metrics.assets));
-  await expect(
-    await page.evaluate(() => localStorage.getItem("solara-dashboard-selected")),
-  ).toBe(DEMO_STORE_ID);
+  await expect(await page.evaluate(() => localStorage.getItem("solara-dashboard-selected"))).toBe(
+    DEMO_STORE_ID,
+  );
 });
 
 test("Escape cierra el detalle, restaura el foco a la card y limpia la selección persistida", async ({
@@ -238,7 +240,9 @@ test("Escape cierra el detalle, restaura el foco a la card y limpia la selecció
   await expect(detailPanel(page)).toContainText("Seleccioná una tienda");
   await expect(cardBtn).toBeFocused();
   await expect(cardBtn).toHaveAttribute("aria-pressed", "false");
-  await expect(await page.evaluate(() => localStorage.getItem("solara-dashboard-selected"))).toBeNull();
+  await expect(
+    await page.evaluate(() => localStorage.getItem("solara-dashboard-selected")),
+  ).toBeNull();
 });
 
 test("el botón Abrir tienda del panel abre el editor con el proyecto", async ({ page }) => {
@@ -281,9 +285,9 @@ test("el pin marca la card, agrupa Fijadas y persiste tras recargar", async ({ p
 
   await card(page, DEMO_STORE_NAME).getByTestId("ui-card-pin").click();
   await expect(page.getByRole("heading", { name: "Fijadas" })).toHaveCount(0);
-  await expect(
-    await page.evaluate(() => localStorage.getItem("solara-dashboard-pinned")),
-  ).toBe("[]");
+  await expect(await page.evaluate(() => localStorage.getItem("solara-dashboard-pinned"))).toBe(
+    "[]",
+  );
 });
 
 test("el checkbox de comparar marca la selección y habilita Comparar con dos tiendas", async ({

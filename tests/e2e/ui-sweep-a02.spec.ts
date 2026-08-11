@@ -207,23 +207,20 @@ test.describe("A2 — Catálogo: acciones masivas", () => {
     await expect(priceInput(page, 1)).toHaveValue("3070000");
   });
 
-  test(
-    "A1: el error de validación obsoleto se limpia tras un ajuste exitoso",
-    async ({ page }) => {
-      await openCatalog(page);
-      await rowCheckbox(page, 0).check();
+  test("A1: el error de validación obsoleto se limpia tras un ajuste exitoso", async ({ page }) => {
+    await openCatalog(page);
+    await rowCheckbox(page, 0).check();
 
-      await priceKindSelect(page).selectOption("percentage");
-      await priceValueInput(page).fill("-150");
-      await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
-      await expect(page.getByTestId("ui-inline-error")).toContainText("mínimo -100%");
+    await priceKindSelect(page).selectOption("percentage");
+    await priceValueInput(page).fill("-150");
+    await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
+    await expect(page.getByTestId("ui-inline-error")).toContainText("mínimo -100%");
 
-      await priceValueInput(page).fill("5");
-      await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
-      await expect(priceInput(page, 0)).toHaveValue("3029250");
-      await expect(page.getByTestId("ui-inline-error")).toBeHidden();
-    },
-  );
+    await priceValueInput(page).fill("5");
+    await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
+    await expect(priceInput(page, 0)).toHaveValue("3029250");
+    await expect(page.getByTestId("ui-inline-error")).toBeHidden();
+  });
 });
 
 test.describe("A2 — Catálogo: columnas y vista", () => {

@@ -69,9 +69,9 @@ test("la búsqueda filtra tarjetas, actualiza el contador y limpiar devuelve el 
 
   await search.fill("Predeterminado");
   await expect(storeCount(page)).toHaveText("1 visibles");
-  await expect(page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" })).toHaveCount(
-    1,
-  );
+  await expect(
+    page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }),
+  ).toHaveCount(1);
   await expect(clear).toBeVisible();
 });
 
@@ -107,9 +107,9 @@ test("el filtro de estado aplica a archivadas, activas y todas con feedback en e
 
   await status.selectOption("active");
   await expect(storeCount(page)).toHaveText("1 visibles");
-  await expect(page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" })).toHaveCount(
-    1,
-  );
+  await expect(
+    page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }),
+  ).toHaveCount(1);
 
   await status.selectOption("all");
   await expect(storeCount(page)).toHaveText("2 visibles");
@@ -131,9 +131,9 @@ test("el orden cambia el primer proyecto y persiste en localStorage tras recarga
 
   await sort.selectOption("products");
   await expect(firstCardName(page)).toHaveText("Predeterminado");
-  await expect(
-    await page.evaluate(() => localStorage.getItem("solara-dashboard-sort")),
-  ).toBe("products");
+  await expect(await page.evaluate(() => localStorage.getItem("solara-dashboard-sort"))).toBe(
+    "products",
+  );
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
@@ -157,9 +157,9 @@ test("la vista alterna grilla/lista con estado presionado y persiste tras recarg
   await expect(listButton).toHaveAttribute("aria-pressed", "true");
   await expect(gridButton).toHaveAttribute("aria-pressed", "false");
   await expect(results).toHaveClass(/dashboard-cosmic-results--list/);
-  await expect(
-    await page.evaluate(() => localStorage.getItem("solara-dashboard-view")),
-  ).toBe("list");
+  await expect(await page.evaluate(() => localStorage.getItem("solara-dashboard-view"))).toBe(
+    "list",
+  );
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
@@ -273,7 +273,10 @@ test("el nombre vacío usa el sugerido y el campo limita a 60 caracteres", async
     .getByRole("button", { name: "Duplicar", exact: true })
     .click();
   await expect(page.getByTestId("ui-duplicate-name")).toHaveValue("Predeterminado (copia) (copia)");
-  await page.getByRole("dialog", { name: "Duplicar tienda" }).getByRole("button", { name: "Cancelar", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Duplicar tienda" })
+    .getByRole("button", { name: "Cancelar", exact: true })
+    .click();
 });
 
 async function duplicateAs(page: Page, name: string) {

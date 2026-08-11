@@ -71,11 +71,11 @@ export function CategoryTree({
     const depths = new Map<string, number>();
     const visit = (category: Category, depth: number) => {
       depths.set(category.id, depth);
-      (categoryChildren.get(category.id) ?? []).forEach((child) => visit(child, depth + 1));
+      for (const child of categoryChildren.get(category.id) ?? []) visit(child, depth + 1);
     };
-    project.categories
-      .filter((category) => category.parentId === undefined)
-      .forEach((category) => visit(category, 0));
+    for (const category of project.categories) {
+      if (category.parentId === undefined) visit(category, 0);
+    }
     return depths;
   }, [categoryChildren, project.categories]);
   const visibleCategories = useMemo(

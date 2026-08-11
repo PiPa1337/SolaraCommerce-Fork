@@ -327,11 +327,7 @@ export async function buildCatalogPackagePlan(
   const imported = await importCsvInWorker(contents.csv, {
     categories: categoryPlan.categories,
     collections: collectionPlan.collections,
-    assets: [
-      ...project.assets,
-      ...newAssets,
-      ...unmatchedImages.map((path) => ({ id: path })),
-    ],
+    assets: [...project.assets, ...newAssets, ...unmatchedImages.map((path) => ({ id: path }))],
     assetPathToId: assetPlan.pathToId,
     categoryPathToId: categoryPlan.pathToId,
     collectionNameToId: collectionPlan.nameToId,

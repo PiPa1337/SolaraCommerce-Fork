@@ -19,10 +19,11 @@
  * editor), chips de salud (seleccionan y persisten) y acciones de la
  * biblioteca (Comparar tiendas, Respaldar todo en modo navegador).
  */
-import type { Server } from "node:http";
+
 import { type ChildProcess, spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
+import type { Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
@@ -554,9 +555,9 @@ test("A12: restaurar muestra toast de confirmación y devuelve el foco a la card
   await expect(page.getByTestId("ui-dashboard-toast")).not.toContainText("Deshacer");
   await expect(restoredCard).toHaveAttribute("aria-pressed", "true");
   await expect(restoredCard).toBeFocused();
-  await expect(
-    card(page, "Predeterminado").locator(".dashboard-store-card__status"),
-  ).toHaveText("Activa");
+  await expect(card(page, "Predeterminado").locator(".dashboard-store-card__status")).toHaveText(
+    "Activa",
+  );
   await expect(detailPanel(page, "Predeterminado")).toBeVisible();
   await expect(
     detailPanel(page, "Predeterminado").getByRole("button", { name: "Archivar", exact: true }),

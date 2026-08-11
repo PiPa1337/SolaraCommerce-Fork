@@ -810,40 +810,38 @@ export function Studio({
                 />
               </Suspense>
             ) : (
-              <>
-                <div className="save-status">
-                  <output
-                    className={`save-indicator save-indicator--${saveState}`}
-                    aria-live="polite"
+              <div className="save-status">
+                <output
+                  className={`save-indicator save-indicator--${saveState}`}
+                  aria-live="polite"
+                >
+                  {saveState === "saving" ? (
+                    <span className="save-spinner" aria-hidden />
+                  ) : saveState === "saved" ? (
+                    <CheckCircle className="save-check" aria-hidden size={16} />
+                  ) : (
+                    <FloppyDisk aria-hidden size={16} />
+                  )}
+                  {saveState === "saved"
+                    ? lastSavedAt
+                      ? `Guardado ${formatSaveTime(lastSavedAt)}`
+                      : "Guardado"
+                    : saveState === "pending"
+                      ? "Cambios pendientes"
+                      : saveState === "saving"
+                        ? "Guardando…"
+                        : "Error al guardar"}
+                </output>
+                {saveState === "error" ? (
+                  <button
+                    type="button"
+                    className="save-retry"
+                    onClick={() => void autosave.flush().catch(() => undefined)}
                   >
-                    {saveState === "saving" ? (
-                      <span className="save-spinner" aria-hidden />
-                    ) : saveState === "saved" ? (
-                      <CheckCircle className="save-check" aria-hidden size={16} />
-                    ) : (
-                      <FloppyDisk aria-hidden size={16} />
-                    )}
-                    {saveState === "saved"
-                      ? lastSavedAt
-                        ? `Guardado ${formatSaveTime(lastSavedAt)}`
-                        : "Guardado"
-                      : saveState === "pending"
-                        ? "Cambios pendientes"
-                        : saveState === "saving"
-                          ? "Guardando…"
-                          : "Error al guardar"}
-                  </output>
-                  {saveState === "error" ? (
-                    <button
-                      type="button"
-                      className="save-retry"
-                      onClick={() => void autosave.flush().catch(() => undefined)}
-                    >
-                      Reintentar
-                    </button>
-                  ) : null}
-                </div>
-              </>
+                    Reintentar
+                  </button>
+                ) : null}
+              </div>
             )}
             <Tooltip
               tip={focusMode ? "Salir del modo foco" : "Modo foco de la vista previa"}

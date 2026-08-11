@@ -44,8 +44,8 @@ async function openCatalog(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
-    await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
   await expect(rows(page)).toHaveCount(50);
 }
 

@@ -101,10 +101,6 @@ async function selectHero(page: Page): Promise<void> {
   await rowByName(page, "Hero de catálogo").first().locator(".section-select").click();
 }
 
-async function selectRow(page: Page, index: number): Promise<void> {
-  await row(page, index).locator(".section-select").click();
-}
-
 test("duplicar crea una copia con id nuevo, contenido independiente y feedback de selección", async ({
   page,
 }) => {
@@ -131,13 +127,14 @@ test("duplicar crea una copia con id nuevo, contenido independiente y feedback d
   });
 
   // Identidad propia: editar la copia no toca el original (id distinto).
-  await row(page, heroIndex + 1).locator(".section-select").click();
+  await row(page, heroIndex + 1)
+    .locator(".section-select")
+    .click();
   const title = page.getByRole("textbox", { name: "Título", exact: true });
   await title.fill("Hero duplicado del barrido");
-  await expect(previewFrame(page).locator('[data-solara-module="catalog-hero"] h1').first()).toHaveText(
-    "Vestite con lo que te representa.",
-    { timeout: 15_000 },
-  );
+  await expect(
+    previewFrame(page).locator('[data-solara-module="catalog-hero"] h1').first(),
+  ).toHaveText("Vestite con lo que te representa.", { timeout: 15_000 });
   await expect(
     previewFrame(page).locator('[data-solara-module="catalog-hero"] h1').last(),
   ).toHaveText("Hero duplicado del barrido", { timeout: 15_000 });
@@ -180,10 +177,9 @@ test("reemplazar módulo cambia el módulo y conserva sólo los settings compati
   await expect(rowName(page, 3)).resolves.toBe("Testimonios");
   await expect(page.locator(".inspector header h3")).toHaveText("Testimonios");
   await expect(moduleSelect).toHaveValue("catalog-testimonials");
-  await expect(previewFrame(page).locator('[data-solara-module="catalog-testimonials"]')).toHaveCount(
-    2,
-    { timeout: 15_000 },
-  );
+  await expect(
+    previewFrame(page).locator('[data-solara-module="catalog-testimonials"]'),
+  ).toHaveCount(2, { timeout: 15_000 });
 
   // Contrato: "title" se conserva; "limit" (incompatible) se descarta y el
   // campo Cantidad desaparece del inspector; "items" vuelve a defaults.
@@ -222,7 +218,9 @@ test("mover abajo con botón reordena lista y preview y deshabilita en los lími
   await expect(
     row(page, initialCount - 1).getByRole("button", { name: "Mover abajo" }),
   ).toBeDisabled();
-  await expect(row(page, initialCount - 1).getByRole("button", { name: "Mover arriba" })).toBeEnabled();
+  await expect(
+    row(page, initialCount - 1).getByRole("button", { name: "Mover arriba" }),
+  ).toBeEnabled();
 
   const firstBefore = await rowName(page, 0);
   const secondBefore = await rowName(page, 1);
@@ -308,12 +306,16 @@ test("eliminar quita la sección del proyecto y del preview, salta la selección
   await selectHero(page);
   const title = page.getByRole("textbox", { name: "Título", exact: true });
   await title.fill("Hero que voy a borrar");
-  await expect(
-    previewFrame(page).locator('[data-solara-module="catalog-hero"] h1'),
-  ).toHaveText("Hero que voy a borrar", { timeout: 15_000 });
+  await expect(previewFrame(page).locator('[data-solara-module="catalog-hero"] h1')).toHaveText(
+    "Hero que voy a borrar",
+    { timeout: 15_000 },
+  );
 
   // Eliminar la sección seleccionada.
-  await rowByName(page, "Hero de catálogo").first().getByRole("button", { name: "Eliminar sección" }).click();
+  await rowByName(page, "Hero de catálogo")
+    .first()
+    .getByRole("button", { name: "Eliminar sección" })
+    .click();
 
   // Efecto real: fuera de la lista y del preview.
   await expect(sections.getByRole("listitem")).toHaveCount(initialCount - 1);
@@ -331,9 +333,10 @@ test("eliminar quita la sección del proyecto y del preview, salta la selección
   await expect(sections.getByRole("listitem")).toHaveCount(initialCount);
   await selectHero(page);
   await expect(title).toHaveValue("Hero que voy a borrar");
-  await expect(
-    previewFrame(page).locator('[data-solara-module="catalog-hero"] h1'),
-  ).toHaveText("Hero que voy a borrar", { timeout: 15_000 });
+  await expect(previewFrame(page).locator('[data-solara-module="catalog-hero"] h1')).toHaveText(
+    "Hero que voy a borrar",
+    { timeout: 15_000 },
+  );
 
   // Redo: se elimina de nuevo.
   await redoButton(page).click();
@@ -373,9 +376,10 @@ test("guardar un valor válido del inspector aplica al preview y persiste tras r
   const title = page.getByRole("textbox", { name: "Título", exact: true });
   await title.fill("Título persistente del barrido A11");
   await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
-  await expect(
-    previewFrame(page).locator('[data-solara-module="catalog-hero"] h1'),
-  ).toHaveText("Título persistente del barrido A11", { timeout: 15_000 });
+  await expect(previewFrame(page).locator('[data-solara-module="catalog-hero"] h1')).toHaveText(
+    "Título persistente del barrido A11",
+    { timeout: 15_000 },
+  );
 
   // El historial registra la edición (payload validado → snapshot).
   await expect(undoButton(page)).toBeEnabled();
@@ -404,9 +408,11 @@ test("un valor inválido del inspector NO entra al historial ni al preview", asy
   await expect(page.getByTestId("ui-schema-errors")).toContainText("intervalMs");
 
   // Efecto real: el preview sigue con el valor confirmado (6000).
-  await expect(
-    previewFrame(page).locator(".catalog-hero-inner"),
-  ).toHaveAttribute("data-interval", "6000", { timeout: 15_000 });
+  await expect(previewFrame(page).locator(".catalog-hero-inner")).toHaveAttribute(
+    "data-interval",
+    "6000",
+    { timeout: 15_000 },
+  );
 
   // Contrato de datos: sin commit, no hay autosave ni entrada en el historial.
   await expect(page.getByText("Cambios pendientes", { exact: true })).toHaveCount(0);

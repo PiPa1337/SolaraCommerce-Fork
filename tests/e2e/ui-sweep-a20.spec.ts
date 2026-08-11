@@ -500,17 +500,16 @@ test("A20: comparación — quitar de comparar actualiza el conteo y deshabilita
 
 // ------------------------------------------------------- defectos ajenos (A14)
 
-test(
-  "A14: una ruta válida fuera de la muestra (p. ej. /envios/) se descarta en silencio",
-  async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await openDemoStore(page);
-    await expectPreviewTitle(page, HOME_TITLE);
+test("A14: una ruta válida fuera de la muestra (p. ej. /envios/) se descarta en silencio", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openDemoStore(page);
+  await expectPreviewTitle(page, HOME_TITLE);
 
-    // /envios/ es una página real del sitio (buildPages la genera), pero no
-    // está en la muestra de getPreviewRoutes: Studio.tsx la descarta y el
-    // preview vuelve al inicio sin aviso.
-    await commitRoute(page, "/envios/");
-    await expectPreviewTitle(page, "Envíos | Modo Sur");
-  },
-);
+  // /envios/ es una página real del sitio (buildPages la genera), pero no
+  // está en la muestra de getPreviewRoutes: Studio.tsx la descarta y el
+  // preview vuelve al inicio sin aviso.
+  await commitRoute(page, "/envios/");
+  await expectPreviewTitle(page, "Envíos | Modo Sur");
+});

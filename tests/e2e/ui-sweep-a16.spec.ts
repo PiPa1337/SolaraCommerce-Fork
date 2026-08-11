@@ -167,9 +167,7 @@ test("input de color: hex válido commitea en preview y picker nativo", async ({
   await expect(page.getByTestId("ui-contrast-ok")).toHaveCount(3);
 });
 
-test("input de color: hex inválido se rechaza con error inline y sin commit", async ({
-  page,
-}) => {
+test("input de color: hex inválido se rechaza con error inline y sin commit", async ({ page }) => {
   await setupCleanStore(page, "A16 hex inválido");
   await openThemeTab(page);
 
@@ -318,9 +316,9 @@ test("contenedor: se puede teclear por tecla sin que el campo rebote (A16-B1)", 
   // Restaurar geometría vuelve al ancho de apertura.
   await page.getByTestId("ui-reset-geometry").click();
   await expect(container).toHaveValue(original);
-  await expect.poll(previewVar(page, "--solara-container"), { timeout: 15_000 }).toBe(
-    `${original}px`,
-  );
+  await expect
+    .poll(previewVar(page, "--solara-container"), { timeout: 15_000 })
+    .toBe(`${original}px`);
 });
 
 test("reset con borrador inválido: restaura el valor y limpia el error (A16-B2)", async ({
@@ -397,8 +395,7 @@ test("resets por grupo: cada uno restaura sólo su grupo de valores de apertura"
   // Restaurar colores: paleta de apertura y su preset marcado de nuevo.
   await page.getByTestId("ui-reset-colors").click();
   await expect(backgroundText).toHaveValue(opening.background);
-  await expect(page.getByTestId("ui-theme-preset").filter({ hasText: "Editorial cálido" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await expect(
+    page.getByTestId("ui-theme-preset").filter({ hasText: "Editorial cálido" }),
+  ).toHaveAttribute("aria-pressed", "true");
 });

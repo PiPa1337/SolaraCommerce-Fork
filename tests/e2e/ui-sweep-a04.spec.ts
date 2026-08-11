@@ -433,9 +433,7 @@ test("guardar con error en otro paso acerca la razón al primer error (regresió
   // Al intentar guardar, la razón debe hacerse visible (scroll al primer error).
   await dialog.getByRole("button", { name: "Crear producto" }).click();
   await expect(dialog).toBeVisible();
-  await expect
-    .poll(() => dialog.evaluate((element) => element.scrollTop))
-    .toBeGreaterThan(0);
+  await expect.poll(() => dialog.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
   await expect(priceError).toBeInViewport();
 });
 

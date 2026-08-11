@@ -138,7 +138,9 @@ test("los campos guiados commitean, dan feedback de guardado y persisten (capa 1
   await expectSaved(page);
 
   // Descripción, email, WhatsApp y catálogo → rutas del schema.
-  await page.getByLabel("Descripción", { exact: true }).fill("Indumentaria pensada para la ciudad.");
+  await page
+    .getByLabel("Descripción", { exact: true })
+    .fill("Indumentaria pensada para la ciudad.");
   await page.getByLabel("Email", { exact: true }).fill("hola@aurora.example");
   await page.getByLabel("Número internacional", { exact: true }).fill("5491123456789");
   await page.getByLabel("Nombre del catálogo", { exact: true }).fill("La Colección");
@@ -212,9 +214,7 @@ test("los vacíos de campos obligatorios dan error inline sin rechazo global (re
   await labelInput.fill("Mi enlace");
   await expect(labelInput).toHaveValue("Mi enlace");
   await labelInput.fill("");
-  await expect(item.getByTestId("ui-field-error")).toContainText(
-    "Completá el nombre del enlace.",
-  );
+  await expect(item.getByTestId("ui-field-error")).toContainText("Completá el nombre del enlace.");
   await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
   await expect
     .poll(
@@ -234,10 +234,9 @@ test("los vacíos de campos obligatorios dan error inline sin rechazo global (re
   ).toContainText("Completá la URL pública.");
   await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
   await expect
-    .poll(
-      async () => (await readStoredProject(page, "Tienda vacíos B1"))?.project.baseUrl,
-      { timeout: 15_000 },
-    )
+    .poll(async () => (await readStoredProject(page, "Tienda vacíos B1"))?.project.baseUrl, {
+      timeout: 15_000,
+    })
     .toBe(initialUrl);
 
   // Título SEO: el vacío no commitea y conserva el valor previo en el proyecto.
@@ -245,9 +244,7 @@ test("los vacíos de campos obligatorios dan error inline sin rechazo global (re
   const seoInput = homeEditor.getByLabel("Título SEO", { exact: true });
   const seoInitial = await seoInput.inputValue();
   await seoInput.fill("");
-  await expect(homeEditor.getByTestId("ui-field-error")).toContainText(
-    "Completá el título SEO.",
-  );
+  await expect(homeEditor.getByTestId("ui-field-error")).toContainText("Completá el título SEO.");
   await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
   await expect
     .poll(
@@ -294,9 +291,10 @@ test("el progreso guiado anuncia por aria-live, sube al completar y marca el pas
 
   // El checklist lo marca listo y el progreso sube.
   await openStudioTab(page, "Preparar");
-  await expect(
-    page.locator('[data-requirement-id="identity.whatsapp"]'),
-  ).toHaveAttribute("data-requirement-status", "ready");
+  await expect(page.locator('[data-requirement-id="identity.whatsapp"]')).toHaveAttribute(
+    "data-requirement-status",
+    "ready",
+  );
   await expect(page.getByText(/\d+ de \d+ requisitos listos/)).toBeVisible();
   await expect.poll(async () => progressValue(page)).toBeGreaterThan(initialProgress);
 });
@@ -385,12 +383,15 @@ test("el editor de navegación valida destinos, reordena y borra con confirmaci�
   );
   await openStudioTab(page, "Preparar");
   await openStudioTab(page, "Resumen");
-  await expect(page.locator(".navigation-editor-item").nth(1).getByLabel("Destino", { exact: true }))
-    .toHaveValue("https://ejemplo.com/tienda");
+  await expect(
+    page.locator(".navigation-editor-item").nth(1).getByLabel("Destino", { exact: true }),
+  ).toHaveValue("https://ejemplo.com/tienda");
 
   // Borrar un ítem sin subenlaces es directo (sin diálogo).
   const itemWithoutChildren = page.locator(".navigation-editor-item").nth(0);
-  await itemWithoutChildren.getByRole("button", { name: "Eliminar enlace Nueva categoría" }).click();
+  await itemWithoutChildren
+    .getByRole("button", { name: "Eliminar enlace Nueva categoría" })
+    .click();
   await expect(page.getByTestId("ui-confirm-dialog")).toHaveCount(0);
   await expect(page.locator(".navigation-editor-item")).toHaveCount(1);
 
@@ -398,15 +399,11 @@ test("el editor de navegación valida destinos, reordena y borra con confirmaci�
   const remainingItem = page.locator(".navigation-editor-item").nth(0);
   await remainingItem.getByRole("button", { name: "Añadir subenlace" }).click();
   await expect(remainingItem.getByLabel("Subenlace 1", { exact: true })).toBeVisible();
-  await remainingItem
-    .getByRole("button", { name: "Eliminar enlace Colección Nueva" })
-    .click();
+  await remainingItem.getByRole("button", { name: "Eliminar enlace Colección Nueva" }).click();
   await expect(page.getByTestId("ui-confirm-dialog")).toBeVisible();
   await page.getByRole("button", { name: "Cancelar", exact: true }).click();
   await expect(page.locator(".navigation-editor-item")).toHaveCount(1);
-  await remainingItem
-    .getByRole("button", { name: "Eliminar enlace Colección Nueva" })
-    .click();
+  await remainingItem.getByRole("button", { name: "Eliminar enlace Colección Nueva" }).click();
   await page.getByTestId("ui-confirm-accept").click();
   await expect(page.locator(".navigation-editor-item")).toHaveCount(0);
 });

@@ -217,7 +217,7 @@ export function ThemeEditor({
   useEffect(() => {
     setContainerDraft(null);
     setContainerError(false);
-  }, [project.theme.container]);
+  }, []);
 
   const updateTheme = (theme: Theme) =>
     onChange({ ...project, theme, updatedAt: new Date().toISOString() });

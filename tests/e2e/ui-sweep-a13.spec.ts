@@ -1,15 +1,10 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import {
-  startStudioServer,
-  stopStudioServer,
-  type RunningStudioServer,
-} from "./studio-server";
+import { type RunningStudioServer, startStudioServer, stopStudioServer } from "./studio-server";
 
 /**
  * Barrido A13 — Diálogos y acciones del dashboard (slice de auditoría;
@@ -176,21 +171,18 @@ test("A13: duplicar — id nuevo, nombre elegido, cancelar y toast", async ({ pa
   expect((await copyDetail.locator("dd").first().textContent()) ?? "").not.toBe(originalId);
 });
 
-test(
-  "A12: duplicar con éxito devuelve el foco a la card de origen",
-  async ({ page }) => {
-    await openDashboard(page);
-    const detail = await selectStore(page, "Predeterminado");
-    await detail.getByRole("button", { name: "Duplicar" }).click();
-    const duplicateDialog = page.getByTestId("ui-duplicate-dialog");
-    await expect(duplicateDialog).toBeVisible();
-    await duplicateDialog.getByRole("button", { name: "Duplicar", exact: true }).click();
-    await expect(duplicateDialog).toBeHidden();
-    // El camino de cancelar restaura el foco al disparador del diálogo; el de
-    // éxito ahora también devuelve el foco a la card de origen (fix A12).
-    await expect(page.locator('[data-store-card-id="store-modo-sur-demo"]')).toBeFocused();
-  },
-);
+test("A12: duplicar con éxito devuelve el foco a la card de origen", async ({ page }) => {
+  await openDashboard(page);
+  const detail = await selectStore(page, "Predeterminado");
+  await detail.getByRole("button", { name: "Duplicar" }).click();
+  const duplicateDialog = page.getByTestId("ui-duplicate-dialog");
+  await expect(duplicateDialog).toBeVisible();
+  await duplicateDialog.getByRole("button", { name: "Duplicar", exact: true }).click();
+  await expect(duplicateDialog).toBeHidden();
+  // El camino de cancelar restaura el foco al disparador del diálogo; el de
+  // éxito ahora también devuelve el foco a la card de origen (fix A12).
+  await expect(page.locator('[data-store-card-id="store-modo-sur-demo"]')).toBeFocused();
+});
 
 test("A13: archivar — confirmación, cancelar y deshacer", async ({ page }) => {
   await openDashboard(page);
@@ -220,9 +212,9 @@ test("A13: archivar — confirmación, cancelar y deshacer", async ({ page }) =>
   await expect(toast).toContainText("archivada");
   await toast.getByRole("button", { name: "Deshacer" }).click();
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
-  await expect(cardByName(page, "Predeterminado").locator(".dashboard-store-card__status")).toHaveText(
-    "Activa",
-  );
+  await expect(
+    cardByName(page, "Predeterminado").locator(".dashboard-store-card__status"),
+  ).toHaveText("Activa");
 });
 
 test("A13: archivar — restaurar desde el filtro de archivadas", async ({ page }) => {
@@ -234,9 +226,9 @@ test("A13: archivar — restaurar desde el filtro de archivadas", async ({ page 
 
   // La card vive en Archivadas con su estado reflejado.
   await page.getByLabel("Estado").selectOption("archived");
-  await expect(cardByName(page, "Predeterminado").locator(".dashboard-store-card__status")).toHaveText(
-    "Archivada",
-  );
+  await expect(
+    cardByName(page, "Predeterminado").locator(".dashboard-store-card__status"),
+  ).toHaveText("Archivada");
 
   // Restaurar la vuelve a Activas: como el filtro sigue en «Archivadas», la
   // card sale de la lista visible y el detalle se cierra al quedar sin
@@ -249,9 +241,9 @@ test("A13: archivar — restaurar desde el filtro de archivadas", async ({ page 
   // En Activas la card reaparece con estado Activa y el detalle ofrece Archivar.
   await page.getByLabel("Estado").selectOption("active");
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
-  await expect(cardByName(page, "Predeterminado").locator(".dashboard-store-card__status")).toHaveText(
-    "Activa",
-  );
+  await expect(
+    cardByName(page, "Predeterminado").locator(".dashboard-store-card__status"),
+  ).toHaveText("Activa");
   const restoredDetail = await selectStore(page, "Predeterminado");
   await expect(restoredDetail.getByRole("button", { name: "Archivar", exact: true })).toBeVisible();
 });
@@ -287,9 +279,11 @@ test("A13: respaldo ahora — descarga real de un .solara.json con el proyecto",
   // nombre visible «Predeterminado»: contrato App.tsx -> downloadBlob.
   expect(download.suggestedFilename()).toBe("demo-catalogo-jerarquico-respaldo.solara.json");
 
-  const envelope = JSON.parse(
-    readFileSync((await download.path()) ?? "", "utf8"),
-  ) as { format: string; version: number; project: { schemaVersion: number; id: string } };
+  const envelope = JSON.parse(readFileSync((await download.path()) ?? "", "utf8")) as {
+    format: string;
+    version: number;
+    project: { schemaVersion: number; id: string };
+  };
   expect(envelope.format).toBe("solara-project");
   expect(envelope.version).toBe(2);
   expect(envelope.project.schemaVersion).toBe(2);
@@ -313,21 +307,6 @@ test("A13: abrir tienda — la card y el detalle navegan al editor", async ({ pa
 });
 
 // ---------------------------------------------------------------- modo gestionado
-
-async function findFreePort(): Promise<number> {
-  const probe = createServer();
-  await new Promise<void>((resolveListening, reject) => {
-    probe.once("error", reject);
-    probe.listen(0, "127.0.0.1", () => resolveListening());
-  });
-  const address = probe.address();
-  await new Promise<void>((resolveClosing, reject) => {
-    probe.close((error) => (error ? reject(error) : resolveClosing()));
-  });
-  if (!address || typeof address === "string") throw new Error("No se pudo reservar un puerto.");
-  return address.port;
-}
-
 async function waitForServer(url: string): Promise<void> {
   await expect
     .poll(
@@ -502,9 +481,7 @@ test("A13: cierre del servidor — cancelar, estado cerrando y terminal con bann
   }
 });
 
-test("A12: la «X» de creación se deshabilita mientras la tienda se crea", async ({
-  page,
-}) => {
+test("A12: la «X» de creación se deshabilita mientras la tienda se crea", async ({ page }) => {
   const managed = await startManagedServer();
   try {
     await page.goto(managed.url);

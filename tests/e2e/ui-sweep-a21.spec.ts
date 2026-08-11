@@ -584,24 +584,24 @@ test("A21.9 el conflicto abre el diálogo con trampa de foco y Conservar/Escape 
   }
 });
 
-test(
-  "A14: tras conservar el borrador con Escape el foco cae al body, no al botón Guardar",
-  async ({ context, page }) => {
-    test.setTimeout(360_000);
-    const managed = await startManagedServer(studioServer.root);
-    try {
-      const pageB = await context.newPage();
-      await triggerConflict(page, pageB, managed);
-      await pageB.keyboard.press("Escape");
-      // El botón Guardar queda deshabilitado durante el guardado: el navegador
-      // lo desenfoca antes de que Studio capture el opener del diálogo y el
-      // restauro al cerrar apunta a document.body.
-      await expect(pageB.locator("[data-studio-save]")).toBeFocused();
-    } finally {
-      await stopManagedServer(managed);
-    }
-  },
-);
+test("A14: tras conservar el borrador con Escape el foco cae al body, no al botón Guardar", async ({
+  context,
+  page,
+}) => {
+  test.setTimeout(360_000);
+  const managed = await startManagedServer(studioServer.root);
+  try {
+    const pageB = await context.newPage();
+    await triggerConflict(page, pageB, managed);
+    await pageB.keyboard.press("Escape");
+    // El botón Guardar queda deshabilitado durante el guardado: el navegador
+    // lo desenfoca antes de que Studio capture el opener del diálogo y el
+    // restauro al cerrar apunta a document.body.
+    await expect(pageB.locator("[data-studio-save]")).toBeFocused();
+  } finally {
+    await stopManagedServer(managed);
+  }
+});
 
 test("A21.10 «Recargar desde disco» restaura el proyecto del disco y alinea el indicador", async ({
   context,

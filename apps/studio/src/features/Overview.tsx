@@ -542,9 +542,7 @@ export function Overview({
                               (next) =>
                                 updateNavigation({
                                   items: project.navigation.items.map((current) =>
-                                    current.id === item.id
-                                      ? { ...current, label: next }
-                                      : current,
+                                    current.id === item.id ? { ...current, label: next } : current,
                                   ),
                                 }),
                             )
@@ -728,9 +726,7 @@ export function Overview({
               const seoDescriptionKey = `page-seo-desc-${page.id}`;
               const seoDescriptionDisplay = fieldValue(seoDescriptionKey, page.seoDescription);
               const seoDescriptionError =
-                seoDescriptionDisplay.trim() === ""
-                  ? "Completá la descripción SEO."
-                  : undefined;
+                seoDescriptionDisplay.trim() === "" ? "Completá la descripción SEO." : undefined;
               return (
                 <div className="page-editor" key={page.id}>
                   <strong>

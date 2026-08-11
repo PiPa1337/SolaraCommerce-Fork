@@ -292,8 +292,8 @@ describe("pausa y reanudación del runtime (contrato A3↔A4)", () => {
 describe("carrito y checkout del drawer (A29)", () => {
   it("refleja el conteo en el badge y en el aria-label del trigger", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("element.textContent = String(count)");
-    expect(STOREFRONT_RUNTIME_JS).toContain("`${label} vacío`");
-    expect(STOREFRONT_RUNTIME_JS).toContain("`${label}, ${count} productos`");
+    expect(STOREFRONT_RUNTIME_JS).toContain(`\`\${label} vacío\``);
+    expect(STOREFRONT_RUNTIME_JS).toContain(`\`\${label}, \${count} productos\``);
   });
 
   it("cierra el drawer con Escape y devuelve el foco al trigger", () => {
@@ -305,7 +305,7 @@ describe("carrito y checkout del drawer (A29)", () => {
 
   it("quita líneas por data-cart-remove y persiste el carrito", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain(
-      'data-cart-remove="${escapeAttribute(line.variantId)}"',
+      `data-cart-remove="\${escapeAttribute(line.variantId)}"`,
     );
     expect(STOREFRONT_RUNTIME_JS).toContain(
       "cart = cart.filter((line) => line.variantId !== variantId)",
@@ -324,9 +324,9 @@ describe("carrito y checkout del drawer (A29)", () => {
 
   it("construye la URL wa.me con teléfono normalizado y totales en centavos", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain(
-      '`https://wa.me/${phone.replace(/\\D/g, "")}?text=${encodeURIComponent(message)}`',
+      `\`https://wa.me/\${phone.replace(/\\D/g, "")}?text=\${encodeURIComponent(message)}\``,
     );
-    expect(STOREFRONT_RUNTIME_JS).toContain("Total estimado: ${money.format(total / 100)}");
+    expect(STOREFRONT_RUNTIME_JS).toContain(`Total estimado: \${money.format(total / 100)}`);
     expect(STOREFRONT_RUNTIME_JS).toContain(
       "Entiendo que precio, disponibilidad, envío y pago se confirman",
     );
@@ -352,15 +352,11 @@ describe("fixmes del barrido A29 (index.ts)", () => {
   });
 
   it("el conteo de categoría anuncia con aria-live al filtrar", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain(
-      'resultCount?.setAttribute("aria-live", "polite")',
-    );
+    expect(STOREFRONT_RUNTIME_JS).toContain('resultCount?.setAttribute("aria-live", "polite")');
   });
 
   it("en /buscar/ el binding usa el input visible de la página, no el del diálogo", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain('document.querySelector("#solara-search-input")');
-    expect(STOREFRONT_RUNTIME_JS).not.toContain(
-      '"#catalog-search-input, #solara-search-input"',
-    );
+    expect(STOREFRONT_RUNTIME_JS).not.toContain('"#catalog-search-input, #solara-search-input"');
   });
 });

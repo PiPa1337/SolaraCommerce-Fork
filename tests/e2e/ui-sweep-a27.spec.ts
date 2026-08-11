@@ -524,19 +524,16 @@ test("C10: el checkout del drawer moderno genera el enlace de WhatsApp con el pe
   await expect(drawer.locator("[data-order-preview]")).toContainText("11 5555 0142");
 });
 
-test(
-  "A29: el drawer de carrito abierto inertea a los hermanos de la página (como el menú móvil)",
-  async ({ page }) => {
-    test
-      .info()
-      .annotations.push({ type: "contrato", description: "A27 · fixme A29 · drawer inert" });
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto(storeUrl(basePort, "/"));
+test("A29: el drawer de carrito abierto inertea a los hermanos de la página (como el menú móvil)", async ({
+  page,
+}) => {
+  test.info().annotations.push({ type: "contrato", description: "A27 · fixme A29 · drawer inert" });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(storeUrl(basePort, "/"));
 
-    await page.locator("[data-solara-cart-open]").click();
-    await expect(page.locator('[data-solara-module="catalog-hero"]')).toHaveAttribute("inert", "");
-  },
-);
+  await page.locator("[data-solara-cart-open]").click();
+  await expect(page.locator('[data-solara-module="catalog-hero"]')).toHaveAttribute("inert", "");
+});
 
 test("C11: el contrato del detalle moderno declara los atributos que lee el runtime", async () => {
   test.info().annotations.push({ type: "contrato", description: "A27 · C11 · markup contract" });

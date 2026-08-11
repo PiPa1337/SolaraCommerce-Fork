@@ -390,50 +390,47 @@ test("SEO: contadores con maxLength y persistencia en páginas (capa 1+2+3)", as
   );
 });
 
-test(
-  "vacíos de campos obligatorios: error inline en español sin rechazo global (BUG B1 → A7)",
-  async ({ page }) => {
-    const store = { name: "Tienda B1 A08" };
-    await setupCleanStore(page, store.name);
-    await page.getByRole("button", { name: "Añadir enlace de catálogo", exact: true }).click();
-    const item = navItems(page).first();
+test("vacíos de campos obligatorios: error inline en español sin rechazo global (BUG B1 → A7)", async ({
+  page,
+}) => {
+  const store = { name: "Tienda B1 A08" };
+  await setupCleanStore(page, store.name);
+  await page.getByRole("button", { name: "Añadir enlace de catálogo", exact: true }).click();
+  const item = navItems(page).first();
 
-    await item.getByLabel("Enlace 1", { exact: true }).fill("Mi enlace");
-    await expect(fieldsetByLegend(item, "Enlace 1").getByTestId("ui-field-error")).toHaveCount(0);
+  await item.getByLabel("Enlace 1", { exact: true }).fill("Mi enlace");
+  await expect(fieldsetByLegend(item, "Enlace 1").getByTestId("ui-field-error")).toHaveCount(0);
 
-    await item.getByLabel("Enlace 1", { exact: true }).fill("");
-    await expect(fieldsetByLegend(item, "Enlace 1").getByTestId("ui-field-error")).toContainText(
-      "Completá",
-    );
-    await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
-    await expect
-      .poll(async () => (await storedProject(page, store))?.project.navigation.items[0]?.label)
-      .toBe("Mi enlace");
+  await item.getByLabel("Enlace 1", { exact: true }).fill("");
+  await expect(fieldsetByLegend(item, "Enlace 1").getByTestId("ui-field-error")).toContainText(
+    "Completá",
+  );
+  await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
+  await expect
+    .poll(async () => (await storedProject(page, store))?.project.navigation.items[0]?.label)
+    .toBe("Mi enlace");
 
-    const urlInput = domainSection(page).getByLabel("URL pública", { exact: true });
-    const initialUrl = await urlInput.inputValue();
-    await urlInput.fill("");
-    await expect(
-      fieldsetByLegend(domainSection(page), "URL pública").getByTestId("ui-field-error"),
-    ).toContainText("Completá");
-    await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
-    await expect
-      .poll(async () => (await storedProject(page, store))?.project.baseUrl)
-      .toBe(initialUrl);
+  const urlInput = domainSection(page).getByLabel("URL pública", { exact: true });
+  const initialUrl = await urlInput.inputValue();
+  await urlInput.fill("");
+  await expect(
+    fieldsetByLegend(domainSection(page), "URL pública").getByTestId("ui-field-error"),
+  ).toContainText("Completá");
+  await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
+  await expect
+    .poll(async () => (await storedProject(page, store))?.project.baseUrl)
+    .toBe(initialUrl);
 
-    const seoInput = homeEditor(page).getByLabel("Título SEO", { exact: true });
-    await seoInput.fill("");
-    await expect(
-      fieldsetByLegend(homeEditor(page), "Título SEO").getByTestId("ui-field-error"),
-    ).toContainText("Completá");
-    await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
-    await expect
-      .poll(async () => {
-        const home = (await storedProject(page, store))?.project.pages.find(
-          (p) => p.kind === "home",
-        );
-        return home?.seoTitle;
-      })
-      .toBe("Tienda B1 A08");
-  },
-);
+  const seoInput = homeEditor(page).getByLabel("Título SEO", { exact: true });
+  await seoInput.fill("");
+  await expect(
+    fieldsetByLegend(homeEditor(page), "Título SEO").getByTestId("ui-field-error"),
+  ).toContainText("Completá");
+  await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
+  await expect
+    .poll(async () => {
+      const home = (await storedProject(page, store))?.project.pages.find((p) => p.kind === "home");
+      return home?.seoTitle;
+    })
+    .toBe("Tienda B1 A08");
+});

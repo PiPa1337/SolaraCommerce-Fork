@@ -175,10 +175,7 @@ async function startManagedServer(portRange = 5700): Promise<{
   return { url, root: applicationRoot, process: serverProcess };
 }
 
-async function stopManagedServer(managed: {
-  root: string;
-  process: ChildProcess;
-}): Promise<void> {
+async function stopManagedServer(managed: { root: string; process: ChildProcess }): Promise<void> {
   if (managed.process.exitCode === null) managed.process.kill();
   rmSync(managed.root, { recursive: true, force: true });
 }
@@ -570,10 +567,7 @@ test("A14.11 error de guardado — el indicador anuncia el fallo y Reintentar es
   // del arranque: el autosave falla de forma real y el shell entra en error.
   await page.addInitScript(() => {
     const originalPut = IDBObjectStore.prototype.put;
-    IDBObjectStore.prototype.put = function (
-      this: IDBObjectStore,
-      ...args: [unknown, unknown?]
-    ) {
+    IDBObjectStore.prototype.put = function (this: IDBObjectStore, ...args: [unknown, unknown?]) {
       const win = window as Window & { __solaraA14BlockWrites?: boolean };
       if (win.__solaraA14BlockWrites && this.name === "projects") {
         throw new Error("Escritura bloqueada por el probe A14.");
@@ -727,19 +721,18 @@ test("A14.14 conflicto — Escape conserva el borrador y restaura el foco al bot
   }
 });
 
-test(
-  "A14: el punto sucio no se anuncia a lectores de pantalla (span aria-hidden con title)",
-  async ({ page }) => {
-    await page.clock.install({ time: FAKE_START });
-    await openDemoStore(page);
-    await openHeroInspector(page);
-    await page.clock.pauseAt(FAKE_PAUSE);
+test("A14: el punto sucio no se anuncia a lectores de pantalla (span aria-hidden con title)", async ({
+  page,
+}) => {
+  await page.clock.install({ time: FAKE_START });
+  await openDemoStore(page);
+  await openHeroInspector(page);
+  await page.clock.pauseAt(FAKE_PAUSE);
 
-    const title = page.getByRole("textbox", { name: "Título", exact: true });
-    await title.fill("Cambio único A14");
-    await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
-    // La pestaña con cambios debe exponer el estado pendiente en su nombre
-    // accesible; hoy el punto es aria-hidden y sólo lleva title.
-    await expect(tabByName(page, "Resumen")).toHaveAccessibleName(/cambios sin revisar/i);
-  },
-);
+  const title = page.getByRole("textbox", { name: "Título", exact: true });
+  await title.fill("Cambio único A14");
+  await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
+  // La pestaña con cambios debe exponer el estado pendiente en su nombre
+  // accesible; hoy el punto es aria-hidden y sólo lleva title.
+  await expect(tabByName(page, "Resumen")).toHaveAccessibleName(/cambios sin revisar/i);
+});

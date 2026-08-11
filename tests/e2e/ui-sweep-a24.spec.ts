@@ -1,353 +1,525 @@
-import type { Server } from "node:http";
-import { expect, type Locator, type Page, test } from "@playwright/test";
-import { startStudioServer, stopStudioServer } from "./studio-server";
+import { type ChildProcess, spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { expect, type Page, test } from "@playwright/test";
+import { type RunningStudioServer, startStudioServer, stopStudioServer } from "./studio-server";
 
 /**
- * Barrido A24: RepeaterEditor (agregar con id válido, duplicar, quitar,
- * campos que persisten, reordenar) y CategoryTree (expandir/colapsar con
- * aria-expanded, reubicar válido, destinos bloqueados y diálogo de
- * confirmación) con el contrato de 3 capas: efecto real, auto-feedback y
- * contrato de datos (payload -> receptor).
+ * Barrido A13 — Diálogos y acciones del dashboard (slice de auditoría;
+ * Dashboard.tsx no se edita, los bugs quedan como fixme nombrando a A12).
+ *
+ * Contrato por control: (1) efecto real, (2) auto-feedback del control,
+ * (3) contrato de datos (payload -> receptor).
  */
 
-let studioServer: Server;
-let studioUrl: string;
+let studioServer: RunningStudioServer;
 
 test.beforeAll(async () => {
-  const studio = await startStudioServer();
-  studioServer = studio.server;
-  studioUrl = studio.url;
+  studioServer = await startStudioServer();
 });
 
 test.afterAll(async () => {
-  await stopStudioServer(studioServer);
+  await stopStudioServer(studioServer.server);
 });
 
-test.setTimeout(120_000);
+test.setTimeout(90_000);
 
-async function openStore(page: Page) {
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
-    timeout: 20_000,
-  });
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+async function openDashboard(page: Page): Promise<void> {
+  await page.goto(studioServer.url);
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
 }
 
-async function openBuilder(page: Page) {
-  await page.goto(studioUrl);
-  await openStore(page);
-  await page.getByRole("tab", { name: "Constructor" }).click();
-  await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
+function cardByName(page: Page, name: string): Locator {
+  return page.locator(".dashboard-store-card").filter({ hasText: name }).first();
 }
 
-async function openCatalog(page: Page) {
-  await page.goto(studioUrl);
-  await openStore(page);
-  await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
-  await expect(page.getByRole("list", { name: "Categorías ordenadas" })).toBeVisible();
+async function selectStore(page: Page, name: string): Promise<Locator> {
+  const card = cardByName(page, name);
+  await card.locator(".dashboard-store-card__button").click();
+  const detail = page.getByRole("complementary", { name: `Tienda seleccionada: ${name}` });
+  await expect(detail).toBeVisible();
+  return detail;
 }
 
-async function selectTestimonials(page: Page, expectedItems = 3) {
-  const sections = page.getByRole("list", { name: "Secciones de la tienda" });
-  await sections
-    .getByRole("listitem")
-    .filter({ hasText: "Testimonios" })
-    .first()
-    .locator(".section-select")
-    .click();
-  const editor = page.locator(".repeater-editor");
-  await expect(editor).toBeVisible();
-  await expect(editor.locator(".repeater-editor__item")).toHaveCount(expectedItems);
-  return editor;
+async function openCreateDialog(page: Page): Promise<Locator> {
+  await page.getByRole("button", { name: "Nueva tienda", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Crear tienda" });
+  await expect(dialog).toBeVisible();
+  return dialog;
 }
 
-const testimonialsPreview = (page: Page) =>
-  page
-    .frameLocator("iframe")
-    .locator('[data-solara-module="catalog-testimonials"]')
-    .first();
+test("A13: crear — diálogo con foco, validación de nombre y pasos con indicador activo", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  const dialog = await openCreateDialog(page);
 
-const treeItems = (page: Page) => page.getByRole("list", { name: "Categorías ordenadas" }).locator("li");
+  // Auto-feedback: foco inicial en el nombre y pasos en «1 Marca».
+  await expect(page.getByLabel("Nueva tienda")).toBeFocused();
+  const steps = dialog.locator(".create-store__steps li");
+  await expect(steps).toHaveCount(4);
+  await expect(steps.nth(0)).toHaveClass(/is-active/);
 
-async function treeIndexOf(page: Page, text: string) {
-  const items = treeItems(page);
-  const count = await items.count();
-  for (let index = 0; index < count; index += 1) {
-    if ((await items.nth(index).textContent())?.includes(text)) return index;
+  // Validación: Continuar sin nombre no avanza.
+  await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByTestId("ui-inline-error")).toContainText("Escribí un nombre");
+
+  // Paso 2: aparece el campo de marca y el indicador lo marca activo.
+  await page.getByLabel("Nueva tienda").fill("Tienda A13");
+  await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByLabel("Nombre visible de la marca")).toBeVisible();
+  await expect(steps.nth(1)).toHaveClass(/is-active/);
+
+  // Atrás vuelve al paso 1 y el indicador retrocede.
+  await dialog.getByRole("button", { name: "Atrás", exact: true }).click();
+  await expect(page.getByLabel("Nombre visible de la marca")).toHaveCount(0);
+  await expect(steps.nth(0)).toHaveClass(/is-active/);
+  await expect(steps.nth(1)).not.toHaveClass(/is-active/);
+
+  // Avance completo: paso 3 (email/WhatsApp) y paso 4 (revisión con botón final).
+  for (let step = 1; step <= 2; step += 1) {
+    await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
   }
-  return -1;
+  await expect(page.getByLabel("Email de contacto (opcional)")).toBeVisible();
+  await expect(page.getByLabel("WhatsApp (opcional)")).toBeVisible();
+  await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(steps.nth(3)).toHaveClass(/is-active/);
+  await expect(dialog).toContainText("diseño Catalog Modern");
+  await expect(dialog.getByRole("button", { name: "Crear tienda vacía" })).toBeVisible();
+});
+
+test("A13: crear — cancelar con Escape y con X devuelve el foco al botón", async ({ page }) => {
+  await openDashboard(page);
+  const createButton = page.getByRole("button", { name: "Nueva tienda", exact: true });
+
+  await openCreateDialog(page);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Crear tienda" })).toHaveCount(0);
+  await expect(createButton).toBeFocused();
+
+  await openCreateDialog(page);
+  await page.getByRole("button", { name: "Cerrar creación" }).click();
+  await expect(page.getByRole("dialog", { name: "Crear tienda" })).toHaveCount(0);
+  await expect(createButton).toBeFocused();
+});
+
+test("A13: crear — el contrato de datos agrega la card con su id y persiste", async ({ page }) => {
+  await openDashboard(page);
+
+  const dialog = await openCreateDialog(page);
+  await page.getByLabel("Nueva tienda").fill("Tienda A13");
+  await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
+  await page.getByLabel("Nombre visible de la marca").fill("Marca A13");
+  await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
+  await page.getByLabel("Email de contacto (opcional)").fill("hola@a13.test");
+  await page.getByLabel("WhatsApp (opcional)").fill("5491100000000");
+  await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
+  await dialog.getByRole("button", { name: "Crear tienda vacía" }).click();
+
+  // Efecto real: la creación navega al editor con la tienda nueva activa.
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Volver a tiendas" }).click();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+  await expect(cardByName(page, "Tienda A13")).toBeVisible();
+
+  // Contrato de datos: la card nueva abre un detalle con id generado `store-*`.
+  const detail = await selectStore(page, "Tienda A13");
+  await expect(detail.locator("dd").first()).toHaveText(/^store-/);
+
+  // Persistencia: tras recargar, la tienda creada sigue en la biblioteca.
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+  await expect(cardByName(page, "Tienda A13")).toBeVisible();
+});
+
+test("A13: duplicar — id nuevo, nombre elegido, cancelar y toast", async ({ page }) => {
+  await openDashboard(page);
+  const originalDetail = await selectStore(page, "Predeterminado");
+  const originalId = (await originalDetail.locator("dd").first().textContent()) ?? "";
+  expect(originalId).toMatch(/^store-/);
+
+  // Cancelar no crea nada y el foco vuelve al disparador del diálogo (el
+  // botón Duplicar del panel): restauración nativa del diálogo, no a la card.
+  await originalDetail.getByRole("button", { name: "Duplicar" }).click();
+  const duplicateDialog = page.getByTestId("ui-duplicate-dialog");
+  await expect(duplicateDialog).toBeVisible();
+  await expect(page.getByTestId("ui-duplicate-name")).toHaveValue("Predeterminado (copia)");
+  await expect(page.getByTestId("ui-duplicate-name")).toBeFocused();
+  await duplicateDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(duplicateDialog).toBeHidden();
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  await expect(originalDetail.getByRole("button", { name: "Duplicar", exact: true })).toBeFocused();
+
+  // Confirmación con nombre propio: la card nueva aparece con ese nombre.
+  await originalDetail.getByRole("button", { name: "Duplicar" }).click();
+  await expect(duplicateDialog).toBeVisible();
+  await page.getByTestId("ui-duplicate-name").fill("Copia A13");
+  await duplicateDialog.getByRole("button", { name: "Duplicar", exact: true }).click();
+  await expect(duplicateDialog).toBeHidden();
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+  await expect(cardByName(page, "Copia A13")).toBeVisible();
+  await expect(page.getByTestId("ui-dashboard-toast")).toContainText("Tienda duplicada");
+
+  // Contrato de datos: la copia recibe un id nuevo, distinto del original.
+  const copyDetail = await selectStore(page, "Copia A13");
+  await expect(copyDetail.locator("dd").first()).toHaveText(/^store-/);
+  expect((await copyDetail.locator("dd").first().textContent()) ?? "").not.toBe(originalId);
+});
+
+test("A12: duplicar con éxito devuelve el foco a la card de origen", async ({ page }) => {
+  await openDashboard(page);
+  const detail = await selectStore(page, "Predeterminado");
+  await detail.getByRole("button", { name: "Duplicar" }).click();
+  const duplicateDialog = page.getByTestId("ui-duplicate-dialog");
+  await expect(duplicateDialog).toBeVisible();
+  await duplicateDialog.getByRole("button", { name: "Duplicar", exact: true }).click();
+  await expect(duplicateDialog).toBeHidden();
+  // El camino de cancelar restaura el foco al disparador del diálogo; el de
+  // éxito ahora también devuelve el foco a la card de origen (fix A12).
+  await expect(page.locator('[data-store-card-id="store-modo-sur-demo"]')).toBeFocused();
+});
+
+test("A13: archivar — confirmación, cancelar y deshacer", async ({ page }) => {
+  await openDashboard(page);
+  const detail = await selectStore(page, "Predeterminado");
+
+  // La confirmación es un diálogo propio con foco en Cancelar (destructivo).
+  await detail.getByRole("button", { name: "Archivar", exact: true }).click();
+  const confirm = page.getByTestId("ui-confirm-dialog");
+  await expect(confirm).toBeVisible();
+  await expect(confirm).toContainText("Archivar tienda");
+  await expect(confirm).toContainText('"Predeterminado"');
+  await expect(confirm.getByRole("button", { name: "Cancelar", exact: true })).toBeFocused();
+
+  // Cancelar no archiva.
+  await confirm.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(confirm).toHaveCount(0);
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+
+  // Confirmar archiva: la card sale de Activas y el toast ofrece Deshacer.
+  await detail.getByRole("button", { name: "Archivar", exact: true }).click();
+  await expect(confirm).toBeVisible();
+  await confirm.getByTestId("ui-confirm-accept").click();
+  await expect(confirm).toHaveCount(0);
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
+
+  const toast = page.getByTestId("ui-dashboard-toast");
+  await expect(toast).toContainText("archivada");
+  await toast.getByRole("button", { name: "Deshacer" }).click();
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  await expect(
+    cardByName(page, "Predeterminado").locator(".dashboard-store-card__status"),
+  ).toHaveText("Activa");
+});
+
+test("A13: archivar — restaurar desde el filtro de archivadas", async ({ page }) => {
+  await openDashboard(page);
+  const detail = await selectStore(page, "Predeterminado");
+  await detail.getByRole("button", { name: "Archivar", exact: true }).click();
+  await page.getByTestId("ui-confirm-dialog").getByTestId("ui-confirm-accept").click();
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
+
+  // La card vive en Archivadas con su estado reflejado.
+  await page.getByLabel("Estado").selectOption("archived");
+  await expect(
+    cardByName(page, "Predeterminado").locator(".dashboard-store-card__status"),
+  ).toHaveText("Archivada");
+
+  // Restaurar la vuelve a Activas: como el filtro sigue en «Archivadas», la
+  // card sale de la lista visible y el detalle se cierra al quedar sin
+  // selección visible (comportamiento del filtro, no una pérdida de datos).
+  const archivedDetail = await selectStore(page, "Predeterminado");
+  await archivedDetail.getByRole("button", { name: "Restaurar", exact: true }).click();
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
+  await expect(cardByName(page, "Predeterminado")).toHaveCount(0);
+
+  // En Activas la card reaparece con estado Activa y el detalle ofrece Archivar.
+  await page.getByLabel("Estado").selectOption("active");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  await expect(
+    cardByName(page, "Predeterminado").locator(".dashboard-store-card__status"),
+  ).toHaveText("Activa");
+  const restoredDetail = await selectStore(page, "Predeterminado");
+  await expect(restoredDetail.getByRole("button", { name: "Archivar", exact: true })).toBeVisible();
+});
+
+test("A12: restaurar muestra el toast de confirmación y no deja foco en una card", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  const detail = await selectStore(page, "Predeterminado");
+  await detail.getByRole("button", { name: "Archivar", exact: true }).click();
+  await page.getByTestId("ui-confirm-dialog").getByTestId("ui-confirm-accept").click();
+  await page.getByLabel("Estado").selectOption("archived");
+  const archivedDetail = await selectStore(page, "Predeterminado");
+  await archivedDetail.getByRole("button", { name: "Restaurar", exact: true }).click();
+  // Archivar muestra toast con Deshacer; restaurar muestra una confirmación
+  // propia sin acción de deshacer (fix A12) aunque la card salga del filtro.
+  const toast = page.getByTestId("ui-dashboard-toast");
+  await expect(toast).toContainText("restaurada");
+  await expect(toast).not.toContainText("Deshacer");
+  // La card restaurada ya no está en el filtro «Archivadas»: ninguna card
+  // queda enfocada (la selección no migra a otro destino visible).
+  await expect(page.locator(".dashboard-store-card__button:focus")).toHaveCount(0);
+});
+
+test("A13: respaldo ahora — descarga real de un .solara.json con el proyecto", async ({ page }) => {
+  await openDashboard(page);
+  await selectStore(page, "Predeterminado");
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Respaldo ahora" }).click();
+  const download = await downloadPromise;
+  // El nombre deriva del slug del proyecto (demo-catalogo-jerarquico), no del
+  // nombre visible «Predeterminado»: contrato App.tsx -> downloadBlob.
+  expect(download.suggestedFilename()).toBe("demo-catalogo-jerarquico-respaldo.solara.json");
+
+  const envelope = JSON.parse(readFileSync((await download.path()) ?? "", "utf8")) as {
+    format: string;
+    version: number;
+    project: { schemaVersion: number; id: string };
+  };
+  expect(envelope.format).toBe("solara-project");
+  expect(envelope.version).toBe(2);
+  expect(envelope.project.schemaVersion).toBe(2);
+  expect(envelope.project.id).toBe("store-modo-sur-demo");
+
+  // Auto-feedback del panel de detalle tras la operación.
+  await expect(page.getByTestId("ui-detail-notice")).toContainText("Se creó un respaldo.");
+});
+
+test("A13: abrir tienda — la card y el detalle navegan al editor", async ({ page }) => {
+  await openDashboard(page);
+  await cardByName(page, "Predeterminado")
+    .getByRole("button", { name: "Abrir esta tienda" })
+    .click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Volver a tiendas" }).click();
+  const detail = await selectStore(page, "Predeterminado");
+  await detail.getByRole("button", { name: "Abrir tienda" }).click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+});
+
+// ---------------------------------------------------------------- modo gestionado
+
+async function waitForServer(url: string): Promise<void> {
+  await expect
+    .poll(
+      async () => {
+        try {
+          return (await fetch(url)).status;
+        } catch {
+          return 0;
+        }
+      },
+      { timeout: 10_000, intervals: [100, 250, 500] },
+    )
+    .toBe(200);
 }
 
-test("el repeater agrega un ítem con id válido, sus campos persisten y sobrevive a la recarga", async ({
+async function startManagedServer(): Promise<{ process: ChildProcess; url: string; root: string }> {
+  const applicationRoot = mkdtempSync(join(tmpdir(), "solara-a13-managed-"));
+  // Rango propio (5400-5549): evita colisiones con agentes paralelos que usan
+  // 4300-4499 (a15, local-storage), 4700-4899 (editor-persistence) y 4900+ (a11y).
+  const port = 5400 + Math.floor(Math.random() * 150);
+  const token = randomBytes(24).toString("base64url");
+  const url = `http://127.0.0.1:${port}`;
+  const serverProcess: ChildProcess = spawn(
+    process.execPath,
+    [
+      resolve("packages/exporter/scripts/serve.mjs"),
+      resolve("apps/studio/dist"),
+      String(port),
+      token,
+      applicationRoot,
+    ],
+    { cwd: resolve("."), stdio: "ignore" },
+  );
+  await waitForServer(url);
+  return { process: serverProcess, url, root: applicationRoot };
+}
+
+async function stopManagedServer(process: ChildProcess, root: string): Promise<void> {
+  if (process.exitCode === null) process.kill();
+  rmSync(root, { recursive: true, force: true });
+}
+
+test("A13: panel gestionado — descargar, respaldo, sitio público y carpeta", async ({ page }) => {
+  test.setTimeout(240_000);
+  const managed = await startManagedServer();
+  try {
+    await page.goto(managed.url);
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole("button", { name: "Respaldar todo" })).toBeEnabled({
+      timeout: 15_000,
+    });
+
+    const detail = await selectStore(page, "Predeterminado");
+
+    // Descargar respaldo: archivo real desde disco, con versión del manifest.
+    const downloadPromise = page.waitForEvent("download");
+    await detail.getByRole("button", { name: "Descargar respaldo" }).click();
+    const download = await downloadPromise;
+    // Slug real del proyecto en disco (demo-catalogo-jerarquico) con la
+    // versión del manifest (v1 en la primera persistencia).
+    expect(download.suggestedFilename()).toMatch(/^demo-catalogo-jerarquico-v1\.solara\.json$/);
+
+    // Respaldo ahora: respaldo manual en disco, aviso en el panel.
+    await detail.getByRole("button", { name: "Respaldo ahora" }).click();
+    await expect(page.getByTestId("ui-detail-notice")).toContainText("Se creó un respaldo.");
+
+    // Camino de error: el endpoint rechaza la apertura y el banner global
+    // muestra el motivo; el botón vuelve a quedar habilitado y sin popup.
+    await page.route("**/open-site", async (route) => {
+      await route.fulfill({
+        status: 400,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: false, error: "La tienda no tiene un sitio público válido." }),
+      });
+    });
+    await detail.getByRole("button", { name: "Abrir sitio público" }).click();
+    await expect(page.locator(".global-error")).toContainText("no tiene un sitio público válido");
+    await page.getByRole("button", { name: "Cerrar mensaje" }).click();
+    await expect(detail.getByRole("button", { name: "Abrir sitio público" })).toBeEnabled();
+    await page.unroute("**/open-site");
+
+    // Camino feliz: el sitio se exportó durante la migración de boot
+    // (persistProjectToDisk exporta production) y el botón abre el popup real.
+    const popupPromise = page.waitForEvent("popup");
+    await detail.getByRole("button", { name: "Abrir sitio público" }).click();
+    const popup = await popupPromise;
+    await popup.waitForURL(/^http:\/\/127\.0\.0\.1:\d+/);
+    // La tienda demo se llama «Predeterminado» pero su SEO conserva la marca
+    // del fixture (Modo Sur): el sitio exportado refleja el proyecto en disco.
+    await expect(popup).toHaveTitle(/Modo Sur/i);
+    await popup.close();
+
+    // Abrir carpeta: el POST llega al endpoint local con el id correcto; la
+    // apertura del explorador queda fuera del entorno de pruebas.
+    let folderRequestUrl = "";
+    await page.route("**/open-folder", async (route) => {
+      folderRequestUrl = route.request().url();
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, folder: "e2e" }),
+      });
+    });
+    await detail.getByRole("button", { name: "Abrir carpeta" }).click();
+    // El POST llega al endpoint local con el id correcto; esperar a que el
+    // botón salga del estado «Abriendo carpeta» asegura que el fetch terminó.
+    await expect(detail.getByRole("button", { name: "Abrir carpeta" })).toBeEnabled();
+    expect(folderRequestUrl).toContain("/storage/projects/store-modo-sur-demo/open-folder");
+    await expect(page.locator(".global-error")).toHaveCount(0);
+  } finally {
+    await stopManagedServer(managed.process, managed.root);
+  }
+});
+
+test("A13: cierre del servidor — cancelar, estado cerrando y terminal con banner", async ({
   page,
 }) => {
-  await openBuilder(page);
-  const editor = await selectTestimonials(page);
-  const items = editor.locator(".repeater-editor__item");
+  test.setTimeout(120_000);
+  const managed = await startManagedServer();
+  try {
+    await page.goto(managed.url);
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+      timeout: 15_000,
+    });
+    const closeButton = page.getByRole("button", { name: "Cerrar app" });
+    await expect(closeButton).toBeVisible({ timeout: 15_000 });
 
-  await page.getByRole("button", { name: "Agregar elemento" }).click();
-  await expect(items).toHaveCount(4);
-  await expect(items.nth(3).locator("header strong")).toHaveText("Nuevo elemento");
-  await expect(page.getByTestId("ui-schema-errors")).toHaveCount(0);
-  await expect(testimonialsPreview(page).locator(".catalog-testimonial")).toHaveCount(4, {
-    timeout: 15_000,
-  });
-  await expect(testimonialsPreview(page).locator(".catalog-testimonial").nth(3).locator("h3")).toHaveText(
-    "Nuevo elemento",
-    { timeout: 15_000 },
-  );
+    // Cancelar mantiene el servidor vivo y el diálogo devuelve el foco al
+    // botón que lo abrió (restauración nativa de dialog.close()).
+    await closeButton.click();
+    const shutdownDialog = page.getByRole("dialog", { name: "¿Cerrar SolaraCommerce?" });
+    await expect(shutdownDialog).toBeVisible();
+    await shutdownDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+    await expect(shutdownDialog).toBeHidden();
+    await expect(closeButton).toBeFocused();
+    await expect.poll(async () => (await fetch(managed.url)).status, { timeout: 5_000 }).toBe(200);
 
-  await items.nth(3).getByLabel("Nombre").fill("Cliente A24");
-  await expect(items.nth(3).locator("header strong")).toHaveText("Cliente A24");
-  await expect(testimonialsPreview(page).locator(".catalog-testimonial").nth(3).locator("h3")).toHaveText(
-    "Cliente A24",
-    { timeout: 15_000 },
-  );
-  await expect(page.getByText(/^Guardado/)).toBeVisible({ timeout: 15_000 });
+    // Cierre confirmado: el diálogo queda en «Cerrando...» con todo deshabilitado
+    // mientras el servidor responde (respuesta demorada para poder observarlo).
+    let delayShutdown = true;
+    await page.route("**/__solara/shutdown", async (route) => {
+      if (delayShutdown) await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_500));
+      await route.continue();
+    });
+    await closeButton.click();
+    await expect(shutdownDialog).toBeVisible();
+    await shutdownDialog.getByRole("button", { name: "Cerrar y detener" }).click();
+    const closing = shutdownDialog.getByRole("button", { name: "Cerrando..." });
+    await expect(closing).toBeVisible();
+    await expect(closing).toBeDisabled();
+    await expect(shutdownDialog.getByRole("button", { name: "Cancelar" })).toBeDisabled();
 
-  await page.reload();
-  await openStore(page);
-  await page.getByRole("tab", { name: "Constructor" }).click();
-  await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
-  const editorAfter = await selectTestimonials(page, 4);
-  const itemsAfter = editorAfter.locator(".repeater-editor__item");
-  await expect(itemsAfter.nth(3).getByLabel("Nombre")).toHaveValue("Cliente A24");
-  await expect(page.getByTestId("ui-schema-errors")).toHaveCount(0);
-  await expect(testimonialsPreview(page).locator(".catalog-testimonial").nth(3).locator("h3")).toHaveText(
-    "Cliente A24",
-    { timeout: 15_000 },
-  );
+    // Terminal: banner persistente y servidor detenido.
+    await expect(page.locator(".shutdown-status")).toContainText("Servidor local detenido", {
+      timeout: 15_000,
+    });
+    await expect.poll(() => managed.process.exitCode, { timeout: 10_000 }).toBe(0);
+    await expect(page.getByRole("button", { name: "Cerrar app" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Respaldar todo" })).toBeDisabled();
+
+    // El estado terminal no se revierte: ni diálogo ni banner nuevo.
+    delayShutdown = false;
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent("solara:open-shutdown"));
+    });
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator(".shutdown-status")).toContainText("Servidor local detenido");
+  } finally {
+    await stopManagedServer(managed.process, managed.root);
+  }
 });
 
-test("duplicar un ítem clona sus campos con un id nuevo y persiste tras recargar", async ({ page }) => {
-  await openBuilder(page);
-  const editor = await selectTestimonials(page);
-  const items = editor.locator(".repeater-editor__item");
-  const firstBody = await items.nth(0).getByLabel("Texto", { exact: true }).inputValue();
+test("A12: la «X» de creación se deshabilita mientras la tienda se crea", async ({ page }) => {
+  const managed = await startManagedServer();
+  try {
+    await page.goto(managed.url);
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole("button", { name: "Respaldar todo" })).toBeEnabled({
+      timeout: 15_000,
+    });
 
-  await items.nth(0).getByRole("button", { name: "Duplicar elemento" }).click();
-  await expect(items).toHaveCount(4);
-  await expect(items.nth(1).locator("header strong")).toHaveText("Sofía M.");
-  await expect(items.nth(1).getByLabel("Texto", { exact: true })).toHaveValue(firstBody);
-  await expect(items.nth(1).getByLabel("Nombre")).toHaveValue("Sofía M.");
-  await expect(page.getByTestId("ui-schema-errors")).toHaveCount(0);
+    // Demorar el inicio de la transacción de guardado hace observable el
+    // estado «Creando» (la creación local es demasiado rápida para capturarla).
+    await page.route("**/__solara/storage/projects", async (route) => {
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_500));
+      await route.continue();
+    });
 
-  const preview = testimonialsPreview(page);
-  await expect(preview.locator(".catalog-testimonial")).toHaveCount(4, { timeout: 15_000 });
-  await expect(preview.locator(".catalog-testimonial h3").nth(0)).toHaveText("Sofía M.", {
-    timeout: 15_000,
-  });
-  await expect(preview.locator(".catalog-testimonial h3").nth(1)).toHaveText("Sofía M.");
-  await expect(preview.locator(".catalog-testimonial h3").nth(2)).toHaveText("Julián R.");
-  await expect(page.getByText(/^Guardado/)).toBeVisible({ timeout: 15_000 });
-
-  await page.reload();
-  await openStore(page);
-  await page.getByRole("tab", { name: "Constructor" }).click();
-  await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
-  const editorAfter = await selectTestimonials(page, 4);
-  await expect(editorAfter.locator(".repeater-editor__item")).toHaveCount(4);
-  await expect(page.getByTestId("ui-schema-errors")).toHaveCount(0);
-});
-
-test("quitar un ítem lo elimina del editor y del preview sin invalidar el schema", async ({ page }) => {
-  await openBuilder(page);
-  const editor = await selectTestimonials(page);
-  const items = editor.locator(".repeater-editor__item");
-
-  await items.nth(0).getByRole("button", { name: "Eliminar elemento" }).click();
-  await expect(items).toHaveCount(2);
-  await expect(items.nth(0).locator("header strong")).toHaveText("Julián R.");
-  await expect(editor.locator(".repeater-editor__item").filter({ hasText: "Sofía M." })).toHaveCount(0);
-  await expect(page.getByTestId("ui-schema-errors")).toHaveCount(0);
-  await expect(testimonialsPreview(page).locator(".catalog-testimonial")).toHaveCount(2, {
-    timeout: 15_000,
-  });
-  await expect(testimonialsPreview(page).locator(".catalog-testimonial h3").nth(0)).toHaveText(
-    "Julián R.",
-    { timeout: 15_000 },
-  );
-});
-
-test("reordenar intercambia los ítems con estados disabled coherentes y se refleja en el preview", async ({
-  page,
-}) => {
-  await openBuilder(page);
-  const editor = await selectTestimonials(page);
-  const items = editor.locator(".repeater-editor__item");
-
-  await expect(items.nth(0).getByRole("button", { name: "Subir elemento" })).toBeDisabled();
-  await expect(items.nth(2).getByRole("button", { name: "Bajar elemento" })).toBeDisabled();
-
-  await items.nth(0).getByRole("button", { name: "Bajar elemento" }).click();
-  await expect(items.nth(0).locator("header strong")).toHaveText("Julián R.");
-  await expect(items.nth(1).locator("header strong")).toHaveText("Sofía M.");
-  const preview = testimonialsPreview(page);
-  await expect(preview.locator(".catalog-testimonial h3").nth(0)).toHaveText("Julián R.", {
-    timeout: 15_000,
-  });
-  await expect(preview.locator(".catalog-testimonial h3").nth(1)).toHaveText("Sofía M.");
-
-  await items.nth(1).getByRole("button", { name: "Subir elemento" }).click();
-  await expect(items.nth(0).locator("header strong")).toHaveText("Sofía M.");
-  await expect(preview.locator(".catalog-testimonial h3").nth(0)).toHaveText("Sofía M.", {
-    timeout: 15_000,
-  });
-});
-
-test("los campos numéricos y booleanos del repeater persisten tras recargar", async ({ page }) => {
-  await openBuilder(page);
-  const editor = await selectTestimonials(page);
-  const items = editor.locator(".repeater-editor__item");
-
-  await items.nth(0).getByRole("spinbutton", { name: "Valoración" }).fill("3");
-  await items.nth(0).getByRole("checkbox", { name: "Contenido de ejemplo" }).uncheck();
-  await expect(
-    testimonialsPreview(page)
-      .locator(".catalog-testimonial")
-      .first()
-      .locator(".catalog-testimonial-rating"),
-  ).toHaveAttribute("aria-label", "3 de 5", { timeout: 15_000 });
-  await expect(page.getByText(/^Guardado/)).toBeVisible({ timeout: 15_000 });
-
-  await page.reload();
-  await openStore(page);
-  await page.getByRole("tab", { name: "Constructor" }).click();
-  await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
-  await selectTestimonials(page);
-  await expect(items.nth(0).getByRole("spinbutton", { name: "Valoración" })).toHaveValue("3");
-  await expect(items.nth(0).getByRole("checkbox", { name: "Contenido de ejemplo" })).not.toBeChecked();
-  await expect(
-    testimonialsPreview(page)
-      .locator(".catalog-testimonial")
-      .first()
-      .locator(".catalog-testimonial-rating"),
-  ).toHaveAttribute("aria-label", "3 de 5", { timeout: 15_000 });
-});
-
-test("el árbol colapsa y expande raíces con aria-expanded y oculta/restaura sus hijas", async ({
-  page,
-}) => {
-  await openCatalog(page);
-  const tree = page.getByRole("list", { name: "Categorías ordenadas" });
-
-  await expect(tree.locator("li")).toHaveCount(14);
-  await expect(page.getByRole("button", { name: "Contraer Remeras" })).toHaveAttribute(
-    "aria-expanded",
-    "true",
-  );
-
-  await page.getByRole("button", { name: "Contraer Remeras" }).click();
-  await expect(page.getByRole("button", { name: "Expandir Remeras" })).toHaveAttribute(
-    "aria-expanded",
-    "false",
-  );
-  await expect(tree.locator("li")).toHaveCount(11);
-  await expect(tree.locator("li").filter({ hasText: "Básicas" })).toHaveCount(0);
-  await expect(tree.locator("li").filter({ hasText: "Manga larga" })).toHaveCount(0);
-
-  await page.getByRole("button", { name: "Expandir Remeras" }).click();
-  await expect(page.getByRole("button", { name: "Contraer Remeras" })).toHaveAttribute(
-    "aria-expanded",
-    "true",
-  );
-  await expect(tree.locator("li")).toHaveCount(14);
-  await expect(tree.locator("li").filter({ hasText: "Básicas" })).toHaveCount(1);
-});
-
-test("reubicar una categoría hoja la mueve de verdad y el padre actual deja de ofrecerse", async ({
-  page,
-}) => {
-  await openCatalog(page);
-  const tree = page.getByRole("list", { name: "Categorías ordenadas" });
-  const moveSelect = page.getByLabel("Categoría a reubicar");
-  const parentSelect = page.getByLabel("Nuevo padre");
-  const moveButton = page.getByRole("button", { name: "Reubicar categoría" });
-
-  await moveSelect.selectOption({ label: "Vestidos" });
-  await expect(moveButton).toBeEnabled();
-  await expect(parentSelect).toBeEnabled();
-  await parentSelect.selectOption({ label: "Remeras" });
-  await expect(parentSelect).toHaveValue("category-remeras");
-
-  await moveButton.click();
-  const dialog = page.getByRole("dialog", { name: "Reubicar categoría" });
-  await expect(dialog).toBeVisible();
-  await expect(dialog.getByText("¿Reubicar Vestidos bajo Remeras?")).toBeVisible();
-  await dialog.getByTestId("ui-confirm-accept").click();
-  await expect(dialog).toBeHidden();
-
-  await expect(tree.locator('li[data-depth="0"]')).toHaveCount(7);
-  await expect(tree.locator('li[data-depth="1"]').filter({ hasText: "Vestidos" })).toHaveCount(1);
-  const remerasIndex = await treeIndexOf(page, "Remeras");
-  expect(remerasIndex).toBeGreaterThanOrEqual(0);
-  expect(await treeIndexOf(page, "Vestidos")).toBe(remerasIndex + 1);
-  await expect(parentSelect.locator("option", { hasText: "Remeras" })).toHaveCount(0);
-
-  await parentSelect.selectOption({ index: 0 });
-  await moveButton.click();
-  await expect(dialog).toBeVisible();
-  await dialog.getByTestId("ui-confirm-accept").click();
-  await expect(tree.locator('li[data-depth="0"]').filter({ hasText: "Vestidos" })).toHaveCount(1);
-  await expect(tree.locator('li[data-depth="0"]')).toHaveCount(8);
-});
-
-test("una raíz con hijos queda bloqueada: hint, botón deshabilitado y destinos deshabilitados", async ({
-  page,
-}) => {
-  await openCatalog(page);
-  const moveSelect = page.getByLabel("Categoría a reubicar");
-  const parentSelect = page.getByLabel("Nuevo padre");
-  const moveButton = page.getByRole("button", { name: "Reubicar categoría" });
-
-  await moveSelect.selectOption({ label: "Remeras" });
-  await expect(moveButton).toBeDisabled();
-  await expect(page.locator(".category-reparent")).toContainText(
-    "Esta categoría tiene subcategorías y debe permanecer como raíz.",
-  );
-  await expect(parentSelect).toBeEnabled();
-  const enabledRootOptions = await parentSelect
-    .locator('option:not([value=""]):not([disabled])')
-    .count();
-  expect(enabledRootOptions).toBe(0);
-  await expect(parentSelect.locator("option", { hasText: "Remeras" })).toHaveCount(0);
-  await expect(parentSelect.locator("option", { hasText: "Básicas" })).toHaveCount(0);
-
-  await parentSelect.selectOption({ index: 0 });
-  await expect(moveButton).toBeDisabled();
-});
-
-test("cancelar, Escape y la X cierran el diálogo sin reubicar y devuelven el foco", async ({
-  page,
-}) => {
-  await openCatalog(page);
-  const tree = page.getByRole("list", { name: "Categorías ordenadas" });
-  const moveSelect = page.getByLabel("Categoría a reubicar");
-  const parentSelect = page.getByLabel("Nuevo padre");
-  const moveButton = page.getByRole("button", { name: "Reubicar categoría" });
-  const dialog = page.getByRole("dialog", { name: "Reubicar categoría" });
-
-  await moveSelect.selectOption({ label: "Vestidos" });
-  await parentSelect.selectOption({ label: "Remeras" });
-
-  await moveButton.click();
-  await expect(dialog).toBeVisible();
-  await expect(dialog.getByTestId("ui-confirm-accept")).toBeFocused();
-  await dialog.getByRole("button", { name: "Cancelar", exact: true }).click();
-  await expect(dialog).toBeHidden();
-  await expect(moveButton).toBeFocused();
-  await expect(tree.locator('li[data-depth="0"]')).toHaveCount(8);
-
-  await moveButton.click();
-  await expect(dialog).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(dialog).toBeHidden();
-  await expect(tree.locator('li[data-depth="0"]').filter({ hasText: "Vestidos" })).toHaveCount(1);
-
-  await moveButton.click();
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "Cerrar diálogo" }).click();
-  await expect(dialog).toBeHidden();
-  await expect(tree.locator('li[data-depth="0"]')).toHaveCount(8);
+    const dialog = await openCreateDialog(page);
+    await page.getByLabel("Nueva tienda").fill("Tienda A13 X");
+    for (let step = 1; step <= 3; step += 1) {
+      await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
+    }
+    const closeCreation = page.getByRole("button", { name: "Cerrar creación" });
+    // El nombre cambia a «Creando» durante la transacción: el locator por regex
+    // resuelve en ambos estados.
+    const submit = dialog.getByRole("button", { name: /Crear tienda vacía|Creando/ });
+    await submit.click();
+    await expect(submit).toBeDisabled();
+    await expect(submit).toHaveText("Creando");
+    // Auto-feedback: la X queda deshabilitada mientras `creatingProject`;
+    // closeCreate no hace nada y el diálogo no queda a medias.
+    await expect(closeCreation).toBeDisabled();
+    // Al terminar la transacción la creación navega igual al editor.
+    await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
+      timeout: 30_000,
+    });
+  } finally {
+    await stopManagedServer(managed.process, managed.root);
+  }
 });

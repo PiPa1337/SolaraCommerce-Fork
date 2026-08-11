@@ -19,11 +19,11 @@
  * revisión de paquete es inalcanzable porque importCatalogCsv rechaza antes
  * cualquier referencia de imagen sin resolver.
  */
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import type { Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { expect, test, type Download, type Page } from "@playwright/test";
+import { type Download, expect, type Page, test } from "@playwright/test";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 120_000 : 90_000);
@@ -486,7 +486,7 @@ test("Diálogo de archivar: abre con conteo, Escape cancela y confirmar archiva"
   await expect(dialog.getByRole("heading", { name: "Archivar productos" })).toBeVisible();
   await expect(dialog).toContainText("¿Archivar los 2 productos seleccionados?");
   // Destructivo: el foco inicial cae en Cancelar.
-  expect(await dialog.evaluate((element) => document.activeElement?.textContent)).toBe("Cancelar");
+  expect(await dialog.evaluate(() => document.activeElement?.textContent)).toBe("Cancelar");
 
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);

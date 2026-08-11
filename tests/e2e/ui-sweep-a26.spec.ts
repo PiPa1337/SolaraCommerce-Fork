@@ -119,9 +119,7 @@ test("galería: el tooltip aparece en hover y con foco por teclado, con posicion
   const save = page.locator('.ui-tooltip:has-text("Guardar")');
   await expect(save).toHaveClass(/ui-tooltip--bottom/);
   await save.getByRole("button", { name: "Guardar", exact: true }).focus();
-  await expect
-    .poll(() => tooltipState(save), { timeout: 5_000 })
-    .toMatchObject({ opacity: "1" });
+  await expect.poll(() => tooltipState(save), { timeout: 5_000 }).toMatchObject({ opacity: "1" });
   const focused = await tooltipState(save);
   expect(focused.content).toContain("Guarda los cambios en disco");
 

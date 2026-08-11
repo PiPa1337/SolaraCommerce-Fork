@@ -418,48 +418,46 @@ test("la mini preview refleja en vivo título, precio mínimo y estado (edición
   await expect(page.getByText(/50 productos y /)).toBeVisible();
 });
 
-test(
-  "A4 — guardado bloqueado: el diálogo no acerca la razón al campo visible (error fuera del viewport)",
-  async ({ page }) => {
-    test.setTimeout(90_000);
-    await openCatalog(page);
-    const dialog = await openCreateDialog(page);
+test("A4 — guardado bloqueado: el diálogo no acerca la razón al campo visible (error fuera del viewport)", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await openCatalog(page);
+  const dialog = await openCreateDialog(page);
 
-    await dialog.getByRole("textbox", { name: "Título" }).fill("Sweep A06 Fixme");
-    await goToStep(dialog, "Variantes");
-    await dialog.getByRole("spinbutton", { name: "Precio en centavos" }).fill("-100");
-    // Volver a Datos deja el error de precio fuera del área visible del body.
-    await goToStep(dialog, "Datos");
+  await dialog.getByRole("textbox", { name: "Título" }).fill("Sweep A06 Fixme");
+  await goToStep(dialog, "Variantes");
+  await dialog.getByRole("spinbutton", { name: "Precio en centavos" }).fill("-100");
+  // Volver a Datos deja el error de precio fuera del área visible del body.
+  await goToStep(dialog, "Datos");
 
-    // El scroll real ocurre en el <dialog> (max-height con recorte del UA),
-    // no en .product-dialog__body: el body crece y el diálogo es el contenedor
-    // scrolleable.
-    await expect(dialog.evaluate((element) => element.scrollTop)).resolves.toBe(0);
+  // El scroll real ocurre en el <dialog> (max-height con recorte del UA),
+  // no en .product-dialog__body: el body crece y el diálogo es el contenedor
+  // scrolleable.
+  await expect(dialog.evaluate((element) => element.scrollTop)).resolves.toBe(0);
 
-    // Al intentar guardar, la razón debería hacerse visible (scroll al primer
-    // error o aviso transitorio).
-    await dialog.getByRole("button", { name: "Crear producto" }).click();
-    await expect(dialog.evaluate((element) => element.scrollTop)).resolves.toBeGreaterThan(0);
-    const priceError = dialog
-      .getByRole("spinbutton", { name: "Precio en centavos" })
-      .locator("xpath=ancestor::fieldset[contains(@class, 'field')]")
-      .getByTestId("ui-field-error");
-    await expect(priceError).toBeInViewport();
-  },
-);
+  // Al intentar guardar, la razón debería hacerse visible (scroll al primer
+  // error o aviso transitorio).
+  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  await expect(dialog.evaluate((element) => element.scrollTop)).resolves.toBeGreaterThan(0);
+  const priceError = dialog
+    .getByRole("spinbutton", { name: "Precio en centavos" })
+    .locator("xpath=ancestor::fieldset[contains(@class, 'field')]")
+    .getByTestId("ui-field-error");
+  await expect(priceError).toBeInViewport();
+});
 
-test(
-  "A4 — sin indicador visible de estado sucio dentro del diálogo de producto",
-  async ({ page }) => {
-    test.setTimeout(90_000);
-    await openCatalog(page);
-    const dialog = await openEditDialog(page, "Camisa Rayas Finas");
-    await expect(dialog).not.toHaveAttribute("data-dirty", "true");
+test("A4 — sin indicador visible de estado sucio dentro del diálogo de producto", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await openCatalog(page);
+  const dialog = await openEditDialog(page, "Camisa Rayas Finas");
+  await expect(dialog).not.toHaveAttribute("data-dirty", "true");
 
-    // Tras editar, el diálogo debería comunicar que hay cambios sin guardar
-    // (atributo/aria/badge); hoy el estado sólo se vuelve perceptible en el
-    // prompt de descarte, no dentro del formulario.
-    await dialog.getByRole("textbox", { name: "Título" }).fill("Camisa A06 Sucia");
-    await expect(dialog).toHaveAttribute("data-dirty", "true");
-  },
-);
+  // Tras editar, el diálogo debería comunicar que hay cambios sin guardar
+  // (atributo/aria/badge); hoy el estado sólo se vuelve perceptible en el
+  // prompt de descarte, no dentro del formulario.
+  await dialog.getByRole("textbox", { name: "Título" }).fill("Camisa A06 Sucia");
+  await expect(dialog).toHaveAttribute("data-dirty", "true");
+});
