@@ -10,6 +10,14 @@ versión publicada.
 
 ## [Unreleased]
 
+### Selectores visibles de importación (2026-08-11)
+
+- Catálogo verifica que CSV y carpetas se abran desde sus botones visibles,
+  respeten el contrato del selector y mantengan la cobertura de revisión,
+  cancelación, errores y reimportación.
+- Recursos verifica que `Cargar imágenes` y `Cargar video` abran el selector
+  correcto con sus formatos aceptados y selección múltiple.
+
 ### Runtime público y controles exportados (2026-08-11)
 
 - Los controles de testimonios de Catalog Modern ahora desplazan su fila real.

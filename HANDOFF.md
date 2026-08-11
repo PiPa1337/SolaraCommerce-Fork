@@ -179,6 +179,19 @@ anuncian un error inline y no generan cambios pendientes. No se modificó la
 forma de `catalogScaleStore`; la corrección sólo agrega validación de UI y
 regresión E2E sobre la demo determinista de 50 productos.
 
+## Selectores visibles de importación (2026-08-11)
+
+El barrido A03 ya no inyecta CSV o carpetas directamente en los inputs ocultos:
+los helpers pulsan `Importar CSV` e `Importar carpeta + imágenes`, verifican el
+contrato de `filechooser` y luego recorren la misma importación que usa la UI.
+La cobertura conserva revisión, progreso, cancelación, errores, imágenes
+faltantes y reimportación. El barrido A17 verifica de forma equivalente que
+`Cargar imágenes` y `Cargar video` expongan sus formatos aceptados, selección
+múltiple y nombres accesibles.
+
+Resultado del checkpoint: A03 10/10 y A17 11/11 en Chromium. No se modificó la
+lógica de producción ni el fixture determinista `catalogScaleStore`.
+
 ## Aviso de actualización de plantilla (2026-08-11)
 
 A09 también cubre el botón `Cerrar aviso de actualización` del flujo Preparar.

@@ -135,11 +135,27 @@ async function openCatalog(page: Page): Promise<void> {
 }
 
 async function uploadCsv(page: Page, csv: string, name: string): Promise<void> {
-  await page.locator('input[type="file"][accept*="csv"]').setInputFiles({
+  const chooserPromise = page.waitForEvent("filechooser");
+  await page.getByTestId("ui-csv-import").click();
+  const chooser = await chooserPromise;
+  expect(await chooser.isMultiple()).toBe(false);
+  const input = await chooser.element();
+  expect(await input.getAttribute("accept")).toBe(".csv,text/csv");
+  await chooser.setFiles({
     name,
     mimeType: "text/csv",
     buffer: Buffer.from(csv, "utf8"),
   });
+}
+
+async function uploadPackage(page: Page, directory: string): Promise<void> {
+  const chooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Importar carpeta + imágenes", exact: true }).click();
+  const chooser = await chooserPromise;
+  expect(await chooser.isMultiple()).toBe(true);
+  const input = await chooser.element();
+  expect(await input.getAttribute("webkitdirectory")).not.toBeNull();
+  await chooser.setFiles(directory);
 }
 
 /** Observa la ventana de busy con una única evaluación por poll: el conteo de
@@ -325,7 +341,7 @@ test("Importar carpeta con imágenes: revisión de fusión, aplicar y reimportar
   const firstFolder = await makePackageFolder("125000");
   const secondFolder = await makePackageFolder("130000");
   try {
-    await page.locator('input[type="file"][webkitdirectory]').setInputFiles(firstFolder);
+    await uploadPackage(page, firstFolder);
     const folderName = firstFolder.split(/[\\/]/).pop() ?? "carpeta";
 
     // Auto-feedback: progress y botón con label de ocupado.
@@ -356,7 +372,7 @@ test("Importar carpeta con imágenes: revisión de fusión, aplicar y reimportar
 
     // Reimportar la misma carpeta: actualización por slug y reutilización de
     // imagen (hash), con el nuevo precio visible en la tabla.
-    await page.locator('input[type="file"][webkitdirectory]').setInputFiles(secondFolder);
+    await uploadPackage(page, secondFolder);
     await expect(review).toBeVisible();
     await expect(review.getByText("Productos nuevos").locator("..")).toContainText("0");
     await expect(review.getByText("Productos actualizados").locator("..")).toContainText("1");
@@ -379,7 +395,7 @@ test("Cancelar la revisión de carpeta no cambia nada", async ({ page }) => {
   await openCatalog(page);
   const folder = await makePackageFolder("125000");
   try {
-    await page.locator('input[type="file"][webkitdirectory]').setInputFiles(folder);
+    await uploadPackage(page, folder);
 
     const review = page.locator(".catalog-package-review");
     await expect(review).toBeVisible();
@@ -402,7 +418,7 @@ test("Carpeta sin productos.csv: error visible, sin revisión y app viva", async
   const directory = mkdtempSync(join(tmpdir(), "solara-a03-paquete-invalido-"));
   try {
     writeFileSync(join(directory, "nota.txt"), "sin catalogo", "utf8");
-    await page.locator('input[type="file"][webkitdirectory]').setInputFiles(directory);
+    await uploadPackage(page, directory);
 
     // Auto-feedback: el error del worker llega como alerta visible y el botón
     // vuelve a su label de reposo (busy se limpia).
@@ -456,7 +472,7 @@ test("Carpeta con imagen faltante: aviso visible en la revisión y catálogo int
       ].join(","),
     ].join("\r\n");
     writeFileSync(join(directory, "productos.csv"), csv, "utf8");
-    await page.locator('input[type="file"][webkitdirectory]').setInputFiles(directory);
+    await uploadPackage(page, directory);
 
     const review = page.locator(".catalog-package-review");
     await expect(review).toBeVisible();

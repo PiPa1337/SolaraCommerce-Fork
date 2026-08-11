@@ -85,6 +85,29 @@ async function uploadPixel(page: import("@playwright/test").Page): Promise<void>
 // carga de la máquina; el timeout por defecto de 30 s no alcanza.
 test.setTimeout(120_000);
 
+test("los botones visibles de carga abren el selector correcto", async ({ page }) => {
+  await page.goto(studioUrl);
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({ timeout: 20_000 });
+  await createCleanStore(page, "Tienda barrido A17 selectores");
+  await openAssetsTab(page);
+
+  const imageChooserPromise = page.waitForEvent("filechooser");
+  await page.getByTestId("ui-asset-upload").click();
+  const imageChooser = await imageChooserPromise;
+  expect(await imageChooser.isMultiple()).toBe(true);
+  const imageInput = await imageChooser.element();
+  expect(await imageInput.getAttribute("aria-label")).toBe("Seleccionar imágenes");
+  expect(await imageInput.getAttribute("accept")).toBe("image/jpeg,image/png,image/webp");
+
+  const videoChooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Cargar video", exact: true }).click();
+  const videoChooser = await videoChooserPromise;
+  expect(await videoChooser.isMultiple()).toBe(true);
+  const videoInput = await videoChooser.element();
+  expect(await videoInput.getAttribute("aria-label")).toBe("Seleccionar videos");
+  expect(await videoInput.getAttribute("accept")).toBe("video/mp4,video/webm");
+});
+
 test("sube un lote con progreso real por archivo, reporta duplicados y libera la UI", async ({
   page,
 }) => {
