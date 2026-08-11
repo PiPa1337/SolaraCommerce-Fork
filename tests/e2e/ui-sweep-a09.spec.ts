@@ -298,6 +298,28 @@ test("los cinco acordeones del Resumen marcan su estado y pliegan su panel (capa
   }
 });
 
+test("el estado plegado del Resumen sobrevive al cambio de pestaña", async ({ page }) => {
+  await setupCleanStore(page, "Tienda acordeón persistente A9");
+  await openStudioTab(page, "Resumen");
+
+  const identityToggle = page.getByRole("button", { name: "Identidad", exact: true });
+  const identityPanel = page.locator('[data-accordion-id="identity"] .overview-accordion__panel');
+  await identityToggle.click();
+  await expect(identityToggle).toHaveAttribute("aria-expanded", "false");
+  await expect(identityPanel).toBeHidden();
+
+  await openStudioTab(page, "Preparar");
+  await openStudioTab(page, "Resumen");
+
+  await expect(page.getByRole("button", { name: "Identidad", exact: true })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await expect(
+    page.locator('[data-accordion-id="identity"] .overview-accordion__panel'),
+  ).toBeHidden();
+});
+
 test("campos restantes: razón social, teléfono, dirección, saludo, URL y slug (capa 1+2+3)", async ({
   page,
 }) => {
