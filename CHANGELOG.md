@@ -10,6 +10,11 @@ versión publicada.
 
 ## [Unreleased]
 
+### Runtime público y controles exportados (2026-08-11)
+
+- Los controles de testimonios de Catalog Modern ahora desplazan su fila real.
+- El desplazamiento funciona también con teclado y respeta el overflow horizontal responsive.
+
 ### Auditoría UI/UX de SEO (2026-08-11)
 
 - la pestaña SEO comunica el estado de su auditoría local, incluyendo carga,

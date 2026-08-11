@@ -567,8 +567,20 @@ function storefrontBoot(): void {
       return;
     }
 
-    const addButton = target.closest<HTMLElement>("[data-add-to-cart]");
+    const addButton = target.closest<HTMLElement>(
+      "[data-add-to-cart],[data-testimonials-prev],[data-testimonials-next]",
+    );
     if (addButton) {
+      if (addButton.matches("[data-testimonials-prev],[data-testimonials-next]")) {
+        const track = addButton
+          .closest<HTMLElement>(".catalog-testimonials-section")
+          ?.querySelector<HTMLElement>(".catalog-testimonials-track");
+        if (track)
+          track.scrollLeft += addButton.matches("[data-testimonials-prev]")
+            ? -track.clientWidth
+            : track.clientWidth;
+        return;
+      }
       event.preventDefault();
       addProductToCart(addButton.closest<HTMLElement>("[data-product]"));
     }
@@ -1353,6 +1365,21 @@ function storefrontBoot(): void {
       }
     });
   }
+
+  document.querySelectorAll<HTMLElement>(".catalog-testimonials-section").forEach((s) => {
+    const track = s.querySelector<HTMLElement>(".catalog-testimonials-track");
+    const buttons = s.querySelectorAll<HTMLButtonElement>(".catalog-testimonials-controls button");
+    if (!track) return;
+    const sync = () => {
+      const max = track.scrollWidth - track.clientWidth;
+      buttons.forEach((button, i) => {
+        button.disabled = i ? track.scrollLeft >= max : !track.scrollLeft || !max;
+      });
+    };
+    track.addEventListener("scroll", sync, { passive: true });
+    window.addEventListener("resize", sync);
+    sync();
+  });
 
   const motionRoots = hasFeature("motion")
     ? Array.from(document.querySelectorAll<HTMLElement>("[data-motion-root]")).filter(

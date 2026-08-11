@@ -125,6 +125,16 @@ Lighthouse quedan por confirmar en CI/Node 22.
 4. El documento específico del cambio y sus tests.
 5. `docs/TECHNICAL_DEBT.md` sólo para riesgos relevantes al trabajo.
 
+## Runtime de testimonios exportados (2026-08-11)
+
+La fila de testimonios de Catalog Modern conserva su fallback horizontal sin
+JavaScript y ahora conecta `data-testimonials-prev` y
+`data-testimonials-next` en el runtime público. Los botones avanzan o
+retroceden una ventana de la fila y conservan el fallback horizontal cuando no
+hay JavaScript. La regresión E2E usa el viewport móvil y activa ambos controles
+mediante teclado. El presupuesto crudo del runtime se ajustó a 53 KiB para
+incluir este comportamiento sin agregar dependencias.
+
 ## Portabilidad Windows
 
 La distribución portable está implementada en `apps/desktop`. Electron carga

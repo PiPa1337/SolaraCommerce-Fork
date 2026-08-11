@@ -205,6 +205,45 @@ test("la categoría moderna mantiene filtros, densidad y pie comercial", async (
   );
 });
 
+test("los controles de testimonios desplazan la fila y comunican sus límites", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(storeUrl("/"));
+  const desktopTestimonials = page.locator('[data-solara-module="catalog-testimonials"]');
+  await expect(
+    desktopTestimonials.getByRole("button", { name: "Testimonio anterior" }),
+  ).toBeDisabled();
+  await expect(
+    desktopTestimonials.getByRole("button", { name: "Testimonio siguiente" }),
+  ).toBeDisabled();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(storeUrl("/"));
+
+  const testimonials = page.locator('[data-solara-module="catalog-testimonials"]');
+  const track = testimonials.locator(".catalog-testimonials-track");
+  const previous = testimonials.getByRole("button", { name: "Testimonio anterior" });
+  const next = testimonials.getByRole("button", { name: "Testimonio siguiente" });
+
+  await expect(track).toBeVisible();
+  await expect(previous).toBeDisabled();
+  await expect(next).toBeEnabled();
+  const initialScroll = await track.evaluate((element) => element.scrollLeft);
+
+  await next.focus();
+  await next.press("Enter");
+  await expect
+    .poll(() => track.evaluate((element) => element.scrollLeft))
+    .toBeGreaterThan(initialScroll);
+  await expect(previous).toBeEnabled();
+
+  await previous.focus();
+  await previous.press(" ");
+  await expect.poll(() => track.evaluate((element) => element.scrollLeft)).toBe(initialScroll);
+  await expect(previous).toBeDisabled();
+});
+
 test("la navegación, el detalle moderno y las variantes siguen siendo rastreables", async ({
   page,
 }) => {
