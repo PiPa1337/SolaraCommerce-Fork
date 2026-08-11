@@ -773,6 +773,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
   };
 
   const applyPriceAdjustment = () => {
+    setError("");
     const numeric = Number(priceAdjustment);
     if (priceKind === "percentage" && numeric < -100) {
       setError("El porcentaje no puede reducir el precio por debajo de cero (mínimo -100%).");
@@ -1115,7 +1116,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
         )}
 
         {selectedIds.length > 0 ? (
-          <section className="bulk-panel bulk-panel--sticky" aria-label="Acciones masivas">
+          <section className="bulk-panel bulk-panel--elevated" aria-label="Acciones masivas">
             <header>
               <CheckSquare aria-hidden size={20} />
               <strong>{selectedIds.length} productos seleccionados</strong>

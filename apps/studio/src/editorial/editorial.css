@@ -1384,10 +1384,7 @@ tbody tr:hover {
   background: var(--accent-soft);
 }
 
-.bulk-panel--sticky {
-  position: sticky;
-  z-index: 6;
-  bottom: 12px;
+.bulk-panel--elevated {
   background: color-mix(in srgb, var(--surface-raised) 88%, transparent);
   box-shadow: var(--shadow-float);
   backdrop-filter: blur(14px);

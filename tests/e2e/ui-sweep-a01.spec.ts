@@ -15,7 +15,10 @@
  * con i%3. Conteos: remeras 7, basicas 3, camisas 7, pantalones 6, jeans 2,
  * abrigos/vestidos/tejidos/calzado/accesorios 6.
  */
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import type { Server } from "node:http";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
@@ -72,6 +75,15 @@ const bulkPanel = (page: Page) => page.getByRole("region", { name: "Acciones mas
 async function blurFocus(page: Page): Promise<void> {
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur?.());
 }
+
+const priceKindSelect = (page: Page) => bulkPanel(page).getByRole("combobox", { name: "Ajuste" });
+const priceValueInput = (page: Page) =>
+  bulkPanel(page).getByRole("spinbutton", { name: /Valor %|Centavos/ });
+
+const commercialHeader =
+  "producto_id,variante_id,slug,titulo,descripcion,marca,estado,categorias,colecciones,etiquetas,imagenes,variante,sku,opciones,precio_centavos,precio_anterior_centavos,disponible,estado_stock,gtin,mpn,imagen_variante,creado_en,actualizado_en";
+
+const fecha = "2026-08-07T10:00:00.000Z";
 
 test.describe("A1 — Catálogo: búsqueda", () => {
   test("busca por título, marca y estado; limpiar restaura las 50 filas", async ({ page }) => {
@@ -326,5 +338,92 @@ test.describe("A1 — Catálogo: acciones por fila", () => {
     );
     await dialog.getByRole("button", { name: "Cancelar" }).click();
     await expect(dialog).toBeHidden();
+  });
+});
+
+test.describe("A1 — Regresión: fixmes del barrido (A2/A3)", () => {
+  test("el error de ajuste obsoleto (-100%) se limpia tras un ajuste exitoso", async ({ page }) => {
+    await openCatalog(page);
+    await rows(page).nth(0).getByRole("checkbox").check();
+    await expect(bulkPanel(page)).toBeVisible();
+
+    await priceKindSelect(page).selectOption("percentage");
+    await priceValueInput(page).fill("-150");
+    await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
+    await expect(page.getByTestId("ui-inline-error")).toContainText("mínimo -100%");
+    await expect(priceInput(page, 0)).toHaveValue("2885000");
+
+    await priceValueInput(page).fill("5");
+    await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
+    await expect(priceInput(page, 0)).toHaveValue("3029250");
+    await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
+  });
+
+  test("la revisión de paquete avisa la imagen faltante y la fusión aplica", async ({ page }) => {
+    await openCatalog(page);
+    const directory = mkdtempSync(join(tmpdir(), "solara-a01-paquete-faltante-"));
+    try {
+      const csv = [
+        commercialHeader,
+        [
+          "",
+          "",
+          "taza-faltante",
+          "Taza con imagen faltante",
+          "",
+          "Marca A01",
+          "active",
+          "",
+          "",
+          "",
+          "imagenes/faltante.png",
+          "Única",
+          "TAZA-001",
+          "",
+          "125000",
+          "",
+          "true",
+          "in_stock",
+          "",
+          "",
+          "imagenes/faltante.png",
+          fecha,
+          fecha,
+        ].join(","),
+      ].join("\r\n");
+      writeFileSync(join(directory, "productos.csv"), csv, "utf8");
+      await page.locator('input[type="file"][webkitdirectory]').setInputFiles(directory);
+
+      const review = page.locator(".catalog-package-review");
+      await expect(review).toBeVisible();
+      await expect(review.getByText(/No se encontraron: imagenes\/faltante\.png/)).toBeVisible();
+
+      await review.getByRole("button", { name: "Agregar y actualizar" }).click();
+      await expect(page.getByText("51 productos y 61 variantes.")).toBeVisible();
+      await expect(review).toHaveCount(0);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("con el panel de acciones abierto las filas de la tabla siguen clickeables", async ({
+    page,
+  }) => {
+    await openCatalog(page);
+    await rows(page).nth(0).getByRole("checkbox").check();
+    await expect(bulkPanel(page)).toBeVisible();
+    await expect(page.getByText("1 seleccionados", { exact: true })).toBeVisible();
+
+    await rows(page).nth(1).getByRole("checkbox").check();
+    await expect(rows(page).nth(1)).toHaveAttribute("data-selected", "true");
+    await expect(page.getByText("2 seleccionados", { exact: true })).toBeVisible();
+    await expect(bulkPanel(page)).toContainText("2 productos seleccionados");
+
+    await rows(page).nth(2).getByRole("checkbox").check();
+    await expect(page.getByText("3 seleccionados", { exact: true })).toBeVisible();
+    await expect(bulkPanel(page)).toContainText("3 productos seleccionados");
+
+    await rows(page).nth(1).getByRole("checkbox").uncheck();
+    await expect(page.getByText("2 seleccionados", { exact: true })).toBeVisible();
   });
 });

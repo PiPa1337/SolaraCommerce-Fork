@@ -309,12 +309,28 @@ export async function buildCatalogPackagePlan(
   const categoryPlan = buildCategories(project, csvCategoryPaths(records));
   const collectionPlan = buildCollections(project, csvCollectionNames(records));
   const assetPlan = await buildAssets(contents.images, project);
+  const newAssets = assetPlan.assets.filter(
+    (asset) => !project.assets.some((old) => old.id === asset.id),
+  );
+  const knownAssetIds = new Set(project.assets.map((asset) => asset.id));
+  const realAssetIds = new Set([...knownAssetIds, ...newAssets.map((asset) => asset.id)]);
+  const referencedImages = new Set(
+    records.flatMap((record) =>
+      [...record.imagenes.split("|"), record.imagen_variante]
+        .map((value) => normalizePath(value))
+        .filter(Boolean),
+    ),
+  );
+  const unmatchedImages = [...referencedImages].filter(
+    (path) => !assetPlan.pathToId[path] && !knownAssetIds.has(path as ImageAsset["id"]),
+  );
   const imported = await importCsvInWorker(contents.csv, {
     categories: categoryPlan.categories,
     collections: collectionPlan.collections,
     assets: [
       ...project.assets,
-      ...assetPlan.assets.filter((asset) => !project.assets.some((old) => old.id === asset.id)),
+      ...newAssets,
+      ...unmatchedImages.map((path) => ({ id: path })),
     ],
     assetPathToId: assetPlan.pathToId,
     categoryPathToId: categoryPlan.pathToId,
@@ -322,16 +338,16 @@ export async function buildCatalogPackagePlan(
     defaultTimestamp: timestamp,
     defaultBrand: project.identity.brandName,
   });
-  const merged = mergeProducts(project.products, imported, timestamp);
-  const referencedImages = new Set(
-    records.flatMap((record) =>
-      record.imagenes
-        .split("|")
-        .map((value) => normalizePath(value))
-        .filter(Boolean),
+  const products = imported.map((product) => ({
+    ...product,
+    imageIds: product.imageIds.filter((assetId) => realAssetIds.has(assetId)),
+    variants: product.variants.map((variant) =>
+      variant.imageId === undefined || realAssetIds.has(variant.imageId)
+        ? variant
+        : { ...variant, imageId: undefined },
     ),
-  );
-  const knownAssetIds = new Set(project.assets.map((asset) => asset.id));
+  }));
+  const merged = mergeProducts(project.products, products, timestamp);
   return {
     products: merged.products,
     categories: categoryPlan.categories,
@@ -346,9 +362,7 @@ export async function buildCatalogPackagePlan(
       collectionsAdded: collectionPlan.added,
       imagesAdded: assetPlan.added,
       imagesReused: assetPlan.reused,
-      unmatchedImages: [...referencedImages].filter(
-        (path) => !assetPlan.pathToId[path] && !knownAssetIds.has(path as ImageAsset["id"]),
-      ),
+      unmatchedImages,
     },
   };
 }
