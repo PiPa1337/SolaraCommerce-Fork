@@ -527,11 +527,10 @@ export function Studio({
       event.returnValue = "";
     };
     window.addEventListener("beforeunload", warnBeforeClose);
-    return () => {
-      window.removeEventListener("beforeunload", warnBeforeClose);
-      autosave.dispose();
-    };
+    return () => window.removeEventListener("beforeunload", warnBeforeClose);
   }, [autosave, managedDirty, managedStorage]);
+
+  useEffect(() => () => autosave.dispose(), [autosave]);
 
   const performLeave = async () => {
     setLeaving(true);

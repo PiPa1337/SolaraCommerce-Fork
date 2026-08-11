@@ -49,6 +49,9 @@ versión publicada.
 - Ctrl+S queda bloqueado mientras se resuelve un conflicto de versión en el
   almacenamiento administrado, evitando reintentos invisibles sobre un shell
   modalmente inerte.
+- La cola de autosave sólo se descarta al desmontar el Studio; los cambios del
+  indicador de persistencia ya no pueden cancelar una cola activa de forma
+  intermedia.
 
 ### Auditoría total de la pestaña Preparar (2026-08-10)
 
