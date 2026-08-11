@@ -10,6 +10,15 @@ versión publicada.
 
 ## [Unreleased]
 
+### Auditoría UI/UX de SEO (2026-08-11)
+
+- la pestaña SEO comunica el estado de su auditoría local, incluyendo carga,
+  error y reintento;
+- el diagnóstico visual prioriza los hallazgos antes de las previews y ofrece
+  navegación directa cuando un problema tiene una pestaña de corrección;
+- se agregaron regresiones Playwright para la jerarquía y el feedback de la
+  auditoría SEO.
+
 ### Auditoría total de la pestaña Preparar (2026-08-10)
 
 Cierre del plan

@@ -1,5 +1,6 @@
 /** Auditoría previa a exportación para metadata, JSON-LD, sitemap, Merchant y contexto IA. */
 import {
+  ArrowClockwise,
   ArrowRight,
   CheckCircle,
   Circle,
@@ -11,7 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import type { AuditReport, OptimizationReport } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "../components/primitives";
 import { Button, Field, SectionHeader } from "../components/Ui";
 import { downloadBlob } from "../lib/projectArchive";
@@ -121,22 +122,36 @@ export function Seo({
   });
   const [optimization, setOptimization] = useState<OptimizationReport | null>(null);
   const [checkedIssues, setCheckedIssues] = useState<Set<string>>(new Set());
+  const [auditStatus, setAuditStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [auditError, setAuditError] = useState("");
+  const runAudit = useCallback(
+    async (isActive: () => boolean = () => true) => {
+      setAuditStatus("loading");
+      setAuditError("");
+      setOptimization(null);
+      try {
+        const { auditReport, buildOptimizationReport } = await import("@solara/exporter");
+        if (!isActive()) return;
+        setReport(auditReport(project));
+        setOptimization(buildOptimizationReport(project, { mode: "draft", publicAiContext: true }));
+        setAuditStatus("ready");
+      } catch {
+        if (!isActive()) return;
+        setAuditStatus("error");
+        setAuditError(
+          "No se pudo completar la auditoría. Reintentá para volver a analizar la tienda.",
+        );
+      }
+    },
+    [project],
+  );
   useEffect(() => {
     let active = true;
-    void import("@solara/exporter")
-      .then(({ auditReport, buildOptimizationReport }) => {
-        if (active) {
-          setReport(auditReport(project));
-          setOptimization(
-            buildOptimizationReport(project, { mode: "draft", publicAiContext: true }),
-          );
-        }
-      })
-      .catch(() => undefined);
+    void runAudit(() => active);
     return () => {
       active = false;
     };
-  }, [project]);
+  }, [runAudit]);
   const issues = normalizeIssues(report.issues);
   const groupedIssues = useMemo(() => {
     const groups = new Map<string, AuditIssue[]>();
@@ -156,8 +171,8 @@ export function Seo({
   const checkedCount = issues.filter((issue) => checkedIssues.has(issue.id)).length;
   const commit = (seo: StoreProjectV1["seo"]) =>
     onChange({ ...project, seo, updatedAt: new Date().toISOString() });
-  const errors = report.criticalCount;
-  const warnings = report.warningCount;
+  const errors = auditStatus === "ready" ? report.criticalCount : 0;
+  const warnings = auditStatus === "ready" ? report.warningCount : 0;
   const socialAsset =
     project.assets.find((asset) => asset.id === project.seo.socialImageId) ?? project.assets[0];
   const homepage = `${project.baseUrl.replace(/\/+$/, "")}/`;
@@ -181,9 +196,22 @@ export function Seo({
       <SectionHeader
         title="SEO y Google"
         description="La auditoría compara el proyecto con el HTML, los datos estructurados y el feed."
+        actions={
+          <output className="seo-header-status" data-testid="ui-seo-audit-state" aria-live="polite">
+            {auditStatus === "loading" ? (
+              <Badge tone="neutral">Analizando SEO</Badge>
+            ) : auditStatus === "error" ? (
+              <Badge tone="danger">Auditoría pendiente</Badge>
+            ) : errors > 0 ? (
+              <Badge tone="danger">{errors} críticos</Badge>
+            ) : (
+              <Badge tone="success">Auditoría lista</Badge>
+            )}
+          </output>
+        }
       />
       <div className="seo-grid">
-        <fieldset>
+        <fieldset className="seo-fieldset seo-fieldset--appearance">
           <legend>
             <MagnifyingGlass aria-hidden size={19} /> Apariencia
           </legend>
@@ -220,7 +248,7 @@ export function Seo({
           </Field>
         </fieldset>
 
-        <fieldset>
+        <fieldset className="seo-fieldset seo-fieldset--social">
           <legend>Imagen social</legend>
           <Field
             label="Recurso para compartir"
@@ -370,27 +398,57 @@ export function Seo({
           </article>
         </div>
 
-        <div className="audit-panel">
+        <div className="audit-panel" data-testid="ui-seo-audit-panel">
           <header>
             <div>
               <h3>Auditoría</h3>
               <p>
-                {errors} errores críticos, {warnings} advertencias.
+                {auditStatus === "loading"
+                  ? "Analizando metadata, rutas y datos estructurados…"
+                  : auditStatus === "error"
+                    ? auditError
+                    : `${errors} errores críticos, ${warnings} advertencias.`}
               </p>
-              {report.merchantMode === "experimental-whatsapp" ? (
+              {auditStatus === "ready" && report.merchantMode === "experimental-whatsapp" ? (
                 <p className="audit-note">
                   Merchant en modo experimental: el checkout final por WhatsApp puede no cumplir los
                   requisitos de Google.
                 </p>
               ) : null}
             </div>
-            {errors === 0 ? (
+            {auditStatus === "ready" && errors === 0 ? (
               <span className="audit-ready">
                 <CheckCircle aria-hidden size={18} weight="fill" /> Lista para revisar
               </span>
             ) : null}
           </header>
-          {issues.length === 0 ? (
+          {auditStatus === "loading" ? (
+            <output
+              className="audit-state audit-state--loading"
+              data-testid="ui-seo-audit-loading"
+              aria-live="polite"
+            >
+              <span className="spinner" aria-hidden />
+              <p>Ejecutando la auditoría local…</p>
+            </output>
+          ) : auditStatus === "error" ? (
+            <div
+              className="audit-state audit-state--error"
+              data-testid="ui-seo-audit-error"
+              role="alert"
+            >
+              <WarningCircle aria-hidden size={22} />
+              <p>{auditError}</p>
+              <Button
+                variant="quiet"
+                size="sm"
+                icon={ArrowClockwise}
+                onClick={() => void runAudit()}
+              >
+                Reintentar
+              </Button>
+            </div>
+          ) : issues.length === 0 ? (
             <div className="audit-empty">
               <CheckCircle aria-hidden size={26} />
               <p>No se detectaron problemas con el proyecto actual.</p>
@@ -417,6 +475,17 @@ export function Seo({
                         </small>
                       ) : null}
                     </div>
+                    {issue.fixTarget && issue.fixTarget !== "seo" ? (
+                      <Button
+                        variant="quiet"
+                        size="sm"
+                        icon={ArrowRight}
+                        data-testid="ui-seo-audit-fix"
+                        onClick={() => navigateToFix(issue.fixTarget ?? "")}
+                      >
+                        Ir a {FIX_LABELS[issue.fixTarget] ?? "corregir"}
+                      </Button>
+                    ) : null}
                   </article>
                 );
               })}
@@ -424,11 +493,7 @@ export function Seo({
           )}
         </div>
 
-        <section
-          className="guided-checklist"
-          style={{ gridColumn: "1 / -1" }}
-          data-testid="ui-seo-checklist"
-        >
+        <section className="guided-checklist" data-testid="ui-seo-checklist">
           <div className="guided-checklist__header">
             <div>
               <span className="guided-kicker">Revisión manual</span>
@@ -523,7 +588,10 @@ export function Seo({
         </section>
 
         {optimization ? (
-          <div className="optimization-panel" data-testid="ui-seo-crawler">
+          <div
+            className="optimization-panel optimization-panel--crawler"
+            data-testid="ui-seo-crawler"
+          >
             <header>
               <div>
                 <h3>Cómo nos ve un crawler</h3>
@@ -564,7 +632,7 @@ export function Seo({
         ) : null}
 
         {optimization ? (
-          <div className="optimization-panel">
+          <div className="optimization-panel optimization-panel--score">
             <header>
               <div>
                 <h3>Optimización automática</h3>

@@ -165,3 +165,25 @@ test("el título SEO persiste al cambiar de pestaña (H8-01)", async ({ page }) 
   await page.getByRole("tab", { name: "SEO", exact: true }).click();
   await expect(page.getByLabel("Título SEO")).toHaveValue("Título SEO auditoría F10");
 });
+
+test("SEO comunica el estado de auditoría y prioriza el diagnóstico sobre las previews", async ({
+  page,
+}) => {
+  await setupCleanStore(page, "Tienda SEO estados");
+  await page.getByRole("tab", { name: "SEO", exact: true }).click();
+
+  const status = page.getByTestId("ui-seo-audit-state");
+  const audit = page.getByTestId("ui-seo-audit-panel");
+  const previews = page.getByTestId("ui-seo-preview-google");
+
+  await expect(status).toBeVisible();
+  await expect(status).toHaveText(/Auditoría lista|críticos/);
+  await expect(audit).toBeVisible();
+  await expect(audit).toContainText(/errores críticos|No se detectaron problemas/);
+
+  const auditBox = await audit.boundingBox();
+  const previewsBox = await previews.boundingBox();
+  expect(auditBox).not.toBeNull();
+  expect(previewsBox).not.toBeNull();
+  expect(auditBox?.y).toBeLessThan(previewsBox?.y ?? Number.POSITIVE_INFINITY);
+});

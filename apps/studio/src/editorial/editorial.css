@@ -810,6 +810,17 @@ tbody tr:hover {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .seo-grid {
+    grid-template-areas:
+      "appearance"
+      "social"
+      "audit"
+      "previews"
+      "checklist"
+      "crawler"
+      "score";
+  }
+
   .theme-layout fieldset:last-child {
     grid-column: auto;
   }
@@ -986,6 +997,17 @@ tbody tr:hover {
 
   .optimization-metrics span:nth-child(-n + 2) {
     border-bottom: 1px solid var(--line);
+  }
+
+  .audit-item,
+  .audit-state {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .audit-item > .button,
+  .audit-state > .button {
+    grid-column: 2;
+    justify-self: start;
   }
 
   .export-actions .button,

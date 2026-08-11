@@ -3359,6 +3359,13 @@ tbody tr[data-selected="true"] {
 .seo-grid {
   display: grid;
   grid-template-columns: minmax(260px, 0.85fr) minmax(300px, 1.15fr);
+  grid-template-areas:
+    "appearance social"
+    "audit audit"
+    "previews previews"
+    "checklist checklist"
+    "crawler crawler"
+    "score score";
   align-items: start;
   gap: 14px;
 }
@@ -3368,14 +3375,29 @@ tbody tr[data-selected="true"] {
   gap: 14px;
 }
 
+.seo-fieldset--appearance {
+  grid-area: appearance;
+}
+
+.seo-fieldset--social {
+  grid-area: social;
+}
+
+.seo-header-status {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+}
+
 .seo-previews {
-  grid-column: 1 / -1;
+  grid-area: previews;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 10px;
 }
 
 .audit-panel {
+  grid-area: audit;
   border: 1px solid var(--line);
   border-radius: var(--radius-panel);
   background: var(--surface);
@@ -3417,8 +3439,9 @@ tbody tr[data-selected="true"] {
 
 .audit-item {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 9px;
+  align-items: start;
   padding: 12px 15px;
   border-bottom: 1px solid var(--line);
 }
@@ -3452,6 +3475,47 @@ tbody tr[data-selected="true"] {
   line-height: 1.4;
 }
 
+.audit-item small {
+  display: block;
+  margin-top: 5px;
+  color: var(--faint);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.audit-item > .button {
+  align-self: center;
+  white-space: nowrap;
+}
+
+.audit-state {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 76px;
+  padding: 16px;
+}
+
+.audit-state p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.audit-state--loading {
+  color: var(--muted);
+}
+
+.audit-state--error {
+  color: var(--danger);
+}
+
+.audit-state--error p {
+  color: var(--ink);
+}
+
 .audit-empty {
   display: grid;
   justify-items: center;
@@ -3468,11 +3532,22 @@ tbody tr[data-selected="true"] {
 }
 
 .optimization-panel {
-  grid-column: 1 / -1;
   border: 1px solid var(--line);
   border-radius: var(--radius-panel);
   background: var(--surface-raised);
   overflow: hidden;
+}
+
+.optimization-panel--crawler {
+  grid-area: crawler;
+}
+
+.optimization-panel--score {
+  grid-area: score;
+}
+
+.guided-checklist {
+  grid-area: checklist;
 }
 
 .optimization-panel > header,
