@@ -196,4 +196,8 @@ test("SEO comunica el estado de auditoría y prioriza el diagnóstico sobre las 
   expect(auditBox).not.toBeNull();
   expect(previewsBox).not.toBeNull();
   expect(auditBox?.y).toBeLessThan(previewsBox?.y ?? Number.POSITIVE_INFINITY);
+  const semanticOrder = await page
+    .locator(".seo-grid")
+    .evaluate((grid) => Array.from(grid.children).map((child) => child.className));
+  expect(semanticOrder.indexOf("audit-panel")).toBeLessThan(semanticOrder.indexOf("seo-previews"));
 });

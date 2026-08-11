@@ -31,6 +31,7 @@ import {
   type RefObject,
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -66,6 +67,7 @@ function formatIssuePaths(issues: Array<{ path: readonly PropertyKey[] }>): stri
 }
 
 interface ModulePickerProps {
+  id: string;
   modules: RegisteredModule[];
   slot: StoreSection["slot"];
   query: string;
@@ -81,6 +83,7 @@ interface ModulePickerProps {
  * los legacy sólo son reemplazos (compatibilidad) y no se ofrecen como nuevos.
  */
 function ModulePicker({
+  id,
   modules,
   slot,
   query,
@@ -142,6 +145,7 @@ function ModulePicker({
 
   return (
     <div
+      id={id}
       ref={pickerRef}
       className="module-picker"
       data-testid="ui-module-picker"
@@ -250,6 +254,7 @@ export function Builder({
   const [slotToAdd, setSlotToAdd] = useState<StoreSection["slot"]>("content");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerQuery, setPickerQuery] = useState("");
+  const pickerId = useId();
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
@@ -434,6 +439,8 @@ export function Builder({
               variant="primary"
               icon={Plus}
               aria-expanded={pickerOpen}
+              aria-haspopup="dialog"
+              aria-controls={pickerOpen ? pickerId : undefined}
               onClick={() => {
                 setPickerOpen((current) => !current);
                 setPickerQuery("");
@@ -449,6 +456,7 @@ export function Builder({
             ) : null}
             {pickerOpen ? (
               <ModulePicker
+                id={pickerId}
                 modules={modules}
                 slot={slotToAdd}
                 query={pickerQuery}

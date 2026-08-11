@@ -23,6 +23,13 @@ versión publicada.
 - se eliminó el fade de apertura del panel izquierdo para evitar que el preview
   quede visible a través del editor durante la transición.
 
+### Auditoría de controles del Studio (2026-08-11)
+
+- el picker de módulos del Constructor expone `aria-haspopup` y una relación
+  `aria-controls` válida mientras está abierto;
+- el orden semántico de SEO coincide con la jerarquía visual: auditoría antes de
+  previews y checklist.
+
 ### Auditoría total de la pestaña Preparar (2026-08-10)
 
 Cierre del plan

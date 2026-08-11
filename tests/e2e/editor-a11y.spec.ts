@@ -455,6 +455,10 @@ test("el selector de módulos es modal, enfoca la búsqueda y atrapa el foco (ST
   const picker = page.getByTestId("ui-module-picker");
   await expect(picker).toBeVisible();
   await expect(picker).toHaveAttribute("aria-modal", "true");
+  await expect(addButton).toHaveAttribute("aria-haspopup", "dialog");
+  const pickerId = await picker.getAttribute("id");
+  expect(pickerId).toBeTruthy();
+  await expect(addButton).toHaveAttribute("aria-controls", pickerId ?? "");
   await expect(picker.getByLabel("Buscar módulo")).toBeFocused();
 
   for (let tab = 0; tab < 25; tab += 1) await page.keyboard.press("Tab");

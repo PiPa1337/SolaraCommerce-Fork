@@ -275,6 +275,101 @@ export function Seo({
           </Field>
         </fieldset>
 
+        <div className="audit-panel" data-testid="ui-seo-audit-panel">
+          <header>
+            <div>
+              <h3>Auditoría</h3>
+              <p>
+                {auditStatus === "loading"
+                  ? "Analizando metadata, rutas y datos estructurados…"
+                  : auditStatus === "error"
+                    ? auditError
+                    : `${errors} errores críticos, ${warnings} advertencias.`}
+              </p>
+              {auditStatus === "ready" && report.merchantMode === "experimental-whatsapp" ? (
+                <p className="audit-note">
+                  Merchant en modo experimental: el checkout final por WhatsApp puede no cumplir los
+                  requisitos de Google.
+                </p>
+              ) : null}
+            </div>
+            {auditStatus === "ready" && errors === 0 ? (
+              <span className="audit-ready">
+                <CheckCircle aria-hidden size={18} weight="fill" /> Lista para revisar
+              </span>
+            ) : null}
+          </header>
+          {auditStatus === "loading" ? (
+            <output
+              className="audit-state audit-state--loading"
+              data-testid="ui-seo-audit-loading"
+              aria-live="polite"
+            >
+              <span className="spinner" aria-hidden />
+              <p>Ejecutando la auditoría local…</p>
+            </output>
+          ) : auditStatus === "error" ? (
+            <div
+              className="audit-state audit-state--error"
+              data-testid="ui-seo-audit-error"
+              role="alert"
+            >
+              <WarningCircle aria-hidden size={22} />
+              <p>{auditError}</p>
+              <Button
+                variant="quiet"
+                size="sm"
+                icon={ArrowClockwise}
+                onClick={() => void runAudit()}
+              >
+                Reintentar
+              </Button>
+            </div>
+          ) : issues.length === 0 ? (
+            <div className="audit-empty">
+              <CheckCircle aria-hidden size={26} />
+              <p>No se detectaron problemas con el proyecto actual.</p>
+            </div>
+          ) : (
+            <div className="audit-list">
+              {issues.map((issue) => {
+                const Icon = iconFor(issue);
+                return (
+                  <article className={`audit-item audit-item--${issue.severity}`} key={issue.id}>
+                    <Icon
+                      aria-hidden
+                      size={19}
+                      weight={issue.severity === "info" ? "regular" : "fill"}
+                    />
+                    <div>
+                      <strong title={issue.title}>{issue.title}</strong>
+                      {issue.message ? <p>{issue.message}</p> : null}
+                      {issue.area || issue.fixTarget ? (
+                        <small>
+                          {issue.area ? `Área: ${issue.area}` : ""}
+                          {issue.area && issue.fixTarget ? " · " : ""}
+                          {issue.fixTarget ? `Resolver en: ${issue.fixTarget}` : ""}
+                        </small>
+                      ) : null}
+                    </div>
+                    {issue.fixTarget && issue.fixTarget !== "seo" ? (
+                      <Button
+                        variant="quiet"
+                        size="sm"
+                        icon={ArrowRight}
+                        data-testid="ui-seo-audit-fix"
+                        onClick={() => navigateToFix(issue.fixTarget ?? "")}
+                      >
+                        Ir a {FIX_LABELS[issue.fixTarget] ?? "corregir"}
+                      </Button>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         <div className="seo-previews">
           <article className="asset-item" data-testid="ui-seo-preview-google">
             <div>
@@ -396,101 +491,6 @@ export function Seo({
               <span style={{ overflowWrap: "anywhere" }}>{homepage}</span>
             </div>
           </article>
-        </div>
-
-        <div className="audit-panel" data-testid="ui-seo-audit-panel">
-          <header>
-            <div>
-              <h3>Auditoría</h3>
-              <p>
-                {auditStatus === "loading"
-                  ? "Analizando metadata, rutas y datos estructurados…"
-                  : auditStatus === "error"
-                    ? auditError
-                    : `${errors} errores críticos, ${warnings} advertencias.`}
-              </p>
-              {auditStatus === "ready" && report.merchantMode === "experimental-whatsapp" ? (
-                <p className="audit-note">
-                  Merchant en modo experimental: el checkout final por WhatsApp puede no cumplir los
-                  requisitos de Google.
-                </p>
-              ) : null}
-            </div>
-            {auditStatus === "ready" && errors === 0 ? (
-              <span className="audit-ready">
-                <CheckCircle aria-hidden size={18} weight="fill" /> Lista para revisar
-              </span>
-            ) : null}
-          </header>
-          {auditStatus === "loading" ? (
-            <output
-              className="audit-state audit-state--loading"
-              data-testid="ui-seo-audit-loading"
-              aria-live="polite"
-            >
-              <span className="spinner" aria-hidden />
-              <p>Ejecutando la auditoría local…</p>
-            </output>
-          ) : auditStatus === "error" ? (
-            <div
-              className="audit-state audit-state--error"
-              data-testid="ui-seo-audit-error"
-              role="alert"
-            >
-              <WarningCircle aria-hidden size={22} />
-              <p>{auditError}</p>
-              <Button
-                variant="quiet"
-                size="sm"
-                icon={ArrowClockwise}
-                onClick={() => void runAudit()}
-              >
-                Reintentar
-              </Button>
-            </div>
-          ) : issues.length === 0 ? (
-            <div className="audit-empty">
-              <CheckCircle aria-hidden size={26} />
-              <p>No se detectaron problemas con el proyecto actual.</p>
-            </div>
-          ) : (
-            <div className="audit-list">
-              {issues.map((issue) => {
-                const Icon = iconFor(issue);
-                return (
-                  <article className={`audit-item audit-item--${issue.severity}`} key={issue.id}>
-                    <Icon
-                      aria-hidden
-                      size={19}
-                      weight={issue.severity === "info" ? "regular" : "fill"}
-                    />
-                    <div>
-                      <strong title={issue.title}>{issue.title}</strong>
-                      {issue.message ? <p>{issue.message}</p> : null}
-                      {issue.area || issue.fixTarget ? (
-                        <small>
-                          {issue.area ? `Área: ${issue.area}` : ""}
-                          {issue.area && issue.fixTarget ? " · " : ""}
-                          {issue.fixTarget ? `Resolver en: ${issue.fixTarget}` : ""}
-                        </small>
-                      ) : null}
-                    </div>
-                    {issue.fixTarget && issue.fixTarget !== "seo" ? (
-                      <Button
-                        variant="quiet"
-                        size="sm"
-                        icon={ArrowRight}
-                        data-testid="ui-seo-audit-fix"
-                        onClick={() => navigateToFix(issue.fixTarget ?? "")}
-                      >
-                        Ir a {FIX_LABELS[issue.fixTarget] ?? "corregir"}
-                      </Button>
-                    ) : null}
-                  </article>
-                );
-              })}
-            </div>
-          )}
         </div>
 
         <section className="guided-checklist" data-testid="ui-seo-checklist">
