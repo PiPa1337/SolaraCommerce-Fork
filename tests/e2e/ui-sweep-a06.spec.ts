@@ -84,11 +84,6 @@ function fieldOf(input: Locator): Locator {
   return input.locator("xpath=ancestor::fieldset[contains(@class, 'field')]");
 }
 
-/** Cuerpo scrolleable del diálogo de producto. */
-function dialogBody(dialog: Locator): Locator {
-  return dialog.locator(".product-dialog__body");
-}
-
 async function goToStep(dialog: Locator, label: string) {
   await dialog.getByRole("button", { name: label, exact: true }).click();
 }
@@ -423,7 +418,7 @@ test("la mini preview refleja en vivo título, precio mínimo y estado (edición
   await expect(page.getByText(/50 productos y /)).toBeVisible();
 });
 
-test.fixme(
+test(
   "A4 — guardado bloqueado: el diálogo no acerca la razón al campo visible (error fuera del viewport)",
   async ({ page }) => {
     test.setTimeout(90_000);
@@ -436,13 +431,15 @@ test.fixme(
     // Volver a Datos deja el error de precio fuera del área visible del body.
     await goToStep(dialog, "Datos");
 
-    const body = dialogBody(dialog);
-    await expect(body.evaluate((element) => element.scrollTop)).resolves.toBe(0);
+    // El scroll real ocurre en el <dialog> (max-height con recorte del UA),
+    // no en .product-dialog__body: el body crece y el diálogo es el contenedor
+    // scrolleable.
+    await expect(dialog.evaluate((element) => element.scrollTop)).resolves.toBe(0);
 
     // Al intentar guardar, la razón debería hacerse visible (scroll al primer
-    // error o aviso transitorio); hoy el clic no produce ningún cambio visual.
+    // error o aviso transitorio).
     await dialog.getByRole("button", { name: "Crear producto" }).click();
-    await expect(body.evaluate((element) => element.scrollTop)).resolves.toBeGreaterThan(0);
+    await expect(dialog.evaluate((element) => element.scrollTop)).resolves.toBeGreaterThan(0);
     const priceError = dialog
       .getByRole("spinbutton", { name: "Precio en centavos" })
       .locator("xpath=ancestor::fieldset[contains(@class, 'field')]")
@@ -451,7 +448,7 @@ test.fixme(
   },
 );
 
-test.fixme(
+test(
   "A4 — sin indicador visible de estado sucio dentro del diálogo de producto",
   async ({ page }) => {
     test.setTimeout(90_000);
