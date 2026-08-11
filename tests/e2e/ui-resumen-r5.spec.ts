@@ -9,8 +9,8 @@
  *       (catalog-header: mega-menu desktop + categorías móviles) y LEGACY
  *       (editorial-header: solara-nav-dropdown anidado);
  *  (4c) "Nombre del catálogo" (navigation.catalogLabel) cambia el label del
- *       enlace de catálogo integrado en moderno y legacy, y NO toca el search
- *       dialog (eyebrow fijo "Catálogo");
+ *       enlace de catálogo integrado en moderno y legacy, y es el eyebrow del
+ *       search dialog (fix Ola 3: ya no está hardcodeado "Catálogo");
  *  (4d) el enlace de catálogo integrado navega a /categorias/<slug>/ cuando
  *       hay items, o a /buscar/ como fallback sin items (con búsqueda activa).
  *
@@ -360,10 +360,10 @@ test("el enlace de catálogo integrado navega a /categorias/ o /buscar/ y no toc
   await expect(page).toHaveURL(/\/categorias\/remeras\/$/);
   await expect(page.getByRole("heading", { level: 1, name: "Remeras" })).toBeVisible();
 
-  // 4c: el search dialog no consume catalogLabel (eyebrow fijo "Catálogo").
+  // 4c: el search dialog usa catalogLabel como eyebrow (fix Ola 3).
   await page.goto(storeUrl(modernUrl, "/"));
-  await expect(page.locator("#catalog-search-dialog")).toContainText("Catálogo");
-  await expect(page.locator("#catalog-search-dialog")).not.toContainText("Explorar");
+  await expect(page.locator("#catalog-search-dialog .catalog-eyebrow")).toHaveText("Explorar");
+  await expect(page.locator("#catalog-search-dialog")).not.toContainText("Catálogo");
 
   // Sin items + búsqueda activa: el enlace integrado cae a /buscar/ con el label.
   await page.goto(storeUrl(emptyUrl, "/"));

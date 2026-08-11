@@ -539,3 +539,66 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     expect(headerHtml).toMatch(/<noscript>[\s\S]*@media print/);
   });
 });
+
+describe("auditoría Resumen — fixes Ola 3 (navegación y footer moderno)", () => {
+  const headerSection = createModuleSection({
+    id: "section-modern-header-resumen-test" as StoreSection["id"],
+    slot: "header",
+    moduleId: "catalog-header",
+  });
+  const footerSection = createModuleSection({
+    id: "section-modern-footer-resumen-test" as StoreSection["id"],
+    slot: "footer",
+    moduleId: "catalog-footer",
+  });
+
+  it("en mode automatic los ítems del editor tienen prioridad sobre las categorías", () => {
+    const project = structuredClone(catalogModernStore);
+    project.navigation = { ...project.navigation, mode: "automatic", items: [] };
+
+    // Sin items editados: la navegación deriva de las categorías raíz.
+    const automaticHtml = renderSections(project, [headerSection], { pageType: "home" });
+    expect(automaticHtml).toContain('class="catalog-mega-group__link" href="/categorias/remeras/"');
+
+    // Con items editados: el renderer los usa aunque el modo siga automatic.
+    project.navigation.items = [
+      { id: "nav-manual", label: "Enlace manual", href: "/contacto/" },
+      { id: "nav-manual-2", label: "Segundo enlace", href: "/envios/" },
+    ];
+    const editorHtml = renderSections(project, [headerSection], { pageType: "home" });
+    expect(editorHtml).toContain('class="catalog-mega-group__link" href="/contacto/"');
+    expect(editorHtml).toContain('class="catalog-mega-group__link" href="/envios/"');
+    expect(editorHtml).toContain("Enlace manual");
+    expect(editorHtml).not.toContain('href="/categorias/remeras/"');
+  });
+
+  it("la plantilla limpia (automatic, sin items ni categorías) conserva el fallback a /buscar/", () => {
+    const html = renderSections(catalogModernCleanStore, [headerSection], { pageType: "home" });
+    expect(html).toContain('class="catalog-nav-empty" href="/buscar/"');
+    expect(html).not.toContain("catalog-mega-group__link");
+  });
+
+  it("incluye la dirección de identidad en el footer moderno (paridad con legacy)", () => {
+    const project = structuredClone(catalogModernStore);
+    project.identity.address = "Av. Siempre Viva 123";
+    const html = renderSections(project, [footerSection], { pageType: "home" });
+
+    expect(html).toContain("<span>Av. Siempre Viva 123</span>");
+    expect(html).toContain("mailto:");
+    expect(html).toContain("tel:");
+  });
+
+  it("usa navigation.catalogLabel como eyebrow del diálogo de búsqueda", () => {
+    const project = structuredClone(catalogModernStore);
+    project.navigation.catalogLabel = "Explorar";
+    const html = renderSections(project, [headerSection], { pageType: "home" });
+
+    expect(html).toContain('<p class="catalog-eyebrow">Explorar</p>');
+    expect(html).not.toContain('<p class="catalog-eyebrow">Catálogo</p>');
+
+    const cleanHtml = renderSections(catalogModernCleanStore, [headerSection], {
+      pageType: "home",
+    });
+    expect(cleanHtml).toContain('<p class="catalog-eyebrow">Categorías</p>');
+  });
+});

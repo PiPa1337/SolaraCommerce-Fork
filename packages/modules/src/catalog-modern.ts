@@ -141,7 +141,13 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
             href: `/categorias/${child.slug}/`,
           })),
       }));
-    const navigationItems = navigation.mode === "automatic" ? automaticItems : navigation.items;
+    // Los ítems editados en el Resumen tienen prioridad sobre la navegación
+    // derivada de categorías aunque el modo sea "automatic"; con items vacíos
+    // se conserva el comportamiento previo (categorías en automatic).
+    const navigationItems =
+      navigation.mode === "automatic" && navigation.items.length === 0
+        ? automaticItems
+        : navigation.items;
     const current = (types: string[]) =>
       types.includes(context.pageType ?? "") ? ' aria-current="page"' : "";
     const configuredCatalogLabel = navigation.catalogLabel.trim();
@@ -235,7 +241,7 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
           searchEnabled
             ? `<dialog id="catalog-search-dialog" class="catalog-search-dialog" data-catalog-search-dialog aria-labelledby="catalog-search-title">
           <form class="catalog-search-dialog-form" action="/buscar/" method="get" role="search">
-            <div class="catalog-search-dialog-heading"><div><p class="catalog-eyebrow">Catálogo</p><h2 id="catalog-search-title">Buscar productos</h2></div><button type="button" data-catalog-search-close aria-label="Cerrar búsqueda">Cerrar</button></div>
+            <div class="catalog-search-dialog-heading"><div><p class="catalog-eyebrow">${escapeHtml(catalogLabel)}</p><h2 id="catalog-search-title">Buscar productos</h2></div><button type="button" data-catalog-search-close aria-label="Cerrar búsqueda">Cerrar</button></div>
             <label for="catalog-search-input">Buscar por nombre, marca, categoría o etiqueta</label>
             <div class="catalog-search-dialog-controls"><input id="catalog-search-input" name="q" type="search" autocomplete="off" enterkeyhint="search"><button class="catalog-primary-action" type="submit">Buscar</button></div>
           </form>
@@ -1054,6 +1060,9 @@ export const catalogFooter: ModuleDefinition<
         : "",
       context.project.identity.phone
         ? `<a href="tel:${escapeAttribute(context.project.identity.phone)}">${escapeHtml(context.project.identity.phone)}</a>`
+        : "",
+      context.project.identity.address
+        ? `<span>${escapeHtml(context.project.identity.address)}</span>`
         : "",
     ]
       .filter(Boolean)

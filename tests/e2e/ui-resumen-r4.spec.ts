@@ -22,6 +22,11 @@
  *   - legacy: definitions.ts:115-147 — lee `project.navigation.items` y
  *     `catalogLabel` sin condición de mode.
  *
+ * Fix Ola 3 (P0, catalog-modern.ts): los ítems del editor tienen prioridad
+ * sobre la navegación por categorías aunque `navigation.mode` sea
+ * "automatic"; el test final cubre la tienda nueva (clean) donde el dead
+ * control era total.
+ *
  * Tienda: "Predeterminado" (seed demo, `navigation.mode` curado con 8 enlaces).
  */
 import type { Server } from "node:http";
@@ -92,6 +97,29 @@ async function readDemoProject(page: Page): Promise<StoreProjectV1> {
   );
 }
 
+/** Lee el proyecto persistido de cualquier tienda de IndexedDB. */
+async function readProjectByName(page: Page, storeName: string): Promise<StoreProjectV1> {
+  return page.evaluate(
+    (name) =>
+      new Promise<StoreProjectV1>((resolve, reject) => {
+        const request = indexedDB.open("solara-commerce-studio");
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("success", () => {
+          const db = request.result;
+          const all = db.transaction("projects").objectStore("projects").getAll();
+          all.addEventListener("error", () => reject(all.error));
+          all.addEventListener("success", () => {
+            const records = all.result as Array<{ name: string; project: StoreProjectV1 }>;
+            const record = records.find((item) => item.name === name);
+            if (!record) reject(new Error(`No se encontró la tienda "${name}" en IDB.`));
+            else resolve(record.project);
+          });
+        });
+      }),
+    storeName,
+  );
+}
+
 /** Espera a que el proyecto persistido cumpla una condición. */
 async function pollProject(
   page: Page,
@@ -100,6 +128,19 @@ async function pollProject(
 ): Promise<StoreProjectV1> {
   await expect.poll(async () => predicate(await readDemoProject(page)), { timeout }).toBe(true);
   return readDemoProject(page);
+}
+
+/** Espera a que el proyecto de una tienda concreta cumpla una condición. */
+async function pollStoreProject(
+  page: Page,
+  storeName: string,
+  predicate: (project: StoreProjectV1) => boolean,
+  timeout = 15_000,
+): Promise<StoreProjectV1> {
+  await expect
+    .poll(async () => predicate(await readProjectByName(page, storeName)), { timeout })
+    .toBe(true);
+  return readProjectByName(page, storeName);
 }
 
 function saveIndicator(page: Page) {
@@ -398,4 +439,80 @@ test("paridad legacy: editorial-header renderiza el mismo contrato de enlaces (d
 
   // mailto sobrevive en el header legacy y cierra la lista en orden.
   expect(links.at(-1)).toEqual({ href: "mailto:hola@tienda.example", label: "Escribinos" });
+});
+
+test("tienda nueva (mode automatic): el enlace agregado en Resumen aparece en el header moderno exportado", async ({
+  page,
+}) => {
+  // Tienda limpia: la plantilla nace con navigation.mode "automatic" e items []
+  // (project-schema/src/catalog-modern-template.ts). El Studio no expone el modo,
+  // así que el fix del renderer (catalog-modern.ts) debe dar prioridad a los
+  // ítems del editor aunque el modo siga siendo automatic.
+  const storeName = "Tienda R4 automática";
+  await page.goto(studioUrl);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.deleteDatabase("solara-commerce-studio");
+        request.addEventListener("success", () => resolve());
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("blocked", () => reject(new Error("La base quedó bloqueada.")));
+      }),
+  );
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 30_000,
+  });
+  await page.getByRole("button", { name: "Nueva tienda", exact: true }).click();
+  await page.getByLabel("Nueva tienda").fill(storeName);
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await page.getByRole("button", { name: "Crear tienda vacía", exact: true }).click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
+    timeout: 30_000,
+  });
+  await page.getByRole("tab", { name: "Resumen", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
+
+  // ANTES: sin items ni categorías el header no tiene menú de categorías.
+  const before = await pollStoreProject(page, storeName, (project) =>
+    project.navigation.items.every((item) => item.label !== "Enlace R4 auto"),
+  );
+  expect(before.navigation.mode).toBe("automatic");
+  expect(before.navigation.items).toHaveLength(0);
+  const beforeHtml = exportHomeHtml(before);
+  expect(beforeHtml).not.toContain("catalog-mega-group__link");
+
+  // Agregar un enlace en el Resumen (la tienda limpia empieza sin items).
+  await page.getByRole("button", { name: "Añadir enlace de catálogo", exact: true }).click();
+  const newItem = page.locator(".navigation-editor-item").last();
+  await newItem.getByLabel("Enlace 1", { exact: true }).fill("Enlace R4 auto");
+  await newItem.getByLabel("Destino", { exact: true }).fill("/contacto/");
+  await newItem.getByLabel("Destino", { exact: true }).blur();
+  await expect(saveIndicator(page)).toContainText("Cambios guardados", { timeout: 5_000 });
+
+  // El proyecto persiste el item pero el modo sigue siendo automatic (el
+  // editor no lo conmuta; la prioridad la resuelve el renderer).
+  const after = await pollStoreProject(page, storeName, (project) =>
+    project.navigation.items.some(
+      (item) => item.label === "Enlace R4 auto" && item.href === "/contacto/",
+    ),
+  );
+  expect(after.navigation.mode).toBe("automatic");
+  expect(after.navigation.items).toHaveLength(1);
+
+  // Utilidad: el header moderno exportado muestra el enlace del editor
+  // aunque el modo siga siendo automatic (fix P0 de Ola 3).
+  const afterHtml = exportHomeHtml(after);
+  expect(afterHtml).toContain('class="catalog-mega-group__link" href="/contacto/"');
+  expect(afterHtml).toContain("Enlace R4 auto");
+  expect(afterHtml).not.toContain('class="catalog-mega-group__link" href="/categorias/');
+
+  // El preview (mismo renderer) muestra el enlace dentro del menú del header.
+  const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
+  await preview.locator(".catalog-nav-trigger").first().dispatchEvent("click");
+  await expect(
+    preview.locator(".catalog-mega-group__link", { hasText: "Enlace R4 auto" }),
+  ).toBeVisible();
 });
