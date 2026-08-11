@@ -248,13 +248,14 @@ export function Studio({
   // navegador desenfoca el botón Guardar cuando pasa a disabled durante el
   // guardado y el activeElement capturado sería body: se recupera el opener
   // real (botón Guardar) como respaldo para que el restauro nunca caiga en
-  // body (fixme A21/A14).
+  // body (fixme A21/A14). El botón puede quedar disabled mientras el conflicto
+  // está visible; se guarda igual porque se vuelve enfocable al cerrar.
   const conflictDialogRef = useRef<HTMLDivElement>(null);
   const conflictOpenerRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (!conflict) return;
     const active = document.activeElement;
-    const saveButton = document.querySelector<HTMLElement>("[data-studio-save]:not([disabled])");
+    const saveButton = document.querySelector<HTMLElement>("[data-studio-save]");
     conflictOpenerRef.current =
       active instanceof HTMLElement &&
       active !== document.body &&

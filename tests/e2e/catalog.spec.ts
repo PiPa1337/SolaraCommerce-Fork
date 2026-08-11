@@ -90,7 +90,7 @@ test("edita variantes y conserva el último cambio al volver, recargar y reabrir
   await page.getByPlaceholder("Buscar por producto, marca o estado").fill("Lámpara Horizonte");
   await expect(page.getByLabel("Nombre de Lámpara Horizonte")).toBeVisible();
   await page.getByLabel("Seleccionar Lámpara Horizonte").check();
-  await page.getByLabel("Estado").selectOption("archived");
+  await page.getByRole("combobox", { name: "Estado", exact: true }).selectOption("archived");
   await page.getByRole("button", { name: "Aplicar estado" }).click();
   await expect(page.locator("tbody .status-label", { hasText: "Archivado" })).toBeVisible();
 
@@ -134,7 +134,7 @@ test("previsualiza, cancela y edita en masa entre páginas", async ({ page }) =>
   await expect(page.getByText("120 seleccionados")).toBeVisible();
   await expect(page.locator('thead input[type="checkbox"]')).toBeChecked();
 
-  await page.getByLabel("Estado").selectOption("archived");
+  await page.getByRole("combobox", { name: "Estado", exact: true }).selectOption("archived");
   await clickDom(page.getByTestId("apply-bulk-status"));
   await expect(page.locator("tbody .status-label", { hasText: "Archivado" }).first()).toBeVisible();
   await clickDom(page.getByRole("button", { name: "Deshacer" }));

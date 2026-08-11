@@ -52,6 +52,9 @@ versión publicada.
 - La cola de autosave sólo se descarta al desmontar el Studio; los cambios del
   indicador de persistencia ya no pueden cancelar una cola activa de forma
   intermedia.
+- El foco vuelve al botón Guardar después de resolver un conflicto aunque el
+  control haya estado temporalmente deshabilitado mientras se mostraba el
+  diálogo.
 
 ### Auditoría total de la pestaña Preparar (2026-08-10)
 

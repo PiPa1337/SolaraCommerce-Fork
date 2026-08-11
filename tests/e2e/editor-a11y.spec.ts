@@ -654,6 +654,7 @@ test("el diálogo 409 cierra con Escape conservando el borrador y el fondo es in
     await pageA.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
     await expect(pageA.getByTestId("ui-studio-notice")).toContainText("Borrador conservado");
+    await expect(pageA.locator("[data-studio-save]")).toBeFocused();
     await expect(pageA.locator(".studio-shell")).not.toHaveAttribute("inert", "");
   } finally {
     await stopManagedServer(managed);
