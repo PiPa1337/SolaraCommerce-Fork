@@ -41,6 +41,8 @@ versión publicada.
   acciones de cada fila con el nombre de la sección afectada.
 - Recursos confirma los estados de limpieza de la caché regenerable y presenta
   el aviso de almacenamiento con un contenedor legible y acción protegida.
+- Catálogo incluye el nombre del producto en el nombre accesible del editor de
+  estado inline.
 
 ### Auditoría total de la pestaña Preparar (2026-08-10)
 

@@ -138,6 +138,7 @@ test("edita el estado de una fila sin pasar por el editor", async ({ page }) => 
   const trigger = page.getByTestId("ui-status-edit-trigger").first();
   const current = ((await trigger.textContent()) ?? "").trim();
   const nextLabel = current === "Activo" ? "Oculto" : "Activo";
+  await expect(trigger).toHaveAttribute("aria-label", new RegExp(`^Estado de .+: ${current}$`));
 
   await trigger.click();
   const statusSelect = page.getByTestId("ui-status-edit").first();

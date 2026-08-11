@@ -268,6 +268,7 @@ function StatusCell({
       <button
         type="button"
         className={`status-label status-label--${product.status}`}
+        aria-label={`Estado de ${product.title}: ${productStatusLabel(product.status)}`}
         data-testid="ui-status-edit-trigger"
         onClick={() => setEditing(true)}
       >
