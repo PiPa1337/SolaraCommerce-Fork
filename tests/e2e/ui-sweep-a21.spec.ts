@@ -625,6 +625,9 @@ test("A21.9 el conflicto abre el diálogo con trampa de foco y Conservar/Escape 
     // el guardado (disabled) y el shell lo captura por selector como opener
     // (fixme A14 resuelto; antes el foco caía en body).
     await expect(pageB.locator("[data-studio-save]")).toBeFocused();
+    const notice = pageB.getByTestId("ui-studio-notice");
+    await notice.getByRole("button", { name: "Cerrar aviso", exact: true }).click();
+    await expect(notice).toHaveCount(0);
 
     // El indicador conserva el error: el guardado no se confirmó en disco.
     await expect(pageB.locator("output.save-indicator")).toHaveClass(/save-indicator--error/);

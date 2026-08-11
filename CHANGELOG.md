@@ -45,6 +45,11 @@ versión publicada.
 - Recursos verifica que `Copiar ID` escriba el identificador real del asset y
   cambie su feedback accesible a `Copiado`.
 
+### Cobertura del aviso global del Studio (2026-08-11)
+
+- El conflicto de persistencia verifica que `Cerrar aviso` quite el banner
+  global sin ocultar el estado de error ni impedir `Reintentar`.
+
 ### Auditoría UI/UX de SEO (2026-08-11)
 
 - la pestaña SEO comunica el estado de su auditoría local, incluyendo carga,

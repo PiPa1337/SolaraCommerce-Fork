@@ -195,6 +195,13 @@ el ID persistido (`asset-hero`) y verifica el feedback accesible `Copiado de
 Campaña Modo Sur`. Las pruebas de carga y reemplazo siguen usando el clipboard
 real sólo cuando no necesitan leerlo.
 
+## Aviso global del Studio (2026-08-11)
+
+El flujo A21.9 de conflicto de persistencia también cubre el botón `Cerrar
+aviso` del banner global de Studio. Después de conservar el borrador, la prueba
+lo cierra y confirma que el indicador continúa en error y que `Reintentar` sigue
+disponible; cerrar el aviso no altera el estado de persistencia.
+
 ## Portabilidad Windows
 
 La distribución portable está implementada en `apps/desktop`. Electron carga
