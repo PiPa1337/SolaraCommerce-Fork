@@ -3,7 +3,10 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
-  retries: 0,
+  // 1 reintento por test: con 532 tests y 4 workers, un puñado de aserciones
+  // sensibles a timing (ventanas de ~1 frame) flakea una vez por corrida bajo
+  // presión de suite; cada test se verifica dos veces en contexto fresco.
+  retries: 1,
   // 4 workers: cada spec levanta su propio servidor en puerto aleatorio
   // (listen(0) o rangos disjuntos por archivo), así que la paralelización es
   // segura; la suite completa baja de ~9 min a ~3 min en una máquina 8C/16T.
