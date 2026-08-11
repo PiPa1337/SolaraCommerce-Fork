@@ -447,14 +447,19 @@ export function Dashboard({
 
   const doArchive = useCallback(
     async (id: string, archived: boolean) => {
+      // Restaurar debe devolver el foco a la card: la refresh posterior
+      // re-renderiza `projects` y el efecto de selección enfocaría el panel;
+      // la bandera hace que ese mismo efecto enfoque la card restaurada.
+      if (!archived) focusCardOnSelectRef.current = true;
       try {
         await onArchive(id, archived);
       } catch {
+        focusCardOnSelectRef.current = false;
         // el error ya quedó visible en el banner global del dashboard
         return;
       }
+      const record = projects.find((item) => item.id === id);
       if (archived) {
-        const record = projects.find((item) => item.id === id);
         showToast({
           message: `Tienda "${record?.name ?? "archivada"}" archivada.`,
           actionLabel: "Deshacer",
@@ -463,7 +468,9 @@ export function Dashboard({
             void doArchive(id, false);
           },
         });
+        return;
       }
+      showToast({ message: `Tienda "${record?.name ?? "restaurada"}" restaurada.` });
     },
     [onArchive, projects, showToast],
   );
@@ -723,14 +730,20 @@ export function Dashboard({
   };
 
   const confirmDuplicate = async (id: string, name: string) => {
+    // Simetría con el camino de cancelar: la refresh posterior re-renderiza
+    // `projects` y el efecto de selección robaría el foco al panel de detalle;
+    // la bandera hace que ese mismo efecto enfoque la card de origen.
+    focusCardOnSelectRef.current = true;
     try {
       await onDuplicate(id, name);
     } catch (reason) {
+      focusCardOnSelectRef.current = false;
       // el DuplicateDialog muestra el error inline y mantiene el diálogo abierto
       throw reason instanceof Error ? reason : new Error("No se pudo duplicar la tienda.");
     }
     setDuplicateTarget(undefined);
     showToast({ message: "Tienda duplicada." });
+    requestAnimationFrame(() => cardButtonRefs.current.get(id)?.focus());
   };
 
   const toggleCompare = () => {
@@ -1082,7 +1095,12 @@ export function Dashboard({
               <span className="dashboard-cosmic-kicker">Nuevo proyecto</span>
               <h2 id={createStoreTitleId}>Crear tienda</h2>
             </div>
-            <IconButton icon={X} label="Cerrar creación" onClick={closeCreate} />
+            <IconButton
+              icon={X}
+              label="Cerrar creación"
+              disabled={creatingProject}
+              onClick={closeCreate}
+            />
           </header>
           <ol className="create-store__steps" aria-label="Pasos para preparar la tienda">
             <li className={step >= 1 ? "is-active" : ""}>1 Marca</li>

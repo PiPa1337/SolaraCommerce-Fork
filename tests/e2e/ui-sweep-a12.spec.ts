@@ -20,6 +20,11 @@
  * biblioteca (Comparar tiendas, Respaldar todo en modo navegador).
  */
 import type { Server } from "node:http";
+import { type ChildProcess, spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
@@ -93,6 +98,47 @@ async function duplicateAs(page: Page, name: string): Promise<void> {
 
 const toolbarCombobox = (page: Page, index: number): Locator =>
   page.locator(".dashboard-cosmic-toolbar").getByRole("combobox").nth(index);
+
+async function waitForServer(url: string): Promise<void> {
+  await expect
+    .poll(
+      async () => {
+        try {
+          return (await fetch(url)).status;
+        } catch {
+          return 0;
+        }
+      },
+      { timeout: 10_000, intervals: [100, 250, 500] },
+    )
+    .toBe(200);
+}
+
+async function startManagedServer(): Promise<{ process: ChildProcess; url: string; root: string }> {
+  const applicationRoot = mkdtempSync(join(tmpdir(), "solara-a12-managed-"));
+  // Rango propio (5700-5849): evita colisiones con a13 (5400-5549) y a21 (5400-5699).
+  const port = 5700 + Math.floor(Math.random() * 150);
+  const token = randomBytes(24).toString("base64url");
+  const url = `http://127.0.0.1:${port}`;
+  const serverProcess: ChildProcess = spawn(
+    process.execPath,
+    [
+      resolve("packages/exporter/scripts/serve.mjs"),
+      resolve("apps/studio/dist"),
+      String(port),
+      token,
+      applicationRoot,
+    ],
+    { cwd: resolve("."), stdio: "ignore" },
+  );
+  await waitForServer(url);
+  return { process: serverProcess, url, root: applicationRoot };
+}
+
+async function stopManagedServer(process: ChildProcess, root: string): Promise<void> {
+  if (process.exitCode === null) process.kill();
+  rmSync(root, { recursive: true, force: true });
+}
 
 /**
  * Marca la tienda Predeterminado como desactualizada en IndexedDB (el mismo
@@ -423,4 +469,96 @@ test("las acciones de la biblioteca reflejan su estado en modo navegador", async
     "aria-pressed",
     "false",
   );
+});
+
+test("A12: la X de creación se deshabilita mientras la tienda se crea", async ({ page }) => {
+  test.setTimeout(240_000);
+  const managed = await startManagedServer();
+  try {
+    await page.goto(managed.url);
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole("button", { name: "Respaldar todo" })).toBeEnabled({
+      timeout: 15_000,
+    });
+
+    // Demorar el inicio de la transacción de guardado hace observable el
+    // estado «Creando» (la creación local es demasiado rápida para capturarla).
+    await page.route("**/__solara/storage/projects", async (route) => {
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_500));
+      await route.continue();
+    });
+
+    await page.getByRole("button", { name: "Nueva tienda", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Crear tienda" });
+    await expect(dialog).toBeVisible();
+    await page.getByLabel("Nueva tienda").fill("Tienda A12 X");
+    for (let step = 1; step <= 3; step += 1) {
+      await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
+    }
+    const closeCreation = page.getByRole("button", { name: "Cerrar creación" });
+    // El nombre cambia a «Creando» durante la transacción: el locator por regex
+    // resuelve en ambos estados.
+    const submit = dialog.getByRole("button", { name: /Crear tienda vacía|Creando/ });
+    await submit.click();
+    await expect(submit).toBeDisabled();
+    await expect(submit).toHaveText("Creando");
+    // Auto-feedback: la X queda deshabilitada mientras `creatingProject`;
+    // closeCreate cortaría en silencio y dejaría el diálogo a medias.
+    await expect(closeCreation).toBeDisabled();
+    // Al terminar la transacción la creación navega igual al editor.
+    await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
+      timeout: 30_000,
+    });
+  } finally {
+    await stopManagedServer(managed.process, managed.root);
+  }
+});
+
+test("A12: duplicar con éxito devuelve el foco a la card de origen", async ({ page }) => {
+  await openDashboard(page);
+  await duplicateAs(page, "Copia A12");
+  // El camino de cancelar ya restauraba el foco; el de éxito ahora también:
+  // la card de origen queda enfocada y su detalle seleccionado.
+  const sourceCard = page.locator('[data-store-card-id="store-modo-sur-demo"]');
+  await expect(sourceCard).toBeFocused();
+  await expect(page.getByTestId("ui-dashboard-toast")).toContainText("Tienda duplicada");
+  await expect(detailPanel(page, "Predeterminado")).toBeVisible();
+});
+
+test("A12: restaurar muestra toast de confirmación y devuelve el foco a la card", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  await selectCardByName(page, "Predeterminado");
+  await detailPanel(page, "Predeterminado")
+    .getByRole("button", { name: "Archivar", exact: true })
+    .click();
+  await page.getByTestId("ui-confirm-dialog").getByTestId("ui-confirm-accept").click();
+  await expect(page.getByTestId("ui-dashboard-toast")).toContainText("archivada");
+
+  // Con el filtro «Todas» la card restaurada sigue visible: la restauración
+  // debe dejarla seleccionada y enfocada (simetría con el foco de archivar).
+  const status = toolbarCombobox(page, 0);
+  await status.selectOption("all");
+  await expect(visibleCount(page)).toHaveText("1 visibles");
+  await selectCardByName(page, "Predeterminado");
+  await expect(detailPanel(page, "Predeterminado")).toBeVisible();
+
+  await detailPanel(page, "Predeterminado")
+    .getByRole("button", { name: "Restaurar", exact: true })
+    .click();
+  const restoredCard = card(page, "Predeterminado").locator(".dashboard-store-card__button");
+  await expect(page.getByTestId("ui-dashboard-toast")).toContainText("restaurada");
+  await expect(page.getByTestId("ui-dashboard-toast")).not.toContainText("Deshacer");
+  await expect(restoredCard).toHaveAttribute("aria-pressed", "true");
+  await expect(restoredCard).toBeFocused();
+  await expect(
+    card(page, "Predeterminado").locator(".dashboard-store-card__status"),
+  ).toHaveText("Activa");
+  await expect(detailPanel(page, "Predeterminado")).toBeVisible();
+  await expect(
+    detailPanel(page, "Predeterminado").getByRole("button", { name: "Archivar", exact: true }),
+  ).toBeVisible();
 });
