@@ -10,6 +10,13 @@ versión publicada.
 
 ## [Unreleased]
 
+### Foco al cerrar el detalle de Recursos (2026-08-11)
+
+- El panel de detalle de una imagen devuelve el foco al botón `Detalle` que lo
+  abrió cuando se cierra, evitando dejar el teclado sobre un nodo desmontado.
+- A17 verifica el cierre y mantiene la cobertura de carga, reemplazo, usos,
+  borrado y estados de caché.
+
 ### Foco al cerrar el editor de producto (2026-08-11)
 
 - `ProductEditor` conserva el control que abrió el diálogo y devuelve el foco

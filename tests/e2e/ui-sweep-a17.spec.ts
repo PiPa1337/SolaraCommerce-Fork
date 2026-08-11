@@ -297,6 +297,7 @@ test("el detalle muestra usos coherentes con las referencias del proyecto", asyn
 
   await page.getByTestId("ui-asset-detail-close").click();
   await expect(detail).not.toBeAttached();
+  await expect(heroAsset.getByTestId("ui-asset-detail-open")).toBeFocused();
 
   const productAsset = page.locator(".asset-item").filter({
     has: page.locator('input[value="Remera esencial negra"]'),

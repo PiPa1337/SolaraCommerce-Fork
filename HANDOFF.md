@@ -665,3 +665,15 @@ desconectado.
 La regresión está en `tests/e2e/ui-sweep-a06.spec.ts`: A06 queda en 11/11 en
 Chromium. No se modificó `schemaVersion`, el contrato de catálogo ni
 `catalogScaleStore`.
+
+## Foco al cerrar el detalle de Recursos (2026-08-11)
+
+El detalle de una imagen en Recursos se renderiza como un panel lateral
+condicional, no como un diálogo. Al cerrarlo, el botón `Detalle` que lo abrió
+ya no podía conservar el foco porque el panel desmontaba su propio botón de
+cierre. `Assets` ahora guarda el disparador conectado y restaura el foco en el
+siguiente frame; también cancela ese frame si el panel vuelve a abrirse antes
+de ejecutarlo. Si el asset fue eliminado, el disparador desconectado se ignora.
+
+La regresión está en `tests/e2e/ui-sweep-a17.spec.ts`: A17 queda en 11/11 en
+Chromium. No se modificó el schema ni la forma de `catalogScaleStore`.

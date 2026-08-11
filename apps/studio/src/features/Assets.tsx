@@ -48,6 +48,7 @@ export function Assets({
   const [copied, setCopied] = useState("");
   const [dragging, setDragging] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<ImageAsset["id"] | null>(null);
+  const selectedAssetOpenerRef = useRef<HTMLElement | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<ImageAsset["id"] | null>(null);
   const [replaceTargetId, setReplaceTargetId] = useState<ImageAsset["id"] | null>(null);
 
@@ -57,6 +58,15 @@ export function Assets({
       .then(setStorage)
       .catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (selectedAssetId !== null) return;
+    const opener = selectedAssetOpenerRef.current;
+    selectedAssetOpenerRef.current = null;
+    if (!opener?.isConnected) return;
+    const frame = window.requestAnimationFrame(() => opener.focus({ preventScroll: true }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [selectedAssetId]);
 
   const asFileList = (files: File[]): FileList => {
     const transfer = new DataTransfer();
@@ -452,6 +462,12 @@ export function Assets({
     imageInputRef.current?.click();
   };
 
+  const openAssetDetail = (assetId: ImageAsset["id"]) => {
+    selectedAssetOpenerRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setSelectedAssetId(assetId);
+  };
+
   return (
     <section className="workspace-section">
       <SectionHeader
@@ -709,7 +725,7 @@ export function Assets({
                       type="button"
                       aria-label={`Detalle de ${asset.name}`}
                       data-testid="ui-asset-detail-open"
-                      onClick={() => setSelectedAssetId(asset.id)}
+                      onClick={() => openAssetDetail(asset.id)}
                     >
                       <Info aria-hidden size={15} />
                       Detalle
