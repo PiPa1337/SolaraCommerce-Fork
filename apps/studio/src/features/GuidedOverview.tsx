@@ -24,7 +24,9 @@ import { auditProjectInWorker } from "../lib/workers";
 
 interface GuidedOverviewProps {
   project: StoreProjectV1;
+  advancedMode: boolean;
   onNavigate(destination: GuidedDestination): void;
+  onToggleAdvancedMode(): void;
   onApplyUpgrade(project: StoreProjectV1): void;
 }
 
@@ -55,7 +57,13 @@ function RequirementStatusIcon({ status }: { status: ContentStatus }) {
   return <WarningCircle size={18} />;
 }
 
-export function GuidedOverview({ project, onNavigate, onApplyUpgrade }: GuidedOverviewProps) {
+export function GuidedOverview({
+  project,
+  advancedMode,
+  onNavigate,
+  onToggleAdvancedMode,
+  onApplyUpgrade,
+}: GuidedOverviewProps) {
   const titleId = useId();
   const checklistId = useId();
   const baseReadiness = evaluateCatalogModernReadiness(project);
@@ -108,8 +116,13 @@ export function GuidedOverview({ project, onNavigate, onApplyUpgrade }: GuidedOv
         title="Preparar tienda"
         description="Catalog Modern ya está armado. Completá tu contenido, cargá el catálogo y revisá la publicación."
         actions={
-          <Button variant="quiet" icon={ArrowRight} onClick={() => onNavigate("builder")}>
-            Modo avanzado
+          <Button
+            variant="quiet"
+            icon={advancedMode ? CheckCircle : ArrowRight}
+            aria-pressed={advancedMode}
+            onClick={onToggleAdvancedMode}
+          >
+            {advancedMode ? "Modo avanzado activado" : "Modo avanzado"}
           </Button>
         }
       />

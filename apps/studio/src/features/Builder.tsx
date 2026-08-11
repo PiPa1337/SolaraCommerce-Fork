@@ -228,11 +228,21 @@ interface BuilderProps {
   project: StoreProjectV1;
   onChange(project: StoreProjectV1): void;
   protectedBase?: boolean;
+  /** Estado de sesión del Modo avanzado (shell): muestra el indicador del Constructor. */
+  advancedMode?: boolean;
+  /** Desbloquea la estructura protegida activando el Modo avanzado (PR5-F1). */
+  onEnableAdvanced?(): void;
 }
 
 type EditablePageKind = StoreProjectV1["pages"][number]["kind"];
 
-export function Builder({ project, onChange, protectedBase = false }: BuilderProps) {
+export function Builder({
+  project,
+  onChange,
+  protectedBase = false,
+  advancedMode = false,
+  onEnableAdvanced,
+}: BuilderProps) {
   const allModules = useMemo(availableModules, []);
   const modules = useMemo(() => allModules.filter(isAddableModule), [allModules]);
   const [pageKind, setPageKind] = useState<EditablePageKind>("home");
@@ -381,6 +391,9 @@ export function Builder({ project, onChange, protectedBase = false }: BuilderPro
         }
         actions={
           <div className="add-section">
+            {advancedMode ? (
+              <output className="ui-badge ui-badge--accent">Modo avanzado activado</output>
+            ) : null}
             <select
               aria-label="Página de edición"
               value={pageKind}
@@ -429,6 +442,11 @@ export function Builder({ project, onChange, protectedBase = false }: BuilderPro
             >
               Agregar sección
             </Button>
+            {protectedBase && onEnableAdvanced ? (
+              <Button variant="quiet" size="sm" onClick={onEnableAdvanced}>
+                Desbloquear
+              </Button>
+            ) : null}
             {pickerOpen ? (
               <ModulePicker
                 modules={modules}

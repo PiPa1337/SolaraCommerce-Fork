@@ -188,7 +188,9 @@ test("el tab Constructor directo conserva la base protegida; el modo avanzado s�
   await expect(page.getByText(/La estructura base está protegida/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Agregar sección" })).toBeDisabled();
 
-  // El guiado es el único camino al modo avanzado (F13).
+  // La pestaña del Constructor no activa el modo: la base protegida es el
+  // default en tiendas limpias (F13). El modo llega del flujo guiado o del
+  // botón "Desbloquear" del Constructor (contrato PT4, Opción A).
   await openStudioTab(page, "Preparar");
   await page.getByRole("button", { name: "Modo avanzado" }).click();
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();

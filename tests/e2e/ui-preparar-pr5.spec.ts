@@ -1,13 +1,16 @@
 /**
  * Auditoría Preparar PR5 (2026-08-11) — Modo avanzado y protección de
- * estructura. Contrato de 4 capas (plan docs/superpowers/plans/2026-08-10-auditoria-preparar.md):
- * - funcional: "Modo avanzado" de Preparar navega al Constructor con la
- *   estructura desprotegida (tab aria-selected, banner "estructura protegida"
- *   fuera, "Agregar sección" habilitado); volver a Preparar resetea el modo y
- *   el Constructor vuelve a proteger la base (contrato F13);
- * - auto-feedback: el estado del modo avanzado NO tiene indicador propio
- *   (el botón de Preparar no expone aria-pressed ni ningún estado); la única
- *   señal visible es la descripción del Constructor;
+ * estructura. Contrato de 4 capas (plan docs/superpowers/plans/2026-08-10-auditoria-preparar.md,
+ * fix Ola 3 por contrato PT4 Opción A):
+ * - funcional: "Modo avanzado" de Preparar es un toggle (aria-pressed + label
+ *   "Modo avanzado activado") que navega al Constructor con la estructura
+ *   desprotegida (tab aria-selected, banner "estructura protegida" fuera,
+ *   "Agregar sección" habilitado); el modo PERSISTE entre Preparar y
+ *   Constructor en la sesión (no hay reset asimétrico) y es reversible desde
+ *   el mismo toggle; el banner protegido del Constructor es accionable con el
+ *   botón "Desbloquear" (PR5-F1/PT4-Q3);
+ * - auto-feedback: el toggle expone aria-pressed y cambia de label; el
+ *   Constructor muestra el indicador "Modo avanzado activado" (PR5-F1);
  * - datos: la protección se deriva de `origin.seed === "clean"` + modo;
  *   la tienda demo nunca queda protegida; la edición de contenido del
  *   inspector sigue operativa bajo protección;
@@ -15,6 +18,8 @@
  *   bloquea (agregar, mover, ocultar, duplicar, eliminar, reemplazar módulo y
  *   restaurar defaults), y el checklist guiado de Inicio también desprotege
  *   (mismo camino navigateFromGuided).
+ * El modo es sesión-only: nace en false al abrir la tienda y no sobrevive a
+ * recargas (documentado en Studio.tsx).
  */
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
@@ -118,13 +123,16 @@ async function readSectionTitle(page: Page, storeName: string, sectionId: string
   );
 }
 
-test("Modo avanzado desde Preparar navega al Constructor con la estructura desprotegida (tab aria-selected, banner fuera)", async ({
+test("Modo avanzado desde Preparar navega al Constructor con la estructura desprotegida (toggle accesible, tab aria-selected, banner fuera)", async ({
   page,
 }) => {
   await setupCleanStore(page, "Tienda PR5 avanzado");
   await openPrepararTab(page);
 
-  await page.getByRole("button", { name: "Modo avanzado" }).click();
+  // Auto-feedback: el toggle de Preparar expone su estado (PR5-F1).
+  const advancedButton = page.getByRole("button", { name: "Modo avanzado" });
+  await expect(advancedButton).toHaveAttribute("aria-pressed", "false");
+  await advancedButton.click();
 
   // El tab Constructor queda seleccionado y el banner protegido desaparece.
   await expect(page.getByRole("tab", { name: "Constructor", exact: true })).toHaveAttribute(
@@ -134,6 +142,11 @@ test("Modo avanzado desde Preparar navega al Constructor con la estructura despr
   await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
   await expect(page.getByText(UNPROTECTED_DESCRIPTION)).toBeVisible();
   await expect(page.getByText(PROTECTED_DESCRIPTION)).toHaveCount(0);
+
+  // Auto-feedback: el Constructor indica el modo activo (PR5-F1).
+  await expect(
+    page.getByRole("status").filter({ hasText: "Modo avanzado activado" }),
+  ).toBeVisible();
 
   // Estructura desbloqueada: agregar, mover, ocultar, duplicar, eliminar,
   // reemplazar módulo y restaurar defaults.
@@ -147,26 +160,34 @@ test("Modo avanzado desde Preparar navega al Constructor con la estructura despr
   await expect(page.getByTestId("ui-restore-defaults")).toBeEnabled();
 });
 
-test("volver a Preparar resetea el modo: el Constructor vuelve a proteger la base y el botón no indica estado", async ({
+test("el modo persiste entre Preparar y Constructor en la sesión: toggle accesible, banner accionable y reversible", async ({
   page,
 }) => {
   await setupCleanStore(page, "Tienda PR5 vuelta");
   await openPrepararTab(page);
-  await page.getByRole("button", { name: "Modo avanzado" }).click();
+  const advancedButton = page.getByRole("button", { name: "Modo avanzado" });
+  await expect(advancedButton).toHaveAttribute("aria-pressed", "false");
+  await advancedButton.click();
   await expect(page.getByText(UNPROTECTED_DESCRIPTION)).toBeVisible();
 
-  // Vuelta a Preparar: el modo se resetea (selectTab("guided")), y entrar al
-  // Constructor por la pestaña vuelve a dejar la estructura protegida.
+  // Contrato PT4 Opción A: volver a Preparar NO resetea el modo (no hay
+  // reset asimétrico); el toggle refleja el estado activo con label propio.
   await openPrepararTab(page);
-  const advancedButton = page.getByRole("button", { name: "Modo avanzado" });
-  // Auto-feedback: el botón no expone ningún estado (sin aria-pressed ni
-  // marca): el modo es invisible salvo por la descripción del Constructor.
-  expect(await advancedButton.getAttribute("aria-pressed")).toBeNull();
+  const activeButton = page.getByRole("button", { name: "Modo avanzado activado" });
+  await expect(activeButton).toHaveAttribute("aria-pressed", "true");
 
+  // Entrar al Constructor por la pestaña conserva la desprotección.
   await openConstructorTab(page);
+  await expect(page.getByText(UNPROTECTED_DESCRIPTION)).toBeVisible();
+  await expect(page.getByText(PROTECTED_DESCRIPTION)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Agregar sección" })).toBeEnabled();
+
+  // El toggle permite volver a proteger desde Preparar (reversible in situ).
+  await openPrepararTab(page);
+  await activeButton.click();
+  await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
   await expect(page.getByText(PROTECTED_DESCRIPTION)).toBeVisible();
   await expect(page.getByRole("button", { name: "Agregar sección" })).toBeDisabled();
-  await expect(heroRow(page).getByRole("button", { name: "Mover abajo" })).toBeDisabled();
 
   // El checklist guiado de Inicio desprotege por el mismo camino que el botón
   // (navigateFromGuided): un requisito del hero navega al Constructor con la
@@ -181,11 +202,12 @@ test("volver a Preparar resetea el modo: el Constructor vuelve a proteger la bas
   await expect(page.getByText(PROTECTED_DESCRIPTION)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Agregar sección" })).toBeEnabled();
 
-  // El ciclo completo se puede repetir: volver a Preparar re-protege.
+  // El modo sigue activo tras el ciclo completo (persistencia de sesión).
   await openPrepararTab(page);
-  await openConstructorTab(page);
-  await expect(page.getByText(PROTECTED_DESCRIPTION)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Agregar sección" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Modo avanzado activado" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
 });
 
 test("tienda limpia sin modo avanzado: la protección bloquea la estructura pero deja editar el contenido", async ({

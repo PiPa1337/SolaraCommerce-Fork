@@ -112,6 +112,8 @@ interface StudioTabContentProps {
   runCommand(command: DomainCommand): void;
   onNavigate(destination: StudioTab): void;
   onApplyUpgrade(nextProject: StoreProjectV1): void;
+  onToggleAdvancedMode(): void;
+  onEnableAdvanced(): void;
   onImport(project: StoreProjectV1): Promise<void>;
   onOpenSite?: ((id: string) => Promise<void>) | undefined;
 }
@@ -127,13 +129,21 @@ const StudioTabContent = memo(function StudioTabContent({
   runCommand,
   onNavigate,
   onApplyUpgrade,
+  onToggleAdvancedMode,
+  onEnableAdvanced,
   onImport,
   onOpenSite,
 }: StudioTabContentProps) {
   switch (tab) {
     case "guided":
       return (
-        <GuidedOverview project={project} onNavigate={onNavigate} onApplyUpgrade={onApplyUpgrade} />
+        <GuidedOverview
+          project={project}
+          advancedMode={advancedMode}
+          onNavigate={onNavigate}
+          onToggleAdvancedMode={onToggleAdvancedMode}
+          onApplyUpgrade={onApplyUpgrade}
+        />
       );
     case "overview":
       return <Overview project={project} onChange={replaceProject} />;
@@ -145,6 +155,8 @@ const StudioTabContent = memo(function StudioTabContent({
           project={project}
           onChange={replaceProject}
           protectedBase={!advancedMode && project.origin?.seed === "clean"}
+          advancedMode={advancedMode}
+          onEnableAdvanced={onEnableAdvanced}
         />
       );
     case "theme":
@@ -567,6 +579,17 @@ export function Studio({
     [setPaneOpen],
   );
 
+  // Toggle de Preparar (contrato PT4, Opción A): además de navegar al
+  // Constructor, enciende/apaga el Modo avanzado para que el estado sea
+  // visible y reversible desde el propio control que lo activa.
+  const toggleAdvancedMode = useCallback(() => {
+    setAdvancedMode((current) => !current);
+    setTab("builder");
+    setPaneOpen(true);
+  }, [setPaneOpen]);
+
+  const enableAdvancedMode = useCallback(() => setAdvancedMode(true), []);
+
   const applyGuidedUpgrade = useCallback(
     (nextProject: StoreProjectV1) => {
       void (async () => {
@@ -602,10 +625,12 @@ export function Studio({
 
   const selectTab = useCallback(
     (nextId: StudioTab, focusTab = false) => {
-      // El tab Constructor no fuerza el Modo avanzado: en tiendas limpias la
-      // estructura protegida es el estado por defecto (F13). El Modo avanzado
-      // se activa sólo desde el flujo guiado (navigateFromGuided).
-      if (nextId === "guided") setAdvancedMode(false);
+      // El Modo avanzado es estado de sesión del shell (contrato PT4, Opción A):
+      // persiste entre TODAS las pestañas (incluido Preparar) para que haya un
+      // único estado observable, independiente del camino. Nace en `false` al
+      // abrir la tienda y no sobrevive a recargas; se activa desde el flujo
+      // guiado (navigateFromGuided), desde el toggle de Preparar o desde el
+      // botón Desbloquear del Constructor, y se apaga con el mismo toggle.
       setTab(nextId);
       setLastVisitedAt((current) => ({ ...current, [nextId]: project.updatedAt }));
       // El pane conserva su estado al cambiar de pestaña (H3-B3): sólo se
@@ -974,6 +999,8 @@ export function Studio({
               runCommand={runCommand}
               onNavigate={navigateFromGuided}
               onApplyUpgrade={applyGuidedUpgrade}
+              onToggleAdvancedMode={toggleAdvancedMode}
+              onEnableAdvanced={enableAdvancedMode}
               onImport={importFromExport}
               onOpenSite={onOpenSite}
             />

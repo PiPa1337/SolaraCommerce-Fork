@@ -117,8 +117,15 @@ test("los pasos del checklist llevan a su área y el modo avanzado conserva el e
     timeout: 5_000,
   });
 
+  // El modo avanzado conserva su estado al volver de Preparar (contrato PT4
+  // Opción A): el toggle del guiado refleja el modo activo y el Constructor
+  // sigue desprotegido.
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
-  await page.getByRole("button", { name: "Modo avanzado" }).click();
+  await expect(page.getByRole("button", { name: "Modo avanzado activado" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.getByRole("tab", { name: "Constructor", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
 
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();

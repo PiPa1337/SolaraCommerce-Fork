@@ -464,9 +464,15 @@ test("el toggle guiado/manual cambia la vista y persiste el estado", async ({ pa
   await openStudioTab(page, "Constructor");
   await expect(page.getByRole("button", { name: "Agregar sección" })).toBeEnabled();
 
-  // Volver al flujo guiado restaura la vista guiada y la protección de la base.
+  // El modo persiste al pasar por Preparar (contrato PT4 Opción A: no hay
+  // reset asimétrico): el toggle del guiado refleja el estado activo y la
+  // desprotección se conserva; se re-protege sólo al relanzar o apagar el modo.
   await openStudioTab(page, "Preparar");
   await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Modo avanzado activado" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await openStudioTab(page, "Constructor");
-  await expect(page.getByRole("button", { name: "Agregar sección" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Agregar sección" })).toBeEnabled();
 });
