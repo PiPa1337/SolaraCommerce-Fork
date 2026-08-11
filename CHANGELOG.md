@@ -25,6 +25,16 @@ versión publicada.
 - Exportar simula el fallo del worker de auditoría, mantiene Producción bloqueada,
   ofrece Reintentar y verifica que la nueva tentativa vuelva a anunciar el error.
 
+### Cobertura de acciones masivas del catálogo (2026-08-11)
+
+- Catálogo verifica las asignaciones masivas de categorías, colecciones y tags
+  contra el editor de producto, incluyendo que los productos no seleccionados
+  conserven sus datos.
+- El editor de producto verifica que sus checkboxes de organización y tags
+  sobrevivan al guardado y a la reapertura del producto.
+- Agregar y quitar tags informa un error inline cuando el valor está vacío y no
+  crea cambios pendientes en ese caso.
+
 ### Auditoría UI/UX de SEO (2026-08-11)
 
 - la pestaña SEO comunica el estado de su auditoría local, incluyendo carga,

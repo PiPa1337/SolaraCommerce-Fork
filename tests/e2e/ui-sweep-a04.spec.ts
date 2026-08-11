@@ -448,3 +448,38 @@ test("el diálogo expone data-dirty cuando el formulario tiene cambios (regresi�
   await dialog.getByRole("textbox", { name: "Título" }).fill("Camisa A04 Sucia");
   await expect(dialog).toHaveAttribute("data-dirty", "true");
 });
+
+test("organización: las categorías, colecciones y tags del editor hacen round-trip", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await openCatalog(page);
+  const dialog = await openEditDialog(page, "Camisa Rayas Finas");
+
+  await dialog
+    .locator("label.check-field")
+    .filter({ hasText: "Accesorios" })
+    .getByRole("checkbox")
+    .check();
+  await dialog
+    .locator("label.check-field")
+    .filter({ hasText: "Fin de temporada" })
+    .getByRole("checkbox")
+    .check();
+  await dialog.getByRole("textbox", { name: "Tags", exact: true }).fill("editorial, auditoria");
+  await saveDialog(dialog, false);
+
+  const reopened = await openEditDialog(page, "Camisa Rayas Finas");
+  await expect(
+    reopened.locator("label.check-field").filter({ hasText: "Accesorios" }).getByRole("checkbox"),
+  ).toBeChecked();
+  await expect(
+    reopened
+      .locator("label.check-field")
+      .filter({ hasText: "Fin de temporada" })
+      .getByRole("checkbox"),
+  ).toBeChecked();
+  await expect(reopened.getByRole("textbox", { name: "Tags", exact: true })).toHaveValue(
+    "editorial, auditoria",
+  );
+});

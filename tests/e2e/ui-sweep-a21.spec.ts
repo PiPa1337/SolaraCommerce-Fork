@@ -5,6 +5,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -236,9 +237,17 @@ async function failRendererChunk(page: Page): Promise<void> {
       // Los navegadores sin service workers ya permiten interceptar el chunk.
     }
   });
+  const rendererAsset = readdirSync(resolve("apps/studio/dist/assets")).find((asset) => {
+    if (!asset.endsWith(".js")) return false;
+    return readFileSync(resolve("apps/studio/dist/assets", asset), "utf8").includes(
+      "renderPreviewHtml",
+    );
+  });
+  if (!rendererAsset) throw new Error("No se encontró el chunk del renderer SEO.");
+  const rendererPath = `/assets/${rendererAsset}`;
   let blocked = false;
   await page.route("**/assets/*.js", async (route) => {
-    if (!blocked && route.request().url().includes("/assets/index-D")) {
+    if (!blocked && new URL(route.request().url()).pathname === rendererPath) {
       blocked = true;
       await route.abort("failed");
       return;

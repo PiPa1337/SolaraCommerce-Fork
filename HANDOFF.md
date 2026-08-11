@@ -163,6 +163,22 @@ E2E estable en A21.3b; el mismo seam cubre el error de Preview y la recuperació
 de su iframe en A20. La prueba desactiva sólo el service worker y aborta el
 chunk del renderer, sin interceptar recursos del producto durante el flujo normal.
 
+## Acciones masivas del catálogo (2026-08-11)
+
+La pasada adicional de Catálogo cubre las acciones de asignar categorías,
+colecciones y tags a una selección de productos. A02 verifica el efecto visible
+en la tabla, confirma las asignaciones en el editor de producto y comprueba que
+un producto no seleccionado conserve su categoría, colección y tags. El mismo
+recorrido usa la selección por teclado para abrir el editor y mantiene el
+contrato de `@solara/core`, que recalcula `productIds` derivados.
+El editor individual también tiene una regresión de round-trip para sus
+checkboxes de organización y el campo de tags en A04.
+
+El campo de tags vacío ya no falla en silencio: `Agregar tags` y `Quitar tags`
+anuncian un error inline y no generan cambios pendientes. No se modificó la
+forma de `catalogScaleStore`; la corrección sólo agrega validación de UI y
+regresión E2E sobre la demo determinista de 50 productos.
+
 ## Portabilidad Windows
 
 La distribución portable está implementada en `apps/desktop`. Electron carga

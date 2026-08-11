@@ -815,7 +815,11 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
       .split(",")
       .map((tag) => tag.trim())
       .filter(Boolean);
-    if (normalized.length === 0) return;
+    if (normalized.length === 0) {
+      setError("Ingresá al menos un tag separado por comas.");
+      return;
+    }
+    setError("");
     onCommand({ type, productIds: selectedIds, tags: normalized, at: now() });
   };
 

@@ -68,6 +68,11 @@ const bulkStatusSelect = (page: Page) => bulkPanel(page).getByRole("combobox", {
 const priceKindSelect = (page: Page) => bulkPanel(page).getByRole("combobox", { name: "Ajuste" });
 const priceValueInput = (page: Page) =>
   bulkPanel(page).getByRole("spinbutton", { name: /Valor %|Centavos/ });
+const categoryAssignmentSelect = (page: Page) =>
+  bulkPanel(page).getByRole("listbox", { name: "Categorías" });
+const collectionAssignmentSelect = (page: Page) =>
+  bulkPanel(page).getByRole("listbox", { name: "Colecciones" });
+const bulkTagsInput = (page: Page) => bulkPanel(page).getByRole("textbox", { name: "Tags" });
 
 async function expectSelectedCount(page: Page, count: number): Promise<void> {
   await expect(page.getByText(`${count} seleccionados`, { exact: true })).toBeVisible();
@@ -220,6 +225,86 @@ test.describe("A2 — Catálogo: acciones masivas", () => {
     await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
     await expect(priceInput(page, 0)).toHaveValue("3029250");
     await expect(page.getByTestId("ui-inline-error")).toBeHidden();
+  });
+
+  test("asignaciones masivas: categorías, colecciones y tags sólo afectan lo seleccionado", async ({
+    page,
+  }) => {
+    await openCatalog(page);
+    await rowCheckbox(page, 0).check();
+    await rowCheckbox(page, 1).check();
+    const untouchedCategoryCell = rows(page).nth(2).locator("td").nth(3);
+    const untouchedCategory = (await untouchedCategoryCell.innerText()).trim();
+    expect(untouchedCategory).not.toBe("");
+
+    await categoryAssignmentSelect(page).selectOption("category-camisas");
+    await bulkPanel(page).getByRole("button", { name: "Establecer categorías" }).click();
+    await expect(rows(page).nth(0).getByText("Camisas", { exact: true })).toBeVisible();
+    await expect(rows(page).nth(1).getByText("Camisas", { exact: true })).toBeVisible();
+    await expect(untouchedCategoryCell).toHaveText(untouchedCategory);
+
+    await collectionAssignmentSelect(page).selectOption("collection-mas-elegidos");
+    await bulkPanel(page).getByRole("button", { name: "Establecer colecciones" }).click();
+
+    await bulkTagsInput(page).fill(" auditoria, masiva ");
+    await bulkPanel(page).getByRole("button", { name: "Agregar tags" }).click();
+    await bulkTagsInput(page).fill("remeras");
+    await bulkPanel(page).getByRole("button", { name: "Quitar tags" }).click();
+    await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: "Limpiar", exact: true }).click();
+    await rowCheckbox(page, 0).check();
+    await blurFocus(page);
+    await page.keyboard.press("e");
+    const firstEditor = page.locator("dialog.product-dialog");
+    await expect(firstEditor).toBeVisible();
+    await expect(
+      firstEditor.getByRole("heading", { name: "Remera esencial de algodón" }),
+    ).toBeVisible();
+    await expect(firstEditor.getByRole("checkbox", { name: "Camisas", exact: true })).toBeChecked();
+    await expect(
+      firstEditor.getByRole("checkbox", { name: "Más elegidos", exact: true }),
+    ).toBeChecked();
+    await expect(firstEditor.getByRole("textbox", { name: "Tags", exact: true })).toHaveValue(
+      "urbano, nuevo, auditoria, masiva",
+    );
+    await firstEditor.getByRole("button", { name: "Cerrar editor" }).click();
+    await expect(firstEditor).toBeHidden();
+
+    await page.getByRole("button", { name: "Limpiar", exact: true }).click();
+    await rowCheckbox(page, 2).check();
+    await blurFocus(page);
+    await page.keyboard.press("e");
+    const untouchedEditor = page.locator("dialog.product-dialog");
+    await expect(untouchedEditor).toBeVisible();
+    await expect(
+      untouchedEditor.getByRole("heading", { name: "Remera manga larga Base" }),
+    ).toBeVisible();
+    await expect(
+      untouchedEditor
+        .locator("label.check-field")
+        .filter({ hasText: untouchedCategory })
+        .getByRole("checkbox"),
+    ).toBeChecked();
+    await expect(
+      untouchedEditor.getByRole("checkbox", { name: "Más elegidos", exact: true }),
+    ).not.toBeChecked();
+    await expect(
+      untouchedEditor.getByRole("textbox", { name: "Tags", exact: true }),
+    ).not.toHaveValue(/auditoria|masiva/);
+  });
+
+  test("tags masivos: un valor vacío muestra error y no crea cambios", async ({ page }) => {
+    await openCatalog(page);
+    await rowCheckbox(page, 0).check();
+
+    await bulkTagsInput(page).fill(" , ");
+    await bulkPanel(page).getByRole("button", { name: "Agregar tags" }).click();
+
+    await expect(page.getByTestId("ui-inline-error")).toContainText(
+      "Ingresá al menos un tag separado por comas.",
+    );
+    await expect(page.getByText("Cambios pendientes", { exact: true })).toHaveCount(0);
   });
 });
 
