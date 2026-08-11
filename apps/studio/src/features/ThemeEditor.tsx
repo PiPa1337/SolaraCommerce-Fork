@@ -555,6 +555,7 @@ export function ThemeEditor({
             <FontSelect
               value={project.theme.typography.display}
               testId="ui-font-display"
+              label="Familia de títulos"
               onChange={(stack) => commitFont("display", stack)}
             />
           </Field>
@@ -562,6 +563,7 @@ export function ThemeEditor({
             <FontSelect
               value={project.theme.typography.body}
               testId="ui-font-body"
+              label="Familia de texto"
               onChange={(stack) => commitFont("body", stack)}
             />
           </Field>
@@ -651,16 +653,19 @@ export function ThemeEditor({
 function FontSelect({
   value,
   testId,
+  label,
   onChange,
 }: {
   value: string;
   testId: string;
+  label: string;
   onChange(stack: string): void;
 }) {
   const matched = matchFontOption(value);
   const custom = matched === undefined;
   return (
     <select
+      aria-label={label}
       value={custom ? value : matched.stack}
       data-testid={testId}
       onChange={(event) => onChange(event.target.value)}
