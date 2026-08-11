@@ -10,6 +10,40 @@ versión publicada.
 
 ## [Unreleased]
 
+### Auditoría total de la pestaña Resumen (2026-08-10)
+
+Cierre del plan
+[`docs/superpowers/plans/2026-08-10-auditoria-resumen.md`](docs/superpowers/plans/2026-08-10-auditoria-resumen.md):
+~40 controles del tab Resumen auditados con el contrato de 4 capas —
+funcional / auto-feedback / datos / **utilidad** (el control debe producir un
+cambio visible en el preview Y en el sitio exportado). Hallazgo central: los
+enlaces de navegación editados en el Resumen no renderizaban en tiendas nuevas
+(mode `automatic`) — ahora el header moderno siempre refleja la navegación del
+editor.
+
+**Corregido:**
+
+- los enlaces y subenlaces del Resumen se renderizan siempre en el header
+  moderno, con prioridad sobre la navegación derivada de categorías (antes, en
+  una tienda nueva, un enlace editado no aparecía en ningún lado);
+- el JSON-LD del negocio usa el número de WhatsApp como `telephone` (cae a
+  `identity.phone`) y las claves vacías se omiten;
+- la meta description de la Home cae a la descripción de la marca cuando no
+  hay descripción SEO configurada;
+- el `<title>` de la Home cae al nombre del proyecto cuando no hay título SEO
+  (el nombre del proyecto gana su primer consumidor real en el sitio);
+- el footer moderno muestra la dirección de la tienda, como el footer legacy;
+- el eyebrow del diálogo de búsqueda usa el "Nombre del catálogo" configurado;
+- el gate guiado ya no miente: el conteo "N pendientes bloquean producción" se
+  alinea con el gate real del export (`criticalCount` del auditor, singular
+  "1 pendiente" y estado "Verificando…") y el número de plantilla se marca
+  como placeholder;
+- las secciones del Resumen conservan su pliegue por tienda al cambiar de
+  pestaña y al recargar la app.
+
+**Paridad:** preview ↔ sitio exportado verificada **byte a byte** en `/`,
+`/nosotros/` y `/contacto/` (252 verificaciones campo×ruta).
+
 ### Auditoría total de la pestaña Tema (2026-08-10)
 
 Cierre del plan

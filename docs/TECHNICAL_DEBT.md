@@ -24,6 +24,10 @@ y el cierre de la auditoría total de la pestaña Tema
 ([`2026-08-10-auditoria-tema.md`](../docs/superpowers/plans/2026-08-10-auditoria-tema.md),
 cuyos fixes y decisiones abiertas se agrupan en la sección
 "Auditoría total de la pestaña Tema (2026-08-10)" más abajo);
+y el cierre de la auditoría total de la pestaña Resumen
+([`2026-08-10-auditoria-resumen.md`](../docs/superpowers/plans/2026-08-10-auditoria-resumen.md),
+cuyos fixes y decisiones abiertas se agrupan en la sección
+"Auditoría total de la pestaña Resumen (2026-08-10)" más abajo);
 lo que sigue pendiente son decisiones de producto o matrices que exigen release.
 Nota de proceso (ola paralela): los archivos de T6 (CSV, Catalog,
 ProductEditor, ThemeEditor y Overview) se commitearon dentro de `c92f99f`
@@ -229,6 +233,45 @@ evidencia en `.superpowers/sdd/tema-*.md`; resumen de usuario en el
 | P2 | Dark mode deshabilitado por decisión documentada: los 7 tokens no alcanzan (no existe `colors.dark` ni derivación por luminancia; la capa `--catalog-*` quedó clara fija y habilitar el modo oscuro mezclaría superficies). | El usuario no puede elegir "Oscuro" desde el select (mantiene el hint). | Decidir entre la opción A (sólo `color-scheme`, sin inventar paleta) y la opción B (schema v3 con `colors.dark` + remapeo `--catalog-*`); propuestas con evidencia en `.superpowers/sdd/tema-t7-report.md`. |
 | P3 | Google Fonts self-host: ~34.9 KB woff2 por familia (Archivo 34.1 / Inter 47.1 / Lora 36.9 KB, medido). | Peso del sitio por cada familia usada; se deduplica si display === body (el default usa 1 archivo). | Revisar si se agregan familias al registro al cerrar la decisión de dark mode. |
 | P3 | El CSS del storefront creció +6 KB (+8.1 %: 75.1 → 81.2 KB; cap 780 KiB). | Crecimiento del CSS principal del sitio (margen amplio, vigilarlo). | Re-ejecutar `scripts/public-storefront-budget.test.ts` ante cambios de styles.ts. |
+
+## Auditoría total de la pestaña Resumen (2026-08-10)
+
+Cierre del plan
+[`docs/superpowers/plans/2026-08-10-auditoria-resumen.md`](../docs/superpowers/plans/2026-08-10-auditoria-resumen.md):
+la caza (R1-R8) y la traza (P1-P4) auditaron ~40 controles del tab Resumen con
+el contrato de 4 capas (funcional / auto-feedback / datos / utilidad).
+Hallazgo central: los enlaces de navegación editados no renderizaban en
+tiendas nuevas — la plantilla limpia siembra `navigation.mode: "automatic"` y
+el header moderno descartaba `navigation.items` (dead control P0, el Studio no
+exponía el modo); con los fixes de Ola 3 el header moderno siempre refleja la
+navegación del editor, con prioridad sobre la navegación derivada de
+categorías. Detalle y evidencia en `.superpowers/sdd/resumen-*.md`; resumen de
+usuario en el `CHANGELOG.md`.
+
+**Resueltas (commit de referencia):**
+
+| Área | Problema | Fix |
+| --- | --- | --- |
+| JSON-LD | `telephone` usaba sólo `identity.phone`; con identidad vacía se emitían claves `""`. | `telephone = whatsapp.phone \|\| identity.phone` y claves vacías omitidas (R2-1). `268306e` |
+| Meta Home | La descripción de marca no alimentaba la meta description (R1). | Fallback `seoDescription ?? seo.description ?? identity.description`. `268306e` |
+| `<title>` Home | `project.name` sin consumidor en el sitio (R1-1). | Fallback `seoTitle ?? seo.title ?? project.name ?? brandName`: `project.name` gana su primer consumidor real. `268306e` |
+| Navegación | Dead control P0: en tiendas nuevas (mode `automatic`) los enlaces editados no renderizaban; el editor no exponía el modo (R4/R5/P4-1). | El renderer honra `navigation.items` con prioridad sobre la navegación derivada en cualquier modo; la plantilla no cambia (`automatic` + `items: []`). `e0d1330` |
+| Footer moderno | `identity.address` ausente del footer moderno (sólo legacy/JSON-LD/Contacto, R1-6). | El `<address>` incluye la dirección con las mismas condiciones que email/teléfono (paridad con legacy). `e0d1330` |
+| Search dialog | El eyebrow estaba hardcodeado "Catálogo" (R5). | Usa `navigation.catalogLabel` con la sanitización del trigger (vacío/"tienda" → "Categorías"). `e0d1330` |
+| Gate guiado | La guía sobredeclaraba bloqueos (`criticalPending` de guidance) frente al gate real del export (`auditReport().criticalCount`); sentinel de teléfono tratado como "placeholder" (R7-F1/F2). | Copia alineada con el gate real (singular "1 pendiente", estado "Verificando…"); el sentinel marca `placeholder`. `237fed0` |
+| Colapsables | El pliegue de secciones se perdía al cambiar de pestaña y al recargar (R8-B1). | Persistencia por tienda en localStorage (patrón del pane). `237fed0` |
+| Badge `invalid` | Inalcanzable en flujos soportados (el editor no commitea inválidos; un proyecto inválido deriva a recuperación, R7-F3). | Documentado como defensivo (sólo proyectos pre-schema). `237fed0` |
+
+**Paridad:** preview ↔ sitio exportado verificada byte a byte en `/`,
+`/nosotros/` y `/contacto/` con el documento completo normalizado (252
+verificaciones campo×ruta, P2); sin divergencias en campos del Resumen.
+
+**Abiertas (ninguna de alto impacto):**
+
+| Prioridad | Problema | Riesgo/impacto | Recomendación |
+| --- | --- | --- | --- |
+| P3 | `pages.home.title` (título visible de Home) sigue sin consumidor directo en el sitio: el `<title>` usa seo y el h1 viene del hero (R6-H1). Documentado como contrato (decisión, no bug). | El campo puede confundir si se edita sin ver efecto. | Conectar a un h1/hero de Home o eliminar el campo con test en un barrido futuro; requiere migración o aceptación explícita. |
+| — | `project.slug` es identidad interna por diseño (carpeta `proyectos/`, respaldos, historial de export); no afecta URLs públicas (R3 test 5: sitio idéntico ante cambios de slug). | — | Mantener el contrato documentado; no conectarlo al sitio (decisión vigente). |
 
 ## Código potencialmente muerto o duplicado
 

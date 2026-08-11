@@ -451,3 +451,47 @@ vars del tema (U2) — el flujo del editor llega idéntico a ambos outputs.
    agregan familias.
 3. **CSS del storefront** — +6 KB (+8.1 %: 75.1 → 81.2 KB, cap 780 KiB);
    vigilarlo en budgets ante cambios de styles.ts.
+
+## Auditoría total de la pestaña Resumen (2026-08-10)
+
+Cierre del plan
+[`docs/superpowers/plans/2026-08-10-auditoria-resumen.md`](docs/superpowers/plans/2026-08-10-auditoria-resumen.md):
+~40 controles del tab Resumen auditados con el contrato de 4 capas —
+funcional / auto-feedback / datos / **utilidad**. La caza (R1-R8) y la traza
+(P1-P4) encontraron el hallazgo central: los enlaces de navegación editados en
+el Resumen no renderizaban en tiendas nuevas — la plantilla limpia siembra
+`navigation.mode: "automatic"` y el header moderno descartaba
+`navigation.items` (dead control P0: el Studio no exponía el modo). Tres
+agentes de fix lo resolvieron: el header moderno siempre refleja la navegación
+del editor, con prioridad sobre la navegación derivada de categorías.
+
+Reportes: `.superpowers/sdd/resumen-rN-report.md`, `resumen-pN-report.md` y
+`resumen-ola3-*-report.md`. Resumen de usuario en [`CHANGELOG.md`](CHANGELOG.md),
+sección "Auditoría total de la pestaña Resumen (2026-08-10)"; deuda abierta en
+[`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md).
+
+**Resuelto (commits `268306e`, `e0d1330`, `237fed0`):** enlaces y subenlaces
+con prioridad en el header moderno incluso en `mode: automatic` (dead control
+P0, tiendas nuevas muestran los links editados); JSON-LD `telephone` =
+`whatsapp.phone || identity.phone` con claves vacías omitidas; meta description
+de Home con fallback `seoDescription ?? seo.description ?? identity.description`;
+`<title>` de Home con fallback `seoTitle ?? seo.title ?? project.name ??
+brandName` (`project.name` gana su primer consumidor real); dirección en el
+footer moderno; `catalogLabel` en el eyebrow del search dialog; gate guiado
+alineado con el gate real del export (`auditReport().criticalCount`, singular
+"1 pendiente", estado "Verificando…"); sentinel de teléfono marca `placeholder`;
+colapsables persistentes por tienda en localStorage; badge `invalid`
+documentado como defensivo.
+
+**Paridad:** preview ↔ sitio exportado verificada **byte a byte** en `/`,
+`/nosotros/` y `/contacto/` (252 verificaciones campo×ruta, documento completo
+normalizado idéntico en las 3 rutas — P2).
+
+**Decisiones abiertas (documentadas, sin fix en esta ola):**
+
+1. **`pages.home.title` (título visible de Home)** — sigue sin consumidor
+   directo en el sitio: el `<title>` usa seo y el h1 viene del hero.
+   Documentado como contrato.
+2. **Slug interno** — identidad interna por diseño (carpeta `proyectos/`,
+   respaldos e historial de export); el sitio exportado es idéntico ante
+   cambios de slug (R3 test 5).
