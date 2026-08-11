@@ -500,7 +500,7 @@ test("A20: comparación — quitar de comparar actualiza el conteo y deshabilita
 
 // ------------------------------------------------------- defectos ajenos (A14)
 
-test.fixme(
+test(
   "A14: una ruta válida fuera de la muestra (p. ej. /envios/) se descarta en silencio",
   async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });

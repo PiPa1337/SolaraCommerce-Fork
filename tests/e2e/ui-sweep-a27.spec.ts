@@ -524,7 +524,7 @@ test("C10: el checkout del drawer moderno genera el enlace de WhatsApp con el pe
   await expect(drawer.locator("[data-order-preview]")).toContainText("11 5555 0142");
 });
 
-test.fixme(
+test(
   "A29: el drawer de carrito abierto inertea a los hermanos de la página (como el menú móvil)",
   async ({ page }) => {
     test

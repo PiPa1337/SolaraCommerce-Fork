@@ -483,7 +483,7 @@ test("moderno: categoría con filtros — etiqueta aplica y orden real", async (
   );
 });
 
-test.fixme(
+test(
   "A29: la búsqueda guarda por término — 'a b' debe mostrar 'Escribí al menos 2 caracteres' en vez de puntuar términos de 1 carácter",
   async ({ page }) => {
     await page.goto(scaleUrlFor("/buscar/?q=a%20b"));
@@ -493,7 +493,7 @@ test.fixme(
   },
 );
 
-test.fixme(
+test(
   "A29: el conteo de resultados de categoría anuncia cambios de filtros con aria-live",
   async ({ page }) => {
     await page.goto(scaleUrlFor("/categorias/casa/"));
@@ -504,7 +504,7 @@ test.fixme(
   },
 );
 
-test.fixme(
+test(
   "A29: en /buscar/ moderno el prefill y el teclado van al input del diálogo oculto, no al input visible",
   async ({ page }) => {
     await page.goto(modernUrlFor("/buscar/?q=quilted"));

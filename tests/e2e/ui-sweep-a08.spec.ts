@@ -390,7 +390,7 @@ test("SEO: contadores con maxLength y persistencia en páginas (capa 1+2+3)", as
   );
 });
 
-test.fixme(
+test(
   "vacíos de campos obligatorios: error inline en español sin rechazo global (BUG B1 → A7)",
   async ({ page }) => {
     const store = { name: "Tienda B1 A08" };

@@ -443,7 +443,7 @@ test("A15.7 el guardado gestionado versiona en disco y actualiza la barra de est
   }
 });
 
-test.fixme(
+test(
   "A14: el error de validación del shell no tiene trigger accesible desde la UI (InlineError del topbar inalcanzable)",
   async ({ page }) => {
     await openDemoStore(page);
@@ -451,7 +451,7 @@ test.fixme(
   },
 );
 
-test.fixme(
+test(
   "A14: el estado de error de guardado y su botón Reintentar no tienen trigger accesible desde la UI",
   async ({ page }) => {
     await openDemoStore(page);

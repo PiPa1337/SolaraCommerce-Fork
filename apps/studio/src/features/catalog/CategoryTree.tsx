@@ -67,6 +67,17 @@ export function CategoryTree({
     });
     return children;
   }, [project.categories]);
+  const categoryDepths = useMemo(() => {
+    const depths = new Map<string, number>();
+    const visit = (category: Category, depth: number) => {
+      depths.set(category.id, depth);
+      (categoryChildren.get(category.id) ?? []).forEach((child) => visit(child, depth + 1));
+    };
+    project.categories
+      .filter((category) => category.parentId === undefined)
+      .forEach((category) => visit(category, 0));
+    return depths;
+  }, [categoryChildren, project.categories]);
   const visibleCategories = useMemo(
     () =>
       orderedCategories.filter((category) => {
@@ -128,7 +139,7 @@ export function CategoryTree({
             const hasChildren = (categoryChildren.get(category.id)?.length ?? 0) > 0;
             const expanded = !collapsedCategoryIds.has(category.id);
             return (
-              <li key={category.id} data-depth={category.parentId ? "1" : "0"}>
+              <li key={category.id} data-depth={categoryDepths.get(category.id) ?? 0}>
                 <div className="category-tree-name">
                   {hasChildren ? (
                     <button

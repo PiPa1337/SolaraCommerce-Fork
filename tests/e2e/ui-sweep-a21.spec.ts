@@ -584,7 +584,7 @@ test("A21.9 el conflicto abre el diálogo con trampa de foco y Conservar/Escape 
   }
 });
 
-test.fixme(
+test(
   "A14: tras conservar el borrador con Escape el foco cae al body, no al botón Guardar",
   async ({ context, page }) => {
     test.setTimeout(360_000);

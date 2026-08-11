@@ -34,6 +34,15 @@ export function RepeaterEditor({
     onChange(
       items.map((item, itemIndex) => (itemIndex === index ? { ...item, [key]: next } : item)),
     );
+  const duplicate = (index: number) => {
+    const current = items[index];
+    if (!current) return;
+    onChange([
+      ...items.slice(0, index + 1),
+      { ...current, id: `item-${crypto.randomUUID()}` },
+      ...items.slice(index + 1),
+    ]);
+  };
   const move = (index: number, delta: -1 | 1) => {
     const target = index + delta;
     if (target < 0 || target >= items.length) return;
@@ -70,6 +79,14 @@ export function RepeaterEditor({
                 aria-label="Bajar elemento"
               >
                 ↓
+              </button>
+              <button
+                type="button"
+                onClick={() => duplicate(index)}
+                disabled={maxItems !== undefined && items.length >= maxItems}
+                aria-label="Duplicar elemento"
+              >
+                Duplicar
               </button>
               <button
                 type="button"
