@@ -243,9 +243,7 @@ test("Sistema: el preview sigue prefers-color-scheme al emular la media", async 
   // Fix Ola 3: la capa --catalog-* del skin catalog-modern deriva de los
   // tokens --solara-* (styles.ts:1942-1948), así que el root del skin sigue
   // al override del dark (#1d1e19) y la mezcla ilegible ya no existe.
-  await expect
-    .poll(previewCatalogBackground(page), { timeout: 15_000 })
-    .toBe("rgb(29, 30, 25)");
+  await expect.poll(previewCatalogBackground(page), { timeout: 15_000 }).toBe("rgb(29, 30, 25)");
 
   // Con el sistema en claro, el modo auto respeta la paleta del usuario. El
   // cambio de emulación requiere un iframe nuevo: un cambio de modo (idempotente

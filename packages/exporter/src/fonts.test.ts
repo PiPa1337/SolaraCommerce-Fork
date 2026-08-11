@@ -13,7 +13,7 @@ describe("fonts", () => {
       expect(option.woff2Path).toBe(`assets/fonts/${option.family.toLowerCase()}.woff2`);
       const bytes = fontFilesFor(option.stack, option.stack).get(option.woff2Path);
       expect(bytes).toBeDefined();
-      expect([...bytes?.subarray(0, 4)]).toEqual(WOFF2_MAGIC);
+      expect([...(bytes?.subarray(0, 4) ?? new Uint8Array())]).toEqual(WOFF2_MAGIC);
       expect(bytes?.length).toBeLessThan(60 * 1024);
     }
   });

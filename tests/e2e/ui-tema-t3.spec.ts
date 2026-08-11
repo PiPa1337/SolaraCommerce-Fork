@@ -173,9 +173,7 @@ test("romper contraste en vivo: muted = fondo pasa el par a warning y restaurar 
   // muted = background (#fcfcfb): ratio 1.00:1, el panel avisa sin recargar.
   await page.getByTestId("ui-color-text-muted").fill("#fcfcfb");
   await expect(mutedRow).toHaveAttribute("data-testid", "ui-contrast-warning");
-  await expect(mutedRow.locator(".contrast-check__ratio")).toHaveText(
-    "1.00:1 — inferior a 4.5:1",
-  );
+  await expect(mutedRow.locator(".contrast-check__ratio")).toHaveText("1.00:1 — inferior a 4.5:1");
 
   // Los otros pares siguen OK (el cambio es por par).
   await expect(contrastRow(page, "Texto sobre fondo")).toHaveAttribute(
@@ -200,9 +198,7 @@ test("hex inválido: el campo avisa y el panel sigue reflejando el último color
 
   // "zzz" no commitea: error inline en el campo, panel sin estado "no válido".
   await page.getByTestId("ui-color-text-muted").fill("zzz");
-  await expect(page.getByTestId("ui-field-error")).toHaveText(
-    "Ingresá un color hex como #1a2b3c.",
-  );
+  await expect(page.getByTestId("ui-field-error")).toHaveText("Ingresá un color hex como #1a2b3c.");
   await expect(page.getByTestId("ui-color-text-muted")).toHaveAttribute("aria-invalid", "true");
   await expect(mutedRow).toHaveAttribute("data-testid", "ui-contrast-ok");
   await expect(mutedRow.locator(".contrast-check__ratio")).toHaveText("5.36:1");

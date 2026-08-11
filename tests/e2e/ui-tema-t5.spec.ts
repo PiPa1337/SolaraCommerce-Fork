@@ -93,20 +93,17 @@ function previewVar(page: Page, name: string): () => Promise<string> {
  */
 async function styleFingerprint(page: Page, props: string[]): Promise<string> {
   const root = page.frameLocator('iframe[title="Vista previa desktop"]').locator(".solara-page");
-  return root.evaluate(
-    (element, propNames) => {
-      const lines: string[] = [];
-      for (const el of element.querySelectorAll("*")) {
-        const computed = getComputedStyle(el);
-        const values = propNames
-          .map((property) => `${property}=${computed.getPropertyValue(property).trim()}`)
-          .join("|");
-        lines.push(`${el.tagName}.${String(el.className)}:${values}`);
-      }
-      return lines.sort().join("\n");
-    },
-    props,
-  );
+  return root.evaluate((element, propNames) => {
+    const lines: string[] = [];
+    for (const el of element.querySelectorAll("*")) {
+      const computed = getComputedStyle(el);
+      const values = propNames
+        .map((property) => `${property}=${computed.getPropertyValue(property).trim()}`)
+        .join("|");
+      lines.push(`${el.tagName}.${String(el.className)}:${values}`);
+    }
+    return lines.sort().join("\n");
+  }, props);
 }
 
 const RADIUS_PROPS = [
@@ -245,14 +242,10 @@ test("spacingScale: el gap de la grilla principal de productos escala con el sli
 
   const spacing = page.getByLabel(/^Espaciado /);
   await spacing.fill("1.5");
-  await expect
-    .poll(previewVar(page, "--solara-space-scale"), { timeout: 15_000 })
-    .toBe("1.5");
+  await expect.poll(previewVar(page, "--solara-space-scale"), { timeout: 15_000 }).toBe("1.5");
   const fingerprint15 = await styleFingerprint(page, SPACING_PROPS);
   await spacing.fill("0.75");
-  await expect
-    .poll(previewVar(page, "--solara-space-scale"), { timeout: 15_000 })
-    .toBe("0.75");
+  await expect.poll(previewVar(page, "--solara-space-scale"), { timeout: 15_000 }).toBe("0.75");
   const fingerprint075 = await styleFingerprint(page, SPACING_PROPS);
   expect(fingerprint15).not.toBe(fingerprint075);
 

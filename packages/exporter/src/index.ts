@@ -33,11 +33,11 @@ import {
   optimizeProject,
 } from "@solara/site-optimizer";
 import { STOREFRONT_RUNTIME_CSS, STOREFRONT_RUNTIME_JS } from "@solara/storefront-runtime";
-import { fontCssFor, fontFilesFor, type FontTransport } from "./fonts";
+import { type FontTransport, fontCssFor, fontFilesFor } from "./fonts";
 
 export type { OptimizationReport } from "@solara/site-optimizer";
-export { FONT_OPTIONS, fontCssFor, fontFilesFor } from "./fonts";
 export type { FontOption, FontTransport } from "./fonts";
+export { FONT_OPTIONS, fontCssFor, fontFilesFor } from "./fonts";
 
 export type ExportMode = "draft" | "production";
 export type AuditSeverity = "critical" | "warning" | "info";
@@ -2252,12 +2252,11 @@ function buildFiles(
     ),
   );
   files.set("assets/storefront.js", STOREFRONT_RUNTIME_JS);
-  fontFilesFor(
-    publicProject.theme.typography.display,
-    publicProject.theme.typography.body,
-  ).forEach((bytes, path) => {
-    files.set(path, bytes);
-  });
+  fontFilesFor(publicProject.theme.typography.display, publicProject.theme.typography.body).forEach(
+    (bytes, path) => {
+      files.set(path, bytes);
+    },
+  );
   if (manifest.searchEnabled) files.set("search-index.json", buildSearchIndex(publicProject));
   if (manifest.cartEnabled || manifest.checkoutEnabled || publicProject.siteShell.cart)
     files.set("catalog-index.json", buildCatalogIndex(publicProject));
