@@ -113,6 +113,31 @@ test("el dashboard no desborda y mantiene acciones usables en los 5 viewports", 
       detail.getByRole("button", { name: "Abrir tienda" }),
       "Abrir tienda",
     );
+    for (const actionName of ["Respaldo ahora", "Duplicar", "Archivar"]) {
+      const action = detail.getByRole("button", { name: actionName, exact: true });
+      await expectActionUsable(page, action, actionName);
+      const label = action.locator(":scope > span");
+      await expect(label).toHaveCSS("white-space", "nowrap");
+      await expect(label).toHaveCSS("overflow-wrap", "normal");
+      await expect
+        .poll(
+          () =>
+            label.evaluate((element) => {
+              const style = getComputedStyle(element);
+              const fontSize = Number.parseFloat(style.fontSize);
+              const lineHeight =
+                style.lineHeight === "normal"
+                  ? fontSize * 1.25
+                  : Number.parseFloat(style.lineHeight);
+              return (
+                element.scrollWidth <= element.clientWidth &&
+                element.getBoundingClientRect().height <= lineHeight * 1.2
+              );
+            }),
+          { message: `${actionName}: el texto no debe quedar cortado ni partirse` },
+        )
+        .toBe(true);
+    }
 
     if (viewport.width <= 820) {
       const position = await detail.evaluate((element) => getComputedStyle(element).position);

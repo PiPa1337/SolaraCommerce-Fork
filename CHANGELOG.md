@@ -43,6 +43,9 @@ versión publicada.
   el aviso de almacenamiento con un contenedor legible y acción protegida.
 - Catálogo incluye el nombre del producto en el nombre accesible del editor de
   estado inline.
+- El panel lateral del dashboard da ancho completo a las acciones principales y
+  distribuye “Duplicar” y “Archivar” en dos columnas para mantener los textos
+  legibles sin partir palabras en viewports estrechos.
 
 ### Auditoría total de la pestaña Preparar (2026-08-10)
 
