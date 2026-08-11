@@ -234,9 +234,15 @@ function previewFrame(page: Page) {
 /** Título del documento del preview (mismo renderer que el sitio exportado). */
 async function expectPreviewTitle(page: Page, expected: string): Promise<void> {
   await expect
-    .poll(() => previewFrame(page).locator("html").evaluate((element) => document.title), {
-      timeout: 15_000,
-    })
+    .poll(
+      () =>
+        previewFrame(page)
+          .locator("html")
+          .evaluate(() => document.title),
+      {
+        timeout: 15_000,
+      },
+    )
     .toBe(expected);
 }
 

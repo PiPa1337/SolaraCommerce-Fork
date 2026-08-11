@@ -13,7 +13,9 @@ import {
 } from "./index";
 
 function onlineStoreJsonLd(homeHtml: string): Record<string, unknown> {
-  for (const script of homeHtml.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
+  for (const script of homeHtml.matchAll(
+    /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g,
+  )) {
     const data = JSON.parse(script[1] ?? "{}") as Record<string, unknown>;
     if (data["@type"] === "OnlineStore") return data;
   }
