@@ -640,6 +640,15 @@ test("el diálogo 409 cierra con Escape conservando el borrador y el fondo es in
     const { pageA } = await createConflict(browser, managed.url, "A11y A", "A11y B");
     const dialog = pageA.getByTestId("ui-conflict-dialog");
     await expect(dialog).toBeVisible({ timeout: 60_000 });
+    let commitAttemptsAfterConflict = 0;
+    pageA.on("request", (request) => {
+      if (request.url().includes("/__solara/storage/saves/") && request.url().endsWith("/commit")) {
+        commitAttemptsAfterConflict += 1;
+      }
+    });
+    await pageA.keyboard.press("Control+S");
+    await pageA.waitForTimeout(350);
+    expect(commitAttemptsAfterConflict, "Ctrl+S no debe reintentar un conflicto visible").toBe(0);
     await expect(pageA.locator(".studio-shell")).toHaveAttribute("inert", "");
 
     await pageA.keyboard.press("Escape");

@@ -46,6 +46,9 @@ versión publicada.
 - El panel lateral del dashboard da ancho completo a las acciones principales y
   distribuye “Duplicar” y “Archivar” en dos columnas para mantener los textos
   legibles sin partir palabras en viewports estrechos.
+- Ctrl+S queda bloqueado mientras se resuelve un conflicto de versión en el
+  almacenamiento administrado, evitando reintentos invisibles sobre un shell
+  modalmente inerte.
 
 ### Auditoría total de la pestaña Preparar (2026-08-10)
 

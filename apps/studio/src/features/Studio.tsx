@@ -833,6 +833,7 @@ export function Studio({
                   onError={setValidationError}
                   onConflict={setConflict}
                   onSaved={handleDiskSaved}
+                  blocked={conflict !== null}
                 />
               </Suspense>
             ) : (

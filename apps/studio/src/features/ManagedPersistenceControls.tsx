@@ -59,6 +59,7 @@ export function ManagedPersistenceControls({
   onError,
   onConflict,
   onSaved,
+  blocked = false,
 }: {
   project: StoreProjectV1;
   diskVersion: number | null;
@@ -68,6 +69,7 @@ export function ManagedPersistenceControls({
   onError(message: string): void;
   onConflict?(reason: LocalStorageError): void;
   onSaved?(receipt: LocalSaveReceipt): void;
+  blocked?: boolean;
 }) {
   const [state, setState] = useState<DiskSaveState>("saved");
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -111,7 +113,7 @@ export function ManagedPersistenceControls({
   }, [dirty, onDirtyChange]);
 
   const save = useCallback(async () => {
-    if (!dirty || saveInFlightRef.current) return;
+    if (blocked || !dirty || saveInFlightRef.current) return;
     saveInFlightRef.current = true;
     setState("saving");
     onError("");
@@ -139,7 +141,7 @@ export function ManagedPersistenceControls({
     } finally {
       saveInFlightRef.current = false;
     }
-  }, [dirty, draftQueue, onConflict, onError, onSaved, project]);
+  }, [blocked, dirty, draftQueue, onConflict, onError, onSaved, project]);
 
   useEffect(() => {
     saveRef.current = save;
@@ -149,6 +151,7 @@ export function ManagedPersistenceControls({
     const handleShortcut = (event: KeyboardEvent) => {
       if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "s") return;
       event.preventDefault();
+      if (blocked) return;
       void saveRef.current();
     };
     window.addEventListener("keydown", handleShortcut);
@@ -156,7 +159,7 @@ export function ManagedPersistenceControls({
       window.removeEventListener("keydown", handleShortcut);
       draftQueue.dispose();
     };
-  }, [draftQueue]);
+  }, [blocked, draftQueue]);
 
   return (
     <div className="save-status">
@@ -164,7 +167,7 @@ export function ManagedPersistenceControls({
         type="button"
         className="save-button"
         data-studio-save
-        disabled={!dirty || state === "saving"}
+        disabled={!dirty || state === "saving" || blocked}
         onClick={() => void save()}
       >
         <FloppyDisk aria-hidden size={16} />
