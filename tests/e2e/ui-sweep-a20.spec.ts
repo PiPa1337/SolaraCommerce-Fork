@@ -384,6 +384,30 @@ test("A20: preview — abrir el panel de edición desde la barra de preview", as
   await expectPreviewTitle(page, HOME_TITLE);
 });
 
+test("A20: preview — la toolbar se puede operar con teclado", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openDemoStore(page);
+
+  const routeInput = page.getByTestId("ui-preview-route");
+  await routeInput.focus();
+  await routeInput.fill("/contacto/");
+  await routeInput.press("Enter");
+  await expect(page.getByTestId("ui-preview-route-announce")).toContainText(
+    "Vista previa: /contacto/",
+  );
+
+  const zoom75 = page.getByRole("button", { name: "75%" });
+  await zoom75.focus();
+  await zoom75.press(" ");
+  await expect(zoom75).toHaveAttribute("aria-pressed", "true");
+
+  const tablet = page.getByRole("button", { name: "Vista de tablet" });
+  await tablet.focus();
+  await tablet.press("Enter");
+  await expect(tablet).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator('iframe[title="Vista previa tablet"]')).toBeVisible();
+});
+
 // --------------------------------------------------------------- Comparación
 
 test("A20: comparación — selección, conteo, acción con 2 y reporte del diálogo", async ({

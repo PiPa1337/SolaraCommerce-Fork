@@ -19,6 +19,7 @@ versión publicada.
 
 - Recursos verifica el feedback de drag-and-drop, cuota alta y limpieza de la caché regenerable.
 - SEO verifica también la preview de WhatsApp y la lista de rutas detectadas.
+- Preview verifica ruta, zoom, tamaños y apertura del panel mediante teclado, además del flujo con mouse.
 
 ### Auditoría UI/UX de SEO (2026-08-11)
 

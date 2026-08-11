@@ -141,9 +141,10 @@ La segunda pasada de la auditoría agregó regresiones E2E para estados que no
 aparecen en el recorrido inicial: el dropzone de Recursos comunica su estado
 activo y vuelve a un estado limpio; el aviso de cuota alta permite limpiar la
 caché regenerable y anuncia el resultado; SEO verifica la preview de WhatsApp y
-la primera ruta del crawler. El sweep dedicado de Recursos quedó en 9/9 y el de
-SEO en 12/12. Estos tests cubren feedback y datos visibles, pero no sustituyen
-una prueba con lector de pantalla real.
+la primera ruta del crawler; Preview verifica su toolbar mediante teclado además
+del flujo con mouse. El sweep dedicado de Recursos quedó en 9/9, el de SEO en
+12/12 y el de Preview en 9/9. Estos tests cubren feedback y datos visibles, pero
+no sustituyen una prueba con lector de pantalla real.
 
 ## Portabilidad Windows
 
