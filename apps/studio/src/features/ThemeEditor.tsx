@@ -10,6 +10,104 @@ const CONTAINER_ERROR = "Ingresá un ancho de 960 a 1800 px.";
 const CONTAINER_MIN = 960;
 const CONTAINER_MAX = 1800;
 
+/**
+ * Opciones reales del selector de fuentes. El valor persistido es el stack
+ * completo (typography.display/body siguen strings); las familias del sistema
+ * no cargan nada y las de Google Fonts son las que el exporter materializa
+ * con @font-face en el sitio y el preview.
+ */
+interface FontOption {
+  id: string;
+  label: string;
+  stack: string;
+  group: "sistema" | "google";
+}
+
+const FONT_OPTIONS: FontOption[] = [
+  { id: "georgia", label: "Georgia", group: "sistema", stack: `Georgia, "Times New Roman", serif` },
+  {
+    id: "verdana",
+    label: "Verdana",
+    group: "sistema",
+    stack: `Verdana, Geneva, Tahoma, sans-serif`,
+  },
+  {
+    id: "arial",
+    label: "Arial",
+    group: "sistema",
+    stack: `Arial, "Helvetica Neue", Helvetica, sans-serif`,
+  },
+  { id: "tahoma", label: "Tahoma", group: "sistema", stack: `Tahoma, Verdana, Geneva, sans-serif` },
+  {
+    id: "trebuchet",
+    label: "Trebuchet MS",
+    group: "sistema",
+    stack: `"Trebuchet MS", "Segoe UI", Tahoma, sans-serif`,
+  },
+  {
+    id: "times",
+    label: "Times New Roman",
+    group: "sistema",
+    stack: `"Times New Roman", Times, Georgia, serif`,
+  },
+  {
+    id: "courier",
+    label: "Courier New",
+    group: "sistema",
+    stack: `"Courier New", Courier, "Lucida Console", monospace`,
+  },
+  {
+    id: "monospace",
+    label: "Monospace",
+    group: "sistema",
+    stack: `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`,
+  },
+  { id: "sans-serif", label: "Sans serif", group: "sistema", stack: `sans-serif` },
+  { id: "serif", label: "Serif", group: "sistema", stack: `serif` },
+  {
+    id: "system-ui",
+    label: "System UI",
+    group: "sistema",
+    stack: `system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`,
+  },
+  {
+    id: "archivo",
+    label: "Archivo",
+    group: "google",
+    stack: `Archivo, Arial Narrow, Helvetica Neue, Arial, sans-serif`,
+  },
+  {
+    id: "inter",
+    label: "Inter",
+    group: "google",
+    stack: `Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`,
+  },
+  { id: "lora", label: "Lora", group: "google", stack: `Lora, Georgia, "Times New Roman", serif` },
+];
+
+/** Primera familia de un stack, sin comillas y en minúsculas. */
+function firstFamilyOf(stack: string): string {
+  return (stack.split(",")[0] ?? "")
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .toLowerCase();
+}
+
+/**
+ * Migración tolerante: resuelve el valor guardado por stack exacto o por la
+ * primera familia del stack. Si no matchea ninguna opción devuelve undefined:
+ * el select muestra una opción "Personalizada" con el valor tal cual y el
+ * proyecto no se reescribe.
+ */
+function matchFontOption(value: string): FontOption | undefined {
+  const trimmed = value.trim();
+  const exact = FONT_OPTIONS.find((option) => option.stack === trimmed);
+  if (exact) return exact;
+  const first = firstFamilyOf(trimmed);
+  if (first === "") return undefined;
+  return FONT_OPTIONS.find((option) => firstFamilyOf(option.stack) === first);
+}
+
 /** Normaliza a #rrggbb en minúsculas, el formato que acepta el input nativo. */
 function normalizeHexColor(color: string): string | null {
   const match = HEX_COLOR_RE.exec(color.trim());
@@ -287,6 +385,15 @@ export function ThemeEditor({
     }
   };
 
+  const commitFont = (key: "display" | "body", stack: string) => {
+    if (stack !== project.theme.typography[key]) {
+      updateTheme({
+        ...project.theme,
+        typography: { ...project.theme.typography, [key]: stack },
+      });
+    }
+  };
+
   const contrastChecks = CONTRAST_PAIRS.map((pair) => ({
     ...pair,
     ratio: contrastRatio(
@@ -445,25 +552,17 @@ export function ThemeEditor({
             </Button>
           </div>
           <Field label="Familia de títulos">
-            <input
+            <FontSelect
               value={project.theme.typography.display}
-              onChange={(event) =>
-                updateTheme({
-                  ...project.theme,
-                  typography: { ...project.theme.typography, display: event.target.value },
-                })
-              }
+              testId="ui-font-display"
+              onChange={(stack) => commitFont("display", stack)}
             />
           </Field>
           <Field label="Familia de texto">
-            <input
+            <FontSelect
               value={project.theme.typography.body}
-              onChange={(event) =>
-                updateTheme({
-                  ...project.theme,
-                  typography: { ...project.theme.typography, body: event.target.value },
-                })
-              }
+              testId="ui-font-body"
+              onChange={(stack) => commitFont("body", stack)}
             />
           </Field>
           <Field label={`Escala ${project.theme.typography.scale.toFixed(2)}`}>
@@ -529,7 +628,6 @@ export function ThemeEditor({
               type="number"
               min={CONTAINER_MIN}
               max={CONTAINER_MAX}
-              step={20}
               value={containerDraft ?? String(project.theme.container)}
               aria-invalid={containerError ? true : undefined}
               onChange={(event) => commitContainer(event.target.value)}
@@ -542,5 +640,52 @@ export function ThemeEditor({
         {groupLabels.colors}, {groupLabels.typography} y {groupLabels.geometry} por separado).
       </p>
     </section>
+  );
+}
+
+/**
+ * Selector de fuentes real: familias del sistema + Google Fonts curadas. Un
+ * valor guardado fuera de las opciones se muestra como "Personalizada" sin
+ * reescribir el proyecto (migración tolerante sin cambios de schema).
+ */
+function FontSelect({
+  value,
+  testId,
+  onChange,
+}: {
+  value: string;
+  testId: string;
+  onChange(stack: string): void;
+}) {
+  const matched = matchFontOption(value);
+  const custom = matched === undefined;
+  return (
+    <select
+      value={custom ? value : matched.stack}
+      data-testid={testId}
+      onChange={(event) => onChange(event.target.value)}
+    >
+      <optgroup label="Sistema">
+        {FONT_OPTIONS.filter((option) => option.group === "sistema").map((option) => (
+          <option key={option.id} value={option.stack}>
+            {option.label}
+          </option>
+        ))}
+      </optgroup>
+      <optgroup label="Google Fonts">
+        {FONT_OPTIONS.filter((option) => option.group === "google").map((option) => (
+          <option key={option.id} value={option.stack}>
+            {option.label}
+          </option>
+        ))}
+      </optgroup>
+      {custom ? (
+        <optgroup label="Personalizada">
+          <option value={value}>
+            {value === "" ? "Personalizada" : `Personalizada: ${value}`}
+          </option>
+        </optgroup>
+      ) : null}
+    </select>
   );
 }

@@ -240,10 +240,12 @@ test("Sistema: el preview sigue prefers-color-scheme al emular la media", async 
   await expect.poll(previewVar(page, "--solara-text"), { timeout: 15_000 }).toBe("#f3eee4");
   await expect.poll(previewColorScheme(page), { timeout: 15_000 }).toBe("dark");
 
-  // Hallazgo: la capa --catalog-* del skin catalog-modern (styles.ts:1942-1948)
-  // no deriva de los tokens --solara-*: el root sigue pintando claro (papel
-  // #fcfcfb) sobre el fondo oscuro del override → mezcla ilegible.
-  await expect.poll(previewCatalogBackground(page), { timeout: 15_000 }).toBe("rgb(252, 252, 251)");
+  // Fix Ola 3: la capa --catalog-* del skin catalog-modern deriva de los
+  // tokens --solara-* (styles.ts:1942-1948), así que el root del skin sigue
+  // al override del dark (#1d1e19) y la mezcla ilegible ya no existe.
+  await expect
+    .poll(previewCatalogBackground(page), { timeout: 15_000 })
+    .toBe("rgb(29, 30, 25)");
 
   // Con el sistema en claro, el modo auto respeta la paleta del usuario. El
   // cambio de emulación requiere un iframe nuevo: un cambio de modo (idempotente
@@ -411,17 +413,18 @@ test("utilidad: los overrides fijos del dark ya viajan en el CSS exportado (qué
     /data-color-mode="dark"\]\{[^}]*--solara-accent:|\]\[data-color-mode="dark"\]\s*\{[^}]*--solara-accent-text/,
   );
 
-  // La capa --catalog-* del skin catalog-modern (styles.ts:1942-1948) está
-  // hardcodeada en claro y no referencia ningún --solara-*: el override del
-  // dark no la alcanza → superficies claras sobre fondo oscuro (ilegible).
-  expect(css).toContain("--catalog-ink:#0b0b0c");
-  expect(css).toContain("--catalog-paper:#fcfcfb");
-  expect(css).toContain("--catalog-surface:#f0f0ee");
-  expect(css).toContain("--catalog-muted:#696966");
-  expect(css).toContain("--catalog-border:#dededa");
-  expect(css).not.toContain("--catalog-ink:var(");
-  expect(css).not.toContain("--catalog-paper:var(");
-  expect(css).not.toContain("--catalog-surface:var(");
-  expect(css).not.toContain("--catalog-muted:var(");
-  expect(css).not.toContain("--catalog-border:var(");
+  // La capa --catalog-* del skin catalog-modern (styles.ts:1942-1948) es un
+  // alias de los tokens --solara-* con fallback al valor claro original
+  // (fix Ola 3): el override del dark SÍ alcanza las superficies modernas,
+  // salvo accent/accentText que el override no toca.
+  expect(css).toContain("--catalog-ink:var(--solara-text,#0b0b0c)");
+  expect(css).toContain("--catalog-paper:var(--solara-background,#fcfcfb)");
+  expect(css).toContain("--catalog-surface:var(--solara-surface,#f0f0ee)");
+  expect(css).toContain("--catalog-muted:var(--solara-muted,#696966)");
+  expect(css).toContain("--catalog-border:var(--solara-border,#dededa)");
+  expect(css).toContain("--catalog-ink:var(");
+  expect(css).toContain("--catalog-paper:var(");
+  expect(css).toContain("--catalog-surface:var(");
+  expect(css).toContain("--catalog-muted:var(");
+  expect(css).toContain("--catalog-border:var(");
 });
