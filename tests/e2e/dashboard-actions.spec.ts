@@ -49,7 +49,8 @@ test("archivar confirma, muestra deshacer y restaura la tienda", async ({ page }
   await toast.getByRole("button", { name: "Deshacer" }).click();
 
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
-  await expect(page.getByTestId("ui-dashboard-toast")).toHaveCount(0);
+  // A12: restaurar confirma con un toast propio (asimetría con archivar resuelta).
+  await expect(page.getByTestId("ui-dashboard-toast")).toContainText("restaurada");
   await expect(
     page
       .locator(".dashboard-store-card")

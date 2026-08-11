@@ -87,7 +87,7 @@ test("el punto de sucio aparece con un único cambio y se limpia al guardar (H3-
   await title.fill("Cambio único");
   await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
 
-  await page.getByRole("tab", { name: "Resumen", exact: true }).click();
+  await page.getByRole("tab", { name: /Resumen/ }).click();
   await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
 
   // Constructor y Resumen quedaron visitados en el commit del cambio; las
@@ -111,7 +111,7 @@ test("el scroll del panel se conserva al cambiar de pestaña (H3-B2)", async ({ 
   });
   await expect.poll(() => pane.evaluate((element) => element.scrollTop)).toBe(600);
 
-  await page.getByRole("tab", { name: "Resumen", exact: true }).click();
+  await page.getByRole("tab", { name: /Resumen/ }).click();
   await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
 
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
@@ -130,7 +130,7 @@ test("el panel cerrado no se reabre al cambiar de pestaña (H3-B3)", async ({ pa
   await expect(pane).toHaveClass(/editor-pane--closed/);
   await expect(pane).toHaveAttribute("aria-hidden", "true");
 
-  await page.getByRole("tab", { name: "Resumen", exact: true }).click();
+  await page.getByRole("tab", { name: /Resumen/ }).click();
   await expect(pane).toHaveClass(/editor-pane--closed/);
   await expect(pane).toHaveAttribute("aria-hidden", "true");
   await expect(page.getByRole("button", { name: "Abrir panel de edición" })).toBeVisible();

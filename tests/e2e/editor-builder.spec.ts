@@ -67,9 +67,9 @@ test("el picker de módulos filtra por nombre y agrega el módulo elegido", asyn
   await expect(picker).toBeVisible();
 
   await picker.getByLabel("Buscar módulo").fill("testimonios");
-  await expect(picker.getByRole("button")).toHaveCount(1);
-  await expect(picker.getByRole("button")).toContainText("Testimonios");
-  await expect(picker.getByRole("button")).toContainText("Nuevo");
+  await expect(picker.getByRole("button", { name: /Testimonios/ })).toHaveCount(1);
+  await expect(picker.getByRole("button", { name: /Testimonios/ })).toContainText("Testimonios");
+  await expect(picker.getByRole("button", { name: /Testimonios/ })).toContainText("Nuevo");
 
   await picker.getByRole("button", { name: /Testimonios/ }).click();
   await expect(picker).toBeHidden();

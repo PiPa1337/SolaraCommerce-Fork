@@ -83,7 +83,7 @@ test("los puntos de sucio aparecen, se limpian al visitar y tras guardar (T3.7)"
   // El segundo y tercer commit ocurren con el autosave pendiente: la marca de
   // sucio sólo vive mientras hay cambios sin persistir.
   await title.press(" ");
-  const resumenTab = page.getByRole("tab", { name: "Resumen", exact: true });
+  const resumenTab = page.getByRole("tab", { name: /Resumen/ });
   await expect(resumenTab.getByTestId("ui-tab-dirty")).toBeVisible();
   await title.press(" ");
   const catalogoTab = page.getByRole("tab", { name: "Catálogo", exact: true });
