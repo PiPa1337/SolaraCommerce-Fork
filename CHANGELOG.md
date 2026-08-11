@@ -10,6 +10,46 @@ versión publicada.
 
 ## [Unreleased]
 
+### Auditoría total de la pestaña Preparar (2026-08-10)
+
+Cierre del plan
+[`docs/superpowers/plans/2026-08-10-auditoria-preparar.md`](docs/superpowers/plans/2026-08-10-auditoria-preparar.md):
+el flujo guiado (GuidedOverview + modelo `catalog-modern-guidance.ts`) se auditó
+contra el proyecto REAL y contra el gate real de producción (`auditReport` del
+exporter) — el checklist ya no promete bloqueos que el export no tiene. Hallazgo
+central: ~15 requisitos "críticos" eran dead requirements (sin crítico real
+detrás) y dos críticos reales que bloquean producción no tenían requisito en
+Preparar.
+
+**Corregido:**
+
+- el flujo guiado ahora refleja el estado REAL y el gate de producción: los
+  dead requirements se degradaron a `recommended` (identity.description, hero
+  title/body/CTA, products.title, product.category, asset.alt, campos con sólo
+  validación zod) o se eliminaron (category.description, sin editor en el
+  Studio);
+- gaps cubiertos: `domain.https` tiene requisito propio con destino (Resumen →
+  dominio) y `policies.incomplete` quedó degradado a warning (el Studio no
+  tiene editor de políticas: el crítico era inalcanzable desde la guía);
+- el teléfono de plantilla (`5491100000000`) YA NO se publica en el sitio:
+  data-whatsapp, enlaces wa.me (contacto, compra, carrito, detalle de
+  producto), JSON-LD y ai-context quedan saneados; el runtime queda intacto;
+- el upgrade de plantilla ya no es un ritual vacío: `planCatalogModernUpgrade`
+  modela el cambio real v1→v2 (el nombre del catálogo pasa de "Colecciones" a
+  "Categorías", además de version y section-add) y el panel muestra los
+  conflictos renderizados con label/path/reason (antes sólo el conteo) y tiene
+  botón Cerrar;
+- el estado "todo listo" tiene feedback: banner + lista de requisitos listos;
+- el modo avanzado es accesible y persistente: botón con `aria-pressed`,
+  botón "Desbloquear" en el banner del Constructor y el modo persiste en la
+  sesión entre pestañas;
+- journey end-to-end verificado: tienda limpia → completar la guía → 28/28
+  requisitos (100 %) → export de producción viable (0 críticos).
+
+**Paridad:** requisito ↔ crítico real del export verificada 1:1 en la demo
+(297/297) y en la tienda limpia; el gate visual usa el `criticalCount` del
+auditor como única fuente.
+
 ### Auditoría total de la pestaña Resumen (2026-08-10)
 
 Cierre del plan

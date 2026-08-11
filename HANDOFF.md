@@ -495,3 +495,20 @@ normalizado idéntico en las 3 rutas — P2).
 2. **Slug interno** — identidad interna por diseño (carpeta `proyectos/`,
    respaldos e historial de export); el sitio exportado es idéntico ante
    cambios de slug (R3 test 5).
+
+## Auditoría total de la pestaña Preparar (2026-08-10)
+
+Cierre del plan
+[`docs/superpowers/plans/2026-08-10-auditoria-preparar.md`](docs/superpowers/plans/2026-08-10-auditoria-preparar.md):
+el flujo guiado se auditó contra el proyecto REAL y contra el gate real de
+producción (`auditReport`). Hallazgo central: ~15 requisitos "críticos" eran
+dead requirements y dos críticos reales que bloquean producción no tenían
+requisito en Preparar. Con los fixes (requisitos honestos, upgrade con cambios
+reales, modo avanzado accesible y persistente, sentinel WhatsApp nunca
+publicado) el journey de tienda limpia completa TODO (28/28, 100 %) y exporta
+producción viable. Reportes en `.superpowers/sdd/preparar-*.md`; resumen de
+usuario en [`CHANGELOG.md`](CHANGELOG.md), sección "Auditoría total de la
+pestaña Preparar (2026-08-10)"; deuda y decisiones abiertas en
+[`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md), sección "Auditoría total de
+la pestaña Preparar (2026-08-10)". Quedan abiertas, de olas previas, la
+decisión de dark mode (Tema) y el contrato de `pages.home.title` (Resumen).
