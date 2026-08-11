@@ -17,6 +17,13 @@ versión publicada.
 - La auditoría responsive cubre las ocho pestañas del Studio en 390, 768, 1024,
   1366, 1440 y 1920 px, verificando que la página no genere overflow horizontal.
 
+### Feedback visible del editor de producto (2026-08-11)
+
+- El guardado bloqueado lleva el primer error al viewport y el encabezado del
+  editor muestra `Cambios sin guardar` mientras el borrador está sucio.
+- Los casos A4 del barrido de catálogo dejaron de ser marcadores de deuda y
+  ahora funcionan como regresiones afirmativas.
+
 ### Foco explícito en diálogos del Dashboard (2026-08-11)
 
 - Comparar tiendas conserva el foco del botón que abrió el diálogo al cerrarlo,

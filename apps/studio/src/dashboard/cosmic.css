@@ -2549,6 +2549,12 @@ tbody tr[data-selected="true"] {
   font-size: 18px;
 }
 
+.product-dialog__dirty {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 650;
+}
+
 .product-dialog__body {
   display: grid;
   gap: 14px;

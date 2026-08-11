@@ -304,6 +304,15 @@ export function ProductEditor({
         <div>
           <span>{mode === "create" ? "Nuevo producto" : "Editar producto"}</span>
           <h2 id={titleId}>{draft.title || "Producto sin nombre"}</h2>
+          {isDirty ? (
+            <output
+              className="product-dialog__dirty"
+              data-testid="ui-product-dirty"
+              aria-live="polite"
+            >
+              Cambios sin guardar
+            </output>
+          ) : null}
         </div>
         <IconButton icon={X} label="Cerrar editor" onClick={requestClose} />
       </div>

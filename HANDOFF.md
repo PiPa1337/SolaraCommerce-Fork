@@ -741,3 +741,15 @@ baseline responsive de `tests/e2e/ui-sweep-a21.spec.ts` recorre Preparar,
 Resumen, Catálogo, Constructor, Tema, Recursos, SEO y Exportar en los seis
 viewports del plan y verifica que `document` y `body` no creen overflow
 horizontal.
+
+## Feedback visible en ProductEditor (2026-08-11)
+
+El encabezado de `ProductEditor` muestra un `output` con `aria-live="polite"` y
+el texto `Cambios sin guardar` mientras el borrador difiere del producto
+original. El diálogo conserva `data-dirty="true"` para las regresiones de estado,
+y `save()` desplaza el primer error inline al viewport antes de bloquear el
+guardado.
+
+La cobertura afirmativa está en los dos casos A4 de
+`tests/e2e/ui-sweep-a06.spec.ts`; ambos pasan con el scroll del error y el
+indicador visible.

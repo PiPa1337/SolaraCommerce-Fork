@@ -17,9 +17,8 @@
  * - Cerrar (X/Escape) con cambios: prompt de descarte que muestra el estado;
  *   cerrar limpio no pregunta.
  * - Mini preview: refleja en vivo título, precio mínimo y estado (crear/editar).
- * - test.fixme "A4": bugs que requieren cambios en ProductEditor.tsx
- *   (razón de guardado bloqueado fuera de la zona visible; sin indicador
- *   visible de estado sucio dentro del diálogo).
+ * - A4: el guardado bloqueado lleva el primer error al viewport y el diálogo
+ *   muestra el estado visible de cambios sin guardar.
  */
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
@@ -453,9 +452,7 @@ test("la mini preview refleja en vivo título, precio mínimo y estado (edición
   await expect(page.getByText(/50 productos y /)).toBeVisible();
 });
 
-test("A4 — guardado bloqueado: el diálogo no acerca la razón al campo visible (error fuera del viewport)", async ({
-  page,
-}) => {
+test("A4 — guardado bloqueado acerca la razón al campo visible", async ({ page }) => {
   test.setTimeout(90_000);
   await openCatalog(page);
   const dialog = await openCreateDialog(page);
@@ -482,17 +479,14 @@ test("A4 — guardado bloqueado: el diálogo no acerca la razón al campo visibl
   await expect(priceError).toBeInViewport();
 });
 
-test("A4 — sin indicador visible de estado sucio dentro del diálogo de producto", async ({
-  page,
-}) => {
+test("A4 — el diálogo muestra un indicador visible de cambios sin guardar", async ({ page }) => {
   test.setTimeout(90_000);
   await openCatalog(page);
   const dialog = await openEditDialog(page, "Camisa Rayas Finas");
   await expect(dialog).not.toHaveAttribute("data-dirty", "true");
 
-  // Tras editar, el diálogo debería comunicar que hay cambios sin guardar
-  // (atributo/aria/badge); hoy el estado sólo se vuelve perceptible en el
-  // prompt de descarte, no dentro del formulario.
   await dialog.getByRole("textbox", { name: "Título" }).fill("Camisa A06 Sucia");
   await expect(dialog).toHaveAttribute("data-dirty", "true");
+  await expect(dialog.getByTestId("ui-product-dirty")).toHaveText("Cambios sin guardar");
+  await expect(dialog.getByTestId("ui-product-dirty")).toHaveAttribute("aria-live", "polite");
 });
