@@ -242,6 +242,32 @@ test("Respaldar y adoptar cambios: respalda en descarga, actualiza y persiste te
   await expect(page.getByText("Actualización disponible")).toHaveCount(0);
 });
 
+test("Cerrar aviso de actualización lo descarta sin mutar la plantilla", async ({ page }) => {
+  const storeName = "Tienda descarta actualización A9";
+  await setupCleanStore(page, storeName);
+
+  await openStudioTab(page, "Preparar");
+  await page.waitForTimeout(900);
+  await seedTemplateVersion(page, storeName, 1);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await page
+    .locator(".dashboard-store-card", { hasText: storeName })
+    .getByTestId("ui-card-open")
+    .click();
+  await openStudioTab(page, "Preparar");
+
+  const updatePanel = page.locator(".template-update");
+  await expect(updatePanel).toBeVisible();
+  await updatePanel
+    .getByRole("button", { name: "Cerrar aviso de actualización", exact: true })
+    .click();
+
+  await expect(updatePanel).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Respaldar y adoptar cambios" })).toHaveCount(0);
+  await expect.poll(async () => readTemplateVersion(page, storeName)).toBe(1);
+});
+
 test("los cinco acordeones del Resumen marcan su estado y pliegan su panel (capa 2)", async ({
   page,
 }) => {

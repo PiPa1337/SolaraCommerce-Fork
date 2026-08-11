@@ -179,6 +179,14 @@ anuncian un error inline y no generan cambios pendientes. No se modificó la
 forma de `catalogScaleStore`; la corrección sólo agrega validación de UI y
 regresión E2E sobre la demo determinista de 50 productos.
 
+## Aviso de actualización de plantilla (2026-08-11)
+
+A09 también cubre el botón `Cerrar aviso de actualización` del flujo Preparar.
+El cierre es una acción de interfaz de sesión: oculta el panel y sus acciones,
+pero mantiene `origin.templateVersion` sin cambios y no dispara el respaldo ni
+la adopción de la plantilla. La acción de adopción sigue cubierta por el
+recorrido que descarga el respaldo previo y persiste la versión nueva.
+
 ## Portabilidad Windows
 
 La distribución portable está implementada en `apps/desktop`. Electron carga

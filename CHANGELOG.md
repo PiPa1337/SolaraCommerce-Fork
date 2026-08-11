@@ -35,6 +35,11 @@ versión publicada.
 - Agregar y quitar tags informa un error inline cuando el valor está vacío y no
   crea cambios pendientes en ese caso.
 
+### Cobertura del aviso de actualización de plantilla (2026-08-11)
+
+- Preparar verifica que `Cerrar aviso de actualización` descarte el panel sin
+  mutar la versión de plantilla ni ejecutar la adopción.
+
 ### Auditoría UI/UX de SEO (2026-08-11)
 
 - la pestaña SEO comunica el estado de su auditoría local, incluyendo carga,
