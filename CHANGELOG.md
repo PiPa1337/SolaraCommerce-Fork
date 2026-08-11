@@ -29,6 +29,8 @@ versión publicada.
   `aria-controls` válida mientras está abierto;
 - el orden semántico de SEO coincide con la jerarquía visual: auditoría antes de
   previews y checklist.
+- Preparar deja de heredar el grid del checklist SEO: en móvil recupera una sola
+  columna y mantiene legible el CTA del siguiente paso.
 
 ### Auditoría total de la pestaña Preparar (2026-08-10)
 

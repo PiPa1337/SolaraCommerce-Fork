@@ -3546,7 +3546,7 @@ tbody tr[data-selected="true"] {
   grid-area: score;
 }
 
-.guided-checklist {
+.seo-grid > .guided-checklist {
   grid-area: checklist;
 }
 

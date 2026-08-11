@@ -63,6 +63,27 @@ test("abre la base limpia en Preparar y ofrece edición manual por pasos", async
   await expect(page.getByText("Imágenes del producto")).toBeVisible();
 });
 
+test("Preparar conserva una sola columna y un CTA legible en móvil", async ({ page }) => {
+  await setupCleanStore(page, "Tienda guiada móvil");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("tab", { name: "Preparar", exact: true }).click();
+
+  const overview = page.locator(".guided-overview");
+  await expect
+    .poll(() =>
+      overview.evaluate(
+        (element) => getComputedStyle(element).gridTemplateColumns.split(" ").length,
+      ),
+    )
+    .toBe(1);
+
+  const nextButton = page.getByTestId("ui-guided-next");
+  await expect.poll(async () => (await nextButton.boundingBox())?.width ?? 0).toBeGreaterThan(200);
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= 390))
+    .toBe(true);
+});
+
 test("el progreso de Preparar sube al completar un requisito (T4.1)", async ({ page }) => {
   await setupCleanStore(page, "Tienda con progreso");
 
