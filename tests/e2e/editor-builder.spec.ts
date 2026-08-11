@@ -56,6 +56,21 @@ async function selectHero(page: Page) {
   await hero.getByRole("button").first().click();
 }
 
+test("la sección seleccionada y sus acciones exponen el contexto accesible", async ({ page }) => {
+  await openBuilder(page);
+  await selectHero(page);
+
+  const hero = page.getByRole("listitem").filter({ hasText: "Hero de catálogo" });
+  const selector = hero.getByRole("button").first();
+  await expect(selector).toHaveAttribute("aria-pressed", "true");
+
+  const describedBy = await hero
+    .getByRole("button", { name: "Duplicar sección" })
+    .getAttribute("aria-describedby");
+  expect(describedBy).toBeTruthy();
+  await expect(page.locator(`#${describedBy}`)).toHaveText("Hero de catálogo");
+});
+
 test("el picker de módulos filtra por nombre y agrega el módulo elegido", async ({ page }) => {
   await openBuilder(page);
   const sections = page.getByRole("list", { name: "Secciones de la tienda" });

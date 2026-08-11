@@ -474,6 +474,7 @@ export function Builder({
         <ul className="section-stack" aria-label="Secciones de la tienda">
           {pageSections.map((section, index) => {
             const definition = allModules.find((module) => module.manifest.id === section.moduleId);
+            const sectionLabelId = `section-row-label-${section.id}`;
             return (
               <motion.li
                 className="section-row"
@@ -487,30 +488,34 @@ export function Builder({
                 <button
                   className="section-select"
                   type="button"
+                  aria-pressed={section.id === selectedId}
                   aria-keyshortcuts="ArrowUp ArrowDown"
                   onClick={() => setSelectedId(section.id)}
                   onKeyDown={(event) => handleSectionHeaderKeyDown(event, index)}
                 >
                   <span>{slotLabels[section.slot]}</span>
-                  <strong title={definition?.manifest.name ?? section.moduleId}>
+                  <strong id={sectionLabelId} title={definition?.manifest.name ?? section.moduleId}>
                     {definition?.manifest.name ?? section.moduleId}
                   </strong>
                 </button>
                 <div className="section-row-actions">
                   <IconButton
                     icon={ArrowUp}
+                    aria-describedby={sectionLabelId}
                     label="Mover arriba"
                     disabled={index === 0 || isProtected(section)}
                     onClick={() => move(index, -1)}
                   />
                   <IconButton
                     icon={ArrowDown}
+                    aria-describedby={sectionLabelId}
                     label="Mover abajo"
                     disabled={index === pageSections.length - 1 || isProtected(section)}
                     onClick={() => move(index, 1)}
                   />
                   <IconButton
                     icon={section.enabled ? Eye : EyeSlash}
+                    aria-describedby={sectionLabelId}
                     label={section.enabled ? "Ocultar sección" : "Mostrar sección"}
                     disabled={isProtected(section)}
                     onClick={() =>
@@ -522,6 +527,7 @@ export function Builder({
                   />
                   <IconButton
                     icon={Copy}
+                    aria-describedby={sectionLabelId}
                     label="Duplicar sección"
                     disabled={isProtected(section)}
                     onClick={() => {
@@ -537,6 +543,7 @@ export function Builder({
                   />
                   <IconButton
                     icon={Trash}
+                    aria-describedby={sectionLabelId}
                     label="Eliminar sección"
                     disabled={isProtected(section)}
                     onClick={() => {

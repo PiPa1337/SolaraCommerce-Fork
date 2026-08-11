@@ -37,6 +37,8 @@ versión publicada.
   y conserva el foco en el tab abierto.
 - Exportar comunica de forma visible si la auditoría está analizando, lista o
   bloqueando producción por errores críticos.
+- Constructor expone la sección seleccionada con `aria-pressed` y describe las
+  acciones de cada fila con el nombre de la sección afectada.
 
 ### Auditoría total de la pestaña Preparar (2026-08-10)
 
