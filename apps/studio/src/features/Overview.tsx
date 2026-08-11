@@ -581,7 +581,11 @@ export function Overview({
                           }
                         />
                       </Field>
-                      <Field label="Destino" {...(itemHrefError ? { error: itemHrefError } : {})}>
+                      <Field
+                        label="Destino"
+                        description={`Destino del enlace ${item.label}`}
+                        {...(itemHrefError ? { error: itemHrefError } : {})}
+                      >
                         {destinationInput(`nav-${item.id}`, item.href ?? "", (next) =>
                           updateNavigationItem(item.id, { href: next }),
                         )}
@@ -620,6 +624,7 @@ export function Overview({
                           <div className="navigation-child-editor" key={child.id}>
                             <Field
                               label={`Subenlace ${childIndex + 1}`}
+                              description={`Subenlace ${child.label} de ${item.label}`}
                               {...(childLabelError ? { error: childLabelError } : {})}
                             >
                               <input
@@ -643,6 +648,7 @@ export function Overview({
                             </Field>
                             <Field
                               label="Destino"
+                              description={`Destino del subenlace ${child.label} de ${item.label}`}
                               {...(childHrefError ? { error: childHrefError } : {})}
                             >
                               {destinationInput(
@@ -752,6 +758,8 @@ export function Overview({
         >
           <div className="form-grid">
             {project.pages.map((page) => {
+              const pageLabel =
+                page.kind === "home" ? "Home" : page.kind === "about" ? "Nosotros" : "Contacto";
               const pageTitleDisplay = fieldValue(`page-title-${page.id}`, page.title);
               const pageTitleError =
                 pageTitleDisplay.trim() === "" ? "Completá el título visible." : undefined;
@@ -765,15 +773,10 @@ export function Overview({
                 seoDescriptionDisplay.trim() === "" ? "Completá la descripción SEO." : undefined;
               return (
                 <div className="page-editor" key={page.id}>
-                  <strong>
-                    {page.kind === "home"
-                      ? "Home"
-                      : page.kind === "about"
-                        ? "Nosotros"
-                        : "Contacto"}
-                  </strong>
+                  <strong>{pageLabel}</strong>
                   <Field
                     label="Título visible"
+                    description={`Página ${pageLabel}`}
                     {...(pageTitleError ? { error: pageTitleError } : {})}
                   >
                     <input
@@ -790,6 +793,7 @@ export function Overview({
                   </Field>
                   <Field
                     label="Título SEO"
+                    description={`Página ${pageLabel}`}
                     hint={`${seoTitleDisplay.length}/70 caracteres`}
                     {...(seoTitleError ? { error: seoTitleError } : {})}
                   >
@@ -808,6 +812,7 @@ export function Overview({
                   </Field>
                   <Field
                     label="Descripción SEO"
+                    description={`Página ${pageLabel}`}
                     hint={`${seoDescriptionDisplay.length}/180 caracteres`}
                     {...(seoDescriptionError ? { error: seoDescriptionError } : {})}
                   >

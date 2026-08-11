@@ -200,6 +200,8 @@ export function Seo({
 
   const iconFor = (issue: AuditIssue) =>
     issue.severity === "error" ? XCircle : issue.severity === "warning" ? WarningCircle : Info;
+  const issueContext = (issue: AuditIssue) =>
+    issue.message ? `${issue.title}: ${issue.message}` : `${issue.title} (${issue.id})`;
 
   return (
     <section className="workspace-section">
@@ -367,7 +369,7 @@ export function Seo({
                         variant="quiet"
                         size="sm"
                         icon={ArrowRight}
-                        aria-label={`Ir a ${FIX_LABELS[issue.fixTarget] ?? "corregir"} para resolver: ${issue.title}`}
+                        aria-label={`Ir a ${FIX_LABELS[issue.fixTarget] ?? "corregir"} para resolver: ${issueContext(issue)}`}
                         data-testid="ui-seo-audit-fix"
                         onClick={() => navigateToFix(issue.fixTarget ?? "", onNavigate)}
                       >
@@ -574,7 +576,7 @@ export function Seo({
                         variant="quiet"
                         size="sm"
                         icon={ArrowRight}
-                        aria-label={`Ir a ${FIX_LABELS[issue.fixTarget] ?? "corregir"} para resolver: ${issue.title}`}
+                        aria-label={`Ir a ${FIX_LABELS[issue.fixTarget] ?? "corregir"} para resolver: ${issueContext(issue)}`}
                         data-testid="ui-seo-check-fix"
                         onClick={() => navigateToFix(issue.fixTarget ?? "", onNavigate)}
                       >
@@ -587,8 +589,8 @@ export function Seo({
                         icon={done ? CheckCircle : Circle}
                         aria-label={
                           done
-                            ? `Marcar como pendiente: ${issue.title}`
-                            : `Marcar como revisado: ${issue.title}`
+                            ? `Marcar como pendiente: ${issueContext(issue)}`
+                            : `Marcar como revisado: ${issueContext(issue)}`
                         }
                         aria-pressed={done}
                         data-testid="ui-seo-check-toggle"

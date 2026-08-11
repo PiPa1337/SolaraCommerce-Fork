@@ -421,6 +421,20 @@ preoptimiza `dexie` y `react-dom/client` porque la configuración anterior podí
 dejar la pantalla en blanco durante una auditoría local. La batería focalizada
 de Chromium quedó en 73/73 y el paquete Studio en 256/256 tests.
 
+### Reauditoría de controles repetidos (2026-08-11)
+
+El barrido fresco de Dashboard y las ocho pestañas no encontró grupos de
+controles repetidos sin contexto. Se agregó `aria-description` para asociar
+tienda a las acciones repetidas del Dashboard, posición a las secciones
+duplicadas del Constructor, recurso a los campos de Recursos y página/enlace a
+los campos repetidos de Resumen. El checklist SEO usa ahora el mensaje del
+hallazgo para distinguir sus toggles y acciones aunque compartan el título
+`Revisión SEO`.
+
+La regresión nueva de accesibilidad pasó 21/21; los recorridos afectados de
+Resumen, Constructor, Recursos, SEO y Dashboard pasaron 72/72. Las etiquetas
+visibles y locators semánticos existentes se conservaron.
+
 ## Auditoría total de la pestaña Tema (2026-08-10)
 
 Cierre del plan

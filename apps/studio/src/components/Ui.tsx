@@ -111,6 +111,7 @@ export function Field({
   label,
   hint,
   error,
+  description,
   children,
   className = "",
 }: {
@@ -118,6 +119,8 @@ export function Field({
   hint?: string;
   /** Mensaje de error inline: borde danger, texto y aria-describedby. */
   error?: string;
+  /** Contexto adicional para distinguir campos repetidos sin alterar su label visible. */
+  description?: string;
   children: ReactNode;
   className?: string;
 }) {
@@ -142,6 +145,7 @@ export function Field({
     } else if (hint) {
       patches["aria-describedby"] = hintId;
     }
+    if (description) patches["aria-description"] = description;
   }
   const labeledChild =
     isNativeControl && Object.keys(patches).length > 0 ? cloneElement(children, patches) : children;

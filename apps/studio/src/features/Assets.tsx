@@ -681,6 +681,7 @@ export function Assets({
                     <input
                       key={`${asset.id}-${asset.hash}`}
                       defaultValue={asset.name}
+                      aria-description={`Recurso ${asset.name}`}
                       onBlur={(event) => {
                         const name = event.target.value.trim();
                         if (name && name !== asset.name) updateAsset(asset.id, { name });
@@ -692,6 +693,7 @@ export function Assets({
                     <input
                       defaultValue={asset.alt}
                       placeholder="Describí lo visible en la imagen"
+                      aria-description={`Recurso ${asset.name}`}
                       onBlur={(event) => {
                         const alt = event.target.value.trim();
                         if (alt !== asset.alt) updateAsset(asset.id, { alt });
@@ -751,6 +753,7 @@ export function Assets({
                     <span>Nombre</span>
                     <input
                       defaultValue={video.name}
+                      aria-description={`Video ${video.name}`}
                       onBlur={(event) =>
                         updateVideo(video.id, { name: event.target.value.trim() || video.name })
                       }
@@ -760,6 +763,7 @@ export function Assets({
                     <span>Imagen de portada</span>
                     <select
                       defaultValue={video.posterAssetId ?? ""}
+                      aria-description={`Video ${video.name}`}
                       onChange={(event) =>
                         updateVideo(video.id, {
                           posterAssetId: (event.target.value || undefined) as

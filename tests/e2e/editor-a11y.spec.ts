@@ -301,6 +301,55 @@ async function unlabeledControls(page: Page): Promise<string[]> {
     );
 }
 
+test("los controles repetidos conservan contexto accesible por superficie", async ({ page }) => {
+  await openDashboard(page);
+
+  const distinctDescriptions = async (locator: import("@playwright/test").Locator) => {
+    const values = await locator.evaluateAll((elements) =>
+      elements.map((element) => element.getAttribute("aria-description") ?? ""),
+    );
+    expect(values.every(Boolean)).toBe(true);
+    expect(new Set(values).size).toBe(values.length);
+  };
+
+  await distinctDescriptions(page.getByTestId("ui-card-pin"));
+  await distinctDescriptions(page.getByTestId("ui-card-open"));
+
+  await openDefaultStore(page);
+  await page.getByRole("tab", { name: "Resumen", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
+  await distinctDescriptions(page.getByLabel("Destino", { exact: true }));
+  await distinctDescriptions(page.getByLabel("Subenlace 1", { exact: true }));
+  await distinctDescriptions(page.getByLabel("Título visible", { exact: true }));
+  await distinctDescriptions(page.getByLabel("Título SEO", { exact: true }));
+  await distinctDescriptions(page.getByLabel("Descripción SEO", { exact: true }));
+
+  await page.getByRole("tab", { name: "Recursos", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Recursos", exact: true })).toBeVisible();
+  await distinctDescriptions(page.getByLabel("Nombre", { exact: true }));
+  await distinctDescriptions(page.getByLabel("Texto alternativo", { exact: true }));
+
+  await page.getByRole("tab", { name: "Constructor", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
+  const sectionSelects = page.locator(".section-select");
+  await expect(sectionSelects).not.toHaveCount(0);
+  await distinctDescriptions(sectionSelects);
+  const sectionActionDescriptions = await page
+    .locator(".section-row-actions [data-testid='ui-icon-button']")
+    .evaluateAll((elements) => elements.map((element) => element.getAttribute("aria-description")));
+  expect(sectionActionDescriptions.every(Boolean)).toBe(true);
+
+  await page.getByRole("tab", { name: "SEO", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "SEO y Google", exact: true })).toBeVisible();
+  const checklistToggles = page.getByTestId("ui-seo-check-toggle");
+  await expect(checklistToggles).not.toHaveCount(0);
+  const labels = await checklistToggles.evaluateAll((elements) =>
+    elements.map((element) => element.getAttribute("aria-label") ?? ""),
+  );
+  expect(labels.every((label) => label.includes(":"))).toBe(true);
+  expect(new Set(labels).size).toBe(labels.length);
+});
+
 test("el ConfirmDialog de eliminar enlace enfoca, atrapa el foco, cancela con Escape y devuelve el foco (T6.4)", async ({
   page,
 }) => {

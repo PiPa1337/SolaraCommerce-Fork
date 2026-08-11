@@ -71,6 +71,19 @@ versión publicada.
 - la matriz responsive conserva la navegación del encabezado y verifica que la
   barra de acciones masivas pueda alcanzarse y utilizarse después del scroll.
 
+### Reauditoría de controles repetidos (2026-08-11)
+
+- las acciones repetidas de Dashboard, las secciones duplicadas del Constructor
+  y los campos repetidos de Resumen y Recursos ahora anuncian el objeto o la
+  posición afectada mediante `aria-description`, sin cambiar sus nombres
+  visibles ni los selectores existentes;
+- los toggles y accesos correctivos del checklist SEO incluyen el mensaje del
+  hallazgo en su nombre accesible, por lo que cada revisión puede distinguirse
+  aunque comparta el título genérico;
+- se agregó una regresión que verifica contexto único en Dashboard, Resumen,
+  Recursos, Constructor y SEO; los recorridos funcionales asociados pasaron
+  72/72.
+
 ### Auditoría total de la pestaña Preparar (2026-08-10)
 
 Cierre del plan
