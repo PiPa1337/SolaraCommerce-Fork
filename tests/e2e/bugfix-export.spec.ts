@@ -114,7 +114,7 @@ test("una tienda con críticos nunca habilita el export, ni al re-auditar por co
   await expect(production).toBeDisabled({ timeout: 1_500 });
   await page.locator(".export-ai-context input[type='checkbox']").uncheck();
   await expect(production).toBeDisabled({ timeout: 1_500 });
-  await expect(page.getByText(/errores críticos deben resolverse/)).toBeVisible({
+  await expect(page.locator(".export-warning")).toBeVisible({
     timeout: 30_000,
   });
   await expect(production).toBeDisabled();

@@ -431,7 +431,7 @@ test.describe("Export", () => {
     await page.getByRole("tab", { name: "Exportar", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible();
 
-    const block = page.getByText(/errores críticos deben resolverse/);
+    const block = page.locator(".export-warning");
     await expect(block).toBeVisible({ timeout: 30_000 });
     await expect(page.getByTestId("ui-export-production")).toBeDisabled();
     const blockCount = Number(

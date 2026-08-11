@@ -3207,6 +3207,43 @@ tbody tr[data-selected="true"] {
   background: var(--accent-soft);
 }
 
+.asset-storage-warning {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--warning) 42%, var(--line));
+  border-radius: var(--radius-input);
+  background: color-mix(in srgb, var(--warning-soft) 58%, var(--surface));
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.asset-storage-warning button {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.asset-storage-warning button:disabled {
+  color: var(--muted);
+}
+
+.asset-cache-status {
+  display: block;
+  margin: -4px 0 12px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 650;
+}
+
 .theme-layout {
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;

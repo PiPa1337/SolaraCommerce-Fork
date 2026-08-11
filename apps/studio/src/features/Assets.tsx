@@ -43,6 +43,8 @@ export function Assets({
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [progressLabel, setProgressLabel] = useState("Procesando imágenes");
   const [storage, setStorage] = useState<Awaited<ReturnType<typeof getStorageEstimate>>>();
+  const [cacheBusy, setCacheBusy] = useState(false);
+  const [cacheStatus, setCacheStatus] = useState("");
   const [copied, setCopied] = useState("");
   const [dragging, setDragging] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<ImageAsset["id"] | null>(null);
@@ -429,6 +431,22 @@ export function Assets({
     dispatchFiles(dropped);
   };
 
+  const clearRegenerableCache = () => {
+    setCacheBusy(true);
+    setCacheStatus("Limpiando caché regenerable…");
+    void clearAssetCache()
+      .then(() => getStorageEstimate())
+      .then((nextStorage) => {
+        setStorage(nextStorage);
+        setCacheStatus("Caché regenerable limpiada.");
+      })
+      .catch(() => {
+        setCacheStatus("");
+        setError("No se pudo limpiar la caché regenerable.");
+      })
+      .finally(() => setCacheBusy(false));
+  };
+
   const openReplacePicker = (asset: ImageAsset) => {
     setReplaceTargetId(asset.id);
     imageInputRef.current?.click();
@@ -541,21 +559,22 @@ export function Assets({
         ) : null}
         {batchStatus ? <output data-testid="ui-asset-batch-status">{batchStatus}</output> : null}
         {storage && storage.quota > 0 && storage.ratio >= 0.75 ? (
-          <output className="asset-storage-warning">
+          <output className="asset-storage-warning" aria-live="polite">
             El almacenamiento local está al {Math.round(storage.ratio * 100)} % (
             {bytesToSize(storage.usage)} de {bytesToSize(storage.quota)}). Exportá un respaldo y
             limpiá recursos no usados si llega al 90 %.
-            <button
-              type="button"
-              onClick={() => {
-                void clearAssetCache()
-                  .then(() => getStorageEstimate())
-                  .then(setStorage)
-                  .catch(() => setError("No se pudo limpiar la caché regenerable."));
-              }}
-            >
-              Limpiar caché regenerable
+            <button type="button" disabled={cacheBusy} onClick={clearRegenerableCache}>
+              {cacheBusy ? "Limpiando…" : "Limpiar caché regenerable"}
             </button>
+          </output>
+        ) : null}
+        {cacheStatus ? (
+          <output
+            className="asset-cache-status"
+            data-testid="ui-asset-cache-status"
+            aria-live="polite"
+          >
+            {cacheStatus}
           </output>
         ) : null}
         {selectedAsset ? (

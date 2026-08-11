@@ -39,6 +39,8 @@ versión publicada.
   bloqueando producción por errores críticos.
 - Constructor expone la sección seleccionada con `aria-pressed` y describe las
   acciones de cada fila con el nombre de la sección afectada.
+- Recursos confirma los estados de limpieza de la caché regenerable y presenta
+  el aviso de almacenamiento con un contenedor legible y acción protegida.
 
 ### Auditoría total de la pestaña Preparar (2026-08-10)
 

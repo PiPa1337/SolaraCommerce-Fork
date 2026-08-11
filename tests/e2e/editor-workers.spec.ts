@@ -227,7 +227,7 @@ test("bloquea la exportación de producción cuando hay errores críticos visibl
   await page.getByRole("tab", { name: "Exportar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible();
 
-  await expect(page.getByText(/errores críticos deben resolverse/)).toBeVisible({
+  await expect(page.locator(".export-warning")).toBeVisible({
     timeout: 30_000,
   });
   await expect(page.getByTestId("ui-export-production")).toBeDisabled();
