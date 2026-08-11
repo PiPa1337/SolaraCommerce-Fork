@@ -86,7 +86,7 @@ test("los puntos de sucio aparecen, se limpian al visitar y tras guardar (T3.7)"
   const resumenTab = page.getByRole("tab", { name: /Resumen/ });
   await expect(resumenTab.getByTestId("ui-tab-dirty")).toBeVisible();
   await title.press(" ");
-  const catalogoTab = page.getByRole("tab", { name: "Catálogo", exact: true });
+  const catalogoTab = page.getByRole("tab", { name: /Catálogo/ });
   await expect(catalogoTab.getByTestId("ui-tab-dirty")).toBeVisible();
 
   await title.press(" ");
