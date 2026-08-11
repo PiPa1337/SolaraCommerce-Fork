@@ -148,18 +148,20 @@ no sustituyen una prueba con lector de pantalla real.
 
 ## Auditoría del error de Exportar (2026-08-11)
 
-La segunda pasada también cubre el fallo del worker de auditoría de Exportar con
-un `Worker` simulado sólo para el E2E: el panel muestra el error, mantiene
-Producción deshabilitada, deja disponible `Reintentar auditoría` y verifica que
-la acción inicia una nueva tentativa. El test de `ui-export.spec.ts` quedó en
-3/3 con un worker y conserva la lógica de producción sin cambios.
+La regresión dedicada `bugfix-audit-failure.spec.ts` cubre el fallo del worker
+de auditoría de Exportar: el panel muestra el error, mantiene Producción
+deshabilitada, deja disponible `Reintentar auditoría` y, al restaurar la carga,
+verifica que la nueva tentativa complete la auditoría y habilite Producción.
+Se retiró un test duplicado agregado durante esta pasada para conservar una
+única fuente de evidencia sin cambiar la lógica de producción.
 
 El inventario estático restante corresponde a salidas estructurales o estados
 transitorios (`ui-dashboard-health`, `ui-seo-check-group`, `ui-preview-loading`,
 `ui-toggle`, además de inputs cubiertos por locators semánticos). Los estados
-dinámicos `ui-seo-audit-loading` y `ui-seo-audit-error` siguen revisados en el
-código y en la inspección visual; no se fuerza un E2E frágil sobre el chunk
-dinámico del renderer hasta disponer de un punto de inyección estable.
+dinámicos `ui-seo-audit-loading` y `ui-seo-audit-error` ahora tienen un recorrido
+E2E estable en A21.3b; el mismo seam cubre el error de Preview y la recuperación
+de su iframe en A20. La prueba desactiva sólo el service worker y aborta el
+chunk del renderer, sin interceptar recursos del producto durante el flujo normal.
 
 ## Portabilidad Windows
 

@@ -14,6 +14,7 @@ import type { StoreProjectV1 } from "@solara/project-schema";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Tooltip } from "../components/primitives";
 import { Button, IconButton } from "../components/Ui";
+import { loadExporter } from "../lib/loadExporter";
 
 export type PreviewSize = "desktop" | "tablet" | "mobile";
 export type PreviewZoom = 100 | 75 | 50;
@@ -312,10 +313,9 @@ export function Preview({
     return () => window.removeEventListener("message", handlePreviewAssetRequest);
   }, []);
 
-  /* biome-ignore lint/correctness/useExhaustiveDependencies: renderToken es la clave de reintento del render. */
   useEffect(() => {
     let active = true;
-    void import("@solara/exporter")
+    void loadExporter(renderToken)
       .then(({ getPreviewAssetSources, renderPreviewHtml }) => {
         if (!active) return;
         try {

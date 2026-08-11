@@ -225,6 +225,28 @@ async function goToSeoTab(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "SEO y Google" })).toBeVisible();
 }
 
+async function failRendererChunk(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    try {
+      Object.defineProperty(navigator, "serviceWorker", {
+        value: undefined,
+        configurable: true,
+      });
+    } catch {
+      // Los navegadores sin service workers ya permiten interceptar el chunk.
+    }
+  });
+  let blocked = false;
+  await page.route("**/assets/*.js", async (route) => {
+    if (!blocked && route.request().url().includes("/assets/index-D")) {
+      blocked = true;
+      await route.abort("failed");
+      return;
+    }
+    await route.continue();
+  });
+}
+
 // --------------------------------------------------------------- SEO: global
 
 test("A21.1 los campos globales limitan con maxLength, cuentan caracteres y persisten entre pestañas", async ({
@@ -308,6 +330,26 @@ test("A21.3 el picker de imagen social cambia el campo y el preview de Open Grap
   await select.selectOption("");
   await expect(select).toHaveValue("");
   await expect.poll(async () => ogImage.getAttribute("src"), { timeout: 10_000 }).toBe(initialSrc);
+});
+
+test("A21.3b SEO reintenta la auditoría cuando el renderer vuelve a estar disponible", async ({
+  page,
+}) => {
+  await failRendererChunk(page);
+  await openDemoStore(page);
+  await goToSeoTab(page);
+
+  const error = page.getByTestId("ui-seo-audit-error");
+  await expect(error).toBeVisible({ timeout: 30_000 });
+  await expect(error).toContainText("No se pudo completar la auditoría");
+  const retry = error.getByRole("button", { name: "Reintentar", exact: true });
+  await expect(retry).toBeEnabled();
+
+  await page.unroute("**/assets/*.js");
+  await retry.click();
+  await expect(error).toHaveCount(0, { timeout: 30_000 });
+  await expect(page.getByTestId("ui-seo-audit-state")).toContainText("Auditoría lista");
+  await expect(page.getByTestId("ui-seo-crawler")).toBeVisible();
 });
 
 // -------------------------------------------------------- Per-page -> preview

@@ -58,46 +58,6 @@ async function createAuditStore(page: import("@playwright/test").Page) {
   });
 }
 
-test("el error del worker de auditoría conserva un reintento accionable", async ({ page }) => {
-  await page.addInitScript(() => {
-    const NativeWorker = window.Worker;
-    let attempts = 0;
-    class FailingWorker extends EventTarget {
-      postMessage(_message: unknown) {
-        attempts += 1;
-        document.documentElement.dataset.exportAuditAttempts = String(attempts);
-        window.setTimeout(() => this.dispatchEvent(new Event("error")), 0);
-      }
-
-      terminate() {}
-    }
-    window.Worker = function Worker(url: string | URL, options?: WorkerOptions) {
-      if (String(url).includes("export.worker")) {
-        return new FailingWorker() as unknown as Worker;
-      }
-      return new NativeWorker(url, options);
-    } as unknown as typeof Worker;
-  });
-  await resetIndexedDb(page);
-  await createAuditStore(page);
-  await page.getByRole("tab", { name: "Exportar", exact: true }).click();
-
-  const error = page.getByTestId("ui-audit-error");
-  await expect(error).toBeVisible({ timeout: 30_000 });
-  await expect(error).toContainText("No se pudo cargar la auditoría");
-  await expect(page.getByTestId("ui-audit-retry")).toBeEnabled();
-  await expect(page.getByTestId("ui-export-production")).toBeDisabled();
-  const attemptsBeforeRetry = Number(
-    await page.locator("html").getAttribute("data-export-audit-attempts"),
-  );
-  expect(attemptsBeforeRetry).toBeGreaterThan(0);
-  await page.getByTestId("ui-audit-retry").click();
-  await expect
-    .poll(async () => Number(await page.locator("html").getAttribute("data-export-audit-attempts")))
-    .toBeGreaterThan(attemptsBeforeRetry);
-  await expect(error).toBeVisible();
-});
-
 test("el resumen de salud muestra el mismo conteo de críticos que bloquea la producción", async ({
   page,
 }) => {

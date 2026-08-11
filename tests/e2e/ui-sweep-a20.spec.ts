@@ -211,6 +211,28 @@ async function createSecondStore(page: Page, name: string): Promise<void> {
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
 }
 
+async function failPreviewRenderer(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    try {
+      Object.defineProperty(navigator, "serviceWorker", {
+        value: undefined,
+        configurable: true,
+      });
+    } catch {
+      // Los navegadores sin service workers ya permiten interceptar el chunk.
+    }
+  });
+  let blocked = false;
+  await page.route("**/assets/*.js", async (route) => {
+    if (!blocked && route.request().url().includes("/assets/index-D")) {
+      blocked = true;
+      await route.abort("failed");
+      return;
+    }
+    await route.continue();
+  });
+}
+
 const compareCount = (page: Page) => page.locator(".dashboard-cosmic-comparebar__count");
 const compareAction = (page: Page) => page.getByRole("button", { name: "Comparar", exact: true });
 
@@ -406,6 +428,26 @@ test("A20: preview — la toolbar se puede operar con teclado", async ({ page })
   await tablet.press("Enter");
   await expect(tablet).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator('iframe[title="Vista previa tablet"]')).toBeVisible();
+});
+
+test("A20: preview — el error del renderer ofrece recargar y recupera el iframe", async ({
+  page,
+}) => {
+  await failPreviewRenderer(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openDemoStore(page);
+
+  const error = page.locator(".preview-error");
+  await expect(error).toBeVisible({ timeout: 30_000 });
+  await expect(error).toContainText("La vista previa necesita atención");
+  const reload = error.getByRole("button", { name: "Recargar vista previa", exact: true });
+  await expect(reload).toBeEnabled();
+
+  await page.unroute("**/assets/*.js");
+  await reload.click();
+  await expect(error).toHaveCount(0, { timeout: 30_000 });
+  await expect(previewFrame(page)).toBeVisible({ timeout: 30_000 });
+  await expectPreviewTitle(page, HOME_TITLE);
 });
 
 // --------------------------------------------------------------- Comparación

@@ -15,6 +15,7 @@ import type { StoreProjectV1 } from "@solara/project-schema";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "../components/primitives";
 import { Button, Field, SectionHeader } from "../components/Ui";
+import { loadExporter } from "../lib/loadExporter";
 import { downloadBlob } from "../lib/projectArchive";
 
 interface AuditIssue {
@@ -134,13 +135,14 @@ export function Seo({
   const [checkedIssues, setCheckedIssues] = useState<Set<string>>(new Set());
   const [auditStatus, setAuditStatus] = useState<"loading" | "ready" | "error">("loading");
   const [auditError, setAuditError] = useState("");
+  const [auditAttempt, setAuditAttempt] = useState(0);
   const runAudit = useCallback(
-    async (isActive: () => boolean = () => true) => {
+    async (isActive: () => boolean = () => true, retryAttempt = 0) => {
       setAuditStatus("loading");
       setAuditError("");
       setOptimization(null);
       try {
-        const { auditReport, buildOptimizationReport } = await import("@solara/exporter");
+        const { auditReport, buildOptimizationReport } = await loadExporter(retryAttempt);
         if (!isActive()) return;
         setReport(auditReport(project));
         setOptimization(buildOptimizationReport(project, { mode: "draft", publicAiContext: true }));
@@ -157,11 +159,11 @@ export function Seo({
   );
   useEffect(() => {
     let active = true;
-    void runAudit(() => active);
+    void runAudit(() => active, auditAttempt);
     return () => {
       active = false;
     };
-  }, [runAudit]);
+  }, [runAudit, auditAttempt]);
   const issues = normalizeIssues(report.issues);
   const groupedIssues = useMemo(() => {
     const groups = new Map<string, AuditIssue[]>();
@@ -332,7 +334,7 @@ export function Seo({
                 variant="quiet"
                 size="sm"
                 icon={ArrowClockwise}
-                onClick={() => void runAudit()}
+                onClick={() => setAuditAttempt((attempt) => attempt + 1)}
               >
                 Reintentar
               </Button>
