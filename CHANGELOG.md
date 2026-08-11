@@ -35,6 +35,8 @@ versión publicada.
   devuelven el foco visible al tab de destino.
 - El checklist posterior de Exportar usa la navegación del shell para “Ir a SEO”
   y conserva el foco en el tab abierto.
+- Exportar comunica de forma visible si la auditoría está analizando, lista o
+  bloqueando producción por errores críticos.
 
 ### Auditoría total de la pestaña Preparar (2026-08-10)
 

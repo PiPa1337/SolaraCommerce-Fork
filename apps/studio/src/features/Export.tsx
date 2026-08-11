@@ -328,6 +328,29 @@ export function ExportPanel({
           </Button>
         </div>
       ) : null}
+      {!auditError ? (
+        <output
+          className={`export-audit-status export-audit-status--${
+            auditReady ? (critical > 0 ? "blocked" : "ready") : "loading"
+          }`}
+          data-testid="ui-export-audit-status"
+          aria-live="polite"
+        >
+          {auditReady ? (
+            <>
+              <CheckCircle aria-hidden size={17} />
+              {critical > 0
+                ? `Auditoría lista: ${critical} errores críticos deben resolverse.`
+                : "Auditoría lista: la producción está habilitada."}
+            </>
+          ) : (
+            <>
+              <span className="spinner" aria-hidden />
+              Analizando el proyecto para habilitar la exportación de producción…
+            </>
+          )}
+        </output>
+      ) : null}
       {busy === "draft" || busy === "production" ? (
         <ExportStages done={doneStages} />
       ) : exportDone ? (

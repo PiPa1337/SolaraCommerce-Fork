@@ -65,8 +65,11 @@ test("el resumen de salud muestra el mismo conteo de críticos que bloquea la pr
   await createAuditStore(page);
   await page.getByRole("tab", { name: "Exportar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible();
+  await expect(page.getByTestId("ui-export-audit-status")).toContainText("Auditoría lista:", {
+    timeout: 30_000,
+  });
 
-  const block = page.getByText(/errores críticos deben resolverse/);
+  const block = page.locator(".export-warning");
   await expect(block).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("ui-export-production")).toBeDisabled();
 

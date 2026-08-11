@@ -3664,6 +3664,34 @@ tbody tr[data-selected="true"] {
   font-weight: 700;
 }
 
+.export-audit-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-input);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.export-audit-status--loading {
+  color: var(--muted);
+}
+
+.export-audit-status--ready {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.export-audit-status--blocked {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
 .export-notice {
   display: flex;
   align-items: flex-start;
