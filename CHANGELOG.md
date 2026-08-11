@@ -40,6 +40,11 @@ versión publicada.
 - Preparar verifica que `Cerrar aviso de actualización` descarte el panel sin
   mutar la versión de plantilla ni ejecutar la adopción.
 
+### Cobertura de copia de identificadores de recursos (2026-08-11)
+
+- Recursos verifica que `Copiar ID` escriba el identificador real del asset y
+  cambie su feedback accesible a `Copiado`.
+
 ### Auditoría UI/UX de SEO (2026-08-11)
 
 - la pestaña SEO comunica el estado de su auditoría local, incluyendo carga,

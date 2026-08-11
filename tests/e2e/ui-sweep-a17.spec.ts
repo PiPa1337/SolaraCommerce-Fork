@@ -286,6 +286,42 @@ test("el detalle muestra usos coherentes con las referencias del proyecto", asyn
   await expect(page.getByTestId("ui-asset-delete")).toBeDisabled();
 });
 
+test("Copiar ID escribe el identificador del recurso y comunica Copiado", async ({ page }) => {
+  await page.goto(studioUrl);
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({ timeout: 20_000 });
+  const card = page
+    .locator(".dashboard-store-card")
+    .filter({ has: page.getByText("Predeterminado", { exact: true }) });
+  await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+  await openAssetsTab(page);
+
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          (window as unknown as { __clipboardValue?: string }).__clipboardValue = value;
+        },
+      },
+    });
+  });
+
+  const heroAsset = page.locator(".asset-item").filter({
+    has: page.locator('input[value="Campaña Modo Sur"]'),
+  });
+  const copyButton = heroAsset.getByRole("button", { name: "Copiar ID de Campaña Modo Sur" });
+  await copyButton.click();
+
+  const copiedButton = heroAsset.getByRole("button", { name: "Copiado de Campaña Modo Sur" });
+  await expect(copiedButton).toHaveAttribute("aria-label", "Copiado de Campaña Modo Sur");
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as unknown as { __clipboardValue?: string }).__clipboardValue),
+    )
+    .toBe("asset-hero");
+});
+
 test("eliminar sin usos: confirmar quita la imagen y cancelar la conserva", async ({ page }) => {
   await page.goto(studioUrl);
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({ timeout: 20_000 });

@@ -187,6 +187,14 @@ pero mantiene `origin.templateVersion` sin cambios y no dispara el respaldo ni
 la adopción de la plantilla. La acción de adopción sigue cubierta por el
 recorrido que descarga el respaldo previo y persiste la versión nueva.
 
+## Copia de IDs de recursos (2026-08-11)
+
+A17 cubre el botón `Copiar ID` que aparece en cada recurso. La prueba reemplaza
+el clipboard del contexto por un receptor determinista, comprueba que se escribe
+el ID persistido (`asset-hero`) y verifica el feedback accesible `Copiado de
+Campaña Modo Sur`. Las pruebas de carga y reemplazo siguen usando el clipboard
+real sólo cuando no necesitan leerlo.
+
 ## Portabilidad Windows
 
 La distribución portable está implementada en `apps/desktop`. Electron carga
