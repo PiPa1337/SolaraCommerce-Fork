@@ -816,6 +816,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
               className="visually-hidden"
               ref={importRef}
               type="file"
+              aria-label="Seleccionar archivo CSV"
               accept=".csv,text/csv"
               onChange={(event) => {
                 const file = event.target.files?.[0];
@@ -827,6 +828,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
               className="visually-hidden"
               id={packageInputId}
               type="file"
+              aria-label="Seleccionar carpeta de catálogo"
               webkitdirectory="true"
               multiple
               onChange={(event) => {

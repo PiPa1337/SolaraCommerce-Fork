@@ -166,6 +166,16 @@ test("el título SEO persiste al cambiar de pestaña (H8-01)", async ({ page }) 
   await expect(page.getByLabel("Título SEO")).toHaveValue("Título SEO auditoría F10");
 });
 
+test("los pares de color del Tema tienen nombres accesibles independientes", async ({ page }) => {
+  await setupCleanStore(page, "Tienda colores accesibles");
+  await openThemeTab(page);
+
+  await expect(page.getByLabel("Fondo selector de color")).toHaveValue("#fcfcfb");
+  await expect(page.getByLabel("Fondo valor hexadecimal")).toHaveValue("#fcfcfb");
+  await expect(page.getByLabel("Texto secundario selector de color")).toBeVisible();
+  await expect(page.getByLabel("Texto secundario valor hexadecimal")).toBeVisible();
+});
+
 test("SEO comunica el estado de auditoría y prioriza el diagnóstico sobre las previews", async ({
   page,
 }) => {

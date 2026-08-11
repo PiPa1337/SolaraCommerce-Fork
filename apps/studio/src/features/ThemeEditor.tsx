@@ -493,12 +493,14 @@ export function ThemeEditor({
                   <input
                     type="color"
                     value={project.theme.colors[key]}
+                    aria-label={`${colorLabels[key]} selector de color`}
                     data-testid={`ui-color-native-${key}`}
                     onChange={(event) => commitColor(key, event.target.value)}
                   />
                   <input
                     type="text"
                     value={colorDrafts[key] ?? project.theme.colors[key]}
+                    aria-label={`${colorLabels[key]} valor hexadecimal`}
                     aria-invalid={colorErrors[key] ? true : undefined}
                     data-testid={`ui-color-text-${key}`}
                     onChange={(event) => commitColor(key, event.target.value)}

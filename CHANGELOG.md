@@ -16,6 +16,8 @@ versión publicada.
   error y reintento;
 - el diagnóstico visual prioriza los hallazgos antes de las previews y ofrece
   navegación directa cuando un problema tiene una pestaña de corrección;
+- los pares de color del Tema y los selectores de archivos tienen nombres
+  accesibles explícitos para teclado y tecnologías asistivas;
 - se agregaron regresiones Playwright para la jerarquía y el feedback de la
   auditoría SEO.
 

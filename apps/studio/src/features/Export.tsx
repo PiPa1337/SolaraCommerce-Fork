@@ -417,6 +417,7 @@ export function ExportPanel({
               ref={importRef}
               className="visually-hidden"
               type="file"
+              aria-label="Seleccionar respaldo de proyecto"
               accept=".json,.solara.json,application/json"
               onChange={(event) => {
                 const file = event.target.files?.[0];

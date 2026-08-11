@@ -445,6 +445,7 @@ export function Assets({
               className="visually-hidden"
               ref={imageInputRef}
               type="file"
+              aria-label="Seleccionar imágenes"
               multiple
               accept="image/jpeg,image/png,image/webp"
               onChange={(event) => {
@@ -463,6 +464,7 @@ export function Assets({
               className="visually-hidden"
               ref={videoInputRef}
               type="file"
+              aria-label="Seleccionar videos"
               multiple
               accept="video/mp4,video/webm"
               onChange={(event) => {
