@@ -2,6 +2,11 @@ import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
+const ARCHIVO_STACK = `Archivo, Arial Narrow, Helvetica Neue, Arial, sans-serif`;
+const INTER_STACK = `Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
+/** minifyCss compacta el espacio tras cada coma en themeCss (preview y export). */
+const MINIFIED = (stack: string) => stack.replaceAll(", ", ",");
+
 /**
  * Barrido A16 — ThemeEditor completo: efecto real, auto-feedback y contrato
  * de datos de TODOS los controles de tema.
@@ -237,22 +242,26 @@ test("tipografía: familias y escala llegan a los tokens del preview", async ({ 
   await setupCleanStore(page, "A16 tipografía");
   await openThemeTab(page);
 
-  const display = page.getByLabel("Familia de títulos");
-  const body = page.getByLabel("Familia de texto");
+  const display = page.getByTestId("ui-font-display");
+  const body = page.getByTestId("ui-font-body");
   const scale = page.getByLabel(/^Escala /);
 
-  await display.fill("Archivo");
-  await body.fill("Inter");
+  await display.selectOption(ARCHIVO_STACK);
+  await body.selectOption(INTER_STACK);
   // El slider se mueve y su etiqueta refleja el valor elegido (auto-feedback).
   await scale.fill("1.25");
 
-  await expect(display).toHaveValue("Archivo");
-  await expect(body).toHaveValue("Inter");
+  await expect(display).toHaveValue(ARCHIVO_STACK);
+  await expect(body).toHaveValue(INTER_STACK);
   await expect(scale).toHaveValue("1.25");
   await expect(page.getByLabel("Escala 1.25")).toBeVisible();
 
-  await expect.poll(previewVar(page, "--solara-display"), { timeout: 15_000 }).toBe("Archivo");
-  await expect.poll(previewVar(page, "--solara-body"), { timeout: 15_000 }).toBe("Inter");
+  await expect
+    .poll(previewVar(page, "--solara-font-display"), { timeout: 15_000 })
+    .toBe(MINIFIED(ARCHIVO_STACK));
+  await expect
+    .poll(previewVar(page, "--solara-font-body"), { timeout: 15_000 })
+    .toBe(MINIFIED(INTER_STACK));
   await expect.poll(previewVar(page, "--solara-type-scale"), { timeout: 15_000 }).toBe("1.25");
 });
 
@@ -273,7 +282,6 @@ test("geometría: espaciado, radio y contenedor cambian los tokens del preview",
   await expect(page.getByLabel("Radio 28px")).toBeVisible();
 
   await expect.poll(previewVar(page, "--solara-space-scale"), { timeout: 15_000 }).toBe("1.35");
-  await expect.poll(previewVar(page, "--solara-space"), { timeout: 15_000 }).toBe("1.35");
   await expect.poll(previewVar(page, "--solara-radius"), { timeout: 15_000 }).toBe("28px");
 });
 
@@ -367,7 +375,7 @@ test("resets por grupo: cada uno restaura sólo su grupo de valores de apertura"
   await openThemeTab(page);
 
   const backgroundText = page.getByTestId("ui-color-text-background");
-  const display = page.getByLabel("Familia de títulos");
+  const display = page.getByTestId("ui-font-display");
   const container = page.getByLabel("Ancho del contenedor");
 
   const opening = {
@@ -377,7 +385,7 @@ test("resets por grupo: cada uno restaura sólo su grupo de valores de apertura"
   };
 
   await page.getByRole("button", { name: "Aplicar paleta Tinta profunda" }).click();
-  await display.fill("Georgia");
+  await display.selectOption('Georgia, "Times New Roman", serif');
   await container.fill(String(Number(opening.container) + 100));
   await expect(backgroundText).toHaveValue("#16151a");
 

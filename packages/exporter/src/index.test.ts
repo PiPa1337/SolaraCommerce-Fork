@@ -742,3 +742,58 @@ describe("renderPreviewHtml sin preload absoluto", () => {
     expect(html).toMatch(/rel="preload" as="image"/);
   });
 });
+
+describe("tema: carga real de fuentes y vars sin duplicados", () => {
+  const decodePreviewCss = (preview: string): string => {
+    const match = /data:text\/css;base64,([^"]+)/.exec(preview);
+    if (!match) throw new Error("CSS del preview no encontrado");
+    return Buffer.from(match[1]!, "base64").toString("utf8");
+  };
+
+  it("emite @font-face self-host cuando la familia es Google Fonts y agrega el woff2", () => {
+    const result = exportProject(catalogModernStore, { mode: "draft" });
+    const css = String(result.files.get("assets/storefront.css"));
+    const font = result.files.get("assets/fonts/archivo.woff2");
+
+    expect(css).toContain('@font-face{font-family:"Archivo"');
+    expect(css).toContain('url("/assets/fonts/archivo.woff2") format("woff2")');
+    expect(css).toContain("font-weight:400 900");
+    expect(css).not.toContain('local("Arial")');
+    expect(css.split("@font-face").length - 1).toBe(1);
+    expect(font).toBeInstanceOf(Uint8Array);
+    expect((font as Uint8Array).length).toBeGreaterThan(30_000);
+    expect(result.files.has("assets/fonts/inter.woff2")).toBe(false);
+  });
+
+  it("no emite fuentes para familias del sistema ni archivos woff2", () => {
+    const result = exportProject(referenceStore, { mode: "draft" });
+    const css = String(result.files.get("assets/storefront.css"));
+
+    expect(css).not.toContain("@font-face");
+    expect([...result.files.keys()].some((path) => path.startsWith("assets/fonts/"))).toBe(false);
+  });
+
+  it("el preview transporta la fuente inline en base64 sin URLs relativas", () => {
+    const preview = renderPreviewHtml(catalogModernStore, "draft", "/");
+    const css = decodePreviewCss(preview);
+
+    expect(css).toContain('@font-face{font-family:"Archivo"');
+    expect(css).toContain("data:font/woff2;base64,");
+    expect(css).not.toContain('url("/assets/fonts/');
+    expect(css).not.toContain("local(");
+  });
+
+  it("emite una sola var por campo y el body usa el token canónico", () => {
+    const css = String(
+      exportProject(catalogModernStore, { mode: "draft" }).files.get("assets/storefront.css"),
+    );
+
+    expect(css).toContain("--solara-font-display:");
+    expect(css).toContain("--solara-font-body:");
+    expect(css).toContain("--solara-space-scale:");
+    expect(css).not.toMatch(/--solara-display:/);
+    expect(css).not.toMatch(/--solara-body:/);
+    expect(css).not.toMatch(/--solara-space:/);
+    expect(css).toContain("font-family:var(--solara-font-body)");
+  });
+});

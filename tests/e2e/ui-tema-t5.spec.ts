@@ -9,27 +9,22 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
  * (range 0.75-1.5).
  *
  * Capa 4 (utilidad) es el foco: el CSS exportado antes vs después del cambio
- * y el render real del preview. Hallazgo de esta auditoría (confirmado con
- * evidencia de grep y diff):
+ * y el render real del preview. La auditoría (2026-08-10) confirmó dos dead
+ * controls: los bloques catalog-modern overrideaban el radio con valores
+ * fijos y nadie consumía --solara-space/--solara-space-scale. El fix de Ola 3
+ * (styles.ts) conectó ambos:
  *
- * 1. radius: el token --solara-radius SÍ tiene reglas consumidoras en
- *    styles.ts (base + bloques legacy), pero los bloques catalog-modern
- *    overridean todas las superficies visibles con valores fijos
- *    (999px/20px/16px) y NUNCA usan var(--solara-radius). Resultado
- *    empírico: el fingerprint de border-radius del preview es idéntico con
- *    radio 40 y radio 0 (probe ejecutado en esta auditoría).
- * 2. spacingScale: --solara-space y --solara-space-scale se emiten pero
- *    NINGUNA regla las consume (grep completo en styles.ts/catalog-modern/
- *    definitions/runtime: 0 usos de var(--solara-space)). El slider cambia
- *    dos vars que nadie lee: dead control confirmado por diff del CSS (solo
- *    cambian las dos líneas de la var) y por fingerprint idéntico del render.
- * 3. --solara-display (exporter:585) es un duplicado muerto de
- *    --solara-font-display (exporter:587): mismo valor emitido, y solo
- *    --solara-font-display tiene consumidores en styles.ts (85, 291, 583,
- *    1709).
+ * 1. radius: las superficies modernas (cards, inputs, botones, dialogs)
+ *    usan var(--solara-radius); las pills/badges semánticas conservan 999px.
+ * 2. spacingScale: las grillas y stacks principales del skin moderno usan
+ *    gap: calc(Xrem * var(--solara-space-scale, 1)), y la var ya tiene
+ *    consumidores reales en el CSS exportado.
+ * 3. --solara-display y --solara-body eran duplicados muertos; la emisión
+ *    quedó en el token canónico (--solara-font-display / --solara-font-body),
+ *    y --solara-space se unificó en --solara-space-scale (exporter).
  *
- * Los specs de comportamiento ACTUAL documentan el dead control; los
- * test.fixme nombran el fix de Ola 3 que debe invertir esas aserciones.
+ * Este spec aserTA el comportamiento CORREGIDO: los fingerprints de
+ * border-radius y de gap/padding/margin difieren entre valores extremos.
  */
 
 test.setTimeout(process.env.CI ? 60_000 : 30_000);
@@ -142,7 +137,7 @@ function exportCss(radius: number, spacingScale: number): string {
   return String(exportProject(project, { mode: "draft" }).files.get("assets/storefront.css"));
 }
 
-test("radius: el token llega al preview y al sitio, pero el radio visual no cambia (T5)", async ({
+test("radius: el token llega al preview y al sitio y el radio visual cambia (T5)", async ({
   page,
 }) => {
   await setupCleanStore(page, "T5 radius");
@@ -160,39 +155,54 @@ test("radius: el token llega al preview y al sitio, pero el radio visual no camb
   await expect.poll(previewVar(page, "--solara-radius"), { timeout: 15_000 }).toBe("0px");
   const fingerprint0 = await styleFingerprint(page, RADIUS_PROPS);
 
-  // El token se emite y las reglas base/legacy lo consumen en el CSS del
-  // sitio exportado: la cadena de emisión existe.
+  // La cadena de emisión y consumo llega al CSS del sitio exportado: las
+  // superficies modernas (cards, inputs, botones, dialogs) usan la var.
+  // Antes del fix solo había 5 consumidores en este export; ahora el bloque
+  // catalog-modern agrega ~20.
   const css40 = exportCss(40, 1);
   const css0 = exportCss(0, 1);
   expect(css40).toMatch(/--solara-radius:\s*40px;/);
   expect(css0).toMatch(/--solara-radius:\s*0px;/);
-  expect(css40.match(/border-radius:\s*var\(--solara-radius\)/g) ?? []).toHaveLength(5);
+  expect(css40.match(/border-radius:\s*var\(--solara-radius\)/g) ?? []).toHaveLength(26);
 
-  // Comportamiento ACTUAL (evidencia empírica): los bloques catalog-modern
-  // overridean todas las superficies visibles con radios fijos (999px, 20px,
-  // 16px) y ninguno usa var(--solara-radius); el render es idéntico. El fix
-  // de Ola 3 debe convertir esta igualdad en diferencia.
-  expect(fingerprint40).toBe(fingerprint0);
+  // Comportamiento CORREGIDO (fix Ola 3): las superficies del skin moderno
+  // consumen var(--solara-radius); el render del preview difiere entre 40 y 0.
+  expect(fingerprint40).not.toBe(fingerprint0);
 });
 
-test.fixme(
-  "radius: efecto visible en catalog-modern tras conectar var(--solara-radius) a los bloques modernos (fix Ola 3, OWNER styles.ts)",
-  async ({ page }) => {
-    await setupCleanStore(page, "T5 radius fix");
-    await openThemeTab(page);
+test("radius: el efecto visible se mantiene y las pills semánticas conservan 999px (T5)", async ({
+  page,
+}) => {
+  await setupCleanStore(page, "T5 radius fix");
+  await openThemeTab(page);
 
-    const radius = page.getByLabel(/^Radio /);
-    await radius.fill("40");
-    await expect.poll(previewVar(page, "--solara-radius"), { timeout: 15_000 }).toBe("40px");
-    const fingerprint40 = await styleFingerprint(page, RADIUS_PROPS);
-    await radius.fill("0");
-    await expect.poll(previewVar(page, "--solara-radius"), { timeout: 15_000 }).toBe("0px");
-    const fingerprint0 = await styleFingerprint(page, RADIUS_PROPS);
-    expect(fingerprint40).not.toBe(fingerprint0);
-  },
-);
+  const radius = page.getByLabel(/^Radio /);
+  await radius.fill("40");
+  await expect.poll(previewVar(page, "--solara-radius"), { timeout: 15_000 }).toBe("40px");
+  const fingerprint40 = await styleFingerprint(page, RADIUS_PROPS);
+  await radius.fill("0");
+  await expect.poll(previewVar(page, "--solara-radius"), { timeout: 15_000 }).toBe("0px");
+  const fingerprint0 = await styleFingerprint(page, RADIUS_PROPS);
+  expect(fingerprint40).not.toBe(fingerprint0);
 
-test("spacingScale: el valor llega a las vars pero ninguna regla la consume; el render no cambia (T5)", async ({
+  // Una superficie principal (hero) sigue el slider...
+  await radius.fill("40");
+  await expect.poll(previewVar(page, "--solara-radius"), { timeout: 15_000 }).toBe("40px");
+  const heroRadius = await previewRoot(page)
+    .locator(".catalog-hero-inner")
+    .first()
+    .evaluate((element) => getComputedStyle(element).borderRadius);
+  expect(heroRadius).toBe("40px");
+
+  // ...y una pill semántica (campo de búsqueda del header) queda redonda.
+  const pillRadius = await previewRoot(page)
+    .locator(".catalog-search-link")
+    .first()
+    .evaluate((element) => getComputedStyle(element).borderRadius);
+  expect(pillRadius).toBe("999px");
+});
+
+test("spacingScale: el valor llega a la var y las grillas modernas cambian su gap (T5)", async ({
   page,
 }) => {
   await setupCleanStore(page, "T5 spacing");
@@ -202,65 +212,73 @@ test("spacingScale: el valor llega a las vars pero ninguna regla la consume; el 
 
   await spacing.fill("1.5");
   await expect(page.getByLabel("Espaciado 1.50")).toBeVisible();
-  await expect.poll(previewVar(page, "--solara-space"), { timeout: 15_000 }).toBe("1.5");
   await expect.poll(previewVar(page, "--solara-space-scale"), { timeout: 15_000 }).toBe("1.5");
   const fingerprint15 = await styleFingerprint(page, SPACING_PROPS);
   expect(fingerprint15.length).toBeGreaterThan(0);
 
   await spacing.fill("0.75");
-  await expect.poll(previewVar(page, "--solara-space"), { timeout: 15_000 }).toBe("0.75");
   await expect.poll(previewVar(page, "--solara-space-scale"), { timeout: 15_000 }).toBe("0.75");
   const fingerprint075 = await styleFingerprint(page, SPACING_PROPS);
 
-  // Dead control confirmado por diff del sitio: solo cambian las dos líneas
-  // de la var; ninguna regla del CSS usa var(--solara-space) o
-  // var(--solara-space-scale).
+  // Fix Ola 3: la var ya tiene consumidores reales en el CSS exportado
+  // (grillas y stacks principales del skin moderno usan
+  // calc(Xrem * var(--solara-space-scale, 1))); el resto del CSS solo
+  // difiere en la línea de la var.
   const css15 = exportCss(1, 1.5);
   const css075 = exportCss(1, 0.75);
-  expect(css15).toMatch(/--solara-space:\s*1\.5;/);
   expect(css15).toMatch(/--solara-space-scale:\s*1\.5;/);
-  expect(css15).not.toContain("var(--solara-space)");
-  expect(css15).not.toContain("var(--solara-space-scale)");
-  expect(css15.replace(/--solara-space(?:-scale)?:\s*[\d.]+;/g, "")).toBe(
-    css075.replace(/--solara-space(?:-scale)?:\s*[\d.]+;/g, ""),
+  expect(css15).toContain("var(--solara-space-scale");
+  expect(css15.replace(/--solara-space-scale:\s*[\d.]+;/g, "")).toBe(
+    css075.replace(/--solara-space-scale:\s*[\d.]+;/g, ""),
   );
 
-  // Comportamiento ACTUAL: el slider cambia la var pero el render es
-  // idéntico (0 consumidores). El fix de Ola 3 debe invertir esta igualdad.
-  expect(fingerprint15).toBe(fingerprint075);
+  // Comportamiento CORREGIDO: el slider cambia gaps/paddings reales y el
+  // fingerprint del render difiere entre 1.5 y 0.75.
+  expect(fingerprint15).not.toBe(fingerprint075);
 });
 
-test.fixme(
-  "spacingScale: efecto visible tras conectar --solara-space a gaps/paddings reales (fix Ola 3, OWNER styles.ts + ThemeEditor)",
-  async ({ page }) => {
-    await setupCleanStore(page, "T5 spacing fix");
-    await openThemeTab(page);
+test("spacingScale: el gap de la grilla principal de productos escala con el slider (T5)", async ({
+  page,
+}) => {
+  await setupCleanStore(page, "T5 spacing fix");
+  await openThemeTab(page);
 
-    const spacing = page.getByLabel(/^Espaciado /);
-    await spacing.fill("1.5");
-    await expect.poll(previewVar(page, "--solara-space"), { timeout: 15_000 }).toBe("1.5");
-    const fingerprint15 = await styleFingerprint(page, SPACING_PROPS);
-    await spacing.fill("0.75");
-    await expect.poll(previewVar(page, "--solara-space"), { timeout: 15_000 }).toBe("0.75");
-    const fingerprint075 = await styleFingerprint(page, SPACING_PROPS);
-    expect(fingerprint15).not.toBe(fingerprint075);
+  const spacing = page.getByLabel(/^Espaciado /);
+  await spacing.fill("1.5");
+  await expect
+    .poll(previewVar(page, "--solara-space-scale"), { timeout: 15_000 })
+    .toBe("1.5");
+  const fingerprint15 = await styleFingerprint(page, SPACING_PROPS);
+  await spacing.fill("0.75");
+  await expect
+    .poll(previewVar(page, "--solara-space-scale"), { timeout: 15_000 })
+    .toBe("0.75");
+  const fingerprint075 = await styleFingerprint(page, SPACING_PROPS);
+  expect(fingerprint15).not.toBe(fingerprint075);
 
-    const css = exportCss(1, 1.5);
-    expect(css).toContain("var(--solara-space");
-  },
-);
+  // El CSS exportado consume la var en las grillas principales.
+  const css = exportCss(1, 1.5);
+  expect(css).toContain("var(--solara-space-scale");
 
-test("--solara-display: duplicado muerto de --solara-font-display (T5)", async () => {
+  // Gap computado de la grilla principal: 1.25rem * 1.5 = 30px; 1.25rem * 0.75 = 15px.
+  const gridGap = async (): Promise<string> =>
+    previewRoot(page)
+      .locator(".catalog-product-grid")
+      .first()
+      .evaluate((element) => getComputedStyle(element).columnGap);
+  await spacing.fill("1.5");
+  await expect.poll(gridGap, { timeout: 15_000 }).toBe("30px");
+  await spacing.fill("0.75");
+  await expect.poll(gridGap, { timeout: 15_000 }).toBe("15px");
+});
+
+test("--solara-display: emisión muerta eliminada, queda solo el token canónico (T5)", async () => {
   const css = exportCss(1, 1);
 
-  // Ambas vars se emiten con el mismo valor (exporter index.ts:585 y 587).
-  const display = /--solara-display:\s*([^;]+);/.exec(css)?.[1];
-  const fontDisplay = /--solara-font-display:\s*([^;]+);/.exec(css)?.[1];
-  expect(fontDisplay).toBeTruthy();
-  expect(display).toBe(fontDisplay);
-
-  // Solo --solara-font-display tiene consumidores en styles.ts
-  // (85, 291, 583, 1709); --solara-display no se lee en ninguna regla.
+  // --solara-font-display se emite y tiene consumidores en styles.ts
+  // (85, 291, 583, 1709); --solara-display ya no se emite (exporter index.ts).
+  expect(css).toContain("--solara-font-display:");
+  expect(css).not.toMatch(/--solara-display:/);
   expect(css).toContain("var(--solara-font-display)");
   expect(css).not.toContain("var(--solara-display)");
 });

@@ -1,22 +1,30 @@
 /**
- * Bin T4 — Auditoría de tipografía del tema (plan 2026-08-10, Ola 1).
+ * Bin T4 — Auditoría de tipografía del tema (plan 2026-08-10, Ola 1 + Ola 3).
  *
  * Contrato de 4 capas para "Familia de títulos" (typography.display),
  * "Familia de texto" (typography.body) y "Escala" (range 0.8-1.4):
  *
- * 1. Funcional: el valor escrito/deslizado llega a los tokens --solara-*.
- * 2. Auto-feedback: los campos controlados reflejan lo escrito.
- * 3. Datos: themeCss emite los mismos nombres en preview y exportación.
+ * 1. Funcional: la opción elegida del selector (stack completo) llega a los
+ *    tokens --solara-*.
+ * 2. Auto-feedback: el select refleja la opción resuelta del valor guardado.
+ * 3. Datos: themeCss emite los mismos stacks en preview y exportación.
  * 4. Utilidad: font-family COMPUTADA en el preview y en el sitio servido,
- *    diff del CSS exportado antes/después, y evidencia de que el control no
- *    carga fuentes (ni Google Fonts ni @font-face del usuario): el efecto
- *    real depende de las familias instaladas en el sistema del visitante.
+ *    diff del CSS exportado antes/después, y evidencia de que un valor
+ *    "Personalizada" (fuera del selector) se conserva sin cargarse. Las
+ *    familias Google del registro se cargan self-host (@font-face + woff2
+ *    propio); las personalizadas no emiten @font-face y el efecto real
+ *    depende de las familias instaladas en el sistema.
  */
 import { createServer, type Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
 import { startStudioServer, stopStudioServer } from "./studio-server";
+
+const GEORGIA_STACK = `Georgia, "Times New Roman", serif`;
+const ARCHIVO_STACK = `Archivo, Arial Narrow, Helvetica Neue, Arial, sans-serif`;
+/** minifyCss compacta el espacio tras cada coma en themeCss (preview y export). */
+const MINIFIED_GEORGIA_STACK = GEORGIA_STACK.replaceAll(", ", ",");
 
 test.setTimeout(process.env.CI ? 120_000 : 90_000);
 
@@ -181,7 +189,7 @@ async function stopSiteServer(siteServer: Server): Promise<void> {
   });
 }
 
-test("T4: la familia de títulos llega al preview y al sitio; la de texto queda sobreescrita por el stack fijo del módulo", async ({
+test("T4: las familias elegidas llegan al preview y al sitio: títulos, marca y texto", async ({
   page,
 }) => {
   await setupCleanStore(page, "Tienda T4 familias");
@@ -190,10 +198,15 @@ test("T4: la familia de títulos llega al preview y al sitio; la de texto queda 
   const previewStoreRoot = previewStore(page);
   const previewHeading = previewStoreRoot.locator("h1").first();
 
-  // Inventario con el default: el CSS del módulo catalog-modern fija en la
-  // raíz del storefront el stack "Archivo, Arial Narrow, Helvetica Neue,
-  // Arial, sans-serif" (styles.ts:1951), y la marca del encabezado usa
-  // "Georgia, Times New Roman, serif" fijo (styles.ts:1965/2302).
+  // Inventario con el default: el selector resuelve el stack del fixture
+  // (Archivo) por coincidencia exacta; la raíz del storefront consume
+  // var(--solara-font-body) (styles.ts:1951) y la marca consume
+  // var(--solara-font-display) (styles.ts:1965/2302), ambas con el stack
+  // default del fixture.
+  const display = page.getByTestId("ui-font-display");
+  const body = page.getByTestId("ui-font-body");
+  await expect(display).toHaveValue(ARCHIVO_STACK);
+  await expect(body).toHaveValue(ARCHIVO_STACK);
   await expect
     .poll(() => previewStoreRoot.evaluate((element) => getComputedStyle(element).fontFamily), {
       timeout: 15_000,
@@ -208,65 +221,83 @@ test("T4: la familia de títulos llega al preview y al sitio; la de texto queda 
           .evaluate((element) => getComputedStyle(element).fontFamily),
       { timeout: 15_000 },
     )
-    .toContain("Georgia");
-
-  const display = page.getByLabel("Familia de títulos");
-  const body = page.getByLabel("Familia de texto");
+    .toContain("Archivo");
 
   // Un cambio por vez: los commits del panel disparan actualizaciones del
   // preview que pueden llegar fuera de orden; el estado final tiene ambos.
-  await display.fill("Georgia");
-  await expect(display).toHaveValue("Georgia");
-  await expect.poll(previewVar(page, "--solara-font-display"), { timeout: 15_000 }).toBe("Georgia");
+  await display.selectOption(GEORGIA_STACK);
+  await expect(display).toHaveValue(GEORGIA_STACK);
+  await expect
+    .poll(previewVar(page, "--solara-font-display"), { timeout: 15_000 })
+    .toBe(MINIFIED_GEORGIA_STACK);
 
   // "Familia de títulos" SÍ produce un efecto real: los títulos h1-h3 leen
-  // var(--solara-font-display) (styles.ts:85) y computan la familia escrita.
+  // var(--solara-font-display) (styles.ts:85) y la marca del encabezado
+  // también (fix Ola 3: dejó de quedar fija en Georgia).
   await expect
     .poll(() => previewHeading.evaluate((element) => getComputedStyle(element).fontFamily), {
       timeout: 15_000,
     })
-    .toBe("Georgia");
+    .toBe(GEORGIA_STACK);
+  await expect
+    .poll(
+      () =>
+        previewStoreRoot
+          .locator(".catalog-brand")
+          .first()
+          .evaluate((element) => getComputedStyle(element).fontFamily),
+      { timeout: 15_000 },
+    )
+    .toBe(GEORGIA_STACK);
 
-  await body.fill("Georgia");
-  await expect(body).toHaveValue("Georgia");
-  await expect.poll(previewVar(page, "--solara-font-body"), { timeout: 15_000 }).toBe("Georgia");
+  await body.selectOption(GEORGIA_STACK);
+  await expect(body).toHaveValue(GEORGIA_STACK);
+  await expect
+    .poll(previewVar(page, "--solara-font-body"), { timeout: 15_000 })
+    .toBe(MINIFIED_GEORGIA_STACK);
 
-  // "Familia de texto" NO produce efecto real en catalog-modern: el dato llega
-  // al token (--solara-font-body: Georgia) pero la raíz del storefront queda
-  // con el stack fijo del módulo, que gana por especificidad (0,2,0 vs 0,1,0).
+  // "Familia de texto" produce un efecto real (fix Ola 3): la raíz del
+  // storefront consume var(--solara-font-body) y computa la familia elegida.
   await expect
     .poll(() => previewStoreRoot.evaluate((element) => getComputedStyle(element).fontFamily), {
       timeout: 15_000,
     })
-    .toContain("Archivo");
+    .toBe(GEORGIA_STACK);
   const rootFamilyAfter = await previewStoreRoot.evaluate(
     (element) => getComputedStyle(element).fontFamily,
   );
-  expect(rootFamilyAfter).not.toContain("Georgia");
+  expect(rootFamilyAfter).toContain("Georgia");
+  expect(rootFamilyAfter).not.toContain("Archivo");
 
   // El mismo proyecto persistido viaja al sitio exportado: se exporta lo que
-  // el Studio escribió y el sitio servido repite el comportamiento (títulos
-  // con la familia escrita, texto con el stack fijo). (La tienda limpia
-  // arrastra imágenes de plantilla, así que el modo es draft: el CSS y el
-  // render son los mismos que production, sólo cambia el noindex.)
+  // el Studio escribió y el sitio servido repite el comportamiento (títulos,
+  // marca y texto con la familia elegida). (La tienda limpia arrastra
+  // imágenes de plantilla, así que el modo es draft: el CSS y el render son
+  // los mismos que production, sólo cambia el noindex.)
   const project = await readProjectWithTheme(page, "Tienda T4 familias", {
-    display: "Georgia",
-    body: "Georgia",
+    display: GEORGIA_STACK,
+    body: GEORGIA_STACK,
   });
   const exported = exportProject(project as never, { mode: "draft" });
   const site = await startSiteServer(exported.files);
   try {
     await page.goto(`${site.url}/`);
-    await expect(page.locator("[data-solara-store] h1").first()).toHaveCSS(
-      "font-family",
-      "Georgia",
-    );
+    await expect
+      .poll(
+        () =>
+          page
+            .locator("[data-solara-store] h1")
+            .first()
+            .evaluate((element) => getComputedStyle(element).fontFamily),
+        { timeout: 15_000 },
+      )
+      .toBe(GEORGIA_STACK);
     const siteRootFamily = await page
       .locator("[data-solara-store]")
       .first()
       .evaluate((element) => getComputedStyle(element).fontFamily);
-    expect(siteRootFamily).toContain("Archivo");
-    expect(siteRootFamily).not.toContain("Georgia");
+    expect(siteRootFamily).toContain("Georgia");
+    expect(siteRootFamily).not.toContain("Archivo");
   } finally {
     await stopSiteServer(site.server);
   }
@@ -295,9 +326,10 @@ test("T4: la escala del range cambia el tamaño real en el preview y en el sitio
   const sizeAt140 = await rootFontSize();
   expect(sizeAt140 / 16).toBeCloseTo(1.4, 2);
 
-  // Los títulos usan tamaños en rem (clamp) y NO escalan con la var: la escala
-  // sólo afecta al texto que hereda la raíz (hallazgo de utilidad parcial).
-  const headingSizeBase = parseFloat(
+  // Los títulos escalan con la var (fix Ola 3): los h1 modernos usan
+  // font-size: calc(clamp(...) * var(--solara-type-scale, 1)); la escala
+  // afecta a la base y a los títulos por igual.
+  const headingSizeAt140 = parseFloat(
     await previewStore(page)
       .locator("h1")
       .first()
@@ -305,13 +337,13 @@ test("T4: la escala del range cambia el tamaño real en el preview y en el sitio
   );
   await scale.fill("1");
   await expect.poll(rootFontSize, { timeout: 15_000 }).toBe(16);
-  const headingSizeScaled = parseFloat(
+  const headingSizeAt100 = parseFloat(
     await previewStore(page)
       .locator("h1")
       .first()
       .evaluate((element) => getComputedStyle(element).fontSize),
   );
-  expect(headingSizeScaled).toBe(headingSizeBase);
+  expect(headingSizeAt140 / headingSizeAt100).toBeCloseTo(1.4, 2);
 
   // El sitio exportado repite el mismo tamaño: escala 1.4 → 22.4px.
   await scale.fill("1.4");
@@ -342,16 +374,16 @@ test("T4: las familias y la escala viajan al CSS del sitio exportado (diff antes
   await setupCleanStore(page, "Tienda T4 diff");
   await openThemeTab(page);
 
-  await page.getByLabel("Familia de títulos").fill("Georgia");
-  await page.getByLabel("Familia de texto").fill("Georgia");
+  await page.getByTestId("ui-font-display").selectOption(GEORGIA_STACK);
+  await page.getByTestId("ui-font-body").selectOption(GEORGIA_STACK);
   const scale = page.getByLabel(/^Escala /);
   await scale.fill("1.4");
   await expect.poll(previewVar(page, "--solara-type-scale"), { timeout: 15_000 }).toBe("1.4");
 
   const edited = exportProject(
     await readProjectWithTheme(page, "Tienda T4 diff", {
-      display: "Georgia",
-      body: "Georgia",
+      display: GEORGIA_STACK,
+      body: GEORGIA_STACK,
       scale: 1.4,
     }),
     { mode: "draft" },
@@ -361,19 +393,23 @@ test("T4: las familias y la escala viajan al CSS del sitio exportado (diff antes
   const baseCss = String(base.files.get("assets/storefront.css"));
   const editedCss = String(edited.files.get("assets/storefront.css"));
   const editedHtml = String(edited.files.get("index.html"));
+  const minifiedGeorgia = GEORGIA_STACK.replaceAll(", ", ",");
 
   // El default llega al CSS; el cambio lo reemplaza (diff de utilidad).
   expect(baseCss).toContain("--solara-font-display:Archivo");
-  expect(editedCss).toContain("--solara-font-display:Georgia");
-  expect(editedCss).toContain("--solara-font-body:Georgia");
+  expect(editedCss).toContain(`--solara-font-display:${minifiedGeorgia}`);
+  expect(editedCss).toContain(`--solara-font-body:${minifiedGeorgia}`);
   expect(editedCss).toContain("--solara-type-scale:1.4");
   expect(editedCss).not.toContain("--solara-font-display:Archivo");
 
-  // Sin carga de fuentes: ni Google Fonts ni @font-face del usuario (sólo el
-  // shim local "Archivo" → Arial), en el CSS y en el HTML del sitio.
+  // Carga self-host (Ola 3): el default (Archivo, display === body) emite un
+  // @font-face real con woff2 propio; una familia no registrada (Georgia) no
+  // emite @font-face y el navegador cae al stack. Sin CDN ni @import.
   const fontFaceCount = (value: string): number => value.split("@font-face").length - 1;
   expect(fontFaceCount(baseCss)).toBe(1);
-  expect(fontFaceCount(editedCss)).toBe(1);
+  expect(baseCss).toContain('url("/assets/fonts/archivo.woff2")');
+  expect(fontFaceCount(editedCss)).toBe(0);
+  expect(editedCss).not.toContain("@font-face{font-family");
   expect(editedCss).not.toContain("fonts.googleapis.com");
   expect(editedCss).not.toContain("@import");
   expect(editedHtml).not.toContain("fonts.googleapis.com");
@@ -383,26 +419,86 @@ test("T4: las familias y la escala viajan al CSS del sitio exportado (diff antes
   const site = await startSiteServer(edited.files);
   try {
     await page.goto(`${site.url}/`);
-    await expect(page.locator("[data-solara-store] h1").first()).toHaveCSS(
-      "font-family",
-      "Georgia",
-    );
+    await expect
+      .poll(
+        () =>
+          page
+            .locator("[data-solara-store] h1")
+            .first()
+            .evaluate((element) => getComputedStyle(element).fontFamily),
+        { timeout: 15_000 },
+      )
+      .toBe(GEORGIA_STACK);
   } finally {
     await stopSiteServer(site.server);
   }
 });
 
-test("T4: sin carga de fuentes, una familia desconocida se declara pero no se materializa", async ({
+test("T4: un valor fuera del selector se conserva como 'Personalizada' sin reescribir el proyecto", async ({
   page,
 }) => {
   await setupCleanStore(page, "Tienda T4 desconocida");
+  // La migración tolerante arranca de un proyecto viejo guardado con un valor
+  // libre ("MiFuente"): se escribe directo en IndexedDB y se reabre la tienda.
+  await page.goto(studioUrl);
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open("solara-commerce-studio");
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("success", () => {
+          const database = request.result;
+          const transaction = database.transaction("projects", "readwrite");
+          const store = transaction.objectStore("projects");
+          const records = store.getAll();
+          records.addEventListener("success", () => {
+            const record = (records.result ?? []).find(
+              (entry) =>
+                (entry as { project?: { name?: string } }).project?.name ===
+                "Tienda T4 desconocida",
+            );
+            if (record !== undefined) {
+              (
+                record as { project: { theme: { typography: { display: string } } } }
+              ).project.theme.typography.display = "MiFuente";
+              store.put(record);
+            }
+            database.close();
+            resolve();
+          });
+          records.addEventListener("error", () => {
+            database.close();
+            reject(records.error);
+          });
+        });
+      }),
+  );
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+
+  const card = page
+    .locator(".dashboard-store-card")
+    .filter({ hasText: "Tienda T4 desconocida" })
+    .first();
+  await card.locator(".dashboard-store-card__button").click();
+  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
   await openThemeTab(page);
 
-  await page.getByLabel("Familia de títulos").fill("MiFuente");
+  // El select muestra la opción "Personalizada" con el valor tal cual y el
+  // resto del tema (body default = Archivo) sigue resolviendo sus opciones.
+  const display = page.getByTestId("ui-font-display");
+  const body = page.getByTestId("ui-font-body");
+  await expect(display).toHaveValue("MiFuente");
+  await expect(display.locator('optgroup[label="Personalizada"] option')).toContainText(
+    "Personalizada: MiFuente",
+  );
+  await expect(body).toHaveValue(ARCHIVO_STACK);
 
   // Se declara (font-family computada = "MiFuente") pero no se carga: el
-  // registro de fuentes del documento no tiene ninguna entrada "MiFuente"
-  // (sólo el shim local "Archivo"), así que el navegador cae al fallback.
+  // registro de fuentes no conoce "MiFuente", así que no emite @font-face y
+  // el navegador cae al fallback.
   const frame = page.frameLocator('iframe[title="Vista previa desktop"]');
   await expect
     .poll(
@@ -426,6 +522,7 @@ test("T4: sin carga de fuentes, una familia desconocida se declara pero no se ma
     )
     .toEqual([]);
 
+  // El valor viaja al export sin reescribirse ni registrarse como @font-face.
   const edited = exportProject(
     await readProjectWithTheme(page, "Tienda T4 desconocida", {
       display: "MiFuente",

@@ -32,12 +32,12 @@ const SALVIA_COLORS: Theme["colors"] = {
 };
 
 const EDITED_TYPOGRAPHY: Theme["typography"] = {
-  display: "Georgia, serif",
-  body: "Verdana, sans-serif",
+  display: 'Georgia, "Times New Roman", serif',
+  body: "Verdana, Geneva, Tahoma, sans-serif",
   scale: 1.15,
 };
 
-const EDITED_GEOMETRY = { spacingScale: 1.25, radius: 8, container: 1400 };
+const EDITED_GEOMETRY = { spacingScale: 1.25, radius: 8, container: 1425 };
 
 const demoTheme = structuredClone(catalogModernStore.theme);
 const editedTheme: Theme = {
@@ -149,8 +149,8 @@ async function readTheme(page: Page): Promise<Theme> {
     colorMode: (await page.getByLabel("Modo", { exact: true }).inputValue()) as Theme["colorMode"],
     colors,
     typography: {
-      display: await page.getByLabel("Familia de títulos").inputValue(),
-      body: await page.getByLabel("Familia de texto").inputValue(),
+      display: await page.getByTestId("ui-font-display").inputValue(),
+      body: await page.getByTestId("ui-font-body").inputValue(),
       scale: Number(await page.getByLabel(/Escala/).inputValue()),
     },
     spacingScale: Number(await page.getByLabel(/Espaciado/).inputValue()),
@@ -162,12 +162,12 @@ async function readTheme(page: Page): Promise<Theme> {
 /** Edita los tres grupos con valores deterministas (dentro del schema). */
 async function applyEdits(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Aplicar paleta Salvia serena" }).click();
-  await page.getByLabel("Familia de títulos").fill(EDITED_TYPOGRAPHY.display);
-  await page.getByLabel("Familia de texto").fill(EDITED_TYPOGRAPHY.body);
+  await page.getByTestId("ui-font-display").selectOption(EDITED_TYPOGRAPHY.display);
+  await page.getByTestId("ui-font-body").selectOption(EDITED_TYPOGRAPHY.body);
   await page.getByLabel(/Escala/).fill("1.15");
   await page.getByLabel(/Espaciado/).fill("1.25");
   await page.getByLabel(/Radio/).fill("8");
-  await page.getByLabel("Ancho del contenedor").fill("1400");
+  await page.getByLabel("Ancho del contenedor").fill(String(EDITED_GEOMETRY.container));
 }
 
 /** Guardar del modo navegador: flush del autosave con Ctrl+S y aviso "Guardado". */
@@ -285,9 +285,8 @@ test("los resets limpian borradores inválidos de color y de contenedor (fix A16
   await expect(accentNative).toHaveValue(openingAccent);
 
   // Mismo patrón para el borrador del ancho del contenedor (fuera de rango).
-  // "900" es múltiplo del step (20): con valores fuera del paso (ej. "999")
-  // Chromium actualiza el valor por el setter que React rastrea y el onChange
-  // no se dispara (hallazgo T8-B1, ver reporte; el tecleo real pisa igual).
+  // "900" queda por debajo del mínimo; el input ya no tiene step (fix T8-B1:
+  // los valores no-múltiplos de 20 se descartaban en silencio).
   const container = page.getByLabel("Ancho del contenedor");
   const containerField = fieldsetOf(container);
   const openingContainer = await container.inputValue();
@@ -303,6 +302,21 @@ test("los resets limpian borradores inválidos de color y de contenedor (fix A16
   await expect(container).toHaveValue(openingContainer);
   await expect(container).not.toHaveAttribute("aria-invalid", "true");
   await expect(containerField.getByTestId("ui-field-error")).toHaveCount(0);
+
+  // Un valor válido que NO es múltiplo del viejo step (20) commitea y
+  // persiste: ni el borrador ni el token lo pierden (fix T8-B1).
+  await container.click();
+  await page.keyboard.press("ControlOrMeta+A");
+  await page.keyboard.type("1150");
+  await expect(container).toHaveValue("1150");
+  await expect(container).not.toHaveAttribute("aria-invalid", "true");
+  await expect(containerField.getByTestId("ui-field-error")).toHaveCount(0);
+  await expect.poll(previewVar(page, "--solara-container"), { timeout: 15_000 }).toBe("1150px");
+
+  await page.getByTestId("ui-reset-geometry").click();
+  await expect(container).toHaveValue(openingContainer);
+  await expect(container).not.toHaveAttribute("aria-invalid", "true");
+  await expect(containerField.getByTestId("ui-field-error")).toHaveCount(0);
 });
 
 test("persistencia: recargar la pestaña conserva el tema editado y reancla los resets", async ({
@@ -313,8 +327,8 @@ test("persistencia: recargar la pestaña conserva el tema editado y reancla los 
   await openThemeTab(page);
 
   await page.getByRole("button", { name: "Aplicar paleta Salvia serena" }).click();
-  await page.getByLabel("Familia de títulos").fill(EDITED_TYPOGRAPHY.display);
-  await page.getByLabel("Ancho del contenedor").fill("1400");
+  await page.getByTestId("ui-font-display").selectOption(EDITED_TYPOGRAPHY.display);
+  await page.getByLabel("Ancho del contenedor").fill(String(EDITED_GEOMETRY.container));
   await flushSave(page);
 
   await page.reload();
@@ -327,15 +341,19 @@ test("persistencia: recargar la pestaña conserva el tema editado y reancla los 
   await openThemeTab(page);
 
   await expect(page.getByTestId("ui-color-text-background")).toHaveValue(SALVIA_COLORS.background);
-  await expect(page.getByLabel("Familia de títulos")).toHaveValue(EDITED_TYPOGRAPHY.display);
-  await expect(page.getByLabel("Ancho del contenedor")).toHaveValue("1400");
+  await expect(page.getByTestId("ui-font-display")).toHaveValue(EDITED_TYPOGRAPHY.display);
+  await expect(page.getByLabel("Ancho del contenedor")).toHaveValue(
+    String(EDITED_GEOMETRY.container),
+  );
 
   // La apertura de la pestaña tras la recarga es la versión guardada: el
   // reset vuelve a esos valores editados, no a los de la plantilla.
   await page.getByTestId("ui-reset-colors").click();
   await expect(page.getByTestId("ui-color-text-background")).toHaveValue(SALVIA_COLORS.background);
-  await expect(page.getByLabel("Familia de títulos")).toHaveValue(EDITED_TYPOGRAPHY.display);
-  await expect(page.getByLabel("Ancho del contenedor")).toHaveValue("1400");
+  await expect(page.getByTestId("ui-font-display")).toHaveValue(EDITED_TYPOGRAPHY.display);
+  await expect(page.getByLabel("Ancho del contenedor")).toHaveValue(
+    String(EDITED_GEOMETRY.container),
+  );
 });
 
 test("persistencia: Guardar en el navegador conserva todo el tema tras recargar la app (IndexedDB)", async ({
@@ -436,6 +454,8 @@ test("utilidad: tras los tres resets el preview y el sitio exportado vuelven al 
   expect(editedCss).toContain(`--solara-container:${EDITED_GEOMETRY.container}px`);
   expect(editedCss).toContain("--solara-type-scale:1.15");
   // minifyCss compacta el espacio tras la coma de la familia tipográfica.
-  expect(editedCss).toContain(`--solara-display:${EDITED_TYPOGRAPHY.display.replace(" ", "")}`);
-  expect(editedCss).toContain(`--solara-body:${EDITED_TYPOGRAPHY.body.replace(" ", "")}`);
+  expect(editedCss).toContain(
+    `--solara-font-display:${EDITED_TYPOGRAPHY.display.replaceAll(", ", ",")}`,
+  );
+  expect(editedCss).toContain(`--solara-font-body:${EDITED_TYPOGRAPHY.body.replaceAll(", ", ",")}`);
 });

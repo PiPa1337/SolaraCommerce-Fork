@@ -33,8 +33,11 @@ import {
   optimizeProject,
 } from "@solara/site-optimizer";
 import { STOREFRONT_RUNTIME_CSS, STOREFRONT_RUNTIME_JS } from "@solara/storefront-runtime";
+import { fontCssFor, fontFilesFor, type FontTransport } from "./fonts";
 
 export type { OptimizationReport } from "@solara/site-optimizer";
+export { FONT_OPTIONS, fontCssFor, fontFilesFor } from "./fonts";
+export type { FontOption, FontTransport } from "./fonts";
 
 export type ExportMode = "draft" | "production";
 export type AuditSeverity = "critical" | "warning" | "info";
@@ -569,7 +572,7 @@ function deferPreviewAssetMarkup(document: string, sources: ReadonlyMap<string, 
   return deferred;
 }
 
-function themeCss(project: StoreProjectV1): string {
+function themeCss(project: StoreProjectV1, transport: FontTransport = "file"): string {
   const { colors, typography, spacingScale, radius, container } = project.theme;
   const rootColorScheme = project.theme.colorMode === "dark" ? "dark" : "light";
   return `
@@ -582,13 +585,10 @@ function themeCss(project: StoreProjectV1): string {
   --solara-accent: ${colors.accent};
   --solara-accent-text: ${colors.accentText};
   --solara-border: ${colors.border};
-  --solara-display: ${typography.display};
-  --solara-body: ${typography.body};
   --solara-font-display: ${typography.display};
   --solara-font-body: ${typography.body};
   --solara-type-scale: ${typography.scale};
   --solara-space-scale: ${spacingScale};
-  --solara-space: ${spacingScale};
   --solara-radius: ${radius}px;
   --solara-container: ${container}px;
   --solara-chrome-height: 116px;
@@ -596,8 +596,8 @@ function themeCss(project: StoreProjectV1): string {
 
 * { box-sizing: border-box; }
 html { background: var(--solara-background); color: var(--solara-text); }
-body { margin: 0; min-width: 320px; font-family: var(--solara-body); line-height: 1.5; }
-@font-face { font-family: "Archivo"; src: local("Arial"); font-display: swap; font-weight: 400 900; }
+body { margin: 0; min-width: 320px; font-family: var(--solara-font-body); line-height: 1.5; }
+${fontCssFor(typography.display, typography.body, transport)}
 .solara-page[data-color-mode="dark"] { color-scheme: dark; }
 @media (prefers-color-scheme: dark) {
   .solara-page[data-color-mode="auto"] { color-scheme: dark; }
@@ -2252,6 +2252,12 @@ function buildFiles(
     ),
   );
   files.set("assets/storefront.js", STOREFRONT_RUNTIME_JS);
+  fontFilesFor(
+    publicProject.theme.typography.display,
+    publicProject.theme.typography.body,
+  ).forEach((bytes, path) => {
+    files.set(path, bytes);
+  });
   if (manifest.searchEnabled) files.set("search-index.json", buildSearchIndex(publicProject));
   if (manifest.cartEnabled || manifest.checkoutEnabled || publicProject.siteShell.cart)
     files.set("catalog-index.json", buildCatalogIndex(publicProject));
@@ -2428,7 +2434,7 @@ export function renderPreviewHtml(
       "data:text/css;base64,PREVIEW_STYLE",
       `data:text/css;base64,${toBase64(
         minifyCss(
-          `${themeCss(project)}\n${previewModuleStyles(project)}\n${STOREFRONT_RUNTIME_CSS}`,
+          `${themeCss(project, "inline")}\n${previewModuleStyles(project)}\n${STOREFRONT_RUNTIME_CSS}`,
         ),
       )}`,
     );
