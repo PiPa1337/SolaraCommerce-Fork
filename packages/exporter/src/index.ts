@@ -2447,7 +2447,10 @@ export function renderPreviewHtml(
   const previewAssets = createPreviewAssetBundle(project);
   const pages = buildPages(previewAssets.project);
   const manifest = createPublicExportManifest(previewAssets.project, pages);
-  const page = pages.find((candidate) => candidate.canonicalPath === path) ?? pages[0];
+  const page =
+    pages.find((candidate) => candidate.canonicalPath === path) ??
+    pages.find((candidate) => candidate.pageType === "not-found") ??
+    pages[0];
   if (!page) throw new Error("No se pudo renderizar la página inicial.");
   let document = renderDocument(previewAssets.project, page, mode, false, manifest);
   const usedSources = new Map(

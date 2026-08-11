@@ -295,6 +295,12 @@ test("A20: preview — la ruta del selector cambia la página, el input y el anu
   await expectPreviewTitle(page, "Remeras | Modo Sur");
 
   // Volver al inicio restaura el título del home.
+  await commitRoute(page, "/ruta-que-no-existe/");
+  await expectPreviewTitle(page, "Página no encontrada | Modo Sur");
+  await expect(
+    page.frameLocator('iframe[title="Vista previa desktop"]').locator("body"),
+  ).toContainText("No encontramos esa página.");
+
   await commitRoute(page, "/");
   await expectPreviewTitle(page, HOME_TITLE);
   await expect(announce).toContainText("Vista previa: /");

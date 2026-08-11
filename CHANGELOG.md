@@ -10,6 +10,14 @@ versión publicada.
 
 ## [Unreleased]
 
+### Ruta inexistente en Preview (2026-08-11)
+
+- El campo de ruta del Preview ahora muestra la página 404 del exporter cuando
+  se escribe una URL desconocida, en vez de presentar Home como si la ruta
+  existiera.
+- La regresión verifica el título, el anuncio y el mensaje visible de la página
+  no encontrada.
+
 ### Fecha de disponibilidad para preventas (2026-08-11)
 
 - El editor de variantes muestra `Fecha de disponibilidad` al seleccionar

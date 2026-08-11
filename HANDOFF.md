@@ -203,6 +203,14 @@ ya existe una fecha para permitir corregirla), serializa el día como
 
 No se cambió `schemaVersion` ni la forma de `catalogScaleStore`.
 
+## Ruta inexistente en Preview (2026-08-11)
+
+`renderPreviewHtml` conserva el renderer compartido y, cuando la ruta escrita
+en el toolbar no coincide con una página, selecciona el descriptor existente
+de tipo `not-found`. El export público no cambia: sólo se evita que el Preview
+presente Home como respuesta de una URL inexistente. A20 comprueba título y
+mensaje 404 dentro del iframe.
+
 ## Aviso de actualización de plantilla (2026-08-11)
 
 A09 también cubre el botón `Cerrar aviso de actualización` del flujo Preparar.
