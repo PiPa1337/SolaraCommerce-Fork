@@ -146,6 +146,21 @@ del flujo con mouse. El sweep dedicado de Recursos quedó en 9/9, el de SEO en
 12/12 y el de Preview en 9/9. Estos tests cubren feedback y datos visibles, pero
 no sustituyen una prueba con lector de pantalla real.
 
+## Auditoría del error de Exportar (2026-08-11)
+
+La segunda pasada también cubre el fallo del worker de auditoría de Exportar con
+un `Worker` simulado sólo para el E2E: el panel muestra el error, mantiene
+Producción deshabilitada, deja disponible `Reintentar auditoría` y verifica que
+la acción inicia una nueva tentativa. El test de `ui-export.spec.ts` quedó en
+3/3 con un worker y conserva la lógica de producción sin cambios.
+
+El inventario estático restante corresponde a salidas estructurales o estados
+transitorios (`ui-dashboard-health`, `ui-seo-check-group`, `ui-preview-loading`,
+`ui-toggle`, además de inputs cubiertos por locators semánticos). Los estados
+dinámicos `ui-seo-audit-loading` y `ui-seo-audit-error` siguen revisados en el
+código y en la inspección visual; no se fuerza un E2E frágil sobre el chunk
+dinámico del renderer hasta disponer de un punto de inyección estable.
+
 ## Portabilidad Windows
 
 La distribución portable está implementada en `apps/desktop`. Electron carga
