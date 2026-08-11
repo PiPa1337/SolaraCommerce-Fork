@@ -10,6 +10,61 @@ versión publicada.
 
 ## [Unreleased]
 
+### Barrido total de controles (2026-08-10)
+
+Cierre del plan
+[`docs/superpowers/plans/2026-08-10-barrido-total-controles.md`](docs/superpowers/plans/2026-08-10-barrido-total-controles.md):
+30 agentes (bins A1-A30) auditaron ~300 controles de Studio y storefront con el
+contrato de 3 capas — (1) click → efecto real, (2) auto-feedback del control
+(estado seleccionado/activo/expandido), (3) contrato de datos payload →
+receptor. La capa 2 quedó incorporada como estándar de auditoría. ~25 bugs
+reales se corrigieron y 325 tests de barrido (`ui-sweep-*`) quedaron como gate
+regresión.
+
+**Corregido (resumen por área):**
+
+- **Catálogo y producto:** la paginación dejaba de mentir al encogerse fuera de
+  rango (resumen invertido y páginas fantasma en la galería y el catálogo);
+  el aviso de ajuste de precio ya no muestra errores obsoletos; el paquete es
+  alcanzable con la toolbar flotante; el precio editado marca el formulario como
+  sucio (salir sin guardar avisa) y el diálogo de salida scrollea al primer
+  error.
+- **Resumen guiado:** errores inline para campos vacíos y `baseUrl` estable;
+  los acordeones y campos comunican su estado con `aria-expanded`.
+- **Dashboard:** el chip de salud selecciona la tienda aunque los filtros la
+  oculten; la X de creación y el foco del diálogo de duplicar vuelven al lugar
+  correcto; restaurar vuelve a mostrar toast; el diálogo de duplicar limita la
+  sugerencia de nombre a 60 caracteres.
+- **Shell del Studio:** el foco vuelve a la pestaña dueña al cerrar el panel;
+  el toggle de tema ya no miente con `prefers-color-scheme: dark` (el primer
+  click dejó de ser un no-op); reintento accesible de auditoría, validación de
+  la barra de estado, ruta de preview fuera de la muestra resuelta y foco del
+  diálogo de conflicto; el punto sucio de las tabs se anuncia a lectores de
+  pantalla.
+- **Tema, assets y constructor:** los presets de paleta muestran el estado
+  aplicado (`aria-pressed` + badge); el ancho del contenedor no rebota al
+  teclear; la duración `Infinity` de videos WebM se corrige, el progreso por
+  archivo es honesto y los avisos de lote concuerdan en singular/plural; las
+  slides heredadas sin `id` ya no rompen el preview (backfill automático).
+- **SEO y guardado administrado:** el checklist marca revisado con toggles
+  reales y el indicador de guardado muestra "Cambios pendientes".
+- **Primitivas y toolbars:** keys únicas de Skeleton, popover de columnas con
+  foco y `aria-expanded`, y singular "1 filtrado".
+- **Storefront:** `aria-expanded` inicial en el carrito y el menú móvil
+  (moderno y legacy, incluso sin JavaScript); tabs del detalle con
+  `aria-controls` correcto; el drawer inertea a los hermanos de la página;
+  totales con `aria-live`; la búsqueda ya no casa todo con un término vacío ni
+  ensucia el ranking con consultas de 1 carácter; el prefill del buscador ya no
+  aterriza en el input oculto del diálogo.
+
+**Hallazgos destacados** (de los reportes `.superpowers/sdd/barrido-aNN-report.md`):
+el tema del Studio mentía y era un no-op con preferencia de sistema oscura; las
+slides heredadas sin `id` invalidaban todo el preview; los videos WebM medían
+`duration=Infinity`; una búsqueda de 1 carácter casaba cualquier token; el
+prefill de `?q=` se escribía en el input oculto del diálogo de búsqueda; la
+pagination podía mostrar "276-120 de 120"; y el drawer de carrito no marcaba
+`inert` a la página mientras estaba abierto.
+
 ### Auditoría funcional de controles y traza de datos (2026-08-10)
 
 La caza conductual clickeó cada control de la UI con Playwright (H1-H8) y

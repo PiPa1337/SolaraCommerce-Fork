@@ -16,6 +16,10 @@ y el cierre de la auditoría funcional de controles y su traza de datos
 ([`2026-08-10-auditoria-controles.md`](../docs/superpowers/plans/2026-08-10-auditoria-controles.md),
 con los commits de los 12 controles rotos y de los desajustes de contrato
 referenciados en cada fila);
+y el cierre del barrido total de controles
+([`2026-08-10-barrido-total-controles.md`](../docs/superpowers/plans/2026-08-10-barrido-total-controles.md),
+cuyos fixes y gaps documentados se agrupan en la sección
+"Barrido total de controles (2026-08-10)" más abajo);
 lo que sigue pendiente son decisiones de producto o matrices que exigen release.
 Nota de proceso (ola paralela): los archivos de T6 (CSV, Catalog,
 ProductEditor, ThemeEditor y Overview) se commitearon dentro de `c92f99f`
@@ -144,6 +148,48 @@ esos fixes citan ese commit.
 | P3 | Abierto (traza T15): `data-theme` en el `<html>` exportado no tiene consumidor CSS/JS en el sitio público (el mecanismo real es `data-color-mode` + variables `:root`): hook inerte, no un desajuste de contrato. | Atributo sin efecto que puede confundir. | Quitarlo o darle un consumidor si se redefine el tema del sitio. |
 | P3 | Abierto (traza T19 C6, documentado): los atajos del editor no operan con el foco dentro del iframe del preview (documentos separados por sandbox): limitación por diseño, fijada por test. | El usuario debe volver el foco al editor para usar atajos. | Aceptar la limitación documentada (el preview es el sitio público). |
 | P3 | Nota de proceso (ola paralela): quedan stashes legacy WIP `stash@{0..2}` (`t13-wip` y dos copias idénticas a HEAD de `2ec3785`) que no se descartan por pertenecer a traces en paralelo; y `.playwright-cli/` es scratch untracked de los recorridos de caza. | Pérdida de trabajo WIP si se descartan; ruido untracked. | Revisar y descartar los stashes al confirmar que son idénticos a HEAD; agregar `.playwright-cli/` a `.gitignore`. |
+
+## Barrido total de controles (2026-08-10)
+
+Cierre del plan
+[`docs/superpowers/plans/2026-08-10-barrido-total-controles.md`](../docs/superpowers/plans/2026-08-10-barrido-total-controles.md):
+30 bins (A1-A30) auditaron ~300 controles de Studio y storefront con el contrato
+de 3 capas — (1) click → efecto real, (2) auto-feedback del control, (3) contrato
+de datos payload → receptor — y dejaron 325 tests de barrido (`ui-sweep-*`) como
+gate; ~25 bugs reales se corrigieron con su aserción de regresión.
+
+**Resueltas (por bin, commit de referencia):**
+
+| Bin | Problema | Fix |
+| --- | --- | --- |
+| A1 | Pagination del catálogo fuera de rango con conteo mentiroso; error obsoleto del ajuste de precio; aviso de paquete inalcanzable; toolbar sticky→elevated. | `79e8aea` |
+| A4 | `isDirty` ignoraba `priceText` (salir sin guardar no avisaba); scroll al primer error y dirty del diálogo de salida. | `1c02c2f` |
+| A7 | Errores inline para campos vacíos y `baseUrl` estable. | `f1dd27f` |
+| A12 | Chip de salud no seleccionaba la tienda con filtros activos; X de creación; foco al duplicar; toast de restaurar. | `d62b3d1` |
+| A14 | Foco perdido al cerrar el pane; toggle de tema mentiroso con `prefers-color-scheme: dark` (primer click era no-op); reintento accesible; validación de la statusbar; ruta de preview fuera de muestra; foco del diálogo de conflicto. | `7d07aa3` |
+| A14 | El punto sucio de las tabs se anuncia a lectores de pantalla. | `1126783` |
+| A16 | Presets de paleta sin estado marcado (auto-feedback: `aria-pressed`/`data-active`/badge); rebote del ancho del contenedor; reset de borradores inválidos. | `9ee5d7c` |
+| A17 | Duración `Infinity` de videos WebM; video genérico; progreso por archivo; concordancia singular/plural de los avisos de lote. | `3a887fe` |
+| A18 | Slides heredadas sin `id` rompían el preview (backfill `slide-<uuid>`). | `ac4eea4` |
+| A21 | Checklist SEO con toggles reales; indicador managed con "Cambios pendientes"; overflow. | `eafb844` |
+| A22 | Keys colisionadas de Skeleton; popover de columnas con foco/`aria-expanded`; singular "1 filtrado". | `363a067` |
+| A23 | Foco tras cerrar el diálogo de duplicar; sugerencia de nombre > 60. | `38af03a` |
+| A26 | Pagination invertida ("276-120 de 120") y páginas fantasma. | `964fc67` |
+| A27 | `aria-expanded` del carrito y del menú móvil; noscript; tabs del detalle con `aria-controls` correcto. | `1b5ebb3` |
+| A28 | Trigger de carrito legacy sin `aria-expanded` inicial (ni siquiera sin JavaScript). | `041d3f8` |
+| A29 | Drawer sin `inert` de los hermanos; guard de términos de búsqueda; `aria-live` de totales; binding del prefill al input oculto. | `ded076a` |
+| A30 | Término vacío casaba todos los tokens; búsqueda de 1 carácter. | `475a474` |
+
+**Abiertas:**
+
+| Prioridad | Problema | Riesgo/impacto | Recomendación |
+| --- | --- | --- | --- |
+| P1 | Margen del budget del runtime JS en 13 B (53,235/53,248 tras `ded076a`). | Cualquier cambio en el serializado rompe el budget. | Medir y compactar antes de agregar comportamiento al runtime. |
+| P3 | Gaps de contrato/auto-feedback documentados durante el barrido, sin fix: el tooltip duplica la burbuja CSS con el `title` nativo (fallback para AT); avisos de lote "1 duplicadas/recuperadas" en plural en algunos caminos; GTIN/MPN sin validación de formato (strings libres del schema); SKU duplicado aceptado sin feedback (diferido, ver SCH2); `availabilityDate` existe en `VariantSchema` pero sin control en el editor; foco post-confirmar → `body` en algunos diálogos; el estado colapsado de los acordeones de Overview no sobrevive al cambio de pestaña; moneda/locale sin control en Overview (literales del schema `z.literal("ARS")`/`z.literal("es-AR")`); el preview no ofrece camino 404 (una ruta desconocida vuelve al home sin aviso). | Contratos menores o decisiones de producto que un futuro cambio puede confundir. | Resolver por área en barridos puntuales; las decisiones de schema (GTIN/MPN, availabilityDate, moneda/locale) requieren migración o aceptación explícita. |
+
+**Nota de proceso:** la capa 2 del contrato (auto-feedback) quedó incorporada al
+contrato de auditoría: un control debe comunicar su estado
+seleccionado/activo/expandido en el HTML inicial y mantenerlo sincronizado.
 
 ## Código potencialmente muerto o duplicado
 

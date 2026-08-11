@@ -370,3 +370,37 @@ Nuevos gates E2E: `ui-matriz-interaccion` (13), `ui-shell` (10),
 `ui-export` (2), `ui-catalogo` (1), `ui-tema-seo` (4), `ui-shutdown` (1).
 Residuales y notas de proceso (stashes `stash@{0..2}`, `.playwright-cli/`) en
 [`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md).
+
+## Barrido total de controles (2026-08-10)
+
+Cierre del plan
+[`docs/superpowers/plans/2026-08-10-barrido-total-controles.md`](docs/superpowers/plans/2026-08-10-barrido-total-controles.md):
+un despacho de 30 agentes (bins A1-A30) auditó ~300 controles de Studio y
+storefront público con el **contrato de 3 capas** y dejó 325 tests de barrido
+(`tests/e2e/ui-sweep-aNN.spec.ts`) como gate. ~25 bugs reales se corrigieron
+con su aserción de regresión (detalle y commits por bin en
+[`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md), sección "Barrido total de
+controles (2026-08-10)", y en los reportes `.superpowers/sdd/barrido-aNN-report.md`).
+
+**El contrato de 3 capas queda como estándar para futuras auditorías de
+controles:**
+
+1. **Funcional:** click/tecla real (Playwright) → aserción del efecto en
+   estado, datos o preview (no "visible-only").
+2. **Auto-feedback:** el control comunica su estado seleccionado/activo/
+   expandido/deshabilitado (`aria-pressed`/`aria-expanded`/`aria-selected`/
+   clase activa/`disabled`) en el HTML inicial y lo mantiene sincronizado con
+   su lógica; si el estado cambia y el control no lo refleja, es un BUG.
+3. **Datos:** payload del handler → receptor (traza estática corta): los campos
+   que el receptor lee son exactamente los que el control envía.
+
+Storefront (A27-A30) se audita contra el sitio **exportado**, no contra el
+editor. Los bins AUDIT no editan el archivo compartido: reportan `test.fixme`
+nombrando al OWNER, que corrige en la misma ola.
+
+Residuales del barrido (budget del runtime JS con 13 B de margen, gaps de
+auto-feedback documentados, `availabilityDate` sin control, moneda/locale
+literales, camino 404 del preview, entre otros) en
+[`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md); resumen de usuario en el
+[`CHANGELOG.md`](CHANGELOG.md), sección "Barrido total de controles
+(2026-08-10)".
