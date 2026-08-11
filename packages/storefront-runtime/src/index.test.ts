@@ -339,3 +339,28 @@ describe("carrito y checkout del drawer (A29)", () => {
     );
   });
 });
+
+describe("fixmes del barrido A29 (index.ts)", () => {
+  it("el drawer de carrito inertea a los hermanos al abrir y los libera al cerrar", () => {
+    expect(STOREFRONT_RUNTIME_JS.match(/pageSiblingsOf\(drawer\)/g)?.length).toBe(2);
+    expect(STOREFRONT_RUNTIME_JS).toContain('s.setAttribute("inert", "")');
+    expect(STOREFRONT_RUNTIME_JS).toContain('s.removeAttribute("inert")');
+  });
+
+  it("la búsqueda guarda por término: un término de 1 carácter corta el query", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("terms.some((t) => t.length < 2)");
+  });
+
+  it("el conteo de categoría anuncia con aria-live al filtrar", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      'resultCount?.setAttribute("aria-live", "polite")',
+    );
+  });
+
+  it("en /buscar/ el binding usa el input visible de la página, no el del diálogo", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain('document.querySelector("#solara-search-input")');
+    expect(STOREFRONT_RUNTIME_JS).not.toContain(
+      '"#catalog-search-input, #solara-search-input"',
+    );
+  });
+});

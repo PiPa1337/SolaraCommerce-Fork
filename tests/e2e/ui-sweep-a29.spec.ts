@@ -416,3 +416,49 @@ test("totales del carrito anuncian con aria-live", async ({ page }) => {
   await expect(page.locator("[data-cart-total]").first()).toHaveAttribute("aria-live", "polite");
   await expect(page.locator("[data-cart-count]").first()).toHaveAttribute("aria-live", "polite");
 });
+
+test("drawer: inertea a los hermanos de la página al abrir y los libera al cerrar (fixme A29)", async ({
+  page,
+}) => {
+  await clearCart(page);
+  await page.goto(storeUrl("/"));
+  const hero = page.locator('[data-solara-module="catalog-hero"]');
+  await expect(hero).not.toHaveAttribute("inert", "");
+  await page.locator("[data-solara-cart-open]").first().click();
+  await expect(page.locator("[data-cart-drawer]")).toHaveAttribute("data-open", "true");
+  await expect(hero).toHaveAttribute("inert", "");
+  await page.keyboard.press("Escape");
+  await expect(page.locator("[data-cart-drawer]")).not.toHaveAttribute("data-open", "true");
+  await expect(hero).not.toHaveAttribute("inert", "");
+});
+
+test("búsqueda: el término con espacios internos corta por término de 1 carácter (fixme A29)", async ({
+  page,
+}) => {
+  await page.goto(storeUrl("/buscar/?q=a%20b"));
+  await expect(page.locator("[data-search-results]")).toContainText(
+    "Escribí al menos 2 caracteres para buscar.",
+  );
+});
+
+test("categoría: el conteo de resultados anuncia con aria-live al filtrar (fixme A29)", async ({
+  page,
+}) => {
+  await page.goto(storeUrl("/categorias/remeras/"));
+  const count = page.locator("[data-category-result-count]");
+  await expect(count).toHaveAttribute("aria-live", "polite");
+  await page.locator("[data-category-tag]").selectOption("diario");
+  await expect(count).toContainText("4 de 7 productos");
+});
+
+test("/buscar/ moderno: prefill y teclado van al input visible de la página (fixme A29)", async ({
+  page,
+}) => {
+  await page.goto(storeUrl("/buscar/?q=quilted"));
+  const input = page.locator("#solara-search-input");
+  await expect(input).toHaveValue("quilted");
+  await expect(page.locator("[data-search-results] .solara-search-result a").first()).toBeVisible();
+  await input.focus();
+  await input.press("ArrowDown");
+  await expect(page.locator("[data-search-results] .solara-search-result a").first()).toBeFocused();
+});

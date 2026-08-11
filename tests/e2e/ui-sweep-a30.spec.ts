@@ -244,12 +244,12 @@ test("búsqueda: sugerencia ortográfica con link que navega", async ({ page }) 
   });
 });
 
-test("búsqueda: términos de 1 carácter no matchean por substring (bug search.ts)", async ({
+test("búsqueda: términos de 1 carácter cortan el query con el guard por término (fix A29)", async ({
   page,
 }) => {
   await page.goto(scaleUrlFor("/buscar/?q=w%20z"));
   await expect(page.locator("[data-search-results]")).toContainText(
-    "No encontramos productos para esa búsqueda.",
+    "Escribí al menos 2 caracteres para buscar.",
     { timeout: 15_000 },
   );
 });

@@ -330,6 +330,12 @@ function storefrontBoot(): void {
     return freshCatalog;
   };
 
+  const pageSiblingsOf = (drawer: HTMLElement): Element[] => {
+    const root = drawer.closest("[data-solara-module]");
+    if (!root?.parentElement) return [];
+    return [...root.parentElement.children].filter((child) => child !== root);
+  };
+
   const openCart = (): void => {
     const drawer = document.querySelector<HTMLElement>("[data-cart-drawer]");
     if (!drawer) return;
@@ -348,6 +354,7 @@ function storefrontBoot(): void {
           backdrop.hidden = false;
         });
     }
+    for (const s of pageSiblingsOf(drawer)) s.setAttribute("inert", "");
     window.setTimeout(() => {
       drawer
         .querySelector<HTMLElement>(
@@ -373,6 +380,7 @@ function storefrontBoot(): void {
           backdrop.hidden = true;
         });
     }
+    for (const s of pageSiblingsOf(drawer)) s.removeAttribute("inert");
     if (lastCartTrigger?.isConnected) lastCartTrigger.focus();
     lastCartTrigger = null;
   };
@@ -1113,9 +1121,7 @@ function storefrontBoot(): void {
     startAutoplay();
   });
 
-  const searchInput = document.querySelector<HTMLInputElement>(
-    "#catalog-search-input, #solara-search-input",
-  );
+  const searchInput = document.querySelector<HTMLInputElement>("#solara-search-input");
   const searchResults = document.querySelector<HTMLElement>("[data-search-results]");
   if (searchInput && searchResults) {
     const searchApi = (
@@ -1167,7 +1173,7 @@ function storefrontBoot(): void {
     if (query) {
       document.querySelector('meta[name="robots"]')?.setAttribute("content", "noindex,follow");
       const terms = searchApi.normalizeSearchTokens(query);
-      if (terms.join(" ").length < 2) {
+      if (!terms.length || terms.some((t) => t.length < 2)) {
         searchResults.innerHTML = "<p>Escribí al menos 2 caracteres para buscar.</p>";
       } else {
         const controller = new AbortController();
@@ -1270,6 +1276,7 @@ function storefrontBoot(): void {
       scope?.querySelectorAll<HTMLSelectElement>("[data-category-option]") ?? [],
     );
     const resultCount = scope?.querySelector<HTMLElement>("[data-category-result-count]");
+    resultCount?.setAttribute("aria-live", "polite");
     if (!grid) return;
     const cards = Array.from(grid.querySelectorAll<HTMLElement>("[data-product-card]"));
     const filterEmpty = document.createElement("p");
