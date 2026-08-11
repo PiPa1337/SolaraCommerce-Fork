@@ -24,6 +24,35 @@ import { Button, Field, IconButton, SectionHeader } from "../components/Ui";
 
 const PHONE_PATTERN = /^\d{8,15}$/;
 
+/** Clave de localStorage del estado plegado del Resumen (R8-B1): por tienda,
+ *  con el mismo patrón que el pane del editor en Studio.tsx. */
+const COLLAPSED_SECTIONS_KEY = "solara-resumen-collapsed";
+
+function readCollapsedSections(projectId: string): ReadonlySet<string> {
+  try {
+    const raw = window.localStorage.getItem(`${COLLAPSED_SECTIONS_KEY}:${projectId}`);
+    if (!raw) return new Set();
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return new Set(parsed.filter((value): value is string => typeof value === "string"));
+    }
+  } catch {
+    // Almacenamiento no disponible o contenido inválido: secciones abiertas.
+  }
+  return new Set();
+}
+
+function writeCollapsedSections(projectId: string, sections: ReadonlySet<string>): void {
+  try {
+    window.localStorage.setItem(
+      `${COLLAPSED_SECTIONS_KEY}:${projectId}`,
+      JSON.stringify([...sections]),
+    );
+  } catch {
+    // Almacenamiento no disponible: el pliegue queda sólo para la sesión.
+  }
+}
+
 function isValidUrl(value: string): boolean {
   try {
     const url = new URL(value);
@@ -116,7 +145,9 @@ export function Overview({
   onChange(project: StoreProjectV1): void;
 }) {
   const [pendingNavDelete, setPendingNavDelete] = useState<string | null>(null);
-  const [collapsedSections, setCollapsedSections] = useState<ReadonlySet<string>>(() => new Set());
+  const [collapsedSections, setCollapsedSections] = useState<ReadonlySet<string>>(() =>
+    readCollapsedSections(project.id),
+  );
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [fieldDrafts, setFieldDrafts] = useState<Record<string, string>>({});
   const [unsaved, setUnsaved] = useState(false);
@@ -201,6 +232,7 @@ export function Overview({
       const next = new Set(current);
       if (next.has(sectionId)) next.delete(sectionId);
       else next.add(sectionId);
+      writeCollapsedSections(project.id, next);
       return next;
     });
 

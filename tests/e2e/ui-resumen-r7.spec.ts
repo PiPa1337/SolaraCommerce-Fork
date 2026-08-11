@@ -14,8 +14,13 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
  *   - el gate de producción: un requisito pendiente debe verse reflejado en el
  *     Export (críticos → botón de producción deshabilitado);
  *   - badges de estado: ready / missing / placeholder (el sentinel de teléfono
- *     de la plantilla limpia es "missing", no placeholder; el estado invalid es
- *     inalcanzable en un proyecto persistido porque el schema lo rechaza).
+ *     de la plantilla limpia es "placeholder": es un valor de plantilla que
+ *     hay que reemplazar; el estado invalid es inalcanzable en un proyecto
+ *     persistido porque el schema lo rechaza y lo deriva a recuperación);
+ *   - el gate de producción usa la auditoría real del exporter: la copia de la
+ *     guía ya no declara bloqueos para el sentinel de WhatsApp ni para los
+ *     placeholders de texto (R7-F1 alineado), sólo para lo que `auditReport`
+ *     marca como crítico.
  */
 
 test.setTimeout(process.env.CI ? 60_000 : 45_000);
@@ -176,11 +181,14 @@ test("completar un campo marca el requisito listo, el progreso avanza y Siguient
   await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
 
   // Estado inicial real de la plantilla limpia: 4 de 17 requisitos listos (24%).
+  // El único bloqueo real del exporter es template.placeholder (auditReport),
+  // no los 11 pendientes que la guía declaraba antes del fix R7-F1.
   const before = await readProgress(page);
   expect(before.text).toBe("4 de 17 requisitos listos");
   expect(before.percent).toBe(24);
   await expect(page.locator(".guided-progress__copy > span")).toHaveText(
-    "11 pendientes bloquean producción.",
+    "1 pendiente bloquea producción.",
+    { timeout: 20_000 },
   );
 
   // El primer pendiente es la Descripción (placeholder de plantilla): "Siguiente"
@@ -191,11 +199,11 @@ test("completar un campo marca el requisito listo, el progreso avanza y Siguient
   await expect(firstPending).toContainText("Reemplazar texto de plantilla");
   await expect(page.getByTestId("ui-guided-next")).toContainText("Siguiente: Descripción de marca");
 
-  // El sentinel de teléfono (5491100000000) marca el requisito como "missing"
-  // (no placeholder): la guía lo trata como no configurado.
+  // El sentinel de teléfono (5491100000000) es un valor de plantilla, no una
+  // ausencia: la guía lo marca "placeholder" ("Reemplazar texto de plantilla").
   const whatsappPending = requirement(page, "identity.whatsapp");
-  await expect(whatsappPending).toHaveAttribute("data-requirement-status", "missing");
-  await expect(whatsappPending).toContainText("Falta completar");
+  await expect(whatsappPending).toHaveAttribute("data-requirement-status", "placeholder");
+  await expect(whatsappPending).toContainText("Reemplazar texto de plantilla");
 
   await page.getByRole("button", { name: "Cerrar panel de edición" }).click();
   await expectPaneClosed(page);
@@ -311,16 +319,20 @@ test("el requisito pendiente de imagen se refleja en el Export y desbloquea al c
   await expect(page.locator(".export-warning")).toHaveCount(0);
   await expect(page.locator("output.optimization-export-summary")).toContainText("0 críticos");
 
-  // Sin embargo, la guía sigue declarando pendientes críticos (7) que "bloquean
-  // producción" mientras el Export quedó habilitado: el conteo de la guía y el
-  // gate real del exporter divergen para todo lo que no es template.placeholder.
+  // La guía usa el gate real del exporter (auditReport): con 0 críticos, ya no
+  // declara bloqueos para los placeholders de texto que siguen pendientes
+  // (R7-F1 alineado); el checklist conserva el conteo de requisitos pendientes.
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
   await expect(page.locator(".guided-progress__copy > span")).toHaveText(
-    "7 pendientes bloquean producción.",
+    "La tienda puede pasar a revisión de publicación.",
+    { timeout: 20_000 },
+  );
+  await expect(pendingRequirements(page).filter({ hasText: "Descripción de marca" })).toHaveCount(
+    1,
   );
 });
 
-test("el sentinel de WhatsApp pendiente NO bloquea producción pese al reclamo de la guía (R7-3 — hallazgo)", async ({
+test("el sentinel de WhatsApp pendiente NO bloquea producción y la guía ya no lo declara bloqueante (R7-3 — R7-F1 alineado)", async ({
   page,
 }) => {
   const storeName = "Tienda R7 teléfono";
@@ -334,21 +346,22 @@ test("el sentinel de WhatsApp pendiente NO bloquea producción pese al reclamo d
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
 
-  // Exactamente un requisito pendiente: el WhatsApp, declarado crítico.
+  // Exactamente un requisito pendiente: el WhatsApp, como placeholder de plantilla.
   await expect(pendingRequirements(page)).toHaveCount(1);
   const whatsapp = pendingRequirements(page).first();
   await expect(whatsapp).toHaveAttribute("data-requirement-id", "identity.whatsapp");
-  await expect(whatsapp).toHaveAttribute("data-requirement-status", "missing");
-  await expect(whatsapp).toContainText("Falta completar");
+  await expect(whatsapp).toHaveAttribute("data-requirement-status", "placeholder");
+  await expect(whatsapp).toContainText("Reemplazar texto de plantilla");
   await expect(page.locator(".guided-progress__copy > span")).toHaveText(
-    "1 pendientes bloquean producción.",
+    "La tienda puede pasar a revisión de publicación.",
+    { timeout: 20_000 },
   );
   await expect(page.getByTestId("ui-guided-done").locator("summary")).toHaveText(
     "Requisitos listos (16)",
   );
 
-  // Pero el audit del exporter NO considera el sentinel un crítico: la
-  // producción queda habilitada. La afirmación de la guía no se cumple 1:1.
+  // Coherencia con el gate real: el audit del exporter NO considera el sentinel
+  // un crítico y la producción queda habilitada (1:1 con la copia de la guía).
   await page.getByRole("tab", { name: "Exportar", exact: true }).click();
   await expect(page.locator("output.optimization-export-summary")).toBeVisible({
     timeout: 20_000,

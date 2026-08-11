@@ -8,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import {
+  CATALOG_MODERN_PLACEHOLDER_PHONE,
   type ContentRequirement,
   type ContentStatus,
   evaluateCatalogModernReadiness,
@@ -16,9 +17,10 @@ import {
   applyCatalogModernUpgrade,
   planCatalogModernUpgrade,
 } from "@solara/project-schema/catalog-modern-upgrade";
-import { useId } from "react";
+import { useEffect, useId, useState } from "react";
 import { Button, SectionHeader } from "../components/Ui";
 import { destinationFor, type GuidedDestination } from "../lib/guidedDestinations";
+import { auditProjectInWorker } from "../lib/workers";
 
 interface GuidedOverviewProps {
   project: StoreProjectV1;
@@ -56,10 +58,45 @@ function RequirementStatusIcon({ status }: { status: ContentStatus }) {
 export function GuidedOverview({ project, onNavigate, onApplyUpgrade }: GuidedOverviewProps) {
   const titleId = useId();
   const checklistId = useId();
-  const readiness = evaluateCatalogModernReadiness(project);
-  const pending = readiness.requirements.filter((requirement) => requirement.status !== "ready");
-  const ready = readiness.requirements.filter((requirement) => requirement.status === "ready");
+  const baseReadiness = evaluateCatalogModernReadiness(project);
+  /** El sentinel de WhatsApp de la plantilla (5491100000000) es un valor de
+   *  plantilla, no una ausencia: la guía lo muestra como "Reemplazar texto de
+   *  plantilla" (placeholder) aunque el campo del Resumen lo normalice a vacío
+   *  (R7-F2). El estado `invalid` es defensivo: el editor nunca commitea
+   *  valores que el schema rechace y un proyecto persistido inválido deriva a
+   *  "recuperación" en el dashboard, así que en flujos soportados no se
+   *  alcanza (R7-F3). */
+  const requirements = baseReadiness.requirements.map((requirement) =>
+    requirement.id === "identity.whatsapp" &&
+    project.whatsapp.phone === CATALOG_MODERN_PLACEHOLDER_PHONE &&
+    requirement.status === "missing"
+      ? { ...requirement, status: "placeholder" as const }
+      : requirement,
+  );
+  const pending = requirements.filter((requirement) => requirement.status !== "ready");
+  const ready = requirements.filter((requirement) => requirement.status === "ready");
   const visiblePending = pending.slice(0, 12);
+  /** Bloqueos reales de la exportación: el mismo gate que el tab Exportar
+   *  (`auditReport(...).criticalCount` en el worker del exportador), no la
+   *  severidad interna de la guía. El sentinel de WhatsApp y los placeholders
+   *  de texto NO bloquean producción; las imágenes de plantilla y el catálogo
+   *  incompleto sí (R7-F1). Mientras la auditoría no responde, la copia evita
+   *  afirmar nada. */
+  const [blockingCount, setBlockingCount] = useState<number | null>(null);
+  useEffect(() => {
+    let active = true;
+    void auditProjectInWorker(project, true)
+      .then(({ criticalCount }) => {
+        if (active) setBlockingCount(criticalCount);
+      })
+      .catch(() => {
+        // Paridad con el tab Exportar: si la auditoría falla, el gate no bloquea.
+        if (active) setBlockingCount(0);
+      });
+    return () => {
+      active = false;
+    };
+  }, [project]);
   const productCount = project.products.filter((product) => product.status === "active").length;
   const imageCount = project.assets.length;
   const upgrade = planCatalogModernUpgrade(project);
@@ -79,7 +116,7 @@ export function GuidedOverview({ project, onNavigate, onApplyUpgrade }: GuidedOv
 
       <output className="guided-progress" aria-live="polite">
         <div className="guided-progress__icon" aria-hidden>
-          {readiness.criticalPending === 0 ? (
+          {blockingCount !== null && blockingCount === 0 ? (
             <CheckCircle size={26} />
           ) : (
             <ClipboardText size={26} />
@@ -87,12 +124,14 @@ export function GuidedOverview({ project, onNavigate, onApplyUpgrade }: GuidedOv
         </div>
         <div className="guided-progress__copy">
           <strong id={titleId}>
-            {readiness.ready} de {readiness.requirements.length} requisitos listos
+            {ready.length} de {requirements.length} requisitos listos
           </strong>
           <span>
-            {readiness.criticalPending > 0
-              ? `${readiness.criticalPending} pendientes bloquean producción.`
-              : "La tienda puede pasar a revisión de publicación."}
+            {blockingCount === null
+              ? "Verificando la publicación…"
+              : blockingCount > 0
+                ? `${blockingCount} ${blockingCount === 1 ? "pendiente bloquea" : "pendientes bloquean"} producción.`
+                : "La tienda puede pasar a revisión de publicación."}
           </span>
           {nextPending ? (
             <Button
@@ -112,10 +151,10 @@ export function GuidedOverview({ project, onNavigate, onApplyUpgrade }: GuidedOv
           aria-label="Progreso de preparación"
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-valuenow={readiness.percent}
+          aria-valuenow={baseReadiness.percent}
           data-testid="ui-guided-progress"
         >
-          <span style={{ width: `${readiness.percent}%` }} />
+          <span style={{ width: `${baseReadiness.percent}%` }} />
         </div>
       </output>
 

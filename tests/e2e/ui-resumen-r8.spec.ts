@@ -12,9 +12,9 @@
  *   respaldo .solara.json descargado;
  * - utilidad: tras adoptar, el sitio exportado (exportProject production)
  *   incorpora la sección de plantilla faltante (diff antes/después).
- * Hallazgo verificado: el estado de los colapsables del Resumen NO persiste
- * (ni al cambiar de pestaña ni al recargar la app); se documenta en el
- * reporte .superpowers/sdd/resumen-r8-report.md.
+ * Fix verificado (R8-B1): el estado de los colapsables del Resumen persiste en
+ * localStorage por tienda (clave `solara-resumen-collapsed:<id>`), tanto entre
+ * pestañas como tras recargar la app.
  */
 import { readFileSync } from "node:fs";
 import type { Server } from "node:http";
@@ -537,7 +537,7 @@ test("los colapsables pliegan y despliegan cada sección del Resumen dentro de l
   await expect(identityPanel).toBeVisible();
 });
 
-test("hallazgo verificado: el estado de los colapsables NO persiste ni entre pestañas ni tras recargar", async ({
+test("el estado de los colapsables persiste entre pestañas y tras recargar (R8-B1)", async ({
   page,
 }) => {
   await resetIndexedDb(page);
@@ -548,21 +548,25 @@ test("hallazgo verificado: el estado de los colapsables NO persiste ni entre pes
   await identityToggle.click();
   await expect(identityToggle).toHaveAttribute("aria-expanded", "false");
 
-  // Cambio de pestaña: StudioTabContent desmonta el panel y el estado es
-  // efímero (useState local de Overview.tsx).
+  // Cambio de pestaña: StudioTabContent desmonta el panel, pero el pliegue se
+  // restaura desde localStorage (clave por tienda, patrón del pane en Studio).
   await page.getByRole("tab", { name: "Tema", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Tema", exact: true })).toBeVisible();
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
-  await expect(identityToggle).toHaveAttribute("aria-expanded", "true");
-
-  // Recarga de la app: idem, todo vuelve a abierto.
-  await identityToggle.click();
   await expect(identityToggle).toHaveAttribute("aria-expanded", "false");
+
+  // Recarga de la app: idem, el pliegue sobrevive.
   await page.reload();
   await openDemoStore(page);
   await openResumenTab(page);
   await expect(page.getByRole("button", { name: "Identidad", exact: true })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+
+  // El resto de las secciones sigue abierto por defecto.
+  await expect(page.getByRole("button", { name: "Pedido por WhatsApp" })).toHaveAttribute(
     "aria-expanded",
     "true",
   );
