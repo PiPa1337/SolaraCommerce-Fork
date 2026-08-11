@@ -207,7 +207,7 @@ test.describe("A2 — Catálogo: acciones masivas", () => {
     await expect(priceInput(page, 1)).toHaveValue("3070000");
   });
 
-  test.fixme(
+  test(
     "A1: el error de validación obsoleto se limpia tras un ajuste exitoso",
     async ({ page }) => {
       await openCatalog(page);
@@ -220,7 +220,7 @@ test.describe("A2 — Catálogo: acciones masivas", () => {
 
       await priceValueInput(page).fill("5");
       await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
-      await expect(priceInput(page, 0)).toHaveValue("3134250");
+      await expect(priceInput(page, 0)).toHaveValue("3029250");
       await expect(page.getByTestId("ui-inline-error")).toBeHidden();
     },
   );

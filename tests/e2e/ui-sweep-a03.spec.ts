@@ -420,15 +420,9 @@ test("Carpeta sin productos.csv: error visible, sin revisión y app viva", async
   }
 });
 
-test("Carpeta con imagen faltante: error por fila visible y catálogo intacto", async ({ page }) => {
-  test.fixme(
-    true,
-    "A1: el aviso 'No se encontraron' de la revisión de paquete es inalcanzable. " +
-      "importCatalogCsv (packages/core) lanza 'Imagen inexistente en imagenes, fila N' cuando " +
-      "una referencia no resuelve a un asset del contexto, así que la revisión nunca muestra " +
-      "la advertencia; en su lugar el plan entero falla con InlineError. Decidir: tolerar la " +
-      "referencia faltante en la revisión (advertencia) o eliminar el resumen unmatchedImages.",
-  );
+test("Carpeta con imagen faltante: aviso visible en la revisión y catálogo intacto", async ({
+  page,
+}) => {
   await openCatalog(page);
   const directory = mkdtempSync(join(tmpdir(), "solara-a03-paquete-faltante-"));
   try {
