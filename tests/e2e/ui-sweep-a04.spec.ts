@@ -286,6 +286,13 @@ test("la disponibilidad de la variante arranca marcada y persiste al reabrir", a
   await availability.uncheck();
   await expect(availability).not.toBeChecked();
 
+  // Preventa expone el dato que necesita la auditoría Merchant y lo conserva
+  // como ISO al volver a abrir el producto.
+  await dialog.getByLabel("Stock").selectOption("preorder");
+  const availabilityDate = dialog.getByLabel("Fecha de disponibilidad");
+  await expect(availabilityDate).toBeVisible();
+  await availabilityDate.fill("2026-09-15");
+
   await saveDialog(dialog, true);
 
   const reopened = await openEditDialog(page, "Disponibilidad A04");
@@ -293,6 +300,8 @@ test("la disponibilidad de la variante arranca marcada y persiste al reabrir", a
   await expect(
     reopened.getByRole("checkbox", { name: "Disponible para vender" }),
   ).not.toBeChecked();
+  await expect(reopened.getByLabel("Stock")).toHaveValue("preorder");
+  await expect(reopened.getByLabel("Fecha de disponibilidad")).toHaveValue("2026-09-15");
 });
 
 test("cancelar sin cambios cierra directo; con cambios pide confirmación y descarta", async ({

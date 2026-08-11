@@ -192,6 +192,17 @@ múltiple y nombres accesibles.
 Resultado del checkpoint: A03 10/10 y A17 11/11 en Chromium. No se modificó la
 lógica de producción ni el fixture determinista `catalogScaleStore`.
 
+## Fecha de disponibilidad para preventas (2026-08-11)
+
+El schema ya aceptaba `Variant.availabilityDate` y el exporter lo utilizaba
+para `availabilityStarts` y `g:availability_date`, pero ProductEditor no tenía
+un control para resolver el crítico de Merchant cuando `stockStatus` era
+`preorder`. Ahora el editor muestra un campo de fecha contextual (también si
+ya existe una fecha para permitir corregirla), serializa el día como
+`T00:00:00.000Z` y conserva el valor en el round-trip de guardado.
+
+No se cambió `schemaVersion` ni la forma de `catalogScaleStore`.
+
 ## Aviso de actualización de plantilla (2026-08-11)
 
 A09 también cubre el botón `Cerrar aviso de actualización` del flujo Preparar.

@@ -695,6 +695,24 @@ export function ProductEditor({
                         ))}
                       </select>
                     </Field>
+                    {variant.stockStatus === "preorder" || variant.availabilityDate ? (
+                      <Field
+                        label="Fecha de disponibilidad"
+                        hint="Se usa para informar cuándo estará disponible una preventa."
+                      >
+                        <input
+                          type="date"
+                          value={variant.availabilityDate?.slice(0, 10) ?? ""}
+                          onChange={(event) => {
+                            const date = event.target.value;
+                            updateVariant(variant.id, (current) => ({
+                              ...current,
+                              availabilityDate: date ? `${date}T00:00:00.000Z` : undefined,
+                            }));
+                          }}
+                        />
+                      </Field>
+                    ) : null}
                     <Field label="GTIN">
                       <input
                         value={variant.gtin ?? ""}

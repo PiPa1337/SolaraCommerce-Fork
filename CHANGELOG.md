@@ -10,6 +10,13 @@ versión publicada.
 
 ## [Unreleased]
 
+### Fecha de disponibilidad para preventas (2026-08-11)
+
+- El editor de variantes muestra `Fecha de disponibilidad` al seleccionar
+  `Preventa` y conserva el valor al guardar y reabrir el producto.
+- La corrección conecta el campo que ya consumen la auditoría de exportación,
+  JSON-LD y Merchant, sin cambiar el schema persistido.
+
 ### Selectores visibles de importación (2026-08-11)
 
 - Catálogo verifica que CSV y carpetas se abran desde sus botones visibles,
