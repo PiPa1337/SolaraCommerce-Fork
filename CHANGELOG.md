@@ -10,6 +10,14 @@ versión publicada.
 
 ## [Unreleased]
 
+### Foco explícito en diálogos del Dashboard (2026-08-11)
+
+- Comparar tiendas conserva el foco del botón que abrió el diálogo al cerrarlo,
+  y Crear tienda recuerda el disparador real cuando se abre desde una superficie
+  alternativa del Dashboard.
+- Las regresiones cubren Escape, X, cierre por acción, restauración del foco y
+  los recorridos existentes de creación, comparación y cierre de sesión.
+
 ### Marca interna de testimonios fuera del inspector (2026-08-11)
 
 - `Contenido de ejemplo` era una marca interna sin consumidor en el renderer;

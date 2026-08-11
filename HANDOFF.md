@@ -714,3 +714,15 @@ resultado no se puede observar.
 La cobertura está en `packages/modules/src/index.test.ts` y
 `tests/e2e/editor-builder.spec.ts`; agregar un testimonio sigue generando un
 ítem válido y el inspector ya no expone el control muerto.
+
+## Foco explícito en diálogos del Dashboard (2026-08-11)
+
+`CompareView` ahora captura el elemento que abrió el diálogo y lo vuelve a
+enfocar al cerrar por Escape, X o el botón `Cerrar`. `Dashboard` aplica el mismo
+contrato a Crear tienda y Cerrar app; Crear tienda conserva el disparador
+actual, no sólo el botón hero, cuando otra superficie del Dashboard la abre.
+
+La cobertura específica está en `tests/e2e/ui-sweep-a20.spec.ts`,
+`tests/e2e/dashboard-actions.spec.ts` y `tests/e2e/ui-sweep-a13.spec.ts`.
+Los recorridos de comparación y A13 mantienen sus regresiones de foco y pasan en
+Chromium junto con las acciones del Dashboard.

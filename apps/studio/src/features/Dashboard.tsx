@@ -250,6 +250,8 @@ export function Dashboard({
   const nameInputRef = useRef<HTMLInputElement>(null);
   const selectedPanelRef = useRef<HTMLElement>(null);
   const createButtonRef = useRef<HTMLButtonElement>(null);
+  const createOpenerRef = useRef<HTMLElement | null>(null);
+  const shutdownOpenerRef = useRef<HTMLElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const cardButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const lastSelectedIdRef = useRef<string | undefined>(undefined);
@@ -320,14 +322,28 @@ export function Dashboard({
       dialog.showModal();
       requestAnimationFrame(() => nameInputRef.current?.focus());
     }
-    if (!creating && dialog.open) dialog.close();
+    if (!creating && dialog.open) {
+      dialog.close();
+      const opener = createOpenerRef.current ?? createButtonRef.current;
+      createOpenerRef.current = null;
+      if (!opener?.isConnected) return;
+      const frame = requestAnimationFrame(() => opener.focus({ preventScroll: true }));
+      return () => cancelAnimationFrame(frame);
+    }
   }, [creating]);
 
   useEffect(() => {
     const dialog = shutdownDialogRef.current;
     if (!dialog) return;
     if (shutdownDialogOpen && !dialog.open) dialog.showModal();
-    if (!shutdownDialogOpen && dialog.open) dialog.close();
+    if (!shutdownDialogOpen && dialog.open) {
+      dialog.close();
+      const opener = shutdownOpenerRef.current;
+      shutdownOpenerRef.current = null;
+      if (!opener?.isConnected) return;
+      const frame = requestAnimationFrame(() => opener.focus({ preventScroll: true }));
+      return () => cancelAnimationFrame(frame);
+    }
   }, [shutdownDialogOpen]);
 
   useEffect(() => {
@@ -361,6 +377,8 @@ export function Dashboard({
   useEffect(() => {
     const openShutdown = () => {
       if (shutdownTerminalRef.current) return;
+      shutdownOpenerRef.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
       setShutdownDialogOpen(true);
     };
     window.addEventListener("solara:open-shutdown", openShutdown);
@@ -391,6 +409,11 @@ export function Dashboard({
   useEffect(() => () => window.clearTimeout(actionNoticeTimerRef.current), []);
 
   const openCreate = useCallback(() => {
+    const activeElement = document.activeElement;
+    createOpenerRef.current =
+      activeElement instanceof HTMLElement && activeElement !== document.body
+        ? activeElement
+        : createButtonRef.current;
     setStep(1);
     setName("");
     setBrandName("");
@@ -403,7 +426,6 @@ export function Dashboard({
   const closeCreate = () => {
     if (creatingProject) return;
     setCreating(false);
-    createButtonRef.current?.focus();
   };
 
   const selectCard = useCallback((id: string, options?: { focusCard?: boolean }) => {

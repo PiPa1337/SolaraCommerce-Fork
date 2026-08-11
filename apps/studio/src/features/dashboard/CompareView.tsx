@@ -61,6 +61,7 @@ function SectionDiffs({ report }: { report: CompareReport }) {
 
 export function CompareView({ left, right, open, onClose }: CompareViewProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
   const titleId = useId();
   const countsTitleId = useId();
   const themeTitleId = useId();
@@ -73,8 +74,19 @@ export function CompareView({ left, right, open, onClose }: CompareViewProps) {
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
+    if (open && !dialog.open) {
+      openerRef.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      dialog.showModal();
+    }
+    if (!open && dialog.open) {
+      dialog.close();
+      const opener = openerRef.current;
+      openerRef.current = null;
+      if (!opener?.isConnected) return;
+      const frame = requestAnimationFrame(() => opener.focus({ preventScroll: true }));
+      return () => cancelAnimationFrame(frame);
+    }
   }, [open]);
 
   return (

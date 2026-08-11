@@ -145,6 +145,7 @@ test("el modo comparar exige dos tiendas y muestra los diffs de secciones y moti
 
   await dialog.getByRole("button", { name: "Cerrar", exact: true }).click();
   await expect(dialog).toBeHidden();
+  await expect(compareAction).toBeFocused();
   await page.getByRole("button", { name: "Cancelar", exact: true }).click();
   await expect(page.getByTestId("ui-card-compare")).toHaveCount(0);
 });
