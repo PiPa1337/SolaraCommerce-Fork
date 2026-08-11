@@ -305,6 +305,12 @@ test.describe("A2 — Catálogo: acciones masivas", () => {
       "Ingresá al menos un tag separado por comas.",
     );
     await expect(page.getByText("Cambios pendientes", { exact: true })).toHaveCount(0);
+
+    await bulkPanel(page).getByRole("button", { name: "Quitar tags" }).click();
+    await expect(page.getByTestId("ui-inline-error")).toContainText(
+      "Ingresá al menos un tag separado por comas.",
+    );
+    await expect(page.getByText("Cambios pendientes", { exact: true })).toHaveCount(0);
   });
 });
 
