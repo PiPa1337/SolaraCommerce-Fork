@@ -174,6 +174,12 @@ test("cada pestaña del Studio no desborda y conserva su acción principal", asy
         page.getByRole(tab === "Tema" ? "combobox" : "button", { name: action, exact: true }),
         action,
       );
+      if (tab === "Catálogo" && viewport.width <= 660) {
+        await expect(page.locator(".catalog-table-region")).toHaveRole("region");
+        await expect(
+          page.getByText("Deslizá horizontalmente para ver todas las columnas."),
+        ).toBeVisible();
+      }
     }
   }
 });

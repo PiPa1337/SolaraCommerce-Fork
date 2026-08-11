@@ -166,6 +166,8 @@ test("los tabs del Studio usan tablist/tab/tabpanel con aria-selected", async ({
   await expect(preparar).toHaveAttribute("aria-selected", "false");
   await expect(page.getByRole("heading", { name: "Resumen" })).toBeVisible();
   await expect(panel).toHaveAttribute("aria-labelledby", (await resumen.getAttribute("id")) ?? "");
+  await expect(resumen).toHaveAttribute("aria-controls", (await panel.getAttribute("id")) ?? "");
+  await expect(preparar).not.toHaveAttribute("aria-controls");
 });
 
 test("el teclado mueve y activa los tabs con flechas y Enter/Espacio", async ({ page }) => {

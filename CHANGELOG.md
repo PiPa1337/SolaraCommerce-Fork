@@ -56,6 +56,21 @@ versión publicada.
   control haya estado temporalmente deshabilitado mientras se mostraba el
   diálogo.
 
+### Refinamiento UI/UX contextual y responsive (2026-08-11)
+
+- los controles repetidos de SEO, Recursos, Catálogo y Resumen ahora exponen
+  el elemento afectado en su descripción accesible, sin cambiar sus etiquetas
+  visibles ni los flujos existentes;
+- los tabs del Studio sólo anuncian `aria-controls` sobre el panel actualmente
+  activo, manteniendo la relación tab/tabpanel precisa al cambiar de pestaña;
+- Catálogo identifica su tabla con caption y región semántica, y en viewports
+  compactos explica el desplazamiento horizontal interno de sus diez columnas
+  sin generar overflow de página;
+- el servidor Vite de desarrollo preoptimiza Dexie y `react-dom/client`,
+  evitando una pantalla en blanco durante la auditoría local;
+- la matriz responsive conserva la navegación del encabezado y verifica que la
+  barra de acciones masivas pueda alcanzarse y utilizarse después del scroll.
+
 ### Auditoría total de la pestaña Preparar (2026-08-10)
 
 Cierre del plan

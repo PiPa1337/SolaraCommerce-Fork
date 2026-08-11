@@ -319,6 +319,7 @@ function CatalogCard({
   onEdit(): void;
 }) {
   const first = product.variants[0];
+  const titleId = `catalog-card-title-${product.id}`;
   return (
     <article className="catalog-card" data-testid="ui-catalog-card">
       <div className="catalog-card__image">
@@ -329,7 +330,9 @@ function CatalogCard({
         )}
       </div>
       <div className="catalog-card__body">
-        <h3 title={product.title}>{product.title}</h3>
+        <h3 id={titleId} title={product.title}>
+          {product.title}
+        </h3>
         <div className="catalog-card__meta">
           <span className={`status-label status-label--${product.status}`}>
             {productStatusLabel(product.status)}
@@ -340,7 +343,7 @@ function CatalogCard({
         </div>
         {first ? <p className="catalog-card__price">{formatCurrency(first.price)}</p> : null}
       </div>
-      <Button variant="quiet" icon={PencilSimple} onClick={onEdit}>
+      <Button variant="quiet" icon={PencilSimple} aria-describedby={titleId} onClick={onEdit}>
         Editar
       </Button>
     </article>
@@ -405,6 +408,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
   const importReviewTitleId = useId();
   const packageInputId = useId();
   const packageReviewTitleId = useId();
+  const tableHintId = useId();
 
   useEffect(() => {
     setColumnVisibility(loadCatalogColumnVisibility(project.id));
@@ -555,15 +559,24 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
         id: "actions",
         header: "Acciones",
         enableSorting: false,
-        cell: ({ row }) => (
-          <Button
-            variant="quiet"
-            icon={PencilSimple}
-            onClick={() => setEditor({ mode: "edit", product: structuredClone(row.original) })}
-          >
-            Editar
-          </Button>
-        ),
+        cell: ({ row }) => {
+          const descriptionId = `catalog-row-edit-context-${row.original.id}`;
+          return (
+            <>
+              <span id={descriptionId} className="visually-hidden">
+                Producto {row.original.title}
+              </span>
+              <Button
+                variant="quiet"
+                icon={PencilSimple}
+                aria-describedby={descriptionId}
+                onClick={() => setEditor({ mode: "edit", product: structuredClone(row.original) })}
+              >
+                Editar
+              </Button>
+            </>
+          );
+        },
       },
     ],
     [onCommand, project],
@@ -1060,62 +1073,72 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
             ))}
           </div>
         ) : (
-          <div className="table-shell">
-            <table>
-              <thead>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <th
-                        key={header.id}
-                        aria-sort={
-                          header.column.getIsSorted() === "asc"
-                            ? "ascending"
-                            : header.column.getIsSorted() === "desc"
-                              ? "descending"
-                              : undefined
-                        }
-                      >
-                        {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                          <button
-                            className="table-sort"
-                            type="button"
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {header.column.getIsSorted() === "asc" ? (
-                              <ArrowUp aria-hidden size={14} />
-                            ) : header.column.getIsSorted() === "desc" ? (
-                              <ArrowDown aria-hidden size={14} />
-                            ) : null}
-                          </button>
-                        ) : (
-                          flexRender(header.column.columnDef.header, header.getContext())
-                        )}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
-                {table.getRowModel().rows.map((row) => (
-                  <CatalogRow
-                    key={row.id}
-                    row={row}
-                    selected={row.getIsSelected()}
-                    columnVisibility={columnVisibility}
-                  />
-                ))}
-                {table.getRowModel().rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={columns.length} className="table-empty">
-                      No hay productos que coincidan con la búsqueda.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+          <section
+            className="catalog-table-region"
+            aria-label="Tabla de productos"
+            aria-describedby={tableHintId}
+          >
+            <p id={tableHintId} className="catalog-table-hint">
+              Deslizá horizontalmente para ver todas las columnas.
+            </p>
+            <div className="table-shell">
+              <table>
+                <caption className="visually-hidden">Productos del catálogo</caption>
+                <thead>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <th
+                          key={header.id}
+                          aria-sort={
+                            header.column.getIsSorted() === "asc"
+                              ? "ascending"
+                              : header.column.getIsSorted() === "desc"
+                                ? "descending"
+                                : undefined
+                          }
+                        >
+                          {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                            <button
+                              className="table-sort"
+                              type="button"
+                              onClick={header.column.getToggleSortingHandler()}
+                            >
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                              {header.column.getIsSorted() === "asc" ? (
+                                <ArrowUp aria-hidden size={14} />
+                              ) : header.column.getIsSorted() === "desc" ? (
+                                <ArrowDown aria-hidden size={14} />
+                              ) : null}
+                            </button>
+                          ) : (
+                            flexRender(header.column.columnDef.header, header.getContext())
+                          )}
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
+                </thead>
+                <tbody>
+                  {table.getRowModel().rows.map((row) => (
+                    <CatalogRow
+                      key={row.id}
+                      row={row}
+                      selected={row.getIsSelected()}
+                      columnVisibility={columnVisibility}
+                    />
+                  ))}
+                  {table.getRowModel().rows.length === 0 ? (
+                    <tr>
+                      <td colSpan={columns.length} className="table-empty">
+                        No hay productos que coincidan con la búsqueda.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </section>
         )}
 
         {selectedIds.length > 0 ? (

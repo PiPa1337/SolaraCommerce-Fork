@@ -367,6 +367,7 @@ export function Seo({
                         variant="quiet"
                         size="sm"
                         icon={ArrowRight}
+                        aria-label={`Ir a ${FIX_LABELS[issue.fixTarget] ?? "corregir"} para resolver: ${issue.title}`}
                         data-testid="ui-seo-audit-fix"
                         onClick={() => navigateToFix(issue.fixTarget ?? "", onNavigate)}
                       >
@@ -573,6 +574,7 @@ export function Seo({
                         variant="quiet"
                         size="sm"
                         icon={ArrowRight}
+                        aria-label={`Ir a ${FIX_LABELS[issue.fixTarget] ?? "corregir"} para resolver: ${issue.title}`}
                         data-testid="ui-seo-check-fix"
                         onClick={() => navigateToFix(issue.fixTarget ?? "", onNavigate)}
                       >
@@ -583,6 +585,11 @@ export function Seo({
                         variant="quiet"
                         size="sm"
                         icon={done ? CheckCircle : Circle}
+                        aria-label={
+                          done
+                            ? `Marcar como pendiente: ${issue.title}`
+                            : `Marcar como revisado: ${issue.title}`
+                        }
                         aria-pressed={done}
                         data-testid="ui-seo-check-toggle"
                         onClick={() => toggleIssue(issue.id)}

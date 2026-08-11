@@ -4,6 +4,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
+    include: ["dexie", "react-dom/client"],
     noDiscovery: true,
   },
   build: {

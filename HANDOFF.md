@@ -405,6 +405,22 @@ literales, camino 404 del preview, entre otros) en
 [`CHANGELOG.md`](CHANGELOG.md), sección "Barrido total de controles
 (2026-08-10)".
 
+## Reauditoría focal de UI/UX (2026-08-11)
+
+La matriz visual e interactiva de las ocho pestañas del Studio se repitió en
+390×844, 768×1024, 1024×768, 1366×768, 1440×900 y 1920×1080. No se observó
+overflow horizontal de página; Catálogo conserva un scroll horizontal interno
+intencional por sus diez columnas y ahora lo anuncia en viewports compactos con
+una región semántica y caption accesible. Las pruebas responsive verifican que
+la tabla y la barra de acciones masivas sigan siendo alcanzables.
+
+Se agregaron descripciones accesibles contextuales para acciones repetidas de
+SEO, Recursos, Catálogo y Resumen, y los tabs del Studio sólo anuncian la
+relación `aria-controls` con el panel activo. El servidor Vite de desarrollo
+preoptimiza `dexie` y `react-dom/client` porque la configuración anterior podía
+dejar la pantalla en blanco durante una auditoría local. La batería focalizada
+de Chromium quedó en 73/73 y el paquete Studio en 256/256 tests.
+
 ## Auditoría total de la pestaña Tema (2026-08-10)
 
 Cierre del plan

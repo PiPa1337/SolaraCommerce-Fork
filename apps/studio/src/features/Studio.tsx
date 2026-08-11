@@ -931,7 +931,7 @@ export function Studio({
                 data-testid="ui-tab"
                 role="tab"
                 aria-selected={tab === id}
-                aria-controls={editorPaneId}
+                aria-controls={tab === id ? editorPaneId : undefined}
                 tabIndex={tab === id ? 0 : -1}
                 onClick={() => selectTab(id)}
               >

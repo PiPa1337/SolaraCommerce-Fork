@@ -1370,6 +1370,19 @@ tbody tr:hover {
   max-height: clamp(280px, calc(100dvh - 340px), 640px);
 }
 
+.catalog-table-hint {
+  display: none;
+}
+
+@container (max-width: 660px) {
+  .catalog-table-hint {
+    display: block;
+    margin: 0 0 6px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+}
+
 .catalog-columns {
   position: relative;
 }

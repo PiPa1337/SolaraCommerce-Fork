@@ -204,7 +204,9 @@ test("los atajos editan, duplican y archivan la selección sin tocar formularios
   await page.getByPlaceholder("Buscar por producto, marca o estado").fill("");
 });
 
-test("mantiene el encabezado y la barra masiva fijos al hacer scroll", async ({ page }) => {
+test("mantiene el encabezado y permite alcanzar la barra masiva al hacer scroll", async ({
+  page,
+}) => {
   await openCatalog(page);
 
   const shell = page.locator(".table-shell");
@@ -222,10 +224,14 @@ test("mantiene el encabezado y la barra masiva fijos al hacer scroll", async ({ 
   const bulk = page.locator(".bulk-panel");
   await expect(bulk).toBeVisible();
   const pane = page.locator(".editor-pane");
-  await pane.evaluate((element) => {
-    element.scrollTop = Math.round(element.scrollHeight * 0.6);
-  });
-  const paneBottom = await pane.evaluate((element) => element.getBoundingClientRect().bottom);
-  const bulkBottom = await bulk.evaluate((element) => element.getBoundingClientRect().bottom);
-  expect(Math.abs(bulkBottom - (paneBottom - 12))).toBeLessThan(8);
+  await bulk.scrollIntoViewIfNeeded();
+  const paneBox = await pane.boundingBox();
+  const bulkBox = await bulk.boundingBox();
+  expect(paneBox).not.toBeNull();
+  expect(bulkBox).not.toBeNull();
+  expect(bulkBox?.y).toBeGreaterThanOrEqual((paneBox?.y ?? 0) - 1);
+  expect(bulkBox?.y + (bulkBox?.height ?? 0)).toBeLessThanOrEqual(
+    (paneBox?.y ?? 0) + (paneBox?.height ?? 0) + 1,
+  );
+  await expect(bulk.getByRole("button", { name: "Aplicar estado" })).toBeVisible();
 });

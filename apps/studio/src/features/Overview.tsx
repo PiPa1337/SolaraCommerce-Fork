@@ -603,6 +603,9 @@ export function Overview({
                     </div>
                     <div className="navigation-children">
                       <span className="navigation-children-title">Subenlaces</span>
+                      <span id={`nav-children-context-${item.id}`} className="visually-hidden">
+                        Subenlaces de {item.label}
+                      </span>
                       {(item.children ?? []).map((child, childIndex) => {
                         const childHrefDraft =
                           drafts[`nav-${item.id}-${child.id}`] ?? child.href ?? "";
@@ -686,6 +689,7 @@ export function Overview({
                       })}
                       <Button
                         variant="secondary"
+                        aria-describedby={`nav-children-context-${item.id}`}
                         onClick={() =>
                           updateNavigationItem(item.id, {
                             children: [

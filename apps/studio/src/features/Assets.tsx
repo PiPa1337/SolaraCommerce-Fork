@@ -705,6 +705,7 @@ export function Assets({
                   <div className="asset-actions">
                     <button
                       type="button"
+                      aria-label={`Detalle de ${asset.name}`}
                       data-testid="ui-asset-detail-open"
                       onClick={() => setSelectedAssetId(asset.id)}
                     >
@@ -713,6 +714,7 @@ export function Assets({
                     </button>
                     <button
                       type="button"
+                      aria-label={`${copied === asset.id ? "Copiado" : "Copiar ID"} de ${asset.name}`}
                       onClick={() => {
                         void navigator.clipboard.writeText(asset.id).then(() => {
                           setCopied(asset.id);
