@@ -20,6 +20,8 @@ versión publicada.
   accesibles explícitos para teclado y tecnologías asistivas;
 - se agregaron regresiones Playwright para la jerarquía y el feedback de la
   auditoría SEO.
+- se eliminó el fade de apertura del panel izquierdo para evitar que el preview
+  quede visible a través del editor durante la transición.
 
 ### Auditoría total de la pestaña Preparar (2026-08-10)
 

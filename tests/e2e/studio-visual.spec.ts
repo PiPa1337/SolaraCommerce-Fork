@@ -246,6 +246,7 @@ test("catálogo y constructor conservan jerarquía responsive", async ({ page })
     await page.setViewportSize(viewport);
     await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
+    await expect(page.locator("[data-studio-editor-pane]")).toHaveCSS("transform", "none");
     await expectNoHorizontalOverflow(page, `Catálogo ${viewport.name}`);
     if (viewport.name === "desktop") {
       await page.screenshot({ path: "test-results/catalog.png", fullPage: true });
@@ -358,6 +359,14 @@ test("el panel de trabajo se despliega desde la izquierda y deja crecer el previ
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
   await expect(editor).toHaveClass(/editor-pane--open/);
   await expect(page.getByRole("button", { name: "Cerrar panel de edición" })).toBeVisible();
+  const editorTransition = await editor.evaluate((element) => ({
+    opacity: getComputedStyle(element).opacity,
+    transitionProperty: getComputedStyle(element).transitionProperty,
+  }));
+  expect(editorTransition.opacity).toBe("1");
+  expect(
+    editorTransition.transitionProperty.split(",").map((property) => property.trim()),
+  ).not.toContain("opacity");
 
   await page.getByRole("button", { name: "Cerrar panel de edición" }).click();
   await expect(editor).toHaveClass(/editor-pane--closed/);

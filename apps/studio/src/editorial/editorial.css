@@ -1321,8 +1321,7 @@ tbody tr:hover {
 .editor-pane {
   transition:
     transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 260ms ease,
-    opacity 200ms ease;
+    box-shadow 260ms ease;
 }
 
 .editor-pane--closed {
