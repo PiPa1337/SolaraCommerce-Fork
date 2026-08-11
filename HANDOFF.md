@@ -651,3 +651,17 @@ pestaña Preparar (2026-08-10)"; deuda y decisiones abiertas en
 [`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md), sección "Auditoría total de
 la pestaña Preparar (2026-08-10)". Quedan abiertas, de olas previas, la
 decisión de dark mode (Tema) y el contrato de `pages.home.title` (Resumen).
+
+## Foco al cerrar ProductEditor (2026-08-11)
+
+El diálogo nativo de edición de producto abría con `showModal()` pero no
+conservaba el elemento que lo había disparado. `ProductEditor` ahora captura el
+elemento activo al montar y, al desmontarse, cierra el diálogo y devuelve el
+foco al disparador conectado mediante el siguiente frame. Esto mantiene el
+contexto de teclado después de `Cancelar`, `Escape`, guardado o descarte
+confirmado; si el disparador ya no existe, no intenta enfocar un nodo
+desconectado.
+
+La regresión está en `tests/e2e/ui-sweep-a06.spec.ts`: A06 queda en 10/10 en
+Chromium. No se modificó `schemaVersion`, el contrato de catálogo ni
+`catalogScaleStore`.

@@ -347,6 +347,20 @@ test("cerrar con cambios: prompt por X y Escape conserva el estado; cerrar limpi
   await expect(confirm).toHaveCount(0);
 });
 
+test("cerrar el editor sin cambios devuelve el foco al disparador de la fila", async ({ page }) => {
+  test.setTimeout(90_000);
+  await openCatalog(page);
+  const row = await filterRow(page, "Camisa Rayas Finas");
+  const editButton = row.getByRole("button", { name: "Editar" });
+  await editButton.click();
+
+  const dialog = page.locator("dialog.product-dialog");
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancelar" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(editButton).toBeFocused();
+});
+
 test("la mini preview refleja en vivo título, precio mínimo y estado (edición y creación)", async ({
   page,
 }) => {

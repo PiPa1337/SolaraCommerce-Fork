@@ -10,6 +10,13 @@ versión publicada.
 
 ## [Unreleased]
 
+### Foco al cerrar el editor de producto (2026-08-11)
+
+- `ProductEditor` conserva el control que abrió el diálogo y devuelve el foco
+  al cerrarlo, incluyendo el cierre limpio por `Cancelar` o `Escape`.
+- A06 verifica el foco restaurado sobre el botón `Editar` de la fila sin
+  cambiar el modelo persistido ni el fixture determinista.
+
 ### Ruta inexistente en Preview (2026-08-11)
 
 - El campo de ruta del Preview ahora muestra la página 404 del exporter cuando

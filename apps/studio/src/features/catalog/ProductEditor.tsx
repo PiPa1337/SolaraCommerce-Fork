@@ -125,6 +125,7 @@ export function ProductEditor({
   onSave,
 }: ProductEditorProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
   const [draft, setDraft] = useState<Product>(() => structuredClone(product));
   const [optionValues, setOptionValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(
@@ -164,8 +165,15 @@ export function ProductEditor({
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
+    openerRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     dialog.showModal();
-    return () => dialog.close();
+    return () => {
+      if (dialog.open) dialog.close();
+      const opener = openerRef.current;
+      if (!opener?.isConnected) return;
+      window.requestAnimationFrame(() => opener.focus({ preventScroll: true }));
+    };
   }, []);
 
   const isDirty =
