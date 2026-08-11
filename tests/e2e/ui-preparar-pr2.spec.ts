@@ -1,0 +1,670 @@
+/**
+ * Auditoría Preparar PR2 (2026-08-11) — Paridad requisitos ↔ críticos de
+ * producción. Contrato de 4 capas (plan
+ * docs/superpowers/plans/2026-08-10-auditoria-preparar.md):
+ * - funcional + auto-feedback: un requisito faltante aparece como "Falta
+ *   completar" en el checklist de Preparar y el contador de bloqueos del tab
+ *   ("N pendientes bloquean producción.") proviene del MISMO gate que el tab
+ *   Exportar (`auditProjectInWorker` → `auditReport(...).criticalCount`);
+ * - datos: los escenarios se construyen sobre el proyecto real autoservado en
+ *   IndexedDB (el mismo receptor del payload del editor) mutado y recargado;
+ * - utilidad (paridad con el gate real de producción): para cada requisito
+ *   del modelo (`catalog-modern-guidance.ts`) se verifica contra
+ *   `auditReport(project)` del exporter y contra `exportProject(..., { mode:
+ *   "production" })`: si el requisito está pendiente, su crítico equivalente
+ *   debe aparecer en la auditoría y la exportación debe fallar; al
+ *   completarlo, el crítico debe desaparecer. Requisitos sin crítico real =
+ *   dead requirement (fixme); críticos sin requisito = gap del flujo (fixme).
+ */
+import type { Server } from "node:http";
+import { expect, type Page, test } from "@playwright/test";
+import { auditReport, exportProject } from "@solara/exporter";
+import type { StoreProjectV1 } from "@solara/project-schema";
+import { createCleanStore } from "./project-helpers";
+import { startStudioServer, stopStudioServer } from "./studio-server";
+
+test.setTimeout(process.env.CI ? 180_000 : 120_000);
+
+const DEMO_PROJECT_ID = "store-modo-sur-demo";
+
+let server: Server;
+let studioUrl: string;
+
+test.beforeAll(async () => {
+  const running = await startStudioServer();
+  server = running.server;
+  studioUrl = running.url;
+});
+
+test.afterAll(async () => {
+  await stopStudioServer(server);
+});
+
+async function resetIndexedDb(page: Page): Promise<void> {
+  await page.goto(studioUrl);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolveDelete, reject) => {
+        const request = indexedDB.deleteDatabase("solara-commerce-studio");
+        request.addEventListener("success", () => resolveDelete());
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("blocked", () => reject(new Error("La base quedó bloqueada.")));
+      }),
+  );
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 20_000,
+  });
+}
+
+async function openDemoStore(page: Page): Promise<void> {
+  await resetIndexedDb(page);
+  await page.locator(`[data-store-card-id="${DEMO_PROJECT_ID}"]`).click();
+  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
+    timeout: 30_000,
+  });
+}
+
+async function setupCleanStore(page: Page, name: string): Promise<void> {
+  await resetIndexedDb(page);
+  await createCleanStore(page, name);
+  // Espera a que el autosave deje el registro persistido en IndexedDB (el
+  // indicador ui-save-indicator sólo vive en el tab Overview).
+  await expect.poll(async () => projectIdByName(page, name), { timeout: 15_000 }).toBeDefined();
+}
+
+async function openPrepararTab(page: Page): Promise<void> {
+  await page.getByRole("tab", { name: "Preparar", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
+}
+
+/** Lee el proyecto autoservado en IndexedDB (receptor del payload del editor). */
+async function readStoredProject(page: Page, key: string): Promise<StoreProjectV1 | null> {
+  return page.evaluate(
+    (storeKey) =>
+      new Promise<StoreProjectV1 | null>((resolve, reject) => {
+        const request = indexedDB.open("solara-commerce-studio");
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("success", () => {
+          const db = request.result;
+          const found = db.transaction("projects").objectStore("projects").get(storeKey);
+          found.addEventListener("error", () => reject(found.error));
+          found.addEventListener("success", () => {
+            const record = found.result as { project: StoreProjectV1 } | undefined;
+            resolve(record?.project ?? null);
+          });
+        });
+      }),
+    key,
+  );
+}
+
+/** Encuentra el id de la tienda por nombre (para tiendas creadas por la UI). */
+async function projectIdByName(page: Page, name: string): Promise<string | undefined> {
+  return page.evaluate(
+    (storeName) =>
+      new Promise<string | undefined>((resolve, reject) => {
+        const request = indexedDB.open("solara-commerce-studio");
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("success", () => {
+          const db = request.result;
+          const cursorRequest = db.transaction("projects").objectStore("projects").openCursor();
+          cursorRequest.addEventListener("error", () => reject(cursorRequest.error));
+          cursorRequest.addEventListener("success", () => {
+            const cursor = cursorRequest.result;
+            if (!cursor) {
+              resolve(undefined);
+              return;
+            }
+            const record = cursor.value as { name: string };
+            if (record.name === storeName) {
+              resolve(cursor.key as string);
+              return;
+            }
+            cursor.continue();
+          });
+        });
+      }),
+    name,
+  );
+}
+
+/** Aplica una mutación al proyecto autoservado y la persiste en IndexedDB.
+ *  El mutador viaja como fuente (los evaluate de Playwright no serializan
+ *  funciones como argumentos) y se reconstruye dentro de la página. */
+async function mutateStoredProject(
+  page: Page,
+  key: string,
+  mutator: (project: StoreProjectV1) => void,
+): Promise<void> {
+  const applied = await page.evaluate(
+    async ([storeKey, mutatorSource]) => {
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open("solara-commerce-studio");
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("success", () => resolve(request.result));
+      });
+      const record = await new Promise<{ name: string; project: StoreProjectV1 } | undefined>(
+        (resolve, reject) => {
+          const found = db.transaction("projects").objectStore("projects").get(storeKey);
+          found.addEventListener("error", () => reject(found.error));
+          found.addEventListener("success", () => {
+            resolve(found.result as { name: string; project: StoreProjectV1 } | undefined);
+          });
+        },
+      );
+      if (!record) return false;
+      const apply = new Function("project", `(${mutatorSource})(project)`) as (
+        project: StoreProjectV1,
+      ) => void;
+      apply(record.project);
+      await new Promise<void>((resolve, reject) => {
+        const transaction = db.transaction("projects", "readwrite");
+        transaction.objectStore("projects").put(record);
+        transaction.addEventListener("complete", () => resolve());
+        transaction.addEventListener("error", () => reject(transaction.error));
+      });
+      db.close();
+      return true;
+    },
+    [key, mutator.toString()] as const,
+  );
+  expect(applied).toBe(true);
+}
+
+/** Restaura el proyecto autoservado completo (datos planos, serializables). */
+async function restoreStoredProject(
+  page: Page,
+  key: string,
+  original: StoreProjectV1,
+): Promise<void> {
+  const applied = await page.evaluate(
+    ([storeKey, project]) =>
+      new Promise<boolean>((resolve, reject) => {
+        const request = indexedDB.open("solara-commerce-studio");
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("success", () => {
+          const db = request.result;
+          const found = db.transaction("projects").objectStore("projects").get(storeKey);
+          found.addEventListener("error", () => reject(found.error));
+          found.addEventListener("success", () => {
+            const record = found.result as { name: string };
+            const transaction = db.transaction("projects", "readwrite");
+            transaction.objectStore("projects").put({ ...record, project });
+            transaction.addEventListener("complete", () => resolve(true));
+            transaction.addEventListener("error", () => reject(transaction.error));
+          });
+        });
+      }),
+    [key, original] as const,
+  );
+  expect(applied).toBe(true);
+}
+
+/** Recarga la app y reabre la tienda; devuelve el proyecto autoservado. */
+async function reloadAndOpen(page: Page, storeKey: string): Promise<StoreProjectV1> {
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await page.locator(`[data-store-card-id="${storeKey}"]`).click();
+  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
+    timeout: 30_000,
+  });
+  const project = await readStoredProject(page, storeKey);
+  expect(project).not.toBeNull();
+  return project as StoreProjectV1;
+}
+
+function requirement(page: Page, requirementId: string) {
+  return page.locator(
+    `[data-testid="ui-guided-requirement"][data-requirement-id="${requirementId}"]`,
+  );
+}
+
+function criticalCodes(project: StoreProjectV1): string[] {
+  return auditReport(project)
+    .issues.filter((issue) => issue.severity === "critical")
+    .map((issue) => issue.code);
+}
+
+function exportOutcome(project: StoreProjectV1): { ok: boolean; message: string } {
+  try {
+    exportProject(project, { mode: "production" });
+    return { ok: true, message: "" };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+test("baseline demo: 297 requisitos listos, 0 críticos y producción exportable (PR2)", async ({
+  page,
+}) => {
+  await openDemoStore(page);
+  await openPrepararTab(page);
+
+  // El checklist completo está listo y el gate del tab anuncia 0 bloqueos.
+  await expect(page.getByTestId("ui-guided-ready")).toBeVisible();
+  await expect(page.getByText("La tienda puede pasar a revisión de publicación.")).toBeVisible();
+
+  const project = await readStoredProject(page, DEMO_PROJECT_ID);
+  expect(project).not.toBeNull();
+  expect(criticalCodes(project as StoreProjectV1)).toEqual([]);
+  expect(exportOutcome(project as StoreProjectV1).ok).toBe(true);
+});
+
+test("paridad: sin descripción de producto el requisito falta, el crítico aparece y bloquea producción; completarla lo libera (product.description)", async ({
+  page,
+}) => {
+  await openDemoStore(page);
+
+  // 1. Romper: vaciar la descripción del primer producto activo.
+  const before = await readStoredProject(page, DEMO_PROJECT_ID);
+  const product = (before as StoreProjectV1).products.find((item) => item.status === "active");
+  expect(product).toBeDefined();
+  const requirementId = `product.${product?.id}.description`;
+  await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+    const target = project.products.find((item) => item.status === "active");
+    if (target) target.description = "";
+  });
+
+  // 2. El checklist marca "Falta completar" y el gate del tab ve 1 bloqueo.
+  const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  await openPrepararTab(page);
+  await expect(requirement(page, requirementId)).toHaveAttribute(
+    "data-requirement-status",
+    "missing",
+  );
+  await expect(requirement(page, requirementId)).toContainText("Falta completar");
+  await expect(page.getByText("1 pendiente bloquea producción.")).toBeVisible();
+
+  // 3. El auditReport real tiene el crítico y production se bloquea.
+  expect(criticalCodes(broken)).toContain("product.description");
+  const outcome = exportOutcome(broken);
+  expect(outcome.ok).toBe(false);
+  expect(outcome.message).toContain("no tiene descripción");
+
+  // 4. Completar por la UI (Catálogo → Editar → Descripción → Guardar):
+  // el requisito queda listo y el crítico desaparece de la auditoría.
+  await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
+  await page
+    .locator("tbody tr")
+    .filter({ has: page.getByRole("checkbox", { name: `Seleccionar ${product?.title}` }) })
+    .getByRole("button", { name: "Editar" })
+    .click();
+  const dialog = page.locator("dialog.product-dialog");
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("textbox", { name: "Descripción" }).fill("PR2 descripción completa");
+  await dialog.getByRole("button", { name: "Guardar producto" }).click();
+  await expect(dialog).toHaveCount(0);
+  // El payload llega al proyecto autoservado (mismo receptor del editor).
+  await expect
+    .poll(
+      async () =>
+        (await readStoredProject(page, DEMO_PROJECT_ID))?.products.find(
+          (item) => item.status === "active",
+        )?.description,
+      { timeout: 15_000 },
+    )
+    .toBe("PR2 descripción completa");
+
+  await openPrepararTab(page);
+  await expect(page.getByTestId("ui-guided-ready")).toBeVisible();
+  await expect(page.getByText("La tienda puede pasar a revisión de publicación.")).toBeVisible();
+
+  const completed = await readStoredProject(page, DEMO_PROJECT_ID);
+  const completedProduct = (completed as StoreProjectV1).products.find(
+    (item) => item.status === "active",
+  );
+  expect(completedProduct?.description).toBe("PR2 descripción completa");
+  expect(criticalCodes(completed as StoreProjectV1)).not.toContain("product.description");
+  expect(exportOutcome(completed as StoreProjectV1).ok).toBe(true);
+});
+
+test("paridad: producto sin imágenes bloquea producción y restaurarlas libera el crítico (product.image)", async ({
+  page,
+}) => {
+  await openDemoStore(page);
+
+  const before = await readStoredProject(page, DEMO_PROJECT_ID);
+  const product = (before as StoreProjectV1).products.find((item) => item.status === "active");
+  const requirementId = `product.${product?.id}.image`;
+  await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+    const target = project.products.find((item) => item.status === "active");
+    if (target) target.imageIds = [];
+  });
+
+  const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  await openPrepararTab(page);
+  await expect(requirement(page, requirementId)).toHaveAttribute(
+    "data-requirement-status",
+    "missing",
+  );
+  await expect(page.getByText("1 pendiente bloquea producción.")).toBeVisible();
+  expect(criticalCodes(broken)).toContain("product.image");
+  const outcome = exportOutcome(broken);
+  expect(outcome.ok).toBe(false);
+  expect(outcome.message).toContain("no tiene imagen");
+
+  // Completar restaurando la imagen (el mismo receptor del payload del editor).
+  await restoreStoredProject(page, DEMO_PROJECT_ID, before as StoreProjectV1);
+  const completed = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  await openPrepararTab(page);
+  await expect(page.getByTestId("ui-guided-ready")).toBeVisible();
+  expect(criticalCodes(completed)).not.toContain("product.image");
+  expect(exportOutcome(completed).ok).toBe(true);
+});
+
+test("paridad: variante sin precio bloquea producción y restaurarlo libera el crítico (variant.price)", async ({
+  page,
+}) => {
+  await openDemoStore(page);
+
+  const before = await readStoredProject(page, DEMO_PROJECT_ID);
+  const product = (before as StoreProjectV1).products.find((item) => item.status === "active");
+  const requirementId = `product.${product?.id}.price`;
+  await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+    const target = project.products.find((item) => item.status === "active");
+    if (target?.variants[0]) target.variants[0].price = 0;
+  });
+
+  const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  await openPrepararTab(page);
+  await expect(requirement(page, requirementId)).toHaveAttribute(
+    "data-requirement-status",
+    "missing",
+  );
+  await expect(page.getByText("1 pendiente bloquea producción.")).toBeVisible();
+  expect(criticalCodes(broken)).toContain("variant.price");
+  const outcome = exportOutcome(broken);
+  expect(outcome.ok).toBe(false);
+  expect(outcome.message).toContain("no tiene un precio válido");
+
+  await restoreStoredProject(page, DEMO_PROJECT_ID, before as StoreProjectV1);
+  const completed = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  await openPrepararTab(page);
+  await expect(page.getByTestId("ui-guided-ready")).toBeVisible();
+  expect(criticalCodes(completed)).not.toContain("variant.price");
+  expect(exportOutcome(completed).ok).toBe(true);
+});
+
+test("paridad tienda limpia: las imágenes de plantilla pendientes bloquean producción y reemplazarlas libera el crítico (template.placeholder)", async ({
+  page,
+}) => {
+  const storeName = "PR2 Limpia";
+  await setupCleanStore(page, storeName);
+  const storeKey = await projectIdByName(page, storeName);
+  expect(storeKey).toBeDefined();
+  const cleanStoreKey = storeKey as string;
+
+  // 1. La tienda limpia: 4 de 17 requisitos listos y los assets en estado
+  // "Reemplazar texto de plantilla" (el checklist muestra 12 y oculta el resto).
+  await openPrepararTab(page);
+  const placeholderAssets = page.locator(
+    '[data-testid="ui-guided-requirement"][data-requirement-id^="asset."][data-requirement-status="placeholder"]',
+  );
+  await expect(page.getByText("4 de 17 requisitos listos")).toBeVisible();
+  await expect(placeholderAssets).toHaveCount(3);
+  await expect(page.getByText("+1 más")).toBeVisible();
+  await expect(page.getByText("1 pendiente bloquea producción.")).toBeVisible();
+
+  const clean = await readStoredProject(page, cleanStoreKey);
+  expect(criticalCodes(clean as StoreProjectV1)).toEqual(["template.placeholder"]);
+  const outcome = exportOutcome(clean as StoreProjectV1);
+  expect(outcome.ok).toBe(false);
+  expect(outcome.message).toContain("imágenes de plantilla");
+
+  // 2. Completar: reemplazar nombre y alt de todas las imágenes de plantilla.
+  await mutateStoredProject(page, cleanStoreKey, (project) => {
+    project.assets.forEach((asset) => {
+      asset.name = "Imagen real";
+      asset.alt = "Imagen real para producción";
+    });
+  });
+
+  // 3. El crítico desaparece y la producción limpia es exportable (0 críticos).
+  const completed = await reloadAndOpen(page, cleanStoreKey);
+  await openPrepararTab(page);
+  await expect(
+    page.locator(
+      '[data-testid="ui-guided-requirement"][data-requirement-id^="asset."][data-requirement-status="placeholder"]',
+    ),
+  ).toHaveCount(0);
+  expect(criticalCodes(completed)).toEqual([]);
+  expect(exportOutcome(completed).ok).toBe(true);
+  await expect(page.getByText("La tienda puede pasar a revisión de publicación.")).toBeVisible();
+});
+
+test.fixme(
+  "dead requirement: descripción de marca vacía queda pendiente pero NO bloquea producción (identity.description)",
+  async ({ page }) => {
+    await openDemoStore(page);
+    await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+      project.identity.description = "";
+    });
+    const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+    await openPrepararTab(page);
+    await expect(requirement(page, "identity.description")).toHaveAttribute(
+      "data-requirement-status",
+      "missing",
+    );
+    expect(criticalCodes(broken)).toEqual([]);
+    expect(exportOutcome(broken).ok).toBe(true);
+  },
+);
+
+test.fixme(
+  "dead requirement: WhatsApp sentinel (5491100000000) queda pendiente pero NO bloquea producción (identity.whatsapp)",
+  async ({ page }) => {
+    await openDemoStore(page);
+    await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+      project.whatsapp.phone = "5491100000000";
+    });
+    const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+    await openPrepararTab(page);
+    await expect(requirement(page, "identity.whatsapp")).toHaveAttribute(
+      "data-requirement-status",
+      "missing",
+    );
+    expect(criticalCodes(broken)).toEqual([]);
+    expect(exportOutcome(broken).ok).toBe(true);
+  },
+);
+
+for (const heroRequirement of ["title", "body", "primary-cta"]) {
+  const requirementId = `home.hero.${heroRequirement}`;
+  const label =
+    heroRequirement === "title"
+      ? "título del hero"
+      : heroRequirement === "body"
+        ? "descripción del hero"
+        : "CTA principal del hero";
+  test.fixme(
+    `dead requirement: ${label} vacío queda pendiente pero NO bloquea producción (${requirementId})`,
+    async ({ page }) => {
+      await openDemoStore(page);
+      await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+        const hero = project.sections.find((section) => section.id === "modo-section-hero");
+        const settingKey = heroRequirement === "primary-cta" ? "actionLabel" : heroRequirement;
+        if (hero) hero.settings[settingKey] = "";
+      });
+      const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+      await openPrepararTab(page);
+      await expect(requirement(page, requirementId)).toHaveAttribute(
+        "data-requirement-status",
+        "missing",
+      );
+      expect(criticalCodes(broken)).toEqual([]);
+      expect(exportOutcome(broken).ok).toBe(true);
+    },
+  );
+}
+
+test.fixme(
+  "dead requirement: título de la grilla de productos vacío queda pendiente pero NO bloquea producción (home.products.title)",
+  async ({ page }) => {
+    await openDemoStore(page);
+    await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+      const section = project.sections.find((item) => item.id === "modo-section-new");
+      if (section) section.settings.title = "";
+    });
+    const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+    await openPrepararTab(page);
+    await expect(requirement(page, "home.products.title")).toHaveAttribute(
+      "data-requirement-status",
+      "missing",
+    );
+    expect(criticalCodes(broken)).toEqual([]);
+    expect(exportOutcome(broken).ok).toBe(true);
+  },
+);
+
+test.fixme(
+  "dead requirement: campos con respaldo SOLO en el schema (Zod min(1)): con valor en blanco quedan pendientes y la producción pasa (identity.brand-name, navigation.catalog-label, seo.title, seo.description, about.title, contact.title, product.title, category.title)",
+  async ({ page }) => {
+    await openDemoStore(page);
+    const scenarios: Array<{
+      id: string;
+      apply: (project: StoreProjectV1) => void;
+      requirementIdOf: (project: StoreProjectV1) => string;
+    }> = [
+      {
+        id: "identity.brand-name",
+        apply: (project) => {
+          project.identity.brandName = " ";
+        },
+        requirementIdOf: () => "identity.brand-name",
+      },
+      {
+        id: "navigation.catalog-label",
+        apply: (project) => {
+          project.navigation.catalogLabel = " ";
+        },
+        requirementIdOf: () => "navigation.catalog-label",
+      },
+      {
+        id: "seo.title",
+        apply: (project) => {
+          project.seo.title = " ";
+        },
+        requirementIdOf: () => "seo.title",
+      },
+      {
+        id: "seo.description",
+        apply: (project) => {
+          project.seo.description = " ";
+        },
+        requirementIdOf: () => "seo.description",
+      },
+      {
+        id: "about.title",
+        apply: (project) => {
+          const aboutPage = project.pages.find((item) => item.kind === "about");
+          if (aboutPage) aboutPage.title = " ";
+        },
+        requirementIdOf: () => "about.title",
+      },
+      {
+        id: "contact.title",
+        apply: (project) => {
+          const contactPage = project.pages.find((item) => item.kind === "contact");
+          if (contactPage) contactPage.title = " ";
+        },
+        requirementIdOf: () => "contact.title",
+      },
+      {
+        id: "product.title",
+        apply: (project) => {
+          const product = project.products.find((item) => item.status === "active");
+          if (product) product.title = " ";
+        },
+        requirementIdOf: (project) => {
+          const product = project.products.find((item) => item.status === "active");
+          return `product.${product?.id}.title`;
+        },
+      },
+      {
+        id: "category.title",
+        apply: (project) => {
+          if (project.categories[0]) project.categories[0].title = " ";
+        },
+        requirementIdOf: (project) => `category.${project.categories[0]?.id}.title`,
+      },
+    ];
+    for (const scenario of scenarios) {
+      await mutateStoredProject(page, DEMO_PROJECT_ID, scenario.apply);
+      const project = await reloadAndOpen(page, DEMO_PROJECT_ID);
+      await openPrepararTab(page);
+      // Sin crítico real en el auditReport: la producción pasa o sólo falla por
+      // el schema (Zod), nunca por un crítico del gate.
+      expect(criticalCodes(project)).toEqual([]);
+      await expect(requirement(page, scenario.requirementIdOf(project))).toHaveAttribute(
+        "data-requirement-status",
+        "missing",
+      );
+    }
+  },
+);
+
+test.fixme(
+  "gap: un dominio sin HTTPS bloquea producción con el crítico domain.https y Preparar no muestra ningún requisito (domain.https)",
+  async ({ page }) => {
+    await openDemoStore(page);
+    await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+      project.baseUrl = "http://modo-sur.example";
+    });
+    const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+    await openPrepararTab(page);
+    await expect(page.getByTestId("ui-guided-ready")).toBeVisible();
+    expect(criticalCodes(broken)).toEqual(["domain.https"]);
+    const outcome = exportOutcome(broken);
+    expect(outcome.ok).toBe(false);
+    expect(outcome.message).toContain("HTTPS");
+  },
+);
+
+test.fixme(
+  "gap: políticas de envío/devoluciones vacías bloquean producción con el crítico policies.incomplete y Preparar no tiene requisitos de políticas (policies.incomplete)",
+  async ({ page }) => {
+    await openDemoStore(page);
+    await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+      project.policies.shipping.details = "";
+      project.policies.returns.details = "";
+    });
+    const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+    await openPrepararTab(page);
+    await expect(page.getByTestId("ui-guided-ready")).toBeVisible();
+    expect(criticalCodes(broken)).toEqual(["policies.incomplete"]);
+    const outcome = exportOutcome(broken);
+    expect(outcome.ok).toBe(false);
+    expect(outcome.message).toContain("políticas de envío y devoluciones");
+  },
+);
+
+test.fixme(
+  "gap: el crítico template.placeholder mira el NOMBRE del asset, el requisito solo su alt; nombre de plantilla con alt listo bloquea producción sin requisito pendiente (asset.*.alt)",
+  async ({ page }) => {
+    const storeName = "PR2 Limpia Nombre";
+    await setupCleanStore(page, storeName);
+    const storeKey = await projectIdByName(page, storeName);
+    expect(storeKey).toBeDefined();
+    const cleanStoreKey = storeKey as string;
+    await mutateStoredProject(page, cleanStoreKey, (project) => {
+      project.assets.forEach((asset) => {
+        asset.alt = "Texto alternativo real";
+      });
+    });
+    const broken = await reloadAndOpen(page, cleanStoreKey);
+    await openPrepararTab(page);
+    await expect(
+      page.locator(
+        '[data-testid="ui-guided-requirement"][data-requirement-id^="asset."][data-requirement-status="placeholder"]',
+      ),
+    ).toHaveCount(0);
+    expect(criticalCodes(broken)).toEqual(["template.placeholder"]);
+    const outcome = exportOutcome(broken);
+    expect(outcome.ok).toBe(false);
+    expect(outcome.message).toContain("imágenes de plantilla");
+  },
+);
