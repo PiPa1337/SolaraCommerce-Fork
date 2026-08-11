@@ -82,8 +82,10 @@ async function openHeroInspector(page: Page): Promise<void> {
 
 const pane = (page: Page): Locator => page.locator("[data-studio-editor-pane]");
 
+// La pestaña sucia anuncia el estado pendiente en su nombre accesible
+// ("Resumen cambios sin revisar"), así que el matcher tolera el sufijo.
 const tabByName = (page: Page, name: string): Locator =>
-  page.getByRole("tab", { name, exact: true });
+  page.getByRole("tab", { name: new RegExp(`^${name}(\\s.*)?$`, "i") });
 
 /** Instala un probe que registra si el indicador llegó a estado "saving". */
 async function installSavingProbe(page: Page): Promise<void> {
@@ -725,7 +727,7 @@ test("A14.14 conflicto — Escape conserva el borrador y restaura el foco al bot
   }
 });
 
-test.fixme(
+test(
   "A14: el punto sucio no se anuncia a lectores de pantalla (span aria-hidden con title)",
   async ({ page }) => {
     await page.clock.install({ time: FAKE_START });

@@ -913,12 +913,15 @@ export function Studio({
                 <Icon aria-hidden size={19} weight={tab === id ? "fill" : "regular"} />
                 <span>{label}</span>
                 {dirtyTabs.has(id) ? (
-                  <span
-                    className="studio-tab-dirty"
-                    data-testid="ui-tab-dirty"
-                    aria-hidden="true"
-                    title={`${label} tiene cambios sin revisar`}
-                  />
+                  <>
+                    <span className="visually-hidden">cambios sin revisar</span>
+                    <span
+                      className="studio-tab-dirty"
+                      data-testid="ui-tab-dirty"
+                      aria-hidden="true"
+                      title={`${label} tiene cambios sin revisar`}
+                    />
+                  </>
                 ) : null}
                 {tab === id ? (
                   <motion.span
