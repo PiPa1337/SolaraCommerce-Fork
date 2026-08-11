@@ -404,3 +404,50 @@ literales, camino 404 del preview, entre otros) en
 [`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md); resumen de usuario en el
 [`CHANGELOG.md`](CHANGELOG.md), sección "Barrido total de controles
 (2026-08-10)".
+
+## Auditoría total de la pestaña Tema (2026-08-10)
+
+Cierre del plan
+[`docs/superpowers/plans/2026-08-10-auditoria-tema.md`](docs/superpowers/plans/2026-08-10-auditoria-tema.md):
+~40 controles del panel Tema auditados con el contrato de 4 capas —
+funcional / auto-feedback / datos / **utilidad** (el control debe producir un
+cambio visible en el preview Y en el sitio exportado). La caza (T1-T8) y la
+traza (U1-U4) encontraron el hallazgo central: la plantilla moderna pisaba los
+colores, el radio, la fuente y el espaciado del editor con valores fijos (capa
+`--catalog-*`, radios y stacks hardcodeados en `packages/modules/src/styles.ts`)
+— el panel Tema casi no se veía. Tres agentes de fix + a11y conectaron todo;
+quedan 3 decisiones abiertas (dark mode, familias Google Fonts adicionales,
+peso del CSS del storefront).
+
+Reportes: `.superpowers/sdd/tema-tN-report.md`, `tema-uN-report.md` y
+`tema-fix-themeeditor.md`. Resumen de usuario en [`CHANGELOG.md`](CHANGELOG.md),
+sección "Auditoría total de la pestaña Tema (2026-08-10)"; deuda abierta en
+[`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md).
+
+**Resuelto (commits `f6f9487`, `1728e72`, `c12daff`):** paleta conectada a la
+plantilla default (`--catalog-*` deriva de `var(--solara-*)`: los 7 colores y
+los 4 presets se ven); radius en ~21 superficies modernas (pills conservan
+999px); fuentes → vars en raíz y marca; `--solara-space-scale` → grillas/gaps
+(antes 0 consumidores — dead control); `--solara-type-scale` → títulos
+modernos; accentText → botones; carga real de fuentes (Archivo/Inter/Lora
+woff2 variable self-hosted en `assets/fonts/`, `@font-face` en themeCss,
+preview inline base64, shim `local(Arial)` eliminado); vars muertas eliminadas
+(`--solara-display`, `--solara-body`, `--solara-space`); selector real de
+fuentes con migración tolerante (opción "Personalizada" conserva el valor,
+schema intacto); contenedor sin pérdida de valores (step eliminado, T8-B1);
+nombre accesible del selector (a11y).
+
+**Paridad:** preview ↔ sitio exportado verificada **byte a byte** para las 17
+vars del tema (U2) — el flujo del editor llega idéntico a ambos outputs.
+
+**Decisiones abiertas (sin fix en esta ola):**
+
+1. **Dark mode** — deshabilitado por decisión documentada: los 7 tokens no
+   alcanzan para una segunda paleta y habilitarlo rompería la capa fija clara.
+   Propuestas A (sólo `color-scheme`) y B (schema v3 con `colors.dark`) con
+   evidencia en `.superpowers/sdd/tema-t7-report.md`; mantener el hint.
+2. **Google Fonts self-host** — ~34.9 KB woff2 por familia en el sitio
+   exportado (medido: Archivo 34.1 / Inter 47.1 / Lora 36.9 KB); revisar si se
+   agregan familias.
+3. **CSS del storefront** — +6 KB (+8.1 %: 75.1 → 81.2 KB, cap 780 KiB);
+   vigilarlo en budgets ante cambios de styles.ts.

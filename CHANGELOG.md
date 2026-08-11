@@ -10,6 +10,43 @@ versión publicada.
 
 ## [Unreleased]
 
+### Auditoría total de la pestaña Tema (2026-08-10)
+
+Cierre del plan
+[`docs/superpowers/plans/2026-08-10-auditoria-tema.md`](docs/superpowers/plans/2026-08-10-auditoria-tema.md):
+~40 controles auditados con el contrato de 4 capas — funcional /
+auto-feedback / datos / **utilidad** (el control debe producir un cambio
+visible en el preview Y en el sitio exportado). Hallazgo central: la plantilla
+moderna pisaba los colores, el radio, la fuente y el espaciado del editor con
+valores fijos — ahora TODO el panel Tema afecta el preview y el sitio
+exportado.
+
+**Corregido:**
+
+- la paleta (los 7 colores) se conecta a la plantilla default: la capa fija
+  `--catalog-*` ahora deriva de `var(--solara-*)` y los presets se ven;
+- el radio se aplica en ~21 superficies modernas (las pills conservan 999px);
+- las fuentes pasan a vars en la raíz y en la marca; `--solara-space-scale` se
+  conecta a grillas y gaps (antes 0 consumidores — dead control);
+  `--solara-type-scale` se aplica a los títulos modernos; `accentText` se
+  conecta a los botones;
+- carga real de fuentes: Archivo/Inter/Lora woff2 variable self-hosted en
+  `assets/fonts/` con `@font-face` en el themeCss, preview inline base64 y el
+  shim `local(Arial)` eliminado;
+- selector real de fuentes: 11 familias de sistema + Archivo/Inter/Lora, con
+  migración tolerante (un valor guardado sin match se conserva como opción
+  "Personalizada", schema intacto);
+- variables muertas eliminadas (`--solara-display`, `--solara-body`,
+  `--solara-space`);
+- el contenedor ya no pierde valores: se eliminó el `step` que descartaba en
+  silencio los anchos no múltiplos de 20;
+- el selector de fuentes tiene nombre accesible (a11y).
+
+**Paridad:** preview ↔ sitio exportado verificada **byte a byte** para las 17
+vars del tema (U2). Dark mode queda deshabilitado por decisión documentada: los
+7 tokens no alcanzan para una segunda paleta (propuestas A/B en
+`.superpowers/sdd/tema-t7-report.md`).
+
 ### Barrido total de controles (2026-08-10)
 
 Cierre del plan

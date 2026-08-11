@@ -20,6 +20,10 @@ y el cierre del barrido total de controles
 ([`2026-08-10-barrido-total-controles.md`](../docs/superpowers/plans/2026-08-10-barrido-total-controles.md),
 cuyos fixes y gaps documentados se agrupan en la sección
 "Barrido total de controles (2026-08-10)" más abajo);
+y el cierre de la auditoría total de la pestaña Tema
+([`2026-08-10-auditoria-tema.md`](../docs/superpowers/plans/2026-08-10-auditoria-tema.md),
+cuyos fixes y decisiones abiertas se agrupan en la sección
+"Auditoría total de la pestaña Tema (2026-08-10)" más abajo);
 lo que sigue pendiente son decisiones de producto o matrices que exigen release.
 Nota de proceso (ola paralela): los archivos de T6 (CSV, Catalog,
 ProductEditor, ThemeEditor y Overview) se commitearon dentro de `c92f99f`
@@ -190,6 +194,41 @@ gate; ~25 bugs reales se corrigieron con su aserción de regresión.
 **Nota de proceso:** la capa 2 del contrato (auto-feedback) quedó incorporada al
 contrato de auditoría: un control debe comunicar su estado
 seleccionado/activo/expandido en el HTML inicial y mantenerlo sincronizado.
+
+## Auditoría total de la pestaña Tema (2026-08-10)
+
+Cierre del plan
+[`docs/superpowers/plans/2026-08-10-auditoria-tema.md`](../docs/superpowers/plans/2026-08-10-auditoria-tema.md):
+la caza (T1-T8) y la traza (U1-U4) auditaron ~40 controles del panel Tema con
+el contrato de 4 capas (funcional / auto-feedback / datos / utilidad).
+Hallazgo central: la plantilla moderna pisaba los colores, el radio, la fuente
+y el espaciado del editor con valores fijos (capa `--catalog-*`, radios y
+stacks hardcodeados en `packages/modules/src/styles.ts`); con los fixes de Ola
+3 TODO el panel Tema afecta el preview y el sitio exportado. Detalle y
+evidencia en `.superpowers/sdd/tema-*.md`; resumen de usuario en el
+`CHANGELOG.md`.
+
+**Resueltas (commit de referencia):**
+
+| Área | Problema | Fix |
+| --- | --- | --- |
+| Colores | La capa `--catalog-*` (styles.ts:1942-1948) pisaba la paleta del usuario con hex fijos: los 7 colores y los 4 presets no se veían en la plantilla moderna. | `--catalog-ink/paper/surface/muted/border` derivan de `var(--solara-text/background/surface/muted/border)`; presets y tokens afectan preview y sitio; `accentText` conectado a botones. `f6f9487` |
+| Radio | `var(--solara-radius)` se consumía sólo en base/legacy; Catalog Modern usaba radios fijos (render idéntico con 0 y 40, probado en T5). | Radius conectado en ~21 superficies modernas (pills conservan 999px). `f6f9487` |
+| Fuentes | Inputs de texto libres sin carga de fuentes + stack fijo en la raíz moderna (styles.ts:1951) y marca fija en Georgia. | Selector real (11 familias de sistema + Archivo/Inter/Lora) con `@font-face` woff2 variable self-hosted en `assets/fonts/` (preview inline base64); raíz y marca leen `var(--solara-font-body/-display)`; shim `local(Arial)` eliminado; migración tolerante: un valor sin match se conserva como "Personalizada" (schema intacto). `1728e72` `f6f9487` |
+| Espaciado | `--solara-space`/`--solara-space-scale` sin consumidores (dead control confirmado: render idéntico con 0.75 y 1.5). | `--solara-space-scale` conectado a grillas/gaps de la plantilla moderna; var duplicada eliminada. `f6f9487` |
+| Tipografía | `--solara-type-scale` sólo alcanzaba texto heredado; los títulos modernos no escalaban. | `--solara-type-scale` aplicado a títulos modernos. `f6f9487` |
+| Vars muertas | `--solara-display` y `--solara-body` duplicaban a `--solara-font-display/-font-body` sin consumidores propios. | Emisiones eliminadas del exporter; `body` usa `var(--solara-font-body)`. `1728e72` |
+| T8-B1 | El input "Ancho del contenedor" descartaba en silencio valores no múltiplos del `step` 20 (ej. 999/1150). | `step` eliminado: cualquier entero 960-1800 commitea sin pérdida. `f6f9487` |
+| a11y | El selector de fuentes no anunciaba un nombre accesible. | Nombre accesible conectado. `c12daff` |
+| Paridad | Preview y sitio exportado debían emitir los mismos valores de tema. | Paridad TOTAL verificada byte a byte para las 17 vars (U2); sin divergencias. — |
+
+**Abiertas:**
+
+| Prioridad | Problema | Riesgo/impacto | Recomendación |
+| --- | --- | --- | --- |
+| P2 | Dark mode deshabilitado por decisión documentada: los 7 tokens no alcanzan (no existe `colors.dark` ni derivación por luminancia; la capa `--catalog-*` quedó clara fija y habilitar el modo oscuro mezclaría superficies). | El usuario no puede elegir "Oscuro" desde el select (mantiene el hint). | Decidir entre la opción A (sólo `color-scheme`, sin inventar paleta) y la opción B (schema v3 con `colors.dark` + remapeo `--catalog-*`); propuestas con evidencia en `.superpowers/sdd/tema-t7-report.md`. |
+| P3 | Google Fonts self-host: ~34.9 KB woff2 por familia (Archivo 34.1 / Inter 47.1 / Lora 36.9 KB, medido). | Peso del sitio por cada familia usada; se deduplica si display === body (el default usa 1 archivo). | Revisar si se agregan familias al registro al cerrar la decisión de dark mode. |
+| P3 | El CSS del storefront creció +6 KB (+8.1 %: 75.1 → 81.2 KB; cap 780 KiB). | Crecimiento del CSS principal del sitio (margen amplio, vigilarlo). | Re-ejecutar `scripts/public-storefront-budget.test.ts` ante cambios de styles.ts. |
 
 ## Código potencialmente muerto o duplicado
 
