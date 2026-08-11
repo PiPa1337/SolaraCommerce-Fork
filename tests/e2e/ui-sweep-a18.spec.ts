@@ -367,6 +367,14 @@ test("A18 T6: mover se deshabilita en los límites (auto-feedback)", async ({ pa
   const firstCard = page.locator(".slide-card").first();
   const lastCard = page.locator(".slide-card").last();
   await expect(firstCard.getByRole("button", { name: "Mover slide arriba" })).toBeDisabled();
+  await expect(firstCard.getByRole("button", { name: "Mover slide arriba" })).toHaveAttribute(
+    "aria-description",
+    "Slide 1 de 2",
+  );
+  await expect(lastCard.getByRole("button", { name: "Mover slide abajo" })).toHaveAttribute(
+    "aria-description",
+    "Slide 2 de 2",
+  );
   await expect(firstCard.getByRole("button", { name: "Mover slide abajo" })).toBeEnabled();
   await expect(lastCard.getByRole("button", { name: "Mover slide arriba" })).toBeEnabled();
   await expect(lastCard.getByRole("button", { name: "Mover slide abajo" })).toBeDisabled();

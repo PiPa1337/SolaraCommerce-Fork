@@ -69,6 +69,7 @@ export function RepeaterEditor({
                 onClick={() => move(index, -1)}
                 disabled={index === 0}
                 aria-label="Subir elemento"
+                aria-description={`${label} ${index + 1} de ${items.length}`}
               >
                 ↑
               </button>
@@ -77,6 +78,7 @@ export function RepeaterEditor({
                 onClick={() => move(index, 1)}
                 disabled={index === items.length - 1}
                 aria-label="Bajar elemento"
+                aria-description={`${label} ${index + 1} de ${items.length}`}
               >
                 ↓
               </button>
@@ -85,6 +87,7 @@ export function RepeaterEditor({
                 onClick={() => duplicate(index)}
                 disabled={maxItems !== undefined && items.length >= maxItems}
                 aria-label="Duplicar elemento"
+                aria-description={`${label} ${index + 1} de ${items.length}`}
               >
                 Duplicar
               </button>
@@ -93,6 +96,7 @@ export function RepeaterEditor({
                 onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}
                 disabled={items.length <= (minItems ?? 0)}
                 aria-label="Eliminar elemento"
+                aria-description={`${label} ${index + 1} de ${items.length}`}
               >
                 Eliminar
               </button>

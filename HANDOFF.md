@@ -677,3 +677,14 @@ de ejecutarlo. Si el asset fue eliminado, el disparador desconectado se ignora.
 
 La regresión está en `tests/e2e/ui-sweep-a17.spec.ts`: A17 queda en 11/11 en
 Chromium. No se modificó el schema ni la forma de `catalogScaleStore`.
+
+## Contexto accesible para controles repetidos del Constructor (2026-08-11)
+
+Los botones de orden, duplicado y eliminación de los repetidores generados y
+del editor de slides conservan sus nombres de acción estables para la UI, pero
+ahora agregan `aria-description` con la posición y el total (`Slides 1 de 2`,
+`Slide 2 de 2`). Esto permite distinguir controles iguales al navegar con
+tecnologías asistivas sin introducir locators o textos visibles nuevos.
+
+La cobertura está en `tests/e2e/studio-builder.spec.ts` y
+`tests/e2e/ui-sweep-a18.spec.ts`: 3/3 y 13/13 pasan en Chromium.

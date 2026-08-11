@@ -83,6 +83,15 @@ test("edita slides modernos con el inspector generado por metadata", async ({ pa
   await addItem.click();
   await addItem.click();
   await expect(page.locator(".repeater-editor__item")).toHaveCount(2);
+  await expect(
+    page.locator(".repeater-editor__item").nth(0).getByRole("button", { name: "Bajar elemento" }),
+  ).toHaveAttribute("aria-description", "Slides 1 de 2");
+  await expect(
+    page
+      .locator(".repeater-editor__item")
+      .nth(1)
+      .getByRole("button", { name: "Eliminar elemento" }),
+  ).toHaveAttribute("aria-description", "Slides 2 de 2");
   await page.locator(".repeater-editor__item").nth(0).getByRole("textbox").nth(0).fill("Primero");
   await page.locator(".repeater-editor__item").nth(1).getByRole("textbox").nth(0).fill("Segundo");
   await page

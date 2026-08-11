@@ -10,6 +10,14 @@ versión publicada.
 
 ## [Unreleased]
 
+### Contexto accesible para controles repetidos del Constructor (2026-08-11)
+
+- Los controles de ordenar, duplicar y eliminar elementos repetidos anuncian
+  también la posición del elemento al que afectan, sin cambiar sus nombres
+  visibles ni la interacción existente.
+- Constructor y A18 verifican los atributos contextuales junto con el flujo de
+  slides, límites, historial y diálogos.
+
 ### Foco al cerrar el detalle de Recursos (2026-08-11)
 
 - El panel de detalle de una imagen devuelve el foco al botón `Detalle` que lo

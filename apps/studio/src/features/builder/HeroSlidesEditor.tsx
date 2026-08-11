@@ -120,18 +120,21 @@ export function HeroSlidesEditor({
                   <IconButton
                     icon={ArrowUp}
                     label="Mover slide arriba"
+                    aria-description={`Slide ${index + 1} de ${slides.length}`}
                     disabled={index === 0}
                     onClick={() => moveSlide(index, -1)}
                   />
                   <IconButton
                     icon={ArrowDown}
                     label="Mover slide abajo"
+                    aria-description={`Slide ${index + 1} de ${slides.length}`}
                     disabled={index === slides.length - 1}
                     onClick={() => moveSlide(index, 1)}
                   />
                   <IconButton
                     icon={Copy}
                     label="Duplicar slide"
+                    aria-description={`Slide ${index + 1} de ${slides.length}`}
                     onClick={() =>
                       onChange([
                         ...slides.slice(0, index + 1),
@@ -143,6 +146,7 @@ export function HeroSlidesEditor({
                   <IconButton
                     icon={Trash}
                     label="Eliminar slide"
+                    aria-description={`Slide ${index + 1} de ${slides.length}`}
                     onClick={() =>
                       onChange(slides.filter((_item, slideIndex) => slideIndex !== index))
                     }
