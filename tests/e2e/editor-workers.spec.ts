@@ -242,14 +242,28 @@ test("el respaldo del proyecto muestra progreso y deshabilita las acciones (T6.7
 
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Descargar .solara.json" }).click();
-  await expect(page.getByTestId("ui-export-progress")).toContainText("Creando respaldo");
-  // El respaldo del demo completa en milisegundos con el worker caliente: las
-  // dos aserciones de deshabilitado arrancan en el mismo tick para no perder
-  // la ventana (bajo carga de suite el worker ya está arrancado).
-  await Promise.all([
-    expect(page.getByTestId("ui-export-draft")).toBeDisabled(),
-    expect(page.getByRole("button", { name: "Importar respaldo" })).toBeDisabled(),
-  ]);
+  // Lectura atómica: mientras el progreso es visible, ambos botones deben
+  // estar deshabilitados EN EL MISMO turno (la ventana dura ~1 frame con el
+  // worker caliente; dos aserciones separadas la pierden).
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const progress = document.querySelector('[data-testid="ui-export-progress"]');
+          if (!progress) return { progress: false };
+          const draft = document.querySelector('[data-testid="ui-export-draft"]');
+          const importButton = Array.from(document.querySelectorAll("button")).find((b) =>
+            b.textContent?.trim().startsWith("Importar respaldo"),
+          );
+          return {
+            progress: true,
+            draft: draft?.hasAttribute("disabled") ?? null,
+            import: importButton?.hasAttribute("disabled") ?? null,
+          };
+        }),
+      { timeout: 15_000 },
+    )
+    .toEqual({ progress: true, draft: true, import: true });
 
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/\.solara\.json$/);
