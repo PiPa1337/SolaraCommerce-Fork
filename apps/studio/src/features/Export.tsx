@@ -91,10 +91,12 @@ export function ExportPanel({
   project,
   onImport,
   onOpenSite,
+  onNavigate,
 }: {
   project: StoreProjectV1;
   onImport(project: StoreProjectV1): Promise<void>;
   onOpenSite?(id: string): Promise<void>;
+  onNavigate(destination: "seo"): void;
 }) {
   const importRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<"draft" | "production" | "project" | "import" | "">("");
@@ -234,7 +236,10 @@ export function ExportPanel({
   };
 
   const navigateToSeo = () => {
-    document.getElementById("studio-tab-seo")?.click();
+    onNavigate("seo");
+    requestAnimationFrame(() => {
+      document.getElementById("studio-tab-seo")?.focus();
+    });
   };
 
   const postItems = [

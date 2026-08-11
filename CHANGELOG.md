@@ -33,6 +33,8 @@ versión publicada.
   columna y mantiene legible el CTA del siguiente paso.
 - Los accesos de corrección de la auditoría SEO navegan mediante el shell y
   devuelven el foco visible al tab de destino.
+- El checklist posterior de Exportar usa la navegación del shell para “Ir a SEO”
+  y conserva el foco en el tab abierto.
 
 ### Auditoría total de la pestaña Preparar (2026-08-10)
 

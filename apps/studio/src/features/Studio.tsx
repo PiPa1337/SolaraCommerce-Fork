@@ -170,6 +170,7 @@ const StudioTabContent = memo(function StudioTabContent({
         <ExportPanel
           project={project}
           onImport={onImport}
+          onNavigate={onNavigate}
           {...(onOpenSite ? { onOpenSite } : {})}
         />
       );

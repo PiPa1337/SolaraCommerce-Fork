@@ -233,6 +233,7 @@ test("el checklist posterior persiste los toggles, navega a SEO y el historial r
     "aria-selected",
     "true",
   );
+  await expect(page.getByRole("tab", { name: "SEO", exact: true })).toBeFocused();
 });
 
 test("el historial persiste al recargar y la producción exporta sin críticos", async ({ page }) => {
