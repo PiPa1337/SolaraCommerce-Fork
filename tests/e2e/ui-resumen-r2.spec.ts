@@ -314,9 +314,9 @@ test("utilidad: el número y el saludo editados llegan al sitio exportado (diff 
   expect(afterHome).toContain(`data-whatsapp-greeting="${EDITED_GREETING}"`);
   expect(afterHome).toContain('data-whatsapp-include-sku="false"');
 
-  // JSON-LD del negocio: `telephone` se alimenta de identity.phone, no del
-  // número de WhatsApp. Con la demo ambos coinciden; tras editar el número de
-  // WhatsApp, el JSON-LD conserva el teléfono de identidad (hallazgo R2-1).
+  // JSON-LD del negocio: `telephone` prefiere el número de WhatsApp y cae al
+  // de identidad (hallazgo R2-1, resuelto en Ola 3: exporter storeStructuredData).
+  // ANTES ambos coinciden en la demo; DESPUÉS el JSON-LD adopta el número nuevo.
   const jsonLd = (html: string): unknown[] =>
     [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
       .map((match) => JSON.parse(match[1] ?? "{}"))
@@ -324,7 +324,7 @@ test("utilidad: el número y el saludo editados llegan al sitio exportado (diff 
   const beforeStore = jsonLd(beforeHome).find((entry) => entry["@type"] === "OnlineStore");
   const afterStore = jsonLd(afterHome).find((entry) => entry["@type"] === "OnlineStore");
   expect(beforeStore?.telephone).toBe("5491123456789");
-  expect(afterStore?.telephone).toBe("5491123456789");
+  expect(afterStore?.telephone).toBe(EDITED_PHONE);
 
   // Fallback noscript del módulo de producto: saludo y número editados.
   const beforeProduct = String(

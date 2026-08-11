@@ -924,8 +924,10 @@ function storeStructuredData(project: StoreProjectV1): unknown[] {
       description: project.identity.description,
       ...(logo ? { logo: absoluteResourceUrl(project, logo) } : {}),
       email: project.identity.email || undefined,
-      telephone: project.identity.phone,
-      address: project.identity.address,
+      ...(project.whatsapp.phone || project.identity.phone
+        ? { telephone: project.whatsapp.phone || project.identity.phone }
+        : {}),
+      ...(project.identity.address ? { address: project.identity.address } : {}),
       hasMerchantReturnPolicy: {
         "@type": "MerchantReturnPolicy",
         applicableCountry: project.policies.returns.countries,
@@ -1301,8 +1303,9 @@ function buildPages(
 
   const home: PageDescriptor = {
     path: "index.html",
-    title: homeConfig?.seoTitle ?? project.seo.title,
-    description: homeConfig?.seoDescription ?? project.seo.description,
+    title: homeConfig?.seoTitle ?? project.seo.title ?? project.name ?? project.identity.brandName,
+    description:
+      homeConfig?.seoDescription ?? project.seo.description ?? project.identity.description,
     canonicalPath: "/",
     pageType: "home",
     body: `<main class="solara-home">${renderProjectSections(project, homeSections, { pageType: "home" })}</main>`,

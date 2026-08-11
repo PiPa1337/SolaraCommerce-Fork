@@ -290,9 +290,11 @@ test("identidad completa: persiste tras recarga y cada campo llega al sitio expo
   expect(home).toContain(`"email":"${VALUES.email}"`);
   expect(contact).toContain(`mailto:${VALUES.email}`);
 
-  // 5. Teléfono → footer (tel:), página Contacto y JSON-LD.
+  // 5. Teléfono → footer (tel:), página Contacto y JSON-LD. El JSON-LD del
+  // negocio prefiere whatsapp.phone y cae a identity.phone (R2-1 resuelto en
+  // Ola 3, exporter storeStructuredData); la demo no edita WhatsApp.
   expect(home).toContain(`tel:${VALUES.phone}`);
-  expect(home).toContain(`"telephone":"${VALUES.phone}"`);
+  expect(home).toContain(`"telephone":"${ORIGINAL.phone}"`);
   expect(contact).toContain(`tel:${VALUES.phone}`);
 
   // 6. Dirección → JSON-LD y página Contacto (el footer moderno no la muestra).

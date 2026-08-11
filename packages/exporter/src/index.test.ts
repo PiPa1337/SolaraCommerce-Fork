@@ -12,6 +12,18 @@ import {
   renderPreviewHtml,
 } from "./index";
 
+function onlineStoreJsonLd(homeHtml: string): Record<string, unknown> {
+  for (const script of homeHtml.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
+    const data = JSON.parse(script[1] ?? "{}") as Record<string, unknown>;
+    if (data["@type"] === "OnlineStore") return data;
+  }
+  throw new Error("Falta el bloque JSON-LD OnlineStore.");
+}
+
+function homeMetaDescription(homeHtml: string): string {
+  return /<meta name="description" content="([^"]*)"/.exec(homeHtml)?.[1] ?? "";
+}
+
 describe("exporter", () => {
   it("crea páginas estáticas y un feed consistente", () => {
     const result = exportProject(referenceStore, { mode: "production" });
@@ -645,6 +657,65 @@ describe("exporter", () => {
       "<title>Título exclusivo de Contacto</title>",
     );
     expect(String(result.files.get("index.html"))).not.toContain("Título global de la tienda");
+  });
+
+  it("el JSON-LD del negocio prefiere whatsapp.phone sobre identity.phone", () => {
+    const project = {
+      ...referenceStore,
+      whatsapp: { ...referenceStore.whatsapp, phone: "5492212345678" },
+    };
+    const homeHtml = String(
+      exportProject(project as typeof referenceStore, { mode: "draft" }).files.get("index.html"),
+    );
+    const store = onlineStoreJsonLd(homeHtml);
+    expect(store.telephone).toBe("5492212345678");
+  });
+
+  it("el JSON-LD del negocio omite telephone y address cuando están vacíos", () => {
+    const project = {
+      ...referenceStore,
+      identity: { ...referenceStore.identity, phone: "", address: "" },
+    };
+    const homeHtml = String(
+      exportProject(project as typeof referenceStore, { mode: "draft" }).files.get("index.html"),
+    );
+    const store = onlineStoreJsonLd(homeHtml);
+    expect(store.telephone).toBe(referenceStore.whatsapp.phone);
+    expect(store).not.toHaveProperty("address");
+    expect(JSON.stringify(store)).not.toContain("address");
+  });
+
+  it("la meta description de Home prefiere la página y el seo global antes que la identidad", () => {
+    const project = {
+      ...referenceStore,
+      pages: referenceStore.pages.map((page) =>
+        page.kind === "home" ? { ...page, seoDescription: "Descripción de la página Home." } : page,
+      ),
+      seo: { ...referenceStore.seo, description: "Descripción del seo global." },
+      identity: { ...referenceStore.identity, description: "Descripción de la identidad." },
+    };
+    const homeHtml = String(
+      exportProject(project as typeof referenceStore, { mode: "draft" }).files.get("index.html"),
+    );
+    expect(homeMetaDescription(homeHtml)).toBe("Descripción de la página Home.");
+    expect(homeHtml).toContain(
+      '<meta property="og:description" content="Descripción de la página Home.">',
+    );
+  });
+
+  it("el título de Home prefiere la página y el seo global antes que la identidad", () => {
+    const project = {
+      ...referenceStore,
+      pages: referenceStore.pages.map((page) =>
+        page.kind === "home" ? { ...page, seoTitle: "Título de la página Home" } : page,
+      ),
+      seo: { ...referenceStore.seo, title: "Título del seo global" },
+      name: "Nombre del proyecto",
+    };
+    const homeHtml = String(
+      exportProject(project as typeof referenceStore, { mode: "draft" }).files.get("index.html"),
+    );
+    expect(/<title>([\s\S]*?)<\/title>/.exec(homeHtml)?.[1]).toBe("Título de la página Home");
   });
 
   it("usa el seo global como fallback en rutas sin página editable", () => {
