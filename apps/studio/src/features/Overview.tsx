@@ -23,6 +23,10 @@ import { useToast } from "../components/Toast";
 import { Button, Field, IconButton, SectionHeader } from "../components/Ui";
 
 const PHONE_PATTERN = /^\d{8,15}$/;
+const CATALOG_LABEL_MAX_LENGTH = 40;
+const NAVIGATION_LABEL_MAX_LENGTH = 80;
+const NAVIGATION_ITEMS_MAX = 20;
+const NAVIGATION_CHILDREN_MAX = 12;
 
 type PendingNavigationDelete =
   | {
@@ -166,6 +170,7 @@ export function Overview({
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [fieldDrafts, setFieldDrafts] = useState<Record<string, string>>({});
   const [unsaved, setUnsaved] = useState(false);
+  const navigationItemsLimitId = useId();
   const unsavedTimer = useRef<number | undefined>(undefined);
   /** Último campo que SÍ commiteó (no el último editado): sólo su borrador se
    *  limpia cuando el proyecto cambia. Un borrador inválido sin commitear no
@@ -213,7 +218,11 @@ export function Overview({
     project.identity.description.trim() === "" ? "Completá la descripción de la marca." : undefined;
   const catalogLabelDisplay = fieldValue("catalogLabel", project.navigation.catalogLabel);
   const catalogLabelError =
-    catalogLabelDisplay.trim() === "" ? "Completá el nombre del catálogo." : undefined;
+    catalogLabelDisplay.trim() === ""
+      ? "Completá el nombre del catálogo."
+      : catalogLabelDisplay.length > CATALOG_LABEL_MAX_LENGTH
+        ? `Usá hasta ${CATALOG_LABEL_MAX_LENGTH} caracteres.`
+        : undefined;
   const emailDisplay = fieldValue("email", project.identity.email);
   const emailError =
     emailDisplay.trim() !== "" && !isValidEmail(emailDisplay)
@@ -534,15 +543,17 @@ export function Overview({
           <div className="form-grid">
             <Field
               label="Nombre del catálogo"
+              hint={`${catalogLabelDisplay.length}/${CATALOG_LABEL_MAX_LENGTH} caracteres`}
               {...(catalogLabelError ? { error: catalogLabelError } : {})}
             >
               <input
+                maxLength={CATALOG_LABEL_MAX_LENGTH}
                 value={catalogLabelDisplay}
                 onChange={(event) =>
                   updateField(
                     "catalogLabel",
                     event.target.value,
-                    (next) => next.trim() !== "",
+                    (next) => next.trim() !== "" && next.length <= CATALOG_LABEL_MAX_LENGTH,
                     (next) => updateNavigation({ catalogLabel: next }),
                   )
                 }
@@ -592,21 +603,32 @@ export function Overview({
                 const itemLabelKey = `nav-label-${item.id}`;
                 const itemLabelDisplay = fieldValue(itemLabelKey, item.label);
                 const itemLabelError =
-                  itemLabelDisplay.trim() === "" ? "Completá el nombre del enlace." : undefined;
+                  itemLabelDisplay.trim() === ""
+                    ? "Completá el nombre del enlace."
+                    : itemLabelDisplay.length > NAVIGATION_LABEL_MAX_LENGTH
+                      ? `Usá hasta ${NAVIGATION_LABEL_MAX_LENGTH} caracteres.`
+                      : undefined;
+                const children = item.children ?? [];
+                const childrenLimitReached = children.length >= NAVIGATION_CHILDREN_MAX;
+                const childrenContextId = `nav-children-context-${item.id}`;
+                const childrenLimitId = `nav-children-limit-${item.id}`;
                 return (
                   <div className="navigation-editor-item" key={item.id}>
                     <div className="form-grid">
                       <Field
                         label={`Enlace ${index + 1}`}
+                        hint={`${itemLabelDisplay.length}/${NAVIGATION_LABEL_MAX_LENGTH} caracteres`}
                         {...(itemLabelError ? { error: itemLabelError } : {})}
                       >
                         <input
+                          maxLength={NAVIGATION_LABEL_MAX_LENGTH}
                           value={itemLabelDisplay}
                           onChange={(event) =>
                             updateField(
                               itemLabelKey,
                               event.target.value,
-                              (next) => next.trim() !== "",
+                              (next) =>
+                                next.trim() !== "" && next.length <= NAVIGATION_LABEL_MAX_LENGTH,
                               (next) =>
                                 updateNavigation({
                                   items: project.navigation.items.map((current) =>
@@ -643,10 +665,10 @@ export function Overview({
                     </div>
                     <div className="navigation-children">
                       <span className="navigation-children-title">Subenlaces</span>
-                      <span id={`nav-children-context-${item.id}`} className="visually-hidden">
+                      <span id={childrenContextId} className="visually-hidden">
                         Subenlaces de {item.label}
                       </span>
-                      {(item.children ?? []).map((child, childIndex) => {
+                      {children.map((child, childIndex) => {
                         const childHrefDraft =
                           drafts[`nav-${item.id}-${child.id}`] ?? child.href ?? "";
                         const childHrefError = destinationError(childHrefDraft);
@@ -655,21 +677,27 @@ export function Overview({
                         const childLabelError =
                           childLabelDisplay.trim() === ""
                             ? "Completá el nombre del subenlace."
-                            : undefined;
+                            : childLabelDisplay.length > NAVIGATION_LABEL_MAX_LENGTH
+                              ? `Usá hasta ${NAVIGATION_LABEL_MAX_LENGTH} caracteres.`
+                              : undefined;
                         return (
                           <div className="navigation-child-editor" key={child.id}>
                             <Field
                               label={`Subenlace ${childIndex + 1}`}
                               description={`Subenlace ${child.label} de ${item.label}`}
+                              hint={`${childLabelDisplay.length}/${NAVIGATION_LABEL_MAX_LENGTH} caracteres`}
                               {...(childLabelError ? { error: childLabelError } : {})}
                             >
                               <input
+                                maxLength={NAVIGATION_LABEL_MAX_LENGTH}
                                 value={childLabelDisplay}
                                 onChange={(event) =>
                                   updateField(
                                     childLabelKey,
                                     event.target.value,
-                                    (next) => next.trim() !== "",
+                                    (next) =>
+                                      next.trim() !== "" &&
+                                      next.length <= NAVIGATION_LABEL_MAX_LENGTH,
                                     (next) =>
                                       updateNavigationItem(item.id, {
                                         children: (item.children ?? []).map((current) =>
@@ -733,11 +761,12 @@ export function Overview({
                       })}
                       <Button
                         variant="secondary"
-                        aria-describedby={`nav-children-context-${item.id}`}
+                        aria-describedby={`${childrenContextId}${childrenLimitReached ? ` ${childrenLimitId}` : ""}`}
+                        disabled={childrenLimitReached}
                         onClick={() =>
                           updateNavigationItem(item.id, {
                             children: [
-                              ...(item.children ?? []),
+                              ...children,
                               {
                                 id: `nav-${crypto.randomUUID()}`,
                                 label: "Nuevo subenlace",
@@ -751,6 +780,11 @@ export function Overview({
                       >
                         Añadir subenlace
                       </Button>
+                      {childrenLimitReached ? (
+                        <small id={childrenLimitId} className="navigation-limit-hint">
+                          Llegaste al máximo de {NAVIGATION_CHILDREN_MAX} subenlaces.
+                        </small>
+                      ) : null}
                     </div>
                     <IconButton
                       icon={Trash}
@@ -770,6 +804,12 @@ export function Overview({
               })}
               <Button
                 variant="secondary"
+                aria-describedby={
+                  project.navigation.items.length >= NAVIGATION_ITEMS_MAX
+                    ? navigationItemsLimitId
+                    : undefined
+                }
+                disabled={project.navigation.items.length >= NAVIGATION_ITEMS_MAX}
                 onClick={() =>
                   updateNavigation({
                     items: [
@@ -787,6 +827,15 @@ export function Overview({
               >
                 Añadir enlace de catálogo
               </Button>
+              {project.navigation.items.length >= NAVIGATION_ITEMS_MAX ? (
+                <small
+                  id={navigationItemsLimitId}
+                  className="navigation-limit-hint"
+                  data-testid="ui-navigation-items-limit"
+                >
+                  Llegaste al máximo de {NAVIGATION_ITEMS_MAX} enlaces de navegación.
+                </small>
+              ) : null}
             </div>
           </div>
         </AccordionSection>

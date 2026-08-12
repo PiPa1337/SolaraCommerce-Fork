@@ -15,6 +15,9 @@ versión publicada.
 - Los errores de booleanos, arrays JSON, repetidores y slides quedan asociados
   al control o grupo que debe corregirse, se anuncian con `role="alert"` y
   marcan el estado inválido sin cambiar el contrato del schema.
+- La navegación pública respeta en el editor los límites del schema: 40
+  caracteres para el catálogo, 80 por enlace, 20 enlaces y 12 subenlaces;
+  muestra contadores y explica los botones deshabilitados al alcanzar el máximo.
 - Los errores de validación de título, descripción e imagen social en SEO ahora
   permanecen visibles junto al campo inválido, anuncian su relación mediante
   `aria-describedby` y conservan el borrador hasta que el valor se corrige.

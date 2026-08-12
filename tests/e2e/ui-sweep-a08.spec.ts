@@ -434,3 +434,42 @@ test("vacíos de campos obligatorios: error inline en español sin rechazo globa
     })
     .toBe("Tienda B1 A08");
 });
+
+test("los límites de navegación respetan el schema y anuncian los controles deshabilitados", async ({
+  page,
+}) => {
+  await setupCleanStore(page, "Tienda límites nav A08");
+
+  const catalogLabel = page.getByLabel("Nombre del catálogo", { exact: true });
+  await expect(catalogLabel).toHaveAttribute("maxlength", "40");
+  await catalogLabel.fill("C".repeat(40));
+  await expect(catalogLabel).toHaveValue("C".repeat(40));
+  await expect(
+    fieldsetByLegend(
+      page.locator('[data-accordion-id="navigation"]'),
+      "Nombre del catálogo",
+    ).locator("small"),
+  ).toContainText("40/40 caracteres");
+
+  const addLink = page.getByRole("button", { name: "Añadir enlace de catálogo", exact: true });
+  for (let index = 0; index < 20; index += 1) await addLink.click();
+  await expect(navItems(page)).toHaveCount(20);
+  await expect(addLink).toBeDisabled();
+  const itemLimit = page.getByTestId("ui-navigation-items-limit");
+  await expect(itemLimit).toContainText("20 enlaces");
+  const itemLimitId = await itemLimit.getAttribute("id");
+  expect(itemLimitId).toBeTruthy();
+  await expect(addLink).toHaveAttribute("aria-describedby", itemLimitId as string);
+
+  const firstItem = navItems(page).first();
+  const addChild = firstItem.getByRole("button", { name: "Añadir subenlace", exact: true });
+  for (let index = 0; index < 12; index += 1) await addChild.click();
+  await expect(firstItem.locator(".navigation-child-editor")).toHaveCount(12);
+  await expect(addChild).toBeDisabled();
+  const childLimit = firstItem.getByText("Llegaste al máximo de 12 subenlaces.", { exact: true });
+  await expect(childLimit).toBeVisible();
+  await expect(addChild).toHaveAttribute(
+    "aria-describedby",
+    /nav-children-context-.+ nav-children-limit-.+/,
+  );
+});
