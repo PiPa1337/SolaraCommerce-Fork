@@ -18,6 +18,8 @@ versión publicada.
 - Los errores de validación de título, descripción e imagen social en SEO ahora
   permanecen visibles junto al campo inválido, anuncian su relación mediante
   `aria-describedby` y conservan el borrador hasta que el valor se corrige.
+- La Razón social del Resumen conserva el borrador vacío, muestra el error junto
+  al campo y sólo actualiza el proyecto cuando vuelve a ser válida.
 - El barrido del Constructor verifica duplicado con contenido independiente,
   límite de ocho elementos, cancelación segura, foco tras borrar y recuperación
   del error antes de volver a aplicar el cambio.

@@ -198,6 +198,8 @@ export function Overview({
     : phoneInvalid
       ? "Usá entre 8 y 15 dígitos con código de país y área."
       : undefined;
+  const legalNameDisplay = fieldValue("legalName", project.identity.legalName);
+  const legalNameError = legalNameDisplay.trim() === "" ? "Completá la razón social." : undefined;
   const urlDisplay = fieldValue("baseUrl", project.baseUrl);
   const urlError =
     urlDisplay.trim() === ""
@@ -379,11 +381,16 @@ export function Overview({
                 }
               />
             </Field>
-            <Field label="Razón social">
+            <Field label="Razón social" {...(legalNameError ? { error: legalNameError } : {})}>
               <input
-                value={project.identity.legalName}
+                value={legalNameDisplay}
                 onChange={(event) =>
-                  commit({ identity: { ...project.identity, legalName: event.target.value } })
+                  updateField(
+                    "legalName",
+                    event.target.value,
+                    (next) => next.trim() !== "",
+                    (next) => commit({ identity: { ...project.identity, legalName: next } }),
+                  )
                 }
               />
             </Field>

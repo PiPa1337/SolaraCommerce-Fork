@@ -185,6 +185,25 @@ test("nombre y email validan en vivo con errores inline y sólo commitean valore
   await expect(fieldError(page, "Completá el nombre de la tienda.")).toHaveCount(0);
   await expect(nameInput).toHaveValue(VALUES.name);
 
+  // Razón social vacía → el borrador queda visible, el error se asocia al
+  // campo y el proyecto confirmado conserva el valor anterior.
+  const legalNameInput = identityInputs(page).legalName;
+  await legalNameInput.fill("");
+  await expect(legalNameInput).toHaveAttribute("aria-invalid", "true");
+  const legalNameError = fieldError(page, "Completá la razón social.");
+  await expect(legalNameError).toBeVisible();
+  const legalNameDescribedBy = await legalNameInput.getAttribute("aria-describedby");
+  expect(legalNameDescribedBy).toContain(await legalNameError.getAttribute("id"));
+  await expect
+    .poll(async () => readStoredProject(page), { timeout: 15_000 })
+    .toMatchObject({
+      identity: { legalName: ORIGINAL.legalName },
+    });
+
+  await legalNameInput.fill(VALUES.legalName);
+  await expect(legalNameInput).not.toHaveAttribute("aria-invalid", "true");
+  await expect(fieldError(page, "Completá la razón social.")).toHaveCount(0);
+
   // Email inválido → error inline "Ingresá un email válido." y borrador sin commit.
   const emailInput = identityInputs(page).email;
   await emailInput.fill("r1-invalido");
