@@ -24,6 +24,7 @@ import {
   getCategoryAncestors,
   getCategoryBreadcrumb,
   getCategoryProductIds,
+  isCatalogModernPlaceholderAsset,
   StoreProjectV1Schema,
 } from "@solara/project-schema";
 import {
@@ -1956,9 +1957,8 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
   }
 
   if (project.origin?.seed === "clean") {
-    const placeholders = project.assets.filter(
-      (asset) =>
-        asset.name === "Imagen de plantilla" || asset.alt === "Imagen de ejemplo para reemplazar",
+    const placeholders = project.assets.filter((asset) =>
+      isCatalogModernPlaceholderAsset(project, asset),
     );
     if (placeholders.length > 0) {
       issues.push({

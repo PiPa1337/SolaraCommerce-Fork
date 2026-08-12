@@ -10,6 +10,19 @@ versión publicada.
 
 ## [Unreleased]
 
+### Paridad del checklist Preparar y pendientes expandibles (2026-08-11)
+
+- La detección de imágenes de plantilla se comparte entre el modelo guiado y el
+  exporter: corregir sólo el `alt` no oculta un nombre de plantilla que todavía
+  bloquea la publicación.
+- WhatsApp sentinel queda como contenido recomendado porque el exportador lo
+  sanea y no bloquea producción; los campos que el schema exige siguen siendo
+  críticos para no ofrecer un proyecto inválido.
+- El indicador `+N más` de Preparar ahora es un botón accesible que expande y
+  contrae todos los pendientes, con `aria-expanded` y `aria-controls`. Los
+  recorridos PR2 (12/12) y PR8 (2/2) quedaron activos, sin los `fixme` ya
+  resueltos.
+
 ### Tooltips y cobertura responsive (2026-08-11)
 
 - Los tooltips del Studio conservan la burbuja visual, exponen una descripción

@@ -20,14 +20,10 @@
  *   navegación de categorías, producto publicable, páginas editoriales,
  *   sitemap y checkout WhatsApp funcional (wa.me con el teléfono real).
  *
- * Hallazgos de utilidad (fixmes, READ-ONLY — Ola 3):
- * - "0 pendientes" es inalcanzable en una tienda limpia: las categorías sólo
- *   llegan por importación de carpeta y su descripción queda vacía sin
- *   ninguna UI que la edite (`category.{id}.description` sin destino);
- * - un producto agregado a mano no puede asignarse a una categoría sin
- *   importar una carpeta (no existe creación de categorías en el Studio), así
- *   que `product.{id}.category` (severidad critical en la guía) queda
- *   pendiente aunque producción no lo bloquee (severidad ≠ gate real).
+ * Hallazgos de utilidad convertidos en regresiones:
+ * - `category.{id}.description` ya no se presenta como requisito inalcanzable;
+ * - un producto agregado a mano puede quedar sin categoría como contenido
+ *   recomendado, y el checklist expandible permite localizar ese requisito.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import type { Server } from "node:http";
@@ -277,7 +273,7 @@ test("journey: tienda limpia → completar Preparar por destinos → exportar pr
   await createCleanStore(page, STORE_NAME);
   await openPrepararTab(page);
 
-  // (1) Estado inicial honesto de la tienda limpia: 4 de 17 requisitos listos,
+  // (1) Estado inicial honesto de la tienda limpia: 5 de 18 requisitos listos,
   // el único bloqueo real es template.placeholder (crítico del exporter).
   await expect(page.locator(".guided-progress__copy strong")).toHaveText(
     "5 de 18 requisitos listos",
@@ -374,11 +370,10 @@ test("journey: tienda limpia → completar Preparar por destinos → exportar pr
   await page.getByLabel("Texto alternativo").nth(4).blur();
   await pollStoredProject(page, "assets.4.alt", "Taza de cerámica esmaltada a mano.");
 
-  // (9) Preparar al final del journey: todo lo cubrible quedó listo; sólo
-  // quedan las descripciones de categoría (sin editor en el Studio, hallazgo
-  // PR8) y el gate real ya no bloquea producción. 29 activos = 20 base (con
-  // productos y categorías activando home.products/categories.title y el 5to
-  // asset) + 5 del producto + 2 tías; 28 listos, 0 pendientes.
+  // (9) Preparar al final del journey: todos los requisitos cubiertos por el
+  // modelo guiado quedan listos y el gate real ya no bloquea producción. Las
+  // descripciones de categoría no forman parte del checklist porque el Studio
+  // no tiene editor para ese campo. 28 listos, 0 pendientes.
   await openPrepararTab(page);
   await expect(page.locator(".guided-progress__copy strong")).toHaveText(
     "28 de 28 requisitos listos",
@@ -480,46 +475,31 @@ test("journey: tienda limpia → completar Preparar por destinos → exportar pr
   expect(sitemap).toContain("https://tienda-pr8.example/contacto/");
 });
 
-test.fixme(
-  "hallazgo PR8: «0 pendientes» es inalcanzable — category.*.description no tiene editor ni destino en el Studio (falta UI de categorías o requisito conectado a un crítico real)",
-  async ({ page }) => {
-    // Cuando exista un editor de categorías (o el modelo se alinee al gate),
-    // este journey termina con 0 pendientes, 29/29 y el bloque "La base está
-    // lista para revisar" con acceso directo a la exportación.
-    await resetIndexedDb(page);
-    await createCleanStore(page, STORE_NAME);
-    await openPrepararTab(page);
-    await expect(page.getByTestId("ui-guided-ready")).toBeVisible();
-    await expect(page.locator(".guided-progress__copy strong")).toHaveText(
-      "29 de 29 requisitos listos",
-    );
-    await expect(page.getByTestId("ui-guided-progress")).toHaveAttribute("aria-valuenow", "100");
-    await expect(pendingRequirements(page)).toHaveCount(0);
-    await expect(page.locator(".guided-progress__copy > span")).toHaveText(
-      "La tienda puede pasar a revisión de publicación.",
-      { timeout: 20_000 },
-    );
-  },
-);
-
-test.fixme(
-  "hallazgo PR8: un producto agregado a mano no puede asignarse a una categoría (no existe creación de categorías fuera de la importación) y product.{id}.category queda pendiente aunque producción no lo bloquee",
-  async ({ page }) => {
-    await resetIndexedDb(page);
-    await createCleanStore(page, STORE_NAME);
-    await openPrepararTab(page);
-    await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
-    await page.getByRole("button", { name: "Agregar producto" }).first().click();
-    const dialog = page.locator("dialog.product-dialog");
-    await dialog.getByRole("textbox", { name: "Título" }).fill("Taza PR8 manual");
-    await dialog.getByRole("button", { name: "Imágenes", exact: true }).click();
-    await dialog.locator(".product-asset-option").first().click();
-    await dialog.getByRole("button", { name: "Crear producto" }).click();
-    await expect(dialog).toBeHidden();
-    await openPrepararTab(page);
-    const categoryRequirement = page
-      .getByTestId("ui-guided-requirement")
-      .filter({ hasText: "Categoría: Taza PR8 manual" });
-    await expect(categoryRequirement).toHaveAttribute("data-requirement-status", "missing");
-  },
-);
+test("contenido recomendado: un producto agregado a mano puede quedar sin categoría sin bloquear producción", async ({
+  page,
+}) => {
+  await resetIndexedDb(page);
+  await createCleanStore(page, STORE_NAME);
+  await openPrepararTab(page);
+  await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
+  await page.getByRole("button", { name: "Agregar producto" }).first().click();
+  const dialog = page.locator("dialog.product-dialog");
+  await dialog.getByRole("textbox", { name: "Título" }).fill("Taza PR8 manual");
+  await dialog.getByLabel("Estado").selectOption("active");
+  await dialog.getByRole("textbox", { name: "Descripción" }).fill("Taza artesanal de prueba.");
+  await dialog.getByRole("button", { name: "Imágenes", exact: true }).click();
+  await dialog.locator(".product-asset-option").first().click();
+  await dialog.getByRole("spinbutton", { name: "Precio en centavos" }).fill("1000");
+  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await openPrepararTab(page);
+  const showAll = page.getByTestId("ui-guided-show-all");
+  await expect(showAll).toHaveAttribute("aria-expanded", "false");
+  await showAll.click();
+  await expect(showAll).toHaveAttribute("aria-expanded", "true");
+  const categoryRequirement = page
+    .getByTestId("ui-guided-requirement")
+    .filter({ hasText: "Categoría: Taza PR8 manual" });
+  await expect(categoryRequirement).toHaveAttribute("data-requirement-status", "missing");
+});

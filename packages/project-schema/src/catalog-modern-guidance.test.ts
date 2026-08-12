@@ -5,6 +5,7 @@ import {
   catalogModernTemplateManifest,
   evaluateCatalogModernReadiness,
   getCatalogModernContentRequirements,
+  isCatalogModernPlaceholderAsset,
 } from "./catalog-modern-guidance";
 import { buildCatalogModernProject } from "./catalog-modern-template";
 import type { StoreProjectV2 } from "./index";
@@ -69,11 +70,26 @@ describe("Catalog Modern guidance", () => {
       (item) => item.id === "identity.whatsapp",
     );
     expect(whatsapp?.status).toBe("missing");
+    expect(whatsapp?.severity).toBe("recommended");
     const demo = buildCatalogModernProject({ seed: "demo" });
     const demoWhatsapp = evaluateCatalogModernReadiness(demo).requirements.find(
       (item) => item.id === "identity.whatsapp",
     );
     expect(demoWhatsapp?.status).toBe("ready");
+  });
+
+  it("mantiene pendiente una imagen de plantilla aunque solo se corrija su alt", () => {
+    const clean = buildCatalogModernProject({ seed: "clean" });
+    clean.assets.forEach((asset) => {
+      asset.alt = "Texto alternativo real";
+    });
+
+    const assetRequirements = getCatalogModernContentRequirements(clean).filter(
+      (item) => item.scope === "asset",
+    );
+    expect(assetRequirements).toHaveLength(clean.assets.length);
+    expect(assetRequirements.every((item) => item.status === "placeholder")).toBe(true);
+    expect(clean.assets.every((asset) => isCatalogModernPlaceholderAsset(clean, asset))).toBe(true);
   });
 
   it("todo target del checklist existe en el proyecto y coincide con su valor (sin typos de ruta)", () => {

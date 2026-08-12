@@ -8,13 +8,12 @@
  *   Exportar (`auditProjectInWorker` → `auditReport(...).criticalCount`);
  * - datos: los escenarios se construyen sobre el proyecto real autoservado en
  *   IndexedDB (el mismo receptor del payload del editor) mutado y recargado;
- * - utilidad (paridad con el gate real de producción): para cada requisito
- *   del modelo (`catalog-modern-guidance.ts`) se verifica contra
- *   `auditReport(project)` del exporter y contra `exportProject(..., { mode:
- *   "production" })`: si el requisito está pendiente, su crítico equivalente
- *   debe aparecer en la auditoría y la exportación debe fallar; al
- *   completarlo, el crítico debe desaparecer. Requisitos sin crítico real =
- *   dead requirement (fixme); críticos sin requisito = gap del flujo (fixme).
+ * - utilidad (paridad con el gate real de producción): los requisitos críticos
+ *   se verifican contra `auditReport(project)` y contra
+ *   `exportProject(..., { mode: "production" })`. Los requisitos recomendados
+ *   orientan contenido que no bloquea la exportación; no se confunden con un
+ *   crítico del gate. Los casos que antes estaban marcados como deuda se
+ *   convierten en regresiones explícitas cuando el contrato ya está resuelto.
  */
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
@@ -436,235 +435,151 @@ test("paridad tienda limpia: las imágenes de plantilla pendientes bloquean prod
   await expect(page.getByText("La tienda puede pasar a revisión de publicación.")).toBeVisible();
 });
 
-test.fixme(
-  "dead requirement: descripción de marca vacía queda pendiente pero NO bloquea producción (identity.description)",
-  async ({ page }) => {
-    await openDemoStore(page);
-    await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
-      project.identity.description = "";
-    });
-    const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
-    await openPrepararTab(page);
-    await expect(requirement(page, "identity.description")).toHaveAttribute(
-      "data-requirement-status",
-      "missing",
-    );
-    expect(criticalCodes(broken)).toEqual([]);
-    expect(exportOutcome(broken).ok).toBe(true);
-  },
-);
-
-test.fixme(
-  "dead requirement: WhatsApp sentinel (5491100000000) queda pendiente pero NO bloquea producción (identity.whatsapp)",
-  async ({ page }) => {
-    await openDemoStore(page);
-    await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
-      project.whatsapp.phone = "5491100000000";
-    });
-    const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
-    await openPrepararTab(page);
-    await expect(requirement(page, "identity.whatsapp")).toHaveAttribute(
-      "data-requirement-status",
-      "missing",
-    );
-    expect(criticalCodes(broken)).toEqual([]);
-    expect(exportOutcome(broken).ok).toBe(true);
-  },
-);
-
-for (const heroRequirement of ["title", "body", "primary-cta"]) {
-  const requirementId = `home.hero.${heroRequirement}`;
-  const label =
-    heroRequirement === "title"
-      ? "título del hero"
-      : heroRequirement === "body"
-        ? "descripción del hero"
-        : "CTA principal del hero";
-  test.fixme(
-    `dead requirement: ${label} vacío queda pendiente pero NO bloquea producción (${requirementId})`,
-    async ({ page }) => {
-      await openDemoStore(page);
-      await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
-        const hero = project.sections.find((section) => section.id === "modo-section-hero");
-        const settingKey = heroRequirement === "primary-cta" ? "actionLabel" : heroRequirement;
-        if (hero) hero.settings[settingKey] = "";
-      });
-      const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
-      await openPrepararTab(page);
-      await expect(requirement(page, requirementId)).toHaveAttribute(
-        "data-requirement-status",
-        "missing",
-      );
-      expect(criticalCodes(broken)).toEqual([]);
-      expect(exportOutcome(broken).ok).toBe(true);
-    },
+test("contenido recomendado: descripción de marca vacía queda pendiente pero no bloquea producción (identity.description)", async ({
+  page,
+}) => {
+  await openDemoStore(page);
+  await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+    project.identity.description = "";
+  });
+  const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  await openPrepararTab(page);
+  await expect(requirement(page, "identity.description")).toHaveAttribute(
+    "data-requirement-status",
+    "missing",
   );
-}
+  expect(criticalCodes(broken)).toEqual([]);
+  expect(exportOutcome(broken).ok).toBe(true);
+});
 
-test.fixme(
-  "dead requirement: título de la grilla de productos vacío queda pendiente pero NO bloquea producción (home.products.title)",
-  async ({ page }) => {
-    await openDemoStore(page);
-    await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
-      const section = project.sections.find((item) => item.id === "modo-section-new");
-      if (section) section.settings.title = "";
-    });
-    const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
-    await openPrepararTab(page);
-    await expect(requirement(page, "home.products.title")).toHaveAttribute(
+test("contenido recomendado: el WhatsApp sentinel queda pendiente pero no bloquea producción (identity.whatsapp)", async ({
+  page,
+}) => {
+  await openDemoStore(page);
+  await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+    project.whatsapp.phone = "5491100000000";
+  });
+  const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  await openPrepararTab(page);
+  await expect(requirement(page, "identity.whatsapp")).toHaveAttribute(
+    "data-requirement-status",
+    "placeholder",
+  );
+  expect(criticalCodes(broken)).toEqual([]);
+  expect(exportOutcome(broken).ok).toBe(true);
+});
+
+test("contenido recomendado: los textos del hero vacíos quedan pendientes pero no bloquean producción", async ({
+  page,
+}) => {
+  await openDemoStore(page);
+  await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+    const hero = project.sections.find((section) => section.id === "modo-section-hero");
+    if (hero) {
+      hero.settings.title = "";
+      hero.settings.body = "";
+      hero.settings.actionLabel = "";
+    }
+  });
+  const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  await openPrepararTab(page);
+  for (const requirementId of ["home.hero.title", "home.hero.body", "home.hero.primary-cta"]) {
+    await expect(requirement(page, requirementId)).toHaveAttribute(
       "data-requirement-status",
       "missing",
     );
-    expect(criticalCodes(broken)).toEqual([]);
-    expect(exportOutcome(broken).ok).toBe(true);
-  },
-);
+  }
+  expect(criticalCodes(broken)).toEqual([]);
+  expect(exportOutcome(broken).ok).toBe(true);
+});
 
-test.fixme(
-  "dead requirement: campos con respaldo SOLO en el schema (Zod min(1)): con valor en blanco quedan pendientes y la producción pasa (identity.brand-name, navigation.catalog-label, seo.title, seo.description, about.title, contact.title, product.title, category.title)",
-  async ({ page }) => {
-    await openDemoStore(page);
-    const scenarios: Array<{
-      id: string;
-      apply: (project: StoreProjectV1) => void;
-      requirementIdOf: (project: StoreProjectV1) => string;
-    }> = [
-      {
-        id: "identity.brand-name",
-        apply: (project) => {
-          project.identity.brandName = " ";
-        },
-        requirementIdOf: () => "identity.brand-name",
-      },
-      {
-        id: "navigation.catalog-label",
-        apply: (project) => {
-          project.navigation.catalogLabel = " ";
-        },
-        requirementIdOf: () => "navigation.catalog-label",
-      },
-      {
-        id: "seo.title",
-        apply: (project) => {
-          project.seo.title = " ";
-        },
-        requirementIdOf: () => "seo.title",
-      },
-      {
-        id: "seo.description",
-        apply: (project) => {
-          project.seo.description = " ";
-        },
-        requirementIdOf: () => "seo.description",
-      },
-      {
-        id: "about.title",
-        apply: (project) => {
-          const aboutPage = project.pages.find((item) => item.kind === "about");
-          if (aboutPage) aboutPage.title = " ";
-        },
-        requirementIdOf: () => "about.title",
-      },
-      {
-        id: "contact.title",
-        apply: (project) => {
-          const contactPage = project.pages.find((item) => item.kind === "contact");
-          if (contactPage) contactPage.title = " ";
-        },
-        requirementIdOf: () => "contact.title",
-      },
-      {
-        id: "product.title",
-        apply: (project) => {
-          const product = project.products.find((item) => item.status === "active");
-          if (product) product.title = " ";
-        },
-        requirementIdOf: (project) => {
-          const product = project.products.find((item) => item.status === "active");
-          return `product.${product?.id}.title`;
-        },
-      },
-      {
-        id: "category.title",
-        apply: (project) => {
-          if (project.categories[0]) project.categories[0].title = " ";
-        },
-        requirementIdOf: (project) => `category.${project.categories[0]?.id}.title`,
-      },
-    ];
-    for (const scenario of scenarios) {
-      await mutateStoredProject(page, DEMO_PROJECT_ID, scenario.apply);
-      const project = await reloadAndOpen(page, DEMO_PROJECT_ID);
-      await openPrepararTab(page);
-      // Sin crítico real en el auditReport: la producción pasa o sólo falla por
-      // el schema (Zod), nunca por un crítico del gate.
-      expect(criticalCodes(project)).toEqual([]);
-      await expect(requirement(page, scenario.requirementIdOf(project))).toHaveAttribute(
-        "data-requirement-status",
-        "missing",
-      );
-    }
-  },
-);
+test("contenido recomendado: título de la grilla de productos vacío queda pendiente pero no bloquea producción (home.products.title)", async ({
+  page,
+}) => {
+  await openDemoStore(page);
+  await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+    const section = project.sections.find((item) => item.id === "modo-section-new");
+    if (section) section.settings.title = "";
+  });
+  const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  await openPrepararTab(page);
+  await expect(requirement(page, "home.products.title")).toHaveAttribute(
+    "data-requirement-status",
+    "missing",
+  );
+  expect(criticalCodes(broken)).toEqual([]);
+  expect(exportOutcome(broken).ok).toBe(true);
+});
 
-test.fixme(
-  "gap: un dominio sin HTTPS bloquea producción con el crítico domain.https y Preparar no muestra ningún requisito (domain.https)",
-  async ({ page }) => {
-    await openDemoStore(page);
-    await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
-      project.baseUrl = "http://modo-sur.example";
+test("paridad: un dominio sin HTTPS aparece como inválido en Preparar y bloquea producción (domain.https)", async ({
+  page,
+}) => {
+  await openDemoStore(page);
+  await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+    project.baseUrl = "http://modo-sur.example";
+  });
+  const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  await openPrepararTab(page);
+  await expect(page.getByTestId("ui-guided-ready")).toHaveCount(0);
+  await expect(requirement(page, "domain.https")).toHaveAttribute(
+    "data-requirement-status",
+    "invalid",
+  );
+  await expect(requirement(page, "domain.https")).toContainText("Revisar formato");
+  await requirement(page, "domain.https")
+    .getByRole("button", { name: "Editar URL pública con HTTPS" })
+    .click();
+  await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
+  expect(criticalCodes(broken)).toEqual(["domain.https"]);
+  const outcome = exportOutcome(broken);
+  expect(outcome.ok).toBe(false);
+  expect(outcome.message).toContain("HTTPS");
+});
+
+test("contrato: políticas incompletas son una advertencia no bloqueante mientras no exista editor en Studio", async ({
+  page,
+}) => {
+  await openDemoStore(page);
+  await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+    project.policies.shipping.details = "";
+    project.policies.returns.details = "";
+  });
+  const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  await openPrepararTab(page);
+  await expect(page.getByTestId("ui-guided-ready")).toBeVisible();
+  expect(criticalCodes(broken)).toEqual([]);
+  expect(auditReport(broken).issues).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ code: "policies.incomplete", severity: "warning" }),
+    ]),
+  );
+  const outcome = exportOutcome(broken);
+  expect(outcome.ok).toBe(true);
+});
+
+test("paridad: una imagen de plantilla sigue pendiente si solo se corrige su alt (template.placeholder)", async ({
+  page,
+}) => {
+  const storeName = "PR2 Limpia Nombre";
+  await setupCleanStore(page, storeName);
+  const storeKey = await projectIdByName(page, storeName);
+  expect(storeKey).toBeDefined();
+  const cleanStoreKey = storeKey as string;
+  await mutateStoredProject(page, cleanStoreKey, (project) => {
+    project.assets.forEach((asset) => {
+      asset.alt = "Texto alternativo real";
     });
-    const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
-    await openPrepararTab(page);
-    await expect(page.getByTestId("ui-guided-ready")).toBeVisible();
-    expect(criticalCodes(broken)).toEqual(["domain.https"]);
-    const outcome = exportOutcome(broken);
-    expect(outcome.ok).toBe(false);
-    expect(outcome.message).toContain("HTTPS");
-  },
-);
-
-test.fixme(
-  "gap: políticas de envío/devoluciones vacías bloquean producción con el crítico policies.incomplete y Preparar no tiene requisitos de políticas (policies.incomplete)",
-  async ({ page }) => {
-    await openDemoStore(page);
-    await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
-      project.policies.shipping.details = "";
-      project.policies.returns.details = "";
-    });
-    const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
-    await openPrepararTab(page);
-    await expect(page.getByTestId("ui-guided-ready")).toBeVisible();
-    expect(criticalCodes(broken)).toEqual(["policies.incomplete"]);
-    const outcome = exportOutcome(broken);
-    expect(outcome.ok).toBe(false);
-    expect(outcome.message).toContain("políticas de envío y devoluciones");
-  },
-);
-
-test.fixme(
-  "gap: el crítico template.placeholder mira el NOMBRE del asset, el requisito solo su alt; nombre de plantilla con alt listo bloquea producción sin requisito pendiente (asset.*.alt)",
-  async ({ page }) => {
-    const storeName = "PR2 Limpia Nombre";
-    await setupCleanStore(page, storeName);
-    const storeKey = await projectIdByName(page, storeName);
-    expect(storeKey).toBeDefined();
-    const cleanStoreKey = storeKey as string;
-    await mutateStoredProject(page, cleanStoreKey, (project) => {
-      project.assets.forEach((asset) => {
-        asset.alt = "Texto alternativo real";
-      });
-    });
-    const broken = await reloadAndOpen(page, cleanStoreKey);
-    await openPrepararTab(page);
-    await expect(
-      page.locator(
-        '[data-testid="ui-guided-requirement"][data-requirement-id^="asset."][data-requirement-status="placeholder"]',
-      ),
-    ).toHaveCount(0);
-    expect(criticalCodes(broken)).toEqual(["template.placeholder"]);
-    const outcome = exportOutcome(broken);
-    expect(outcome.ok).toBe(false);
-    expect(outcome.message).toContain("imágenes de plantilla");
-  },
-);
+  });
+  const broken = await reloadAndOpen(page, cleanStoreKey);
+  await openPrepararTab(page);
+  await expect(
+    page.locator(
+      '[data-testid="ui-guided-requirement"][data-requirement-id^="asset."][data-requirement-status="placeholder"]',
+    ),
+  ).toHaveCount(3);
+  await expect(page.getByText("+1 más")).toBeVisible();
+  expect(criticalCodes(broken)).toEqual(["template.placeholder"]);
+  const outcome = exportOutcome(broken);
+  expect(outcome.ok).toBe(false);
+  expect(outcome.message).toContain("imágenes de plantilla");
+});

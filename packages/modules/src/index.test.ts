@@ -306,7 +306,7 @@ describe("official module system", () => {
     }
 
     expect(repeater.fields.map((field) => field.key)).not.toContain("example");
-    expect(testimonials.settingsSchema.parse({}).items).toEqual([]);
+    expect(testimonials.settingsSchema.parse({})).toEqual(expect.objectContaining({ items: [] }));
   });
 
   it("omite beneficios de confianza sin datos configurados", () => {

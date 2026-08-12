@@ -286,28 +286,34 @@ la caza (PR1-PR8) y la traza (PT1-PT4) auditaron el flujo guiado
 contra el gate real del export (`auditReport`), con el contrato de 4 capas
 (funcional / auto-feedback / datos / utilidad). Hallazgo central: ~15
 requisitos "críticos" del checklist eran dead requirements (sin crítico real en
-el export) y dos críticos reales que bloquean producción (`domain.https`,
-`policies.incomplete`) no tenían requisito en Preparar. Detalle y evidencia en
+el export) y dos gaps reales del export (`domain.https`,
+`policies.incomplete`) no tenían requisito en Preparar. `domain.https` conserva
+severidad crítica; `policies.incomplete` fue degradado a warning porque no hay
+editor de políticas en el Studio. Detalle y evidencia en
 `.superpowers/sdd/preparar-*.md`; resumen de usuario en el `CHANGELOG.md`.
 
 **Resueltas (commit de referencia):**
 
 | Área | Problema | Fix |
 | --- | --- | --- |
-| Requisitos honestos | Dead requirements: ~15 requisitos con severidad critical sin crítico real detrás (identity.description, hero title/body/CTA, products.title, product.category, asset.alt, y campos con sólo validación zod: brand-name, catalog-label, seo.title/description, about/contact.title, product.title, category.title, identity.email/whatsapp, home.hero.eyebrow, home.categories.title). | Degradados a `recommended` (ya no bloquean el progreso ni mienten el gate); los que tienen destino público siguen listados como orientación. `4d7d94a` |
+| Requisitos honestos | El checklist mezcla bloqueos del export con contenido recomendado. Los textos editoriales, alt, categorías de producto y el sentinel de WhatsApp no bloquean producción; los campos que `StoreProjectV2Schema` exige permanecen críticos porque un proyecto inválido no puede exportarse. | La guía distingue `critical` de `recommended`; el gate visual sigue leyendo `auditReport` y los recorridos PR2 verifican ambos contratos. `4d7d94a` + `2026-08-11` |
 | category.description | Sin editor en el Studio (el destino público existe en el exporter, pero la categoría no tiene UI de alta/edición ni comando en core): el requisito era inalcanzable para siempre (PR8-G1). | Requisito eliminado del modelo guiado; documentado en esta fila como contrato (no hay crítico del export que lo respalde). `4d7d94a` |
 | Gap `domain.https` | `baseUrl` sin HTTPS bloquea producción sin que Preparar lo muestre (una tienda con checklist "listo" no exportaba; PT1 gap P0). | Requisito guiado `domain.https` agregado con destino al Resumen → dominio. `4d7d94a` |
-| Gap `policies.incomplete` | Crítico del export por políticas sin detalles, sin requisito ni editor en el Studio (el crítico era inalcanzable desde la guía). | Degradado a warning en el gate visual: Preparar ya no lo promete como alcanzable (sin editor de políticas, no se crea un requisito muerto). `4d7d94a` |
-| Sentinel WhatsApp | El teléfono de plantilla `5491100000000` se publicaba verbatim en el sitio (wa.me, JSON-LD, ai-context; hallazgo M-3 preexistente y PT2-D3). | El sitio NO emite el número ni los enlaces cuando el teléfono efectivo es el sentinel o vacío: `data-whatsapp`/greeting/include-sku omitidos, JSON-LD cae a `identity.phone` u omite `telephone`, contacto/compra/carrito/detalle sin `wa.me`, `ai-context.json` saneado; el runtime queda intacto (budget 52 KiB sin tocar). `081739e` |
+| Gap `policies.incomplete` | Hallazgo inicialmente crítico del export por políticas sin detalles, sin requisito ni editor en el Studio (el crítico era inalcanzable desde la guía). | Degradado a warning en el gate visual: Preparar ya no lo promete como alcanzable (sin editor de políticas, no se crea un requisito muerto). `4d7d94a` |
+| Sentinel WhatsApp | El teléfono de plantilla `5491100000000` se publicaba verbatim en el sitio (wa.me, JSON-LD, ai-context; hallazgo M-3 preexistente y PT2-D3). | El sitio NO emite el número ni los enlaces cuando el teléfono efectivo es el sentinel o vacío: `data-whatsapp`/greeting/include-sku omitidos, JSON-LD cae a `identity.phone` u omite `telephone`, contacto/compra/carrito/detalle sin `wa.me`, `ai-context.json` saneado; el runtime queda intacto. En la guía es `recommended`, porque el export pasa sin ese teléfono. `081739e` |
 | Upgrade honesto | `planCatalogModernUpgrade` sólo prometía version + section-add; el panel con conflictos era un "ritual vacío" sin salida (PR6). | El upgrade modela el cambio real v1→v2 de `navigation.catalogLabel` ("Colecciones"→"Categorías"); los conflictos se renderizan con label/path/reason (antes sólo el conteo); el panel tiene botón Cerrar. `4d7d94a` |
 | Estado "todo listo" | Una tienda 100 % lista no ofrecía feedback del desglose (decisión previa del barrido A25). | Estado terminal con banner + lista de requisitos listos. `4d7d94a` |
 | Modo avanzado | Sin `aria-pressed` en el botón, sin punto de desbloqueo en el Constructor (el banner era texto muerto, PT4 Q3) y el modo se reseteaba al entrar a Preparar (PT4 Q4, asimetría por camino). | Botón con `aria-pressed`, botón "Desbloquear" en el banner del Constructor y el modo persiste en la sesión entre TODAS las pestañas (PT4 Opción A: se elimina el reset de `selectTab`). `41f2156` |
 | Journey | PR8 (pre-fix) terminaba en 27/29 (93 %) y nunca alcanzaba "0 pendientes" por los dead requirements. | Tras la recalibración del modelo, el journey de tienda limpia completa TODO (28/28, 100 %) y exporta producción viable (0 críticos, sitio completo). `4d7d94a` `e6782c5` |
+| Lista truncada | `Preparar` mostraba sólo doce pendientes y el contador `+N más` no permitía acceder a los requisitos restantes. | El contador es un botón expandible con estados ARIA; PR8 comprueba que un requisito de categoría fuera de la primera página siga siendo localizable y accionable. `2026-08-11` |
+| Paridad de imágenes de plantilla | El exporter bloqueaba por nombre o alt, mientras la guía sólo derivaba `placeholder` desde el valor del alt. | `isCatalogModernPlaceholderAsset` es la única regla compartida entre el modelo y el exporter; la regresión cubre el caso de corregir sólo el alt. `2026-08-11` |
 
-**Paridad:** requisito ↔ crítico real verificada 1:1 con la demo
-(`catalogModernStore`: 297/297 listos, 0 críticos) y la tienda limpia; el gate
-visual usa el `criticalCount` del auditor como única fuente (alineación
-heredada de Resumen, `237fed0`).
+**Paridad:** los requisitos `critical` de la guía se verifican contra el gate de
+producción completo: `auditReport` para bloqueos de auditoría y
+`StoreProjectV2Schema` durante `exportProject` para contratos de datos. Los
+requisitos `recommended` son orientación y no se presentan como bloqueos. La
+demo mantiene 297/297 listos y 0 críticos; la tienda limpia llega a 28/28 tras
+completar su contenido.
 
 **Abiertas (sin fix en esta ola):**
 

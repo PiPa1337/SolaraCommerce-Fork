@@ -85,7 +85,8 @@ export function GuidedOverview({
   );
   const pending = requirements.filter((requirement) => requirement.status !== "ready");
   const ready = requirements.filter((requirement) => requirement.status === "ready");
-  const visiblePending = pending.slice(0, 12);
+  const [showAllPending, setShowAllPending] = useState(false);
+  const visiblePending = showAllPending ? pending : pending.slice(0, 12);
   /** Bloqueos reales de la exportación: el mismo gate que el tab Exportar
    *  (`auditReport(...).criticalCount` en el worker del exportador), no la
    *  severidad interna de la guía. El sentinel de WhatsApp y los placeholders
@@ -257,13 +258,21 @@ export function GuidedOverview({
               <span className="guided-kicker">Siguiente paso</span>
               <h3 id={checklistId}>Completá lo que falta</h3>
             </div>
-            {pending.length > visiblePending.length ? (
-              <span className="guided-checklist__more">
-                +{pending.length - visiblePending.length} más
-              </span>
+            {pending.length > 12 ? (
+              <Button
+                variant="quiet"
+                size="sm"
+                className="guided-checklist__more"
+                data-testid="ui-guided-show-all"
+                aria-controls={`${checklistId}-pending`}
+                aria-expanded={showAllPending}
+                onClick={() => setShowAllPending((current) => !current)}
+              >
+                {showAllPending ? "Mostrar menos" : `+${pending.length - 12} más`}
+              </Button>
             ) : null}
           </div>
-          <ul>
+          <ul id={`${checklistId}-pending`}>
             {visiblePending.map((requirement) => (
               <li
                 key={requirement.id}

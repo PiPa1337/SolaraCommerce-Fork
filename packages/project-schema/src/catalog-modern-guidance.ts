@@ -109,6 +109,17 @@ function isCleanTemplate(project: StoreProjectV2): boolean {
   return project.origin?.templateId === "catalog-modern" && project.origin.seed === "clean";
 }
 
+/** El exporter bloquea las imagenes de plantilla por nombre o por alt. */
+export function isCatalogModernPlaceholderAsset(
+  project: StoreProjectV2,
+  asset: Pick<ImageAsset, "name" | "alt">,
+): boolean {
+  return (
+    isCleanTemplate(project) &&
+    (asset.name === "Imagen de plantilla" || asset.alt === "Imagen de ejemplo para reemplazar")
+  );
+}
+
 function isPlaceholder(value: string, project: StoreProjectV2): boolean {
   if (!isCleanTemplate(project)) return false;
   const normalized = value.trim().toLocaleLowerCase("es-AR");
@@ -166,7 +177,7 @@ function activeCategories(project: StoreProjectV2): Category[] {
 }
 
 function imageRequirement(project: StoreProjectV2, asset: ImageAsset): ContentRequirement {
-  return requirement(project, {
+  const result = requirement(project, {
     id: `asset.${asset.id}.alt`,
     scope: "asset",
     role: "alt",
@@ -176,6 +187,9 @@ function imageRequirement(project: StoreProjectV2, asset: ImageAsset): ContentRe
     severity: "recommended",
     value: asset.alt,
   });
+  return isCatalogModernPlaceholderAsset(project, asset)
+    ? { ...result, status: "placeholder" }
+    : result;
 }
 
 export function getCatalogModernContentRequirements(project: StoreProjectV2): ContentRequirement[] {
@@ -215,7 +229,8 @@ export function getCatalogModernContentRequirements(project: StoreProjectV2): Co
       role: "contact",
       label: "WhatsApp de pedidos",
       target: "whatsapp.phone",
-      severity: "critical",
+      // recommended: el sentinel se sanea en el sitio y el export pasa sin él.
+      severity: "recommended",
       value: catalogModernPhoneValue(project.whatsapp.phone),
     }),
     requirement(project, {

@@ -641,8 +641,10 @@ Cierre del plan
 [`docs/superpowers/plans/2026-08-10-auditoria-preparar.md`](docs/superpowers/plans/2026-08-10-auditoria-preparar.md):
 el flujo guiado se auditó contra el proyecto REAL y contra el gate real de
 producción (`auditReport`). Hallazgo central: ~15 requisitos "críticos" eran
-dead requirements y dos críticos reales que bloquean producción no tenían
-requisito en Preparar. Con los fixes (requisitos honestos, upgrade con cambios
+dead requirements y dos gaps reales del export no tenían requisito en Preparar.
+`domain.https` conserva severidad crítica; `policies.incomplete` fue degradado a
+warning porque no existe editor de políticas en el Studio. Con los fixes
+(requisitos honestos, upgrade con cambios
 reales, modo avanzado accesible y persistente, sentinel WhatsApp nunca
 publicado) el journey de tienda limpia completa TODO (28/28, 100 %) y exporta
 producción viable. Reportes en `.superpowers/sdd/preparar-*.md`; resumen de
@@ -753,3 +755,21 @@ guardado.
 La cobertura afirmativa está en los dos casos A4 de
 `tests/e2e/ui-sweep-a06.spec.ts`; ambos pasan con el scroll del error y el
 indicador visible.
+
+## Paridad y expansión de pendientes en Preparar (2026-08-11)
+
+El checklist ya no oculta de forma permanente los requisitos que superan los
+primeros doce: `+N más` es un botón con `aria-expanded` y `aria-controls` que
+permite recorrer toda la lista y volver a contraerla. Esto mantiene accionables
+los destinos de productos y recursos cuando una tienda tiene muchos pendientes.
+
+La detección de imágenes de plantilla vive en
+`isCatalogModernPlaceholderAsset`, compartida por la guía y el exporter. Tanto
+el nombre `Imagen de plantilla` como el alt sentinel mantienen el requisito en
+estado `placeholder`; así la guía coincide con `template.placeholder` aunque el
+usuario haya corregido sólo uno de los dos campos. El sentinel de WhatsApp es
+recomendado, no bloqueante, porque el exporter no lo publica.
+
+PR2 queda con 12/12 regresiones activas y PR8 con 2/2; el caso que intentaba
+persistir valores rechazados por Zod fue retirado de E2E y permanece cubierto por
+el contrato del schema.
