@@ -554,13 +554,13 @@ test("A14.10 teclado de tabs — flechas con wrap, Home y End mueven foco y sele
   await expect(tablist.locator('[role="tab"][tabindex="0"]')).toHaveCount(1);
 });
 
-// -------------------------------------------------- fixmes del barrido (A14)
-// Regresión de los fixmes A15/A20/A21 en Studio.tsx: el error de guardado
+// -------------------------------------------------- regresiones del barrido (A14)
+// Regresión de A15/A20/A21 en Studio.tsx: el error de guardado
 // anuncia el fallo y Reintentar queda accesible, el error de validación vive
 // en la barra de estado, las rutas fuera de la muestra renderizan su página y
 // el diálogo de conflicto restaura el foco al botón Guardar.
 
-test("A14.11 error de guardado — el indicador anuncia el fallo y Reintentar es accesible (fixme A15)", async ({
+test("A14.11 error de guardado — el indicador anuncia el fallo y Reintentar es accesible (A15)", async ({
   page,
 }) => {
   // Sabotea las escrituras a IndexedDB (sólo la store de proyectos) después
@@ -616,7 +616,7 @@ test("A14.11 error de guardado — el indicador anuncia el fallo y Reintentar es
   await expect(indicator).toHaveClass(/save-indicator--error/, { timeout: 15_000 });
 });
 
-test("A14.12 preview — una ruta válida fuera de la muestra renderiza su página (fixme A20)", async ({
+test("A14.12 preview — una ruta válida fuera de la muestra renderiza su página (A20)", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -644,7 +644,7 @@ test("A14.12 preview — una ruta válida fuera de la muestra renderiza su pági
   );
 });
 
-test("A14.13 guardado gestionado — el error de validación se muestra en la barra de estado (fixme A15)", async ({
+test("A14.13 guardado gestionado — el error de validación se muestra en la barra de estado (A15)", async ({
   page,
 }) => {
   test.setTimeout(240_000);
@@ -678,7 +678,7 @@ test("A14.13 guardado gestionado — el error de validación se muestra en la ba
   }
 });
 
-test("A14.14 conflicto — Escape conserva el borrador y restaura el foco al botón Guardar (fixme A21)", async ({
+test("A14.14 conflicto — Escape conserva el borrador y restaura el foco al botón Guardar (A21)", async ({
   context,
   page,
 }) => {

@@ -8,7 +8,7 @@ import { type RunningStudioServer, startStudioServer, stopStudioServer } from ".
 
 /**
  * Barrido A13 — Diálogos y acciones del dashboard (slice de auditoría;
- * Dashboard.tsx no se edita, los bugs quedan como fixme nombrando a A12).
+ * Dashboard.tsx no se edita; los bugs quedan como regresiones del owner A12.
  *
  * Contrato por control: (1) efecto real, (2) auto-feedback del control,
  * (3) contrato de datos (payload -> receptor).

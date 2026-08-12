@@ -12,7 +12,7 @@
  * wa.me).
  *
  * Los comportamientos interactivos viven en el runtime (A29): si un control
- * falla por comportamiento del runtime se marca `test.fixme` nombrando "A29".
+ * falla por comportamiento del runtime queda cubierto como regresión de A29.
  */
 import { readFileSync } from "node:fs";
 import { createServer } from "node:http";

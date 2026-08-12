@@ -20,7 +20,7 @@
  *  - Ocultar/mostrar sección: feedback de ícono/label + preview.
  *  - Undo/redo de cada operación con feedback del estado del historial.
  *
- * Bugs que requieren cambio en Builder.tsx: `test.fixme` nombrando a A10.
+ * Los cambios de Builder.tsx quedan cubiertos como regresiones del owner A10.
  */
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";

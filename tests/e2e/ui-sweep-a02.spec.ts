@@ -5,7 +5,8 @@
  * (2) auto-feedback del control (contadores, aria-expanded, aria-pressed,
  * checkbox), (3) payload del handler → receptor (`@solara/core`).
  *
- * Bugs que requieren cambio en Catalog.tsx: `test.fixme` nombrando a A1.
+ * Los recorridos que requirieron cambios en Catalog.tsx quedan cubiertos como
+ * regresiones del owner A1.
  */
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";

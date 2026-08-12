@@ -3,8 +3,8 @@
  * El propietario del archivo es A4 (OWNER); este spec NO lo edita: verifica el
  * contrato de 3 capas (efecto real, auto-feedback, datos) para agregar,
  * duplicar, eliminar, opciones, precio/SKU, stock, disponibilidad, reorden y
- * campos secundarios de variante. Los bugs que requieran cambios en
- * ProductEditor.tsx se registran como test.fixme con nombre "A4".
+ * campos secundarios de variante. Los cambios de ProductEditor.tsx quedan
+ * registrados como regresiones del owner A4.
  *
  * Capa de datos: el receptor es el reducer del catálogo (product.create /
  * product.update con changes.variants) y la persistencia Dexie valida el

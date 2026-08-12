@@ -417,7 +417,7 @@ test("totales del carrito anuncian con aria-live", async ({ page }) => {
   await expect(page.locator("[data-cart-count]").first()).toHaveAttribute("aria-live", "polite");
 });
 
-test("drawer: inertea a los hermanos de la página al abrir y los libera al cerrar (fixme A29)", async ({
+test("drawer: inertea a los hermanos de la página al abrir y los libera al cerrar (A29)", async ({
   page,
 }) => {
   await clearCart(page);
@@ -432,7 +432,7 @@ test("drawer: inertea a los hermanos de la página al abrir y los libera al cerr
   await expect(hero).not.toHaveAttribute("inert", "");
 });
 
-test("búsqueda: el término con espacios internos corta por término de 1 carácter (fixme A29)", async ({
+test("búsqueda: el término con espacios internos corta por término de 1 carácter (A29)", async ({
   page,
 }) => {
   await page.goto(storeUrl("/buscar/?q=a%20b"));
@@ -441,7 +441,7 @@ test("búsqueda: el término con espacios internos corta por término de 1 cará
   );
 });
 
-test("categoría: el conteo de resultados anuncia con aria-live al filtrar (fixme A29)", async ({
+test("categoría: el conteo de resultados anuncia con aria-live al filtrar (A29)", async ({
   page,
 }) => {
   await page.goto(storeUrl("/categorias/remeras/"));
@@ -451,7 +451,7 @@ test("categoría: el conteo de resultados anuncia con aria-live al filtrar (fixm
   await expect(count).toContainText("4 de 7 productos");
 });
 
-test("/buscar/ moderno: prefill y teclado van al input visible de la página (fixme A29)", async ({
+test("/buscar/ moderno: prefill y teclado van al input visible de la página (A29)", async ({
   page,
 }) => {
   await page.goto(storeUrl("/buscar/?q=quilted"));

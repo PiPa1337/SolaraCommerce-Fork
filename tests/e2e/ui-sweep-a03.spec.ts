@@ -5,8 +5,8 @@
  * importación/exportación CSV, importación de carpeta con imágenes y
  * diálogos de revisión/confirmación de `features/Catalog.tsx`.
  *
- * Este spec NO modifica la aplicación: cualquier falla que requiera cambios
- * en Catalog.tsx se reporta como `test.fixme` nombrando al OWNER (A1).
+ * Este spec NO modifica la aplicación: las correcciones de Catalog.tsx quedan
+ * verificadas como regresiones del OWNER (A1).
  * El diálogo de reubicación de categorías vive en CategoryTree.tsx (bin A24).
  *
  * El feedback de ocupado (label "Generando"/"Procesando", progress) dura
@@ -15,9 +15,9 @@
  * cadencia que verifica conteo + disabled + texto de progress en una sola
  * evaluación, sin depender de dos aserciones secuenciales.
  *
- * Casos documentados para A1 (fixme): el resumen "No se encontraron" de la
- * revisión de paquete es inalcanzable porque importCatalogCsv rechaza antes
- * cualquier referencia de imagen sin resolver.
+ * Caso documentado para A1: el resumen "No se encontraron" de la revisión de
+ * paquete no se alcanza porque importCatalogCsv rechaza referencias de imagen
+ * sin resolver antes de abrir la revisión.
  */
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import type { Server } from "node:http";

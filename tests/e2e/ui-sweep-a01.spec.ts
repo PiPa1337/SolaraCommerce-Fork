@@ -341,7 +341,7 @@ test.describe("A1 — Catálogo: acciones por fila", () => {
   });
 });
 
-test.describe("A1 — Regresión: fixmes del barrido (A2/A3)", () => {
+test.describe("A1 — Regresión: contratos del barrido (A2/A3)", () => {
   test("el error de ajuste obsoleto (-100%) se limpia tras un ajuste exitoso", async ({ page }) => {
     await openCatalog(page);
     await rows(page).nth(0).getByRole("checkbox").check();

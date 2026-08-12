@@ -527,7 +527,7 @@ test("C10: el checkout del drawer moderno genera el enlace de WhatsApp con el pe
 test("A29: el drawer de carrito abierto inertea a los hermanos de la página (como el menú móvil)", async ({
   page,
 }) => {
-  test.info().annotations.push({ type: "contrato", description: "A27 · fixme A29 · drawer inert" });
+  test.info().annotations.push({ type: "contrato", description: "A27 · A29 · drawer inert" });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(storeUrl(basePort, "/"));
 

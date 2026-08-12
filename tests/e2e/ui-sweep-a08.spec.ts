@@ -7,8 +7,8 @@
  *      estado del teléfono, contadores de SEO y maxLength;
  *  (3) datos: payload del control → receptor (`navigation.items[]`,
  *      `pages[].seoTitle/seoDescription`, `whatsapp.phone`, `baseUrl`).
- * Los bugs que requieren cambio en Overview.tsx van como `test.fixme`
- * nombrando a A7.
+ * Los bugs que requirieron cambio en Overview.tsx quedan cubiertos como
+ * regresiones del owner A7.
  */
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";

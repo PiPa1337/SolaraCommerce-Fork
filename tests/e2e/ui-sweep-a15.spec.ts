@@ -8,7 +8,7 @@
  * → Guardado), botones Deshacer/Rehacer, atajos Ctrl+S/Ctrl+Z/Ctrl+Shift+Z,
  * barra de estado (esquema, persistencia, última exportación), guardado
  * gestionado (botón + atajo + versionado en disco) y Modo avanzado.
- * Los fixmes nombran a A14 (owner de Studio.tsx): estados de error sin
+ * Las regresiones nombran a A14 (owner de Studio.tsx): estados de error sin
  * trigger accesible desde la UI.
  */
 import { type ChildProcess, spawn } from "node:child_process";

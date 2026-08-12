@@ -457,7 +457,7 @@ test("A4 — guardado bloqueado acerca la razón al campo visible", async ({ pag
   await openCatalog(page);
   const dialog = await openCreateDialog(page);
 
-  await dialog.getByRole("textbox", { name: "Título" }).fill("Sweep A06 Fixme");
+  await dialog.getByRole("textbox", { name: "Título" }).fill("Sweep A06");
   await goToStep(dialog, "Variantes");
   await dialog.getByRole("spinbutton", { name: "Precio en centavos" }).fill("-100");
   // Volver a Datos deja el error de precio fuera del área visible del body.

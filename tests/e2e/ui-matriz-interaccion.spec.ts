@@ -9,9 +9,8 @@
  * etapas), Dashboard (crear, duplicar, archivar/restaurar, vista) y
  * SEO/Tema (preset, hex inválido, persistencia).
  *
- * Pendientes por agentes en paralelo: los tres tests de Shell quedan en
- * test.fixme hasta que F2 (Studio.tsx) aterrice; al habilitarlos, el cuerpo
- * ya está escrito y sólo hay que quitar el fixme.
+ * Los tres recorridos de Shell son regresiones afirmativas del comportamiento
+ * que ya entrega Studio.tsx.
  */
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";

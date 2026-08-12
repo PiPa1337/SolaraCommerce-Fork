@@ -1,7 +1,7 @@
 /**
  * Barrido A30 (2026-08-10) — Runtime público: búsqueda, filtros y orden.
  * OWNER de `packages/storefront-runtime/src/search.ts`. `index.ts` (búsqueda)
- * es READ-ONLY de A29: los bugs de allí van como `test.fixme` nombrando "A29".
+ * es READ-ONLY de A29: sus casos quedan cubiertos como regresiones de A29.
  *
  * Se verifica contra el sitio EXPORTADO (production) de `catalogScaleStore`
  * (búsqueda + categoría legacy con paginación) y de `catalogModernStore`
@@ -13,7 +13,7 @@
  * estado vacío visible, foco), (3) contrato de datos (payload de la tarjeta
  * `data-product-*` → handler del runtime; `q` → search-index.json → ranking).
  *
- * Fixmes de A29 (index.ts): guard por término de 1 carácter, aria-live del
+ * Regresiones de A29 (index.ts): guard por término de 1 carácter, aria-live del
  * conteo de categoría y prefill/teclado del input visible en /buscar/ moderno.
  */
 import { readFileSync } from "node:fs";

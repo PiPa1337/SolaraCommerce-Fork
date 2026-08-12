@@ -668,7 +668,7 @@ test("A21.9 el conflicto abre el diálogo con trampa de foco y Conservar/Escape 
     await expect(pageB.getByTestId("ui-conflict-dialog")).toHaveCount(0);
     // El restauro recupera el botón Guardar: el navegador lo desenfocó durante
     // el guardado (disabled) y el shell lo captura por selector como opener
-    // (fixme A14 resuelto; antes el foco caía en body).
+    // (A14 resuelto; antes el foco caía en body).
     await expect(pageB.locator("[data-studio-save]")).toBeFocused();
     const notice = pageB.getByTestId("ui-studio-notice");
     await notice.getByRole("button", { name: "Cerrar aviso", exact: true }).click();
