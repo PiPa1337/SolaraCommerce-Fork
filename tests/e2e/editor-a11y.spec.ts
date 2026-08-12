@@ -252,6 +252,22 @@ test("las referencias ARIA del dashboard y del Studio siempre tienen destino", a
   }
 });
 
+test("los subárboles aria-hidden no dejan controles enfocables", async ({ page }) => {
+  await openDashboard(page);
+  await expectAriaHiddenSubtreesToBeInert(page, "dashboard");
+
+  await openDefaultStore(page);
+  const tabNames = (await page.getByRole("tab").allTextContents())
+    .map((name) => name.trim())
+    .filter(Boolean);
+  for (const tabName of tabNames) {
+    const tab = page.getByRole("tab", { name: tabName, exact: true });
+    await tab.click();
+    await expect(tab).toHaveAttribute("aria-selected", "true");
+    await expectAriaHiddenSubtreesToBeInert(page, `Studio/${tabName}`);
+  }
+});
+
 async function expectAriaReferencesToExist(page: Page, surface: string): Promise<void> {
   const danglingReferences = await page
     .locator(
@@ -279,6 +295,37 @@ async function expectAriaReferencesToExist(page: Page, surface: string): Promise
     );
 
   expect(danglingReferences, `${surface}: referencias ARIA sin destino`).toEqual([]);
+}
+
+async function expectAriaHiddenSubtreesToBeInert(page: Page, surface: string): Promise<void> {
+  const violations = await page.locator("[aria-hidden='true']").evaluateAll((elements) =>
+    elements.flatMap((hidden) => {
+      const focusable = hidden.querySelectorAll<HTMLElement>(
+        'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      const visibleFocusable = Array.from(focusable).filter((element) => {
+        const style = getComputedStyle(element);
+        return (
+          !element.matches(":disabled") &&
+          element.getAttribute("aria-disabled") !== "true" &&
+          element.tabIndex >= 0 &&
+          style.display !== "none" &&
+          style.visibility !== "hidden" &&
+          element.getClientRects().length > 0
+        );
+      });
+      return visibleFocusable.length > 0
+        ? [
+            {
+              hidden: hidden.outerHTML.slice(0, 180),
+              controls: visibleFocusable.map((element) => element.outerHTML.slice(0, 180)),
+            },
+          ]
+        : [];
+    }),
+  );
+
+  expect(violations, `${surface}: aria-hidden contiene controles enfocables`).toEqual([]);
 }
 
 test("el foco visible es distinguible en tarjetas y tabs", async ({ page }) => {

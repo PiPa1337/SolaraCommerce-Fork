@@ -32,6 +32,10 @@ versión publicada.
 - El sweep de accesibilidad valida referencias `aria-labelledby`,
   `aria-describedby`, `aria-controls`, `aria-owns` y `aria-activedescendant` en
   Dashboard y en las ocho pestañas del Studio.
+- Los nuevos gates de accesibilidad verifican que los subárboles `aria-hidden`
+  no dejen controles visibles enfocables y que los campos con ayuda y error
+  conserven ambas referencias. Recursos y guardado administrado anuncian sus
+  operaciones asíncronas con `aria-busy`.
 
 ### Paridad del checklist Preparar y pendientes expandibles (2026-08-11)
 

@@ -168,6 +168,7 @@ export function ManagedPersistenceControls({
         className="save-button"
         data-studio-save
         disabled={!dirty || state === "saving" || blocked}
+        aria-busy={state === "saving"}
         onClick={() => void save()}
       >
         <FloppyDisk aria-hidden size={16} />

@@ -348,6 +348,10 @@ test("el formulario de Resumen valida con errores inline y aria-describedby (T6.
   await expect(urlField.getByTestId("ui-field-error")).toContainText(
     "Ingresá una URL válida con http(s).",
   );
+  const urlDescribedBy = (await url.getAttribute("aria-describedby"))?.trim().split(/\s+/) ?? [];
+  expect(urlDescribedBy, "la URL conserva ayuda y error en aria-describedby").toHaveLength(2);
+  await expect(page.locator(`#${urlDescribedBy[0]}`)).toContainText("canonical y feeds");
+  await expect(page.locator(`#${urlDescribedBy[1]}`)).toContainText("http(s)");
   await url.fill(originalUrl);
   await expect(urlField.getByTestId("ui-field-error")).toHaveCount(0);
 });

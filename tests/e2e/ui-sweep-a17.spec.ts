@@ -263,8 +263,42 @@ test("el dropzone comunica el estado activo y permite limpiar la caché regenera
 
   const clearCache = page.getByRole("button", { name: "Limpiar caché regenerable", exact: true });
   await expect(clearCache).toBeVisible();
+  await page.evaluate(() => {
+    const button = [...document.querySelectorAll("button")].find(
+      (element) => element.textContent?.trim() === "Limpiar caché regenerable",
+    );
+    if (!button) throw new Error("No se encontró el botón de caché regenerable.");
+    const transitions: string[] = [];
+    const record = () => transitions.push(button.getAttribute("aria-busy") ?? "missing");
+    record();
+    const observer = new MutationObserver(record);
+    observer.observe(button, {
+      attributes: true,
+      attributeFilter: ["aria-busy"],
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+    (window as unknown as { __assetCacheBusyTransitions?: string[] }).__assetCacheBusyTransitions =
+      transitions;
+    (
+      window as unknown as { __assetCacheBusyObserver?: MutationObserver }
+    ).__assetCacheBusyObserver = observer;
+  });
   await clearCache.click();
   await expect(page.getByTestId("ui-asset-cache-status")).toHaveText("Caché regenerable limpiada.");
+  await expect(clearCache).toHaveAttribute("aria-busy", "false");
+  await expect(clearCache).toBeEnabled();
+  const transitions = await page.evaluate(() => {
+    const state = window as unknown as {
+      __assetCacheBusyTransitions?: string[];
+      __assetCacheBusyObserver?: MutationObserver;
+    };
+    state.__assetCacheBusyObserver?.disconnect();
+    return state.__assetCacheBusyTransitions ?? [];
+  });
+  expect(transitions, "la limpieza anuncia su estado ocupado").toContain("true");
+  expect(transitions.at(-1), "la limpieza vuelve a estar disponible").toBe("false");
 });
 
 test("el detalle muestra usos coherentes con las referencias del proyecto", async ({ page }) => {

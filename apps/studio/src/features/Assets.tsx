@@ -579,7 +579,12 @@ export function Assets({
             El almacenamiento local está al {Math.round(storage.ratio * 100)} % (
             {bytesToSize(storage.usage)} de {bytesToSize(storage.quota)}). Exportá un respaldo y
             limpiá recursos no usados si llega al 90 %.
-            <button type="button" disabled={cacheBusy} onClick={clearRegenerableCache}>
+            <button
+              type="button"
+              disabled={cacheBusy}
+              aria-busy={cacheBusy}
+              onClick={clearRegenerableCache}
+            >
               {cacheBusy ? "Limpiando…" : "Limpiar caché regenerable"}
             </button>
           </output>

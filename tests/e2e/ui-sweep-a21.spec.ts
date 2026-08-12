@@ -572,6 +572,7 @@ test("A21.8 el indicador managed anuncia pendientes, Guardando… y Guardado, y 
     await expect(indicator).toHaveAttribute("aria-live", "polite");
     await expect(indicator).toContainText("Guardado");
     await expect(saveButton).toBeDisabled();
+    await expect(saveButton).toHaveAttribute("aria-busy", "false");
 
     await page.getByRole("tab", { name: "Resumen", exact: true }).click();
     const nameInput = page.getByLabel("Nombre de la tienda");
@@ -582,16 +583,45 @@ test("A21.8 el indicador managed anuncia pendientes, Guardando… y Guardado, y 
     await expect(indicator).toContainText("Cambios pendientes");
     await expect(indicator).toHaveClass(/save-indicator--saved/);
 
+    await page.evaluate(() => {
+      const button = document.querySelector<HTMLButtonElement>("[data-studio-save]");
+      if (!button) throw new Error("No se encontró el botón de guardado.");
+      const transitions: string[] = [];
+      const record = () => transitions.push(button.getAttribute("aria-busy") ?? "missing");
+      record();
+      const observer = new MutationObserver(record);
+      observer.observe(button, { attributes: true, attributeFilter: ["aria-busy"] });
+      (
+        window as unknown as { __managedSaveBusyTransitions?: string[] }
+      ).__managedSaveBusyTransitions = transitions;
+      (
+        window as unknown as { __managedSaveBusyObserver?: MutationObserver }
+      ).__managedSaveBusyObserver = observer;
+    });
     await page.keyboard.press("Control+s");
     await expect(indicator).toContainText("Guardado", { timeout: 90_000 });
     await expect(indicator).not.toContainText("Cambios pendientes");
     await expect(saveButton).toBeDisabled();
+    await expect(saveButton).toHaveAttribute("aria-busy", "false");
+    const saveTransitions = await page.evaluate(() => {
+      const state = window as unknown as {
+        __managedSaveBusyTransitions?: string[];
+        __managedSaveBusyObserver?: MutationObserver;
+      };
+      state.__managedSaveBusyObserver?.disconnect();
+      return state.__managedSaveBusyTransitions ?? [];
+    });
+    expect(saveTransitions, "el guardado administrado anuncia su estado ocupado").toContain("true");
+    expect(saveTransitions.at(-1), "el guardado administrado vuelve a estar disponible").toBe(
+      "false",
+    );
 
     await nameInput.fill("Edición A21 botón");
     await expect(indicator).toContainText("Cambios pendientes");
     await saveButton.click();
     await expect(indicator).toContainText("Guardado", { timeout: 90_000 });
     await expect(saveButton).toBeDisabled();
+    await expect(saveButton).toHaveAttribute("aria-busy", "false");
     await expect(page.getByTestId("ui-status-bar")).toContainText("Persistencia: Disco");
   } finally {
     await stopManagedServer(managed);
