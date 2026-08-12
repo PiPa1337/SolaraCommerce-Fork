@@ -25,6 +25,8 @@ versión publicada.
 - La reubicación de categorías conserva la selección al cancelar, devuelve el
   foco al control disparador y expone el cuerpo de confirmación de forma
   accesible.
+- El diálogo de conflicto de persistencia enlaza su explicación dinámica con
+  `aria-describedby` para anunciar el contexto antes de sus acciones.
 - Los errores de booleanos, arrays JSON, repetidores y slides quedan asociados
   al control o grupo que debe corregirse, se anuncian con `role="alert"` y
   marcan el estado inválido sin cambiar el contrato del schema.

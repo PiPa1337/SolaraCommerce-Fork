@@ -261,6 +261,7 @@ export function Studio({
   // está visible; se guarda igual porque se vuelve enfocable al cerrar.
   const conflictDialogRef = useRef<HTMLDivElement>(null);
   const conflictOpenerRef = useRef<HTMLElement | null>(null);
+  const conflictDescriptionId = useId();
   useEffect(() => {
     if (!conflict) return;
     const active = document.activeElement;
@@ -1056,12 +1057,13 @@ export function Studio({
           role="dialog"
           aria-modal="true"
           aria-labelledby={conflictTitleId}
+          aria-describedby={conflictDescriptionId}
           data-testid="ui-conflict-dialog"
           onKeyDown={trapConflictFocus}
         >
           <div className="conflict-dialog" ref={conflictDialogRef} tabIndex={-1}>
             <h3 id={conflictTitleId}>La tienda cambió en otra pestaña</h3>
-            <p>
+            <p id={conflictDescriptionId}>
               {conflict.message} Tu borrador quedó guardado en este navegador. Elegí cómo seguir:
             </p>
             <div className="conflict-dialog__options">

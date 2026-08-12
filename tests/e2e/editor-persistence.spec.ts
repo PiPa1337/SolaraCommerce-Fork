@@ -309,6 +309,9 @@ test("el diálogo de conflicto 409 es modal, con nombre y opciones accesibles (T
     await expect(
       dialog.getByRole("heading", { name: "La tienda cambió en otra pestaña" }),
     ).toBeVisible();
+    const describedBy = await dialog.getAttribute("aria-describedby");
+    expect(describedBy, "el dialogo referencia su explicacion por id").not.toBeNull();
+    await expect(dialog.locator("p")).toHaveId(describedBy ?? "missing-description");
     await expect(dialog.getByRole("button", { name: "Conservar borrador" })).toBeVisible();
     await expect(dialog.getByRole("button", { name: "Recargar desde disco" })).toBeVisible();
     await expect(dialog.getByRole("button", { name: "Duplicar con mi borrador" })).toBeVisible();
