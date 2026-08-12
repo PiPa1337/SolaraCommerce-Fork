@@ -116,6 +116,7 @@ export function ExportPanel({
     readExportHistory(project.slug),
   );
   const [postDone, setPostDone] = useState<Set<string>>(new Set());
+  const [siteOpening, setSiteOpening] = useState(false);
 
   /* biome-ignore lint/correctness/useExhaustiveDependencies: auditAttempt es la clave de reintento de la auditoría tras un fallo. */
   useEffect(() => {
@@ -235,6 +236,19 @@ export function ExportPanel({
     });
   };
 
+  const openSite = async () => {
+    if (!onOpenSite || siteOpening) return;
+    setSiteOpening(true);
+    setError("");
+    try {
+      await onOpenSite(project.id);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "No se pudo abrir el sitio.");
+    } finally {
+      setSiteOpening(false);
+    }
+  };
+
   const navigateToSeo = () => {
     onNavigate("seo");
     requestAnimationFrame(() => {
@@ -253,9 +267,11 @@ export function ExportPanel({
           size="sm"
           icon={ArrowUpRight}
           data-testid="ui-export-open-site"
-          onClick={() => void onOpenSite(project.id)}
+          aria-busy={siteOpening}
+          disabled={siteOpening}
+          onClick={() => void openSite()}
         >
-          Abrir sitio
+          {siteOpening ? "Abriendo sitio" : "Abrir sitio"}
         </Button>
       ) : null,
     },

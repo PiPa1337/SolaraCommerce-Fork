@@ -28,8 +28,9 @@ import { createCleanStore } from "./project-helpers";
  *     checklist, estados del indicador managed: pendiente/guardando/guardado/
  *     error, foco de la trampa del diálogo de conflicto);
  * (3) contrato de datos (página home -> homepageSeoPreview; socialImageId ->
- *     preview OG; expectedVersion -> VERSION_CONFLICT -> onConflict; recargar
- *     desde disco -> proyecto del disco; duplicar -> tienda «copia»).
+ *     preview OG; expectedVersion -> VERSION_CONFLICT -> onConflict; abrir
+ *     sitio -> endpoint managed; recargar desde disco -> proyecto del disco;
+ *     duplicar -> tienda «copia»).
  *
  * El servidor de Studio sirve una SNAPSHOT de apps/studio/dist: otros agentes
  * del barrido reconstruyen dist en paralelo y un build a mitad de carrera
@@ -623,6 +624,68 @@ test("A21.8 el indicador managed anuncia pendientes, Guardando… y Guardado, y 
     await expect(saveButton).toBeDisabled();
     await expect(saveButton).toHaveAttribute("aria-busy", "false");
     await expect(page.getByTestId("ui-status-bar")).toContainText("Persistencia: Disco");
+  } finally {
+    await stopManagedServer(managed);
+  }
+});
+
+test("A21.8b Exportar anuncia y bloquea Abrir sitio mientras resuelve el host managed", async ({
+  page,
+}) => {
+  test.setTimeout(300_000);
+  const managed = await startManagedServer(studioServer.root);
+  try {
+    await page.goto(managed.url);
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+      timeout: 120_000,
+    });
+    await page
+      .locator(`article:has([data-store-card-id="${DEMO_STORE_ID}"])`)
+      .getByRole("button", { name: "Abrir esta tienda" })
+      .click();
+    await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
+      timeout: 120_000,
+    });
+    await page.getByRole("tab", { name: "Exportar", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Exportar", exact: true })).toBeVisible();
+
+    await page.getByTestId("ui-export-draft").click();
+    await expect(page.getByTestId("ui-export-result")).toContainText("Exportación correcta", {
+      timeout: 90_000,
+    });
+
+    const openSite = page.getByTestId("ui-export-open-site");
+    await expect(openSite).toBeEnabled();
+    await expect(openSite).toHaveAttribute("aria-busy", "false");
+    await page.evaluate(() => {
+      const button = document.querySelector<HTMLElement>('[data-testid="ui-export-open-site"]');
+      if (!button) throw new Error("No se encontró Abrir sitio en Exportar.");
+      const transitions: string[] = [];
+      const record = () => transitions.push(button.getAttribute("aria-busy") ?? "missing");
+      record();
+      const observer = new MutationObserver(record);
+      observer.observe(button, { attributes: true, attributeFilter: ["aria-busy"] });
+      (window as unknown as { __exportOpenBusy?: string[] }).__exportOpenBusy = transitions;
+      (window as unknown as { __exportOpenObserver?: MutationObserver }).__exportOpenObserver =
+        observer;
+    });
+
+    const popupPromise = page.waitForEvent("popup");
+    await openSite.click();
+    const popup = await popupPromise;
+    await expect(openSite).toBeEnabled({ timeout: 30_000 });
+    await expect(openSite).toHaveAttribute("aria-busy", "false");
+    const transitions = await page.evaluate(() => {
+      const state = window as unknown as {
+        __exportOpenBusy?: string[];
+        __exportOpenObserver?: MutationObserver;
+      };
+      state.__exportOpenObserver?.disconnect();
+      return state.__exportOpenBusy ?? [];
+    });
+    expect(transitions).toContain("true");
+    expect(transitions.at(-1)).toBe("false");
+    await popup.close();
   } finally {
     await stopManagedServer(managed);
   }

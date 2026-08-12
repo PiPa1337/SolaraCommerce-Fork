@@ -16,6 +16,12 @@ versión publicada.
   preferencia previa; una elección clara u oscura guardada sigue teniendo
   prioridad desde la primera pintura y después de recargar.
 
+### Feedback al abrir el sitio exportado (2026-08-12)
+
+- El botón `Abrir sitio` de Exportar anuncia `aria-busy`, cambia su etiqueta y
+  se bloquea mientras espera al host local, evitando aperturas duplicadas y
+  mostrando un error recuperable si la operación falla.
+
 ### Panel de edición sin desplazamiento lateral (2026-08-12)
 
 - El panel de edición usa un ancho máximo común de 1200 px en todas las
