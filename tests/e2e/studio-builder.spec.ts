@@ -38,6 +38,16 @@ async function openBuilder(page: Page) {
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
 }
 
+async function confirmSectionDeletion(page: Page, section: Locator) {
+  await section.getByRole("button", { name: "Eliminar sección" }).click();
+  const dialog = page.getByTestId("ui-confirm-dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAttribute("aria-describedby", /.+/);
+  await expect(dialog.locator(".confirm-dialog__body")).toContainText("deshacerlo");
+  await dialog.getByRole("button", { name: "Eliminar sección", exact: true }).click();
+  await expect(dialog).toBeHidden();
+}
+
 test("edita el hero moderno, actualiza el preview y persiste tras recargar", async ({ page }) => {
   await openBuilder(page);
   const hero = page.getByRole("listitem").filter({ hasText: "Hero de catálogo" });
@@ -140,7 +150,15 @@ test("agrega, ordena, duplica, oculta, deshace y elimina secciones modernas", as
     initialBrandCount + 2,
   );
   const duplicate = sections.getByRole("listitem").filter({ hasText: "Franja de marcas" }).last();
-  await duplicate.getByRole("button", { name: "Eliminar sección" }).click();
+  const duplicateDelete = duplicate.getByRole("button", { name: "Eliminar sección" });
+  await duplicateDelete.click();
+  const confirmation = page.getByTestId("ui-confirm-dialog");
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation.locator(".confirm-dialog__body")).toContainText("Franja de marcas");
+  await confirmation.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(confirmation).toBeHidden();
+  await expect(duplicateDelete).toBeFocused();
+  await confirmSectionDeletion(page, duplicate);
   await expect(sections.getByRole("listitem").filter({ hasText: "Franja de marcas" })).toHaveCount(
     initialBrandCount + 1,
   );
@@ -159,11 +177,9 @@ test("agrega, ordena, duplica, oculta, deshace y elimina secciones modernas", as
     page.frameLocator("iframe").locator('[data-solara-module="catalog-hero"]'),
   ).toHaveCount(0, { timeout: 15_000 });
 
-  await sections
-    .getByRole("listitem")
-    .filter({ hasText: "Franja de marcas" })
-    .last()
-    .getByRole("button", { name: "Eliminar sección" })
-    .click();
+  await confirmSectionDeletion(
+    page,
+    sections.getByRole("listitem").filter({ hasText: "Franja de marcas" }).last(),
+  );
   await expect(sections.getByRole("listitem")).toHaveCount(initialCount);
 });

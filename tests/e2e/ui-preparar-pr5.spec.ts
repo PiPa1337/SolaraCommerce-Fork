@@ -317,11 +317,19 @@ test("utilidad: el modo avanzado habilita toda la matriz que la protección bloq
     .last()
     .getByRole("button", { name: "Eliminar sección" })
     .click();
+  await page
+    .getByTestId("ui-confirm-dialog")
+    .getByRole("button", { name: "Eliminar sección", exact: true })
+    .click();
   expect(await sectionModuleNames(page)).toHaveLength(CLEAN_SECTION_COUNT + 1);
   await page
     .locator(".section-row")
     .nth(4)
     .getByRole("button", { name: "Eliminar sección" })
+    .click();
+  await page
+    .getByTestId("ui-confirm-dialog")
+    .getByRole("button", { name: "Eliminar sección", exact: true })
     .click();
   expect(await sectionModuleNames(page)).toHaveLength(CLEAN_SECTION_COUNT);
   await heroRow(page).locator(".section-select").click();

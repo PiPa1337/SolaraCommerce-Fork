@@ -24,6 +24,21 @@ import { Button, Field, IconButton, SectionHeader } from "../components/Ui";
 
 const PHONE_PATTERN = /^\d{8,15}$/;
 
+type PendingNavigationDelete =
+  | {
+      kind: "item";
+      itemId: string;
+      label: string;
+      childCount: number;
+    }
+  | {
+      kind: "child";
+      itemId: string;
+      childId: string;
+      label: string;
+      parentLabel: string;
+    };
+
 /** Clave de localStorage del estado plegado del Resumen (R8-B1): por tienda,
  *  con el mismo patrón que el pane del editor en Studio.tsx. */
 const COLLAPSED_SECTIONS_KEY = "solara-resumen-collapsed";
@@ -144,7 +159,7 @@ export function Overview({
   project: StoreProjectV1;
   onChange(project: StoreProjectV1): void;
 }) {
-  const [pendingNavDelete, setPendingNavDelete] = useState<string | null>(null);
+  const [pendingNavDelete, setPendingNavDelete] = useState<PendingNavigationDelete | null>(null);
   const [collapsedSections, setCollapsedSections] = useState<ReadonlySet<string>>(() =>
     readCollapsedSections(project.id),
   );
@@ -157,9 +172,6 @@ export function Overview({
    *  debe ser destruido por un commit de otro campo. */
   const lastCommittedFieldRef = useRef<string | null>(null);
   const { success } = useToast();
-  const pendingNavItem = pendingNavDelete
-    ? project.navigation.items.find((item) => item.id === pendingNavDelete)
-    : undefined;
 
   /** Valor visible de un campo validado: el borrador local prima sobre el proyecto. */
   const fieldValue = (key: string, projectValue: string) => fieldDrafts[key] ?? projectValue;
@@ -257,6 +269,23 @@ export function Overview({
         item.id === itemId ? { ...item, ...patch } : item,
       ),
     });
+  const confirmNavigationDelete = () => {
+    if (!pendingNavDelete) return;
+    if (pendingNavDelete.kind === "item") {
+      deleteNavItem(pendingNavDelete.itemId);
+    } else {
+      const parent = project.navigation.items.find((item) => item.id === pendingNavDelete.itemId);
+      if (parent) {
+        updateNavigationItem(parent.id, {
+          children: (parent.children ?? []).filter(
+            (child) => child.id !== pendingNavDelete.childId,
+          ),
+        });
+        success("Subenlace de navegación eliminado");
+      }
+    }
+    setPendingNavDelete(null);
+  };
   const moveNavigationItem = (itemId: string, delta: -1 | 1) => {
     const index = project.navigation.items.findIndex((item) => item.id === itemId);
     const target = index + delta;
@@ -683,10 +712,12 @@ export function Overview({
                               label={`Eliminar subenlace ${child.label}`}
                               tooltip="Eliminar subenlace"
                               onClick={() =>
-                                updateNavigationItem(item.id, {
-                                  children: (item.children ?? []).filter(
-                                    (current) => current.id !== child.id,
-                                  ),
+                                setPendingNavDelete({
+                                  kind: "child",
+                                  itemId: item.id,
+                                  childId: child.id,
+                                  label: child.label,
+                                  parentLabel: item.label,
                                 })
                               }
                             />
@@ -718,10 +749,14 @@ export function Overview({
                       icon={Trash}
                       label={`Eliminar enlace ${item.label}`}
                       tooltip="Eliminar enlace"
-                      onClick={() => {
-                        if ((item.children?.length ?? 0) > 0) setPendingNavDelete(item.id);
-                        else deleteNavItem(item.id);
-                      }}
+                      onClick={() =>
+                        setPendingNavDelete({
+                          kind: "item",
+                          itemId: item.id,
+                          label: item.label,
+                          childCount: item.children?.length ?? 0,
+                        })
+                      }
                     />
                   </div>
                 );
@@ -842,22 +877,32 @@ export function Overview({
           Los cambios se guardan automáticamente en tu máquina.
         </span>
       </div>
-      {pendingNavItem ? (
+      {pendingNavDelete ? (
         <ConfirmDialog
-          title="Eliminar enlace de navegación"
-          body={
-            <>
-              Se eliminará «{pendingNavItem.label}» junto con sus{" "}
-              {pendingNavItem.children?.length ?? 0} subenlace(s). Podés deshacerlo desde la barra
-              del editor.
-            </>
+          title={
+            pendingNavDelete.kind === "item"
+              ? "Eliminar enlace de navegación"
+              : "Eliminar subenlace de navegación"
           }
-          confirmLabel="Eliminar enlace"
+          body={
+            pendingNavDelete.kind === "item" ? (
+              <>
+                Se eliminará «{pendingNavDelete.label}».
+                {pendingNavDelete.childCount > 0
+                  ? ` También se eliminarán ${pendingNavDelete.childCount} subenlace(s).`
+                  : " No tiene subenlaces."}{" "}
+                Podés deshacerlo desde la barra del editor.
+              </>
+            ) : (
+              <>
+                Se eliminará el subenlace «{pendingNavDelete.label}» de «
+                {pendingNavDelete.parentLabel}». Podés deshacerlo desde la barra del editor.
+              </>
+            )
+          }
+          confirmLabel={pendingNavDelete.kind === "item" ? "Eliminar enlace" : "Eliminar subenlace"}
           danger
-          onConfirm={() => {
-            deleteNavItem(pendingNavItem.id);
-            setPendingNavDelete(null);
-          }}
+          onConfirm={confirmNavigationDelete}
           onCancel={() => setPendingNavDelete(null)}
         />
       ) : null}

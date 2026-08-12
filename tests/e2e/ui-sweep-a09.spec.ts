@@ -482,9 +482,14 @@ test("subenlaces: alta, edición, reorden con límites y borrado directo (capa 1
     "Colección de verano",
   );
 
-  // Borrado directo (sin diálogo): los subenlaces no tienen hijos.
+  // El borrado del subenlace confirma el destino y conserva el foco.
   await secondChild.getByRole("button", { name: "Eliminar subenlace Nuevo subenlace" }).click();
-  await expect(page.getByTestId("ui-confirm-dialog")).toHaveCount(0);
+  const childDeleteDialog = page.getByRole("dialog", {
+    name: "Eliminar subenlace de navegación",
+  });
+  await expect(childDeleteDialog).toBeVisible();
+  await expect(childDeleteDialog.locator(".confirm-dialog__body")).toContainText("Nuevo subenlace");
+  await childDeleteDialog.getByRole("button", { name: "Eliminar subenlace", exact: true }).click();
   await expect(item.locator(".navigation-child-editor")).toHaveCount(1);
 
   // Capa 3: el subenlace commiteado llegó al proyecto autoservado.

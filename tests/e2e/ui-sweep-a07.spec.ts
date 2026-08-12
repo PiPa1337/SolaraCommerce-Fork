@@ -387,12 +387,17 @@ test("el editor de navegación valida destinos, reordena y borra con confirmaci�
     page.locator(".navigation-editor-item").nth(1).getByLabel("Destino", { exact: true }),
   ).toHaveValue("https://ejemplo.com/tienda");
 
-  // Borrar un ítem sin subenlaces es directo (sin diálogo).
+  // Borrar un ítem sin subenlaces también confirma el impacto.
   const itemWithoutChildren = page.locator(".navigation-editor-item").nth(0);
   await itemWithoutChildren
     .getByRole("button", { name: "Eliminar enlace Nueva categoría" })
     .click();
-  await expect(page.getByTestId("ui-confirm-dialog")).toHaveCount(0);
+  const directDeleteDialog = page.getByTestId("ui-confirm-dialog");
+  await expect(directDeleteDialog).toBeVisible();
+  await expect(directDeleteDialog.locator(".confirm-dialog__body")).toContainText(
+    "No tiene subenlaces",
+  );
+  await directDeleteDialog.getByRole("button", { name: "Eliminar enlace", exact: true }).click();
   await expect(page.locator(".navigation-editor-item")).toHaveCount(1);
 
   // Con subenlaces pide confirmación: cancelar conserva, aceptar elimina.

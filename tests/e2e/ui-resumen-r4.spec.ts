@@ -301,7 +301,7 @@ test("eliminar un enlace: directo sin subenlaces, confirmación con subenlaces y
   }
   const beforeCount = before.navigation.items.length;
 
-  // 1) Enlace sin subenlaces: se elimina directo (sin diálogo) con toast.
+  // 1) Enlace sin subenlaces: confirma el impacto y muestra toast.
   await page.getByRole("button", { name: "Añadir enlace de catálogo", exact: true }).click();
   const newItem = lastItem(page);
   await newItem.getByLabel(`Enlace ${beforeCount + 1}`, { exact: true }).fill("Enlace R4");
@@ -310,6 +310,8 @@ test("eliminar un enlace: directo sin subenlaces, confirmación con subenlaces y
     project.navigation.items.some((item) => item.label === "Enlace R4"),
   );
   await page.getByRole("button", { name: "Eliminar enlace Enlace R4", exact: true }).click();
+  await expect(page.getByTestId("ui-confirm-dialog")).toBeVisible();
+  await page.getByRole("button", { name: "Eliminar enlace", exact: true }).click();
   await expect(page.getByTestId("ui-toast").last()).toContainText("Enlace de navegación eliminado");
   await expect(navigationItems(page)).toHaveCount(beforeCount);
 

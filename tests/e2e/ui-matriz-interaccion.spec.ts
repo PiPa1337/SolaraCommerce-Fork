@@ -167,6 +167,11 @@ test.describe("Builder", () => {
       .nth(1)
       .getByRole("button", { name: "Eliminar sección" })
       .click();
+    await expect(page.getByTestId("ui-confirm-dialog")).toBeVisible();
+    await page
+      .getByTestId("ui-confirm-dialog")
+      .getByRole("button", { name: "Eliminar sección", exact: true })
+      .click();
     await expect(sections.getByRole("listitem")).toHaveCount(countAfterAdd);
 
     // Deshacer: la copia vuelve.

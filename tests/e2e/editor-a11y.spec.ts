@@ -563,6 +563,9 @@ test("el ConfirmDialog de eliminar enlace enfoca, atrapa el foco, cancela con Es
   const dialog = page.getByRole("dialog", { name: "Eliminar enlace de navegación" });
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveAttribute("data-testid", "ui-confirm-dialog");
+  const descriptionId = await dialog.getAttribute("aria-describedby");
+  expect(descriptionId).toBeTruthy();
+  await expect(dialog.locator(".confirm-dialog__body")).toHaveAttribute("id", descriptionId ?? "");
 
   const cancel = dialog.getByRole("button", { name: "Cancelar" });
   const confirm = dialog.getByRole("button", { name: "Eliminar enlace" });

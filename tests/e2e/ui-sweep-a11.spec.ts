@@ -352,6 +352,10 @@ test("eliminar quita la sección del proyecto y del preview, salta la selección
     .first()
     .getByRole("button", { name: "Eliminar sección" })
     .click();
+  await page
+    .getByTestId("ui-confirm-dialog")
+    .getByRole("button", { name: "Eliminar sección", exact: true })
+    .click();
 
   // Efecto real: fuera de la lista y del preview.
   await expect(sections.getByRole("listitem")).toHaveCount(initialCount - 1);
@@ -394,6 +398,10 @@ test("eliminar la última sección muestra el estado vacío y undo la devuelve",
 
   // Eliminar la última: estado vacío con invitación a seleccionar.
   await row(page, 0).getByRole("button", { name: "Eliminar sección" }).click();
+  await page
+    .getByTestId("ui-confirm-dialog")
+    .getByRole("button", { name: "Eliminar sección", exact: true })
+    .click();
   await expect(sectionsList(page).getByRole("listitem")).toHaveCount(0);
   await expect(page.getByText("Seleccioná una sección", { exact: true })).toBeVisible();
 
@@ -520,6 +528,10 @@ test("cada operación de sección entra al historial con feedback en Deshacer/Re
 
   // Eliminar la copia y rehacer la edición de settings entran al historial.
   await row(page, 1).getByRole("button", { name: "Eliminar sección" }).click();
+  await page
+    .getByTestId("ui-confirm-dialog")
+    .getByRole("button", { name: "Eliminar sección", exact: true })
+    .click();
   await expect(sections.getByRole("listitem")).toHaveCount(initialCount);
   await selectHero(page);
   const title = page.getByRole("textbox", { name: "Título", exact: true });

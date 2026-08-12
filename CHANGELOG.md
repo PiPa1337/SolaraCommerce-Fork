@@ -10,6 +10,16 @@ versión publicada.
 
 ## [Unreleased]
 
+### Confirmaciones de acciones destructivas (2026-08-12)
+
+- El Constructor confirma la eliminación de secciones, explica que se pierde su
+  configuración y devuelve el foco al contexto correcto después de cancelar o
+  confirmar.
+- Enlaces y subenlaces de navegación usan el mismo diálogo, muestran el alcance
+  de la eliminación y conservan el toast posterior al guardado.
+- Los diálogos exponen también su cuerpo mediante `aria-describedby`, para que
+  el impacto de la acción se anuncie junto con su título.
+
 ### Auditoria visual responsive de SEO (2026-08-12)
 
 - SEO ahora apila sus bloques cuando el panel del editor es estrecho, incluso

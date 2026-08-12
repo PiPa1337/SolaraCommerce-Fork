@@ -36,6 +36,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import {
   Button,
   EmptyState,
@@ -240,6 +241,11 @@ interface BuilderProps {
 
 type EditablePageKind = StoreProjectV1["pages"][number]["kind"];
 
+type PendingSectionDelete = {
+  id: StoreSection["id"];
+  label: string;
+};
+
 export function Builder({
   project,
   onChange,
@@ -254,6 +260,7 @@ export function Builder({
   const [slotToAdd, setSlotToAdd] = useState<StoreSection["slot"]>("content");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerQuery, setPickerQuery] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<PendingSectionDelete | null>(null);
   const pickerId = useId();
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -374,6 +381,28 @@ export function Builder({
     }));
   };
 
+  const deleteSection = (sectionId: StoreSection["id"]) => {
+    const index = pageSections.findIndex((section) => section.id === sectionId);
+    if (index < 0) return;
+    const nextSections = pageSections.filter((section) => section.id !== sectionId);
+    // Mantener el contrato existente del editor: tras borrar, el inspector
+    // salta a la primera sección restante, también cuando se elimina una
+    // sección intermedia.
+    const nextSelectedId = nextSections[0]?.id ?? "";
+    replaceSections(nextSections);
+    setSelectedId(nextSelectedId);
+    requestAnimationFrame(() => {
+      const focusTarget = nextSelectedId
+        ? document.querySelector<HTMLElement>(
+            `[data-section-select="${CSS.escape(nextSelectedId)}"]`,
+          )
+        : null;
+      (
+        focusTarget ?? document.querySelector<HTMLElement>('[aria-label="Página de edición"]')
+      )?.focus();
+    });
+  };
+
   const savedSettingsError = useMemo(() => {
     if (!selected || !selectedModule) return "";
     const settingsResult = selectedModule.settingsSchema.safeParse(selected.settings);
@@ -488,6 +517,7 @@ export function Builder({
                 <button
                   className="section-select"
                   type="button"
+                  data-section-select={section.id}
                   aria-pressed={section.id === selectedId}
                   aria-description={`Sección ${index + 1} de ${pageSections.length}`}
                   aria-keyshortcuts="ArrowUp ArrowDown"
@@ -552,10 +582,12 @@ export function Builder({
                     aria-description={`Sección ${index + 1} de ${pageSections.length}`}
                     label="Eliminar sección"
                     disabled={isProtected(section)}
-                    onClick={() => {
-                      replaceSections(pageSections.filter((item) => item.id !== section.id));
-                      setSelectedId(pageSections.find((item) => item.id !== section.id)?.id ?? "");
-                    }}
+                    onClick={() =>
+                      setPendingDelete({
+                        id: section.id,
+                        label: definition?.manifest.name ?? section.moduleId,
+                      })
+                    }
                   />
                 </div>
               </motion.li>
@@ -734,6 +766,26 @@ export function Builder({
           )}
         </aside>
       </div>
+      {pendingDelete ? (
+        <ConfirmDialog
+          title="Eliminar sección"
+          body={
+            <>
+              Se eliminará «{pendingDelete.label}» y su configuración del proyecto. Podés deshacerlo
+              después desde la barra del editor.
+            </>
+          }
+          confirmLabel="Eliminar sección"
+          cancelLabel="Cancelar"
+          danger
+          onConfirm={() => {
+            const sectionId = pendingDelete.id;
+            setPendingDelete(null);
+            requestAnimationFrame(() => deleteSection(sectionId));
+          }}
+          onCancel={() => setPendingDelete(null)}
+        />
+      ) : null}
     </section>
   );
 }

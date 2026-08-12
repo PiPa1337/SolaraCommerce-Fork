@@ -32,6 +32,7 @@ export function ConfirmDialog({
   const cancelRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
+  const bodyId = useId();
   const busyRef = useRef(busy);
   const onConfirmRef = useRef(onConfirm);
   const onCancelRef = useRef(onCancel);
@@ -82,6 +83,7 @@ export function ConfirmDialog({
       ref={dialogRef}
       data-testid="ui-confirm-dialog"
       aria-labelledby={titleId}
+      aria-describedby={bodyId}
     >
       <div className="confirm-dialog__panel">
         <header className="confirm-dialog__header">
@@ -97,7 +99,9 @@ export function ConfirmDialog({
             <X aria-hidden size={18} />
           </button>
         </header>
-        <div className="confirm-dialog__body">{body}</div>
+        <div className="confirm-dialog__body" id={bodyId}>
+          {body}
+        </div>
         <footer className="confirm-dialog__actions">
           <Button ref={cancelRef} variant="quiet" onClick={() => onCancel()}>
             {cancelLabel}
