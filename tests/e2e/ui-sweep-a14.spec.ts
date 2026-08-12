@@ -299,17 +299,15 @@ test("A14.3 pane — cerrar/abrir con efecto real, persistencia y foco restaurad
   );
   expect(stored).toBe("open");
 
-  // El pane cerrado no se reabre al cambiar de pestaña (H3-B3): la pestaña
-  // cambia (data-tab) pero el panel sigue oculto.
+  // Cualquier pestaña reabre el panel cerrado (H3-B3), para que el control
+  // seleccionado y su tabpanel visible nunca queden desincronizados.
   await page.getByRole("button", { name: "Cerrar panel de edición" }).click();
   await expect(pane(page)).toHaveClass(/editor-pane--closed/);
   await tabByName(page, "Resumen").click();
   await expect(tabByName(page, "Resumen")).toHaveAttribute("aria-selected", "true");
   await expect(pane(page)).toHaveAttribute("data-tab", "overview");
-  await expect(pane(page)).toHaveClass(/editor-pane--closed/);
-  await expect(pane(page)).toBeHidden();
-  await page.getByRole("button", { name: "Abrir panel de edición" }).click();
   await expect(pane(page)).toHaveClass(/editor-pane--open/);
+  await expect(pane(page)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
   await expect(pane(page)).toHaveAttribute("data-tab", "overview");
 });

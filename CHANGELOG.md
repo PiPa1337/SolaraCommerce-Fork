@@ -36,6 +36,9 @@ versión publicada.
   pestañas; Catálogo deja de exigir desplazamiento lateral y usa tarjetas
   completas cuando el espacio es estrecho, manteniendo visible la información
   de todas las columnas y la selección de productos.
+- Volver a seleccionar una pestaña, o elegir otra, reabre el panel después de
+  cerrarlo; funciona con mouse y teclado y conserva el botón de reapertura de
+  la barra de Preview como acceso alternativo.
 
 ### Feedback accesible en inspectores generados (2026-08-12)
 

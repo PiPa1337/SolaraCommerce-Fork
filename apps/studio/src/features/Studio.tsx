@@ -338,9 +338,6 @@ export function Studio({
   const focusExitId = useId();
   const lastProjectRef = useRef(initialProject);
   const previousSaveStateRef = useRef<AutosaveState>("saved");
-  // El pane sólo se reabre por un cambio de pestaña cuando el usuario no lo
-  // cerró explícitamente en esta sesión (H3-B3: el estado cerrado se conserva).
-  const paneClosedByUserRef = useRef(false);
   // Scroll por pestaña del panel de edición (H3-B2): el pane no se remonta y
   // cada pestaña recupera su posición al volver.
   const paneScrollPositionsRef = useRef<Partial<Record<StudioTab, number>>>({});
@@ -374,7 +371,6 @@ export function Studio({
 
   const setPaneOpen = useCallback(
     (open: boolean) => {
-      paneClosedByUserRef.current = !open;
       setEditorOpen(open);
       try {
         window.localStorage.setItem(paneStorageKey, open ? "open" : "closed");
@@ -411,7 +407,6 @@ export function Studio({
       event.preventDefault();
       setEditorOpen((current) => {
         const next = !current;
-        paneClosedByUserRef.current = !next;
         try {
           window.localStorage.setItem(paneStorageKey, next ? "open" : "closed");
         } catch {
@@ -621,9 +616,9 @@ export function Studio({
       // botón Desbloquear del Constructor, y se apaga con el mismo toggle.
       setTab(nextId);
       setLastVisitedAt((current) => ({ ...current, [nextId]: project.updatedAt }));
-      // El pane conserva su estado al cambiar de pestaña (H3-B3): sólo se
-      // abre si el usuario no lo cerró explícitamente en esta sesión.
-      if (!paneClosedByUserRef.current) setPaneOpen(true);
+      // Cada pestaña es también la vía directa para recuperar el panel: una
+      // pestaña seleccionada nunca debe controlar un tabpanel oculto (H3-B3).
+      setPaneOpen(true);
       if (focusTab) {
         requestAnimationFrame(() => {
           const tabElement = document.getElementById(`studio-tab-${nextId}`);

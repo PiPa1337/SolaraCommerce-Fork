@@ -3,7 +3,7 @@
  * 1. El punto de sucio aparece con UN solo cambio (la marca se limpiaba en el
  *    mismo commit del cambio, antes del aviso "Cambios pendientes").
  * 2. El scroll del panel se conserva al cambiar de pestaña (sin remount).
- * 3. El panel cerrado no se reabre al cambiar de pestaña.
+ * 3. Las pestañas permiten reabrir el panel cerrado con mouse y teclado.
  * 4. Ctrl+S fuerza el guardado en modo navegador (flush del autosave).
  * 5. Ctrl+Z / Ctrl+Shift+Z deshacen/rehacen el proyecto fuera de campos de
  *    texto, y no secuestran el undo nativo dentro de un campo.
@@ -119,26 +119,31 @@ test("el scroll del panel se conserva al cambiar de pestaña (H3-B2)", async ({ 
   await expect.poll(() => pane.evaluate((element) => element.scrollTop)).toBe(600);
 });
 
-test("el panel cerrado no se reabre al cambiar de pestaña (H3-B3)", async ({ page }) => {
+test("las pestañas reabren el panel cerrado con mouse y teclado (H3-B3)", async ({ page }) => {
   await openDemoStore(page);
   const pane = page.locator("[data-studio-editor-pane]");
+  const catalogTab = page.getByRole("tab", { name: "Catálogo", exact: true });
 
-  await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
+  await catalogTab.click();
   await expect(pane).toHaveClass(/editor-pane--open/);
 
   await page.getByRole("button", { name: "Cerrar panel de edición" }).click();
   await expect(pane).toHaveClass(/editor-pane--closed/);
   await expect(pane).toHaveAttribute("aria-hidden", "true");
 
-  await page.getByRole("tab", { name: /Resumen/ }).click();
-  await expect(pane).toHaveClass(/editor-pane--closed/);
-  await expect(pane).toHaveAttribute("aria-hidden", "true");
-  await expect(page.getByRole("button", { name: "Abrir panel de edición" })).toBeVisible();
+  await catalogTab.click();
+  await expect(pane).toHaveClass(/editor-pane--open/);
+  await expect(pane).toHaveAttribute("aria-hidden", "false");
+
+  await page.getByRole("button", { name: "Cerrar panel de edición" }).click();
+  await expect(catalogTab).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(pane).toHaveClass(/editor-pane--open/);
 
   const stored = await page.evaluate(() =>
     localStorage.getItem("solara-editor-pane:store-modo-sur-demo"),
   );
-  expect(stored).toBe("closed");
+  expect(stored).toBe("open");
 });
 
 test("Ctrl+S fuerza el guardado en modo navegador (H3-B4)", async ({ page }) => {
