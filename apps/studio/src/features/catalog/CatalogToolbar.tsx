@@ -121,7 +121,7 @@ export function CatalogToolbar({
               icon={Columns}
               aria-expanded={columnsOpen}
               aria-haspopup="true"
-              aria-controls={columnsPopoverId}
+              aria-controls={columnsOpen ? columnsPopoverId : undefined}
               data-testid="ui-columns-toggle"
               onClick={() => setColumnsOpen((open) => !open)}
             >

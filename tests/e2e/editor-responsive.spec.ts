@@ -174,11 +174,53 @@ test("cada pestaña del Studio no desborda y conserva su acción principal", asy
         page.getByRole(tab === "Tema" ? "combobox" : "button", { name: action, exact: true }),
         action,
       );
+      if (tab === "SEO") {
+        await expect(page.locator(".seo-header-score")).toBeVisible();
+        const seoOrder = await page.evaluate(() => {
+          const boxOf = (selector: string) =>
+            document.querySelector(selector)?.getBoundingClientRect();
+          const audit = boxOf('[data-testid="ui-seo-audit-panel"]');
+          const checklist = boxOf('[data-testid="ui-seo-checklist"]');
+          const appearance = boxOf(".seo-fieldset--appearance");
+          const previews = boxOf('[data-testid="ui-seo-preview-google"]');
+          return {
+            audit: audit?.y ?? null,
+            checklist: checklist?.y ?? null,
+            appearance: appearance?.y ?? null,
+            previews: previews?.y ?? null,
+          };
+        });
+        expect(seoOrder.audit).not.toBeNull();
+        expect(seoOrder.checklist).not.toBeNull();
+        expect(seoOrder.appearance).not.toBeNull();
+        expect(seoOrder.previews).not.toBeNull();
+        expect(seoOrder.audit).toBeLessThan(seoOrder.checklist ?? Number.POSITIVE_INFINITY);
+        expect(seoOrder.checklist).toBeLessThan(seoOrder.appearance ?? Number.POSITIVE_INFINITY);
+        expect(seoOrder.appearance).toBeLessThan(seoOrder.previews ?? Number.POSITIVE_INFINITY);
+      }
       if (tab === "Catálogo" && viewport.width <= 660) {
         await expect(page.locator(".catalog-table-region")).toHaveRole("region");
         await expect(
           page.getByText("Deslizá horizontalmente para ver todas las columnas."),
         ).toBeVisible();
+        await expect
+          .poll(
+            () =>
+              page
+                .locator(".editor-pane--open")
+                .evaluate((element) => getComputedStyle(element).overflowX),
+            { message: "Catálogo móvil: el panel no agrega un segundo scroll horizontal" },
+          )
+          .toBe("hidden");
+        await expect
+          .poll(
+            () =>
+              page.locator(".table-shell").evaluate((element) => {
+                return element.scrollWidth > element.clientWidth;
+              }),
+            { message: "Catálogo móvil: la tabla conserva su scroll horizontal intencional" },
+          )
+          .toBe(true);
       }
     }
   }

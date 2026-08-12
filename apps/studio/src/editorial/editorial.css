@@ -812,11 +812,11 @@ tbody tr:hover {
 
   .seo-grid {
     grid-template-areas:
+      "audit"
+      "checklist"
       "appearance"
       "social"
-      "audit"
       "previews"
-      "checklist"
       "crawler"
       "score";
   }

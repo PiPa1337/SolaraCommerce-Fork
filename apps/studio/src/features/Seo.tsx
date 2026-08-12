@@ -211,17 +211,31 @@ export function Seo({
         title="SEO y Google"
         description="La auditoría compara el proyecto con el HTML, los datos estructurados y el feed."
         actions={
-          <output className="seo-header-status" data-testid="ui-seo-audit-state" aria-live="polite">
+          <div className="seo-header-status" data-testid="ui-seo-audit-state" aria-live="polite">
             {auditStatus === "loading" ? (
               <Badge tone="neutral">Analizando SEO</Badge>
             ) : auditStatus === "error" ? (
               <Badge tone="danger">Auditoría pendiente</Badge>
-            ) : errors > 0 ? (
-              <Badge tone="danger">{errors} críticos</Badge>
             ) : (
-              <Badge tone="success">Auditoría lista</Badge>
+              <>
+                {optimization ? (
+                  <output
+                    className="seo-header-score"
+                    aria-label={`Score SEO: ${optimization.score}/100`}
+                  >
+                    <Badge tone={errors > 0 ? "danger" : "success"}>
+                      Score SEO: {optimization.score}/100
+                    </Badge>
+                  </output>
+                ) : null}
+                {errors > 0 ? (
+                  <Badge tone="danger">{errors} críticos</Badge>
+                ) : (
+                  <Badge tone="success">Auditoría lista</Badge>
+                )}
+              </>
             )}
-          </output>
+          </div>
         }
       />
       <div className="seo-grid">

@@ -125,6 +125,7 @@ test.describe("A22 — Toggle de columnas", () => {
     const stockHeader = page.locator("th", { hasText: "Stock" });
 
     await expect(columnsToggle(page)).toHaveAttribute("aria-expanded", "false");
+    await expect(columnsToggle(page)).not.toHaveAttribute("aria-controls");
     await expect(columnsPopover(page)).toHaveCount(0);
     await expect(stockHeader).toHaveCount(1);
 

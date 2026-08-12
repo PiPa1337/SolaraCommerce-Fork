@@ -10,6 +10,16 @@ versión publicada.
 
 ## [Unreleased]
 
+### Jerarquía SEO y scroll del Catálogo móvil (2026-08-11)
+
+- SEO muestra el score de optimización junto al estado de auditoría y ordena
+  visualmente diagnóstico, checklist, metadata y previews para que la acción
+  prioritaria aparezca antes del detalle editable.
+- El panel de Catálogo deja de ofrecer un segundo scroll horizontal en móvil;
+  la tabla conserva su desplazamiento horizontal intencional.
+- El toggle de columnas ya no deja una referencia `aria-controls` colgante cuando
+  el popover está cerrado; al abrirlo vuelve a asociarse con su contenido.
+
 ### Paridad del checklist Preparar y pendientes expandibles (2026-08-11)
 
 - La detección de imágenes de plantilla se comparte entre el modelo guiado y el

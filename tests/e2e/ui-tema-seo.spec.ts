@@ -183,19 +183,29 @@ test("SEO comunica el estado de auditoría y prioriza el diagnóstico sobre las 
   await page.getByRole("tab", { name: "SEO", exact: true }).click();
 
   const status = page.getByTestId("ui-seo-audit-state");
+  const score = page.locator(".seo-header-score");
   const audit = page.getByTestId("ui-seo-audit-panel");
+  const checklist = page.getByTestId("ui-seo-checklist");
+  const appearance = page.locator(".seo-fieldset--appearance");
   const previews = page.getByTestId("ui-seo-preview-google");
 
   await expect(status).toBeVisible();
   await expect(status).toHaveText(/Auditoría lista|críticos/);
+  await expect(score).toHaveAccessibleName(/Score SEO: \d+\/100/);
   await expect(audit).toBeVisible();
   await expect(audit).toContainText(/errores críticos|No se detectaron problemas/);
 
   const auditBox = await audit.boundingBox();
+  const checklistBox = await checklist.boundingBox();
+  const appearanceBox = await appearance.boundingBox();
   const previewsBox = await previews.boundingBox();
   expect(auditBox).not.toBeNull();
+  expect(checklistBox).not.toBeNull();
+  expect(appearanceBox).not.toBeNull();
   expect(previewsBox).not.toBeNull();
-  expect(auditBox?.y).toBeLessThan(previewsBox?.y ?? Number.POSITIVE_INFINITY);
+  expect(auditBox?.y).toBeLessThan(checklistBox?.y ?? Number.POSITIVE_INFINITY);
+  expect(checklistBox?.y).toBeLessThan(appearanceBox?.y ?? Number.POSITIVE_INFINITY);
+  expect(appearanceBox?.y).toBeLessThan(previewsBox?.y ?? Number.POSITIVE_INFINITY);
   const semanticOrder = await page
     .locator(".seo-grid")
     .evaluate((grid) => Array.from(grid.children).map((child) => child.className));
