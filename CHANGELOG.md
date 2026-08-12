@@ -29,6 +29,9 @@ versión publicada.
   `aria-controls` sin destino en el panel izquierdo.
 - Los campos que combinan ayuda, error y descripciones externas conservan todas
   esas referencias para tecnologías asistivas.
+- El sweep de accesibilidad valida referencias `aria-labelledby`,
+  `aria-describedby`, `aria-controls`, `aria-owns` y `aria-activedescendant` en
+  Dashboard y en las ocho pestañas del Studio.
 
 ### Paridad del checklist Preparar y pendientes expandibles (2026-08-11)
 

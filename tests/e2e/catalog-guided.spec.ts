@@ -123,8 +123,19 @@ test("el formulario de Resumen valida en vivo con errores inline (T4.2)", async 
   await expect(phoneError).toBeVisible();
   await expect(phoneInput).toHaveAttribute("aria-invalid", "true");
   await expect(phoneInput).toHaveAttribute("aria-describedby", /.+/);
-  const phoneErrorId = await phoneInput.getAttribute("aria-describedby");
-  await expect(page.locator(`#${phoneErrorId}`)).toHaveText(/8 y 15 dígitos/);
+  const phoneDescriptionIds =
+    (await phoneInput.getAttribute("aria-describedby"))?.split(/\s+/).filter(Boolean) ?? [];
+  expect(phoneDescriptionIds.length).toBeGreaterThan(0);
+  const phoneDescriptions = await page
+    .locator("[id]")
+    .evaluateAll(
+      (elements, ids) =>
+        elements
+          .filter((element) => (ids as string[]).includes(element.id))
+          .map((element) => element.textContent?.trim() ?? ""),
+      phoneDescriptionIds,
+    );
+  expect(phoneDescriptions.join(" ")).toMatch(/8 y 15 dígitos/);
 
   const urlInput = page.getByLabel("URL pública");
   await urlInput.fill("no-es-una-url");

@@ -235,6 +235,52 @@ test("las referencias aria-controls del panel izquierdo siempre tienen destino",
   }
 });
 
+test("las referencias ARIA del dashboard y del Studio siempre tienen destino", async ({ page }) => {
+  await openDashboard(page);
+  await expectAriaReferencesToExist(page, "dashboard");
+
+  await openDefaultStore(page);
+  const tabNames = (await page.getByRole("tab").allTextContents())
+    .map((name) => name.trim())
+    .filter(Boolean);
+  expect(tabNames).toHaveLength(8);
+  for (const tabName of tabNames) {
+    const tab = page.getByRole("tab", { name: tabName, exact: true });
+    await tab.click();
+    await expect(tab).toHaveAttribute("aria-selected", "true");
+    await expectAriaReferencesToExist(page, `Studio/${tabName}`);
+  }
+});
+
+async function expectAriaReferencesToExist(page: Page, surface: string): Promise<void> {
+  const danglingReferences = await page
+    .locator(
+      "[aria-labelledby], [aria-describedby], [aria-controls], [aria-owns], [aria-activedescendant]",
+    )
+    .evaluateAll((elements) =>
+      elements.flatMap((element) => {
+        const references = [
+          "aria-labelledby",
+          "aria-describedby",
+          "aria-controls",
+          "aria-owns",
+          "aria-activedescendant",
+        ].flatMap((attribute) => {
+          const value = element.getAttribute(attribute)?.trim();
+          return value ? [[attribute, value] as const] : [];
+        });
+        return references.flatMap(([attribute, value]) => {
+          const missing = value.split(/\s+/).filter((id) => !document.getElementById(id));
+          return missing.length > 0
+            ? [`${element.tagName.toLowerCase()}[${attribute}="${value}"] -> ${missing.join(",")}`]
+            : [];
+        });
+      }),
+    );
+
+  expect(danglingReferences, `${surface}: referencias ARIA sin destino`).toEqual([]);
+}
+
 test("el foco visible es distinguible en tarjetas y tabs", async ({ page }) => {
   await openDashboard(page);
   await expectFocusVisible(
