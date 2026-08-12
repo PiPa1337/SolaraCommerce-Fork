@@ -18,6 +18,8 @@ versión publicada.
 - El barrido del Constructor verifica duplicado con contenido independiente,
   límite de ocho elementos, cancelación segura, foco tras borrar y recuperación
   del error antes de volver a aplicar el cambio.
+- Exportar agrega una regresión explícita para cancelar la producción con botón
+  o Escape sin generar historial y devolviendo el foco a su disparador.
 
 ### Confirmaciones de acciones destructivas (2026-08-12)
 

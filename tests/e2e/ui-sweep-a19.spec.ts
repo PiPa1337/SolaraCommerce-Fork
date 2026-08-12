@@ -138,6 +138,29 @@ test("la producción queda bloqueada con críticos y la razón coincide con el r
   await expect(page.locator(".optimization-export-summary")).toContainText(/advertencias/);
 });
 
+test("cancela la produccion sin exportar y devuelve el foco", async ({ page }) => {
+  await openDemoStore(page);
+  await expect(page.getByTestId("ui-export-production")).toBeEnabled({ timeout: 30_000 });
+
+  const production = page.getByTestId("ui-export-production");
+  await production.click();
+  const dialog = page.getByTestId("ui-confirm-dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAttribute("aria-describedby", /.+/);
+  await dialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(production).toBeFocused();
+  await expect(page.getByTestId("ui-export-result")).toHaveCount(0);
+  await expect(page.getByTestId("ui-export-history")).toHaveCount(0);
+
+  await production.click();
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(production).toBeFocused();
+  await expect(page.getByTestId("ui-export-result")).toHaveCount(0);
+});
+
 test("el borrador exporta con aviso honesto de modo navegador y etapas marcadas de a una", async ({
   page,
 }) => {
