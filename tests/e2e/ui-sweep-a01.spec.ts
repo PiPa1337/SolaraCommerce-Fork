@@ -350,13 +350,13 @@ test.describe("A1 — Regresión: contratos del barrido (A2/A3)", () => {
     await priceKindSelect(page).selectOption("percentage");
     await priceValueInput(page).fill("-150");
     await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
-    await expect(page.getByTestId("ui-inline-error")).toContainText("mínimo -100%");
+    await expect(bulkPanel(page).getByTestId("ui-field-error")).toContainText("mínimo -100%");
     await expect(priceInput(page, 0)).toHaveValue("2885000");
 
     await priceValueInput(page).fill("5");
     await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
     await expect(priceInput(page, 0)).toHaveValue("3029250");
-    await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
+    await expect(bulkPanel(page).getByTestId("ui-field-error")).toHaveCount(0);
   });
 
   test("la revisión de paquete avisa la imagen faltante y la fusión aplica", async ({ page }) => {

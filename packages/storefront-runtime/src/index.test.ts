@@ -304,8 +304,8 @@ describe("carrito y checkout del drawer (A29)", () => {
 
   it("cierra el drawer con Escape y devuelve el foco al trigger", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain('event.key === "Escape"');
-    expect(STOREFRONT_RUNTIME_JS).toContain("lastCartTrigger?.isConnected");
-    expect(STOREFRONT_RUNTIME_JS).toContain("lastCartTrigger.focus()");
+    expect(STOREFRONT_RUNTIME_JS).toContain("trigger ?? document.activeElement");
+    expect(STOREFRONT_RUNTIME_JS).toContain("lastCartTrigger?.focus()");
     expect(STOREFRONT_RUNTIME_JS).toContain("syncCartToggleExpanded(false)");
   });
 

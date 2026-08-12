@@ -95,7 +95,11 @@ async function serve(
             : extension === "png"
               ? "image/png"
               : "application/octet-stream";
-    response.writeHead(200, { "Content-Type": contentType, "Cache-Control": "no-store" });
+    response.writeHead(200, {
+      "Content-Type": contentType,
+      "Cache-Control": "no-store",
+      Connection: "close",
+    });
     response.end(content);
   });
   await new Promise<void>((resolveListening) =>

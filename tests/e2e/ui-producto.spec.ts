@@ -146,6 +146,9 @@ test("agregar y quitar variantes persiste al reabrir el editor", async ({ page }
   // Quitar una variante y guardar: al reabrir queda una.
   const second = edit.locator(".variant-editor").nth(1);
   await second.getByRole("button", { name: /Eliminar/ }).click();
+  const confirmDelete = page.getByTestId("ui-confirm-dialog");
+  await expect(confirmDelete).toBeVisible();
+  await confirmDelete.getByRole("button", { name: "Eliminar variante" }).click();
   await expect(edit.locator(".variant-editor")).toHaveCount(1);
   await saveProduct(edit, false);
 

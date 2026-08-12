@@ -336,12 +336,12 @@ function storefrontBoot(): void {
     return [...root.parentElement.children].filter((child) => child !== root);
   };
 
-  const openCart = (): void => {
+  const openCart = (trigger?: HTMLElement): void => {
     const drawer = document.querySelector<HTMLElement>("[data-cart-drawer]");
     if (!drawer) return;
     syncCartToggleExpanded(true);
     void reconcileCart();
-    lastCartTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    lastCartTrigger = trigger ?? (document.activeElement as HTMLElement);
     if (drawer instanceof HTMLDialogElement) {
       if (!drawer.open) drawer.showModal();
     } else {
@@ -381,8 +381,7 @@ function storefrontBoot(): void {
         });
     }
     for (const s of pageSiblingsOf(drawer)) s.removeAttribute("inert");
-    if (lastCartTrigger?.isConnected) lastCartTrigger.focus();
-    lastCartTrigger = null;
+    window.setTimeout(() => lastCartTrigger?.focus());
   };
 
   const selectedVariant = (productRoot: HTMLElement): HTMLElement | null => {
@@ -585,7 +584,8 @@ function storefrontBoot(): void {
       addProductToCart(addButton.closest<HTMLElement>("[data-product]"));
     }
 
-    if (target.closest("[data-open-cart]")) openCart();
+    const cartTrigger = target.closest<HTMLElement>("[data-open-cart]");
+    if (cartTrigger) openCart(cartTrigger);
 
     if (target.closest("[data-close-cart]")) {
       closeCart();

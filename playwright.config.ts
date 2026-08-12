@@ -1,5 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// El Studio v1 se soporta y valida por completo en Chromium. Firefox y WebKit
+// repiten únicamente los contratos del sitio público exportado: esta lista es
+// explícita para que un nuevo barrido interno del editor no triplique por
+// accidente el gate release ni convierta diferencias del browser del Studio en
+// supuestas regresiones del storefront.
+const publicStorefrontSpecs =
+  /[/\\](catalog-modern|exported-store|exporter-sentinel|scale-store|storefront-nojs|ui-sweep-a(?:27|28|29|30))\.spec\.ts$/;
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
@@ -23,14 +31,12 @@ export default defineConfig({
           { name: "chromium", use: { ...devices["Desktop Chrome"] } },
           {
             name: "firefox",
-            testIgnore:
-              /[/\\](assets|catalog|release-a11y|studio-builder|studio-visual)\.spec\.ts$/,
+            testMatch: publicStorefrontSpecs,
             use: { ...devices["Desktop Firefox"] },
           },
           {
             name: "webkit",
-            testIgnore:
-              /[/\\](assets|catalog|release-a11y|studio-builder|studio-visual)\.spec\.ts$/,
+            testMatch: publicStorefrontSpecs,
             use: { ...devices["Desktop Safari"] },
           },
         ]

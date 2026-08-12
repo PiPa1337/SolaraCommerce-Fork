@@ -20,10 +20,11 @@ corepack pnpm reference:export
 corepack pnpm release:manifest
 ```
 
-El comando exige Node 22, igual que CI. Studio se valida en Chromium (la
-combinación oficialmente soportada en v1); el storefront se repite en Firefox y
-WebKit para cubrir Safari y Firefox sin convertir el procesamiento local de
-imágenes en un requisito de esos navegadores.
+El comando exige Node 22, igual que CI. Studio se valida con la suite completa
+en Chromium (la combinación oficialmente soportada en v1). Firefox y WebKit
+repiten una lista explícita de specs del storefront exportado —rutas modernas y
+legacy, carrito, variantes, búsqueda, filtros, escala y estado sin JavaScript—
+para cubrir Safari y Firefox sin ejecutar allí los barridos internos del Studio.
 
 `release:manifest` escribe `.release/release-manifest.json`, que no se versiona.
 `reference:export` también deja `.release/reference-site/` y

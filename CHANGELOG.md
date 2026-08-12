@@ -10,6 +10,20 @@ versión publicada.
 
 ## [Unreleased]
 
+### Matriz release reproducible (2026-08-12)
+
+- El gate Node 22 mantiene toda la suite del Studio en Chromium y limita
+  Firefox/WebKit a los contratos explícitos del storefront exportado, de acuerdo
+  con el soporte documentado; los barridos internos del editor ya no se
+  triplican accidentalmente en navegadores no soportados por Studio v1.
+- Las regresiones de producto vuelven a cubrir la confirmación al eliminar una
+  variante y el error inline actual del ajuste porcentual masivo.
+- El drawer del carrito conserva el disparador real que lo abrió y devuelve el
+  foco también en WebKit, donde un clic de puntero no enfoca el botón de forma
+  implícita.
+- El fixture de estilos cierra sus conexiones HTTP después de cada navegación,
+  evitando esperas intermitentes al comparar escalas tipográficas.
+
 ### Tema oscuro predeterminado (2026-08-12)
 
 - El Dashboard y el Studio inician en modo oscuro cuando no existe una
