@@ -37,6 +37,7 @@ export interface ProjectCardProps {
   project: StoredProject | undefined;
   detailRef: RefObject<HTMLElement | null>;
   backupId: string | undefined;
+  archivingId?: string | undefined;
   siteOpeningId: string | undefined;
   folderOpeningId: string | undefined;
   downloadingId: string | undefined;
@@ -55,6 +56,7 @@ export function ProjectCard({
   project,
   detailRef,
   backupId,
+  archivingId,
   siteOpeningId,
   folderOpeningId,
   downloadingId,
@@ -147,7 +149,7 @@ export function ProjectCard({
               <Button
                 variant="secondary"
                 icon={ArrowUpRight}
-                disabled={siteOpeningId === project.id}
+                loading={siteOpeningId === project.id}
                 onClick={() => void onOpenSite(project.id)}
               >
                 {siteOpeningId === project.id ? "Abriendo sitio" : "Abrir sitio público"}
@@ -157,7 +159,7 @@ export function ProjectCard({
               <Button
                 variant="secondary"
                 icon={FolderOpen}
-                disabled={folderOpeningId === project.id}
+                loading={folderOpeningId === project.id}
                 onClick={() => void onOpenFolder(project.id)}
               >
                 {folderOpeningId === project.id ? "Abriendo carpeta" : "Abrir carpeta"}
@@ -166,7 +168,7 @@ export function ProjectCard({
             <Button
               variant="secondary"
               icon={CloudArrowDown}
-              disabled={backupId === project.id}
+              loading={backupId === project.id}
               onClick={() => void onBackup(project.id)}
             >
               {backupId === project.id ? "Preparando respaldo" : "Respaldo ahora"}
@@ -175,7 +177,7 @@ export function ProjectCard({
               <Button
                 variant="secondary"
                 icon={DownloadSimple}
-                disabled={downloadingId === project.id}
+                loading={downloadingId === project.id}
                 onClick={() => void onDownloadBackup(project.id)}
               >
                 {downloadingId === project.id ? "Descargando respaldo" : "Descargar respaldo"}
@@ -187,6 +189,7 @@ export function ProjectCard({
             <Button
               variant={project.status === "archived" ? "secondary" : "danger"}
               icon={project.status === "archived" ? ArrowCounterClockwise : Archive}
+              loading={archivingId === project.id}
               onClick={() => void onArchive(project.id, project.status !== "archived")}
             >
               {project.status === "archived" ? "Restaurar" : "Archivar"}

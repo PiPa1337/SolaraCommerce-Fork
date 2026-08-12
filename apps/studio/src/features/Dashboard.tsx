@@ -241,6 +241,7 @@ export function Dashboard({
   const [compareOpen, setCompareOpen] = useState(false);
   const [duplicateTarget, setDuplicateTarget] = useState<StoredProject>();
   const [pendingArchiveId, setPendingArchiveId] = useState<string | null>(null);
+  const [archivingId, setArchivingId] = useState<string>();
   const [backingUp, setBackingUp] = useState<string>();
   const [criticalIssues, setCriticalIssues] = useState<number | null>(null);
   const [auditSkipped, setAuditSkipped] = useState(0);
@@ -475,9 +476,12 @@ export function Dashboard({
       // re-renderiza `projects` y el efecto de selección enfocaría el panel;
       // la bandera hace que ese mismo efecto enfoque la card restaurada.
       if (!archived) focusCardOnSelectRef.current = true;
+      setArchivingId(id);
       try {
         await onArchive(id, archived);
+        setArchivingId(undefined);
       } catch {
+        setArchivingId(undefined);
         focusCardOnSelectRef.current = false;
         // el error ya quedó visible en el banner global del dashboard
         return;
@@ -968,6 +972,7 @@ export function Dashboard({
             <Button
               icon={CloudArrowDown}
               disabled={!managed || backingUp !== undefined}
+              loading={backingUp !== undefined}
               title={
                 managed
                   ? undefined
@@ -1081,6 +1086,7 @@ export function Dashboard({
               project={selected}
               detailRef={selectedPanelRef}
               backupId={backupId}
+              archivingId={archivingId}
               siteOpeningId={siteOpeningId}
               folderOpeningId={folderOpeningId}
               downloadingId={downloadingId}

@@ -361,12 +361,33 @@ test("A13: panel gestionado — descargar, respaldo, sitio público y carpeta", 
       timeout: 15_000,
     });
 
+    await page.route("**/manual-backup", async (route) => {
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 450));
+      await route.continue();
+    });
+    const bulkBackup = page.getByRole("button", { name: "Respaldar todo" });
+    await bulkBackup.click();
+    const bulkBackupBusy = page.getByRole("button", { name: /Respaldando 1 de 1/ });
+    await expect(bulkBackupBusy).toHaveAttribute("aria-busy", "true");
+    await expect(bulkBackupBusy).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Respaldar todo" })).toBeEnabled();
+    await page.unroute("**/manual-backup");
+
     const detail = await selectStore(page, "Predeterminado");
 
     // Descargar respaldo: archivo real desde disco, con versión del manifest.
+    await page.route("**/current", async (route) => {
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 450));
+      await route.continue();
+    });
     const downloadPromise = page.waitForEvent("download");
     await detail.getByRole("button", { name: "Descargar respaldo" }).click();
+    const downloadBusy = detail.getByRole("button", { name: /Descargando respaldo/ });
+    await expect(downloadBusy).toHaveAttribute("aria-busy", "true");
+    await expect(downloadBusy).toBeDisabled();
     const download = await downloadPromise;
+    await expect(detail.getByRole("button", { name: /Descargar respaldo/ })).toBeEnabled();
+    await page.unroute("**/current");
     // Slug real del proyecto en disco (demo-catalogo-jerarquico) con la
     // versión del manifest (v1 en la primera persistencia).
     expect(download.suggestedFilename()).toMatch(/^demo-catalogo-jerarquico-v1\.solara\.json$/);
@@ -375,9 +396,27 @@ test("A13: panel gestionado — descargar, respaldo, sitio público y carpeta", 
     await detail.getByRole("button", { name: "Respaldo ahora" }).click();
     await expect(page.getByTestId("ui-detail-notice")).toContainText("Se creó un respaldo.");
 
+    await page.route("**/manual-backup", async (route) => {
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 450));
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ path: "e2e/manual-backup.solara.json", version: 2 }),
+      });
+    });
+    await detail.getByRole("button", { name: "Respaldo ahora" }).click();
+    const manualBackupBusy = detail.getByRole("button", { name: /Preparando respaldo/ });
+    await expect(manualBackupBusy).toHaveAttribute("aria-busy", "true");
+    await expect(manualBackupBusy).toBeDisabled();
+    await expect(page.getByTestId("ui-detail-notice")).toContainText(/respaldo/);
+    await expect(detail.getByRole("button", { name: /Respaldo ahora/ })).toBeEnabled();
+    await page.unroute("**/manual-backup");
+
     // Camino de error: el endpoint rechaza la apertura y el banner global
     // muestra el motivo; el botón vuelve a quedar habilitado y sin popup.
+    const openSiteBusy = detail.getByRole("button", { name: /Abriendo sitio/ });
     await page.route("**/open-site", async (route) => {
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 450));
       await route.fulfill({
         status: 400,
         contentType: "application/json",
@@ -385,6 +424,8 @@ test("A13: panel gestionado — descargar, respaldo, sitio público y carpeta", 
       });
     });
     await detail.getByRole("button", { name: "Abrir sitio público" }).click();
+    await expect(openSiteBusy).toHaveAttribute("aria-busy", "true");
+    await expect(openSiteBusy).toBeDisabled();
     await expect(page.locator(".global-error")).toContainText("no tiene un sitio público válido");
     await page.getByRole("button", { name: "Cerrar mensaje" }).click();
     await expect(detail.getByRole("button", { name: "Abrir sitio público" })).toBeEnabled();
@@ -404,7 +445,9 @@ test("A13: panel gestionado — descargar, respaldo, sitio público y carpeta", 
     // Abrir carpeta: el POST llega al endpoint local con el id correcto; la
     // apertura del explorador queda fuera del entorno de pruebas.
     let folderRequestUrl = "";
+    const openFolderBusy = detail.getByRole("button", { name: /Abriendo carpeta/ });
     await page.route("**/open-folder", async (route) => {
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 450));
       folderRequestUrl = route.request().url();
       await route.fulfill({
         status: 200,
@@ -415,9 +458,23 @@ test("A13: panel gestionado — descargar, respaldo, sitio público y carpeta", 
     await detail.getByRole("button", { name: "Abrir carpeta" }).click();
     // El POST llega al endpoint local con el id correcto; esperar a que el
     // botón salga del estado «Abriendo carpeta» asegura que el fetch terminó.
+    await expect(openFolderBusy).toHaveAttribute("aria-busy", "true");
+    await expect(openFolderBusy).toBeDisabled();
     await expect(detail.getByRole("button", { name: "Abrir carpeta" })).toBeEnabled();
     expect(folderRequestUrl).toContain("/storage/projects/store-modo-sur-demo/open-folder");
     await expect(page.locator(".global-error")).toHaveCount(0);
+
+    await page.route("**/__solara/storage/saves", async (route) => {
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 450));
+      await route.continue();
+    });
+    await detail.getByRole("button", { name: "Archivar", exact: true }).click();
+    await page.getByTestId("ui-confirm-dialog").getByTestId("ui-confirm-accept").click();
+    const archiveBusy = detail.getByRole("button", { name: /Archivar/ });
+    await expect(archiveBusy).toHaveAttribute("aria-busy", "true");
+    await expect(archiveBusy).toBeDisabled();
+    await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
+    await page.unroute("**/__solara/storage/saves");
   } finally {
     await stopManagedServer(managed.process, managed.root);
   }

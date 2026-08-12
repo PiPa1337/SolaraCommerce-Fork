@@ -12,6 +12,8 @@ versión publicada.
 
 ### Feedback accesible en inspectores generados (2026-08-12)
 
+- Las acciones asincronas del Dashboard muestran `aria-busy`, spinner y bloqueo
+  temporal durante respaldos, descargas, aperturas y archivado/restauracion.
 - Las acciones masivas de precios y tags muestran los errores junto al campo
   que requiere corrección, anuncian el estado inválido y evitan aplicar un
   ajuste vacío como cero.
