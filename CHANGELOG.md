@@ -23,6 +23,8 @@ versión publicada.
   confirmar o cancelar, manteniendo el contexto de teclado.
 - El árbol de categorías verifica explícitamente sus estados `aria-expanded` y
   la activación por `Enter` y `Space`.
+- La capa de carga del Preview anuncia su estado con `aria-live` y ahora tiene
+  una regresión que comprueba su desaparición al terminar el iframe.
 
 ### Paridad del checklist Preparar y pendientes expandibles (2026-08-11)
 

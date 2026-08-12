@@ -378,7 +378,11 @@ export function Preview({
               }}
             />
             {!iframeReady ? (
-              <output className="preview-overlay" data-testid="ui-preview-loading">
+              <output
+                className="preview-overlay"
+                data-testid="ui-preview-loading"
+                aria-live="polite"
+              >
                 <span className="save-spinner" aria-hidden />
                 Cargando vista previa
               </output>

@@ -445,6 +445,40 @@ test("A20: preview — la toolbar se puede operar con teclado", async ({ page })
   await expect(page.locator('iframe[title="Vista previa tablet"]')).toBeVisible();
 });
 
+test("A20: preview — la carga del iframe anuncia el estado y se retira al terminar", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openDemoStore(page);
+
+  const loadingObservation = page.evaluate(
+    () =>
+      new Promise<{ ariaLive: string | null; text: string } | null>((resolve) => {
+        const timeout = window.setTimeout(() => {
+          observer.disconnect();
+          resolve(null);
+        }, 15_000);
+        const observer = new MutationObserver(() => {
+          const loading = document.querySelector<HTMLElement>('[data-testid="ui-preview-loading"]');
+          if (!loading) return;
+          window.clearTimeout(timeout);
+          observer.disconnect();
+          resolve({ ariaLive: loading.getAttribute("aria-live"), text: loading.textContent ?? "" });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+      }),
+  );
+
+  await commitRoute(page, "/contacto/");
+  await expectPreviewTitle(page, "Contacto | Modo Sur");
+  await expect(page.getByTestId("ui-preview-loading")).toHaveCount(0);
+
+  await expect(await loadingObservation).toEqual({
+    ariaLive: "polite",
+    text: expect.stringContaining("Cargando vista previa"),
+  });
+});
+
 test("A20: preview — el error del renderer ofrece recargar y recupera el iframe", async ({
   page,
 }) => {
