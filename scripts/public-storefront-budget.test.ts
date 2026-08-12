@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { exportProject } from "../packages/exporter/src/index";
 import { catalogModernStore } from "../packages/project-schema/src/catalog-modern-fixture";
+import { catalogModernV2Store } from "../packages/project-schema/src/catalog-modern-v2-fixture";
 
 test("mantiene el presupuesto de la salida pública optimizada", () => {
   const result = exportProject(catalogModernStore, { mode: "production" });
@@ -22,4 +23,16 @@ test("mantiene el presupuesto de la salida pública optimizada", () => {
   expect(html).not.toContain("data:image/");
   expect(new Set(assetPaths).size).toBe(assetPaths.length);
   expect(html.match(/rel="preload" as="image"/g)?.length ?? 0).toBeGreaterThan(0);
+});
+
+test("mantiene la foundation V2 dentro de un presupuesto público explícito", () => {
+  const result = exportProject(catalogModernV2Store, { mode: "production" });
+  const css = String(result.files.get("assets/storefront.css") ?? "");
+  const javascript = String(result.files.get("assets/storefront.js") ?? "");
+  const cssBytes = Buffer.byteLength(css, "utf8");
+  const javascriptBytes = Buffer.byteLength(javascript, "utf8");
+
+  console.info({ catalogModernV2CssRaw: cssBytes, catalogModernV2JavascriptRaw: javascriptBytes });
+  expect(cssBytes).toBeLessThanOrEqual(96 * 1024);
+  expect(javascriptBytes).toBeLessThanOrEqual(53 * 1024);
 });

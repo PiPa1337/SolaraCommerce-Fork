@@ -133,10 +133,9 @@ describe("official module system", () => {
       for (const selectorGroup of selectors) {
         for (const selector of selectorGroup.split(",")) {
           const trimmed = selector.trim();
-          const scoped =
-            moduleId === "catalog-modern"
-              ? trimmed.startsWith("[data-solara-store].catalog-modern")
-              : trimmed.startsWith(`[data-solara-module="${moduleId}"]`);
+          const scoped = moduleId.startsWith("catalog-modern")
+            ? trimmed.startsWith(`[data-solara-store].${moduleId}`)
+            : trimmed.startsWith(`[data-solara-module="${moduleId}"]`);
           expect(scoped).toBe(true);
         }
       }

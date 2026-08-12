@@ -1,5 +1,6 @@
 import { CATALOG_MODERN_PLACEHOLDER_PHONE } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
+import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import { referenceStore } from "@solara/project-schema/fixture";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 import { describe, expect, it } from "vitest";
@@ -146,6 +147,22 @@ describe("exporter", () => {
 
     expect(css.split(distinctive).length - 1).toBe(1);
     expect(new Blob([css]).size).toBeLessThan(300_000);
+  });
+
+  it("incluye la foundation V2 sólo en proyectos catalog-modern-v2", () => {
+    const v1Css = String(
+      exportProject(catalogModernStore, { mode: "production" }).files.get("assets/storefront.css"),
+    );
+    const v2Css = String(
+      exportProject(catalogModernV2Store, { mode: "production" }).files.get(
+        "assets/storefront.css",
+      ),
+    );
+
+    expect(v2Css).toContain(".catalog-modern-v2 .catalog-hero-inner");
+    expect(v2Css).toContain("--catalog-v2-motion-editorial");
+    expect(v2Css).toContain("prefers-reduced-motion:reduce");
+    expect(v1Css).not.toContain("--catalog-v2-motion-editorial");
   });
 
   it("rechaza proyectos inválidos con una ruta accionable en cada límite público", () => {

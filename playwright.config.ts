@@ -6,7 +6,7 @@ import { defineConfig, devices } from "@playwright/test";
 // accidente el gate release ni convierta diferencias del browser del Studio en
 // supuestas regresiones del storefront.
 const publicStorefrontSpecs =
-  /[/\\](catalog-modern|exported-store|exporter-sentinel|scale-store|storefront-nojs|ui-sweep-a(?:27|28|29|30))\.spec\.ts$/;
+  /[/\\](catalog-modern(?:-v2)?|exported-store|exporter-sentinel|scale-store|storefront-nojs|ui-sweep-a(?:27|28|29|30))\.spec\.ts$/;
 
 export default defineConfig({
   testDir: "./tests/e2e",

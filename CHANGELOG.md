@@ -19,6 +19,11 @@ versión publicada.
 - Se incorporan el plan maestro, el baseline técnico y doce referencias visuales
   por superficie para guiar una evolución editorial con motion, responsive y
   accesibilidad verificables.
+- La foundation V2 incorpora una paleta cálida editable, tipografía editorial,
+  contenedor amplio, productos verticales y estados especiales de hover y
+  entrada; respeta `prefers-reduced-motion` y no agrega JavaScript al runtime.
+- La home V2 se valida en el viewport real `1920x968` y en `390x844`, sin
+  overflow horizontal, con CTA visible y grillas de cuatro y dos columnas.
 
 ### Matriz release reproducible (2026-08-12)
 

@@ -837,21 +837,33 @@ function moduleStylesForSections(
   return `${STORE_BASE_STYLES}\n${blocks.filter(Boolean).join("\n")}`;
 }
 
+function stylesForProjectFamily(project: StoreProjectV1, styles: string): string {
+  if (project.commerceTemplates.designFamily !== "catalog-modern-v2") return styles;
+  const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"] ?? "";
+  return v2Styles ? `${styles}\n${v2Styles}` : styles;
+}
+
 function exportedModuleStyles(project: StoreProjectV1): string {
   const pageSections = project.pages.flatMap((page) => page.sections);
   const productModule = isModernProject(project) ? "catalog-product-detail" : "product-detail";
-  return moduleStylesForSections(
-    activeProjectSections(project, [...project.sections, ...pageSections]),
-    project.products.some((product) => product.status === "active") ? [productModule] : [],
+  return stylesForProjectFamily(
+    project,
+    moduleStylesForSections(
+      activeProjectSections(project, [...project.sections, ...pageSections]),
+      project.products.some((product) => product.status === "active") ? [productModule] : [],
+    ),
   );
 }
 
 function previewModuleStyles(project: StoreProjectV1): string {
   const pageSections = project.pages.flatMap((page) => page.sections);
   const productModule = isModernProject(project) ? "catalog-product-detail" : "product-detail";
-  return moduleStylesForSections(
-    activeProjectSections(project, [...project.sections, ...pageSections]),
-    project.products.some((product) => product.status === "active") ? [productModule] : [],
+  return stylesForProjectFamily(
+    project,
+    moduleStylesForSections(
+      activeProjectSections(project, [...project.sections, ...pageSections]),
+      project.products.some((product) => product.status === "active") ? [productModule] : [],
+    ),
   );
 }
 

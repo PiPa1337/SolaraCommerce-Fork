@@ -37,6 +37,8 @@ describe("StoreProjectV2Schema", () => {
 
     expect(parsed.schemaVersion).toBe(2);
     expect(parsed.commerceTemplates.designFamily).toBe("catalog-modern-v2");
+    expect(parsed.theme.colors.background).toBe("#f7f5f0");
+    expect(parsed.theme.container).toBe(1760);
     expect(catalogModernStore.commerceTemplates.designFamily).toBe("catalog-modern-v1");
   });
 
