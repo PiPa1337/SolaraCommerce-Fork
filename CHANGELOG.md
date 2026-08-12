@@ -10,6 +10,13 @@ versión publicada.
 
 ## [Unreleased]
 
+### Panel de edición sin desplazamiento lateral (2026-08-12)
+
+- El panel de edición usa un ancho máximo común de 1200 px en todas las
+  pestañas; Catálogo deja de exigir desplazamiento lateral y usa tarjetas
+  completas cuando el espacio es estrecho, manteniendo visible la información
+  de todas las columnas y la selección de productos.
+
 ### Feedback accesible en inspectores generados (2026-08-12)
 
 - Las acciones asincronas del Dashboard muestran `aria-busy`, spinner y bloqueo

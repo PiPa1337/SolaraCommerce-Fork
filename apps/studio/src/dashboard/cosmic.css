@@ -2385,7 +2385,7 @@ legend {
   border: 1px solid var(--line);
   border-radius: var(--radius-panel);
   background: var(--surface);
-  overflow: auto;
+  overflow-y: auto;
 }
 
 table {

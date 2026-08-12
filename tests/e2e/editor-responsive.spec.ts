@@ -4,7 +4,7 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
 
 /**
  * T0.3 — Matriz responsive del editor.
- * Recorre dashboard, todas las pestañas del Studio y el preview en 5 viewports,
+ * Recorre dashboard, todas las pestañas del Studio y el preview en 7 viewports,
  * y verifica ausencia de scroll vertical de página y overflow horizontal, más acciones visibles/accionables.
  */
 
@@ -12,7 +12,9 @@ const viewports = [
   { name: "móvil 390", width: 390, height: 844 },
   { name: "tablet 768", width: 768, height: 1024 },
   { name: "tablet 1024", width: 1024, height: 768 },
+  { name: "desktop 1366", width: 1366, height: 768 },
   { name: "desktop 1440", width: 1440, height: 900 },
+  { name: "desktop real 1920", width: 1920, height: 968 },
   { name: "wide 1920", width: 1920, height: 1080 },
 ] as const;
 
@@ -77,7 +79,7 @@ const tabActions: Array<{ tab: string; heading: string; action: string }> = [
   { tab: "Exportar", heading: "Exportar", action: "Exportar borrador" },
 ];
 
-test("el dashboard no desborda y mantiene acciones usables en los 5 viewports", async ({
+test("el dashboard no desborda y mantiene acciones usables en los 7 viewports", async ({
   page,
 }) => {
   for (const viewport of viewports) {
@@ -165,10 +167,52 @@ test("cada pestaña del Studio no desborda y conserva su acción principal", asy
 
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
+    const paneWidths: number[] = [];
     for (const { tab, heading, action } of tabActions) {
       await page.getByRole("tab", { name: tab, exact: true }).click();
       await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
       await expectNoPageOverflow(page, `Pestaña ${tab} ${viewport.name}`);
+      const pane = page.locator(".editor-pane--open");
+      const paneMetrics = await pane.evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        return {
+          clientWidth: element.clientWidth,
+          scrollWidth: element.scrollWidth,
+          overflowers: Array.from(element.querySelectorAll<HTMLElement>("*"))
+            .map((child) => {
+              const box = child.getBoundingClientRect();
+              return {
+                selector: `${child.tagName.toLowerCase()}.${child.className}`,
+                clientWidth: child.clientWidth,
+                scrollWidth: child.scrollWidth,
+                left: Math.round(box.left - bounds.left),
+                right: Math.round(box.right - bounds.left),
+              };
+            })
+            .filter(
+              (child) =>
+                child.scrollWidth > child.clientWidth + 1 ||
+                child.left < -1 ||
+                child.right > element.clientWidth + 1,
+            )
+            .sort((left, right) => right.right - left.right)
+            .slice(0, 12),
+        };
+      });
+      paneWidths.push(paneMetrics.clientWidth);
+      expect(
+        paneMetrics.scrollWidth,
+        `${tab} ${viewport.name}: el panel no debe tener scroll horizontal. ${JSON.stringify(paneMetrics.overflowers)}`,
+      ).toBeLessThanOrEqual(paneMetrics.clientWidth + 1);
+
+      const sectionMetrics = await pane.locator(".workspace-section").evaluate((element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+      }));
+      expect(
+        sectionMetrics.scrollWidth,
+        `${tab} ${viewport.name}: el contenido debe caber dentro del panel`,
+      ).toBeLessThanOrEqual(sectionMetrics.clientWidth + 1);
       await expectActionUsable(
         page,
         page.getByRole(tab === "Tema" ? "combobox" : "button", { name: action, exact: true }),
@@ -198,35 +242,67 @@ test("cada pestaña del Studio no desborda y conserva su acción principal", asy
         expect(seoOrder.checklist).toBeLessThan(seoOrder.appearance ?? Number.POSITIVE_INFINITY);
         expect(seoOrder.appearance).toBeLessThan(seoOrder.previews ?? Number.POSITIVE_INFINITY);
       }
-      if (tab === "Catálogo" && viewport.width <= 660) {
-        await expect(page.locator(".catalog-table-region")).toHaveRole("region");
+      if (tab === "Catálogo") {
         await expect(
           page.getByText("Deslizá horizontalmente para ver todas las columnas."),
-        ).toBeVisible();
-        await expect
-          .poll(
-            () =>
-              page
-                .locator(".editor-pane--open")
-                .evaluate((element) => getComputedStyle(element).overflowX),
-            { message: "Catálogo móvil: el panel no agrega un segundo scroll horizontal" },
-          )
-          .toBe("hidden");
-        await expect
-          .poll(
-            () =>
-              page.locator(".table-shell").evaluate((element) => {
-                return element.scrollWidth > element.clientWidth;
-              }),
-            { message: "Catálogo móvil: la tabla conserva su scroll horizontal intencional" },
-          )
-          .toBe(true);
+        ).toHaveCount(0);
+        if (viewport.width <= 1240) {
+          await expect(page.locator(".catalog-table-region")).toHaveCount(0);
+          await expect(page.getByTestId("ui-catalog-cards")).toBeVisible();
+          const firstCard = page.getByTestId("ui-catalog-card").first();
+          await expect(firstCard).toContainText("Marca:");
+          await expect(firstCard).toContainText("Categorías:");
+          await expect(firstCard).toContainText("Precio:");
+          await expect(firstCard).toContainText("Actualizado:");
+          const selection = firstCard.getByRole("checkbox");
+          await expect(selection).toBeVisible();
+          await expect(page.getByRole("button", { name: "Lista" })).toBeDisabled();
+          if (viewport.width === 1024) {
+            await selection.check();
+            await expect(page.getByText("1 seleccionados", { exact: true })).toBeVisible();
+            await selection.uncheck();
+            await expect(page.getByText("0 seleccionados", { exact: true })).toBeVisible();
+            await firstCard.scrollIntoViewIfNeeded();
+            await page.screenshot({
+              path: "test-results/catalog-scale-compact-1024.png",
+              fullPage: true,
+            });
+          }
+        } else {
+          await expect(page.locator(".catalog-table-region")).toHaveRole("region");
+          await expect
+            .poll(
+              () =>
+                page.locator(".table-shell").evaluate((element) => {
+                  return element.scrollWidth <= element.clientWidth + 1;
+                }),
+              { message: `Catálogo ${viewport.name}: la tabla no agrega scroll horizontal` },
+            )
+            .toBe(true);
+          if (viewport.width === 1366 || viewport.name === "desktop real 1920") {
+            await page.locator(".table-shell").scrollIntoViewIfNeeded();
+            await page.screenshot({
+              path: `test-results/catalog-scale-table-${viewport.width}x${viewport.height}.png`,
+              fullPage: true,
+            });
+          }
+        }
       }
+    }
+    expect(
+      Math.max(...paneWidths) - Math.min(...paneWidths),
+      `${viewport.name}: todas las pestañas deben usar el mismo ancho de panel`,
+    ).toBeLessThanOrEqual(1);
+    if (viewport.width >= 1366) {
+      expect(
+        paneWidths[0],
+        `${viewport.name}: el panel debe aprovechar el ancho ampliado`,
+      ).toBeGreaterThanOrEqual(1120);
     }
   }
 });
 
-test("el preview y su toolbar responden en los 5 viewports", async ({ page }) => {
+test("el preview y su toolbar responden en los 7 viewports", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(studioUrl);
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
@@ -274,7 +350,7 @@ test("el preview y su toolbar responden en los 5 viewports", async ({ page }) =>
   }
 });
 
-test("el recorrido clave del smoke no desborda en los 5 viewports (T6.3)", async ({ page }) => {
+test("el recorrido clave del smoke no desborda en los 7 viewports (T6.3)", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(studioUrl);
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();

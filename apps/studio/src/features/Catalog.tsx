@@ -331,16 +331,30 @@ function StatusCell({
 function CatalogCard({
   product,
   image,
+  categories,
+  selected,
+  onSelectionChange,
   onEdit,
 }: {
   product: Product;
   image: { source: string; alt: string } | undefined;
+  categories: string;
+  selected: boolean;
+  onSelectionChange(selected: boolean): void;
   onEdit(): void;
 }) {
   const first = product.variants[0];
   const titleId = `catalog-card-title-${product.id}`;
   return (
     <article className="catalog-card" data-testid="ui-catalog-card">
+      <label className="check-field">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={(event) => onSelectionChange(event.target.checked)}
+        />
+        Seleccionar {product.title}
+      </label>
       <div className="catalog-card__image">
         {image ? (
           <img src={image.source} alt={image.alt || product.title} loading="lazy" />
@@ -352,15 +366,21 @@ function CatalogCard({
         <h3 id={titleId} title={product.title}>
           {product.title}
         </h3>
+        <span className="table-muted-cell">Marca: {product.brand || "—"}</span>
+        <span className="table-muted-cell">Categorías: {categories}</span>
         <div className="catalog-card__meta">
           <span className={`status-label status-label--${product.status}`}>
             {productStatusLabel(product.status)}
           </span>
+          <span className="catalog-card__variants">{productStockLabel(product)}</span>
           <span className="catalog-card__variants">
             {product.variants.length} {product.variants.length === 1 ? "variante" : "variantes"}
           </span>
         </div>
-        {first ? <p className="catalog-card__price">{formatCurrency(first.price)}</p> : null}
+        <span className="catalog-card__price">
+          Precio: {first ? formatCurrency(first.price) : "—"}
+        </span>
+        <span className="table-muted-cell">Actualizado: {formatDate(product.updatedAt)}</span>
       </div>
       <Button variant="quiet" icon={PencilSimple} aria-describedby={titleId} onClick={onEdit}>
         Editar
@@ -425,16 +445,26 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
     loadCatalogColumnVisibility(project.id),
   );
   const [view, setView] = useState<"table" | "cards">(() => loadCatalogView(project.id));
+  const [compactLayout, setCompactLayout] = useState(() =>
+    typeof window === "undefined" ? false : window.matchMedia("(max-width: 1240px)").matches,
+  );
   const importRef = useRef<HTMLInputElement>(null);
   const importReviewTitleId = useId();
   const packageInputId = useId();
   const packageReviewTitleId = useId();
-  const tableHintId = useId();
 
   useEffect(() => {
     setColumnVisibility(loadCatalogColumnVisibility(project.id));
     setView(loadCatalogView(project.id));
   }, [project.id]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 1240px)");
+    const updateLayout = () => setCompactLayout(media.matches);
+    updateLayout();
+    media.addEventListener("change", updateLayout);
+    return () => media.removeEventListener("change", updateLayout);
+  }, []);
 
   useEffect(() => {
     const validIds = new Set<string>(project.products.map((product) => product.id));
@@ -639,6 +669,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
     .map(([id]) => id as Product["id"]);
   const filteredRows = table.getFilteredRowModel().rows;
   const hasProducts = project.products.length > 0;
+  const visibleView = compactLayout ? "cards" : view;
 
   useEffect(() => {
     if (selectedIds.length === 0) {
@@ -1073,7 +1104,8 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
           setSelection={setSelection}
           visibleColumns={columnVisibility}
           onToggleColumn={toggleColumn}
-          view={view}
+          view={visibleView}
+          compactLayout={compactLayout}
           onViewChange={changeView}
         />
 
@@ -1103,26 +1135,22 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
               </Button>
             }
           />
-        ) : view === "cards" ? (
+        ) : visibleView === "cards" ? (
           <div className="catalog-card-grid" data-testid="ui-catalog-cards">
             {table.getRowModel().rows.map((row) => (
               <CatalogCard
                 key={row.id}
                 product={row.original}
                 image={project.assets.find((asset) => asset.id === row.original.imageIds[0])}
+                categories={productCategoryTitles(row.original, project)}
+                selected={row.getIsSelected()}
+                onSelectionChange={(selected) => row.toggleSelected(selected)}
                 onEdit={() => setEditor({ mode: "edit", product: structuredClone(row.original) })}
               />
             ))}
           </div>
         ) : (
-          <section
-            className="catalog-table-region"
-            aria-label="Tabla de productos"
-            aria-describedby={tableHintId}
-          >
-            <p id={tableHintId} className="catalog-table-hint">
-              Deslizá horizontalmente para ver todas las columnas.
-            </p>
+          <section className="catalog-table-region" aria-label="Tabla de productos">
             <div className="table-shell">
               <table>
                 <caption className="visually-hidden">Productos del catálogo</caption>

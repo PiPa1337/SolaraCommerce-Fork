@@ -23,6 +23,7 @@ interface CatalogToolbarProps {
   visibleColumns: Record<string, boolean>;
   onToggleColumn(id: string): void;
   view: "table" | "cards";
+  compactLayout: boolean;
   onViewChange(view: "table" | "cards"): void;
 }
 
@@ -41,6 +42,7 @@ export function CatalogToolbar({
   visibleColumns,
   onToggleColumn,
   view,
+  compactLayout,
   onViewChange,
 }: CatalogToolbarProps) {
   const orderedCategories = categoryTree(project);
@@ -109,10 +111,13 @@ export function CatalogToolbar({
             value={view}
             onChange={onViewChange}
             options={[
-              { value: "table", label: "Lista", icon: List },
+              { value: "table", label: "Lista", icon: List, disabled: compactLayout },
               { value: "cards", label: "Tarjetas", icon: SquaresFour },
             ]}
           />
+          {compactLayout ? (
+            <small className="table-muted-cell">Vista adaptada sin desplazamiento lateral.</small>
+          ) : null}
           <div className="catalog-columns" ref={columnsRef}>
             <Button
               ref={columnsToggleRef}
@@ -123,6 +128,10 @@ export function CatalogToolbar({
               aria-haspopup="true"
               aria-controls={columnsOpen ? columnsPopoverId : undefined}
               data-testid="ui-columns-toggle"
+              disabled={compactLayout}
+              title={
+                compactLayout ? "Las tarjetas muestran toda la información disponible." : undefined
+              }
               onClick={() => setColumnsOpen((open) => !open)}
             >
               Columnas
