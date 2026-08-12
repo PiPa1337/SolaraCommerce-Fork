@@ -119,6 +119,16 @@ test("restaurar valores por defecto devuelve la sección al estado inicial", asy
   ).toHaveText("Un título editado", { timeout: 15_000 });
 
   await page.getByRole("button", { name: "Restaurar valores por defecto" }).click();
+  const restoreDialog = page.getByRole("dialog", { name: "Restaurar valores por defecto" });
+  await expect(restoreDialog).toBeVisible();
+  await expect(restoreDialog.locator(".confirm-dialog__body")).toContainText("Hero de catálogo");
+  await restoreDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(title).toHaveValue("Un título editado");
+  await page.getByRole("button", { name: "Restaurar valores por defecto" }).click();
+  await page
+    .getByRole("dialog", { name: "Restaurar valores por defecto" })
+    .getByRole("button", { name: "Restaurar valores", exact: true })
+    .click();
   await expect(title).toHaveValue("Vestite con lo que te representa.");
   await expect(
     page.frameLocator("iframe").locator('[data-solara-module="catalog-hero"] h1'),

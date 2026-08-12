@@ -111,10 +111,20 @@ test("duplica, reordena y elimina variantes sin bajar del mínimo", async ({ pag
   await expect(variants.nth(0).getByRole("textbox", { name: "Nombre" })).toHaveValue("Arena copia");
 
   await variants.nth(0).getByRole("button", { name: "Eliminar Arena copia" }).click();
+  const deleteDialog = dialog.getByRole("dialog", { name: "Eliminar variante" });
+  await expect(deleteDialog).toBeVisible();
+  await deleteDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(variants).toHaveCount(3);
+  await variants.nth(0).getByRole("button", { name: "Eliminar Arena copia" }).click();
+  await deleteDialog.getByRole("button", { name: "Eliminar variante", exact: true }).click();
   variants = dialog.locator(".variant-editor");
   await expect(variants).toHaveCount(2);
 
   await variants.nth(0).getByRole("button", { name: "Eliminar Única" }).click();
+  await dialog
+    .getByRole("dialog", { name: "Eliminar variante" })
+    .getByRole("button", { name: "Eliminar variante", exact: true })
+    .click();
   variants = dialog.locator(".variant-editor");
   await expect(variants).toHaveCount(1);
   await expect(variants.nth(0).getByRole("button", { name: "Eliminar Arena" })).toBeDisabled();

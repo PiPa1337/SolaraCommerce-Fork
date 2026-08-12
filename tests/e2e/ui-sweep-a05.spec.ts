@@ -259,6 +259,16 @@ test("A05: eliminar variante la quita de la edición y persiste el recorte", asy
   await expect(last.getByRole("textbox", { name: "Nombre" })).toHaveValue("Arena / XL");
 
   await last.getByRole("button", { name: "Eliminar Arena / XL" }).click();
+  const deleteDialog = edit.getByRole("dialog", { name: "Eliminar variante" });
+  await expect(deleteDialog).toBeVisible();
+  await expect(deleteDialog.locator(".confirm-dialog__body")).toContainText("Arena / XL");
+  await deleteDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(edit.locator(".variant-editor")).toHaveCount(8);
+  await last.getByRole("button", { name: "Eliminar Arena / XL" }).click();
+  await edit
+    .getByRole("dialog", { name: "Eliminar variante" })
+    .getByRole("button", { name: "Eliminar variante", exact: true })
+    .click();
   rows = edit.locator(".variant-editor");
   await expect(rows).toHaveCount(7);
   await expect(rows.nth(6).locator("header strong")).toHaveText("Variante 7");

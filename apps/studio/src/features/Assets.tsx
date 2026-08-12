@@ -46,6 +46,7 @@ export function Assets({
   const [cacheBusy, setCacheBusy] = useState(false);
   const [cacheStatus, setCacheStatus] = useState("");
   const [copied, setCopied] = useState("");
+  const [copyErrorId, setCopyErrorId] = useState<ImageAsset["id"] | null>(null);
   const [dragging, setDragging] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<ImageAsset["id"] | null>(null);
   const selectedAssetOpenerRef = useRef<HTMLElement | null>(null);
@@ -468,6 +469,19 @@ export function Assets({
     setSelectedAssetId(assetId);
   };
 
+  const copyAssetId = async (assetId: ImageAsset["id"]) => {
+    setCopyErrorId(null);
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("clipboard unavailable");
+      await navigator.clipboard.writeText(assetId);
+      setCopied(assetId);
+      window.setTimeout(() => setCopied(""), 1_200);
+    } catch {
+      setCopied("");
+      setCopyErrorId(assetId);
+    }
+  };
+
   return (
     <section className="workspace-section">
       <SectionHeader
@@ -612,6 +626,9 @@ export function Assets({
                   {bytesToSize(Math.round(selectedAsset.source.length * 0.75))} · hash{" "}
                   {selectedAsset.hash.slice(0, 8)}…
                 </p>
+                <p data-testid="ui-asset-id">
+                  ID: <code>{selectedAsset.id}</code>
+                </p>
               </div>
               <IconButton
                 icon={X}
@@ -738,12 +755,7 @@ export function Assets({
                     <button
                       type="button"
                       aria-label={`${copied === asset.id ? "Copiado" : "Copiar ID"} de ${asset.name}`}
-                      onClick={() => {
-                        void navigator.clipboard.writeText(asset.id).then(() => {
-                          setCopied(asset.id);
-                          window.setTimeout(() => setCopied(""), 1_200);
-                        });
-                      }}
+                      onClick={() => void copyAssetId(asset.id)}
                     >
                       {copied === asset.id ? (
                         <Check aria-hidden size={15} />
@@ -752,6 +764,11 @@ export function Assets({
                       )}
                       {copied === asset.id ? "Copiado" : "Copiar ID"}
                     </button>
+                    {copyErrorId === asset.id ? (
+                      <small className="field-error" role="alert" data-testid="ui-asset-copy-error">
+                        No se pudo copiar el ID. Podés seleccionarlo manualmente desde el detalle.
+                      </small>
+                    ) : null}
                   </div>
                 </div>
               </article>

@@ -36,6 +36,12 @@ interface ProductEditorProps {
 
 type EditorStep = "details" | "media" | "organization" | "variants";
 
+type PendingVariantDelete = {
+  id: Variant["id"];
+  index: number;
+  label: string;
+};
+
 const editorSteps: Array<{ id: EditorStep; label: string }> = [
   { id: "details", label: "Datos" },
   { id: "media", label: "Imágenes" },
@@ -138,6 +144,9 @@ export function ProductEditor({
   const [tags, setTags] = useState(product.tags.join(", "));
   const [error, setError] = useState("");
   const [confirmClose, setConfirmClose] = useState(false);
+  const [pendingVariantDelete, setPendingVariantDelete] = useState<PendingVariantDelete | null>(
+    null,
+  );
   const [activeStep, setActiveStep] = useState<EditorStep>("details");
   const [slugTouched, setSlugTouched] = useState(
     mode === "edit" && product.slug !== slugify(product.title),
@@ -222,6 +231,36 @@ export function ProductEditor({
     setDraft((current) => ({ ...current, variants: [...current.variants, variant] }));
     setOptionValues((current) => ({ ...current, [variant.id]: optionsText(variant.optionValues) }));
     setPriceText((current) => ({ ...current, [variant.id]: String(variant.price) }));
+  };
+
+  const removeVariant = (variantId: Variant["id"]) => {
+    if (draft.variants.length <= 1) return;
+    const index = draft.variants.findIndex((variant) => variant.id === variantId);
+    if (index < 0) return;
+    const nextFocusIndex = draft.variants[index + 1] ? index : index - 1;
+    setDraft((current) => ({
+      ...current,
+      variants: current.variants.filter((variant) => variant.id !== variantId),
+    }));
+    setOptionValues((current) => {
+      const next = { ...current };
+      delete next[variantId];
+      return next;
+    });
+    setPriceText((current) => {
+      const next = { ...current };
+      delete next[variantId];
+      return next;
+    });
+    requestAnimationFrame(() => {
+      const focusTarget =
+        nextFocusIndex >= 0
+          ? dialogRef.current?.querySelector<HTMLElement>(
+              `[data-variant-delete-index="${nextFocusIndex}"]`,
+            )
+          : null;
+      (focusTarget ?? dialogRef.current?.querySelector<HTMLElement>("[data-variant-add]"))?.focus();
+    });
   };
 
   const moveVariant = (id: string, direction: -1 | 1) => {
@@ -591,24 +630,14 @@ export function ProductEditor({
                         icon={Trash}
                         label={`Eliminar ${variant.title}`}
                         disabled={draft.variants.length === 1}
-                        onClick={() => {
-                          setDraft((current) => ({
-                            ...current,
-                            variants: current.variants.filter(
-                              (candidate) => candidate.id !== variant.id,
-                            ),
-                          }));
-                          setOptionValues((current) => {
-                            const next = { ...current };
-                            delete next[variant.id];
-                            return next;
-                          });
-                          setPriceText((current) => {
-                            const next = { ...current };
-                            delete next[variant.id];
-                            return next;
-                          });
-                        }}
+                        onClick={() =>
+                          setPendingVariantDelete({
+                            id: variant.id,
+                            index,
+                            label: variant.title || `Variante ${index + 1}`,
+                          })
+                        }
+                        data-variant-delete-index={index}
                       />
                     </div>
                   </header>
@@ -792,7 +821,7 @@ export function ProductEditor({
               );
             })}
           </div>
-          <Button icon={Plus} onClick={() => addVariant()}>
+          <Button icon={Plus} onClick={() => addVariant()} data-variant-add>
             Agregar variante
           </Button>
         </fieldset>
@@ -819,6 +848,25 @@ export function ProductEditor({
             onCancel();
           }}
           onCancel={() => setConfirmClose(false)}
+        />
+      ) : null}
+      {pendingVariantDelete ? (
+        <ConfirmDialog
+          title="Eliminar variante"
+          body={
+            <>
+              Se eliminará «{pendingVariantDelete.label}» y sus opciones, precio y stock del
+              borrador del producto. Podés cancelar ahora si no querés cambiarlo.
+            </>
+          }
+          confirmLabel="Eliminar variante"
+          danger
+          onConfirm={() => {
+            const variantId = pendingVariantDelete.id;
+            setPendingVariantDelete(null);
+            requestAnimationFrame(() => removeVariant(variantId));
+          }}
+          onCancel={() => setPendingVariantDelete(null)}
         />
       ) : null}
     </dialog>

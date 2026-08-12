@@ -430,7 +430,7 @@ test("switches restantes: navegación y shell commitean con aria-checked (capa 1
   }
 });
 
-test("subenlaces: alta, edición, reorden con límites y borrado directo (capa 1+2+3)", async ({
+test("subenlaces: alta, edición, reorden con límites y borrado confirmado (capa 1+2+3)", async ({
   page,
 }) => {
   const storeName = "Tienda subenlaces A9";

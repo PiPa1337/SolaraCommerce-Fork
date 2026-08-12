@@ -291,7 +291,18 @@ test("A18 T4: quitar elimina la slide y el preview se actualiza", async ({ page 
   await seedLegacyHero(page);
   await openHeroInspector(page);
 
-  await page.getByRole("button", { name: "Eliminar slide" }).first().click();
+  const deleteSlide = page.getByRole("button", { name: "Eliminar slide" }).first();
+  await deleteSlide.click();
+  const deleteDialog = page.getByRole("dialog", { name: "Eliminar slide" });
+  await expect(deleteDialog).toBeVisible();
+  await expect(deleteDialog.locator(".confirm-dialog__body")).toContainText("Diapo base");
+  await deleteDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(page.locator(".slide-card")).toHaveCount(2);
+  await deleteSlide.click();
+  await page
+    .getByRole("dialog", { name: "Eliminar slide" })
+    .getByRole("button", { name: "Eliminar slide", exact: true })
+    .click();
   await expect(page.locator(".slide-card")).toHaveCount(1);
   await expect(page.getByText("1 configurados", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Título del slide 1", { exact: true })).toHaveValue("Segunda diapo");

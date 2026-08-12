@@ -110,7 +110,7 @@ export function ExportPanel({
   const [optimization, setOptimization] = useState<OptimizationReport | null>(null);
   const [exportDone, setExportDone] = useState(false);
   const [doneStages, setDoneStages] = useState<ReadonlySet<string>>(new Set());
-  const [confirmAction, setConfirmAction] = useState<"production" | "import" | "">("");
+  const [confirmAction, setConfirmAction] = useState<"production" | "import" | "history" | "">("");
   const [pendingImport, setPendingImport] = useState<File | null>(null);
   const [history, setHistory] = useState<ExportHistoryEntry[]>(() =>
     readExportHistory(project.slug),
@@ -515,7 +515,7 @@ export function ExportPanel({
               variant="quiet"
               size="sm"
               data-testid="ui-export-history-clear"
-              onClick={clearHistory}
+              onClick={() => setConfirmAction("history")}
             >
               Borrar historial
             </Button>
@@ -582,6 +582,24 @@ export function ExportPanel({
             setConfirmAction("");
             setPendingImport(null);
           }}
+        />
+      ) : null}
+      {confirmAction === "history" ? (
+        <ConfirmDialog
+          title="Borrar historial de exportaciones"
+          danger
+          confirmLabel="Borrar historial"
+          body={
+            <p>
+              Se eliminarán todos los registros de exportaciones exitosas de esta tienda en este
+              navegador. El proyecto y los sitios exportados no se modificarán.
+            </p>
+          }
+          onConfirm={() => {
+            setConfirmAction("");
+            clearHistory();
+          }}
+          onCancel={() => setConfirmAction("")}
         />
       ) : null}
     </section>

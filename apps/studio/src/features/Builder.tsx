@@ -246,6 +246,18 @@ type PendingSectionDelete = {
   label: string;
 };
 
+type PendingSectionRestore = {
+  id: StoreSection["id"];
+  label: string;
+};
+
+type PendingModuleReplace = {
+  id: StoreSection["id"];
+  currentLabel: string;
+  nextLabel: string;
+  moduleId: string;
+};
+
 export function Builder({
   project,
   onChange,
@@ -261,6 +273,10 @@ export function Builder({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerQuery, setPickerQuery] = useState("");
   const [pendingDelete, setPendingDelete] = useState<PendingSectionDelete | null>(null);
+  const [pendingRestore, setPendingRestore] = useState<PendingSectionRestore | null>(null);
+  const [pendingModuleReplace, setPendingModuleReplace] = useState<PendingModuleReplace | null>(
+    null,
+  );
   const pickerId = useId();
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -368,16 +384,18 @@ export function Builder({
       ? Object.entries(slotLabels)
       : Object.entries(slotLabels).filter(([slot]) => ["catalog", "content"].includes(slot));
 
-  const replaceModule = (moduleId: string) => {
-    if (!selected || isProtected(selected)) return;
-    updateSection(selected.id, (section) => replaceModuleInSection(section, moduleId));
+  const replaceModule = (sectionId: StoreSection["id"], moduleId: string) => {
+    const section = pageSections.find((current) => current.id === sectionId);
+    if (!section || isProtected(section)) return;
+    updateSection(sectionId, (current) => replaceModuleInSection(current, moduleId));
   };
 
-  const restoreDefaults = () => {
-    if (!selected || isProtected(selected) || !selectedModule) return;
-    updateSection(selected.id, (section) => ({
-      ...section,
-      settings: defaultSettingsForModule(selectedModule.manifest.id),
+  const restoreDefaults = (sectionId: StoreSection["id"]) => {
+    const section = pageSections.find((current) => current.id === sectionId);
+    if (!section || isProtected(section)) return;
+    updateSection(sectionId, (current) => ({
+      ...current,
+      settings: defaultSettingsForModule(current.moduleId),
     }));
   };
 
@@ -635,7 +653,19 @@ export function Builder({
                 <select
                   value={selected.moduleId}
                   disabled={isProtected(selected)}
-                  onChange={(event) => replaceModule(event.target.value)}
+                  onChange={(event) => {
+                    if (event.target.value === selected.moduleId) return;
+                    const target = replacementModules.find(
+                      (module) => module.manifest.id === event.target.value,
+                    );
+                    if (!target) return;
+                    setPendingModuleReplace({
+                      id: selected.id,
+                      currentLabel: selectedModule?.manifest.name ?? selected.moduleId,
+                      nextLabel: target.manifest.name,
+                      moduleId: target.manifest.id,
+                    });
+                  }}
                 >
                   {replacementModules.map((module, index) => (
                     <option key={module.manifest.id} value={module.manifest.id}>
@@ -652,7 +682,12 @@ export function Builder({
                 icon={ArrowCounterClockwise}
                 disabled={isProtected(selected)}
                 data-testid="ui-restore-defaults"
-                onClick={restoreDefaults}
+                onClick={() =>
+                  setPendingRestore({
+                    id: selected.id,
+                    label: selectedModule?.manifest.name ?? selected.moduleId,
+                  })
+                }
               >
                 Restaurar valores por defecto
               </Button>
@@ -784,6 +819,46 @@ export function Builder({
             requestAnimationFrame(() => deleteSection(sectionId));
           }}
           onCancel={() => setPendingDelete(null)}
+        />
+      ) : null}
+      {pendingRestore ? (
+        <ConfirmDialog
+          title="Restaurar valores por defecto"
+          body={
+            <>
+              Se reemplazará toda la configuración de «{pendingRestore.label}» por sus valores
+              iniciales. Podés deshacerlo después desde la barra del editor.
+            </>
+          }
+          confirmLabel="Restaurar valores"
+          cancelLabel="Cancelar"
+          danger
+          onConfirm={() => {
+            const sectionId = pendingRestore.id;
+            setPendingRestore(null);
+            requestAnimationFrame(() => restoreDefaults(sectionId));
+          }}
+          onCancel={() => setPendingRestore(null)}
+        />
+      ) : null}
+      {pendingModuleReplace ? (
+        <ConfirmDialog
+          title="Cambiar módulo de sección"
+          danger
+          confirmLabel="Cambiar módulo"
+          body={
+            <>
+              Se cambiará «{pendingModuleReplace.currentLabel}» por «
+              {pendingModuleReplace.nextLabel}». Los ajustes compatibles se conservarán; el resto
+              volverá a los valores iniciales del nuevo módulo.
+            </>
+          }
+          onConfirm={() => {
+            const replacement = pendingModuleReplace;
+            setPendingModuleReplace(null);
+            requestAnimationFrame(() => replaceModule(replacement.id, replacement.moduleId));
+          }}
+          onCancel={() => setPendingModuleReplace(null)}
         />
       ) : null}
     </section>

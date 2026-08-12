@@ -209,6 +209,16 @@ test("restaurar valores por defecto revierte la sección con feedback visible", 
   );
 
   await page.getByRole("button", { name: "Restaurar valores por defecto" }).click();
+  const restoreDialog = page.getByRole("dialog", { name: "Restaurar valores por defecto" });
+  await expect(restoreDialog).toBeVisible();
+  await expect(restoreDialog.locator(".confirm-dialog__body")).toContainText("configuración");
+  await restoreDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(title).toHaveValue("Título del barrido");
+  await page.getByRole("button", { name: "Restaurar valores por defecto" }).click();
+  await page
+    .getByRole("dialog", { name: "Restaurar valores por defecto" })
+    .getByRole("button", { name: "Restaurar valores", exact: true })
+    .click();
   await expect(title).toHaveValue("Vestite con lo que te representa.");
   await expect(body).toHaveValue("Prendas elegidas para acompañarte todos los días.");
   await expect(previewFrame(page).locator('[data-solara-module="catalog-hero"] h1')).toHaveText(

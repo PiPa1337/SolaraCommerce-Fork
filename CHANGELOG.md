@@ -20,6 +20,17 @@ versión publicada.
 - Los diálogos exponen también su cuerpo mediante `aria-describedby`, para que
   el impacto de la acción se anuncie junto con su título.
 
+### Confirmacion de borrados y restauracion en borradores (2026-08-12)
+
+- Los editores de repetidores, slides y variantes confirman el borrado, explican
+  el alcance de la perdida y conservan el foco en el siguiente control util.
+- Restaurar los valores por defecto de una seccion deja de ser una mutacion
+  silenciosa: permite cancelar y recuerda que la operacion puede deshacerse.
+- Exportar confirma el borrado del historial local y aclara que no elimina el
+  proyecto ni los sitios exportados.
+- Las regresiones E2E cubren cancelar y confirmar cada accion, junto con los
+  recorridos existentes de Constructor, Catalogo, Preparar y Exportar.
+
 ### Auditoria visual responsive de SEO (2026-08-12)
 
 - SEO ahora apila sus bloques cuando el panel del editor es estrecho, incluso

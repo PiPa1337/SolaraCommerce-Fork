@@ -223,6 +223,20 @@ test("el checklist posterior persiste los toggles, navega a SEO y el historial r
   expect((parsed as Array<{ mode: string }>)[0]?.mode).toBe("draft");
 
   await page.getByTestId("ui-export-history-clear").click();
+  const clearHistoryDialog = page.getByRole("dialog", {
+    name: "Borrar historial de exportaciones",
+  });
+  await expect(clearHistoryDialog).toBeVisible();
+  await expect(clearHistoryDialog.locator(".confirm-dialog__body")).toContainText(
+    "El proyecto y los sitios exportados no se modificarán",
+  );
+  await clearHistoryDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(page.getByTestId("ui-export-history")).toBeVisible();
+  await page.getByTestId("ui-export-history-clear").click();
+  await page
+    .getByRole("dialog", { name: "Borrar historial de exportaciones" })
+    .getByRole("button", { name: "Borrar historial", exact: true })
+    .click();
   await expect(page.getByTestId("ui-export-history")).toHaveCount(0);
   const cleared = await page.evaluate((key) => localStorage.getItem(key), HISTORY_KEY);
   expect(cleared).toBeNull();

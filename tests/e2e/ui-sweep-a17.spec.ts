@@ -380,6 +380,43 @@ test("Copiar ID escribe el identificador del recurso y comunica Copiado", async 
     .toBe("asset-hero");
 });
 
+test("Copiar ID muestra un error accionable cuando el portapapeles rechaza la operación", async ({
+  page,
+}) => {
+  await page.goto(studioUrl);
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({ timeout: 20_000 });
+  const card = page
+    .locator(".dashboard-store-card")
+    .filter({ has: page.getByText("Predeterminado", { exact: true }) });
+  await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+  await openAssetsTab(page);
+
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async () => {
+          throw new Error("permission denied");
+        },
+      },
+    });
+  });
+
+  const heroAsset = page.locator(".asset-item").filter({
+    has: page.locator('input[value="Campaña Modo Sur"]'),
+  });
+  await heroAsset.getByRole("button", { name: "Copiar ID de Campaña Modo Sur" }).click();
+  await expect(heroAsset.getByTestId("ui-asset-copy-error")).toContainText(
+    "No se pudo copiar el ID",
+  );
+  await heroAsset.getByTestId("ui-asset-detail-open").click();
+  await expect(page.getByTestId("ui-asset-id")).toContainText("asset-hero");
+  await expect(
+    heroAsset.getByRole("button", { name: "Copiar ID de Campaña Modo Sur" }),
+  ).toBeVisible();
+});
+
 test("eliminar sin usos: confirmar quita la imagen y cancelar la conserva", async ({ page }) => {
   await page.goto(studioUrl);
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({ timeout: 20_000 });

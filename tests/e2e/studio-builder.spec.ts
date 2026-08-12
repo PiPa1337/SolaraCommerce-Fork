@@ -117,6 +117,20 @@ test("edita slides modernos con el inspector generado por metadata", async ({ pa
     .nth(0)
     .getByRole("button", { name: "Eliminar elemento" })
     .click();
+  const repeaterDialog = page.getByTestId("ui-confirm-dialog");
+  await expect(repeaterDialog).toBeVisible();
+  await expect(repeaterDialog.locator(".confirm-dialog__body")).toContainText("Segundo");
+  await repeaterDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(page.locator(".repeater-editor__item")).toHaveCount(2);
+  await page
+    .locator(".repeater-editor__item")
+    .nth(0)
+    .getByRole("button", { name: "Eliminar elemento" })
+    .click();
+  await page
+    .getByTestId("ui-confirm-dialog")
+    .getByRole("button", { name: "Eliminar elemento", exact: true })
+    .click();
   await expect(page.locator(".repeater-editor__item")).toHaveCount(1);
 });
 

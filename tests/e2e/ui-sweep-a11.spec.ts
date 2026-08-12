@@ -170,6 +170,17 @@ test("reemplazar módulo cambia el módulo y conserva sólo los settings compati
 
   // Reemplazo a Testimonios: compatibleSettings = ["title", "items"].
   await moduleSelect.selectOption("catalog-testimonials");
+  const replaceDialog = page.getByRole("dialog", { name: "Cambiar módulo de sección" });
+  await expect(replaceDialog).toBeVisible();
+  await expect(replaceDialog.locator(".confirm-dialog__body")).toContainText("Testimonios");
+  await replaceDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(moduleSelect).toHaveValue("catalog-brand-strip");
+  await expect(rowName(page, 3)).resolves.toBe("Franja de marcas");
+  await moduleSelect.selectOption("catalog-testimonials");
+  await page
+    .getByRole("dialog", { name: "Cambiar módulo de sección" })
+    .getByRole("button", { name: "Cambiar módulo", exact: true })
+    .click();
 
   // Efecto real: la fila en la misma posición, el inspector, el select y el
   // preview se actualizan. La fila cambia de nombre, por eso se re-consulta

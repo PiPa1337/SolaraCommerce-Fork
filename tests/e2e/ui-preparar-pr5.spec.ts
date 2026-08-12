@@ -268,7 +268,7 @@ test("utilidad: el modo avanzado habilita toda la matriz que la protección bloq
   await page.getByTestId("ui-module-search").fill("Franja");
   await page.getByTestId("ui-module-option").filter({ hasText: "Franja de marcas" }).click();
   await expect(page.getByTestId("ui-module-picker")).toHaveCount(0);
-  expect(await sectionModuleNames(page)).toHaveLength(CLEAN_SECTION_COUNT + 1);
+  await expect.poll(() => sectionModuleNames(page)).toHaveLength(CLEAN_SECTION_COUNT + 1);
 
   // Seleccionar el hero para editar su estructura y contenido.
   await heroRow(page).locator(".section-select").click();
@@ -294,9 +294,30 @@ test("utilidad: el modo avanzado habilita toda la matriz que la protección bloq
   // sección agregada (que también se llama "Franja de marcas").
   const brandsRow = page.locator(".section-row").nth(2);
   await brandsRow.locator(".section-select").click();
-  await page.getByLabel("Módulo").selectOption({ label: "Mosaico de categorías" });
+  const moduleSelect = page.getByLabel("Módulo");
+  await moduleSelect.selectOption({ label: "Mosaico de categorías" });
+  const replaceDialog = page.getByRole("dialog", { name: "Cambiar módulo de sección" });
+  await expect(replaceDialog).toBeVisible();
+  await expect(replaceDialog.locator(".confirm-dialog__body")).toContainText(
+    "Mosaico de categorías",
+  );
+  await replaceDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(moduleSelect).toHaveValue("catalog-brand-strip");
+  await expect(brandsRow.locator(".section-select strong")).toHaveText("Franja de marcas");
+
+  await moduleSelect.selectOption({ label: "Mosaico de categorías" });
+  await page
+    .getByRole("dialog", { name: "Cambiar módulo de sección" })
+    .getByRole("button", { name: "Cambiar módulo", exact: true })
+    .click();
+  await expect(moduleSelect).toHaveValue("catalog-category-bento");
   await expect(brandsRow.locator(".section-select strong")).toHaveText("Mosaico de categorías");
-  await page.getByLabel("Módulo").selectOption({ label: "Franja de marcas" });
+  await moduleSelect.selectOption({ label: "Franja de marcas" });
+  await page
+    .getByRole("dialog", { name: "Cambiar módulo de sección" })
+    .getByRole("button", { name: "Cambiar módulo", exact: true })
+    .click();
+  await expect(moduleSelect).toHaveValue("catalog-brand-strip");
   await expect(brandsRow.locator(".section-select strong")).toHaveText("Franja de marcas");
 
   // Restaurar valores por defecto: el título editado vuelve a los defaults
@@ -304,6 +325,11 @@ test("utilidad: el modo avanzado habilita toda la matriz que la protección bloq
   await heroRow(page).locator(".section-select").click();
   await page.getByLabel("Título", { exact: true }).fill("Título PR5 antes de restaurar");
   await page.getByTestId("ui-restore-defaults").click();
+  await expect(page.getByRole("dialog", { name: "Restaurar valores por defecto" })).toBeVisible();
+  await page
+    .getByRole("dialog", { name: "Restaurar valores por defecto" })
+    .getByRole("button", { name: "Restaurar valores", exact: true })
+    .click();
   await expect(page.getByLabel("Título", { exact: true })).toHaveValue(MODULE_DEFAULT_HERO_TITLE);
 
   // Duplicar la sección base.
@@ -331,7 +357,7 @@ test("utilidad: el modo avanzado habilita toda la matriz que la protección bloq
     .getByTestId("ui-confirm-dialog")
     .getByRole("button", { name: "Eliminar sección", exact: true })
     .click();
-  expect(await sectionModuleNames(page)).toHaveLength(CLEAN_SECTION_COUNT);
+  await expect.poll(() => sectionModuleNames(page)).toHaveLength(CLEAN_SECTION_COUNT);
   await heroRow(page).locator(".section-select").click();
   await expect(page.getByLabel("Título", { exact: true })).toHaveValue(MODULE_DEFAULT_HERO_TITLE);
 });

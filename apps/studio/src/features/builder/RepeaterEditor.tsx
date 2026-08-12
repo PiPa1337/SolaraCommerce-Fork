@@ -1,7 +1,14 @@
 import type { RepeaterItemField } from "@solara/modules";
 import type { StoreProjectV1 } from "@solara/project-schema";
+import { useId, useRef, useState } from "react";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { Field } from "../../components/Ui";
 import { defaultRepeaterItem } from "./repeaterDefaults";
+
+type PendingRepeaterDelete = {
+  index: number;
+  label: string;
+};
 
 export function RepeaterEditor({
   label,
@@ -29,6 +36,9 @@ export function RepeaterEditor({
         Boolean(item && typeof item === "object"),
       )
     : [];
+  const editorId = useId();
+  const editorRef = useRef<HTMLFieldSetElement>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingRepeaterDelete | null>(null);
   const defaults = () => defaultRepeaterItem(fields, project, itemLabelKey);
   const update = (index: number, key: string, next: unknown) =>
     onChange(
@@ -54,8 +64,24 @@ export function RepeaterEditor({
     next[target] = current;
     onChange(next);
   };
+  const removeItem = (index: number) => {
+    if (index < 0 || index >= items.length) return;
+    const nextFocusIndex = items[index + 1] ? index : index - 1;
+    onChange(items.filter((_, itemIndex) => itemIndex !== index));
+    requestAnimationFrame(() => {
+      const focusTarget =
+        nextFocusIndex >= 0
+          ? editorRef.current?.querySelector<HTMLElement>(
+              `[data-repeater-delete-index="${nextFocusIndex}"]`,
+            )
+          : null;
+      (
+        focusTarget ?? editorRef.current?.querySelector<HTMLElement>("[data-repeater-add]")
+      )?.focus();
+    });
+  };
   return (
-    <fieldset className="repeater-editor">
+    <fieldset className="repeater-editor" ref={editorRef} data-repeater-id={editorId}>
       <legend>{label}</legend>
       {items.map((item, index) => (
         <article className="repeater-editor__item" key={String(item.id ?? index)}>
@@ -93,10 +119,16 @@ export function RepeaterEditor({
               </button>
               <button
                 type="button"
-                onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}
+                onClick={() =>
+                  setPendingDelete({
+                    index,
+                    label: String((itemLabelKey && item[itemLabelKey]) || `${label} ${index + 1}`),
+                  })
+                }
                 disabled={items.length <= (minItems ?? 0)}
                 aria-label="Eliminar elemento"
                 aria-description={`${label} ${index + 1} de ${items.length}`}
+                data-repeater-delete-index={index}
               >
                 Eliminar
               </button>
@@ -179,10 +211,30 @@ export function RepeaterEditor({
         className="secondary-button"
         onClick={() => onChange([...items, defaults()])}
         disabled={maxItems !== undefined && items.length >= maxItems}
+        data-repeater-add
       >
         Agregar elemento
       </button>
       {error ? <small className="field-error">{error}</small> : null}
+      {pendingDelete ? (
+        <ConfirmDialog
+          title="Eliminar elemento"
+          body={
+            <>
+              Se eliminará «{pendingDelete.label}» y todos sus campos del editor. Podés cancelar
+              ahora si no querés cambiar el borrador.
+            </>
+          }
+          confirmLabel="Eliminar elemento"
+          danger
+          onConfirm={() => {
+            const index = pendingDelete.index;
+            setPendingDelete(null);
+            requestAnimationFrame(() => removeItem(index));
+          }}
+          onCancel={() => setPendingDelete(null)}
+        />
+      ) : null}
     </fieldset>
   );
 }

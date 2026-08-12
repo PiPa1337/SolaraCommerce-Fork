@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, Copy, Plus, Trash } from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
-import { useEffect, useId } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { Button, Field, IconButton } from "../../components/Ui";
 
 type HeroSlideDraft = {
@@ -11,6 +12,11 @@ type HeroSlideDraft = {
   actionLabel: string;
   actionHref: string;
   imageId: string;
+};
+
+type PendingSlideDelete = {
+  index: number;
+  label: string;
 };
 
 function slideValue(slide: unknown, key: keyof HeroSlideDraft): string {
@@ -43,6 +49,8 @@ export function HeroSlidesEditor({
   onChange(next: HeroSlideDraft[]): void;
 }) {
   const titleId = useId();
+  const editorRef = useRef<HTMLElement>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingSlideDelete | null>(null);
   const slides = Array.isArray(value) ? value.map(normalizeSlide) : [];
 
   /**
@@ -92,9 +100,23 @@ export function HeroSlidesEditor({
         imageId: "",
       },
     ]);
+  const removeSlide = (index: number) => {
+    if (index < 0 || index >= slides.length) return;
+    const nextFocusIndex = slides[index + 1] ? index : index - 1;
+    onChange(slides.filter((_item, slideIndex) => slideIndex !== index));
+    requestAnimationFrame(() => {
+      const focusTarget =
+        nextFocusIndex >= 0
+          ? editorRef.current?.querySelector<HTMLElement>(
+              `[data-slide-delete-index="${nextFocusIndex}"]`,
+            )
+          : null;
+      (focusTarget ?? editorRef.current?.querySelector<HTMLElement>("[data-slide-add]"))?.focus();
+    });
+  };
 
   return (
-    <section className="slides-editor" aria-labelledby={titleId}>
+    <section className="slides-editor" aria-labelledby={titleId} ref={editorRef}>
       <h4 className="visually-hidden" id={titleId}>
         Editor visual de slides
       </h4>
@@ -103,7 +125,7 @@ export function HeroSlidesEditor({
           <strong>Slides del carrusel</strong>
           <small>{slides.length} configurados</small>
         </div>
-        <Button icon={Plus} onClick={addSlide}>
+        <Button icon={Plus} onClick={addSlide} data-slide-add>
           Agregar slide
         </Button>
       </div>
@@ -148,8 +170,12 @@ export function HeroSlidesEditor({
                     label="Eliminar slide"
                     aria-description={`Slide ${index + 1} de ${slides.length}`}
                     onClick={() =>
-                      onChange(slides.filter((_item, slideIndex) => slideIndex !== index))
+                      setPendingDelete({
+                        index,
+                        label: slide.title || `Slide ${index + 1}`,
+                      })
                     }
+                    data-slide-delete-index={index}
                   />
                 </div>
               </header>
@@ -210,6 +236,25 @@ export function HeroSlidesEditor({
           ))}
         </div>
       )}
+      {pendingDelete ? (
+        <ConfirmDialog
+          title="Eliminar slide"
+          body={
+            <>
+              Se eliminará «{pendingDelete.label}» y todo su contenido del carrusel. Podés cancelar
+              ahora si no querés cambiar el borrador.
+            </>
+          }
+          confirmLabel="Eliminar slide"
+          danger
+          onConfirm={() => {
+            const index = pendingDelete.index;
+            setPendingDelete(null);
+            requestAnimationFrame(() => removeSlide(index));
+          }}
+          onCancel={() => setPendingDelete(null)}
+        />
+      ) : null}
     </section>
   );
 }

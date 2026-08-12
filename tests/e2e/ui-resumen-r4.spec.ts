@@ -289,7 +289,7 @@ test("el destino inválido `//` no persiste y mailto/tel son aceptados", async (
   expect(html).not.toContain('href="//evil.example"');
 });
 
-test("eliminar un enlace: directo sin subenlaces, confirmación con subenlaces y ausencia en el sitio", async ({
+test("eliminar un enlace: confirmación con o sin subenlaces y ausencia en el sitio", async ({
   page,
 }) => {
   await openDemoResumen(page);
