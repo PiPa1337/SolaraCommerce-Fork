@@ -10,6 +10,16 @@ versión publicada.
 
 ## [Unreleased]
 
+### Base aislada Storefront V2 (2026-08-12)
+
+- El schema admite la nueva familia visual `catalog-modern-v2` sin cambiar
+  `schemaVersion: 2` ni reinterpretar tiendas existentes `catalog-modern-v1`.
+- Una fixture determinista V2 de 50 productos permite evolucionar el storefront
+  con paridad entre Preview y exportación mientras V1 permanece disponible.
+- Se incorporan el plan maestro, el baseline técnico y doce referencias visuales
+  por superficie para guiar una evolución editorial con motion, responsive y
+  accesibilidad verificables.
+
 ### Matriz release reproducible (2026-08-12)
 
 - El gate Node 22 mantiene toda la suite del Studio en Chromium y limita

@@ -663,7 +663,17 @@ function activeProjectSections(
 }
 
 function isModernProject(project: StoreProjectV1): boolean {
-  return project.commerceTemplates.designFamily === "catalog-modern-v1";
+  return (
+    project.commerceTemplates.designFamily === "catalog-modern-v1" ||
+    project.commerceTemplates.designFamily === "catalog-modern-v2"
+  );
+}
+
+function modernProjectClass(project: StoreProjectV1): string {
+  if (!isModernProject(project)) return "";
+  return project.commerceTemplates.designFamily === "catalog-modern-v2"
+    ? " catalog-modern catalog-modern-v2"
+    : " catalog-modern";
 }
 
 function publicMediaUsage(project: StoreProjectV1): {
@@ -1162,7 +1172,7 @@ function renderDocument(
 </head>
 <body>
   <a class="solara-skip-link" href="#solara-main">Ir al contenido</a>
-  <div class="solara-page${isModernProject(project) ? " catalog-modern" : ""}" data-solara-store data-design-family="${escapeHtml(project.commerceTemplates.designFamily ?? "legacy-editorial-v1")}" data-page-type="${page.pageType}" data-color-mode="${project.theme.colorMode}">${page.body.replace("<main", '<main id="solara-main"')}</div>
+  <div class="solara-page${modernProjectClass(project)}" data-solara-store data-design-family="${escapeHtml(project.commerceTemplates.designFamily ?? "legacy-editorial-v1")}" data-page-type="${page.pageType}" data-color-mode="${project.theme.colorMode}">${page.body.replace("<main", '<main id="solara-main"')}</div>
   <script src="/assets/storefront.js" defer></script>
 </body>
 </html>`;

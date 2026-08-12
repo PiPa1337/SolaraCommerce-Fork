@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { catalogModernStore } from "./catalog-modern-fixture";
+import { catalogModernV2Store } from "./catalog-modern-v2-fixture";
 import { referenceStore } from "./fixture";
 import {
   MoneySchema,
@@ -28,6 +30,14 @@ describe("StoreProjectV2Schema", () => {
     const parsed = StoreProjectV2Schema.parse(project);
     expect(parsed.schemaVersion).toBe(2);
     expect(parsed.products[0]?.variants[0]?.availabilityDate).toBe("2026-09-01T00:00:00.000Z");
+  });
+
+  it("acepta catalog-modern-v2 sin cambiar schemaVersion ni reinterpretar V1", () => {
+    const parsed = StoreProjectV2Schema.parse(catalogModernV2Store);
+
+    expect(parsed.schemaVersion).toBe(2);
+    expect(parsed.commerceTemplates.designFamily).toBe("catalog-modern-v2");
+    expect(catalogModernStore.commerceTemplates.designFamily).toBe("catalog-modern-v1");
   });
 
   it("rechaza dinero fraccionario y slugs inválidos", () => {

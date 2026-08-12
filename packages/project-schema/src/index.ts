@@ -107,7 +107,9 @@ export const EditablePageSchema = z.object({
 });
 
 export const CommerceTemplatesSchema = z.object({
-  designFamily: z.enum(["legacy-editorial-v1", "catalog-modern-v1"]).optional(),
+  designFamily: z
+    .enum(["legacy-editorial-v1", "catalog-modern-v1", "catalog-modern-v2"])
+    .optional(),
   category: z
     .object({ productsPerPage: z.number().int().min(1).max(48).default(24) })
     .default({ productsPerPage: 24 }),

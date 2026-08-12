@@ -8,6 +8,7 @@
     "./fixture": "./src/fixture.ts",
     "./scale-fixture": "./src/scale-fixture.ts",
     "./catalog-modern-fixture": "./src/catalog-modern-fixture.ts",
+    "./catalog-modern-v2-fixture": "./src/catalog-modern-v2-fixture.ts",
     "./catalog-modern-template": "./src/catalog-modern-template.ts",
     "./catalog-modern-guidance": "./src/catalog-modern-guidance.ts",
     "./catalog-modern-upgrade": "./src/catalog-modern-upgrade.ts"

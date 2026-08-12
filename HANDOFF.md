@@ -700,7 +700,7 @@ cantidad y una etiqueta accesible en la card; cuando está desactivada, no emite
 el bloque. El mismo contrato se mantiene en Preview y exportación.
 
 La cobertura está en `packages/modules/src/index.test.ts` (33/33),
-`packages/exporter/src/catalog-modern.test.ts` (109/109, 1 skipped) y
+`packages/exporter/src/catalog-modern.test.ts` (110/110, 1 skipped) y
 `tests/e2e/ui-sweep-a11.spec.ts` (11/11 en Chromium), incluyendo activación,
 desactivación, feedback del inspector y undo. El build de Studio pasó y no se
 modificaron `schemaVersion`, datos persistidos ni la forma de `catalogScaleStore`.

@@ -74,6 +74,8 @@ También contiene:
   y 60 variantes;
 - `catalog-modern-fixture.ts`: `catalogModernStore`, referencia visual Modo Sur
   con 50 productos, 14 categorías y 60 variantes;
+- `catalog-modern-v2-fixture.ts`: `catalogModernV2Store`, clon determinista
+  aislado para evolucionar la familia V2 sin mutar proyectos V1;
 - `catalog-modern-template.ts`: fábrica `clean`/`demo`;
 - `catalog-modern-guidance.ts`: requisitos de contenido y checklist;
 - `catalog-modern-upgrade.ts`: plan de actualización de plantilla sin sobrescribir

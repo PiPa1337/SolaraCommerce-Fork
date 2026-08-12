@@ -1,6 +1,7 @@
 import { StoreProjectV2Schema } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
+import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import { describe, expect, it } from "vitest";
 import { exportProject, renderPreviewHtml } from "./index";
 
@@ -39,6 +40,23 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(product).toContain("catalog-option-pill");
     expect(product).toContain('role="tablist"');
     expect(product).toContain("Lo que dicen quienes compraron");
+  });
+
+  it("recorre preview y export con una raíz V2 aislada sin alterar V1", () => {
+    const v2Export = exportProject(catalogModernV2Store, { mode: "production" });
+    const v2Home = String(v2Export.files.get("index.html"));
+    const v2Product = String(v2Export.files.get("productos/remera-esencial-de-algodon/index.html"));
+    const v2Preview = renderPreviewHtml(catalogModernV2Store, "draft", "/");
+    const v1Home = String(exported.files.get("index.html"));
+    const moduleTree = (html: string) =>
+      [...html.matchAll(/data-solara-module="([^"]+)"/g)].map((match) => match[1]);
+
+    expect(v2Home).toContain('data-design-family="catalog-modern-v2"');
+    expect(v2Home).toContain('class="solara-page catalog-modern catalog-modern-v2"');
+    expect(v2Home).toContain('data-solara-module="catalog-product-grid"');
+    expect(v2Product).toContain('data-solara-module="catalog-product-detail"');
+    expect(moduleTree(v2Preview)).toEqual(moduleTree(v2Home));
+    expect(v1Home).not.toContain("catalog-modern-v2");
   });
 
   it("bloquea production en la plantilla limpia hasta reemplazar placeholders", () => {

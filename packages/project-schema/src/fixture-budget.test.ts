@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { catalogModernStore } from "./catalog-modern-fixture";
+import { catalogModernV2Store } from "./catalog-modern-v2-fixture";
 import { referenceStore } from "./fixture";
 import { catalogScaleStore } from "./scale-fixture";
 
@@ -17,6 +18,12 @@ describe("presupuesto de fixtures locales", () => {
   it("mide la fixture de escala y fija un techo de 8 MiB", () => {
     const bytes = serializedBytes(catalogScaleStore);
     console.info(`catalogScaleStore: ${(bytes / 1024).toFixed(1)} KiB`);
+    expect(bytes).toBeLessThan(8 * 1024 * 1024);
+  });
+
+  it("mide la fixture V2 aislada y fija un techo de 8 MiB", () => {
+    const bytes = serializedBytes(catalogModernV2Store);
+    console.info(`catalogModernV2Store: ${(bytes / 1024).toFixed(1)} KiB`);
     expect(bytes).toBeLessThan(8 * 1024 * 1024);
   });
 

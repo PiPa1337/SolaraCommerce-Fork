@@ -20,7 +20,7 @@ export type SafeHtml = string & { readonly [safeHtmlBrand]: true };
 
 export type ModuleSlot = StoreSection["slot"];
 
-export type ModuleFamily = "legacy-editorial-v1" | "catalog-modern-v1";
+export type ModuleFamily = "legacy-editorial-v1" | "catalog-modern-v1" | "catalog-modern-v2";
 export type ModuleAvailability = "default" | "compatibility-only";
 
 export type RenderPageType =
