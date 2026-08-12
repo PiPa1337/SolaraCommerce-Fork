@@ -37,6 +37,7 @@ export function RepeaterEditor({
       )
     : [];
   const editorId = useId();
+  const errorId = useId();
   const editorRef = useRef<HTMLFieldSetElement>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingRepeaterDelete | null>(null);
   const defaults = () => defaultRepeaterItem(fields, project, itemLabelKey);
@@ -81,7 +82,13 @@ export function RepeaterEditor({
     });
   };
   return (
-    <fieldset className="repeater-editor" ref={editorRef} data-repeater-id={editorId}>
+    <fieldset
+      className="repeater-editor"
+      ref={editorRef}
+      data-repeater-id={editorId}
+      aria-invalid={error ? true : undefined}
+      aria-describedby={error ? errorId : undefined}
+    >
       <legend>{label}</legend>
       {items.map((item, index) => (
         <article className="repeater-editor__item" key={String(item.id ?? index)}>
@@ -215,7 +222,11 @@ export function RepeaterEditor({
       >
         Agregar elemento
       </button>
-      {error ? <small className="field-error">{error}</small> : null}
+      {error ? (
+        <small id={errorId} className="field-error" role="alert" data-testid="ui-field-error">
+          {error}
+        </small>
+      ) : null}
       {pendingDelete ? (
         <ConfirmDialog
           title="Eliminar elemento"

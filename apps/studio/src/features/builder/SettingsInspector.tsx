@@ -1,6 +1,6 @@
 import type { RegisteredModule } from "@solara/modules";
 import type { StoreProjectV1 } from "@solara/project-schema";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { Field, InlineError } from "../../components/Ui";
 import { HeroSlidesEditor } from "./HeroSlidesEditor";
 import { RepeaterEditor } from "./RepeaterEditor";
@@ -25,6 +25,7 @@ export function SettingsInspector({
   const [draft, setDraft] = useState(values);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [rawArrays, setRawArrays] = useState<Record<string, string>>({});
+  const errorIdPrefix = useId();
 
   useEffect(() => {
     setDraft(values);
@@ -83,25 +84,37 @@ export function SettingsInspector({
       {fields.map((field) => {
         const value = draft[field.key];
         const error = errors[field.key];
-        const hint = error ?? field.description;
+        const feedback = error ? { error } : field.description ? { hint: field.description } : {};
         if (field.type === "boolean") {
+          const errorId = `${errorIdPrefix}-${field.key.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
           return (
             <div key={field.key}>
               <label className="check-field">
                 <input
                   type="checkbox"
                   checked={Boolean(value)}
+                  aria-invalid={Boolean(error)}
+                  {...(error ? { "aria-describedby": errorId } : {})}
                   onChange={(event) => setValue(field.key, event.target.checked)}
                 />
                 {field.label}
               </label>
-              {error ? <small className="field-error">{error}</small> : null}
+              {error ? (
+                <small
+                  id={errorId}
+                  className="field-error"
+                  role="alert"
+                  data-testid="ui-field-error"
+                >
+                  {error}
+                </small>
+              ) : null}
             </div>
           );
         }
         if (field.type === "number") {
           return (
-            <Field label={field.label} {...(error ? { hint: error } : {})} key={field.key}>
+            <Field label={field.label} {...feedback} key={field.key}>
               <input
                 type="number"
                 value={String(value ?? "")}
@@ -122,7 +135,7 @@ export function SettingsInspector({
         if (field.type === "asset") {
           const acceptsVideo = field.key.toLowerCase().includes("video");
           return (
-            <Field label={field.label} {...(error ? { hint: error } : {})} key={field.key}>
+            <Field label={field.label} {...feedback} key={field.key}>
               <select
                 value={String(value ?? "")}
                 aria-invalid={Boolean(error)}
@@ -151,7 +164,7 @@ export function SettingsInspector({
         }
         if (field.type === "select") {
           return (
-            <Field label={field.label} {...(error ? { hint: error } : {})} key={field.key}>
+            <Field label={field.label} {...feedback} key={field.key}>
               <select
                 value={String(value ?? "")}
                 aria-invalid={Boolean(error)}
@@ -179,7 +192,7 @@ export function SettingsInspector({
             );
           }
           return (
-            <Field label={field.label} {...(hint ? { hint } : {})} key={field.key}>
+            <Field label={field.label} {...feedback} key={field.key}>
               <textarea
                 value={rawArrays[field.key] ?? JSON.stringify(value ?? [], null, 2)}
                 rows={6}
@@ -218,7 +231,7 @@ export function SettingsInspector({
         return (
           <Field
             label={field.label}
-            {...(hint ? { hint } : {})}
+            {...feedback}
             key={field.key}
             className={error ? "field--error" : ""}
           >

@@ -49,6 +49,7 @@ export function HeroSlidesEditor({
   onChange(next: HeroSlideDraft[]): void;
 }) {
   const titleId = useId();
+  const errorId = useId();
   const editorRef = useRef<HTMLElement>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingSlideDelete | null>(null);
   const slides = Array.isArray(value) ? value.map(normalizeSlide) : [];
@@ -116,7 +117,12 @@ export function HeroSlidesEditor({
   };
 
   return (
-    <section className="slides-editor" aria-labelledby={titleId} ref={editorRef}>
+    <section
+      className="slides-editor"
+      aria-labelledby={titleId}
+      {...(error ? { "aria-describedby": errorId } : {})}
+      ref={editorRef}
+    >
       <h4 className="visually-hidden" id={titleId}>
         Editor visual de slides
       </h4>
@@ -129,7 +135,11 @@ export function HeroSlidesEditor({
           Agregar slide
         </Button>
       </div>
-      {error ? <small className="field-error">{error}</small> : null}
+      {error ? (
+        <small id={errorId} className="field-error" role="alert" data-testid="ui-field-error">
+          {error}
+        </small>
+      ) : null}
       {slides.length === 0 ? (
         <p className="inspector-note">Agregá al menos dos slides para activar el carrusel.</p>
       ) : (

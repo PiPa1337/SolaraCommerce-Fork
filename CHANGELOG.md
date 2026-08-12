@@ -10,6 +10,15 @@ versión publicada.
 
 ## [Unreleased]
 
+### Feedback accesible en inspectores generados (2026-08-12)
+
+- Los errores de booleanos, arrays JSON, repetidores y slides quedan asociados
+  al control o grupo que debe corregirse, se anuncian con `role="alert"` y
+  marcan el estado inválido sin cambiar el contrato del schema.
+- El barrido del Constructor verifica duplicado con contenido independiente,
+  límite de ocho elementos, cancelación segura, foco tras borrar y recuperación
+  del error antes de volver a aplicar el cambio.
+
 ### Confirmaciones de acciones destructivas (2026-08-12)
 
 - El Constructor confirma la eliminación de secciones, explica que se pierde su

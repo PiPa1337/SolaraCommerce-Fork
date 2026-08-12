@@ -134,6 +134,59 @@ test("edita slides modernos con el inspector generado por metadata", async ({ pa
   await expect(page.locator(".repeater-editor__item")).toHaveCount(1);
 });
 
+test("los repetidores completan duplicado, límites, error asociado y foco tras borrar", async ({
+  page,
+}) => {
+  await openBuilder(page);
+  await page.getByLabel("Tipo de sección").selectOption("content");
+  await page.getByRole("button", { name: "Agregar sección" }).click();
+  await page
+    .getByTestId("ui-module-picker")
+    .getByRole("button", { name: /Testimonios/ })
+    .click();
+
+  const repeater = page.getByRole("group", { name: "Testimonios" });
+  const items = repeater.locator(".repeater-editor__item");
+  const addItem = repeater.getByRole("button", { name: "Agregar elemento" });
+  await addItem.click();
+  await addItem.click();
+  await expect(items).toHaveCount(2);
+
+  await items.nth(0).getByRole("textbox", { name: "Nombre" }).fill("Primero");
+  await items.nth(0).getByRole("button", { name: "Duplicar elemento" }).click();
+  await expect(items).toHaveCount(3);
+  await expect(items.nth(1).getByRole("textbox", { name: "Nombre" })).toHaveValue("Primero");
+  await items.nth(1).getByRole("textbox", { name: "Nombre" }).fill("Duplicado");
+  await expect(items.nth(0).getByRole("textbox", { name: "Nombre" })).toHaveValue("Primero");
+
+  for (let index = 3; index < 8; index += 1) await addItem.click();
+  await expect(items).toHaveCount(8);
+  await expect(addItem).toBeDisabled();
+  await expect(items.nth(0).getByRole("button", { name: "Duplicar elemento" })).toBeDisabled();
+
+  const firstDelete = items.nth(0).getByRole("button", { name: "Eliminar elemento" });
+  await firstDelete.click();
+  const dialog = page.getByTestId("ui-confirm-dialog");
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(firstDelete).toBeFocused();
+  await firstDelete.click();
+  await dialog.getByRole("button", { name: "Eliminar elemento", exact: true }).click();
+  await expect(items).toHaveCount(7);
+  await expect(items.nth(0).getByRole("button", { name: "Eliminar elemento" })).toBeFocused();
+
+  const firstName = items.nth(0).getByRole("textbox", { name: "Nombre" });
+  await firstName.fill("");
+  await expect(repeater).toHaveAttribute("aria-invalid", "true");
+  const fieldError = repeater.getByTestId("ui-field-error");
+  await expect(fieldError).toBeVisible();
+  const describedBy = await repeater.getAttribute("aria-describedby");
+  await expect(fieldError).toHaveAttribute("id", describedBy ?? "missing-error-id");
+  await firstName.fill("Corregido");
+  await expect(fieldError).toHaveCount(0);
+  await expect(repeater).not.toHaveAttribute("aria-invalid");
+});
+
 test("agrega, ordena, duplica, oculta, deshace y elimina secciones modernas", async ({ page }) => {
   test.setTimeout(60_000);
   await openBuilder(page);
