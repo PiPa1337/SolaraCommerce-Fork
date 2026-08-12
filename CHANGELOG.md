@@ -21,6 +21,9 @@ versión publicada.
 - El botón `Abrir sitio` de Exportar anuncia `aria-busy`, cambia su etiqueta y
   se bloquea mientras espera al host local, evitando aperturas duplicadas y
   mostrando un error recuperable si la operación falla.
+- El barrido de Preparar verifica también sus tres accesos rápidos (`Marca y
+  textos`, `Cargar catálogo` y `Organizar imágenes`) y conserva evidencia
+  visual oscura de Preparar y Resumen en el viewport real `1920x968`.
 
 ### Panel de edición sin desplazamiento lateral (2026-08-12)
 

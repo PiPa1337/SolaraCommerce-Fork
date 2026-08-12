@@ -218,6 +218,12 @@ test("cada pestaña del Studio no desborda y conserva su acción principal", asy
         page.getByRole(tab === "Tema" ? "combobox" : "button", { name: action, exact: true }),
         action,
       );
+      if (viewport.name === "desktop real 1920" && (tab === "Preparar" || tab === "Resumen")) {
+        await page.screenshot({
+          path: `test-results/${tab.toLowerCase()}-dark-1920x968.png`,
+          fullPage: true,
+        });
+      }
       if (tab === "SEO") {
         await expect(page.locator(".seo-header-score")).toBeVisible();
         const seoOrder = await page.evaluate(() => {

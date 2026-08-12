@@ -14,8 +14,8 @@
  * Abrir tienda del panel (abre el editor), checkbox de comparar (selección
  * marcada), pin (persiste), Escape del detalle (cierra, enfoca y limpia),
  * aviso aria-live del respaldo; "Siguiente" (navega y abre el pane), "Modo
- * avanzado" (cambia), ítems de requisito (navegan al scope), panel de upgrade
- * ("Respaldar y adoptar cambios") y elementos de progreso.
+ * avanzado" (cambia), ítems de requisito y accesos rápidos (navegan al scope),
+ * panel de upgrade ("Respaldar y adoptar cambios") y elementos de progreso.
  */
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
@@ -374,6 +374,26 @@ test("los ítems de requisito navegan a su scope", async ({ page }) => {
   await expect(assetItem).toHaveAttribute("data-requirement-status", "placeholder");
   await assetItem.getByRole("button", { name: /^Editar / }).click();
   await expect(studioTab(page, "Recursos")).toHaveAttribute("aria-selected", "true");
+});
+
+test("los tres accesos rápidos de Preparar navegan al área anunciada", async ({ page }) => {
+  await openDashboard(page);
+  await createCleanStore(page, "Tienda Accesos A25");
+  await openGuidedTab(page);
+
+  const cases = [
+    { button: /Marca y textos/, tab: "Resumen", heading: "Resumen" },
+    { button: /Cargar catálogo/, tab: "Catálogo", heading: "Catálogo" },
+    { button: /Organizar imágenes/, tab: "Recursos", heading: "Recursos" },
+  ] as const;
+
+  for (const entry of cases) {
+    await page.getByRole("button", { name: entry.button }).click();
+    await expect(studioTab(page, entry.tab)).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("heading", { name: entry.heading, exact: true })).toBeVisible();
+    await expectPaneOpen(page);
+    await openGuidedTab(page);
+  }
 });
 
 test("el progreso es coherente con el proyecto y sube al completar un requisito", async ({
