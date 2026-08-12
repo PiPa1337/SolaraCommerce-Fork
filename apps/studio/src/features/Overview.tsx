@@ -214,8 +214,9 @@ export function Overview({
         : undefined;
   const nameDisplay = fieldValue("name", project.name);
   const nameError = nameDisplay.trim() === "" ? "Completá el nombre de la tienda." : undefined;
+  const descriptionDisplay = fieldValue("description", project.identity.description);
   const descriptionError =
-    project.identity.description.trim() === "" ? "Completá la descripción de la marca." : undefined;
+    descriptionDisplay.trim() === "" ? "Completá la descripción de la marca." : undefined;
   const catalogLabelDisplay = fieldValue("catalogLabel", project.navigation.catalogLabel);
   const catalogLabelError =
     catalogLabelDisplay.trim() === ""
@@ -410,9 +411,14 @@ export function Overview({
             >
               <textarea
                 rows={4}
-                value={project.identity.description}
+                value={descriptionDisplay}
                 onChange={(event) =>
-                  commit({ identity: { ...project.identity, description: event.target.value } })
+                  updateField(
+                    "description",
+                    event.target.value,
+                    (next) => next.trim() !== "",
+                    (next) => commit({ identity: { ...project.identity, description: next } }),
+                  )
                 }
               />
             </Field>

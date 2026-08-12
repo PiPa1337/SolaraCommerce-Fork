@@ -18,6 +18,9 @@ versión publicada.
 - La navegación pública respeta en el editor los límites del schema: 40
   caracteres para el catálogo, 80 por enlace, 20 enlaces y 12 subenlaces;
   muestra contadores y explica los botones deshabilitados al alcanzar el máximo.
+- La descripción obligatoria de la marca conserva el borrador vacío para
+  mostrar el error junto al textarea, sin enviar un proyecto inválido al schema;
+  al corregirla vuelve a persistir normalmente.
 - Los errores de validación de título, descripción e imagen social en SEO ahora
   permanecen visibles junto al campo inválido, anuncian su relación mediante
   `aria-describedby` y conservan el borrador hasta que el valor se corrige.

@@ -421,6 +421,33 @@ test("vacíos de campos obligatorios: error inline en español sin rechazo globa
     .poll(async () => (await storedProject(page, store))?.project.baseUrl)
     .toBe(initialUrl);
 
+  const descriptionInput = page.getByLabel("Descripción", { exact: true });
+  await descriptionInput.fill("Descripción inicial para validar el borrador.");
+  await expect
+    .poll(async () => (await storedProject(page, store))?.project.identity.description)
+    .toBe("Descripción inicial para validar el borrador.");
+  await descriptionInput.fill("");
+  const descriptionField = fieldsetByLegend(
+    page.locator('[data-accordion-id="identity"]'),
+    "Descripción",
+  );
+  const descriptionError = descriptionField.getByTestId("ui-field-error");
+  await expect(descriptionError).toContainText("Completá");
+  await expect(descriptionInput).toHaveAttribute("aria-invalid", "true");
+  const descriptionErrorId = await descriptionError.getAttribute("id");
+  expect(descriptionErrorId).toBeTruthy();
+  await expect(descriptionInput).toHaveAttribute("aria-describedby", descriptionErrorId as string);
+  await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
+  await expect
+    .poll(async () => (await storedProject(page, store))?.project.identity.description)
+    .toBe("Descripción inicial para validar el borrador.");
+
+  await descriptionInput.fill("Descripción corregida.");
+  await expect(descriptionField.getByTestId("ui-field-error")).toHaveCount(0);
+  await expect
+    .poll(async () => (await storedProject(page, store))?.project.identity.description)
+    .toBe("Descripción corregida.");
+
   const seoInput = homeEditor(page).getByLabel("Título SEO", { exact: true });
   await seoInput.fill("");
   await expect(
