@@ -37,12 +37,25 @@ test("el árbol de categorías colapsa y expande raíces", async ({ page }) => {
   const collapse = page.getByRole("button", { name: /^Contraer / }).first();
   await expect(collapse).toBeVisible();
   const title = (await collapse.getAttribute("aria-label"))?.replace(/^Contraer /, "") ?? "";
+  await expect(collapse).toHaveAttribute("aria-expanded", "true");
   await collapse.click();
 
   const expandAgain = page.getByRole("button", { name: `Expandir ${title}` });
   await expect(expandAgain).toBeVisible();
-  await expandAgain.click();
-  await expect(page.getByRole("button", { name: `Contraer ${title}` })).toBeVisible();
+  await expect(expandAgain).toHaveAttribute("aria-expanded", "false");
+  await expandAgain.focus();
+  await expect(expandAgain).toBeFocused();
+  await page.keyboard.press("Enter");
+
+  const collapseAgain = page.getByRole("button", { name: `Contraer ${title}` });
+  await expect(collapseAgain).toBeVisible();
+  await expect(collapseAgain).toHaveAttribute("aria-expanded", "true");
+  await collapseAgain.focus();
+  await page.keyboard.press(" ");
+  await expect(page.getByRole("button", { name: `Expandir ${title}` })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
 });
 
 test("reubicar una categoría hoja cambia su padre y se confirma", async ({ page }) => {

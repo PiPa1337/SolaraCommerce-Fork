@@ -21,6 +21,8 @@ versión publicada.
   el popover está cerrado; al abrirlo vuelve a asociarse con su contenido.
 - El selector inline de estado del Catálogo devuelve el foco a su disparador al
   confirmar o cancelar, manteniendo el contexto de teclado.
+- El árbol de categorías verifica explícitamente sus estados `aria-expanded` y
+  la activación por `Enter` y `Space`.
 
 ### Paridad del checklist Preparar y pendientes expandibles (2026-08-11)
 
