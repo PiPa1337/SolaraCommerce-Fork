@@ -25,6 +25,8 @@ versión publicada.
   la activación por `Enter` y `Space`.
 - La capa de carga del Preview anuncia su estado con `aria-live` y ahora tiene
   una regresión que comprueba su desaparición al terminar el iframe.
+- El gate de accesibilidad recorre las ocho pestañas y detecta referencias
+  `aria-controls` sin destino en el panel izquierdo.
 
 ### Paridad del checklist Preparar y pendientes expandibles (2026-08-11)
 

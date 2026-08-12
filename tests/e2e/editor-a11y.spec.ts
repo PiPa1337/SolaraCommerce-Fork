@@ -200,6 +200,41 @@ test("el teclado mueve y activa los tabs con flechas y Enter/Espacio", async ({ 
   await expect(page.getByRole("heading", { name: "Resumen" })).toBeVisible();
 });
 
+test("las referencias aria-controls del panel izquierdo siempre tienen destino", async ({
+  page,
+}) => {
+  await openDefaultStore(page);
+
+  for (const tabName of [
+    "Preparar",
+    "Resumen",
+    "Catálogo",
+    "Constructor",
+    "Tema",
+    "Recursos",
+    "SEO",
+    "Exportar",
+  ]) {
+    const tab = page.getByRole("tab", { name: tabName, exact: true });
+    await tab.click();
+    await expect(tab).toHaveAttribute("aria-selected", "true");
+
+    const danglingControls = await page.locator("[aria-controls]").evaluateAll((elements) =>
+      elements.flatMap((element) => {
+        const controls = element.getAttribute("aria-controls")?.trim().split(/\s+/) ?? [];
+        const missing = controls.filter((id) => !document.getElementById(id));
+        return missing.length > 0
+          ? [
+              `${element.tagName.toLowerCase()}[aria-label="${element.getAttribute("aria-label") ?? ""}"] -> ${missing.join(",")}`,
+            ]
+          : [];
+      }),
+    );
+
+    expect(danglingControls, `${tabName}: aria-controls sin destino`).toEqual([]);
+  }
+});
+
 test("el foco visible es distinguible en tarjetas y tabs", async ({ page }) => {
   await openDashboard(page);
   await expectFocusVisible(
