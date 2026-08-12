@@ -512,7 +512,17 @@ test("A05: precio anterior, GTIN, MPN e imagen de variante persisten", async ({ 
   const first = rows.nth(0);
 
   const compareAt = first.getByRole("spinbutton", { name: "Precio anterior en centavos" });
+  await compareAt.fill("-1.5");
+  await expect(compareAt).toHaveAttribute("aria-invalid", "true");
+  await expect(fieldOf(compareAt).getByTestId("ui-field-error")).toContainText(
+    "El precio anterior debe ser un número entero en centavos, mayor o igual a 0.",
+  );
+  await edit.getByRole("button", { name: "Guardar producto" }).click();
+  await expect(edit).toBeVisible();
+  await expect(fieldOf(compareAt).getByTestId("ui-field-error")).toBeVisible();
+
   await compareAt.fill("5000000");
+  await expect(compareAt).not.toHaveAttribute("aria-invalid", "true");
   await expect(compareAt).toHaveValue("5000000");
 
   const gtin = first.getByRole("textbox", { name: "GTIN" });

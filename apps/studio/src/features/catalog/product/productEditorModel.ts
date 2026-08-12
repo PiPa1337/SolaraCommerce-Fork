@@ -44,6 +44,7 @@ export function slugErrorFor(slug: string, existingSlugs: string[]): string | un
 export interface VariantFieldErrors {
   title: string | undefined;
   price: string | undefined;
+  compareAtPrice: string | undefined;
   options: string | undefined;
 }
 
@@ -89,11 +90,19 @@ export function validateDraft(
     const fieldErrors: VariantFieldErrors = {
       title: undefined,
       price: undefined,
+      compareAtPrice: undefined,
       options: undefined,
     };
     if (!variant.title.trim()) fieldErrors.title = "Escribí un nombre para la variante.";
     if (!Number.isInteger(variant.price) || variant.price < 0) {
       fieldErrors.price = "El precio debe ser un número entero en centavos, mayor o igual a 0.";
+    }
+    if (
+      variant.compareAtPrice !== undefined &&
+      (!Number.isInteger(variant.compareAtPrice) || variant.compareAtPrice < 0)
+    ) {
+      fieldErrors.compareAtPrice =
+        "El precio anterior debe ser un número entero en centavos, mayor o igual a 0.";
     }
     try {
       parseOptions(optionValues[variant.id] ?? "");

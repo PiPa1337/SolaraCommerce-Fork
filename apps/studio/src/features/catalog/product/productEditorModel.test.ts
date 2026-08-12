@@ -116,6 +116,7 @@ describe("validateDraft", () => {
       [],
     );
     expect(errors.variantErrors[0]?.price).toContain("entero en centavos");
+    expect(errors.variantErrors[0]?.compareAtPrice).toBeUndefined();
     expect(errors.variantErrors[1]?.title).toContain("nombre para la variante");
     expect(errors.variantErrors[1]?.options).toContain("está repetida");
   });
@@ -134,13 +135,35 @@ describe("validateDraft", () => {
     expect(errors.variantErrors[0]).toEqual({
       title: undefined,
       price: undefined,
+      compareAtPrice: undefined,
       options: undefined,
     });
     expect(errors.variantErrors[1]).toEqual({
       title: undefined,
       price: undefined,
+      compareAtPrice: undefined,
       options: undefined,
     });
+  });
+
+  it("valida el precio anterior sin cambiar la regla del precio actual", () => {
+    const errors = validateDraft(
+      baseProduct({
+        variants: [{ ...baseVariant(), compareAtPrice: 12.5 as Variant["price"] }],
+      }),
+      {},
+      [],
+    );
+    expect(errors.variantErrors[0]?.compareAtPrice).toContain("precio anterior");
+
+    const valid = validateDraft(
+      baseProduct({
+        variants: [{ ...baseVariant(), compareAtPrice: undefined }],
+      }),
+      {},
+      [],
+    );
+    expect(valid.variantErrors[0]?.compareAtPrice).toBeUndefined();
   });
 });
 

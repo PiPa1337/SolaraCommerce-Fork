@@ -32,6 +32,9 @@ versión publicada.
 - Los errores de schema dentro de cada slide y elemento repetido ahora se
   proyectan también al campo exacto, con `aria-invalid`, mensaje cercano y
   `aria-describedby`, sin perder el resumen de error del grupo.
+- El precio anterior de una variante valida enteros no negativos en el mismo
+  formulario, marca el campo antes de guardar y conserva el borrador hasta que
+  se corrige, manteniendo el contrato de dinero en centavos.
 - Exportar agrega una regresión explícita para cancelar la producción con botón
   o Escape sin generar historial y devolviendo el foco a su disparador.
 

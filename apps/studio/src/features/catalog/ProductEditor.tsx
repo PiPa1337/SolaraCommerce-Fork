@@ -285,6 +285,7 @@ export function ProductEditor({
         (variant) =>
           variant.title !== undefined ||
           variant.price !== undefined ||
+          variant.compareAtPrice !== undefined ||
           variant.options !== undefined,
       )
     ) {
@@ -602,6 +603,7 @@ export function ProductEditor({
               const variantError = variantErrors[index] ?? {
                 title: undefined,
                 price: undefined,
+                compareAtPrice: undefined,
                 options: undefined,
               };
               return (
@@ -707,7 +709,12 @@ export function ProductEditor({
                         }}
                       />
                     </Field>
-                    <Field label="Precio anterior en centavos">
+                    <Field
+                      label="Precio anterior en centavos"
+                      {...(variantError.compareAtPrice
+                        ? { error: variantError.compareAtPrice }
+                        : {})}
+                    >
                       <input
                         type="number"
                         min={0}
