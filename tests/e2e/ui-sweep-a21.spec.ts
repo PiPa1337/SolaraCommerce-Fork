@@ -512,6 +512,7 @@ test("A21.6 «Ir a corregir» navega a la pestaña del destino sin colapsar el c
     "aria-selected",
     "true",
   );
+  await expect(page.getByRole("tab", { name: destination, exact: true })).toBeFocused();
   await expect(page.getByTestId("ui-seo-check-fix")).toHaveCount(0);
 
   await goToSeoTab(page);

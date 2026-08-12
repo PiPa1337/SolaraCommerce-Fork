@@ -140,12 +140,15 @@ export function Field({
     ) {
       patches["aria-labelledby"] = labelId;
     }
-    if (error) {
-      patches["aria-describedby"] = errorId;
-      patches["aria-invalid"] = true;
-    } else if (hint) {
-      patches["aria-describedby"] = hintId;
-    }
+    const existingDescribedBy =
+      typeof children.props["aria-describedby"] === "string"
+        ? children.props["aria-describedby"]
+        : "";
+    const describedBy = [existingDescribedBy, hint ? hintId : "", error ? errorId : ""]
+      .filter(Boolean)
+      .join(" ");
+    if (describedBy) patches["aria-describedby"] = describedBy;
+    if (error) patches["aria-invalid"] = true;
     if (description) patches["aria-description"] = description;
   }
   const labeledChild =

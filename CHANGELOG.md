@@ -27,6 +27,8 @@ versión publicada.
   una regresión que comprueba su desaparición al terminar el iframe.
 - El gate de accesibilidad recorre las ocho pestañas y detecta referencias
   `aria-controls` sin destino en el panel izquierdo.
+- Los campos que combinan ayuda, error y descripciones externas conservan todas
+  esas referencias para tecnologías asistivas.
 
 ### Paridad del checklist Preparar y pendientes expandibles (2026-08-11)
 
