@@ -20,6 +20,7 @@ export function DuplicateDialog({ project, onClose, onDuplicate, onDone }: Dupli
   const nameInputRef = useRef<HTMLInputElement>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
   const titleId = useId();
+  const descriptionId = useId();
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -70,6 +71,7 @@ export function DuplicateDialog({ project, onClose, onDuplicate, onDone }: Dupli
       ref={dialogRef}
       className="dashboard-cosmic-dialog"
       aria-labelledby={titleId}
+      aria-describedby={descriptionId}
       data-testid="ui-duplicate-dialog"
       onCancel={(event) => {
         event.preventDefault();
@@ -90,7 +92,7 @@ export function DuplicateDialog({ project, onClose, onDuplicate, onDone }: Dupli
           </div>
           <IconButton icon={X} label="Cancelar duplicado" disabled={busy} onClick={onClose} />
         </header>
-        <p className="dashboard-cosmic-dialog__summary">
+        <p id={descriptionId} className="dashboard-cosmic-dialog__summary">
           Se creará una copia completa de <strong>{project?.name}</strong>: catálogo, tema,
           secciones y configuración.
         </p>

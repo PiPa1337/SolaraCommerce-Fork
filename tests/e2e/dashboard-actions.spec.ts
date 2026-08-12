@@ -67,6 +67,12 @@ test("duplicar pasa por el diálogo y aplica el nombre elegido", async ({ page }
   await detail.getByRole("button", { name: "Duplicar" }).click();
   const dialog = page.getByRole("dialog", { name: "Duplicar tienda" });
   await expect(dialog).toBeVisible();
+  const descriptionId = await dialog.getAttribute("aria-describedby");
+  expect(descriptionId).toBeTruthy();
+  await expect(dialog.locator(".dashboard-cosmic-dialog__summary")).toHaveAttribute(
+    "id",
+    descriptionId ?? "missing-description",
+  );
   const nameInput = page.getByTestId("ui-duplicate-name");
   await expect(nameInput).toHaveValue("Predeterminado (copia)");
 
