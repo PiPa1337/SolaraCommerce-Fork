@@ -19,6 +19,8 @@ versión publicada.
   la tabla conserva su desplazamiento horizontal intencional.
 - El toggle de columnas ya no deja una referencia `aria-controls` colgante cuando
   el popover está cerrado; al abrirlo vuelve a asociarse con su contenido.
+- El selector inline de estado del Catálogo devuelve el foco a su disparador al
+  confirmar o cancelar, manteniendo el contexto de teclado.
 
 ### Paridad del checklist Preparar y pendientes expandibles (2026-08-11)
 

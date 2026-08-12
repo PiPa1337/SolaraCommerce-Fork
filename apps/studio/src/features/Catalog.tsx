@@ -257,19 +257,38 @@ function StatusCell({
   onCommand(command: DomainCommand): void;
 }) {
   const [editing, setEditing] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const selectRef = useRef<HTMLSelectElement>(null);
 
   useEffect(() => {
     if (editing) selectRef.current?.focus();
   }, [editing]);
 
+  const focusTrigger = () => {
+    requestAnimationFrame(() => {
+      const trigger =
+        triggerRef.current ??
+        [
+          ...document.querySelectorAll<HTMLButtonElement>('[data-testid="ui-status-edit-trigger"]'),
+        ].find((candidate) => candidate.dataset.productId === product.id);
+      trigger?.focus({ preventScroll: true });
+    });
+  };
+
+  const closeEditing = (restoreFocus: boolean) => {
+    setEditing(false);
+    if (restoreFocus) focusTrigger();
+  };
+
   if (!editing) {
     return (
       <button
+        ref={triggerRef}
         type="button"
         className={`status-label status-label--${product.status}`}
         aria-label={`Estado de ${product.title}: ${productStatusLabel(product.status)}`}
         data-testid="ui-status-edit-trigger"
+        data-product-id={product.id}
         onClick={() => setEditing(true)}
       >
         {productStatusLabel(product.status)}
@@ -294,11 +313,11 @@ function StatusCell({
             at: now(),
           });
         }
-        setEditing(false);
+        closeEditing(true);
       }}
       onBlur={() => setEditing(false)}
       onKeyDown={(event) => {
-        if (event.key === "Escape") setEditing(false);
+        if (event.key === "Escape") closeEditing(true);
       }}
     >
       <option value="active">Activo</option>

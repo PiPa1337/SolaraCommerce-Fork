@@ -143,8 +143,26 @@ test("edita el estado de una fila sin pasar por el editor", async ({ page }) => 
   await trigger.click();
   const statusSelect = page.getByTestId("ui-status-edit").first();
   await expect(statusSelect).toBeVisible();
+  await expect(statusSelect).toBeFocused();
   await statusSelect.selectOption(nextLabel === "Oculto" ? "hidden" : "active");
-  await expect(page.getByTestId("ui-status-edit-trigger").first()).toHaveText(nextLabel);
+  const updatedTrigger = page.getByTestId("ui-status-edit-trigger").first();
+  await expect(updatedTrigger).toHaveText(nextLabel);
+  await expect(updatedTrigger).toBeFocused();
+});
+
+test("Escape en el estado inline cancela y devuelve el foco al disparador", async ({ page }) => {
+  await openCatalog(page);
+  const trigger = page.getByTestId("ui-status-edit-trigger").first();
+  const current = ((await trigger.textContent()) ?? "").trim();
+
+  await trigger.click();
+  const statusSelect = page.getByTestId("ui-status-edit").first();
+  await expect(statusSelect).toBeFocused();
+  await page.keyboard.press("Escape");
+
+  await expect(statusSelect).toHaveCount(0);
+  await expect(trigger).toHaveText(current);
+  await expect(trigger).toBeFocused();
 });
 
 test("alterna la vista de tarjetas y la persiste", async ({ page }) => {
