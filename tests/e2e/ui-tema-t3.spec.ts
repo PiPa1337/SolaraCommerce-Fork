@@ -199,7 +199,12 @@ test("hex inválido: el campo avisa y el panel sigue reflejando el último color
   // "zzz" no commitea: error inline en el campo, panel sin estado "no válido".
   await page.getByTestId("ui-color-text-muted").fill("zzz");
   await expect(page.getByTestId("ui-field-error")).toHaveText("Ingresá un color hex como #1a2b3c.");
-  await expect(page.getByTestId("ui-color-text-muted")).toHaveAttribute("aria-invalid", "true");
+  const invalidMuted = page.getByTestId("ui-color-text-muted");
+  await expect(invalidMuted).toHaveAttribute("aria-invalid", "true");
+  await expect(invalidMuted).toHaveAttribute("aria-describedby", "theme-color-error-muted");
+  await expect(page.locator("#theme-color-error-muted")).toHaveText(
+    "Ingresá un color hex como #1a2b3c.",
+  );
   await expect(mutedRow).toHaveAttribute("data-testid", "ui-contrast-ok");
   await expect(mutedRow.locator(".contrast-check__ratio")).toHaveText("5.36:1");
   await expect(page.getByTestId("ui-contrast-warn")).toHaveCount(0);

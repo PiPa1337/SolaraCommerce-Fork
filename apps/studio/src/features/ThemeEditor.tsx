@@ -487,7 +487,9 @@ export function ThemeEditor({
               <Field
                 label={colorLabels[key]}
                 key={key}
-                {...(colorErrors[key] ? { error: COLOR_ERROR } : {})}
+                {...(colorErrors[key]
+                  ? { error: COLOR_ERROR, errorId: `theme-color-error-${key}` }
+                  : {})}
               >
                 <span className="color-input">
                   <input
@@ -502,6 +504,7 @@ export function ThemeEditor({
                     value={colorDrafts[key] ?? project.theme.colors[key]}
                     aria-label={`${colorLabels[key]} valor hexadecimal`}
                     aria-invalid={colorErrors[key] ? true : undefined}
+                    aria-describedby={colorErrors[key] ? `theme-color-error-${key}` : undefined}
                     data-testid={`ui-color-text-${key}`}
                     onChange={(event) => commitColor(key, event.target.value)}
                   />

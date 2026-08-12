@@ -112,6 +112,7 @@ export function Field({
   label,
   hint,
   error,
+  errorId: customErrorId,
   description,
   children,
   className = "",
@@ -120,6 +121,8 @@ export function Field({
   hint?: string;
   /** Mensaje de error inline: borde danger, texto y aria-describedby. */
   error?: string;
+  /** ID estable para asociar un control anidado al mensaje de error. */
+  errorId?: string;
   /** Contexto adicional para distinguir campos repetidos sin alterar su label visible. */
   description?: string;
   children: ReactNode;
@@ -127,7 +130,8 @@ export function Field({
 }) {
   const labelId = useId();
   const hintId = useId();
-  const errorId = useId();
+  const generatedErrorId = useId();
+  const errorId = customErrorId ?? generatedErrorId;
   const isNativeControl =
     isValidElement<Record<string, unknown>>(children) &&
     typeof children.type === "string" &&

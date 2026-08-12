@@ -18,4 +18,18 @@ describe("Field", () => {
     expect(markup).toContain("El título es obligatorio");
     expect(markup).toContain('aria-invalid="true"');
   });
+
+  it("permite asociar un control anidado al error con un id estable", () => {
+    const markup = renderToStaticMarkup(
+      <Field label="Color" error="El color no es válido" errorId="color-error">
+        <span>
+          <input aria-describedby="color-error" />
+        </span>
+      </Field>,
+    );
+
+    expect(markup).toContain('aria-describedby="color-error"');
+    expect(markup).toContain('id="color-error"');
+    expect(markup).toContain("El color no es válido");
+  });
 });

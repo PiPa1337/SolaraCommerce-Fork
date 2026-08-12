@@ -215,7 +215,11 @@ for (const key of THEME_COLOR_KEYS) {
     // 3) Hex inválido: error inline y NINGÚN cambio confirmado (preview y sitio).
     await page.getByTestId(`ui-color-text-${key}`).fill("zzz");
     await expect(page.getByTestId("ui-field-error")).toHaveText(COLOR_ERROR);
-    await expect(page.getByTestId(`ui-color-text-${key}`)).toHaveAttribute("aria-invalid", "true");
+    const invalidColor = page.getByTestId(`ui-color-text-${key}`);
+    await expect(invalidColor).toHaveAttribute("aria-invalid", "true");
+    const errorId = await invalidColor.getAttribute("aria-describedby");
+    expect(errorId).toBe(`theme-color-error-${key}`);
+    await expect(page.locator(`#${errorId}`)).toHaveText(COLOR_ERROR);
     await expect(page.getByTestId(`ui-color-native-${key}`)).toHaveValue(pickerTarget);
     await expect.poll(previewVar(page, key), { timeout: 15_000 }).toBe(pickerTarget);
     const invalidOut = exportedWith(await readCommittedColors(page));
