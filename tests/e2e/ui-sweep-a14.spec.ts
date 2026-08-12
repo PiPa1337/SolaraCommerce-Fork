@@ -11,8 +11,8 @@
  * Cobertura: tabs (cambio de panel, aria-selected, roving tabindex, puntos
  * sucios), pane abrir/cerrar (clase, aria-hidden, foco restaurado, persistencia
  * y Ctrl+\), modo foco (cambio visual + foco restaurado + Escape y Ctrl+Shift+F),
- * tema (chrome re-estilizado, aria-pressed/label coherentes con el tema efectivo
- * incluida la preferencia del sistema), breadcrumb volver y teclado de tabs
+ * tema (oscuro predeterminado, persistencia y aria-pressed/label coherentes),
+ * breadcrumb volver y teclado de tabs
  * (flechas con wrap, Home/End).
  */
 import type { ChildProcess } from "node:child_process";
@@ -400,31 +400,27 @@ test("A14.6 modo foco — cambio visual del shell, foco restaurado y salida con 
 test("A14.7 tema — el toggle re-estiliza el chrome, refleja su estado y persiste", async ({
   page,
 }) => {
-  await openDemoStore(page);
-  const toggle = page.getByTestId("ui-theme-toggle");
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto(studioUrl);
+  await wipeIndexedDb(page);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   const root = page.locator("html");
 
-  // Sin override: sin atributo, chrome claro (paleta por defecto).
-  await expect(root).not.toHaveAttribute("data-studio-theme");
-  await expect(toggle).toHaveAttribute("aria-pressed", "false");
-  await expect(toggle).toHaveAttribute("aria-label", "Usar tema oscuro");
-  await expect
-    .poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor))
-    .toBe("rgb(238, 234, 225)");
-
-  // Primer click: tema oscuro aplicado + feedback del control coherente.
-  await toggle.click();
+  // Sin preferencia guardada: el Dashboard ya nace oscuro aunque el sistema sea claro.
   await expect(root).toHaveAttribute("data-studio-theme", "dark");
   await expect
     .poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor))
     .toBe("rgb(23, 26, 23)");
+
+  await page.locator(`[data-store-card-id="${DEMO_STORE_ID}"]`).click();
+  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+  const toggle = page.getByTestId("ui-theme-toggle");
   await expect(toggle).toHaveAttribute("aria-pressed", "true");
   await expect(toggle).toHaveAttribute("aria-label", "Usar tema claro");
-  await expect(page.evaluate(() => localStorage.getItem("solara-studio-theme"))).resolves.toBe(
-    "dark",
-  );
 
-  // Segundo click: vuelve al claro, con el mismo contrato de feedback.
+  // Primer click: tema claro aplicado + feedback del control coherente.
   await toggle.click();
   await expect(root).toHaveAttribute("data-studio-theme", "light");
   await expect
@@ -432,21 +428,37 @@ test("A14.7 tema — el toggle re-estiliza el chrome, refleja su estado y persis
     .toBe("rgb(238, 234, 225)");
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
   await expect(toggle).toHaveAttribute("aria-label", "Usar tema oscuro");
+  await expect(page.evaluate(() => localStorage.getItem("solara-studio-theme"))).resolves.toBe(
+    "light",
+  );
 
-  // Persistencia: la recarga conserva el override; el atributo se aplica al
-  // abrir el editor y el chrome oscuro no depende de la preferencia del sistema.
+  // Segundo click: vuelve al oscuro, con el mismo contrato de feedback.
   await toggle.click();
-  await expect(root).toHaveAttribute("data-studio-theme", "dark");
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.locator(`[data-store-card-id="${DEMO_STORE_ID}"]`).click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
-  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
   await expect(root).toHaveAttribute("data-studio-theme", "dark");
   await expect
     .poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor))
     .toBe("rgb(23, 26, 23)");
   await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(toggle).toHaveAttribute("aria-label", "Usar tema claro");
+
+  // Persistencia: la recarga conserva una elección clara desde el Dashboard,
+  // antes de volver a abrir el editor.
+  await toggle.click();
+  await expect(root).toHaveAttribute("data-studio-theme", "light");
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await expect(root).toHaveAttribute("data-studio-theme", "light");
+  await expect
+    .poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor))
+    .toBe("rgb(238, 234, 225)");
+  await page.locator(`[data-store-card-id="${DEMO_STORE_ID}"]`).click();
+  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+  await expect(root).toHaveAttribute("data-studio-theme", "light");
+  await expect
+    .poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor))
+    .toBe("rgb(238, 234, 225)");
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
 });
 
 test("A14.8 tema — con preferencia del sistema oscura el toggle refleja el tema efectivo", async ({
@@ -457,8 +469,8 @@ test("A14.8 tema — con preferencia del sistema oscura el toggle refleja el tem
   const toggle = page.getByTestId("ui-theme-toggle");
   const root = page.locator("html");
 
-  // Sin override la app sigue al sistema: chrome oscuro y el toggle lo dice.
-  await expect(root).not.toHaveAttribute("data-studio-theme");
+  // El valor predeterminado oscuro coincide con el sistema y el toggle lo dice.
+  await expect(root).toHaveAttribute("data-studio-theme", "dark");
   await expect
     .poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor))
     .toBe("rgb(23, 26, 23)");

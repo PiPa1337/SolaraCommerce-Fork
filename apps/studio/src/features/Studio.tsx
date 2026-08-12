@@ -56,6 +56,7 @@ import { downloadBlob } from "../lib/projectArchive";
 import { saveProject } from "../lib/repository";
 import { formatSaveTime } from "../lib/saveTime";
 import { formatLastExportLabel } from "../lib/statusBar";
+import { applyStudioTheme, readStudioTheme, storeStudioTheme } from "../lib/studioTheme";
 import { createProjectArchiveInWorker } from "../lib/workers";
 import { Assets } from "./Assets";
 import { Builder } from "./Builder";
@@ -329,29 +330,7 @@ export function Studio({
       {} as Partial<Record<StudioTab, string>>,
     ),
   );
-  const [theme, setTheme] = useState<"light" | "dark" | null>(() => {
-    try {
-      const stored = window.localStorage.getItem("solara-studio-theme");
-      return stored === "dark" ? "dark" : stored === "light" ? "light" : null;
-    } catch {
-      return null;
-    }
-  });
-  // El tema efectivo resuelve el override almacenado contra la preferencia del
-  // sistema: sin override el chrome sigue al media query y el toggle debe
-  // ofrecer (y reflejar) el tema que realmente está aplicado (A14).
-  const [systemPrefersDark, setSystemPrefersDark] = useState(() =>
-    typeof window.matchMedia === "function"
-      ? window.matchMedia("(prefers-color-scheme: dark)").matches
-      : false,
-  );
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = (event: MediaQueryListEvent) => setSystemPrefersDark(event.matches);
-    media.addEventListener("change", onChange);
-    return () => media.removeEventListener("change", onChange);
-  }, []);
-  const resolvedTheme: "light" | "dark" = theme ?? (systemPrefersDark ? "dark" : "light");
+  const [theme, setTheme] = useState(readStudioTheme);
   const [autosave] = useState(() => new AutosaveQueue(saveProject, 550));
   const editorPaneId = useId();
   const conflictTitleId = useId();
@@ -519,9 +498,7 @@ export function Studio({
   }, [managedDirty, managedStorage, project.updatedAt, saveState]);
 
   useEffect(() => {
-    const root = document.documentElement;
-    if (theme === null) root.removeAttribute("data-studio-theme");
-    else root.setAttribute("data-studio-theme", theme);
+    applyStudioTheme(theme);
   }, [theme]);
 
   useEffect(() => {
@@ -673,14 +650,10 @@ export function Studio({
   }, [focusExitId, focusMode, focusToggleId]);
 
   const toggleTheme = useCallback(() => {
-    const next = resolvedTheme === "dark" ? "light" : "dark";
+    const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
-    try {
-      window.localStorage.setItem("solara-studio-theme", next);
-    } catch {
-      // Almacenamiento bloqueado: el tema se conserva sólo en memoria.
-    }
-  }, [resolvedTheme]);
+    storeStudioTheme(next);
+  }, [theme]);
 
   const handleDiskSaved = useCallback(
     (receipt: LocalSaveReceipt) => {
@@ -894,13 +867,13 @@ export function Studio({
               />
             </Tooltip>
             <Tooltip
-              tip={resolvedTheme === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
+              tip={theme === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
               position="bottom"
             >
               <IconButton
-                icon={resolvedTheme === "dark" ? Sun : Moon}
-                label={resolvedTheme === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
-                aria-pressed={resolvedTheme === "dark"}
+                icon={theme === "dark" ? Sun : Moon}
+                label={theme === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
+                aria-pressed={theme === "dark"}
                 data-testid="ui-theme-toggle"
                 onClick={toggleTheme}
               />

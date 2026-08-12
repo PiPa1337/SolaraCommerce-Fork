@@ -10,6 +10,12 @@ versión publicada.
 
 ## [Unreleased]
 
+### Tema oscuro predeterminado (2026-08-12)
+
+- El Dashboard y el Studio inician en modo oscuro cuando no existe una
+  preferencia previa; una elección clara u oscura guardada sigue teniendo
+  prioridad desde la primera pintura y después de recargar.
+
 ### Panel de edición sin desplazamiento lateral (2026-08-12)
 
 - El panel de edición usa un ancho máximo común de 1200 px en todas las
