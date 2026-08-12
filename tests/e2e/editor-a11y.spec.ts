@@ -790,6 +790,16 @@ test("un cambio inválido en SEO anuncia el error de validación sin servidor (S
   await title.blur();
   await expect(page.getByTestId("ui-inline-error")).toBeVisible();
   await expect(page.getByTestId("ui-inline-error")).toContainText("seo.title");
+  await expect(title).toHaveAttribute("aria-invalid", "true");
+  const titleField = title.locator("xpath=ancestor::fieldset[1]");
+  const titleError = titleField.getByTestId("ui-field-error");
+  await expect(titleError).toBeVisible();
+  await expect(titleError).toHaveAttribute("role", "alert");
+  const describedBy = await title.getAttribute("aria-describedby");
+  expect(describedBy).toContain(await titleError.getAttribute("id"));
+  await title.fill("Título SEO corregido");
+  await expect(title).not.toHaveAttribute("aria-invalid", "true");
+  await expect(titleField.getByTestId("ui-field-error")).toHaveCount(0);
   await expect(page.getByTestId("ui-status-bar")).toBeVisible();
 });
 

@@ -15,6 +15,9 @@ versión publicada.
 - Los errores de booleanos, arrays JSON, repetidores y slides quedan asociados
   al control o grupo que debe corregirse, se anuncian con `role="alert"` y
   marcan el estado inválido sin cambiar el contrato del schema.
+- Los errores de validación de título, descripción e imagen social en SEO ahora
+  permanecen visibles junto al campo inválido, anuncian su relación mediante
+  `aria-describedby` y conservan el borrador hasta que el valor se corrige.
 - El barrido del Constructor verifica duplicado con contenido independiente,
   límite de ocho elementos, cancelación segura, foco tras borrar y recuperación
   del error antes de volver a aplicar el cambio.

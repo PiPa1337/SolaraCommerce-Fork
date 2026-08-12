@@ -116,6 +116,7 @@ interface StudioTabContentProps {
   onEnableAdvanced(): void;
   onImport(project: StoreProjectV1): Promise<void>;
   onOpenSite?: ((id: string) => Promise<void>) | undefined;
+  validationError: string;
 }
 
 // El contenido de la pestaña activa sólo se recalcula cuando cambia su
@@ -133,6 +134,7 @@ const StudioTabContent = memo(function StudioTabContent({
   onEnableAdvanced,
   onImport,
   onOpenSite,
+  validationError,
 }: StudioTabContentProps) {
   switch (tab) {
     case "guided":
@@ -164,7 +166,14 @@ const StudioTabContent = memo(function StudioTabContent({
     case "assets":
       return <Assets project={project} onChange={replaceProject} />;
     case "seo":
-      return <Seo project={project} onChange={replaceProject} onNavigate={onNavigate} />;
+      return (
+        <Seo
+          project={project}
+          onChange={replaceProject}
+          onNavigate={onNavigate}
+          validationError={validationError}
+        />
+      );
     case "export":
       return (
         <ExportPanel
@@ -1005,6 +1014,7 @@ export function Studio({
               onEnableAdvanced={enableAdvancedMode}
               onImport={importFromExport}
               onOpenSite={onOpenSite}
+              validationError={validationError}
             />
           </motion.main>
           <MemoizedPreview

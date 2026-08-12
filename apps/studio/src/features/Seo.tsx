@@ -88,6 +88,12 @@ const AREA_LABELS: Record<string, string> = {
   general: "General",
 };
 
+function fieldValidationError(validationError: string, path: string): string | undefined {
+  const prefix = `${path}:`;
+  if (!validationError.startsWith(prefix)) return undefined;
+  return validationError.slice(prefix.length).trim() || "Valor inválido.";
+}
+
 /**
  * Resuelve el título y la descripción que el exporter renderiza en la ruta de
  * Home: la página editable manda, luego el seo global y por último la identidad.
@@ -120,11 +126,14 @@ export function Seo({
   project,
   onChange,
   onNavigate,
+  validationError,
 }: {
   project: StoreProjectV1;
   onChange(project: StoreProjectV1): void;
   onNavigate(destination: SeoNavigationTarget): void;
+  validationError: string;
 }) {
+  const [seoDraft, setSeoDraft] = useState(project.seo);
   const [report, setReport] = useState<AuditReport>({
     issues: [],
     criticalCount: 0,
@@ -136,6 +145,9 @@ export function Seo({
   const [auditStatus, setAuditStatus] = useState<"loading" | "ready" | "error">("loading");
   const [auditError, setAuditError] = useState("");
   const [auditAttempt, setAuditAttempt] = useState(0);
+  useEffect(() => {
+    setSeoDraft(project.seo);
+  }, [project.seo]);
   const runAudit = useCallback(
     async (isActive: () => boolean = () => true, retryAttempt = 0) => {
       setAuditStatus("loading");
@@ -181,8 +193,10 @@ export function Seo({
     );
   }, [issues]);
   const checkedCount = issues.filter((issue) => checkedIssues.has(issue.id)).length;
-  const commit = (seo: StoreProjectV1["seo"]) =>
+  const commit = (seo: StoreProjectV1["seo"]) => {
+    setSeoDraft(seo);
     onChange({ ...project, seo, updatedAt: new Date().toISOString() });
+  };
   const errors = auditStatus === "ready" ? report.criticalCount : 0;
   const warnings = auditStatus === "ready" ? report.warningCount : 0;
   const socialAsset =
@@ -190,6 +204,9 @@ export function Seo({
   const homepage = `${project.baseUrl.replace(/\/+$/, "")}/`;
   const previewSeo = homepageSeoPreview(project);
   const routeLimit = 24;
+  const titleError = fieldValidationError(validationError, "seo.title");
+  const descriptionError = fieldValidationError(validationError, "seo.description");
+  const socialImageError = fieldValidationError(validationError, "seo.socialImageId");
 
   const toggleIssue = (id: string) => {
     setCheckedIssues((current) => {
@@ -243,34 +260,42 @@ export function Seo({
           <legend>
             <MagnifyingGlass aria-hidden size={19} /> Apariencia
           </legend>
-          <Field label="Título SEO" hint={`${project.seo.title.length}/70 caracteres`}>
+          <Field
+            label="Título SEO"
+            hint={`${seoDraft.title.length}/70 caracteres`}
+            {...(titleError ? { error: titleError } : {})}
+          >
             <input
               maxLength={70}
-              value={project.seo.title}
-              onChange={(event) => commit({ ...project.seo, title: event.target.value })}
+              value={seoDraft.title}
+              onChange={(event) => commit({ ...seoDraft, title: event.target.value })}
             />
           </Field>
-          <Field label="Descripción SEO" hint={`${project.seo.description.length}/180 caracteres`}>
+          <Field
+            label="Descripción SEO"
+            hint={`${seoDraft.description.length}/180 caracteres`}
+            {...(descriptionError ? { error: descriptionError } : {})}
+          >
             <textarea
               rows={4}
               maxLength={180}
-              value={project.seo.description}
-              onChange={(event) => commit({ ...project.seo, description: event.target.value })}
+              value={seoDraft.description}
+              onChange={(event) => commit({ ...seoDraft, description: event.target.value })}
             />
           </Field>
           <Field label="Verificación de Search Console">
             <input
-              value={project.seo.searchConsoleVerification}
+              value={seoDraft.searchConsoleVerification}
               onChange={(event) =>
-                commit({ ...project.seo, searchConsoleVerification: event.target.value })
+                commit({ ...seoDraft, searchConsoleVerification: event.target.value })
               }
             />
           </Field>
           <Field label="Verificación de Merchant Center">
             <input
-              value={project.seo.merchantVerification}
+              value={seoDraft.merchantVerification}
               onChange={(event) =>
-                commit({ ...project.seo, merchantVerification: event.target.value })
+                commit({ ...seoDraft, merchantVerification: event.target.value })
               }
             />
           </Field>
@@ -281,12 +306,13 @@ export function Seo({
           <Field
             label="Recurso para compartir"
             hint="Se usa para Open Graph y compartir la tienda."
+            {...(socialImageError ? { error: socialImageError } : {})}
           >
             <select
-              value={project.seo.socialImageId ?? ""}
+              value={seoDraft.socialImageId ?? ""}
               onChange={(event) =>
                 commit({
-                  ...project.seo,
+                  ...seoDraft,
                   socialImageId: event.target.value
                     ? (event.target.value as StoreProjectV1["assets"][number]["id"])
                     : undefined,
