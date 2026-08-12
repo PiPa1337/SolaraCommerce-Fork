@@ -275,6 +275,82 @@ test("catálogo y constructor conservan jerarquía responsive", async ({ page })
   }
 });
 
+test("SEO conserva jerarquia y controles dentro del contenedor en todos los viewports", async ({
+  page,
+}) => {
+  await openProject(page);
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    await page.getByRole("tab", { name: "SEO", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "SEO y Google", exact: true })).toBeVisible();
+    await expectNoHorizontalOverflow(page, `SEO ${viewport.name}`);
+
+    const layout = await page.locator(".seo-grid").evaluate((grid) => {
+      const container = grid.getBoundingClientRect();
+      const boxOf = (selector: string) => {
+        const element = grid.querySelector<HTMLElement>(selector);
+        if (!element) return null;
+        const box = element.getBoundingClientRect();
+        return { left: box.left, right: box.right, top: box.top };
+      };
+      const controls = Array.from(
+        grid.querySelectorAll<HTMLElement>("input, textarea, select, button, a"),
+      ).map((element) => {
+        const box = element.getBoundingClientRect();
+        return {
+          label: element.getAttribute("aria-label") ?? element.textContent?.trim() ?? "control",
+          left: box.left,
+          right: box.right,
+          width: box.width,
+          visible: box.width > 0 && box.height > 0,
+        };
+      });
+      return {
+        left: container.left,
+        right: container.right,
+        clientWidth: grid.clientWidth,
+        scrollWidth: grid.scrollWidth,
+        sections: [
+          boxOf('[data-testid="ui-seo-audit-panel"]'),
+          boxOf('[data-testid="ui-seo-checklist"]'),
+          boxOf(".seo-fieldset--appearance"),
+          boxOf('[data-testid="ui-seo-preview-google"]'),
+        ],
+        controls,
+      };
+    });
+
+    expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth + 1);
+    expect(layout.sections.every((section) => section !== null)).toBe(true);
+    for (const section of layout.sections) {
+      expect(section?.left ?? Number.NEGATIVE_INFINITY).toBeGreaterThanOrEqual(layout.left - 1);
+      expect(section?.right ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(layout.right + 1);
+    }
+    expect(layout.controls.length).toBeGreaterThanOrEqual(6);
+    for (const control of layout.controls) {
+      expect(control.visible, `${viewport.name}: ${control.label} debe tener caja visible`).toBe(
+        true,
+      );
+      expect(
+        control.width,
+        `${viewport.name}: ${control.label} no puede tener ancho cero`,
+      ).toBeGreaterThan(0);
+      expect(
+        control.left,
+        `${viewport.name}: ${control.label} queda fuera por la izquierda`,
+      ).toBeGreaterThanOrEqual(layout.left - 1);
+      expect(
+        control.right,
+        `${viewport.name}: ${control.label} queda fuera por la derecha`,
+      ).toBeLessThanOrEqual(layout.right + 1);
+    }
+
+    if (viewport.name === "desktop") {
+      await page.screenshot({ path: "test-results/seo.png", fullPage: true });
+    }
+  }
+});
+
 test("preview diferencia escritorio, tablet y móvil", async ({ page }) => {
   await page.setViewportSize(viewports[0]);
   await openProject(page);

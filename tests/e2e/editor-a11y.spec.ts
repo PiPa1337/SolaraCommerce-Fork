@@ -268,6 +268,22 @@ test("los subárboles aria-hidden no dejan controles enfocables", async ({ page 
   }
 });
 
+test("los estados ARIA interactivos usan roles y valores coherentes", async ({ page }) => {
+  await openDashboard(page);
+  await expectAriaStateSemantics(page, "dashboard");
+
+  await openDefaultStore(page);
+  const tabNames = (await page.getByRole("tab").allTextContents())
+    .map((name) => name.trim())
+    .filter(Boolean);
+  for (const tabName of tabNames) {
+    const tab = page.getByRole("tab", { name: tabName, exact: true });
+    await tab.click();
+    await expect(tab).toHaveAttribute("aria-selected", "true");
+    await expectAriaStateSemantics(page, `Studio/${tabName}`);
+  }
+});
+
 async function expectAriaReferencesToExist(page: Page, surface: string): Promise<void> {
   const danglingReferences = await page
     .locator(
@@ -326,6 +342,59 @@ async function expectAriaHiddenSubtreesToBeInert(page: Page, surface: string): P
   );
 
   expect(violations, `${surface}: aria-hidden contiene controles enfocables`).toEqual([]);
+}
+
+async function expectAriaStateSemantics(page: Page, surface: string): Promise<void> {
+  const violations = await page
+    .locator(
+      "[aria-pressed], [aria-expanded], [aria-checked], [aria-busy], [aria-invalid], [aria-readonly], [aria-current]",
+    )
+    .evaluateAll((elements) => {
+      const booleanAttributes = [
+        "aria-pressed",
+        "aria-checked",
+        "aria-busy",
+        "aria-invalid",
+        "aria-readonly",
+      ];
+      const validCurrent = new Set(["page", "step", "location", "date", "time", "true", "false"]);
+      return elements.flatMap((element) => {
+        const style = getComputedStyle(element);
+        if (style.display === "none" || style.visibility === "hidden") return [];
+        const issues: string[] = [];
+        for (const attribute of booleanAttributes) {
+          if (!element.hasAttribute(attribute)) continue;
+          const value = element.getAttribute(attribute);
+          if (value !== "true" && value !== "false") issues.push(`${attribute}=${value}`);
+        }
+        if (element.hasAttribute("aria-expanded")) {
+          const value = element.getAttribute("aria-expanded");
+          if (value !== "true" && value !== "false") issues.push(`aria-expanded=${value}`);
+          const tag = element.tagName.toLowerCase();
+          const role = element.getAttribute("role");
+          if (tag !== "button" && tag !== "summary" && role !== "button") {
+            issues.push(`aria-expanded en ${tag}[role=${role ?? ""}]`);
+          }
+        }
+        if (element.hasAttribute("aria-pressed")) {
+          const tag = element.tagName.toLowerCase();
+          const role = element.getAttribute("role");
+          if (tag !== "button" && role !== "button") issues.push(`aria-pressed en ${tag}`);
+        }
+        if (element.hasAttribute("aria-checked") && element.getAttribute("role") !== "switch") {
+          issues.push(`aria-checked en role=${element.getAttribute("role") ?? ""}`);
+        }
+        if (element.hasAttribute("aria-current")) {
+          const value = element.getAttribute("aria-current");
+          if (!value || !validCurrent.has(value)) issues.push(`aria-current=${value}`);
+        }
+        return issues.length > 0
+          ? [`${element.outerHTML.slice(0, 220)} -> ${issues.join(", ")}`]
+          : [];
+      });
+    });
+
+  expect(violations, `${surface}: estados ARIA incoherentes`).toEqual([]);
 }
 
 test("el foco visible es distinguible en tarjetas y tabs", async ({ page }) => {

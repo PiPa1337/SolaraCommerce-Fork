@@ -643,6 +643,12 @@ tbody tr:hover {
   .product-asset-picker {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .seo-grid {
+    grid-template:
+      "audit" "checklist" "appearance" "social" "previews" "crawler" "score" /
+      minmax(0, 1fr);
+  }
 }
 
 @container (max-width: 560px) {
@@ -805,20 +811,8 @@ tbody tr:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .theme-layout,
-  .seo-grid {
+  .theme-layout {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .seo-grid {
-    grid-template-areas:
-      "audit"
-      "checklist"
-      "appearance"
-      "social"
-      "previews"
-      "crawler"
-      "score";
   }
 
   .theme-layout fieldset:last-child {

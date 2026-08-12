@@ -10,6 +10,16 @@ versión publicada.
 
 ## [Unreleased]
 
+### Auditoria visual responsive de SEO (2026-08-12)
+
+- SEO ahora apila sus bloques cuando el panel del editor es estrecho, incluso
+  en ventanas donde el viewport general sigue siendo de escritorio.
+- El gate visual comprueba orden, overflow y limites de todos los controles de
+  SEO en movil, tablet y escritorio, y agrega evidencia de captura para la
+  revision visual.
+- El gate de accesibilidad valida valores y roles coherentes para los estados
+  ARIA interactivos del Dashboard y las ocho pestanas del Studio.
+
 ### Jerarquía SEO y scroll del Catálogo móvil (2026-08-11)
 
 - SEO muestra el score de optimización junto al estado de auditoría y ordena
