@@ -10,6 +10,10 @@ type PendingRepeaterDelete = {
   label: string;
 };
 
+function fieldErrorProps(error: string | undefined): { error: string } | Record<string, never> {
+  return error ? { error } : {};
+}
+
 export function RepeaterEditor({
   label,
   value,
@@ -17,6 +21,8 @@ export function RepeaterEditor({
   minItems,
   maxItems,
   itemLabelKey,
+  fieldPath,
+  fieldErrors,
   error,
   project,
   onChange,
@@ -27,6 +33,8 @@ export function RepeaterEditor({
   minItems?: number;
   maxItems?: number;
   itemLabelKey?: string;
+  fieldPath: string;
+  fieldErrors?: Readonly<Record<string, string>>;
   error?: string;
   project: StoreProjectV1;
   onChange(next: unknown[]): void;
@@ -143,21 +151,45 @@ export function RepeaterEditor({
           </header>
           {fields.map((field) => {
             const current = item[field.key];
+            const fieldError = fieldErrors?.[`${fieldPath}.${index}.${field.key}`];
+            const fieldErrorId = `${editorId}-${index}-${field.key}-error`.replace(
+              /[^a-zA-Z0-9_-]/g,
+              "-",
+            );
             if (field.type === "boolean") {
               return (
-                <label className="check-field" key={field.key}>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(current)}
-                    onChange={(event) => update(index, field.key, event.target.checked)}
-                  />
-                  {field.label}
-                </label>
+                <div key={field.key}>
+                  <label className="check-field">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(current)}
+                      aria-invalid={Boolean(fieldError)}
+                      {...(fieldError ? { "aria-describedby": fieldErrorId } : {})}
+                      onChange={(event) => update(index, field.key, event.target.checked)}
+                    />
+                    {field.label}
+                  </label>
+                  {fieldError ? (
+                    <small
+                      id={fieldErrorId}
+                      className="field-error"
+                      role="alert"
+                      data-testid="ui-field-error"
+                    >
+                      {fieldError}
+                    </small>
+                  ) : null}
+                </div>
               );
             }
             if (field.type === "asset") {
               return (
-                <Field label={field.label} key={field.key}>
+                <Field
+                  label={field.label}
+                  description={`${label} ${index + 1}`}
+                  {...fieldErrorProps(fieldError)}
+                  key={field.key}
+                >
                   <select
                     value={String(current ?? "")}
                     onChange={(event) => update(index, field.key, event.target.value)}
@@ -174,7 +206,12 @@ export function RepeaterEditor({
             }
             if (field.type === "select") {
               return (
-                <Field label={field.label} key={field.key}>
+                <Field
+                  label={field.label}
+                  description={`${label} ${index + 1}`}
+                  {...fieldErrorProps(fieldError)}
+                  key={field.key}
+                >
                   <select
                     value={String(current ?? "")}
                     onChange={(event) => update(index, field.key, event.target.value)}
@@ -189,7 +226,12 @@ export function RepeaterEditor({
               );
             }
             return (
-              <Field label={field.label} key={field.key}>
+              <Field
+                label={field.label}
+                description={`${label} ${index + 1}`}
+                {...fieldErrorProps(fieldError)}
+                key={field.key}
+              >
                 <input
                   type={field.type === "number" ? "number" : field.type === "url" ? "url" : "text"}
                   value={String(current ?? "")}

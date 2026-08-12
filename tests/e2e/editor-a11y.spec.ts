@@ -776,6 +776,15 @@ test("vaciar un número en un repeater no commitea 0 y muestra el error de esque
   await rating.fill("");
   await expect(rating).toHaveValue("");
   await expect(page.getByTestId("ui-schema-errors")).toContainText("items");
+  await expect(rating).toHaveAttribute("aria-invalid", "true");
+  const ratingField = rating.locator("xpath=ancestor::fieldset[1]");
+  const ratingError = ratingField.getByTestId("ui-field-error");
+  await expect(ratingError).toBeVisible();
+  const ratingDescribedBy = await rating.getAttribute("aria-describedby");
+  expect(ratingDescribedBy).toContain(await ratingError.getAttribute("id"));
+  await rating.fill("5");
+  await expect(rating).not.toHaveAttribute("aria-invalid", "true");
+  await expect(ratingField.getByTestId("ui-field-error")).toHaveCount(0);
   await expect(page.getByText("Cambios pendientes", { exact: true })).toHaveCount(0);
 });
 

@@ -178,12 +178,18 @@ test("los repetidores completan duplicado, límites, error asociado y foco tras 
   const firstName = items.nth(0).getByRole("textbox", { name: "Nombre" });
   await firstName.fill("");
   await expect(repeater).toHaveAttribute("aria-invalid", "true");
-  const fieldError = repeater.getByTestId("ui-field-error");
+  const itemField = items.nth(0).getByRole("group", { name: "Nombre" });
+  const fieldError = itemField.getByTestId("ui-field-error");
   await expect(fieldError).toBeVisible();
-  const describedBy = await repeater.getAttribute("aria-describedby");
-  await expect(fieldError).toHaveAttribute("id", describedBy ?? "missing-error-id");
+  await expect(firstName).toHaveAttribute("aria-invalid", "true");
+  const fieldDescribedBy = await firstName.getAttribute("aria-describedby");
+  expect(fieldDescribedBy).toContain(await fieldError.getAttribute("id"));
+  const groupDescribedBy = await repeater.getAttribute("aria-describedby");
+  expect(groupDescribedBy).toBeTruthy();
+  await expect(repeater.locator(`[id="${groupDescribedBy}"]`)).toBeVisible();
   await firstName.fill("Corregido");
-  await expect(fieldError).toHaveCount(0);
+  await expect(itemField.getByTestId("ui-field-error")).toHaveCount(0);
+  await expect(repeater.getByTestId("ui-field-error")).toHaveCount(0);
   await expect(repeater).not.toHaveAttribute("aria-invalid");
 });
 

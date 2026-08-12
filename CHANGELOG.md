@@ -29,6 +29,9 @@ versión publicada.
 - El barrido del Constructor verifica duplicado con contenido independiente,
   límite de ocho elementos, cancelación segura, foco tras borrar y recuperación
   del error antes de volver a aplicar el cambio.
+- Los errores de schema dentro de cada slide y elemento repetido ahora se
+  proyectan también al campo exacto, con `aria-invalid`, mensaje cercano y
+  `aria-describedby`, sin perder el resumen de error del grupo.
 - Exportar agrega una regresión explícita para cancelar la producción con botón
   o Escape sin generar historial y devolviendo el foco a su disparador.
 

@@ -37,14 +37,22 @@ function normalizeSlide(slide: unknown, index: number): HeroSlideDraft {
   };
 }
 
+function fieldErrorProps(error: string | undefined): { error: string } | Record<string, never> {
+  return error ? { error } : {};
+}
+
 export function HeroSlidesEditor({
   value,
   project,
+  fieldPath,
+  fieldErrors,
   error,
   onChange,
 }: {
   value: unknown;
   project: StoreProjectV1;
+  fieldPath: string;
+  fieldErrors?: Readonly<Record<string, string>>;
   error?: string;
   onChange(next: HeroSlideDraft[]): void;
 }) {
@@ -77,6 +85,8 @@ export function HeroSlidesEditor({
       slides.map((slide, slideIndex) => (slideIndex === index ? { ...slide, [key]: next } : slide)),
     );
   };
+  const fieldError = (index: number, key: keyof HeroSlideDraft) =>
+    fieldErrors?.[`${fieldPath}.${index}.${key}`];
   const moveSlide = (index: number, delta: -1 | 1) => {
     const target = index + delta;
     if (target < 0 || target >= slides.length) return;
@@ -189,7 +199,7 @@ export function HeroSlidesEditor({
                   />
                 </div>
               </header>
-              <Field label="Imagen">
+              <Field label="Imagen" {...fieldErrorProps(fieldError(index, "imageId"))}>
                 <select
                   value={slide.imageId}
                   aria-label={`Imagen del slide ${index + 1}`}
@@ -203,21 +213,21 @@ export function HeroSlidesEditor({
                   ))}
                 </select>
               </Field>
-              <Field label="Antetítulo">
+              <Field label="Antetítulo" {...fieldErrorProps(fieldError(index, "eyebrow"))}>
                 <input
                   value={slide.eyebrow}
                   aria-label={`Antetítulo del slide ${index + 1}`}
                   onChange={(event) => updateSlide(index, "eyebrow", event.target.value)}
                 />
               </Field>
-              <Field label="Título">
+              <Field label="Título" {...fieldErrorProps(fieldError(index, "title"))}>
                 <input
                   value={slide.title}
                   aria-label={`Título del slide ${index + 1}`}
                   onChange={(event) => updateSlide(index, "title", event.target.value)}
                 />
               </Field>
-              <Field label="Texto">
+              <Field label="Texto" {...fieldErrorProps(fieldError(index, "body"))}>
                 <textarea
                   value={slide.body}
                   rows={3}
@@ -226,14 +236,17 @@ export function HeroSlidesEditor({
                 />
               </Field>
               <div className="inspector-split">
-                <Field label="Texto del CTA">
+                <Field label="Texto del CTA" {...fieldErrorProps(fieldError(index, "actionLabel"))}>
                   <input
                     value={slide.actionLabel}
                     aria-label={`Texto del CTA del slide ${index + 1}`}
                     onChange={(event) => updateSlide(index, "actionLabel", event.target.value)}
                   />
                 </Field>
-                <Field label="Destino del CTA">
+                <Field
+                  label="Destino del CTA"
+                  {...fieldErrorProps(fieldError(index, "actionHref"))}
+                >
                   <input
                     type="url"
                     value={slide.actionHref}

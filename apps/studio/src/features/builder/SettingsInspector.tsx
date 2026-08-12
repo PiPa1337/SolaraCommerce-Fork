@@ -9,6 +9,37 @@ function formatIssuePaths(issues: Array<{ path: readonly PropertyKey[] }>): stri
   return [...new Set(issues.map((issue) => issue.path.join(".") || "settings"))].join(", ");
 }
 
+function splitSchemaIssues(
+  issues: readonly { path: readonly PropertyKey[]; message: string }[],
+  fallbackKey?: string,
+): {
+  topLevel: Record<string, string>;
+  nested: Record<string, string>;
+} {
+  const topLevel: Record<string, string> = {};
+  const nested: Record<string, string> = {};
+
+  for (const issue of issues) {
+    const root =
+      typeof issue.path[0] === "string" && issue.path[0]
+        ? issue.path[0]
+        : (fallbackKey ?? "settings");
+    topLevel[root] ??= issue.message;
+
+    const index = issue.path[1];
+    const field = issue.path[2];
+    if (
+      typeof issue.path[0] === "string" &&
+      typeof index === "number" &&
+      typeof field === "string"
+    ) {
+      nested[`${issue.path[0]}.${index}.${field}`] ??= issue.message;
+    }
+  }
+
+  return { topLevel, nested };
+}
+
 export function SettingsInspector({
   values,
   fields,
@@ -24,12 +55,14 @@ export function SettingsInspector({
 }) {
   const [draft, setDraft] = useState(values);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [nestedErrors, setNestedErrors] = useState<Record<string, string>>({});
   const [rawArrays, setRawArrays] = useState<Record<string, string>>({});
   const errorIdPrefix = useId();
 
   useEffect(() => {
     setDraft(values);
     setErrors({});
+    setNestedErrors({});
     setRawArrays({});
   }, [values]);
 
@@ -56,6 +89,7 @@ export function SettingsInspector({
     const result = schema.safeParse(candidate);
     if (result.success) {
       setErrors({});
+      setNestedErrors({});
       setRawArrays((current) => {
         const next = { ...current };
         delete next[key];
@@ -64,11 +98,9 @@ export function SettingsInspector({
       onChange(result.data as Record<string, unknown>);
       return;
     }
-    setErrors(
-      Object.fromEntries(
-        result.error.issues.map((issue) => [String(issue.path[0] ?? key), issue.message]),
-      ),
-    );
+    const mapped = splitSchemaIssues(result.error.issues, key);
+    setErrors(mapped.topLevel);
+    setNestedErrors(mapped.nested);
   };
 
   return (
@@ -186,6 +218,8 @@ export function SettingsInspector({
                 key={field.key}
                 value={value}
                 project={project}
+                fieldPath={field.key}
+                fieldErrors={nestedErrors}
                 {...(error ? { error } : {})}
                 onChange={(next) => setValue(field.key, next)}
               />
@@ -205,6 +239,7 @@ export function SettingsInspector({
                     setDraft((current) => ({ ...current, [field.key]: event.target.value }));
                     setRawArrays((current) => ({ ...current, [field.key]: event.target.value }));
                     setErrors((current) => ({ ...current, [field.key]: "JSON inválido." }));
+                    setNestedErrors({});
                   }
                 }}
               />
@@ -221,6 +256,8 @@ export function SettingsInspector({
               {...(field.minItems === undefined ? {} : { minItems: field.minItems })}
               {...(field.maxItems === undefined ? {} : { maxItems: field.maxItems })}
               {...(field.itemLabelKey === undefined ? {} : { itemLabelKey: field.itemLabelKey })}
+              fieldPath={field.key}
+              fieldErrors={nestedErrors}
               {...(error === undefined ? {} : { error })}
               project={project}
               onChange={(next) => setValue(field.key, next)}

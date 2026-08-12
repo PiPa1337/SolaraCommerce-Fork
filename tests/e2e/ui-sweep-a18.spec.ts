@@ -455,7 +455,13 @@ test("A18 T8: título vacío muestra error y no se commitea; al corregirlo se ap
 
   await page.getByLabel("Título del slide 1", { exact: true }).fill("");
   await expect(page.getByTestId("ui-schema-errors")).toContainText("slides.0.title");
-  await expect(page.locator(".field-error")).toBeVisible();
+  const title = page.getByLabel("Título del slide 1", { exact: true });
+  await expect(title).toHaveAttribute("aria-invalid", "true");
+  const titleField = title.locator("xpath=ancestor::fieldset[1]");
+  const titleError = titleField.getByTestId("ui-field-error");
+  await expect(titleError).toBeVisible();
+  const titleDescribedBy = await title.getAttribute("aria-describedby");
+  expect(titleDescribedBy).toContain(await titleError.getAttribute("id"));
   await expect
     .poll(async () => {
       const slides = (await readHeroSlides(page)) as Array<{ title: string }>;
@@ -465,6 +471,8 @@ test("A18 T8: título vacío muestra error y no se commitea; al corregirlo se ap
 
   await page.getByLabel("Título del slide 1", { exact: true }).fill("Diapo corregida");
   await expect(page.getByTestId("ui-schema-errors")).not.toBeVisible();
+  await expect(title).not.toHaveAttribute("aria-invalid", "true");
+  await expect(titleField.getByTestId("ui-field-error")).toHaveCount(0);
   await expect
     .poll(async () => {
       const slides = (await readHeroSlides(page)) as Array<{ title: string }>;
