@@ -27,6 +27,8 @@ versión publicada.
 - El Constructor prueba directamente `Desbloquear` desde una tienda protegida
   y el recorrido válido completo de movimiento (preset, intensidad, duración,
   distancia y ejecución única), incluyendo preview y persistencia.
+- La ruta editable de Preview verifica también el commit al perder foco y la
+  restauración de la ruta vigente ante una entrada vacía, sin render ambiguo.
 
 ### Panel de edición sin desplazamiento lateral (2026-08-12)
 

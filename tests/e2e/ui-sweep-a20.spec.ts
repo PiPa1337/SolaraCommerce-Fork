@@ -311,6 +311,29 @@ test("A20: preview — la ruta del selector cambia la página, el input y el anu
   await expect(contactoOption).toHaveAttribute("value", "/contacto/");
 });
 
+test("A20: preview — la ruta confirma al perder foco y un valor vacío restaura la actual", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openDemoStore(page);
+
+  const routeInput = page.getByTestId("ui-preview-route");
+  const announce = page.getByTestId("ui-preview-route-announce");
+  await routeInput.fill("/contacto/");
+  await page.getByRole("button", { name: "75%" }).focus();
+
+  await expect(routeInput).toHaveValue("/contacto/");
+  await expect(announce).toContainText("Vista previa: /contacto/");
+  await expectPreviewTitle(page, "Contacto | Modo Sur");
+
+  await routeInput.fill("   ");
+  await page.getByRole("button", { name: "100%" }).focus();
+
+  await expect(routeInput).toHaveValue("/contacto/");
+  await expect(announce).toContainText("Vista previa: /contacto/");
+  await expectPreviewTitle(page, "Contacto | Modo Sur");
+});
+
 test("A20: preview — zoom: escala del iframe, estado presionado y sesión", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openDemoStore(page);
