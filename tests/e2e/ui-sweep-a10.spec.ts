@@ -15,7 +15,8 @@
  *  - Sección con esquema inválido: panel de error del Builder (settings que no
  *    superan el schema del módulo, seedeados vía IndexedDB) y limpieza al
  *    corregir; el motion fuera de rango se rechaza en el borde del Studio con
- *    error visible y sin commit.
+ *    error visible y sin commit; los valores válidos llegan al preview y
+ *    persisten.
  *  - Regresiones: cambio de página reclama el slot del selector y el botón
  *    Cancelar cierra el diálogo como las demás vías de cierre.
  */
@@ -244,6 +245,72 @@ test("un motion fuera de rango no se commitea y el studio avisa el error de sche
     page.getByTestId("ui-inline-error").filter({ hasText: "motion.distance" }),
   ).toBeVisible();
   await expect(page.getByText("Cambios pendientes", { exact: true })).toHaveCount(0);
+});
+
+test("los controles de movimiento válidos actualizan preview y persisten", async ({ page }) => {
+  await openBuilder(page);
+  await selectHero(page);
+
+  const preset = page.getByRole("combobox", { name: "Preset" });
+  const intensity = page.getByRole("slider", { name: /^Intensidad / });
+  const duration = page.getByRole("spinbutton", { name: "Duración" });
+  const distance = page.getByRole("spinbutton", { name: "Distancia" });
+  const once = page.getByRole("checkbox", { name: "Ejecutar una vez" });
+
+  await preset.selectOption("fade");
+  await intensity.fill("7");
+  await duration.fill("0.8");
+  await distance.fill("42");
+  await once.uncheck();
+
+  const hero = previewFrame(page).locator('[data-solara-module="catalog-hero"]');
+  await expect(hero).toHaveAttribute("data-motion-preset", "fade", { timeout: 15_000 });
+  await expect(hero).toHaveAttribute("data-motion-intensity", "0.7");
+  await expect(hero).toHaveAttribute("data-motion-distance", "42");
+  await expect(hero).toHaveAttribute("data-motion-once", "false");
+  await expect(hero).toHaveAttribute("style", /--motion-duration:800ms/);
+
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            new Promise<Record<string, unknown> | null>((resolve, reject) => {
+              const request = indexedDB.open("solara-commerce-studio");
+              request.addEventListener("error", () => reject(request.error));
+              request.addEventListener("success", () => {
+                const db = request.result;
+                const get = db
+                  .transaction("projects")
+                  .objectStore("projects")
+                  .get("store-modo-sur-demo");
+                get.addEventListener("success", () => {
+                  const section = get.result?.project?.sections?.find(
+                    (candidate: { moduleId?: string }) => candidate.moduleId === "catalog-hero",
+                  );
+                  db.close();
+                  resolve(section?.motion ?? null);
+                });
+                get.addEventListener("error", () => reject(get.error));
+              });
+            }),
+        ),
+      { timeout: 15_000 },
+    )
+    .toMatchObject({ preset: "fade", intensity: 7, duration: 0.8, distance: 42, once: false });
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({ timeout: 20_000 });
+  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
+  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await page.getByRole("tab", { name: "Constructor" }).click();
+  await selectHero(page);
+
+  await expect(page.getByRole("combobox", { name: "Preset" })).toHaveValue("fade");
+  await expect(page.getByRole("slider", { name: "Intensidad 7" })).toHaveValue("7");
+  await expect(page.getByRole("spinbutton", { name: "Duración" })).toHaveValue("0.8");
+  await expect(page.getByRole("spinbutton", { name: "Distancia" })).toHaveValue("42");
+  await expect(page.getByRole("checkbox", { name: "Ejecutar una vez" })).not.toBeChecked();
 });
 
 async function seedInvalidHeroSettings(page: Page): Promise<void> {

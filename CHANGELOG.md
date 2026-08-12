@@ -24,6 +24,9 @@ versión publicada.
 - El barrido de Preparar verifica también sus tres accesos rápidos (`Marca y
   textos`, `Cargar catálogo` y `Organizar imágenes`) y conserva evidencia
   visual oscura de Preparar y Resumen en el viewport real `1920x968`.
+- El Constructor prueba directamente `Desbloquear` desde una tienda protegida
+  y el recorrido válido completo de movimiento (preset, intensidad, duración,
+  distancia y ejecución única), incluyendo preview y persistencia.
 
 ### Panel de edición sin desplazamiento lateral (2026-08-12)
 

@@ -250,6 +250,26 @@ test("tienda limpia sin modo avanzado: la protección bloquea la estructura pero
   await expect(page.getByRole("button", { name: "Agregar sección" })).toBeDisabled();
 });
 
+test("Desbloquear activa el modo avanzado desde el Constructor protegido", async ({ page }) => {
+  await setupCleanStore(page, "Tienda PR5 desbloquear");
+  await openConstructorTab(page);
+
+  const unlock = page.getByRole("button", { name: "Desbloquear", exact: true });
+  await expect(page.getByText(PROTECTED_DESCRIPTION)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Agregar sección" })).toBeDisabled();
+  await expect(unlock).toBeVisible();
+
+  await unlock.click();
+
+  await expect(page.getByText(PROTECTED_DESCRIPTION)).toHaveCount(0);
+  await expect(page.getByText(UNPROTECTED_DESCRIPTION)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Agregar sección" })).toBeEnabled();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Modo avanzado activado" }),
+  ).toBeVisible();
+  await expect(unlock).toHaveCount(0);
+});
+
 test("utilidad: el modo avanzado habilita toda la matriz que la protección bloquea", async ({
   page,
 }) => {
