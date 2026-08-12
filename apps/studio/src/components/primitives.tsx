@@ -208,7 +208,8 @@ export function Pagination({
   const first = totalItems !== undefined && totalItems > 0 ? (current - 1) * perPage + 1 : 0;
   const last = totalItems !== undefined ? Math.min(current * perPage, totalItems) : 0;
   const go = (target: number) => {
-    if (!disabled && target >= 1 && target <= totalPages && target !== page) onChange(target);
+    const effectiveTarget = Math.min(Math.max(1, target), maxPage);
+    if (!disabled && effectiveTarget !== current) onChange(effectiveTarget);
   };
   const entries: Array<number | "ellipsis-start" | "ellipsis-end"> = [];
   if (maxPage <= 7) {
@@ -239,7 +240,7 @@ export function Pagination({
           size="sm"
           icon={ArrowLeft}
           disabled={disabled || current <= 1}
-          onClick={() => go(page - 1)}
+          onClick={() => go(current - 1)}
         >
           Anterior
         </Button>
@@ -268,7 +269,7 @@ export function Pagination({
           size="sm"
           icon={ArrowRight}
           disabled={disabled || current >= maxPage}
-          onClick={() => go(page + 1)}
+          onClick={() => go(current + 1)}
         >
           Siguiente
         </Button>

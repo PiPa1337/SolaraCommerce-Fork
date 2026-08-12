@@ -209,6 +209,15 @@ test("galería: el resumen de paginación nunca sale del rango al cambiar el tam
   await expect(pagination.getByRole("button", { name: "12", exact: true })).toHaveCount(0);
   await expect(pagination.getByRole("button", { name: "Siguiente", exact: true })).toBeDisabled();
   await expect(pagination.locator(".ui-pagination__summary")).not.toHaveText("276–120 de 120");
+
+  // Aunque el estado recibido aún conserva page=12, la navegación usa la
+  // página efectiva clamped (5) y no queda atrapada en la página fantasma.
+  await pagination.getByRole("button", { name: "Anterior", exact: true }).click();
+  await expect(pagination.locator(".ui-pagination__summary")).toHaveText("76–100 de 120");
+  await expect(pagination.getByRole("button", { name: "4", exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
 });
 
 test("galería: badges y status badges renderizan tonos con estilo aplicado", async ({ page }) => {

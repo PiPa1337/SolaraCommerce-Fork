@@ -20,6 +20,8 @@ versión publicada.
   visual que no tiene el error.
 - El diálogo de duplicación expone mediante `aria-describedby` el alcance de
   la copia antes de pedir el nuevo nombre.
+- La paginación del catálogo navega desde la página efectiva cuando un filtro o
+  cambio de tamaño deja temporalmente un índice fuera de rango.
 - La reubicación de categorías conserva la selección al cancelar, devuelve el
   foco al control disparador y expone el cuerpo de confirmación de forma
   accesible.
