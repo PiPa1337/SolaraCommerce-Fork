@@ -85,6 +85,46 @@ test("reubicar una categoría hoja cambia su padre y se confirma", async ({ page
   await expect(page.getByRole("dialog", { name: "Reubicar categoría" })).toBeHidden();
 });
 
+test("cancelar la reubicación conserva selección, foco y descripción del diálogo", async ({
+  page,
+}) => {
+  await openCatalog(page);
+
+  const moveSelect = page.getByLabel("Categoría a reubicar");
+  const parentSelect = page.getByLabel("Nuevo padre");
+  const moveButton = page.getByRole("button", { name: "Reubicar categoría" });
+  const options = moveSelect.locator("option");
+
+  let moved = false;
+  for (let index = 1; index < (await options.count()); index += 1) {
+    await moveSelect.selectOption({ index });
+    if (await moveButton.isEnabled()) {
+      moved = true;
+      break;
+    }
+  }
+  expect(moved).toBe(true);
+
+  const selectedCategory = await moveSelect.inputValue();
+  await parentSelect.selectOption({ index: 0 });
+  await moveButton.click();
+
+  const dialog = page.getByRole("dialog", { name: "Reubicar categoría" });
+  await expect(dialog).toBeVisible();
+  const descriptionId = await dialog.getAttribute("aria-describedby");
+  expect(descriptionId).toBeTruthy();
+  await expect(dialog.locator(".confirm-dialog__body")).toHaveAttribute(
+    "id",
+    descriptionId ?? "missing-description",
+  );
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(moveButton).toBeFocused();
+  await expect(moveSelect).toHaveValue(selectedCategory);
+  await expect(parentSelect).toHaveValue("");
+});
+
 test("una raíz con hijos no puede reubicarse bajo otra raíz (bloqueo)", async ({ page }) => {
   await openCatalog(page);
 

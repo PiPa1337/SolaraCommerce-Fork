@@ -208,7 +208,11 @@ test.describe("A2 — Catálogo: acciones masivas", () => {
     await priceKindSelect(page).selectOption("percentage");
     await priceValueInput(page).fill("-150");
     await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
-    await expect(page.getByTestId("ui-inline-error")).toContainText("mínimo -100%");
+    await expect(bulkPanel(page).getByTestId("ui-field-error")).toContainText("mínimo -100%");
+    await expect(priceValueInput(page)).toHaveAttribute("aria-invalid", "true");
+    const priceErrorId = await priceValueInput(page).getAttribute("aria-describedby");
+    expect(priceErrorId).toBeTruthy();
+    await expect(bulkPanel(page).locator(`#${priceErrorId}`)).toContainText("mínimo -100%");
     await expect(priceInput(page, 0)).toHaveValue("2985000");
     await expect(priceInput(page, 1)).toHaveValue("3070000");
   });
@@ -220,12 +224,27 @@ test.describe("A2 — Catálogo: acciones masivas", () => {
     await priceKindSelect(page).selectOption("percentage");
     await priceValueInput(page).fill("-150");
     await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
-    await expect(page.getByTestId("ui-inline-error")).toContainText("mínimo -100%");
+    await expect(bulkPanel(page).getByTestId("ui-field-error")).toContainText("mínimo -100%");
 
     await priceValueInput(page).fill("5");
     await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
     await expect(priceInput(page, 0)).toHaveValue("3029250");
-    await expect(page.getByTestId("ui-inline-error")).toBeHidden();
+    await expect(bulkPanel(page).getByTestId("ui-field-error")).toHaveCount(0);
+  });
+
+  test("ajuste sin valor muestra error asociado y se limpia al corregirlo", async ({ page }) => {
+    await openCatalog(page);
+    await rowCheckbox(page, 0).check();
+
+    await priceValueInput(page).fill("");
+    await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
+
+    const priceError = bulkPanel(page).getByTestId("ui-field-error");
+    await expect(priceError).toContainText("Ingresá un valor");
+    await expect(priceValueInput(page)).toHaveAttribute("aria-invalid", "true");
+    await priceValueInput(page).fill("5");
+    await expect(priceError).toHaveCount(0);
+    await expect(priceValueInput(page)).not.toHaveAttribute("aria-invalid", "true");
   });
 
   test("asignaciones masivas: categorías, colecciones y tags sólo afectan lo seleccionado", async ({
@@ -302,13 +321,14 @@ test.describe("A2 — Catálogo: acciones masivas", () => {
     await bulkTagsInput(page).fill(" , ");
     await bulkPanel(page).getByRole("button", { name: "Agregar tags" }).click();
 
-    await expect(page.getByTestId("ui-inline-error")).toContainText(
+    await expect(bulkPanel(page).getByTestId("ui-field-error")).toContainText(
       "Ingresá al menos un tag separado por comas.",
     );
+    await expect(bulkTagsInput(page)).toHaveAttribute("aria-invalid", "true");
     await expect(page.getByText("Cambios pendientes", { exact: true })).toHaveCount(0);
 
     await bulkPanel(page).getByRole("button", { name: "Quitar tags" }).click();
-    await expect(page.getByTestId("ui-inline-error")).toContainText(
+    await expect(bulkPanel(page).getByTestId("ui-field-error")).toContainText(
       "Ingresá al menos un tag separado por comas.",
     );
     await expect(page.getByText("Cambios pendientes", { exact: true })).toHaveCount(0);

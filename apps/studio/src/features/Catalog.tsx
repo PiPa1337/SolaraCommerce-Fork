@@ -412,6 +412,8 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
   const [reparentParentId, setReparentParentId] = useState("");
   const [collectionIds, setCollectionIds] = useState<string[]>([]);
   const [tags, setTags] = useState("");
+  const [priceAdjustmentError, setPriceAdjustmentError] = useState("");
+  const [tagsError, setTagsError] = useState("");
   const [editor, setEditor] = useState<EditorState>();
   const [pendingArchiveIds, setPendingArchiveIds] = useState<Product["id"][] | null>(null);
   const [pendingImport, setPendingImport] = useState<ImportSummary>();
@@ -638,6 +640,13 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
   const filteredRows = table.getFilteredRowModel().rows;
   const hasProducts = project.products.length > 0;
 
+  useEffect(() => {
+    if (selectedIds.length === 0) {
+      setPriceAdjustmentError("");
+      setTagsError("");
+    }
+  }, [selectedIds.length]);
+
   // Si el conjunto filtrado encoge (acciones masivas, importaciones) y el
   // pageIndex quedó fuera de rango, volvemos a la última página válida para
   // que el conteo del resumen y la página marcada nunca mientan.
@@ -807,9 +816,16 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
 
   const applyPriceAdjustment = () => {
     setError("");
+    setPriceAdjustmentError("");
+    if (priceAdjustment.trim() === "") {
+      setPriceAdjustmentError("Ingresá un valor para ajustar los precios.");
+      return;
+    }
     const numeric = Number(priceAdjustment);
     if (priceKind === "percentage" && numeric < -100) {
-      setError("El porcentaje no puede reducir el precio por debajo de cero (mínimo -100%).");
+      setPriceAdjustmentError(
+        "El porcentaje no puede reducir el precio por debajo de cero (mínimo -100%).",
+      );
       return;
     }
     const adjustment =
@@ -818,7 +834,9 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
         : { type: "percentage" as const, basisPoints: Math.round(numeric * 100) };
     const value = adjustment.type === "amount" ? adjustment.cents : adjustment.basisPoints;
     if (!Number.isSafeInteger(value)) {
-      setError("El ajuste debe producir una cantidad entera de centavos o puntos básicos.");
+      setPriceAdjustmentError(
+        "El ajuste debe producir una cantidad entera de centavos o puntos básicos.",
+      );
       return;
     }
     onCommand({
@@ -830,12 +848,13 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
   };
 
   const applyTags = (type: "products.addTags" | "products.removeTags") => {
+    setTagsError("");
     const normalized = tags
       .split(",")
       .map((tag) => tag.trim())
       .filter(Boolean);
     if (normalized.length === 0) {
-      setError("Ingresá al menos un tag separado por comas.");
+      setTagsError("Ingresá al menos un tag separado por comas.");
       return;
     }
     setError("");
@@ -1201,19 +1220,26 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
                 <Field label="Ajuste">
                   <select
                     value={priceKind}
-                    onChange={(event) =>
-                      setPriceKind(event.target.value as "percentage" | "amount")
-                    }
+                    onChange={(event) => {
+                      setPriceKind(event.target.value as "percentage" | "amount");
+                      setPriceAdjustmentError("");
+                    }}
                   >
                     <option value="percentage">Porcentaje</option>
                     <option value="amount">Centavos</option>
                   </select>
                 </Field>
-                <Field label={priceKind === "percentage" ? "Valor %" : "Centavos"}>
+                <Field
+                  label={priceKind === "percentage" ? "Valor %" : "Centavos"}
+                  error={priceAdjustmentError}
+                >
                   <input
                     type="number"
                     value={priceAdjustment}
-                    onChange={(event) => setPriceAdjustment(event.target.value)}
+                    onChange={(event) => {
+                      setPriceAdjustment(event.target.value);
+                      setPriceAdjustmentError("");
+                    }}
                     step={priceKind === "percentage" ? "0.1" : "1"}
                   />
                 </Field>
@@ -1291,8 +1317,14 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
               </div>
 
               <div className="bulk-action bulk-action--tags">
-                <Field label="Tags" hint="Separados por comas.">
-                  <input value={tags} onChange={(event) => setTags(event.target.value)} />
+                <Field label="Tags" hint="Separados por comas." error={tagsError}>
+                  <input
+                    value={tags}
+                    onChange={(event) => {
+                      setTags(event.target.value);
+                      setTagsError("");
+                    }}
+                  />
                 </Field>
                 <Button onClick={() => applyTags("products.addTags")}>Agregar tags</Button>
                 <Button variant="quiet" onClick={() => applyTags("products.removeTags")}>

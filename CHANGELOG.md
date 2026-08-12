@@ -12,6 +12,12 @@ versión publicada.
 
 ### Feedback accesible en inspectores generados (2026-08-12)
 
+- Las acciones masivas de precios y tags muestran los errores junto al campo
+  que requiere corrección, anuncian el estado inválido y evitan aplicar un
+  ajuste vacío como cero.
+- La reubicación de categorías conserva la selección al cancelar, devuelve el
+  foco al control disparador y expone el cuerpo de confirmación de forma
+  accesible.
 - Los errores de booleanos, arrays JSON, repetidores y slides quedan asociados
   al control o grupo que debe corregirse, se anuncian con `role="alert"` y
   marcan el estado inválido sin cambiar el contrato del schema.
