@@ -1,5 +1,12 @@
 # Changelog
 
+### Flujo de seguir comprando en el carrito V2 (2026-08-13)
+
+- El drawer ofrece una acción visible para cerrar y continuar recorriendo la
+  tienda después de agregar un producto, sin bloquear los enlaces del storefront.
+- Se cubre el recorrido agregar, seguir comprando, navegar y agregar un segundo
+  producto sin perder la primera línea.
+
 ### Carrusel de testimonios y footer V2 (2026-08-13)
 
 - Los controles de testimonios identifican su rail, respetan reduced motion y

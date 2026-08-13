@@ -322,6 +322,11 @@ describe("carrito y checkout del drawer (A29)", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("syncCartToggleExpanded(false)");
   });
 
+  it("permite seguir comprando desde el drawer sin perder el carrito", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain('target.closest("[data-close-cart]")');
+    expect(STOREFRONT_RUNTIME_JS).toContain("renderCart()");
+  });
+
   it("quita líneas por data-cart-remove y persiste el carrito", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain(
       `data-cart-remove="\${escapeAttribute(line.variantId)}"`,

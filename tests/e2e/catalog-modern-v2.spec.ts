@@ -558,6 +558,48 @@ test("V2 conserva varias líneas del carrito al navegar entre páginas", async (
   await expect(page.locator("[data-cart-count]").first()).toHaveText("2");
 });
 
+test("V2 conserva el carrito cuando la navegación ocurre inmediatamente después de agregar", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  const firstProduct = new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString();
+  await page.goto(firstProduct);
+  await page.evaluate(() => localStorage.removeItem("solara-cart:store-catalog-modern-v2"));
+  await page.reload();
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+
+  await page.goto(new URL("/productos/remera-grafica-horizonte/", serverUrl).toString());
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("1");
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+
+  await page.goto(new URL("/carrito/", serverUrl).toString());
+  await expect(
+    page.locator(".solara-cart-page-grid [data-cart-lines] .solara-cart-line"),
+  ).toHaveCount(2);
+});
+
+test("V2 conserva el carrito al navegar con enlaces del storefront", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  const firstProduct = new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString();
+  await page.goto(firstProduct);
+  await page.evaluate(() => localStorage.removeItem("solara-cart:store-catalog-modern-v2"));
+  await page.reload();
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("1");
+  await expect(page.getByRole("button", { name: "Seguir comprando" })).toBeVisible();
+  await page.getByRole("button", { name: "Seguir comprando" }).click();
+
+  await page.locator('a[href="/"]').first().click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("1");
+
+  await page.locator('a[href="/productos/remera-grafica-horizonte/"]').first().click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Remera gráfica Horizonte");
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("1");
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("2");
+});
+
 test("V2 compone checkout editorial sin overflow en desktop y movil", async ({
   page,
 }, testInfo) => {

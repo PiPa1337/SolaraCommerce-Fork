@@ -362,6 +362,26 @@ test("A20: preview - carrito conserva multiples lineas al cambiar de ruta", asyn
   });
 });
 
+test("A20: preview - persiste el carrito ante un cambio de ruta inmediato", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openDemoStore(page);
+  await page.evaluate(() => localStorage.removeItem("solara-cart:store-modo-sur-demo"));
+  const frame = page.frameLocator('iframe[title="Vista previa desktop"]');
+
+  await commitRoute(page, "/productos/remera-esencial-de-algodon/");
+  await expect(frame.getByRole("heading", { level: 1 })).toContainText(
+    "Remera esencial de algodón",
+    { timeout: 20_000 },
+  );
+  await frame.getByRole("button", { name: "Agregar al carrito" }).click();
+
+  await commitRoute(page, "/productos/remera-grafica-horizonte/");
+  await expect(frame.getByRole("heading", { level: 1 })).toContainText("Remera gráfica Horizonte", {
+    timeout: 20_000,
+  });
+  await expect(frame.locator("[data-cart-count]").first()).toHaveText("1");
+});
+
 test("A20: preview - una escritura tardía de una ruta anterior no pisa el carrito actual", async ({
   page,
 }) => {
