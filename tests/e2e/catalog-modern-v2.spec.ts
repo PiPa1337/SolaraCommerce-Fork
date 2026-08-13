@@ -134,10 +134,10 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
       ?.getBoundingClientRect();
     return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
   });
-  expect(gridMetrics.gridWidth).toBeGreaterThan(1340);
-  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(1360);
-  expect(gridMetrics.cardWidth).toBeGreaterThan(310);
-  expect(gridMetrics.cardWidth).toBeLessThan(330);
+  expect(gridMetrics.gridWidth).toBeGreaterThan(1300);
+  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(1320);
+  expect(gridMetrics.cardWidth).toBeGreaterThan(300);
+  expect(gridMetrics.cardWidth).toBeLessThan(320);
   const firstMedia = grid.locator(".catalog-product-media").first();
   const mediaRatio = await firstMedia.evaluate((element) => {
     const rect = element.getBoundingClientRect();
@@ -711,7 +711,7 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
     if (viewport.width === 1920) {
       expect(
         await results.evaluate((element) => element.getBoundingClientRect().width),
-      ).toBeLessThanOrEqual(1360);
+      ).toBeLessThanOrEqual(1320);
     }
     expect(
       await results.evaluate(

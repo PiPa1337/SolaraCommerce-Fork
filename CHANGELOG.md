@@ -21,7 +21,7 @@ versión publicada.
 
 ### Ajuste de escala de cards V2 (2026-08-13)
 
-- Las grillas de productos de la home y búsqueda limitan su ancho a 1360px
+- Las grillas de productos de la home y búsqueda limitan su ancho a 1320px
   para reducir ligeramente el tamaño de cada card en pantallas amplias sin
   cambiar columnas, contenido ni proporción de imagen.
 - Las imágenes de esas cards declaran un límite responsive de 20rem para

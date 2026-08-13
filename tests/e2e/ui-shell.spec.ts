@@ -146,6 +146,25 @@ test("las pestañas reabren el panel cerrado con mouse y teclado (H3-B3)", async
   expect(stored).toBe("open");
 });
 
+test("la toolbar vuelve a abrir el panel horizontal cerrado (H3-B3)", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  await openDemoStore(page);
+
+  const pane = page.locator("[data-studio-editor-pane]");
+  const openButton = page.getByRole("button", { name: "Abrir panel de edición" });
+  await openButton.click();
+  await expect(pane).toHaveClass(/editor-pane--open/);
+
+  await page.getByRole("button", { name: "Cerrar panel de edición" }).click();
+  await expect(pane).toHaveClass(/editor-pane--closed/);
+  await expect(pane).toHaveAttribute("aria-hidden", "true");
+  await expect(openButton).toBeVisible();
+
+  await openButton.click();
+  await expect(pane).toHaveClass(/editor-pane--open/);
+  await expect(pane).toHaveAttribute("aria-hidden", "false");
+});
+
 test("Ctrl+S fuerza el guardado en modo navegador (H3-B4)", async ({ page }) => {
   await page.clock.install({ time: FAKE_START });
   await openDemoStore(page);
