@@ -219,6 +219,27 @@ function repairModernGreeting(project: StoreProjectV1): StoreProjectV1 {
   });
 }
 
+function repairScaleDemoPresentation(project: StoreProjectV1): StoreProjectV1 {
+  if (project.id !== SCALE_DEMO_PROJECT_ID || project.origin?.seed !== "demo") return project;
+  const desired = buildScaleDemoProject();
+  if (
+    project.commerceTemplates.designFamily === desired.commerceTemplates.designFamily &&
+    project.theme.container === desired.theme.container &&
+    project.theme.colors.background === desired.theme.colors.background
+  ) {
+    return project;
+  }
+  return StoreProjectV1Schema.parse({
+    ...project,
+    theme: structuredClone(desired.theme),
+    commerceTemplates: {
+      ...project.commerceTemplates,
+      designFamily: desired.commerceTemplates.designFamily,
+    },
+    updatedAt: new Date().toISOString(),
+  });
+}
+
 async function sourceAsDataUrl(source: string): Promise<string> {
   const response = await fetch(source);
   if (!response.ok) throw new Error(`No se pudo cargar el recurso inicial ${source}.`);
@@ -589,12 +610,14 @@ export async function ensureScaleDemoProject(): Promise<boolean> {
   const existing = await database.projects.get(SCALE_DEMO_PROJECT_ID);
   if (existing) {
     const parsed = StoreProjectV1Schema.parse(existing.project);
-    const project = repairModernGreeting(
-      parsed.name === LEGACY_SCALE_DEMO_PROJECT_NAME
-        ? { ...parsed, name: SCALE_DEMO_PROJECT_NAME }
-        : parsed,
+    const project = repairScaleDemoPresentation(
+      repairModernGreeting(
+        parsed.name === LEGACY_SCALE_DEMO_PROJECT_NAME
+          ? { ...parsed, name: SCALE_DEMO_PROJECT_NAME }
+          : parsed,
+      ),
     );
-    if (project.name !== parsed.name || project.whatsapp.greeting !== parsed.whatsapp.greeting) {
+    if (JSON.stringify(project) !== JSON.stringify(parsed)) {
       await saveProject(project);
     }
     return false;

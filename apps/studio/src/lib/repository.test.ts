@@ -214,6 +214,25 @@ describe("repositorio local", () => {
     expect((await getProject(legacyClean.id))?.name).toBe("Base limpia anterior");
   });
 
+  it("actualiza la presentacion V2 de Predeterminado sin tocar su catalogo", async () => {
+    const staleDemo = StoreProjectV1Schema.parse({
+      ...structuredClone(catalogModernStore),
+      id: SCALE_DEMO_PROJECT_ID,
+      name: "Predeterminado",
+      origin: { ...catalogModernStore.origin, seed: "demo" },
+      products: catalogModernStore.products.map((product, index) =>
+        index === 0 ? { ...product, title: "Nombre personalizado" } : product,
+      ),
+    });
+    await saveProject(staleDemo);
+
+    expect(await ensureScaleDemoProject()).toBe(false);
+    const repaired = await getProject(SCALE_DEMO_PROJECT_ID);
+    expect(repaired?.commerceTemplates.designFamily).toBe("catalog-modern-v2");
+    expect(repaired?.theme.container).toBe(1760);
+    expect(repaired?.products[0]?.title).toBe("Nombre personalizado");
+  });
+
   it("construye Predeterminado directamente con Editorial V2", () => {
     const demo = buildScaleDemoProject();
     expect(demo.name).toBe("Predeterminado");

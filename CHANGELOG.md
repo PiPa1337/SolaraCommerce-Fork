@@ -10,6 +10,13 @@ versión publicada.
 
 ## [Unreleased]
 
+### Sincronizacion de presentacion de Predeterminado (2026-08-13)
+
+- La tienda demo existente actualiza su familia visual a Catalog Modern V2 al
+  iniciar Studio, sin reemplazar sus productos ni el contenido personalizado.
+- Se agrego una regresion para evitar que una cache vieja mantenga
+  `Predeterminado` en la presentacion V1.
+
 ### Refinamiento de escala de cards V2 (2026-08-13)
 
 - Las grillas de productos de la home y búsqueda reducen su ancho máximo a
