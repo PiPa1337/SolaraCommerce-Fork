@@ -32,6 +32,8 @@ versión publicada.
   WhatsApp hasta que la interacción real los vuelve relevantes.
 - El benchmark exporta ahora `catalog-modern-v2` con 2.000 productos, valida
   páginas activas, índice de búsqueda y un presupuesto máximo de 48 MiB.
+- La matriz V2 verifica nombres accesibles, IDs únicos, foco visible, menú por
+  teclado, fallback sin JavaScript, canonical/Open Graph y `noindex` del checkout.
 
 ### Matriz release reproducible (2026-08-12)
 

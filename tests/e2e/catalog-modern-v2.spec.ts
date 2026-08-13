@@ -333,3 +333,86 @@ test("V2 compone checkout editorial sin overflow en desktop y movil", async ({
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.screenshot({ path: testInfo.outputPath("checkout-390x844.png"), fullPage: true });
 });
+
+test("V2 conserva nombres accesibles, foco visible y navegacion por teclado", async ({ page }) => {
+  const routes = [
+    "/",
+    "/categorias/remeras/",
+    "/productos/remera-esencial-de-algodon/",
+    "/compra/",
+  ];
+
+  for (const route of routes) {
+    await page.goto(new URL(route, serverUrl).toString());
+    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+    const audit = await page.evaluate(() => {
+      const ids = [...document.querySelectorAll<HTMLElement>("[id]")].map((element) => element.id);
+      const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
+      const unnamed = [
+        ...document.querySelectorAll<HTMLElement>("a, button, input, select, textarea, summary"),
+      ]
+        .filter((element) => {
+          const style = getComputedStyle(element);
+          return (
+            style.display !== "none" &&
+            style.visibility !== "hidden" &&
+            !element.closest("[inert]") &&
+            !(element instanceof HTMLInputElement && element.type === "hidden")
+          );
+        })
+        .filter((element) => {
+          const explicitName =
+            element.getAttribute("aria-label")?.trim() ||
+            element.getAttribute("title")?.trim() ||
+            element.textContent?.trim();
+          const labelledInput =
+            (element instanceof HTMLInputElement ||
+              element instanceof HTMLSelectElement ||
+              element instanceof HTMLTextAreaElement) &&
+            element.labels &&
+            element.labels.length > 0;
+          return !explicitName && !labelledInput;
+        })
+        .map((element) => `${element.tagName.toLowerCase()}#${element.id}`);
+      return { duplicateIds: [...new Set(duplicateIds)], unnamed };
+    });
+    expect(audit).toEqual({ duplicateIds: [], unnamed: [] });
+  }
+
+  const checkoutName = page.locator("#solara-customer-name");
+  await checkoutName.focus();
+  expect(
+    await checkoutName.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return style.outlineStyle !== "none" && Number.parseFloat(style.outlineWidth) >= 2;
+    }),
+  ).toBe(true);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(serverUrl);
+  const openMenu = page.getByRole("button", { name: "Abrir menú" });
+  await openMenu.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#catalog-mobile-menu")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cerrar menú" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#catalog-mobile-menu")).toBeHidden();
+  await expect(openMenu).toBeFocused();
+});
+
+test("V2 conserva contenido y compra directa sin JavaScript", async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString());
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Remera esencial de algodón");
+  await expect(page.locator("a.catalog-add-fallback")).toBeVisible();
+  await expect(page.locator(".catalog-product-add")).toBeHidden();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+
+  await page.goto(serverUrl);
+  await expect(page.locator("#catalog-mobile-menu")).toBeVisible();
+  await expect(page.locator(".catalog-product-card").first()).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await context.close();
+});
