@@ -2616,7 +2616,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-product-grid {
   gap: clamp(1.5rem, 2.4vw, 3rem) clamp(.8rem, 1.4vw, 1.6rem);
-  max-width: 1600px;
+  max-width: 1520px;
   margin: 0 auto;
 }
 .cm.v2 .catalog-product-card {

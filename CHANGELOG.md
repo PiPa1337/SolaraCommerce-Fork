@@ -37,6 +37,8 @@ versión publicada.
 - Los productos de las fixtures deterministas muestran una galería de tres
   imágenes con miniaturas navegables; la grilla V2 limita su ancho para que
   las cards no resulten excesivamente grandes en pantallas amplias.
+- La grilla principal V2 fija ese límite en `1520px` y ajusta sus `sizes` para
+  que las cards respiren mejor sin perder la composición de cuatro columnas.
 - La página de producto V2 mantiene márgenes horizontales simétricos, elimina
   el desborde lateral y pasa a una columna en tabletas para conservar la
   jerarquía y la legibilidad.

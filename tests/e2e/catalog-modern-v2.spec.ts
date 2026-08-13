@@ -135,9 +135,9 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
     return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
   });
   expect(gridMetrics.gridWidth).toBeGreaterThan(1500);
-  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(1600);
+  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(1520);
   expect(gridMetrics.cardWidth).toBeGreaterThan(350);
-  expect(gridMetrics.cardWidth).toBeLessThan(390);
+  expect(gridMetrics.cardWidth).toBeLessThan(370);
   const firstMedia = grid.locator(".catalog-product-media").first();
   const mediaRatio = await firstMedia.evaluate((element) => {
     const rect = element.getBoundingClientRect();
@@ -148,7 +148,7 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   const image = firstMedia.locator("img");
   await expect(image).toHaveAttribute(
     "sizes",
-    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(23.5vw, 23.75rem)",
+    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(23.25vw, 22.5rem)",
   );
   const initialTransform = await image.evaluate((element) => getComputedStyle(element).transform);
   await firstMedia.hover();
