@@ -27,6 +27,14 @@ versión publicada.
 - Las imágenes de esas cards declaran un límite responsive de 19rem para
   solicitar recursos más cercanos al ancho realmente renderizado.
 
+### Corrección de overflow en Tema (2026-08-13)
+
+- Los sliders de escala, espaciado y radio ya no agregan sus márgenes nativos
+  fuera del fieldset en el editor, evitando un desborde horizontal de 4px en
+  desktop y mobile.
+- La matriz responsive del Studio verifica explícitamente que los controles de
+  Tema quepan dentro de sus contenedores en los siete viewports soportados.
+
 ### Base aislada Storefront V2 (2026-08-12)
 
 - El mosaico de categorías de Catalog Modern muestra sólo categorías madre y

@@ -213,6 +213,17 @@ test("cada pestaña del Studio no desborda y conserva su acción principal", asy
         sectionMetrics.scrollWidth,
         `${tab} ${viewport.name}: el contenido debe caber dentro del panel`,
       ).toBeLessThanOrEqual(sectionMetrics.clientWidth + 1);
+      if (tab === "Tema") {
+        const themeFieldsets = await pane
+          .locator(".theme-layout fieldset")
+          .evaluateAll((elements) =>
+            elements.every((element) => element.scrollWidth <= element.clientWidth + 1),
+          );
+        expect(
+          themeFieldsets,
+          `Tema ${viewport.name}: los controles no deben desbordar sus fieldsets`,
+        ).toBe(true);
+      }
       await expectActionUsable(
         page,
         page.getByRole(tab === "Tema" ? "combobox" : "button", { name: action, exact: true }),
