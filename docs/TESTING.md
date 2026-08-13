@@ -40,7 +40,8 @@ corepack pnpm check:optimization
 ```
 
 Los fixtures pequeños verifican render visual; `catalogScaleStore` verifica 50
-productos, jerarquía y 60 variantes; el benchmark de core usa 1.000 productos.
+productos, jerarquía y 60 variantes; el benchmark de core exporta
+`catalog-modern-v2` con 2.000 productos sin versionar un fixture masivo.
 
 ### Playwright
 

@@ -81,8 +81,8 @@ Se ejecutaron con resultado exitoso:
 - `corepack pnpm build`: TypeScript y build Vite de Studio.
 - `corepack pnpm test:e2e`: 38 tests Chromium pasaron y 1 prueba visual opcional
   fue omitida por no definir `VISUAL_REVIEW_STAGE`.
-- `corepack pnpm benchmark:export`: 1.000 productos en 891 ms, 998 archivos,
-  25.693.443 bytes de sitio sin empaquetado (carpeta directa).
+- `corepack pnpm benchmark:export`: `catalog-modern-v2` con 2.000 productos en
+  aproximadamente 3,5 s, 1.973 archivos y 40.422.856 bytes sin empaquetar.
 - `corepack pnpm check:budgets` (bytes crudos): Studio JS ≤ 700 KiB y CSS
   ≤ 100 KiB (CSS medido ~98.6 KiB); runtime público JS ≤ 52 KiB (medido
   50.094 B, ~48.9 KiB) y CSS ≤ 8 KiB (medido 7.486 B, ~7.3 KiB);
@@ -113,7 +113,7 @@ Lighthouse quedan por confirmar en CI/Node 22.
 2. Ejecutar la matriz OS real (disco lleno y permisos a nivel de volumen) como
    job Windows de release antes de volver a cambiar el servicio de disco.
 3. Probar release con Node 22, Firefox, WebKit y Lighthouse.
-4. Medir exportación de 1.000 productos antes de introducir cache incremental.
+4. Mantener el benchmark de 2.000 productos antes de introducir cache incremental.
 5. Si se necesita cloud, diseñar una capa nueva sin convertirla en requisito del
    storefront estático.
 

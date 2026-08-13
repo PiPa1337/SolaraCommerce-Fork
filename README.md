@@ -254,7 +254,7 @@ en el sitio público.
 - **Falla el gate de release:** ejecutalo con Node 22 y los tres navegadores;
   el entorno local con Node 24 puede diferir de CI.
 
-El benchmark exporta el fixture determinista de 1.000 productos y falla si supera
+El benchmark exporta `catalog-modern-v2` con 2.000 productos y falla si supera
 30 segundos. Playwright usa Chromium para el bucle local; la matriz completa y
 Lighthouse se reservan para el gate de release. El gate release requiere Node
 22 (igual que CI) y ejecuta Chromium, Firefox y WebKit; en equipos con otra

@@ -30,6 +30,8 @@ versión publicada.
 - Checkout V2 presenta un formulario editorial y resumen sticky en escritorio,
   se apila sin overflow en móvil y mantiene ocultos resumen, drawer y enlace de
   WhatsApp hasta que la interacción real los vuelve relevantes.
+- El benchmark exporta ahora `catalog-modern-v2` con 2.000 productos, valida
+  páginas activas, índice de búsqueda y un presupuesto máximo de 48 MiB.
 
 ### Matriz release reproducible (2026-08-12)
 
