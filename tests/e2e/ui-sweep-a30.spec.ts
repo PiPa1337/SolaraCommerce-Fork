@@ -166,7 +166,7 @@ test("búsqueda: matching real sin tildes y conteo exacto por categoría", async
   await expect(results).toHaveCount(2, { timeout: 15_000 });
   await expect(results.first()).toContainText("Pieza de escala 41");
   await expect(results.last()).toContainText("Pieza de escala 48");
-  await expect(page.locator("[data-search-results]")).toContainText("Resultados para “bano”");
+  await expect(page.locator("[data-search-results]")).toContainText("resultados para “bano”");
   await expect(page.locator("[data-search-results]")).not.toContainText("Mostrando 48");
 
   await page.goto(scaleUrlFor("/buscar/?q=organizacion"));
@@ -181,7 +181,7 @@ test("búsqueda: cap de 48 con aviso honesto y robots noindex", async ({ page })
   await expect(page.locator("[data-search-results] .solara-search-result")).toHaveCount(48, {
     timeout: 15_000,
   });
-  await expect(page.locator("[data-search-results]")).toContainText("Resultados para “escala”");
+  await expect(page.locator("[data-search-results]")).toContainText("resultados para “escala”");
   await expect(page.locator("[data-search-results]")).toContainText(
     "Mostrando 48 de 50 resultados. Refiná tu búsqueda…",
   );

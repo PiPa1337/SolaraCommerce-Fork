@@ -545,6 +545,38 @@ test("V2 conserva estabilidad visual y feedback inmediato", async ({ page }) => 
   await expect(page.locator(".catalog-cart-drawer")).toHaveAttribute("data-open", "true");
 });
 
+test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page }, testInfo) => {
+  const searchUrl = new URL("/buscar/?q=remera", serverUrl).toString();
+  for (const viewport of [
+    { width: 1920, height: 968, columns: 4 },
+    { width: 390, height: 844, columns: 2 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(searchUrl);
+    const results = page.locator(".solara-search-results-grid");
+    await expect(results).toBeVisible();
+    await expect(results.locator(".solara-search-result").first()).toBeVisible();
+    await expect(page.locator(".solara-search-summary").first()).toHaveText(
+      /^\d+ resultados para “remera”$/,
+    );
+    expect(
+      await results.evaluate(
+        (element) => getComputedStyle(element).gridTemplateColumns.split(" ").length,
+      ),
+    ).toBe(viewport.columns);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      viewport.width,
+    );
+    await page.evaluate(() => {
+      for (const animation of document.getAnimations()) animation.finish();
+    });
+    await page.screenshot({
+      path: testInfo.outputPath(`search-results-${viewport.width}x${viewport.height}.png`),
+      fullPage: true,
+    });
+  }
+});
+
 test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, testInfo) => {
   const routes = [
     ["buscar", "/buscar/"],

@@ -2695,6 +2695,16 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .solara-search-form input { min-height: 52px; padding-inline: 1rem; border-radius: 2px; background: transparent; }
 .cm.v2 .solara-search-results { min-height: 18rem; padding-block: clamp(2.5rem, 5vw, 5rem); }
 .cm.v2 .solara-search-results > p:only-child { max-width: 34rem; margin: 1rem auto; font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(1.55rem, 2.5vw, 2.35rem); line-height: 1.15; text-align: center; }
+.cm.v2 .solara-search-summary { margin: 0 0 1.75rem; font-size: 1rem; font-weight: 650; }
+.cm.v2 .solara-search-results-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3rem clamp(.8rem, 1.4vw, 1.6rem); }
+.cm.v2 .solara-search-result { min-width: 0; overflow: hidden; }
+.cm.v2 .solara-search-result a { gap: .75rem; }
+.cm.v2 .solara-search-result img { transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out), filter var(--catalog-v2-motion-component) ease; }
+.cm.v2 .solara-search-result a:hover img { transform: scale(1.035); filter: saturate(1.04) contrast(1.02); }
+.cm.v2 .solara-search-result a > div { display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; }
+.cm.v2 .solara-search-result h2 { font-family: var(--solara-font-body, Arial, sans-serif); font-size: .98rem; font-weight: 600; letter-spacing: -.02em; }
+.cm.v2 .solara-search-result p { order: -1; font-size: .68rem; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; }
+.cm.v2 .solara-search-result strong { font-size: .92rem; font-weight: 500; }
 .cm.v2 .catalog-category-layout {
   grid-template-columns: 270px minmax(0, 1fr);
   gap: clamp(2.5rem, 4vw, 5rem);
@@ -2947,6 +2957,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   justify-content: center;
 }
 @media (max-width: 1199px) {
+  .cm.v2 .solara-search-results-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
   .cm.v2 .catalog-hero-inner {
     grid-template-columns: minmax(18rem, .86fr) minmax(0, 1.14fr);
     min-height: min(680px, calc(100svh - 124px));
@@ -3040,6 +3053,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .solara-search-form .solara-primary-action { width: 100%; }
   .cm.v2 .solara-search-results { min-height: 14rem; padding-block: 2.5rem 4rem; }
   .cm.v2 .solara-search-results > p:only-child { margin-inline: 0; font-size: 1.55rem; text-align: left; }
+  .cm.v2 .solara-search-results-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2rem .7rem; }
   .cm.v2 .solara-cart-page > .solara-page-intro { padding: 2.5rem 0 1rem; }
   .cm.v2 .solara-cart-page-grid { grid-template-columns: minmax(0, 1fr); gap: 3rem; padding: 1.5rem 0 4rem; }
   .cm.v2 .solara-cart-page-grid > aside { position: static; padding: 2rem 0 0; border-left: 0; }

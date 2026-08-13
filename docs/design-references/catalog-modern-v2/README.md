@@ -23,6 +23,8 @@ que una tienda no posea.
 | `checkout-mobile.png` | checkout móvil | flujo apilado, controles táctiles y resumen sin overflow |
 | `search-desktop.png` | búsqueda desktop | intro contenida, formulario ancho y vacío editorial honesto |
 | `search-mobile.png` | búsqueda móvil | H1 y ayuda separados, controles apilados y táctiles |
+| `search-results-desktop.png` | resultados desktop | conteo honesto y cuatro columnas abiertas con hover acotado |
+| `search-results-mobile.png` | resultados móvil | consulta visible y dos columnas legibles sin overflow |
 | `cart-page-desktop.png` | carrito completo desktop | líneas abiertas y summary de 360–420 px con datos sans |
 | `cart-page-mobile.png` | carrito completo móvil | productos y resumen apilados sin importes display ni overflow |
 | `testimonials-desktop.png` | reseñas + ayuda | muro de citas agrupado y CTA WhatsApp |
@@ -141,6 +143,10 @@ la serif queda reservada para el H1 y el título del resumen.
 - label, input y botón permanecen visibles, con controles de al menos 44 px;
 - el formulario usa el ancho disponible en desktop y se apila en móvil;
 - el vacío explica el próximo paso sin inventar productos, sugerencias o resultados.
+- los resultados muestran el conteo real y usan cuatro columnas desktop, tres
+  en tablet y dos en móvil, conservando imagen 4:5 y metadata completa;
+- el hover amplía sólo la imagen sin reflow; foco y navegación por flechas
+  mantienen el acceso equivalente por teclado.
 
 ### Checkout
 

@@ -1234,7 +1234,7 @@ function storefrontBoot(): void {
               ranked.length > 48
                 ? `<p class="solara-search-summary">Mostrando 48 de ${ranked.length} resultados. Refiná tu búsqueda…</p>`
                 : "";
-            searchResults.innerHTML = `<p class="solara-search-summary">Resultados para “${escapeText(query)}”</p>${cutNotice}<div class="solara-search-results-grid">${shown
+            searchResults.innerHTML = `<p class="solara-search-summary">${ranked.length} resultados para “${escapeText(query)}”</p>${cutNotice}<div class="solara-search-results-grid">${shown
               .map(
                 ({ entry }) =>
                   `<article class="solara-search-result"><a href="${escapeAttribute(entry.path)}">${entry.imageUrl ? `<img src="${escapeAttribute(entry.imageUrl)}" alt="${escapeAttribute(entry.title)}" width="${entry.imageWidth ?? 1}" height="${entry.imageHeight ?? 1}" loading="lazy">` : ""}<div><h2>${escapeText(entry.title)}</h2><p>${escapeText(entry.brand)}</p><strong>${money.format(entry.priceMin / 100)}</strong></div></a></article>`,
