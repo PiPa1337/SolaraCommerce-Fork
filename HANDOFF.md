@@ -77,17 +77,20 @@ servirse en un hosting estático. El pedido se deriva a WhatsApp.
 
 Se ejecutaron con resultado exitoso:
 
-- `corepack pnpm check`: scan de repository, formato, typecheck, tests de todos
-  los paquetes y optimizer (22 project-schema, 23 core, 6 module-sdk, 6
-  storefront-runtime, 6 site-optimizer, 16 modules, 57 exporter y 1 omitido en
-  Windows, 42 Studio, 3 Desktop y 4 del optimizer en 2 archivos).
+- Los pasos de `corepack pnpm check`: repository, formato, typecheck, tests de
+  todos los paquetes y optimizer. El gate de serialización, bloqueado dentro
+  del sandbox por la carpeta temporal de `esbuild`, pasó aparte fuera del
+  sandbox en sus modos minificado y sin minificar.
 - `corepack pnpm build`: TypeScript y build Vite de Studio.
-- `corepack pnpm test:e2e`: 38 tests Chromium pasaron y 1 prueba visual opcional
-  fue omitida por no definir `VISUAL_REVIEW_STAGE`.
+- `corepack pnpm test:e2e`: 711 tests Chromium pasaron y 1 prueba visual
+  opcional fue omitida por no definir `VISUAL_REVIEW_STAGE`.
+- `corepack pnpm desktop:build`, `desktop:package`, `portable:smoke` y
+  `test:e2e:portable`: el artefacto portable actual compila, abre y conserva el
+  recorrido local de persistencia.
 - `corepack pnpm benchmark:export`: `catalog-modern-v2` con 2.000 productos en
   aproximadamente 3,5 s, 1.973 archivos y 40.422.856 bytes sin empaquetar.
 - `corepack pnpm check:budgets` (bytes crudos): Studio JS ≤ 700 KiB y CSS
-  ≤ 100 KiB; runtime público JS ≤ 53 KiB (medido 54.226 B) y CSS ≤ 8 KiB
+  ≤ 100 KiB; runtime público JS ≤ 53 KiB (medido 52.993 B) y CSS ≤ 8 KiB
   (medido 7.486 B); la foundation `catalog-modern-v2` conserva sus topes de
   104 KiB CSS (104.966 B) y 53 KiB JavaScript (52.993 B) sin elevarlos para
   búsqueda, carrito completo, políticas o recuperación 404.

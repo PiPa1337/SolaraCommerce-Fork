@@ -34,12 +34,15 @@ todos los elementos en su estado final y elimina las transiciones espaciales.
 ## Gates actuales
 
 - Preview y exportación comparten renderer.
-- 1920x968 y 390x844 sin overflow horizontal en home, categoría, PDP, carrito y checkout.
+- Las trece rutas públicas permanecen sin overflow horizontal en 390x844,
+  768x1024, 1024x768, 1366x768, 1440x900 y 1920x968.
 - navegación por teclado, foco visible, nombres accesibles e IDs únicos;
 - fallback de compra directa y navegación móvil sin JavaScript;
 - canonical, Open Graph, sitemap y `noindex` de rutas transaccionales;
 - benchmark de exportación de 2.000 productos bajo 30 segundos y 48 MiB;
 - presupuesto público V2: CSS crudo hasta 104 KiB y runtime JS hasta 53 KiB.
+- comparación visual equivalente en 1920x968: V1 conserva su composición y no
+  recibe estilos `.cm.v2`; ambas familias mantienen el mismo contenido.
 
 La matriz Firefox/WebKit sigue siendo un gate de release y debe ejecutarse con
 Node 22. No debe presentarse como validada desde un entorno Node 24.
