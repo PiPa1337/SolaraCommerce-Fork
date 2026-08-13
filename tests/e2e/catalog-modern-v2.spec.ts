@@ -211,6 +211,21 @@ test("V2 ajusta las imágenes al ancho renderizado y mantiene una galería PDP u
   await expect(thumbs.nth(1)).toHaveAttribute("aria-current", "true");
   const relatedImages = page.locator(".solara-related-products .catalog-product-card-image");
   await expect(relatedImages).toHaveCount(4);
+  const relatedGrid = page.locator(".solara-related-products .catalog-product-grid");
+  const relatedGridMetrics = await relatedGrid.evaluate((element) => {
+    const gridRect = element.getBoundingClientRect();
+    const cardRect = element
+      .querySelector<HTMLElement>(".catalog-product-card")
+      ?.getBoundingClientRect();
+    return {
+      columns: getComputedStyle(element).gridTemplateColumns.split(" ").length,
+      gridWidth: gridRect.width,
+      cardWidth: cardRect?.width ?? 0,
+    };
+  });
+  expect(relatedGridMetrics.columns).toBe(4);
+  expect(relatedGridMetrics.gridWidth).toBeLessThanOrEqual(940);
+  expect(relatedGridMetrics.cardWidth).toBeLessThanOrEqual(225);
   await expect
     .poll(() =>
       relatedImages.evaluateAll(
