@@ -88,7 +88,7 @@ Se ejecutaron con resultado exitoso:
   `test:e2e:portable`: el artefacto portable actual compila, abre y conserva el
   recorrido local de persistencia.
 - `corepack pnpm benchmark:export`: `catalog-modern-v2` con 2.000 productos en
-  aproximadamente 3,5 s, 1.973 archivos y 40.422.856 bytes sin empaquetar.
+  2,67 s, 1.973 archivos y 40.440.295 bytes sin empaquetar.
 - `corepack pnpm check:budgets` (bytes crudos): Studio JS ≤ 700 KiB y CSS
   ≤ 100 KiB; runtime público JS ≤ 53 KiB (medido 52.993 B) y CSS ≤ 8 KiB
   (medido 7.486 B); la foundation `catalog-modern-v2` conserva sus topes de
