@@ -281,8 +281,39 @@ describe("official module system", () => {
     expect(bento).toContain("catalog-category-bento-item--wide");
     expect(bento).toContain("catalog-category-bento-item--tall");
     expect(bento).toContain("catalog-category-bento-item--compact");
+    expect(
+      [...bento.matchAll(/catalog-category-bento-item--(wide|tall|compact)/g)].map(
+        (match) => match[1],
+      ),
+    ).toEqual(["wide", "tall", "tall", "wide", "compact", "compact", "compact", "compact"]);
+    expect(bento).toContain('sizes="(max-width: 767px) calc(100vw - 3.5rem)');
+    expect(bento).toContain('sizes="(max-width: 767px) calc((100vw - 4.25rem) / 2)');
     expect(bento).toContain("Ver todo el catálogo");
     expect(bento).toContain('href="/categorias/');
+  });
+
+  it("recalcula el mosaico automático al cambiar las categorías madre", () => {
+    const section = catalogModernStore.sections.find(
+      (candidate) => candidate.moduleId === "catalog-category-bento",
+    );
+    if (!section) throw new Error("Fixture sin bento de categorías");
+    const roots = catalogModernStore.categories.filter((category) => !category.parentId);
+    const project = structuredClone(catalogModernStore);
+
+    for (const count of [1, 4, 5]) {
+      project.categories = roots.slice(0, count);
+      const html = renderSections(project, [section], { pageType: "home" });
+      const layouts = [...html.matchAll(/catalog-category-bento-item--(wide|tall|compact)/g)].map(
+        (match) => match[1],
+      );
+      expect(layouts).toEqual(
+        count === 1
+          ? ["wide"]
+          : count === 4
+            ? ["wide", "tall", "compact", "compact"]
+            : ["wide", "tall", "tall", "compact", "compact"],
+      );
+    }
   });
 
   it("respeta showRating en las cards y expone el resumen de reseñas visible", () => {

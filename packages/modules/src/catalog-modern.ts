@@ -553,7 +553,7 @@ function modernProductCardImageSizes(
   if (context.pageType === "category") {
     return "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1279px) calc((100vw - 24rem) / 3), min(28vw, 17rem)";
   }
-  return "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(21.5vw, 13rem)";
+  return "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 4.6rem) / 3), min(20vw, 12.5rem)";
 }
 
 function modernProductCard(
@@ -858,6 +858,47 @@ const categoryBentoSettings = z.object({
     .default([]),
 });
 
+type CategoryBentoLayout = z.infer<typeof categoryBentoSettings>["items"][number]["size"];
+
+function automaticCategoryBentoLayout(count: number): CategoryBentoLayout[] {
+  if (count <= 0) return [];
+  if (count === 1) return ["wide"];
+  if (count === 2) return ["wide", "wide"];
+  if (count === 3) return ["wide", "compact", "compact"];
+
+  if (count === 4) return ["wide", "tall", "compact", "compact"];
+  if (count === 5) return ["wide", "tall", "tall", "compact", "compact"];
+  if (count === 6) return ["wide", "wide", "compact", "compact", "compact", "compact"];
+  if (count === 7) return ["wide", "wide", "compact", "compact", "compact", "compact", "compact"];
+
+  const repeatedLayouts: CategoryBentoLayout[] = [];
+  let remaining = count;
+  while (remaining >= 8) {
+    repeatedLayouts.push(
+      "wide",
+      "tall",
+      "tall",
+      "wide",
+      "compact",
+      "compact",
+      "compact",
+      "compact",
+    );
+    remaining -= 8;
+  }
+  return [...repeatedLayouts, ...automaticCategoryBentoLayout(remaining)];
+}
+
+function categoryBentoImageSizes(layout: CategoryBentoLayout, count: number): string {
+  if (count === 1) {
+    return "(max-width: 767px) calc(100vw - 3.5rem), (max-width: 1199px) calc(100vw - 3rem), min(88vw, 100rem)";
+  }
+  if (layout === "wide") {
+    return "(max-width: 767px) calc(100vw - 3.5rem), (max-width: 1199px) calc(100vw - 3rem - 10vw), min(43vw, 50rem)";
+  }
+  return "(max-width: 767px) calc((100vw - 4.25rem) / 2), (max-width: 1199px) calc((100vw - 3.75rem - 10vw) / 2), min(21vw, 25rem)";
+}
+
 export const catalogCategoryBento: ModuleDefinition<
   "catalog-category-bento",
   z.infer<typeof categoryBentoSettings>
@@ -902,11 +943,11 @@ export const catalogCategoryBento: ModuleDefinition<
         .map((product) => product.id),
     );
     const rootCategories = context.project.categories.filter((category) => !category.parentId);
-    const automaticLayout = ["wide", "tall", "compact", "compact"] as const;
+    const automaticLayout = automaticCategoryBentoLayout(rootCategories.length);
     const automaticItems = rootCategories.map((category, index) => ({
       categoryId: category.id,
       imageId: "",
-      size: automaticLayout[index % automaticLayout.length],
+      size: automaticLayout[index] ?? "compact",
     }));
     const configuredItems = context.settings.items
       .filter((item) => rootCategories.some((category) => category.id === item.categoryId))
@@ -936,7 +977,7 @@ export const catalogCategoryBento: ModuleDefinition<
           {
             className: "catalog-category-bento-image",
             loading: "lazy",
-            sizes: "(max-width: 767px) 92vw, (max-width: 1199px) 45vw, 30vw",
+            sizes: categoryBentoImageSizes(item.size, sourceItems.length),
             fallbackAlt: category.title,
           },
         );

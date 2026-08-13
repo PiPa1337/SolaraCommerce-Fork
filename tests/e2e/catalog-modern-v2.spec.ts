@@ -150,8 +150,8 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
       ?.getBoundingClientRect();
     return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
   });
-  expect(gridMetrics.gridWidth).toBeGreaterThan(880);
-  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(900);
+  expect(gridMetrics.gridWidth).toBeGreaterThan(860);
+  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(880);
   expect(gridMetrics.cardWidth).toBeGreaterThan(195);
   expect(gridMetrics.cardWidth).toBeLessThan(215);
   const firstMedia = grid.locator(".catalog-product-media").first();
@@ -164,7 +164,7 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   const image = firstMedia.locator("img");
   await expect(image).toHaveAttribute(
     "sizes",
-    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(21.5vw, 13rem)",
+    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 4.6rem) / 3), min(20vw, 12.5rem)",
   );
   const initialTransform = await image.evaluate((element) => getComputedStyle(element).transform);
   await firstMedia.hover();
@@ -224,7 +224,7 @@ test("V2 ajusta las imágenes al ancho renderizado y mantiene una galería PDP u
     };
   });
   expect(relatedGridMetrics.columns).toBe(4);
-  expect(relatedGridMetrics.gridWidth).toBeLessThanOrEqual(900);
+  expect(relatedGridMetrics.gridWidth).toBeLessThanOrEqual(880);
   expect(relatedGridMetrics.cardWidth).toBeLessThanOrEqual(215);
   await expect
     .poll(() =>
@@ -851,7 +851,7 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
         return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
       });
       expect(resultsMetrics.gridWidth).toBeGreaterThan(880);
-      expect(resultsMetrics.gridWidth).toBeLessThanOrEqual(900);
+      expect(resultsMetrics.gridWidth).toBeLessThanOrEqual(880);
       expect(resultsMetrics.cardWidth).toBeGreaterThan(195);
       expect(resultsMetrics.cardWidth).toBeLessThan(215);
     }

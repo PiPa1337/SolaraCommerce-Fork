@@ -2618,7 +2618,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-product-grid {
   gap: clamp(1.5rem, 2.4vw, 3rem) clamp(.8rem, 1.4vw, 1.6rem);
-  max-width: 900px;
+  max-width: 880px;
   margin: 0 auto;
 }
 .cm.v2 .catalog-product-card {
@@ -2686,6 +2686,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-category-bento-grid {
   grid-auto-rows: clamp(10rem, 10vw, 12rem);
+}
+.cm.v2 .catalog-category-bento-grid[data-category-count="1"] .catalog-category-bento-item {
+  grid-column: 1 / -1;
 }
 .cm.v2 .catalog-category-bento-item img {
   transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out), filter var(--catalog-v2-motion-component) ease;

@@ -1,5 +1,12 @@
 # Changelog
 
+### Bento y cards del storefront V2 (2026-08-13)
+
+- El bento automático usa una composición dinámica según la cantidad de
+  categorías madre y ajusta `sizes` al espacio real de cada tarjeta.
+- La grilla de productos V2 reduce levemente su ancho máximo y solicita
+  imágenes proporcionales al ancho real de sus columnas en desktop y tablet.
+
 ### Carrito del preview entre rutas (2026-08-13)
 
 - El Preview del Studio hidrata cada ruta con el snapshot vigente del carrito.
