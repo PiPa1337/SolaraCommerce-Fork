@@ -202,6 +202,12 @@ test("V2 ajusta las imágenes al ancho renderizado y mantiene una galería PDP u
   const thumbs = page.locator(".catalog-product-gallery-thumbs button");
   await expect(figures).toHaveCount(3);
   await expect(thumbs).toHaveCount(3);
+  expect(
+    await figures.evaluateAll(
+      (elements) =>
+        elements.filter((element) => getComputedStyle(element).display !== "none").length,
+    ),
+  ).toBe(1);
   await expect(figures.first().locator("img")).toHaveAttribute(
     "sizes",
     "(max-width: 767px) 92vw, (max-width: 1199px) 94vw, 60vw",

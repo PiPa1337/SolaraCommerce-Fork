@@ -1,5 +1,13 @@
 # Changelog
 
+### Galería PDP y ritmo editorial V2 (2026-08-13)
+
+- La galería del producto muestra una sola imagen principal y ubica sus
+  miniaturas en una columna compacta, evitando que las imágenes secundarias
+  alarguen innecesariamente la página.
+- Se compactan los espacios del encabezado de categoría, el detalle de
+  producto y el carrito en desktop, conservando el layout responsive.
+
 ### Búsqueda V2 y escala de resultados (2026-08-13)
 
 - La grilla de resultados queda alineada con el ancho máximo de las cards del

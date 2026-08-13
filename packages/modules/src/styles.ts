@@ -2712,8 +2712,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .solara-category-hero {
   grid-template-columns: minmax(0, 1.15fr) minmax(22rem, .45fr);
-  gap: clamp(2rem, 5vw, 6rem);
-  padding-top: clamp(4rem, 7vw, 7rem);
+  gap: clamp(1rem, 2vw, 2rem);
+  padding-top: clamp(2rem, 4vw, 4rem);
 }
 .cm.v2 .solara-category-hero h1,
 .cm.v2 .solara-page-intro h1,
@@ -2777,11 +2777,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-product-detail-inner {
   grid-template-columns: minmax(0, 1.35fr) minmax(420px, .65fr);
-  gap: clamp(3rem, 6vw, 8rem);
-  padding-block: clamp(3rem, 6vw, 6rem);
+  gap: clamp(2rem, 4vw, 5rem);
+  padding-block: clamp(2rem, 4vw, 4rem);
 }
 .cm.v2 .catalog-product-gallery {
-  grid-template-columns: 5.5rem minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 5.5rem;
   gap: 1rem;
 }
 .cm.v2 .catalog-product-gallery-main,
@@ -2792,9 +2792,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   aspect-ratio: 4 / 5;
 }
 .cm.v2 .catalog-product-gallery-main figure {
+  display: none;
   width: 100%;
   height: 100%;
-  aspect-ratio: auto;
 }
 .cm.v2 .catalog-product-gallery-image {
   transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out);
@@ -2879,7 +2879,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   background: color-mix(in srgb, var(--catalog-ink), transparent 45%);
   backdrop-filter: blur(3px);
 }
-.cm.v2 .solara-cart-page > .solara-page-intro { max-width: none; padding: clamp(3rem, 5vw, 5rem) 0 1rem; }
+.cm.v2 .solara-cart-page > .solara-page-intro { max-width: none; padding: clamp(2rem, 4vw, 4rem) 0 1rem; }
 .cm.v2 .solara-cart-page > .solara-page-intro h1 { max-width: none; font-size: calc(clamp(3.5rem, 4.5vw, 5.75rem) * var(--solara-type-scale, 1)); line-height: .95; }
 .cm.v2 .solara-cart-page-grid { grid-template-columns: minmax(0, 1fr) clamp(22.5rem, 27vw, 26rem); gap: clamp(3rem, 6vw, 7rem); padding: 2rem 0 clamp(5rem, 8vw, 8rem); }
 .cm.v2 .solara-cart-page-grid > aside { position: sticky; top: 2rem; padding: 1.25rem 0 1.5rem clamp(2rem, 4vw, 4rem); border-left: 1px solid var(--catalog-border); border-radius: 0; background: transparent; }
