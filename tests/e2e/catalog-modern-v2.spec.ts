@@ -150,10 +150,10 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
       ?.getBoundingClientRect();
     return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
   });
-  expect(gridMetrics.gridWidth).toBeGreaterThan(960);
-  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(980);
-  expect(gridMetrics.cardWidth).toBeGreaterThan(215);
-  expect(gridMetrics.cardWidth).toBeLessThan(235);
+  expect(gridMetrics.gridWidth).toBeGreaterThan(920);
+  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(940);
+  expect(gridMetrics.cardWidth).toBeGreaterThan(205);
+  expect(gridMetrics.cardWidth).toBeLessThan(225);
   const firstMedia = grid.locator(".catalog-product-media").first();
   const mediaRatio = await firstMedia.evaluate((element) => {
     const rect = element.getBoundingClientRect();
@@ -164,7 +164,7 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   const image = firstMedia.locator("img");
   await expect(image).toHaveAttribute(
     "sizes",
-    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(22.5vw, 14.25rem)",
+    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(22.5vw, 13.5rem)",
   );
   const initialTransform = await image.evaluate((element) => getComputedStyle(element).transform);
   await firstMedia.hover();
@@ -385,12 +385,12 @@ test("V2 ordena categoría y filtros como rail editorial y sheet móvil", async 
       ?.getBoundingClientRect();
     return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
   });
-  expect(categoryGridMetrics.gridWidth).toBeGreaterThan(880);
-  expect(categoryGridMetrics.gridWidth).toBeLessThanOrEqual(912);
-  expect(categoryGridMetrics.cardWidth).toBeGreaterThan(265);
-  expect(categoryGridMetrics.cardWidth).toBeLessThan(295);
+  expect(categoryGridMetrics.gridWidth).toBeGreaterThan(848);
+  expect(categoryGridMetrics.gridWidth).toBeLessThanOrEqual(880);
+  expect(categoryGridMetrics.cardWidth).toBeGreaterThan(255);
+  expect(categoryGridMetrics.cardWidth).toBeLessThan(285);
   expect(await grid.locator(".catalog-product-card-image").first().getAttribute("sizes")).toBe(
-    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1279px) calc((100vw - 24rem) / 3), min(30vw, 17.75rem)",
+    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1279px) calc((100vw - 24rem) / 3), min(30vw, 17rem)",
   );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1920);
   await revealWholePage(page);
@@ -490,6 +490,7 @@ test("V2 compone checkout editorial sin overflow en desktop y movil", async ({
   const form = page.locator(".solara-checkout-form-v2");
   const fields = form.locator(".solara-checkout-fields");
   const summary = form.locator(".solara-checkout-order-panel");
+  const intro = page.locator(".solara-checkout-page > .solara-page-intro");
   const title = page.getByRole("heading", { level: 1, name: "Coordinar compra" });
   await expect(fields).toBeVisible();
   await expect(summary).toBeVisible();
@@ -507,6 +508,15 @@ test("V2 compone checkout editorial sin overflow en desktop y movil", async ({
   expect(await summary.evaluate((element) => getComputedStyle(element).position)).toBe("sticky");
   expect((await fields.boundingBox())?.width).toBeGreaterThan(600);
   expect((await summary.boundingBox())?.width).toBeGreaterThan(500);
+  const desktopIntroGap = await intro.evaluate((element) => {
+    const introBottom = element.getBoundingClientRect().bottom;
+    const formTop =
+      element.parentElement
+        ?.querySelector<HTMLElement>(".solara-checkout-form-v2")
+        ?.getBoundingClientRect().top ?? 0;
+    return formTop - introBottom;
+  });
+  expect(desktopIntroGap).toBeLessThanOrEqual(48);
   expect(
     await fields
       .locator("input")
@@ -538,6 +548,15 @@ test("V2 compone checkout editorial sin overflow en desktop y movil", async ({
     await form.evaluate((element) => getComputedStyle(element).gridTemplateColumns),
   ).not.toMatch(/\s/);
   expect(await summary.evaluate((element) => getComputedStyle(element).position)).toBe("static");
+  const mobileIntroGap = await intro.evaluate((element) => {
+    const introBottom = element.getBoundingClientRect().bottom;
+    const formTop =
+      element.parentElement
+        ?.querySelector<HTMLElement>(".solara-checkout-form-v2")
+        ?.getBoundingClientRect().top ?? 0;
+    return formTop - introBottom;
+  });
+  expect(mobileIntroGap).toBeLessThanOrEqual(40);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.screenshot({ path: testInfo.outputPath("checkout-390x844.png"), fullPage: true });
 });
@@ -788,7 +807,7 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
     );
     await expect(results.locator("img").first()).toHaveAttribute(
       "sizes",
-      "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(22.5vw, 14.25rem)",
+      "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(22.5vw, 13.5rem)",
     );
     if (viewport.width === 1920) {
       const resultsMetrics = await results.evaluate((element) => {
@@ -798,10 +817,10 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
           ?.getBoundingClientRect();
         return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
       });
-      expect(resultsMetrics.gridWidth).toBeGreaterThan(960);
-      expect(resultsMetrics.gridWidth).toBeLessThanOrEqual(980);
-      expect(resultsMetrics.cardWidth).toBeGreaterThan(215);
-      expect(resultsMetrics.cardWidth).toBeLessThan(235);
+      expect(resultsMetrics.gridWidth).toBeGreaterThan(920);
+      expect(resultsMetrics.gridWidth).toBeLessThanOrEqual(940);
+      expect(resultsMetrics.cardWidth).toBeGreaterThan(205);
+      expect(resultsMetrics.cardWidth).toBeLessThan(225);
     }
     expect(
       await results.evaluate(

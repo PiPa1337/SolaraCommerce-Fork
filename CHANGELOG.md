@@ -12,6 +12,18 @@
   respeta los tamaños anchos y altos dinámicos, evitando una lista vertical
   innecesariamente extensa.
 
+### Checkout V2 con ritmo más compacto (2026-08-13)
+
+- El formulario de compra queda más cerca de la explicación inicial en desktop
+  y mobile, reduciendo espacio vacío sin cambiar la revisión del pedido ni el
+  envío final por WhatsApp.
+
+### Cards de producto V2 más proporcionadas (2026-08-13)
+
+- Se redujo ligeramente el ancho de las grillas de productos en portada, búsqueda
+  y categorías, manteniendo la misma cantidad de columnas y ajustando los hints
+  de imágenes al ancho realmente renderizado.
+
 ### Hero V2 sin cortes de palabras (2026-08-13)
 
 - El hero de Catalog Modern V2 conserva palabras completas en el título y
