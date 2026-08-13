@@ -154,6 +154,18 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   expect(gridMetrics.gridWidth).toBeLessThanOrEqual(880);
   expect(gridMetrics.cardWidth).toBeGreaterThan(195);
   expect(gridMetrics.cardWidth).toBeLessThan(215);
+  const sectionPadding = await page
+    .locator(".catalog-product-grid-section")
+    .first()
+    .evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        top: Number.parseFloat(style.paddingTop),
+        bottom: Number.parseFloat(style.paddingBottom),
+      };
+    });
+  expect(sectionPadding.top).toBeLessThanOrEqual(140);
+  expect(sectionPadding.bottom).toBeLessThanOrEqual(140);
   const firstMedia = grid.locator(".catalog-product-media").first();
   const mediaRatio = await firstMedia.evaluate((element) => {
     const rect = element.getBoundingClientRect();

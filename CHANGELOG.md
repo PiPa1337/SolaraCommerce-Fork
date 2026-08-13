@@ -1,5 +1,11 @@
 # Changelog
 
+### Ritmo vertical de la home V2 (2026-08-13)
+
+- Se reduce el espacio vertical máximo de las grillas editoriales y del bento
+  en desktop y tablet, evitando pausas excesivas entre productos y categorías.
+- Mobile conserva su respiración y composición táctil específicas.
+
 ### Galería PDP y ritmo editorial V2 (2026-08-13)
 
 - La galería del producto muestra una sola imagen principal y ubica sus

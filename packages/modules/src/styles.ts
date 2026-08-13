@@ -2600,7 +2600,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-product-grid-section,
 .cm.v2 .catalog-testimonials-section {
-  padding-block: clamp(5rem, 10vw, 10rem);
+  padding-block: clamp(4rem, 7vw, 7rem);
 }
 .cm.v2 .catalog-product-grid-section h2,
 .cm.v2 .catalog-category-bento-section h2,
@@ -2676,7 +2676,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-category-bento-section {
   margin-top: 0;
-  padding: clamp(4rem, 8vw, 8rem) clamp(1.5rem, 5vw, 5rem);
+  padding: clamp(3rem, 6vw, 6rem) clamp(1.5rem, 5vw, 5rem);
   border-radius: 0;
 }
 .cm.v2 .catalog-category-bento-item {
