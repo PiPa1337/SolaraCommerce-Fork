@@ -48,6 +48,21 @@ function addPreviewScrollbarPolicy(document: string): string {
   return `${document.slice(0, headEnd)}${PREVIEW_SCROLLBAR_STYLE}\n${document.slice(headEnd)}`;
 }
 
+function addPreviewCartState(document: string, storeId: string): string {
+  let serialized = "[]";
+  try {
+    const stored = window.localStorage.getItem(`solara-cart:${storeId}`);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) serialized = stored;
+    }
+  } catch {}
+  const state = `<script id="solara-preview-cart" type="application/json">${serialized.replace(/</g, "\\u003c")}</script>`;
+  const headEnd = document.indexOf("</head>");
+  if (headEnd === -1) return `${state}${document}`;
+  return `${document.slice(0, headEnd)}${state}\n${document.slice(headEnd)}`;
+}
+
 /**
  * La vista previa transporta los assets por postMessage y nunca resuelve el
  * dominio del proyecto; el exporter emite el preload LCP absoluto sólo en
@@ -235,6 +250,7 @@ export function Preview({
   const [renderToken, setRenderToken] = useState(0);
   const [iframeReady, setIframeReady] = useState(false);
   const previewAssetSources = useRef<ReadonlyMap<string, string>>(new Map());
+  const previewFrameWindows = useRef<Window[]>([]);
   const previewFrame = useRef<HTMLIFrameElement>(null);
   const previewObserver = useRef<IntersectionObserver | null>(null);
   const pausedRef = useRef(false);
@@ -281,6 +297,12 @@ export function Preview({
       previewObserver.current = null;
       previewFrame.current = node;
       if (!node) return;
+      if (node.contentWindow) {
+        previewFrameWindows.current = [
+          ...previewFrameWindows.current.slice(-2),
+          node.contentWindow,
+        ];
+      }
       const observer = new IntersectionObserver((entries) => {
         for (const entry of entries) {
           intersectingRef.current = entry.isIntersecting;
@@ -301,9 +323,25 @@ export function Preview({
 
   useEffect(() => {
     const handlePreviewAssetRequest = (event: MessageEvent<unknown>) => {
-      if (event.source !== previewFrame.current?.contentWindow) return;
       if (!event.data || typeof event.data !== "object") return;
       const message = event.data as { type?: unknown; paths?: unknown };
+      const cartMessage = event.data as { type?: unknown; key?: unknown; value?: unknown };
+      if (
+        cartMessage.type === "solara-preview-cart-write" &&
+        typeof cartMessage.key === "string" &&
+        cartMessage.key.startsWith("solara-cart:")
+      ) {
+        if (!event.source || !previewFrameWindows.current.includes(event.source as Window)) return;
+        try {
+          if (typeof cartMessage.value === "string") {
+            window.localStorage.setItem(cartMessage.key, cartMessage.value);
+          } else {
+            window.localStorage.removeItem(cartMessage.key);
+          }
+        } catch {}
+        return;
+      }
+      if (!event.source || !previewFrameWindows.current.includes(event.source as Window)) return;
       if (message.type !== "solara-preview-assets-request" || !Array.isArray(message.paths)) return;
       const sources: Record<string, string> = {};
       message.paths.forEach((path) => {
@@ -311,7 +349,10 @@ export function Preview({
         const source = previewAssetSources.current.get(path);
         if (source) sources[path] = source;
       });
-      event.source?.postMessage({ type: "solara-preview-assets-response", sources }, "*");
+      (event.source as Window).postMessage(
+        { type: "solara-preview-assets-response", sources },
+        "*",
+      );
     };
     window.addEventListener("message", handlePreviewAssetRequest);
     return () => window.removeEventListener("message", handlePreviewAssetRequest);
@@ -325,8 +366,11 @@ export function Preview({
         try {
           previewAssetSources.current = getPreviewAssetSources(project);
           setHtml(
-            addPreviewScrollbarPolicy(
-              renderPreviewHtml(project, "draft", route, { assetTransport: "parent" }),
+            addPreviewCartState(
+              addPreviewScrollbarPolicy(
+                renderPreviewHtml(project, "draft", route, { assetTransport: "parent" }),
+              ),
+              project.id,
             ),
           );
           setIframeReady(false);
@@ -377,7 +421,13 @@ export function Preview({
               // más restrictivo y evita el warning de Chromium.
               sandbox={previewSandbox}
               style={zoom !== 100 ? { zoom: zoom / 100 } : undefined}
-              onLoad={() => {
+              onLoad={(event) => {
+                if (event.currentTarget.contentWindow) {
+                  previewFrameWindows.current = [
+                    ...previewFrameWindows.current.slice(-2),
+                    event.currentTarget.contentWindow,
+                  ];
+                }
                 setIframeReady(true);
                 if (pausedRef.current) {
                   previewFrame.current?.contentWindow?.postMessage({ type: "solara-pause" }, "*");

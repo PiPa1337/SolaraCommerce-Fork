@@ -1,5 +1,11 @@
 # Changelog
 
+### Carrito del preview entre rutas (2026-08-13)
+
+- El Preview del Studio hidrata cada ruta con el snapshot vigente del carrito.
+- Las mutaciones posteriores se persisten en el documento padre sin perder
+  productos al cambiar de página.
+
 ### Cards de categoría V2 (2026-08-13)
 
 - Las cards de categoría reducen levemente su rail máximo y declaran un `sizes`

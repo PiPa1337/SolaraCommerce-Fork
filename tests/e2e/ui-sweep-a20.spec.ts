@@ -334,6 +334,34 @@ test("A20: preview — la ruta confirma al perder foco y un valor vacío restaur
   await expectPreviewTitle(page, "Contacto | Modo Sur");
 });
 
+test("A20: preview - carrito conserva multiples lineas al cambiar de ruta", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openDemoStore(page);
+  await page.evaluate(() => localStorage.removeItem("solara-cart:store-modo-sur-demo"));
+  const frame = page.frameLocator('iframe[title="Vista previa desktop"]');
+  await commitRoute(page, "/productos/remera-esencial-de-algodon/");
+  await expect(frame.getByRole("heading", { level: 1 })).toContainText(
+    "Remera esencial de algodón",
+    { timeout: 20_000 },
+  );
+  await frame.getByRole("button", { name: "Agregar al carrito" }).click();
+  await expect(frame.locator("[data-cart-count]").first()).toHaveText("1");
+
+  await commitRoute(page, "/productos/remera-grafica-horizonte/");
+  await expect(frame.getByRole("heading", { level: 1 })).toContainText("Remera gráfica Horizonte", {
+    timeout: 20_000,
+  });
+  await frame.getByRole("button", { name: "Agregar al carrito" }).click();
+  await expect(frame.locator("[data-cart-count]").first()).toHaveText("2");
+
+  await commitRoute(page, "/carrito/");
+  await expect(
+    frame.locator(".solara-cart-page-grid [data-cart-lines] .solara-cart-line"),
+  ).toHaveCount(2, {
+    timeout: 20_000,
+  });
+});
+
 test("A20: preview — zoom: escala del iframe, estado presionado y sesión", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openDemoStore(page);

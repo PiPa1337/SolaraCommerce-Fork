@@ -167,6 +167,7 @@ function storefrontBoot(): void {
   const greeting = root.dataset.whatsappGreeting ?? "Hola, quiero hacer este pedido:";
   const includeSku = root.dataset.whatsappIncludeSku !== "false";
   const storageKey = `solara-cart:${storeId}`;
+  const embedded = window.parent !== window;
   const money = new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
@@ -184,6 +185,7 @@ function storefrontBoot(): void {
   const hasFeature = (feature: string): boolean => runtimeFeatures.has(feature);
 
   const readStoredCart = (): StoredCartLine[] => {
+    if (embedded) return [];
     try {
       const stored = JSON.parse(localStorage.getItem(storageKey) ?? "[]") as unknown;
       if (!Array.isArray(stored)) {
@@ -200,6 +202,15 @@ function storefrontBoot(): void {
   };
 
   let cart = hasFeature("cart") || hasFeature("checkout") ? readStoredCart() : [];
+  if (embedded) {
+    const previewCartState = document.getElementById("solara-preview-cart")?.textContent;
+    if (previewCartState) {
+      try {
+        const parsed = JSON.parse(previewCartState);
+        cart = Array.isArray(parsed) ? parsed : [];
+      } catch {}
+    }
+  }
   let lastCartTrigger: HTMLElement | null = null;
   let paused = false;
   const heroAutoplayControls: Array<{ stop: () => void; start: () => void }> = [];
@@ -211,15 +222,29 @@ function storefrontBoot(): void {
 
   const pageType = document.querySelector<HTMLElement>("[data-solara-store]")?.dataset.pageType;
 
-  const renderCart = (): void => {
+  const renderCart = (persist = true): void => {
     const active = document.activeElement;
     const focusedQuantity =
       active instanceof HTMLElement && active.matches("[data-cart-quantity]")
         ? active.dataset.cartQuantity
         : undefined;
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(cart));
-    } catch {}
+    if (persist) {
+      const serialized = JSON.stringify(cart);
+      try {
+        if (embedded) {
+          window.parent.postMessage(
+            {
+              type: "solara-preview-cart-write",
+              key: storageKey,
+              value: serialized,
+            },
+            "*",
+          );
+        } else {
+          localStorage.setItem(storageKey, serialized);
+        }
+      } catch {}
+    }
     const count = cart.reduce((sum, line) => sum + line.quantity, 0);
     document.querySelectorAll<HTMLElement>("[data-cart-count]").forEach((element) => {
       element.textContent = String(count);
@@ -1410,8 +1435,15 @@ function storefrontBoot(): void {
   }
 
   if (hasFeature("cart") || hasFeature("checkout")) {
-    renderCart();
-    syncCartToggleExpanded(false);
+    const initializeCart = (): void => {
+      renderCart(false);
+      syncCartToggleExpanded(false);
+    };
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initializeCart, { once: true });
+    } else {
+      initializeCart();
+    }
   }
   if (hasFeature("variants")) {
     document.querySelectorAll<HTMLElement>("[data-product]").forEach(syncVariant);
