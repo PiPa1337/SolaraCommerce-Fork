@@ -687,6 +687,15 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
     await expect(page.locator(".solara-search-summary").first()).toHaveText(
       /^\d+ resultados para “remera”$/,
     );
+    await expect(results.locator("img").first()).toHaveAttribute(
+      "sizes",
+      "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(23.25vw, 22.5rem)",
+    );
+    if (viewport.width === 1920) {
+      expect(
+        await results.evaluate((element) => element.getBoundingClientRect().width),
+      ).toBeLessThanOrEqual(1520);
+    }
     expect(
       await results.evaluate(
         (element) => getComputedStyle(element).gridTemplateColumns.split(" ").length,

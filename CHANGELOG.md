@@ -41,6 +41,8 @@ versión publicada.
   que las cards respiren mejor sin perder la composición de cuatro columnas.
 - La cabecera de categoría V2 usa una imagen `5:3` en lugar de una franja
   panorámica, equilibrando el peso del título y mejorando su lectura en mobile.
+- La búsqueda V2 comparte el límite de `1520px` de la home y sus resultados
+  declaran `sizes` responsive para no solicitar imágenes mayores que sus cards.
 - La página de producto V2 mantiene márgenes horizontales simétricos, elimina
   el desborde lateral y pasa a una columna en tabletas para conservar la
   jerarquía y la legibilidad.
