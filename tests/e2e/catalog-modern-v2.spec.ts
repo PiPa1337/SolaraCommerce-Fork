@@ -134,10 +134,10 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
       ?.getBoundingClientRect();
     return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
   });
-  expect(gridMetrics.gridWidth).toBeGreaterThan(1400);
-  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(1440);
-  expect(gridMetrics.cardWidth).toBeGreaterThan(330);
-  expect(gridMetrics.cardWidth).toBeLessThan(350);
+  expect(gridMetrics.gridWidth).toBeGreaterThan(1340);
+  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(1360);
+  expect(gridMetrics.cardWidth).toBeGreaterThan(310);
+  expect(gridMetrics.cardWidth).toBeLessThan(330);
   const firstMedia = grid.locator(".catalog-product-media").first();
   const mediaRatio = await firstMedia.evaluate((element) => {
     const rect = element.getBoundingClientRect();
@@ -148,7 +148,7 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   const image = firstMedia.locator("img");
   await expect(image).toHaveAttribute(
     "sizes",
-    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(23.5vw, 21.25rem)",
+    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(23.5vw, 20rem)",
   );
   const initialTransform = await image.evaluate((element) => getComputedStyle(element).transform);
   await firstMedia.hover();
@@ -706,12 +706,12 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
     );
     await expect(results.locator("img").first()).toHaveAttribute(
       "sizes",
-      "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(23.5vw, 21.25rem)",
+      "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(23.5vw, 20rem)",
     );
     if (viewport.width === 1920) {
       expect(
         await results.evaluate((element) => element.getBoundingClientRect().width),
-      ).toBeLessThanOrEqual(1440);
+      ).toBeLessThanOrEqual(1360);
     }
     expect(
       await results.evaluate(

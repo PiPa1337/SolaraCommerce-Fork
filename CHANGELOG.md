@@ -10,6 +10,14 @@ versión publicada.
 
 ## [Unreleased]
 
+### Ajuste de escala de cards V2 (2026-08-13)
+
+- Las grillas de productos de la home y búsqueda limitan su ancho a 1360px
+  para reducir ligeramente el tamaño de cada card en pantallas amplias sin
+  cambiar columnas, contenido ni proporción de imagen.
+- Las imágenes de esas cards declaran un límite responsive de 20rem para
+  solicitar recursos más cercanos al ancho realmente renderizado.
+
 ### Base aislada Storefront V2 (2026-08-12)
 
 - El mosaico de categorías de Catalog Modern muestra sólo categorías madre y
@@ -37,7 +45,7 @@ versión publicada.
 - Los productos de las fixtures deterministas muestran una galería de tres
   imágenes con miniaturas navegables; la grilla V2 limita su ancho para que
   las cards no resulten excesivamente grandes en pantallas amplias.
-- La grilla principal V2 fija ese límite en `1520px` y ajusta sus `sizes` para
+- La grilla principal y la búsqueda V2 fijan ese límite en `1360px` y ajustan sus `sizes` para
   que las cards respiren mejor sin perder la composición de cuatro columnas.
 - La cabecera de categoría V2 usa una imagen `5:3` en lugar de una franja
   panorámica, equilibrando el peso del título y mejorando su lectura en mobile.
