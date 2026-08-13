@@ -2515,8 +2515,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-hero-inner {
   grid-template-columns: minmax(20rem, .78fr) minmax(0, 1.22fr);
   width: min(calc(100% - 3rem), var(--catalog-v2-wide));
-  height: min(680px, calc(100svh - 132px));
-  min-height: 34rem;
+  height: 90svh;
+  min-height: 0;
   margin-top: 1.25rem;
   overflow: hidden;
   isolation: isolate;
@@ -2969,8 +2969,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
   .cm.v2 .catalog-hero-inner {
     grid-template-columns: minmax(18rem, .86fr) minmax(0, 1.14fr);
-    height: min(620px, calc(100svh - 124px));
-    min-height: 32rem;
+    height: 90svh;
+    min-height: 0;
   }
   .cm.v2 .catalog-hero-copy h1 {
     font-size: calc(clamp(3.6rem, 7vw, 5.5rem) * var(--solara-type-scale, 1));

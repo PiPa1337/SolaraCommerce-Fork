@@ -107,7 +107,8 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
     };
   });
   expect(heroMetrics.width).toBeGreaterThan(1700);
-  expect(heroMetrics.height).toBeLessThanOrEqual(700);
+  expect(heroMetrics.height).toBeGreaterThan(968 * 0.89);
+  expect(heroMetrics.height).toBeLessThan(968 * 0.91);
   expect(heroMetrics.titleInside).toBe(true);
   expect(heroMetrics.titleBeforeMedia).toBe(true);
   expect(heroMetrics.actionsInViewport).toBe(true);

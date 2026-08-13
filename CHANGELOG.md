@@ -18,6 +18,8 @@ versión publicada.
 - El hero Editorial V2 cabe en el alto útil de una ventana 1920×1080
   maximizada, mantiene texto y acciones dentro del primer viewport y evita que
   la tipografía invada la imagen.
+- El hero de escritorio usa una altura inmersiva de `90svh`, manteniendo el
+  contenido interno centrado y el comportamiento automático en móvil.
 - Las animaciones de aparición usan su línea de entrada como límite real de
   intersección, incluso cuando una sección alta ya asoma parcialmente en el
   viewport.
