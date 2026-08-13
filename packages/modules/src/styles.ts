@@ -2651,6 +2651,151 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern-v2 .catalog-footer-inner {
   padding-top: clamp(3rem, 7vw, 7rem);
 }
+[data-solara-store].catalog-modern-v2 .solara-category-hero {
+  grid-template-columns: minmax(0, 1.15fr) minmax(22rem, .45fr);
+  gap: clamp(2rem, 5vw, 6rem);
+  padding-top: clamp(4rem, 7vw, 7rem);
+}
+[data-solara-store].catalog-modern-v2 .solara-category-hero h1,
+[data-solara-store].catalog-modern-v2 .solara-page-intro h1,
+[data-solara-store].catalog-modern-v2 .solara-cart-page h1,
+[data-solara-store].catalog-modern-v2 .solara-checkout-page h1 {
+  max-width: 10ch;
+  font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
+  font-size: calc(clamp(4rem, 6.5vw, 8rem) * var(--solara-type-scale, 1));
+  font-weight: 500;
+  letter-spacing: -.075em;
+  line-height: .88;
+  overflow-wrap: normal;
+}
+[data-solara-store].catalog-modern-v2 .catalog-category-layout {
+  grid-template-columns: 270px minmax(0, 1fr);
+  gap: clamp(2.5rem, 4vw, 5rem);
+}
+[data-solara-store].catalog-modern-v2 .catalog-category-filters {
+  padding: 1.25rem 0;
+  border-width: 1px 0;
+  border-radius: 0;
+  background: transparent;
+}
+[data-solara-store].catalog-modern-v2 .catalog-filter-groups fieldset {
+  padding-bottom: 1.25rem;
+}
+[data-solara-store].catalog-modern-v2 .catalog-filter-groups legend {
+  font-size: .68rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+[data-solara-store].catalog-modern-v2 .catalog-category-results .solara-category-toolbar {
+  min-height: 54px;
+  margin-bottom: 1.75rem;
+}
+[data-solara-store].catalog-modern-v2 .catalog-category-results .catalog-product-grid {
+  gap: clamp(2rem, 3vw, 4rem) clamp(1rem, 1.8vw, 2rem);
+}
+[data-solara-store].catalog-modern-v2 .catalog-product-detail,
+[data-solara-store].catalog-modern-v2 .catalog-product-tabs,
+[data-solara-store].catalog-modern-v2 .catalog-product-reviews {
+  width: min(calc(100% - 3rem), var(--catalog-v2-wide));
+}
+[data-solara-store].catalog-modern-v2 .catalog-product-detail-inner {
+  grid-template-columns: minmax(0, 1.35fr) minmax(420px, .65fr);
+  gap: clamp(3rem, 6vw, 8rem);
+  padding-block: clamp(3rem, 6vw, 6rem);
+}
+[data-solara-store].catalog-modern-v2 .catalog-product-gallery {
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: 1rem;
+}
+[data-solara-store].catalog-modern-v2 .catalog-product-gallery-main,
+[data-solara-store].catalog-modern-v2 .catalog-product-gallery-thumbs button {
+  border-radius: 0;
+}
+[data-solara-store].catalog-modern-v2 .catalog-product-gallery-main {
+  aspect-ratio: 4 / 5;
+}
+[data-solara-store].catalog-modern-v2 .catalog-product-gallery-main figure {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+}
+[data-solara-store].catalog-modern-v2 .catalog-product-gallery-image {
+  transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out);
+}
+[data-solara-store].catalog-modern-v2 .catalog-product-gallery-main:hover .catalog-product-gallery-image {
+  transform: scale(1.025);
+}
+[data-solara-store].catalog-modern-v2 .catalog-product-info {
+  position: sticky;
+  top: 1.5rem;
+  padding-top: 1rem;
+}
+[data-solara-store].catalog-modern-v2 .catalog-product-info h1 {
+  max-width: 11ch;
+  font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
+  font-size: calc(clamp(3.4rem, 4.2vw, 5.5rem) * var(--solara-type-scale, 1));
+  font-weight: 500;
+  letter-spacing: -.075em;
+  line-height: .88;
+  overflow-wrap: normal;
+}
+[data-solara-store].catalog-modern-v2 .catalog-detail-price {
+  margin-top: 1.5rem;
+  font-size: 1.4rem;
+  font-weight: 650;
+}
+[data-solara-store].catalog-modern-v2 .catalog-add-form {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+}
+[data-solara-store].catalog-modern-v2 .catalog-option-pill,
+[data-solara-store].catalog-modern-v2 .catalog-product-info select,
+[data-solara-store].catalog-modern-v2 .catalog-product-tabs button {
+  border-radius: 2px;
+}
+[data-solara-store].catalog-modern-v2 .catalog-product-tabs {
+  margin-top: 0;
+}
+[data-solara-store].catalog-modern-v2 .catalog-cart-drawer {
+  width: min(520px, 100%);
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  box-shadow: -24px 0 80px color-mix(in srgb, var(--catalog-ink), transparent 80%);
+  transition: transform var(--catalog-v2-motion-component) var(--catalog-v2-ease-out);
+}
+[data-solara-store].catalog-modern-v2 .catalog-cart-drawer header h2 {
+  font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
+  font-size: clamp(2.2rem, 4vw, 3.4rem);
+  font-weight: 500;
+  letter-spacing: -.065em;
+}
+[data-solara-store].catalog-modern-v2 .catalog-cart-drawer header button {
+  border-radius: 2px;
+}
+[data-solara-store].catalog-modern-v2 .catalog-cart-items .solara-cart-line {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .75rem;
+}
+[data-solara-store].catalog-modern-v2 .catalog-cart-items .solara-cart-line > div:first-child {
+  min-width: 0;
+}
+[data-solara-store].catalog-modern-v2 .catalog-cart-items .solara-cart-line > input {
+  grid-column: 1;
+  width: 5rem;
+}
+[data-solara-store].catalog-modern-v2 .catalog-cart-items .solara-cart-line > button {
+  grid-column: 2;
+  justify-self: end;
+}
+[data-solara-store].catalog-modern-v2 .catalog-cart-items .solara-cart-line > span:last-child {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  white-space: nowrap;
+}
+[data-solara-store].catalog-modern-v2 .catalog-cart-backdrop {
+  background: color-mix(in srgb, var(--catalog-ink), transparent 45%);
+  backdrop-filter: blur(3px);
+}
 @media (max-width: 1199px) {
   [data-solara-store].catalog-modern-v2 .catalog-hero-inner {
     grid-template-columns: minmax(18rem, .86fr) minmax(0, 1.14fr);
@@ -2703,6 +2848,49 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
   [data-solara-store].catalog-modern-v2 .catalog-category-bento-section {
     padding: 4rem 1rem;
+  }
+  [data-solara-store].catalog-modern-v2 .catalog-filter-toggle:not([open]) + .catalog-filter-groups {
+    display: none;
+  }
+  [data-solara-store].catalog-modern-v2 .catalog-category-filters:has(details[open]) {
+    position: fixed;
+    z-index: 52;
+    inset: auto 0 0;
+    width: 100%;
+    max-height: 88dvh;
+    padding: 1rem 1rem calc(1.25rem + env(safe-area-inset-bottom));
+    overflow-y: auto;
+    border: 1px solid var(--catalog-border);
+    border-bottom: 0;
+    border-radius: 18px 18px 0 0;
+    background: var(--catalog-paper);
+    box-shadow: 0 -20px 70px color-mix(in srgb, var(--catalog-ink), transparent 68%), 0 0 0 100vmax color-mix(in srgb, var(--catalog-ink), transparent 50%);
+  }
+  [data-solara-store].catalog-modern-v2 .catalog-product-detail,
+  [data-solara-store].catalog-modern-v2 .catalog-product-tabs,
+  [data-solara-store].catalog-modern-v2 .catalog-product-reviews {
+    width: min(calc(100% - 1.5rem), var(--catalog-v2-wide));
+  }
+  [data-solara-store].catalog-modern-v2 .catalog-product-info {
+    position: static;
+  }
+  [data-solara-store].catalog-modern-v2 .catalog-product-gallery-main figure {
+    aspect-ratio: 4 / 5;
+  }
+  [data-solara-store].catalog-modern-v2 .catalog-product-info h1 {
+    max-width: 10ch;
+    font-size: calc(clamp(3.1rem, 15vw, 5.5rem) * var(--solara-type-scale, 1));
+  }
+  [data-solara-store].catalog-modern-v2 .catalog-cart-drawer {
+    inset: auto 0 0;
+    width: 100%;
+    height: min(88dvh, 46rem);
+    max-height: 88dvh;
+    border-radius: 20px 20px 0 0;
+    transform: translateY(105%);
+  }
+  [data-solara-store].catalog-modern-v2 .catalog-cart-drawer[data-open="true"] {
+    transform: translateY(0);
   }
 }
 @media (prefers-reduced-motion: reduce) {

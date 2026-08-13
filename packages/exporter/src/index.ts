@@ -1229,7 +1229,7 @@ function categoryListingMarkup(
   const resultCount = `<span data-category-result-count data-category-total="${products.length}">${products.length} productos</span>`;
   if (isModernProject(project)) {
     return `<div class="catalog-category-layout">
-      ${modernCategoryFilters(products)}
+      ${modernCategoryFilters(products, project.commerceTemplates.designFamily === "catalog-modern-v2")}
       <div class="catalog-category-results">
         <div class="solara-category-toolbar" data-category-toolbar>
           ${resultCount}
@@ -1251,7 +1251,7 @@ function categoryListingMarkup(
   ${grid}`;
 }
 
-function modernCategoryFilters(products: readonly Product[]): string {
+function modernCategoryFilters(products: readonly Product[], mobileSheet = false): string {
   const tags = [...new Set(products.flatMap((product) => product.tags))].slice(0, 12);
   const tagOptions = tags
     .map((tag) => `<option value="${escapeAttribute(tag)}">${escapeHtml(tag)}</option>`)
@@ -1277,7 +1277,11 @@ function modernCategoryFilters(products: readonly Product[]): string {
       return `<fieldset><legend>${escapeHtml(key)}</legend><label><span class="sr-only">Filtrar por ${escapeHtml(key)}</span><select data-category-option data-category-option-key="${escapeAttribute(key)}"><option value="">Todas</option>${options}</select></label></fieldset>`;
     })
     .join("");
-  return `<aside class="catalog-category-filters" aria-label="Filtros del catálogo"><details open><summary>Filtros</summary><div class="catalog-filter-groups"><fieldset><legend>Disponibilidad</legend><label><input type="checkbox" data-category-available> Sólo disponibles</label></fieldset><fieldset><legend>Etiqueta</legend><label><span class="sr-only">Filtrar por etiqueta</span><select data-category-tag><option value="">Todas</option>${tagOptions}</select></label></fieldset>${optionFilters}<fieldset><legend>Precio</legend><div class="catalog-price-fields"><label><span>Mínimo</span><input type="number" min="0" step="1" data-category-min-price inputmode="decimal"></label><label><span>Máximo</span><input type="number" min="0" step="1" data-category-max-price inputmode="decimal"></label></div></fieldset></div></details></aside>`;
+  const groups = `<div class="catalog-filter-groups"><fieldset><legend>Disponibilidad</legend><label><input type="checkbox" data-category-available> Sólo disponibles</label></fieldset><fieldset><legend>Etiqueta</legend><label><span class="sr-only">Filtrar por etiqueta</span><select data-category-tag><option value="">Todas</option>${tagOptions}</select></label></fieldset>${optionFilters}<fieldset><legend>Precio</legend><div class="catalog-price-fields"><label><span>Mínimo</span><input type="number" min="0" step="1" data-category-min-price inputmode="decimal"></label><label><span>Máximo</span><input type="number" min="0" step="1" data-category-max-price inputmode="decimal"></label></div></fieldset></div>`;
+  const content = mobileSheet
+    ? `<details class="catalog-filter-toggle"><summary>Filtros</summary></details>${groups}`
+    : `<details open><summary>Filtros</summary>${groups}</details>`;
+  return `<aside class="catalog-category-filters" aria-label="Filtros del catálogo">${content}</aside>`;
 }
 
 function categoryBreadcrumbItems(

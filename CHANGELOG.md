@@ -24,6 +24,9 @@ versión publicada.
   entrada; respeta `prefers-reduced-motion` y no agrega JavaScript al runtime.
 - La home V2 se valida en el viewport real `1920x968` y en `390x844`, sin
   overflow horizontal, con CTA visible y grillas de cuatro y dos columnas.
+- Categoría V2 usa un rail editorial de filtros en escritorio y un sheet
+  inferior nativo en móvil; PDP adopta galería vertical 4:5 e información
+  sticky, y el carrito pasa de drawer lateral de 520 px a sheet móvil.
 
 ### Matriz release reproducible (2026-08-12)
 

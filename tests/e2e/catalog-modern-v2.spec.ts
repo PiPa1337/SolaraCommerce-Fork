@@ -164,3 +164,110 @@ test("V2 mantiene CTA, dos columnas y reduced motion en 390x844", async ({ page 
 
   await page.screenshot({ path: testInfo.outputPath("home-390x844.png"), fullPage: true });
 });
+
+test("V2 ordena categoría y filtros como rail editorial y sheet móvil", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  await page.goto(new URL("/categorias/remeras/", serverUrl).toString());
+
+  const layout = page.locator(".catalog-category-layout");
+  const filters = page.locator(".catalog-category-filters");
+  const grid = page.locator(".catalog-category-results .catalog-product-grid");
+  await expect(layout).toBeVisible();
+  await expect(filters.locator(".catalog-filter-groups")).toBeVisible();
+  expect(await layout.evaluate((element) => getComputedStyle(element).gridTemplateColumns)).toMatch(
+    /^2[4-9]\dpx /,
+  );
+  expect(
+    await grid.evaluate(
+      (element) => getComputedStyle(element).gridTemplateColumns.split(" ").length,
+    ),
+  ).toBe(3);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1920);
+  await revealWholePage(page);
+  await page.screenshot({ path: testInfo.outputPath("category-1920x968.png"), fullPage: true });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(new URL("/categorias/remeras/", serverUrl).toString());
+  await expect(filters.locator(".catalog-filter-groups")).toBeHidden();
+  await expect(filters.locator("details")).not.toHaveAttribute("open", "");
+  await filters.locator("summary").click();
+  await expect(filters.locator("details")).toHaveAttribute("open", "");
+  await expect(filters.locator(".catalog-filter-groups")).toBeVisible();
+  const mobileFilter = await filters.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return {
+      position: style.position,
+      bottom: Math.round(innerHeight - rect.bottom),
+      width: rect.width,
+    };
+  });
+  expect(mobileFilter.position).toBe("fixed");
+  expect(mobileFilter.bottom).toBe(0);
+  expect(mobileFilter.width).toBe(390);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.screenshot({ path: testInfo.outputPath("filters-390x844.png"), fullPage: false });
+});
+
+test("V2 presenta PDP editorial y carrito lateral o inferior según viewport", async ({
+  page,
+}, testInfo) => {
+  const productUrl = new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString();
+  await page.setViewportSize({ width: 1920, height: 968 });
+  await page.goto(productUrl);
+
+  const detail = page.locator(".catalog-product-detail-inner");
+  const info = page.locator(".catalog-product-info");
+  await expect(detail).toBeVisible();
+  expect(await detail.evaluate((element) => getComputedStyle(element).gridTemplateColumns)).toMatch(
+    /^\d+(\.\d+)?px \d+(\.\d+)?px$/,
+  );
+  expect(await info.evaluate((element) => getComputedStyle(element).position)).toBe("sticky");
+  const galleryRatio = await page.locator(".catalog-product-gallery-main").evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return rect.width / rect.height;
+  });
+  expect(galleryRatio).toBeCloseTo(0.8, 1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1920);
+  await page.screenshot({ path: testInfo.outputPath("product-1920x968.png"), fullPage: true });
+
+  await page.getByLabel("Elegí talle y color").selectOption({ index: 1 });
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  const drawer = page.locator(".catalog-cart-drawer");
+  await expect(drawer).toHaveAttribute("data-open", "true");
+  expect(Math.round((await drawer.boundingBox())?.width ?? 0)).toBe(520);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1920);
+  const drawerBounds = await drawer.evaluate((element) => {
+    const drawerRect = element.getBoundingClientRect();
+    const targets = [
+      element.querySelector("header button"),
+      element.querySelector(".solara-cart-line > span:last-child"),
+      ...element.querySelectorAll(".catalog-cart-summary strong"),
+    ].filter((target): target is Element => target !== null);
+    return {
+      left: drawerRect.left,
+      right: drawerRect.right,
+      targets: targets.map((target) => {
+        const rect = target.getBoundingClientRect();
+        return { left: rect.left, right: rect.right, width: rect.width };
+      }),
+    };
+  });
+  expect(drawerBounds.targets.length).toBeGreaterThanOrEqual(5);
+  expect(
+    drawerBounds.targets.every(
+      (target) => target.left >= drawerBounds.left && target.right <= drawerBounds.right,
+    ),
+  ).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("cart-1920x968.png"), fullPage: false });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const drawerMetrics = await drawer.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return { width: Math.round(rect.width), bottom: Math.round(innerHeight - rect.bottom) };
+  });
+  expect(drawerMetrics).toEqual({ width: 390, bottom: 0 });
+  await page.screenshot({ path: testInfo.outputPath("cart-390x844.png"), fullPage: false });
+});
