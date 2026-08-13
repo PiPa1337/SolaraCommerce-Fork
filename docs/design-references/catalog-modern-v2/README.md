@@ -21,6 +21,10 @@ que una tienda no posea.
 | `cart-mobile.png` | sheet móvil | sheet de 82–88dvh con safe area y acciones completas |
 | `checkout-desktop.png` | checkout desktop | formulario abierto y resumen lateral sticky sin pago online |
 | `checkout-mobile.png` | checkout móvil | flujo apilado, controles táctiles y resumen sin overflow |
+| `search-desktop.png` | búsqueda desktop | intro contenida, formulario ancho y vacío editorial honesto |
+| `search-mobile.png` | búsqueda móvil | H1 y ayuda separados, controles apilados y táctiles |
+| `cart-page-desktop.png` | carrito completo desktop | líneas abiertas y summary de 360–420 px con datos sans |
+| `cart-page-mobile.png` | carrito completo móvil | productos y resumen apilados sin importes display ni overflow |
 | `testimonials-desktop.png` | reseñas + ayuda | muro de citas agrupado y CTA WhatsApp |
 | `footer-desktop.png` | cierre + footer | contenido real, cuatro grupos y vuelta arriba |
 
@@ -122,6 +126,17 @@ tabla define relaciones y fallback V2, no colores hardcodeados de una marca.
 - líneas en estructura abierta con miniatura estable, cantidad y eliminar;
 - summary y CTA permanecen alcanzables sin tapar líneas;
 - el backdrop conserva contexto pero evita interacción accidental.
+
+En la página completa, desktop usa lista flexible más un resumen de 360–420 px;
+móvil apila ambas zonas. Precios, entrega y total siempre usan la fuente body:
+la serif queda reservada para el H1 y el título del resumen.
+
+### Búsqueda
+
+- el H1 mantiene una línea en desktop y puede partir sin solapar la ayuda en móvil;
+- label, input y botón permanecen visibles, con controles de al menos 44 px;
+- el formulario usa el ancho disponible en desktop y se apila en móvil;
+- el vacío explica el próximo paso sin inventar productos, sugerencias o resultados.
 
 ### Checkout
 

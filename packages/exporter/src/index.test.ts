@@ -150,19 +150,19 @@ describe("exporter", () => {
   });
 
   it("incluye la foundation V2 sólo en proyectos catalog-modern-v2", () => {
-    const v1Css = String(
-      exportProject(catalogModernStore, { mode: "production" }).files.get("assets/storefront.css"),
-    );
-    const v2Css = String(
-      exportProject(catalogModernV2Store, { mode: "production" }).files.get(
-        "assets/storefront.css",
-      ),
-    );
+    const v1Result = exportProject(catalogModernStore, { mode: "production" });
+    const v2Result = exportProject(catalogModernV2Store, { mode: "production" });
+    const v1Css = String(v1Result.files.get("assets/storefront.css"));
+    const v2Css = String(v2Result.files.get("assets/storefront.css"));
+    const v1Home = String(v1Result.files.get("index.html"));
+    const v2Home = String(v2Result.files.get("index.html"));
 
-    expect(v2Css).toContain(".catalog-modern-v2 .catalog-hero-inner");
+    expect(v2Css).toContain("[data-v2].catalog-modern .catalog-hero-inner");
     expect(v2Css).toContain("--catalog-v2-motion-editorial");
     expect(v2Css).toContain("prefers-reduced-motion:reduce");
+    expect(v2Home).toContain(" data-v2");
     expect(v1Css).not.toContain("--catalog-v2-motion-editorial");
+    expect(v1Home).not.toContain(" data-v2");
   });
 
   it("rechaza proyectos inválidos con una ruta accionable en cada límite público", () => {

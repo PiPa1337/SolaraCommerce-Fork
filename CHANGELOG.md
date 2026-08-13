@@ -16,7 +16,7 @@ versión publicada.
   `schemaVersion: 2` ni reinterpretar tiendas existentes `catalog-modern-v1`.
 - Una fixture determinista V2 de 50 productos permite evolucionar el storefront
   con paridad entre Preview y exportación mientras V1 permanece disponible.
-- Se incorporan el plan maestro, el baseline técnico y catorce referencias visuales
+- Se incorporan el plan maestro, el baseline técnico y dieciocho referencias visuales
   por superficie para guiar una evolución editorial con motion, responsive y
   accesibilidad verificables.
 - La foundation V2 incorpora una paleta cálida editable, tipografía editorial,
@@ -36,6 +36,9 @@ versión publicada.
   teclado, fallback sin JavaScript, canonical/Open Graph y `noindex` del checkout.
 - Tema permite activar o revertir Editorial V2 sin migrar contenido ni cambiar
   el schema; el header se compacta al hacer scroll y los appears usan un observer compartido.
+- Búsqueda separa correctamente título, ayuda y formulario en móvil; la página
+  completa de carrito amplía su resumen en desktop, se apila en móvil y reserva
+  la serif para encabezados en lugar de aplicarla a importes o entrega.
 
 ### Matriz release reproducible (2026-08-12)
 

@@ -439,3 +439,96 @@ test("V2 activa appear progresivo y compacta el header al hacer scroll", async (
   await expect(products).toHaveAttribute("data-motion-visible", "true");
   await expect(products.locator("[data-motion-zone]")).toHaveCSS("animation-name", "none");
 });
+
+test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, testInfo) => {
+  const routes = [
+    ["buscar", "/buscar/"],
+    ["carrito", "/carrito/"],
+    ["nosotros", "/nosotros/"],
+    ["contacto", "/contacto/"],
+    ["envios", "/envios/"],
+    ["devoluciones", "/devoluciones/"],
+    ["privacidad", "/privacidad/"],
+    ["terminos", "/terminos/"],
+    ["404", "/404.html"],
+  ] as const;
+
+  for (const viewport of [
+    { width: 1920, height: 968, label: "desktop" },
+    { width: 390, height: 844, label: "mobile" },
+  ]) {
+    await page.setViewportSize(viewport);
+    for (const [name, route] of routes) {
+      await page.goto(new URL(route, serverUrl).toString());
+      await expect(page.locator('[data-design-family="catalog-modern-v2"]')).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+        `${name} ${viewport.label}`,
+      ).toBeLessThanOrEqual(viewport.width);
+    }
+    await page.goto(new URL("/buscar/", serverUrl).toString());
+    const searchTitle = page.getByRole("heading", { level: 1, name: "Buscar productos" });
+    const searchHelp = page.getByText("Buscá por nombre, marca, categoría o etiqueta.");
+    const [titleBox, helpBox] = await Promise.all([
+      searchTitle.boundingBox(),
+      searchHelp.boundingBox(),
+    ]);
+    expect(titleBox).not.toBeNull();
+    expect(helpBox).not.toBeNull();
+    expect(
+      (helpBox?.y ?? 0) - ((titleBox?.y ?? 0) + (titleBox?.height ?? 0)),
+    ).toBeGreaterThanOrEqual(8);
+    const searchForm = page.locator(".solara-search-form");
+    const searchInputBox = await searchForm
+      .getByRole("searchbox", { name: "Buscar productos" })
+      .boundingBox();
+    const searchButtonBox = await searchForm.getByRole("button", { name: "Buscar" }).boundingBox();
+    expect(searchInputBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect(searchButtonBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+    if (viewport.label === "desktop") {
+      expect(searchInputBox?.width ?? 0).toBeGreaterThanOrEqual(720);
+      expect(searchButtonBox?.y).toBe(searchInputBox?.y);
+    } else {
+      expect(searchInputBox?.width ?? 0).toBeGreaterThanOrEqual(350);
+      expect(searchButtonBox?.width ?? 0).toBeGreaterThanOrEqual(350);
+      expect(searchButtonBox?.y ?? 0).toBeGreaterThan((searchInputBox?.y ?? 0) + 44);
+    }
+    await page.screenshot({
+      path: testInfo.outputPath(`search-${viewport.width}x${viewport.height}.png`),
+      fullPage: true,
+    });
+
+    await page.goto(new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString());
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.getByLabel("Elegí talle y color").selectOption({ index: 1 });
+    await page.getByRole("button", { name: "Agregar al carrito" }).click();
+    await page.getByRole("button", { name: "Cerrar carrito" }).click();
+    await page.goto(new URL("/carrito/", serverUrl).toString());
+    await expect(
+      page.locator(".solara-cart-page-grid [data-cart-lines] .solara-cart-line"),
+    ).toHaveCount(1);
+    const cartSummary = page.locator(".solara-cart-page-grid > aside");
+    const cartSummaryBox = await cartSummary.boundingBox();
+    const summaryAmount = cartSummary.locator("strong").first();
+    const summaryTypography = await summaryAmount.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return { family: styles.fontFamily, size: Number.parseFloat(styles.fontSize) };
+    });
+    expect(summaryTypography.family.toLowerCase()).not.toContain("georgia");
+    expect(summaryTypography.size).toBeLessThanOrEqual(24);
+    if (viewport.label === "desktop") {
+      expect(cartSummaryBox?.width ?? 0).toBeGreaterThanOrEqual(360);
+    } else {
+      expect(cartSummaryBox?.width ?? 0).toBeGreaterThanOrEqual(350);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      viewport.width,
+    );
+    await page.screenshot({
+      path: testInfo.outputPath(`cart-page-${viewport.width}x${viewport.height}.png`),
+      fullPage: true,
+    });
+  }
+});

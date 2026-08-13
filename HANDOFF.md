@@ -54,6 +54,9 @@ servirse en un hosting estático. El pedido se deriva a WhatsApp.
 6. Los módulos no compilan código del usuario en el navegador.
 7. `proyectos/` no se versiona en Git y el servicio sólo escucha loopback.
 8. Los cambios de schema requieren migración y pruebas de round-trip.
+9. `catalog-modern-v2` y `data-design-family` siguen siendo los contratos
+   visibles; `data-v2` es sólo un alias interno de CSS para mantener el
+   presupuesto público y nunca se persiste en el proyecto.
 
 ## Archivos modificados durante este handoff
 
@@ -84,10 +87,10 @@ Se ejecutaron con resultado exitoso:
 - `corepack pnpm benchmark:export`: `catalog-modern-v2` con 2.000 productos en
   aproximadamente 3,5 s, 1.973 archivos y 40.422.856 bytes sin empaquetar.
 - `corepack pnpm check:budgets` (bytes crudos): Studio JS ≤ 700 KiB y CSS
-  ≤ 100 KiB (CSS medido ~98.6 KiB); runtime público JS ≤ 52 KiB (medido
-  50.094 B, ~48.9 KiB) y CSS ≤ 8 KiB (medido 7.486 B, ~7.3 KiB);
-  storefront.js ≤ 52 KiB y storefront.css ≤ 780 KiB (storefront.css
-  deduplicado ~75 KiB).
+  ≤ 100 KiB; runtime público JS ≤ 53 KiB (medido 54.226 B) y CSS ≤ 8 KiB
+  (medido 7.486 B); la foundation `catalog-modern-v2` conserva sus topes de
+  104 KiB CSS (106.429 B) y 53 KiB JavaScript sin elevarlos para búsqueda o
+  carrito completo.
 - `corepack pnpm pilot:preflight`: fixture de referencia, 27 páginas y 3
   ofertas.
 - `corepack pnpm check:repository`, `corepack pnpm format:check` y
