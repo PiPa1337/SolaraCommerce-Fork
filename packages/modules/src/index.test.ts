@@ -350,6 +350,17 @@ describe("official module system", () => {
     expect(testimonials.settingsSchema.parse({})).toEqual(expect.objectContaining({ items: [] }));
   });
 
+  it("expone el rail de testimonios y sus controles con una relación accesible", () => {
+    const section = catalogModernStore.sections.find(
+      (item) => item.moduleId === "catalog-testimonials",
+    );
+    if (!section) throw new Error("Fixture sin testimonios");
+    const html = renderSections(catalogModernStore, [section], { pageType: "home" });
+    expect(html).toContain('role="group" aria-label="Controles de testimonios"');
+    expect(html).toMatch(/aria-controls="catalog-testimonials-track-[^"]+"/);
+    expect(html).toContain('aria-label="Testimonios de clientes" role="region"');
+  });
+
   it("omite beneficios de confianza sin datos configurados", () => {
     const project = {
       ...referenceStore,

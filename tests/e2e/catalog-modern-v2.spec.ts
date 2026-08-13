@@ -495,6 +495,48 @@ test("V2 presenta PDP editorial y carrito lateral o inferior según viewport", a
   await page.screenshot({ path: testInfo.outputPath("cart-390x844.png"), fullPage: false });
 });
 
+test("V2 hace accesible el carrusel de testimonios y rotula el footer", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(new URL("/", serverUrl).toString());
+
+  const section = page.locator(".catalog-testimonials-section");
+  const track = section.locator(".catalog-testimonials-track");
+  const previous = section.getByRole("button", { name: "Testimonio anterior" });
+  const next = section.getByRole("button", { name: "Testimonio siguiente" });
+  await expect(section.getByRole("group", { name: "Controles de testimonios" })).toBeVisible();
+  await expect(track).toHaveAttribute("role", "region");
+  await expect(previous).toBeDisabled();
+  await expect(previous).toHaveAttribute("aria-disabled", "true");
+  await expect(next).toBeEnabled();
+  await expect(next).toHaveAttribute("aria-disabled", "false");
+
+  const before = await track.evaluate((element) => element.scrollLeft);
+  await next.click();
+  await expect.poll(() => track.evaluate((element) => element.scrollLeft)).toBeGreaterThan(before);
+  await expect(previous).toBeEnabled();
+
+  await expect(page.locator('.catalog-footer-inner nav[aria-label="Catálogo"] strong')).toHaveText(
+    "Explorar",
+  );
+  await expect(page.locator('.catalog-footer-inner nav[aria-label="Ayuda"] strong')).toHaveText(
+    "Ayuda",
+  );
+  await expect(page.locator(".catalog-footer-inner address strong")).toHaveText("Contacto");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.waitForTimeout(150);
+  await revealWholePage(page);
+  await page.screenshot({ path: testInfo.outputPath("home-390x844.png"), fullPage: true });
+
+  await page.setViewportSize({ width: 1920, height: 968 });
+  await page.goto(new URL("/", serverUrl).toString());
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1920);
+  await page.waitForTimeout(150);
+  await revealWholePage(page);
+  await page.screenshot({ path: testInfo.outputPath("home-1920x968.png"), fullPage: true });
+});
+
 test("V2 conserva varias líneas del carrito al navegar entre páginas", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 968 });
   const firstProduct = new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString();

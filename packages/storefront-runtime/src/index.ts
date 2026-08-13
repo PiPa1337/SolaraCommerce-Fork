@@ -594,9 +594,12 @@ function storefrontBoot(): void {
           .closest<HTMLElement>(".catalog-testimonials-section")
           ?.querySelector<HTMLElement>(".catalog-testimonials-track");
         if (track)
-          track.scrollLeft += addButton.matches("[data-testimonials-prev]")
-            ? -track.clientWidth
-            : track.clientWidth;
+          track.scrollBy({
+            left: addButton.matches("[data-testimonials-prev]")
+              ? -track.clientWidth
+              : track.clientWidth,
+            behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+          });
         return;
       }
       event.preventDefault();
@@ -1392,7 +1395,8 @@ function storefrontBoot(): void {
     const sync = () => {
       const max = track.scrollWidth - track.clientWidth;
       buttons.forEach((button, i) => {
-        button.disabled = i ? track.scrollLeft >= max : !track.scrollLeft || !max;
+        button.disabled = !max || (i ? track.scrollLeft >= max - 1 : track.scrollLeft <= 1);
+        button.setAttribute("aria-disabled", `${button.disabled}`);
       });
     };
     track.addEventListener("scroll", sync, { passive: true });

@@ -298,6 +298,14 @@ describe("pausa y reanudación del runtime (contrato A3↔A4)", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("previewCartSession");
     expect(STOREFRONT_RUNTIME_JS).toContain("session: previewCartSession");
   });
+
+  it("mueve testimonios con scroll suave y expone el estado disabled", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("scrollBy({");
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      'behavior: matchMedia("(prefers-reduced-motion: reduce)")',
+    );
+    expect(STOREFRONT_RUNTIME_JS).toContain('setAttribute("aria-disabled"');
+  });
 });
 
 describe("carrito y checkout del drawer (A29)", () => {

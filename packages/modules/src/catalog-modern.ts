@@ -1048,11 +1048,12 @@ export const catalogTestimonials: ModuleDefinition<
   render(context) {
     const items = context.settings.items;
     if (!items.length) return moduleRoot("catalog-testimonials", context.section, safeHtml(""));
+    const trackId = `catalog-testimonials-track-${context.section.id}`;
     return moduleRoot(
       "catalog-testimonials",
       context.section,
       safeHtml(
-        `<div class="catalog-testimonials-section"><header><h2>${escapeHtml(context.settings.title)}</h2><div class="catalog-testimonials-controls"><button type="button" data-testimonials-prev aria-label="Testimonio anterior">←</button><button type="button" data-testimonials-next aria-label="Testimonio siguiente">→</button></div></header><div class="catalog-testimonials-track" data-motion-zone="items">${items.map((item) => `<article class="catalog-testimonial"><p class="catalog-testimonial-rating" aria-label="${item.rating} de 5">${"★".repeat(item.rating)}</p><h3>${escapeHtml(item.author)}</h3>${item.context ? `<p class="catalog-testimonial-context">${escapeHtml(item.context)}</p>` : ""}<blockquote>“${escapeHtml(item.body)}”</blockquote></article>`).join("")}</div></div>`,
+        `<div class="catalog-testimonials-section"><header><h2>${escapeHtml(context.settings.title)}</h2><div class="catalog-testimonials-controls" role="group" aria-label="Controles de testimonios"><button type="button" data-testimonials-prev aria-controls="${escapeAttribute(trackId)}" aria-label="Testimonio anterior">←</button><button type="button" data-testimonials-next aria-controls="${escapeAttribute(trackId)}" aria-label="Testimonio siguiente">→</button></div></header><div id="${escapeAttribute(trackId)}" class="catalog-testimonials-track" data-motion-zone="items" aria-label="Testimonios de clientes" role="region">${items.map((item) => `<article class="catalog-testimonial"><p class="catalog-testimonial-rating" aria-label="${item.rating} de 5">${"★".repeat(item.rating)}</p><h3>${escapeHtml(item.author)}</h3>${item.context ? `<p class="catalog-testimonial-context">${escapeHtml(item.context)}</p>` : ""}<blockquote>“${escapeHtml(item.body)}”</blockquote></article>`).join("")}</div></div>`,
       ),
     );
   },
@@ -1163,7 +1164,7 @@ export const catalogFooter: ModuleDefinition<
       "catalog-footer",
       context.section,
       safeHtml(
-        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div><nav aria-label="Catálogo"><a href="/">Inicio</a>${catalogLinkMarkup}${searchLink}</nav><nav aria-label="Ayuda"><a href="/contacto/">Contacto</a><a href="/nosotros/">Nosotros</a>${policyLinks}</nav><address>${contact}</address><small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)}</small></div>`,
+        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div><nav aria-label="Catálogo"><strong>Explorar</strong><a href="/">Inicio</a>${catalogLinkMarkup}${searchLink}</nav><nav aria-label="Ayuda"><strong>Ayuda</strong><a href="/contacto/">Contacto</a><a href="/nosotros/">Nosotros</a>${policyLinks}</nav><address><strong>Contacto</strong>${contact}</address><small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)}</small></div>`,
       ),
       { tag: "footer" },
     );

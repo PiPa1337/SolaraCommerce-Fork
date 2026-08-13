@@ -1,5 +1,11 @@
 # Changelog
 
+### Carrusel de testimonios y footer V2 (2026-08-13)
+
+- Los controles de testimonios identifican su rail, respetan reduced motion y
+  anuncian visualmente su estado disponible o agotado.
+- El footer agrega rótulos visibles para sus grupos de navegación y contacto.
+
 ### Carrito del preview por sesión de ruta (2026-08-13)
 
 - Las escrituras del carrito embebido quedan vinculadas a la sesión activa del
