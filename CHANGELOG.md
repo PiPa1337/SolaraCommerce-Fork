@@ -40,6 +40,8 @@ versión publicada.
 - Las trece rutas públicas se recorren también en `768x1024`, `1024x768`,
   `1366x768` y `1440x900`; documento, body y raíz permanecen sin overflow
   horizontal entre los extremos móvil y desktop.
+- Un gate de estabilidad V2 limita el CLS local a `0,05` durante carga, appear y
+  scroll, y exige feedback DOM del carrito en menos de `100 ms` desde la acción.
 - Tema permite activar o revertir Editorial V2 sin migrar contenido ni cambiar
   el schema; el header se compacta al hacer scroll y los appears usan un observer compartido.
 - Búsqueda separa correctamente título, ayuda y formulario en móvil; la página

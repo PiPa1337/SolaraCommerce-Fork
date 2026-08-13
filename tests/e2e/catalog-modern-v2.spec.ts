@@ -494,6 +494,57 @@ test("V2 mantiene todas las rutas sin overflow en tablet y laptop", async ({ pag
   }
 });
 
+test("V2 conserva estabilidad visual y feedback inmediato", async ({ page }) => {
+  await page.addInitScript(() => {
+    const state = window as Window & { __solaraLayoutShift?: number };
+    state.__solaraLayoutShift = 0;
+    const observer = new PerformanceObserver((list) => {
+      for (const item of list.getEntries()) {
+        const shift = item as PerformanceEntry & { hadRecentInput: boolean; value: number };
+        if (!shift.hadRecentInput)
+          state.__solaraLayoutShift = (state.__solaraLayoutShift ?? 0) + shift.value;
+      }
+    });
+    observer.observe({ type: "layout-shift", buffered: true });
+  });
+
+  await page.setViewportSize({ width: 1920, height: 968 });
+  await page.goto(serverUrl);
+  await page.waitForFunction(() =>
+    [...document.images].every((image) => image.complete && image.naturalWidth > 0),
+  );
+  await revealWholePage(page);
+  await page.waitForTimeout(750);
+  const layoutShift = await page.evaluate(
+    () => (window as Window & { __solaraLayoutShift?: number }).__solaraLayoutShift ?? 0,
+  );
+  expect(layoutShift).toBeLessThanOrEqual(0.05);
+
+  await page.goto(new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString());
+  await page.getByLabel("Elegí talle y color").selectOption({ index: 1 });
+  const responseMs = await page.getByRole("button", { name: "Agregar al carrito" }).evaluate(
+    (button) =>
+      new Promise<number>((resolve, reject) => {
+        const drawer = document.querySelector<HTMLElement>(".catalog-cart-drawer");
+        if (!drawer) {
+          reject(new Error("No se encontró el drawer de carrito."));
+          return;
+        }
+        const startedAt = performance.now();
+        const observer = new MutationObserver(() => {
+          if (drawer.dataset.open === "true") {
+            observer.disconnect();
+            resolve(performance.now() - startedAt);
+          }
+        });
+        observer.observe(drawer, { attributes: true, attributeFilter: ["data-open"] });
+        (button as HTMLButtonElement).click();
+      }),
+  );
+  expect(responseMs).toBeLessThan(100);
+  await expect(page.locator(".catalog-cart-drawer")).toHaveAttribute("data-open", "true");
+});
+
 test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, testInfo) => {
   const routes = [
     ["buscar", "/buscar/"],
