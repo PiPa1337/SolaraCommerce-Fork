@@ -10,6 +10,14 @@ versión publicada.
 
 ## [Unreleased]
 
+### Ajuste fino de escala de cards V2 (2026-08-13)
+
+- Las cards de productos de la home y búsqueda reducen ligeramente su ancho
+  máximo en desktop, de modo que la grilla se percibe más aireada sin perder
+  sus cuatro columnas ni su proporción editorial.
+- Las imágenes de esas cards declaran un techo responsive de 15rem, alineado
+  con el ancho visual realmente renderizado.
+
 ### Sincronizacion de presentacion de Predeterminado (2026-08-13)
 
 - La tienda demo existente actualiza su familia visual a Catalog Modern V2 al
