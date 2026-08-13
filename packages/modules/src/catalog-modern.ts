@@ -553,7 +553,7 @@ function modernProductCardImageSizes(
   if (context.pageType === "category") {
     return "(max-width: 767px) calc((100vw - 2.2rem) / 2), calc((100vw - 18rem) / 3)";
   }
-  return "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(23.5vw, 20rem)";
+  return "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(23.5vw, 19rem)";
 }
 
 function modernProductCard(

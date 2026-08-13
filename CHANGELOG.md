@@ -21,10 +21,10 @@ versión publicada.
 
 ### Ajuste de escala de cards V2 (2026-08-13)
 
-- Las grillas de productos de la home y búsqueda limitan su ancho a 1320px
+- Las grillas de productos de la home y búsqueda limitan su ancho a 1280px
   para reducir ligeramente el tamaño de cada card en pantallas amplias sin
   cambiar columnas, contenido ni proporción de imagen.
-- Las imágenes de esas cards declaran un límite responsive de 20rem para
+- Las imágenes de esas cards declaran un límite responsive de 19rem para
   solicitar recursos más cercanos al ancho realmente renderizado.
 
 ### Base aislada Storefront V2 (2026-08-12)
