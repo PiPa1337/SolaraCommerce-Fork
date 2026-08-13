@@ -56,6 +56,9 @@ versión publicada.
 
 ## [Unreleased]
 
+- Corregido el menú móvil del storefront V2 para que conserve su panel completo al abrir categorías y subcategorías, incluso durante la animación de entrada del header.
+- Refinada la densidad de las cards de productos en home, búsqueda, categorías y productos relacionados, con `sizes` alineados al ancho visual reducido.
+
 ### Encabezado de tabla del catálogo (2026-08-13)
 
 - El catálogo deja de anidar un scroll vertical propio dentro del panel del

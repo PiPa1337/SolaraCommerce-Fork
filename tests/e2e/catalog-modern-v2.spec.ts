@@ -150,10 +150,10 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
       ?.getBoundingClientRect();
     return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
   });
-  expect(gridMetrics.gridWidth).toBeGreaterThan(920);
-  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(940);
-  expect(gridMetrics.cardWidth).toBeGreaterThan(205);
-  expect(gridMetrics.cardWidth).toBeLessThan(225);
+  expect(gridMetrics.gridWidth).toBeGreaterThan(880);
+  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(900);
+  expect(gridMetrics.cardWidth).toBeGreaterThan(195);
+  expect(gridMetrics.cardWidth).toBeLessThan(215);
   const firstMedia = grid.locator(".catalog-product-media").first();
   const mediaRatio = await firstMedia.evaluate((element) => {
     const rect = element.getBoundingClientRect();
@@ -164,7 +164,7 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   const image = firstMedia.locator("img");
   await expect(image).toHaveAttribute(
     "sizes",
-    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(22.5vw, 13.5rem)",
+    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(21.5vw, 13rem)",
   );
   const initialTransform = await image.evaluate((element) => getComputedStyle(element).transform);
   await firstMedia.hover();
@@ -224,8 +224,8 @@ test("V2 ajusta las imágenes al ancho renderizado y mantiene una galería PDP u
     };
   });
   expect(relatedGridMetrics.columns).toBe(4);
-  expect(relatedGridMetrics.gridWidth).toBeLessThanOrEqual(940);
-  expect(relatedGridMetrics.cardWidth).toBeLessThanOrEqual(225);
+  expect(relatedGridMetrics.gridWidth).toBeLessThanOrEqual(900);
+  expect(relatedGridMetrics.cardWidth).toBeLessThanOrEqual(215);
   await expect
     .poll(() =>
       relatedImages.evaluateAll(
@@ -400,12 +400,12 @@ test("V2 ordena categoría y filtros como rail editorial y sheet móvil", async 
       ?.getBoundingClientRect();
     return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
   });
-  expect(categoryGridMetrics.gridWidth).toBeGreaterThan(848);
-  expect(categoryGridMetrics.gridWidth).toBeLessThanOrEqual(880);
-  expect(categoryGridMetrics.cardWidth).toBeGreaterThan(255);
-  expect(categoryGridMetrics.cardWidth).toBeLessThan(285);
+  expect(categoryGridMetrics.gridWidth).toBeGreaterThan(800);
+  expect(categoryGridMetrics.gridWidth).toBeLessThanOrEqual(832);
+  expect(categoryGridMetrics.cardWidth).toBeGreaterThan(240);
+  expect(categoryGridMetrics.cardWidth).toBeLessThan(270);
   expect(await grid.locator(".catalog-product-card-image").first().getAttribute("sizes")).toBe(
-    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1279px) calc((100vw - 24rem) / 3), min(30vw, 17.5rem)",
+    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1279px) calc((100vw - 24rem) / 3), min(28vw, 17rem)",
   );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1920);
   await revealWholePage(page);
@@ -635,8 +635,26 @@ test("V2 conserva nombres accesibles, foco visible y navegacion por teclado", as
   const openMenu = page.getByRole("button", { name: "Abrir menú" });
   await openMenu.focus();
   await page.keyboard.press("Enter");
-  await expect(page.locator("#catalog-mobile-menu")).toBeVisible();
+  const mobileMenu = page.locator("#catalog-mobile-menu");
+  await expect(mobileMenu).toBeVisible();
+  const openMenuMetrics = await mobileMenu.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      height: rect.height,
+      width: rect.width,
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    };
+  });
+  expect(openMenuMetrics.height).toBeGreaterThan(800);
+  expect(openMenuMetrics.width).toBeLessThanOrEqual(374);
+  expect(openMenuMetrics.scrollWidth).toBeLessThanOrEqual(openMenuMetrics.clientWidth);
   await expect(page.getByRole("button", { name: "Cerrar menú" })).toBeFocused();
+  await mobileMenu.locator(".catalog-mobile-categories > summary").click();
+  await mobileMenu.locator(".catalog-mobile-category > summary").first().click();
+  expect(
+    await mobileMenu.evaluate((element) => element.getBoundingClientRect().height),
+  ).toBeGreaterThan(800);
   await page.keyboard.press("Escape");
   await expect(page.locator("#catalog-mobile-menu")).toBeHidden();
   await expect(openMenu).toBeFocused();
@@ -822,7 +840,7 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
     );
     await expect(results.locator("img").first()).toHaveAttribute(
       "sizes",
-      "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(22.5vw, 13.5rem)",
+      "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(21.5vw, 13rem)",
     );
     if (viewport.width === 1920) {
       const resultsMetrics = await results.evaluate((element) => {
@@ -832,10 +850,10 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
           ?.getBoundingClientRect();
         return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
       });
-      expect(resultsMetrics.gridWidth).toBeGreaterThan(920);
-      expect(resultsMetrics.gridWidth).toBeLessThanOrEqual(940);
-      expect(resultsMetrics.cardWidth).toBeGreaterThan(205);
-      expect(resultsMetrics.cardWidth).toBeLessThan(225);
+      expect(resultsMetrics.gridWidth).toBeGreaterThan(880);
+      expect(resultsMetrics.gridWidth).toBeLessThanOrEqual(900);
+      expect(resultsMetrics.cardWidth).toBeGreaterThan(195);
+      expect(resultsMetrics.cardWidth).toBeLessThan(215);
     }
     expect(
       await results.evaluate(

@@ -2448,7 +2448,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   z-index: 30;
   background: color-mix(in srgb, var(--catalog-paper), transparent 3%);
   transition: box-shadow var(--catalog-v2-motion-control) ease;
-  animation: solara-motion-fade-up var(--catalog-v2-motion-component) var(--catalog-v2-ease-out) both;
+  animation: solara-motion-fade var(--catalog-v2-motion-component) var(--catalog-v2-ease-out) both;
 }
 .cm.v2 [data-solara-module="catalog-header"][data-scrolled="true"] {
   box-shadow: 0 12px 32px color-mix(in srgb, var(--catalog-ink), transparent 92%);
@@ -2618,7 +2618,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-product-grid {
   gap: clamp(1.5rem, 2.4vw, 3rem) clamp(.8rem, 1.4vw, 1.6rem);
-  max-width: 940px;
+  max-width: 900px;
   margin: 0 auto;
 }
 .cm.v2 .catalog-product-card {
@@ -2735,7 +2735,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .solara-search-results { min-height: 18rem; padding-block: clamp(2.5rem, 5vw, 5rem); }
 .cm.v2 .solara-search-results > p:only-child { max-width: 34rem; margin: 1rem auto; font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(1.55rem, 2.5vw, 2.35rem); line-height: 1.15; text-align: center; }
 .cm.v2 .solara-search-summary { margin: 0 0 1.75rem; font-size: 1rem; font-weight: 650; }
-.cm.v2 .solara-search-results-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3rem clamp(.8rem, 1.4vw, 1.6rem); max-width: 940px; margin: 0 auto; }
+.cm.v2 .solara-search-results-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3rem clamp(.8rem, 1.4vw, 1.6rem); max-width: 900px; margin: 0 auto; }
 .cm.v2 .solara-search-result { min-width: 0; overflow: hidden; }
 .cm.v2 .solara-search-result a { gap: .75rem; }
 .cm.v2 .solara-search-result img { transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out), filter var(--catalog-v2-motion-component) ease; }
@@ -2766,7 +2766,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   min-height: 54px;
   margin-bottom: 1.75rem;
 }
-.cm.v2 .catalog-category-results .catalog-product-grid{gap:2rem 1.5rem;max-width:55rem}
+.cm.v2 .catalog-category-results .catalog-product-grid{gap:2rem 1.5rem;max-width:52rem}
 .cm.v2 .catalog-product-detail,
 .cm.v2 .catalog-product-tabs,
 .cm.v2 .catalog-product-reviews {
