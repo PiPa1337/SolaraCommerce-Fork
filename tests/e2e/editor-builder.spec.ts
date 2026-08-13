@@ -201,6 +201,35 @@ test("un preset de tema aplica los colores y el preview los refleja", async ({ p
     .toBe("#f5f7f4");
 });
 
+test("la familia Editorial V2 se activa y revierte sin cambiar el contenido", async ({ page }) => {
+  await openBuilder(page);
+  await page.getByRole("tab", { name: "Tema" }).click();
+  await expect(page.getByRole("heading", { name: "Tema" })).toBeVisible();
+
+  const v1 = page.getByTestId("ui-design-family-v1");
+  const v2 = page.getByTestId("ui-design-family-v2");
+  await expect(v1).toHaveAttribute("aria-pressed", "true");
+  await v2.click();
+  await expect(v2).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
+  const preview = page.frameLocator("iframe");
+  await expect(preview.locator('[data-design-family="catalog-modern-v2"]')).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(preview.getByRole("heading", { level: 1 })).toHaveText(
+    "Vestite con lo que te representa.",
+  );
+
+  await v1.click();
+  await expect(v1).toHaveAttribute("aria-pressed", "true");
+  await expect(preview.locator('[data-design-family="catalog-modern-v1"]')).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(preview.getByRole("heading", { level: 1 })).toHaveText(
+    "Vestite con lo que te representa.",
+  );
+});
+
 test("agregar un testimonio genera un ítem válido que commitea y persiste en el preview", async ({
   page,
 }) => {

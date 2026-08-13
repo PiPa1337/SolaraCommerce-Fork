@@ -320,6 +320,13 @@ export function ThemeEditor({
   const updateTheme = (theme: Theme) =>
     onChange({ ...project, theme, updatedAt: new Date().toISOString() });
 
+  const updateDesignFamily = (designFamily: "catalog-modern-v1" | "catalog-modern-v2") =>
+    onChange({
+      ...project,
+      commerceTemplates: { ...project.commerceTemplates, designFamily },
+      updatedAt: new Date().toISOString(),
+    });
+
   const commitColor = (key: keyof Theme["colors"], raw: string) => {
     const next = normalizeHexColor(raw);
     if (next === null) {
@@ -408,6 +415,44 @@ export function ThemeEditor({
         title="Tema"
         description="Un sistema de tokens consistente para todos los módulos de la tienda."
       />
+
+      {project.commerceTemplates.designFamily?.startsWith("catalog-modern") ? (
+        <fieldset className="theme-presets-panel">
+          <legend>Familia visual</legend>
+          <div className="theme-presets">
+            <button
+              type="button"
+              className="theme-preset"
+              data-testid="ui-design-family-v1"
+              aria-pressed={project.commerceTemplates.designFamily === "catalog-modern-v1"}
+              data-active={
+                project.commerceTemplates.designFamily === "catalog-modern-v1" || undefined
+              }
+              onClick={() => updateDesignFamily("catalog-modern-v1")}
+            >
+              <strong>Catálogo clásico V1</strong>
+              <small>Diseño estable original, conservado sin reinterpretar.</small>
+            </button>
+            <button
+              type="button"
+              className="theme-preset"
+              data-testid="ui-design-family-v2"
+              aria-pressed={project.commerceTemplates.designFamily === "catalog-modern-v2"}
+              data-active={
+                project.commerceTemplates.designFamily === "catalog-modern-v2" || undefined
+              }
+              onClick={() => updateDesignFamily("catalog-modern-v2")}
+            >
+              <strong>Editorial V2</strong>
+              <small>Layout amplio, motion progresivo y controles responsive refinados.</small>
+            </button>
+          </div>
+          <p className="inspector-note">
+            Cambia sólo la presentación. Catálogo, contenido, SEO y configuración comercial se
+            conservan.
+          </p>
+        </fieldset>
+      ) : null}
 
       <fieldset className="theme-presets-panel">
         <legend>Paletas</legend>

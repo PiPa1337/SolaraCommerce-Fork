@@ -108,11 +108,12 @@ footer. Las secciones anteriores permanecen como `legacy-editorial-v1` de
 compatibilidad: no se muestran como opciones nuevas, pero siguen renderizando
 proyectos que las usan.
 
-`catalog-modern-v2` se encuentra en evolución incremental y aislada. Conserva
-el mismo modelo `schemaVersion: 2` y reutiliza temporalmente los módulos modernos
-compatibles, pero obtiene una raíz CSS propia y una fixture separada para que
-ningún refinamiento visual o de motion reinterprete tiendas V1 existentes. El
-plan y las referencias aceptadas viven en
+`catalog-modern-v2` se encuentra disponible como familia visual reversible en
+la pestaña Tema. Conserva el mismo modelo `schemaVersion: 2` y reutiliza los
+módulos modernos compatibles, pero obtiene una raíz CSS propia y una fixture
+separada para que ningún refinamiento visual o de motion reinterprete tiendas
+V1 existentes. La activación y los gates se documentan en
+[`docs/STOREFRONT_V2.md`](STOREFRONT_V2.md). El plan y las referencias aceptadas viven en
 [`docs/superpowers/plans/2026-08-12-storefront-v2-motion.md`](superpowers/plans/2026-08-12-storefront-v2-motion.md)
 y [`docs/design-references/catalog-modern-v2/`](design-references/catalog-modern-v2/README.md).
 

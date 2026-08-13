@@ -16,7 +16,7 @@ buscá sus tests con `rg`.
 | Navbar público | `packages/modules/src/index.ts` y estilos | `storefront-runtime`, navigation schema | Mantener enlaces rastreables, teclado, focus return y fallback sin JS. |
 | Footer y shell público | `packages/modules/src/` | `packages/exporter/src/index.ts`, `styles.css` | No mezclar selectores legacy con Catalog Modern sin una decisión explícita. |
 | Hero, cards o bento | `packages/modules/src/index.ts` | module-sdk, fixtures, `styles.css` | Actualizar también `catalogScaleStore` y verificar 390/768/1024/1440. |
-| Tema, colores y tipografías | `apps/studio/src/features/ThemeEditor.tsx`, `packages/modules` | `styles.css`, theme schema | Tokens son el contrato; evitar hardcodear colores en módulos. |
+| Tema, familia V1/V2, colores y tipografías | `apps/studio/src/features/ThemeEditor.tsx`, `packages/modules` | `styles.css`, theme schema, `docs/STOREFRONT_V2.md` | Tokens son el contrato; cambiar familia no migra contenido. |
 | Imágenes y videos | `apps/studio/src/features/Assets.tsx` | `image.worker.ts`, `workers.ts`, exporter | Conservar hash, dimensiones, alt, WebP/fallback y no bloquear UI. |
 | SEO y auditoría | `apps/studio/src/features/Seo.tsx` | exporter, site-optimizer | HTML, JSON-LD, sitemap y feed deben salir del mismo snapshot. |
 | Exportación del sitio | `packages/exporter/src/index.ts` | modules, runtime, `export.worker.ts` | No introducir datos del editor en la carpeta pública; mantener reproducibilidad. |

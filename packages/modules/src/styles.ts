@@ -2443,9 +2443,16 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   letter-spacing: -.006em;
 }
 [data-solara-store].catalog-modern-v2 [data-solara-module="catalog-header"] {
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 30;
+  background: color-mix(in srgb, var(--catalog-paper), transparent 3%);
+  transition: box-shadow var(--catalog-v2-motion-control) ease;
   animation: solara-motion-fade-up var(--catalog-v2-motion-component) var(--catalog-v2-ease-out) both;
+}
+[data-solara-store].catalog-modern-v2 [data-solara-module="catalog-header"][data-scrolled="true"] {
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--catalog-ink), transparent 92%);
+  backdrop-filter: blur(14px);
 }
 [data-solara-store].catalog-modern-v2 [data-solara-module="catalog-hero"] {
   animation: solara-motion-fade-up var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out) 70ms both;
@@ -2460,12 +2467,20 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   width: min(calc(100% - 3rem), var(--catalog-v2-wide));
   min-height: 76px;
   border-color: color-mix(in srgb, var(--catalog-border), transparent 18%);
+  transition: min-height var(--catalog-v2-motion-control) var(--catalog-v2-ease-out);
+}
+[data-solara-store].catalog-modern-v2 [data-scrolled="true"] .catalog-header-inner {
+  min-height: 60px;
 }
 [data-solara-store].catalog-modern-v2 .catalog-brand {
   font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
   font-size: clamp(1.85rem, 2vw, 2.45rem);
   font-weight: 500;
   letter-spacing: -.075em;
+  transition: font-size var(--catalog-v2-motion-control) var(--catalog-v2-ease-out);
+}
+[data-solara-store].catalog-modern-v2 [data-scrolled="true"] .catalog-brand {
+  font-size: 1.7rem;
 }
 [data-solara-store].catalog-modern-v2 .catalog-desktop-nav {
   font-size: .82rem;

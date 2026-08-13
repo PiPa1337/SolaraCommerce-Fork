@@ -737,7 +737,7 @@ function storefrontBoot(): void {
     });
 
   const headers = Array.from(
-    document.querySelectorAll<HTMLElement>('[data-solara-module="editorial-header"]'),
+    document.querySelectorAll<HTMLElement>('[data-solara-module$="-header"]'),
   );
   const sentinel = document.createElement("span");
   let headerObserver: IntersectionObserver | null = null;

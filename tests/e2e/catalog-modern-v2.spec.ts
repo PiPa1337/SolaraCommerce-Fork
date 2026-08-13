@@ -416,3 +416,26 @@ test("V2 conserva contenido y compra directa sin JavaScript", async ({ browser }
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await context.close();
 });
+
+test("V2 activa appear progresivo y compacta el header al hacer scroll", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  await page.goto(serverUrl);
+
+  const header = page.locator('[data-solara-module="catalog-header"]');
+  const headerInner = header.locator(".catalog-header-inner");
+  const products = page.locator('[data-solara-section="modo-section-new"]');
+  const initialHeight = (await headerInner.boundingBox())?.height ?? 0;
+  await expect(products).not.toHaveAttribute("data-motion-visible", "true");
+
+  await products.scrollIntoViewIfNeeded();
+  await expect(products).toHaveAttribute("data-motion-visible", "true");
+  await expect(header).toHaveAttribute("data-scrolled", "true");
+  await expect
+    .poll(async () => (await headerInner.boundingBox())?.height ?? initialHeight)
+    .toBeLessThan(initialHeight);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload();
+  await expect(products).toHaveAttribute("data-motion-visible", "true");
+  await expect(products.locator("[data-motion-zone]")).toHaveCSS("animation-name", "none");
+});
