@@ -440,6 +440,60 @@ test("V2 activa appear progresivo y compacta el header al hacer scroll", async (
   await expect(products.locator("[data-motion-zone]")).toHaveCSS("animation-name", "none");
 });
 
+test("V2 mantiene todas las rutas sin overflow en tablet y laptop", async ({ page }) => {
+  const routes = [
+    "/",
+    "/categorias/remeras/",
+    "/productos/remera-esencial-de-algodon/",
+    "/buscar/",
+    "/carrito/",
+    "/compra/",
+    "/nosotros/",
+    "/contacto/",
+    "/envios/",
+    "/devoluciones/",
+    "/privacidad/",
+    "/terminos/",
+    "/404.html",
+  ] as const;
+
+  for (const viewport of [
+    { width: 768, height: 1024 },
+    { width: 1024, height: 768 },
+    { width: 1366, height: 768 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    for (const route of routes) {
+      await page.goto(new URL(route, serverUrl).toString());
+      await expect(page.locator('[data-design-family="catalog-modern-v2"]')).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+      const metrics = await page.evaluate(() => {
+        const root = document.querySelector<HTMLElement>("[data-solara-store]");
+        const rootRect = root?.getBoundingClientRect();
+        return {
+          documentWidth: document.documentElement.scrollWidth,
+          bodyWidth: document.body.scrollWidth,
+          clientWidth: document.documentElement.clientWidth,
+          rootLeft: rootRect?.left ?? -1,
+          rootRight: rootRect?.right ?? Number.POSITIVE_INFINITY,
+        };
+      });
+      expect(
+        metrics.documentWidth,
+        `${route} @ ${viewport.width}x${viewport.height}`,
+      ).toBeLessThanOrEqual(viewport.width);
+      expect(
+        metrics.bodyWidth,
+        `${route} body @ ${viewport.width}x${viewport.height}`,
+      ).toBeLessThanOrEqual(viewport.width);
+      expect(metrics.clientWidth).toBe(viewport.width);
+      expect(metrics.rootLeft).toBeGreaterThanOrEqual(0);
+      expect(metrics.rootRight).toBeLessThanOrEqual(viewport.width);
+    }
+  }
+});
+
 test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, testInfo) => {
   const routes = [
     ["buscar", "/buscar/"],
