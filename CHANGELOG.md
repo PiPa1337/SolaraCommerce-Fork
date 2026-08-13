@@ -1,5 +1,12 @@
 # Changelog
 
+### Búsqueda V2 y escala de resultados (2026-08-13)
+
+- La grilla de resultados queda alineada con el ancho máximo de las cards del
+  resto del storefront V2.
+- Las imágenes de búsqueda declaran tamaños compactos para mobile, tablet y
+  desktop, evitando solicitar variantes más grandes que el espacio real.
+
 ### Flujo de seguir comprando en el carrito V2 (2026-08-13)
 
 - El drawer ofrece una acción visible para cerrar y continuar recorriendo la

@@ -933,6 +933,7 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
   const searchUrl = new URL("/buscar/?q=remera", serverUrl).toString();
   for (const viewport of [
     { width: 1920, height: 968, columns: 4 },
+    { width: 1024, height: 768, columns: 3 },
     { width: 390, height: 844, columns: 2 },
   ]) {
     await page.setViewportSize(viewport);
@@ -945,9 +946,9 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
     );
     await expect(results.locator("img").first()).toHaveAttribute(
       "sizes",
-      "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(21.5vw, 13rem)",
+      "(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem",
     );
-    if (viewport.width === 1920) {
+    if (viewport.width >= 1024) {
       const resultsMetrics = await results.evaluate((element) => {
         const gridRect = element.getBoundingClientRect();
         const cardRect = element
@@ -955,10 +956,15 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
           ?.getBoundingClientRect();
         return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
       });
-      expect(resultsMetrics.gridWidth).toBeGreaterThan(880);
+      expect(resultsMetrics.gridWidth).toBeGreaterThan(800);
       expect(resultsMetrics.gridWidth).toBeLessThanOrEqual(880);
-      expect(resultsMetrics.cardWidth).toBeGreaterThan(195);
-      expect(resultsMetrics.cardWidth).toBeLessThan(215);
+      if (viewport.width === 1920) {
+        expect(resultsMetrics.cardWidth).toBeGreaterThan(195);
+        expect(resultsMetrics.cardWidth).toBeLessThan(215);
+      } else {
+        expect(resultsMetrics.cardWidth).toBeGreaterThan(250);
+        expect(resultsMetrics.cardWidth).toBeLessThan(300);
+      }
     }
     expect(
       await results.evaluate(

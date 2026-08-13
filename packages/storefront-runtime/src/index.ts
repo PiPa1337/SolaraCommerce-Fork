@@ -1259,7 +1259,7 @@ function storefrontBoot(): void {
             searchResults.innerHTML = `<p class="solara-search-summary">${ranked.length} resultados para “${escapeText(query)}”</p>${cutNotice}<div class="solara-search-results-grid">${shown
               .map(
                 ({ entry }) =>
-                  `<article class="solara-search-result"><a href="${escapeAttribute(entry.path)}">${entry.imageUrl ? `<img src="${escapeAttribute(entry.imageUrl)}" alt="${escapeAttribute(entry.title)}" width="${entry.imageWidth ?? 1}" height="${entry.imageHeight ?? 1}" sizes="(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(21.5vw, 13rem)" loading="lazy">` : ""}<div><h2>${escapeText(entry.title)}</h2><p>${escapeText(entry.brand)}</p><strong>${money.format(entry.priceMin / 100)}</strong></div></a></article>`,
+                  `<article class="solara-search-result"><a href="${escapeAttribute(entry.path)}">${entry.imageUrl ? `<img src="${escapeAttribute(entry.imageUrl)}" alt="${escapeAttribute(entry.title)}" width="${entry.imageWidth ?? 1}" height="${entry.imageHeight ?? 1}" sizes="(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem" loading="lazy">` : ""}<div><h2>${escapeText(entry.title)}</h2><p>${escapeText(entry.brand)}</p><strong>${money.format(entry.priceMin / 100)}</strong></div></a></article>`,
               )
               .join("")}</div>`;
           })

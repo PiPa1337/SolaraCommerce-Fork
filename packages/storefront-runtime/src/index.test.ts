@@ -306,6 +306,12 @@ describe("pausa y reanudación del runtime (contrato A3↔A4)", () => {
     );
     expect(STOREFRONT_RUNTIME_JS).toContain('setAttribute("aria-disabled"');
   });
+
+  it("declara sizes compactos para la grilla de resultados de búsqueda", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      'sizes="(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem"',
+    );
+  });
 });
 
 describe("carrito y checkout del drawer (A29)", () => {
