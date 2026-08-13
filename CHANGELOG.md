@@ -45,6 +45,9 @@ versión publicada.
 - La búsqueda con resultados informa la cantidad real y recompone su grilla en
   cuatro, tres o dos columnas según el espacio, con metadata abierta y hover de
   imagen sin reflow.
+- El runtime deja de serializar una copia pública de `matchToken` que el sitio
+  no consumía; la función conserva sus tests unitarios y el JavaScript público
+  recupera 1.250 B de margen sin cambiar ranking, sugerencias ni navegación.
 - Tema permite activar o revertir Editorial V2 sin migrar contenido ni cambiar
   el schema; el header se compacta al hacer scroll y los appears usan un observer compartido.
 - Búsqueda separa correctamente título, ayuda y formulario en móvil; la página

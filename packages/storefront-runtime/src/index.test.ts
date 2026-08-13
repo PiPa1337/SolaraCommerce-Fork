@@ -67,9 +67,9 @@ describe("storefront runtime", () => {
 
   it("serializa los helpers de búsqueda dentro del runtime público", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("function levenshtein");
-    expect(STOREFRONT_RUNTIME_JS).toContain("function matchToken");
     expect(STOREFRONT_RUNTIME_JS).toContain("function scoreEntry");
     expect(STOREFRONT_RUNTIME_JS).toContain("function normalizeSearchTokens");
+    expect(STOREFRONT_RUNTIME_JS).not.toContain("const matchToken = function matchToken");
     expect(STOREFRONT_RUNTIME_JS).toContain("storefrontBoot");
   });
 
@@ -82,7 +82,7 @@ describe("storefront runtime", () => {
     );
     expect(STOREFRONT_RUNTIME_JS).toContain("const scoreEntry = function scoreEntry");
     expect(STOREFRONT_RUNTIME_JS).toContain(
-      "globalThis.__solaraSearchHelpers = { normalizeSearchTokens, levenshtein, matchToken, scoreEntry }",
+      "globalThis.__solaraSearchHelpers = { normalizeSearchTokens, levenshtein, scoreEntry }",
     );
     expect(STOREFRONT_RUNTIME_JS).toContain("searchApi.normalizeSearchTokens");
     expect(STOREFRONT_RUNTIME_JS).toContain("searchApi.scoreEntry");
@@ -90,7 +90,7 @@ describe("storefront runtime", () => {
   });
 
   it("mantiene el runtime por debajo de 53 KB crudos", () => {
-    // Medición real al 2026-08-11: runtime JS 54.259 B en bytes crudos (sin gzip).
+    // Medición real al 2026-08-13: runtime JS 52.993 B en bytes crudos (sin gzip).
     expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(53 * 1024);
   });
 });

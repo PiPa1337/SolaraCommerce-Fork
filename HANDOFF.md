@@ -89,7 +89,7 @@ Se ejecutaron con resultado exitoso:
 - `corepack pnpm check:budgets` (bytes crudos): Studio JS ≤ 700 KiB y CSS
   ≤ 100 KiB; runtime público JS ≤ 53 KiB (medido 54.226 B) y CSS ≤ 8 KiB
   (medido 7.486 B); la foundation `catalog-modern-v2` conserva sus topes de
-  104 KiB CSS (104.966 B) y 53 KiB JavaScript (54.243 B) sin elevarlos para
+  104 KiB CSS (104.966 B) y 53 KiB JavaScript (52.993 B) sin elevarlos para
   búsqueda, carrito completo, políticas o recuperación 404.
 - `corepack pnpm pilot:preflight`: fixture de referencia, 27 páginas y 3
   ofertas.

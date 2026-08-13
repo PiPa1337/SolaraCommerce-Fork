@@ -4,19 +4,11 @@
  * dejar contenido y navegación utilizables cuando JavaScript falla.
  */
 import type { Product, StoreProjectV1, Variant } from "@solara/project-schema";
-import {
-  levenshtein,
-  matchToken,
-  normalizeSearchTokens,
-  type SearchEntryTokens,
-  scoreEntry,
-  type TokenMatch,
-} from "./search";
+import { levenshtein, normalizeSearchTokens, type SearchEntryTokens, scoreEntry } from "./search";
 
 interface SearchApi {
   normalizeSearchTokens: (value: string) => string[];
   levenshtein: (a: string, b: string) => number;
-  matchToken: (term: string, token: string) => TokenMatch;
   scoreEntry: (queryTerms: readonly string[], entry: SearchEntryTokens) => number;
 }
 
@@ -1478,7 +1470,6 @@ function storefrontBoot(): void {
 const SEARCH_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unknown]> = [
   ["normalizeSearchTokens", normalizeSearchTokens],
   ["levenshtein", levenshtein],
-  ["matchToken", matchToken],
   ["scoreEntry", scoreEntry],
 ];
 

@@ -39,11 +39,13 @@ export function levenshtein(a: string, b: string): number {
 
 export type TokenMatch = "exact" | "prefix" | "substring" | "fuzzy" | null;
 
+/**
+ * Autocontenida porque el runtime serializa `fn.toString()` y un minificador
+ * puede renombrar referencias cruzadas. La copia privada de Levenshtein evita
+ * ese enlace roto. Los términos de un carácter se rechazan para no convertir
+ * cualquier coincidencia parcial en ruido.
+ */
 export function matchToken(term: string, token: string): TokenMatch {
-  // Función autocontenida a propósito: el runtime público se serializa con
-  // fn.toString() (STOREFRONT_RUNTIME_JS) y esbuild renombra las referencias
-  // cruzadas al minificar, dejando nombres mangled sin enlazar en el string
-  // serializado. `distance` es una copia privada del algoritmo de levenshtein.
   const distance = (a: string, b: string): number => {
     if (a === b) return 0;
     const shorter = a.length <= b.length ? a : b;
@@ -66,10 +68,6 @@ export function matchToken(term: string, token: string): TokenMatch {
     return current[shorter.length] as number;
   };
 
-  // Términos vacíos o de 1 carácter no matchean por prefijo/substring/fuzzy:
-  // un término de 1 carácter como substring casaría TODO token que contenga
-  // esa letra y el ranking se degradaría a ruido (el runtime pide al menos 2
-  // caracteres por término).
   if (term === "" || token === "") return null;
   if (term === token) return "exact";
   if (term.length === 1) return null;
@@ -88,13 +86,12 @@ export interface SearchEntryTokens {
   description: string[];
 }
 
+/**
+ * Mantiene copias privadas del matcher y sus pesos porque esta función también
+ * se serializa de forma aislada. Sus límites deben permanecer idénticos a
+ * `matchToken`: mínimo dos caracteres y distancia máxima 1/2 según longitud.
+ */
 export function scoreEntry(queryTerms: readonly string[], entry: SearchEntryTokens): number {
-  // Copias privadas autocontenidas (distance + match) por el mismo motivo que
-  // en matchToken: el runtime público serializa fn.toString() y esbuild
-  // renombraría las referencias a levenshtein/matchToken al minificar.
-  // Los límites deben ser idénticos a matchToken: término/token vacío o de 1
-  // carácter → null; token/term < 3 → null para fuzzy; token <= 4 → límite 1,
-  // si no → límite 2.
   const distance = (a: string, b: string): number => {
     if (a === b) return 0;
     const shorter = a.length <= b.length ? a : b;
@@ -126,8 +123,6 @@ export function scoreEntry(queryTerms: readonly string[], entry: SearchEntryToke
     const limit = token.length <= 4 ? 1 : 2;
     return distance(term, token) <= limit ? "fuzzy" : null;
   };
-  // Estos pesos deben permanecer dentro de la función: el runtime público
-  // serializa el fuente de las funciones y no incluiría las consts de módulo.
   const MATCH_WEIGHT: Record<Exclude<TokenMatch, null>, number> = {
     exact: 10,
     prefix: 7,

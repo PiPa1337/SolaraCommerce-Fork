@@ -8,7 +8,7 @@ test("mantiene el runtime storefront dentro del presupuesto en bytes crudos", ()
   const javascriptBytes = Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8");
   const cssBytes = Buffer.byteLength(STOREFRONT_RUNTIME_CSS, "utf8");
 
-  // Medición real al 2026-08-11: runtime JS 54.259 B, runtime CSS 7.486 B.
+  // Medición real al 2026-08-13: runtime JS 52.993 B, runtime CSS 7.486 B.
   // El runtime incluye controles de testimonios exportados desde 2026-08-11.
   console.log({
     storefrontRuntimeJavascriptRaw: javascriptBytes,
