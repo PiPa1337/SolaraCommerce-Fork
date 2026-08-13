@@ -1,5 +1,20 @@
 # Changelog
 
+### Hero V2 sin cortes de palabras (2026-08-13)
+
+- El hero de Catalog Modern V2 conserva palabras completas en el título y
+  amplía de forma controlada la columna editorial para evitar cortes dentro de
+  la palabra o invasión visual sobre la imagen en desktop y mobile.
+- Se agregó una regresión responsive que comprueba que `representa.` no se
+  fragmente en ningún viewport cubierto.
+
+### Cards V2 con escala más contenida (2026-08-13)
+
+- La grilla principal de productos V2 reduce levemente su ancho máximo para
+  mantener cards más proporcionadas y mejor separadas en desktop.
+- El atributo `sizes` de sus imágenes refleja la nueva medida renderizada para
+  evitar descargar una variante mayor de la necesaria.
+
 Todos los cambios notables de SolaraCommerce se documentan en este archivo.
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y

@@ -90,7 +90,23 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
       overflowWrap: getComputedStyle(element).overflowWrap,
       wordBreak: getComputedStyle(element).wordBreak,
     })),
-  ).toEqual({ overflowWrap: "break-word", wordBreak: "normal" });
+  ).toEqual({ overflowWrap: "normal", wordBreak: "normal" });
+  expect(
+    await page.locator(".catalog-hero-copy h1").evaluate((element) => {
+      const node = element.firstChild;
+      if (!node || node.nodeType !== Node.TEXT_NODE) return [];
+      const words = (node.textContent ?? "").match(/\S+/g) ?? [];
+      let offset = 0;
+      return words.map((word) => {
+        const start = (node.textContent ?? "").indexOf(word, offset);
+        const range = document.createRange();
+        range.setStart(node, start);
+        range.setEnd(node, start + word.length);
+        offset = start + word.length;
+        return { word, rects: range.getClientRects().length };
+      });
+    }),
+  ).toEqual(expect.arrayContaining([expect.objectContaining({ word: "representa.", rects: 1 })]));
 
   const heroMetrics = await page.locator(".catalog-hero-inner").evaluate((element) => {
     const rect = element.getBoundingClientRect();
@@ -134,10 +150,10 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
       ?.getBoundingClientRect();
     return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
   });
-  expect(gridMetrics.gridWidth).toBeGreaterThan(1020);
-  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(1040);
-  expect(gridMetrics.cardWidth).toBeGreaterThan(230);
-  expect(gridMetrics.cardWidth).toBeLessThan(250);
+  expect(gridMetrics.gridWidth).toBeGreaterThan(960);
+  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(980);
+  expect(gridMetrics.cardWidth).toBeGreaterThan(215);
+  expect(gridMetrics.cardWidth).toBeLessThan(235);
   const firstMedia = grid.locator(".catalog-product-media").first();
   const mediaRatio = await firstMedia.evaluate((element) => {
     const rect = element.getBoundingClientRect();
@@ -148,7 +164,7 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   const image = firstMedia.locator("img");
   await expect(image).toHaveAttribute(
     "sizes",
-    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(23.5vw, 15rem)",
+    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(22.5vw, 14.25rem)",
   );
   const initialTransform = await image.evaluate((element) => getComputedStyle(element).transform);
   await firstMedia.hover();
@@ -193,6 +209,15 @@ test("V2 ajusta las imágenes al ancho renderizado y mantiene una galería PDP u
   await thumbs.nth(1).click();
   await expect(figures.nth(1)).toHaveAttribute("data-gallery-active", "true");
   await expect(thumbs.nth(1)).toHaveAttribute("aria-current", "true");
+  const relatedImages = page.locator(".solara-related-products .catalog-product-card-image");
+  await expect(relatedImages).toHaveCount(4);
+  await expect
+    .poll(() =>
+      relatedImages.evaluateAll(
+        (images) => images.filter((image) => image.complete && image.naturalWidth > 0).length,
+      ),
+    )
+    .toBe(4);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(productUrl);
@@ -262,6 +287,22 @@ test("V2 mantiene CTA, dos columnas y reduced motion en 390x844", async ({ page 
       .first()
       .evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length),
   ).toBe(2);
+  expect(
+    await page.locator(".catalog-hero-copy h1").evaluate((element) => {
+      const node = element.firstChild;
+      if (!node || node.nodeType !== Node.TEXT_NODE) return [];
+      const words = (node.textContent ?? "").match(/\S+/g) ?? [];
+      let offset = 0;
+      return words.map((word) => {
+        const start = (node.textContent ?? "").indexOf(word, offset);
+        const range = document.createRange();
+        range.setStart(node, start);
+        range.setEnd(node, start + word.length);
+        offset = start + word.length;
+        return { word, rects: range.getClientRects().length };
+      });
+    }),
+  ).toEqual(expect.arrayContaining([expect.objectContaining({ word: "representa.", rects: 1 })]));
 
   await revealWholePage(page);
   await expect(page.locator(".catalog-product-card").last()).toHaveCSS("opacity", "1");

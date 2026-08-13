@@ -2514,7 +2514,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   background: transparent;
 }
 .cm.v2 .catalog-hero-inner {
-  grid-template-columns: minmax(20rem, .78fr) minmax(0, 1.22fr);
+  grid-template-columns: minmax(20rem, .84fr) minmax(0, 1.16fr);
   width: min(calc(100% - 3rem), var(--catalog-v2-wide));
   height: 90svh;
   min-height: 0;
@@ -2537,13 +2537,14 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   letter-spacing: .2em;
 }
 .cm.v2 .catalog-hero-copy h1 {
-  max-width: 9.5ch;
+  max-width: 100%;
   font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
-  font-size: calc(clamp(4rem, 5.2vw, 6.4rem) * var(--solara-type-scale, 1));
+  font-size: calc(clamp(3.8rem, 5vw, 6rem) * var(--solara-type-scale, 1));
   font-weight: 500;
   letter-spacing: -.065em;
   line-height: .88;
-  overflow-wrap: break-word;
+  overflow-wrap: normal;
+  hyphens: none;
   word-break: normal;
   text-wrap: balance;
 }
@@ -2617,7 +2618,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-product-grid {
   gap: clamp(1.5rem, 2.4vw, 3rem) clamp(.8rem, 1.4vw, 1.6rem);
-  max-width: 1040px;
+  max-width: 980px;
   margin: 0 auto;
 }
 .cm.v2 .catalog-product-card {
@@ -3038,8 +3039,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     padding: 2.75rem 1rem 2rem;
   }
   .cm.v2 .catalog-hero-copy h1 {
-    max-width: 8ch;
-    font-size: calc(clamp(3.45rem, 15vw, 5.5rem) * var(--solara-type-scale, 1));
+    max-width: 100%;
+    font-size: calc(clamp(3.25rem, 14vw, 5.2rem) * var(--solara-type-scale, 1));
   }
   .cm.v2 .catalog-hero-media {
     min-height: 42svh;
