@@ -43,6 +43,8 @@ versión publicada.
   panorámica, equilibrando el peso del título y mejorando su lectura en mobile.
 - La búsqueda V2 comparte el límite de `1520px` de la home y sus resultados
   declaran `sizes` responsive para no solicitar imágenes mayores que sus cards.
+- La navegación V2 mantiene visible la ruta activa en desktop y conserva su
+  `aria-current` en el menú móvil para orientar mejor al visitante.
 - La página de producto V2 mantiene márgenes horizontales simétricos, elimina
   el desborde lateral y pasa a una columna en tabletas para conservar la
   jerarquía y la legibilidad.

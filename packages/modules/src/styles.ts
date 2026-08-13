@@ -2504,7 +2504,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   transition: transform var(--catalog-v2-motion-control) var(--catalog-v2-ease-out);
 }
 .cm.v2 .catalog-desktop-nav > a:hover::after,
-.cm.v2 .catalog-desktop-nav summary:hover::after {
+.cm.v2 .catalog-desktop-nav summary:hover::after,
+.cm.v2 .catalog-desktop-nav [aria-current="page"]::after {
   transform: scaleX(1);
   transform-origin: left;
 }

@@ -526,6 +526,23 @@ test("V2 conserva nombres accesibles, foco visible y navegacion por teclado", as
   await expect(openMenu).toBeFocused();
 });
 
+test("V2 indica la ruta activa en la navegacion", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  await page.goto(new URL("/contacto/", serverUrl).toString());
+  const activeDesktopLink = page.locator('.catalog-desktop-nav [aria-current="page"]');
+  await expect(activeDesktopLink).toHaveText("Contacto");
+  expect(
+    await activeDesktopLink.evaluate((element) => getComputedStyle(element, "::after").transform),
+  ).not.toBe("matrix(0, 0, 0, 1, 0, 0)");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(new URL("/categorias/remeras/", serverUrl).toString());
+  await page.locator("[data-catalog-menu-open]").click();
+  await expect(
+    page.locator('.catalog-mobile-categories > summary[aria-current="page"]'),
+  ).toBeVisible();
+});
+
 test("V2 conserva contenido y compra directa sin JavaScript", async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
