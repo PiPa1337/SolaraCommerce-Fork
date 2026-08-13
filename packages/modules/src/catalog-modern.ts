@@ -551,7 +551,7 @@ function modernProductCardImageSizes(
     return "(max-width: 640px) 44vw, (max-width: 1024px) 30vw, 23vw";
   }
   if (context.pageType === "category") {
-    return "(max-width: 767px) calc((100vw - 2.2rem) / 2), calc((100vw - 18rem) / 3)";
+    return "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1279px) calc((100vw - 24rem) / 3), min(30vw, 17.75rem)";
   }
   return "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(22.5vw, 14.25rem)";
 }

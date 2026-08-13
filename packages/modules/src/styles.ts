@@ -2766,9 +2766,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   min-height: 54px;
   margin-bottom: 1.75rem;
 }
-.cm.v2 .catalog-category-results .catalog-product-grid {
-  gap: clamp(2rem, 3vw, 4rem) clamp(1rem, 1.8vw, 2rem);
-}
+.cm.v2 .catalog-category-results .catalog-product-grid{gap:2rem 1.5rem;max-width:57rem}
 .cm.v2 .catalog-product-detail,
 .cm.v2 .catalog-product-tabs,
 .cm.v2 .catalog-product-reviews {

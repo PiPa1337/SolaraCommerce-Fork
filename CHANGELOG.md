@@ -1,5 +1,11 @@
 # Changelog
 
+### Cards de categoría V2 (2026-08-13)
+
+- Las cards de categoría reducen levemente su rail máximo y declaran un `sizes`
+  acorde al ancho renderizado para mantener una escala más aireada y descargar
+  imágenes proporcionales al espacio real.
+
 ### Hero V2 sin cortes de palabras (2026-08-13)
 
 - El hero de Catalog Modern V2 conserva palabras completas en el título y

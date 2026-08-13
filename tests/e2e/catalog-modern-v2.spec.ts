@@ -351,6 +351,20 @@ test("V2 ordena categoría y filtros como rail editorial y sheet móvil", async 
       (element) => getComputedStyle(element).gridTemplateColumns.split(" ").length,
     ),
   ).toBe(3);
+  const categoryGridMetrics = await grid.evaluate((element) => {
+    const gridRect = element.getBoundingClientRect();
+    const cardRect = element
+      .querySelector<HTMLElement>(".catalog-product-card")
+      ?.getBoundingClientRect();
+    return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
+  });
+  expect(categoryGridMetrics.gridWidth).toBeGreaterThan(880);
+  expect(categoryGridMetrics.gridWidth).toBeLessThanOrEqual(912);
+  expect(categoryGridMetrics.cardWidth).toBeGreaterThan(265);
+  expect(categoryGridMetrics.cardWidth).toBeLessThan(295);
+  expect(await grid.locator(".catalog-product-card-image").first().getAttribute("sizes")).toBe(
+    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1279px) calc((100vw - 24rem) / 3), min(30vw, 17.75rem)",
+  );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1920);
   await revealWholePage(page);
   await page.screenshot({ path: testInfo.outputPath("category-1920x968.png"), fullPage: true });
