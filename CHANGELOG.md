@@ -23,6 +23,23 @@ versión publicada.
 - Las animaciones de aparición usan su línea de entrada como límite real de
   intersección, incluso cuando una sección alta ya asoma parcialmente en el
   viewport.
+- Las cards de productos y categorías ahora comunican el mismo estado activo
+  con mouse y teclado; los enlaces de colección tienen una línea de acción
+  progresiva y estados pressed/focus coherentes.
+- El preview embebido del portable ya no queda atascado en "Cargando vista
+  previa": Electron puede montar el `srcdoc` aislado y mostrar la tienda V2.
+- En navegadores HTTP el preview conserva el sandbox opaco más restrictivo; el
+  permiso adicional de origen se limita al protocolo Electron, donde es
+  necesario para montar `srcdoc` sin degradar la carga del editor.
+- Las imágenes importadas generan candidatos responsive desde `320px` hasta
+  `1800px`, y las cards, galerías y miniaturas declaran el ancho real que
+  ocupan según desktop, tablet o mobile.
+- Los productos de las fixtures deterministas muestran una galería de tres
+  imágenes con miniaturas navegables; la grilla V2 limita su ancho para que
+  las cards no resulten excesivamente grandes en pantallas amplias.
+- La página de producto V2 mantiene márgenes horizontales simétricos, elimina
+  el desborde lateral y pasa a una columna en tabletas para conservar la
+  jerarquía y la legibilidad.
 - `Predeterminado` se crea directamente con Editorial V2 en instalaciones
   nuevas; las tiendas personales y las tiendas V1 existentes no se migran de
   forma implícita.

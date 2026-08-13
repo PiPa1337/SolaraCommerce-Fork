@@ -14,6 +14,7 @@ import {
   DEPRECATED_CATEGORY_CLEANUP_SENTINEL,
   database,
   duplicateProject,
+  ensureCatalogModernDemoGallery,
   ensureCatalogModernDemoReviews,
   ensureDeprecatedCategoriesRemoved,
   ensureScaleDemoProject,
@@ -307,6 +308,25 @@ describe("repositorio local", () => {
     expect((await getProject(staleDemo.id))?.products[0]?.reviews).toHaveLength(6);
     expect(await getProject(referenceStore.id)).toEqual(referenceStore);
     expect(await ensureCatalogModernDemoReviews()).toBe(false);
+  });
+
+  it("amplía la galería del demo sin reescribir imágenes personalizadas", async () => {
+    const staleDemo = StoreProjectV1Schema.parse({
+      ...structuredClone(catalogModernStore),
+      id: SCALE_DEMO_PROJECT_ID,
+      products: catalogModernStore.products.map((product, index) =>
+        index === 0 ? { ...product, imageIds: product.imageIds.slice(0, 1) } : product,
+      ),
+    });
+    await saveProject(staleDemo);
+    await saveProject(referenceStore);
+
+    expect(await ensureCatalogModernDemoGallery()).toBe(true);
+    const expanded = await getProject(staleDemo.id);
+    expect(expanded?.products[0]?.imageIds).toHaveLength(3);
+    expect(expanded?.products[0]?.imageIds[0]).toBe(staleDemo.products[0]?.imageIds[0]);
+    expect(await getProject(referenceStore.id)).toEqual(referenceStore);
+    expect(await ensureCatalogModernDemoGallery()).toBe(false);
   });
 });
 

@@ -29,7 +29,7 @@ export interface ProcessedImage {
   responsive: Array<{ width: number; source: string }>;
 }
 
-const IMAGE_WIDTHS = [480, 768, 1200, 1800] as const;
+const IMAGE_WIDTHS = [320, 480, 640, 768, 1024, 1280, 1600, 1800] as const;
 
 function fallbackImagePlan(sourceWidth: number, sourceHeight: number, maxWidth = 1800) {
   const width = Math.min(sourceWidth, Math.max(1, Math.min(Math.floor(maxWidth), 1800)));

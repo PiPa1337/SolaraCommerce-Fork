@@ -544,6 +544,18 @@ function productCategory(
   })[0];
 }
 
+function modernProductCardImageSizes(
+  context: Parameters<NonNullable<(typeof catalogProductGrid)["render"]>>[0],
+): string {
+  if (context.project.commerceTemplates.designFamily !== "catalog-modern-v2") {
+    return "(max-width: 640px) 44vw, (max-width: 1024px) 30vw, 23vw";
+  }
+  if (context.pageType === "category") {
+    return "(max-width: 767px) calc((100vw - 2.2rem) / 2), calc((100vw - 18rem) / 3)";
+  }
+  return "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(23.5vw, 23.75rem)";
+}
+
 function modernProductCard(
   context: Parameters<NonNullable<(typeof catalogProductGrid)["render"]>>[0],
   product: Product,
@@ -560,7 +572,7 @@ function modernProductCard(
     className: "catalog-product-card-image",
     loading: index < 4 ? "eager" : "lazy",
     fetchPriority: index < 4 ? "high" : "auto",
-    sizes: "(max-width: 640px) 44vw, (max-width: 1024px) 30vw, 280px",
+    sizes: modernProductCardImageSizes(context),
     fallbackAlt: product.title,
   });
   return `<article class="catalog-product-card" data-product-card data-product-id="${escapeAttribute(product.id)}" data-product-title="${escapeAttribute(product.title)}"${category ? ` data-product-category="${escapeAttribute(category.id)}"` : ""}><a class="catalog-product-media" href="/productos/${escapeAttribute(product.slug)}/" aria-label="Ver ${escapeAttribute(product.title)}">${image}</a><div class="catalog-product-card-copy">${category ? `<p class="catalog-product-category">${escapeHtml(category.title)}</p>` : ""}<h3><a href="/productos/${escapeAttribute(product.slug)}/">${escapeHtml(product.title)}</a></h3>${reviewSummary ? `<p class="catalog-product-rating" aria-label="${reviewSummary.average.toFixed(1)} de 5">${"★".repeat(Math.round(reviewSummary.average))}<span>${reviewSummary.average.toFixed(1)} / 5 · ${reviewSummary.count} reseñas</span></p>` : ""}<p class="catalog-product-price"><strong>${escapeHtml(formatMoney(price))}</strong>${compare && compare > price ? ` <del>${escapeHtml(formatMoney(compare))}</del><span class="catalog-discount">-${Math.round((1 - price / compare) * 100)}%</span>` : ""}</p></div></article>`;
@@ -699,6 +711,7 @@ export const catalogProductDetail: ModuleDefinition<
         "catalog-product-detail",
         context.section,
         safeHtml('<p class="catalog-empty">Este producto no está disponible.</p>'),
+        { className: "catalog-product-detail" },
       );
     }
     const firstVariant =
@@ -716,7 +729,10 @@ export const catalogProductDetail: ModuleDefinition<
           className: "catalog-product-gallery-image",
           loading: index === 0 ? "eager" : "lazy",
           fetchPriority: index === 0 ? "high" : "auto",
-          sizes: "(max-width: 767px) 92vw, 54vw",
+          sizes:
+            context.project.commerceTemplates.designFamily === "catalog-modern-v2"
+              ? "(max-width: 767px) 92vw, (max-width: 1199px) 94vw, 60vw"
+              : "(max-width: 767px) 92vw, 54vw",
           fallbackAlt: product.title,
         });
         return `<figure data-gallery-image-id="${escapeAttribute(assetId)}" data-gallery-active="${String(index === 0)}">${image}</figure>`;
@@ -727,7 +743,10 @@ export const catalogProductDetail: ModuleDefinition<
         const image = renderImage(context.project, assetId, {
           className: "catalog-product-gallery-thumb",
           loading: "lazy",
-          sizes: "5rem",
+          sizes:
+            context.project.commerceTemplates.designFamily === "catalog-modern-v2"
+              ? "5.5rem"
+              : "5rem",
           fallbackAlt: `${product.title}, imagen ${index + 1}`,
         });
         return `<button type="button" data-gallery-thumb="${escapeAttribute(assetId)}" aria-label="Ver imagen ${index + 1}" aria-current="${String(index === 0)}">${image}</button>`;
@@ -820,6 +839,7 @@ export const catalogProductDetail: ModuleDefinition<
           <div id="${escapeAttribute(policiesPanelId)}" class="catalog-product-policies" data-product-tab-panel="policies"><details><summary>Envíos</summary><p>${escapeHtml(context.project.policies.shipping.details)}</p></details><details><summary>Cambios y devoluciones</summary><p>${escapeHtml(context.project.policies.returns.details)}</p></details></div>
         </div>
       </div>${productTabs}${reviewSection}</div>`),
+      { className: "catalog-product-detail" },
     );
   },
 };

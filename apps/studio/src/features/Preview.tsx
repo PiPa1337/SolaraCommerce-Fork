@@ -240,6 +240,10 @@ export function Preview({
   const pausedRef = useRef(false);
   const intersectingRef = useRef(true);
   const visibleRef = useRef(!document.hidden);
+  const previewSandbox =
+    typeof window !== "undefined" && window.location.protocol === "solara:"
+      ? "allow-forms allow-scripts allow-same-origin"
+      : "allow-forms allow-scripts";
 
   /**
    * Contrato con el runtime del storefront (Task A4): un postMessage
@@ -368,7 +372,10 @@ export function Preview({
               ref={attachPreviewObserver}
               title={`Vista previa ${size}`}
               srcDoc={html}
-              sandbox="allow-forms allow-scripts"
+              // Electron no carga srcdoc con origen opaco; conserva su origen
+              // sólo en el protocolo portable. En HTTP mantiene el sandbox
+              // más restrictivo y evita el warning de Chromium.
+              sandbox={previewSandbox}
               style={zoom !== 100 ? { zoom: zoom / 100 } : undefined}
               onLoad={() => {
                 setIframeReady(true);

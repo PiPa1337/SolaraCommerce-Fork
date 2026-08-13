@@ -2616,11 +2616,14 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-product-grid {
   gap: clamp(1.5rem, 2.4vw, 3rem) clamp(.8rem, 1.4vw, 1.6rem);
+  max-width: 1600px;
+  margin: 0 auto;
 }
 .cm.v2 .catalog-product-card {
   transition: transform var(--catalog-v2-motion-component) var(--catalog-v2-ease-out);
 }
-.cm.v2 .catalog-product-card:hover {
+.cm.v2 .catalog-product-card:hover,
+.cm.v2 .catalog-product-card:focus-within {
   transform: translateY(-6px);
 }
 .cm.v2 .catalog-product-media {
@@ -2630,7 +2633,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-product-card-image {
   transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out), filter var(--catalog-v2-motion-component) ease;
 }
-.cm.v2 .catalog-product-card:hover .catalog-product-card-image {
+.cm.v2 .catalog-product-card:hover .catalog-product-card-image,
+.cm.v2 .catalog-product-card:focus-within .catalog-product-card-image {
   transform: scale(1.055);
   filter: saturate(1.04) contrast(1.02);
 }
@@ -2645,10 +2649,28 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   letter-spacing: -.02em;
 }
 .cm.v2 .catalog-view-all {
+  position: relative;
+  border-bottom: 0;
   padding-bottom: .2rem;
   font-size: .72rem;
   letter-spacing: .08em;
   text-transform: uppercase;
+}
+.cm.v2 .catalog-view-all::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  transform: scaleX(.35);
+  transform-origin: left;
+  background: currentcolor;
+  content: "";
+  transition: transform var(--catalog-v2-motion-control) var(--catalog-v2-ease-out);
+}
+.cm.v2 .catalog-view-all:hover::after,
+.cm.v2 .catalog-view-all:focus-visible::after {
+  transform: scaleX(1);
 }
 .cm.v2 .catalog-category-bento-section {
   margin-top: 0;
@@ -2658,6 +2680,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-category-bento-item {
   overflow: hidden;
   border-radius: 0;
+  transition: transform var(--catalog-v2-motion-component) var(--catalog-v2-ease-out), box-shadow var(--catalog-v2-motion-component) var(--catalog-v2-ease-out);
 }
 .cm.v2 .catalog-category-bento-grid {
   grid-auto-rows: clamp(10rem, 10vw, 12rem);
@@ -2665,7 +2688,13 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-category-bento-item img {
   transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out), filter var(--catalog-v2-motion-component) ease;
 }
-.cm.v2 .catalog-category-bento-item:hover img {
+.cm.v2 .catalog-category-bento-item:hover,
+.cm.v2 .catalog-category-bento-item:focus-visible {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 36px color-mix(in srgb, var(--catalog-ink), transparent 86%);
+}
+.cm.v2 .catalog-category-bento-item:hover img,
+.cm.v2 .catalog-category-bento-item:focus-visible img {
   transform: scale(1.06);
   filter: saturate(.82) contrast(1.06);
 }
@@ -2740,7 +2769,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-product-detail,
 .cm.v2 .catalog-product-tabs,
 .cm.v2 .catalog-product-reviews {
-  width: min(calc(100% - 3rem), var(--catalog-v2-wide));
+  width: min(calc(100% - clamp(1.5rem, 6vw, 8rem)), var(--catalog-v2-wide));
 }
 .cm.v2 .catalog-product-detail-inner {
   grid-template-columns: minmax(0, 1.35fr) minmax(420px, .65fr);
@@ -2977,6 +3006,13 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
   .cm.v2 .catalog-category-bento-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cm.v2 .catalog-product-detail-inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3rem;
+  }
+  .cm.v2 .catalog-product-info {
+    position: static;
   }
 }
 @media (max-width: 767px) {

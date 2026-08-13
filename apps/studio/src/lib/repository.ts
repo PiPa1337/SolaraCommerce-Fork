@@ -62,7 +62,7 @@ export interface ProjectMigrationRecord {
   updatedAt: string;
 }
 
-export const ASSET_CACHE_RECIPE_VERSION = 1;
+export const ASSET_CACHE_RECIPE_VERSION = 2;
 
 export function createAssetCacheKey(
   hash: string,
@@ -134,6 +134,31 @@ export function buildScaleDemoProject(): StoreProjectV1 {
     },
   });
 }
+
+/** Amplía sólo el seed demo existente; nunca reescribe galerías personalizadas. */
+export function expandCatalogModernDemoGalleries(project: StoreProjectV1): StoreProjectV1 {
+  if (project.id !== SCALE_DEMO_PROJECT_ID || project.origin?.seed !== "demo") return project;
+  const reference = buildCatalogModernProject({ seed: "demo" });
+  const availableAssetIds = new Set(project.assets.map((asset) => asset.id));
+  let changed = false;
+  const products = project.products.map((product) => {
+    const desired = reference.products.find((candidate) => candidate.id === product.id);
+    if (!desired || product.imageIds.length >= 3 || product.imageIds[0] !== desired.imageIds[0]) {
+      return product;
+    }
+    const imageIds = [...product.imageIds];
+    for (const imageId of desired.imageIds) {
+      if (availableAssetIds.has(imageId) && !imageIds.includes(imageId)) imageIds.push(imageId);
+    }
+    if (imageIds.length === product.imageIds.length) return product;
+    changed = true;
+    return { ...product, imageIds };
+  });
+  return changed
+    ? StoreProjectV1Schema.parse({ ...project, products, updatedAt: new Date().toISOString() })
+    : project;
+}
+
 const STORAGE_SENTINEL = "solara-studio-storage-version";
 export const DEPRECATED_CATEGORY_CLEANUP_SENTINEL = "solara-deprecated-category-cleanup";
 const DEPRECATED_CATEGORY_CLEANUP_VERSION = "1";
@@ -604,6 +629,17 @@ export async function ensureCatalogModernDemoReviews(): Promise<boolean> {
   });
   if (!changed) return false;
   await saveProject(StoreProjectV1Schema.parse({ ...parsed, products }));
+  return true;
+}
+
+export async function ensureCatalogModernDemoGallery(): Promise<boolean> {
+  await ready();
+  const record = await database.projects.get(SCALE_DEMO_PROJECT_ID);
+  if (!record) return false;
+  const parsed = StoreProjectV1Schema.parse(record.project);
+  const expanded = expandCatalogModernDemoGalleries(parsed);
+  if (expanded === parsed) return false;
+  await saveProject(expanded);
   return true;
 }
 

@@ -127,6 +127,17 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
       (element) => getComputedStyle(element).gridTemplateColumns.split(" ").length,
     ),
   ).toBe(4);
+  const gridMetrics = await grid.evaluate((element) => {
+    const gridRect = element.getBoundingClientRect();
+    const cardRect = element
+      .querySelector<HTMLElement>(".catalog-product-card")
+      ?.getBoundingClientRect();
+    return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
+  });
+  expect(gridMetrics.gridWidth).toBeGreaterThan(1500);
+  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(1600);
+  expect(gridMetrics.cardWidth).toBeGreaterThan(350);
+  expect(gridMetrics.cardWidth).toBeLessThan(390);
   const firstMedia = grid.locator(".catalog-product-media").first();
   const mediaRatio = await firstMedia.evaluate((element) => {
     const rect = element.getBoundingClientRect();
@@ -135,6 +146,10 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   expect(mediaRatio).toBeCloseTo(0.8, 1);
 
   const image = firstMedia.locator("img");
+  await expect(image).toHaveAttribute(
+    "sizes",
+    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(23.5vw, 23.75rem)",
+  );
   const initialTransform = await image.evaluate((element) => getComputedStyle(element).transform);
   await firstMedia.hover();
   await expect
@@ -144,6 +159,93 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   await revealWholePage(page);
   await expect(page.locator(".catalog-product-card").last()).toHaveCSS("opacity", "1");
   await page.screenshot({ path: testInfo.outputPath("home-1920x968.png"), fullPage: true });
+});
+
+test("V2 ajusta las imágenes al ancho renderizado y mantiene una galería PDP usable", async ({
+  page,
+}) => {
+  const productUrl = new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString();
+  await page.setViewportSize({ width: 1920, height: 968 });
+  await page.goto(productUrl);
+
+  const detail = page.locator('[data-solara-module="catalog-product-detail"]');
+  const detailMetrics = await detail.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      left: rect.left,
+      right: window.innerWidth - rect.right,
+      width: rect.width,
+      scrollWidth: document.documentElement.scrollWidth,
+    };
+  });
+  expect(detailMetrics.left).toBeGreaterThanOrEqual(79);
+  expect(detailMetrics.right).toBeGreaterThanOrEqual(79);
+  expect(detailMetrics.scrollWidth).toBeLessThanOrEqual(1920);
+
+  const figures = page.locator(".catalog-product-gallery-main figure");
+  const thumbs = page.locator(".catalog-product-gallery-thumbs button");
+  await expect(figures).toHaveCount(3);
+  await expect(thumbs).toHaveCount(3);
+  await expect(figures.first().locator("img")).toHaveAttribute(
+    "sizes",
+    "(max-width: 767px) 92vw, (max-width: 1199px) 94vw, 60vw",
+  );
+  await thumbs.nth(1).click();
+  await expect(figures.nth(1)).toHaveAttribute("data-gallery-active", "true");
+  await expect(thumbs.nth(1)).toHaveAttribute("aria-current", "true");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(productUrl);
+  const mobileDetail = page.locator('[data-solara-module="catalog-product-detail"]');
+  const mobileMetrics = await mobileDetail.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const inner = element.querySelector<HTMLElement>(".catalog-product-detail-inner");
+    return {
+      left: rect.left,
+      right: window.innerWidth - rect.right,
+      columns: inner ? getComputedStyle(inner).gridTemplateColumns : "",
+      scrollWidth: document.documentElement.scrollWidth,
+    };
+  });
+  expect(mobileMetrics.left).toBeGreaterThanOrEqual(11);
+  expect(mobileMetrics.right).toBeGreaterThanOrEqual(11);
+  expect(mobileMetrics.columns).toBe("minmax(0px, 1fr)");
+  expect(mobileMetrics.scrollWidth).toBeLessThanOrEqual(390);
+  await expect(mobileDetail.locator(".catalog-product-gallery-thumbs button")).toHaveCount(3);
+});
+
+test("V2 mantiene feedback equivalente para hover y teclado en cards y bento", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  await page.goto(serverUrl);
+
+  const productCard = page.locator(".catalog-product-card").first();
+  const productLink = productCard.locator(".catalog-product-media");
+  const initialProductTransform = await productCard.evaluate(
+    (element) => getComputedStyle(element).transform,
+  );
+  await productLink.focus();
+  await expect
+    .poll(() => productCard.evaluate((element) => getComputedStyle(element).transform))
+    .not.toBe(initialProductTransform);
+
+  const bentoItem = page.locator(".catalog-category-bento-item").first();
+  const bentoImage = bentoItem.locator("img");
+  await bentoItem.scrollIntoViewIfNeeded();
+  const initialBentoTransform = await bentoItem.evaluate(
+    (element) => getComputedStyle(element).transform,
+  );
+  await bentoItem.focus();
+  await expect
+    .poll(() => bentoItem.evaluate((element) => getComputedStyle(element).transform))
+    .not.toBe(initialBentoTransform);
+  await expect
+    .poll(() => bentoImage.evaluate((element) => getComputedStyle(element).transform))
+    .not.toBe("none");
+
+  const viewAll = page.locator(".catalog-view-all").first();
+  await viewAll.focus();
+  await expect(viewAll).toBeFocused();
+  await expect(viewAll).toHaveCSS("text-decoration-line", "none");
 });
 
 test("V2 mantiene CTA, dos columnas y reduced motion en 390x844", async ({ page }, testInfo) => {

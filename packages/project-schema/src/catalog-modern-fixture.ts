@@ -255,7 +255,11 @@ const products = productNames.map((title, index) => {
       ...(productNumber % 7 === 0 ? ["collection-fin-de-temporada"] : []),
     ],
     tags: [rootSlug, index % 2 === 0 ? "urbano" : "esencial", index % 3 === 0 ? "nuevo" : "diario"],
-    imageIds: [imageId],
+    imageIds: [
+      imageId,
+      imageIds[(index + 1) % imageIds.length] ?? imageId,
+      imageIds[(index + 2) % imageIds.length] ?? imageId,
+    ],
     variants: optionVariants(productNumber, imageId),
     ...(reviews ? { reviews } : {}),
     createdAt: fixedDate,

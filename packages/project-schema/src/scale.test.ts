@@ -15,6 +15,10 @@ describe("fixture de catálogo jerárquico", () => {
     expect(catalogScaleStore.categories.filter((category) => !category.parentId)).toHaveLength(9);
     expect(catalogScaleStore.categories.filter((category) => category.parentId)).toHaveLength(6);
     expect(catalogScaleStore.products.flatMap((product) => product.variants)).toHaveLength(60);
+    expect(catalogScaleStore.products.every((product) => product.imageIds.length >= 3)).toBe(true);
+    expect(catalogScaleStore.products.every((product) => new Set(product.imageIds).size >= 3)).toBe(
+      true,
+    );
 
     const casa = catalogScaleStore.categories.find((category) => category.slug === "casa");
     const textiles = catalogScaleStore.categories.find((category) => category.slug === "textiles");

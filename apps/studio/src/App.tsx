@@ -28,10 +28,12 @@ import {
   consumeStorageResetNotice,
   createProject,
   duplicateProject,
+  ensureCatalogModernDemoGallery,
   ensureCatalogModernDemoReviews,
   ensureDeprecatedCategoriesRemoved,
   ensureFirstProject,
   ensureScaleDemoProject,
+  expandCatalogModernDemoGalleries,
   getProject,
   getProjectMigration,
   getRecoveryDraft,
@@ -203,6 +205,13 @@ function StudioShell() {
           : undefined;
         if (diskListing?.projects.length) {
           if (detectedStorage.writable) {
+            for (const diskProject of diskListing.projects) {
+              const expanded = expandCatalogModernDemoGalleries(diskProject.project);
+              if (expanded === diskProject.project) continue;
+              await markProjectMigration(diskProject.id, "pending");
+              await persistToDisk(expanded, diskProject.diskVersion ?? null);
+              await markProjectMigration(diskProject.id, "done");
+            }
             const browserProjects = await listProjectsWithRecovery();
             const diskById = new Map(diskListing.projects.map((item) => [item.id, item]));
             for (const stored of browserProjects.projects) {
@@ -248,6 +257,14 @@ function StudioShell() {
             current
               ? `${current} Se actualizaron las reseñas de Predeterminado.`
               : "Se actualizaron las reseñas de Predeterminado.",
+          );
+        }
+        const demoGalleryExpanded = await ensureCatalogModernDemoGallery();
+        if (demoGalleryExpanded) {
+          setNotice((current) =>
+            current
+              ? `${current} Se ampliaron las galerías de Predeterminado.`
+              : "Se ampliaron las galerías de Predeterminado.",
           );
         }
         const deprecatedCategoriesRemoved = await ensureDeprecatedCategoriesRemoved();

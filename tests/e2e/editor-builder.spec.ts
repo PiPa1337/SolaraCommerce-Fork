@@ -36,6 +36,10 @@ async function openBuilder(page: Page) {
   });
   await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  // Predeterminado nace en V2; estos recorridos de inspector conservan su
+  // baseline V1 explícito para probar también la reversibilidad de la familia.
+  await page.getByRole("tab", { name: "Tema" }).click();
+  await page.getByTestId("ui-design-family-v1").click();
   await page.getByRole("tab", { name: "Constructor" }).click();
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
 }
@@ -287,5 +291,5 @@ test("un par de bajo contraste muestra la advertencia y el reset por grupo la li
 
   await page.getByRole("button", { name: "Restaurar colores" }).click();
   await expect(warning).toBeHidden();
-  await expect(textHex).toHaveValue("#0b0b0c");
+  await expect(textHex).toHaveValue("#11110f");
 });

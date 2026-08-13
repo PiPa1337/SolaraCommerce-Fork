@@ -97,6 +97,20 @@ try {
   const initialB = JSON.parse(readFileSync(manifestBPath, "utf8"));
 
   await instanceA.page.getByRole("button", { name: "Abrir esta tienda" }).first().click();
+  const previewFrame = instanceA.page.locator('iframe[title="Vista previa desktop"]');
+  await previewFrame.waitFor({ state: "visible", timeout: 20_000 });
+  const previewState = await previewFrame.evaluate((frame) => ({
+    sandbox: frame.getAttribute("sandbox") ?? "",
+    ready: frame.contentDocument?.readyState === "complete",
+    heading: frame.contentDocument?.querySelector("h1")?.textContent?.trim() ?? "",
+  }));
+  if (
+    !previewState.sandbox.includes("allow-same-origin") ||
+    !previewState.ready ||
+    !previewState.heading
+  ) {
+    throw new Error("El preview Electron no montó el srcdoc aislado de la tienda.");
+  }
   // El arranque puede guardar un RecoveryDraft cuando el demo de IndexedDB
   // difiere del seed en disco (App.tsx); este gate quiere la verdad del disco:
   // espera el tab del editor y, si el diálogo de recuperación aparece, lo

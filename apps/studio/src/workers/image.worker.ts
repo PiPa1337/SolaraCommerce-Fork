@@ -1,6 +1,6 @@
 /** Transformaciones de imagen deterministas compartidas por caché y exportación. */
 export const IMAGE_RECIPE = {
-  widths: [480, 768, 1200, 1800] as const,
+  widths: [320, 480, 640, 768, 1024, 1280, 1600, 1800] as const,
   maxBytes: 25 * 1024 * 1024,
   maxPixels: 50_000_000,
   webpQuality: 0.82,

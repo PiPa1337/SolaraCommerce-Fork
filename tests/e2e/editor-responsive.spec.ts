@@ -347,6 +347,7 @@ test("el preview y su toolbar responden en los 7 viewports", async ({ page }) =>
 
     const frame = page.locator('iframe[title="Vista previa desktop"]');
     await expect(frame).toBeVisible();
+    await expect(frame).toHaveAttribute("sandbox", "allow-forms allow-scripts");
     await expectNoPageOverflow(page, `Preview iframe ${viewport.name}`);
 
     if (viewport.width <= 680) {

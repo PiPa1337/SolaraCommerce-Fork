@@ -203,7 +203,11 @@ const products = Array.from({ length: 50 }, (_, index) => {
     categoryIds,
     collectionIds: ["collection-casa-serena"],
     tags: ["escala", productNumber % 2 === 0 ? "casa" : "uso-diario"],
-    imageIds: [imageId],
+    imageIds: [
+      imageId,
+      imageIds[productNumber % imageIds.length] ?? imageId,
+      imageIds[(productNumber + 1) % imageIds.length] ?? imageId,
+    ],
     variants,
     createdAt: fixedDate,
     updatedAt: fixedDate,
