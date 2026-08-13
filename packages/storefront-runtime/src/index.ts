@@ -202,6 +202,7 @@ function storefrontBoot(): void {
   };
 
   let cart = hasFeature("cart") || hasFeature("checkout") ? readStoredCart() : [];
+  const previewCartSession = document.getElementById("solara-preview-cart")?.dataset.session ?? "";
   if (embedded) {
     const previewCartState = document.getElementById("solara-preview-cart")?.textContent;
     if (previewCartState) {
@@ -237,6 +238,7 @@ function storefrontBoot(): void {
               type: "solara-preview-cart-write",
               key: storageKey,
               value: serialized,
+              session: previewCartSession,
             },
             "*",
           );

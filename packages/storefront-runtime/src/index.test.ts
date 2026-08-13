@@ -293,6 +293,11 @@ describe("pausa y reanudación del runtime (contrato A3↔A4)", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("connectMotion()");
     expect(STOREFRONT_RUNTIME_JS).toContain("freshCatalog = null");
   });
+
+  it("vincula la escritura del carrito embebido a la sesion activa del preview", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("previewCartSession");
+    expect(STOREFRONT_RUNTIME_JS).toContain("session: previewCartSession");
+  });
 });
 
 describe("carrito y checkout del drawer (A29)", () => {

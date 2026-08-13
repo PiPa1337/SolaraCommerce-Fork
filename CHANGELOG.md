@@ -1,5 +1,11 @@
 # Changelog
 
+### Carrito del preview por sesión de ruta (2026-08-13)
+
+- Las escrituras del carrito embebido quedan vinculadas a la sesión activa del
+  preview, evitando que una ruta anterior sobrescriba líneas agregadas después.
+- Se agrega una regresión E2E para el cambio de producto y la escritura tardía.
+
 ### Bento y cards del storefront V2 (2026-08-13)
 
 - El bento automático usa una composición dinámica según la cantidad de

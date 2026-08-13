@@ -495,6 +495,27 @@ test("V2 presenta PDP editorial y carrito lateral o inferior según viewport", a
   await page.screenshot({ path: testInfo.outputPath("cart-390x844.png"), fullPage: false });
 });
 
+test("V2 conserva varias líneas del carrito al navegar entre páginas", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  const firstProduct = new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString();
+  await page.goto(firstProduct);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("1");
+
+  await page.goto(new URL("/productos/remera-grafica-horizonte/", serverUrl).toString());
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("1");
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("2");
+
+  await page.goto(new URL("/carrito/", serverUrl).toString());
+  await expect(
+    page.locator(".solara-cart-page-grid [data-cart-lines] .solara-cart-line"),
+  ).toHaveCount(2);
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("2");
+});
+
 test("V2 compone checkout editorial sin overflow en desktop y movil", async ({
   page,
 }, testInfo) => {

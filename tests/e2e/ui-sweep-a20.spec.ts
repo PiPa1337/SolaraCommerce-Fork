@@ -362,6 +362,65 @@ test("A20: preview - carrito conserva multiples lineas al cambiar de ruta", asyn
   });
 });
 
+test("A20: preview - una escritura tardía de una ruta anterior no pisa el carrito actual", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openDemoStore(page);
+  await page.evaluate(() => localStorage.removeItem("solara-cart:store-modo-sur-demo"));
+  const frame = page.frameLocator('iframe[title="Vista previa desktop"]');
+
+  await commitRoute(page, "/productos/remera-esencial-de-algodon/");
+  await expect(frame.getByRole("heading", { level: 1 })).toContainText(
+    "Remera esencial de algodón",
+    { timeout: 20_000 },
+  );
+  const firstSession = await frame.locator("#solara-preview-cart").getAttribute("data-session");
+  await frame.getByRole("button", { name: "Agregar al carrito" }).click();
+  await expect(frame.locator("[data-cart-count]").first()).toHaveText("1");
+  const firstCart = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("solara-cart:store-modo-sur-demo") ?? "[]"),
+  );
+
+  await commitRoute(page, "/productos/remera-grafica-horizonte/");
+  await expect(frame.getByRole("heading", { level: 1 })).toContainText("Remera gráfica Horizonte", {
+    timeout: 20_000,
+  });
+  const currentSession = await frame.locator("#solara-preview-cart").getAttribute("data-session");
+  expect(currentSession).not.toBe(firstSession);
+  await frame.getByRole("button", { name: "Agregar al carrito" }).click();
+  await expect(frame.locator("[data-cart-count]").first()).toHaveText("2");
+  await expect
+    .poll(async () =>
+      page.evaluate(() =>
+        JSON.parse(localStorage.getItem("solara-cart:store-modo-sur-demo") ?? "[]"),
+      ),
+    )
+    .toHaveLength(2);
+
+  const activeFrame = page.frames().find((candidate) => candidate !== page.mainFrame());
+  expect(activeFrame).toBeDefined();
+  await activeFrame?.evaluate(
+    ({ session, staleCart }) => {
+      window.parent.postMessage(
+        {
+          type: "solara-preview-cart-write",
+          key: "solara-cart:store-modo-sur-demo",
+          value: JSON.stringify(staleCart),
+          session,
+        },
+        "*",
+      );
+    },
+    { session: firstSession, staleCart: firstCart },
+  );
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const preservedCart = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("solara-cart:store-modo-sur-demo") ?? "[]"),
+  );
+  expect(preservedCart).toHaveLength(2);
+});
+
 test("A20: preview — zoom: escala del iframe, estado presionado y sesión", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openDemoStore(page);

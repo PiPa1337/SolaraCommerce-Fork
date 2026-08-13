@@ -48,7 +48,7 @@ function addPreviewScrollbarPolicy(document: string): string {
   return `${document.slice(0, headEnd)}${PREVIEW_SCROLLBAR_STYLE}\n${document.slice(headEnd)}`;
 }
 
-function addPreviewCartState(document: string, storeId: string): string {
+function addPreviewCartState(document: string, storeId: string, sessionId: string): string {
   let serialized = "[]";
   try {
     const stored = window.localStorage.getItem(`solara-cart:${storeId}`);
@@ -57,7 +57,7 @@ function addPreviewCartState(document: string, storeId: string): string {
       if (Array.isArray(parsed)) serialized = stored;
     }
   } catch {}
-  const state = `<script id="solara-preview-cart" type="application/json">${serialized.replace(/</g, "\\u003c")}</script>`;
+  const state = `<script id="solara-preview-cart" data-session="${sessionId}" type="application/json">${serialized.replace(/</g, "\\u003c")}</script>`;
   const headEnd = document.indexOf("</head>");
   if (headEnd === -1) return `${state}${document}`;
   return `${document.slice(0, headEnd)}${state}\n${document.slice(headEnd)}`;
@@ -249,8 +249,11 @@ export function Preview({
   const [error, setError] = useState("");
   const [renderToken, setRenderToken] = useState(0);
   const [iframeReady, setIframeReady] = useState(false);
+  const [htmlSession, setHtmlSession] = useState("");
   const previewAssetSources = useRef<ReadonlyMap<string, string>>(new Map());
   const previewFrameWindows = useRef<Window[]>([]);
+  const previewRenderSessionRef = useRef(0);
+  const activePreviewSessionRef = useRef("");
   const previewFrame = useRef<HTMLIFrameElement>(null);
   const previewObserver = useRef<IntersectionObserver | null>(null);
   const pausedRef = useRef(false);
@@ -325,11 +328,17 @@ export function Preview({
     const handlePreviewAssetRequest = (event: MessageEvent<unknown>) => {
       if (!event.data || typeof event.data !== "object") return;
       const message = event.data as { type?: unknown; paths?: unknown };
-      const cartMessage = event.data as { type?: unknown; key?: unknown; value?: unknown };
+      const cartMessage = event.data as {
+        type?: unknown;
+        key?: unknown;
+        value?: unknown;
+        session?: unknown;
+      };
       if (
         cartMessage.type === "solara-preview-cart-write" &&
         typeof cartMessage.key === "string" &&
-        cartMessage.key.startsWith("solara-cart:")
+        cartMessage.key.startsWith("solara-cart:") &&
+        cartMessage.session === activePreviewSessionRef.current
       ) {
         if (!event.source || !previewFrameWindows.current.includes(event.source as Window)) return;
         try {
@@ -360,17 +369,21 @@ export function Preview({
 
   useEffect(() => {
     let active = true;
+    const previewSession = String(++previewRenderSessionRef.current);
     void loadExporter(renderToken)
       .then(({ getPreviewAssetSources, renderPreviewHtml }) => {
         if (!active) return;
         try {
           previewAssetSources.current = getPreviewAssetSources(project);
+          activePreviewSessionRef.current = previewSession;
+          setHtmlSession(previewSession);
           setHtml(
             addPreviewCartState(
               addPreviewScrollbarPolicy(
                 renderPreviewHtml(project, "draft", route, { assetTransport: "parent" }),
               ),
               project.id,
+              previewSession,
             ),
           );
           setIframeReady(false);
@@ -413,6 +426,7 @@ export function Preview({
         ) : (
           <>
             <iframe
+              key={htmlSession}
               ref={attachPreviewObserver}
               title={`Vista previa ${size}`}
               srcDoc={html}
