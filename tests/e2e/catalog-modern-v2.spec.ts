@@ -3,9 +3,11 @@ import { createServer, type Server } from "node:http";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
+import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 
 const exported = exportProject(catalogModernV2Store, { mode: "production" });
+const exportedV1 = exportProject(catalogModernStore, { mode: "production" });
 const fixtureFiles = new Map<string, Uint8Array>(
   ["hero", "remera", "jean", "camisa"].map((name) => [
     `fixtures/modo-sur-${name}.png`,
@@ -694,4 +696,51 @@ test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, t
       fullPage: true,
     });
   }
+});
+
+test("V1 y V2 conservan contenido y aislamiento en capturas equivalentes", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  const v1HtmlFile = exportedV1.files.get("index.html");
+  const v1CssFile = [...exportedV1.files.entries()].find(([path]) => path.endsWith(".css"))?.[1];
+  if (!v1HtmlFile) throw new Error("La exportación V1 no generó index.html.");
+  if (!v1CssFile) throw new Error("La exportación V1 no generó styles.css.");
+  const v1Html = (
+    typeof v1HtmlFile === "string" ? v1HtmlFile : new TextDecoder().decode(v1HtmlFile)
+  ).replace(
+    "</head>",
+    `<base href="${serverUrl}/"><style>${typeof v1CssFile === "string" ? v1CssFile : new TextDecoder().decode(v1CssFile)}</style></head>`,
+  );
+  await page.setContent(v1Html, { waitUntil: "networkidle" });
+  await expect(page.locator('[data-design-family="catalog-modern-v1"]')).toBeVisible();
+  await expect(page.locator(".cm.v2")).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Vestite con lo que te representa.",
+  );
+  await expect(page.locator(".catalog-hero-inner")).toHaveCSS("display", "grid");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1920);
+  await revealWholePage(page);
+  await page.evaluate(() => {
+    for (const animation of document.getAnimations()) animation.finish();
+  });
+  await page.screenshot({
+    path: testInfo.outputPath("comparison-v1-1920x968.png"),
+    fullPage: true,
+  });
+
+  await page.goto(serverUrl);
+  await expect(page.locator('[data-design-family="catalog-modern-v2"]')).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Vestite con lo que te representa.",
+  );
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1920);
+  await revealWholePage(page);
+  await page.evaluate(() => {
+    for (const animation of document.getAnimations()) animation.finish();
+  });
+  await page.screenshot({
+    path: testInfo.outputPath("comparison-v2-1920x968.png"),
+    fullPage: true,
+  });
 });

@@ -48,6 +48,9 @@ versión publicada.
 - El runtime deja de serializar una copia pública de `matchToken` que el sitio
   no consumía; la función conserva sus tests unitarios y el JavaScript público
   recupera 1.250 B de margen sin cambiar ranking, sugerencias ni navegación.
+- Una comparación equivalente en `1920x968` verifica que V1 y V2 conservan el
+  mismo contenido y permanecen sin overflow horizontal ni filtraciones de
+  estilos, con capturas completas que incluyen sus imágenes diferidas.
 - Tema permite activar o revertir Editorial V2 sin migrar contenido ni cambiar
   el schema; el header se compacta al hacer scroll y los appears usan un observer compartido.
 - Búsqueda separa correctamente título, ayuda y formulario en móvil; la página
