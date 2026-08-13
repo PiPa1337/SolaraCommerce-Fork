@@ -405,7 +405,7 @@ test("V2 ordena categoría y filtros como rail editorial y sheet móvil", async 
   expect(categoryGridMetrics.cardWidth).toBeGreaterThan(255);
   expect(categoryGridMetrics.cardWidth).toBeLessThan(285);
   expect(await grid.locator(".catalog-product-card-image").first().getAttribute("sizes")).toBe(
-    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1279px) calc((100vw - 24rem) / 3), min(30vw, 17rem)",
+    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1279px) calc((100vw - 24rem) / 3), min(30vw, 17.5rem)",
   );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1920);
   await revealWholePage(page);
