@@ -10,6 +10,15 @@ versión publicada.
 
 ## [Unreleased]
 
+### Auditoría SEO del Studio (2026-08-13)
+
+- Los hallazgos de SEO muestran títulos accionables según su código, en lugar
+  de repetir "Revisión SEO" en todas las filas.
+- La auditoría comunica también severidad y área con etiquetas legibles, sin
+  depender únicamente del color y sin overflow en mobile.
+- Se agregaron regresiones para los títulos, metadata visible, foco y layout
+  responsive de SEO.
+
 ### Ajuste de escala de cards V2 (2026-08-13)
 
 - Las grillas de productos de la home y búsqueda limitan su ancho a 1360px

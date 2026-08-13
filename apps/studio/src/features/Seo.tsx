@@ -29,6 +29,61 @@ interface AuditIssue {
 
 type SeoNavigationTarget = "overview" | "catalog" | "assets" | "seo" | "export";
 
+const SEO_ISSUE_TITLES: Record<string, string> = {
+  "domain.https": "Conexión segura (HTTPS)",
+  "domain.baseurl-path": "URL base incorrecta",
+  "template.placeholder": "Contenido de plantilla pendiente",
+  "product.description": "Descripción de producto faltante",
+  "product.image": "Imagen de producto faltante",
+  "image.alt": "Texto alternativo faltante",
+  "variant.price": "Precio de variante inválido",
+  "variant.identifier": "Identificador de variante faltante",
+  "video.poster": "Portada de video faltante",
+  "video.size": "Video demasiado pesado",
+  "video.duration": "Video demasiado largo",
+  "product.slug.duplicate": "Slug de producto duplicado",
+  "category.slug.duplicate": "Slug de categoría duplicado",
+  "collection.slug.duplicate": "Slug de colección duplicado",
+  "slug.reserved": "Slug reservado",
+  "shipping.handling-range": "Tiempo de preparación incompleto",
+  "shipping.transit-range": "Tiempo de envío incompleto",
+  "identity.contact": "Datos de contacto incompletos",
+  "product.brand": "Marca de producto faltante",
+  "variant.availability-date": "Fecha de disponibilidad incompleta",
+  "variant.availability-date.unused": "Fecha de disponibilidad sin uso",
+  "merchant.snapshot-mismatch": "Snapshot de Merchant desactualizado",
+  "policies.incomplete": "Políticas incompletas",
+  "merchant.whatsapp-checkout": "Checkout por WhatsApp",
+  "route.slug.duplicate": "Slug de ruta duplicado",
+  "route.slug.reserved": "Slug de ruta reservado",
+  "ai.entity.incomplete": "Información de negocio incompleta",
+  "ai.contact.missing": "Datos de contacto faltantes",
+  "content.product.description": "Descripción de producto faltante",
+  "content.product.image": "Imagen de producto faltante",
+  "merchant.variant.price": "Precio de variante inválido",
+  "merchant.variant.identifier": "Identificador de variante faltante",
+  "content.asset.alt": "Texto alternativo faltante",
+  "performance.asset.responsive": "Imagen sin variante responsive",
+  "performance.asset.weight": "Imagen pesada",
+  "content.category.description": "Descripción de categoría faltante",
+  "catalog.section.orphan-source": "Sección sin origen válido",
+  "seo.canonical.invalid": "Canonical inválido",
+  "seo.metadata.missing": "Metadata SEO incompleta",
+  "seo.title.duplicate": "Títulos SEO repetidos",
+  "seo.product.orphan": "Producto fuera de una categoría",
+  "ai.policies.incomplete": "Políticas incompletas",
+  "html.canonical": "Canonical ausente o inválido",
+  "html.robots": "Robots incompleto",
+  "structured.shared-snapshot": "Datos estructurados desactualizados",
+  "assets.deduplicate": "Assets duplicados",
+  "runtime.progressive": "Carga progresiva incompleta",
+  "ai.public-context": "Contexto público incompleto",
+};
+
+export function seoIssueTitle(code: string): string {
+  return SEO_ISSUE_TITLES[code] ?? "Revisión SEO";
+}
+
 function normalizeIssues(value: unknown): AuditIssue[] {
   const candidate = Array.isArray(value)
     ? value
@@ -46,10 +101,12 @@ function normalizeIssues(value: unknown): AuditIssue[] {
         : rawSeverity === "warning" || rawSeverity === "warn"
           ? "warning"
           : "info";
+    const code = String(record.code ?? "");
+    const explicitTitle = record.title ?? record.label;
     return {
-      id: String(record.id ?? record.code ?? index),
+      id: String(record.id ?? (code || index)),
       severity,
-      title: String(record.title ?? record.label ?? "Revisión SEO"),
+      title: explicitTitle ? String(explicitTitle) : seoIssueTitle(code),
       message: String(record.message ?? record.description ?? record.detail ?? ""),
       ...(typeof record.area === "string" ? { area: record.area } : {}),
       ...(typeof record.fixTarget === "string" ? { fixTarget: record.fixTarget } : {}),
@@ -86,6 +143,12 @@ const AREA_LABELS: Record<string, string> = {
   performance: "Rendimiento",
   ai: "Contexto IA",
   general: "General",
+};
+
+const SEVERITY_LABELS: Record<AuditIssue["severity"], string> = {
+  error: "Crítico",
+  warning: "Advertencia",
+  info: "Información",
 };
 
 function fieldValidationError(validationError: string, path: string): string | undefined {
@@ -399,10 +462,28 @@ export function Seo({
                       <strong title={issue.title}>{issue.title}</strong>
                       {issue.message ? <p>{issue.message}</p> : null}
                       {issue.area || issue.fixTarget ? (
-                        <small>
-                          {issue.area ? `Área: ${issue.area}` : ""}
-                          {issue.area && issue.fixTarget ? " · " : ""}
-                          {issue.fixTarget ? `Resolver en: ${issue.fixTarget}` : ""}
+                        <small className="audit-item__meta">
+                          <Badge
+                            tone={
+                              issue.severity === "error"
+                                ? "danger"
+                                : issue.severity === "warning"
+                                  ? "warning"
+                                  : "info"
+                            }
+                            className="audit-item__severity"
+                          >
+                            {SEVERITY_LABELS[issue.severity]}
+                          </Badge>
+                          {issue.area ? (
+                            <span> · {AREA_LABELS[issue.area] ?? issue.area}</span>
+                          ) : null}
+                          {issue.fixTarget ? (
+                            <span>
+                              {" · Corregir en "}
+                              {FIX_LABELS[issue.fixTarget] ?? issue.fixTarget}
+                            </span>
+                          ) : null}
                         </small>
                       ) : null}
                     </div>

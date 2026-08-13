@@ -194,6 +194,12 @@ test("SEO comunica el estado de auditoría y prioriza el diagnóstico sobre las 
   await expect(score).toHaveAccessibleName(/Score SEO: \d+\/100/);
   await expect(audit).toBeVisible();
   await expect(audit).toContainText(/errores críticos|No se detectaron problemas/);
+  const auditSeverity = audit.locator(".audit-item__severity");
+  if (await auditSeverity.count()) {
+    await expect(auditSeverity.first()).toHaveText(/Crítico|Advertencia|Información/);
+    await expect(audit.locator(".audit-item__meta").first()).not.toContainText("Área:");
+    await expect(audit.locator(".audit-item__meta").first()).not.toContainText("Resolver en:");
+  }
 
   const auditBox = await audit.boundingBox();
   const checklistBox = await checklist.boundingBox();
@@ -210,6 +216,23 @@ test("SEO comunica el estado de auditoría y prioriza el diagnóstico sobre las 
     .locator(".seo-grid")
     .evaluate((grid) => Array.from(grid.children).map((child) => child.className));
   expect(semanticOrder.indexOf("audit-panel")).toBeLessThan(semanticOrder.indexOf("seo-previews"));
+});
+
+test("las incidencias SEO conservan metadata legible sin overflow en mobile", async ({ page }) => {
+  await setupCleanStore(page, "Tienda SEO mobile");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("tab", { name: "SEO", exact: true }).click();
+
+  const audit = page.getByTestId("ui-seo-audit-panel");
+  await expect(audit).toBeVisible();
+  const issueCount = await audit.locator(".audit-item").count();
+  if (issueCount > 0) {
+    await expect(audit.locator(".audit-item__severity").first()).toHaveText(
+      /Crítico|Advertencia|Información/,
+    );
+    await expect(audit.locator(".audit-item__meta").first()).not.toContainText("Área:");
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
 test("los accesos de auditoría SEO navegan y devuelven el foco al tab destino", async ({

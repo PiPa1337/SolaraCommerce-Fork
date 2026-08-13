@@ -1,6 +1,6 @@
 import { referenceStore } from "@solara/project-schema/fixture";
 import { describe, expect, it } from "vitest";
-import { homepageSeoPreview } from "./Seo";
+import { homepageSeoPreview, seoIssueTitle } from "./Seo";
 
 const GLOBAL_TITLE = "Título global de la tienda";
 const GLOBAL_DESCRIPTION = "Descripción global de la tienda.";
@@ -83,5 +83,17 @@ describe("homepageSeoPreview: contrato con el exporter (ruta /)", () => {
       title: referenceStore.identity.brandName,
       description: referenceStore.identity.description,
     });
+  });
+});
+
+describe("seoIssueTitle: jerarquía accionable de la auditoría", () => {
+  it("diferencia incidencias de rendimiento, contenido y Merchant", () => {
+    expect(seoIssueTitle("performance.asset.weight")).toBe("Imagen pesada");
+    expect(seoIssueTitle("seo.title.duplicate")).toBe("Títulos SEO repetidos");
+    expect(seoIssueTitle("merchant.whatsapp-checkout")).toBe("Checkout por WhatsApp");
+  });
+
+  it("mantiene un fallback estable para códigos nuevos", () => {
+    expect(seoIssueTitle("future.issue.code")).toBe("Revisión SEO");
   });
 });
