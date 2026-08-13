@@ -7,6 +7,7 @@ import Dexie from "dexie";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import {
   ASSET_CACHE_RECIPE_VERSION,
+  buildScaleDemoProject,
   clearAssetCache,
   clearRecoveryDraft,
   createAssetCacheKey,
@@ -210,6 +211,14 @@ describe("repositorio local", () => {
     expect((await getProject(legacyDemo.id))?.name).toBe("Predeterminado");
     expect((await getProject(legacyClean.id))?.status).toBe("archived");
     expect((await getProject(legacyClean.id))?.name).toBe("Base limpia anterior");
+  });
+
+  it("construye Predeterminado directamente con Editorial V2", () => {
+    const demo = buildScaleDemoProject();
+    expect(demo.name).toBe("Predeterminado");
+    expect(demo.commerceTemplates.designFamily).toBe("catalog-modern-v2");
+    expect(demo.theme.container).toBe(1760);
+    expect(demo.products).toHaveLength(50);
   });
 
   it("retira Sale y Novedades de todos los proyectos sin perder productos", async () => {

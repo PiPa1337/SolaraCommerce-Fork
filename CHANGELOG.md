@@ -12,6 +12,9 @@ versión publicada.
 
 ### Base aislada Storefront V2 (2026-08-12)
 
+- `Predeterminado` se crea directamente con Editorial V2 en instalaciones
+  nuevas; las tiendas personales y las tiendas V1 existentes no se migran de
+  forma implícita.
 - El schema admite la nueva familia visual `catalog-modern-v2` sin cambiar
   `schemaVersion: 2` ni reinterpretar tiendas existentes `catalog-modern-v1`.
 - Una fixture determinista V2 de 50 productos permite evolucionar el storefront

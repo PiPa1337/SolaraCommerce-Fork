@@ -9,6 +9,7 @@ import {
   buildCatalogModernProject,
   catalogModernCleanStore,
 } from "@solara/project-schema/catalog-modern-template";
+import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import Dexie, { type EntityTable } from "dexie";
 
 export interface StoredProject {
@@ -115,6 +116,24 @@ export const SCALE_DEMO_PROJECT_NAME = "Predeterminado";
 const LEGACY_SCALE_DEMO_PROJECT_NAME = "Demo Modo Sur, catálogo moderno";
 const LEGACY_CLEAN_PROJECT_ID = "store-catalog-modern-clean-default";
 const LEGACY_CLEAN_PROJECT_NAME = "Mi primera tienda";
+
+export function buildScaleDemoProject(): StoreProjectV1 {
+  const demo = buildCatalogModernProject({
+    seed: "demo",
+    id: SCALE_DEMO_PROJECT_ID,
+    name: SCALE_DEMO_PROJECT_NAME,
+    slug: "demo-catalogo-jerarquico",
+    baseUrl: "https://demo-catalogo-jerarquico.example",
+  });
+  return StoreProjectV1Schema.parse({
+    ...demo,
+    theme: structuredClone(catalogModernV2Store.theme),
+    commerceTemplates: {
+      ...demo.commerceTemplates,
+      designFamily: "catalog-modern-v2",
+    },
+  });
+}
 const STORAGE_SENTINEL = "solara-studio-storage-version";
 export const DEPRECATED_CATEGORY_CLEANUP_SENTINEL = "solara-deprecated-category-cleanup";
 const DEPRECATED_CATEGORY_CLEANUP_VERSION = "1";
@@ -485,17 +504,7 @@ export async function ensureFirstProject(): Promise<StoreProjectV1> {
     if (project.whatsapp.greeting !== parsed.whatsapp.greeting) await saveProject(project);
     return project;
   }
-  const initial = await embedFixtureAssets(
-    StoreProjectV1Schema.parse(
-      buildCatalogModernProject({
-        seed: "demo",
-        id: SCALE_DEMO_PROJECT_ID,
-        name: SCALE_DEMO_PROJECT_NAME,
-        slug: "demo-catalogo-jerarquico",
-        baseUrl: "https://demo-catalogo-jerarquico.example",
-      }),
-    ),
-  );
+  const initial = await embedFixtureAssets(buildScaleDemoProject());
   await saveProject(initial);
   return initial;
 }
@@ -566,15 +575,7 @@ export async function ensureScaleDemoProject(): Promise<boolean> {
     return false;
   }
 
-  const demo = StoreProjectV1Schema.parse(
-    buildCatalogModernProject({
-      seed: "demo",
-      id: SCALE_DEMO_PROJECT_ID,
-      name: SCALE_DEMO_PROJECT_NAME,
-      slug: "demo-catalogo-jerarquico",
-      baseUrl: "https://demo-catalogo-jerarquico.example",
-    }),
-  );
+  const demo = buildScaleDemoProject();
   await saveProject(await embedFixtureAssets(demo));
   return true;
 }
