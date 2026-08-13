@@ -1364,6 +1364,19 @@ tbody tr:hover {
   max-height: clamp(280px, calc(100dvh - 340px), 640px);
 }
 
+.catalog-table-region {
+  scroll-margin-top: 92px;
+}
+
+.catalog-table-region .table-shell {
+  max-height: none;
+  overflow-y: visible;
+}
+
+.catalog-table-region th {
+  top: 80px;
+}
+
 .catalog-columns {
   position: relative;
 }

@@ -336,6 +336,23 @@ test("cada pestaña del Studio no desborda y conserva su acción principal", asy
             .toBe(true);
           if (viewport.width === 1366 || viewport.name === "desktop real 1920") {
             await page.locator(".table-shell").scrollIntoViewIfNeeded();
+            const stickyTableMetrics = await page.evaluate(() => {
+              const toolbar = document.querySelector<HTMLElement>(".catalog-toolbar");
+              const header = document.querySelector<HTMLElement>(".catalog-table-region thead th");
+              if (!toolbar || !header) return null;
+              const toolbarBox = toolbar.getBoundingClientRect();
+              const headerBox = header.getBoundingClientRect();
+              return {
+                toolbarBottom: toolbarBox.bottom,
+                headerTop: headerBox.top,
+                overlaps: headerBox.top < toolbarBox.bottom - 1,
+              };
+            });
+            expect(stickyTableMetrics).not.toBeNull();
+            expect(
+              stickyTableMetrics?.overlaps,
+              `Catálogo ${viewport.name}: la toolbar no debe cubrir el encabezado de la tabla`,
+            ).toBe(false);
             await page.screenshot({
               path: `test-results/catalog-scale-table-${viewport.width}x${viewport.height}.png`,
               fullPage: true,

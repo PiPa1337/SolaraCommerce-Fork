@@ -10,6 +10,13 @@ versión publicada.
 
 ## [Unreleased]
 
+### Encabezado de tabla del catálogo (2026-08-13)
+
+- El catálogo deja de anidar un scroll vertical propio dentro del panel del
+  Studio y mantiene el encabezado de la tabla visible debajo de la toolbar fija.
+- Se agregó una regresión responsive para evitar que la barra sticky cubra el
+  encabezado al recorrer el catálogo en desktop.
+
 ### Ajuste fino de escala de cards V2 (2026-08-13)
 
 - Las cards de productos de la home y búsqueda reducen ligeramente su ancho
