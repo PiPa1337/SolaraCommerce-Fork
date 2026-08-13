@@ -747,12 +747,20 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
     );
     await expect(results.locator("img").first()).toHaveAttribute(
       "sizes",
-      "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(23.5vw, 15rem)",
+      "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(22.5vw, 14.25rem)",
     );
     if (viewport.width === 1920) {
-      expect(
-        await results.evaluate((element) => element.getBoundingClientRect().width),
-      ).toBeLessThanOrEqual(1040);
+      const resultsMetrics = await results.evaluate((element) => {
+        const gridRect = element.getBoundingClientRect();
+        const cardRect = element
+          .querySelector<HTMLElement>(".solara-search-result")
+          ?.getBoundingClientRect();
+        return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
+      });
+      expect(resultsMetrics.gridWidth).toBeGreaterThan(960);
+      expect(resultsMetrics.gridWidth).toBeLessThanOrEqual(980);
+      expect(resultsMetrics.cardWidth).toBeGreaterThan(215);
+      expect(resultsMetrics.cardWidth).toBeLessThan(235);
     }
     expect(
       await results.evaluate(

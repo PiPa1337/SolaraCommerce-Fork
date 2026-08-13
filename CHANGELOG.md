@@ -15,6 +15,13 @@
 - El atributo `sizes` de sus imágenes refleja la nueva medida renderizada para
   evitar descargar una variante mayor de la necesaria.
 
+### Búsqueda V2 con cards consistentes (2026-08-13)
+
+- La grilla de resultados de búsqueda usa la misma escala contenida de la home,
+  evitando que las cards crezcan al cambiar de ruta.
+- Las imágenes de búsqueda declaran el mismo techo responsive que las cards
+  principales.
+
 Todos los cambios notables de SolaraCommerce se documentan en este archivo.
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y
