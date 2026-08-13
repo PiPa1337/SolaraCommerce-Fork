@@ -556,6 +556,7 @@ test("V2 conserva varias líneas del carrito al navegar entre páginas", async (
     page.locator(".solara-cart-page-grid [data-cart-lines] .solara-cart-line"),
   ).toHaveCount(2);
   await expect(page.locator("[data-cart-count]").first()).toHaveText("2");
+  await expect(page.locator("[data-cart-drawer] .solara-cart-line")).toHaveCount(2);
 });
 
 test("V2 conserva el carrito cuando la navegación ocurre inmediatamente después de agregar", async ({
