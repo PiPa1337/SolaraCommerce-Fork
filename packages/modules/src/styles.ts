@@ -2367,10 +2367,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   [data-solara-store].catalog-modern .catalog-testimonials-section > header { align-items: start; flex-direction: column; }
   [data-solara-store].catalog-modern .catalog-category-bento-section { padding: 1.25rem; }
   [data-solara-store].catalog-modern .catalog-category-bento-grid { grid-template-columns: 1fr; }
-  [data-solara-store].catalog-modern .catalog-category-bento-item,
-  [data-solara-store].catalog-modern .catalog-category-bento-item--feature,
-  [data-solara-store].catalog-modern .catalog-category-bento-item--wide,
-  [data-solara-store].catalog-modern .catalog-category-bento-item--tall { min-height: 160px; grid-column: 1; grid-row: auto; }
+  [data-solara-store].catalog-modern:not(.v2) .catalog-category-bento-item,
+  [data-solara-store].catalog-modern:not(.v2) .catalog-category-bento-item--feature,
+  [data-solara-store].catalog-modern:not(.v2) .catalog-category-bento-item--wide,
+  [data-solara-store].catalog-modern:not(.v2) .catalog-category-bento-item--tall { min-height: 160px; grid-column: 1; grid-row: auto; }
   [data-solara-store].catalog-modern .catalog-search-dialog-controls { grid-template-columns: 1fr; }
   [data-solara-store].catalog-modern .catalog-search-dialog-controls .catalog-primary-action { width: 100%; }
   [data-solara-store].catalog-modern .catalog-newsletter-inner { align-items: stretch; flex-direction: column; margin-bottom: 2rem; }
@@ -3060,11 +3060,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
   .cm.v2 .catalog-category-bento-section {
     padding: 4rem 1rem;
-  }
-  .cm.v2 .catalog-category-bento-item--tall {
-    min-height: 160px;
-    grid-column: 1;
-    grid-row: auto;
   }
   .cm.v2 .catalog-filter-toggle:not([open]) + .catalog-filter-groups {
     display: none;

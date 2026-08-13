@@ -6,6 +6,12 @@
   acorde al ancho renderizado para mantener una escala más aireada y descargar
   imágenes proporcionales al espacio real.
 
+### Bento de categorías responsive (2026-08-13)
+
+- El mosaico de categorías conserva su composición de dos columnas en mobile y
+  respeta los tamaños anchos y altos dinámicos, evitando una lista vertical
+  innecesariamente extensa.
+
 ### Hero V2 sin cortes de palabras (2026-08-13)
 
 - El hero de Catalog Modern V2 conserva palabras completas en el título y

@@ -287,6 +287,33 @@ test("V2 mantiene CTA, dos columnas y reduced motion en 390x844", async ({ page 
       .first()
       .evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length),
   ).toBe(2);
+  const mobileBento = page.locator(".catalog-category-bento-grid");
+  const mobileBentoMetrics = await mobileBento.evaluate((element) => {
+    const gridRect = element.getBoundingClientRect();
+    const items = [...element.querySelectorAll<HTMLElement>(".catalog-category-bento-item")];
+    return {
+      columns: getComputedStyle(element).gridTemplateColumns.split(" ").length,
+      count: items.length,
+      gridLeft: gridRect.left,
+      gridWidth: gridRect.width,
+      maxRight: Math.max(...items.map((item) => item.getBoundingClientRect().right)),
+      wideColumns: getComputedStyle(
+        items.find((item) => item.classList.contains("catalog-category-bento-item--wide")) ??
+          items[0],
+      ).gridColumn,
+      tallRows: getComputedStyle(
+        items.find((item) => item.classList.contains("catalog-category-bento-item--tall")) ??
+          items[0],
+      ).gridRow,
+    };
+  });
+  expect(mobileBentoMetrics.columns).toBe(2);
+  expect(mobileBentoMetrics.count).toBe(8);
+  expect(mobileBentoMetrics.maxRight).toBeLessThanOrEqual(
+    mobileBentoMetrics.gridLeft + mobileBentoMetrics.gridWidth + 1,
+  );
+  expect(mobileBentoMetrics.wideColumns).toBe("span 2");
+  expect(mobileBentoMetrics.tallRows).toBe("span 2");
   expect(
     await page.locator(".catalog-hero-copy h1").evaluate((element) => {
       const node = element.firstChild;
