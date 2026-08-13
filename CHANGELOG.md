@@ -10,6 +10,14 @@ versión publicada.
 
 ## [Unreleased]
 
+### Refinamiento de escala de cards V2 (2026-08-13)
+
+- Las grillas de productos de la home y búsqueda reducen su ancho máximo a
+  1120px para que las cards se perciban más proporcionadas en desktop sin
+  cambiar la grilla de cuatro columnas ni su contenido.
+- Las imágenes declaran un límite responsive de 16rem, alineado con la nueva
+  escala visual y evitando solicitar recursos innecesariamente grandes.
+
 ### Acciones táctiles del Constructor (2026-08-13)
 
 - Las acciones de mover, ocultar, duplicar y eliminar se alinean con el target
