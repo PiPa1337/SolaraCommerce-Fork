@@ -133,9 +133,12 @@ describe("official module system", () => {
       for (const selectorGroup of selectors) {
         for (const selector of selectorGroup.split(",")) {
           const trimmed = selector.trim();
-          const scoped = moduleId.startsWith("catalog-modern")
-            ? trimmed.startsWith(`[data-solara-store].${moduleId}`)
-            : trimmed.startsWith(`[data-solara-module="${moduleId}"]`);
+          const scoped =
+            moduleId === "catalog-modern-v2"
+              ? trimmed.startsWith(".cm.v2")
+              : moduleId.startsWith("catalog-modern")
+                ? trimmed.startsWith(`[data-solara-store].${moduleId}`)
+                : trimmed.startsWith(`[data-solara-module="${moduleId}"]`);
           expect(scoped).toBe(true);
         }
       }
