@@ -44,8 +44,10 @@ todos los elementos en su estado final y elimina las transiciones espaciales.
 - comparación visual equivalente en 1920x968: V1 conserva su composición y no
   recibe estilos `.cm.v2`; ambas familias mantienen el mismo contenido.
 
-La matriz Firefox/WebKit sigue siendo un gate de release y debe ejecutarse con
-Node 22. No debe presentarse como validada desde un entorno Node 24.
+La matriz release se validó con Node 22.18.0: los contratos públicos V2 pasaron
+en Chromium, Firefox y WebKit. La ejecución completa registró 903 tests verdes,
+2 casos Chromium que pasaron al reintentar y 3 capturas visuales opcionales
+omitidas.
 
 ## Evidencia visual
 

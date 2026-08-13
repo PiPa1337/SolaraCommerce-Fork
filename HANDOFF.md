@@ -99,13 +99,17 @@ Se ejecutaron con resultado exitoso:
 - `corepack pnpm check:repository`, `corepack pnpm format:check` y
   `git diff --check` sin errores.
 
-`corepack pnpm test:e2e:release` fue intentado y no se ejecutó porque el script
-exige Node 22 y este entorno tiene Node 24.18.0. La matriz Firefox/WebKit y
-Lighthouse quedan por confirmar en CI/Node 22.
+La matriz equivalente a `corepack pnpm test:e2e:release` se ejecutó localmente
+con el binario oficial Node 22.18.0 verificado por SHA-256: 903 tests pasaron,
+2 casos Chromium sensibles a timing pasaron al reintentar y 3 capturas visuales
+opcionales fueron omitidas. Chromium, Firefox y WebKit quedaron validados;
+Lighthouse continúa como gate separado de CI/release.
 
 ## Errores y riesgos observados
 
 - El entorno local puede tener Node 24 aunque CI/release fija Node 22.
+- GitHub Actions no asignó runner al último push porque la cuenta reportó un
+  problema de pagos o límite de gasto; la matriz Node 22 se completó localmente.
 - La carpeta `proyectos/` y reportes locales son deliberadamente ignorados.
 - Los fallos de escritura se simulan de forma determinista (writeGuard); la
   matriz OS real (disco lleno/permisos a nivel de volumen) queda como job de
@@ -118,7 +122,7 @@ Lighthouse quedan por confirmar en CI/Node 22.
    `Predeterminado` desde `proyectos/`.
 2. Ejecutar la matriz OS real (disco lleno y permisos a nivel de volumen) como
    job Windows de release antes de volver a cambiar el servicio de disco.
-3. Probar release con Node 22, Firefox, WebKit y Lighthouse.
+3. Restablecer la facturación de GitHub Actions y ejecutar Lighthouse en CI.
 4. Mantener el benchmark de 2.000 productos antes de introducir cache incremental.
 5. Si se necesita cloud, diseñar una capa nueva sin convertirla en requisito del
    storefront estático.
@@ -349,8 +353,8 @@ crudos: Studio JS ≤ 700 KiB y CSS ≤ 100 KiB; storefront.js ≤ 52 KiB y
 storefront.css ≤ 780 KiB; runtime JS ≤ 52 KiB y CSS ≤ 8 KiB.
 
 **Pendientes documentados** en `docs/TECHNICAL_DEBT.md`: matriz OS real
-(disco lleno/permisos a nivel de volumen) como job de release, release con
-Node 22 (Firefox/WebKit/Lighthouse), aprobación Merchant con checkout por
+(disco lleno/permisos a nivel de volumen) como job de release, Lighthouse,
+aprobación Merchant con checkout por
 WhatsApp, publicación manual y la migración temporal `legacy-zip-migration.mjs`
 con `fflate`, que se elimina en un release posterior.
 

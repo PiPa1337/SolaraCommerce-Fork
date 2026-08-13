@@ -183,9 +183,9 @@ separado del fixture visual pequeño y del benchmark de 1.000 productos.
 - `corepack pnpm test:e2e` (Chromium)
 - `corepack pnpm check:budgets`
 - `corepack pnpm pilot:preflight`
-- La matriz manual con Node 24 permite Chromium y WebKit, pero Firefox no puede
-  crear páginas con Playwright 1.55. El script release exige Node 22, por lo
-  que la matriz oficial queda para CI con Node 22.
+- La matriz release completa se ejecutó con Node 22.18.0 y validó Chromium,
+  Firefox y WebKit: 903 tests pasaron, 2 pasaron al reintentar y 3 capturas
+  visuales opcionales fueron omitidas.
 
 ## Riesgos y límites conocidos
 
@@ -193,8 +193,8 @@ separado del fixture visual pequeño y del benchmark de 1.000 productos.
   navegador; el límite inicial es 30 MB.
 - El checkout sigue terminando en WhatsApp, por lo que la elegibilidad Merchant
   se mantiene como advertencia.
-- El release multibrowser requiere ejecutar Node 22; el entorno local actual
-  usa Node 24. La fuente Archivo Variable y un sprite SVG empaquetado quedan
+- El desarrollo cotidiano usa Node 24, pero la matriz multibrowser ya fue
+  validada con Node 22. La fuente Archivo Variable y un sprite SVG empaquetado quedan
   fuera hasta disponer de los assets de distribución definitivos; mientras
   tanto se conserva la pila local sin descargas remotas.
 - La publicación real, dominio y credenciales de Google continúan fuera del
@@ -269,8 +269,8 @@ corepack pnpm pilot:preflight
 corepack pnpm test:e2e
 ```
 
-La matriz release con Firefox/WebKit requiere Node 22 en CI; este entorno local
-usa Node 24 y por eso no se presenta como una ejecucion release exitosa.
+La matriz release con Firefox/WebKit se completó localmente con Node 22.18.0;
+el entorno de desarrollo habitual continúa en Node 24.
 
 En el preview, las imágenes no reciben `src` temporal: se declaran como datos
 pendientes, el iframe las solicita por `postMessage` y recién entonces asigna

@@ -59,6 +59,9 @@ versión publicada.
 
 ### Matriz release reproducible (2026-08-12)
 
+- La matriz final bajo Node 22.18.0 valida Chromium, Firefox y WebKit con 903
+  tests verdes, 2 casos Chromium recuperados por el reintento previsto y 3
+  capturas visuales opcionales omitidas.
 - El gate Node 22 mantiene toda la suite del Studio en Chromium y limita
   Firefox/WebKit a los contratos explícitos del storefront exportado, de acuerdo
   con el soporte documentado; los barridos internos del editor ya no se
