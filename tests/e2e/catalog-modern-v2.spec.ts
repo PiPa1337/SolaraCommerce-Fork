@@ -90,21 +90,35 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
       overflowWrap: getComputedStyle(element).overflowWrap,
       wordBreak: getComputedStyle(element).wordBreak,
     })),
-  ).toEqual({ overflowWrap: "normal", wordBreak: "normal" });
+  ).toEqual({ overflowWrap: "break-word", wordBreak: "normal" });
 
   const heroMetrics = await page.locator(".catalog-hero-inner").evaluate((element) => {
     const rect = element.getBoundingClientRect();
     const title = element.querySelector("h1")?.getBoundingClientRect();
+    const actions = element.querySelector(".catalog-hero-actions")?.getBoundingClientRect();
     const media = element.querySelector(".catalog-hero-media")?.getBoundingClientRect();
     return {
       width: rect.width,
+      height: rect.height,
       titleInside: Boolean(title && title.left >= rect.left && title.right <= rect.right),
+      titleBeforeMedia: Boolean(title && media && title.right <= media.left),
+      actionsInViewport: Boolean(actions && actions.bottom <= window.innerHeight),
       mediaShare: media ? media.width / rect.width : 0,
     };
   });
   expect(heroMetrics.width).toBeGreaterThan(1700);
+  expect(heroMetrics.height).toBeLessThanOrEqual(700);
   expect(heroMetrics.titleInside).toBe(true);
+  expect(heroMetrics.titleBeforeMedia).toBe(true);
+  expect(heroMetrics.actionsInViewport).toBe(true);
   expect(heroMetrics.mediaShare).toBeGreaterThan(0.52);
+
+  const bento = page.locator(".catalog-category-bento-grid");
+  await expect(bento.locator(".catalog-category-bento-item")).toHaveCount(8);
+  await expect(bento).not.toContainText("Básicas");
+  await expect(bento.locator(".catalog-category-bento-item--wide")).not.toHaveCount(0);
+  await expect(bento.locator(".catalog-category-bento-item--tall")).not.toHaveCount(0);
+  await expect(bento.locator(".catalog-category-bento-item--compact")).not.toHaveCount(0);
 
   const grid = page.locator(".catalog-product-grid").first();
   expect(
@@ -429,7 +443,9 @@ test("V2 activa appear progresivo y compacta el header al hacer scroll", async (
   const initialHeight = (await headerInner.boundingBox())?.height ?? 0;
   await expect(products).not.toHaveAttribute("data-motion-visible", "true");
 
-  await products.scrollIntoViewIfNeeded();
+  await products.evaluate((element) =>
+    window.scrollTo({ top: element.getBoundingClientRect().top + window.scrollY - 160 }),
+  );
   await expect(products).toHaveAttribute("data-motion-visible", "true");
   await expect(header).toHaveAttribute("data-scrolled", "true");
   await expect

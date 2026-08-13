@@ -12,6 +12,15 @@ versión publicada.
 
 ### Base aislada Storefront V2 (2026-08-12)
 
+- El mosaico de categorías de Catalog Modern muestra sólo categorías madre y
+  distribuye sus tarjetas en proporciones dinámicas `2×1`, `1×2` y `1×1`, sin
+  incorporar subcategorías ni dejar huecos en la retícula responsive.
+- El hero Editorial V2 cabe en el alto útil de una ventana 1920×1080
+  maximizada, mantiene texto y acciones dentro del primer viewport y evita que
+  la tipografía invada la imagen.
+- Las animaciones de aparición usan su línea de entrada como límite real de
+  intersección, incluso cuando una sección alta ya asoma parcialmente en el
+  viewport.
 - `Predeterminado` se crea directamente con Editorial V2 en instalaciones
   nuevas; las tiendas personales y las tiendas V1 existentes no se migran de
   forma implícita.

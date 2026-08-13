@@ -832,7 +832,7 @@ const categoryBentoSettings = z.object({
         id: z.string().min(1),
         categoryId: z.string().min(1),
         imageId: z.string().default(""),
-        size: z.enum(["wide", "compact"]).default("wide"),
+        size: z.enum(["wide", "tall", "compact"]).default("wide"),
       }),
     )
     .default([]),
@@ -866,6 +866,7 @@ export const catalogCategoryBento: ModuleDefinition<
           type: "select",
           options: [
             { value: "wide", label: "Ancha" },
+            { value: "tall", label: "Alta" },
             { value: "compact", label: "Compacta" },
           ],
         },
@@ -880,22 +881,22 @@ export const catalogCategoryBento: ModuleDefinition<
         .filter((product) => product.status === "active")
         .map((product) => product.id),
     );
-    const automaticItems = context.project.categories.map((category, index) => ({
+    const rootCategories = context.project.categories.filter((category) => !category.parentId);
+    const automaticLayout = ["wide", "tall", "compact", "compact"] as const;
+    const automaticItems = rootCategories.map((category, index) => ({
       categoryId: category.id,
       imageId: "",
-      size: (index === 1 || index % 4 === 0 ? "wide" : "compact") as "wide" | "compact",
+      size: automaticLayout[index % automaticLayout.length],
     }));
     const configuredItems = context.settings.items
-      .filter((item) =>
-        context.project.categories.some((category) => category.id === item.categoryId),
-      )
+      .filter((item) => rootCategories.some((category) => category.id === item.categoryId))
       .filter(
         (item, index, items) =>
           items.findIndex((candidate) => candidate.categoryId === item.categoryId) === index,
       );
     const sourceItems = configuredItems.length ? configuredItems : automaticItems;
     const items = sourceItems
-      .map((item, index) => {
+      .map((item) => {
         const category = context.project.categories.find(
           (candidate) => candidate.id === item.categoryId,
         );
@@ -919,7 +920,7 @@ export const catalogCategoryBento: ModuleDefinition<
             fallbackAlt: category.title,
           },
         );
-        const layout = index === 0 ? "feature" : index === 1 ? "wide" : item.size;
+        const layout = item.size;
         const productCount = getCategoryProductIds(
           context.project,
           category.id as CategoryId,
@@ -934,7 +935,7 @@ export const catalogCategoryBento: ModuleDefinition<
       "catalog-category-bento",
       context.section,
       safeHtml(
-        `<div class="catalog-category-bento-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${items && searchEnabled ? '<a class="catalog-category-bento-all" href="/buscar/">Ver todo el catálogo</a>' : ""}</header><div class="catalog-category-bento-grid" data-motion-zone="items">${items || '<p class="catalog-empty">Todavía no hay categorías para mostrar.</p>'}</div></div>`,
+        `<div class="catalog-category-bento-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${items && searchEnabled ? '<a class="catalog-category-bento-all" href="/buscar/">Ver todo el catálogo</a>' : ""}</header><div class="catalog-category-bento-grid" data-category-count="${sourceItems.length}" data-motion-zone="items">${items || '<p class="catalog-empty">Todavía no hay categorías para mostrar.</p>'}</div></div>`,
       ),
     );
   },

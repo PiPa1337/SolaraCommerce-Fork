@@ -263,16 +263,24 @@ describe("official module system", () => {
     expect(firstGrid).not.toContain("catalog-product-availability");
   });
 
-  it("deriva el bento desde las categorías reales del proyecto", () => {
+  it("deriva el bento sólo desde categorías madre y alterna proporciones", () => {
     const html = renderSections(catalogModernStore, catalogModernStore.sections, {
       pageType: "home",
     });
     const bento = html.slice(html.indexOf('data-solara-module="catalog-category-bento"'));
+    const rootCategories = catalogModernStore.categories.filter((category) => !category.parentId);
+    const childCategories = catalogModernStore.categories.filter((category) => category.parentId);
     expect(bento.match(/class="catalog-category-bento-item /g) ?? []).toHaveLength(
-      catalogModernStore.categories.length,
+      rootCategories.length,
     );
-    expect(bento).toContain(catalogModernStore.categories[0]?.title);
-    expect(bento).toContain(catalogModernStore.categories.at(-1)?.title);
+    expect(bento).toContain(rootCategories[0]?.title);
+    expect(bento).toContain(rootCategories.at(-1)?.title);
+    childCategories.forEach((category) => {
+      expect(bento).not.toContain(`href="/categorias/${category.slug}/"`);
+    });
+    expect(bento).toContain("catalog-category-bento-item--wide");
+    expect(bento).toContain("catalog-category-bento-item--tall");
+    expect(bento).toContain("catalog-category-bento-item--compact");
     expect(bento).toContain("Ver todo el catálogo");
     expect(bento).toContain('href="/categorias/');
   });

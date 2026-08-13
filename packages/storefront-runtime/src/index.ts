@@ -1379,30 +1379,26 @@ function storefrontBoot(): void {
       )
     : [];
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let motionObserver: IntersectionObserver | null = null;
+  let motionObservers: IntersectionObserver[] = [];
   const connectMotion = (): void => {
     if (!reduceMotion && "IntersectionObserver" in window) {
       root.dataset.motionReady = "true";
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            const element = entry.target as HTMLElement;
-            const entryPoint = Number(element.dataset.motionEntry ?? "0.18");
-            const triggerLine = window.innerHeight * (1 - Math.max(0, Math.min(1, entryPoint)));
-            if (entry.isIntersecting && entry.boundingClientRect.top <= triggerLine) {
+      motionRoots.forEach((element) => {
+        const entryPoint = Math.max(0, Math.min(1, Number(element.dataset.motionEntry ?? "0.18")));
+        const observer = new IntersectionObserver(
+          ([entry]) => {
+            if (entry?.isIntersecting) {
               element.dataset.motionVisible = "true";
-              if (element.dataset.motionOnce !== "false") observer.unobserve(element);
+              if (element.dataset.motionOnce !== "false") observer.disconnect();
             } else if (element.dataset.motionOnce === "false") {
               delete element.dataset.motionVisible;
             }
-          });
-        },
-        { threshold: [0, 0.01] },
-      );
-      motionRoots.forEach((element) => {
+          },
+          { rootMargin: `0px 0px -${entryPoint * 100}% 0px`, threshold: 0 },
+        );
         observer.observe(element);
+        motionObservers.push(observer);
       });
-      motionObserver = observer;
     }
   };
   if (!reduceMotion && "IntersectionObserver" in window) {
@@ -1424,8 +1420,10 @@ function storefrontBoot(): void {
   const pauseRuntime = (): void => {
     if (paused) return;
     paused = true;
-    motionObserver?.disconnect();
-    motionObserver = null;
+    motionObservers.forEach((observer) => {
+      observer.disconnect();
+    });
+    motionObservers = [];
     headerObserver?.disconnect();
     headerObserver = null;
     chromeObserver?.disconnect();

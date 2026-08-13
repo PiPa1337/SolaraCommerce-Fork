@@ -363,9 +363,13 @@ test("las cards, el bento y la búsqueda moderna usan contenido real", async ({ 
   await expect(firstCard.locator(".catalog-product-availability")).toHaveCount(0);
 
   const bento = page.locator(".catalog-category-bento-section");
-  await expect(bento.locator(".catalog-category-bento-item")).toHaveCount(14);
+  await expect(bento.locator(".catalog-category-bento-item")).toHaveCount(8);
   await expect(bento).toContainText("Remeras");
   await expect(bento).toContainText("Camisas");
+  await expect(bento).not.toContainText("Básicas");
+  await expect(bento.locator(".catalog-category-bento-item--wide")).not.toHaveCount(0);
+  await expect(bento.locator(".catalog-category-bento-item--tall")).not.toHaveCount(0);
+  await expect(bento.locator(".catalog-category-bento-item--compact")).not.toHaveCount(0);
   await expect(bento.locator(".catalog-category-bento-item small").first()).toBeVisible();
   expect(
     await bento
