@@ -601,6 +601,40 @@ test("V2 conserva el carrito al navegar con enlaces del storefront", async ({ pa
   await expect(page.locator("[data-cart-count]").first()).toHaveText("2");
 });
 
+test("V2 envía al checkout todas las líneas agregadas desde páginas distintas", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  const firstProduct = new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString();
+  const secondProduct = new URL("/productos/remera-grafica-horizonte/", serverUrl).toString();
+  const checkoutUrl = new URL("/compra/", serverUrl).toString();
+
+  await page.goto(firstProduct);
+  await page.evaluate(() => localStorage.removeItem("solara-cart:store-catalog-modern-v2"));
+  await page.reload();
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("1");
+  await page.getByRole("button", { name: "Seguir comprando" }).click();
+
+  await page.goto(secondProduct);
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("1");
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("2");
+  await page.getByRole("button", { name: "Seguir comprando" }).click();
+
+  await page.goto(checkoutUrl);
+  const fields = page.locator(".solara-checkout-fields");
+  const preview = page.locator(".solara-checkout-order-panel [data-order-preview]");
+  await fields.locator("#solara-customer-name").fill("Ana Prueba");
+  await fields.locator("#solara-customer-phone").fill("5491112345678");
+  await fields.locator("#solara-customer-address").fill("Calle de prueba 123");
+  await fields.getByRole("button", { name: "Preparar pedido" }).click();
+
+  await expect(preview).toContainText("1 x Remera esencial de algodón");
+  await expect(preview).toContainText("1 x Remera gráfica Horizonte");
+  await expect(page.locator(".solara-checkout-form-v2 [data-whatsapp-link]")).toBeVisible();
+});
+
 test("V2 compone checkout editorial sin overflow en desktop y movil", async ({
   page,
 }, testInfo) => {

@@ -12,6 +12,12 @@
 - Se agrega cobertura explícita en 1024×768 para verificar que líneas, resumen
   y acciones de compra permanezcan dentro del viewport sin scroll horizontal.
 
+### Checkout con múltiples líneas V2 (2026-08-13)
+
+- Se cubre el envío de un pedido con dos productos agregados desde páginas
+  distintas, verificando que ambas líneas lleguen al resumen y al enlace de
+  WhatsApp.
+
 ### Flujo de seguir comprando en el carrito V2 (2026-08-13)
 
 - El drawer ofrece una acción visible para cerrar y continuar recorriendo la
