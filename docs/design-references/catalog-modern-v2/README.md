@@ -19,6 +19,8 @@ que una tienda no posea.
 | `product-mobile.png` | detalle móvil | galería swipeable, opciones táctiles y CTA sticky |
 | `cart-desktop.png` | drawer desktop | panel de 500 px, backdrop, cantidades y WhatsApp |
 | `cart-mobile.png` | sheet móvil | sheet de 82–88dvh con safe area y acciones completas |
+| `checkout-desktop.png` | checkout desktop | formulario abierto y resumen lateral sticky sin pago online |
+| `checkout-mobile.png` | checkout móvil | flujo apilado, controles táctiles y resumen sin overflow |
 | `testimonials-desktop.png` | reseñas + ayuda | muro de citas agrupado y CTA WhatsApp |
 | `footer-desktop.png` | cierre + footer | contenido real, cuatro grupos y vuelta arriba |
 
@@ -120,6 +122,14 @@ tabla define relaciones y fallback V2, no colores hardcodeados de una marca.
 - líneas en estructura abierta con miniatura estable, cantidad y eliminar;
 - summary y CTA permanecen alcanzables sin tapar líneas;
 - el backdrop conserva contexto pero evita interacción accidental.
+
+### Checkout
+
+- desktop: formulario y resumen en dos columnas abiertas separadas por un divisor;
+- móvil: formulario primero y resumen después, sin panel flotante que tape contenido;
+- labels persistentes, controles de al menos 48 px y foco de alto contraste;
+- no se inventan pagos, envíos, cuentas ni confirmaciones fuera de WhatsApp;
+- el resumen sigue derivándose del runtime y conserva `aria-live`.
 
 ## Componentes y estados
 

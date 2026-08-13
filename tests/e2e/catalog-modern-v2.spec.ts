@@ -271,3 +271,65 @@ test("V2 presenta PDP editorial y carrito lateral o inferior según viewport", a
   expect(drawerMetrics).toEqual({ width: 390, bottom: 0 });
   await page.screenshot({ path: testInfo.outputPath("cart-390x844.png"), fullPage: false });
 });
+
+test("V2 compone checkout editorial sin overflow en desktop y movil", async ({
+  page,
+}, testInfo) => {
+  const checkoutUrl = new URL("/compra/", serverUrl).toString();
+  await page.setViewportSize({ width: 1920, height: 968 });
+  await page.goto(checkoutUrl);
+
+  const form = page.locator(".solara-checkout-form-v2");
+  const fields = form.locator(".solara-checkout-fields");
+  const summary = form.locator(".solara-checkout-order-panel");
+  const title = page.getByRole("heading", { level: 1, name: "Coordinar compra" });
+  await expect(fields).toBeVisible();
+  await expect(summary).toBeVisible();
+  await expect(form.locator("[data-whatsapp-link]")).toBeHidden();
+  await expect(summary.locator("[data-order-preview]")).toBeHidden();
+  expect(
+    await title.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return element.getBoundingClientRect().height / Number.parseFloat(style.lineHeight);
+    }),
+  ).toBeLessThan(1.25);
+  expect(await form.evaluate((element) => getComputedStyle(element).gridTemplateColumns)).toMatch(
+    /^\d+(\.\d+)?px \d+(\.\d+)?px$/,
+  );
+  expect(await summary.evaluate((element) => getComputedStyle(element).position)).toBe("sticky");
+  expect((await fields.boundingBox())?.width).toBeGreaterThan(600);
+  expect((await summary.boundingBox())?.width).toBeGreaterThan(500);
+  expect(
+    await fields
+      .locator("input")
+      .first()
+      .evaluate((element) => element.getBoundingClientRect().height),
+  ).toBeGreaterThanOrEqual(48);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1920);
+  await page.screenshot({ path: testInfo.outputPath("checkout-1920x968.png"), fullPage: true });
+
+  await page.goto(new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString());
+  await page.getByLabel("Elegí talle y color").selectOption({ index: 1 });
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await page.getByRole("button", { name: "Cerrar carrito" }).click();
+  await page.goto(checkoutUrl);
+  await fields.locator("#solara-customer-name").fill("Ana Prueba");
+  await fields.locator("#solara-customer-phone").fill("5491112345678");
+  await fields.locator("#solara-customer-address").fill("Calle de prueba 123");
+  await fields.getByRole("button", { name: "Preparar pedido" }).click();
+  await expect(summary.locator("[data-order-preview]")).toContainText("Remera esencial");
+  await expect(form.locator("[data-whatsapp-link]")).toBeVisible();
+  await expect(form.locator("[data-whatsapp-link]")).toHaveAttribute("href", /^https:\/\/wa\.me\//);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(checkoutUrl);
+  await expect(fields).toBeVisible();
+  await expect(summary).toBeVisible();
+  await expect(page.locator(".catalog-cart-drawer")).toHaveCSS("visibility", "hidden");
+  expect(
+    await form.evaluate((element) => getComputedStyle(element).gridTemplateColumns),
+  ).not.toMatch(/\s/);
+  expect(await summary.evaluate((element) => getComputedStyle(element).position)).toBe("static");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.screenshot({ path: testInfo.outputPath("checkout-390x844.png"), fullPage: true });
+});

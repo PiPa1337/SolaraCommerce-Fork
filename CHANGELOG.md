@@ -16,7 +16,7 @@ versión publicada.
   `schemaVersion: 2` ni reinterpretar tiendas existentes `catalog-modern-v1`.
 - Una fixture determinista V2 de 50 productos permite evolucionar el storefront
   con paridad entre Preview y exportación mientras V1 permanece disponible.
-- Se incorporan el plan maestro, el baseline técnico y doce referencias visuales
+- Se incorporan el plan maestro, el baseline técnico y catorce referencias visuales
   por superficie para guiar una evolución editorial con motion, responsive y
   accesibilidad verificables.
 - La foundation V2 incorpora una paleta cálida editable, tipografía editorial,
@@ -27,6 +27,9 @@ versión publicada.
 - Categoría V2 usa un rail editorial de filtros en escritorio y un sheet
   inferior nativo en móvil; PDP adopta galería vertical 4:5 e información
   sticky, y el carrito pasa de drawer lateral de 520 px a sheet móvil.
+- Checkout V2 presenta un formulario editorial y resumen sticky en escritorio,
+  se apila sin overflow en móvil y mantiene ocultos resumen, drawer y enlace de
+  WhatsApp hasta que la interacción real los vuelve relevantes.
 
 ### Matriz release reproducible (2026-08-12)
 

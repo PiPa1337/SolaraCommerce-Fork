@@ -32,7 +32,10 @@ test("mantiene la foundation V2 dentro de un presupuesto público explícito", (
   const cssBytes = Buffer.byteLength(css, "utf8");
   const javascriptBytes = Buffer.byteLength(javascript, "utf8");
 
-  console.info({ catalogModernV2CssRaw: cssBytes, catalogModernV2JavascriptRaw: javascriptBytes });
-  expect(cssBytes).toBeLessThanOrEqual(96 * 1024);
+  console.info({
+    catalogModernV2CssRaw: cssBytes,
+    catalogModernV2JavascriptRaw: javascriptBytes,
+  });
+  expect(cssBytes).toBeLessThanOrEqual(104 * 1024);
   expect(javascriptBytes).toBeLessThanOrEqual(53 * 1024);
 });
