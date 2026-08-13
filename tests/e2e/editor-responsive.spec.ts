@@ -235,6 +235,44 @@ test("cada pestaña del Studio no desborda y conserva su acción principal", asy
           fullPage: true,
         });
       }
+      if (tab === "Constructor") {
+        const sectionActions = await page
+          .locator(".section-row-actions [data-testid='ui-icon-button']")
+          .evaluateAll((elements) =>
+            elements
+              .filter((element) => {
+                const box = element.getBoundingClientRect();
+                return box.width > 0 && box.height > 0;
+              })
+              .map((element) => {
+                const box = element.getBoundingClientRect();
+                return {
+                  width: box.width,
+                  height: box.height,
+                  right: box.right,
+                  viewportWidth: window.innerWidth,
+                };
+              }),
+          );
+        expect(
+          sectionActions.length,
+          `Constructor ${viewport.name}: acciones visibles`,
+        ).toBeGreaterThan(0);
+        for (const action of sectionActions) {
+          expect(
+            action.width,
+            `Constructor ${viewport.name}: target táctil ancho`,
+          ).toBeGreaterThanOrEqual(36);
+          expect(
+            action.height,
+            `Constructor ${viewport.name}: target táctil alto`,
+          ).toBeGreaterThanOrEqual(36);
+          expect(
+            action.right,
+            `Constructor ${viewport.name}: acción dentro del viewport`,
+          ).toBeLessThanOrEqual(action.viewportWidth + 1);
+        }
+      }
       if (tab === "SEO") {
         await expect(page.locator(".seo-header-score")).toBeVisible();
         const seoOrder = await page.evaluate(() => {

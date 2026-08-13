@@ -10,6 +10,14 @@ versión publicada.
 
 ## [Unreleased]
 
+### Acciones táctiles del Constructor (2026-08-13)
+
+- Las acciones de mover, ocultar, duplicar y eliminar se alinean con el target
+  base de 36 px del Studio, incluso cuando la fila se divide en dos líneas en
+  mobile.
+- La matriz responsive verifica que esos controles sigan completos dentro del
+  viewport en todos los tamaños soportados.
+
 ### Auditoría SEO del Studio (2026-08-13)
 
 - Los hallazgos de SEO muestran títulos accionables según su código, en lugar

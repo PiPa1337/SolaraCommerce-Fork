@@ -3018,9 +3018,9 @@ tbody tr[data-selected="true"] {
 }
 
 .section-row-actions .icon-button {
-  width: 29px;
-  min-width: 29px;
-  min-height: 29px;
+  width: 36px;
+  min-width: 36px;
+  min-height: 36px;
 }
 
 .inspector {
