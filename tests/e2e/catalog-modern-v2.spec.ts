@@ -682,6 +682,65 @@ test("V2 compone checkout editorial sin overflow en desktop y movil", async ({
   await page.screenshot({ path: testInfo.outputPath("checkout-390x844.png"), fullPage: true });
 });
 
+test("V2 conserva carrito y checkout dentro del viewport intermedio", async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  const checkoutUrl = new URL("/compra/", serverUrl).toString();
+  await page.goto(checkoutUrl);
+
+  const checkoutMetrics = await page.evaluate(() => {
+    const rectOf = (selector: string) => {
+      const element = document.querySelector<HTMLElement>(selector);
+      if (!element) return null;
+      const rect = element.getBoundingClientRect();
+      return { left: rect.left, right: rect.right, width: rect.width, height: rect.height };
+    };
+    return {
+      documentWidth: document.documentElement.scrollWidth,
+      bodyWidth: document.body.scrollWidth,
+      form: rectOf(".solara-checkout-form-v2"),
+      fields: rectOf(".solara-checkout-fields"),
+      summary: rectOf(".solara-checkout-order-panel"),
+      button: rectOf(".solara-checkout-fields .solara-primary-action"),
+    };
+  });
+  expect(checkoutMetrics.documentWidth).toBeLessThanOrEqual(1024);
+  expect(checkoutMetrics.bodyWidth).toBeLessThanOrEqual(1024);
+  expect(checkoutMetrics.form?.right ?? 0).toBeLessThanOrEqual(1024);
+  expect(checkoutMetrics.fields?.width ?? 0).toBeGreaterThan(0);
+  expect(checkoutMetrics.summary?.width ?? 0).toBeGreaterThanOrEqual(300);
+  expect(checkoutMetrics.button?.height ?? 0).toBeGreaterThanOrEqual(48);
+
+  await page.goto(new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString());
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await page.getByRole("button", { name: "Cerrar carrito" }).click();
+  await page.goto(new URL("/carrito/", serverUrl).toString());
+
+  const cartMetrics = await page.evaluate(() => {
+    const rectOf = (selector: string) => {
+      const element = document.querySelector<HTMLElement>(selector);
+      if (!element) return null;
+      const rect = element.getBoundingClientRect();
+      return { left: rect.left, right: rect.right, width: rect.width, height: rect.height };
+    };
+    return {
+      documentWidth: document.documentElement.scrollWidth,
+      bodyWidth: document.body.scrollWidth,
+      grid: rectOf(".solara-cart-page-grid"),
+      line: rectOf(".solara-cart-page-grid [data-cart-lines] .solara-cart-line"),
+      summary: rectOf(".solara-cart-page-grid > aside"),
+      button: rectOf(".solara-cart-page-grid > aside .solara-primary-action"),
+    };
+  });
+  expect(cartMetrics.documentWidth).toBeLessThanOrEqual(1024);
+  expect(cartMetrics.bodyWidth).toBeLessThanOrEqual(1024);
+  expect(cartMetrics.grid?.right ?? 0).toBeLessThanOrEqual(1024);
+  expect(cartMetrics.line?.width ?? 0).toBeGreaterThan(0);
+  expect(cartMetrics.summary?.width ?? 0).toBeGreaterThanOrEqual(300);
+  expect(cartMetrics.button?.height ?? 0).toBeGreaterThanOrEqual(44);
+});
+
 test("V2 conserva nombres accesibles, foco visible y navegacion por teclado", async ({ page }) => {
   const routes = [
     "/",

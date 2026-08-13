@@ -7,6 +7,11 @@
 - Las imágenes de búsqueda declaran tamaños compactos para mobile, tablet y
   desktop, evitando solicitar variantes más grandes que el espacio real.
 
+### Gate responsive de carrito y checkout V2 (2026-08-13)
+
+- Se agrega cobertura explícita en 1024×768 para verificar que líneas, resumen
+  y acciones de compra permanezcan dentro del viewport sin scroll horizontal.
+
 ### Flujo de seguir comprando en el carrito V2 (2026-08-13)
 
 - El drawer ofrece una acción visible para cerrar y continuar recorriendo la
