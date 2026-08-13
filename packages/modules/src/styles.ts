@@ -2722,6 +2722,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   line-height: .88;
   overflow-wrap: normal;
 }
+.cm.v2 .solara-category-hero img { aspect-ratio: 5 / 3; }
 .cm.v2 .solara-search-page .solara-page-intro { max-width: none; padding: clamp(3rem, 5vw, 5rem) 0 1.5rem; }
 .cm.v2 .solara-search-page .solara-page-intro h1 { max-width: none; font-size: calc(clamp(3.5rem, 4.5vw, 5.75rem) * var(--solara-type-scale, 1)); line-height: .95; }
 .cm.v2 .solara-search-page .solara-page-intro > p:not(.solara-eyebrow) { margin: 1rem 0 0; color: var(--catalog-muted); font-size: 1rem; line-height: 1.55; }

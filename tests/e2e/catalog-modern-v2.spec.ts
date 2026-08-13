@@ -293,8 +293,15 @@ test("V2 ordena categoría y filtros como rail editorial y sheet móvil", async 
   const layout = page.locator(".catalog-category-layout");
   const filters = page.locator(".catalog-category-filters");
   const grid = page.locator(".catalog-category-results .catalog-product-grid");
+  const categoryImage = page.locator(".solara-category-hero img");
   await expect(layout).toBeVisible();
   await expect(filters.locator(".catalog-filter-groups")).toBeVisible();
+  expect(
+    await categoryImage.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.width / rect.height;
+    }),
+  ).toBeCloseTo(5 / 3, 1);
   expect(await layout.evaluate((element) => getComputedStyle(element).gridTemplateColumns)).toMatch(
     /^2[4-9]\dpx /,
   );
