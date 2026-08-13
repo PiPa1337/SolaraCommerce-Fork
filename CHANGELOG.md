@@ -45,6 +45,10 @@ versión publicada.
   declaran `sizes` responsive para no solicitar imágenes mayores que sus cards.
 - La navegación V2 mantiene visible la ruta activa en desktop y conserva su
   `aria-current` en el menú móvil para orientar mejor al visitante.
+- Las grillas V2 de productos y búsqueda limitan su ancho para que las cards
+  respiren mejor en desktop y sus imágenes se soliciten al tamaño renderizado.
+- El estado 404 V2 compacta el espacio vertical del hero y acerca las acciones
+  al mensaje en mobile, evitando un vacío innecesario sin perder jerarquía.
 - La página de producto V2 mantiene márgenes horizontales simétricos, elimina
   el desborde lateral y pasa a una columna en tabletas para conservar la
   jerarquía y la legibilidad.

@@ -2617,7 +2617,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-product-grid {
   gap: clamp(1.5rem, 2.4vw, 3rem) clamp(.8rem, 1.4vw, 1.6rem);
-  max-width: 1520px;
+  max-width: 1440px;
   margin: 0 auto;
 }
 .cm.v2 .catalog-product-card {
@@ -2734,7 +2734,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .solara-search-results { min-height: 18rem; padding-block: clamp(2.5rem, 5vw, 5rem); }
 .cm.v2 .solara-search-results > p:only-child { max-width: 34rem; margin: 1rem auto; font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(1.55rem, 2.5vw, 2.35rem); line-height: 1.15; text-align: center; }
 .cm.v2 .solara-search-summary { margin: 0 0 1.75rem; font-size: 1rem; font-weight: 650; }
-.cm.v2 .solara-search-results-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3rem clamp(.8rem, 1.4vw, 1.6rem); max-width: 1520px; margin: 0 auto; }
+.cm.v2 .solara-search-results-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3rem clamp(.8rem, 1.4vw, 1.6rem); max-width: 1440px; margin: 0 auto; }
 .cm.v2 .solara-search-result { min-width: 0; overflow: hidden; }
 .cm.v2 .solara-search-result a { gap: .75rem; }
 .cm.v2 .solara-search-result img { transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out), filter var(--catalog-v2-motion-component) ease; }
@@ -2896,8 +2896,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .solara-cart-page-grid [data-cart-lines] .solara-cart-line input { width: 100%; min-height: 44px; }
 .cm.v2 .solara-cart-page-grid [data-cart-lines] .solara-cart-line > button { grid-column: 3; grid-row: 2; justify-self: end; }
 .cm.v2 .solara-cart-page-grid [data-cart-lines] .solara-cart-line > span:last-child { grid-column: 3; grid-row: 1; font-family: var(--solara-font-body, Arial, sans-serif); font-weight: 650; white-space: nowrap; }
-.cm.v2 .solara-error-hero { display: grid; grid-template-columns: minmax(0, .8fr) minmax(28rem, 1.2fr); min-height: min(620px, calc(100svh - 170px)); overflow: hidden; }
-.cm.v2 .solara-error-copy { padding-block: 4rem; }
+.cm.v2 .solara-error-hero { display: grid; grid-template-columns: minmax(0, .8fr) minmax(28rem, 1.2fr); min-height: min(520px, calc(100svh - 220px)); overflow: hidden; }
+.cm.v2 .solara-error-copy { padding-block: 2rem; }
 .cm.v2 .solara-error-copy h1 { margin-top: 1rem; font-size: calc(clamp(4rem, 5.5vw, 7rem) * var(--solara-type-scale, 1)); letter-spacing: -.07em; line-height: .92; }
 .cm.v2 .solara-error-copy > p:not(.solara-eyebrow) { max-width: 36rem; margin-top: 1.5rem; color: var(--catalog-muted); font-size: 1.05rem; }
 .cm.v2 .solara-error-code { color: color-mix(in srgb, var(--catalog-border), transparent 25%); font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(18rem, 31vw, 36rem); letter-spacing: -.1em; line-height: .7; text-align: center; }
@@ -3122,9 +3122,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .solara-cart-page-grid [data-cart-lines] .solara-cart-line > button { grid-column: 2; grid-row: 3; }
   .cm.v2 .solara-cart-page-grid [data-cart-lines] .solara-cart-line > span:last-child { grid-column: 2; grid-row: 2; justify-self: end; }
   .cm.v2 .solara-error-hero { display: flex; min-height: 0; flex-direction: column; align-items: stretch; padding: 2rem 0 4rem; }
-  .cm.v2 .solara-error-copy { padding-block: 1.5rem 0; }
+  .cm.v2 .solara-error-copy { padding-block: 1rem 0; }
   .cm.v2 .solara-error-copy h1 { font-size: calc(clamp(3.4rem, 14vw, 4.8rem) * var(--solara-type-scale, 1)); }
-  .cm.v2 .solara-error-code { order: 2; margin: 3rem 0 1rem; font-size: clamp(12rem, 55vw, 17rem); }
+  .cm.v2 .solara-error-code { order: 2; margin: 2rem 0 .5rem; font-size: clamp(10rem, 48vw, 14rem); }
   .cm.v2 .solara-error-actions { display: grid; }
   .cm.v2 .solara-checkout-page h1 {
     max-width: 10ch;

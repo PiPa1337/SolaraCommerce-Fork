@@ -134,10 +134,10 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
       ?.getBoundingClientRect();
     return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
   });
-  expect(gridMetrics.gridWidth).toBeGreaterThan(1500);
-  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(1520);
-  expect(gridMetrics.cardWidth).toBeGreaterThan(350);
-  expect(gridMetrics.cardWidth).toBeLessThan(370);
+  expect(gridMetrics.gridWidth).toBeGreaterThan(1400);
+  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(1440);
+  expect(gridMetrics.cardWidth).toBeGreaterThan(330);
+  expect(gridMetrics.cardWidth).toBeLessThan(350);
   const firstMedia = grid.locator(".catalog-product-media").first();
   const mediaRatio = await firstMedia.evaluate((element) => {
     const rect = element.getBoundingClientRect();
@@ -148,7 +148,7 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   const image = firstMedia.locator("img");
   await expect(image).toHaveAttribute(
     "sizes",
-    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(23.25vw, 22.5rem)",
+    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(23.5vw, 21.25rem)",
   );
   const initialTransform = await image.evaluate((element) => getComputedStyle(element).transform);
   await firstMedia.hover();
@@ -706,12 +706,12 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
     );
     await expect(results.locator("img").first()).toHaveAttribute(
       "sizes",
-      "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(23.25vw, 22.5rem)",
+      "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 5rem) / 3), min(23.5vw, 21.25rem)",
     );
     if (viewport.width === 1920) {
       expect(
         await results.evaluate((element) => element.getBoundingClientRect().width),
-      ).toBeLessThanOrEqual(1520);
+      ).toBeLessThanOrEqual(1440);
     }
     expect(
       await results.evaluate(
@@ -773,6 +773,10 @@ test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, t
         await expect(page.locator(".solara-error-code")).toHaveAttribute("aria-hidden", "true");
         await expect(page.getByRole("link", { name: "Volver al inicio" })).toBeVisible();
         await expect(page.getByRole("link", { name: "Ver categorías" })).toBeVisible();
+        if (viewport.width === 1920) {
+          const errorHero = await page.locator(".solara-error-hero").boundingBox();
+          expect(errorHero?.height ?? 0).toBeLessThanOrEqual(520);
+        }
       }
       if (name !== "buscar" && name !== "carrito") {
         await page.evaluate(() => {
