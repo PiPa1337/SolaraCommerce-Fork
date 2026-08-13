@@ -157,12 +157,32 @@ describe("exporter", () => {
     const v1Home = String(v1Result.files.get("index.html"));
     const v2Home = String(v2Result.files.get("index.html"));
 
-    expect(v2Css).toContain("[data-v2].catalog-modern .catalog-hero-inner");
+    expect(v2Css).toContain(".cm.v2 .catalog-hero-inner");
     expect(v2Css).toContain("--catalog-v2-motion-editorial");
     expect(v2Css).toContain("prefers-reduced-motion:reduce");
-    expect(v2Home).toContain(" data-v2");
+    expect(v2Home).toContain("catalog-modern-v2 cm v2");
     expect(v1Css).not.toContain("--catalog-v2-motion-editorial");
-    expect(v1Home).not.toContain(" data-v2");
+    expect(v1Home).not.toContain("catalog-modern-v2 cm v2");
+  });
+
+  it("compone políticas y recuperación 404 V2 sin inventar condiciones", () => {
+    const result = exportProject(catalogModernV2Store, { mode: "production" });
+    const shipping = String(result.files.get("envios/index.html"));
+    const returns = String(result.files.get("devoluciones/index.html"));
+    const privacy = String(result.files.get("privacidad/index.html"));
+    const notFound = String(result.files.get("404.html"));
+
+    expect(shipping).toContain('class="solara-editorial-page solara-policy-page');
+    expect(shipping).toContain("Preparación del pedido");
+    expect(shipping).toContain("1 a 3 días");
+    expect(shipping).toContain("2 a 7 días");
+    expect(shipping).toContain("Argentina");
+    expect(returns).toContain("Plazo informado");
+    expect(returns).toContain("10 días");
+    expect(privacy).toContain(catalogModernV2Store.policies.privacy);
+    expect(notFound).toContain('class="solara-error-code" aria-hidden="true">404');
+    expect(notFound).toContain("Volver al inicio");
+    expect(shipping).not.toMatch(/envío gratis|seguimiento|transportista/i);
   });
 
   it("rechaza proyectos inválidos con una ruta accionable en cada límite público", () => {

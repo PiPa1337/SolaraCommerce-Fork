@@ -16,7 +16,7 @@ versión publicada.
   `schemaVersion: 2` ni reinterpretar tiendas existentes `catalog-modern-v1`.
 - Una fixture determinista V2 de 50 productos permite evolucionar el storefront
   con paridad entre Preview y exportación mientras V1 permanece disponible.
-- Se incorporan el plan maestro, el baseline técnico y dieciocho referencias visuales
+- Se incorporan el plan maestro, el baseline técnico y veintidós referencias visuales
   por superficie para guiar una evolución editorial con motion, responsive y
   accesibilidad verificables.
 - La foundation V2 incorpora una paleta cálida editable, tipografía editorial,
@@ -30,6 +30,9 @@ versión publicada.
 - Checkout V2 presenta un formulario editorial y resumen sticky en escritorio,
   se apila sin overflow en móvil y mantiene ocultos resumen, drawer y enlace de
   WhatsApp hasta que la interacción real los vuelve relevantes.
+- Envíos, cambios, privacidad, términos y la recuperación 404 adoptan una
+  composición editorial responsive derivada únicamente de datos reales, sin
+  inventar condiciones comerciales o legales y sin alterar las páginas V1.
 - El benchmark exporta ahora `catalog-modern-v2` con 2.000 productos, valida
   páginas activas, índice de búsqueda y un presupuesto máximo de 48 MiB.
 - La matriz V2 verifica nombres accesibles, IDs únicos, foco visible, menú por

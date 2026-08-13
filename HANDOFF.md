@@ -55,7 +55,7 @@ servirse en un hosting estático. El pedido se deriva a WhatsApp.
 7. `proyectos/` no se versiona en Git y el servicio sólo escucha loopback.
 8. Los cambios de schema requieren migración y pruebas de round-trip.
 9. `catalog-modern-v2` y `data-design-family` siguen siendo los contratos
-   visibles; `data-v2` es sólo un alias interno de CSS para mantener el
+   visibles; `.cm.v2` son sólo alias internos de CSS para mantener el
    presupuesto público y nunca se persiste en el proyecto.
 
 ## Archivos modificados durante este handoff
@@ -89,8 +89,8 @@ Se ejecutaron con resultado exitoso:
 - `corepack pnpm check:budgets` (bytes crudos): Studio JS ≤ 700 KiB y CSS
   ≤ 100 KiB; runtime público JS ≤ 53 KiB (medido 54.226 B) y CSS ≤ 8 KiB
   (medido 7.486 B); la foundation `catalog-modern-v2` conserva sus topes de
-  104 KiB CSS (106.429 B) y 53 KiB JavaScript sin elevarlos para búsqueda o
-  carrito completo.
+  104 KiB CSS (103.798 B) y 53 KiB JavaScript sin elevarlos para búsqueda,
+  carrito completo, políticas o recuperación 404.
 - `corepack pnpm pilot:preflight`: fixture de referencia, 27 páginas y 3
   ofertas.
 - `corepack pnpm check:repository`, `corepack pnpm format:check` y

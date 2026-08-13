@@ -672,7 +672,7 @@ function isModernProject(project: StoreProjectV1): boolean {
 function modernProjectClass(project: StoreProjectV1): string {
   if (!isModernProject(project)) return "";
   return project.commerceTemplates.designFamily === "catalog-modern-v2"
-    ? " catalog-modern catalog-modern-v2"
+    ? " catalog-modern catalog-modern-v2 cm v2"
     : " catalog-modern";
 }
 
@@ -1184,7 +1184,7 @@ function renderDocument(
 </head>
 <body>
   <a class="solara-skip-link" href="#solara-main">Ir al contenido</a>
-  <div class="solara-page${modernProjectClass(project)}" data-solara-store${project.commerceTemplates.designFamily === "catalog-modern-v2" ? " data-v2" : ""} data-design-family="${escapeHtml(project.commerceTemplates.designFamily ?? "legacy-editorial-v1")}" data-page-type="${page.pageType}" data-color-mode="${project.theme.colorMode}">${page.body.replace("<main", '<main id="solara-main"')}</div>
+  <div class="solara-page${modernProjectClass(project)}" data-solara-store data-design-family="${escapeHtml(project.commerceTemplates.designFamily ?? "legacy-editorial-v1")}" data-page-type="${page.pageType}" data-color-mode="${project.theme.colorMode}">${page.body.replace("<main", '<main id="solara-main"')}</div>
   <script src="/assets/storefront.js" defer></script>
 </body>
 </html>`;
@@ -1643,13 +1643,38 @@ function buildPages(
     structuredData: [],
   };
 
+  const isV2Design = project.commerceTemplates.designFamily === "catalog-modern-v2";
+  const formatPolicyDays = (minimum: number, maximum: number) =>
+    minimum === maximum
+      ? `${minimum} ${minimum === 1 ? "día" : "días"}`
+      : `${minimum} a ${maximum} días`;
+  const policyCoverage = (countries: readonly string[]) =>
+    countries.map((country) => (country === "AR" ? "Argentina" : country)).join(", ");
+  const policyContactAction = whatsAppContactLink
+    ? `<a class="solara-primary-action" href="${escapeAttribute(whatsAppContactLink)}" target="_blank" rel="noopener noreferrer">Consultar por WhatsApp</a>`
+    : '<a class="solara-secondary-action" href="/contacto/">Ir a contacto</a>';
+  const renderV2PolicyPage = (
+    title: string,
+    eyebrow: string,
+    summary: string,
+    details: string,
+    facts: readonly (readonly [label: string, value: string])[] = [],
+  ) =>
+    [
+      renderProjectSections(project, sharedHeader, { pageType: "legal" }),
+      `<main class="solara-editorial-page solara-policy-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><span>${escapeHtml(title)}</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">${escapeHtml(eyebrow)}</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(summary)}</p></header><section class="solara-story-grid"><div><h2>Qué necesitás saber</h2><p>${escapeHtml(details)}</p></div><div><h2>¿Tenés dudas?</h2><p>Escribinos antes de coordinar tu pedido y revisamos esta información con vos.</p>${policyContactAction}</div></section>${facts.length ? `<section class="solara-values-grid">${facts.map(([label, value]) => `<article><h2>${escapeHtml(label)}</h2><p>${escapeHtml(value)}</p></article>`).join("")}</section>` : ""}</main>`,
+      renderProjectSections(project, sharedFooter, { pageType: "legal" }),
+    ].join("");
+
   const notFoundPage: PageDescriptor = {
     path: "404.html",
     title: `Página no encontrada | ${project.identity.brandName}`,
     description: "La página que buscás no existe.",
     canonicalPath: "/404.html",
     pageType: "not-found",
-    body: `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container solara-error-page"><p class="solara-eyebrow">404</p><h1>No encontramos esa página.</h1><p>Podés volver al inicio o explorar nuestras colecciones.</p><a class="solara-primary-action" href="/">Volver al inicio</a></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
+    body: isV2Design
+      ? `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container solara-error-page"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><span>404</span></nav><section class="solara-error-hero"><div class="solara-error-copy"><p class="solara-eyebrow">Página no encontrada</p><h1>No encontramos esa página.</h1><p>Podés volver al inicio o explorar nuestras colecciones.</p><div class="solara-error-actions"><a class="solara-primary-action" href="/">Volver al inicio</a>${project.categories[0] ? `<a class="solara-secondary-action" href="/categorias/${escapeAttribute(project.categories[0].slug)}/">Ver categorías</a>` : ""}</div></div><p class="solara-error-code" aria-hidden="true">404</p></section></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`
+      : `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container solara-error-page"><p class="solara-eyebrow">404</p><h1>No encontramos esa página.</h1><p>Podés volver al inicio o explorar nuestras colecciones.</p><a class="solara-primary-action" href="/">Volver al inicio</a></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
     structuredData: [],
   };
 
@@ -1660,7 +1685,31 @@ function buildPages(
       description: project.policies.shipping.summary,
       canonicalPath: "/envios/",
       pageType: "legal",
-      body: `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>Envíos</h1><p>${escapeHtml(project.policies.shipping.details)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
+      body: isV2Design
+        ? renderV2PolicyPage(
+            "Envíos",
+            "Información de entrega",
+            project.policies.shipping.summary,
+            project.policies.shipping.details,
+            [
+              [
+                "Preparación del pedido",
+                formatPolicyDays(
+                  project.policies.shipping.handlingDaysMin,
+                  project.policies.shipping.handlingDaysMax,
+                ),
+              ],
+              [
+                "Tiempo estimado de tránsito",
+                formatPolicyDays(
+                  project.policies.shipping.transitDaysMin,
+                  project.policies.shipping.transitDaysMax,
+                ),
+              ],
+              ["Cobertura", policyCoverage(project.policies.shipping.countries)],
+            ],
+          )
+        : `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>Envíos</h1><p>${escapeHtml(project.policies.shipping.details)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
       structuredData: [],
     },
     {
@@ -1669,7 +1718,24 @@ function buildPages(
       description: project.policies.returns.summary,
       canonicalPath: "/devoluciones/",
       pageType: "legal",
-      body: `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>Cambios y devoluciones</h1><p>${escapeHtml(project.policies.returns.details)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
+      body: isV2Design
+        ? renderV2PolicyPage(
+            "Cambios y devoluciones",
+            "Condiciones de cambio",
+            project.policies.returns.summary,
+            project.policies.returns.details,
+            [
+              [
+                "Plazo informado",
+                formatPolicyDays(
+                  project.policies.returns.returnDays,
+                  project.policies.returns.returnDays,
+                ),
+              ],
+              ["Cobertura", policyCoverage(project.policies.returns.countries)],
+            ],
+          )
+        : `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>Cambios y devoluciones</h1><p>${escapeHtml(project.policies.returns.details)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
       structuredData: [],
     },
     {
@@ -1678,7 +1744,14 @@ function buildPages(
       description: "Cómo usamos los datos compartidos al realizar un pedido.",
       canonicalPath: "/privacidad/",
       pageType: "legal",
-      body: `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>Privacidad</h1><p>${escapeHtml(project.policies.privacy)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
+      body: isV2Design
+        ? renderV2PolicyPage(
+            "Privacidad",
+            "Uso de tus datos",
+            "Cómo usamos los datos compartidos al realizar un pedido.",
+            project.policies.privacy,
+          )
+        : `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>Privacidad</h1><p>${escapeHtml(project.policies.privacy)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
       structuredData: [],
     },
     {
@@ -1687,7 +1760,14 @@ function buildPages(
       description: "Condiciones comerciales de la tienda.",
       canonicalPath: "/terminos/",
       pageType: "legal",
-      body: `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>Términos</h1><p>${escapeHtml(project.policies.terms)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
+      body: isV2Design
+        ? renderV2PolicyPage(
+            "Términos",
+            "Condiciones comerciales",
+            "Información vigente para coordinar una compra.",
+            project.policies.terms,
+          )
+        : `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>Términos</h1><p>${escapeHtml(project.policies.terms)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
       structuredData: [],
     },
   ];

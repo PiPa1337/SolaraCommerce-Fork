@@ -27,6 +27,10 @@ que una tienda no posea.
 | `cart-page-mobile.png` | carrito completo móvil | productos y resumen apilados sin importes display ni overflow |
 | `testimonials-desktop.png` | reseñas + ayuda | muro de citas agrupado y CTA WhatsApp |
 | `footer-desktop.png` | cierre + footer | contenido real, cuatro grupos y vuelta arriba |
+| `policy-desktop.png` | políticas desktop | introducción editorial, datos reales, hechos verificables y contacto |
+| `policy-mobile.png` | políticas móvil | contenido factual apilado, legible y sin overflow |
+| `not-found-desktop.png` | recuperación 404 desktop | composición asimétrica, código tipográfico y rutas útiles |
+| `not-found-mobile.png` | recuperación 404 móvil | acciones visibles antes del código decorativo y sin recortes |
 
 ## Referencias rechazadas durante la exploración
 
@@ -145,6 +149,24 @@ la serif queda reservada para el H1 y el título del resumen.
 - labels persistentes, controles de al menos 48 px y foco de alto contraste;
 - no se inventan pagos, envíos, cuentas ni confirmaciones fuera de WhatsApp;
 - el resumen sigue derivándose del runtime y conserva `aria-live`.
+
+### Políticas
+
+- Envíos y cambios convierten únicamente los campos reales del proyecto en
+  resumen, detalle, plazos y cobertura; no agregan promesas comerciales.
+- Privacidad y términos muestran sólo el texto configurado y un contacto
+  genérico; no inventan prácticas legales, garantías ni jurisdicciones.
+- desktop combina una introducción de lectura acotada con hechos escaneables;
+  móvil apila toda la información sin tablas ni desplazamiento horizontal.
+- la composición V2 es exclusiva de `catalog-modern-v2`; V1 conserva su HTML.
+
+### Recuperación 404
+
+- el mensaje explica el error y ofrece regreso a inicio como acción primaria;
+- la primera categoría sólo aparece cuando existe realmente en el proyecto;
+- el `404` de gran escala es decorativo y queda fuera del árbol accesible;
+- desktop admite una composición asimétrica y móvil mantiene las acciones antes
+  del número, sin clipping ni overflow.
 
 ## Componentes y estados
 

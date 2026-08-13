@@ -466,6 +466,32 @@ test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, t
         await page.evaluate(() => document.documentElement.scrollWidth),
         `${name} ${viewport.label}`,
       ).toBeLessThanOrEqual(viewport.width);
+      if (["envios", "devoluciones", "privacidad", "terminos"].includes(name)) {
+        const policyPage = page.locator(".solara-policy-page");
+        await expect(policyPage.locator(".solara-story-grid")).toBeVisible();
+        await expect(policyPage.getByRole("heading", { level: 2 })).toHaveCount(
+          name === "envios" ? 5 : name === "devoluciones" ? 4 : 2,
+        );
+      }
+      if (name === "envios") {
+        await expect(page.locator(".solara-policy-page .solara-values-grid article")).toHaveCount(
+          3,
+        );
+      }
+      if (name === "404") {
+        await expect(page.locator(".solara-error-code")).toHaveAttribute("aria-hidden", "true");
+        await expect(page.getByRole("link", { name: "Volver al inicio" })).toBeVisible();
+        await expect(page.getByRole("link", { name: "Ver categorías" })).toBeVisible();
+      }
+      if (name !== "buscar" && name !== "carrito") {
+        await page.evaluate(() => {
+          for (const animation of document.getAnimations()) animation.finish();
+        });
+        await page.screenshot({
+          path: testInfo.outputPath(`${name}-${viewport.width}x${viewport.height}.png`),
+          fullPage: true,
+        });
+      }
     }
     await page.goto(new URL("/buscar/", serverUrl).toString());
     const searchTitle = page.getByRole("heading", { level: 1, name: "Buscar productos" });

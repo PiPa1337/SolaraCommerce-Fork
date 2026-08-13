@@ -54,7 +54,7 @@ describe("tienda base catalog-modern de 50 productos", () => {
       [...html.matchAll(/data-solara-module="([^"]+)"/g)].map((match) => match[1]);
 
     expect(v2Home).toContain('data-design-family="catalog-modern-v2"');
-    expect(v2Home).toContain('class="solara-page catalog-modern catalog-modern-v2"');
+    expect(v2Home).toContain('class="solara-page catalog-modern catalog-modern-v2 cm v2"');
     expect(v2Home).toContain('data-solara-module="catalog-product-grid"');
     expect(v2Product).toContain('data-solara-module="catalog-product-detail"');
     expect(v2Home).toContain('<link rel="canonical"');
