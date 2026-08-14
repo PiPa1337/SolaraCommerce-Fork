@@ -62,3 +62,23 @@
 - Gates: `pnpm check` exit=0, benchmark 1.704 ms, e2e 8/8.
 - Mejoras: axe catalogModern 100 %, CSS Studio 0.23 %, cobertura ampliada (nojs 24 combos, reproducibilidad draft, contratos).
 - Acumulado PLAN 1→3: axe 14→0 en reference y 19→0 en catalogModern; benchmark −2.9 % vs baseline del PLAN 1; margen CSS Studio +232 B; margen runtime 1.5 KB (bloqueado por decisión del usuario).
+
+## PLAN 4 (17:10-17:25Z, 2026-08-14)
+
+| id | ítem | métrica | antes | después | Δ% | estado |
+|----|------|---------|-------|---------|-----|--------|
+| P4-1 | Re-verificación gates PLAN 3 | gates | — | 14/14 | 0 | hecho |
+| P4-2 | Verificación discount/announcement (medición) | checks | — | 2/2 | verificado | hecho |
+| P4-3 | CSS Studio duplicación post-dedup | duplicadas | 0 | 0 | 0 (completo) | hecho |
+| P4-4 | Foco visible con teclado | invisibles | — | 0/12 tabs | gate nuevo | hecho (`focus-visible.spec.ts`) |
+| P4-5 | Draft útil + noindex/robots/sitemap | checks | — | 4/4 | gate nuevo | hecho |
+| P4-6 | CDP reposo post-axe | ms/s | 31.8/18.0 | 31.6/18.6 | 0 (ruido) | hecho |
+| P4-7 | Content-types del handler | checks | 9/9 | 9/9 | 0 | hecho |
+| P4-8 | Runtime raw (estado real del usuario) | bytes | 55.845 B | 55.845 B | 0 | hecho |
+| P4-9 | Robots/sitemap draft vs production | drift | 0 | 0 | gate nuevo | hecho |
+| P4-10 | Preload LCP en páginas con imagen | páginas | — | **146/146** | gate nuevo | hecho (`sitio-consistencia.test.ts`) |
+
+### Totales PLAN 4
+- Gates: `pnpm check` exit=0, benchmark 1.550 ms (Δ% 8.4 % acumulado vs baseline PLAN 1), e2e 2/2.
+- Mejoras: 3 gates permanentes nuevos (foco, consistencia draft/production, preloads 146/146).
+- Acumulado PLAN 1→4: axe 0/0 en ambos fixtures; preloads 100 %; foco 100 %; benchmark −8.4 %; margen CSS Studio 4.3 KiB.
