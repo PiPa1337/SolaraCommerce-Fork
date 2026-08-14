@@ -511,8 +511,8 @@ test("V2 mantiene CTA, dos columnas y reduced motion en 390x844", async ({ page 
   expect(mobileBentoMetrics.maxRight).toBeLessThanOrEqual(
     mobileBentoMetrics.gridLeft + mobileBentoMetrics.gridWidth + 1,
   );
-  expect(mobileBentoMetrics.wideColumns).toBe("span 2");
-  expect(mobileBentoMetrics.tallRows).toBe("span 2");
+  expect(mobileBentoMetrics.wideColumns).toBe("span 1");
+  expect(mobileBentoMetrics.tallRows).toBe("span 1");
   expect(
     await page.locator(".catalog-hero-copy h1").evaluate((element) => {
       const words: { word: string; rects: number }[] = [];

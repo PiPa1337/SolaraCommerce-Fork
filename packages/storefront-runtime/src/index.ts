@@ -161,6 +161,7 @@ export function buildWhatsAppUrl(phone: string, message: string): string {
 function storefrontBoot(): void {
   const root = document.documentElement;
   const storeId = root.dataset.storeId ?? "solara";
+  const baseHref = root.dataset.baseHref ?? "";
   const currency = root.dataset.currency ?? "ARS";
   const locale = root.lang || "es-AR";
   const phone = root.dataset.whatsapp ?? "";
@@ -209,6 +210,7 @@ function storefrontBoot(): void {
   }
   let lastCartTrigger: HTMLElement | null = null;
   let paused = false;
+  let deferredSearch: (() => void) | undefined;
   const heroAutoplayControls: Array<{ stop: () => void; start: () => void }> = [];
 
   const initialAddLabels = new Map<HTMLElement, string>();
@@ -335,7 +337,7 @@ function storefrontBoot(): void {
   const reconcileCart = (): Promise<boolean> => {
     if (paused) return Promise.resolve(false);
     if (freshCatalog) return freshCatalog;
-    freshCatalog = fetch("/catalog-index.json")
+    freshCatalog = fetch(`${baseHref}/catalog-index.json`)
       .then((response) => {
         if (!response.ok) throw new Error("No se pudo cargar el catálogo actual.");
         return response.json() as Promise<CatalogIndexEntry[]>;
@@ -1205,69 +1207,76 @@ function storefrontBoot(): void {
     const query = new URLSearchParams(window.location.search).get("q") ?? "";
     searchInput.value = query;
     if (query) {
-      document.querySelector('meta[name="robots"]')?.setAttribute("content", "noindex,follow");
-      const terms = searchApi.normalizeSearchTokens(query);
-      if (!terms.length || terms.some((t) => t.length < 2)) {
-        searchResults.innerHTML = "<p>Escribí al menos 2 caracteres para buscar.</p>";
-      } else {
-        const controller = new AbortController();
-        searchResults.innerHTML = "<p>Cargando resultados…</p>";
-        fetch("/search-index.json", { signal: controller.signal })
-          .then((response) => {
-            if (!response.ok) throw new Error("No se pudo cargar el índice de búsqueda.");
-            return response.json() as Promise<SearchEntryWithTokens[]>;
-          })
-          .then((entries) => {
-            const ranked = entries
-              .map((entry) => ({
-                entry,
-                score: searchApi.scoreEntry(
-                  terms,
-                  entry.tokens ?? {
-                    title: searchApi.normalizeSearchTokens(entry.title),
-                    brand: searchApi.normalizeSearchTokens(entry.brand),
-                    tags: searchApi.normalizeSearchTokens((entry.tags ?? []).join(" ")),
-                    categories: searchApi.normalizeSearchTokens(
-                      `${(entry.categoryIds ?? []).join(" ")} ${(entry.collectionIds ?? []).join(" ")} ${(entry.categoryNames ?? []).join(" ")} ${(entry.collectionNames ?? []).join(" ")}`,
-                    ),
-                    description: searchApi.normalizeSearchTokens(entry.description),
-                  },
-                ),
-              }))
-              .filter((item) => item.score > 0)
-              .sort(
-                (left, right) =>
-                  right.score - left.score ||
-                  Number(right.entry.available) - Number(left.entry.available) ||
-                  left.entry.title.localeCompare(right.entry.title),
-              );
-            if (ranked.length === 0) {
-              const suggestion = suggestCorrection(terms, entries);
-              if (suggestion) {
-                const url = `/buscar/?q=${encodeURIComponent(suggestion)}`;
-                searchResults.innerHTML = `<p class="solara-search-summary">No encontramos resultados para “${escapeText(query)}”. ¿Quisiste decir <a href="${escapeAttribute(url)}">${escapeText(suggestion)}</a>?</p>`;
+      const runSearch = (): void => {
+        document.querySelector('meta[name="robots"]')?.setAttribute("content", "noindex,follow");
+        const terms = searchApi.normalizeSearchTokens(query);
+        if (!terms.length || terms.some((t) => t.length < 2)) {
+          searchResults.innerHTML = "<p>Escribí al menos 2 caracteres para buscar.</p>";
+        } else {
+          const controller = new AbortController();
+          searchResults.innerHTML = "<p>Cargando resultados…</p>";
+          fetch(`${baseHref}/search-index.json`, { signal: controller.signal })
+            .then((response) => {
+              if (!response.ok) throw new Error("No se pudo cargar el índice de búsqueda.");
+              return response.json() as Promise<SearchEntryWithTokens[]>;
+            })
+            .then((entries) => {
+              const ranked = entries
+                .map((entry) => ({
+                  entry,
+                  score: searchApi.scoreEntry(
+                    terms,
+                    entry.tokens ?? {
+                      title: searchApi.normalizeSearchTokens(entry.title),
+                      brand: searchApi.normalizeSearchTokens(entry.brand),
+                      tags: searchApi.normalizeSearchTokens((entry.tags ?? []).join(" ")),
+                      categories: searchApi.normalizeSearchTokens(
+                        `${(entry.categoryIds ?? []).join(" ")} ${(entry.collectionIds ?? []).join(" ")} ${(entry.categoryNames ?? []).join(" ")} ${(entry.collectionNames ?? []).join(" ")}`,
+                      ),
+                      description: searchApi.normalizeSearchTokens(entry.description),
+                    },
+                  ),
+                }))
+                .filter((item) => item.score > 0)
+                .sort(
+                  (left, right) =>
+                    right.score - left.score ||
+                    Number(right.entry.available) - Number(left.entry.available) ||
+                    left.entry.title.localeCompare(right.entry.title),
+                );
+              if (ranked.length === 0) {
+                const suggestion = suggestCorrection(terms, entries);
+                if (suggestion) {
+                  const url = `/buscar/?q=${encodeURIComponent(suggestion)}`;
+                  searchResults.innerHTML = `<p class="solara-search-summary">No encontramos resultados para “${escapeText(query)}”. ¿Quisiste decir <a href="${escapeAttribute(url)}">${escapeText(suggestion)}</a>?</p>`;
+                  return;
+                }
+                searchResults.innerHTML = "<p>No encontramos productos para esa búsqueda.</p>";
                 return;
               }
-              searchResults.innerHTML = "<p>No encontramos productos para esa búsqueda.</p>";
-              return;
-            }
-            const shown = ranked.slice(0, 48);
-            const cutNotice =
-              ranked.length > 48
-                ? `<p class="solara-search-summary">Mostrando 48 de ${ranked.length} resultados. Refiná tu búsqueda…</p>`
-                : "";
-            searchResults.innerHTML = `<p class="solara-search-summary">${ranked.length} resultados para “${escapeText(query)}”</p>${cutNotice}<div class="solara-search-results-grid">${shown
-              .map(
-                ({ entry }) =>
-                  `<article class="solara-search-result"><a href="${escapeAttribute(entry.path)}">${entry.imageUrl ? `<img src="${escapeAttribute(entry.imageUrl)}" alt="${escapeAttribute(entry.title)}" width="${entry.imageWidth ?? 1}" height="${entry.imageHeight ?? 1}" sizes="(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem" loading="lazy">` : ""}<div><h2>${escapeText(entry.title)}</h2><p>${escapeText(entry.brand)}</p><strong>${money.format(entry.priceMin / 100)}</strong></div></a></article>`,
-              )
-              .join("")}</div>`;
-          })
-          .catch(() => {
-            searchResults.innerHTML =
-              '<p role="alert">No se pudo cargar la búsqueda. Intentá nuevamente.</p>';
-          });
-        window.addEventListener("pagehide", () => controller.abort(), { once: true });
+              const shown = ranked.slice(0, 48);
+              const cutNotice =
+                ranked.length > 48
+                  ? `<p class="solara-search-summary">Mostrando 48 de ${ranked.length} resultados. Refiná tu búsqueda…</p>`
+                  : "";
+              searchResults.innerHTML = `<p class="solara-search-summary">${ranked.length} resultados para “${escapeText(query)}”</p>${cutNotice}<div class="solara-search-results-grid">${shown
+                .map(
+                  ({ entry }) =>
+                    `<article class="solara-search-result"><a href="${escapeAttribute(entry.path)}">${entry.imageUrl ? `<img src="${escapeAttribute(entry.imageUrl)}" alt="${escapeAttribute(entry.title)}" width="${entry.imageWidth ?? 1}" height="${entry.imageHeight ?? 1}" sizes="(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem" loading="lazy">` : ""}<div><h2>${escapeText(entry.title)}</h2><p>${escapeText(entry.brand)}</p><strong>${money.format(entry.priceMin / 100)}</strong></div></a></article>`,
+                )
+                .join("")}</div>`;
+            })
+            .catch(() => {
+              searchResults.innerHTML =
+                '<p role="alert">No se pudo cargar la búsqueda. Intentá nuevamente.</p>';
+            });
+          window.addEventListener("pagehide", () => controller.abort(), { once: true });
+        }
+      };
+      if (paused || document.hidden) {
+        deferredSearch = runSearch;
+      } else {
+        runSearch();
       }
     }
   }
@@ -1489,7 +1498,61 @@ function storefrontBoot(): void {
       observer.observe(hero);
     });
   };
+  const connectBentoParallax = (): void => {
+    if (
+      !hasFeature("motion") ||
+      reduceMotion ||
+      !matchMedia("(pointer: fine)").matches ||
+      !matchMedia("(min-width: 768px)").matches
+    ) {
+      return;
+    }
+    document
+      .querySelectorAll<HTMLElement>(
+        '[data-solara-module="catalog-category-bento"] .catalog-category-bento-item',
+      )
+      .forEach((item) => {
+        const image = item.querySelector<HTMLElement>(".catalog-category-bento-image");
+        if (!image) return;
+        let tx = 0;
+        let ty = 0;
+        let cx = 0;
+        let cy = 0;
+        let raf = 0;
+        const stop = (): void => {
+          raf = 0;
+          image.style.willChange = "";
+        };
+        const tick = (): void => {
+          cx += (tx - cx) * 0.08;
+          cy += (ty - cy) * 0.08;
+          image.style.transform = `translate3d(${cx.toFixed(2)}px, ${cy.toFixed(2)}px, 0)`;
+          raf = requestAnimationFrame(
+            Math.abs(tx - cx) > 0.05 || Math.abs(ty - cy) > 0.05 ? tick : stop,
+          );
+        };
+        const onMove = (event: PointerEvent): void => {
+          const rect = item.getBoundingClientRect();
+          tx = -(((event.clientX - rect.left) / (rect.width / 2) - 1) * 6);
+          ty = -(((event.clientY - rect.top) / (rect.height / 2) - 1) * 6);
+          if (raf === 0) {
+            image.style.willChange = "transform";
+            raf = requestAnimationFrame(tick);
+          }
+        };
+        const observer = new IntersectionObserver(([entry]) => {
+          if (entry?.isIntersecting) {
+            item.addEventListener("pointermove", onMove, { passive: true });
+          } else {
+            item.removeEventListener("pointermove", onMove);
+            stop();
+          }
+        });
+        observer.observe(item);
+      });
+  };
   connectHeroParallax();
+  connectBentoParallax();
 
   if (hasFeature("cart") || hasFeature("checkout")) {
     const initializeCart = (): void => {
@@ -1538,6 +1601,9 @@ function storefrontBoot(): void {
       freshCatalog = null;
       void reconcileCart();
     }
+    const pendingSearch = deferredSearch;
+    deferredSearch = undefined;
+    pendingSearch?.();
   };
 
   const onVisibility = (): void => {
@@ -1566,8 +1632,38 @@ const RUNTIME_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unk
   ["reconcileCartLines", reconcileCartLines],
 ];
 
+/**
+ * Compacta el fuente de un helper serializado sin renombrar bindings ni
+ * alterar strings (el runtime público se mide por bytes crudos). Reglas
+ * conservadoras: protege comillas simples, dobles y templates; elimina
+ * comentarios y colapsa whitespace fuera de strings; recorta el espacio
+ * alrededor de puntuación segura. No toca operadores compuestos (===, <=, =>
+ * ya no tienen espacios internos) ni rutas con `/`.
+ */
+export function minifyJsSource(value: string): string {
+  const quoted: string[] = [];
+  const protectedValue = value.replace(
+    /('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`)/g,
+    (match) => {
+      const token = `__SOLARA_JS_STRING_${quoted.length}__`;
+      quoted.push(match);
+      return token;
+    },
+  );
+  const minified = protectedValue
+    .replace(/\/\/[^\n]*/g, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\s+/g, " ")
+    .replace(/\s*([{}();,:+\-*%<>=!&|?.[\]])\s*/g, "$1")
+    .trim();
+  return minified.replace(
+    /__SOLARA_JS_STRING_(\d+)__/g,
+    (_, index: string) => quoted[Number(index)] ?? "",
+  );
+}
+
 const SERIALIZED_RUNTIME_HELPERS = RUNTIME_HELPERS.map(([name, fn]) => {
-  const source = fn.toString();
+  const source = minifyJsSource(fn.toString());
   const bindingName = source.match(/^function\s+([A-Za-z_$][\w$]*)/)?.[1] ?? name;
   return { name, bindingName, source };
 });

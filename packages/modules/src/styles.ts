@@ -277,6 +277,9 @@ export const STORE_BASE_STYLES = `
   grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.34fr);
   gap: clamp(2rem, 7vw, 7rem);
 }
+[data-solara-store] .solara-cart-page-grid [data-cart-lines]:has(> .solara-cart-empty, > .solara-empty-state) {
+  align-self: center;
+}
 [data-solara-store] .solara-cart-page-grid {
   padding-block: 2rem 7rem;
 }
@@ -620,7 +623,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   border-radius: var(--solara-radius);
   color: var(--solara-background);
   cursor: pointer;
-  min-height: 42px;
+  min-height: 44px;
   padding: 0.55rem 1rem;
   white-space: nowrap;
 }
@@ -772,7 +775,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     font-size: 0.78rem;
   }
   [data-solara-module="editorial-header"] .solara-cart-trigger {
-    min-height: 40px;
+    min-height: 44px;
     padding-inline: 0.55rem;
     font-size: 0;
   }
@@ -2280,6 +2283,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .solara-editorial-page .solara-values-grid { margin-bottom: clamp(3rem, 7vw, 6rem); }
 [data-solara-store].catalog-modern .solara-editorial-page .solara-values-grid article { min-width: 0; padding: 1.5rem 1.25rem 2rem; }
 [data-solara-store].catalog-modern .solara-cart-page-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 2rem; padding: 2rem 0 5rem; }
+[data-solara-store].catalog-modern .solara-cart-page-grid [data-cart-lines]:has(> .solara-cart-empty, > .solara-empty-state) { align-self: center; }
 [data-solara-store].catalog-modern .solara-cart-page-grid > aside { align-self: start; padding: 1.25rem; border-radius: var(--solara-radius); background: var(--catalog-surface); }
 [data-solara-store].catalog-modern .solara-cart-summary { display: grid; gap: .7rem; }
 [data-solara-store].catalog-modern .solara-cart-summary > p { display: flex; justify-content: space-between; gap: 1rem; margin: 0; color: var(--catalog-muted); font-size: .85rem; }
@@ -2784,54 +2788,59 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-category-bento-grid[data-category-count="1"] .catalog-category-bento-item {
   grid-column: 1 / -1;
 }
-.cm.v2 .catalog-category-bento-item img {
-  transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out), filter var(--catalog-v2-motion-component) ease;
+/* ===== Mosaico de categorías V2: motion editorial ===== */
+.cm.v2 .catalog-category-bento-media{position:absolute;z-index:0;inset:0;overflow:hidden}
+.cm.v2 .catalog-category-bento-image{position:absolute;inset:-14px;width:calc(100% + 28px);height:calc(100% + 28px);object-fit:cover;opacity:1;scale:1;transition:scale 650ms cubic-bezier(.22,1,.36,1)}
+.cm.v2 .catalog-category-bento-item:hover .catalog-category-bento-image,.cm.v2 .catalog-category-bento-item:focus-visible .catalog-category-bento-image{scale:1.035;transition-duration:500ms}
+.cm.v2 .catalog-category-bento-media::after{content:"";position:absolute;inset:0;background:var(--catalog-ink);opacity:0;pointer-events:none;transition:opacity 650ms cubic-bezier(.22,1,.36,1)}
+.cm.v2 .catalog-category-bento-item:hover .catalog-category-bento-media::after,.cm.v2 .catalog-category-bento-item:focus-visible .catalog-category-bento-media::after{opacity:.08;transition-duration:500ms}
+.cm.v2 .catalog-category-bento-fallback{font-size:calc(clamp(3rem, 5vw, 4.5rem) * var(--solara-type-scale, 1))}
+.cm.v2 .catalog-category-bento-label{display:inline-block;align-self:flex-start;margin:1rem;overflow:hidden;border-radius:2px}
+.cm.v2 .catalog-category-bento-title{display:inline-block;position:relative;padding:.45rem .65rem;border-radius:2px;background:color-mix(in srgb,var(--catalog-paper) 92%,transparent);color:var(--catalog-ink);font-size:1.1rem;letter-spacing:-.02em;line-height:1.12;transition:transform 650ms cubic-bezier(.22,1,.36,1),background-color 220ms var(--catalog-v2-ease-out)}
+.cm.v2 .catalog-category-bento-title::after{content:"";position:absolute;left:.65rem;right:.65rem;bottom:.35rem;height:1px;background:currentColor;transform:scaleX(0);transform-origin:left;transition:transform 650ms cubic-bezier(.22,1,.36,1)}
+.cm.v2 .catalog-category-bento-item:hover .catalog-category-bento-title,.cm.v2 .catalog-category-bento-item:focus-visible .catalog-category-bento-title{transform:translateX(6px);background:var(--catalog-paper);transition-duration:500ms}
+.cm.v2 .catalog-category-bento-item:hover .catalog-category-bento-title::after,.cm.v2 .catalog-category-bento-item:focus-visible .catalog-category-bento-title::after{transform:scaleX(1);transition-duration:500ms}
+/* Contador de productos: oculto en V2; si se muestra, responde al hover. */
+.cm.v2 .catalog-category-bento-item small{display:none;transition:transform 650ms cubic-bezier(.22,1,.36,1)}
+.cm.v2 .catalog-category-bento-item:hover small,.cm.v2 .catalog-category-bento-item:focus-visible small{transform:translateX(-4px);transition-duration:500ms}
+/* Glow inferior: línea fina que surge desde la izquierda al hover. */
+.cm.v2 .catalog-category-bento-item::before{content:"";position:absolute;z-index:3;left:0;right:0;bottom:0;height:2px;background:linear-gradient(90deg,transparent,var(--catalog-sale) 30%,var(--catalog-sale) 70%,transparent);transform:scaleX(0);transform-origin:left;opacity:0;box-shadow:0 0 12px color-mix(in srgb,var(--catalog-sale) 60%,transparent);pointer-events:none;transition:transform 650ms cubic-bezier(.22,1,.36,1),opacity 650ms cubic-bezier(.22,1,.36,1)}
+.cm.v2 .catalog-category-bento-item:hover::before,.cm.v2 .catalog-category-bento-item:focus-visible::before{transform:scaleX(1);opacity:1;transition-duration:500ms}
+/* Scrim inferior existente. */
+.cm.v2 .catalog-category-bento-item::after{background:linear-gradient(to top,rgb(11 11 12 / .2),transparent 60%)}
+/* "Ver todo el catálogo": underline propio que se dibuja al entrar. */
+.cm.v2 .catalog-category-bento-all{position:relative;border-bottom:0}
+.cm.v2 .catalog-category-bento-all::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:currentColor;transform:scaleX(1);transform-origin:left}
+/* Parallax de scroll: sólo las imágenes, ±6px, con view timeline. */
+@keyframes solara-bento-parallax{from{transform:translateY(6px)}to{transform:translateY(-6px)}}
+@supports (animation-timeline:view()){
+.cm.v2 .catalog-category-bento-media{animation:solara-bento-parallax linear both;animation-timeline:view()!important;animation-range:entry 0% exit 100%!important}
 }
-.cm.v2 .catalog-category-bento-fallback {
-  font-size: calc(clamp(3rem, 5vw, 4.5rem) * var(--solara-type-scale, 1));
-}
-.cm.v2 .catalog-category-bento-item:hover,
-.cm.v2 .catalog-category-bento-item:focus-visible {
-  transform: translateY(-4px);
-  box-shadow: 0 18px 36px color-mix(in srgb, var(--catalog-ink), transparent 86%);
-}
-.cm.v2 .catalog-category-bento-item:hover img,
-.cm.v2 .catalog-category-bento-item:focus-visible img {
-  transform: scale(1.06);
-  filter: saturate(.82) contrast(1.06);
-}
-/* Título del mosaico como chip editorial: visible sobre cualquier imagen. */
-.cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
-  display: inline-block;
-  align-self: flex-start;
-  margin: 1rem;
-  padding: .45rem .65rem;
-  border-radius: 2px;
-  background: transparent;
-  color: var(--catalog-ink);
-  font-size: 1.1rem;
-  letter-spacing: -.02em;
-  line-height: 1.12;
-  transition: background-color 220ms var(--catalog-v2-ease-out), transform 220ms var(--catalog-v2-ease-out);
-}
-.cm.v2 .catalog-category-bento-item:has(.catalog-category-bento-image) > span:not(.catalog-category-bento-fallback) {
-  background: color-mix(in srgb, var(--catalog-paper) 92%, transparent);
-}
-.cm.v2 .catalog-category-bento-item:hover > span:not(.catalog-category-bento-fallback),
-.cm.v2 .catalog-category-bento-item:focus-visible > span:not(.catalog-category-bento-fallback) {
-  background: var(--catalog-paper);
-  transform: translateY(-2px);
-}
-/* Contador de productos: oculto en V2. */
-.cm.v2 .catalog-category-bento-item small {
-  display: none;
-}
-.cm.v2 .catalog-category-bento-item::after {
-  background: linear-gradient(to top, rgb(11 11 12 / .2), transparent 60%);
-}
-.cm.v2 .catalog-category-bento-image {
-  opacity: 1;
-}
+/* Entrada de sección: máscaras y stagger por orden visual. Fill backwards:
+   al terminar, el elemento vuelve a su estado natural y el hover queda libre. */
+.cm.v2 .catalog-category-bento-heading{overflow:hidden}
+.cm.v2 [data-solara-module="catalog-category-bento"][data-motion-visible="true"] .catalog-category-bento-heading-inner{animation:solara-bento-rise 700ms cubic-bezier(.22,1,.36,1) both}
+.cm.v2 [data-solara-module="catalog-category-bento"][data-motion-visible="true"] .catalog-category-bento-all{animation:solara-bento-fade-x 450ms cubic-bezier(.22,1,.36,1) 180ms backwards}
+.cm.v2 [data-solara-module="catalog-category-bento"][data-motion-visible="true"] .catalog-category-bento-all::after{animation:solara-bento-underline 450ms cubic-bezier(.22,1,.36,1) 180ms backwards}
+.cm.v2 [data-solara-module="catalog-category-bento"][data-motion-visible="true"] .catalog-category-bento-item{--bento-d:0ms;animation:solara-bento-card 750ms cubic-bezier(.22,1,.36,1) var(--bento-d) backwards}
+.cm.v2 [data-solara-module="catalog-category-bento"][data-motion-visible="true"] .catalog-category-bento-item:nth-child(2){--bento-d:70ms}
+.cm.v2 [data-solara-module="catalog-category-bento"][data-motion-visible="true"] .catalog-category-bento-item:nth-child(3){--bento-d:140ms}
+.cm.v2 [data-solara-module="catalog-category-bento"][data-motion-visible="true"] .catalog-category-bento-item:nth-child(4){--bento-d:210ms}
+.cm.v2 [data-solara-module="catalog-category-bento"][data-motion-visible="true"] .catalog-category-bento-item:nth-child(5){--bento-d:280ms}
+.cm.v2 [data-solara-module="catalog-category-bento"][data-motion-visible="true"] .catalog-category-bento-item:nth-child(6){--bento-d:350ms}
+.cm.v2 [data-solara-module="catalog-category-bento"][data-motion-visible="true"] .catalog-category-bento-item:nth-child(7){--bento-d:420ms}
+.cm.v2 [data-solara-module="catalog-category-bento"][data-motion-visible="true"] .catalog-category-bento-item:nth-child(8){--bento-d:490ms}
+.cm.v2 [data-solara-module="catalog-category-bento"][data-motion-visible="true"] .catalog-category-bento-item:nth-child(n+9){--bento-d:560ms}
+.cm.v2 [data-solara-module="catalog-category-bento"][data-motion-visible="true"] .catalog-category-bento-item .catalog-category-bento-image{animation:solara-bento-zoom 950ms cubic-bezier(.22,1,.36,1) var(--bento-d) backwards}
+.cm.v2 [data-solara-module="catalog-category-bento"][data-motion-visible="true"] .catalog-category-bento-item .catalog-category-bento-title{animation:solara-bento-label 700ms cubic-bezier(.22,1,.36,1) calc(var(--bento-d) + 120ms) backwards}
+.cm.v2 [data-solara-module="catalog-category-bento"][data-motion-visible="true"] .catalog-category-bento-item small{animation:solara-bento-badge 600ms cubic-bezier(.22,1,.36,1) calc(var(--bento-d) + 190ms) backwards}
+@keyframes solara-bento-rise{from{transform:translateY(110%)}}
+@keyframes solara-bento-fade-x{from{opacity:0;transform:translateX(12px)}}
+@keyframes solara-bento-underline{from{transform:scaleX(0)}}
+@keyframes solara-bento-card{from{clip-path:inset(8% 0 8% 0);transform:translateY(22px);opacity:0}}
+@keyframes solara-bento-zoom{from{scale:1.06}}
+@keyframes solara-bento-label{from{transform:translateY(120%)}}
+@keyframes solara-bento-badge{from{opacity:0;transform:translateY(8px)}}
 .cm.v2 .catalog-testimonial {
   border-radius: 0;
   background: color-mix(in srgb, var(--catalog-surface), transparent 34%);
@@ -3024,6 +3033,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .solara-cart-page > .solara-page-intro { max-width: none; padding: clamp(2rem, 4vw, 4rem) 0 1rem; }
 .cm.v2 .solara-cart-page > .solara-page-intro h1 { max-width: none; font-size: calc(clamp(3.5rem, 4.5vw, 5.75rem) * var(--solara-type-scale, 1)); line-height: .95; }
 .cm.v2 .solara-cart-page-grid { grid-template-columns: minmax(0, 1fr) clamp(22.5rem, 27vw, 24rem); gap: clamp(3rem, 6vw, 5rem); padding: 2rem 0 clamp(5rem, 8vw, 8rem); }
+.cm.v2 .solara-cart-page-grid [data-cart-lines]:has(> .solara-cart-empty, > .solara-empty-state) { align-self: center; }
 .cm.v2 .solara-cart-page-grid > aside { position: sticky; top: 2rem; padding: 1.25rem 0 1.5rem clamp(2rem, 4vw, 4rem); border-left: 1px solid var(--catalog-border); border-radius: 0; background: transparent; }
 .cm.v2 .solara-cart-summary { gap: 1rem; }
 .cm.v2 .solara-cart-summary > p { min-height: 2rem; align-items: center; font-size: .92rem; }
@@ -3332,6 +3342,15 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-product-card,
   .cm.v2 .catalog-product-card-image,
   .cm.v2 .catalog-category-bento-item img,
+  .cm.v2 .catalog-category-bento-media,
+  .cm.v2 .catalog-category-bento-image,
+  .cm.v2 .catalog-category-bento-title,
+  .cm.v2 .catalog-category-bento-title::after,
+  .cm.v2 .catalog-category-bento-item::before,
+  .cm.v2 .catalog-category-bento-heading-inner,
+  .cm.v2 .catalog-category-bento-all,
+  .cm.v2 .catalog-category-bento-all::after,
+  .cm.v2 .catalog-category-bento-item small,
   .cm.v2 .catalog-hero-image,
   .cm.v2 .catalog-hero-video,
   .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-reveal--eyebrow,
@@ -3349,6 +3368,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     animation: none !important;
     transition: none !important;
     transform: none !important;
+    scale: none;
     clip-path: none;
   }
   .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action::before {
