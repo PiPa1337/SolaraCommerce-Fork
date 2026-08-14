@@ -1,5 +1,25 @@
 # Changelog
 
+### Mosaico de categorías: motion editorial (2026-08-14)
+
+- Entrada coreografiada una sola vez: título con máscara (translateY 110%→0,
+  700ms), "Ver todo el catálogo" con fade+slide y underline que se dibuja,
+  cards con stagger de 70ms en orden visual (clip-path inset 8% + translateY
+  22px, 750ms), imagen con microzoom 1.06→1 (950ms), nombre que emerge desde
+  abajo (+120ms) y badge (+190ms). Fill backwards: al terminar, el estado
+  natural queda libre para el hover.
+- Hover coordinado (500ms in / 650ms out, cubic-bezier .22,1,.36,1): imagen
+  con scale 1→1.035 + capa oscura 0.08, nombre que se desplaza 6px con línea
+  que se dibuja, badge −4px y línea glow inferior con desvanecido en los
+  extremos. La card nunca escala ni rota.
+- Parallax de scroll: sólo las imágenes, ±6px con view timeline; cursor
+  follower ±6px opuesto al puntero (rAF + lerp, IntersectionObserver, passive,
+  desktop y pointer fino, pausado fuera del viewport).
+- Markup con wrappers de máscara (label/título y media), semántica y SEO
+  intactos; reduced-motion y no-JS dejan todo visible. Techo CSS V2 → 132 KiB
+  (revisión final de presupuestos pendiente). La tienda queda guardada como
+  v31.
+
 ### Run perpetuo de QA y optimización (2026-08-14, en curso)
 
 - Infraestructura perpetua: branch `perpetual/debug-optimizacion`, backlog en
