@@ -3095,12 +3095,34 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .cm.v2 .catalog-hero-inner {
-    grid-template-columns: minmax(18rem, .86fr) minmax(0, 1.14fr);
+    grid-template-columns: minmax(17rem, 1.05fr) minmax(0, .95fr);
     height: 90svh;
     min-height: 0;
   }
+  .cm.v2 .catalog-hero-copy {
+    padding: clamp(1.75rem, 3vw, 2.5rem) clamp(1.25rem, 2.5vw, 2rem);
+  }
   .cm.v2 .catalog-hero-copy h1 {
     font-size: calc(clamp(3.6rem, 7vw, 5.5rem) * var(--solara-type-scale, 1));
+  }
+  .cm.v2 .catalog-hero-benefits {
+    gap: .75rem .75rem;
+  }
+  .cm.v2 .catalog-hero-benefit {
+    gap: .45rem;
+  }
+  .cm.v2 .catalog-hero-benefit-icon {
+    width: 18px;
+    height: 18px;
+  }
+  .cm.v2 .catalog-hero-benefit-copy strong {
+    font-size: .8rem;
+  }
+  .cm.v2 .catalog-hero-benefit-copy small {
+    font-size: .68rem;
+  }
+  .cm.v2 .catalog-hero-benefit + .catalog-hero-benefit {
+    padding-left: .75rem;
   }
   .cm.v2 .catalog-category-bento-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3255,28 +3277,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-reveal--actions{--hero-v2-rise:9px}
   .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits{grid-template-columns:1fr;gap:1rem}
   .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit + .catalog-hero-benefit{border-left:0;padding-left:0}
-}
-/* Tablet vertical (768-919): el hero apila copy + media a ancho completo para
-   que los beneficios no queden comprimidos en la columna angosta del grid. */
-@media (min-width: 768px) and (max-width: 919px) {
-  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-inner {
-    display: flex;
-    flex-direction: column;
-    height: auto;
-    min-height: 0;
-    margin-top: 0;
-  }
-  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-copy {
-    min-height: 0;
-    padding: 2.75rem 1rem 2rem;
-  }
-  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-copy h1 {
-    max-width: 100%;
-    font-size: calc(clamp(3.25rem, 9vw, 5.2rem) * var(--solara-type-scale, 1));
-  }
-  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-media {
-    min-height: 40svh;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   .cm.v2 [data-solara-module="catalog-header"],

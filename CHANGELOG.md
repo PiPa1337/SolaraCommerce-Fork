@@ -1,5 +1,13 @@
 # Changelog
 
+### Hero V2: split conservado en tablet (2026-08-14)
+
+- A ~770px el hero mantiene el layout split (texto ~52% / imagen ~48%) como la
+  referencia del usuario, con la columna de copy equilibrada y beneficios
+  compactos en 3 columnas (ícono 18px, tipografía menor, gaps reducidos en el
+  rango ≤1199px). Verificado por medición y revisión visual contra la
+  referencia. La tienda queda guardada como v21.
+
 ### Hero V2: hover sin mover el texto, spacing y tablet vertical (2026-08-14)
 
 - El hover del CTA ya no desplaza el label: sólo viajan el ícono y la capa de
