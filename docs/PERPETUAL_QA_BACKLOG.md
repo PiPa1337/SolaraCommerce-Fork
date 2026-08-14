@@ -48,7 +48,7 @@ fases C y O (regla de selección nivel 3). Conversión en curso:
 | id | prioridad | área | título | estado | evidencia |
 |----|-----------|------|--------|--------|-----------|
 | D1 | media | studio | `shouldSeedRecoveryDraft`: el RecoveryDraft se siembra sólo cuando el navegador es estrictamente más nuevo que el disco (evidencia de edición); el demo sin editar ya no dispara el diálogo | hecho | repository.test.ts (24/24), studio 274/274 |
-| D2 | media | studio | Cierre de la app con guardados en vuelo: decisión UX (esperar/confirmar/cancelar) | pendiente | deuda D1/D7 (requiere decisión de producto) |
+| D2 | media | studio | Cierre de la app con guardados en vuelo: decisión UX (esperar/confirmar/cancelar) | bloqueado | requiere decisión del usuario |
 | D3 | baja | exporter | EX-B7: semántica del sha256 documentada en INTEGRATIONS.md (bytes exactos del archivo, sin normalización) + test que fija que una re-serialización produce otro hash | hecho | local-project-storage.test.mjs (30/30), exporter 123/124 |
 | D4 | baja | studio | Overlay del detalle de tienda en viewports acotados scrollea con la región | pendiente | deuda U2-móvil (evaluación UX) |
 | D5 | baja | shell | Validación de pestaña oculta: receta headed para release | pendiente | deuda T10 (release) |
@@ -70,4 +70,4 @@ fases C y O (regla de selección nivel 3). Conversión en curso:
 
 ## SIGUIENTE
 
-C10 — Barrido continuo: doctor + barrido visual con los cierres C4b/c aplicados
+D4 — Overlay del detalle de tienda en viewports acotados scrollea con la región
