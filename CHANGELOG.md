@@ -1,5 +1,19 @@
 # Changelog
 
+### Hero V2: hover sin mover el texto, spacing y tablet vertical (2026-08-14)
+
+- El hover del CTA ya no desplaza el label: sólo viajan el ícono y la capa de
+  fondo; el texto conserva su posición (sólo cambia de color).
+- Se restaura el aire entre título y subtítulo: el selector del margen quedaba
+  huérfano con el wrapper de reveal; ahora el hairline separador tiene margen
+  propio y el subtítulo mantiene su ritmo.
+- Rango tablet vertical (768-919px): el hero apila copy + imagen a ancho
+  completo para que los 3 beneficios no queden comprimidos en la columna
+  angosta (a 770px la columna de copy medía 255px; ahora el copy va a ancho
+  completo y los beneficios en fila cómoda). Verificado por medición y
+  revisión visual en 320, 390, 770 y 1024 sin overflow.
+- La tienda queda guardada como v20.
+
 ### Hero V2: título balanceado y hairline en beneficios (2026-08-14)
 
 - El título del hero se divide en líneas balanceadas (~12 caracteres) para el

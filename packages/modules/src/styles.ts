@@ -2542,9 +2542,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   word-break: normal;
   text-wrap: balance;
 }
-.cm.v2 .catalog-hero-copy > p:not(.catalog-eyebrow) {
+.cm.v2 .catalog-hero-copy .catalog-hero-reveal--body > p {
   max-width: 38ch;
-  margin-top: 1.15rem;
+  margin-top: 0;
   font-size: clamp(.98rem, 1.1vw, 1.12rem);
   line-height: 1.62;
 }
@@ -2590,7 +2590,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
    con el observer; sin el atributo el contenido queda visible sin animar. */
 .cm.v2 [data-solara-module="catalog-hero"] [data-motion-zone]{animation:none!important}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-line{display:block;overflow:hidden}
-.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-rule{width:3.5rem;height:1px;background:color-mix(in srgb,var(--catalog-ink) 35%,transparent);transform-origin:left}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-rule{width:3.5rem;height:1px;background:color-mix(in srgb,var(--catalog-ink) 35%,transparent);transform-origin:left;margin-block:1.35rem 1.05rem}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.5rem 2.25rem;margin:2rem 0 1rem;padding:0;list-style:none}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit{display:flex;align-items:center;gap:.65rem;min-width:0}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit + .catalog-hero-benefit{border-left:1px solid color-mix(in srgb,var(--catalog-border) 55%,transparent);padding-left:1.25rem}
@@ -2607,7 +2607,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-cta-label{display:inline-block;white-space:nowrap}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-cta-icon{width:16px;height:16px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-cta-label,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-cta-icon{transition:transform 260ms var(--catalog-v2-ease-out),color 260ms}
-.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:hover .catalog-hero-cta-label,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:focus-visible .catalog-hero-cta-label{transform:translateX(-2px);color:color-mix(in srgb,var(--solara-accent-text) 100%,#fff 20%)}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:hover .catalog-hero-cta-label,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:focus-visible .catalog-hero-cta-label{color:color-mix(in srgb,var(--solara-accent-text) 100%,#fff 20%)}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:hover .catalog-hero-cta-icon,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:focus-visible .catalog-hero-cta-icon{transform:translateX(4px);color:color-mix(in srgb,var(--solara-accent-text) 100%,#fff 20%)}
 .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-reveal--eyebrow{--hero-v2-rise:14px;animation:solara-hero-rise var(--hero-v2-dur-eyebrow,380ms) var(--catalog-v2-ease-out) 60ms both}
 .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-title{--hero-v2-rise:-10px;animation:solara-hero-rise var(--hero-v2-dur-title,380ms) var(--catalog-v2-ease-out) 100ms both}
@@ -3255,6 +3255,28 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-reveal--actions{--hero-v2-rise:9px}
   .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits{grid-template-columns:1fr;gap:1rem}
   .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit + .catalog-hero-benefit{border-left:0;padding-left:0}
+}
+/* Tablet vertical (768-919): el hero apila copy + media a ancho completo para
+   que los beneficios no queden comprimidos en la columna angosta del grid. */
+@media (min-width: 768px) and (max-width: 919px) {
+  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-inner {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+    margin-top: 0;
+  }
+  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-copy {
+    min-height: 0;
+    padding: 2.75rem 1rem 2rem;
+  }
+  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-copy h1 {
+    max-width: 100%;
+    font-size: calc(clamp(3.25rem, 9vw, 5.2rem) * var(--solara-type-scale, 1));
+  }
+  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-media {
+    min-height: 40svh;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .cm.v2 [data-solara-module="catalog-header"],
