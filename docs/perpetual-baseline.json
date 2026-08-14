@@ -1,22 +1,18 @@
 {
-  "plan": 6,
-  "de10": 6,
+  "plan": 7,
+  "de10": 7,
   "branch": "main",
   "baselineEntrada": {
     "runtimeJavascriptRaw": 55845,
     "runtimeMargen": 1499,
     "cssStudio": 102160,
-    "cssStudioMargen": 4336,
     "exportMs2000": 1553,
-    "axe": "0/0/0 (3 fixtures, 18 rutas)",
+    "axe": "0/0/0 (3 fixtures)",
     "preloads": "146/146",
-    "lcpFrio": "68/60 ms",
-    "focoVisible": "0 invisibles",
+    "lcpFrio": "44-56 ms",
+    "contratosProfundos": "6/6 sin drift",
     "paritySweep": "6/6",
-    "enganches": "5/5",
-    "contratos": "1/1",
-    "nojsCobertura": "24 combinaciones",
-    "seoJsonld": "5/5"
+    "enganches": "5/5"
   },
-  "nextItem": "P6-1"
+  "nextItem": "P7-1"
 }

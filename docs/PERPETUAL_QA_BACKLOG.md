@@ -1,20 +1,18 @@
-# Backlog del PLAN 6 (de 10) — run acotado con Δ%
+# Backlog del PLAN 7 (de 10) — run acotado con Δ%
 
-Re-verificación profunda de enganches + hallazgos nuevos. Formato: `Métrica | Antes | Después | Δ%`.
+Barrido visual + visión con ojos frescos + re-verificaciones. Formato: `Métrica | Antes | Después | Δ%`.
 
 | id | capa | ítem | métrica | antes | después | Δ% | estado |
 |----|------|------|---------|-------|---------|-----|--------|
-| P6-1 | F | Re-verificación de TODOS los gates acumulados (PLAN 1-5) | gates | OK | | | pendiente |
-| P6-2 | F | Contrato persistido: `data-design-family` en el html vs fixture en los 3 fixtures | drift | — | | | pendiente |
-| P6-3 | F | `productIds` de categorías/colecciones derivados vs ids reales (recalculo del schema) | drift | — | | | pendiente |
-| P6-4 | F | Manifest del export: `usedAssets`/`usedVideos` vs archivos emitidos (nada huérfano, nada faltante) | drift | — | | | pendiente |
-| P6-5 | C | Runtime: features declaradas vs inicializadas en el boot (cada `hasFeature` cubierta) | drift | — | | | pendiente |
-| P6-6 | B | CSS: `data-design-family` scope de las familias (V1 vs V2 sin fuga entre sí) | checks | — | | | pendiente |
-| P6-7 | E | Rutas: canonical única por ruta (sin duplicados en sitemap) | checks | — | | | pendiente |
-| P6-8 | H | LCP frío de catalogModern (hoy solo reference) | ms | — | | | pendiente |
-| P6-9 | G | Handler: ruta `404.html` servida con el content-type html (verificado) | checks | 1/1 | 1/1 | 0 | pendiente |
-| P6-10 | D | Fuentes: subset re-verificado (Archivo 30.196 B) tras reversiones del usuario | bytes | — | | | pendiente |
+| P7-1 | E | Barrido visual completo (sweep) — solo 404 esperado | hallazgos | 4 (404) | | | pendiente |
+| P7-2 | V | Visión fresca sobre las capturas (hallazgos nuevos) | hallazgos | — | | | pendiente |
+| P7-3 | A | Re-verificación axe (3 fixtures) | findings | 0 | | | pendiente |
+| P7-4 | H | CDP reposo re-medición | ms/s | 31.6/18.6 | | | pendiente |
+| P7-5 | C | Consola limpia en barrido (sweep) | errores | 0 | | | pendiente |
+| P7-6 | B/D | Re-verificación CSS V2 + fuentes + preloads | gates | OK | | | pendiente |
+| P7-7 | F | Re-verificación paridad + enganches + reproducibilidad | gates | OK | | | pendiente |
+| P7-8 | E | No-JS: re-verificación 24 combinaciones | gates | OK | | | pendiente |
 
 ## SIGUIENTE
 
-P6-1 — Re-verificación de todos los gates acumulados
+P7-1 — Barrido visual completo
