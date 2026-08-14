@@ -43,11 +43,16 @@ Fuente única de trabajo del bucle perpetuo. Reglas:
 ## Deuda abierta (fuente de ítems futuros)
 
 Documentada en `docs/TECHNICAL_DEBT.md`; se convierten en ítems al cerrar las
-fases C y O (regla de selección nivel 3).
+fases C y O (regla de selección nivel 3). Conversión en curso:
 
-## Mejoras propias (hallazgos de barridos visuales y re-auditorías)
-
-(se llena desde los barridos de Playwright/vision y del doctor)
+| id | prioridad | área | título | estado | evidencia |
+|----|-----------|------|--------|--------|-----------|
+| D1 | media | studio | Fricción de primer arranque: `App.tsx` siembra un `RecoveryDraft` cuando el demo de IndexedDB difiere del seed en disco → diálogo "Recuperar borrador" para un proyecto nunca editado | pendiente | deuda `ff33dea` |
+| D2 | media | studio | Cierre de la app con guardados en vuelo: decisión UX (esperar/confirmar/cancelar) | pendiente | deuda D1/D7 (requiere decisión de producto) |
+| D3 | baja | exporter | EX-B7: semántica del sha256 del mapa de archivos no especificada formalmente | pendiente | deuda EX-B7 |
+| D4 | baja | studio | Overlay del detalle de tienda en viewports acotados scrollea con la región | pendiente | deuda U2-móvil (evaluación UX) |
+| D5 | baja | shell | Validación de pestaña oculta: receta headed para release | pendiente | deuda T10 (release) |
+| D6 | baja | studio | Dark mode A/B: decisión de producto (color-scheme vs schema v3) | pendiente | deuda P2 |
 
 ## Mejoras propias (hallazgos de barridos visuales y re-auditorías)
 
@@ -65,4 +70,4 @@ fases C y O (regla de selección nivel 3).
 
 ## SIGUIENTE
 
-Deuda abierta nivel 3 — re-lectura de docs/TECHNICAL_DEBT.md con los cierres aplicados para convertir filas abiertas en ítems
+D1 — Fricción de primer arranque: RecoveryDraft sembrado sin ediciones del usuario
