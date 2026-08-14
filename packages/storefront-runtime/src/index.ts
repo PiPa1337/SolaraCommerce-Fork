@@ -209,6 +209,7 @@ function storefrontBoot(): void {
   }
   let lastCartTrigger: HTMLElement | null = null;
   let paused = false;
+  let deferredSearch: (() => void) | undefined;
   const heroAutoplayControls: Array<{ stop: () => void; start: () => void }> = [];
 
   const initialAddLabels = new Map<HTMLElement, string>();
@@ -1205,69 +1206,76 @@ function storefrontBoot(): void {
     const query = new URLSearchParams(window.location.search).get("q") ?? "";
     searchInput.value = query;
     if (query) {
-      document.querySelector('meta[name="robots"]')?.setAttribute("content", "noindex,follow");
-      const terms = searchApi.normalizeSearchTokens(query);
-      if (!terms.length || terms.some((t) => t.length < 2)) {
-        searchResults.innerHTML = "<p>Escribí al menos 2 caracteres para buscar.</p>";
-      } else {
-        const controller = new AbortController();
-        searchResults.innerHTML = "<p>Cargando resultados…</p>";
-        fetch("/search-index.json", { signal: controller.signal })
-          .then((response) => {
-            if (!response.ok) throw new Error("No se pudo cargar el índice de búsqueda.");
-            return response.json() as Promise<SearchEntryWithTokens[]>;
-          })
-          .then((entries) => {
-            const ranked = entries
-              .map((entry) => ({
-                entry,
-                score: searchApi.scoreEntry(
-                  terms,
-                  entry.tokens ?? {
-                    title: searchApi.normalizeSearchTokens(entry.title),
-                    brand: searchApi.normalizeSearchTokens(entry.brand),
-                    tags: searchApi.normalizeSearchTokens((entry.tags ?? []).join(" ")),
-                    categories: searchApi.normalizeSearchTokens(
-                      `${(entry.categoryIds ?? []).join(" ")} ${(entry.collectionIds ?? []).join(" ")} ${(entry.categoryNames ?? []).join(" ")} ${(entry.collectionNames ?? []).join(" ")}`,
-                    ),
-                    description: searchApi.normalizeSearchTokens(entry.description),
-                  },
-                ),
-              }))
-              .filter((item) => item.score > 0)
-              .sort(
-                (left, right) =>
-                  right.score - left.score ||
-                  Number(right.entry.available) - Number(left.entry.available) ||
-                  left.entry.title.localeCompare(right.entry.title),
-              );
-            if (ranked.length === 0) {
-              const suggestion = suggestCorrection(terms, entries);
-              if (suggestion) {
-                const url = `/buscar/?q=${encodeURIComponent(suggestion)}`;
-                searchResults.innerHTML = `<p class="solara-search-summary">No encontramos resultados para “${escapeText(query)}”. ¿Quisiste decir <a href="${escapeAttribute(url)}">${escapeText(suggestion)}</a>?</p>`;
+      const runSearch = (): void => {
+        document.querySelector('meta[name="robots"]')?.setAttribute("content", "noindex,follow");
+        const terms = searchApi.normalizeSearchTokens(query);
+        if (!terms.length || terms.some((t) => t.length < 2)) {
+          searchResults.innerHTML = "<p>Escribí al menos 2 caracteres para buscar.</p>";
+        } else {
+          const controller = new AbortController();
+          searchResults.innerHTML = "<p>Cargando resultados…</p>";
+          fetch("/search-index.json", { signal: controller.signal })
+            .then((response) => {
+              if (!response.ok) throw new Error("No se pudo cargar el índice de búsqueda.");
+              return response.json() as Promise<SearchEntryWithTokens[]>;
+            })
+            .then((entries) => {
+              const ranked = entries
+                .map((entry) => ({
+                  entry,
+                  score: searchApi.scoreEntry(
+                    terms,
+                    entry.tokens ?? {
+                      title: searchApi.normalizeSearchTokens(entry.title),
+                      brand: searchApi.normalizeSearchTokens(entry.brand),
+                      tags: searchApi.normalizeSearchTokens((entry.tags ?? []).join(" ")),
+                      categories: searchApi.normalizeSearchTokens(
+                        `${(entry.categoryIds ?? []).join(" ")} ${(entry.collectionIds ?? []).join(" ")} ${(entry.categoryNames ?? []).join(" ")} ${(entry.collectionNames ?? []).join(" ")}`,
+                      ),
+                      description: searchApi.normalizeSearchTokens(entry.description),
+                    },
+                  ),
+                }))
+                .filter((item) => item.score > 0)
+                .sort(
+                  (left, right) =>
+                    right.score - left.score ||
+                    Number(right.entry.available) - Number(left.entry.available) ||
+                    left.entry.title.localeCompare(right.entry.title),
+                );
+              if (ranked.length === 0) {
+                const suggestion = suggestCorrection(terms, entries);
+                if (suggestion) {
+                  const url = `/buscar/?q=${encodeURIComponent(suggestion)}`;
+                  searchResults.innerHTML = `<p class="solara-search-summary">No encontramos resultados para “${escapeText(query)}”. ¿Quisiste decir <a href="${escapeAttribute(url)}">${escapeText(suggestion)}</a>?</p>`;
+                  return;
+                }
+                searchResults.innerHTML = "<p>No encontramos productos para esa búsqueda.</p>";
                 return;
               }
-              searchResults.innerHTML = "<p>No encontramos productos para esa búsqueda.</p>";
-              return;
-            }
-            const shown = ranked.slice(0, 48);
-            const cutNotice =
-              ranked.length > 48
-                ? `<p class="solara-search-summary">Mostrando 48 de ${ranked.length} resultados. Refiná tu búsqueda…</p>`
-                : "";
-            searchResults.innerHTML = `<p class="solara-search-summary">${ranked.length} resultados para “${escapeText(query)}”</p>${cutNotice}<div class="solara-search-results-grid">${shown
-              .map(
-                ({ entry }) =>
-                  `<article class="solara-search-result"><a href="${escapeAttribute(entry.path)}">${entry.imageUrl ? `<img src="${escapeAttribute(entry.imageUrl)}" alt="${escapeAttribute(entry.title)}" width="${entry.imageWidth ?? 1}" height="${entry.imageHeight ?? 1}" sizes="(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem" loading="lazy">` : ""}<div><h2>${escapeText(entry.title)}</h2><p>${escapeText(entry.brand)}</p><strong>${money.format(entry.priceMin / 100)}</strong></div></a></article>`,
-              )
-              .join("")}</div>`;
-          })
-          .catch(() => {
-            searchResults.innerHTML =
-              '<p role="alert">No se pudo cargar la búsqueda. Intentá nuevamente.</p>';
-          });
-        window.addEventListener("pagehide", () => controller.abort(), { once: true });
+              const shown = ranked.slice(0, 48);
+              const cutNotice =
+                ranked.length > 48
+                  ? `<p class="solara-search-summary">Mostrando 48 de ${ranked.length} resultados. Refiná tu búsqueda…</p>`
+                  : "";
+              searchResults.innerHTML = `<p class="solara-search-summary">${ranked.length} resultados para “${escapeText(query)}”</p>${cutNotice}<div class="solara-search-results-grid">${shown
+                .map(
+                  ({ entry }) =>
+                    `<article class="solara-search-result"><a href="${escapeAttribute(entry.path)}">${entry.imageUrl ? `<img src="${escapeAttribute(entry.imageUrl)}" alt="${escapeAttribute(entry.title)}" width="${entry.imageWidth ?? 1}" height="${entry.imageHeight ?? 1}" sizes="(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem" loading="lazy">` : ""}<div><h2>${escapeText(entry.title)}</h2><p>${escapeText(entry.brand)}</p><strong>${money.format(entry.priceMin / 100)}</strong></div></a></article>`,
+                )
+                .join("")}</div>`;
+            })
+            .catch(() => {
+              searchResults.innerHTML =
+                '<p role="alert">No se pudo cargar la búsqueda. Intentá nuevamente.</p>';
+            });
+          window.addEventListener("pagehide", () => controller.abort(), { once: true });
+        }
+      };
+      if (paused || document.hidden) {
+        deferredSearch = runSearch;
+      } else {
+        runSearch();
       }
     }
   }
@@ -1538,6 +1546,9 @@ function storefrontBoot(): void {
       freshCatalog = null;
       void reconcileCart();
     }
+    const pendingSearch = deferredSearch;
+    deferredSearch = undefined;
+    pendingSearch?.();
   };
 
   const onVisibility = (): void => {
