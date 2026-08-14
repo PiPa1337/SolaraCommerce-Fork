@@ -59,7 +59,7 @@ fases C y O (regla de selección nivel 3). Conversión en curso:
 | id | prioridad | área | título | estado | evidencia |
 |----|-----------|------|--------|--------|-----------|
 | V1 | media | exporter | Carrito vacío: la columna del mensaje se centra contra el resumen en las 3 familias (`:has(> .solara-cart-empty)`; el runtime usa `solara-cart-empty`, no `empty-state`); gate e2e de medición con server de content-types correctos | hecho | cart-empty-align.spec.ts + verificación visual |
-| V2 | media | exporter | Sección "Comprar con claridad" aparece bajo la página 404 (¿layout global o bug?) | pendiente | idem |
+| V2 | media | exporter | Verificado: "Comprar con claridad" es el `trust-strip` del footer compartido (`renderProjectSections` con `sharedFooter`); el 404 muestra el footer completo intencionalmente (navegación estándar). No es bug | hecho | fixture.ts slot trust + verificación |
 | V3 | baja | exporter | Colección con pocos productos: espacio vacío masivo a la derecha | pendiente | idem |
 | V4 | baja | exporter | Variantes de producto se ven como texto plano, no como pills seleccionables | pendiente | idem |
 | V5 | baja | exporter | Home hero: espacio muerto en tercio derecho (aceptable, revisar) | pendiente | idem |
@@ -70,4 +70,4 @@ fases C y O (regla de selección nivel 3). Conversión en curso:
 
 ## SIGUIENTE
 
-V2 — Sección "Comprar con claridad" aparece bajo la página 404 (¿layout global o bug?)
+V3 — Colección con pocos productos: espacio vacío masivo a la derecha
