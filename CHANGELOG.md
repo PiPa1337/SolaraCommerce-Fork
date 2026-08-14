@@ -1,5 +1,15 @@
 # Changelog
 
+### Dashboard con dos referencias V1/V2 (2026-08-14)
+
+- El perfil local queda con dos tiendas de referencia para comparar las
+  familias lado a lado: `Predeterminado` (catalog-modern-v2) y `Modo Sur`
+  (catalog-modern-v1). Una purga única por perfil elimina el resto de tiendas
+  con sus borradores de recuperación y registros de migración; las tiendas que
+  el usuario cree después no se ven afectadas.
+- Las carpetas de las tiendas eliminadas quedan en respaldo en
+  `.release/tiendas-eliminadas-2026-08-14/` fuera del dashboard.
+
 ### Grillas V2 expandidas en todas las rutas (2026-08-14)
 
 - Colecciones, categorías, búsqueda y recomendaciones usan el ancho editorial

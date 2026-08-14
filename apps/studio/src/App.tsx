@@ -40,6 +40,7 @@ import {
   listProjectsWithRecovery,
   markProjectMigration,
   type ProjectRecoveryIssue,
+  purgeNonDemoStores,
   purgeRolledBackDemoRecords,
   type StoredProject,
   saveProject,
@@ -205,6 +206,7 @@ function StudioShell() {
           : undefined;
         if (diskListing?.projects.length) {
           if (detectedStorage.writable) {
+            await purgeNonDemoStores();
             for (const diskProject of diskListing.projects) {
               const expanded = expandCatalogModernDemoGalleries(diskProject.project);
               if (expanded === diskProject.project) continue;
@@ -240,6 +242,7 @@ function StudioShell() {
             "Se reinició la base local para activar el contrato de tienda v2. Los respaldos y exportaciones no fueron modificados.",
           );
         }
+        await purgeNonDemoStores();
         if (result.projects.length === 0 && result.recovery.length === 0) {
           await ensureFirstProject();
         }

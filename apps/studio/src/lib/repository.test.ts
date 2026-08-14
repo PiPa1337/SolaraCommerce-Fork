@@ -5,12 +5,32 @@ import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-t
 import { referenceStore } from "@solara/project-schema/fixture";
 import Dexie from "dexie";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+
+// El entorno de vitest no define localStorage; el stub permite probar el
+// sentinel de la purga única con el mismo contrato del navegador.
+const memoryStorage = new Map<string, string>();
+if (typeof globalThis.localStorage === "undefined") {
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (key: string) => memoryStorage.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        memoryStorage.set(key, value);
+      },
+      removeItem: (key: string) => {
+        memoryStorage.delete(key);
+      },
+    },
+  });
+}
+
 import {
   ASSET_CACHE_RECIPE_VERSION,
   buildScaleDemoProject,
   clearAssetCache,
   clearRecoveryDraft,
   createAssetCacheKey,
+  DEMO_ONLY_PURGE_SENTINEL,
   DEPRECATED_CATEGORY_CLEANUP_SENTINEL,
   database,
   duplicateProject,
@@ -25,11 +45,13 @@ import {
   listProjects,
   listProjectsWithRecovery,
   markProjectMigration,
+  purgeNonDemoStores,
   putCachedAsset,
   SCALE_DEMO_PROJECT_ID,
   saveProject,
   saveRecoveryDraft,
   setProjectArchived,
+  V1_DEMO_PROJECT_ID,
 } from "./repository";
 
 describe("repositorio local", () => {
@@ -39,6 +61,7 @@ describe("repositorio local", () => {
     await database.recoveryDrafts.clear();
     if (typeof localStorage !== "undefined") {
       localStorage.removeItem(DEPRECATED_CATEGORY_CLEANUP_SENTINEL);
+      localStorage.removeItem(DEMO_ONLY_PURGE_SENTINEL);
     }
   });
 
@@ -346,6 +369,36 @@ describe("repositorio local", () => {
     expect(expanded?.products[0]?.imageIds[0]).toBe(staleDemo.products[0]?.imageIds[0]);
     expect(await getProject(referenceStore.id)).toEqual(referenceStore);
     expect(await ensureCatalogModernDemoGallery()).toBe(false);
+  });
+
+  it("purga una sola vez las tiendas que no son referencias V1/V2", async () => {
+    const v1Reference = StoreProjectV1Schema.parse({
+      ...structuredClone(catalogModernStore),
+      id: V1_DEMO_PROJECT_ID,
+    });
+    const v2Reference = buildScaleDemoProject();
+    const extraStore = StoreProjectV1Schema.parse({
+      ...structuredClone(catalogModernStore),
+      id: "store-extra",
+    });
+    await saveProject(v1Reference);
+    await saveProject(v2Reference);
+    await saveProject(extraStore);
+    await saveRecoveryDraft(extraStore, 0);
+    await markProjectMigration(extraStore.id, "done");
+
+    expect(await purgeNonDemoStores()).toBe(true);
+    expect(await getProject(V1_DEMO_PROJECT_ID)).toEqual(v1Reference);
+    expect(await getProject(SCALE_DEMO_PROJECT_ID)).toEqual(v2Reference);
+    expect(await getProject("store-extra")).toBeUndefined();
+    expect(await getRecoveryDraft("store-extra")).toBeUndefined();
+    expect(await getProjectMigration("store-extra")).toBeUndefined();
+    expect(localStorage.getItem(DEMO_ONLY_PURGE_SENTINEL)).toBeTruthy();
+
+    expect(await purgeNonDemoStores()).toBe(false);
+    await saveProject(StoreProjectV1Schema.parse({ ...extraStore, id: "store-nueva" }));
+    expect(await purgeNonDemoStores()).toBe(false);
+    expect(await getProject("store-nueva")).toBeDefined();
   });
 });
 

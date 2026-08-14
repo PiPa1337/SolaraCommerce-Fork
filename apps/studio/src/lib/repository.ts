@@ -113,6 +113,12 @@ export const database = new SolaraDatabase();
 export const PROJECT_STORAGE_VERSION = "2";
 export const SCALE_DEMO_PROJECT_ID = "store-modo-sur-demo";
 export const SCALE_DEMO_PROJECT_NAME = "Predeterminado";
+/** Referencia V1 (Modo Sur): convive con Predeterminado V2 en el dashboard. */
+export const V1_DEMO_PROJECT_ID = "store-modo-sur";
+/** Purga única de tiendas: conserva sólo las dos referencias para comparar. */
+export const DEMO_ONLY_PURGE_SENTINEL = "solara-demo-only-purge";
+const DEMO_ONLY_PURGE_VERSION = "1";
+const DEMO_KEEP_PROJECT_IDS = new Set([SCALE_DEMO_PROJECT_ID, V1_DEMO_PROJECT_ID]);
 const LEGACY_SCALE_DEMO_PROJECT_NAME = "Demo Modo Sur, catálogo moderno";
 const LEGACY_CLEAN_PROJECT_ID = "store-catalog-modern-clean-default";
 const LEGACY_CLEAN_PROJECT_NAME = "Mi primera tienda";
@@ -581,6 +587,35 @@ export async function purgeRolledBackDemoRecords(): Promise<void> {
   await ready();
   await database.projects.delete("store-modo-sur-revamp");
   await database.recoveryDrafts.delete("store-modo-sur-revamp");
+}
+
+/**
+ * Purga única (sentinel) de tiendas del perfil local: conserva únicamente las
+ * dos referencias (Modo Sur V1 y Predeterminado V2) para comparar ambas
+ * familias lado a lado, y elimina el resto con sus borradores de recuperación
+ * y registros de migración. Corre una sola vez por perfil; cualquier tienda
+ * que el usuario cree después queda intacta.
+ */
+export async function purgeNonDemoStores(): Promise<boolean> {
+  await ready();
+  if (
+    typeof localStorage !== "undefined" &&
+    localStorage.getItem(DEMO_ONLY_PURGE_SENTINEL) === DEMO_ONLY_PURGE_VERSION
+  ) {
+    return false;
+  }
+  let changed = false;
+  for (const record of await database.projects.toArray()) {
+    if (DEMO_KEEP_PROJECT_IDS.has(record.id)) continue;
+    await database.projects.delete(record.id);
+    await database.recoveryDrafts.delete(record.id);
+    await database.migrations.delete(record.id);
+    changed = true;
+  }
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem(DEMO_ONLY_PURGE_SENTINEL, DEMO_ONLY_PURGE_VERSION);
+  }
+  return changed;
 }
 
 export async function ensureScaleDemoProject(): Promise<boolean> {
