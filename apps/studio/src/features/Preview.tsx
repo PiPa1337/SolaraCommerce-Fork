@@ -48,15 +48,23 @@ function addPreviewScrollbarPolicy(document: string): string {
   return `${document.slice(0, headEnd)}${PREVIEW_SCROLLBAR_STYLE}\n${document.slice(headEnd)}`;
 }
 
-function addPreviewCartState(document: string, storeId: string, sessionId: string): string {
-  let serialized = "[]";
+function readPreviewCartState(storeId: string): string {
   try {
     const stored = window.localStorage.getItem(`solara-cart:${storeId}`);
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) serialized = stored;
+      if (Array.isArray(parsed)) return stored;
     }
   } catch {}
+  return "[]";
+}
+
+function addPreviewCartState(
+  document: string,
+  storeId: string,
+  sessionId: string,
+  serialized = readPreviewCartState(storeId),
+): string {
   const state = `<script id="solara-preview-cart" data-session="${sessionId}" type="application/json">${serialized.replace(/</g, "\\u003c")}</script>`;
   const headEnd = document.indexOf("</head>");
   if (headEnd === -1) return `${state}${document}`;
@@ -277,6 +285,7 @@ export function Preview({
   const previewFrameWindows = useRef<Window[]>([]);
   const previewRenderSessionRef = useRef(0);
   const activePreviewSessionRef = useRef("");
+  const previewCartStateRef = useRef<{ key: string; serialized: string } | null>(null);
   const previewFrame = useRef<HTMLIFrameElement>(null);
   const previewObserver = useRef<IntersectionObserver | null>(null);
   const pausedRef = useRef(false);
@@ -376,16 +385,19 @@ export function Preview({
       if (
         cartMessage.type === "solara-preview-cart-write" &&
         typeof cartMessage.key === "string" &&
-        cartMessage.key.startsWith("solara-cart:") &&
+        cartMessage.key === `solara-cart:${project.id}` &&
         cartMessage.session === activePreviewSessionRef.current
       ) {
         if (!event.source || !previewFrameWindows.current.includes(event.source as Window)) return;
+        const serialized = typeof cartMessage.value === "string" ? cartMessage.value : "[]";
         try {
-          if (typeof cartMessage.value === "string") {
-            window.localStorage.setItem(cartMessage.key, cartMessage.value);
-          } else {
-            window.localStorage.removeItem(cartMessage.key);
-          }
+          if (!Array.isArray(JSON.parse(serialized))) return;
+          previewCartStateRef.current = { key: cartMessage.key, serialized };
+        } catch {
+          return;
+        }
+        try {
+          window.localStorage.setItem(cartMessage.key, serialized);
         } catch {}
         return;
       }
@@ -404,7 +416,7 @@ export function Preview({
     };
     window.addEventListener("message", handlePreviewAssetRequest);
     return () => window.removeEventListener("message", handlePreviewAssetRequest);
-  }, [onRouteChange]);
+  }, [onRouteChange, project.id]);
 
   useEffect(() => {
     let active = true;
@@ -416,6 +428,11 @@ export function Preview({
           previewAssetSources.current = getPreviewAssetSources(project);
           activePreviewSessionRef.current = previewSession;
           setHtmlSession(previewSession);
+          const cartKey = `solara-cart:${project.id}`;
+          const serializedCart =
+            previewCartStateRef.current?.key === cartKey
+              ? previewCartStateRef.current.serialized
+              : readPreviewCartState(project.id);
           setHtml(
             addPreviewNavigationBridge(
               addPreviewCartState(
@@ -424,6 +441,7 @@ export function Preview({
                 ),
                 project.id,
                 previewSession,
+                serializedCart,
               ),
             ),
           );

@@ -1,5 +1,13 @@
 # Changelog
 
+### Snapshot de carrito en Preview V2 (2026-08-14)
+
+- El host del Studio conserva el último snapshot completo recibido desde el
+  iframe y lo reutiliza al cambiar de ruta, aunque la escritura de
+  `localStorage` todavía no haya terminado.
+- Se agrega una regresión E2E para agregar un producto y cambiar de ruta de
+  inmediato sin perderlo antes de sumar el segundo.
+
 ### Navegación interna del Preview V2 (2026-08-14)
 
 - Los enlaces internos de la tienda embebida vuelven al controlador de rutas del
