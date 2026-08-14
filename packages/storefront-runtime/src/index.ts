@@ -534,6 +534,7 @@ function storefrontBoot(): void {
     const variant = productRoot ? selectedVariant(productRoot) : null;
     if (!productRoot || !variant || variant.dataset.available !== "true") return;
 
+    if (!embedded) cart = readStoredCart();
     const variantId = variant.dataset.variantId ?? "";
     const quantityInput = productRoot.querySelector<HTMLInputElement>('input[name="quantity"]');
     const quantity = Math.max(1, Math.min(99, Math.trunc(Number(quantityInput?.value ?? "1"))));

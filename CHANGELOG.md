@@ -1,5 +1,11 @@
 # Changelog
 
+### Carrito resistente a páginas restauradas (2026-08-13)
+
+- Se vuelve a leer el carrito persistido antes de agregar un producto, evitando
+  que una página restaurada por atrás/adelante sobrescriba líneas existentes.
+- Se agrega una regresión E2E con navegación back/forward y dos productos.
+
 ### Ritmo vertical de la home V2 (2026-08-13)
 
 - Se reduce el espacio vertical máximo de las grillas editoriales y del bento

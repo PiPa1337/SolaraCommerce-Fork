@@ -597,6 +597,29 @@ test("V2 conserva el carrito cuando la navegación ocurre inmediatamente despué
   ).toHaveCount(2);
 });
 
+test("V2 recupera el carrito antes de agregar desde una página restaurada", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  const firstProduct = new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString();
+  const secondProduct = new URL("/productos/remera-grafica-horizonte/", serverUrl).toString();
+
+  await page.goto(firstProduct);
+  await page.evaluate(() => localStorage.removeItem("solara-cart:store-catalog-modern-v2"));
+  await page.reload();
+  await page.goto(secondProduct);
+  await page.goBack();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Remera esencial de algodón");
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+
+  await page.goForward();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Remera gráfica Horizonte");
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await page.goto(new URL("/carrito/", serverUrl).toString());
+
+  await expect(
+    page.locator(".solara-cart-page-grid [data-cart-lines] .solara-cart-line"),
+  ).toHaveCount(2);
+});
+
 test("V2 conserva el carrito al navegar con enlaces del storefront", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 968 });
   const firstProduct = new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString();

@@ -176,6 +176,10 @@ describe("carrito robusto y checkout con precios frescos (C2/C3/C5/C9 + SF-B4/B5
     expect(STOREFRONT_RUNTIME_JS).toContain("reconcileCart");
     expect(STOREFRONT_RUNTIME_JS).toContain("catalog-index.json");
   });
+
+  it("refresca el carrito persistido antes de agregar desde una página restaurada", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("if (!embedded) cart = readStoredCart();");
+  });
 });
 
 describe("carrito sin líneas fantasma y conteos honestos (F-04, SF-B7, SF-B8, C6, NG-4)", () => {
