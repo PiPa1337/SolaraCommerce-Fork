@@ -37,7 +37,7 @@ Fuente única de trabajo del bucle perpetuo. Reglas:
 | O3b | baja | exporter | Consolidar bloques repetidos del hero V2 cuando la iteración visual se estabilice | pendiente | derivado de O3 |
 | O4 | media | exporter | Eliminado el check O(n²) del audit (`feed.includes` por oferta → Set de ids del feed): audit 1.034 → ~60 ms, benchmark 2.629 → 1.610 ms (−39%). Cache incremental: NO se justifica (sin el cuello, 1.6 s en 2.000 productos) | hecho | audit-scale.test.ts + benchmark |
 | O5 | media | exporter | Verificado: preloads LCP (`fetchpriority=high`) en home, categoría y producto en reference y catalogModern; orden del head correcto; único finding `performance.asset.responsive` es dato del fixture (no del renderer) | hecho | verificación con evidencia |
-| O6 | baja | exporter | Subsetting de fuentes self-host (~34.9 KB/familia) | pendiente | deuda |
+| O6 | baja | exporter | Subsetting con fonttools (latin + es-AR + símbolos, hinting y eje variable conservados): Archivo 34.9→30.2 KB, Inter 48.3→38.3 KB, Lora 37.8→34.2 KB (120.9→102.7 KB total, −15%). Verificado visualmente: cero tofu, acentos correctos | hecho | fonts.ts + verificación visual |
 | O7 | baja | studio | Recalibrar umbrales `perf-idle` sobre TaskDuration (hoy sobre ScriptDuration) | pendiente | deuda T10 |
 
 ## Deuda abierta (fuente de ítems futuros)
@@ -65,4 +65,4 @@ fases C y O (regla de selección nivel 3).
 
 ## SIGUIENTE
 
-O6 — Subsetting de fuentes self-host (~34.9 KB/familia)
+O7 — Recalibrar umbrales `perf-idle` sobre TaskDuration (hoy sobre ScriptDuration)
