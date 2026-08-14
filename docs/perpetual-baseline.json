@@ -1,21 +1,22 @@
 {
-  "plan": 5,
-  "de10": 5,
+  "plan": 6,
+  "de10": 6,
   "branch": "main",
   "baselineEntrada": {
     "runtimeJavascriptRaw": 55845,
     "runtimeMargen": 1499,
     "cssStudio": 102160,
     "cssStudioMargen": 4336,
-    "exportMs2000": 1550,
-    "axe": "0/0 ambos fixtures",
+    "exportMs2000": 1553,
+    "axe": "0/0/0 (3 fixtures, 18 rutas)",
     "preloads": "146/146",
+    "lcpFrio": "68/60 ms",
     "focoVisible": "0 invisibles",
     "paritySweep": "6/6",
     "enganches": "5/5",
     "contratos": "1/1",
     "nojsCobertura": "24 combinaciones",
-    "taskHomeMsS": 31.6
+    "seoJsonld": "5/5"
   },
-  "nextItem": "P5-1"
+  "nextItem": "P6-1"
 }

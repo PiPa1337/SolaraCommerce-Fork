@@ -1,20 +1,20 @@
-# Backlog del PLAN 5 (de 10) — run acotado con Δ%
+# Backlog del PLAN 6 (de 10) — run acotado con Δ%
 
-Re-verificaciones + hallazgos nuevos. Formato: `Métrica | Antes | Después | Δ%`.
+Re-verificación profunda de enganches + hallazgos nuevos. Formato: `Métrica | Antes | Después | Δ%`.
 
 | id | capa | ítem | métrica | antes | después | Δ% | estado |
 |----|------|------|---------|-------|---------|-----|--------|
-| P5-1 | F | Re-verificación gates PLAN 4 | gates | OK | | | pendiente |
-| P5-2 | H | LCP/CLS: medición con navegador frío (sin caché) — 3 corridas y mediana | ms | 76/72 | | | pendiente |
-| P5-3 | G | Servidor local: verificación de Cache-Control headers en assets estáticos | headers | — | | | pendiente |
-| P5-4 | B | CSS V2: re-medir duplicación (el usuario iteró el hero/bento — puede haber crecido) | bytes | 247 B | | | pendiente |
-| P5-5 | E | Rutas: catalogScale draft en nojs (paginación sin JS útil) | combos | — | | | pendiente |
-| P5-6 | A | Axe en catalogScale (tercer fixture) | findings | — | | | pendiente |
-| P5-7 | D | Videos: poster + tamaño en los fixtures que usan video | checks | — | | | pendiente |
-| P5-8 | C | Consola del sitio con runtime real (no solo load — interacciones: carrito, búsqueda) | errores | 0 | | | pendiente |
-| P5-9 | F | JSON-LD: validación de tipos y URLs absolutas en todas las páginas | checks | — | | | pendiente |
-| P5-10 | A | Contraste del footer catalogModern (small ©) con axe ya en 0 — verificar tokens muted del modern | findings | 0 | | | pendiente |
+| P6-1 | F | Re-verificación de TODOS los gates acumulados (PLAN 1-5) | gates | OK | | | pendiente |
+| P6-2 | F | Contrato persistido: `data-design-family` en el html vs fixture en los 3 fixtures | drift | — | | | pendiente |
+| P6-3 | F | `productIds` de categorías/colecciones derivados vs ids reales (recalculo del schema) | drift | — | | | pendiente |
+| P6-4 | F | Manifest del export: `usedAssets`/`usedVideos` vs archivos emitidos (nada huérfano, nada faltante) | drift | — | | | pendiente |
+| P6-5 | C | Runtime: features declaradas vs inicializadas en el boot (cada `hasFeature` cubierta) | drift | — | | | pendiente |
+| P6-6 | B | CSS: `data-design-family` scope de las familias (V1 vs V2 sin fuga entre sí) | checks | — | | | pendiente |
+| P6-7 | E | Rutas: canonical única por ruta (sin duplicados en sitemap) | checks | — | | | pendiente |
+| P6-8 | H | LCP frío de catalogModern (hoy solo reference) | ms | — | | | pendiente |
+| P6-9 | G | Handler: ruta `404.html` servida con el content-type html (verificado) | checks | 1/1 | 1/1 | 0 | pendiente |
+| P6-10 | D | Fuentes: subset re-verificado (Archivo 30.196 B) tras reversiones del usuario | bytes | — | | | pendiente |
 
 ## SIGUIENTE
 
-P5-1 — Re-verificación de gates del PLAN 4
+P6-1 — Re-verificación de todos los gates acumulados
