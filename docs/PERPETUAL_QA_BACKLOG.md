@@ -63,11 +63,11 @@ fases C y O (regla de selección nivel 3). Conversión en curso:
 | V3 | baja | exporter | Verificado: grilla con pocos productos = comportamiento estándar (las cards se alinean a la izquierda); la demo tiene 2 productos por diseño. No se toca la grilla V2 (iteración visual activa del usuario) | hecho | decisión documentada |
 | V4 | baja | exporter | Verificado: los productos modern (v1/v2) usan 6 pills con borde/hover/aria-pressed; el legacy usa select nativo (diseño accesible sin JS). El hallazgo era del producto legacy | hecho | verificación markup |
 | V5 | baja | exporter | Home hero: espacio muerto en tercio derecho (composición editorial intencional; el usuario la itera activamente) | hecho | decisión documentada |
-| V6 | baja | exporter | Home mobile: target táctil del carrito < 44px | pendiente | idem |
+| V6 | baja | exporter | Target táctil del carrito legacy en mobile: la media query pisaba con 40px → 44px (estándar táctil); gate e2e de medición | hecho | cart-target-size.spec.ts |
 
 | C4b | media | exporter | baseUrl subcarpeta: hrefs internos del body (paginación, breadcrumbs, cards de productos, CTAs de carrito/compra, links de categorías hijas) | pendiente | derivado de C4a |
 | C4c | media | exporter/runtime | baseUrl subcarpeta: navegación de datos del proyecto (siteShell/navigation) + fetches del runtime (`search-index.json`, `catalog-index.json`) | pendiente | derivado de C4a |
 
 ## SIGUIENTE
 
-V4 — Variantes de producto se ven como texto plano, no como pills seleccionables
+C4b — baseUrl subcarpeta: hrefs internos del body (paginación, breadcrumbs, cards, CTAs)

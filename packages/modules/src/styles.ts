@@ -623,7 +623,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   border-radius: var(--solara-radius);
   color: var(--solara-background);
   cursor: pointer;
-  min-height: 42px;
+  min-height: 44px;
   padding: 0.55rem 1rem;
   white-space: nowrap;
 }
@@ -775,7 +775,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     font-size: 0.78rem;
   }
   [data-solara-module="editorial-header"] .solara-cart-trigger {
-    min-height: 40px;
+    min-height: 44px;
     padding-inline: 0.55rem;
     font-size: 0;
   }
