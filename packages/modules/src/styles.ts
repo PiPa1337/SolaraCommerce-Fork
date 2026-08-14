@@ -2815,22 +2815,16 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   transition: background-color 220ms var(--catalog-v2-ease-out), transform 220ms var(--catalog-v2-ease-out);
 }
 .cm.v2 .catalog-category-bento-item:has(.catalog-category-bento-image) > span:not(.catalog-category-bento-fallback) {
-  background: color-mix(in srgb, var(--catalog-paper) 74%, transparent);
+  background: color-mix(in srgb, var(--catalog-paper) 92%, transparent);
 }
 .cm.v2 .catalog-category-bento-item:hover > span:not(.catalog-category-bento-fallback),
 .cm.v2 .catalog-category-bento-item:focus-visible > span:not(.catalog-category-bento-fallback) {
-  background: color-mix(in srgb, var(--catalog-paper) 92%, transparent);
+  background: var(--catalog-paper);
   transform: translateY(-2px);
 }
-/* Contador de productos: chip cuadrado, coherente con la familia. */
+/* Contador de productos: oculto en V2. */
 .cm.v2 .catalog-category-bento-item small {
-  right: 1rem;
-  bottom: 1rem;
-  padding: .35rem .55rem;
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--catalog-paper) 82%, transparent);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: .05em;
+  display: none;
 }
 .cm.v2 .catalog-category-bento-item::after {
   background: linear-gradient(to top, rgb(11 11 12 / .2), transparent 60%);
