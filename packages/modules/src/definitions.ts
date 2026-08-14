@@ -738,7 +738,7 @@ export const productDetail: ModuleDefinition<
           sizes: "5rem",
           fallbackAlt: `${product.title}, imagen ${index + 1}`,
         });
-        return `<button type="button" data-gallery-thumb="${escapeAttribute(assetId)}" aria-label="Ver imagen ${index + 1}" aria-current="${String(index === 0)}">${image}</button>`;
+        return `<button type="button" role="listitem" data-gallery-thumb="${escapeAttribute(assetId)}" aria-label="Ver imagen ${index + 1}" aria-current="${String(index === 0)}">${image}</button>`;
       })
       .join("");
     const gallery = galleryAssetIds.length

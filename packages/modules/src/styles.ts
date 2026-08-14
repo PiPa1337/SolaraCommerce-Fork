@@ -1564,7 +1564,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   font-size: 1.35rem;
 }
 [data-solara-module="trust-strip"] article p {
-  color: var(--solara-muted);
+  color: var(--solara-text);
   margin-top: 0.8rem;
   max-width: 32ch;
 }
@@ -1724,7 +1724,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   width: auto;
 }
 [data-solara-module="editorial-footer"] .solara-footer > div p {
-  color: var(--solara-muted);
+  color: var(--solara-text);
   margin-top: 1rem;
   max-width: 46ch;
 }
@@ -1744,7 +1744,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   color: var(--solara-accent);
 }
 [data-solara-module="editorial-footer"] address span {
-  color: var(--solara-muted);
+  color: var(--solara-text);
 }
 [data-solara-module="editorial-footer"] .solara-footer > * {
   min-width: 0;
@@ -1756,7 +1756,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   overflow-wrap: anywhere;
 }
 [data-solara-module="editorial-footer"] small {
-  color: var(--solara-muted);
+  color: var(--solara-text);
   grid-column: 1 / -1;
 }
 @media (max-width: 767px) {

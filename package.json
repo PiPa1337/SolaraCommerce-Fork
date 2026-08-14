@@ -36,6 +36,7 @@
     "typecheck": "corepack pnpm -r --if-present typecheck"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@biomejs/biome": "2.2.2",
     "@playwright/test": "1.55.0",
     "@types/node": "24.3.0",
