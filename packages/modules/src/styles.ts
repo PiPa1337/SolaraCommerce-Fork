@@ -2591,19 +2591,20 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 [data-solara-module="catalog-hero"] [data-motion-zone]{animation:none!important}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-line{display:block;overflow:hidden}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-rule{width:3.5rem;height:1px;background:color-mix(in srgb,var(--catalog-ink) 35%,transparent);transform-origin:left}
-.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits{display:flex;flex-wrap:wrap;gap:1.5rem 2.25rem;margin-top:2rem}
-.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit{display:flex;align-items:center;gap:.65rem}
-.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-copy{display:flex;flex-direction:column;gap:.15rem}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.5rem 2.25rem;margin:2rem 0 1rem;padding:0;list-style:none}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit{display:flex;align-items:center;gap:.65rem;min-width:0}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-icon{width:22px;height:22px;flex:0 0 auto}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-copy{display:flex;flex-direction:column;gap:.15rem;min-width:0}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-copy small{color:var(--catalog-muted)}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-icon,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit strong{transition:transform 220ms var(--catalog-v2-ease-out),color 220ms}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit:hover .catalog-hero-benefit-icon,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit:focus-visible .catalog-hero-benefit-icon{transform:translateY(-2px)}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit:hover strong,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit:focus-visible strong{color:var(--catalog-sale)}
-.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action{position:relative;overflow:hidden;isolation:isolate}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action{position:relative;display:inline-flex;align-items:center;gap:.6rem;overflow:hidden;isolation:isolate}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action::before{content:"";position:absolute;inset:0;z-index:-1;background:color-mix(in srgb,var(--solara-accent) 82%,#000);transform:translateY(101%);transition:transform 300ms var(--catalog-v2-ease-out)}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:hover,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:focus-visible{transform:translateY(-1px);box-shadow:none}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:hover::before,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:focus-visible::before{transform:translateY(0)}
-.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-cta-label{display:inline-block}
-.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-cta-icon{display:inline-flex;align-items:center;justify-content:center}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-cta-label{display:inline-block;white-space:nowrap}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-cta-icon{width:16px;height:16px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-cta-label,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-cta-icon{transition:transform 260ms var(--catalog-v2-ease-out),color 260ms}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:hover .catalog-hero-cta-label,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:focus-visible .catalog-hero-cta-label{transform:translateX(-2px);color:color-mix(in srgb,var(--solara-accent-text) 100%,#fff 20%)}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:hover .catalog-hero-cta-icon,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:focus-visible .catalog-hero-cta-icon{transform:translateX(4px);color:color-mix(in srgb,var(--solara-accent-text) 100%,#fff 20%)}
@@ -3251,6 +3252,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-title{--hero-v2-rise:-5px}
   .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-reveal--body,.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-benefit{--hero-v2-rise:8px}
   .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-reveal--actions{--hero-v2-rise:9px}
+  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits{grid-template-columns:1fr;gap:1rem}
 }
 @media (prefers-reduced-motion: reduce) {
   .cm.v2 [data-solara-module="catalog-header"],

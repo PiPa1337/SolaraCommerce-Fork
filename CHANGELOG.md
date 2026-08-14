@@ -1,5 +1,13 @@
 # Changelog
 
+### Fix visual del hero V2 (2026-08-14)
+
+- Los íconos SVG del CTA y de los beneficios tenían tamaño implícito del
+  navegador (71-115px) que rompía el layout: ahora tienen tamaño explícito
+  (16px el CTA, 22px los beneficios), el label del CTA no se parte en líneas
+  y los beneficios van en grilla de 3 columnas en desktop y una en móvil, sin
+  viñetas ni indent heredados del `ul`. La tienda queda guardada como v18.
+
 ### Hero V2 cinematográfico (2026-08-14)
 
 - El hero de la familia V2 estrena una secuencia de entrada única y breve

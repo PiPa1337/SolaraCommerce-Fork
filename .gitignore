@@ -8,6 +8,7 @@ test-results/
 .solara-runtime/
 proyectos/
 .release/
+_qa/
 .lighthouseci/
 .env
 .env.*
