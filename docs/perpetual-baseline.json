@@ -1,18 +1,19 @@
 {
-  "plan": 7,
-  "de10": 7,
+  "plan": 8,
+  "de10": 8,
   "branch": "main",
   "baselineEntrada": {
     "runtimeJavascriptRaw": 55845,
     "runtimeMargen": 1499,
     "cssStudio": 102160,
     "exportMs2000": 1553,
-    "axe": "0/0/0 (3 fixtures)",
+    "axe": "0/0/0",
     "preloads": "146/146",
-    "lcpFrio": "44-56 ms",
-    "contratosProfundos": "6/6 sin drift",
+    "lcp": "44-72 ms",
+    "taskHomeMsS": 30.8,
     "paritySweep": "6/6",
-    "enganches": "5/5"
+    "enganches": "5/5",
+    "nojs": "24 combinaciones"
   },
-  "nextItem": "P7-1"
+  "nextItem": "P8-1"
 }
