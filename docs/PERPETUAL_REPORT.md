@@ -122,3 +122,21 @@
 - Gates: `pnpm check` exit=0; 6 gates nuevos de contratos profundos (contratos-profundos.test.ts) con drift 0 en todos.
 - Mejoras: la cobertura de enganches generador↔sitio es ahora exhaustiva (familia, ids derivados, assets, features, CSS, sitemap).
 - Acumulado PLAN 1→6: axe 0/0/0; preloads 146/146; LCP frío 44-56 ms; contratos profundos 6/6 sin drift.
+
+## PLAN 7 (18:10-18:30Z, 2026-08-14)
+
+| id | ítem | métrica | antes | después | Δ% | estado |
+|----|------|---------|-------|---------|-----|--------|
+| P7-1 | Barrido visual completo | hallazgos | 4 (solo 404) | 4 (solo 404) | 0 | hecho |
+| P7-2 | Visión fresca: 4 hallazgos → 2 re-verificados (carrito=h1 del diseño por medición; 404=footer intencional) + 2 fijados: "A coordinar" 2rem→1rem (solo total 2rem), placeholder del input de búsqueda | hallazgos | 2 accionables | 0 | **100 %** | hecho |
+| P7-3 | Axe re-verificado (3 fixtures) | findings | 0 | 0 | 0 | hecho |
+| P7-4 | CDP reposo | ms/s | 31.6/18.6 | 30.8/17.8 | 2.5 % (ruido) | hecho |
+| P7-5 | Consola limpia (sweep) | errores | 0 | 0 | 0 | hecho |
+| P7-6 | CSS V2 + fuentes + preloads | gates | OK | OK | 0 | hecho |
+| P7-7 | Paridad + enganches + reproducibilidad | gates | OK | 16/16 | 0 | hecho |
+| P7-8 | No-JS 24 combinaciones | gates | OK | OK | 0 | hecho |
+
+### Totales PLAN 7
+- Gates: `pnpm check` exit=0, e2e 3/3, axe 0, sweep limpio.
+- Mejoras: 2 fixes visuales reales de la visión fresca; la medición volvió a desmentir 2 percepciones.
+- Acumulado PLAN 1→7: benchmark −8.2 %; axe 0/0/0; preloads 146/146; LCP 44-72 ms; foco 0; JSON-LD 100 %; contratos profundos 0 drift.

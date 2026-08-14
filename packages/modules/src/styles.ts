@@ -298,9 +298,13 @@ export const STORE_BASE_STYLES = `
 }
 [data-solara-store] .solara-cart-summary > p strong {
   text-align: right;
+  font-size: 1rem;
 }
 [data-solara-store] .solara-cart-page-grid aside strong {
   font-family: var(--solara-font-display);
+  font-size: 2rem;
+}
+[data-solara-store] .solara-cart-summary > p:last-of-type strong {
   font-size: 2rem;
 }
 [data-solara-store] .solara-pagination {

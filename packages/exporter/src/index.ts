@@ -1658,7 +1658,7 @@ function buildPages(
     ...(socialImage ? { image: socialImage } : {}),
   };
 
-  const searchControls = `<form class="solara-search-form" role="search" action="/buscar/" method="get"><label for="solara-search-input">Buscar productos</label><div><input id="solara-search-input" name="q" type="search" autocomplete="off"><button class="solara-primary-action" type="submit">Buscar</button></div></form>`;
+  const searchControls = `<form class="solara-search-form" role="search" action="/buscar/" method="get"><label for="solara-search-input">Buscar productos</label><div><input id="solara-search-input" name="q" type="search" autocomplete="off" placeholder="Buscar productos"><button class="solara-primary-action" type="submit">Buscar</button></div></form>`;
   const searchPage: PageDescriptor = {
     path: "buscar/index.html",
     title: `Buscar productos | ${project.identity.brandName}`,
