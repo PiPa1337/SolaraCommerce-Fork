@@ -324,10 +324,17 @@ export function moduleRoot(
   moduleId: string,
   section: StoreSection,
   content: SafeHtml | string,
-  options: { tag?: "section" | "header" | "aside" | "footer"; className?: string } = {},
+  options: {
+    tag?: "section" | "header" | "aside" | "footer";
+    className?: string;
+    ariaLabel?: string;
+  } = {},
 ): SafeHtml {
   const tag = options.tag ?? "section";
   const className = options.className ? ` class="${escapeAttribute(options.className)}"` : "";
+  const ariaLabel = options.ariaLabel
+    ? ` aria-label="${escapeAttribute(options.ariaLabel)}"`
+    : "";
   const motion = section.motion;
   const motionAttributes = [
     'data-motion-root="true"',
@@ -340,7 +347,7 @@ export function moduleRoot(
     `style="--motion-distance:${motion.distance}px;--motion-duration:${motion.duration * 1000}ms;--motion-delay:${motion.delay * 1000}ms;--motion-stagger:${motion.stagger * 1000}ms;--motion-intensity:${motion.intensity / 10};--motion-entry:${motion.entryPoint};--motion-easing:${escapeAttribute(motion.easing)}"`,
   ].join(" ");
   return safeHtml(
-    `<${tag} data-solara-module="${escapeAttribute(moduleId)}" data-solara-section="${escapeAttribute(section.id)}" ${motionAttributes}${className}>${content}</${tag}>`,
+    `<${tag} data-solara-module="${escapeAttribute(moduleId)}" data-solara-section="${escapeAttribute(section.id)}" ${motionAttributes}${className}${ariaLabel}>${content}</${tag}>`,
   );
 }
 

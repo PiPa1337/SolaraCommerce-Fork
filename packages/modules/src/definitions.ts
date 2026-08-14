@@ -82,6 +82,7 @@ export const announcementBar: ModuleDefinition<
       safeHtml(
         `<div class="solara-announcement" data-motion-zone="content"><p>${escapeHtml(context.settings.text)}</p>${link}</div>`,
       ),
+      { ariaLabel: "Avisos" },
     );
   },
 };
@@ -738,11 +739,11 @@ export const productDetail: ModuleDefinition<
           sizes: "5rem",
           fallbackAlt: `${product.title}, imagen ${index + 1}`,
         });
-        return `<button type="button" role="listitem" data-gallery-thumb="${escapeAttribute(assetId)}" aria-label="Ver imagen ${index + 1}" aria-current="${String(index === 0)}">${image}</button>`;
+        return `<button type="button" data-gallery-thumb="${escapeAttribute(assetId)}" aria-label="Ver imagen ${index + 1}" aria-current="${String(index === 0)}">${image}</button>`;
       })
       .join("");
     const gallery = galleryAssetIds.length
-      ? `<div class="solara-product-gallery" data-product-gallery><div class="solara-product-gallery-main">${galleryFigures}</div><div class="solara-product-gallery-thumbs" role="list" aria-label="Imágenes del producto">${galleryThumbs}</div></div>`
+      ? `<div class="solara-product-gallery" data-product-gallery><div class="solara-product-gallery-main">${galleryFigures}</div><div class="solara-product-gallery-thumbs">${galleryThumbs}</div></div>`
       : '<p class="solara-empty-state">Este producto todavía no tiene imágenes.</p>';
     const variants = product.variants
       .map((variant) => {
@@ -941,6 +942,7 @@ export const trustStrip: ModuleDefinition<"trust-strip", z.infer<typeof trustSet
           ${benefitMarkup}
         </div>
       </div>`),
+      { ariaLabel: "Beneficios y confianza" },
     );
   },
 };

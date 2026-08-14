@@ -1554,10 +1554,11 @@ function buildPages(
         : [];
       const body = [
         renderProjectSections(project, sharedHeader, { pageType: "product", product }),
-        `<main>${productDetailSection(project, product)}</main>`,
-        relatedProducts.length && relatedSections.length
-          ? `<section class="solara-related-products"><div class="solara-container">${renderProjectSections(project, relatedSections, { pageType: "product", products: relatedProducts })}</div></section>`
-          : "",
+        `<main>${productDetailSection(project, product)}${
+          relatedProducts.length && relatedSections.length
+            ? `<section class="solara-related-products"><div class="solara-container">${renderProjectSections(project, relatedSections, { pageType: "product", products: relatedProducts })}</div></section>`
+            : ""
+        }</main>`,
         renderProjectSections(project, sharedFooter, { pageType: "product", product }),
       ].join("");
       return {
