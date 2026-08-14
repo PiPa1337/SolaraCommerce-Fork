@@ -142,7 +142,7 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
     await grid.evaluate(
       (element) => getComputedStyle(element).gridTemplateColumns.split(" ").length,
     ),
-  ).toBe(4);
+  ).toBe(6);
   const gridMetrics = await grid.evaluate((element) => {
     const gridRect = element.getBoundingClientRect();
     const cardRect = element
@@ -150,9 +150,9 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
       ?.getBoundingClientRect();
     return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
   });
-  expect(gridMetrics.gridWidth).toBeGreaterThan(860);
-  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(880);
-  expect(gridMetrics.cardWidth).toBeGreaterThan(195);
+  expect(gridMetrics.gridWidth).toBeGreaterThan(1290);
+  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(1320);
+  expect(gridMetrics.cardWidth).toBeGreaterThan(190);
   expect(gridMetrics.cardWidth).toBeLessThan(215);
   const sectionPadding = await page
     .locator(".catalog-product-grid-section")
@@ -171,12 +171,12 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
     const rect = element.getBoundingClientRect();
     return rect.width / rect.height;
   });
-  expect(mediaRatio).toBeCloseTo(0.8, 1);
+  expect(mediaRatio).toBeCloseTo(1, 1);
 
   const image = firstMedia.locator("img");
   await expect(image).toHaveAttribute(
     "sizes",
-    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 4.6rem) / 3), min(20vw, 12.5rem)",
+    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) min(22vw, 11.5rem), min(20vw, 13rem)",
   );
   const initialTransform = await image.evaluate((element) => getComputedStyle(element).transform);
   await firstMedia.hover();
@@ -478,8 +478,10 @@ test("V2 audita composición en viewports intermedios", async ({ page }, testInf
     expect(metrics.documentWidth).toBeLessThanOrEqual(viewport.width);
     expect(metrics.heroWidth).toBeLessThanOrEqual(viewport.width);
     expect(metrics.heroActionsBottom).toBeLessThanOrEqual(viewport.height);
-    expect(metrics.productColumns).toBe(viewport.width <= 1199 ? 3 : 4);
-    expect(metrics.productCardWidth).toBeGreaterThan(180);
+    expect(metrics.productColumns).toBe(
+      viewport.width >= 1200 ? 6 : viewport.width >= 1024 ? 5 : 3,
+    );
+    expect(metrics.productCardWidth).toBeGreaterThan(155);
     expect(metrics.navHeight).toBeLessThanOrEqual(44);
     await page.screenshot({
       path: testInfo.outputPath(`home-${viewport.width}x${viewport.height}.png`),
@@ -592,9 +594,38 @@ test("V2 presenta PDP editorial y carrito lateral o inferior según viewport", a
     const rect = element.getBoundingClientRect();
     return rect.width / rect.height;
   });
-  expect(galleryRatio).toBeCloseTo(0.8, 1);
+  expect(galleryRatio).toBeCloseTo(1, 1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1920);
   await page.screenshot({ path: testInfo.outputPath("product-1920x968.png"), fullPage: true });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(productUrl);
+  const mobileDetail = page.locator(".catalog-product-detail-inner");
+  const mobileInfo = page.locator(".catalog-product-info");
+  const mobileProductMetrics = await mobileDetail.evaluate((element) => {
+    const detailRect = element.getBoundingClientRect();
+    const gallery = element.querySelector<HTMLElement>(".catalog-product-gallery-main");
+    const action = element.querySelector<HTMLElement>(".catalog-product-add");
+    return {
+      layout: getComputedStyle(element).display,
+      detailLeft: detailRect.left,
+      detailRight: innerWidth - detailRect.right,
+      galleryHeight: gallery?.getBoundingClientRect().height ?? 0,
+      actionBottom: action?.getBoundingClientRect().bottom ?? Number.POSITIVE_INFINITY,
+      documentWidth: document.documentElement.scrollWidth,
+    };
+  });
+  expect(mobileProductMetrics.layout).toBe("flex");
+  expect(mobileProductMetrics.detailLeft).toBeGreaterThanOrEqual(11);
+  expect(mobileProductMetrics.detailRight).toBeGreaterThanOrEqual(11);
+  expect(mobileProductMetrics.galleryHeight).toBeLessThanOrEqual(520);
+  expect(mobileProductMetrics.actionBottom).toBeGreaterThan(0);
+  expect(mobileProductMetrics.documentWidth).toBeLessThanOrEqual(390);
+  await expect(mobileInfo.getByRole("button", { name: "Agregar al carrito" })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("product-390x844.png"), fullPage: true });
+
+  await page.setViewportSize({ width: 1920, height: 968 });
+  await page.goto(productUrl);
 
   await page.getByLabel("Elegí talle y color").selectOption({ index: 1 });
   await page.getByRole("button", { name: "Agregar al carrito" }).click();

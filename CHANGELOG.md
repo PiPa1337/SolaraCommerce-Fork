@@ -1,5 +1,13 @@
 # Changelog
 
+### Grillas V2 con miniaturas cuadradas (2026-08-14)
+
+- Las secciones de productos aprovechan el ancho disponible con una grilla
+  adaptativa, manteniendo las cards legibles y conservando una densidad menor
+  en las recomendaciones relacionadas.
+- Las imágenes de producto V2 usan superficies cuadradas y `contain` para
+  evitar recortes en cards, galería principal y miniaturas.
+
 ### Snapshot de carrito en Preview V2 (2026-08-14)
 
 - El host del Studio conserva el último snapshot completo recibido desde el

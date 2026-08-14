@@ -553,7 +553,7 @@ function modernProductCardImageSizes(
   if (context.pageType === "category") {
     return "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1279px) calc((100vw - 24rem) / 3), min(28vw, 17rem)";
   }
-  return "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) calc((100vw - 4.6rem) / 3), min(20vw, 12.5rem)";
+  return "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) min(22vw, 11.5rem), min(20vw, 13rem)";
 }
 
 function modernProductCard(
@@ -570,8 +570,8 @@ function modernProductCard(
   const imageId = variant?.imageId ?? product.imageIds[0];
   const image = renderImage(context.project, imageId, {
     className: "catalog-product-card-image",
-    loading: index < 4 ? "eager" : "lazy",
-    fetchPriority: index < 4 ? "high" : "auto",
+    loading: index < 6 ? "eager" : "lazy",
+    fetchPriority: index < 6 ? "high" : "auto",
     sizes: modernProductCardImageSizes(context),
     fallbackAlt: product.title,
   });
