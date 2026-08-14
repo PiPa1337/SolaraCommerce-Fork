@@ -16,7 +16,7 @@ Fuente única de trabajo del bucle perpetuo. Reglas:
 
 | id | prioridad | área | título | estado | evidencia |
 |----|-----------|------|--------|--------|-----------|
-| C1 | alta | exporter | Paridad preview/export diferencial: extender `normalize-parity.test.ts` a categorías paginadas, 404, políticas y búsqueda | pendiente | docs/TESTING.md |
+| C1 | alta | exporter | Paridad preview/export diferencial: `scripts/parity-sweep.test.ts` cubre los 3 fixtures en draft y production, todas las rutas (6/6 verdes) | hecho | scripts/parity-sweep.test.ts |
 | C2 | alta | exporter | Paginación SEO: `?pagina=1` redirige/rel-canonical; `pagina/99` → 404 real | pendiente | deuda P3 |
 | C3 | alta | exporter/schema | `safeSlug` no sanitiza nombres reservados de Windows (CON, NUL, AUX, COM1-9, LPT1-9) → fallos de escritura indiagnosticables | pendiente | deuda abierta |
 | C4 | alta | exporter | `baseUrl` en subcarpeta: URLs absolutas de recursos asumen raíz del dominio | pendiente | deuda X1 |
@@ -61,4 +61,4 @@ fases C y O (regla de selección nivel 3).
 
 ## SIGUIENTE
 
-C1 — Paridad preview/export diferencial (normalize-parity.test.ts)
+C2 — Paginación SEO: `?pagina=1` → canonical; `pagina/99` → 404 real
