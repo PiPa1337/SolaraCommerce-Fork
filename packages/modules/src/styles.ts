@@ -280,6 +280,9 @@ export const STORE_BASE_STYLES = `
 [data-solara-store] .solara-cart-page-grid {
   padding-block: 2rem 7rem;
 }
+[data-solara-store] .solara-cart-page-grid [data-cart-lines]:has(> .solara-cart-empty, > .solara-empty-state) {
+  align-self: center;
+}
 [data-solara-store] .solara-cart-page-grid aside {
   align-self: start;
   display: grid;
@@ -772,7 +775,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     font-size: 0.78rem;
   }
   [data-solara-module="editorial-header"] .solara-cart-trigger {
-    min-height: 40px;
+    min-height: 44px;
     padding-inline: 0.55rem;
     font-size: 0;
   }
@@ -1883,7 +1886,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   gap: 0.55rem;
 }
 [data-solara-module="hero-media"] .solara-hero-controls button {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0.5rem 0.65rem;
   border: 1px solid rgb(255 255 255 / 0.54);
   border-radius: var(--solara-radius);
