@@ -31,7 +31,7 @@ Fuente única de trabajo del bucle perpetuo. Reglas:
 
 | id | prioridad | área | título | estado | evidencia |
 |----|-----------|------|--------|--------|-----------|
-| O1 | alta | runtime | Compactar runtime serializado (`parseCart`, `reconcileCartLines`, `levenshtein`, `normalizeSearchTokens`) sin romper contrato del bundle | pendiente | 55.845 B / tope 56 KiB |
+| O1 | alta | runtime | `minifyJsSource` compacta los helpers serializados sin renombrar bindings ni tocar strings: runtime 56.218 → 55.211 B (−1.007), margen 2.133 B; e2e público 15/15 | hecho | budget + runtime-serialization + e2e |
 | O2 | alta | studio | Compactar CSS del Studio | pendiente | ~99.2 KiB / tope 100 KiB |
 | O3 | media | exporter | Auditar `styles.ts` del storefront (+8.1 %: 75 → 81 KB) | pendiente | deuda |
 | O4 | media | exporter | Pases duplicados del export (`auditProject` vs `buildOptimizationReport`); cache incremental solo si el benchmark lo justifica (medir primero) | pendiente | HANDOFF |
@@ -64,4 +64,4 @@ fases C y O (regla de selección nivel 3).
 
 ## SIGUIENTE
 
-O1 — Compactar runtime serializado (`parseCart`, `reconcileCartLines`, `levenshtein`, `normalizeSearchTokens`) — hoy 56.218 B raw / tope 57.344 B
+O2 — Compactar CSS del Studio (~99.2 KiB / tope 100 KiB)

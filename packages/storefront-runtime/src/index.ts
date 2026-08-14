@@ -1577,8 +1577,38 @@ const RUNTIME_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unk
   ["reconcileCartLines", reconcileCartLines],
 ];
 
+/**
+ * Compacta el fuente de un helper serializado sin renombrar bindings ni
+ * alterar strings (el runtime público se mide por bytes crudos). Reglas
+ * conservadoras: protege comillas simples, dobles y templates; elimina
+ * comentarios y colapsa whitespace fuera de strings; recorta el espacio
+ * alrededor de puntuación segura. No toca operadores compuestos (===, <=, =>
+ * ya no tienen espacios internos) ni rutas con `/`.
+ */
+export function minifyJsSource(value: string): string {
+  const quoted: string[] = [];
+  const protectedValue = value.replace(
+    /('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`)/g,
+    (match) => {
+      const token = `__SOLARA_JS_STRING_${quoted.length}__`;
+      quoted.push(match);
+      return token;
+    },
+  );
+  const minified = protectedValue
+    .replace(/\/\/[^\n]*/g, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\s+/g, " ")
+    .replace(/\s*([{}();,:+\-*%<>=!&|?.[\]])\s*/g, "$1")
+    .trim();
+  return minified.replace(
+    /__SOLARA_JS_STRING_(\d+)__/g,
+    (_, index: string) => quoted[Number(index)] ?? "",
+  );
+}
+
 const SERIALIZED_RUNTIME_HELPERS = RUNTIME_HELPERS.map(([name, fn]) => {
-  const source = fn.toString();
+  const source = minifyJsSource(fn.toString());
   const bindingName = source.match(/^function\s+([A-Za-z_$][\w$]*)/)?.[1] ?? name;
   return { name, bindingName, source };
 });
