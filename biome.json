@@ -11,7 +11,8 @@
       "!**/playwright-report",
       "!**/test-results",
       "!**/.release",
-      "!**/proyectos"
+      "!**/proyectos",
+      "!**/_qa"
     ]
   },
   "formatter": {
