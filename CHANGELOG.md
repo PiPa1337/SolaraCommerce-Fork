@@ -1,5 +1,12 @@
 # Changelog
 
+### Toolbar de categorías responsive (2026-08-13)
+
+- Se corrige el layout móvil V2 para que filtros, contador y orden ocupen todo
+  el ancho disponible sin quedar comprimidos en una columna residual.
+- Se agrega una regresión E2E que verifica una sola columna y ausencia de
+  overflow interno en 390 px.
+
 ### Carrito público entre páginas (2026-08-13)
 
 - Se corrige la serialización del runtime exportado para que `parseCart` y

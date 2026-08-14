@@ -465,6 +465,23 @@ test("V2 ordena categoría y filtros como rail editorial y sheet móvil", async 
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(new URL("/categorias/remeras/", serverUrl).toString());
+  const mobileLayout = await layout.evaluate((element) => {
+    const toolbar = element.querySelector<HTMLElement>(".solara-category-toolbar");
+    const rect = element.getBoundingClientRect();
+    const toolbarRect = toolbar?.getBoundingClientRect();
+    return {
+      columns: getComputedStyle(element).gridTemplateColumns.split(" ").length,
+      width: rect.width,
+      toolbarWidth: toolbarRect?.width ?? 0,
+      toolbarScrollWidth: toolbar?.scrollWidth ?? 0,
+    };
+  });
+  expect(mobileLayout.columns).toBe(1);
+  expect(mobileLayout.width).toBeLessThanOrEqual(390);
+  expect(mobileLayout.toolbarWidth).toBeGreaterThan(300);
+  expect(mobileLayout.toolbarScrollWidth).toBeLessThanOrEqual(mobileLayout.toolbarWidth);
+  await expect(layout.locator(".solara-category-toolbar span")).toBeVisible();
+  await expect(layout.locator(".solara-category-toolbar select")).toBeVisible();
   await expect(filters.locator(".catalog-filter-groups")).toBeHidden();
   await expect(filters.locator("details")).not.toHaveAttribute("open", "");
   await filters.locator("summary").click();
