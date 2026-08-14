@@ -455,16 +455,26 @@ test("V2 mantiene feedback equivalente para hover y teclado en cards y bento", a
   const bentoItem = page.locator(".catalog-category-bento-item").first();
   const bentoImage = bentoItem.locator("img");
   await bentoItem.scrollIntoViewIfNeeded();
+  // La card del mosaico nunca transforma (contrato de motion V2): el feedback
+  // vive en la imagen (scale) y en la línea glow inferior.
   const initialBentoTransform = await bentoItem.evaluate(
     (element) => getComputedStyle(element).transform,
   );
+  const initialBentoScale = await bentoImage.evaluate(
+    (element) => getComputedStyle(element).scale,
+  );
   await bentoItem.focus();
   await expect
-    .poll(() => bentoItem.evaluate((element) => getComputedStyle(element).transform))
-    .not.toBe(initialBentoTransform);
+    .poll(() => bentoImage.evaluate((element) => getComputedStyle(element).scale))
+    .not.toBe(initialBentoScale);
+  await expect(bentoItem.evaluate((element) => getComputedStyle(element).transform)).resolves.toBe(
+    initialBentoTransform,
+  );
   await expect
-    .poll(() => bentoImage.evaluate((element) => getComputedStyle(element).transform))
-    .not.toBe("none");
+    .poll(() =>
+      bentoItem.evaluate((element) => getComputedStyle(element, "::before").opacity),
+    )
+    .toBe("1");
 
   const viewAll = page.locator(".catalog-view-all").first();
   await viewAll.focus();
