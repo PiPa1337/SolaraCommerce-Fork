@@ -1,5 +1,13 @@
 # Changelog
 
+### Hero V2: título balanceado y hairline en beneficios (2026-08-14)
+
+- El título del hero se divide en líneas balanceadas (~12 caracteres) para el
+  reveal con máscara: "Vestite con / lo que te / representa." sin viudas
+  tipográficas (revisión visual con visión).
+- Los beneficios ganan un hairline vertical sutil entre columnas en desktop
+  (se quita en móvil). La tienda queda guardada como v19.
+
 ### Fix visual del hero V2 (2026-08-14)
 
 - Los íconos SVG del CTA y de los beneficios tenían tamaño implícito del

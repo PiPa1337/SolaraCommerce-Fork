@@ -2593,6 +2593,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-rule{width:3.5rem;height:1px;background:color-mix(in srgb,var(--catalog-ink) 35%,transparent);transform-origin:left}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.5rem 2.25rem;margin:2rem 0 1rem;padding:0;list-style:none}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit{display:flex;align-items:center;gap:.65rem;min-width:0}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit + .catalog-hero-benefit{border-left:1px solid color-mix(in srgb,var(--catalog-border) 55%,transparent);padding-left:1.25rem}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-icon{width:22px;height:22px;flex:0 0 auto}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-copy{display:flex;flex-direction:column;gap:.15rem;min-width:0}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-copy small{color:var(--catalog-muted)}
@@ -3253,6 +3254,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-reveal--body,.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-benefit{--hero-v2-rise:8px}
   .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-reveal--actions{--hero-v2-rise:9px}
   .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits{grid-template-columns:1fr;gap:1rem}
+  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit + .catalog-hero-benefit{border-left:0;padding-left:0}
 }
 @media (prefers-reduced-motion: reduce) {
   .cm.v2 [data-solara-module="catalog-header"],

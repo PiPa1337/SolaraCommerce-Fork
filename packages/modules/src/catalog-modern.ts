@@ -323,11 +323,27 @@ export const catalogHeroBenefitIcons: Record<string, string> = {
   check: '<path d="m4.5 12.5 5 5 10-11"></path>',
 };
 
+/**
+ * Divide el título en líneas balanceadas (~12 caracteres por línea) para el
+ * reveal con máscara. Cada línea debe caber sin partir palabras internamente
+ * dentro del ancho del h1 (max-width 11ch en V2); el texto se conserva íntegro.
+ */
 function heroTitleLines(title: string): string[] {
   const words = title.trim().split(/\s+/).filter(Boolean);
-  if (words.length <= 2) return [words.join(" ")];
-  const mid = Math.ceil(words.length / 2);
-  return [words.slice(0, mid).join(" "), words.slice(mid).join(" ")];
+  if (words.length <= 1) return [words.join(" ")];
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (current && candidate.length > 12) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = candidate;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
 }
 
 function renderHeroBenefits(benefits: z.infer<typeof heroSettings>["benefits"]): string {

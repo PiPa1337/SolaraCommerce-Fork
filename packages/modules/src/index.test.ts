@@ -835,9 +835,9 @@ describe("catalog-hero V2: contrato de markup para motion (beneficios y líneas)
     };
     const html = renderSections(catalogModernV2Store, [section], { pageType: "home" });
 
-    expect(html.match(/data-hero-line-inner/g) ?? []).toHaveLength(2);
+    expect(html.match(/data-hero-line-inner/g) ?? []).toHaveLength(3);
     expect(html).toContain(
-      '<span class="catalog-hero-line" data-hero-line><span class="catalog-hero-line-inner" data-hero-line-inner>Vestite con lo</span></span> <span class="catalog-hero-line" data-hero-line><span class="catalog-hero-line-inner" data-hero-line-inner>que te representa.</span></span>',
+      '<span class="catalog-hero-line" data-hero-line><span class="catalog-hero-line-inner" data-hero-line-inner>Vestite con</span></span> <span class="catalog-hero-line" data-hero-line><span class="catalog-hero-line-inner" data-hero-line-inner>lo que te</span></span> <span class="catalog-hero-line" data-hero-line><span class="catalog-hero-line-inner" data-hero-line-inner>representa.</span></span>',
     );
     const titleMarkup = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1] ?? "";
     expect(
