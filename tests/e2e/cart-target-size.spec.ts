@@ -9,7 +9,11 @@ test("V6: el target táctil del carrito mide al menos 44px en mobile", async ({ 
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
     const requested = decodeURIComponent(url.pathname).replace(/^\/+/, "");
     const path =
-      requested === "" ? "index.html" : requested.endsWith("/") ? `${requested}index.html` : requested;
+      requested === ""
+        ? "index.html"
+        : requested.endsWith("/")
+          ? `${requested}index.html`
+          : requested;
     const content = exported.files.get(path);
     if (content === undefined) {
       response.writeHead(404).end("Not found");

@@ -1508,7 +1508,9 @@ function storefrontBoot(): void {
       return;
     }
     document
-      .querySelectorAll<HTMLElement>('[data-solara-module="catalog-category-bento"] .catalog-category-bento-item')
+      .querySelectorAll<HTMLElement>(
+        '[data-solara-module="catalog-category-bento"] .catalog-category-bento-item',
+      )
       .forEach((item) => {
         const image = item.querySelector<HTMLElement>(".catalog-category-bento-image");
         if (!image) return;

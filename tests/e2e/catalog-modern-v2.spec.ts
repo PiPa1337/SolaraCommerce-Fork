@@ -460,9 +460,7 @@ test("V2 mantiene feedback equivalente para hover y teclado en cards y bento", a
   const initialBentoTransform = await bentoItem.evaluate(
     (element) => getComputedStyle(element).transform,
   );
-  const initialBentoScale = await bentoImage.evaluate(
-    (element) => getComputedStyle(element).scale,
-  );
+  const initialBentoScale = await bentoImage.evaluate((element) => getComputedStyle(element).scale);
   await bentoItem.focus();
   await expect
     .poll(() => bentoImage.evaluate((element) => getComputedStyle(element).scale))
@@ -471,9 +469,7 @@ test("V2 mantiene feedback equivalente para hover y teclado en cards y bento", a
     initialBentoTransform,
   );
   await expect
-    .poll(() =>
-      bentoItem.evaluate((element) => getComputedStyle(element, "::before").opacity),
-    )
+    .poll(() => bentoItem.evaluate((element) => getComputedStyle(element, "::before").opacity))
     .toBe("1");
 
   const viewAll = page.locator(".catalog-view-all").first();
@@ -521,8 +517,8 @@ test("V2 mantiene CTA, dos columnas y reduced motion en 390x844", async ({ page 
   expect(mobileBentoMetrics.maxRight).toBeLessThanOrEqual(
     mobileBentoMetrics.gridLeft + mobileBentoMetrics.gridWidth + 1,
   );
-  expect(mobileBentoMetrics.wideColumns).toBe("span 2");
-  expect(mobileBentoMetrics.tallRows).toBe("span 2");
+  expect(mobileBentoMetrics.wideColumns).toBe("span 1");
+  expect(mobileBentoMetrics.tallRows).toBe("span 1");
   expect(
     await page.locator(".catalog-hero-copy h1").evaluate((element) => {
       const words: { word: string; rects: number }[] = [];

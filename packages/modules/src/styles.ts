@@ -2804,7 +2804,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-category-bento-item small{display:none;transition:transform 650ms cubic-bezier(.22,1,.36,1)}
 .cm.v2 .catalog-category-bento-item:hover small,.cm.v2 .catalog-category-bento-item:focus-visible small{transform:translateX(-4px);transition-duration:500ms}
 /* Glow inferior: línea fina que surge desde la izquierda al hover. */
-.cm.v2 .catalog-category-bento-item::before{content:"";position:absolute;z-index:3;left:0;right:0;bottom:0;height:2px;background:linear-gradient(90deg,transparent,var(--catalog-sale) 30%,var(--catalog-sale) 70%,transparent);transform:scaleX(0);transform-origin:left;opacity:0;box-shadow:0 0 10px color-mix(in srgb,var(--catalog-sale) 45%,transparent);pointer-events:none;transition:transform 650ms cubic-bezier(.22,1,.36,1),opacity 650ms cubic-bezier(.22,1,.36,1)}
+.cm.v2 .catalog-category-bento-item::before{content:"";position:absolute;z-index:3;left:0;right:0;bottom:0;height:2px;background:linear-gradient(90deg,transparent,var(--catalog-sale) 30%,var(--catalog-sale) 70%,transparent);transform:scaleX(0);transform-origin:left;opacity:0;box-shadow:0 0 12px color-mix(in srgb,var(--catalog-sale) 60%,transparent);pointer-events:none;transition:transform 650ms cubic-bezier(.22,1,.36,1),opacity 650ms cubic-bezier(.22,1,.36,1)}
 .cm.v2 .catalog-category-bento-item:hover::before,.cm.v2 .catalog-category-bento-item:focus-visible::before{transform:scaleX(1);opacity:1;transition-duration:500ms}
 /* Scrim inferior existente. */
 .cm.v2 .catalog-category-bento-item::after{background:linear-gradient(to top,rgb(11 11 12 / .2),transparent 60%)}
