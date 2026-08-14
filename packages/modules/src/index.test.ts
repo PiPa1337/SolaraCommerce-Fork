@@ -676,7 +676,10 @@ describe("catalog-hero V2 con CTA único de WhatsApp", () => {
     expect(actionsMarkup).toContain('href="https://wa.me/5491123456789"');
     expect(actionsMarkup).not.toContain("?text=");
     expect(actionsMarkup).toContain('target="_blank" rel="noopener noreferrer"');
-    expect(actionsMarkup).toContain(">Escribir por WhatsApp</a>");
+    expect(actionsMarkup).toContain(
+      '<span class="catalog-hero-cta-label">Escribir por WhatsApp</span>',
+    );
+    expect(actionsMarkup).toContain('class="catalog-hero-cta-icon"');
     expect(actionsMarkup).not.toContain("catalog-secondary-action");
     expect(actionsMarkup).not.toContain("Ver reci\u00e9n llegados");
     expect(actionsMarkup.match(/<a\b/g)).toHaveLength(1);
@@ -718,6 +721,194 @@ describe("catalog-hero V2 con CTA único de WhatsApp", () => {
     expect(html).not.toContain("Escribir por WhatsApp");
     expect(html).toContain('class="catalog-primary-action" href="/colecciones/recien-llegados/"');
     expect(html).toContain("Explorar tienda");
+  });
+});
+
+describe("catalog-hero V2: contrato de markup para motion (beneficios y líneas)", () => {
+  const heroSection = (store: typeof catalogModernV2Store) => {
+    const section = store.sections.find((candidate) => candidate.moduleId === "catalog-hero");
+    if (!section) throw new Error("Fixture sin hero");
+    return section;
+  };
+
+  it("V2 renderiza tres beneficios por defecto con svg, aria-label y textos comerciales", () => {
+    const html = renderSections(catalogModernV2Store, [heroSection(catalogModernV2Store)], {
+      pageType: "home",
+    });
+
+    expect(html).toContain('data-hero-benefits aria-label="Beneficios"');
+    expect(html.match(/class="catalog-hero-benefit" data-hero-benefit/g) ?? []).toHaveLength(3);
+    expect(html.match(/class="catalog-hero-benefit-icon"/g) ?? []).toHaveLength(3);
+    expect(html).toContain(
+      'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"',
+    );
+    expect(html).toContain("<strong>Envíos a todo el país</strong>");
+    expect(html).toContain("<strong>Pedido directo</strong>");
+    expect(html).toContain("<strong>Compra cuidada</strong>");
+    expect(html).toContain("Coordinamos la entrega por WhatsApp");
+    expect(html).toContain("Comprá conversando con la marca");
+    expect(html).toContain("Confirmamos todo antes de enviar");
+    expect(html).not.toContain("catalog-hero-stats");
+  });
+
+  it("con benefits vacío cae al markup de stats respetando showCatalogStats", () => {
+    const base = heroSection(catalogModernV2Store);
+    const html = renderSections(
+      catalogModernV2Store,
+      [{ ...base, settings: { ...base.settings, benefits: [] } }],
+      { pageType: "home" },
+    );
+
+    expect(html).toContain('class="catalog-hero-stats"');
+    expect(html).not.toContain("data-hero-benefits");
+
+    const hidden = renderSections(
+      catalogModernV2Store,
+      [{ ...base, settings: { ...base.settings, benefits: [], showCatalogStats: false } }],
+      { pageType: "home" },
+    );
+
+    expect(hidden).not.toContain("catalog-hero-stats");
+    expect(hidden).not.toContain("data-hero-benefits");
+  });
+
+  it("V1 conserva el hero actual sin contrato de motion ni beneficios", () => {
+    const html = renderSections(catalogModernStore, [heroSection(catalogModernStore)], {
+      pageType: "home",
+    });
+
+    expect(html).toContain("<h1>Vestite con lo que te representa.</h1>");
+    expect(html).toContain("catalog-hero-stats");
+    expect(html).not.toContain("data-hero-title");
+    expect(html).not.toContain("data-hero-line");
+    expect(html).not.toContain("data-hero-rule");
+    expect(html).not.toContain("catalog-hero-reveal");
+    expect(html).not.toContain("data-hero-benefits");
+  });
+
+  it("el modo carousel conserva la estructura actual sin contrato de motion", () => {
+    const base = heroSection(catalogModernV2Store);
+    const section = {
+      ...base,
+      settings: {
+        ...base.settings,
+        mode: "carousel",
+        slides: [
+          {
+            id: "slide-hero-1",
+            title: "Primer slide",
+            body: "Cuerpo del primero",
+            actionLabel: "Ver",
+            actionHref: "/",
+            imageId: "",
+          },
+          {
+            id: "slide-hero-2",
+            title: "Segundo slide",
+            body: "Cuerpo del segundo",
+            actionLabel: "Ver",
+            actionHref: "/",
+            imageId: "",
+          },
+        ],
+      },
+    };
+    const html = renderSections(catalogModernV2Store, [section], { pageType: "home" });
+
+    expect(html).toContain("catalog-hero-slide-stage");
+    expect(html).toContain("data-catalog-hero-slide-panel");
+    expect(html).toContain("catalog-hero-controls");
+    expect(html).toContain("<h1>Primer slide</h1>");
+    expect(html).toContain("catalog-hero-stats");
+    expect(html).not.toContain("data-hero-title");
+    expect(html).not.toContain("data-hero-line");
+    expect(html).not.toContain("data-hero-rule");
+    expect(html).not.toContain("catalog-hero-reveal");
+    expect(html).not.toContain("data-hero-benefits");
+  });
+
+  it("divide el título en líneas deterministas y conserva el texto íntegro", () => {
+    const base = heroSection(catalogModernV2Store);
+    const section = {
+      ...base,
+      settings: { ...base.settings, title: "Vestite con lo que te representa." },
+    };
+    const html = renderSections(catalogModernV2Store, [section], { pageType: "home" });
+
+    expect(html.match(/data-hero-line-inner/g) ?? []).toHaveLength(2);
+    expect(html).toContain(
+      '<span class="catalog-hero-line" data-hero-line><span class="catalog-hero-line-inner" data-hero-line-inner>Vestite con lo</span></span> <span class="catalog-hero-line" data-hero-line><span class="catalog-hero-line-inner" data-hero-line-inner>que te representa.</span></span>',
+    );
+    const titleMarkup = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1] ?? "";
+    expect(
+      titleMarkup
+        .replace(/<[^>]+>/g, "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    ).toBe("Vestite con lo que te representa.");
+
+    const short = renderSections(
+      catalogModernV2Store,
+      [{ ...base, settings: { ...base.settings, title: "Solo dos" } }],
+      { pageType: "home" },
+    );
+    expect(short.match(/data-hero-line-inner/g) ?? []).toHaveLength(1);
+    expect(short).toContain(">Solo dos</span></span>");
+
+    const odd = renderSections(
+      catalogModernV2Store,
+      [{ ...base, settings: { ...base.settings, title: "Una bici verde" } }],
+      { pageType: "home" },
+    );
+    expect(odd).toContain(">Una bici</span></span> <span");
+    expect(odd).toContain(">verde</span></span>");
+  });
+
+  it("usa check como ícono de respaldo cuando el ícono no existe", () => {
+    const base = heroSection(catalogModernV2Store);
+    const section = {
+      ...base,
+      settings: {
+        ...base.settings,
+        benefits: [
+          { id: "benefit-truck", icon: "truck", title: "Envíos", text: "" },
+          { id: "benefit-unknown", icon: "icono-inexistente", title: "Raro", text: "" },
+          { id: "benefit-check", icon: "check", title: "Check", text: "" },
+        ],
+      },
+    };
+    const html = renderSections(catalogModernV2Store, [section], { pageType: "home" });
+    const icons = [
+      ...html.matchAll(/<li class="catalog-hero-benefit" data-hero-benefit><svg[\s\S]*?<\/svg>/g),
+    ].map((match) => match[0] ?? "");
+
+    expect(icons).toHaveLength(3);
+    expect(icons[1]).toBe(icons[2]);
+    expect(icons[1]).not.toBe(icons[0]);
+  });
+
+  it("valida en el schema id obligatorio, tope de 3 ítems y defaults comerciales", () => {
+    const schema = getTypedModule("catalog-hero")?.settingsSchema;
+    if (!schema) throw new Error("Falta el módulo catalog-hero");
+
+    const defaults = schema.parse({});
+    expect(defaults.benefits).toHaveLength(3);
+    expect(defaults.benefits[0]?.icon).toBe("truck");
+    expect(defaults.benefits[0]?.title).toBe("Envíos a todo el país");
+    expect(schema.safeParse({ benefits: [{ icon: "truck", title: "Sin id" }] }).success).toBe(
+      false,
+    );
+    expect(
+      schema.safeParse({
+        benefits: [
+          { id: "a", title: "A" },
+          { id: "b", title: "B" },
+          { id: "c", title: "C" },
+          { id: "d", title: "D" },
+        ],
+      }).success,
+    ).toBe(false);
+    expect(schema.safeParse({ benefits: [{ id: "a", title: "A" }] }).success).toBe(true);
   });
 });
 

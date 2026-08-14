@@ -264,6 +264,13 @@ const heroSlideSchema = z.object({
   imageId: z.string().default(""),
 });
 
+const catalogHeroBenefitSchema = z.object({
+  id: z.string().min(1),
+  icon: z.string().default("truck"),
+  title: z.string().min(1),
+  text: z.string().default(""),
+});
+
 const heroSettings = z.object({
   mode: z.enum(["image", "carousel", "video"]).default("image"),
   eyebrow: z.string().default("Nueva temporada"),
@@ -279,7 +286,58 @@ const heroSettings = z.object({
   autoplay: z.boolean().default(false),
   intervalMs: z.number().int().min(3000).max(15000).default(6000),
   showCatalogStats: z.boolean().default(true),
+  benefits: z
+    .array(catalogHeroBenefitSchema)
+    .max(3)
+    .default([
+      {
+        id: "hero-benefit-envios",
+        icon: "truck",
+        title: "Envíos a todo el país",
+        text: "Coordinamos la entrega por WhatsApp",
+      },
+      {
+        id: "hero-benefit-pedido",
+        icon: "chat",
+        title: "Pedido directo",
+        text: "Comprá conversando con la marca",
+      },
+      {
+        id: "hero-benefit-compra",
+        icon: "shield",
+        title: "Compra cuidada",
+        text: "Confirmamos todo antes de enviar",
+      },
+    ]),
 });
+
+export const catalogHeroBenefitIcons: Record<string, string> = {
+  truck:
+    '<path d="M2 6.5h10.5V15H2z"></path><path d="M12.5 9.5H17l3.5 3.5v2h-8"></path><circle cx="6.5" cy="15.5" r="1.7"></circle><circle cx="16.5" cy="15.5" r="1.7"></circle>',
+  chat: '<path d="M4 5h16v11H9.5L4 19.5z"></path>',
+  shield: '<path d="M12 3l7 2.5v5.5c0 4.2-2.9 7.2-7 8.5-4.1-1.3-7-4.3-7-8.5V5.5z"></path>',
+  tag: '<path d="M3 11.5V4h7.5L20 13.5 13.5 20z"></path><circle cx="7.8" cy="7.8" r="1.1"></circle>',
+  gift: '<path d="M3.5 8.5h17v4h-17z"></path><path d="M5 12.5v7.5h14v-7.5"></path><path d="M12 8.5v11.5"></path><path d="M12 8.5C12 8.5 11 4.5 8.6 4.5S5.8 7 8.2 8.3z"></path><path d="M12 8.5c0-4 .9-4 2.6-4s2.9 2.5 1.2 3.8z"></path>',
+  clock: '<circle cx="12" cy="12" r="8.2"></circle><path d="M12 7.2V12l3.4 2"></path>',
+  card: '<rect x="2.5" y="5" width="19" height="14" rx="1.5"></rect><path d="M2.5 9.5h19"></path>',
+  check: '<path d="m4.5 12.5 5 5 10-11"></path>',
+};
+
+function heroTitleLines(title: string): string[] {
+  const words = title.trim().split(/\s+/).filter(Boolean);
+  if (words.length <= 2) return [words.join(" ")];
+  const mid = Math.ceil(words.length / 2);
+  return [words.slice(0, mid).join(" "), words.slice(mid).join(" ")];
+}
+
+function renderHeroBenefits(benefits: z.infer<typeof heroSettings>["benefits"]): string {
+  return `<ul class="catalog-hero-benefits" data-hero-benefits aria-label="Beneficios">${benefits
+    .map((benefit) => {
+      const icon = catalogHeroBenefitIcons[benefit.icon] ?? catalogHeroBenefitIcons.check ?? "";
+      return `<li class="catalog-hero-benefit" data-hero-benefit><svg class="catalog-hero-benefit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${icon}</svg><span class="catalog-hero-benefit-copy"><strong>${escapeHtml(benefit.title)}</strong>${benefit.text ? `<small>${escapeHtml(benefit.text)}</small>` : ""}</span></li>`;
+    })
+    .join("")}</ul>`;
+}
 
 function modernFallbackAsset(
   context: { project: import("@solara/project-schema").StoreProjectV1 },
@@ -340,6 +398,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
       "autoplay",
       "intervalMs",
       "showCatalogStats",
+      "benefits",
     ],
   }),
   settingsSchema: heroSettings,
@@ -380,6 +439,32 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
     { key: "autoplay", type: "boolean", label: "Reproducción automática" },
     { key: "intervalMs", type: "number", label: "Intervalo", min: 3000, max: 15000, step: 500 },
     { key: "showCatalogStats", type: "boolean", label: "Mostrar estadísticas del catálogo" },
+    {
+      key: "benefits",
+      type: "repeater",
+      label: "Beneficios",
+      maxItems: 3,
+      itemLabelKey: "title",
+      fields: [
+        {
+          key: "icon",
+          type: "select",
+          label: "Ícono",
+          options: [
+            { value: "truck", label: "Envío" },
+            { value: "chat", label: "WhatsApp" },
+            { value: "shield", label: "Protección" },
+            { value: "tag", label: "Etiqueta" },
+            { value: "gift", label: "Regalo" },
+            { value: "clock", label: "Reloj" },
+            { value: "card", label: "Tarjeta" },
+            { value: "check", label: "Check" },
+          ],
+        },
+        { key: "title", type: "text", label: "Título" },
+        { key: "text", type: "text", label: "Descripción" },
+      ],
+    },
   ],
   motionZones: [
     ...modernRevealZone,
@@ -430,6 +515,26 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
     const stats = settings.showCatalogStats
       ? `<dl class="catalog-hero-stats" aria-label="Resumen del catálogo"><div data-stat="products"><dt>${context.project.products.filter((product) => product.status === "active").length}</dt><dd>productos activos</dd></div><div data-stat="categories"><dt>${context.project.categories.filter((category) => !category.parentId).length}</dt><dd>categorías</dd></div><div data-stat="whatsapp"><dt>${context.project.whatsapp.phone ? "WhatsApp" : "Contacto"}</dt><dd>${context.project.whatsapp.phone ? "pedido directo" : "consultas"}</dd></div></dl>`
       : "";
+    // La familia V2 (fuera del modo carousel) expone el contrato de markup que
+    // la tarea de motion usa para entrada cinematográfica, máscaras y parallax:
+    // reveal zones, líneas del título y beneficios configurables. El modo
+    // carousel y la familia V1 conservan exactamente la estructura previa.
+    const isV2Hero =
+      context.project.commerceTemplates.designFamily === "catalog-modern-v2" &&
+      settings.mode !== "carousel";
+    const benefitsMarkup = isV2Hero
+      ? settings.benefits.length > 0
+        ? renderHeroBenefits(settings.benefits)
+        : stats
+      : "";
+    const titleLinesMarkup = isV2Hero
+      ? heroTitleLines(title)
+          .map(
+            (line) =>
+              `<span class="catalog-hero-line" data-hero-line><span class="catalog-hero-line-inner" data-hero-line-inner>${escapeHtml(line)}</span></span>`,
+          )
+          .join(" ")
+      : "";
     const slides =
       settings.mode === "carousel"
         ? settings.slides
@@ -447,15 +552,12 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
         ? context.project.whatsapp.phone.replace(/\D/g, "")
         : "";
     const actions = whatsappPhone
-      ? `<a class="catalog-primary-action solara-primary-action" href="https://wa.me/${escapeAttribute(whatsappPhone)}" target="_blank" rel="noopener noreferrer">Escribir por WhatsApp</a>`
+      ? `<a class="catalog-primary-action solara-primary-action" href="https://wa.me/${escapeAttribute(whatsappPhone)}" target="_blank" rel="noopener noreferrer"><span class="catalog-hero-cta-label">Escribir por WhatsApp</span><svg class="catalog-hero-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${catalogHeroBenefitIcons.chat}</svg></a>`
       : `<a class="catalog-primary-action" href="${escapeAttribute(safeUrl(actionHref))}">${escapeHtml(actionLabel)}</a>${settings.secondaryActionLabel ? `<a class="catalog-secondary-action" href="${escapeAttribute(safeUrl(settings.secondaryActionHref))}">${escapeHtml(settings.secondaryActionLabel)}</a>` : ""}`;
-    return moduleRoot(
-      "catalog-hero",
-      context.section,
-      safeHtml(
-        `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}"><div class="catalog-hero-copy"><p class="catalog-eyebrow">${escapeHtml(settings.eyebrow)}</p><h1>${escapeHtml(title)}</h1><p class="catalog-hero-body">${escapeHtml(body)}</p><div class="catalog-hero-actions">${actions}</div>${stats}</div><figure class="catalog-hero-media" data-motion-zone="media">${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>`,
-      ),
-    );
+    const heroInner = isV2Hero
+      ? `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}"><div class="catalog-hero-copy"><div class="catalog-hero-reveal catalog-hero-reveal--eyebrow"><p class="catalog-eyebrow">${escapeHtml(settings.eyebrow)}</p></div><h1 class="catalog-hero-title" data-hero-title>${titleLinesMarkup}</h1><div class="catalog-hero-rule" data-hero-rule aria-hidden="true"></div><div class="catalog-hero-reveal catalog-hero-reveal--body"><p class="catalog-hero-body">${escapeHtml(body)}</p></div><div class="catalog-hero-reveal catalog-hero-reveal--actions"><div class="catalog-hero-actions">${actions}</div></div>${benefitsMarkup}</div><figure class="catalog-hero-media" data-motion-zone="media" data-hero-media>${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>`
+      : `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}"><div class="catalog-hero-copy"><p class="catalog-eyebrow">${escapeHtml(settings.eyebrow)}</p><h1>${escapeHtml(title)}</h1><p class="catalog-hero-body">${escapeHtml(body)}</p><div class="catalog-hero-actions">${actions}</div>${stats}</div><figure class="catalog-hero-media" data-motion-zone="media">${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>`;
+    return moduleRoot("catalog-hero", context.section, safeHtml(heroInner));
   },
 };
 

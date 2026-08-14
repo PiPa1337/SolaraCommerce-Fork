@@ -93,18 +93,23 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   ).toEqual({ overflowWrap: "normal", wordBreak: "normal" });
   expect(
     await page.locator(".catalog-hero-copy h1").evaluate((element) => {
-      const node = element.firstChild;
-      if (!node || node.nodeType !== Node.TEXT_NODE) return [];
-      const words = (node.textContent ?? "").match(/\S+/g) ?? [];
-      let offset = 0;
-      return words.map((word) => {
-        const start = (node.textContent ?? "").indexOf(word, offset);
-        const range = document.createRange();
-        range.setStart(node, start);
-        range.setEnd(node, start + word.length);
-        offset = start + word.length;
-        return { word, rects: range.getClientRects().length };
-      });
+      const words: { word: string; rects: number }[] = [];
+      for (const inner of element.querySelectorAll<HTMLElement>("[data-hero-line-inner]")) {
+        const node = inner.firstChild;
+        if (!node || node.nodeType !== Node.TEXT_NODE) continue;
+        const text = node.textContent ?? "";
+        const lineWords = text.match(/\S+/g) ?? [];
+        let offset = 0;
+        for (const word of lineWords) {
+          const start = text.indexOf(word, offset);
+          const range = document.createRange();
+          range.setStart(node, start);
+          range.setEnd(node, start + word.length);
+          offset = start + word.length;
+          words.push({ word, rects: range.getClientRects().length });
+        }
+      }
+      return words;
     }),
   ).toEqual(expect.arrayContaining([expect.objectContaining({ word: "representa.", rects: 1 })]));
 
@@ -139,6 +144,51 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
       { timeout: 5_000 },
     )
     .toBe("1");
+
+  // Coreografía de entrada del hero V2: tras ~1.4s las líneas, la regla, el
+  // cuerpo, las acciones, los beneficios y el media quedan en estado final.
+  await expect
+    .poll(
+      () =>
+        page
+          .locator("[data-hero-benefit]")
+          .nth(2)
+          .evaluate((element) => getComputedStyle(element).opacity),
+      { timeout: 5_000 },
+    )
+    .toBe("1");
+  const heroFinal = await page.evaluate(() => {
+    const identity = ["none", "matrix(1, 0, 0, 1, 0, 0)"];
+    const title = document.querySelector(".catalog-hero-title");
+    const lines = [...document.querySelectorAll<HTMLElement>("[data-hero-line-inner]")];
+    const rule = document.querySelector(".catalog-hero-rule");
+    const media = document.querySelector("[data-hero-media]");
+    const benefits = [...document.querySelectorAll<HTMLElement>("[data-hero-benefit]")];
+    const body = document.querySelector(".catalog-hero-reveal--body");
+    const actions = document.querySelector(".catalog-hero-reveal--actions");
+    const mediaClip = media ? getComputedStyle(media).clipPath : "";
+    const clipPercentages =
+      mediaClip === "none" ? [] : [...mediaClip.matchAll(/([\d.]+)%/g)].map((m) => Number(m[1]));
+    return {
+      titleOpacity: title ? getComputedStyle(title).opacity : "",
+      linesFinal: lines.every((line) => identity.includes(getComputedStyle(line).transform)),
+      ruleFinal: rule ? identity.includes(getComputedStyle(rule).transform) : false,
+      bodyOpacity: body ? getComputedStyle(body).opacity : "",
+      actionsOpacity: actions ? getComputedStyle(actions).opacity : "",
+      benefitOpacities: benefits.map((benefit) => getComputedStyle(benefit).opacity),
+      mediaVisible:
+        Boolean(media) &&
+        getComputedStyle(media).opacity === "1" &&
+        (mediaClip === "none" || clipPercentages.length === 0 || Math.max(...clipPercentages) <= 1),
+    };
+  });
+  expect(heroFinal.titleOpacity).toBe("1");
+  expect(heroFinal.linesFinal).toBe(true);
+  expect(heroFinal.ruleFinal).toBe(true);
+  expect(heroFinal.bodyOpacity).toBe("1");
+  expect(heroFinal.actionsOpacity).toBe("1");
+  expect(heroFinal.benefitOpacities).toEqual(["1", "1", "1"]);
+  expect(heroFinal.mediaVisible).toBe(true);
 
   const heroCollision = await page.evaluate(() => {
     const header = document
@@ -465,18 +515,23 @@ test("V2 mantiene CTA, dos columnas y reduced motion en 390x844", async ({ page 
   expect(mobileBentoMetrics.tallRows).toBe("span 2");
   expect(
     await page.locator(".catalog-hero-copy h1").evaluate((element) => {
-      const node = element.firstChild;
-      if (!node || node.nodeType !== Node.TEXT_NODE) return [];
-      const words = (node.textContent ?? "").match(/\S+/g) ?? [];
-      let offset = 0;
-      return words.map((word) => {
-        const start = (node.textContent ?? "").indexOf(word, offset);
-        const range = document.createRange();
-        range.setStart(node, start);
-        range.setEnd(node, start + word.length);
-        offset = start + word.length;
-        return { word, rects: range.getClientRects().length };
-      });
+      const words: { word: string; rects: number }[] = [];
+      for (const inner of element.querySelectorAll<HTMLElement>("[data-hero-line-inner]")) {
+        const node = inner.firstChild;
+        if (!node || node.nodeType !== Node.TEXT_NODE) continue;
+        const text = node.textContent ?? "";
+        const lineWords = text.match(/\S+/g) ?? [];
+        let offset = 0;
+        for (const word of lineWords) {
+          const start = text.indexOf(word, offset);
+          const range = document.createRange();
+          range.setStart(node, start);
+          range.setEnd(node, start + word.length);
+          offset = start + word.length;
+          words.push({ word, rects: range.getClientRects().length });
+        }
+      }
+      return words;
     }),
   ).toEqual(expect.arrayContaining([expect.objectContaining({ word: "representa.", rects: 1 })]));
 
@@ -507,6 +562,29 @@ test("V2 mantiene CTA, dos columnas y reduced motion en 390x844", async ({ page 
       .locator('[data-solara-module="catalog-hero"]')
       .evaluate((element) => getComputedStyle(element).animationName),
   ).toBe("none");
+  // Con reduced motion el hero queda visible al instante, sin coreografía:
+  // líneas sin transform, regla sin escala, beneficios opacos y media sin
+  // máscara de entrada.
+  const reducedHero = await page.evaluate(() => {
+    const line = document.querySelector<HTMLElement>("[data-hero-line-inner]");
+    const rule = document.querySelector<HTMLElement>(".catalog-hero-rule");
+    const media = document.querySelector<HTMLElement>("[data-hero-media]");
+    const benefits = [...document.querySelectorAll<HTMLElement>("[data-hero-benefit]")];
+    return {
+      lineTransform: line ? getComputedStyle(line).transform : "",
+      lineAnimation: line ? getComputedStyle(line).animationName : "",
+      ruleTransform: rule ? getComputedStyle(rule).transform : "",
+      benefitOpacities: benefits.map((benefit) => getComputedStyle(benefit).opacity),
+      mediaClip: media ? getComputedStyle(media).clipPath : "",
+      mediaAnimation: media ? getComputedStyle(media).animationName : "",
+    };
+  });
+  expect(reducedHero.lineTransform).toBe("none");
+  expect(reducedHero.lineAnimation).toBe("none");
+  expect(reducedHero.ruleTransform).toBe("none");
+  expect(reducedHero.benefitOpacities).toEqual(["1", "1", "1"]);
+  expect(reducedHero.mediaClip).toBe("none");
+  expect(reducedHero.mediaAnimation).toBe("none");
   expect(
     await page
       .locator(".catalog-product-card-image")

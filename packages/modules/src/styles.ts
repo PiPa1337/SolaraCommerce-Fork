@@ -2454,9 +2454,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   box-shadow: 0 12px 32px color-mix(in srgb, var(--catalog-ink), transparent 92%);
   backdrop-filter: blur(14px);
 }
-.cm.v2 [data-solara-module="catalog-hero"] {
-  animation: solara-motion-fade-up var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out) 70ms both;
-}
 .cm.v2 .catalog-announcement-inner {
   min-height: 36px;
   background: var(--catalog-ink);
@@ -2587,6 +2584,50 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-hero-stats dt {
   font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
   font-weight: 500;
+}
+/* Motion cinematográfico del hero V2 (familia imagen/video): la coreografía de
+   entrada está gateada por [data-motion-visible="true"], que el runtime setea
+   con el observer; sin el atributo el contenido queda visible sin animar. */
+.cm.v2 [data-solara-module="catalog-hero"] [data-motion-zone]{animation:none!important}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-line{display:block;overflow:hidden}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-rule{width:3.5rem;height:1px;background:color-mix(in srgb,var(--catalog-ink) 35%,transparent);transform-origin:left}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits{display:flex;flex-wrap:wrap;gap:1.5rem 2.25rem;margin-top:2rem}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit{display:flex;align-items:center;gap:.65rem}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-copy{display:flex;flex-direction:column;gap:.15rem}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-copy small{color:var(--catalog-muted)}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-icon,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit strong{transition:transform 220ms var(--catalog-v2-ease-out),color 220ms}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit:hover .catalog-hero-benefit-icon,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit:focus-visible .catalog-hero-benefit-icon{transform:translateY(-2px)}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit:hover strong,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit:focus-visible strong{color:var(--catalog-sale)}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action{position:relative;overflow:hidden;isolation:isolate}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action::before{content:"";position:absolute;inset:0;z-index:-1;background:color-mix(in srgb,var(--solara-accent) 82%,#000);transform:translateY(101%);transition:transform 300ms var(--catalog-v2-ease-out)}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:hover,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:focus-visible{transform:translateY(-1px);box-shadow:none}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:hover::before,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:focus-visible::before{transform:translateY(0)}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-cta-label{display:inline-block}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-cta-icon{display:inline-flex;align-items:center;justify-content:center}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-cta-label,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-cta-icon{transition:transform 260ms var(--catalog-v2-ease-out),color 260ms}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:hover .catalog-hero-cta-label,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:focus-visible .catalog-hero-cta-label{transform:translateX(-2px);color:color-mix(in srgb,var(--solara-accent-text) 100%,#fff 20%)}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:hover .catalog-hero-cta-icon,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:focus-visible .catalog-hero-cta-icon{transform:translateX(4px);color:color-mix(in srgb,var(--solara-accent-text) 100%,#fff 20%)}
+.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-reveal--eyebrow{--hero-v2-rise:14px;animation:solara-hero-rise var(--hero-v2-dur-eyebrow,380ms) var(--catalog-v2-ease-out) 60ms both}
+.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-title{--hero-v2-rise:-10px;animation:solara-hero-rise var(--hero-v2-dur-title,380ms) var(--catalog-v2-ease-out) 100ms both}
+.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-line-inner{animation:solara-hero-line var(--hero-v2-dur-line,560ms) var(--catalog-v2-ease-out) var(--hero-v2-line-delay,120ms) both}
+.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-line:nth-child(2){--hero-v2-line-delay:190ms}
+.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-rule{animation:solara-hero-rule var(--hero-v2-dur-rule,480ms) var(--catalog-v2-ease-out) 300ms both}
+.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-reveal--body{animation:solara-hero-rise var(--hero-v2-dur-body,420ms) var(--catalog-v2-ease-out) 360ms both}
+.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-reveal--actions{--hero-v2-rise:18px;animation:solara-hero-rise var(--hero-v2-dur-actions,420ms) var(--catalog-v2-ease-out) 430ms both}
+.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-benefit{animation:solara-hero-rise var(--hero-v2-dur-benefit,420ms) var(--catalog-v2-ease-out) var(--hero-v2-benefit-delay,500ms) both}
+.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-benefit:nth-child(2){--hero-v2-benefit-delay:560ms}
+.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-benefit:nth-child(3){--hero-v2-benefit-delay:620ms}
+.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] [data-hero-media]{animation:solara-hero-media var(--hero-v2-dur-media,900ms) var(--catalog-v2-ease-out) 80ms both!important}
+.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-image{animation:solara-hero-media-zoom var(--hero-v2-dur-zoom,1200ms) var(--catalog-v2-ease-out) 80ms both}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-inner:hover .catalog-hero-image{animation:none!important}
+@keyframes solara-hero-rise{from{opacity:0;transform:translateY(var(--hero-v2-rise,16px))}to{opacity:1;transform:translateY(0)}}
+@keyframes solara-hero-line{from{transform:translateY(115%)}to{transform:translateY(0)}}
+@keyframes solara-hero-rule{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes solara-hero-media{from{clip-path:inset(0 0 100% 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes solara-hero-media-zoom{from{transform:scale(1.06)}to{transform:scale(1.01)}}
+@keyframes solara-hero-parallax{from{transform:translateY(4%)}to{transform:translateY(-4%)}}
+@supports (animation-timeline:view()){
+.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] [data-hero-media]{animation:solara-hero-media var(--hero-v2-dur-media,900ms) var(--catalog-v2-ease-out) 80ms both,solara-hero-parallax linear both!important;animation-timeline:auto,view()!important;animation-range:normal,entry 0% exit 25%!important}
 }
 .cm.v2 .catalog-brand-strip-inner,
 .cm.v2 .catalog-product-grid-section,
@@ -3205,6 +3246,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-cart-drawer[data-open="true"] {
     transform: translateY(0);
   }
+  .cm.v2 [data-solara-module="catalog-hero"]{--hero-v2-dur-eyebrow:228ms;--hero-v2-dur-title:228ms;--hero-v2-dur-line:336ms;--hero-v2-dur-rule:288ms;--hero-v2-dur-body:252ms;--hero-v2-dur-actions:252ms;--hero-v2-dur-benefit:252ms;--hero-v2-dur-media:540ms,1s;--hero-v2-dur-zoom:720ms}
+  .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-reveal--eyebrow{--hero-v2-rise:7px}
+  .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-title{--hero-v2-rise:-5px}
+  .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-reveal--body,.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-benefit{--hero-v2-rise:8px}
+  .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-reveal--actions{--hero-v2-rise:9px}
 }
 @media (prefers-reduced-motion: reduce) {
   .cm.v2 [data-solara-module="catalog-header"],
@@ -3213,9 +3259,25 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-product-card-image,
   .cm.v2 .catalog-category-bento-item img,
   .cm.v2 .catalog-hero-image,
-  .cm.v2 .catalog-hero-video {
+  .cm.v2 .catalog-hero-video,
+  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-reveal--eyebrow,
+  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-title,
+  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-line-inner,
+  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-rule,
+  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-reveal--body,
+  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-reveal--actions,
+  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit,
+  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-icon,
+  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-cta-label,
+  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-cta-icon,
+  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action,
+  .cm.v2 [data-solara-module="catalog-hero"] [data-hero-media][data-motion-zone] {
     animation: none !important;
+    transition: none !important;
     transform: none !important;
+    clip-path: none;
+  }
+  .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action::before {
     transition: none !important;
   }
 }

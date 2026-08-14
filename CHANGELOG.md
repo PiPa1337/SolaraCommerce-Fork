@@ -1,5 +1,30 @@
 # Changelog
 
+### Hero V2 cinematográfico (2026-08-14)
+
+- El hero de la familia V2 estrena una secuencia de entrada única y breve
+  (~1.1s) con reveal por máscara: eyebrow, título por líneas (2 líneas
+  deterministas con máscara y profundidad sutil), separador que se dibuja,
+  descripción, CTA y beneficios, más un reveal de la imagen con microzoom y
+  máscara. Después de la entrada sólo quedan microinteracciones y parallax.
+- CTA con hover avanzado coordinado (capa de fondo, label e ícono que se
+  desplazan; sin `scale()` genérico) y beneficios con microinteracción propia.
+- Las estadísticas del catálogo se reemplazan en V2 por 3 beneficios
+  comerciales configurables desde el Constructor (ícono, título y texto; los
+  ítems se editan en vivo; sin beneficios configurados vuelve a las
+  estadísticas derivadas).
+- Parallax: scroll sutil con `animation-timeline: view()` (progresivo, sólo
+  donde existe soporte) y cursor con un handler ligero del runtime (pointer
+  fino, desktop, rAF + lerp, `will-change` sólo activo, sin listeners de
+  scroll). Móvil reduce duraciones y distancias; `prefers-reduced-motion`
+  deja el hero completamente visible e inanimado; sin JavaScript el contenido
+  es visible de inmediato.
+- El markup conserva la semántica (h1 íntegro envuelto en spans, aria y
+  enlaces intactos) y V1/carrusel no cambian. Topes documentados: CSS V2
+  120 KiB y runtime JS 56 KiB (parallax de cursor + coreografía; pendiente la
+  revisión de presupuestos acordada).
+- La tienda demo queda guardada como v17 con el hero nuevo.
+
 ### Grilla V2 de máximo 5 y ritmo vertical reducido (2026-08-14)
 
 - La grilla de productos V2 muestra como máximo 5 columnas en desktop (1920,

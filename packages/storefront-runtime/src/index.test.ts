@@ -94,9 +94,29 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("i !== +!!count");
   });
 
-  it("mantiene el runtime por debajo de 53 KB crudos", () => {
-    // Medición real al 2026-08-13: runtime JS 52.993 B en bytes crudos (sin gzip).
-    expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(53 * 1024);
+  it("mantiene el runtime por debajo de 56 KB crudos", () => {
+    // Medición real al 2026-08-14: runtime JS 55.845 B en bytes crudos (sin gzip);
+    // el techo subió de 53 a 56 KiB por el parallax de cursor del hero V2.
+    expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(56 * 1024);
+  });
+});
+
+describe("parallax de cursor del hero V2 (connectHeroParallax)", () => {
+  it("serializa el handler con guards de pointer fino, viewport y reduced motion", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("connectHeroParallax");
+    expect(STOREFRONT_RUNTIME_JS).toContain('"[data-hero-media]"');
+    expect(STOREFRONT_RUNTIME_JS).toContain('"(pointer: fine)"');
+    expect(STOREFRONT_RUNTIME_JS).toContain('"(min-width: 768px)"');
+    expect(STOREFRONT_RUNTIME_JS).toContain("translate3d");
+    expect(STOREFRONT_RUNTIME_JS).toContain('addEventListener("pointermove"');
+    expect(STOREFRONT_RUNTIME_JS).toContain("willChange");
+    expect(STOREFRONT_RUNTIME_JS).toContain("IntersectionObserver");
+  });
+
+  it("no introduce scroll ni entrada táctil en el parallax", () => {
+    expect(STOREFRONT_RUNTIME_JS).not.toContain("scrollY");
+    expect(STOREFRONT_RUNTIME_JS).not.toContain('addEventListener("wheel"');
+    expect(STOREFRONT_RUNTIME_JS).not.toContain('addEventListener("touchstart"');
   });
 });
 
