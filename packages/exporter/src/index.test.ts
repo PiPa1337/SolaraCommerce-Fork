@@ -561,6 +561,36 @@ describe("exporter", () => {
     );
   });
 
+  it("respeta la subcarpeta de baseUrl en canonical, recursos y sitemap", () => {
+    const project = {
+      ...referenceStore,
+      baseUrl: "https://casa-luma.example/tienda/",
+    };
+
+    const result = exportProject(project, { mode: "production" });
+    const home = String(result.files.get("index.html"));
+    expect(home).toContain(
+      '<link rel="canonical" href="https://casa-luma.example/tienda/">',
+    );
+    expect(home).toContain('<meta property="og:url" content="https://casa-luma.example/tienda/">');
+    expect(home).toContain('href="/tienda/assets/storefront.css"');
+    expect(home).toContain('src="/tienda/assets/storefront.js"');
+    expect(home).toContain('href="/tienda/ai-context.json"');
+    expect(home).toContain('href="/tienda/llms.txt"');
+
+    const sitemap = String(result.files.get("sitemap.xml"));
+    expect(sitemap).toContain("https://casa-luma.example/tienda/productos/manta-bruma/");
+
+    const product = String(result.files.get("productos/manta-bruma/index.html"));
+    expect(product).toContain(
+      '"url":"https://casa-luma.example/tienda/productos/manta-bruma/"',
+    );
+
+    const preview = renderPreviewHtml(project, "production", "/");
+    expect(preview).toContain("data:text/css;base64,");
+    expect(preview).not.toContain('href="/tienda/assets/storefront.css"');
+  });
+
   it("publica catalog-index.json cuando el drawer de carrito está activo sin templates", () => {
     const project = {
       ...referenceStore,

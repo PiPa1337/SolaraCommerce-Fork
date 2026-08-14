@@ -19,7 +19,7 @@ Fuente única de trabajo del bucle perpetuo. Reglas:
 | C1 | alta | exporter | Paridad preview/export diferencial: `scripts/parity-sweep.test.ts` cubre los 3 fixtures en draft y production, todas las rutas (6/6 verdes) | hecho | scripts/parity-sweep.test.ts |
 | C2 | alta | exporter | Paginación SEO: el servidor local sirve `404.html` custom para rutas inexistentes (`pagina/99`) como los hostings estáticos; `?pagina=1` resuelve la página 1 con canonical correcta (decisión estática: canonical hace el trabajo de la redirección) | hecho | request-handler.test.mjs (9/9) |
 | C3 | alta | exporter/schema | `SlugSchema` rechaza nombres reservados de Windows (CON/PRN/AUX/NUL/COM1-9/LPT1-9, case-insensitive) con mensaje accionable; prefijos válidos (contenido, control, com10) siguen aceptados. El folder de storage usa `slug--hash` (nunca colisiona) | hecho | index.test.ts (29/29), mensaje verificado |
-| C4 | alta | exporter | `baseUrl` en subcarpeta: URLs absolutas de recursos asumen raíz del dominio | pendiente | deuda X1 |
+| C4 | alta | exporter | C4a hecho: canonical, og, JSON-LD, sitemap, alternates, css/js y preview respetan la subcarpeta de baseUrl (`assetHref`). C4b (backlog): hrefs internos del body (paginación, breadcrumbs, cards, CTAs); C4c: navegación de datos del proyecto + fetches del runtime (`search-index.json`, `catalog-index.json`) | en-progreso | index.test.ts (117/118) |
 | C5 | media | exporter/runtime | `data-theme` en `<html>` exportado sin consumidor CSS/JS | pendiente | deuda T15 |
 | C6 | media | exporter | Errores de export accionables: envolver fallos de buildPages/buildFiles con ruta y contexto | pendiente | doctor C0 |
 | C7 | media | studio | `requestWorker` sin reintento: si el worker muere, reintento con backoff y diagnóstico | pendiente | deuda abierta |
@@ -59,6 +59,9 @@ fases C y O (regla de selección nivel 3).
 | V5 | baja | exporter | Home hero: espacio muerto en tercio derecho (aceptable, revisar) | pendiente | idem |
 | V6 | baja | exporter | Home mobile: target táctil del carrito < 44px | pendiente | idem |
 
+| C4b | media | exporter | baseUrl subcarpeta: hrefs internos del body (paginación, breadcrumbs, cards de productos, CTAs de carrito/compra, links de categorías hijas) | pendiente | derivado de C4a |
+| C4c | media | exporter/runtime | baseUrl subcarpeta: navegación de datos del proyecto (siteShell/navigation) + fetches del runtime (`search-index.json`, `catalog-index.json`) | pendiente | derivado de C4a |
+
 ## SIGUIENTE
 
-C4 — `baseUrl` en subcarpeta: URLs absolutas de recursos asumen raíz del dominio
+C5 — `data-theme` inerte: conectar consumidor o eliminar (deuda T15)

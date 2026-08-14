@@ -203,6 +203,20 @@ function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/+$/, "");
 }
 
+function baseUrlPathname(baseUrl: string): string {
+  try {
+    return new URL(baseUrl).pathname.replace(/\/+$/, "");
+  } catch {
+    return "";
+  }
+}
+
+/** Prefija una ruta root-absoluta con la subcarpeta de la baseUrl si existe. */
+function assetHref(project: StoreProjectV1, path: string): string {
+  const prefix = baseUrlPathname(project.baseUrl);
+  return prefix ? `${prefix}${path}` : path;
+}
+
 function absoluteUrl(project: StoreProjectV1, path: string): string {
   return `${normalizeBaseUrl(project.baseUrl)}${path.startsWith("/") ? path : `/${path}`}`;
 }
@@ -1155,8 +1169,8 @@ function renderDocument(
       : "";
   const aiContextLinks =
     mode === "production" && publicAiContext && !nonIndexablePage
-      ? `<link rel="alternate" type="application/json" title="Contexto publico para agentes" href="/ai-context.json">
-  <link rel="alternate" type="text/plain" title="Resumen publico para agentes" href="/llms.txt">`
+      ? `<link rel="alternate" type="application/json" title="Contexto publico para agentes" href="${escapeAttribute(assetHref(project, "/ai-context.json"))}">
+  <link rel="alternate" type="text/plain" title="Resumen publico para agentes" href="${escapeAttribute(assetHref(project, "/llms.txt"))}">`
       : "";
 
   return `<!doctype html>
@@ -1179,13 +1193,13 @@ function renderDocument(
   ${verification}
   ${lcpPreload}
   ${aiContextLinks}
-  <link rel="stylesheet" href="/assets/storefront.css">
+  <link rel="stylesheet" href="${escapeAttribute(assetHref(project, "/assets/storefront.css"))}">
   ${structuredData}
 </head>
 <body>
   <a class="solara-skip-link" href="#solara-main">Ir al contenido</a>
   <div class="solara-page${modernProjectClass(project)}" data-solara-store data-design-family="${escapeHtml(project.commerceTemplates.designFamily ?? "legacy-editorial-v1")}" data-page-type="${page.pageType}" data-color-mode="${project.theme.colorMode}">${page.body.replace("<main", '<main id="solara-main"')}</div>
-  <script src="/assets/storefront.js" defer></script>
+  <script src="${escapeAttribute(assetHref(project, "/assets/storefront.js"))}" defer></script>
 </body>
 </html>`;
 }
@@ -2084,7 +2098,7 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
       code: "domain.baseurl-path",
       severity: "warning",
       message:
-        "El sitio usa rutas relativas a la raíz; una baseUrl con subcarpeta rompe los assets.",
+        "La baseUrl usa una subcarpeta: canonical, sitemap, metadatos y recursos ya la respetan; la navegación interna del sitio y las búsquedas del runtime siguen asumiendo la raíz.",
       path: "baseUrl",
     });
   }
@@ -2592,11 +2606,16 @@ export function renderPreviewHtml(
   if (options.assetTransport === "parent") {
     document = deferPreviewAssetMarkup(document, usedSources);
   }
+  const stylesheetHref = assetHref(project, "/assets/storefront.css");
+  const storefrontSrc = assetHref(project, "/assets/storefront.js");
   return document
     .replace("</body>", `${previewAssetMarkup(usedSources, options.assetTransport)}\n</body>`)
-    .replace('href="/assets/storefront.css"', 'href="data:text/css;base64,PREVIEW_STYLE"')
     .replace(
-      'src="/assets/storefront.js"',
+      `href="${stylesheetHref}"`,
+      'href="data:text/css;base64,PREVIEW_STYLE"',
+    )
+    .replace(
+      `src="${storefrontSrc}"`,
       `src="data:text/javascript;base64,${toBase64(STOREFRONT_RUNTIME_JS)}"`,
     )
     .replace(
