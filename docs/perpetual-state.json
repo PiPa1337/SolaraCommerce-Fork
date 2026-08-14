@@ -18,21 +18,91 @@
     "fuentesTotalBytes": 102724
   },
   "items": [
-    { "id": "C1", "titulo": "Compactar runtime: margen 404 B (parallax bento del usuario consumio 1.7 KB)", "metrica": "runtimeJavascriptRaw", "estado": "pendiente" },
-    { "id": "F1", "titulo": "Paridad estricta arbol+body en todas las rutas de los 3 fixtures x 2 modos", "metrica": "% rutas paridad", "estado": "pendiente" },
-    { "id": "F2", "titulo": "Manifest runtimeFeatures vs atributo html vs capacidades reales", "metrica": "drift count", "estado": "pendiente" },
-    { "id": "F3", "titulo": "Snapshot vs feed/sitemap/search/catalog-index consistencia", "metrica": "inconsistencias", "estado": "pendiente" },
-    { "id": "F4", "titulo": "criticalCount audit vs bloqueo production vs UI", "metrica": "drift", "estado": "pendiente" },
-    { "id": "F5", "titulo": "Reproducibilidad byte a byte 3 fixtures x 2 runs", "metrica": "% reproducibles", "estado": "pendiente" },
-    { "id": "E1", "titulo": "Cobertura rutas draft+production x 2 viewports x no-JS", "metrica": "% rutas verificadas", "estado": "pendiente" },
-    { "id": "A1", "titulo": "Axe a11y sobre el sitio exportado", "metrica": "findings por pagina", "estado": "pendiente" },
+    {
+      "id": "C1",
+      "titulo": "Compactar runtime: margen 404 B (parallax bento del usuario consumio 1.7 KB)",
+      "metrica": "runtimeJavascriptRaw",
+      "estado": "pendiente"
+    },
+    {
+      "id": "F1",
+      "titulo": "Paridad estricta arbol+body en todas las rutas de los 3 fixtures x 2 modos",
+      "metrica": "% rutas paridad",
+      "estado": "pendiente"
+    },
+    {
+      "id": "F2",
+      "titulo": "Manifest runtimeFeatures vs atributo html vs capacidades reales",
+      "metrica": "drift count",
+      "estado": "pendiente"
+    },
+    {
+      "id": "F3",
+      "titulo": "Snapshot vs feed/sitemap/search/catalog-index consistencia",
+      "metrica": "inconsistencias",
+      "estado": "pendiente"
+    },
+    {
+      "id": "F4",
+      "titulo": "criticalCount audit vs bloqueo production vs UI",
+      "metrica": "drift",
+      "estado": "pendiente"
+    },
+    {
+      "id": "F5",
+      "titulo": "Reproducibilidad byte a byte 3 fixtures x 2 runs",
+      "metrica": "% reproducibles",
+      "estado": "pendiente"
+    },
+    {
+      "id": "E1",
+      "titulo": "Cobertura rutas draft+production x 2 viewports x no-JS",
+      "metrica": "% rutas verificadas",
+      "estado": "pendiente"
+    },
+    {
+      "id": "A1",
+      "titulo": "Axe a11y sobre el sitio exportado",
+      "metrica": "findings por pagina",
+      "estado": "pendiente"
+    },
     { "id": "A2", "titulo": "Nodos HTML por ruta", "metrica": "nodos", "estado": "pendiente" },
-    { "id": "C2", "titulo": "Errores de consola/red del sitio", "metrica": "count", "estado": "pendiente" },
-    { "id": "B1", "titulo": "CSS V2 duplicacion fusionable post-hero", "metrica": "bytes", "estado": "pendiente" },
-    { "id": "D1", "titulo": "Findings performance.asset.* del optimizador", "metrica": "findings", "estado": "pendiente" },
-    { "id": "H1", "titulo": "Long tasks/rAF del sitio exportado (CDP)", "metrica": "ms/s", "estado": "pendiente" },
-    { "id": "H2", "titulo": "LCP/CLS con PerformanceObserver", "metrica": "ms", "estado": "pendiente" },
-    { "id": "G1", "titulo": "Servidor local: content-types/cache/404/subcarpeta", "metrica": "% checks", "estado": "pendiente" }
+    {
+      "id": "C2",
+      "titulo": "Errores de consola/red del sitio",
+      "metrica": "count",
+      "estado": "pendiente"
+    },
+    {
+      "id": "B1",
+      "titulo": "CSS V2 duplicacion fusionable post-hero",
+      "metrica": "bytes",
+      "estado": "pendiente"
+    },
+    {
+      "id": "D1",
+      "titulo": "Findings performance.asset.* del optimizador",
+      "metrica": "findings",
+      "estado": "pendiente"
+    },
+    {
+      "id": "H1",
+      "titulo": "Long tasks/rAF del sitio exportado (CDP)",
+      "metrica": "ms/s",
+      "estado": "pendiente"
+    },
+    {
+      "id": "H2",
+      "titulo": "LCP/CLS con PerformanceObserver",
+      "metrica": "ms",
+      "estado": "pendiente"
+    },
+    {
+      "id": "G1",
+      "titulo": "Servidor local: content-types/cache/404/subcarpeta",
+      "metrica": "% checks",
+      "estado": "pendiente"
+    }
   ],
   "nextItem": "C1"
 }
