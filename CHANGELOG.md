@@ -1,5 +1,19 @@
 # Changelog
 
+### Carrito público entre páginas (2026-08-13)
+
+- Se corrige la serialización del runtime exportado para que `parseCart` y
+  `reconcileCartLines` mantengan sus bindings después del bundle de producción.
+- El storefront conserva varias líneas al cambiar de producto, recargar y
+  entrar al carrito o checkout; también se regenera el portable de
+  `Predeterminado` con esta corrección.
+
+### PDP V2 más equilibrada en tablet (2026-08-13)
+
+- La página de producto conserva dos columnas entre 768 y 1199px para evitar
+  galerías gigantes y mantener la compra cerca del contenido visible.
+- Mobile conserva su composición de una columna y sus márgenes táctiles.
+
 ### Proporción del carrito V2 (2026-08-13)
 
 - Se compacta el resumen del carrito en desktop grande para equilibrar el

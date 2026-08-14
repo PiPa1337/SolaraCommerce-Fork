@@ -252,6 +252,40 @@ test("V2 ajusta las imágenes al ancho renderizado y mantiene una galería PDP u
     )
     .toBe(4);
 
+  for (const viewport of [
+    { width: 1024, height: 768 },
+    { width: 768, height: 1024 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(productUrl);
+    const intermediateMetrics = await page
+      .locator(".catalog-product-detail-inner")
+      .evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        const info = element
+          .querySelector<HTMLElement>(".catalog-product-info")
+          ?.getBoundingClientRect();
+        const button = element
+          .querySelector<HTMLElement>(".catalog-product-add")
+          ?.getBoundingClientRect();
+        return {
+          columns: style.gridTemplateColumns.split(" ").length,
+          infoWidth: info?.width ?? 0,
+          buttonBottom: button?.bottom ?? 0,
+          documentWidth: document.documentElement.scrollWidth,
+          viewportWidth: window.innerWidth,
+          sectionBottom: rect.bottom,
+        };
+      });
+    expect(intermediateMetrics.columns).toBe(2);
+    expect(intermediateMetrics.infoWidth).toBeGreaterThan(0);
+    expect(intermediateMetrics.buttonBottom).toBeLessThanOrEqual(intermediateMetrics.sectionBottom);
+    expect(intermediateMetrics.documentWidth).toBeLessThanOrEqual(
+      intermediateMetrics.viewportWidth,
+    );
+  }
+
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(productUrl);
   const mobileDetail = page.locator('[data-solara-module="catalog-product-detail"]');
@@ -261,13 +295,13 @@ test("V2 ajusta las imágenes al ancho renderizado y mantiene una galería PDP u
     return {
       left: rect.left,
       right: window.innerWidth - rect.right,
-      columns: inner ? getComputedStyle(inner).gridTemplateColumns : "",
+      layout: inner ? getComputedStyle(inner).display : "",
       scrollWidth: document.documentElement.scrollWidth,
     };
   });
   expect(mobileMetrics.left).toBeGreaterThanOrEqual(11);
   expect(mobileMetrics.right).toBeGreaterThanOrEqual(11);
-  expect(mobileMetrics.columns).toBe("minmax(0px, 1fr)");
+  expect(mobileMetrics.layout).toBe("flex");
   expect(mobileMetrics.scrollWidth).toBeLessThanOrEqual(390);
   await expect(mobileDetail.locator(".catalog-product-gallery-thumbs button")).toHaveCount(3);
 });

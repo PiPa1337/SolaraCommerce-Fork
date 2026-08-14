@@ -187,16 +187,11 @@ function storefrontBoot(): void {
   const readStoredCart = (): StoredCartLine[] => {
     if (embedded) return [];
     try {
-      const stored = JSON.parse(localStorage.getItem(storageKey) ?? "[]") as unknown;
-      if (!Array.isArray(stored)) {
-        localStorage.removeItem(storageKey);
-        return [];
-      }
-      return parseCart(stored);
+      const serialized = localStorage.getItem(storageKey);
+      if (!serialized) return [];
+      const stored = JSON.parse(serialized) as unknown;
+      return Array.isArray(stored) ? parseCart(stored) : [];
     } catch {
-      try {
-        localStorage.removeItem(storageKey);
-      } catch {}
       return [];
     }
   };
@@ -1516,10 +1511,20 @@ const RUNTIME_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unk
   ["reconcileCartLines", reconcileCartLines],
 ];
 
-export const STOREFRONT_RUNTIME_JS = `${RUNTIME_HELPERS.map(
-  ([name, fn]) => `const ${name} = ${fn.toString()};`,
+const SERIALIZED_RUNTIME_HELPERS = RUNTIME_HELPERS.map(([name, fn]) => {
+  const source = fn.toString();
+  const bindingName = source.match(/^function\s+([A-Za-z_$][\w$]*)/)?.[1] ?? name;
+  return { name, bindingName, source };
+});
+
+export const STOREFRONT_RUNTIME_JS = `${SERIALIZED_RUNTIME_HELPERS.map(
+  ({ bindingName, source }) => `const ${bindingName} = ${source};`,
 ).join("\n")}
-globalThis.__solaraSearchHelpers = { ${SEARCH_HELPERS.map(([name]) => name).join(", ")} };
+globalThis.__solaraSearchHelpers = { ${SERIALIZED_RUNTIME_HELPERS.filter(({ name }) =>
+  SEARCH_HELPERS.some(([searchName]) => searchName === name),
+)
+  .map(({ name, bindingName }) => (name === bindingName ? name : `${name}: ${bindingName}`))
+  .join(", ")} };
 (${storefrontBoot.toString()})();`;
 
 export const STOREFRONT_RUNTIME_CSS = `

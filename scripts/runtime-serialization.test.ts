@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { expect, test } from "vitest";
@@ -13,7 +14,7 @@ import type { SearchEntryTokens } from "../packages/storefront-runtime/src/searc
  * el string resultante evalúa y ejecuta con minify y sin minify.
  */
 
-const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
+const REPO_ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 
 const PROBE_ENTRY = `import {
   levenshtein,
@@ -28,6 +29,9 @@ globalThis.__probeHelpers = [
 ];`;
 
 const HELPER_NAMES = ["normalizeSearchTokens", "levenshtein", "scoreEntry"] as const;
+
+const FULL_RUNTIME_ENTRY = `import { STOREFRONT_RUNTIME_JS } from "./packages/storefront-runtime/src/index";
+globalThis.__serializedRuntime = STOREFRONT_RUNTIME_JS;`;
 
 function boot(): void {
   const score = scoreEntry(["taza"], {
@@ -68,6 +72,28 @@ return globalThis.__probeHelpers;`,
   return helpers;
 }
 
+async function serializeFullRuntime() {
+  const result = await build({
+    stdin: {
+      contents: FULL_RUNTIME_ENTRY,
+      sourcefile: "full-runtime-probe.ts",
+      loader: "ts",
+      resolveDir: REPO_ROOT,
+    },
+    bundle: true,
+    minify: true,
+    format: "iife",
+    write: false,
+  });
+  const sandbox: Record<string, unknown> = {};
+  const loadBundle = new Function(
+    "globalThis",
+    `${result.outputFiles?.[0]?.text ?? ""}
+return globalThis.__serializedRuntime;`,
+  );
+  return loadBundle(sandbox) as string;
+}
+
 function evaluateRuntime(helpers: SerializedHelper[]) {
   const runtime = `${helpers.map(([name, fn]) => `const ${name} = ${fn.toString()};`).join("\n")}
 globalThis.__solaraSearchHelpers = { ${helpers.map(([name]) => name).join(", ")} };
@@ -93,4 +119,17 @@ test("el runtime serializado funciona bundleado con minify (modo producción)", 
 
 test("el runtime serializado funciona bundleado sin minify", async () => {
   await evaluateRuntime(await serializeHelpers(false));
+});
+
+test("el runtime completo conserva los bindings de carrito al bundlear con minify", async () => {
+  const runtime = await serializeFullRuntime();
+  const parseCartDeclaration = runtime.match(
+    /const ([A-Za-z_$][\w$]*) = function ([A-Za-z_$][\w$]*)\(a\)\{return Array\.isArray\(a\)\?/,
+  );
+  const reconcileCartDeclaration = runtime.match(
+    /const ([A-Za-z_$][\w$]*) = function ([A-Za-z_$][\w$]*)\(a,e\)\{const/,
+  );
+
+  expect(parseCartDeclaration?.[1]).toBe(parseCartDeclaration?.[2]);
+  expect(reconcileCartDeclaration?.[1]).toBe(reconcileCartDeclaration?.[2]);
 });
