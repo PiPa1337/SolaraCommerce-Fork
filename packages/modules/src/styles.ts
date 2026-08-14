@@ -2093,6 +2093,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-category-bento-item::after { position: absolute; z-index: 1; inset: 0; content: ""; background: linear-gradient(to top, rgb(11 11 12 / .16), transparent 42%); pointer-events: none; }
 [data-solara-store].catalog-modern .catalog-category-bento-image { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .78; transition: transform 280ms cubic-bezier(.16,1,.3,1); }
 [data-solara-store].catalog-modern .catalog-category-bento-item:hover .catalog-category-bento-image { transform: scale(1.02); }
+[data-solara-store].catalog-modern .catalog-category-bento-fallback { position: absolute; z-index: 0; inset: 0; display: grid; place-items: center; margin: 0; background: var(--catalog-surface); color: var(--catalog-ink); font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(3rem, 5vw, 4.5rem); font-weight: 500; letter-spacing: -.06em; line-height: 1; }
 [data-solara-store].catalog-modern .catalog-category-bento-all { border-bottom: 1px solid currentColor; font-size: .82rem; text-decoration: none; }
 [data-solara-store].catalog-modern .catalog-testimonials-track { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(280px, 1fr); gap: calc(.8rem * var(--solara-space-scale, 1)); overflow-x: auto; overscroll-behavior-inline: contain; scroll-snap-type: x proximity; padding-bottom: .5rem; }
 [data-solara-store].catalog-modern .catalog-testimonial { min-height: 190px; padding: 1.25rem; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); scroll-snap-align: start; }
@@ -2602,7 +2603,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-product-grid-section,
 .cm.v2 .catalog-testimonials-section {
-  padding-block: clamp(4rem, 7vw, 7rem);
+  padding-block: clamp(2.6rem, 4.6vw, 4.6rem);
 }
 .cm.v2 .catalog-product-grid-section h2,
 .cm.v2 .catalog-category-bento-section h2,
@@ -2616,20 +2617,26 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-product-grid-section > header,
 .cm.v2 .catalog-testimonials-section > header {
-  margin-bottom: clamp(2rem, 4vw, 4rem);
+  margin-bottom: clamp(1.3rem, 2.6vw, 2.6rem);
 }
 .cm.v2 .catalog-product-grid {
-  grid-template-columns: repeat(auto-fit,minmax(11rem,1fr));
+  grid-template-columns: repeat(auto-fit,minmax(min(100% / 5, 20rem),1fr));
   gap: clamp(1.5rem, 2.4vw, 3rem) clamp(.8rem, 1.4vw, 1.6rem);
   margin: 0 auto;
 }
-/* Desktop amplio: la sección mide min(100% - 3rem, 1760px); sin el tope de
-   1320px el auto-fit pasa de 6 a 8 columnas. Entre 1440px y 1614px el mínimo
-   baja a 10rem para mantener 8 columnas (con 11rem el auto-fit daría 7). */
-@media (min-width: 1440px) and (max-width: 1614px) {
+/* Máximo 5 columnas en desktop: el tope min(100% / 5, 20rem) nunca genera más
+   de 5 tracks; con el gap el auto-fit da 5 columnas recién a partir de un
+   contenedor de ~1702px, por eso entre 1366px y 1919px se fijan las 5 y desde
+   1920px el auto-fit topeado ya produce 5 sobre la sección de 1760px. */
+@media (min-width: 1366px) and (max-width: 1919px) {
   .cm.v2 .catalog-product-grid {
-    grid-template-columns: repeat(auto-fit,minmax(10rem,1fr));
-    gap: clamp(1.5rem, 2.4vw, 3rem) 1rem;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+/* Tablets de 768px a 1023px: 3 columnas (el auto-fit daría 4 con cards angostas). */
+@media (max-width: 1023px) {
+  .cm.v2 .catalog-product-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 .cm.v2 .catalog-product-card {
@@ -2651,14 +2658,30 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   transform: scale(1.055);
 }
 .cm.v2 .catalog-product-card-copy {
-  padding-top: 1rem;
+  padding-top: 1.25rem;
 }
 .cm.v2 .catalog-product-card h3 {
   min-height: 0;
   font-family: var(--solara-font-body, Arial, sans-serif);
-  font-size: .98rem;
+  font-size: 1.18rem;
   font-weight: 600;
   letter-spacing: -.02em;
+}
+/* Metadata de card escalada con la columna más ancha (+15-25% sobre la base). */
+.cm.v2 .catalog-product-category {
+  font-size: .82rem;
+}
+.cm.v2 .catalog-product-rating {
+  font-size: .95rem;
+}
+.cm.v2 .catalog-product-rating span {
+  font-size: .82rem;
+}
+.cm.v2 .catalog-product-price {
+  font-size: 1.1rem;
+}
+.cm.v2 .catalog-discount {
+  font-size: .78rem;
 }
 .cm.v2 .catalog-view-all {
   position: relative;
@@ -2686,7 +2709,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-category-bento-section {
   margin-top: 0;
-  padding-block: clamp(4rem, 7vw, 7rem);
+  padding-block: clamp(2.6rem, 4.6vw, 4.6rem);
   padding-inline: 0;
   border-radius: 0;
   background: transparent;
@@ -2705,6 +2728,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-category-bento-item img {
   transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out), filter var(--catalog-v2-motion-component) ease;
 }
+.cm.v2 .catalog-category-bento-fallback {
+  font-size: calc(clamp(3rem, 5vw, 4.5rem) * var(--solara-type-scale, 1));
+}
 .cm.v2 .catalog-category-bento-item:hover,
 .cm.v2 .catalog-category-bento-item:focus-visible {
   transform: translateY(-4px);
@@ -2720,7 +2746,16 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   background: color-mix(in srgb, var(--catalog-surface), transparent 34%);
 }
 .cm.v2 .catalog-footer-inner {
-  padding-top: clamp(3rem, 7vw, 7rem);
+  padding-top: clamp(2rem, 4.6vw, 4.6rem);
+}
+/* El CTA de newsletter hereda de V1 un margen inferior de hasta 5rem; en la
+   composición V2 respira con las secciones y se acerca al pie. */
+.cm.v2 .catalog-newsletter-inner {
+  margin-bottom: clamp(1.3rem, 3.3vw, 3.3rem);
+  padding: clamp(1.15rem, 2.6vw, 2rem);
+}
+.cm.v2 .solara-related-products > .solara-container > h2 {
+  margin-top: 2rem;
 }
 .cm.v2 .solara-category-hero {
   grid-template-columns: minmax(0, 1.15fr) minmax(22rem, .45fr);
@@ -2778,7 +2813,14 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   min-height: 54px;
   margin-bottom: 1.75rem;
 }
-.cm.v2 .catalog-category-results .catalog-product-grid{grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:2rem 1.5rem;max-width:1320px}
+.cm.v2 .catalog-category-results .catalog-product-grid{grid-template-columns:repeat(auto-fit,minmax(min(100% / 5, 20rem),1fr));gap:2rem 1.5rem;max-width:1320px}
+/* La grilla de categorías es más angosta (rail de 270px + tope de 1320px):
+   conserva 3 columnas hasta 1199px como antes del tope de 5. */
+@media (max-width: 1199px) {
+  .cm.v2 .catalog-category-results .catalog-product-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
 .cm.v2 .catalog-product-detail,
 .cm.v2 .catalog-product-tabs,
 .cm.v2 .catalog-product-reviews {
@@ -3057,9 +3099,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
   .cm.v2 .catalog-product-grid-section,
   .cm.v2 .catalog-testimonials-section {
-    padding-block: 5rem;
+    padding-block: 3.25rem;
   }
   .cm.v2 .catalog-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 2rem .7rem;
   }
   .cm.v2 .catalog-category-results .catalog-product-grid {
@@ -3069,7 +3112,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     transform: none;
   }
   .cm.v2 .catalog-category-bento-section {
-    padding-block: 5rem;
+    padding-block: 3.25rem;
     padding-inline: 0;
   }
   .cm.v2 .catalog-filter-toggle:not([open]) + .catalog-filter-groups {

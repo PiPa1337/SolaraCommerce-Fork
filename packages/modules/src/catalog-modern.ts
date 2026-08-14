@@ -974,20 +974,18 @@ export const catalogCategoryBento: ModuleDefinition<
             product.status === "active" &&
             getCategoryProductIds(context.project, category.id as CategoryId).includes(product.id),
         );
-        const fallbackImageId =
+        const productImageId =
           categoryProduct?.variants.find((variant) => variant.available)?.imageId ??
-          categoryProduct?.imageIds[0] ??
-          modernFallbackAsset(context, "");
-        const image = renderImage(
-          context.project,
-          item.imageId || category.imageId || fallbackImageId,
-          {
-            className: "catalog-category-bento-image",
-            loading: "lazy",
-            sizes: categoryBentoImageSizes(item.size, sourceItems.length),
-            fallbackAlt: category.title,
-          },
-        );
+          categoryProduct?.imageIds[0];
+        const imageId = item.imageId || category.imageId || productImageId;
+        const image = imageId
+          ? renderImage(context.project, imageId, {
+              className: "catalog-category-bento-image",
+              loading: "lazy",
+              sizes: categoryBentoImageSizes(item.size, sourceItems.length),
+              fallbackAlt: category.title,
+            })
+          : `<span class="catalog-category-bento-fallback" aria-hidden="true">${escapeHtml(category.title.charAt(0))}</span>`;
         const layout = item.size;
         const productCount = getCategoryProductIds(
           context.project,

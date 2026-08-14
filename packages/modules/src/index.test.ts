@@ -317,6 +317,24 @@ describe("official module system", () => {
     }
   });
 
+  it("usa un placeholder neutral cuando la categoría no tiene imagen posible", () => {
+    const section = catalogModernStore.sections.find(
+      (candidate) => candidate.moduleId === "catalog-category-bento",
+    );
+    if (!section) throw new Error("Fixture sin bento de categorías");
+    const project = structuredClone(catalogModernStore);
+    const root = project.categories.find((category) => !category.parentId);
+    if (!root) throw new Error("Fixture sin categorías madre");
+    root.imageId = undefined;
+    project.categories = [root];
+    project.products = project.products.filter((product) => !root.productIds.includes(product.id));
+    const html = renderSections(project, [section], { pageType: "home" });
+    expect(html).toContain(
+      `<span class="catalog-category-bento-fallback" aria-hidden="true">${root.title.charAt(0)}</span>`,
+    );
+    expect(html).not.toContain("catalog-category-bento-image");
+  });
+
   it("respeta showRating en las cards y expone el resumen de reseñas visible", () => {
     const sections = catalogModernStore.sections.map((section) =>
       section.id === "modo-section-new"

@@ -39,7 +39,6 @@ const roots = rootDefinitions.map(([slug, title, description]) => ({
   slug,
   title,
   description,
-  imageId: "asset-hero",
   productIds: [] as string[],
 }));
 
@@ -279,8 +278,27 @@ function categoryProductIds(categoryId: string): string[] {
     .map((product) => product.id);
 }
 
+// El pool de imágenes del store moderno tiene 4 assets para 8 categorías
+// raíz: la asignación es explícita y curada, nunca automática. Las tres con
+// asset claro usan la imagen de su producto representativo (remera, camisa,
+// jean); el resto resuelve de forma determinista la primera imagen de su
+// primer producto en el momento de construir las categorías finales.
+const rootCategoryImageIds: Partial<Record<string, string>> = {
+  "category-remeras": "asset-manta",
+  "category-camisas": "asset-modo-camisa",
+  "category-pantalones": "asset-jarra",
+};
+
+function firstCategoryProductImage(categoryId: string): string {
+  const firstProductId = categoryProductIds(categoryId)[0];
+  return products.find((product) => product.id === firstProductId)?.imageIds[0] ?? "";
+}
+
 const finalizedCategories = categories.map((category) => ({
   ...category,
+  ...("parentId" in category
+    ? {}
+    : { imageId: rootCategoryImageIds[category.id] ?? firstCategoryProductImage(category.id) }),
   productIds: categoryProductIds(category.id),
 }));
 const navigationItems = roots.map(({ slug, title }) => ({

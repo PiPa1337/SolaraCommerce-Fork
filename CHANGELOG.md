@@ -1,5 +1,34 @@
 # Changelog
 
+### Grilla V2 de máximo 5 y ritmo vertical reducido (2026-08-14)
+
+- La grilla de productos V2 muestra como máximo 5 columnas en desktop (1920,
+  1440 y 1366 → 5; 1024 → 4; 768 → 3; 390 → 2) y las cards escalan
+  proporcionalmente: título +20%, precio +16%, metadata y copy con más aire;
+  se conservan colores, tipografías y el lenguaje editorial. La misma regla
+  aplica a colecciones, categorías y relacionados, sin overflow.
+- Los espacios verticales entre secciones (productos, categorías, testimonios,
+  newsletter, footer) se reducen ~35% conservando whitespace premium (ningún
+  bloque queda pegado).
+- La tienda demo queda guardada como v16 con las imágenes de categoría curadas
+  y el orden nuevo.
+
+### Bento de categorías con imagen propia y placeholder neutral (2026-08-14)
+
+- El mosaico de categorías ya no cae en el asset de campaña compartido cuando
+  la categoría no define imagen: el render mantiene la prioridad
+  `item.imageId → category.imageId → primer producto (variante disponible →
+  imageIds[0])` y, sin imagen posible, muestra un placeholder neutral con la
+  inicial de la categoría en lugar del asset compartido.
+- El fixture Modo Sur asigna a cada categoría raíz una imagen curada o
+  determinista (el pool tiene 4 assets para 8 categorías): Remeras→remera,
+  Camisas→camisa y Pantalones→jean son explícitas; el resto resuelve con la
+  primera imagen de su primer producto. Ninguna categoría raíz repite la imagen
+  de campaña en la home.
+- Verificado: modules 41/41, schema 28/28, budgets (V2 CSS 107.158 B < 108 KiB),
+  E2E V2 de fold y hover del bento 2/2, y el HTML exportado V1/V2 sin duplicados
+  consecutivos ni asset de campaña.
+
 ### Franja de marcas pareja y tienda demo guardada (2026-08-14)
 
 - "MARCAS QUE NOS ACOMPAÑAN" usa padding vertical parejo arriba y abajo

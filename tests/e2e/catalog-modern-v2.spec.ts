@@ -166,12 +166,13 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   await expect(bento.locator(".catalog-category-bento-item--compact")).not.toHaveCount(0);
 
   const grid = page.locator(".catalog-product-grid").first();
-  // La grilla ya no se topea en 1320px: usa la sección completa (1760px) y pasa de 6 a 8 columnas.
+  // La grilla V2 topea en 5 columnas (min(100% / 5, 20rem)): 5 es el máximo
+  // editorial en desktop y las cards crecen con la columna.
   expect(
     await grid.evaluate(
       (element) => getComputedStyle(element).gridTemplateColumns.split(" ").length,
     ),
-  ).toBe(8);
+  ).toBe(5);
   const gridMetrics = await grid.evaluate((element) => {
     const gridRect = element.getBoundingClientRect();
     const cardRect = element
@@ -181,8 +182,9 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   });
   expect(gridMetrics.gridWidth).toBeGreaterThan(1700);
   expect(gridMetrics.gridWidth).toBeLessThanOrEqual(1760);
-  expect(gridMetrics.cardWidth).toBeGreaterThan(190);
-  expect(gridMetrics.cardWidth).toBeLessThan(215);
+  // 5 columnas sobre 1760px con gap 1.6rem: card ≈ 331px.
+  expect(gridMetrics.cardWidth).toBeGreaterThan(320);
+  expect(gridMetrics.cardWidth).toBeLessThan(345);
   const sectionPadding = await page
     .locator(".catalog-product-grid-section")
     .first()
@@ -255,12 +257,12 @@ test("V2 usa el ancho completo en colecciones y mantiene cards cuadradas", async
       mediaRatio: media ? media.width / media.height : 0,
     };
   });
-  // Sin el tope de 1320px la grilla usa el contenedor completo: 8 columnas en 1920.
-  expect(metrics.columns).toBe(8);
+  // La grilla V2 topea en 5 columnas también en colecciones (mismo auto-fit cap).
+  expect(metrics.columns).toBe(5);
   expect(metrics.width).toBeGreaterThan(1700);
   expect(metrics.width).toBeLessThanOrEqual(1760);
-  expect(metrics.cardWidth).toBeGreaterThan(190);
-  expect(metrics.cardWidth).toBeLessThan(215);
+  expect(metrics.cardWidth).toBeGreaterThan(320);
+  expect(metrics.cardWidth).toBeLessThan(345);
   expect(metrics.mediaRatio).toBeCloseTo(1, 1);
 });
 
@@ -316,13 +318,14 @@ test("V2 ajusta las imágenes al ancho renderizado y mantiene una galería PDP u
       cardWidth: cardRect?.width ?? 0,
     };
   });
-  // auto-fit genera 8 tracks sobre el ancho completo; con 6 relacionados el layout
-  // colapsa las dos vacías (computed style reporta las 8 tracks generadas).
-  expect(relatedGridMetrics.columns).toBe(8);
+  // El auto-fit topeado genera 5 tracks sobre el ancho completo; con 6
+  // relacionados el layout colapsa una track vacía (computed style reporta las
+  // 5 tracks generadas).
+  expect(relatedGridMetrics.columns).toBe(5);
   expect(relatedGridMetrics.gridWidth).toBeGreaterThan(1700);
   expect(relatedGridMetrics.gridWidth).toBeLessThanOrEqual(1760);
-  expect(relatedGridMetrics.cardWidth).toBeGreaterThan(240);
-  expect(relatedGridMetrics.cardWidth).toBeLessThan(290);
+  expect(relatedGridMetrics.cardWidth).toBeGreaterThan(320);
+  expect(relatedGridMetrics.cardWidth).toBeLessThan(345);
   await expect
     .poll(() =>
       relatedImages.evaluateAll(
@@ -541,9 +544,9 @@ test("V2 audita composición en viewports intermedios", async ({ page }, testInf
     expect(metrics.documentWidth).toBeLessThanOrEqual(viewport.width);
     expect(metrics.heroWidth).toBeLessThanOrEqual(viewport.width);
     expect(metrics.heroActionsBottom).toBeLessThanOrEqual(viewport.height);
-    // 1440+ pasa de 6 a 8 columnas: la grilla ya no se topea en 1320px y usa la sección completa.
+    // 1440 y 1366 quedan en 5 columnas (tope editorial), 1024 baja a 4 y 768 a 3.
     expect(metrics.productColumns).toBe(
-      viewport.width >= 1440 ? 8 : viewport.width >= 1200 ? 6 : viewport.width >= 1024 ? 5 : 3,
+      viewport.width >= 1024 ? (viewport.width >= 1200 ? 5 : 4) : 3,
     );
     expect(metrics.productCardWidth).toBeGreaterThan(155);
     expect(metrics.navHeight).toBeLessThanOrEqual(44);
@@ -576,11 +579,13 @@ test("V2 ordena categoría y filtros como rail editorial y sheet móvil", async 
   expect(await layout.evaluate((element) => getComputedStyle(element).gridTemplateColumns)).toMatch(
     /^2[4-9]\dpx /,
   );
+  // La grilla de categorías topea en 4 columnas sobre su contenedor de 1320px
+  // (auto-fit min(100% / 5, 20rem); el rail la deja más angosta que la home).
   expect(
     await grid.evaluate(
       (element) => getComputedStyle(element).gridTemplateColumns.split(" ").length,
     ),
-  ).toBe(6);
+  ).toBe(4);
   const categoryGridMetrics = await grid.evaluate((element) => {
     const gridRect = element.getBoundingClientRect();
     const cardRect = element
@@ -590,8 +595,9 @@ test("V2 ordena categoría y filtros como rail editorial y sheet móvil", async 
   });
   expect(categoryGridMetrics.gridWidth).toBeGreaterThan(1290);
   expect(categoryGridMetrics.gridWidth).toBeLessThanOrEqual(1320);
-  expect(categoryGridMetrics.cardWidth).toBeGreaterThan(170);
-  expect(categoryGridMetrics.cardWidth).toBeLessThan(215);
+  // 4 columnas sobre 1320px con gap 1.5rem: card ≈ 312px.
+  expect(categoryGridMetrics.cardWidth).toBeGreaterThan(295);
+  expect(categoryGridMetrics.cardWidth).toBeLessThan(330);
   expect(await grid.locator(".catalog-product-card-image").first().getAttribute("sizes")).toBe(
     "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) min(22vw, 11.5rem), min(20vw, 13rem)",
   );

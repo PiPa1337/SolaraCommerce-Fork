@@ -42,6 +42,29 @@ describe("StoreProjectV2Schema", () => {
     expect(catalogModernStore.commerceTemplates.designFamily).toBe("catalog-modern-v1");
   });
 
+  it("asigna a cada categoría raíz una imagen curada o determinista del store moderno", () => {
+    const roots = catalogModernStore.categories.filter((category) => !category.parentId);
+    const assetIds = new Set<string>(catalogModernStore.assets.map((asset) => asset.id));
+
+    expect(roots).toHaveLength(8);
+    roots.forEach((category) => {
+      expect(category.imageId, category.id).toBeDefined();
+      expect(assetIds.has(category.imageId ?? ""), category.id).toBe(true);
+    });
+
+    const byId = new Map<string, string>(
+      roots.map((category) => [category.id, category.imageId ?? ""]),
+    );
+    expect(byId.get("category-remeras")).toBe("asset-manta");
+    expect(byId.get("category-camisas")).toBe("asset-modo-camisa");
+    expect(byId.get("category-pantalones")).toBe("asset-jarra");
+    const abrigos = roots.find((category) => category.id === "category-abrigos");
+    const abrigosFirstProduct = catalogModernStore.products.find((product) =>
+      abrigos?.productIds.includes(product.id),
+    );
+    expect(abrigos?.imageId).toBe(abrigosFirstProduct?.imageIds[0]);
+  });
+
   it("rechaza dinero fraccionario y slugs inválidos", () => {
     expect(MoneySchema.safeParse(19.99).success).toBe(false);
     expect(SlugSchema.safeParse("Manta Bruma").success).toBe(false);
