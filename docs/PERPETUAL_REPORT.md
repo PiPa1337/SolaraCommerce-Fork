@@ -43,3 +43,22 @@
 - Gates: `pnpm check` exit=0, benchmark 1.602 ms (Δ% 5.3 % acumulado vs baseline PLAN 1), e2e 10/10, axe 0 findings.
 - Mejoras porcentuales reales: N1 (100 %), N2 (10 %), benchmark acumulado (5.3 %).
 - Autocrítica: el hallazgo "ALTA" de la visión era una percepción del estilo (h1 grandes); la medición lo desmintió — la regla medir-antes-de-tocar funcionó. El minify del boot sigue bloqueado por decisión del usuario.
+
+## PLAN 3 (16:45-17:10Z, 2026-08-14)
+
+| id | ítem | métrica | antes | después | Δ% | estado |
+|----|------|---------|-------|---------|-----|--------|
+| P3-1 | Re-verificación gates PLAN 2 | gates | — | 11/11 | 0 | hecho |
+| P3-2 | Runtime: compactar (helpers) | bytes | 55.845 B | — | — | bloqueado: usuario removió minifyJsSource del runtime (729dded) |
+| P3-3 | CSS Studio: dedup de reglas exactas (postbuild permanente) | bytes | 102.392 B | 102.160 B | **0.23 %** (margen 4.3 KiB) | hecho (`dedup-studio-css.mjs`) |
+| P3-4 | nojs-coverage ampliado a catalogModern | combinaciones | 14 | 24 | gate ampliado | hecho |
+| P3-5 | Axe en catalogModern: 4 serious (discount), 1 critical (gallery), 2 moderate (announcement header), region newsletter | findings | 19 | **0** | **100 %** | hecho: discount oscurecido, gallery sin roles, announcement→section con aria-label, newsletter aria-label |
+| P3-6 | CDP re-medición post-a11y | ms | 30.7/18.0 | 31.8/18.1 | 0 (ruido) | hecho |
+| P3-7 | Handler + subcarpeta | gates | — | 9/9 + 1 | 0 | hecho |
+| P3-8 | Reproducibilidad también en draft | fixtures | — | 3/3 × 2 modos | gate ampliado | hecho |
+| P3-9 | Search-index vs rutas paginadas (catalogScale) | drift | 0 | 0 | 0 (gate F3 cubre) | hecho |
+
+### Totales PLAN 3
+- Gates: `pnpm check` exit=0, benchmark 1.704 ms, e2e 8/8.
+- Mejoras: axe catalogModern 100 %, CSS Studio 0.23 %, cobertura ampliada (nojs 24 combos, reproducibilidad draft, contratos).
+- Acumulado PLAN 1→3: axe 14→0 en reference y 19→0 en catalogModern; benchmark −2.9 % vs baseline del PLAN 1; margen CSS Studio +232 B; margen runtime 1.5 KB (bloqueado por decisión del usuario).

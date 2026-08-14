@@ -72,6 +72,14 @@ test("F4: criticalCount del audit coincide con el bloqueo de production", () => 
   );
 });
 
+test("F5-draft: reproducible byte a byte tambien en draft", () => {
+  for (const [name, project] of Object.entries(fixtures)) {
+    const first = exportProject(project, { mode: "draft" });
+    const second = exportProject(project, { mode: "draft" });
+    expect(sha256(serializeForHash(first.files))).toBe(sha256(serializeForHash(second.files)));
+  }
+});
+
 test("F5: el export es reproducible byte a byte en los 3 fixtures", () => {
   for (const [name, project] of Object.entries(fixtures)) {
     const first = exportProject(project, { mode: "production" });
