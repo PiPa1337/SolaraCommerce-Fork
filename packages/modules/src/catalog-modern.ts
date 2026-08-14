@@ -100,7 +100,7 @@ export const catalogAnnouncement: ModuleDefinition<
       safeHtml(
         `<div class="catalog-announcement-inner" data-motion-zone="content"><span>${escapeHtml(context.settings.text)}</span>${link}<button type="button" data-catalog-announcement-close aria-label="Cerrar anuncio">×</button></div>`,
       ),
-      { tag: "header" },
+      { tag: "section", ariaLabel: "Avisos" },
     );
   },
 };
@@ -878,7 +878,7 @@ export const catalogProductDetail: ModuleDefinition<
       })
       .join("");
     const gallery = galleryAssetIds.length
-      ? `<div class="catalog-product-gallery" data-product-gallery><div class="catalog-product-gallery-main">${galleryFigures}</div><div class="catalog-product-gallery-thumbs" role="list" aria-label="Imágenes del producto">${galleryThumbs}</div></div>`
+      ? `<div class="catalog-product-gallery" data-product-gallery><div class="catalog-product-gallery-main">${galleryFigures}</div><div class="catalog-product-gallery-thumbs">${galleryThumbs}</div></div>`
       : '<p class="catalog-empty">Este producto todavía no tiene imágenes.</p>';
     const variants = product.variants
       .map((variant) => {
@@ -1216,6 +1216,7 @@ export const catalogNewsletterCta: ModuleDefinition<
       safeHtml(
         `<div class="catalog-newsletter-inner" data-motion-zone="content"><div><h2>${escapeHtml(context.settings.title)}</h2><p>${escapeHtml(context.settings.body)}</p></div><a class="catalog-newsletter-action" href="${escapeAttribute(safeUrl(context.settings.actionHref))}">${escapeHtml(context.settings.actionLabel)}</a></div>`,
       ),
+      { ariaLabel: "Novedades" },
     );
   },
 };

@@ -2093,7 +2093,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-product-price { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-top: .35rem; font-size: .95rem; }
 [data-solara-store].catalog-modern .catalog-product-price strong { font-weight: 800; }
 [data-solara-store].catalog-modern .catalog-product-price del { color: var(--catalog-muted); }
-[data-solara-store].catalog-modern .catalog-discount { padding: .18rem .4rem; border-radius: 999px; background: rgb(217 74 85 / .12); color: var(--catalog-sale); font-size: .68rem; font-weight: 700; }
+[data-solara-store].catalog-modern .catalog-discount { padding: .18rem .4rem; border-radius: 999px; background: rgb(217 74 85 / .12); color: color-mix(in srgb, var(--catalog-sale) 74%, #16130f); font-size: .68rem; font-weight: 700; }
 [data-solara-store].catalog-modern .catalog-category-bento-section { margin-top: 1rem; padding: clamp(1.5rem, 3vw, 2.5rem); border-radius: var(--solara-radius); background: var(--catalog-surface); }
 [data-solara-store].catalog-modern .catalog-category-bento-section > header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 1rem; }
 [data-solara-store].catalog-modern .catalog-category-bento-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-flow: dense; grid-auto-rows: clamp(9rem, 10vw, 12rem); gap: calc(.75rem * var(--solara-space-scale, 1)); margin-top: 1.5rem; }
