@@ -2569,6 +2569,15 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   overflow: hidden;
   border-radius: 2px;
 }
+.cm.v2 .catalog-hero-media figure {
+  margin: 0;
+  line-height: 0;
+}
+.cm.v2 .catalog-hero-media figure > * {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .cm.v2 .catalog-hero-image,
 .cm.v2 .catalog-hero-video {
   transform: scale(1.015);
