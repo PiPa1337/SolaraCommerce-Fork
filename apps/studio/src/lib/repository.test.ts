@@ -55,6 +55,7 @@ import {
   saveProject,
   saveRecoveryDraft,
   setProjectArchived,
+  shouldSeedRecoveryDraft,
   V1_DEMO_PROJECT_ID,
 } from "./repository";
 
@@ -99,6 +100,15 @@ describe("repositorio local", () => {
     });
     await clearRecoveryDraft(referenceStore.id);
     expect(await getRecoveryDraft(referenceStore.id)).toBeUndefined();
+  });
+
+  it("siembra RecoveryDraft sólo cuando el navegador es más nuevo que el disco", () => {
+    const seed = { updatedAt: "2026-08-01T10:00:00.000Z" };
+    const editedAfterDisk = { updatedAt: "2026-08-02T10:00:00.000Z" };
+    expect(shouldSeedRecoveryDraft(editedAfterDisk, seed, true)).toBe(true);
+    expect(shouldSeedRecoveryDraft(seed, editedAfterDisk, true)).toBe(false);
+    expect(shouldSeedRecoveryDraft(seed, seed, true)).toBe(false);
+    expect(shouldSeedRecoveryDraft(editedAfterDisk, seed, false)).toBe(false);
   });
 
   it("rechaza proyectos inválidos antes de escribir en IndexedDB", async () => {

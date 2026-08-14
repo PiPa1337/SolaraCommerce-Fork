@@ -128,8 +128,18 @@ async function staticResponse(root, pathname, { fallbackToIndex = false } = {}) 
   if (!safeStaticPath(root, pathname))
     return response(403, "Forbidden", { "Content-Type": "text/plain; charset=utf-8" });
   const requested = resolveStaticFile(root, pathname, { fallbackToIndex });
-  if (!requested)
+  if (!requested) {
+    // Iguala al comportamiento de los hostings estáticos: una ruta inexistente
+    // (p.ej. categorias/x/pagina/99/) responde 404 con la página 404.html del
+    // propio sitio cuando existe, para que el error sea útil sin JavaScript.
+    const notFoundPage = resolveStaticFile(root, "/404.html");
+    if (notFoundPage)
+      return response(404, await readFile(notFoundPage), {
+        "Cache-Control": "no-store",
+        "Content-Type": "text/html; charset=utf-8",
+      });
     return response(404, "Not found", { "Content-Type": "text/plain; charset=utf-8" });
+  }
   return response(200, await readFile(requested), {
     "Cache-Control": "no-store",
     "Content-Type": publicContentTypes[extname(requested)] ?? "application/octet-stream",

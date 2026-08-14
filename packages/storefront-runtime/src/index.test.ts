@@ -5,6 +5,7 @@ import {
   buildWhatsAppMessage,
   buildWhatsAppUrl,
   formatMoney,
+  minifyJsSource,
   parseCart,
   reconcileCartLines,
   STOREFRONT_RUNTIME_CSS,
@@ -71,6 +72,21 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("function normalizeSearchTokens");
     expect(STOREFRONT_RUNTIME_JS).not.toContain("const matchToken = function matchToken");
     expect(STOREFRONT_RUNTIME_JS).toContain("storefrontBoot");
+  });
+
+  it("compacta el fuente de los helpers sin alterar strings ni comportamiento", () => {
+    const compact = minifyJsSource(parseCart.toString());
+    expect(compact.length).toBeLessThan(parseCart.toString().length);
+    expect(compact).not.toContain("  ");
+    const evaluated = new Function(`return (${compact})`)() as typeof parseCart;
+    const sample = [
+      { variantId: "v1", title: "T", variantTitle: "V", sku: "S", unitPrice: 100, quantity: 2 },
+      { variantId: "v2", title: "T", variantTitle: "V", sku: "S", unitPrice: 100, quantity: 0 },
+    ];
+    expect(evaluated(sample)).toEqual(parseCart(sample));
+    expect(evaluated("no es array")).toEqual([]);
+    const withCatalog = minifyJsSource(reconcileCartLines.toString());
+    expect(withCatalog).not.toContain("\n");
   });
 
   it("expone los helpers de búsqueda por un nombre canónico estable", () => {
@@ -315,6 +331,11 @@ describe("pausa y reanudación del runtime (contrato A3↔A4)", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain(
       'addEventListener("visibilitychange", onVisibility, { passive: true })',
     );
+  });
+
+  it("difiere el fetch del índice de búsqueda cuando el runtime está pausado", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("deferredSearch");
+    expect(STOREFRONT_RUNTIME_JS).toContain("fetch(`${baseHref}/search-index.json`");
   });
 
   it("registra los listeners de scroll como pasivos", () => {

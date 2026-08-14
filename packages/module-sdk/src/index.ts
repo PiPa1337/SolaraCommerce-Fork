@@ -172,6 +172,24 @@ export function safeUrl(value: unknown, fallback = "#"): string {
   }
 }
 
+/**
+ * Ruta interna del sitio con la subcarpeta de la baseUrl prefijada cuando
+ * existe (p.ej. baseUrl `https://dominio/tienda/` → `/tienda/productos/x/`).
+ * Las URLs externas, anclas y rutas relativas pasan intactas por `safeUrl`.
+ */
+export function internalHref(project: StoreProjectV1, path: string): string {
+  const candidate = safeUrl(path);
+  if (!candidate.startsWith("/") || candidate.startsWith("//")) {
+    return candidate;
+  }
+  try {
+    const prefix = new URL(project.baseUrl).pathname.replace(/\/+$/, "");
+    return prefix ? `${prefix}${candidate}` : candidate;
+  } catch {
+    return candidate;
+  }
+}
+
 export function safeAssetUrl(value: unknown, fallback = ""): string {
   const candidate = String(value ?? "").trim();
   if (candidate.startsWith("blob:")) {

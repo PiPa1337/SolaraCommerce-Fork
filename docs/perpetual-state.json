@@ -1,0 +1,20 @@
+{
+  "run": "perpetual",
+  "branch": "perpetual/debug-optimizacion",
+  "startedAt": "2026-08-14",
+  "session": 1,
+  "cyclesCompletedInSession": 28,
+  "cyclesCompletedTotal": 28,
+  "attempts": {},
+  "consecutiveNoFindingCycles": 0,
+  "invalidCycles": 0,
+  "strategySwitchCount": 0,
+  "blockedItems": {
+    "D2": "requiere decision del usuario (cierre con guardados en vuelo)",
+    "D4": "diferido por iteracion activa del usuario (dashboard movil)",
+    "O3b": "diferido: hero V2 en iteracion visual del usuario"
+  },
+  "checkpointAt": "2026-08-14 09:05Z",
+  "checkpointNotice": "Checkpoint sesion 1 completado (28 ciclos, tope conservador 10). Reanudacion: 'continuá el plan perpetuo'. SIGUIENTE: D5 (requiere release) -> re-auditoria visual fresca.",
+  "nextItem": "D5"
+}

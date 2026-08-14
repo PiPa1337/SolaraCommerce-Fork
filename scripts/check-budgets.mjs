@@ -32,7 +32,11 @@ const javascript = javascriptCandidates.reduce((largest, file) =>
 // de Studio. El techo CSS subió de 84 a 96 KiB (2026-08-07) y luego a 100 KiB
 // el mismo día: el plan de UI/UX del editor (componentes, tokens, dashboard,
 // shell, flujos y motion) lleva el CSS a ~98.6 KiB; 100 KiB deja margen sin
-// obligar a recortar el alcance aprobado.
+// obligar a recortar el alcance aprobado. El 2026-08-14 sube a 104 KiB: un
+// análisis de dead code (3 métodos: clases por token, por template y por
+// prefijo) confirmó que todo el CSS del Studio se usa o se genera por template
+// (Ui.tsx, primitives.tsx, Toast.tsx, dashboard cosmic); el bundle llegó a
+// 102.392 B con 8 B de margen, insuficiente para cualquier cambio CSS futuro.
 const checks = [
   {
     label: "Studio JavaScript inicial crudo",
@@ -42,7 +46,7 @@ const checks = [
   {
     label: "Studio CSS inicial crudo",
     file: stylesheet,
-    limit: 100 * 1024,
+    limit: 104 * 1024,
   },
 ];
 

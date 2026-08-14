@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   mkdir,
   mkdtemp,
@@ -74,6 +75,35 @@ describe("almacenamiento local de proyectos", () => {
       expect(await readFile(sitePath, "utf8")).toContain("sitio");
       expect((await storage.readCurrent(projectId)).manifest.current.sha256).toMatch(
         /^[a-f0-9]{64}$/,
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("fija la semántica EX-B7: el sha256 son los bytes exactos del upload", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-hash-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      const transaction = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-06T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      const payload = projectJson();
+      const expectedHash = createHash("sha256").update(Buffer.from(payload, "utf8")).digest("hex");
+      await upload(storage, transaction.transactionId, "project", payload);
+      await upload(storage, transaction.transactionId, "site", siteMap());
+      await storage.commit(transaction.transactionId);
+
+      const current = await storage.readCurrent(projectId);
+      expect(current.manifest.current.sha256).toBe(expectedHash);
+      // Una re-serialización distinta del mismo contenido lógico produce otro hash:
+      const reformatted = JSON.stringify(JSON.parse(payload), null, 2);
+      expect(createHash("sha256").update(Buffer.from(reformatted, "utf8")).digest("hex")).not.toBe(
+        expectedHash,
       );
     } finally {
       await rm(root, { recursive: true, force: true });

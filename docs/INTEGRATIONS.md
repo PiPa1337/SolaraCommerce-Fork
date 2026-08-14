@@ -42,6 +42,25 @@ calcularlo. Un conflicto de versión responde `409`; Studio no hace merge
 automático. Un fallo de exportación puede confirmar el proyecto editable y
 conservar el último sitio público válido.
 
+### Semántica del `sha256` (contrato EX-B7)
+
+El `X-Solara-SHA256` y los hashes del manifest (`current.sha256` del proyecto y
+del sitio) son el **SHA-256 hexadecimal de los bytes exactos del archivo
+subido o persistido, sin transformación alguna**: sin normalización de
+saltos de línea, sin re-serialización JSON y sin cambios de encoding. El
+servidor lo recalcula sobre el stream entrante y sobre los bytes leídos del
+disco al validar (verificación de `list()` y `readCurrent`). Consecuencias:
+
+- un mismo contenido serializado de dos formas distintas produce hashes
+  distintos (el hash identifica la serialización concreta, no el contenido
+  lógico);
+- el hash se invalida ante cualquier cambio de formato de persistencia
+  (p.ej. whitespace del JSON, orden de claves, encoding de base64 en el mapa
+  del sitio), por lo que un cambio de formato exige recalcular y re-guardar
+  los manifiestos, nunca comparar contra hashes históricos;
+- los clientes deben enviar el hash del payload que realmente envían (los
+  tests de `request-handler` verifican la comparación byte a byte).
+
 ### Migración única desde `.solara.zip`
 
 En el arranque, el servidor ejecuta una sola vez

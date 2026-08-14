@@ -98,6 +98,24 @@ describe("exporter", () => {
     expect(css).toContain('.solara-page[data-color-mode="auto"]{color-scheme:dark}');
   });
 
+  it("consume data-theme del html con color-scheme en el CSS exportado", () => {
+    const darkProject = {
+      ...referenceStore,
+      theme: { ...referenceStore.theme, colorMode: "dark" },
+    } as typeof referenceStore;
+    const darkCss = String(
+      exportProject(darkProject, { mode: "draft" }).files.get("assets/storefront.css"),
+    );
+    const darkHtml = String(exportProject(darkProject, { mode: "draft" }).files.get("index.html"));
+    expect(darkHtml).toContain('data-theme="dark"');
+    expect(darkCss).toContain('html[data-theme="dark"]{color-scheme:dark}');
+
+    const lightCss = String(
+      exportProject(referenceStore, { mode: "draft" }).files.get("assets/storefront.css"),
+    );
+    expect(lightCss).toContain('html[data-theme="light"]{color-scheme:light}');
+  });
+
   it("usa el mismo árbol semántico de módulos en preview y home exportado", () => {
     const preview = renderPreviewHtml(referenceStore);
     const exported = String(
@@ -196,6 +214,20 @@ describe("exporter", () => {
     );
     expect(() => createProjectArchive(invalid as typeof referenceStore)).toThrow(
       /archivo del proyecto.*baseUrl/i,
+    );
+  });
+
+  it("envuelve errores internos de generación con contexto de fase accionable", () => {
+    const broken = structuredClone(referenceStore);
+    const section = broken.sections.find((candidate) => candidate.moduleId === "hero-media");
+    if (!section) throw new Error("Fixture incompleto");
+    section.moduleId = "modulo-inexistente";
+
+    expect(() => exportProject(broken as typeof referenceStore, { mode: "draft" })).toThrow(
+      /generación del sitio falló.*Módulo desconocido: modulo-inexistente/s,
+    );
+    expect(() => renderPreviewHtml(broken as typeof referenceStore)).toThrow(
+      /generación del sitio falló.*Módulo desconocido: modulo-inexistente/s,
     );
   });
 
@@ -559,6 +591,56 @@ describe("exporter", () => {
         path: "baseUrl",
       }),
     );
+  });
+
+  it("respeta la subcarpeta de baseUrl en canonical, recursos y sitemap", () => {
+    const project = {
+      ...referenceStore,
+      baseUrl: "https://casa-luma.example/tienda/",
+    };
+
+    const result = exportProject(project, { mode: "production" });
+    const home = String(result.files.get("index.html"));
+    expect(home).toContain('<link rel="canonical" href="https://casa-luma.example/tienda/">');
+    expect(home).toContain('<meta property="og:url" content="https://casa-luma.example/tienda/">');
+    expect(home).toContain('href="/tienda/assets/storefront.css"');
+    expect(home).toContain('src="/tienda/assets/storefront.js"');
+    expect(home).toContain('href="/tienda/ai-context.json"');
+    expect(home).toContain('href="/tienda/llms.txt"');
+
+    const sitemap = String(result.files.get("sitemap.xml"));
+    expect(sitemap).toContain("https://casa-luma.example/tienda/productos/manta-bruma/");
+
+    const product = String(result.files.get("productos/manta-bruma/index.html"));
+    expect(product).toContain('"url":"https://casa-luma.example/tienda/productos/manta-bruma/"');
+
+    const preview = renderPreviewHtml(project, "production", "/");
+    expect(preview).toContain("data:text/css;base64,");
+    expect(preview).not.toContain('href="/tienda/assets/storefront.css"');
+  });
+
+  it("prefija los enlaces internos del body con la subcarpeta de baseUrl", () => {
+    const project = {
+      ...referenceStore,
+      baseUrl: "https://casa-luma.example/tienda/",
+    };
+
+    const result = exportProject(project, { mode: "production" });
+    const home = String(result.files.get("index.html"));
+    const category = String(result.files.get("categorias/textiles/index.html"));
+    const cart = String(result.files.get("carrito/index.html"));
+    const productPage = String(result.files.get("productos/manta-bruma/index.html"));
+
+    expect(home).toContain('href="/tienda/categorias/mesa/"');
+    expect(home).toContain('href="/tienda/productos/manta-bruma/"');
+    expect(category).toContain('href="/tienda/productos/manta-bruma/"');
+    expect(category).toContain('href="/tienda/buscar/"');
+    expect(cart).toContain('href="/tienda/compra/"');
+    expect(productPage).toContain('action="/tienda/carrito/"');
+    expect(home).not.toContain('href="/tienda/tienda/');
+
+    const preview = renderPreviewHtml(project, "production", "/");
+    expect(preview).toContain('href="/tienda/categorias/mesa/"');
   });
 
   it("publica catalog-index.json cuando el drawer de carrito está activo sin templates", () => {

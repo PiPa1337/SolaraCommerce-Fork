@@ -11,6 +11,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { app, BrowserWindow, dialog, ipcMain, net, protocol, shell } from "electron";
 import {
+  detectPortableFirstRun,
   ensurePortableLayout,
   resolvePortableLayout,
 } from "../../../packages/exporter/scripts/portable-layout.mjs";
@@ -51,6 +52,7 @@ const layout = resolvePortableLayout({
 const smokeMode = process.argv.includes("--solara-smoke");
 let mainWindow;
 let requestHandler;
+let firstRunAt = null;
 let shuttingDown = false;
 
 // Los paths se fijan antes de `ready`, pero las carpetas se crean dentro de
@@ -95,6 +97,16 @@ async function log(message, error) {
 
 async function start() {
   try {
+    const firstRunDetection = await detectPortableFirstRun(
+      layout.portableRoot,
+      join(layout.runtimeRoot, "instance.json"),
+    );
+    firstRunAt = firstRunDetection.firstRun ? layout.portableRoot : null;
+    if (firstRunAt) {
+      await log(
+        `Primera ejecución en esta carpeta: ${layout.portableRoot}. Si moviste la aplicación, tus tiendas siguen en la carpeta anterior.`,
+      );
+    }
     await ensurePortableLayout(layout, { appVersion: app.getVersion() });
     await app.whenReady();
 
@@ -175,6 +187,7 @@ function registerIpc() {
     appVersion: app.getVersion(),
     portableRoot: layout.portableRoot,
     profileRoot: layout.profileRoot,
+    ...(firstRunAt ? { portableFirstRunAt: firstRunAt } : {}),
   }));
   ipcMain.handle("solara:open-site", async (_event, projectId) => {
     if (typeof projectId !== "string") throw new Error("ID de tienda inválido.");
