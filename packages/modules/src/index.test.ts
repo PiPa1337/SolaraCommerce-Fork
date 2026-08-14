@@ -1,6 +1,7 @@
 import { CATALOG_MODERN_PLACEHOLDER_PHONE, type StoreSection } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
+import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import { referenceStore } from "@solara/project-schema/fixture";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 import { describe, expect, expectTypeOf, it } from "vitest";
@@ -640,6 +641,65 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     });
     const headerHtml = renderSections(catalogModernStore, [headerSection], { pageType: "home" });
     expect(headerHtml).toMatch(/<noscript>[\s\S]*@media print/);
+  });
+});
+
+describe("catalog-hero V2 con CTA único de WhatsApp", () => {
+  it("reemplaza las acciones del hero V2 por un único enlace wa.me sin mensaje", () => {
+    const section = catalogModernV2Store.sections.find(
+      (candidate) => candidate.moduleId === "catalog-hero",
+    );
+    if (!section) throw new Error("Fixture V2 sin hero");
+    const html = renderSections(catalogModernV2Store, [section], { pageType: "home" });
+    const actions = html.slice(html.indexOf('class="catalog-hero-actions"'));
+    const actionsMarkup = actions.slice(0, actions.indexOf("</div>"));
+
+    expect(actionsMarkup).toContain('class="catalog-primary-action solara-primary-action"');
+    expect(actionsMarkup).toContain('href="https://wa.me/5491123456789"');
+    expect(actionsMarkup).not.toContain("?text=");
+    expect(actionsMarkup).toContain('target="_blank" rel="noopener noreferrer"');
+    expect(actionsMarkup).toContain(">Escribir por WhatsApp</a>");
+    expect(actionsMarkup).not.toContain("catalog-secondary-action");
+    expect(actionsMarkup).not.toContain("Ver reci\u00e9n llegados");
+    expect(actionsMarkup.match(/<a\b/g)).toHaveLength(1);
+  });
+
+  it("conserva las acciones del hero V2 cuando no hay WhatsApp configurado", () => {
+    const project = structuredClone(catalogModernV2Store);
+    project.whatsapp = { ...project.whatsapp, phone: "" };
+    const section = project.sections.find((candidate) => candidate.moduleId === "catalog-hero");
+    if (!section) throw new Error("Fixture V2 sin hero");
+    const html = renderSections(project, [section], { pageType: "home" });
+
+    expect(html).not.toContain("wa.me");
+    expect(html).not.toContain("Escribir por WhatsApp");
+    expect(html).toContain("Ver reci\u00e9n llegados");
+    expect(html).toContain("Explorar tienda");
+  });
+
+  it("trata el teléfono sentinel de plantilla como no configurado en V2", () => {
+    const project = structuredClone(catalogModernV2Store);
+    project.whatsapp = { ...project.whatsapp, phone: CATALOG_MODERN_PLACEHOLDER_PHONE };
+    const section = project.sections.find((candidate) => candidate.moduleId === "catalog-hero");
+    if (!section) throw new Error("Fixture V2 sin hero");
+    const html = renderSections(project, [section], { pageType: "home" });
+
+    expect(html).not.toContain("wa.me");
+    expect(html).not.toContain("Escribir por WhatsApp");
+    expect(html).toContain("Ver reci\u00e9n llegados");
+  });
+
+  it("no altera las acciones del hero V1", () => {
+    const section = catalogModernStore.sections.find(
+      (candidate) => candidate.moduleId === "catalog-hero",
+    );
+    if (!section) throw new Error("Fixture V1 sin hero");
+    const html = renderSections(catalogModernStore, [section], { pageType: "home" });
+
+    expect(html).not.toContain("wa.me");
+    expect(html).not.toContain("Escribir por WhatsApp");
+    expect(html).toContain('class="catalog-primary-action" href="/colecciones/recien-llegados/"');
+    expect(html).toContain("Explorar tienda");
   });
 });
 

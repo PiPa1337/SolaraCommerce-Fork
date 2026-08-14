@@ -2608,7 +2608,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-testimonials-section h2 {
   max-width: 12ch;
   font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
-  font-size: calc(clamp(2.8rem, 5.5vw, 6.5rem) * var(--solara-type-scale, 1));
+  font-size: calc(clamp(1.8rem, 4vw, 3rem) * var(--solara-type-scale, 1));
   font-weight: 500;
   letter-spacing: -.075em;
   line-height: .9;
@@ -2616,12 +2616,27 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-product-grid-section > header,
 .cm.v2 .catalog-testimonials-section > header {
   margin-bottom: clamp(2rem, 4vw, 4rem);
+  margin-inline: calc(clamp(1.75rem, 4vw, 3rem) - (max(1.5rem, (100vw - var(--catalog-v2-wide)) / 2) - max(1rem, (100vw - var(--solara-container)) / 2)));
+}
+.cm.v2 .catalog-category-bento-section > header {
+  margin-inline: calc(clamp(1.75rem, 4vw, 3rem) - (max(1.5rem, (100vw - var(--catalog-v2-wide)) / 2) - max(1rem, (100vw - var(--solara-container)) / 2)) - clamp(1.5rem, 5vw, 5rem));
+}
+.cm.v2 .solara-container .catalog-product-grid-section > header {
+  margin-inline: calc(clamp(1.75rem, 4vw, 3rem) - max(1.5rem, (min(100% - 2rem, var(--solara-container)) - var(--catalog-v2-wide)) / 2));
 }
 .cm.v2 .catalog-product-grid {
   grid-template-columns: repeat(auto-fit,minmax(11rem,1fr));
   gap: clamp(1.5rem, 2.4vw, 3rem) clamp(.8rem, 1.4vw, 1.6rem);
-  max-width: 1320px;
   margin: 0 auto;
+}
+/* Desktop amplio: la sección mide min(100% - 3rem, 1760px); sin el tope de
+   1320px el auto-fit pasa de 6 a 8 columnas. Entre 1440px y 1614px el mínimo
+   baja a 10rem para mantener 8 columnas (con 11rem el auto-fit daría 7). */
+@media (min-width: 1440px) and (max-width: 1614px) {
+  .cm.v2 .catalog-product-grid {
+    grid-template-columns: repeat(auto-fit,minmax(10rem,1fr));
+    gap: clamp(1.5rem, 2.4vw, 3rem) 1rem;
+  }
 }
 .cm.v2 .catalog-product-card {
   transition: transform var(--catalog-v2-motion-component) var(--catalog-v2-ease-out);
@@ -2722,7 +2737,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .solara-checkout-page h1 {
   max-width: 10ch;
   font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
-  font-size: calc(clamp(4rem, 6.5vw, 8rem) * var(--solara-type-scale, 1));
+  font-size: calc(clamp(3.8rem, 5vw, 6rem) * var(--solara-type-scale, 1));
   font-weight: 500;
   letter-spacing: -.075em;
   line-height: .88;
@@ -2965,7 +2980,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .solara-checkout-order-panel h2 {
   margin: .35rem 0 .75rem;
   font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
-  font-size: calc(clamp(2.5rem, 4vw, 4.5rem) * var(--solara-type-scale, 1));
+  font-size: calc(clamp(1.8rem, 4vw, 3rem) * var(--solara-type-scale, 1));
   font-weight: 500;
   letter-spacing: -.06em;
   line-height: .95;
@@ -3048,10 +3063,13 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-testimonials-section {
     padding-block: 5rem;
   }
-  .cm.v2 .catalog-product-grid-section h2,
-  .cm.v2 .catalog-category-bento-section h2,
-  .cm.v2 .catalog-testimonials-section h2 {
-    font-size: calc(clamp(3rem, 14vw, 5rem) * var(--solara-type-scale, 1));
+  .cm.v2 .catalog-product-grid-section > header,
+  .cm.v2 .catalog-testimonials-section > header {
+    margin-inline: calc(clamp(1.75rem, 4vw, 3rem) - (.75rem - 1rem));
+  }
+  .cm.v2 .catalog-category-bento-section > header,
+  .cm.v2 .solara-container .catalog-product-grid-section > header {
+    margin-inline: calc(clamp(1.75rem, 4vw, 3rem) - .75rem);
   }
   .cm.v2 .catalog-product-grid {
     gap: 2rem .7rem;
@@ -3096,6 +3114,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     font-size: calc(clamp(3.1rem, 15vw, 5.5rem) * var(--solara-type-scale, 1));
   }
   .cm.v2 .solara-search-page .solara-page-intro { padding: 2.5rem 0 1.25rem; }
+  .cm.v2 .solara-category-hero h1,
+  .cm.v2 .solara-page-intro h1 {
+    font-size: calc(clamp(3.25rem, 14vw, 5.2rem) * var(--solara-type-scale, 1));
+  }
   .cm.v2 .solara-search-page .solara-page-intro h1,
   .cm.v2 .solara-cart-page > .solara-page-intro h1 { font-size: calc(clamp(3.15rem, 13.5vw, 4.25rem) * var(--solara-type-scale, 1)); line-height: .98; }
   .cm.v2 .solara-search-page .solara-page-intro > p:not(.solara-eyebrow) { margin-top: .85rem; }

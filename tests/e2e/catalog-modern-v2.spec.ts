@@ -166,11 +166,12 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   await expect(bento.locator(".catalog-category-bento-item--compact")).not.toHaveCount(0);
 
   const grid = page.locator(".catalog-product-grid").first();
+  // La grilla ya no se topea en 1320px: usa la sección completa (1760px) y pasa de 6 a 8 columnas.
   expect(
     await grid.evaluate(
       (element) => getComputedStyle(element).gridTemplateColumns.split(" ").length,
     ),
-  ).toBe(6);
+  ).toBe(8);
   const gridMetrics = await grid.evaluate((element) => {
     const gridRect = element.getBoundingClientRect();
     const cardRect = element
@@ -178,8 +179,8 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
       ?.getBoundingClientRect();
     return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
   });
-  expect(gridMetrics.gridWidth).toBeGreaterThan(1290);
-  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(1320);
+  expect(gridMetrics.gridWidth).toBeGreaterThan(1700);
+  expect(gridMetrics.gridWidth).toBeLessThanOrEqual(1760);
   expect(gridMetrics.cardWidth).toBeGreaterThan(190);
   expect(gridMetrics.cardWidth).toBeLessThan(215);
   const sectionPadding = await page
@@ -254,9 +255,10 @@ test("V2 usa el ancho completo en colecciones y mantiene cards cuadradas", async
       mediaRatio: media ? media.width / media.height : 0,
     };
   });
-  expect(metrics.columns).toBe(6);
-  expect(metrics.width).toBeGreaterThan(1290);
-  expect(metrics.width).toBeLessThanOrEqual(1320);
+  // Sin el tope de 1320px la grilla usa el contenedor completo: 8 columnas en 1920.
+  expect(metrics.columns).toBe(8);
+  expect(metrics.width).toBeGreaterThan(1700);
+  expect(metrics.width).toBeLessThanOrEqual(1760);
   expect(metrics.cardWidth).toBeGreaterThan(190);
   expect(metrics.cardWidth).toBeLessThan(215);
   expect(metrics.mediaRatio).toBeCloseTo(1, 1);
@@ -314,11 +316,13 @@ test("V2 ajusta las imágenes al ancho renderizado y mantiene una galería PDP u
       cardWidth: cardRect?.width ?? 0,
     };
   });
-  expect(relatedGridMetrics.columns).toBe(6);
-  expect(relatedGridMetrics.gridWidth).toBeGreaterThan(1290);
-  expect(relatedGridMetrics.gridWidth).toBeLessThanOrEqual(1320);
-  expect(relatedGridMetrics.cardWidth).toBeGreaterThan(190);
-  expect(relatedGridMetrics.cardWidth).toBeLessThan(215);
+  // auto-fit genera 8 tracks sobre el ancho completo; con 6 relacionados el layout
+  // colapsa las dos vacías (computed style reporta las 8 tracks generadas).
+  expect(relatedGridMetrics.columns).toBe(8);
+  expect(relatedGridMetrics.gridWidth).toBeGreaterThan(1700);
+  expect(relatedGridMetrics.gridWidth).toBeLessThanOrEqual(1760);
+  expect(relatedGridMetrics.cardWidth).toBeGreaterThan(240);
+  expect(relatedGridMetrics.cardWidth).toBeLessThan(290);
   await expect
     .poll(() =>
       relatedImages.evaluateAll(
@@ -537,8 +541,9 @@ test("V2 audita composición en viewports intermedios", async ({ page }, testInf
     expect(metrics.documentWidth).toBeLessThanOrEqual(viewport.width);
     expect(metrics.heroWidth).toBeLessThanOrEqual(viewport.width);
     expect(metrics.heroActionsBottom).toBeLessThanOrEqual(viewport.height);
+    // 1440+ pasa de 6 a 8 columnas: la grilla ya no se topea en 1320px y usa la sección completa.
     expect(metrics.productColumns).toBe(
-      viewport.width >= 1200 ? 6 : viewport.width >= 1024 ? 5 : 3,
+      viewport.width >= 1440 ? 8 : viewport.width >= 1200 ? 6 : viewport.width >= 1024 ? 5 : 3,
     );
     expect(metrics.productCardWidth).toBeGreaterThan(155);
     expect(metrics.navHeight).toBeLessThanOrEqual(44);

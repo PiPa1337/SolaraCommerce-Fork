@@ -439,11 +439,21 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
             )
             .join("")
         : "";
+    // La familia V2 reemplaza las acciones del hero por un único enlace directo
+    // a WhatsApp (sin mensaje precargado) cuando la tienda tiene teléfono público.
+    const whatsappPhone =
+      context.project.commerceTemplates.designFamily === "catalog-modern-v2" &&
+      hasPublicWhatsApp(context.project.whatsapp)
+        ? context.project.whatsapp.phone.replace(/\D/g, "")
+        : "";
+    const actions = whatsappPhone
+      ? `<a class="catalog-primary-action solara-primary-action" href="https://wa.me/${escapeAttribute(whatsappPhone)}" target="_blank" rel="noopener noreferrer">Escribir por WhatsApp</a>`
+      : `<a class="catalog-primary-action" href="${escapeAttribute(safeUrl(actionHref))}">${escapeHtml(actionLabel)}</a>${settings.secondaryActionLabel ? `<a class="catalog-secondary-action" href="${escapeAttribute(safeUrl(settings.secondaryActionHref))}">${escapeHtml(settings.secondaryActionLabel)}</a>` : ""}`;
     return moduleRoot(
       "catalog-hero",
       context.section,
       safeHtml(
-        `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}"><div class="catalog-hero-copy"><p class="catalog-eyebrow">${escapeHtml(settings.eyebrow)}</p><h1>${escapeHtml(title)}</h1><p class="catalog-hero-body">${escapeHtml(body)}</p><div class="catalog-hero-actions"><a class="catalog-primary-action" href="${escapeAttribute(safeUrl(actionHref))}">${escapeHtml(actionLabel)}</a>${settings.secondaryActionLabel ? `<a class="catalog-secondary-action" href="${escapeAttribute(safeUrl(settings.secondaryActionHref))}">${escapeHtml(settings.secondaryActionLabel)}</a>` : ""}</div>${stats}</div><figure class="catalog-hero-media" data-motion-zone="media">${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>`,
+        `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}"><div class="catalog-hero-copy"><p class="catalog-eyebrow">${escapeHtml(settings.eyebrow)}</p><h1>${escapeHtml(title)}</h1><p class="catalog-hero-body">${escapeHtml(body)}</p><div class="catalog-hero-actions">${actions}</div>${stats}</div><figure class="catalog-hero-media" data-motion-zone="media">${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>`,
       ),
     );
   },

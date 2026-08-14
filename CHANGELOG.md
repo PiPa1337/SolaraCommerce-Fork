@@ -1,5 +1,21 @@
 # Changelog
 
+### Retoques V2 con subagentes: títulos, CTA y grillas (2026-08-14)
+
+- Los títulos h2 de todas las secciones V2 ("Recién llegados", "Más elegidos",
+  "Explorá por categoría", relacionados, checkout…) adoptan el tamaño y el
+  espaciado lateral del título "Recibí las próximas novedades"; los h1 de
+  página (categoría, búsqueda, carrito, compra) se reescalan a la familia del
+  hero sin tocar el hero mismo.
+- El hero V2 muestra un único CTA "Escribir por WhatsApp" que enlaza directo a
+  `https://wa.me/<teléfono>` sin mensaje precargado (el mismo número que usa el
+  carrito); V1 y las tiendas sin teléfono conservan las acciones previas.
+- La grilla de productos V2 aprovecha el ancho disponible: en desktop suma dos
+  columnas (8 en 1440 y 1920) y móvil sigue en 2; categorías, búsqueda y
+  relacionados verificados sin overflow.
+- Los cambios se implementaron con subagentes por tarea y se integraron con
+  tests: modules 40/40, E2E V2 28/28, budgets y repository checks verdes.
+
 ### Retoque V2: hero de borde a borde (2026-08-14)
 
 - El hero V2 pierde el margen superior e inferior: la imagen colisiona con el
