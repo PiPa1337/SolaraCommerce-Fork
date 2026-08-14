@@ -48,6 +48,17 @@ fases C y O (regla de selección nivel 3).
 
 (se llena desde los barridos de Playwright/vision y del doctor)
 
+## Mejoras propias (hallazgos de barridos visuales y re-auditorías)
+
+| id | prioridad | área | título | estado | evidencia |
+|----|-----------|------|--------|--------|-----------|
+| V1 | media | exporter | Carrito vacío: mensaje y resumen desalineados verticalmente en desktop | pendiente | `_qa/2026-08-14-barrido-1/vision-report.md` |
+| V2 | media | exporter | Sección "Comprar con claridad" aparece bajo la página 404 (¿layout global o bug?) | pendiente | idem |
+| V3 | baja | exporter | Colección con pocos productos: espacio vacío masivo a la derecha | pendiente | idem |
+| V4 | baja | exporter | Variantes de producto se ven como texto plano, no como pills seleccionables | pendiente | idem |
+| V5 | baja | exporter | Home hero: espacio muerto en tercio derecho (aceptable, revisar) | pendiente | idem |
+| V6 | baja | exporter | Home mobile: target táctil del carrito < 44px | pendiente | idem |
+
 ## SIGUIENTE
 
 C1 — Paridad preview/export diferencial (normalize-parity.test.ts)
