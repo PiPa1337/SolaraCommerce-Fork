@@ -58,7 +58,7 @@ fases C y O (regla de selección nivel 3). Conversión en curso:
 
 | id | prioridad | área | título | estado | evidencia |
 |----|-----------|------|--------|--------|-----------|
-| V1 | media | exporter | Carrito vacío: mensaje y resumen desalineados verticalmente en desktop | pendiente | `_qa/2026-08-14-barrido-1/vision-report.md` |
+| V1 | media | exporter | Carrito vacío: la columna del mensaje se centra contra el resumen en las 3 familias (`:has(> .solara-cart-empty)`; el runtime usa `solara-cart-empty`, no `empty-state`); gate e2e de medición con server de content-types correctos | hecho | cart-empty-align.spec.ts + verificación visual |
 | V2 | media | exporter | Sección "Comprar con claridad" aparece bajo la página 404 (¿layout global o bug?) | pendiente | idem |
 | V3 | baja | exporter | Colección con pocos productos: espacio vacío masivo a la derecha | pendiente | idem |
 | V4 | baja | exporter | Variantes de producto se ven como texto plano, no como pills seleccionables | pendiente | idem |
@@ -70,4 +70,4 @@ fases C y O (regla de selección nivel 3). Conversión en curso:
 
 ## SIGUIENTE
 
-V1 — Carrito vacío: mensaje y resumen desalineados verticalmente en desktop (hallazgo visual MEDIA)
+V2 — Sección "Comprar con claridad" aparece bajo la página 404 (¿layout global o bug?)
