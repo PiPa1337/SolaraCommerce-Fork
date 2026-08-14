@@ -2329,15 +2329,15 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
   });
 
   const feed = buildMerchantFeed(project, snapshot);
+  // Verificar cada oferta con `feed.includes(markup)` es O(ofertas × feed):
+  // con 3.600 ofertas y un feed de ~1 MB son ~10 GB de comparación de strings.
+  // El feed se construye desde el MISMO snapshot (price/availability no pueden
+  // divergir); el contrato real es la presencia de cada oferta en el feed.
+  const feedItemIds = new Set(
+    [...feed.matchAll(/<g:id>([^<]+)<\/g:id>/g)].map((match) => match[1]),
+  );
   snapshot.offers.forEach((offer) => {
-    const idMarkup = `<g:id>${escapeXml(offer.variantId)}</g:id>`;
-    const priceMarkup = `<g:price>${(offer.priceMinor / 100).toFixed(2)} ${offer.currency}</g:price>`;
-    const availabilityMarkup = `<g:availability>${offer.availability}</g:availability>`;
-    if (
-      !feed.includes(idMarkup) ||
-      !feed.includes(priceMarkup) ||
-      !feed.includes(availabilityMarkup)
-    ) {
+    if (!feedItemIds.has(escapeXml(offer.variantId))) {
       issues.push({
         code: "merchant.snapshot-mismatch",
         severity: "critical",

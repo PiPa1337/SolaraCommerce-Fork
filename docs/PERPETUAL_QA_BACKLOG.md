@@ -35,7 +35,7 @@ Fuente única de trabajo del bucle perpetuo. Reglas:
 | O2 | alta | studio | Análisis de dead code con 3 métodos: todo el CSS se usa o se genera por template; tope del CSS Studio subido 100 → 104 KiB con justificación (margen 102.392 → 4.1 KiB de aire) | hecho | check-budgets + análisis documentado |
 | O3 | media | exporter | Auditoría: CSS V2 117.459 B / tope 120 KiB (margen 5.4 KB OK). 55 selectores repetidos (hero V2 acumuló bloques) pero NO consecutivos → no fusionables sin refactor de media queries; el hero está en iteración activa del usuario → refactor diferido | hecho | auditoría documentada |
 | O3b | baja | exporter | Consolidar bloques repetidos del hero V2 cuando la iteración visual se estabilice | pendiente | derivado de O3 |
-| O4 | media | exporter | Pases duplicados del export (`auditProject` vs `buildOptimizationReport`); cache incremental solo si el benchmark lo justifica (medir primero) | pendiente | HANDOFF |
+| O4 | media | exporter | Eliminado el check O(n²) del audit (`feed.includes` por oferta → Set de ids del feed): audit 1.034 → ~60 ms, benchmark 2.629 → 1.610 ms (−39%). Cache incremental: NO se justifica (sin el cuello, 1.6 s en 2.000 productos) | hecho | audit-scale.test.ts + benchmark |
 | O5 | media | exporter | Prioridad de carga: preloads reales de LCP, orden de `<head>`, bajar findings `performance.*` | pendiente | site-optimizer |
 | O6 | baja | exporter | Subsetting de fuentes self-host (~34.9 KB/familia) | pendiente | deuda |
 | O7 | baja | studio | Recalibrar umbrales `perf-idle` sobre TaskDuration (hoy sobre ScriptDuration) | pendiente | deuda T10 |
@@ -65,4 +65,4 @@ fases C y O (regla de selección nivel 3).
 
 ## SIGUIENTE
 
-O4 — Pases duplicados del export (`auditProject` vs `buildOptimizationReport`); cache incremental solo si el benchmark lo justifica (medir primero)
+O5 — Prioridad de carga: preloads reales de LCP, orden de `<head>`, bajar findings `performance.*` del optimizador
