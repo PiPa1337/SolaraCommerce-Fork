@@ -50,7 +50,7 @@ fases C y O (regla de selección nivel 3). Conversión en curso:
 | D1 | media | studio | `shouldSeedRecoveryDraft`: el RecoveryDraft se siembra sólo cuando el navegador es estrictamente más nuevo que el disco (evidencia de edición); el demo sin editar ya no dispara el diálogo | hecho | repository.test.ts (24/24), studio 274/274 |
 | D2 | media | studio | Cierre de la app con guardados en vuelo: decisión UX (esperar/confirmar/cancelar) | bloqueado | requiere decisión del usuario |
 | D3 | baja | exporter | EX-B7: semántica del sha256 documentada en INTEGRATIONS.md (bytes exactos del archivo, sin normalización) + test que fija que una re-serialización produce otro hash | hecho | local-project-storage.test.mjs (30/30), exporter 123/124 |
-| D4 | baja | studio | Overlay del detalle de tienda en viewports acotados scrollea con la región | pendiente | deuda U2-móvil (evaluación UX) |
+| D4 | baja | studio | Evaluado: el detalle del dashboard en móvil scrollea con la región (usable); fijarlo como overlay móvil es una mejora UX que requiere validación del usuario (dashboard en iteración activa) | bloqueado | diferido por iteración del usuario |
 | D5 | baja | shell | Validación de pestaña oculta: receta headed para release | pendiente | deuda T10 (release) |
 | D6 | baja | studio | Dark mode A/B: decisión de producto (color-scheme vs schema v3) | pendiente | deuda P2 |
 
