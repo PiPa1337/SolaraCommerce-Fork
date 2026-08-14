@@ -102,3 +102,23 @@
 - Gates: `pnpm check` exit=0, benchmark 1.553 ms (Δ% 8.2 % acumulado vs baseline PLAN 1), e2e 6/6.
 - Mejoras: 3 gates nuevos (LCP frío, recursos/video, SEO/JSON-LD); axe cubre los 3 fixtures (18 rutas).
 - Acumulado PLAN 1→5: benchmark −8.2 %; axe 0/0/0; preloads 146/146; LCP frío 60-68 ms; foco 0 invisibles; JSON-LD comercial 100 %.
+
+## PLAN 6 (17:50-18:10Z, 2026-08-14)
+
+| id | ítem | métrica | antes | después | Δ% | estado |
+|----|------|---------|-------|---------|-----|--------|
+| P6-1 | Re-verificación de todos los gates acumulados | gates | — | 20/20 (7 archivos) | 0 | hecho |
+| P6-2 | `data-design-family` html ↔ fixture (3 fixtures) | drift | 0 | 0 | gate nuevo | hecho |
+| P6-3 | `productIds` de categorías/colecciones derivados | drift | 0 | 0 | gate nuevo | hecho |
+| P6-4 | Assets sin huérfanos ni faltantes en el export | huérfanos | 0 | 0 | gate nuevo | hecho |
+| P6-5 | Features del runtime declaradas en el html | drift | 0 | 0 | gate nuevo | hecho |
+| P6-6 | CSS de familias aislado bajo su raíz (V1/V2) | fugas | 0 | 0 | gate nuevo | hecho |
+| P6-7 | Sitemap sin canonicales duplicadas | duplicados | 0 | 0 | gate nuevo | hecho |
+| P6-8 | LCP frío de catalogModern | ms | — | home 56 / prod 52 | baseline | hecho |
+| P6-9 | 404.html content-type (cubierto) | checks | 1/1 | 1/1 | 0 | hecho |
+| P6-10 | Fuentes subset re-verificadas | bytes | 30.196 B | 30.196 B | 0 (intacto) | hecho |
+
+### Totales PLAN 6
+- Gates: `pnpm check` exit=0; 6 gates nuevos de contratos profundos (contratos-profundos.test.ts) con drift 0 en todos.
+- Mejoras: la cobertura de enganches generador↔sitio es ahora exhaustiva (familia, ids derivados, assets, features, CSS, sitemap).
+- Acumulado PLAN 1→6: axe 0/0/0; preloads 146/146; LCP frío 44-56 ms; contratos profundos 6/6 sin drift.
