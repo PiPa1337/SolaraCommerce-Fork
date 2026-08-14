@@ -922,7 +922,9 @@ test("V2 conserva carrito y checkout dentro del viewport intermedio", async ({ p
       grid: rectOf(".solara-cart-page-grid"),
       line: rectOf(".solara-cart-page-grid [data-cart-lines] .solara-cart-line"),
       summary: rectOf(".solara-cart-page-grid > aside"),
-      button: rectOf(".solara-cart-page-grid > aside .solara-primary-action"),
+      button: rectOf(
+        ".solara-cart-page-grid > aside [data-cart-cta]:not([hidden]) .solara-primary-action",
+      ),
     };
   });
   expect(cartMetrics.documentWidth).toBeLessThanOrEqual(1024);
