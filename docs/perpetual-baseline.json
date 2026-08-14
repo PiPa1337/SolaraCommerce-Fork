@@ -1,21 +1,23 @@
 {
-  "plan": 3,
-  "de10": 3,
+  "plan": 4,
+  "de10": 4,
   "branch": "main",
   "baselineEntrada": {
     "runtimeJavascriptRaw": 55845,
     "runtimeTope": 57344,
     "runtimeMargen": 1499,
-    "exportMs2000": 1602,
-    "axeFindings": 0,
-    "axeSerios": 0,
+    "cssStudio": 102160,
+    "cssStudioTope": 106496,
+    "cssStudioMargen": 4336,
+    "exportMs2000": 1704,
+    "axeReference": 0,
+    "axeCatalogModern": 0,
     "paritySweep": "6/6",
-    "enganches": "4/4",
+    "enganches": "5/5",
     "contratos": "1/1",
-    "nojsCobertura": "7 rutas x2",
-    "lcpHomeMs": 788,
-    "taskHomeMsS": 30.7,
-    "nodosPromedio": 268
+    "nojsCobertura": "24 combinaciones",
+    "lcpProductoMs": 528,
+    "taskHomeMsS": 31.8
   },
-  "nextItem": "P3-1"
+  "nextItem": "P4-1"
 }
