@@ -1,21 +1,21 @@
 {
-  "plan": 1,
-  "de10": 1,
+  "plan": 2,
+  "de10": 2,
   "branch": "main",
   "baselineEntrada": {
-    "runtimeJavascriptRaw": 56940,
+    "runtimeJavascriptRaw": 55845,
     "runtimeTope": 57344,
-    "runtimeMargen": 404,
-    "cssStudio": 102392,
-    "cssStudioTope": 106496,
-    "cssV2Raw": 117459,
-    "cssV2Tope": 122880,
-    "exportMs2000": 1692,
-    "filesBytes2000": 40576901,
-    "optimizationScoreReference": 97,
-    "fuentesTotalBytes": 102724,
+    "runtimeMargen": 1499,
+    "exportMs2000": 1644,
+    "axeFindings": 7,
+    "axeSerios": 0,
     "paritySweep": "6/6",
-    "benchmarkPresupuestoMs": 30000
+    "enganches": "4/4",
+    "nojsCobertura": "7 rutas x2",
+    "lcpHomeMs": 788,
+    "lcpProductoMs": 552,
+    "taskHomeMsS": 30.7,
+    "nodosPromedio": 268
   },
-  "nextItem": "C1"
+  "nextItem": "R1"
 }

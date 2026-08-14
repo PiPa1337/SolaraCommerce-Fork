@@ -1,26 +1,21 @@
-# Backlog del PLAN 1 (de 10) — run acotado con Δ%
+# Backlog del PLAN 2 (de 10) — run acotado con Δ%
 
-Formato: `Métrica | Antes | Después | Δ%`. Regla: Δ% < 0 → revertir/bloquear; Δ% ≈ 0 solo en robustez documentada; ciclo sin Δ% = inválido.
+Residuales del PLAN 1 + re-verificaciones + hallazgos nuevos. Formato: `Métrica | Antes | Después | Δ%`.
 
 | id | capa | ítem | métrica | antes | después | Δ% | estado |
 |----|------|------|---------|-------|---------|-----|--------|
-| C1 | C | Runtime JS: recuperar margen (el parallax del bento consumió 1.7 KB) | runtimeJavascriptRaw | 56.940 B | | | pendiente |
-| F1 | F | Paridad estricta árbol+body, 3 fixtures × 2 modos, todas las rutas | % rutas paridad | 100 % | | | pendiente |
-| F2 | F | Manifest runtimeFeatures ↔ data-solara-runtime-features ↔ capacidades del HTML | drift count | | | | pendiente |
-| F3 | F | Snapshot ↔ feed/sitemap/search-index/catalog-index (ids, precios, urls) | inconsistencias | | | | pendiente |
-| F4 | F | criticalCount audit ↔ bloqueo production ↔ UI | drift | | | | pendiente |
-| F5 | F | Reproducibilidad byte-a-byte 3 fixtures × 2 runs | % reproducibles | | | | pendiente |
-| E1 | E | Cobertura rutas draft+production × desktop/mobile × no-JS | % rutas verificadas | | | | pendiente |
-| A1 | A | Axe/a11y sobre el sitio exportado | findings por página | | | | pendiente |
-| A2 | A | Nodos HTML por ruta | nodos | | | | pendiente |
-| C2 | C | Errores de consola/red del sitio | count | | | | pendiente |
-| B1 | B | CSS V2 duplicación fusionable post-hero | bytes | | | | pendiente |
-| D1 | D | Findings performance.asset.* del optimizador | findings | | | | pendiente |
-| H1 | H | Long tasks/rAF del sitio exportado (CDP) | ms/s | | | | pendiente |
-| H2 | H | LCP/CLS con PerformanceObserver | ms | | | | pendiente |
-| G1 | G | Servidor local: content-types/cache/404/subcarpeta | % checks | | | | pendiente |
-| V1 | verif | A3/A4, B2, D2/D3, F6, G2 contratos | Δ% 0 justificado | | | | pendiente |
+| R1 | F | Re-verificación F1-F5 (enganches) — esperado Δ% ≈ 0 | gates | 4/4 | | | pendiente |
+| R2 | E/A | Re-verificación E1 + A2 (cobertura no-JS, nodos) | gates | OK | | | pendiente |
+| R3 | C | Re-verificación runtime budget + serialización | raw | 55.845 B | | | pendiente |
+| R4 | B/D | Re-verificación B1/D1 (CSS duplicación, findings assets) | gates | OK | | | pendiente |
+| R5 | H/G | Re-verificación H1/H2/G1 (CDP + servidor local) | gates | OK | | | pendiente |
+| N1 | A | Hallazgo PLAN 1: 6 moderados "region" del footer legacy → evaluar landmarks semánticos | findings moderate | 6 | | | pendiente |
+| N2 | C | Hallazgo PLAN 1: controles del hero legacy `min-height: 40px` (target táctil) | px | 40 | | | pendiente |
+| N3 | A | Hallazgo PLAN 1: 1 minor de axe sin identificar → detallar | findings minor | 1 | | | pendiente |
+| N4 | E | Barrido visual fresco + visión (ojos nuevos sobre el sitio) | hallazgos | | | | pendiente |
+| N5 | F | Contrato persistido: ids de módulos/secciones vs registry (F6) | drift | | | | pendiente |
+| N6 | C | Runtime: margen 1.499 B — compactar sin tocar lo que el usuario revirtió (helpers ya compactados; evaluar boot SOLO si el usuario lo aprueba — condicional) | margen | 1.499 B | | | bloqueado condicional |
 
 ## SIGUIENTE
 
-C1 — Runtime JS: recuperar margen (56.940 B → objetivo < 56.000 B)
+R1 — Re-verificación de enganches F1-F5
