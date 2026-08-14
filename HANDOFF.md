@@ -783,3 +783,11 @@ recomendado, no bloqueante, porque el exporter no lo publica.
 PR2 queda con 12/12 regresiones activas y PR8 con 2/2; el caso que intentaba
 persistir valores rechazados por Zod fue retirado de E2E y permanece cubierto por
 el contrato del schema.
+
+
+## Run perpetuo de QA y optimización
+
+Estado vivo en [docs/PERPETUAL_QA_BACKLOG.md](docs/PERPETUAL_QA_BACKLOG.md),
+contadores en [docs/perpetual-state.json](docs/perpetual-state.json) y latido en
+[docs/perpetual-progress.log](docs/perpetual-progress.log). Branch:
+`perpetual/debug-optimizacion`. Reanudación: "continuá el plan perpetuo".

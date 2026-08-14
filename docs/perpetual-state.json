@@ -1,0 +1,15 @@
+{
+  "run": "perpetual",
+  "branch": "perpetual/debug-optimizacion",
+  "startedAt": "2026-08-14",
+  "session": 1,
+  "cyclesCompletedInSession": 1,
+  "cyclesCompletedTotal": 1,
+  "attempts": {},
+  "consecutiveNoFindingCycles": 0,
+  "invalidCycles": 0,
+  "strategySwitchCount": 0,
+  "blockedItems": {},
+  "checkpointAt": null,
+  "nextItem": "C1"
+}

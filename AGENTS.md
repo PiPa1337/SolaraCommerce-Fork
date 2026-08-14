@@ -218,6 +218,27 @@ La guía de distribución autocontenida está en
       sesión (formato Keep a Changelog, en español).
 - [ ] Actualizar documentación y [`HANDOFF.md`](HANDOFF.md) si cambia una decisión.
 
+## Plan perpetuo de QA y optimización (obligatorio si se invoca)
+
+Si alguien dice "continuá el plan perpetuo" (o similar), se debe:
+
+1. leer `docs/PERPETUAL_QA_BACKLOG.md`, `docs/perpetual-state.json`,
+   `docs/perpetual-progress.log` y este archivo;
+2. reportar en una línea el lapso del run (timestamps del log vs. reloj del shell,
+   informativo), ciclos totales, pendientes y bloqueados;
+3. ejecutar el health check: `git status` limpio, branch
+   `perpetual/debug-optimizacion`, log consistente;
+4. proseguir por el campo `SIGUIENTE` del backlog, sin preguntas de contexto ni
+   de continuidad, aplicando el ciclo: TDD → fix → gates proporcionales → log →
+   commit → actualizar `SIGUIENTE` → repetir.
+
+El bucle no se detiene solo. Nunca preguntar si se continúa. Detenerse sólo ante
+instrucción explícita del usuario (cierre formal: gates completos, CHANGELOG,
+push de la rama). Reglas del watchdog: 3 intentos por ítem → `bloqueado` con
+evidencia y siguiente ítem; 5 ciclos sin hallazgo → switch de estrategia
+(barrido visual Playwright + `doctor:export` + re-lectura de deuda); 10 ciclos
+por sesión → checkpoint y aviso de reanudación.
+
 ## Entrega y Git
 
 - `origin` = `PiPa1337/SolaraCommerce-Fork` (privado): es el repositorio de

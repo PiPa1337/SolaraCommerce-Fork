@@ -15,6 +15,7 @@
     "check": "corepack pnpm check:repository && corepack pnpm format:check && corepack pnpm typecheck && corepack pnpm test && corepack pnpm check:optimization && corepack pnpm check:runtime-serialization",
     "check:repository": "node scripts/check-repository.mjs",
     "dev": "corepack pnpm --filter @solara/studio dev",
+    "doctor:export": "vitest run scripts/export-doctor.test.ts",
     "desktop:build": "corepack pnpm --filter @solara/desktop build",
     "desktop:package": "corepack pnpm --filter @solara/desktop package && node scripts/create-portable-distribution.mjs",
     "format": "biome check --write .",
