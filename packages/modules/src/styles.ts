@@ -2772,7 +2772,14 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   transition: transform var(--catalog-v2-motion-component) var(--catalog-v2-ease-out), box-shadow var(--catalog-v2-motion-component) var(--catalog-v2-ease-out);
 }
 .cm.v2 .catalog-category-bento-grid {
-  grid-auto-rows: clamp(10rem, 10vw, 12rem);
+  grid-auto-rows: auto;
+}
+.cm.v2 .catalog-category-bento-item,
+.cm.v2 .catalog-category-bento-item--wide,
+.cm.v2 .catalog-category-bento-item--tall {
+  grid-column: span 1;
+  grid-row: span 1;
+  aspect-ratio: 1;
 }
 .cm.v2 .catalog-category-bento-grid[data-category-count="1"] .catalog-category-bento-item {
   grid-column: 1 / -1;
