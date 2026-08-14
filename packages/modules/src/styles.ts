@@ -3095,7 +3095,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .cm.v2 .catalog-hero-inner {
-    grid-template-columns: minmax(17rem, 1.05fr) minmax(0, .95fr);
+    grid-template-columns: minmax(17rem, 1.22fr) minmax(0, 1fr);
     height: 90svh;
     min-height: 0;
   }
