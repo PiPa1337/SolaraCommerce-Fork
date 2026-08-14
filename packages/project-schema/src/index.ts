@@ -15,11 +15,24 @@ export const CollectionIdSchema = brandedId("CollectionId");
 export const SectionIdSchema = brandedId("SectionId");
 export const AssetIdSchema = brandedId("AssetId");
 export const MoneySchema = z.number().int().nonnegative().brand<"Money">();
+const WINDOWS_RESERVED_SLUGS = new Set([
+  "con",
+  "prn",
+  "aux",
+  "nul",
+  ...Array.from({ length: 9 }, (_, index) => `com${index + 1}`),
+  ...Array.from({ length: 9 }, (_, index) => `lpt${index + 1}`),
+]);
+
 export const SlugSchema = z
   .string()
   .min(1)
   .max(120)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+  .refine((value) => !WINDOWS_RESERVED_SLUGS.has(value.toLowerCase()), {
+    message:
+      "El slug usa un nombre reservado del sistema (Windows). Elegí otro nombre para la ruta.",
+  })
   .brand<"Slug">();
 
 export type StoreId = z.infer<typeof StoreIdSchema>;

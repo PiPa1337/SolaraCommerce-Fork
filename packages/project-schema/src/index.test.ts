@@ -70,6 +70,29 @@ describe("StoreProjectV2Schema", () => {
     expect(SlugSchema.safeParse("Manta Bruma").success).toBe(false);
   });
 
+  it("rechaza slugs con nombres reservados de Windows", () => {
+    const reserved = [
+      "con",
+      "prn",
+      "aux",
+      "nul",
+      "com1",
+      "com9",
+      "lpt1",
+      "lpt9",
+      "CON",
+      "Nul",
+      "CoM3",
+    ];
+    for (const slug of reserved) {
+      expect(SlugSchema.safeParse(slug).success, `slug reservado aceptado: ${slug}`).toBe(false);
+    }
+    const allowed = ["contenido", "control", "conn", "const", "com", "lpt", "com10", "lpt10"];
+    for (const slug of allowed) {
+      expect(SlugSchema.safeParse(slug).success, `slug válido rechazado: ${slug}`).toBe(true);
+    }
+  });
+
   it("rechaza versiones sin migración", () => {
     expect(() => migrateProject({ ...referenceStore, schemaVersion: 1 })).toThrow(
       "Versión de proyecto incompatible",
