@@ -1489,7 +1489,59 @@ function storefrontBoot(): void {
       observer.observe(hero);
     });
   };
+  const connectBentoParallax = (): void => {
+    if (
+      !hasFeature("motion") ||
+      reduceMotion ||
+      !matchMedia("(pointer: fine)").matches ||
+      !matchMedia("(min-width: 768px)").matches
+    ) {
+      return;
+    }
+    document
+      .querySelectorAll<HTMLElement>('[data-solara-module="catalog-category-bento"] .catalog-category-bento-item')
+      .forEach((item) => {
+        const image = item.querySelector<HTMLElement>(".catalog-category-bento-image");
+        if (!image) return;
+        let tx = 0;
+        let ty = 0;
+        let cx = 0;
+        let cy = 0;
+        let raf = 0;
+        const stop = (): void => {
+          raf = 0;
+          image.style.willChange = "";
+        };
+        const tick = (): void => {
+          cx += (tx - cx) * 0.08;
+          cy += (ty - cy) * 0.08;
+          image.style.transform = `translate3d(${cx.toFixed(2)}px, ${cy.toFixed(2)}px, 0)`;
+          raf = requestAnimationFrame(
+            Math.abs(tx - cx) > 0.05 || Math.abs(ty - cy) > 0.05 ? tick : stop,
+          );
+        };
+        const onMove = (event: PointerEvent): void => {
+          const rect = item.getBoundingClientRect();
+          tx = -(((event.clientX - rect.left) / (rect.width / 2) - 1) * 6);
+          ty = -(((event.clientY - rect.top) / (rect.height / 2) - 1) * 6);
+          if (raf === 0) {
+            image.style.willChange = "transform";
+            raf = requestAnimationFrame(tick);
+          }
+        };
+        const observer = new IntersectionObserver(([entry]) => {
+          if (entry?.isIntersecting) {
+            item.addEventListener("pointermove", onMove, { passive: true });
+          } else {
+            item.removeEventListener("pointermove", onMove);
+            stop();
+          }
+        });
+        observer.observe(item);
+      });
+  };
   connectHeroParallax();
+  connectBentoParallax();
 
   if (hasFeature("cart") || hasFeature("checkout")) {
     const initializeCart = (): void => {
