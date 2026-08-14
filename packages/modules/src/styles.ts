@@ -2797,6 +2797,44 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   transform: scale(1.06);
   filter: saturate(.82) contrast(1.06);
 }
+/* Título del mosaico como chip editorial: visible sobre cualquier imagen. */
+.cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
+  display: inline-block;
+  align-self: flex-start;
+  margin: 1rem;
+  padding: .45rem .65rem;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--catalog-ink);
+  font-size: 1.1rem;
+  letter-spacing: -.02em;
+  line-height: 1.12;
+  transition: background-color 220ms var(--catalog-v2-ease-out), transform 220ms var(--catalog-v2-ease-out);
+}
+.cm.v2 .catalog-category-bento-item:has(.catalog-category-bento-image) > span:not(.catalog-category-bento-fallback) {
+  background: color-mix(in srgb, var(--catalog-paper) 74%, transparent);
+}
+.cm.v2 .catalog-category-bento-item:hover > span:not(.catalog-category-bento-fallback),
+.cm.v2 .catalog-category-bento-item:focus-visible > span:not(.catalog-category-bento-fallback) {
+  background: color-mix(in srgb, var(--catalog-paper) 92%, transparent);
+  transform: translateY(-2px);
+}
+/* Contador de productos: chip cuadrado, coherente con la familia. */
+.cm.v2 .catalog-category-bento-item small {
+  right: 1rem;
+  bottom: 1rem;
+  padding: .35rem .55rem;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--catalog-paper) 82%, transparent);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .05em;
+}
+.cm.v2 .catalog-category-bento-item::after {
+  background: linear-gradient(to top, rgb(11 11 12 / .2), transparent 60%);
+}
+.cm.v2 .catalog-category-bento-image {
+  opacity: .85;
+}
 .cm.v2 .catalog-testimonial {
   border-radius: 0;
   background: color-mix(in srgb, var(--catalog-surface), transparent 34%);
