@@ -44,6 +44,7 @@ import {
   type ProjectRecoveryIssue,
   purgeNonDemoStores,
   purgeRolledBackDemoRecords,
+  SCALE_DEMO_PROJECT_ID,
   type StoredProject,
   saveProject,
   saveRecoveryDraft,
@@ -209,7 +210,21 @@ function StudioShell() {
         if (diskListing?.projects.length) {
           if (detectedStorage.writable) {
             await purgeNonDemoStores();
-            await ensureDemoSectionOrder();
+            const reordered = await ensureDemoSectionOrder();
+            if (reordered) {
+              // El reorden vive en IndexedDB; se confirma en disco para que
+              // el arranque no quede con un draft divergente y el siguiente
+              // Guardar exporte la home con el orden nuevo.
+              const demo = await getProject(SCALE_DEMO_PROJECT_ID);
+              const diskDemo = diskListing.projects.find(
+                (item) => item.id === SCALE_DEMO_PROJECT_ID,
+              );
+              if (demo) {
+                await markProjectMigration(demo.id, "pending");
+                await persistToDisk(demo, diskDemo?.diskVersion ?? null);
+                await markProjectMigration(demo.id, "done");
+              }
+            }
             await ensurePredeterminadoV1Project();
             for (const diskProject of diskListing.projects) {
               const expanded = expandCatalogModernDemoGalleries(diskProject.project);

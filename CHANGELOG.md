@@ -1,5 +1,11 @@
 # Changelog
 
+### Reorden de categorías confirmado en disco (2026-08-14)
+
+- La migración que mueve "Explorá por categoría" debajo de las marcas ahora
+  persiste el proyecto reordenado en `proyectos/` al arrancar (antes quedaba
+  como draft divergente en IndexedDB y el disco seguía con el orden viejo).
+
 ### Home V2: títulos alineados, bento sin caja y categorías bajo marcas (2026-08-14)
 
 - Se quita el margen horizontal que los títulos de sección tenían hacia
