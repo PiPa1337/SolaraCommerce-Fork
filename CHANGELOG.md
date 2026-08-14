@@ -1,5 +1,23 @@
 # Changelog
 
+### Home V2: títulos alineados, bento sin caja y categorías bajo marcas (2026-08-14)
+
+- Se quita el margen horizontal que los títulos de sección tenían hacia
+  adentro: "Recién llegados", "Más elegidos" y el resto quedan alineados con el
+  borde de su contenedor, como el contenido.
+- "Explorá por categoría" pierde el fondo de superficie y el padding interno
+  gigante: los items llegan al borde del contenedor igual que la grilla de
+  productos, con el mismo ritmo vertical.
+- La franja de marcas recupera aire superior: "MARCAS QUE NOS ACOMPAÑAN" ya no
+  queda pegado al borde, y el hero sigue colisionando con el borde de la
+  franja.
+- Las categorías se mueven inmediatamente después de la franja de marcas en la
+  home: hero → marcas → categorías → grillas. El fixture V2 adopta el orden
+  nuevo y una migración idempotente reordena la tienda demo guardada sólo si
+  conserva el patrón anterior (nunca toca reordenamientos manuales).
+- Implementado con subagentes por área y verificado: modules 40/40, schema
+  27/27, repositorio 23/23, E2E V2 29/29, budgets y checks de repositorio.
+
 ### Guardado resiliente ante locks transitorios (2026-08-14)
 
 - El servidor local reintenta el rename de publicaciones (sitio y respaldo)

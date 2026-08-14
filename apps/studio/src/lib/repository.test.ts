@@ -36,6 +36,7 @@ import {
   duplicateProject,
   ensureCatalogModernDemoGallery,
   ensureCatalogModernDemoReviews,
+  ensureDemoSectionOrder,
   ensureDeprecatedCategoriesRemoved,
   ensurePredeterminadoV1Project,
   ensureScaleDemoProject,
@@ -372,6 +373,60 @@ describe("repositorio local", () => {
     expect(expanded?.products[0]?.imageIds[0]).toBe(staleDemo.products[0]?.imageIds[0]);
     expect(await getProject(referenceStore.id)).toEqual(referenceStore);
     expect(await ensureCatalogModernDemoGallery()).toBe(false);
+  });
+
+  it("reordena el demo para que el bento siga a la franja de marcas", async () => {
+    const staleDemo = StoreProjectV1Schema.parse({
+      ...structuredClone(catalogModernStore),
+      id: SCALE_DEMO_PROJECT_ID,
+      name: "Predeterminado",
+    });
+    await saveProject(staleDemo);
+
+    expect(await ensureDemoSectionOrder()).toBe(true);
+    const reordered = await getProject(SCALE_DEMO_PROJECT_ID);
+    const moduleIds = reordered?.sections.map((section) => section.moduleId) ?? [];
+    const brandIndex = moduleIds.indexOf("catalog-brand-strip");
+    expect(moduleIds.slice(brandIndex, brandIndex + 4)).toEqual([
+      "catalog-brand-strip",
+      "catalog-category-bento",
+      "catalog-product-grid",
+      "catalog-product-grid",
+    ]);
+    expect(reordered?.sections.map((section) => section.id).sort()).toEqual(
+      staleDemo.sections.map((section) => section.id).sort(),
+    );
+    expect(await ensureDemoSectionOrder()).toBe(false);
+  });
+
+  it("no reordena el demo si el bento ya sigue a la franja de marcas", async () => {
+    const alreadyOrdered = StoreProjectV1Schema.parse({
+      ...structuredClone(catalogModernStore),
+      id: SCALE_DEMO_PROJECT_ID,
+    });
+    const sections = [...alreadyOrdered.sections];
+    const bentoIndex = sections.findIndex(
+      (section) => section.moduleId === "catalog-category-bento",
+    );
+    const brandIndex = sections.findIndex((section) => section.moduleId === "catalog-brand-strip");
+    const bento = sections.splice(bentoIndex, 1)[0];
+    if (!bento) throw new Error("Fixture sin bento");
+    sections.splice(brandIndex + 1, 0, bento);
+    await saveProject(StoreProjectV1Schema.parse({ ...alreadyOrdered, sections }));
+
+    expect(await ensureDemoSectionOrder()).toBe(false);
+    expect((await getProject(SCALE_DEMO_PROJECT_ID))?.sections).toEqual(sections);
+  });
+
+  it("no toca otra tienda aunque tenga el orden viejo", async () => {
+    const otherStore = StoreProjectV1Schema.parse({
+      ...structuredClone(catalogModernStore),
+      id: "store-otra",
+    });
+    await saveProject(otherStore);
+
+    expect(await ensureDemoSectionOrder()).toBe(false);
+    expect((await getProject("store-otra"))?.sections).toEqual(otherStore.sections);
   });
 
   it("purga una sola vez las tiendas que no son referencias V1/V2", async () => {

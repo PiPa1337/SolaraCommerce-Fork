@@ -1,5 +1,23 @@
 import { catalogModernStore } from "./catalog-modern-fixture";
-import { StoreProjectV2Schema } from "./index";
+import { type StoreProjectV2, StoreProjectV2Schema } from "./index";
+
+/**
+ * Orden de secciones de la home V2: el bento de categorías queda
+ * inmediatamente después de la franja de marcas y antes de las grillas de
+ * productos (hero → marcas → categorías → grillas → testimonios → newsletter).
+ * Los ids y settings de las secciones se conservan intactos; sólo cambia el
+ * orden del array.
+ */
+function v2SectionsWithBentoAfterBrands(): StoreProjectV2["sections"] {
+  const sections = structuredClone(catalogModernStore.sections);
+  const brandIndex = sections.findIndex((section) => section.moduleId === "catalog-brand-strip");
+  const bentoIndex = sections.findIndex((section) => section.moduleId === "catalog-category-bento");
+  if (brandIndex < 0 || bentoIndex < 0) return sections;
+  const bento = sections.splice(bentoIndex, 1)[0];
+  if (!bento) return sections;
+  sections.splice(brandIndex + 1, 0, bento);
+  return sections;
+}
 
 /**
  * Fixture V2 aislada: conserva el catálogo determinista mientras la nueva
@@ -8,6 +26,7 @@ import { StoreProjectV2Schema } from "./index";
 export const catalogModernV2Store = StoreProjectV2Schema.parse({
   ...structuredClone(catalogModernStore),
   id: "store-catalog-modern-v2",
+  sections: v2SectionsWithBentoAfterBrands(),
   theme: {
     ...catalogModernStore.theme,
     colors: {

@@ -2594,10 +2594,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-footer-inner {
   width: min(calc(100% - 3rem), var(--catalog-v2-wide));
 }
-/* El hero colisiona con la franja de marcas: sin margen ni padding superior. */
+/* El hero colisiona con la franja de marcas: sin margen superior, pero el
+   contenido conserva aire hacia el borde de la franja. */
 .cm.v2 .catalog-brand-strip-inner {
   margin-top: 0;
-  padding-top: 0;
+  padding-top: clamp(2.5rem, 4vw, 4rem);
 }
 .cm.v2 .catalog-product-grid-section,
 .cm.v2 .catalog-testimonials-section {
@@ -2616,13 +2617,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-product-grid-section > header,
 .cm.v2 .catalog-testimonials-section > header {
   margin-bottom: clamp(2rem, 4vw, 4rem);
-  margin-inline: calc(clamp(1.75rem, 4vw, 3rem) - (max(1.5rem, (100vw - var(--catalog-v2-wide)) / 2) - max(1rem, (100vw - var(--solara-container)) / 2)));
-}
-.cm.v2 .catalog-category-bento-section > header {
-  margin-inline: calc(clamp(1.75rem, 4vw, 3rem) - (max(1.5rem, (100vw - var(--catalog-v2-wide)) / 2) - max(1rem, (100vw - var(--solara-container)) / 2)) - clamp(1.5rem, 5vw, 5rem));
-}
-.cm.v2 .solara-container .catalog-product-grid-section > header {
-  margin-inline: calc(clamp(1.75rem, 4vw, 3rem) - max(1.5rem, (min(100% - 2rem, var(--solara-container)) - var(--catalog-v2-wide)) / 2));
 }
 .cm.v2 .catalog-product-grid {
   grid-template-columns: repeat(auto-fit,minmax(11rem,1fr));
@@ -2692,8 +2686,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-category-bento-section {
   margin-top: 0;
-  padding: clamp(3rem, 6vw, 6rem) clamp(1.5rem, 5vw, 5rem);
+  padding-block: clamp(4rem, 7vw, 7rem);
+  padding-inline: 0;
   border-radius: 0;
+  background: transparent;
 }
 .cm.v2 .catalog-category-bento-item {
   overflow: hidden;
@@ -3063,14 +3059,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-testimonials-section {
     padding-block: 5rem;
   }
-  .cm.v2 .catalog-product-grid-section > header,
-  .cm.v2 .catalog-testimonials-section > header {
-    margin-inline: calc(clamp(1.75rem, 4vw, 3rem) - (.75rem - 1rem));
-  }
-  .cm.v2 .catalog-category-bento-section > header,
-  .cm.v2 .solara-container .catalog-product-grid-section > header {
-    margin-inline: calc(clamp(1.75rem, 4vw, 3rem) - .75rem);
-  }
   .cm.v2 .catalog-product-grid {
     gap: 2rem .7rem;
   }
@@ -3081,7 +3069,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     transform: none;
   }
   .cm.v2 .catalog-category-bento-section {
-    padding: 4rem 1rem;
+    padding-block: 5rem;
+    padding-inline: 0;
   }
   .cm.v2 .catalog-filter-toggle:not([open]) + .catalog-filter-groups {
     display: none;

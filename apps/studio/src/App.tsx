@@ -30,6 +30,7 @@ import {
   duplicateProject,
   ensureCatalogModernDemoGallery,
   ensureCatalogModernDemoReviews,
+  ensureDemoSectionOrder,
   ensureDeprecatedCategoriesRemoved,
   ensureFirstProject,
   ensurePredeterminadoV1Project,
@@ -208,6 +209,7 @@ function StudioShell() {
         if (diskListing?.projects.length) {
           if (detectedStorage.writable) {
             await purgeNonDemoStores();
+            await ensureDemoSectionOrder();
             await ensurePredeterminadoV1Project();
             for (const diskProject of diskListing.projects) {
               const expanded = expandCatalogModernDemoGalleries(diskProject.project);
@@ -256,6 +258,7 @@ function StudioShell() {
               : "Se agregó la tienda Predeterminado con 50 productos para explorar la escala del catálogo.",
           );
         }
+        await ensureDemoSectionOrder();
         const predeterminadoV1Created = await ensurePredeterminadoV1Project();
         if (predeterminadoV1Created) {
           setNotice((current) =>

@@ -733,6 +733,42 @@ export async function ensureCatalogModernDemoGallery(): Promise<boolean> {
   return true;
 }
 
+/**
+ * Reordena las secciones de home de la demo V2 para que el bento de categorías
+ * quede inmediatamente después de la franja de marcas (hero → marcas →
+ * categorías → grillas). Idempotente por patrón: sólo actúa sobre
+ * `store-modo-sur-demo` cuando detecta el orden viejo (franja de marcas seguida
+ * de dos grillas consecutivas y luego el bento) y no agrega sentinels, así un
+ * reordenamiento manual del usuario nunca se vuelve a tocar.
+ */
+export async function ensureDemoSectionOrder(): Promise<boolean> {
+  await ready();
+  const record = await database.projects.get(SCALE_DEMO_PROJECT_ID);
+  if (!record) return false;
+  const parsed = StoreProjectV1Schema.parse(record.project);
+  if (parsed.id !== SCALE_DEMO_PROJECT_ID) return false;
+
+  const bentoIndex = parsed.sections.findIndex(
+    (section) => section.moduleId === "catalog-category-bento",
+  );
+  if (bentoIndex < 3) return false;
+  if (
+    parsed.sections[bentoIndex - 1]?.moduleId !== "catalog-product-grid" ||
+    parsed.sections[bentoIndex - 2]?.moduleId !== "catalog-product-grid" ||
+    parsed.sections[bentoIndex - 3]?.moduleId !== "catalog-brand-strip"
+  ) {
+    return false;
+  }
+
+  const sections = [...parsed.sections];
+  const bento = sections.splice(bentoIndex, 1)[0];
+  if (!bento) return false;
+  // El patrón garantiza que el brand-strip está en bentoIndex - 3.
+  sections.splice(bentoIndex - 2, 0, bento);
+  await saveProject(StoreProjectV1Schema.parse({ ...parsed, sections }));
+  return true;
+}
+
 export async function duplicateProject(id: string): Promise<StoreProjectV1> {
   const source = await getProject(id);
   if (!source) throw new Error("No se encontró la tienda para duplicar.");
