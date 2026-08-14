@@ -83,6 +83,23 @@ async function writeJsonAtomic(pathname, value) {
 }
 
 /**
+ * Detecta si la raíz portable es nueva para esta instalación: si
+ * `instance.json` no existe todavía, la aplicación arranca por primera vez en
+ * esta carpeta. Útil para avisar cuando el ejecutable se movió de lugar y sus
+ * tiendas quedaron en la ubicación anterior.
+ */
+export async function detectPortableFirstRun(portableRoot, instancePath) {
+  let instanceExists = false;
+  try {
+    const info = await lstat(instancePath);
+    instanceExists = info.isFile();
+  } catch {
+    instanceExists = false;
+  }
+  return { firstRun: !instanceExists, instanceExists };
+}
+
+/**
  * Crea las carpetas regenerables y escribe `instance.json` de forma atómica.
  * El archivo no contiene rutas ni identificadores de la máquina.
  */

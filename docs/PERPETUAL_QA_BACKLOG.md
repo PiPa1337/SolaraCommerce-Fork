@@ -24,7 +24,7 @@ Fuente única de trabajo del bucle perpetuo. Reglas:
 | C6 | media | exporter | Errores de generación envueltos con fase accionable (`withExportContext`): `exportProject` → "fase de archivos del sitio", preview → "fase de páginas/documents del sitio", con `cause` original | hecho | index.test.ts (119/120) |
 | C7 | media | studio | `requestWorker`/`requestWorkerWithStages` reintentan una vez recreando el worker caído (reseteo de caché) con diagnóstico del ErrorEvent; errores de negocio se propagan | hecho | workers.test.ts (3/3), studio 273/273 |
 | C8 | media | runtime | Fetch de `search-index.json` diferido cuando el runtime está pausado u oculto (`deferredSearch` se ejecuta en `resumeRuntime`); runtime 56.218 B (+373, tope 57.344 B OK) | hecho | index.test.ts (60/60), budget OK |
-| C9 | baja | shell | Verificación de raíz portable ausente al arrancar (mover `.exe` recrea `proyectos/` sin aviso) | pendiente | deuda abierta |
+| C9 | baja | shell | `detectPortableFirstRun` marca la primera ejecución en la raíz portable; el shell la registra en el log y la expone en diagnostics (`portableFirstRunAt`); el Dashboard muestra un aviso con la ubicación anterior | hecho | portable-layout.test.mjs (3/3), studio 273/273, exporter 122/123 |
 | C10 | media | todos | Barrido continuo: hallazgos del doctor/e2e/visuales (se alimenta solo) | pendiente | proceso |
 
 ## Fase optimización
@@ -64,4 +64,4 @@ fases C y O (regla de selección nivel 3).
 
 ## SIGUIENTE
 
-C9 — Verificación de raíz portable al arrancar (mover `.exe` debe avisar)
+C10 — Barrido continuo: re-correr doctor + barrido visual con los fixes aplicados y alimentar hallazgos nuevos
