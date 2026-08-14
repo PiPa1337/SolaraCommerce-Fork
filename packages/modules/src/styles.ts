@@ -2881,7 +2881,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .solara-cart-page > .solara-page-intro { max-width: none; padding: clamp(2rem, 4vw, 4rem) 0 1rem; }
 .cm.v2 .solara-cart-page > .solara-page-intro h1 { max-width: none; font-size: calc(clamp(3.5rem, 4.5vw, 5.75rem) * var(--solara-type-scale, 1)); line-height: .95; }
-.cm.v2 .solara-cart-page-grid { grid-template-columns: minmax(0, 1fr) clamp(22.5rem, 27vw, 26rem); gap: clamp(3rem, 6vw, 7rem); padding: 2rem 0 clamp(5rem, 8vw, 8rem); }
+.cm.v2 .solara-cart-page-grid { grid-template-columns: minmax(0, 1fr) clamp(22.5rem, 27vw, 24rem); gap: clamp(3rem, 6vw, 5rem); padding: 2rem 0 clamp(5rem, 8vw, 8rem); }
 .cm.v2 .solara-cart-page-grid > aside { position: sticky; top: 2rem; padding: 1.25rem 0 1.5rem clamp(2rem, 4vw, 4rem); border-left: 1px solid var(--catalog-border); border-radius: 0; background: transparent; }
 .cm.v2 .solara-cart-summary { gap: 1rem; }
 .cm.v2 .solara-cart-summary > p { min-height: 2rem; align-items: center; font-size: .92rem; }

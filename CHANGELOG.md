@@ -1,5 +1,12 @@
 # Changelog
 
+### Proporción del carrito V2 (2026-08-13)
+
+- Se compacta el resumen del carrito en desktop grande para equilibrar el
+  espacio entre líneas, total y acción principal sin alterar mobile ni tablet.
+- Se actualiza la expectativa visual de comparación a la paleta V2 vigente y
+  se agrega una regresión de geometría del carrito.
+
 ### Carrito resistente a páginas restauradas (2026-08-13)
 
 - Se vuelve a leer el carrito persistido antes de agregar un producto, evitando

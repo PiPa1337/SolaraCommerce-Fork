@@ -675,7 +675,7 @@ test("A20: comparación — selección, conteo, acción con 2 y reporte del diá
 
   // Tema: el fondo cambiado aparece con su valor y la insignia de diferencia.
   const backgroundRow = compareRow(page, "Color de fondo");
-  await expect(backgroundRow.locator("strong").nth(0)).toHaveText("#fcfcfb");
+  await expect(backgroundRow.locator("strong").nth(0)).toHaveText("#f7f5f0");
   await expect(backgroundRow.locator("strong").nth(1)).toHaveText("#123456");
   await expect(backgroundRow.locator(".compare-view__badge")).toHaveText("Difiere");
 

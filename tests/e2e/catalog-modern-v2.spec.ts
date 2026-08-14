@@ -757,6 +757,31 @@ test("V2 compone checkout editorial sin overflow en desktop y movil", async ({
   await page.screenshot({ path: testInfo.outputPath("checkout-390x844.png"), fullPage: true });
 });
 
+test("V2 mantiene equilibrados el resumen y las líneas del carrito en desktop", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  await page.goto(new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString());
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await page.getByRole("button", { name: "Cerrar carrito" }).click();
+  await page.goto(new URL("/carrito/", serverUrl).toString());
+
+  const metrics = await page.locator(".solara-cart-page-grid").evaluate((element) => {
+    const style = getComputedStyle(element);
+    const summary = element.querySelector<HTMLElement>(":scope > aside")?.getBoundingClientRect();
+    return {
+      columnGap: Number.parseFloat(style.columnGap),
+      summaryWidth: summary?.width ?? 0,
+      documentWidth: document.documentElement.scrollWidth,
+    };
+  });
+  expect(metrics.columnGap).toBeLessThanOrEqual(80);
+  expect(metrics.summaryWidth).toBeLessThanOrEqual(384);
+  expect(metrics.documentWidth).toBeLessThanOrEqual(1920);
+});
+
 test("V2 conserva carrito y checkout dentro del viewport intermedio", async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
   const checkoutUrl = new URL("/compra/", serverUrl).toString();
