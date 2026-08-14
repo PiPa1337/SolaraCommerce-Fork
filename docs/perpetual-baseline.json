@@ -1,23 +1,21 @@
 {
-  "plan": 4,
-  "de10": 4,
+  "plan": 5,
+  "de10": 5,
   "branch": "main",
   "baselineEntrada": {
     "runtimeJavascriptRaw": 55845,
-    "runtimeTope": 57344,
     "runtimeMargen": 1499,
     "cssStudio": 102160,
-    "cssStudioTope": 106496,
     "cssStudioMargen": 4336,
-    "exportMs2000": 1704,
-    "axeReference": 0,
-    "axeCatalogModern": 0,
+    "exportMs2000": 1550,
+    "axe": "0/0 ambos fixtures",
+    "preloads": "146/146",
+    "focoVisible": "0 invisibles",
     "paritySweep": "6/6",
     "enganches": "5/5",
     "contratos": "1/1",
     "nojsCobertura": "24 combinaciones",
-    "lcpProductoMs": 528,
-    "taskHomeMsS": 31.8
+    "taskHomeMsS": 31.6
   },
-  "nextItem": "P4-1"
+  "nextItem": "P5-1"
 }

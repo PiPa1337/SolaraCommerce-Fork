@@ -1,20 +1,20 @@
-# Backlog del PLAN 4 (de 10) — run acotado con Δ%
+# Backlog del PLAN 5 (de 10) — run acotado con Δ%
 
 Re-verificaciones + hallazgos nuevos. Formato: `Métrica | Antes | Después | Δ%`.
 
 | id | capa | ítem | métrica | antes | después | Δ% | estado |
 |----|------|------|---------|-------|---------|-----|--------|
-| P4-1 | F | Re-verificación gates del PLAN 3 | gates | OK | | | pendiente |
-| P4-2 | V | Verificación visual del discount oscurecido + announcement (capturas + visión) | hallazgos | 0 | | | pendiente |
-| P4-3 | B | CSS Studio: duplicación post-dedup → re-medir; buscar más duplicación por prefijo de bloque (`@media` internos) | bytes | 102.160 B | | | pendiente |
-| P4-4 | A | A11y: axe con teclado (tab) en rutas clave — foco visible | findings | — | | | pendiente |
-| P4-5 | E | Rutas draft: nojs-coverage en draft mode (hoy solo production) | combos | 24 | | | pendiente |
-| P4-6 | H | CDP: long tasks en reposo post-axe (home) | ms/s | 31.8 | | | pendiente |
-| P4-7 | G | Servidor local: content-types de cada extensión (png/webp/woff2/xml) — test dedicado | % checks | — | | | pendiente |
-| P4-8 | C | Runtime: re-medir raw post-reversiones del usuario (estado real) | bytes | 55.845 B | | | pendiente |
-| P4-9 | F | Manifest: `robots.txt`/`sitemap.xml` en draft vs production (noindex/Disallow consistente) | drift | — | | | pendiente |
-| P4-10 | D | Assets: preloads/`fetchpriority` en todas las páginas con imagen (barrido) | % páginas | — | | | pendiente |
+| P5-1 | F | Re-verificación gates PLAN 4 | gates | OK | | | pendiente |
+| P5-2 | H | LCP/CLS: medición con navegador frío (sin caché) — 3 corridas y mediana | ms | 76/72 | | | pendiente |
+| P5-3 | G | Servidor local: verificación de Cache-Control headers en assets estáticos | headers | — | | | pendiente |
+| P5-4 | B | CSS V2: re-medir duplicación (el usuario iteró el hero/bento — puede haber crecido) | bytes | 247 B | | | pendiente |
+| P5-5 | E | Rutas: catalogScale draft en nojs (paginación sin JS útil) | combos | — | | | pendiente |
+| P5-6 | A | Axe en catalogScale (tercer fixture) | findings | — | | | pendiente |
+| P5-7 | D | Videos: poster + tamaño en los fixtures que usan video | checks | — | | | pendiente |
+| P5-8 | C | Consola del sitio con runtime real (no solo load — interacciones: carrito, búsqueda) | errores | 0 | | | pendiente |
+| P5-9 | F | JSON-LD: validación de tipos y URLs absolutas en todas las páginas | checks | — | | | pendiente |
+| P5-10 | A | Contraste del footer catalogModern (small ©) con axe ya en 0 — verificar tokens muted del modern | findings | 0 | | | pendiente |
 
 ## SIGUIENTE
 
-P4-1 — Re-verificación de gates del PLAN 3
+P5-1 — Re-verificación de gates del PLAN 4
