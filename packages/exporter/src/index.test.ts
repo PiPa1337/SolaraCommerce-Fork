@@ -619,6 +619,30 @@ describe("exporter", () => {
     expect(preview).not.toContain('href="/tienda/assets/storefront.css"');
   });
 
+  it("prefija los enlaces internos del body con la subcarpeta de baseUrl", () => {
+    const project = {
+      ...referenceStore,
+      baseUrl: "https://casa-luma.example/tienda/",
+    };
+
+    const result = exportProject(project, { mode: "production" });
+    const home = String(result.files.get("index.html"));
+    const category = String(result.files.get("categorias/textiles/index.html"));
+    const cart = String(result.files.get("carrito/index.html"));
+    const productPage = String(result.files.get("productos/manta-bruma/index.html"));
+
+    expect(home).toContain('href="/tienda/categorias/mesa/"');
+    expect(home).toContain('href="/tienda/productos/manta-bruma/"');
+    expect(category).toContain('href="/tienda/productos/manta-bruma/"');
+    expect(category).toContain('href="/tienda/buscar/"');
+    expect(cart).toContain('href="/tienda/compra/"');
+    expect(productPage).toContain('action="/tienda/carrito/"');
+    expect(home).not.toContain('href="/tienda/tienda/');
+
+    const preview = renderPreviewHtml(project, "production", "/");
+    expect(preview).toContain('href="/tienda/categorias/mesa/"');
+  });
+
   it("publica catalog-index.json cuando el drawer de carrito está activo sin templates", () => {
     const project = {
       ...referenceStore,

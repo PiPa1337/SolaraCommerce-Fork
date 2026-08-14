@@ -4,6 +4,7 @@
  * y produce el sitio estático sin incluir estado interno del editor.
  */
 import { normalizeSearchTokens } from "@solara/core";
+import { internalHref } from "@solara/module-sdk";
 import {
   getModuleDefinition,
   MODULE_STYLE_BLOCKS,
@@ -215,6 +216,25 @@ function baseUrlPathname(baseUrl: string): string {
 function assetHref(project: StoreProjectV1, path: string): string {
   const prefix = baseUrlPathname(project.baseUrl);
   return prefix ? `${prefix}${path}` : path;
+}
+
+/**
+ * Prefija los enlaces internos root-absolutos de un documento con la
+ * subcarpeta de la baseUrl (paginación, breadcrumbs, cards, navegación de
+ * datos del proyecto, forms, imágenes y videos). Cubre exporter y módulos en
+ * un único punto y no duplica rutas ya prefijadas.
+ */
+function prefixDocumentHrefs(project: StoreProjectV1, document: string): string {
+  const prefix = baseUrlPathname(project.baseUrl);
+  if (!prefix) return document;
+  // La posición del lookahead ya está después de la barra inicial: el prefijo
+  // se compara sin esa barra (p.ej. "tienda/" para baseUrl "/tienda"). El
+  // espacio previo evita prefijar atributos compuestos como data-base-href.
+  const escapedPrefix = prefix.slice(1).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return document.replace(
+    new RegExp(`(\\s)(href|action|src|poster)="/(?!/|${escapedPrefix}/)`, "g"),
+    `$1$2="${prefix}/`,
+  );
 }
 
 function absoluteUrl(project: StoreProjectV1, path: string): string {
@@ -1158,6 +1178,8 @@ function renderDocument(
     .join("\n");
   const colorMode =
     project.theme.colorMode === "auto" ? "" : ` data-theme="${project.theme.colorMode}"`;
+  const baseHref = baseUrlPathname(project.baseUrl);
+  const baseHrefAttribute = baseHref ? ` data-base-href="${escapeHtml(baseHref)}"` : "";
   const whatsAppPhone = publicWhatsAppPhone(project);
   const whatsAppAttributes = whatsAppPhone
     ? ` data-whatsapp="${escapeHtml(whatsAppPhone)}" data-whatsapp-greeting="${escapeHtml(project.whatsapp.greeting)}" data-whatsapp-include-sku="${String(project.whatsapp.includeSku)}"`
@@ -1176,7 +1198,7 @@ function renderDocument(
       : "";
 
   return `<!doctype html>
-<html lang="${project.locale}" data-store-id="${escapeHtml(project.id)}" data-currency="${project.currency}"${whatsAppAttributes} data-solara-runtime-features="${escapeAttribute((manifest?.runtimeFeatures ?? []).join(","))}"${colorMode}>
+<html lang="${project.locale}" data-store-id="${escapeHtml(project.id)}" data-currency="${project.currency}"${whatsAppAttributes} data-solara-runtime-features="${escapeAttribute((manifest?.runtimeFeatures ?? []).join(","))}"${colorMode}${baseHrefAttribute}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1206,9 +1228,15 @@ function renderDocument(
 </html>`;
 }
 
-function paginationNavigation(basePath: string, pageNumber: number, totalPages: number): string {
+function paginationNavigation(
+  project: StoreProjectV1,
+  basePath: string,
+  pageNumber: number,
+  totalPages: number,
+): string {
   if (totalPages <= 1) return "";
-  const pathFor = (page: number) => (page === 1 ? `${basePath}/` : `${basePath}/pagina/${page}/`);
+  const pathFor = (page: number) =>
+    internalHref(project, page === 1 ? `${basePath}/` : `${basePath}/pagina/${page}/`);
   return `<nav class="solara-pagination" aria-label="Paginación">
     ${pageNumber > 1 ? `<a rel="prev" href="${escapeHtml(pathFor(pageNumber - 1))}">Anterior</a>` : ""}
     <span>Página ${pageNumber} de ${totalPages}</span>
@@ -1229,7 +1257,7 @@ function categoryChildrenMarkup(project: StoreProjectV1, category: Category): st
   return `<nav class="solara-category-children" aria-label="Subcategorías de ${escapeAttribute(category.title)}"><h2>Explorar ${escapeHtml(category.title)}</h2><ul>${children
     .map(
       (child) =>
-        `<li><a href="/categorias/${escapeAttribute(child.slug)}/"><span>${escapeHtml(child.title)}</span><small>${getCategoryProductIds(project, child.id).length} productos</small></a></li>`,
+        `<li><a href="${internalHref(project, `/categorias/${child.slug}/`)}"><span>${escapeHtml(child.title)}</span><small>${getCategoryProductIds(project, child.id).length} productos</small></a></li>`,
     )
     .join("")}</ul></nav>`;
 }
@@ -1408,7 +1436,7 @@ function buildPages(
           </header>
           ${categoryChildrenMarkup(project, category)}
           ${categoryListingMarkup(project, products, categoryGrid)}
-          ${paginationNavigation(`/categorias/${category.slug}`, pageNumber, totalPages)}
+          ${paginationNavigation(project, `/categorias/${category.slug}`, pageNumber, totalPages)}
         </main>`,
         renderProjectSections(project, sharedFooter, { pageType: "category", category }),
       ].join("");
@@ -1459,7 +1487,7 @@ function buildPages(
             collection: { ...collection, productIds: paginated.map((product) => product.id) },
             products: paginated,
           })}
-          ${paginationNavigation(`/colecciones/${collection.slug}`, pageNumber, totalPages)}
+          ${paginationNavigation(project, `/colecciones/${collection.slug}`, pageNumber, totalPages)}
         </main>`,
         renderProjectSections(project, sharedFooter, { pageType: "collection", collection }),
       ].join("");
@@ -1564,7 +1592,7 @@ function buildPages(
     pageType: "about",
     body: [
       renderProjectSections(project, sharedHeader, { pageType: "about" }),
-      `<main class="solara-editorial-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><span>Nosotros</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Nuestra mirada</p><h1>${escapeHtml(aboutConfig?.title ?? "Elegimos objetos para vivirlos.")}</h1><p>${escapeHtml(project.identity.description)}</p></header><section class="solara-story-grid"><div><h2>Lo que nos guía</h2><p>${escapeHtml(project.identity.description)}</p></div><div><h2>Información clara</h2><p>${escapeHtml(project.policies.shipping.summary)}</p><a class="solara-secondary-action" href="/contacto/">Conocé cómo contactarnos</a></div></section><section class="solara-values-grid"><article><h2>Selección</h2><p>${escapeHtml(project.collections[0]?.description ?? "Conocé nuestras colecciones.")}</p></article><article><h2>Entrega</h2><p>${escapeHtml(project.policies.shipping.summary)}</p></article><article><h2>Atención directa</h2><p>${escapeHtml(project.identity.email || project.identity.phone || "Escribinos para recibir asesoramiento.")}</p></article></section></main>`,
+      `<main class="solara-editorial-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span>Nosotros</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Nuestra mirada</p><h1>${escapeHtml(aboutConfig?.title ?? "Elegimos objetos para vivirlos.")}</h1><p>${escapeHtml(project.identity.description)}</p></header><section class="solara-story-grid"><div><h2>Lo que nos guía</h2><p>${escapeHtml(project.identity.description)}</p></div><div><h2>Información clara</h2><p>${escapeHtml(project.policies.shipping.summary)}</p><a class="solara-secondary-action" href="/contacto/">Conocé cómo contactarnos</a></div></section><section class="solara-values-grid"><article><h2>Selección</h2><p>${escapeHtml(project.collections[0]?.description ?? "Conocé nuestras colecciones.")}</p></article><article><h2>Entrega</h2><p>${escapeHtml(project.policies.shipping.summary)}</p></article><article><h2>Atención directa</h2><p>${escapeHtml(project.identity.email || project.identity.phone || "Escribinos para recibir asesoramiento.")}</p></article></section></main>`,
       editableSections("about").length
         ? renderProjectSections(project, editableSections("about"), { pageType: "about" })
         : "",
@@ -1602,7 +1630,7 @@ function buildPages(
     pageType: "contact",
     body: [
       renderProjectSections(project, sharedHeader, { pageType: "contact" }),
-      `<main class="solara-contact-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><span>Contacto</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Hablemos</p><h1>${escapeHtml(contactConfig?.title ?? "Estamos para ayudarte.")}</h1><p>Respondemos consultas, disponibilidad y detalles de entrega por canales directos.</p></header><section class="solara-contact-grid"><div class="solara-contact-details">${project.identity.email ? `<a href="mailto:${escapeAttribute(project.identity.email)}"><span>Email</span><strong>${escapeHtml(project.identity.email)}</strong></a>` : ""}${project.identity.phone ? `<a href="tel:${escapeAttribute(project.identity.phone)}"><span>Teléfono</span><strong>${escapeHtml(project.identity.phone)}</strong></a>` : ""}${whatsAppContactLink ? `<a href="${escapeAttribute(whatsAppContactLink)}" target="_blank" rel="noopener noreferrer"><span>WhatsApp</span><strong>Escribir por WhatsApp</strong></a>` : ""}${project.identity.address ? `<div><span>Dirección</span><strong>${escapeHtml(project.identity.address)}</strong></div>` : ""}</div><aside class="solara-contact-cta"><h2>Coordinemos tu compra</h2><p>Si ya elegiste una pieza, podés escribirnos y te confirmamos disponibilidad, envío y pago.</p>${whatsAppPurchaseLink ? `<a class="solara-primary-action" href="${escapeAttribute(whatsAppPurchaseLink)}" target="_blank" rel="noopener noreferrer">Escribir por WhatsApp</a>` : ""}</aside></section></main>`,
+      `<main class="solara-contact-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span>Contacto</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Hablemos</p><h1>${escapeHtml(contactConfig?.title ?? "Estamos para ayudarte.")}</h1><p>Respondemos consultas, disponibilidad y detalles de entrega por canales directos.</p></header><section class="solara-contact-grid"><div class="solara-contact-details">${project.identity.email ? `<a href="mailto:${escapeAttribute(project.identity.email)}"><span>Email</span><strong>${escapeHtml(project.identity.email)}</strong></a>` : ""}${project.identity.phone ? `<a href="tel:${escapeAttribute(project.identity.phone)}"><span>Teléfono</span><strong>${escapeHtml(project.identity.phone)}</strong></a>` : ""}${whatsAppContactLink ? `<a href="${escapeAttribute(whatsAppContactLink)}" target="_blank" rel="noopener noreferrer"><span>WhatsApp</span><strong>Escribir por WhatsApp</strong></a>` : ""}${project.identity.address ? `<div><span>Dirección</span><strong>${escapeHtml(project.identity.address)}</strong></div>` : ""}</div><aside class="solara-contact-cta"><h2>Coordinemos tu compra</h2><p>Si ya elegiste una pieza, podés escribirnos y te confirmamos disponibilidad, envío y pago.</p>${whatsAppPurchaseLink ? `<a class="solara-primary-action" href="${escapeAttribute(whatsAppPurchaseLink)}" target="_blank" rel="noopener noreferrer">Escribir por WhatsApp</a>` : ""}</aside></section></main>`,
       editableSections("contact").length
         ? renderProjectSections(project, editableSections("contact"), { pageType: "contact" })
         : "",
@@ -1636,7 +1664,7 @@ function buildPages(
     description: "Encontrá productos por nombre, marca, categoría o etiqueta.",
     canonicalPath: "/buscar/",
     pageType: "search",
-    body: `${renderProjectSections(project, sharedHeader, { pageType: "search" })}<main class="solara-search-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><span>Buscar</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Catálogo</p><h1>Buscar productos</h1><p>Buscá por nombre, marca, categoría o etiqueta.</p>${searchControls}</header><section class="solara-search-results" data-search-results aria-live="polite"><p>Elegí una búsqueda para ver resultados.</p></section></main>${renderProjectSections(project, sharedFooter, { pageType: "search" })}`,
+    body: `${renderProjectSections(project, sharedHeader, { pageType: "search" })}<main class="solara-search-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span>Buscar</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Catálogo</p><h1>Buscar productos</h1><p>Buscá por nombre, marca, categoría o etiqueta.</p>${searchControls}</header><section class="solara-search-results" data-search-results aria-live="polite"><p>Elegí una búsqueda para ver resultados.</p></section></main>${renderProjectSections(project, sharedFooter, { pageType: "search" })}`,
     structuredData: [
       {
         "@context": "https://schema.org",
@@ -1648,19 +1676,21 @@ function buildPages(
   };
 
   const firstRootCategory = project.categories.find((category) => !category.parentId);
-  const emptyCartHref = firstRootCategory ? `/categorias/${firstRootCategory.slug}/` : "/buscar/";
+  const emptyCartHref = firstRootCategory
+    ? internalHref(project, `/categorias/${firstRootCategory.slug}/`)
+    : internalHref(project, "/buscar/");
   const cartPage: PageDescriptor = {
     path: "carrito/index.html",
     title: `Carrito | ${project.identity.brandName}`,
     description: "Revisá tus productos antes de coordinar el pedido.",
     canonicalPath: "/carrito/",
     pageType: "cart",
-    body: `${renderProjectSections(project, sharedHeader, { pageType: "cart" })}<main class="solara-cart-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><span>Carrito</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Tu selección</p><h1>Carrito</h1></header><section class="solara-cart-page-grid"><div data-cart-lines><p class="solara-empty-state">Tu carrito está vacío. Elegí una pieza para comenzar.</p></div><aside class="solara-cart-summary"><p><span>Subtotal</span><strong data-cart-subtotal>${escapeHtml(formatMoney(0))}</strong></p><p><span>Entrega</span><strong>A coordinar</strong></p><p><span>Total estimado</span><strong data-cart-total>${escapeHtml(formatMoney(0))}</strong></p><a class="solara-primary-action" href="/compra/">Continuar a compra</a></aside></section></main>${renderProjectSections(project, sharedFooter, { pageType: "cart" })}`,
+    body: `${renderProjectSections(project, sharedHeader, { pageType: "cart" })}<main class="solara-cart-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span>Carrito</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Tu selección</p><h1>Carrito</h1></header><section class="solara-cart-page-grid"><div data-cart-lines><p class="solara-empty-state">Tu carrito está vacío. Elegí una pieza para comenzar.</p></div><aside class="solara-cart-summary"><p><span>Subtotal</span><strong data-cart-subtotal>${escapeHtml(formatMoney(0))}</strong></p><p><span>Entrega</span><strong>A coordinar</strong></p><p><span>Total estimado</span><strong data-cart-total>${escapeHtml(formatMoney(0))}</strong></p><a class="solara-primary-action" href="/compra/">Continuar a compra</a></aside></section></main>${renderProjectSections(project, sharedFooter, { pageType: "cart" })}`,
     structuredData: [],
   };
   cartPage.body = cartPage.body.replace(
     '<a class="solara-primary-action" href="/compra/">Continuar a compra</a>',
-    `<a data-cart-cta href="${escapeAttribute(emptyCartHref)}"><span class="solara-primary-action">Explorar categor\u00EDas</span></a><a data-cart-cta href="/compra/" hidden><span class="solara-primary-action">Continuar a compra</span></a>`,
+    `<a data-cart-cta href="${escapeAttribute(emptyCartHref)}"><span class="solara-primary-action">Explorar categor\u00EDas</span></a><a data-cart-cta href="${internalHref(project, "/compra/")}" hidden><span class="solara-primary-action">Continuar a compra</span></a>`,
   );
 
   const checkoutWhatsAppLink = whatsAppContactLink
@@ -1677,7 +1707,7 @@ function buildPages(
     description: "Completá tus datos para enviar el pedido por WhatsApp.",
     canonicalPath: "/compra/",
     pageType: "checkout",
-    body: `${renderProjectSections(project, sharedHeader, { pageType: "checkout" })}<main class="solara-checkout-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><a href="/carrito/">Carrito</a><span aria-hidden="true">/</span><span>Compra</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Pedido directo</p><h1>Coordinar compra</h1><p>Dejanos tus datos y abrí el mensaje preparado en WhatsApp.</p></header>${checkoutForm}</main>${renderProjectSections(project, sharedFooter, { pageType: "checkout" })}`,
+    body: `${renderProjectSections(project, sharedHeader, { pageType: "checkout" })}<main class="solara-checkout-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><a href="/carrito/">Carrito</a><span aria-hidden="true">/</span><span>Compra</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Pedido directo</p><h1>Coordinar compra</h1><p>Dejanos tus datos y abrí el mensaje preparado en WhatsApp.</p></header>${checkoutForm}</main>${renderProjectSections(project, sharedFooter, { pageType: "checkout" })}`,
     structuredData: [],
   };
 
@@ -1690,7 +1720,7 @@ function buildPages(
     countries.map((country) => (country === "AR" ? "Argentina" : country)).join(", ");
   const policyContactAction = whatsAppContactLink
     ? `<a class="solara-primary-action" href="${escapeAttribute(whatsAppContactLink)}" target="_blank" rel="noopener noreferrer">Consultar por WhatsApp</a>`
-    : '<a class="solara-secondary-action" href="/contacto/">Ir a contacto</a>';
+    : `<a class="solara-secondary-action" href="${escapeAttribute(internalHref(project, "/contacto/"))}">Ir a contacto</a>`;
   const renderV2PolicyPage = (
     title: string,
     eyebrow: string,
@@ -1700,7 +1730,7 @@ function buildPages(
   ) =>
     [
       renderProjectSections(project, sharedHeader, { pageType: "legal" }),
-      `<main class="solara-editorial-page solara-policy-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><span>${escapeHtml(title)}</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">${escapeHtml(eyebrow)}</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(summary)}</p></header><section class="solara-story-grid"><div><h2>Qué necesitás saber</h2><p>${escapeHtml(details)}</p></div><div><h2>¿Tenés dudas?</h2><p>Escribinos antes de coordinar tu pedido y revisamos esta información con vos.</p>${policyContactAction}</div></section>${facts.length ? `<section class="solara-values-grid">${facts.map(([label, value]) => `<article><h2>${escapeHtml(label)}</h2><p>${escapeHtml(value)}</p></article>`).join("")}</section>` : ""}</main>`,
+      `<main class="solara-editorial-page solara-policy-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span>${escapeHtml(title)}</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">${escapeHtml(eyebrow)}</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(summary)}</p></header><section class="solara-story-grid"><div><h2>Qué necesitás saber</h2><p>${escapeHtml(details)}</p></div><div><h2>¿Tenés dudas?</h2><p>Escribinos antes de coordinar tu pedido y revisamos esta información con vos.</p>${policyContactAction}</div></section>${facts.length ? `<section class="solara-values-grid">${facts.map(([label, value]) => `<article><h2>${escapeHtml(label)}</h2><p>${escapeHtml(value)}</p></article>`).join("")}</section>` : ""}</main>`,
       renderProjectSections(project, sharedFooter, { pageType: "legal" }),
     ].join("");
 
@@ -1711,8 +1741,8 @@ function buildPages(
     canonicalPath: "/404.html",
     pageType: "not-found",
     body: isV2Design
-      ? `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container solara-error-page"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><span>404</span></nav><section class="solara-error-hero"><div class="solara-error-copy"><p class="solara-eyebrow">Página no encontrada</p><h1>No encontramos esa página.</h1><p>Podés volver al inicio o explorar nuestras colecciones.</p><div class="solara-error-actions"><a class="solara-primary-action" href="/">Volver al inicio</a>${project.categories[0] ? `<a class="solara-secondary-action" href="/categorias/${escapeAttribute(project.categories[0].slug)}/">Ver categorías</a>` : ""}</div></div><p class="solara-error-code" aria-hidden="true">404</p></section></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`
-      : `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container solara-error-page"><p class="solara-eyebrow">404</p><h1>No encontramos esa página.</h1><p>Podés volver al inicio o explorar nuestras colecciones.</p><a class="solara-primary-action" href="/">Volver al inicio</a></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
+      ? `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container solara-error-page"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span>404</span></nav><section class="solara-error-hero"><div class="solara-error-copy"><p class="solara-eyebrow">Página no encontrada</p><h1>No encontramos esa página.</h1><p>Podés volver al inicio o explorar nuestras colecciones.</p><div class="solara-error-actions"><a class="solara-primary-action" href="${internalHref(project, "/")}">Volver al inicio</a>${project.categories[0] ? `<a class="solara-secondary-action" href="${escapeAttribute(internalHref(project, `/categorias/${project.categories[0].slug}/`))}">Ver categorías</a>` : ""}</div></div><p class="solara-error-code" aria-hidden="true">404</p></section></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`
+      : `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container solara-error-page"><p class="solara-eyebrow">404</p><h1>No encontramos esa página.</h1><p>Podés volver al inicio o explorar nuestras colecciones.</p><a class="solara-primary-action" href="${internalHref(project, "/")}">Volver al inicio</a></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
     structuredData: [],
   };
 
@@ -2426,7 +2456,13 @@ function buildFiles(
   };
   const files = new Map<string, string | Uint8Array>();
   pages.forEach((page) => {
-    files.set(page.path, renderDocument(publicProject, page, mode, publicAiContext, manifest));
+    files.set(
+      page.path,
+      prefixDocumentHrefs(
+        publicProject,
+        renderDocument(publicProject, page, mode, publicAiContext, manifest),
+      ),
+    );
   });
   files.set(
     "assets/storefront.css",
@@ -2624,6 +2660,7 @@ export function renderPreviewHtml(
   let document = withExportContext("la fase de documentos del sitio", () =>
     renderDocument(previewAssets.project, page, mode, false, manifest),
   );
+  document = prefixDocumentHrefs(project, document);
   const usedSources = new Map(
     [...previewAssets.sources].filter(([path]) => document.includes(path)),
   );

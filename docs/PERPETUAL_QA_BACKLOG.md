@@ -65,9 +65,9 @@ fases C y O (regla de selección nivel 3). Conversión en curso:
 | V5 | baja | exporter | Home hero: espacio muerto en tercio derecho (composición editorial intencional; el usuario la itera activamente) | hecho | decisión documentada |
 | V6 | baja | exporter | Target táctil del carrito legacy en mobile: la media query pisaba con 40px → 44px (estándar táctil); gate e2e de medición | hecho | cart-target-size.spec.ts |
 
-| C4b | media | exporter | baseUrl subcarpeta: hrefs internos del body (paginación, breadcrumbs, cards de productos, CTAs de carrito/compra, links de categorías hijas) | pendiente | derivado de C4a |
-| C4c | media | exporter/runtime | baseUrl subcarpeta: navegación de datos del proyecto (siteShell/navigation) + fetches del runtime (`search-index.json`, `catalog-index.json`) | pendiente | derivado de C4a |
+| C4b | media | exporter | `prefixDocumentHrefs` (post-process central): todos los hrefs/actions/srcs/poster del body se prefijan con la subcarpeta (cubre exporter, módulos y navegación de datos); sin duplicados (lookahead con espacio previo) | hecho | subfolder-site.spec.ts + index.test.ts |
+| C4c | media | exporter/runtime | `data-base-href` en el `<html>` + runtime usa `baseHref` en los fetches (`search-index.json`, `catalog-index.json`); runtime +70 B (margen 2 KB) | hecho | subfolder-site.spec.ts (navegación sin errores) |
 
 ## SIGUIENTE
 
-C4b — baseUrl subcarpeta: hrefs internos del body (paginación, breadcrumbs, cards, CTAs)
+C10 — Barrido continuo: doctor + barrido visual con los cierres C4b/c aplicados

@@ -335,7 +335,7 @@ describe("pausa y reanudación del runtime (contrato A3↔A4)", () => {
 
   it("difiere el fetch del índice de búsqueda cuando el runtime está pausado", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("deferredSearch");
-    expect(STOREFRONT_RUNTIME_JS).toContain('fetch("/search-index.json"');
+    expect(STOREFRONT_RUNTIME_JS).toContain("fetch(`${baseHref}/search-index.json`");
   });
 
   it("registra los listeners de scroll como pasivos", () => {

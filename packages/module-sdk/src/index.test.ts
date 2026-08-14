@@ -2,6 +2,7 @@ import { referenceStore } from "@solara/project-schema/fixture";
 import { describe, expect, it } from "vitest";
 import {
   escapeHtml,
+  internalHref,
   moduleRoot,
   renderImage,
   safeAssetUrl,
@@ -24,7 +25,6 @@ describe("HTML safety", () => {
       '<p>Texto <strong>seguro</strong><a href="#">link</a></p>',
     );
   });
-
   it("allows explicit safe URLs only", () => {
     expect(safeUrl("/productos/manta/")).toBe("/productos/manta/");
     expect(safeUrl("https://example.com/a")).toBe("https://example.com/a");
@@ -34,6 +34,16 @@ describe("HTML safety", () => {
       "blob:https://studio.local/image-id",
     );
     expect(safeAssetUrl("data:text/html,bad")).toBe("");
+  });
+
+  it("internalHref prefiJa rutas internas con la subcarpeta de baseUrl", () => {
+    const withFolder = { ...referenceStore, baseUrl: "https://casa-luma.example/tienda/" };
+    expect(internalHref(withFolder, "/productos/manta/")).toBe("/tienda/productos/manta/");
+    expect(internalHref(withFolder, "/")).toBe("/tienda/");
+    expect(internalHref(referenceStore, "/productos/manta/")).toBe("/productos/manta/");
+    expect(internalHref(withFolder, "https://otro.example/x")).toBe("https://otro.example/x");
+    expect(internalHref(withFolder, "#solara-main")).toBe("#solara-main");
+    expect(internalHref(withFolder, "//evil.example/a")).toBe("#");
   });
 
   it("renderiza imágenes responsive con prioridad y atributos escapados", () => {
