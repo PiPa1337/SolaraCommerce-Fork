@@ -957,7 +957,7 @@ export function Dashboard({
         ) : null}
 
         {portableFirstRunAt ? (
-          <output className="shutdown-status" role="status">
+          <output className="shutdown-status">
             <CheckCircle aria-hidden size={18} />
             <span>
               <strong>Primera vez que SolaraCommerce se abre en esta carpeta.</strong> Si moviste la

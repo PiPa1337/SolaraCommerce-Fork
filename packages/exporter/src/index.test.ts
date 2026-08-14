@@ -99,7 +99,10 @@ describe("exporter", () => {
   });
 
   it("consume data-theme del html con color-scheme en el CSS exportado", () => {
-    const darkProject = { ...referenceStore, theme: { ...referenceStore.theme, colorMode: "dark" } };
+    const darkProject = {
+      ...referenceStore,
+      theme: { ...referenceStore.theme, colorMode: "dark" },
+    } as typeof referenceStore;
     const darkCss = String(
       exportProject(darkProject, { mode: "draft" }).files.get("assets/storefront.css"),
     );
@@ -220,9 +223,9 @@ describe("exporter", () => {
     if (!section) throw new Error("Fixture incompleto");
     section.moduleId = "modulo-inexistente";
 
-    expect(() =>
-      exportProject(broken as typeof referenceStore, { mode: "draft" }),
-    ).toThrow(/generación del sitio falló.*Módulo desconocido: modulo-inexistente/s);
+    expect(() => exportProject(broken as typeof referenceStore, { mode: "draft" })).toThrow(
+      /generación del sitio falló.*Módulo desconocido: modulo-inexistente/s,
+    );
     expect(() => renderPreviewHtml(broken as typeof referenceStore)).toThrow(
       /generación del sitio falló.*Módulo desconocido: modulo-inexistente/s,
     );
@@ -598,9 +601,7 @@ describe("exporter", () => {
 
     const result = exportProject(project, { mode: "production" });
     const home = String(result.files.get("index.html"));
-    expect(home).toContain(
-      '<link rel="canonical" href="https://casa-luma.example/tienda/">',
-    );
+    expect(home).toContain('<link rel="canonical" href="https://casa-luma.example/tienda/">');
     expect(home).toContain('<meta property="og:url" content="https://casa-luma.example/tienda/">');
     expect(home).toContain('href="/tienda/assets/storefront.css"');
     expect(home).toContain('src="/tienda/assets/storefront.js"');
@@ -611,9 +612,7 @@ describe("exporter", () => {
     expect(sitemap).toContain("https://casa-luma.example/tienda/productos/manta-bruma/");
 
     const product = String(result.files.get("productos/manta-bruma/index.html"));
-    expect(product).toContain(
-      '"url":"https://casa-luma.example/tienda/productos/manta-bruma/"',
-    );
+    expect(product).toContain('"url":"https://casa-luma.example/tienda/productos/manta-bruma/"');
 
     const preview = renderPreviewHtml(project, "production", "/");
     expect(preview).toContain("data:text/css;base64,");

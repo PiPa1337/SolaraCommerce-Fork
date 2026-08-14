@@ -65,9 +65,7 @@ test.beforeAll(async () => {
     if (content === undefined) {
       const notFound = exported.files.get("404.html");
       if (notFound !== undefined) {
-        response
-          .writeHead(404, { "Content-Type": "text/html; charset=utf-8" })
-          .end(notFound);
+        response.writeHead(404, { "Content-Type": "text/html; charset=utf-8" }).end(notFound);
       } else {
         response.writeHead(404).end("Not found");
       }
@@ -123,7 +121,9 @@ test("barrido visual: capturas, consola, red y overflow", async ({ browser }) =>
     });
     page.on("pageerror", (error) => pageErrors.push(error.message));
     page.on("requestfailed", (request) =>
-      failedRequests.push(`${request.method()} ${request.url()} :: ${request.failure()?.errorText ?? "?"}`),
+      failedRequests.push(
+        `${request.method()} ${request.url()} :: ${request.failure()?.errorText ?? "?"}`,
+      ),
     );
     page.on("response", (response) => {
       if (response.status() >= 400) badResponses.push(`${response.status()} ${response.url()}`);
@@ -181,7 +181,12 @@ test("barrido visual: capturas, consola, red y overflow", async ({ browser }) =>
         consoleErrors.length = 0;
       }
       if (pageErrors.length > 0) {
-        findings.push({ type: "page-error", route, viewport: viewport.name, detail: [...pageErrors] });
+        findings.push({
+          type: "page-error",
+          route,
+          viewport: viewport.name,
+          detail: [...pageErrors],
+        });
         pageErrors.length = 0;
       }
       if (failedRequests.length > 0) {
