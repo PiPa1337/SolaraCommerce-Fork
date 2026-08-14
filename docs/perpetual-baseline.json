@@ -1,0 +1,21 @@
+{
+  "plan": 1,
+  "de10": 1,
+  "branch": "main",
+  "baselineEntrada": {
+    "runtimeJavascriptRaw": 56940,
+    "runtimeTope": 57344,
+    "runtimeMargen": 404,
+    "cssStudio": 102392,
+    "cssStudioTope": 106496,
+    "cssV2Raw": 117459,
+    "cssV2Tope": 122880,
+    "exportMs2000": 1692,
+    "filesBytes2000": 40576901,
+    "optimizationScoreReference": 97,
+    "fuentesTotalBytes": 102724,
+    "paritySweep": "6/6",
+    "benchmarkPresupuestoMs": 30000
+  },
+  "nextItem": "C1"
+}
