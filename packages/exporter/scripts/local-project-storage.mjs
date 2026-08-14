@@ -112,11 +112,31 @@ async function writeJsonAtomic(pathname, value) {
   const temporary = `${pathname}.tmp-${randomBytes(8).toString("hex")}`;
   try {
     await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, "utf8");
-    await rename(temporary, pathname);
+    await renameWithRetry(temporary, pathname, rename);
   } catch (error) {
     // Un write fallido no debe dejar basura `.tmp-*` junto al destino.
     await rm(temporary, { force: true });
     throw error;
+  }
+}
+
+/**
+ * Windows puede rechazar un rename con EPERM/EBUSY por un lock transitorio
+ * (OneDrive, antivirus) o con EACCES por permisos en un directorio. El
+ * reintento con backoff corto absorbe los locks transitorios; un destino
+ * residual de un intento interrumpido se limpia antes de publicar (commit).
+ */
+async function renameWithRetry(source, destination, renameFile) {
+  const attempts = 4;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await renameFile(source, destination);
+      return;
+    } catch (error) {
+      const transient = ["EPERM", "EBUSY", "EACCES"].includes(error?.code);
+      if (attempt === attempts || !transient) throw error;
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 200 * attempt));
+    }
   }
 }
 
@@ -139,7 +159,7 @@ async function streamToFile(request, pathname, maxBytes, guardWrite) {
   } finally {
     await handle.close();
   }
-  await rename(temporary, pathname);
+  await renameWithRetry(temporary, pathname, rename);
   return { bytes, sha256: hash.digest("hex") };
 }
 
@@ -272,6 +292,10 @@ export function createLocalProjectStorage(options = {}) {
   const guardWrite = async (op, pathname) => {
     await writeGuard?.({ op, pathname });
   };
+  // Sólo los tests inyectan un rename que falla de forma transitoria para
+  // probar el reintento sin tocar el filesystem real; en producción siempre
+  // es el rename de node:fs.
+  const renameFile = typeof options.renameOverride === "function" ? options.renameOverride : rename;
   const transactions = new Map();
   const projectLocks = new Set();
   // Sólo los tests inyectan un reloj para envejecer transacciones sin
@@ -586,7 +610,10 @@ export function createLocalProjectStorage(options = {}) {
           });
           await checkpoint("before-site-rename");
           await guardWrite("rename-site", finalSite);
-          await rename(temporarySite, finalSite);
+          // Un destino con la misma clave sólo puede ser un intento
+          // interrumpido: se limpia para que el rename no falle en Windows.
+          await rm(finalSite, { recursive: true, force: true });
+          await renameWithRetry(temporarySite, finalSite, renameFile);
         } catch (error) {
           await rm(temporarySite, { recursive: true, force: true });
           throw error;
@@ -606,7 +633,7 @@ export function createLocalProjectStorage(options = {}) {
       await checkpoint("before-project-archive");
       await guardWrite("copy-archive", temporaryArchivePath);
       await copyFile(join(transaction.root, "project.json"), temporaryArchivePath);
-      await rename(temporaryArchivePath, archivePath);
+      await renameWithRetry(temporaryArchivePath, archivePath, renameFile);
 
       const previous = metadata.previous;
       if (previous?.current?.projectPath) {

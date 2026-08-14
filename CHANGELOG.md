@@ -1,5 +1,15 @@
 # Changelog
 
+### Guardado resiliente ante locks transitorios (2026-08-14)
+
+- El servidor local reintenta el rename de publicaciones (sitio y respaldo)
+  ante errores transitorios de Windows (EPERM/EBUSY/EACCES, típicos de
+  OneDrive o antivirus) con backoff corto, y limpia un destino stale de un
+  intento interrumpido antes de publicar el sitio. Un guardado ya no falla por
+  un lock momentáneo del sistema.
+- Tests nuevos: reintento ante EPERM transitorio (2 fallos → éxito) y
+  reemplazo de destino stale con la misma clave.
+
 ### Retoques V2 con subagentes: títulos, CTA y grillas (2026-08-14)
 
 - Los títulos h2 de todas las secciones V2 ("Recién llegados", "Más elegidos",

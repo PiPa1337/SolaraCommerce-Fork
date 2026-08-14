@@ -3,6 +3,7 @@ import {
   mkdtemp,
   readdir,
   readFile,
+  rename,
   rm,
   stat,
   symlink,
@@ -10,7 +11,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, sep } from "node:path";
 import { Readable } from "node:stream";
 import { describe, expect, it } from "vitest";
 import { createLocalProjectStorage } from "../scripts/local-project-storage.mjs";
@@ -618,6 +619,123 @@ describe("almacenamiento local de proyectos", () => {
       const receipt = await storage.commit(retry.transactionId);
       expect(receipt).toMatchObject({ version: 2, status: "synced" });
       expect(receipt.site?.version).toBe(2);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reintenta el rename del sitio ante un lock transitorio (EPERM)", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-eperm-"));
+    try {
+      let siteRenameFailures = 0;
+      let armFailures = false;
+      const storage = createLocalProjectStorage({
+        applicationRoot: root,
+        renameOverride: (source, destination) => {
+          if (
+            armFailures &&
+            String(destination).includes(`${sep}sitios${sep}`) &&
+            siteRenameFailures < 2
+          ) {
+            siteRenameFailures += 1;
+            const error = new Error("lock transitorio del sistema");
+            error.code = "EPERM";
+            return Promise.reject(error);
+          }
+          return rename(source, destination);
+        },
+      });
+      const first = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, first.transactionId, "project", projectJson());
+      await upload(
+        storage,
+        first.transactionId,
+        "site",
+        siteMap([{ path: "index.html", encoding: "utf8", data: "<main>v1</main>" }]),
+      );
+      const firstReceipt = await storage.commit(first.transactionId);
+      expect(siteRenameFailures).toBe(0);
+      armFailures = true;
+
+      const attempt = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T11:00:00.000Z",
+        expectedVersion: firstReceipt.version,
+      });
+      await upload(storage, attempt.transactionId, "project", projectJson("v2"));
+      await upload(
+        storage,
+        attempt.transactionId,
+        "site",
+        siteMap([{ path: "index.html", encoding: "utf8", data: "<main>v2</main>" }]),
+      );
+      const receipt = await storage.commit(attempt.transactionId);
+      expect(siteRenameFailures).toBe(2);
+      expect(receipt).toMatchObject({ version: 2, status: "synced" });
+      expect(receipt.site?.version).toBe(2);
+      const siteDir = join(root, receipt.site.directoryPath);
+      expect(await readFile(join(siteDir, "index.html"), "utf8")).toBe("<main>v2</main>");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reemplaza el destino stale del sitio de un intento interrumpido", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-stale-"));
+    const frozen = () => new Date("2026-08-07T10:00:00.000Z");
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root, now: frozen });
+      const first = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, first.transactionId, "project", projectJson());
+      await upload(
+        storage,
+        first.transactionId,
+        "site",
+        siteMap([{ path: "index.html", encoding: "utf8", data: "<main>v1</main>" }]),
+      );
+      const firstReceipt = await storage.commit(first.transactionId);
+
+      // La clave v2 es determinista con el reloj congelado; se planta un
+      // destino stale con esa clave para simular un intento interrumpido.
+      const sitesRoot = dirname(join(root, firstReceipt.site.directoryPath));
+      const v2Key = "prueba-2026-08-07T10-00-00-000Z-v000002";
+      const v2SiteDir = join(sitesRoot, v2Key);
+      await mkdir(v2SiteDir, { recursive: true });
+      await writeFile(join(v2SiteDir, "basura.tmp"), "residuo de un intento cortado", "utf8");
+
+      const attempt = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T11:00:00.000Z",
+        expectedVersion: firstReceipt.version,
+      });
+      await upload(storage, attempt.transactionId, "project", projectJson("v2"));
+      await upload(
+        storage,
+        attempt.transactionId,
+        "site",
+        siteMap([{ path: "index.html", encoding: "utf8", data: "<main>v2</main>" }]),
+      );
+      const receipt = await storage.commit(attempt.transactionId);
+      expect(receipt).toMatchObject({ version: 2, status: "synced" });
+      expect(receipt.site.key).toBe(v2Key);
+      expect(await readFile(join(v2SiteDir, "index.html"), "utf8")).toBe("<main>v2</main>");
+      expect(await readdir(v2SiteDir)).toEqual(["index.html"]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
