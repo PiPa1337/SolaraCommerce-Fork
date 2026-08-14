@@ -38,7 +38,7 @@ Fuente única de trabajo del bucle perpetuo. Reglas:
 | O4 | media | exporter | Eliminado el check O(n²) del audit (`feed.includes` por oferta → Set de ids del feed): audit 1.034 → ~60 ms, benchmark 2.629 → 1.610 ms (−39%). Cache incremental: NO se justifica (sin el cuello, 1.6 s en 2.000 productos) | hecho | audit-scale.test.ts + benchmark |
 | O5 | media | exporter | Verificado: preloads LCP (`fetchpriority=high`) en home, categoría y producto en reference y catalogModern; orden del head correcto; único finding `performance.asset.responsive` es dato del fixture (no del renderer) | hecho | verificación con evidencia |
 | O6 | baja | exporter | Subsetting con fonttools (latin + es-AR + símbolos, hinting y eje variable conservados): Archivo 34.9→30.2 KB, Inter 48.3→38.3 KB, Lora 37.8→34.2 KB (120.9→102.7 KB total, −15%). Verificado visualmente: cero tofu, acentos correctos | hecho | fonts.ts + verificación visual |
-| O7 | baja | studio | Recalibrar umbrales `perf-idle` sobre TaskDuration (hoy sobre ScriptDuration) | pendiente | deuda T10 |
+| O7 | baja | studio | Verificado: los presupuestos de TaskDuration ya están asercionados (100/100/25 ms/s) y el gate corre 4/4; la deuda T10 estaba obsoleta | hecho | perf-idle.spec.ts 4/4 |
 
 ## Deuda abierta (fuente de ítems futuros)
 
@@ -65,4 +65,4 @@ fases C y O (regla de selección nivel 3).
 
 ## SIGUIENTE
 
-O7 — Recalibrar umbrales `perf-idle` sobre TaskDuration (hoy sobre ScriptDuration)
+Deuda abierta nivel 3 — re-lectura de docs/TECHNICAL_DEBT.md con los cierres aplicados para convertir filas abiertas en ítems
