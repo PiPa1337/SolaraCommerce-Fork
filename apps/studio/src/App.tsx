@@ -32,6 +32,7 @@ import {
   ensureCatalogModernDemoReviews,
   ensureDeprecatedCategoriesRemoved,
   ensureFirstProject,
+  ensurePredeterminadoV1Project,
   ensureScaleDemoProject,
   expandCatalogModernDemoGalleries,
   getProject,
@@ -207,6 +208,7 @@ function StudioShell() {
         if (diskListing?.projects.length) {
           if (detectedStorage.writable) {
             await purgeNonDemoStores();
+            await ensurePredeterminadoV1Project();
             for (const diskProject of diskListing.projects) {
               const expanded = expandCatalogModernDemoGalleries(diskProject.project);
               if (expanded === diskProject.project) continue;
@@ -252,6 +254,14 @@ function StudioShell() {
             current
               ? `${current} También se agregó la tienda Predeterminado con 50 productos para explorar la escala del catálogo.`
               : "Se agregó la tienda Predeterminado con 50 productos para explorar la escala del catálogo.",
+          );
+        }
+        const predeterminadoV1Created = await ensurePredeterminadoV1Project();
+        if (predeterminadoV1Created) {
+          setNotice((current) =>
+            current
+              ? `${current} Se agregó Predeterminado V1, la demo original antes del upgrade a V2.`
+              : "Se agregó Predeterminado V1, la demo original antes del upgrade a V2.",
           );
         }
         const demoReviewsExpanded = await ensureCatalogModernDemoReviews();

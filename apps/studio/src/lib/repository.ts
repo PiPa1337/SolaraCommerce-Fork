@@ -5,6 +5,7 @@
  */
 import type { NavigationItem, StoreProjectV1 } from "@solara/project-schema";
 import { getCategoryProductIds, StoreProjectV1Schema } from "@solara/project-schema";
+import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import {
   buildCatalogModernProject,
   catalogModernCleanStore,
@@ -115,10 +116,17 @@ export const SCALE_DEMO_PROJECT_ID = "store-modo-sur-demo";
 export const SCALE_DEMO_PROJECT_NAME = "Predeterminado";
 /** Referencia V1 (Modo Sur): convive con Predeterminado V2 en el dashboard. */
 export const V1_DEMO_PROJECT_ID = "store-modo-sur";
-/** Purga única de tiendas: conserva sólo las dos referencias para comparar. */
+/** Predeterminado V1: la misma demo antes de su upgrade a la familia V2. */
+export const PREDETERMINADO_V1_PROJECT_ID = "store-modo-sur-demo-v1";
+export const PREDETERMINADO_V1_PROJECT_NAME = "Predeterminado V1";
+/** Purga única de tiendas: conserva sólo las referencias para comparar. */
 export const DEMO_ONLY_PURGE_SENTINEL = "solara-demo-only-purge";
 const DEMO_ONLY_PURGE_VERSION = "1";
-const DEMO_KEEP_PROJECT_IDS = new Set([SCALE_DEMO_PROJECT_ID, V1_DEMO_PROJECT_ID]);
+const DEMO_KEEP_PROJECT_IDS = new Set([
+  SCALE_DEMO_PROJECT_ID,
+  V1_DEMO_PROJECT_ID,
+  PREDETERMINADO_V1_PROJECT_ID,
+]);
 const LEGACY_SCALE_DEMO_PROJECT_NAME = "Demo Modo Sur, catálogo moderno";
 const LEGACY_CLEAN_PROJECT_ID = "store-catalog-modern-clean-default";
 const LEGACY_CLEAN_PROJECT_NAME = "Mi primera tienda";
@@ -659,6 +667,30 @@ export async function ensureScaleDemoProject(): Promise<boolean> {
   }
 
   const demo = buildScaleDemoProject();
+  await saveProject(await embedFixtureAssets(demo));
+  return true;
+}
+
+/**
+ * Registra `Predeterminado V1`: la misma demo de referencia antes de su
+ * upgrade a la familia V2 (buildScaleDemoProject). Conserva el catálogo del
+ * fixture demo con la familia y el tema V1, con identidad propia para convivir
+ * como tercera tienda. Idempotente: no sobrescribe ediciones del usuario.
+ */
+export async function ensurePredeterminadoV1Project(): Promise<boolean> {
+  await ready();
+  const existing = await database.projects.get(PREDETERMINADO_V1_PROJECT_ID);
+  if (existing) return false;
+
+  const demo = StoreProjectV1Schema.parse(
+    structuredClone({
+      ...catalogModernStore,
+      id: PREDETERMINADO_V1_PROJECT_ID,
+      name: PREDETERMINADO_V1_PROJECT_NAME,
+      slug: "predeterminado-v1",
+      baseUrl: "https://predeterminado-v1.example",
+    }),
+  );
   await saveProject(await embedFixtureAssets(demo));
   return true;
 }

@@ -3,8 +3,9 @@ import { expect, type Page, test } from "@playwright/test";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 /**
- * Fase 12 — Tras la purga única, un perfil limpio queda con una sola tienda
- * (Predeterminado) y su preview renderiza la familia `catalog-modern-v2`.
+ * Fase 12 — Tras la purga única, un perfil limpio queda con las dos
+ * referencias de la demo (Predeterminado V2 y Predeterminado V1) y sus
+ * previews renderizan la familia correspondiente.
  */
 test.setTimeout(process.env.CI ? 120_000 : 90_000);
 
@@ -35,7 +36,16 @@ async function wipeIndexedDb(page: Page): Promise<void> {
   );
 }
 
-test("el dashboard queda con Predeterminado V2 y sin otras tiendas", async ({ page }) => {
+async function openStore(page: Page, cardId: string): Promise<void> {
+  const card = page.locator(`[data-store-card-id="${cardId}"]`);
+  await card.click();
+  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+}
+
+test("el dashboard muestra Predeterminado V2 y Predeterminado V1 como tiendas separadas", async ({
+  page,
+}) => {
   await page.goto(studioUrl);
   await wipeIndexedDb(page);
   await page.reload();
@@ -44,17 +54,28 @@ test("el dashboard queda con Predeterminado V2 y sin otras tiendas", async ({ pa
   });
 
   const cards = page.locator("[data-store-card-id]");
-  await expect(cards).toHaveCount(1, { timeout: 15_000 });
-  const card = page.locator('[data-store-card-id="store-modo-sur-demo"]');
-  await expect(card).toContainText("Predeterminado");
+  await expect(cards).toHaveCount(2, { timeout: 15_000 });
+  await expect(page.locator('[data-store-card-id="store-modo-sur-demo"]')).toContainText(
+    "Predeterminado",
+  );
+  await expect(page.locator('[data-store-card-id="store-modo-sur-demo-v1"]')).toContainText(
+    "Predeterminado V1",
+  );
 
-  await card.click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
-  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
-
-  const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
+  await openStore(page, "store-modo-sur-demo");
+  const v2Preview = page.frameLocator('iframe[title="Vista previa desktop"]');
   await expect
-    .poll(() => preview.locator('[data-design-family="catalog-modern-v2"]').count(), {
+    .poll(() => v2Preview.locator('[data-design-family="catalog-modern-v2"]').count(), {
+      timeout: 20_000,
+    })
+    .toBeGreaterThan(0);
+  await page.getByRole("button", { name: "Volver a tiendas" }).click();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+
+  await openStore(page, "store-modo-sur-demo-v1");
+  const v1Preview = page.frameLocator('iframe[title="Vista previa desktop"]');
+  await expect
+    .poll(() => v1Preview.locator('[data-design-family="catalog-modern-v1"]').count(), {
       timeout: 20_000,
     })
     .toBeGreaterThan(0);

@@ -2,8 +2,9 @@
 
 ### Dashboard con dos referencias V1/V2 (2026-08-14)
 
-- El perfil local queda con dos tiendas de referencia para comparar las
-  familias lado a lado: `Predeterminado` (catalog-modern-v2) y `Modo Sur`
+- El perfil local queda con tres tiendas de referencia para comparar las
+  familias lado a lado: `Predeterminado` (catalog-modern-v2), `Predeterminado
+  V1` (la misma demo antes del upgrade, catalog-modern-v1) y `Modo Sur`
   (catalog-modern-v1). Una purga única por perfil elimina el resto de tiendas
   con sus borradores de recuperación y registros de migración; las tiendas que
   el usuario cree después no se ven afectadas.

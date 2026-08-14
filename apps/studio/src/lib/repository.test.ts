@@ -37,6 +37,7 @@ import {
   ensureCatalogModernDemoGallery,
   ensureCatalogModernDemoReviews,
   ensureDeprecatedCategoriesRemoved,
+  ensurePredeterminadoV1Project,
   ensureScaleDemoProject,
   getCachedAsset,
   getProject,
@@ -45,6 +46,8 @@ import {
   listProjects,
   listProjectsWithRecovery,
   markProjectMigration,
+  PREDETERMINADO_V1_PROJECT_ID,
+  PREDETERMINADO_V1_PROJECT_NAME,
   purgeNonDemoStores,
   putCachedAsset,
   SCALE_DEMO_PROJECT_ID,
@@ -377,12 +380,17 @@ describe("repositorio local", () => {
       id: V1_DEMO_PROJECT_ID,
     });
     const v2Reference = buildScaleDemoProject();
+    const v1Demo = StoreProjectV1Schema.parse({
+      ...structuredClone(catalogModernStore),
+      id: PREDETERMINADO_V1_PROJECT_ID,
+    });
     const extraStore = StoreProjectV1Schema.parse({
       ...structuredClone(catalogModernStore),
       id: "store-extra",
     });
     await saveProject(v1Reference);
     await saveProject(v2Reference);
+    await saveProject(v1Demo);
     await saveProject(extraStore);
     await saveRecoveryDraft(extraStore, 0);
     await markProjectMigration(extraStore.id, "done");
@@ -390,6 +398,7 @@ describe("repositorio local", () => {
     expect(await purgeNonDemoStores()).toBe(true);
     expect(await getProject(V1_DEMO_PROJECT_ID)).toEqual(v1Reference);
     expect(await getProject(SCALE_DEMO_PROJECT_ID)).toEqual(v2Reference);
+    expect(await getProject(PREDETERMINADO_V1_PROJECT_ID)).toEqual(v1Demo);
     expect(await getProject("store-extra")).toBeUndefined();
     expect(await getRecoveryDraft("store-extra")).toBeUndefined();
     expect(await getProjectMigration("store-extra")).toBeUndefined();
@@ -399,6 +408,55 @@ describe("repositorio local", () => {
     await saveProject(StoreProjectV1Schema.parse({ ...extraStore, id: "store-nueva" }));
     expect(await purgeNonDemoStores()).toBe(false);
     expect(await getProject("store-nueva")).toBeDefined();
+  });
+
+  it("registra Predeterminado V1 con familia V1 e identidad propia", async () => {
+    const originalFetch = globalThis.fetch;
+    const originalFileReader = globalThis.FileReader;
+    globalThis.fetch = ((input: unknown) => {
+      if (String(input).startsWith("/fixtures/")) {
+        const pixel = new Uint8Array([
+          137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8,
+          6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 13, 73, 68, 65, 84, 120, 156, 99, 248, 255, 255,
+          255, 127, 0, 5, 0, 1, 255, 255, 80, 24, 42, 190, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96,
+          130,
+        ]);
+        return Promise.resolve(
+          new Response(pixel, { status: 200, headers: { "Content-Type": "image/png" } }),
+        );
+      }
+      return originalFetch(input as RequestInfo);
+    }) as typeof fetch;
+    globalThis.FileReader = class {
+      result: string | ArrayBuffer | null = null;
+      private loadHandlers: Array<() => void> = [];
+      addEventListener(type: string, handler: () => void) {
+        if (type === "load") this.loadHandlers.push(handler);
+      }
+      async readAsDataURL(blob: Blob) {
+        const buffer = Buffer.from(await blob.arrayBuffer());
+        this.result = `data:${blob.type};base64,${buffer.toString("base64")}`;
+        for (const handler of this.loadHandlers) handler();
+      }
+    } as unknown as typeof FileReader;
+    try {
+      expect(await ensurePredeterminadoV1Project()).toBe(true);
+      const created = await getProject(PREDETERMINADO_V1_PROJECT_ID);
+      expect(created?.name).toBe(PREDETERMINADO_V1_PROJECT_NAME);
+      expect(created?.commerceTemplates.designFamily).toBe("catalog-modern-v1");
+      expect(created?.assets.every((asset) => asset.source.startsWith("data:image"))).toBe(true);
+      expect(await ensurePredeterminadoV1Project()).toBe(false);
+
+      if (!created) throw new Error("Predeterminado V1 no quedó registrado.");
+      await saveProject(
+        StoreProjectV1Schema.parse({ ...structuredClone(created), name: "V1 editada" }),
+      );
+      expect(await ensurePredeterminadoV1Project()).toBe(false);
+      expect((await getProject(PREDETERMINADO_V1_PROJECT_ID))?.name).toBe("V1 editada");
+    } finally {
+      globalThis.fetch = originalFetch;
+      globalThis.FileReader = originalFileReader;
+    }
   });
 });
 
