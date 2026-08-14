@@ -290,6 +290,15 @@ export const STORE_BASE_STYLES = `
   padding-top: 1rem;
   border-top: 1px solid var(--solara-border);
 }
+[data-solara-store] .solara-cart-summary > p {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+}
+[data-solara-store] .solara-cart-summary > p strong {
+  text-align: right;
+}
 [data-solara-store] .solara-cart-page-grid aside strong {
   font-family: var(--solara-font-display);
   font-size: 2rem;
