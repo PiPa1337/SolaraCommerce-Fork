@@ -1,21 +1,21 @@
 {
-  "plan": 2,
-  "de10": 2,
+  "plan": 3,
+  "de10": 3,
   "branch": "main",
   "baselineEntrada": {
     "runtimeJavascriptRaw": 55845,
     "runtimeTope": 57344,
     "runtimeMargen": 1499,
-    "exportMs2000": 1644,
-    "axeFindings": 7,
+    "exportMs2000": 1602,
+    "axeFindings": 0,
     "axeSerios": 0,
     "paritySweep": "6/6",
     "enganches": "4/4",
+    "contratos": "1/1",
     "nojsCobertura": "7 rutas x2",
     "lcpHomeMs": 788,
-    "lcpProductoMs": 552,
     "taskHomeMsS": 30.7,
     "nodosPromedio": 268
   },
-  "nextItem": "R1"
+  "nextItem": "P3-1"
 }
