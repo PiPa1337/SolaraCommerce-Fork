@@ -186,6 +186,22 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
 
   await revealWholePage(page);
   await expect(page.locator(".catalog-product-card").last()).toHaveCSS("opacity", "1");
+  await expect
+    .poll(() =>
+      page
+        .locator(".catalog-product-grid")
+        .first()
+        .locator(".catalog-product-card-image")
+        .evaluateAll(
+          (images) =>
+            images.filter(
+              (image) =>
+                (image as HTMLImageElement).complete &&
+                (image as HTMLImageElement).naturalWidth > 0,
+            ).length,
+        ),
+    )
+    .toBe(12);
   await page.screenshot({ path: testInfo.outputPath("home-1920x968.png"), fullPage: true });
 });
 
@@ -400,6 +416,22 @@ test("V2 mantiene CTA, dos columnas y reduced motion en 390x844", async ({ page 
 
   await revealWholePage(page);
   await expect(page.locator(".catalog-product-card").last()).toHaveCSS("opacity", "1");
+  await expect
+    .poll(() =>
+      page
+        .locator(".catalog-product-grid")
+        .first()
+        .locator(".catalog-product-card-image")
+        .evaluateAll(
+          (images) =>
+            images.filter(
+              (image) =>
+                (image as HTMLImageElement).complete &&
+                (image as HTMLImageElement).naturalWidth > 0,
+            ).length,
+        ),
+    )
+    .toBe(12);
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.reload();
@@ -417,6 +449,43 @@ test("V2 mantiene CTA, dos columnas y reduced motion en 390x844", async ({ page 
   ).toBe("0s");
 
   await page.screenshot({ path: testInfo.outputPath("home-390x844.png"), fullPage: true });
+});
+
+test("V2 audita composición en viewports intermedios", async ({ page }, testInfo) => {
+  for (const viewport of [
+    { width: 768, height: 1024 },
+    { width: 1024, height: 768 },
+    { width: 1366, height: 768 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(serverUrl);
+    const metrics = await page.evaluate(() => {
+      const hero = document.querySelector<HTMLElement>(".catalog-hero-inner");
+      const grid = document.querySelector<HTMLElement>(".catalog-product-grid");
+      const card = grid?.querySelector<HTMLElement>(".catalog-product-card");
+      const action = document.querySelector<HTMLElement>(".catalog-hero-actions");
+      const nav = document.querySelector<HTMLElement>(".catalog-desktop-nav");
+      return {
+        documentWidth: document.documentElement.scrollWidth,
+        heroWidth: hero?.getBoundingClientRect().width ?? 0,
+        heroActionsBottom: action?.getBoundingClientRect().bottom ?? 0,
+        productColumns: grid ? getComputedStyle(grid).gridTemplateColumns.split(" ").length : 0,
+        productCardWidth: card?.getBoundingClientRect().width ?? 0,
+        navHeight: nav?.getBoundingClientRect().height ?? 0,
+      };
+    });
+    expect(metrics.documentWidth).toBeLessThanOrEqual(viewport.width);
+    expect(metrics.heroWidth).toBeLessThanOrEqual(viewport.width);
+    expect(metrics.heroActionsBottom).toBeLessThanOrEqual(viewport.height);
+    expect(metrics.productColumns).toBe(viewport.width <= 1199 ? 3 : 4);
+    expect(metrics.productCardWidth).toBeGreaterThan(180);
+    expect(metrics.navHeight).toBeLessThanOrEqual(44);
+    await page.screenshot({
+      path: testInfo.outputPath(`home-${viewport.width}x${viewport.height}.png`),
+      fullPage: false,
+    });
+  }
 });
 
 test("V2 ordena categoría y filtros como rail editorial y sheet móvil", async ({

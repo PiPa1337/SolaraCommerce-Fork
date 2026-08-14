@@ -1,5 +1,12 @@
 # Changelog
 
+### Header V2 responsive (2026-08-14)
+
+- Evita que los enlaces de navegacion se partan en dos lineas en tablets de
+  768px, manteniendo el header legible y sin overflow.
+- Agrega cobertura visual y geometrica en 768, 1024, 1366 y 1440px, junto con
+  una comprobacion de carga de imagenes de la primera grilla.
+
 ### Carrito embebido V2 (2026-08-14)
 
 - El carrito del preview guarda de inmediato en el host cuando el entorno lo

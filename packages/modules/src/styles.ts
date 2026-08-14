@@ -2485,10 +2485,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   font-size: .82rem;
   letter-spacing: .015em;
 }
-.cm.v2 .catalog-desktop-nav > a,
-.cm.v2 .catalog-desktop-nav summary {
-  position: relative;
-}
+.cm.v2 .catalog-desktop-nav > a,.cm.v2 .catalog-desktop-nav summary{position:relative;white-space:nowrap}
 .cm.v2 .catalog-desktop-nav > a::after,
 .cm.v2 .catalog-desktop-nav summary::after {
   position: absolute;
