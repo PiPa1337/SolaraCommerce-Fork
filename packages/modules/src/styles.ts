@@ -3106,7 +3106,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     font-size: calc(clamp(3.6rem, 7vw, 5.5rem) * var(--solara-type-scale, 1));
   }
   .cm.v2 .catalog-hero-benefits {
-    gap: .75rem .75rem;
+    gap: .6rem .6rem;
   }
   .cm.v2 .catalog-hero-benefit {
     gap: .45rem;
@@ -3122,7 +3122,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     font-size: .68rem;
   }
   .cm.v2 .catalog-hero-benefit + .catalog-hero-benefit {
-    padding-left: .75rem;
+    padding-left: .6rem;
   }
   .cm.v2 .catalog-category-bento-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
