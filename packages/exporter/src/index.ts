@@ -1278,9 +1278,10 @@ function modernCategoryFilters(products: readonly Product[], mobileSheet = false
     })
     .join("");
   const groups = `<div class="catalog-filter-groups"><fieldset><legend>Disponibilidad</legend><label><input type="checkbox" data-category-available> Sólo disponibles</label></fieldset><fieldset><legend>Etiqueta</legend><label><span class="sr-only">Filtrar por etiqueta</span><select data-category-tag><option value="">Todas</option>${tagOptions}</select></label></fieldset>${optionFilters}<fieldset><legend>Precio</legend><div class="catalog-price-fields"><label><span>Mínimo</span><input type="number" min="0" step="1" data-category-min-price inputmode="decimal"></label><label><span>Máximo</span><input type="number" min="0" step="1" data-category-max-price inputmode="decimal"></label></div></fieldset></div>`;
+  const summary = `<summary><span>Filtros</span><span class="catalog-filter-disclosure" aria-hidden="true">&#x2304;</span></summary>`;
   const content = mobileSheet
-    ? `<details class="catalog-filter-toggle"><summary>Filtros</summary></details>${groups}`
-    : `<details open><summary>Filtros</summary>${groups}</details>`;
+    ? `<details class="catalog-filter-toggle">${summary}</details>${groups}`
+    : `<details open>${summary}${groups}</details>`;
   return `<aside class="catalog-category-filters" aria-label="Filtros del catálogo">${content}</aside>`;
 }
 

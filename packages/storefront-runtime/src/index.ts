@@ -167,7 +167,7 @@ function storefrontBoot(): void {
   const greeting = root.dataset.whatsappGreeting ?? "Hola, quiero hacer este pedido:";
   const includeSku = root.dataset.whatsappIncludeSku !== "false";
   const storageKey = `solara-cart:${storeId}`;
-  const embedded = window.parent !== window;
+  const embed = parent !== window && location.protocol[0] !== "s";
   const money = new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
@@ -185,7 +185,7 @@ function storefrontBoot(): void {
   const hasFeature = (feature: string): boolean => runtimeFeatures.has(feature);
 
   const readStoredCart = (): StoredCartLine[] => {
-    if (embedded) return [];
+    if (embed) return [];
     try {
       const serialized = localStorage.getItem(storageKey);
       if (!serialized) return [];
@@ -198,7 +198,7 @@ function storefrontBoot(): void {
 
   let cart = hasFeature("cart") || hasFeature("checkout") ? readStoredCart() : [];
   const previewCartSession = document.getElementById("solara-preview-cart")?.dataset.session ?? "";
-  if (embedded) {
+  if (embed) {
     const previewCartState = document.getElementById("solara-preview-cart")?.textContent;
     if (previewCartState) {
       try {
@@ -227,8 +227,8 @@ function storefrontBoot(): void {
     if (persist) {
       const serialized = JSON.stringify(cart);
       try {
-        if (embedded) {
-          window.parent.postMessage(
+        if (embed) {
+          parent.postMessage(
             {
               type: "solara-preview-cart-write",
               key: storageKey,
@@ -373,7 +373,7 @@ function storefrontBoot(): void {
         });
     }
     for (const s of pageSiblingsOf(drawer)) s.setAttribute("inert", "");
-    window.setTimeout(() => {
+    setTimeout(() => {
       drawer
         .querySelector<HTMLElement>(
           'button, input, select, textarea, a, [tabindex]:not([tabindex="-1"])',
@@ -533,7 +533,7 @@ function storefrontBoot(): void {
     const variant = productRoot ? selectedVariant(productRoot) : null;
     if (!productRoot || !variant || variant.dataset.available !== "true") return;
 
-    if (!embedded) cart = readStoredCart();
+    if (!embed) cart = readStoredCart();
     const variantId = variant.dataset.variantId ?? "";
     const quantityInput = productRoot.querySelector<HTMLInputElement>('input[name="quantity"]');
     const quantity = Math.max(1, Math.min(99, Math.trunc(Number(quantityInput?.value ?? "1"))));
@@ -1495,7 +1495,7 @@ function storefrontBoot(): void {
   };
   document.addEventListener("visibilitychange", onVisibility, { passive: true });
   window.addEventListener("message", (event) => {
-    if (event.source !== window.parent) return;
+    if (event.source !== parent) return;
     const type = (event.data as { type?: unknown } | undefined)?.type;
     if (type === "solara-pause") pauseRuntime();
     else if (type === "solara-resume") resumeRuntime();

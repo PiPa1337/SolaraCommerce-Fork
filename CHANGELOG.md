@@ -1,5 +1,18 @@
 # Changelog
 
+### Carrito embebido V2 (2026-08-14)
+
+- El carrito del preview guarda de inmediato en el host cuando el entorno lo
+  permite y conserva el puente por `postMessage` como fallback, evitando perder
+  lineas al cambiar de ruta rapidamente.
+
+### Filtros moviles V2 (2026-08-14)
+
+- El sheet de filtros muestra un disclosure visible con estado abierto/cerrado para abrir y
+  cerrar el panel sin perder el contexto de la categoria.
+- La estructura conserva el filtro movil cerrado al iniciar, evita overflow y
+  mantiene el rail de filtros abierto en desktop.
+
 ### CTA y acumulación del carrito (2026-08-13)
 
 - El carrito acumula la misma variante y conserva sus líneas al volver desde

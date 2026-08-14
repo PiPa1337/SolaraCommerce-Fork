@@ -115,6 +115,40 @@ try {
   // difiere del seed en disco (App.tsx); este gate quiere la verdad del disco:
   // espera el tab del editor y, si el diálogo de recuperación aparece, lo
   // descarta. Bucle tolerante a la latencia de aparición del diálogo.
+  const preview = instanceA.page.frameLocator('iframe[title="Vista previa desktop"]');
+  const productPaths = await preview
+    .locator('a[href^="/productos/"]')
+    .evaluateAll((links) =>
+      [...new Set(links.map((link) => link.getAttribute("href")))].filter(Boolean),
+    );
+  if (productPaths.length < 2) throw new Error("El preview portable no expuso dos productos.");
+  const storeId = await preview.locator("html").getAttribute("data-store-id");
+  if (!storeId) throw new Error("El preview portable no expuso el ID de la tienda.");
+  await instanceA.page.evaluate((id) => localStorage.removeItem(`solara-cart:${id}`), storeId);
+  const routeInput = instanceA.page.getByTestId("ui-preview-route");
+  for (const [index, path] of productPaths.slice(0, 2).entries()) {
+    await routeInput.fill(path);
+    await routeInput.press("Enter");
+    await preview.getByRole("heading", { level: 1 }).waitFor({ timeout: 20_000 });
+    await preview.getByRole("button", { name: "Agregar al carrito" }).click();
+    const expectedCount = String(index + 1);
+    await preview.locator("[data-cart-count]").first().waitFor({ state: "visible" });
+    const count = await preview.locator("[data-cart-count]").first().textContent();
+    if (count !== expectedCount)
+      throw new Error(`El carrito portable esperaba ${expectedCount}, recibió ${count}.`);
+  }
+  await routeInput.fill("/carrito/");
+  await routeInput.press("Enter");
+  await preview
+    .locator(".solara-cart-page-grid [data-cart-lines] .solara-cart-line")
+    .nth(1)
+    .waitFor({ timeout: 20_000 });
+  const portableLines = await preview
+    .locator(".solara-cart-page-grid [data-cart-lines] .solara-cart-line")
+    .count();
+  if (portableLines !== 2)
+    throw new Error(`El carrito portable conservó ${portableLines} líneas en vez de 2.`);
+
   for (let attempt = 0; attempt < 12; attempt++) {
     const tab = instanceA.page.getByRole("tab", { name: "Resumen", exact: true });
     if (await tab.isVisible({ timeout: 500 }).catch(() => false)) break;

@@ -431,6 +431,7 @@ test("V2 ordena categoría y filtros como rail editorial y sheet móvil", async 
   const categoryImage = page.locator(".solara-category-hero img");
   await expect(layout).toBeVisible();
   await expect(filters.locator(".catalog-filter-groups")).toBeVisible();
+  await expect(filters.locator("details + .catalog-filter-groups")).toHaveCount(1);
   expect(
     await categoryImage.evaluate((element) => {
       const rect = element.getBoundingClientRect();
@@ -487,6 +488,7 @@ test("V2 ordena categoría y filtros como rail editorial y sheet móvil", async 
   await filters.locator("summary").click();
   await expect(filters.locator("details")).toHaveAttribute("open", "");
   await expect(filters.locator(".catalog-filter-groups")).toBeVisible();
+  await expect(filters.locator("details > summary .catalog-filter-disclosure")).toBeVisible();
   const mobileFilter = await filters.evaluate((element) => {
     const style = getComputedStyle(element);
     const rect = element.getBoundingClientRect();

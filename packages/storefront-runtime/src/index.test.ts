@@ -183,7 +183,12 @@ describe("carrito robusto y checkout con precios frescos (C2/C3/C5/C9 + SF-B4/B5
   });
 
   it("refresca el carrito persistido antes de agregar desde una página restaurada", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain("if (!embedded) cart = readStoredCart();");
+    expect(STOREFRONT_RUNTIME_JS).toContain("if (!embed) cart = readStoredCart();");
+  });
+
+  it("usa el almacenamiento compartido en el preview portable", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain('location.protocol[0] !== "s"');
+    expect(STOREFRONT_RUNTIME_JS).toContain("if (!embed) cart = readStoredCart();");
   });
 });
 
@@ -283,7 +288,7 @@ describe("pausa y reanudación del runtime (contrato A3↔A4)", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain('"solara-pause"');
     expect(STOREFRONT_RUNTIME_JS).toContain('"solara-resume"');
     expect(STOREFRONT_RUNTIME_JS).toContain('addEventListener("message"');
-    expect(STOREFRONT_RUNTIME_JS).toContain("event.source !== window.parent");
+    expect(STOREFRONT_RUNTIME_JS).toContain("event.source !== parent");
   });
 
   it("pausa el trabajo con la visibilidad del documento con un listener pasivo", () => {
