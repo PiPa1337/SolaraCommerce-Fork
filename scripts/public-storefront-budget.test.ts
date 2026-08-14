@@ -42,13 +42,11 @@ test("mantiene la foundation V2 dentro de un presupuesto público explícito", (
   });
 
   // Análisis de costo (2026-08-14): CSS estático minificado servido una vez;
-  // Análisis de costo (2026-08-14): CSS estático minificado servido una vez;
-  // gzip lo comprime a ~14% (≈17 KiB transferidos). El techo subió de 120 a
-  // 132 KiB por el motion editorial del mosaico de categorías (~8 KB:
-  // coreografía de entrada, hover coordinado, glow y parallax). La revisión
-  // final de presupuestos está pendiente de terminar la animación completa,
-  // como acordó el usuario; los gates del runtime (56 KiB JS / 8 KiB CSS) y
-  // el tope público de V1 (780 KiB) no cambian.
-  expect(cssBytes).toBeLessThanOrEqual(132 * 1024);
+  // gzip lo comprime a ~14% (≈16 KiB transferidos). El techo subió de 108 a
+  // 120 KiB por el motion cinematográfico del hero V2 (~9 KB minificado:
+  // coreografía de entrada, hover del CTA, beneficios, parallax y reduced
+  // motion), con margen para la iteración visual V2 en curso sin tocar los
+  // gates del runtime (56 KiB JS / 8 KiB CSS) ni el tope público de V1 (780 KiB).
+  expect(cssBytes).toBeLessThanOrEqual(120 * 1024);
   expect(javascriptBytes).toBeLessThanOrEqual(56 * 1024);
 });
