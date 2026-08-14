@@ -2634,10 +2634,7 @@ export function renderPreviewHtml(
   const storefrontSrc = assetHref(project, "/assets/storefront.js");
   return document
     .replace("</body>", `${previewAssetMarkup(usedSources, options.assetTransport)}\n</body>`)
-    .replace(
-      `href="${stylesheetHref}"`,
-      'href="data:text/css;base64,PREVIEW_STYLE"',
-    )
+    .replace(`href="${stylesheetHref}"`, 'href="data:text/css;base64,PREVIEW_STYLE"')
     .replace(
       `src="${storefrontSrc}"`,
       `src="data:text/javascript;base64,${toBase64(STOREFRONT_RUNTIME_JS)}"`,

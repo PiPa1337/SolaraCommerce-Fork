@@ -88,7 +88,7 @@ async function writeJsonAtomic(pathname, value) {
  * esta carpeta. Útil para avisar cuando el ejecutable se movió de lugar y sus
  * tiendas quedaron en la ubicación anterior.
  */
-export async function detectPortableFirstRun(portableRoot, instancePath) {
+export async function detectPortableFirstRun(_portableRoot, instancePath) {
   let instanceExists = false;
   try {
     const info = await lstat(instancePath);

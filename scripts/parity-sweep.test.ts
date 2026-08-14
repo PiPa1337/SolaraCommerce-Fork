@@ -87,7 +87,10 @@ for (const [fixtureName, project] of Object.entries(fixtures)) {
           mismatches.push(`${route.path}: cuerpo normalizado distinto`);
         }
       }
-      expect(mismatches, `Rutas sin paridad (${fixtureName}/${mode}):\n${mismatches.join("\n")}`).toEqual([]);
+      expect(
+        mismatches,
+        `Rutas sin paridad (${fixtureName}/${mode}):\n${mismatches.join("\n")}`,
+      ).toEqual([]);
     });
   }
 }
