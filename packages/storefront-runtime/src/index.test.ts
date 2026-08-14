@@ -89,6 +89,11 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).not.toContain("__solaraSearchHelpers.__solaraSearchHelpers");
   });
 
+  it("convierte el CTA del carrito en una salida útil cuando está vacío", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("data-cart-cta");
+    expect(STOREFRONT_RUNTIME_JS).toContain("i !== +!!count");
+  });
+
   it("mantiene el runtime por debajo de 53 KB crudos", () => {
     // Medición real al 2026-08-13: runtime JS 52.993 B en bytes crudos (sin gzip).
     expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(53 * 1024);

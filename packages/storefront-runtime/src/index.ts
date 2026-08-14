@@ -284,6 +284,10 @@ function storefrontBoot(): void {
         .join("");
     });
 
+    document.querySelectorAll<HTMLElement>("[data-cart-cta]").forEach((a, i) => {
+      a.hidden = i !== +!!count;
+    });
+
     const total = cart.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
     document.querySelectorAll<HTMLElement>("[data-cart-subtotal]").forEach((element) => {
       element.setAttribute("aria-live", "polite");

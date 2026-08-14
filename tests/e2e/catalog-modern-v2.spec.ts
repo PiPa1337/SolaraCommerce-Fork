@@ -628,6 +628,47 @@ test("V2 conserva varias líneas del carrito al navegar entre páginas", async (
   await expect(page.locator("[data-cart-drawer] .solara-cart-line")).toHaveCount(2);
 });
 
+test("V2 acumula la misma variante sin reemplazarla al volver desde otra página", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  const productUrl = new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString();
+  await page.goto(productUrl);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("1");
+
+  await page.goto(new URL("/", serverUrl).toString());
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("1");
+  await page.goto(productUrl);
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("2");
+
+  await page.goto(new URL("/carrito/", serverUrl).toString());
+  await expect(
+    page.locator(".solara-cart-page-grid [data-cart-lines] .solara-cart-line"),
+  ).toHaveCount(1);
+  await expect(page.locator(".solara-cart-page [data-cart-quantity]").first()).toHaveValue("2");
+});
+
+test("V2 ofrece una salida útil cuando el carrito está vacío", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  const cartAction = page.locator("[data-cart-cta]:visible");
+  await page.goto(new URL("/carrito/", serverUrl).toString());
+  await expect(cartAction).toHaveText("Explorar categorías");
+  await expect(cartAction).toHaveAttribute("href", "/categorias/remeras/");
+
+  await page.goto(new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString());
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await page.getByRole("button", { name: "Seguir comprando" }).click();
+  await page.goto(new URL("/carrito/", serverUrl).toString());
+  await expect(cartAction).toHaveText("Continuar a compra");
+  await expect(cartAction).toHaveAttribute("href", "/compra/");
+});
+
 test("V2 conserva el carrito cuando la navegación ocurre inmediatamente después de agregar", async ({
   page,
 }) => {

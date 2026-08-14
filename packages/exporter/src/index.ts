@@ -1615,6 +1615,8 @@ function buildPages(
     ],
   };
 
+  const firstRootCategory = project.categories.find((category) => !category.parentId);
+  const emptyCartHref = firstRootCategory ? `/categorias/${firstRootCategory.slug}/` : "/buscar/";
   const cartPage: PageDescriptor = {
     path: "carrito/index.html",
     title: `Carrito | ${project.identity.brandName}`,
@@ -1624,6 +1626,10 @@ function buildPages(
     body: `${renderProjectSections(project, sharedHeader, { pageType: "cart" })}<main class="solara-cart-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><span>Carrito</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Tu selección</p><h1>Carrito</h1></header><section class="solara-cart-page-grid"><div data-cart-lines><p class="solara-empty-state">Tu carrito está vacío. Elegí una pieza para comenzar.</p></div><aside class="solara-cart-summary"><p><span>Subtotal</span><strong data-cart-subtotal>${escapeHtml(formatMoney(0))}</strong></p><p><span>Entrega</span><strong>A coordinar</strong></p><p><span>Total estimado</span><strong data-cart-total>${escapeHtml(formatMoney(0))}</strong></p><a class="solara-primary-action" href="/compra/">Continuar a compra</a></aside></section></main>${renderProjectSections(project, sharedFooter, { pageType: "cart" })}`,
     structuredData: [],
   };
+  cartPage.body = cartPage.body.replace(
+    '<a class="solara-primary-action" href="/compra/">Continuar a compra</a>',
+    `<a data-cart-cta href="${escapeAttribute(emptyCartHref)}"><span class="solara-primary-action">Explorar categor\u00EDas</span></a><a data-cart-cta href="/compra/" hidden><span class="solara-primary-action">Continuar a compra</span></a>`,
+  );
 
   const checkoutWhatsAppLink = whatsAppContactLink
     ? `<a class="solara-secondary-action" data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>Enviar pedido en WhatsApp</a>`

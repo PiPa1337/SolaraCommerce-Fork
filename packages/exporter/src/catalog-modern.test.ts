@@ -123,6 +123,9 @@ describe("tienda base catalog-modern de 50 productos", () => {
     const cart = String(exported.files.get("carrito/index.html"));
     expect(cart).toContain("data-cart-subtotal");
     expect(cart).toContain("Entrega");
+    expect(cart).toContain("data-cart-cta");
+    expect(cart).toContain("Explorar categor\u00EDas");
+    expect(cart).toContain("Continuar a compra");
   });
 
   it("mantiene la página de búsqueda compacta con input persistente y resultados fuera del diálogo", () => {

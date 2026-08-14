@@ -1,5 +1,14 @@
 # Changelog
 
+### CTA y acumulación del carrito (2026-08-13)
+
+- El carrito acumula la misma variante y conserva sus líneas al volver desde
+  otra página, sin reemplazar el contenido existente.
+- El resumen vacío ofrece un enlace a la primera categoría madre y reserva el
+  acceso a checkout para cuando existen productos.
+- Se agregan regresiones E2E para líneas múltiples, cantidades acumuladas,
+  navegación, recuperación y checkout.
+
 ### Toolbar de categorías responsive (2026-08-13)
 
 - Se corrige el layout móvil V2 para que filtros, contador y orden ocupen todo
