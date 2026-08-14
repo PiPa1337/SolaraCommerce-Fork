@@ -194,13 +194,23 @@ const MemoizedPreview = memo(function MemoizedPreview({
   route,
   size,
   zoom,
+  onRouteChange,
 }: {
   project: StoreProjectV1;
   route: string;
   size: PreviewSize;
   zoom: PreviewZoom;
+  onRouteChange(route: string): void;
 }) {
-  return <Preview project={project} route={route} size={size} zoom={zoom} />;
+  return (
+    <Preview
+      project={project}
+      route={route}
+      size={size}
+      zoom={zoom}
+      onRouteChange={onRouteChange}
+    />
+  );
 });
 
 export function Studio({
@@ -991,6 +1001,7 @@ export function Studio({
             route={previewRoute}
             size={previewSize}
             zoom={previewZoom}
+            onRouteChange={setPreviewRoute}
           />
         </div>
 

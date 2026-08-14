@@ -1,5 +1,12 @@
 # Changelog
 
+### Navegación interna del Preview V2 (2026-08-14)
+
+- Los enlaces internos de la tienda embebida vuelven al controlador de rutas del
+  Studio en lugar de abandonar el `srcdoc` y reiniciar el runtime.
+- El carrito conserva sus líneas al recorrer Inicio, productos y carrito desde
+  enlaces reales del storefront; los enlaces externos mantienen su comportamiento.
+
 ### Header V2 responsive (2026-08-14)
 
 - Evita que los enlaces de navegacion se partan en dos lineas en tablets de

@@ -63,6 +63,27 @@ function addPreviewCartState(document: string, storeId: string, sessionId: strin
   return `${document.slice(0, headEnd)}${state}\n${document.slice(headEnd)}`;
 }
 
+function addPreviewNavigationBridge(document: string): string {
+  const bridge = `<script data-solara-preview-navigation>
+(() => {
+  const session = document.getElementById("solara-preview-cart")?.dataset.session ?? "";
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const anchor = target.closest("a[href]");
+    if (!(anchor instanceof HTMLAnchorElement) || anchor.target === "_blank" || anchor.hasAttribute("download")) return;
+    const href = anchor.getAttribute("href") ?? "";
+    if (!href.startsWith("/") || href.startsWith("//") || href.startsWith("/#")) return;
+    event.preventDefault();
+    parent.postMessage({ type: "solara-preview-navigate", path: href, session }, "*");
+  }, true);
+})();
+</script>`;
+  const bodyEnd = document.indexOf("</body>");
+  if (bodyEnd === -1) return `${document}${bridge}`;
+  return `${document.slice(0, bodyEnd)}${bridge}\n${document.slice(bodyEnd)}`;
+}
+
 /**
  * La vista previa transporta los assets por postMessage y nunca resuelve el
  * dominio del proyecto; el exporter emite el preload LCP absoluto sólo en
@@ -239,11 +260,13 @@ export function Preview({
   route,
   size,
   zoom,
+  onRouteChange,
 }: {
   project: StoreProjectV1;
   route: string;
   size: PreviewSize;
   zoom: PreviewZoom;
+  onRouteChange(route: string): void;
 }) {
   const [html, setHtml] = useState("");
   const [error, setError] = useState("");
@@ -334,6 +357,22 @@ export function Preview({
         value?: unknown;
         session?: unknown;
       };
+      const navigationMessage = event.data as {
+        type?: unknown;
+        path?: unknown;
+        session?: unknown;
+      };
+      if (
+        navigationMessage.type === "solara-preview-navigate" &&
+        typeof navigationMessage.path === "string" &&
+        navigationMessage.path.startsWith("/") &&
+        !navigationMessage.path.startsWith("//") &&
+        navigationMessage.session === activePreviewSessionRef.current
+      ) {
+        if (!event.source || !previewFrameWindows.current.includes(event.source as Window)) return;
+        onRouteChange(navigationMessage.path);
+        return;
+      }
       if (
         cartMessage.type === "solara-preview-cart-write" &&
         typeof cartMessage.key === "string" &&
@@ -365,7 +404,7 @@ export function Preview({
     };
     window.addEventListener("message", handlePreviewAssetRequest);
     return () => window.removeEventListener("message", handlePreviewAssetRequest);
-  }, []);
+  }, [onRouteChange]);
 
   useEffect(() => {
     let active = true;
@@ -378,12 +417,14 @@ export function Preview({
           activePreviewSessionRef.current = previewSession;
           setHtmlSession(previewSession);
           setHtml(
-            addPreviewCartState(
-              addPreviewScrollbarPolicy(
-                renderPreviewHtml(project, "draft", route, { assetTransport: "parent" }),
+            addPreviewNavigationBridge(
+              addPreviewCartState(
+                addPreviewScrollbarPolicy(
+                  renderPreviewHtml(project, "draft", route, { assetTransport: "parent" }),
+                ),
+                project.id,
+                previewSession,
               ),
-              project.id,
-              previewSession,
             ),
           );
           setIframeReady(false);
