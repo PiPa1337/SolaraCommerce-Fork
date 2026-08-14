@@ -41,6 +41,9 @@ const zipExemptPaths = new Set([
   "packages/exporter/scripts/legacy-zip-migration.mjs",
   "packages/exporter/src/legacy-zip-migration.test.mjs",
   "scripts/check-repository.mjs",
+  // Medición de presupuesto sólo en Node: documenta el costo gzip del CSS
+  // público, no introduce compresión en el producto.
+  "scripts/public-storefront-budget.test.ts",
 ]);
 // Texto con encoding dañado: secuencias UTF-8 leídas como ANSI y reescritas
 // ("á" → "Ã¡", "ó" → "Ã³", "β" → "Î²") o caracteres perdidos (U+FFFD). Los
