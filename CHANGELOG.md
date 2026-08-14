@@ -1,5 +1,12 @@
 # Changelog
 
+### Grillas V2 expandidas en todas las rutas (2026-08-14)
+
+- Colecciones, categorías, búsqueda y recomendaciones usan el ancho editorial
+  disponible en escritorio y dejan de quedar limitadas a cuatro columnas.
+- La búsqueda también conserva miniaturas cuadradas y sin recorte, igual que las
+  cards principales y la galería de producto.
+
 ### Grillas V2 con miniaturas cuadradas (2026-08-14)
 
 - Las secciones de productos aprovechan el ancho disponible con una grilla

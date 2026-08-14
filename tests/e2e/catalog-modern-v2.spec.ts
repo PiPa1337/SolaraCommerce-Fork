@@ -205,6 +205,35 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   await page.screenshot({ path: testInfo.outputPath("home-1920x968.png"), fullPage: true });
 });
 
+test("V2 usa el ancho completo en colecciones y mantiene cards cuadradas", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  await page.goto(new URL("/colecciones/recien-llegados/", serverUrl).toString());
+
+  const grid = page.locator(".catalog-product-grid").first();
+  await expect(grid).toBeVisible();
+  const metrics = await grid.evaluate((element) => {
+    const gridRect = element.getBoundingClientRect();
+    const card = element
+      .querySelector<HTMLElement>(".catalog-product-card")
+      ?.getBoundingClientRect();
+    const media = element
+      .querySelector<HTMLElement>(".catalog-product-media")
+      ?.getBoundingClientRect();
+    return {
+      columns: getComputedStyle(element).gridTemplateColumns.split(" ").length,
+      width: gridRect.width,
+      cardWidth: card?.width ?? 0,
+      mediaRatio: media ? media.width / media.height : 0,
+    };
+  });
+  expect(metrics.columns).toBe(6);
+  expect(metrics.width).toBeGreaterThan(1290);
+  expect(metrics.width).toBeLessThanOrEqual(1320);
+  expect(metrics.cardWidth).toBeGreaterThan(190);
+  expect(metrics.cardWidth).toBeLessThan(215);
+  expect(metrics.mediaRatio).toBeCloseTo(1, 1);
+});
+
 test("V2 ajusta las imágenes al ancho renderizado y mantiene una galería PDP usable", async ({
   page,
 }) => {
@@ -244,7 +273,7 @@ test("V2 ajusta las imágenes al ancho renderizado y mantiene una galería PDP u
   await expect(figures.nth(1)).toHaveAttribute("data-gallery-active", "true");
   await expect(thumbs.nth(1)).toHaveAttribute("aria-current", "true");
   const relatedImages = page.locator(".solara-related-products .catalog-product-card-image");
-  await expect(relatedImages).toHaveCount(4);
+  await expect(relatedImages).toHaveCount(6);
   const relatedGrid = page.locator(".solara-related-products .catalog-product-grid");
   const relatedGridMetrics = await relatedGrid.evaluate((element) => {
     const gridRect = element.getBoundingClientRect();
@@ -257,16 +286,18 @@ test("V2 ajusta las imágenes al ancho renderizado y mantiene una galería PDP u
       cardWidth: cardRect?.width ?? 0,
     };
   });
-  expect(relatedGridMetrics.columns).toBe(4);
-  expect(relatedGridMetrics.gridWidth).toBeLessThanOrEqual(880);
-  expect(relatedGridMetrics.cardWidth).toBeLessThanOrEqual(215);
+  expect(relatedGridMetrics.columns).toBe(6);
+  expect(relatedGridMetrics.gridWidth).toBeGreaterThan(1290);
+  expect(relatedGridMetrics.gridWidth).toBeLessThanOrEqual(1320);
+  expect(relatedGridMetrics.cardWidth).toBeGreaterThan(190);
+  expect(relatedGridMetrics.cardWidth).toBeLessThan(215);
   await expect
     .poll(() =>
       relatedImages.evaluateAll(
         (images) => images.filter((image) => image.complete && image.naturalWidth > 0).length,
       ),
     )
-    .toBe(4);
+    .toBe(6);
 
   for (const viewport of [
     { width: 1024, height: 768 },
@@ -516,7 +547,7 @@ test("V2 ordena categoría y filtros como rail editorial y sheet móvil", async 
     await grid.evaluate(
       (element) => getComputedStyle(element).gridTemplateColumns.split(" ").length,
     ),
-  ).toBe(3);
+  ).toBe(6);
   const categoryGridMetrics = await grid.evaluate((element) => {
     const gridRect = element.getBoundingClientRect();
     const cardRect = element
@@ -524,12 +555,12 @@ test("V2 ordena categoría y filtros como rail editorial y sheet móvil", async 
       ?.getBoundingClientRect();
     return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
   });
-  expect(categoryGridMetrics.gridWidth).toBeGreaterThan(800);
-  expect(categoryGridMetrics.gridWidth).toBeLessThanOrEqual(832);
-  expect(categoryGridMetrics.cardWidth).toBeGreaterThan(240);
-  expect(categoryGridMetrics.cardWidth).toBeLessThan(270);
+  expect(categoryGridMetrics.gridWidth).toBeGreaterThan(1290);
+  expect(categoryGridMetrics.gridWidth).toBeLessThanOrEqual(1320);
+  expect(categoryGridMetrics.cardWidth).toBeGreaterThan(170);
+  expect(categoryGridMetrics.cardWidth).toBeLessThan(215);
   expect(await grid.locator(".catalog-product-card-image").first().getAttribute("sizes")).toBe(
-    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1279px) calc((100vw - 24rem) / 3), min(28vw, 17rem)",
+    "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) min(22vw, 11.5rem), min(20vw, 13rem)",
   );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1920);
   await revealWholePage(page);
@@ -1288,7 +1319,7 @@ test("V2 conserva estabilidad visual y feedback inmediato", async ({ page }) => 
 test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page }, testInfo) => {
   const searchUrl = new URL("/buscar/?q=remera", serverUrl).toString();
   for (const viewport of [
-    { width: 1920, height: 968, columns: 4 },
+    { width: 1920, height: 968, columns: 6 },
     { width: 1024, height: 768, columns: 3 },
     { width: 390, height: 844, columns: 2 },
   ]) {
@@ -1310,16 +1341,21 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
         const cardRect = element
           .querySelector<HTMLElement>(".solara-search-result")
           ?.getBoundingClientRect();
-        return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
+        return {
+          gridWidth: gridRect.width,
+          cardWidth: cardRect?.width ?? 0,
+        };
       });
-      expect(resultsMetrics.gridWidth).toBeGreaterThan(800);
-      expect(resultsMetrics.gridWidth).toBeLessThanOrEqual(880);
       if (viewport.width === 1920) {
+        expect(resultsMetrics.gridWidth).toBeGreaterThan(1290);
+        expect(resultsMetrics.gridWidth).toBeLessThanOrEqual(1320);
         expect(resultsMetrics.cardWidth).toBeGreaterThan(195);
         expect(resultsMetrics.cardWidth).toBeLessThan(215);
       } else {
-        expect(resultsMetrics.cardWidth).toBeGreaterThan(250);
-        expect(resultsMetrics.cardWidth).toBeLessThan(300);
+        expect(resultsMetrics.gridWidth).toBeGreaterThan(950);
+        expect(resultsMetrics.gridWidth).toBeLessThanOrEqual(1000);
+        expect(resultsMetrics.cardWidth).toBeGreaterThan(300);
+        expect(resultsMetrics.cardWidth).toBeLessThan(340);
       }
     }
     expect(

@@ -1489,9 +1489,24 @@ function buildPages(
             candidate.collectionIds.some((id) => product.collectionIds.includes(id))
           );
         })
-        .slice(0, 4);
+        .slice(0, 6);
+      // En catálogos chicos completamos la fila con productos activos para
+      // conservar una sección de recomendaciones útil y visualmente estable.
+      if (relatedProducts.length < 6) {
+        const relatedIds = new Set(relatedProducts.map((candidate) => candidate.id));
+        relatedProducts.push(
+          ...project.products
+            .filter(
+              (candidate) =>
+                candidate.status === "active" &&
+                candidate.id !== product.id &&
+                !relatedIds.has(candidate.id),
+            )
+            .slice(0, 6 - relatedProducts.length),
+        );
+      }
       const relatedSections = project.commerceTemplates.product.showRelated
-        ? listingSections(project, "related", 4)
+        ? listingSections(project, "related", 6)
         : [];
       const body = [
         renderProjectSections(project, sharedHeader, { pageType: "product", product }),

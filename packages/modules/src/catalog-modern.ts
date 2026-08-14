@@ -550,9 +550,6 @@ function modernProductCardImageSizes(
   if (context.project.commerceTemplates.designFamily !== "catalog-modern-v2") {
     return "(max-width: 640px) 44vw, (max-width: 1024px) 30vw, 23vw";
   }
-  if (context.pageType === "category") {
-    return "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1279px) calc((100vw - 24rem) / 3), min(28vw, 17rem)";
-  }
   return "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) min(22vw, 11.5rem), min(20vw, 13rem)";
 }
 
