@@ -1,5 +1,12 @@
 # Changelog
 
+### Retoque V2: hero de borde a borde (2026-08-14)
+
+- El hero V2 pierde el margen superior e inferior: la imagen colisiona con el
+  header arriba y con la franja de marcas abajo, en escritorio y móvil.
+- El gate de presupuesto V2 pasa a 108 KiB con el costo gzip documentado
+  (~15 KiB transferidos) para absorber la iteración visual en curso.
+
 ### Dashboard con dos referencias V1/V2 (2026-08-14)
 
 - El perfil local queda con tres tiendas de referencia para comparar las

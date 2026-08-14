@@ -130,6 +130,34 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   expect(heroMetrics.actionsInViewport).toBe(true);
   expect(heroMetrics.mediaShare).toBeGreaterThan(0.52);
 
+  await expect
+    .poll(
+      () =>
+        page
+          .locator('[data-solara-module="catalog-hero"]')
+          .evaluate((element) => getComputedStyle(element).opacity),
+      { timeout: 5_000 },
+    )
+    .toBe("1");
+
+  const heroCollision = await page.evaluate(() => {
+    const header = document
+      .querySelector('[data-solara-module="catalog-header"]')
+      ?.getBoundingClientRect();
+    const hero = document.querySelector(".catalog-hero-inner")?.getBoundingClientRect();
+    const strip = document
+      .querySelector('[data-solara-module="catalog-brand-strip"] .catalog-brand-strip-inner')
+      ?.getBoundingClientRect();
+    return {
+      headerBottom: header?.bottom ?? 0,
+      heroTop: hero?.top ?? 0,
+      heroBottom: hero?.bottom ?? 0,
+      stripTop: strip?.top ?? 0,
+    };
+  });
+  expect(Math.abs(heroCollision.heroTop - heroCollision.headerBottom)).toBeLessThanOrEqual(1);
+  expect(Math.abs(heroCollision.stripTop - heroCollision.heroBottom)).toBeLessThanOrEqual(1);
+
   const bento = page.locator(".catalog-category-bento-grid");
   await expect(bento.locator(".catalog-category-bento-item")).toHaveCount(8);
   await expect(bento).not.toContainText("Básicas");

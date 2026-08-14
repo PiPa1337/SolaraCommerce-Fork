@@ -2514,7 +2514,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   width: min(calc(100% - 3rem), var(--catalog-v2-wide));
   height: 90svh;
   min-height: 0;
-  margin-top: 1.25rem;
+  margin-top: 0;
   overflow: hidden;
   isolation: isolate;
   border-radius: 0;
@@ -2593,6 +2593,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-testimonials-section,
 .cm.v2 .catalog-footer-inner {
   width: min(calc(100% - 3rem), var(--catalog-v2-wide));
+}
+/* El hero colisiona con la franja de marcas: sin margen ni padding superior. */
+.cm.v2 .catalog-brand-strip-inner {
+  margin-top: 0;
+  padding-top: 0;
 }
 .cm.v2 .catalog-product-grid-section,
 .cm.v2 .catalog-testimonials-section {
@@ -3026,7 +3031,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     display: flex;
     height: auto;
     min-height: 0;
-    margin-top: .5rem;
+    margin-top: 0;
   }
   .cm.v2 .catalog-hero-copy {
     min-height: 0;
