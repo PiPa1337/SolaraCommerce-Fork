@@ -1109,7 +1109,7 @@ export const catalogCategoryBento: ModuleDefinition<
           context.project,
           category.id as CategoryId,
         ).filter((id) => activeProducts.has(id)).length;
-        return `<a class="catalog-category-bento-item catalog-category-bento-item--${layout}" href="/categorias/${escapeAttribute(category.slug)}/" aria-label="Explorar ${escapeAttribute(category.title)}"><span>${escapeHtml(category.title)}</span>${productCount ? `<small>${productCount} productos</small>` : ""}${image}</a>`;
+        return `<a class="catalog-category-bento-item catalog-category-bento-item--${layout}" href="/categorias/${escapeAttribute(category.slug)}/" aria-label="Explorar ${escapeAttribute(category.title)}"><span class="catalog-category-bento-label"><span class="catalog-category-bento-title">${escapeHtml(category.title)}</span></span>${productCount ? `<small>${productCount} productos</small>` : ""}<div class="catalog-category-bento-media">${image}</div></a>`;
       })
       .filter(Boolean)
       .join("");
@@ -1119,7 +1119,7 @@ export const catalogCategoryBento: ModuleDefinition<
       "catalog-category-bento",
       context.section,
       safeHtml(
-        `<div class="catalog-category-bento-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${items && searchEnabled ? '<a class="catalog-category-bento-all" href="/buscar/">Ver todo el catálogo</a>' : ""}</header><div class="catalog-category-bento-grid" data-category-count="${sourceItems.length}" data-motion-zone="items">${items || '<p class="catalog-empty">Todavía no hay categorías para mostrar.</p>'}</div></div>`,
+        `<div class="catalog-category-bento-section"><header><h2 class="catalog-category-bento-heading"><span class="catalog-category-bento-heading-inner">${escapeHtml(context.settings.title)}</span></h2>${items && searchEnabled ? '<a class="catalog-category-bento-all" href="/buscar/">Ver todo el catálogo</a>' : ""}</header><div class="catalog-category-bento-grid" data-category-count="${sourceItems.length}" data-motion-zone="items">${items || '<p class="catalog-empty">Todavía no hay categorías para mostrar.</p>'}</div></div>`,
       ),
     );
   },
