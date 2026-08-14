@@ -214,6 +214,20 @@ describe("exporter", () => {
     );
   });
 
+  it("envuelve errores internos de generación con contexto de fase accionable", () => {
+    const broken = structuredClone(referenceStore);
+    const section = broken.sections.find((candidate) => candidate.moduleId === "hero-media");
+    if (!section) throw new Error("Fixture incompleto");
+    section.moduleId = "modulo-inexistente";
+
+    expect(() =>
+      exportProject(broken as typeof referenceStore, { mode: "draft" }),
+    ).toThrow(/generación del sitio falló.*Módulo desconocido: modulo-inexistente/s);
+    expect(() => renderPreviewHtml(broken as typeof referenceStore)).toThrow(
+      /generación del sitio falló.*Módulo desconocido: modulo-inexistente/s,
+    );
+  });
+
   it("excluye feed y agrega noindex en borrador", () => {
     const result = exportProject(referenceStore, { mode: "draft" });
     expect(result.files.has("google-merchant.xml")).toBe(false);

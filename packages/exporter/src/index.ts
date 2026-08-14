@@ -2533,6 +2533,22 @@ function buildFiles(
 }
 
 /**
+ * Envuelve un error interno de generación con la fase en la que ocurrió y
+ * conserva el mensaje original como causa, para que el usuario pueda accionar
+ * sobre la entidad que falló en lugar de ver un stack interno.
+ */
+function withExportContext<T>(phase: string, fn: () => T): T {
+  try {
+    return fn();
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`La generación del sitio falló en ${phase}: ${detail}`, {
+      cause: error,
+    });
+  }
+}
+
+/**
  * Builds the complete public artifact from one parsed snapshot. Keep all
  * generated files here so Preview, public site, SEO and Merchant cannot drift apart.
  */
@@ -2566,7 +2582,9 @@ export function exportProject(projectInput: StoreProjectV1, options: ExportOptio
     );
   }
 
-  const files = buildFiles(project, options.mode, publicAiContext);
+  const files = withExportContext("la fase de archivos del sitio", () =>
+    buildFiles(project, options.mode, publicAiContext),
+  );
   return { files, audit, optimization };
 }
 
@@ -2594,14 +2612,18 @@ export function renderPreviewHtml(
 ): string {
   const project = parseProject(projectInput, "renderizar la vista previa");
   const previewAssets = createPreviewAssetBundle(project);
-  const pages = buildPages(previewAssets.project);
+  const pages = withExportContext("la fase de páginas del sitio", () =>
+    buildPages(previewAssets.project),
+  );
   const manifest = createPublicExportManifest(previewAssets.project, pages);
   const page =
     pages.find((candidate) => candidate.canonicalPath === path) ??
     pages.find((candidate) => candidate.pageType === "not-found") ??
     pages[0];
   if (!page) throw new Error("No se pudo renderizar la página inicial.");
-  let document = renderDocument(previewAssets.project, page, mode, false, manifest);
+  let document = withExportContext("la fase de documentos del sitio", () =>
+    renderDocument(previewAssets.project, page, mode, false, manifest),
+  );
   const usedSources = new Map(
     [...previewAssets.sources].filter(([path]) => document.includes(path)),
   );
