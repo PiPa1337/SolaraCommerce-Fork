@@ -112,29 +112,50 @@ function requestWorker<Request extends object, Result>(
   worker: Worker,
   request: Request,
   transfer: Transferable[] = [],
+  recreate?: () => Worker,
 ): Promise<Result> {
   const id = crypto.randomUUID();
   return new Promise((resolve, reject) => {
-    const detach = () => {
-      worker.removeEventListener("message", handleMessage);
-      worker.removeEventListener("error", handleError);
+    const perform = (current: Worker, retried: boolean) => {
+      const detach = () => {
+        current.removeEventListener("message", handleMessage);
+        current.removeEventListener("error", handleError);
+      };
+      const handleMessage = (event: MessageEvent<WorkerResponse<Result>>) => {
+        if (event.data.id !== id) return;
+        detach();
+        if (event.data.ok) resolve(event.data.result);
+        else reject(new Error(event.data.error));
+      };
+      const handleError = (event: ErrorEvent) => {
+        detach();
+        if (!retried && recreate) {
+          perform(recreate(), true);
+          return;
+        }
+        const detail = event?.message ? `: ${event.message}` : "";
+        reject(
+          new Error(
+            retried
+              ? `El worker no respondió y el reintento falló${detail}.`
+              : `El worker no respondió${detail}.`,
+          ),
+        );
+      };
+      current.addEventListener("message", handleMessage);
+      current.addEventListener("error", handleError);
+      current.postMessage({ ...request, id }, transfer);
     };
-    const handleMessage = (event: MessageEvent<WorkerResponse<Result>>) => {
-      if (event.data.id !== id) return;
-      detach();
-      if (event.data.ok) resolve(event.data.result);
-      else reject(new Error(event.data.error));
-    };
-    const handleError = () => {
-      // Un worker caído no responderá: rechazar la petición y soltar ambos
-      // listeners evita promesas colgadas y acumulación de handlers.
-      detach();
-      reject(new Error("El worker no respondió."));
-    };
-    worker.addEventListener("message", handleMessage);
-    worker.addEventListener("error", handleError);
-    worker.postMessage({ ...request, id }, transfer);
+    perform(worker, false);
   });
+}
+
+/** Recrea un worker cacheado caído: resetea la caché y devuelve una instancia nueva. */
+function recreateWorker(reset: () => void, factory: () => Worker): () => Worker {
+  return () => {
+    reset();
+    return factory();
+  };
 }
 
 let csvWorker: Worker | undefined;
@@ -177,6 +198,10 @@ export function importCsvInWorker(csv: string, context?: CatalogCsvContext): Pro
   return requestWorker(
     getCsvWorker(),
     context ? { type: "import", csv, context } : { type: "import", csv },
+    [],
+    recreateWorker(() => {
+      csvWorker = undefined;
+    }, getCsvWorker),
   );
 }
 
@@ -193,6 +218,10 @@ export function diagnoseCsvInWorker(
   return requestWorker(
     getCsvWorker(),
     context ? { type: "diagnose", csv, context } : { type: "diagnose", csv },
+    [],
+    recreateWorker(() => {
+      csvWorker = undefined;
+    }, getCsvWorker),
   );
 }
 
@@ -205,18 +234,39 @@ export function readCatalogPackageInFolder(files: File[]): Promise<CatalogPackag
   });
   return Promise.all(payload.map(async (entry) => ({ ...entry, buffer: await entry.buffer }))).then(
     (entries) =>
-      requestWorker(getCatalogPackageWorker(), { type: "catalog-package", files: entries }),
+      requestWorker(
+        getCatalogPackageWorker(),
+        { type: "catalog-package", files: entries },
+        [],
+        recreateWorker(() => {
+          catalogPackageWorker = undefined;
+        }, getCatalogPackageWorker),
+      ),
   );
 }
 
 export function exportCsvInWorker(products: Product[]): Promise<string> {
-  return requestWorker(getCsvWorker(), { type: "export", products });
+  return requestWorker(
+    getCsvWorker(),
+    { type: "export", products },
+    [],
+    recreateWorker(() => {
+      csvWorker = undefined;
+    }, getCsvWorker),
+  );
 }
 
 export function exportCommercialCsvInWorker(
   project: Pick<StoreProjectV1, "products" | "categories" | "collections">,
 ): Promise<string> {
-  return requestWorker(getCsvWorker(), { type: "export-commercial", project });
+  return requestWorker(
+    getCsvWorker(),
+    { type: "export-commercial", project },
+    [],
+    recreateWorker(() => {
+      csvWorker = undefined;
+    }, getCsvWorker),
+  );
 }
 
 export async function hashFile(file: File): Promise<string> {
@@ -243,6 +293,9 @@ export async function processImageInWorker(file: File): Promise<ProcessedImage> 
         maxWidth: 1800,
       },
       [workerBuffer],
+      recreateWorker(() => {
+        imageWorker = undefined;
+      }, getImageWorker),
     );
   } catch (reason) {
     const message = reason instanceof Error ? reason.message : String(reason);
@@ -266,6 +319,9 @@ export function exportSiteInWorker(
     getExportWorker(),
     { type: "site", project, mode, options },
     onStage,
+    recreateWorker(() => {
+      exportWorker = undefined;
+    }, getExportWorker),
   );
 }
 
@@ -281,48 +337,82 @@ function requestWorkerWithStages<Request extends object, Result>(
   worker: Worker,
   request: Request,
   onStage?: (stage: ExportStageId) => void,
+  recreate?: () => Worker,
 ): Promise<Result> {
   const id = crypto.randomUUID();
   return new Promise((resolve, reject) => {
-    const detach = () => {
-      worker.removeEventListener("message", handleMessage);
-      worker.removeEventListener("error", handleError);
+    const perform = (current: Worker, retried: boolean) => {
+      const detach = () => {
+        current.removeEventListener("message", handleMessage);
+        current.removeEventListener("error", handleError);
+      };
+      const handleMessage = (event: MessageEvent<WorkerResponse<Result> | ExportStageMessage>) => {
+        if (event.data.id !== id) return;
+        if ("kind" in event.data) {
+          onStage?.(event.data.stage);
+          return;
+        }
+        detach();
+        if (event.data.ok) resolve(event.data.result);
+        else reject(new Error(event.data.error));
+      };
+      const handleError = (event: ErrorEvent) => {
+        detach();
+        if (!retried && recreate) {
+          perform(recreate(), true);
+          return;
+        }
+        const detail = event?.message ? `: ${event.message}` : "";
+        reject(
+          new Error(
+            retried
+              ? `El worker no respondió y el reintento falló${detail}.`
+              : `El worker no respondió${detail}.`,
+          ),
+        );
+      };
+      current.addEventListener("message", handleMessage);
+      current.addEventListener("error", handleError);
+      current.postMessage({ ...request, id });
     };
-    const handleMessage = (event: MessageEvent<WorkerResponse<Result> | ExportStageMessage>) => {
-      if (event.data.id !== id) return;
-      if ("kind" in event.data) {
-        onStage?.(event.data.stage);
-        return;
-      }
-      detach();
-      if (event.data.ok) resolve(event.data.result);
-      else reject(new Error(event.data.error));
-    };
-    const handleError = () => {
-      detach();
-      reject(new Error("El worker no respondió."));
-    };
-    worker.addEventListener("message", handleMessage);
-    worker.addEventListener("error", handleError);
-    worker.postMessage({ ...request, id });
+    perform(worker, false);
   });
 }
 
 export function createProjectArchiveInWorker(project: StoreProjectV1): Promise<string> {
-  return requestWorker(getExportWorker(), { type: "project-write", project });
+  return requestWorker(
+    getExportWorker(),
+    { type: "project-write", project },
+    [],
+    recreateWorker(() => {
+      exportWorker = undefined;
+    }, getExportWorker),
+  );
 }
 
 export async function readProjectArchiveInWorker(file: File): Promise<StoreProjectV1> {
   const buffer = await file.arrayBuffer();
-  return requestWorker(getExportWorker(), { type: "project-read", buffer }, [buffer]);
+  return requestWorker(
+    getExportWorker(),
+    { type: "project-read", buffer },
+    [buffer],
+    recreateWorker(() => {
+      exportWorker = undefined;
+    }, getExportWorker),
+  );
 }
 
 export function readProjectArchiveBytesInWorker(bytes: Uint8Array): Promise<StoreProjectV1> {
   const copy = new Uint8Array(bytes.byteLength);
   copy.set(bytes);
-  return requestWorker(getExportWorker(), { type: "project-read", buffer: copy.buffer }, [
-    copy.buffer,
-  ]);
+  return requestWorker(
+    getExportWorker(),
+    { type: "project-read", buffer: copy.buffer },
+    [copy.buffer],
+    recreateWorker(() => {
+      exportWorker = undefined;
+    }, getExportWorker),
+  );
 }
 
 export interface AuditResult {

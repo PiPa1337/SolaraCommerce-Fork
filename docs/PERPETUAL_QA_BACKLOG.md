@@ -22,7 +22,7 @@ Fuente única de trabajo del bucle perpetuo. Reglas:
 | C4 | alta | exporter | C4a hecho: canonical, og, JSON-LD, sitemap, alternates, css/js y preview respetan la subcarpeta de baseUrl (`assetHref`). C4b (backlog): hrefs internos del body (paginación, breadcrumbs, cards, CTAs); C4c: navegación de datos del proyecto + fetches del runtime (`search-index.json`, `catalog-index.json`) | en-progreso | index.test.ts (117/118) |
 | C5 | media | exporter/runtime | `data-theme` ahora tiene consumidor CSS: `html[data-theme="dark"/"light"]{color-scheme:...}` en el theme CSS (0 bytes de JS; el contrato e2e de ui-tema-t7 se mantiene) | hecho | index.test.ts (118/119) |
 | C6 | media | exporter | Errores de generación envueltos con fase accionable (`withExportContext`): `exportProject` → "fase de archivos del sitio", preview → "fase de páginas/documents del sitio", con `cause` original | hecho | index.test.ts (119/120) |
-| C7 | media | studio | `requestWorker` sin reintento: si el worker muere, reintento con backoff y diagnóstico | pendiente | deuda abierta |
+| C7 | media | studio | `requestWorker`/`requestWorkerWithStages` reintentan una vez recreando el worker caído (reseteo de caché) con diagnóstico del ErrorEvent; errores de negocio se propagan | hecho | workers.test.ts (3/3), studio 273/273 |
 | C8 | media | runtime | Fetch de boot de `search-index.json` no gateado por la pausa `solara-pause` | pendiente | deuda abierta |
 | C9 | baja | shell | Verificación de raíz portable ausente al arrancar (mover `.exe` recrea `proyectos/` sin aviso) | pendiente | deuda abierta |
 | C10 | media | todos | Barrido continuo: hallazgos del doctor/e2e/visuales (se alimenta solo) | pendiente | proceso |
@@ -64,4 +64,4 @@ fases C y O (regla de selección nivel 3).
 
 ## SIGUIENTE
 
-C7 — `requestWorker` sin reintento: si el worker muere, reintento con backoff y diagnóstico
+C8 — Fetch de boot de `search-index.json` no gateado por la pausa `solara-pause`
