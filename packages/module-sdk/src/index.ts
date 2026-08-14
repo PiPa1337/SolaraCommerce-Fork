@@ -332,9 +332,7 @@ export function moduleRoot(
 ): SafeHtml {
   const tag = options.tag ?? "section";
   const className = options.className ? ` class="${escapeAttribute(options.className)}"` : "";
-  const ariaLabel = options.ariaLabel
-    ? ` aria-label="${escapeAttribute(options.ariaLabel)}"`
-    : "";
+  const ariaLabel = options.ariaLabel ? ` aria-label="${escapeAttribute(options.ariaLabel)}"` : "";
   const motion = section.motion;
   const motionAttributes = [
     'data-motion-root="true"',

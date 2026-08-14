@@ -1,7 +1,7 @@
-import AxeBuilder from "@axe-core/playwright";
-import { createServer } from "node:http";
 import { mkdirSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
 import { resolve } from "node:path";
+import AxeBuilder from "@axe-core/playwright";
 import { test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { referenceStore } from "@solara/project-schema/fixture";
@@ -22,7 +22,11 @@ test("A1: axe sobre las rutas del sitio exportado", async ({ page }) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
     const requested = decodeURIComponent(url.pathname).replace(/^\/+/, "");
     const path =
-      requested === "" ? "index.html" : requested.endsWith("/") ? `${requested}index.html` : requested;
+      requested === ""
+        ? "index.html"
+        : requested.endsWith("/")
+          ? `${requested}index.html`
+          : requested;
     const content = exported.files.get(path);
     if (content === undefined) {
       response.writeHead(404).end("Not found");
