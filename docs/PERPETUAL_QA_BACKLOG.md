@@ -20,7 +20,7 @@ Fuente única de trabajo del bucle perpetuo. Reglas:
 | C2 | alta | exporter | Paginación SEO: el servidor local sirve `404.html` custom para rutas inexistentes (`pagina/99`) como los hostings estáticos; `?pagina=1` resuelve la página 1 con canonical correcta (decisión estática: canonical hace el trabajo de la redirección) | hecho | request-handler.test.mjs (9/9) |
 | C3 | alta | exporter/schema | `SlugSchema` rechaza nombres reservados de Windows (CON/PRN/AUX/NUL/COM1-9/LPT1-9, case-insensitive) con mensaje accionable; prefijos válidos (contenido, control, com10) siguen aceptados. El folder de storage usa `slug--hash` (nunca colisiona) | hecho | index.test.ts (29/29), mensaje verificado |
 | C4 | alta | exporter | C4a hecho: canonical, og, JSON-LD, sitemap, alternates, css/js y preview respetan la subcarpeta de baseUrl (`assetHref`). C4b (backlog): hrefs internos del body (paginación, breadcrumbs, cards, CTAs); C4c: navegación de datos del proyecto + fetches del runtime (`search-index.json`, `catalog-index.json`) | en-progreso | index.test.ts (117/118) |
-| C5 | media | exporter/runtime | `data-theme` en `<html>` exportado sin consumidor CSS/JS | pendiente | deuda T15 |
+| C5 | media | exporter/runtime | `data-theme` ahora tiene consumidor CSS: `html[data-theme="dark"/"light"]{color-scheme:...}` en el theme CSS (0 bytes de JS; el contrato e2e de ui-tema-t7 se mantiene) | hecho | index.test.ts (118/119) |
 | C6 | media | exporter | Errores de export accionables: envolver fallos de buildPages/buildFiles con ruta y contexto | pendiente | doctor C0 |
 | C7 | media | studio | `requestWorker` sin reintento: si el worker muere, reintento con backoff y diagnóstico | pendiente | deuda abierta |
 | C8 | media | runtime | Fetch de boot de `search-index.json` no gateado por la pausa `solara-pause` | pendiente | deuda abierta |
@@ -64,4 +64,4 @@ fases C y O (regla de selección nivel 3).
 
 ## SIGUIENTE
 
-C5 — `data-theme` inerte: conectar consumidor o eliminar (deuda T15)
+C6 — Errores de export accionables: envolver fallos de buildPages/buildFiles con ruta y contexto

@@ -98,6 +98,21 @@ describe("exporter", () => {
     expect(css).toContain('.solara-page[data-color-mode="auto"]{color-scheme:dark}');
   });
 
+  it("consume data-theme del html con color-scheme en el CSS exportado", () => {
+    const darkProject = { ...referenceStore, theme: { ...referenceStore.theme, colorMode: "dark" } };
+    const darkCss = String(
+      exportProject(darkProject, { mode: "draft" }).files.get("assets/storefront.css"),
+    );
+    const darkHtml = String(exportProject(darkProject, { mode: "draft" }).files.get("index.html"));
+    expect(darkHtml).toContain('data-theme="dark"');
+    expect(darkCss).toContain('html[data-theme="dark"]{color-scheme:dark}');
+
+    const lightCss = String(
+      exportProject(referenceStore, { mode: "draft" }).files.get("assets/storefront.css"),
+    );
+    expect(lightCss).toContain('html[data-theme="light"]{color-scheme:light}');
+  });
+
   it("usa el mismo árbol semántico de módulos en preview y home exportado", () => {
     const preview = renderPreviewHtml(referenceStore);
     const exported = String(

@@ -625,6 +625,8 @@ function themeCss(project: StoreProjectV1, transport: FontTransport = "file"): s
 
 * { box-sizing: border-box; }
 html { background: var(--solara-background); color: var(--solara-text); }
+html[data-theme="dark"] { color-scheme: dark; }
+html[data-theme="light"] { color-scheme: light; }
 body { margin: 0; min-width: 320px; font-family: var(--solara-font-body); line-height: 1.5; }
 ${fontCssFor(typography.display, typography.body, transport)}
 .solara-page[data-color-mode="dark"] { color-scheme: dark; }
