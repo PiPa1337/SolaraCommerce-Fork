@@ -2836,7 +2836,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   background: linear-gradient(to top, rgb(11 11 12 / .2), transparent 60%);
 }
 .cm.v2 .catalog-category-bento-image {
-  opacity: .85;
+  opacity: 1;
 }
 .cm.v2 .catalog-testimonial {
   border-radius: 0;
