@@ -1,5 +1,14 @@
 # Changelog
 
+### Franja de marcas pareja y tienda demo guardada (2026-08-14)
+
+- "MARCAS QUE NOS ACOMPAÑAN" usa padding vertical parejo arriba y abajo
+  (`padding-block: clamp(2.5rem, 4vw, 4rem)`), conservando la colisión del hero
+  con el borde de la franja.
+- La tienda demo V2 quedó guardada como v15 por el pipeline real del servidor
+  local (reorden de secciones + export production con el código vigente): el
+  sitio público ya refleja los cambios sin necesidad de guardar manualmente.
+
 ### Reorden de categorías confirmado en disco (2026-08-14)
 
 - La migración que mueve "Explorá por categoría" debajo de las marcas ahora

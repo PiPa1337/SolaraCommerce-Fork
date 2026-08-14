@@ -2594,11 +2594,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-footer-inner {
   width: min(calc(100% - 3rem), var(--catalog-v2-wide));
 }
-/* El hero colisiona con la franja de marcas: sin margen superior, pero el
-   contenido conserva aire hacia el borde de la franja. */
+/* El hero colisiona con el borde de la franja (margin-top 0); el contenido
+   respira con padding vertical parejo arriba y abajo. */
 .cm.v2 .catalog-brand-strip-inner {
   margin-top: 0;
-  padding-top: clamp(2.5rem, 4vw, 4rem);
+  padding-block: clamp(2.5rem, 4vw, 4rem);
 }
 .cm.v2 .catalog-product-grid-section,
 .cm.v2 .catalog-testimonials-section {
