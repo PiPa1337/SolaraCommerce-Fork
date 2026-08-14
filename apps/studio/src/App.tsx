@@ -49,6 +49,7 @@ import {
   saveProject,
   saveRecoveryDraft,
   setProjectArchived,
+  shouldSeedRecoveryDraft,
   slugify,
 } from "./lib/repository";
 import { createProjectArchiveInWorker, readProjectArchiveInWorker } from "./lib/workers";
@@ -246,7 +247,13 @@ function StudioShell() {
               if (await getProjectMigration(diskProject.id)) {
                 await markProjectMigration(diskProject.id, "done");
               }
-              if (JSON.stringify(stored.project) !== JSON.stringify(diskProject.project)) {
+              if (
+                shouldSeedRecoveryDraft(
+                  stored.project,
+                  diskProject.project,
+                  JSON.stringify(stored.project) !== JSON.stringify(diskProject.project),
+                )
+              ) {
                 await saveRecoveryDraft(stored.project, diskProject.diskVersion ?? 0);
               }
             }

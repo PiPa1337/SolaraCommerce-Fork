@@ -47,7 +47,7 @@ fases C y O (regla de selección nivel 3). Conversión en curso:
 
 | id | prioridad | área | título | estado | evidencia |
 |----|-----------|------|--------|--------|-----------|
-| D1 | media | studio | Fricción de primer arranque: `App.tsx` siembra un `RecoveryDraft` cuando el demo de IndexedDB difiere del seed en disco → diálogo "Recuperar borrador" para un proyecto nunca editado | pendiente | deuda `ff33dea` |
+| D1 | media | studio | `shouldSeedRecoveryDraft`: el RecoveryDraft se siembra sólo cuando el navegador es estrictamente más nuevo que el disco (evidencia de edición); el demo sin editar ya no dispara el diálogo | hecho | repository.test.ts (24/24), studio 274/274 |
 | D2 | media | studio | Cierre de la app con guardados en vuelo: decisión UX (esperar/confirmar/cancelar) | pendiente | deuda D1/D7 (requiere decisión de producto) |
 | D3 | baja | exporter | EX-B7: semántica del sha256 del mapa de archivos no especificada formalmente | pendiente | deuda EX-B7 |
 | D4 | baja | studio | Overlay del detalle de tienda en viewports acotados scrollea con la región | pendiente | deuda U2-móvil (evaluación UX) |
@@ -70,4 +70,4 @@ fases C y O (regla de selección nivel 3). Conversión en curso:
 
 ## SIGUIENTE
 
-D1 — Fricción de primer arranque: RecoveryDraft sembrado sin ediciones del usuario
+D3 — EX-B7: semántica del sha256 del mapa de archivos del sitio

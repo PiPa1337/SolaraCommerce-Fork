@@ -30,6 +30,22 @@ export interface ProjectRecoveryIssue {
   message: string;
 }
 
+/**
+ * Decide si el proyecto del navegador merece un RecoveryDraft cuando difiere
+ * del disco: sólo cuando el navegador es estrictamente más nuevo (evidencia de
+ * ediciones posteriores al último guardado). Un demo recién sembrado o migrado
+ * en disco tiene updatedAt igual o más viejo y no debe mostrar el diálogo
+ * "Recuperar borrador" para un proyecto que el usuario nunca editó.
+ */
+export function shouldSeedRecoveryDraft(
+  browserProject: Pick<StoreProjectV1, "updatedAt">,
+  diskProject: Pick<StoreProjectV1, "updatedAt">,
+  diff: boolean,
+): boolean {
+  if (!diff) return false;
+  return Date.parse(browserProject.updatedAt) > Date.parse(diskProject.updatedAt);
+}
+
 export interface ProjectListResult {
   projects: StoredProject[];
   recovery: ProjectRecoveryIssue[];
