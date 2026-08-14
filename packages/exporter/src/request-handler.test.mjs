@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
@@ -371,6 +371,51 @@ describe("handler: abrir el sitio público", () => {
       expect(status.status).toBe(200);
     } finally {
       await handler?.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("handler: página 404 personalizada del sitio estático", () => {
+  it("sirve 404.html del sitio para rutas inexistentes como pagina/99", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-handler-404-"));
+    try {
+      await writeFile(join(root, "index.html"), "<main>home</main>");
+      await writeFile(join(root, "404.html"), "<main>no-encontrada</main>");
+      const handler = createSolaraRequestHandler({
+        staticRoot: root,
+        applicationRoot: root,
+        onShutdown: () => {},
+      });
+      const missing = await handler.handle(request("GET", "/categorias/x/pagina/99/"));
+      expect(missing.status).toBe(404);
+      expect(Buffer.from(missing.body).toString("utf8")).toContain("no-encontrada");
+      expect(missing.headers["Content-Type"]).toContain("text/html");
+
+      const queryPageOne = await handler.handle(request("GET", "/categorias/x/?pagina=1"));
+      expect(queryPageOne.status).toBe(404);
+
+      const home = await handler.handle(request("GET", "/"));
+      expect(home.status).toBe(200);
+      expect(Buffer.from(home.body).toString("utf8")).toContain("home");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("mantiene el 404 plano si el sitio no incluye 404.html", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-handler-404-"));
+    try {
+      await writeFile(join(root, "index.html"), "<main>home</main>");
+      const handler = createSolaraRequestHandler({
+        staticRoot: root,
+        applicationRoot: root,
+        onShutdown: () => {},
+      });
+      const missing = await handler.handle(request("GET", "/ruta-inexistente/"));
+      expect(missing.status).toBe(404);
+      expect(missing.headers["Content-Type"]).toContain("text/plain");
+    } finally {
       await rm(root, { recursive: true, force: true });
     }
   });

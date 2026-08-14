@@ -1,6 +1,30 @@
 # Changelog
 
-### Hero V2: split conservado en tablet (2026-08-14)
+### Run perpetuo de QA y optimización (2026-08-14, en curso)
+
+- Infraestructura perpetua: branch `perpetual/debug-optimizacion`, backlog en
+  `docs/PERPETUAL_QA_BACKLOG.md`, estado en `docs/perpetual-state.json` y
+  latido en `docs/perpetual-progress.log`; reanudación desde AGENTS.md/HANDOFF.
+- Nuevo `scripts/export-doctor.test.ts` (`pnpm doctor:export`): diagnóstico del
+  export por fases (parse+optimize, audit, buildFiles+render), tamaños por
+  archivo, hallazgos de auditoría por severidad y paridad preview/export de
+  todas las rutas. Resultado inicial: 27 archivos, 293.924 bytes, score 97,
+  paridad 16/16 en referenceStore.
+- Nuevo `scripts/parity-sweep.test.ts` (C1): gate de paridad diferencial
+  preview/export con árbol de módulos y cuerpo normalizado para los 3 fixtures
+  (reference, catalogModern, catalogScale) en draft y production, todas las
+  rutas incluidas las paginadas. 6/6 verdes.
+- C2: el servidor local (handler compartido HTTP/Electron) ahora sirve la
+  página `404.html` del propio sitio para rutas inexistentes (p.ej.
+  `pagina/99`), igualando el comportamiento de los hostings estáticos; sin
+  `404.html` mantiene el 404 plano. `?pagina=1` ya resuelve la página 1 con su
+  canonical correcta (decisión estática documentada).
+- Barrido visual del sitio exportado (`SOLARA_QA_VISUAL=1`): spec Playwright
+  con cosecha de consola/red/overflow y capturas desktop/mobile. Hallazgos
+  V1-V6 en el backlog (2 medios: carrito vacío desalineado y sección bajo el
+  404; 4 menores).
+
+
 
 - A ~770px el hero mantiene el layout split (texto ~52% / imagen ~48%) como la
   referencia del usuario, con la columna de copy equilibrada y beneficios

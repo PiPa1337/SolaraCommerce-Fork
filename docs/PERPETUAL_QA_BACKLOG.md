@@ -17,7 +17,7 @@ Fuente única de trabajo del bucle perpetuo. Reglas:
 | id | prioridad | área | título | estado | evidencia |
 |----|-----------|------|--------|--------|-----------|
 | C1 | alta | exporter | Paridad preview/export diferencial: `scripts/parity-sweep.test.ts` cubre los 3 fixtures en draft y production, todas las rutas (6/6 verdes) | hecho | scripts/parity-sweep.test.ts |
-| C2 | alta | exporter | Paginación SEO: `?pagina=1` redirige/rel-canonical; `pagina/99` → 404 real | pendiente | deuda P3 |
+| C2 | alta | exporter | Paginación SEO: el servidor local sirve `404.html` custom para rutas inexistentes (`pagina/99`) como los hostings estáticos; `?pagina=1` resuelve la página 1 con canonical correcta (decisión estática: canonical hace el trabajo de la redirección) | hecho | request-handler.test.mjs (9/9) |
 | C3 | alta | exporter/schema | `safeSlug` no sanitiza nombres reservados de Windows (CON, NUL, AUX, COM1-9, LPT1-9) → fallos de escritura indiagnosticables | pendiente | deuda abierta |
 | C4 | alta | exporter | `baseUrl` en subcarpeta: URLs absolutas de recursos asumen raíz del dominio | pendiente | deuda X1 |
 | C5 | media | exporter/runtime | `data-theme` en `<html>` exportado sin consumidor CSS/JS | pendiente | deuda T15 |
@@ -61,4 +61,4 @@ fases C y O (regla de selección nivel 3).
 
 ## SIGUIENTE
 
-C2 — Paginación SEO: `?pagina=1` → canonical; `pagina/99` → 404 real
+C3 — `safeSlug` no sanitiza nombres reservados de Windows (CON, NUL, AUX, COM1-9, LPT1-9)
