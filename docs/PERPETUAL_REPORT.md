@@ -82,3 +82,23 @@
 - Gates: `pnpm check` exit=0, benchmark 1.550 ms (Δ% 8.4 % acumulado vs baseline PLAN 1), e2e 2/2.
 - Mejoras: 3 gates permanentes nuevos (foco, consistencia draft/production, preloads 146/146).
 - Acumulado PLAN 1→4: axe 0/0 en ambos fixtures; preloads 100 %; foco 100 %; benchmark −8.4 %; margen CSS Studio 4.3 KiB.
+
+## PLAN 5 (17:25-17:50Z, 2026-08-14)
+
+| id | ítem | métrica | antes | después | Δ% | estado |
+|----|------|---------|-------|---------|-----|--------|
+| P5-1 | Re-verificación gates PLAN 4 | gates | — | 15/15 | 0 | hecho |
+| P5-2 | LCP navegador frío (3 corridas, mediana) | ms | — | home 68 / prod 60 | baseline | hecho (`lcp-cold.spec.ts`) |
+| P5-3 | Cache-Control handler (no-store) | checks | 9/9 | 9/9 | 0 | hecho |
+| P5-4 | CSS V2 duplicación post-iteración usuario | bytes | 247 B | 247 B | 0 (sin cambio) | hecho |
+| P5-5 | Draft útil (cubierto en P4-5) | checks | 4/4 | 4/4 | 0 | hecho |
+| P5-6 | **Axe en catalogScale (3er fixture)** | findings | — | **0** (18 rutas, 3 fixtures) | gate ampliado | hecho |
+| P5-7 | Videos con poster y duración válida | checks | — | 2/2 | gate nuevo | hecho (`recursos-check.test.ts`) |
+| P5-8 | Consola con interacciones (exported-store 6/6 + nojs 24) | errores | 0 | 0 | 0 | hecho |
+| P5-9 | JSON-LD válido con URLs absolutas (páginas comerciales) | checks | — | 5/5 | gate nuevo | hecho (`seo-check.test.ts`) |
+| P5-10 | Contraste footer modern (axe 0 ya lo cubre) | findings | 0 | 0 | 0 | hecho |
+
+### Totales PLAN 5
+- Gates: `pnpm check` exit=0, benchmark 1.553 ms (Δ% 8.2 % acumulado vs baseline PLAN 1), e2e 6/6.
+- Mejoras: 3 gates nuevos (LCP frío, recursos/video, SEO/JSON-LD); axe cubre los 3 fixtures (18 rutas).
+- Acumulado PLAN 1→5: benchmark −8.2 %; axe 0/0/0; preloads 146/146; LCP frío 60-68 ms; foco 0 invisibles; JSON-LD comercial 100 %.

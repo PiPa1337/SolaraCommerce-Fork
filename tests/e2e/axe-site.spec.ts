@@ -6,10 +6,12 @@ import { test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { referenceStore } from "@solara/project-schema/fixture";
+import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 
 const projects = {
   reference: referenceStore,
   catalogModern: catalogModernStore,
+  catalogScale: catalogScaleStore,
 } as const;
 
 function routesFor(project: (typeof projects)[keyof typeof projects]): string[] {
@@ -30,9 +32,7 @@ function routesFor(project: (typeof projects)[keyof typeof projects]): string[] 
   ];
 }
 
-test("A1: axe sobre las rutas del sitio exportado (reference y catalogModern)", async ({
-  page,
-}) => {
+test("A1: axe sobre las rutas del sitio exportado (3 fixtures)", async ({ page }) => {
   let exported = exportProject(referenceStore, { mode: "production" });
   const server = createServer((request, response) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
