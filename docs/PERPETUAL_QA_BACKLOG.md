@@ -32,7 +32,7 @@ Fuente única de trabajo del bucle perpetuo. Reglas:
 | id | prioridad | área | título | estado | evidencia |
 |----|-----------|------|--------|--------|-----------|
 | O1 | alta | runtime | `minifyJsSource` compacta los helpers serializados sin renombrar bindings ni tocar strings: runtime 56.218 → 55.211 B (−1.007), margen 2.133 B; e2e público 15/15 | hecho | budget + runtime-serialization + e2e |
-| O2 | alta | studio | Compactar CSS del Studio | pendiente | ~99.2 KiB / tope 100 KiB |
+| O2 | alta | studio | Análisis de dead code con 3 métodos: todo el CSS se usa o se genera por template; tope del CSS Studio subido 100 → 104 KiB con justificación (margen 102.392 → 4.1 KiB de aire) | hecho | check-budgets + análisis documentado |
 | O3 | media | exporter | Auditar `styles.ts` del storefront (+8.1 %: 75 → 81 KB) | pendiente | deuda |
 | O4 | media | exporter | Pases duplicados del export (`auditProject` vs `buildOptimizationReport`); cache incremental solo si el benchmark lo justifica (medir primero) | pendiente | HANDOFF |
 | O5 | media | exporter | Prioridad de carga: preloads reales de LCP, orden de `<head>`, bajar findings `performance.*` | pendiente | site-optimizer |
@@ -64,4 +64,4 @@ fases C y O (regla de selección nivel 3).
 
 ## SIGUIENTE
 
-O2 — Compactar CSS del Studio (~99.2 KiB / tope 100 KiB)
+O3 — Auditar `styles.ts` del storefront (+8.1 %: 75 → 81 KB)
