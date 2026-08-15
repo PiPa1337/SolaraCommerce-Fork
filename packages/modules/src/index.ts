@@ -31,6 +31,7 @@ import {
   catalogProductGrid,
   catalogTestimonials,
 } from "./catalog-modern";
+import { contactV2ModuleIds, contactV2Modules } from "./contact-v2";
 import {
   announcementBar,
   cartDrawer,
@@ -79,6 +80,8 @@ export {
   catalogProductDetail,
   catalogProductGrid,
   catalogTestimonials,
+  contactV2Modules,
+  contactV2ModuleIds,
 };
 export type { RepeaterItemField } from "@solara/module-sdk";
 
@@ -89,7 +92,9 @@ export type { RepeaterItemField } from "@solara/module-sdk";
 export type RegisteredModule = ModuleDefinition<any, any>;
 
 export type AnyLegacyModule = (typeof officialModules)[number];
-export type AnyCatalogModernModule = (typeof catalogModernModules)[number];
+export type AnyCatalogModernModule =
+  | (typeof catalogModernModules)[number]
+  | (typeof contactV2Modules)[number];
 export type AnyModule = AnyLegacyModule | AnyCatalogModernModule;
 export type ModuleId = AnyModule["manifest"]["id"];
 export type ModuleById = { [Id in ModuleId]: Extract<AnyModule, { manifest: { id: Id } }> };
@@ -101,7 +106,7 @@ export function getTypedModule(id: string): RegisteredModule | undefined {
 }
 
 export const moduleRegistry: Record<string, RegisteredModule> = Object.fromEntries(
-  [...officialModules, ...catalogModernModules].map((definition) => [
+  [...officialModules, ...catalogModernModules, ...contactV2Modules].map((definition) => [
     definition.manifest.id,
     definition,
   ]),
@@ -117,6 +122,20 @@ export function isCatalogModernModule(definition: RegisteredModule): boolean {
 
 export function isAddableModule(definition: RegisteredModule): boolean {
   return (definition.manifest.availability ?? "compatibility-only") === "default";
+}
+
+export function isModuleAvailableOnPage(
+  definition: RegisteredModule,
+  pageKind: RenderPageType,
+  designFamily?: string,
+): boolean {
+  if (!isAddableModule(definition)) return false;
+  const moduleId = definition.manifest.id;
+  const isContactV2 = pageKind === "contact" && designFamily === "catalog-modern-v2";
+  if (isContactV2) {
+    return contactV2ModuleIds.has(moduleId) || moduleId === "catalog-newsletter-cta";
+  }
+  return !contactV2ModuleIds.has(moduleId);
 }
 
 export interface PageRenderContext {

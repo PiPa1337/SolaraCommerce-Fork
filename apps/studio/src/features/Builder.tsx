@@ -19,6 +19,7 @@ import {
   defaultSettingsForModule,
   isAddableModule,
   isLegacyModule,
+  isModuleAvailableOnPage,
   moduleRegistry,
   type RegisteredModule,
   replaceModuleInSection,
@@ -266,7 +267,6 @@ export function Builder({
   onEnableAdvanced,
 }: BuilderProps) {
   const allModules = useMemo(availableModules, []);
-  const modules = useMemo(() => allModules.filter(isAddableModule), [allModules]);
   const [pageKind, setPageKind] = useState<EditablePageKind>("home");
   const [selectedId, setSelectedId] = useState(project.sections[0]?.id ?? "");
   const [slotToAdd, setSlotToAdd] = useState<StoreSection["slot"]>("content");
@@ -285,12 +285,20 @@ export function Builder({
   const pageSections = pageKind === "home" ? project.sections : (editablePage?.sections ?? []);
   const selected = pageSections.find((section) => section.id === selectedId);
   const selectedModule = allModules.find((module) => module.manifest.id === selected?.moduleId);
+  const modules = useMemo(
+    () =>
+      allModules.filter((module) =>
+        isModuleAvailableOnPage(module, pageKind, project.commerceTemplates.designFamily),
+      ),
+    [allModules, pageKind, project.commerceTemplates.designFamily],
+  );
   const isProtected = (section: StoreSection): boolean =>
     protectedBase &&
     pageKind === "home" &&
     catalogModernTemplateManifest.protectedSectionIds.includes(section.id);
   const replacementModules =
-    selectedModule && !isAddableModule(selectedModule)
+    selectedModule &&
+    !isModuleAvailableOnPage(selectedModule, pageKind, project.commerceTemplates.designFamily)
       ? [
           selectedModule,
           ...modules.filter((module) =>

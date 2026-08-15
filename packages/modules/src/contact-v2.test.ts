@@ -14,6 +14,7 @@ import {
   contactV2Modules,
   contactWhatsappCtaSettings,
 } from "./contact-v2";
+import { getModuleDefinition, isModuleAvailableOnPage } from "./index";
 
 const renderSection = catalogModernV2Store.sections[0];
 if (!renderSection) throw new Error("Fixture sin sección para renderizar Contacto V2");
@@ -33,6 +34,16 @@ describe("Contacto V2 module contracts", () => {
         "contact-location",
       ]),
     );
+  });
+
+  it("restringe los módulos a Contacto V2 y conserva el newsletter compartido", () => {
+    const hero = getModuleDefinition("contact-hero");
+    const newsletter = getModuleDefinition("catalog-newsletter-cta");
+    if (!hero || !newsletter) throw new Error("Faltan módulos registrados");
+    expect(isModuleAvailableOnPage(hero, "contact", "catalog-modern-v2")).toBe(true);
+    expect(isModuleAvailableOnPage(hero, "home", "catalog-modern-v2")).toBe(false);
+    expect(isModuleAvailableOnPage(hero, "contact", "catalog-modern-v1")).toBe(false);
+    expect(isModuleAvailableOnPage(newsletter, "contact", "catalog-modern-v2")).toBe(true);
   });
 
   it("aplica los defaults comerciales y los límites de repeaters", () => {
