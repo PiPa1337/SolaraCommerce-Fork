@@ -133,3 +133,25 @@ test("P2-B5: los avatares distinguen tiendas con el mismo prefijo (PR vs PV)", a
   expect(marks).toContain("PR");
   expect(marks).toContain("PV");
 });
+
+test("R3-P9-B5: el dashboard no desborda en viewport móvil", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(studioUrl);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.deleteDatabase("solara-commerce-studio");
+        request.addEventListener("success", () => resolve());
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("blocked", () =>
+          reject(new Error("No se pudo limpiar la base de Studio.")),
+        );
+      }),
+  );
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+
+  const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+  console.log("R3-P9-B5 scrollWidth móvil:", scrollWidth);
+  expect(scrollWidth).toBeLessThanOrEqual(390);
+});
