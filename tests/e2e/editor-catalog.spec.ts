@@ -330,3 +330,22 @@ test("R3-P5-B5: el paginado del catálogo respeta el tamaño elegido", async ({ 
   expect(countPage2).toBeGreaterThan(0);
   expect(countPage2).toBeLessThanOrEqual(25);
 });
+
+test("R4-P5-B5: el export CSV descarga productos con encabezado", async ({ page }) => {
+  await openCatalog(page);
+
+  const downloadPromise = page.waitForEvent("download", { timeout: 30_000 });
+  await page.getByRole("button", { name: "Exportar CSV" }).click();
+  const download = await downloadPromise;
+  const filename = download.suggestedFilename();
+  console.log("R4-P5-B5 CSV descargado:", filename);
+  expect(filename.toLowerCase()).toContain(".csv");
+
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  const text = Buffer.concat(chunks).toString("utf8");
+  const header = text.split("\n")[0] ?? "";
+  console.log("R4-P5-B5 header CSV:", JSON.stringify(header.slice(0, 80)));
+  expect(header.toLowerCase()).toMatch(/nombre|title|producto/);
+});
