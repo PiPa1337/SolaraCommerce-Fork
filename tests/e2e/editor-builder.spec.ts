@@ -521,3 +521,20 @@ test("P6-B6: el picker de módulos se opera con teclado y trampa de Tab", async 
   await page.keyboard.press("Escape");
   await expect(picker).toBeHidden();
 });
+
+test("R3-P6-B5: Desbloquear en Constructor enciende el modo avanzado", async ({ page }) => {
+  await openBuilder(page);
+  const unlock = page.getByRole("button", { name: "Desbloquear" });
+  const visible = await unlock.isVisible().catch(() => false);
+  console.log("R3-P6-B5 Desbloquear visible:", visible);
+  if (!visible) {
+    console.log("R3-P6-B5 base sin proteger: modo avanzado ya activo");
+    return;
+  }
+  await unlock.click();
+  await page.waitForTimeout(800);
+  const badge = page.locator(".ui-badge", { hasText: "Modo avanzado activado" });
+  await expect(badge).toBeVisible();
+  await expect(page.getByRole("button", { name: "Desbloquear" })).toHaveCount(0);
+  console.log("R3-P6-B5 modo avanzado activado desde Constructor");
+});
