@@ -274,3 +274,20 @@ test("R3-P7-B5: las vistas previas de Google/OG/WhatsApp reflejan el título de 
   await expect(whatsapp).toContainText("Título único de la vista previa");
   console.log("R3-P7-B5 las tres vistas previas reflejan el título de la home");
 });
+
+test("R4-P7-B5: la descripción SEO muestra el contador y recorta a 180", async ({ page }) => {
+  await setupCleanStore(page, "Tienda Desc SEO");
+  await page.getByRole("tab", { name: "SEO", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "SEO y Google" })).toBeVisible();
+
+  const description = page.getByLabel("Descripción SEO");
+  await description.fill("a".repeat(200));
+  const value = await description.inputValue();
+  const hint = await page
+    .getByText(/\/180 caracteres/)
+    .first()
+    .innerText();
+  console.log("R4-P7-B5 largo del campo:", value.length, "| hint:", JSON.stringify(hint));
+  expect(value.length).toBeLessThanOrEqual(180);
+  expect(hint).toMatch(/\d+\/180 caracteres/);
+});
