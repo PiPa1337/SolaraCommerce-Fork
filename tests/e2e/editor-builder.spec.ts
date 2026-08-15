@@ -538,3 +538,29 @@ test("R3-P6-B5: Desbloquear en Constructor enciende el modo avanzado", async ({ 
   await expect(page.getByRole("button", { name: "Desbloquear" })).toHaveCount(0);
   console.log("R3-P6-B5 modo avanzado activado desde Constructor");
 });
+
+test("R4-P6-B5: Restaurar tipografía revierte las fuentes a los valores de apertura", async ({
+  page,
+}) => {
+  await openBuilder(page);
+  await page.getByRole("tab", { name: "Tema" }).click();
+  await page.waitForTimeout(1000);
+
+  const fontSelect = page.getByTestId("ui-font-display");
+  await fontSelect.scrollIntoViewIfNeeded();
+  const fontStack = await fontSelect.inputValue();
+  console.log("R4-P6-B5 fuente inicial:", JSON.stringify(fontStack.slice(0, 50)));
+
+  const optionCount = await fontSelect.locator("option").count();
+  const currentIndex = await fontSelect.evaluate((el) => el.selectedIndex);
+  const targetIndex = currentIndex < optionCount - 1 ? currentIndex + 1 : 0;
+  await fontSelect.selectOption({ index: targetIndex });
+  await page.waitForTimeout(500);
+  const resetButton = page.getByTestId("ui-reset-typography");
+  await resetButton.scrollIntoViewIfNeeded();
+  await resetButton.click();
+  await page.waitForTimeout(700);
+  const afterReset = await page.getByTestId("ui-font-display").inputValue();
+  console.log("R4-P6-B5 fuente tras reset:", JSON.stringify(afterReset.slice(0, 50)));
+  expect(afterReset).toBe(fontStack);
+});
