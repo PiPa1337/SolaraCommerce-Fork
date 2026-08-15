@@ -28,6 +28,7 @@ import {
   isCatalogModernPlaceholderAsset,
   StoreProjectV1Schema,
 } from "@solara/project-schema";
+import { ensureContactV2Sections } from "@solara/project-schema/catalog-modern-template";
 import {
   buildAiContext,
   buildLlmsTxt,
@@ -162,7 +163,7 @@ const encoder = new TextEncoder();
 
 function parseProject(projectInput: StoreProjectV1, operation: string): StoreProjectV1 {
   const result = StoreProjectV1Schema.safeParse(projectInput);
-  if (result.success) return result.data;
+  if (result.success) return ensureContactV2Sections(result.data);
 
   const details = result.error.issues
     .map((issue) => `${issue.path.join(".") || "project"}: ${issue.message}`)
