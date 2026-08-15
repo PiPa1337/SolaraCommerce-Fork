@@ -155,3 +155,36 @@ test("R3-P9-B5: el dashboard no desborda en viewport móvil", async ({ page }) =
   console.log("R3-P9-B5 scrollWidth móvil:", scrollWidth);
   expect(scrollWidth).toBeLessThanOrEqual(390);
 });
+
+test("R4-P2-B5: la vista en lista del dashboard alterna y persiste", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(studioUrl);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.deleteDatabase("solara-commerce-studio");
+        request.addEventListener("success", () => resolve());
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("blocked", () =>
+          reject(new Error("No se pudo limpiar la base de Studio.")),
+        );
+      }),
+  );
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+
+  const listButton = page.getByRole("button", { name: "Vista en lista" });
+  await listButton.click();
+  await page.waitForTimeout(600);
+  const listActive = await listButton.getAttribute("aria-pressed");
+  console.log("R4-P2-B5 lista activa:", listActive);
+  expect(listActive).toBe("true");
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  const persisted = await page
+    .getByRole("button", { name: "Vista en lista" })
+    .getAttribute("aria-pressed");
+  console.log("R4-P2-B5 lista tras recargar:", persisted);
+  expect(persisted).toBe("true");
+});
