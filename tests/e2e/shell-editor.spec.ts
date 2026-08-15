@@ -150,3 +150,34 @@ test("P3-B6: Ctrl+Shift+F alterna el modo foco desde el teclado", async ({ page 
   console.log("P3-B6 foco tras segundo Ctrl+Shift+F:", JSON.stringify(restored));
   expect(restored).toBeFalsy();
 });
+
+test("R3-P3-B5: Ctrl+Shift+Z rehace el cambio deshecho por teclado", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
+  await page
+    .locator(".dashboard-store-card")
+    .first()
+    .locator(".dashboard-store-card__button")
+    .dblclick();
+  await page.locator(".studio-shell").waitFor({ timeout: 30000 });
+  await page.waitForTimeout(1000);
+
+  await page.getByRole("tab", { name: "Resumen", exact: true }).click();
+  await page.waitForTimeout(1200);
+  const nameInput = page.getByRole("textbox", { name: "Nombre de la tienda" });
+  await nameInput.fill("Tienda undo redo");
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(400);
+  await page.keyboard.press("Control+z");
+  await page.waitForTimeout(500);
+  const afterUndo = await nameInput.inputValue();
+  console.log("R3-P3-B5 tras Ctrl+Z:", JSON.stringify(afterUndo));
+  expect(afterUndo).not.toBe("Tienda undo redo");
+
+  await page.keyboard.press("Control+Shift+z");
+  await page.waitForTimeout(500);
+  const afterRedo = await nameInput.inputValue();
+  console.log("R3-P3-B5 tras Ctrl+Shift+Z:", JSON.stringify(afterRedo));
+  expect(afterRedo).toBe("Tienda undo redo");
+});
