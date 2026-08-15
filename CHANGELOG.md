@@ -1,5 +1,16 @@
 # Changelog
 
+### Hero V2: se quita el parallax de cursor de la media (2026-08-14)
+
+- El follower de cursor del hero (`connectHeroParallax`) movía la media con
+  valores subpixel (lerp + `toFixed(2)`), causando un micro-movimiento de 1px
+  en el borde derecho de la imagen ("se quita y agrega 1px"). Se elimina por
+  completo; la media queda estática tras la entrada.
+- Se borra el keyframes muerto `solara-hero-parallax` y el techo del runtime
+  JS vuelve de 56 a 55 KiB (~1.6 KB ahorrados). Nuevo contrato E2E y de
+  runtime: sin `pointermove` ni follower en el serializado.
+- La tienda queda guardada como v35 y el portable reconstruido.
+
 ### Hero V2: sin zoom de foto al hover y CTA con cortina estática (2026-08-14)
 
 - Se quita el zoom de la media del hero al pasar el cursor (la imagen y el

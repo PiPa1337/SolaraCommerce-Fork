@@ -489,9 +489,7 @@ test("V2 hero: la foto no hace zoom al hover y el CTA conserva cortina sin mover
   expect(await image.evaluate((element) => getComputedStyle(element).transform)).toBe(
     mediaTransform,
   );
-  expect(await media.evaluate((element) => getComputedStyle(element).transform)).toBe(
-    "matrix(1, 0, 0, 1, 0, 0)",
-  );
+  expect(await media.evaluate((element) => getComputedStyle(element).transform)).toBe("none");
 
   const action = hero.locator(".catalog-hero-actions .catalog-primary-action");
   const label = hero.locator(".catalog-hero-cta-label");

@@ -2647,7 +2647,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 @keyframes solara-hero-rule{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @keyframes solara-hero-media{from{clip-path:inset(0 0 100% 0)}to{clip-path:inset(0 0 0 0)}}
 @keyframes solara-hero-media-zoom{from{transform:scale(1.06)}to{transform:scale(1.01)}}
-@keyframes solara-hero-parallax{from{transform:translateY(0)}to{transform:translateY(-4%)}}
 @supports (animation-timeline:view()){
 .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] [data-hero-media]{animation:solara-hero-media var(--hero-v2-dur-media,900ms) var(--catalog-v2-ease-out) 80ms both,solara-hero-parallax linear both!important;animation-timeline:auto,view()!important;animation-range:normal,exit 0% exit 25%!important}
 }
