@@ -91,6 +91,38 @@ versiona.
 - Para inspeccionar una exportación, usar `pnpm reference:export` o
   `pnpm pilot:export` y revisar el directorio indicado por el script.
 
+## Gates del sitio generado y sus enganches (run acotado, 2026-08-14)
+
+- `scripts/enganches.test.ts`: features del manifest vs atributo html,
+  consistencia snapshot↔feed/sitemap/search/catalog-index, criticalCount del
+  audit, reproducibilidad byte-a-byte (production y draft).
+- `scripts/contratos.test.ts`: todo `moduleId` de las secciones existe en el
+  registry de módulos.
+- `scripts/contratos-profundos.test.ts`: design-family en el html, `productIds`
+  derivados de categorías/colecciones, assets sin huérfanos, features
+  declaradas, CSS de familias aislado, sitemap sin duplicados.
+- `scripts/sitio-consistencia.test.ts`: draft útil con noindex/robots, robots
+  draft vs production, preload LCP en todas las páginas con imagen.
+- `scripts/seo-check.test.ts`: JSON-LD válido con URLs absolutas en páginas
+  comerciales.
+- `scripts/recursos-check.test.ts`: duplicación CSS V2 y videos con poster.
+- `scripts/audit-scale.test.ts`: el audit del catálogo grande no degrada
+  (regresión de O(n²)).
+- `tests/e2e/axe-site.spec.ts`: axe-core en las rutas de los 3 fixtures
+  (reference, catalogModern, catalogScale) — 0 violaciones.
+- `tests/e2e/nojs-coverage.spec.ts`: 6 rutas × 2 fixtures × con/sin JS, con
+  contenido útil y 0 errores de consola/red.
+- `tests/e2e/focus-visible.spec.ts`: el foco del teclado es visible.
+- `tests/e2e/interacciones.spec.ts`: agregar al carrito → carrito → checkout
+  sin errores de consola.
+- `tests/e2e/lcp-cold.spec.ts`: LCP con navegador frío (3 corridas, mediana).
+- `tests/e2e/cdp-site.spec.ts`: long tasks/rAF del sitio exportado.
+- `tests/e2e/qa-visual-sweep.spec.ts` y `qa-visual-modern.spec.ts`: capturas
+  para barrido visual con la skill de visión (requieren `SOLARA_QA_VISUAL=1`
+  para el sweep).
+- `scripts/dedup-studio-css.mjs`: elimina reglas duplicadas exactas del CSS
+  del Studio al construir (postbuild de `@solara/studio`).
+
 ## Estrategia futura
 
 La suite local cubre límites de upload y del mapa de archivos del sitio,
