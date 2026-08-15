@@ -6,7 +6,12 @@ import { Button, Field, InlineError } from "../../components/Ui";
 import { hashFile } from "../../lib/workers";
 import { HeroSlidesEditor } from "./HeroSlidesEditor";
 import { RepeaterEditor } from "./RepeaterEditor";
-import { applyVideoToSection, buildVideoAsset, sectionSettingsWithVideo } from "./videoUpload";
+import {
+  applyVideoPoster,
+  applyVideoToSection,
+  buildVideoAsset,
+  sectionSettingsWithVideo,
+} from "./videoUpload";
 
 function formatIssuePaths(issues: Array<{ path: readonly PropertyKey[] }>): string {
   return [...new Set(issues.map((issue) => issue.path.join(".") || "settings"))].join(", ");
@@ -106,13 +111,25 @@ export function SettingsInspector({
       const hash = await hashFile(file);
       const existing = project.videos.find((video) => video.hash === hash);
       if (existing) {
-        // El video ya está en el proyecto: se apunta el campo (y el modo/poster
-        // se alinean sin tocar los assets).
+        // El video ya está en el proyecto: se refresca el poster (primer
+        // frame) si la extracción produce uno, se apunta el campo y el
+        // modo/poster se alinean — todo en una sola actualización.
+        const rebuilt = await buildVideoAsset(file, { hash });
         const nextSettings = sectionSettingsWithVideo(draft, fieldKey, existing.id);
         setDraft(nextSettings);
         if (schema) {
           const result = schema.safeParse(nextSettings);
           if (result.success) onChange(result.data);
+        }
+        if (rebuilt.posterImage) {
+          const withPoster = applyVideoPoster(project, existing.id, rebuilt.posterImage);
+          onProjectChange({
+            ...withPoster,
+            sections: withPoster.sections.map((section) =>
+              section.id === sectionId ? { ...section, settings: nextSettings } : section,
+            ),
+            updatedAt: new Date().toISOString(),
+          });
         }
         return;
       }

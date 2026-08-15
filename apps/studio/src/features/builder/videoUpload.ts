@@ -66,8 +66,10 @@ export function readVideoMetadata(
 
 /**
  * Extrae un fotograma del video a baja resolución (máx. 640px) como imagen
- * de preload/poster. Si el navegador no puede decodificar o dibujar el
- * fotograma, devuelve undefined (la subida no debe fallar por el poster).
+ * de preload/poster. Usa el primer frame literal del video (t=0) para que el
+ * preload sea idéntico a lo primero que se ve al reproducir. Si el navegador
+ * no puede decodificar o dibujar el fotograma, devuelve undefined (la subida
+ * no debe fallar por el poster).
  */
 export async function extractVideoPoster(
   file: File,
@@ -85,14 +87,15 @@ export async function extractVideoPoster(
       video.onloadeddata = () => resolve();
       video.onerror = () => reject(new Error("No se pudo decodificar el video."));
     });
-    const duration = Number.isFinite(video.duration) ? video.duration : 0;
-    const at = options.atSeconds ?? Math.min(1, duration > 0 ? duration * 0.15 : 1);
-    video.currentTime = at;
-    await new Promise<void>((resolve) => {
-      video.onseeked = () => resolve();
-      video.onerror = () => resolve();
-      window.setTimeout(() => resolve(), 4_000);
-    });
+    const at = options.atSeconds ?? 0;
+    if (Math.abs(video.currentTime - at) > 0.001) {
+      video.currentTime = at;
+      await new Promise<void>((resolve) => {
+        video.onseeked = () => resolve();
+        video.onerror = () => resolve();
+        window.setTimeout(() => resolve(), 4_000);
+      });
+    }
     if (video.videoWidth < 1 || video.videoHeight < 1) return undefined;
     const maxDimension = options.maxDimension ?? 640;
     const scale = Math.min(1, maxDimension / Math.max(video.videoWidth, video.videoHeight));
@@ -224,6 +227,35 @@ export function sectionSettingsWithVideo(
   // limpia el poster manual para que el render use el automático.
   if (fieldKey === "videoAssetId" && "posterAssetId" in next) next.posterAssetId = "";
   return next;
+}
+
+/**
+ * Actualiza el poster de un video existente (re-upload del mismo archivo):
+ * reemplaza el poster viejo por el nuevo en `assets` y apunta el video al
+ * nuevo `posterAssetId`. Devuelve el proyecto con UNA sola actualización.
+ */
+export function applyVideoPoster(
+  project: StoreProjectV1,
+  videoId: string,
+  posterImage: ImageAsset | undefined,
+): StoreProjectV1 {
+  const oldPosterId = project.videos.find((video) => video.id === videoId)?.posterAssetId;
+  const assetsWithoutOld = oldPosterId
+    ? project.assets.filter((asset) => asset.id !== oldPosterId)
+    : project.assets;
+  return {
+    ...project,
+    videos: project.videos.map((video) =>
+      video.id === videoId
+        ? {
+            ...video,
+            ...(posterImage ? { posterAssetId: posterImage.id } : {}),
+          }
+        : video,
+    ),
+    assets: posterImage ? [...assetsWithoutOld, posterImage] : assetsWithoutOld,
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 /**

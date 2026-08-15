@@ -2,6 +2,7 @@ import { type ImageAsset, StoreProjectV1Schema, type VideoAsset } from "@solara/
 import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import { describe, expect, it } from "vitest";
 import {
+  applyVideoPoster,
   applyVideoToSection,
   buildVideoAsset,
   sectionSettingsWithVideo,
@@ -182,6 +183,55 @@ describe("applyVideoToSection", () => {
     );
     expect(next.assets).toContainEqual(poster);
     expect(next.videos).toContainEqual(video);
+    expect(StoreProjectV1Schema.safeParse(next).success).toBe(true);
+  });
+
+  it("re-subir el mismo video reemplaza el poster viejo por el nuevo", () => {
+    const project = structuredClone(catalogModernV2Store);
+    const oldPoster: ImageAsset = {
+      kind: "image",
+      id: "asset-poster-viejo" as ImageAsset["id"],
+      name: "look (preload)",
+      alt: "",
+      mimeType: "image/jpeg",
+      source: "data:image/jpeg;base64,QU5USUdVQQ==",
+      width: 360,
+      height: 640,
+      hash: "poster-viejo",
+    };
+    const video: VideoAsset = {
+      kind: "video",
+      id: "video-refresh-test" as VideoAsset["id"],
+      name: "look",
+      alt: "",
+      mimeType: "video/mp4",
+      source: "data:video/mp4;base64,AA==",
+      width: 1080,
+      height: 1920,
+      durationSeconds: 8,
+      hash: "hash-refresh",
+      posterAssetId: oldPoster.id,
+    };
+    project.assets = [...project.assets, oldPoster];
+    project.videos = [video];
+
+    const newPoster: ImageAsset = {
+      kind: "image",
+      id: "asset-poster-nuevo" as ImageAsset["id"],
+      name: "look (preload)",
+      alt: "",
+      mimeType: "image/webp",
+      source: "data:image/webp;base64,UFJJTUVSQV9GUkFNRQ==",
+      width: 360,
+      height: 640,
+      hash: "poster-nuevo",
+    };
+    const next = applyVideoPoster(project, video.id, newPoster);
+    expect(next.videos.find((candidate) => candidate.id === video.id)?.posterAssetId).toBe(
+      newPoster.id,
+    );
+    expect(next.assets).toContainEqual(newPoster);
+    expect(next.assets.some((asset) => asset.id === oldPoster.id)).toBe(false);
     expect(StoreProjectV1Schema.safeParse(next).success).toBe(true);
   });
 });

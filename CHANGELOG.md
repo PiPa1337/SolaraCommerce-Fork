@@ -1,5 +1,15 @@
 # Changelog
 
+### Hero V2: poster automático desde el primer frame del video (2026-08-15)
+
+- El poster de preload se extrae del **primer frame literal** (t=0, sin
+  epsilon): el preload muestra exactamente lo primero que se ve al reproducir.
+  Si el seek es innecesario (ya estamos en t=0) se salta para no demorar la
+  subida.
+- Re-subir el mismo video (mismo hash) ahora **refresca el poster**: reemplaza
+  el poster viejo por el nuevo en los assets y apunta el video al nuevo
+  `posterAssetId` (antes el dedupe por hash dejaba el poster viejo).
+
 ### Portable: los rebuilds preservan los guardados del usuario (2026-08-15)
 
 - `desktop:package` recreaba la carpeta portable desde cero: cualquier tienda
