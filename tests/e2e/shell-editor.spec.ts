@@ -125,3 +125,28 @@ test("P3-B4: el modo foco oculta el panel y Esc lo restaura", async ({ page }) =
   expect(restored).toBeFalsy();
   await expect(pane).toBeVisible();
 });
+
+test("P3-B6: Ctrl+Shift+F alterna el modo foco desde el teclado", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
+  await page
+    .locator(".dashboard-store-card")
+    .first()
+    .locator(".dashboard-store-card__button")
+    .dblclick();
+  await page.locator(".studio-shell").waitFor({ timeout: 30000 });
+  await page.waitForTimeout(1000);
+
+  await page.keyboard.press("Control+Shift+f");
+  await page.waitForTimeout(700);
+  const focused = await page.locator(".studio-shell").getAttribute("data-studio-focus");
+  console.log("P3-B6 foco tras Ctrl+Shift+F:", JSON.stringify(focused));
+  expect(focused).toBeTruthy();
+
+  await page.keyboard.press("Control+Shift+f");
+  await page.waitForTimeout(700);
+  const restored = await page.locator(".studio-shell").getAttribute("data-studio-focus");
+  console.log("P3-B6 foco tras segundo Ctrl+Shift+F:", JSON.stringify(restored));
+  expect(restored).toBeFalsy();
+});
