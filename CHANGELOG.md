@@ -1,5 +1,20 @@
 # Changelog
 
+### Hero V2: el fondo pasa a velo blanquizo y el copy vuelve a tinta (2026-08-15)
+
+- Se revierte el refuerzo de legibilidad anterior (gradiente oscuro +
+  antetítulo aclarado): el usuario prefiere el fondo con un velo blanquizo.
+- El fondo del hero (desktop) ahora aplica un velo tipo papel creciente hacia
+  la izquierda (`--catalog-paper` con gradiente 92% → transparente y opacidad
+  regulada por el setting `backgroundDarkness`, ahora etiquetado "Velo del
+  fondo (%)" en el editor). El copy vuelve a la tinta oscura; sin fondo,
+  mantiene el papel claro.
+- Se elimina el `brightness()` oscurecedor y el fondo del figure de la media
+  pasa a transparente (desaparece la costura vertical entre el velo y la foto
+  9:16; verificado con visión: texto legible, transición suave).
+- E2E: el test del fold verifica el velo (`::after` presente), la variable de
+  intensidad y que el copy no queda blanco. La tienda queda guardada como v38.
+
 ### Hero V2: fondo editorial oscurecido, tipografía expandida y photo 9:16 (2026-08-15)
 
 - Nuevos settings del hero conectados al editor: `backgroundImageId` (fondo

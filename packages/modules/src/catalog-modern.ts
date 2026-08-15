@@ -453,7 +453,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
     {
       key: "backgroundDarkness",
       type: "number",
-      label: "Oscuridad del fondo (%)",
+      label: "Velo del fondo (%)",
       min: 0,
       max: 90,
       step: 5,

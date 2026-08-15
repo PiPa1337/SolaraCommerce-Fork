@@ -2547,8 +2547,12 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   position: relative;
   z-index: 1;
 }
-/* Fondo editorial oscurecido (desktop, detrás del copy): imagen editable
-   desde el editor, oscurecida con la variable del setting. */
+.cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial--has-background [data-hero-media] {
+  background: transparent;
+}
+/* Fondo editorial (desktop, detrás del copy): imagen editable desde el editor
+   con un velo blanquizo de papel del lado del texto; el copy conserva la
+   tinta oscura. La intensidad del velo la regula el setting (0-90%). */
 .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial--has-background .catalog-hero-background {
   position: absolute;
   inset: 0;
@@ -2560,18 +2564,21 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: brightness(calc(1 - var(--catalog-hero-bg-dark, 0.6) * 0.78)) saturate(0.92);
+  filter: saturate(0.92);
   transform: scale(1.01);
 }
-/* Con fondo presente el copy pasa a claro para leer sobre la imagen. */
-.cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial--has-background .catalog-hero-copy {
-  color: #fff;
-}
-.cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial--has-background .catalog-hero-copy .catalog-hero-body {
-  color: color-mix(in srgb, #fff 82%, transparent);
-}
-.cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial--has-background .catalog-hero-copy .catalog-hero-rule {
-  background: color-mix(in srgb, #fff 45%, transparent);
+.cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial--has-background .catalog-hero-background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--catalog-paper) 92%, transparent) 0%,
+    color-mix(in srgb, var(--catalog-paper) 64%, transparent) 45%,
+    color-mix(in srgb, var(--catalog-paper) 26%, transparent) 78%,
+    transparent 100%
+  );
+  opacity: calc(0.3 + var(--catalog-hero-bg-dark, 0.6) * 0.7);
 }
 .cm.v2 .catalog-hero-copy {
   position: relative;

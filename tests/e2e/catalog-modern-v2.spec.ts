@@ -196,8 +196,8 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   expect(heroFinal.benefitOpacities).toEqual(["1", "1", "1"]);
   expect(heroFinal.mediaVisible).toBe(true);
 
-  // Fondo editorial del hero (desktop): cubre el hero, usa la oscuridad del
-  // setting y el copy pasa a blanco para leer sobre la imagen oscurecida.
+  // Fondo editorial del hero (desktop): cubre el hero, usa la intensidad del
+  // velo del setting y deja el copy en tinta oscura sobre el velo blanquizo.
   const heroBackgroundMetrics = await page.evaluate(() => {
     const bg = document.querySelector<HTMLElement>("[data-hero-background]");
     const hero = document.querySelector<HTMLElement>(".catalog-hero-inner");
@@ -211,13 +211,15 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
         Math.abs(bgRect.right - heroRect.right) < 1 &&
         Math.abs(bgRect.top - heroRect.top) < 1,
       darkness: getComputedStyle(bg).getPropertyValue("--catalog-hero-bg-dark").trim(),
-      copyColor: getComputedStyle(copy).color,
+      veilVisible: getComputedStyle(bg, "::after").backgroundImage !== "none",
+      copyIsWhite: getComputedStyle(copy).color === "rgb(255, 255, 255)",
     };
   });
   expect(heroBackgroundMetrics).toEqual({
     fillsHero: true,
     darkness: "0.6",
-    copyColor: "rgb(255, 255, 255)",
+    veilVisible: true,
+    copyIsWhite: false,
   });
 
   const heroCollision = await page.evaluate(() => {
