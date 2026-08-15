@@ -1,6 +1,30 @@
 # PERPETUAL REPORT — runs acotados con Δ%
 
-## PLAN 1 APP (app completa — diagnóstico base, 2026-08-14)
+## REPORTE GLOBAL — PLAN APP 10× (app completa, 2026-08-15)
+
+### Δ% por plan
+
+| Plan | Área | Resultado clave | Δ% |
+|------|------|-----------------|-----|
+| 1 | Diagnóstico base | axe del editor **10 serious → 0**; foco 0/26 invisibles; memoria sin fuga (Δ 0); reposo 0 ms/s | **100 % serious** |
+| 2 | Dashboard | Archivar separado con borde (anti-error), ícono Globe para sitio público, nombre de card con aire, status con color | 4 fixes reales |
+| 3 | Shell editor | Gates nuevos: pane conserva scroll (200→200) y reabre; Ctrl+Z deshace; Ctrl+S guarda | 2 gates nuevos |
+| 4 | Flujos guiados | Gate de creación completo: foco inicial, validación inline, pasos, apertura del editor (610 ms) | gate nuevo |
+| 5 | Catálogo | Tabla 8/8; baseline D7: 50 filas, filtro 461 ms | verificado |
+| 6 | Builder | 13/13; feedback al preview **295 ms** (mediana) | verificado |
+| 7 | Tema/SEO/Assets/Preview | 16/16; pausa del preview **0.04 ms/s** (contrato verificado) | verificado |
+| 8 | Export/persistencia | 6/6 (etapas, críticos, conflictos 409, recovery, workers con fallo simulado) | verificado |
+| 9 | Shell/rendimiento/calidad | axe app 0 serious (moderates estructurales del panel lateral documentados); memoria 0 fuga | 100 % serious |
+| 10 | Re-auditoría | 22 e2e + check exit=0 + perf-idle 4/4 + editor-perf 5/5 + benchmark 1.744 ms | todos verdes |
+
+### Autocrítica
+
+- El dashboard y el editor ya estaban limpios en reposo (0 CPU, 0 rAF, sin fugas) — el margen percibido era la GPU software de la instalación (fix entregado en el portable).
+- Moderates de axe restantes (9) son estructurales del shell (panel lateral con fieldsets fuera del main) — aceptados con documentación; el iframe del preview se excluye del gate (tiene su propio gate).
+- No se tocaron las decisiones de producto pendientes (D2 cierre con guardados, D6 dark mode).
+- Todos los cambios respetaron las reglas del Núcleo Común (Δ% medido, autocrítica, gates verdes por plan, push por plan).
+
+
 
 | id | ítem | métrica | antes | después | Δ% | estado |
 |----|------|---------|-------|---------|-----|--------|
