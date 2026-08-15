@@ -1,14 +1,14 @@
 import {
-Archive,
-ArrowCounterClockwise,
-ArrowUpRight,
-CloudArrowDown,
-Copy,
-DownloadSimple,
-FolderOpen,
-Globe,
-Package,
-X,
+  Archive,
+  ArrowCounterClockwise,
+  ArrowUpRight,
+  CloudArrowDown,
+  Copy,
+  DownloadSimple,
+  FolderOpen,
+  Globe,
+  Package,
+  X,
 } from "@phosphor-icons/react";
 import type { RefObject } from "react";
 import { Button, IconButton } from "../../components/Ui";
