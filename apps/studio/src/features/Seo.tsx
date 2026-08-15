@@ -330,6 +330,7 @@ export function Seo({
           >
             <input
               maxLength={70}
+              aria-label="Título SEO"
               value={seoDraft.title}
               onChange={(event) => commit({ ...seoDraft, title: event.target.value })}
             />
@@ -342,6 +343,7 @@ export function Seo({
             <textarea
               rows={4}
               maxLength={180}
+              aria-label="Descripción SEO"
               value={seoDraft.description}
               onChange={(event) => commit({ ...seoDraft, description: event.target.value })}
             />
@@ -372,6 +374,7 @@ export function Seo({
             {...(socialImageError ? { error: socialImageError } : {})}
           >
             <select
+              aria-label="Recurso para compartir"
               value={seoDraft.socialImageId ?? ""}
               onChange={(event) =>
                 commit({

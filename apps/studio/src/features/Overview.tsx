@@ -333,6 +333,7 @@ export function Overview({
   const destinationInput = (key: string, value: string, onCommit: (next: string) => void) => (
     <input
       type="url"
+      aria-label="Destino"
       value={drafts[key] ?? value}
       onChange={(event) => {
         setDrafts((current) => ({ ...current, [key]: event.target.value }));
@@ -376,6 +377,7 @@ export function Overview({
           <div className="form-grid">
             <Field label="Nombre de la tienda" {...(nameError ? { error: nameError } : {})}>
               <input
+                aria-label="Nombre de la tienda"
                 value={nameDisplay}
                 onChange={(event) =>
                   updateField(
@@ -393,6 +395,7 @@ export function Overview({
             </Field>
             <Field label="Razón social" {...(legalNameError ? { error: legalNameError } : {})}>
               <input
+                aria-label="Razón social"
                 value={legalNameDisplay}
                 onChange={(event) =>
                   updateField(
@@ -411,6 +414,7 @@ export function Overview({
             >
               <textarea
                 rows={4}
+                aria-label="Descripción"
                 value={descriptionDisplay}
                 onChange={(event) =>
                   updateField(
@@ -425,6 +429,7 @@ export function Overview({
             <Field label="Email" {...(emailError ? { error: emailError } : {})}>
               <input
                 type="email"
+                aria-label="Email"
                 value={emailDisplay}
                 onChange={(event) =>
                   updateField(
@@ -438,6 +443,7 @@ export function Overview({
             </Field>
             <Field label="Teléfono">
               <input
+                aria-label="Teléfono"
                 value={project.identity.phone}
                 onChange={(event) =>
                   commit({ identity: { ...project.identity, phone: event.target.value } })
@@ -446,6 +452,7 @@ export function Overview({
             </Field>
             <Field label="Dirección" className="field--wide">
               <input
+                aria-label="Dirección"
                 value={project.identity.address}
                 onChange={(event) =>
                   commit({ identity: { ...project.identity, address: event.target.value } })
@@ -522,6 +529,7 @@ export function Overview({
             >
               <input
                 type="url"
+                aria-label="URL pública"
                 value={urlDisplay}
                 onChange={(event) =>
                   updateField(
@@ -553,6 +561,7 @@ export function Overview({
               {...(catalogLabelError ? { error: catalogLabelError } : {})}
             >
               <input
+                aria-label="Nombre del catálogo"
                 maxLength={CATALOG_LABEL_MAX_LENGTH}
                 value={catalogLabelDisplay}
                 onChange={(event) =>
@@ -627,6 +636,7 @@ export function Overview({
                         {...(itemLabelError ? { error: itemLabelError } : {})}
                       >
                         <input
+                          aria-label="Enlace"
                           maxLength={NAVIGATION_LABEL_MAX_LENGTH}
                           value={itemLabelDisplay}
                           onChange={(event) =>
@@ -695,6 +705,7 @@ export function Overview({
                               {...(childLabelError ? { error: childLabelError } : {})}
                             >
                               <input
+                                aria-label="Enlace"
                                 maxLength={NAVIGATION_LABEL_MAX_LENGTH}
                                 value={childLabelDisplay}
                                 onChange={(event) =>
@@ -895,6 +906,7 @@ export function Overview({
                     {...(seoTitleError ? { error: seoTitleError } : {})}
                   >
                     <input
+                      aria-label="Título SEO"
                       maxLength={70}
                       value={seoTitleDisplay}
                       onChange={(event) =>
@@ -915,6 +927,7 @@ export function Overview({
                   >
                     <textarea
                       rows={2}
+                      aria-label="Descripción SEO"
                       maxLength={180}
                       value={seoDescriptionDisplay}
                       onChange={(event) =>
