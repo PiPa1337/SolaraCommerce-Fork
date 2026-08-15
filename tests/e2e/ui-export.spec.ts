@@ -109,3 +109,34 @@ test("las etapas de generación avanzan de a una mientras exporta el borrador", 
     ).toHaveAttribute("data-done", "true");
   }
 });
+
+test("P8-B5: la descarga del respaldo es un .solara.json v2 válido", async ({ page }) => {
+  await openDemoStore(page);
+
+  const downloadPromise = page.waitForEvent("download", { timeout: 30_000 });
+  await page.getByTestId("ui-export-backup").click();
+  const download = await downloadPromise;
+  const filename = download.suggestedFilename();
+  console.log("P8-B5 archivo descargado:", filename);
+  expect(filename).toMatch(/\.solara\.json$/);
+
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  const text = Buffer.concat(chunks).toString("utf8");
+  const parsed = JSON.parse(text) as {
+    format?: string;
+    version?: number;
+    project?: { schemaVersion?: number };
+  };
+  console.log(
+    "P8-B5 envelope:",
+    parsed.format,
+    parsed.version,
+    "| schema:",
+    parsed.project?.schemaVersion,
+  );
+  expect(parsed.format).toBe("solara-project");
+  expect(parsed.version).toBe(2);
+  expect(parsed.project?.schemaVersion).toBe(2);
+});
