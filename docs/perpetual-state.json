@@ -1,7 +1,10 @@
 {
-  "plan": 2,
-  "de10": 2,
+  "run": "app-10x-ronda-1-de-5",
+  "plan": 1,
+  "de10": 1,
   "planDoc": "docs/PERPETUAL_PLAN_APP_10X.md",
   "branch": "main",
-  "nextItem": "A1"
+  "round": 1,
+  "roundsTotal": 5,
+  "nextItem": "R1-K1"
 }

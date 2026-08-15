@@ -1,22 +1,18 @@
 {
-  "plan": 10,
-  "de10": 10,
-  "branch": "main",
+  "run": "app-10x-ronda-1-de-5",
+  "plan": 1,
   "baselineEntrada": {
-    "runtimeJavascriptRaw": 55845,
-    "runtimeMargen": 1499,
-    "cssStudio": 102160,
-    "cssStudioMargen": 4336,
-    "exportMs2000": 1727,
-    "axe": "0/0/0 (3 fixtures)",
-    "preloads": "146/146",
-    "lcp": "48-92 ms",
-    "interacciones": "0 errores",
-    "contratosProfundos": "6/6",
-    "paritySweep": "6/6",
-    "nojs": "24 combinaciones",
-    "foco": "0 invisibles",
-    "seoJsonld": "100 %"
-  },
-  "nextItem": "P10-1"
+    "axeEditorSerious": 0,
+    "axeEditorModerate": 9,
+    "focoInvisible": 0,
+    "memoriaFuga": 0,
+    "reposoMsS": 0.04,
+    "editorOpenMs": 500,
+    "feedbackBuilderMs": 295,
+    "tablaFiltroMs": 461,
+    "creacionTiendaMs": 610,
+    "benchmarkMs": 1744,
+    "perfIdle": "4/4",
+    "editorPerf": "5/5"
+  }
 }
