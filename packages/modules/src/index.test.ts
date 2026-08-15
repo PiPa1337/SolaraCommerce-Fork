@@ -11,7 +11,9 @@ import { referenceStore } from "@solara/project-schema/fixture";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
+  aboutV2Modules,
   catalogModernModules,
+  contactV2Modules,
   createModuleSection,
   getModuleDefinition,
   getTypedModule,
@@ -531,9 +533,12 @@ describe("registro de módulos tipado", () => {
   });
 
   it("mantiene ids únicos en el registro", () => {
-    const ids = [...officialModules, ...catalogModernModules].map(
-      (definition) => definition.manifest.id,
-    );
+    const ids = [
+      ...officialModules,
+      ...catalogModernModules,
+      ...contactV2Modules,
+      ...aboutV2Modules,
+    ].map((definition) => definition.manifest.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toContain("catalog-hero");
   });

@@ -37,7 +37,11 @@ export function defaultRepeaterItem(
                           ? "Ver más"
                           : field.key === "actionHref"
                             ? "/"
-                            : "",
+                            : field.type === "asset"
+                              ? ""
+                              : field.type === "url"
+                                ? "/"
+                                : "Texto editable",
       ]),
     ),
   };

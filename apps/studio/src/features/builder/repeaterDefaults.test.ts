@@ -1,5 +1,5 @@
 import type { RepeaterItemField } from "@solara/modules";
-import { catalogModernModules, type RegisteredModule } from "@solara/modules";
+import { aboutV2Modules, catalogModernModules, type RegisteredModule } from "@solara/modules";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { describe, expect, it } from "vitest";
 import { defaultRepeaterItem } from "./repeaterDefaults";
@@ -15,7 +15,7 @@ function repeaterFields(
 describe("defaultRepeaterItem", () => {
   it("siempre genera un id válido aunque settingsFields no lo declare", () => {
     const project = structuredClone(catalogModernStore);
-    for (const module of catalogModernModules) {
+    for (const module of [...catalogModernModules, ...aboutV2Modules]) {
       for (const { fields, key } of repeaterFields(module)) {
         const item = defaultRepeaterItem(fields, project);
         expect(item.id, `${module.manifest.id}.${key}`).toMatch(/^item-.+/);
@@ -25,7 +25,7 @@ describe("defaultRepeaterItem", () => {
 
   it("el ítem generado pasa el schema del módulo junto a los defaults", () => {
     const project = structuredClone(catalogModernStore);
-    for (const module of catalogModernModules) {
+    for (const module of [...catalogModernModules, ...aboutV2Modules]) {
       for (const repeater of module.settingsFields) {
         if (repeater.type !== "repeater") continue;
         const defaults = module.settingsSchema.parse({});
@@ -60,6 +60,21 @@ describe("defaultRepeaterItem", () => {
       items: duplicated,
     });
     expect(result.success).toBe(true);
+  });
+
+  it("genera texto no vacío para campos de texto requeridos no etiquetados", () => {
+    const project = structuredClone(catalogModernStore);
+    const item = defaultRepeaterItem(
+      [
+        { key: "number", type: "text", label: "Número" },
+        { key: "icon", type: "text", label: "Ícono" },
+        { key: "role", type: "text", label: "Función" },
+      ],
+      project,
+    );
+    expect(item.number).toBe("Texto editable");
+    expect(item.icon).toBe("Texto editable");
+    expect(item.role).toBe("Texto editable");
   });
 
   it("eliminar un ítem conserva los restantes válidos", () => {

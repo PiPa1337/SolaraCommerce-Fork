@@ -1,4 +1,9 @@
-import { catalogModernModules, officialModules, type RegisteredModule } from "@solara/modules";
+import {
+  aboutV2Modules,
+  catalogModernModules,
+  officialModules,
+  type RegisteredModule,
+} from "@solara/modules";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { catalogModernStore as catalogModernStoreFixture } from "@solara/project-schema/catalog-modern-fixture";
 import { describe, expect, it } from "vitest";
@@ -39,7 +44,7 @@ function arrayItemShape(schema: SchemaRef, key: string): Record<string, unknown>
 }
 
 describe("settingsFields <-> settingsSchema contrato", () => {
-  const modules = [...officialModules, ...catalogModernModules];
+  const modules = [...officialModules, ...catalogModernModules, ...aboutV2Modules];
   for (const module of modules) {
     const id = module.manifest.id;
     it(`${id}: toda key de settingsFields existe en el schema`, () => {
@@ -103,7 +108,7 @@ describe("settingsFields <-> settingsSchema contrato", () => {
 });
 
 describe("el payload de cada control pasa el schema del módulo", () => {
-  const modules = [...officialModules, ...catalogModernModules];
+  const modules = [...officialModules, ...catalogModernModules, ...aboutV2Modules];
   for (const module of modules) {
     const id = module.manifest.id;
     it(`${id}: payload por tipo de control`, () => {
