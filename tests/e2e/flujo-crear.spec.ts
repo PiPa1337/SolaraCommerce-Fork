@@ -83,3 +83,33 @@ test("P4-B4: archivar una tienda desde el panel de detalle y restaurarla", async
   console.log("P4-B4 toast tras deshacer:", JSON.stringify(restoredText.slice(0, 60)));
   expect(restoredText).toContain("restaurada");
 });
+
+test("P4-B6: restaurar una tienda archivada desde el filtro Archivadas", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
+
+  await page.locator(".dashboard-store-card").first().click();
+  await page.waitForTimeout(500);
+  await page.locator(".dashboard-store-detail").getByRole("button", { name: "Archivar" }).click();
+  await page
+    .getByRole("dialog", { name: "Archivar tienda" })
+    .getByRole("button", {
+      name: "Archivar",
+    })
+    .click();
+  await page.locator("[data-testid='ui-dashboard-toast']").waitFor({ state: "visible" });
+
+  const filter = page.getByRole("combobox", { name: "Estado" });
+  await filter.selectOption("archived");
+  await page.waitForTimeout(700);
+  const archivedCard = page.locator(".dashboard-store-card", { hasText: "Archivada" }).first();
+  await expect(archivedCard).toBeVisible();
+  await archivedCard.click();
+  await page.waitForTimeout(500);
+  await page.locator(".dashboard-store-detail").getByRole("button", { name: "Restaurar" }).click();
+  const toast = page.locator("[data-testid='ui-dashboard-toast']");
+  await expect(toast).toContainText("restaurada", { timeout: 30_000 });
+  const finalText = await toast.innerText();
+  console.log("P4-B6 toast tras restaurar desde filtro:", JSON.stringify(finalText.slice(0, 60)));
+});
