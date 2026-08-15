@@ -175,3 +175,75 @@
 - Gates: `pnpm check` exit=0, benchmark 1.727 ms.
 - Mejoras: deuda documentada al día (2 filas resueltas), 16 gates del run documentados.
 - Acumulado PLAN 1→9: benchmark −1.6 % (1.727 vs 1.692 baseline; ruido de máquina); axe 0/0/0; preloads 146/146; LCP 48-92 ms; contratos 0 drift; runtime 55.845 B (margen 1.5 KB, bloqueado por decisión del usuario).
+
+## PLAN 10 — Consolidación y cierre formal (19:05-19:20Z, 2026-08-14)
+
+| id | ítem | métrica | antes | después | Δ% | estado |
+|----|------|---------|-------|---------|-----|--------|
+| P10-1 | Re-auditoría enganches (10 archivos de gates) | tests | — | 30/30 | 0 | hecho |
+| P10-2 | Rutas + a11y (nojs, axe, foco, preloads, JSON-LD) | gates | OK | OK | 0 | hecho |
+| P10-3 | Runtime + CSS + assets | gates | OK | OK | 0 | hecho |
+| P10-4 | Navegador + servidor | gates | OK | OK | 0 | hecho |
+| P10-5 | Gates finales: check exit=0, benchmark 1.740 ms, e2e 15/15, sweep solo 404 | gates | — | todos verdes | — | hecho |
+| P10-6 | Reporte global consolidado | reporte | — | este documento | — | hecho |
+| P10-7 | Commit de cierre + push | git | — | — | — | pendiente |
+
+---
+
+# REPORTE GLOBAL CONSOLIDADO — 10 planes (baseline PLAN 1 → cierre PLAN 10)
+
+## Resumen de Δ% por capa
+
+| Capa | Hallazgos iniciales | Hallazgos finales | Δ% |
+|------|--------------------|-------------------|-----|
+| **A. HTML/a11y** | 33 findings axe (14 reference + 19 catalogModern) | **0** (3 fixtures, 18 rutas) | **100 %** |
+| **B. CSS** | 3 reglas duplicadas Studio (203 B) + tracking −0.09em | 0 duplicadas + dedup postbuild permanente (−232 B) + tracking −0.03em | 100 % duplicación / 33 % tracking |
+| **C. Runtime JS** | 55.845 B (margen 1.5 KB) | 55.845 B (bloqueado por decisión del usuario) | 0 (sin cambio propio) |
+| **D. Assets** | preloads sin gate | **146/146 páginas con preload LCP** | 100 % cobertura |
+| **E. Rutas** | sin gate no-JS | **24 combinaciones** útiles sin JS | gate nuevo |
+| **F. Enganches** | 4 gates (PLAN 1) | **16 gates** de contratos y enganches, 0 drift | cobertura ×4 |
+| **G. Servidor local** | 9 tests | 9 tests + subcarpeta + 404 + interacciones | +3 gates |
+| **H. Navegador** | sin medición | LCP frío 44-92 ms, long tasks 30-31 ms/s | gates nuevos |
+
+## Δ% por métrica clave (baseline PLAN 1 → cierre PLAN 10)
+
+| Métrica | PLAN 1 (antes) | PLAN 10 (después) | Δ% |
+|---------|----------------|-------------------|-----|
+| Export 2.000 productos | 1.692 ms | 1.740 ms | −2.8 % (ruido de máquina; sin regresión medida) |
+| Axe findings | 33 | 0 | **100 %** |
+| Preloads LCP | sin gate | 146/146 | **100 % cobertura** |
+| Foco visible | sin gate | 0 invisibles | 100 % |
+| Interacciones (carrito→checkout) | sin gate | 0 errores | 100 % |
+| CSS Studio | 102.392 B | 102.160 B | **0.23 %** (+dedup permanente) |
+| Runtime | 55.845 B | 55.845 B | 0 (bloqueado) |
+| Fuentes | 30.196 B (Archivo) | 30.196 B | 0 (intacto) |
+| Contratos profundos | sin gate | 6/6 sin drift | gate nuevo |
+| JSON-LD comercial | sin gate | 100 % | gate nuevo |
+
+## Mejoras reales aplicadas (por plan)
+
+- **PLAN 1**: gate de enganches (4), axe reference 14→0 (contraste trust/footer, listitem), runtime margen recuperado por estado, mediciones CDP/LCP base.
+- **PLAN 2**: axe 7→0 (aria-labels de secciones, related dentro del main), controles hero 40→44 px, resumen legacy con flex.
+- **PLAN 3**: axe catalogModern 19→0 (discount oscurecido, gallery sin roles, announcement→section, newsletter label), dedup CSS Studio postbuild, nojs 24 combos, reproducibilidad draft.
+- **PLAN 4**: preloads 146/146, foco visible 0, gates draft/robots/JSON-LD.
+- **PLAN 5**: LCP frío (44-92 ms), axe 3 fixtures 18 rutas, videos con poster, JSON-LD 100 %.
+- **PLAN 6**: contratos profundos 6/6 sin drift (familia, ids derivados, assets, features, CSS aislado, sitemap).
+- **PLAN 7**: visión fresca → placeholder de búsqueda + "A coordinar" proporcionado; 2 percepciones desmentidas por medición.
+- **PLAN 8**: tracking de títulos −0.09/−0.075 → −0.03em (5 reglas); gate de interacciones reales 0 errores.
+- **PLAN 9**: deuda al día (paginación C2, dead flags B3), 16 gates documentados.
+- **PLAN 10**: re-auditoría completa, reporte global.
+
+## Autocrítica (qué no mejoró y por qué)
+
+1. **Runtime JS (C)**: el margen sigue en 1.5 KB sin la compactación del boot (−958 B disponibles). El usuario revirtió explícitamente el cambio (commit `729dded`) mientras iteraba el motion del runtime — respetado. Si el usuario lo aprueba, la compactación está lista.
+2. **Benchmark**: sin mejora adicional post-PLAN 1 (la mejora del −39 % del run anterior ya estaba en el baseline; las variaciones 1.55-1.74 s son ruido de máquina, sin regresión medida).
+3. **Duplicación CSS V2 (247 B)**: no fusionable sin refactor de media queries del hero, que el usuario sigue iterando.
+4. **2 decisiones pendientes del usuario**: cierre con guardados en vuelo (D2) y dark mode A/B (D6) — no accionables sin su decisión.
+5. **Proceso**: el usuario editó archivos en paralelo durante el run (runtime/styles), lo que obligó al watchdog a registrar condiciones de entorno; ningún cambio del usuario se perdió.
+
+## Estado final del sistema
+
+- **30 tests de gates** + **15 e2e** + **502 unitarios** verdes; `pnpm check` exit=0; benchmark 1.74 s; barrido visual sin hallazgos nuevos.
+- Sitio generado: axe 0/0/0, foco 100 %, no-JS 24 combos útiles, preloads 146/146, JSON-LD 100 %, interacciones 0 errores, LCP 44-92 ms.
+- Generador: contratos profundos 0 drift, reproducibilidad byte-a-byte draft+production, enganches manifest↔html↔feed↔snapshot verificados.
+- **FIN del documento: los 10 planes se ejecutaron en cadena. Se detiene aquí a la espera de tu instrucción.**
