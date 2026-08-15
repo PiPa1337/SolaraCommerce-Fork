@@ -253,3 +253,31 @@ test("mantiene el encabezado y permite alcanzar la barra masiva al hacer scroll"
   );
   await expect(bulk.getByRole("button", { name: "Aplicar estado" })).toBeVisible();
 });
+
+test("P5-B5: archivar un producto inline y restaurarlo sin perder la fila", async ({ page }) => {
+  await openCatalog(page);
+
+  const rows = page.locator("tbody tr");
+  await expect(rows.first()).toBeVisible();
+  const firstTrigger = page.getByTestId("ui-status-edit-trigger").first();
+  const firstRowName = await rows.first().locator("td").nth(1).innerText();
+  await firstTrigger.click();
+  const statusSelect = page.getByTestId("ui-status-edit").first();
+  await statusSelect.selectOption("archived");
+  await page.waitForTimeout(600);
+  const labelAfter = await rows.first().locator(".status-label").innerText();
+  console.log("P5-B5 estado tras archivar:", JSON.stringify(labelAfter));
+  expect(labelAfter).toContain("Archivad");
+
+  const namesAfter = await rows.locator("td").nth(1).allInnerTexts();
+  expect(namesAfter).toContain(firstRowName);
+
+  const archivedTrigger = page.getByTestId("ui-status-edit-trigger").first();
+  await archivedTrigger.click();
+  const archivedSelect = page.getByTestId("ui-status-edit").first();
+  await archivedSelect.selectOption("active");
+  await page.waitForTimeout(600);
+  const labelRestored = await rows.first().locator(".status-label").innerText();
+  console.log("P5-B5 estado tras restaurar:", JSON.stringify(labelRestored));
+  expect(labelRestored).toContain("Activo");
+});
