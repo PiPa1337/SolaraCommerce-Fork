@@ -1,20 +1,20 @@
 {
-  "run": "app-10x-ronda-2-de-5",
+  "run": "app-10x-ronda-3-de-5",
   "plan": 1,
   "de10": 1,
   "planDoc": "docs/PERPETUAL_PLAN_APP_10X.md",
   "branch": "main",
-  "round": 2,
+  "round": 3,
   "roundsTotal": 5,
-  "nextItem": "R2-K1",
-  "ronda1Cierre": {
-    "e2e": "39/39",
+  "nextItem": "R3-K1",
+  "ronda2Cierre": {
+    "e2e": "50/50",
     "check": 0,
-    "benchmarkMs": 1693,
     "hitos": [
-      "axe app 0/0 (main+tabpanel, h1 editor)",
-      "avatar por iniciales (PR vs PV)",
-      "gates nuevos: P3-B4 focus, P4-B4 archivar/deshacer, P5-B5 producto, P6-B5 modo avanzado, P7-B5 vistas/zoom, P8-B5 respaldo v2, P9-B5 aviso global"
+      "axe best-practice 0/0 (detalle como section)",
+      "gates nuevos: P2-B5 avatares, P3-B6 atajo foco, P4-B6 restauracion filtro, P5-B6 busqueda estado, P6-B6 picker teclado, P7-B6 zoom sesion, P8-B6 historial, P9-B6 Esc conflicto",
+      "dist reconstruido para e2e del studio-server",
+      "storeMark sin asercion (warning biome limpio)"
     ]
   }
 }
