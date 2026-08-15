@@ -2773,11 +2773,44 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
 }
 .cm.v2 .catalog-product-card {
+  position: relative;
   transition: transform var(--catalog-v2-motion-component) var(--catalog-v2-ease-out);
 }
 .cm.v2 .catalog-product-card:hover,
 .cm.v2 .catalog-product-card:focus-within {
   transform: translateY(-6px);
+}
+/* Línea glow con puntito en el borde izquierdo al hover: la línea crece desde
+   abajo y el puntito viaja en su punta (radial en el tope del pseudo). */
+.cm.v2 .catalog-product-card::before,
+.cm.v2 .catalog-category-bento-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 2px;
+  height: 0;
+  z-index: 2;
+  background:
+    radial-gradient(circle, var(--catalog-sale) 0 3.5px, transparent 4px) 50% 0 / 9px 9px no-repeat,
+    linear-gradient(
+      to top,
+      var(--catalog-sale),
+      color-mix(in srgb, var(--catalog-sale) 30%, transparent)
+    );
+  box-shadow: 0 0 14px 1px color-mix(in srgb, var(--catalog-sale) 55%, transparent);
+  opacity: 0;
+  transition:
+    height 520ms var(--catalog-v2-ease-out),
+    opacity 240ms var(--catalog-v2-ease-out);
+  pointer-events: none;
+}
+.cm.v2 .catalog-product-card:hover::before,
+.cm.v2 .catalog-product-card:focus-within::before,
+.cm.v2 .catalog-category-bento-item:hover::before,
+.cm.v2 .catalog-category-bento-item:focus-within::before {
+  height: 100%;
+  opacity: 1;
 }
 .cm.v2 .catalog-product-media {
   aspect-ratio: 1;
@@ -2816,7 +2849,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-discount {
   font-size: .78rem;
 }
-.cm.v2 .catalog-view-all {
+.cm.v2 .catalog-view-all,
+.cm.v2 .catalog-category-bento-all {
   position: relative;
   border-bottom: 0;
   padding-bottom: .2rem;
@@ -2824,7 +2858,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   letter-spacing: .08em;
   text-transform: uppercase;
 }
-.cm.v2 .catalog-view-all::after {
+.cm.v2 .catalog-view-all::after,
+.cm.v2 .catalog-category-bento-all::after {
   position: absolute;
   right: 0;
   bottom: 0;
@@ -2837,7 +2872,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   transition: transform var(--catalog-v2-motion-control) var(--catalog-v2-ease-out);
 }
 .cm.v2 .catalog-view-all:hover::after,
-.cm.v2 .catalog-view-all:focus-visible::after {
+.cm.v2 .catalog-view-all:focus-visible::after,
+.cm.v2 .catalog-category-bento-all:hover::after,
+.cm.v2 .catalog-category-bento-all:focus-visible::after {
   transform: scaleX(1);
 }
 .cm.v2 .catalog-category-bento-section {
@@ -2916,6 +2953,63 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-testimonial {
   border-radius: 0;
   background: color-mix(in srgb, var(--catalog-surface), transparent 34%);
+}
+/* Entrada coreografiada estilo hero para reseñas: header primero y cada
+   testimonio entra con stagger. */
+.cm.v2 [data-solara-module="catalog-testimonials"][data-motion-visible="true"] .catalog-testimonials-section > header {
+  --hero-v2-rise: 14px;
+  animation: solara-hero-rise 420ms var(--catalog-v2-ease-out) 60ms backwards;
+}
+.cm.v2 [data-solara-module="catalog-testimonials"][data-motion-visible="true"] .catalog-testimonial {
+  --hero-v2-rise: 18px;
+  animation: solara-hero-rise 460ms var(--catalog-v2-ease-out) calc(140ms + var(--catalog-t-index, 0) * 70ms) backwards;
+}
+.cm.v2 [data-solara-module="catalog-testimonials"][data-motion-visible="true"] .catalog-testimonial:nth-child(1) {
+  --catalog-t-index: 1;
+}
+.cm.v2 [data-solara-module="catalog-testimonials"][data-motion-visible="true"] .catalog-testimonial:nth-child(2) {
+  --catalog-t-index: 2;
+}
+.cm.v2 [data-solara-module="catalog-testimonials"][data-motion-visible="true"] .catalog-testimonial:nth-child(3) {
+  --catalog-t-index: 3;
+}
+.cm.v2 [data-solara-module="catalog-testimonials"][data-motion-visible="true"] .catalog-testimonial:nth-child(4) {
+  --catalog-t-index: 4;
+}
+.cm.v2 [data-solara-module="catalog-testimonials"][data-motion-visible="true"] .catalog-testimonial:nth-child(5) {
+  --catalog-t-index: 5;
+}
+.cm.v2 [data-solara-module="catalog-testimonials"][data-motion-visible="true"] .catalog-testimonial:nth-child(6) {
+  --catalog-t-index: 6;
+}
+.cm.v2 [data-solara-module="catalog-testimonials"][data-motion-visible="true"] .catalog-testimonial:nth-child(7) {
+  --catalog-t-index: 7;
+}
+.cm.v2 [data-solara-module="catalog-testimonials"][data-motion-visible="true"] .catalog-testimonial:nth-child(8) {
+  --catalog-t-index: 8;
+}
+/* CTA de novedades: título, texto y acción entran escalonados. */
+.cm.v2 [data-solara-module="catalog-newsletter-cta"][data-motion-visible="true"] .catalog-newsletter-inner > div {
+  --hero-v2-rise: 14px;
+  animation: solara-hero-rise 420ms var(--catalog-v2-ease-out) 80ms backwards;
+}
+.cm.v2 [data-solara-module="catalog-newsletter-cta"][data-motion-visible="true"] .catalog-newsletter-action {
+  --hero-v2-rise: 16px;
+  animation: solara-hero-rise 420ms var(--catalog-v2-ease-out) 200ms backwards;
+}
+.cm.v2 .catalog-footer-made {
+  margin: .55rem 0 0;
+  font-size: .72rem;
+  letter-spacing: .02em;
+}
+.cm.v2 .catalog-footer-made a {
+  color: var(--catalog-muted);
+  text-decoration: none;
+  transition: color var(--catalog-v2-motion-control) ease;
+}
+.cm.v2 .catalog-footer-made a:hover,
+.cm.v2 .catalog-footer-made a:focus-visible {
+  color: var(--catalog-sale);
 }
 .cm.v2 .catalog-footer-inner {
   padding-top: clamp(2rem, 4.6vw, 4.6rem);
@@ -3465,8 +3559,14 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 [data-solara-module="catalog-header"],
   .cm.v2 [data-solara-module="catalog-hero"],
   .cm.v2 .catalog-product-card,
+  .cm.v2 .catalog-product-card::before,
   .cm.v2 .catalog-product-card-image,
+  .cm.v2 .catalog-category-bento-item::before,
   .cm.v2 .catalog-category-bento-item img,
+  .cm.v2 [data-solara-module="catalog-testimonials"] .catalog-testimonials-section > header,
+  .cm.v2 [data-solara-module="catalog-testimonials"] .catalog-testimonial,
+  .cm.v2 [data-solara-module="catalog-newsletter-cta"] .catalog-newsletter-inner > div,
+  .cm.v2 [data-solara-module="catalog-newsletter-cta"] .catalog-newsletter-action,
   .cm.v2 .catalog-hero-image,
   .cm.v2 .catalog-hero-video,
   .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-reveal--eyebrow,

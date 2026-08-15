@@ -1618,6 +1618,71 @@ test("V2 envuelve el título de categoría en la caja frosted glass", async ({ p
   );
 });
 
+test("V2 anima 'Ver todo el catálogo' como 'Ver todos'", async ({ page }) => {
+  await page.goto(serverUrl);
+  const bentoAll = page.locator(".catalog-category-bento-all").first();
+  await bentoAll.scrollIntoViewIfNeeded();
+  const rest = await bentoAll.evaluate((element) => getComputedStyle(element, "::after").transform);
+  await bentoAll.hover();
+  await expect
+    .poll(() => bentoAll.evaluate((element) => getComputedStyle(element, "::after").transform))
+    .not.toBe(rest);
+});
+
+test("V2 anima reseñas y novedades con entrada estilo hero", async ({ page }) => {
+  await page.goto(serverUrl);
+  await revealWholePage(page);
+  await page.waitForTimeout(1200);
+  const testimonialHeader = page.locator(
+    '[data-solara-module="catalog-testimonials"] .catalog-testimonials-section > header',
+  );
+  await expect(testimonialHeader).toBeVisible();
+  expect(
+    await testimonialHeader.evaluate((element) => getComputedStyle(element).animationName),
+  ).not.toBe("none");
+  const testimonial = page.locator(".catalog-testimonial").first();
+  expect(await testimonial.evaluate((element) => getComputedStyle(element).animationName)).not.toBe(
+    "none",
+  );
+  const newsletterText = page.locator(
+    '[data-solara-module="catalog-newsletter-cta"] .catalog-newsletter-inner > div',
+  );
+  await expect(newsletterText).toBeVisible();
+  expect(
+    await newsletterText.evaluate((element) => getComputedStyle(element).animationName),
+  ).not.toBe("none");
+});
+
+test("V2 cards: línea glow con puntito en el borde izquierdo al hover", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  await page.goto(serverUrl);
+  await page.waitForTimeout(1600);
+  const card = page.locator(".catalog-product-card").first();
+  await card.hover();
+  await expect
+    .poll(() => card.evaluate((element) => getComputedStyle(element, "::before").height))
+    .not.toBe("0px");
+  const bento = page.locator(".catalog-category-bento-item").first();
+  await bento.scrollIntoViewIfNeeded();
+  await bento.hover();
+  await expect
+    .poll(() => bento.evaluate((element) => getComputedStyle(element, "::before").height))
+    .not.toBe("0px");
+});
+
+test("V2 footer: copyright con año y nombre + Hecho con ❤️ en solara.com.ar", async ({ page }) => {
+  await page.goto(serverUrl);
+  const footer = page.locator('[data-solara-module="catalog-footer"]');
+  await expect(footer).toBeVisible();
+  const small = footer.locator("small");
+  await expect(small).toContainText("Todos los derechos reservados");
+  await expect(small).toContainText(String(new Date().getFullYear()));
+  await expect(small).toContainText("Modo Sur");
+  const made = footer.locator(".catalog-footer-made a");
+  await expect(made).toHaveText("Hecho con ❤️ en solara.com.ar");
+  await expect(made).toHaveAttribute("href", "https://solara.com.ar");
+});
+
 test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, testInfo) => {
   const routes = [
     ["buscar", "/buscar/"],

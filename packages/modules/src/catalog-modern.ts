@@ -1346,7 +1346,7 @@ export const catalogFooter: ModuleDefinition<
       "catalog-footer",
       context.section,
       safeHtml(
-        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div><nav aria-label="Catálogo"><strong>Explorar</strong><a href="/">Inicio</a>${catalogLinkMarkup}${searchLink}</nav><nav aria-label="Ayuda"><strong>Ayuda</strong><a href="/contacto/">Contacto</a><a href="/nosotros/">Nosotros</a>${policyLinks}</nav><address><strong>Contacto</strong>${contact}</address><small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)}</small></div>`,
+        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div><nav aria-label="Catálogo"><strong>Explorar</strong><a href="/">Inicio</a>${catalogLinkMarkup}${searchLink}</nav><nav aria-label="Ayuda"><strong>Ayuda</strong><a href="/contacto/">Contacto</a><a href="/nosotros/">Nosotros</a>${policyLinks}</nav><address><strong>Contacto</strong>${contact}</address><small>© ${new Date().getFullYear()} ${escapeHtml(context.project.identity.brandName)}. Todos los derechos reservados.</small><p class="catalog-footer-made"><a href="https://solara.com.ar" target="_blank" rel="noopener noreferrer">Hecho con ❤️ en solara.com.ar</a></p></div>`,
       ),
       { tag: "footer" },
     );

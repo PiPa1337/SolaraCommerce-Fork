@@ -41,12 +41,13 @@ test("mantiene la foundation V2 dentro de un presupuesto público explícito", (
     catalogModernV2JavascriptRaw: javascriptBytes,
   });
 
-  // Análisis de costo (2026-08-14): CSS estático minificado servido una vez;
-  // gzip lo comprime a ~14% (≈16 KiB transferidos). El techo subió de 108 a
-  // 120 KiB por el motion cinematográfico del hero V2 (~9 KB minificado:
-  // coreografía de entrada, hover del CTA, beneficios, parallax y reduced
-  // motion), con margen para la iteración visual V2 en curso sin tocar los
-  // gates del runtime (56 KiB JS / 8 KiB CSS) ni el tope público de V1 (780 KiB).
-  expect(cssBytes).toBeLessThanOrEqual(120 * 1024);
+  // Análisis de costo (2026-08-15): CSS estático minificado servido una vez;
+  // gzip lo comprime a ~14% (≈17 KiB transferidos). El techo subió de 120 a
+  // 128 KiB por el lote visual V2 (≈5.3 KB: línea glow + puntito en cards de
+  // producto y categoría, entrada estilo hero de reseñas/novedades, "Ver todo
+  // el catálogo" animado y footer con "Hecho con ❤️ en solara.com.ar"), con
+  // margen para la iteración visual V2 en curso sin tocar los gates del
+  // runtime (56 KiB JS / 8 KiB CSS) ni el tope público de V1 (780 KiB).
+  expect(cssBytes).toBeLessThanOrEqual(128 * 1024);
   expect(javascriptBytes).toBeLessThanOrEqual(56 * 1024);
 });

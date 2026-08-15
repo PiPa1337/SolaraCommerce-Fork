@@ -1,5 +1,23 @@
 # Changelog
 
+### Lote visual V2: glow en cards, entradas de reseñas/novedades y footer (2026-08-15)
+
+- "Ver todo el catálogo" (bento) ahora anima igual que "Ver todos" (subrayado
+  scaleX .35→1 con ease).
+- Reseñas y "Recibí las próximas novedades" entran con coreografía estilo
+  hero: header primero, testimonios con stagger (70ms, hasta 8) y el CTA de
+  novedades en dos pasos; gated por data-motion-visible y cubiertos en
+  reduced-motion.
+- Cards de producto y de categoría: al hover, una línea glow terracota crece
+  desde abajo por el borde izquierdo con un puntito brillante en la punta
+  (radial en el tope del pseudo); también en focus-within. Verificado por
+  medición (height 427px) y visión (glow sutil, premium).
+- Footer: "© {año actual} {marca}. Todos los derechos reservados." + línea
+  "Hecho con ❤️ en solara.com.ar" con enlace (hover terracota).
+- Techo CSS V2: 120 → 128 KiB (≈5.3 KB del lote, documentado). E2E +4
+  (34/34). La tienda queda guardada (v42 en repo; el portable preserva su
+  versión más nueva).
+
 ### Páginas de categoría: título en caja frosted glass (2026-08-15)
 
 - El h1 de las páginas de categoría se envuelve en `.solara-category-title-glass`:
