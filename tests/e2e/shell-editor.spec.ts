@@ -92,3 +92,36 @@ test("P3-B3: Ctrl+Z deshace un cambio y Ctrl+S guarda en modo navegador", async 
   console.log("P3-B3 indicador tras Ctrl+S:", JSON.stringify(saved));
   expect(saved).toMatch(/guardad/i);
 });
+
+test("P3-B4: el modo foco oculta el panel y Esc lo restaura", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
+  await page
+    .locator(".dashboard-store-card")
+    .first()
+    .locator(".dashboard-store-card__button")
+    .dblclick();
+  await page.locator(".studio-shell").waitFor({ timeout: 30000 });
+  await page.waitForTimeout(1000);
+
+  await page.getByRole("tab", { name: "Resumen", exact: true }).click();
+  await page.waitForTimeout(1000);
+  const pane = page.locator(".editor-pane");
+  await expect(pane).toBeVisible();
+
+  const focusButton = page.getByRole("button", { name: "Modo foco de la vista previa" });
+  await focusButton.click();
+  await page.waitForTimeout(700);
+  const focused = await page.locator(".studio-shell").getAttribute("data-studio-focus");
+  console.log("P3-B4 data-studio-focus:", JSON.stringify(focused));
+  expect(focused).toBeTruthy();
+  await expect(pane).toBeHidden();
+
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(700);
+  const restored = await page.locator(".studio-shell").getAttribute("data-studio-focus");
+  console.log("P3-B4 tras Esc: focus", JSON.stringify(restored));
+  expect(restored).toBeFalsy();
+  await expect(pane).toBeVisible();
+});
