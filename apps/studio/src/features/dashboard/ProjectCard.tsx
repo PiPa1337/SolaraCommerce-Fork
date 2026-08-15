@@ -72,7 +72,7 @@ export function ProjectCard({
   onArchive,
 }: ProjectCardProps) {
   return (
-    <aside
+    <section
       ref={detailRef}
       className={`dashboard-store-detail${project ? " is-open" : ""}`}
       aria-label={project ? `Tienda seleccionada: ${project.name}` : "Tienda seleccionada"}
@@ -214,6 +214,6 @@ export function ProjectCard({
           <p>Elegí un proyecto para ver sus datos y acciones.</p>
         </div>
       )}
-    </aside>
+    </section>
   );
 }
