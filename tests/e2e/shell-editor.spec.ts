@@ -181,3 +181,38 @@ test("R3-P3-B5: Ctrl+Shift+Z rehace el cambio deshecho por teclado", async ({ pa
   console.log("R3-P3-B5 tras Ctrl+Shift+Z:", JSON.stringify(afterRedo));
   expect(afterRedo).toBe("Tienda undo redo");
 });
+
+test("R4-P3-B5: el panel cerrado se conserva al recargar la tienda", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
+  await page
+    .locator(".dashboard-store-card")
+    .first()
+    .locator(".dashboard-store-card__button")
+    .dblclick();
+  await page.locator(".studio-shell").waitFor({ timeout: 30000 });
+  await page.waitForTimeout(1000);
+
+  const storeId = await page.evaluate(
+    () => document.querySelector(".studio-shell")?.getAttribute("data-project-id") ?? "",
+  );
+  await page.evaluate(() => {
+    const key = Object.keys(localStorage).find((k) => k.startsWith("solara-editor-pane:"));
+    if (key) localStorage.setItem(key, "closed");
+  });
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await page
+    .locator(".dashboard-store-card")
+    .first()
+    .locator(".dashboard-store-card__button")
+    .dblclick();
+  await page.locator(".studio-shell").waitFor({ timeout: 30000 });
+  await page.waitForTimeout(1000);
+  const closed = await page
+    .locator(".editor-pane")
+    .evaluate((el) => el.classList.contains("editor-pane--closed"));
+  console.log("R4-P3-B5 panel cerrado tras recargar:", closed, "| storeId:", storeId);
+  expect(closed).toBe(true);
+});
