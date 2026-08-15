@@ -218,6 +218,39 @@ function storefrontBoot(): void {
 
   const pageType = document.querySelector<HTMLElement>("[data-solara-store]")?.dataset.pageType;
 
+  const connectContactForms = (): void => {
+    if (!hasFeature("contact")) return;
+    document.querySelectorAll<HTMLFormElement>("[data-solara-contact-form]").forEach((form) => {
+      if (form.dataset.contactBound === "true") return;
+      form.dataset.contactBound = "true";
+      form.addEventListener("submit", (event) => {
+        const phone = form.dataset.whatsappPhone?.replace(/\D/g, "") ?? "";
+        if (!phone) return;
+        event.preventDefault();
+        const data = new FormData(form);
+        const brand = form.dataset.whatsappBrand ?? storeId;
+        const lines = [
+          `Hola ${brand}, quiero hacer una consulta.`,
+          ["Nombre", data.get("name")],
+          ["Email", data.get("email")],
+          ["Teléfono", data.get("phone")],
+          ["Motivo", data.get("reason")],
+          ["Número de pedido", data.get("orderNumber")],
+          ["Mensaje", data.get("message")],
+        ]
+          .filter((entry) => !Array.isArray(entry) || String(entry[1] ?? "").trim().length > 0)
+          .map((entry) =>
+            Array.isArray(entry) ? `${entry[0]}: ${String(entry[1]).trim()}` : entry,
+          );
+        window.open(
+          `https://wa.me/${phone}?text=${encodeURIComponent(lines.join("\n"))}`,
+          "_blank",
+          "noopener,noreferrer",
+        );
+      });
+    });
+  };
+
   const renderCart = (persist = true): void => {
     const active = document.activeElement;
     const focusedQuantity =
@@ -1451,6 +1484,7 @@ function storefrontBoot(): void {
       initializeCart();
     }
   }
+  connectContactForms();
   if (hasFeature("variants")) {
     document.querySelectorAll<HTMLElement>("[data-product]").forEach(syncVariant);
   }

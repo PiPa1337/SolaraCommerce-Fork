@@ -65,6 +65,14 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("scrollLeft");
   });
 
+  it("serializa el capability del formulario de Contacto hacia WhatsApp", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("connectContactForms");
+    expect(STOREFRONT_RUNTIME_JS).toContain("data-solara-contact-form");
+    expect(STOREFRONT_RUNTIME_JS).toContain("whatsappPhone");
+    expect(STOREFRONT_RUNTIME_JS).toContain("encodeURIComponent");
+    expect(STOREFRONT_RUNTIME_JS).toContain("https://wa.me/");
+  });
+
   it("serializa los helpers de búsqueda dentro del runtime público", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("function levenshtein");
     expect(STOREFRONT_RUNTIME_JS).toContain("function scoreEntry");

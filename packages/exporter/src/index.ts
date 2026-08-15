@@ -797,6 +797,7 @@ export function createPublicExportManifest(
   if (pages.some((page) => page.pageType === "product")) runtimeFeatures.add("product");
   if (activeModules.some((moduleId) => moduleId.includes("hero"))) runtimeFeatures.add("hero");
   if (media.videoIds.size > 0) runtimeFeatures.add("video");
+  if (activeModules.includes("contact-form")) runtimeFeatures.add("contact");
   if (activeModules.some((moduleId) => moduleId.includes("motion")) || sections.length > 0) {
     runtimeFeatures.add("motion");
   }

@@ -8,7 +8,14 @@ import {
   safeHtml,
   safeUrl,
 } from "@solara/module-sdk";
-import { CATALOG_MODERN_PLACEHOLDER_PHONE } from "@solara/project-schema";
+import {
+  CATALOG_MODERN_PLACEHOLDER_PHONE,
+  contactDefaultFaqItems,
+  contactDefaultHelpItems,
+  contactDefaultPurchaseItems,
+  contactDefaultQuickLinks,
+  contactDefaultReasons,
+} from "@solara/project-schema";
 import { z } from "zod";
 
 const contactRevealZone = [
@@ -98,156 +105,16 @@ const contactFaqItemSchema = z.object({
   enabled: z.boolean().default(true),
 });
 
-const defaultQuickLinks = [
-  {
-    id: "contact-quick-whatsapp",
-    icon: "chat",
-    title: "Respondemos por WhatsApp",
-    body: "La forma más rápida de obtener ayuda.",
-    href: "#contact-form",
-    actionLabel: "Consultar",
-  },
-  {
-    id: "contact-quick-general",
-    icon: "question",
-    title: "Consultas generales",
-    body: "Respondemos tus dudas por email.",
-    href: "#contact-channels",
-    actionLabel: "Consultar",
-  },
-  {
-    id: "contact-quick-order",
-    icon: "truck",
-    title: "Seguimiento de pedidos",
-    body: "Consultá el estado de tu compra.",
-    href: "#contact-form",
-    actionLabel: "Consultar",
-  },
-  {
-    id: "contact-quick-changes",
-    icon: "change",
-    title: "Cambios y devoluciones",
-    body: "Te guiamos en cada paso del proceso.",
-    href: "#contact-faq",
-    actionLabel: "Consultar",
-  },
-];
-
-const defaultContactReasons = [
-  "Consulta de producto",
-  "Estado de pedido",
-  "Cambios y devoluciones",
-  "Otra consulta",
-];
-
-const defaultHelpItems = [
-  {
-    id: "contact-help-product",
-    icon: "bag",
-    title: "Comprar un producto",
-    body: "Consultá sobre talles, stock, medios de pago y más.",
-    href: "#contact-form",
-    actionLabel: "Más información",
-  },
-  {
-    id: "contact-help-order",
-    icon: "box",
-    title: "Mi pedido",
-    body: "Estado, seguimiento y detalles de tu compra.",
-    href: "#contact-form",
-    actionLabel: "Más información",
-  },
-  {
-    id: "contact-help-changes",
-    icon: "change",
-    title: "Cambios y devoluciones",
-    body: "Políticas, plazos y pasos para gestionar tu cambio.",
-    href: "#contact-faq",
-    actionLabel: "Más información",
-  },
-  {
-    id: "contact-help-other",
-    icon: "chat",
-    title: "Otra consulta",
-    body: "Otro tema o consulta no listada aquí.",
-    href: "#contact-form",
-    actionLabel: "Más información",
-  },
-];
-
-const defaultPurchaseItems = [
-  {
-    id: "contact-purchase-shipping",
-    icon: "truck",
-    title: "Envíos",
-    body: "Realizamos envíos a todo el país. Conocé costos y tiempos.",
-    href: "#contact-form",
-    actionLabel: "Más información",
-  },
-  {
-    id: "contact-purchase-payment",
-    icon: "box",
-    title: "Pagos",
-    body: "Aceptamos tarjetas, transferencias y otros medios de pago.",
-    href: "#contact-form",
-    actionLabel: "Más información",
-  },
-  {
-    id: "contact-purchase-changes",
-    icon: "change",
-    title: "Cambios",
-    body: "Tenés 30 días para cambios. Conocé nuestras políticas.",
-    href: "#contact-faq",
-    actionLabel: "Más información",
-  },
-];
-
-const defaultFaqItems = [
-  {
-    id: "contact-faq-buy",
-    question: "¿Cómo realizo una compra?",
-    answer: "Escribinos por WhatsApp, elegí tus productos y coordinamos el pedido con vos.",
-    enabled: true,
-  },
-  {
-    id: "contact-faq-order",
-    question: "¿Cómo consulto el estado de mi pedido?",
-    answer: "Enviános tu número de pedido por WhatsApp y te contamos en qué estado se encuentra.",
-    enabled: true,
-  },
-  {
-    id: "contact-faq-shipping",
-    question: "¿Hacen envíos?",
-    answer: "Coordinamos envíos a todo el país y confirmamos el costo antes de finalizar.",
-    enabled: true,
-  },
-  {
-    id: "contact-faq-change",
-    question: "¿Cómo solicito un cambio?",
-    answer: "Escribinos dentro del plazo indicado y te guiamos con los pasos necesarios.",
-    enabled: true,
-  },
-  {
-    id: "contact-faq-stock",
-    question: "¿Puedo consultar disponibilidad antes de comprar?",
-    answer: "Sí, podés consultarnos por talle, color y stock antes de confirmar.",
-    enabled: true,
-  },
-  {
-    id: "contact-faq-whatsapp",
-    question: "¿Cómo me comunico por WhatsApp?",
-    answer: "Usá cualquier botón de WhatsApp de esta página para iniciar una conversación.",
-    enabled: true,
-  },
-];
-
 export const contactHeroSettings = z.object({
   eyebrow: z.string().default("HABLEMOS"),
   title: z.string().default("Estamos para ayudarte."),
   body: z
     .string()
     .default("Respondemos consultas, disponibilidad y detalles de entrega por canales directos."),
-  quickLinks: z.array(contactQuickLinkSchema).max(4).default(defaultQuickLinks),
+  quickLinks: z
+    .array(contactQuickLinkSchema)
+    .max(4)
+    .default([...contactDefaultQuickLinks]),
 });
 
 export const contactFormSettings = z.object({
@@ -262,7 +129,10 @@ export const contactFormSettings = z.object({
   orderNumberLabel: z.string().default("Número de pedido (opcional)"),
   messageLabel: z.string().default("Mensaje"),
   submitLabel: z.string().default("Enviar consulta"),
-  reasons: z.array(z.string().min(1)).max(12).default(defaultContactReasons),
+  reasons: z
+    .array(z.string().min(1))
+    .max(12)
+    .default([...contactDefaultReasons]),
 });
 
 export const contactChannelsSettings = z.object({
@@ -284,7 +154,10 @@ export const contactChannelsSettings = z.object({
 export const contactHelpGridSettings = z.object({
   title: z.string().default("¿En qué podemos ayudarte?"),
   body: z.string().default("Elegí el tema para que podamos asistirte de la mejor manera."),
-  items: z.array(contactHelpItemSchema).max(4).default(defaultHelpItems),
+  items: z
+    .array(contactHelpItemSchema)
+    .max(4)
+    .default([...contactDefaultHelpItems]),
 });
 
 export const contactWhatsappCtaSettings = z.object({
@@ -296,13 +169,19 @@ export const contactWhatsappCtaSettings = z.object({
 });
 
 export const contactPurchaseInfoSettings = z.object({
-  items: z.array(contactPurchaseItemSchema).max(3).default(defaultPurchaseItems),
+  items: z
+    .array(contactPurchaseItemSchema)
+    .max(3)
+    .default([...contactDefaultPurchaseItems]),
 });
 
 export const contactFaqSettings = z.object({
   title: z.string().default("Preguntas frecuentes"),
   body: z.string().default("Respondemos las dudas más comunes."),
-  items: z.array(contactFaqItemSchema).max(8).default(defaultFaqItems),
+  items: z
+    .array(contactFaqItemSchema)
+    .max(8)
+    .default([...contactDefaultFaqItems]),
 });
 
 export const contactLocationSettings = z.object({
@@ -444,7 +323,7 @@ export const contactForm: ModuleDefinition<
       "contact-form",
       context.section,
       safeHtml(
-        `<section id="contact-form" class="contact-main-grid" data-motion-zone="content"><form class="contact-form" data-solara-contact-form${phone ? ` data-whatsapp-phone="${escapeAttribute(phone)}"` : ""} action="${phone ? `https://wa.me/${escapeAttribute(phone)}` : "#"}" method="get" target="_blank"><h2>${escapeHtml(settings.title)}</h2><p>${escapeHtml(settings.body)}</p><div class="contact-form-fields"><label>${escapeHtml(settings.nameLabel)}<input name="name" autocomplete="name" required></label><label>${escapeHtml(settings.emailLabel)}<input name="email" type="email" autocomplete="email" required></label>${settings.showPhone ? `<label>${escapeHtml(settings.phoneLabel)}<input name="phone" type="tel" autocomplete="tel" required></label>` : ""}<label>${escapeHtml(settings.reasonLabel)}<select name="reason" required><option value="">Seleccioná una opción</option>${settings.reasons.map((reason) => `<option value="${escapeAttribute(reason)}">${escapeHtml(reason)}</option>`).join("")}</select></label>${settings.showOrderNumber ? `<label>${escapeHtml(settings.orderNumberLabel)}<input name="orderNumber" inputmode="numeric"></label>` : ""}<label class="contact-form-message">${escapeHtml(settings.messageLabel)}<textarea name="message" rows="5" required></textarea></label></div><button class="catalog-primary-action" type="submit">${escapeHtml(settings.submitLabel)} →</button>${fallback}<noscript><p>Activá JavaScript o usá el enlace de WhatsApp para enviar la consulta.</p></noscript></form></section>`,
+        `<section id="contact-form" class="contact-main-grid" data-motion-zone="content"><form class="contact-form" data-solara-contact-form data-whatsapp-brand="${escapeAttribute(context.project.identity.brandName)}"${phone ? ` data-whatsapp-phone="${escapeAttribute(phone)}"` : ""} action="${phone ? `https://wa.me/${escapeAttribute(phone)}` : "#"}" method="get" target="_blank"><h2>${escapeHtml(settings.title)}</h2><p>${escapeHtml(settings.body)}</p><div class="contact-form-fields"><label>${escapeHtml(settings.nameLabel)}<input name="name" autocomplete="name" required></label><label>${escapeHtml(settings.emailLabel)}<input name="email" type="email" autocomplete="email" required></label>${settings.showPhone ? `<label>${escapeHtml(settings.phoneLabel)}<input name="phone" type="tel" autocomplete="tel" required></label>` : ""}<label>${escapeHtml(settings.reasonLabel)}<select name="reason" required><option value="">Seleccioná una opción</option>${settings.reasons.map((reason) => `<option value="${escapeAttribute(reason)}">${escapeHtml(reason)}</option>`).join("")}</select></label>${settings.showOrderNumber ? `<label>${escapeHtml(settings.orderNumberLabel)}<input name="orderNumber" inputmode="numeric"></label>` : ""}<label class="contact-form-message">${escapeHtml(settings.messageLabel)}<textarea name="message" rows="5" required></textarea></label></div><button class="catalog-primary-action" type="submit">${escapeHtml(settings.submitLabel)} →</button>${fallback}<noscript><p>Activá JavaScript o usá el enlace de WhatsApp para enviar la consulta.</p></noscript></form></section>`,
       ),
     );
   },
