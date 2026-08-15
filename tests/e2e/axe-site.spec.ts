@@ -29,6 +29,7 @@ function routesFor(project: (typeof projects)[keyof typeof projects]): string[] 
     "/carrito/",
     "/compra/",
     "/buscar/",
+    "/nosotros/",
   ];
 }
 
