@@ -1432,7 +1432,7 @@ function buildPages(
         `<main class="solara-container catalog-category-page">
           ${categoryBreadcrumbMarkup(project, category)}
           <header class="solara-category-hero">
-            <h1>${escapeHtml(category.title)}</h1>
+            <h1><span class="solara-category-title-glass">${escapeHtml(category.title)}</span></h1>
             <p>${escapeHtml(category.description)}</p>
             ${categoryMedia}
           </header>

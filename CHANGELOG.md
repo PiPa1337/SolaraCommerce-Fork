@@ -1,5 +1,11 @@
 # Changelog
 
+### Páginas de categoría: título en caja frosted glass (2026-08-15)
+
+- El h1 de las páginas de categoría se envuelve en `.solara-category-title-glass`:
+  mismo lenguaje que la caja de beneficios del hero (papel translúcido 38%,
+  blur 14px, borde fino, sin radio). E2E nuevo (título visible + blur aplicado).
+
 ### Fix minificador CSS + overscan de la media (2026-08-15)
 
 - El minificador del exporter quitaba los espacios alrededor de `+` en

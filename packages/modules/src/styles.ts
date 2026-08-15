@@ -386,6 +386,16 @@ export const STORE_BASE_STYLES = `
 [data-solara-store] .solara-category-hero h1 {
   margin-bottom: 0;
 }
+/* Título de categoría en caja frosted glass (mismo lenguaje que los
+   beneficios del hero): translúcido de papel + blur + borde, sin radio. */
+[data-solara-store] .solara-category-hero .solara-category-title-glass {
+  display: inline-block;
+  padding: 0.55rem 1.1rem;
+  background: color-mix(in srgb, var(--catalog-paper) 38%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid color-mix(in srgb, var(--catalog-ink) 10%, transparent);
+}
 [data-solara-store] .solara-category-hero p {
   margin-top: 0.5rem;
   color: var(--solara-muted);

@@ -1606,6 +1606,18 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
   }
 });
 
+test("V2 envuelve el título de categoría en la caja frosted glass", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  await page.goto(new URL("/categorias/remeras/", serverUrl).toString());
+  await expect(page.locator('[data-design-family="catalog-modern-v2"]')).toBeVisible();
+  const glass = page.locator(".solara-category-title-glass");
+  await expect(glass).toBeVisible();
+  await expect(glass).toHaveText("Remeras");
+  expect(await glass.evaluate((element) => getComputedStyle(element).backdropFilter)).not.toBe(
+    "none",
+  );
+});
+
 test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, testInfo) => {
   const routes = [
     ["buscar", "/buscar/"],
