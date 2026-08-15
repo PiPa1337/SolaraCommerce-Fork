@@ -1,4 +1,8 @@
-import { CATALOG_MODERN_PLACEHOLDER_PHONE, type StoreSection } from "@solara/project-schema";
+import {
+  CATALOG_MODERN_PLACEHOLDER_PHONE,
+  type StoreSection,
+  type VideoAsset,
+} from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
 import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
@@ -270,12 +274,12 @@ describe("official module system", () => {
       (candidate) => candidate.moduleId === "catalog-hero" && candidate.enabled !== false,
     );
     if (!section) throw new Error("Fixture sin hero");
-    const video = {
-      kind: "video" as const,
-      id: "video-render-test" as const,
+    const video: VideoAsset = {
+      kind: "video",
+      id: "video-render-test" as VideoAsset["id"],
       name: "Look de temporada",
       alt: "Video de la campaña",
-      mimeType: "video/mp4" as const,
+      mimeType: "video/mp4",
       source: "data:video/mp4;base64,AAAA",
       width: 1080,
       height: 1920,
