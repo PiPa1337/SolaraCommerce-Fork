@@ -1,4 +1,4 @@
-import type { StoreSection } from "./index";
+import type { AssetId, StoreSection } from "./index";
 
 export const aboutDefaultHistoryParagraphs = [
   {
@@ -131,6 +131,86 @@ export const aboutDefaultStats = [
   },
 ] as const;
 
+export const aboutDefaultTeam = [
+  {
+    id: "about-team-sofia",
+    imageAssetId: "asset-about-team-sofia",
+    name: "Sofía",
+    role: "Selección",
+    body: "Recorro marcas y materiales para encontrar piezas que tengan sentido.",
+  },
+  {
+    id: "about-team-martin",
+    imageAssetId: "asset-about-team-martin",
+    name: "Martín",
+    role: "Atención y envíos",
+    body: "Estoy del otro lado para responder consultas y coordinar cada entrega.",
+  },
+] as const;
+
+export const catalogModernV2EditorialAssets = [
+  {
+    kind: "image" as const,
+    id: "asset-about-hero" as AssetId,
+    name: "Retrato editorial de la marca",
+    alt: "Retrato editorial de una mujer con una campera clara",
+    mimeType: "image/jpeg",
+    source:
+      "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=1200&h=1800&q=85",
+    width: 1200,
+    height: 1800,
+    hash: "remote-unsplash-about-hero",
+  },
+  {
+    kind: "image" as const,
+    id: "asset-about-editorial" as AssetId,
+    name: "Texturas de la selección",
+    alt: "Prendas de textura natural ordenadas en una selección editorial",
+    mimeType: "image/jpeg",
+    source:
+      "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1600&h=1000&q=85",
+    width: 1600,
+    height: 1000,
+    hash: "remote-unsplash-about-editorial",
+  },
+  {
+    kind: "image" as const,
+    id: "asset-about-team-sofia" as AssetId,
+    name: "Sofía",
+    alt: "Retrato editorial de Sofía",
+    mimeType: "image/jpeg",
+    source:
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&h=1000&q=85",
+    width: 800,
+    height: 1000,
+    hash: "remote-unsplash-about-team-sofia",
+  },
+  {
+    kind: "image" as const,
+    id: "asset-about-team-martin" as AssetId,
+    name: "Martín",
+    alt: "Retrato editorial de Martín",
+    mimeType: "image/jpeg",
+    source:
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&h=1000&q=85",
+    width: 800,
+    height: 1000,
+    hash: "remote-unsplash-about-team-martin",
+  },
+  {
+    kind: "image" as const,
+    id: "asset-contact-hero" as AssetId,
+    name: "Atención cercana",
+    alt: "Personas conversando en un espacio de trabajo luminoso",
+    mimeType: "image/jpeg",
+    source:
+      "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1200&h=1800&q=85",
+    width: 1200,
+    height: 1800,
+    hash: "remote-unsplash-contact-hero",
+  },
+] as const;
+
 const defaultAboutMotion: StoreSection["motion"] = {
   preset: "fade-up",
   intensity: 4,
@@ -164,7 +244,9 @@ export function defaultAboutV2Sections(): StoreSection[] {
       eyebrow: "NUESTRA MIRADA",
       title: "Una selección pensada para moverte.",
       body: "Elegimos piezas con intención para acompañar tu forma de vivir.",
-      imageAssetId: "asset-hero",
+      actionLabel: "Explorar selección",
+      actionHref: "/buscar/",
+      imageAssetId: "asset-about-hero",
     }),
     section("about-section-history", "about-history", {
       title: "Cómo empezó todo",
@@ -182,7 +264,7 @@ export function defaultAboutV2Sections(): StoreSection[] {
       eyebrow: "NUESTRA FORMA DE ELEGIR",
       title: "Menos ruido. Mejores elecciones.",
       body: "Buscamos piezas que tengan sentido, se usen de verdad y puedan quedarse con vos.",
-      imageAssetId: "asset-manta",
+      imageAssetId: "asset-about-editorial",
     }),
     section("about-section-process", "about-process", {
       title: "Cómo seleccionamos",
@@ -196,12 +278,11 @@ export function defaultAboutV2Sections(): StoreSection[] {
       title: "La experiencia",
       items: structuredClone(aboutDefaultExperience),
     }),
-    section(
-      "about-section-team",
-      "about-team",
-      { enabled: false, title: "Detrás de la tienda", items: [] },
-      false,
-    ),
+    section("about-section-team", "about-team", {
+      enabled: true,
+      title: "Detrás de la tienda",
+      items: structuredClone(aboutDefaultTeam),
+    }),
     section("about-section-stats", "about-stats", {
       items: structuredClone(aboutDefaultStats),
     }),

@@ -48,6 +48,7 @@ describe("Contacto V2 module contracts", () => {
 
   it("aplica los defaults comerciales y los límites de repeaters", () => {
     expect(contactHeroSettings.parse({}).title).toBe("Estamos para ayudarte.");
+    expect(contactHeroSettings.parse({}).imageAssetId).toBe("asset-contact-hero");
     expect(contactHeroSettings.parse({}).quickLinks).toHaveLength(4);
     expect(contactHelpGridSettings.parse({}).items).toHaveLength(4);
     expect(contactPurchaseInfoSettings.parse({}).items).toHaveLength(3);
@@ -79,9 +80,14 @@ describe("Contacto V2 module contracts", () => {
       }),
     );
     expect(html).toContain('data-solara-module="contact-hero"');
-    expect(html).toContain("Estamos para ayudarte.");
+    expect(html).toContain("Estamos para");
+    expect(html).toContain("ayudarte.");
     expect(html).toContain("Respondemos por WhatsApp");
     expect(html).toContain('data-motion-zone="items"');
+    expect(html).toContain('class="catalog-hero-inner contact-hero"');
+    expect(html).toContain('class="catalog-hero-media contact-hero-media"');
+    expect(html).not.toContain("<video");
+    expect(html).toContain("images.unsplash.com");
   });
 
   it("no renderiza ubicación desactivada ni deja markup vacío", () => {

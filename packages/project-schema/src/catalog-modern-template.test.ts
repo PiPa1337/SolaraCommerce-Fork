@@ -94,6 +94,12 @@ describe("plantilla Catalog Modern", () => {
       "about-products-cta",
     ]);
     expect(normalized.pages.find((page) => page.kind === "about")?.sections).toHaveLength(10);
+    const hero = normalized.pages.find((page) => page.kind === "about")?.sections[0];
+    expect(hero?.settings.imageAssetId).toBe("asset-about-hero");
+    const team = normalized.pages.find((page) => page.kind === "about")?.sections[7];
+    expect(team?.enabled).toBe(true);
+    expect(team?.settings.enabled).toBe(true);
+    expect(team?.settings.items).toHaveLength(2);
     expect(ensureAboutV2Sections(normalized)).toEqual(normalized);
   });
 
@@ -122,5 +128,34 @@ describe("plantilla Catalog Modern", () => {
       settings: { ...hero.settings, title: "Título escrito por la tienda" },
     };
     expect(ensureAboutV2Sections(project)).toEqual(project);
+  });
+
+  it("completa settings visuales faltantes de un seed V2 anterior", () => {
+    const legacy = structuredClone(catalogModernV2Store);
+    const about = legacy.pages.find((page) => page.kind === "about");
+    if (!about) throw new Error("Fixture sin página about");
+    const hero = about.sections.find((section) => section.moduleId === "about-hero");
+    const team = about.sections.find((section) => section.moduleId === "about-team");
+    if (!hero || !team) throw new Error("Fixture about incompleta");
+    delete hero.settings.actionLabel;
+    delete hero.settings.actionHref;
+    hero.settings.imageAssetId = "";
+    team.enabled = false;
+    team.settings.enabled = false;
+    team.settings.items = [];
+
+    const normalized = ensureCatalogModernV2Sections(legacy);
+    const normalizedHero = normalized.pages
+      .find((page) => page.kind === "about")
+      ?.sections.find((section) => section.moduleId === "about-hero");
+    const normalizedTeam = normalized.pages
+      .find((page) => page.kind === "about")
+      ?.sections.find((section) => section.moduleId === "about-team");
+    expect(normalizedHero?.settings.actionLabel).toBe("Explorar selección");
+    expect(normalizedHero?.settings.actionHref).toBe("/buscar/");
+    expect(normalizedHero?.settings.imageAssetId).toBe("asset-about-hero");
+    expect(normalizedTeam?.enabled).toBe(true);
+    expect(normalizedTeam?.settings.enabled).toBe(true);
+    expect(normalizedTeam?.settings.items).toHaveLength(2);
   });
 });

@@ -1,4 +1,8 @@
-import { defaultAboutV2Sections } from "./catalog-modern-about";
+import {
+  aboutDefaultTeam,
+  catalogModernV2EditorialAssets,
+  defaultAboutV2Sections,
+} from "./catalog-modern-about";
 import { defaultContactV2Sections } from "./catalog-modern-contact";
 import { catalogModernStore } from "./catalog-modern-fixture";
 import { CATALOG_MODERN_GUIDANCE_VERSION } from "./catalog-modern-guidance";
@@ -7,13 +11,53 @@ import { type StoreProjectV1, type StoreProjectV2, StoreProjectV2Schema } from "
 /** Version of the guided Catalog Modern template. Increase only when its persisted shape changes. */
 export const CATALOG_MODERN_TEMPLATE_VERSION = CATALOG_MODERN_GUIDANCE_VERSION;
 
-export function ensureContactV2Sections(project: StoreProjectV1): StoreProjectV1 {
+function ensureCatalogModernV2Assets(project: StoreProjectV1): StoreProjectV1 {
   if (project.commerceTemplates.designFamily !== "catalog-modern-v2") return project;
-  const page = project.pages.find((candidate) => candidate.kind === "contact");
-  if (!page || page.sections.length > 0) return project;
+  const existing = new Set(project.assets.map((asset) => asset.id));
+  const missing = catalogModernV2EditorialAssets.filter((asset) => !existing.has(asset.id));
+  if (missing.length === 0) return project;
   return {
     ...project,
-    pages: project.pages.map((candidate) =>
+    assets: [...project.assets, ...structuredClone(missing)],
+  };
+}
+
+export function ensureContactV2Sections(project: StoreProjectV1): StoreProjectV1 {
+  if (project.commerceTemplates.designFamily !== "catalog-modern-v2") return project;
+  const withAssets = ensureCatalogModernV2Assets(project);
+  const page = withAssets.pages.find((candidate) => candidate.kind === "contact");
+  if (!page) return withAssets;
+  if (page.sections.length > 0) {
+    let changed = false;
+    const sections = page.sections.map((section) => {
+      if (section.id !== "contact-section-hero" || section.moduleId !== "contact-hero")
+        return section;
+      const settings = { ...section.settings };
+      if (typeof settings.actionLabel !== "string") {
+        settings.actionLabel = "Escribinos";
+        changed = true;
+      }
+      if (typeof settings.actionHref !== "string") {
+        settings.actionHref = "#contact-form";
+        changed = true;
+      }
+      if (!settings.imageAssetId) {
+        settings.imageAssetId = "asset-contact-hero";
+        changed = true;
+      }
+      return changed ? { ...section, settings } : section;
+    });
+    if (!changed) return withAssets;
+    return {
+      ...withAssets,
+      pages: withAssets.pages.map((candidate) =>
+        candidate.kind === "contact" ? { ...candidate, sections } : candidate,
+      ),
+    };
+  }
+  return {
+    ...withAssets,
+    pages: withAssets.pages.map((candidate) =>
       candidate.kind === "contact"
         ? { ...candidate, sections: defaultContactV2Sections() }
         : candidate,
@@ -23,11 +67,71 @@ export function ensureContactV2Sections(project: StoreProjectV1): StoreProjectV1
 
 export function ensureAboutV2Sections(project: StoreProjectV1): StoreProjectV1 {
   if (project.commerceTemplates.designFamily !== "catalog-modern-v2") return project;
-  const page = project.pages.find((candidate) => candidate.kind === "about");
-  if (!page || page.sections.length > 0) return project;
+  const withAssets = ensureCatalogModernV2Assets(project);
+  const page = withAssets.pages.find((candidate) => candidate.kind === "about");
+  if (!page) return withAssets;
+  if (page.sections.length > 0) {
+    let changed = false;
+    const sections = page.sections.map((section) => {
+      if (section.moduleId === "about-hero" && section.id === "about-section-hero") {
+        const settings = { ...section.settings };
+        if (typeof settings.actionLabel !== "string") {
+          settings.actionLabel = "Explorar selección";
+          changed = true;
+        }
+        if (typeof settings.actionHref !== "string") {
+          settings.actionHref = "/buscar/";
+          changed = true;
+        }
+        if (!settings.imageAssetId) {
+          settings.imageAssetId = "asset-about-hero";
+          changed = true;
+        }
+        return changed ? { ...section, settings } : section;
+      }
+      if (
+        section.moduleId === "about-editorial-image" &&
+        section.id === "about-section-editorial-image" &&
+        !section.settings.imageAssetId
+      ) {
+        changed = true;
+        return {
+          ...section,
+          settings: { ...section.settings, imageAssetId: "asset-about-editorial" },
+        };
+      }
+      if (
+        section.moduleId === "about-team" &&
+        section.id === "about-section-team" &&
+        section.enabled === false &&
+        section.settings.enabled === false &&
+        Array.isArray(section.settings.items) &&
+        section.settings.items.length === 0
+      ) {
+        changed = true;
+        return {
+          ...section,
+          enabled: true,
+          settings: {
+            ...section.settings,
+            enabled: true,
+            items: structuredClone(aboutDefaultTeam),
+          },
+        };
+      }
+      return section;
+    });
+    if (!changed) return withAssets;
+    return {
+      ...withAssets,
+      pages: withAssets.pages.map((candidate) =>
+        candidate.kind === "about" ? { ...candidate, sections } : candidate,
+      ),
+    };
+  }
   return {
-    ...project,
-    pages: project.pages.map((candidate) =>
+    ...withAssets,
+    pages: withAssets.pages.map((candidate) =>
       candidate.kind === "about" ? { ...candidate, sections: defaultAboutV2Sections() } : candidate,
     ),
   };

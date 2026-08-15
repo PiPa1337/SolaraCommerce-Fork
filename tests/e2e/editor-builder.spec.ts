@@ -367,7 +367,7 @@ test("el Builder cambia a Nosotros V2 y muestra sus módulos editables", async (
 
   await page.locator('[data-section-select="about-section-team"]').click();
   await expect(page.getByRole("checkbox", { name: "Mostrar equipo" })).toBeVisible();
-  await expect(page.getByRole("checkbox", { name: "Mostrar equipo" })).not.toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Mostrar equipo" })).toBeChecked();
 
   await page.getByRole("button", { name: "Agregar sección" }).click();
   const picker = page.getByTestId("ui-module-picker");

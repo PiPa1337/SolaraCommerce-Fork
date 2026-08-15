@@ -4,8 +4,10 @@ import {
   formatMoney,
   type ModuleDefinition,
   moduleRoot,
+  type RenderContext,
   renderImage,
   renderVideo,
+  type SafeHtml,
   safeAssetUrl,
   safeHtml,
   safeUrl,
@@ -346,6 +348,53 @@ function heroTitleLines(title: string): string[] {
   }
   if (current) lines.push(current);
   return lines;
+}
+
+export interface CatalogModernEditorialHeroOptions {
+  moduleId: string;
+  rootClassName: string;
+  innerClassName: string;
+  eyebrow: string;
+  title: string;
+  body: string;
+  imageAssetId: string;
+  imageClassName?: string;
+  actions: SafeHtml | string;
+  trailing?: SafeHtml | string;
+}
+
+export function renderCatalogModernEditorialHero(
+  context: Pick<RenderContext<unknown>, "project" | "section">,
+  options: CatalogModernEditorialHeroOptions,
+): SafeHtml {
+  const image = renderImage(context.project, options.imageAssetId, {
+    className: ["catalog-hero-image", options.imageClassName].filter(Boolean).join(" "),
+    loading: "eager",
+    fetchPriority: "high",
+    sizes: "(max-width: 767px) 100vw, 45vw",
+    fallbackAlt: options.title,
+  });
+  const titleLines = heroTitleLines(options.title)
+    .map(
+      (line) =>
+        `<span class="catalog-hero-line" data-hero-line><span class="catalog-hero-line-inner" data-hero-line-inner>${escapeHtml(line)}</span></span>`,
+    )
+    .join(" ");
+  const rootClassName = ["catalog-hero-page", "catalog-hero-editorial", options.rootClassName]
+    .filter(Boolean)
+    .join(" ");
+  const innerClassName = ["catalog-hero-inner", options.innerClassName].filter(Boolean).join(" ");
+  const mediaClassName = ["catalog-hero-media", `${options.innerClassName}-media`]
+    .filter(Boolean)
+    .join(" ");
+  return moduleRoot(
+    options.moduleId,
+    context.section,
+    safeHtml(
+      `<div class="${escapeAttribute(innerClassName)}" data-motion-zone="content"><div class="catalog-hero-copy"><div class="catalog-hero-reveal catalog-hero-reveal--eyebrow"><p class="catalog-eyebrow">${escapeHtml(options.eyebrow)}</p></div><h1 class="catalog-hero-title" data-hero-title>${titleLines}</h1><div class="catalog-hero-rule" data-hero-rule aria-hidden="true"></div><div class="catalog-hero-reveal catalog-hero-reveal--body"><p class="catalog-hero-body">${escapeHtml(options.body)}</p></div><div class="catalog-hero-reveal catalog-hero-reveal--actions"><div class="catalog-hero-actions">${options.actions}</div></div></div><figure class="${escapeAttribute(mediaClassName)}" data-motion-zone="media" data-hero-media>${image}</figure></div>${options.trailing ?? ""}`,
+    ),
+    { className: rootClassName },
+  );
 }
 
 function renderHeroBenefits(

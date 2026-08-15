@@ -51,7 +51,9 @@ describe("exporter", () => {
     expect(html).toContain('data-solara-module="about-hero"');
     expect(html).toContain('data-solara-module="about-history"');
     expect(html).toContain('data-solara-module="about-products-cta"');
-    expect(html).toContain("Título editable de Nosotros");
+    expect(html).toContain("Título");
+    expect(html).toContain("editable de");
+    expect(html).toContain("Nosotros");
     expect(html).toContain("Descripción editable de Nosotros");
     expect(html).not.toContain("solara-story-grid");
     expect(html).toContain("<title>Nosotros | Modo Sur</title>");
@@ -78,10 +80,12 @@ describe("exporter", () => {
       ...hero,
       settings: { ...hero.settings, title: "Preview Nosotros" },
     };
-    expect(renderPreviewHtml(project, "draft", "/nosotros/")).toContain("Preview Nosotros");
+    const preview = renderPreviewHtml(project, "draft", "/nosotros/");
+    expect(preview).toContain("Preview");
+    expect(preview).toContain("Nosotros");
     expect(
       String(exportProject(project, { mode: "draft" }).files.get("nosotros/index.html")),
-    ).toContain("Preview Nosotros");
+    ).toContain("Preview");
   });
 
   it("minifyCss conserva los espacios de + en calc (válido) y compacta el resto", () => {

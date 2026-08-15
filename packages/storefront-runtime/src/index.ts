@@ -1443,18 +1443,27 @@ function storefrontBoot(): void {
       )
     : [];
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const motionSeen = new WeakSet<HTMLElement>();
   let motionObservers: IntersectionObserver[] = [];
   const connectMotion = (): void => {
+    if (motionObservers.length > 0) return;
     if (!reduceMotion && "IntersectionObserver" in window) {
       root.dataset.motionReady = "true";
       motionRoots.forEach((element) => {
+        const once = element.dataset.motionOnce !== "false";
+        if (once && motionSeen.has(element)) return;
         const entryPoint = Math.max(0, Math.min(1, Number(element.dataset.motionEntry ?? "0.18")));
         const observer = new IntersectionObserver(
           ([entry]) => {
             if (entry?.isIntersecting) {
+              if (once && motionSeen.has(element)) return;
+              if (once) motionSeen.add(element);
               element.dataset.motionVisible = "true";
-              if (element.dataset.motionOnce !== "false") observer.disconnect();
-            } else if (element.dataset.motionOnce === "false") {
+              if (once) {
+                observer.disconnect();
+                motionObservers = motionObservers.filter((current) => current !== observer);
+              }
+            } else if (!once) {
               delete element.dataset.motionVisible;
             }
           },

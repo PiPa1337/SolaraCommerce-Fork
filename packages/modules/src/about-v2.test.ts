@@ -48,11 +48,11 @@ describe("Nosotros V2 module contracts", () => {
 
   it("aplica defaults y límites de repeaters", () => {
     expect(aboutHeroSettings.parse({}).title).toBe("Una selección pensada para moverte.");
-    expect(aboutHeroSettings.parse({}).imageAssetId).toBe("asset-hero");
+    expect(aboutHeroSettings.parse({}).imageAssetId).toBe("asset-about-hero");
     expect(aboutHistorySettings.parse({}).paragraphs).toHaveLength(3);
     expect(aboutEditorialImageSettings.parse({}).enabled).toBe(true);
-    expect(aboutTeamSettings.parse({}).enabled).toBe(false);
-    expect(aboutTeamSettings.parse({}).items).toEqual([]);
+    expect(aboutTeamSettings.parse({}).enabled).toBe(true);
+    expect(aboutTeamSettings.parse({}).items).toHaveLength(2);
     expect(
       aboutTeamSettings.safeParse({ items: Array.from({ length: 5 }, () => ({})) }).success,
     ).toBe(false);
@@ -71,9 +71,12 @@ describe("Nosotros V2 module contracts", () => {
     );
     expect(html).toContain('data-solara-module="about-hero"');
     expect(html).toContain("&lt;Título&gt;");
-    expect(html).toContain("<h1>");
+    expect(html).toContain('<h1 class="catalog-hero-title"');
     expect(html).toContain('data-motion-zone="content"');
-    expect(html).toContain("modo-sur-hero.png");
+    expect(html).toContain('class="catalog-hero-inner about-hero"');
+    expect(html).toContain('class="catalog-hero-media about-hero-media"');
+    expect(html).not.toContain("<video");
+    expect(html).toContain("images.unsplash.com");
   });
 
   it("no deja markup cuando los módulos opcionales están desactivados", () => {
@@ -109,6 +112,8 @@ describe("Nosotros V2 module contracts", () => {
     expect(styles).toContain(".cm.v2 .solara-about-page");
     expect(styles).toContain(".cm.v2 .about-hero");
     expect(styles).toContain("aspect-ratio: 9 / 16");
+    expect(styles).toContain(".cm.v2 .catalog-hero-page .catalog-hero-inner");
+    expect(styles).toContain(".cm.v2 .solara-about-sections > [data-solara-module]");
     expect(styles).toContain("@media (prefers-reduced-motion: reduce)");
     expect(styles).toContain('[data-solara-module^="about-"]');
   });

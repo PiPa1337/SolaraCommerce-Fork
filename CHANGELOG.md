@@ -11,6 +11,17 @@
 - Verificado: schema, módulos, exporter, Builder, E2E responsive/no-JS/axe,
   `corepack pnpm check`, build y portable smoke.
 
+### Héroes V2 alineados con Inicio y appear estable (2026-08-15)
+
+- Nosotros y Contacto reutilizan el shell visual de Inicio V2: copy, media
+  vertical 9:16, altura, márgenes, padding y ritmo de spacing; ambas rutas usan
+  imagen estática y no video.
+- Se reemplazaron assets demo discordantes por imágenes remotas de Unsplash para
+  los héroes, la imagen editorial y los perfiles de Nosotros.
+- El runtime recuerda los appears one-shot al pausar/reanudar el preview, evita
+  observers duplicados y ya no hace que las secciones aparezcan, desaparezcan y
+  vuelvan a aparecer.
+
 ### Contacto V2 modular y editable (2026-08-15)
 
 - Nueva página `/contacto/` para `catalog-modern-v2`, construida con módulos

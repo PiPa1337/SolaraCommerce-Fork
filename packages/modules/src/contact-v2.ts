@@ -17,6 +17,7 @@ import {
   contactDefaultReasons,
 } from "@solara/project-schema";
 import { z } from "zod";
+import { renderCatalogModernEditorialHero } from "./catalog-modern";
 import { scopedAssetId } from "./helpers";
 
 const contactRevealZone = [
@@ -117,6 +118,9 @@ export const contactHeroSettings = z.object({
   body: z
     .string()
     .default("Respondemos consultas, disponibilidad y detalles de entrega por canales directos."),
+  actionLabel: z.string().default("Escribinos"),
+  actionHref: z.string().default("#contact-form"),
+  imageAssetId: z.string().default("asset-contact-hero"),
   quickLinks: z
     .array(contactQuickLinkSchema)
     .max(4)
@@ -239,12 +243,23 @@ export const contactHero: ModuleDefinition<
   id: "contact-hero",
   name: "Hero de Contacto",
   description: "Introducción de Contacto con accesos rápidos.",
-  compatibleSettings: ["eyebrow", "title", "body", "quickLinks"],
+  compatibleSettings: [
+    "eyebrow",
+    "title",
+    "body",
+    "actionLabel",
+    "actionHref",
+    "imageAssetId",
+    "quickLinks",
+  ],
   settingsSchema: contactHeroSettings,
   settingsFields: [
     { key: "eyebrow", type: "text", label: "Antetítulo" },
     { key: "title", type: "text", label: "Título" },
     { key: "body", type: "text", label: "Descripción" },
+    { key: "actionLabel", type: "text", label: "Botón" },
+    { key: "actionHref", type: "url", label: "Destino" },
+    { key: "imageAssetId", type: "asset", label: "Imagen vertical" },
     {
       key: "quickLinks",
       type: "repeater",
@@ -260,17 +275,26 @@ export const contactHero: ModuleDefinition<
       ],
     },
   ],
-  motionZones: contactRevealZone,
+  motionZones: [...contactRevealZone, ...contactItemsZone],
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const settings = context.settings;
-    return moduleRoot(
-      "contact-hero",
-      context.section,
-      safeHtml(
-        `<div class="contact-hero" data-motion-zone="content"><div class="contact-hero-copy"><p class="solara-eyebrow">${escapeHtml(settings.eyebrow)}</p><h1>${escapeHtml(settings.title)}</h1><p>${escapeHtml(settings.body)}</p></div><div class="contact-quick-links" data-motion-zone="items">${settings.quickLinks.map((item) => `<a class="contact-quick-link" href="${escapeAttribute(safeUrl(item.href))}">${contactIconMarkup(item.icon)}<span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.body)}</small></span><span aria-hidden="true">→</span></a>`).join("")}</div></div>`,
-      ),
-    );
+    const actions = settings.actionLabel
+      ? `<a class="catalog-primary-action" href="${escapeAttribute(safeUrl(settings.actionHref))}">${escapeHtml(settings.actionLabel)} →</a>`
+      : "";
+    const quickLinks = `<div class="contact-quick-links contact-hero-links" data-motion-zone="items">${settings.quickLinks.map((item) => `<a class="contact-quick-link" href="${escapeAttribute(safeUrl(item.href))}">${contactIconMarkup(item.icon)}<span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.body)}</small></span><span aria-hidden="true">→</span></a>`).join("")}</div>`;
+    return renderCatalogModernEditorialHero(context, {
+      moduleId: "contact-hero",
+      rootClassName: "contact-hero-module",
+      innerClassName: "contact-hero",
+      imageClassName: "contact-hero-image",
+      eyebrow: settings.eyebrow,
+      title: settings.title,
+      body: settings.body,
+      imageAssetId: settings.imageAssetId,
+      actions,
+      trailing: quickLinks,
+    });
   },
 });
 

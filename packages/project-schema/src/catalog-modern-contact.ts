@@ -176,6 +176,9 @@ export function defaultContactV2Sections(): StoreSection[] {
       eyebrow: "HABLEMOS",
       title: "Estamos para ayudarte.",
       body: "Respondemos consultas, disponibilidad y detalles de entrega por canales directos.",
+      actionLabel: "Escribinos",
+      actionHref: "#contact-form",
+      imageAssetId: "asset-contact-hero",
       quickLinks: structuredClone(contactDefaultQuickLinks),
     }),
     section("contact-section-form", "contact-form", {

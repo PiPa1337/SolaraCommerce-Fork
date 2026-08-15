@@ -17,8 +17,10 @@ import {
   aboutDefaultPrinciples,
   aboutDefaultProcess,
   aboutDefaultStats,
+  aboutDefaultTeam,
 } from "@solara/project-schema";
 import { z } from "zod";
+import { renderCatalogModernEditorialHero } from "./catalog-modern";
 import { scopedAssetId } from "./helpers";
 
 const aboutRevealZone = [
@@ -99,7 +101,9 @@ export const aboutHeroSettings = z.object({
   eyebrow: z.string().default("NUESTRA MIRADA"),
   title: z.string().default("Una selección pensada para moverte."),
   body: z.string().default("Elegimos piezas con intención para acompañar tu forma de vivir."),
-  imageAssetId: z.string().default("asset-hero"),
+  actionLabel: z.string().default("Explorar selección"),
+  actionHref: z.string().default("/buscar/"),
+  imageAssetId: z.string().default("asset-about-hero"),
 });
 
 export const aboutHistorySettings = z.object({
@@ -176,7 +180,7 @@ export const aboutExperienceSettings = z.object({
 });
 
 export const aboutTeamSettings = z.object({
-  enabled: z.boolean().default(false),
+  enabled: z.boolean().default(true),
   title: z.string().default("Detrás de la tienda"),
   items: z
     .array(
@@ -189,7 +193,7 @@ export const aboutTeamSettings = z.object({
       }),
     )
     .max(4)
-    .default([]),
+    .default([...aboutDefaultTeam]),
 });
 
 export const aboutStatsSettings = z.object({
@@ -220,33 +224,33 @@ export const aboutHero: ModuleDefinition<
   id: "about-hero",
   name: "Hero de Nosotros",
   description: "Introducción editorial de la marca con imagen vertical opcional.",
-  compatibleSettings: ["eyebrow", "title", "body", "imageAssetId"],
+  compatibleSettings: ["eyebrow", "title", "body", "actionLabel", "actionHref", "imageAssetId"],
   settingsSchema: aboutHeroSettings,
   settingsFields: [
     { key: "eyebrow", type: "text", label: "Antetítulo" },
     { key: "title", type: "text", label: "Título" },
     { key: "body", type: "text", label: "Descripción" },
+    { key: "actionLabel", type: "text", label: "Botón" },
+    { key: "actionHref", type: "url", label: "Destino" },
     { key: "imageAssetId", type: "asset", label: "Imagen vertical" },
   ],
   motionZones: aboutRevealZone,
   render(context) {
     const settings = context.settings;
-    const image = settings.imageAssetId
-      ? renderImage(context.project, settings.imageAssetId, {
-          className: "about-hero-image",
-          loading: "eager",
-          fetchPriority: "high",
-          sizes: "(max-width: 767px) 100vw, 42vw",
-          fallbackAlt: settings.title,
-        })
+    const actions = settings.actionLabel
+      ? `<a class="catalog-primary-action" href="${escapeAttribute(safeUrl(settings.actionHref))}">${escapeHtml(settings.actionLabel)} →</a>`
       : "";
-    return moduleRoot(
-      "about-hero",
-      context.section,
-      safeHtml(
-        `<div class="about-hero" data-motion-zone="content"><div class="about-hero-copy"><p class="solara-eyebrow">${escapeHtml(settings.eyebrow)}</p><h1>${escapeHtml(settings.title)}</h1><p>${escapeHtml(settings.body)}</p></div>${image ? `<div class="about-hero-media">${image}</div>` : ""}</div>`,
-      ),
-    );
+    return renderCatalogModernEditorialHero(context, {
+      moduleId: "about-hero",
+      rootClassName: "about-hero-module",
+      innerClassName: "about-hero",
+      imageClassName: "about-hero-image",
+      eyebrow: settings.eyebrow,
+      title: settings.title,
+      body: settings.body,
+      imageAssetId: settings.imageAssetId,
+      actions,
+    });
   },
 });
 
@@ -500,7 +504,7 @@ export const aboutTeam: ModuleDefinition<
             const image = member.imageAssetId
               ? renderImage(context.project, member.imageAssetId, {
                   className: "about-team-image",
-                  loading: "lazy",
+                  loading: "eager",
                   sizes: "(max-width: 767px) 50vw, 25vw",
                   fallbackAlt: `${member.name} · ${member.role}`,
                 })

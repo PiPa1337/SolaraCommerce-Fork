@@ -970,6 +970,7 @@ export {
   aboutDefaultPrinciples,
   aboutDefaultProcess,
   aboutDefaultStats,
+  aboutDefaultTeam,
   defaultAboutV2Sections,
 } from "./catalog-modern-about";
 export {

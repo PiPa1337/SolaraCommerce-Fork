@@ -122,3 +122,45 @@ test("Contacto V2 no desborda en mobile y conserva FAQ nativa", async ({ page })
   await page.locator(".contact-faq details").first().locator("summary").click();
   await expect(page.locator(".contact-faq details").first()).toHaveAttribute("open", "");
 });
+
+test("Contacto V2 comparte hero y ritmo de Inicio sin video", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(new URL("/", serverUrl).toString());
+  const home = await page.evaluate(() => {
+    const hero = document.querySelector<HTMLElement>(
+      '[data-solara-module="catalog-hero"] .catalog-hero-inner',
+    );
+    const copy = document.querySelector<HTMLElement>(
+      '[data-solara-module="catalog-hero"] .catalog-hero-copy',
+    );
+    const section = document.querySelector<HTMLElement>(".catalog-product-grid-section");
+    return {
+      columns: hero ? getComputedStyle(hero).gridTemplateColumns : "",
+      height: hero ? getComputedStyle(hero).height : "",
+      copyPadding: copy ? getComputedStyle(copy).padding : "",
+      sectionPadding: section ? getComputedStyle(section).paddingBlock : "",
+    };
+  });
+  await page.goto(new URL("/contacto/", serverUrl).toString());
+  const contact = await page.evaluate(() => {
+    const hero = document.querySelector<HTMLElement>(
+      '[data-solara-module="contact-hero"] .catalog-hero-inner',
+    );
+    const copy = document.querySelector<HTMLElement>(
+      '[data-solara-module="contact-hero"] .catalog-hero-copy',
+    );
+    const section = document.querySelector<HTMLElement>(".contact-main-grid");
+    return {
+      columns: hero ? getComputedStyle(hero).gridTemplateColumns : "",
+      height: hero ? getComputedStyle(hero).height : "",
+      copyPadding: copy ? getComputedStyle(copy).padding : "",
+      sectionPadding: section ? getComputedStyle(section).paddingBlock : "",
+      videos: document.querySelectorAll("video").length,
+    };
+  });
+  expect(contact.columns).toBe(home.columns);
+  expect(contact.height).toBe(home.height);
+  expect(contact.copyPadding).toBe(home.copyPadding);
+  expect(contact.sectionPadding).toBe(home.sectionPadding);
+  expect(contact.videos).toBe(0);
+});

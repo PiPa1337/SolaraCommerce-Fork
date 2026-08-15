@@ -55,7 +55,7 @@ test.afterAll(async () => {
   await new Promise<void>((resolveClose) => server.close(() => resolveClose()));
 });
 
-test("Nosotros V2 renderiza sus módulos en orden y omite equipo por default", async ({ page }) => {
+test("Nosotros V2 renderiza sus módulos y completa el equipo editorial", async ({ page }) => {
   await page.goto(new URL("/nosotros/", serverUrl).toString());
   const modules = await page
     .locator("[data-solara-module]")
@@ -77,7 +77,13 @@ test("Nosotros V2 renderiza sus módulos en orden y omite equipo por default", a
       "catalog-footer",
     ]),
   );
-  expect(await page.locator('[data-solara-module="about-team"]').count()).toBe(0);
+  expect(await page.locator('[data-solara-module="about-team"]').count()).toBe(1);
+  await expect(page.locator(".about-team-member")).toHaveCount(2);
+  await expect(page.locator(".about-team-member img")).toHaveCount(2);
+  await expect(page.locator(".about-team-member img").first()).toHaveAttribute(
+    "src",
+    /images\.unsplash\.com/,
+  );
   await expect(page.locator(".about-hero h1")).toHaveText("Una selección pensada para moverte.");
   await expect(page.locator(".about-principle-item")).toHaveCount(4);
   await expect(page.locator(".about-process-item")).toHaveCount(4);
@@ -113,10 +119,10 @@ test("Nosotros V2 no desborda en mobile y conserva el copy sin JavaScript", asyn
 test("Nosotros V2 respeta reduced motion", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(new URL("/nosotros/", serverUrl).toString());
-  await expect(page.locator('[data-solara-module="about-hero"] [data-motion-zone]')).toHaveCSS(
-    "animation-name",
-    "none",
-  );
+  const motionZones = page.locator('[data-solara-module="about-hero"] [data-motion-zone]');
+  await expect(motionZones).toHaveCount(2);
+  await expect(motionZones.nth(0)).toHaveCSS("animation-name", "none");
+  await expect(motionZones.nth(1)).toHaveCSS("animation-name", "none");
   await expect(page.locator(".about-hero h1")).toBeVisible();
 });
 
@@ -144,4 +150,46 @@ test("Nosotros V2 aplica la grilla editorial y limita los iconos", async ({ page
   expect(heroColumns).toBe(2);
   expect(iconBox?.width ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(32);
   expect(iconBox?.height ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(32);
+});
+
+test("Nosotros V2 comparte hero y ritmo de Inicio sin video", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(new URL("/", serverUrl).toString());
+  const home = await page.evaluate(() => {
+    const hero = document.querySelector<HTMLElement>(
+      '[data-solara-module="catalog-hero"] .catalog-hero-inner',
+    );
+    const copy = document.querySelector<HTMLElement>(
+      '[data-solara-module="catalog-hero"] .catalog-hero-copy',
+    );
+    const section = document.querySelector<HTMLElement>(".catalog-product-grid-section");
+    return {
+      columns: hero ? getComputedStyle(hero).gridTemplateColumns : "",
+      height: hero ? getComputedStyle(hero).height : "",
+      copyPadding: copy ? getComputedStyle(copy).padding : "",
+      sectionPadding: section ? getComputedStyle(section).paddingBlock : "",
+    };
+  });
+  await page.goto(new URL("/nosotros/", serverUrl).toString());
+  const about = await page.evaluate(() => {
+    const hero = document.querySelector<HTMLElement>(
+      '[data-solara-module="about-hero"] .catalog-hero-inner',
+    );
+    const copy = document.querySelector<HTMLElement>(
+      '[data-solara-module="about-hero"] .catalog-hero-copy',
+    );
+    const section = document.querySelector<HTMLElement>(".about-history");
+    return {
+      columns: hero ? getComputedStyle(hero).gridTemplateColumns : "",
+      height: hero ? getComputedStyle(hero).height : "",
+      copyPadding: copy ? getComputedStyle(copy).padding : "",
+      sectionPadding: section ? getComputedStyle(section).paddingBlock : "",
+      videos: document.querySelectorAll("video").length,
+    };
+  });
+  expect(about.columns).toBe(home.columns);
+  expect(about.height).toBe(home.height);
+  expect(about.copyPadding).toBe(home.copyPadding);
+  expect(about.sectionPadding).toBe(home.sectionPadding);
+  expect(about.videos).toBe(0);
 });

@@ -54,7 +54,13 @@ V1 y legacy mantienen el contenido hardcodeado actual como fallback compatible.
 - `eyebrow`, default `NUESTRA MIRADA`.
 - `title`, default `Una selección pensada para moverte.`.
 - `body`, descripción editable.
-- `imageAssetId`, imagen editorial vertical 9:16 opcional.
+- `actionLabel`, default `Explorar selección`.
+- `actionHref`, default `/buscar/`.
+- `imageAssetId`, default `asset-about-hero`, imagen editorial vertical 9:16.
+
+El hero usa el mismo shell de `catalog-hero` de Inicio V2: `90svh`, copy a la
+izquierda, media 9:16 a la derecha, ancho `--catalog-v2-wide` y el mismo
+padding. Sólo usa una imagen estática; no emite video.
 
 Cuando no hay imagen, el copy ocupa el ancho disponible sin dejar un hueco.
 
@@ -131,13 +137,15 @@ Los íconos son pictogramas lineales pequeños, no ilustraciones grandes.
 
 ### `about-team`
 
-- `enabled`, default `false`.
+- `enabled`, default `true`.
 - `title`, default `Detrás de la tienda`.
 - `items`, repeater máximo 4.
 - Cada miembro contiene `imageAssetId`, `name`, `role` y `body`.
 
-Una marca unipersonal usa un solo miembro. Si no se quieren mostrar personas,
-se desactiva el módulo completo y no queda espacio vacío.
+Los defaults incluyen dos perfiles demo con retratos remotos del proyecto:
+Sofía, Selección, y Martín, Atención y envíos. Una marca unipersonal puede
+dejar un solo miembro; si no se quieren mostrar personas, se desactiva el
+módulo completo y no queda espacio vacío.
 
 ### `about-stats`
 
@@ -170,6 +178,9 @@ La página conserva exactamente la identidad de Home V2:
 - Sin cards redondeadas ni estética SaaS.
 - Assets seleccionados desde el proyecto, con `object-fit: cover` y ratios
   explícitos.
+- Los defaults visuales usan imágenes remotas de Unsplash almacenadas como
+  datos de assets (`asset-about-hero`, `asset-about-editorial`,
+  `asset-about-team-sofia`, `asset-about-team-martin`), sin binarios generados.
 
 Orden desktop:
 
@@ -187,7 +198,8 @@ Orden desktop:
 12. Footer.
 
 En mobile todo se apila manteniendo el mismo orden. Las imágenes ocupan el
-ancho disponible y los repeaters no generan overflow horizontal.
+ancho disponible y los repeaters no generan overflow horizontal. El ritmo de
+padding y márgenes de cada bloque reutiliza el de Inicio V2.
 
 ## Builder
 
@@ -214,6 +226,8 @@ cargarse y al exportarse. V1/legacy no reciben módulos nuevos.
 ## Render, SEO Y Persistencia
 
 - V2 usa `renderProjectSections(project, aboutSections, { pageType: "about" })`.
+- Nosotros y Contacto V2 comparten el renderer de hero editorial estático de
+  Inicio; sus rutas nunca emiten video.
 - El exporter mantiene `/nosotros/`, canonical y breadcrumbs.
 - Structured data sigue siendo `AboutPage`.
 - La salida V1/legacy conserva el renderer editorial actual.
@@ -227,6 +241,8 @@ cargarse y al exportarse. V1/legacy no reciben módulos nuevos.
   `data-motion-visible` y `data-motion-zone`.
 - Los items pueden entrar con stagger de 70ms usando los keyframes de Home V2.
 - No se agregan listeners de scroll.
+- Los roots `once=true` se registran en una memoria one-shot del runtime; pausar
+  y reanudar el preview no vuelve a ocultar ni reproducir el contenido ya visto.
 - `prefers-reduced-motion: reduce` elimina animaciones y muestra el contenido
   inmediatamente.
 - Imágenes tienen alt generado desde nombre/rol o setting editable.
@@ -243,4 +259,6 @@ cargarse y al exportarse. V1/legacy no reciben módulos nuevos.
 - E2E de assets opcionales y ausencia de huecos al desactivar módulos.
 - Axe y teclado en `/nosotros/`.
 - Revisión visual contra la imagen de referencia enviada.
+- Comparación E2E de columnas, altura, padding y spacing de hero contra Inicio en
+  Nosotros y Contacto.
 - `corepack pnpm check`, build, desktop package y portable smoke.

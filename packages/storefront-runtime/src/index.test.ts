@@ -332,6 +332,13 @@ describe("pausa y reanudación del runtime (contrato A3↔A4)", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("freshCatalog = null");
   });
 
+  it("no vuelve a reproducir appear one-shot al reanudar el preview", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("motionSeen =");
+    expect(STOREFRONT_RUNTIME_JS).toContain("new WeakSet");
+    expect(STOREFRONT_RUNTIME_JS).toContain("motionSeen.has(element)");
+    expect(STOREFRONT_RUNTIME_JS).toContain("if (motionObservers.length > 0) return");
+  });
+
   it("vincula la escritura del carrito embebido a la sesion activa del preview", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("previewCartSession");
     expect(STOREFRONT_RUNTIME_JS).toContain("session: previewCartSession");
