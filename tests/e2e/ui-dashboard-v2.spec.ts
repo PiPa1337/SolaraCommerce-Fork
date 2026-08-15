@@ -80,3 +80,34 @@ test("el dashboard muestra Predeterminado V2 y Predeterminado V1 como tiendas se
     })
     .toBeGreaterThan(0);
 });
+
+test("P9-B5: el aviso global de reset se cierra y no vuelve a aparecer", async ({ page }) => {
+  await page.goto(studioUrl);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.deleteDatabase("solara-commerce-studio");
+        request.addEventListener("success", () => resolve());
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("blocked", () =>
+          reject(new Error("No se pudo limpiar la base de Studio.")),
+        );
+      }),
+  );
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+
+  const notice = page.locator(".global-notice");
+  const hadNotice = (await notice.count()) > 0;
+  console.log("P9-B5 aviso presente en primer arranque:", hadNotice);
+  if (hadNotice) {
+    await notice.getByRole("button", { name: "Cerrar aviso" }).click();
+    await expect(notice).toBeHidden();
+  }
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  const afterReload = await page.locator(".global-notice").count();
+  console.log("P9-B5 aviso tras recargar:", afterReload);
+  expect(afterReload).toBe(0);
+});
