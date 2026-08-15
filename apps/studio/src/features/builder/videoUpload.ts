@@ -1,4 +1,4 @@
-import type { VideoAsset } from "@solara/project-schema";
+import type { StoreProjectV1, VideoAsset } from "@solara/project-schema";
 import { hashFile } from "../../lib/workers";
 
 export const VIDEO_MAX_BYTES = 30 * 1024 * 1024;
@@ -111,5 +111,30 @@ export async function buildVideoAsset(file: File, deps: VideoUploadDeps = {}): P
     height: metadata.height,
     durationSeconds: metadata.duration,
     hash,
+  };
+}
+
+/**
+ * Agrega el video al proyecto y apunta el setting de la sección en UNA sola
+ * actualización: evita la carrera en la que la sección referencia un video
+ * que el proyecto todavía no contiene (el parse de StoreProjectV2 rechaza el
+ * estado intermedio y bloquea la edición).
+ */
+export function applyVideoToSection(
+  project: StoreProjectV1,
+  sectionId: string,
+  settings: Record<string, unknown>,
+  settingsKey: string,
+  video: VideoAsset,
+): StoreProjectV1 {
+  return {
+    ...project,
+    sections: project.sections.map((section) =>
+      section.id === sectionId
+        ? { ...section, settings: { ...settings, [settingsKey]: video.id } }
+        : section,
+    ),
+    videos: [...project.videos, video],
+    updatedAt: new Date().toISOString(),
   };
 }

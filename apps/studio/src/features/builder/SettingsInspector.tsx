@@ -6,7 +6,7 @@ import { Button, Field, InlineError } from "../../components/Ui";
 import { hashFile } from "../../lib/workers";
 import { HeroSlidesEditor } from "./HeroSlidesEditor";
 import { RepeaterEditor } from "./RepeaterEditor";
-import { buildVideoAsset } from "./videoUpload";
+import { applyVideoToSection, buildVideoAsset } from "./videoUpload";
 
 function formatIssuePaths(issues: Array<{ path: readonly PropertyKey[] }>): string {
   return [...new Set(issues.map((issue) => issue.path.join(".") || "settings"))].join(", ");
@@ -50,6 +50,7 @@ export function SettingsInspector({
   project,
   onChange,
   onProjectChange,
+  sectionId,
 }: {
   values: Record<string, unknown>;
   fields: RegisteredModule["settingsFields"];
@@ -57,6 +58,7 @@ export function SettingsInspector({
   project: StoreProjectV1;
   onChange(values: Record<string, unknown>): void;
   onProjectChange?(project: StoreProjectV1): void;
+  sectionId?: string;
 }) {
   const [draft, setDraft] = useState(values);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -101,15 +103,27 @@ export function SettingsInspector({
     try {
       const hash = await hashFile(file);
       const existing = project.videos.find((video) => video.hash === hash);
-      const video = existing ?? (await buildVideoAsset(file, { hash }));
-      if (!existing) {
+      if (existing) {
+        // El video ya está en el proyecto: sólo se apunta el campo.
+        setValue(fieldKey, existing.id);
+        return;
+      }
+      const video = await buildVideoAsset(file, { hash });
+      if (sectionId) {
+        // Atómico: el proyecto nuevo trae el video Y el setting de la sección
+        // en una sola actualización para que el parse nunca vea un estado
+        // intermedio inválido (video inexistente).
+        const nextProject = applyVideoToSection(project, sectionId, draft, fieldKey, video);
+        setDraft({ ...draft, [fieldKey]: video.id });
+        onProjectChange(nextProject);
+      } else {
         onProjectChange({
           ...project,
           videos: [...project.videos, video],
           updatedAt: new Date().toISOString(),
         });
+        setValue(fieldKey, video.id);
       }
-      setValue(fieldKey, video.id);
     } catch (reason) {
       setVideoUploadError(reason instanceof Error ? reason.message : "No se pudo subir el video.");
     } finally {

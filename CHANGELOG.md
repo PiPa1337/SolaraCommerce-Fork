@@ -1,5 +1,19 @@
 # Changelog
 
+### Constructor: subir video atómico (sin estado inválido) (2026-08-15)
+
+- Fix de carrera: al subir un video desde el inspector del hero, el proyecto
+  se actualizaba en dos pasos (primero el video, después el setting de la
+  sección) y un parse intermedio veía `videoAssetId` sin el video en
+  `project.videos`, mostrando "Video de la sección ... inexistente" y
+  bloqueando la edición/guardado.
+- Ahora `applyVideoToSection` construye el proyecto nuevo (video + setting de
+  la sección) en una sola actualización; si el archivo ya existía por hash se
+  reutiliza sin tocar el proyecto. El contrato queda fijado por unit test:
+  el proyecto resultante pasa `StoreProjectV1Schema.parse`.
+- El estado del usuario se recupera eligiendo "Sin imagen" en "Video local" o
+  re-subiendo el mismo archivo (dedupe por hash).
+
 ### Constructor: subir video directo en el hero (loop, sin sonido) (2026-08-15)
 
 - El campo "Video local" del hero ahora permite **Subir video** desde el

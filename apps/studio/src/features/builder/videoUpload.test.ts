@@ -1,5 +1,12 @@
+import { StoreProjectV1Schema, type VideoAsset } from "@solara/project-schema";
+import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import { describe, expect, it } from "vitest";
-import { buildVideoAsset, VIDEO_MAX_BYTES, VIDEO_MAX_DURATION_SECONDS } from "./videoUpload";
+import {
+  applyVideoToSection,
+  buildVideoAsset,
+  VIDEO_MAX_BYTES,
+  VIDEO_MAX_DURATION_SECONDS,
+} from "./videoUpload";
 
 function fakeFile(overrides: Partial<File> = {}): File {
   return {
@@ -65,5 +72,33 @@ describe("buildVideoAsset", () => {
       durationSeconds: 8,
     });
     expect(asset.id).toMatch(/^video-/);
+  });
+});
+
+describe("applyVideoToSection", () => {
+  it("agrega el video y apunta el setting en una sola actualización válida", () => {
+    const project = catalogModernV2Store;
+    const section = project.sections.find(
+      (candidate) => candidate.moduleId === "catalog-hero" && candidate.enabled !== false,
+    );
+    expect(section).toBeDefined();
+    const video: VideoAsset = {
+      kind: "video",
+      id: "video-atomic-test" as VideoAsset["id"],
+      name: "look verano",
+      alt: "",
+      mimeType: "video/mp4",
+      source: "data:video/mp4;base64,AA==",
+      width: 1080,
+      height: 1920,
+      durationSeconds: 8,
+      hash: "hash-atomic",
+    };
+    if (!section) throw new Error("Fixture sin hero");
+    const next = applyVideoToSection(project, section.id, section.settings, "videoAssetId", video);
+    expect(next.videos).toContainEqual(video);
+    const nextSection = next.sections.find((candidate) => candidate.id === section.id);
+    expect(nextSection?.settings.videoAssetId).toBe("video-atomic-test");
+    expect(StoreProjectV1Schema.safeParse(next).success).toBe(true);
   });
 });

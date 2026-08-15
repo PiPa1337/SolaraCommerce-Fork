@@ -704,6 +704,7 @@ export function Builder({
                     updateSection(selected.id, (section) => ({ ...section, settings }))
                   }
                   onProjectChange={onChange}
+                  sectionId={selected.id}
                 />
               </fieldset>
 
