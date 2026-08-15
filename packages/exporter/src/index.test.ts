@@ -30,6 +30,60 @@ function homeMetaDescription(homeHtml: string): string {
 }
 
 describe("exporter", () => {
+  it("renderiza Nosotros V2 desde sections editables y mantiene el orden", () => {
+    const project = structuredClone(catalogModernV2Store);
+    const about = project.pages.find((page) => page.kind === "about");
+    if (!about) throw new Error("Fixture sin página about");
+    const hero = about.sections[0];
+    if (!hero) throw new Error("Página about sin hero");
+    about.sections[0] = {
+      ...hero,
+      settings: {
+        ...hero.settings,
+        title: "Título editable de Nosotros",
+        body: "Descripción editable de Nosotros",
+      },
+    };
+
+    const result = exportProject(project, { mode: "production" });
+    const html = String(result.files.get("nosotros/index.html"));
+    expect(html).toContain('class="solara-about-page solara-container"');
+    expect(html).toContain('data-solara-module="about-hero"');
+    expect(html).toContain('data-solara-module="about-history"');
+    expect(html).toContain('data-solara-module="about-products-cta"');
+    expect(html).toContain("Título editable de Nosotros");
+    expect(html).toContain("Descripción editable de Nosotros");
+    expect(html).not.toContain("solara-story-grid");
+    expect(html).toContain("<title>Nosotros | Modo Sur</title>");
+    expect(html).toContain('"@type":"AboutPage"');
+    expect(html).toContain('rel="canonical"');
+  });
+
+  it("mantiene el fallback de Nosotros para proyectos no V2", () => {
+    const project = structuredClone(catalogModernStore);
+    const result = exportProject(project, { mode: "production" });
+    const html = String(result.files.get("nosotros/index.html"));
+    expect(html).toContain("solara-editorial-page");
+    expect(html).toContain("solara-story-grid");
+    expect(html).not.toContain('data-solara-module="about-hero"');
+  });
+
+  it("usa el mismo renderer de secciones en preview y exportación", () => {
+    const project = structuredClone(catalogModernV2Store);
+    const about = project.pages.find((page) => page.kind === "about");
+    if (!about) throw new Error("Fixture sin página about");
+    const hero = about.sections[0];
+    if (!hero) throw new Error("Página about sin hero");
+    about.sections[0] = {
+      ...hero,
+      settings: { ...hero.settings, title: "Preview Nosotros" },
+    };
+    expect(renderPreviewHtml(project, "draft", "/nosotros/")).toContain("Preview Nosotros");
+    expect(
+      String(exportProject(project, { mode: "draft" }).files.get("nosotros/index.html")),
+    ).toContain("Preview Nosotros");
+  });
+
   it("minifyCss conserva los espacios de + en calc (válido) y compacta el resto", () => {
     const input = `/* comentario */\n.a { width: calc(100% + 2rem); gap: 1rem  2rem; }\n.a > .b { color: red; }`;
     const out = minifyCss(input);

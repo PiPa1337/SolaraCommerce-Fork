@@ -28,7 +28,7 @@ import {
   isCatalogModernPlaceholderAsset,
   StoreProjectV1Schema,
 } from "@solara/project-schema";
-import { ensureContactV2Sections } from "@solara/project-schema/catalog-modern-template";
+import { ensureCatalogModernV2Sections } from "@solara/project-schema/catalog-modern-template";
 import {
   buildAiContext,
   buildLlmsTxt,
@@ -163,7 +163,7 @@ const encoder = new TextEncoder();
 
 function parseProject(projectInput: StoreProjectV1, operation: string): StoreProjectV1 {
   const result = StoreProjectV1Schema.safeParse(projectInput);
-  if (result.success) return ensureContactV2Sections(result.data);
+  if (result.success) return ensureCatalogModernV2Sections(result.data);
 
   const details = result.error.issues
     .map((issue) => `${issue.path.join(".") || "project"}: ${issue.message}`)
@@ -1589,20 +1589,35 @@ function buildPages(
   const contactConfig = project.pages.find((page) => page.kind === "contact");
   const editableSections = (kind: "about" | "contact") =>
     project.pages.find((page) => page.kind === kind)?.sections ?? [];
+  const isAboutV2 = project.commerceTemplates.designFamily === "catalog-modern-v2";
+  const aboutV2Sections = editableSections("about");
+  const aboutHero = aboutV2Sections.find(
+    (section) => section.moduleId === "about-hero" && section.enabled,
+  );
+  const aboutPreloadImage =
+    isAboutV2 && typeof aboutHero?.settings.imageAssetId === "string"
+      ? imageUrl(project, aboutHero.settings.imageAssetId)
+      : undefined;
+  const aboutV2Body = [
+    renderProjectSections(project, sharedHeader, { pageType: "about" }),
+    `<main class="solara-about-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span aria-current="page">Nosotros</span></nav><div class="solara-about-sections">${renderProjectSections(project, aboutV2Sections, { pageType: "about" })}</div></main>`,
+    renderProjectSections(project, sharedFooter, { pageType: "about" }),
+  ].join("");
+  const legacyAboutBody = [
+    renderProjectSections(project, sharedHeader, { pageType: "about" }),
+    `<main class="solara-editorial-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span>Nosotros</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Nuestra mirada</p><h1>${escapeHtml(aboutConfig?.title ?? "Elegimos objetos para vivirlos.")}</h1><p>${escapeHtml(project.identity.description)}</p></header><section class="solara-story-grid"><div><h2>Lo que nos guía</h2><p>${escapeHtml(project.identity.description)}</p></div><div><h2>Información clara</h2><p>${escapeHtml(project.policies.shipping.summary)}</p><a class="solara-secondary-action" href="/contacto/">Conocé cómo contactarnos</a></div></section><section class="solara-values-grid"><article><h2>Selección</h2><p>${escapeHtml(project.collections[0]?.description ?? "Conocé nuestras colecciones.")}</p></article><article><h2>Entrega</h2><p>${escapeHtml(project.policies.shipping.summary)}</p></article><article><h2>Atención directa</h2><p>${escapeHtml(project.identity.email || project.identity.phone || "Escribinos para recibir asesoramiento.")}</p></article></section></main>`,
+    editableSections("about").length
+      ? renderProjectSections(project, editableSections("about"), { pageType: "about" })
+      : "",
+    renderProjectSections(project, sharedFooter, { pageType: "about" }),
+  ].join("");
   const aboutPage: PageDescriptor = {
     path: "nosotros/index.html",
     title: aboutConfig?.seoTitle ?? `Nosotros | ${project.identity.brandName}`,
     description: aboutConfig?.seoDescription ?? project.identity.description,
     canonicalPath: "/nosotros/",
     pageType: "about",
-    body: [
-      renderProjectSections(project, sharedHeader, { pageType: "about" }),
-      `<main class="solara-editorial-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span>Nosotros</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Nuestra mirada</p><h1>${escapeHtml(aboutConfig?.title ?? "Elegimos objetos para vivirlos.")}</h1><p>${escapeHtml(project.identity.description)}</p></header><section class="solara-story-grid"><div><h2>Lo que nos guía</h2><p>${escapeHtml(project.identity.description)}</p></div><div><h2>Información clara</h2><p>${escapeHtml(project.policies.shipping.summary)}</p><a class="solara-secondary-action" href="/contacto/">Conocé cómo contactarnos</a></div></section><section class="solara-values-grid"><article><h2>Selección</h2><p>${escapeHtml(project.collections[0]?.description ?? "Conocé nuestras colecciones.")}</p></article><article><h2>Entrega</h2><p>${escapeHtml(project.policies.shipping.summary)}</p></article><article><h2>Atención directa</h2><p>${escapeHtml(project.identity.email || project.identity.phone || "Escribinos para recibir asesoramiento.")}</p></article></section></main>`,
-      editableSections("about").length
-        ? renderProjectSections(project, editableSections("about"), { pageType: "about" })
-        : "",
-      renderProjectSections(project, sharedFooter, { pageType: "about" }),
-    ].join(""),
+    body: isAboutV2 ? aboutV2Body : legacyAboutBody,
     structuredData: [
       {
         "@context": "https://schema.org",
@@ -1617,6 +1632,7 @@ function buildPages(
       ]),
     ],
     ...(socialImage ? { image: socialImage } : {}),
+    ...(aboutPreloadImage ? { preloadImage: aboutPreloadImage } : {}),
   };
 
   const whatsAppContactLink = buildWhatsAppLink(
