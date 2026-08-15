@@ -188,3 +188,22 @@ test("R3-P8-B5: importar un respaldo inválido muestra error y no rompe la app",
   console.log("R3-P8-B5 error de importación visible:", errorVisible);
   expect(errorVisible).toBe(true);
 });
+
+test("R4-P8-B5: exportar producción pasa por confirmación y completa las etapas", async ({
+  page,
+}) => {
+  await openDemoStore(page);
+  await page.getByTestId("ui-export-production").click();
+  const dialog = page.getByRole("dialog", { name: "Exportar sitio de producción" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Exportar producción" }).click();
+  await expect(page.getByTestId("ui-export-result")).toContainText("Exportación correcta", {
+    timeout: 120_000,
+  });
+  for (const stage of ["validate", "render", "package"]) {
+    await expect(
+      page.locator(`[data-testid="ui-export-stage"][data-stage="${stage}"]`),
+    ).toHaveAttribute("data-done", "true");
+  }
+  console.log("R4-P8-B5 producción exportada con las tres etapas");
+});
