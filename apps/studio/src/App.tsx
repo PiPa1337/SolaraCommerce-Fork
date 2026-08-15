@@ -144,6 +144,13 @@ function StudioShell() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  // Deduplica por contenido: en dev StrictMode ejecuta el efecto de arranque
+  // dos veces y los notices de seeding se repetían en el banner.
+  const notify = useCallback((message: string) => {
+    setNotice((current) =>
+      current?.includes(message) ? current : current ? `${current} ${message}` : message,
+    );
+  }, []);
   const [sessionManaged, setSessionManaged] = useState(false);
   // H7-B1: tras «Cerrar y detener» el cierre es terminal; App lo guarda para no
   // ofrecer «Cerrar app» ni reintentar el cierre con el servidor muerto.
@@ -274,43 +281,27 @@ function StudioShell() {
         }
         const demoCreated = await ensureScaleDemoProject();
         if (demoCreated) {
-          setNotice((current) =>
-            current
-              ? `${current} También se agregó la tienda Predeterminado con 50 productos para explorar la escala del catálogo.`
-              : "Se agregó la tienda Predeterminado con 50 productos para explorar la escala del catálogo.",
+          notify(
+            "Se agregó la tienda Predeterminado con 50 productos para explorar la escala del catálogo.",
           );
         }
         await ensureDemoSectionOrder();
         const predeterminadoV1Created = await ensurePredeterminadoV1Project();
         if (predeterminadoV1Created) {
-          setNotice((current) =>
-            current
-              ? `${current} Se agregó Predeterminado V1, la demo original antes del upgrade a V2.`
-              : "Se agregó Predeterminado V1, la demo original antes del upgrade a V2.",
-          );
+          notify("Se agregó Predeterminado V1, la demo original antes del upgrade a V2.");
         }
         const demoReviewsExpanded = await ensureCatalogModernDemoReviews();
         if (demoReviewsExpanded) {
-          setNotice((current) =>
-            current
-              ? `${current} Se actualizaron las reseñas de Predeterminado.`
-              : "Se actualizaron las reseñas de Predeterminado.",
-          );
+          notify("Se actualizaron las reseñas de Predeterminado.");
         }
         const demoGalleryExpanded = await ensureCatalogModernDemoGallery();
         if (demoGalleryExpanded) {
-          setNotice((current) =>
-            current
-              ? `${current} Se ampliaron las galerías de Predeterminado.`
-              : "Se ampliaron las galerías de Predeterminado.",
-          );
+          notify("Se ampliaron las galerías de Predeterminado.");
         }
         const deprecatedCategoriesRemoved = await ensureDeprecatedCategoriesRemoved();
         if (deprecatedCategoriesRemoved) {
-          setNotice((current) =>
-            current
-              ? `${current} Se retiraron las categorias Sale y Novedades; los productos y sus precios se conservaron.`
-              : "Se retiraron las categorias Sale y Novedades; los productos y sus precios se conservaron.",
+          notify(
+            "Se retiraron las categorias Sale y Novedades; los productos y sus precios se conservaron.",
           );
         }
         const browserResult = await refreshBrowser();
@@ -321,11 +312,7 @@ function StudioShell() {
             await markProjectMigration(stored.id, "done");
           }
           await refreshDisk();
-          setNotice((current) =>
-            current
-              ? `${current} Se migraron las tiendas locales a proyectos/.`
-              : "Las tiendas locales se migraron a proyectos/.",
-          );
+          notify("Las tiendas locales se migraron a proyectos/.");
         }
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : "No se pudo abrir Studio.");
@@ -333,7 +320,7 @@ function StudioShell() {
         setLoading(false);
       }
     })();
-  }, [persistToDisk, refreshBrowser, refreshDisk]);
+  }, [notify, persistToDisk, refreshBrowser, refreshDisk]);
 
   const guard = async (action: () => Promise<void>) => {
     setError("");
