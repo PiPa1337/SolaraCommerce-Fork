@@ -1,17 +1,18 @@
-# Backlog del PLAN 8 (de 10) — run acotado con Δ%
+# Backlog del PLAN 9 (de 10) — run acotado con Δ%
 
-Re-verificación navegador/servidor + auditoría visual profunda. Formato: `Métrica | Antes | Después | Δ%`.
+Deuda residual y contratos persistidos. Formato: `Métrica | Antes | Después | Δ%`.
 
 | id | capa | ítem | métrica | antes | después | Δ% | estado |
 |----|------|------|---------|-------|---------|-----|--------|
-| P8-1 | H | Re-verificación CDP completo (long tasks, rAF, LCP frío) | gates | OK | | | pendiente |
-| P8-2 | G | Re-verificación servidor local (handler 9/9, subcarpeta, 404) | gates | OK | | | pendiente |
-| P8-3 | V | Auditoría visual multi-viewport del sitio catalogModern (capturas + visión) | hallazgos | — | | | pendiente |
-| P8-4 | A | Axe con teclado re-verificado | gates | OK | | | pendiente |
-| P8-5 | F | Re-verificación contratos profundos | gates | OK | | | pendiente |
-| P8-6 | E | Re-verificación cobertura rutas (nojs + preloads + JSON-LD) | gates | OK | | | pendiente |
-| P8-7 | C | Consola del sitio con interacciones reales (agregar al carrito + checkout en navegador) | errores | 0 | | | pendiente |
+| P9-1 | F | Contratos persistidos vs schema: ids de módulos/secciones en docs (DATA_MODEL/PROJECT_MAP) al día | drift docs | — | | | pendiente |
+| P9-2 | F | Re-lectura de `docs/TECHNICAL_DEBT.md`: filas abiertas accionables → convertir | items | — | | | pendiente |
+| P9-3 | F | Verificación de que `schemaVersion: 2` y `StoreProjectV1` alias no hayan mutado en el run | checks | — | | | pendiente |
+| P9-4 | G | Migración `.solara.zip` legacy (fflate temporal): verificar que el test siga cubriendo la ruta | gates | — | | | pendiente |
+| P9-5 | F | Docs de operación (HANDOFF/INTEGRATIONS) actualizados con los gates nuevos del run | checks | — | | | pendiente |
+| P9-6 | E | Re-verificación final de rutas de los 3 fixtures (parity + nojs + preloads) | gates | OK | | | pendiente |
+| P9-7 | C | Runtime raw final (estado real) + presupuesto | bytes | 55.845 B | | | pendiente |
+| P9-8 | H | LCP/CLS final acumulado | ms | 44-56 | | | pendiente |
 
 ## SIGUIENTE
 
-P8-1 — Re-verificación CDP completo
+P9-1 — Contratos persistidos vs docs

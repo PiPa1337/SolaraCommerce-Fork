@@ -1,6 +1,6 @@
 {
-  "plan": 8,
-  "de10": 8,
+  "plan": 9,
+  "de10": 9,
   "branch": "main",
   "baselineEntrada": {
     "runtimeJavascriptRaw": 55845,
@@ -9,11 +9,10 @@
     "exportMs2000": 1553,
     "axe": "0/0/0",
     "preloads": "146/146",
-    "lcp": "44-72 ms",
-    "taskHomeMsS": 30.8,
-    "paritySweep": "6/6",
-    "enganches": "5/5",
-    "nojs": "24 combinaciones"
+    "lcp": "44-56 ms",
+    "interacciones": "0 errores",
+    "contratosProfundos": "6/6",
+    "paritySweep": "6/6"
   },
-  "nextItem": "P8-1"
+  "nextItem": "P9-1"
 }
