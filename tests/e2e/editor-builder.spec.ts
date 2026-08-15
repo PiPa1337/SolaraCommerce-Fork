@@ -444,3 +444,48 @@ test("un par de bajo contraste muestra la advertencia y el reset por grupo la li
   await expect(warning).toBeHidden();
   await expect(textHex).toHaveValue("#11110f");
 });
+
+test("P6-B5: el modo avanzado se enciende desde Preparar y se revierte", async ({ page }) => {
+  await page.goto(studioUrl);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.deleteDatabase("solara-commerce-studio");
+        request.addEventListener("success", () => resolve());
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("blocked", () =>
+          reject(new Error("No se pudo limpiar la base de Studio.")),
+        );
+      }),
+  );
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 20_000,
+  });
+  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
+  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await page.getByRole("tab", { name: "Preparar" }).click();
+  await page.waitForTimeout(1200);
+
+  const toggle = page.getByRole("button", { name: "Modo avanzado" });
+  await expect(toggle).toBeVisible();
+  await toggle.click();
+  await page.waitForTimeout(1200);
+  const constructorHeading = page.getByRole("heading", { name: "Constructor" });
+  await expect(constructorHeading).toBeVisible();
+  const advancedStatus = page.getByText("Modo avanzado activado");
+  await expect(advancedStatus.first()).toBeVisible();
+  console.log("P6-B5 modo avanzado activado en Constructor");
+
+  await page.getByRole("tab", { name: "Preparar" }).click();
+  await page.waitForTimeout(1000);
+  const activeToggle = page.getByRole("button", { name: "Modo avanzado activado" });
+  const pressed = await activeToggle.getAttribute("aria-pressed");
+  console.log("P6-B5 aria-pressed en Preparar:", pressed);
+  expect(pressed).toBe("true");
+  await activeToggle.click();
+  await page.waitForTimeout(1000);
+  const badge = page.locator(".ui-badge", { hasText: "Modo avanzado activado" });
+  await expect(badge).toHaveCount(0);
+  console.log("P6-B5 modo avanzado revertido en Constructor");
+});
