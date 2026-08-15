@@ -1,4 +1,5 @@
 import { catalogModernStore } from "./catalog-modern-fixture";
+import { ensureContactV2Sections } from "./catalog-modern-template";
 import { type StoreProjectV2, StoreProjectV2Schema } from "./index";
 
 /**
@@ -23,7 +24,7 @@ function v2SectionsWithBentoAfterBrands(): StoreProjectV2["sections"] {
  * Fixture V2 aislada: conserva el catálogo determinista mientras la nueva
  * familia visual evoluciona sin reinterpretar proyectos catalog-modern-v1.
  */
-export const catalogModernV2Store = StoreProjectV2Schema.parse({
+const v2Project = StoreProjectV2Schema.parse({
   ...structuredClone(catalogModernStore),
   id: "store-catalog-modern-v2",
   sections: v2SectionsWithBentoAfterBrands(),
@@ -50,3 +51,5 @@ export const catalogModernV2Store = StoreProjectV2Schema.parse({
     designFamily: "catalog-modern-v2",
   },
 });
+
+export const catalogModernV2Store = StoreProjectV2Schema.parse(ensureContactV2Sections(v2Project));

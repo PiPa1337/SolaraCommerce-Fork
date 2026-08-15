@@ -3,7 +3,9 @@ import {
   buildCatalogModernProject,
   CATALOG_MODERN_TEMPLATE_VERSION,
   catalogModernCleanStore,
+  ensureContactV2Sections,
 } from "./catalog-modern-template";
+import { catalogModernV2Store } from "./catalog-modern-v2-fixture";
 
 describe("plantilla Catalog Modern", () => {
   it("crea una tienda limpia guiada sin copiar el catálogo demo", () => {
@@ -41,5 +43,28 @@ describe("plantilla Catalog Modern", () => {
     expect(project.id).toBe("store-ejemplo");
     expect(project.identity.brandName).toBe("Marca ejemplo");
     expect(project.baseUrl).toBe("https://tienda-ejemplo.example");
+  });
+
+  it("seedear Contacto V2 y normaliza una página vacía sin tocar V1", () => {
+    const v2Contact = catalogModernV2Store.pages.find((page) => page.kind === "contact");
+    expect(v2Contact?.sections.map((section) => section.moduleId)).toEqual([
+      "contact-hero",
+      "contact-form",
+      "contact-channels",
+      "contact-help-grid",
+      "contact-whatsapp-cta",
+      "contact-purchase-info",
+      "contact-faq",
+      "contact-location",
+    ]);
+    const empty = structuredClone(catalogModernV2Store);
+    empty.pages = empty.pages.map((page) =>
+      page.kind === "contact" ? { ...page, sections: [] } : page,
+    );
+    const normalized = ensureContactV2Sections(empty);
+    expect(normalized.pages.find((page) => page.kind === "contact")?.sections).toHaveLength(8);
+    expect(ensureContactV2Sections(normalized)).toEqual(normalized);
+    const v1 = structuredClone(catalogModernCleanStore);
+    expect(ensureContactV2Sections(v1)).toEqual(v1);
   });
 });

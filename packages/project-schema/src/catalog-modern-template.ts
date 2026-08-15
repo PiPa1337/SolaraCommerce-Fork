@@ -1,9 +1,24 @@
+import { defaultContactV2Sections } from "./catalog-modern-contact";
 import { catalogModernStore } from "./catalog-modern-fixture";
 import { CATALOG_MODERN_GUIDANCE_VERSION } from "./catalog-modern-guidance";
-import { type StoreProjectV2, StoreProjectV2Schema } from "./index";
+import { type StoreProjectV1, type StoreProjectV2, StoreProjectV2Schema } from "./index";
 
 /** Version of the guided Catalog Modern template. Increase only when its persisted shape changes. */
 export const CATALOG_MODERN_TEMPLATE_VERSION = CATALOG_MODERN_GUIDANCE_VERSION;
+
+export function ensureContactV2Sections(project: StoreProjectV1): StoreProjectV1 {
+  if (project.commerceTemplates.designFamily !== "catalog-modern-v2") return project;
+  const page = project.pages.find((candidate) => candidate.kind === "contact");
+  if (!page || page.sections.length > 0) return project;
+  return {
+    ...project,
+    pages: project.pages.map((candidate) =>
+      candidate.kind === "contact"
+        ? { ...candidate, sections: defaultContactV2Sections() }
+        : candidate,
+    ),
+  };
+}
 
 export type CatalogModernSeed = "clean" | "demo";
 

@@ -964,6 +964,14 @@ export function getCategoryBreadcrumb(
   return category ? [...getCategoryAncestors(project, categoryId), category] : [];
 }
 
+export {
+  contactDefaultFaqItems,
+  contactDefaultHelpItems,
+  contactDefaultPurchaseItems,
+  contactDefaultQuickLinks,
+  contactDefaultReasons,
+  defaultContactV2Sections,
+} from "./catalog-modern-contact";
 export * from "./catalog-modern-guidance";
 
 /** Valida una entrada desconocida y agrega contexto al error de schema. */

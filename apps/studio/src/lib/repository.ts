@@ -9,6 +9,7 @@ import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixtur
 import {
   buildCatalogModernProject,
   catalogModernCleanStore,
+  ensureContactV2Sections,
 } from "@solara/project-schema/catalog-modern-template";
 import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import Dexie, { type EntityTable } from "dexie";
@@ -155,14 +156,16 @@ export function buildScaleDemoProject(): StoreProjectV1 {
     slug: "demo-catalogo-jerarquico",
     baseUrl: "https://demo-catalogo-jerarquico.example",
   });
-  return StoreProjectV1Schema.parse({
-    ...demo,
-    theme: structuredClone(catalogModernV2Store.theme),
-    commerceTemplates: {
-      ...demo.commerceTemplates,
-      designFamily: "catalog-modern-v2",
-    },
-  });
+  return ensureContactV2Sections(
+    StoreProjectV1Schema.parse({
+      ...demo,
+      theme: structuredClone(catalogModernV2Store.theme),
+      commerceTemplates: {
+        ...demo.commerceTemplates,
+        designFamily: "catalog-modern-v2",
+      },
+    }),
+  );
 }
 
 /** Amplía sólo el seed demo existente; nunca reescribe galerías personalizadas. */
@@ -452,7 +455,7 @@ export async function listProjectsWithRecovery(): Promise<ProjectListResult> {
   for (const record of records) {
     const parsed = StoreProjectV1Schema.safeParse(record.project);
     if (parsed.success) {
-      projects.push({ ...record, project: parsed.data });
+      projects.push({ ...record, project: ensureContactV2Sections(parsed.data) });
     } else {
       recovery.push({
         id: record.id,
@@ -475,12 +478,12 @@ export async function getProject(id: string): Promise<StoreProjectV1 | undefined
       `La tienda "${record.name}" no se puede abrir. Exportá un respaldo anterior y recuperala desde Importar respaldo. ${schemaErrorMessage(parsed.error)}`,
     );
   }
-  return parsed.data;
+  return ensureContactV2Sections(parsed.data);
 }
 
 export async function saveProject(project: StoreProjectV1): Promise<void> {
   await ready();
-  const validProject = StoreProjectV1Schema.parse(project);
+  const validProject = ensureContactV2Sections(StoreProjectV1Schema.parse(project));
   await database.transaction("rw", database.projects, async () => {
     await database.projects.put(toRecord(validProject));
   });
@@ -491,7 +494,7 @@ export async function saveRecoveryDraft(
   baseDiskVersion = 0,
 ): Promise<void> {
   await ready();
-  const validProject = StoreProjectV1Schema.parse(project);
+  const validProject = ensureContactV2Sections(StoreProjectV1Schema.parse(project));
   await database.recoveryDrafts.put({
     projectId: validProject.id,
     baseDiskVersion,
@@ -505,7 +508,7 @@ export async function getRecoveryDraft(projectId: string): Promise<RecoveryDraft
   const draft = await database.recoveryDrafts.get(projectId);
   if (!draft) return undefined;
   const parsed = StoreProjectV1Schema.safeParse(draft.project);
-  return parsed.success ? { ...draft, project: parsed.data } : undefined;
+  return parsed.success ? { ...draft, project: ensureContactV2Sections(parsed.data) } : undefined;
 }
 
 export async function clearRecoveryDraft(projectId: string): Promise<void> {
