@@ -1,13 +1,14 @@
 import {
-  Archive,
-  ArrowCounterClockwise,
-  ArrowUpRight,
-  CloudArrowDown,
-  Copy,
-  DownloadSimple,
-  FolderOpen,
-  Package,
-  X,
+Archive,
+ArrowCounterClockwise,
+ArrowUpRight,
+CloudArrowDown,
+Copy,
+DownloadSimple,
+FolderOpen,
+Globe,
+Package,
+X,
 } from "@phosphor-icons/react";
 import type { RefObject } from "react";
 import { Button, IconButton } from "../../components/Ui";
@@ -148,7 +149,7 @@ export function ProjectCard({
             {onOpenSite ? (
               <Button
                 variant="secondary"
-                icon={ArrowUpRight}
+                icon={Globe}
                 loading={siteOpeningId === project.id}
                 onClick={() => void onOpenSite(project.id)}
               >
@@ -187,6 +188,7 @@ export function ProjectCard({
               Duplicar
             </Button>
             <Button
+              className="dashboard-store-detail__danger"
               variant={project.status === "archived" ? "secondary" : "danger"}
               icon={project.status === "archived" ? ArrowCounterClockwise : Archive}
               loading={archivingId === project.id}

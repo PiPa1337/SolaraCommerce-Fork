@@ -517,6 +517,7 @@
 .dashboard-store-card__button strong {
   max-width: 100%;
   overflow: hidden;
+  padding-inline: 46px;
   color: var(--cosmic-ink);
   font-size: 14px;
   text-overflow: ellipsis;
@@ -529,6 +530,12 @@
   gap: 5px;
   color: var(--cosmic-muted);
   font-size: 10px;
+}
+.dashboard-store-card__status.is-active {
+  color: var(--cosmic-green);
+}
+.dashboard-store-card__status.is-archived {
+  color: var(--cosmic-red);
 }
 
 .dashboard-store-card__status > span {
@@ -679,6 +686,12 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 5px;
   margin-top: 4px;
+}
+.dashboard-store-detail__actions .dashboard-store-detail__danger {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--cosmic-line);
 }
 
 .dashboard-store-detail__actions .button:first-child {
