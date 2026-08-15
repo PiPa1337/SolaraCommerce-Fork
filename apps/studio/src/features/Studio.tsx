@@ -826,9 +826,9 @@ export function Studio({
                 <span className="studio-breadcrumb__sep" aria-hidden>
                   /
                 </span>
-                <strong className="studio-breadcrumb__current" aria-current="page">
+                <h1 className="studio-breadcrumb__current" aria-current="page">
                   {project.name}
-                </strong>
+                </h1>
               </nav>
               <small>{project.baseUrl}</small>
             </div>
@@ -1001,8 +1001,8 @@ export function Studio({
           </output>
         ) : null}
 
-        <div className="studio-workspace">
-          <motion.main
+        <main className="studio-workspace">
+          <motion.section
             ref={paneRef}
             id={editorPaneId}
             data-studio-editor-pane
@@ -1038,7 +1038,7 @@ export function Studio({
               onOpenSite={onOpenSite}
               validationError={validationError}
             />
-          </motion.main>
+          </motion.section>
           <MemoizedPreview
             project={project}
             route={previewRoute}
@@ -1046,7 +1046,7 @@ export function Studio({
             zoom={previewZoom}
             onRouteChange={setPreviewRoute}
           />
-        </div>
+        </main>
 
         {focusMode ? (
           <Tooltip tip="Salir del modo foco" position="bottom" className="studio-focus-exit">

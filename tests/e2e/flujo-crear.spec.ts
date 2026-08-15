@@ -38,7 +38,6 @@ test("P4-C2: crear una tienda desde el dashboard en pasos con validacion", async
   await page.waitForTimeout(2000);
   const bodyText = await page.locator("body").innerText();
   console.log("P4-C2 tienda en el body:", bodyText.includes("Tienda del plan"));
-  const createdCard = page.locator(".dashboard-store-card").filter({ hasText: "Tienda del plan" });
   await page.waitForTimeout(1500);
   const editorOpened = await page.locator(".studio-shell").count();
   const nameInEditor = (await page.locator("body").innerText()).includes("Tienda del plan");
