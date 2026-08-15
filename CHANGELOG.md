@@ -1,5 +1,15 @@
 # Changelog
 
+### Cards: la rayita de hover anclada a la media (fix real del posicionamiento) (2026-08-15)
+
+- El `::before` de la barrita es `position: absolute` y la media no era un
+  contenedor posicionado: la barra se anclaba al ancestro posicionado más
+  cercano (la página/sección) y aparecía fuera de la card. Se agrega
+  `position: relative` a `.catalog-product-media`; la barra queda exactamente
+  sobre el borde izquierdo de la foto (que no se escala en hover), sin
+  entrar al copy. Verificado por píxeles (terracota en `media.left`, 3px) y
+  por medición (barra = caja de la media).
+
 ### Hero: la media cubre la altura exacta del hero (sin espacio inferior) (2026-08-15)
 
 - El overscan de la media tenía `margin-bottom: -1px` sin compensar: la

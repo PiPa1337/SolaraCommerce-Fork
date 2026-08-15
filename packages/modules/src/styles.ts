@@ -2780,12 +2780,13 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   transform: translateY(-6px);
 }
 /* Rayita de 3px animada en el borde izquierdo de la IMAGEN al hover: crece
-   desde abajo con transform (compositor, sin layout). Anclada a la propia
-   imagen (position: relative) para que nunca exceda la foto. */
-.cm.v2 .catalog-product-card-image {
+   desde abajo con transform (compositor, sin layout). La media es el ancla
+   (position: relative) y NO se escala en hover: la barra queda exactamente
+   sobre la foto sin escala, sin salirse ni entrar al copy. */
+.cm.v2 .catalog-product-media {
   position: relative;
 }
-.cm.v2 .catalog-product-card-image::before,
+.cm.v2 .catalog-product-media::before,
 .cm.v2 .catalog-category-bento-item::before {
   content: "";
   position: absolute;
@@ -2803,8 +2804,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     opacity 200ms var(--catalog-v2-ease-out);
   pointer-events: none;
 }
-.cm.v2 .catalog-product-card:hover .catalog-product-card-image::before,
-.cm.v2 .catalog-product-card:focus-within .catalog-product-card-image::before,
+.cm.v2 .catalog-product-card:hover .catalog-product-media::before,
+.cm.v2 .catalog-product-card:focus-within .catalog-product-media::before,
 .cm.v2 .catalog-category-bento-item:hover::before,
 .cm.v2 .catalog-category-bento-item:focus-within::before {
   transform: scaleY(1);
@@ -3557,7 +3558,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 [data-solara-module="catalog-header"],
   .cm.v2 [data-solara-module="catalog-hero"],
   .cm.v2 .catalog-product-card,
-  .cm.v2 .catalog-product-card .catalog-product-card-image::before,
+  .cm.v2 .catalog-product-card .catalog-product-media::before,
   .cm.v2 .catalog-product-card-image,
   .cm.v2 .catalog-category-bento-item::before,
   .cm.v2 .catalog-category-bento-item img,
