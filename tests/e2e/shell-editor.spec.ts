@@ -8,7 +8,11 @@ test("P3-B2: el pane conserva scroll y foco al cambiar de pestaña y reabrir", a
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(STUDIO_URL, { waitUntil: "load" });
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
-  await page.locator(".dashboard-store-card").first().locator(".dashboard-store-card__button").dblclick();
+  await page
+    .locator(".dashboard-store-card")
+    .first()
+    .locator(".dashboard-store-card__button")
+    .dblclick();
   await page.locator(".studio-shell").waitFor({ timeout: 30000 });
   await page.waitForTimeout(1000);
 
@@ -21,25 +25,36 @@ test("P3-B2: el pane conserva scroll y foco al cambiar de pestaña y reabrir", a
     const el = document.querySelector<HTMLElement>(".editor-pane");
     if (el) el.scrollTop = 200;
   });
-  const scrollBefore = await page.evaluate(() => document.querySelector<HTMLElement>(".editor-pane")?.scrollTop ?? 0);
+  const scrollBefore = await page.evaluate(
+    () => document.querySelector<HTMLElement>(".editor-pane")?.scrollTop ?? 0,
+  );
 
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   await page.waitForTimeout(1200);
   await page.getByRole("tab", { name: "Constructor", exact: true }).click();
   await page.waitForTimeout(1500);
-  const scrollAfter = await page.evaluate(() => document.querySelector<HTMLElement>(".editor-pane")?.scrollTop ?? 0);
+  const scrollAfter = await page.evaluate(
+    () => document.querySelector<HTMLElement>(".editor-pane")?.scrollTop ?? 0,
+  );
   console.log("P3-B2 scroll: antes", scrollBefore, "después", scrollAfter);
   expect(Math.abs(scrollAfter - scrollBefore)).toBeLessThanOrEqual(5);
 
-  await page.getByRole("button", { name: "Cerrar panel de edición" }).click().catch(() => undefined);
+  await page
+    .getByRole("button", { name: "Cerrar panel de edición" })
+    .click()
+    .catch(() => undefined);
   await page.waitForTimeout(600);
-  const closed = await page.locator(".editor-pane").evaluate((el) => el.classList.contains("editor-pane--closed"));
+  const closed = await page
+    .locator(".editor-pane")
+    .evaluate((el) => el.classList.contains("editor-pane--closed"));
   console.log("P3-B2 pane cerrado:", closed);
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   await page.waitForTimeout(800);
   await page.getByRole("tab", { name: "Constructor", exact: true }).click();
   await page.waitForTimeout(1200);
-  const reopened = await page.locator(".editor-pane").evaluate((el) => el.classList.contains("editor-pane--open"));
+  const reopened = await page
+    .locator(".editor-pane")
+    .evaluate((el) => el.classList.contains("editor-pane--open"));
   console.log("P3-B2 pane reabierto al volver:", reopened);
   expect(reopened).toBe(true);
 });
@@ -48,7 +63,11 @@ test("P3-B3: Ctrl+Z deshace un cambio y Ctrl+S guarda en modo navegador", async 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(STUDIO_URL, { waitUntil: "load" });
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
-  await page.locator(".dashboard-store-card").first().locator(".dashboard-store-card__button").dblclick();
+  await page
+    .locator(".dashboard-store-card")
+    .first()
+    .locator(".dashboard-store-card__button")
+    .dblclick();
   await page.locator(".studio-shell").waitFor({ timeout: 30000 });
   await page.waitForTimeout(1000);
 
@@ -66,7 +85,10 @@ test("P3-B3: Ctrl+Z deshace un cambio y Ctrl+S guarda en modo navegador", async 
   await nameInput.fill("Tienda guardada");
   await page.keyboard.press("Control+s");
   await page.waitForTimeout(1200);
-  const saved = await page.locator("[data-testid='ui-save-indicator']").innerText().catch(() => "");
+  const saved = await page
+    .locator("[data-testid='ui-save-indicator']")
+    .innerText()
+    .catch(() => "");
   console.log("P3-B3 indicador tras Ctrl+S:", JSON.stringify(saved));
   expect(saved).toMatch(/guardad/i);
 });
