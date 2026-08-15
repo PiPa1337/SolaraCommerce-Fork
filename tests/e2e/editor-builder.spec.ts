@@ -489,3 +489,35 @@ test("P6-B5: el modo avanzado se enciende desde Preparar y se revierte", async (
   await expect(badge).toHaveCount(0);
   console.log("P6-B5 modo avanzado revertido en Constructor");
 });
+
+test("P6-B6: el picker de módulos se opera con teclado y trampa de Tab", async ({ page }) => {
+  await openBuilder(page);
+  const sections = page.getByLabel("Secciones");
+  const initialCount = await sections.getByRole("listitem").count();
+
+  await page.getByLabel("Tipo de sección").selectOption("content");
+  await page.getByRole("button", { name: "Agregar sección" }).click();
+  const picker = page.getByTestId("ui-module-picker");
+  await expect(picker).toBeVisible();
+
+  const search = picker.getByLabel("Buscar módulo");
+  await search.fill("testimonios");
+  const option = picker.getByTestId("ui-module-option").first();
+  await expect(option).toBeVisible();
+  await option.focus();
+  await page.keyboard.press("Enter");
+  await expect(picker).toBeHidden();
+  await expect(sections.getByRole("listitem")).toHaveCount(initialCount + 1);
+  console.log("P6-B6 módulo agregado por teclado");
+
+  await page.getByLabel("Tipo de sección").selectOption("content");
+  await page.getByRole("button", { name: "Agregar sección" }).click();
+  await expect(picker).toBeVisible();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  const activeInPicker = await picker.evaluate((el) => el.contains(document.activeElement));
+  console.log("P6-B6 foco atrapado en el picker:", activeInPicker);
+  expect(activeInPicker).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(picker).toBeHidden();
+});
