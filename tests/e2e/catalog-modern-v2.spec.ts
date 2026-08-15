@@ -472,6 +472,50 @@ test("V2 mantiene feedback equivalente para hover y teclado en cards y bento", a
   await expect(viewAll).toHaveCSS("text-decoration-line", "none");
 });
 
+test("V2 hero: la foto no hace zoom al hover y el CTA conserva cortina sin mover texto ni icono", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  await page.goto(serverUrl);
+  await page.locator('[data-solara-module="catalog-hero"]').waitFor({ state: "visible" });
+  await page.waitForTimeout(1_600);
+
+  const hero = page.locator('[data-solara-module="catalog-hero"]');
+  const media = hero.locator("[data-hero-media]");
+  const image = hero.locator(".catalog-hero-image");
+  const mediaTransform = await image.evaluate((element) => getComputedStyle(element).transform);
+  await hero.locator(".catalog-hero-copy").hover();
+  await page.waitForTimeout(600);
+  expect(await image.evaluate((element) => getComputedStyle(element).transform)).toBe(
+    mediaTransform,
+  );
+  expect(await media.evaluate((element) => getComputedStyle(element).transform)).toBe(
+    "matrix(1, 0, 0, 1, 0, 0)",
+  );
+
+  const action = hero.locator(".catalog-hero-actions .catalog-primary-action");
+  const label = hero.locator(".catalog-hero-cta-label");
+  const icon = hero.locator(".catalog-hero-cta-icon");
+  const actionTransform = await action.evaluate((element) => getComputedStyle(element).transform);
+  const labelTransform = await label.evaluate((element) => getComputedStyle(element).transform);
+  const iconTransform = await icon.evaluate((element) => getComputedStyle(element).transform);
+  const curtainRest = await action.evaluate(
+    (element) => getComputedStyle(element, "::before").transform,
+  );
+  await action.hover();
+  await expect
+    .poll(() => action.evaluate((element) => getComputedStyle(element, "::before").transform))
+    .not.toBe(curtainRest);
+  await page.waitForTimeout(500);
+  expect(await action.evaluate((element) => getComputedStyle(element).transform)).toBe(
+    actionTransform,
+  );
+  expect(await label.evaluate((element) => getComputedStyle(element).transform)).toBe(
+    labelTransform,
+  );
+  expect(await icon.evaluate((element) => getComputedStyle(element).transform)).toBe(iconTransform);
+});
+
 test("V2 mantiene CTA, dos columnas y reduced motion en 390x844", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(serverUrl);
