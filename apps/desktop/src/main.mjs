@@ -6,6 +6,7 @@
  * contrato `/__solara/*` que el launcher HTTP de desarrollo.
  */
 
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { appendFile, mkdir } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -19,6 +20,7 @@ import {
   createSolaraRequestHandler,
   resolveStaticFile,
 } from "../../../packages/exporter/scripts/solara-request-handler.mjs";
+import { GPU_CRASH_WINDOW_MS, gpuMarkerPath, shouldUseSoftwareMode } from "./gpu-mode.mjs";
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -33,14 +35,10 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
-// Fuerza composición por software antes de que Chromium cree el proceso GPU.
-// Algunas máquinas Windows no tienen las DLL/controladores esperados por la
-// versión embebida de Chromium y, sin este switch temprano, la app termina
-// antes de poder mostrar el error o cargar Studio.
-app.commandLine.appendSwitch("disable-gpu");
-app.commandLine.appendSwitch("disable-gpu-compositing");
-app.commandLine.appendSwitch("in-process-gpu");
-
+// Composición: por defecto la app usa la aceleración de hardware (el monitor
+// puede correr a su refresh rate nativo, p.ej. 144 Hz). El modo software solo
+// se activa cuando el proceso GPU murió al arrancar en una máquina sin
+// DLLs/controladores (ver gpu-mode.mjs y el watchdog abajo).
 const bundleRoot =
   typeof __dirname === "string" ? __dirname : dirname(fileURLToPath(import.meta.url));
 const isPackaged = app.isPackaged || process.env.SOLARA_PACKAGED === "1";
@@ -50,6 +48,36 @@ const layout = resolvePortableLayout({
   executablePath: process.execPath,
 });
 const smokeMode = process.argv.includes("--solara-smoke");
+const gpuMarkerPathValue = gpuMarkerPath(layout.profileRoot);
+const gpuSoftwareEnabled = shouldUseSoftwareMode(existsSync(gpuMarkerPathValue));
+if (gpuSoftwareEnabled) {
+  app.commandLine.appendSwitch("disable-gpu");
+  app.commandLine.appendSwitch("disable-gpu-compositing");
+  app.commandLine.appendSwitch("in-process-gpu");
+}
+const gpuStartedAt = Date.now();
+let gpuRelaunchScheduled = false;
+app.on("child-process-gone", (_event, details) => {
+  if (details.type !== "GPU" || gpuRelaunchScheduled || smokeMode) return;
+  if (details.reason === "clean-exit") return;
+  if (Date.now() - gpuStartedAt > GPU_CRASH_WINDOW_MS) return;
+  gpuRelaunchScheduled = true;
+  try {
+    writeFileSync(
+      gpuMarkerPathValue,
+      JSON.stringify({
+        mode: "software",
+        at: new Date().toISOString(),
+        reason: details.reason,
+      }),
+    );
+  } catch {
+    // Un fallo al escribir el marcador no impide relanzar en software por CLI.
+  }
+  app.relaunch();
+  app.exit(0);
+});
+
 let mainWindow;
 let requestHandler;
 let firstRunAt = null;
@@ -187,6 +215,8 @@ function registerIpc() {
     appVersion: app.getVersion(),
     portableRoot: layout.portableRoot,
     profileRoot: layout.profileRoot,
+    gpuMode: gpuSoftwareEnabled ? "software" : "hardware",
+    gpuFeatureStatus: app.getGPUFeatureStatus?.() ?? {},
     ...(firstRunAt ? { portableFirstRunAt: firstRunAt } : {}),
   }));
   ipcMain.handle("solara:open-site", async (_event, projectId) => {

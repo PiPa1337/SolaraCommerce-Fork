@@ -58,6 +58,9 @@ async function assertPortableDiagnostics(instance, folder) {
   ) {
     throw new Error("El perfil Electron quedó fuera de la raíz portable.");
   }
+  if (diagnostics.gpuMode !== "hardware" && diagnostics.gpuMode !== "software") {
+    throw new Error(`El shell no expuso el modo de composición (${diagnostics.gpuMode}).`);
+  }
 }
 
 try {
