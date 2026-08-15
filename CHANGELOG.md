@@ -1,5 +1,16 @@
 # Changelog
 
+### Hero V2: sin efectos residuales de la entrada en la media (2026-08-15)
+
+- La animación de entrada usaba `fill-mode: both`: al terminar dejaba el
+  `clip-path: inset(0 0 0 0)` y el `transform` del parallax de scroll
+  aplicados para siempre — cualquier clip/transform rasteriza el borde del
+  layer con antialiasing y la franja de 1px volvía a aparecer con el poster.
+- Los tres `both` de la media pasan a `backwards` (el estado final es
+  identidad): el clip y el transform se liberan al terminar, el parallax de
+  scroll sigue funcionando. Verificado por medición (clipPath/transform
+  "none" tras la entrada, rects alineados) y por visión: bordes limpios.
+
 ### Hero V2: columna de media en píxeles enteros (fin de la franja del poster) (2026-08-15)
 
 - La franja de 1px persistía con el POSTER (imagen preview) aunque no con el
