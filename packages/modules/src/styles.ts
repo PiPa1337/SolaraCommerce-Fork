@@ -2534,6 +2534,16 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   border-radius: 0;
   background: transparent;
 }
+/* Variante editorial (V2 sin carousel): la media es siempre 9:16 y la columna
+   de texto se estira horizontalmente. */
+.cm.v2 .catalog-hero-editorial .catalog-hero-inner {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.cm.v2 .catalog-hero-editorial [data-hero-media] {
+  width: min(calc(90svh * 9 / 16), 45vw);
+  aspect-ratio: 9 / 16;
+  min-height: 0;
+}
 .cm.v2 .catalog-hero-copy {
   position: relative;
   z-index: 2;
@@ -2613,6 +2623,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-line{display:block;overflow:hidden}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-rule{width:3.5rem;height:1px;background:color-mix(in srgb,var(--catalog-ink) 35%,transparent);transform-origin:left;margin-block:1.35rem 1.05rem}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.5rem 2.25rem;margin:2rem 0 1rem;padding:0;list-style:none}
+/* La banda duplicada (mobile) no existe en desktop: la copia interna queda visible. */
+.cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band{display:none}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit{display:flex;align-items:center;gap:.65rem;min-width:0}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit + .catalog-hero-benefit{border-left:1px solid color-mix(in srgb,var(--catalog-border) 55%,transparent);padding-left:1.25rem}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-icon{width:22px;height:22px;flex:0 0 auto}
@@ -2637,9 +2649,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-rule{animation:solara-hero-rule var(--hero-v2-dur-rule,480ms) var(--catalog-v2-ease-out) 300ms both}
 .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-reveal--body{animation:solara-hero-rise var(--hero-v2-dur-body,420ms) var(--catalog-v2-ease-out) 360ms both}
 .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-reveal--actions{--hero-v2-rise:18px;animation:solara-hero-rise var(--hero-v2-dur-actions,420ms) var(--catalog-v2-ease-out) 430ms both}
-.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-benefit{animation:solara-hero-rise var(--hero-v2-dur-benefit,420ms) var(--catalog-v2-ease-out) var(--hero-v2-benefit-delay,500ms) both}
-.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-benefit:nth-child(2){--hero-v2-benefit-delay:560ms}
-.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-benefit:nth-child(3){--hero-v2-benefit-delay:620ms}
+.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-benefits--copy .catalog-hero-benefit{animation:solara-hero-rise var(--hero-v2-dur-benefit,420ms) var(--catalog-v2-ease-out) var(--hero-v2-benefit-delay,500ms) both}
+.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-benefits--copy .catalog-hero-benefit:nth-child(2){--hero-v2-benefit-delay:560ms}
+.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-benefits--copy .catalog-hero-benefit:nth-child(3){--hero-v2-benefit-delay:620ms}
 .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] [data-hero-media]{animation:solara-hero-media var(--hero-v2-dur-media,900ms) var(--catalog-v2-ease-out) 80ms both!important}
 .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-image{animation:solara-hero-media-zoom var(--hero-v2-dur-zoom,1200ms) var(--catalog-v2-ease-out) 80ms both}
 @keyframes solara-hero-rise{from{opacity:0;transform:translateY(var(--hero-v2-rise,16px))}to{opacity:1;transform:translateY(0)}}
@@ -2699,6 +2711,12 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 @media (max-width: 1023px) {
   .cm.v2 .catalog-product-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  /* En retratos de tablet el ancho 9:16 se recorta contra 45vw; la media
+     estira a la altura del hero para no dejar vacío debajo. */
+  .cm.v2 .catalog-hero-editorial [data-hero-media] {
+    height: 100%;
+    aspect-ratio: auto;
   }
 }
 .cm.v2 .catalog-product-card {
@@ -3219,6 +3237,57 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
   .cm.v2 .catalog-hero-media {
     min-height: 42svh;
+  }
+  /* Editorial en mobile: la foto es el fondo full-bleed del hero con scrim,
+     el copy queda encima y los beneficios bajan a una banda debajo. */
+  .cm.v2 .catalog-hero-editorial .catalog-hero-inner {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    width: 100%;
+    min-height: 82svh;
+  }
+  .cm.v2 .catalog-hero-editorial [data-hero-media] {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    aspect-ratio: auto;
+    border-radius: 0;
+  }
+  .cm.v2 .catalog-hero-editorial [data-hero-media]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+      180deg,
+      rgba(12, 12, 14, 0.14) 0%,
+      rgba(12, 12, 14, 0.3) 45%,
+      rgba(12, 12, 14, 0.76) 100%
+    );
+    pointer-events: none;
+  }
+  .cm.v2 .catalog-hero-editorial .catalog-hero-copy {
+    position: relative;
+    z-index: 2;
+    padding: 4.5rem 1.25rem 2.25rem;
+    color: #fff;
+  }
+  .cm.v2 .catalog-hero-editorial .catalog-hero-copy .catalog-hero-body {
+    color: color-mix(in srgb, #fff 82%, transparent);
+  }
+  .cm.v2 .catalog-hero-editorial .catalog-hero-benefits--copy {
+    display: none;
+  }
+  .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band {
+    display: block;
+    width: min(calc(100% - 1.5rem), var(--catalog-v2-wide));
+    margin: 1.25rem auto 2.25rem;
+    padding: 0;
   }
   .cm.v2 .catalog-product-grid-section,
   .cm.v2 .catalog-testimonials-section {

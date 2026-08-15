@@ -346,8 +346,11 @@ function heroTitleLines(title: string): string[] {
   return lines;
 }
 
-function renderHeroBenefits(benefits: z.infer<typeof heroSettings>["benefits"]): string {
-  return `<ul class="catalog-hero-benefits" data-hero-benefits aria-label="Beneficios">${benefits
+function renderHeroBenefits(
+  benefits: z.infer<typeof heroSettings>["benefits"],
+  extraClass = "",
+): string {
+  return `<ul class="catalog-hero-benefits ${extraClass}" data-hero-benefits aria-label="Beneficios">${benefits
     .map((benefit) => {
       const icon = catalogHeroBenefitIcons[benefit.icon] ?? catalogHeroBenefitIcons.check ?? "";
       return `<li class="catalog-hero-benefit" data-hero-benefit><svg class="catalog-hero-benefit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${icon}</svg><span class="catalog-hero-benefit-copy"><strong>${escapeHtml(benefit.title)}</strong>${benefit.text ? `<small>${escapeHtml(benefit.text)}</small>` : ""}</span></li>`;
@@ -517,7 +520,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
                   className: "catalog-hero-image",
                   loading: index === 0 ? "eager" : "lazy",
                   fetchPriority: index === 0 ? "high" : "auto",
-                  sizes: "(max-width: 767px) 100vw, 52vw",
+                  sizes: "(max-width: 767px) 100vw, 45vw",
                   fallbackAlt: slide.title,
                 },
               );
@@ -540,9 +543,16 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
       settings.mode !== "carousel";
     const benefitsMarkup = isV2Hero
       ? settings.benefits.length > 0
-        ? renderHeroBenefits(settings.benefits)
+        ? renderHeroBenefits(settings.benefits, "catalog-hero-benefits--copy")
         : stats
       : "";
+    // La banda de beneficios del hero V2 se renderiza tras el contenedor del
+    // hero para que en mobile (foto como fondo full-bleed) quede debajo de la
+    // imagen; en desktop la banda se oculta y se muestra la copia interna.
+    const benefitsBand =
+      isV2Hero && settings.benefits.length > 0
+        ? renderHeroBenefits(settings.benefits, "catalog-hero-benefits--band")
+        : "";
     const titleLinesMarkup = isV2Hero
       ? heroTitleLines(title)
           .map(
@@ -571,9 +581,14 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
       ? `<a class="catalog-primary-action solara-primary-action" href="https://wa.me/${escapeAttribute(whatsappPhone)}" target="_blank" rel="noopener noreferrer"><span class="catalog-hero-cta-label">Escribir por WhatsApp</span><svg class="catalog-hero-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${catalogHeroBenefitIcons.chat}</svg></a>`
       : `<a class="catalog-primary-action" href="${escapeAttribute(safeUrl(actionHref))}">${escapeHtml(actionLabel)}</a>${settings.secondaryActionLabel ? `<a class="catalog-secondary-action" href="${escapeAttribute(safeUrl(settings.secondaryActionHref))}">${escapeHtml(settings.secondaryActionLabel)}</a>` : ""}`;
     const heroInner = isV2Hero
-      ? `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}"><div class="catalog-hero-copy"><div class="catalog-hero-reveal catalog-hero-reveal--eyebrow"><p class="catalog-eyebrow">${escapeHtml(settings.eyebrow)}</p></div><h1 class="catalog-hero-title" data-hero-title>${titleLinesMarkup}</h1><div class="catalog-hero-rule" data-hero-rule aria-hidden="true"></div><div class="catalog-hero-reveal catalog-hero-reveal--body"><p class="catalog-hero-body">${escapeHtml(body)}</p></div><div class="catalog-hero-reveal catalog-hero-reveal--actions"><div class="catalog-hero-actions">${actions}</div></div>${benefitsMarkup}</div><figure class="catalog-hero-media" data-motion-zone="media" data-hero-media>${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>`
+      ? `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}"><div class="catalog-hero-copy"><div class="catalog-hero-reveal catalog-hero-reveal--eyebrow"><p class="catalog-eyebrow">${escapeHtml(settings.eyebrow)}</p></div><h1 class="catalog-hero-title" data-hero-title>${titleLinesMarkup}</h1><div class="catalog-hero-rule" data-hero-rule aria-hidden="true"></div><div class="catalog-hero-reveal catalog-hero-reveal--body"><p class="catalog-hero-body">${escapeHtml(body)}</p></div><div class="catalog-hero-reveal catalog-hero-reveal--actions"><div class="catalog-hero-actions">${actions}</div></div>${benefitsMarkup}</div><figure class="catalog-hero-media" data-motion-zone="media" data-hero-media>${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>${benefitsBand}`
       : `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}"><div class="catalog-hero-copy"><p class="catalog-eyebrow">${escapeHtml(settings.eyebrow)}</p><h1>${escapeHtml(title)}</h1><p class="catalog-hero-body">${escapeHtml(body)}</p><div class="catalog-hero-actions">${actions}</div>${stats}</div><figure class="catalog-hero-media" data-motion-zone="media">${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>`;
-    return moduleRoot("catalog-hero", context.section, safeHtml(heroInner));
+    return moduleRoot(
+      "catalog-hero",
+      context.section,
+      safeHtml(heroInner),
+      isV2Hero ? { className: "catalog-hero-editorial" } : undefined,
+    );
   },
 };
 

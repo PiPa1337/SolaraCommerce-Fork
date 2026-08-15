@@ -1,5 +1,24 @@
 # Changelog
 
+### Hero V2 editorial: media 9:16 en desktop y foto como fondo en mobile (2026-08-14)
+
+- Desktop: la media del hero es siempre 9:16 (`width: min(calc(90svh * 9 /
+  16), 45vw)` con `aspect-ratio: 9/16`); la columna de texto se estira
+  horizontalmente (grilla `1fr / auto`). En retratos de tablet (≤1023px) la
+  media estira a la altura del hero para no dejar vacío (compromiso 9:16).
+- Mobile (≤767px): la foto/video es el fondo full-bleed del hero (altura
+  mínima 82svh) con scrim en gradiente; el eyebrow, título, body y el botón de
+  WhatsApp quedan encima con texto blanco; los 3 beneficios (Envíos a todo el
+  país, Pedido directo, Compra cuidada) se renderizan como banda debajo de la
+  imagen (la copia interna se oculta en mobile y la banda en desktop).
+- Markup: el hero V2 sin carousel marca `catalog-hero-editorial` y duplica el
+  listado de beneficios como banda (una copia se oculta por viewport;
+  `display:none` la excluye del AT). Carousel V1/V2 intacto. `sizes` de la
+  imagen hero pasa de 52vw a 45vw.
+- E2E: `mediaShare` pasa a rango 0.2-0.45 con verificación del aspect ~9:16,
+  y el test 390 fija fondo full-bleed + banda debajo de la imagen. La tienda
+  queda guardada como v36.
+
 ### Hero V2: se quita el parallax de cursor de la media (2026-08-14)
 
 - El follower de cursor del hero (`connectHeroParallax`) movía la media con

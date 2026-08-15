@@ -125,6 +125,7 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
       titleBeforeMedia: Boolean(title && media && title.right <= media.left),
       actionsInViewport: Boolean(actions && actions.bottom <= window.innerHeight),
       mediaShare: media ? media.width / rect.width : 0,
+      mediaAspect: media ? Number(((media.width / media.height) * 100).toFixed(2)) : 0,
     };
   });
   expect(heroMetrics.width).toBeGreaterThan(1700);
@@ -133,7 +134,10 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   expect(heroMetrics.titleInside).toBe(true);
   expect(heroMetrics.titleBeforeMedia).toBe(true);
   expect(heroMetrics.actionsInViewport).toBe(true);
-  expect(heroMetrics.mediaShare).toBeGreaterThan(0.52);
+  expect(heroMetrics.mediaShare).toBeGreaterThan(0.2);
+  expect(heroMetrics.mediaShare).toBeLessThan(0.45);
+  expect(heroMetrics.mediaAspect).toBeGreaterThan(50);
+  expect(heroMetrics.mediaAspect).toBeLessThan(59);
 
   await expect
     .poll(
@@ -163,7 +167,9 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
     const lines = [...document.querySelectorAll<HTMLElement>("[data-hero-line-inner]")];
     const rule = document.querySelector(".catalog-hero-rule");
     const media = document.querySelector("[data-hero-media]");
-    const benefits = [...document.querySelectorAll<HTMLElement>("[data-hero-benefit]")];
+    const benefits = [
+      ...document.querySelectorAll<HTMLElement>(".catalog-hero-benefits--copy [data-hero-benefit]"),
+    ];
     const body = document.querySelector(".catalog-hero-reveal--body");
     const actions = document.querySelector(".catalog-hero-reveal--actions");
     const mediaClip = media ? getComputedStyle(media).clipPath : "";
@@ -555,6 +561,32 @@ test("V2 mantiene CTA, dos columnas y reduced motion en 390x844", async ({ page 
   );
   expect(mobileBentoMetrics.wideColumns).toBe("span 1");
   expect(mobileBentoMetrics.tallRows).toBe("span 1");
+  const mobileHeroEditorial = await page.evaluate(() => {
+    const hero = document.querySelector<HTMLElement>(".catalog-hero-editorial .catalog-hero-inner");
+    const media = document.querySelector<HTMLElement>(".catalog-hero-editorial [data-hero-media]");
+    const band = document.querySelector<HTMLElement>(".catalog-hero-benefits--band");
+    const copy = document.querySelector<HTMLElement>(".catalog-hero-editorial .catalog-hero-copy");
+    if (!hero || !media || !band || !copy) return null;
+    const heroRect = hero.getBoundingClientRect();
+    const mediaRect = media.getBoundingClientRect();
+    const bandRect = band.getBoundingClientRect();
+    const copyRect = copy.getBoundingClientRect();
+    return {
+      mediaFillsHero:
+        Math.abs(mediaRect.left - heroRect.left) < 1 &&
+        Math.abs(mediaRect.right - heroRect.right) < 1 &&
+        mediaRect.top <= heroRect.top,
+      bandBelowMedia: bandRect.top >= mediaRect.bottom - 1,
+      copyInsideHero: copyRect.top >= heroRect.top && copyRect.bottom <= heroRect.bottom + 1,
+      bandVisible: getComputedStyle(band).display !== "none",
+    };
+  });
+  expect(mobileHeroEditorial).toEqual({
+    mediaFillsHero: true,
+    bandBelowMedia: true,
+    copyInsideHero: true,
+    bandVisible: true,
+  });
   expect(
     await page.locator(".catalog-hero-copy h1").evaluate((element) => {
       const words: { word: string; rects: number }[] = [];
@@ -611,7 +643,9 @@ test("V2 mantiene CTA, dos columnas y reduced motion en 390x844", async ({ page 
     const line = document.querySelector<HTMLElement>("[data-hero-line-inner]");
     const rule = document.querySelector<HTMLElement>(".catalog-hero-rule");
     const media = document.querySelector<HTMLElement>("[data-hero-media]");
-    const benefits = [...document.querySelectorAll<HTMLElement>("[data-hero-benefit]")];
+    const benefits = [
+      ...document.querySelectorAll<HTMLElement>(".catalog-hero-benefits--copy [data-hero-benefit]"),
+    ];
     return {
       lineTransform: line ? getComputedStyle(line).transform : "",
       lineAnimation: line ? getComputedStyle(line).animationName : "",
