@@ -105,6 +105,11 @@ const contactFaqItemSchema = z.object({
   enabled: z.boolean().default(true),
 });
 
+const contactReasonSchema = z.object({
+  id: z.string().min(1),
+  value: z.string().min(1),
+});
+
 export const contactHeroSettings = z.object({
   eyebrow: z.string().default("HABLEMOS"),
   title: z.string().default("Estamos para ayudarte."),
@@ -130,9 +135,9 @@ export const contactFormSettings = z.object({
   messageLabel: z.string().default("Mensaje"),
   submitLabel: z.string().default("Enviar consulta"),
   reasons: z
-    .array(z.string().min(1))
+    .array(contactReasonSchema)
     .max(12)
-    .default([...contactDefaultReasons]),
+    .default(contactDefaultReasons.map((reason) => ({ ...reason }))),
 });
 
 export const contactChannelsSettings = z.object({
@@ -323,7 +328,7 @@ export const contactForm: ModuleDefinition<
       "contact-form",
       context.section,
       safeHtml(
-        `<section id="contact-form" class="contact-main-grid" data-motion-zone="content"><form class="contact-form" data-solara-contact-form data-whatsapp-brand="${escapeAttribute(context.project.identity.brandName)}"${phone ? ` data-whatsapp-phone="${escapeAttribute(phone)}"` : ""} action="${phone ? `https://wa.me/${escapeAttribute(phone)}` : "#"}" method="get" target="_blank"><h2>${escapeHtml(settings.title)}</h2><p>${escapeHtml(settings.body)}</p><div class="contact-form-fields"><label>${escapeHtml(settings.nameLabel)}<input name="name" autocomplete="name" required></label><label>${escapeHtml(settings.emailLabel)}<input name="email" type="email" autocomplete="email" required></label>${settings.showPhone ? `<label>${escapeHtml(settings.phoneLabel)}<input name="phone" type="tel" autocomplete="tel" required></label>` : ""}<label>${escapeHtml(settings.reasonLabel)}<select name="reason" required><option value="">Seleccioná una opción</option>${settings.reasons.map((reason) => `<option value="${escapeAttribute(reason)}">${escapeHtml(reason)}</option>`).join("")}</select></label>${settings.showOrderNumber ? `<label>${escapeHtml(settings.orderNumberLabel)}<input name="orderNumber" inputmode="numeric"></label>` : ""}<label class="contact-form-message">${escapeHtml(settings.messageLabel)}<textarea name="message" rows="5" required></textarea></label></div><button class="catalog-primary-action" type="submit">${escapeHtml(settings.submitLabel)} →</button>${fallback}<noscript><p>Activá JavaScript o usá el enlace de WhatsApp para enviar la consulta.</p></noscript></form></section>`,
+        `<section id="contact-form" class="contact-main-grid" data-motion-zone="content"><form class="contact-form" data-solara-contact-form data-whatsapp-brand="${escapeAttribute(context.project.identity.brandName)}"${phone ? ` data-whatsapp-phone="${escapeAttribute(phone)}"` : ""} action="${phone ? `https://wa.me/${escapeAttribute(phone)}` : "#"}" method="get" target="_blank"><h2>${escapeHtml(settings.title)}</h2><p>${escapeHtml(settings.body)}</p><div class="contact-form-fields"><label>${escapeHtml(settings.nameLabel)}<input name="name" autocomplete="name" required></label><label>${escapeHtml(settings.emailLabel)}<input name="email" type="email" autocomplete="email" required></label>${settings.showPhone ? `<label>${escapeHtml(settings.phoneLabel)}<input name="phone" type="tel" autocomplete="tel" required></label>` : ""}<label>${escapeHtml(settings.reasonLabel)}<select name="reason" required><option value="">Seleccioná una opción</option>${settings.reasons.map((reason) => `<option value="${escapeAttribute(reason.value)}">${escapeHtml(reason.value)}</option>`).join("")}</select></label>${settings.showOrderNumber ? `<label>${escapeHtml(settings.orderNumberLabel)}<input name="orderNumber" inputmode="numeric"></label>` : ""}<label class="contact-form-message">${escapeHtml(settings.messageLabel)}<textarea name="message" rows="5" required></textarea></label></div><button class="catalog-primary-action" type="submit">${escapeHtml(settings.submitLabel)} →</button>${fallback}<noscript><p>Activá JavaScript o usá el enlace de WhatsApp para enviar la consulta.</p></noscript></form></section>`,
       ),
     );
   },

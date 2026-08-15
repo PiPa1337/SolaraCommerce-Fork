@@ -36,10 +36,10 @@ export const contactDefaultQuickLinks = [
 ] as const;
 
 export const contactDefaultReasons = [
-  "Consulta de producto",
-  "Estado de pedido",
-  "Cambios y devoluciones",
-  "Otra consulta",
+  { id: "contact-reason-product", value: "Consulta de producto" },
+  { id: "contact-reason-order", value: "Estado de pedido" },
+  { id: "contact-reason-change", value: "Cambios y devoluciones" },
+  { id: "contact-reason-other", value: "Otra consulta" },
 ] as const;
 
 export const contactDefaultHelpItems = [
