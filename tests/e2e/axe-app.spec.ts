@@ -11,7 +11,10 @@ test("P1-L1: axe sobre el Studio (dashboard y pestañas del editor)", async ({ p
   await page.setViewportSize({ width: 1440, height: 900 });
   const findings: Array<{ area: string; impact: string; id: string; target: string }> = [];
   const check = async (area: string) => {
-    const results = await new AxeBuilder({ page }).analyze();
+    // El iframe del preview embebe el sitio público (documento separado, con su
+    // propio gate de axe en axe-site.spec.ts): sus landmarks no forman parte
+    // del editor y no deben contaminar este análisis.
+    const results = await new AxeBuilder({ page }).exclude("iframe").analyze();
     for (const violation of results.violations) {
       findings.push({
         area,
