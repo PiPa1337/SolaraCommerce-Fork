@@ -1,5 +1,11 @@
 # Changelog
 
+### Hero V2: la caja de beneficios queda sin radio (2026-08-15)
+
+- Se elimina el `border-radius` de la caja frosted glass de los beneficios
+  (esquina recta, coherente con el lenguaje del hero). La tienda queda
+  guardada como v40.
+
 ### Hero V2: caja frosted glass para los beneficios (2026-08-15)
 
 - Los 3 beneficios del copy del hero (Envíos, Pedido directo, Compra cuidada)

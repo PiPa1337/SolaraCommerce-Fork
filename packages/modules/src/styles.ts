@@ -2661,7 +2661,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.5rem 2.25rem;margin:2rem 0 1rem;padding:0;list-style:none}
 /* Los beneficios del copy del hero van en una caja con blur de fondo (desktop,
    sobre el velo y la imagen): se aísla el bloque del fondo fotográfico. */
-.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits--copy{align-self:stretch;margin-inline:0;padding:.95rem 1.15rem;border-radius:8px;background:color-mix(in srgb,var(--catalog-paper) 38%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid color-mix(in srgb,var(--catalog-ink) 10%,transparent)}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits--copy{align-self:stretch;margin-inline:0;padding:.95rem 1.15rem;border-radius:0;background:color-mix(in srgb,var(--catalog-paper) 38%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid color-mix(in srgb,var(--catalog-ink) 10%,transparent)}
 /* La banda duplicada (mobile) no existe en desktop: la copia interna queda visible. */
 .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band{display:none}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit{display:flex;align-items:center;gap:.65rem;min-width:0}
