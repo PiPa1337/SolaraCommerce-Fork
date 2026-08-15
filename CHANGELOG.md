@@ -1,5 +1,17 @@
 # Changelog
 
+### Glow de cards: más sutil, sobre la imagen y con transform (2026-08-15)
+
+- El glow se movió de la card completa a la IMAGEN (`.catalog-product-media`):
+  ya no sube por el copy (categoría/nombre/precio); en las fichas de categoría
+  sigue en el tile (que es todo imagen).
+- Más sutil (sombra 8px al 35%, degradado al 22%) y con mejor performance:
+  la línea crece con `transform: scaleY` (compositor, sin layout) y el
+  puntito viaja en la punta como capa del mismo pseudo (caja de 8px con la
+  línea de 2px centrada + radial con centro luminoso, completo y sin recorte).
+- E2E actualizado (transform del pseudo en la media). Verificado con visión:
+  línea sutil solo sobre la foto, puntito de luz con halo en la punta.
+
 ### Lote visual V2: glow en cards, entradas de reseñas/novedades y footer (2026-08-15)
 
 - "Ver todo el catálogo" (bento) ahora anima igual que "Ver todos" (subrayado

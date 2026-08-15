@@ -2773,43 +2773,51 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
 }
 .cm.v2 .catalog-product-card {
-  position: relative;
   transition: transform var(--catalog-v2-motion-component) var(--catalog-v2-ease-out);
 }
 .cm.v2 .catalog-product-card:hover,
 .cm.v2 .catalog-product-card:focus-within {
   transform: translateY(-6px);
 }
-/* Línea glow con puntito en el borde izquierdo al hover: la línea crece desde
-   abajo y el puntito viaja en su punta (radial en el tope del pseudo). */
-.cm.v2 .catalog-product-card::before,
+/* Línea glow sutil con puntito en el borde izquierdo de la IMAGEN al hover:
+   crece desde abajo con transform (compositor, sin layout) y el puntito viaja
+   en la punta (radial en el tope del pseudo). */
+.cm.v2 .catalog-product-media::before,
 .cm.v2 .catalog-category-bento-item::before {
   content: "";
   position: absolute;
-  left: 0;
+  left: -3px;
   bottom: 0;
-  width: 2px;
-  height: 0;
+  width: 8px;
+  height: 100%;
   z-index: 2;
+  transform: scaleY(0);
+  transform-origin: bottom;
   background:
-    radial-gradient(circle, var(--catalog-sale) 0 3.5px, transparent 4px) 50% 0 / 9px 9px no-repeat,
+    radial-gradient(
+        circle,
+        color-mix(in srgb, var(--catalog-sale) 55%, #fff 45%) 0 1.5px,
+        var(--catalog-sale) 1.5px 3.5px,
+        transparent 4.5px
+      )
+      50% 3px / 10px 10px no-repeat,
     linear-gradient(
       to top,
       var(--catalog-sale),
-      color-mix(in srgb, var(--catalog-sale) 30%, transparent)
-    );
-  box-shadow: 0 0 14px 1px color-mix(in srgb, var(--catalog-sale) 55%, transparent);
+      color-mix(in srgb, var(--catalog-sale) 22%, transparent)
+    ) 50% 0 / 2px 100% no-repeat;
+  box-shadow: 0 0 8px 0 color-mix(in srgb, var(--catalog-sale) 35%, transparent);
   opacity: 0;
   transition:
-    height 520ms var(--catalog-v2-ease-out),
-    opacity 240ms var(--catalog-v2-ease-out);
+    transform 520ms var(--catalog-v2-ease-out),
+    opacity 220ms var(--catalog-v2-ease-out);
   pointer-events: none;
 }
-.cm.v2 .catalog-product-card:hover::before,
-.cm.v2 .catalog-product-card:focus-within::before,
+.cm.v2 .catalog-product-card:hover .catalog-product-media::before,
+.cm.v2 .catalog-product-card:focus-within .catalog-product-media::before,
 .cm.v2 .catalog-category-bento-item:hover::before,
 .cm.v2 .catalog-category-bento-item:focus-within::before {
-  height: 100%;
+  transform: scaleY(1);
   opacity: 1;
 }
 .cm.v2 .catalog-product-media {
@@ -3559,7 +3567,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 [data-solara-module="catalog-header"],
   .cm.v2 [data-solara-module="catalog-hero"],
   .cm.v2 .catalog-product-card,
-  .cm.v2 .catalog-product-card::before,
+  .cm.v2 .catalog-product-card .catalog-product-media::before,
   .cm.v2 .catalog-product-card-image,
   .cm.v2 .catalog-category-bento-item::before,
   .cm.v2 .catalog-category-bento-item img,

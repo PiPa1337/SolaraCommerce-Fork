@@ -1653,21 +1653,29 @@ test("V2 anima reseñas y novedades con entrada estilo hero", async ({ page }) =
   ).not.toBe("none");
 });
 
-test("V2 cards: línea glow con puntito en el borde izquierdo al hover", async ({ page }) => {
+test("V2 cards: línea glow con puntito en la imagen al hover", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 968 });
   await page.goto(serverUrl);
   await page.waitForTimeout(1600);
   const card = page.locator(".catalog-product-card").first();
+  const media = card.locator(".catalog-product-media");
+  const restTransform = await media.evaluate(
+    (element) => getComputedStyle(element, "::before").transform,
+  );
   await card.hover();
   await expect
-    .poll(() => card.evaluate((element) => getComputedStyle(element, "::before").height))
-    .not.toBe("0px");
+    .poll(() => media.evaluate((element) => getComputedStyle(element, "::before").transform))
+    .not.toBe(restTransform);
+
   const bento = page.locator(".catalog-category-bento-item").first();
   await bento.scrollIntoViewIfNeeded();
+  const bentoRest = await bento.evaluate(
+    (element) => getComputedStyle(element, "::before").transform,
+  );
   await bento.hover();
   await expect
-    .poll(() => bento.evaluate((element) => getComputedStyle(element, "::before").height))
-    .not.toBe("0px");
+    .poll(() => bento.evaluate((element) => getComputedStyle(element, "::before").transform))
+    .not.toBe(bentoRest);
 });
 
 test("V2 footer: copyright con año y nombre + Hecho con ❤️ en solara.com.ar", async ({ page }) => {
