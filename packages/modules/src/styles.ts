@@ -3554,6 +3554,395 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits{grid-template-columns:1fr;gap:1rem}
   .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit + .catalog-hero-benefit{border-left:0;padding-left:0}
 }
+/* Contacto V2 modular: reutiliza los tokens de Home y mantiene una grilla
+   editorial de líneas finas, sin tarjetas redondeadas. */
+.cm.v2 .solara-contact-page {
+  width: min(calc(100% - 3rem), var(--catalog-v2-wide));
+  margin-inline: auto;
+}
+.cm.v2 .solara-contact-page > .solara-contact-sections {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 0 clamp(2rem, 5vw, 5rem);
+}
+.cm.v2 .solara-contact-sections > [data-solara-module="contact-hero"],
+.cm.v2 .solara-contact-sections > [data-solara-module="contact-help-grid"],
+.cm.v2 .solara-contact-sections > [data-solara-module="contact-whatsapp-cta"],
+.cm.v2 .solara-contact-sections > [data-solara-module="contact-purchase-info"],
+.cm.v2 .solara-contact-sections > [data-solara-module="contact-faq"],
+.cm.v2 .solara-contact-sections > [data-solara-module="contact-location"],
+.cm.v2 .solara-contact-sections > [data-solara-module="catalog-newsletter-cta"] {
+  grid-column: 1 / -1;
+}
+.cm.v2 .solara-contact-sections > [data-solara-module="contact-form"] {
+  grid-column: 1;
+}
+.cm.v2 .solara-contact-sections > [data-solara-module="contact-channels"] {
+  grid-column: 2;
+}
+.cm.v2 .contact-hero {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(20rem, 1fr);
+  gap: clamp(3rem, 8vw, 9rem);
+  padding-block: clamp(3rem, 7vw, 6rem);
+  border-top: 1px solid var(--catalog-border);
+}
+.cm.v2 .contact-hero-copy h1 {
+  max-width: 8ch;
+  margin: .65rem 0 1rem;
+  font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
+  font-size: clamp(4rem, 7vw, 7.5rem);
+  font-weight: 500;
+  letter-spacing: -.065em;
+  line-height: .86;
+  text-wrap: balance;
+}
+.cm.v2 .contact-hero-copy > p:last-child {
+  max-width: 36ch;
+  color: var(--catalog-muted);
+}
+.cm.v2 .contact-quick-links {
+  display: grid;
+  align-content: end;
+}
+.cm.v2 .contact-quick-link,
+.cm.v2 .contact-channel-row {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .85rem;
+  min-height: 4.4rem;
+  border-top: 1px solid var(--catalog-border);
+  color: var(--catalog-ink);
+  text-decoration: none;
+}
+.cm.v2 .contact-quick-link:last-child,
+.cm.v2 .contact-channel-row:last-child {
+  border-bottom: 1px solid var(--catalog-border);
+}
+.cm.v2 .solara-contact-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 1.3rem;
+  height: 1.3rem;
+}
+.cm.v2 .solara-contact-icon svg {
+  width: 100%;
+  height: 100%;
+}
+.cm.v2 .contact-quick-link > span:nth-child(2),
+.cm.v2 .contact-channel-row > span:nth-child(2) {
+  display: grid;
+  gap: .15rem;
+  min-width: 0;
+}
+.cm.v2 .contact-quick-link small,
+.cm.v2 .contact-channel-row small {
+  color: var(--catalog-muted);
+  font-size: .78rem;
+  line-height: 1.35;
+}
+.cm.v2 .contact-main-grid,
+.cm.v2 .contact-channels {
+  min-width: 0;
+  margin: 0;
+  padding-block: clamp(2.5rem, 5vw, 4rem);
+  border-top: 1px solid var(--catalog-border);
+}
+.cm.v2 .contact-main-grid h2,
+.cm.v2 .contact-channels h2,
+.cm.v2 .contact-help h2,
+.cm.v2 .contact-faq h2,
+.cm.v2 .contact-location h2 {
+  margin: 0 0 .45rem;
+  font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
+  font-size: clamp(1.7rem, 3vw, 2.5rem);
+  font-weight: 500;
+  letter-spacing: -.04em;
+}
+.cm.v2 .contact-main-grid > p,
+.cm.v2 .contact-channels > header p,
+.cm.v2 .contact-help > header p,
+.cm.v2 .contact-faq > header p,
+.cm.v2 .contact-location > header p {
+  margin: 0 0 1.5rem;
+  color: var(--catalog-muted);
+}
+.cm.v2 .contact-form-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .8rem 1rem;
+}
+.cm.v2 .contact-form-fields label {
+  display: grid;
+  gap: .35rem;
+  color: var(--catalog-ink);
+  font-size: .76rem;
+  font-weight: 600;
+}
+.cm.v2 .contact-form-fields label.contact-form-message {
+  grid-column: 1 / -1;
+}
+.cm.v2 .contact-form-fields input,
+.cm.v2 .contact-form-fields select,
+.cm.v2 .contact-form-fields textarea {
+  width: 100%;
+  min-height: 2.8rem;
+  padding: .7rem .75rem;
+  border: 1px solid var(--catalog-border);
+  border-radius: 0;
+  background: var(--catalog-paper);
+  color: var(--catalog-ink);
+  font: inherit;
+}
+.cm.v2 .contact-form-fields textarea {
+  resize: vertical;
+}
+.cm.v2 .contact-form .catalog-primary-action {
+  margin-top: 1.2rem;
+}
+.cm.v2 .contact-form-fallback,
+.cm.v2 .contact-form noscript {
+  display: block;
+  margin-top: .75rem;
+  color: var(--catalog-muted);
+  font-size: .78rem;
+}
+.cm.v2 .contact-channel-list {
+  display: grid;
+}
+.cm.v2 .contact-channel-row {
+  min-height: 4.7rem;
+}
+.cm.v2 .contact-help,
+.cm.v2 .contact-faq,
+.cm.v2 .contact-location {
+  padding-block: clamp(2.5rem, 6vw, 5rem);
+  border-top: 1px solid var(--catalog-border);
+}
+.cm.v2 .contact-help-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 1.5rem;
+  border: 1px solid var(--catalog-border);
+}
+.cm.v2 .contact-help-item {
+  display: grid;
+  align-content: start;
+  gap: .7rem;
+  min-height: 12rem;
+  padding: 1.25rem;
+  border-right: 1px solid var(--catalog-border);
+  color: var(--catalog-ink);
+  text-decoration: none;
+}
+.cm.v2 .contact-help-item:last-child {
+  border-right: 0;
+}
+.cm.v2 .contact-help-item p {
+  margin: 0;
+  color: var(--catalog-muted);
+  font-size: .82rem;
+  line-height: 1.45;
+}
+.cm.v2 .contact-help-item > span:last-child {
+  align-self: end;
+  color: var(--catalog-sale);
+  font-size: .78rem;
+}
+.cm.v2 .contact-whatsapp-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-block: 0;
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  background: var(--catalog-ink);
+  color: var(--catalog-paper);
+}
+.cm.v2 .contact-whatsapp-cta h2 {
+  margin: 0 0 .35rem;
+  font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
+  font-size: clamp(1.8rem, 3.5vw, 3rem);
+  letter-spacing: -.05em;
+}
+.cm.v2 .contact-whatsapp-cta p {
+  max-width: 45ch;
+  margin: 0;
+  color: color-mix(in srgb, var(--catalog-paper) 72%, transparent);
+}
+.cm.v2 .contact-whatsapp-cta .catalog-primary-action {
+  flex: 0 0 auto;
+  background: var(--catalog-paper);
+  color: var(--catalog-ink);
+}
+.cm.v2 .contact-purchase-info {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  border-block: 1px solid var(--catalog-border);
+}
+.cm.v2 .contact-purchase-info article {
+  min-width: 0;
+  padding: 1.5rem 1.25rem;
+  border-right: 1px solid var(--catalog-border);
+}
+.cm.v2 .contact-purchase-info article:last-child {
+  border-right: 0;
+}
+.cm.v2 .contact-purchase-info article > div {
+  display: grid;
+  gap: .55rem;
+}
+.cm.v2 .contact-purchase-info p {
+  margin: 0;
+  color: var(--catalog-muted);
+  font-size: .8rem;
+  line-height: 1.45;
+}
+.cm.v2 .contact-purchase-info a {
+  color: var(--catalog-sale);
+  font-size: .75rem;
+  text-decoration: none;
+}
+.cm.v2 .contact-faq > div {
+  border-top: 1px solid var(--catalog-border);
+}
+.cm.v2 .contact-faq details {
+  border-bottom: 1px solid var(--catalog-border);
+}
+.cm.v2 .contact-faq summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 3.1rem;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+}
+.cm.v2 .contact-faq summary::-webkit-details-marker {
+  display: none;
+}
+.cm.v2 .contact-faq summary::after {
+  content: "+";
+  color: var(--catalog-muted);
+  font-size: 1.1rem;
+  font-weight: 400;
+}
+.cm.v2 .contact-faq details[open] summary::after {
+  content: "−";
+}
+.cm.v2 .contact-faq details p {
+  max-width: 60ch;
+  margin: 0 0 1rem;
+  color: var(--catalog-muted);
+  line-height: 1.55;
+}
+.cm.v2 .contact-location-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+.cm.v2 .contact-location-image,
+.cm.v2 .contact-location-map {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+.cm.v2 .contact-location-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 3rem;
+  padding-top: 1rem;
+  color: var(--catalog-muted);
+}
+.cm.v2 .contact-location-meta p {
+  display: grid;
+  gap: .2rem;
+  margin: 0;
+}
+.cm.v2 .contact-location-meta strong {
+  color: var(--catalog-ink);
+  font-size: .8rem;
+}
+.cm.v2 [data-solara-module="contact-hero"][data-motion-visible="true"] .contact-hero-copy,
+.cm.v2 [data-solara-module="contact-hero"][data-motion-visible="true"] .contact-quick-links,
+.cm.v2 [data-solara-module="contact-form"][data-motion-visible="true"] .contact-main-grid,
+.cm.v2 [data-solara-module="contact-channels"][data-motion-visible="true"] .contact-channels,
+.cm.v2 [data-solara-module="contact-help-grid"][data-motion-visible="true"] .contact-help,
+.cm.v2 [data-solara-module="contact-whatsapp-cta"][data-motion-visible="true"] .contact-whatsapp-cta,
+.cm.v2 [data-solara-module="contact-purchase-info"][data-motion-visible="true"] .contact-purchase-info,
+.cm.v2 [data-solara-module="contact-faq"][data-motion-visible="true"] .contact-faq,
+.cm.v2 [data-solara-module="contact-location"][data-motion-visible="true"] .contact-location {
+  --hero-v2-rise: 16px;
+  animation: solara-hero-rise 460ms var(--catalog-v2-ease-out) 60ms backwards;
+}
+.cm.v2 [data-solara-module="contact-hero"][data-motion-visible="true"] .contact-quick-link,
+.cm.v2 [data-solara-module="contact-help-grid"][data-motion-visible="true"] .contact-help-item,
+.cm.v2 [data-solara-module="contact-purchase-info"][data-motion-visible="true"] article,
+.cm.v2 [data-solara-module="contact-faq"][data-motion-visible="true"] details {
+  --hero-v2-rise: 12px;
+  animation: solara-hero-rise 420ms var(--catalog-v2-ease-out) 140ms backwards;
+}
+@media (max-width: 767px) {
+  .cm.v2 .solara-contact-page {
+    width: min(calc(100% - 1.5rem), var(--catalog-v2-wide));
+  }
+  .cm.v2 .solara-contact-page > .solara-contact-sections {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cm.v2 .solara-contact-sections > [data-solara-module="contact-form"],
+  .cm.v2 .solara-contact-sections > [data-solara-module="contact-channels"] {
+    grid-column: 1;
+  }
+  .cm.v2 .contact-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+    padding-block: 2.5rem 3rem;
+  }
+  .cm.v2 .contact-hero-copy h1 {
+    max-width: 9ch;
+    font-size: clamp(3.4rem, 15vw, 5.2rem);
+  }
+  .cm.v2 .contact-form-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cm.v2 .contact-form-fields label.contact-form-message {
+    grid-column: auto;
+  }
+  .cm.v2 .contact-help-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cm.v2 .contact-help-item {
+    min-height: 10rem;
+    padding: 1rem;
+    border-bottom: 1px solid var(--catalog-border);
+  }
+  .cm.v2 .contact-help-item:nth-child(2n) {
+    border-right: 0;
+  }
+  .cm.v2 .contact-whatsapp-cta {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .cm.v2 .contact-whatsapp-cta .catalog-primary-action {
+    width: 100%;
+    text-align: center;
+  }
+  .cm.v2 .contact-purchase-info,
+  .cm.v2 .contact-location-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cm.v2 .contact-purchase-info article {
+    border-right: 0;
+    border-bottom: 1px solid var(--catalog-border);
+  }
+  .cm.v2 .contact-purchase-info article:last-child {
+    border-bottom: 0;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .cm.v2 [data-solara-module="catalog-header"],
   .cm.v2 [data-solara-module="catalog-hero"],
@@ -3566,6 +3955,19 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 [data-solara-module="catalog-testimonials"] .catalog-testimonial,
   .cm.v2 [data-solara-module="catalog-newsletter-cta"] .catalog-newsletter-inner > div,
   .cm.v2 [data-solara-module="catalog-newsletter-cta"] .catalog-newsletter-action,
+  .cm.v2 [data-solara-module="contact-hero"] .contact-hero-copy,
+  .cm.v2 [data-solara-module="contact-hero"] .contact-quick-links,
+  .cm.v2 [data-solara-module="contact-hero"] .contact-quick-link,
+  .cm.v2 [data-solara-module="contact-form"] .contact-main-grid,
+  .cm.v2 [data-solara-module="contact-channels"] .contact-channels,
+  .cm.v2 [data-solara-module="contact-help-grid"] .contact-help,
+  .cm.v2 [data-solara-module="contact-help-grid"] .contact-help-item,
+  .cm.v2 [data-solara-module="contact-whatsapp-cta"] .contact-whatsapp-cta,
+  .cm.v2 [data-solara-module="contact-purchase-info"] .contact-purchase-info,
+  .cm.v2 [data-solara-module="contact-purchase-info"] article,
+  .cm.v2 [data-solara-module="contact-faq"] .contact-faq,
+  .cm.v2 [data-solara-module="contact-faq"] details,
+  .cm.v2 [data-solara-module="contact-location"] .contact-location,
   .cm.v2 .catalog-hero-image,
   .cm.v2 .catalog-hero-video,
   .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-reveal--eyebrow,
