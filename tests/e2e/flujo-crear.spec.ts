@@ -113,3 +113,23 @@ test("P4-B6: restaurar una tienda archivada desde el filtro Archivadas", async (
   const finalText = await toast.innerText();
   console.log("P4-B6 toast tras restaurar desde filtro:", JSON.stringify(finalText.slice(0, 60)));
 });
+
+test("R3-P2-B5: duplicar una tienda desde el panel de detalle", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
+
+  await page.locator(".dashboard-store-card").first().click();
+  await page.waitForTimeout(500);
+  await page.locator(".dashboard-store-detail").getByRole("button", { name: "Duplicar" }).click();
+  const dialog = page.getByRole("dialog", { name: "Duplicar tienda" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel("Nuevo nombre").fill("Copia de prueba");
+  await dialog.getByRole("button", { name: "Duplicar" }).click();
+  await expect(dialog).toBeHidden();
+  await page.waitForTimeout(1200);
+
+  const names = await page.locator(".dashboard-store-card strong").allInnerTexts();
+  console.log("R3-P2-B5 tiendas tras duplicar:", JSON.stringify(names));
+  expect(names.some((name) => name.includes("Copia de prueba"))).toBe(true);
+});
