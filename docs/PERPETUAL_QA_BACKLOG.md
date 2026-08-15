@@ -1,18 +1,17 @@
-# Backlog del PLAN 9 (de 10) — run acotado con Δ%
+# Backlog del PLAN 10 (de 10) — consolidación y cierre formal
 
-Deuda residual y contratos persistidos. Formato: `Métrica | Antes | Después | Δ%`.
+Re-auditoría completa de las 8 capas + reporte global. Formato: `Métrica | Antes | Después | Δ%`.
 
 | id | capa | ítem | métrica | antes | después | Δ% | estado |
 |----|------|------|---------|-------|---------|-----|--------|
-| P9-1 | F | Contratos persistidos vs schema: ids de módulos/secciones en docs (DATA_MODEL/PROJECT_MAP) al día | drift docs | — | | | pendiente |
-| P9-2 | F | Re-lectura de `docs/TECHNICAL_DEBT.md`: filas abiertas accionables → convertir | items | — | | | pendiente |
-| P9-3 | F | Verificación de que `schemaVersion: 2` y `StoreProjectV1` alias no hayan mutado en el run | checks | — | | | pendiente |
-| P9-4 | G | Migración `.solara.zip` legacy (fflate temporal): verificar que el test siga cubriendo la ruta | gates | — | | | pendiente |
-| P9-5 | F | Docs de operación (HANDOFF/INTEGRATIONS) actualizados con los gates nuevos del run | checks | — | | | pendiente |
-| P9-6 | E | Re-verificación final de rutas de los 3 fixtures (parity + nojs + preloads) | gates | OK | | | pendiente |
-| P9-7 | C | Runtime raw final (estado real) + presupuesto | bytes | 55.845 B | | | pendiente |
-| P9-8 | H | LCP/CLS final acumulado | ms | 44-56 | | | pendiente |
+| P10-1 | F | Re-auditoría enganches completa (todos los gates F) | gates | OK | | | pendiente |
+| P10-2 | E/A | Re-auditoría rutas + a11y (nojs, axe, foco, preloads, JSON-LD) | gates | OK | | | pendiente |
+| P10-3 | C/B/D | Re-auditoría runtime + CSS + assets | gates | OK | | | pendiente |
+| P10-4 | H/G | Re-auditoría navegador + servidor | gates | OK | | | pendiente |
+| P10-5 | — | Gates completos finales: `pnpm check`, benchmark, e2e completo, barrido visual | gates | — | | | pendiente |
+| P10-6 | — | **Reporte global consolidado** (Δ% por ítem, capa y plan) + autocrítica | reporte | — | | | pendiente |
+| P10-7 | — | Commit de cierre + push | git | — | | | pendiente |
 
 ## SIGUIENTE
 
-P9-1 — Contratos persistidos vs docs
+P10-1 — Re-auditoría de enganches completa

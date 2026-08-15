@@ -1,18 +1,22 @@
 {
-  "plan": 9,
-  "de10": 9,
+  "plan": 10,
+  "de10": 10,
   "branch": "main",
   "baselineEntrada": {
     "runtimeJavascriptRaw": 55845,
     "runtimeMargen": 1499,
     "cssStudio": 102160,
-    "exportMs2000": 1553,
-    "axe": "0/0/0",
+    "cssStudioMargen": 4336,
+    "exportMs2000": 1727,
+    "axe": "0/0/0 (3 fixtures)",
     "preloads": "146/146",
-    "lcp": "44-56 ms",
+    "lcp": "48-92 ms",
     "interacciones": "0 errores",
     "contratosProfundos": "6/6",
-    "paritySweep": "6/6"
+    "paritySweep": "6/6",
+    "nojs": "24 combinaciones",
+    "foco": "0 invisibles",
+    "seoJsonld": "100 %"
   },
-  "nextItem": "P9-1"
+  "nextItem": "P10-1"
 }
