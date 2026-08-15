@@ -157,3 +157,21 @@
 - Gates: `pnpm check` exit=0, e2e 1/1 (gate nuevo de interacciones).
 - Mejoras: tracking de títulos corregido (legibilidad), gate de interacciones reales.
 - Acumulado PLAN 1→8: benchmark −8.2 %; axe 0/0/0; preloads 146/146; LCP 44-56 ms; interacciones 0 errores; contratos 0 drift.
+
+## PLAN 9 (18:50-19:05Z, 2026-08-14)
+
+| id | ítem | métrica | antes | después | Δ% | estado |
+|----|------|---------|-------|---------|-----|--------|
+| P9-1 | Docs: gates del run documentados en TESTING.md | docs | — | 16 gates | gate doc | hecho |
+| P9-2 | Deuda: paginación (C2) y dead flags (B3) marcadas resueltas con evidencia | filas | 2 abiertas | 0 | 100 % | hecho |
+| P9-3 | `schemaVersion: 2` y alias `StoreProjectV1` intactos | checks | 2/2 | 2/2 | 0 | hecho |
+| P9-4 | Migración `.solara.zip` + reparse | gates | 5/5 | 5/5 | 0 | hecho |
+| P9-5 | Contratos profundos re-verificados | gates | 19/19 | 19/19 | 0 | hecho |
+| P9-6 | Rutas 3 fixtures finales | gates | OK | OK | 0 | hecho |
+| P9-7 | Runtime raw final | bytes | 55.845 B | 55.845 B | 0 | hecho |
+| P9-8 | LCP final | ms | 44-56 | 48-92 | 0 (estable) | hecho |
+
+### Totales PLAN 9
+- Gates: `pnpm check` exit=0, benchmark 1.727 ms.
+- Mejoras: deuda documentada al día (2 filas resueltas), 16 gates del run documentados.
+- Acumulado PLAN 1→9: benchmark −1.6 % (1.727 vs 1.692 baseline; ruido de máquina); axe 0/0/0; preloads 146/146; LCP 48-92 ms; contratos 0 drift; runtime 55.845 B (margen 1.5 KB, bloqueado por decisión del usuario).
