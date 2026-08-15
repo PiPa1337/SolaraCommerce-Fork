@@ -133,3 +133,20 @@ test("R3-P2-B5: duplicar una tienda desde el panel de detalle", async ({ page })
   console.log("R3-P2-B5 tiendas tras duplicar:", JSON.stringify(names));
   expect(names.some((name) => name.includes("Copia de prueba"))).toBe(true);
 });
+
+test("R4-P4-B5: cancelar la creación de tienda no crea nada", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
+  const cardsBefore = await page.locator(".dashboard-store-card").count();
+
+  await page.getByRole("button", { name: "Nueva tienda" }).click();
+  const dialog = page.getByRole("dialog", { name: "Crear tienda" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Cerrar creación" }).click();
+  await expect(dialog).toBeHidden();
+  await page.waitForTimeout(500);
+  const cardsAfter = await page.locator(".dashboard-store-card").count();
+  console.log("R4-P4-B5 cards antes/después:", cardsBefore, cardsAfter);
+  expect(cardsAfter).toBe(cardsBefore);
+});
