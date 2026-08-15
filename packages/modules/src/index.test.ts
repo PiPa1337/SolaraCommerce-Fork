@@ -264,6 +264,42 @@ describe("official module system", () => {
     expect(firstGrid).not.toContain("catalog-product-availability");
   });
 
+  it("renderiza el hero en modo video con loop mudo y sin imagen de portada", () => {
+    const project = structuredClone(catalogModernStore);
+    const section = project.sections.find(
+      (candidate) => candidate.moduleId === "catalog-hero" && candidate.enabled !== false,
+    );
+    if (!section) throw new Error("Fixture sin hero");
+    const video = {
+      kind: "video" as const,
+      id: "video-render-test" as const,
+      name: "Look de temporada",
+      alt: "Video de la campaña",
+      mimeType: "video/mp4" as const,
+      source: "data:video/mp4;base64,AAAA",
+      width: 1080,
+      height: 1920,
+      durationSeconds: 8,
+      hash: "video-render-hash",
+    };
+    project.videos = [video];
+    section.settings = {
+      ...section.settings,
+      mode: "video",
+      videoAssetId: video.id,
+      posterAssetId: "",
+    };
+    const html = renderSections(project, [section], { pageType: "home" });
+    const hero = html.slice(html.indexOf('data-solara-module="catalog-hero"'));
+    expect(hero).toContain("<video");
+    expect(hero).toContain("muted");
+    expect(hero).toContain("loop");
+    expect(hero).toContain("playsinline");
+    expect(hero).toContain("autoplay");
+    expect(hero).toContain('src="data:video/mp4;base64,AAAA"');
+    expect(hero).not.toContain('class="catalog-hero-image"');
+  });
+
   it("deriva el bento sólo desde categorías madre y alterna proporciones", () => {
     const html = renderSections(catalogModernStore, catalogModernStore.sections, {
       pageType: "home",
@@ -737,8 +773,12 @@ describe("catalog-hero V2: contrato de markup para motion (beneficios y líneas)
     });
 
     expect(html).toContain('data-hero-benefits aria-label="Beneficios"');
-    expect(html.match(/class="catalog-hero-benefit" data-hero-benefit/g) ?? []).toHaveLength(3);
-    expect(html.match(/class="catalog-hero-benefit-icon"/g) ?? []).toHaveLength(3);
+    // La familia V2 renderiza los beneficios dos veces: la copia interna
+    // (desktop) y la banda posterior (mobile), con los mismos 3 items.
+    expect(html.match(/class="catalog-hero-benefit" data-hero-benefit/g) ?? []).toHaveLength(6);
+    expect(html).toContain('class="catalog-hero-benefits catalog-hero-benefits--copy"');
+    expect(html).toContain('class="catalog-hero-benefits catalog-hero-benefits--band"');
+    expect(html.match(/class="catalog-hero-benefit-icon"/g) ?? []).toHaveLength(6);
     expect(html).toContain(
       'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"',
     );
@@ -882,7 +922,7 @@ describe("catalog-hero V2: contrato de markup para motion (beneficios y líneas)
       ...html.matchAll(/<li class="catalog-hero-benefit" data-hero-benefit><svg[\s\S]*?<\/svg>/g),
     ].map((match) => match[0] ?? "");
 
-    expect(icons).toHaveLength(3);
+    expect(icons).toHaveLength(6);
     expect(icons[1]).toBe(icons[2]);
     expect(icons[1]).not.toBe(icons[0]);
   });

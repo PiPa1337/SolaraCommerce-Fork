@@ -1,5 +1,15 @@
 # Changelog
 
+### Constructor: subir video activa el modo video y persiste dentro del proyecto (2026-08-15)
+
+- Al subir un video en el hero, la sección pasa automáticamente a modo
+  "video" (si expone `mode`): ya no queda mostrando la foto de portada.
+- El archivo se embebe como data URL en el proyecto (no es una ruta externa):
+  vive dentro del `.solara.json` y del sitio exportado (`/assets/<hash>.mp4`).
+- Tests: helper `sectionSettingsWithVideo` (modo video atómico), render del
+  hero en modo video (loop mudo, sin `<img>` de portada) y ajuste del
+  contrato de beneficios (6 items: copia + banda).
+
 ### Constructor: subir video atómico (sin estado inválido) (2026-08-15)
 
 - Fix de carrera: al subir un video desde el inspector del hero, el proyecto

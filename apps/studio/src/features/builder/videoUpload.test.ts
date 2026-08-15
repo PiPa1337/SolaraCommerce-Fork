@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyVideoToSection,
   buildVideoAsset,
+  sectionSettingsWithVideo,
   VIDEO_MAX_BYTES,
   VIDEO_MAX_DURATION_SECONDS,
 } from "./videoUpload";
@@ -100,5 +101,21 @@ describe("applyVideoToSection", () => {
     const nextSection = next.sections.find((candidate) => candidate.id === section.id);
     expect(nextSection?.settings.videoAssetId).toBe("video-atomic-test");
     expect(StoreProjectV1Schema.safeParse(next).success).toBe(true);
+  });
+});
+
+describe("sectionSettingsWithVideo", () => {
+  it("apunta el campo y pasa el modo a video cuando la sección tiene mode", () => {
+    const settings = sectionSettingsWithVideo(
+      { mode: "image", videoAssetId: "" },
+      "videoAssetId",
+      "video-1",
+    );
+    expect(settings).toEqual({ mode: "video", videoAssetId: "video-1" });
+  });
+
+  it("no inventa un setting mode si la sección no lo tiene", () => {
+    const settings = sectionSettingsWithVideo({ videoAssetId: "" }, "videoAssetId", "video-1");
+    expect(settings).toEqual({ videoAssetId: "video-1" });
   });
 });

@@ -115,6 +115,21 @@ export async function buildVideoAsset(file: File, deps: VideoUploadDeps = {}): P
 }
 
 /**
+ * Settings de la sección tras subir un video: apunta el campo y, si la
+ * sección expone un setting `mode` (p. ej. el hero), lo pasa a "video" para
+ * que el render use el video y no la imagen de portada.
+ */
+export function sectionSettingsWithVideo(
+  draft: Record<string, unknown>,
+  fieldKey: string,
+  videoId: string,
+): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...draft, [fieldKey]: videoId };
+  if (typeof next.mode === "string") next.mode = "video";
+  return next;
+}
+
+/**
  * Agrega el video al proyecto y apunta el setting de la sección en UNA sola
  * actualización: evita la carrera en la que la sección referencia un video
  * que el proyecto todavía no contiene (el parse de StoreProjectV2 rechaza el

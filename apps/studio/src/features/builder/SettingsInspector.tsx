@@ -6,7 +6,7 @@ import { Button, Field, InlineError } from "../../components/Ui";
 import { hashFile } from "../../lib/workers";
 import { HeroSlidesEditor } from "./HeroSlidesEditor";
 import { RepeaterEditor } from "./RepeaterEditor";
-import { applyVideoToSection, buildVideoAsset } from "./videoUpload";
+import { applyVideoToSection, buildVideoAsset, sectionSettingsWithVideo } from "./videoUpload";
 
 function formatIssuePaths(issues: Array<{ path: readonly PropertyKey[] }>): string {
   return [...new Set(issues.map((issue) => issue.path.join(".") || "settings"))].join(", ");
@@ -112,9 +112,11 @@ export function SettingsInspector({
       if (sectionId) {
         // Atómico: el proyecto nuevo trae el video Y el setting de la sección
         // en una sola actualización para que el parse nunca vea un estado
-        // intermedio inválido (video inexistente).
-        const nextProject = applyVideoToSection(project, sectionId, draft, fieldKey, video);
-        setDraft({ ...draft, [fieldKey]: video.id });
+        // intermedio inválido (video inexistente). Si la sección tiene un
+        // setting `mode`, pasa a "video" para que el render use el video.
+        const nextSettings = sectionSettingsWithVideo(draft, fieldKey, video.id);
+        const nextProject = applyVideoToSection(project, sectionId, nextSettings, fieldKey, video);
+        setDraft(nextSettings);
         onProjectChange(nextProject);
       } else {
         onProjectChange({
