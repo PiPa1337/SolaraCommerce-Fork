@@ -1,5 +1,22 @@
 # Changelog
 
+### Hero V2: fondo editorial oscurecido, tipografía expandida y photo 9:16 (2026-08-15)
+
+- Nuevos settings del hero conectados al editor: `backgroundImageId` (fondo
+  oscurecido, sólo desktop, detrás del texto) y `backgroundDarkness` (0-90%,
+  slider). Con fondo presente el copy pasa a texto blanco y la regla a blanco
+  translúcido; sin fondo, mantiene el papel claro.
+- El fondo se renderiza como asset del proyecto (`data-hero-background`, lazy,
+  `object-fit: cover`, `brightness()` según el setting) y se oculta en mobile,
+  donde la media (foto o video) sigue siendo el fondo full-bleed.
+- Tipografía del hero ampliada para el espacio horizontal: título
+  `clamp(4.75rem, 6.4vw, 8rem)` y body `max-width: 54ch` con cuerpo
+  `clamp(1.05rem, 1.2vw, 1.28rem)`.
+- La demo guarda v37 con la foto de fondo "Fondo editorial del hero" (asset
+  `asset-hero-fondo`, imagen de moda de Unsplash embebida como data URL).
+  El fixture V2 habilita el fondo con su asset existente para cubrir el
+  contrato en E2E (29/29 verdes).
+
 ### Hero V2 editorial: media 9:16 en desktop y foto como fondo en mobile (2026-08-14)
 
 - Desktop: la media del hero es siempre 9:16 (`width: min(calc(90svh * 9 /

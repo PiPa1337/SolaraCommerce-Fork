@@ -282,6 +282,8 @@ const heroSettings = z.object({
   secondaryActionHref: z.string().default("/categorias/remeras/"),
   posterAssetId: z.string().default(""),
   videoAssetId: z.string().default(""),
+  backgroundImageId: z.string().default(""),
+  backgroundDarkness: z.number().int().min(0).max(90).default(60),
   slides: z.array(heroSlideSchema).default([]),
   autoplay: z.boolean().default(false),
   intervalMs: z.number().int().min(3000).max(15000).default(6000),
@@ -413,6 +415,8 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
       "secondaryActionHref",
       "posterAssetId",
       "videoAssetId",
+      "backgroundImageId",
+      "backgroundDarkness",
       "slides",
       "autoplay",
       "intervalMs",
@@ -441,6 +445,19 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
     { key: "secondaryActionHref", type: "url", label: "Destino secundario" },
     { key: "posterAssetId", type: "asset", label: "Imagen de portada" },
     { key: "videoAssetId", type: "asset", label: "Video local" },
+    {
+      key: "backgroundImageId",
+      type: "asset",
+      label: "Fondo del hero (desktop)",
+    },
+    {
+      key: "backgroundDarkness",
+      type: "number",
+      label: "Oscuridad del fondo (%)",
+      min: 0,
+      max: 90,
+      step: 5,
+    },
     {
       key: "slides",
       type: "repeater",
@@ -541,6 +558,24 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
     const isV2Hero =
       context.project.commerceTemplates.designFamily === "catalog-modern-v2" &&
       settings.mode !== "carousel";
+    // Fondo editorial del hero (sólo desktop, detrás del texto): imagen
+    // oscurecida por el editor. En mobile se oculta; la media (foto o video)
+    // es el fondo full-bleed.
+    const heroBackground =
+      isV2Hero && settings.backgroundImageId
+        ? renderImage(context.project, settings.backgroundImageId, {
+            className: "catalog-hero-background-image",
+            loading: "lazy",
+            fetchPriority: "auto",
+            sizes: "100vw",
+            fallbackAlt: `${title} — fondo editorial`,
+          })
+        : "";
+    const heroBackgroundWrap = heroBackground
+      ? `<div class="catalog-hero-background" data-hero-background style="--catalog-hero-bg-dark:${
+          Math.min(Math.max(settings.backgroundDarkness, 0), 90) / 100
+        }">${heroBackground}</div>`
+      : "";
     const benefitsMarkup = isV2Hero
       ? settings.benefits.length > 0
         ? renderHeroBenefits(settings.benefits, "catalog-hero-benefits--copy")
@@ -581,13 +616,19 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
       ? `<a class="catalog-primary-action solara-primary-action" href="https://wa.me/${escapeAttribute(whatsappPhone)}" target="_blank" rel="noopener noreferrer"><span class="catalog-hero-cta-label">Escribir por WhatsApp</span><svg class="catalog-hero-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${catalogHeroBenefitIcons.chat}</svg></a>`
       : `<a class="catalog-primary-action" href="${escapeAttribute(safeUrl(actionHref))}">${escapeHtml(actionLabel)}</a>${settings.secondaryActionLabel ? `<a class="catalog-secondary-action" href="${escapeAttribute(safeUrl(settings.secondaryActionHref))}">${escapeHtml(settings.secondaryActionLabel)}</a>` : ""}`;
     const heroInner = isV2Hero
-      ? `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}"><div class="catalog-hero-copy"><div class="catalog-hero-reveal catalog-hero-reveal--eyebrow"><p class="catalog-eyebrow">${escapeHtml(settings.eyebrow)}</p></div><h1 class="catalog-hero-title" data-hero-title>${titleLinesMarkup}</h1><div class="catalog-hero-rule" data-hero-rule aria-hidden="true"></div><div class="catalog-hero-reveal catalog-hero-reveal--body"><p class="catalog-hero-body">${escapeHtml(body)}</p></div><div class="catalog-hero-reveal catalog-hero-reveal--actions"><div class="catalog-hero-actions">${actions}</div></div>${benefitsMarkup}</div><figure class="catalog-hero-media" data-motion-zone="media" data-hero-media>${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>${benefitsBand}`
+      ? `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}">${heroBackgroundWrap}<div class="catalog-hero-copy"><div class="catalog-hero-reveal catalog-hero-reveal--eyebrow"><p class="catalog-eyebrow">${escapeHtml(settings.eyebrow)}</p></div><h1 class="catalog-hero-title" data-hero-title>${titleLinesMarkup}</h1><div class="catalog-hero-rule" data-hero-rule aria-hidden="true"></div><div class="catalog-hero-reveal catalog-hero-reveal--body"><p class="catalog-hero-body">${escapeHtml(body)}</p></div><div class="catalog-hero-reveal catalog-hero-reveal--actions"><div class="catalog-hero-actions">${actions}</div></div>${benefitsMarkup}</div><figure class="catalog-hero-media" data-motion-zone="media" data-hero-media>${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>${benefitsBand}`
       : `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}"><div class="catalog-hero-copy"><p class="catalog-eyebrow">${escapeHtml(settings.eyebrow)}</p><h1>${escapeHtml(title)}</h1><p class="catalog-hero-body">${escapeHtml(body)}</p><div class="catalog-hero-actions">${actions}</div>${stats}</div><figure class="catalog-hero-media" data-motion-zone="media">${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>`;
+    const heroRootClass = [
+      isV2Hero ? "catalog-hero-editorial" : "",
+      heroBackgroundWrap ? "catalog-hero-editorial--has-background" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
     return moduleRoot(
       "catalog-hero",
       context.section,
       safeHtml(heroInner),
-      isV2Hero ? { className: "catalog-hero-editorial" } : undefined,
+      heroRootClass ? { className: heroRootClass } : undefined,
     );
   },
 };

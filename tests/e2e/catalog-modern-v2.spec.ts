@@ -196,6 +196,30 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   expect(heroFinal.benefitOpacities).toEqual(["1", "1", "1"]);
   expect(heroFinal.mediaVisible).toBe(true);
 
+  // Fondo editorial del hero (desktop): cubre el hero, usa la oscuridad del
+  // setting y el copy pasa a blanco para leer sobre la imagen oscurecida.
+  const heroBackgroundMetrics = await page.evaluate(() => {
+    const bg = document.querySelector<HTMLElement>("[data-hero-background]");
+    const hero = document.querySelector<HTMLElement>(".catalog-hero-inner");
+    const copy = document.querySelector<HTMLElement>(".catalog-hero-copy");
+    if (!bg || !hero || !copy) return null;
+    const bgRect = bg.getBoundingClientRect();
+    const heroRect = hero.getBoundingClientRect();
+    return {
+      fillsHero:
+        Math.abs(bgRect.left - heroRect.left) < 1 &&
+        Math.abs(bgRect.right - heroRect.right) < 1 &&
+        Math.abs(bgRect.top - heroRect.top) < 1,
+      darkness: getComputedStyle(bg).getPropertyValue("--catalog-hero-bg-dark").trim(),
+      copyColor: getComputedStyle(copy).color,
+    };
+  });
+  expect(heroBackgroundMetrics).toEqual({
+    fillsHero: true,
+    darkness: "0.6",
+    copyColor: "rgb(255, 255, 255)",
+  });
+
   const heroCollision = await page.evaluate(() => {
     const header = document
       .querySelector('[data-solara-module="catalog-header"]')
@@ -579,6 +603,10 @@ test("V2 mantiene CTA, dos columnas y reduced motion en 390x844", async ({ page 
       bandBelowMedia: bandRect.top >= mediaRect.bottom - 1,
       copyInsideHero: copyRect.top >= heroRect.top && copyRect.bottom <= heroRect.bottom + 1,
       bandVisible: getComputedStyle(band).display !== "none",
+      backgroundHidden: getComputedStyle(
+        document.querySelector<HTMLElement>("[data-hero-background]") ??
+          document.createElement("div"),
+      ).display,
     };
   });
   expect(mobileHeroEditorial).toEqual({
@@ -586,6 +614,7 @@ test("V2 mantiene CTA, dos columnas y reduced motion en 390x844", async ({ page 
     bandBelowMedia: true,
     copyInsideHero: true,
     bandVisible: true,
+    backgroundHidden: "none",
   });
   expect(
     await page.locator(".catalog-hero-copy h1").evaluate((element) => {

@@ -564,6 +564,8 @@ export const catalogModernStore = StoreProjectV2Schema.parse({
         secondaryActionHref: "/categorias/remeras/",
         posterAssetId: "asset-hero",
         videoAssetId: "",
+        backgroundImageId: "asset-hero",
+        backgroundDarkness: 60,
         slides: [],
         autoplay: false,
         intervalMs: 6000,

@@ -2537,12 +2537,41 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 /* Variante editorial (V2 sin carousel): la media es siempre 9:16 y la columna
    de texto se estira horizontalmente. */
 .cm.v2 .catalog-hero-editorial .catalog-hero-inner {
+  position: relative;
   grid-template-columns: minmax(0, 1fr) auto;
 }
 .cm.v2 .catalog-hero-editorial [data-hero-media] {
   width: min(calc(90svh * 9 / 16), 45vw);
   aspect-ratio: 9 / 16;
   min-height: 0;
+  position: relative;
+  z-index: 1;
+}
+/* Fondo editorial oscurecido (desktop, detrás del copy): imagen editable
+   desde el editor, oscurecida con la variable del setting. */
+.cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial--has-background .catalog-hero-background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial--has-background .catalog-hero-background img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(calc(1 - var(--catalog-hero-bg-dark, 0.6) * 0.78)) saturate(0.92);
+  transform: scale(1.01);
+}
+/* Con fondo presente el copy pasa a claro para leer sobre la imagen. */
+.cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial--has-background .catalog-hero-copy {
+  color: #fff;
+}
+.cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial--has-background .catalog-hero-copy .catalog-hero-body {
+  color: color-mix(in srgb, #fff 82%, transparent);
+}
+.cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial--has-background .catalog-hero-copy .catalog-hero-rule {
+  background: color-mix(in srgb, #fff 45%, transparent);
 }
 .cm.v2 .catalog-hero-copy {
   position: relative;
@@ -2559,7 +2588,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-hero-copy h1 {
   max-width: 100%;
   font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
-  font-size: calc(clamp(3.8rem, 5vw, 6rem) * var(--solara-type-scale, 1));
+  font-size: calc(clamp(4.75rem, 6.4vw, 8rem) * var(--solara-type-scale, 1));
   font-weight: 500;
   letter-spacing: -.065em;
   line-height: .88;
@@ -2569,9 +2598,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   text-wrap: balance;
 }
 .cm.v2 .catalog-hero-copy .catalog-hero-reveal--body > p {
-  max-width: 38ch;
+  max-width: 54ch;
   margin-top: 0;
-  font-size: clamp(.98rem, 1.1vw, 1.12rem);
+  font-size: clamp(1.05rem, 1.2vw, 1.28rem);
   line-height: 1.62;
 }
 .cm.v2 .catalog-primary-action,
@@ -3281,6 +3310,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     color: color-mix(in srgb, #fff 82%, transparent);
   }
   .cm.v2 .catalog-hero-editorial .catalog-hero-benefits--copy {
+    display: none;
+  }
+  .cm.v2 .catalog-hero-editorial [data-hero-background] {
     display: none;
   }
   .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band {
