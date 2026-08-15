@@ -1,5 +1,15 @@
 # Changelog
 
+### Hero V2: el video 9:16 arranca solo (autoplay forzado en modo video) (2026-08-15)
+
+- El hero tenía `autoplay: false` por defecto (era del carrusel): el video se
+  veía como imagen quieta. En modo video el render fuerza `autoplay` (muted +
+  loop + playsinline, permitido por los navegadores) y la subida de video
+  también marca `autoplay: true` en la sección.
+- Tests: el contrato de render ahora aserta el atributo en el tag `<video>`
+  (antes pasaba por el `data-autoplay` del contenedor) y cubre el caso
+  "autoplay false + modo video = autoplay".
+
 ### Hero V2: media 9:16 sólo video + poster automático del video (2026-08-15)
 
 - El editor del hero V2 expone el modo **sólo Video** (la media 9:16 ya no

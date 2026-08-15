@@ -189,13 +189,14 @@ describe("applyVideoToSection", () => {
 describe("sectionSettingsWithVideo", () => {
   it("apunta el campo y pasa el modo a video cuando la sección tiene mode", () => {
     const settings = sectionSettingsWithVideo(
-      { mode: "image", videoAssetId: "", posterAssetId: "asset-hero" },
+      { mode: "image", videoAssetId: "", autoplay: false, posterAssetId: "asset-hero" },
       "videoAssetId",
       "video-1",
     );
     expect(settings).toEqual({
       mode: "video",
       videoAssetId: "video-1",
+      autoplay: true,
       posterAssetId: "",
     });
   });

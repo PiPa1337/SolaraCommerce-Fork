@@ -218,6 +218,8 @@ export function sectionSettingsWithVideo(
 ): Record<string, unknown> {
   const next: Record<string, unknown> = { ...draft, [fieldKey]: videoId };
   if (typeof next.mode === "string") next.mode = "video";
+  // La media 9:16 en modo video es loop mudo de fondo: arranca sola.
+  if ("autoplay" in next) next.autoplay = true;
   // El poster del hero lo genera el video (fotograma a baja resolución): se
   // limpia el poster manual para que el render use el automático.
   if (fieldKey === "videoAssetId" && "posterAssetId" in next) next.posterAssetId = "";

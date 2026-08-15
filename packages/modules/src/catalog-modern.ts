@@ -384,7 +384,9 @@ function renderCatalogHeroMedia(
       className: "catalog-hero-video",
       ...(settings.posterAssetId ? { posterAssetId: settings.posterAssetId } : {}),
       preload: "none",
-      autoplay: settings.autoplay,
+      // La media 9:16 es loop mudo de fondo: en modo video siempre autoplay
+      // (el setting `autoplay` del hero era para el carrusel).
+      autoplay: settings.mode === "video" ? true : settings.autoplay,
       fallbackAlt: title,
     });
     if (video) return video;

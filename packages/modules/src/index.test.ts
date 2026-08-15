@@ -296,13 +296,45 @@ describe("official module system", () => {
     };
     const html = renderSections(project, [section], { pageType: "home" });
     const hero = html.slice(html.indexOf('data-solara-module="catalog-hero"'));
-    expect(hero).toContain("<video");
-    expect(hero).toContain("muted");
-    expect(hero).toContain("loop");
-    expect(hero).toContain("playsinline");
-    expect(hero).toContain("autoplay");
-    expect(hero).toContain('src="data:video/mp4;base64,AAAA"');
+    const videoTag = hero.slice(hero.indexOf("<video"), hero.indexOf("</video>") + 8);
+    expect(videoTag).toContain("<video");
+    expect(videoTag).toContain("muted");
+    expect(videoTag).toContain("loop");
+    expect(videoTag).toContain("playsinline");
+    expect(videoTag).toMatch(/\sautoplay\b/);
+    expect(videoTag).toContain('src="data:video/mp4;base64,AAAA"');
     expect(hero).not.toContain('class="catalog-hero-image"');
+  });
+
+  it("en modo video autoplay es obligatorio aunque el setting diga false", () => {
+    const project = structuredClone(catalogModernStore);
+    const section = project.sections.find(
+      (candidate) => candidate.moduleId === "catalog-hero" && candidate.enabled !== false,
+    );
+    if (!section) throw new Error("Fixture sin hero");
+    const video: VideoAsset = {
+      kind: "video",
+      id: "video-autoplay-test" as VideoAsset["id"],
+      name: "look",
+      alt: "",
+      mimeType: "video/mp4",
+      source: "data:video/mp4;base64,AAAA",
+      width: 1080,
+      height: 1920,
+      durationSeconds: 8,
+      hash: "video-autoplay-hash",
+    };
+    project.videos = [video];
+    section.settings = {
+      ...section.settings,
+      mode: "video",
+      videoAssetId: video.id,
+      autoplay: false,
+    };
+    const html = renderSections(project, [section], { pageType: "home" });
+    const hero = html.slice(html.indexOf('data-solara-module="catalog-hero"'));
+    const videoTag = hero.slice(hero.indexOf("<video"), hero.indexOf("</video>") + 8);
+    expect(videoTag).toMatch(/\sautoplay\b/);
   });
 
   it("usa el poster automático del video como preload", () => {
