@@ -35,7 +35,7 @@ export function formatCompactDate(value: string): string {
 
 export interface ProjectCardProps {
   project: StoredProject | undefined;
-  detailRef: RefObject<HTMLFieldSetElement | null>;
+  detailRef: RefObject<HTMLElement | null>;
   backupId: string | undefined;
   archivingId?: string | undefined;
   siteOpeningId: string | undefined;
@@ -71,7 +71,7 @@ export function ProjectCard({
   onArchive,
 }: ProjectCardProps) {
   return (
-    <fieldset
+    <aside
       ref={detailRef}
       className={`dashboard-store-detail${project ? " is-open" : ""}`}
       aria-label={project ? `Tienda seleccionada: ${project.name}` : "Tienda seleccionada"}
@@ -212,6 +212,6 @@ export function ProjectCard({
           <p>Elegí un proyecto para ver sus datos y acciones.</p>
         </div>
       )}
-    </fieldset>
+    </aside>
   );
 }

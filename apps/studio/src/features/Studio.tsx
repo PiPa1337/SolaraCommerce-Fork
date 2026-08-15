@@ -58,12 +58,6 @@ import { formatSaveTime } from "../lib/saveTime";
 import { formatLastExportLabel } from "../lib/statusBar";
 import { applyStudioTheme, readStudioTheme, storeStudioTheme } from "../lib/studioTheme";
 import { createProjectArchiveInWorker } from "../lib/workers";
-import { Assets } from "./Assets";
-import { Builder } from "./Builder";
-import { Catalog } from "./Catalog";
-import { ExportPanel } from "./Export";
-import { GuidedOverview } from "./GuidedOverview";
-import { Overview } from "./Overview";
 import {
   getPreviewRoutes,
   Preview,
@@ -71,8 +65,31 @@ import {
   PreviewToolbar,
   type PreviewZoom,
 } from "./Preview";
-import { Seo } from "./Seo";
-import { ThemeEditor } from "./ThemeEditor";
+
+// Las vistas del editor se cargan al abrir la pestaña: el shell y el preview
+// arrancan sin parsear Catalog/Builder/Export/etc.
+const LazyGuidedOverview = lazy(() =>
+  import("./GuidedOverview").then(({ GuidedOverview: Component }) => ({ default: Component })),
+);
+const LazyOverview = lazy(() =>
+  import("./Overview").then(({ Overview: Component }) => ({ default: Component })),
+);
+const LazyCatalog = lazy(() =>
+  import("./Catalog").then(({ Catalog: Component }) => ({ default: Component })),
+);
+const LazyBuilder = lazy(() =>
+  import("./Builder").then(({ Builder: Component }) => ({ default: Component })),
+);
+const LazyThemeEditor = lazy(() =>
+  import("./ThemeEditor").then(({ ThemeEditor: Component }) => ({ default: Component })),
+);
+const LazyAssets = lazy(() =>
+  import("./Assets").then(({ Assets: Component }) => ({ default: Component })),
+);
+const LazySeo = lazy(() => import("./Seo").then(({ Seo: Component }) => ({ default: Component })));
+const LazyExportPanel = lazy(() =>
+  import("./Export").then(({ ExportPanel: Component }) => ({ default: Component })),
+);
 
 const ManagedPersistenceControls = lazy(() =>
   import("./ManagedPersistenceControls").then(({ ManagedPersistenceControls: Component }) => ({
@@ -123,6 +140,8 @@ interface StudioTabContentProps {
 // El contenido de la pestaña activa sólo se recalcula cuando cambia su
 // entrada (proyecto, tab o modo). Los re-renders del shell por estado de
 // guardado, marca de sucio o avisos no vuelven a montar el editor completo.
+const tabFallback = <div className="studio-tab-fallback" aria-busy="true" />;
+
 const StudioTabContent = memo(function StudioTabContent({
   tab,
   project,
@@ -140,49 +159,73 @@ const StudioTabContent = memo(function StudioTabContent({
   switch (tab) {
     case "guided":
       return (
-        <GuidedOverview
-          project={project}
-          advancedMode={advancedMode}
-          onNavigate={onNavigate}
-          onToggleAdvancedMode={onToggleAdvancedMode}
-          onApplyUpgrade={onApplyUpgrade}
-        />
+        <Suspense fallback={tabFallback}>
+          <LazyGuidedOverview
+            project={project}
+            advancedMode={advancedMode}
+            onNavigate={onNavigate}
+            onToggleAdvancedMode={onToggleAdvancedMode}
+            onApplyUpgrade={onApplyUpgrade}
+          />
+        </Suspense>
       );
     case "overview":
-      return <Overview project={project} onChange={replaceProject} />;
+      return (
+        <Suspense fallback={tabFallback}>
+          <LazyOverview project={project} onChange={replaceProject} />
+        </Suspense>
+      );
     case "catalog":
-      return <Catalog project={project} onCommand={runCommand} onChange={replaceProject} />;
+      return (
+        <Suspense fallback={tabFallback}>
+          <LazyCatalog project={project} onCommand={runCommand} onChange={replaceProject} />
+        </Suspense>
+      );
     case "builder":
       return (
-        <Builder
-          project={project}
-          onChange={replaceProject}
-          protectedBase={!advancedMode && project.origin?.seed === "clean"}
-          advancedMode={advancedMode}
-          onEnableAdvanced={onEnableAdvanced}
-        />
+        <Suspense fallback={tabFallback}>
+          <LazyBuilder
+            project={project}
+            onChange={replaceProject}
+            protectedBase={!advancedMode && project.origin?.seed === "clean"}
+            advancedMode={advancedMode}
+            onEnableAdvanced={onEnableAdvanced}
+          />
+        </Suspense>
       );
     case "theme":
-      return <ThemeEditor project={project} onChange={replaceProject} />;
+      return (
+        <Suspense fallback={tabFallback}>
+          <LazyThemeEditor project={project} onChange={replaceProject} />
+        </Suspense>
+      );
     case "assets":
-      return <Assets project={project} onChange={replaceProject} />;
+      return (
+        <Suspense fallback={tabFallback}>
+          <LazyAssets project={project} onChange={replaceProject} />
+        </Suspense>
+      );
     case "seo":
       return (
-        <Seo
-          project={project}
-          onChange={replaceProject}
-          onNavigate={onNavigate}
-          validationError={validationError}
-        />
+        <Suspense fallback={tabFallback}>
+          <LazySeo
+            project={project}
+            onChange={replaceProject}
+            onNavigate={onNavigate}
+            validationError={validationError}
+          />
+        </Suspense>
       );
     case "export":
       return (
-        <ExportPanel
-          project={project}
-          onImport={onImport}
-          onNavigate={onNavigate}
-          {...(onOpenSite ? { onOpenSite } : {})}
-        />
+        <Suspense fallback={tabFallback}>
+          <LazyExportPanel
+            project={project}
+            onImport={onImport}
+            onNavigate={onNavigate}
+            {...(onOpenSite ? { onOpenSite } : {})}
+          />
+        </Suspense>
       );
   }
 });

@@ -115,7 +115,12 @@ test("restaurar valores por defecto devuelve la sección al estado inicial", asy
   await openBuilder(page);
   await selectHero(page);
 
-  const title = page.getByRole("textbox", { name: "Título", exact: true });
+  // El hero V2 tiene slides con campos "Título" propios (aria-description="Slide N");
+  // el campo del módulo (top-level) no lleva esa marca.
+  const title = page
+    .getByRole("textbox", { name: "Título", exact: true })
+    .and(page.locator("input:not([aria-description])"))
+    .first();
   await title.fill("Un título editado");
   await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
   await expect(

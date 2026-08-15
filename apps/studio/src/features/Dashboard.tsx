@@ -250,7 +250,7 @@ export function Dashboard({
   const shutdownDialogRef = useRef<HTMLDialogElement>(null);
   const shutdownTerminalRef = useRef(shutdownTerminal === true);
   const nameInputRef = useRef<HTMLInputElement>(null);
-  const selectedPanelRef = useRef<HTMLFieldSetElement>(null);
+  const selectedPanelRef = useRef<HTMLElement>(null);
   const createButtonRef = useRef<HTMLButtonElement>(null);
   const createOpenerRef = useRef<HTMLElement | null>(null);
   const shutdownOpenerRef = useRef<HTMLElement | null>(null);
