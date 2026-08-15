@@ -140,3 +140,20 @@
 - Gates: `pnpm check` exit=0, e2e 3/3, axe 0, sweep limpio.
 - Mejoras: 2 fixes visuales reales de la visión fresca; la medición volvió a desmentir 2 percepciones.
 - Acumulado PLAN 1→7: benchmark −8.2 %; axe 0/0/0; preloads 146/146; LCP 44-72 ms; foco 0; JSON-LD 100 %; contratos profundos 0 drift.
+
+## PLAN 8 (18:30-18:50Z, 2026-08-14)
+
+| id | ítem | métrica | antes | después | Δ% | estado |
+|----|------|---------|-------|---------|-----|--------|
+| P8-1 | CDP + LCP frío re-verificado | ms | 44-56 | 44-56 | 0 | hecho |
+| P8-2 | Handler 9/9 + subcarpeta | gates | OK | OK | 0 | hecho |
+| P8-3 | Auditoría visual catalogModern (10 capturas): 4 hallazgos → 3 desmentidos por medición (A coordinar 1 línea 21px; badge % presente; recortes de fixtures) + 1 real: tracking −0.09/−0.075em → −0.03em en 5 reglas | hallazgos | 1 real | 0 | **100 %** | hecho |
+| P8-4 | Axe + foco re-verificados | gates | OK | OK | 0 | hecho |
+| P8-5 | Contratos profundos re-verificados | gates | 6/6 | 6/6 | 0 | hecho |
+| P8-6 | Cobertura rutas re-verificada | gates | OK | OK | 0 | hecho |
+| P8-7 | **Interacciones reales sin errores** (agregar al carrito → carrito → checkout): gate nuevo | errores | — | 0 | gate nuevo | hecho (`interacciones.spec.ts`) |
+
+### Totales PLAN 8
+- Gates: `pnpm check` exit=0, e2e 1/1 (gate nuevo de interacciones).
+- Mejoras: tracking de títulos corregido (legibilidad), gate de interacciones reales.
+- Acumulado PLAN 1→8: benchmark −8.2 %; axe 0/0/0; preloads 146/146; LCP 44-56 ms; interacciones 0 errores; contratos 0 drift.

@@ -2149,7 +2149,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-product-gallery-thumbs button[aria-current="true"] { border-color: var(--catalog-ink); }
 [data-solara-store].catalog-modern .catalog-product-gallery-thumb { width: 100%; height: 100%; object-fit: contain; }
 [data-solara-store].catalog-modern .catalog-product-info { align-self: start; padding-top: .5rem; }
-[data-solara-store].catalog-modern .catalog-product-info h1 { max-width: 14ch; margin-top: .35rem; font-size: calc(clamp(2.25rem, 4.2vw, 4.7rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.09em; line-height: .92; overflow-wrap: anywhere; }
+[data-solara-store].catalog-modern .catalog-product-info h1 { max-width: 14ch; margin-top: .35rem; font-size: calc(clamp(2.25rem, 4.2vw, 4.7rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.03em; line-height: .92; overflow-wrap: anywhere; }
 [data-solara-store].catalog-modern .catalog-detail-price { display: flex; flex-wrap: wrap; align-items: baseline; gap: .65rem; margin-top: 1.15rem; font-size: 1.55rem; font-weight: 800; }
 [data-solara-store].catalog-modern .catalog-detail-price del { color: var(--catalog-muted); font-size: 1rem; font-weight: 500; }
 [data-solara-store].catalog-modern .catalog-product-info > .catalog-product-rating { margin-top: .8rem; }
@@ -2247,7 +2247,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .solara-category-hero h1,
 [data-solara-store].catalog-modern .solara-page-intro h1,
 [data-solara-store].catalog-modern .solara-cart-page h1,
-[data-solara-store].catalog-modern .solara-checkout-page h1 { font-size: calc(clamp(2.8rem, 6vw, 5.5rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.09em; line-height: .9; }
+[data-solara-store].catalog-modern .solara-checkout-page h1 { font-size: calc(clamp(2.8rem, 6vw, 5.5rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.03em; line-height: .9; }
 [data-solara-store].catalog-modern .solara-category-hero img { width: 100%; aspect-ratio: 16 / 7; object-fit: cover; border-radius: 16px; }
 [data-solara-store].catalog-modern .solara-category-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 1rem 0 1.5rem; padding: .8rem 0; border-block: 1px solid var(--catalog-border); }
 [data-solara-store].catalog-modern .solara-category-toolbar select,
@@ -2489,7 +2489,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
   font-size: clamp(1.85rem, 2vw, 2.45rem);
   font-weight: 500;
-  letter-spacing: -.075em;
+  letter-spacing: -.03em;
   transition: font-size var(--catalog-v2-motion-control) var(--catalog-v2-ease-out);
 }
 .cm.v2 [data-scrolled="true"] .catalog-brand {
@@ -2680,7 +2680,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
   font-size: calc(clamp(1.8rem, 4vw, 3rem) * var(--solara-type-scale, 1));
   font-weight: 500;
-  letter-spacing: -.075em;
+  letter-spacing: -.03em;
   line-height: .9;
 }
 .cm.v2 .catalog-product-grid-section > header,
@@ -2877,7 +2877,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
   font-size: calc(clamp(3.8rem, 5vw, 6rem) * var(--solara-type-scale, 1));
   font-weight: 500;
-  letter-spacing: -.075em;
+  letter-spacing: -.03em;
   line-height: .88;
   overflow-wrap: normal;
 }
@@ -2970,7 +2970,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
   font-size: calc(clamp(3.4rem, 4.2vw, 5.5rem) * var(--solara-type-scale, 1));
   font-weight: 500;
-  letter-spacing: -.075em;
+  letter-spacing: -.03em;
   line-height: .88;
   overflow-wrap: normal;
 }
