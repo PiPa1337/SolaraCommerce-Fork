@@ -53,3 +53,33 @@ test("P4-C2: crear una tienda desde el dashboard en pasos con validacion", async
   expect(editorOpened).toBeGreaterThan(0);
   expect(nameInEditor).toBe(true);
 });
+
+test("P4-B4: archivar una tienda desde el panel de detalle y restaurarla", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
+
+  await page.locator(".dashboard-store-card").first().click();
+  await page.waitForTimeout(600);
+  const archiveButton = page.locator(".dashboard-store-detail").getByRole("button", {
+    name: "Archivar",
+  });
+  await expect(archiveButton).toBeVisible();
+
+  await archiveButton.click();
+  const dialog = page.getByRole("dialog", { name: "Archivar tienda" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Archivar" }).click();
+  const toast = page.locator("[data-testid='ui-dashboard-toast']");
+  await toast.waitFor({ state: "visible", timeout: 30_000 });
+  const toastText = await toast.innerText();
+  console.log("P4-B4 toast tras archivar:", JSON.stringify(toastText.slice(0, 60)));
+  expect(toastText).toContain("archivada");
+
+  await toast.getByRole("button", { name: "Deshacer" }).click();
+  const restoredToast = page.locator("[data-testid='ui-dashboard-toast']");
+  await restoredToast.waitFor({ state: "visible", timeout: 30_000 });
+  const restoredText = await restoredToast.innerText();
+  console.log("P4-B4 toast tras deshacer:", JSON.stringify(restoredText.slice(0, 60)));
+  expect(restoredText).toContain("restaurada");
+});
