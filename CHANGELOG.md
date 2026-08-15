@@ -1,5 +1,15 @@
 # Changelog
 
+### Hero V2: legibilidad sobre el fondo oscurecido (2026-08-15)
+
+- Revisión con visión del hero desktop: el antetítulo terracota se perdía
+  contra la textura de los percheros y el body quedaba fino. Se agrega un
+  gradiente oscuro asimétrico sobre el fondo (0.6 → 0.06 de izquierda a
+  derecha), el antetítulo se aclara (`sale 55% + blanco 45%` con sombra
+  sutil) y el body sube a peso 500 con `text-shadow`. Verificado con visión:
+  título, descripción, antetítulo y CTA legibles sin esfuerzo y transición
+  del gradiente suave.
+
 ### Hero V2: fondo editorial oscurecido, tipografía expandida y photo 9:16 (2026-08-15)
 
 - Nuevos settings del hero conectados al editor: `backgroundImageId` (fondo

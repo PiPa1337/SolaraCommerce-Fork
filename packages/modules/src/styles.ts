@@ -2564,11 +2564,29 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   transform: scale(1.01);
 }
 /* Con fondo presente el copy pasa a claro para leer sobre la imagen. */
+.cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial--has-background .catalog-hero-background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(10, 10, 12, 0.6) 0%,
+    rgba(10, 10, 12, 0.42) 45%,
+    rgba(10, 10, 12, 0.2) 72%,
+    rgba(10, 10, 12, 0.06) 100%
+  );
+}
 .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial--has-background .catalog-hero-copy {
   color: #fff;
 }
+.cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial--has-background .catalog-hero-copy .catalog-eyebrow {
+  color: color-mix(in srgb, var(--catalog-sale) 55%, #fff 45%);
+  text-shadow: 0 1px 2px rgba(10, 10, 12, 0.45);
+}
 .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial--has-background .catalog-hero-copy .catalog-hero-body {
   color: color-mix(in srgb, #fff 82%, transparent);
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(10, 10, 12, 0.4);
 }
 .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial--has-background .catalog-hero-copy .catalog-hero-rule {
   background: color-mix(in srgb, #fff 45%, transparent);
