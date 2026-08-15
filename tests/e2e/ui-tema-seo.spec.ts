@@ -249,3 +249,28 @@ test("los accesos de auditoría SEO navegan y devuelven el foco al tab destino",
   await expect(assetsTab).toHaveAttribute("aria-selected", "true");
   await expect(assetsTab).toBeFocused();
 });
+
+test("R3-P7-B5: las vistas previas de Google/OG/WhatsApp reflejan el título de la home", async ({
+  page,
+}) => {
+  await setupCleanStore(page, "Tienda Previews");
+  await page.getByRole("tab", { name: "Resumen", exact: true }).click();
+  const homeTitleInput = page.locator('input[aria-label="Título SEO"]').first();
+  await expect(homeTitleInput).toBeVisible();
+  await homeTitleInput.fill("Título único de la vista previa");
+  await page.waitForTimeout(900);
+
+  await page.getByRole("tab", { name: "SEO", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "SEO y Google" })).toBeVisible();
+
+  const google = page.getByTestId("ui-seo-preview-google");
+  const og = page.getByTestId("ui-seo-preview-og");
+  const whatsapp = page.getByTestId("ui-seo-preview-whatsapp");
+  await expect(google).toBeVisible();
+  await expect
+    .poll(() => google.innerText(), { timeout: 15_000 })
+    .toContain("Título único de la vista previa");
+  await expect(og).toContainText("Título único de la vista previa");
+  await expect(whatsapp).toContainText("Título único de la vista previa");
+  console.log("R3-P7-B5 las tres vistas previas reflejan el título de la home");
+});
