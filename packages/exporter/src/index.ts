@@ -664,7 +664,7 @@ button, input, select, textarea, a { outline-offset: 3px; }
 }
 
 /** Remove CSS transport whitespace while preserving quoted content and calc spacing. */
-function minifyCss(value: string): string {
+export function minifyCss(value: string): string {
   const quoted: string[] = [];
   const protectedValue = value.replace(/("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g, (match) => {
     const token = `__SOLARA_CSS_STRING_${quoted.length}__`;
@@ -674,7 +674,9 @@ function minifyCss(value: string): string {
   let minified = protectedValue
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .replace(/\s+/g, " ")
-    .replace(/\s*([{};,:>+~])\s*/g, "$1")
+    // El `+` queda fuera: en calc() requiere espacios a ambos lados y
+    // quitarlos vuelve inválida la declaración (el navegador la descarta).
+    .replace(/\s*([{};,:>~])\s*/g, "$1")
     .replace(/;}/g, "}")
     .trim();
   quoted.forEach((match, index) => {

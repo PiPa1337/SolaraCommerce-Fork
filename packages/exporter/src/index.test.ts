@@ -10,6 +10,7 @@ import {
   createProjectArchive,
   createPublicExportManifest,
   exportProject,
+  minifyCss,
   readProjectArchive,
   renderPreviewHtml,
 } from "./index";
@@ -29,6 +30,19 @@ function homeMetaDescription(homeHtml: string): string {
 }
 
 describe("exporter", () => {
+  it("minifyCss conserva los espacios de + en calc (válido) y compacta el resto", () => {
+    const input = `/* comentario */\n.a { width: calc(100% + 2rem); gap: 1rem  2rem; }\n.a > .b { color: red; }`;
+    const out = minifyCss(input);
+    expect(out).not.toContain("/*");
+    expect(out).toContain("calc(100% + 2rem)");
+    expect(out).not.toContain("1rem  2rem");
+    expect(out).toContain(".a>.b");
+    expect(out).not.toContain("; }");
+    // round() con min() anidado sigue siendo válido tras minificar
+    const math = minifyCss(".m { width: calc(min(90svh * 9 / 16, 45vw) + 2px); }");
+    expect(math).toContain("min(90svh * 9 / 16,45vw) + 2px");
+  });
+
   it("crea páginas estáticas y un feed consistente", () => {
     const result = exportProject(referenceStore, { mode: "production" });
     const productHtml = String(result.files.get("productos/manta-bruma/index.html"));

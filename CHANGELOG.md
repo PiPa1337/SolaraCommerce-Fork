@@ -1,5 +1,18 @@
 # Changelog
 
+### Fix minificador CSS + overscan de la media (2026-08-15)
+
+- El minificador del exporter quitaba los espacios alrededor de `+` en
+  `calc()` (los `+`/`-` los REQUIERE la spec): cualquier declaración con
+  `calc(... + ...)` se descartaba silenciosamente en el navegador. `minifyCss`
+  ahora conserva los espacios del `+` y queda exportado con test propio
+  (calc con +, round/min anidados, comentarios y selectores).
+- La media del hero usa overscan (`calc(min(90svh * 9 / 16, 45vw) + 2px)` con
+  `margin -1px -2px -1px 0`): sus bordes de layer quedan recortados por el
+  overflow del hero (clip duro, sin antialiasing a ningún DPR). Verificado
+  por medición: media 492px alineada, right recortado en 1840, sin overflow
+  de página.
+
 ### Hero V2: sin efectos residuales de la entrada en la media (2026-08-15)
 
 - La animación de entrada usaba `fill-mode: both`: al terminar dejaba el

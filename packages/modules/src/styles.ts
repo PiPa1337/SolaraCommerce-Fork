@@ -2544,8 +2544,14 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 .cm.v2 .catalog-hero-editorial [data-hero-media] {
-  width: round(up, min(calc(90svh * 9 / 16), 45vw), 1px);
-  aspect-ratio: 9 / 16;
+  /* Overscan de 1-2px: los bordes del layer del video/poster (que el
+     compositor antialiasa contra el fondo) quedan FUERA del hero y el
+     overflow:hidden del hero-inner los recorta. El borde visible es un clip
+     duro: sin franjas de 1px a ningún DPR/escala de pantalla. */
+  width: calc(min(90svh * 9 / 16, 45vw) + 2px);
+  height: 100%;
+  aspect-ratio: auto;
+  margin: -1px -2px -1px 0;
   min-height: 0;
   position: relative;
   z-index: 1;
