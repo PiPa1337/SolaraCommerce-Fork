@@ -1,5 +1,16 @@
 # Changelog
 
+### Hero V2: sin franjas en los bordes de la media (2026-08-15)
+
+- La media (imagen/video) tenía `transform: scale(1.015)` — un overscan que
+  quedó del parallax de cursor (eliminado). Al escalar, los bordes del
+  elemento se salían del figure (recortados con overflow hidden) y la arista
+  semitransparente se componía sobre la foto de fondo: línea blanquiza de
+  1-2px a la derecha (y arriba) del video antes de que comience.
+- Se elimina el scale base y el zoom de entrada ahora termina en scale(1)
+  exacto. Verificado por medición (bounding rects) y por visión: bordes
+  nítidos, sin franjas.
+
 ### Hero V2: poster con dimensiones de presentación y primer frame real (2026-08-15)
 
 - El poster usa el metadata de `requestVideoFrameCallback`: dimensiones de
