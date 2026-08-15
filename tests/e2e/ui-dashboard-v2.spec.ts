@@ -188,3 +188,30 @@ test("R4-P2-B5: la vista en lista del dashboard alterna y persiste", async ({ pa
   console.log("R4-P2-B5 lista tras recargar:", persisted);
   expect(persisted).toBe("true");
 });
+
+test("R5-P5-B5: el filtro de estado del dashboard persiste al recargar", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(studioUrl);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.deleteDatabase("solara-commerce-studio");
+        request.addEventListener("success", () => resolve());
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("blocked", () =>
+          reject(new Error("No se pudo limpiar la base de Studio.")),
+        );
+      }),
+  );
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+
+  const filter = page.getByRole("combobox", { name: "Estado" });
+  await filter.selectOption("archived");
+  await page.waitForTimeout(500);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  const persisted = await page.getByRole("combobox", { name: "Estado" }).inputValue();
+  console.log("R5-P5-B5 filtro tras recargar:", persisted);
+  expect(persisted).toBe("archived");
+});

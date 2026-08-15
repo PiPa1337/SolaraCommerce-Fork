@@ -4,14 +4,17 @@ import {
   DASHBOARD_PINNED_STORAGE_KEY,
   DASHBOARD_SELECTED_STORAGE_KEY,
   DASHBOARD_SORT_STORAGE_KEY,
+  DASHBOARD_STATUS_FILTER_STORAGE_KEY,
   DASHBOARD_VIEW_STORAGE_KEY,
   readPinnedIds,
   readStoredSelectedId,
   readStoredSort,
+  readStoredStatusFilter,
   readStoredView,
   writePinnedIds,
   writeStoredSelectedId,
   writeStoredSort,
+  writeStoredStatusFilter,
   writeStoredView,
 } from "./dashboardStorage";
 
@@ -71,7 +74,18 @@ describe("persistencia del dashboard", () => {
     const storage = createStorage();
     storage.setItem(DASHBOARD_SORT_STORAGE_KEY, "aleatorio");
     storage.setItem(DASHBOARD_VIEW_STORAGE_KEY, "carrousel");
+    storage.setItem(DASHBOARD_STATUS_FILTER_STORAGE_KEY, "rarito");
     expect(readStoredSort(storage)).toBe("updated");
     expect(readStoredView(storage)).toBe("grid");
+    expect(readStoredStatusFilter(storage)).toBe("active");
+  });
+
+  it("el filtro de estado persiste con el mismo round-trip que sort y vista", () => {
+    const storage = createStorage();
+    expect(readStoredStatusFilter(storage)).toBe("active");
+    writeStoredStatusFilter("archived", storage);
+    expect(readStoredStatusFilter(storage)).toBe("archived");
+    writeStoredStatusFilter("all", storage);
+    expect(readStoredStatusFilter(storage)).toBe("all");
   });
 });

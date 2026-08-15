@@ -43,10 +43,12 @@ import {
   readPinnedIds,
   readStoredSelectedId,
   readStoredSort,
+  readStoredStatusFilter,
   readStoredView,
   writePinnedIds,
   writeStoredSelectedId,
   writeStoredSort,
+  writeStoredStatusFilter,
   writeStoredView,
 } from "../lib/dashboardStorage";
 import { formatDate } from "../lib/format";
@@ -212,7 +214,7 @@ export function Dashboard({
   shutdownTerminal,
   onShutdownTerminal,
 }: DashboardProps) {
-  const [statusFilter, setStatusFilter] = useState<DashboardStatusFilter>("active");
+  const [statusFilter, setStatusFilter] = useState<DashboardStatusFilter>(readStoredStatusFilter);
   const [sort, setSort] = useState<DashboardSort>(readStoredSort);
   const [view, setView] = useState<DashboardView>(readStoredView);
   const [query, setQuery] = useState("");
@@ -444,6 +446,11 @@ export function Dashboard({
   const changeSort = useCallback((next: DashboardSort) => {
     writeStoredSort(next);
     setSort(next);
+  }, []);
+
+  const changeStatusFilter = useCallback((next: DashboardStatusFilter) => {
+    writeStoredStatusFilter(next);
+    setStatusFilter(next);
   }, []);
 
   const changeView = useCallback((next: DashboardView) => {
@@ -961,7 +968,7 @@ export function Dashboard({
             view={view}
             searchRef={searchInputRef}
             onQueryChange={setQuery}
-            onStatusFilterChange={setStatusFilter}
+            onStatusFilterChange={changeStatusFilter}
             onSortChange={changeSort}
             onViewChange={changeView}
           />

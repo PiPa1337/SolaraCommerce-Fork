@@ -5,12 +5,13 @@
  * selección que el usuario descarta se limpia (clearStoredSelectedId) para que
  * el round-trip no devuelva una selección vieja al reabrir el dashboard.
  */
-import type { DashboardSort } from "./dashboardModel";
+import type { DashboardSort, DashboardStatusFilter } from "./dashboardModel";
 
 export const DASHBOARD_PINNED_STORAGE_KEY = "solara-dashboard-pinned";
 export const DASHBOARD_SELECTED_STORAGE_KEY = "solara-dashboard-selected";
 export const DASHBOARD_SORT_STORAGE_KEY = "solara-dashboard-sort";
 export const DASHBOARD_VIEW_STORAGE_KEY = "solara-dashboard-view";
+export const DASHBOARD_STATUS_FILTER_STORAGE_KEY = "solara-dashboard-status-filter";
 
 export type DashboardView = "grid" | "list";
 
@@ -107,5 +108,27 @@ export function writeStoredView(
     storage.setItem(DASHBOARD_VIEW_STORAGE_KEY, value);
   } catch {
     // Almacenamiento bloqueado: la vista vive sólo en memoria.
+  }
+}
+
+export function readStoredStatusFilter(
+  storage: ReadStorage = defaultStorage,
+): DashboardStatusFilter {
+  try {
+    const value = storage.getItem(DASHBOARD_STATUS_FILTER_STORAGE_KEY);
+    return value === "all" || value === "active" || value === "archived" ? value : "active";
+  } catch {
+    return "active";
+  }
+}
+
+export function writeStoredStatusFilter(
+  value: DashboardStatusFilter,
+  storage: WriteStorage = defaultStorage,
+): void {
+  try {
+    storage.setItem(DASHBOARD_STATUS_FILTER_STORAGE_KEY, value);
+  } catch {
+    // Almacenamiento bloqueado: el filtro vive sólo en memoria.
   }
 }
