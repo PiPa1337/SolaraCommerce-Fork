@@ -28,9 +28,7 @@ export function ensureAboutV2Sections(project: StoreProjectV1): StoreProjectV1 {
   return {
     ...project,
     pages: project.pages.map((candidate) =>
-      candidate.kind === "about"
-        ? { ...candidate, sections: defaultAboutV2Sections() }
-        : candidate,
+      candidate.kind === "about" ? { ...candidate, sections: defaultAboutV2Sections() } : candidate,
     ),
   };
 }

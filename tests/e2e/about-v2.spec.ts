@@ -133,3 +133,15 @@ test("Nosotros V2 conserva foco visible al navegar por teclado", async ({ page }
   });
   expect(hasRing).toBe(true);
 });
+
+test("Nosotros V2 aplica la grilla editorial y limita los iconos", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(new URL("/nosotros/", serverUrl).toString());
+  const heroColumns = await page
+    .locator(".about-hero")
+    .evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length);
+  const iconBox = await page.locator(".solara-about-icon").first().boundingBox();
+  expect(heroColumns).toBe(2);
+  expect(iconBox?.width ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(32);
+  expect(iconBox?.height ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(32);
+});

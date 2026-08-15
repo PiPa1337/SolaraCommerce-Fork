@@ -78,7 +78,9 @@ describe("plantilla Catalog Modern", () => {
 
     const normalized = ensureAboutV2Sections(empty);
     expect(
-      normalized.pages.find((page) => page.kind === "about")?.sections.map((section) => section.moduleId),
+      normalized.pages
+        .find((page) => page.kind === "about")
+        ?.sections.map((section) => section.moduleId),
     ).toEqual([
       "about-hero",
       "about-history",

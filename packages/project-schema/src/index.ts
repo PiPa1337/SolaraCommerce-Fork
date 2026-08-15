@@ -965,14 +965,6 @@ export function getCategoryBreadcrumb(
 }
 
 export {
-  contactDefaultFaqItems,
-  contactDefaultHelpItems,
-  contactDefaultPurchaseItems,
-  contactDefaultQuickLinks,
-  contactDefaultReasons,
-  defaultContactV2Sections,
-} from "./catalog-modern-contact";
-export {
   aboutDefaultExperience,
   aboutDefaultHistoryParagraphs,
   aboutDefaultPrinciples,
@@ -980,6 +972,14 @@ export {
   aboutDefaultStats,
   defaultAboutV2Sections,
 } from "./catalog-modern-about";
+export {
+  contactDefaultFaqItems,
+  contactDefaultHelpItems,
+  contactDefaultPurchaseItems,
+  contactDefaultQuickLinks,
+  contactDefaultReasons,
+  defaultContactV2Sections,
+} from "./catalog-modern-contact";
 export * from "./catalog-modern-guidance";
 
 /** Valida una entrada desconocida y agrega contexto al error de schema. */

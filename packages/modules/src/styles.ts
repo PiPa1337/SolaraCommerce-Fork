@@ -3990,6 +3990,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action::before {
     transition: none !important;
   }
+}
   .cm.v2 .solara-about-page { width: min(calc(100% - 3rem), var(--catalog-v2-wide)); margin-inline: auto; }
   .cm.v2 .solara-about-sections { display: grid; }
   .cm.v2 .solara-about-sections > [data-solara-module] { min-width: 0; border-top: 1px solid var(--catalog-border); }
@@ -4052,7 +4053,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   @media (prefers-reduced-motion: reduce) {
     .cm.v2 [data-solara-module^="about-"] [data-motion-zone], .cm.v2 [data-solara-module^="about-"] article, .cm.v2 [data-solara-module^="about-"] .about-process-item, .cm.v2 [data-solara-module^="about-"] .about-principle-item { animation: none !important; transition: none !important; transform: none !important; }
   }
-}
 `,
 };
 
