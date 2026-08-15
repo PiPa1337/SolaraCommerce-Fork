@@ -9,7 +9,12 @@ import {
   aboutV2ModuleIds,
   aboutV2Modules,
 } from "./about-v2";
-import { getModuleDefinition, isCatalogModernModule, isModuleAvailableOnPage } from "./index";
+import {
+  getModuleDefinition,
+  isCatalogModernModule,
+  isModuleAvailableOnPage,
+  MODULE_STYLE_BLOCKS,
+} from "./index";
 
 describe("Nosotros V2 module contracts", () => {
   it("registra los diez módulos con ids estables", () => {
@@ -97,5 +102,14 @@ describe("Nosotros V2 module contracts", () => {
         }),
       ),
     ).toBe("");
+  });
+
+  it("incluye estilos V2 para la página y reduced motion", () => {
+    const styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    expect(styles).toContain(".cm.v2 .solara-about-page");
+    expect(styles).toContain(".cm.v2 .about-hero");
+    expect(styles).toContain("aspect-ratio: 9 / 16");
+    expect(styles).toContain("@media (prefers-reduced-motion: reduce)");
+    expect(styles).toContain('[data-solara-module^="about-"]');
   });
 });
