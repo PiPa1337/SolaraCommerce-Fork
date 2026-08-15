@@ -1,6 +1,7 @@
 /** Inspector de tokens visuales persistidos; no introduce estilos públicos paralelos. */
 import { ArrowCounterClockwise, PaintBrush, TextT, Wrench } from "@phosphor-icons/react";
 import type { StoreProjectV1, Theme } from "@solara/project-schema";
+import { ensureContactV2Sections } from "@solara/project-schema/catalog-modern-template";
 import { useEffect, useRef, useState } from "react";
 import { Button, Field, SectionHeader } from "../components/Ui";
 
@@ -320,12 +321,16 @@ export function ThemeEditor({
   const updateTheme = (theme: Theme) =>
     onChange({ ...project, theme, updatedAt: new Date().toISOString() });
 
-  const updateDesignFamily = (designFamily: "catalog-modern-v1" | "catalog-modern-v2") =>
-    onChange({
+  const updateDesignFamily = (designFamily: "catalog-modern-v1" | "catalog-modern-v2") => {
+    const nextProject = {
       ...project,
       commerceTemplates: { ...project.commerceTemplates, designFamily },
       updatedAt: new Date().toISOString(),
-    });
+    };
+    onChange(
+      designFamily === "catalog-modern-v2" ? ensureContactV2Sections(nextProject) : nextProject,
+    );
+  };
 
   const commitColor = (key: keyof Theme["colors"], raw: string) => {
     const next = normalizeHexColor(raw);

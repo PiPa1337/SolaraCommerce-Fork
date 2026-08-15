@@ -336,6 +336,21 @@ test("subir un video real genera el poster con el primer frame exacto", async ({
   expect(blue).toBeLessThan(80);
 });
 
+test("el Builder cambia a Contacto V2 y muestra sus módulos editables", async ({ page }) => {
+  await openBuilder(page);
+  await page.getByRole("tab", { name: "Tema" }).click();
+  await page.getByTestId("ui-design-family-v2").click();
+  await page.getByRole("tab", { name: "Constructor" }).click();
+  await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
+  const pageSelector = page.getByLabel("Página de edición");
+  await pageSelector.selectOption("contact");
+  await expect(pageSelector).toHaveValue("contact");
+  await expect(page.locator('[data-section-select="contact-section-hero"]')).toBeVisible();
+  await expect(page.getByText("Hero de Contacto", { exact: true }).first()).toBeVisible();
+  await page.locator('[data-section-select="contact-section-form"]').click();
+  await expect(page.getByText("Formulario de Contacto", { exact: true }).first()).toBeVisible();
+});
+
 test("el hero V2 expone el modo sólo video (media 9:16)", async ({ page }) => {
   await openBuilder(page);
   await selectHero(page);
