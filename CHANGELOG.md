@@ -1,5 +1,20 @@
 # Changelog
 
+### Hero V2: media 9:16 sólo video + poster automático del video (2026-08-15)
+
+- El editor del hero V2 expone el modo **sólo Video** (la media 9:16 ya no
+  ofrece imagen ni carrusel; el schema conserva los valores por compatibilidad
+  y la familia V1 mantiene sus opciones).
+- Al subir un video se genera automáticamente el **poster de preload**: se
+  extrae un fotograma a baja resolución (máx. 640px, webp/jpeg), se agrega
+  como asset "X (preload)" al proyecto y se asocia al video (`posterAssetId`).
+  Si la extracción falla, la subida no se bloquea.
+- El render del hero usa el poster del video cuando el setting manual está
+  vacío (`posterAssetId || undefined`): el preload sale del propio video.
+- Tests: 10 unit de video (poster, atómico, modo), 2 nuevos de render
+  (video loop mudo sin img, poster del video), E2E del filtro de modo V2
+  (sólo Video) y del upload con error visible.
+
 ### Constructor: subir video activa el modo video y persiste dentro del proyecto (2026-08-15)
 
 - Al subir un video en el hero, la sección pasa automáticamente a modo

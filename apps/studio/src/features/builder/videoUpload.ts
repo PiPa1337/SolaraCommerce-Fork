@@ -1,4 +1,4 @@
-import type { StoreProjectV1, VideoAsset } from "@solara/project-schema";
+import type { ImageAsset, StoreProjectV1, VideoAsset } from "@solara/project-schema";
 import { hashFile } from "../../lib/workers";
 
 export const VIDEO_MAX_BYTES = 30 * 1024 * 1024;
@@ -64,11 +64,69 @@ export function readVideoMetadata(
   });
 }
 
+/**
+ * Extrae un fotograma del video a baja resolución (máx. 640px) como imagen
+ * de preload/poster. Si el navegador no puede decodificar o dibujar el
+ * fotograma, devuelve undefined (la subida no debe fallar por el poster).
+ */
+export async function extractVideoPoster(
+  file: File,
+  options: { maxDimension?: number; atSeconds?: number } = {},
+): Promise<{ source: string; width: number; height: number } | undefined> {
+  if (typeof document === "undefined") return undefined;
+  const video = document.createElement("video");
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "auto";
+    video.src = objectUrl;
+    await new Promise<void>((resolve, reject) => {
+      video.onloadeddata = () => resolve();
+      video.onerror = () => reject(new Error("No se pudo decodificar el video."));
+    });
+    const duration = Number.isFinite(video.duration) ? video.duration : 0;
+    const at = options.atSeconds ?? Math.min(1, duration > 0 ? duration * 0.15 : 1);
+    video.currentTime = at;
+    await new Promise<void>((resolve) => {
+      video.onseeked = () => resolve();
+      video.onerror = () => resolve();
+      window.setTimeout(() => resolve(), 4_000);
+    });
+    if (video.videoWidth < 1 || video.videoHeight < 1) return undefined;
+    const maxDimension = options.maxDimension ?? 640;
+    const scale = Math.min(1, maxDimension / Math.max(video.videoWidth, video.videoHeight));
+    const width = Math.max(1, Math.round(video.videoWidth * scale));
+    const height = Math.max(1, Math.round(video.videoHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) return undefined;
+    context.drawImage(video, 0, 0, width, height);
+    const webp = canvas.toDataURL("image/webp", 0.85);
+    if (webp.startsWith("data:image/")) return { source: webp, width, height };
+    const jpeg = canvas.toDataURL("image/jpeg", 0.85);
+    if (jpeg.startsWith("data:image/")) return { source: jpeg, width, height };
+    return undefined;
+  } catch {
+    return undefined;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 export interface VideoUploadDeps {
   hash?: string;
   readMetadata?: typeof readVideoMetadata;
   readDataUrl?: typeof readFileAsDataUrl;
   computeHash?: typeof hashFile;
+  extractPoster?: typeof extractVideoPoster;
+}
+
+export interface BuiltVideo {
+  video: VideoAsset;
+  posterImage: ImageAsset | undefined;
 }
 
 /**
@@ -76,7 +134,7 @@ export interface VideoUploadDeps {
  * VideoAsset listo para sumar al proyecto. Los helpers se inyectan en `deps`
  * para poder testear la validación sin un navegador.
  */
-export async function buildVideoAsset(file: File, deps: VideoUploadDeps = {}): Promise<VideoAsset> {
+export async function buildVideoAsset(file: File, deps: VideoUploadDeps = {}): Promise<BuiltVideo> {
   if (file.type !== "video/mp4" && file.type !== "video/webm") {
     throw new Error("Sólo se aceptan videos MP4 o WebM.");
   }
@@ -98,19 +156,53 @@ export async function buildVideoAsset(file: File, deps: VideoUploadDeps = {}): P
   ) {
     throw new Error("El video debe durar entre 0 y 60 segundos.");
   }
+  const name = file.name.replace(/\.[^.]+$/, "");
   const source = await readDataUrl(file);
   const hash = deps.hash ?? (await computeHash(file));
+
+  // Poster automático del video a baja resolución: si falla, no bloquea.
+  let posterImage: ImageAsset | undefined;
+  try {
+    const extractPoster = deps.extractPoster ?? extractVideoPoster;
+    const poster = await extractPoster(file);
+    if (poster) {
+      const raw = poster.source.split(",")[1] ?? "";
+      const bytes = Uint8Array.from(atob(raw), (char) => char.charCodeAt(0));
+      const digest = await crypto.subtle.digest("SHA-256", bytes);
+      const posterHash = [...new Uint8Array(digest)]
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
+      posterImage = {
+        kind: "image",
+        id: `asset-${crypto.randomUUID()}` as ImageAsset["id"],
+        name: `${name} (preload)`,
+        alt: `Preload de ${name}`,
+        mimeType: poster.source.startsWith("data:image/webp") ? "image/webp" : "image/jpeg",
+        source: poster.source,
+        width: poster.width,
+        height: poster.height,
+        hash: posterHash,
+      };
+    }
+  } catch {
+    posterImage = undefined;
+  }
+
   return {
-    kind: "video",
-    id: `video-${crypto.randomUUID()}` as VideoAsset["id"],
-    name: file.name.replace(/\.[^.]+$/, ""),
-    alt: "",
-    mimeType: file.type as "video/mp4" | "video/webm",
-    source,
-    width: metadata.width,
-    height: metadata.height,
-    durationSeconds: metadata.duration,
-    hash,
+    video: {
+      kind: "video",
+      id: `video-${crypto.randomUUID()}` as VideoAsset["id"],
+      name,
+      alt: "",
+      mimeType: file.type as "video/mp4" | "video/webm",
+      source,
+      ...(posterImage ? { posterAssetId: posterImage.id } : {}),
+      width: metadata.width,
+      height: metadata.height,
+      durationSeconds: metadata.duration,
+      hash,
+    },
+    posterImage,
   };
 }
 
@@ -126,6 +218,9 @@ export function sectionSettingsWithVideo(
 ): Record<string, unknown> {
   const next: Record<string, unknown> = { ...draft, [fieldKey]: videoId };
   if (typeof next.mode === "string") next.mode = "video";
+  // El poster del hero lo genera el video (fotograma a baja resolución): se
+  // limpia el poster manual para que el render use el automático.
+  if (fieldKey === "videoAssetId" && "posterAssetId" in next) next.posterAssetId = "";
   return next;
 }
 
@@ -141,6 +236,7 @@ export function applyVideoToSection(
   settings: Record<string, unknown>,
   settingsKey: string,
   video: VideoAsset,
+  posterImage?: ImageAsset,
 ): StoreProjectV1 {
   return {
     ...project,
@@ -150,6 +246,7 @@ export function applyVideoToSection(
         : section,
     ),
     videos: [...project.videos, video],
+    ...(posterImage ? { assets: [...project.assets, posterImage] } : {}),
     updatedAt: new Date().toISOString(),
   };
 }

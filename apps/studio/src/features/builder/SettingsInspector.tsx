@@ -51,6 +51,7 @@ export function SettingsInspector({
   onChange,
   onProjectChange,
   sectionId,
+  moduleId,
 }: {
   values: Record<string, unknown>;
   fields: RegisteredModule["settingsFields"];
@@ -59,6 +60,7 @@ export function SettingsInspector({
   onChange(values: Record<string, unknown>): void;
   onProjectChange?(project: StoreProjectV1): void;
   sectionId?: string;
+  moduleId?: string;
 }) {
   const [draft, setDraft] = useState(values);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -104,27 +106,41 @@ export function SettingsInspector({
       const hash = await hashFile(file);
       const existing = project.videos.find((video) => video.hash === hash);
       if (existing) {
-        // El video ya está en el proyecto: sólo se apunta el campo.
-        setValue(fieldKey, existing.id);
+        // El video ya está en el proyecto: se apunta el campo (y el modo/poster
+        // se alinean sin tocar los assets).
+        const nextSettings = sectionSettingsWithVideo(draft, fieldKey, existing.id);
+        setDraft(nextSettings);
+        if (schema) {
+          const result = schema.safeParse(nextSettings);
+          if (result.success) onChange(result.data);
+        }
         return;
       }
       const video = await buildVideoAsset(file, { hash });
       if (sectionId) {
-        // Atómico: el proyecto nuevo trae el video Y el setting de la sección
-        // en una sola actualización para que el parse nunca vea un estado
-        // intermedio inválido (video inexistente). Si la sección tiene un
+        // Atómico: el proyecto nuevo trae el video (y su poster automático) Y
+        // el setting de la sección en una sola actualización para que el parse
+        // nunca vea un estado intermedio inválido. Si la sección tiene un
         // setting `mode`, pasa a "video" para que el render use el video.
-        const nextSettings = sectionSettingsWithVideo(draft, fieldKey, video.id);
-        const nextProject = applyVideoToSection(project, sectionId, nextSettings, fieldKey, video);
+        const nextSettings = sectionSettingsWithVideo(draft, fieldKey, video.video.id);
+        const nextProject = applyVideoToSection(
+          project,
+          sectionId,
+          nextSettings,
+          fieldKey,
+          video.video,
+          video.posterImage,
+        );
         setDraft(nextSettings);
         onProjectChange(nextProject);
       } else {
         onProjectChange({
           ...project,
-          videos: [...project.videos, video],
+          videos: [...project.videos, video.video],
+          ...(video.posterImage ? { assets: [...project.assets, video.posterImage] } : {}),
           updatedAt: new Date().toISOString(),
         });
-        setValue(fieldKey, video.id);
+        setValue(fieldKey, video.video.id);
       }
     } catch (reason) {
       setVideoUploadError(reason instanceof Error ? reason.message : "No se pudo subir el video.");
@@ -269,6 +285,14 @@ export function SettingsInspector({
           );
         }
         if (field.type === "select") {
+          // El hero V2 es media 9:16 sólo video: el editor no ofrece imagen ni
+          // carrusel (el schema conserva los valores para compatibilidad).
+          const modeOptions =
+            field.key === "mode" &&
+            moduleId === "catalog-hero" &&
+            project.commerceTemplates.designFamily === "catalog-modern-v2"
+              ? (field.options ?? []).filter((option) => option.value === "video")
+              : field.options;
           return (
             <Field label={field.label} {...feedback} key={field.key}>
               <select
@@ -276,7 +300,7 @@ export function SettingsInspector({
                 aria-invalid={Boolean(error)}
                 onChange={(event) => setValue(field.key, event.target.value)}
               >
-                {field.options.map((option) => (
+                {modeOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>

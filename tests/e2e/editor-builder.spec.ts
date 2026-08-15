@@ -226,6 +226,26 @@ test("el hero permite subir un video desde el campo de video", async ({ page }) 
   await expect(page.getByText("Sólo se aceptan videos MP4 o WebM.")).toBeVisible();
 });
 
+test("el hero V2 expone el modo sólo video (media 9:16)", async ({ page }) => {
+  await openBuilder(page);
+  await selectHero(page);
+  const modeField = page.getByRole("combobox", { name: "Modo" });
+  await expect(modeField).toBeVisible();
+  await expect(modeField.locator("option")).toHaveCount(3);
+
+  await page.getByRole("tab", { name: "Tema" }).click();
+  await page.getByTestId("ui-design-family-v2").click();
+  await page.getByRole("tab", { name: "Constructor" }).click();
+  await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
+  await selectHero(page);
+
+  const v2ModeField = page.getByRole("combobox", { name: "Modo" });
+  await expect(v2ModeField).toBeVisible();
+  await expect(v2ModeField.locator("option")).toHaveCount(1);
+  await expect(v2ModeField.locator("option")).toHaveAttribute("value", "video");
+  await expect(v2ModeField).toHaveValue("video");
+});
+
 test("la familia Editorial V2 se activa y revierte sin cambiar el contenido", async ({ page }) => {
   await openBuilder(page);
   await page.getByRole("tab", { name: "Tema" }).click();

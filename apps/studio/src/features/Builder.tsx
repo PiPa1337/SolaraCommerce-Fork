@@ -705,6 +705,7 @@ export function Builder({
                   }
                   onProjectChange={onChange}
                   sectionId={selected.id}
+                  moduleId={selectedModule?.manifest.id}
                 />
               </fieldset>
 

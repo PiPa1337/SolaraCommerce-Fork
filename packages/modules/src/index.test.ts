@@ -1,5 +1,6 @@
 import {
   CATALOG_MODERN_PLACEHOLDER_PHONE,
+  type ImageAsset,
   type StoreSection,
   type VideoAsset,
 } from "@solara/project-schema";
@@ -302,6 +303,48 @@ describe("official module system", () => {
     expect(hero).toContain("autoplay");
     expect(hero).toContain('src="data:video/mp4;base64,AAAA"');
     expect(hero).not.toContain('class="catalog-hero-image"');
+  });
+
+  it("usa el poster automático del video como preload", () => {
+    const project = structuredClone(catalogModernStore);
+    const section = project.sections.find(
+      (candidate) => candidate.moduleId === "catalog-hero" && candidate.enabled !== false,
+    );
+    if (!section) throw new Error("Fixture sin hero");
+    const poster: ImageAsset = {
+      kind: "image",
+      id: "asset-poster-test" as ImageAsset["id"],
+      name: "look (preload)",
+      alt: "Preload de look",
+      mimeType: "image/webp",
+      source: "data:image/webp;base64,UE9TVEVS",
+      width: 360,
+      height: 640,
+      hash: "poster-hash",
+    };
+    const video: VideoAsset = {
+      kind: "video",
+      id: "video-poster-test" as VideoAsset["id"],
+      name: "look",
+      alt: "",
+      mimeType: "video/mp4",
+      source: "data:video/mp4;base64,AAAA",
+      width: 1080,
+      height: 1920,
+      durationSeconds: 8,
+      hash: "video-hash",
+      posterAssetId: poster.id,
+    };
+    project.assets = [...project.assets, poster];
+    project.videos = [video];
+    section.settings = {
+      ...section.settings,
+      mode: "video",
+      videoAssetId: video.id,
+      posterAssetId: "",
+    };
+    const html = renderSections(project, [section], { pageType: "home" });
+    expect(html).toContain('poster="data:image/webp;base64,UE9TVEVS"');
   });
 
   it("deriva el bento sólo desde categorías madre y alterna proporciones", () => {
