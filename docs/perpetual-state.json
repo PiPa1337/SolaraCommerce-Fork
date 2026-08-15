@@ -1,24 +1,24 @@
 {
-  "run": "app-10x-ronda-4-de-5",
+  "run": "app-10x-ronda-5-de-5",
   "plan": 1,
   "de10": 1,
   "planDoc": "docs/PERPETUAL_PLAN_APP_10X.md",
   "branch": "main",
-  "round": 4,
+  "round": 5,
   "roundsTotal": 5,
-  "nextItem": "R4-K1",
-  "ronda3Cierre": {
-    "e2e": "67/67",
+  "nextItem": "R5-K1",
+  "ronda4Cierre": {
+    "e2e": "74/74",
     "check": 0,
     "gatesNuevos": [
-      "R3-P2 duplicar tienda",
-      "R3-P3 redo por teclado",
-      "R3-P4 salida sin guardar (modo administrado)",
-      "R3-P5 paginado catalogo",
-      "R3-P6 Desbloquear (condicional)",
-      "R3-P7 previews Google/OG/WhatsApp",
-      "R3-P8 import invalido con error",
-      "R3-P9 dashboard movil sin desborde"
+      "R4-P2 vista lista dashboard",
+      "R4-P3 panel cerrado persiste",
+      "R4-P4 cancelar creacion",
+      "R4-P5 export CSV",
+      "R4-P6 restaurar tipografia",
+      "R4-P7 contador descripcion SEO",
+      "R4-P8 export produccion con confirmacion",
+      "R4-P9 flakiness ronda 3 (39/39)"
     ]
   }
 }
