@@ -2554,12 +2554,12 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 .cm.v2 .catalog-hero-editorial [data-hero-media] {
-  /* Overscan de 1-2px: los bordes del layer del video/poster (que el
-     compositor antialiasa contra el fondo) quedan FUERA del hero y el
+  /* Overscan de 1-2px por los 4 lados: los bordes del layer del video/poster
+     (que el compositor antialiasa contra el fondo) quedan FUERA del hero y el
      overflow:hidden del hero-inner los recorta. El borde visible es un clip
-     duro: sin franjas de 1px a ningún DPR/escala de pantalla. */
+     duro: sin franjas ni espacios a ningún DPR/escala de pantalla. */
   width: calc(min(90svh * 9 / 16, 45vw) + 2px);
-  height: 100%;
+  height: calc(100% + 2px);
   aspect-ratio: auto;
   margin: -1px -2px -1px 0;
   min-height: 0;
@@ -2768,7 +2768,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   /* En retratos de tablet el ancho 9:16 se recorta contra 45vw; la media
      estira a la altura del hero para no dejar vacío debajo. */
   .cm.v2 .catalog-hero-editorial [data-hero-media] {
-    height: 100%;
+    height: calc(100% + 2px);
     aspect-ratio: auto;
   }
 }
@@ -2779,38 +2779,24 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-product-card:focus-within {
   transform: translateY(-6px);
 }
-/* Línea glow sutil con puntito en el borde izquierdo de la IMAGEN al hover:
-   crece desde abajo con transform (compositor, sin layout) y el puntito viaja
-   en la punta (radial en el tope del pseudo). */
+/* Rayita de 3px animada en el borde izquierdo de la IMAGEN al hover: crece
+   desde abajo con transform (compositor, sin layout), dentro de la imagen. */
 .cm.v2 .catalog-product-media::before,
 .cm.v2 .catalog-category-bento-item::before {
   content: "";
   position: absolute;
-  left: -3px;
+  left: 0;
   bottom: 0;
-  width: 8px;
+  width: 3px;
   height: 100%;
   z-index: 2;
   transform: scaleY(0);
   transform-origin: bottom;
-  background:
-    radial-gradient(
-        circle,
-        color-mix(in srgb, var(--catalog-sale) 55%, #fff 45%) 0 1.5px,
-        var(--catalog-sale) 1.5px 3.5px,
-        transparent 4.5px
-      )
-      50% 3px / 10px 10px no-repeat,
-    linear-gradient(
-      to top,
-      var(--catalog-sale),
-      color-mix(in srgb, var(--catalog-sale) 22%, transparent)
-    ) 50% 0 / 2px 100% no-repeat;
-  box-shadow: 0 0 8px 0 color-mix(in srgb, var(--catalog-sale) 35%, transparent);
+  background: var(--catalog-sale);
   opacity: 0;
   transition:
-    transform 520ms var(--catalog-v2-ease-out),
-    opacity 220ms var(--catalog-v2-ease-out);
+    transform 420ms var(--catalog-v2-ease-out),
+    opacity 200ms var(--catalog-v2-ease-out);
   pointer-events: none;
 }
 .cm.v2 .catalog-product-card:hover .catalog-product-media::before,

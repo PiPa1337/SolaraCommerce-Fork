@@ -1,5 +1,16 @@
 # Changelog
 
+### Hero: la media cubre la altura exacta del hero (sin espacio inferior) (2026-08-15)
+
+- El overscan de la media tenía `margin-bottom: -1px` sin compensar: la
+  columna terminaba 1px antes que el hero y se veía una franja crema debajo
+  de la foto/video (el usuario reportó "la imagen de fondo y el video deben
+  tener la misma altura"). La media ahora crece `height: calc(100% + 2px)` y
+  el overflow del hero la recorta en los 4 bordes: fondo y media comparten
+  exactamente la misma altura visible.
+- Verificado por medición (mediaBottom = heroBottom + 1, recortado) en 5
+  viewports y por visión: borde inferior nítido, sin franja.
+
 ### Glow de cards: más sutil, sobre la imagen y con transform (2026-08-15)
 
 - El glow se movió de la card completa a la IMAGEN (`.catalog-product-media`):
