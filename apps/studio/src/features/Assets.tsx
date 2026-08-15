@@ -25,6 +25,12 @@ import {
   requestPersistentStorage,
 } from "../lib/repository";
 import { hashFile, type ProcessedImage, processImageInWorker } from "../lib/workers";
+import {
+  readFileAsDataUrl,
+  readVideoMetadata,
+  VIDEO_MAX_BYTES,
+  VIDEO_MAX_DURATION_SECONDS,
+} from "./builder/videoUpload";
 
 export function Assets({
   project,
@@ -96,64 +102,6 @@ export function Assets({
       updatedAt: new Date().toISOString(),
     });
   };
-
-  const readFileAsDataUrl = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.addEventListener("load", () => resolve(String(reader.result)));
-      reader.addEventListener("error", () => reject(new Error("No se pudo leer el video.")));
-      reader.readAsDataURL(file);
-    });
-
-  const readVideoMetadata = (
-    file: File,
-  ): Promise<{ width: number; height: number; duration: number }> =>
-    new Promise((resolve, reject) => {
-      const element = document.createElement("video");
-      const objectUrl = URL.createObjectURL(file);
-      let settled = false;
-      let deadline: number | undefined;
-      const cleanup = () => {
-        if (deadline !== undefined) window.clearTimeout(deadline);
-        URL.revokeObjectURL(objectUrl);
-      };
-      const fail = (message: string) => {
-        if (settled) return;
-        settled = true;
-        cleanup();
-        reject(new Error(message));
-      };
-      const finish = () => {
-        if (settled) return;
-        settled = true;
-        cleanup();
-        resolve({
-          width: element.videoWidth,
-          height: element.videoHeight,
-          duration: element.duration,
-        });
-      };
-      deadline = window.setTimeout(() => fail("No se pudo leer la metadata del video."), 5_000);
-      element.preload = "metadata";
-      element.onerror = () => fail("No se pudo leer la metadata del video.");
-      element.onloadedmetadata = () => {
-        if (Number.isFinite(element.duration) && element.duration > 0) {
-          finish();
-          return;
-        }
-        // WebM grabados (p. ej. MediaRecorder) reportan duration=Infinity en
-        // el metadata: forzar el cálculo buscando el final del archivo.
-        const onDurationChange = () => {
-          if (Number.isFinite(element.duration) && element.duration > 0) {
-            element.removeEventListener("durationchange", onDurationChange);
-            finish();
-          }
-        };
-        element.addEventListener("durationchange", onDurationChange);
-        element.currentTime = 1e12;
-      };
-      element.src = objectUrl;
-    });
 
   const cacheProcessedImage = async (hash: string, file: File, processed: ProcessedImage) => {
     await putCachedAsset({
@@ -317,7 +265,7 @@ export function Assets({
         try {
           if (!["video/mp4", "video/webm"].includes(file.type))
             throw new Error("Sólo se aceptan videos MP4 o WebM.");
-          if (file.size > 30 * 1024 * 1024)
+          if (file.size > VIDEO_MAX_BYTES)
             throw new Error(`El video supera los 30 MB (${bytesToSize(file.size)}).`);
           const hash = await hashFile(file);
           if (knownHashes.has(hash)) {
@@ -333,7 +281,7 @@ export function Assets({
             metadata.width < 1 ||
             metadata.height < 1 ||
             metadata.duration <= 0 ||
-            metadata.duration > 60
+            metadata.duration > VIDEO_MAX_DURATION_SECONDS
           ) {
             throw new Error("El video debe durar entre 0 y 60 segundos.");
           }

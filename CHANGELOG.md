@@ -1,5 +1,19 @@
 # Changelog
 
+### Constructor: subir video directo en el hero (loop, sin sonido) (2026-08-15)
+
+- El campo "Video local" del hero ahora permite **Subir video** desde el
+  inspector (MP4/WebM, hasta 30 MB, 0-60 s): valida, hashea, lee metadata y
+  agrega el `VideoAsset` al proyecto dejando el campo seleccionado. Si el
+  archivo ya existe (mismo hash) reutiliza el asset.
+- Helpers de video compartidos entre Assets y el inspector
+  (`builder/videoUpload.ts`) con test unitario de validación (formato, tamaño,
+  duración y construcción del asset con inyección de dependencias).
+- El render del hero ya emite `muted loop playsinline autoplay`: el video
+  queda en loop sin sonido como fondo de la media (9:16 desktop / full-bleed
+  mobile). E2E nuevo en el builder (error de formato visible) y ui-assets
+  sigue verde.
+
 ### Hero V2: la caja de beneficios queda sin radio (2026-08-15)
 
 - Se elimina el `border-radius` de la caja frosted glass de los beneficios

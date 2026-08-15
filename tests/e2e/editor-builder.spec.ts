@@ -210,6 +210,22 @@ test("un preset de tema aplica los colores y el preview los refleja", async ({ p
     .toBe("#f5f7f4");
 });
 
+test("el hero permite subir un video desde el campo de video", async ({ page }) => {
+  await openBuilder(page);
+  await selectHero(page);
+  await expect(page.getByRole("button", { name: "Subir video" })).toBeVisible();
+  await page.getByRole("button", { name: "Subir video" }).click();
+  await page
+    .locator('input[type="file"][accept*="video/"]')
+    .first()
+    .setInputFiles({
+      name: "no-es-video.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("esto no es un video"),
+    });
+  await expect(page.getByText("Sólo se aceptan videos MP4 o WebM.")).toBeVisible();
+});
+
 test("la familia Editorial V2 se activa y revierte sin cambiar el contenido", async ({ page }) => {
   await openBuilder(page);
   await page.getByRole("tab", { name: "Tema" }).click();

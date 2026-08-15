@@ -703,6 +703,7 @@ export function Builder({
                   onChange={(settings) =>
                     updateSection(selected.id, (section) => ({ ...section, settings }))
                   }
+                  onProjectChange={onChange}
                 />
               </fieldset>
 

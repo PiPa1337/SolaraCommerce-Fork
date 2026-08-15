@@ -1,9 +1,12 @@
 import type { RegisteredModule } from "@solara/modules";
 import type { StoreProjectV1 } from "@solara/project-schema";
-import { useEffect, useId, useMemo, useState } from "react";
-import { Field, InlineError } from "../../components/Ui";
+import type { ChangeEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { Button, Field, InlineError } from "../../components/Ui";
+import { hashFile } from "../../lib/workers";
 import { HeroSlidesEditor } from "./HeroSlidesEditor";
 import { RepeaterEditor } from "./RepeaterEditor";
+import { buildVideoAsset } from "./videoUpload";
 
 function formatIssuePaths(issues: Array<{ path: readonly PropertyKey[] }>): string {
   return [...new Set(issues.map((issue) => issue.path.join(".") || "settings"))].join(", ");
@@ -46,17 +49,23 @@ export function SettingsInspector({
   schema,
   project,
   onChange,
+  onProjectChange,
 }: {
   values: Record<string, unknown>;
   fields: RegisteredModule["settingsFields"];
   schema: RegisteredModule["settingsSchema"] | undefined;
   project: StoreProjectV1;
   onChange(values: Record<string, unknown>): void;
+  onProjectChange?(project: StoreProjectV1): void;
 }) {
   const [draft, setDraft] = useState(values);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [nestedErrors, setNestedErrors] = useState<Record<string, string>>({});
   const [rawArrays, setRawArrays] = useState<Record<string, string>>({});
+  const [videoUploadBusy, setVideoUploadBusy] = useState(false);
+  const [videoUploadError, setVideoUploadError] = useState("");
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const pendingVideoFieldRef = useRef("");
   const errorIdPrefix = useId();
 
   useEffect(() => {
@@ -81,6 +90,32 @@ export function SettingsInspector({
   if (fields.length === 0) {
     return <p className="inspector-note">Este módulo no requiere configuración.</p>;
   }
+
+  const handleVideoFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    const fieldKey = pendingVideoFieldRef.current;
+    if (!file || !fieldKey || !onProjectChange) return;
+    setVideoUploadBusy(true);
+    setVideoUploadError("");
+    try {
+      const hash = await hashFile(file);
+      const existing = project.videos.find((video) => video.hash === hash);
+      const video = existing ?? (await buildVideoAsset(file, { hash }));
+      if (!existing) {
+        onProjectChange({
+          ...project,
+          videos: [...project.videos, video],
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      setValue(fieldKey, video.id);
+    } catch (reason) {
+      setVideoUploadError(reason instanceof Error ? reason.message : "No se pudo subir el video.");
+    } finally {
+      setVideoUploadBusy(false);
+    }
+  };
 
   const setValue = (key: string, next: unknown) => {
     const candidate = { ...draft, [key]: next };
@@ -191,6 +226,29 @@ export function SettingsInspector({
                   </optgroup>
                 ) : null}
               </select>
+              {acceptsVideo && onProjectChange ? (
+                <div className="inspector-video-upload">
+                  <input
+                    ref={videoInputRef}
+                    type="file"
+                    accept="video/mp4,video/webm"
+                    hidden
+                    onChange={handleVideoFile}
+                  />
+                  <Button
+                    variant="quiet"
+                    onClick={() => {
+                      pendingVideoFieldRef.current = field.key;
+                      setVideoUploadError("");
+                      videoInputRef.current?.click();
+                    }}
+                    disabled={videoUploadBusy}
+                  >
+                    {videoUploadBusy ? "Subiendo video..." : "Subir video"}
+                  </Button>
+                  {videoUploadError ? <InlineError>{videoUploadError}</InlineError> : null}
+                </div>
+              ) : null}
             </Field>
           );
         }
