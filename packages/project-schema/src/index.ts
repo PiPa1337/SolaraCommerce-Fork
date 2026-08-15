@@ -972,6 +972,14 @@ export {
   contactDefaultReasons,
   defaultContactV2Sections,
 } from "./catalog-modern-contact";
+export {
+  aboutDefaultExperience,
+  aboutDefaultHistoryParagraphs,
+  aboutDefaultPrinciples,
+  aboutDefaultProcess,
+  aboutDefaultStats,
+  defaultAboutV2Sections,
+} from "./catalog-modern-about";
 export * from "./catalog-modern-guidance";
 
 /** Valida una entrada desconocida y agrega contexto al error de schema. */

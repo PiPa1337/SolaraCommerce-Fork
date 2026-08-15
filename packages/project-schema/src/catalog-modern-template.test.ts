@@ -3,6 +3,8 @@ import {
   buildCatalogModernProject,
   CATALOG_MODERN_TEMPLATE_VERSION,
   catalogModernCleanStore,
+  ensureAboutV2Sections,
+  ensureCatalogModernV2Sections,
   ensureContactV2Sections,
 } from "./catalog-modern-template";
 import { catalogModernV2Store } from "./catalog-modern-v2-fixture";
@@ -66,5 +68,57 @@ describe("plantilla Catalog Modern", () => {
     expect(ensureContactV2Sections(normalized)).toEqual(normalized);
     const v1 = structuredClone(catalogModernCleanStore);
     expect(ensureContactV2Sections(v1)).toEqual(v1);
+  });
+
+  it("seedear Nosotros V2 con diez módulos y de forma idempotente", () => {
+    const empty = structuredClone(catalogModernV2Store);
+    empty.pages = empty.pages.map((page) =>
+      page.kind === "about" ? { ...page, sections: [] } : page,
+    );
+
+    const normalized = ensureAboutV2Sections(empty);
+    expect(
+      normalized.pages.find((page) => page.kind === "about")?.sections.map((section) => section.moduleId),
+    ).toEqual([
+      "about-hero",
+      "about-history",
+      "about-principles",
+      "about-editorial-image",
+      "about-process",
+      "about-manifesto",
+      "about-experience",
+      "about-team",
+      "about-stats",
+      "about-products-cta",
+    ]);
+    expect(normalized.pages.find((page) => page.kind === "about")?.sections).toHaveLength(10);
+    expect(ensureAboutV2Sections(normalized)).toEqual(normalized);
+  });
+
+  it("normaliza Contacto y Nosotros juntas sin tocar V1", () => {
+    const empty = structuredClone(catalogModernV2Store);
+    empty.pages = empty.pages.map((page) =>
+      page.kind === "about" || page.kind === "contact" ? { ...page, sections: [] } : page,
+    );
+    const normalized = ensureCatalogModernV2Sections(empty);
+    expect(normalized.pages.find((page) => page.kind === "about")?.sections).toHaveLength(10);
+    expect(normalized.pages.find((page) => page.kind === "contact")?.sections).toHaveLength(8);
+
+    const v1 = structuredClone(catalogModernCleanStore);
+    expect(ensureAboutV2Sections(v1)).toEqual(v1);
+    expect(ensureCatalogModernV2Sections(v1)).toEqual(v1);
+  });
+
+  it("mantiene el contenido explícito de una página about V2", () => {
+    const project = structuredClone(catalogModernV2Store);
+    const about = project.pages.find((page) => page.kind === "about");
+    if (!about) throw new Error("Fixture sin página about");
+    const hero = about.sections[0];
+    if (!hero) throw new Error("Página about sin hero");
+    about.sections[0] = {
+      ...hero,
+      settings: { ...hero.settings, title: "Título escrito por la tienda" },
+    };
+    expect(ensureAboutV2Sections(project)).toEqual(project);
   });
 });

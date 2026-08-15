@@ -1,5 +1,5 @@
 import { catalogModernStore } from "./catalog-modern-fixture";
-import { ensureContactV2Sections } from "./catalog-modern-template";
+import { ensureCatalogModernV2Sections } from "./catalog-modern-template";
 import { type StoreProjectV2, StoreProjectV2Schema } from "./index";
 
 /**
@@ -52,4 +52,6 @@ const v2Project = StoreProjectV2Schema.parse({
   },
 });
 
-export const catalogModernV2Store = StoreProjectV2Schema.parse(ensureContactV2Sections(v2Project));
+export const catalogModernV2Store = StoreProjectV2Schema.parse(
+  ensureCatalogModernV2Sections(v2Project),
+);

@@ -1,3 +1,4 @@
+import { defaultAboutV2Sections } from "./catalog-modern-about";
 import { defaultContactV2Sections } from "./catalog-modern-contact";
 import { catalogModernStore } from "./catalog-modern-fixture";
 import { CATALOG_MODERN_GUIDANCE_VERSION } from "./catalog-modern-guidance";
@@ -18,6 +19,24 @@ export function ensureContactV2Sections(project: StoreProjectV1): StoreProjectV1
         : candidate,
     ),
   };
+}
+
+export function ensureAboutV2Sections(project: StoreProjectV1): StoreProjectV1 {
+  if (project.commerceTemplates.designFamily !== "catalog-modern-v2") return project;
+  const page = project.pages.find((candidate) => candidate.kind === "about");
+  if (!page || page.sections.length > 0) return project;
+  return {
+    ...project,
+    pages: project.pages.map((candidate) =>
+      candidate.kind === "about"
+        ? { ...candidate, sections: defaultAboutV2Sections() }
+        : candidate,
+    ),
+  };
+}
+
+export function ensureCatalogModernV2Sections(project: StoreProjectV1): StoreProjectV1 {
+  return ensureAboutV2Sections(ensureContactV2Sections(project));
 }
 
 export type CatalogModernSeed = "clean" | "demo";
