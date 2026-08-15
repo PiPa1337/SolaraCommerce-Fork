@@ -2526,7 +2526,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-hero-inner {
   grid-template-columns: minmax(20rem, .84fr) minmax(0, 1.16fr);
   width: min(calc(100% - 3rem), var(--catalog-v2-wide));
-  height: 90svh;
+  /* Altura en píxeles enteros: el borde del layer de la media (poster/video)
+     queda alineado a la rejilla del compositor y no se antialiasa contra la
+     foto de fondo (franja de 1px en el borde derecho con el preview). */
+  height: round(up, 90svh, 1px);
   min-height: 0;
   margin-top: 0;
   overflow: hidden;
@@ -2541,7 +2544,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 .cm.v2 .catalog-hero-editorial [data-hero-media] {
-  width: min(calc(90svh * 9 / 16), 45vw);
+  width: round(up, min(calc(90svh * 9 / 16), 45vw), 1px);
   aspect-ratio: 9 / 16;
   min-height: 0;
   position: relative;
@@ -3206,7 +3209,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
   .cm.v2 .catalog-hero-inner {
     grid-template-columns: minmax(17rem, 1.5fr) minmax(0, 1fr);
-    height: 90svh;
+    height: round(up, 90svh, 1px);
     min-height: 0;
   }
   .cm.v2 .catalog-hero-copy {

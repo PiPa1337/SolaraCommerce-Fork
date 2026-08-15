@@ -1,5 +1,14 @@
 # Changelog
 
+### Hero V2: columna de media en píxeles enteros (fin de la franja del poster) (2026-08-15)
+
+- La franja de 1px persistía con el POSTER (imagen preview) aunque no con el
+  video: el layer compuesto del video en coordenadas fraccionarias se
+  antialiasa contra la foto de fondo. Se ancla la altura del hero
+  (`round(up, 90svh, 1px)`) y el ancho de la media
+  (`round(up, min(calc(90svh * 9 / 16), 45vw), 1px)`) a píxeles enteros.
+  Verificado con captura y visión: borde del poster nítido, sin franjas.
+
 ### Hero V2: sin franjas en los bordes de la media (2026-08-15)
 
 - La media (imagen/video) tenía `transform: scale(1.015)` — un overscan que
