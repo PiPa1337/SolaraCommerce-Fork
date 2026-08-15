@@ -140,3 +140,27 @@ test("P8-B5: la descarga del respaldo es un .solara.json v2 válido", async ({ p
   expect(parsed.version).toBe(2);
   expect(parsed.project?.schemaVersion).toBe(2);
 });
+
+test("P8-B6: el historial de exportaciones registra y se borra con confirmación", async ({
+  page,
+}) => {
+  await openDemoStore(page);
+  await page.getByTestId("ui-export-draft").click();
+  await expect(page.getByTestId("ui-export-result")).toContainText("Exportación correcta", {
+    timeout: 90_000,
+  });
+  await page.waitForTimeout(600);
+
+  const history = page.getByTestId("ui-export-history");
+  const items = history.getByTestId("ui-export-history-item");
+  const count = await items.count();
+  console.log("P8-B6 ítems del historial:", count);
+  expect(count).toBeGreaterThan(0);
+
+  await history.getByTestId("ui-export-history-clear").click();
+  const dialog = page.getByRole("dialog", { name: "Borrar historial de exportaciones" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Borrar historial" }).click();
+  await expect(history).toBeHidden();
+  console.log("P8-B6 historial borrado");
+});
