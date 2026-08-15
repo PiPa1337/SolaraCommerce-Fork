@@ -111,3 +111,25 @@ test("P9-B5: el aviso global de reset se cierra y no vuelve a aparecer", async (
   console.log("P9-B5 aviso tras recargar:", afterReload);
   expect(afterReload).toBe(0);
 });
+
+test("P2-B5: los avatares distinguen tiendas con el mismo prefijo (PR vs PV)", async ({ page }) => {
+  await page.goto(studioUrl);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.deleteDatabase("solara-commerce-studio");
+        request.addEventListener("success", () => resolve());
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("blocked", () =>
+          reject(new Error("No se pudo limpiar la base de Studio.")),
+        );
+      }),
+  );
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+
+  const marks = await page.locator(".dashboard-store-card__mark").allInnerTexts();
+  console.log("P2-B5 marks:", JSON.stringify(marks));
+  expect(marks).toContain("PR");
+  expect(marks).toContain("PV");
+});
