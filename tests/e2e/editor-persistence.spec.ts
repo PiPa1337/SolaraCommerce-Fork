@@ -211,6 +211,30 @@ test("el conflicto 409 permite recargar desde disco y descarta el borrador local
   }
 });
 
+test("P9-B6: Esc en el conflicto 409 conserva el borrador (mismo contrato que Conservar)", async ({
+  browser,
+}) => {
+  const managed = await startManagedServer();
+  try {
+    const { pageA } = await createConflict(
+      browser,
+      managed.url,
+      "Predeterminado E",
+      "Predeterminado F",
+    );
+    await pageA.keyboard.press("Escape");
+    await expect(pageA.getByTestId("ui-conflict-dialog")).toHaveCount(0);
+    await expect(pageA.getByTestId("ui-studio-notice")).toContainText("Borrador conservado");
+    await pageA.getByRole("tab", { name: "Resumen" }).click();
+    await expect(pageA.getByLabel("Nombre de la tienda")).toHaveValue(
+      "Predeterminado E (borrador local)",
+    );
+    console.log("P9-B6 Esc conserva el borrador");
+  } finally {
+    await stopManagedServer(managed);
+  }
+});
+
 test("el conflicto 409 permite duplicar con el borrador local y persiste la copia", async ({
   browser,
 }) => {
