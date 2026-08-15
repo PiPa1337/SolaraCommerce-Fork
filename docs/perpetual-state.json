@@ -1,20 +1,24 @@
 {
-  "run": "app-10x-ronda-3-de-5",
+  "run": "app-10x-ronda-4-de-5",
   "plan": 1,
   "de10": 1,
   "planDoc": "docs/PERPETUAL_PLAN_APP_10X.md",
   "branch": "main",
-  "round": 3,
+  "round": 4,
   "roundsTotal": 5,
-  "nextItem": "R3-K1",
-  "ronda2Cierre": {
-    "e2e": "50/50",
+  "nextItem": "R4-K1",
+  "ronda3Cierre": {
+    "e2e": "67/67",
     "check": 0,
-    "hitos": [
-      "axe best-practice 0/0 (detalle como section)",
-      "gates nuevos: P2-B5 avatares, P3-B6 atajo foco, P4-B6 restauracion filtro, P5-B6 busqueda estado, P6-B6 picker teclado, P7-B6 zoom sesion, P8-B6 historial, P9-B6 Esc conflicto",
-      "dist reconstruido para e2e del studio-server",
-      "storeMark sin asercion (warning biome limpio)"
+    "gatesNuevos": [
+      "R3-P2 duplicar tienda",
+      "R3-P3 redo por teclado",
+      "R3-P4 salida sin guardar (modo administrado)",
+      "R3-P5 paginado catalogo",
+      "R3-P6 Desbloquear (condicional)",
+      "R3-P7 previews Google/OG/WhatsApp",
+      "R3-P8 import invalido con error",
+      "R3-P9 dashboard movil sin desborde"
     ]
   }
 }
