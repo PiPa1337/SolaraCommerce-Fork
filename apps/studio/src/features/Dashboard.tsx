@@ -35,6 +35,7 @@ import {
   getDashboardStats,
   getProjectMetrics,
   partitionPinnedProjects,
+  storeMark,
 } from "../lib/dashboardModel";
 import {
   clearStoredSelectedId,
@@ -159,7 +160,7 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
       >
         <span className="dashboard-store-card__index">{index + 1}</span>
         <span className="dashboard-store-card__mark" aria-hidden>
-          {record.name.slice(0, 2).toUpperCase()}
+          {storeMark(record.name)}
         </span>
         <strong title={record.name}>{record.name}</strong>
         <span className={`dashboard-store-card__status is-${record.status}`}>

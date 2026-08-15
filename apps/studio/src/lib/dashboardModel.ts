@@ -27,6 +27,17 @@ export interface HealthAuditResult {
   skipped: number;
 }
 
+export function storeMark(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "?";
+  if (words.length === 1) return words[0]!.slice(0, 2).toUpperCase();
+  return words
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
+}
+
 export function auditStoreHealth(
   projects: readonly StoredProject[],
   audit: (project: StoredProject["project"]) => number,

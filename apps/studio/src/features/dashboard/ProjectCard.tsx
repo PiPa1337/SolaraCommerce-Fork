@@ -12,7 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import type { RefObject } from "react";
 import { Button, IconButton } from "../../components/Ui";
-import { getProjectMetrics } from "../../lib/dashboardModel";
+import { getProjectMetrics, storeMark } from "../../lib/dashboardModel";
 import { formatDate } from "../../lib/format";
 import type { StoredProject } from "../../lib/repository";
 
@@ -92,7 +92,7 @@ export function ProjectCard({
           </header>
           <div className="dashboard-store-detail__identity">
             <span className="dashboard-store-detail__mark" aria-hidden>
-              {project.name.slice(0, 2).toUpperCase()}
+              {storeMark(project.name)}
             </span>
             <div>
               <h3>{project.name}</h3>

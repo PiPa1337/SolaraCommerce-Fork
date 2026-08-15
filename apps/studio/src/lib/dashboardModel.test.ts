@@ -7,6 +7,7 @@ import {
   getDashboardStats,
   getProjectMetrics,
   partitionPinnedProjects,
+  storeMark,
 } from "./dashboardModel";
 import type { StoredProject } from "./repository";
 
@@ -162,5 +163,13 @@ describe("modelo del dashboard", () => {
         () => 0,
       ),
     ).toEqual({ critical: 0, skipped: 0 });
+  });
+
+  it("marca la tienda con iniciales por palabra, no con las dos primeras letras", () => {
+    expect(storeMark("Predeterminado")).toBe("PR");
+    expect(storeMark("Predeterminado V1")).toBe("PV");
+    expect(storeMark("  mi   tienda  ")).toBe("MT");
+    expect(storeMark("")).toBe("?");
+    expect(storeMark("A")).toBe("A");
   });
 });
