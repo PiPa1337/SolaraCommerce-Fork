@@ -306,3 +306,27 @@ test("P5-B6: la búsqueda por término de estado filtra archivados", async ({ pa
   await page.waitForTimeout(600);
   await rows.first().locator(".status-label").waitFor();
 });
+
+test("R3-P5-B5: el paginado del catálogo respeta el tamaño elegido", async ({ page }) => {
+  await openCatalog(page);
+
+  const rows = page.locator("tbody tr");
+  await expect(rows.first()).toBeVisible();
+  const sizeSelect = page.getByRole("combobox", { name: "Filas por página" });
+  await sizeSelect.selectOption("25");
+  await page.waitForTimeout(700);
+  const count25 = await rows.count();
+  console.log("R3-P5-B5 filas con 25 por página:", count25);
+  expect(count25).toBe(25);
+
+  const pageButton = page.getByRole("group", { name: "Páginas" }).getByRole("button", {
+    name: "2",
+    exact: true,
+  });
+  await pageButton.click();
+  await page.waitForTimeout(700);
+  const countPage2 = await rows.count();
+  console.log("R3-P5-B5 filas en página 2:", countPage2);
+  expect(countPage2).toBeGreaterThan(0);
+  expect(countPage2).toBeLessThanOrEqual(25);
+});
