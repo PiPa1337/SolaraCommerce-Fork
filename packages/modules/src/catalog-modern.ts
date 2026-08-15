@@ -382,7 +382,7 @@ function renderCatalogHeroMedia(
   if (settings.mode === "video" && settings.videoAssetId) {
     const video = renderVideo(context.project, settings.videoAssetId, {
       className: "catalog-hero-video",
-      posterAssetId: settings.posterAssetId || undefined,
+      ...(settings.posterAssetId ? { posterAssetId: settings.posterAssetId } : {}),
       preload: "none",
       autoplay: settings.autoplay,
       fallbackAlt: title,
