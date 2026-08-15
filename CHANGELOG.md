@@ -1,5 +1,16 @@
 # Changelog
 
+### Hero V2: sin zoom de foto al hover y CTA con cortina estática (2026-08-14)
+
+- Se quita el zoom de la media del hero al pasar el cursor (la imagen y el
+  video ya no escalan al hacer hover sobre el contenedor del hero).
+- El CTA primario conserva el efecto cortina (`::before` que sube y cubre el
+  fondo), pero el botón, el texto y el icono ya no se desplazan (se elimina el
+  `translateY(-1px)` del botón y el `translateX(4px)` del icono).
+- Nueva prueba E2E que fija el contrato: la foto mantiene su transform al
+  hover y el CTA sólo cambia la cortina y el color, sin movimiento.
+- La tienda queda guardada como v34 y el portable reconstruido.
+
 ### Shell: GPU acelerada por defecto con fallback automático (2026-08-14)
 
 - La app forzaba composición por software en todas las máquinas
