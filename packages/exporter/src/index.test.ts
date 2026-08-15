@@ -916,6 +916,18 @@ describe("exporter", () => {
     expect(/<title>([\s\S]*?)<\/title>/.exec(homeHtml)?.[1]).toBe("Título de la página Home");
   });
 
+  it("renderiza Contacto V2 desde sus sections editables", () => {
+    const html = String(
+      exportProject(catalogModernV2Store, { mode: "production" }).files.get("contacto/index.html"),
+    );
+    expect(html).toContain('data-solara-module="contact-hero"');
+    expect(html).toContain('data-solara-module="contact-form"');
+    expect(html).toContain('data-solara-module="contact-faq"');
+    expect(html).toContain('"@type":"ContactPage"');
+    expect(html).not.toContain("Lo que nos guía");
+    expect(html).not.toContain("Información clara");
+  });
+
   it("usa el seo global como fallback en rutas sin página editable", () => {
     const project = {
       ...referenceStore,

@@ -1625,20 +1625,28 @@ function buildPages(
     project,
     `Hola ${project.identity.brandName}, quiero coordinar una compra.`,
   );
+  const isContactV2 = project.commerceTemplates.designFamily === "catalog-modern-v2";
+  const contactV2Body = [
+    renderProjectSections(project, sharedHeader, { pageType: "contact" }),
+    `<main class="solara-contact-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span>Contacto</span></nav><div class="solara-contact-sections">${renderProjectSections(project, editableSections("contact"), { pageType: "contact" })}</div></main>`,
+    renderProjectSections(project, sharedFooter, { pageType: "contact" }),
+  ].join("");
   const contactPage: PageDescriptor = {
     path: "contacto/index.html",
     title: contactConfig?.seoTitle ?? `Contacto | ${project.identity.brandName}`,
     description: contactConfig?.seoDescription ?? "Escribinos para coordinar tu pedido.",
     canonicalPath: "/contacto/",
     pageType: "contact",
-    body: [
-      renderProjectSections(project, sharedHeader, { pageType: "contact" }),
-      `<main class="solara-contact-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span>Contacto</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Hablemos</p><h1>${escapeHtml(contactConfig?.title ?? "Estamos para ayudarte.")}</h1><p>Respondemos consultas, disponibilidad y detalles de entrega por canales directos.</p></header><section class="solara-contact-grid"><div class="solara-contact-details">${project.identity.email ? `<a href="mailto:${escapeAttribute(project.identity.email)}"><span>Email</span><strong>${escapeHtml(project.identity.email)}</strong></a>` : ""}${project.identity.phone ? `<a href="tel:${escapeAttribute(project.identity.phone)}"><span>Teléfono</span><strong>${escapeHtml(project.identity.phone)}</strong></a>` : ""}${whatsAppContactLink ? `<a href="${escapeAttribute(whatsAppContactLink)}" target="_blank" rel="noopener noreferrer"><span>WhatsApp</span><strong>Escribir por WhatsApp</strong></a>` : ""}${project.identity.address ? `<div><span>Dirección</span><strong>${escapeHtml(project.identity.address)}</strong></div>` : ""}</div><aside class="solara-contact-cta"><h2>Coordinemos tu compra</h2><p>Si ya elegiste una pieza, podés escribirnos y te confirmamos disponibilidad, envío y pago.</p>${whatsAppPurchaseLink ? `<a class="solara-primary-action" href="${escapeAttribute(whatsAppPurchaseLink)}" target="_blank" rel="noopener noreferrer">Escribir por WhatsApp</a>` : ""}</aside></section></main>`,
-      editableSections("contact").length
-        ? renderProjectSections(project, editableSections("contact"), { pageType: "contact" })
-        : "",
-      renderProjectSections(project, sharedFooter, { pageType: "contact" }),
-    ].join(""),
+    body: isContactV2
+      ? contactV2Body
+      : [
+          renderProjectSections(project, sharedHeader, { pageType: "contact" }),
+          `<main class="solara-contact-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span>Contacto</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Hablemos</p><h1>${escapeHtml(contactConfig?.title ?? "Estamos para ayudarte.")}</h1><p>Respondemos consultas, disponibilidad y detalles de entrega por canales directos.</p></header><section class="solara-contact-grid"><div class="solara-contact-details">${project.identity.email ? `<a href="mailto:${escapeAttribute(project.identity.email)}"><span>Email</span><strong>${escapeHtml(project.identity.email)}</strong></a>` : ""}${project.identity.phone ? `<a href="tel:${escapeAttribute(project.identity.phone)}"><span>Teléfono</span><strong>${escapeHtml(project.identity.phone)}</strong></a>` : ""}${whatsAppContactLink ? `<a href="${escapeAttribute(whatsAppContactLink)}" target="_blank" rel="noopener noreferrer"><span>WhatsApp</span><strong>Escribir por WhatsApp</strong></a>` : ""}${project.identity.address ? `<div><span>Dirección</span><strong>${escapeHtml(project.identity.address)}</strong></div>` : ""}</div><aside class="solara-contact-cta"><h2>Coordinemos tu compra</h2><p>Si ya elegiste una pieza, podés escribirnos y te confirmamos disponibilidad, envío y pago.</p>${whatsAppPurchaseLink ? `<a class="solara-primary-action" href="${escapeAttribute(whatsAppPurchaseLink)}" target="_blank" rel="noopener noreferrer">Escribir por WhatsApp</a>` : ""}</aside></section></main>`,
+          editableSections("contact").length
+            ? renderProjectSections(project, editableSections("contact"), { pageType: "contact" })
+            : "",
+          renderProjectSections(project, sharedFooter, { pageType: "contact" }),
+        ].join(""),
     structuredData: [
       {
         "@context": "https://schema.org",
