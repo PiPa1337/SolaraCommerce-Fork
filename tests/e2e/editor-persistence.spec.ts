@@ -235,6 +235,29 @@ test("P9-B6: Esc en el conflicto 409 conserva el borrador (mismo contrato que Co
   }
 });
 
+test("R3-P4-B5: salir con cambios sin guardar pide confirmación explícita en modo administrado", async ({
+  browser,
+}) => {
+  const managed = await startManagedServer();
+  try {
+    const page = await browser.newPage();
+    await openDashboard(page, managed.url);
+    await openDemoStore(page);
+    await page.getByLabel("Nombre de la tienda").fill("Nombre sin guardar");
+    await page.getByRole("button", { name: "Volver a tiendas" }).click();
+    const dialog = page.getByRole("dialog", { name: "Salir sin guardar" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Salir sin guardar" }).click();
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+      timeout: 30_000,
+    });
+    console.log("R3-P4-B5 salida confirmada al dashboard");
+    await page.close();
+  } finally {
+    await stopManagedServer(managed);
+  }
+});
+
 test("el conflicto 409 permite duplicar con el borrador local y persiste la copia", async ({
   browser,
 }) => {
