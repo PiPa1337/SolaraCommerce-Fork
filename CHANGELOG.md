@@ -1,5 +1,22 @@
 # Changelog
 
+### Cinco rondas completas del plan de QA 10× sobre la app (2026-08-15)
+
+- **A11y total**: axe del editor y del dashboard en 0 violaciones (incluye
+  best-practice): el panel de edición pasó de `main` con `role="tabpanel"` a
+  `section` dentro de un `main` real, el breadcrumb de la tienda es `h1`, y el
+  panel de detalle del dashboard es `section` en vez de `aside` anidado.
+- **Dashboard**: el filtro de estado (Activas/Archivadas/Todas) ahora persiste
+  entre recargas, igual que el orden y la vista. Los avatares distinguen
+  tiendas con el mismo prefijo (PR vs PV).
+- **Gates e2e**: 25 tests nuevos sobre flujos reales (foco y Esc, archivar y
+  restaurar por filtro, duplicar, modo avanzado, picker por teclado, vistas y
+  zoom del preview, respaldo v2, historial de exportaciones, import inválido,
+  export producción, CSV del catálogo, paginado, reset de tipografía,
+  contadores SEO, persistencia de panel/filtro/vista, responsive móvil).
+- **Estabilidad**: batería completa 75/75 en dos corridas consecutivas sin
+  flakiness; benchmark de exportación 1.744 → 1.693 ms.
+
 ### Cards: la rayita de hover anclada a la media (fix real del posicionamiento) (2026-08-15)
 
 - El `::before` de la barrita es `position: absolute` y la media no era un

@@ -1,6 +1,43 @@
 # PERPETUAL REPORT — runs acotados con Δ%
 
-## REPORTE GLOBAL — PLAN APP 10× (app completa, 2026-08-15)
+## REPORTE GLOBAL — 5 RONDAS COMPLETAS (app 10×, 2026-08-15)
+
+### Resumen del run
+
+- 5 rondas × 10 planes ejecutados en cadena (50 planes), todo en `origin/main`.
+- 25 gates e2e nuevos; cobertura final: **75/75 en dos corridas consecutivas, cero flakiness**; `pnpm check` exit=0 en cada plan.
+- Benchmark de exportación: 1.744 ms → **1.693 ms (-2.9 %)**.
+
+### Hallazgos y fixes reales por ronda
+
+**Ronda 1 (base)**
+- axe del editor con best-practice: **9 moderate → 0** (landmark main/tabpanel del editor, h1 del breadcrumb).
+- Avatares del dashboard por iniciales de palabra: "Predeterminado" → PR, "Predeterminado V1" → PV (antes ambos PR).
+- Gates nuevos: P3-B4 modo foco, P4-B4 archivar/deshacer, P5-B5 producto inline, P6-B5 modo avanzado, P7-B5 vistas/zoom preview, P8-B5 respaldo .solara.json v2, P9-B5 aviso global.
+
+**Ronda 2**
+- Detalle del dashboard como `<section>` (landmark-complementary-is-top-level resuelto).
+- Descubrimiento: los e2e del editor servían `dist` atrasado → **reconstrucción de dist incorporada al flujo**.
+- Gates: P2-B5 avatares, P3-B6 atajo foco, P4-B6 restauración por filtro, P5-B6 búsqueda por estado, P6-B6 picker teclado, P7-B6 zoom de sesión, P8-B6 historial, P9-B6 Esc en conflicto 409.
+
+**Ronda 3**
+- Gates: duplicar tienda, redo por teclado, salida sin guardar (modo administrado), paginado del catálogo, Desbloquear del Constructor, previews Google/OG/WhatsApp, import inválido con error, dashboard móvil sin desborde.
+
+**Ronda 4**
+- Gates: vista lista persistente, panel cerrado persistente, cancelar creación, export CSV, restaurar tipografía, contador de descripción SEO, export producción con confirmación; verificación de flakiness (39/39).
+
+**Ronda 5 (final)**
+- **Filtro de estado del dashboard ahora persiste** (mismo contrato que orden y vista) con test unit + gate e2e.
+- Doble corrida completa de la batería: 75/75 y 75/75, cero flakiness.
+
+### Autocrítica
+
+- El trabajo de las rondas fue mayormente de verificación y gates (el fix grande ya estaba hecho en la primera ejecución); los hallazgos nuevos fueron finos pero reales (persistencia del filtro, semántica del detalle, avatares).
+- Quedan fuera del alcance (decisiones de producto, no bugs): D2 (cierre con guardados), D6 (dark mode), y los moderates estructurales ya resueltos.
+- Los 404 de `/__solara/session` en modo dev son esperados y no contaminan los e2e (el servidor de pruebas emula la respuesta).
+- Portable reconstruido al cierre; la instalación del usuario debe copiar la carpeta nueva para activar todos los cambios (incluido el fix de GPU).
+
+
 
 ### Δ% por plan
 
