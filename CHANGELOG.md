@@ -1,5 +1,17 @@
 # Changelog
 
+### Shell: GPU acelerada por defecto con fallback automático (2026-08-14)
+
+- La app forzaba composición por software en todas las máquinas
+  (`disable-gpu` + `disable-gpu-compositing` + `in-process-gpu`), limitando el
+  renderizado al refresh rate nativo del monitor (p.ej. 144 Hz). Ahora la
+  aceleración de hardware es el modo por defecto y el modo software solo se
+  activa cuando el proceso GPU muere al arrancar: `main.mjs` escribe un
+  marcador en el perfil y se relanza sola (ventana de 15 s, salta en smoke).
+  Lógica en `apps/desktop/src/gpu-mode.mjs` con test propio; `solara:diagnostics`
+  expone `gpuMode` y `gpuFeatureStatus`. Verificado: check exit=0, portable
+  smoke y e2e portable OK. El portable actualizado queda en `.release/portable/`.
+
 ### Run perpetuo de QA y optimización (2026-08-14, en curso)
 
 - Infraestructura perpetua: branch `perpetual/debug-optimizacion`, backlog en
