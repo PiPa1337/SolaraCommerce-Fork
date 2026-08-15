@@ -5,6 +5,7 @@ import {
   applyVideoPoster,
   applyVideoToSection,
   buildVideoAsset,
+  posterDimensions,
   sectionSettingsWithVideo,
   VIDEO_MAX_BYTES,
   VIDEO_MAX_DURATION_SECONDS,
@@ -233,6 +234,33 @@ describe("applyVideoToSection", () => {
     expect(next.assets).toContainEqual(newPoster);
     expect(next.assets.some((asset) => asset.id === oldPoster.id)).toBe(false);
     expect(StoreProjectV1Schema.safeParse(next).success).toBe(true);
+  });
+});
+
+describe("posterDimensions", () => {
+  it("mantiene el aspect exacto del video en escala 9:16", () => {
+    const { width, height } = posterDimensions(1080, 1920, 640);
+    expect(width).toBe(360);
+    expect(height).toBe(640);
+    expect(width / height).toBeCloseTo(1080 / 1920, 6);
+  });
+
+  it("mantiene el aspect exacto en 16:9 y con dimensiones impares", () => {
+    const landscape = posterDimensions(1920, 1080, 640);
+    expect(landscape).toEqual({ width: 640, height: 360 });
+    expect(landscape.width / landscape.height).toBeCloseTo(1920 / 1080, 6);
+
+    const odd = posterDimensions(1334, 750, 640);
+    expect(odd.width / odd.height).toBeCloseTo(1334 / 750, 2);
+    expect(Math.max(odd.width, odd.height)).toBe(640);
+
+    const square = posterDimensions(1000, 1000, 640);
+    expect(square).toEqual({ width: 640, height: 640 });
+  });
+
+  it("no amplía videos más chicos que el máximo", () => {
+    const small = posterDimensions(320, 568, 640);
+    expect(small).toEqual({ width: 320, height: 568 });
   });
 });
 

@@ -65,11 +65,31 @@ export function readVideoMetadata(
 }
 
 /**
+ * Dimensiones del poster con aspect exacto del video: se redondea una sola
+ * dimensión y la otra se deriva (sin desviación xy por redondeos
+ * independientes).
+ */
+export function posterDimensions(
+  videoWidth: number,
+  videoHeight: number,
+  maxDimension: number,
+): { width: number; height: number } {
+  const scale = Math.min(1, maxDimension / Math.max(videoWidth, videoHeight));
+  if (videoWidth >= videoHeight) {
+    const width = Math.max(1, Math.round(videoWidth * scale));
+    return { width, height: Math.max(1, Math.round(width * (videoHeight / videoWidth))) };
+  }
+  const height = Math.max(1, Math.round(videoHeight * scale));
+  return { width: Math.max(1, Math.round(height * (videoWidth / videoHeight))), height };
+}
+
+/**
  * Extrae un fotograma del video a baja resolución (máx. 640px) como imagen
- * de preload/poster. Usa el primer frame literal del video (t=0) para que el
- * preload sea idéntico a lo primero que se ve al reproducir. Si el navegador
- * no puede decodificar o dibujar el fotograma, devuelve undefined (la subida
- * no debe fallar por el poster).
+ * de preload/poster. Captura el primer frame PRESENTADO por el reproductor
+ * (requestVideoFrameCallback): es exactamente lo primero que se ve al dar
+ * play, sin depender de seeks por tiempo. Si el navegador no puede decodificar
+ * o dibujar el fotograma, devuelve undefined (la subida no debe fallar por el
+ * poster).
  */
 export async function extractVideoPoster(
   file: File,
@@ -87,6 +107,22 @@ export async function extractVideoPoster(
       video.onloadeddata = () => resolve();
       video.onerror = () => reject(new Error("No se pudo decodificar el video."));
     });
+    const videoWithCallback = video as HTMLVideoElement & {
+      requestVideoFrameCallback?: (callback: () => void) => number;
+    };
+    // Se registra ANTES de forzar la presentación: el callback dispara cuando
+    // el reproductor pinta el primer frame.
+    const frameReady = new Promise<void>((resolve) => {
+      if (typeof videoWithCallback.requestVideoFrameCallback === "function") {
+        const timer = window.setTimeout(() => resolve(), 3_000);
+        videoWithCallback.requestVideoFrameCallback(() => {
+          window.clearTimeout(timer);
+          resolve();
+        });
+      } else {
+        window.setTimeout(() => resolve(), 150);
+      }
+    });
     const at = options.atSeconds ?? 0;
     if (Math.abs(video.currentTime - at) > 0.001) {
       video.currentTime = at;
@@ -96,11 +132,13 @@ export async function extractVideoPoster(
         window.setTimeout(() => resolve(), 4_000);
       });
     }
+    await frameReady;
+    if (video.readyState < 2) {
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 100));
+    }
     if (video.videoWidth < 1 || video.videoHeight < 1) return undefined;
     const maxDimension = options.maxDimension ?? 640;
-    const scale = Math.min(1, maxDimension / Math.max(video.videoWidth, video.videoHeight));
-    const width = Math.max(1, Math.round(video.videoWidth * scale));
-    const height = Math.max(1, Math.round(video.videoHeight * scale));
+    const { width, height } = posterDimensions(video.videoWidth, video.videoHeight, maxDimension);
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;

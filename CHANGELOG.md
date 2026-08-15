@@ -1,5 +1,14 @@
 # Changelog
 
+### Hero V2: poster = primer frame presentado, con aspect exacto (2026-08-15)
+
+- El poster ya no se toma por seeks de tiempo: se captura el primer frame que
+  el reproductor realmente PINTA (`requestVideoFrameCallback` registrado antes
+  de forzar la presentación). Es idéntico a lo primero que se ve al dar play.
+- El tamaño del poster se deriva con aspect exacto del video (una dimensión
+  redondeada, la otra calculada): sin desviación xy acumulada por redondeos
+  independientes (tope ≤1px, inherente a píxeles enteros).
+
 ### Hero V2: poster automático desde el primer frame del video (2026-08-15)
 
 - El poster de preload se extrae del **primer frame literal** (t=0, sin
