@@ -222,6 +222,12 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
     copyIsWhite: false,
   });
 
+  // Los beneficios del hero van en una caja con blur de fondo sobre la imagen.
+  const benefitsBox = await page
+    .locator(".catalog-hero-benefits--copy")
+    .evaluate((element) => getComputedStyle(element).backdropFilter);
+  expect(benefitsBox).not.toBe("none");
+
   const heroCollision = await page.evaluate(() => {
     const header = document
       .querySelector('[data-solara-module="catalog-header"]')

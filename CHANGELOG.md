@@ -1,5 +1,15 @@
 # Changelog
 
+### Hero V2: caja frosted glass para los beneficios (2026-08-15)
+
+- Los 3 beneficios del copy del hero (Envíos, Pedido directo, Compra cuidada)
+  van envueltos en una caja con `backdrop-filter: blur(14px)`, fondo
+  translúcido de papel (38%), borde fino y radio 8px. Aísla el bloque de la
+  imagen de fondo; la banda mobile queda igual (sobre fondo plano). Verificado
+  con visión: frosted glass sutil, textos legibles, sin afectar título ni CTA.
+- E2E: el test del fold verifica que la caja tenga `backdrop-filter`. La
+  tienda queda guardada como v39.
+
 ### Hero V2: el fondo pasa a velo blanquizo y el copy vuelve a tinta (2026-08-15)
 
 - Se revierte el refuerzo de legibilidad anterior (gradiente oscuro +
