@@ -1,5 +1,16 @@
 # Changelog
 
+### Nosotros V2 editorial y modular (2026-08-15)
+
+- Nueva página `/nosotros/` para `catalog-modern-v2`, con hero editorial,
+  historia, principios, proceso, manifiesto, experiencia, estadísticas y CTA.
+- El Builder permite editar módulos, repeaters, assets y toggles de equipo e
+  imagen editorial sin afectar Home, Contacto, V1 ni legacy.
+- Preview y exportación comparten el renderer de secciones; la salida inicial
+  conserva contenido sin JavaScript, `AboutPage`, canonical y breadcrumbs.
+- Verificado: schema, módulos, exporter, Builder, E2E responsive/no-JS/axe,
+  `corepack pnpm check`, build y portable smoke.
+
 ### Contacto V2 modular y editable (2026-08-15)
 
 - Nueva página `/contacto/` para `catalog-modern-v2`, construida con módulos
