@@ -245,7 +245,6 @@ export function Dashboard({
   const [backingUp, setBackingUp] = useState<string>();
   const [criticalIssues, setCriticalIssues] = useState<number | null>(null);
   const [auditSkipped, setAuditSkipped] = useState(0);
-  const [portableFirstRunAt, setPortableFirstRunAt] = useState<string | null>(null);
   const createDialogRef = useRef<HTMLDialogElement>(null);
   const shutdownDialogRef = useRef<HTMLDialogElement>(null);
   const shutdownTerminalRef = useRef(shutdownTerminal === true);
@@ -385,19 +384,6 @@ export function Dashboard({
     };
     window.addEventListener("solara:open-shutdown", openShutdown);
     return () => window.removeEventListener("solara:open-shutdown", openShutdown);
-  }, []);
-
-  useEffect(() => {
-    if (window.location.protocol !== "solara:") return;
-    const desktop = (
-      window as Window & {
-        solaraDesktop?: { diagnostics?: () => Promise<{ portableFirstRunAt?: string }> };
-      }
-    ).solaraDesktop;
-    void desktop
-      ?.diagnostics?.()
-      .then((info) => setPortableFirstRunAt(info.portableFirstRunAt ?? null))
-      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -952,16 +938,6 @@ export function Dashboard({
             <CheckCircle aria-hidden size={18} />
             <span>
               <strong>Servidor local detenido.</strong> Podés cerrar esta pestaña del navegador.
-            </span>
-          </output>
-        ) : null}
-
-        {portableFirstRunAt ? (
-          <output className="shutdown-status">
-            <CheckCircle aria-hidden size={18} />
-            <span>
-              <strong>Primera vez que SolaraCommerce se abre en esta carpeta.</strong> Si moviste la
-              aplicación, tus tiendas siguen en la ubicación anterior: {portableFirstRunAt}.
             </span>
           </output>
         ) : null}
