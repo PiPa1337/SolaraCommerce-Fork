@@ -1,5 +1,23 @@
 # PERPETUAL REPORT — runs acotados con Δ%
 
+## PLAN 1 APP (app completa — diagnóstico base, 2026-08-14)
+
+| id | ítem | métrica | antes | después | Δ% | estado |
+|----|------|---------|-------|---------|-----|--------|
+| K1 | perf-app: boot dashboard / editor / tabs | ms | dashboard 3.2 s (dev), editor 500-518 ms, tabs 44-168 ms | baseline | — | hecho (`perf-app.spec.ts`) |
+| K2 | memoria: heap tras navegar todas las pestañas | MB | 289.9 → 289.9 (Δ 0) | baseline, sin fuga | — | hecho |
+| K3 | reposo: perf-idle re-verificado | ms/s | 0 | 0 | 0 | hecho |
+| L1 | axe del editor (8 áreas) | serious | **10** | **0** | **100 %** | hecho: contraste statusbar y audit-item (faint→muted), aria-labels en 10 controles (SEO, Resumen, catálogo, navegación) |
+| L2 | foco visible con teclado (tabs, pane, botones) | invisibles | — | 0/26 tabs | gate nuevo | hecho (`focus-app.spec.ts`) |
+| B1 | fixes inmediatos de a11y del diagnóstico | serious | 10 | 0 | 100 % | hecho |
+| J1 | cierre con guardados en vuelo | doc | — | decisión D2 ya en backlog (requiere decisión del usuario) | documentado | hecho |
+
+### Pendientes documentados para los PLAN 2-9
+- 15 moderate (landmark-unique 8, region 7) + 7 minor del editor → se atienden por área.
+- Gates: `pnpm check` exit=0, e2e 21/21, 3 gates nuevos (perf-app, axe-app, focus-app).
+
+
+
 ## PLAN 1 (16:00-16:20Z, 2026-08-14)
 
 | id | ítem | métrica | antes | después | Δ% | estado |
