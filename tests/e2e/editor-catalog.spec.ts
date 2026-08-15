@@ -281,3 +281,28 @@ test("P5-B5: archivar un producto inline y restaurarlo sin perder la fila", asyn
   console.log("P5-B5 estado tras restaurar:", JSON.stringify(labelRestored));
   expect(labelRestored).toContain("Activo");
 });
+
+test("P5-B6: la búsqueda por término de estado filtra archivados", async ({ page }) => {
+  await openCatalog(page);
+
+  const rows = page.locator("tbody tr");
+  await expect(rows.first()).toBeVisible();
+  const firstTrigger = page.getByTestId("ui-status-edit-trigger").first();
+  await firstTrigger.click();
+  const statusSelect = page.getByTestId("ui-status-edit").first();
+  await statusSelect.selectOption("archived");
+  await page.waitForTimeout(600);
+
+  await page.getByPlaceholder("Buscar por producto, marca o estado").fill("archiv");
+  await page.waitForTimeout(600);
+  const labels = await page.locator("tbody tr .status-label").allInnerTexts();
+  console.log("P5-B6 estados visibles tras buscar 'archiv':", JSON.stringify(labels.slice(0, 5)));
+  expect(labels.length).toBeGreaterThan(0);
+  for (const label of labels) {
+    expect(label.toLowerCase()).toContain("archivad");
+  }
+
+  await page.getByPlaceholder("Buscar por producto, marca o estado").fill("");
+  await page.waitForTimeout(600);
+  await rows.first().locator(".status-label").waitFor();
+});
