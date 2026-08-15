@@ -1,5 +1,16 @@
 # Changelog
 
+### Portable: los rebuilds preservan los guardados del usuario (2026-08-15)
+
+- `desktop:package` recreaba la carpeta portable desde cero: cualquier tienda
+  guardada desde la app (que persiste en `SolaraCommerce-Portable/proyectos/`)
+  se perdía en el rebuild. Ahora `create-portable-distribution.mjs` preserva
+  las tiendas del portable cuya versión de manifest es más nueva que la del
+  repo y restaura `.solara-runtime/` completo.
+- Lógica exportada `shouldKeepPortableStore` con 4 tests (más nuevo gana,
+  repo no se pisa, tienda sólo portable, carpetas sin manifest). Verificado
+  end-to-end: una tienda v99 del portable sobrevive al rebuild.
+
 ### Hero V2: el video 9:16 arranca solo (autoplay forzado en modo video) (2026-08-15)
 
 - El hero tenía `autoplay: false` por defecto (era del carrusel): el video se
