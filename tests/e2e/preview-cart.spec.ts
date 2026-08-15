@@ -151,3 +151,42 @@ test("P7-B5: los tamaños de vista y el zoom cambian el stage del preview", asyn
     await stopStudioServer(running.server);
   }
 });
+
+test("P7-B6: el zoom del preview se conserva al recargar la sesión", async ({ page }) => {
+  const running = await startStudioServer();
+  try {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(running.url);
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+      timeout: 30_000,
+    });
+    const card = page.locator(".dashboard-store-card").filter({
+      has: page.getByText("Predeterminado", { exact: true }),
+    });
+    await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+    await page.locator(".studio-shell").waitFor({ timeout: 30_000 });
+    await page.waitForTimeout(1500);
+
+    await page.getByRole("button", { name: "50%" }).click();
+    await page.waitForTimeout(400);
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+      timeout: 30_000,
+    });
+    const cardAfter = page.locator(".dashboard-store-card").filter({
+      has: page.getByText("Predeterminado", { exact: true }),
+    });
+    await cardAfter.getByRole("button", { name: "Abrir esta tienda" }).click();
+    await page.locator(".studio-shell").waitFor({ timeout: 30_000 });
+    await page.waitForTimeout(1500);
+
+    const frame = page.locator('.preview-stage iframe[title^="Vista previa"]');
+    const persistedZoom = await frame.evaluate((el) => getComputedStyle(el).zoom);
+    console.log("P7-B6 zoom tras recargar:", persistedZoom);
+    expect(parseFloat(persistedZoom)).toBeLessThan(1);
+    const zoomButton = page.getByRole("button", { name: "50%" });
+    await expect(zoomButton).toHaveAttribute("aria-pressed", "true");
+  } finally {
+    await stopStudioServer(running.server);
+  }
+});
