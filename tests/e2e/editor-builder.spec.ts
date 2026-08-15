@@ -351,6 +351,31 @@ test("el Builder cambia a Contacto V2 y muestra sus módulos editables", async (
   await expect(page.getByText("Formulario de Contacto", { exact: true }).first()).toBeVisible();
 });
 
+test("el Builder cambia a Nosotros V2 y muestra sus módulos editables", async ({ page }) => {
+  await openBuilder(page);
+  await page.getByRole("tab", { name: "Tema" }).click();
+  await page.getByTestId("ui-design-family-v2").click();
+  await page.getByRole("tab", { name: "Constructor" }).click();
+
+  const pageSelector = page.getByLabel("Página de edición");
+  await pageSelector.selectOption("about");
+  await expect(page.locator('[data-section-select="about-section-hero"]')).toBeVisible();
+  await expect(page.getByText("Hero de Nosotros", { exact: true }).first()).toBeVisible();
+
+  await page.locator('[data-section-select="about-section-history"]').click();
+  await expect(page.getByText("Historia de Nosotros", { exact: true }).first()).toBeVisible();
+
+  await page.locator('[data-section-select="about-section-team"]').click();
+  await expect(page.getByRole("checkbox", { name: "Mostrar equipo" })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Mostrar equipo" })).not.toBeChecked();
+
+  await page.getByRole("button", { name: "Agregar sección" }).click();
+  const picker = page.getByTestId("ui-module-picker");
+  await expect(picker.getByRole("button", { name: /Hero de Nosotros/ })).toBeVisible();
+  await expect(picker.getByRole("button", { name: /Hero de Contacto/ })).toHaveCount(0);
+  await page.getByTestId("ui-module-picker-cancel").click();
+});
+
 test("el hero V2 expone el modo sólo video (media 9:16)", async ({ page }) => {
   await openBuilder(page);
   await selectHero(page);

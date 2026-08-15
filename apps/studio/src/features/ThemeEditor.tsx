@@ -1,7 +1,7 @@
 /** Inspector de tokens visuales persistidos; no introduce estilos públicos paralelos. */
 import { ArrowCounterClockwise, PaintBrush, TextT, Wrench } from "@phosphor-icons/react";
 import type { StoreProjectV1, Theme } from "@solara/project-schema";
-import { ensureContactV2Sections } from "@solara/project-schema/catalog-modern-template";
+import { ensureCatalogModernV2Sections } from "@solara/project-schema/catalog-modern-template";
 import { useEffect, useRef, useState } from "react";
 import { Button, Field, SectionHeader } from "../components/Ui";
 
@@ -328,7 +328,9 @@ export function ThemeEditor({
       updatedAt: new Date().toISOString(),
     };
     onChange(
-      designFamily === "catalog-modern-v2" ? ensureContactV2Sections(nextProject) : nextProject,
+      designFamily === "catalog-modern-v2"
+        ? ensureCatalogModernV2Sections(nextProject)
+        : nextProject,
     );
   };
 
