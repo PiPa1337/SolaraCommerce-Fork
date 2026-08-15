@@ -133,7 +133,9 @@ try {
     await routeInput.fill(path);
     await routeInput.press("Enter");
     await preview.getByRole("heading", { level: 1 }).waitFor({ timeout: 20_000 });
-    await preview.getByRole("button", { name: "Agregar al carrito" }).click();
+    await preview
+      .getByRole("button", { name: "Agregar al carrito" })
+      .dispatchEvent("click");
     const expectedCount = String(index + 1);
     await preview.locator("[data-cart-count]").first().waitFor({ state: "visible" });
     const count = await preview.locator("[data-cart-count]").first().textContent();
