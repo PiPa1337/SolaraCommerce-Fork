@@ -1,5 +1,19 @@
 # Changelog
 
+### Contacto V2 modular y editable (2026-08-15)
+
+- Nueva página `/contacto/` para `catalog-modern-v2`, construida con módulos
+  independientes: hero, formulario WhatsApp, canales, centro de ayuda, CTA
+  oscuro, información de compra, FAQ y ubicación opcional.
+- El Builder permite editar Contacto, agregar/ordenar módulos y configurar
+  repeaters, toggles, canales, horarios, FAQs y ubicación sin afectar Home,
+  V1 ni legacy.
+- Formulario HTML-first con fallback sin JavaScript; con runtime prepara el
+  mensaje completo y abre WhatsApp. FAQ usa `<details>`, ubicación desactivada
+  no deja markup ni espacio y la ruta emite `ContactPage`/breadcrumbs.
+- Verificado: exporter 56 tests, modules 56 tests, Studio 290 tests, E2E
+  Contacto 3/3, Builder 18/18, no-JS/axe y gate `corepack pnpm check` verdes.
+
 ### Cinco rondas completas del plan de QA 10× sobre la app (2026-08-15)
 
 - **A11y total**: axe del editor y del dashboard en 0 violaciones (incluye

@@ -17,6 +17,7 @@ import {
   contactDefaultReasons,
 } from "@solara/project-schema";
 import { z } from "zod";
+import { scopedAssetId } from "./helpers";
 
 const contactRevealZone = [
   {
@@ -260,7 +261,7 @@ export const contactHero: ModuleDefinition<
     },
   ],
   motionZones: contactRevealZone,
-  styleAsset: "catalog-modern" as never,
+  styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const settings = context.settings;
     return moduleRoot(
@@ -317,7 +318,7 @@ export const contactForm: ModuleDefinition<
     },
   ],
   motionZones: contactRevealZone,
-  styleAsset: "catalog-modern" as never,
+  styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const settings = context.settings;
     const phone = contactPhone(context);
@@ -373,7 +374,7 @@ export const contactChannels: ModuleDefinition<
     { key: "hoursActionLabel", type: "text", label: "Acción horarios" },
   ],
   motionZones: contactItemsZone,
-  styleAsset: "catalog-modern" as never,
+  styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const settings = context.settings;
     const phone = contactPhone(context);
@@ -465,7 +466,7 @@ export const contactHelpGrid: ModuleDefinition<
     },
   ],
   motionZones: contactItemsZone,
-  styleAsset: "catalog-modern" as never,
+  styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const settings = context.settings;
     return moduleRoot(
@@ -493,7 +494,7 @@ export const contactWhatsappCta: ModuleDefinition<
     { key: "actionLabel", type: "text", label: "Botón" },
   ],
   motionZones: contactRevealZone,
-  styleAsset: "catalog-modern" as never,
+  styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const phone = contactPhone(context);
     if (!phone) return safeHtml("");
@@ -534,7 +535,7 @@ export const contactPurchaseInfo: ModuleDefinition<
     },
   ],
   motionZones: contactItemsZone,
-  styleAsset: "catalog-modern" as never,
+  styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     return moduleRoot(
       "contact-purchase-info",
@@ -572,7 +573,7 @@ export const contactFaq: ModuleDefinition<
     },
   ],
   motionZones: contactItemsZone,
-  styleAsset: "catalog-modern" as never,
+  styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const activeItems = context.settings.items.filter((item) => item.enabled);
     return moduleRoot(
@@ -614,7 +615,7 @@ export const contactLocation: ModuleDefinition<
     { key: "mapImageAssetId", type: "asset", label: "Imagen del mapa" },
   ],
   motionZones: contactRevealZone,
-  styleAsset: "catalog-modern" as never,
+  styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const settings = context.settings;
     if (
