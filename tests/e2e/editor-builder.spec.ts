@@ -226,6 +226,116 @@ test("el hero permite subir un video desde el campo de video", async ({ page }) 
   await expect(page.getByText("Sólo se aceptan videos MP4 o WebM.")).toBeVisible();
 });
 
+test("subir un video real genera el poster con el primer frame exacto", async ({ page }) => {
+  await openBuilder(page);
+  await selectHero(page);
+
+  // Grabar un video real en el navegador: el primer frame es rojo puro y el
+  // resto azul. Si el poster se captura "después del primer frame", el centro
+  // del poster sale azul y el test falla.
+  const recorded = await page.evaluate(async () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 360;
+    canvas.height = 640;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Sin contexto 2d");
+    const stream = canvas.captureStream(30);
+    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+      ? "video/webm;codecs=vp9"
+      : "video/webm";
+    const recorder = new MediaRecorder(stream, { mimeType });
+    const chunks: Blob[] = [];
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) chunks.push(event.data);
+    };
+    const stopped = new Promise<void>((resolve) => {
+      recorder.onstop = () => resolve();
+    });
+    recorder.start(100);
+    const t0 = performance.now();
+    while (performance.now() - t0 < 400) {
+      context.fillStyle = "#ff0000";
+      context.fillRect(0, 0, 360, 640);
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    context.fillStyle = "#0000ff";
+    context.fillRect(0, 0, 360, 640);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    recorder.stop();
+    await stopped;
+    const blob = new Blob(chunks, { type: recorder.mimeType });
+    return Array.from(new Uint8Array(await blob.arrayBuffer()));
+  });
+
+  await page.getByRole("button", { name: "Subir video" }).click();
+  await page
+    .locator('input[type="file"][accept*="video/"]')
+    .first()
+    .setInputFiles({
+      name: "primer-frame-rojo.webm",
+      mimeType: "video/webm",
+      buffer: Buffer.from(recorded),
+    });
+  // La subida termina cuando el botón vuelve a estar habilitado.
+  await expect(page.getByRole("button", { name: "Subir video" })).toBeEnabled({
+    timeout: 25_000,
+  });
+
+  // Leer el poster generado desde IndexedDB y decodificarlo en la página.
+  const posterInfo = await page.evaluate(async () => {
+    const open = indexedDB.open("solara-commerce-studio");
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      open.onsuccess = () => resolve(open.result);
+      open.onerror = () => reject(open.error);
+    });
+    const transaction = db.transaction("projects", "readonly");
+    const store = transaction.objectStore("projects");
+    const all = await new Promise<
+      Array<{
+        project?: {
+          videos?: Array<{ posterAssetId?: string }>;
+          assets?: Array<{ id: string; source: string }>;
+        };
+      }>
+    >((resolve) => {
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result ?? []);
+    });
+    const record = all.find((item) => (item.project?.videos?.length ?? 0) > 0);
+    const video = record?.project?.videos?.[0];
+    const poster = record?.project?.assets?.find((asset) => asset.id === video?.posterAssetId);
+    if (!poster) return null;
+    const image = new Image();
+    image.src = poster.source;
+    await image.decode();
+    const probe = document.createElement("canvas");
+    probe.width = image.naturalWidth;
+    probe.height = image.naturalHeight;
+    const probeContext = probe.getContext("2d");
+    if (!probeContext) return null;
+    probeContext.drawImage(image, 0, 0);
+    const center = probeContext.getImageData(
+      Math.floor(image.naturalWidth / 2),
+      Math.floor(image.naturalHeight / 2),
+      1,
+      1,
+    ).data;
+    return {
+      width: image.naturalWidth,
+      height: image.naturalHeight,
+      center: Array.from(center),
+    };
+  });
+
+  expect(posterInfo).not.toBeNull();
+  expect(posterInfo?.width).toBe(360);
+  expect(posterInfo?.height).toBe(640);
+  const [red, green, blue] = posterInfo?.center ?? [];
+  expect(red).toBeGreaterThan(200);
+  expect(green).toBeLessThan(80);
+  expect(blue).toBeLessThan(80);
+});
+
 test("el hero V2 expone el modo sólo video (media 9:16)", async ({ page }) => {
   await openBuilder(page);
   await selectHero(page);

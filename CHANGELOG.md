@@ -1,5 +1,18 @@
 # Changelog
 
+### Hero V2: poster con dimensiones de presentación y primer frame real (2026-08-15)
+
+- El poster usa el metadata de `requestVideoFrameCallback`: dimensiones de
+  PRESENTACIÓN (rotación/SAR del contenedor ya aplicados) para que el aspect
+  coincida con lo que muestra el video (corrige la línea lateral y el tamaño
+  raro en videos de teléfono o anamórficos).
+- Si el primer frame presentado cae después de t=0 (H.264 con B-frames o
+  keyframe desfasado), rebusca hacia atrás hasta 3 veces hasta el primer
+  frame decodificable.
+- Nuevo E2E que graba un video real en el navegador (primer frame rojo, resto
+  azul), lo sube por el constructor, decodifica el poster generado desde
+  IndexedDB y verifica: primer frame exacto (rojo) y dimensiones 360x640.
+
 ### Hero V2: poster = primer frame presentado, con aspect exacto (2026-08-15)
 
 - El poster ya no se toma por seeks de tiempo: se captura el primer frame que

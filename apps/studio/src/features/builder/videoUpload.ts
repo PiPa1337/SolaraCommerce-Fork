@@ -86,10 +86,14 @@ export function posterDimensions(
 /**
  * Extrae un fotograma del video a baja resolución (máx. 640px) como imagen
  * de preload/poster. Captura el primer frame PRESENTADO por el reproductor
- * (requestVideoFrameCallback): es exactamente lo primero que se ve al dar
- * play, sin depender de seeks por tiempo. Si el navegador no puede decodificar
- * o dibujar el fotograma, devuelve undefined (la subida no debe fallar por el
- * poster).
+ * usando el metadata de requestVideoFrameCallback:
+ * - dimensiones de PRESENTACIÓN (rotación/SAR ya aplicados) para que el
+ *   poster tenga el aspect real que muestra el video (sin líneas ni
+ *   estirados);
+ * - si el primer frame presentado cae después de t=0 (H.264 con B-frames o
+ *   keyframe desfasado), rebusca hacia atrás hasta 3 veces.
+ * Si el navegador no puede decodificar o dibujar el fotograma, devuelve
+ * undefined (la subida no debe fallar por el poster).
  */
 export async function extractVideoPoster(
   file: File,
@@ -108,37 +112,79 @@ export async function extractVideoPoster(
       video.onerror = () => reject(new Error("No se pudo decodificar el video."));
     });
     const videoWithCallback = video as HTMLVideoElement & {
-      requestVideoFrameCallback?: (callback: () => void) => number;
+      requestVideoFrameCallback?: (
+        callback: (
+          now: number,
+          metadata: {
+            mediaTime?: number;
+            width?: number;
+            height?: number;
+          },
+        ) => void,
+      ) => number;
     };
-    // Se registra ANTES de forzar la presentación: el callback dispara cuando
-    // el reproductor pinta el primer frame.
-    const frameReady = new Promise<void>((resolve) => {
-      if (typeof videoWithCallback.requestVideoFrameCallback === "function") {
-        const timer = window.setTimeout(() => resolve(), 3_000);
-        videoWithCallback.requestVideoFrameCallback(() => {
-          window.clearTimeout(timer);
-          resolve();
-        });
-      } else {
-        window.setTimeout(() => resolve(), 150);
-      }
-    });
-    const at = options.atSeconds ?? 0;
-    if (Math.abs(video.currentTime - at) > 0.001) {
-      video.currentTime = at;
-      await new Promise<void>((resolve) => {
-        video.onseeked = () => resolve();
-        video.onerror = () => resolve();
-        window.setTimeout(() => resolve(), 4_000);
-      });
+
+    interface PresentedFrame {
+      mediaTime: number;
+      width: number;
+      height: number;
     }
-    await frameReady;
+    // Espera el próximo frame presentado; resuelve con su metadata.
+    const nextPresentedFrame = (timeoutMs: number): Promise<PresentedFrame | undefined> =>
+      new Promise((resolve) => {
+        if (typeof videoWithCallback.requestVideoFrameCallback === "function") {
+          const timer = window.setTimeout(() => resolve(undefined), timeoutMs);
+          videoWithCallback.requestVideoFrameCallback((_now, metadata) => {
+            window.clearTimeout(timer);
+            resolve({
+              mediaTime: metadata.mediaTime ?? 0,
+              width: metadata.width ?? video.videoWidth,
+              height: metadata.height ?? video.videoHeight,
+            });
+          });
+        } else {
+          window.setTimeout(() => resolve(undefined), 150);
+        }
+      });
+    const seekTo = async (target: number): Promise<void> => {
+      if (Math.abs(video.currentTime - target) > 0.001) {
+        video.currentTime = target;
+        await new Promise<void>((resolve) => {
+          video.onseeked = () => resolve();
+          video.onerror = () => resolve();
+          window.setTimeout(() => resolve(), 4_000);
+        });
+      }
+    };
+
+    // Busca el primer frame: presenta en t=0 y, si el frame cae después
+    // (keyframe desfasado), rebusca hacia atrás hasta 3 veces.
+    let presented = await nextPresentedFrame(3_000);
+    await seekTo(options.atSeconds ?? 0);
+    const afterSeek = await nextPresentedFrame(3_000);
+    if (afterSeek) presented = afterSeek;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const earliest = presented;
+      if (!earliest || earliest.mediaTime <= 0.05) break;
+      const target = Math.max(0, earliest.mediaTime - 0.1);
+      await seekTo(target);
+      const earlier = await nextPresentedFrame(2_000);
+      if (!earlier) break;
+      presented = earlier;
+      if (earlier.mediaTime >= earliest.mediaTime) break;
+    }
     if (video.readyState < 2) {
       await new Promise<void>((resolve) => window.setTimeout(resolve, 100));
     }
     if (video.videoWidth < 1 || video.videoHeight < 1) return undefined;
     const maxDimension = options.maxDimension ?? 640;
-    const { width, height } = posterDimensions(video.videoWidth, video.videoHeight, maxDimension);
+    // Dimensiones de presentación (rotación/SAR aplicados) con fallback a las
+    // codificadas.
+    const displayWidth =
+      presented?.width && presented.width > 0 ? presented.width : video.videoWidth;
+    const displayHeight =
+      presented?.height && presented.height > 0 ? presented.height : video.videoHeight;
+    const { width, height } = posterDimensions(displayWidth, displayHeight, maxDimension);
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
