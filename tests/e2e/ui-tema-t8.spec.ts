@@ -391,7 +391,7 @@ test("persistencia: el respaldo .solara.json descargado contiene el theme editad
   await page.getByRole("button", { name: "Volver a tiendas" }).click();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
 
-  const detail = page.getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" });
+  const detail = page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" });
   const downloadPromise = page.waitForEvent("download");
   await detail.getByRole("button", { name: "Respaldo ahora" }).click();
   const download = await downloadPromise;

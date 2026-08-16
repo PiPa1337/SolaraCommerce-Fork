@@ -107,7 +107,7 @@ test("el dashboard no desborda y mantiene acciones usables en los 7 viewports", 
       .filter({ hasText: "Predeterminado" })
       .first();
     await card.locator(".dashboard-store-card__button").click();
-    const detail = page.getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" });
+    const detail = page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" });
     await expect(detail).toBeVisible();
     await expectNoPageOverflow(page, `Dashboard detalle ${viewport.name}`, false);
     await expectActionUsable(
@@ -160,7 +160,7 @@ test("cada pestaña del Studio no desborda y conserva su acción principal", asy
   const card = page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }).first();
   await card.locator(".dashboard-store-card__button").click();
   await page
-    .getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" })
+    .getByRole("region", { name: "Tienda seleccionada: Predeterminado" })
     .getByRole("button", { name: "Abrir tienda" })
     .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
@@ -381,7 +381,7 @@ test("el preview y su toolbar responden en los 7 viewports", async ({ page }) =>
   const card = page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }).first();
   await card.locator(".dashboard-store-card__button").click();
   await page
-    .getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" })
+    .getByRole("region", { name: "Tienda seleccionada: Predeterminado" })
     .getByRole("button", { name: "Abrir tienda" })
     .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
@@ -430,7 +430,7 @@ test("el recorrido clave del smoke no desborda en los 7 viewports (T6.3)", async
   const card = page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }).first();
   await card.locator(".dashboard-store-card__button").click();
   await page
-    .getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" })
+    .getByRole("region", { name: "Tienda seleccionada: Predeterminado" })
     .getByRole("button", { name: "Abrir tienda" })
     .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();

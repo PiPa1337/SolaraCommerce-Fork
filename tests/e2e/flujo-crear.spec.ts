@@ -70,14 +70,14 @@ test("P4-B4: archivar una tienda desde el panel de detalle y restaurarla", async
   const dialog = page.getByRole("dialog", { name: "Archivar tienda" });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Archivar" }).click();
-  const toast = page.locator("[data-testid='ui-dashboard-toast']");
+  const toast = page.locator("[data-testid='ui-toast']");
   await toast.waitFor({ state: "visible", timeout: 30_000 });
   const toastText = await toast.innerText();
   console.log("P4-B4 toast tras archivar:", JSON.stringify(toastText.slice(0, 60)));
   expect(toastText).toContain("archivada");
 
   await toast.getByRole("button", { name: "Deshacer" }).click();
-  const restoredToast = page.locator("[data-testid='ui-dashboard-toast']");
+  const restoredToast = page.locator("[data-testid='ui-toast']");
   await restoredToast.waitFor({ state: "visible", timeout: 30_000 });
   const restoredText = await restoredToast.innerText();
   console.log("P4-B4 toast tras deshacer:", JSON.stringify(restoredText.slice(0, 60)));
@@ -98,7 +98,7 @@ test("P4-B6: restaurar una tienda archivada desde el filtro Archivadas", async (
       name: "Archivar",
     })
     .click();
-  await page.locator("[data-testid='ui-dashboard-toast']").waitFor({ state: "visible" });
+  await page.locator("[data-testid='ui-toast']").waitFor({ state: "visible" });
 
   const filter = page.getByRole("combobox", { name: "Estado" });
   await filter.selectOption("archived");
@@ -108,7 +108,7 @@ test("P4-B6: restaurar una tienda archivada desde el filtro Archivadas", async (
   await archivedCard.click();
   await page.waitForTimeout(500);
   await page.locator(".dashboard-store-detail").getByRole("button", { name: "Restaurar" }).click();
-  const toast = page.locator("[data-testid='ui-dashboard-toast']");
+  const toast = page.locator("[data-testid='ui-toast']");
   await expect(toast).toContainText("restaurada", { timeout: 30_000 });
   const finalText = await toast.innerText();
   console.log("P4-B6 toast tras restaurar desde filtro:", JSON.stringify(finalText.slice(0, 60)));

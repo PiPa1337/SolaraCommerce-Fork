@@ -29,14 +29,14 @@ async function openStore(page: Page): Promise<void> {
   const card = page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }).first();
   await card.locator(".dashboard-store-card__button").click();
   await expect(
-    page.getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" }),
+    page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" }),
   ).toBeVisible();
 }
 
 async function openStudio(page: Page): Promise<void> {
   await openStore(page);
   await page
-    .getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" })
+    .getByRole("region", { name: "Tienda seleccionada: Predeterminado" })
     .getByRole("button", { name: "Abrir tienda" })
     .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
@@ -147,7 +147,7 @@ test("el detalle de tienda y el Studio distinguen disabled, hover y focus", asyn
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStore(page);
 
-  const detail = page.getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" });
+  const detail = page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" });
   const backup = detail.getByRole("button", { name: "Respaldo ahora" });
   await expectEnabledButton(backup, "Respaldo ahora");
   await expectFocusRing(backup, "Respaldo ahora");

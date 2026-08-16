@@ -173,7 +173,7 @@ test("dashboard permite abrir, buscar, cambiar vista, respaldar y administrar un
   const card = page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }).first();
   await card.locator(".dashboard-store-card__button").click();
   await expect(
-    page.getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" }),
+    page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" }),
   ).toBeVisible();
 
   await card.getByRole("button", { name: "Abrir esta tienda" }).click();
@@ -198,7 +198,7 @@ test("dashboard permite abrir, buscar, cambiar vista, respaldar y administrar un
     .first();
   const selectedButton = selectedCard.locator(".dashboard-store-card__button");
   await selectedButton.click();
-  const detail = page.getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" });
+  const detail = page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" });
   await detail.getByRole("button", { name: "Cerrar detalle" }).click();
   await expect(selectedButton).toBeFocused();
   await selectedButton.click();
@@ -230,11 +230,11 @@ test("dashboard permite abrir, buscar, cambiar vista, respaldar y administrar un
   await archivedCard.locator(".dashboard-store-card__button").click();
   await expect(
     page
-      .getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" })
+      .getByRole("region", { name: "Tienda seleccionada: Predeterminado" })
       .getByRole("button", { name: "Restaurar" }),
   ).toBeVisible();
   await page
-    .getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" })
+    .getByRole("region", { name: "Tienda seleccionada: Predeterminado" })
     .getByRole("button", { name: "Restaurar" })
     .click();
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");

@@ -135,7 +135,7 @@ test("archiva la tienda demo desde el dashboard y la restaura", async ({ page })
   // El locator ya es el botón de selección de la card (data-store-card-id vive
   // en él); un selector descendente .dashboard-store-card__button no matchea.
   await card.click();
-  const detail = page.getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" });
+  const detail = page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" });
   await expect(detail).toBeVisible();
 
   // T4.12: el archivo de tienda confirma con el diálogo unificado en vez de
@@ -155,7 +155,7 @@ test("archiva la tienda demo desde el dashboard y la restaura", async ({ page })
     .first();
   await archivedCard.locator(".dashboard-store-card__button").click();
   await expect(
-    page.getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" }),
+    page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Restaurar" }).click();
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");

@@ -232,7 +232,7 @@ test("el filtro de estado cambia las cards y la selección se sincroniza con la 
   const confirm = page.getByTestId("ui-confirm-dialog");
   await expect(confirm).toBeVisible();
   await confirm.getByRole("button", { name: "Archivar", exact: true }).click();
-  await expect(page.getByTestId("ui-dashboard-toast")).toContainText("Deshacer");
+  await expect(page.getByTestId("ui-toast")).toContainText("Deshacer");
 
   await status.selectOption("archived");
   await expect(visibleCount(page)).toHaveText("1 visibles");
@@ -524,7 +524,7 @@ test("A12: duplicar con éxito devuelve el foco a la card de origen", async ({ p
   // la card de origen queda enfocada y su detalle seleccionado.
   const sourceCard = page.locator('[data-store-card-id="store-modo-sur-demo"]');
   await expect(sourceCard).toBeFocused();
-  await expect(page.getByTestId("ui-dashboard-toast")).toContainText("Tienda duplicada");
+  await expect(page.getByTestId("ui-toast")).toContainText("Tienda duplicada");
   await expect(detailPanel(page, "Predeterminado")).toBeVisible();
 });
 
@@ -537,7 +537,7 @@ test("A12: restaurar muestra toast de confirmación y devuelve el foco a la card
     .getByRole("button", { name: "Archivar", exact: true })
     .click();
   await page.getByTestId("ui-confirm-dialog").getByTestId("ui-confirm-accept").click();
-  await expect(page.getByTestId("ui-dashboard-toast")).toContainText("archivada");
+  await expect(page.getByTestId("ui-toast")).toContainText("archivada");
 
   // Con el filtro «Todas» la card restaurada sigue visible: la restauración
   // debe dejarla seleccionada y enfocada (simetría con el foco de archivar).
@@ -551,8 +551,8 @@ test("A12: restaurar muestra toast de confirmación y devuelve el foco a la card
     .getByRole("button", { name: "Restaurar", exact: true })
     .click();
   const restoredCard = card(page, "Predeterminado").locator(".dashboard-store-card__button");
-  await expect(page.getByTestId("ui-dashboard-toast")).toContainText("restaurada");
-  await expect(page.getByTestId("ui-dashboard-toast")).not.toContainText("Deshacer");
+  await expect(page.getByTestId("ui-toast")).toContainText("restaurada");
+  await expect(page.getByTestId("ui-toast")).not.toContainText("Deshacer");
   await expect(restoredCard).toHaveAttribute("aria-pressed", "true");
   await expect(restoredCard).toBeFocused();
   await expect(card(page, "Predeterminado").locator(".dashboard-store-card__status")).toHaveText(

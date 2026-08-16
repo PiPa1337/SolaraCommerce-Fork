@@ -17,17 +17,23 @@ import {
 
 export type ToastKind = "success" | "error" | "info";
 
+export interface ToastAction {
+  label: string;
+  onAction(): void;
+}
+
 interface ToastItem {
   id: number;
   kind: ToastKind;
   message: string;
+  action?: ToastAction;
 }
 
 export interface ToastApi {
-  success(message: string, duration?: number): void;
+  success(message: string, duration?: number, action?: ToastAction): void;
   error(message: string, duration?: number): void;
   info(message: string, duration?: number): void;
-  push(kind: ToastKind, message: string, duration?: number): void;
+  push(kind: ToastKind, message: string, duration?: number, action?: ToastAction): void;
 }
 
 const DEFAULT_DURATION: Record<ToastKind, number> = {
@@ -53,10 +59,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const push = useCallback(
-    (kind: ToastKind, message: string, duration?: number) => {
+    (kind: ToastKind, message: string, duration?: number, action?: ToastAction) => {
       const id = nextId.current;
       nextId.current += 1;
-      setToasts((current) => [...current, { id, kind, message }]);
+      setToasts((current) => [...current, { id, kind, message, ...(action ? { action } : {}) }]);
       const ms = duration ?? DEFAULT_DURATION[kind];
       const timer = setTimeout(() => dismiss(id), ms);
       timers.current.set(id, timer);
@@ -67,7 +73,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const api = useMemo<ToastApi>(
     () => ({
       push,
-      success: (message, duration) => push("success", message, duration),
+      success: (message, duration, action) => push("success", message, duration, action),
       error: (message, duration) => push("error", message, duration),
       info: (message, duration) => push("info", message, duration),
     }),
@@ -93,6 +99,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             data-testid="ui-toast"
           >
             <span className="toast__message">{toast.message}</span>
+            {toast.action ? (
+              <button
+                className="toast__action"
+                type="button"
+                onClick={() => {
+                  dismiss(toast.id);
+                  toast.action?.onAction();
+                }}
+              >
+                {toast.action.label}
+              </button>
+            ) : null}
             <button
               className="toast__close"
               type="button"

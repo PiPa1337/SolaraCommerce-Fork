@@ -27,7 +27,7 @@ async function openDemoDetail(page: Page) {
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   const card = page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }).first();
   await card.locator(".dashboard-store-card__button").click();
-  return page.getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" });
+  return page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" });
 }
 
 test("archivar confirma, muestra deshacer y restaura la tienda", async ({ page }) => {
@@ -41,16 +41,18 @@ test("archivar confirma, muestra deshacer y restaura la tienda", async ({ page }
   await expect(confirm).toBeVisible();
   await confirm.getByRole("button", { name: "Archivar", exact: true }).click();
   await expect(confirm).toBeHidden();
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
+  // El storage reset siembra dos tiendas (Predeterminado y Predeterminado V1):
+  // archivar una deja una visible.
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
 
-  const toast = page.getByTestId("ui-dashboard-toast");
+  const toast = page.getByTestId("ui-toast");
   await expect(toast).toBeVisible();
   await expect(toast).toContainText("Deshacer");
   await toast.getByRole("button", { name: "Deshacer" }).click();
 
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
   // A12: restaurar confirma con un toast propio (asimetría con archivar resuelta).
-  await expect(page.getByTestId("ui-dashboard-toast")).toContainText("restaurada");
+  await expect(page.getByTestId("ui-toast")).toContainText("restaurada");
   await expect(
     page
       .locator(".dashboard-store-card")
@@ -79,9 +81,9 @@ test("duplicar pasa por el diálogo y aplica el nombre elegido", async ({ page }
   await nameInput.fill("Copia de prueba");
   await dialog.getByRole("button", { name: "Duplicar" }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("3 visibles");
   await expect(page.locator(".dashboard-store-card").getByText("Copia de prueba")).toBeVisible();
-  await expect(page.getByTestId("ui-dashboard-toast")).toContainText("Tienda duplicada");
+  await expect(page.getByTestId("ui-toast")).toContainText("Tienda duplicada");
 });
 
 test("duplicar falla sin cerrar el diálogo ni anunciar éxito", async ({ page }) => {
@@ -103,7 +105,7 @@ test("duplicar falla sin cerrar el diálogo ni anunciar éxito", async ({ page }
   await dialog.getByRole("button", { name: "Duplicar", exact: true }).click();
   await expect(dialog).toContainText("UUID no disponible");
   await expect(dialog).toBeVisible();
-  await expect(page.getByTestId("ui-dashboard-toast")).toHaveCount(0);
+  await expect(page.getByTestId("ui-toast")).toHaveCount(0);
 
   await dialog.getByRole("button", { name: "Cancelar", exact: true }).click();
   await expect(dialog).toBeHidden();
@@ -137,10 +139,18 @@ test("el modo comparar exige dos tiendas y muestra los diffs de secciones y moti
   await expect(compareAction).toBeDisabled();
 
   const checkboxes = page.getByTestId("ui-card-compare");
-  await expect(checkboxes).toHaveCount(2);
-  await checkboxes.nth(0).check();
+  await expect(checkboxes).toHaveCount(3);
+  await page
+    .locator(".dashboard-store-card")
+    .filter({ has: page.getByText("Predeterminado", { exact: true }) })
+    .getByTestId("ui-card-compare")
+    .check();
   await expect(compareAction).toBeDisabled();
-  await checkboxes.nth(1).check();
+  await page
+    .locator(".dashboard-store-card")
+    .filter({ has: page.getByText("Predeterminado (copia)", { exact: true }) })
+    .getByTestId("ui-card-compare")
+    .check();
   await expect(compareAction).toBeEnabled();
 
   await compareAction.click();

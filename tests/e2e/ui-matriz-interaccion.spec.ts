@@ -478,7 +478,7 @@ test.describe("Dashboard", () => {
       .filter({ has: page.getByText("Predeterminado", { exact: true }) });
     await card.locator(".dashboard-store-card__button").click();
     await page
-      .getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" })
+      .getByRole("region", { name: "Tienda seleccionada: Predeterminado" })
       .getByRole("button", { name: "Archivar" })
       .click();
     const confirm = page.getByTestId("ui-confirm-dialog");
@@ -486,7 +486,7 @@ test.describe("Dashboard", () => {
     await confirm.getByRole("button", { name: "Archivar", exact: true }).click();
     await expect(confirm).toBeHidden();
     await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
-    const toast = page.getByTestId("ui-dashboard-toast");
+    const toast = page.getByTestId("ui-toast");
     await expect(toast).toContainText("Deshacer");
     await toast.getByRole("button", { name: "Deshacer" }).click();
     await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
@@ -497,7 +497,7 @@ test.describe("Dashboard", () => {
       .locator(".dashboard-store-card")
       .filter({ has: page.getByText("Predeterminado", { exact: true }) });
     await restoredCard.locator(".dashboard-store-card__button").click();
-    const detail = page.getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" });
+    const detail = page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" });
     await expect(detail).toBeVisible();
 
     // Duplicar: la copia aparece con id nuevo.

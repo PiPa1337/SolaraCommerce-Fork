@@ -199,7 +199,7 @@ test("el diálogo precarga el nombre sugerido, enfoca el campo y confirma con En
     "data-store-card-id",
     originalId ?? "",
   );
-  await expect(page.getByTestId("ui-dashboard-toast")).toContainText("Tienda duplicada.");
+  await expect(page.getByTestId("ui-toast")).toContainText("Tienda duplicada.");
 });
 
 test("Escape cierra el diálogo sin duplicar y devuelve el foco al botón que lo abrió", async ({
@@ -269,7 +269,7 @@ test("el nombre vacío usa el sugerido y el campo limita a 60 caracteres", async
     .locator(".dashboard-store-card__button")
     .click();
   await page
-    .getByRole("complementary", { name: "Tienda seleccionada: Predeterminado (copia)" })
+    .getByRole("region", { name: "Tienda seleccionada: Predeterminado (copia)" })
     .getByRole("button", { name: "Duplicar", exact: true })
     .click();
   await expect(page.getByTestId("ui-duplicate-name")).toHaveValue("Predeterminado (copia) (copia)");

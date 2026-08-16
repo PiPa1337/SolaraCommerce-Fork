@@ -163,7 +163,7 @@ test("A13: duplicar — id nuevo, nombre elegido, cancelar y toast", async ({ pa
   await expect(duplicateDialog).toBeHidden();
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
   await expect(cardByName(page, "Copia A13")).toBeVisible();
-  await expect(page.getByTestId("ui-dashboard-toast")).toContainText("Tienda duplicada");
+  await expect(page.getByTestId("ui-toast")).toContainText("Tienda duplicada");
 
   // Contrato de datos: la copia recibe un id nuevo, distinto del original.
   const copyDetail = await selectStore(page, "Copia A13");
@@ -208,7 +208,7 @@ test("A13: archivar — confirmación, cancelar y deshacer", async ({ page }) =>
   await expect(confirm).toHaveCount(0);
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
 
-  const toast = page.getByTestId("ui-dashboard-toast");
+  const toast = page.getByTestId("ui-toast");
   await expect(toast).toContainText("archivada");
   await toast.getByRole("button", { name: "Deshacer" }).click();
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
@@ -260,7 +260,7 @@ test("A12: restaurar muestra el toast de confirmación y no deja foco en una car
   await archivedDetail.getByRole("button", { name: "Restaurar", exact: true }).click();
   // Archivar muestra toast con Deshacer; restaurar muestra una confirmación
   // propia sin acción de deshacer (fix A12) aunque la card salga del filtro.
-  const toast = page.getByTestId("ui-dashboard-toast");
+  const toast = page.getByTestId("ui-toast");
   await expect(toast).toContainText("restaurada");
   await expect(toast).not.toContainText("Deshacer");
   // La card restaurada ya no está en el filtro «Archivadas»: ninguna card

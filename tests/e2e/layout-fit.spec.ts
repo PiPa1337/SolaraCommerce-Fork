@@ -58,7 +58,7 @@ async function openDemoStore(page: Page): Promise<void> {
   const card = page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }).first();
   await card.locator(".dashboard-store-card__button").click();
   await page
-    .getByRole("complementary", { name: "Tienda seleccionada: Predeterminado" })
+    .getByRole("region", { name: "Tienda seleccionada: Predeterminado" })
     .getByRole("button", { name: "Abrir tienda" })
     .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();

@@ -24,8 +24,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { createPortal } from "react-dom";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { useToast } from "../components/Toast";
 import { Button, EmptyState, Field, IconButton, InlineError } from "../components/Ui";
 import {
   auditStoreHealth,
@@ -194,12 +194,6 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
   );
 });
 
-interface DashboardToast {
-  message: string;
-  actionLabel?: string;
-  onAction?(): void;
-}
-
 export function Dashboard({
   projects,
   onCreate,
@@ -238,7 +232,6 @@ export function Dashboard({
   >("checking");
   const [shutdownDialogOpen, setShutdownDialogOpen] = useState(false);
   const [shutdownError, setShutdownError] = useState("");
-  const [toast, setToast] = useState<DashboardToast>();
   const [compareMode, setCompareMode] = useState(false);
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [compareOpen, setCompareOpen] = useState(false);
@@ -262,7 +255,6 @@ export function Dashboard({
   const selectionInitializedRef = useRef(false);
   const focusCardOnSelectRef = useRef(false);
   const actionNoticeTimerRef = useRef<number | undefined>(undefined);
-  const toastTimerRef = useRef<number | undefined>(undefined);
   const reduceMotion = useReducedMotion();
   const dashboardTitleId = useId();
   const libraryTitleId = useId();
@@ -472,11 +464,7 @@ export function Dashboard({
     actionNoticeTimerRef.current = window.setTimeout(() => setActionNotice(""), 5000);
   }, []);
 
-  const showToast = useCallback((next: DashboardToast) => {
-    setToast(next);
-    window.clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = window.setTimeout(() => setToast(undefined), 5000);
-  }, []);
+  const { success } = useToast();
 
   const doArchive = useCallback(
     async (id: string, archived: boolean) => {
@@ -496,19 +484,17 @@ export function Dashboard({
       }
       const record = projects.find((item) => item.id === id);
       if (archived) {
-        showToast({
-          message: `Tienda "${record?.name ?? "archivada"}" archivada.`,
-          actionLabel: "Deshacer",
+        success(`Tienda "${record?.name ?? "archivada"}" archivada.`, undefined, {
+          label: "Deshacer",
           onAction: () => {
-            setToast(undefined);
             void doArchive(id, false);
           },
         });
         return;
       }
-      showToast({ message: `Tienda "${record?.name ?? "restaurada"}" restaurada.` });
+      success(`Tienda "${record?.name ?? "restaurada"}" restaurada.`);
     },
-    [onArchive, projects, showToast],
+    [onArchive, projects, success],
   );
 
   const handleArchive = useCallback(
@@ -752,8 +738,6 @@ export function Dashboard({
     }
   };
 
-  useEffect(() => () => window.clearTimeout(toastTimerRef.current), []);
-
   const openDuplicate = async (id: string) => {
     setDuplicateTarget(projects.find((record) => record.id === id));
   };
@@ -778,7 +762,7 @@ export function Dashboard({
       throw reason instanceof Error ? reason : new Error("No se pudo duplicar la tienda.");
     }
     setDuplicateTarget(undefined);
-    showToast({ message: "Tienda duplicada." });
+    success("Tienda duplicada.");
     requestAnimationFrame(() => cardButtonRefs.current.get(id)?.focus());
   };
 
@@ -824,13 +808,13 @@ export function Dashboard({
     } finally {
       setBackingUp(undefined);
     }
-    showToast({
-      message: bulkBackupToastMessage({
+    success(
+      bulkBackupToastMessage({
         total: targets.length,
         failed,
         ...(firstError ? { firstError } : {}),
       }),
-    });
+    );
   };
 
   const openFolder = async (id: string) => {
@@ -1269,21 +1253,6 @@ export function Dashboard({
         onDuplicate={confirmDuplicate}
         onDone={() => setDuplicateTarget(undefined)}
       />
-
-      {toast
-        ? createPortal(
-            <output className="dashboard-toast" data-testid="ui-dashboard-toast">
-              <span>{toast.message}</span>
-              {toast.actionLabel && toast.onAction ? (
-                <Button variant="quiet" onClick={() => toast.onAction?.()}>
-                  {toast.actionLabel}
-                </Button>
-              ) : null}
-              <IconButton icon={X} label="Cerrar aviso" onClick={() => setToast(undefined)} />
-            </output>,
-            document.body,
-          )
-        : null}
 
       {pendingArchiveRecord ? (
         <ConfirmDialog
