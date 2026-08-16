@@ -29,4 +29,7 @@ Estado de partida (tag `v2-auditoria-baseline` en `54a63b6`), 2026-08-16.
 
 ## Registro de hallazgos y correcciones
 
-(vacío — se completa por fase)
+### Fase 1 (Pasada 1 — arquitectura y funcionamiento)
+- F1-H1 (abierto → Fase 5): el preview regenera el HTML completo por cada tecla del editor (sin debounce); los renders van al worker (no bloquean UI) pero generan trabajo redundante. Medir y debouncer con justificación.
+- Confirmado sólido: drafts sincronizados (Seo/PreviewToolbar), clamp de página del catálogo, comparePair derivado sin stale, persistencia local con verificación de id y 409 por versión, sessions anti-stale del preview, sin warnings de React.
+
