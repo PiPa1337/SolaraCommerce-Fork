@@ -1,5 +1,21 @@
 # Changelog
 
+### Auditoría integral V2 — 8 pasadas end-to-end (2026-08-16)
+
+- **Bug real F2-H3**: la selección del dashboard se anulaba cuando un filtro o
+  refresh pasaba por un conjunto vacío (el detalle quedaba en blanco sin
+  recuperación); ahora la selección se conserva.
+- **Performance**: el preview del editor debouncea su render (150 ms): las
+  ráfagas de escritura pasaron de 2.47 s a 1.45 s (-41 % medido).
+- **UI/UX**: el dashboard migró a un único sistema de toasts (el global, con
+  soporte de acción "Deshacer"); se eliminó el toast paralelo.
+- **Código**: wizard de creación extraído (`CreateStoreDialog`), slugify
+  consolidado (3 → 1), CSS muerto eliminado.
+- **Regresiones**: suites antiguas alineadas al storage reset (dos tiendas
+  base, rol `region`, toasts apilados); batería e2e completa **712/712** con
+  doble corrida sin flakes.
+- Reporte completo: `docs/AUDITORIA_V2.md`.
+
 ### Hero V2 de Inicio copiado en Nosotros y Contacto (2026-08-16)
 
 - El hero de `/nosotros/` y `/contacto/` comparte ahora con Inicio el fondo
