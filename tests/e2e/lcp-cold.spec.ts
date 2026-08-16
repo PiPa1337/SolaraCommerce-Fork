@@ -1,6 +1,4 @@
-import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
-import { resolve } from "node:path";
 import { test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";

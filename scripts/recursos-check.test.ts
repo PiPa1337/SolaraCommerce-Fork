@@ -2,7 +2,6 @@ import { expect, test } from "vitest";
 import { exportProject } from "../packages/exporter/src/index";
 import { catalogModernStore } from "../packages/project-schema/src/catalog-modern-fixture";
 import { referenceStore } from "../packages/project-schema/src/fixture";
-import { catalogScaleStore } from "../packages/project-schema/src/scale-fixture";
 
 test("P5-4: duplicacion de selectores en el CSS V2 post-iteracion del usuario", () => {
   const result = exportProject(catalogModernStore, { mode: "production" });

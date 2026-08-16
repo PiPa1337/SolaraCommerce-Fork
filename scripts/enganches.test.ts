@@ -30,7 +30,7 @@ function serializeForHash(files: ReadonlyMap<string, string | Uint8Array>): stri
 }
 
 test("F2: el atributo data-solara-runtime-features coincide con el manifest", () => {
-  for (const [name, project] of Object.entries(fixtures)) {
+  for (const [, project] of Object.entries(fixtures)) {
     const result = exportProject(project, { mode: "production" });
     const manifest = createPublicExportManifest(project);
     const home = String(result.files.get("index.html"));
@@ -41,7 +41,7 @@ test("F2: el atributo data-solara-runtime-features coincide con el manifest", ()
 });
 
 test("F3: search-index y catalog-index referencian solo productos activos con rutas del sitio", () => {
-  for (const [name, project] of Object.entries(fixtures)) {
+  for (const [, project] of Object.entries(fixtures)) {
     const result = exportProject(project, { mode: "production" });
     const searchIndex = JSON.parse(String(result.files.get("search-index.json") ?? "[]")) as Array<{
       path?: string;
@@ -73,7 +73,7 @@ test("F4: criticalCount del audit coincide con el bloqueo de production", () => 
 });
 
 test("F5-draft: reproducible byte a byte tambien en draft", () => {
-  for (const [name, project] of Object.entries(fixtures)) {
+  for (const [, project] of Object.entries(fixtures)) {
     const first = exportProject(project, { mode: "draft" });
     const second = exportProject(project, { mode: "draft" });
     expect(sha256(serializeForHash(first.files))).toBe(sha256(serializeForHash(second.files)));
@@ -81,7 +81,7 @@ test("F5-draft: reproducible byte a byte tambien en draft", () => {
 });
 
 test("F5: el export es reproducible byte a byte en los 3 fixtures", () => {
-  for (const [name, project] of Object.entries(fixtures)) {
+  for (const [, project] of Object.entries(fixtures)) {
     const first = exportProject(project, { mode: "production" });
     const second = exportProject(project, { mode: "production" });
     expect(sha256(serializeForHash(first.files))).toBe(sha256(serializeForHash(second.files)));
