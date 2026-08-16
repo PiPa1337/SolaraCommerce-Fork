@@ -80,3 +80,42 @@ Estado de partida (tag `v2-auditoria-baseline` en `54a63b6`), 2026-08-16.
 - Mejoras futuras no realizadas: virtualización del catálogo (no justificada: paginación limita el render), dark mode del storefront (decisión de producto), consolidación de las suites sweep.
 
 
+
+## Auditoría adversarial del Constructor → web (2026-08-16)
+
+### Método
+Harness automatizado + probes dirigidos: para cada página editable (Home/Nosotros/Contacto),
+cada sección y cada campo del inspector (texto, número, select, toggle, repeater) se editó
+con un valor único y se verificó su reflejo en el preview y en el sitio exportado. Se
+probó además: reorden, ocultar/duplicar/eliminar secciones, modo avanzado, carrusel,
+motion, rating extremo, ids inválidos, rutas inválidas, doble click, cambio de página
+con el picker abierto.
+
+### Bugs confirmados (12)
+
+| # | Bug | Evidencia | Severidad |
+|---|---|---|---|
+| 1 | Hero V2 de Home con teléfono configurado: los campos "Botón principal"/"Botón secundario" se editan sin efecto (el render los reemplaza por el botón de WhatsApp) | probe: campos editados no aparecen en preview; código: línea 694-703 de catalog-modern.ts | alta (campo muerto) |
+| 2 | QuickLink del hero de Contacto: `item.actionLabel` nunca se renderiza (el campo "Consultar" del item es muerto) | probe dirigido; render línea 285 de contact-v2.ts | alta (campo muerto) |
+| 3 | Secciones deshabilitadas (ej. Ubicación de Contacto): todos sus campos se editan sin feedback (el preview no muestra el módulo) | probe: título editado sin reflejo; render con early-return | media (UX) |
+| 4 | Limit del product-grid: no se aplica (20 cards con limit 12; el cambio a 4 no se refleja) | probe: cards 20 con limit 12 | alta |
+| 5 | Enlaces sin validación: el quickLink con href "change" genera un enlace roto (el safeUrl deja pasar cualquier texto) | probe: campo "change" en el hero de Contacto | media |
+| 6 | Rating del testimonio sin clamp: el valor 9 (más allá del max 5) se renderiza con estrellas extra | probe: input number sin límite efectivo | baja |
+| 7 | Iconos inválidos con fallback silencioso: el campo dice "gato" y la web muestra spark/question (campo y web desincronizados) | código: iconPaths[name] ?? fallback | baja |
+| 8 | sourceId del grid como texto libre: un id inválido vacía el grid con el estado vacío pero sin indicar el motivo | probe: colección inventada → catalog-empty | baja (UX) |
+| 9 | Preview sin 404: una ruta inválida en el preview muestra la Home (el sitio real da 404) | probe: /ruta-inexistente/ → home | baja |
+| 10 | Página de producto no editable: el product-detail (botón "Agregar al carrito", nota de entrega) no tiene inspector (el pageSelect solo lista Home/Nosotros/Contacto) | probe: selector con 3 páginas | media (alcance) |
+| 11 | Doble click en "Agregar sección" → el picker se abre y cierra (0 pickers) | probe: dblclick → 0 pickers | baja |
+| 12 | El picker queda abierto al cambiar de página (muestra los módulos de la página anterior) | probe: picker visible tras cambiar a Nosotros | media (UX) |
+
+### Verificado como funcionando (sin bug)
+Reorden con persistencia tras recargar; ocultar/duplicar/eliminar secciones; motion (preset
+se refleja); announcement (texto y enlace); header (navbar automático con categorías);
+toggles del grid (showRating activa las estrellas); source collection/category del grid;
+estado vacío del grid con id inválido; bento con fallback automático; testimonios
+(repeater persiste); FAQ, form, help-grid, whatsapp-cta, purchase-info (títulos y
+acciones de secciones habilitadas); políticas del footer (envios/devoluciones/privacidad/
+terminos existen); categoría sin productos; producto sin categoría; precio 0; modo
+avanzado; tienda V1 con módulos; editor del producto; guardado/409/recovery/backup;
+preview con vistas y zoom; carrito del preview; exportación con cambios; ruta con
+espacios (se ignora); doble Enter en la ruta (navega una vez).
