@@ -108,9 +108,9 @@ test("P4-B6: restaurar una tienda archivada desde el filtro Archivadas", async (
   await archivedCard.click();
   await page.waitForTimeout(500);
   await page.locator(".dashboard-store-detail").getByRole("button", { name: "Restaurar" }).click();
-  const toast = page.locator("[data-testid='ui-toast']");
-  await expect(toast).toContainText("restaurada", { timeout: 30_000 });
-  const finalText = await toast.innerText();
+  const restoredToast = page.locator("[data-testid='ui-toast']", { hasText: "restaurada" });
+  await expect(restoredToast).toBeVisible({ timeout: 30_000 });
+  const finalText = await restoredToast.innerText();
   console.log("P4-B6 toast tras restaurar desde filtro:", JSON.stringify(finalText.slice(0, 60)));
 });
 

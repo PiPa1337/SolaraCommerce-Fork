@@ -13,6 +13,7 @@ import {
 } from "@solara/project-schema/catalog-modern-template";
 import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import Dexie, { type EntityTable } from "dexie";
+import { slugify as slugifySlug } from "./slugify";
 
 export interface StoredProject {
   id: string;
@@ -876,12 +877,6 @@ export async function clearAssetCache(): Promise<void> {
 }
 
 export function slugify(value: string, fallback = "tienda"): string {
-  const slug = value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 110);
+  const slug = slugifySlug(value);
   return slug || fallback;
 }

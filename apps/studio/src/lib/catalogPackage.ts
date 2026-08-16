@@ -6,6 +6,7 @@ import type {
   Product,
   StoreProjectV1,
 } from "@solara/project-schema";
+import { slugify as slugifySlug } from "./slugify";
 import {
   hashFile,
   importCsvInWorker,
@@ -39,19 +40,12 @@ export interface CatalogPackagePlan {
   summary: CatalogPackageSummary;
 }
 
-function slugify(value: string): string {
-  const slug = value
-    .trim()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("en-US")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-  return slug || "categoria";
-}
-
 function normalizePath(value: string): string {
   return value.trim().replaceAll("\\", "/").replace(/^\.\//, "");
+}
+
+function slugify(value: string): string {
+  return slugifySlug(value) || "categoria";
 }
 
 function categoryPathParts(value: string): string[] {

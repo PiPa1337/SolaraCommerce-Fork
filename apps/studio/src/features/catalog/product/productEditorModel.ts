@@ -20,16 +20,8 @@ export const VARIANT_STOCK_OPTIONS: readonly Variant["stockStatus"][] = [
 
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-/** Slug local desde el título: minúsculas, números y guiones (NFD quita acentos). */
-export function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 120);
-}
+/** Slug local desde el título (canónico del Studio, límite 120 del schema). */
+export { slugify } from "../../../lib/slugify";
 
 export function slugErrorFor(slug: string, existingSlugs: string[]): string | undefined {
   if (!slug) return "Escribí un slug o se generará desde el título.";

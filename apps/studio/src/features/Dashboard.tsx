@@ -10,7 +10,6 @@ import {
   Plus,
   Star,
   Storefront,
-  X,
 } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
 import {
@@ -26,7 +25,7 @@ import {
 } from "react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { useToast } from "../components/Toast";
-import { Button, EmptyState, Field, IconButton, InlineError } from "../components/Ui";
+import { Button, EmptyState, InlineError } from "../components/Ui";
 import {
   auditStoreHealth,
   type DashboardSort,
@@ -55,6 +54,7 @@ import { formatDate } from "../lib/format";
 import type { StoredProject } from "../lib/repository";
 import { bulkBackupToastMessage } from "./dashboard/bulkBackupModel";
 import { CompareView } from "./dashboard/CompareView";
+import { CreateStoreDialog } from "./dashboard/CreateStoreDialog";
 import { DashboardToolbar } from "./dashboard/DashboardToolbar";
 import { DuplicateDialog } from "./dashboard/DuplicateDialog";
 import { formatCompactDate, ProjectCard, statusLabel } from "./dashboard/ProjectCard";
@@ -215,13 +215,6 @@ export function Dashboard({
   const [selectedId, setSelectedId] = useState<string | undefined>(readStoredSelectedId);
   const [pinnedIds, setPinnedIds] = useState<string[]>(readPinnedIds);
   const [creating, setCreating] = useState(false);
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [name, setName] = useState("");
-  const [brandName, setBrandName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [createError, setCreateError] = useState("");
-  const [creatingProject, setCreatingProject] = useState(false);
   const [backupId, setBackupId] = useState<string>();
   const [siteOpeningId, setSiteOpeningId] = useState<string>();
   const [folderOpeningId, setFolderOpeningId] = useState<string>();
@@ -241,10 +234,8 @@ export function Dashboard({
   const [backingUp, setBackingUp] = useState<string>();
   const [criticalIssues, setCriticalIssues] = useState<number | null>(null);
   const [auditSkipped, setAuditSkipped] = useState(0);
-  const createDialogRef = useRef<HTMLDialogElement>(null);
   const shutdownDialogRef = useRef<HTMLDialogElement>(null);
   const shutdownTerminalRef = useRef(shutdownTerminal === true);
-  const nameInputRef = useRef<HTMLInputElement>(null);
   const selectedPanelRef = useRef<HTMLElement>(null);
   const createButtonRef = useRef<HTMLButtonElement>(null);
   const createOpenerRef = useRef<HTMLElement | null>(null);
@@ -258,7 +249,6 @@ export function Dashboard({
   const reduceMotion = useReducedMotion();
   const dashboardTitleId = useId();
   const libraryTitleId = useId();
-  const createStoreTitleId = useId();
   const shutdownTitleId = useId();
   const pinnedGroupTitleId = useId();
 
@@ -312,20 +302,12 @@ export function Dashboard({
   }, [projects.length, selectedId, visible]);
 
   useEffect(() => {
-    const dialog = createDialogRef.current;
-    if (!dialog) return;
-    if (creating && !dialog.open) {
-      dialog.showModal();
-      requestAnimationFrame(() => nameInputRef.current?.focus());
-    }
-    if (!creating && dialog.open) {
-      dialog.close();
-      const opener = createOpenerRef.current ?? createButtonRef.current;
-      createOpenerRef.current = null;
-      if (!opener?.isConnected) return;
-      const frame = requestAnimationFrame(() => opener.focus({ preventScroll: true }));
-      return () => cancelAnimationFrame(frame);
-    }
+    if (creating) return;
+    const opener = createOpenerRef.current ?? createButtonRef.current;
+    createOpenerRef.current = null;
+    if (!opener?.isConnected) return;
+    const frame = requestAnimationFrame(() => opener.focus({ preventScroll: true }));
+    return () => cancelAnimationFrame(frame);
   }, [creating]);
 
   useEffect(() => {
@@ -410,19 +392,12 @@ export function Dashboard({
       activeElement instanceof HTMLElement && activeElement !== document.body
         ? activeElement
         : createButtonRef.current;
-    setStep(1);
-    setName("");
-    setBrandName("");
-    setEmail("");
-    setPhone("");
-    setCreateError("");
     setCreating(true);
   }, []);
 
-  const closeCreate = () => {
-    if (creatingProject) return;
+  const closeCreate = useCallback(() => {
     setCreating(false);
-  };
+  }, []);
 
   const selectCard = useCallback((id: string, options?: { focusCard?: boolean }) => {
     if (options?.focusCard) focusCardOnSelectRef.current = true;
@@ -666,32 +641,6 @@ export function Dashboard({
       cancelled = true;
     };
   }, [projects]);
-
-  const submit = async () => {
-    setCreateError("");
-    if (step < 4) {
-      if (step === 1 && !name.trim()) {
-        setCreateError("Escribí un nombre para continuar.");
-        return;
-      }
-      setStep((current) => (current + 1) as 1 | 2 | 3 | 4);
-      return;
-    }
-    if (!name.trim()) {
-      setCreateError("Escribí un nombre para crear la tienda.");
-      return;
-    }
-    setCreatingProject(true);
-    try {
-      await onCreate({ name, brandName: brandName || name, email, phone });
-      setCreating(false);
-      setStep(1);
-    } catch (reason) {
-      setCreateError(reason instanceof Error ? reason.message : "No se pudo crear la tienda.");
-    } finally {
-      setCreatingProject(false);
-    }
-  };
 
   const requestShutdown = async () => {
     if (shutdownTerminalRef.current) return;
@@ -1096,113 +1045,7 @@ export function Dashboard({
         </section>
       </div>
 
-      <dialog
-        ref={createDialogRef}
-        className="dashboard-cosmic-dialog"
-        aria-labelledby={createStoreTitleId}
-        onCancel={(event) => {
-          event.preventDefault();
-          closeCreate();
-        }}
-      >
-        <form
-          method="dialog"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void submit();
-          }}
-        >
-          <header className="dashboard-cosmic-dialog__header">
-            <div>
-              <span className="dashboard-cosmic-kicker">Nuevo proyecto</span>
-              <h2 id={createStoreTitleId}>Crear tienda</h2>
-            </div>
-            <IconButton
-              icon={X}
-              label="Cerrar creación"
-              disabled={creatingProject}
-              onClick={closeCreate}
-            />
-          </header>
-          <ol className="create-store__steps" aria-label="Pasos para preparar la tienda">
-            <li className={step >= 1 ? "is-active" : ""}>1 Marca</li>
-            <li className={step >= 2 ? "is-active" : ""}>2 Identidad y assets</li>
-            <li className={step >= 3 ? "is-active" : ""}>3 Catálogo</li>
-            <li className={step >= 4 ? "is-active" : ""}>4 Revisión</li>
-          </ol>
-          {createError ? <InlineError>{createError}</InlineError> : null}
-          <Field label="Nueva tienda">
-            <input
-              ref={nameInputRef}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Nombre comercial"
-              autoComplete="organization"
-            />
-          </Field>
-          {step >= 2 ? (
-            <Field label="Nombre visible de la marca">
-              <input
-                value={brandName}
-                onChange={(event) => setBrandName(event.target.value)}
-                placeholder={name || "Nombre de marca"}
-                autoComplete="organization"
-              />
-            </Field>
-          ) : null}
-          {step === 2 ? (
-            <p className="dashboard-cosmic-dialog__summary">
-              La plantilla deja listos los textos, la navegación y los espacios para tus imágenes.
-            </p>
-          ) : null}
-          {step >= 3 ? (
-            <div className="create-store__contact-fields">
-              <Field label="Email de contacto (opcional)">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="hola@tumarca.com"
-                  autoComplete="email"
-                />
-              </Field>
-              <Field label="WhatsApp (opcional)">
-                <input
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  placeholder="5491123456789"
-                  autoComplete="tel"
-                  inputMode="tel"
-                />
-              </Field>
-              <p className="dashboard-cosmic-dialog__summary">
-                El catálogo comienza vacío. Después podrás importar un CSV o cargar productos
-                manualmente.
-              </p>
-            </div>
-          ) : null}
-          {step === 4 ? (
-            <p className="dashboard-cosmic-dialog__summary" aria-live="polite">
-              Vas a crear una tienda vacía con el diseño Catalog Modern. La demo de 50 productos
-              queda disponible como proyecto separado.
-            </p>
-          ) : null}
-          <footer className="dashboard-cosmic-dialog__actions">
-            {step > 1 ? (
-              <Button
-                variant="quiet"
-                type="button"
-                onClick={() => setStep((current) => (current - 1) as 1 | 2 | 3 | 4)}
-              >
-                Atrás
-              </Button>
-            ) : null}
-            <Button variant="primary" icon={Plus} disabled={creatingProject} type="submit">
-              {creatingProject ? "Creando" : step === 4 ? "Crear tienda vacía" : "Continuar"}
-            </Button>
-          </footer>
-        </form>
-      </dialog>
+      <CreateStoreDialog open={creating} onCreate={onCreate} onClose={closeCreate} />
 
       <dialog
         ref={shutdownDialogRef}
