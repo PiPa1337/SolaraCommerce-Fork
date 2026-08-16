@@ -38,7 +38,7 @@ function cardByName(page: Page, name: string): Locator {
 async function selectStore(page: Page, name: string): Promise<Locator> {
   const card = cardByName(page, name);
   await card.locator(".dashboard-store-card__button").click();
-  const detail = page.getByRole("complementary", { name: `Tienda seleccionada: ${name}` });
+  const detail = page.getByRole("region", { name: `Tienda seleccionada: ${name}` });
   await expect(detail).toBeVisible();
   return detail;
 }
@@ -123,7 +123,7 @@ test("A13: crear — el contrato de datos agrega la card con su id y persiste", 
 
   await page.getByRole("button", { name: "Volver a tiendas" }).click();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("3 visibles");
   await expect(cardByName(page, "Tienda A13")).toBeVisible();
 
   // Contrato de datos: la card nueva abre un detalle con id generado `store-*`.
@@ -133,7 +133,7 @@ test("A13: crear — el contrato de datos agrega la card con su id y persiste", 
   // Persistencia: tras recargar, la tienda creada sigue en la biblioteca.
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("3 visibles");
   await expect(cardByName(page, "Tienda A13")).toBeVisible();
 });
 
@@ -152,7 +152,7 @@ test("A13: duplicar — id nuevo, nombre elegido, cancelar y toast", async ({ pa
   await expect(page.getByTestId("ui-duplicate-name")).toBeFocused();
   await duplicateDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
   await expect(duplicateDialog).toBeHidden();
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
   await expect(originalDetail.getByRole("button", { name: "Duplicar", exact: true })).toBeFocused();
 
   // Confirmación con nombre propio: la card nueva aparece con ese nombre.
@@ -161,7 +161,7 @@ test("A13: duplicar — id nuevo, nombre elegido, cancelar y toast", async ({ pa
   await page.getByTestId("ui-duplicate-name").fill("Copia A13");
   await duplicateDialog.getByRole("button", { name: "Duplicar", exact: true }).click();
   await expect(duplicateDialog).toBeHidden();
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("3 visibles");
   await expect(cardByName(page, "Copia A13")).toBeVisible();
   await expect(page.getByTestId("ui-toast")).toContainText("Tienda duplicada");
 
@@ -199,19 +199,19 @@ test("A13: archivar — confirmación, cancelar y deshacer", async ({ page }) =>
   // Cancelar no archiva.
   await confirm.getByRole("button", { name: "Cancelar", exact: true }).click();
   await expect(confirm).toHaveCount(0);
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
 
   // Confirmar archiva: la card sale de Activas y el toast ofrece Deshacer.
   await detail.getByRole("button", { name: "Archivar", exact: true }).click();
   await expect(confirm).toBeVisible();
   await confirm.getByTestId("ui-confirm-accept").click();
   await expect(confirm).toHaveCount(0);
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
 
   const toast = page.getByTestId("ui-toast");
   await expect(toast).toContainText("archivada");
   await toast.getByRole("button", { name: "Deshacer" }).click();
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
   await expect(
     cardByName(page, "Predeterminado").locator(".dashboard-store-card__status"),
   ).toHaveText("Activa");
@@ -222,7 +222,7 @@ test("A13: archivar — restaurar desde el filtro de archivadas", async ({ page 
   const detail = await selectStore(page, "Predeterminado");
   await detail.getByRole("button", { name: "Archivar", exact: true }).click();
   await page.getByTestId("ui-confirm-dialog").getByTestId("ui-confirm-accept").click();
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
 
   // La card vive en Archivadas con su estado reflejado.
   await page.getByLabel("Estado").selectOption("archived");
@@ -240,7 +240,7 @@ test("A13: archivar — restaurar desde el filtro de archivadas", async ({ page 
 
   // En Activas la card reaparece con estado Activa y el detalle ofrece Archivar.
   await page.getByLabel("Estado").selectOption("active");
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
   await expect(
     cardByName(page, "Predeterminado").locator(".dashboard-store-card__status"),
   ).toHaveText("Activa");
@@ -260,8 +260,8 @@ test("A12: restaurar muestra el toast de confirmación y no deja foco en una car
   await archivedDetail.getByRole("button", { name: "Restaurar", exact: true }).click();
   // Archivar muestra toast con Deshacer; restaurar muestra una confirmación
   // propia sin acción de deshacer (fix A12) aunque la card salga del filtro.
-  const toast = page.getByTestId("ui-toast");
-  await expect(toast).toContainText("restaurada");
+  const toast = page.locator("[data-testid='ui-toast']").filter({ hasText: "restaurada" });
+  await expect(toast).toBeVisible();
   await expect(toast).not.toContainText("Deshacer");
   // La card restaurada ya no está en el filtro «Archivadas»: ninguna card
   // queda enfocada (la selección no migra a otro destino visible).

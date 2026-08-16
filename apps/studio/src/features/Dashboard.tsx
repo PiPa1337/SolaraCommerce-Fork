@@ -292,7 +292,11 @@ export function Dashboard({
       return;
     }
     if (selectedId) {
-      setSelectedId(visible[0]?.id);
+      // Si la selección actual no está en la lista visible (filtro o refresh
+      // transitorio), se sigue a la primera visible; si no hay ninguna visible
+      // todavía, se conserva la selección en vez de anularla: un filtro que
+      // pasa por un conjunto vacío no debe dejar el detalle en blanco.
+      setSelectedId(visible[0]?.id ?? selectedId);
       return;
     }
     if (!selectionInitializedRef.current && visible[0]) {

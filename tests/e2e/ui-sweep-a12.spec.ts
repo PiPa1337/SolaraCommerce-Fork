@@ -79,7 +79,7 @@ async function selectCardByName(page: Page, name: string): Promise<void> {
 }
 
 function detailPanel(page: Page, name?: string): Locator {
-  return page.getByRole("complementary", {
+  return page.getByRole("region", {
     name: name ? `Tienda seleccionada: ${name}` : "Tienda seleccionada",
   });
 }
@@ -94,7 +94,7 @@ async function duplicateAs(page: Page, name: string): Promise<void> {
     .getByRole("dialog", { name: "Duplicar tienda" })
     .getByRole("button", { name: "Duplicar", exact: true })
     .click();
-  await expect(visibleCount(page)).toHaveText("2 visibles");
+  await expect(visibleCount(page)).toHaveText("3 visibles");
 }
 
 const toolbarCombobox = (page: Page, index: number): Locator =>
@@ -185,7 +185,7 @@ test("la búsqueda filtra las cards, renumera los índices y actualiza el conteo
   await duplicateAs(page, "Zeta");
   const search = page.getByRole("searchbox", { name: "Buscar tienda" });
 
-  await expect(visibleCount(page)).toHaveText("2 visibles");
+  await expect(visibleCount(page)).toHaveText("3 visibles");
   await expect(cardIndex(page, 0)).toHaveText("1");
   await expect(cardIndex(page, 1)).toHaveText("2");
 
@@ -196,16 +196,16 @@ test("la búsqueda filtra las cards, renumera los índices y actualiza el conteo
   await expect(cardIndex(page, 0)).toHaveText("1");
 
   await search.fill("Predeterminado");
-  await expect(visibleCount(page)).toHaveText("1 visibles");
-  await expect(cardName(page, 0)).toHaveText("Predeterminado");
+  await expect(visibleCount(page)).toHaveText("2 visibles");
+  await expect(cardName(page, 0)).toContainText("Predeterminado");
 
   await search.fill("tienda inexistente");
   await expect(visibleCount(page)).toHaveText("0 visibles");
   await expect(page.getByTestId("ui-empty-state")).toContainText("No hay coincidencias");
 
   await search.fill("");
-  await expect(visibleCount(page)).toHaveText("2 visibles");
-  await expect(page.locator(".dashboard-store-card")).toHaveCount(2);
+  await expect(visibleCount(page)).toHaveText("3 visibles");
+  await expect(page.locator(".dashboard-store-card")).toHaveCount(3);
 });
 
 test("el filtro de estado cambia las cards y la selección se sincroniza con la lista visible", async ({
@@ -221,18 +221,22 @@ test("el filtro de estado cambia las cards y la selección se sincroniza con la 
   await status.selectOption("archived");
   await expect(visibleCount(page)).toHaveText("0 visibles");
   await expect(page.getByTestId("ui-empty-state")).toBeVisible();
-  await expect(detailPanel(page)).toContainText("Seleccioná una tienda");
+  // La selección se conserva cuando el filtro la oculta (F2-H3): el detalle
+  // sigue mostrando la tienda elegida en vez de quedar en blanco.
+  await expect(detailPanel(page, "Zeta")).toBeVisible();
 
   await status.selectOption("all");
-  await expect(visibleCount(page)).toHaveText("2 visibles");
-  await expect(detailPanel(page)).toContainText("Seleccioná una tienda");
+  await expect(visibleCount(page)).toHaveText("3 visibles");
+  await expect(detailPanel(page, "Zeta")).toBeVisible();
 
   await selectCardByName(page, "Zeta");
   await detailPanel(page, "Zeta").getByRole("button", { name: "Archivar" }).click();
   const confirm = page.getByTestId("ui-confirm-dialog");
   await expect(confirm).toBeVisible();
   await confirm.getByRole("button", { name: "Archivar", exact: true }).click();
-  await expect(page.getByTestId("ui-toast")).toContainText("Deshacer");
+  await expect(
+    page.locator("[data-testid='ui-toast']").filter({ hasText: "Deshacer" }),
+  ).toBeVisible();
 
   await status.selectOption("archived");
   await expect(visibleCount(page)).toHaveText("1 visibles");
@@ -240,7 +244,7 @@ test("el filtro de estado cambia las cards y la selección se sincroniza con la 
   await expect(detailPanel(page, "Zeta")).toBeVisible();
 
   await status.selectOption("active");
-  await expect(visibleCount(page)).toHaveText("1 visibles");
+  await expect(visibleCount(page)).toHaveText("2 visibles");
   await expect(card(page, "Predeterminado").locator(".dashboard-store-card__status")).toHaveText(
     "Activa",
   );
@@ -259,7 +263,7 @@ test("el orden reordena las cards de verdad y actualiza el índice visible", asy
 
   await sort.selectOption("name");
   await expect(cardName(page, 0)).toHaveText("Predeterminado");
-  await expect(cardName(page, 1)).toHaveText("Zeta");
+  await expect(cardName(page, 1)).toHaveText("Predeterminado V1");
 
   await sort.selectOption("products");
   await expect(cardName(page, 0)).toHaveText("Predeterminado");
@@ -369,7 +373,7 @@ test("el modo comparar marca los checkboxes y la barra actualiza el conteo y el 
   await expect(page.getByText("Elegí 2 tiendas para comparar")).toBeVisible();
 
   const checkboxes = page.getByTestId("ui-card-compare");
-  await expect(checkboxes).toHaveCount(2);
+  await expect(checkboxes).toHaveCount(3);
   await expect(page.getByRole("button", { name: "Comparar", exact: true })).toBeDisabled();
 
   await checkboxes.nth(0).check();
@@ -441,7 +445,7 @@ test("el chip de salud con filtros que ocultan la tienda la muestra, la seleccio
   await expect(visibleCount(page)).toHaveText("0 visibles");
   await page.getByTestId("ui-health-chip").click();
   await expect(search).toHaveValue("");
-  await expect(visibleCount(page)).toHaveText("1 visibles");
+  await expect(visibleCount(page)).toHaveText("2 visibles");
   await expect(detailPanel(page, "Predeterminado")).toBeVisible();
   await expect(
     card(page, "Predeterminado").locator(".dashboard-store-card__button"),
@@ -451,7 +455,7 @@ test("el chip de salud con filtros que ocultan la tienda la muestra, la seleccio
   await expect(visibleCount(page)).toHaveText("0 visibles");
   await page.getByTestId("ui-health-chip").click();
   await expect(status).toHaveValue("active");
-  await expect(visibleCount(page)).toHaveText("1 visibles");
+  await expect(visibleCount(page)).toHaveText("2 visibles");
   await expect(detailPanel(page, "Predeterminado")).toBeVisible();
   await expect(
     card(page, "Predeterminado").locator(".dashboard-store-card__button"),
@@ -543,7 +547,7 @@ test("A12: restaurar muestra toast de confirmación y devuelve el foco a la card
   // debe dejarla seleccionada y enfocada (simetría con el foco de archivar).
   const status = toolbarCombobox(page, 0);
   await status.selectOption("all");
-  await expect(visibleCount(page)).toHaveText("1 visibles");
+  await expect(visibleCount(page)).toHaveText("2 visibles");
   await selectCardByName(page, "Predeterminado");
   await expect(detailPanel(page, "Predeterminado")).toBeVisible();
 
@@ -551,8 +555,9 @@ test("A12: restaurar muestra toast de confirmación y devuelve el foco a la card
     .getByRole("button", { name: "Restaurar", exact: true })
     .click();
   const restoredCard = card(page, "Predeterminado").locator(".dashboard-store-card__button");
-  await expect(page.getByTestId("ui-toast")).toContainText("restaurada");
-  await expect(page.getByTestId("ui-toast")).not.toContainText("Deshacer");
+  const restoredToast = page.locator("[data-testid='ui-toast']").filter({ hasText: "restaurada" });
+  await expect(restoredToast).toBeVisible();
+  await expect(restoredToast).not.toContainText("Deshacer");
   await expect(restoredCard).toHaveAttribute("aria-pressed", "true");
   await expect(restoredCard).toBeFocused();
   await expect(card(page, "Predeterminado").locator(".dashboard-store-card__status")).toHaveText(

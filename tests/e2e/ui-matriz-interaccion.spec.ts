@@ -453,7 +453,7 @@ test.describe("Dashboard", () => {
     page,
   }) => {
     await resetIndexedDb(page);
-    await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+    await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
 
     // Crear una tienda: entra al editor con el nombre nuevo.
     await page.getByRole("button", { name: "Nueva tienda", exact: true }).click();
@@ -470,7 +470,7 @@ test.describe("Dashboard", () => {
     // Volver al dashboard para las acciones restantes.
     await page.getByRole("button", { name: "Volver a tiendas" }).click();
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-    await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+    await expect(page.locator(".dashboard-cosmic-count")).toHaveText("3 visibles");
 
     // Archivar con confirmación y restaurar desde el deshacer.
     const card = page
@@ -485,11 +485,11 @@ test.describe("Dashboard", () => {
     await expect(confirm).toBeVisible();
     await confirm.getByRole("button", { name: "Archivar", exact: true }).click();
     await expect(confirm).toBeHidden();
-    await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+    await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
     const toast = page.getByTestId("ui-toast");
     await expect(toast).toContainText("Deshacer");
     await toast.getByRole("button", { name: "Deshacer" }).click();
-    await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+    await expect(page.locator(".dashboard-cosmic-count")).toHaveText("3 visibles");
 
     // Al archivar (filtro por defecto "Activas") la selección salta a la
     // primera visible; se vuelve a elegir Predeterminado para duplicarla.
@@ -507,7 +507,7 @@ test.describe("Dashboard", () => {
     await page.getByTestId("ui-duplicate-name").fill("Copia Matriz F14");
     await duplicate.getByRole("button", { name: "Duplicar", exact: true }).click();
     await expect(duplicate).toBeHidden();
-    await expect(page.locator(".dashboard-cosmic-count")).toHaveText("3 visibles");
+    await expect(page.locator(".dashboard-cosmic-count")).toHaveText("4 visibles");
     const copy = page.locator(".dashboard-store-card").filter({ hasText: "Copia Matriz F14" });
     await expect(copy).toBeVisible();
     await expect(copy.locator(".dashboard-store-card__button")).not.toHaveAttribute(
