@@ -418,50 +418,59 @@ export function Preview({
     return () => window.removeEventListener("message", handlePreviewAssetRequest);
   }, [onRouteChange, project.id]);
 
+  // El render del sitio completo es caro: agrupa los cambios rápidos (typing,
+  // sliders) en una sola regeneración por ráfaga. El debounce no retrasa la
+  // edición (el estado siempre está al día) y el preview queda a 150ms del
+  // último cambio, imperceptible al ojo.
   useEffect(() => {
     let active = true;
-    const previewSession = String(++previewRenderSessionRef.current);
-    void loadExporter(renderToken)
-      .then(({ getPreviewAssetSources, renderPreviewHtml }) => {
-        if (!active) return;
-        try {
-          previewAssetSources.current = getPreviewAssetSources(project);
-          activePreviewSessionRef.current = previewSession;
-          setHtmlSession(previewSession);
-          const cartKey = `solara-cart:${project.id}`;
-          const serializedCart =
-            previewCartStateRef.current?.key === cartKey
-              ? previewCartStateRef.current.serialized
-              : readPreviewCartState(project.id);
-          setHtml(
-            addPreviewNavigationBridge(
-              addPreviewCartState(
-                addPreviewScrollbarPolicy(
-                  renderPreviewHtml(project, "draft", route, { assetTransport: "parent" }),
+    const timer = window.setTimeout(() => {
+      const previewSession = String(++previewRenderSessionRef.current);
+      void loadExporter(renderToken)
+        .then(({ getPreviewAssetSources, renderPreviewHtml }) => {
+          if (!active) return;
+          try {
+            previewAssetSources.current = getPreviewAssetSources(project);
+            activePreviewSessionRef.current = previewSession;
+            setHtmlSession(previewSession);
+            const cartKey = `solara-cart:${project.id}`;
+            const serializedCart =
+              previewCartStateRef.current?.key === cartKey
+                ? previewCartStateRef.current.serialized
+                : readPreviewCartState(project.id);
+            setHtml(
+              addPreviewNavigationBridge(
+                addPreviewCartState(
+                  addPreviewScrollbarPolicy(
+                    renderPreviewHtml(project, "draft", route, { assetTransport: "parent" }),
+                  ),
+                  project.id,
+                  previewSession,
+                  serializedCart,
                 ),
-                project.id,
-                previewSession,
-                serializedCart,
               ),
-            ),
-          );
-          setIframeReady(false);
-          setError("");
-        } catch (reason) {
-          setError(
-            reason instanceof Error ? reason.message : "No se pudo generar la vista previa.",
-          );
-        }
-      })
-      .catch((reason: unknown) => {
-        if (active) {
-          setError(
-            reason instanceof Error ? reason.message : "No se pudo cargar el renderer de preview.",
-          );
-        }
-      });
+            );
+            setIframeReady(false);
+            setError("");
+          } catch (reason) {
+            setError(
+              reason instanceof Error ? reason.message : "No se pudo generar la vista previa.",
+            );
+          }
+        })
+        .catch((reason: unknown) => {
+          if (active) {
+            setError(
+              reason instanceof Error
+                ? reason.message
+                : "No se pudo cargar el renderer de preview.",
+            );
+          }
+        });
+    }, 150);
     return () => {
       active = false;
+      window.clearTimeout(timer);
     };
   }, [project, route, renderToken]);
 
