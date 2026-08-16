@@ -86,6 +86,9 @@ describe("Contacto V2 module contracts", () => {
     expect(html).toContain('data-motion-zone="items"');
     expect(html).toContain('class="catalog-hero-inner contact-hero"');
     expect(html).toContain('class="catalog-hero-media contact-hero-media"');
+    expect(html).toContain('class="catalog-hero-background"');
+    expect(html).toContain("catalog-hero-benefits--copy");
+    expect(html).toContain("catalog-hero-benefits--band");
     expect(html).not.toContain("<video");
     expect(html).toContain("images.unsplash.com");
   });

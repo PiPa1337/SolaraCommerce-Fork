@@ -4112,6 +4112,17 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-hero-page .catalog-hero-media figure { height: 100%; margin: 0; line-height: 0; }
   .cm.v2 .catalog-hero-page .catalog-hero-media figure > * { width: 100%; height: 100%; object-fit: cover; }
   .cm.v2 .catalog-hero-page .catalog-hero-video { display: none !important; }
+  .cm.v2 .catalog-hero-page .catalog-hero-background { position: absolute; z-index: 0; inset: 0; overflow: hidden; pointer-events: none; }
+  .cm.v2 .catalog-hero-page .catalog-hero-background img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.92); transform: scale(1.01); }
+  .cm.v2 .catalog-hero-page .catalog-hero-background::after { position: absolute; inset: 0; background: linear-gradient(90deg, color-mix(in srgb, var(--catalog-paper) 92%, transparent), color-mix(in srgb, var(--catalog-paper) 64%, transparent) 45%, color-mix(in srgb, var(--catalog-paper) 26%, transparent) 78%, transparent); content: ""; opacity: calc(.3 + var(--catalog-hero-bg-dark, .6) * .7); }
+  .cm.v2 .catalog-hero-page .catalog-hero-benefits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem 2.25rem; margin: 2rem 0 1rem; padding: 0; list-style: none; }
+  .cm.v2 .catalog-hero-page .catalog-hero-benefits--copy { align-self: stretch; margin-inline: 0; padding: .95rem 1.15rem; border: 1px solid color-mix(in srgb, var(--catalog-ink) 10%, transparent); border-radius: 0; background: color-mix(in srgb, var(--catalog-paper) 38%, transparent); backdrop-filter: blur(14px); }
+  .cm.v2 .catalog-hero-page .catalog-hero-benefits--band { display: none; }
+  .cm.v2 .catalog-hero-page .catalog-hero-benefit { display: flex; align-items: center; gap: .65rem; min-width: 0; }
+  .cm.v2 .catalog-hero-page .catalog-hero-benefit + .catalog-hero-benefit { padding-left: 1.25rem; border-left: 1px solid color-mix(in srgb, var(--catalog-border) 55%, transparent); }
+  .cm.v2 .catalog-hero-page .catalog-hero-benefit-icon { flex: 0 0 auto; width: 22px; height: 22px; }
+  .cm.v2 .catalog-hero-page .catalog-hero-benefit-copy { display: flex; min-width: 0; flex-direction: column; gap: .15rem; }
+  .cm.v2 .catalog-hero-page .catalog-hero-benefit-copy small { color: var(--catalog-muted); }
   .cm.v2 .catalog-hero-page > .catalog-hero-inner[data-motion-zone],
   .cm.v2 .catalog-hero-page .catalog-hero-media[data-motion-zone],
   .cm.v2 [data-solara-module^="about-"]:not(.catalog-hero-page) [data-motion-zone],
@@ -4119,9 +4130,13 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-reveal--eyebrow { --hero-v2-rise: 14px; animation: solara-hero-rise var(--hero-v2-dur-eyebrow, 380ms) var(--catalog-v2-ease-out) 60ms both; }
   .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-title { --hero-v2-rise: -10px; animation: solara-hero-rise var(--hero-v2-dur-title, 380ms) var(--catalog-v2-ease-out) 100ms both; }
   .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-line-inner { animation: solara-hero-line var(--hero-v2-dur-line, 560ms) var(--catalog-v2-ease-out) var(--hero-v2-line-delay, 120ms) both; }
+  .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-line:nth-child(2) .catalog-hero-line-inner { --hero-v2-line-delay: 190ms; }
   .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-rule { animation: solara-hero-rule var(--hero-v2-dur-rule, 480ms) var(--catalog-v2-ease-out) 300ms both; }
   .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-reveal--body { animation: solara-hero-rise var(--hero-v2-dur-body, 420ms) var(--catalog-v2-ease-out) 360ms both; }
   .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-reveal--actions { --hero-v2-rise: 18px; animation: solara-hero-rise var(--hero-v2-dur-actions, 420ms) var(--catalog-v2-ease-out) 430ms both; }
+  .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-benefits--copy .catalog-hero-benefit { animation: solara-hero-rise var(--hero-v2-dur-benefit, 420ms) var(--catalog-v2-ease-out) var(--hero-v2-benefit-delay, 500ms) both; }
+  .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-benefits--copy .catalog-hero-benefit:nth-child(2) { --hero-v2-benefit-delay: 560ms; }
+  .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-benefits--copy .catalog-hero-benefit:nth-child(3) { --hero-v2-benefit-delay: 620ms; }
   .cm.v2 .catalog-hero-page[data-motion-visible="true"] [data-hero-media] { animation: solara-hero-media var(--hero-v2-dur-media, 900ms) var(--catalog-v2-ease-out) 80ms backwards !important; }
   .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-image { animation: solara-hero-media-zoom var(--hero-v2-dur-zoom, 1200ms) var(--catalog-v2-ease-out) 80ms backwards; }
   .cm.v2 .contact-hero-module[data-motion-visible="true"] .contact-hero-links { --hero-v2-rise: 16px; animation: solara-hero-rise 460ms var(--catalog-v2-ease-out) 140ms backwards !important; }
@@ -4194,6 +4209,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
       color: #fff;
     }
     .cm.v2 .catalog-hero-page .catalog-hero-copy .catalog-hero-body { color: color-mix(in srgb, #fff 82%, transparent); }
+    .cm.v2 .catalog-hero-page .catalog-hero-background { display: none; }
+    .cm.v2 .catalog-hero-page .catalog-hero-benefits--copy { display: none; }
+    .cm.v2 .catalog-hero-page .catalog-hero-benefits--band { display: grid; grid-template-columns: 1fr; gap: 1rem; width: min(calc(100% - 1.5rem), var(--catalog-v2-wide)); margin: 1.25rem auto 2.25rem; }
+    .cm.v2 .catalog-hero-page .catalog-hero-benefit + .catalog-hero-benefit { padding-left: 0; border-left: 0; }
     .cm.v2 .contact-hero-module .contact-hero-links,
     .cm.v2 .solara-about-sections > [data-solara-module]:not([data-solara-module="about-hero"]),
     .cm.v2 .solara-contact-sections > [data-solara-module]:not([data-solara-module="contact-hero"]) {
@@ -4205,9 +4224,12 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
   @media (prefers-reduced-motion: reduce) {
     .cm.v2 .catalog-hero-page [data-motion-zone],
+    .cm.v2 .catalog-hero-page .catalog-hero-reveal,
     .cm.v2 .catalog-hero-page .catalog-hero-line-inner,
     .cm.v2 .catalog-hero-page .catalog-hero-rule,
+    .cm.v2 .catalog-hero-page .catalog-hero-benefit,
     .cm.v2 .catalog-hero-page[data-motion-visible="true"] [data-hero-media],
+    .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-image,
     .cm.v2 .contact-hero-module .contact-hero-links,
     .cm.v2 .contact-hero-module .contact-quick-link {
       animation: none !important;

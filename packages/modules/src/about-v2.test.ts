@@ -75,6 +75,9 @@ describe("Nosotros V2 module contracts", () => {
     expect(html).toContain('data-motion-zone="content"');
     expect(html).toContain('class="catalog-hero-inner about-hero"');
     expect(html).toContain('class="catalog-hero-media about-hero-media"');
+    expect(html).toContain('class="catalog-hero-background"');
+    expect(html).toContain("catalog-hero-benefits--copy");
+    expect(html).toContain("catalog-hero-benefits--band");
     expect(html).not.toContain("<video");
     expect(html).toContain("images.unsplash.com");
   });

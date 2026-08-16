@@ -1,5 +1,14 @@
 # Changelog
 
+### Hero V2 de Inicio copiado en Nosotros y Contacto (2026-08-16)
+
+- El hero de `/nosotros/` y `/contacto/` comparte ahora con Inicio el fondo
+  editorial, los beneficios, el ritmo del copy y el shell responsive.
+- Se mantienen fotografías estáticas 9:16 y no se renderiza video en estas rutas;
+  desktop usa la foto de fondo y mobile conserva la foto full-bleed.
+- Verificado: módulos, typecheck, `corepack pnpm check`, E2E de Nosotros y
+  Contacto, build, empaquetado desktop y portable smoke.
+
 ### Nosotros V2 editorial y modular (2026-08-15)
 
 - Nueva página `/nosotros/` para `catalog-modern-v2`, con hero editorial,

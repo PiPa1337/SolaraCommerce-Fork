@@ -359,6 +359,9 @@ export interface CatalogModernEditorialHeroOptions {
   body: string;
   imageAssetId: string;
   imageClassName?: string;
+  backgroundImageId?: string;
+  backgroundDarkness?: number;
+  benefits?: ReadonlyArray<{ icon: string; title: string; text: string }>;
   actions: SafeHtml | string;
   trailing?: SafeHtml | string;
 }
@@ -374,13 +377,45 @@ export function renderCatalogModernEditorialHero(
     sizes: "(max-width: 767px) 100vw, 45vw",
     fallbackAlt: options.title,
   });
+  const backgroundImageId = options.backgroundImageId ?? options.imageAssetId;
+  const background = renderImage(context.project, backgroundImageId, {
+    className: "catalog-hero-background-image",
+    loading: "lazy",
+    sizes: "100vw",
+    fallbackAlt: `${options.title} — fondo editorial`,
+  });
+  const backgroundWrap = `<div class="catalog-hero-background" data-hero-background aria-hidden="true" style="--catalog-hero-bg-dark:${Math.min(Math.max(options.backgroundDarkness ?? 60, 0), 90) / 100}">${background}</div>`;
+  const benefits = options.benefits ?? [
+    {
+      icon: "truck",
+      title: "Envíos a todo el país",
+      text: "Coordinamos la entrega por WhatsApp",
+    },
+    {
+      icon: "chat",
+      title: "Pedido directo",
+      text: "Comprá conversando con la marca",
+    },
+    {
+      icon: "shield",
+      title: "Compra cuidada",
+      text: "Confirmamos todo antes de enviar",
+    },
+  ];
+  const benefitsCopy = renderHeroBenefits(benefits, "catalog-hero-benefits--copy");
+  const benefitsBand = renderHeroBenefits(benefits, "catalog-hero-benefits--band");
   const titleLines = heroTitleLines(options.title)
     .map(
       (line) =>
         `<span class="catalog-hero-line" data-hero-line><span class="catalog-hero-line-inner" data-hero-line-inner>${escapeHtml(line)}</span></span>`,
     )
     .join(" ");
-  const rootClassName = ["catalog-hero-page", "catalog-hero-editorial", options.rootClassName]
+  const rootClassName = [
+    "catalog-hero-page",
+    "catalog-hero-editorial",
+    "catalog-hero-editorial--has-background",
+    options.rootClassName,
+  ]
     .filter(Boolean)
     .join(" ");
   const innerClassName = ["catalog-hero-inner", options.innerClassName].filter(Boolean).join(" ");
@@ -391,14 +426,14 @@ export function renderCatalogModernEditorialHero(
     options.moduleId,
     context.section,
     safeHtml(
-      `<div class="${escapeAttribute(innerClassName)}" data-motion-zone="content"><div class="catalog-hero-copy"><div class="catalog-hero-reveal catalog-hero-reveal--eyebrow"><p class="catalog-eyebrow">${escapeHtml(options.eyebrow)}</p></div><h1 class="catalog-hero-title" data-hero-title>${titleLines}</h1><div class="catalog-hero-rule" data-hero-rule aria-hidden="true"></div><div class="catalog-hero-reveal catalog-hero-reveal--body"><p class="catalog-hero-body">${escapeHtml(options.body)}</p></div><div class="catalog-hero-reveal catalog-hero-reveal--actions"><div class="catalog-hero-actions">${options.actions}</div></div></div><figure class="${escapeAttribute(mediaClassName)}" data-motion-zone="media" data-hero-media>${image}</figure></div>${options.trailing ?? ""}`,
+      `<div class="${escapeAttribute(innerClassName)}" data-motion-zone="content">${backgroundWrap}<div class="catalog-hero-copy"><div class="catalog-hero-reveal catalog-hero-reveal--eyebrow"><p class="catalog-eyebrow">${escapeHtml(options.eyebrow)}</p></div><h1 class="catalog-hero-title" data-hero-title>${titleLines}</h1><div class="catalog-hero-rule" data-hero-rule aria-hidden="true"></div><div class="catalog-hero-reveal catalog-hero-reveal--body"><p class="catalog-hero-body">${escapeHtml(options.body)}</p></div><div class="catalog-hero-reveal catalog-hero-reveal--actions"><div class="catalog-hero-actions">${options.actions}</div></div>${benefitsCopy}</div><figure class="${escapeAttribute(mediaClassName)}" data-motion-zone="media" data-hero-media>${image}</figure></div>${benefitsBand}${options.trailing ?? ""}`,
     ),
     { className: rootClassName },
   );
 }
 
 function renderHeroBenefits(
-  benefits: z.infer<typeof heroSettings>["benefits"],
+  benefits: ReadonlyArray<{ icon: string; title: string; text: string }>,
   extraClass = "",
 ): string {
   return `<ul class="catalog-hero-benefits ${extraClass}" data-hero-benefits aria-label="Beneficios">${benefits
