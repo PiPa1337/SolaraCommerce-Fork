@@ -1613,3 +1613,13 @@ button.status-label:focus-visible {
     transform: none;
   }
 }
+.builder-section-hidden-note {
+  display: block;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}

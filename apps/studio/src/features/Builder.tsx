@@ -280,6 +280,7 @@ export function Builder({
   const pickerId = useId();
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
+  const lastPickerToggleAtRef = useRef(0);
   const reduceMotion = useReducedMotion();
   const editablePage = project.pages.find((page) => page.kind === pageKind);
   const pageSections = pageKind === "home" ? project.sections : (editablePage?.sections ?? []);
@@ -389,7 +390,7 @@ export function Builder({
 
   const pageSlotLabels =
     pageKind === "home"
-      ? Object.entries(slotLabels)
+      ? Object.entries(slotLabels).filter(([slot]) => slot !== "product")
       : Object.entries(slotLabels).filter(([slot]) => ["catalog", "content"].includes(slot));
 
   const replaceModule = (sectionId: StoreSection["id"], moduleId: string) => {
@@ -468,6 +469,8 @@ export function Builder({
                 );
                 setPageKind(next);
                 setSlotToAdd((current) => (allowedSlots.includes(current) ? current : "catalog"));
+                setPickerOpen(false);
+                setPickerQuery("");
                 const nextPage = project.pages.find((page) => page.kind === next);
                 const nextSections =
                   next === "home" ? project.sections : (nextPage?.sections ?? []);
@@ -497,6 +500,11 @@ export function Builder({
               aria-haspopup="dialog"
               aria-controls={pickerOpen ? pickerId : undefined}
               onClick={() => {
+                // Un doble click rápido no debe abrir y cerrar el picker en el
+                // mismo instante: se ignora el segundo toggle inmediato.
+                const now = Date.now();
+                if (pickerOpen && now - lastPickerToggleAtRef.current < 350) return;
+                lastPickerToggleAtRef.current = now;
                 setPickerOpen((current) => !current);
                 setPickerQuery("");
               }}
@@ -702,6 +710,12 @@ export function Builder({
 
               <fieldset>
                 <legend>Contenido</legend>
+                {selected.enabled === false ? (
+                  <output className="builder-section-hidden-note" role="status">
+                    Esta sección está oculta: activala con «Mostrar sección» para verla en el
+                    preview y en el sitio.
+                  </output>
+                ) : null}
                 <SettingsInspector
                   key={`${selected.id}:${selected.moduleId}`}
                   values={selected.settings}
