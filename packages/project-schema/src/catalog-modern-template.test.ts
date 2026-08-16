@@ -158,4 +158,14 @@ describe("plantilla Catalog Modern", () => {
     expect(normalizedTeam?.settings.enabled).toBe(true);
     expect(normalizedTeam?.settings.items).toHaveLength(2);
   });
+
+  it("la tienda limpia nace con Nosotros y Contacto editables en el constructor", () => {
+    const clean = buildCatalogModernProject({ seed: "clean", name: "Probe", slug: "probe" });
+    const about = clean.pages.find((page) => page.kind === "about");
+    const contact = clean.pages.find((page) => page.kind === "contact");
+    expect(about?.sections.length).toBeGreaterThan(0);
+    expect(contact?.sections.length).toBeGreaterThan(0);
+    expect(about?.sections.some((section) => section.moduleId === "about-hero")).toBe(true);
+    expect(contact?.sections.some((section) => section.moduleId === "contact-hero")).toBe(true);
+  });
 });

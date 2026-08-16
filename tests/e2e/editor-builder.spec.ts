@@ -449,7 +449,8 @@ test("agregar un testimonio genera un ítem válido que commitea y persiste en e
     .frameLocator("iframe")
     .locator('[data-solara-module="catalog-testimonials"]')
     .last()
-    .locator(".catalog-testimonial h3");
+    .locator(".catalog-testimonial h3")
+    .last();
   await expect(newTestimonial).toHaveText("Nuevo elemento", { timeout: 15_000 });
 
   await expect(page.getByText(/^Guardado/)).toBeVisible({ timeout: 15_000 });

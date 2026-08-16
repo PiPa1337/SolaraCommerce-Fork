@@ -156,7 +156,17 @@ function cleanProject(options: BuildCatalogModernProjectOptions): StoreProjectV2
   const name = options.name?.trim() || "Nueva tienda";
   const brandName = options.brandName?.trim() || name;
   const slug = options.slug || "nueva-tienda";
-  const project = structuredClone(catalogModernStore);
+  // Base V2 construida localmente (sin importar el v2-fixture, que depende de
+  // esta plantilla): trae designFamily v2, los assets de plantilla y las
+  // páginas Nosotros/Contacto pobladas con los módulos V2 (editables en el
+  // constructor) — mismo patrón que catalog-modern-v2-fixture.
+  const project = ensureCatalogModernV2Sections({
+    ...structuredClone(catalogModernStore),
+    commerceTemplates: {
+      ...catalogModernStore.commerceTemplates,
+      designFamily: "catalog-modern-v2",
+    },
+  });
   const sections = project.sections.map((section) => {
     if (section.moduleId === "catalog-product-grid" && section.id.endsWith("-new")) {
       return {
@@ -223,7 +233,7 @@ function cleanProject(options: BuildCatalogModernProjectOptions): StoreProjectV2
     return section;
   });
 
-  return StoreProjectV2Schema.parse({
+  const clean = StoreProjectV2Schema.parse({
     ...project,
     id: options.id || "store-catalog-modern-clean",
     name,
@@ -287,6 +297,7 @@ function cleanProject(options: BuildCatalogModernProjectOptions): StoreProjectV2
     collections: [],
     sections,
   });
+  return clean;
 }
 
 export function buildCatalogModernProject(

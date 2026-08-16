@@ -1,5 +1,17 @@
 # Changelog
 
+### Nosotros y Contacto editables en toda tienda nueva (2026-08-16)
+
+- **Bug**: las tiendas creadas desde "Nueva tienda" nacían con las páginas
+  Nosotros y Contacto vacías en el Constructor (la plantilla limpia clonaba la
+  base V1, sin secciones V2).
+- **Fix**: la plantilla limpia ahora usa la base V2 (construida localmente
+  para evitar el ciclo de imports con el v2-fixture): designFamily
+  catalog-modern-v2, assets de plantilla y las páginas about/contact pobladas
+  con los módulos V2 (11 secciones en Nosotros, 9 en Contacto), editables y
+  reordenables como en Inicio.
+- Gate de regresión nuevo (F2-B5) + batería e2e completa 700/700.
+
 ### Auditoría integral V2 — 8 pasadas end-to-end (2026-08-16)
 
 - **Bug real F2-H3**: la selección del dashboard se anulaba cuando un filtro o

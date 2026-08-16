@@ -54,6 +54,39 @@ test("P4-C2: crear una tienda desde el dashboard en pasos con validacion", async
   expect(nameInEditor).toBe(true);
 });
 
+test("F2-B5: la tienda nueva nace con Nosotros y Contacto editables en el Constructor", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
+
+  await page.getByRole("button", { name: "Nueva tienda" }).click();
+  await page.getByLabel("Nueva tienda").fill("Tienda Constructor");
+  for (let step = 0; step < 3; step += 1) {
+    await page.getByRole("button", { name: "Continuar" }).click();
+  }
+  await page.getByRole("button", { name: "Crear tienda vacía" }).click();
+  await page.getByRole("navigation", { name: "Áreas de la tienda" }).waitFor({ timeout: 30_000 });
+
+  await page.getByRole("tab", { name: "Constructor", exact: true }).click();
+  await page.waitForTimeout(1500);
+  const pageSelect = page.locator(".editor-pane select").nth(0);
+  await pageSelect.selectOption({ label: "Nosotros" });
+  await page.waitForTimeout(1000);
+  const aboutPane = await page.locator(".editor-pane").innerText();
+  const aboutHasSections = aboutPane.includes("Hero de Nosotros");
+  console.log("F2-B5 Nosotros editable:", aboutHasSections);
+  expect(aboutHasSections).toBe(true);
+
+  await pageSelect.selectOption({ label: "Contacto" });
+  await page.waitForTimeout(1000);
+  const contactPane = await page.locator(".editor-pane").innerText();
+  const contactHasSections = contactPane.includes("Hero de Contacto");
+  console.log("F2-B5 Contacto editable:", contactHasSections);
+  expect(contactHasSections).toBe(true);
+});
+
 test("P4-B4: archivar una tienda desde el panel de detalle y restaurarla", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(STUDIO_URL, { waitUntil: "load" });
