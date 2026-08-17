@@ -41,6 +41,7 @@ import {
   getRecoveryDraft,
   listProjectsWithRecovery,
   markProjectMigration,
+  optimizeDemoFixtureAssets,
   type ProjectRecoveryIssue,
   purgeNonDemoStores,
   purgeRolledBackDemoRecords,
@@ -229,17 +230,24 @@ function StudioShell() {
               );
               if (demo) {
                 await markProjectMigration(demo.id, "pending");
-                await persistToDisk(demo, diskDemo?.diskVersion ?? null);
+                const saved = await persistToDisk(demo, diskDemo?.diskVersion ?? null);
                 await markProjectMigration(demo.id, "done");
+                if (diskDemo) {
+                  diskDemo.project = demo;
+                  diskDemo.diskVersion = saved.receipt.version;
+                }
               }
             }
             await ensurePredeterminadoV1Project();
             for (const diskProject of diskListing.projects) {
-              const expanded = expandCatalogModernDemoGalleries(diskProject.project);
+              const optimized = await optimizeDemoFixtureAssets(diskProject.project);
+              const expanded = expandCatalogModernDemoGalleries(optimized);
               if (expanded === diskProject.project) continue;
               await markProjectMigration(diskProject.id, "pending");
-              await persistToDisk(expanded, diskProject.diskVersion ?? null);
+              const saved = await persistToDisk(expanded, diskProject.diskVersion ?? null);
               await markProjectMigration(diskProject.id, "done");
+              diskProject.project = expanded;
+              diskProject.diskVersion = saved.receipt.version;
             }
             const browserProjects = await listProjectsWithRecovery();
             const diskById = new Map(diskListing.projects.map((item) => [item.id, item]));

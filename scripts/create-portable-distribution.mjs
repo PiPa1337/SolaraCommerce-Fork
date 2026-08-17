@@ -39,6 +39,21 @@ export async function shouldKeepPortableStore(preservedStore, repoStore) {
   return (await storeVersion(preservedStore)) > (await storeVersion(repoStore));
 }
 
+/**
+ * OneDrive puede bloquear un rename entre volúmenes o durante una
+ * sincronización aunque la carpeta se pueda copiar. La copia conserva el
+ * respaldo y permite que el rebuild continúe sin descartar el estado portable.
+ */
+export async function preserveDirectory(source, destinationPath) {
+  try {
+    await rename(source, destinationPath);
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
+    if (!["EPERM", "EXDEV", "EBUSY"].includes(code)) throw error;
+    await cp(source, destinationPath, { recursive: true });
+  }
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   if (!existsSync(join(unpacked, "SolaraCommerce.exe"))) {
     throw new Error(
@@ -52,10 +67,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const preservedRuntime = join(backupDir, "solara-runtime");
   if (existsSync(destination)) {
     if (existsSync(join(destination, "proyectos"))) {
-      await rename(join(destination, "proyectos"), preservedProyectos);
+      await preserveDirectory(join(destination, "proyectos"), preservedProyectos);
     }
     if (existsSync(join(destination, ".solara-runtime"))) {
-      await rename(join(destination, ".solara-runtime"), preservedRuntime);
+      await preserveDirectory(join(destination, ".solara-runtime"), preservedRuntime);
     }
   }
 

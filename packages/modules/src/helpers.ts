@@ -7,7 +7,6 @@ import {
   type RenderContext,
   renderImage,
   type SafeHtml,
-  safeAssetUrl,
   safeHtml,
 } from "@solara/module-sdk";
 import type { AssetId, Product, StoreProjectV1 } from "@solara/project-schema";
@@ -93,7 +92,11 @@ export function renderBrand(project: StoreProjectV1): SafeHtml {
     );
   }
 
-  return safeHtml(
-    `<img class="solara-logo" src="${escapeAttribute(safeAssetUrl(logo.source, ""))}" alt="${escapeAttribute(project.identity.brandName)}" width="${logo.width}" height="${logo.height}">`,
-  );
+  return renderImage(project, logo.id, {
+    className: "solara-logo",
+    loading: "eager",
+    fetchPriority: "high",
+    sizes: "(max-width: 767px) 8rem, 12rem",
+    fallbackAlt: project.identity.brandName,
+  });
 }

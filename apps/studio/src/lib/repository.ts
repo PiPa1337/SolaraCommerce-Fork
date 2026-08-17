@@ -14,6 +14,7 @@ import {
 import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import Dexie, { type EntityTable } from "dexie";
 import { slugify as slugifySlug } from "./slugify";
+import { processImageInWorker } from "./workers";
 
 export interface StoredProject {
   id: string;
@@ -286,6 +287,67 @@ async function sourceAsDataUrl(source: string): Promise<string> {
   });
 }
 
+function isFixtureImage(asset: StoreProjectV1["assets"][number]): boolean {
+  return asset.source.startsWith("/fixtures/") || asset.hash.startsWith("fixture-");
+}
+
+function canProcessImagesInBrowser(): boolean {
+  return typeof Worker !== "undefined" || typeof document !== "undefined";
+}
+
+async function optimizeEmbeddedFixtureImage(
+  asset: StoreProjectV1["assets"][number],
+): Promise<StoreProjectV1["assets"][number]> {
+  if (!isFixtureImage(asset) || asset.responsiveSources?.length || !canProcessImagesInBrowser()) {
+    return asset;
+  }
+
+  const response = await fetch(asset.source);
+  if (!response.ok) throw new Error(`No se pudo cargar la imagen inicial ${asset.name}.`);
+  const blob = await response.blob();
+  const file = new File([blob], `${asset.name}.png`, {
+    type: blob.type || asset.mimeType || "image/png",
+  });
+  const processed = await processImageInWorker(file);
+  return {
+    ...asset,
+    mimeType: "image/webp",
+    source: processed.primary,
+    fallbackSource: processed.fallback,
+    responsiveSources: processed.responsive,
+    width: processed.width,
+    height: processed.height,
+  };
+}
+
+/**
+ * Completa la receta responsive de los fixtures que ya estaban guardados en
+ * versiones anteriores. Sólo reconoce hashes `fixture-*`, por lo que nunca
+ * reinterpreta una imagen personalizada del usuario.
+ */
+export async function optimizeDemoFixtureAssets(project: StoreProjectV1): Promise<StoreProjectV1> {
+  if (!canProcessImagesInBrowser()) return project;
+  const assets = await Promise.all(
+    project.assets.map(async (asset) => {
+      if (!isFixtureImage(asset) || asset.responsiveSources?.length) return asset;
+      try {
+        return await optimizeEmbeddedFixtureImage(asset);
+      } catch {
+        // Mantener la imagen original permite abrir la tienda aunque un
+        // navegador no pueda decodificar un fixture; el próximo reemplazo sí
+        // volverá a pasar por la receta completa.
+        return asset;
+      }
+    }),
+  );
+  if (assets.every((asset, index) => asset === project.assets[index])) return project;
+  return StoreProjectV1Schema.parse({
+    ...project,
+    assets,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
 async function embedFixtureAssets(project: StoreProjectV1): Promise<StoreProjectV1> {
   const assets = await Promise.all(
     project.assets.map(async (asset) =>
@@ -294,7 +356,7 @@ async function embedFixtureAssets(project: StoreProjectV1): Promise<StoreProject
         : asset,
     ),
   );
-  return StoreProjectV1Schema.parse({ ...project, assets });
+  return optimizeDemoFixtureAssets(StoreProjectV1Schema.parse({ ...project, assets }));
 }
 
 function isDeprecatedCategoryPath(value: string): boolean {
@@ -582,8 +644,8 @@ export async function ensureFirstProject(): Promise<StoreProjectV1> {
   const first = await database.projects.orderBy("updatedAt").reverse().first();
   if (first) {
     const parsed = StoreProjectV1Schema.parse(first.project);
-    const project = repairModernGreeting(parsed);
-    if (project.whatsapp.greeting !== parsed.whatsapp.greeting) await saveProject(project);
+    const project = await optimizeDemoFixtureAssets(repairModernGreeting(parsed));
+    if (JSON.stringify(project) !== JSON.stringify(parsed)) await saveProject(project);
     return project;
   }
   const initial = await embedFixtureAssets(buildScaleDemoProject());
@@ -596,8 +658,8 @@ export async function ensureModernBaseProject(): Promise<boolean> {
   const existing = await database.projects.get(catalogModernCleanStore.id);
   if (existing) {
     const parsed = StoreProjectV1Schema.parse(existing.project);
-    const project = repairModernGreeting(parsed);
-    if (project.whatsapp.greeting !== parsed.whatsapp.greeting) await saveProject(project);
+    const project = await optimizeDemoFixtureAssets(repairModernGreeting(parsed));
+    if (JSON.stringify(project) !== JSON.stringify(parsed)) await saveProject(project);
     return false;
   }
 
@@ -675,13 +737,14 @@ export async function ensureScaleDemoProject(): Promise<boolean> {
   const existing = await database.projects.get(SCALE_DEMO_PROJECT_ID);
   if (existing) {
     const parsed = StoreProjectV1Schema.parse(existing.project);
-    const project = repairScaleDemoPresentation(
+    const repaired = repairScaleDemoPresentation(
       repairModernGreeting(
         parsed.name === LEGACY_SCALE_DEMO_PROJECT_NAME
           ? { ...parsed, name: SCALE_DEMO_PROJECT_NAME }
           : parsed,
       ),
     );
+    const project = await optimizeDemoFixtureAssets(repaired);
     if (JSON.stringify(project) !== JSON.stringify(parsed)) {
       await saveProject(project);
     }
@@ -702,7 +765,12 @@ export async function ensureScaleDemoProject(): Promise<boolean> {
 export async function ensurePredeterminadoV1Project(): Promise<boolean> {
   await ready();
   const existing = await database.projects.get(PREDETERMINADO_V1_PROJECT_ID);
-  if (existing) return false;
+  if (existing) {
+    const parsed = StoreProjectV1Schema.parse(existing.project);
+    const optimized = await optimizeDemoFixtureAssets(parsed);
+    if (optimized !== parsed) await saveProject(optimized);
+    return false;
+  }
 
   const demo = StoreProjectV1Schema.parse(
     structuredClone({

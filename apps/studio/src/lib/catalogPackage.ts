@@ -275,7 +275,7 @@ async function buildAssets(
       id: `asset-${hash.slice(0, 24)}` as ImageAsset["id"],
       name: file.name,
       alt: "",
-      mimeType: image.type,
+      mimeType: "image/webp",
       source: processed.primary,
       fallbackSource: processed.fallback,
       responsiveSources: processed.responsive,

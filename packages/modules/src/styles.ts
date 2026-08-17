@@ -2447,7 +2447,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 @media (prefers-reduced-motion: reduce) {
   [data-solara-store].catalog-modern * { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
-  [data-solara-store].catalog-modern .catalog-hero-video { display: none; }
 }
 `,
   "catalog-modern-v2": `

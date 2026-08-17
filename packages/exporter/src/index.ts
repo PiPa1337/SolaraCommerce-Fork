@@ -4,7 +4,7 @@
  * y produce el sitio estático sin incluir estado interno del editor.
  */
 import { normalizeSearchTokens } from "@solara/core";
-import { internalHref } from "@solara/module-sdk";
+import { internalHref, renderImage } from "@solara/module-sdk";
 import {
   getModuleDefinition,
   MODULE_STYLE_BLOCKS,
@@ -244,6 +244,16 @@ function absoluteUrl(project: StoreProjectV1, path: string): string {
 
 function absoluteResourceUrl(project: StoreProjectV1, value: string): string {
   return /^https?:\/\//i.test(value) ? value : absoluteUrl(project, value);
+}
+
+/**
+ * Recursos servidos por el propio sitio deben seguir siendo relativos en el
+ * HTML. La baseUrl puede ser todavía el dominio de ejemplo mientras se
+ * trabaja localmente; usarla para el preload dispararía una petición externa
+ * fallida aunque el `<img>` relativo sí pudiera cargar.
+ */
+function resourceHref(project: StoreProjectV1, value: string): string {
+  return /^https?:\/\//i.test(value) ? value : assetHref(project, value);
 }
 
 function publicWhatsAppPhone(project: StoreProjectV1): string {
@@ -1188,9 +1198,7 @@ function renderDocument(
   const whatsAppAttributes = whatsAppPhone
     ? ` data-whatsapp="${escapeHtml(whatsAppPhone)}" data-whatsapp-greeting="${escapeHtml(project.whatsapp.greeting)}" data-whatsapp-include-sku="${String(project.whatsapp.includeSku)}"`
     : "";
-  const criticalImage = page.preloadImage
-    ? absoluteResourceUrl(project, page.preloadImage)
-    : undefined;
+  const criticalImage = page.preloadImage ? resourceHref(project, page.preloadImage) : undefined;
   const lcpPreload =
     mode === "production" && criticalImage
       ? `<link rel="preload" as="image" href="${escapeAttribute(criticalImage)}" fetchpriority="high">`
@@ -1386,10 +1394,16 @@ function buildPages(
   const homeHero = effectiveHomeSections(project).find(
     (section) => section.enabled && section.slot === "hero",
   );
+  const homeHeroVideo =
+    typeof homeHero?.settings.videoAssetId === "string"
+      ? videoFor(project, homeHero.settings.videoAssetId)
+      : undefined;
   const homePreloadImage =
     (typeof homeHero?.settings.posterAssetId === "string"
       ? imageUrl(project, homeHero.settings.posterAssetId)
-      : undefined) ?? socialImage;
+      : undefined) ??
+    imageUrl(project, homeHeroVideo?.posterAssetId) ??
+    socialImage;
   const homeConfig = project.pages.find((page) => page.kind === "home");
   const homeSections = homeConfig?.sections.length
     ? [...sharedHeader, ...homeConfig.sections, ...sharedFooter]
@@ -1421,7 +1435,15 @@ function buildPages(
       const categoryImage = imageUrl(project, category.imageId);
       const categoryMedia =
         categoryAsset && categoryImage
-          ? `<img src="${escapeAttribute(categoryImage)}" alt="${escapeAttribute(categoryAsset.alt || category.title)}" width="${categoryAsset.width}" height="${categoryAsset.height}" loading="eager">`
+          ? String(
+              renderImage(project, category.imageId, {
+                className: "solara-category-hero-image",
+                loading: "eager",
+                fetchPriority: "high",
+                sizes: "100vw",
+                fallbackAlt: category.title,
+              }),
+            )
           : "";
       const categorySections = listingSections(project, "category", pageSize);
       const categoryGrid = renderProjectSections(project, categorySections, {
@@ -1962,10 +1984,15 @@ function buildImageSitemap(project: StoreProjectV1): string {
   const homeHero = effectiveHomeSections(project).find(
     (section) => section.slot === "hero" && section.enabled,
   );
+  const homeHeroVideo =
+    typeof homeHero?.settings.videoAssetId === "string"
+      ? videoFor(project, homeHero.settings.videoAssetId)
+      : undefined;
   const homeImage =
     (typeof homeHero?.settings.posterAssetId === "string"
       ? imageUrl(project, homeHero.settings.posterAssetId)
       : undefined) ??
+    imageUrl(project, homeHeroVideo?.posterAssetId) ??
     imageUrl(project, project.seo.socialImageId) ??
     imageUrl(project, project.assets[0]?.id);
   add("/", homeImage, project.identity.brandName);

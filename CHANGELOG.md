@@ -1,5 +1,18 @@
 # Changelog
 
+### Exportación pública: media responsive, preload local y video del hero (2026-08-17)
+
+- **Performance**: los fixtures de imágenes que ya estaban guardados se
+  migran a WebP responsive con variantes por ancho, sin reinterpretar assets
+  personalizados.
+- **Lighthouse**: el preload LCP usa una ruta del propio sitio para no pedir el
+  hero al dominio `.example` que sólo sirve como base de trabajo.
+- **Video**: el hero `catalog-modern-v2` queda cubierto en exportación de
+  producción y el video conserva su poster visible cuando el usuario prefiere
+  movimiento reducido.
+- **Portable**: el empaquetado preserva `proyectos/` y `.solara-runtime/` con
+  copia segura cuando OneDrive bloquea un `rename` transitorio.
+
 ### Nosotros y Contacto editables en toda tienda nueva (2026-08-16)
 
 - **Bug**: las tiendas creadas desde "Nueva tienda" nacían con las páginas

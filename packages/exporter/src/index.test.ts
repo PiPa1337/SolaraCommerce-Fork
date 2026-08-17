@@ -253,6 +253,7 @@ describe("exporter", () => {
     expect(v2Home).toContain("catalog-modern-v2 cm v2");
     expect(v1Css).not.toContain("--catalog-v2-motion-editorial");
     expect(v1Home).not.toContain("catalog-modern-v2 cm v2");
+    expect(v1Css).not.toContain("catalog-hero-video{display:none}");
   });
 
   it("compone políticas y recuperación 404 V2 sin inventar condiciones", () => {
@@ -486,6 +487,73 @@ describe("exporter", () => {
     expect(home).toContain('class="solara-hero-media-poster"');
     expect(result.files.has("assets/fixture-video.mp4")).toBe(true);
     expect(String(result.files.get("video-sitemap.xml"))).toContain("fixture-video.mp4");
+  });
+
+  it("incluye el video del hero Catalog Modern V2 y su binario en producción", () => {
+    const project = structuredClone(catalogModernStore);
+    project.commerceTemplates = {
+      ...project.commerceTemplates,
+      designFamily: "catalog-modern-v2",
+    };
+    const hero = project.sections.find(
+      (section) => section.moduleId === "catalog-hero" && section.enabled,
+    );
+    if (!hero) throw new Error("Fixture sin hero");
+    const poster = {
+      ...project.assets[0],
+      id: "asset-video-poster",
+      name: "Poster de campaña",
+      source: "/fixtures/modo-sur-camisa.png",
+      hash: "fixture-video-poster",
+    } as (typeof project.assets)[number];
+    project.assets = [...project.assets, poster];
+    const video = {
+      kind: "video" as const,
+      id: "video-catalog-modern-v2",
+      name: "Campaña Modo Sur",
+      alt: "Campaña de Modo Sur en movimiento",
+      mimeType: "video/mp4" as const,
+      source: "data:video/mp4;base64,AAAA",
+      width: 1080,
+      height: 1920,
+      durationSeconds: 8,
+      hash: "fixture-catalog-modern-v2-video",
+      posterAssetId: poster.id,
+    } as (typeof project.videos)[number];
+    project.videos = [video];
+    hero.settings = {
+      ...hero.settings,
+      mode: "video",
+      videoAssetId: video.id,
+      posterAssetId: "",
+      backgroundImageId: "",
+    };
+
+    const result = exportProject(project, { mode: "production" });
+    const home = String(result.files.get("index.html"));
+
+    expect(home).toContain('data-solara-module="catalog-hero"');
+    expect(home).toContain('class="catalog-hero-video"');
+    expect(home).toContain('rel="preload" as="image" href="/fixtures/modo-sur-camisa.png"');
+    expect(home).toContain(`src="/assets/${video.hash}.mp4"`);
+    expect(result.files.has(`assets/${video.hash}.mp4`)).toBe(true);
+    expect(String(result.files.get("video-sitemap.xml"))).toContain(`${video.hash}.mp4`);
+  });
+
+  it("mantiene el preload LCP dentro del sitio aunque la baseUrl siga siendo de ejemplo", () => {
+    const result = exportProject(
+      { ...catalogModernStore, baseUrl: "https://demo-catalogo-jerarquico.example" },
+      { mode: "production" },
+    );
+    const home = String(result.files.get("index.html"));
+
+    expect(home).toContain('rel="preload" as="image" href="/fixtures/modo-sur-hero.png"');
+    expect(home).not.toContain(
+      'rel="preload" as="image" href="https://demo-catalogo-jerarquico.example',
+    );
+    expect(home).toContain(
+      '<link rel="canonical" href="https://demo-catalogo-jerarquico.example/">',
+    );
   });
 
   it("omite el thumbnail cuando el poster del hero no resuelve", () => {

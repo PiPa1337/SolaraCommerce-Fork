@@ -711,7 +711,7 @@ export function Builder({
               <fieldset>
                 <legend>Contenido</legend>
                 {selected.enabled === false ? (
-                  <output className="builder-section-hidden-note" role="status">
+                  <output className="builder-section-hidden-note">
                     Esta sección está oculta: activala con «Mostrar sección» para verla en el
                     preview y en el sitio.
                   </output>
