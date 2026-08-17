@@ -239,7 +239,7 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
         <nav class="catalog-desktop-nav" aria-label="Navegación principal">${nav}</nav>
         <div class="catalog-header-actions">${search}${cart}</div>
         <noscript><style>[data-solara-store].catalog-modern .catalog-search-link{display:none}[data-solara-store].catalog-modern .catalog-search-noscript{display:inline-flex;align-items:center;min-height:44px;padding:.55rem 1rem;border:1px solid var(--catalog-border);border-radius:999px;background:var(--catalog-surface);color:var(--catalog-muted);text-decoration:none;font-size:.82rem}@media (max-width:767px){[data-solara-store].catalog-modern .catalog-mobile-menu[hidden]{display:block}}@media print{[data-solara-store].catalog-modern .catalog-mobile-menu{display:none!important}}</style></noscript>
-        <aside id="catalog-mobile-menu" class="catalog-mobile-menu" data-catalog-menu hidden role="dialog" aria-modal="true" aria-hidden="true" aria-label="Navegación móvil"><div class="catalog-mobile-menu__header"><a class="catalog-mobile-brand" href="/" aria-label="Inicio de ${escapeAttribute(context.project.identity.brandName)}">${renderBrand(context.project)}</a><button type="button" class="catalog-mobile-menu__close" data-catalog-menu-close aria-label="Cerrar menú"><span class="sr-only">Cerrar menú</span><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="m6 6 12 12M18 6 6 18"></path></svg></button></div>${searchEnabled ? `<form class="catalog-mobile-search" action="/buscar/" method="get" role="search"><label class="sr-only" for="catalog-mobile-search-input">Buscar productos</label><div class="catalog-mobile-search__field"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><input id="catalog-mobile-search-input" name="q" type="search" placeholder="Buscar productos..." autocomplete="off"><button type="submit" aria-label="Buscar"><span aria-hidden="true">→</span></button></div></form>` : ""}<nav aria-label="Navegación móvil">${mobileNav}</nav></aside>
+        <div id="catalog-mobile-menu" class="catalog-mobile-menu" data-catalog-menu hidden role="dialog" aria-modal="true" aria-hidden="true" aria-label="Navegación móvil"><div class="catalog-mobile-menu__header"><a class="catalog-mobile-brand" href="/" aria-label="Inicio de ${escapeAttribute(context.project.identity.brandName)}">${renderBrand(context.project)}</a><button type="button" class="catalog-mobile-menu__close" data-catalog-menu-close aria-label="Cerrar menú"><span class="sr-only">Cerrar menú</span><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="m6 6 12 12M18 6 6 18"></path></svg></button></div>${searchEnabled ? `<form class="catalog-mobile-search" action="/buscar/" method="get" role="search"><label class="sr-only" for="catalog-mobile-search-input">Buscar productos</label><div class="catalog-mobile-search__field"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><input id="catalog-mobile-search-input" name="q" type="search" placeholder="Buscar productos..." autocomplete="off"><button type="submit" aria-label="Buscar"><span aria-hidden="true">→</span></button></div></form>` : ""}<nav aria-label="Navegación móvil">${mobileNav}</nav></div>
         ${
           searchEnabled
             ? `<dialog id="catalog-search-dialog" class="catalog-search-dialog" data-catalog-search-dialog aria-labelledby="catalog-search-title">
@@ -1352,11 +1352,18 @@ export const catalogNewsletterCta: ModuleDefinition<
   motionZones: modernRevealZone,
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
+    const actionHref = safeUrl(context.settings.actionHref);
+    const configuredActionLabel = context.settings.actionLabel.trim();
+    const actionLabel =
+      /^\/contacto\/?$/i.test(actionHref) &&
+      configuredActionLabel.toLowerCase() === "escribir por whatsapp"
+        ? "Ver opciones de contacto"
+        : configuredActionLabel || "Ver opciones de contacto";
     return moduleRoot(
       "catalog-newsletter-cta",
       context.section,
       safeHtml(
-        `<div class="catalog-newsletter-inner" data-motion-zone="content"><div><h2>${escapeHtml(context.settings.title)}</h2><p>${escapeHtml(context.settings.body)}</p></div><a class="catalog-newsletter-action" href="${escapeAttribute(safeUrl(context.settings.actionHref))}">${escapeHtml(context.settings.actionLabel)}</a></div>`,
+        `<div class="catalog-newsletter-inner" data-motion-zone="content"><div><h2>${escapeHtml(context.settings.title)}</h2><p>${escapeHtml(context.settings.body)}</p></div><a class="catalog-newsletter-action" href="${escapeAttribute(actionHref)}">${escapeHtml(actionLabel)}</a></div>`,
       ),
       { ariaLabel: "Novedades" },
     );

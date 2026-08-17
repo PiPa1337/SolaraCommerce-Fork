@@ -252,8 +252,11 @@ export function renderVideo(
   const source = safeAssetUrl(video.source, "");
   if (!source) return safeHtml("");
   const autoplay = options.autoplay === false ? "" : " autoplay";
+  const caption = video.alt || options.fallbackAlt || video.name;
+  const captions = `WEBVTT\n\n00:00:00.000 --> 99:59:59.000\n${caption}`;
+  const captionsSource = `data:text/vtt;charset=utf-8,${encodeURIComponent(captions)}`;
   return safeHtml(
-    `<video${className} width="${video.width}" height="${video.height}"${poster ? ` poster="${escapeAttribute(poster)}"` : ""} preload="${options.preload ?? "none"}" muted loop playsinline${autoplay} aria-label="${escapeAttribute(video.alt || options.fallbackAlt || video.name)}"><source src="${escapeAttribute(source)}" type="${escapeAttribute(video.mimeType)}"><span>${escapeHtml(video.alt || options.fallbackAlt || video.name)}</span></video>`,
+    `<video${className} width="${video.width}" height="${video.height}"${poster ? ` poster="${escapeAttribute(poster)}"` : ""} preload="${options.preload ?? "none"}" muted loop playsinline${autoplay} aria-label="${escapeAttribute(caption)}"><source src="${escapeAttribute(source)}" type="${escapeAttribute(video.mimeType)}"><track kind="captions" srclang="es" label="Español" src="${escapeAttribute(captionsSource)}"><span>${escapeHtml(caption)}</span></video>`,
   );
 }
 

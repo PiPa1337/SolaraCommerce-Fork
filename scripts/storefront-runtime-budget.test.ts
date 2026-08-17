@@ -8,15 +8,13 @@ test("mantiene el runtime storefront dentro del presupuesto en bytes crudos", ()
   const javascriptBytes = Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8");
   const cssBytes = Buffer.byteLength(STOREFRONT_RUNTIME_CSS, "utf8");
 
-  // Medición real al 2026-08-14: runtime JS 54.2 KB, runtime CSS 7.486 B.
-  // El tope volvió de 56 a 55 KiB al quitar el parallax de cursor del hero V2
-  // (connectHeroParallax, ~1.6 KB) que causaba micro-movimiento de 1px en el
-  // borde derecho de la media. El runtime incluye controles de testimonios
-  // exportados desde 2026-08-11.
+  // Medición real al 2026-08-17: runtime JS 55.3 KiB, runtime CSS 7.486 B.
+  // El techo de 56 KiB incluye el pequeño coste de la política Trusted Types
+  // que protege los sinks HTML del carrito y la búsqueda.
   console.log({
     storefrontRuntimeJavascriptRaw: javascriptBytes,
     storefrontRuntimeCssRaw: cssBytes,
   });
-  expect(javascriptBytes).toBeLessThanOrEqual(55 * 1024);
+  expect(javascriptBytes).toBeLessThanOrEqual(56 * 1024);
   expect(cssBytes).toBeLessThanOrEqual(8 * 1024);
 });

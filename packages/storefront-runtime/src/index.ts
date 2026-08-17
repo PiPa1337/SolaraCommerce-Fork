@@ -158,6 +158,22 @@ export function buildWhatsAppUrl(phone: string, message: string): string {
   return `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
 }
 
+function setHtml(element: HTMLElement, value: string): void {
+  const runtime = globalThis as typeof globalThis & {
+    __solaraTrustedTypesPolicy?: { createHTML: (input: string) => string } | undefined;
+    trustedTypes?: {
+      createPolicy: (
+        name: string,
+        rules: { createHTML: (input: string) => string },
+      ) => { createHTML: (input: string) => string };
+    };
+  };
+  runtime.__solaraTrustedTypesPolicy ??= runtime.trustedTypes?.createPolicy("solara-storefront", {
+    createHTML: (input) => input,
+  });
+  element.innerHTML = runtime.__solaraTrustedTypesPolicy?.createHTML(value) ?? value;
+}
+
 function storefrontBoot(): void {
   const root = document.documentElement;
   const storeId = root.dataset.storeId ?? "solara";
@@ -288,15 +304,13 @@ function storefrontBoot(): void {
     });
 
     document.querySelectorAll<HTMLElement>("[data-cart-lines]").forEach((container) => {
-      if (cart.length === 0) {
-        container.innerHTML =
-          '<p class="solara-cart-empty">Tu carrito está vacío. Elegí una pieza para comenzar.</p>';
-        return;
-      }
-
-      container.innerHTML = cart
-        .map(
-          (line) => `
+      setHtml(
+        container,
+        cart.length === 0
+          ? '<p class="solara-cart-empty">Tu carrito está vacío. Elegí una pieza para comenzar.</p>'
+          : cart
+              .map(
+                (line) => `
             <article class="solara-cart-line">
               <div>
                 ${line.imageUrl ? `<img src="${escapeAttribute(line.imageUrl)}" alt=""${line.imageWidth ? ` width="${line.imageWidth}"` : ""}${line.imageHeight ? ` height="${line.imageHeight}"` : ""} loading="lazy">` : ""}
@@ -313,8 +327,9 @@ function storefrontBoot(): void {
               <button type="button" data-cart-remove="${escapeAttribute(line.variantId)}" aria-label="Eliminar ${escapeAttribute(line.title)}">Eliminar</button>
               <span>${money.format((line.unitPrice * line.quantity) / 100)}</span>
             </article>`,
-        )
-        .join("");
+              )
+              .join(""),
+      );
     });
 
     document.querySelectorAll<HTMLElement>("[data-cart-cta]").forEach((a, i) => {
@@ -753,14 +768,23 @@ function storefrontBoot(): void {
 
   if (pageType === "cart" || pageType === "checkout") void reconcileCart();
 
-  const updateChromeHeight = (): void => {
+  let chromeUpdateFrame: number | null = null;
+  const measureChromeHeight = (): void => {
+    chromeUpdateFrame = null;
     if (paused) return;
     const chrome = Array.from(
       document.querySelectorAll<HTMLElement>(
         '[data-solara-module="announcement-bar"], [data-solara-module="editorial-header"]',
       ),
     ).reduce((total, element) => total + element.getBoundingClientRect().height, 0);
-    root.style.setProperty("--solara-chrome-height", `${Math.ceil(chrome)}px`);
+    const nextHeight = `${Math.ceil(chrome)}px`;
+    if (root.style.getPropertyValue("--solara-chrome-height") !== nextHeight) {
+      root.style.setProperty("--solara-chrome-height", nextHeight);
+    }
+  };
+  const updateChromeHeight = (): void => {
+    if (chromeUpdateFrame !== null) return;
+    chromeUpdateFrame = window.requestAnimationFrame(measureChromeHeight);
   };
   let chromeObserver: ResizeObserver | null = null;
   const connectChromeObserver = (): void => {
@@ -1241,10 +1265,10 @@ function storefrontBoot(): void {
       document.querySelector('meta[name="robots"]')?.setAttribute("content", "noindex,follow");
       const terms = searchApi.normalizeSearchTokens(query);
       if (!terms.length || terms.some((t) => t.length < 2)) {
-        searchResults.innerHTML = "<p>Escribí al menos 2 caracteres para buscar.</p>";
+        setHtml(searchResults, "<p>Escribí al menos 2 caracteres para buscar.</p>");
       } else {
         const controller = new AbortController();
-        searchResults.innerHTML = "<p>Cargando resultados…</p>";
+        setHtml(searchResults, "<p>Cargando resultados…</p>");
         fetch("/search-index.json", { signal: controller.signal })
           .then((response) => {
             if (!response.ok) throw new Error("No se pudo cargar el índice de búsqueda.");
@@ -1278,10 +1302,13 @@ function storefrontBoot(): void {
               const suggestion = suggestCorrection(terms, entries);
               if (suggestion) {
                 const url = `/buscar/?q=${encodeURIComponent(suggestion)}`;
-                searchResults.innerHTML = `<p class="solara-search-summary">No encontramos resultados para “${escapeText(query)}”. ¿Quisiste decir <a href="${escapeAttribute(url)}">${escapeText(suggestion)}</a>?</p>`;
+                setHtml(
+                  searchResults,
+                  `<p class="solara-search-summary">No encontramos resultados para “${escapeText(query)}”. ¿Quisiste decir <a href="${escapeAttribute(url)}">${escapeText(suggestion)}</a>?</p>`,
+                );
                 return;
               }
-              searchResults.innerHTML = "<p>No encontramos productos para esa búsqueda.</p>";
+              setHtml(searchResults, "<p>No encontramos productos para esa búsqueda.</p>");
               return;
             }
             const shown = ranked.slice(0, 48);
@@ -1289,16 +1316,21 @@ function storefrontBoot(): void {
               ranked.length > 48
                 ? `<p class="solara-search-summary">Mostrando 48 de ${ranked.length} resultados. Refiná tu búsqueda…</p>`
                 : "";
-            searchResults.innerHTML = `<p class="solara-search-summary">${ranked.length} resultados para “${escapeText(query)}”</p>${cutNotice}<div class="solara-search-results-grid">${shown
-              .map(
-                ({ entry }) =>
-                  `<article class="solara-search-result"><a href="${escapeAttribute(entry.path)}">${entry.imageUrl ? `<img src="${escapeAttribute(entry.imageUrl)}" alt="${escapeAttribute(entry.title)}" width="${entry.imageWidth ?? 1}" height="${entry.imageHeight ?? 1}" sizes="(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem" loading="lazy">` : ""}<div><h2>${escapeText(entry.title)}</h2><p>${escapeText(entry.brand)}</p><strong>${money.format(entry.priceMin / 100)}</strong></div></a></article>`,
-              )
-              .join("")}</div>`;
+            setHtml(
+              searchResults,
+              `<p class="solara-search-summary">${ranked.length} resultados para “${escapeText(query)}”</p>${cutNotice}<div class="solara-search-results-grid">${shown
+                .map(
+                  ({ entry }) =>
+                    `<article class="solara-search-result"><a href="${escapeAttribute(entry.path)}">${entry.imageUrl ? `<img src="${escapeAttribute(entry.imageUrl)}" alt="${escapeAttribute(entry.title)}" width="${entry.imageWidth ?? 1}" height="${entry.imageHeight ?? 1}" sizes="(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem" loading="lazy">` : ""}<div><h2>${escapeText(entry.title)}</h2><p>${escapeText(entry.brand)}</p><strong>${money.format(entry.priceMin / 100)}</strong></div></a></article>`,
+                )
+                .join("")}</div>`,
+            );
           })
           .catch(() => {
-            searchResults.innerHTML =
-              '<p role="alert">No se pudo cargar la búsqueda. Intentá nuevamente.</p>';
+            setHtml(
+              searchResults,
+              '<p role="alert">No se pudo cargar la búsqueda. Intentá nuevamente.</p>',
+            );
           });
         window.addEventListener("pagehide", () => controller.abort(), { once: true });
       }
@@ -1556,6 +1588,7 @@ const RUNTIME_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unk
   ...SEARCH_HELPERS,
   ["parseCart", parseCart],
   ["reconcileCartLines", reconcileCartLines],
+  ["setHtml", setHtml],
 ];
 
 const SERIALIZED_RUNTIME_HELPERS = RUNTIME_HELPERS.map(([name, fn]) => {

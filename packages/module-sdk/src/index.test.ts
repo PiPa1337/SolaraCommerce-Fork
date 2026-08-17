@@ -5,6 +5,7 @@ import {
   internalHref,
   moduleRoot,
   renderImage,
+  renderVideo,
   safeAssetUrl,
   safeHtml,
   safeUrl,
@@ -99,6 +100,29 @@ describe("HTML safety", () => {
 
     expect(html).toContain('<source type="image/webp"');
     expect(html).toContain('src="data:image/jpeg;base64,AQ=="');
+  });
+
+  it("incluye captions VTT en los videos exportados", () => {
+    const project = structuredClone(referenceStore);
+    const video = {
+      kind: "video",
+      id: "video-caption-test",
+      name: "Campaña de temporada",
+      alt: "Modelos con prendas de la nueva colección",
+      mimeType: "video/mp4",
+      source: "data:video/mp4;base64,AAAA",
+      width: 720,
+      height: 1280,
+      durationSeconds: 8,
+      hash: "video-caption-hash",
+    } as (typeof project.videos)[number];
+    project.videos = [video];
+
+    const html = renderVideo(project, video.id);
+
+    expect(html).toContain('<track kind="captions" srclang="es" label="Español"');
+    expect(html).toContain("data:text/vtt;charset=utf-8,");
+    expect(html).toContain(encodeURIComponent("WEBVTT"));
   });
 
   it("expone controles de movimiento declarativos en el root", () => {

@@ -20,12 +20,18 @@ const copies = [
 try {
   await Promise.all(copies.map((copy) => cp(source, copy, { recursive: true })));
   const children = copies.map((copy) => {
-    const child = spawn(join(copy, "SolaraCommerce.exe"), ["--solara-smoke"], {
-      cwd: copy,
-      env: { ...process.env, SOLARA_PORTABLE_SMOKE: "1" },
-      stdio: "ignore",
-      windowsHide: true,
-    });
+    // El smoke no valida la composición GPU. Forzar rasterizado software evita
+    // que una DLL gráfica ausente en el runner mate el proceso antes del test.
+    const child = spawn(
+      join(copy, "SolaraCommerce.exe"),
+      ["--solara-smoke", "--disable-gpu", "--disable-gpu-compositing", "--in-process-gpu"],
+      {
+        cwd: copy,
+        env: { ...process.env, SOLARA_PORTABLE_SMOKE: "1" },
+        stdio: "ignore",
+        windowsHide: true,
+      },
+    );
     return new Promise((resolveExit, reject) => {
       const timer = setTimeout(() => {
         child.kill();

@@ -662,6 +662,14 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     );
 
     expect(noscripts.some((block) => block?.includes(".catalog-mobile-menu[hidden]"))).toBe(true);
+    expect(html).toContain(
+      '<div id="catalog-mobile-menu" class="catalog-mobile-menu" data-catalog-menu hidden role="dialog"',
+    );
+    expect(html).not.toContain('<aside id="catalog-mobile-menu"');
+    const homeHtml = renderSections(catalogModernStore, catalogModernStore.sections, {
+      pageType: "home",
+    });
+    expect(homeHtml).toContain("Ver opciones de contacto");
   });
 
   it("no emite rutas a /buscar/ cuando la búsqueda está deshabilitada", () => {
@@ -779,6 +787,15 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     });
     const headerHtml = renderSections(catalogModernStore, [headerSection], { pageType: "home" });
     expect(headerHtml).toMatch(/<noscript>[\s\S]*@media print/);
+  });
+
+  it("usa una entrada de hero compositada sin clip-path", () => {
+    const modernStyles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!modernStyles) throw new Error("Falta el bloque de estilos catalog-modern-v2");
+
+    expect(modernStyles).toContain("@keyframes solara-hero-media");
+    expect(modernStyles).toContain("@keyframes solara-hero-media{from{opacity:0}to{opacity:1}}");
+    expect(modernStyles).not.toContain("clip-path");
   });
 });
 

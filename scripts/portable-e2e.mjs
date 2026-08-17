@@ -25,6 +25,9 @@ const movedA = join(testRoot, "Copia movida - espacio y ü");
 async function openPortable(folder) {
   const app = await electron.launch({
     executablePath: join(folder, "SolaraCommerce.exe"),
+    // El E2E verifica el shell, la persistencia y el aislamiento; no depende
+    // de una DLL/controlador GPU disponible en el runner.
+    args: ["--disable-gpu", "--disable-gpu-compositing", "--in-process-gpu"],
     timeout: 20_000,
   });
   const page = await app.firstWindow({ timeout: 20_000 });

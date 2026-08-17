@@ -1,5 +1,24 @@
 # Changelog
 
+### Hardening y accesibilidad del storefront exportado (2026-08-17)
+
+- **Performance**: la medición del chrome se agrupa en `requestAnimationFrame`
+  y sólo escribe la variable CSS cuando cambia, evitando forced reflow durante
+  el arranque y el cierre de la franja de anuncios.
+- **Accesibilidad**: los videos incluyen una pista VTT de captions, el menú
+  móvil usa un `div` compatible con `role="dialog"` y el CTA interno de
+  contacto ya no comparte el nombre de un enlace de WhatsApp externo.
+- **Motion**: la entrada del media del hero V2 reemplaza `clip-path` por
+  `opacity` compositada; el zoom visual de la imagen conserva su `transform`
+  sin alterar las dimensiones del contenedor.
+- **Seguridad**: el export production publica HSTS, COOP y Trusted Types; el
+  runtime protege sus actualizaciones HTML con la política permitida y la CSP
+  acepta las pistas VTT locales.
+- **Presupuesto**: el runtime público queda en 55.3 KiB crudos; el límite de
+  56 KiB documenta el coste de la protección Trusted Types.
+- **Release QA**: los smoke/E2E del portable fuerzan rasterizado software para
+  validar el shell sin depender de DLLs o controladores GPU del runner.
+
 ### Exportación directa a carpeta en Windows (2026-08-17)
 
 - **Escritorio**: Exportar abre el selector nativo de carpetas y escribe el

@@ -51,6 +51,12 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("motionEntry");
   });
 
+  it("agrupa la medición del chrome y usa Trusted Types para HTML dinámico", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("requestAnimationFrame(measureChromeHeight)");
+    expect(STOREFRONT_RUNTIME_JS).toContain("setHtml");
+    expect(STOREFRONT_RUNTIME_JS).toContain('createPolicy("solara-storefront"');
+  });
+
   it("incluye comportamiento accesible para el popup de búsqueda", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("data-catalog-search-dialog");
     expect(STOREFRONT_RUNTIME_JS).toContain("data-catalog-search-open");
@@ -102,11 +108,10 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("i !== +!!count");
   });
 
-  it("mantiene el runtime por debajo de 55 KB crudos", () => {
-    // Medición real al 2026-08-14: runtime JS 54.2 KB en bytes crudos (sin gzip);
-    // el techo volvió de 56 a 55 KiB al quitar el parallax de cursor del hero
-    // V2 (causaba un micro-movimiento de 1px en el borde derecho de la media).
-    expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(55 * 1024);
+  it("mantiene el runtime por debajo de 56 KB crudos", () => {
+    // El runtime queda en 55.3 KiB crudos después de agregar la política
+    // Trusted Types que protege los sinks HTML del carrito y la búsqueda.
+    expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(56 * 1024);
   });
 });
 

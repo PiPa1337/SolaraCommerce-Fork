@@ -2709,7 +2709,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 @keyframes solara-hero-rise{from{opacity:0;transform:translateY(var(--hero-v2-rise,16px))}to{opacity:1;transform:translateY(0)}}
 @keyframes solara-hero-line{from{transform:translateY(115%)}to{transform:translateY(0)}}
 @keyframes solara-hero-rule{from{transform:scaleX(0)}to{transform:scaleX(1)}}
-@keyframes solara-hero-media{from{clip-path:inset(0 0 100% 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes solara-hero-media{from{opacity:0}to{opacity:1}}
 @keyframes solara-hero-media-zoom{from{transform:scale(1.06)}to{transform:scale(1)}}
 @supports (animation-timeline:view()){
 .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] [data-hero-media]{animation:solara-hero-media var(--hero-v2-dur-media,900ms) var(--catalog-v2-ease-out) 80ms backwards,solara-hero-parallax linear backwards!important;animation-timeline:auto,view()!important;animation-range:normal,exit 0% exit 25%!important}
@@ -3984,7 +3984,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     animation: none !important;
     transition: none !important;
     transform: none !important;
-    clip-path: none;
   }
   .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action::before {
     transition: none !important;
@@ -4234,7 +4233,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
       animation: none !important;
       transition: none !important;
       transform: none !important;
-      clip-path: none !important;
     }
   }
 `,
