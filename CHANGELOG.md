@@ -1,5 +1,12 @@
 # Changelog
 
+### Exportación directa a carpeta en Windows (2026-08-17)
+
+- **Escritorio**: Exportar abre el selector nativo de carpetas y escribe el
+  sitio completo en la ubicación elegida, incluyendo videos y otros binarios.
+- **Seguridad**: las rutas del export no pueden escapar de la carpeta elegida
+  ni repetirse antes de escribir archivos.
+
 ### Exportación pública: media responsive, preload local y video del hero (2026-08-17)
 
 - **Performance**: los fixtures de imágenes que ya estaban guardados se

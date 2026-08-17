@@ -54,6 +54,25 @@ export async function preserveDirectory(source, destinationPath) {
   }
 }
 
+function isTransientDirectoryLock(error) {
+  const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
+  return ["EBUSY", "EPERM", "EXDEV"].includes(code);
+}
+
+/** Reemplaza una carpeta o actualiza su contenido si Windows bloquea un borrado. */
+async function replaceDirectory(source, destinationPath) {
+  try {
+    await rm(destinationPath, { recursive: true, force: true });
+    await cp(source, destinationPath, { recursive: true });
+    return false;
+  } catch (error) {
+    if (!isTransientDirectoryLock(error)) throw error;
+    await mkdir(destinationPath, { recursive: true });
+    await cp(source, destinationPath, { recursive: true, force: true });
+    return true;
+  }
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   if (!existsSync(join(unpacked, "SolaraCommerce.exe"))) {
     throw new Error(
@@ -74,10 +93,15 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     }
   }
 
-  await rm(destination, { recursive: true, force: true });
-  await cp(unpacked, destination, { recursive: true });
+  const overlaidPortable = await replaceDirectory(unpacked, destination);
   await mkdir(join(destination, "proyectos"), { recursive: true });
   await mkdir(join(destination, ".solara-runtime"), { recursive: true });
+
+  if (overlaidPortable) {
+    console.warn(
+      "El portable anterior estaba ocupado; se actualizaron sus archivos sin borrar carpetas bloqueadas.",
+    );
+  }
 
   // 2. Copiar las tiendas del repo.
   const sourceProjects = resolve(root, "proyectos");
@@ -93,16 +117,14 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       const preservedStore = join(preservedProyectos, entry.name);
       const destinationStore = join(destination, "proyectos", entry.name);
       if (await shouldKeepPortableStore(preservedStore, destinationStore)) {
-        await rm(destinationStore, { recursive: true, force: true });
-        await cp(preservedStore, destinationStore, { recursive: true });
+        await replaceDirectory(preservedStore, destinationStore);
       }
     }
   }
 
   // 4. Restaurar el perfil/runtime del portable.
   if (existsSync(preservedRuntime)) {
-    await rm(join(destination, ".solara-runtime"), { recursive: true, force: true });
-    await cp(preservedRuntime, join(destination, ".solara-runtime"), { recursive: true });
+    await replaceDirectory(preservedRuntime, join(destination, ".solara-runtime"));
   }
   await rm(backupDir, { recursive: true, force: true });
 

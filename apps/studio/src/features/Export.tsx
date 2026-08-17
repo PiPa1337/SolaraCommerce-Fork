@@ -15,6 +15,7 @@ import type { StoreProjectV1 } from "@solara/project-schema";
 import { useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Button, InlineError, SectionHeader } from "../components/Ui";
+import { getDesktopExportBridge } from "../lib/desktopBridge";
 import {
   clearExportHistory,
   type ExportHistoryEntry,
@@ -117,6 +118,7 @@ export function ExportPanel({
   );
   const [postDone, setPostDone] = useState<Set<string>>(new Set());
   const [siteOpening, setSiteOpening] = useState(false);
+  const desktopExport = getDesktopExportBridge();
 
   /* biome-ignore lint/correctness/useExhaustiveDependencies: auditAttempt es la clave de reintento de la auditoría tras un fallo. */
   useEffect(() => {
@@ -179,6 +181,21 @@ export function ExportPanel({
         },
       );
       setOptimization(result.optimization);
+      if (desktopExport) {
+        const saved = await desktopExport.exportSite({
+          storeSlug: project.slug,
+          mode,
+          files: [...result.files.entries()].map(([path, data]) => ({ path, data })),
+        });
+        if (saved.cancelled) {
+          setNotice("Exportación cancelada. No se modificó ninguna carpeta.");
+          setDoneStages(new Set());
+          return;
+        }
+        setNotice(
+          `Exportación correcta: ${saved.filesWritten ?? result.files.size} archivos guardados en ${saved.folder}.`,
+        );
+      }
       recordHistory({
         mode,
         score: result.optimization.score,
@@ -187,11 +204,13 @@ export function ExportPanel({
       setExportDone(true);
       setDoneStages(new Set(EXPORT_STAGES.map((stage) => stage.id)));
       setPostDone(new Set());
-      setNotice(
-        onOpenSite
-          ? "Exportación correcta. El sitio público se guarda en proyectos/<tienda>/sitios/ al guardar con el lanzador; podés abrirlo desde el dashboard."
-          : "Exportación correcta. En modo navegador el sitio generado no se conserva en disco; usá el lanzador de SolaraCommerce para guardarlo y abrirlo.",
-      );
+      if (!desktopExport) {
+        setNotice(
+          onOpenSite
+            ? "Exportación correcta. El sitio público se guarda en proyectos/<tienda>/sitios/ al guardar con el lanzador; podés abrirlo desde el dashboard."
+            : "Exportación correcta. En modo navegador el sitio generado no se conserva en disco; usá el lanzador de SolaraCommerce para guardarlo y abrirlo.",
+        );
+      }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo exportar la tienda.");
     } finally {
@@ -494,7 +513,11 @@ export function ExportPanel({
             onClick={() => void exportSite("draft")}
             disabled={Boolean(busy)}
           >
-            {busy === "draft" ? "Generando" : "Exportar borrador"}
+            {busy === "draft"
+              ? "Generando"
+              : desktopExport
+                ? "Elegir carpeta y exportar"
+                : "Exportar borrador"}
           </Button>
         </article>
 
@@ -515,7 +538,11 @@ export function ExportPanel({
             onClick={() => setConfirmAction("production")}
             disabled={Boolean(busy) || !auditReady || critical > 0}
           >
-            {busy === "production" ? "Generando" : "Exportar producción"}
+            {busy === "production"
+              ? "Generando"
+              : desktopExport
+                ? "Elegir carpeta y exportar"
+                : "Exportar producción"}
           </Button>
         </article>
       </div>
@@ -566,8 +593,10 @@ export function ExportPanel({
           confirmLabel="Exportar producción"
           body={
             <p>
-              Se generará el HTML final con sitemap, datos estructurados y feed de Merchant. Revisá
-              el preview y el checklist SEO antes de continuar.
+              Se generará el HTML final con sitemap, datos estructurados y feed de Merchant.
+              {desktopExport
+                ? " Al terminar, se abrirá el explorador de Windows para elegir la carpeta de destino."
+                : " Revisá el preview y el checklist SEO antes de continuar."}
             </p>
           }
           onConfirm={() => {

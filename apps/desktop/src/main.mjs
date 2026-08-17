@@ -20,6 +20,7 @@ import {
   createSolaraRequestHandler,
   resolveStaticFile,
 } from "../../../packages/exporter/scripts/solara-request-handler.mjs";
+import { writeExportFiles } from "./export-site.mjs";
 import { GPU_CRASH_WINDOW_MS, gpuMarkerPath, shouldUseSoftwareMode } from "./gpu-mode.mjs";
 
 protocol.registerSchemesAsPrivileged([
@@ -229,6 +230,28 @@ function registerIpc() {
     });
     if (result.status >= 400) throw new Error(String(result.body));
     return JSON.parse(String(result.body)).url;
+  });
+  ipcMain.handle("solara:export-site", async (_event, payload) => {
+    if (!payload || typeof payload !== "object" || !Array.isArray(payload.files)) {
+      throw new Error("La exportación no contiene un conjunto de archivos válido.");
+    }
+    const mode = payload.mode === "draft" ? "borrador" : "producción";
+    const storeSlug = typeof payload.storeSlug === "string" ? payload.storeSlug : "tienda";
+    const selection = await dialog.showOpenDialog(mainWindow, {
+      title: `Seleccionar carpeta para exportar ${storeSlug} (${mode})`,
+      buttonLabel: "Seleccionar carpeta",
+      defaultPath: app.getPath("documents"),
+      properties: ["openDirectory", "createDirectory"],
+    });
+    if (selection.canceled || !selection.filePaths[0]) return { cancelled: true };
+
+    const destination = selection.filePaths[0];
+    const result = await writeExportFiles(destination, payload.files);
+    return {
+      cancelled: false,
+      folder: destination,
+      filesWritten: result.filesWritten,
+    };
   });
 }
 
