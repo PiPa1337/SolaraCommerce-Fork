@@ -5,7 +5,6 @@
  */
 import type { NavigationItem, StoreProjectV1 } from "@solara/project-schema";
 import { getCategoryProductIds, StoreProjectV1Schema } from "@solara/project-schema";
-import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import {
   buildCatalogModernProject,
   catalogModernCleanStore,
@@ -133,19 +132,13 @@ export const database = new SolaraDatabase();
 export const PROJECT_STORAGE_VERSION = "2";
 export const SCALE_DEMO_PROJECT_ID = "store-modo-sur-demo";
 export const SCALE_DEMO_PROJECT_NAME = "Predeterminado";
-/** Referencia V1 (Modo Sur): convive con Predeterminado V2 en el dashboard. */
+/** IDs reservados de referencias V1 que ya no forman parte del producto. */
 export const V1_DEMO_PROJECT_ID = "store-modo-sur";
-/** Predeterminado V1: la misma demo antes de su upgrade a la familia V2. */
 export const PREDETERMINADO_V1_PROJECT_ID = "store-modo-sur-demo-v1";
-export const PREDETERMINADO_V1_PROJECT_NAME = "Predeterminado V1";
-/** Purga única de tiendas: conserva sólo las referencias para comparar. */
+/** Purga única de tiendas: conserva sólo la demo Predeterminado V2. */
 export const DEMO_ONLY_PURGE_SENTINEL = "solara-demo-only-purge";
 const DEMO_ONLY_PURGE_VERSION = "1";
-const DEMO_KEEP_PROJECT_IDS = new Set([
-  SCALE_DEMO_PROJECT_ID,
-  V1_DEMO_PROJECT_ID,
-  PREDETERMINADO_V1_PROJECT_ID,
-]);
+const DEMO_KEEP_PROJECT_IDS = new Set([SCALE_DEMO_PROJECT_ID]);
 const LEGACY_SCALE_DEMO_PROJECT_NAME = "Demo Modo Sur, catálogo moderno";
 const LEGACY_CLEAN_PROJECT_ID = "store-catalog-modern-clean-default";
 const LEGACY_CLEAN_PROJECT_NAME = "Mi primera tienda";
@@ -682,9 +675,8 @@ export async function purgeRolledBackDemoRecords(): Promise<void> {
 }
 
 /**
- * Purga única (sentinel) de tiendas del perfil local: conserva únicamente las
- * dos referencias (Modo Sur V1 y Predeterminado V2) para comparar ambas
- * familias lado a lado, y elimina el resto con sus borradores de recuperación
+ * Purga única (sentinel) de tiendas del perfil local: conserva únicamente la
+ * demo Predeterminado V2 y elimina el resto con sus borradores de recuperación
  * y registros de migración. Corre una sola vez por perfil; cualquier tienda
  * que el usuario cree después queda intacta.
  */
@@ -706,6 +698,26 @@ export async function purgeNonDemoStores(): Promise<boolean> {
   }
   if (typeof localStorage !== "undefined") {
     localStorage.setItem(DEMO_ONLY_PURGE_SENTINEL, DEMO_ONLY_PURGE_VERSION);
+  }
+  return changed;
+}
+
+/**
+ * Retira las dos referencias V1 que una versión anterior de Studio sembraba.
+ * No usa una purga global ni toca tiendas creadas por el usuario: los IDs son
+ * reservados por la demo y la operación es idempotente para poder ejecutarse
+ * también en perfiles que ya fueron migrados.
+ */
+export async function retireLegacyDemoProjects(): Promise<boolean> {
+  await ready();
+  let changed = false;
+  for (const projectId of [V1_DEMO_PROJECT_ID, PREDETERMINADO_V1_PROJECT_ID]) {
+    const exists = await database.projects.get(projectId);
+    if (!exists) continue;
+    await database.projects.delete(projectId);
+    await database.recoveryDrafts.delete(projectId);
+    await database.migrations.delete(projectId);
+    changed = true;
   }
   return changed;
 }
@@ -752,35 +764,6 @@ export async function ensureScaleDemoProject(): Promise<boolean> {
   }
 
   const demo = buildScaleDemoProject();
-  await saveProject(await embedFixtureAssets(demo));
-  return true;
-}
-
-/**
- * Registra `Predeterminado V1`: la misma demo de referencia antes de su
- * upgrade a la familia V2 (buildScaleDemoProject). Conserva el catálogo del
- * fixture demo con la familia y el tema V1, con identidad propia para convivir
- * como tercera tienda. Idempotente: no sobrescribe ediciones del usuario.
- */
-export async function ensurePredeterminadoV1Project(): Promise<boolean> {
-  await ready();
-  const existing = await database.projects.get(PREDETERMINADO_V1_PROJECT_ID);
-  if (existing) {
-    const parsed = StoreProjectV1Schema.parse(existing.project);
-    const optimized = await optimizeDemoFixtureAssets(parsed);
-    if (optimized !== parsed) await saveProject(optimized);
-    return false;
-  }
-
-  const demo = StoreProjectV1Schema.parse(
-    structuredClone({
-      ...catalogModernStore,
-      id: PREDETERMINADO_V1_PROJECT_ID,
-      name: PREDETERMINADO_V1_PROJECT_NAME,
-      slug: "predeterminado-v1",
-      baseUrl: "https://predeterminado-v1.example",
-    }),
-  );
   await saveProject(await embedFixtureAssets(demo));
   return true;
 }

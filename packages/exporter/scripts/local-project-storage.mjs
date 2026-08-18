@@ -783,6 +783,18 @@ export function createLocalProjectStorage(options = {}) {
     return { folder: found.folder, path: found.root };
   }
 
+  /**
+   * Borra una tienda ya identificada por una migración de producto. No se
+   * expone como ruta HTTP general: el handler sólo lo usa con IDs legacy
+   * reservados y la búsqueda previa mantiene la operación dentro de proyectos/.
+   */
+  async function removeProject(projectId) {
+    const found = await findManifest(projectId);
+    if (!found) return false;
+    await rm(found.root, { recursive: true, force: true });
+    return true;
+  }
+
   async function manualBackup(projectId) {
     const found = await findManifest(projectId);
     if (!found) throw new Error("La tienda no existe en disco.");
@@ -836,6 +848,7 @@ export function createLocalProjectStorage(options = {}) {
     readCurrent,
     getLastValidSiteDirectory,
     openFolder,
+    removeProject,
     manualBackup,
     abort,
     cleanupStaging,

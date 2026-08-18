@@ -1,5 +1,20 @@
 # Changelog
 
+### Predeterminado V2 como única demo integrada (2026-08-17)
+
+- **Producto**: Studio deja de sembrar y mostrar las referencias `Modo Sur V1` y
+  `Predeterminado V1`; la única demo integrada es `Predeterminado` con la familia
+  `catalog-modern-v2`.
+- **Migración**: los perfiles existentes retiran sólo los dos IDs legacy
+  reservados, junto con sus recovery drafts y migraciones, tanto de IndexedDB
+  como del almacenamiento administrado en `proyectos/`. Las tiendas del usuario
+  quedan intactas.
+- **Persistencia**: el arranque no reescribe el snapshot V2 si no hay cambios,
+  por lo que el Predeterminado existente conserva su versión de disco 44.
+- **Regresión**: dashboard, purga, persistencia local y handler loopback quedan
+  cubiertos con tests para el único Predeterminado y para la conservación de
+  tiendas ajenas.
+
 ### Hardening y accesibilidad del storefront exportado (2026-08-17)
 
 - **Performance**: la medición del chrome se agrupa en `requestAnimationFrame`

@@ -53,7 +53,7 @@ test("la búsqueda filtra tarjetas, actualiza el contador y limpiar devuelve el 
   const search = page.getByRole("searchbox", { name: "Buscar tienda" });
   const clear = page.getByRole("button", { name: "Limpiar búsqueda" });
 
-  await expect(storeCount(page)).toHaveText("2 visibles");
+  await expect(storeCount(page)).toHaveText("1 visibles");
   await expect(clear).toHaveCount(0);
 
   await search.fill("inexistente");
@@ -62,16 +62,16 @@ test("la búsqueda filtra tarjetas, actualiza el contador y limpiar devuelve el 
   await expect(clear).toBeVisible();
 
   await clear.click();
-  await expect(storeCount(page)).toHaveText("2 visibles");
+  await expect(storeCount(page)).toHaveText("1 visibles");
   await expect(search).toHaveValue("");
   await expect(clear).toHaveCount(0);
   await expect(search).toBeFocused();
 
   await search.fill("Predeterminado");
-  await expect(storeCount(page)).toHaveText("2 visibles");
+  await expect(storeCount(page)).toHaveText("1 visibles");
   await expect(
     page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }),
-  ).toHaveCount(2);
+  ).toHaveCount(1);
   await expect(clear).toBeVisible();
 });
 
@@ -87,17 +87,17 @@ test("el filtro de estado aplica a archivadas, activas y todas con feedback en e
   await expect(page.getByTestId("ui-empty-state")).toBeVisible();
 
   await status.selectOption("all");
-  await expect(storeCount(page)).toHaveText("3 visibles");
+  await expect(storeCount(page)).toHaveText("2 visibles");
 
   await status.selectOption("active");
-  await expect(storeCount(page)).toHaveText("3 visibles");
+  await expect(storeCount(page)).toHaveText("2 visibles");
 
   const detail = await selectStore(page, "Zeta copia");
   await detail.getByRole("button", { name: "Archivar" }).click();
   const confirm = page.getByTestId("ui-confirm-dialog");
   await expect(confirm).toBeVisible();
   await confirm.getByRole("button", { name: "Archivar", exact: true }).click();
-  await expect(storeCount(page)).toHaveText("2 visibles");
+  await expect(storeCount(page)).toHaveText("1 visibles");
 
   await status.selectOption("archived");
   await expect(storeCount(page)).toHaveText("1 visibles");
@@ -106,13 +106,13 @@ test("el filtro de estado aplica a archivadas, activas y todas con feedback en e
   await expect(archivedCard.locator(".dashboard-store-card__status")).toHaveText("Archivada");
 
   await status.selectOption("active");
-  await expect(storeCount(page)).toHaveText("2 visibles");
+  await expect(storeCount(page)).toHaveText("1 visibles");
   await expect(
     page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }),
-  ).toHaveCount(2);
+  ).toHaveCount(1);
 
   await status.selectOption("all");
-  await expect(storeCount(page)).toHaveText("3 visibles");
+  await expect(storeCount(page)).toHaveText("2 visibles");
 });
 
 test("el orden cambia el primer proyecto y persiste en localStorage tras recargar", async ({
@@ -192,7 +192,7 @@ test("el diálogo precarga el nombre sugerido, enfoca el campo y confirma con En
   await nameInput.fill("Copia Enter");
   await nameInput.press("Enter");
   await expect(dialog).toBeHidden();
-  await expect(storeCount(page)).toHaveText("3 visibles");
+  await expect(storeCount(page)).toHaveText("2 visibles");
   const copyCard = page.locator(".dashboard-store-card").filter({ hasText: "Copia Enter" });
   await expect(copyCard).toBeVisible();
   await expect(copyCard.locator(".dashboard-store-card__button")).not.toHaveAttribute(
@@ -211,14 +211,14 @@ test("Escape cierra el diálogo sin duplicar y devuelve el foco al botón que lo
 
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
-  await expect(storeCount(page)).toHaveText("2 visibles");
+  await expect(storeCount(page)).toHaveText("1 visibles");
   await expect(duplicateButton).toBeFocused();
 
   await duplicateButton.click();
   await expect(dialog).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
-  await expect(storeCount(page)).toHaveText("2 visibles");
+  await expect(storeCount(page)).toHaveText("1 visibles");
   await expect(duplicateButton).toBeFocused();
 });
 
@@ -257,7 +257,7 @@ test("el nombre vacío usa el sugerido y el campo limita a 60 caracteres", async
   await nameInput.fill("");
   await dialog.getByRole("button", { name: "Duplicar", exact: true }).click();
   await expect(dialog).toBeHidden();
-  await expect(storeCount(page)).toHaveText("3 visibles");
+  await expect(storeCount(page)).toHaveText("2 visibles");
   await expect(
     page.locator(".dashboard-store-card").getByText("Predeterminado (copia)"),
   ).toBeVisible();
@@ -284,5 +284,5 @@ async function duplicateAs(page: Page, name: string) {
   await page.getByTestId("ui-duplicate-name").fill(name);
   await dialog.getByRole("button", { name: "Duplicar", exact: true }).click();
   await expect(dialog).toBeHidden();
-  await expect(storeCount(page)).toHaveText("3 visibles");
+  await expect(storeCount(page)).toHaveText("2 visibles");
 }

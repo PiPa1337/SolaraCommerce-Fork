@@ -117,6 +117,26 @@ export async function listLocalProjects(): Promise<LocalProjectManifestSummary> 
   return { projects: result.projects, recovery: result.recovery };
 }
 
+/**
+ * Ejecuta la migración acotada de referencias V1 en el almacenamiento
+ * administrado. El servidor sólo conoce los dos IDs reservados de la demo;
+ * no es un endpoint de borrado general de tiendas.
+ */
+export async function retireLegacyDemoProjectsOnDisk(): Promise<string[]> {
+  const result = await requestJson<{ removedProjectIds?: unknown }>(
+    "/__solara/storage/migrations/retire-legacy-demo",
+    {
+      method: "POST",
+      headers: { Accept: "application/json" },
+    },
+  );
+  return Array.isArray(result.removedProjectIds)
+    ? result.removedProjectIds.filter(
+        (projectId): projectId is string => typeof projectId === "string",
+      )
+    : [];
+}
+
 export async function readLocalProject(projectId: string): Promise<Uint8Array> {
   const response = await fetch(
     `/__solara/storage/projects/${encodeURIComponent(projectId)}/current`,

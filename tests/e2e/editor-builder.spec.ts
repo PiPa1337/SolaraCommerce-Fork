@@ -36,10 +36,8 @@ async function openBuilder(page: Page) {
   });
   await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
-  // Predeterminado nace en V2; estos recorridos de inspector conservan su
-  // baseline V1 explícito para probar también la reversibilidad de la familia.
-  await page.getByRole("tab", { name: "Tema" }).click();
-  await page.getByTestId("ui-design-family-v1").click();
+  // Predeterminado se conserva en la familia Editorial V2; los recorridos
+  // parten de la demo integrada sin mutarla durante el setup.
   await page.getByRole("tab", { name: "Constructor" }).click();
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
 }
@@ -381,43 +379,22 @@ test("el hero V2 expone el modo sólo video (media 9:16)", async ({ page }) => {
   await selectHero(page);
   const modeField = page.getByRole("combobox", { name: "Modo" });
   await expect(modeField).toBeVisible();
-  await expect(modeField.locator("option")).toHaveCount(3);
-
-  await page.getByRole("tab", { name: "Tema" }).click();
-  await page.getByTestId("ui-design-family-v2").click();
-  await page.getByRole("tab", { name: "Constructor" }).click();
-  await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
-  await selectHero(page);
-
-  const v2ModeField = page.getByRole("combobox", { name: "Modo" });
-  await expect(v2ModeField).toBeVisible();
-  await expect(v2ModeField.locator("option")).toHaveCount(1);
-  await expect(v2ModeField.locator("option")).toHaveAttribute("value", "video");
-  await expect(v2ModeField).toHaveValue("video");
+  await expect(modeField.locator("option")).toHaveCount(1);
+  await expect(modeField.locator("option")).toHaveAttribute("value", "video");
+  await expect(modeField).toHaveValue("video");
 });
 
-test("la familia Editorial V2 se activa y revierte sin cambiar el contenido", async ({ page }) => {
+test("la familia Editorial V2 queda activa sin usar el preset V1", async ({ page }) => {
   await openBuilder(page);
   await page.getByRole("tab", { name: "Tema" }).click();
   await expect(page.getByRole("heading", { name: "Tema" })).toBeVisible();
 
   const v1 = page.getByTestId("ui-design-family-v1");
   const v2 = page.getByTestId("ui-design-family-v2");
-  await expect(v1).toHaveAttribute("aria-pressed", "true");
-  await v2.click();
+  await expect(v1).toHaveAttribute("aria-pressed", "false");
   await expect(v2).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
   const preview = page.frameLocator("iframe");
   await expect(preview.locator('[data-design-family="catalog-modern-v2"]')).toBeVisible({
-    timeout: 20_000,
-  });
-  await expect(preview.getByRole("heading", { level: 1 })).toHaveText(
-    "Vestite con lo que te representa.",
-  );
-
-  await v1.click();
-  await expect(v1).toHaveAttribute("aria-pressed", "true");
-  await expect(preview.locator('[data-design-family="catalog-modern-v1"]')).toBeVisible({
     timeout: 20_000,
   });
   await expect(preview.getByRole("heading", { level: 1 })).toHaveText(

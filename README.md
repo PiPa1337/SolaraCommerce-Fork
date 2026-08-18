@@ -189,10 +189,11 @@ el exporter genera también `/contacto/`, `/nosotros/`, `/buscar/`, `/carrito/` 
 `/compra/`, manteniendo HTML útil sin JavaScript.
 
 Los módulos anteriores quedan registrados como `legacy-editorial-v1` y sólo se
-conservan para abrir o editar proyectos existentes. Los módulos
-`catalog-modern-v1` son los únicos que aparecen como nuevas opciones del
-constructor. Sus textos, productos, categorías, navegación, testimonios y CTA
-se editan desde Studio mediante schemas Zod y metadata tipada.
+conservan para abrir o editar proyectos existentes. La familia
+`catalog-modern-v2` es la opción visual activa de las nuevas tiendas y de
+`Predeterminado`; `catalog-modern-v1` queda para compatibilidad con proyectos
+legacy. Sus textos, productos, categorías, navegación, testimonios y CTA se
+editan desde Studio mediante schemas Zod y metadata tipada.
 
 La búsqueda descarga `search-index.json` sólo al abrirse y el carrito reconcilia
 sus líneas contra `catalog-index.json` únicamente en sus rutas propias. Los videos

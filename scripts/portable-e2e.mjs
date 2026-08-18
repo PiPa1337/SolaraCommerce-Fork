@@ -73,9 +73,26 @@ try {
   ]);
 
   const [instanceA, instanceB] = await Promise.all([openPortable(copyA), openPortable(copyB)]);
+  const assertOnlyCurrentDemoIsIntegrated = async (page) => {
+    const ids = await page
+      .locator("[data-store-card-id]")
+      .evaluateAll((cards) =>
+        cards.map((card) => card.getAttribute("data-store-card-id")).filter((id) => Boolean(id)),
+      );
+    if (!ids.includes("store-modo-sur-demo")) {
+      throw new Error("El portable no mostró Predeterminado V2 después de migrar el dashboard.");
+    }
+    for (const retiredId of ["store-modo-sur", "store-modo-sur-demo-v1"]) {
+      if (ids.includes(retiredId)) {
+        throw new Error(`El portable todavía muestra una referencia V1 (${retiredId}).`);
+      }
+    }
+  };
   await Promise.all([
     assertPortableDiagnostics(instanceA, copyA),
     assertPortableDiagnostics(instanceB, copyB),
+    assertOnlyCurrentDemoIsIntegrated(instanceA.page),
+    assertOnlyCurrentDemoIsIntegrated(instanceB.page),
   ]);
   const openedStoreId = async (page) => {
     const id = await page

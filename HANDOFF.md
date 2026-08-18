@@ -14,6 +14,11 @@ La aplicación funciona sin backend remoto. Cuando se abre con
 respaldo `.solara.json` se puede volver a importar y la carpeta pública puede
 servirse en un hosting estático. El pedido se deriva a WhatsApp.
 
+La única demo integrada es `Predeterminado` con la familia `catalog-modern-v2`.
+Al arrancar, una migración acotada retira los IDs reservados de las antiguas
+referencias V1 en IndexedDB y `proyectos/`; no borra tiendas creadas por el
+usuario ni fuerza un nuevo guardado del Predeterminado existente.
+
 ## Funcionalidades terminadas
 
 - workspace pnpm con TypeScript estricto, Vite, Vitest, Biome y Playwright;
@@ -57,6 +62,9 @@ servirse en un hosting estático. El pedido se deriva a WhatsApp.
 9. `catalog-modern-v2` y `data-design-family` siguen siendo los contratos
    visibles; `.cm.v2` son sólo alias internos de CSS para mantener el
    presupuesto público y nunca se persiste en el proyecto.
+10. `Predeterminado` V2 es la única demo sembrada. `catalog-modern-v1`, sus
+    fixtures y sus módulos permanecen sólo para compatibilidad y regresión de
+    proyectos existentes; no se vuelven a crear referencias V1 en el dashboard.
 
 ## Archivos modificados durante este handoff
 

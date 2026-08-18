@@ -96,11 +96,11 @@ mismo renderer.
 
 ## Familias visuales y tienda de referencia
 
-La familia `catalog-modern-v1` es la base editable para nuevas tiendas. Usa
-tokens monocromáticos, tipografía display pesada disponible localmente, tarjetas
-de producto con imagen cuadrada, precio y disponibilidad, y una densidad cercana
-al catálogo de las referencias. La primera pantalla prioriza la propuesta de
-valor y la entrada al catálogo; la sección de productos no depende de JavaScript.
+La familia `catalog-modern-v2` es la base visual activa de Predeterminado y de
+las nuevas tiendas. Usa tokens editoriales, tipografía display, tarjetas de
+producto con imagen cuadrada, precio y disponibilidad, y una densidad amplia
+para desktop y responsive. La primera pantalla prioriza la propuesta de valor y
+la entrada al catálogo; la sección de productos no depende de JavaScript.
 
 Incluye módulos nuevos para anuncio, header, hero audiovisual, marcas, grillas,
 detalle de producto, bento de categorías, testimonios, newsletter, carrito y
@@ -108,11 +108,12 @@ footer. Las secciones anteriores permanecen como `legacy-editorial-v1` de
 compatibilidad: no se muestran como opciones nuevas, pero siguen renderizando
 proyectos que las usan.
 
-`catalog-modern-v2` se encuentra disponible como familia visual reversible en
-la pestaña Tema. Conserva el mismo modelo `schemaVersion: 2` y reutiliza los
-módulos modernos compatibles, pero obtiene una raíz CSS propia y una fixture
-separada para que ningún refinamiento visual o de motion reinterprete tiendas
-V1 existentes. La activación y los gates se documentan en
+`catalog-modern-v1` queda sólo como compatibilidad para proyectos existentes y
+referencias de regresión; ya no se siembra como tienda ni se usa como default.
+`catalog-modern-v2` conserva el mismo modelo `schemaVersion: 2`, reutiliza los
+módulos modernos compatibles y obtiene una raíz CSS propia. La opción reversible
+se mantiene únicamente para abrir o recuperar proyectos legacy sin migrar
+contenido. La activación y los gates se documentan en
 [`docs/STOREFRONT_V2.md`](STOREFRONT_V2.md). El plan y las referencias aceptadas viven en
 [`docs/superpowers/plans/2026-08-12-storefront-v2-motion.md`](superpowers/plans/2026-08-12-storefront-v2-motion.md)
 y [`docs/design-references/catalog-modern-v2/`](design-references/catalog-modern-v2/README.md).
@@ -124,9 +125,10 @@ el worker de exportación y el renderer público no bloquean el arranque del edi
 `buildCatalogModernProject({ seed: "clean" | "demo" })` es la fábrica única de
 la plantilla. Las tiendas nuevas usan `clean`: conservan el shell, la home y
 los estados vacíos, pero empiezan sin productos, categorías ni colecciones. La
-semilla `demo` alimenta `catalogModernStore` y la tienda `Predeterminado`, que
-prueba copy, variantes, categorías y exportación con cuatro assets reutilizados;
-no se crea un archivo por producto.
+semilla `demo` alimenta la tienda `Predeterminado`, que prueba copy,
+variantes, categorías y exportación con cuatro assets reutilizados; el fixture
+`catalogModernStore` queda como referencia interna de regresión y no se registra
+como una segunda tienda. No se crea un archivo por producto.
 El dashboard abre el estudio directamente en `Preparar`: la base limpia conserva
 un modo guiado para completar marca, recursos, catálogo y publicación. El modo
 avanzado permite editar secciones y agregar módulos extra. El origen y la
@@ -166,10 +168,12 @@ sus descendientes y las hijas mantienen su propia página.
   categoría con bloqueo de ciclos y profundidad inválida.
 - El escenario Chromium cubre navbar, subcategorías, paginación, producto 50,
   búsqueda por ancestro y layout móvil.
-- Studio crea de forma idempotente `Predeterminado` al iniciar y lo muestra en
-  el dashboard con 50 productos y 60 variantes. Si existe la base limpia
-  anterior sin cambios, la archiva como `Base limpia anterior` antes de crear
-  la referencia; nunca sobrescribe una tienda que el usuario haya editado.
+- Studio crea de forma idempotente `Predeterminado` al iniciar y lo muestra como
+  la única demo integrada del dashboard con 50 productos y 60 variantes. Si
+  existe la base limpia anterior sin cambios, la archiva como `Base limpia
+  anterior` antes de crear la referencia; nunca sobrescribe una tienda que el
+  usuario haya editado. Los perfiles anteriores retiran las referencias V1
+  reservadas sin borrar tiendas creadas por el usuario.
 
 El fixture se exporta desde `@solara/project-schema/scale-fixture` y se mantiene
 separado del fixture visual pequeño y del benchmark de 1.000 productos.

@@ -33,7 +33,6 @@ import {
   ensureDemoSectionOrder,
   ensureDeprecatedCategoriesRemoved,
   ensureFirstProject,
-  ensurePredeterminadoV1Project,
   ensureScaleDemoProject,
   expandCatalogModernDemoGalleries,
   getProject,
@@ -45,6 +44,7 @@ import {
   type ProjectRecoveryIssue,
   purgeNonDemoStores,
   purgeRolledBackDemoRecords,
+  retireLegacyDemoProjects,
   SCALE_DEMO_PROJECT_ID,
   type StoredProject,
   saveProject,
@@ -213,6 +213,18 @@ function StudioShell() {
         }));
         storageModeRef.current = detectedStorage.managed;
         setLocalStorageStatus(detectedStorage);
+        let retiredLegacyProjects = false;
+        if (detectedStorage.managed && detectedStorage.writable) {
+          const { retireLegacyDemoProjectsOnDisk } = await loadLocalStorage();
+          const removedFromDisk = await retireLegacyDemoProjectsOnDisk();
+          retiredLegacyProjects = removedFromDisk.length > 0;
+        }
+        if (!detectedStorage.managed || detectedStorage.writable) {
+          retiredLegacyProjects = (await retireLegacyDemoProjects()) || retiredLegacyProjects;
+        }
+        if (retiredLegacyProjects) {
+          notify("Se retiraron las referencias V1; Predeterminado V2 es la única demo integrada.");
+        }
         const diskListing = detectedStorage.managed
           ? await (await loadLocalProjectRepository()).loadAllDiskProjects()
           : undefined;
@@ -238,7 +250,6 @@ function StudioShell() {
                 }
               }
             }
-            await ensurePredeterminadoV1Project();
             for (const diskProject of diskListing.projects) {
               const optimized = await optimizeDemoFixtureAssets(diskProject.project);
               const expanded = expandCatalogModernDemoGalleries(optimized);
@@ -294,10 +305,6 @@ function StudioShell() {
           );
         }
         await ensureDemoSectionOrder();
-        const predeterminadoV1Created = await ensurePredeterminadoV1Project();
-        if (predeterminadoV1Created) {
-          notify("Se agregó Predeterminado V1, la demo original antes del upgrade a V2.");
-        }
         const demoReviewsExpanded = await ensureCatalogModernDemoReviews();
         if (demoReviewsExpanded) {
           notify("Se actualizaron las reseñas de Predeterminado.");

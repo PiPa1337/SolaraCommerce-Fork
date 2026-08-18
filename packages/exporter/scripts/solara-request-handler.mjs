@@ -29,6 +29,7 @@ export const publicContentTypes = {
 };
 
 const shutdownCookieName = "solara_shutdown";
+const RETIRED_LEGACY_DEMO_PROJECT_IDS = ["store-modo-sur", "store-modo-sur-demo-v1"];
 
 function normaliseHeaders(headers = {}) {
   return Object.fromEntries(
@@ -261,6 +262,21 @@ export function createSolaraRequestHandler({
       }
       if (pathname === "/__solara/storage/projects" && request.method === "GET") {
         return jsonResponse(200, { ok: true, ...(await storage.list()) }, sessionHeaders);
+      }
+      if (
+        pathname === "/__solara/storage/migrations/retire-legacy-demo" &&
+        request.method === "POST"
+      ) {
+        const removedProjectIds = [];
+        for (const projectId of RETIRED_LEGACY_DEMO_PROJECT_IDS) {
+          const siteServer = siteServers.get(projectId);
+          if (siteServer) {
+            await closeSiteServer(siteServer);
+            siteServers.delete(projectId);
+          }
+          if (await storage.removeProject(projectId)) removedProjectIds.push(projectId);
+        }
+        return jsonResponse(200, { ok: true, removedProjectIds }, sessionHeaders);
       }
       const projectMatch = /^\/__solara\/storage\/projects\/([^/]+)\/current$/.exec(pathname);
       if (projectMatch && request.method === "GET") {

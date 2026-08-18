@@ -2,11 +2,7 @@ import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
-/**
- * Fase 12 — Tras la purga única, un perfil limpio queda con las dos
- * referencias de la demo (Predeterminado V2 y Predeterminado V1) y sus
- * previews renderizan la familia correspondiente.
- */
+/** Fase 12 — Un perfil limpio queda con la única demo Predeterminado V2. */
 test.setTimeout(process.env.CI ? 120_000 : 90_000);
 
 let server: Server;
@@ -43,9 +39,7 @@ async function openStore(page: Page, cardId: string): Promise<void> {
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
 }
 
-test("el dashboard muestra Predeterminado V2 y Predeterminado V1 como tiendas separadas", async ({
-  page,
-}) => {
+test("el dashboard muestra sólo Predeterminado V2", async ({ page }) => {
   await page.goto(studioUrl);
   await wipeIndexedDb(page);
   await page.reload();
@@ -54,28 +48,16 @@ test("el dashboard muestra Predeterminado V2 y Predeterminado V1 como tiendas se
   });
 
   const cards = page.locator("[data-store-card-id]");
-  await expect(cards).toHaveCount(2, { timeout: 15_000 });
+  await expect(cards).toHaveCount(1, { timeout: 15_000 });
   await expect(page.locator('[data-store-card-id="store-modo-sur-demo"]')).toContainText(
     "Predeterminado",
   );
-  await expect(page.locator('[data-store-card-id="store-modo-sur-demo-v1"]')).toContainText(
-    "Predeterminado V1",
-  );
+  await expect(page.locator('[data-store-card-id="store-modo-sur-demo-v1"]')).toHaveCount(0);
 
   await openStore(page, "store-modo-sur-demo");
   const v2Preview = page.frameLocator('iframe[title="Vista previa desktop"]');
   await expect
     .poll(() => v2Preview.locator('[data-design-family="catalog-modern-v2"]').count(), {
-      timeout: 20_000,
-    })
-    .toBeGreaterThan(0);
-  await page.getByRole("button", { name: "Volver a tiendas" }).click();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-
-  await openStore(page, "store-modo-sur-demo-v1");
-  const v1Preview = page.frameLocator('iframe[title="Vista previa desktop"]');
-  await expect
-    .poll(() => v1Preview.locator('[data-design-family="catalog-modern-v1"]').count(), {
       timeout: 20_000,
     })
     .toBeGreaterThan(0);
@@ -112,7 +94,7 @@ test("P9-B5: el aviso global de reset se cierra y no vuelve a aparecer", async (
   expect(afterReload).toBe(0);
 });
 
-test("P2-B5: los avatares distinguen tiendas con el mismo prefijo (PR vs PV)", async ({ page }) => {
+test("P2-B5: el avatar de Predeterminado conserva sus iniciales", async ({ page }) => {
   await page.goto(studioUrl);
   await page.evaluate(
     () =>
@@ -131,7 +113,7 @@ test("P2-B5: los avatares distinguen tiendas con el mismo prefijo (PR vs PV)", a
   const marks = await page.locator(".dashboard-store-card__mark").allInnerTexts();
   console.log("P2-B5 marks:", JSON.stringify(marks));
   expect(marks).toContain("PR");
-  expect(marks).toContain("PV");
+  expect(marks).not.toContain("PV");
 });
 
 test("R3-P9-B5: el dashboard no desborda en viewport móvil", async ({ page }) => {

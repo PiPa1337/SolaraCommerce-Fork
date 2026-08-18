@@ -41,16 +41,15 @@ test("archivar confirma, muestra deshacer y restaura la tienda", async ({ page }
   await expect(confirm).toBeVisible();
   await confirm.getByRole("button", { name: "Archivar", exact: true }).click();
   await expect(confirm).toBeHidden();
-  // El storage reset siembra dos tiendas (Predeterminado y Predeterminado V1):
-  // archivar una deja una visible.
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  // El storage reset siembra sólo Predeterminado: archivarla deja cero visibles.
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
 
   const toast = page.getByTestId("ui-toast");
   await expect(toast).toBeVisible();
   await expect(toast).toContainText("Deshacer");
   await toast.getByRole("button", { name: "Deshacer" }).click();
 
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
   // A12: restaurar confirma con un toast propio (asimetría con archivar resuelta).
   await expect(page.getByTestId("ui-toast")).toContainText("restaurada");
   await expect(
@@ -81,7 +80,7 @@ test("duplicar pasa por el diálogo y aplica el nombre elegido", async ({ page }
   await nameInput.fill("Copia de prueba");
   await dialog.getByRole("button", { name: "Duplicar" }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("3 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
   await expect(page.locator(".dashboard-store-card").getByText("Copia de prueba")).toBeVisible();
   await expect(page.getByTestId("ui-toast")).toContainText("Tienda duplicada");
 });
@@ -139,7 +138,7 @@ test("el modo comparar exige dos tiendas y muestra los diffs de secciones y moti
   await expect(compareAction).toBeDisabled();
 
   const checkboxes = page.getByTestId("ui-card-compare");
-  await expect(checkboxes).toHaveCount(3);
+  await expect(checkboxes).toHaveCount(2);
   await page
     .locator(".dashboard-store-card")
     .filter({ has: page.getByText("Predeterminado", { exact: true }) })

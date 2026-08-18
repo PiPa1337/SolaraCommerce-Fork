@@ -15,13 +15,13 @@ vi.mock("node:fs", async (importActual) => {
 const projectId = "store-open-folder";
 const shutdownCookieName = "solara_shutdown";
 
-function projectJson() {
+function projectJson(id = projectId, name = "Prueba") {
   return JSON.stringify({
     format: "solara-project",
     version: 2,
-    projectId,
+    projectId: id,
     exportedAt: "2026-08-07T10:00:00.000Z",
-    project: { schemaVersion: 2, id: projectId, name: "Prueba", slug: "prueba" },
+    project: { schemaVersion: 2, id, name, slug: name.toLowerCase().replaceAll(" ", "-") },
   });
 }
 
@@ -55,6 +55,55 @@ async function createProject(handler) {
   );
   return storage.commit(transaction.transactionId);
 }
+
+async function createStoredProject(handler, id) {
+  const storage = handler.storage;
+  const transaction = await storage.beginSave({
+    projectId: id,
+    name: id,
+    slug: id,
+    projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+    expectedVersion: null,
+  });
+  await storage.upload(
+    transaction.transactionId,
+    "project",
+    Readable.from([Buffer.from(projectJson(id, id))]),
+  );
+  return storage.commit(transaction.transactionId);
+}
+
+describe("handler: retiro de referencias legacy", () => {
+  it("retira sólo los dos IDs V1 reservados y conserva tiendas del usuario", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-handler-retire-demo-"));
+    try {
+      const handler = createSolaraRequestHandler({
+        applicationRoot: root,
+        shutdownToken: "token-test",
+        onShutdown: () => {},
+      });
+      await createStoredProject(handler, "store-modo-sur");
+      await createStoredProject(handler, "store-modo-sur-demo-v1");
+      await createStoredProject(handler, "store-de-usuario");
+
+      const response = await handler.handle(
+        request("POST", "/__solara/storage/migrations/retire-legacy-demo", {
+          cookie: `${shutdownCookieName}=token-test`,
+        }),
+      );
+      expect(response.status).toBe(200);
+      expect(JSON.parse(response.body).removedProjectIds).toEqual([
+        "store-modo-sur",
+        "store-modo-sur-demo-v1",
+      ]);
+      await expect(handler.storage.readCurrent("store-modo-sur")).resolves.toBeUndefined();
+      await expect(handler.storage.readCurrent("store-modo-sur-demo-v1")).resolves.toBeUndefined();
+      await expect(handler.storage.readCurrent("store-de-usuario")).resolves.toBeDefined();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
 
 describe("handler: abrir carpeta de una tienda", () => {
   it("abre la carpeta de una tienda existente con la cookie de sesión", async () => {
