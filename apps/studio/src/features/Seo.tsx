@@ -270,6 +270,24 @@ export function Seo({
   const titleError = fieldValidationError(validationError, "seo.title");
   const descriptionError = fieldValidationError(validationError, "seo.description");
   const socialImageError = fieldValidationError(validationError, "seo.socialImageId");
+  const seoKeywords = [
+    project.identity.brandName,
+    previewSeo.title,
+    ...project.categories
+      .filter((category) => !category.parentId)
+      .map((category) => category.title),
+    ...project.collections.map((collection) => collection.title),
+  ]
+    .flatMap((value) =>
+      value
+        .toLocaleLowerCase("es-AR")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .split(/\s+/),
+    )
+    .filter((value, index, values) => value.length >= 3 && values.indexOf(value) === index)
+    .slice(0, 24)
+    .join(", ");
 
   const toggleIssue = (id: string) => {
     setCheckedIssues((current) => {
@@ -393,6 +411,36 @@ export function Seo({
               ))}
             </select>
           </Field>
+        </fieldset>
+
+        <fieldset className="seo-fieldset seo-fieldset--derived" data-testid="ui-seo-derived">
+          <legend>Metadata publicada</legend>
+          <dl className="seo-derived-meta">
+            <div>
+              <dt>Autor</dt>
+              <dd>{project.identity.brandName}</dd>
+            </div>
+            <div>
+              <dt>Publisher</dt>
+              <dd>{project.identity.legalName}</dd>
+            </div>
+            <div>
+              <dt>Keywords</dt>
+              <dd>{seoKeywords || "Se generan desde el contenido de la tienda."}</dd>
+            </div>
+            <div>
+              <dt>Robots</dt>
+              <dd>Borrador: noindex,nofollow · Producción: index,follow</dd>
+            </div>
+            <div>
+              <dt>Canonical</dt>
+              <dd>{homepage}</dd>
+            </div>
+            <div>
+              <dt>OG description</dt>
+              <dd>{previewSeo.description}</dd>
+            </div>
+          </dl>
         </fieldset>
 
         <div className="audit-panel" data-testid="ui-seo-audit-panel">

@@ -1014,6 +1014,38 @@ describe("exporter", () => {
     );
   });
 
+  it("conecta metadata social y SEO derivada con los datos actuales de la tienda", () => {
+    const project = {
+      ...referenceStore,
+      identity: {
+        ...referenceStore.identity,
+        brandName: "Tienda editorial",
+        legalName: "Tienda editorial SRL",
+      },
+      seo: { ...referenceStore.seo, socialImageId: "asset-manta" },
+      updatedAt: "2026-08-18T18:00:00.000Z",
+    };
+    const result = exportProject(project as typeof referenceStore, { mode: "production" });
+    const html = String(result.files.get("index.html"));
+    const aboutHtml = String(result.files.get("nosotros/index.html"));
+
+    expect(html).toContain('<meta name="keywords" content="tienda, editorial');
+    expect(html).toContain('<meta name="author" content="Tienda editorial">');
+    expect(html).toContain('<meta name="publisher" content="Tienda editorial SRL">');
+    expect(html).toContain('<meta name="robots" content="index,follow');
+    expect(html).toContain('<meta name="googlebot" content="index,follow');
+    expect(aboutHtml).toContain(
+      '<meta property="og:image" content="https://casa-luma.example/fixtures/manta-bruma.png">',
+    );
+    expect(aboutHtml).toContain(
+      '<meta property="og:image:alt" content="Manta de algodón verde sobre un sillón claro">',
+    );
+    expect(aboutHtml).toContain(
+      '<meta property="og:updated_time" content="2026-08-18T18:00:00.000Z">',
+    );
+    expect(aboutHtml).toContain('<meta name="twitter:card" content="summary_large_image">');
+  });
+
   it("la meta de Home respeta la página y las rutas sin página editable caen a la identidad", () => {
     // Contrato del schema: la Home siempre existe y define su seoDescription, así
     // que la cadena seoDescription ?? seo.description ?? identity.description
@@ -1091,6 +1123,30 @@ describe("exporter", () => {
     expect(homeHtml).toContain(
       '<meta property="og:image" content="https://casa-luma.example/fixtures/jarra-delta.png">',
     );
+  });
+
+  it("usa la descripción SEO de la tienda en rutas sin descripción editable", () => {
+    const project = {
+      ...referenceStore,
+      seo: { ...referenceStore.seo, description: "Descripción central de la tienda." },
+      pages: referenceStore.pages.filter((page) => page.kind === "home"),
+    };
+    const result = exportProject(project as typeof referenceStore, { mode: "production" });
+    for (const path of [
+      "contacto/index.html",
+      "buscar/index.html",
+      "carrito/index.html",
+      "compra/index.html",
+      "404.html",
+    ]) {
+      const html = String(result.files.get(path));
+      expect(html).toContain(
+        '<meta name="description" content="Descripción central de la tienda.">',
+      );
+      expect(html).toContain(
+        '<meta property="og:description" content="Descripción central de la tienda.">',
+      );
+    }
   });
 
   it("emite la verificación de Search Console y de Merchant Center", () => {

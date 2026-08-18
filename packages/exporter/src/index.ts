@@ -1221,7 +1221,30 @@ function renderDocument(
   manifest?: PublicExportManifest,
 ): string {
   const canonical = absoluteUrl(project, page.canonicalPath);
-  const socialImage = page.image ? absoluteResourceUrl(project, page.image) : undefined;
+  const socialImageValue =
+    page.image ??
+    imageUrl(project, project.seo.socialImageId) ??
+    imageUrl(project, project.assets[0]?.id);
+  const socialImage = socialImageValue ? absoluteResourceUrl(project, socialImageValue) : undefined;
+  const socialAsset = page.image
+    ? project.assets.find(
+        (asset) => imageUrl(project, asset.id) === page.image || asset.source === page.image,
+      )
+    : (imageFor(project, project.seo.socialImageId) ?? project.assets[0]);
+  const keywords = [
+    project.identity.brandName,
+    page.title,
+    ...project.categories
+      .filter((category) => !category.parentId)
+      .map((category) => category.title),
+    ...project.collections.map((collection) => collection.title),
+  ]
+    .flatMap((value) => normalizeSearchTokens(value))
+    .filter((value, index, values) => value.length >= 3 && values.indexOf(value) === index)
+    .slice(0, 24)
+    .join(", ");
+  const author = project.identity.brandName || project.identity.legalName;
+  const publisher = project.identity.legalName || author;
   const nonIndexablePage = ["search", "cart", "checkout", "not-found"].includes(page.pageType);
   const robots =
     mode === "draft"
@@ -1277,7 +1300,11 @@ function renderDocument(
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${escapeHtml(page.title)}</title>
   <meta name="description" content="${escapeHtml(page.description)}">
+  <meta name="keywords" content="${escapeHtml(keywords)}">
+  <meta name="author" content="${escapeHtml(author)}">
+  <meta name="publisher" content="${escapeHtml(publisher)}">
   <meta name="robots" content="${robots}">
+  <meta name="googlebot" content="${robots}">
   <link rel="canonical" href="${escapeHtml(canonical)}">
   <meta name="theme-color" content="${escapeHtml(project.theme.colors.background)}">
   <meta property="og:type" content="${page.pageType === "product" ? "product" : "website"}">
@@ -1286,7 +1313,9 @@ function renderDocument(
   <meta property="og:title" content="${escapeHtml(page.title)}">
   <meta property="og:description" content="${escapeHtml(page.description)}">
   <meta property="og:url" content="${escapeHtml(canonical)}">
-  ${socialImage ? `<meta property="og:image" content="${escapeHtml(socialImage)}">` : ""}
+  ${socialImage ? `<meta property="og:image" content="${escapeHtml(socialImage)}"><meta property="og:image:alt" content="${escapeHtml(socialAsset?.alt || page.title)}">${socialAsset ? `<meta property="og:image:width" content="${socialAsset.width}"><meta property="og:image:height" content="${socialAsset.height}">` : ""}<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(page.title)}"><meta name="twitter:description" content="${escapeHtml(page.description)}"><meta name="twitter:image" content="${escapeHtml(socialImage)}">` : `<meta name="twitter:card" content="summary">`}
+  <meta property="og:updated_time" content="${escapeHtml(project.updatedAt)}">
+  ${page.pageType === "product" ? `<meta property="article:published_time" content="${escapeHtml(project.createdAt)}"><meta property="article:modified_time" content="${escapeHtml(project.updatedAt)}"><meta property="article:author" content="${escapeHtml(author)}">` : ""}
   ${verification}
   ${lcpPreload}
   ${fontPreloads}
@@ -1456,8 +1485,6 @@ function buildPages(
       ? ["cart", "footer"].includes(section.slot) || section.moduleId === "catalog-newsletter-cta"
       : ["trust", "cart", "footer"].includes(section.slot),
   );
-  const socialImage =
-    imageUrl(project, project.seo.socialImageId) ?? imageUrl(project, project.assets[0]?.id);
   const homeHero = effectiveHomeSections(project).find(
     (section) => section.enabled && section.slot === "hero",
   );
@@ -1465,6 +1492,17 @@ function buildPages(
     typeof homeHero?.settings.videoAssetId === "string"
       ? videoFor(project, homeHero.settings.videoAssetId)
       : undefined;
+  const socialImage =
+    imageUrl(project, project.seo.socialImageId) ??
+    (typeof homeHero?.settings.posterAssetId === "string"
+      ? imageUrl(project, homeHero.settings.posterAssetId)
+      : undefined) ??
+    imageUrl(project, homeHeroVideo?.posterAssetId) ??
+    imageUrl(project, project.assets[0]?.id);
+  const defaultSeoDescription =
+    project.seo.description.trim() ||
+    project.identity.description.trim() ||
+    `Descubrí la propuesta de ${project.identity.brandName}.`;
   const homePreloadImage =
     (typeof homeHero?.settings.posterAssetId === "string"
       ? imageUrl(project, homeHero.settings.posterAssetId)
@@ -1742,7 +1780,7 @@ function buildPages(
   const contactPage: PageDescriptor = {
     path: "contacto/index.html",
     title: contactConfig?.seoTitle ?? `Contacto | ${project.identity.brandName}`,
-    description: contactConfig?.seoDescription ?? "Escribinos para coordinar tu pedido.",
+    description: contactConfig?.seoDescription ?? defaultSeoDescription,
     canonicalPath: "/contacto/",
     pageType: "contact",
     body: isContactV2
@@ -1787,7 +1825,7 @@ function buildPages(
   const searchPage: PageDescriptor = {
     path: "buscar/index.html",
     title: `Buscar productos | ${project.identity.brandName}`,
-    description: "Encontrá productos por nombre, marca, categoría o etiqueta.",
+    description: defaultSeoDescription,
     canonicalPath: "/buscar/",
     pageType: "search",
     body: `${renderProjectSections(project, sharedHeader, { pageType: "search" })}<main class="solara-search-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span>Buscar</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Catálogo</p><h1>Buscar productos</h1><p>Buscá por nombre, marca, categoría o etiqueta.</p>${searchControls}</header><section class="catalog-category-layout solara-search-layout"><div class="solara-search-filter-column">${searchFilters}</div><div class="catalog-category-results solara-search-results"><div class="solara-category-toolbar" data-search-toolbar><span data-category-result-count data-search-result-count aria-live="polite">Elegí una búsqueda</span>${searchSort}</div><div data-search-results aria-live="polite"><div class="solara-search-results-grid" data-category-grid></div></div></div></section></main>${renderProjectSections(project, sharedFooter, { pageType: "search" })}`,
@@ -1812,7 +1850,7 @@ function buildPages(
   const cartPage: PageDescriptor = {
     path: "carrito/index.html",
     title: `Carrito | ${project.identity.brandName}`,
-    description: "Revisá tus productos antes de coordinar el pedido.",
+    description: defaultSeoDescription,
     canonicalPath: "/carrito/",
     pageType: "cart",
     body: `${renderProjectSections(project, sharedHeader, { pageType: "cart" })}<main class="solara-cart-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span>Carrito</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Tu selección</p><h1>Carrito</h1></header><section class="solara-cart-page-grid"><div data-cart-lines><p class="solara-empty-state">Tu carrito está vacío. Elegí una pieza para comenzar.</p></div><aside class="solara-cart-summary"><p><span>Subtotal</span><strong data-cart-subtotal>${escapeHtml(formatMoney(0))}</strong></p><p><span>Entrega</span><strong>A coordinar</strong></p><p><span>Total estimado</span><strong data-cart-total>${escapeHtml(formatMoney(0))}</strong></p><a class="solara-primary-action" href="${escapeAttribute(cartContinueHref)}">${cartContinueLabel}</a></aside></section></main>${renderProjectSections(project, sharedFooter, { pageType: "cart" })}`,
@@ -1834,7 +1872,7 @@ function buildPages(
   const checkoutPage: PageDescriptor = {
     path: "compra/index.html",
     title: `Compra por WhatsApp | ${project.identity.brandName}`,
-    description: "Completá tus datos para enviar el pedido por WhatsApp.",
+    description: defaultSeoDescription,
     canonicalPath: "/compra/",
     pageType: "checkout",
     body: `${renderProjectSections(project, sharedHeader, { pageType: "checkout" })}<main class="solara-checkout-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><a href="/carrito/">Carrito</a><span aria-hidden="true">/</span><span>Compra</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Pedido directo</p><h1>Coordinar compra</h1><p>Dejanos tus datos y abrí el mensaje preparado en WhatsApp.</p></header>${checkoutForm}</main>${renderProjectSections(project, sharedFooter, { pageType: "checkout" })}`,
@@ -1866,7 +1904,7 @@ function buildPages(
   const notFoundPage: PageDescriptor = {
     path: "404.html",
     title: `Página no encontrada | ${project.identity.brandName}`,
-    description: "La página que buscás no existe.",
+    description: defaultSeoDescription,
     canonicalPath: "/404.html",
     pageType: "not-found",
     body: isV2Design

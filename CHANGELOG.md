@@ -1,5 +1,22 @@
 # Changelog
 
+### Predeterminado: responsive, imágenes y SEO conectado (2026-08-18)
+
+- **Migración de la demo**: el snapshot existente de `Predeterminado` conserva
+  sus 50 productos, elimina referencias visibles a `Modo Sur`, incorpora 12
+  imágenes cuadradas WebP y deja tres imágenes por producto con fuentes
+  responsive para 320, 356 y desktop.
+- **Mobile**: se fijan márgenes de 12 px en 320–450 px, tabs del PDP sin
+  overflow ni salto de ancho, grillas cortas acotadas y tipografías de cards y
+  categorías que no se cortan; la sombra del hero queda negra y sutil.
+- **SEO**: keywords, author, publisher, robots, Googlebot, Open Graph y
+  Twitter se derivan del proyecto actual; las rutas sin configuración propia
+  reutilizan la descripción SEO de la tienda y la imagen social prioriza la
+  imagen configurada o el hero.
+- **Regresión**: E2E V2 Chromium (39/39), auditoría visual, tests de Studio,
+  exporter, modules y schema, build y migración de los snapshots local y
+  portable.
+
 ### Storefront V2: filtros, contacto por email y media cuadrada (2026-08-18)
 
 - **Búsqueda**: la ruta `/buscar/` reutiliza el motor de filtros del catálogo

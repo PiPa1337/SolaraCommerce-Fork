@@ -35,14 +35,13 @@ import {
   ensureDeprecatedCategoriesRemoved,
   ensureFirstProject,
   ensureScaleDemoProject,
-  expandCatalogModernDemoGalleries,
   expandCatalogModernDemoTestimonials,
   getProject,
   getProjectMigration,
   getRecoveryDraft,
   listProjectsWithRecovery,
   markProjectMigration,
-  optimizeDemoFixtureAssets,
+  migrateCatalogModernDemo,
   type ProjectRecoveryIssue,
   purgeNonDemoStores,
   purgeRolledBackDemoRecords,
@@ -253,9 +252,8 @@ function StudioShell() {
               }
             }
             for (const diskProject of diskListing.projects) {
-              const optimized = await optimizeDemoFixtureAssets(diskProject.project);
-              const expanded = expandCatalogModernDemoGalleries(optimized);
-              const testimonialsExpanded = expandCatalogModernDemoTestimonials(expanded);
+              const migrated = await migrateCatalogModernDemo(diskProject.project);
+              const testimonialsExpanded = expandCatalogModernDemoTestimonials(migrated);
               if (testimonialsExpanded === diskProject.project) continue;
               await markProjectMigration(diskProject.id, "pending");
               const saved = await persistToDisk(

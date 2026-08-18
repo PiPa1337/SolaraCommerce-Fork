@@ -16,6 +16,22 @@ import { type StoreProjectV1, type StoreProjectV2, StoreProjectV2Schema } from "
 /** Version of the guided Catalog Modern template. Increase only when its persisted shape changes. */
 export const CATALOG_MODERN_TEMPLATE_VERSION = CATALOG_MODERN_GUIDANCE_VERSION;
 
+/** Reemplaza textos heredados de una fixture sin tocar claves ni la forma del proyecto. */
+export function replaceCatalogBrandText<T>(value: T, source: string, target: string): T {
+  if (!source || source === target) return value;
+  if (typeof value === "string") return value.split(source).join(target) as T;
+  if (Array.isArray(value)) {
+    return value.map((item) => replaceCatalogBrandText(item, source, target)) as T;
+  }
+  if (typeof value !== "object" || value === null) return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [
+      key,
+      replaceCatalogBrandText(item, source, target),
+    ]),
+  ) as T;
+}
+
 function ensureCatalogModernV2Assets(project: StoreProjectV1): StoreProjectV1 {
   if (project.commerceTemplates.designFamily !== "catalog-modern-v2") return project;
   const existing = new Set(project.assets.map((asset) => asset.id));
@@ -401,7 +417,13 @@ export function buildCatalogModernProject(
   options: BuildCatalogModernProjectOptions,
 ): StoreProjectV2 {
   if (options.seed === "clean") return cleanProject(options);
-  const project = structuredClone(catalogModernStore);
+  const project = options.brandName?.trim()
+    ? replaceCatalogBrandText(
+        structuredClone(catalogModernStore),
+        catalogModernStore.identity.brandName,
+        options.brandName.trim(),
+      )
+    : structuredClone(catalogModernStore);
   return StoreProjectV2Schema.parse({
     ...project,
     ...(options.id ? { id: options.id } : {}),

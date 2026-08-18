@@ -17,8 +17,10 @@ del formulario de contacto se preparan para el email configurado de la tienda.
 
 La única demo integrada es `Predeterminado` con la familia `catalog-modern-v2`.
 Al arrancar, una migración acotada retira los IDs reservados de las antiguas
-referencias V1 en IndexedDB y `proyectos/`; no borra tiendas creadas por el
-usuario ni fuerza un nuevo guardado del Predeterminado existente.
+referencias V1 y, sólo para esa demo determinista, actualiza el snapshot
+existente con la identidad, las galerías y las fuentes responsive actuales;
+cuando el almacenamiento administrado es escribible vuelve a exportar esa
+versión a `proyectos/`. No borra tiendas creadas por el usuario.
 
 ## Funcionalidades terminadas
 

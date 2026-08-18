@@ -247,6 +247,7 @@ describe("repositorio local", () => {
 
     expect(await ensureScaleDemoProject()).toBe(false);
     expect((await getProject(legacyDemo.id))?.name).toBe("Predeterminado");
+    expect((await getProject(legacyDemo.id))?.identity.brandName).toBe("Predeterminado");
     expect((await getProject(legacyClean.id))?.status).toBe("archived");
     expect((await getProject(legacyClean.id))?.name).toBe("Base limpia anterior");
   });
@@ -273,6 +274,8 @@ describe("repositorio local", () => {
   it("construye Predeterminado directamente con Editorial V2", () => {
     const demo = buildScaleDemoProject();
     expect(demo.name).toBe("Predeterminado");
+    expect(demo.identity.brandName).toBe("Predeterminado");
+    expect(JSON.stringify(demo)).not.toContain("Modo Sur");
     expect(demo.commerceTemplates.designFamily).toBe("catalog-modern-v2");
     expect(demo.theme.container).toBe(1760);
     expect(demo.products).toHaveLength(50);

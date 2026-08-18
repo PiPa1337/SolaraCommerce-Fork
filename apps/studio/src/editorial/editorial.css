@@ -646,7 +646,7 @@ tbody tr:hover {
 
   .seo-grid {
     grid-template:
-      "audit" "checklist" "appearance" "social" "previews" "crawler" "score" /
+      "audit" "checklist" "appearance" "social" "derived" "previews" "crawler" "score" /
       minmax(0, 1fr);
   }
 }

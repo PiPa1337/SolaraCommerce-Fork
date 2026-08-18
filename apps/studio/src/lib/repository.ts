@@ -9,6 +9,7 @@ import {
   buildCatalogModernProject,
   catalogModernCleanStore,
   ensureCatalogModernV2Sections,
+  replaceCatalogBrandText,
 } from "@solara/project-schema/catalog-modern-template";
 import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import Dexie, { type EntityTable } from "dexie";
@@ -148,12 +149,18 @@ export function buildScaleDemoProject(): StoreProjectV1 {
     seed: "demo",
     id: SCALE_DEMO_PROJECT_ID,
     name: SCALE_DEMO_PROJECT_NAME,
+    brandName: SCALE_DEMO_PROJECT_NAME,
     slug: "demo-catalogo-jerarquico",
     baseUrl: "https://demo-catalogo-jerarquico.example",
   });
   return ensureCatalogModernV2Sections(
     StoreProjectV1Schema.parse({
       ...demo,
+      identity: {
+        ...demo.identity,
+        legalName: SCALE_DEMO_PROJECT_NAME,
+        brandName: SCALE_DEMO_PROJECT_NAME,
+      },
       theme: structuredClone(catalogModernV2Store.theme),
       commerceTemplates: {
         ...demo.commerceTemplates,
@@ -163,27 +170,107 @@ export function buildScaleDemoProject(): StoreProjectV1 {
   );
 }
 
-/** Amplía sólo el seed demo existente; nunca reescribe galerías personalizadas. */
+function isLegacyDemoFixtureAsset(project: StoreProjectV1, assetId: string): boolean {
+  const asset = project.assets.find((candidate) => candidate.id === assetId);
+  return Boolean(
+    asset?.hash.startsWith("fixture-modo-sur-") &&
+      !asset.hash.startsWith("fixture-modo-sur-product-"),
+  );
+}
+
+/** Corrige referencias visibles de la fixture sin tocar tiendas personalizadas. */
+export function repairScaleDemoBrand(project: StoreProjectV1): StoreProjectV1 {
+  if (project.id !== SCALE_DEMO_PROJECT_ID || project.origin?.seed !== "demo") return project;
+  const target =
+    project.identity.brandName === "Modo Sur"
+      ? project.name.trim() || SCALE_DEMO_PROJECT_NAME
+      : project.identity.brandName.trim();
+  if (!target || target === "Modo Sur" || !JSON.stringify(project).includes("Modo Sur")) {
+    return project;
+  }
+  return StoreProjectV1Schema.parse({
+    ...replaceCatalogBrandText(project, "Modo Sur", target),
+    identity: {
+      ...replaceCatalogBrandText(project.identity, "Modo Sur", target),
+      ...(project.identity.legalName.includes("Modo Sur") ? { legalName: target } : {}),
+    },
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+/** Migra el snapshot heredado de Predeterminado a la galería editorial actual. */
 export function expandCatalogModernDemoGalleries(project: StoreProjectV1): StoreProjectV1 {
   if (project.id !== SCALE_DEMO_PROJECT_ID || project.origin?.seed !== "demo") return project;
-  const reference = buildCatalogModernProject({ seed: "demo" });
-  const availableAssetIds = new Set(project.assets.map((asset) => asset.id));
-  let changed = false;
+  const reference = buildCatalogModernProject({
+    seed: "demo",
+    name: project.name,
+    brandName: project.identity.brandName,
+  });
+  const referenceAssets = reference.assets.filter((asset) => asset.id.startsWith("asset-product-"));
+  const availableAssetIds = new Set([
+    ...project.assets.map((asset) => asset.id),
+    ...referenceAssets.map((asset) => asset.id),
+  ]);
+  const missingAssets = referenceAssets.filter(
+    (asset) => !project.assets.some((candidate) => candidate.id === asset.id),
+  );
+  let changed = missingAssets.length > 0;
   const products = project.products.map((product) => {
     const desired = reference.products.find((candidate) => candidate.id === product.id);
-    if (!desired || product.imageIds.length >= 3 || product.imageIds[0] !== desired.imageIds[0]) {
-      return product;
-    }
-    const imageIds = [...product.imageIds];
+    if (!desired) return product;
+    const legacyOnly =
+      product.imageIds.length === 0 ||
+      product.imageIds.every((imageId) => isLegacyDemoFixtureAsset(project, imageId));
+    const imageIds = legacyOnly
+      ? desired.imageIds.filter((imageId) => availableAssetIds.has(imageId)).slice(0, 3)
+      : [...product.imageIds];
     for (const imageId of desired.imageIds) {
+      if (imageIds.length >= 3) break;
       if (availableAssetIds.has(imageId) && !imageIds.includes(imageId)) imageIds.push(imageId);
     }
-    if (imageIds.length === product.imageIds.length) return product;
+    const firstImageId = imageIds[0];
+    const variants = product.variants.map((variant) =>
+      variant.imageId && !isLegacyDemoFixtureAsset(project, variant.imageId)
+        ? variant
+        : { ...variant, ...(firstImageId ? { imageId: firstImageId } : {}) },
+    );
+    if (
+      imageIds.length !== product.imageIds.length ||
+      imageIds.some((imageId, index) => imageId !== product.imageIds[index]) ||
+      variants.some((variant, index) => variant.imageId !== product.variants[index]?.imageId)
+    ) {
+      changed = true;
+      return { ...product, imageIds, variants };
+    }
+    return product;
+  });
+  const referenceCategories = new Map(
+    reference.categories.map((category) => [category.id, category]),
+  );
+  const categories = project.categories.map((category) => {
+    const desired = referenceCategories.get(category.id);
+    const desiredImageId =
+      desired?.imageId && !isLegacyDemoFixtureAsset(reference, desired.imageId)
+        ? desired.imageId
+        : reference.products.find((product) => product.categoryIds.includes(category.id))
+            ?.imageIds[0];
+    if (
+      !desiredImageId ||
+      (category.imageId && !isLegacyDemoFixtureAsset(project, category.imageId))
+    ) {
+      return category;
+    }
     changed = true;
-    return { ...product, imageIds };
+    return { ...category, imageId: desiredImageId };
   });
   return changed
-    ? StoreProjectV1Schema.parse({ ...project, products, updatedAt: new Date().toISOString() })
+    ? StoreProjectV1Schema.parse({
+        ...project,
+        assets: [...project.assets, ...structuredClone(missingAssets)],
+        products,
+        categories,
+        updatedAt: new Date().toISOString(),
+      })
     : project;
 }
 
@@ -311,6 +398,15 @@ function repairScaleDemoPresentation(project: StoreProjectV1): StoreProjectV1 {
   });
 }
 
+function normalizeScaleDemoProject(project: StoreProjectV1): StoreProjectV1 {
+  const renamed =
+    project.id === SCALE_DEMO_PROJECT_ID &&
+    [LEGACY_SCALE_DEMO_PROJECT_NAME, "Modo Sur"].includes(project.name)
+      ? { ...project, name: SCALE_DEMO_PROJECT_NAME }
+      : project;
+  return repairScaleDemoBrand(repairScaleDemoPresentation(renamed));
+}
+
 async function sourceAsDataUrl(source: string): Promise<string> {
   const response = await fetch(source);
   if (!response.ok) throw new Error(`No se pudo cargar el recurso inicial ${source}.`);
@@ -385,6 +481,7 @@ export async function optimizeDemoFixtureAssets(project: StoreProjectV1): Promis
 }
 
 async function embedFixtureAssets(project: StoreProjectV1): Promise<StoreProjectV1> {
+  if (!canProcessImagesInBrowser()) return project;
   const assets = await Promise.all(
     project.assets.map(async (asset) =>
       asset.source.startsWith("/fixtures/")
@@ -393,6 +490,13 @@ async function embedFixtureAssets(project: StoreProjectV1): Promise<StoreProject
     ),
   );
   return optimizeDemoFixtureAssets(StoreProjectV1Schema.parse({ ...project, assets }));
+}
+
+export async function migrateCatalogModernDemo(project: StoreProjectV1): Promise<StoreProjectV1> {
+  if (project.id !== SCALE_DEMO_PROJECT_ID || project.origin?.seed !== "demo") return project;
+  const expanded = expandCatalogModernDemoGalleries(normalizeScaleDemoProject(project));
+  if (!expanded.assets.some((asset) => asset.source.startsWith("/fixtures/"))) return expanded;
+  return embedFixtureAssets(expanded);
 }
 
 function isDeprecatedCategoryPath(value: string): boolean {
@@ -792,14 +896,9 @@ export async function ensureScaleDemoProject(): Promise<boolean> {
   const existing = await database.projects.get(SCALE_DEMO_PROJECT_ID);
   if (existing) {
     const parsed = StoreProjectV1Schema.parse(existing.project);
-    const repaired = repairScaleDemoPresentation(
-      repairModernGreeting(
-        parsed.name === LEGACY_SCALE_DEMO_PROJECT_NAME
-          ? { ...parsed, name: SCALE_DEMO_PROJECT_NAME }
-          : parsed,
-      ),
-    );
-    const project = expandCatalogModernDemoTestimonials(await optimizeDemoFixtureAssets(repaired));
+    const repaired = repairModernGreeting(normalizeScaleDemoProject(parsed));
+    const migrated = await migrateCatalogModernDemo(repaired);
+    const project = expandCatalogModernDemoTestimonials(migrated);
     if (JSON.stringify(project) !== JSON.stringify(parsed)) {
       await saveProject(project);
     }
@@ -843,7 +942,7 @@ export async function ensureCatalogModernDemoGallery(): Promise<boolean> {
   const record = await database.projects.get(SCALE_DEMO_PROJECT_ID);
   if (!record) return false;
   const parsed = StoreProjectV1Schema.parse(record.project);
-  const expanded = expandCatalogModernDemoGalleries(parsed);
+  const expanded = await migrateCatalogModernDemo(parsed);
   if (expanded === parsed) return false;
   await saveProject(expanded);
   return true;

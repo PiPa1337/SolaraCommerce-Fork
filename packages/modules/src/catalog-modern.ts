@@ -960,7 +960,7 @@ export const catalogProductGrid: ModuleDefinition<
       "catalog-product-grid",
       context.section,
       safeHtml(
-        `<div class="catalog-product-grid-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${context.settings.showViewAll ? `<a class="catalog-view-all" href="${escapeAttribute(safeUrl(viewAllHref))}" aria-label="${escapeAttribute(viewAllAriaLabel)}">Ver todos</a>` : ""}</header><div class="catalog-product-grid" data-motion-zone="items"${categoryGrid}>${cards || '<p class="catalog-empty">No hay productos para mostrar.</p>'}</div></div>`,
+        `<div class="catalog-product-grid-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${context.settings.showViewAll ? `<a class="catalog-view-all" href="${escapeAttribute(safeUrl(viewAllHref))}" aria-label="${escapeAttribute(viewAllAriaLabel)}">Ver todos</a>` : ""}</header><div class="catalog-product-grid" data-motion-zone="items" data-product-count="${products.length}"${categoryGrid}>${cards || '<p class="catalog-empty">No hay productos para mostrar.</p>'}</div></div>`,
       ),
     );
   },
