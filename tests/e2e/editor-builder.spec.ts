@@ -334,45 +334,20 @@ test("subir un video real genera el poster con el primer frame exacto", async ({
   expect(blue).toBeLessThan(80);
 });
 
-test("el Builder cambia a Contacto V2 y muestra sus módulos editables", async ({ page }) => {
+test("el Builder mantiene el contacto de Home V2 y no ofrece páginas independientes", async ({
+  page,
+}) => {
   await openBuilder(page);
   await page.getByRole("tab", { name: "Tema" }).click();
   await page.getByTestId("ui-design-family-v2").click();
   await page.getByRole("tab", { name: "Constructor" }).click();
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
   const pageSelector = page.getByLabel("Página de edición");
-  await pageSelector.selectOption("contact");
-  await expect(pageSelector).toHaveValue("contact");
-  await expect(page.getByTestId("ui-preview-route")).toHaveValue("/contacto/");
-  await expect(page.locator('[data-section-select="contact-section-hero"]')).toBeVisible();
-  await expect(page.getByText("Hero de Contacto", { exact: true }).first()).toBeVisible();
-  await page.locator('[data-section-select="contact-section-form"]').click();
-  await expect(page.getByText("Formulario de Contacto", { exact: true }).first()).toBeVisible();
-});
-
-test("el Builder cambia a Nosotros V2 y muestra sus módulos editables", async ({ page }) => {
-  await openBuilder(page);
-  await page.getByRole("tab", { name: "Tema" }).click();
-  await page.getByTestId("ui-design-family-v2").click();
-  await page.getByRole("tab", { name: "Constructor" }).click();
-
-  const pageSelector = page.getByLabel("Página de edición");
-  await pageSelector.selectOption("about");
-  await expect(page.locator('[data-section-select="about-section-hero"]')).toBeVisible();
-  await expect(page.getByText("Hero de Nosotros", { exact: true }).first()).toBeVisible();
-
-  await page.locator('[data-section-select="about-section-history"]').click();
-  await expect(page.getByText("Historia de Nosotros", { exact: true }).first()).toBeVisible();
-
-  await page.locator('[data-section-select="about-section-team"]').click();
-  await expect(page.getByRole("checkbox", { name: "Mostrar equipo" })).toBeVisible();
-  await expect(page.getByRole("checkbox", { name: "Mostrar equipo" })).toBeChecked();
-
-  await page.getByRole("button", { name: "Agregar sección" }).click();
-  const picker = page.getByTestId("ui-module-picker");
-  await expect(picker.getByRole("button", { name: /Hero de Nosotros/ })).toBeVisible();
-  await expect(picker.getByRole("button", { name: /Hero de Contacto/ })).toHaveCount(0);
-  await page.getByTestId("ui-module-picker-cancel").click();
+  await expect(pageSelector).toHaveValue("home");
+  await expect(pageSelector.locator("option")).toHaveCount(1);
+  await expect(page.getByTestId("ui-preview-route")).toHaveValue("/");
+  await expect(page.locator('[data-section-select="home-section-contact-form"]')).toBeVisible();
+  await expect(page.locator('[data-section-select="home-section-contact-channels"]')).toBeVisible();
 });
 
 test("el hero V2 expone el modo sólo video (media 9:16)", async ({ page }) => {
@@ -428,7 +403,7 @@ test("agregar un testimonio genera un ítem válido que commitea y persiste en e
     .locator('[data-solara-module="catalog-testimonials"]')
     .last()
     .locator(".catalog-testimonial h3")
-    .last();
+    .first();
   await expect(newTestimonial).toHaveText("Nuevo elemento", { timeout: 15_000 });
 
   await expect(page.getByText(/^Guardado/)).toBeVisible({ timeout: 15_000 });

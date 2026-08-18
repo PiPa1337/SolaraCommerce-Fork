@@ -99,6 +99,7 @@ function addPreviewNavigationBridge(document: string): string {
  * reales a la URL pública del sitio.
  */
 export function getPreviewRoutes(project: StoreProjectV1): PreviewRoute[] {
+  const standaloneV2PagesRemoved = project.commerceTemplates.designFamily === "catalog-modern-v2";
   const firstRoot = project.categories.find((category) => category.parentId === undefined);
   const firstChild = project.categories.find((category) => category.parentId !== undefined);
   const paginatedCategory = project.categories.find(
@@ -132,8 +133,12 @@ export function getPreviewRoutes(project: StoreProjectV1): PreviewRoute[] {
       ? [{ path: `/productos/${lastProduct.slug}/`, label: "Producto final" }]
       : []),
     ...(project.commerceTemplates.search.enabled ? [{ path: "/buscar/", label: "Buscar" }] : []),
-    { path: "/contacto/", label: "Contacto" },
-    { path: "/nosotros/", label: "Nosotros" },
+    ...(standaloneV2PagesRemoved
+      ? []
+      : [
+          { path: "/contacto/", label: "Contacto" },
+          { path: "/nosotros/", label: "Nosotros" },
+        ]),
     ...(project.commerceTemplates.cart.enabled ? [{ path: "/carrito/", label: "Carrito" }] : []),
     ...(project.commerceTemplates.checkout.enabled ? [{ path: "/compra/", label: "Compra" }] : []),
   ];

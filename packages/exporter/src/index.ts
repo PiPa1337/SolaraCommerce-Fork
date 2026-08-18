@@ -719,6 +719,16 @@ function isModernProject(project: StoreProjectV1): boolean {
   );
 }
 
+function isPublishedEditablePage(
+  project: StoreProjectV1,
+  page: StoreProjectV1["pages"][number],
+): boolean {
+  return !(
+    project.commerceTemplates.designFamily === "catalog-modern-v2" &&
+    (page.kind === "about" || page.kind === "contact")
+  );
+}
+
 function modernProjectClass(project: StoreProjectV1): string {
   if (!isModernProject(project)) return "";
   return project.commerceTemplates.designFamily === "catalog-modern-v2"
@@ -769,7 +779,12 @@ function publicMediaUsage(project: StoreProjectV1): {
   project.collections.forEach((collection) => {
     addValue(collection.imageId);
   });
-  [...project.sections, ...project.pages.flatMap((page) => page.sections)]
+  [
+    ...project.sections,
+    ...project.pages
+      .filter((page) => isPublishedEditablePage(project, page))
+      .flatMap((page) => page.sections),
+  ]
     .filter((section) => section.enabled && shellSectionEnabled(project, section))
     .forEach((section) => {
       scan(section.settings);
@@ -793,7 +808,9 @@ export function createPublicExportManifest(
 ): PublicExportManifest {
   const sections = activeProjectSections(project, [
     ...project.sections,
-    ...project.pages.flatMap((page) => page.sections),
+    ...project.pages
+      .filter((page) => isPublishedEditablePage(project, page))
+      .flatMap((page) => page.sections),
   ]);
   const activeModules = [...new Set(sections.map((section) => section.moduleId))].sort();
   const media = publicMediaUsage(project);
@@ -924,7 +941,9 @@ function stylesForProjectFamily(project: StoreProjectV1, styles: string): string
 }
 
 function exportedModuleStyles(project: StoreProjectV1): string {
-  const pageSections = project.pages.flatMap((page) => page.sections);
+  const pageSections = project.pages
+    .filter((page) => isPublishedEditablePage(project, page))
+    .flatMap((page) => page.sections);
   const productModule = isModernProject(project) ? "catalog-product-detail" : "product-detail";
   return stylesForProjectFamily(
     project,
@@ -936,7 +955,9 @@ function exportedModuleStyles(project: StoreProjectV1): string {
 }
 
 function previewModuleStyles(project: StoreProjectV1): string {
-  const pageSections = project.pages.flatMap((page) => page.sections);
+  const pageSections = project.pages
+    .filter((page) => isPublishedEditablePage(project, page))
+    .flatMap((page) => page.sections);
   const productModule = isModernProject(project) ? "catalog-product-detail" : "product-detail";
   return stylesForProjectFamily(
     project,
@@ -1651,7 +1672,8 @@ function buildPages(
   const contactConfig = project.pages.find((page) => page.kind === "contact");
   const editableSections = (kind: "about" | "contact") =>
     project.pages.find((page) => page.kind === kind)?.sections ?? [];
-  const isAboutV2 = project.commerceTemplates.designFamily === "catalog-modern-v2";
+  const isV2Design = project.commerceTemplates.designFamily === "catalog-modern-v2";
+  const isAboutV2 = isV2Design;
   const aboutV2Sections = editableSections("about");
   const aboutHero = aboutV2Sections.find(
     (section) => section.moduleId === "about-hero" && section.enabled,
@@ -1802,7 +1824,6 @@ function buildPages(
     structuredData: [],
   };
 
-  const isV2Design = project.commerceTemplates.designFamily === "catalog-modern-v2";
   const formatPolicyDays = (minimum: number, maximum: number) =>
     minimum === maximum
       ? `${minimum} ${minimum === 1 ? "día" : "días"}`
@@ -1811,7 +1832,7 @@ function buildPages(
     countries.map((country) => (country === "AR" ? "Argentina" : country)).join(", ");
   const policyContactAction = whatsAppContactLink
     ? `<a class="solara-primary-action" href="${escapeAttribute(whatsAppContactLink)}" target="_blank" rel="noopener noreferrer">Consultar por WhatsApp</a>`
-    : `<a class="solara-secondary-action" href="${escapeAttribute(internalHref(project, "/contacto/"))}">Ir a contacto</a>`;
+    : `<a class="solara-secondary-action" href="${escapeAttribute(internalHref(project, isV2Design ? "/#contact-form" : "/contacto/"))}">${isV2Design ? "Escribinos" : "Ir a contacto"}</a>`;
   const renderV2PolicyPage = (
     title: string,
     eyebrow: string,
@@ -1933,8 +1954,7 @@ function buildPages(
 
   return [
     home,
-    aboutPage,
-    contactPage,
+    ...(isV2Design ? [] : [aboutPage, contactPage]),
     ...(project.commerceTemplates.search.enabled ? [searchPage] : []),
     ...(project.commerceTemplates.cart.enabled ? [cartPage] : []),
     ...(project.commerceTemplates.checkout.enabled ? [checkoutPage] : []),

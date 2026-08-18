@@ -276,11 +276,14 @@ test("A20: preview — la ruta del selector cambia la página, el input y el anu
   const routeInput = page.getByTestId("ui-preview-route");
   const announce = page.getByTestId("ui-preview-route-announce");
 
-  // Ruta de contacto: página, input y anuncio se actualizan.
+  // V2 ya no publica la ruta de Contacto; el renderer responde como 404.
   await commitRoute(page, "/contacto/");
-  await expectPreviewTitle(page, "Contacto | Modo Sur");
+  await expectPreviewTitle(page, "Página no encontrada | Modo Sur");
   await expect(routeInput).toHaveValue("/contacto/");
   await expect(announce).toContainText("Vista previa: /contacto/");
+  await expect(
+    page.frameLocator('iframe[title="Vista previa desktop"]').locator("body"),
+  ).toContainText("No encontramos esa página.");
 
   // Producto (primera del catálogo): título propio de la página de producto.
   await commitRoute(page, "/productos/remera-esencial-de-algodon/");
@@ -306,9 +309,8 @@ test("A20: preview — la ruta del selector cambia la página, el input y el anu
   await expect(announce).toContainText("Vista previa: /");
 
   // Contrato de datos: el datalist ofrece rutas que el renderer acepta.
-  const contactoOption = page.locator("datalist option").filter({ hasText: "Contacto" });
-  await expect(contactoOption).toHaveCount(1);
-  await expect(contactoOption).toHaveAttribute("value", "/contacto/");
+  const contactoOption = page.locator('datalist option[value="/contacto/"]');
+  await expect(contactoOption).toHaveCount(0);
 });
 
 test("A20: preview — la ruta confirma al perder foco y un valor vacío restaura la actual", async ({
@@ -319,19 +321,19 @@ test("A20: preview — la ruta confirma al perder foco y un valor vacío restaur
 
   const routeInput = page.getByTestId("ui-preview-route");
   const announce = page.getByTestId("ui-preview-route-announce");
-  await routeInput.fill("/contacto/");
+  await routeInput.fill("/carrito/");
   await page.getByRole("button", { name: "75%" }).focus();
 
-  await expect(routeInput).toHaveValue("/contacto/");
-  await expect(announce).toContainText("Vista previa: /contacto/");
-  await expectPreviewTitle(page, "Contacto | Modo Sur");
+  await expect(routeInput).toHaveValue("/carrito/");
+  await expect(announce).toContainText("Vista previa: /carrito/");
+  await expectPreviewTitle(page, "Carrito | Modo Sur");
 
   await routeInput.fill("   ");
   await page.getByRole("button", { name: "100%" }).focus();
 
-  await expect(routeInput).toHaveValue("/contacto/");
-  await expect(announce).toContainText("Vista previa: /contacto/");
-  await expectPreviewTitle(page, "Contacto | Modo Sur");
+  await expect(routeInput).toHaveValue("/carrito/");
+  await expect(announce).toContainText("Vista previa: /carrito/");
+  await expectPreviewTitle(page, "Carrito | Modo Sur");
 });
 
 test("A20: preview - carrito conserva multiples lineas al cambiar de ruta", async ({ page }) => {
@@ -578,10 +580,10 @@ test("A20: preview — la toolbar se puede operar con teclado", async ({ page })
 
   const routeInput = page.getByTestId("ui-preview-route");
   await routeInput.focus();
-  await routeInput.fill("/contacto/");
+  await routeInput.fill("/carrito/");
   await routeInput.press("Enter");
   await expect(page.getByTestId("ui-preview-route-announce")).toContainText(
-    "Vista previa: /contacto/",
+    "Vista previa: /carrito/",
   );
 
   const zoom75 = page.getByRole("button", { name: "75%" });
@@ -620,8 +622,8 @@ test("A20: preview — la carga del iframe anuncia el estado y se retira al term
       }),
   );
 
-  await commitRoute(page, "/contacto/");
-  await expectPreviewTitle(page, "Contacto | Modo Sur");
+  await commitRoute(page, "/carrito/");
+  await expectPreviewTitle(page, "Carrito | Modo Sur");
   await expect(page.getByTestId("ui-preview-loading")).toHaveCount(0);
 
   await expect(await loadingObservation).toEqual({

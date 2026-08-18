@@ -110,22 +110,22 @@ test("elegir un módulo lo agrega al slot indicado y el preview lo refleja", asy
   const sections = sectionsList(page);
   const initialCount = await sections.getByRole("listitem").count();
 
-  await page.getByLabel("Tipo de sección").selectOption("product");
+  await page.getByLabel("Tipo de sección").selectOption("catalog");
   const dialog = await openPicker(page);
-  await dialog.getByLabel("Buscar módulo").fill("detalle");
-  await dialog.getByRole("button", { name: /Detalle moderno de producto/ }).click();
+  await dialog.getByLabel("Buscar módulo").fill("mosaico");
+  await dialog.getByRole("button", { name: /Mosaico de categorías/ }).click();
 
   await expect(dialog).toBeHidden();
   await expect(addButton(page)).toHaveAttribute("aria-expanded", "false");
   await expect(sections.getByRole("listitem")).toHaveCount(initialCount + 1);
 
   const added = sections.getByRole("listitem").last();
-  await expect(added).toContainText("Detalle moderno de producto");
-  await expect(added.locator(".section-select span")).toHaveText("Producto");
-  await expect(page.locator(".inspector header span")).toHaveText("Producto");
+  await expect(added).toContainText("Mosaico de categorías");
+  await expect(added.locator(".section-select span")).toHaveText("Catálogo");
+  await expect(page.locator(".inspector header span")).toHaveText("Catálogo");
 
   await expect(
-    previewFrame(page).locator('[data-solara-module="catalog-product-detail"]'),
+    previewFrame(page).locator('[data-solara-module="catalog-category-bento"]'),
   ).toBeVisible({ timeout: 15_000 });
 });
 
@@ -177,31 +177,22 @@ test("un click fuera del picker lo cierra y devuelve el foco al botón", async (
   await expect(addButton(page)).toBeFocused();
 });
 
-test("cambiar de página reclama el tipo de sección fuera del rango de esa página", async ({
-  page,
-}) => {
+test("V2 mantiene Home como única página editable del Constructor", async ({ page }) => {
   await openBuilder(page);
-  await page.getByLabel("Tipo de sección").selectOption("hero");
-  await page.getByLabel("Página de edición").selectOption("about");
-  await expect(page.getByLabel("Tipo de sección")).toHaveValue("catalog");
+  const pageSelector = page.getByLabel("Página de edición");
 
-  const dialog = await openPicker(page);
-  await dialog.getByLabel("Buscar módulo").fill("mosaico");
-  const option = dialog.getByRole("button", { name: /Mosaico de categorías/ });
-  await expect(option).toBeEnabled();
-  await option.click();
-
-  const added = sectionsList(page).getByRole("listitem").last();
-  await expect(added).toContainText("Mosaico de categorías");
-  await expect(added.locator(".section-select span")).toHaveText("Catálogo");
+  await expect(pageSelector).toHaveValue("home");
+  await expect(pageSelector.locator("option")).toHaveCount(1);
+  await expect(pageSelector.locator('option[value="about"]')).toHaveCount(0);
+  await expect(pageSelector.locator('option[value="contact"]')).toHaveCount(0);
 });
 
 test("restaurar valores por defecto revierte la sección con feedback visible", async ({ page }) => {
   await openBuilder(page);
   await selectHero(page);
 
-  const title = page.getByRole("textbox", { name: "Título", exact: true });
-  const body = page.getByRole("textbox", { name: "Descripción", exact: true });
+  const title = page.getByRole("textbox", { name: "Título", exact: true }).first();
+  const body = page.getByRole("textbox", { name: "Descripción", exact: true }).first();
   await title.fill("Título del barrido");
   await body.fill("Cuerpo del barrido");
   await expect(previewFrame(page).locator('[data-solara-module="catalog-hero"] h1')).toHaveText(
@@ -390,7 +381,7 @@ test("una sección con settings inválidos para su módulo muestra el panel de e
   await expect(panel).toContainText("mode");
 
   // Corregir el campo inválido valida la sección y limpia el panel.
-  await page.getByLabel("Modo", { exact: true }).selectOption("image");
+  await page.getByLabel("Modo", { exact: true }).selectOption("video");
   await expect(panel).toBeHidden();
   await expect(previewFrame(page).locator('[data-solara-module="catalog-hero"]')).toBeVisible({
     timeout: 15_000,

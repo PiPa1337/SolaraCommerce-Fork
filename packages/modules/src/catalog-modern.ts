@@ -130,6 +130,9 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const navigation = context.project.navigation;
+    const isV2 = context.project.commerceTemplates.designFamily === "catalog-modern-v2";
+    const showContact = !isV2 && navigation.showContact;
+    const showAbout = !isV2 && navigation.showAbout;
     const automaticItems = context.project.categories
       .filter((category) => !category.parentId)
       .map((category) => ({
@@ -147,10 +150,28 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
     // Los ítems editados en el Resumen tienen prioridad sobre la navegación
     // derivada de categorías aunque el modo sea "automatic"; con items vacíos
     // se conserva el comportamiento previo (categorías en automatic).
-    const navigationItems =
+    const configuredNavigationItems =
       navigation.mode === "automatic" && navigation.items.length === 0
         ? automaticItems
         : navigation.items;
+    const normalizeV2NavigationHref = (href: string | undefined): string | undefined => {
+      if (!isV2) return href;
+      if (/^\/contacto\/?$/i.test(href ?? "")) return "/#contact-form";
+      if (/^\/nosotros\/?$/i.test(href ?? "")) return undefined;
+      return href;
+    };
+    const navigationItems = configuredNavigationItems.flatMap((item) => {
+      if (isV2 && /^\/nosotros\/?$/i.test(item.href ?? "")) return [];
+      return [
+        {
+          ...item,
+          href: normalizeV2NavigationHref(item.href),
+          children: item.children
+            ?.filter((child) => !/^\/nosotros\/?$/i.test(child.href ?? ""))
+            .map((child) => ({ ...child, href: normalizeV2NavigationHref(child.href) })),
+        },
+      ];
+    });
     const current = (types: string[]) =>
       types.includes(context.pageType ?? "") ? ' aria-current="page"' : "";
     const configuredCatalogLabel = navigation.catalogLabel.trim();
@@ -218,8 +239,8 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
       : searchEnabled
         ? `<a class="catalog-mobile-nav-link" href="/buscar/"><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("categories")}</span><span>${escapeHtml(catalogLabel)}</span>${forwardChevron}</a>`
         : "";
-    const nav = `${navigation.showHome ? `<a href="/"${current(["home"])}>Inicio</a>` : ""}${catalog}${navigation.showContact ? `<a href="/contacto/"${current(["contact"])}>Contacto</a>` : ""}${navigation.showAbout ? `<a href="/nosotros/"${current(["about"])}>Nosotros</a>` : ""}`;
-    const mobileNav = `${navigation.showHome ? `<a class="catalog-mobile-nav-link" href="/"${current(["home"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("home")}</span><span>Inicio</span>${forwardChevron}</a>` : ""}${mobileCategories}${navigation.showContact ? `<a class="catalog-mobile-nav-link" href="/contacto/"${current(["contact"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("contact")}</span><span>Contacto</span>${forwardChevron}</a>` : ""}${navigation.showAbout ? `<a class="catalog-mobile-nav-link" href="/nosotros/"${current(["about"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("about")}</span><span>Nosotros</span>${forwardChevron}</a>` : ""}`;
+    const nav = `${navigation.showHome ? `<a href="/"${current(["home"])}>Inicio</a>` : ""}${catalog}${showContact ? `<a href="/contacto/"${current(["contact"])}>Contacto</a>` : ""}${showAbout ? `<a href="/nosotros/"${current(["about"])}>Nosotros</a>` : ""}`;
+    const mobileNav = `${navigation.showHome ? `<a class="catalog-mobile-nav-link" href="/"${current(["home"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("home")}</span><span>Inicio</span>${forwardChevron}</a>` : ""}${mobileCategories}${showContact ? `<a class="catalog-mobile-nav-link" href="/contacto/"${current(["contact"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("contact")}</span><span>Contacto</span>${forwardChevron}</a>` : ""}${showAbout ? `<a class="catalog-mobile-nav-link" href="/nosotros/"${current(["about"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("about")}</span><span>Nosotros</span>${forwardChevron}</a>` : ""}`;
     const search = searchEnabled
       ? `<button class="catalog-search-link" type="button" data-catalog-search-open aria-controls="catalog-search-dialog" aria-expanded="false" aria-label="${escapeAttribute(context.settings.searchLabel)}"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><span>${escapeHtml(context.settings.searchLabel)}</span></button><noscript><a class="catalog-search-noscript" href="/buscar/">${escapeHtml(context.settings.searchLabel)}</a></noscript>`
       : "";
@@ -611,6 +632,12 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
       searchEnabled,
       activeSlide?.actionHref ?? settings.actionHref,
     );
+    const configuredSecondaryActionHref = safeUrl(settings.secondaryActionHref);
+    const secondaryActionHref =
+      context.project.commerceTemplates.designFamily === "catalog-modern-v2" &&
+      /^\/nosotros\/?$/i.test(configuredSecondaryActionHref)
+        ? "#contact-form"
+        : configuredSecondaryActionHref;
     const media = renderCatalogHeroMedia(context, settings, title);
     const slidePanels =
       settings.mode === "carousel"
@@ -700,7 +727,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
         : "";
     const actions = whatsappPhone
       ? `<a class="catalog-primary-action solara-primary-action" href="https://wa.me/${escapeAttribute(whatsappPhone)}" target="_blank" rel="noopener noreferrer"><span class="catalog-hero-cta-label">Escribir por WhatsApp</span><svg class="catalog-hero-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${catalogHeroBenefitIcons.chat}</svg></a>`
-      : `<a class="catalog-primary-action" href="${escapeAttribute(safeUrl(actionHref))}">${escapeHtml(actionLabel)}</a>${settings.secondaryActionLabel ? `<a class="catalog-secondary-action" href="${escapeAttribute(safeUrl(settings.secondaryActionHref))}">${escapeHtml(settings.secondaryActionLabel)}</a>` : ""}`;
+      : `<a class="catalog-primary-action" href="${escapeAttribute(safeUrl(actionHref))}">${escapeHtml(actionLabel)}</a>${settings.secondaryActionLabel ? `<a class="catalog-secondary-action" href="${escapeAttribute(secondaryActionHref)}">${escapeHtml(settings.secondaryActionLabel)}</a>` : ""}`;
     const heroInner = isV2Hero
       ? `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}">${heroBackgroundWrap}<div class="catalog-hero-copy"><div class="catalog-hero-reveal catalog-hero-reveal--eyebrow"><p class="catalog-eyebrow">${escapeHtml(settings.eyebrow)}</p></div><h1 class="catalog-hero-title" data-hero-title>${titleLinesMarkup}</h1><div class="catalog-hero-rule" data-hero-rule aria-hidden="true"></div><div class="catalog-hero-reveal catalog-hero-reveal--body"><p class="catalog-hero-body">${escapeHtml(body)}</p></div><div class="catalog-hero-reveal catalog-hero-reveal--actions"><div class="catalog-hero-actions">${actions}</div></div>${benefitsMarkup}</div><figure class="catalog-hero-media" data-motion-zone="media" data-hero-media>${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>${benefitsBand}`
       : `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}"><div class="catalog-hero-copy"><p class="catalog-eyebrow">${escapeHtml(settings.eyebrow)}</p><h1>${escapeHtml(title)}</h1><p class="catalog-hero-body">${escapeHtml(body)}</p><div class="catalog-hero-actions">${actions}</div>${stats}</div><figure class="catalog-hero-media" data-motion-zone="media">${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>`;
@@ -1359,10 +1386,15 @@ export const catalogNewsletterCta: ModuleDefinition<
   motionZones: modernRevealZone,
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
-    const actionHref = safeUrl(context.settings.actionHref);
+    const configuredActionHref = safeUrl(context.settings.actionHref);
+    const actionHref =
+      context.project.commerceTemplates.designFamily === "catalog-modern-v2" &&
+      /^\/contacto\/?$/i.test(configuredActionHref)
+        ? "#contact-form"
+        : configuredActionHref;
     const configuredActionLabel = context.settings.actionLabel.trim();
     const actionLabel =
-      /^\/contacto\/?$/i.test(actionHref) &&
+      (/^\/contacto\/?$/i.test(actionHref) || actionHref === "#contact-form") &&
       configuredActionLabel.toLowerCase() === "escribir por whatsapp"
         ? "Ver opciones de contacto"
         : configuredActionLabel || "Ver opciones de contacto";
@@ -1401,6 +1433,7 @@ export const catalogFooter: ModuleDefinition<
   motionZones: modernRevealZone,
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
+    const isV2 = context.project.commerceTemplates.designFamily === "catalog-modern-v2";
     const policyLinks = context.settings.showPolicies
       ? `<a href="/envios/">Envíos</a><a href="/devoluciones/">Cambios</a><a href="/privacidad/">Privacidad</a><a href="/terminos/">Términos</a>`
       : "";
@@ -1440,11 +1473,14 @@ export const catalogFooter: ModuleDefinition<
       ? `<a href="${escapeAttribute(catalogLink.href)}">${escapeHtml(catalogLink.label)}</a>`
       : "";
     const searchLink = searchEnabled ? `<a href="/buscar/">Buscar</a>` : "";
+    const helpPageLinks = isV2
+      ? ""
+      : `<a href="/contacto/">Contacto</a><a href="/nosotros/">Nosotros</a>`;
     return moduleRoot(
       "catalog-footer",
       context.section,
       safeHtml(
-        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div><nav aria-label="Catálogo"><strong>Explorar</strong><a href="/">Inicio</a>${catalogLinkMarkup}${searchLink}</nav><nav aria-label="Ayuda"><strong>Ayuda</strong><a href="/contacto/">Contacto</a><a href="/nosotros/">Nosotros</a>${policyLinks}</nav><address><strong>Contacto</strong>${contact}</address><small>© ${new Date().getFullYear()} ${escapeHtml(context.project.identity.brandName)}. Todos los derechos reservados.</small><p class="catalog-footer-made"><a href="https://solara.com.ar" target="_blank" rel="noopener noreferrer">Hecho con ❤️ en solara.com.ar</a></p></div>`,
+        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div><nav aria-label="Catálogo"><strong>Explorar</strong><a href="/">Inicio</a>${catalogLinkMarkup}${searchLink}</nav><nav aria-label="Ayuda"><strong>Ayuda</strong>${helpPageLinks}${policyLinks}</nav><address><strong>Contacto</strong>${contact}</address><small>© ${new Date().getFullYear()} ${escapeHtml(context.project.identity.brandName)}. Todos los derechos reservados.</small><p class="catalog-footer-made"><a href="https://solara.com.ar" target="_blank" rel="noopener noreferrer">Hecho con ❤️ en solara.com.ar</a></p></div>`,
       ),
       { tag: "footer" },
     );

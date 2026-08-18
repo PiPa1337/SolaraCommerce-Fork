@@ -247,12 +247,12 @@ test("label y destino del enlace: edición, validación inline y contrato de dat
     "Usá http(s) o una ruta interna",
   );
 
-  await destInput.fill("/contacto/");
+  await destInput.fill("/envios/");
   await destInput.press("Tab");
   await expect(fieldsetByLegend(item, "Destino").getByTestId("ui-field-error")).toHaveCount(0);
   await expect
     .poll(async () => (await storedProject(page, store))?.project.navigation.items[0]?.href)
-    .toBe("/contacto/");
+    .toBe("/envios/");
 
   await destInput.fill("");
   await destInput.press("Tab");

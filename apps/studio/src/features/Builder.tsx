@@ -269,6 +269,7 @@ export function Builder({
   onEnableAdvanced,
 }: BuilderProps) {
   const allModules = useMemo(availableModules, []);
+  const standaloneV2PagesRemoved = project.commerceTemplates.designFamily === "catalog-modern-v2";
   const [pageKind, setPageKind] = useState<EditablePageKind>("home");
   const [selectedId, setSelectedId] = useState(project.sections[0]?.id ?? "");
   const [slotToAdd, setSlotToAdd] = useState<StoreSection["slot"]>("content");
@@ -315,6 +316,13 @@ export function Builder({
       setSelectedId(pageSections[0]?.id ?? "");
     }
   }, [pageSections, selectedId]);
+
+  useEffect(() => {
+    if (standaloneV2PagesRemoved && pageKind !== "home") {
+      setPageKind("home");
+      onPreviewRouteChange?.("/");
+    }
+  }, [onPreviewRouteChange, pageKind, standaloneV2PagesRemoved]);
 
   const closePicker = useCallback(() => {
     setPickerOpen(false);
@@ -483,8 +491,8 @@ export function Builder({
               }}
             >
               <option value="home">Home</option>
-              <option value="about">Nosotros</option>
-              <option value="contact">Contacto</option>
+              {!standaloneV2PagesRemoved ? <option value="about">Nosotros</option> : null}
+              {!standaloneV2PagesRemoved ? <option value="contact">Contacto</option> : null}
             </select>
             <select
               aria-label="Tipo de sección"

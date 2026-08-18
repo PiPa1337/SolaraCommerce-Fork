@@ -43,6 +43,48 @@ function ensureHomeContactV2Sections(project: StoreProjectV1): StoreProjectV1 {
   return { ...project, sections };
 }
 
+function ensureHomeV2ContactLinks(project: StoreProjectV1): StoreProjectV1 {
+  if (project.commerceTemplates.designFamily !== "catalog-modern-v2") return project;
+
+  let changed = false;
+  const sections = project.sections.map((section) => {
+    const settings = { ...section.settings };
+    let sectionChanged = false;
+    if (
+      section.moduleId === "catalog-hero" &&
+      typeof settings.secondaryActionHref === "string" &&
+      /^\/nosotros\/?$/i.test(settings.secondaryActionHref)
+    ) {
+      settings.secondaryActionHref = "#contact-form";
+      sectionChanged = true;
+    }
+    if (
+      section.moduleId === "catalog-newsletter-cta" &&
+      typeof settings.actionHref === "string" &&
+      /^\/contacto\/?$/i.test(settings.actionHref)
+    ) {
+      settings.actionHref = "#contact-form";
+      sectionChanged = true;
+    }
+    if (sectionChanged) changed = true;
+    return sectionChanged ? { ...section, settings } : section;
+  });
+  return changed ? { ...project, sections } : project;
+}
+
+function ensureHomeV2Navigation(project: StoreProjectV1): StoreProjectV1 {
+  if (
+    project.commerceTemplates.designFamily !== "catalog-modern-v2" ||
+    (!project.navigation.showContact && !project.navigation.showAbout)
+  ) {
+    return project;
+  }
+  return {
+    ...project,
+    navigation: { ...project.navigation, showContact: false, showAbout: false },
+  };
+}
+
 function hasDefaultContactItems(value: unknown, defaults: readonly unknown[]): boolean {
   if (!Array.isArray(value) || value.length !== defaults.length) return false;
   return value.every((item, index) => JSON.stringify(item) === JSON.stringify(defaults[index]));
@@ -187,7 +229,11 @@ export function ensureAboutV2Sections(project: StoreProjectV1): StoreProjectV1 {
 }
 
 export function ensureCatalogModernV2Sections(project: StoreProjectV1): StoreProjectV1 {
-  return ensureHomeContactV2Sections(ensureAboutV2Sections(ensureContactV2Sections(project)));
+  return ensureHomeV2Navigation(
+    ensureHomeV2ContactLinks(
+      ensureHomeContactV2Sections(ensureAboutV2Sections(ensureContactV2Sections(project))),
+    ),
+  );
 }
 
 export type CatalogModernSeed = "clean" | "demo";
@@ -248,7 +294,7 @@ function cleanProject(options: BuildCatalogModernProjectOptions): StoreProjectV2
           actionLabel: "Abrir búsqueda",
           actionHref: "/buscar/",
           secondaryActionLabel: "Conocé la marca",
-          secondaryActionHref: "/nosotros/",
+          secondaryActionHref: "#contact-form",
         },
       };
     }
@@ -266,7 +312,7 @@ function cleanProject(options: BuildCatalogModernProjectOptions): StoreProjectV2
           title: "Hacé crecer tu catálogo",
           body: "Cuando estés listo, compartí tu tienda y recibí pedidos por WhatsApp.",
           actionLabel: "Configurar contacto",
-          actionHref: "/contacto/",
+          actionHref: "#contact-form",
         },
       };
     }
@@ -324,6 +370,8 @@ function cleanProject(options: BuildCatalogModernProjectOptions): StoreProjectV2
       mode: "automatic",
       catalogLabel: "Categorías",
       items: [],
+      showContact: false,
+      showAbout: false,
     },
     pages: project.pages.map((page) => ({
       ...page,

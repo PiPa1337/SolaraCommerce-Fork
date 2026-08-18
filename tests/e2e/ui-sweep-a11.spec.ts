@@ -130,7 +130,7 @@ test("duplicar crea una copia con id nuevo, contenido independiente y feedback d
   await row(page, heroIndex + 1)
     .locator(".section-select")
     .click();
-  const title = page.getByRole("textbox", { name: "Título", exact: true });
+  const title = page.getByRole("textbox", { name: "Título", exact: true }).first();
   await title.fill("Hero duplicado del barrido");
   await expect(
     previewFrame(page).locator('[data-solara-module="catalog-hero"] h1').first(),
@@ -164,7 +164,7 @@ test("reemplazar módulo cambia el módulo y conserva sólo los settings compati
 
   const moduleSelect = page.getByLabel("Módulo");
   await expect(moduleSelect).toHaveValue("catalog-brand-strip");
-  const title = page.getByRole("textbox", { name: "Título", exact: true });
+  const title = page.getByRole("textbox", { name: "Título", exact: true }).first();
   await expect(title).toHaveValue("Marcas que nos acompañan");
   await expect(page.getByRole("spinbutton", { name: "Cantidad" })).toHaveValue("5");
 
@@ -351,7 +351,7 @@ test("eliminar quita la sección del proyecto y del preview, salta la selección
 
   // Preparar contenido propio para verificar que undo restaura el snapshot.
   await selectHero(page);
-  const title = page.getByRole("textbox", { name: "Título", exact: true });
+  const title = page.getByRole("textbox", { name: "Título", exact: true }).first();
   await title.fill("Hero que voy a borrar");
   await expect(previewFrame(page).locator('[data-solara-module="catalog-hero"] h1')).toHaveText(
     "Hero que voy a borrar",
@@ -394,32 +394,14 @@ test("eliminar quita la sección del proyecto y del preview, salta la selección
   await expect(sections.getByRole("listitem")).toHaveCount(initialCount - 1);
 });
 
-test("eliminar la última sección muestra el estado vacío y undo la devuelve", async ({ page }) => {
+test("V2 no permite seleccionar páginas editoriales archivadas en el Builder", async ({ page }) => {
   await openBuilder(page);
-  await page.getByLabel("Página de edición").selectOption("about");
-  await expect(sectionsList(page).getByRole("listitem")).toHaveCount(0);
+  const pageSelector = page.getByLabel("Página de edición");
 
-  // Alta en la página secundaria para dejar una única sección (setup).
-  await page.getByRole("button", { name: "Agregar sección" }).click();
-  await page
-    .getByTestId("ui-module-picker")
-    .getByRole("button", { name: /Testimonios/ })
-    .click();
-  await expect(sectionsList(page).getByRole("listitem")).toHaveCount(1);
-
-  // Eliminar la última: estado vacío con invitación a seleccionar.
-  await row(page, 0).getByRole("button", { name: "Eliminar sección" }).click();
-  await page
-    .getByTestId("ui-confirm-dialog")
-    .getByRole("button", { name: "Eliminar sección", exact: true })
-    .click();
-  await expect(sectionsList(page).getByRole("listitem")).toHaveCount(0);
-  await expect(page.getByText("Seleccioná una sección", { exact: true })).toBeVisible();
-
-  // Undo la devuelve y la selección apunta a ella.
-  await undoButton(page).click();
-  await expect(sectionsList(page).getByRole("listitem")).toHaveCount(1);
-  await expect(row(page, 0)).toHaveAttribute("data-selected", "true");
+  await expect(pageSelector).toHaveValue("home");
+  await expect(pageSelector.locator("option")).toHaveCount(1);
+  await expect(pageSelector.locator('option[value="about"]')).toHaveCount(0);
+  await expect(pageSelector.locator('option[value="contact"]')).toHaveCount(0);
 });
 
 test("guardar un valor válido del inspector aplica al preview y persiste tras recarga", async ({
@@ -428,7 +410,7 @@ test("guardar un valor válido del inspector aplica al preview y persiste tras r
   await openBuilder(page);
   await selectHero(page);
 
-  const title = page.getByRole("textbox", { name: "Título", exact: true });
+  const title = page.getByRole("textbox", { name: "Título", exact: true }).first();
   await title.fill("Título persistente del barrido A11");
   await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
   await expect(previewFrame(page).locator('[data-solara-module="catalog-hero"] h1')).toHaveText(
@@ -444,7 +426,7 @@ test("guardar un valor válido del inspector aplica al preview y persiste tras r
   await page.reload();
   await reopenBuilder(page);
   await selectHero(page);
-  await expect(page.getByRole("textbox", { name: "Título", exact: true })).toHaveValue(
+  await expect(page.getByRole("textbox", { name: "Título", exact: true }).first()).toHaveValue(
     "Título persistente del barrido A11",
   );
 });
@@ -545,7 +527,7 @@ test("cada operación de sección entra al historial con feedback en Deshacer/Re
     .click();
   await expect(sections.getByRole("listitem")).toHaveCount(initialCount);
   await selectHero(page);
-  const title = page.getByRole("textbox", { name: "Título", exact: true });
+  const title = page.getByRole("textbox", { name: "Título", exact: true }).first();
   await title.fill("Título en el ciclo de historial");
   await expect(undoButton(page)).toBeEnabled();
 

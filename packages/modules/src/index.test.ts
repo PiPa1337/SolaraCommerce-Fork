@@ -1098,6 +1098,40 @@ describe("auditoría Resumen — fixes Ola 3 (navegación y footer moderno)", ()
     expect(editorHtml).not.toContain('href="/categorias/remeras/"');
   });
 
+  it("V2 redirige Contacto al bloque de Home y omite Nosotros archivado", () => {
+    const project = structuredClone(catalogModernV2Store);
+    project.navigation = {
+      ...project.navigation,
+      mode: "curated",
+      items: [
+        { id: "nav-contact-v2", label: "Contacto", href: "/contacto/" },
+        { id: "nav-about-v2", label: "Nosotros", href: "/nosotros/" },
+        {
+          id: "nav-help-v2",
+          label: "Ayuda",
+          href: "/envios/",
+          children: [
+            { id: "nav-child-contact-v2", label: "Contacto", href: "/contacto/" },
+            { id: "nav-child-about-v2", label: "Nosotros", href: "/nosotros/" },
+          ],
+        },
+      ],
+    };
+
+    const headerSection = createModuleSection({
+      id: "section-modern-header-v2-archived-pages" as StoreSection["id"],
+      slot: "header",
+      moduleId: "catalog-header",
+    });
+    const html = renderSections(project, [headerSection], { pageType: "home" });
+
+    expect(html).toContain('href="/#contact-form"');
+    expect(html).toContain('href="/envios/"');
+    expect(html).not.toContain('href="/contacto/"');
+    expect(html).not.toContain('href="/nosotros/"');
+    expect(html).not.toContain(">Nosotros</a>");
+  });
+
   it("la plantilla limpia (automatic, sin items ni categorías) conserva el fallback a /buscar/", () => {
     const html = renderSections(catalogModernCleanStore, [headerSection], { pageType: "home" });
     expect(html).toContain('class="catalog-nav-empty" href="/buscar/"');

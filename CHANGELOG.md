@@ -1,5 +1,18 @@
 # Changelog
 
+### Páginas públicas V2 concentradas en Home (2026-08-18)
+
+- **Navegación**: la tienda `catalog-modern-v2` deja de publicar las páginas
+  independientes `Contacto` y `Nosotros`; Inicio conserva la sección de
+  contacto responsive al final de la página.
+- **Compatibilidad**: los datos guardados de esas páginas se conservan como
+  archivo interno para no borrar contenido persistido, pero no se incluyen en
+  HTML, Preview, navegación ni en el selector de páginas del Constructor V2.
+- **Enlaces**: los CTA heredados hacia `/nosotros/` y `/contacto/` se normalizan
+  hacia `#contact-form`; la familia V1 mantiene sus rutas y enlaces originales.
+- **Regresión**: exporter, schema, Preview, Constructor y E2E verifican la
+  ausencia de las rutas V2 y la presencia del formulario y canales en Home.
+
 ### Contacto al final de Home V2 (2026-08-18)
 
 - **Home**: se agregaron los módulos editables de formulario y canales de

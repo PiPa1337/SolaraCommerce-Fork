@@ -170,6 +170,15 @@ describe("plantilla Catalog Modern", () => {
 
   it("agrega Contacto al final de Home V2 sin duplicar módulos ni tocar V1", () => {
     const legacy = structuredClone(catalogModernV2Store);
+    legacy.navigation.showContact = true;
+    legacy.navigation.showAbout = true;
+    const legacyHero = legacy.sections.find((section) => section.moduleId === "catalog-hero");
+    const legacyNewsletter = legacy.sections.find(
+      (section) => section.moduleId === "catalog-newsletter-cta",
+    );
+    if (!legacyHero || !legacyNewsletter) throw new Error("Fixture V2 sin CTA de contacto");
+    legacyHero.settings.secondaryActionHref = "/nosotros/";
+    legacyNewsletter.settings.actionHref = "/contacto/";
     legacy.sections = legacy.sections.filter(
       (section) => !["contact-form", "contact-channels"].includes(section.moduleId),
     );
@@ -182,6 +191,16 @@ describe("plantilla Catalog Modern", () => {
     expect(formIndex).toBeGreaterThan(-1);
     expect(channelsIndex).toBe(formIndex + 1);
     expect(cartIndex).toBeGreaterThan(channelsIndex);
+    expect(normalized.navigation.showContact).toBe(false);
+    expect(normalized.navigation.showAbout).toBe(false);
+    expect(
+      normalized.sections.find((section) => section.moduleId === "catalog-hero")?.settings
+        .secondaryActionHref,
+    ).toBe("#contact-form");
+    expect(
+      normalized.sections.find((section) => section.moduleId === "catalog-newsletter-cta")?.settings
+        .actionHref,
+    ).toBe("#contact-form");
     expect(ensureCatalogModernV2Sections(normalized)).toEqual(normalized);
 
     const v1 = structuredClone(catalogModernStore);

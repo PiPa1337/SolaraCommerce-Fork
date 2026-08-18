@@ -118,7 +118,27 @@ export const editorialHeader: ModuleDefinition<
   styleAsset: scopedAssetId("editorial-header"),
   render(context) {
     const navigation = context.project.navigation;
-    const nestedItems = navigation.items
+    const isV2 = context.project.commerceTemplates.designFamily === "catalog-modern-v2";
+    const showContact = !isV2 && navigation.showContact;
+    const showAbout = !isV2 && navigation.showAbout;
+    const publishedNavigationItems = navigation.items.flatMap((item) => {
+      if (isV2 && /^\/nosotros\/?$/i.test(item.href ?? "")) return [];
+      const normalizeHref = (href: string | undefined): string | undefined => {
+        if (isV2 && /^\/contacto\/?$/i.test(href ?? "")) return "/#contact-form";
+        if (isV2 && /^\/nosotros\/?$/i.test(href ?? "")) return undefined;
+        return href;
+      };
+      return [
+        {
+          ...item,
+          href: normalizeHref(item.href),
+          children: item.children
+            ?.filter((child) => !/^\/nosotros\/?$/i.test(child.href ?? ""))
+            .map((child) => ({ ...child, href: normalizeHref(child.href) })),
+        },
+      ];
+    });
+    const nestedItems = publishedNavigationItems
       .map(
         (item) =>
           `<li><a href="${escapeAttribute(safeUrl(item.href ?? "#"))}">${escapeHtml(item.label)}</a>${
@@ -144,13 +164,13 @@ export const editorialHeader: ModuleDefinition<
       ? ' aria-current="page"'
       : "";
     const catalogClass =
-      navigation.items.length > 6
+      publishedNavigationItems.length > 6
         ? "solara-nav-dropdown solara-nav-dropdown--wide"
         : "solara-nav-dropdown";
     const catalog = context.settings.showCategories
       ? `<details class="${catalogClass}"><summary${catalogCurrent}>${escapeHtml(navigation.catalogLabel || context.settings.catalogLabel)}</summary><ul>${nestedItems || `<li><a href="${escapeAttribute(safeUrl(context.settings.catalogHref))}">${escapeHtml(context.settings.catalogLabel)}</a></li>`}</ul></details>`
       : `<a href="${escapeAttribute(safeUrl(context.settings.catalogHref))}"${catalogCurrent}>${escapeHtml(navigation.catalogLabel || context.settings.catalogLabel)}</a>`;
-    const nav = `${navigation.showHome ? `<a href="/"${homeCurrent}>Inicio</a>` : ""}${catalog}${navigation.showContact ? `<a href="/contacto/"${contactCurrent}>Contacto</a>` : ""}${navigation.showAbout ? `<a href="/nosotros/"${aboutCurrent}>Nosotros</a>` : ""}`;
+    const nav = `${navigation.showHome ? `<a href="/"${homeCurrent}>Inicio</a>` : ""}${catalog}${showContact ? `<a href="/contacto/"${contactCurrent}>Contacto</a>` : ""}${showAbout ? `<a href="/nosotros/"${aboutCurrent}>Nosotros</a>` : ""}`;
     const actions = `${navigation.showSearch && context.project.commerceTemplates.search.enabled ? `<a class="solara-search-trigger" href="/buscar/" aria-label="Buscar productos"${searchCurrent}>Buscar</a>` : ""}${navigation.showCart && context.project.siteShell.cart && (context.project.commerceTemplates.cart.enabled || context.project.commerceTemplates.checkout.enabled) ? `<button class="solara-cart-trigger" type="button" data-solara-cart-open data-open-cart data-cart-label="${escapeAttribute(context.settings.cartLabel)}" aria-controls="solara-cart" aria-expanded="false"${cartCurrent}>${escapeHtml(context.settings.cartLabel)} <span data-solara-cart-count data-cart-count aria-live="polite">0</span></button>` : ""}`;
     return moduleRoot(
       "editorial-header",

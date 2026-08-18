@@ -1478,9 +1478,9 @@ test("V2 conserva nombres accesibles, foco visible y navegacion por teclado", as
 
 test("V2 indica la ruta activa en la navegacion", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 968 });
-  await page.goto(new URL("/contacto/", serverUrl).toString());
+  await page.goto(new URL("/", serverUrl).toString());
   const activeDesktopLink = page.locator('.catalog-desktop-nav [aria-current="page"]');
-  await expect(activeDesktopLink).toHaveText("Contacto");
+  await expect(activeDesktopLink).toHaveText("Inicio");
   expect(
     await activeDesktopLink.evaluate((element) => getComputedStyle(element, "::after").transform),
   ).not.toBe("matrix(0, 0, 0, 1, 0, 0)");
@@ -1543,8 +1543,6 @@ test("V2 mantiene todas las rutas sin overflow en tablet y laptop", async ({ pag
     "/buscar/",
     "/carrito/",
     "/compra/",
-    "/nosotros/",
-    "/contacto/",
     "/envios/",
     "/devoluciones/",
     "/privacidad/",
@@ -1789,8 +1787,6 @@ test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, t
   const routes = [
     ["buscar", "/buscar/"],
     ["carrito", "/carrito/"],
-    ["nosotros", "/nosotros/"],
-    ["contacto", "/contacto/"],
     ["envios", "/envios/"],
     ["devoluciones", "/devoluciones/"],
     ["privacidad", "/privacidad/"],

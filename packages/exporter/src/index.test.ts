@@ -30,35 +30,16 @@ function homeMetaDescription(homeHtml: string): string {
 }
 
 describe("exporter", () => {
-  it("renderiza Nosotros V2 desde sections editables y mantiene el orden", () => {
-    const project = structuredClone(catalogModernV2Store);
-    const about = project.pages.find((page) => page.kind === "about");
-    if (!about) throw new Error("Fixture sin página about");
-    const hero = about.sections[0];
-    if (!hero) throw new Error("Página about sin hero");
-    about.sections[0] = {
-      ...hero,
-      settings: {
-        ...hero.settings,
-        title: "Título editable de Nosotros",
-        body: "Descripción editable de Nosotros",
-      },
-    };
-
-    const result = exportProject(project, { mode: "production" });
-    const html = String(result.files.get("nosotros/index.html"));
-    expect(html).toContain('class="solara-about-page solara-container"');
-    expect(html).toContain('data-solara-module="about-hero"');
-    expect(html).toContain('data-solara-module="about-history"');
-    expect(html).toContain('data-solara-module="about-products-cta"');
-    expect(html).toContain("Título");
-    expect(html).toContain("editable de");
-    expect(html).toContain("Nosotros");
-    expect(html).toContain("Descripción editable de Nosotros");
-    expect(html).not.toContain("solara-story-grid");
-    expect(html).toContain("<title>Nosotros | Modo Sur</title>");
-    expect(html).toContain('"@type":"AboutPage"');
-    expect(html).toContain('rel="canonical"');
+  it("no publica las páginas Nosotros y Contacto independientes en V2", () => {
+    const result = exportProject(catalogModernV2Store, { mode: "production" });
+    expect(result.files.has("nosotros/index.html")).toBe(false);
+    expect(result.files.has("contacto/index.html")).toBe(false);
+    expect(renderPreviewHtml(catalogModernV2Store, "draft", "/nosotros/")).toContain(
+      "No encontramos esa página",
+    );
+    expect(renderPreviewHtml(catalogModernV2Store, "draft", "/contacto/")).toContain(
+      "No encontramos esa página",
+    );
   });
 
   it("mantiene el fallback de Nosotros para proyectos no V2", () => {
@@ -70,22 +51,15 @@ describe("exporter", () => {
     expect(html).not.toContain('data-solara-module="about-hero"');
   });
 
-  it("usa el mismo renderer de secciones en preview y exportación", () => {
+  it("usa el mismo renderer del contacto final de Home en preview y exportación", () => {
     const project = structuredClone(catalogModernV2Store);
-    const about = project.pages.find((page) => page.kind === "about");
-    if (!about) throw new Error("Fixture sin página about");
-    const hero = about.sections[0];
-    if (!hero) throw new Error("Página about sin hero");
-    about.sections[0] = {
-      ...hero,
-      settings: { ...hero.settings, title: "Preview Nosotros" },
-    };
-    const preview = renderPreviewHtml(project, "draft", "/nosotros/");
-    expect(preview).toContain("Preview");
-    expect(preview).toContain("Nosotros");
-    expect(
-      String(exportProject(project, { mode: "draft" }).files.get("nosotros/index.html")),
-    ).toContain("Preview");
+    const contact = project.sections.find((section) => section.moduleId === "contact-form");
+    if (!contact) throw new Error("Fixture sin formulario de contacto en Home");
+    contact.settings = { ...contact.settings, title: "Preview Escribinos" };
+    const preview = renderPreviewHtml(project, "draft", "/");
+    const exportedHome = String(exportProject(project, { mode: "draft" }).files.get("index.html"));
+    expect(preview).toContain("Preview Escribinos");
+    expect(exportedHome).toContain("Preview Escribinos");
   });
 
   it("minifyCss conserva los espacios de + en calc (válido) y compacta el resto", () => {
@@ -1081,16 +1055,12 @@ describe("exporter", () => {
     expect(/<title>([\s\S]*?)<\/title>/.exec(homeHtml)?.[1]).toBe("Título de la página Home");
   });
 
-  it("renderiza Contacto V2 desde sus sections editables", () => {
-    const html = String(
-      exportProject(catalogModernV2Store, { mode: "production" }).files.get("contacto/index.html"),
-    );
-    expect(html).toContain('data-solara-module="contact-hero"');
-    expect(html).toContain('data-solara-module="contact-form"');
-    expect(html).toContain('data-solara-module="contact-faq"');
-    expect(html).toContain('"@type":"ContactPage"');
-    expect(html).not.toContain("Lo que nos guía");
-    expect(html).not.toContain("Información clara");
+  it("conserva la configuración archivada de Contacto V2 sin publicarla", () => {
+    const contact = catalogModernV2Store.pages.find((page) => page.kind === "contact");
+    expect(contact?.sections.some((section) => section.moduleId === "contact-form")).toBe(true);
+    expect(
+      exportProject(catalogModernV2Store, { mode: "production" }).files.has("contacto/index.html"),
+    ).toBe(false);
   });
 
   it("usa el seo global como fallback en rutas sin página editable", () => {
