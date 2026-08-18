@@ -1,5 +1,14 @@
 # Changelog
 
+### Hero V2 y exportación pública (2026-08-17)
+
+- **Hero**: la media principal queda visible desde el primer paint; conserva el
+  zoom compositado de entrada sin ocultarse durante la espera de la animación.
+- **Exportación**: el fondo editorial del hero queda cubierto por una prueba de
+  assets y los exports production precargan las fuentes locales activas.
+- **Accesibilidad y seguridad**: los enlaces de cada grilla de productos tienen
+  nombres accesibles distintos y HSTS incorpora la directiva `preload`.
+
 ### Predeterminado V2 como única demo integrada (2026-08-17)
 
 - **Producto**: Studio deja de sembrar y mostrar las referencias `Modo Sur V1` y

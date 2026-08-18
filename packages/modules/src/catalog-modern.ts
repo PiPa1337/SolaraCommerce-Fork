@@ -890,6 +890,9 @@ export const catalogProductGrid: ModuleDefinition<
     const searchEnabled =
       context.project.navigation.showSearch && context.project.commerceTemplates.search.enabled;
     const viewAllHref = catalogSearchHref(searchEnabled, context.settings.viewAllHref);
+    const viewAllAriaLabel = context.settings.title.trim()
+      ? `Ver todos los productos de ${context.settings.title.trim()}`
+      : "Ver todos los productos de esta sección";
     const categoryGrid = context.pageType === "category" ? " data-category-grid" : "";
     const cards = products
       .map((product, index) => {
@@ -913,7 +916,7 @@ export const catalogProductGrid: ModuleDefinition<
       "catalog-product-grid",
       context.section,
       safeHtml(
-        `<div class="catalog-product-grid-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${context.settings.showViewAll ? `<a class="catalog-view-all" href="${escapeAttribute(safeUrl(viewAllHref))}">Ver todos</a>` : ""}</header><div class="catalog-product-grid" data-motion-zone="items"${categoryGrid}>${cards || '<p class="catalog-empty">No hay productos para mostrar.</p>'}</div></div>`,
+        `<div class="catalog-product-grid-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${context.settings.showViewAll ? `<a class="catalog-view-all" href="${escapeAttribute(safeUrl(viewAllHref))}" aria-label="${escapeAttribute(viewAllAriaLabel)}">Ver todos</a>` : ""}</header><div class="catalog-product-grid" data-motion-zone="items"${categoryGrid}>${cards || '<p class="catalog-empty">No hay productos para mostrar.</p>'}</div></div>`,
       ),
     );
   },

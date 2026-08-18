@@ -521,6 +521,11 @@ test("V2 hero: la foto no hace zoom al hover y el CTA conserva cortina sin mover
   const hero = page.locator('[data-solara-module="catalog-hero"]');
   const media = hero.locator("[data-hero-media]");
   const image = hero.locator(".catalog-hero-image");
+  const backgroundImage = hero.locator(".catalog-hero-background-image");
+  await expect
+    .poll(() => backgroundImage.evaluate((element) => (element as HTMLImageElement).naturalWidth))
+    .toBeGreaterThan(0);
+  await expect.poll(() => media.evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
   const mediaTransform = await image.evaluate((element) => getComputedStyle(element).transform);
   await hero.locator(".catalog-hero-copy").hover();
   await page.waitForTimeout(600);

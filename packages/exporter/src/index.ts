@@ -37,7 +37,7 @@ import {
   optimizeProject,
 } from "@solara/site-optimizer";
 import { STOREFRONT_RUNTIME_CSS, STOREFRONT_RUNTIME_JS } from "@solara/storefront-runtime";
-import { type FontTransport, fontCssFor, fontFilesFor } from "./fonts";
+import { activeFonts, type FontTransport, fontCssFor, fontFilesFor } from "./fonts";
 
 export type { OptimizationReport } from "@solara/site-optimizer";
 export type { FontOption, FontTransport } from "./fonts";
@@ -1203,6 +1203,15 @@ function renderDocument(
     mode === "production" && criticalImage
       ? `<link rel="preload" as="image" href="${escapeAttribute(criticalImage)}" fetchpriority="high">`
       : "";
+  const fontPreloads =
+    mode === "production"
+      ? activeFonts(project.theme.typography.display, project.theme.typography.body)
+          .map(
+            (font) =>
+              `<link rel="preload" as="font" type="font/woff2" href="${escapeAttribute(assetHref(project, `/${font.woff2Path}`))}" crossorigin>`,
+          )
+          .join("\n  ")
+      : "";
   const aiContextLinks =
     mode === "production" && publicAiContext && !nonIndexablePage
       ? `<link rel="alternate" type="application/json" title="Contexto publico para agentes" href="${escapeAttribute(assetHref(project, "/ai-context.json"))}">
@@ -1228,6 +1237,7 @@ function renderDocument(
   ${socialImage ? `<meta property="og:image" content="${escapeHtml(socialImage)}">` : ""}
   ${verification}
   ${lcpPreload}
+  ${fontPreloads}
   ${aiContextLinks}
   <link rel="stylesheet" href="${escapeAttribute(assetHref(project, "/assets/storefront.css"))}">
   ${structuredData}
@@ -2558,7 +2568,7 @@ function buildFiles(
       `/*
   Cache-Control: public, max-age=0, must-revalidate
   Content-Security-Policy: default-src 'self'; img-src 'self' data: https: http:; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self'; media-src 'self' data: https: http:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types solara-storefront
-  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   Cross-Origin-Opener-Policy: same-origin
   Referrer-Policy: strict-origin-when-cross-origin
   X-Content-Type-Options: nosniff

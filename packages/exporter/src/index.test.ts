@@ -340,7 +340,44 @@ describe("exporter", () => {
     expect(product.match(/<link rel="preload" as="image"/g)).toHaveLength(1);
     expect(headers).toContain("/assets/*");
     expect(headers).toContain("max-age=31536000, immutable");
+    expect(headers).toContain(
+      "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload",
+    );
     expect(headers).toContain("/ai-context.json");
+  });
+
+  it("incluye el fondo editorial del hero en los assets del export", () => {
+    const project = structuredClone(catalogModernV2Store);
+    const hero = project.sections.find((section) => section.moduleId === "catalog-hero");
+    const heroAsset = project.assets.find((asset) => asset.id === "asset-hero");
+    if (!hero || !heroAsset) throw new Error("Fixture V2 sin hero o imagen principal");
+
+    const backgroundAsset = {
+      ...heroAsset,
+      id: "asset-hero-background-test" as typeof heroAsset.id,
+      name: "Fondo editorial de prueba",
+      source: "data:image/webp;base64,UklGRg==",
+      fallbackSource: undefined,
+      responsiveSources: [],
+      hash: "test-hero-background",
+    };
+    project.assets.push(backgroundAsset);
+    hero.settings = { ...hero.settings, backgroundImageId: backgroundAsset.id };
+
+    const result = exportProject(project, { mode: "production" });
+    const home = String(result.files.get("index.html"));
+
+    expect(home).toContain("/assets/test-hero-background.webp");
+    expect(result.files.has("assets/test-hero-background.webp")).toBe(true);
+  });
+
+  it("precarga las fuentes locales activas en production", () => {
+    const result = exportProject(catalogModernV2Store, { mode: "production" });
+    const home = String(result.files.get("index.html"));
+
+    expect(home).toContain(
+      '<link rel="preload" as="font" type="font/woff2" href="/assets/fonts/archivo.woff2" crossorigin>',
+    );
   });
 
   it("publica rutas editoriales, catálogo reconciliable y sitemaps sin checkout", () => {
@@ -823,7 +860,7 @@ describe("exporter", () => {
     expect(headers).toBe(`/*
   Cache-Control: public, max-age=0, must-revalidate
   Content-Security-Policy: default-src 'self'; img-src 'self' data: https: http:; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self'; media-src 'self' data: https: http:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types solara-storefront
-  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   Cross-Origin-Opener-Policy: same-origin
   Referrer-Policy: strict-origin-when-cross-origin
   X-Content-Type-Options: nosniff

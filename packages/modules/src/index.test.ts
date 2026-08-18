@@ -789,13 +789,26 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     expect(headerHtml).toMatch(/<noscript>[\s\S]*@media print/);
   });
 
-  it("usa una entrada de hero compositada sin clip-path", () => {
+  it("mantiene visible la media LCP y usa zoom compositado sin clip-path", () => {
     const modernStyles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
     if (!modernStyles) throw new Error("Falta el bloque de estilos catalog-modern-v2");
 
-    expect(modernStyles).toContain("@keyframes solara-hero-media");
-    expect(modernStyles).toContain("@keyframes solara-hero-media{from{opacity:0}to{opacity:1}}");
+    expect(modernStyles).toContain(
+      "[data-hero-media]{animation:none!important;opacity:1!important}",
+    );
+    expect(modernStyles).toContain("@keyframes solara-hero-media-zoom");
     expect(modernStyles).not.toContain("clip-path");
+  });
+});
+
+describe("catalog-product-grid: nombres accesibles únicos", () => {
+  it("distingue los enlaces de cada sección por su título", () => {
+    const html = renderSections(catalogModernV2Store, catalogModernV2Store.sections, {
+      pageType: "home",
+    });
+
+    expect(html).toContain('aria-label="Ver todos los productos de Recién llegados"');
+    expect(html).toContain('aria-label="Ver todos los productos de Más elegidos"');
   });
 });
 

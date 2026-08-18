@@ -2704,16 +2704,12 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-benefits--copy .catalog-hero-benefit{animation:solara-hero-rise var(--hero-v2-dur-benefit,420ms) var(--catalog-v2-ease-out) var(--hero-v2-benefit-delay,500ms) both}
 .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-benefits--copy .catalog-hero-benefit:nth-child(2){--hero-v2-benefit-delay:560ms}
 .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-benefits--copy .catalog-hero-benefit:nth-child(3){--hero-v2-benefit-delay:620ms}
-.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] [data-hero-media]{animation:solara-hero-media var(--hero-v2-dur-media,900ms) var(--catalog-v2-ease-out) 80ms backwards!important}
+.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] [data-hero-media]{animation:none!important;opacity:1!important}
 .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-image{animation:solara-hero-media-zoom var(--hero-v2-dur-zoom,1200ms) var(--catalog-v2-ease-out) 80ms backwards}
 @keyframes solara-hero-rise{from{opacity:0;transform:translateY(var(--hero-v2-rise,16px))}to{opacity:1;transform:translateY(0)}}
 @keyframes solara-hero-line{from{transform:translateY(115%)}to{transform:translateY(0)}}
 @keyframes solara-hero-rule{from{transform:scaleX(0)}to{transform:scaleX(1)}}
-@keyframes solara-hero-media{from{opacity:0}to{opacity:1}}
 @keyframes solara-hero-media-zoom{from{transform:scale(1.06)}to{transform:scale(1)}}
-@supports (animation-timeline:view()){
-.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] [data-hero-media]{animation:solara-hero-media var(--hero-v2-dur-media,900ms) var(--catalog-v2-ease-out) 80ms backwards,solara-hero-parallax linear backwards!important;animation-timeline:auto,view()!important;animation-range:normal,exit 0% exit 25%!important}
-}
 .cm.v2 .catalog-brand-strip-inner,
 .cm.v2 .catalog-product-grid-section,
 .cm.v2 .catalog-category-bento-section,
@@ -4135,7 +4131,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-benefits--copy .catalog-hero-benefit { animation: solara-hero-rise var(--hero-v2-dur-benefit, 420ms) var(--catalog-v2-ease-out) var(--hero-v2-benefit-delay, 500ms) both; }
   .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-benefits--copy .catalog-hero-benefit:nth-child(2) { --hero-v2-benefit-delay: 560ms; }
   .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-benefits--copy .catalog-hero-benefit:nth-child(3) { --hero-v2-benefit-delay: 620ms; }
-  .cm.v2 .catalog-hero-page[data-motion-visible="true"] [data-hero-media] { animation: solara-hero-media var(--hero-v2-dur-media, 900ms) var(--catalog-v2-ease-out) 80ms backwards !important; }
+  .cm.v2 .catalog-hero-page[data-motion-visible="true"] [data-hero-media] { animation: none !important; opacity: 1 !important; }
   .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-image { animation: solara-hero-media-zoom var(--hero-v2-dur-zoom, 1200ms) var(--catalog-v2-ease-out) 80ms backwards; }
   .cm.v2 .contact-hero-module[data-motion-visible="true"] .contact-hero-links { --hero-v2-rise: 16px; animation: solara-hero-rise 460ms var(--catalog-v2-ease-out) 140ms backwards !important; }
   .cm.v2 .contact-hero-module[data-motion-visible="true"] .contact-hero-links .contact-quick-link { --hero-v2-rise: 12px; animation: solara-hero-rise 420ms var(--catalog-v2-ease-out) calc(140ms + var(--contact-link-index, 0) * 70ms) backwards !important; }
