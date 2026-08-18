@@ -30,7 +30,7 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(home).toContain("data-catalog-search-dialog");
     expect(home).toContain("data-catalog-search-open");
     expect(home).toContain("/fixtures/modo-sur-hero.png");
-    expect(home).toContain("/fixtures/modo-sur-remera.png");
+    expect(home).toContain("/fixtures/modo-sur-product-01.webp");
     expect(home.match(/data-product-card/g) ?? []).toHaveLength(20);
     expect(home).not.toContain("catalog-product-rating");
     expect(home).not.toContain("catalog-product-availability");
@@ -93,6 +93,7 @@ describe("tienda base catalog-modern de 50 productos", () => {
       [...html.matchAll(/data-solara-module="([^"]+)"/g)].map((match) => match[1]);
     const search = JSON.parse(String(exported.files.get("search-index.json"))) as Array<{
       title: string;
+      options?: string[];
       tokens?: {
         title: string[];
         brand: string[];
@@ -109,6 +110,7 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(remera?.tokens?.title).toContain("algodon");
     expect(remera?.tokens?.description).toContain("prenda");
     expect(remera?.tokens?.categories).toContain("basicas");
+    expect(remera?.options).toContain("Talle=S");
     expect(search.every((entry) => Array.isArray(entry.tokens?.title))).toBe(true);
     expect(exported.files.has("categorias/novedades/index.html")).toBe(false);
     expect(exported.files.has("categorias/sale/index.html")).toBe(false);
@@ -145,7 +147,10 @@ describe("tienda base catalog-modern de 50 productos", () => {
 
     expect(search).toContain("data-catalog-search-dialog");
     expect(search).toContain("data-catalog-search-open");
-    expect(search).toContain('class="solara-search-results" data-search-results');
+    expect(search).toContain('class="catalog-category-layout solara-search-layout"');
+    expect(search).toContain('data-search-results aria-live="polite"');
+    expect(search).toContain('data-category-option-key="Talle"');
+    expect(search).toContain("data-search-sort");
     expect(search).toContain('<form class="solara-search-form" role="search" action="/buscar/"');
     expect(search).toContain('<label for="solara-search-input">Buscar productos</label>');
     expect(search).toContain('<input id="solara-search-input" name="q" type="search"');

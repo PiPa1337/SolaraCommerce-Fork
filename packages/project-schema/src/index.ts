@@ -920,6 +920,21 @@ export type StoreProjectV2 = z.infer<typeof StoreProjectV2Schema>;
 export type StoreProjectV1 = StoreProjectV2;
 export const StoreProjectV1Schema = StoreProjectV2Schema;
 
+/**
+ * Keeps the default order greeting aligned with the storefront identity while
+ * preserving the configured punctuation and the rest of a custom greeting.
+ */
+export function personalizeWhatsAppGreeting(greeting: string, brandName: string): string {
+  const configured = greeting.trim();
+  const brand = brandName.trim();
+  if (!configured || !brand || !/^hola\b/i.test(configured)) return configured;
+  const separator = configured.search(/[,:]/);
+  if (separator < 0) {
+    return `Hola ${brand}, ${configured.replace(/^hola\s*/i, "").trim()}`.trim();
+  }
+  return `Hola ${brand}${configured[separator]}${configured.slice(separator + 1)}`.trim();
+}
+
 /** Devuelve la cadena raíz-padre sin mutar el proyecto. */
 export function getCategoryAncestors(
   project: Pick<StoreProjectV2, "categories">,

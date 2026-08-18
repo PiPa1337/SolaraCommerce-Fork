@@ -14,6 +14,13 @@ const fixtureFiles = new Map<string, Uint8Array>(
     readFileSync(resolve(`apps/studio/public/fixtures/modo-sur-${name}.png`)),
   ]),
 );
+for (let index = 1; index <= 12; index += 1) {
+  const number = String(index).padStart(2, "0");
+  fixtureFiles.set(
+    `fixtures/modo-sur-product-${number}.webp`,
+    readFileSync(resolve(`apps/studio/public/fixtures/modo-sur-product-${number}.webp`)),
+  );
+}
 
 let server: Server;
 let serverUrl: string;
@@ -53,7 +60,9 @@ test.beforeAll(async () => {
             ? "text/javascript; charset=utf-8"
             : extension === "png"
               ? "image/png"
-              : "application/octet-stream";
+              : extension === "webp"
+                ? "image/webp"
+                : "application/octet-stream";
     response.writeHead(200, { "Content-Type": contentType, "Cache-Control": "no-store" });
     response.end(content);
   });
@@ -1668,9 +1677,7 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
     const results = page.locator(".solara-search-results-grid");
     await expect(results).toBeVisible();
     await expect(results.locator(".solara-search-result").first()).toBeVisible();
-    await expect(page.locator(".solara-search-summary").first()).toHaveText(
-      /^\d+ resultados para “remera”$/,
-    );
+    await expect(page.locator("[data-search-result-count]").first()).toContainText("productos");
     await expect(results.locator("img").first()).toHaveAttribute(
       "sizes",
       "(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem",
@@ -1692,10 +1699,10 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
         expect(resultsMetrics.cardWidth).toBeGreaterThan(195);
         expect(resultsMetrics.cardWidth).toBeLessThan(215);
       } else {
-        expect(resultsMetrics.gridWidth).toBeGreaterThan(950);
-        expect(resultsMetrics.gridWidth).toBeLessThanOrEqual(1000);
-        expect(resultsMetrics.cardWidth).toBeGreaterThan(300);
-        expect(resultsMetrics.cardWidth).toBeLessThan(340);
+        expect(resultsMetrics.gridWidth).toBeGreaterThan(640);
+        expect(resultsMetrics.gridWidth).toBeLessThanOrEqual(720);
+        expect(resultsMetrics.cardWidth).toBeGreaterThan(200);
+        expect(resultsMetrics.cardWidth).toBeLessThan(240);
       }
     }
     expect(

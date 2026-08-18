@@ -401,7 +401,7 @@ test("las cards, el bento y la búsqueda moderna usan contenido real", async ({ 
     form.requestSubmit();
   });
   await expect(page).toHaveURL(/\/buscar\/\?q=Remera$/);
-  await expect(page.locator(".solara-search-summary")).toContainText("Remera");
+  await expect(page.locator("[data-search-result-count]")).toContainText("productos");
   await expect(page.locator("[data-search-results] .solara-search-result").first()).toBeVisible();
   await expect(dialog).toBeHidden();
 

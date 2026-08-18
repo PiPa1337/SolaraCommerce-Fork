@@ -21,6 +21,7 @@ import {
   getCategoryProductIds,
   type Product,
   type ProductReview,
+  personalizeWhatsAppGreeting,
 } from "@solara/project-schema";
 import { z } from "zod";
 import { lowestPrice, renderBrand, scopedAssetId } from "./helpers";
@@ -986,7 +987,10 @@ function buildWhatsAppInquiryLink(
   if (!phone || rawPhone === CATALOG_MODERN_PLACEHOLDER_PHONE) return "";
   const firstVariant = product.variants.find((variant) => variant.available) ?? product.variants[0];
   const message = [
-    context.project.whatsapp.greeting,
+    personalizeWhatsAppGreeting(
+      context.project.whatsapp.greeting,
+      context.project.identity.brandName,
+    ),
     `Producto: ${product.title}`,
     firstVariant ? `Variante: ${firstVariant.title}` : "",
     `Precio: ${formatMoney(firstVariant?.price ?? lowestPrice(product))}`,
@@ -1498,7 +1502,7 @@ export const catalogFooter: ModuleDefinition<
       "catalog-footer",
       context.section,
       safeHtml(
-        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div><nav aria-label="Catálogo"><strong>Explorar</strong><a href="/">Inicio</a>${catalogLinkMarkup}${searchLink}</nav><nav aria-label="Ayuda"><strong>Ayuda</strong>${helpPageLinks}${policyLinks}</nav><address><strong>Contacto</strong>${contact}</address><small>© ${new Date().getFullYear()} ${escapeHtml(context.project.identity.brandName)}. Todos los derechos reservados.</small><p class="catalog-footer-made"><a href="https://solara.com.ar" target="_blank" rel="noopener noreferrer">Hecho con ❤️ en solara.com.ar</a></p></div>`,
+        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div><nav aria-label="Catálogo"><strong>Explorar</strong><a href="/">Inicio</a>${catalogLinkMarkup}${searchLink}</nav><nav aria-label="Ayuda"><strong>Ayuda</strong>${helpPageLinks}${policyLinks}</nav><address><strong>Contacto</strong>${contact}</address><div class="catalog-footer-meta"><small>© ${new Date().getFullYear()} ${escapeHtml(context.project.identity.brandName)}. Todos los derechos reservados.</small><p class="catalog-footer-made"><a href="https://solara.com.ar" target="_blank" rel="noopener noreferrer">Hecho con ❤️ en solara.com.ar</a></p></div></div>`,
       ),
       { tag: "footer" },
     );

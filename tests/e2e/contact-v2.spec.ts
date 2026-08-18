@@ -75,7 +75,8 @@ test("Contacto V2 vive al final de Home y mantiene el formulario funcional", asy
   const contactUrl = await page.evaluate(
     () => (window as Window & { __contactUrl?: string }).__contactUrl ?? "",
   );
-  expect(contactUrl).toContain("https://wa.me/5491123456789?text=");
+  expect(contactUrl).toContain("mailto:hola@modosur.example?subject=");
+  expect(decodeURIComponent(contactUrl)).toContain("Hola Modo Sur, quiero hacer una consulta.");
   expect(decodeURIComponent(contactUrl)).toContain("Quiero consultar un talle");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     await page.evaluate(() => window.innerWidth),

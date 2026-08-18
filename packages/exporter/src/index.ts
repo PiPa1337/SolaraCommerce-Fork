@@ -27,6 +27,7 @@ import {
   getCategoryBreadcrumb,
   getCategoryProductIds,
   isCatalogModernPlaceholderAsset,
+  personalizeWhatsAppGreeting,
   StoreProjectV1Schema,
 } from "@solara/project-schema";
 import { ensureCatalogModernV2Sections } from "@solara/project-schema/catalog-modern-template";
@@ -1247,7 +1248,7 @@ function renderDocument(
   const baseHrefAttribute = baseHref ? ` data-base-href="${escapeHtml(baseHref)}"` : "";
   const whatsAppPhone = publicWhatsAppPhone(project);
   const whatsAppAttributes = whatsAppPhone
-    ? ` data-whatsapp="${escapeHtml(whatsAppPhone)}" data-whatsapp-greeting="${escapeHtml(project.whatsapp.greeting)}" data-whatsapp-include-sku="${String(project.whatsapp.includeSku)}"`
+    ? ` data-whatsapp="${escapeHtml(whatsAppPhone)}" data-whatsapp-greeting="${escapeHtml(personalizeWhatsAppGreeting(project.whatsapp.greeting, project.identity.brandName))}" data-whatsapp-include-sku="${String(project.whatsapp.includeSku)}"`
     : "";
   const criticalImage = page.preloadImage ? resourceHref(project, page.preloadImage) : undefined;
   const lcpPreload =
@@ -1368,7 +1369,12 @@ function categoryListingMarkup(
   ${grid}`;
 }
 
-function modernCategoryFilters(products: readonly Product[], mobileSheet = false): string {
+function modernCategoryFilters(
+  products: readonly Product[],
+  mobileSheet = false,
+  controlPrefix = "category",
+): string {
+  const dataAttribute = (name: string): string => `data-${controlPrefix}-${name}`;
   const tags = [...new Set(products.flatMap((product) => product.tags))].slice(0, 12);
   const tagOptions = tags
     .map((tag) => `<option value="${escapeAttribute(tag)}">${escapeHtml(tag)}</option>`)
@@ -1391,15 +1397,15 @@ function modernCategoryFilters(products: readonly Product[], mobileSheet = false
         .slice(0, 16)
         .map((value) => `<option value="${escapeAttribute(value)}">${escapeHtml(value)}</option>`)
         .join("");
-      return `<fieldset><legend>${escapeHtml(key)}</legend><label><span class="sr-only">Filtrar por ${escapeHtml(key)}</span><select data-category-option data-category-option-key="${escapeAttribute(key)}"><option value="">Todas</option>${options}</select></label></fieldset>`;
+      return `<fieldset><legend>${escapeHtml(key)}</legend><label><span class="sr-only">Filtrar por ${escapeHtml(key)}</span><select ${dataAttribute("option")} ${dataAttribute("option-key")}="${escapeAttribute(key)}"><option value="">Todas</option>${options}</select></label></fieldset>`;
     })
     .join("");
-  const groups = `<div class="catalog-filter-groups"><fieldset><legend>Disponibilidad</legend><label><input type="checkbox" data-category-available> Sólo disponibles</label></fieldset><fieldset><legend>Etiqueta</legend><label><span class="sr-only">Filtrar por etiqueta</span><select data-category-tag><option value="">Todas</option>${tagOptions}</select></label></fieldset>${optionFilters}<fieldset><legend>Precio</legend><div class="catalog-price-fields"><label><span>Mínimo</span><input type="number" min="0" step="1" data-category-min-price inputmode="decimal"></label><label><span>Máximo</span><input type="number" min="0" step="1" data-category-max-price inputmode="decimal"></label></div></fieldset></div>`;
+  const groups = `<div class="catalog-filter-groups"><fieldset><legend>Disponibilidad</legend><label><input type="checkbox" ${dataAttribute("available")}> Sólo disponibles</label></fieldset><fieldset><legend>Etiqueta</legend><label><span class="sr-only">Filtrar por etiqueta</span><select ${dataAttribute("tag")}><option value="">Todas</option>${tagOptions}</select></label></fieldset>${optionFilters}<fieldset><legend>Precio</legend><div class="catalog-price-fields"><label><span>Mínimo</span><input type="number" min="0" step="1" ${dataAttribute("min-price")} inputmode="decimal"></label><label><span>Máximo</span><input type="number" min="0" step="1" ${dataAttribute("max-price")} inputmode="decimal"></label></div></fieldset></div>`;
   const summary = `<summary><span>Filtros</span><span class="catalog-filter-disclosure" aria-hidden="true">&#x2304;</span></summary>`;
   const content = mobileSheet
     ? `<details class="catalog-filter-toggle">${summary}</details>${groups}`
     : `<details open>${summary}${groups}</details>`;
-  return `<aside class="catalog-category-filters" aria-label="Filtros del catálogo">${content}</aside>`;
+  return `<aside class="catalog-category-filters${controlPrefix === "search" ? " solara-search-filters" : ""}" aria-label="Filtros del catálogo">${content}</aside>`;
 }
 
 function categoryBreadcrumbItems(
@@ -1771,13 +1777,20 @@ function buildPages(
   };
 
   const searchControls = `<form class="solara-search-form" role="search" action="/buscar/" method="get"><label for="solara-search-input">Buscar productos</label><div><input id="solara-search-input" name="q" type="search" autocomplete="off" placeholder="Buscar productos"><button class="solara-primary-action" type="submit">Buscar</button></div></form>`;
+  const searchProducts = project.products.filter((product) => product.status === "active");
+  const searchFilters = modernCategoryFilters(
+    searchProducts,
+    project.commerceTemplates.designFamily === "catalog-modern-v2",
+    "category",
+  );
+  const searchSort = `<label>Ordenar <select data-category-sort data-search-sort><option value="recommended">Recomendados</option><option value="price-desc">Precio mayor</option><option value="price-asc">Precio menor</option><option value="name">Nombre</option></select></label>`;
   const searchPage: PageDescriptor = {
     path: "buscar/index.html",
     title: `Buscar productos | ${project.identity.brandName}`,
     description: "Encontrá productos por nombre, marca, categoría o etiqueta.",
     canonicalPath: "/buscar/",
     pageType: "search",
-    body: `${renderProjectSections(project, sharedHeader, { pageType: "search" })}<main class="solara-search-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span>Buscar</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Catálogo</p><h1>Buscar productos</h1><p>Buscá por nombre, marca, categoría o etiqueta.</p>${searchControls}</header><section class="solara-search-results" data-search-results aria-live="polite"><p>Elegí una búsqueda para ver resultados.</p></section></main>${renderProjectSections(project, sharedFooter, { pageType: "search" })}`,
+    body: `${renderProjectSections(project, sharedHeader, { pageType: "search" })}<main class="solara-search-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span>Buscar</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Catálogo</p><h1>Buscar productos</h1><p>Buscá por nombre, marca, categoría o etiqueta.</p>${searchControls}</header><section class="catalog-category-layout solara-search-layout"><div class="solara-search-filter-column">${searchFilters}</div><div class="catalog-category-results solara-search-results"><div class="solara-category-toolbar" data-search-toolbar><span data-category-result-count data-search-result-count aria-live="polite">Elegí una búsqueda</span>${searchSort}</div><div data-search-results aria-live="polite"><div class="solara-search-results-grid" data-category-grid></div></div></div></section></main>${renderProjectSections(project, sharedFooter, { pageType: "search" })}`,
     structuredData: [
       {
         "@context": "https://schema.org",
@@ -2163,6 +2176,13 @@ function buildSearchIndex(project: StoreProjectV1): string {
       const collectionNames = product.collectionIds
         .map((id) => project.collections.find((collection) => collection.id === id)?.title)
         .filter((value): value is string => Boolean(value));
+      const options = [
+        ...new Set(
+          product.variants.flatMap((variant) =>
+            Object.entries(variant.optionValues).map(([key, value]) => `${key}=${value}`),
+          ),
+        ),
+      ];
       return {
         id: product.id,
         slug: product.slug,
@@ -2174,6 +2194,7 @@ function buildSearchIndex(project: StoreProjectV1): string {
         collectionIds: product.collectionIds,
         categoryNames,
         collectionNames,
+        options,
         ...(image ? { imageUrl: image } : {}),
         ...(imageAsset ? { imageWidth: imageAsset.width, imageHeight: imageAsset.height } : {}),
         priceMin: Math.min(...prices),

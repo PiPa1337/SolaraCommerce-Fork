@@ -99,6 +99,38 @@ export interface CustomerDetails {
   notes: string;
 }
 
+export interface ContactFormDetails {
+  name: string;
+  email: string;
+  phone: string;
+  reason: string;
+  orderNumber: string;
+  message: string;
+}
+
+export function buildContactMailto(
+  email: string,
+  brandName: string,
+  details: ContactFormDetails,
+): string {
+  const fields: Array<[string, string]> = [
+    ["Nombre", details.name],
+    ["Email", details.email],
+    ["Teléfono", details.phone],
+    ["Motivo", details.reason],
+    ["Número de pedido", details.orderNumber],
+    ["Mensaje", details.message],
+  ];
+  const lines = [
+    `Hola ${brandName.trim()}, quiero hacer una consulta.`,
+    ...fields
+      .filter((entry) => entry[1].trim().length > 0)
+      .map(([label, value]) => `${label}: ${value.trim()}`),
+  ];
+  const subject = `Consulta para ${brandName.trim()}`;
+  return `mailto:${email.trim()}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join("\n"))}`;
+}
+
 export function formatMoney(cents: number, currency = "ARS", locale = "es-AR"): string {
   return new Intl.NumberFormat(locale, {
     style: "currency",
@@ -245,29 +277,22 @@ function storefrontBoot(): void {
       if (form.dataset.contactBound === "true") return;
       form.dataset.contactBound = "true";
       form.addEventListener("submit", (event) => {
-        const phone = form.dataset.whatsappPhone?.replace(/\D/g, "") ?? "";
-        if (!phone) return;
         event.preventDefault();
         const data = new FormData(form);
-        const brand = form.dataset.whatsappBrand ?? storeId;
+        const email = (form.dataset.contactEmail ?? "").trim();
+        if (!email) return;
+        const status = form.querySelector<HTMLElement>("[data-contact-status]");
+        const brand = (form.dataset.contactBrand ?? storeId).trim();
+        const labels = "Nombre|Email|Teléfono|Motivo|Pedido|Mensaje".split("|");
         const lines = [
           `Hola ${brand}, quiero hacer una consulta.`,
-          ["Nombre", data.get("name")],
-          ["Email", data.get("email")],
-          ["Teléfono", data.get("phone")],
-          ["Motivo", data.get("reason")],
-          ["Número de pedido", data.get("orderNumber")],
-          ["Mensaje", data.get("message")],
-        ]
-          .filter((entry) => !Array.isArray(entry) || String(entry[1] ?? "").trim().length > 0)
-          .map((entry) =>
-            Array.isArray(entry) ? `${entry[0]}: ${String(entry[1]).trim()}` : entry,
-          );
-        window.open(
-          `https://wa.me/${phone}?text=${encodeURIComponent(lines.join("\n"))}`,
-          "_blank",
-          "noopener,noreferrer",
-        );
+          ...[...data]
+            .filter(([, value]) => value)
+            .map(([, value], index) => `${labels[index] ?? "D"}: ${String(value).trim()}`),
+        ];
+        const mailto = `mailto:${email}?subject=${encodeURIComponent(`Consulta para ${brand}`)}&body=${encodeURIComponent(lines.join("\n"))}`;
+        window.open(mailto, "_blank", "noopener");
+        status?.replaceChildren("Listo");
       });
     });
   };
@@ -1247,6 +1272,7 @@ function storefrontBoot(): void {
       collectionIds?: string[];
       categoryNames?: string[];
       collectionNames?: string[];
+      options?: string[];
       path: string;
       imageUrl?: string;
       imageWidth?: number;
@@ -1255,6 +1281,9 @@ function storefrontBoot(): void {
       available: boolean;
       tokens?: SearchEntryTokens;
     };
+    const searchGrid = searchResults.querySelector<HTMLElement>(
+      "[data-category-grid]",
+    ) as HTMLElement;
     const suggestCorrection = (
       terms: string[],
       entries: SearchEntryWithTokens[],
@@ -1283,10 +1312,10 @@ function storefrontBoot(): void {
       document.querySelector('meta[name="robots"]')?.setAttribute("content", "noindex,follow");
       const terms = searchApi.normalizeSearchTokens(query);
       if (!terms.length || terms.some((t) => t.length < 2)) {
-        setHtml(searchResults, "<p>Escribí al menos 2 caracteres para buscar.</p>");
+        setHtml(searchGrid, "<p>Escribí al menos 2 caracteres para buscar.</p>");
       } else {
         const controller = new AbortController();
-        setHtml(searchResults, "<p>Cargando resultados…</p>");
+        setHtml(searchGrid, "<p>Cargando resultados…</p>");
         fetch("/search-index.json", { signal: controller.signal })
           .then((response) => {
             if (!response.ok) throw new Error("No se pudo cargar el índice de búsqueda.");
@@ -1321,32 +1350,29 @@ function storefrontBoot(): void {
               if (suggestion) {
                 const url = `/buscar/?q=${encodeURIComponent(suggestion)}`;
                 setHtml(
-                  searchResults,
+                  searchGrid,
                   `<p class="solara-search-summary">No encontramos resultados para “${escapeText(query)}”. ¿Quisiste decir <a href="${escapeAttribute(url)}">${escapeText(suggestion)}</a>?</p>`,
                 );
                 return;
               }
-              setHtml(searchResults, "<p>No encontramos productos para esa búsqueda.</p>");
+              setHtml(searchGrid, "<p>No encontramos productos para esa búsqueda.</p>");
               return;
             }
-            const shown = ranked.slice(0, 48);
-            const cutNotice =
-              ranked.length > 48
-                ? `<p class="solara-search-summary">Mostrando 48 de ${ranked.length} resultados. Refiná tu búsqueda…</p>`
-                : "";
             setHtml(
-              searchResults,
-              `<p class="solara-search-summary">${ranked.length} resultados para “${escapeText(query)}”</p>${cutNotice}<div class="solara-search-results-grid">${shown
-                .map(
-                  ({ entry }) =>
-                    `<article class="solara-search-result"><a href="${escapeAttribute(entry.path)}">${entry.imageUrl ? `<img src="${escapeAttribute(entry.imageUrl)}" alt="${escapeAttribute(entry.title)}" width="${entry.imageWidth ?? 1}" height="${entry.imageHeight ?? 1}" sizes="(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem" loading="lazy">` : ""}<div><h2>${escapeText(entry.title)}</h2><p>${escapeText(entry.brand)}</p><strong>${money.format(entry.priceMin / 100)}</strong></div></a></article>`,
-                )
-                .join("")}</div>`,
+              searchGrid,
+              ranked
+                .slice(0, 48)
+                .map(({ entry }) => {
+                  const attrs = `data-product-card data-product-price="${entry.priceMin}" data-product-available="${entry.available}" data-product-tags="${escapeAttribute(String(entry.tags ?? []))}" data-product-options="${escapeAttribute((entry.options ?? []).join("|"))}"`;
+                  return `<article class="solara-search-result" ${attrs}><a href="${escapeAttribute(entry.path)}">${entry.imageUrl ? `<img src="${escapeAttribute(entry.imageUrl)}" alt="${escapeAttribute(entry.title)}" width="${entry.imageWidth ?? 1}" height="${entry.imageHeight ?? 1}" sizes="(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem" loading="lazy">` : ""}<div><h2>${escapeText(entry.title)}</h2><p>${escapeText(entry.brand)}</p><strong>${money.format(entry.priceMin / 100)}</strong></div></a></article>`;
+                })
+                .join(""),
             );
+            searchGrid.dispatchEvent(new Event("f"));
           })
           .catch(() => {
             setHtml(
-              searchResults,
+              searchGrid,
               '<p role="alert">No se pudo cargar la búsqueda. Intentá nuevamente.</p>',
             );
           });
@@ -1395,13 +1421,14 @@ function storefrontBoot(): void {
     const resultCount = scope?.querySelector<HTMLElement>("[data-category-result-count]");
     resultCount?.setAttribute("aria-live", "polite");
     if (!grid) return;
-    const cards = Array.from(grid.querySelectorAll<HTMLElement>("[data-product-card]"));
+    const getCards = () => Array.from(grid.querySelectorAll<HTMLElement>("[data-product-card]"));
     const filterEmpty = document.createElement("p");
     filterEmpty.className = "solara-empty-state";
     filterEmpty.textContent = "No hay productos que coincidan con estos filtros.";
     filterEmpty.hidden = true;
     grid.insertAdjacentElement("afterend", filterEmpty);
     const render = (): void => {
+      const cards = getCards();
       const visible = cards.filter((card) => {
         const price = Number(card.dataset.productPrice ?? "0");
         const min = Number(minPrice?.value ?? "") * 100;
@@ -1435,7 +1462,7 @@ function storefrontBoot(): void {
         });
       } else if (sort.value === "name") {
         sorted.sort((left, right) =>
-          (left.dataset.productTitle ?? "").localeCompare(right.dataset.productTitle ?? ""),
+          (left.textContent ?? "").localeCompare(right.textContent ?? ""),
         );
       }
       sorted.forEach((card) => {
@@ -1450,6 +1477,7 @@ function storefrontBoot(): void {
         resultCount.textContent = `${visible.length} de ${total} productos`;
       }
     };
+    grid.addEventListener("f", render);
     sort.addEventListener("change", render);
     availableOnly?.addEventListener("change", render);
     tagFilter?.addEventListener("change", render);

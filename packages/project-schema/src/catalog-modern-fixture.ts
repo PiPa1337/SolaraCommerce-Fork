@@ -65,7 +65,6 @@ const primaryRoots = [
   "calzado",
   "accesorios",
 ];
-const imageIds = ["asset-manta", "asset-jarra", "asset-modo-camisa"] as const;
 const brands = ["Modo Sur", "Línea Norte", "Taller del Río", "Estudio Liso", "Bruma"];
 const productNames = [
   "Remera esencial de algodón",
@@ -119,6 +118,30 @@ const productNames = [
   "Cinturón hebilla",
   "Pañuelo gráfico",
 ] as const;
+
+const productImagePools: Record<string, readonly string[]> = {
+  remeras: ["asset-product-01", "asset-product-02", "asset-product-03"],
+  camisas: ["asset-product-04", "asset-product-05"],
+  pantalones: ["asset-product-06", "asset-product-07", "asset-product-08"],
+  abrigos: ["asset-product-09"],
+  vestidos: ["asset-product-11"],
+  tejidos: ["asset-product-10"],
+  calzado: ["asset-product-12"],
+  accesorios: ["asset-product-12"],
+};
+const allProductImageIds = [...new Set(Object.values(productImagePools).flat())];
+
+function productImageIds(rootSlug: string, index: number): string[] {
+  const pool = productImagePools[rootSlug] ?? productImagePools.remeras ?? [];
+  const selected = [
+    pool[index % pool.length] ?? allProductImageIds[index % allProductImageIds.length],
+  ];
+  for (let offset = 0; selected.length < 3 && offset < allProductImageIds.length; offset += 1) {
+    const candidate = allProductImageIds[(index + offset) % allProductImageIds.length];
+    if (candidate && !selected.includes(candidate)) selected.push(candidate);
+  }
+  return selected.filter((id): id is string => Boolean(id));
+}
 
 function optionVariants(productNumber: number, imageId: string) {
   const basePrice = 2800000 + productNumber * 85000;
@@ -220,7 +243,8 @@ const products = productNames.map((title, index) => {
         ? ["jeans", "sastreros", "shorts"][index % 3]
         : undefined;
   const categoryIds = [`category-${childCategory ?? rootSlug}`];
-  const imageId = imageIds[index % imageIds.length] ?? imageIds[0];
+  const imageIds = productImageIds(rootSlug, index);
+  const imageId = imageIds[0] ?? "asset-product-01";
   const reviews =
     productNumber <= 6
       ? reviewSeeds.map((review, reviewIndex) => ({
@@ -254,11 +278,7 @@ const products = productNames.map((title, index) => {
       ...(productNumber % 7 === 0 ? ["collection-fin-de-temporada"] : []),
     ],
     tags: [rootSlug, index % 2 === 0 ? "urbano" : "esencial", index % 3 === 0 ? "nuevo" : "diario"],
-    imageIds: [
-      imageId,
-      imageIds[(index + 1) % imageIds.length] ?? imageId,
-      imageIds[(index + 2) % imageIds.length] ?? imageId,
-    ],
+    imageIds,
     variants: optionVariants(productNumber, imageId),
     ...(reviews ? { reviews } : {}),
     createdAt: fixedDate,
@@ -278,15 +298,17 @@ function categoryProductIds(categoryId: string): string[] {
     .map((product) => product.id);
 }
 
-// El pool de imágenes del store moderno tiene 4 assets para 8 categorías
-// raíz: la asignación es explícita y curada, nunca automática. Las tres con
-// asset claro usan la imagen de su producto representativo (remera, camisa,
-// jean); el resto resuelve de forma determinista la primera imagen de su
-// primer producto en el momento de construir las categorías finales.
+// La asignación de assets de categoría es explícita y sólo usa categorías
+// madre; los hijos conservan sus imágenes de producto para el detalle.
 const rootCategoryImageIds: Partial<Record<string, string>> = {
-  "category-remeras": "asset-manta",
-  "category-camisas": "asset-modo-camisa",
-  "category-pantalones": "asset-jarra",
+  "category-remeras": "asset-product-01",
+  "category-camisas": "asset-product-04",
+  "category-pantalones": "asset-product-06",
+  "category-abrigos": "asset-product-09",
+  "category-vestidos": "asset-product-11",
+  "category-tejidos": "asset-product-10",
+  "category-calzado": "asset-product-12",
+  "category-accesorios": "asset-product-12",
 };
 
 function firstCategoryProductImage(categoryId: string): string {
@@ -330,6 +352,33 @@ const motion = (preset: "none" | "fade-up" | "stagger") => ({
   entryPoint: 0.2,
   once: true,
 });
+
+const productAssetDefinitions = [
+  ["01", "Remera esencial negra", "Remera negra de algodón sobre fondo gris claro"],
+  ["02", "Remera gráfica negra", "Remera negra gráfica sobre fondo gris claro"],
+  ["03", "Remera manga larga negra", "Remera negra de manga larga sobre fondo gris claro"],
+  ["04", "Camisa Oxford blanca", "Camisa Oxford blanca sobre fondo gris claro"],
+  ["05", "Camisa a rayas finas", "Camisa blanca a rayas finas sobre fondo gris claro"],
+  ["06", "Jean recto azul", "Jean recto azul sobre fondo gris claro"],
+  ["07", "Pantalón sastrero carbón", "Pantalón sastrero gris carbón sobre fondo gris claro"],
+  ["08", "Short de verano arena", "Short de verano color arena sobre fondo gris claro"],
+  ["09", "Campera liviana negra", "Campera liviana negra sobre fondo gris claro"],
+  ["10", "Tejido de algodón crudo", "Tejido de algodón color crudo sobre fondo gris claro"],
+  ["11", "Vestido midi negro", "Vestido midi negro sobre fondo gris claro"],
+  ["12", "Zapatilla urbana blanca", "Zapatilla blanca y accesorio de cuero sobre fondo gris claro"],
+] as const;
+
+const catalogModernProductAssets = productAssetDefinitions.map(([number, name, alt]) => ({
+  kind: "image" as const,
+  id: `asset-product-${number}`,
+  name,
+  alt,
+  mimeType: "image/webp",
+  source: `/fixtures/modo-sur-product-${number}.webp`,
+  width: 356,
+  height: 356,
+  hash: `fixture-modo-sur-product-${number}`,
+}));
 
 const catalogModernAssets = [
   {
@@ -376,6 +425,7 @@ const catalogModernAssets = [
     height: 1254,
     hash: "fixture-modo-sur-camisa",
   },
+  ...catalogModernProductAssets,
 ] as const;
 
 export const catalogModernStore = StoreProjectV2Schema.parse({

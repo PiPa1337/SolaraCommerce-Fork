@@ -2122,11 +2122,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-category-bento-fallback { position: absolute; z-index: 0; inset: 0; display: grid; place-items: center; margin: 0; background: var(--catalog-surface); color: var(--catalog-ink); font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(3rem, 5vw, 4.5rem); font-weight: 500; letter-spacing: -.06em; line-height: 1; }
 [data-solara-store].catalog-modern .catalog-category-bento-all { border-bottom: 1px solid currentColor; font-size: .82rem; text-decoration: none; }
 [data-solara-store].catalog-modern .catalog-testimonials-track { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(280px, 1fr); gap: calc(.8rem * var(--solara-space-scale, 1)); overflow-x: auto; overscroll-behavior-inline: contain; scroll-snap-type: x proximity; padding-bottom: .5rem; }
-[data-solara-store].catalog-modern .catalog-testimonial { min-height: 190px; padding: 1.25rem; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); scroll-snap-align: start; }
+[data-solara-store].catalog-modern .catalog-testimonial { min-height: 190px; padding: 1.25rem; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); scroll-snap-align: start; text-align: left; }
 [data-solara-store].catalog-modern .catalog-testimonial-rating { color: var(--catalog-rating); letter-spacing: .08em; }
 [data-solara-store].catalog-modern .catalog-testimonial h3 { margin-top: .9rem; font-size: 1rem; font-weight: 800; }
 [data-solara-store].catalog-modern .catalog-testimonial-context { margin-top: .15rem; color: var(--catalog-muted); font-size: .75rem; }
-[data-solara-store].catalog-modern .catalog-testimonial blockquote { margin-top: .75rem; color: var(--catalog-muted); font-size: .9rem; overflow-wrap: anywhere; }
+[data-solara-store].catalog-modern .catalog-testimonial blockquote { margin: .75rem 0 0; color: var(--catalog-muted); font-size: .9rem; text-align: left; overflow-wrap: anywhere; }
 [data-solara-store].catalog-modern .catalog-testimonials-controls { display: flex; gap: .35rem; }
 [data-solara-store].catalog-modern .catalog-testimonials-controls button { width: 44px; height: 44px; border: 1px solid var(--catalog-border); border-radius: 999px; background: transparent; cursor: pointer; }
 [data-solara-store].catalog-modern .catalog-testimonials-controls button:hover { border-color: var(--catalog-ink); }
@@ -2145,7 +2145,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-footer-inner nav a:hover { text-decoration: underline; text-underline-offset: .16em; }
 [data-solara-store].catalog-modern .catalog-footer-brand p { max-width: 28ch; margin-top: .8rem; color: var(--catalog-muted); font-size: .84rem; }
 [data-solara-store].catalog-modern .catalog-footer-inner address { display: grid; align-content: start; gap: .45rem; font-style: normal; font-size: .84rem; }
-[data-solara-store].catalog-modern .catalog-footer-inner small { grid-column: 1 / -1; padding-top: 1rem; border-top: 1px solid var(--catalog-border); color: var(--catalog-muted); }
+[data-solara-store].catalog-modern .catalog-footer-meta { display: flex; flex: 1 1 100%; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .8rem 1.5rem; min-width: 0; padding-top: 1rem; border-top: 1px solid var(--catalog-border); }
+[data-solara-store].catalog-modern .catalog-footer-meta > * { min-width: 0; margin: 0; flex: 1 1 18rem; }
+[data-solara-store].catalog-modern .catalog-footer-meta small { color: var(--catalog-muted); }
+[data-solara-store].catalog-modern .catalog-footer-meta .catalog-footer-made { text-align: right; }
 [data-solara-store].catalog-modern .catalog-empty { grid-column: 1 / -1; padding: 2rem 0; color: var(--catalog-muted); }
 [data-solara-store].catalog-modern .catalog-product-detail { width: min(calc(100% - 2rem), var(--solara-container)); margin: 0 auto; }
 [data-solara-store].catalog-modern .catalog-product-detail-inner { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr); gap: clamp(2rem, 5vw, 5rem); padding: clamp(2rem, 5vw, 4rem) 0 3rem; }
@@ -2487,6 +2490,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-header-inner {
   width: min(calc(100% - 3rem), var(--catalog-v2-wide));
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, auto);
   min-height: 76px;
   border-color: color-mix(in srgb, var(--catalog-border), transparent 18%);
   transition: min-height var(--catalog-v2-motion-control) var(--catalog-v2-ease-out);
@@ -2495,11 +2499,22 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   min-height: 60px;
 }
 .cm.v2 .catalog-brand {
+  min-width: 0;
+  overflow: hidden;
   font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
   font-size: clamp(1.85rem, 2vw, 2.45rem);
   font-weight: 500;
   letter-spacing: -.03em;
   transition: font-size var(--catalog-v2-motion-control) var(--catalog-v2-ease-out);
+}
+.cm.v2 .catalog-brand .solara-wordmark,
+.cm.v2 .catalog-mobile-brand .solara-wordmark {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .cm.v2 [data-scrolled="true"] .catalog-brand {
   font-size: 1.7rem;
@@ -2764,6 +2779,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-testimonial {
   min-width: 0;
+  text-align: left;
+}
+.cm.v2 .catalog-testimonial blockquote {
+  margin: .75rem 0 0;
+  text-align: left;
 }
 .cm.v2 .catalog-product-grid {
   grid-template-columns: repeat(auto-fit,minmax(min(100% / 5, 20rem),1fr));
@@ -2781,6 +2801,16 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 /* Tablets de 768px a 1023px: 3 columnas (el auto-fit daría 4 con cards angostas). */
 @media (max-width: 1023px) {
+  .cm.v2 .catalog-hero-copy h1,
+  .cm.v2 .catalog-hero-line-inner,
+  .cm.v2 .catalog-hero-body,
+  .cm.v2 .catalog-hero-cta-label {
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+  .cm.v2 .catalog-hero-cta-label {
+    white-space: normal;
+  }
   .cm.v2 .catalog-product-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -2868,7 +2898,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   font-size: .78rem;
 }
 .cm.v2 .catalog-view-all,
-.cm.v2 .catalog-category-bento-all {
+.cm.v2 .catalog-category-bento-all,
+.cm.v2 .catalog-mega-menu__all {
   position: relative;
   border-bottom: 0;
   padding-bottom: .2rem;
@@ -2877,7 +2908,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   text-transform: uppercase;
 }
 .cm.v2 .catalog-view-all::after,
-.cm.v2 .catalog-category-bento-all::after {
+.cm.v2 .catalog-category-bento-all::after,
+.cm.v2 .catalog-mega-menu__all::after {
   position: absolute;
   right: 0;
   bottom: 0;
@@ -2892,7 +2924,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-view-all:hover::after,
 .cm.v2 .catalog-view-all:focus-visible::after,
 .cm.v2 .catalog-category-bento-all:hover::after,
-.cm.v2 .catalog-category-bento-all:focus-visible::after {
+.cm.v2 .catalog-category-bento-all:focus-visible::after,
+.cm.v2 .catalog-mega-menu__all:hover::after,
+.cm.v2 .catalog-mega-menu__all:focus-visible::after {
   transform: scaleX(1);
 }
 .cm.v2 .catalog-category-bento-section {
@@ -3028,7 +3062,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   animation: solara-hero-rise 420ms var(--catalog-v2-ease-out) 200ms backwards;
 }
 .cm.v2 .catalog-footer-made {
-  margin: .55rem 0 0;
+  margin: 0;
   font-size: .72rem;
   letter-spacing: .02em;
 }
@@ -3043,6 +3077,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-footer-inner {
   padding-top: clamp(2rem, 4.6vw, 4.6rem);
+}
+.cm.v2 .catalog-footer-meta {
+  width: 100%;
 }
 /* El CTA de newsletter hereda de V1 un margen inferior de hasta 5rem; en la
    composición V2 respira con las secciones y se acerca al pie. */
@@ -3560,6 +3597,13 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     padding-block: 3.25rem;
     padding-inline: 0;
   }
+  .cm.v2 .catalog-footer-meta {
+    justify-content: center;
+    text-align: center;
+  }
+  .cm.v2 .catalog-footer-meta .catalog-footer-made {
+    text-align: center;
+  }
   .cm.v2 .catalog-filter-toggle:not([open]) + .catalog-filter-groups {
     display: none;
   }
@@ -3577,6 +3621,18 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     border-radius: 18px 18px 0 0;
     background: var(--catalog-paper);
     box-shadow: 0 -20px 70px color-mix(in srgb, var(--catalog-ink), transparent 68%), 0 0 0 100vmax color-mix(in srgb, var(--catalog-ink), transparent 50%);
+  }
+  .cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
+    max-width: calc(100% - 1.3rem);
+    margin: .65rem;
+    padding: .3rem .45rem;
+    font-size: clamp(.82rem, 4.5vw, 1rem);
+    line-height: 1.05;
+  }
+  .cm.v2 .catalog-category-bento-title {
+    display: block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
   .cm.v2 .catalog-product-detail,
   .cm.v2 .catalog-product-tabs,
@@ -3673,7 +3729,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .solara-home-contact > [data-solara-module] {
   min-width: 0;
-  border-top: 1px solid var(--catalog-border);
+  border-top: 0;
 }
 .cm.v2 .solara-home-contact > [data-solara-module="contact-form"] {
   grid-column: 1;
@@ -3882,6 +3938,12 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .contact-form noscript {
   display: block;
   margin-top: .75rem;
+  color: var(--catalog-muted);
+  font-size: .78rem;
+}
+.cm.v2 .contact-form-status {
+  min-height: 1.2em;
+  margin: .75rem 0 0;
   color: var(--catalog-muted);
   font-size: .78rem;
 }

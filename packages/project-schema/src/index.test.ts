@@ -5,6 +5,7 @@ import { referenceStore } from "./fixture";
 import {
   MoneySchema,
   migrateProject,
+  personalizeWhatsAppGreeting,
   SlugSchema,
   type StoreProjectV2,
   StoreProjectV2Schema,
@@ -17,6 +18,13 @@ function invalidProject(mutator: (project: StoreProjectV2) => void): StoreProjec
 }
 
 describe("StoreProjectV2Schema", () => {
+  it("personaliza el saludo comercial con la marca actual", () => {
+    expect(
+      personalizeWhatsAppGreeting("Hola Modo Sur, quiero hacer este pedido:", "Predeterminado"),
+    ).toBe("Hola Predeterminado, quiero hacer este pedido:");
+    expect(personalizeWhatsAppGreeting("Necesito ayuda", "Predeterminado")).toBe("Necesito ayuda");
+  });
+
   it("valida el fixture compartido", () => {
     expect(StoreProjectV2Schema.parse(referenceStore)).toEqual(referenceStore);
   });
@@ -55,9 +63,9 @@ describe("StoreProjectV2Schema", () => {
     const byId = new Map<string, string>(
       roots.map((category) => [category.id, category.imageId ?? ""]),
     );
-    expect(byId.get("category-remeras")).toBe("asset-manta");
-    expect(byId.get("category-camisas")).toBe("asset-modo-camisa");
-    expect(byId.get("category-pantalones")).toBe("asset-jarra");
+    expect(byId.get("category-remeras")).toBe("asset-product-01");
+    expect(byId.get("category-camisas")).toBe("asset-product-04");
+    expect(byId.get("category-pantalones")).toBe("asset-product-06");
     const abrigos = roots.find((category) => category.id === "category-abrigos");
     const abrigosFirstProduct = catalogModernStore.products.find((product) =>
       abrigos?.productIds.includes(product.id),

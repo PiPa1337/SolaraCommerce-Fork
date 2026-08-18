@@ -2,6 +2,7 @@ import { referenceStore } from "@solara/project-schema/fixture";
 import { describe, expect, it } from "vitest";
 import {
   buildCartLine,
+  buildContactMailto,
   buildWhatsAppMessage,
   buildWhatsAppUrl,
   formatMoney,
@@ -12,6 +13,21 @@ import {
 } from "./index";
 
 describe("storefront runtime", () => {
+  it("construye el enlace de email con los datos del formulario", () => {
+    const mailto = buildContactMailto("hola@example.com", "Predeterminado", {
+      name: "Ana",
+      email: "ana@example.com",
+      phone: "11 5555 1111",
+      reason: "Producto",
+      orderNumber: "",
+      message: "Quiero consultar un talle",
+    });
+    expect(mailto).toContain("mailto:hola@example.com?subject=");
+    expect(decodeURIComponent(mailto)).toContain("Hola Predeterminado, quiero hacer una consulta.");
+    expect(decodeURIComponent(mailto)).toContain("Quiero consultar un talle");
+    expect(decodeURIComponent(mailto)).not.toContain("Número de pedido:");
+  });
+
   it("genera un mensaje determinista con variante y SKU", () => {
     const product = referenceStore.products[0];
     const variant = product?.variants[0];
@@ -71,12 +87,12 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("scrollLeft");
   });
 
-  it("serializa el capability del formulario de Contacto hacia WhatsApp", () => {
+  it("serializa el capability del formulario de Contacto hacia email", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("connectContactForms");
     expect(STOREFRONT_RUNTIME_JS).toContain("data-solara-contact-form");
-    expect(STOREFRONT_RUNTIME_JS).toContain("whatsappPhone");
+    expect(STOREFRONT_RUNTIME_JS).toContain("contactEmail");
     expect(STOREFRONT_RUNTIME_JS).toContain("encodeURIComponent");
-    expect(STOREFRONT_RUNTIME_JS).toContain("https://wa.me/");
+    expect(STOREFRONT_RUNTIME_JS).toContain("mailto:");
   });
 
   it("serializa los helpers de búsqueda dentro del runtime público", () => {
@@ -288,9 +304,7 @@ describe("carrito sin líneas fantasma y conteos honestos (F-04, SF-B7, SF-B8, C
     expect(STOREFRONT_RUNTIME_JS).toContain(`de \${total} productos`);
   });
 
-  it("la búsqueda avisa cuando el ranking se corta en 48 resultados (SF-B7)", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain("Mostrando 48 de ");
-    expect(STOREFRONT_RUNTIME_JS).toContain("Refiná tu búsqueda");
+  it("limita la búsqueda a 48 resultados antes de aplicar sus filtros (SF-B7)", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("slice(0, 48)");
   });
 

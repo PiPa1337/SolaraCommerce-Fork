@@ -1,5 +1,21 @@
 # Changelog
 
+### Storefront V2: filtros, contacto por email y media cuadrada (2026-08-18)
+
+- **Búsqueda**: la ruta `/buscar/` reutiliza el motor de filtros del catálogo
+  para disponibilidad, etiqueta, color/talle, rango de precio y ordenamiento por
+  recomendados, precio o nombre, con rail responsive en desktop/tablet.
+- **Contacto**: el formulario prepara una consulta `mailto:` con nombre de la
+  tienda, datos del comprador y mensaje; mantiene feedback accesible y el CTA
+  visual del hero.
+- **Personalización**: el saludo de WhatsApp reemplaza automáticamente la
+  marca configurada, sin dejar el nombre de la fixture en tiendas renombradas.
+- **Media y layout**: la fixture V2 recibe 12 imágenes cuadradas WebP curadas
+  desde un único grid, con hasta tres imágenes por producto; se ajustan reseñas,
+  footer, títulos móviles y navegación sin scroll lateral.
+- **Regresión**: se cubren schema, exportación, runtime, módulos, contacto,
+  fixtures, rutas V1/V2 y E2E responsive con el fork como único destino Git.
+
 ### Hero V2 responsive en tablet (2026-08-18)
 
 - **Composición**: entre 768 y 899 px el hero editorial pasa a usar la imagen

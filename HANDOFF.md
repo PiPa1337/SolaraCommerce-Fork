@@ -12,7 +12,8 @@ La aplicación funciona sin backend remoto. Cuando se abre con
 `Abrir SolaraCommerce.cmd`, el servidor loopback guarda versiones en
 `proyectos/`; IndexedDB queda como borrador de recuperación y caché. El
 respaldo `.solara.json` se puede volver a importar y la carpeta pública puede
-servirse en un hosting estático. El pedido se deriva a WhatsApp.
+servirse en un hosting estático. El pedido se deriva a WhatsApp y las consultas
+del formulario de contacto se preparan para el email configurado de la tienda.
 
 La única demo integrada es `Predeterminado` con la familia `catalog-modern-v2`.
 Al arrancar, una migración acotada retira los IDs reservados de las antiguas
@@ -32,6 +33,9 @@ usuario ni fuerza un nuevo guardado del Predeterminado existente.
   opcional;
 - carrito local resiliente con respaldo y recuperación entre rutas, selección de
   variantes y pedido determinista por WhatsApp;
+- storefront V2 con contacto por email, saludo de WhatsApp personalizado por
+  marca, filtros de búsqueda compartidos con categorías y media cuadrada de
+  productos;
 - dashboard, flujo guiado, catálogo, constructor, tema, assets, SEO y export;
 - guardado local versionado y transaccional mediante el servidor loopback.
 

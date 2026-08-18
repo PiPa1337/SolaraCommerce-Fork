@@ -120,6 +120,23 @@ describe("Contacto V2 module contracts", () => {
     expect(html).not.toContain("contact-quick-links");
   });
 
+  it("renderiza el formulario con destino de email y feedback accesible", () => {
+    const form = getModuleDefinition("contact-form");
+    if (!form?.render) throw new Error("Falta el módulo contact-form");
+    const html = String(
+      form.render({
+        project: catalogModernV2Store,
+        section: renderSection,
+        settings: contactFormSettings.parse({}),
+        pageType: "home",
+      }),
+    );
+    expect(html).toContain("data-solara-contact-form");
+    expect(html).toContain('data-contact-email="hola@modo-sur.example"');
+    expect(html).toContain('action="mailto:hola@modo-sur.example');
+    expect(html).toContain("data-contact-status");
+  });
+
   it("no renderiza ubicación desactivada ni deja markup vacío", () => {
     const settings = contactLocationSettings.parse({});
     const html = String(
