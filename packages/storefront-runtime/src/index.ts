@@ -214,8 +214,9 @@ function storefrontBoot(): void {
     if (embed) return [];
     try {
       const primary = parseSerializedCart(localStorage.getItem(storageKey));
-      if (primary !== null) return primary;
-      return parseSerializedCart(localStorage.getItem(backupKey)) ?? [];
+      return primary?.length
+        ? primary
+        : (parseSerializedCart(localStorage.getItem(backupKey)) ?? []);
     } catch {
       return [];
     }
@@ -271,23 +272,24 @@ function storefrontBoot(): void {
     });
   };
 
-  const persistCart = (): void => {
-    const serialized = JSON.stringify(cart);
+  const persistCart = (c = !1): void => {
+    if (!cart.length && !c) return;
+    const s = JSON.stringify(cart);
     try {
       if (embed) {
-        if (previewCartElement) previewCartElement.textContent = serialized;
+        if (previewCartElement) previewCartElement.textContent = s;
         parent.postMessage(
           {
             type: "solara-preview-cart-write",
             key: storageKey,
-            value: serialized,
+            value: s,
             session: previewCartElement?.dataset.session,
           },
           "*",
         );
       } else {
-        localStorage.setItem(storageKey, serialized);
-        cart.length && localStorage.setItem(backupKey, serialized);
+        localStorage.setItem(storageKey, s);
+        localStorage.setItem(backupKey, s);
       }
     } catch {}
   };
@@ -298,7 +300,7 @@ function storefrontBoot(): void {
       active instanceof HTMLElement && active.matches("[data-cart-quantity]")
         ? active.dataset.cartQuantity
         : undefined;
-    if (persist) persistCart();
+    if (persist) persistCart(!cart.length);
     const count = cart.reduce((sum, line) => sum + line.quantity, 0);
     document.querySelectorAll<HTMLElement>("[data-cart-count]").forEach((element) => {
       element.textContent = String(count);
@@ -360,7 +362,7 @@ function storefrontBoot(): void {
     }
   };
 
-  if (embed) window.addEventListener("pagehide", persistCart);
+  if (embed) window.addEventListener("pagehide", () => persistCart());
 
   const escapeText = (value: string): string =>
     value.replace(

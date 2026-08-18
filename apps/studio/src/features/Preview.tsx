@@ -52,7 +52,26 @@ function readPreviewCartState(storeId: string): string {
   const parse = (serialized: string | null): string | undefined => {
     if (serialized === null) return undefined;
     try {
-      return Array.isArray(JSON.parse(serialized)) ? serialized : undefined;
+      const parsed = JSON.parse(serialized);
+      if (!Array.isArray(parsed)) return undefined;
+      const validLine = parsed.some((line) => {
+        if (!line || typeof line !== "object") return false;
+        const value = line as Record<string, unknown>;
+        return (
+          typeof value.variantId === "string" &&
+          value.variantId.length > 0 &&
+          typeof value.title === "string" &&
+          typeof value.variantTitle === "string" &&
+          typeof value.sku === "string" &&
+          typeof value.unitPrice === "number" &&
+          Number.isFinite(value.unitPrice) &&
+          typeof value.quantity === "number" &&
+          Number.isFinite(value.quantity) &&
+          value.quantity >= 1 &&
+          value.quantity <= 99
+        );
+      });
+      return parsed.length === 0 || validLine ? serialized : undefined;
     } catch {
       return undefined;
     }
@@ -60,9 +79,9 @@ function readPreviewCartState(storeId: string): string {
   try {
     const key = `solara-cart:${storeId}`;
     const stored = parse(window.localStorage.getItem(key));
-    if (stored !== undefined) return stored;
     const backup = parse(window.localStorage.getItem(`${key}:backup`));
-    if (backup !== undefined) return backup;
+    if (stored !== undefined && JSON.parse(stored).length > 0) return stored;
+    return backup ?? stored ?? "[]";
   } catch {}
   return "[]";
 }
@@ -73,10 +92,10 @@ function addPreviewCartState(
   sessionId: string,
   serialized = readPreviewCartState(storeId),
 ): string {
-  const state = `<script id="solara-preview-cart" data-session="${sessionId}" data-key="solara-cart:${storeId}" data-hydrated="true" type="application/json">${serialized.replace(/</g, "\\u003c")}</script>`;
+  const element = `<script id="solara-preview-cart" data-session="${sessionId}" data-key="solara-cart:${storeId}" data-hydrated="true" type="application/json">${serialized.replace(/</g, "\\u003c")}</script>`;
   const headEnd = document.indexOf("</head>");
-  if (headEnd === -1) return `${state}${document}`;
-  return `${document.slice(0, headEnd)}${state}\n${document.slice(headEnd)}`;
+  if (headEnd === -1) return `${element}${document}`;
+  return `${document.slice(0, headEnd)}${element}\n${document.slice(headEnd)}`;
 }
 
 function addPreviewNavigationBridge(document: string): string {
@@ -413,19 +432,19 @@ export function Preview({
         cartMessage.key === `solara-cart:${project.id}` &&
         cartMessage.session === activePreviewSessionRef.current
       ) {
-        if (!event.source || !previewFrameWindows.current.includes(event.source as Window)) return;
+        if (event.source !== previewFrame.current?.contentWindow) return;
         const serialized = typeof cartMessage.value === "string" ? cartMessage.value : "[]";
+        const cleared = cartMessage.type === "solara-preview-cart-write";
         try {
-          if (!Array.isArray(JSON.parse(serialized))) return;
+          const parsed = JSON.parse(serialized);
+          if (!Array.isArray(parsed) || (!cleared && parsed.length === 0)) return;
           previewCartStateRef.current = { key: cartMessage.key, serialized };
         } catch {
           return;
         }
         try {
           window.localStorage.setItem(cartMessage.key, serialized);
-          if (serialized !== "[]") {
-            window.localStorage.setItem(`${cartMessage.key}:backup`, serialized);
-          }
+          window.localStorage.setItem(`${cartMessage.key}:backup`, serialized);
         } catch {}
         return;
       }

@@ -1,5 +1,17 @@
 # Changelog
 
+### Carrito V2 protegido contra vaciados de navegación (2026-08-18)
+
+- **Persistencia**: la lectura prioriza el respaldo cuando la clave primaria
+  quedó vacía o contiene líneas inválidas; el respaldo se mantiene sincronizado
+  incluso cuando el usuario vacía el carrito de forma intencional.
+- **Preview**: sólo el iframe activo puede escribir el estado; los snapshots
+  vacíos no explícitos se ignoran y el vaciado real se conserva al cambiar de
+  ruta.
+- **Regresión**: E2E cubre primaria vacía, clave dañada, vaciado intencional
+  en storefront y preview, además de los recorridos existentes de múltiples
+  líneas.
+
 ### Carrito V2 resiliente y rutas retiradas (2026-08-18)
 
 - **Persistencia**: el carrito público usa un respaldo local, recupera datos si

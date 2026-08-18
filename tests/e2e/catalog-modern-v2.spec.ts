@@ -1189,6 +1189,53 @@ test("V2 recupera el carrito desde el respaldo si la clave primaria está dañad
   ).toHaveCount(1);
 });
 
+test("V2 recupera el carrito si una navegación dejó vacía la clave primaria", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  const productUrl = new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString();
+  const cartKey = "solara-cart:store-catalog-modern-v2";
+  await page.goto(productUrl);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("1");
+
+  await page.evaluate((key) => localStorage.setItem(key, "[]"), cartKey);
+  await page.goto(new URL("/carrito/", serverUrl).toString());
+
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("1");
+  await expect(
+    page.locator(".solara-cart-page-grid [data-cart-lines] .solara-cart-line"),
+  ).toHaveCount(1);
+});
+
+test("V2 conserva un vaciado intencional sin recuperar la copia anterior", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  const productUrl = new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString();
+  const cartKey = "solara-cart:store-catalog-modern-v2";
+  await page.goto(productUrl);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await page.locator("[data-cart-remove]").first().click();
+
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("0");
+  await expect(
+    page.evaluate(
+      (key) => ({
+        primary: localStorage.getItem(key),
+        backup: localStorage.getItem(`${key}:backup`),
+      }),
+      cartKey,
+    ),
+  ).resolves.toEqual({ primary: "[]", backup: "[]" });
+
+  await page.goto(new URL("/carrito/", serverUrl).toString());
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("0");
+  await expect(
+    page.locator(".solara-cart-page-grid [data-cart-lines] .solara-cart-line"),
+  ).toHaveCount(0);
+});
+
 test("V2 conserva el carrito al navegar con enlaces del storefront", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 968 });
   const firstProduct = new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString();

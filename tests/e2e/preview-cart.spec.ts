@@ -108,6 +108,47 @@ test("el preview V2 conserva el carrito al cambiar de ruta inmediatamente despuÃ
   }
 });
 
+test("el preview V2 conserva el vaciado intencional al cambiar de ruta", async ({ page }) => {
+  const running = await startStudioServer();
+  try {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(running.url);
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+      timeout: 30_000,
+    });
+    const card = page.locator(".dashboard-store-card").filter({
+      has: page.getByText("Predeterminado", { exact: true }),
+    });
+    await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+
+    const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
+    await page.evaluate(() => {
+      localStorage.removeItem("solara-cart:store-modo-sur-demo");
+      localStorage.removeItem("solara-cart:store-modo-sur-demo:backup");
+    });
+    await expect(preview.locator('[data-design-family="catalog-modern-v2"]')).toBeVisible({
+      timeout: 30_000,
+    });
+    await preview.locator('a[href="/productos/remera-esencial-de-algodon/"]').first().click();
+    await preview.getByRole("button", { name: "Agregar al carrito" }).click();
+    await expect(preview.locator("[data-cart-count]").first()).toHaveText("1");
+    await preview.locator("[data-cart-remove]").first().click();
+    await expect(preview.locator("[data-cart-count]").first()).toHaveText("0");
+
+    await page.getByTestId("ui-preview-route").fill("/carrito/");
+    await page.getByTestId("ui-preview-route").press("Enter");
+    await expect(preview.getByRole("heading", { level: 1 })).toHaveText("Carrito", {
+      timeout: 30_000,
+    });
+    await expect(preview.locator("[data-cart-count]").first()).toHaveText("0");
+    await expect(
+      preview.locator(".solara-cart-page [data-cart-lines] .solara-cart-line"),
+    ).toHaveCount(0);
+  } finally {
+    await stopStudioServer(running.server);
+  }
+});
+
 test("P7-B5: los tamaÃ±os de vista y el zoom cambian el stage del preview", async ({ page }) => {
   const running = await startStudioServer();
   try {
