@@ -4,6 +4,7 @@
  * del sitio no debe descartar el respaldo editable ni el último sitio válido.
  */
 import type { StoreProjectV1 } from "@solara/project-schema";
+import { ensureCatalogModernV2Sections } from "@solara/project-schema/catalog-modern-template";
 import {
   type LocalProjectSummary,
   type LocalSaveReceipt,
@@ -21,6 +22,15 @@ import {
 export interface DiskProject extends StoredProject {
   diskVersion: number;
   diskStatus: "synced" | "site-outdated";
+}
+
+/**
+ * El respaldo en disco puede provenir de una versión que todavía guardaba las
+ * páginas secundarias V2 sin secciones. La UI necesita abrir el mismo contrato
+ * normalizado que usa el repositorio IndexedDB y el exporter.
+ */
+export function normalizeLoadedProject(project: StoreProjectV1): StoreProjectV1 {
+  return ensureCatalogModernV2Sections(project);
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
@@ -44,7 +54,7 @@ export function serializeSiteFiles(files: ReadonlyMap<string, string | Uint8Arra
 
 export async function loadDiskProject(summary: LocalProjectSummary): Promise<DiskProject> {
   const archive = await readLocalProject(summary.projectId);
-  const project = await readProjectArchiveBytesInWorker(archive);
+  const project = normalizeLoadedProject(await readProjectArchiveBytesInWorker(archive));
   return {
     id: project.id,
     name: project.name,

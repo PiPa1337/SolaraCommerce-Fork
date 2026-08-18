@@ -1,5 +1,17 @@
 # Changelog
 
+### Constructor V2 para páginas secundarias (2026-08-17)
+
+- **Carga administrada**: los respaldos V2 antiguos que guardaban Nosotros y
+  Contacto sin secciones ahora se normalizan al abrirse, igual que los
+  proyectos de IndexedDB y el exporter; Inicio conserva sus secciones sin
+  cambios.
+- **Preview**: al elegir una página secundaria en el Constructor, la vista
+  previa cambia automáticamente a su ruta (`/nosotros/` o `/contacto/`) para
+  mostrar de inmediato el resultado de la edición.
+- **Regresión**: se cubrió la recuperación de 10 secciones de Nosotros y 8 de
+  Contacto, además del recorrido E2E del selector y su preview.
+
 ### Hero V2 y exportación pública (2026-08-17)
 
 - **Hero**: la media principal queda visible desde el primer paint; conserva el

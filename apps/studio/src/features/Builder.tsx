@@ -233,6 +233,7 @@ function ModulePicker({
 interface BuilderProps {
   project: StoreProjectV1;
   onChange(project: StoreProjectV1): void;
+  onPreviewRouteChange?(route: string): void;
   protectedBase?: boolean;
   /** Estado de sesión del Modo avanzado (shell): muestra el indicador del Constructor. */
   advancedMode?: boolean;
@@ -262,6 +263,7 @@ type PendingModuleReplace = {
 export function Builder({
   project,
   onChange,
+  onPreviewRouteChange,
   protectedBase = false,
   advancedMode = false,
   onEnableAdvanced,
@@ -468,6 +470,9 @@ export function Builder({
                   (slot) => next === "home" || slot === "catalog" || slot === "content",
                 );
                 setPageKind(next);
+                onPreviewRouteChange?.(
+                  next === "home" ? "/" : next === "about" ? "/nosotros/" : "/contacto/",
+                );
                 setSlotToAdd((current) => (allowedSlots.includes(current) ? current : "catalog"));
                 setPickerOpen(false);
                 setPickerQuery("");

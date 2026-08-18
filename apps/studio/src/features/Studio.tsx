@@ -132,6 +132,7 @@ interface StudioTabContentProps {
   onApplyUpgrade(nextProject: StoreProjectV1): void;
   onToggleAdvancedMode(): void;
   onEnableAdvanced(): void;
+  onPreviewRouteChange(route: string): void;
   onImport(project: StoreProjectV1): Promise<void>;
   onOpenSite?: ((id: string) => Promise<void>) | undefined;
   validationError: string;
@@ -152,6 +153,7 @@ const StudioTabContent = memo(function StudioTabContent({
   onApplyUpgrade,
   onToggleAdvancedMode,
   onEnableAdvanced,
+  onPreviewRouteChange,
   onImport,
   onOpenSite,
   validationError,
@@ -187,6 +189,7 @@ const StudioTabContent = memo(function StudioTabContent({
           <LazyBuilder
             project={project}
             onChange={replaceProject}
+            onPreviewRouteChange={onPreviewRouteChange}
             protectedBase={!advancedMode && project.origin?.seed === "clean"}
             advancedMode={advancedMode}
             onEnableAdvanced={onEnableAdvanced}
@@ -1034,6 +1037,7 @@ export function Studio({
               onApplyUpgrade={applyGuidedUpgrade}
               onToggleAdvancedMode={toggleAdvancedMode}
               onEnableAdvanced={enableAdvancedMode}
+              onPreviewRouteChange={setPreviewRoute}
               onImport={importFromExport}
               onOpenSite={onOpenSite}
               validationError={validationError}

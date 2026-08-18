@@ -343,6 +343,7 @@ test("el Builder cambia a Contacto V2 y muestra sus módulos editables", async (
   const pageSelector = page.getByLabel("Página de edición");
   await pageSelector.selectOption("contact");
   await expect(pageSelector).toHaveValue("contact");
+  await expect(page.getByTestId("ui-preview-route")).toHaveValue("/contacto/");
   await expect(page.locator('[data-section-select="contact-section-hero"]')).toBeVisible();
   await expect(page.getByText("Hero de Contacto", { exact: true }).first()).toBeVisible();
   await page.locator('[data-section-select="contact-section-form"]').click();
