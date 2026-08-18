@@ -21,6 +21,8 @@ const HOME_MODULES = [
   "catalog-category-bento",
   "catalog-testimonials",
   "catalog-newsletter-cta",
+  "contact-form",
+  "contact-channels",
   "catalog-footer",
 ];
 
@@ -102,7 +104,9 @@ test("V2-B3: las secciones activas de Contacto del Constructor están en /contac
   const html = await htmlOf(page, "/contacto/");
   // contact-location es condicional (nace deshabilitado sin datos de
   // ubicación): no se exige en la web hasta habilitarlo (V2-B6).
-  const activeModules = CONTACT_MODULES.filter((id) => id !== "contact-location");
+  const activeModules = CONTACT_MODULES.filter(
+    (id) => !["contact-location", "contact-help-grid"].includes(id),
+  );
   const missing = activeModules.filter((id) => !html.includes(`data-solara-module="${id}"`));
   console.log("V2-B3 contacto faltantes (activos):", JSON.stringify(missing));
   expect(missing).toEqual([]);

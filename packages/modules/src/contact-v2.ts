@@ -16,7 +16,7 @@ import {
   contactDefaultReasons,
 } from "@solara/project-schema";
 import { z } from "zod";
-import { renderCatalogModernEditorialHero } from "./catalog-modern";
+import { catalogHeroBenefitIcons, renderCatalogModernEditorialHero } from "./catalog-modern";
 import { scopedAssetId } from "./helpers";
 
 const contactRevealZone = [
@@ -345,13 +345,13 @@ export const contactForm: ModuleDefinition<
     const settings = context.settings;
     const phone = contactPhone(context);
     const fallback = phone
-      ? `<a class="contact-form-fallback" href="https://wa.me/${escapeAttribute(phone)}">Escribinos por WhatsApp</a>`
+      ? `<a class="catalog-primary-action solara-primary-action contact-form-fallback" href="https://wa.me/${escapeAttribute(phone)}" target="_blank" rel="noopener noreferrer"><span class="catalog-hero-cta-label">Escribinos por WhatsApp</span><svg class="catalog-hero-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${catalogHeroBenefitIcons.chat}</svg></a>`
       : `<p class="contact-form-fallback">Configurá un teléfono de WhatsApp para recibir consultas.</p>`;
     return moduleRoot(
       "contact-form",
       context.section,
       safeHtml(
-        `<section id="contact-form" class="contact-main-grid" data-motion-zone="content"><form class="contact-form" data-solara-contact-form data-whatsapp-brand="${escapeAttribute(context.project.identity.brandName)}"${phone ? ` data-whatsapp-phone="${escapeAttribute(phone)}"` : ""} action="${phone ? `https://wa.me/${escapeAttribute(phone)}` : "#"}" method="get" target="_blank"><h2>${escapeHtml(settings.title)}</h2><p>${escapeHtml(settings.body)}</p><div class="contact-form-fields"><label>${escapeHtml(settings.nameLabel)}<input name="name" autocomplete="name" required></label><label>${escapeHtml(settings.emailLabel)}<input name="email" type="email" autocomplete="email" required></label>${settings.showPhone ? `<label>${escapeHtml(settings.phoneLabel)}<input name="phone" type="tel" autocomplete="tel" required></label>` : ""}<label>${escapeHtml(settings.reasonLabel)}<select name="reason" required><option value="">Seleccioná una opción</option>${settings.reasons.map((reason) => `<option value="${escapeAttribute(reason.value)}">${escapeHtml(reason.value)}</option>`).join("")}</select></label>${settings.showOrderNumber ? `<label>${escapeHtml(settings.orderNumberLabel)}<input name="orderNumber" inputmode="numeric"></label>` : ""}<label class="contact-form-message">${escapeHtml(settings.messageLabel)}<textarea name="message" rows="5" required></textarea></label></div><button class="catalog-primary-action" type="submit">${escapeHtml(settings.submitLabel)} →</button>${fallback}<noscript><p>Activá JavaScript o usá el enlace de WhatsApp para enviar la consulta.</p></noscript></form></section>`,
+        `<section id="contact-form" class="contact-main-grid" data-motion-zone="content"><form class="contact-form" data-solara-contact-form data-whatsapp-brand="${escapeAttribute(context.project.identity.brandName)}"${phone ? ` data-whatsapp-phone="${escapeAttribute(phone)}"` : ""} action="${phone ? `https://wa.me/${escapeAttribute(phone)}` : "#"}" method="get" target="_blank"><h2>${escapeHtml(settings.title)}</h2><p>${escapeHtml(settings.body)}</p><div class="contact-form-fields"><label>${escapeHtml(settings.nameLabel)}<input name="name" autocomplete="name" required></label><label>${escapeHtml(settings.emailLabel)}<input name="email" type="email" autocomplete="email" required></label>${settings.showPhone ? `<label>${escapeHtml(settings.phoneLabel)}<input name="phone" type="tel" autocomplete="tel" required></label>` : ""}<label>${escapeHtml(settings.reasonLabel)}<select name="reason" required><option value="">Seleccioná una opción</option>${settings.reasons.map((reason) => `<option value="${escapeAttribute(reason.value)}">${escapeHtml(reason.value)}</option>`).join("")}</select></label>${settings.showOrderNumber ? `<label>${escapeHtml(settings.orderNumberLabel)}<input name="orderNumber" inputmode="numeric"></label>` : ""}<label class="contact-form-message">${escapeHtml(settings.messageLabel)}<textarea name="message" rows="5" required></textarea></label></div><div class="contact-form-actions"><button class="catalog-primary-action solara-primary-action" type="submit"><span class="catalog-hero-cta-label">${escapeHtml(settings.submitLabel)}</span><span class="catalog-hero-cta-icon" aria-hidden="true">→</span></button>${fallback}</div><noscript><p>Activá JavaScript o usá el enlace de WhatsApp para enviar la consulta.</p></noscript></form></section>`,
       ),
     );
   },

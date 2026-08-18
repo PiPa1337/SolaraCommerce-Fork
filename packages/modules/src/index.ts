@@ -139,11 +139,19 @@ export function isModuleAvailableOnPage(
   const moduleId = definition.manifest.id;
   const isAboutV2 = pageKind === "about" && designFamily === "catalog-modern-v2";
   const isContactV2 = pageKind === "contact" && designFamily === "catalog-modern-v2";
+  const isHomeV2 = pageKind === "home" && designFamily === "catalog-modern-v2";
   if (isAboutV2) {
     return aboutV2ModuleIds.has(moduleId) || moduleId === "catalog-newsletter-cta";
   }
   if (isContactV2) {
     return contactV2ModuleIds.has(moduleId) || moduleId === "catalog-newsletter-cta";
+  }
+  if (isHomeV2) {
+    return (
+      moduleId === "contact-form" ||
+      moduleId === "contact-channels" ||
+      (!aboutV2ModuleIds.has(moduleId) && !contactV2ModuleIds.has(moduleId))
+    );
   }
   return !aboutV2ModuleIds.has(moduleId) && !contactV2ModuleIds.has(moduleId);
 }

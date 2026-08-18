@@ -3586,6 +3586,27 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   width: min(calc(100% - 3rem), var(--catalog-v2-wide));
   margin-inline: auto;
 }
+.cm.v2 .solara-home-contact {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(18rem, 1fr);
+  gap: 0 clamp(2rem, 5vw, 5rem);
+  width: min(calc(100% - 3rem), var(--catalog-v2-wide));
+  margin-inline: auto;
+}
+.cm.v2 .solara-home-contact > [data-solara-module] {
+  min-width: 0;
+  border-top: 1px solid var(--catalog-border);
+}
+.cm.v2 .solara-home-contact > [data-solara-module="contact-form"] {
+  grid-column: 1;
+}
+.cm.v2 .solara-home-contact > [data-solara-module="contact-channels"] {
+  grid-column: 2;
+}
+.cm.v2 .solara-home-contact > [data-solara-module] > .contact-main-grid,
+.cm.v2 .solara-home-contact > [data-solara-module] > .contact-channels {
+  border-top: 0;
+}
 .cm.v2 .solara-contact-page > .solara-contact-sections {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
@@ -3687,6 +3708,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   letter-spacing: -.04em;
 }
 .cm.v2 .contact-main-grid > p,
+.cm.v2 .contact-form > p,
 .cm.v2 .contact-channels > header p,
 .cm.v2 .contact-help > header p,
 .cm.v2 .contact-faq > header p,
@@ -3725,9 +3747,60 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   resize: vertical;
 }
 .cm.v2 .contact-form .catalog-primary-action {
+  margin-top: 0;
+}
+.cm.v2 .contact-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .7rem;
   margin-top: 1.2rem;
 }
-.cm.v2 .contact-form-fallback,
+.cm.v2 .contact-form-actions .catalog-primary-action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: .6rem;
+  overflow: hidden;
+  isolation: isolate;
+  margin-top: 0;
+}
+.cm.v2 .contact-form-actions .catalog-primary-action::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: color-mix(in srgb, var(--solara-accent) 82%, #000);
+  content: "";
+  transform: translateY(101%);
+  transition: transform 300ms var(--catalog-v2-ease-out);
+}
+.cm.v2 .contact-form-actions .catalog-primary-action:hover,
+.cm.v2 .contact-form-actions .catalog-primary-action:focus-visible {
+  transform: none;
+  box-shadow: none;
+}
+.cm.v2 .contact-form-actions .catalog-primary-action:hover::before,
+.cm.v2 .contact-form-actions .catalog-primary-action:focus-visible::before {
+  transform: translateY(0);
+}
+.cm.v2 .contact-form-actions .catalog-hero-cta-label,
+.cm.v2 .contact-form-actions .catalog-hero-cta-icon {
+  transition: color 260ms, transform 260ms var(--catalog-v2-ease-out);
+}
+.cm.v2 .contact-form-actions .catalog-hero-cta-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.cm.v2 .contact-form-actions .catalog-primary-action:hover .catalog-hero-cta-label,
+.cm.v2 .contact-form-actions .catalog-primary-action:focus-visible .catalog-hero-cta-label,
+.cm.v2 .contact-form-actions .catalog-primary-action:hover .catalog-hero-cta-icon,
+.cm.v2 .contact-form-actions .catalog-primary-action:focus-visible .catalog-hero-cta-icon {
+  color: color-mix(in srgb, var(--solara-accent-text) 100%, #fff 20%);
+}
+.cm.v2 .contact-form-fallback:not(.catalog-primary-action),
 .cm.v2 .contact-form noscript {
   display: block;
   margin-top: .75rem;
@@ -3739,6 +3812,15 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .contact-channel-row {
   min-height: 4.7rem;
+}
+.cm.v2 .contact-channel-row > span:last-child {
+  color: var(--catalog-ink);
+  transition: color 220ms, transform 220ms var(--catalog-v2-ease-out);
+}
+.cm.v2 .contact-channel-row:hover > span:last-child,
+.cm.v2 .contact-channel-row:focus-visible > span:last-child {
+  color: var(--catalog-sale);
+  transform: translateX(3px);
 }
 .cm.v2 .contact-help,
 .cm.v2 .contact-faq,
@@ -3913,6 +3995,14 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   animation: solara-hero-rise 420ms var(--catalog-v2-ease-out) 140ms backwards;
 }
 @media (max-width: 767px) {
+  .cm.v2 .solara-home-contact {
+    width: min(calc(100% - 1.5rem), var(--catalog-v2-wide));
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cm.v2 .solara-home-contact > [data-solara-module="contact-form"],
+  .cm.v2 .solara-home-contact > [data-solara-module="contact-channels"] {
+    grid-column: 1;
+  }
   .cm.v2 .solara-contact-page {
     width: min(calc(100% - 1.5rem), var(--catalog-v2-wide));
   }
@@ -3937,6 +4027,12 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
   .cm.v2 .contact-form-fields label.contact-form-message {
     grid-column: auto;
+  }
+  .cm.v2 .contact-form-actions {
+    flex-direction: column;
+  }
+  .cm.v2 .contact-form-actions .catalog-primary-action {
+    width: 100%;
   }
   .cm.v2 .contact-help-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

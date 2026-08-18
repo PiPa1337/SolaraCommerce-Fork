@@ -8,6 +8,7 @@ import { internalHref, renderImage } from "@solara/module-sdk";
 import {
   getModuleDefinition,
   MODULE_STYLE_BLOCKS,
+  type PageRenderContext,
   renderSections,
   STORE_BASE_STYLES,
 } from "@solara/modules";
@@ -839,6 +840,8 @@ function effectiveHomeSections(project: StoreProjectV1): readonly StoreSection[]
   return home?.sections.length ? home.sections : project.sections;
 }
 
+const HOME_CONTACT_MODULE_IDS = new Set(["contact-form", "contact-channels"]);
+
 function renderProjectSections(
   project: StoreProjectV1,
   sections: StoreSection[],
@@ -854,15 +857,42 @@ function renderProjectSections(
     pageContext.pageType === "legal" || pageContext.pageType === "not-found"
       ? "content"
       : pageContext.pageType;
-  return String(
-    renderSections(project, activeProjectSections(project, sections), {
-      pageType: modulePageType,
-      ...(pageContext.product ? { product: pageContext.product } : {}),
-      ...(pageContext.category ? { category: pageContext.category } : {}),
-      ...(pageContext.collection ? { collection: pageContext.collection } : {}),
-      ...(pageContext.products ? { products: pageContext.products } : {}),
-    }),
-  );
+  const activeSections = activeProjectSections(project, sections);
+  const renderContext: PageRenderContext = {
+    pageType: modulePageType,
+    ...(pageContext.product ? { product: pageContext.product } : {}),
+    ...(pageContext.category ? { category: pageContext.category } : {}),
+    ...(pageContext.collection ? { collection: pageContext.collection } : {}),
+    ...(pageContext.products ? { products: pageContext.products } : {}),
+  };
+  if (pageContext.pageType !== "home") {
+    return String(renderSections(project, activeSections, renderContext));
+  }
+
+  // Los dos módulos de contacto se mantienen independientes para el
+  // Constructor, pero comparten una grilla sólo cuando aparecen juntos en
+  // Home. Así la página dedicada conserva su layout y Home puede reordenarlos
+  // sin perder la composición responsive.
+  const chunks: string[] = [];
+  let contactSections: StoreSection[] = [];
+  const flushContactSections = (): void => {
+    if (contactSections.length === 0) return;
+    chunks.push(
+      `<div class="solara-home-contact">${String(renderSections(project, contactSections, renderContext))}</div>`,
+    );
+    contactSections = [];
+  };
+
+  for (const section of activeSections) {
+    if (HOME_CONTACT_MODULE_IDS.has(section.moduleId)) {
+      contactSections.push(section);
+      continue;
+    }
+    flushContactSections();
+    chunks.push(String(renderSections(project, [section], renderContext)));
+  }
+  flushContactSections();
+  return chunks.join("");
 }
 
 function moduleStylesForSections(

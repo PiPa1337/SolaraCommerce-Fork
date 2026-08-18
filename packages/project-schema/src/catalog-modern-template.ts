@@ -7,6 +7,7 @@ import {
   contactDefaultHelpItems,
   contactDefaultQuickLinks,
   defaultContactV2Sections,
+  defaultHomeContactSections,
 } from "./catalog-modern-contact";
 import { catalogModernStore } from "./catalog-modern-fixture";
 import { CATALOG_MODERN_GUIDANCE_VERSION } from "./catalog-modern-guidance";
@@ -24,6 +25,22 @@ function ensureCatalogModernV2Assets(project: StoreProjectV1): StoreProjectV1 {
     ...project,
     assets: [...project.assets, ...structuredClone(missing)],
   };
+}
+
+function ensureHomeContactV2Sections(project: StoreProjectV1): StoreProjectV1 {
+  if (project.commerceTemplates.designFamily !== "catalog-modern-v2") return project;
+
+  const defaults = defaultHomeContactSections();
+  const existingModuleIds = new Set(project.sections.map((section) => section.moduleId));
+  const missing = defaults.filter((section) => !existingModuleIds.has(section.moduleId));
+  if (missing.length === 0) return project;
+
+  const insertAt = project.sections.findIndex(
+    (section) => section.slot === "cart" || section.slot === "footer",
+  );
+  const sections = [...project.sections];
+  sections.splice(insertAt < 0 ? sections.length : insertAt, 0, ...missing);
+  return { ...project, sections };
 }
 
 function hasDefaultContactItems(value: unknown, defaults: readonly unknown[]): boolean {
@@ -170,7 +187,7 @@ export function ensureAboutV2Sections(project: StoreProjectV1): StoreProjectV1 {
 }
 
 export function ensureCatalogModernV2Sections(project: StoreProjectV1): StoreProjectV1 {
-  return ensureAboutV2Sections(ensureContactV2Sections(project));
+  return ensureHomeContactV2Sections(ensureAboutV2Sections(ensureContactV2Sections(project)));
 }
 
 export type CatalogModernSeed = "clean" | "demo";

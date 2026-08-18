@@ -240,3 +240,42 @@ export function defaultContactV2Sections(): StoreSection[] {
     ),
   ];
 }
+
+/**
+ * Home V2 termina con los mismos módulos de contacto que la página dedicada,
+ * pero con ids propios para que el Constructor pueda editarlos sin mezclar
+ * ambas superficies.
+ */
+export function defaultHomeContactSections(): StoreSection[] {
+  return [
+    section("home-section-contact-form", "contact-form", {
+      title: "Escribinos",
+      body: "Completá el formulario y nuestro equipo te responderá a la brevedad.",
+      showPhone: true,
+      showOrderNumber: true,
+      nameLabel: "Nombre",
+      emailLabel: "Email",
+      phoneLabel: "Teléfono",
+      reasonLabel: "Motivo de consulta",
+      orderNumberLabel: "Número de pedido (opcional)",
+      messageLabel: "Mensaje",
+      submitLabel: "Enviar consulta",
+      reasons: [...contactDefaultReasons],
+    }),
+    section("home-section-contact-channels", "contact-channels", {
+      title: "Nuestros canales",
+      body: "Elegí el canal que prefieras para comunicarte con nosotros.",
+      showWhatsapp: true,
+      showEmail: true,
+      showPhone: true,
+      showAddress: true,
+      showHours: true,
+      hoursText: "Lunes a viernes de 9 a 18 hs.\nSábados de 10 a 14 hs.",
+      whatsappActionLabel: "Escribir ahora",
+      emailActionLabel: "Enviar email",
+      phoneActionLabel: "Llamar ahora",
+      addressActionLabel: "Ver en mapa",
+      hoursActionLabel: "Ver horarios",
+    }),
+  ];
+}

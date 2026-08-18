@@ -1,5 +1,19 @@
 # Changelog
 
+### Contacto al final de Home V2 (2026-08-18)
+
+- **Home**: se agregaron los módulos editables de formulario y canales de
+  contacto al cierre de Inicio, agrupados en una composición responsive sin
+  alterar la página Contacto ni la compatibilidad V1.
+- **CTA**: Enviar consulta y Escribinos por WhatsApp reutilizan el tratamiento
+  visual del botón del hero, con enlace externo seguro, hover, foco visible y
+  ancho completo en móvil.
+- **Constructor y exportación**: los módulos quedan disponibles sólo en Home
+  V2, se migran de forma idempotente a tiendas existentes y mantienen paridad
+  entre Preview y exportación.
+- **Regresión**: schema, módulos, exporter y E2E cubren layout de dos columnas,
+  apilado móvil, cero overflow y consistencia visual del CTA.
+
 ### Reseñas y Contacto V2 (2026-08-18)
 
 - **Reseñas**: la demo pasa de 3 a 12 testimonios y la página V2 los muestra

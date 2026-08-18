@@ -38,10 +38,14 @@ describe("Contacto V2 module contracts", () => {
 
   it("restringe los módulos a Contacto V2 y conserva el newsletter compartido", () => {
     const hero = getModuleDefinition("contact-hero");
+    const form = getModuleDefinition("contact-form");
+    const channels = getModuleDefinition("contact-channels");
     const newsletter = getModuleDefinition("catalog-newsletter-cta");
-    if (!hero || !newsletter) throw new Error("Faltan módulos registrados");
+    if (!hero || !form || !channels || !newsletter) throw new Error("Faltan módulos registrados");
     expect(isModuleAvailableOnPage(hero, "contact", "catalog-modern-v2")).toBe(true);
     expect(isModuleAvailableOnPage(hero, "home", "catalog-modern-v2")).toBe(false);
+    expect(isModuleAvailableOnPage(form, "home", "catalog-modern-v2")).toBe(true);
+    expect(isModuleAvailableOnPage(channels, "home", "catalog-modern-v2")).toBe(true);
     expect(isModuleAvailableOnPage(hero, "contact", "catalog-modern-v1")).toBe(false);
     expect(isModuleAvailableOnPage(newsletter, "contact", "catalog-modern-v2")).toBe(true);
   });

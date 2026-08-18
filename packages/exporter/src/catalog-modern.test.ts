@@ -58,6 +58,9 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(v2Home).toContain('data-design-family="catalog-modern-v2"');
     expect(v2Home).toContain('class="solara-page catalog-modern catalog-modern-v2 cm v2"');
     expect(v2Home).toContain('data-solara-module="catalog-product-grid"');
+    expect(v2Home).toContain('class="solara-home-contact"');
+    expect(v2Home).toContain('data-solara-module="contact-form"');
+    expect(v2Home).toContain('data-solara-module="contact-channels"');
     expect(v2Home.match(/class="catalog-testimonial"/g) ?? []).toHaveLength(12);
     expect(v2Home).not.toContain("catalog-testimonials-controls");
     expect(v2Product).toContain('data-solara-module="catalog-product-detail"');

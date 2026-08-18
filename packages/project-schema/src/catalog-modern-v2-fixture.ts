@@ -5,7 +5,8 @@ import { type StoreProjectV2, StoreProjectV2Schema } from "./index";
 /**
  * Orden de secciones de la home V2: el bento de categorías queda
  * inmediatamente después de la franja de marcas y antes de las grillas de
- * productos (hero → marcas → categorías → grillas → testimonios → newsletter).
+ * productos y el contacto final (hero → marcas → categorías → grillas →
+ * testimonios → newsletter → contacto).
  * Los ids y settings de las secciones se conservan intactos; sólo cambia el
  * orden del array.
  */

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contactDefaultHelpItems, contactDefaultQuickLinks } from "./catalog-modern-contact";
+import { catalogModernStore } from "./catalog-modern-fixture";
 import {
   buildCatalogModernProject,
   CATALOG_MODERN_TEMPLATE_VERSION,
@@ -164,6 +165,27 @@ describe("plantilla Catalog Modern", () => {
 
     const v1 = structuredClone(catalogModernCleanStore);
     expect(ensureAboutV2Sections(v1)).toEqual(v1);
+    expect(ensureCatalogModernV2Sections(v1)).toEqual(v1);
+  });
+
+  it("agrega Contacto al final de Home V2 sin duplicar módulos ni tocar V1", () => {
+    const legacy = structuredClone(catalogModernV2Store);
+    legacy.sections = legacy.sections.filter(
+      (section) => !["contact-form", "contact-channels"].includes(section.moduleId),
+    );
+    const normalized = ensureCatalogModernV2Sections(legacy);
+    const moduleIds = normalized.sections.map((section) => section.moduleId);
+    const formIndex = moduleIds.indexOf("contact-form");
+    const channelsIndex = moduleIds.indexOf("contact-channels");
+    const cartIndex = moduleIds.indexOf("catalog-cart-drawer");
+
+    expect(formIndex).toBeGreaterThan(-1);
+    expect(channelsIndex).toBe(formIndex + 1);
+    expect(cartIndex).toBeGreaterThan(channelsIndex);
+    expect(ensureCatalogModernV2Sections(normalized)).toEqual(normalized);
+
+    const v1 = structuredClone(catalogModernStore);
+    expect(v1.sections.some((section) => section.moduleId === "contact-form")).toBe(false);
     expect(ensureCatalogModernV2Sections(v1)).toEqual(v1);
   });
 
