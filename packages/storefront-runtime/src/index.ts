@@ -199,29 +199,33 @@ function storefrontBoot(): void {
       .filter(Boolean),
   );
   const hasFeature = (feature: string): boolean => runtimeFeatures.has(feature);
+  const backupKey = `${storageKey}:backup`;
+
+  const parseSerializedCart = (serialized: string | null): StoredCartLine[] | null => {
+    try {
+      const stored = JSON.parse(serialized ?? "null");
+      return Array.isArray(stored) ? parseCart(stored) : null;
+    } catch {
+      return null;
+    }
+  };
 
   const readStoredCart = (): StoredCartLine[] => {
     if (embed) return [];
     try {
-      const serialized = localStorage.getItem(storageKey);
-      if (!serialized) return [];
-      const stored = JSON.parse(serialized) as unknown;
-      return Array.isArray(stored) ? parseCart(stored) : [];
+      const primary = parseSerializedCart(localStorage.getItem(storageKey));
+      if (primary !== null) return primary;
+      return parseSerializedCart(localStorage.getItem(backupKey)) ?? [];
     } catch {
       return [];
     }
   };
 
   let cart = hasFeature("cart") || hasFeature("checkout") ? readStoredCart() : [];
-  const previewCartSession = document.getElementById("solara-preview-cart")?.dataset.session ?? "";
-  if (embed) {
-    const previewCartState = document.getElementById("solara-preview-cart")?.textContent;
-    if (previewCartState) {
-      try {
-        const parsed = JSON.parse(previewCartState);
-        cart = Array.isArray(parsed) ? parsed : [];
-      } catch {}
-    }
+  const previewCartElement = document.getElementById("solara-preview-cart");
+  if (embed && previewCartElement?.dataset.hydrated) {
+    const previewCartState = parseSerializedCart(previewCartElement?.textContent ?? null);
+    if (previewCartState !== null) cart = previewCartState;
   }
   let lastCartTrigger: HTMLElement | null = null;
   let paused = false;
@@ -267,30 +271,34 @@ function storefrontBoot(): void {
     });
   };
 
-  const renderCart = (persist = true): void => {
+  const persistCart = (): void => {
+    const serialized = JSON.stringify(cart);
+    try {
+      if (embed) {
+        if (previewCartElement) previewCartElement.textContent = serialized;
+        parent.postMessage(
+          {
+            type: "solara-preview-cart-write",
+            key: storageKey,
+            value: serialized,
+            session: previewCartElement?.dataset.session,
+          },
+          "*",
+        );
+      } else {
+        localStorage.setItem(storageKey, serialized);
+        cart.length && localStorage.setItem(backupKey, serialized);
+      }
+    } catch {}
+  };
+
+  const renderCart = (persist = false): void => {
     const active = document.activeElement;
     const focusedQuantity =
       active instanceof HTMLElement && active.matches("[data-cart-quantity]")
         ? active.dataset.cartQuantity
         : undefined;
-    if (persist) {
-      const serialized = JSON.stringify(cart);
-      try {
-        if (embed) {
-          parent.postMessage(
-            {
-              type: "solara-preview-cart-write",
-              key: storageKey,
-              value: serialized,
-              session: previewCartSession,
-            },
-            "*",
-          );
-        } else {
-          localStorage.setItem(storageKey, serialized);
-        }
-      } catch {}
-    }
+    if (persist) persistCart();
     const count = cart.reduce((sum, line) => sum + line.quantity, 0);
     document.querySelectorAll<HTMLElement>("[data-cart-count]").forEach((element) => {
       element.textContent = String(count);
@@ -352,6 +360,8 @@ function storefrontBoot(): void {
     }
   };
 
+  if (embed) window.addEventListener("pagehide", persistCart);
+
   const escapeText = (value: string): string =>
     value.replace(
       /[&<>"']/g,
@@ -376,8 +386,14 @@ function storefrontBoot(): void {
   let freshCatalog: Promise<boolean> | null = null;
 
   const applyCatalog = (catalog: CatalogIndexEntry[]): void => {
-    cart = reconcileCartLines(cart, catalog);
-    renderCart();
+    if (!Array.isArray(catalog) || (catalog.length === 0 && cart.length > 0)) {
+      renderCart(false);
+      return;
+    }
+    const reconciled = reconcileCartLines(cart, catalog);
+    const changed = JSON.stringify(reconciled) !== JSON.stringify(cart);
+    cart = reconciled;
+    renderCart(changed);
   };
 
   const reconcileCart = (): Promise<boolean> => {
@@ -573,7 +589,7 @@ function storefrontBoot(): void {
       }
       const quantity = Math.min(99, Math.trunc(parsed));
       cart = cart.map((line) => (line.variantId === variantId ? { ...line, quantity } : line));
-      renderCart();
+      renderCart(true);
     }
   });
 
@@ -605,7 +621,7 @@ function storefrontBoot(): void {
         available: true,
       });
     }
-    renderCart();
+    renderCart(true);
     openCart();
   };
 
@@ -665,7 +681,7 @@ function storefrontBoot(): void {
     if (removeButton) {
       const variantId = removeButton.dataset.cartRemove;
       cart = cart.filter((line) => line.variantId !== variantId);
-      renderCart();
+      renderCart(true);
     }
   });
 

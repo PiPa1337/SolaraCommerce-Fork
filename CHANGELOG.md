@@ -1,5 +1,20 @@
 # Changelog
 
+### Carrito V2 resiliente y rutas retiradas (2026-08-18)
+
+- **Persistencia**: el carrito público usa un respaldo local, recupera datos si
+  la clave primaria está dañada y evita reemplazar líneas válidas durante una
+  reconciliación de catálogo vacía o incompleta.
+- **Preview**: el iframe hidrata el carrito de forma explícita, actualiza el
+  estado antes de cambiar de ruta y sincroniza snapshots con sesión validada;
+  también conserva el estado al cerrar o reconstruir la vista previa.
+- **V2**: se dejaron de publicar `compra`, `envios` y `devoluciones`; el carrito
+  ofrece el formulario de contacto de Inicio. La familia V1 conserva checkout
+  y sus páginas legales para compatibilidad.
+- **Regresión**: E2E cubre rutas sucesivas, historial, múltiples líneas,
+  checkout del drawer, viewports sin overflow y respuestas 404 de las rutas
+  V2 retiradas.
+
 ### Páginas públicas V2 concentradas en Home (2026-08-18)
 
 - **Navegación**: la tienda `catalog-modern-v2` deja de publicar las páginas

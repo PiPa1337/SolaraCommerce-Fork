@@ -230,24 +230,19 @@ describe("exporter", () => {
     expect(v1Css).not.toContain("catalog-hero-video{display:none}");
   });
 
-  it("compone políticas y recuperación 404 V2 sin inventar condiciones", () => {
+  it("publica sólo las políticas vigentes y recuperación 404 V2", () => {
     const result = exportProject(catalogModernV2Store, { mode: "production" });
-    const shipping = String(result.files.get("envios/index.html"));
-    const returns = String(result.files.get("devoluciones/index.html"));
     const privacy = String(result.files.get("privacidad/index.html"));
+    const terms = String(result.files.get("terminos/index.html"));
     const notFound = String(result.files.get("404.html"));
 
-    expect(shipping).toContain('class="solara-editorial-page solara-policy-page');
-    expect(shipping).toContain("Preparación del pedido");
-    expect(shipping).toContain("1 a 3 días");
-    expect(shipping).toContain("2 a 7 días");
-    expect(shipping).toContain("Argentina");
-    expect(returns).toContain("Plazo informado");
-    expect(returns).toContain("10 días");
+    expect(result.files.has("envios/index.html")).toBe(false);
+    expect(result.files.has("devoluciones/index.html")).toBe(false);
+    expect(result.files.has("compra/index.html")).toBe(false);
     expect(privacy).toContain(catalogModernV2Store.policies.privacy);
+    expect(terms).toContain(catalogModernV2Store.policies.terms);
     expect(notFound).toContain('class="solara-error-code" aria-hidden="true">404');
     expect(notFound).toContain("Volver al inicio");
-    expect(shipping).not.toMatch(/envío gratis|seguimiento|transportista/i);
   });
 
   it("rechaza proyectos inválidos con una ruta accionable en cada límite público", () => {

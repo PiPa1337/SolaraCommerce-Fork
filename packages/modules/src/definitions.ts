@@ -122,19 +122,23 @@ export const editorialHeader: ModuleDefinition<
     const showContact = !isV2 && navigation.showContact;
     const showAbout = !isV2 && navigation.showAbout;
     const publishedNavigationItems = navigation.items.flatMap((item) => {
-      if (isV2 && /^\/nosotros\/?$/i.test(item.href ?? "")) return [];
       const normalizeHref = (href: string | undefined): string | undefined => {
         if (isV2 && /^\/contacto\/?$/i.test(href ?? "")) return "/#contact-form";
         if (isV2 && /^\/nosotros\/?$/i.test(href ?? "")) return undefined;
+        if (isV2 && /^\/compra\/?$/i.test(href ?? "")) return "/#contact-form";
+        if (isV2 && /^\/(envios|devoluciones)\/?$/i.test(href ?? "")) return undefined;
         return href;
       };
+      const href = normalizeHref(item.href);
+      if (isV2 && !href) return [];
+      const children = item.children
+        ?.map((child) => ({ ...child, href: normalizeHref(child.href) }))
+        .filter((child): child is typeof child & { href: string } => Boolean(child.href));
       return [
         {
           ...item,
-          href: normalizeHref(item.href),
-          children: item.children
-            ?.filter((child) => !/^\/nosotros\/?$/i.test(child.href ?? ""))
-            .map((child) => ({ ...child, href: normalizeHref(child.href) })),
+          href,
+          ...(children ? { children } : {}),
         },
       ];
     });
@@ -1046,8 +1050,11 @@ export const editorialFooter: ModuleDefinition<
   motionZones: revealZone,
   styleAsset: scopedAssetId("editorial-footer"),
   render(context) {
+    const isV2 = context.project.commerceTemplates.designFamily === "catalog-modern-v2";
     const policies = context.settings.showPolicies
-      ? '<nav aria-label="Políticas"><a href="/envios/">Envíos</a><a href="/devoluciones/">Devoluciones</a><a href="/privacidad/">Privacidad</a><a href="/terminos/">Términos</a></nav>'
+      ? isV2
+        ? '<nav aria-label="Políticas"><a href="/privacidad/">Privacidad</a><a href="/terminos/">Términos</a></nav>'
+        : '<nav aria-label="Políticas"><a href="/envios/">Envíos</a><a href="/devoluciones/">Devoluciones</a><a href="/privacidad/">Privacidad</a><a href="/terminos/">Términos</a></nav>'
       : "";
     const note = context.settings.note || context.project.identity.description;
     const email = context.project.identity.email

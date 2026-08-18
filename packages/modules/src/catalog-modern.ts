@@ -92,9 +92,17 @@ export const catalogAnnouncement: ModuleDefinition<
   motionZones: modernRevealZone,
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
+    const isV2 = context.project.commerceTemplates.designFamily === "catalog-modern-v2";
+    const normalizeV2Href = (href: string): string => {
+      if (!isV2) return href;
+      if (/^\/(contacto|nosotros|compra|envios|devoluciones)\/?$/i.test(href)) {
+        return "#contact-form";
+      }
+      return href;
+    };
     const link =
       context.settings.linkLabel && context.settings.linkHref
-        ? `<a href="${escapeAttribute(safeUrl(context.settings.linkHref))}">${escapeHtml(context.settings.linkLabel)}</a>`
+        ? `<a href="${escapeAttribute(safeUrl(normalizeV2Href(context.settings.linkHref)))}">${escapeHtml(context.settings.linkLabel)}</a>`
         : "";
     return moduleRoot(
       "catalog-announcement",
@@ -158,17 +166,21 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
       if (!isV2) return href;
       if (/^\/contacto\/?$/i.test(href ?? "")) return "/#contact-form";
       if (/^\/nosotros\/?$/i.test(href ?? "")) return undefined;
+      if (/^\/compra\/?$/i.test(href ?? "")) return "/#contact-form";
+      if (/^\/(envios|devoluciones)\/?$/i.test(href ?? "")) return undefined;
       return href;
     };
     const navigationItems = configuredNavigationItems.flatMap((item) => {
-      if (isV2 && /^\/nosotros\/?$/i.test(item.href ?? "")) return [];
+      const href = normalizeV2NavigationHref(item.href);
+      if (isV2 && !href) return [];
+      const children = item.children
+        ?.map((child) => ({ ...child, href: normalizeV2NavigationHref(child.href) }))
+        .filter((child): child is typeof child & { href: string } => Boolean(child.href));
       return [
         {
           ...item,
-          href: normalizeV2NavigationHref(item.href),
-          children: item.children
-            ?.filter((child) => !/^\/nosotros\/?$/i.test(child.href ?? ""))
-            .map((child) => ({ ...child, href: normalizeV2NavigationHref(child.href) })),
+          href,
+          ...(children ? { children } : {}),
         },
       ];
     });
@@ -622,22 +634,26 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const settings = context.settings;
+    const normalizeV2Href = (href: string): string => {
+      if (
+        context.project.commerceTemplates.designFamily === "catalog-modern-v2" &&
+        /^\/(contacto|nosotros|compra|envios|devoluciones)\/?$/i.test(href)
+      ) {
+        return "#contact-form";
+      }
+      return href;
+    };
     const searchEnabled =
       context.project.navigation.showSearch && context.project.commerceTemplates.search.enabled;
     const activeSlide = settings.mode === "carousel" ? settings.slides[0] : undefined;
     const title = activeSlide?.title ?? settings.title;
     const body = activeSlide?.body ?? settings.body;
     const actionLabel = activeSlide?.actionLabel ?? settings.actionLabel;
-    const actionHref = catalogSearchHref(
-      searchEnabled,
-      activeSlide?.actionHref ?? settings.actionHref,
+    const actionHref = normalizeV2Href(
+      catalogSearchHref(searchEnabled, activeSlide?.actionHref ?? settings.actionHref),
     );
     const configuredSecondaryActionHref = safeUrl(settings.secondaryActionHref);
-    const secondaryActionHref =
-      context.project.commerceTemplates.designFamily === "catalog-modern-v2" &&
-      /^\/nosotros\/?$/i.test(configuredSecondaryActionHref)
-        ? "#contact-form"
-        : configuredSecondaryActionHref;
+    const secondaryActionHref = normalizeV2Href(configuredSecondaryActionHref);
     const media = renderCatalogHeroMedia(context, settings, title);
     const slidePanels =
       settings.mode === "carousel"
@@ -654,7 +670,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
                   fallbackAlt: slide.title,
                 },
               );
-              return `<figure data-catalog-hero-slide-panel data-title="${escapeAttribute(slide.title)}" data-body="${escapeAttribute(slide.body)}" data-action-label="${escapeAttribute(slide.actionLabel)}" data-action-href="${escapeAttribute(safeUrl(catalogSearchHref(searchEnabled, slide.actionHref)))}"${index === 0 ? "" : " hidden"}>${slideImage}</figure>`;
+              return `<figure data-catalog-hero-slide-panel data-title="${escapeAttribute(slide.title)}" data-body="${escapeAttribute(slide.body)}" data-action-label="${escapeAttribute(slide.actionLabel)}" data-action-href="${escapeAttribute(normalizeV2Href(safeUrl(catalogSearchHref(searchEnabled, slide.actionHref))))}"${index === 0 ? "" : " hidden"}>${slideImage}</figure>`;
             })
             .join("")
         : "";
@@ -1389,7 +1405,7 @@ export const catalogNewsletterCta: ModuleDefinition<
     const configuredActionHref = safeUrl(context.settings.actionHref);
     const actionHref =
       context.project.commerceTemplates.designFamily === "catalog-modern-v2" &&
-      /^\/contacto\/?$/i.test(configuredActionHref)
+      /^\/(contacto|nosotros|compra|envios|devoluciones)\/?$/i.test(configuredActionHref)
         ? "#contact-form"
         : configuredActionHref;
     const configuredActionLabel = context.settings.actionLabel.trim();
@@ -1435,7 +1451,9 @@ export const catalogFooter: ModuleDefinition<
   render(context) {
     const isV2 = context.project.commerceTemplates.designFamily === "catalog-modern-v2";
     const policyLinks = context.settings.showPolicies
-      ? `<a href="/envios/">Envíos</a><a href="/devoluciones/">Cambios</a><a href="/privacidad/">Privacidad</a><a href="/terminos/">Términos</a>`
+      ? isV2
+        ? `<a href="/privacidad/">Privacidad</a><a href="/terminos/">Términos</a>`
+        : `<a href="/envios/">Envíos</a><a href="/devoluciones/">Cambios</a><a href="/privacidad/">Privacidad</a><a href="/terminos/">Términos</a>`
       : "";
     const note = context.settings.note || context.project.identity.description;
     const contact = [

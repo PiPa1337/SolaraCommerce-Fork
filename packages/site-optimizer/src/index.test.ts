@@ -70,7 +70,7 @@ describe("site optimizer", () => {
     const text = buildLlmsTxt(catalogModernCleanStore);
     expect(text).toContain("# Nueva tienda");
     expect(text).not.toContain("Modo Sur");
-    expect(text).toContain("/contacto/");
+    expect(text).toContain("/#contact-form");
     expect(text).toContain("## Productos");
     expect(text.endsWith("\n")).toBe(true);
   });

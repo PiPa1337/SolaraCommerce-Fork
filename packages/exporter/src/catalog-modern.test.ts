@@ -46,7 +46,6 @@ describe("tienda base catalog-modern de 50 productos", () => {
     const v2Export = exportProject(catalogModernV2Store, { mode: "production" });
     const v2Home = String(v2Export.files.get("index.html"));
     const v2Product = String(v2Export.files.get("productos/remera-esencial-de-algodon/index.html"));
-    const v2Checkout = String(v2Export.files.get("compra/index.html"));
     const v2Sitemap = String(v2Export.files.get("sitemap.xml"));
     const v2Preview = renderPreviewHtml(catalogModernV2Store, "draft", "/");
     const v1Home = String(exported.files.get("index.html"));
@@ -64,13 +63,17 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(v2Product).toContain('data-solara-module="catalog-product-detail"');
     expect(v2Export.files.has("nosotros/index.html")).toBe(false);
     expect(v2Export.files.has("contacto/index.html")).toBe(false);
+    expect(v2Export.files.has("compra/index.html")).toBe(false);
+    expect(v2Export.files.has("envios/index.html")).toBe(false);
+    expect(v2Export.files.has("devoluciones/index.html")).toBe(false);
     expect(v2Home).not.toContain('href="/nosotros/"');
     expect(v2Home).not.toContain('href="/contacto/"');
+    expect(v2Home).not.toContain('href="/envios/"');
+    expect(v2Home).not.toContain('href="/devoluciones/"');
+    expect(v2Home).not.toContain('href="/compra/"');
     expect(v2Home).toContain('<link rel="canonical"');
     expect(v2Home).toContain('<meta property="og:title"');
     expect(v2Sitemap).toContain("/productos/remera-esencial-de-algodon/");
-    expect(v2Checkout).toContain('<meta name="robots" content="noindex,follow">');
-    expect(v2Checkout).toContain('class="solara-checkout-form solara-checkout-form-v2"');
     expect(moduleTree(v2Preview)).toEqual(moduleTree(v2Home));
     expect(v1Home).not.toContain("catalog-modern-v2");
   });

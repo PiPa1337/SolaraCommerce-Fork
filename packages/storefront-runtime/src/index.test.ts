@@ -219,6 +219,18 @@ describe("carrito robusto y checkout con precios frescos (C2/C3/C5/C9 + SF-B4/B5
     expect(STOREFRONT_RUNTIME_JS).toContain('location.protocol[0] !== "s"');
     expect(STOREFRONT_RUNTIME_JS).toContain("if (!embed) cart = readStoredCart();");
   });
+
+  it("protege el estado del preview contra iframes y escrituras iniciales obsoletas", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("dataset.hydrated");
+    expect(STOREFRONT_RUNTIME_JS).toContain('type: "solara-preview-cart-write"');
+    expect(STOREFRONT_RUNTIME_JS).toContain('addEventListener("pagehide"');
+    expect(STOREFRONT_RUNTIME_JS).toContain("backupKey");
+  });
+
+  it("no vacía el carrito ante un índice de catálogo vacío", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("catalog.length === 0 && cart.length > 0");
+    expect(STOREFRONT_RUNTIME_JS).toContain("renderCart(false)");
+  });
 });
 
 describe("carrito sin líneas fantasma y conteos honestos (F-04, SF-B7, SF-B8, C6, NG-4)", () => {
@@ -345,8 +357,7 @@ describe("pausa y reanudación del runtime (contrato A3↔A4)", () => {
   });
 
   it("vincula la escritura del carrito embebido a la sesion activa del preview", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain("previewCartSession");
-    expect(STOREFRONT_RUNTIME_JS).toContain("session: previewCartSession");
+    expect(STOREFRONT_RUNTIME_JS).toContain("session: previewCartElement?.dataset.session");
   });
 
   it("mueve testimonios con scroll suave y expone el estado disabled", () => {
@@ -380,7 +391,7 @@ describe("carrito y checkout del drawer (A29)", () => {
 
   it("permite seguir comprando desde el drawer sin perder el carrito", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain('target.closest("[data-close-cart]")');
-    expect(STOREFRONT_RUNTIME_JS).toContain("renderCart()");
+    expect(STOREFRONT_RUNTIME_JS).toContain("renderCart(true)");
   });
 
   it("quita líneas por data-cart-remove y persiste el carrito", () => {

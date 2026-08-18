@@ -1126,7 +1126,7 @@ describe("auditoría Resumen — fixes Ola 3 (navegación y footer moderno)", ()
     const html = renderSections(project, [headerSection], { pageType: "home" });
 
     expect(html).toContain('href="/#contact-form"');
-    expect(html).toContain('href="/envios/"');
+    expect(html).not.toContain('href="/envios/"');
     expect(html).not.toContain('href="/contacto/"');
     expect(html).not.toContain('href="/nosotros/"');
     expect(html).not.toContain(">Nosotros</a>");

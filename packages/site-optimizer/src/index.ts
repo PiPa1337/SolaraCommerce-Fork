@@ -159,6 +159,7 @@ function buildRoutes(project: StoreProjectV1): OptimizationRoute[] {
   const home = pageByKind.get("home");
   const about = pageByKind.get("about");
   const contact = pageByKind.get("contact");
+  const isV2 = project.commerceTemplates.designFamily === "catalog-modern-v2";
   const pageSize = project.commerceTemplates.category.productsPerPage;
   const routes: OptimizationRoute[] = [
     route(
@@ -170,42 +171,50 @@ function buildRoutes(project: StoreProjectV1): OptimizationRoute[] {
       home?.seoDescription ?? project.seo.description,
       true,
     ),
-    route(
-      "/nosotros/",
-      "about",
-      true,
-      "/nosotros/",
-      about?.seoTitle ?? `Nosotros | ${project.identity.brandName}`,
-      about?.seoDescription ?? project.identity.description,
-      true,
-    ),
-    route(
-      "/contacto/",
-      "contact",
-      true,
-      "/contacto/",
-      contact?.seoTitle ?? `Contacto | ${project.identity.brandName}`,
-      contact?.seoDescription ?? "Escribinos para coordinar tu pedido.",
-      true,
-    ),
-    route(
-      "/envios/",
-      "legal",
-      true,
-      "/envios/",
-      `Envios | ${project.identity.brandName}`,
-      project.policies.shipping.summary,
-      false,
-    ),
-    route(
-      "/devoluciones/",
-      "legal",
-      true,
-      "/devoluciones/",
-      `Cambios y devoluciones | ${project.identity.brandName}`,
-      project.policies.returns.summary,
-      false,
-    ),
+  ];
+
+  if (!isV2) {
+    routes.push(
+      route(
+        "/nosotros/",
+        "about",
+        true,
+        "/nosotros/",
+        about?.seoTitle ?? `Nosotros | ${project.identity.brandName}`,
+        about?.seoDescription ?? project.identity.description,
+        true,
+      ),
+      route(
+        "/contacto/",
+        "contact",
+        true,
+        "/contacto/",
+        contact?.seoTitle ?? `Contacto | ${project.identity.brandName}`,
+        contact?.seoDescription ?? "Escribinos para coordinar tu pedido.",
+        true,
+      ),
+      route(
+        "/envios/",
+        "legal",
+        true,
+        "/envios/",
+        `Envios | ${project.identity.brandName}`,
+        project.policies.shipping.summary,
+        false,
+      ),
+      route(
+        "/devoluciones/",
+        "legal",
+        true,
+        "/devoluciones/",
+        `Cambios y devoluciones | ${project.identity.brandName}`,
+        project.policies.returns.summary,
+        false,
+      ),
+    );
+  }
+
+  routes.push(
     route(
       "/privacidad/",
       "legal",
@@ -224,7 +233,7 @@ function buildRoutes(project: StoreProjectV1): OptimizationRoute[] {
       "Condiciones comerciales de la tienda.",
       false,
     ),
-  ];
+  );
 
   if (project.commerceTemplates.search.enabled) {
     routes.push(
@@ -252,7 +261,7 @@ function buildRoutes(project: StoreProjectV1): OptimizationRoute[] {
       ),
     );
   }
-  if (project.commerceTemplates.checkout.enabled) {
+  if (project.commerceTemplates.checkout.enabled && !isV2) {
     routes.push(
       route(
         "/compra/",
@@ -816,6 +825,11 @@ export function buildAiContext(
 export function buildLlmsTxt(project: StoreProjectV1): string {
   const routes = buildRoutes(project).filter((item) => item.indexable);
   const products = project.products.filter((product) => product.status === "active");
+
+  const contactPath =
+    project.commerceTemplates.designFamily === "catalog-modern-v2"
+      ? "/#contact-form"
+      : "/contacto/";
   const lines = [
     `# ${project.identity.brandName}`,
     "",
@@ -844,7 +858,7 @@ export function buildLlmsTxt(project: StoreProjectV1): string {
     "## Politicas",
     `- Envios: ${cleanText(project.policies.shipping.details)}`,
     `- Cambios y devoluciones: ${cleanText(project.policies.returns.details)}`,
-    `- Contacto: ${publicUrl(project, "/contacto/")}`,
+    `- Contacto: ${publicUrl(project, contactPath)}`,
   ];
   return `${lines.join("\n")}\n`;
 }

@@ -30,9 +30,15 @@ usuario ni fuerza un nuevo guardado del Predeterminado existente.
 - preview responsive y exportación HTML/CSS/JS a carpeta;
 - SEO inicial, JSON-LD, sitemap, image/video sitemap, Merchant y contexto IA
   opcional;
-- carrito local, selección de variantes y pedido determinista por WhatsApp;
+- carrito local resiliente con respaldo y recuperación entre rutas, selección de
+  variantes y pedido determinista por WhatsApp;
 - dashboard, flujo guiado, catálogo, constructor, tema, assets, SEO y export;
 - guardado local versionado y transaccional mediante el servidor loopback.
+
+La demo V2 no publica las rutas independientes `compra`, `envios` ni
+`devoluciones`: el carrito deriva a la sección de contacto de Inicio. La familia
+V1 mantiene esas páginas y su checkout por compatibilidad con proyectos
+existentes.
 
 ## Incompleto o fuera de alcance
 

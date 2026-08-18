@@ -49,12 +49,20 @@ function addPreviewScrollbarPolicy(document: string): string {
 }
 
 function readPreviewCartState(storeId: string): string {
-  try {
-    const stored = window.localStorage.getItem(`solara-cart:${storeId}`);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) return stored;
+  const parse = (serialized: string | null): string | undefined => {
+    if (serialized === null) return undefined;
+    try {
+      return Array.isArray(JSON.parse(serialized)) ? serialized : undefined;
+    } catch {
+      return undefined;
     }
+  };
+  try {
+    const key = `solara-cart:${storeId}`;
+    const stored = parse(window.localStorage.getItem(key));
+    if (stored !== undefined) return stored;
+    const backup = parse(window.localStorage.getItem(`${key}:backup`));
+    if (backup !== undefined) return backup;
   } catch {}
   return "[]";
 }
@@ -65,7 +73,7 @@ function addPreviewCartState(
   sessionId: string,
   serialized = readPreviewCartState(storeId),
 ): string {
-  const state = `<script id="solara-preview-cart" data-session="${sessionId}" type="application/json">${serialized.replace(/</g, "\\u003c")}</script>`;
+  const state = `<script id="solara-preview-cart" data-session="${sessionId}" data-key="solara-cart:${storeId}" data-hydrated="true" type="application/json">${serialized.replace(/</g, "\\u003c")}</script>`;
   const headEnd = document.indexOf("</head>");
   if (headEnd === -1) return `${state}${document}`;
   return `${document.slice(0, headEnd)}${state}\n${document.slice(headEnd)}`;
@@ -74,7 +82,8 @@ function addPreviewCartState(
 function addPreviewNavigationBridge(document: string): string {
   const bridge = `<script data-solara-preview-navigation>
 (() => {
-  const session = document.getElementById("solara-preview-cart")?.dataset.session ?? "";
+  const state = document.getElementById("solara-preview-cart");
+  const session = state?.dataset.session ?? "";
   document.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
@@ -83,6 +92,14 @@ function addPreviewNavigationBridge(document: string): string {
     const href = anchor.getAttribute("href") ?? "";
     if (!href.startsWith("/") || href.startsWith("//") || href.startsWith("/#")) return;
     event.preventDefault();
+    if (state) {
+      parent.postMessage({
+        type: "solara-preview-cart-snapshot",
+        key: state.dataset.key ?? "",
+        value: state.textContent ?? "[]",
+        session,
+      }, "*");
+    }
     parent.postMessage({ type: "solara-preview-navigate", path: href, session }, "*");
   }, true);
 })();
@@ -140,7 +157,9 @@ export function getPreviewRoutes(project: StoreProjectV1): PreviewRoute[] {
           { path: "/nosotros/", label: "Nosotros" },
         ]),
     ...(project.commerceTemplates.cart.enabled ? [{ path: "/carrito/", label: "Carrito" }] : []),
-    ...(project.commerceTemplates.checkout.enabled ? [{ path: "/compra/", label: "Compra" }] : []),
+    ...(project.commerceTemplates.checkout.enabled && !standaloneV2PagesRemoved
+      ? [{ path: "/compra/", label: "Compra" }]
+      : []),
   ];
 }
 
@@ -388,7 +407,8 @@ export function Preview({
         return;
       }
       if (
-        cartMessage.type === "solara-preview-cart-write" &&
+        (cartMessage.type === "solara-preview-cart-write" ||
+          cartMessage.type === "solara-preview-cart-snapshot") &&
         typeof cartMessage.key === "string" &&
         cartMessage.key === `solara-cart:${project.id}` &&
         cartMessage.session === activePreviewSessionRef.current
@@ -403,6 +423,9 @@ export function Preview({
         }
         try {
           window.localStorage.setItem(cartMessage.key, serialized);
+          if (serialized !== "[]") {
+            window.localStorage.setItem(`${cartMessage.key}:backup`, serialized);
+          }
         } catch {}
         return;
       }

@@ -1792,18 +1792,22 @@ function buildPages(
   const emptyCartHref = firstRootCategory
     ? internalHref(project, `/categorias/${firstRootCategory.slug}/`)
     : internalHref(project, "/buscar/");
+  const cartContinueHref = isV2Design
+    ? internalHref(project, "/#contact-form")
+    : internalHref(project, "/compra/");
+  const cartContinueLabel = isV2Design ? "Escribinos para coordinar" : "Continuar a compra";
   const cartPage: PageDescriptor = {
     path: "carrito/index.html",
     title: `Carrito | ${project.identity.brandName}`,
     description: "Revisá tus productos antes de coordinar el pedido.",
     canonicalPath: "/carrito/",
     pageType: "cart",
-    body: `${renderProjectSections(project, sharedHeader, { pageType: "cart" })}<main class="solara-cart-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span>Carrito</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Tu selección</p><h1>Carrito</h1></header><section class="solara-cart-page-grid"><div data-cart-lines><p class="solara-empty-state">Tu carrito está vacío. Elegí una pieza para comenzar.</p></div><aside class="solara-cart-summary"><p><span>Subtotal</span><strong data-cart-subtotal>${escapeHtml(formatMoney(0))}</strong></p><p><span>Entrega</span><strong>A coordinar</strong></p><p><span>Total estimado</span><strong data-cart-total>${escapeHtml(formatMoney(0))}</strong></p><a class="solara-primary-action" href="/compra/">Continuar a compra</a></aside></section></main>${renderProjectSections(project, sharedFooter, { pageType: "cart" })}`,
+    body: `${renderProjectSections(project, sharedHeader, { pageType: "cart" })}<main class="solara-cart-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span>Carrito</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">Tu selección</p><h1>Carrito</h1></header><section class="solara-cart-page-grid"><div data-cart-lines><p class="solara-empty-state">Tu carrito está vacío. Elegí una pieza para comenzar.</p></div><aside class="solara-cart-summary"><p><span>Subtotal</span><strong data-cart-subtotal>${escapeHtml(formatMoney(0))}</strong></p><p><span>Entrega</span><strong>A coordinar</strong></p><p><span>Total estimado</span><strong data-cart-total>${escapeHtml(formatMoney(0))}</strong></p><a class="solara-primary-action" href="${escapeAttribute(cartContinueHref)}">${cartContinueLabel}</a></aside></section></main>${renderProjectSections(project, sharedFooter, { pageType: "cart" })}`,
     structuredData: [],
   };
   cartPage.body = cartPage.body.replace(
-    '<a class="solara-primary-action" href="/compra/">Continuar a compra</a>',
-    `<a data-cart-cta href="${escapeAttribute(emptyCartHref)}"><span class="solara-primary-action">Explorar categor\u00EDas</span></a><a data-cart-cta href="${internalHref(project, "/compra/")}" hidden><span class="solara-primary-action">Continuar a compra</span></a>`,
+    `<a class="solara-primary-action" href="${escapeAttribute(cartContinueHref)}">${cartContinueLabel}</a>`,
+    `<a data-cart-cta href="${escapeAttribute(emptyCartHref)}"><span class="solara-primary-action">Explorar categor\u00EDas</span></a><a data-cart-cta href="${escapeAttribute(cartContinueHref)}" hidden><span class="solara-primary-action">${cartContinueLabel}</span></a>`,
   );
 
   const checkoutWhatsAppLink = whatsAppContactLink
@@ -1952,17 +1956,23 @@ function buildPages(
     },
   ];
 
+  const publishedLegalPages = isV2Design
+    ? legalPages.filter(
+        (page) => page.canonicalPath !== "/envios/" && page.canonicalPath !== "/devoluciones/",
+      )
+    : legalPages;
+
   return [
     home,
     ...(isV2Design ? [] : [aboutPage, contactPage]),
     ...(project.commerceTemplates.search.enabled ? [searchPage] : []),
     ...(project.commerceTemplates.cart.enabled ? [cartPage] : []),
-    ...(project.commerceTemplates.checkout.enabled ? [checkoutPage] : []),
+    ...(project.commerceTemplates.checkout.enabled && !isV2Design ? [checkoutPage] : []),
     notFoundPage,
     ...categories,
     ...collections,
     ...products,
-    ...legalPages,
+    ...publishedLegalPages,
   ].map((page) => ({
     ...page,
     body: page.body || `<main><p>No hay contenido publicado.</p></main>`,

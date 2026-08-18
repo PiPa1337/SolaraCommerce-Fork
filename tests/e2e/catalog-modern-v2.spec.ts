@@ -1122,8 +1122,8 @@ test("V2 ofrece una salida útil cuando el carrito está vacío", async ({ page 
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
   await page.getByRole("button", { name: "Seguir comprando" }).click();
   await page.goto(new URL("/carrito/", serverUrl).toString());
-  await expect(cartAction).toHaveText("Continuar a compra");
-  await expect(cartAction).toHaveAttribute("href", "/compra/");
+  await expect(cartAction).toHaveText("Escribinos para coordinar");
+  await expect(cartAction).toHaveAttribute("href", "/#contact-form");
 });
 
 test("V2 conserva el carrito cuando la navegación ocurre inmediatamente después de agregar", async ({
@@ -1169,6 +1169,26 @@ test("V2 recupera el carrito antes de agregar desde una página restaurada", asy
   ).toHaveCount(2);
 });
 
+test("V2 recupera el carrito desde el respaldo si la clave primaria está dañada", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  const productUrl = new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString();
+  const cartKey = "solara-cart:store-catalog-modern-v2";
+  await page.goto(productUrl);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("1");
+  await page.evaluate((key) => localStorage.setItem(key, "{ carrito dañado"), cartKey);
+
+  await page.goto(new URL("/carrito/", serverUrl).toString());
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("1");
+  await expect(
+    page.locator(".solara-cart-page-grid [data-cart-lines] .solara-cart-line"),
+  ).toHaveCount(1);
+});
+
 test("V2 conserva el carrito al navegar con enlaces del storefront", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 968 });
   const firstProduct = new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString();
@@ -1191,13 +1211,10 @@ test("V2 conserva el carrito al navegar con enlaces del storefront", async ({ pa
   await expect(page.locator("[data-cart-count]").first()).toHaveText("2");
 });
 
-test("V2 envía al checkout todas las líneas agregadas desde páginas distintas", async ({
-  page,
-}) => {
+test("V2 conserva todas las líneas y ofrece contacto desde el carrito", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 968 });
   const firstProduct = new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString();
   const secondProduct = new URL("/productos/remera-grafica-horizonte/", serverUrl).toString();
-  const checkoutUrl = new URL("/compra/", serverUrl).toString();
 
   await page.goto(firstProduct);
   await page.evaluate(() => localStorage.removeItem("solara-cart:store-catalog-modern-v2"));
@@ -1212,98 +1229,38 @@ test("V2 envía al checkout todas las líneas agregadas desde páginas distintas
   await expect(page.locator("[data-cart-count]").first()).toHaveText("2");
   await page.getByRole("button", { name: "Seguir comprando" }).click();
 
-  await page.goto(checkoutUrl);
-  const fields = page.locator(".solara-checkout-fields");
-  const preview = page.locator(".solara-checkout-order-panel [data-order-preview]");
-  await fields.locator("#solara-customer-name").fill("Ana Prueba");
-  await fields.locator("#solara-customer-phone").fill("5491112345678");
-  await fields.locator("#solara-customer-address").fill("Calle de prueba 123");
-  await fields.getByRole("button", { name: "Preparar pedido" }).click();
-
-  await expect(preview).toContainText("1 x Remera esencial de algodón");
-  await expect(preview).toContainText("1 x Remera gráfica Horizonte");
-  await expect(page.locator(".solara-checkout-form-v2 [data-whatsapp-link]")).toBeVisible();
+  await page.goto(new URL("/carrito/", serverUrl).toString());
+  await expect(
+    page.locator(".solara-cart-page-grid [data-cart-lines] .solara-cart-line"),
+  ).toHaveCount(2);
+  const cartAction = page.locator("[data-cart-cta]:visible");
+  await expect(cartAction).toHaveText("Escribinos para coordinar");
+  await expect(cartAction).toHaveAttribute("href", "/#contact-form");
 });
 
-test("V2 compone checkout editorial sin overflow en desktop y movil", async ({
-  page,
-}, testInfo) => {
-  const checkoutUrl = new URL("/compra/", serverUrl).toString();
+test("V2 compone el checkout del drawer sin overflow en desktop y movil", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 968 });
-  await page.goto(checkoutUrl);
-
-  const form = page.locator(".solara-checkout-form-v2");
-  const fields = form.locator(".solara-checkout-fields");
-  const summary = form.locator(".solara-checkout-order-panel");
-  const intro = page.locator(".solara-checkout-page > .solara-page-intro");
-  const title = page.getByRole("heading", { level: 1, name: "Coordinar compra" });
-  await expect(fields).toBeVisible();
-  await expect(summary).toBeVisible();
-  await expect(form.locator("[data-whatsapp-link]")).toBeHidden();
-  await expect(summary.locator("[data-order-preview]")).toBeHidden();
-  expect(
-    await title.evaluate((element) => {
-      const style = getComputedStyle(element);
-      return element.getBoundingClientRect().height / Number.parseFloat(style.lineHeight);
-    }),
-  ).toBeLessThan(1.25);
-  expect(await form.evaluate((element) => getComputedStyle(element).gridTemplateColumns)).toMatch(
-    /^\d+(\.\d+)?px \d+(\.\d+)?px$/,
-  );
-  expect(await summary.evaluate((element) => getComputedStyle(element).position)).toBe("sticky");
-  expect((await fields.boundingBox())?.width).toBeGreaterThan(600);
-  expect((await summary.boundingBox())?.width).toBeGreaterThan(500);
-  const desktopIntroGap = await intro.evaluate((element) => {
-    const introBottom = element.getBoundingClientRect().bottom;
-    const formTop =
-      element.parentElement
-        ?.querySelector<HTMLElement>(".solara-checkout-form-v2")
-        ?.getBoundingClientRect().top ?? 0;
-    return formTop - introBottom;
-  });
-  expect(desktopIntroGap).toBeLessThanOrEqual(48);
-  expect(
-    await fields
-      .locator("input")
-      .first()
-      .evaluate((element) => element.getBoundingClientRect().height),
-  ).toBeGreaterThanOrEqual(48);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1920);
-  await page.screenshot({ path: testInfo.outputPath("checkout-1920x968.png"), fullPage: true });
-
-  await page.goto(new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString());
-  await page.getByLabel("Elegí talle y color").selectOption({ index: 1 });
+  const productUrl = new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString();
+  await page.goto(productUrl);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
-  await page.getByRole("button", { name: "Cerrar carrito" }).click();
-  await page.goto(checkoutUrl);
-  await fields.locator("#solara-customer-name").fill("Ana Prueba");
-  await fields.locator("#solara-customer-phone").fill("5491112345678");
-  await fields.locator("#solara-customer-address").fill("Calle de prueba 123");
-  await fields.getByRole("button", { name: "Preparar pedido" }).click();
-  await expect(summary.locator("[data-order-preview]")).toContainText("Remera esencial");
+  const form = page.locator(".catalog-cart-drawer [data-checkout-form]");
+  await expect(form).toBeVisible();
+  await form.locator("#catalog-drawer-name").fill("Ana Prueba");
+  await form.locator("#catalog-drawer-phone").fill("5491112345678");
+  await form.locator("#catalog-drawer-address").fill("Calle de prueba 123");
+  await form.getByRole("button", { name: "Continuar por WhatsApp" }).click();
+  await expect(form.locator("[data-order-preview]")).toContainText("Remera esencial");
   await expect(form.locator("[data-whatsapp-link]")).toBeVisible();
   await expect(form.locator("[data-whatsapp-link]")).toHaveAttribute("href", /^https:\/\/wa\.me\//);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1920);
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(checkoutUrl);
-  await expect(fields).toBeVisible();
-  await expect(summary).toBeVisible();
-  await expect(page.locator(".catalog-cart-drawer")).toHaveCSS("visibility", "hidden");
-  expect(
-    await form.evaluate((element) => getComputedStyle(element).gridTemplateColumns),
-  ).not.toMatch(/\s/);
-  expect(await summary.evaluate((element) => getComputedStyle(element).position)).toBe("static");
-  const mobileIntroGap = await intro.evaluate((element) => {
-    const introBottom = element.getBoundingClientRect().bottom;
-    const formTop =
-      element.parentElement
-        ?.querySelector<HTMLElement>(".solara-checkout-form-v2")
-        ?.getBoundingClientRect().top ?? 0;
-    return formTop - introBottom;
-  });
-  expect(mobileIntroGap).toBeLessThanOrEqual(40);
+  await page.goto(productUrl);
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await expect(page.locator(".catalog-cart-drawer")).toHaveAttribute("data-open", "true");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-  await page.screenshot({ path: testInfo.outputPath("checkout-390x844.png"), fullPage: true });
 });
 
 test("V2 mantiene equilibrados el resumen y las líneas del carrito en desktop", async ({
@@ -1331,34 +1288,8 @@ test("V2 mantiene equilibrados el resumen y las líneas del carrito en desktop",
   expect(metrics.documentWidth).toBeLessThanOrEqual(1920);
 });
 
-test("V2 conserva carrito y checkout dentro del viewport intermedio", async ({ page }) => {
+test("V2 conserva el carrito dentro del viewport intermedio", async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
-  const checkoutUrl = new URL("/compra/", serverUrl).toString();
-  await page.goto(checkoutUrl);
-
-  const checkoutMetrics = await page.evaluate(() => {
-    const rectOf = (selector: string) => {
-      const element = document.querySelector<HTMLElement>(selector);
-      if (!element) return null;
-      const rect = element.getBoundingClientRect();
-      return { left: rect.left, right: rect.right, width: rect.width, height: rect.height };
-    };
-    return {
-      documentWidth: document.documentElement.scrollWidth,
-      bodyWidth: document.body.scrollWidth,
-      form: rectOf(".solara-checkout-form-v2"),
-      fields: rectOf(".solara-checkout-fields"),
-      summary: rectOf(".solara-checkout-order-panel"),
-      button: rectOf(".solara-checkout-fields .solara-primary-action"),
-    };
-  });
-  expect(checkoutMetrics.documentWidth).toBeLessThanOrEqual(1024);
-  expect(checkoutMetrics.bodyWidth).toBeLessThanOrEqual(1024);
-  expect(checkoutMetrics.form?.right ?? 0).toBeLessThanOrEqual(1024);
-  expect(checkoutMetrics.fields?.width ?? 0).toBeGreaterThan(0);
-  expect(checkoutMetrics.summary?.width ?? 0).toBeGreaterThanOrEqual(300);
-  expect(checkoutMetrics.button?.height ?? 0).toBeGreaterThanOrEqual(48);
-
   await page.goto(new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString());
   await page.evaluate(() => localStorage.clear());
   await page.reload();
@@ -1397,7 +1328,7 @@ test("V2 conserva nombres accesibles, foco visible y navegacion por teclado", as
     "/",
     "/categorias/remeras/",
     "/productos/remera-esencial-de-algodon/",
-    "/compra/",
+    "/carrito/",
   ];
 
   for (const route of routes) {
@@ -1437,7 +1368,11 @@ test("V2 conserva nombres accesibles, foco visible y navegacion por teclado", as
     expect(audit).toEqual({ duplicateIds: [], unnamed: [] });
   }
 
-  const checkoutName = page.locator("#solara-customer-name");
+  await page.goto(new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString());
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  const checkoutName = page.locator("#catalog-drawer-name");
   await checkoutName.focus();
   expect(
     await checkoutName.evaluate((element) => {
@@ -1493,7 +1428,7 @@ test("V2 indica la ruta activa en la navegacion", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("V2 conserva contenido y compra directa sin JavaScript", async ({ browser }) => {
+test("V2 conserva contenido y el fallback del producto sin JavaScript", async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
   await page.setViewportSize({ width: 390, height: 844 });
@@ -1542,9 +1477,6 @@ test("V2 mantiene todas las rutas sin overflow en tablet y laptop", async ({ pag
     "/productos/remera-esencial-de-algodon/",
     "/buscar/",
     "/carrito/",
-    "/compra/",
-    "/envios/",
-    "/devoluciones/",
     "/privacidad/",
     "/terminos/",
     "/404.html",
@@ -1584,6 +1516,13 @@ test("V2 mantiene todas las rutas sin overflow en tablet y laptop", async ({ pag
       expect(metrics.rootLeft).toBeGreaterThanOrEqual(0);
       expect(metrics.rootRight).toBeLessThanOrEqual(viewport.width);
     }
+  }
+});
+
+test("V2 no publica las rutas independientes retiradas", async ({ page }) => {
+  for (const route of ["/compra/", "/envios/", "/devoluciones/"]) {
+    const response = await page.goto(new URL(route, serverUrl).toString());
+    expect(response?.status(), route).toBe(404);
   }
 });
 
@@ -1787,8 +1726,6 @@ test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, t
   const routes = [
     ["buscar", "/buscar/"],
     ["carrito", "/carrito/"],
-    ["envios", "/envios/"],
-    ["devoluciones", "/devoluciones/"],
     ["privacidad", "/privacidad/"],
     ["terminos", "/terminos/"],
     ["404", "/404.html"],
@@ -1807,17 +1744,10 @@ test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, t
         await page.evaluate(() => document.documentElement.scrollWidth),
         `${name} ${viewport.label}`,
       ).toBeLessThanOrEqual(viewport.width);
-      if (["envios", "devoluciones", "privacidad", "terminos"].includes(name)) {
+      if (["privacidad", "terminos"].includes(name)) {
         const policyPage = page.locator(".solara-policy-page");
         await expect(policyPage.locator(".solara-story-grid")).toBeVisible();
-        await expect(policyPage.getByRole("heading", { level: 2 })).toHaveCount(
-          name === "envios" ? 5 : name === "devoluciones" ? 4 : 2,
-        );
-      }
-      if (name === "envios") {
-        await expect(page.locator(".solara-policy-page .solara-values-grid article")).toHaveCount(
-          3,
-        );
+        await expect(policyPage.getByRole("heading", { level: 2 })).toHaveCount(2);
       }
       if (name === "404") {
         await expect(page.locator(".solara-error-code")).toHaveAttribute("aria-hidden", "true");
