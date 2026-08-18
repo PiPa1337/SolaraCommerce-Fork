@@ -797,6 +797,10 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
       "[data-hero-media]{animation:none!important;opacity:1!important}",
     );
     expect(modernStyles).toContain("@keyframes solara-hero-media-zoom");
+    expect(modernStyles).toContain(".catalog-hero-line-inner");
+    expect(modernStyles).toContain("text-shadow:");
+    expect(modernStyles).toContain("@media (min-width: 768px) and (max-width: 899px)");
+    expect(modernStyles).toContain(".catalog-hero-benefits--band");
     expect(modernStyles).not.toContain("clip-path");
   });
 });

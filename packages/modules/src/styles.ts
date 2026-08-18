@@ -2622,6 +2622,17 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   word-break: normal;
   text-wrap: balance;
 }
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-eyebrow,
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-line-inner,
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-body,
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-copy strong,
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-copy small {
+  /* Halo dual y tenue: mantiene la lectura en fondos claros y oscuros sin
+     convertir el tratamiento editorial en una sombra decorativa pesada. */
+  text-shadow:
+    0 1px 0 color-mix(in srgb, var(--catalog-paper) 72%, transparent),
+    0 2px 8px color-mix(in srgb, var(--catalog-ink) 20%, transparent);
+}
 .cm.v2 .catalog-hero-copy .catalog-hero-reveal--body > p {
   max-width: 54ch;
   margin-top: 0;
@@ -3378,6 +3389,73 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
   .cm.v2 .catalog-product-info {
     position: static;
+  }
+}
+/* En tablet angosta el hero editorial usa la misma composición legible que
+   mobile: imagen de fondo, copy superpuesto y beneficios en una banda aparte.
+   Así no se comprimen tres beneficios dentro de una columna de 17-20rem. */
+@media (min-width: 768px) and (max-width: 899px) {
+  .cm.v2 .catalog-hero-editorial .catalog-hero-inner {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    width: min(calc(100% - 3rem), var(--catalog-v2-wide));
+    height: round(up, 90svh, 1px);
+    min-height: 0;
+  }
+  .cm.v2 .catalog-hero-editorial [data-hero-media] {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    aspect-ratio: auto;
+    margin: 0;
+    border-radius: 0;
+  }
+  .cm.v2 .catalog-hero-editorial [data-hero-media]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+      180deg,
+      rgba(12, 12, 14, 0.1) 0%,
+      rgba(12, 12, 14, 0.24) 45%,
+      rgba(12, 12, 14, 0.78) 100%
+    );
+    pointer-events: none;
+  }
+  .cm.v2 .catalog-hero-editorial .catalog-hero-copy {
+    position: relative;
+    z-index: 2;
+    padding: clamp(2.5rem, 7vw, 4.5rem) clamp(2rem, 5vw, 3.5rem) clamp(3.5rem, 7vw, 4.25rem);
+    color: #fff;
+  }
+  .cm.v2 .catalog-hero-editorial .catalog-hero-copy .catalog-hero-body {
+    color: color-mix(in srgb, #fff 84%, transparent);
+  }
+  .cm.v2 .catalog-hero-editorial .catalog-hero-benefits--copy {
+    display: none;
+  }
+  .cm.v2 .catalog-hero-editorial [data-hero-background] {
+    display: none;
+  }
+  .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .85rem;
+    width: min(calc(100% - 3rem), var(--catalog-v2-wide));
+    margin: 1.25rem auto 2.25rem;
+    padding: 0;
+  }
+  .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band .catalog-hero-benefit {
+    gap: .55rem;
+  }
+  .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band .catalog-hero-benefit + .catalog-hero-benefit {
+    padding-left: .85rem;
   }
 }
 @media (max-width: 767px) {

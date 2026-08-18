@@ -788,7 +788,9 @@ test("V2 Home muestra Contacto como módulos responsive y replica el CTA del her
 
 test("V2 audita composición en viewports intermedios", async ({ page }, testInfo) => {
   for (const viewport of [
-    { width: 768, height: 1024 },
+    { width: 768, height: 823 },
+    { width: 820, height: 900 },
+    { width: 899, height: 900 },
     { width: 1024, height: 768 },
     { width: 1366, height: 768 },
     { width: 1440, height: 900 },
@@ -801,6 +803,11 @@ test("V2 audita composición en viewports intermedios", async ({ page }, testInf
       const card = grid?.querySelector<HTMLElement>(".catalog-product-card");
       const action = document.querySelector<HTMLElement>(".catalog-hero-actions");
       const nav = document.querySelector<HTMLElement>(".catalog-desktop-nav");
+      const media = document.querySelector<HTMLElement>(".catalog-hero-media");
+      const benefitsBand = document.querySelector<HTMLElement>(".catalog-hero-benefits--band");
+      const titleLine = document.querySelector<HTMLElement>(".catalog-hero-line-inner");
+      const body = document.querySelector<HTMLElement>(".catalog-hero-body");
+      const copy = document.querySelector<HTMLElement>(".catalog-hero-copy");
       return {
         documentWidth: document.documentElement.scrollWidth,
         heroWidth: hero?.getBoundingClientRect().width ?? 0,
@@ -808,6 +815,13 @@ test("V2 audita composición en viewports intermedios", async ({ page }, testInf
         productColumns: grid ? getComputedStyle(grid).gridTemplateColumns.split(" ").length : 0,
         productCardWidth: card?.getBoundingClientRect().width ?? 0,
         navHeight: nav?.getBoundingClientRect().height ?? 0,
+        heroDisplay: hero ? getComputedStyle(hero).display : "",
+        heroFlexDirection: hero ? getComputedStyle(hero).flexDirection : "",
+        mediaPosition: media ? getComputedStyle(media).position : "",
+        benefitsBandDisplay: benefitsBand ? getComputedStyle(benefitsBand).display : "",
+        titleTextShadow: titleLine ? getComputedStyle(titleLine).textShadow : "",
+        bodyTextShadow: body ? getComputedStyle(body).textShadow : "",
+        copyColor: copy ? getComputedStyle(copy).color : "",
       };
     });
     expect(metrics.documentWidth).toBeLessThanOrEqual(viewport.width);
@@ -819,6 +833,24 @@ test("V2 audita composición en viewports intermedios", async ({ page }, testInf
     );
     expect(metrics.productCardWidth).toBeGreaterThan(155);
     expect(metrics.navHeight).toBeLessThanOrEqual(44);
+    expect(metrics.titleTextShadow).not.toBe("none");
+    expect(metrics.bodyTextShadow).not.toBe("none");
+    if (viewport.width <= 899) {
+      expect(metrics.heroDisplay).toBe("flex");
+      expect(metrics.heroFlexDirection).toBe("column");
+      expect(metrics.mediaPosition).toBe("absolute");
+      expect(metrics.benefitsBandDisplay).toBe("grid");
+      expect(metrics.copyColor).toBe("rgb(255, 255, 255)");
+    }
+    await expect
+      .poll(
+        () =>
+          page
+            .locator(".catalog-hero-title")
+            .evaluate((element) => getComputedStyle(element).opacity),
+        { timeout: 5_000 },
+      )
+      .toBe("1");
     await page.screenshot({
       path: testInfo.outputPath(`home-${viewport.width}x${viewport.height}.png`),
       fullPage: false,

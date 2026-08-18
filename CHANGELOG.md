@@ -1,5 +1,15 @@
 # Changelog
 
+### Hero V2 responsive en tablet (2026-08-18)
+
+- **Composición**: entre 768 y 899 px el hero editorial pasa a usar la imagen
+  como fondo, mantiene el copy ordenado y baja los beneficios a una banda de
+  tres columnas para evitar la columna comprimida del layout anterior.
+- **Legibilidad**: los textos del hero incorporan una sombra dual sutil,
+  adaptable a fondos claros y oscuros, sin alterar la jerarquía tipográfica.
+- **Regresión**: el E2E cubre 768x823, 820x900, 899x900 y los viewports de
+  laptop/desktop, incluyendo ausencia de overflow y CTA dentro del viewport.
+
 ### Carrito V2 protegido contra vaciados de navegación (2026-08-18)
 
 - **Persistencia**: la lectura prioriza el respaldo cuando la clave primaria
