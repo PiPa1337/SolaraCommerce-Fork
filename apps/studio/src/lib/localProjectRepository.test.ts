@@ -12,7 +12,7 @@ describe("carga de proyectos administrados", () => {
     const loaded = normalizeLoadedProject(stored);
 
     expect(loaded.pages.find((page) => page.kind === "about")?.sections).toHaveLength(10);
-    expect(loaded.pages.find((page) => page.kind === "contact")?.sections).toHaveLength(8);
+    expect(loaded.pages.find((page) => page.kind === "contact")?.sections).toHaveLength(7);
     expect(loaded.sections).toEqual(stored.sections);
   });
 });

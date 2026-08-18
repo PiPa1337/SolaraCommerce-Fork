@@ -36,6 +36,7 @@ import {
   duplicateProject,
   ensureCatalogModernDemoGallery,
   ensureCatalogModernDemoReviews,
+  ensureCatalogModernDemoTestimonials,
   ensureDemoSectionOrder,
   ensureDeprecatedCategoriesRemoved,
   ensureScaleDemoProject,
@@ -382,6 +383,37 @@ describe("repositorio local", () => {
     expect(expanded?.products[0]?.imageIds[0]).toBe(staleDemo.products[0]?.imageIds[0]);
     expect(await getProject(referenceStore.id)).toEqual(referenceStore);
     expect(await ensureCatalogModernDemoGallery()).toBe(false);
+  });
+
+  it("amplía las reseñas visibles del demo a doce sin tocar otras tiendas", async () => {
+    const staleDemo = StoreProjectV1Schema.parse({
+      ...structuredClone(catalogModernStore),
+      id: SCALE_DEMO_PROJECT_ID,
+      sections: catalogModernStore.sections.map((section) =>
+        section.moduleId === "catalog-testimonials"
+          ? {
+              ...section,
+              settings: {
+                ...section.settings,
+                items: Array.isArray(section.settings.items)
+                  ? section.settings.items.slice(0, 3)
+                  : [],
+              },
+            }
+          : section,
+      ),
+    });
+    await saveProject(staleDemo);
+    await saveProject(referenceStore);
+
+    expect(await ensureCatalogModernDemoTestimonials()).toBe(true);
+    const expanded = await getProject(staleDemo.id);
+    const testimonials = expanded?.sections.find(
+      (section) => section.moduleId === "catalog-testimonials",
+    );
+    expect(testimonials?.settings.items).toHaveLength(12);
+    expect(await getProject(referenceStore.id)).toEqual(referenceStore);
+    expect(await ensureCatalogModernDemoTestimonials()).toBe(false);
   });
 
   it("reordena el demo para que el bento siga a la franja de marcas", async () => {

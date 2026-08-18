@@ -49,7 +49,7 @@ describe("Contacto V2 module contracts", () => {
   it("aplica los defaults comerciales y los límites de repeaters", () => {
     expect(contactHeroSettings.parse({}).title).toBe("Estamos para ayudarte.");
     expect(contactHeroSettings.parse({}).imageAssetId).toBe("asset-contact-hero");
-    expect(contactHeroSettings.parse({}).quickLinks).toHaveLength(4);
+    expect(contactHeroSettings.parse({}).quickLinks).toHaveLength(0);
     expect(contactHelpGridSettings.parse({}).items).toHaveLength(4);
     expect(contactPurchaseInfoSettings.parse({}).items).toHaveLength(3);
     expect(contactFaqSettings.parse({}).items).toHaveLength(6);
@@ -70,7 +70,18 @@ describe("Contacto V2 module contracts", () => {
   });
 
   it("renderiza el hero con accesos rápidos semánticos", () => {
-    const settings = contactHeroSettings.parse({});
+    const settings = contactHeroSettings.parse({
+      quickLinks: [
+        {
+          id: "quick-test",
+          icon: "chat",
+          title: "Acceso de prueba",
+          body: "Texto de prueba",
+          href: "#contact-form",
+          actionLabel: "Consultar",
+        },
+      ],
+    });
     const html = String(
       contactHero.render?.({
         project: catalogModernV2Store,
@@ -82,7 +93,7 @@ describe("Contacto V2 module contracts", () => {
     expect(html).toContain('data-solara-module="contact-hero"');
     expect(html).toContain("Estamos para");
     expect(html).toContain("ayudarte.");
-    expect(html).toContain("Respondemos por WhatsApp");
+    expect(html).toContain("Acceso de prueba");
     expect(html).toContain('data-motion-zone="items"');
     expect(html).toContain('class="catalog-hero-inner contact-hero"');
     expect(html).toContain('class="catalog-hero-media contact-hero-media"');
@@ -91,6 +102,18 @@ describe("Contacto V2 module contracts", () => {
     expect(html).toContain("catalog-hero-benefits--band");
     expect(html).not.toContain("<video");
     expect(html).toContain("images.unsplash.com");
+  });
+
+  it("omite el contenedor de accesos rápidos cuando el hero no tiene enlaces", () => {
+    const html = String(
+      contactHero.render?.({
+        project: catalogModernV2Store,
+        section: renderSection,
+        settings: contactHeroSettings.parse({}),
+        pageType: "contact",
+      }),
+    );
+    expect(html).not.toContain("contact-quick-links");
   });
 
   it("no renderiza ubicación desactivada ni deja markup vacío", () => {

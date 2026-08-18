@@ -30,11 +30,13 @@ import {
   duplicateProject,
   ensureCatalogModernDemoGallery,
   ensureCatalogModernDemoReviews,
+  ensureCatalogModernDemoTestimonials,
   ensureDemoSectionOrder,
   ensureDeprecatedCategoriesRemoved,
   ensureFirstProject,
   ensureScaleDemoProject,
   expandCatalogModernDemoGalleries,
+  expandCatalogModernDemoTestimonials,
   getProject,
   getProjectMigration,
   getRecoveryDraft,
@@ -253,11 +255,15 @@ function StudioShell() {
             for (const diskProject of diskListing.projects) {
               const optimized = await optimizeDemoFixtureAssets(diskProject.project);
               const expanded = expandCatalogModernDemoGalleries(optimized);
-              if (expanded === diskProject.project) continue;
+              const testimonialsExpanded = expandCatalogModernDemoTestimonials(expanded);
+              if (testimonialsExpanded === diskProject.project) continue;
               await markProjectMigration(diskProject.id, "pending");
-              const saved = await persistToDisk(expanded, diskProject.diskVersion ?? null);
+              const saved = await persistToDisk(
+                testimonialsExpanded,
+                diskProject.diskVersion ?? null,
+              );
               await markProjectMigration(diskProject.id, "done");
-              diskProject.project = expanded;
+              diskProject.project = testimonialsExpanded;
               diskProject.diskVersion = saved.receipt.version;
             }
             const browserProjects = await listProjectsWithRecovery();
@@ -312,6 +318,10 @@ function StudioShell() {
         const demoGalleryExpanded = await ensureCatalogModernDemoGallery();
         if (demoGalleryExpanded) {
           notify("Se ampliaron las galerías de Predeterminado.");
+        }
+        const demoTestimonialsExpanded = await ensureCatalogModernDemoTestimonials();
+        if (demoTestimonialsExpanded) {
+          notify("Se ampliaron las reseñas de Predeterminado a 12.");
         }
         const deprecatedCategoriesRemoved = await ensureDeprecatedCategoriesRemoved();
         if (deprecatedCategoriesRemoved) {

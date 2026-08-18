@@ -932,7 +932,7 @@ test("V2 presenta PDP editorial y carrito lateral o inferior según viewport", a
   await page.screenshot({ path: testInfo.outputPath("cart-390x844.png"), fullPage: false });
 });
 
-test("V2 hace accesible el carrusel de testimonios y rotula el footer", async ({
+test("V2 muestra las 12 reseñas en una grilla sin scroll lateral y rotula el footer", async ({
   page,
 }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -940,19 +940,21 @@ test("V2 hace accesible el carrusel de testimonios y rotula el footer", async ({
 
   const section = page.locator(".catalog-testimonials-section");
   const track = section.locator(".catalog-testimonials-track");
-  const previous = section.getByRole("button", { name: "Testimonio anterior" });
-  const next = section.getByRole("button", { name: "Testimonio siguiente" });
-  await expect(section.getByRole("group", { name: "Controles de testimonios" })).toBeVisible();
+  await expect(section.locator(".catalog-testimonial")).toHaveCount(12);
+  await expect(section.getByRole("group", { name: "Controles de testimonios" })).toHaveCount(0);
   await expect(track).toHaveAttribute("role", "region");
-  await expect(previous).toBeDisabled();
-  await expect(previous).toHaveAttribute("aria-disabled", "true");
-  await expect(next).toBeEnabled();
-  await expect(next).toHaveAttribute("aria-disabled", "false");
-
-  const before = await track.evaluate((element) => element.scrollLeft);
-  await next.click();
-  await expect.poll(() => track.evaluate((element) => element.scrollLeft)).toBeGreaterThan(before);
-  await expect(previous).toBeEnabled();
+  expect(
+    await track.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        columns: style.gridTemplateColumns.split(" ").length,
+        overflowX: style.overflowX,
+      };
+    }),
+  ).toEqual(expect.objectContaining({ columns: 1, overflowX: "visible" }));
+  expect(await track.evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(
+    await track.evaluate((element) => element.clientWidth),
+  );
 
   await expect(page.locator('.catalog-footer-inner nav[aria-label="Catálogo"] strong')).toHaveText(
     "Explorar",
@@ -968,6 +970,20 @@ test("V2 hace accesible el carrusel de testimonios y rotula el footer", async ({
 
   await page.setViewportSize({ width: 1920, height: 968 });
   await page.goto(new URL("/", serverUrl).toString());
+  await expect(page.locator(".catalog-testimonials-section .catalog-testimonial")).toHaveCount(12);
+  const desktopTrack = page.locator(".catalog-testimonials-track");
+  expect(
+    await desktopTrack.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        columns: style.gridTemplateColumns.split(" ").length,
+        overflowX: style.overflowX,
+      };
+    }),
+  ).toEqual(expect.objectContaining({ columns: 4, overflowX: "visible" }));
+  expect(await desktopTrack.evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(
+    await desktopTrack.evaluate((element) => element.clientWidth),
+  );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1920);
   await page.waitForTimeout(150);
   await revealWholePage(page);

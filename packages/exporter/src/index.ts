@@ -1632,7 +1632,7 @@ function buildPages(
       : undefined;
   const aboutV2Body = [
     renderProjectSections(project, sharedHeader, { pageType: "about" }),
-    `<main class="solara-about-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span aria-current="page">Nosotros</span></nav><div class="solara-about-sections">${renderProjectSections(project, aboutV2Sections, { pageType: "about" })}</div></main>`,
+    `<main class="solara-about-page solara-container"><div class="solara-about-sections">${renderProjectSections(project, aboutV2Sections, { pageType: "about" })}</div></main>`,
     renderProjectSections(project, sharedFooter, { pageType: "about" }),
   ].join("");
   const legacyAboutBody = [
@@ -1678,7 +1678,7 @@ function buildPages(
   const isContactV2 = project.commerceTemplates.designFamily === "catalog-modern-v2";
   const contactV2Body = [
     renderProjectSections(project, sharedHeader, { pageType: "contact" }),
-    `<main class="solara-contact-page solara-container"><nav class="solara-breadcrumbs" aria-label="Migas de pan"><a href="${internalHref(project, "/")}">Inicio</a><span aria-hidden="true">/</span><span>Contacto</span></nav><div class="solara-contact-sections">${renderProjectSections(project, editableSections("contact"), { pageType: "contact" })}</div></main>`,
+    `<main class="solara-contact-page solara-container"><div class="solara-contact-sections">${renderProjectSections(project, editableSections("contact"), { pageType: "contact" })}</div></main>`,
     renderProjectSections(project, sharedFooter, { pageType: "contact" }),
   ].join("");
   const contactPage: PageDescriptor = {

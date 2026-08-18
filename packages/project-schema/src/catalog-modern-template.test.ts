@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { contactDefaultHelpItems, contactDefaultQuickLinks } from "./catalog-modern-contact";
 import {
   buildCatalogModernProject,
   CATALOG_MODERN_TEMPLATE_VERSION,
@@ -53,7 +54,6 @@ describe("plantilla Catalog Modern", () => {
       "contact-hero",
       "contact-form",
       "contact-channels",
-      "contact-help-grid",
       "contact-whatsapp-cta",
       "contact-purchase-info",
       "contact-faq",
@@ -64,10 +64,60 @@ describe("plantilla Catalog Modern", () => {
       page.kind === "contact" ? { ...page, sections: [] } : page,
     );
     const normalized = ensureContactV2Sections(empty);
-    expect(normalized.pages.find((page) => page.kind === "contact")?.sections).toHaveLength(8);
+    const normalizedContact = normalized.pages.find((page) => page.kind === "contact");
+    expect(normalizedContact?.sections).toHaveLength(7);
+    expect(normalizedContact?.sections[0]?.settings.quickLinks).toEqual([]);
     expect(ensureContactV2Sections(normalized)).toEqual(normalized);
     const v1 = structuredClone(catalogModernCleanStore);
     expect(ensureContactV2Sections(v1)).toEqual(v1);
+  });
+
+  it("retira los bloques de ayuda antiguos sin tocar un Contacto personalizado", () => {
+    const stale = structuredClone(catalogModernV2Store);
+    const contact = stale.pages.find((page) => page.kind === "contact");
+    if (!contact) throw new Error("Fixture sin página Contacto");
+    const hero = contact.sections.find((section) => section.moduleId === "contact-hero");
+    if (!hero) throw new Error("Contacto sin hero");
+    hero.settings.quickLinks = structuredClone(contactDefaultQuickLinks);
+    contact.sections.splice(3, 0, {
+      ...hero,
+      id: "contact-section-help" as typeof hero.id,
+      moduleId: "contact-help-grid",
+      settings: {
+        title: "¿En qué podemos ayudarte?",
+        body: "Elegí el tema para que podamos asistirte de la mejor manera.",
+        items: structuredClone(contactDefaultHelpItems),
+      },
+    });
+
+    const normalized = ensureContactV2Sections(stale);
+    const normalizedContact = normalized.pages.find((page) => page.kind === "contact");
+    expect(
+      normalizedContact?.sections.some((section) => section.id === "contact-section-help"),
+    ).toBe(false);
+    expect(
+      normalizedContact?.sections.find((section) => section.moduleId === "contact-hero")?.settings
+        .quickLinks,
+    ).toEqual([]);
+
+    const custom = structuredClone(catalogModernV2Store);
+    const customContact = custom.pages.find((page) => page.kind === "contact");
+    if (!customContact) throw new Error("Fixture sin página Contacto");
+    const customHero = customContact.sections[0];
+    if (!customHero) throw new Error("Contacto sin hero");
+    customContact.sections[0] = {
+      ...customHero,
+      settings: {
+        ...customHero.settings,
+        quickLinks: [
+          {
+            ...contactDefaultQuickLinks[0],
+            title: "Asistencia personalizada",
+          },
+        ],
+      },
+    };
+    expect(ensureContactV2Sections(custom)).toEqual(custom);
   });
 
   it("seedear Nosotros V2 con diez módulos y de forma idempotente", () => {
@@ -110,7 +160,7 @@ describe("plantilla Catalog Modern", () => {
     );
     const normalized = ensureCatalogModernV2Sections(empty);
     expect(normalized.pages.find((page) => page.kind === "about")?.sections).toHaveLength(10);
-    expect(normalized.pages.find((page) => page.kind === "contact")?.sections).toHaveLength(8);
+    expect(normalized.pages.find((page) => page.kind === "contact")?.sections).toHaveLength(7);
 
     const v1 = structuredClone(catalogModernCleanStore);
     expect(ensureAboutV2Sections(v1)).toEqual(v1);

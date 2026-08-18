@@ -1280,7 +1280,7 @@ const testimonialSchema = z.object({
 });
 const testimonialSettings = z.object({
   title: z.string().default("Lo que dicen quienes nos eligen"),
-  items: z.array(testimonialSchema).max(8).default([]),
+  items: z.array(testimonialSchema).max(12).default([]),
 });
 
 export const catalogTestimonials: ModuleDefinition<
@@ -1301,7 +1301,7 @@ export const catalogTestimonials: ModuleDefinition<
       key: "items",
       type: "repeater",
       label: "Testimonios",
-      maxItems: 8,
+      maxItems: 12,
       itemLabelKey: "author",
       fields: [
         { key: "author", label: "Nombre", type: "text" },
@@ -1317,11 +1317,15 @@ export const catalogTestimonials: ModuleDefinition<
     const items = context.settings.items;
     if (!items.length) return moduleRoot("catalog-testimonials", context.section, safeHtml(""));
     const trackId = `catalog-testimonials-track-${context.section.id}`;
+    const controls =
+      context.project.commerceTemplates.designFamily === "catalog-modern-v2"
+        ? ""
+        : `<div class="catalog-testimonials-controls" role="group" aria-label="Controles de testimonios"><button type="button" data-testimonials-prev aria-controls="${escapeAttribute(trackId)}" aria-label="Testimonio anterior">←</button><button type="button" data-testimonials-next aria-controls="${escapeAttribute(trackId)}" aria-label="Testimonio siguiente">→</button></div>`;
     return moduleRoot(
       "catalog-testimonials",
       context.section,
       safeHtml(
-        `<div class="catalog-testimonials-section"><header><h2>${escapeHtml(context.settings.title)}</h2><div class="catalog-testimonials-controls" role="group" aria-label="Controles de testimonios"><button type="button" data-testimonials-prev aria-controls="${escapeAttribute(trackId)}" aria-label="Testimonio anterior">←</button><button type="button" data-testimonials-next aria-controls="${escapeAttribute(trackId)}" aria-label="Testimonio siguiente">→</button></div></header><div id="${escapeAttribute(trackId)}" class="catalog-testimonials-track" data-motion-zone="items" aria-label="Testimonios de clientes" role="region">${items.map((item) => `<article class="catalog-testimonial"><p class="catalog-testimonial-rating" aria-label="${item.rating} de 5">${"★".repeat(item.rating)}</p><h3>${escapeHtml(item.author)}</h3>${item.context ? `<p class="catalog-testimonial-context">${escapeHtml(item.context)}</p>` : ""}<blockquote>“${escapeHtml(item.body)}”</blockquote></article>`).join("")}</div></div>`,
+        `<div class="catalog-testimonials-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${controls}</header><div id="${escapeAttribute(trackId)}" class="catalog-testimonials-track" data-motion-zone="items" aria-label="Testimonios de clientes" role="region">${items.map((item) => `<article class="catalog-testimonial"><p class="catalog-testimonial-rating" aria-label="${item.rating} de 5">${"★".repeat(item.rating)}</p><h3>${escapeHtml(item.author)}</h3>${item.context ? `<p class="catalog-testimonial-context">${escapeHtml(item.context)}</p>` : ""}<blockquote>“${escapeHtml(item.body)}”</blockquote></article>`).join("")}</div></div>`,
       ),
     );
   },

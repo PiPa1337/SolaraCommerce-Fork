@@ -373,6 +373,15 @@ describe("contrato con secciones (ids de ítems)", () => {
       "modo-testimonial-1",
       "modo-testimonial-2",
       "modo-testimonial-3",
+      "modo-testimonial-4",
+      "modo-testimonial-5",
+      "modo-testimonial-6",
+      "modo-testimonial-7",
+      "modo-testimonial-8",
+      "modo-testimonial-9",
+      "modo-testimonial-10",
+      "modo-testimonial-11",
+      "modo-testimonial-12",
     ]);
   });
 

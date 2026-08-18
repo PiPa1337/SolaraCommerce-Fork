@@ -13,7 +13,6 @@ import {
   contactDefaultFaqItems,
   contactDefaultHelpItems,
   contactDefaultPurchaseItems,
-  contactDefaultQuickLinks,
   contactDefaultReasons,
 } from "@solara/project-schema";
 import { z } from "zod";
@@ -121,10 +120,7 @@ export const contactHeroSettings = z.object({
   actionLabel: z.string().default("Escribinos"),
   actionHref: z.string().default("#contact-form"),
   imageAssetId: z.string().default("asset-contact-hero"),
-  quickLinks: z
-    .array(contactQuickLinkSchema)
-    .max(4)
-    .default([...contactDefaultQuickLinks]),
+  quickLinks: z.array(contactQuickLinkSchema).max(4).default([]),
 });
 
 export const contactFormSettings = z.object({
@@ -282,7 +278,9 @@ export const contactHero: ModuleDefinition<
     const actions = settings.actionLabel
       ? `<a class="catalog-primary-action" href="${escapeAttribute(safeUrl(settings.actionHref))}">${escapeHtml(settings.actionLabel)} →</a>`
       : "";
-    const quickLinks = `<div class="contact-quick-links contact-hero-links" data-motion-zone="items">${settings.quickLinks.map((item) => `<a class="contact-quick-link" href="${escapeAttribute(safeUrl(item.href))}">${contactIconMarkup(item.icon)}<span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.body)}</small></span><span>${escapeHtml(item.actionLabel || "→")} ${item.actionLabel ? "→" : ""}</span></a>`).join("")}</div>`;
+    const quickLinks = settings.quickLinks.length
+      ? `<div class="contact-quick-links contact-hero-links" data-motion-zone="items">${settings.quickLinks.map((item) => `<a class="contact-quick-link" href="${escapeAttribute(safeUrl(item.href))}">${contactIconMarkup(item.icon)}<span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.body)}</small></span><span>${escapeHtml(item.actionLabel || "→")} ${item.actionLabel ? "→" : ""}</span></a>`).join("")}</div>`
+      : "";
     return renderCatalogModernEditorialHero(context, {
       moduleId: "contact-hero",
       rootClassName: "contact-hero-module",

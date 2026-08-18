@@ -46,6 +46,8 @@ describe("tienda base catalog-modern de 50 productos", () => {
     const v2Export = exportProject(catalogModernV2Store, { mode: "production" });
     const v2Home = String(v2Export.files.get("index.html"));
     const v2Product = String(v2Export.files.get("productos/remera-esencial-de-algodon/index.html"));
+    const v2About = String(v2Export.files.get("nosotros/index.html"));
+    const v2Contact = String(v2Export.files.get("contacto/index.html"));
     const v2Checkout = String(v2Export.files.get("compra/index.html"));
     const v2Sitemap = String(v2Export.files.get("sitemap.xml"));
     const v2Preview = renderPreviewHtml(catalogModernV2Store, "draft", "/");
@@ -56,7 +58,14 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(v2Home).toContain('data-design-family="catalog-modern-v2"');
     expect(v2Home).toContain('class="solara-page catalog-modern catalog-modern-v2 cm v2"');
     expect(v2Home).toContain('data-solara-module="catalog-product-grid"');
+    expect(v2Home.match(/class="catalog-testimonial"/g) ?? []).toHaveLength(12);
+    expect(v2Home).not.toContain("catalog-testimonials-controls");
     expect(v2Product).toContain('data-solara-module="catalog-product-detail"');
+    expect(v2About).not.toContain('class="solara-breadcrumbs"');
+    expect(v2Contact).not.toContain('class="solara-breadcrumbs"');
+    expect(v2Contact).not.toContain("Respondemos por WhatsApp");
+    expect(v2Contact).not.toContain("¿En qué podemos ayudarte?");
+    expect(v2Contact).not.toContain("Comprar un producto");
     expect(v2Home).toContain('<link rel="canonical"');
     expect(v2Home).toContain('<meta property="og:title"');
     expect(v2Sitemap).toContain("/productos/remera-esencial-de-algodon/");

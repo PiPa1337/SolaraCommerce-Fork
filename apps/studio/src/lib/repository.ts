@@ -187,6 +187,49 @@ export function expandCatalogModernDemoGalleries(project: StoreProjectV1): Store
     : project;
 }
 
+type TestimonialRecord = { id: string } & Record<string, unknown>;
+
+function testimonialRecords(value: unknown): TestimonialRecord[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (item): item is TestimonialRecord =>
+      typeof item === "object" && item !== null && "id" in item && typeof item.id === "string",
+  );
+}
+
+/** Completa sólo las reseñas de la demo V2; las tiendas personalizadas quedan intactas. */
+export function expandCatalogModernDemoTestimonials(project: StoreProjectV1): StoreProjectV1 {
+  if (project.id !== SCALE_DEMO_PROJECT_ID || project.origin?.seed !== "demo") return project;
+  const reference = buildCatalogModernProject({ seed: "demo" });
+  const desiredSection = reference.sections.find(
+    (section) => section.moduleId === "catalog-testimonials",
+  );
+  const desiredItems = testimonialRecords(desiredSection?.settings.items);
+  if (!desiredItems.length) return project;
+
+  let changed = false;
+  const sections = project.sections.map((section) => {
+    if (section.moduleId !== "catalog-testimonials") return section;
+    const existingItems = testimonialRecords(section.settings.items);
+    if (existingItems.length === 0 || existingItems.length >= desiredItems.length) return section;
+    const existingIds = new Set(existingItems.map((item) => item.id));
+    const additions = desiredItems.filter((item) => !existingIds.has(item.id));
+    if (!additions.length) return section;
+    changed = true;
+    return {
+      ...section,
+      settings: {
+        ...section.settings,
+        items: [...existingItems, ...additions].slice(0, desiredItems.length),
+      },
+    };
+  });
+
+  return changed
+    ? StoreProjectV1Schema.parse({ ...project, sections, updatedAt: new Date().toISOString() })
+    : project;
+}
+
 const STORAGE_SENTINEL = "solara-studio-storage-version";
 export const DEPRECATED_CATEGORY_CLEANUP_SENTINEL = "solara-deprecated-category-cleanup";
 const DEPRECATED_CATEGORY_CLEANUP_VERSION = "1";
@@ -756,7 +799,7 @@ export async function ensureScaleDemoProject(): Promise<boolean> {
           : parsed,
       ),
     );
-    const project = await optimizeDemoFixtureAssets(repaired);
+    const project = expandCatalogModernDemoTestimonials(await optimizeDemoFixtureAssets(repaired));
     if (JSON.stringify(project) !== JSON.stringify(parsed)) {
       await saveProject(project);
     }
@@ -801,6 +844,17 @@ export async function ensureCatalogModernDemoGallery(): Promise<boolean> {
   if (!record) return false;
   const parsed = StoreProjectV1Schema.parse(record.project);
   const expanded = expandCatalogModernDemoGalleries(parsed);
+  if (expanded === parsed) return false;
+  await saveProject(expanded);
+  return true;
+}
+
+export async function ensureCatalogModernDemoTestimonials(): Promise<boolean> {
+  await ready();
+  const record = await database.projects.get(SCALE_DEMO_PROJECT_ID);
+  if (!record) return false;
+  const parsed = StoreProjectV1Schema.parse(record.project);
+  const expanded = expandCatalogModernDemoTestimonials(parsed);
   if (expanded === parsed) return false;
   await saveProject(expanded);
   return true;

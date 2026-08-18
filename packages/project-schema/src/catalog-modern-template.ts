@@ -3,7 +3,11 @@ import {
   catalogModernV2EditorialAssets,
   defaultAboutV2Sections,
 } from "./catalog-modern-about";
-import { defaultContactV2Sections } from "./catalog-modern-contact";
+import {
+  contactDefaultHelpItems,
+  contactDefaultQuickLinks,
+  defaultContactV2Sections,
+} from "./catalog-modern-contact";
 import { catalogModernStore } from "./catalog-modern-fixture";
 import { CATALOG_MODERN_GUIDANCE_VERSION } from "./catalog-modern-guidance";
 import { type StoreProjectV1, type StoreProjectV2, StoreProjectV2Schema } from "./index";
@@ -22,6 +26,23 @@ function ensureCatalogModernV2Assets(project: StoreProjectV1): StoreProjectV1 {
   };
 }
 
+function hasDefaultContactItems(value: unknown, defaults: readonly unknown[]): boolean {
+  if (!Array.isArray(value) || value.length !== defaults.length) return false;
+  return value.every((item, index) => JSON.stringify(item) === JSON.stringify(defaults[index]));
+}
+
+function isDefaultContactHelpSection(
+  section: StoreProjectV1["pages"][number]["sections"][number],
+): boolean {
+  return (
+    section.id === "contact-section-help" &&
+    section.moduleId === "contact-help-grid" &&
+    section.settings.title === "¿En qué podemos ayudarte?" &&
+    section.settings.body === "Elegí el tema para que podamos asistirte de la mejor manera." &&
+    hasDefaultContactItems(section.settings.items, contactDefaultHelpItems)
+  );
+}
+
 export function ensureContactV2Sections(project: StoreProjectV1): StoreProjectV1 {
   if (project.commerceTemplates.designFamily !== "catalog-modern-v2") return project;
   const withAssets = ensureCatalogModernV2Assets(project);
@@ -29,23 +50,34 @@ export function ensureContactV2Sections(project: StoreProjectV1): StoreProjectV1
   if (!page) return withAssets;
   if (page.sections.length > 0) {
     let changed = false;
-    const sections = page.sections.map((section) => {
-      if (section.id !== "contact-section-hero" || section.moduleId !== "contact-hero")
-        return section;
+    const sections = page.sections.flatMap((section) => {
+      if (isDefaultContactHelpSection(section)) {
+        changed = true;
+        return [];
+      }
+      if (section.id !== "contact-section-hero" || section.moduleId !== "contact-hero") {
+        return [section];
+      }
       const settings = { ...section.settings };
+      let sectionChanged = false;
       if (typeof settings.actionLabel !== "string") {
         settings.actionLabel = "Escribinos";
-        changed = true;
+        sectionChanged = true;
       }
       if (typeof settings.actionHref !== "string") {
         settings.actionHref = "#contact-form";
-        changed = true;
+        sectionChanged = true;
       }
       if (!settings.imageAssetId) {
         settings.imageAssetId = "asset-contact-hero";
-        changed = true;
+        sectionChanged = true;
       }
-      return changed ? { ...section, settings } : section;
+      if (hasDefaultContactItems(settings.quickLinks, contactDefaultQuickLinks)) {
+        settings.quickLinks = [];
+        sectionChanged = true;
+      }
+      if (sectionChanged) changed = true;
+      return [sectionChanged ? { ...section, settings } : section];
     });
     if (!changed) return withAssets;
     return {

@@ -2741,6 +2741,19 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-testimonials-section > header {
   margin-bottom: clamp(1.3rem, 2.6vw, 2.6rem);
 }
+.cm.v2 .catalog-testimonials-track {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-flow: row;
+  grid-auto-columns: auto;
+  gap: clamp(1rem, 1.6vw, 1.5rem);
+  overflow: visible;
+  overscroll-behavior: auto;
+  scroll-snap-type: none;
+  padding-bottom: 0;
+}
+.cm.v2 .catalog-testimonial {
+  min-width: 0;
+}
 .cm.v2 .catalog-product-grid {
   grid-template-columns: repeat(auto-fit,minmax(min(100% / 5, 20rem),1fr));
   gap: clamp(1.5rem, 2.4vw, 3rem) clamp(.8rem, 1.4vw, 1.6rem);
@@ -2981,6 +2994,18 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 [data-solara-module="catalog-testimonials"][data-motion-visible="true"] .catalog-testimonial:nth-child(8) {
   --catalog-t-index: 8;
+}
+.cm.v2 [data-solara-module="catalog-testimonials"][data-motion-visible="true"] .catalog-testimonial:nth-child(9) {
+  --catalog-t-index: 9;
+}
+.cm.v2 [data-solara-module="catalog-testimonials"][data-motion-visible="true"] .catalog-testimonial:nth-child(10) {
+  --catalog-t-index: 10;
+}
+.cm.v2 [data-solara-module="catalog-testimonials"][data-motion-visible="true"] .catalog-testimonial:nth-child(11) {
+  --catalog-t-index: 11;
+}
+.cm.v2 [data-solara-module="catalog-testimonials"][data-motion-visible="true"] .catalog-testimonial:nth-child(12) {
+  --catalog-t-index: 12;
 }
 /* CTA de novedades: título, texto y acción entran escalonados. */
 .cm.v2 [data-solara-module="catalog-newsletter-cta"][data-motion-visible="true"] .catalog-newsletter-inner > div {
@@ -3341,6 +3366,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-hero-benefit + .catalog-hero-benefit {
     padding-left: .6rem;
   }
+  .cm.v2 .catalog-testimonials-track {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .cm.v2 .catalog-category-bento-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3440,6 +3468,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-product-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 2rem .7rem;
+  }
+  .cm.v2 .catalog-testimonials-track {
+    grid-template-columns: 1fr;
   }
   .cm.v2 .catalog-category-results .catalog-product-grid {
     grid-template-columns: repeat(2,1fr);

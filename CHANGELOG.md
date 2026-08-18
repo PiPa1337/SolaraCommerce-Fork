@@ -1,5 +1,17 @@
 # Changelog
 
+### Reseñas y Contacto V2 (2026-08-18)
+
+- **Reseñas**: la demo pasa de 3 a 12 testimonios y la página V2 los muestra
+  en una grilla responsive de 4, 2 o 1 columna, sin rail ni scroll lateral.
+- **Migración**: `Predeterminado` completa las reseñas faltantes al iniciar sin
+  reescribir las tiendas o el contenido personalizado.
+- **Contacto**: se retiraron de la plantilla V2 los accesos rápidos y el bloque
+  “¿En qué podemos ayudarte?”, además de las migas visibles de Nosotros y
+  Contacto; los módulos siguen disponibles si una tienda los agrega a mano.
+- **Regresión**: schema, exportación, repositorio y E2E cubren los 12 cards, el
+  ancho sin overflow y la limpieza de las páginas secundarias.
+
 ### Constructor V2 para páginas secundarias (2026-08-17)
 
 - **Carga administrada**: los respaldos V2 antiguos que guardaban Nosotros y

@@ -179,7 +179,7 @@ export function defaultContactV2Sections(): StoreSection[] {
       actionLabel: "Escribinos",
       actionHref: "#contact-form",
       imageAssetId: "asset-contact-hero",
-      quickLinks: structuredClone(contactDefaultQuickLinks),
+      quickLinks: [],
     }),
     section("contact-section-form", "contact-form", {
       title: "Escribinos",
@@ -209,11 +209,6 @@ export function defaultContactV2Sections(): StoreSection[] {
       phoneActionLabel: "Llamar ahora",
       addressActionLabel: "Ver en mapa",
       hoursActionLabel: "Ver horarios",
-    }),
-    section("contact-section-help", "contact-help-grid", {
-      title: "¿En qué podemos ayudarte?",
-      body: "Elegí el tema para que podamos asistirte de la mejor manera.",
-      items: structuredClone(contactDefaultHelpItems),
     }),
     section("contact-section-whatsapp", "contact-whatsapp-cta", {
       title: "¿Preferís hablar directamente?",
