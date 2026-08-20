@@ -3,8 +3,15 @@
  * movimiento y WhatsApp. Se activa por capacidades presentes en el HTML y debe
  * dejar contenido y navegación utilizables cuando JavaScript falla.
  */
-import type { Product, StoreProjectV1, Variant } from "@solara/project-schema";
+import type { Product, PublicCopy, StoreProjectV1, Variant } from "@solara/project-schema";
 import { levenshtein, normalizeSearchTokens, type SearchEntryTokens, scoreEntry } from "./search";
+
+const DEFAULT_CONTACT_COPY = {
+  email: "Email",
+  phone: "Teléfono",
+  message: "Mensaje",
+};
+const DEFAULT_WHATSAPP_ASK = "Hola {storeName}, quiero hacer una consulta.";
 
 interface SearchApi {
   normalizeSearchTokens: (value: string) => string[];
@@ -103,32 +110,57 @@ export interface ContactFormDetails {
   name: string;
   email: string;
   phone: string;
-  reason: string;
-  orderNumber: string;
   message: string;
+}
+
+function getContactLines(
+  brandName: string,
+  details: ContactFormDetails,
+  publicCopy?: Pick<PublicCopy, "contact" | "whatsapp">,
+): string[] {
+  const whatsappCopy = publicCopy?.whatsapp;
+  const contactCopy = publicCopy?.contact ?? DEFAULT_CONTACT_COPY;
+  const fields: Array<[string, string]> = [
+    [whatsappCopy?.customerName ?? "Nombre", details.name],
+    [contactCopy.email, details.email],
+    [whatsappCopy?.customerPhone ?? (contactCopy as any).phone ?? "Teléfono", details.phone],
+    [contactCopy.message, details.message],
+  ];
+  return [
+    (whatsappCopy?.ask ?? DEFAULT_WHATSAPP_ASK).replace("{storeName}", brandName.trim()),
+    ...fields
+      .filter((entry) => entry[1].trim().length > 0)
+      .map(([label, value]) => `${label}: ${value.trim()}`),
+  ];
 }
 
 export function buildContactMailto(
   email: string,
   brandName: string,
   details: ContactFormDetails,
+  publicCopy?: Pick<PublicCopy, "contact" | "whatsapp">,
 ): string {
-  const fields: Array<[string, string]> = [
-    ["Nombre", details.name],
-    ["Email", details.email],
-    ["Teléfono", details.phone],
-    ["Motivo", details.reason],
-    ["Número de pedido", details.orderNumber],
-    ["Mensaje", details.message],
-  ];
-  const lines = [
-    `Hola ${brandName.trim()}, quiero hacer una consulta.`,
-    ...fields
-      .filter((entry) => entry[1].trim().length > 0)
-      .map(([label, value]) => `${label}: ${value.trim()}`),
-  ];
+  const lines = getContactLines(brandName, details, publicCopy);
   const subject = `Consulta para ${brandName.trim()}`;
   return `mailto:${email.trim()}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join("\n"))}`;
+}
+
+export function buildContactWhatsAppMessage(
+  brandName: string,
+  details: ContactFormDetails,
+  publicCopy?: Pick<PublicCopy, "contact" | "whatsapp">,
+): string {
+  return getContactLines(brandName, details, publicCopy).join("\n");
+}
+
+export function buildContactWhatsAppUrl(
+  phone: string,
+  brandName: string,
+  details: ContactFormDetails,
+  publicCopy?: Pick<PublicCopy, "contact" | "whatsapp">,
+): string {
+  const message = buildContactWhatsAppMessage(brandName, details, publicCopy);
+  return buildWhatsAppUrl(phone, message);
 }
 
 export function formatMoney(cents: number, currency = "ARS", locale = "es-AR"): string {
@@ -156,7 +188,7 @@ export function buildCartLine(product: Product, variant: Variant, quantity = 1):
  * should never pass prices read only from localStorage.
  */
 export function buildWhatsAppMessage(
-  project: Pick<StoreProjectV1, "currency" | "locale" | "whatsapp">,
+  project: Pick<StoreProjectV1, "currency" | "locale" | "whatsapp" | "publicCopy">,
   lines: CartLine[],
   customer: CustomerDetails,
 ): string {
@@ -167,19 +199,21 @@ export function buildWhatsAppMessage(
   });
   const total = lines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
 
+  const copy = project.publicCopy.whatsapp;
+  const checkoutCopy = project.publicCopy.checkout;
   return [
     project.whatsapp.greeting.trim(),
     "",
     ...items,
     "",
-    `Total estimado: ${formatMoney(total, project.currency, project.locale)}`,
+    `${copy.total}: ${formatMoney(total, project.currency, project.locale)}`,
     "",
-    `Nombre: ${customer.name.trim()}`,
-    `Teléfono: ${customer.phone.trim()}`,
-    `Entrega: ${customer.address.trim()}`,
-    customer.notes.trim() ? `Notas: ${customer.notes.trim()}` : "",
+    `${copy.customerName}: ${customer.name.trim()}`,
+    `${copy.customerPhone}: ${customer.phone.trim()}`,
+    `${copy.delivery}: ${customer.address.trim()}`,
+    customer.notes.trim() ? `${copy.notes}: ${customer.notes.trim()}` : "",
     "",
-    "Entiendo que precio, disponibilidad, envío y pago se confirman por este medio.",
+    checkoutCopy.disclaimer || copy.confirmation,
   ]
     .filter((line, index, all) => line !== "" || all[index - 1] !== "")
     .join("\n")
@@ -212,7 +246,18 @@ function storefrontBoot(): void {
   const currency = root.dataset.currency ?? "ARS";
   const locale = root.lang || "es-AR";
   const phone = root.dataset.whatsapp ?? "";
-  const greeting = root.dataset.whatsappGreeting ?? "Hola, quiero hacer este pedido:";
+  const copy = JSON.parse(root.dataset.solaraCopy || "{}") as PublicCopy;
+  const {
+    whatsapp: w,
+    contact: k,
+    cart: a,
+    product: p,
+    checkout: x,
+    empty: e,
+    search: s,
+    filters: f,
+  } = copy;
+  const greeting = root.dataset.whatsappGreeting ?? "";
   const includeSku = root.dataset.whatsappIncludeSku !== "false";
   const storageKey = `solara-cart:${storeId}`;
   const embed = parent !== window && location.protocol[0] !== "s";
@@ -266,7 +311,7 @@ function storefrontBoot(): void {
 
   const initialAddLabels = new Map<HTMLElement, string>();
   document.querySelectorAll<HTMLElement>("[data-add-to-cart]").forEach((button) => {
-    initialAddLabels.set(button, button.textContent?.trim() || "Agregar al carrito");
+    initialAddLabels.set(button, button.textContent?.trim() || "");
   });
 
   const pageType = document.querySelector<HTMLElement>("[data-solara-store]")?.dataset.pageType;
@@ -276,23 +321,96 @@ function storefrontBoot(): void {
     document.querySelectorAll<HTMLFormElement>("[data-solara-contact-form]").forEach((form) => {
       if (form.dataset.contactBound === "true") return;
       form.dataset.contactBound = "true";
+      const status = form.querySelector<HTMLElement>("[data-contact-status]");
+      const brand = (form.dataset.contactBrand ?? storeId).trim();
+      const emailTarget = (form.dataset.contactEmail ?? "").trim();
+      const whatsappTarget = (
+        form.dataset.contactWhatsapp ??
+        form.dataset.contactPhone ??
+        ""
+      ).trim();
+      const whatsappButton = form.querySelector<HTMLButtonElement>(
+        '[data-contact-channel="whatsapp"]',
+      );
+      const getDetails = (): { name: string; email: string; phone: string; message: string } => {
+        const data = new FormData(form);
+        return {
+          name: String(data.get("name") ?? "").trim(),
+          email: String(data.get("email") ?? "").trim(),
+          phone: String(data.get("phone") ?? "").trim(),
+          message: String(data.get("message") ?? "").trim(),
+        };
+      };
+      const getContactLines = (details: {
+        name: string;
+        email: string;
+        phone: string;
+        message: string;
+      }): string[] => {
+        const fields: Array<[string, string]> = [
+          [w.customerName ?? "Nombre", details.name],
+          [k.email ?? "Email", details.email],
+          [w.customerPhone ?? (k as any).phone ?? "Teléfono", details.phone],
+          [k.message ?? "Mensaje", details.message],
+        ];
+        return [
+          (w.ask ?? "Hola {storeName}, quiero hacer una consulta.").replace("{storeName}", brand),
+          ...fields
+            .filter((entry) => entry[1].trim().length > 0)
+            .map(([label, value]) => `${label}: ${value.trim()}`),
+        ];
+      };
+      const buildMailto = (details: {
+        name: string;
+        email: string;
+        phone: string;
+        message: string;
+      }): string => {
+        const lines = getContactLines(details);
+        const subject = `Consulta para ${brand}`;
+        return `mailto:${emailTarget}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join("\n"))}`;
+      };
+      const buildWaUrl = (details: {
+        name: string;
+        email: string;
+        phone: string;
+        message: string;
+      }): string => {
+        const message = getContactLines(details).join("\n");
+        return `https://wa.me/${whatsappTarget.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
+      };
+      const handleEmail = (): void => {
+        if (!emailTarget) {
+          status?.replaceChildren(k.emailFallback ?? "Configurá un email para recibir consultas.");
+          return;
+        }
+        if (!form.reportValidity()) return;
+        const details = getDetails();
+        const mailto = buildMailto(details);
+        window.open(mailto, "_blank", "noopener");
+        status?.replaceChildren(k.success);
+      };
+      const handleWhatsapp = (): void => {
+        const clean = whatsappTarget.replace(/\D/g, "");
+        if (!clean) {
+          status?.replaceChildren(
+            k.whatsappFallback ?? "Configurá un teléfono de WhatsApp para recibir consultas.",
+          );
+          return;
+        }
+        if (!form.reportValidity()) return;
+        const details = getDetails();
+        const url = buildWaUrl(details);
+        window.open(url, "_blank", "noopener");
+        status?.replaceChildren(k.success);
+      };
       form.addEventListener("submit", (event) => {
         event.preventDefault();
-        const data = new FormData(form);
-        const email = (form.dataset.contactEmail ?? "").trim();
-        if (!email) return;
-        const status = form.querySelector<HTMLElement>("[data-contact-status]");
-        const brand = (form.dataset.contactBrand ?? storeId).trim();
-        const labels = "Nombre|Email|Teléfono|Motivo|Pedido|Mensaje".split("|");
-        const lines = [
-          `Hola ${brand}, quiero hacer una consulta.`,
-          ...[...data]
-            .filter(([, value]) => value)
-            .map(([, value], index) => `${labels[index] ?? "D"}: ${String(value).trim()}`),
-        ];
-        const mailto = `mailto:${email}?subject=${encodeURIComponent(`Consulta para ${brand}`)}&body=${encodeURIComponent(lines.join("\n"))}`;
-        window.open(mailto, "_blank", "noopener");
-        status?.replaceChildren("Listo");
+        handleEmail();
+      });
+      whatsappButton?.addEventListener("click", (event) => {
+        event.preventDefault();
+        handleWhatsapp();
       });
     });
   };
@@ -331,7 +449,7 @@ function storefrontBoot(): void {
       element.textContent = String(count);
     });
     document.querySelectorAll<HTMLElement>("[data-solara-cart-open]").forEach((element) => {
-      const label = element.dataset.cartLabel ?? "Carrito";
+      const label = element.dataset.cartLabel ?? "";
       element.setAttribute(
         "aria-label",
         count === 0 ? `${label} vacío` : `${label}, ${count} productos`,
@@ -342,7 +460,7 @@ function storefrontBoot(): void {
       setHtml(
         container,
         cart.length === 0
-          ? '<p class="solara-cart-empty">Tu carrito está vacío. Elegí una pieza para comenzar.</p>'
+          ? `<p class="solara-cart-empty">${escapeText(e.cart)}</p>`
           : cart
               .map(
                 (line) => `
@@ -352,14 +470,14 @@ function storefrontBoot(): void {
                 <div>
                 <strong>${escapeText(line.title)}</strong>
                 <small>${escapeText(line.variantTitle)}</small>
-                ${line.available === false ? '<small class="solara-cart-line-warning">Ya no disponible</small>' : ""}
+                ${line.available === false ? `<small class="solara-cart-line-warning">${escapeText(a.unavailable)}</small>` : ""}
                 </div>
               </div>
               <label>
-                <span class="sr-only">Cantidad de ${escapeText(line.title)}</span>
+                <span class="sr-only">${escapeText(p.quantity)} de ${escapeText(line.title)}</span>
                 <input data-cart-quantity="${escapeAttribute(line.variantId)}" type="number" min="1" max="99" value="${line.quantity}"${line.available === false ? " disabled" : ""}>
               </label>
-              <button type="button" data-cart-remove="${escapeAttribute(line.variantId)}" aria-label="Eliminar ${escapeAttribute(line.title)}">Eliminar</button>
+              <button type="button" data-cart-remove="${escapeAttribute(line.variantId)}" aria-label="${escapeAttribute(`${a.remove} ${line.title}`)}">${escapeText(a.remove)}</button>
               <span>${money.format((line.unitPrice * line.quantity) / 100)}</span>
             </article>`,
               )
@@ -428,7 +546,7 @@ function storefrontBoot(): void {
     if (freshCatalog) return freshCatalog;
     freshCatalog = fetch("/catalog-index.json")
       .then((response) => {
-        if (!response.ok) throw new Error("No se pudo cargar el catálogo actual.");
+        if (!response.ok) throw new Error("No se pudo cargar el catálogo.");
         return response.json() as Promise<CatalogIndexEntry[]>;
       })
       .then((catalog) => {
@@ -540,7 +658,9 @@ function storefrontBoot(): void {
     selectGalleryImage(productRoot, variant.dataset.imageId);
     if (priceElement) priceElement.textContent = money.format(price / 100);
     if (skuElement) skuElement.textContent = variant.dataset.sku ?? "";
-    if (availabilityElement) availabilityElement.textContent = available ? "Disponible" : "Agotado";
+    if (availabilityElement) {
+      availabilityElement.textContent = available ? p.available : p.outOfStock;
+    }
     if (compareElement) {
       const compareAt = Number(variant.dataset.compareAt ?? "0");
       compareElement.textContent = compareAt > 0 ? money.format(compareAt / 100) : "";
@@ -548,9 +668,7 @@ function storefrontBoot(): void {
     }
     if (button) {
       button.disabled = !available;
-      button.textContent = available
-        ? (initialAddLabels.get(button) ?? "Agregar al carrito")
-        : "Sin stock";
+      button.textContent = available ? (initialAddLabels.get(button) ?? p.addToCart) : p.noStock;
     }
   };
 
@@ -763,8 +881,7 @@ function storefrontBoot(): void {
         if (unavailable.length > 0) {
           const preview = form.querySelector<HTMLElement>("[data-order-preview]");
           if (preview) {
-            preview.textContent =
-              "Retirá los productos no disponibles del carrito antes de enviar el pedido.";
+            preview.textContent = x.invalidItems;
             preview.setAttribute("role", "alert");
           }
           return;
@@ -783,14 +900,14 @@ function storefrontBoot(): void {
           "",
           ...itemLines,
           "",
-          `Total estimado: ${money.format(total / 100)}`,
+          `${x.total}: ${money.format(total / 100)}`,
           "",
-          `Nombre: ${String(data.get("name") ?? "").trim()}`,
-          `Teléfono: ${String(data.get("phone") ?? "").trim()}`,
-          `Entrega: ${String(data.get("address") ?? "").trim()}`,
-          notes ? `Notas: ${notes}` : "",
+          `${a.name}: ${String(data.get("name") ?? "").trim()}`,
+          `${a.phone}: ${String(data.get("phone") ?? "").trim()}`,
+          `${a.delivery}: ${String(data.get("address") ?? "").trim()}`,
+          notes ? `${a.notes}: ${notes}` : "",
           "",
-          "Entiendo que precio, disponibilidad, envío y pago se confirman por este medio.",
+          x.disclaimer,
         ]
           .filter((line, index, all) => line !== "" || all[index - 1] !== "")
           .join("\n")
@@ -1112,7 +1229,7 @@ function storefrontBoot(): void {
         if (title) title.textContent = selected.dataset.title ?? "";
         if (body) body.textContent = selected.dataset.body ?? "";
         if (action) {
-          action.textContent = selected.dataset.actionLabel ?? "Ver colección";
+          action.textContent = selected.dataset.actionLabel ?? "";
           action.href = selected.dataset.actionHref ?? "/";
         }
       };
@@ -1192,7 +1309,7 @@ function storefrontBoot(): void {
       if (heading) heading.textContent = panel.dataset.heroTitle ?? "";
       if (body) body.textContent = panel.dataset.heroBody ?? "";
       if (action) {
-        action.textContent = panel.dataset.heroActionLabel ?? "Ver colección";
+        action.textContent = panel.dataset.heroActionLabel ?? "";
         action.href = panel.dataset.heroActionHref ?? "/";
       }
       hero.querySelectorAll<HTMLElement>("[data-hero-slide]").forEach((indicator) => {
@@ -1312,10 +1429,10 @@ function storefrontBoot(): void {
       document.querySelector('meta[name="robots"]')?.setAttribute("content", "noindex,follow");
       const terms = searchApi.normalizeSearchTokens(query);
       if (!terms.length || terms.some((t) => t.length < 2)) {
-        setHtml(searchGrid, "<p>Escribí al menos 2 caracteres para buscar.</p>");
+        setHtml(searchGrid, `<p>${escapeText(s.queryTooShort)}</p>`);
       } else {
         const controller = new AbortController();
-        setHtml(searchGrid, "<p>Cargando resultados…</p>");
+        setHtml(searchGrid, `<p>${escapeText(s.loading)}</p>`);
         fetch("/search-index.json", { signal: controller.signal })
           .then((response) => {
             if (!response.ok) throw new Error("No se pudo cargar el índice de búsqueda.");
@@ -1351,11 +1468,11 @@ function storefrontBoot(): void {
                 const url = `/buscar/?q=${encodeURIComponent(suggestion)}`;
                 setHtml(
                   searchGrid,
-                  `<p class="solara-search-summary">No encontramos resultados para “${escapeText(query)}”. ¿Quisiste decir <a href="${escapeAttribute(url)}">${escapeText(suggestion)}</a>?</p>`,
+                  `<p class="solara-search-summary">${escapeText(s.suggestion.replace("{query}", query))} <a href="${escapeAttribute(url)}">${escapeText(suggestion)}</a>?</p>`,
                 );
                 return;
               }
-              setHtml(searchGrid, "<p>No encontramos productos para esa búsqueda.</p>");
+              setHtml(searchGrid, `<p>${escapeText(s.noResults)}</p>`);
               return;
             }
             setHtml(
@@ -1371,10 +1488,7 @@ function storefrontBoot(): void {
             searchGrid.dispatchEvent(new Event("f"));
           })
           .catch(() => {
-            setHtml(
-              searchGrid,
-              '<p role="alert">No se pudo cargar la búsqueda. Intentá nuevamente.</p>',
-            );
+            setHtml(searchGrid, `<p role="alert">${escapeText(s.error)}</p>`);
           });
         window.addEventListener("pagehide", () => controller.abort(), { once: true });
       }
@@ -1424,7 +1538,7 @@ function storefrontBoot(): void {
     const getCards = () => Array.from(grid.querySelectorAll<HTMLElement>("[data-product-card]"));
     const filterEmpty = document.createElement("p");
     filterEmpty.className = "solara-empty-state";
-    filterEmpty.textContent = "No hay productos que coincidan con estos filtros.";
+    filterEmpty.textContent = e.filteredProducts;
     filterEmpty.hidden = true;
     grid.insertAdjacentElement("afterend", filterEmpty);
     const render = (): void => {
@@ -1474,7 +1588,7 @@ function storefrontBoot(): void {
       filterEmpty.hidden = visible.length > 0;
       if (resultCount) {
         const total = resultCount.getAttribute("data-category-total") ?? String(visible.length);
-        resultCount.textContent = `${visible.length} de ${total} productos`;
+        resultCount.textContent = `${visible.length} de ${total} ${f.resultCount}`;
       }
     };
     grid.addEventListener("f", render);

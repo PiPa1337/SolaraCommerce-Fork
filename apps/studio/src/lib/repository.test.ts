@@ -241,6 +241,15 @@ describe("repositorio local", () => {
       ...structuredClone(catalogModernStore),
       id: "store-modo-sur-demo" as typeof catalogModernStore.id,
       name: "Demo Modo Sur, catálogo moderno",
+      identity: {
+        ...catalogModernStore.identity,
+        legalName: "Modo Sur",
+        brandName: "Modo Sur",
+      },
+      whatsapp: {
+        ...catalogModernStore.whatsapp,
+        greeting: "Hola Modo Sur, quiero hacer este pedido:",
+      },
     };
     await saveProject(legacyClean);
     await saveProject(legacyDemo);

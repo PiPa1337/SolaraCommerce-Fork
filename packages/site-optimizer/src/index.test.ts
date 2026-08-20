@@ -44,10 +44,10 @@ describe("site optimizer", () => {
       site: { name: string };
       contact: { email?: string };
     };
-    expect(parsed.site.name).toBe("Modo Sur");
+    expect(parsed.site.name).toBe("Tienda Referencia");
     expect(parsed.products).toHaveLength(50);
     expect(context).not.toContain("data:image");
-    expect(parsed.contact.email).toBe("hola@modo-sur.example");
+    expect(parsed.contact.email).toBe("hola@tienda-referencia-modern.example");
   });
 
   it("puede serializar el contexto AI en modo compacto para producción", () => {
@@ -180,7 +180,7 @@ describe("site optimizer", () => {
         indexable: true,
       }),
     ]);
-    expect(llms).toContain("modo-sur.example/colecciones/esenciales/pagina/2/");
+    expect(llms).toContain("tienda-referencia-modern.example/colecciones/esenciales/pagina/2/");
     expect(context.pages.some((page) => page.path === "/colecciones/esenciales/pagina/2/")).toBe(
       true,
     );

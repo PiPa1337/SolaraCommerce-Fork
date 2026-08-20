@@ -249,6 +249,7 @@ export const aboutHero: ModuleDefinition<
       title: settings.title,
       body: settings.body,
       imageAssetId: settings.imageAssetId,
+      benefits: [],
       actions,
     });
   },

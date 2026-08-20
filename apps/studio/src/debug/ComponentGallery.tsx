@@ -244,7 +244,7 @@ export function ComponentGallery() {
           <div className="component-gallery__grid">
             <Cell title="Field + input" note="Con hint">
               <Field label="Nombre de la tienda" hint="Máximo 60 caracteres.">
-                <input defaultValue="Predeterminado" />
+                <input defaultValue="Tienda ejemplo" />
               </Field>
             </Cell>
             <Cell title="Field con error" note="Borde danger + aria-describedby">

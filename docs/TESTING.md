@@ -22,12 +22,16 @@ corepack pnpm --filter @solara/storefront-runtime test
 
 ### Integración
 
-`corepack pnpm check` ejecuta repository scan, formato, typecheck, tests de todos
-los paquetes y checks de optimizer. `build` comprueba que los paquetes se
+`corepack pnpm check` (alias `check:full`) ejecuta repository scan, formato, typecheck, tests de todos
+los paquetes y checks de optimizer de forma secuencial (CI/cierre). `build` comprueba que los paquetes se
 compilan en orden.
 
+Para iteración diaria en 9800X3D usar `check:quick` — mismos gates en paralelo (~40-60% más rápido, <90s):
+
 ```powershell
-corepack pnpm check
+corepack pnpm check:quick   # 7 gates en paralelo (repository, hardcoded-content, format, typecheck, test, optimization, runtime-serialization)
+corepack pnpm check:full    # secuencial, para cierre/CI
+corepack pnpm check         # alias de check:full
 corepack pnpm build
 ```
 
@@ -45,14 +49,20 @@ productos, jerarquía y 60 variantes; el benchmark de core exporta
 
 ### Playwright
 
-`test:e2e` compila Studio y ejecuta Chromium contra un servidor local. En CI el
+`test:e2e` compila Studio y ejecuta Chromium (8 workers por defecto en 9800X3D, override con `PLAYWRIGHT_WORKERS=6`) contra un servidor local. En CI el
 build ya está hecho y se usa `test:e2e:ci`.
+
+Para iteración diaria usar smoke ampliado (15 specs, ~45s-2min) con cache de build:
 
 ```powershell
 corepack pnpm playwright:install:chromium
-corepack pnpm test:e2e
-corepack pnpm test:e2e:ci
+corepack pnpm test:e2e:smoke  # 15 specs criticos + build cacheado
+corepack pnpm test:e2e        # 74 specs full (~3-4 min con 8 workers)
+corepack pnpm test:e2e:ci     # sin build, CI usa dist ya compilado
 ```
+
+Smoke ampliado cubre: catalog-modern-v2, exporter-sentinel, scale-store, storefront-nojs, ui-sweep-a27..30, axe-site, nojs-coverage, focus-visible, interacciones, catalog, assets, exported-store.
+No incluye visual sweep (VISUAL_REVIEW_STAGE) ni LCP pesado.
 
 La matriz de release instala Chromium, Firefox y WebKit mediante
 `PLAYWRIGHT_MULTI_BROWSER=1`. Los tests visuales se activan sólo con
@@ -73,21 +83,25 @@ versiona.
 
 ## Qué probar ante cada tipo de cambio
 
-| Cambio | Mínimo | Cierre recomendado |
+> Validación diaria = `check:quick` + `test:e2e:smoke` (~2-3 min). Cierre/CI = `check:full` + `test:e2e` full + `benchmark:export` si toca exporter. Release (3 browsers + desktop:package) solo on-demand con Node 22.
+
+| Cambio | Mínimo (quick) | Cierre recomendado |
 | --- | --- | --- |
-| Schema/migración | tests de schema y fixtures | `check`, `build`, E2E de persistencia |
-| Reducer/CSV | tests de `core` y round-trip | benchmark de catálogo |
-| Módulo/estilo público | tests de módulo/exporter | E2E responsive + captura manual |
-| Preview/Studio | typecheck de Studio | `test:e2e` Chromium |
-| Guardado local | tests de repository/servidor | ciclo real launcher + E2E |
-| SEO/exporter | tests de HTML/JSON-LD/sitemap/feed | `benchmark:export`, E2E sin JS |
+| Schema/migración | `check:quick` + tests de schema | `check:full`, `build`, E2E persistencia |
+| Reducer/CSV | `check:quick` + tests de `core` | benchmark de catálogo |
+| Módulo/estilo público | `check:quick` + tests de módulo | `test:e2e:smoke` + E2E responsive |
+| Preview/Studio | `check:quick` (typecheck) | `test:e2e:smoke` / `test:e2e` |
+| Guardado local | `check:quick` | ciclo real launcher + `test:e2e` |
+| SEO/exporter | `check:quick` + tests de exporter | `benchmark:export`, E2E sin JS |
 
 ## Diagnóstico
 
 - Un test E2E fallido deja reportes en `playwright-report/` y traces según la
   configuración de Playwright.
-- `test:e2e:release` requiere los navegadores instalados y Node 22 en CI.
+- `test:e2e:release` requiere los navegadores instalados y Node 22 en CI. No ejecutar en Node 24 (falla) ni como parte de `check:quick` — solo on-demand al cierre.
 - El servidor de tests usa loopback; no debe apuntarse a una tienda publicada.
+- Validación rápida diaria: `pnpm check:quick && pnpm test:e2e:smoke` (~2-3 min en 9800X3D, 8 workers). Cierre: `pnpm check && pnpm test:e2e`.
+- Workers Playwright por defecto 8 (env `PLAYWRIGHT_WORKERS` para limitar a 6 si hay lag). Antes era 4.
 - Para inspeccionar una exportación, usar `pnpm reference:export` o
   `pnpm pilot:export` y revisar el directorio indicado por el script.
 

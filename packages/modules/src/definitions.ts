@@ -72,6 +72,7 @@ export const announcementBar: ModuleDefinition<
   motionZones: revealZone,
   styleAsset: scopedAssetId("announcement-bar"),
   render(context) {
+    const copy = context.project.publicCopy;
     const link =
       context.settings.linkLabel && context.settings.linkHref
         ? `<a href="${escapeAttribute(safeUrl(context.settings.linkHref))}">${escapeHtml(context.settings.linkLabel)}</a>`
@@ -82,7 +83,7 @@ export const announcementBar: ModuleDefinition<
       safeHtml(
         `<div class="solara-announcement" data-motion-zone="content"><p>${escapeHtml(context.settings.text)}</p>${link}</div>`,
       ),
-      { ariaLabel: "Avisos" },
+      { ariaLabel: copy.accessibility.announcements },
     );
   },
 };
@@ -117,6 +118,7 @@ export const editorialHeader: ModuleDefinition<
   clientAsset: "storefront-cart" as AssetId,
   styleAsset: scopedAssetId("editorial-header"),
   render(context) {
+    const copy = context.project.publicCopy;
     const navigation = context.project.navigation;
     const isV2 = context.project.commerceTemplates.designFamily === "catalog-modern-v2";
     const showContact = !isV2 && navigation.showContact;
@@ -174,18 +176,18 @@ export const editorialHeader: ModuleDefinition<
     const catalog = context.settings.showCategories
       ? `<details class="${catalogClass}"><summary${catalogCurrent}>${escapeHtml(navigation.catalogLabel || context.settings.catalogLabel)}</summary><ul>${nestedItems || `<li><a href="${escapeAttribute(safeUrl(context.settings.catalogHref))}">${escapeHtml(context.settings.catalogLabel)}</a></li>`}</ul></details>`
       : `<a href="${escapeAttribute(safeUrl(context.settings.catalogHref))}"${catalogCurrent}>${escapeHtml(navigation.catalogLabel || context.settings.catalogLabel)}</a>`;
-    const nav = `${navigation.showHome ? `<a href="/"${homeCurrent}>Inicio</a>` : ""}${catalog}${showContact ? `<a href="/contacto/"${contactCurrent}>Contacto</a>` : ""}${showAbout ? `<a href="/nosotros/"${aboutCurrent}>Nosotros</a>` : ""}`;
-    const actions = `${navigation.showSearch && context.project.commerceTemplates.search.enabled ? `<a class="solara-search-trigger" href="/buscar/" aria-label="Buscar productos"${searchCurrent}>Buscar</a>` : ""}${navigation.showCart && context.project.siteShell.cart && (context.project.commerceTemplates.cart.enabled || context.project.commerceTemplates.checkout.enabled) ? `<button class="solara-cart-trigger" type="button" data-solara-cart-open data-open-cart data-cart-label="${escapeAttribute(context.settings.cartLabel)}" aria-controls="solara-cart" aria-expanded="false"${cartCurrent}>${escapeHtml(context.settings.cartLabel)} <span data-solara-cart-count data-cart-count aria-live="polite">0</span></button>` : ""}`;
+    const nav = `${navigation.showHome ? `<a href="/"${homeCurrent}>${escapeHtml(copy.navigation.home)}</a>` : ""}${catalog}${showContact ? `<a href="/contacto/"${contactCurrent}>${escapeHtml(copy.navigation.contact)}</a>` : ""}${showAbout ? `<a href="/nosotros/"${aboutCurrent}>${escapeHtml(copy.navigation.about)}</a>` : ""}`;
+    const actions = `${navigation.showSearch && context.project.commerceTemplates.search.enabled ? `<a class="solara-search-trigger" href="/buscar/" aria-label="${escapeAttribute(copy.navigation.search)}"${searchCurrent}>${escapeHtml(copy.navigation.search)}</a>` : ""}${navigation.showCart && context.project.siteShell.cart && (context.project.commerceTemplates.cart.enabled || context.project.commerceTemplates.checkout.enabled) ? `<button class="solara-cart-trigger" type="button" data-solara-cart-open data-open-cart data-cart-label="${escapeAttribute(context.settings.cartLabel || copy.navigation.cart)}" aria-controls="solara-cart" aria-expanded="false"${cartCurrent}>${escapeHtml(context.settings.cartLabel || copy.navigation.cart)} <span data-solara-cart-count data-cart-count aria-live="polite">0</span></button>` : ""}`;
     return moduleRoot(
       "editorial-header",
       context.section,
       safeHtml(`<div class="solara-header" data-motion-zone="content">
-        <a class="solara-brand" href="/" aria-label="${escapeAttribute(`Inicio de ${context.project.identity.brandName}`)}">${renderBrand(context.project)}</a>
-        <nav class="solara-desktop-nav" aria-label="Navegación principal">${nav}</nav>
+        <a class="solara-brand" href="/" aria-label="${escapeAttribute(`${copy.navigation.home} de ${context.project.identity.brandName}`)}">${renderBrand(context.project)}</a>
+        <nav class="solara-desktop-nav" aria-label="${escapeAttribute(copy.accessibility.mainNavigation)}">${nav}</nav>
         <div class="solara-header-actions">${actions}</div>
         <details class="solara-mobile-nav">
-          <summary>Menú</summary>
-          <nav aria-label="Navegación móvil">${nav}</nav>
+          <summary>${escapeHtml(copy.navigation.openMenu)}</summary>
+          <nav aria-label="${escapeAttribute(copy.accessibility.mobileNavigation)}">${nav}</nav>
         </details>
       </div>`),
       { tag: "header" },
@@ -632,7 +634,7 @@ export const editorialProductGrid: ModuleDefinition<
       context.section,
       safeHtml(`<div class="solara-section-shell" id="productos">
         <h2>${escapeHtml(context.settings.title)}</h2>
-        <div class="solara-editorial-products" data-motion-zone="items"${context.pageType === "category" ? " data-category-grid" : ""}>${renderProductCards(context.project, products, "editorial") || '<p class="solara-empty-state">No hay productos para mostrar.</p>'}</div>
+        <div class="solara-editorial-products" data-motion-zone="items"${context.pageType === "category" ? " data-category-grid" : ""}>${renderProductCards(context.project, products, "editorial") || `<p class="solara-empty-state">${escapeHtml(context.project.publicCopy.empty.products)}</p>`}</div>
       </div>`),
     );
   },
@@ -667,7 +669,7 @@ export const compactProductGrid: ModuleDefinition<
       context.section,
       safeHtml(`<div class="solara-section-shell" id="productos">
         <h2>${escapeHtml(context.settings.title)}</h2>
-        <div class="solara-compact-products" data-motion-zone="items"${context.pageType === "category" ? " data-category-grid" : ""}>${renderProductCards(context.project, products, "compact") || '<p class="solara-empty-state">No hay productos para mostrar.</p>'}</div>
+        <div class="solara-compact-products" data-motion-zone="items"${context.pageType === "category" ? " data-category-grid" : ""}>${renderProductCards(context.project, products, "compact") || `<p class="solara-empty-state">${escapeHtml(context.project.publicCopy.empty.products)}</p>`}</div>
       </div>`),
     );
   },
@@ -727,12 +729,13 @@ export const productDetail: ModuleDefinition<
   clientAsset: "storefront-cart" as AssetId,
   styleAsset: scopedAssetId("product-detail"),
   render(context) {
+    const copy = context.project.publicCopy;
     const product = context.product ?? visibleProducts(context)[0];
     if (!product) {
       return moduleRoot(
         "product-detail",
         context.section,
-        safeHtml('<p class="solara-empty-state">Este producto no está disponible.</p>'),
+        safeHtml(`<p class="solara-empty-state">${escapeHtml(copy.empty.products)}</p>`),
       );
     }
     const firstVariant =
@@ -763,18 +766,18 @@ export const productDetail: ModuleDefinition<
           sizes: "5rem",
           fallbackAlt: `${product.title}, imagen ${index + 1}`,
         });
-        return `<button type="button" data-gallery-thumb="${escapeAttribute(assetId)}" aria-label="Ver imagen ${index + 1}" aria-current="${String(index === 0)}">${image}</button>`;
+        return `<button type="button" data-gallery-thumb="${escapeAttribute(assetId)}" aria-label="${escapeAttribute(copy.export.viewImage.replace("{index}", String(index + 1)))}" aria-current="${String(index === 0)}">${image}</button>`;
       })
       .join("");
     const gallery = galleryAssetIds.length
       ? `<div class="solara-product-gallery" data-product-gallery><div class="solara-product-gallery-main">${galleryFigures}</div><div class="solara-product-gallery-thumbs">${galleryThumbs}</div></div>`
-      : '<p class="solara-empty-state">Este producto todavía no tiene imágenes.</p>';
+      : `<p class="solara-empty-state">${escapeHtml(copy.empty.products)}</p>`;
     const variants = product.variants
       .map((variant) => {
         const variantImage = context.project.assets.find(
           (asset) => asset.id === (variant.imageId ?? product.imageIds[0]),
         );
-        return `<option value="${escapeAttribute(variant.id)}" data-variant-data="${escapeAttribute(variant.id)}" data-variant-id="${escapeAttribute(variant.id)}" data-variant-title="${escapeAttribute(variant.title)}" data-sku="${escapeAttribute(variant.sku)}" data-image-id="${escapeAttribute(variant.imageId ?? product.imageIds[0] ?? "")}"${variantImage ? ` data-image-url="${escapeAttribute(safeAssetUrl(variantImage.source, ""))}" data-image-width="${variantImage.width}" data-image-height="${variantImage.height}"` : ""} data-price="${variant.price}" data-compare-at="${variant.compareAtPrice ?? ""}" data-available="${String(variant.available)}" ${variant.available ? "" : "disabled"}${variant.id === firstVariant?.id ? " selected" : ""}>${escapeHtml(variant.title)} - ${escapeHtml(formatMoney(variant.price))}${variant.available ? "" : " - Agotado"}</option>`;
+        return `<option value="${escapeAttribute(variant.id)}" data-variant-data="${escapeAttribute(variant.id)}" data-variant-id="${escapeAttribute(variant.id)}" data-variant-title="${escapeAttribute(variant.title)}" data-sku="${escapeAttribute(variant.sku)}" data-image-id="${escapeAttribute(variant.imageId ?? product.imageIds[0] ?? "")}"${variantImage ? ` data-image-url="${escapeAttribute(safeAssetUrl(variantImage.source, ""))}" data-image-width="${variantImage.width}" data-image-height="${variantImage.height}"` : ""} data-price="${variant.price}" data-compare-at="${variant.compareAtPrice ?? ""}" data-available="${String(variant.available)}" ${variant.available ? "" : "disabled"}${variant.id === firstVariant?.id ? " selected" : ""}>${escapeHtml(variant.title)} - ${escapeHtml(formatMoney(variant.price))}${variant.available ? "" : ` - ${escapeHtml(copy.product.outOfStock)}`}</option>`;
       })
       .join("");
     const variantLinks = product.variants
@@ -804,22 +807,22 @@ export const productDetail: ModuleDefinition<
           ${description}
           <form action="/carrito/" method="get" data-solara-add-form>
             <input type="hidden" name="product" value="${escapeAttribute(product.id)}">
-            <label for="variant-${escapeAttribute(context.section.id)}">Variante</label>
+            <label for="variant-${escapeAttribute(context.section.id)}">${escapeHtml(copy.product.variant)}</label>
             <select id="variant-${escapeAttribute(context.section.id)}" name="variant" data-variant-select required>${variants}</select>
-            <label for="quantity-${escapeAttribute(context.section.id)}">Cantidad</label>
+            <label for="quantity-${escapeAttribute(context.section.id)}">${escapeHtml(copy.product.quantity)}</label>
             <input id="quantity-${escapeAttribute(context.section.id)}" name="quantity" type="number" min="1" max="99" value="1" inputmode="numeric">
             <button type="submit" data-add-to-cart>${escapeHtml(context.settings.actionLabel)}</button>
-            ${whatsappFallback ? `<noscript><style>[data-solara-add-form] .solara-add-fallback{display:inline-flex}[data-solara-add-form] [data-add-to-cart]{display:none}</style><a class="solara-add-fallback" href="${escapeAttribute(whatsappFallback)}" target="_blank" rel="noopener noreferrer">Consultar por WhatsApp</a></noscript>` : ""}
+            ${whatsappFallback ? `<noscript><style>[data-solara-add-form] .solara-add-fallback{display:inline-flex}[data-solara-add-form] [data-add-to-cart]{display:none}</style><a class="solara-add-fallback" href="${escapeAttribute(whatsappFallback)}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.product.askWhatsApp)}</a></noscript>` : ""}
           </form>
-          <nav class="solara-variant-links" aria-label="Enlaces directos a variantes">${variantLinks}</nav>
+          <nav class="solara-variant-links" aria-label="${escapeAttribute(copy.export.variantLinks)}">${variantLinks}</nav>
           <p class="solara-delivery-note">${escapeHtml(context.settings.deliveryNote)}</p>
           <dl class="solara-product-specs">
-            <div><dt>SKU</dt><dd data-product-sku>${escapeHtml(firstVariant?.sku ?? "")}</dd></div>
-            <div><dt>Disponibilidad</dt><dd data-product-availability>${firstVariant?.available ? "Disponible" : "Agotado"}</dd></div>
+            <div><dt>${escapeHtml(copy.product.sku)}</dt><dd data-product-sku>${escapeHtml(firstVariant?.sku ?? "")}</dd></div>
+            <div><dt>${escapeHtml(copy.product.availability)}</dt><dd data-product-availability>${firstVariant?.available ? escapeHtml(copy.product.available) : escapeHtml(copy.product.outOfStock)}</dd></div>
           </dl>
           <div class="solara-product-policies">
-            <details><summary>Envíos</summary><p>${escapeHtml(context.project.policies.shipping.details)}</p></details>
-            <details><summary>Cambios y devoluciones</summary><p>${escapeHtml(context.project.policies.returns.details)}</p></details>
+            <details><summary>${escapeHtml(copy.product.shipping)}</summary><p>${escapeHtml(context.project.policies.shipping.details)}</p></details>
+            <details><summary>${escapeHtml(copy.product.returns)}</summary><p>${escapeHtml(context.project.policies.returns.details)}</p></details>
           </div>
         </div>
       </div>`),
@@ -996,25 +999,26 @@ export const cartDrawer: ModuleDefinition<"cart-drawer", z.infer<typeof cartSett
   clientAsset: "storefront-cart" as AssetId,
   styleAsset: scopedAssetId("cart-drawer"),
   render(context) {
+    const copy = context.project.publicCopy;
     const checkoutLinkMarkup = hasPublicWhatsApp(context.project.whatsapp)
-      ? `<a data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>Enviar pedido en WhatsApp</a>`
+      ? `<a data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>${escapeHtml(copy.checkout.sendWhatsApp)}</a>`
       : "";
     return moduleRoot(
       "cart-drawer",
       context.section,
       safeHtml(`<div class="solara-cart-backdrop" data-solara-cart-close data-close-cart hidden></div>
         <aside id="solara-cart" class="solara-cart-drawer" data-cart-drawer aria-label="${escapeAttribute(context.settings.title)}" aria-hidden="true" inert tabindex="-1">
-          <header><h2>${escapeHtml(context.settings.title)}</h2><button type="button" data-solara-cart-close data-close-cart aria-label="Cerrar carrito">Cerrar</button></header>
+          <header><h2>${escapeHtml(context.settings.title)}</h2><button type="button" data-solara-cart-close data-close-cart aria-label="${escapeAttribute(copy.cart.close)}">${escapeHtml(copy.navigation.close)}</button></header>
           <div data-solara-cart-items data-cart-lines><p class="solara-empty-state">${escapeHtml(context.settings.emptyText)}</p></div>
-          <div class="solara-cart-total"><span>Total</span><strong data-solara-cart-total data-cart-total>${escapeHtml(formatMoney(0))}</strong></div>
+          <div class="solara-cart-total"><span>${escapeHtml(copy.cart.estimatedTotal)}</span><strong data-solara-cart-total data-cart-total>${escapeHtml(formatMoney(0))}</strong></div>
           <form data-solara-checkout data-checkout-form>
-            <label for="solara-drawer-customer-name">Nombre</label>
+            <label for="solara-drawer-customer-name">${escapeHtml(copy.cart.name)}</label>
             <input id="solara-drawer-customer-name" name="name" autocomplete="name" required>
-            <label for="solara-drawer-customer-phone">Teléfono</label>
+            <label for="solara-drawer-customer-phone">${escapeHtml(copy.cart.phone)}</label>
             <input id="solara-drawer-customer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="Ingresá un teléfono válido" required>
-            <label for="solara-drawer-customer-address">Dirección o punto de entrega</label>
+            <label for="solara-drawer-customer-address">${escapeHtml(copy.cart.address)}</label>
             <textarea id="solara-drawer-customer-address" name="address" autocomplete="street-address" required></textarea>
-            <label for="solara-drawer-customer-notes">Notas opcionales</label>
+            <label for="solara-drawer-customer-notes">${escapeHtml(copy.cart.notes)}</label>
             <textarea id="solara-drawer-customer-notes" name="notes"></textarea>
             <button type="submit">${escapeHtml(context.settings.checkoutLabel)}</button>
             <pre data-order-preview aria-live="polite"></pre>

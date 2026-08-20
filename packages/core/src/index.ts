@@ -973,7 +973,7 @@ export function generatePerformanceFixture(productCount = 1_000): StoreProjectV1
       title: `Producto de prueba ${sequence}`,
       description: `Producto determinista para medir catálogos grandes, lote ${sequence}.`,
       status: index % 10 === 0 ? "hidden" : "active",
-      brand: index % 2 === 0 ? "Casa Luma" : "Taller Nadir",
+      brand: index % 2 === 0 ? "Tienda Referencia" : "Taller Nadir",
       categoryIds: [index % 2 === 0 ? "category-textiles" : "category-mesa"],
       collectionIds: ["collection-casa-serena"],
       tags: ["rendimiento", `grupo-${index % 10}`],

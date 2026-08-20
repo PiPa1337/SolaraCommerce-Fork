@@ -18,14 +18,13 @@ describe("storefront runtime", () => {
       name: "Ana",
       email: "ana@example.com",
       phone: "11 5555 1111",
-      reason: "Producto",
-      orderNumber: "",
       message: "Quiero consultar un talle",
     });
     expect(mailto).toContain("mailto:hola@example.com?subject=");
     expect(decodeURIComponent(mailto)).toContain("Hola Predeterminado, quiero hacer una consulta.");
     expect(decodeURIComponent(mailto)).toContain("Quiero consultar un talle");
-    expect(decodeURIComponent(mailto)).not.toContain("Número de pedido:");
+    expect(decodeURIComponent(mailto)).toContain("ana@example.com");
+    expect(decodeURIComponent(mailto)).toContain("11 5555 1111");
   });
 
   it("genera un mensaje determinista con variante y SKU", () => {
@@ -124,10 +123,10 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("i !== +!!count");
   });
 
-  it("mantiene el runtime por debajo de 56 KB crudos", () => {
-    // El runtime queda en 55.3 KiB crudos después de agregar la política
-    // Trusted Types que protege los sinks HTML del carrito y la búsqueda.
-    expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(56 * 1024);
+  it("mantiene el runtime por debajo de 60 KB crudos", () => {
+    // El runtime queda en ~58 KiB crudos después del formulario dual
+    // (email + WhatsApp) y Trusted Types; se deja margen hasta 60 KiB.
+    expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(60 * 1024);
   });
 });
 
@@ -215,7 +214,7 @@ describe("carrito robusto y checkout con precios frescos (C2/C3/C5/C9 + SF-B4/B5
 
   it("conserva el label de acción custom del módulo en syncVariant (SF-B5)", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("initialAddLabels");
-    expect(STOREFRONT_RUNTIME_JS).toContain('"Sin stock"');
+    expect(STOREFRONT_RUNTIME_JS).toContain("p.noStock");
   });
 
   it("restaura la cantidad previa cuando el input queda vacío o en cero (C9)", () => {
@@ -295,13 +294,15 @@ describe("carrito sin líneas fantasma y conteos honestos (F-04, SF-B7, SF-B8, C
     expect(refreshed[0]).toEqual(
       expect.objectContaining({ variantId: "v-activa", available: true, unitPrice: 165000 }),
     );
-    expect(STOREFRONT_RUNTIME_JS).toContain("Ya no disponible");
+    expect(STOREFRONT_RUNTIME_JS).toContain("a.unavailable");
     expect(STOREFRONT_RUNTIME_JS).not.toContain("line.variantId in byVariant");
   });
 
   it("el conteo de categoría usa data-category-total sin pisar el total (SF-B8)", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain('getAttribute("data-category-total")');
-    expect(STOREFRONT_RUNTIME_JS).toContain(`de \${total} productos`);
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      ["de ", "$", "{total} ", "$", "{f.resultCount}"].join(""),
+    );
   });
 
   it("limita la búsqueda a 48 resultados antes de aplicar sus filtros (SF-B7)", () => {
@@ -418,9 +419,7 @@ describe("carrito y checkout del drawer (A29)", () => {
   });
 
   it("bloquea el checkout con role=alert y conserva la línea no disponible", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain(
-      "Retirá los productos no disponibles del carrito antes de enviar el pedido.",
-    );
+    expect(STOREFRONT_RUNTIME_JS).toContain("x.invalidItems");
     expect(STOREFRONT_RUNTIME_JS).toContain('setAttribute("role", "alert")');
     expect(STOREFRONT_RUNTIME_JS).toContain(
       "if (cart.length === 0 || !form.reportValidity()) return;",
@@ -431,10 +430,8 @@ describe("carrito y checkout del drawer (A29)", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain(
       `\`https://wa.me/\${phone.replace(/\\D/g, "")}?text=\${encodeURIComponent(message)}\``,
     );
-    expect(STOREFRONT_RUNTIME_JS).toContain(`Total estimado: \${money.format(total / 100)}`);
-    expect(STOREFRONT_RUNTIME_JS).toContain(
-      "Entiendo que precio, disponibilidad, envío y pago se confirman",
-    );
+    expect(STOREFRONT_RUNTIME_JS).toContain("x.total");
+    expect(STOREFRONT_RUNTIME_JS).toContain("x.disclaimer");
   });
 
   it("acota la cantidad editada y el agregado a 1–99", () => {
@@ -448,8 +445,8 @@ describe("carrito y checkout del drawer (A29)", () => {
 describe("fixmes del barrido A29 (index.ts)", () => {
   it("el drawer de carrito inertea a los hermanos al abrir y los libera al cerrar", () => {
     expect(STOREFRONT_RUNTIME_JS.match(/pageSiblingsOf\(drawer\)/g)?.length).toBe(2);
-    expect(STOREFRONT_RUNTIME_JS).toContain('s.setAttribute("inert", "")');
-    expect(STOREFRONT_RUNTIME_JS).toContain('s.removeAttribute("inert")');
+    expect(STOREFRONT_RUNTIME_JS).toContain('s2.setAttribute("inert", "")');
+    expect(STOREFRONT_RUNTIME_JS).toContain('s2.removeAttribute("inert")');
   });
 
   it("la búsqueda guarda por término: un término de 1 carácter corta el query", () => {

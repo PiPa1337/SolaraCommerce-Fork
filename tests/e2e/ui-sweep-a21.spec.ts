@@ -363,7 +363,7 @@ test("A21.3 el picker de imagen social cambia el campo y el preview de Open Grap
   const ogImage = page.getByTestId("ui-seo-preview-og").locator("img");
   const whatsappPreview = page.getByTestId("ui-seo-preview-whatsapp");
 
-  await expect(whatsappPreview).toContainText("Modo Sur");
+  await expect(whatsappPreview).toContainText("Predeterminado");
   await expect(whatsappPreview).toContainText("Indumentaria y accesorios para todos los días");
 
   await expect(select.locator('option[value=""]')).toContainText(

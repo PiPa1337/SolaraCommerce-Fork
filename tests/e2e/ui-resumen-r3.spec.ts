@@ -24,8 +24,8 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 150_000 : 90_000);
 
-const NEW_BASE_URL = "https://tienda-modo-sur.example";
-const SUBFOLDER_BASE_URL = "https://modo-sur.example/tienda/";
+const NEW_BASE_URL = "https://tienda-aurora.example";
+const SUBFOLDER_BASE_URL = "https://tienda-aurora.example/tienda/";
 const HTTP_BASE_URL = "http://modo-sur-http.example";
 
 let server: Server;
@@ -124,7 +124,7 @@ const otherSlugExport = exportProject(
   { mode: "production" },
 );
 
-const OLD_HOST = "https://modo-sur.example";
+const OLD_HOST = "https://tienda-aurora.example";
 const beforeText = asText(beforeExport.files);
 const afterText = asText(afterExport.files);
 const otherSlugText = asText(otherSlugExport.files);
@@ -236,8 +236,8 @@ test("Auditoría: subcarpeta en la URL pública advierte domain.baseurl-path y h
 
   // Restaurar una URL raíz HTTPS: ambos hallazgos desaparecen.
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
-  await urlInput(page).fill("https://modo-sur.example");
-  await expect.poll(() => storedBaseUrl(page)).toBe("https://modo-sur.example");
+  await urlInput(page).fill("https://tienda-aurora.example");
+  await expect.poll(() => storedBaseUrl(page)).toBe("https://tienda-aurora.example");
   await openSeoTab();
   await expect(urlAlert("domain.https")).toHaveCount(0);
   await expect(urlAlert("domain.baseurl-path")).toHaveCount(0);

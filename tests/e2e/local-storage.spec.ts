@@ -88,7 +88,7 @@ test("el lanzador persiste el proyecto y el sitio fuera de IndexedDB", async ({ 
     await page.getByRole("button", { name: "Abrir sitio público" }).click();
     const popup = await popupPromise;
     await popup.waitForLoadState("domcontentloaded");
-    await expect(popup).toHaveTitle(/Modo Sur|Predeterminado/i);
+    await expect(popup).toHaveTitle(/Predeterminado/i);
     await popup.close();
   } finally {
     if (serverProcess.exitCode === null) serverProcess.kill();

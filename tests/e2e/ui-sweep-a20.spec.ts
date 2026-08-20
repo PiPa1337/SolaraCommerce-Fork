@@ -138,7 +138,7 @@ test.afterAll(async () => {
 
 test.setTimeout(120_000);
 
-const HOME_TITLE = "Modo Sur | Vestite con lo que te representa";
+const HOME_TITLE = "Predeterminado | Vestite con lo que te representa";
 
 async function resetIndexedDb(page: Page): Promise<void> {
   await page.goto(studioServer.url);
@@ -278,7 +278,7 @@ test("A20: preview — la ruta del selector cambia la página, el input y el anu
 
   // V2 ya no publica la ruta de Contacto; el renderer responde como 404.
   await commitRoute(page, "/contacto/");
-  await expectPreviewTitle(page, "Página no encontrada | Modo Sur");
+  await expectPreviewTitle(page, "Página no encontrada | Predeterminado");
   await expect(routeInput).toHaveValue("/contacto/");
   await expect(announce).toContainText("Vista previa: /contacto/");
   await expect(
@@ -287,7 +287,7 @@ test("A20: preview — la ruta del selector cambia la página, el input y el anu
 
   // Producto (primera del catálogo): título propio de la página de producto.
   await commitRoute(page, "/productos/remera-esencial-de-algodon/");
-  await expectPreviewTitle(page, "Remera esencial de algodón | Modo Sur");
+  await expectPreviewTitle(page, "Remera esencial de algodón | Predeterminado");
   await expect(announce).toContainText("Vista previa: /productos/remera-esencial-de-algodon/");
   await expect(
     page.frameLocator('iframe[title="Vista previa desktop"]').locator("body"),
@@ -295,11 +295,11 @@ test("A20: preview — la ruta del selector cambia la página, el input y el anu
 
   // Categoría raíz y categoría de la muestra.
   await commitRoute(page, "/categorias/remeras/");
-  await expectPreviewTitle(page, "Remeras | Modo Sur");
+  await expectPreviewTitle(page, "Remeras | Predeterminado");
 
   // Volver al inicio restaura el título del home.
   await commitRoute(page, "/ruta-que-no-existe/");
-  await expectPreviewTitle(page, "Página no encontrada | Modo Sur");
+  await expectPreviewTitle(page, "Página no encontrada | Predeterminado");
   await expect(
     page.frameLocator('iframe[title="Vista previa desktop"]').locator("body"),
   ).toContainText("No encontramos esa página.");
@@ -326,14 +326,14 @@ test("A20: preview — la ruta confirma al perder foco y un valor vacío restaur
 
   await expect(routeInput).toHaveValue("/carrito/");
   await expect(announce).toContainText("Vista previa: /carrito/");
-  await expectPreviewTitle(page, "Carrito | Modo Sur");
+  await expectPreviewTitle(page, "Carrito | Predeterminado");
 
   await routeInput.fill("   ");
   await page.getByRole("button", { name: "100%" }).focus();
 
   await expect(routeInput).toHaveValue("/carrito/");
   await expect(announce).toContainText("Vista previa: /carrito/");
-  await expectPreviewTitle(page, "Carrito | Modo Sur");
+  await expectPreviewTitle(page, "Carrito | Predeterminado");
 });
 
 test("A20: preview - carrito conserva multiples lineas al cambiar de ruta", async ({ page }) => {
@@ -623,7 +623,7 @@ test("A20: preview — la carga del iframe anuncia el estado y se retira al term
   );
 
   await commitRoute(page, "/carrito/");
-  await expectPreviewTitle(page, "Carrito | Modo Sur");
+  await expectPreviewTitle(page, "Carrito | Predeterminado");
   await expect(page.getByTestId("ui-preview-loading")).toHaveCount(0);
 
   await expect(await loadingObservation).toEqual({
@@ -685,7 +685,7 @@ test("A20: comparación — selección, conteo, acción con 2 y reporte del diá
   await expect(dialog).toContainText("Tienda A20");
   await expect(dialog).toContainText("Sin sitio en disco");
 
-  // Contrato de datos: conteos de Modo Sur (50 productos) vs tienda limpia (0).
+  // Contrato de datos: conteos de Predeterminado (50 productos) vs tienda limpia (0).
   const productsRow = compareRow(page, "Productos activos");
   await expect(productsRow.locator("strong").nth(0)).toHaveText("50");
   await expect(productsRow.locator("strong").nth(1)).toHaveText("0");
@@ -766,18 +766,15 @@ test("A20: comparación — quitar de comparar actualiza el conteo y deshabilita
   );
 });
 
-// ------------------------------------------------------- defectos ajenos (A14)
+// ------------------------------------------------------- rutas retiradas
 
-test("A14: una ruta válida fuera de la muestra (p. ej. /envios/) se descarta en silencio", async ({
-  page,
-}) => {
+test("A14: una ruta retirada (p. ej. /envios/) responde como no encontrada", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openDemoStore(page);
   await expectPreviewTitle(page, HOME_TITLE);
 
-  // /envios/ es una página real del sitio (buildPages la genera), pero no
-  // está en la muestra de getPreviewRoutes: Studio.tsx la descarta y el
-  // preview vuelve al inicio sin aviso.
+  // /envios/ fue retirada del catálogo V2: el preview debe conservar la ruta
+  // solicitada y mostrar la página 404, sin volver al inicio silenciosamente.
   await commitRoute(page, "/envios/");
-  await expectPreviewTitle(page, "Envíos | Modo Sur");
+  await expectPreviewTitle(page, "Página no encontrada | Predeterminado");
 });

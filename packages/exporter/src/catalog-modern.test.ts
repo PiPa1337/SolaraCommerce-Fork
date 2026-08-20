@@ -117,7 +117,9 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(String(exported.files.get("sitemap.xml"))).toContain(
       "/productos/remera-esencial-de-algodon/",
     );
-    expect(catalogModernStore.whatsapp.greeting).toBe("Hola Modo Sur, quiero hacer este pedido:");
+    expect(catalogModernStore.whatsapp.greeting).toBe(
+      "Hola Tienda Referencia, quiero hacer este pedido:",
+    );
   });
 
   it("construye la categoría moderna con filtros y pie comercial", () => {

@@ -1,0 +1,110 @@
+[
+  {
+    "path": "apps/studio/src/lib/repository.ts",
+    "literal": "Modo Sur",
+    "category": "technical-contract",
+    "reason": "Reconoce y migra snapshots legacy; no se renderiza como fallback de una tienda nueva."
+  },
+  {
+    "path": "apps/studio/src/lib/repository.ts",
+    "literal": "Casa Luma",
+    "category": "technical-contract",
+    "reason": "Reconoce el saludo de la fixture histórica durante la migración de datos."
+  },
+  {
+    "path": "apps/studio/src/lib/repository.ts",
+    "literal": "Predeterminado",
+    "category": "technical-contract",
+    "reason": "Identifica la única demo persistida que el producto conserva explícitamente."
+  },
+  {
+    "path": "apps/studio/src/lib/repository.ts",
+    "literal": "5491100000000",
+    "category": "technical-contract",
+    "reason": "Sentinel de teléfono sin configurar."
+  },
+  {
+    "path": "packages/project-schema/src/catalog-modern-fixture.ts",
+    "literal": "modo-sur",
+    "category": "fixture",
+    "reason": "Nombre técnico de assets e IDs binarios existentes; la marca visible de la fixture es neutral."
+  },
+  {
+    "path": "packages/project-schema/src/catalog-modern-fixture.ts",
+    "literal": "5491123456789",
+    "category": "fixture",
+    "reason": "Número determinista de prueba para flujos de WhatsApp; nunca es default de una tienda limpia."
+  },
+  {
+    "path": "packages/project-schema/src/catalog-modern-fixture.ts",
+    "literal": "tienda-referencia-modern.example",
+    "category": "fixture",
+    "reason": "Dominio determinista de la fixture; las tiendas nuevas usan un dominio incompleto hasta que el usuario lo configure."
+  },
+  {
+    "path": "packages/project-schema/src/catalog-modern-fixture.ts",
+    "literal": "hola@tienda-referencia-modern.example",
+    "category": "fixture",
+    "reason": "Email determinista de la fixture; nunca se copia al seed limpio."
+  },
+  {
+    "path": "packages/project-schema/src/catalog-modern-template.ts",
+    "literal": "5491100000000",
+    "category": "technical-contract",
+    "reason": "Sentinel de teléfono sin configurar que la guía no publica."
+  },
+  {
+    "path": "packages/project-schema/src/catalog-modern-guidance.ts",
+    "literal": "5491100000000",
+    "category": "technical-contract",
+    "reason": "Sentinel de teléfono que se muestra sólo como placeholder de configuración."
+  },
+  {
+    "path": "packages/project-schema/src/fixture.ts",
+    "literal": "5491123456789",
+    "category": "fixture",
+    "reason": "Número determinista de prueba para el fixture de referencia."
+  },
+  {
+    "path": "packages/project-schema/src/fixture.ts",
+    "literal": "tienda-referencia.example",
+    "category": "fixture",
+    "reason": "Dominio determinista del fixture de referencia; no es un fallback público."
+  },
+  {
+    "path": "packages/project-schema/src/fixture.ts",
+    "literal": "hola@tienda-referencia.example",
+    "category": "fixture",
+    "reason": "Email determinista del fixture de referencia; no es un fallback público."
+  },
+  {
+    "path": "packages/project-schema/src/scale-fixture.ts",
+    "literal": "casa-luma",
+    "category": "technical-contract",
+    "reason": "Prefijo de IDs y assets heredado del fixture de escala; la identidad visible está neutralizada."
+  },
+  {
+    "path": "packages/project-schema/src/scale-fixture.ts",
+    "literal": "tienda-referencia-scale.example",
+    "category": "fixture",
+    "reason": "Dominio determinista del fixture de escala; no es un fallback público."
+  },
+  {
+    "path": "apps/studio/src/features/GuidedOverview.tsx",
+    "literal": "5491100000000",
+    "category": "technical-contract",
+    "reason": "Sentinel de teléfono presentado como placeholder de configuración."
+  },
+  {
+    "path": "apps/studio/src/features/dashboard/CreateStoreDialog.tsx",
+    "literal": "5491100000000",
+    "category": "technical-contract",
+    "reason": "Sentinel de teléfono presentado como placeholder de configuración."
+  },
+  {
+    "path": "scripts/portable-e2e.mjs",
+    "literal": "Predeterminado",
+    "category": "fixture",
+    "reason": "El E2E verifica la demo persistida que el producto conserva explícitamente."
+  }
+]

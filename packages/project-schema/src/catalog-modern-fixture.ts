@@ -47,7 +47,7 @@ const children = childDefinitions.flatMap(([parentSlug, definitions]) =>
     id: `category-${slug}`,
     slug,
     title,
-    description: `${title} de Modo Sur para combinar sin esfuerzo.`,
+    description: `${title} de la tienda de referencia para combinar sin esfuerzo.`,
     parentId: `category-${parentSlug}`,
     imageId: "asset-manta",
     productIds: [] as string[],
@@ -65,7 +65,7 @@ const primaryRoots = [
   "calzado",
   "accesorios",
 ];
-const brands = ["Modo Sur", "Línea Norte", "Taller del Río", "Estudio Liso", "Bruma"];
+const brands = ["Tienda Referencia", "Línea Base", "Taller Norte", "Estudio Liso", "Bruma"];
 const productNames = [
   "Remera esencial de algodón",
   "Remera gráfica Horizonte",
@@ -384,8 +384,8 @@ const catalogModernAssets = [
   {
     kind: "image" as const,
     id: "asset-hero",
-    name: "Campaña Modo Sur",
-    alt: "Dos personas con prendas negras de Modo Sur frente a una pared clara",
+    name: "Campaña de temporada",
+    alt: "Dos personas con prendas frente a una pared clara",
     mimeType: "image/png",
     source: "/fixtures/modo-sur-hero.png",
     width: 1536,
@@ -431,9 +431,9 @@ const catalogModernAssets = [
 export const catalogModernStore = StoreProjectV2Schema.parse({
   ...structuredClone(catalogScaleStore),
   id: "store-modo-sur",
-  name: "Modo Sur",
-  slug: "modo-sur",
-  baseUrl: "https://modo-sur.example",
+  name: "Tienda Referencia",
+  slug: "tienda-referencia-modern",
+  baseUrl: "https://tienda-referencia-modern.example",
   createdAt: fixedDate,
   updatedAt: fixedDate,
   origin: {
@@ -442,22 +442,22 @@ export const catalogModernStore = StoreProjectV2Schema.parse({
     seed: "demo",
   },
   identity: {
-    legalName: "Modo Sur Estudio SRL",
-    brandName: "Modo Sur",
+    legalName: "Tienda Referencia SRL",
+    brandName: "Tienda Referencia",
     description: "Indumentaria y accesorios elegidos para acompañar tu forma de moverte.",
-    email: "hola@modo-sur.example",
+    email: "hola@tienda-referencia-modern.example",
     phone: "5491123456789",
     address: "Buenos Aires, Argentina",
   },
   whatsapp: {
     ...catalogScaleStore.whatsapp,
     phone: "5491123456789",
-    greeting: "Hola Modo Sur, quiero hacer este pedido:",
+    greeting: "Hola Tienda Referencia, quiero hacer este pedido:",
     includeSku: true,
   },
   seo: {
     ...catalogScaleStore.seo,
-    title: "Modo Sur | Vestite con lo que te representa",
+    title: "Tienda Referencia | Vestite con lo que te representa",
     description: "Indumentaria y accesorios para todos los días, con compra directa por WhatsApp.",
   },
   theme: {
@@ -497,7 +497,7 @@ export const catalogModernStore = StoreProjectV2Schema.parse({
       kind: "home",
       slug: "inicio",
       title: "Vestite con lo que te representa.",
-      seoTitle: "Modo Sur | Vestite con lo que te representa",
+      seoTitle: "Tienda Referencia | Vestite con lo que te representa",
       seoDescription: "Indumentaria y accesorios para todos los días, elegidos para acompañarte.",
       sections: [],
     },
@@ -506,8 +506,9 @@ export const catalogModernStore = StoreProjectV2Schema.parse({
       kind: "about",
       slug: "nosotros",
       title: "Una selección pensada para moverte.",
-      seoTitle: "Nosotros | Modo Sur",
-      seoDescription: "Conocé la mirada detrás de Modo Sur y las prendas que elegimos.",
+      seoTitle: "Nosotros | Tienda Referencia",
+      seoDescription:
+        "Conocé la mirada detrás de la tienda de referencia y las prendas que elegimos.",
       sections: [],
     },
     {
@@ -515,7 +516,7 @@ export const catalogModernStore = StoreProjectV2Schema.parse({
       kind: "contact",
       slug: "contacto",
       title: "Estamos para ayudarte.",
-      seoTitle: "Contacto | Modo Sur",
+      seoTitle: "Contacto | Tienda Referencia",
       seoDescription: "Escribinos por WhatsApp, email o teléfono para coordinar tu pedido.",
       sections: [],
     },
@@ -540,7 +541,7 @@ export const catalogModernStore = StoreProjectV2Schema.parse({
       id: "collection-recien-llegados",
       slug: "recien-llegados",
       title: "Recién llegados",
-      description: "Lo nuevo de Modo Sur.",
+      description: "Lo nuevo de la tienda de referencia.",
       imageId: "asset-hero",
       productIds: products
         .filter((product) => product.collectionIds.includes("collection-recien-llegados"))

@@ -1,5 +1,22 @@
 # Changelog
 
+### Contenido público multi-tienda (2026-08-18)
+
+- **Fuente única**: se agrega `publicCopy` al contrato V2 sin cambiar
+  `schemaVersion`; los respaldos anteriores reciben defaults durante la
+  normalización.
+- **Editor**: Overview incorpora `Contenido global` para editar navegación,
+  búsqueda, filtros, producto, contacto, carrito, checkout, footer, páginas,
+  WhatsApp y textos de exportación.
+- **Renderizado**: módulos, exporter y runtime consumen el copy del proyecto;
+  sólo la atribución de Solara permanece fija. Las páginas legacy y 404 también
+  dejaron de depender de textos de marca.
+- **Seeds**: las tiendas nuevas usan el seed limpio, sin catálogo, imágenes ni
+  contactos demo; la única demo persistida continúa siendo `Predeterminado` V2.
+- **Guardia**: `check-hardcoded-content` rastrea código versionado y no
+  versionado ignorado, clasifica hallazgos y falla ante marcas, contactos,
+  dominios o saludos demo activos sin allowlist exacta.
+
 ### Predeterminado: responsive, imágenes y SEO conectado (2026-08-18)
 
 - **Migración de la demo**: el snapshot existente de `Predeterminado` conserva

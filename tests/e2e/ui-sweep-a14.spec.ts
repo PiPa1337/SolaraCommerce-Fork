@@ -259,6 +259,9 @@ test("A14.2 tabs — los puntos sucios aparecen con el cambio, se limpian al vis
 
   // Visitar una pestaña limpia su punto; el guardado limpia el resto.
   await tabByName(page, "Resumen").click();
+  // Los paneles son lazy y el reloj está pausado en este barrido: avanzamos
+  // sólo lo necesario para resolver Suspense, antes del debounce de autosave.
+  await page.clock.runFor(500);
   await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
   await expect(page.getByTestId("ui-tab-dirty")).toHaveCount(6);
   await expect(tabByName(page, "Resumen").getByTestId("ui-tab-dirty")).toHaveCount(0);
@@ -626,9 +629,7 @@ test("A14.11 error de guardado — el indicador anuncia el fallo y Reintentar es
   await expect(indicator).toHaveClass(/save-indicator--error/, { timeout: 15_000 });
 });
 
-test("A14.12 preview — una ruta válida fuera de la muestra renderiza su página (A20)", async ({
-  page,
-}) => {
+test("A14.12 preview — una ruta retirada muestra la página no encontrada", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openDemoStore(page);
 
@@ -636,8 +637,8 @@ test("A14.12 preview — una ruta válida fuera de la muestra renderiza su pági
   await routeInput.fill("/envios/");
   await routeInput.press("Enter");
 
-  // /envios/ es una página real (buildPages la genera) aunque no esté en el
-  // datalist de la muestra: el srcdoc debe renderizar Envíos y no el home.
+  // /envios/ fue retirada del catálogo V2: el srcdoc debe conservar la ruta
+  // solicitada y mostrar la página 404, sin heredar contenido de otra ruta.
   await expect
     .poll(
       () =>
@@ -647,7 +648,7 @@ test("A14.12 preview — una ruta válida fuera de la muestra renderiza su pági
         }),
       { timeout: 20_000 },
     )
-    .toContain("<title>Env\u00edos | Modo Sur</title>");
+    .toContain("<title>Página no encontrada | Predeterminado</title>");
   await expect(routeInput).toHaveValue("/envios/");
   await expect(page.getByTestId("ui-preview-route-announce")).toContainText(
     "Vista previa: /envios/",

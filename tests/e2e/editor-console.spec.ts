@@ -90,7 +90,7 @@ test("el editor recorre dashboard, tabs y acciones clave sin errores de consola"
   await expect(dialog).toBeVisible();
   await dialog.getByRole("textbox", { name: "Título" }).fill("Linterna Duna");
   await dialog.getByRole("textbox", { name: "Slug" }).fill("linterna-duna");
-  await dialog.getByRole("textbox", { name: "Marca" }).fill("Modo Sur");
+  await dialog.getByRole("textbox", { name: "Marca" }).fill("Marca Aurora");
   await dialog.getByRole("textbox", { name: "Descripción" }).fill("Luz cálida de campamento.");
   await dialog.getByRole("textbox", { name: "SKU" }).fill("LIN-DUNA-01");
   await dialog.getByRole("spinbutton", { name: "Precio en centavos" }).fill("45000");

@@ -13,7 +13,7 @@ const fixtureFiles = new Map<string, Uint8Array>(
 );
 
 test("C4b/c: el sitio con subcarpeta navega con prefijo y sin duplicados", async ({ browser }) => {
-  const project = { ...referenceStore, baseUrl: "https://casa-luma.example/tienda/" };
+  const project = { ...referenceStore, baseUrl: "https://tienda-referencia.example/tienda/" };
   const exported = exportProject(project as typeof referenceStore, { mode: "production" });
   const server = createServer((request, response) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");

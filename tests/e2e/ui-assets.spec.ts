@@ -108,9 +108,9 @@ test("reemplazar un asset en uso conserva usos y el guard de borrado lo bloquea"
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
   await openAssetsTab(page);
 
-  // El hero de la demo usa posterAssetId "asset-hero" (Campaña Modo Sur).
+  // El hero de la demo usa posterAssetId "asset-hero".
   const heroAsset = page.locator(".asset-item").filter({
-    has: page.locator('input[value="Campaña Modo Sur"]'),
+    has: page.locator('input[value="Campaña de temporada"]'),
   });
   await expect(heroAsset).toBeVisible();
   await heroAsset.getByTestId("ui-asset-detail-open").click();
@@ -120,8 +120,8 @@ test("reemplazar un asset en uso conserva usos y el guard de borrado lo bloquea"
   await replaceSelectedAsset(page, "pixel-teal.png");
 
   await expect(detail).toContainText("2 × 2");
-  await expect(detail.getByRole("heading")).toHaveText("Campaña Modo Sur");
-  await expect(heroAsset.locator("input").first()).toHaveValue("Campaña Modo Sur");
+  await expect(detail.getByRole("heading")).toHaveText("Campaña de temporada");
+  await expect(heroAsset.locator("input").first()).toHaveValue("Campaña de temporada");
 
   // El ID se conserva: los usos del hero siguen vivos y el borrado queda bloqueado.
   await expect(detail).toContainText("catalog-hero");

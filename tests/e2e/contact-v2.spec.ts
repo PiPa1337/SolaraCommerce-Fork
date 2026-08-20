@@ -7,10 +7,11 @@ const project = structuredClone(catalogModernV2Store);
 project.whatsapp = { ...project.whatsapp, phone: "5491123456789" };
 project.identity = {
   ...project.identity,
-  email: "hola@modosur.example",
+  email: "hola@contacto.example",
   phone: "5491123456789",
   address: "Buenos Aires, Argentina",
 };
+const fixtureBrand = project.identity.brandName;
 const exported = exportProject(project, { mode: "production" });
 let server: Server;
 let serverUrl: string;
@@ -75,8 +76,10 @@ test("Contacto V2 vive al final de Home y mantiene el formulario funcional", asy
   const contactUrl = await page.evaluate(
     () => (window as Window & { __contactUrl?: string }).__contactUrl ?? "",
   );
-  expect(contactUrl).toContain("mailto:hola@modosur.example?subject=");
-  expect(decodeURIComponent(contactUrl)).toContain("Hola Modo Sur, quiero hacer una consulta.");
+  expect(contactUrl).toContain("mailto:hola@contacto.example?subject=");
+  expect(decodeURIComponent(contactUrl)).toContain(
+    `Hola ${fixtureBrand}, quiero hacer una consulta.`,
+  );
   expect(decodeURIComponent(contactUrl)).toContain("Quiero consultar un talle");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     await page.evaluate(() => window.innerWidth),

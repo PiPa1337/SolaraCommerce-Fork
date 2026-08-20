@@ -224,7 +224,7 @@ function StudioShell() {
           retiredLegacyProjects = (await retireLegacyDemoProjects()) || retiredLegacyProjects;
         }
         if (retiredLegacyProjects) {
-          notify("Se retiraron las referencias V1; Predeterminado V2 es la única demo integrada.");
+          notify("Se retiraron las referencias legacy; la demo V2 es la única demo integrada.");
         }
         const diskListing = detectedStorage.managed
           ? await (await loadLocalProjectRepository()).loadAllDiskProjects()
@@ -304,22 +304,20 @@ function StudioShell() {
         }
         const demoCreated = await ensureScaleDemoProject();
         if (demoCreated) {
-          notify(
-            "Se agregó la tienda Predeterminado con 50 productos para explorar la escala del catálogo.",
-          );
+          notify("Se agregó la tienda demo con 50 productos para explorar la escala del catálogo.");
         }
         await ensureDemoSectionOrder();
         const demoReviewsExpanded = await ensureCatalogModernDemoReviews();
         if (demoReviewsExpanded) {
-          notify("Se actualizaron las reseñas de Predeterminado.");
+          notify("Se actualizaron las reseñas de la tienda demo.");
         }
         const demoGalleryExpanded = await ensureCatalogModernDemoGallery();
         if (demoGalleryExpanded) {
-          notify("Se ampliaron las galerías de Predeterminado.");
+          notify("Se ampliaron las galerías de la tienda demo.");
         }
         const demoTestimonialsExpanded = await ensureCatalogModernDemoTestimonials();
         if (demoTestimonialsExpanded) {
-          notify("Se ampliaron las reseñas de Predeterminado a 12.");
+          notify("Se ampliaron las reseñas de la tienda demo a 12.");
         }
         const deprecatedCategoriesRemoved = await ensureDeprecatedCategoriesRemoved();
         if (deprecatedCategoriesRemoved) {

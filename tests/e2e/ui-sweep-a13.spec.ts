@@ -437,9 +437,8 @@ test("A13: panel gestionado — descargar, respaldo, sitio público y carpeta", 
     await detail.getByRole("button", { name: "Abrir sitio público" }).click();
     const popup = await popupPromise;
     await popup.waitForURL(/^http:\/\/127\.0\.0\.1:\d+/);
-    // La tienda demo se llama «Predeterminado» pero su SEO conserva la marca
-    // del fixture (Modo Sur): el sitio exportado refleja el proyecto en disco.
-    await expect(popup).toHaveTitle(/Modo Sur/i);
+    // La demo integrada conserva «Predeterminado» como identidad pública.
+    await expect(popup).toHaveTitle(/Predeterminado/i);
     await popup.close();
 
     // Abrir carpeta: el POST llega al endpoint local con el id correcto; la

@@ -313,7 +313,7 @@ test("el detalle muestra usos coherentes con las referencias del proyecto", asyn
   await openAssetsTab(page);
 
   const heroAsset = page.locator(".asset-item").filter({
-    has: page.locator('input[value="Campaña Modo Sur"]'),
+    has: page.locator('input[value="Campaña de temporada"]'),
   });
   await expect(heroAsset).toBeVisible();
   await heroAsset.getByTestId("ui-asset-detail-open").click();
@@ -366,13 +366,13 @@ test("Copiar ID escribe el identificador del recurso y comunica Copiado", async 
   });
 
   const heroAsset = page.locator(".asset-item").filter({
-    has: page.locator('input[value="Campaña Modo Sur"]'),
+    has: page.locator('input[value="Campaña de temporada"]'),
   });
-  const copyButton = heroAsset.getByRole("button", { name: "Copiar ID de Campaña Modo Sur" });
+  const copyButton = heroAsset.getByRole("button", { name: "Copiar ID de Campaña de temporada" });
   await copyButton.click();
 
-  const copiedButton = heroAsset.getByRole("button", { name: "Copiado de Campaña Modo Sur" });
-  await expect(copiedButton).toHaveAttribute("aria-label", "Copiado de Campaña Modo Sur");
+  const copiedButton = heroAsset.getByRole("button", { name: "Copiado de Campaña de temporada" });
+  await expect(copiedButton).toHaveAttribute("aria-label", "Copiado de Campaña de temporada");
   await expect
     .poll(() =>
       page.evaluate(() => (window as unknown as { __clipboardValue?: string }).__clipboardValue),
@@ -404,16 +404,16 @@ test("Copiar ID muestra un error accionable cuando el portapapeles rechaza la op
   });
 
   const heroAsset = page.locator(".asset-item").filter({
-    has: page.locator('input[value="Campaña Modo Sur"]'),
+    has: page.locator('input[value="Campaña de temporada"]'),
   });
-  await heroAsset.getByRole("button", { name: "Copiar ID de Campaña Modo Sur" }).click();
+  await heroAsset.getByRole("button", { name: "Copiar ID de Campaña de temporada" }).click();
   await expect(heroAsset.getByTestId("ui-asset-copy-error")).toContainText(
     "No se pudo copiar el ID",
   );
   await heroAsset.getByTestId("ui-asset-detail-open").click();
   await expect(page.getByTestId("ui-asset-id")).toContainText("asset-hero");
   await expect(
-    heroAsset.getByRole("button", { name: "Copiar ID de Campaña Modo Sur" }),
+    heroAsset.getByRole("button", { name: "Copiar ID de Campaña de temporada" }),
   ).toBeVisible();
 });
 

@@ -80,7 +80,7 @@ test("guardar persiste el producto en la fila y en la vista previa", async ({ pa
   const dialog = await openCreateDialog(page);
 
   await dialog.getByRole("textbox", { name: "Título" }).fill("Remera H4AUDIT");
-  await dialog.getByRole("textbox", { name: "Marca" }).fill("Modo Sur");
+  await dialog.getByRole("textbox", { name: "Marca" }).fill("Marca Aurora");
   await dialog.getByRole("textbox", { name: "SKU" }).fill("H4AUDIT-01");
   await dialog.getByRole("spinbutton", { name: "Precio en centavos" }).fill("42900");
   // Los productos nuevos arrancan Ocultos; la vista previa pública sólo

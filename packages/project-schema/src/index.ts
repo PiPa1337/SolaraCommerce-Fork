@@ -109,6 +109,501 @@ export const NavigationConfigSchema = z.object({
   showCart: z.boolean().default(true),
 });
 
+/**
+ * Texto global visible en el storefront. El copy específico de cada módulo
+ * sigue viviendo en StoreSection.settings; este bloque cubre los controles y
+ * estados compartidos que antes tenían fallbacks repartidos por los renderers.
+ */
+export const PUBLIC_COPY_DEFAULTS = {
+  navigation: {
+    home: "Inicio",
+    catalog: "Categorías",
+    contact: "Contacto",
+    about: "Nosotros",
+    search: "Buscar productos",
+    cart: "Carrito",
+    viewAll: "Ver todos los productos",
+    openMenu: "Abrir menú",
+    closeMenu: "Cerrar menú",
+    close: "Cerrar",
+  },
+  search: {
+    title: "Buscar productos",
+    placeholder: "Buscar productos...",
+    queryLabel: "Buscá por nombre, marca, categoría o etiqueta.",
+    submit: "Buscar",
+    close: "Cerrar búsqueda",
+    empty: "Elegí una búsqueda",
+    queryTooShort: "Escribí al menos 2 caracteres para buscar.",
+    loading: "Cargando resultados…",
+    noResults: "No encontramos productos para esa búsqueda.",
+    suggestion: "No encontramos resultados para “{query}”. ¿Quisiste decir",
+    error: "No se pudo cargar la búsqueda. Intentá nuevamente.",
+  },
+  filters: {
+    title: "Filtros",
+    availability: "Disponibilidad",
+    availableOnly: "Sólo disponibles",
+    tag: "Etiqueta",
+    filterByTag: "Filtrar por etiqueta",
+    all: "Todas",
+    price: "Precio",
+    minimum: "Mínimo",
+    maximum: "Máximo",
+    sort: "Ordenar",
+    recommended: "Recomendados",
+    priceAsc: "Precio menor",
+    priceDesc: "Precio mayor",
+    name: "Nombre",
+    resultCount: "productos",
+  },
+  hero: {
+    benefits: "Beneficios",
+    activeProducts: "productos activos",
+    categories: "categorías",
+    whatsapp: "WhatsApp",
+    contact: "Contacto",
+    directOrder: "pedido directo",
+    inquiries: "consultas",
+    whatsappAction: "Escribir por WhatsApp",
+  },
+  product: {
+    available: "Disponible",
+    outOfStock: "Agotado",
+    from: "Desde",
+    variant: "Variante",
+    quantity: "Cantidad",
+    sku: "SKU",
+    availability: "Disponibilidad",
+    details: "Detalles",
+    policies: "Envíos y cambios",
+    shipping: "Envíos",
+    returns: "Cambios y devoluciones",
+    askWhatsApp: "Consultar por WhatsApp",
+    addToCart: "Agregar al carrito",
+    noStock: "Sin stock",
+    related: "También puede interesarte",
+    options: "Opciones del producto",
+    reviews: "Reseñas",
+    reviewEyebrow: "Experiencias reales",
+    reviewTitle: "Lo que dicen quienes compraron",
+    verifiedPurchase: "Compra verificada",
+  },
+  contact: {
+    whatsappFallback: "Configurá un teléfono de WhatsApp para recibir consultas.",
+    emailFallback: "Configurá un email para recibir consultas.",
+    emailAction: "Enviar consulta por email",
+    success: "Listo",
+    email: "Email",
+    phone: "Teléfono",
+    whatsapp: "WhatsApp",
+    address: "Dirección",
+    whatsappAction: "Escribir por WhatsApp",
+    reason: "Motivo",
+    orderNumber: "Número de pedido",
+    message: "Mensaje",
+  },
+  cart: {
+    close: "Cerrar carrito",
+    continueShopping: "Seguir comprando",
+    subtotal: "Subtotal",
+    delivery: "Entrega",
+    deliveryToCoordinate: "A coordinar",
+    estimatedTotal: "Total estimado",
+    name: "Nombre",
+    phone: "Teléfono",
+    address: "Dirección o punto de entrega",
+    notes: "Notas opcionales",
+    remove: "Eliminar",
+    unavailable: "Ya no disponible",
+    exploreCategories: "Explorar categorías",
+  },
+  checkout: {
+    submit: "Preparar pedido",
+    sendWhatsApp: "Enviar pedido en WhatsApp",
+    coordinate: "Escribinos para coordinar",
+    continue: "Continuar a compra",
+    summary: "Resumen del pedido",
+    selection: "Tu selección",
+    prepare: "Prepará el pedido para revisar productos y total antes de abrir WhatsApp.",
+    invalidItems: "Retirá los productos no disponibles del carrito antes de enviar el pedido.",
+    total: "Total estimado",
+    delivery: "Entrega",
+    disclaimer: "Entiendo que precio, disponibilidad, envío y pago se confirman por este medio.",
+  },
+  footer: {
+    explore: "Explorar",
+    help: "Ayuda",
+    contact: "Contacto",
+    policies: "Políticas",
+    shipping: "Envíos",
+    returns: "Cambios",
+    privacy: "Privacidad",
+    terms: "Términos",
+  },
+  empty: {
+    products: "No hay productos para mostrar.",
+    collections: "Todavía no hay colecciones publicadas.",
+    cart: "Tu carrito está vacío.",
+    filteredProducts: "No hay productos que coincidan con estos filtros.",
+  },
+  pages: {
+    home: "Inicio",
+    catalog: "Catálogo",
+    products: "Productos",
+    categories: "Categorías",
+    search: "Buscar",
+    cart: "Carrito",
+    checkout: "Compra",
+    about: "Nosotros",
+    contact: "Contacto",
+    shipping: "Envíos",
+    returns: "Cambios y devoluciones",
+    privacy: "Privacidad",
+    terms: "Términos",
+    notFound: "Página no encontrada",
+    aboutEyebrow: "Nuestra mirada",
+    aboutFallbackTitle: "Elegimos objetos para vivirlos.",
+    aboutGuidanceTitle: "Lo que nos guía",
+    aboutInformationTitle: "Información clara",
+    aboutContactAction: "Conocé cómo contactarnos",
+    aboutSelectionTitle: "Selección",
+    aboutSelectionFallback: "Conocé nuestras colecciones.",
+    aboutDeliveryTitle: "Entrega",
+    aboutDirectTitle: "Atención directa",
+    aboutDirectFallback: "Escribinos para recibir asesoramiento.",
+    contactEyebrow: "Hablemos",
+    contactFallbackTitle: "Estamos para ayudarte.",
+    contactDescription:
+      "Respondemos consultas, disponibilidad y detalles de entrega por canales directos.",
+    contactPurchaseTitle: "Coordinemos tu compra",
+    contactPurchaseDescription:
+      "Si ya elegiste una pieza, podés escribirnos y te confirmamos disponibilidad, envío y pago.",
+    notFoundEyebrow: "Página no encontrada",
+    notFoundTitle: "No encontramos esa página.",
+    notFoundDescription: "Podés volver al inicio o explorar nuestras colecciones.",
+    returnHome: "Volver al inicio",
+    viewCategories: "Ver categorías",
+  },
+  whatsapp: {
+    ask: "Hola {storeName}, quiero hacer una consulta.",
+    purchase: "Hola {storeName}, quiero coordinar una compra.",
+    orderGreeting: "Hola {storeName}, quiero hacer este pedido:",
+    product: "Producto",
+    variant: "Variante",
+    price: "Precio",
+    total: "Total estimado",
+    customerName: "Nombre",
+    customerPhone: "Teléfono",
+    delivery: "Entrega",
+    notes: "Notas",
+    confirmation: "Entiendo que precio, disponibilidad, envío y pago se confirman por este medio.",
+  },
+  export: {
+    skipToContent: "Ir al contenido",
+    breadcrumbs: "Migas de pan",
+    pagination: "Paginación",
+    previous: "Anterior",
+    next: "Siguiente",
+    pageOf: "Página {page} de {total}",
+    categoryChildren: "Subcategorías de {category}",
+    exploreCategory: "Explorar {category}",
+    categoryProducts: "productos",
+    viewCollection: "Ver colección",
+    viewImage: "Ver imagen {index}",
+    variantLinks: "Enlaces directos a variantes",
+    policyDetailsTitle: "Qué necesitás saber",
+    policyQuestionsTitle: "¿Tenés dudas?",
+    policyQuestionsBody:
+      "Escribinos antes de coordinar tu pedido y revisamos esta información con vos.",
+  },
+  accessibility: {
+    benefits: "Beneficios",
+    productInfo: "Información del producto",
+    catalogSummary: "Resumen del catálogo",
+    mobileNavigation: "Navegación móvil",
+    mainNavigation: "Navegación principal",
+    announcements: "Avisos",
+  },
+};
+
+export const PublicCopySchema = z.object({
+  navigation: z
+    .object({
+      home: z.string().min(1).default("Inicio"),
+      catalog: z.string().min(1).default("Categorías"),
+      contact: z.string().min(1).default("Contacto"),
+      about: z.string().min(1).default("Nosotros"),
+      search: z.string().min(1).default("Buscar productos"),
+      cart: z.string().min(1).default("Carrito"),
+      viewAll: z.string().min(1).default("Ver todos los productos"),
+      openMenu: z.string().min(1).default("Abrir menú"),
+      closeMenu: z.string().min(1).default("Cerrar menú"),
+      close: z.string().min(1).default("Cerrar"),
+    })
+    .default(PUBLIC_COPY_DEFAULTS.navigation),
+  search: z
+    .object({
+      title: z.string().min(1).default("Buscar productos"),
+      placeholder: z.string().min(1).default("Buscar productos..."),
+      queryLabel: z.string().min(1).default("Buscá por nombre, marca, categoría o etiqueta."),
+      submit: z.string().min(1).default("Buscar"),
+      close: z.string().min(1).default("Cerrar búsqueda"),
+      empty: z.string().min(1).default("Elegí una búsqueda"),
+      queryTooShort: z.string().min(1).default("Escribí al menos 2 caracteres para buscar."),
+      loading: z.string().min(1).default("Cargando resultados…"),
+      noResults: z.string().min(1).default("No encontramos productos para esa búsqueda."),
+      suggestion: z
+        .string()
+        .min(1)
+        .default("No encontramos resultados para “{query}”. ¿Quisiste decir"),
+      error: z.string().min(1).default("No se pudo cargar la búsqueda. Intentá nuevamente."),
+    })
+    .default(PUBLIC_COPY_DEFAULTS.search),
+  filters: z
+    .object({
+      title: z.string().min(1).default("Filtros"),
+      availability: z.string().min(1).default("Disponibilidad"),
+      availableOnly: z.string().min(1).default("Sólo disponibles"),
+      tag: z.string().min(1).default("Etiqueta"),
+      filterByTag: z.string().min(1).default("Filtrar por etiqueta"),
+      all: z.string().min(1).default("Todas"),
+      price: z.string().min(1).default("Precio"),
+      minimum: z.string().min(1).default("Mínimo"),
+      maximum: z.string().min(1).default("Máximo"),
+      sort: z.string().min(1).default("Ordenar"),
+      recommended: z.string().min(1).default("Recomendados"),
+      priceAsc: z.string().min(1).default("Precio menor"),
+      priceDesc: z.string().min(1).default("Precio mayor"),
+      name: z.string().min(1).default("Nombre"),
+      resultCount: z.string().min(1).default("productos"),
+    })
+    .default(PUBLIC_COPY_DEFAULTS.filters),
+  hero: z
+    .object({
+      benefits: z.string().min(1).default("Beneficios"),
+      activeProducts: z.string().min(1).default("productos activos"),
+      categories: z.string().min(1).default("categorías"),
+      whatsapp: z.string().min(1).default("WhatsApp"),
+      contact: z.string().min(1).default("Contacto"),
+      directOrder: z.string().min(1).default("pedido directo"),
+      inquiries: z.string().min(1).default("consultas"),
+      whatsappAction: z.string().min(1).default("Escribir por WhatsApp"),
+    })
+    .default(PUBLIC_COPY_DEFAULTS.hero),
+  product: z
+    .object({
+      available: z.string().min(1).default("Disponible"),
+      outOfStock: z.string().min(1).default("Agotado"),
+      from: z.string().min(1).default("Desde"),
+      variant: z.string().min(1).default("Variante"),
+      quantity: z.string().min(1).default("Cantidad"),
+      sku: z.string().min(1).default("SKU"),
+      availability: z.string().min(1).default("Disponibilidad"),
+      details: z.string().min(1).default("Detalles"),
+      policies: z.string().min(1).default("Envíos y cambios"),
+      shipping: z.string().min(1).default("Envíos"),
+      returns: z.string().min(1).default("Cambios y devoluciones"),
+      askWhatsApp: z.string().min(1).default("Consultar por WhatsApp"),
+      addToCart: z.string().min(1).default("Agregar al carrito"),
+      noStock: z.string().min(1).default("Sin stock"),
+      related: z.string().min(1).default("También puede interesarte"),
+      options: z.string().min(1).default("Opciones del producto"),
+      reviews: z.string().min(1).default("Reseñas"),
+      reviewEyebrow: z.string().min(1).default("Experiencias reales"),
+      reviewTitle: z.string().min(1).default("Lo que dicen quienes compraron"),
+      verifiedPurchase: z.string().min(1).default("Compra verificada"),
+    })
+    .default(PUBLIC_COPY_DEFAULTS.product),
+  contact: z
+    .object({
+      whatsappFallback: z
+        .string()
+        .min(1)
+        .default("Configurá un teléfono de WhatsApp para recibir consultas."),
+      emailFallback: z.string().min(1).default("Configurá un email para recibir consultas."),
+      emailAction: z.string().min(1).default("Enviar consulta por email"),
+      success: z.string().min(1).default("Listo"),
+      email: z.string().min(1).default("Email"),
+      phone: z.string().min(1).default("Teléfono"),
+      whatsapp: z.string().min(1).default("WhatsApp"),
+      address: z.string().min(1).default("Dirección"),
+      whatsappAction: z.string().min(1).default("Escribir por WhatsApp"),
+      reason: z.string().min(1).default("Motivo"),
+      orderNumber: z.string().min(1).default("Número de pedido"),
+      message: z.string().min(1).default("Mensaje"),
+    })
+    .default(PUBLIC_COPY_DEFAULTS.contact),
+  cart: z
+    .object({
+      close: z.string().min(1).default("Cerrar carrito"),
+      continueShopping: z.string().min(1).default("Seguir comprando"),
+      subtotal: z.string().min(1).default("Subtotal"),
+      delivery: z.string().min(1).default("Entrega"),
+      deliveryToCoordinate: z.string().min(1).default("A coordinar"),
+      estimatedTotal: z.string().min(1).default("Total estimado"),
+      name: z.string().min(1).default("Nombre"),
+      phone: z.string().min(1).default("Teléfono"),
+      address: z.string().min(1).default("Dirección o punto de entrega"),
+      notes: z.string().min(1).default("Notas opcionales"),
+      remove: z.string().min(1).default("Eliminar"),
+      unavailable: z.string().min(1).default("Ya no disponible"),
+      exploreCategories: z.string().min(1).default("Explorar categorías"),
+    })
+    .default(PUBLIC_COPY_DEFAULTS.cart),
+  checkout: z
+    .object({
+      submit: z.string().min(1).default("Preparar pedido"),
+      sendWhatsApp: z.string().min(1).default("Enviar pedido en WhatsApp"),
+      coordinate: z.string().min(1).default("Escribinos para coordinar"),
+      continue: z.string().min(1).default("Continuar a compra"),
+      summary: z.string().min(1).default("Resumen del pedido"),
+      selection: z.string().min(1).default("Tu selección"),
+      prepare: z
+        .string()
+        .min(1)
+        .default("Prepará el pedido para revisar productos y total antes de abrir WhatsApp."),
+      invalidItems: z
+        .string()
+        .min(1)
+        .default("Retirá los productos no disponibles del carrito antes de enviar el pedido."),
+      total: z.string().min(1).default("Total estimado"),
+      delivery: z.string().min(1).default("Entrega"),
+      disclaimer: z
+        .string()
+        .min(1)
+        .default("Entiendo que precio, disponibilidad, envío y pago se confirman por este medio."),
+    })
+    .default(PUBLIC_COPY_DEFAULTS.checkout),
+  footer: z
+    .object({
+      explore: z.string().min(1).default("Explorar"),
+      help: z.string().min(1).default("Ayuda"),
+      contact: z.string().min(1).default("Contacto"),
+      policies: z.string().min(1).default("Políticas"),
+      shipping: z.string().min(1).default("Envíos"),
+      returns: z.string().min(1).default("Cambios"),
+      privacy: z.string().min(1).default("Privacidad"),
+      terms: z.string().min(1).default("Términos"),
+    })
+    .default(PUBLIC_COPY_DEFAULTS.footer),
+  empty: z
+    .object({
+      products: z.string().min(1).default("No hay productos para mostrar."),
+      collections: z.string().min(1).default("Todavía no hay colecciones publicadas."),
+      cart: z.string().min(1).default("Tu carrito está vacío."),
+      filteredProducts: z
+        .string()
+        .min(1)
+        .default("No hay productos que coincidan con estos filtros."),
+    })
+    .default(PUBLIC_COPY_DEFAULTS.empty),
+  pages: z
+    .object({
+      home: z.string().min(1).default("Inicio"),
+      catalog: z.string().min(1).default("Catálogo"),
+      products: z.string().min(1).default("Productos"),
+      categories: z.string().min(1).default("Categorías"),
+      search: z.string().min(1).default("Buscar"),
+      cart: z.string().min(1).default("Carrito"),
+      checkout: z.string().min(1).default("Compra"),
+      about: z.string().min(1).default("Nosotros"),
+      contact: z.string().min(1).default("Contacto"),
+      shipping: z.string().min(1).default("Envíos"),
+      returns: z.string().min(1).default("Cambios y devoluciones"),
+      privacy: z.string().min(1).default("Privacidad"),
+      terms: z.string().min(1).default("Términos"),
+      notFound: z.string().min(1).default("Página no encontrada"),
+      aboutEyebrow: z.string().min(1).default("Nuestra mirada"),
+      aboutFallbackTitle: z.string().min(1).default("Elegimos objetos para vivirlos."),
+      aboutGuidanceTitle: z.string().min(1).default("Lo que nos guía"),
+      aboutInformationTitle: z.string().min(1).default("Información clara"),
+      aboutContactAction: z.string().min(1).default("Conocé cómo contactarnos"),
+      aboutSelectionTitle: z.string().min(1).default("Selección"),
+      aboutSelectionFallback: z.string().min(1).default("Conocé nuestras colecciones."),
+      aboutDeliveryTitle: z.string().min(1).default("Entrega"),
+      aboutDirectTitle: z.string().min(1).default("Atención directa"),
+      aboutDirectFallback: z.string().min(1).default("Escribinos para recibir asesoramiento."),
+      contactEyebrow: z.string().min(1).default("Hablemos"),
+      contactFallbackTitle: z.string().min(1).default("Estamos para ayudarte."),
+      contactDescription: z
+        .string()
+        .min(1)
+        .default(
+          "Respondemos consultas, disponibilidad y detalles de entrega por canales directos.",
+        ),
+      contactPurchaseTitle: z.string().min(1).default("Coordinemos tu compra"),
+      contactPurchaseDescription: z
+        .string()
+        .min(1)
+        .default(
+          "Si ya elegiste una pieza, podés escribirnos y te confirmamos disponibilidad, envío y pago.",
+        ),
+      notFoundEyebrow: z.string().min(1).default("Página no encontrada"),
+      notFoundTitle: z.string().min(1).default("No encontramos esa página."),
+      notFoundDescription: z
+        .string()
+        .min(1)
+        .default("Podés volver al inicio o explorar nuestras colecciones."),
+      returnHome: z.string().min(1).default("Volver al inicio"),
+      viewCategories: z.string().min(1).default("Ver categorías"),
+    })
+    .default(PUBLIC_COPY_DEFAULTS.pages),
+  whatsapp: z
+    .object({
+      ask: z.string().min(1).default("Hola {storeName}, quiero hacer una consulta."),
+      purchase: z.string().min(1).default("Hola {storeName}, quiero coordinar una compra."),
+      orderGreeting: z.string().min(1).default("Hola {storeName}, quiero hacer este pedido:"),
+      product: z.string().min(1).default("Producto"),
+      variant: z.string().min(1).default("Variante"),
+      price: z.string().min(1).default("Precio"),
+      total: z.string().min(1).default("Total estimado"),
+      customerName: z.string().min(1).default("Nombre"),
+      customerPhone: z.string().min(1).default("Teléfono"),
+      delivery: z.string().min(1).default("Entrega"),
+      notes: z.string().min(1).default("Notas"),
+      confirmation: z
+        .string()
+        .min(1)
+        .default("Entiendo que precio, disponibilidad, envío y pago se confirman por este medio."),
+    })
+    .default(PUBLIC_COPY_DEFAULTS.whatsapp),
+  export: z
+    .object({
+      skipToContent: z.string().min(1).default("Ir al contenido"),
+      breadcrumbs: z.string().min(1).default("Migas de pan"),
+      pagination: z.string().min(1).default("Paginación"),
+      previous: z.string().min(1).default("Anterior"),
+      next: z.string().min(1).default("Siguiente"),
+      pageOf: z.string().min(1).default("Página {page} de {total}"),
+      categoryChildren: z.string().min(1).default("Subcategorías de {category}"),
+      exploreCategory: z.string().min(1).default("Explorar {category}"),
+      categoryProducts: z.string().min(1).default("productos"),
+      viewCollection: z.string().min(1).default("Ver colección"),
+      viewImage: z.string().min(1).default("Ver imagen {index}"),
+      variantLinks: z.string().min(1).default("Enlaces directos a variantes"),
+      policyDetailsTitle: z.string().min(1).default("Qué necesitás saber"),
+      policyQuestionsTitle: z.string().min(1).default("¿Tenés dudas?"),
+      policyQuestionsBody: z
+        .string()
+        .min(1)
+        .default("Escribinos antes de coordinar tu pedido y revisamos esta información con vos."),
+    })
+    .default(PUBLIC_COPY_DEFAULTS.export),
+  accessibility: z
+    .object({
+      benefits: z.string().min(1).default("Beneficios"),
+      productInfo: z.string().min(1).default("Información del producto"),
+      catalogSummary: z.string().min(1).default("Resumen del catálogo"),
+      mobileNavigation: z.string().min(1).default("Navegación móvil"),
+      mainNavigation: z.string().min(1).default("Navegación principal"),
+      announcements: z.string().min(1).default("Avisos"),
+    })
+    .default(PUBLIC_COPY_DEFAULTS.accessibility),
+});
+
+export type PublicCopy = z.infer<typeof PublicCopySchema>;
+
 export const EditablePageSchema = z.object({
   id: z.string().min(1),
   kind: z.enum(["home", "about", "contact"]),
@@ -299,6 +794,7 @@ const StoreProjectV2ShapeSchema = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   origin: ProjectOriginSchema,
+  publicCopy: PublicCopySchema.default(PUBLIC_COPY_DEFAULTS),
   identity: z.object({
     legalName: z.string().min(1),
     brandName: z.string().min(1),

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { CATALOG_MODERN_PLACEHOLDER_PHONE } from "@solara/project-schema";
+import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { buildCatalogModernProject } from "@solara/project-schema/catalog-modern-template";
 
 const PLACEHOLDER = "5491100000000";
@@ -39,6 +40,8 @@ test("la demo con teléfono real conserva el contrato data-whatsapp del sitio", 
   });
   const home = String(exported.files.get("index.html"));
   expect(home).toContain('data-whatsapp="5491123456789"');
-  expect(home).toContain('data-whatsapp-greeting="Hola Modo Sur, quiero hacer este pedido:"');
+  expect(home).toContain(
+    `data-whatsapp-greeting="Hola ${catalogModernStore.identity.brandName}, quiero hacer este pedido:"`,
+  );
   expect(home).toContain('data-whatsapp-include-sku="true"');
 });

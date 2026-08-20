@@ -13,6 +13,9 @@ import { catalogModernStore } from "./catalog-modern-fixture";
 import { CATALOG_MODERN_GUIDANCE_VERSION } from "./catalog-modern-guidance";
 import { type StoreProjectV1, type StoreProjectV2, StoreProjectV2Schema } from "./index";
 
+const CLEAN_TEMPLATE_IMAGE_SOURCE =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='900' viewBox='0 0 1200 900'%3E%3Crect width='1200' height='900' fill='%23e8e8e3'/%3E%3Cpath d='M0 700 280 470l170 130 210-250 540 350v200H0z' fill='%23d2d2cb'/%3E%3C/svg%3E";
+
 /** Version of the guided Catalog Modern template. Increase only when its persisted shape changes. */
 export const CATALOG_MODERN_TEMPLATE_VERSION = CATALOG_MODERN_GUIDANCE_VERSION;
 
@@ -271,13 +274,17 @@ function cleanProject(options: BuildCatalogModernProjectOptions): StoreProjectV2
   // esta plantilla): trae designFamily v2, los assets de plantilla y las
   // páginas Nosotros/Contacto pobladas con los módulos V2 (editables en el
   // constructor) — mismo patrón que catalog-modern-v2-fixture.
-  const project = ensureCatalogModernV2Sections({
-    ...structuredClone(catalogModernStore),
-    commerceTemplates: {
-      ...catalogModernStore.commerceTemplates,
-      designFamily: "catalog-modern-v2",
-    },
-  });
+  const project = replaceCatalogBrandText(
+    ensureCatalogModernV2Sections({
+      ...structuredClone(catalogModernStore),
+      commerceTemplates: {
+        ...catalogModernStore.commerceTemplates,
+        designFamily: "catalog-modern-v2",
+      },
+    }),
+    catalogModernStore.identity.brandName,
+    brandName,
+  );
   const sections = project.sections.map((section) => {
     if (section.moduleId === "catalog-product-grid" && section.id.endsWith("-new")) {
       return {
@@ -380,6 +387,10 @@ function cleanProject(options: BuildCatalogModernProjectOptions): StoreProjectV2
       ...asset,
       name: "Imagen de plantilla",
       alt: "Imagen de ejemplo para reemplazar",
+      source: CLEAN_TEMPLATE_IMAGE_SOURCE,
+      fallbackSource: undefined,
+      responsiveSources: undefined,
+      hash: `template-${asset.id}`,
     })),
     navigation: {
       ...project.navigation,

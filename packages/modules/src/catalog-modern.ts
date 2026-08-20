@@ -93,6 +93,7 @@ export const catalogAnnouncement: ModuleDefinition<
   motionZones: modernRevealZone,
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
+    const copy = context.project.publicCopy;
     const isV2 = context.project.commerceTemplates.designFamily === "catalog-modern-v2";
     const normalizeV2Href = (href: string): string => {
       if (!isV2) return href;
@@ -109,9 +110,9 @@ export const catalogAnnouncement: ModuleDefinition<
       "catalog-announcement",
       context.section,
       safeHtml(
-        `<div class="catalog-announcement-inner" data-motion-zone="content"><span>${escapeHtml(context.settings.text)}</span>${link}<button type="button" data-catalog-announcement-close aria-label="Cerrar anuncio">×</button></div>`,
+        `<div class="catalog-announcement-inner" data-motion-zone="content"><span>${escapeHtml(context.settings.text)}</span>${link}<button type="button" data-catalog-announcement-close aria-label="${escapeAttribute(copy.navigation.close)}">×</button></div>`,
       ),
-      { tag: "section", ariaLabel: "Avisos" },
+      { tag: "section", ariaLabel: copy.accessibility.announcements },
     );
   },
 };
@@ -138,6 +139,7 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
   clientAsset: "storefront-cart" as AssetId,
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
+    const copy = context.project.publicCopy;
     const navigation = context.project.navigation;
     const isV2 = context.project.commerceTemplates.designFamily === "catalog-modern-v2";
     const showContact = !isV2 && navigation.showContact;
@@ -192,7 +194,7 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
     const catalogLabel =
       configuredCatalogLabel && configuredCatalogLabel.toLowerCase() !== "tienda"
         ? configuredCatalogLabel
-        : "Categorías";
+        : copy.navigation.catalog;
     const icon = (name: "home" | "categories" | "contact" | "about"): string => {
       const paths = {
         home: '<path d="m3.5 10.5 8.5-7 8.5 7v9a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z"></path>',
@@ -225,7 +227,7 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
       .join("");
     const searchEnabled = navigation.showSearch && context.project.commerceTemplates.search.enabled;
     const desktopMenu = navigationItems.length
-      ? `<div id="catalog-category-menu" class="catalog-mega-menu" role="group" aria-label="Categorías"><ul class="catalog-mega-menu__groups">${desktopMenuItems}</ul>${searchEnabled ? `<a class="catalog-mega-menu__all" href="/buscar/">Ver todos los productos <span aria-hidden="true">→</span></a>` : ""}</div>`
+      ? `<div id="catalog-category-menu" class="catalog-mega-menu" role="group" aria-label="${escapeAttribute(catalogLabel)}"><ul class="catalog-mega-menu__groups">${desktopMenuItems}</ul>${searchEnabled ? `<a class="catalog-mega-menu__all" href="/buscar/">${escapeHtml(copy.navigation.viewAll)} <span aria-hidden="true">→</span></a>` : ""}</div>`
       : "";
     const catalog = navigationItems.length
       ? `<details class="catalog-nav-menu"><summary class="catalog-nav-trigger" aria-controls="catalog-category-menu" aria-haspopup="true" aria-expanded="false"${current(["category", "collection"])}>${escapeHtml(catalogLabel)}${chevron}</summary>${desktopMenu}</details>`
@@ -252,35 +254,35 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
       : searchEnabled
         ? `<a class="catalog-mobile-nav-link" href="/buscar/"><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("categories")}</span><span>${escapeHtml(catalogLabel)}</span>${forwardChevron}</a>`
         : "";
-    const nav = `${navigation.showHome ? `<a href="/"${current(["home"])}>Inicio</a>` : ""}${catalog}${showContact ? `<a href="/contacto/"${current(["contact"])}>Contacto</a>` : ""}${showAbout ? `<a href="/nosotros/"${current(["about"])}>Nosotros</a>` : ""}`;
-    const mobileNav = `${navigation.showHome ? `<a class="catalog-mobile-nav-link" href="/"${current(["home"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("home")}</span><span>Inicio</span>${forwardChevron}</a>` : ""}${mobileCategories}${showContact ? `<a class="catalog-mobile-nav-link" href="/contacto/"${current(["contact"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("contact")}</span><span>Contacto</span>${forwardChevron}</a>` : ""}${showAbout ? `<a class="catalog-mobile-nav-link" href="/nosotros/"${current(["about"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("about")}</span><span>Nosotros</span>${forwardChevron}</a>` : ""}`;
+    const nav = `${navigation.showHome ? `<a href="/"${current(["home"])}>${escapeHtml(copy.navigation.home)}</a>` : ""}${catalog}${showContact ? `<a href="/contacto/"${current(["contact"])}>${escapeHtml(copy.navigation.contact)}</a>` : ""}${showAbout ? `<a href="/nosotros/"${current(["about"])}>${escapeHtml(copy.navigation.about)}</a>` : ""}`;
+    const mobileNav = `${navigation.showHome ? `<a class="catalog-mobile-nav-link" href="/"${current(["home"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("home")}</span><span>${escapeHtml(copy.navigation.home)}</span>${forwardChevron}</a>` : ""}${mobileCategories}${showContact ? `<a class="catalog-mobile-nav-link" href="/contacto/"${current(["contact"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("contact")}</span><span>${escapeHtml(copy.navigation.contact)}</span>${forwardChevron}</a>` : ""}${showAbout ? `<a class="catalog-mobile-nav-link" href="/nosotros/"${current(["about"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("about")}</span><span>${escapeHtml(copy.navigation.about)}</span>${forwardChevron}</a>` : ""}`;
     const search = searchEnabled
-      ? `<button class="catalog-search-link" type="button" data-catalog-search-open aria-controls="catalog-search-dialog" aria-expanded="false" aria-label="${escapeAttribute(context.settings.searchLabel)}"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><span>${escapeHtml(context.settings.searchLabel)}</span></button><noscript><a class="catalog-search-noscript" href="/buscar/">${escapeHtml(context.settings.searchLabel)}</a></noscript>`
+      ? `<button class="catalog-search-link" type="button" data-catalog-search-open aria-controls="catalog-search-dialog" aria-expanded="false" aria-label="${escapeAttribute(context.settings.searchLabel || copy.navigation.search)}"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><span>${escapeHtml(context.settings.searchLabel || copy.navigation.search)}</span></button><noscript><a class="catalog-search-noscript" href="/buscar/">${escapeHtml(context.settings.searchLabel || copy.navigation.search)}</a></noscript>`
       : "";
     const cart =
       navigation.showCart &&
       context.project.siteShell.cart &&
       (context.project.commerceTemplates.cart.enabled ||
         context.project.commerceTemplates.checkout.enabled)
-        ? `<button class="catalog-cart-link" type="button" data-solara-cart-open data-open-cart data-cart-label="${escapeAttribute(context.settings.cartLabel)}" aria-controls="solara-cart" aria-expanded="false"><span>${escapeHtml(context.settings.cartLabel)}</span><strong data-solara-cart-count data-cart-count aria-live="polite">0</strong></button>`
+        ? `<button class="catalog-cart-link" type="button" data-solara-cart-open data-open-cart data-cart-label="${escapeAttribute(context.settings.cartLabel || copy.navigation.cart)}" aria-controls="solara-cart" aria-expanded="false"><span>${escapeHtml(context.settings.cartLabel || copy.navigation.cart)}</span><strong data-solara-cart-count data-cart-count aria-live="polite">0</strong></button>`
         : "";
     return moduleRoot(
       "catalog-header",
       context.section,
       safeHtml(`<div class="catalog-header-inner" data-motion-zone="content">
-        <button class="catalog-mobile-menu-button" type="button" data-catalog-menu-open aria-controls="catalog-mobile-menu" aria-expanded="false"><span class="sr-only">Abrir menú</span><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
-        <a class="catalog-brand" href="/" aria-label="Inicio de ${escapeAttribute(context.project.identity.brandName)}">${renderBrand(context.project)}</a>
-        <nav class="catalog-desktop-nav" aria-label="Navegación principal">${nav}</nav>
+        <button class="catalog-mobile-menu-button" type="button" data-catalog-menu-open aria-controls="catalog-mobile-menu" aria-expanded="false"><span class="sr-only">${escapeHtml(copy.navigation.openMenu)}</span><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
+        <a class="catalog-brand" href="/" aria-label="${escapeAttribute(`${copy.navigation.home} de ${context.project.identity.brandName}`)}">${renderBrand(context.project)}</a>
+        <nav class="catalog-desktop-nav" aria-label="${escapeAttribute(copy.accessibility.mainNavigation)}">${nav}</nav>
         <div class="catalog-header-actions">${search}${cart}</div>
         <noscript><style>[data-solara-store].catalog-modern .catalog-search-link{display:none}[data-solara-store].catalog-modern .catalog-search-noscript{display:inline-flex;align-items:center;min-height:44px;padding:.55rem 1rem;border:1px solid var(--catalog-border);border-radius:999px;background:var(--catalog-surface);color:var(--catalog-muted);text-decoration:none;font-size:.82rem}@media (max-width:767px){[data-solara-store].catalog-modern .catalog-mobile-menu[hidden]{display:block}}@media print{[data-solara-store].catalog-modern .catalog-mobile-menu{display:none!important}}</style></noscript>
-        <div id="catalog-mobile-menu" class="catalog-mobile-menu" data-catalog-menu hidden role="dialog" aria-modal="true" aria-hidden="true" aria-label="Navegación móvil"><div class="catalog-mobile-menu__header"><a class="catalog-mobile-brand" href="/" aria-label="Inicio de ${escapeAttribute(context.project.identity.brandName)}">${renderBrand(context.project)}</a><button type="button" class="catalog-mobile-menu__close" data-catalog-menu-close aria-label="Cerrar menú"><span class="sr-only">Cerrar menú</span><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="m6 6 12 12M18 6 6 18"></path></svg></button></div>${searchEnabled ? `<form class="catalog-mobile-search" action="/buscar/" method="get" role="search"><label class="sr-only" for="catalog-mobile-search-input">Buscar productos</label><div class="catalog-mobile-search__field"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><input id="catalog-mobile-search-input" name="q" type="search" placeholder="Buscar productos..." autocomplete="off"><button type="submit" aria-label="Buscar"><span aria-hidden="true">→</span></button></div></form>` : ""}<nav aria-label="Navegación móvil">${mobileNav}</nav></div>
+        <div id="catalog-mobile-menu" class="catalog-mobile-menu" data-catalog-menu hidden role="dialog" aria-modal="true" aria-hidden="true" aria-label="${escapeAttribute(copy.accessibility.mobileNavigation)}"><div class="catalog-mobile-menu__header"><a class="catalog-mobile-brand" href="/" aria-label="${escapeAttribute(`${copy.navigation.home} de ${context.project.identity.brandName}`)}">${renderBrand(context.project)}</a><button type="button" class="catalog-mobile-menu__close" data-catalog-menu-close aria-label="${escapeAttribute(copy.navigation.closeMenu)}"><span class="sr-only">${escapeHtml(copy.navigation.closeMenu)}</span><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="m6 6 12 12M18 6 6 18"></path></svg></button></div>${searchEnabled ? `<form class="catalog-mobile-search" action="/buscar/" method="get" role="search"><label class="sr-only" for="catalog-mobile-search-input">${escapeHtml(copy.navigation.search)}</label><div class="catalog-mobile-search__field"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><input id="catalog-mobile-search-input" name="q" type="search" placeholder="${escapeAttribute(copy.search.placeholder)}" autocomplete="off"><button type="submit" aria-label="${escapeAttribute(copy.search.submit)}"><span aria-hidden="true">→</span></button></div></form>` : ""}<nav aria-label="${escapeAttribute(copy.accessibility.mobileNavigation)}">${mobileNav}</nav></div>
         ${
           searchEnabled
             ? `<dialog id="catalog-search-dialog" class="catalog-search-dialog" data-catalog-search-dialog aria-labelledby="catalog-search-title">
           <form class="catalog-search-dialog-form" action="/buscar/" method="get" role="search">
-            <div class="catalog-search-dialog-heading"><div><p class="catalog-eyebrow">${escapeHtml(catalogLabel)}</p><h2 id="catalog-search-title">Buscar productos</h2></div><button type="button" data-catalog-search-close aria-label="Cerrar búsqueda">Cerrar</button></div>
-            <label for="catalog-search-input">Buscar por nombre, marca, categoría o etiqueta</label>
-            <div class="catalog-search-dialog-controls"><input id="catalog-search-input" name="q" type="search" autocomplete="off" enterkeyhint="search"><button class="catalog-primary-action" type="submit">Buscar</button></div>
+            <div class="catalog-search-dialog-heading"><div><p class="catalog-eyebrow">${escapeHtml(catalogLabel)}</p><h2 id="catalog-search-title">${escapeHtml(copy.search.title)}</h2></div><button type="button" data-catalog-search-close aria-label="${escapeAttribute(copy.search.close)}">${escapeHtml(copy.navigation.close)}</button></div>
+          <label for="catalog-search-input">${escapeHtml(copy.search.queryLabel)}</label>
+            <div class="catalog-search-dialog-controls"><input id="catalog-search-input" name="q" type="search" autocomplete="off" enterkeyhint="search"><button class="catalog-primary-action" type="submit">${escapeHtml(copy.search.submit)}</button></div>
           </form>
         </dialog>`
             : ""
@@ -404,6 +406,7 @@ export function renderCatalogModernEditorialHero(
   context: Pick<RenderContext<unknown>, "project" | "section">,
   options: CatalogModernEditorialHeroOptions,
 ): SafeHtml {
+  const copy = context.project.publicCopy;
   const image = renderImage(context.project, options.imageAssetId, {
     className: ["catalog-hero-image", options.imageClassName].filter(Boolean).join(" "),
     loading: "eager",
@@ -419,25 +422,17 @@ export function renderCatalogModernEditorialHero(
     fallbackAlt: `${options.title} — fondo editorial`,
   });
   const backgroundWrap = `<div class="catalog-hero-background" data-hero-background aria-hidden="true" style="--catalog-hero-bg-dark:${Math.min(Math.max(options.backgroundDarkness ?? 60, 0), 90) / 100}">${background}</div>`;
-  const benefits = options.benefits ?? [
-    {
-      icon: "truck",
-      title: "Envíos a todo el país",
-      text: "Coordinamos la entrega por WhatsApp",
-    },
-    {
-      icon: "chat",
-      title: "Pedido directo",
-      text: "Comprá conversando con la marca",
-    },
-    {
-      icon: "shield",
-      title: "Compra cuidada",
-      text: "Confirmamos todo antes de enviar",
-    },
-  ];
-  const benefitsCopy = renderHeroBenefits(benefits, "catalog-hero-benefits--copy");
-  const benefitsBand = renderHeroBenefits(benefits, "catalog-hero-benefits--band");
+  const benefits = options.benefits ?? [];
+  const benefitsCopy = renderHeroBenefits(
+    benefits,
+    "catalog-hero-benefits--copy",
+    copy.hero.benefits,
+  );
+  const benefitsBand = renderHeroBenefits(
+    benefits,
+    "catalog-hero-benefits--band",
+    copy.hero.benefits,
+  );
   const titleLines = heroTitleLines(options.title)
     .map(
       (line) =>
@@ -469,8 +464,10 @@ export function renderCatalogModernEditorialHero(
 function renderHeroBenefits(
   benefits: ReadonlyArray<{ icon: string; title: string; text: string }>,
   extraClass = "",
+  ariaLabel = "Beneficios",
 ): string {
-  return `<ul class="catalog-hero-benefits ${extraClass}" data-hero-benefits aria-label="Beneficios">${benefits
+  if (benefits.length === 0) return "";
+  return `<ul class="catalog-hero-benefits ${extraClass}" data-hero-benefits aria-label="${escapeAttribute(ariaLabel)}">${benefits
     .map((benefit) => {
       const icon = catalogHeroBenefitIcons[benefit.icon] ?? catalogHeroBenefitIcons.check ?? "";
       return `<li class="catalog-hero-benefit" data-hero-benefit><svg class="catalog-hero-benefit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${icon}</svg><span class="catalog-hero-benefit-copy"><strong>${escapeHtml(benefit.title)}</strong>${benefit.text ? `<small>${escapeHtml(benefit.text)}</small>` : ""}</span></li>`;
@@ -634,6 +631,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
   clientAsset: "storefront-hero" as AssetId,
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
+    const copy = context.project.publicCopy;
     const settings = context.settings;
     const normalizeV2Href = (href: string): string => {
       if (
@@ -679,7 +677,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
       ? `<div class="catalog-hero-slide-stage">${slidePanels}</div>`
       : String(media);
     const stats = settings.showCatalogStats
-      ? `<dl class="catalog-hero-stats" aria-label="Resumen del catálogo"><div data-stat="products"><dt>${context.project.products.filter((product) => product.status === "active").length}</dt><dd>productos activos</dd></div><div data-stat="categories"><dt>${context.project.categories.filter((category) => !category.parentId).length}</dt><dd>categorías</dd></div><div data-stat="whatsapp"><dt>${context.project.whatsapp.phone ? "WhatsApp" : "Contacto"}</dt><dd>${context.project.whatsapp.phone ? "pedido directo" : "consultas"}</dd></div></dl>`
+      ? `<dl class="catalog-hero-stats" aria-label="${escapeAttribute(copy.accessibility.catalogSummary)}"><div data-stat="products"><dt>${context.project.products.filter((product) => product.status === "active").length}</dt><dd>${escapeHtml(copy.hero.activeProducts)}</dd></div><div data-stat="categories"><dt>${context.project.categories.filter((category) => !category.parentId).length}</dt><dd>${escapeHtml(copy.hero.categories)}</dd></div><div data-stat="whatsapp"><dt>${context.project.whatsapp.phone ? escapeHtml(copy.hero.whatsapp) : escapeHtml(copy.hero.contact)}</dt><dd>${context.project.whatsapp.phone ? escapeHtml(copy.hero.directOrder) : escapeHtml(copy.hero.inquiries)}</dd></div></dl>`
       : "";
     // La familia V2 (fuera del modo carousel) expone el contrato de markup que
     // la tarea de motion usa para entrada cinematográfica, máscaras y parallax:
@@ -708,7 +706,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
       : "";
     const benefitsMarkup = isV2Hero
       ? settings.benefits.length > 0
-        ? renderHeroBenefits(settings.benefits, "catalog-hero-benefits--copy")
+        ? renderHeroBenefits(settings.benefits, "catalog-hero-benefits--copy", copy.hero.benefits)
         : stats
       : "";
     // La banda de beneficios del hero V2 se renderiza tras el contenedor del
@@ -716,7 +714,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
     // imagen; en desktop la banda se oculta y se muestra la copia interna.
     const benefitsBand =
       isV2Hero && settings.benefits.length > 0
-        ? renderHeroBenefits(settings.benefits, "catalog-hero-benefits--band")
+        ? renderHeroBenefits(settings.benefits, "catalog-hero-benefits--band", copy.hero.benefits)
         : "";
     const titleLinesMarkup = isV2Hero
       ? heroTitleLines(title)
@@ -743,7 +741,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
         ? context.project.whatsapp.phone.replace(/\D/g, "")
         : "";
     const actions = whatsappPhone
-      ? `<a class="catalog-primary-action solara-primary-action" href="https://wa.me/${escapeAttribute(whatsappPhone)}" target="_blank" rel="noopener noreferrer"><span class="catalog-hero-cta-label">Escribir por WhatsApp</span><svg class="catalog-hero-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${catalogHeroBenefitIcons.chat}</svg></a>`
+      ? `<a class="catalog-primary-action solara-primary-action" href="https://wa.me/${escapeAttribute(whatsappPhone)}" target="_blank" rel="noopener noreferrer"><span class="catalog-hero-cta-label">${escapeHtml(copy.hero.whatsappAction)}</span><svg class="catalog-hero-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${catalogHeroBenefitIcons.chat}</svg></a>`
       : `<a class="catalog-primary-action" href="${escapeAttribute(safeUrl(actionHref))}">${escapeHtml(actionLabel)}</a>${settings.secondaryActionLabel ? `<a class="catalog-secondary-action" href="${escapeAttribute(secondaryActionHref)}">${escapeHtml(settings.secondaryActionLabel)}</a>` : ""}`;
     const heroInner = isV2Hero
       ? `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}">${heroBackgroundWrap}<div class="catalog-hero-copy"><div class="catalog-hero-reveal catalog-hero-reveal--eyebrow"><p class="catalog-eyebrow">${escapeHtml(settings.eyebrow)}</p></div><h1 class="catalog-hero-title" data-hero-title>${titleLinesMarkup}</h1><div class="catalog-hero-rule" data-hero-rule aria-hidden="true"></div><div class="catalog-hero-reveal catalog-hero-reveal--body"><p class="catalog-hero-body">${escapeHtml(body)}</p></div><div class="catalog-hero-reveal catalog-hero-reveal--actions"><div class="catalog-hero-actions">${actions}</div></div>${benefitsMarkup}</div><figure class="catalog-hero-media" data-motion-zone="media" data-hero-media>${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>${benefitsBand}`
@@ -960,7 +958,7 @@ export const catalogProductGrid: ModuleDefinition<
       "catalog-product-grid",
       context.section,
       safeHtml(
-        `<div class="catalog-product-grid-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${context.settings.showViewAll ? `<a class="catalog-view-all" href="${escapeAttribute(safeUrl(viewAllHref))}" aria-label="${escapeAttribute(viewAllAriaLabel)}">Ver todos</a>` : ""}</header><div class="catalog-product-grid" data-motion-zone="items" data-product-count="${products.length}"${categoryGrid}>${cards || '<p class="catalog-empty">No hay productos para mostrar.</p>'}</div></div>`,
+        `<div class="catalog-product-grid-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${context.settings.showViewAll ? `<a class="catalog-view-all" href="${escapeAttribute(safeUrl(viewAllHref))}" aria-label="${escapeAttribute(viewAllAriaLabel)}">${escapeHtml(context.project.publicCopy.navigation.viewAll)}</a>` : ""}</header><div class="catalog-product-grid" data-motion-zone="items" data-product-count="${products.length}"${categoryGrid}>${cards || `<p class="catalog-empty">${escapeHtml(context.project.publicCopy.empty.products)}</p>`}</div></div>`,
       ),
     );
   },
@@ -1022,12 +1020,13 @@ export const catalogProductDetail: ModuleDefinition<
   clientAsset: "storefront-cart" as AssetId,
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
+    const copy = context.project.publicCopy;
     const product = context.product;
     if (!product) {
       return moduleRoot(
         "catalog-product-detail",
         context.section,
-        safeHtml('<p class="catalog-empty">Este producto no está disponible.</p>'),
+        safeHtml(`<p class="catalog-empty">${escapeHtml(copy.empty.products)}</p>`),
         { className: "catalog-product-detail" },
       );
     }
@@ -1066,19 +1065,19 @@ export const catalogProductDetail: ModuleDefinition<
               : "5rem",
           fallbackAlt: `${product.title}, imagen ${index + 1}`,
         });
-        return `<button type="button" data-gallery-thumb="${escapeAttribute(assetId)}" aria-label="Ver imagen ${index + 1}" aria-current="${String(index === 0)}">${image}</button>`;
+        return `<button type="button" data-gallery-thumb="${escapeAttribute(assetId)}" aria-label="${escapeAttribute(copy.export.viewImage.replace("{index}", String(index + 1)))}" aria-current="${String(index === 0)}">${image}</button>`;
       })
       .join("");
     const gallery = galleryAssetIds.length
       ? `<div class="catalog-product-gallery" data-product-gallery><div class="catalog-product-gallery-main">${galleryFigures}</div><div class="catalog-product-gallery-thumbs">${galleryThumbs}</div></div>`
-      : '<p class="catalog-empty">Este producto todavía no tiene imágenes.</p>';
+      : `<p class="catalog-empty">${escapeHtml(copy.empty.products)}</p>`;
     const variants = product.variants
       .map((variant) => {
         const variantImage = context.project.assets.find(
           (asset) => asset.id === (variant.imageId ?? product.imageIds[0]),
         );
         const imageUrl = variantImage ? safeAssetUrl(variantImage.source, "") : "";
-        return `<option value="${escapeAttribute(variant.id)}" data-variant-data="${escapeAttribute(variant.id)}" data-variant-id="${escapeAttribute(variant.id)}" data-variant-title="${escapeAttribute(variant.title)}" data-sku="${escapeAttribute(variant.sku)}" data-image-id="${escapeAttribute(variant.imageId ?? product.imageIds[0] ?? "")}"${imageUrl ? ` data-image-url="${escapeAttribute(imageUrl)}" data-image-width="${variantImage?.width ?? ""}" data-image-height="${variantImage?.height ?? ""}"` : ""} data-price="${variant.price}" data-compare-at="${variant.compareAtPrice ?? ""}" data-available="${String(variant.available)}"${variant.available ? "" : " disabled"}${variant.id === firstVariant?.id ? " selected" : ""}>${escapeHtml(variant.title)} · ${escapeHtml(formatMoney(variant.price))}${variant.available ? "" : " · Agotado"}</option>`;
+        return `<option value="${escapeAttribute(variant.id)}" data-variant-data="${escapeAttribute(variant.id)}" data-variant-id="${escapeAttribute(variant.id)}" data-variant-title="${escapeAttribute(variant.title)}" data-sku="${escapeAttribute(variant.sku)}" data-image-id="${escapeAttribute(variant.imageId ?? product.imageIds[0] ?? "")}"${imageUrl ? ` data-image-url="${escapeAttribute(imageUrl)}" data-image-width="${variantImage?.width ?? ""}" data-image-height="${variantImage?.height ?? ""}"` : ""} data-price="${variant.price}" data-compare-at="${variant.compareAtPrice ?? ""}" data-available="${String(variant.available)}"${variant.available ? "" : " disabled"}${variant.id === firstVariant?.id ? " selected" : ""}>${escapeHtml(variant.title)} · ${escapeHtml(formatMoney(variant.price))}${variant.available ? "" : ` · ${escapeHtml(copy.product.outOfStock)}`}</option>`;
       })
       .join("");
     const optionNames = [
@@ -1127,9 +1126,9 @@ export const catalogProductDetail: ModuleDefinition<
     const policiesPanelId = `catalog-product-policies-${context.section.id}`;
     const reviewsPanelId = `catalog-product-reviews-${context.section.id}`;
     const reviewSection = reviews.length
-      ? `<section id="${escapeAttribute(reviewsPanelId)}" class="catalog-product-reviews" data-product-tab-panel="reviews" data-motion-zone="items"><header><div><p class="catalog-eyebrow">Experiencias reales</p><h2>Lo que dicen quienes compraron</h2></div>${reviewSummary ? `<p class="catalog-review-average"><strong>${reviewSummary.average.toFixed(1)}</strong> / 5 · ${reviewSummary.count} reseñas</p>` : ""}</header><div class="catalog-review-grid">${reviews.map((review) => `<article class="catalog-review"><p class="catalog-product-rating" aria-label="${review.rating} de 5">${"★".repeat(review.rating)}</p><h3>${escapeHtml(review.authorName)}</h3>${review.title ? `<strong>${escapeHtml(review.title)}</strong>` : ""}<blockquote>${escapeHtml(review.body)}</blockquote><small>${review.verifiedPurchase ? "Compra verificada · " : ""}${escapeHtml(new Intl.DateTimeFormat("es-AR", { dateStyle: "medium" }).format(new Date(review.publishedAt)))}</small></article>`).join("")}</div></section>`
+      ? `<section id="${escapeAttribute(reviewsPanelId)}" class="catalog-product-reviews" data-product-tab-panel="reviews" data-motion-zone="items"><header><div><p class="catalog-eyebrow">${escapeHtml(copy.product.reviewEyebrow)}</p><h2>${escapeHtml(copy.product.reviewTitle)}</h2></div>${reviewSummary ? `<p class="catalog-review-average"><strong>${reviewSummary.average.toFixed(1)}</strong> / 5 · ${reviewSummary.count} ${escapeHtml(copy.product.reviews)}</p>` : ""}</header><div class="catalog-review-grid">${reviews.map((review) => `<article class="catalog-review"><p class="catalog-product-rating" aria-label="${review.rating} de 5">${"★".repeat(review.rating)}</p><h3>${escapeHtml(review.authorName)}</h3>${review.title ? `<strong>${escapeHtml(review.title)}</strong>` : ""}<blockquote>${escapeHtml(review.body)}</blockquote><small>${review.verifiedPurchase ? `${escapeHtml(copy.product.verifiedPurchase)} · ` : ""}${escapeHtml(new Intl.DateTimeFormat("es-AR", { dateStyle: "medium" }).format(new Date(review.publishedAt)))}</small></article>`).join("")}</div></section>`
       : "";
-    const productTabs = `<nav class="catalog-product-tabs" role="tablist" aria-label="Información del producto"><button type="button" role="tab" data-product-tab="details" aria-controls="${escapeAttribute(description ? `${descriptionPanelId} ${detailsPanelId}` : detailsPanelId)}" aria-selected="true">Detalles</button><button type="button" role="tab" data-product-tab="policies" aria-controls="${escapeAttribute(policiesPanelId)}" aria-selected="false">Envíos y cambios</button>${reviews.length ? `<button type="button" role="tab" data-product-tab="reviews" aria-controls="${escapeAttribute(reviewsPanelId)}" aria-selected="false">Reseñas</button>` : ""}</nav>`;
+    const productTabs = `<nav class="catalog-product-tabs" role="tablist" aria-label="${escapeAttribute(copy.accessibility.productInfo)}"><button type="button" role="tab" data-product-tab="details" aria-controls="${escapeAttribute(description ? `${descriptionPanelId} ${detailsPanelId}` : detailsPanelId)}" aria-selected="true">${escapeHtml(copy.product.details)}</button><button type="button" role="tab" data-product-tab="policies" aria-controls="${escapeAttribute(policiesPanelId)}" aria-selected="false">${escapeHtml(copy.product.policies)}</button>${reviews.length ? `<button type="button" role="tab" data-product-tab="reviews" aria-controls="${escapeAttribute(reviewsPanelId)}" aria-selected="false">${escapeHtml(copy.product.reviews)}</button>` : ""}</nav>`;
     return moduleRoot(
       "catalog-product-detail",
       context.section,
@@ -1143,17 +1142,17 @@ export const catalogProductDetail: ModuleDefinition<
           ${description}
           <form class="catalog-add-form" action="/carrito/" method="get" data-solara-add-form>
             <input type="hidden" name="product" value="${escapeAttribute(product.id)}">
-            <label for="catalog-variant-${escapeAttribute(context.section.id)}">Elegí talle y color</label>
+            <label for="catalog-variant-${escapeAttribute(context.section.id)}">${escapeHtml(copy.product.variant)}</label>
             <select id="catalog-variant-${escapeAttribute(context.section.id)}" name="variant" data-variant-select required>${variants}</select>
-            ${optionControls ? `<div class="catalog-variant-options" aria-label="Opciones del producto">${optionControls}</div>` : ""}
-            <div class="catalog-quantity-row"><label for="catalog-quantity-${escapeAttribute(context.section.id)}">Cantidad</label><input id="catalog-quantity-${escapeAttribute(context.section.id)}" name="quantity" type="number" min="1" max="99" value="1" inputmode="numeric"></div>
+            ${optionControls ? `<div class="catalog-variant-options" aria-label="${escapeAttribute(copy.product.options)}">${optionControls}</div>` : ""}
+            <div class="catalog-quantity-row"><label for="catalog-quantity-${escapeAttribute(context.section.id)}">${escapeHtml(copy.product.quantity)}</label><input id="catalog-quantity-${escapeAttribute(context.section.id)}" name="quantity" type="number" min="1" max="99" value="1" inputmode="numeric"></div>
             <button class="catalog-product-add" type="submit" data-add-to-cart>${escapeHtml(context.settings.actionLabel)}</button>
-            ${whatsappFallback ? `<noscript><style>[data-solara-store].catalog-modern .catalog-add-form .catalog-add-fallback{display:inline-flex}[data-solara-store].catalog-modern .catalog-add-form .catalog-product-add{display:none}</style><a class="catalog-add-fallback" href="${escapeAttribute(whatsappFallback)}" target="_blank" rel="noopener noreferrer">Consultar por WhatsApp</a></noscript>` : ""}
+            ${whatsappFallback ? `<noscript><style>[data-solara-store].catalog-modern .catalog-add-form .catalog-add-fallback{display:inline-flex}[data-solara-store].catalog-modern .catalog-add-form .catalog-product-add{display:none}</style><a class="catalog-add-fallback" href="${escapeAttribute(whatsappFallback)}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.product.askWhatsApp)}</a></noscript>` : ""}
           </form>
-          <nav class="catalog-variant-links" aria-label="Enlaces directos a variantes">${variantLinks}</nav>
+          <nav class="catalog-variant-links" aria-label="${escapeAttribute(copy.export.variantLinks)}">${variantLinks}</nav>
           <p class="catalog-delivery-note">${escapeHtml(context.settings.deliveryNote)}</p>
-          <dl id="${escapeAttribute(detailsPanelId)}" class="catalog-product-specs" data-product-tab-panel="details"><div><dt>SKU</dt><dd data-product-sku>${escapeHtml(firstVariant?.sku ?? "")}</dd></div><div><dt>Disponibilidad</dt><dd data-product-availability>${firstVariant?.available ? "Disponible" : "Agotado"}</dd></div></dl>
-          <div id="${escapeAttribute(policiesPanelId)}" class="catalog-product-policies" data-product-tab-panel="policies"><details><summary>Envíos</summary><p>${escapeHtml(context.project.policies.shipping.details)}</p></details><details><summary>Cambios y devoluciones</summary><p>${escapeHtml(context.project.policies.returns.details)}</p></details></div>
+          <dl id="${escapeAttribute(detailsPanelId)}" class="catalog-product-specs" data-product-tab-panel="details"><div><dt>${escapeHtml(copy.product.sku)}</dt><dd data-product-sku>${escapeHtml(firstVariant?.sku ?? "")}</dd></div><div><dt>${escapeHtml(copy.product.availability)}</dt><dd data-product-availability>${firstVariant?.available ? escapeHtml(copy.product.available) : escapeHtml(copy.product.outOfStock)}</dd></div></dl>
+          <div id="${escapeAttribute(policiesPanelId)}" class="catalog-product-policies" data-product-tab-panel="policies"><details><summary>${escapeHtml(copy.product.shipping)}</summary><p>${escapeHtml(context.project.policies.shipping.details)}</p></details><details><summary>${escapeHtml(copy.product.returns)}</summary><p>${escapeHtml(context.project.policies.returns.details)}</p></details></div>
         </div>
       </div>${productTabs}${reviewSection}</div>`),
       { className: "catalog-product-detail" },
@@ -1453,11 +1452,12 @@ export const catalogFooter: ModuleDefinition<
   motionZones: modernRevealZone,
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
+    const copy = context.project.publicCopy;
     const isV2 = context.project.commerceTemplates.designFamily === "catalog-modern-v2";
     const policyLinks = context.settings.showPolicies
       ? isV2
-        ? `<a href="/privacidad/">Privacidad</a><a href="/terminos/">Términos</a>`
-        : `<a href="/envios/">Envíos</a><a href="/devoluciones/">Cambios</a><a href="/privacidad/">Privacidad</a><a href="/terminos/">Términos</a>`
+        ? `<a href="/privacidad/">${escapeHtml(copy.footer.privacy)}</a><a href="/terminos/">${escapeHtml(copy.footer.terms)}</a>`
+        : `<a href="/envios/">${escapeHtml(copy.footer.shipping)}</a><a href="/devoluciones/">${escapeHtml(copy.footer.returns)}</a><a href="/privacidad/">${escapeHtml(copy.footer.privacy)}</a><a href="/terminos/">${escapeHtml(copy.footer.terms)}</a>`
       : "";
     const note = context.settings.note || context.project.identity.description;
     const contact = [
@@ -1494,7 +1494,9 @@ export const catalogFooter: ModuleDefinition<
     const catalogLinkMarkup = catalogLink
       ? `<a href="${escapeAttribute(catalogLink.href)}">${escapeHtml(catalogLink.label)}</a>`
       : "";
-    const searchLink = searchEnabled ? `<a href="/buscar/">Buscar</a>` : "";
+    const searchLink = searchEnabled
+      ? `<a href="/buscar/">${escapeHtml(copy.navigation.search)}</a>`
+      : "";
     const helpPageLinks = isV2
       ? ""
       : `<a href="/contacto/">Contacto</a><a href="/nosotros/">Nosotros</a>`;
@@ -1502,7 +1504,7 @@ export const catalogFooter: ModuleDefinition<
       "catalog-footer",
       context.section,
       safeHtml(
-        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div><nav aria-label="Catálogo"><strong>Explorar</strong><a href="/">Inicio</a>${catalogLinkMarkup}${searchLink}</nav><nav aria-label="Ayuda"><strong>Ayuda</strong>${helpPageLinks}${policyLinks}</nav><address><strong>Contacto</strong>${contact}</address><div class="catalog-footer-meta"><small>© ${new Date().getFullYear()} ${escapeHtml(context.project.identity.brandName)}. Todos los derechos reservados.</small><p class="catalog-footer-made"><a href="https://solara.com.ar" target="_blank" rel="noopener noreferrer">Hecho con ❤️ en solara.com.ar</a></p></div></div>`,
+        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div><nav aria-label="${escapeAttribute(copy.footer.explore)}"><strong>${escapeHtml(copy.footer.explore)}</strong><a href="/">${escapeHtml(copy.navigation.home)}</a>${catalogLinkMarkup}${searchLink}</nav><nav aria-label="${escapeAttribute(copy.footer.help)}"><strong>${escapeHtml(copy.footer.help)}</strong>${helpPageLinks}${policyLinks}</nav><address><strong>${escapeHtml(copy.footer.contact)}</strong>${contact}</address><div class="catalog-footer-meta"><small>© ${new Date().getFullYear()} ${escapeHtml(context.project.identity.brandName)}. Todos los derechos reservados.</small><p class="catalog-footer-made"><a href="https://solara.com.ar" target="_blank" rel="noopener noreferrer">Hecho con ❤️ en solara.com.ar</a></p></div></div>`,
       ),
       { tag: "footer" },
     );
@@ -1536,14 +1538,15 @@ export const catalogCartDrawer: ModuleDefinition<
   clientAsset: "storefront-cart" as AssetId,
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
+    const copy = context.project.publicCopy;
     const checkoutLinkMarkup = hasPublicWhatsApp(context.project.whatsapp)
-      ? `<a data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>Enviar pedido en WhatsApp</a>`
+      ? `<a data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>${escapeHtml(copy.checkout.sendWhatsApp)}</a>`
       : "";
     return moduleRoot(
       "catalog-cart-drawer",
       context.section,
       safeHtml(
-        `<div class="solara-cart-backdrop catalog-cart-backdrop" data-solara-cart-close data-close-cart hidden></div><aside id="solara-cart" class="catalog-cart-drawer" data-cart-drawer aria-label="${escapeAttribute(context.settings.title)}" aria-modal="true" aria-hidden="true" inert tabindex="-1"><header><h2>${escapeHtml(context.settings.title)}</h2><button type="button" data-solara-cart-close data-close-cart aria-label="Cerrar carrito">Cerrar</button></header><div class="catalog-cart-items" data-solara-cart-items data-cart-lines><p class="catalog-empty">${escapeHtml(context.settings.emptyText)}</p></div><button class="catalog-secondary-action" type="button" data-solara-cart-close data-close-cart>Seguir comprando</button><div class="catalog-cart-summary"><p><span>Subtotal</span><strong data-cart-subtotal>${escapeHtml(formatMoney(0))}</strong></p><p><span>Entrega</span><strong> A coordinar</strong></p><p class="catalog-cart-total"><span>Total estimado</span><strong data-solara-cart-total data-cart-total>${escapeHtml(formatMoney(0))}</strong></p></div><form class="catalog-checkout-form" data-solara-checkout data-checkout-form><label for="catalog-drawer-name">Nombre</label><input id="catalog-drawer-name" name="name" autocomplete="name" required><label for="catalog-drawer-phone">Teléfono</label><input id="catalog-drawer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="Ingresá un teléfono válido" required><label for="catalog-drawer-address">Dirección o punto de entrega</label><textarea id="catalog-drawer-address" name="address" autocomplete="street-address" required></textarea><label for="catalog-drawer-notes">Notas opcionales</label><textarea id="catalog-drawer-notes" name="notes"></textarea><button class="catalog-primary-action" type="submit">${escapeHtml(context.settings.checkoutLabel)}</button><pre data-order-preview aria-live="polite"></pre>${checkoutLinkMarkup}</form></aside>`,
+        `<div class="solara-cart-backdrop catalog-cart-backdrop" data-solara-cart-close data-close-cart hidden></div><aside id="solara-cart" class="catalog-cart-drawer" data-cart-drawer aria-label="${escapeAttribute(context.settings.title)}" aria-modal="true" aria-hidden="true" inert tabindex="-1"><header><h2>${escapeHtml(context.settings.title)}</h2><button type="button" data-solara-cart-close data-close-cart aria-label="${escapeAttribute(copy.cart.close)}">${escapeHtml(copy.navigation.close)}</button></header><div class="catalog-cart-items" data-solara-cart-items data-cart-lines><p class="catalog-empty">${escapeHtml(context.settings.emptyText || copy.empty.cart)}</p></div><button class="catalog-secondary-action" type="button" data-solara-cart-close data-close-cart>${escapeHtml(copy.cart.continueShopping)}</button><div class="catalog-cart-summary"><p><span>${escapeHtml(copy.cart.subtotal)}</span><strong data-cart-subtotal>${escapeHtml(formatMoney(0))}</strong></p><p><span>${escapeHtml(copy.cart.delivery)}</span><strong>${escapeHtml(copy.cart.deliveryToCoordinate)}</strong></p><p class="catalog-cart-total"><span>${escapeHtml(copy.cart.estimatedTotal)}</span><strong data-solara-cart-total data-cart-total>${escapeHtml(formatMoney(0))}</strong></p></div><form class="catalog-checkout-form" data-solara-checkout data-checkout-form><label for="catalog-drawer-name">${escapeHtml(copy.cart.name)}</label><input id="catalog-drawer-name" name="name" autocomplete="name" required><label for="catalog-drawer-phone">${escapeHtml(copy.cart.phone)}</label><input id="catalog-drawer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="Ingresá un teléfono válido" required><label for="catalog-drawer-address">${escapeHtml(copy.cart.address)}</label><textarea id="catalog-drawer-address" name="address" autocomplete="street-address" required></textarea><label for="catalog-drawer-notes">${escapeHtml(copy.cart.notes)}</label><textarea id="catalog-drawer-notes" name="notes"></textarea><button class="catalog-primary-action" type="submit">${escapeHtml(context.settings.checkoutLabel)}</button><pre data-order-preview aria-live="polite"></pre>${checkoutLinkMarkup}</form></aside>`,
       ),
     );
   },

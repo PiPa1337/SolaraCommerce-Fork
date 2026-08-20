@@ -13,7 +13,6 @@ import {
   contactDefaultFaqItems,
   contactDefaultHelpItems,
   contactDefaultPurchaseItems,
-  contactDefaultReasons,
 } from "@solara/project-schema";
 import { z } from "zod";
 import { catalogHeroBenefitIcons, renderCatalogModernEditorialHero } from "./catalog-modern";
@@ -106,11 +105,6 @@ const contactFaqItemSchema = z.object({
   enabled: z.boolean().default(true),
 });
 
-const contactReasonSchema = z.object({
-  id: z.string().min(1),
-  value: z.string().min(1),
-});
-
 export const contactHeroSettings = z.object({
   eyebrow: z.string().default("HABLEMOS"),
   title: z.string().default("Estamos para ayudarte."),
@@ -127,18 +121,12 @@ export const contactFormSettings = z.object({
   title: z.string().default("Escribinos"),
   body: z.string().default("Completá el formulario y nuestro equipo te responderá a la brevedad."),
   showPhone: z.boolean().default(true),
-  showOrderNumber: z.boolean().default(true),
   nameLabel: z.string().default("Nombre"),
   emailLabel: z.string().default("Email"),
   phoneLabel: z.string().default("Teléfono"),
-  reasonLabel: z.string().default("Motivo de consulta"),
-  orderNumberLabel: z.string().default("Número de pedido (opcional)"),
   messageLabel: z.string().default("Mensaje"),
-  submitLabel: z.string().default("Enviar consulta"),
-  reasons: z
-    .array(contactReasonSchema)
-    .max(12)
-    .default(contactDefaultReasons.map((reason) => ({ ...reason }))),
+  emailActionLabel: z.string().default("Enviar por Email"),
+  whatsappActionLabel: z.string().default("Enviar por WhatsApp"),
 });
 
 export const contactChannelsSettings = z.object({
@@ -290,6 +278,7 @@ export const contactHero: ModuleDefinition<
       title: settings.title,
       body: settings.body,
       imageAssetId: settings.imageAssetId,
+      benefits: [],
       actions,
       trailing: quickLinks,
     });
@@ -307,53 +296,48 @@ export const contactForm: ModuleDefinition<
     "title",
     "body",
     "showPhone",
-    "showOrderNumber",
     "nameLabel",
     "emailLabel",
     "phoneLabel",
-    "reasonLabel",
-    "orderNumberLabel",
     "messageLabel",
-    "submitLabel",
-    "reasons",
+    "emailActionLabel",
+    "whatsappActionLabel",
   ],
   settingsSchema: contactFormSettings,
   settingsFields: [
     { key: "title", type: "text", label: "Título" },
     { key: "body", type: "text", label: "Texto" },
     { key: "showPhone", type: "boolean", label: "Mostrar teléfono" },
-    { key: "showOrderNumber", type: "boolean", label: "Mostrar número de pedido" },
     { key: "nameLabel", type: "text", label: "Label nombre" },
     { key: "emailLabel", type: "text", label: "Label email" },
     { key: "phoneLabel", type: "text", label: "Label teléfono" },
-    { key: "reasonLabel", type: "text", label: "Label motivo" },
-    { key: "orderNumberLabel", type: "text", label: "Label pedido" },
     { key: "messageLabel", type: "text", label: "Label mensaje" },
-    { key: "submitLabel", type: "text", label: "Botón" },
-    {
-      key: "reasons",
-      type: "repeater",
-      label: "Motivos de consulta",
-      maxItems: 12,
-      itemLabelKey: "value",
-      fields: [{ key: "value", type: "text", label: "Motivo" }],
-    },
+    { key: "emailActionLabel", type: "text", label: "Botón email" },
+    { key: "whatsappActionLabel", type: "text", label: "Botón WhatsApp" },
   ],
   motionZones: contactRevealZone,
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
+    const copy = context.project.publicCopy;
     const settings = context.settings;
     const phone = contactPhone(context);
     const email = context.project.identity.email.trim();
-    const fallback = phone
-      ? `<a class="catalog-primary-action solara-primary-action contact-form-fallback" href="https://wa.me/${escapeAttribute(phone)}" target="_blank" rel="noopener noreferrer"><span class="catalog-hero-cta-label">Escribinos por WhatsApp</span><svg class="catalog-hero-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${catalogHeroBenefitIcons.chat}</svg></a>`
-      : `<p class="contact-form-fallback">Configurá un teléfono de WhatsApp para recibir consultas.</p>`;
-    const action = email ? `mailto:${escapeAttribute(email)}` : "#";
+    const hasWhatsapp = phone.length > 0;
+    const hasEmail = email.length > 0;
+    const brand = context.project.identity.brandName;
+    const action = hasEmail ? `mailto:${escapeAttribute(email)}` : "#";
+    const emailDisabled = hasEmail ? "" : " disabled";
+    const whatsappDisabled = hasWhatsapp ? "" : " disabled";
+    const whatsappHref = hasWhatsapp ? `https://wa.me/${escapeAttribute(phone)}` : "#";
+    const noscriptFallback =
+      hasEmail || hasWhatsapp
+        ? `<p>${hasEmail ? `<a href="mailto:${escapeAttribute(email)}">${escapeHtml(copy.contact.emailAction || settings.emailActionLabel)}</a> ` : escapeHtml(copy.contact.emailFallback)}${hasEmail && hasWhatsapp ? " · " : ""}${hasWhatsapp ? `<a href="${whatsappHref}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.contact.whatsappAction)}</a> ` : escapeHtml(copy.contact.whatsappFallback)}</p>`
+        : `<p>${escapeHtml(copy.contact.whatsappFallback)}</p>`;
     return moduleRoot(
       "contact-form",
       context.section,
       safeHtml(
-        `<section id="contact-form" class="contact-main-grid" data-motion-zone="content"><form class="contact-form" data-solara-contact-form data-contact-brand="${escapeAttribute(context.project.identity.brandName)}" data-contact-email="${escapeAttribute(email)}" action="${action}" method="get" target="_blank"><h2>${escapeHtml(settings.title)}</h2><p>${escapeHtml(settings.body)}</p><div class="contact-form-fields"><label>${escapeHtml(settings.nameLabel)}<input name="name" autocomplete="name" required></label><label>${escapeHtml(settings.emailLabel)}<input name="email" type="email" autocomplete="email" required></label>${settings.showPhone ? `<label>${escapeHtml(settings.phoneLabel)}<input name="phone" type="tel" autocomplete="tel" required></label>` : ""}<label>${escapeHtml(settings.reasonLabel)}<select name="reason" required><option value="">Seleccioná una opción</option>${settings.reasons.map((reason) => `<option value="${escapeAttribute(reason.value)}">${escapeHtml(reason.value)}</option>`).join("")}</select></label>${settings.showOrderNumber ? `<label>${escapeHtml(settings.orderNumberLabel)}<input name="orderNumber" inputmode="numeric"></label>` : ""}<label class="contact-form-message">${escapeHtml(settings.messageLabel)}<textarea name="message" rows="5" required></textarea></label></div><div class="contact-form-actions"><button class="catalog-primary-action solara-primary-action" type="submit"><span class="catalog-hero-cta-label">${escapeHtml(settings.submitLabel)}</span><span class="catalog-hero-cta-icon" aria-hidden="true">→</span></button>${fallback}</div><p class="contact-form-status" data-contact-status aria-live="polite"></p><noscript><p>Activá JavaScript o usá el enlace de email para enviar la consulta.</p></noscript></form></section>`,
+        `<section id="contact-form" class="contact-main-grid" data-motion-zone="content"><form class="contact-form" data-solara-contact-form data-contact-brand="${escapeAttribute(brand)}" data-contact-email="${escapeAttribute(email)}" data-contact-whatsapp="${escapeAttribute(phone)}" action="${action}" method="get" target="_blank"><h2>${escapeHtml(settings.title)}</h2><p>${escapeHtml(settings.body)}</p><div class="contact-form-fields"><label>${escapeHtml(settings.nameLabel)}<input name="name" autocomplete="name" required></label><label>${escapeHtml(settings.emailLabel)}<input name="email" type="email" autocomplete="email" required></label>${settings.showPhone ? `<label>${escapeHtml(settings.phoneLabel)}<input name="phone" type="tel" autocomplete="tel" required></label>` : ""}<label class="contact-form-message">${escapeHtml(settings.messageLabel)}<textarea name="message" rows="5" required></textarea></label></div><div class="contact-form-actions"><button class="catalog-primary-action solara-primary-action" data-contact-channel="email" type="submit"${emailDisabled}><span class="catalog-hero-cta-label">${escapeHtml(settings.emailActionLabel)}</span><span class="catalog-hero-cta-icon" aria-hidden="true">→</span></button><button class="catalog-primary-action solara-primary-action contact-form-whatsapp" data-contact-channel="whatsapp" type="button"${whatsappDisabled}><span class="catalog-hero-cta-label">${escapeHtml(settings.whatsappActionLabel)}</span><svg class="catalog-hero-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${catalogHeroBenefitIcons.chat}</svg></button></div><p class="contact-form-status" data-contact-status aria-live="polite"></p><noscript>${noscriptFallback}<p>Activá JavaScript o usá los enlaces para enviar la consulta.</p></noscript></form></section>`,
       ),
     );
   },

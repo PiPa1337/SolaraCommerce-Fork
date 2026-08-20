@@ -5,6 +5,7 @@ import { referenceStore } from "./fixture";
 import {
   MoneySchema,
   migrateProject,
+  PUBLIC_COPY_DEFAULTS,
   personalizeWhatsAppGreeting,
   SlugSchema,
   type StoreProjectV2,
@@ -27,6 +28,16 @@ describe("StoreProjectV2Schema", () => {
 
   it("valida el fixture compartido", () => {
     expect(StoreProjectV2Schema.parse(referenceStore)).toEqual(referenceStore);
+  });
+
+  it("normaliza publicCopy para respaldos V2 anteriores", () => {
+    const { publicCopy: _legacyCopy, ...legacyProject } = structuredClone(referenceStore);
+
+    const parsed = StoreProjectV2Schema.parse(legacyProject);
+
+    expect(parsed.schemaVersion).toBe(2);
+    expect(parsed.publicCopy.navigation.cart).toBe(PUBLIC_COPY_DEFAULTS.navigation.cart);
+    expect(parsed.publicCopy.product.addToCart).toBe(PUBLIC_COPY_DEFAULTS.product.addToCart);
   });
 
   it("acepta fecha de disponibilidad opcional sin cambiar schemaVersion", () => {

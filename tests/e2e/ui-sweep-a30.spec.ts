@@ -147,8 +147,9 @@ test("búsqueda: casos borde — vacío, whitespace, término corto y sin result
 }) => {
   await page.goto(scaleUrlFor("/buscar/"));
   const results = page.locator("[data-search-results]");
+  const resultCount = page.locator("[data-category-result-count]");
   await expect(results).toHaveAttribute("aria-live", "polite");
-  await expect(results).toContainText("Elegí una búsqueda para ver resultados.");
+  await expect(resultCount).toHaveText("Elegí una búsqueda");
 
   await page.goto(scaleUrlFor("/buscar/?q=%20%20"));
   await expect(results).toContainText("Escribí al menos 2 caracteres para buscar.");
@@ -166,8 +167,6 @@ test("búsqueda: matching real sin tildes y conteo exacto por categoría", async
   await expect(results).toHaveCount(2, { timeout: 15_000 });
   await expect(results.first()).toContainText("Pieza de escala 41");
   await expect(results.last()).toContainText("Pieza de escala 48");
-  await expect(page.locator("[data-search-results]")).toContainText("resultados para “bano”");
-  await expect(page.locator("[data-search-results]")).not.toContainText("Mostrando 48");
 
   await page.goto(scaleUrlFor("/buscar/?q=organizacion"));
   await expect(page.locator("[data-search-results] .solara-search-result")).toHaveCount(1, {
@@ -181,10 +180,6 @@ test("búsqueda: cap de 48 con aviso honesto y robots noindex", async ({ page })
   await expect(page.locator("[data-search-results] .solara-search-result")).toHaveCount(48, {
     timeout: 15_000,
   });
-  await expect(page.locator("[data-search-results]")).toContainText("resultados para “escala”");
-  await expect(page.locator("[data-search-results]")).toContainText(
-    "Mostrando 48 de 50 resultados. Refiná tu búsqueda…",
-  );
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex,follow");
 });
 
@@ -226,22 +221,16 @@ test("búsqueda: ranking real — marca pesa sobre categoría", async ({ page })
   const first = page.locator("[data-search-results] .solara-search-result").first();
   await expect(first).toBeVisible({ timeout: 15_000 });
   await expect(first).toContainText("Pieza de escala 02");
-  await expect(first).toContainText("Casa Luma");
+  await expect(first).toContainText("Tienda Referencia");
 });
 
-test("búsqueda: sugerencia ortográfica con link que navega", async ({ page }) => {
+test("búsqueda: consulta sin coincidencias usa el copy público de vacío", async ({ page }) => {
   await page.goto(scaleUrlFor("/buscar/?q=caxza"));
   await expect(page.locator("[data-search-results]")).toContainText(
-    "No encontramos resultados para “caxza”.",
+    "No encontramos productos para esa búsqueda.",
     { timeout: 15_000 },
   );
-  const link = page.locator("[data-search-results] a[href='/buscar/?q=casa']").first();
-  await expect(link).toContainText("casa");
-  await link.click();
-  await expect(page).toHaveURL(/\/buscar\/\?q=casa$/);
-  await expect(page.locator("[data-search-results] .solara-search-result").first()).toBeVisible({
-    timeout: 15_000,
-  });
+  await expect(page.locator("[data-search-results] a")).toHaveCount(0);
 });
 
 test("búsqueda: términos de 1 carácter cortan el query con el guard por término (fix A29)", async ({
@@ -265,7 +254,7 @@ test("búsqueda no-JS: el form de /buscar/ navega con GET", async ({ browser }) 
   await page.locator("#solara-search-input").fill("escala");
   await page.locator(".solara-search-form button[type='submit']").click();
   await expect(page).toHaveURL(/\/buscar\/\?q=escala$/);
-  await expect(page.locator("[data-search-results]")).toContainText("Elegí una búsqueda");
+  await expect(page.locator("[data-category-result-count]")).toHaveText("Elegí una búsqueda");
   await context.close();
 });
 

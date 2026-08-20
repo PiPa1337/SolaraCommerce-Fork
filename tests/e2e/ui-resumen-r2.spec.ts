@@ -23,7 +23,7 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
 test.setTimeout(process.env.CI ? 150_000 : 90_000);
 
 const EDITED_PHONE = "5492212345678";
-const EDITED_GREETING = "Hola Modo Sur editado, preparo mi pedido:";
+const EDITED_GREETING = "Hola Marca Aurora editada, preparo mi pedido:";
 const PRODUCT_PATH = "/productos/remera-esencial-de-algodon/";
 // El formato es-AR de Intl separa el símbolo del monto con NBSP (U+00A0),
 // tanto en el runtime del sitio como en el formatMoney del exporter.
@@ -267,7 +267,7 @@ test("editar número, saludo y SKU: efecto real en preview y persistencia al rec
 
   await expect(phoneInput).toHaveValue("5491123456789");
   await expect(section).toContainText("Formato correcto");
-  await expect(greetingInput).toHaveValue("Hola Modo Sur, quiero hacer este pedido:");
+  await expect(greetingInput).toHaveValue("Hola Predeterminado, quiero hacer este pedido:");
   await expect(skuToggle).toHaveAttribute("aria-checked", "true");
 
   await phoneInput.fill(EDITED_PHONE);
@@ -308,7 +308,9 @@ test("utilidad: el número y el saludo editados llegan al sitio exportado (diff 
   const afterHome = String(editedExport.files.get("index.html"));
 
   expect(beforeHome).toContain('data-whatsapp="5491123456789"');
-  expect(beforeHome).toContain('data-whatsapp-greeting="Hola Modo Sur, quiero hacer este pedido:"');
+  expect(beforeHome).toContain(
+    'data-whatsapp-greeting="Hola Tienda Referencia, quiero hacer este pedido:"',
+  );
   expect(beforeHome).toContain('data-whatsapp-include-sku="true"');
   expect(afterHome).toContain(`data-whatsapp="${EDITED_PHONE}"`);
   expect(afterHome).toContain(`data-whatsapp-greeting="${EDITED_GREETING}"`);
@@ -367,7 +369,7 @@ test("utilidad: includeSku cambia el mensaje del checkout (con SKU vs sin SKU)",
 
   const withSkuMessage = decodeURIComponent(withSkuHref);
   const withoutSkuMessage = decodeURIComponent(withoutSkuHref);
-  expect(withSkuMessage).toContain("Hola Modo Sur, quiero hacer este pedido:");
+  expect(withSkuMessage).toContain("Hola Tienda Referencia, quiero hacer este pedido:");
   expect(withSkuMessage).toContain(PRODUCT_LINE_WITH_SKU);
   expect(withoutSkuMessage).not.toContain("[MS-001-NE-S]");
   expect(withoutSkuMessage).toContain(PRODUCT_LINE_NO_SKU);

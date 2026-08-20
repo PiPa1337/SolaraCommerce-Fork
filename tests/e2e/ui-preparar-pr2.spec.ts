@@ -516,7 +516,7 @@ test("paridad: un dominio sin HTTPS aparece como inválido en Preparar y bloquea
 }) => {
   await openDemoStore(page);
   await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
-    project.baseUrl = "http://modo-sur.example";
+    project.baseUrl = "http://tienda-aurora.example";
   });
   const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
   await openPrepararTab(page);

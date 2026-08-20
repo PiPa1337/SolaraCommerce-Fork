@@ -32,10 +32,10 @@ const VALUES = {
 
 /** Los valores originales de la tienda demo (catalogModernStore). */
 const ORIGINAL = {
-  name: "Modo Sur",
-  legalName: "Modo Sur Estudio SRL",
+  name: "Predeterminado",
+  legalName: "Predeterminado",
   description: "Indumentaria y accesorios elegidos para acompañar tu forma de moverte.",
-  email: "hola@modo-sur.example",
+  email: "hola@tienda-referencia-modern.example",
   phone: "5491123456789",
   address: "Buenos Aires, Argentina",
 } as const;
@@ -111,7 +111,7 @@ function fieldError(page: Page, text: string) {
 
 /** El proyecto autoservado en IndexedDB, receptor del payload commiteado.
  *  La tienda demo vive bajo su id `store-modo-sur-demo` (su `name` inicial es
- *  "Predeterminado", aunque su brandName sea "Modo Sur"). */
+ *  "Predeterminado", con la identidad pública de la demo integrada. */
 async function readStoredProject(page: Page): Promise<StoreProjectV1 | null> {
   const record = await page.evaluate(
     () =>
@@ -301,7 +301,7 @@ test("identidad completa: persiste tras recarga y cada campo llega al sitio expo
   // (exporter: index.ts:1305 y index.ts:1482/1499).
   expect(metaDescription(home)).toContain("Indumentaria y accesorios para todos los días");
   expect(metaDescription(home)).not.toContain(VALUES.description);
-  expect(metaDescription(about)).toContain("Conocé la mirada detrás de Modo Sur");
+  expect(metaDescription(about)).toContain("Conocé la mirada detrás de la tienda de referencia");
   expect(metaDescription(about)).not.toContain(VALUES.description);
 
   // 4. Email → footer (mailto), página Contacto y JSON-LD.

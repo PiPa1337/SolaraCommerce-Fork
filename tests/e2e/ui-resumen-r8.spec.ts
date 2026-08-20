@@ -35,11 +35,11 @@ const UPGRADE_TO_VERSION = 2;
 const NEWSLETTER_SECTION_ID = "modo-section-newsletter";
 
 const EDITED_RESUMEN = {
-  name: "Modo Sur R8",
+  name: "Marca Aurora R8",
   description: "Descripción persistida por la auditoría R8.",
-  email: "r8@modo-sur.example",
+  email: "r8@aurora.example",
   phone: "5491198765432",
-  greeting: "Hola Modo Sur R8, quiero este pedido:",
+  greeting: "Hola Marca Aurora R8, quiero este pedido:",
   baseUrl: "https://modo-sur-r8.example",
   catalogLabel: "Catálogo R8",
   navLabel: "Marcas R8",

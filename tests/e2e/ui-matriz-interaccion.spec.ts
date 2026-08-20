@@ -385,7 +385,7 @@ test.describe("Assets", () => {
     await expect(page.getByRole("heading", { name: "Recursos" })).toBeVisible();
 
     const heroAsset = page.locator(".asset-item").filter({
-      has: page.locator('input[value="Campaña Modo Sur"]'),
+      has: page.locator('input[value="Campaña de temporada"]'),
     });
     await heroAsset.getByTestId("ui-asset-detail-open").click();
     const detail = page.getByTestId("ui-asset-detail");

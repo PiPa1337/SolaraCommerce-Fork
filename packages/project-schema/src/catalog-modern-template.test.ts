@@ -24,6 +24,16 @@ describe("plantilla Catalog Modern", () => {
     expect(catalogModernCleanStore.navigation.mode).toBe("automatic");
     expect(catalogModernCleanStore.sections.some((section) => section.enabled)).toBe(true);
     expect(JSON.stringify(catalogModernCleanStore)).not.toContain("Modo Sur");
+    expect(JSON.stringify(catalogModernCleanStore)).not.toContain("tienda-referencia");
+    expect(catalogModernCleanStore.identity.email).toBe("");
+    expect(catalogModernCleanStore.identity.phone).toBe("");
+    expect(catalogModernCleanStore.identity.address).toBe("");
+    expect(
+      catalogModernCleanStore.assets
+        .filter((asset) => asset.kind === "image")
+        .every((asset) => asset.source.startsWith("data:image/svg+xml")),
+    ).toBe(true);
+    expect(catalogModernCleanStore.whatsapp.phone).toBe("5491100000000");
   });
 
   it("mantiene la demo de 50 productos y 14 categorías desde la misma plantilla", () => {
@@ -47,6 +57,30 @@ describe("plantilla Catalog Modern", () => {
     expect(project.id).toBe("store-ejemplo");
     expect(project.identity.brandName).toBe("Marca ejemplo");
     expect(project.baseUrl).toBe("https://tienda-ejemplo.example");
+  });
+
+  it("mantiene aisladas dos tiendas limpias con copy global distinto", () => {
+    const first = buildCatalogModernProject({
+      seed: "clean",
+      id: "store-first",
+      name: "Primera tienda",
+      brandName: "Marca primera",
+      slug: "primera-tienda",
+    });
+    const second = buildCatalogModernProject({
+      seed: "clean",
+      id: "store-second",
+      name: "Segunda tienda",
+      brandName: "Marca segunda",
+      slug: "segunda-tienda",
+    });
+
+    first.publicCopy.navigation.cart = "Bolsa";
+
+    expect(second.identity.brandName).toBe("Marca segunda");
+    expect(second.publicCopy.navigation.cart).toBe("Carrito");
+    expect(JSON.stringify(second)).not.toContain("Marca primera");
+    expect(JSON.stringify(second)).not.toContain("Bolsa");
   });
 
   it("seedear Contacto V2 y normaliza una página vacía sin tocar V1", () => {

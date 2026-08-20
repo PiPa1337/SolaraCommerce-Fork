@@ -8,6 +8,7 @@ import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-f
 
 const exported = exportProject(catalogModernV2Store, { mode: "production" });
 const exportedV1 = exportProject(catalogModernStore, { mode: "production" });
+const fixtureBrand = catalogModernV2Store.identity.brandName;
 const fixtureFiles = new Map<string, Uint8Array>(
   ["hero", "remera", "jean", "camisa"].map((name) => [
     `fixtures/modo-sur-${name}.png`,
@@ -1007,7 +1008,9 @@ test("V2 presenta PDP editorial y carrito lateral o inferior según viewport", a
   await page.setViewportSize({ width: 1920, height: 968 });
   await page.goto(productUrl);
 
-  await page.getByLabel("Elegí talle y color").selectOption({ index: 1 });
+  await page
+    .getByLabel(catalogModernV2Store.publicCopy.product.variant, { exact: true })
+    .selectOption({ index: 1 });
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
   const drawer = page.locator(".catalog-cart-drawer");
   await expect(drawer).toHaveAttribute("data-open", "true");
@@ -1070,9 +1073,11 @@ test("V2 muestra las 12 reseñas en una grilla sin scroll lateral y rotula el fo
     await track.evaluate((element) => element.clientWidth),
   );
 
-  await expect(page.locator('.catalog-footer-inner nav[aria-label="Catálogo"] strong')).toHaveText(
-    "Explorar",
-  );
+  await expect(
+    page.locator(
+      `.catalog-footer-inner nav[aria-label="${catalogModernV2Store.publicCopy.footer.explore}"] strong`,
+    ),
+  ).toHaveText(catalogModernV2Store.publicCopy.footer.explore);
   await expect(page.locator('.catalog-footer-inner nav[aria-label="Ayuda"] strong')).toHaveText(
     "Ayuda",
   );
@@ -1641,7 +1646,9 @@ test("V2 conserva estabilidad visual y feedback inmediato", async ({ page }) => 
   expect(layoutShift).toBeLessThanOrEqual(0.05);
 
   await page.goto(new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString());
-  await page.getByLabel("Elegí talle y color").selectOption({ index: 1 });
+  await page
+    .getByLabel(catalogModernV2Store.publicCopy.product.variant, { exact: true })
+    .selectOption({ index: 1 });
   const responseMs = await page.getByRole("button", { name: "Agregar al carrito" }).evaluate(
     (button) =>
       new Promise<number>((resolve, reject) => {
@@ -1802,7 +1809,7 @@ test("V2 footer: copyright con año y nombre + Hecho con ❤️ en solara.com.ar
   const small = footer.locator("small");
   await expect(small).toContainText("Todos los derechos reservados");
   await expect(small).toContainText(String(new Date().getFullYear()));
-  await expect(small).toContainText("Modo Sur");
+  await expect(small).toContainText(fixtureBrand);
   const made = footer.locator(".catalog-footer-made a");
   await expect(made).toHaveText("Hecho con ❤️ en solara.com.ar");
   await expect(made).toHaveAttribute("href", "https://solara.com.ar");
@@ -1856,7 +1863,9 @@ test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, t
     }
     await page.goto(new URL("/buscar/", serverUrl).toString());
     const searchTitle = page.getByRole("heading", { level: 1, name: "Buscar productos" });
-    const searchHelp = page.getByText("Buscá por nombre, marca, categoría o etiqueta.");
+    const searchHelp = page
+      .locator("#solara-main")
+      .getByText(catalogModernV2Store.publicCopy.search.queryLabel, { exact: true });
     const [titleBox, helpBox] = await Promise.all([
       searchTitle.boundingBox(),
       searchHelp.boundingBox(),
@@ -1889,7 +1898,9 @@ test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, t
     await page.goto(new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString());
     await page.evaluate(() => localStorage.clear());
     await page.reload();
-    await page.getByLabel("Elegí talle y color").selectOption({ index: 1 });
+    await page
+      .getByLabel(catalogModernV2Store.publicCopy.product.variant, { exact: true })
+      .selectOption({ index: 1 });
     await page.getByRole("button", { name: "Agregar al carrito" }).click();
     await page.getByRole("button", { name: "Cerrar carrito" }).click();
     await page.goto(new URL("/carrito/", serverUrl).toString());

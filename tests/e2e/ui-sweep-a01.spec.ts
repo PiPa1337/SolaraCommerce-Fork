@@ -5,9 +5,9 @@
  * (aria-sort, aria-current, contadores, data-selected, select con su valor),
  * (3) payload del handler → receptor (estado de Catalog → @tanstack/react-table).
  *
- * Fixture determinista: la demo "Modo Sur" (seed demo) tiene 50 productos
+ * Fixture determinista: la demo integrada (seed demo) tiene 50 productos
  * ("Remera esencial de algodón", "Remera gráfica Horizonte", …), marca
- * cíclica de 5 (Modo Sur, Línea Norte, Taller del Río, Estudio Liso, Bruma),
+ * cíclica de 5 (Predeterminado, Línea Base, Taller Norte, Estudio Liso, Bruma),
  * todos activos, precios 2800000 + n·85000 centavos y variantes [8,2,2,2,1,…].
  * Categorías por índice i (0-49): raíz = i%8 (remeras, camisas, pantalones,
  * abrigos, vestidos, tejidos, calzado, accesorios); las hijas de remeras y
@@ -93,12 +93,12 @@ test.describe("A1 — Catálogo: búsqueda", () => {
     await expect(rows(page)).toHaveCount(6);
     await expect(titleOf(page, 0)).resolves.toBe("Remera esencial de algodón");
 
-    await searchBox(page).fill("Modo Sur");
+    await searchBox(page).fill("Predeterminado");
     await expect(rows(page)).toHaveCount(10);
     const brands = await rows(page)
       .locator('input[aria-label^="Marca de "]')
       .evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).value));
-    expect(brands.every((brand) => brand === "Modo Sur")).toBe(true);
+    expect(brands.every((brand) => brand === "Predeterminado")).toBe(true);
 
     await searchBox(page).fill("Activo");
     await expect(rows(page)).toHaveCount(50);
@@ -276,7 +276,7 @@ test.describe("A1 — Catálogo: paginación", () => {
     await pageButton(page, "2").click();
     await expect(currentPage(page)).toHaveText("2");
 
-    await searchBox(page).fill("Modo Sur");
+    await searchBox(page).fill("Predeterminado");
     await expect(rows(page)).toHaveCount(10);
     await expect(paginationSummary(page)).toHaveText("1–10 de 10");
     await expect(currentPage(page)).toHaveText("1");

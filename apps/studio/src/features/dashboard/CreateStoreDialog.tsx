@@ -156,7 +156,7 @@ export function CreateStoreDialog({
               <input
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
-                placeholder="5491123456789"
+                placeholder="5491100000000"
                 autoComplete="tel"
                 inputMode="tel"
               />

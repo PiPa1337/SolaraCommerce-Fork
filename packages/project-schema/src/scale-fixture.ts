@@ -199,7 +199,7 @@ const products = Array.from({ length: 50 }, (_, index) => {
     title: `Pieza de escala ${String(productNumber).padStart(2, "0")}`,
     description: `Producto de prueba ${productNumber} para validar navegación, búsqueda y grillas de catálogo.`,
     status: "active" as const,
-    brand: productNumber % 2 === 0 ? "Casa Luma" : "Taller Nadir",
+    brand: productNumber % 2 === 0 ? "Tienda Referencia" : "Taller Nadir",
     categoryIds,
     collectionIds: ["collection-casa-serena"],
     tags: ["escala", productNumber % 2 === 0 ? "casa" : "uso-diario"],
@@ -244,14 +244,14 @@ const navigationItems = roots.map((root) => ({
 export const catalogScaleStore = StoreProjectV2Schema.parse({
   ...structuredClone(referenceStore),
   id: "store-casa-luma-scale",
-  name: "Casa Luma Escala",
-  slug: "casa-luma-escala",
-  baseUrl: "https://casa-luma-scale.example",
+  name: "Tienda Referencia Escala",
+  slug: "tienda-referencia-escala",
+  baseUrl: "https://tienda-referencia-scale.example",
   updatedAt: fixedDate,
   identity: {
     ...referenceStore.identity,
-    brandName: "Casa Luma Escala",
-    legalName: "Casa Luma Escala SRL",
+    brandName: "Tienda Referencia Escala",
+    legalName: "Tienda Referencia Escala SRL",
   },
   navigation: {
     ...referenceStore.navigation,

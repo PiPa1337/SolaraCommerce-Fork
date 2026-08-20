@@ -34,6 +34,10 @@ export function lowestPrice(product: Product): number {
   return Math.min(...product.variants.map((variant) => variant.price));
 }
 
+function productCopy(project: StoreProjectV1) {
+  return project.publicCopy.product;
+}
+
 export function productImage(project: StoreProjectV1, product: Product, eager = false): SafeHtml {
   const assetId = product.variants[0]?.imageId ?? product.imageIds[0];
   return renderImage(project, assetId, {
@@ -67,10 +71,10 @@ export function productCard(
         <p class="solara-product-brand">${escapeHtml(product.brand)}</p>
         <h3><a href="${href}">${escapeHtml(product.title)}</a></h3>
       </div>
-      <p class="solara-product-price">${hasRange ? "Desde " : ""}${escapeHtml(formatMoney(price))}</p>
+      <p class="solara-product-price">${hasRange ? `${escapeHtml(productCopy(project).from)} ` : ""}${escapeHtml(formatMoney(price))}</p>
     </div>
     <p class="solara-product-description">${escapeHtml(product.description)}</p>
-    <p class="solara-product-status">${available ? "Disponible" : "Agotado"}</p>
+    <p class="solara-product-status">${available ? escapeHtml(productCopy(project).available) : escapeHtml(productCopy(project).outOfStock)}</p>
   </article>`);
 }
 

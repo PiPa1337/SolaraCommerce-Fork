@@ -160,11 +160,14 @@ Desde la raíz:
 ```bash
 corepack pnpm install --frozen-lockfile
 corepack pnpm dev
-corepack pnpm check
+corepack pnpm check:quick        # <90s, 7 gates en paralelo (iteración diaria, 9800X3D 8 workers)
+corepack pnpm test:e2e:smoke   # 15 specs críticos con build cacheado (~45s-2min)
+corepack pnpm check             # alias de check:full, secuencial (cierre/CI)
+corepack pnpm check:full        # secuencial, para cierre
 corepack pnpm build
 corepack pnpm benchmark:export
-corepack pnpm test:e2e
-corepack pnpm test:e2e:release       # Node 22 + navegadores instalados
+corepack pnpm test:e2e          # 74 specs full (~3-4 min con 8 workers)
+corepack pnpm test:e2e:release       # Node 22 + navegadores instalados (solo on-demand)
 corepack pnpm desktop:build
 corepack pnpm desktop:package
 corepack pnpm portable:smoke
@@ -195,6 +198,7 @@ La guía de distribución autocontenida está en
   deben mover `proyectos/` o `.solara-runtime/` fuera de la carpeta del `.exe`.
 - La matriz release exige Node 22. El desarrollo puede ejecutarse con una versión
   posterior, pero no debe presentarse como validación release.
+- Playwright usa 8 workers por defecto (9800X3D) con override `PLAYWRIGHT_WORKERS=6`; `check:quick` paraleliza typecheck/test con `pnpm -r --parallel`.
 - El checkout termina en WhatsApp y puede limitar la elegibilidad de Merchant.
 - La publicación real, DNS, Search Console y Merchant Center son manuales.
 
@@ -205,7 +209,7 @@ La guía de distribución autocontenida está en
 - [ ] Mantener `catalogModernStore`, `catalogScaleStore` y la plantilla limpia
       coherentes cuando corresponda.
 - [ ] Agregar primero una prueba del comportamiento nuevo o del bug.
-- [ ] Ejecutar el bucle local del paquete afectado y luego el gate proporcional.
+- [ ] Ejecutar el bucle local del paquete afectado y luego el gate proporcional: diaria `check:quick` + `test:e2e:smoke` (~2-3 min); cierre `check` + `test:e2e` full. `test:e2e:release` y `desktop:package` solo on-demand (Node 22).
 - [ ] Revisar HTML inicial, responsive, teclado, reduced motion y no-JavaScript si
       se toca storefront.
 - [ ] Ejecutar `git diff --check` y `corepack pnpm check:repository`.

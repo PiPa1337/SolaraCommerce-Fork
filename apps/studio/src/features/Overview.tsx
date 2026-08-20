@@ -28,6 +28,165 @@ const NAVIGATION_LABEL_MAX_LENGTH = 80;
 const NAVIGATION_ITEMS_MAX = 20;
 const NAVIGATION_CHILDREN_MAX = 12;
 
+const PUBLIC_COPY_FIELDS = [
+  { group: "navigation", key: "home", label: "Inicio" },
+  { group: "navigation", key: "catalog", label: "Catálogo" },
+  { group: "navigation", key: "contact", label: "Contacto" },
+  { group: "navigation", key: "about", label: "Nosotros" },
+  { group: "navigation", key: "search", label: "Búsqueda" },
+  { group: "navigation", key: "cart", label: "Carrito" },
+  { group: "navigation", key: "viewAll", label: "Ver todo" },
+  { group: "navigation", key: "openMenu", label: "Abrir menú" },
+  { group: "navigation", key: "closeMenu", label: "Cerrar menú" },
+  { group: "navigation", key: "close", label: "Cerrar" },
+  { group: "search", key: "title", label: "Título de búsqueda" },
+  { group: "search", key: "placeholder", label: "Placeholder de búsqueda" },
+  { group: "search", key: "queryLabel", label: "Ayuda de búsqueda" },
+  { group: "search", key: "submit", label: "Enviar búsqueda" },
+  { group: "search", key: "close", label: "Cerrar búsqueda" },
+  { group: "search", key: "empty", label: "Búsqueda sin consulta" },
+  { group: "search", key: "queryTooShort", label: "Búsqueda demasiado corta" },
+  { group: "search", key: "loading", label: "Búsqueda en progreso" },
+  { group: "search", key: "noResults", label: "Sin resultados" },
+  { group: "search", key: "suggestion", label: "Sugerencia de búsqueda" },
+  { group: "search", key: "error", label: "Error de búsqueda" },
+  { group: "filters", key: "title", label: "Título de filtros" },
+  { group: "filters", key: "availability", label: "Disponibilidad" },
+  { group: "filters", key: "availableOnly", label: "Sólo disponibles" },
+  { group: "filters", key: "tag", label: "Etiqueta" },
+  { group: "filters", key: "filterByTag", label: "Ayuda de etiqueta" },
+  { group: "filters", key: "all", label: "Todas las opciones" },
+  { group: "filters", key: "price", label: "Precio" },
+  { group: "filters", key: "minimum", label: "Precio mínimo" },
+  { group: "filters", key: "maximum", label: "Precio máximo" },
+  { group: "filters", key: "sort", label: "Ordenar" },
+  { group: "filters", key: "recommended", label: "Orden recomendado" },
+  { group: "filters", key: "priceAsc", label: "Orden precio menor" },
+  { group: "filters", key: "priceDesc", label: "Orden precio mayor" },
+  { group: "filters", key: "name", label: "Orden nombre" },
+  { group: "product", key: "available", label: "Producto disponible" },
+  { group: "product", key: "outOfStock", label: "Producto agotado" },
+  { group: "product", key: "from", label: "Prefijo de precio" },
+  { group: "product", key: "variant", label: "Variante" },
+  { group: "product", key: "quantity", label: "Cantidad" },
+  { group: "product", key: "sku", label: "SKU" },
+  { group: "product", key: "availability", label: "Disponibilidad" },
+  { group: "product", key: "details", label: "Detalles" },
+  { group: "product", key: "policies", label: "Políticas del producto" },
+  { group: "product", key: "shipping", label: "Envíos del producto" },
+  { group: "product", key: "returns", label: "Cambios del producto" },
+  { group: "product", key: "askWhatsApp", label: "Consultar por WhatsApp" },
+  { group: "product", key: "addToCart", label: "Agregar al carrito" },
+  { group: "product", key: "noStock", label: "Sin stock" },
+  { group: "product", key: "related", label: "Productos relacionados" },
+  { group: "product", key: "options", label: "Opciones del producto" },
+  { group: "product", key: "reviews", label: "Reseñas" },
+  { group: "product", key: "reviewEyebrow", label: "Introducción de reseñas" },
+  { group: "product", key: "reviewTitle", label: "Título de reseñas" },
+  { group: "product", key: "verifiedPurchase", label: "Compra verificada" },
+  { group: "hero", key: "whatsappAction", label: "Acción WhatsApp del hero" },
+  { group: "contact", key: "whatsappFallback", label: "Fallback sin WhatsApp" },
+  { group: "contact", key: "emailFallback", label: "Fallback sin email" },
+  { group: "contact", key: "emailAction", label: "Acción de email" },
+  { group: "contact", key: "success", label: "Confirmación de contacto" },
+  { group: "contact", key: "email", label: "Campo email" },
+  { group: "contact", key: "phone", label: "Campo teléfono" },
+  { group: "contact", key: "whatsapp", label: "Canal WhatsApp" },
+  { group: "contact", key: "address", label: "Campo dirección" },
+  { group: "contact", key: "whatsappAction", label: "Acción WhatsApp" },
+  { group: "contact", key: "reason", label: "Campo motivo" },
+  { group: "contact", key: "orderNumber", label: "Campo número de pedido" },
+  { group: "contact", key: "message", label: "Campo mensaje" },
+  { group: "cart", key: "close", label: "Cerrar carrito" },
+  { group: "cart", key: "continueShopping", label: "Seguir comprando" },
+  { group: "cart", key: "subtotal", label: "Subtotal" },
+  { group: "cart", key: "delivery", label: "Entrega" },
+  { group: "cart", key: "deliveryToCoordinate", label: "Entrega a coordinar" },
+  { group: "cart", key: "estimatedTotal", label: "Total estimado" },
+  { group: "cart", key: "name", label: "Nombre del comprador" },
+  { group: "cart", key: "phone", label: "Teléfono del comprador" },
+  { group: "cart", key: "address", label: "Dirección de entrega" },
+  { group: "cart", key: "notes", label: "Notas del pedido" },
+  { group: "cart", key: "remove", label: "Eliminar del carrito" },
+  { group: "cart", key: "unavailable", label: "Producto no disponible" },
+  { group: "cart", key: "exploreCategories", label: "Explorar categorías" },
+  { group: "checkout", key: "submit", label: "Preparar pedido" },
+  { group: "checkout", key: "sendWhatsApp", label: "Enviar pedido por WhatsApp" },
+  { group: "checkout", key: "coordinate", label: "Coordinar pedido" },
+  { group: "checkout", key: "continue", label: "Continuar compra" },
+  { group: "checkout", key: "summary", label: "Resumen del pedido" },
+  { group: "checkout", key: "selection", label: "Selección del pedido" },
+  { group: "checkout", key: "prepare", label: "Ayuda del pedido" },
+  { group: "checkout", key: "invalidItems", label: "Error de disponibilidad" },
+  { group: "checkout", key: "total", label: "Total del pedido" },
+  { group: "checkout", key: "disclaimer", label: "Aviso de confirmación" },
+  { group: "footer", key: "explore", label: "Footer: explorar" },
+  { group: "footer", key: "help", label: "Footer: ayuda" },
+  { group: "footer", key: "contact", label: "Footer: contacto" },
+  { group: "footer", key: "privacy", label: "Footer: privacidad" },
+  { group: "footer", key: "terms", label: "Footer: términos" },
+  { group: "footer", key: "shipping", label: "Footer: envíos" },
+  { group: "footer", key: "returns", label: "Footer: cambios" },
+  { group: "empty", key: "products", label: "Estado vacío: productos" },
+  { group: "empty", key: "collections", label: "Estado vacío: colecciones" },
+  { group: "empty", key: "cart", label: "Estado vacío: carrito" },
+  { group: "empty", key: "filteredProducts", label: "Estado vacío: filtros" },
+  { group: "pages", key: "home", label: "Página de inicio" },
+  { group: "pages", key: "catalog", label: "Página de catálogo" },
+  { group: "pages", key: "products", label: "Página de productos" },
+  { group: "pages", key: "categories", label: "Página de categorías" },
+  { group: "pages", key: "search", label: "Página de búsqueda" },
+  { group: "pages", key: "cart", label: "Página de carrito" },
+  { group: "pages", key: "checkout", label: "Página de compra" },
+  { group: "pages", key: "about", label: "Página nosotros" },
+  { group: "pages", key: "contact", label: "Página de contacto" },
+  { group: "pages", key: "shipping", label: "Página de envíos" },
+  { group: "pages", key: "returns", label: "Página de cambios" },
+  { group: "pages", key: "privacy", label: "Página de privacidad" },
+  { group: "pages", key: "terms", label: "Página de términos" },
+  { group: "pages", key: "aboutEyebrow", label: "Nosotros: introducción" },
+  { group: "pages", key: "aboutFallbackTitle", label: "Nosotros: título" },
+  { group: "pages", key: "aboutGuidanceTitle", label: "Nosotros: guía" },
+  { group: "pages", key: "aboutInformationTitle", label: "Nosotros: información" },
+  { group: "pages", key: "aboutContactAction", label: "Nosotros: contacto" },
+  { group: "pages", key: "aboutSelectionTitle", label: "Nosotros: selección" },
+  { group: "pages", key: "aboutSelectionFallback", label: "Nosotros: colección vacía" },
+  { group: "pages", key: "aboutDeliveryTitle", label: "Nosotros: entrega" },
+  { group: "pages", key: "aboutDirectTitle", label: "Nosotros: atención" },
+  { group: "pages", key: "aboutDirectFallback", label: "Nosotros: contacto vacío" },
+  { group: "pages", key: "contactEyebrow", label: "Contacto: introducción" },
+  { group: "pages", key: "contactFallbackTitle", label: "Contacto: título" },
+  { group: "pages", key: "contactDescription", label: "Contacto: descripción" },
+  { group: "pages", key: "contactPurchaseTitle", label: "Contacto: CTA" },
+  { group: "pages", key: "contactPurchaseDescription", label: "Contacto: ayuda" },
+  { group: "pages", key: "notFoundEyebrow", label: "404: introducción" },
+  { group: "pages", key: "notFoundTitle", label: "404: título" },
+  { group: "pages", key: "notFoundDescription", label: "404: descripción" },
+  { group: "pages", key: "returnHome", label: "404: volver al inicio" },
+  { group: "pages", key: "viewCategories", label: "404: ver categorías" },
+  { group: "export", key: "policyDetailsTitle", label: "Políticas: detalles" },
+  { group: "export", key: "policyQuestionsTitle", label: "Políticas: preguntas" },
+  { group: "export", key: "policyQuestionsBody", label: "Políticas: ayuda" },
+  { group: "whatsapp", key: "ask", label: "Consulta de WhatsApp" },
+  { group: "whatsapp", key: "purchase", label: "Compra de WhatsApp" },
+  { group: "whatsapp", key: "orderGreeting", label: "Saludo del pedido" },
+  { group: "whatsapp", key: "product", label: "Producto en WhatsApp" },
+  { group: "whatsapp", key: "variant", label: "Variante en WhatsApp" },
+  { group: "whatsapp", key: "price", label: "Precio en WhatsApp" },
+  { group: "whatsapp", key: "total", label: "Total en WhatsApp" },
+  { group: "whatsapp", key: "customerName", label: "Nombre en WhatsApp" },
+  { group: "whatsapp", key: "customerPhone", label: "Teléfono en WhatsApp" },
+  { group: "whatsapp", key: "delivery", label: "Entrega en WhatsApp" },
+  { group: "whatsapp", key: "notes", label: "Notas en WhatsApp" },
+  { group: "whatsapp", key: "confirmation", label: "Confirmación en WhatsApp" },
+  { group: "accessibility", key: "benefits", label: "Accesibilidad: beneficios" },
+  { group: "accessibility", key: "productInfo", label: "Accesibilidad: producto" },
+  { group: "accessibility", key: "catalogSummary", label: "Accesibilidad: catálogo" },
+  { group: "accessibility", key: "mobileNavigation", label: "Accesibilidad: navegación móvil" },
+  { group: "accessibility", key: "mainNavigation", label: "Accesibilidad: navegación principal" },
+  { group: "accessibility", key: "announcements", label: "Accesibilidad: avisos" },
+] as const;
+
 type PendingNavigationDelete =
   | {
       kind: "item";
@@ -272,6 +431,18 @@ export function Overview({
   };
   const updateNavigation = (patch: Partial<StoreProjectV1["navigation"]>) =>
     commit({ navigation: { ...project.navigation, ...patch } });
+  const updatePublicCopy = (group: string, key: string, value: string) => {
+    const currentGroup = project.publicCopy[group as keyof StoreProjectV1["publicCopy"]] as Record<
+      string,
+      string
+    >;
+    commit({
+      publicCopy: {
+        ...project.publicCopy,
+        [group]: { ...currentGroup, [key]: value },
+      },
+    });
+  };
   const updateNavigationItem = (
     itemId: string,
     patch: Partial<StoreProjectV1["navigation"]["items"][number]>,
@@ -941,6 +1112,44 @@ export function Overview({
                     />
                   </Field>
                 </div>
+              );
+            })}
+          </div>
+        </AccordionSection>
+
+        <AccordionSection
+          sectionKey="public-copy"
+          label="Contenido global"
+          icon={Article}
+          collapsed={collapsedSections.has("public-copy")}
+          onToggle={() => toggleSection("public-copy")}
+        >
+          <p className="form-help">
+            Estos textos aparecen en controles y estados compartidos del sitio público. El contenido
+            particular de cada sección se edita desde su propio inspector.
+          </p>
+          <div className="form-grid">
+            {PUBLIC_COPY_FIELDS.map(({ group, key, label }) => {
+              const copyGroup = project.publicCopy[
+                group as keyof StoreProjectV1["publicCopy"]
+              ] as Record<string, string>;
+              const fieldKey = `public-copy-${group}-${key}`;
+              const value = fieldValue(fieldKey, copyGroup[key] ?? "");
+              return (
+                <Field key={fieldKey} label={label} className="field--wide">
+                  <input
+                    aria-label={label}
+                    value={value}
+                    onChange={(event) =>
+                      updateField(
+                        fieldKey,
+                        event.target.value,
+                        (next) => next.trim() !== "",
+                        (next) => updatePublicCopy(group, key, next),
+                      )
+                    }
+                  />
+                </Field>
               );
             })}
           </div>

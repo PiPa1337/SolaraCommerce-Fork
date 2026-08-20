@@ -72,9 +72,9 @@ test("el asset del hero de Predeterminado muestra su uso y no se puede borrar", 
   await page.getByRole("tab", { name: "Recursos", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Recursos" })).toBeVisible();
 
-  // El hero de la demo usa posterAssetId "asset-hero" (Campaña Modo Sur).
+  // El hero de la demo usa posterAssetId "asset-hero".
   const heroAsset = page.locator(".asset-item").filter({
-    has: page.locator('input[value="Campaña Modo Sur"]'),
+    has: page.locator('input[value="Campaña de temporada"]'),
   });
   await expect(heroAsset).toBeVisible();
   await heroAsset.getByTestId("ui-asset-detail-open").click();

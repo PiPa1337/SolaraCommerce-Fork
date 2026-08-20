@@ -30,6 +30,39 @@ function homeMetaDescription(homeHtml: string): string {
 }
 
 describe("exporter", () => {
+  it("transporta el copy global personalizado a preview y exportación", () => {
+    const project = structuredClone(catalogModernV2Store);
+    project.publicCopy.navigation.cart = "Bolsa";
+    project.publicCopy.search.title = "Encontrar productos";
+
+    const preview = renderPreviewHtml(project, "draft", "/");
+    const exported = String(exportProject(project, { mode: "draft" }).files.get("index.html"));
+
+    expect(preview).toContain("Bolsa");
+    expect(exported).toContain("Bolsa");
+    expect(exported).toContain("data-solara-copy=");
+    expect(exported).toContain("Encontrar productos");
+  });
+
+  it("usa el copy global en páginas legacy, políticas y recuperación 404", () => {
+    const project = structuredClone(catalogModernStore);
+    project.publicCopy.pages.aboutEyebrow = "La historia de nuestra tienda";
+    project.publicCopy.pages.contactPurchaseTitle = "Hablemos de tu pedido";
+    project.publicCopy.pages.notFoundTitle = "Esta dirección no existe";
+    project.publicCopy.export.policyQuestionsTitle = "¿Necesitás ayuda?";
+
+    const result = exportProject(project, { mode: "production" });
+    const about = String(result.files.get("nosotros/index.html"));
+    const contact = String(result.files.get("contacto/index.html"));
+    const privacy = String(result.files.get("privacidad/index.html"));
+    const notFound = String(result.files.get("404.html"));
+
+    expect(about).toContain("La historia de nuestra tienda");
+    expect(contact).toContain("Hablemos de tu pedido");
+    expect(privacy).toContain("¿Necesitás ayuda?");
+    expect(notFound).toContain("Esta dirección no existe");
+  });
+
   it("no publica las páginas Nosotros y Contacto independientes en V2", () => {
     const result = exportProject(catalogModernV2Store, { mode: "production" });
     expect(result.files.has("nosotros/index.html")).toBe(false);
@@ -105,14 +138,14 @@ describe("exporter", () => {
     expect(snapshot.offers[0]?.variantPath).toBe(
       "/productos/manta-bruma/?variant=variant-manta-musgo",
     );
-    expect(productHtml).toContain("https://casa-luma.example/fixtures/manta-bruma.png");
+    expect(productHtml).toContain("https://tienda-referencia.example/fixtures/manta-bruma.png");
     expect(productHtml).toContain("https://schema.org/color");
     expect(collectionHtml).toContain("Casa serena");
-    expect(sitemap).toContain("https://casa-luma.example/colecciones/casa-serena/");
-    expect(sitemap).toContain("https://casa-luma.example/envios/");
-    expect(imageSitemap).toContain("https://casa-luma.example/fixtures/manta-bruma.png");
+    expect(sitemap).toContain("https://tienda-referencia.example/colecciones/casa-serena/");
+    expect(sitemap).toContain("https://tienda-referencia.example/envios/");
+    expect(imageSitemap).toContain("https://tienda-referencia.example/fixtures/manta-bruma.png");
     expect(feed).toContain(
-      "<g:image_link>https://casa-luma.example/fixtures/manta-bruma.png</g:image_link>",
+      "<g:image_link>https://tienda-referencia.example/fixtures/manta-bruma.png</g:image_link>",
     );
     expect(feed).toContain("<g:mpn>JD-12-CRU</g:mpn>");
     const noIdentifierProject = {
@@ -811,13 +844,13 @@ describe("exporter", () => {
     const modernImageSitemap = String(modern.files.get("image-sitemap.xml"));
 
     expect(legacyImageSitemap).toContain(
-      "<loc>https://casa-luma-scale.example/categorias/casa/pagina/2/</loc>",
+      "<loc>https://tienda-referencia-scale.example/categorias/casa/pagina/2/</loc>",
     );
     expect(legacyImageSitemap).not.toContain(
-      "<loc>https://casa-luma-scale.example/categorias/casa/pagina/3/</loc>",
+      "<loc>https://tienda-referencia-scale.example/categorias/casa/pagina/3/</loc>",
     );
     expect(modernImageSitemap).toContain(
-      "<loc>https://modo-sur.example/colecciones/esenciales/pagina/2/</loc>",
+      "<loc>https://tienda-referencia-modern.example/colecciones/esenciales/pagina/2/</loc>",
     );
   });
 
@@ -975,7 +1008,7 @@ describe("exporter", () => {
       expect(store.telephone).toBe(referenceStore.identity.phone);
       const contactHtml = String(result.files.get("contacto/index.html"));
       expect(contactHtml, `contacto ${mode}`).not.toContain("wa.me");
-      expect(contactHtml, `contacto ${mode}`).not.toContain("Escribir por WhatsApp");
+      expect(contactHtml, `contacto ${mode}`).not.toContain("wa.me");
       const checkoutHtml = String(result.files.get("compra/index.html"));
       expect(checkoutHtml, `compra ${mode}`).not.toContain("data-whatsapp-link");
       const cartHtml = String(result.files.get("carrito/index.html"));
@@ -1035,7 +1068,7 @@ describe("exporter", () => {
     expect(html).toContain('<meta name="robots" content="index,follow');
     expect(html).toContain('<meta name="googlebot" content="index,follow');
     expect(aboutHtml).toContain(
-      '<meta property="og:image" content="https://casa-luma.example/fixtures/manta-bruma.png">',
+      '<meta property="og:image" content="https://tienda-referencia.example/fixtures/manta-bruma.png">',
     );
     expect(aboutHtml).toContain(
       '<meta property="og:image:alt" content="Manta de algodón verde sobre un sillón claro">',
@@ -1121,7 +1154,7 @@ describe("exporter", () => {
       exportProject(project as typeof referenceStore, { mode: "draft" }).files.get("index.html"),
     );
     expect(homeHtml).toContain(
-      '<meta property="og:image" content="https://casa-luma.example/fixtures/jarra-delta.png">',
+      '<meta property="og:image" content="https://tienda-referencia.example/fixtures/jarra-delta.png">',
     );
   });
 

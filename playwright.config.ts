@@ -15,10 +15,12 @@ export default defineConfig({
   // sensibles a timing (ventanas de ~1 frame) flakea una vez por corrida bajo
   // presión de suite; cada test se verifica dos veces en contexto fresco.
   retries: 1,
-  // 4 workers: cada spec levanta su propio servidor en puerto aleatorio
+  // 8 workers (9800X3D optimizado): cada spec levanta su propio servidor en puerto aleatorio
   // (listen(0) o rangos disjuntos por archivo), así que la paralelización es
-  // segura; la suite completa baja de ~9 min a ~3 min en una máquina 8C/16T.
-  workers: 4,
+  // segura; la suite completa baja de ~9 min a ~3-4 min en una máquina 8C/16T.
+  // Smoke ampliado (15 specs) queda en ~45s-2min. Override con PLAYWRIGHT_WORKERS=6 si el IDE laggea.
+  // Default previo era 4 workers.
+  workers: Number(process.env.PLAYWRIGHT_WORKERS ?? 8),
   reporter: process.env.CI
     ? [["line"], ["html", { open: "never", outputFolder: "playwright-report" }]]
     : "list",

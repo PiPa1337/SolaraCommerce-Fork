@@ -72,7 +72,7 @@ test("edita variantes y conserva el último cambio al volver, recargar y reabrir
   await expect(dialog).toBeVisible();
   await dialog.getByRole("textbox", { name: "Título" }).fill("Lámpara Horizonte");
   await dialog.getByRole("textbox", { name: "Slug" }).fill("lampara-horizonte");
-  await dialog.getByRole("textbox", { name: "Marca" }).fill("Casa Luma");
+  await dialog.getByRole("textbox", { name: "Marca" }).fill("Marca Aurora");
   await dialog.getByRole("textbox", { name: "Descripción" }).fill("Luz puntual de lectura.");
   await dialog.getByRole("textbox", { name: "SKU" }).fill("LUZ-HOR-01");
   await dialog.getByRole("textbox", { name: "Opciones" }).fill("Color=Grafito");

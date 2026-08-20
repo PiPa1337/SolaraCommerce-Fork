@@ -293,7 +293,7 @@ test("checkout del drawer: URL wa.me con saludo, líneas, SKU y total en centavo
   expect(url.host).toBe("wa.me");
   expect(url.pathname).toBe("/5491123456789");
   const message = (url.searchParams.get("text") ?? "").replace(/[\u202F\u00A0]/g, " ");
-  expect(message).toContain("Hola Modo Sur, quiero hacer este pedido:");
+  expect(message).toContain("Hola Tienda Referencia, quiero hacer este pedido:");
   expect(message).toContain(
     "- 2 x Remera esencial de algodón (Negro / S) [MS-001-NE-S]: $ 57.700,00",
   );
@@ -301,7 +301,7 @@ test("checkout del drawer: URL wa.me con saludo, líneas, SKU y total en centavo
   expect(message).toContain("Nombre: Malena Ortiz");
   expect(message).toContain("Teléfono: 11 5555 0142");
   expect(message).toContain("Entrega: Av. Forest 842, CABA");
-  expect(message).toContain("Notas: Entregar por la tarde");
+  expect(message).toContain("Notas opcionales: Entregar por la tarde");
   expect(message).toContain("Entiendo que precio, disponibilidad, envío y pago se confirman");
   await expect(drawer.locator("[data-order-preview]")).toContainText("Total estimado: $ 57.700,00");
 });

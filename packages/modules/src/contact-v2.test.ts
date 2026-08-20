@@ -58,7 +58,9 @@ describe("Contacto V2 module contracts", () => {
     expect(contactPurchaseInfoSettings.parse({}).items).toHaveLength(3);
     expect(contactFaqSettings.parse({}).items).toHaveLength(6);
     expect(contactChannelsSettings.parse({}).showWhatsapp).toBe(true);
-    expect(contactFormSettings.parse({}).showOrderNumber).toBe(true);
+    expect(contactFormSettings.parse({}).showPhone).toBe(true);
+    expect(contactFormSettings.parse({}).emailActionLabel).toBe("Enviar por Email");
+    expect(contactFormSettings.parse({}).whatsappActionLabel).toBe("Enviar por WhatsApp");
     expect(contactWhatsappCtaSettings.parse({}).actionLabel).toBe("Iniciar conversación");
     expect(contactLocationSettings.parse({}).enabled).toBe(false);
     expect(
@@ -102,8 +104,8 @@ describe("Contacto V2 module contracts", () => {
     expect(html).toContain('class="catalog-hero-inner contact-hero"');
     expect(html).toContain('class="catalog-hero-media contact-hero-media"');
     expect(html).toContain('class="catalog-hero-background"');
-    expect(html).toContain("catalog-hero-benefits--copy");
-    expect(html).toContain("catalog-hero-benefits--band");
+    expect(html).not.toContain("catalog-hero-benefits--copy");
+    expect(html).not.toContain("catalog-hero-benefits--band");
     expect(html).not.toContain("<video");
     expect(html).toContain("images.unsplash.com");
   });
@@ -132,8 +134,17 @@ describe("Contacto V2 module contracts", () => {
       }),
     );
     expect(html).toContain("data-solara-contact-form");
-    expect(html).toContain('data-contact-email="hola@modo-sur.example"');
-    expect(html).toContain('action="mailto:hola@modo-sur.example');
+    expect(html).toContain(`data-contact-email="${catalogModernV2Store.identity.email}"`);
+    expect(html).toContain(
+      `data-contact-whatsapp="${catalogModernV2Store.whatsapp.phone.replace(/\\D/g, "")}"`,
+    );
+    expect(html).toContain(`action="mailto:${catalogModernV2Store.identity.email}`);
+    expect(html).toContain('data-contact-channel="email"');
+    expect(html).toContain('data-contact-channel="whatsapp"');
+    expect(html).toContain("Enviar por Email");
+    expect(html).toContain("Enviar por WhatsApp");
+    expect(html).not.toContain("Motivo");
+    expect(html).not.toContain("N\u00famero de pedido");
     expect(html).toContain("data-contact-status");
   });
 
