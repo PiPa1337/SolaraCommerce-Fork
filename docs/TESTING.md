@@ -69,6 +69,30 @@ La matriz de release instala Chromium, Firefox y WebKit mediante
 `VISUAL_REVIEW_STAGE=...` y escriben en `test-results/visual-review/`, que no se
 versiona.
 
+## Política de estabilidad E2E (2026-08-21)
+
+Un gate que falla intermitentemente entrena al equipo a ignorar el rojo.
+Estas reglas son obligatorias y existen porque el smoke llegó a acumular ~7
+specs inestables bajo carga paralela (verificado contra baseline `c4d71ae`;
+detalle en `TECHNICAL_DEBT.md` y plan
+`superpowers/plans/2026-08-21-flaky-e2e-runtime-debuggeable.md`).
+
+1. **Incorporación**: un spec nuevo entra al smoke sólo después de 5 corridas
+   consecutivas limpias (local, misma máquina, 8 workers).
+2. **Sincronización**: prohibido usar `waitForTimeout` fijo como espera
+   primaria. Esperar señales: roles/atributos visibles, respuestas de red
+   (`page.waitForResponse`), o el helper compartido de "runtime listo".
+3. **Presupuesto de duración**: specs con timeout declarado >10s no van a smoke;
+   specs >15s van directo a `test:e2e` full con timeout dedicado.
+4. **Gate rojo**: ante un fallo, correr el spec aislado 3×. Si pasa, registrar
+   el spec en `tests/e2e/unstable.json` (con fecha y baseline) y abrir fila en
+   `TECHNICAL_DEBT.md`. Nunca ignorar un rojo sin registro escrito.
+5. **Re-inclusión**: un spec excluido vuelve al gate tras 10/10 corridas limpias
+   verificadas con `scripts/e2e-stability.mjs` (o su sucesor), nunca a ojo.
+6. **Runtime listo**: si se agrega una señal nueva de inicialización del
+   storefront, actualizar el helper compartido (`waitForStorefrontReady`);
+   prohibido copiar esperas locales por spec.
+
 ## Flujos críticos que deben conservarse
 
 - crear una tienda limpia desde la plantilla Catalog Modern;

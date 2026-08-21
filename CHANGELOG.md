@@ -1,5 +1,17 @@
 # Changelog
 
+### Plan: estabilidad E2E + runtime debuggeable (2026-08-21)
+
+- **Plan documentado** en `docs/superpowers/plans/2026-08-21-flaky-e2e-runtime-debuggeable.md`:
+  7 tasks con criterio de éxito — medición de inestabilidad (script), contención
+  vía `tests/e2e/unstable.json`, fix raíz por familia de síntoma, re-inclusión
+  verificada (10/10), y runtime dual con esbuild (draft externo + source map,
+  production inline byte-idéntico).
+- **Política preventiva** nueva en `docs/TESTING.md`: incorporación de specs
+  (5 corridas limpias), sincronización sin `waitForTimeout` fijo, presupuesto de
+  duración por canal, protocolo ante gate rojo y re-inclusión con evidencia.
+- Filas P2 de TECHNICAL_DEBT actualizadas apuntando al plan aprobado.
+
 ### EXEs reconstruidos post-refactor (2026-08-21)
 
 - **Portable actualizado**: `build` + `desktop:build` + `desktop:package` +
