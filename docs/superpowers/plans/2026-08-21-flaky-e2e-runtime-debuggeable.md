@@ -44,6 +44,9 @@ variación entre corridas; aislados pasan. Verificado idéntico en commit base.
   `waitForStorefrontReady(page)` que espera un marcador determinista del runtime
   (atributo/evento ya existente o uno nuevo mínimo, ej:
   `document.documentElement.dataset.solaraReady === "1"`). Aplicado en C4/C8. +34 B en runtime (techo interno 61 KiB, gate 64 KiB).
+- [x] C4 galeria resuelto (setup limpia imageId de variantes; pasa workers=2).
+- [x] C8 reescrito post-tabs (secciones apiladas + details teclado + SKU).
+- [x] C11 actualizado (assets product-01; drawer v2 con inert). A27: 13/13.
 - [ ] **Assets**: esperar el resultado explícito del worker (estado en UI) en vez
   de timeout fijo; subir `testTimeout` del spec si queda >8s reales.
 - [ ] **Scale-store**: dividir "busca por ancestro" (búsqueda móvil) en spec propio
