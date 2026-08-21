@@ -15,10 +15,24 @@ test.beforeAll(async () => {
   server = createServer((request, response) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
     const requested = decodeURIComponent(url.pathname).replace(/^\/+/, "");
-    const path = requested === "" ? "index.html" : requested.endsWith("/") ? `${requested}index.html` : requested;
+    const path =
+      requested === ""
+        ? "index.html"
+        : requested.endsWith("/")
+          ? `${requested}index.html`
+          : requested;
     const file = exported.files.get(path);
-    if (!file) { response.writeHead(404).end("nf"); return; }
-    response.writeHead(200, { "Content-Type": path.endsWith(".xml") ? "application/xml" : path.endsWith(".txt") ? "text/plain" : "text/html; charset=utf-8" });
+    if (!file) {
+      response.writeHead(404).end("nf");
+      return;
+    }
+    response.writeHead(200, {
+      "Content-Type": path.endsWith(".xml")
+        ? "application/xml"
+        : path.endsWith(".txt")
+          ? "text/plain"
+          : "text/html; charset=utf-8",
+    });
     response.end(file);
   });
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
@@ -27,21 +41,40 @@ test.beforeAll(async () => {
   serverUrl = `http://127.0.0.1:${address.port}`;
 });
 
-test.afterAll(async () => { server.close(); });
+test.afterAll(async () => {
+  server.close();
+});
 
-const ROUTES = ["/", "/categorias/remeras/", "/productos/remera-esencial-de-algodon/", "/colecciones/recien-llegados/", "/contacto/", "/nosotros/", "/privacidad/"];
+const ROUTES = [
+  "/",
+  "/categorias/remeras/",
+  "/productos/remera-esencial-de-algodon/",
+  "/colecciones/recien-llegados/",
+  "/contacto/",
+  "/nosotros/",
+  "/privacidad/",
+];
 
 test("canonical unico y coherente en cada ruta", async ({ page }) => {
   for (const route of ROUTES) {
     await page.goto(new URL(route, serverUrl).toString());
-    const canonicals = await page.evaluate(() => document.querySelectorAll('link[rel="canonical"]').length);
+    const canonicals = await page.evaluate(
+      () => document.querySelectorAll('link[rel="canonical"]').length,
+    );
     expect(canonicals, `canonicals en ${route}`).toBeLessThanOrEqual(1);
-    const href = canonicals === 1 ? await page.evaluate(() => document.querySelector('link[rel="canonical"]')?.getAttribute("href") ?? "") : "";
+    const href =
+      canonicals === 1
+        ? await page.evaluate(
+            () => document.querySelector('link[rel="canonical"]')?.getAttribute("href") ?? "",
+          )
+        : "";
     if (href) {
       const expectedPath = route === "/" ? "/" : route;
       expect(href.endsWith(expectedPath), `canonical ${href} vs ruta ${expectedPath}`).toBe(true);
     }
-    const ogCount = await page.evaluate(() => document.querySelectorAll('meta[property="og:title"]').length);
+    const ogCount = await page.evaluate(
+      () => document.querySelectorAll('meta[property="og:title"]').length,
+    );
     expect(ogCount, `og:title en ${route}`).toBeLessThanOrEqual(1);
   }
 });
@@ -51,7 +84,12 @@ test("JSON-LD parseable en home y producto", async ({ page }) => {
     await page.goto(new URL(route, serverUrl).toString());
     const valid = await page.evaluate(() => {
       return [...document.querySelectorAll('script[type="application/ld+json"]')].every((s) => {
-        try { JSON.parse(s.textContent ?? ""); return true; } catch { return false; }
+        try {
+          JSON.parse(s.textContent ?? "");
+          return true;
+        } catch {
+          return false;
+        }
       });
     });
     expect(valid, `JSON-LD valido en ${route}`).toBe(true);

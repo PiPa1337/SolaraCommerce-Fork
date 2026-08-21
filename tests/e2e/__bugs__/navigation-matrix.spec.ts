@@ -16,11 +16,30 @@ test.beforeAll(async () => {
   server = createServer((request, response) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
     const requested = decodeURIComponent(url.pathname).replace(/^\/+/, "");
-    const path = requested === "" ? "index.html" : requested.endsWith("/") ? `${requested}index.html` : requested;
+    const path =
+      requested === ""
+        ? "index.html"
+        : requested.endsWith("/")
+          ? `${requested}index.html`
+          : requested;
     const file = exported.files.get(path);
-    if (!file) { response.writeHead(404, {"Content-Type": "text/html"}).end(notFound); return; }
+    if (!file) {
+      response.writeHead(404, { "Content-Type": "text/html" }).end(notFound);
+      return;
+    }
     const ext = path.split(".").pop();
-    response.writeHead(200, { "Content-Type": ext === "css" ? "text/css" : ext === "js" ? "text/javascript" : ext === "webp" ? "image/webp" : ext === "png" ? "image/png" : "text/html; charset=utf-8" });
+    response.writeHead(200, {
+      "Content-Type":
+        ext === "css"
+          ? "text/css"
+          : ext === "js"
+            ? "text/javascript"
+            : ext === "webp"
+              ? "image/webp"
+              : ext === "png"
+                ? "image/png"
+                : "text/html; charset=utf-8",
+    });
     response.end(file);
   });
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
@@ -29,22 +48,35 @@ test.beforeAll(async () => {
   serverUrl = `http://127.0.0.1:${address.port}`;
 });
 
-test.afterAll(async () => { server.close(); });
+test.afterAll(async () => {
+  server.close();
+});
 
-const PAGES = ["/", "/categorias/remeras/", "/productos/remera-esencial-de-algodon/", "/colecciones/recien-llegados/", "/contacto/", "/nosotros/", "/carrito/", "/checkout/"];
+const PAGES = [
+  "/",
+  "/categorias/remeras/",
+  "/productos/remera-esencial-de-algodon/",
+  "/colecciones/recien-llegados/",
+  "/contacto/",
+  "/nosotros/",
+  "/carrito/",
+  "/checkout/",
+];
 
 test("todo link interno responde sin 404 ni redirect", async ({ page }) => {
   const broken: string[] = [];
   for (const from of PAGES) {
     await page.goto(new URL(from, serverUrl).toString());
     const hrefs = await page.evaluate(() => {
-      return [...document.querySelectorAll('a[href]')]
+      return [...document.querySelectorAll("a[href]")]
         .map((a) => (a as HTMLAnchorElement).getAttribute("href") ?? "")
         .filter((href) => href.startsWith("/") && !href.startsWith("//"));
     });
     const unique = [...new Set(hrefs)];
     for (const href of unique) {
-      const response = await page.request.get(new URL(href, serverUrl).toString(), { maxRedirects: 0 });
+      const response = await page.request.get(new URL(href, serverUrl).toString(), {
+        maxRedirects: 0,
+      });
       if (response.status() !== 200) broken.push(`${from} -> ${href} = ${response.status()}`);
     }
   }
@@ -56,7 +88,12 @@ test("rutas solo existen con trailing slash (sin duplicados)", async ({ page }) 
   // existe como archivo y NO debe existir una copia .html paralela.
   // En V2, /contacto/ y /nosotros/ no existen como paginas independientes
   // (son secciones del home); validar solo rutas que el contrato V2 publica.
-  const routes = ["/categorias/remeras", "/productos/remera-esencial-de-algodon", "/buscar", "/carrito"];
+  const routes = [
+    "/categorias/remeras",
+    "/productos/remera-esencial-de-algodon",
+    "/buscar",
+    "/carrito",
+  ];
   for (const route of routes) {
     const withSlash = await page.request.get(new URL(`${route}/`, serverUrl).toString());
     expect(withSlash.status(), `${route}/`).toBe(200);
