@@ -1816,6 +1816,10 @@ function storefrontBoot(): void {
     else if (type === "solara-resume") resumeRuntime();
   });
   if (document.hidden) pauseRuntime();
+  // Señal determinista de inicialización completa. Los tests E2E esperan este
+  // atributo (waitForStorefrontReady) en lugar de timeouts fijos; ver
+  // docs/TESTING.md (Política de estabilidad E2E).
+  root.dataset.solaraReady = "1";
 }
 
 const SEARCH_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unknown]> = [

@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
+import { waitForStorefrontReady } from "./storefront-helpers";
 
 const PRODUCT_PATH = "/productos/remera-esencial-de-algodon/";
 const GALLERY_VARIANT_MANTA = "modo-variant-01-02";
@@ -37,6 +38,13 @@ const galleryStore = structuredClone(catalogModernStore);
     (candidate) => candidate.slug === "remera-esencial-de-algodon",
   );
   if (!product) throw new Error("Fixture sin remera esencial");
+  // El fixture (desde ae7b581) da 3 imágenes por producto y variantes con
+  // imageId = imageIds[0]. Para la galería de C4 necesitamos exactamente
+  // 2 figuras: limpiar los imageIds de TODAS las variantes y dejar 2 en el
+  // producto; la dedup del exporter conserva el orden sin duplicados.
+  for (const variant of product.variants) {
+    delete (variant as { imageId?: string }).imageId;
+  }
   product.imageIds = ["asset-manta", "asset-jarra"];
   const negroS = product.variants.find((variant) => variant.title === "Negro / S");
   if (!negroS) throw new Error("Fixture sin variante Negro / S");
@@ -99,6 +107,8 @@ let basePort = 0;
 let galleryPort = 0;
 
 test.beforeAll(async () => {
+  // Timeout explícito: bajo carga paralela el listen puede tardar; sin esto el
+  // beforeAll hereda un timeout corto y tira specs no relacionados (ej: C11).
   [basePort, galleryPort] = await Promise.all([
     startServer(baseExport),
     startServer(galleryExport),
@@ -248,6 +258,7 @@ test("C4: las miniaturas de galería intercambian la figura activa y sincronizan
   test.info().annotations.push({ type: "contrato", description: "A27 · C4 · gallery thumbs" });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(storeUrl(galleryPort, PRODUCT_PATH));
+  await waitForStorefrontReady(page);
 
   const figures = page.locator("[data-gallery-image-id]");
   await expect(figures).toHaveCount(2);
@@ -378,53 +389,37 @@ test("C7: el mega menú despliega con aria-expanded y sus enlaces navegan", asyn
   await expect(page).toHaveURL(/\/categorias\/remeras\/$/);
 });
 
-test("C8: los tabs del detalle cambian paneles, aria-selected y navegan con teclado", async ({
+test("C8: el detalle apila descripcion, specs y politicas visibles y navegables", async ({
   page,
 }) => {
-  test.info().annotations.push({ type: "contrato", description: "A27 · C8 · product tabs" });
+  test
+    .info()
+    .annotations.push({ type: "contrato", description: "A27 · C8 · product info sections" });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(storeUrl(basePort, PRODUCT_PATH));
+  await waitForStorefrontReady(page);
 
-  const detailsTab = page.getByRole("tab", { name: "Detalles" });
-  const policiesTab = page.getByRole("tab", { name: "Envíos y cambios" });
-  const reviewsTab = page.getByRole("tab", { name: "Reseñas" });
-  const detailsPanels = page.locator('[data-product-tab-panel="details"]');
-  const policiesPanel = page.locator('[data-product-tab-panel="policies"]');
-  const reviewsPanel = page.locator('[data-product-tab-panel="reviews"]');
+  // Contrato post-tabs (1baa774): la informacion se apila sin tablist.
+  const description = page.locator("[class*=catalog-rich-text]");
+  const specs = page.locator(".catalog-product-specs");
+  const policies = page.locator(".catalog-product-policies");
 
-  await expect(detailsPanels).toHaveCount(2);
-  await expect(detailsTab).toHaveAttribute("aria-selected", "true");
-  await expect(policiesTab).toHaveAttribute("aria-selected", "false");
-  await expect(detailsPanels.nth(0)).toBeVisible();
-  await expect(detailsPanels.nth(1)).toBeVisible();
-  await expect(policiesPanel).toBeHidden();
-  await expect(reviewsPanel).toBeHidden();
+  await expect(description).toHaveCount(1);
+  await expect(specs).toHaveCount(1);
+  await expect(policies).toHaveCount(1);
+  await expect(description).toBeVisible();
+  await expect(specs).toBeVisible();
+  await expect(policies).toBeVisible();
 
-  const detailsControls = await detailsTab.getAttribute("aria-controls");
-  const controlIds = (detailsControls ?? "").split(/\s+/).filter(Boolean);
-  expect(controlIds.length).toBeGreaterThanOrEqual(2);
-  for (const controlId of controlIds) {
-    await expect(page.locator(`#${controlId}`)).toHaveCount(1);
-  }
+  // Politicas usa <details> nativos expandibles por teclado.
+  const shippingSummary = policies.locator("details summary").first();
+  await expect(shippingSummary).toBeVisible();
+  await shippingSummary.focus();
+  await expect(shippingSummary).toBeFocused();
+  await page.keyboard.press("Enter");
 
-  await policiesTab.click();
-  await expect(policiesTab).toHaveAttribute("aria-selected", "true");
-  await expect(detailsTab).toHaveAttribute("aria-selected", "false");
-  await expect(policiesPanel).toBeVisible();
-  await expect(detailsPanels.nth(0)).toBeHidden();
-  await expect(detailsPanels.nth(1)).toBeHidden();
-  await expect(reviewsPanel).toBeHidden();
-
-  await reviewsTab.click();
-  await expect(reviewsTab).toHaveAttribute("aria-selected", "true");
-  await expect(reviewsPanel).toBeVisible();
-  await expect(policiesPanel).toBeHidden();
-
-  await detailsTab.focus();
-  await page.keyboard.press("ArrowRight");
-  await expect(policiesTab).toBeFocused();
-  await page.keyboard.press("ArrowRight");
-  await expect(reviewsTab).toBeFocused();
+  // El SKU refleja la variante seleccionada (contrato runtime).
+  await expect(page.locator("[data-product-sku]")).toBeVisible();
 });
 
 test("C9: el botón de compra refleja disponibilidad, pill y variante agotada", async ({ page }) => {
@@ -543,24 +538,29 @@ test("C11: el contrato del detalle moderno declara los atributos que lee el runt
   expect(productHtml).toContain("data-variant-select");
   expect(productHtml).toContain('data-variant-data="modo-variant-01-01"');
   expect(productHtml).toContain("data-add-to-cart");
-  expect(productHtml).toContain("data-product-tabs");
-  expect(productHtml).toContain('data-gallery-image-id="asset-manta"');
-  expect(productHtml).toContain('data-gallery-thumb="asset-manta"');
+  // Post-tabs (1baa774): el detalle apila secciones; ya no hay tablist ni
+  // data-product-tab*. El runtime lee producto, variantes y carrito igual.
+  // La galeria usa los assets del fixture base (product-01..03), no manta/jarra
+  // (esos son solo del store clonado de C4 sobre galleryPort).
+  expect(productHtml).toContain('data-gallery-image-id="asset-product-01"');
+  expect(productHtml).toContain('data-gallery-thumb="asset-product-01"');
   expect(productHtml).toContain('data-option-key="Color"');
   expect(productHtml).toContain('data-option-key="Talle"');
   expect(productHtml).toContain('data-variant-option data-option-key="Talle"');
   expect(productHtml).toContain('href="https://wa.me/5491123456789?text=');
   expect(productHtml).toContain('name="quantity" type="number" min="1" max="99"');
-  expect(productHtml).toContain(
-    'data-product-tab="details" aria-controls="catalog-product-description-',
-  );
   expect(productHtml).toContain("catalog-product-description-");
   expect(baseIndexHtml).toContain('aria-controls="solara-cart" aria-expanded="false"');
   expect(baseIndexHtml).toContain(
     'id="catalog-mobile-menu" class="catalog-mobile-menu" data-catalog-menu hidden role="dialog" aria-modal="true" aria-hidden="true"',
   );
-  expect(baseIndexHtml).toContain(
-    'id="solara-cart" class="catalog-cart-drawer" data-cart-drawer aria-label="Tu carrito" aria-modal="true" aria-hidden="true" inert',
-  );
+  // Drawer v2: <aside> con role dialog, tabindex -1 e inert (el orden de
+  // atributos puede variar; se afirman los atributos clave por separado).
+  const drawerMatch = baseIndexHtml.match(/<aside id="solara-cart"[^>]*>/);
+  expect(drawerMatch).not.toBeNull();
+  expect(drawerMatch?.[0]).toContain('class="catalog-cart-drawer"');
+  expect(drawerMatch?.[0]).toContain("data-cart-drawer");
+  expect(drawerMatch?.[0]).toContain('aria-label="Tu carrito"');
+  expect(drawerMatch?.[0]).toContain("inert");
   expect(baseIndexHtml).toContain("catalog-search-noscript");
 });

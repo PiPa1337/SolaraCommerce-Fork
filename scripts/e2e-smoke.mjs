@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 // e2e-smoke — smoke ampliado (~2min, 15 specs) con cache de build Studio
@@ -120,6 +120,27 @@ function spawnCmd(cmd, args, opts = {}) {
 const rawArgs = process.argv.slice(2);
 const isFull = rawArgs.includes("--full");
 const extraArgs = rawArgs.filter((a) => a !== "--full");
+// Contención de inestabilidad: los specs listados en unstable.json salen del
+// gate diario (fallan intermitentemente bajo carga; ver TECHNICAL_DEBT.md y
+// docs/TESTING.md). SMOKE_INCLUDE_UNSTABLE=1 los vuelve a incluir para el canal
+// manual/semanal. Un spec se quita de la lista sólo con 10/10 corridas limpias.
+let unstableSpecs = [];
+const unstablePath = resolve("tests/e2e/unstable.json");
+if (existsSync(unstablePath) && process.env.SMOKE_INCLUDE_UNSTABLE !== "1") {
+  try {
+    const parsed = JSON.parse(readFileSync(unstablePath, "utf8"));
+    unstableSpecs = parsed.specs.map((entry) => entry.path);
+  } catch {
+    console.warn("[smoke] unstable.json inválido: se corren todos los specs");
+  }
+}
+const activeSpecs = smokeSpecs.filter((spec) => !unstableSpecs.includes(spec));
+if (unstableSpecs.length > 0) {
+  console.log(
+    `[smoke] ⏭ ${unstableSpecs.length} specs inestables excluidos (SMOKE_INCLUDE_UNSTABLE=1 para incluirlos):`,
+  );
+  for (const spec of unstableSpecs) console.log(`[smoke]   - ${spec}`);
+}
 const needBuild = shouldBuild();
 if (needBuild) {
   console.log("[smoke] ▶ corepack pnpm --filter @solara/studio build");
@@ -141,11 +162,11 @@ if (isFull) {
 }
 // Construir comando playwright con workers optimizados (8 por defecto, env override)
 // y solo Chromium (smoke no necesita Firefox/WebKit)
-const playwrightArgs = ["exec", "playwright", "test", ...smokeSpecs, ...extraArgs];
+const playwrightArgs = ["exec", "playwright", "test", ...activeSpecs, ...extraArgs];
 console.log(`[smoke] ▶ corepack pnpm ${playwrightArgs.join(" ")}`);
 const code = await spawnCmd("corepack", ["pnpm", ...playwrightArgs]);
 if (code !== 0) {
   console.error(`[smoke] ✖ smoke fallo con codigo ${code}`);
   process.exit(code ?? 1);
 }
-console.log("[smoke] ✔ smoke ampliado 15 specs paso");
+console.log(`[smoke] ✔ smoke ampliado ${activeSpecs.length} specs paso`);
