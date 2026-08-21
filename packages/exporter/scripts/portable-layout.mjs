@@ -125,7 +125,20 @@ export function relativePortablePath(root, pathname) {
 async function writeJsonAtomic(pathname, value) {
   const temporary = `${pathname}.tmp-${randomBytes(8).toString("hex")}`;
   await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, "utf8");
-  await rename(temporary, pathname);
+  // Windows puede rechazar el rename con EPERM/EBUSY transitorio cuando dos
+  // launches concurrentes escriben instance.json (test adversarial 13). El
+  // reintento con backoff absorbe el lock; mismo patrón que local-project-storage.
+  const attempts = 4;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await rename(temporary, pathname);
+      return;
+    } catch (error) {
+      const transient = ["EPERM", "EBUSY", "EACCES"].includes(error?.code);
+      if (attempt === attempts || !transient) throw error;
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 200 * attempt));
+    }
+  }
 }
 
 /**

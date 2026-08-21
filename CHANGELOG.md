@@ -1,5 +1,17 @@
 # Changelog
 
+### Fix flaky singleInstance + refactor exporter (2026-08-21)
+
+- **Fix flaky test adversarial 13**: `writeJsonAtomic` en `portable-layout.mjs`
+  reintenta renames con EPERM/EBUSY/EACCES transitorios (4 intentos con
+  backoff), mismo patrón que `renameWithRetry` del storage local. Elimina el
+  fallo intermitente de `singleInstance` bajo carga paralela.
+- **Exporter modular (parte 1)**: `html.ts` (escape), `urls.ts` (baseUrl,
+  prefijado, URLs absolutas), `whatsapp.ts` (teléfono, links, copy) y
+  `assets.ts` (lookup con caché, extensiones, rutas de producto) extraídos de
+  `index.ts`; el barrel preserva la API. index.ts baja de 2797 a ~2700 líneas.
+  Typecheck + 253 tests del paquete verdes.
+
 ### Refactor schema + CI Linux (2026-08-21)
 
 - **Schema modular**: `project-schema` se divide sin cambiar la API pública:
