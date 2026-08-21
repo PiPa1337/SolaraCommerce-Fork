@@ -9,6 +9,12 @@
   structural sharing condicional para el historial (P3, sólo si el uso real
   lo justifica). Cada fila cita la verificación que respalda el estado actual.
 
+### Refactor exporter: audit (2026-08-21)
+
+- **Auditoría modular**: `audit.ts` extrae `auditProject` y `auditReport` del
+  monolito. index.ts baja a ~1975 líneas (desde 2797 original, -30%).
+  Typecheck + 253 tests verdes, check:quick completo OK.
+
 ### Deuda E2E documentada + refactor exporter feeds (2026-08-21)
 
 - **Triaje de specs E2E inestables**: se documenta en TECHNICAL_DEBT el set de
