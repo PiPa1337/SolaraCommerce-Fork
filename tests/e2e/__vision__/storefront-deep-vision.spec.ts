@@ -15,12 +15,23 @@ const OUTPUT_ROOT = "screenshots/storefront-vision";
 
 const VIEWPORTS = [
   { name: "320", width: 320, height: 800 },
+  { name: "360", width: 360, height: 800 },
   { name: "390", width: 390, height: 844 },
+  { name: "412", width: 412, height: 915 },
   { name: "430", width: 430, height: 932 },
+  { name: "450", width: 450, height: 932 },
+  { name: "480", width: 480, height: 960 },
+  { name: "600", width: 600, height: 960 },
   { name: "768", width: 768, height: 1024 },
+  { name: "900", width: 900, height: 1000 },
+  { name: "1023", width: 1023, height: 900 },
   { name: "1024", width: 1024, height: 768 },
+  { name: "1100", width: 1100, height: 900 },
+  { name: "1199", width: 1199, height: 900 },
   { name: "1280", width: 1280, height: 900 },
+  { name: "1366", width: 1366, height: 768 },
   { name: "1440", width: 1440, height: 900 },
+  { name: "1600", width: 1600, height: 900 },
   { name: "1920", width: 1920, height: 1080 },
 ] as const;
 
@@ -88,7 +99,6 @@ for (const viewport of VIEWPORTS) {
     test("captura de rutas", async ({ page }) => {
       mkdirSync(join(OUTPUT_ROOT, viewport.name), { recursive: true });
       for (const route of PAGES) {
-        if (route.dir === "busqueda" && viewport.width < 390) continue;
         await page.goto(new URL(route.path, serverUrl).toString());
         await revealPage(page);
         await page.screenshot({ path: join(OUTPUT_ROOT, viewport.name, `${route.dir}.png`), fullPage: true });
