@@ -174,21 +174,9 @@ function parseProject(projectInput: StoreProjectV1, operation: string): StorePro
   throw new Error(`No se puede ${operation}: el proyecto es inválido. ${details}`);
 }
 
-function escapeHtml(value: string): string {
-  return value.replace(
-    /[&<>"']/g,
-    (character) =>
-      ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#039;",
-      })[character] ?? character,
-  );
-}
+import { escapeAttribute, escapeHtml, escapeXml, jsonForScript } from "./html.js";
 
-const escapeAttribute = escapeHtml;
+export { escapeAttribute, escapeHtml, escapeXml, jsonForScript };
 
 function formatMoney(amount: number, project: StoreProjectV1): string {
   return formatPrice(amount, {
@@ -198,130 +186,49 @@ function formatMoney(amount: number, project: StoreProjectV1): string {
   });
 }
 
-function escapeXml(value: string): string {
-  return escapeHtml(value);
-}
+import {
+  absoluteResourceUrl,
+  absoluteUrl,
+  assetHref,
+  baseUrlPathname,
+  normalizeBaseUrl,
+  prefixDocumentHrefs,
+  resourceHref,
+} from "./urls.js";
 
-function jsonForScript(value: unknown): string {
-  return JSON.stringify(value).replace(/</g, "\\u003c");
-}
+export {
+  absoluteResourceUrl,
+  absoluteUrl,
+  assetHref,
+  baseUrlPathname,
+  normalizeBaseUrl,
+  prefixDocumentHrefs,
+  resourceHref,
+};
 
-function normalizeBaseUrl(baseUrl: string): string {
-  return baseUrl.replace(/\/+$/, "");
-}
+import { buildWhatsAppLink, interpolatePublicCopy, publicWhatsAppPhone } from "./whatsapp.js";
 
-function baseUrlPathname(baseUrl: string): string {
-  try {
-    return new URL(baseUrl).pathname.replace(/\/+$/, "");
-  } catch {
-    return "";
-  }
-}
+export { buildWhatsAppLink, interpolatePublicCopy, publicWhatsAppPhone };
 
-/** Prefija una ruta root-absoluta con la subcarpeta de la baseUrl si existe. */
-function assetHref(project: StoreProjectV1, path: string): string {
-  const prefix = baseUrlPathname(project.baseUrl);
-  return prefix ? `${prefix}${path}` : path;
-}
+import {
+  assetExtension,
+  imageFor,
+  imageUrl,
+  mimeTypeExtension,
+  productImagePaths,
+  videoFor,
+  videoUrl,
+} from "./assets.js";
 
-/**
- * Prefija los enlaces internos root-absolutos de un documento con la
- * subcarpeta de la baseUrl (paginación, breadcrumbs, cards, navegación de
- * datos del proyecto, forms, imágenes y videos). Cubre exporter y módulos en
- * un único punto y no duplica rutas ya prefijadas.
- */
-function prefixDocumentHrefs(project: StoreProjectV1, document: string): string {
-  const prefix = baseUrlPathname(project.baseUrl);
-  if (!prefix) return document;
-  // La posición del lookahead ya está después de la barra inicial: el prefijo
-  // se compara sin esa barra (p.ej. "tienda/" para baseUrl "/tienda"). El
-  // espacio previo evita prefijar atributos compuestos como data-base-href.
-  const escapedPrefix = prefix.slice(1).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return document.replace(
-    new RegExp(`(\\s)(href|action|src|poster)="/(?!/|${escapedPrefix}/)`, "g"),
-    `$1$2="${prefix}/`,
-  );
-}
-
-function absoluteUrl(project: StoreProjectV1, path: string): string {
-  return `${normalizeBaseUrl(project.baseUrl)}${path.startsWith("/") ? path : `/${path}`}`;
-}
-
-function absoluteResourceUrl(project: StoreProjectV1, value: string): string {
-  return /^https?:\/\//i.test(value) ? value : absoluteUrl(project, value);
-}
-
-/**
- * Recursos servidos por el propio sitio deben seguir siendo relativos en el
- * HTML. La baseUrl puede ser todavía el dominio de ejemplo mientras se
- * trabaja localmente; usarla para el preload dispararía una petición externa
- * fallida aunque el `<img>` relativo sí pudiera cargar.
- */
-function resourceHref(project: StoreProjectV1, value: string): string {
-  return /^https?:\/\//i.test(value) ? value : assetHref(project, value);
-}
-
-function publicWhatsAppPhone(project: StoreProjectV1): string {
-  const phone = project.whatsapp.phone.trim();
-  if (!phone || phone === CATALOG_MODERN_PLACEHOLDER_PHONE) return "";
-  return phone;
-}
-
-function buildWhatsAppLink(project: StoreProjectV1, message: string): string {
-  const phone = publicWhatsAppPhone(project).replace(/\D/g, "");
-  if (!phone) return "";
-  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-}
-
-function interpolatePublicCopy(template: string, values: Record<string, string>): string {
-  return template.replace(/\{(\w+)\}/g, (_, key: string) => values[key] ?? `{${key}}`);
-}
-
-const imageLookupCache = new WeakMap<object, ReadonlyMap<string, ImageAsset>>();
-const videoLookupCache = new WeakMap<object, ReadonlyMap<string, VideoAsset>>();
-
-function imageFor(project: StoreProjectV1, assetId: string | undefined): ImageAsset | undefined {
-  if (!assetId) return undefined;
-  let lookup = imageLookupCache.get(project);
-  if (!lookup) {
-    lookup = new Map(project.assets.map((asset) => [asset.id, asset]));
-    imageLookupCache.set(project, lookup);
-  }
-  return lookup.get(assetId);
-}
-
-function imageUrl(project: StoreProjectV1, assetId: string | undefined): string | undefined {
-  const asset = imageFor(project, assetId);
-  if (!asset) return undefined;
-  if (asset.source.startsWith("data:")) return `/assets/${asset.hash}.${assetExtension(asset)}`;
-  return asset.source;
-}
-
-function videoFor(project: StoreProjectV1, assetId: string | undefined): VideoAsset | undefined {
-  if (!assetId) return undefined;
-  let lookup = videoLookupCache.get(project);
-  if (!lookup) {
-    lookup = new Map(project.videos.map((video) => [video.id, video]));
-    videoLookupCache.set(project, lookup);
-  }
-  return lookup.get(assetId);
-}
-
-function videoUrl(project: StoreProjectV1, assetId: string | undefined): string | undefined {
-  const asset = videoFor(project, assetId);
-  if (!asset) return undefined;
-  if (asset.source.startsWith("data:")) return `/assets/${asset.hash}.${assetExtension(asset)}`;
-  return asset.source;
-}
-
-function productImagePaths(project: StoreProjectV1, product: Product, variant?: Variant): string[] {
-  const ids = [variant?.imageId, ...product.imageIds].filter((id): id is NonNullable<typeof id> =>
-    Boolean(id),
-  );
-  return [...new Set(ids)]
-    .map((assetId) => imageUrl(project, assetId))
-    .filter((url): url is string => Boolean(url));
-}
+export {
+  assetExtension,
+  imageFor,
+  imageUrl,
+  mimeTypeExtension,
+  productImagePaths,
+  videoFor,
+  videoUrl,
+};
 
 function offerAvailability(variant: Variant): CommerceOfferSnapshot["availability"] {
   return variant.stockStatus;
@@ -371,17 +278,6 @@ export function buildCommerceSnapshot(project: StoreProjectV1): CommerceSnapshot
     products,
     offers: products.flatMap((product) => product.offers),
   };
-}
-
-function assetExtension(asset: ImageAsset | VideoAsset): string {
-  const extension = mimeTypeExtension(asset.mimeType);
-  return extension || "bin";
-}
-
-function mimeTypeExtension(mimeType: string | undefined): string | undefined {
-  const subtype = mimeType?.split("/")[1]?.split(";")[0]?.toLowerCase();
-  if (!subtype) return undefined;
-  return subtype === "jpeg" ? "jpg" : subtype;
 }
 
 function sourceExtension(source: string, fallback: string): string {
