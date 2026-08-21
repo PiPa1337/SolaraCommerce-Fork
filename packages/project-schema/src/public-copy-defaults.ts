@@ -116,6 +116,7 @@ export const PUBLIC_COPY_DEFAULTS = {
     selection: "Tu selección",
     prepare: "Prepará el pedido para revisar productos y total antes de abrir WhatsApp.",
     invalidItems: "Retirá los productos no disponibles del carrito antes de enviar el pedido.",
+    emptyCart: "Tu carrito está vacío: agregá productos antes de preparar el pedido.",
     total: "Total estimado",
     delivery: "Entrega",
     disclaimer: "Entiendo que precio, disponibilidad, envío y pago se confirman por este medio.",

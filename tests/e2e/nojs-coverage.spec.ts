@@ -6,8 +6,21 @@ import { exportProject } from "@solara/exporter";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { referenceStore } from "@solara/project-schema/fixture";
 
+// Servir TODOS los fixtures reales: el fixture catalogModern usa 12 webp de
+// producto + hero/pngs legacy; el reference usa casa-luma/manta/jarra. Si falta
+// uno, la página dispara 404 en consola y este spec lo marca como fallo.
+const FIXTURE_NAMES = [
+  "casa-luma-hero.png",
+  "manta-bruma.png",
+  "jarra-delta.png",
+  "modo-sur-hero.png",
+  "modo-sur-remera.png",
+  "modo-sur-jean.png",
+  "modo-sur-camisa.png",
+  ...Array.from({ length: 12 }, (_, i) => `modo-sur-product-${String(i + 1).padStart(2, "0")}.webp`),
+];
 const fixtureFiles = new Map<string, Uint8Array>(
-  ["casa-luma-hero.png", "manta-bruma.png", "jarra-delta.png"].map((name) => [
+  FIXTURE_NAMES.map((name) => [
     `fixtures/${name}`,
     readFileSync(resolve("apps/studio/public/fixtures", name)),
   ]),
@@ -76,8 +89,8 @@ test("E1/C2: rutas útiles sin JavaScript y sin errores de consola/red", async (
       for (const javascriptEnabled of [false, true]) {
         const context = await browser.newContext({ javaScriptEnabled: javascriptEnabled });
         const page = await context.newPage();
-        await page.route(/\/fixtures\/[a-z0-9-]+\.png$/, (route) => {
-          const pathMatch = /\/fixtures\/([a-z0-9-]+\.png)$/.exec(
+        await page.route(/\/fixtures\/[a-z0-9-]+\.(png|webp)$/, (route) => {
+          const pathMatch = /\/fixtures\/([a-z0-9-]+\.(?:png|webp))$/.exec(
             new URL(route.request().url()).pathname,
           );
           const name = pathMatch?.[1];
@@ -86,7 +99,11 @@ test("E1/C2: rutas útiles sin JavaScript y sin errores de consola/red", async (
               ? readFileSync(resolve("apps/studio/public/fixtures", name))
               : undefined;
             if (content) {
-              route.fulfill({ status: 200, contentType: "image/png", body: content });
+              route.fulfill({
+                status: 200,
+                contentType: name.endsWith(".webp") ? "image/webp" : "image/png",
+                body: content,
+              });
             } else {
               route.abort();
             }

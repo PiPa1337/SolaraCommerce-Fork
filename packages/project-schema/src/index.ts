@@ -235,6 +235,10 @@ export const PublicCopySchema = z.object({
         .string()
         .min(1)
         .default("Retirá los productos no disponibles del carrito antes de enviar el pedido."),
+      emptyCart: z
+        .string()
+        .min(1)
+        .default("Tu carrito está vacío: agregá productos antes de preparar el pedido."),
       total: z.string().min(1).default("Total estimado"),
       delivery: z.string().min(1).default("Entrega"),
       disclaimer: z

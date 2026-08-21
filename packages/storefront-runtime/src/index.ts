@@ -935,7 +935,17 @@ function storefrontBoot(): void {
   document.querySelectorAll<HTMLFormElement>("[data-checkout-form]").forEach((form) => {
     form.addEventListener("submit", (event) => {
       event.preventDefault();
-      if (cart.length === 0 || !form.reportValidity()) return;
+      if (cart.length === 0) {
+        // Checkout sin carrito: feedback visible en vez de submit silencioso.
+        const emptyPreview = form.querySelector<HTMLElement>("[data-order-preview]");
+        if (emptyPreview) {
+          emptyPreview.textContent = x.emptyCart;
+          emptyPreview.setAttribute("role", "alert");
+          emptyPreview.removeAttribute("hidden");
+        }
+        return;
+      }
+      if (!form.reportValidity()) return;
       // Fuerza fetch fresco para checkout (precio/autorización siempre del catálogo actual)
       freshCatalog = null;
       void reconcileCart().then((ok) => {

@@ -1,5 +1,10 @@
 # Changelog
 
+### Checkout sin carrito: feedback visible (2026-08-21)
+
+- Nuevo copy emptyCart en el schema y feedback visible en data-order-preview
+  cuando se envía /compra/ sin items; antes fallaba silenciosamente.
+
 ### Storefront: escala de espaciado + auditoria geometrica (2026-08-21)
 
 - Gaps del storefront V2 migrados a escala .25/.5/.75/1/1.25/1.5/2/3rem
