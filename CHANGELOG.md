@@ -1,5 +1,11 @@
 # Changelog
 
+### Auditoria UI/UX: P3 completado (2026-08-21)
+
+- Icono de tab activa en duotone (antes fill): distincion mas clara del area
+  activa sin perder sobriedad. Microcopy verificado: sin exclamaciones ni
+  cliches, espanol directo ya era correcto.
+
 ### EXEs reconstruidos con fixes UI/UX (2026-08-21)
 
 - Portable regenerado con los fixes de la auditoria visual: build +

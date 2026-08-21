@@ -976,7 +976,7 @@ export function Studio({
                 tabIndex={tab === id ? 0 : -1}
                 onClick={() => selectTab(id)}
               >
-                <Icon aria-hidden size={19} weight={tab === id ? "fill" : "regular"} />
+                <Icon aria-hidden size={19} weight={tab === id ? "duotone" : "regular"} />
                 <span>{label}</span>
                 {dirtyTabs.has(id) ? (
                   <>
