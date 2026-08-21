@@ -438,6 +438,7 @@
 .dashboard-store-card:hover,
 .dashboard-store-card.is-selected {
   border-color: rgb(231 170 61 / 0.78);
+  box-shadow: 0 6px 22px rgb(231 170 61 / 0.1);
   background: linear-gradient(145deg, rgb(38 32 25 / 0.94), rgb(16 17 23 / 0.94));
 }
 
@@ -1301,6 +1302,7 @@
 
   .dashboard-cosmic .dashboard-store-card:hover {
     transform: none;
+    box-shadow: none;
   }
 }
 
@@ -1638,6 +1640,20 @@
 }
 
 @media (max-width: 560px) {
+  /* Salud compacta en móvil: menos alto antes de las cards de tiendas. */
+  .dashboard-cosmic-health {
+    gap: 6px 14px;
+    padding: 8px 10px;
+  }
+
+  .dashboard-cosmic-health__stats {
+    gap: 4px 16px;
+  }
+
+  .dashboard-cosmic-health__title {
+    min-width: 120px;
+  }
+
   .guided-stats > div {
     padding: 13px 10px;
   }

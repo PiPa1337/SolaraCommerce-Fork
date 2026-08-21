@@ -1,5 +1,12 @@
 # Changelog
 
+### Auditoria UI/UX fase 2: fixes visuales (2026-08-21)
+
+- Salud del dashboard compacta en movil: menos alto antes de las cards.
+- Hover de tiendas visible: glow naranja suave + sombra, sin transform bajo
+  reduced-motion.
+- Deuda documentada: specs unitarios del exporter inestables bajo carga
+  (timeout 5s) que pasan aislados; pendiente subir testTimeout.
 ### Auditoria UI/UX con vision real + estabilidad E2E (2026-08-21)
 
 - Infraestructura de vision: nuevo spec tests/e2e/__vision__/studio-vision.spec.ts
