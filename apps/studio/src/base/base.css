@@ -53,6 +53,16 @@
   --ui-shadow-sm: var(--shadow-float);
   --ui-shadow-md: var(--shadow-panel);
   --ui-focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  /* Escala de espaciado (multiplos de 4px): contrato de alineacion para el
+  editor. Los valores intermedios (7/9/14px...) migran a esta escala. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
 }
 
 * {

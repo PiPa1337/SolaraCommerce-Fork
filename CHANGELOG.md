@@ -1,5 +1,12 @@
 # Changelog
 
+### Escala de espaciado y auditoria de alineacion (2026-08-21)
+
+- Tokens --space-* en base.css (multiplos de 4px): contrato de espaciado.
+  Migrados ~50 gaps de cosmic.css a la escala (7/9/11/14/16/18/22 -> 8/12/16/20/24).
+- Nuevo spec alignment.spec.ts: mide geometria real con getBoundingClientRect
+  (tabs uniformes, columnas alineadas, altos acotados, cards consistentes).
+
 ### Auditoria UI/UX: P3 completado (2026-08-21)
 
 - Icono de tab activa en duotone (antes fill): distincion mas clara del area
