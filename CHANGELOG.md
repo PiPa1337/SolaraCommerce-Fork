@@ -1,5 +1,16 @@
 # Changelog
 
+### Auditoria UI/UX con vision real + estabilidad E2E (2026-08-21)
+
+- Infraestructura de vision: nuevo spec tests/e2e/__vision__/studio-vision.spec.ts
+  captura las 9 pantallas del Studio en 4 viewports (1440/1280/768/390).
+  4/4 viewports pasando, 40 screenshots.
+- Fallback SPA en servidor de pruebas: studio-server.ts sirve index.html
+  para /__studio/*; sin esto la galeria de componentes daba 404.
+- Fixes tipograficos: tabular-nums en paginacion y datos de tiendas;
+  jerarquia label (600) vs hint (400) diferenciada.
+
+
 ### Plan: estabilidad E2E + runtime debuggeable (2026-08-21)
 
 - **Plan documentado** en `docs/superpowers/plans/2026-08-21-flaky-e2e-runtime-debuggeable.md`:
@@ -2310,3 +2321,5 @@ Antes de este changelog, el repositorio acumuló las siguientes fases
   SHA-256, versionado, conflictos `409` y manifest atómico.
 - Distribución portable autocontenida para Windows (Electron,
   `solara://studio`).
+- Estabilidad E2E (chat paralelo): senal determinista solara-ready en
+  storefront, script e2e-stability.mjs y contencion via unstable.json.

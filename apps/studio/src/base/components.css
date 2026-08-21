@@ -390,6 +390,7 @@
 
 .ui-pagination__summary {
   color: var(--muted);
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
   font-weight: 550;
 }

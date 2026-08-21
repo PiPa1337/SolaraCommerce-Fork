@@ -676,6 +676,7 @@
 .dashboard-store-detail__facts dd {
   overflow: hidden;
   color: var(--cosmic-ink);
+  font-variant-numeric: tabular-nums;
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2006,7 +2007,8 @@ legend {
   margin-bottom: 6px;
   padding: 0;
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .form-grid {

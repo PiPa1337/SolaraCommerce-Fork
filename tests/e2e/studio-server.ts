@@ -30,6 +30,19 @@ export async function startStudioServer(): Promise<RunningStudioServer> {
     }
     if (existsSync(file) && statSync(file).isDirectory()) file = join(file, "index.html");
     if (!existsSync(file)) {
+      // Fallback SPA: rutas internas del editor como /__studio/components no
+      // existen como archivos; un hosting estático serviría index.html.
+      if (requested.startsWith("/__studio/")) {
+        const spaIndex = join(studioRoot, "index.html");
+        if (existsSync(spaIndex)) {
+          response.writeHead(200, {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-store",
+          });
+          response.end(readFileSync(spaIndex));
+          return;
+        }
+      }
       response.writeHead(404).end("Not found");
       return;
     }
