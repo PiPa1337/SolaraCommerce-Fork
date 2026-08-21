@@ -10,6 +10,7 @@ export const referenceStore = StoreProjectV2Schema.parse({
   status: "active",
   locale: "es-AR",
   currency: "ARS",
+  priceFractionDisplay: "always",
   baseUrl: "https://tienda-referencia.example",
   createdAt: now,
   updatedAt: now,

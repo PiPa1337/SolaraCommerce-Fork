@@ -157,6 +157,10 @@ function StudioShell() {
   // H7-B1: tras «Cerrar y detener» el cierre es terminal; App lo guarda para no
   // ofrecer «Cerrar app» ni reintentar el cierre con el servidor muerto.
   const [shutdownTerminal, setShutdownTerminal] = useState(false);
+  const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator !== "undefined" ? navigator.onLine : true,
+  );
   const [localStorageStatus, setLocalStorageStatus] = useState<LocalStorageStatus>({
     managed: false,
     writable: false,
@@ -343,6 +347,24 @@ function StudioShell() {
     })();
   }, [notify, persistToDisk, refreshBrowser, refreshDisk]);
 
+  useEffect(() => {
+    const onOnline = () => setIsOnline(true);
+    const onOffline = () => setIsOnline(false);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onSwUpdate = () => setSwUpdateAvailable(true);
+    window.addEventListener("solara-sw-update", onSwUpdate as unknown as EventListener);
+    return () =>
+      window.removeEventListener("solara-sw-update", onSwUpdate as unknown as EventListener);
+  }, []);
+
   const guard = async (action: () => Promise<void>) => {
     setError("");
     try {
@@ -398,9 +420,79 @@ function StudioShell() {
     );
   }
 
+  const banners = (
+    <>
+      {!isOnline ? (
+        <output
+          aria-live="polite"
+          style={{
+            background: "#b91c1c",
+            color: "white",
+            padding: "6px 12px",
+            textAlign: "center",
+            fontSize: "13px",
+          }}
+        >
+          Sin conexion: los cambios se guardan localmente.
+        </output>
+      ) : null}
+      {swUpdateAvailable ? (
+        <output
+          aria-live="polite"
+          style={{
+            background: "#1e40af",
+            color: "white",
+            padding: "6px 12px",
+            textAlign: "center",
+            fontSize: "13px",
+          }}
+        >
+          Nueva version disponible{" "}
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                localStorage.removeItem("solara-sw-update-available");
+              } catch {}
+              window.dispatchEvent(new CustomEvent("solara-sw-activate"));
+              setSwUpdateAvailable(false);
+            }}
+            style={{
+              marginLeft: 12,
+              background: "white",
+              color: "#1e40af",
+              border: "none",
+              padding: "4px 8px",
+              borderRadius: 4,
+              cursor: "pointer",
+            }}
+          >
+            Actualizar
+          </button>{" "}
+          <button
+            type="button"
+            onClick={() => setSwUpdateAvailable(false)}
+            style={{
+              marginLeft: 8,
+              background: "transparent",
+              color: "white",
+              border: "1px solid white",
+              padding: "4px 8px",
+              borderRadius: 4,
+              cursor: "pointer",
+            }}
+          >
+            Cerrar
+          </button>
+        </output>
+      ) : null}
+    </>
+  );
+
   if (active) {
     return (
       <ToastProvider>
+        {banners}
         <Suspense
           fallback={
             <main className="boot-screen">
@@ -491,6 +583,7 @@ function StudioShell() {
 
   return (
     <ToastProvider>
+      {banners}
       <div className="app-root app-root--dashboard-cosmic">
         <a className="skip-link" href="#tiendas">
           Saltar al contenido

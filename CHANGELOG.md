@@ -1,5 +1,16 @@
 # Changelog
 
+### Studio dark-only + priceFractionDisplay auto + fixes post-migración (2026-08-21)
+
+- **Studio dark-only definitivo**: `apps/studio/src/base/base.css` migrado a `#08090A/#111214/#FF6A00` (color-scheme: dark unico), eliminado @media y :root[data-studio-theme="dark"] (-59 lineas); `apps/studio/index.html` theme-color #08090A + style color-scheme dark para FOUC; `studioTheme.ts` a dark.
+- **Shell Studio**: `main.tsx` applyStudioTheme dark + SW update cada 60s; `App.tsx` banners offline/update; `Studio.tsx` sin toggle Sun/Moon, tab Tema de la tienda, preview route sessionStorage.
+- **Precio fraccional**: `priceFractionDisplay: "always"|"auto"` en StoreProjectV2 (default always, sin bump schemaVersion), seccion Formato de precios con toggle Ocultar centavos, formatter central formatMoney.
+- **Storefront runtime**: reconcileCartLines mergea duplicados, parseCart Integer, readStoredCart [] vs null, renderCart 99+, sync storage, freshCatalog null en checkout.
+- **Fixes**: base.css var(--sc-*) -> var(--ink/surface/bg/line-strong), main.tsx encontro encoding, semver patch.js.
+- **Gates**: parity 11/11, determinismo 10/10, budgets OK (JS 690618/737280 CSS 102254/114688), portable smoke OK.
+
+
+
 ### Contenido público multi-tienda (2026-08-18)
 
 - **Fuente única**: se agrega `publicCopy` al contrato V2 sin cambiar

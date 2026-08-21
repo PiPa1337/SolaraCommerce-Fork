@@ -17,6 +17,17 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "ES2022",
-    "types": ["vitest/globals"]
-  }
+    "types": ["vitest/globals"],
+    "incremental": true,
+    "tsBuildInfoFile": "./.tsbuildinfo"
+  },
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.mjs",
+    "**/*.spec.ts",
+    "**/*.spec.mjs",
+    "**/.tsbuildinfo",
+    "dist",
+    "node_modules"
+  ]
 }

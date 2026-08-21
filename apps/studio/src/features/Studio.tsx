@@ -17,11 +17,9 @@ import {
   Image,
   Layout,
   MagnifyingGlass,
-  Moon,
   Package,
   PaintBrush,
   Storefront,
-  Sun,
   X,
 } from "@phosphor-icons/react";
 import {
@@ -56,7 +54,6 @@ import { downloadBlob } from "../lib/projectArchive";
 import { saveProject } from "../lib/repository";
 import { formatSaveTime } from "../lib/saveTime";
 import { formatLastExportLabel } from "../lib/statusBar";
-import { applyStudioTheme, readStudioTheme, storeStudioTheme } from "../lib/studioTheme";
 import { createProjectArchiveInWorker } from "../lib/workers";
 import {
   getPreviewRoutes,
@@ -111,7 +108,7 @@ const tabs: Array<{ id: StudioTab; label: string; icon: typeof Storefront }> = [
   { id: "overview", label: "Resumen", icon: Storefront },
   { id: "catalog", label: "Catálogo", icon: Package },
   { id: "builder", label: "Constructor", icon: Layout },
-  { id: "theme", label: "Tema", icon: PaintBrush },
+  { id: "theme", label: "Tema de la tienda", icon: PaintBrush },
   { id: "assets", label: "Recursos", icon: Image },
   { id: "seo", label: "SEO", icon: MagnifyingGlass },
   { id: "export", label: "Exportar", icon: BoxArrowDown },
@@ -293,7 +290,18 @@ export function Studio({
       return false;
     }
   });
-  const [previewRoute, setPreviewRoute] = useState("/");
+  const [previewRoute, setPreviewRoute] = useState(() => {
+    try {
+      const s = sessionStorage.getItem("solara-preview-route");
+      if (s?.startsWith("/")) return s;
+    } catch {}
+    return "/";
+  });
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("solara-preview-route", previewRoute);
+    } catch {}
+  }, [previewRoute]);
   const [previewSize, setPreviewSize] = useState<PreviewSize>("desktop");
   const [previewZoom, setPreviewZoom] = useState<PreviewZoom>(() => {
     try {
@@ -386,7 +394,6 @@ export function Studio({
       {} as Partial<Record<StudioTab, string>>,
     ),
   );
-  const [theme, setTheme] = useState(readStudioTheme);
   const [autosave] = useState(() => new AutosaveQueue(saveProject, 550));
   const editorPaneId = useId();
   const conflictTitleId = useId();
@@ -547,11 +554,6 @@ export function Studio({
       return changed ? next : current;
     });
   }, [managedDirty, managedStorage, project.updatedAt, saveState]);
-
-  useEffect(() => {
-    applyStudioTheme(theme);
-  }, [theme]);
-
   useEffect(() => {
     if (project === lastProjectRef.current) return;
     lastProjectRef.current = project;
@@ -569,6 +571,30 @@ export function Studio({
     return () => window.removeEventListener("beforeunload", warnBeforeClose);
   }, [autosave, managedDirty, managedStorage]);
 
+  useEffect(() => {
+    if (managedStorage) return;
+    const h = () => {
+      try {
+        localStorage.setItem(`solara-recovery-fallback:${project.id}`, JSON.stringify(project));
+        localStorage.setItem(
+          `solara-recovery-fallback-meta:${project.id}`,
+          JSON.stringify({ baseDiskVersion: 0, updatedAt: new Date().toISOString() }),
+        );
+      } catch {}
+      void autosave.flush().catch(() => {});
+    };
+    const v = () => {
+      if (document.visibilityState === "hidden") h();
+    };
+    window.addEventListener("pagehide", h);
+    document.addEventListener("visibilitychange", v);
+    window.addEventListener("beforeunload", h);
+    return () => {
+      window.removeEventListener("pagehide", h);
+      document.removeEventListener("visibilitychange", v);
+      window.removeEventListener("beforeunload", h);
+    };
+  }, [autosave, managedStorage, project]);
   useEffect(() => () => autosave.dispose(), [autosave]);
 
   const performLeave = async () => {
@@ -699,13 +725,6 @@ export function Studio({
       });
     }
   }, [focusExitId, focusMode, focusToggleId]);
-
-  const toggleTheme = useCallback(() => {
-    const next = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    storeStudioTheme(next);
-  }, [theme]);
-
   const handleDiskSaved = useCallback(
     (receipt: LocalSaveReceipt) => {
       if (receipt.site?.savedAt) setLastExportedAt(receipt.site.savedAt);
@@ -915,18 +934,6 @@ export function Studio({
                 aria-pressed={focusMode}
                 data-testid="ui-focus-toggle"
                 onClick={toggleFocusMode}
-              />
-            </Tooltip>
-            <Tooltip
-              tip={theme === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
-              position="bottom"
-            >
-              <IconButton
-                icon={theme === "dark" ? Sun : Moon}
-                label={theme === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
-                aria-pressed={theme === "dark"}
-                data-testid="ui-theme-toggle"
-                onClick={toggleTheme}
               />
             </Tooltip>
             <div className="history-actions">

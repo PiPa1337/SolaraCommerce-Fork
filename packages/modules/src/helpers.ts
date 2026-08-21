@@ -2,7 +2,7 @@ import {
   escapeAttribute,
   escapeHtml,
   findAsset,
-  formatMoney,
+  formatMoneyForProject,
   joinHtml,
   type RenderContext,
   renderImage,
@@ -71,7 +71,7 @@ export function productCard(
         <p class="solara-product-brand">${escapeHtml(product.brand)}</p>
         <h3><a href="${href}">${escapeHtml(product.title)}</a></h3>
       </div>
-      <p class="solara-product-price">${hasRange ? `${escapeHtml(productCopy(project).from)} ` : ""}${escapeHtml(formatMoney(price))}</p>
+      <p class="solara-product-price">${hasRange ? `${escapeHtml(productCopy(project).from)} ` : ""}${escapeHtml(formatMoneyForProject(price, project))}</p>
     </div>
     <p class="solara-product-description">${escapeHtml(product.description)}</p>
     <p class="solara-product-status">${available ? escapeHtml(productCopy(project).available) : escapeHtml(productCopy(project).outOfStock)}</p>

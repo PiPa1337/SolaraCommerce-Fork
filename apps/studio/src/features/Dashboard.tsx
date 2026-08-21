@@ -141,7 +141,6 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
         type="button"
         className="dashboard-store-card__pin"
         aria-pressed={isPinned}
-        aria-description={`Tienda ${record.name}`}
         aria-label={isPinned ? "Quitar de fijadas" : "Fijar tienda"}
         data-testid="ui-card-pin"
         onClick={() => onPin(record.id)}
@@ -184,7 +183,6 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
         className="dashboard-store-card__open"
         type="button"
         data-testid="ui-card-open"
-        aria-description={`Tienda ${record.name}`}
         aria-label="Abrir esta tienda"
         onClick={() => onOpen(record.id)}
       >
@@ -292,18 +290,22 @@ export function Dashboard({
       return;
     }
     if (selectedId) {
-      // Si la selección actual no está en la lista visible (filtro o refresh
-      // transitorio), se sigue a la primera visible; si no hay ninguna visible
-      // todavía, se conserva la selección en vez de anularla: un filtro que
-      // pasa por un conjunto vacío no debe dejar el detalle en blanco.
-      setSelectedId(visible[0]?.id ?? selectedId);
+      const exists = projects.some((record) => record.id === selectedId);
+      if (exists) {
+        // Selección oculta por filtros: se conserva para no perder contexto y
+        // evitar que el detalle salte a otro proyecto. El usuario ve el
+        // detalle del proyecto seleccionado aunque el filtro lo oculte.
+        return;
+      }
+      // Selección borrada (no existe en projects): seguir a primera visible
+      setSelectedId(visible[0]?.id);
       return;
     }
     if (!selectionInitializedRef.current && visible[0]) {
       selectionInitializedRef.current = true;
       setSelectedId(visible[0].id);
     }
-  }, [projects.length, selectedId, visible]);
+  }, [projects, selectedId, visible]);
 
   useEffect(() => {
     if (creating) return;

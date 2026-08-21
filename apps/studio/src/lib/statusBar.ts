@@ -14,7 +14,7 @@ export function formatLastExportLabel(
   }, null);
   if (!latest) return "—";
   const ageMs = Date.parse(nowIso) - latest.ts;
-  if (Number.isNaN(ageMs) || ageMs < 0 || ageMs > 30 * 24 * 60 * 60 * 1000) return "—";
+  if (Number.isNaN(ageMs) || ageMs < -60 * 1000 || ageMs > 30 * 24 * 60 * 60 * 1000) return "—";
   return formatTime(latest.at);
 }
 

@@ -27,15 +27,19 @@ const SUBST_DRIVE = getSubstFallback();
 // Ejecuta todos los checks livianos en paralelo en vez de secuencial.
 // Mantiene la misma cobertura que `pnpm check` pero en ~40-60% menos tiempo.
 // Uso: corepack pnpm check:quick
-const tasks = [
+const isFull = process.argv.includes("--full");
+const fastTasks = [
   { name: "check:repository", cmd: "corepack pnpm check:repository" },
   { name: "check:hardcoded-content", cmd: "corepack pnpm check:hardcoded-content" },
   { name: "format:check", cmd: "corepack pnpm format:check" },
   { name: "typecheck", cmd: "corepack pnpm -r --parallel --if-present typecheck" },
   { name: "test", cmd: "corepack pnpm -r --parallel --if-present test" },
+];
+const slowTasks = [
   { name: "check:optimization", cmd: "corepack pnpm check:optimization" },
   { name: "check:runtime-serialization", cmd: "corepack pnpm check:runtime-serialization" },
 ];
+const tasks = isFull ? [...fastTasks, ...slowTasks] : fastTasks;
 
 function runTask(task) {
   return new Promise((resolve) => {
@@ -62,7 +66,9 @@ function runTask(task) {
 }
 
 const startAll = Date.now();
-console.log(`[quick] Iniciando ${tasks.length} gates en paralelo (9800X3D optimizado)...`);
+console.log(
+  `[quick] Iniciando ${tasks.length} gates en paralelo (${isFull ? "full" : "fast"}, 9800X3D optimizado)...`,
+);
 const results = await Promise.all(tasks.map(runTask));
 const total = ((Date.now() - startAll) / 1000).toFixed(1);
 const failed = results.filter((r) => !r.ok);

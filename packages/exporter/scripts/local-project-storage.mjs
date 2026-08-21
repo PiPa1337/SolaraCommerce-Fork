@@ -88,13 +88,50 @@ function assertRelativeArchivePath(pathname) {
     throw new Error("El archivo contiene una ruta insegura.");
   }
   if (normalized.includes("\0")) throw new Error("El archivo contiene un byte inválido.");
+  const WINDOWS_RESERVED = new Set([
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
+    "COM1",
+    "COM2",
+    "COM3",
+    "COM4",
+    "COM5",
+    "COM6",
+    "COM7",
+    "COM8",
+    "COM9",
+    "LPT1",
+    "LPT2",
+    "LPT3",
+    "LPT4",
+    "LPT5",
+    "LPT6",
+    "LPT7",
+    "LPT8",
+    "LPT9",
+  ]);
+  for (const segment of normalized.split("/")) {
+    if (!segment) continue;
+    const base = segment.split(".")[0] ?? "";
+    const cleaned = base
+      .trim()
+      .replace(/[. ]+$/, "")
+      .toUpperCase();
+    if (WINDOWS_RESERVED.has(cleaned))
+      throw new Error("La ruta contiene un nombre reservado de Windows.");
+  }
   return normalized;
 }
 
 function assertInside(root, target) {
   const resolvedRoot = resolve(root);
   const resolvedTarget = resolve(target);
-  if (resolvedTarget !== resolvedRoot && !resolvedTarget.startsWith(`${resolvedRoot}${sep}`)) {
+  const isWin = process.platform === "win32";
+  const cmpRoot = isWin ? resolvedRoot.toLowerCase() : resolvedRoot;
+  const cmpTarget = isWin ? resolvedTarget.toLowerCase() : resolvedTarget;
+  if (cmpTarget !== cmpRoot && !cmpTarget.startsWith(`${cmpRoot}${sep.toLowerCase()}`)) {
     throw new Error("La ruta queda fuera del almacenamiento local.");
   }
   return resolvedTarget;
@@ -142,25 +179,30 @@ async function renameWithRetry(source, destination, renameFile) {
 
 async function streamToFile(request, pathname, maxBytes, guardWrite) {
   const temporary = `${pathname}.upload-${randomBytes(8).toString("hex")}`;
-  await mkdir(dirname(pathname), { recursive: true });
-  const handle = await open(temporary, "w");
-  const hash = createHash("sha256");
-  let bytes = 0;
   try {
-    await guardWrite?.("write-upload", pathname);
-    for await (const chunk of request) {
-      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-      bytes += buffer.byteLength;
-      if (bytes > maxBytes) throw new Error("El archivo supera el límite permitido.");
-      hash.update(buffer);
-      await handle.write(buffer);
+    await mkdir(dirname(pathname), { recursive: true });
+    const handle = await open(temporary, "w");
+    const hash = createHash("sha256");
+    let bytes = 0;
+    try {
+      await guardWrite?.("write-upload", pathname);
+      for await (const chunk of request) {
+        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        bytes += buffer.byteLength;
+        if (bytes > maxBytes) throw new Error("El archivo supera el límite permitido.");
+        hash.update(buffer);
+        await handle.write(buffer);
+      }
+      await handle.sync();
+    } finally {
+      await handle.close();
     }
-    await handle.sync();
-  } finally {
-    await handle.close();
+    await renameWithRetry(temporary, pathname, rename);
+    return { bytes, sha256: hash.digest("hex") };
+  } catch (error) {
+    await rm(temporary, { force: true });
+    throw error;
   }
-  await renameWithRetry(temporary, pathname, rename);
-  return { bytes, sha256: hash.digest("hex") };
 }
 
 function parseProjectJson(bytes, expectedProjectId) {
@@ -465,12 +507,8 @@ export function createLocalProjectStorage(options = {}) {
   }
 
   async function beginSave(meta) {
-    await ensureRoots();
     assertProjectId(meta.projectId);
     if (projectLocks.has(meta.projectId)) {
-      // Un cliente muerto (Electron recargado, máquina suspendida) pudo
-      // dejar el lock retenido sin que su abort llegue nunca; si la
-      // transacción que lo mantiene ya expiró, se libera y se continúa.
       const stale = [...transactions.values()].find(
         (transaction) => transaction.metadata.projectId === meta.projectId,
       );
@@ -482,61 +520,65 @@ export function createLocalProjectStorage(options = {}) {
         throw error;
       }
     }
-    if (
-      typeof meta.slug !== "string" ||
-      meta.slug.length === 0 ||
-      meta.slug.length > MAX_SLUG_LENGTH ||
-      !SLUG_PATTERN.test(meta.slug)
-    ) {
-      throw new Error("Slug de tienda inválido.");
-    }
-    if (!Number.isInteger(meta.expectedVersion) && meta.expectedVersion !== null) {
-      throw new Error("Versión esperada inválida.");
-    }
-    const existing = await findManifest(meta.projectId);
-    const currentVersion = existing?.manifest.current?.version ?? 0;
-    if (existing && meta.expectedVersion !== currentVersion) {
-      const error = new Error("La tienda cambió en otra pestaña.");
-      error.code = "VERSION_CONFLICT";
-      throw error;
-    }
-    if (!existing && meta.expectedVersion !== null && meta.expectedVersion !== 0) {
-      const error = new Error("La tienda ya no existe en disco.");
-      error.code = "VERSION_CONFLICT";
-      throw error;
-    }
-    const transactionId = randomBytes(18).toString("hex");
-    const transactionRoot = join(stagingRoot, transactionId);
-    await mkdir(transactionRoot, { recursive: true });
-    const transaction = {
-      id: transactionId,
-      createdAt: now().toISOString(),
-      metadata: {
-        ...meta,
-        version: currentVersion + 1,
-        folder: existing?.folder ?? `${safeSlug(meta.slug)}--${shortProjectKey(meta.projectId)}`,
-        previous: existing?.manifest ?? null,
-      },
-      root: transactionRoot,
-      project: undefined,
-      site: undefined,
-    };
-    // El marcador de la transacción se escribe ANTES de registrar el lock: si
-    // esa escritura falla, la tienda no queda bloqueada para siempre.
-    try {
-      await guardWrite("write-transaction-marker", join(transactionRoot, "transaction.json"));
-      await writeJsonAtomic(join(transactionRoot, "transaction.json"), transaction.metadata);
-    } catch (error) {
-      await rm(transactionRoot, { recursive: true, force: true });
-      throw error;
-    }
     projectLocks.add(meta.projectId);
-    transactions.set(transactionId, transaction);
-    return {
-      transactionId,
-      version: transaction.metadata.version,
-      folder: transaction.metadata.folder,
-    };
+    try {
+      await ensureRoots();
+      if (
+        typeof meta.slug !== "string" ||
+        meta.slug.length === 0 ||
+        meta.slug.length > MAX_SLUG_LENGTH ||
+        !SLUG_PATTERN.test(meta.slug)
+      ) {
+        throw new Error("Slug de tienda inválido.");
+      }
+      if (!Number.isInteger(meta.expectedVersion) && meta.expectedVersion !== null) {
+        throw new Error("Versión esperada inválida.");
+      }
+      const existing = await findManifest(meta.projectId);
+      const currentVersion = existing?.manifest.current?.version ?? 0;
+      if (existing && meta.expectedVersion !== currentVersion) {
+        const error = new Error("La tienda cambió en otra pestaña.");
+        error.code = "VERSION_CONFLICT";
+        throw error;
+      }
+      if (!existing && meta.expectedVersion !== null && meta.expectedVersion !== 0) {
+        const error = new Error("La tienda ya no existe en disco.");
+        error.code = "VERSION_CONFLICT";
+        throw error;
+      }
+      const transactionId = randomBytes(18).toString("hex");
+      const transactionRoot = join(stagingRoot, transactionId);
+      await mkdir(transactionRoot, { recursive: true });
+      const transaction = {
+        id: transactionId,
+        createdAt: now().toISOString(),
+        metadata: {
+          ...meta,
+          version: currentVersion + 1,
+          folder: existing?.folder ?? `${safeSlug(meta.slug)}--${shortProjectKey(meta.projectId)}`,
+          previous: existing?.manifest ?? null,
+        },
+        root: transactionRoot,
+        project: undefined,
+        site: undefined,
+      };
+      try {
+        await guardWrite("write-transaction-marker", join(transactionRoot, "transaction.json"));
+        await writeJsonAtomic(join(transactionRoot, "transaction.json"), transaction.metadata);
+      } catch (error) {
+        await rm(transactionRoot, { recursive: true, force: true });
+        throw error;
+      }
+      transactions.set(transactionId, transaction);
+      return {
+        transactionId,
+        version: transaction.metadata.version,
+        folder: transaction.metadata.folder,
+      };
+    } catch (error) {
+      projectLocks.delete(meta.projectId);
+      throw error;
+    }
   }
 
   async function getTransaction(transactionId) {
@@ -570,6 +612,22 @@ export function createLocalProjectStorage(options = {}) {
     const protectedSiteKeys = new Set(
       Array.isArray(options?.protectedSiteKeys) ? options.protectedSiteKeys : [],
     );
+    // Defensa en profundidad: si otra transacción commiteó entre beginSave y commit,
+    // el manifest actual ya no coincide con `previous`. Rechazar con 409 evita
+    // el last-writer-wins silencioso que violaba "nunca perder el último proyecto válido".
+    const currentManifestAtCommit = await findManifest(metadata.projectId);
+    const currentVersionAtCommit = currentManifestAtCommit?.manifest.current?.version ?? 0;
+    const expectedVersionAtCommit = metadata.previous?.current?.version ?? 0;
+    if (currentVersionAtCommit !== expectedVersionAtCommit) {
+      const error = new Error("La tienda cambió en otra pestaña.");
+      error.code = "VERSION_CONFLICT";
+      throw error;
+    }
+    if (metadata.expectedVersion !== null && metadata.expectedVersion !== currentVersionAtCommit) {
+      const error = new Error("La tienda cambió en otra pestaña.");
+      error.code = "VERSION_CONFLICT";
+      throw error;
+    }
     try {
       if (!transaction.project) throw new Error("Falta el respaldo editable de la tienda.");
       const project = parseProjectJson(
@@ -632,8 +690,13 @@ export function createLocalProjectStorage(options = {}) {
       // Así un mapa inválido no deja archivos huérfanos en `actual/`.
       await checkpoint("before-project-archive");
       await guardWrite("copy-archive", temporaryArchivePath);
-      await copyFile(join(transaction.root, "project.json"), temporaryArchivePath);
-      await renameWithRetry(temporaryArchivePath, archivePath, renameFile);
+      try {
+        await copyFile(join(transaction.root, "project.json"), temporaryArchivePath);
+        await renameWithRetry(temporaryArchivePath, archivePath, renameFile);
+      } catch (error) {
+        await rm(temporaryArchivePath, { force: true });
+        throw error;
+      }
 
       const previous = metadata.previous;
       if (previous?.current?.projectPath) {

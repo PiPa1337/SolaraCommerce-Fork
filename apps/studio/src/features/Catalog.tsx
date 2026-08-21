@@ -165,6 +165,11 @@ function PriceCell({
 
   useEffect(() => () => window.clearTimeout(timerRef.current), []);
 
+  useEffect(() => {
+    setDraft(String(first?.price ?? 0));
+    setInvalid(false);
+  }, [first?.price]);
+
   if (!first) return null;
 
   const flashInvalid = () => {
@@ -570,13 +575,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
         cell: ({ row }) => {
           const first = row.original.variants[0];
           if (!first) return null;
-          return (
-            <PriceCell
-              key={`${row.original.id}-${first.price}`}
-              product={row.original}
-              onCommand={onCommand}
-            />
-          );
+          return <PriceCell product={row.original} onCommand={onCommand} />;
         },
       },
       {

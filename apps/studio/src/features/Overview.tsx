@@ -7,6 +7,7 @@ import {
   Article,
   CaretDown,
   CheckCircle,
+  CurrencyDollar,
   FloppyDisk,
   Globe,
   List,
@@ -715,6 +716,26 @@ export function Overview({
             <Field label="Slug interno">
               <input value={project.slug} readOnly aria-readonly />
             </Field>
+          </div>
+        </AccordionSection>
+
+        <AccordionSection
+          sectionKey="price-format"
+          label="Formato de precios"
+          icon={CurrencyDollar}
+          collapsed={collapsedSections.has("price-format")}
+          onToggle={() => toggleSection("price-format")}
+        >
+          <div className="form-grid">
+            <Toggle
+              checked={project.priceFractionDisplay === "auto"}
+              onChange={(checked) => commit({ priceFractionDisplay: checked ? "auto" : "always" })}
+              label="Ocultar centavos cuando sean cero"
+            />
+            <p className="form-help">
+              Ejemplo: $1.500,00 se muestra como $1.500. Los precios con centavos, como $1.500,50,
+              se mantienen completos.
+            </p>
           </div>
         </AccordionSection>
 

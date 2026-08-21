@@ -38,8 +38,11 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(home).toContain("Camisas");
     expect(product).toContain('data-solara-module="catalog-product-detail"');
     expect(product).toContain("catalog-option-pill");
-    expect(product).toContain('role="tablist"');
-    expect(product).toContain("Lo que dicen quienes compraron");
+    expect(product).not.toContain('role="tablist"');
+    expect(product).toContain('class="catalog-product-specs"');
+    expect(product).toContain('class="catalog-product-policies"');
+    expect(product).not.toContain('class="catalog-product-reviews"');
+    expect(product).not.toContain('class="catalog-product-rating"');
   });
 
   it("recorre preview y export con una raíz V2 aislada sin alterar V1", () => {
@@ -195,10 +198,10 @@ describe("tienda base catalog-modern de 50 productos", () => {
       exportProject(withRatings, { mode: "draft" }).files.get("index.html"),
     );
 
-    expect(preview).toContain('class="catalog-product-rating"');
-    expect(exportedHome).toContain('class="catalog-product-rating"');
-    expect(preview).toContain("4.7 / 5 · 6 reseñas");
-    expect(exportedHome).toContain("4.7 / 5 · 6 reseñas");
+    expect(preview).not.toContain('class="catalog-product-rating"');
+    expect(exportedHome).not.toContain('class="catalog-product-rating"');
+    expect(preview).not.toContain("4.7 / 5 · 6 reseñas");
+    expect(exportedHome).not.toContain("4.7 / 5 · 6 reseñas");
 
     const withoutRatings = {
       ...withRatings,

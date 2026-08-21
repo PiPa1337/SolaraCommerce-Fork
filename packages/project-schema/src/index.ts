@@ -782,6 +782,9 @@ export const CommercePolicySchema = z.object({
   returnDays: z.number().int().nonnegative(),
 });
 
+export const PriceFractionDisplaySchema = z.enum(["always", "auto"]).default("always");
+export type PriceFractionDisplay = z.infer<typeof PriceFractionDisplaySchema>;
+
 const StoreProjectV2ShapeSchema = z.object({
   schemaVersion: z.literal(2),
   id: StoreIdSchema,
@@ -790,6 +793,7 @@ const StoreProjectV2ShapeSchema = z.object({
   status: z.enum(["active", "archived"]),
   locale: z.literal("es-AR"),
   currency: z.literal("ARS"),
+  priceFractionDisplay: PriceFractionDisplaySchema,
   baseUrl: z.string().url(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),

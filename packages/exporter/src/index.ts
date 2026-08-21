@@ -31,6 +31,7 @@ import {
   StoreProjectV1Schema,
 } from "@solara/project-schema";
 import { ensureCatalogModernV2Sections } from "@solara/project-schema/catalog-modern-template";
+import { formatPrice } from "@solara/project-schema/money";
 import {
   buildAiContext,
   buildLlmsTxt,
@@ -189,10 +190,12 @@ function escapeHtml(value: string): string {
 
 const escapeAttribute = escapeHtml;
 
-function formatMoney(amount: number): string {
-  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(
-    amount / 100,
-  );
+function formatMoney(amount: number, project: StoreProjectV1): string {
+  return formatPrice(amount, {
+    currency: project.currency,
+    locale: project.locale,
+    priceFractionDisplay: (project as any).priceFractionDisplay ?? "always",
+  });
 }
 
 function escapeXml(value: string): string {
@@ -1304,7 +1307,7 @@ function renderDocument(
       : "";
 
   return `<!doctype html>
-<html lang="${project.locale}" data-store-id="${escapeHtml(project.id)}" data-currency="${project.currency}"${whatsAppAttributes}${publicCopyAttribute} data-solara-runtime-features="${escapeAttribute((manifest?.runtimeFeatures ?? []).join(","))}"${colorMode}${baseHrefAttribute}>
+<html lang="${project.locale}" data-store-id="${escapeHtml(project.id)}" data-currency="${project.currency}" data-price-fraction-display="${escapeHtml((project as any).priceFractionDisplay ?? "always")}"${whatsAppAttributes}${publicCopyAttribute} data-solara-runtime-features="${escapeAttribute((manifest?.runtimeFeatures ?? []).join(","))}"${colorMode}${baseHrefAttribute}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1402,6 +1405,7 @@ function categoryListingMarkup(
     </div>`;
   }
   const tagOptions = [...new Set(products.flatMap((product) => product.tags))]
+    .sort((a, b) => a.localeCompare(b))
     .slice(0, 12)
     .map((tag) => `<option value="${escapeAttribute(tag)}">${escapeHtml(tag)}</option>`)
     .join("");
@@ -1876,7 +1880,7 @@ function buildPages(
     description: defaultSeoDescription,
     canonicalPath: "/carrito/",
     pageType: "cart",
-    body: `${renderProjectSections(project, sharedHeader, { pageType: "cart" })}<main class="solara-cart-page solara-container"><nav class="solara-breadcrumbs" aria-label="${escapeAttribute(copy.export.breadcrumbs)}"><a href="${internalHref(project, "/")}">${escapeHtml(copy.pages.home)}</a><span aria-hidden="true">/</span><span>${escapeHtml(copy.pages.cart)}</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">${escapeHtml(copy.checkout.selection)}</p><h1>${escapeHtml(copy.pages.cart)}</h1></header><section class="solara-cart-page-grid"><div data-cart-lines><p class="solara-empty-state">${escapeHtml(copy.empty.cart)}</p></div><aside class="solara-cart-summary"><p><span>${escapeHtml(copy.cart.subtotal)}</span><strong data-cart-subtotal>${escapeHtml(formatMoney(0))}</strong></p><p><span>${escapeHtml(copy.cart.delivery)}</span><strong>${escapeHtml(copy.cart.deliveryToCoordinate)}</strong></p><p><span>${escapeHtml(copy.checkout.total)}</span><strong data-cart-total>${escapeHtml(formatMoney(0))}</strong></p><a class="solara-primary-action" href="${escapeAttribute(cartContinueHref)}">${escapeHtml(cartContinueLabel)}</a></aside></section></main>${renderProjectSections(project, sharedFooter, { pageType: "cart" })}`,
+    body: `${renderProjectSections(project, sharedHeader, { pageType: "cart" })}<main class="solara-cart-page solara-container"><nav class="solara-breadcrumbs" aria-label="${escapeAttribute(copy.export.breadcrumbs)}"><a href="${internalHref(project, "/")}">${escapeHtml(copy.pages.home)}</a><span aria-hidden="true">/</span><span>${escapeHtml(copy.pages.cart)}</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">${escapeHtml(copy.checkout.selection)}</p><h1>${escapeHtml(copy.pages.cart)}</h1></header><section class="solara-cart-page-grid"><div data-cart-lines><p class="solara-empty-state">${escapeHtml(copy.empty.cart)}</p></div><aside class="solara-cart-summary"><p><span>${escapeHtml(copy.cart.subtotal)}</span><strong data-cart-subtotal>${escapeHtml(formatMoney(0, project))}</strong></p><p><span>${escapeHtml(copy.cart.delivery)}</span><strong>${escapeHtml(copy.cart.deliveryToCoordinate)}</strong></p><p><span>${escapeHtml(copy.checkout.total)}</span><strong data-cart-total>${escapeHtml(formatMoney(0, project))}</strong></p><a class="solara-primary-action" href="${escapeAttribute(cartContinueHref)}">${escapeHtml(cartContinueLabel)}</a></aside></section></main>${renderProjectSections(project, sharedFooter, { pageType: "cart" })}`,
     structuredData: [],
   };
   cartPage.body = cartPage.body.replace(
@@ -2243,7 +2247,7 @@ function buildSearchIndex(project: StoreProjectV1): string {
             Object.entries(variant.optionValues).map(([key, value]) => `${key}=${value}`),
           ),
         ),
-      ];
+      ].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
       return {
         id: product.id,
         slug: product.slug,

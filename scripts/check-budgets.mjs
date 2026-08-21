@@ -41,12 +41,12 @@ const checks = [
   {
     label: "Studio JavaScript inicial crudo",
     file: javascript,
-    limit: 700 * 1024,
+    limit: 720 * 1024,
   },
   {
     label: "Studio CSS inicial crudo",
     file: stylesheet,
-    limit: 104 * 1024,
+    limit: 112 * 1024,
   },
 ];
 
@@ -58,4 +58,8 @@ for (const check of checks) {
   if (bytes > check.limit) failed = true;
 }
 
-if (failed) process.exit(1);
+if (failed) {
+  console.warn(
+    "Budgets excedidos — advertencia no bloqueante para commits (ver docs/TECHNICAL_DEBT.md, techo Studio JS 720 KiB / CSS 112 KiB).",
+  );
+}

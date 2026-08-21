@@ -51,6 +51,14 @@ function getSourceMaxMtime() {
     resolve("apps/studio/vite.config.ts"),
     resolve("apps/studio/vite.config.js"),
     resolve("apps/studio/tsconfig.json"),
+    // Paquetes que Studio importa (cambios aqui invalidan dist)
+    resolve("packages/project-schema/src"),
+    resolve("packages/core/src"),
+    resolve("packages/modules/src"),
+    resolve("packages/exporter/src"),
+    resolve("packages/storefront-runtime/src"),
+    resolve("packages/module-sdk/src"),
+    resolve("packages/site-optimizer/src"),
   ];
   let max = 0;
   for (const p of roots) {
@@ -109,7 +117,9 @@ function spawnCmd(cmd, args, opts = {}) {
   });
 }
 
-const extraArgs = process.argv.slice(2);
+const rawArgs = process.argv.slice(2);
+const isFull = rawArgs.includes("--full");
+const extraArgs = rawArgs.filter((a) => a !== "--full");
 const needBuild = shouldBuild();
 if (needBuild) {
   console.log("[smoke] ▶ corepack pnpm --filter @solara/studio build");
@@ -123,6 +133,12 @@ if (needBuild) {
   console.log("[smoke] ⏭ build cacheado, saltando compilacion (ahorra ~30-60s)");
 }
 
+if (isFull) {
+  console.log(
+    "[smoke] --full: solo build cacheado, no ejecuta smoke specs (el caller hará playwright test completo)",
+  );
+  process.exit(0);
+}
 // Construir comando playwright con workers optimizados (8 por defecto, env override)
 // y solo Chromium (smoke no necesita Firefox/WebKit)
 const playwrightArgs = ["exec", "playwright", "test", ...smokeSpecs, ...extraArgs];

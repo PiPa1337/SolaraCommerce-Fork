@@ -4,6 +4,7 @@
  * dejar contenido y navegación utilizables cuando JavaScript falla.
  */
 import type { Product, PublicCopy, StoreProjectV1, Variant } from "@solara/project-schema";
+import { personalizeWhatsAppGreeting } from "@solara/project-schema";
 import { levenshtein, normalizeSearchTokens, type SearchEntryTokens, scoreEntry } from "./search";
 
 const DEFAULT_CONTACT_COPY = {
@@ -59,22 +60,35 @@ export function reconcileCartLines(
   catalog: CatalogIndexEntry[],
 ): StoredCartLine[] {
   const byVariant = new Map(catalog.map((entry) => [entry.variantId, entry]));
-  return cart.map((line) => {
+  const merged = new Map<string, StoredCartLine>();
+  for (const line of cart) {
     const current = byVariant.get(line.variantId);
-    if (!current) return { ...line, available: false };
-    return {
-      ...line,
-      productId: current.productId,
-      title: current.title,
-      variantTitle: current.variantTitle,
-      sku: current.sku,
-      unitPrice: current.price,
-      ...(current.imageUrl ? { imageUrl: current.imageUrl } : {}),
-      ...(current.imageWidth ? { imageWidth: current.imageWidth } : {}),
-      ...(current.imageHeight ? { imageHeight: current.imageHeight } : {}),
-      available: current.available,
-    };
-  });
+    let reconciled: StoredCartLine;
+    if (!current) {
+      reconciled = { ...line, available: false };
+    } else {
+      // Limpia imagen fantasma: si el catalogo ya no tiene imagen, no conservar la vieja.
+      reconciled = {
+        ...line,
+        productId: current.productId,
+        title: current.title,
+        variantTitle: current.variantTitle,
+        sku: current.sku,
+        unitPrice: current.price,
+        available: current.available,
+      };
+      if (current.imageUrl) reconciled.imageUrl = current.imageUrl;
+      else delete (reconciled as any).imageUrl;
+      if (current.imageWidth) reconciled.imageWidth = current.imageWidth;
+      else delete (reconciled as any).imageWidth;
+      if (current.imageHeight) reconciled.imageHeight = current.imageHeight;
+      else delete (reconciled as any).imageHeight;
+    }
+    const existing = merged.get(reconciled.variantId);
+    if (existing) existing.quantity = Math.min(99, existing.quantity + reconciled.quantity);
+    else merged.set(reconciled.variantId, reconciled);
+  }
+  return [...merged.values()];
 }
 
 export function parseCart(stored: unknown): StoredCartLine[] {
@@ -90,8 +104,11 @@ export function parseCart(stored: unknown): StoredCartLine[] {
       typeof (line as StoredCartLine).sku === "string" &&
       typeof (line as StoredCartLine).unitPrice === "number" &&
       Number.isFinite((line as StoredCartLine).unitPrice) &&
+      Number.isInteger((line as StoredCartLine).unitPrice) &&
+      (line as StoredCartLine).unitPrice >= 0 &&
       typeof (line as StoredCartLine).quantity === "number" &&
       Number.isFinite((line as StoredCartLine).quantity) &&
+      Number.isInteger((line as StoredCartLine).quantity) &&
       (line as StoredCartLine).quantity >= 1 &&
       (line as StoredCartLine).quantity <= 99 &&
       ((line as StoredCartLine).imageUrl === undefined ||
@@ -163,11 +180,18 @@ export function buildContactWhatsAppUrl(
   return buildWhatsAppUrl(phone, message);
 }
 
-export function formatMoney(cents: number, currency = "ARS", locale = "es-AR"): string {
+export function formatMoney(
+  cents: number,
+  currency = "ARS",
+  locale = "es-AR",
+  priceFractionDisplay: "always" | "auto" = "always",
+): string {
+  const fractionDigits = priceFractionDisplay === "auto" && cents % 100 === 0 ? 0 : 2;
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
-    minimumFractionDigits: 2,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
   }).format(cents / 100);
 }
 
@@ -188,25 +212,40 @@ export function buildCartLine(product: Product, variant: Variant, quantity = 1):
  * should never pass prices read only from localStorage.
  */
 export function buildWhatsAppMessage(
-  project: Pick<StoreProjectV1, "currency" | "locale" | "whatsapp" | "publicCopy">,
+  project: Pick<
+    StoreProjectV1,
+    "currency" | "locale" | "whatsapp" | "publicCopy" | "priceFractionDisplay" | "identity"
+  >,
   lines: CartLine[],
   customer: CustomerDetails,
 ): string {
+  const display = (project as any).priceFractionDisplay ?? "always";
   const items = lines.map((line) => {
     const sku = project.whatsapp.includeSku && line.sku ? ` [${line.sku}]` : "";
-    const lineTotal = formatMoney(line.unitPrice * line.quantity, project.currency, project.locale);
+    const lineTotal = formatMoney(
+      line.unitPrice * line.quantity,
+      project.currency,
+      project.locale,
+      display,
+    );
     return `- ${line.quantity} x ${line.title} (${line.variantTitle})${sku}: ${lineTotal}`;
   });
   const total = lines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
 
   const copy = project.publicCopy.whatsapp;
   const checkoutCopy = project.publicCopy.checkout;
+  // Mantener paridad con runtime: greeting personalizado con brandName si disponible
+  const rawGreeting = project.whatsapp.greeting.trim();
+  const brandForGreeting = (project as any).identity?.brandName?.trim?.() ?? "";
+  const greeting = brandForGreeting
+    ? personalizeWhatsAppGreeting(rawGreeting, brandForGreeting)
+    : rawGreeting;
   return [
-    project.whatsapp.greeting.trim(),
+    greeting,
     "",
     ...items,
     "",
-    `${copy.total}: ${formatMoney(total, project.currency, project.locale)}`,
+    `${copy.total}: ${formatMoney(total, project.currency, project.locale, display)}`,
     "",
     `${copy.customerName}: ${customer.name.trim()}`,
     `${copy.customerPhone}: ${customer.phone.trim()}`,
@@ -221,7 +260,9 @@ export function buildWhatsAppMessage(
 }
 
 export function buildWhatsAppUrl(phone: string, message: string): string {
-  return `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
+  const clean = phone.replace(/\D/g, "");
+  if (!clean) return "";
+  return `https://wa.me/${clean}?text=${encodeURIComponent(message)}`;
 }
 
 function setHtml(element: HTMLElement, value: string): void {
@@ -261,11 +302,13 @@ function storefrontBoot(): void {
   const includeSku = root.dataset.whatsappIncludeSku !== "false";
   const storageKey = `solara-cart:${storeId}`;
   const embed = parent !== window && location.protocol[0] !== "s";
-  const money = new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-  });
+  const priceFractionDisplay = (root.dataset.priceFractionDisplay ?? "always") as "always" | "auto";
+  function formatMoneyRuntime(cents: number): string {
+    return formatMoney(cents, currency, locale, priceFractionDisplay);
+  }
+  const money = {
+    format: (value: number) => formatMoneyRuntime(Math.round(value * 100)),
+  };
   const declaredRuntimeFeatures = root.dataset.solaraRuntimeFeatures;
   const runtimeFeatures = new Set(
     (declaredRuntimeFeatures === undefined
@@ -291,9 +334,10 @@ function storefrontBoot(): void {
     if (embed) return [];
     try {
       const primary = parseSerializedCart(localStorage.getItem(storageKey));
-      return primary?.length
-        ? primary
-        : (parseSerializedCart(localStorage.getItem(backupKey)) ?? []);
+      // Diferenciar vacio intencional [] (no null) del fallo de parse (null).
+      // Antes se usaba primary?.length que resucitaba backup tras vaciar.
+      if (primary !== null) return primary;
+      return parseSerializedCart(localStorage.getItem(backupKey)) ?? [];
     } catch {
       return [];
     }
@@ -446,7 +490,7 @@ function storefrontBoot(): void {
     if (persist) persistCart(!cart.length);
     const count = cart.reduce((sum, line) => sum + line.quantity, 0);
     document.querySelectorAll<HTMLElement>("[data-cart-count]").forEach((element) => {
-      element.textContent = String(count);
+      element.textContent = count > 99 ? "99+" : String(count);
     });
     document.querySelectorAll<HTMLElement>("[data-solara-cart-open]").forEach((element) => {
       const label = element.dataset.cartLabel ?? "";
@@ -507,6 +551,20 @@ function storefrontBoot(): void {
 
   if (embed) window.addEventListener("pagehide", () => persistCart());
 
+  // Sincroniza carrito entre pestanas: storage solo dispara en otras pestañas,
+  // asi que mergeamos sin pisar cambios locales no guardados.
+  if (!embed && typeof window !== "undefined") {
+    window.addEventListener("storage", (event) => {
+      if (event.key !== storageKey && event.key !== backupKey) return;
+      const external = readStoredCart();
+      // Evitar loop si es igual.
+      if (JSON.stringify(external) !== JSON.stringify(cart)) {
+        cart = external;
+        renderCart(false);
+      }
+    });
+  }
+
   const escapeText = (value: string): string =>
     value.replace(
       /[&<>"']/g,
@@ -531,7 +589,7 @@ function storefrontBoot(): void {
   let freshCatalog: Promise<boolean> | null = null;
 
   const applyCatalog = (catalog: CatalogIndexEntry[]): void => {
-    if (!Array.isArray(catalog) || (catalog.length === 0 && cart.length > 0)) {
+    if (!Array.isArray(catalog)) {
       renderCart(false);
       return;
     }
@@ -553,7 +611,10 @@ function storefrontBoot(): void {
         applyCatalog(catalog);
         return true;
       })
-      .catch(() => false);
+      .catch(() => {
+        freshCatalog = null;
+        return false;
+      });
     return freshCatalog;
   };
 
@@ -875,7 +936,17 @@ function storefrontBoot(): void {
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       if (cart.length === 0 || !form.reportValidity()) return;
-      void reconcileCart().then(() => {
+      // Fuerza fetch fresco para checkout (precio/autorización siempre del catálogo actual)
+      freshCatalog = null;
+      void reconcileCart().then((ok) => {
+        if (!ok) {
+          const preview = form.querySelector<HTMLElement>("[data-order-preview]");
+          if (preview) {
+            preview.textContent = s.error ?? x.invalidItems;
+            preview.setAttribute("role", "alert");
+          }
+          return;
+        }
         if (cart.length === 0) return;
         const unavailable = cart.filter((line) => line.available === false);
         if (unavailable.length > 0) {
@@ -913,7 +984,16 @@ function storefrontBoot(): void {
           .join("\n")
           .trim();
 
-        const url = `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
+        const cleanPhone = phone.replace(/\D/g, "");
+        if (!cleanPhone) {
+          const p = form.querySelector<HTMLElement>("[data-order-preview]");
+          if (p) {
+            p.textContent = (k as any).whatsappFallback ?? x.invalidItems;
+            p.setAttribute("role", "alert");
+          }
+          return;
+        }
+        const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
         const preview = form.querySelector<HTMLElement>("[data-order-preview]");
         const link = form.querySelector<HTMLAnchorElement>("[data-whatsapp-link]");
         if (preview) preview.textContent = message;
@@ -1749,6 +1829,7 @@ const RUNTIME_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unk
   ["parseCart", parseCart],
   ["reconcileCartLines", reconcileCartLines],
   ["setHtml", setHtml],
+  ["formatMoney", formatMoney],
 ];
 
 const SERIALIZED_RUNTIME_HELPERS = RUNTIME_HELPERS.map(([name, fn]) => {

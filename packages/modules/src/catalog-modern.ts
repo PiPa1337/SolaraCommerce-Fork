@@ -1,7 +1,7 @@
 import {
   escapeAttribute,
   escapeHtml,
-  formatMoney,
+  formatMoneyForProject,
   type ModuleDefinition,
   moduleRoot,
   type RenderContext,
@@ -729,7 +729,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
         ? settings.slides
             .map(
               (slide, index) =>
-                `<button type="button" data-catalog-hero-slide="${index}" aria-label="Mostrar ${escapeAttribute(slide.title)}" aria-selected="${String(index === 0)}"></button>`,
+                `<button type="button" role="tab" data-catalog-hero-slide="${index}" aria-label="Mostrar ${escapeAttribute(slide.title)}" aria-selected="${String(index === 0)}"></button>`,
             )
             .join("")
         : "";
@@ -744,8 +744,8 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
       ? `<a class="catalog-primary-action solara-primary-action" href="https://wa.me/${escapeAttribute(whatsappPhone)}" target="_blank" rel="noopener noreferrer"><span class="catalog-hero-cta-label">${escapeHtml(copy.hero.whatsappAction)}</span><svg class="catalog-hero-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${catalogHeroBenefitIcons.chat}</svg></a>`
       : `<a class="catalog-primary-action" href="${escapeAttribute(safeUrl(actionHref))}">${escapeHtml(actionLabel)}</a>${settings.secondaryActionLabel ? `<a class="catalog-secondary-action" href="${escapeAttribute(secondaryActionHref)}">${escapeHtml(settings.secondaryActionLabel)}</a>` : ""}`;
     const heroInner = isV2Hero
-      ? `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}">${heroBackgroundWrap}<div class="catalog-hero-copy"><div class="catalog-hero-reveal catalog-hero-reveal--eyebrow"><p class="catalog-eyebrow">${escapeHtml(settings.eyebrow)}</p></div><h1 class="catalog-hero-title" data-hero-title>${titleLinesMarkup}</h1><div class="catalog-hero-rule" data-hero-rule aria-hidden="true"></div><div class="catalog-hero-reveal catalog-hero-reveal--body"><p class="catalog-hero-body">${escapeHtml(body)}</p></div><div class="catalog-hero-reveal catalog-hero-reveal--actions"><div class="catalog-hero-actions">${actions}</div></div>${benefitsMarkup}</div><figure class="catalog-hero-media" data-motion-zone="media" data-hero-media>${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>${benefitsBand}`
-      : `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}"><div class="catalog-hero-copy"><p class="catalog-eyebrow">${escapeHtml(settings.eyebrow)}</p><h1>${escapeHtml(title)}</h1><p class="catalog-hero-body">${escapeHtml(body)}</p><div class="catalog-hero-actions">${actions}</div>${stats}</div><figure class="catalog-hero-media" data-motion-zone="media">${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>`;
+      ? `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}">${heroBackgroundWrap}<div class="catalog-hero-copy"><div class="catalog-hero-reveal catalog-hero-reveal--eyebrow"><p class="catalog-eyebrow">${escapeHtml(settings.eyebrow)}</p></div><h1 class="catalog-hero-title" data-hero-title>${titleLinesMarkup}</h1><div class="catalog-hero-rule" data-hero-rule aria-hidden="true"></div><div class="catalog-hero-reveal catalog-hero-reveal--body"><p class="catalog-hero-body">${escapeHtml(body)}</p></div><div class="catalog-hero-reveal catalog-hero-reveal--actions"><div class="catalog-hero-actions">${actions}</div></div>${benefitsMarkup}</div><figure class="catalog-hero-media" data-motion-zone="media" data-hero-media>${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" role="tablist" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>${benefitsBand}`
+      : `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}"><div class="catalog-hero-copy"><p class="catalog-eyebrow">${escapeHtml(settings.eyebrow)}</p><h1>${escapeHtml(title)}</h1><p class="catalog-hero-body">${escapeHtml(body)}</p><div class="catalog-hero-actions">${actions}</div>${stats}</div><figure class="catalog-hero-media" data-motion-zone="media">${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" role="tablist" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>`;
     const heroRootClass = [
       isV2Hero ? "catalog-hero-editorial" : "",
       heroBackgroundWrap ? "catalog-hero-editorial--has-background" : "",
@@ -865,17 +865,28 @@ function modernProductCardImageSizes(
   return "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) min(22vw, 11.5rem), min(20vw, 13rem)";
 }
 
+export function catalogReviewSummary(
+  product: Product,
+): { average: number; count: number } | undefined {
+  const reviews = product.reviews?.filter((review: ProductReview) => review.visible) ?? [];
+  if (!reviews.length) return undefined;
+  return {
+    average: reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length,
+    count: reviews.length,
+  };
+}
+
 function modernProductCard(
   context: Parameters<NonNullable<(typeof catalogProductGrid)["render"]>>[0],
   product: Product,
   index: number,
-  showRating: boolean,
+  _showRating: boolean,
 ): string {
   const variant = product.variants.find((item) => item.available) ?? product.variants[0];
   const price = lowestPrice(product);
   const compare = variant?.compareAtPrice;
   const category = productCategory(context, product);
-  const reviewSummary = showRating ? catalogReviewSummary(product) : undefined;
+  const _reviewSummary: { average: number; count: number } | undefined = undefined; // reviews eliminated
   const imageId = variant?.imageId ?? product.imageIds[0];
   const image = renderImage(context.project, imageId, {
     className: "catalog-product-card-image",
@@ -884,7 +895,7 @@ function modernProductCard(
     sizes: modernProductCardImageSizes(context),
     fallbackAlt: product.title,
   });
-  return `<article class="catalog-product-card" data-product-card data-product-id="${escapeAttribute(product.id)}" data-product-title="${escapeAttribute(product.title)}"${category ? ` data-product-category="${escapeAttribute(category.id)}"` : ""}><a class="catalog-product-media" href="/productos/${escapeAttribute(product.slug)}/" aria-label="Ver ${escapeAttribute(product.title)}">${image}</a><div class="catalog-product-card-copy">${category ? `<p class="catalog-product-category">${escapeHtml(category.title)}</p>` : ""}<h3><a href="/productos/${escapeAttribute(product.slug)}/">${escapeHtml(product.title)}</a></h3>${reviewSummary ? `<p class="catalog-product-rating" aria-label="${reviewSummary.average.toFixed(1)} de 5">${"★".repeat(Math.max(0, Math.min(5, Math.round(reviewSummary.average))))}<span>${reviewSummary.average.toFixed(1)} / 5 · ${reviewSummary.count} reseñas</span></p>` : ""}<p class="catalog-product-price"><strong>${escapeHtml(formatMoney(price))}</strong>${compare && compare > price ? ` <del>${escapeHtml(formatMoney(compare))}</del><span class="catalog-discount">-${Math.round((1 - price / compare) * 100)}%</span>` : ""}</p></div></article>`;
+  return `<article class="catalog-product-card" data-product-card data-product-id="${escapeAttribute(product.id)}" data-product-title="${escapeAttribute(product.title)}"${category ? ` data-product-category="${escapeAttribute(category.id)}"` : ""}><a class="catalog-product-media" href="/productos/${escapeAttribute(product.slug)}/" aria-label="Ver ${escapeAttribute(product.title)}">${image}</a><div class="catalog-product-card-copy">${category ? `<p class="catalog-product-category">${escapeHtml(category.title)}</p>` : ""}<h3><a href="/productos/${escapeAttribute(product.slug)}/">${escapeHtml(product.title)}</a></h3><p class="catalog-product-price"><strong>${escapeHtml(formatMoneyForProject(price, context.project))}</strong>${compare && compare > price ? ` <del>${escapeHtml(formatMoneyForProject(compare, context.project))}</del><span class="catalog-discount">-${Math.round((1 - price / compare) * 100)}%</span>` : ""}</p></div></article>`;
 }
 
 export const catalogProductGrid: ModuleDefinition<
@@ -991,7 +1002,7 @@ function buildWhatsAppInquiryLink(
     ),
     `Producto: ${product.title}`,
     firstVariant ? `Variante: ${firstVariant.title}` : "",
-    `Precio: ${formatMoney(firstVariant?.price ?? lowestPrice(product))}`,
+    `Precio: ${formatMoneyForProject(firstVariant?.price ?? lowestPrice(product), context.project)}`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -1077,7 +1088,7 @@ export const catalogProductDetail: ModuleDefinition<
           (asset) => asset.id === (variant.imageId ?? product.imageIds[0]),
         );
         const imageUrl = variantImage ? safeAssetUrl(variantImage.source, "") : "";
-        return `<option value="${escapeAttribute(variant.id)}" data-variant-data="${escapeAttribute(variant.id)}" data-variant-id="${escapeAttribute(variant.id)}" data-variant-title="${escapeAttribute(variant.title)}" data-sku="${escapeAttribute(variant.sku)}" data-image-id="${escapeAttribute(variant.imageId ?? product.imageIds[0] ?? "")}"${imageUrl ? ` data-image-url="${escapeAttribute(imageUrl)}" data-image-width="${variantImage?.width ?? ""}" data-image-height="${variantImage?.height ?? ""}"` : ""} data-price="${variant.price}" data-compare-at="${variant.compareAtPrice ?? ""}" data-available="${String(variant.available)}"${variant.available ? "" : " disabled"}${variant.id === firstVariant?.id ? " selected" : ""}>${escapeHtml(variant.title)} · ${escapeHtml(formatMoney(variant.price))}${variant.available ? "" : ` · ${escapeHtml(copy.product.outOfStock)}`}</option>`;
+        return `<option value="${escapeAttribute(variant.id)}" data-variant-data="${escapeAttribute(variant.id)}" data-variant-id="${escapeAttribute(variant.id)}" data-variant-title="${escapeAttribute(variant.title)}" data-sku="${escapeAttribute(variant.sku)}" data-image-id="${escapeAttribute(variant.imageId ?? product.imageIds[0] ?? "")}"${imageUrl ? ` data-image-url="${escapeAttribute(imageUrl)}" data-image-width="${variantImage?.width ?? ""}" data-image-height="${variantImage?.height ?? ""}"` : ""} data-price="${variant.price}" data-compare-at="${variant.compareAtPrice ?? ""}" data-available="${String(variant.available)}"${variant.available ? "" : " disabled"}${variant.id === firstVariant?.id ? " selected" : ""}>${escapeHtml(variant.title)} · ${escapeHtml(formatMoneyForProject(variant.price, context.project))}${variant.available ? "" : ` · ${escapeHtml(copy.product.outOfStock)}`}</option>`;
       })
       .join("");
     const optionNames = [
@@ -1114,31 +1125,23 @@ export const catalogProductDetail: ModuleDefinition<
     const whatsappFallback = buildWhatsAppInquiryLink(context, product);
     const compareAt =
       context.settings.showCompareAtPrice && firstVariant?.compareAtPrice
-        ? formatMoney(firstVariant.compareAtPrice)
+        ? formatMoneyForProject(firstVariant.compareAtPrice, context.project)
         : "";
     const detailsPanelId = `catalog-product-details-${context.section.id}`;
     const descriptionPanelId = `catalog-product-description-${context.section.id}`;
     const description = context.settings.showDescription
-      ? `<div id="${escapeAttribute(descriptionPanelId)}" class="catalog-rich-text" data-product-tab-panel="details">${product.richDescription ? sanitizeRichText(product.richDescription) : `<p>${escapeHtml(product.description)}</p>`}</div>`
+      ? `<div id="${escapeAttribute(descriptionPanelId)}" class="catalog-rich-text">${product.richDescription ? sanitizeRichText(product.richDescription) : `<p>${escapeHtml(product.description)}</p>`}</div>`
       : "";
-    const reviewSummary = catalogReviewSummary(product);
-    const reviews = (product.reviews ?? []).filter((review) => review.visible).slice(0, 6);
     const policiesPanelId = `catalog-product-policies-${context.section.id}`;
-    const reviewsPanelId = `catalog-product-reviews-${context.section.id}`;
-    const reviewSection = reviews.length
-      ? `<section id="${escapeAttribute(reviewsPanelId)}" class="catalog-product-reviews" data-product-tab-panel="reviews" data-motion-zone="items"><header><div><p class="catalog-eyebrow">${escapeHtml(copy.product.reviewEyebrow)}</p><h2>${escapeHtml(copy.product.reviewTitle)}</h2></div>${reviewSummary ? `<p class="catalog-review-average"><strong>${reviewSummary.average.toFixed(1)}</strong> / 5 · ${reviewSummary.count} ${escapeHtml(copy.product.reviews)}</p>` : ""}</header><div class="catalog-review-grid">${reviews.map((review) => `<article class="catalog-review"><p class="catalog-product-rating" aria-label="${review.rating} de 5">${"★".repeat(review.rating)}</p><h3>${escapeHtml(review.authorName)}</h3>${review.title ? `<strong>${escapeHtml(review.title)}</strong>` : ""}<blockquote>${escapeHtml(review.body)}</blockquote><small>${review.verifiedPurchase ? `${escapeHtml(copy.product.verifiedPurchase)} · ` : ""}${escapeHtml(new Intl.DateTimeFormat("es-AR", { dateStyle: "medium" }).format(new Date(review.publishedAt)))}</small></article>`).join("")}</div></section>`
-      : "";
-    const productTabs = `<nav class="catalog-product-tabs" role="tablist" aria-label="${escapeAttribute(copy.accessibility.productInfo)}"><button type="button" role="tab" data-product-tab="details" aria-controls="${escapeAttribute(description ? `${descriptionPanelId} ${detailsPanelId}` : detailsPanelId)}" aria-selected="true">${escapeHtml(copy.product.details)}</button><button type="button" role="tab" data-product-tab="policies" aria-controls="${escapeAttribute(policiesPanelId)}" aria-selected="false">${escapeHtml(copy.product.policies)}</button>${reviews.length ? `<button type="button" role="tab" data-product-tab="reviews" aria-controls="${escapeAttribute(reviewsPanelId)}" aria-selected="false">${escapeHtml(copy.product.reviews)}</button>` : ""}</nav>`;
     return moduleRoot(
       "catalog-product-detail",
       context.section,
-      safeHtml(`<div class="catalog-product-detail-shell" data-product-tabs><div class="catalog-product-detail-inner" data-motion-zone="content" data-product data-product-id="${escapeAttribute(product.id)}" data-product-title="${escapeAttribute(product.title)}" data-default-variant="${escapeAttribute(firstVariant?.id ?? "")}" >
+      safeHtml(`<div class="catalog-product-detail-shell"><div class="catalog-product-detail-inner" data-motion-zone="content" data-product data-product-id="${escapeAttribute(product.id)}" data-product-title="${escapeAttribute(product.title)}" data-default-variant="${escapeAttribute(firstVariant?.id ?? "")}" >
         ${gallery}
         <div class="catalog-product-info">
           <p class="catalog-product-brand">${escapeHtml(product.brand)}</p>
           <h1>${escapeHtml(product.title)}</h1>
-          ${reviewSummary ? `<p class="catalog-product-rating" aria-label="${reviewSummary.average.toFixed(1)} de 5">${"★".repeat(Math.max(0, Math.min(5, Math.round(reviewSummary.average))))}<span>${reviewSummary.average.toFixed(1)} / 5 · ${reviewSummary.count} reseñas</span></p>` : ""}
-          <p class="catalog-detail-price"><span data-product-price>${escapeHtml(formatMoney(lowestPrice(product)))}</span><del data-product-compare${compareAt ? "" : " hidden"}>${escapeHtml(compareAt)}</del></p>
+          <p class="catalog-detail-price"><span data-product-price>${escapeHtml(formatMoneyForProject(lowestPrice(product), context.project))}</span><del data-product-compare${compareAt ? "" : " hidden"}>${escapeHtml(compareAt)}</del></p>
           ${description}
           <form class="catalog-add-form" action="/carrito/" method="get" data-solara-add-form>
             <input type="hidden" name="product" value="${escapeAttribute(product.id)}">
@@ -1151,10 +1154,10 @@ export const catalogProductDetail: ModuleDefinition<
           </form>
           <nav class="catalog-variant-links" aria-label="${escapeAttribute(copy.export.variantLinks)}">${variantLinks}</nav>
           <p class="catalog-delivery-note">${escapeHtml(context.settings.deliveryNote)}</p>
-          <dl id="${escapeAttribute(detailsPanelId)}" class="catalog-product-specs" data-product-tab-panel="details"><div><dt>${escapeHtml(copy.product.sku)}</dt><dd data-product-sku>${escapeHtml(firstVariant?.sku ?? "")}</dd></div><div><dt>${escapeHtml(copy.product.availability)}</dt><dd data-product-availability>${firstVariant?.available ? escapeHtml(copy.product.available) : escapeHtml(copy.product.outOfStock)}</dd></div></dl>
-          <div id="${escapeAttribute(policiesPanelId)}" class="catalog-product-policies" data-product-tab-panel="policies"><details><summary>${escapeHtml(copy.product.shipping)}</summary><p>${escapeHtml(context.project.policies.shipping.details)}</p></details><details><summary>${escapeHtml(copy.product.returns)}</summary><p>${escapeHtml(context.project.policies.returns.details)}</p></details></div>
+          <dl id="${escapeAttribute(detailsPanelId)}" class="catalog-product-specs"><div><dt>${escapeHtml(copy.product.sku)}</dt><dd data-product-sku>${escapeHtml(firstVariant?.sku ?? "")}</dd></div><div><dt>${escapeHtml(copy.product.availability)}</dt><dd data-product-availability>${firstVariant?.available ? escapeHtml(copy.product.available) : escapeHtml(copy.product.outOfStock)}</dd></div></dl>
+          <div id="${escapeAttribute(policiesPanelId)}" class="catalog-product-policies"><details open><summary>${escapeHtml(copy.product.shipping)}</summary><p>${escapeHtml(context.project.policies.shipping.details)}</p></details><details open><summary>${escapeHtml(copy.product.returns)}</summary><p>${escapeHtml(context.project.policies.returns.details)}</p></details></div>
         </div>
-      </div>${productTabs}${reviewSection}</div>`),
+      </div></div>`),
       { className: "catalog-product-detail" },
     );
   },
@@ -1371,7 +1374,7 @@ export const catalogTestimonials: ModuleDefinition<
       "catalog-testimonials",
       context.section,
       safeHtml(
-        `<div class="catalog-testimonials-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${controls}</header><div id="${escapeAttribute(trackId)}" class="catalog-testimonials-track" data-motion-zone="items" aria-label="Testimonios de clientes" role="region">${items.map((item) => `<article class="catalog-testimonial"><p class="catalog-testimonial-rating" aria-label="${item.rating} de 5">${"★".repeat(item.rating)}</p><h3>${escapeHtml(item.author)}</h3>${item.context ? `<p class="catalog-testimonial-context">${escapeHtml(item.context)}</p>` : ""}<blockquote>“${escapeHtml(item.body)}”</blockquote></article>`).join("")}</div></div>`,
+        `<div class="catalog-testimonials-section"><header><h2>${escapeHtml(context.settings.title)}</h2>${controls}</header><div id="${escapeAttribute(trackId)}" class="catalog-testimonials-track" data-motion-zone="items" aria-label="Testimonios de clientes" role="region" tabindex="0">${items.map((item) => `<article class="catalog-testimonial"><p class="catalog-testimonial-rating" aria-label="${item.rating} de 5">${"★".repeat(item.rating)}</p><h3>${escapeHtml(item.author)}</h3>${item.context ? `<p class="catalog-testimonial-context">${escapeHtml(item.context)}</p>` : ""}<blockquote>“${escapeHtml(item.body)}”</blockquote></article>`).join("")}</div></div>`,
       ),
     );
   },
@@ -1460,9 +1463,15 @@ export const catalogFooter: ModuleDefinition<
         : `<a href="/envios/">${escapeHtml(copy.footer.shipping)}</a><a href="/devoluciones/">${escapeHtml(copy.footer.returns)}</a><a href="/privacidad/">${escapeHtml(copy.footer.privacy)}</a><a href="/terminos/">${escapeHtml(copy.footer.terms)}</a>`
       : "";
     const note = context.settings.note || context.project.identity.description;
+    const rawWhatsapp = (context.project.whatsapp.phone ?? "").replace(/\D/g, "");
+    const placeholderDigits = CATALOG_MODERN_PLACEHOLDER_PHONE.replace(/\D/g, "");
+    const hasWhatsapp = rawWhatsapp.length >= 8 && rawWhatsapp !== placeholderDigits;
     const contact = [
       context.project.identity.email
         ? `<a href="mailto:${escapeAttribute(context.project.identity.email)}">${escapeHtml(context.project.identity.email)}</a>`
+        : "",
+      hasWhatsapp
+        ? `<a href="https://wa.me/${escapeAttribute(rawWhatsapp)}" target="_blank" rel="noopener noreferrer">${escapeHtml(context.project.whatsapp.phone)}</a>`
         : "",
       context.project.identity.phone
         ? `<a href="tel:${escapeAttribute(context.project.identity.phone)}">${escapeHtml(context.project.identity.phone)}</a>`
@@ -1504,7 +1513,7 @@ export const catalogFooter: ModuleDefinition<
       "catalog-footer",
       context.section,
       safeHtml(
-        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div><nav aria-label="${escapeAttribute(copy.footer.explore)}"><strong>${escapeHtml(copy.footer.explore)}</strong><a href="/">${escapeHtml(copy.navigation.home)}</a>${catalogLinkMarkup}${searchLink}</nav><nav aria-label="${escapeAttribute(copy.footer.help)}"><strong>${escapeHtml(copy.footer.help)}</strong>${helpPageLinks}${policyLinks}</nav><address><strong>${escapeHtml(copy.footer.contact)}</strong>${contact}</address><div class="catalog-footer-meta"><small>© ${new Date().getFullYear()} ${escapeHtml(context.project.identity.brandName)}. Todos los derechos reservados.</small><p class="catalog-footer-made"><a href="https://solara.com.ar" target="_blank" rel="noopener noreferrer">Hecho con ❤️ en solara.com.ar</a></p></div></div>`,
+        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project)}</a><p>${escapeHtml(note)}</p></div><nav aria-label="${escapeAttribute(copy.footer.explore)}"><strong>${escapeHtml(copy.footer.explore)}</strong><a href="/">${escapeHtml(copy.navigation.home)}</a>${catalogLinkMarkup}${searchLink}</nav><nav aria-label="${escapeAttribute(copy.footer.help)}"><strong>${escapeHtml(copy.footer.help)}</strong>${helpPageLinks}${policyLinks}</nav><address><strong>${escapeHtml(copy.footer.contact)}</strong>${contact}</address><div class="catalog-footer-meta"><small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)}. Todos los derechos reservados.</small><p class="catalog-footer-made"><a href="https://solara.com.ar" target="_blank" rel="noopener noreferrer">Hecho con ❤️ en solara.com.ar</a></p></div></div>`,
       ),
       { tag: "footer" },
     );
@@ -1546,7 +1555,7 @@ export const catalogCartDrawer: ModuleDefinition<
       "catalog-cart-drawer",
       context.section,
       safeHtml(
-        `<div class="solara-cart-backdrop catalog-cart-backdrop" data-solara-cart-close data-close-cart hidden></div><aside id="solara-cart" class="catalog-cart-drawer" data-cart-drawer aria-label="${escapeAttribute(context.settings.title)}" aria-modal="true" aria-hidden="true" inert tabindex="-1"><header><h2>${escapeHtml(context.settings.title)}</h2><button type="button" data-solara-cart-close data-close-cart aria-label="${escapeAttribute(copy.cart.close)}">${escapeHtml(copy.navigation.close)}</button></header><div class="catalog-cart-items" data-solara-cart-items data-cart-lines><p class="catalog-empty">${escapeHtml(context.settings.emptyText || copy.empty.cart)}</p></div><button class="catalog-secondary-action" type="button" data-solara-cart-close data-close-cart>${escapeHtml(copy.cart.continueShopping)}</button><div class="catalog-cart-summary"><p><span>${escapeHtml(copy.cart.subtotal)}</span><strong data-cart-subtotal>${escapeHtml(formatMoney(0))}</strong></p><p><span>${escapeHtml(copy.cart.delivery)}</span><strong>${escapeHtml(copy.cart.deliveryToCoordinate)}</strong></p><p class="catalog-cart-total"><span>${escapeHtml(copy.cart.estimatedTotal)}</span><strong data-solara-cart-total data-cart-total>${escapeHtml(formatMoney(0))}</strong></p></div><form class="catalog-checkout-form" data-solara-checkout data-checkout-form><label for="catalog-drawer-name">${escapeHtml(copy.cart.name)}</label><input id="catalog-drawer-name" name="name" autocomplete="name" required><label for="catalog-drawer-phone">${escapeHtml(copy.cart.phone)}</label><input id="catalog-drawer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="Ingresá un teléfono válido" required><label for="catalog-drawer-address">${escapeHtml(copy.cart.address)}</label><textarea id="catalog-drawer-address" name="address" autocomplete="street-address" required></textarea><label for="catalog-drawer-notes">${escapeHtml(copy.cart.notes)}</label><textarea id="catalog-drawer-notes" name="notes"></textarea><button class="catalog-primary-action" type="submit">${escapeHtml(context.settings.checkoutLabel)}</button><pre data-order-preview aria-live="polite"></pre>${checkoutLinkMarkup}</form></aside>`,
+        `<div class="solara-cart-backdrop catalog-cart-backdrop" data-solara-cart-close data-close-cart hidden></div><aside id="solara-cart" class="catalog-cart-drawer" data-cart-drawer role="dialog" aria-label="${escapeAttribute(context.settings.title)}" aria-modal="true" aria-hidden="true" inert tabindex="-1"><header><h2>${escapeHtml(context.settings.title)}</h2><button type="button" data-solara-cart-close data-close-cart aria-label="${escapeAttribute(copy.cart.close)}">${escapeHtml(copy.navigation.close)}</button></header><div class="catalog-cart-items" data-solara-cart-items data-cart-lines><p class="catalog-empty">${escapeHtml(context.settings.emptyText || copy.empty.cart)}</p></div><button class="catalog-secondary-action" type="button" data-solara-cart-close data-close-cart>${escapeHtml(copy.cart.continueShopping)}</button><div class="catalog-cart-summary"><p><span>${escapeHtml(copy.cart.subtotal)}</span><strong data-cart-subtotal aria-live="polite">${escapeHtml(formatMoneyForProject(0, context.project))}</strong></p><p><span>${escapeHtml(copy.cart.delivery)}</span><strong>${escapeHtml(copy.cart.deliveryToCoordinate)}</strong></p><p class="catalog-cart-total"><span>${escapeHtml(copy.cart.estimatedTotal)}</span><strong data-solara-cart-total data-cart-total aria-live="polite">${escapeHtml(formatMoneyForProject(0, context.project))}</strong></p></div><form class="catalog-checkout-form" data-solara-checkout data-checkout-form><label for="catalog-drawer-name">${escapeHtml(copy.cart.name)}</label><input id="catalog-drawer-name" name="name" autocomplete="name" required><label for="catalog-drawer-phone">${escapeHtml(copy.cart.phone)}</label><input id="catalog-drawer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="Ingresá un teléfono válido" required><label for="catalog-drawer-address">${escapeHtml(copy.cart.address)}</label><textarea id="catalog-drawer-address" name="address" autocomplete="street-address" required></textarea><label for="catalog-drawer-notes">${escapeHtml(copy.cart.notes)}</label><textarea id="catalog-drawer-notes" name="notes"></textarea><button class="catalog-primary-action" type="submit">${escapeHtml(context.settings.checkoutLabel)}</button><pre data-order-preview aria-live="polite" role="status"></pre>${checkoutLinkMarkup}</form></aside>`,
       ),
     );
   },
@@ -1565,14 +1574,3 @@ export const catalogModernModules = [
   catalogCartDrawer,
   catalogFooter,
 ] as const;
-
-export function catalogReviewSummary(
-  product: Product,
-): { average: number; count: number } | undefined {
-  const reviews = product.reviews?.filter((review: ProductReview) => review.visible) ?? [];
-  if (!reviews.length) return undefined;
-  return {
-    average: reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length,
-    count: reviews.length,
-  };
-}

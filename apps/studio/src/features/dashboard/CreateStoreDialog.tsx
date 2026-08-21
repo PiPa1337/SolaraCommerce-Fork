@@ -34,6 +34,7 @@ export function CreateStoreDialog({
   const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -54,6 +55,7 @@ export function CreateStoreDialog({
   }, [open]);
 
   const submit = async () => {
+    if (busyRef.current) return;
     setError("");
     if (step < 4) {
       if (step === 1 && !name.trim()) {
@@ -67,6 +69,7 @@ export function CreateStoreDialog({
       setError("Escribí un nombre para crear la tienda.");
       return;
     }
+    busyRef.current = true;
     setBusy(true);
     try {
       await onCreate({ name, brandName: brandName || name, email, phone });
@@ -75,6 +78,7 @@ export function CreateStoreDialog({
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo crear la tienda.");
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   };
@@ -86,7 +90,7 @@ export function CreateStoreDialog({
       aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
-        if (!busy) onClose();
+        if (!busyRef.current) onClose();
       }}
     >
       <form
@@ -106,7 +110,7 @@ export function CreateStoreDialog({
             label="Cerrar creación"
             disabled={busy}
             onClick={() => {
-              if (!busy) onClose();
+              if (!busyRef.current) onClose();
             }}
           />
         </header>

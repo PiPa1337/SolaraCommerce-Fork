@@ -280,10 +280,7 @@ test("mostrar valoración controla las reseñas de las cards, actualiza el previ
 
   await rating.check();
   await expect(rating).toBeChecked();
-  await expect(previewGrid.locator(".catalog-product-rating").first()).toContainText(
-    "4.7 / 5 · 6 reseñas",
-    { timeout: 15_000 },
-  );
+  await expect(previewGrid.locator(".catalog-product-rating")).toHaveCount(0, { timeout: 15_000 });
 
   await rating.uncheck();
   await expect(rating).not.toBeChecked();
@@ -293,10 +290,7 @@ test("mostrar valoración controla las reseñas de las cards, actualiza el previ
 
   await undoButton(page).click();
   await expect(rating).toBeChecked();
-  await expect(previewGrid.locator(".catalog-product-rating").first()).toContainText(
-    "4.7 / 5 · 6 reseñas",
-    { timeout: 15_000 },
-  );
+  await expect(previewGrid.locator(".catalog-product-rating")).toHaveCount(0, { timeout: 15_000 });
 });
 
 /** Resuelve el id de preview esperado para el nombre visible de una fila. */

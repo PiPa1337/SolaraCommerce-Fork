@@ -12,6 +12,7 @@ import type {
   StoreSection,
   VideoAsset,
 } from "@solara/project-schema";
+import { formatPrice } from "@solara/project-schema/money";
 import type { ZodType } from "zod";
 
 declare const safeHtmlBrand: unique symbol;
@@ -352,12 +353,24 @@ export function moduleRoot(
   );
 }
 
-export function formatMoney(amount: number, locale = "es-AR", currency = "ARS"): string {
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 2,
-  }).format(amount / 100);
+export function formatMoney(
+  amount: number,
+  locale = "es-AR",
+  currency = "ARS",
+  priceFractionDisplay: "always" | "auto" = "always",
+): string {
+  return formatPrice(amount, { locale, currency, priceFractionDisplay });
+}
+
+export function formatMoneyForProject(
+  amount: number,
+  project: { locale: string; currency: string; priceFractionDisplay?: "always" | "auto" },
+): string {
+  return formatPrice(amount, {
+    locale: project.locale,
+    currency: project.currency,
+    priceFractionDisplay: (project as any).priceFractionDisplay ?? "always",
+  });
 }
 
 function imageMimeType(source: string): "image/webp" | "image/jpeg" | "image/png" {

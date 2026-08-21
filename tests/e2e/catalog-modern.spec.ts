@@ -335,9 +335,11 @@ test("la navegación, el detalle moderno y las variantes siguen siendo rastreabl
     page.getByRole("heading", { level: 1, name: "Remera esencial de algodón" }),
   ).toBeVisible();
   await expect(page.getByLabel("Elegí talle y color")).toBeVisible();
-  await page.getByRole("tab", { name: "Reseñas" }).click();
-  await expect(page.getByText("Lo que dicen quienes compraron")).toBeVisible();
-  await expect(page.locator(".catalog-review")).toHaveCount(6);
+  await expect(page.locator(".catalog-product-reviews")).toHaveCount(0);
+  await expect(page.locator(".catalog-review")).toHaveCount(0);
+  await expect(page.getByText("Lo que dicen quienes compraron")).toHaveCount(0);
+  await expect(page.locator(".catalog-product-specs")).toBeVisible();
+  await expect(page.locator(".catalog-product-policies")).toBeVisible();
   await page.getByLabel("Elegí talle y color").selectOption({ index: 1 });
   await expect(page.locator(".catalog-product-info [data-product-price]")).toBeVisible();
   await page.getByRole("button", { name: "Agregar al carrito" }).click();

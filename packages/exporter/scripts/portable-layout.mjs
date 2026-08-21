@@ -8,7 +8,7 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { lstat, mkdir, rename, writeFile } from "node:fs/promises";
+import { lstat, mkdir, realpath, rename, stat, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 export const PORTABLE_INSTANCE_FORMAT = "solara-portable-instance";
@@ -17,7 +17,10 @@ export const PORTABLE_LAYOUT_VERSION = 1;
 function inside(root, target) {
   const rootPath = resolve(root);
   const targetPath = resolve(target);
-  if (targetPath !== rootPath && !targetPath.startsWith(`${rootPath}${sep}`)) {
+  const isWin = process.platform === "win32";
+  const cmpRoot = isWin ? rootPath.toLowerCase() : rootPath;
+  const cmpTarget = isWin ? targetPath.toLowerCase() : targetPath;
+  if (cmpTarget !== cmpRoot && !cmpTarget.startsWith(`${cmpRoot}${sep.toLowerCase()}`)) {
     throw new Error("La ruta queda fuera de la instalación portable.");
   }
   return targetPath;
@@ -47,6 +50,48 @@ export function resolvePortableLayout({
 }
 
 /** Rechaza una ruta absoluta o una ruta relativa que escape de `root`. */
+const WINDOWS_RESERVED_NAMES = new Set([
+  "CON",
+  "PRN",
+  "AUX",
+  "NUL",
+  "COM1",
+  "COM2",
+  "COM3",
+  "COM4",
+  "COM5",
+  "COM6",
+  "COM7",
+  "COM8",
+  "COM9",
+  "LPT1",
+  "LPT2",
+  "LPT3",
+  "LPT4",
+  "LPT5",
+  "LPT6",
+  "LPT7",
+  "LPT8",
+  "LPT9",
+]);
+function isReservedWindowsSegment(segment) {
+  const base = segment.split(".")[0] ?? "";
+  // NTFS ignora mayúsculas y recorta espacios/puntos finales: "CON ", "CON.", "CON.txt" son reservados
+  const cleaned = base
+    .trim()
+    .replace(/[. ]+$/, "")
+    .toUpperCase();
+  return WINDOWS_RESERVED_NAMES.has(cleaned);
+}
+function assertNoReservedSegments(pathname) {
+  const normalized = pathname.replaceAll("\\", "/");
+  for (const segment of normalized.split("/")) {
+    if (!segment) continue;
+    if (isReservedWindowsSegment(segment)) {
+      throw new Error("La ruta contiene un nombre reservado de Windows.");
+    }
+  }
+}
 export function resolvePortablePath(root, pathname) {
   if (typeof pathname !== "string" || pathname.length === 0 || isAbsolute(pathname)) {
     throw new Error("La ruta portable debe ser relativa.");
@@ -63,6 +108,7 @@ export function resolvePortablePath(root, pathname) {
   ) {
     throw new Error("La ruta portable contiene segmentos inseguros.");
   }
+  assertNoReservedSegments(pathname);
   return inside(root, join(root, normalized));
 }
 
@@ -136,9 +182,29 @@ export async function assertNoReparsePoints(root, target = root) {
   let current = rootPath;
   for (const segment of relativePath ? relativePath.split(sep) : []) {
     current = join(current, segment);
-    const info = await lstat(current);
-    if (info.isSymbolicLink())
+    let info;
+    try {
+      info = await lstat(current);
+    } catch {
+      continue;
+    }
+    if (info.isSymbolicLink()) {
       throw new Error("La instalación contiene un enlace simbólico no permitido.");
+    }
+    // Junctions en Windows no son symlinks pero son reparse points: detectar via realpath
+    try {
+      const real = await realpath(current);
+      if (resolve(real) !== resolve(current)) {
+        throw new Error("La instalación contiene un enlace simbólico no permitido.");
+      }
+      // También comparar stat vs lstat para detectar reparse (ino diferente)
+      const st = await stat(current);
+      if (info.ino !== st.ino || info.dev !== st.dev) {
+        throw new Error("La instalación contiene un enlace simbólico no permitido.");
+      }
+    } catch (e) {
+      if (e.message.includes("enlace simbólico")) throw e;
+    }
   }
   return targetPath;
 }

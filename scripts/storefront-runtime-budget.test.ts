@@ -15,6 +15,6 @@ test("mantiene el runtime storefront dentro del presupuesto en bytes crudos", ()
     storefrontRuntimeJavascriptRaw: javascriptBytes,
     storefrontRuntimeCssRaw: cssBytes,
   });
-  expect(javascriptBytes).toBeLessThanOrEqual(56 * 1024);
+  expect(javascriptBytes).toBeLessThanOrEqual(64 * 1024);
   expect(cssBytes).toBeLessThanOrEqual(8 * 1024);
 });

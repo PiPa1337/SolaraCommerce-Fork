@@ -11,7 +11,8 @@
     "./catalog-modern-v2-fixture": "./src/catalog-modern-v2-fixture.ts",
     "./catalog-modern-template": "./src/catalog-modern-template.ts",
     "./catalog-modern-guidance": "./src/catalog-modern-guidance.ts",
-    "./catalog-modern-upgrade": "./src/catalog-modern-upgrade.ts"
+    "./catalog-modern-upgrade": "./src/catalog-modern-upgrade.ts",
+    "./money": "./src/money.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",

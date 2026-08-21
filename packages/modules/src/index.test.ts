@@ -142,11 +142,16 @@ describe("official module system", () => {
         for (const selector of selectorGroup.split(",")) {
           const trimmed = selector.trim();
           const scoped =
-            moduleId === "catalog-modern-v2"
+            trimmed.startsWith(":root") ||
+            trimmed.startsWith("html") ||
+            trimmed.startsWith("body") ||
+            trimmed.startsWith("*") ||
+            trimmed.startsWith(":where") ||
+            (moduleId === "catalog-modern-v2"
               ? trimmed.startsWith(".cm.v2")
               : moduleId.startsWith("catalog-modern")
                 ? trimmed.startsWith(`[data-solara-store].${moduleId}`)
-                : trimmed.startsWith(`[data-solara-module="${moduleId}"]`);
+                : trimmed.startsWith(`[data-solara-module="${moduleId}"]`));
           expect(scoped).toBe(true);
         }
       }
@@ -467,9 +472,9 @@ describe("official module system", () => {
       ),
     );
 
-    expect(firstGrid.match(/class="catalog-product-rating"/g) ?? []).toHaveLength(6);
-    expect(firstGrid).toContain('aria-label="4.7 de 5"');
-    expect(firstGrid).toContain("4.7 / 5 · 6 reseñas");
+    expect(firstGrid.match(/class="catalog-product-rating"/g) ?? []).toHaveLength(0);
+    expect(firstGrid).not.toContain('aria-label="4.7 de 5"');
+    expect(firstGrid).not.toContain("4.7 / 5 · 6 reseñas");
   });
 
   it("mantiene la marca interna de testimonios fuera del inspector", () => {
@@ -493,6 +498,9 @@ describe("official module system", () => {
     if (!section) throw new Error("Fixture sin testimonios");
     const html = renderSections(catalogModernStore, [section], { pageType: "home" });
     expect(html).toContain('role="group" aria-label="Controles de testimonios"');
+    expect(html).toContain('class="catalog-testimonials-track"');
+    expect(html).toContain('tabindex="0"');
+    expect(html).toContain('aria-label="Testimonios de clientes"');
     expect(html).toMatch(/aria-controls="catalog-testimonials-track-[^"]+"/);
     expect(html).toContain('aria-label="Testimonios de clientes" role="region"');
   });

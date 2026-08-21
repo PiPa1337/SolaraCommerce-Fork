@@ -566,7 +566,6 @@ export function Builder({
                   type="button"
                   data-section-select={section.id}
                   aria-pressed={section.id === selectedId}
-                  aria-description={`Sección ${index + 1} de ${pageSections.length}`}
                   aria-keyshortcuts="ArrowUp ArrowDown"
                   onClick={() => setSelectedId(section.id)}
                   onKeyDown={(event) => handleSectionHeaderKeyDown(event, index)}
@@ -580,7 +579,6 @@ export function Builder({
                   <IconButton
                     icon={ArrowUp}
                     aria-describedby={sectionLabelId}
-                    aria-description={`Sección ${index + 1} de ${pageSections.length}`}
                     label="Mover arriba"
                     disabled={index === 0 || isProtected(section)}
                     onClick={() => move(index, -1)}
@@ -588,7 +586,6 @@ export function Builder({
                   <IconButton
                     icon={ArrowDown}
                     aria-describedby={sectionLabelId}
-                    aria-description={`Sección ${index + 1} de ${pageSections.length}`}
                     label="Mover abajo"
                     disabled={index === pageSections.length - 1 || isProtected(section)}
                     onClick={() => move(index, 1)}
@@ -596,7 +593,6 @@ export function Builder({
                   <IconButton
                     icon={section.enabled ? Eye : EyeSlash}
                     aria-describedby={sectionLabelId}
-                    aria-description={`Sección ${index + 1} de ${pageSections.length}`}
                     label={section.enabled ? "Ocultar sección" : "Mostrar sección"}
                     disabled={isProtected(section)}
                     onClick={() =>
@@ -609,7 +605,6 @@ export function Builder({
                   <IconButton
                     icon={Copy}
                     aria-describedby={sectionLabelId}
-                    aria-description={`Sección ${index + 1} de ${pageSections.length}`}
                     label="Duplicar sección"
                     disabled={isProtected(section)}
                     onClick={() => {
@@ -626,7 +621,6 @@ export function Builder({
                   <IconButton
                     icon={Trash}
                     aria-describedby={sectionLabelId}
-                    aria-description={`Sección ${index + 1} de ${pageSections.length}`}
                     label="Eliminar sección"
                     disabled={isProtected(section)}
                     onClick={() =>

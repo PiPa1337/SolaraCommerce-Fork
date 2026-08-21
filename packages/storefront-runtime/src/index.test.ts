@@ -243,7 +243,8 @@ describe("carrito robusto y checkout con precios frescos (C2/C3/C5/C9 + SF-B4/B5
   });
 
   it("no vacía el carrito ante un índice de catálogo vacío", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain("catalog.length === 0 && cart.length > 0");
+    expect(STOREFRONT_RUNTIME_JS).not.toContain("catalog.length === 0 && cart.length > 0");
+    expect(STOREFRONT_RUNTIME_JS).toContain("!Array.isArray(catalog)");
     expect(STOREFRONT_RUNTIME_JS).toContain("renderCart(false)");
   });
 });
@@ -392,7 +393,8 @@ describe("pausa y reanudación del runtime (contrato A3↔A4)", () => {
 
 describe("carrito y checkout del drawer (A29)", () => {
   it("refleja el conteo en el badge y en el aria-label del trigger", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain("element.textContent = String(count)");
+    expect(STOREFRONT_RUNTIME_JS).toContain("count > 99");
+    expect(STOREFRONT_RUNTIME_JS).toContain("99+");
     expect(STOREFRONT_RUNTIME_JS).toContain(`\`\${label} vacío\``);
     expect(STOREFRONT_RUNTIME_JS).toContain(`\`\${label}, \${count} productos\``);
   });
@@ -426,10 +428,11 @@ describe("carrito y checkout del drawer (A29)", () => {
     );
   });
 
-  it("construye la URL wa.me con teléfono normalizado y totales en centavos", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain(
-      `\`https://wa.me/\${phone.replace(/\\D/g, "")}?text=\${encodeURIComponent(message)}\``,
-    );
+  it("construye la URL wa.me con tel\u00E9fono normalizado y totales en centavos", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("https://wa.me/");
+    expect(STOREFRONT_RUNTIME_JS).toContain("encodeURIComponent(message)");
+    expect(STOREFRONT_RUNTIME_JS).toContain('replace(/\\D/g, "")');
+    expect(STOREFRONT_RUNTIME_JS).toContain("cleanPhone");
     expect(STOREFRONT_RUNTIME_JS).toContain("x.total");
     expect(STOREFRONT_RUNTIME_JS).toContain("x.disclaimer");
   });

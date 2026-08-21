@@ -15,7 +15,8 @@ export async function startStudioServer(): Promise<RunningStudioServer> {
     // El launcher real siempre responde /__solara/session; el servidor de
     // pruebas emula el host no gestionado para que el editor no reciba un 404
     // en su sondeo de modo de persistencia (que Chromium loguea como error).
-    if (requested === "/__solara/session") {
+    // Para offline tests, cualquier endpoint __solara debe responder rapido con managed:false
+    if (requested.startsWith("/__solara/")) {
       response.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
       response.end(JSON.stringify({ managed: false }));
       return;

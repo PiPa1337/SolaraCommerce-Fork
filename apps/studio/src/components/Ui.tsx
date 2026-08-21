@@ -153,7 +153,7 @@ export function Field({
       .join(" ");
     if (describedBy) patches["aria-describedby"] = describedBy;
     if (error) patches["aria-invalid"] = true;
-    if (description) patches["aria-description"] = description;
+    if (description) patches.title = description;
   }
   const labeledChild =
     isNativeControl && Object.keys(patches).length > 0 ? cloneElement(children, patches) : children;

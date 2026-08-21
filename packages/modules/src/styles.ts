@@ -401,12 +401,14 @@ export const STORE_BASE_STYLES = `
   color: var(--solara-muted);
 }
 [data-solara-store] .solara-category-hero img {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  width: 100%;
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
-}
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: contain;
+    object-position: center;
+    background: var(--solara-surface);
+  }
 [data-solara-store] .solara-category-children {
   margin-top: 2rem;
   padding: 1rem 0;
@@ -1991,8 +1993,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-header-inner {
   position: relative; display: grid; grid-template-columns: minmax(10rem, 1fr) auto minmax(16rem, 1fr); align-items: center; gap: clamp(1.25rem, 3vw, 3rem); width: min(calc(100% - 2rem), var(--solara-container)); min-height: 80px; margin-inline: auto; border-bottom: 1px solid var(--catalog-border); -webkit-user-select: none; user-select: none;
 }
-[data-solara-store].catalog-modern .catalog-brand { display: inline-flex; align-items: center; min-width: 0; max-width: 100%; color: var(--catalog-ink); font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(1.65rem, 2.5vw, 2.15rem); font-weight: 500; letter-spacing: -.06em; text-decoration: none; }
-[data-solara-store].catalog-modern .catalog-brand .solara-wordmark { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-solara-store].catalog-modern .catalog-brand { display: inline-flex; align-items: center; min-width: 0; max-width: min(42vw, 14rem); overflow: hidden; color: var(--catalog-ink); font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(1.25rem, 4vw, 2.15rem); font-weight: 500; letter-spacing: -.06em; text-decoration: none; white-space: nowrap; text-overflow: ellipsis; }
+[data-solara-store].catalog-modern .catalog-brand .solara-wordmark { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: anywhere; }
 [data-solara-store].catalog-modern .catalog-wordmark { font-weight: 900; }
 [data-solara-store].catalog-modern .catalog-desktop-nav { display: flex; align-items: center; justify-content: center; gap: clamp(.9rem, 2vw, 1.8rem); min-width: 0; font-size: .94rem; }
 [data-solara-store].catalog-modern .catalog-desktop-nav > a,
@@ -2042,7 +2044,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-search-dialog-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .65rem; }
 [data-solara-store].catalog-modern .catalog-search-dialog-controls input { min-height: 48px; padding: .7rem .85rem; border: 1px solid var(--catalog-border); border-radius: 999px; background: var(--catalog-surface); color: var(--catalog-ink); }
 :root.catalog-search-open { overflow: hidden; }
-[data-solara-store].catalog-modern .catalog-cart-link strong { display: inline-grid; place-items: center; min-width: 1.25rem; min-height: 1.25rem; padding-inline: .25rem; border-radius: 999px; background: var(--catalog-ink); color: white; font-size: .7rem; }
+[data-solara-store].catalog-modern .catalog-cart-link strong { display: inline-flex; align-items: center; justify-content: center; min-width: 1.9rem; height: 1.35rem; min-height: 1.35rem; padding: 0 .45rem; border-radius: 999px; background: var(--catalog-ink); color: white; font-size: .68rem; font-variant-numeric: tabular-nums; line-height: 1; text-align: center; box-sizing: border-box; flex-shrink: 0; white-space: nowrap; }
+.cm.v2 .catalog-cart-link strong { display: inline-flex; align-items: center; justify-content: center; min-width: 1.9rem; height: 1.35rem; min-height: 1.35rem; padding: 0 .45rem; border-radius: 999px; background: var(--catalog-ink); color: white; font-size: .68rem; font-variant-numeric: tabular-nums; line-height: 1; text-align: center; box-sizing: border-box; flex-shrink: 0; white-space: nowrap; }
 [data-solara-store].catalog-modern .catalog-mobile-menu-button,
 [data-solara-store].catalog-modern .catalog-mobile-menu { display: none; }
 [data-solara-store].catalog-modern .catalog-mobile-nav-icon { display: inline-grid; place-items: center; flex: 0 0 1.7rem; width: 1.7rem; height: 1.7rem; color: var(--catalog-ink); }
@@ -2114,7 +2117,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-category-bento-item { position: relative; display: flex; min-height: 0; overflow: hidden; grid-column: span 1; grid-row: span 1; border-radius: var(--solara-radius); background: white; text-decoration: none; }
 [data-solara-store].catalog-modern .catalog-category-bento-item--wide { grid-column: span 2; grid-row: span 1; }
 [data-solara-store].catalog-modern .catalog-category-bento-item--tall { grid-column: span 1; grid-row: span 2; }
-[data-solara-store].catalog-modern .catalog-category-bento-item span { position: relative; z-index: 2; margin: 1.25rem; color: var(--catalog-ink); font-size: 1.25rem; font-weight: 800; min-width: 0; overflow-wrap: anywhere; }
+[data-solara-store].catalog-modern .catalog-category-bento-item span { position: relative; z-index: 2; margin: 1.25rem; color: var(--catalog-ink); font-size: 1rem; font-weight: 700; line-height: 1.15; min-width: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 [data-solara-store].catalog-modern .catalog-category-bento-item small { position: absolute; z-index: 2; right: 1rem; bottom: .9rem; padding: .3rem .55rem; border: 1px solid rgb(11 11 12 / .1); border-radius: 999px; background: rgb(252 252 251 / .92); box-shadow: 0 1px 2px rgb(11 11 12 / .08); color: var(--catalog-ink); font-size: .72rem; font-weight: 700; line-height: 1; }
 [data-solara-store].catalog-modern .catalog-category-bento-item::after { position: absolute; z-index: 1; inset: 0; content: ""; background: linear-gradient(to top, rgb(11 11 12 / .16), transparent 42%); pointer-events: none; }
 [data-solara-store].catalog-modern .catalog-category-bento-image { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .78; transition: transform 280ms cubic-bezier(.16,1,.3,1); }
@@ -2122,6 +2125,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-category-bento-fallback { position: absolute; z-index: 0; inset: 0; display: grid; place-items: center; margin: 0; background: var(--catalog-surface); color: var(--catalog-ink); font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(3rem, 5vw, 4.5rem); font-weight: 500; letter-spacing: -.06em; line-height: 1; }
 [data-solara-store].catalog-modern .catalog-category-bento-all { border-bottom: 1px solid currentColor; font-size: .82rem; text-decoration: none; }
 [data-solara-store].catalog-modern .catalog-testimonials-track { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(280px, 1fr); gap: calc(.8rem * var(--solara-space-scale, 1)); overflow-x: auto; overscroll-behavior-inline: contain; scroll-snap-type: x proximity; padding-bottom: .5rem; }
+[data-solara-store].catalog-modern .catalog-testimonials-track:focus-visible { outline: 2px solid var(--catalog-ink); outline-offset: 2px; }
+[data-solara-store].catalog-modern .catalog-testimonials-controls button:focus-visible { outline: 2px solid var(--catalog-ink); outline-offset: 2px; }
 [data-solara-store].catalog-modern .catalog-testimonial { min-height: 190px; padding: 1.25rem; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); scroll-snap-align: start; text-align: left; }
 [data-solara-store].catalog-modern .catalog-testimonial-rating { color: var(--catalog-rating); letter-spacing: .08em; }
 [data-solara-store].catalog-modern .catalog-testimonial h3 { margin-top: .9rem; font-size: 1rem; font-weight: 800; }
@@ -2145,7 +2150,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-footer-inner nav a:hover { text-decoration: underline; text-underline-offset: .16em; }
 [data-solara-store].catalog-modern .catalog-footer-brand p { max-width: 28ch; margin-top: .8rem; color: var(--catalog-muted); font-size: .84rem; }
 [data-solara-store].catalog-modern .catalog-footer-inner address { display: grid; align-content: start; gap: .45rem; font-style: normal; font-size: .84rem; }
-[data-solara-store].catalog-modern .catalog-footer-meta { display: flex; flex: 1 1 100%; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .8rem 1.5rem; min-width: 0; padding-top: 1rem; border-top: 1px solid var(--catalog-border); }
+[data-solara-store].catalog-modern .catalog-footer-meta { display: flex; flex: 1 1 100%; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .8rem 1.5rem; min-width: 0; padding-top: 1rem; border-top: 1px solid var(--catalog-border); grid-column: 1 / -1; }
 [data-solara-store].catalog-modern .catalog-footer-meta > * { min-width: 0; margin: 0; flex: 1 1 18rem; }
 [data-solara-store].catalog-modern .catalog-footer-meta small { color: var(--catalog-muted); }
 [data-solara-store].catalog-modern .catalog-footer-meta .catalog-footer-made { text-align: right; }
@@ -2201,8 +2206,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-search-link svg,
 [data-solara-store].catalog-modern .catalog-mobile-menu-button svg { width: 1.05rem; height: 1.05rem; fill: none; stroke: currentcolor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 [data-solara-store].catalog-modern .catalog-product-info select { min-height: 42px; }
-[data-solara-store].catalog-modern .catalog-product-tabs { display: flex; gap: .35rem; width: min(calc(100% - 2rem), var(--solara-container)); margin: 1.4rem auto 0; border-bottom: 1px solid var(--catalog-border); overflow-x: auto; }
-[data-solara-store].catalog-modern .catalog-product-tabs button { min-height: 44px; padding: .65rem .8rem; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--catalog-muted); cursor: pointer; font: inherit; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+[data-solara-store].catalog-modern .catalog-product-tabs { display: none !important; }
+[data-solara-store].catalog-modern .catalog-product-tabs button { display: none !important; }
 [data-solara-store].catalog-modern .catalog-product-tabs button:hover,
 [data-solara-store].catalog-modern .catalog-product-tabs button[aria-selected="true"] { border-bottom-color: var(--catalog-ink); color: var(--catalog-ink); }
 [data-solara-store].catalog-modern .catalog-product-tabs button:focus-visible { outline: 2px solid var(--catalog-ink); outline-offset: -2px; }
@@ -2261,14 +2266,14 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .solara-page-intro h1,
 [data-solara-store].catalog-modern .solara-cart-page h1,
 [data-solara-store].catalog-modern .solara-checkout-page h1 { font-size: calc(clamp(2.8rem, 6vw, 5.5rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.03em; line-height: .9; }
-[data-solara-store].catalog-modern .solara-category-hero img { width: 100%; aspect-ratio: 16 / 7; object-fit: cover; border-radius: 16px; }
+[data-solara-store].catalog-modern .solara-category-hero img { width: 100%; aspect-ratio: 16 / 7; object-fit: contain; object-position: center; background: var(--catalog-surface); border-radius: 16px; }
 [data-solara-store].catalog-modern .solara-category-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 1rem 0 1.5rem; padding: .8rem 0; border-block: 1px solid var(--catalog-border); }
 [data-solara-store].catalog-modern .solara-category-toolbar select,
 [data-solara-store].catalog-modern .solara-category-toolbar input { min-height: 38px; padding: .4rem .55rem; border: 1px solid var(--catalog-border); border-radius: 8px; background: var(--catalog-paper); }
 [data-solara-store].catalog-modern .catalog-category-page { padding-bottom: clamp(2rem, 5vw, 5rem); }
 [data-solara-store].catalog-modern .catalog-category-layout { display: grid; grid-template-columns: minmax(190px, 230px) minmax(0, 1fr); gap: clamp(1.5rem, 3vw, 3rem); align-items: start; }
 [data-solara-store].catalog-modern .catalog-category-layout .solara-empty-state { grid-column: 1 / -1; padding: 2rem 0; color: var(--catalog-muted); }
-[data-solara-store].catalog-modern .catalog-category-filters { position: sticky; top: 1rem; min-width: 0; padding: 1rem; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); background: var(--catalog-surface); }
+[data-solara-store].catalog-modern .catalog-category-filters { position: sticky; top: 7.5rem; min-width: 0; padding: 1rem; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); background: var(--catalog-surface); }
 [data-solara-store].catalog-modern .catalog-category-filters details > summary { display: none; cursor: pointer; font-weight: 800; list-style: none; }
 [data-solara-store].catalog-modern .catalog-filter-groups { display: grid; gap: 1rem; }
 [data-solara-store].catalog-modern .catalog-filter-groups fieldset { min-width: 0; margin: 0; padding: 0 0 1rem; border: 0; border-bottom: 1px solid var(--catalog-border); }
@@ -2285,6 +2290,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-category-results .catalog-product-grid-section { width: auto; margin: 0; padding: 0 0 1rem; }
 [data-solara-store].catalog-modern .catalog-category-results .catalog-product-grid-section > header { margin-bottom: 1rem; }
 [data-solara-store].catalog-modern .catalog-category-results .catalog-product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.2rem .9rem; }
+[data-solara-store].catalog-modern .catalog-product-grid[data-product-count="1"] { grid-template-columns: minmax(0, 20rem); justify-content: start; }
+[data-solara-store].catalog-modern .catalog-product-grid[data-product-count="2"] { grid-template-columns: repeat(2, minmax(0, 20rem)); justify-content: start; }
+[data-solara-store].catalog-modern .catalog-product-grid[data-product-count="3"] { grid-template-columns: repeat(3, minmax(0, 20rem)); justify-content: start; }
+[data-solara-store].catalog-modern .catalog-product-grid[data-product-count="4"] { grid-template-columns: repeat(4, minmax(0, 20rem)); justify-content: start; }
 [data-solara-store].catalog-modern .catalog-category-results .catalog-product-card-copy { padding-top: .55rem; }
 [data-solara-store].catalog-modern .catalog-category-results .catalog-product-card h3 { font-size: .92rem; }
 [data-solara-store].catalog-modern .catalog-category-page > .solara-pagination { margin-top: 1rem; }
@@ -2500,7 +2509,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-brand {
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
   font-size: clamp(1.85rem, 2vw, 2.45rem);
   font-weight: 500;
@@ -2512,9 +2521,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   display: block;
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .cm.v2 [data-scrolled="true"] .catalog-brand {
   font-size: 1.7rem;
@@ -2736,7 +2746,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-product-grid-section,
 .cm.v2 .catalog-category-bento-section,
 .cm.v2 .catalog-testimonials-section,
-.cm.v2 .catalog-footer-inner {
+.cm.v2 .catalog-footer-inner,
+.cm.v2 .catalog-newsletter-inner {
   width: min(calc(100% - 3rem), var(--catalog-v2-wide));
 }
 /* El hero colisiona con el borde de la franja (margin-top 0); el contenido
@@ -2782,7 +2793,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   text-align: left;
 }
 .cm.v2 .catalog-product-grid {
-  grid-template-columns: repeat(auto-fit,minmax(min(100% / 5, 20rem),1fr));
+  grid-template-columns: repeat(auto-fill,minmax(min(100% / 5, 20rem),1fr));
+  justify-content: start;
   gap: clamp(1.5rem, 2.4vw, 3rem) clamp(.8rem, 1.4vw, 1.6rem);
   margin: 0 auto;
 }
@@ -3084,6 +3096,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   padding-top: clamp(2rem, 4.6vw, 4.6rem);
 }
 .cm.v2 .catalog-footer-meta {
+  grid-column: 1 / -1;
   width: 100%;
 }
 /* El CTA de newsletter hereda de V1 un margen inferior de hasta 5rem; en la
@@ -3112,7 +3125,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   line-height: .88;
   overflow-wrap: normal;
 }
-.cm.v2 .solara-category-hero img { aspect-ratio: 5 / 3; }
+.cm.v2 .solara-category-hero img { aspect-ratio: 5 / 3; object-fit: contain; object-position: center; background: var(--catalog-surface); border-radius: 12px; }
 .cm.v2 .solara-search-page .solara-page-intro { max-width: none; padding: clamp(3rem, 5vw, 5rem) 0 1.5rem; }
 .cm.v2 .solara-search-page .solara-page-intro h1 { max-width: none; font-size: calc(clamp(3.5rem, 4.5vw, 5.75rem) * var(--solara-type-scale, 1)); line-height: .95; }
 .cm.v2 .solara-search-page .solara-page-intro > p:not(.solara-eyebrow) { margin: 1rem 0 0; color: var(--catalog-muted); font-size: 1rem; line-height: 1.55; }
@@ -3123,7 +3136,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .solara-search-results { min-height: 18rem; padding-block: clamp(2.5rem, 5vw, 5rem); }
 .cm.v2 .solara-search-results > p:only-child { max-width: 34rem; margin: 1rem auto; font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(1.55rem, 2.5vw, 2.35rem); line-height: 1.15; text-align: center; }
 .cm.v2 .solara-search-summary { margin: 0 0 1.75rem; font-size: 1rem; font-weight: 650; }
-.cm.v2 .solara-search-results-grid { grid-template-columns: repeat(auto-fit,minmax(11rem,1fr)); gap: 3rem clamp(.8rem, 1.4vw, 1.6rem); max-width: 1320px; margin: 0 auto; }
+.cm.v2 .solara-search-results-grid { grid-template-columns: repeat(auto-fill,minmax(11rem,1fr)); justify-content: start; gap: 3rem clamp(.8rem, 1.4vw, 1.6rem); max-width: 1320px; margin: 0 auto; }
 .cm.v2 .solara-search-result { min-width: 0; overflow: hidden; }
 .cm.v2 .solara-search-result a { gap: .75rem; }
 .cm.v2 .solara-search-result img { aspect-ratio: 1; object-fit: contain; transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out); }
@@ -3137,6 +3150,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   gap: clamp(2.5rem, 4vw, 5rem);
 }
 .cm.v2 .catalog-category-filters {
+  position: sticky;
+  top: 6.5rem;
+  align-self: start;
+  max-height: calc(100dvh - 6.5rem);
+  overflow-y: auto;
   padding: 1.25rem 0;
   border-width: 1px 0;
   border-radius: 0;
@@ -3151,7 +3169,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   min-height: 54px;
   margin-bottom: 1.75rem;
 }
-.cm.v2 .catalog-category-results .catalog-product-grid{grid-template-columns:repeat(auto-fit,minmax(min(100% / 5, 20rem),1fr));gap:2rem 1.5rem;max-width:1320px}
+.cm.v2 .catalog-category-results .catalog-product-grid{grid-template-columns:repeat(auto-fill,minmax(min(100% / 5, 20rem),1fr));justify-content:start;gap:2rem 1.5rem;max-width:1320px}
 /* La grilla de categorías es más angosta (rail de 270px + tope de 1320px):
    conserva 3 columnas hasta 1199px como antes del tope de 5. */
 @media (max-width: 1199px) {
@@ -3162,7 +3180,16 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-product-detail,
 .cm.v2 .catalog-product-tabs,
 .cm.v2 .catalog-product-reviews {
-  width: min(calc(100% - clamp(1.5rem, 6vw, 8rem)), var(--catalog-v2-wide));
+  width: min(calc(100% - 3rem), var(--catalog-v2-wide));
+}
+.cm.v2 .catalog-category-page,
+.cm.v2 .solara-search-page,
+.cm.v2 .solara-cart-page,
+.cm.v2 .solara-checkout-page,
+.cm.v2 .solara-editorial-page,
+.cm.v2 .solara-error-page {
+  width: min(calc(100% - 3rem), var(--catalog-v2-wide));
+  margin-inline: auto;
 }
 .cm.v2 .catalog-product-detail-inner {
   grid-template-columns: minmax(0, 1.35fr) minmax(420px, .65fr);
@@ -3507,7 +3534,20 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-product-grid-section,
   .cm.v2 .catalog-category-bento-section,
   .cm.v2 .catalog-testimonials-section,
-  .cm.v2 .catalog-footer-inner {
+  .cm.v2 .catalog-footer-inner,
+  .cm.v2 .catalog-newsletter-inner,
+  .cm.v2 .catalog-product-detail,
+  .cm.v2 .catalog-product-tabs,
+  .cm.v2 .catalog-product-reviews,
+  .cm.v2 .catalog-category-page,
+  .cm.v2 .solara-search-page,
+  .cm.v2 .solara-cart-page,
+  .cm.v2 .solara-checkout-page,
+  .cm.v2 .solara-editorial-page,
+  .cm.v2 .solara-error-page,
+  .cm.v2 .solara-contact-page,
+  .cm.v2 .solara-about-page,
+  .cm.v2 .solara-home-contact {
     width: min(calc(100% - 1.5rem), var(--catalog-v2-wide));
   }
   .cm.v2 .catalog-hero-inner {
@@ -3628,11 +3668,19 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     box-shadow: 0 -20px 70px color-mix(in srgb, var(--catalog-ink), transparent 68%), 0 0 0 100vmax color-mix(in srgb, var(--catalog-ink), transparent 50%);
   }
   .cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
-    max-width: calc(100% - 1.3rem);
-    margin: .65rem;
-    padding: .3rem .45rem;
-    font-size: clamp(.82rem, 4.5vw, 1rem);
-    line-height: 1.05;
+    max-width: calc(100% - .8rem);
+    margin: .4rem;
+    padding: .25rem .4rem;
+    font-family: var(--solara-font-body, Arial, sans-serif);
+    font-size: .82rem;
+    font-weight: 600;
+    letter-spacing: -.02em;
+    line-height: 1.16;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
   .cm.v2 .catalog-category-bento-title {
     display: block;
@@ -4139,7 +4187,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   --hero-v2-rise: 12px;
   animation: solara-hero-rise 420ms var(--catalog-v2-ease-out) 140ms backwards;
 }
-@media (max-width: 767px) {
+@media (max-width: 1024px) {
   .cm.v2 .solara-home-contact {
     width: min(calc(100% - 1.5rem), var(--catalog-v2-wide));
     grid-template-columns: minmax(0, 1fr);
@@ -4153,6 +4201,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
   .cm.v2 .solara-contact-page > .solara-contact-sections {
     grid-template-columns: minmax(0, 1fr);
+    gap: 2.5rem 0;
   }
   .cm.v2 .solara-contact-sections > [data-solara-module="contact-form"],
   .cm.v2 .solara-contact-sections > [data-solara-module="contact-channels"] {
@@ -4208,6 +4257,23 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
   .cm.v2 .contact-purchase-info article:last-child {
     border-bottom: 0;
+  }
+}
+@media (max-width: 900px) {
+  .cm.v2 .solara-home-contact {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2.5rem 0;
+  }
+  .cm.v2 .solara-home-contact > [data-solara-module="contact-form"],
+  .cm.v2 .solara-home-contact > [data-solara-module="contact-channels"] {
+    grid-column: 1;
+  }
+  .cm.v2 .solara-contact-page > .solara-contact-sections {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cm.v2 .solara-contact-sections > [data-solara-module="contact-form"],
+  .cm.v2 .solara-contact-sections > [data-solara-module="contact-channels"] {
+    grid-column: 1;
   }
 }
 
@@ -4282,26 +4348,93 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 @media (max-width: 450px) {
   .cm.v2 .catalog-header-inner,
+  .cm.v2 .catalog-hero-inner,
   .cm.v2 .catalog-brand-strip-inner,
   .cm.v2 .catalog-product-grid-section,
   .cm.v2 .catalog-category-bento-section,
   .cm.v2 .catalog-testimonials-section,
   .cm.v2 .catalog-footer-inner,
+  .cm.v2 .catalog-newsletter-inner,
   .cm.v2 .catalog-product-detail,
   .cm.v2 .catalog-product-tabs,
   .cm.v2 .catalog-product-reviews,
+  .cm.v2 .catalog-category-page,
   .cm.v2 .solara-search-page,
   .cm.v2 .solara-cart-page,
-  .cm.v2 .solara-checkout-page {
+  .cm.v2 .solara-checkout-page,
+  .cm.v2 .solara-editorial-page,
+  .cm.v2 .solara-error-page,
+  .cm.v2 .solara-contact-page,
+  .cm.v2 .solara-about-page,
+  .cm.v2 .solara-home-contact {
     width: min(calc(100% - 1.5rem), var(--catalog-v2-wide));
   }
   .cm.v2 .catalog-brand,
   .cm.v2 .catalog-mobile-brand {
     min-width: 0;
-    max-width: min(42vw, 12rem);
+    max-width: min(68vw, 16rem);
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  .cm.v2 .catalog-brand .solara-wordmark,
+  .cm.v2 .catalog-mobile-brand .solara-wordmark {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    overflow: visible;
+  }
+@media (max-width: 900px) {
+  .cm.v2 .catalog-footer-inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+  .cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
+    max-width: calc(100% - .8rem);
+    margin: .4rem;
+    padding: .25rem .4rem;
+    font-family: var(--solara-font-body, Arial, sans-serif);
+    font-size: .82rem;
+    font-weight: 600;
+    letter-spacing: -.02em;
+    line-height: 1.16;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  }
+}
+  @media (max-width: 767px) {
+    .cm.v2 .catalog-category-filters {
+      position: static;
+      top: auto;
+      max-height: none;
+      overflow: visible;
+    }
+  }
+  .cm.v2 .catalog-category-filters:hover,
+  .cm.v2 .catalog-category-filters.solara-search-filters:hover {
+    border-color: var(--solara-accent);
+  }
+  .cm.v2 .catalog-category-filters:active,
+  .cm.v2 .catalog-category-filters:focus,
+  .cm.v2 .catalog-category-filters:focus-within,
+  .cm.v2 .catalog-category-filters.solara-search-filters:active,
+  .cm.v2 .catalog-category-filters.solara-search-filters:focus,
+  .cm.v2 .catalog-category-filters.solara-search-filters:focus-within {
+    border-color: var(--catalog-border);
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  .cm.v2 .catalog-category-filters:hover {
+      border-color: var(--solara-accent);
+    }
+  .cm.v2 .catalog-category-filters:active,
+  .cm.v2 .catalog-category-filters:focus,
+  .cm.v2 .catalog-category-filters:focus-within {
+    border-color: var(--catalog-border);
+    outline: none !important;
+    box-shadow: none !important;
   }
   .cm.v2 .catalog-hero-editorial .catalog-hero-copy {
     min-width: 0;
@@ -4332,9 +4465,17 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
     max-width: calc(100% - .8rem);
     margin: .4rem;
-    padding: .2rem .3rem;
-    font-size: clamp(.62rem, 3.2vw, .78rem);
-    line-height: 1.05;
+    padding: .25rem .4rem;
+    font-family: var(--solara-font-body, Arial, sans-serif);
+    font-size: .82rem;
+    font-weight: 600;
+    letter-spacing: -.02em;
+    line-height: 1.16;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
   .cm.v2 .catalog-category-bento-item small {
     right: .4rem;

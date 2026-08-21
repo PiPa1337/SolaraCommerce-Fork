@@ -2,7 +2,7 @@ import {
   escapeAttribute,
   escapeHtml,
   findVideo,
-  formatMoney,
+  formatMoneyForProject,
   type ModuleDefinition,
   moduleRoot,
   type RenderContext,
@@ -699,7 +699,7 @@ function buildWhatsAppInquiryLink(
     context.project.whatsapp.greeting,
     `Producto: ${product.title}`,
     firstVariant ? `Variante: ${firstVariant.title}` : "",
-    `Precio: ${formatMoney(firstVariant?.price ?? lowestPrice(product))}`,
+    `Precio: ${formatMoneyForProject(firstVariant?.price ?? lowestPrice(product), context.project)}`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -777,7 +777,7 @@ export const productDetail: ModuleDefinition<
         const variantImage = context.project.assets.find(
           (asset) => asset.id === (variant.imageId ?? product.imageIds[0]),
         );
-        return `<option value="${escapeAttribute(variant.id)}" data-variant-data="${escapeAttribute(variant.id)}" data-variant-id="${escapeAttribute(variant.id)}" data-variant-title="${escapeAttribute(variant.title)}" data-sku="${escapeAttribute(variant.sku)}" data-image-id="${escapeAttribute(variant.imageId ?? product.imageIds[0] ?? "")}"${variantImage ? ` data-image-url="${escapeAttribute(safeAssetUrl(variantImage.source, ""))}" data-image-width="${variantImage.width}" data-image-height="${variantImage.height}"` : ""} data-price="${variant.price}" data-compare-at="${variant.compareAtPrice ?? ""}" data-available="${String(variant.available)}" ${variant.available ? "" : "disabled"}${variant.id === firstVariant?.id ? " selected" : ""}>${escapeHtml(variant.title)} - ${escapeHtml(formatMoney(variant.price))}${variant.available ? "" : ` - ${escapeHtml(copy.product.outOfStock)}`}</option>`;
+        return `<option value="${escapeAttribute(variant.id)}" data-variant-data="${escapeAttribute(variant.id)}" data-variant-id="${escapeAttribute(variant.id)}" data-variant-title="${escapeAttribute(variant.title)}" data-sku="${escapeAttribute(variant.sku)}" data-image-id="${escapeAttribute(variant.imageId ?? product.imageIds[0] ?? "")}"${variantImage ? ` data-image-url="${escapeAttribute(safeAssetUrl(variantImage.source, ""))}" data-image-width="${variantImage.width}" data-image-height="${variantImage.height}"` : ""} data-price="${variant.price}" data-compare-at="${variant.compareAtPrice ?? ""}" data-available="${String(variant.available)}" ${variant.available ? "" : "disabled"}${variant.id === firstVariant?.id ? " selected" : ""}>${escapeHtml(variant.title)} - ${escapeHtml(formatMoneyForProject(variant.price, context.project))}${variant.available ? "" : ` - ${escapeHtml(copy.product.outOfStock)}`}</option>`;
       })
       .join("");
     const variantLinks = product.variants
@@ -789,7 +789,7 @@ export const productDetail: ModuleDefinition<
     const whatsappFallback = buildWhatsAppInquiryLink(context, product);
     const compareAt =
       context.settings.showCompareAtPrice && firstVariant?.compareAtPrice
-        ? formatMoney(firstVariant.compareAtPrice)
+        ? formatMoneyForProject(firstVariant.compareAtPrice, context.project)
         : "";
     const description = context.settings.showDescription
       ? `<div class="solara-rich-text">${product.richDescription ? sanitizeRichText(product.richDescription) : `<p>${escapeHtml(product.description)}</p>`}</div>`
@@ -803,7 +803,7 @@ export const productDetail: ModuleDefinition<
         <div class="solara-product-info">
           <p class="solara-product-brand">${escapeHtml(product.brand)}</p>
           <h1>${escapeHtml(product.title)}</h1>
-          <p class="solara-detail-price" data-solara-product-price><span data-product-price>${escapeHtml(formatMoney(lowestPrice(product)))}</span><del data-product-compare${compareAt ? "" : " hidden"}>${escapeHtml(compareAt)}</del></p>
+          <p class="solara-detail-price" data-solara-product-price><span data-product-price>${escapeHtml(formatMoneyForProject(lowestPrice(product), context.project))}</span><del data-product-compare${compareAt ? "" : " hidden"}>${escapeHtml(compareAt)}</del></p>
           ${description}
           <form action="/carrito/" method="get" data-solara-add-form>
             <input type="hidden" name="product" value="${escapeAttribute(product.id)}">
@@ -1010,7 +1010,7 @@ export const cartDrawer: ModuleDefinition<"cart-drawer", z.infer<typeof cartSett
         <aside id="solara-cart" class="solara-cart-drawer" data-cart-drawer aria-label="${escapeAttribute(context.settings.title)}" aria-hidden="true" inert tabindex="-1">
           <header><h2>${escapeHtml(context.settings.title)}</h2><button type="button" data-solara-cart-close data-close-cart aria-label="${escapeAttribute(copy.cart.close)}">${escapeHtml(copy.navigation.close)}</button></header>
           <div data-solara-cart-items data-cart-lines><p class="solara-empty-state">${escapeHtml(context.settings.emptyText)}</p></div>
-          <div class="solara-cart-total"><span>${escapeHtml(copy.cart.estimatedTotal)}</span><strong data-solara-cart-total data-cart-total>${escapeHtml(formatMoney(0))}</strong></div>
+          <div class="solara-cart-total"><span>${escapeHtml(copy.cart.estimatedTotal)}</span><strong data-solara-cart-total data-cart-total>${escapeHtml(formatMoneyForProject(0, context.project))}</strong></div>
           <form data-solara-checkout data-checkout-form>
             <label for="solara-drawer-customer-name">${escapeHtml(copy.cart.name)}</label>
             <input id="solara-drawer-customer-name" name="name" autocomplete="name" required>

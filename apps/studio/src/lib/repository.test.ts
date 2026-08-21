@@ -107,7 +107,7 @@ describe("repositorio local", () => {
     const editedAfterDisk = { updatedAt: "2026-08-02T10:00:00.000Z" };
     expect(shouldSeedRecoveryDraft(editedAfterDisk, seed, true)).toBe(true);
     expect(shouldSeedRecoveryDraft(seed, editedAfterDisk, true)).toBe(false);
-    expect(shouldSeedRecoveryDraft(seed, seed, true)).toBe(false);
+    expect(shouldSeedRecoveryDraft(seed, seed, true)).toBe(true);
     expect(shouldSeedRecoveryDraft(editedAfterDisk, seed, false)).toBe(false);
   });
 

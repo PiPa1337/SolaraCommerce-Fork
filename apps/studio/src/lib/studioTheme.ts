@@ -1,24 +1,19 @@
-export type StudioTheme = "light" | "dark";
+export type StudioTheme = "dark";
 
 export const STUDIO_THEME_STORAGE_KEY = "solara-studio-theme";
 
-/** El Studio nace oscuro; una preferencia clara guardada siempre tiene prioridad. */
+// Dark-only: light theme deprecado. Migra preferencia antigua silenciosamente.
 export function readStudioTheme(): StudioTheme {
   try {
-    return window.localStorage.getItem(STUDIO_THEME_STORAGE_KEY) === "light" ? "light" : "dark";
-  } catch {
-    return "dark";
-  }
+    const v = window.localStorage.getItem(STUDIO_THEME_STORAGE_KEY);
+    if (v === "light") window.localStorage.removeItem(STUDIO_THEME_STORAGE_KEY);
+  } catch {}
+  return "dark";
 }
 
-export function applyStudioTheme(theme: StudioTheme): void {
-  document.documentElement.setAttribute("data-studio-theme", theme);
+export function applyStudioTheme(_theme: StudioTheme): void {
+  document.documentElement.setAttribute("data-studio-theme", "dark");
+  document.documentElement.style.colorScheme = "dark";
 }
 
-export function storeStudioTheme(theme: StudioTheme): void {
-  try {
-    window.localStorage.setItem(STUDIO_THEME_STORAGE_KEY, theme);
-  } catch {
-    // Almacenamiento bloqueado: el tema se conserva sólo en memoria.
-  }
-}
+export function storeStudioTheme(_theme: StudioTheme): void {}

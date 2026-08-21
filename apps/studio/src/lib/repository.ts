@@ -35,10 +35,10 @@ export interface ProjectRecoveryIssue {
 
 /**
  * Decide si el proyecto del navegador merece un RecoveryDraft cuando difiere
- * del disco: sólo cuando el navegador es estrictamente más nuevo (evidencia de
- * ediciones posteriores al último guardado). Un demo recién sembrado o migrado
- * en disco tiene updatedAt igual o más viejo y no debe mostrar el diálogo
- * "Recuperar borrador" para un proyecto que el usuario nunca editó.
+ * del disco: cuando el navegador es más nuevo o igual con contenido distinto
+ * (evidencia de ediciones posteriores). Un demo recién sembrado con updatedAt
+ * igual pero sin diff no debe mostrar el diálogo, pero con diff true sí debe
+ * sembrarse para evitar perder ediciones que no avanzaron el timestamp.
  */
 export function shouldSeedRecoveryDraft(
   browserProject: Pick<StoreProjectV1, "updatedAt">,
@@ -46,7 +46,7 @@ export function shouldSeedRecoveryDraft(
   diff: boolean,
 ): boolean {
   if (!diff) return false;
-  return Date.parse(browserProject.updatedAt) > Date.parse(diskProject.updatedAt);
+  return Date.parse(browserProject.updatedAt) >= Date.parse(diskProject.updatedAt);
 }
 
 export interface ProjectListResult {
@@ -698,6 +698,13 @@ export async function saveRecoveryDraft(
 ): Promise<void> {
   await ready();
   const validProject = ensureCatalogModernV2Sections(StoreProjectV1Schema.parse(project));
+  const existing = await database.recoveryDrafts.get(validProject.id);
+  if (existing) {
+    const existingTime = Date.parse(existing.project.updatedAt);
+    const newTime = Date.parse(validProject.updatedAt);
+    if (newTime < existingTime) return;
+    if (newTime === existingTime && baseDiskVersion <= existing.baseDiskVersion) return;
+  }
   await database.recoveryDrafts.put({
     projectId: validProject.id,
     baseDiskVersion,

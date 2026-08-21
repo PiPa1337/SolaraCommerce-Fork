@@ -419,7 +419,7 @@ export function ThemeEditor({
   return (
     <section className="workspace-section">
       <SectionHeader
-        title="Tema"
+        title="Tema de la tienda"
         description="Un sistema de tokens consistente para todos los módulos de la tienda."
       />
 
