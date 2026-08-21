@@ -1,5 +1,14 @@
 # Changelog
 
+### Storefront: escala de espaciado + auditoria geometrica (2026-08-21)
+
+- Gaps del storefront V2 migrados a escala .25/.5/.75/1/1.25/1.5/2/3rem
+  (38 valores distintos -> 8). Padding off-scale migrado igual. CSS V2 queda
+  en 172567 B (baja 19 B) dentro de budget.
+- Nuevo spec tests/e2e/__vision__/storefront-alignment.spec.ts: mide el sitio
+  exportado real (cards uniformes por grilla, modulos centrados, sin overflow
+  en 320px). 3/3 pasando.
+
 ### Escala de espaciado y auditoria de alineacion (2026-08-21)
 
 - Tokens --space-* en base.css (multiplos de 4px): contrato de espaciado.
