@@ -1,5 +1,13 @@
 # Changelog
 
+### Refactor exporter: feeds (2026-08-21)
+
+- **Feeds modular**: `feeds.ts` extrae `buildSitemap`, `buildImageSitemap`,
+  `buildVideoSitemap`, `buildMerchantFeed`, `buildSearchIndex` y
+  `buildCatalogIndex`. `categoryProducts`, `productCategoryScope` y
+  `buildCommerceSnapshot` pasan a ser export públicos. index.ts baja a 2309
+  líneas (desde 2797). Typecheck + 253 tests verdes, check:quick OK.
+
 ### Refactor exporter: structured-data (2026-08-21)
 
 - **JSON-LD modular**: `structured-data.ts` extrae `storeStructuredData`,
