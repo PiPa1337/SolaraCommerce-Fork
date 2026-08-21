@@ -1,5 +1,15 @@
 # Changelog
 
+### Deuda E2E documentada + refactor exporter feeds (2026-08-21)
+
+- **Triaje de specs E2E inestables**: se documenta en TECHNICAL_DEBT el set de
+  specs que fallan intermitentemente bajo carga paralela (verificado también en
+  el commit base `c4d71ae`, sin los refactors): assets, nojs-coverage, C4/C8/C11,
+  scale-store y dos de catalog-modern-v2. Queda registrada la recomendación de
+  triaje (timeouts, workers, separación de specs lentos).
+- **Feeds modular**: `feeds.ts` concentra sitemaps, Merchant feed e índices;
+  index.ts queda en 2309 líneas. Gates: typecheck + 253 tests + check:quick OK.
+
 ### Refactor exporter: feeds (2026-08-21)
 
 - **Feeds modular**: `feeds.ts` extrae `buildSitemap`, `buildImageSitemap`,
