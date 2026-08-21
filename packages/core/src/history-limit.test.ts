@@ -1,12 +1,6 @@
-import { describe, expect, it } from "vitest";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
-import {
-  createHistory,
-  executeCommand,
-  MAX_HISTORY_LENGTH,
-  undo,
-  redo,
-} from "./index.js";
+import { describe, expect, it } from "vitest";
+import { createHistory, executeCommand, MAX_HISTORY_LENGTH, redo, undo } from "./index.js";
 
 const timestamp = "2026-08-21T03:00:00.000Z";
 

@@ -4,7 +4,8 @@ import { App } from "./App";
 import { applyStudioTheme } from "./lib/studioTheme";
 import "./styles.css";
 
-applyStudioTheme("dark"); document.documentElement.style.colorScheme = "dark";
+applyStudioTheme("dark");
+document.documentElement.style.colorScheme = "dark";
 
 const container = document.getElementById("root");
 if (!container) {

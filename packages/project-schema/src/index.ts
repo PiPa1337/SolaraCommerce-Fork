@@ -4,17 +4,40 @@
  * estos tipos para evitar modelos paralelos.
  */
 import { z } from "zod";
+import {
+  categoryAncestorIds,
+  categoryDescendantIds,
+  categoryProductIds,
+} from "./category-helpers.js";
+import { ImageAssetSchema, MediaAssetSchema, VideoAssetSchema } from "./media.js";
+import { PUBLIC_COPY_DEFAULTS } from "./public-copy-defaults.js";
 
-const brandedId = <Brand extends string>(_brand: Brand) => z.string().min(1).brand<Brand>();
+export { ImageAssetSchema, MediaAssetSchema, VideoAssetSchema };
 
-export const StoreIdSchema = brandedId("StoreId");
-export const ProductIdSchema = brandedId("ProductId");
-export const VariantIdSchema = brandedId("VariantId");
-export const CategoryIdSchema = brandedId("CategoryId");
-export const CollectionIdSchema = brandedId("CollectionId");
-export const SectionIdSchema = brandedId("SectionId");
-export const AssetIdSchema = brandedId("AssetId");
-export const MoneySchema = z.number().int().nonnegative().brand<"Money">();
+export { PUBLIC_COPY_DEFAULTS };
+
+import {
+  AssetIdSchema,
+  CategoryIdSchema,
+  CollectionIdSchema,
+  MoneySchema,
+  ProductIdSchema,
+  SectionIdSchema,
+  StoreIdSchema,
+  VariantIdSchema,
+} from "./ids.js";
+
+export {
+  AssetIdSchema,
+  CategoryIdSchema,
+  CollectionIdSchema,
+  MoneySchema,
+  ProductIdSchema,
+  SectionIdSchema,
+  StoreIdSchema,
+  VariantIdSchema,
+};
+
 const WINDOWS_RESERVED_SLUGS = new Set([
   "con",
   "prn",
@@ -45,43 +68,6 @@ export type AssetId = z.infer<typeof AssetIdSchema>;
 export type Money = z.infer<typeof MoneySchema>;
 export type Slug = z.infer<typeof SlugSchema>;
 
-export const ImageAssetSchema = z.object({
-  kind: z.literal("image").default("image"),
-  id: AssetIdSchema,
-  name: z.string().min(1),
-  alt: z.string(),
-  mimeType: z.string().min(1),
-  source: z.string().min(1),
-  fallbackSource: z.string().min(1).optional(),
-  responsiveSources: z
-    .array(
-      z.object({
-        width: z.number().int().positive(),
-        source: z.string().min(1),
-      }),
-    )
-    .optional(),
-  width: z.number().int().positive(),
-  height: z.number().int().positive(),
-  hash: z.string().min(1),
-});
-
-export const VideoAssetSchema = z.object({
-  kind: z.literal("video"),
-  id: AssetIdSchema,
-  name: z.string().min(1),
-  alt: z.string().default(""),
-  mimeType: z.enum(["video/mp4", "video/webm"]),
-  source: z.string().min(1),
-  posterAssetId: AssetIdSchema.optional(),
-  width: z.number().int().positive(),
-  height: z.number().int().positive(),
-  durationSeconds: z.number().positive().max(60),
-  hash: z.string().min(1),
-});
-
-export const MediaAssetSchema = z.union([ImageAssetSchema, VideoAssetSchema]);
-
 export const NavigationItemSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1).max(80),
@@ -108,224 +94,6 @@ export const NavigationConfigSchema = z.object({
   showSearch: z.boolean().default(true),
   showCart: z.boolean().default(true),
 });
-
-/**
- * Texto global visible en el storefront. El copy específico de cada módulo
- * sigue viviendo en StoreSection.settings; este bloque cubre los controles y
- * estados compartidos que antes tenían fallbacks repartidos por los renderers.
- */
-export const PUBLIC_COPY_DEFAULTS = {
-  navigation: {
-    home: "Inicio",
-    catalog: "Categorías",
-    contact: "Contacto",
-    about: "Nosotros",
-    search: "Buscar productos",
-    cart: "Carrito",
-    viewAll: "Ver todos los productos",
-    openMenu: "Abrir menú",
-    closeMenu: "Cerrar menú",
-    close: "Cerrar",
-  },
-  search: {
-    title: "Buscar productos",
-    placeholder: "Buscar productos...",
-    queryLabel: "Buscá por nombre, marca, categoría o etiqueta.",
-    submit: "Buscar",
-    close: "Cerrar búsqueda",
-    empty: "Elegí una búsqueda",
-    queryTooShort: "Escribí al menos 2 caracteres para buscar.",
-    loading: "Cargando resultados…",
-    noResults: "No encontramos productos para esa búsqueda.",
-    suggestion: "No encontramos resultados para “{query}”. ¿Quisiste decir",
-    error: "No se pudo cargar la búsqueda. Intentá nuevamente.",
-  },
-  filters: {
-    title: "Filtros",
-    availability: "Disponibilidad",
-    availableOnly: "Sólo disponibles",
-    tag: "Etiqueta",
-    filterByTag: "Filtrar por etiqueta",
-    all: "Todas",
-    price: "Precio",
-    minimum: "Mínimo",
-    maximum: "Máximo",
-    sort: "Ordenar",
-    recommended: "Recomendados",
-    priceAsc: "Precio menor",
-    priceDesc: "Precio mayor",
-    name: "Nombre",
-    resultCount: "productos",
-  },
-  hero: {
-    benefits: "Beneficios",
-    activeProducts: "productos activos",
-    categories: "categorías",
-    whatsapp: "WhatsApp",
-    contact: "Contacto",
-    directOrder: "pedido directo",
-    inquiries: "consultas",
-    whatsappAction: "Escribir por WhatsApp",
-  },
-  product: {
-    available: "Disponible",
-    outOfStock: "Agotado",
-    from: "Desde",
-    variant: "Variante",
-    quantity: "Cantidad",
-    sku: "SKU",
-    availability: "Disponibilidad",
-    details: "Detalles",
-    policies: "Envíos y cambios",
-    shipping: "Envíos",
-    returns: "Cambios y devoluciones",
-    askWhatsApp: "Consultar por WhatsApp",
-    addToCart: "Agregar al carrito",
-    noStock: "Sin stock",
-    related: "También puede interesarte",
-    options: "Opciones del producto",
-    reviews: "Reseñas",
-    reviewEyebrow: "Experiencias reales",
-    reviewTitle: "Lo que dicen quienes compraron",
-    verifiedPurchase: "Compra verificada",
-  },
-  contact: {
-    whatsappFallback: "Configurá un teléfono de WhatsApp para recibir consultas.",
-    emailFallback: "Configurá un email para recibir consultas.",
-    emailAction: "Enviar consulta por email",
-    success: "Listo",
-    email: "Email",
-    phone: "Teléfono",
-    whatsapp: "WhatsApp",
-    address: "Dirección",
-    whatsappAction: "Escribir por WhatsApp",
-    reason: "Motivo",
-    orderNumber: "Número de pedido",
-    message: "Mensaje",
-  },
-  cart: {
-    close: "Cerrar carrito",
-    continueShopping: "Seguir comprando",
-    subtotal: "Subtotal",
-    delivery: "Entrega",
-    deliveryToCoordinate: "A coordinar",
-    estimatedTotal: "Total estimado",
-    name: "Nombre",
-    phone: "Teléfono",
-    address: "Dirección o punto de entrega",
-    notes: "Notas opcionales",
-    remove: "Eliminar",
-    unavailable: "Ya no disponible",
-    exploreCategories: "Explorar categorías",
-  },
-  checkout: {
-    submit: "Preparar pedido",
-    sendWhatsApp: "Enviar pedido en WhatsApp",
-    coordinate: "Escribinos para coordinar",
-    continue: "Continuar a compra",
-    summary: "Resumen del pedido",
-    selection: "Tu selección",
-    prepare: "Prepará el pedido para revisar productos y total antes de abrir WhatsApp.",
-    invalidItems: "Retirá los productos no disponibles del carrito antes de enviar el pedido.",
-    total: "Total estimado",
-    delivery: "Entrega",
-    disclaimer: "Entiendo que precio, disponibilidad, envío y pago se confirman por este medio.",
-  },
-  footer: {
-    explore: "Explorar",
-    help: "Ayuda",
-    contact: "Contacto",
-    policies: "Políticas",
-    shipping: "Envíos",
-    returns: "Cambios",
-    privacy: "Privacidad",
-    terms: "Términos",
-  },
-  empty: {
-    products: "No hay productos para mostrar.",
-    collections: "Todavía no hay colecciones publicadas.",
-    cart: "Tu carrito está vacío.",
-    filteredProducts: "No hay productos que coincidan con estos filtros.",
-  },
-  pages: {
-    home: "Inicio",
-    catalog: "Catálogo",
-    products: "Productos",
-    categories: "Categorías",
-    search: "Buscar",
-    cart: "Carrito",
-    checkout: "Compra",
-    about: "Nosotros",
-    contact: "Contacto",
-    shipping: "Envíos",
-    returns: "Cambios y devoluciones",
-    privacy: "Privacidad",
-    terms: "Términos",
-    notFound: "Página no encontrada",
-    aboutEyebrow: "Nuestra mirada",
-    aboutFallbackTitle: "Elegimos objetos para vivirlos.",
-    aboutGuidanceTitle: "Lo que nos guía",
-    aboutInformationTitle: "Información clara",
-    aboutContactAction: "Conocé cómo contactarnos",
-    aboutSelectionTitle: "Selección",
-    aboutSelectionFallback: "Conocé nuestras colecciones.",
-    aboutDeliveryTitle: "Entrega",
-    aboutDirectTitle: "Atención directa",
-    aboutDirectFallback: "Escribinos para recibir asesoramiento.",
-    contactEyebrow: "Hablemos",
-    contactFallbackTitle: "Estamos para ayudarte.",
-    contactDescription:
-      "Respondemos consultas, disponibilidad y detalles de entrega por canales directos.",
-    contactPurchaseTitle: "Coordinemos tu compra",
-    contactPurchaseDescription:
-      "Si ya elegiste una pieza, podés escribirnos y te confirmamos disponibilidad, envío y pago.",
-    notFoundEyebrow: "Página no encontrada",
-    notFoundTitle: "No encontramos esa página.",
-    notFoundDescription: "Podés volver al inicio o explorar nuestras colecciones.",
-    returnHome: "Volver al inicio",
-    viewCategories: "Ver categorías",
-  },
-  whatsapp: {
-    ask: "Hola {storeName}, quiero hacer una consulta.",
-    purchase: "Hola {storeName}, quiero coordinar una compra.",
-    orderGreeting: "Hola {storeName}, quiero hacer este pedido:",
-    product: "Producto",
-    variant: "Variante",
-    price: "Precio",
-    total: "Total estimado",
-    customerName: "Nombre",
-    customerPhone: "Teléfono",
-    delivery: "Entrega",
-    notes: "Notas",
-    confirmation: "Entiendo que precio, disponibilidad, envío y pago se confirman por este medio.",
-  },
-  export: {
-    skipToContent: "Ir al contenido",
-    breadcrumbs: "Migas de pan",
-    pagination: "Paginación",
-    previous: "Anterior",
-    next: "Siguiente",
-    pageOf: "Página {page} de {total}",
-    categoryChildren: "Subcategorías de {category}",
-    exploreCategory: "Explorar {category}",
-    categoryProducts: "productos",
-    viewCollection: "Ver colección",
-    viewImage: "Ver imagen {index}",
-    variantLinks: "Enlaces directos a variantes",
-    policyDetailsTitle: "Qué necesitás saber",
-    policyQuestionsTitle: "¿Tenés dudas?",
-    policyQuestionsBody:
-      "Escribinos antes de coordinar tu pedido y revisamos esta información con vos.",
-  },
-  accessibility: {
-    benefits: "Beneficios",
-    productInfo: "Información del producto",
-    catalogSummary: "Resumen del catálogo",
-    mobileNavigation: "Navegación móvil",
-    mainNavigation: "Navegación principal",
-    announcements: "Avisos",
-  },
-};
 
 export const PublicCopySchema = z.object({
   navigation: z
@@ -897,78 +665,6 @@ function sameMembers(left: readonly string[], right: readonly string[]): boolean
   if (left.length !== right.length) return false;
   const rightMembers = new Set(right);
   return left.every((value) => rightMembers.has(value));
-}
-
-interface CategoryRelation {
-  id: string;
-  parentId?: string | undefined;
-}
-
-function categoryRelationsById(
-  categories: readonly CategoryRelation[],
-): Map<string, CategoryRelation> {
-  return new Map(categories.map((category) => [category.id, category]));
-}
-
-function categoryDescendantIds(
-  categories: readonly CategoryRelation[],
-  categoryId: string,
-): string[] {
-  const childrenByParent = new Map<string, string[]>();
-  for (const category of categories) {
-    if (!category.parentId) continue;
-    const children = childrenByParent.get(category.parentId) ?? [];
-    children.push(category.id);
-    childrenByParent.set(category.parentId, children);
-  }
-
-  const descendants: string[] = [];
-  const visited = new Set<string>([categoryId]);
-  const visit = (parentId: string): void => {
-    for (const childId of childrenByParent.get(parentId) ?? []) {
-      if (visited.has(childId)) continue;
-      visited.add(childId);
-      descendants.push(childId);
-      visit(childId);
-    }
-  };
-  visit(categoryId);
-  return descendants;
-}
-
-function categoryAncestorIds(
-  categories: readonly CategoryRelation[],
-  categoryId: string,
-): string[] {
-  const byId = categoryRelationsById(categories);
-  const ancestors: string[] = [];
-  const seen = new Set<string>();
-  let current = byId.get(categoryId)?.parentId;
-  while (current) {
-    if (seen.has(current)) break;
-    seen.add(current);
-    ancestors.unshift(current);
-    current = byId.get(current)?.parentId;
-  }
-  return ancestors;
-}
-
-function categoryScopeIds(
-  categories: readonly CategoryRelation[],
-  categoryId: string,
-): Set<string> {
-  return new Set([categoryId, ...categoryDescendantIds(categories, categoryId)]);
-}
-
-function categoryProductIds(
-  categories: readonly CategoryRelation[],
-  products: readonly { id: string; categoryIds: readonly string[] }[],
-  categoryId: string,
-): string[] {
-  const scope = categoryScopeIds(categories, categoryId);
-  return products
-    .filter((product) => product.categoryIds.some((id) => scope.has(id)))
-    .map((product) => product.id);
 }
 
 export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((project, context) => {

@@ -1,7 +1,7 @@
 import "fake-indexeddb/auto";
-import { describe, expect, it, vi, beforeEach } from "vitest";
 import { StoreProjectV1Schema } from "@solara/project-schema";
 import { buildCatalogModernProject } from "@solara/project-schema/catalog-modern-template";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock workers para no depender de Worker real en Vitest (jsdom)
 vi.mock("./workers", async () => {
@@ -38,7 +38,12 @@ describe("persistencia - atomicidad backup vs site", () => {
     vi.clearAllMocks();
   });
   it("INV: si exportSite falla, el backup editable sigue valido", async () => {
-    const base = buildCatalogModernProject({ seed: "clean", id: "persist-atomic", name: "Test", slug: "test" });
+    const base = buildCatalogModernProject({
+      seed: "clean",
+      id: "persist-atomic",
+      name: "Test",
+      slug: "test",
+    });
     const project = StoreProjectV1Schema.parse(base);
     const { persistProjectToDisk } = await import("./localProjectRepository");
     const { saveLocalProject } = await import("./localStorage");
@@ -54,11 +59,18 @@ describe("persistencia - atomicidad backup vs site", () => {
     expect(metadata.projectId).toBe("persist-atomic");
   });
   it("INV: backup se verifica antes de guardar (projectId coincide)", async () => {
-    const base = buildCatalogModernProject({ seed: "clean", id: "persist-atomic-2", name: "Test2", slug: "test2" });
+    const base = buildCatalogModernProject({
+      seed: "clean",
+      id: "persist-atomic-2",
+      name: "Test2",
+      slug: "test2",
+    });
     const project = StoreProjectV1Schema.parse(base);
     const workers = await import("./workers");
     // Fuerza createProjectArchive a devolver proyecto con id distinto para probar verificación
-    (workers.createProjectArchiveInWorker as any).mockResolvedValueOnce(JSON.stringify({ ...project, id: "otro-id" }));
+    (workers.createProjectArchiveInWorker as any).mockResolvedValueOnce(
+      JSON.stringify({ ...project, id: "otro-id" }),
+    );
     const { persistProjectToDisk } = await import("./localProjectRepository");
     await expect(persistProjectToDisk(project, 1)).rejects.toThrow(/no coincide/);
   });
