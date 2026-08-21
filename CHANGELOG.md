@@ -1,5 +1,14 @@
 # Changelog
 
+### Plan de mejora arquitectónica: registro de pendientes (2026-08-21)
+
+- **Deuda nueva registrada** en `TECHNICAL_DEBT.md` con recomendación concreta:
+  runtime serializado sin source maps (P2, pipeline esbuild + paridad),
+  núcleo de render del exporter (~2300 líneas, P2, extracción por página),
+  tests ad-hoc sin utilidades compartidas (P3, `packages/test-utils`) y
+  structural sharing condicional para el historial (P3, sólo si el uso real
+  lo justifica). Cada fila cita la verificación que respalda el estado actual.
+
 ### Deuda E2E documentada + refactor exporter feeds (2026-08-21)
 
 - **Triaje de specs E2E inestables**: se documenta en TECHNICAL_DEBT el set de
