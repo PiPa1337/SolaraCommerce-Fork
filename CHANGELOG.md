@@ -1,5 +1,15 @@
 # Changelog
 
+### Refactor schema + CI Linux (2026-08-21)
+
+- **Schema modular**: `project-schema` se divide sin cambiar la API pública:
+  `ids.ts` (IDs branded/Money), `media.ts` (assets imagen/video),
+  `public-copy-defaults.ts` (copy del storefront) y `category-helpers.ts`
+  (jerarquía de categorías). `index.ts` queda como barrel: los consumidores no
+  cambian. Typecheck estricto de 8 paquetes verde, 71 tests del schema pasan.
+- **CI multi-plataforma**: nuevo job `portability` en `ubuntu-latest` que corre
+  `check` + `build` para detectar bugs de portabilidad Node temprano.
+
 ### Mejora arquitectónica: límite de historial, budgets bloqueantes y docs (2026-08-21)
 
 - **Límite de historial undo/redo**: `MAX_HISTORY_LENGTH = 50` en `@solara/core`;
