@@ -53,7 +53,6 @@ jobs:
 
       - name: Revisar budgets de bundles
         run: pnpm check:budgets
-        continue-on-error: true
 
       - name: Benchmark de exportación
         run: pnpm benchmark:export

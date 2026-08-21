@@ -1,5 +1,24 @@
 # Changelog
 
+### Mejora arquitectónica: límite de historial, budgets bloqueantes y docs (2026-08-21)
+
+- **Límite de historial undo/redo**: `MAX_HISTORY_LENGTH = 50` en `@solara/core`;
+  `executeCommand` y `redo` descartan los snapshots más antiguos (FIFO) para
+  evitar crecimiento ilimitado de memoria con catálogos grandes. Constante
+  exportada como contrato público. Tests nuevos en `history-limit.test.ts`
+  (límite, undo/redo dentro del límite, FIFO).
+- **Budgets bloqueantes en CI**: se elimina `continue-on-error: true` del paso
+  `check:budgets` en `.github/workflows/ci.yml`. Los techos actuales pasan con
+  margen (Studio JS 690617/737280 B, CSS 102254/114688 B, runtime JS/CSS OK,
+  V2 CSS 172586/184320 B).
+- **Docs**: auditorías cerradas y plan perpetuo viejo archivados en
+  `docs/archive/` (`PERPETUAL_PLAN_10X.md`, `ARCHITECTURE_REVIEW_2026-08-21.md`,
+  `AUDITORIA_V2.md`, `auditoria-tareasnewchat-verificacion.md`). Nuevo
+  `docs/INDEX.md` como punto de entrada único a la documentación activa.
+- **Deuda técnica actualizada**: filas EX-B7 (semántica sha256, ya documentada
+  en INTEGRATIONS.md) y safeSlug/nombres reservados (ya resuelto en schema +
+  rutas) marcadas como resueltas con evidencia.
+
 ### Studio dark-only + priceFractionDisplay auto + fixes post-migración (2026-08-21)
 
 - **Studio dark-only definitivo**: `apps/studio/src/base/base.css` migrado a `#08090A/#111214/#FF6A00` (color-scheme: dark unico), eliminado @media y :root[data-studio-theme="dark"] (-59 lineas); `apps/studio/index.html` theme-color #08090A + style color-scheme dark para FOUC; `studioTheme.ts` a dark.

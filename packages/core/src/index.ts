@@ -436,6 +436,12 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
   }
 }
 
+/**
+ * Límite de snapshots de undo. Evita crecimiento ilimitado de memoria con
+ * catálogos grandes; los estados más antiguos se descartan primero.
+ */
+export const MAX_HISTORY_LENGTH = 50;
+
 export interface HistoryState {
   past: StoreProjectV1[];
   present: StoreProjectV1;
@@ -452,7 +458,7 @@ export function executeCommand(history: HistoryState, command: DomainCommand): H
     return history;
   }
   return {
-    past: [...history.past, history.present],
+    past: [...history.past, history.present].slice(-MAX_HISTORY_LENGTH),
     present: next,
     future: [],
   };
@@ -476,7 +482,7 @@ export function redo(history: HistoryState): HistoryState {
     return history;
   }
   return {
-    past: [...history.past, history.present],
+    past: [...history.past, history.present].slice(-MAX_HISTORY_LENGTH),
     present: next,
     future: history.future.slice(1),
   };
