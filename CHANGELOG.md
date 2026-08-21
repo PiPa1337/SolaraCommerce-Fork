@@ -1,5 +1,12 @@
 # Changelog
 
+### Refactor exporter: structured-data (2026-08-21)
+
+- **JSON-LD modular**: `structured-data.ts` extrae `storeStructuredData`,
+  `breadcrumbData`, `offerData`, `schemaOptionName` y `productStructuredData`
+  del monolito. `effectiveHomeSections` ahora es export público. index.ts baja
+  a 2541 líneas. Typecheck + 253 tests verdes, check:quick completo OK.
+
 ### Fix flaky singleInstance + refactor exporter (2026-08-21)
 
 - **Fix flaky test adversarial 13**: `writeJsonAtomic` en `portable-layout.mjs`
