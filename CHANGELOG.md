@@ -1,5 +1,11 @@
 # Changelog
 
+### EXEs reconstruidos con fixes UI/UX (2026-08-21)
+
+- Portable regenerado con los fixes de la auditoria visual: build +
+  desktop:build + desktop:package + portable:smoke OK
+  (SolaraCommerce.exe 196.1 MB, 21/08 13:49).
+
 ### Auditoria UI/UX fase 2: fixes visuales (2026-08-21)
 
 - Salud del dashboard compacta en movil: menos alto antes de las cards.
