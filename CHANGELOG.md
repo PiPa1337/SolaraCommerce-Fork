@@ -1,5 +1,12 @@
 # Changelog
 
+### EXEs reconstruidos post-refactor (2026-08-21)
+
+- **Portable actualizado**: `build` + `desktop:build` + `desktop:package` +
+  `portable:smoke OK`. `SolaraCommerce.exe` regenerado (196.1 MB,
+  21/08 10:44) con los refactors de schema/exporter y el fix del límite de
+  historial incluidos.
+
 ### Plan de mejora arquitectónica: registro de pendientes (2026-08-21)
 
 - **Deuda nueva registrada** en `TECHNICAL_DEBT.md` con recomendación concreta:
