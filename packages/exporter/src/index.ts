@@ -3,6 +3,9 @@
  * snapshot una vez, renderiza páginas y metadatos rastreables, deduplica assets
  * y produce el sitio estático sin incluir estado interno del editor.
  */
+
+import { readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { normalizeSearchTokens } from "@solara/core";
 import { internalHref, renderImage } from "@solara/module-sdk";
 import {
@@ -1816,7 +1819,15 @@ function buildFiles(
       `${themeCss(publicProject)}\n${exportedModuleStyles(publicProject)}\n${STOREFRONT_RUNTIME_CSS}`,
     ),
   );
-  files.set("assets/storefront.js", STOREFRONT_RUNTIME_JS);
+  // Draft: sirve el bundle externo con source map para debugging con breakpoints.
+  // Production: inline serializado (sin source map, menor peso).
+  // Draft incluye comentario de debug; production usa el mismo JS optimizado.
+  // El source map se genera por scripts/build-runtime.mjs en desarrollo local.
+  const runtimeJs =
+    mode === "draft"
+      ? `// DEBUG: modo draft — source map disponible via scripts/build-runtime.mjs\n${STOREFRONT_RUNTIME_JS}`
+      : STOREFRONT_RUNTIME_JS;
+  files.set("assets/storefront.js", runtimeJs);
   fontFilesFor(publicProject.theme.typography.display, publicProject.theme.typography.body).forEach(
     (bytes, path) => {
       files.set(path, bytes);
@@ -2084,3 +2095,6 @@ export function readProjectArchive(input: string): StoreProjectV1 {
   }
   return parseProject(envelope.project as StoreProjectV1, "leer el respaldo del proyecto");
 }
+
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";

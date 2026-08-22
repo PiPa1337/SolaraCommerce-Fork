@@ -111,5 +111,8 @@ jobs:
       - name: Formato, tipos y tests unitarios
         run: pnpm check
 
+      - name: Tests adversariales y de vision
+        run: pnpm exec playwright test tests/e2e/__bugs__ tests/e2e/__vision__/alignment.spec.ts tests/e2e/__vision__/storefront-alignment.spec.ts --workers=2 --retries=1
+
       - name: Build
         run: pnpm build
