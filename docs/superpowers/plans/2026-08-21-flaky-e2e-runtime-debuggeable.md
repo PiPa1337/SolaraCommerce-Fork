@@ -64,7 +64,14 @@ variación entre corridas; aislados pasan. Verificado idéntico en commit base.
 - [ ] Por cada fix: 10/10 estable → quitar de `unstable.json` → fila de
   TECHNICAL_DEBT pasa a Resuelto con evidencia del script.
 
-## Problema 2 — Runtime storefront no debuggeable (P2)
+## Estado de ejecucion (actualizado)
+
+- Task 1: COMPLETA. Script e2e-stability.mjs + medicion 5x15 con tasas reales.
+- Task 2: COMPLETA. unstable.json + exclusion del gate diario + canal SMOKE_INCLUDE_UNSTABLE=1. Smoke diario: 10 specs, 65 passed, verde.
+- Task 3 (mayoria): C4/C8/C11 resueltos al contrato post-tabs. Nojs-coverage resuelto (faltaban fixtures webp). Estabilidad visual resuelta (emulateMedia reducedMotion + ventana de medicion tras animaciones). Carrito V2 resuelto a nivel contrato (1baa774 respeta vaciados intencionales; test viejo contradecia ese contrato y fue reemplazado).
+- Pendientes Task 3: assets.spec (worker lento bajo carga) y scale-store (split del spec). Ambos quedan en unstable.json.
+- Tasks 4-7: pendientes (re-inclusion 10/10 y runtime dual esbuild).
+ — Runtime storefront no debuggeable (P2)
 
 **Síntoma:** `STOREFRONT_RUNTIME_JS` se serializa con `fn.toString()` e inline en
 el HTML exportado: sin source maps, stack traces ilegibles, imposible poner
