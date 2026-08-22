@@ -18,3 +18,5 @@ _qa/
 .DS_Store
 .superpowers/sdd/
 .playwright-cli/
+
+placeholder-dump.json
