@@ -29,7 +29,8 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(home).toContain('data-solara-module="catalog-product-grid"');
     expect(home).toContain("data-catalog-search-dialog");
     expect(home).toContain("data-catalog-search-open");
-    expect(home).toContain("/fixtures/optimized/modo-sur-hero-1536.webp");
+    // El hero optimizado viaja como data URL y el export lo convierte a /assets/{hash}.webp
+    expect(home).toContain("assets/fixture-modo-sur-hero.webp");
     expect(home).toContain("/fixtures/modo-sur-product-01.webp");
     expect(home.match(/data-product-card/g) ?? []).toHaveLength(20);
     expect(home).not.toContain("catalog-product-rating");

@@ -285,7 +285,13 @@ describe("paridad Preview ↔ Export", () => {
         title: seoTitle(html),
         desc: html.match(/<meta name="description" content="([^"]*)">/)?.[1] ?? null,
         canonical: canonicals(html),
-        ogImage: html.match(/<meta property="og:image" content="([^"]*)">/)?.[1] ?? null,
+        // El basename coincide entre preview (/__solara-preview-assets/) y
+        // export (/assets/): la paridad real es el asset, no la ruta de servicio.
+        ogImage:
+          html
+            .match(/<meta property="og:image" content="([^"]*)">/)?.[1]
+            ?.split("/")
+            .pop() ?? null,
         robots: html.match(/<meta name="robots" content="([^"]*)">/)?.[1] ?? null,
         jsonLd: (html.match(/<script type="application\/ld\+json">/g) ?? []).length,
       });

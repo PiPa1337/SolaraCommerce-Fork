@@ -138,18 +138,14 @@ describe("exporter", () => {
     expect(snapshot.offers[0]?.variantPath).toBe(
       "/productos/manta-bruma/?variant=variant-manta-musgo",
     );
-    expect(productHtml).toContain(
-      "https://tienda-referencia.example/fixtures/optimized/manta-bruma-1024.webp",
-    );
+    expect(productHtml).toContain("https://tienda-referencia.example/assets/fixture-manta.webp");
     expect(productHtml).toContain("https://schema.org/color");
     expect(collectionHtml).toContain("Casa serena");
     expect(sitemap).toContain("https://tienda-referencia.example/colecciones/casa-serena/");
     expect(sitemap).toContain("https://tienda-referencia.example/envios/");
-    expect(imageSitemap).toContain(
-      "https://tienda-referencia.example/fixtures/optimized/manta-bruma-1024.webp",
-    );
+    expect(imageSitemap).toContain("https://tienda-referencia.example/assets/fixture-manta.webp");
     expect(feed).toContain(
-      "<g:image_link>https://tienda-referencia.example/fixtures/optimized/manta-bruma-1024.webp</g:image_link>",
+      "<g:image_link>https://tienda-referencia.example/assets/fixture-manta.webp</g:image_link>",
     );
     expect(feed).toContain("<g:mpn>JD-12-CRU</g:mpn>");
     const noIdentifierProject = {
@@ -546,7 +542,7 @@ describe("exporter", () => {
       ...project.assets[0],
       id: "asset-video-poster",
       name: "Poster de campaña",
-      source: "/fixtures/optimized/modo-sur-camisa-1024.webp",
+      source: "/assets/fixture-modo-sur-camisa.webp",
       hash: "fixture-video-poster",
     } as (typeof project.assets)[number];
     project.assets = [...project.assets, poster];
@@ -577,9 +573,7 @@ describe("exporter", () => {
 
     expect(home).toContain('data-solara-module="catalog-hero"');
     expect(home).toContain('class="catalog-hero-video"');
-    expect(home).toContain(
-      'rel="preload" as="image" href="/fixtures/optimized/modo-sur-camisa-1024.webp"',
-    );
+    expect(home).toContain('rel="preload" as="image" href="/assets/fixture-modo-sur-camisa.webp"');
     expect(home).toContain(`src="/assets/${video.hash}.mp4"`);
     expect(result.files.has(`assets/${video.hash}.mp4`)).toBe(true);
     expect(String(result.files.get("video-sitemap.xml"))).toContain(`${video.hash}.mp4`);
@@ -592,9 +586,7 @@ describe("exporter", () => {
     );
     const home = String(result.files.get("index.html"));
 
-    expect(home).toContain(
-      'rel="preload" as="image" href="/fixtures/optimized/modo-sur-hero-1536.webp"',
-    );
+    expect(home).toContain('rel="preload" as="image" href="/assets/fixture-modo-sur-hero.webp"');
     expect(home).not.toContain(
       'rel="preload" as="image" href="https://demo-catalogo-jerarquico.example',
     );
@@ -1076,7 +1068,7 @@ describe("exporter", () => {
     expect(html).toContain('<meta name="robots" content="index,follow');
     expect(html).toContain('<meta name="googlebot" content="index,follow');
     expect(aboutHtml).toContain(
-      '<meta property="og:image" content="https://tienda-referencia.example/fixtures/optimized/manta-bruma-1024.webp">',
+      '<meta property="og:image" content="https://tienda-referencia.example/assets/fixture-manta.webp">',
     );
     expect(aboutHtml).toContain(
       '<meta property="og:image:alt" content="Manta de algodón verde sobre un sillón claro">',
@@ -1162,7 +1154,7 @@ describe("exporter", () => {
       exportProject(project as typeof referenceStore, { mode: "draft" }).files.get("index.html"),
     );
     expect(homeHtml).toContain(
-      '<meta property="og:image" content="https://tienda-referencia.example/fixtures/optimized/jarra-delta-1024.webp">',
+      '<meta property="og:image" content="https://tienda-referencia.example/assets/fixture-jarra.webp">',
     );
   });
 

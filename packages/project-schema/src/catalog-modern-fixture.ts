@@ -1,5 +1,6 @@
 import { CATALOG_MODERN_GUIDANCE_VERSION } from "./catalog-modern-guidance";
 import { StoreProjectV2Schema } from "./index";
+import { OPTIMIZED_FIXTURE_DATA_URLS } from "./optimized-fixture-urls.js";
 import { catalogScaleStore } from "./scale-fixture";
 
 const fixedDate = "2026-07-29T12:00:00.000Z";
@@ -387,12 +388,12 @@ const catalogModernAssets = [
     name: "Campaña de temporada",
     alt: "Dos personas con prendas frente a una pared clara",
     mimeType: "image/webp",
-    source: "/fixtures/optimized/modo-sur-hero-1536.webp",
+    source: OPTIMIZED_FIXTURE_DATA_URLS.modo_sur_hero_1536,
     responsiveSources: [
-      { width: 320, source: "/fixtures/optimized/modo-sur-hero-320.webp" },
-      { width: 640, source: "/fixtures/optimized/modo-sur-hero-640.webp" },
-      { width: 1024, source: "/fixtures/optimized/modo-sur-hero-1024.webp" },
-      { width: 1536, source: "/fixtures/optimized/modo-sur-hero-1536.webp" },
+      { width: 320, source: OPTIMIZED_FIXTURE_DATA_URLS.modo_sur_hero_320 },
+      { width: 640, source: OPTIMIZED_FIXTURE_DATA_URLS.modo_sur_hero_640 },
+      { width: 1024, source: OPTIMIZED_FIXTURE_DATA_URLS.modo_sur_hero_1024 },
+      { width: 1536, source: OPTIMIZED_FIXTURE_DATA_URLS.modo_sur_hero_1536 },
     ],
     width: 1536,
     height: 1024,
@@ -404,11 +405,11 @@ const catalogModernAssets = [
     name: "Remera esencial negra",
     alt: "Remera negra de algodón sobre fondo gris claro",
     mimeType: "image/webp",
-    source: "/fixtures/optimized/modo-sur-remera-1024.webp",
+    source: OPTIMIZED_FIXTURE_DATA_URLS.modo_sur_remera_1024,
     responsiveSources: [
-      { width: 320, source: "/fixtures/optimized/modo-sur-remera-320.webp" },
-      { width: 640, source: "/fixtures/optimized/modo-sur-remera-640.webp" },
-      { width: 1024, source: "/fixtures/optimized/modo-sur-remera-1024.webp" },
+      { width: 320, source: OPTIMIZED_FIXTURE_DATA_URLS.modo_sur_remera_320 },
+      { width: 640, source: OPTIMIZED_FIXTURE_DATA_URLS.modo_sur_remera_640 },
+      { width: 1024, source: OPTIMIZED_FIXTURE_DATA_URLS.modo_sur_remera_1024 },
     ],
     width: 1254,
     height: 1254,
@@ -420,11 +421,11 @@ const catalogModernAssets = [
     name: "Jean recto azul",
     alt: "Jean recto azul sobre fondo gris claro",
     mimeType: "image/webp",
-    source: "/fixtures/optimized/modo-sur-jean-1024.webp",
+    source: OPTIMIZED_FIXTURE_DATA_URLS.modo_sur_jean_1024,
     responsiveSources: [
-      { width: 320, source: "/fixtures/optimized/modo-sur-jean-320.webp" },
-      { width: 640, source: "/fixtures/optimized/modo-sur-jean-640.webp" },
-      { width: 1024, source: "/fixtures/optimized/modo-sur-jean-1024.webp" },
+      { width: 320, source: OPTIMIZED_FIXTURE_DATA_URLS.modo_sur_jean_320 },
+      { width: 640, source: OPTIMIZED_FIXTURE_DATA_URLS.modo_sur_jean_640 },
+      { width: 1024, source: OPTIMIZED_FIXTURE_DATA_URLS.modo_sur_jean_1024 },
     ],
     width: 1254,
     height: 1254,
@@ -436,11 +437,11 @@ const catalogModernAssets = [
     name: "Camisa a cuadros",
     alt: "Camisa a cuadros roja y azul sobre fondo gris claro",
     mimeType: "image/webp",
-    source: "/fixtures/optimized/modo-sur-camisa-1024.webp",
+    source: OPTIMIZED_FIXTURE_DATA_URLS.modo_sur_camisa_1024,
     responsiveSources: [
-      { width: 320, source: "/fixtures/optimized/modo-sur-camisa-320.webp" },
-      { width: 640, source: "/fixtures/optimized/modo-sur-camisa-640.webp" },
-      { width: 1024, source: "/fixtures/optimized/modo-sur-camisa-1024.webp" },
+      { width: 320, source: OPTIMIZED_FIXTURE_DATA_URLS.modo_sur_camisa_320 },
+      { width: 640, source: OPTIMIZED_FIXTURE_DATA_URLS.modo_sur_camisa_640 },
+      { width: 1024, source: OPTIMIZED_FIXTURE_DATA_URLS.modo_sur_camisa_1024 },
     ],
     width: 1254,
     height: 1254,

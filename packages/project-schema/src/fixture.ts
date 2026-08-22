@@ -1,4 +1,5 @@
 import { StoreProjectV2Schema } from "./index";
+import { REFERENCE_FIXTURE_DATA_URLS } from "./optimized-fixture-urls.js";
 
 const now = "2026-07-29T12:00:00.000Z";
 
@@ -141,11 +142,11 @@ export const referenceStore = StoreProjectV2Schema.parse({
       name: "Manta Bruma",
       alt: "Manta de algodón verde sobre un sillón claro",
       mimeType: "image/webp",
-      source: "/fixtures/optimized/manta-bruma-1024.webp",
+      source: REFERENCE_FIXTURE_DATA_URLS.manta_bruma_1024,
       responsiveSources: [
-        { width: 320, source: "/fixtures/optimized/manta-bruma-320.webp" },
-        { width: 640, source: "/fixtures/optimized/manta-bruma-640.webp" },
-        { width: 1024, source: "/fixtures/optimized/manta-bruma-1024.webp" },
+        { width: 320, source: REFERENCE_FIXTURE_DATA_URLS.manta_bruma_320 },
+        { width: 640, source: REFERENCE_FIXTURE_DATA_URLS.manta_bruma_640 },
+        { width: 1024, source: REFERENCE_FIXTURE_DATA_URLS.manta_bruma_1024 },
       ],
       width: 1152,
       height: 1536,
@@ -157,11 +158,11 @@ export const referenceStore = StoreProjectV2Schema.parse({
       name: "Jarra Delta",
       alt: "Jarra de cerámica sobre una mesa de madera",
       mimeType: "image/webp",
-      source: "/fixtures/optimized/jarra-delta-1024.webp",
+      source: REFERENCE_FIXTURE_DATA_URLS.jarra_delta_1024,
       responsiveSources: [
-        { width: 320, source: "/fixtures/optimized/jarra-delta-320.webp" },
-        { width: 640, source: "/fixtures/optimized/jarra-delta-640.webp" },
-        { width: 1024, source: "/fixtures/optimized/jarra-delta-1024.webp" },
+        { width: 320, source: REFERENCE_FIXTURE_DATA_URLS.jarra_delta_320 },
+        { width: 640, source: REFERENCE_FIXTURE_DATA_URLS.jarra_delta_640 },
+        { width: 1024, source: REFERENCE_FIXTURE_DATA_URLS.jarra_delta_1024 },
       ],
       width: 1152,
       height: 1536,
@@ -173,12 +174,12 @@ export const referenceStore = StoreProjectV2Schema.parse({
       name: "Mesa de referencia",
       alt: "Mesa servida con objetos de referencia",
       mimeType: "image/webp",
-      source: "/fixtures/optimized/casa-luma-hero-1536.webp",
+      source: REFERENCE_FIXTURE_DATA_URLS.casa_luma_hero_1536,
       responsiveSources: [
-        { width: 320, source: "/fixtures/optimized/casa-luma-hero-320.webp" },
-        { width: 640, source: "/fixtures/optimized/casa-luma-hero-640.webp" },
-        { width: 1024, source: "/fixtures/optimized/casa-luma-hero-1024.webp" },
-        { width: 1536, source: "/fixtures/optimized/casa-luma-hero-1536.webp" },
+        { width: 320, source: REFERENCE_FIXTURE_DATA_URLS.casa_luma_hero_320 },
+        { width: 640, source: REFERENCE_FIXTURE_DATA_URLS.casa_luma_hero_640 },
+        { width: 1024, source: REFERENCE_FIXTURE_DATA_URLS.casa_luma_hero_1024 },
+        { width: 1536, source: REFERENCE_FIXTURE_DATA_URLS.casa_luma_hero_1536 },
       ],
       width: 1536,
       height: 1024,
