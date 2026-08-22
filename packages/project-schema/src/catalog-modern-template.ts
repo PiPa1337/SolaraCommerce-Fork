@@ -546,6 +546,8 @@ export function buildCatalogModernProject(
           settings: { ...section.settings, title: "Categorias", items: [] },
         };
       if (section.moduleId === "catalog-brand-strip") return { ...section, enabled: false };
+      if (section.moduleId === "catalog-product-grid" && section.id.endsWith("-top"))
+        return { ...section, enabled: false };
       if (section.moduleId === "catalog-testimonials")
         return { ...section, enabled: false, settings: { ...section.settings, items: [] } };
       if (section.moduleId === "catalog-newsletter-cta")
