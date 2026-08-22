@@ -17,7 +17,10 @@ const FIXTURE_NAMES = [
   "modo-sur-remera.png",
   "modo-sur-jean.png",
   "modo-sur-camisa.png",
-  ...Array.from({ length: 12 }, (_, i) => `modo-sur-product-${String(i + 1).padStart(2, "0")}.webp`),
+  ...Array.from(
+    { length: 12 },
+    (_, i) => `modo-sur-product-${String(i + 1).padStart(2, "0")}.webp`,
+  ),
 ];
 const fixtureFiles = new Map<string, Uint8Array>(
   FIXTURE_NAMES.map((name) => [

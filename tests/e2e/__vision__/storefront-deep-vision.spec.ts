@@ -3,8 +3,9 @@
  * más estados interactivos (hover, menú móvil, drawer, filtros).
  * Herramienta de diagnóstico manual — no es gate de CI.
  */
-import { createServer, type Server } from "node:http";
+
 import { mkdirSync } from "node:fs";
+import { createServer, type Server } from "node:http";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
@@ -56,7 +57,12 @@ test.beforeAll(async () => {
   server = createServer((request, response) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
     const requested = decodeURIComponent(url.pathname).replace(/^\/+/, "");
-    const path = requested === "" ? "index.html" : requested.endsWith("/") ? `${requested}index.html` : requested;
+    const path =
+      requested === ""
+        ? "index.html"
+        : requested.endsWith("/")
+          ? `${requested}index.html`
+          : requested;
     const file = exported.files.get(path);
     if (!file) {
       response.writeHead(404, { "Content-Type": "text/html; charset=utf-8" });
@@ -64,9 +70,16 @@ test.beforeAll(async () => {
       return;
     }
     const extension = path.split(".").pop();
-    const types = { css: "text/css; charset=utf-8", js: "text/javascript; charset=utf-8", webp: "image/webp", png: "image/png" };
+    const types = {
+      css: "text/css; charset=utf-8",
+      js: "text/javascript; charset=utf-8",
+      webp: "image/webp",
+      png: "image/png",
+    };
     response.writeHead(200, {
-      "Content-Type": types[extension as keyof typeof types] ?? (path.endsWith(".html") ? "text/html; charset=utf-8" : "application/octet-stream"),
+      "Content-Type":
+        types[extension as keyof typeof types] ??
+        (path.endsWith(".html") ? "text/html; charset=utf-8" : "application/octet-stream"),
       "Cache-Control": "no-store",
     });
     response.end(file);
@@ -101,7 +114,10 @@ for (const viewport of VIEWPORTS) {
       for (const route of PAGES) {
         await page.goto(new URL(route.path, serverUrl).toString());
         await revealPage(page);
-        await page.screenshot({ path: join(OUTPUT_ROOT, viewport.name, `${route.dir}.png`), fullPage: true });
+        await page.screenshot({
+          path: join(OUTPUT_ROOT, viewport.name, `${route.dir}.png`),
+          fullPage: true,
+        });
       }
     });
   });

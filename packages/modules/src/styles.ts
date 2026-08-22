@@ -4838,8 +4838,3 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 export const MODULE_STYLES = `${STORE_BASE_STYLES}\n${Object.values(MODULE_STYLE_BLOCKS).join(
   "\n",
 )}`;
-
-
-
-
-

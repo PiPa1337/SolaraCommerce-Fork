@@ -425,9 +425,10 @@ describe("carrito y checkout del drawer (A29)", () => {
   it("bloquea el checkout con role=alert y conserva la línea no disponible", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("x.invalidItems");
     expect(STOREFRONT_RUNTIME_JS).toContain('setAttribute("role", "alert")');
-    expect(STOREFRONT_RUNTIME_JS).toContain(
-      "if (cart.length === 0 || !form.reportValidity()) return;",
-    );
+    // El bloqueo ahora da feedback visible (emptyCart con role=alert) antes de
+    // validar el formulario, en lugar de un return silencioso combinado.
+    expect(STOREFRONT_RUNTIME_JS).toContain("if (cart.length === 0) {");
+    expect(STOREFRONT_RUNTIME_JS).toContain("if (!form.reportValidity()) return;");
   });
 
   it("construye la URL wa.me con tel\u00E9fono normalizado y totales en centavos", () => {
