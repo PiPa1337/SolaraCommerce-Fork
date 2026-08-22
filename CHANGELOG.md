@@ -1,5 +1,18 @@
 # Changelog
 
+### Caza de bugs sistematica + P3 jerarquia About (2026-08-21)
+
+- Suite adversarial nueva en tests/e2e/__bugs__: contenido limite (RTL, emoji,
+  5000 chars, precios extremos), matriz de navegacion (todo link interno 200),
+  fallos de runtime (localStorage bloqueado, catalog corrupto, imagenes rotas),
+  formularios hostiles (XSS, 10k chars) e integridad SEO. 13/13 pasando.
+- Hallazgo verificado: el schema rechaza titulo vacio (guard valido), el
+  sitio sobrevive storage bloqueado y catalog corrupto sin errores JS.
+- Vision ampliada a 19 viewports cubriendo todos los breakpoints del CSS
+  (320-1920): 209 capturas verificadas.
+- P3: jerarquia tipografica en grillas About (principios/experiencia) con
+  display font y aire vertical entre parrafos.
+
 ### Checkout sin carrito: feedback visible (2026-08-21)
 
 - Nuevo copy emptyCart en el schema y feedback visible en data-order-preview
