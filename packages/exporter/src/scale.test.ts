@@ -72,9 +72,9 @@ describe("exporter con catálogo jerárquico de escala", () => {
       "Casa",
     );
     expect(feed.match(/<item>/g)).toHaveLength(60);
-    expect(new Set([...home.matchAll(/\/fixtures\/[^"']+/g)].map((match) => match[0])).size).toBe(
-      3,
-    );
+    // Con responsiveSources las rutas unicas crecen (variantes por ancho).
+    const uniquePaths = new Set([...home.matchAll(/\/fixtures\/[^"']+/g)].map((match) => match[0]));
+    expect(uniquePaths.size).toBeGreaterThanOrEqual(3);
   });
 
   it("ofrece en legacy las etiquetas de productos de otras páginas de la categoría", () => {

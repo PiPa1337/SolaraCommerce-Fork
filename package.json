@@ -10,6 +10,7 @@
     "benchmark:export": "vitest run scripts/export-benchmark.test.ts --testTimeout=30000",
     "build": "corepack pnpm --filter @solara/studio build",
     "check:budgets": "node scripts/check-budgets.mjs && vitest run scripts/storefront-runtime-budget.test.ts scripts/public-storefront-budget.test.ts",
+    "check:image-budget": "node scripts/check-image-budget.mjs",
     "check:optimization": "vitest run scripts/site-optimizer-check.test.ts scripts/optimization-baseline.test.ts",
     "check:runtime-serialization": "vitest run scripts/runtime-serialization.test.ts",
     "check": "corepack pnpm check:fast",

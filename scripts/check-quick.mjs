@@ -31,6 +31,7 @@ const isFull = process.argv.includes("--full");
 const fastTasks = [
   { name: "check:repository", cmd: "corepack pnpm check:repository" },
   { name: "check:hardcoded-content", cmd: "corepack pnpm check:hardcoded-content" },
+  { name: "check:image-budget", cmd: "node scripts/check-image-budget.mjs" },
   { name: "format:check", cmd: "corepack pnpm format:check" },
   { name: "typecheck", cmd: "corepack pnpm -r --parallel --if-present typecheck" },
   { name: "test", cmd: "corepack pnpm -r --parallel --if-present test" },
