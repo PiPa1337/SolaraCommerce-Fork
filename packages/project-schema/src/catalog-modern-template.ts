@@ -255,7 +255,7 @@ export function ensureCatalogModernV2Sections(project: StoreProjectV1): StorePro
   );
 }
 
-export type CatalogModernSeed = "clean" | "demo";
+export type CatalogModernSeed = "clean" | "demo" | "placeholder";
 
 export interface BuildCatalogModernProjectOptions {
   seed: CatalogModernSeed;
@@ -427,7 +427,190 @@ function cleanProject(options: BuildCatalogModernProjectOptions): StoreProjectV2
 export function buildCatalogModernProject(
   options: BuildCatalogModernProjectOptions,
 ): StoreProjectV2 {
+  /**
+   * Plantilla placeholder: tienda base V2 con 5 productos genericos, 2
+   * categorias y textos instructivos. Es la base para generar tiendas nuevas:
+   * el usuario reemplaza los placeholders sin tener que borrar contenido demo.
+   */
+  function placeholderProject(options: BuildCatalogModernProjectOptions): StoreProjectV2 {
+    const name = options.name?.trim() || "Predeterminado";
+    const brandName = options.brandName?.trim() || "Mi tienda";
+    const slug = options.slug || "predeterminado";
+    // Base clean ya trae designFamily v2, secciones V2 y imagen placeholder SVG.
+    const project = replaceCatalogBrandText(
+      ensureCatalogModernV2Sections({
+        ...structuredClone(catalogModernStore),
+        commerceTemplates: {
+          ...catalogModernStore.commerceTemplates,
+          designFamily: "catalog-modern-v2",
+        },
+      }),
+      catalogModernStore.identity.brandName,
+      brandName,
+    );
+
+    // Assets placeholder compartido (SVG gris del template, cero peso).
+    const placeholderAsset = { ...project.assets[0] };
+    const assets = [placeholderAsset];
+
+    const products = Array.from({ length: 5 }, (_, index) => ({
+      id: `product-placeholder-${index + 1}`,
+      slug: `producto-${index + 1}`,
+      title: `Producto ${index + 1}`,
+      description: `Descripcion del producto ${index + 1}.`,
+      status: "active" as const,
+      brand: brandName,
+      categoryIds: [`category-placeholder-${(index % 2) + 1}`],
+      collectionIds: ["collection-placeholder-1"],
+      tags: [],
+      imageIds: [placeholderAsset.id],
+      variants: [
+        {
+          id: `variant-placeholder-${index + 1}`,
+          title: "Unica",
+          price: 1000,
+          available: true,
+          optionValues: {},
+          sku: `P${index + 1}`,
+          stockStatus: "in_stock" as const,
+        },
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }));
+    const categories = Array.from({ length: 2 }, (_, index) => ({
+      id: `category-placeholder-${index + 1}`,
+      slug: `categoria-${index + 1}`,
+      title: `Categoria ${index + 1}`,
+      description: `Descripcion de la categoria ${index + 1}.`,
+      parentId: undefined,
+      productIds: products
+        .filter((p) => p.categoryIds.includes(`category-placeholder-${index + 1}`))
+        .map((p) => p.id),
+      imageId: placeholderAsset.id,
+    }));
+    const collections = [
+      {
+        id: "collection-placeholder-1",
+        slug: "coleccion-1",
+        title: "Coleccion 1",
+        description: "Descripcion de la coleccion 1.",
+        productIds: products.map((p) => p.id),
+        imageId: placeholderAsset.id,
+      },
+    ];
+
+    const sections = project.sections.map((section) => {
+      if (section.moduleId === "catalog-hero") {
+        return {
+          ...section,
+          settings: {
+            ...section.settings,
+            eyebrow: "Nueva tienda",
+            title: "Titulo del hero",
+            body: "Subtitulo del hero: contá qué vendés.",
+            actionLabel: "Ver productos",
+            actionHref: "/buscar/",
+            secondaryActionLabel: "Contacto",
+            secondaryActionHref: "#contact-form",
+          },
+        };
+      }
+      if (section.moduleId === "catalog-announcement")
+        return {
+          ...section,
+          settings: {
+            ...section.settings,
+            text: "Texto de anuncio editable",
+            linkLabel: "",
+            linkHref: "",
+          },
+        };
+      if (section.moduleId === "catalog-product-grid" && section.id.endsWith("-new")) {
+        return {
+          ...section,
+          settings: {
+            ...section.settings,
+            title: "Productos",
+            source: "collection",
+            sourceId: "collection-placeholder-1",
+            limit: 5,
+            viewAllHref: "/buscar/",
+          },
+        };
+      }
+      if (section.moduleId === "catalog-category-bento")
+        return {
+          ...section,
+          enabled: true,
+          settings: { ...section.settings, title: "Categorias", items: [] },
+        };
+      if (section.moduleId === "catalog-brand-strip") return { ...section, enabled: false };
+      if (section.moduleId === "catalog-testimonials")
+        return { ...section, enabled: false, settings: { ...section.settings, items: [] } };
+      if (section.moduleId === "catalog-newsletter-cta")
+        return {
+          ...section,
+          settings: {
+            ...section.settings,
+            title: "Novedades",
+            body: "Seccion de novedades editable.",
+            actionLabel: "Contacto",
+            actionHref: "#contact-form",
+          },
+        };
+      if (section.moduleId === "catalog-footer")
+        return { ...section, settings: { ...section.settings, note: "Nota del pie editable." } };
+      return section;
+    });
+
+    const pages = project.pages.map((page) => ({
+      ...page,
+      title:
+        page.kind === "about"
+          ? "Nosotros (editar)"
+          : page.kind === "contact"
+            ? "Contacto (editar)"
+            : "Titulo del hero",
+    }));
+
+    return StoreProjectV2Schema.parse({
+      ...project,
+      id: options.id || "store-predeterminado-base",
+      name,
+      slug,
+      baseUrl: options.baseUrl || `https://${slug}.example`,
+      origin: {
+        templateId: "catalog-modern",
+        templateVersion: CATALOG_MODERN_TEMPLATE_VERSION,
+        seed: "placeholder",
+      },
+      identity: {
+        ...project.identity,
+        legalName: brandName,
+        brandName,
+        description: "Descripcion corta de tu tienda.",
+        email: "",
+        phone: "",
+        address: "",
+      },
+      whatsapp: {
+        ...project.whatsapp,
+        phone: "5491100000000",
+        greeting: `Hola ${brandName}, quiero hacer este pedido:`,
+      },
+      seo: { ...project.seo, title: brandName, description: "Descripcion SEO de tu tienda." },
+      navigation: { ...project.navigation, mode: "automatic" as const, items: [] },
+      assets,
+      products,
+      categories,
+      collections,
+      pages,
+      sections,
+    });
+  }
   if (options.seed === "clean") return cleanProject(options);
+  if (options.seed === "placeholder") return placeholderProject(options);
   const project = options.brandName?.trim()
     ? replaceCatalogBrandText(
         structuredClone(catalogModernStore),

@@ -146,7 +146,7 @@ const LEGACY_CLEAN_PROJECT_NAME = "Mi primera tienda";
 
 export function buildScaleDemoProject(): StoreProjectV1 {
   const demo = buildCatalogModernProject({
-    seed: "demo",
+    seed: "placeholder",
     id: SCALE_DEMO_PROJECT_ID,
     name: SCALE_DEMO_PROJECT_NAME,
     brandName: SCALE_DEMO_PROJECT_NAME,

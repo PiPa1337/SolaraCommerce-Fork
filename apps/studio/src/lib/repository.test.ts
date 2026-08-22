@@ -287,7 +287,10 @@ describe("repositorio local", () => {
     expect(JSON.stringify(demo)).not.toContain("Modo Sur");
     expect(demo.commerceTemplates.designFamily).toBe("catalog-modern-v2");
     expect(demo.theme.container).toBe(1760);
-    expect(demo.products).toHaveLength(50);
+    // La base es placeholder: 5 productos genericos para que el usuario
+    // reemplace sin borrar contenido demo.
+    expect(demo.products).toHaveLength(5);
+    expect(demo.products[0]?.title).toBe("Producto 1");
   });
 
   it("retira Sale y Novedades de todos los proyectos sin perder productos", async () => {

@@ -106,5 +106,11 @@
     "literal": "Predeterminado",
     "category": "fixture",
     "reason": "El E2E verifica la demo persistida que el producto conserva explícitamente."
+  },
+  {
+    "path": "packages/project-schema/src/catalog-modern-template.ts",
+    "literal": "Predeterminado",
+    "category": "technical-contract",
+    "reason": "Nombre de la tienda base placeholder que se genera para nuevas tiendas."
   }
 ]

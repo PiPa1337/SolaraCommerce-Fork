@@ -28,9 +28,6 @@ import {
   consumeStorageResetNotice,
   createProject,
   duplicateProject,
-  ensureCatalogModernDemoGallery,
-  ensureCatalogModernDemoReviews,
-  ensureCatalogModernDemoTestimonials,
   ensureDemoSectionOrder,
   ensureDeprecatedCategoriesRemoved,
   ensureFirstProject,
@@ -308,20 +305,7 @@ function StudioShell() {
         }
         const demoCreated = await ensureScaleDemoProject();
         if (demoCreated) {
-          notify("Se agregó la tienda demo con 50 productos para explorar la escala del catálogo.");
-        }
-        await ensureDemoSectionOrder();
-        const demoReviewsExpanded = await ensureCatalogModernDemoReviews();
-        if (demoReviewsExpanded) {
-          notify("Se actualizaron las reseñas de la tienda demo.");
-        }
-        const demoGalleryExpanded = await ensureCatalogModernDemoGallery();
-        if (demoGalleryExpanded) {
-          notify("Se ampliaron las galerías de la tienda demo.");
-        }
-        const demoTestimonialsExpanded = await ensureCatalogModernDemoTestimonials();
-        if (demoTestimonialsExpanded) {
-          notify("Se ampliaron las reseñas de la tienda demo a 12.");
+          notify("Se creó tu tienda base: reemplazá los placeholders con tus productos.");
         }
         const deprecatedCategoriesRemoved = await ensureDeprecatedCategoriesRemoved();
         if (deprecatedCategoriesRemoved) {
