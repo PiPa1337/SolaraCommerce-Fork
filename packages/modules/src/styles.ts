@@ -4603,8 +4603,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .solara-about-icon { display: inline-grid; place-items: center; width: 1.3rem; height: 1.3rem; color: var(--catalog-sale); }
   .cm.v2 .solara-about-icon svg { width: 100%; height: 100%; }
   .cm.v2 .about-principle-number, .cm.v2 .about-process-number { color: var(--catalog-sale); font-size: .78rem; letter-spacing: .08em; }
-  .cm.v2 .about-principle-item h3, .cm.v2 .about-experience-grid h3, .cm.v2 .about-team-member h3 { margin: 0; font-size: 1rem; }
-  .cm.v2 .about-principle-item p, .cm.v2 .about-experience-grid p, .cm.v2 .about-stats-grid p, .cm.v2 .about-team-member p { margin: 0; color: var(--catalog-muted); font-size: .82rem; line-height: 1.5; }
+  /* Jerarquia en grillas about: h3 con peso display, body con aire vertical. */
+  .cm.v2 .about-principle-item h3, .cm.v2 .about-experience-grid h3 { margin: 0 0 .35rem; font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: 1.18rem; font-weight: 500; letter-spacing: -.01em; }
+  .cm.v2 .about-principle-item p, .cm.v2 .about-experience-grid article > p { color: var(--catalog-muted); font-size: .85rem; line-height: 1.55; }
+  .cm.v2 .about-principle-item p + p, .cm.v2 .about-experience-grid article > p + p { margin-top: .5rem; }
   .cm.v2 .about-editorial-image { padding-block: clamp(3rem, 7vw, 6rem); }
   .cm.v2 .about-editorial-image-media img { width: 100%; aspect-ratio: 16 / 8; object-fit: cover; }
   .cm.v2 .about-editorial-image-copy { grid-template-columns: minmax(0, .8fr) minmax(0, 1fr); gap: 2rem 8vw; padding-top: 1.5rem; }
