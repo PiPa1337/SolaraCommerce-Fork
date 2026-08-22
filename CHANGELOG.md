@@ -1,5 +1,11 @@
 # Changelog
 
+### Runtime debuggeable: build externo con esbuild (2026-08-21)
+
+- scripts/build-runtime.mjs genera storefront-runtime.js + source map
+  (563KB + 987KB) desde entry-draft.ts. El exportador puede usar este bundle
+  en modo draft para debugging con breakpoints; production mantiene el inline.
+
 ### Caza de bugs sistematica + P3 jerarquia About (2026-08-21)
 
 - Suite adversarial nueva en tests/e2e/__bugs__: contenido limite (RTL, emoji,

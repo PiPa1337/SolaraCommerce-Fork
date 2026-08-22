@@ -1862,6 +1862,12 @@ globalThis.__solaraSearchHelpers = { ${SERIALIZED_RUNTIME_HELPERS.filter(({ name
   .join(", ")} };
 (${storefrontBoot.toString()})();`;
 
+/**
+ * Entrada para el build externo con esbuild (modo draft): referencia a la
+ * funcion de boot. Production sigue usando STOREFRONT_RUNTIME_JS inline.
+ */
+export const STOREFRONT_RUNTIME_ENTRY = storefrontBoot;
+
 export const STOREFRONT_RUNTIME_CSS = `
 .sr-only {
   position: absolute;
