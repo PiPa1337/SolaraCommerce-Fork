@@ -156,4 +156,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   );
 
   console.log(`Distribución portable creada en ${destination}`);
+  // Limpiar build/win-unpacked para evitar confusión con múltiples EXEs.
+  // La única fuente de verdad es SolaraCommerce-Portable/.
+  const unpackedDir = resolve(root, ".release/portable/build/win-unpacked");
+  if (existsSync(unpackedDir)) {
+    await rm(unpackedDir, { recursive: true, force: true });
+    console.log("build/win-unpacked eliminado (fuente única: SolaraCommerce-Portable/)");
+  }
 }

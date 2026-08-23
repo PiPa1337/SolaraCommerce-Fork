@@ -592,7 +592,9 @@ function StudioShell() {
             </a>
           </nav>
           <div className="app-header__actions">
-            <span className="app-local-status">Studio local</span>
+            <span className="app-local-status">
+              Studio local · {__BUILD_HASH__} · {__BUILD_DATE__}
+            </span>
             <span className="app-local-indicator" aria-hidden />
             {sessionManaged && !shutdownTerminal ? (
               <button
