@@ -21,6 +21,10 @@ describe("plantilla Catalog Modern", () => {
     expect(catalogModernCleanStore.products).toHaveLength(0);
     expect(catalogModernCleanStore.categories).toHaveLength(0);
     expect(catalogModernCleanStore.collections).toHaveLength(0);
+    expect(catalogModernCleanStore.pages.map((page) => page.kind)).toEqual(["home"]);
+    expect(
+      catalogModernCleanStore.assets.every((asset) => !/^asset-(about|contact)-/i.test(asset.id)),
+    ).toBe(true);
     expect(catalogModernCleanStore.navigation.mode).toBe("automatic");
     expect(catalogModernCleanStore.sections.some((section) => section.enabled)).toBe(true);
     expect(JSON.stringify(catalogModernCleanStore)).not.toContain("Modo Sur");
@@ -33,7 +37,7 @@ describe("plantilla Catalog Modern", () => {
         .filter((asset) => asset.kind === "image")
         .every((asset) => asset.source.startsWith("data:image/svg+xml")),
     ).toBe(true);
-    expect(catalogModernCleanStore.whatsapp.phone).toBe("5491100000000");
+    expect(catalogModernCleanStore.whatsapp.phone).toBe("");
   });
 
   it("mantiene la demo de 50 productos y 14 categorías desde la misma plantilla", () => {

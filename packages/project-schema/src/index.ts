@@ -581,7 +581,9 @@ const StoreProjectV2ShapeSchema = z.object({
     address: z.string(),
   }),
   whatsapp: z.object({
-    phone: z.string().regex(/^\d{8,15}$/),
+    // A clean project has no WhatsApp number yet; configured numbers remain
+    // strict international digits without a leading plus sign.
+    phone: z.string().regex(/^(?:\d{8,15})?$/),
     greeting: z.string(),
     includeSku: z.boolean(),
   }),
@@ -590,6 +592,7 @@ const StoreProjectV2ShapeSchema = z.object({
     description: z.string().min(1).max(180),
     searchConsoleVerification: z.string(),
     merchantVerification: z.string(),
+    faviconAssetId: AssetIdSchema.optional(),
     socialImageId: AssetIdSchema.optional(),
   }),
   theme: ThemeSchema,
@@ -1086,6 +1089,15 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
       ["seo", "socialImageId"],
       "Imagen social",
       project.seo.socialImageId,
+      context,
+    );
+  }
+  if (project.seo.faviconAssetId !== undefined) {
+    addMissingReferenceIssue(
+      mediaIds.has(project.seo.faviconAssetId),
+      ["seo", "faviconAssetId"],
+      "Favicon",
+      project.seo.faviconAssetId,
       context,
     );
   }

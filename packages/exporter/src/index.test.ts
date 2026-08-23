@@ -1158,6 +1158,34 @@ describe("exporter", () => {
     );
   });
 
+  it("emite el favicon ICO y su fallback Apple cuando SEO lo configura", () => {
+    const favicon = {
+      kind: "image" as const,
+      id: "asset-test-favicon" as (typeof referenceStore.assets)[number]["id"],
+      name: "Favicon del sitio",
+      alt: "Favicon del sitio",
+      mimeType: "image/x-icon",
+      source: "data:image/x-icon;base64,AAABAA==",
+      fallbackSource: "data:image/png;base64,iVBORw0KGgo=",
+      width: 256,
+      height: 256,
+      hash: "test-favicon-v1",
+    };
+    const project = {
+      ...referenceStore,
+      assets: [...referenceStore.assets, favicon],
+      seo: { ...referenceStore.seo, faviconAssetId: favicon.id },
+    };
+    const result = exportProject(project as typeof referenceStore, { mode: "production" });
+    const homeHtml = String(result.files.get("index.html"));
+    expect(homeHtml).toContain('rel="icon" href="/assets/test-favicon-v1.ico"');
+    expect(homeHtml).toContain(
+      'rel="apple-touch-icon" sizes="180x180" href="/assets/test-favicon-v1-fallback.png"',
+    );
+    expect(result.files.has("assets/test-favicon-v1.ico")).toBe(true);
+    expect(result.files.has("assets/test-favicon-v1-fallback.png")).toBe(true);
+  });
+
   it("usa la descripción SEO de la tienda en rutas sin descripción editable", () => {
     const project = {
       ...referenceStore,

@@ -4,8 +4,6 @@
  * y produce el sitio estático sin incluir estado interno del editor.
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
 import { normalizeSearchTokens } from "@solara/core";
 import { internalHref, renderImage } from "@solara/module-sdk";
 import {
@@ -25,7 +23,6 @@ import type {
   VideoAsset,
 } from "@solara/project-schema";
 import {
-  CATALOG_MODERN_PLACEHOLDER_PHONE,
   getCategoryAncestors,
   getCategoryBreadcrumb,
   getCategoryProductIds,
@@ -657,7 +654,7 @@ function modernProjectClass(project: StoreProjectV1): string {
     : " catalog-modern";
 }
 
-function publicMediaUsage(project: StoreProjectV1): {
+export function publicMediaUsage(project: StoreProjectV1): {
   assetIds: Set<string>;
   videoIds: Set<string>;
 } {
@@ -685,6 +682,7 @@ function publicMediaUsage(project: StoreProjectV1): {
   };
 
   addValue(project.identity.logoAssetId);
+  addValue(project.seo.faviconAssetId);
   addValue(project.seo.socialImageId);
   project.products
     .filter((product) => product.status === "active")
@@ -715,7 +713,10 @@ function publicMediaUsage(project: StoreProjectV1): {
     if (videoIds.has(video.id)) addValue(video.posterAssetId);
   });
   const socialAsset = project.assets.find((asset) => asset.id === project.seo.socialImageId);
-  if (!socialAsset && project.assets[0]) assetIds.add(project.assets[0].id);
+  const fallbackAsset = project.assets.find(
+    (asset) => !isCatalogModernPlaceholderAsset(project, asset),
+  );
+  if (!socialAsset && fallbackAsset) assetIds.add(fallbackAsset.id);
   return { assetIds, videoIds };
 }
 
@@ -967,6 +968,11 @@ function renderDocument(
     imageUrl(project, project.seo.socialImageId) ??
     imageUrl(project, project.assets[0]?.id);
   const socialImage = socialImageValue ? absoluteResourceUrl(project, socialImageValue) : undefined;
+  const faviconAsset = imageFor(project, project.seo.faviconAssetId);
+  const faviconHref = faviconAsset?.source ? assetHref(project, faviconAsset.source) : undefined;
+  const faviconFallbackHref = faviconAsset?.fallbackSource
+    ? assetHref(project, faviconAsset.fallbackSource)
+    : undefined;
   const socialAsset = page.image
     ? project.assets.find(
         (asset) => imageUrl(project, asset.id) === page.image || asset.source === page.image,
@@ -1053,6 +1059,17 @@ function renderDocument(
   <meta name="googlebot" content="${robots}">
   <link rel="canonical" href="${escapeHtml(canonical)}">
   <meta name="theme-color" content="${escapeHtml(project.theme.colors.background)}">
+  ${
+    faviconHref
+      ? `<link rel="icon" href="${escapeAttribute(faviconHref)}" sizes="16x16 32x32 48x48 64x64 128x128 256x256" type="image/x-icon">
+  <link rel="shortcut icon" href="${escapeAttribute(faviconHref)}" type="image/x-icon">${
+    faviconFallbackHref
+      ? `
+  <link rel="apple-touch-icon" sizes="180x180" href="${escapeAttribute(faviconFallbackHref)}">`
+      : ""
+  }`
+      : ""
+  }
   <meta property="og:type" content="${page.pageType === "product" ? "product" : "website"}">
   <meta property="og:locale" content="es_AR">
   <meta property="og:site_name" content="${escapeHtml(project.identity.brandName)}">
@@ -1829,21 +1846,9 @@ function buildFiles(
       : STOREFRONT_RUNTIME_JS;
   files.set("assets/storefront.js", runtimeJs);
   if (mode === "draft") {
-    // Copia el mapa generado por scripts/build-runtime.mjs (si existe) para
-    // debugging con breakpoints. Nunca se emite en production.
-    try {
-      const mapPath = resolve(
-        process.cwd(),
-        "packages/storefront-runtime/dist/storefront-runtime.js.map",
-      );
-      if (existsSync(mapPath)) {
-        files.set("assets/storefront.js.map", readFileSync(mapPath));
-      } else {
-        files.set("assets/storefront.js.map", "{}");
-      }
-    } catch {
-      files.set("assets/storefront.js.map", "{}");
-    }
+    // El exporter también corre dentro del Worker del Studio; no importar
+    // fs/path aquí evita que Vite convierta el worker en un módulo Node.
+    files.set("assets/storefront.js.map", "{}");
   }
   fontFilesFor(publicProject.theme.typography.display, publicProject.theme.typography.body).forEach(
     (bytes, path) => {
@@ -2112,6 +2117,3 @@ export function readProjectArchive(input: string): StoreProjectV1 {
   }
   return parseProject(envelope.project as StoreProjectV1, "leer el respaldo del proyecto");
 }
-
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";

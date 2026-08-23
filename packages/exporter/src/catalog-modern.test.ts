@@ -90,6 +90,24 @@ describe("tienda base catalog-modern de 50 productos", () => {
     );
   });
 
+  it("distingue placeholders publicados de imágenes de plantilla sin referencias", () => {
+    const source = catalogModernCleanStore.assets[0];
+    if (!source) throw new Error("La plantilla limpia debe tener una imagen de ejemplo.");
+    const draft = exportProject(
+      {
+        ...catalogModernCleanStore,
+        assets: [
+          ...catalogModernCleanStore.assets,
+          { ...source, id: `${source.id}-unused` as typeof source.id },
+        ],
+      },
+      { mode: "draft" },
+    );
+    expect(draft.audit).toContainEqual(
+      expect.objectContaining({ code: "template.placeholder.unused", severity: "warning" }),
+    );
+  });
+
   it("mantiene la paridad entre preview y exportación y el índice de búsqueda", () => {
     const preview = renderPreviewHtml(catalogModernStore, "draft", "/");
     const exportedHome = String(exported.files.get("index.html"));

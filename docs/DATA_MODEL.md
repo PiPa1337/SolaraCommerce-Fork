@@ -40,9 +40,11 @@ contiene configuración; el HTML lo genera el registro de módulos.
 - `baseUrl` es un campo del proyecto (no vive dentro de `seo`) y define la URL
   canónica de la tienda publicada.
 - `identity`: nombre de marca, descripción, logo y datos de contacto.
-- `seo`: título, descripción, imagen social y verificaciones de Search Console
-  y Merchant. No tiene `robots` ni URL base: esas decisiones pertenecen al
-  proyecto y a las rutas exportadas.
+- `seo`: título, descripción, `faviconAssetId`, imagen social (`socialImageId`)
+  y verificaciones de Search Console y Merchant. El favicon se guarda como un
+  asset ICO multirresolución y la imagen social se normaliza a 1200×630 al
+  cargarla desde Studio. No tiene `robots` ni URL base: esas decisiones
+  pertenecen al proyecto y a las rutas exportadas.
 - `theme`: tokens de color, tipografía, espaciado, radios y modo visual.
 - `navigation`: etiqueta de catálogo, enlaces curados y sus hijos (máximo un
   nivel adicional), además de búsqueda y carrito.
@@ -84,6 +86,11 @@ por hash durante la exportación. Los data URLs se aceptan para fixtures y
 persistencia local; el sitio exportado los materializa como archivos normales.
 
 ### Carrito y pedido por WhatsApp
+
+`whatsapp.phone` puede quedar vacío en una tienda nueva; sólo se persiste como
+dígitos internacionales cuando el usuario lo configura. Sin número, el
+runtime no inventa un destinatario y muestra un error accionable al iniciar el
+checkout.
 
 El runtime usa `solara-cart:{storeId}` en `localStorage`. Una `CartLine` guarda
 IDs, títulos, variante, SKU, cantidad, precio resuelto e imagen. Al leerla se

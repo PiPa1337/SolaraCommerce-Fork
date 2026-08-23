@@ -1,8 +1,9 @@
 /** Árbol de categorías colapsable con cantidades directas/heredadas y reubicación segura. */
-import { CaretRight, TreeStructure } from "@phosphor-icons/react";
+import { CaretRight, PencilSimple, Plus, TreeStructure } from "@phosphor-icons/react";
 import type { DomainCommand } from "@solara/core";
 import {
   type Category,
+  type Collection,
   getCategoryDescendants,
   getCategoryProductIds,
   type StoreProjectV1,
@@ -10,7 +11,8 @@ import {
 import type { Dispatch, SetStateAction } from "react";
 import { useMemo, useState } from "react";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
-import { Button, EmptyState, Field } from "../../components/Ui";
+import { Button, EmptyState, Field, InlineError } from "../../components/Ui";
+import { slugify } from "../../lib/slugify";
 
 export function categoryTree(project: StoreProjectV1): Category[] {
   const roots = project.categories.filter((category) => category.parentId === undefined);
@@ -36,6 +38,23 @@ export function categoryLabel(category: Category): string {
 }
 
 const now = () => new Date().toISOString();
+
+type TaxonomyKind = "category" | "collection";
+
+type TaxonomyDraft = {
+  kind: TaxonomyKind;
+  id?: string;
+  title: string;
+  slug: string;
+  description: string;
+  parentId: string;
+};
+
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function emptyTaxonomyDraft(kind: TaxonomyKind): TaxonomyDraft {
+  return { kind, title: "", slug: "", description: "", parentId: "" };
+}
 
 interface CategoryTreeProps {
   project: StoreProjectV1;
@@ -113,6 +132,110 @@ export function CategoryTree({
     category: Category;
     parentId: string;
   } | null>(null);
+  const [taxonomyDraft, setTaxonomyDraft] = useState<TaxonomyDraft | null>(null);
+  const [taxonomyError, setTaxonomyError] = useState("");
+
+  const editCategory = (category: Category) => {
+    setTaxonomyError("");
+    setTaxonomyDraft({
+      kind: "category",
+      id: category.id,
+      title: category.title,
+      slug: category.slug,
+      description: category.description,
+      parentId: category.parentId ?? "",
+    });
+  };
+
+  const editCollection = (collection: Collection) => {
+    setTaxonomyError("");
+    setTaxonomyDraft({
+      kind: "collection",
+      id: collection.id,
+      title: collection.title,
+      slug: collection.slug,
+      description: collection.description,
+      parentId: "",
+    });
+  };
+
+  const submitTaxonomy = () => {
+    if (!taxonomyDraft) return;
+    setTaxonomyError("");
+    const title = taxonomyDraft.title.trim();
+    const slug = (taxonomyDraft.slug.trim() || slugify(title)).toLowerCase();
+    if (!title) {
+      setTaxonomyError("Escribí un nombre para continuar.");
+      return;
+    }
+    if (!SLUG_PATTERN.test(slug)) {
+      setTaxonomyError("El slug solo admite minúsculas, números y guiones.");
+      return;
+    }
+    const siblings = taxonomyDraft.kind === "category" ? project.categories : project.collections;
+    if (siblings.some((item) => item.slug === slug && item.id !== taxonomyDraft.id)) {
+      setTaxonomyError("Ya existe otra categoría o colección con ese slug.");
+      return;
+    }
+
+    try {
+      if (taxonomyDraft.kind === "category") {
+        if (taxonomyDraft.id) {
+          onCommand({
+            type: "category.update",
+            categoryId: taxonomyDraft.id as Category["id"],
+            changes: {
+              slug: slug as Category["slug"],
+              title,
+              description: taxonomyDraft.description.trim(),
+            },
+            at: now(),
+          });
+        } else {
+          onCommand({
+            type: "category.create",
+            category: {
+              id: `category-${crypto.randomUUID()}` as Category["id"],
+              slug: slug as Category["slug"],
+              title,
+              description: taxonomyDraft.description.trim(),
+              ...(taxonomyDraft.parentId
+                ? { parentId: taxonomyDraft.parentId as Category["id"] }
+                : {}),
+              productIds: [],
+            },
+            at: now(),
+          });
+        }
+      } else if (taxonomyDraft.id) {
+        onCommand({
+          type: "collection.update",
+          collectionId: taxonomyDraft.id as Collection["id"],
+          changes: {
+            slug: slug as Collection["slug"],
+            title,
+            description: taxonomyDraft.description.trim(),
+          },
+          at: now(),
+        });
+      } else {
+        onCommand({
+          type: "collection.create",
+          collection: {
+            id: `collection-${crypto.randomUUID()}` as Collection["id"],
+            slug: slug as Collection["slug"],
+            title,
+            description: taxonomyDraft.description.trim(),
+            productIds: [],
+          },
+          at: now(),
+        });
+      }
+      setTaxonomyDraft(null);
+    } catch (reason) {
+      setTaxonomyError(reason instanceof Error ? reason.message : "No se pudo guardar.");
+    }
+  };
 
   return (
     <section className="category-tree-panel" aria-label="Árbol de categorías">
@@ -122,12 +245,34 @@ export function CategoryTree({
           <h2>Categorías</h2>
           <p>Las categorías padre agregan automáticamente los productos de sus hijas.</p>
         </div>
+        <div className="category-tree-actions">
+          <Button
+            size="sm"
+            icon={Plus}
+            onClick={() => {
+              setTaxonomyError("");
+              setTaxonomyDraft(emptyTaxonomyDraft("category"));
+            }}
+          >
+            Categoría
+          </Button>
+          <Button
+            size="sm"
+            icon={Plus}
+            onClick={() => {
+              setTaxonomyError("");
+              setTaxonomyDraft(emptyTaxonomyDraft("collection"));
+            }}
+          >
+            Colección
+          </Button>
+        </div>
       </header>
       {orderedCategories.length === 0 ? (
         <EmptyState
           icon={TreeStructure}
           title="No hay categorías"
-          body="Las categorías llegan con la plantilla de la tienda o se importan con el CSV del catálogo; después podés reubicarlas aquí."
+          body="Creá una categoría desde acá o importá el catálogo; después podés reubicarla y asignarle productos."
         />
       ) : (
         <ul className="category-tree" aria-label="Categorías ordenadas">
@@ -166,6 +311,14 @@ export function CategoryTree({
                     <span className="category-tree-spacer" aria-hidden />
                   )}
                   <strong>{category.title}</strong>
+                  <button
+                    className="category-tree-edit"
+                    type="button"
+                    aria-label={`Editar ${category.title}`}
+                    onClick={() => editCategory(category)}
+                  >
+                    <PencilSimple aria-hidden size={14} />
+                  </button>
                 </div>
                 <span>
                   {directCount} directos · {totalCount} totales
@@ -175,6 +328,112 @@ export function CategoryTree({
           })}
         </ul>
       )}
+
+      <section className="taxonomy-collections" aria-label="Colecciones">
+        <div className="taxonomy-collections__header">
+          <div>
+            <span className="eyebrow">Agrupaciones</span>
+            <h3>Colecciones</h3>
+          </div>
+          <span>{project.collections.length} configuradas</span>
+        </div>
+        {project.collections.length > 0 ? (
+          <ul className="taxonomy-collections__list">
+            {project.collections.map((collection) => (
+              <li key={collection.id}>
+                <div>
+                  <strong>{collection.title}</strong>
+                  <small>{collection.productIds.length} productos directos</small>
+                </div>
+                <Button size="sm" variant="quiet" onClick={() => editCollection(collection)}>
+                  Editar
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="taxonomy-collections__empty">
+            Creá una colección para agrupar productos sin duplicar categorías.
+          </p>
+        )}
+      </section>
+
+      {taxonomyDraft ? (
+        <section className="taxonomy-editor" aria-label="Editar organización">
+          <div className="taxonomy-editor__header">
+            <div>
+              <span className="eyebrow">Editor nativo</span>
+              <h3>
+                {taxonomyDraft.id ? "Editar" : "Nueva"}{" "}
+                {taxonomyDraft.kind === "category" ? "categoría" : "colección"}
+              </h3>
+            </div>
+            <Button variant="quiet" size="sm" onClick={() => setTaxonomyDraft(null)}>
+              Cancelar
+            </Button>
+          </div>
+          {taxonomyError ? <InlineError>{taxonomyError}</InlineError> : null}
+          <div className="form-grid">
+            <Field label="Nombre">
+              <input
+                value={taxonomyDraft.title}
+                onChange={(event) =>
+                  setTaxonomyDraft((current) =>
+                    current ? { ...current, title: event.target.value } : current,
+                  )
+                }
+              />
+            </Field>
+            <Field label="Slug" hint="Minúsculas, números y guiones.">
+              <input
+                value={taxonomyDraft.slug}
+                onChange={(event) =>
+                  setTaxonomyDraft((current) =>
+                    current ? { ...current, slug: event.target.value } : current,
+                  )
+                }
+              />
+            </Field>
+          </div>
+          <Field label="Descripción">
+            <textarea
+              rows={2}
+              value={taxonomyDraft.description}
+              onChange={(event) =>
+                setTaxonomyDraft((current) =>
+                  current ? { ...current, description: event.target.value } : current,
+                )
+              }
+            />
+          </Field>
+          {taxonomyDraft.kind === "category" && !taxonomyDraft.id ? (
+            <Field label="Categoría padre" hint="Solo se permiten dos niveles de profundidad.">
+              <select
+                value={taxonomyDraft.parentId}
+                onChange={(event) =>
+                  setTaxonomyDraft((current) =>
+                    current ? { ...current, parentId: event.target.value } : current,
+                  )
+                }
+              >
+                <option value="">Sin padre (raíz)</option>
+                {project.categories
+                  .filter((category) => category.parentId === undefined)
+                  .map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.title}
+                    </option>
+                  ))}
+              </select>
+            </Field>
+          ) : null}
+          <div className="taxonomy-editor__actions">
+            <Button variant="primary" onClick={submitTaxonomy}>
+              {taxonomyDraft.id ? "Guardar cambios" : "Crear"}
+            </Button>
+          </div>
+        </section>
+      ) : null}
       <div className="category-reparent">
         <Field label="Categoría a reubicar">
           <select

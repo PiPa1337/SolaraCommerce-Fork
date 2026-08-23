@@ -18,6 +18,7 @@ import {
   optionsText,
   PRODUCT_STATUS_OPTIONS,
   parseOptions,
+  productActivationRequirements,
   slugify,
   VARIANT_STOCK_OPTIONS,
   validateDraft,
@@ -31,7 +32,7 @@ interface ProductEditorProps {
   existingSlugs: string[];
   mode: "create" | "edit";
   onCancel(): void;
-  onSave(product: Product): void;
+  onSave(product: Product, activate?: boolean): void;
 }
 
 type EditorStep = "details" | "media" | "organization" | "variants";
@@ -276,7 +277,7 @@ export function ProductEditor({
     });
   };
 
-  const save = () => {
+  const save = (activate = false) => {
     setError("");
     if (
       errors.title !== undefined ||
@@ -298,6 +299,7 @@ export function ProductEditor({
       const normalizedSlug = draft.slug.trim();
       const parsed = ProductSchema.parse({
         ...draft,
+        status: activate ? "active" : draft.status,
         slug: normalizedSlug,
         title: draft.title.trim(),
         brand: draft.brand.trim(),
@@ -318,7 +320,19 @@ export function ProductEditor({
           mpn: setOptionalText(variant.mpn ?? ""),
         })),
       });
-      onSave(parsed);
+      if (parsed.status === "active") {
+        const activationRequirements = productActivationRequirements(parsed);
+        if (activationRequirements.length > 0) {
+          setError(`Para activar el producto completá ${activationRequirements.join(", ")}.`);
+          setActiveStep(
+            !parsed.description.trim() || parsed.variants.some((variant) => variant.price <= 0)
+              ? "details"
+              : "media",
+          );
+          return;
+        }
+      }
+      onSave(parsed, activate);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "El producto no es válido.");
     }
@@ -838,8 +852,11 @@ export function ProductEditor({
         <Button variant="quiet" onClick={requestClose}>
           Cancelar
         </Button>
-        <Button variant="primary" onClick={save}>
-          {mode === "create" ? "Crear producto" : "Guardar producto"}
+        <Button onClick={() => save(false)}>
+          {mode === "create" ? "Guardar borrador" : "Guardar cambios"}
+        </Button>
+        <Button variant="primary" onClick={() => save(true)}>
+          {mode === "create" ? "Crear y activar" : "Guardar y activar"}
         </Button>
       </div>
 

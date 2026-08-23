@@ -8,6 +8,7 @@ const topLevelAsset = "asset-slide-top" as ImageAsset["id"];
 const notCollected = "asset-not-collected" as ImageAsset["id"];
 const logoAsset = "asset-logo" as ImageAsset["id"];
 const socialAsset = "asset-social" as ImageAsset["id"];
+const faviconAsset = "asset-favicon" as ImageAsset["id"];
 
 function withSections(settings: Record<string, unknown>[]) {
   const project = structuredClone(catalogModernStore);
@@ -48,16 +49,21 @@ describe("assetUses", () => {
     expect(assetUses(project, notCollected)).toEqual([]);
   });
 
-  it("cuenta el logo de la tienda y la imagen social", () => {
+  it("cuenta el logo, la imagen social y el favicon", () => {
     const project = structuredClone(catalogModernStore);
     project.identity.logoAssetId = logoAsset;
     project.seo.socialImageId = socialAsset;
+    project.seo.faviconAssetId = faviconAsset;
     expect(assetUses(project, logoAsset)).toContainEqual({
       label: "Logo de la tienda",
       detail: "Identidad",
     });
     expect(assetUses(project, socialAsset)).toContainEqual({
       label: "Imagen social",
+      detail: "SEO",
+    });
+    expect(assetUses(project, faviconAsset)).toContainEqual({
+      label: "Favicon del sitio",
       detail: "SEO",
     });
   });

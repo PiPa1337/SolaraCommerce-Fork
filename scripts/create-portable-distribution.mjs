@@ -13,7 +13,7 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { cp, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -57,7 +57,7 @@ async function inspectStore(storeDir) {
  */
 export async function shouldKeepPortableStore(preservedStore, repoStore) {
   if (!existsSync(preservedStore)) return false;
-  if (!existsSync(repoStore)) return true;
+  if (!existsSync(repoStore)) return (await inspectStore(preservedStore)).healthy;
   const [preserved, repo] = await Promise.all([
     inspectStore(preservedStore),
     inspectStore(repoStore),
@@ -88,22 +88,50 @@ export async function preserveDirectory(source, destinationPath) {
   }
 }
 
-function isTransientDirectoryLock(error) {
-  const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
-  return ["EBUSY", "EPERM", "EXDEV"].includes(code);
+/** Recupera estado preservado si el overlay se interrumpe por un lock de Windows. */
+export async function restorePreservedDirectoryIfMissing(source, destinationPath) {
+  if (!existsSync(source) || existsSync(destinationPath)) return true;
+  try {
+    await cp(source, destinationPath, { recursive: true });
+    return true;
+  } catch (error) {
+    console.error(`No se pudo restaurar ${destinationPath} desde el respaldo temporal.`, error);
+    return false;
+  }
 }
 
-/** Reemplaza una carpeta o actualiza su contenido si Windows bloquea un borrado. */
-async function replaceDirectory(source, destinationPath) {
+/** Reemplaza una carpeta sin dejar un overlay parcial si Windows la tiene abierta. */
+export async function replaceDirectory(source, destinationPath) {
+  const backupPath = join(
+    dirname(destinationPath),
+    `.${destinationPath.split(/[\\/]/).pop()}-previous-${process.pid}-${Date.now()}`,
+  );
+  let destinationMoved = false;
   try {
-    await rm(destinationPath, { recursive: true, force: true });
-    await cp(source, destinationPath, { recursive: true });
+    if (existsSync(destinationPath)) {
+      // Renombrar la carpeta completa es la barrera: un EXE abierto hace
+      // fallar este paso antes de modificar archivos del portable en uso.
+      await rename(destinationPath, backupPath);
+      destinationMoved = true;
+    }
+    await rename(source, destinationPath);
+    if (destinationMoved) await rm(backupPath, { recursive: true, force: true });
     return false;
   } catch (error) {
-    if (!isTransientDirectoryLock(error)) throw error;
-    await mkdir(destinationPath, { recursive: true });
-    await cp(source, destinationPath, { recursive: true, force: true });
-    return true;
+    if (destinationMoved) {
+      try {
+        if (existsSync(destinationPath)) {
+          await rm(destinationPath, { recursive: true, force: true });
+        }
+        await rename(backupPath, destinationPath);
+      } catch (restoreError) {
+        console.error(
+          `No se pudo restaurar el portable anterior en ${destinationPath}.`,
+          restoreError,
+        );
+      }
+    }
+    throw error;
   }
 }
 
@@ -127,15 +155,26 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     }
   }
 
-  const overlaidPortable = await replaceDirectory(unpacked, destination);
+  try {
+    await replaceDirectory(unpacked, destination);
+  } catch (error) {
+    const projectsRestored = await restorePreservedDirectoryIfMissing(
+      preservedProyectos,
+      join(destination, "proyectos"),
+    );
+    const runtimeRestored = await restorePreservedDirectoryIfMissing(
+      preservedRuntime,
+      join(destination, ".solara-runtime"),
+    );
+    if (projectsRestored && runtimeRestored) {
+      await rm(backupDir, { recursive: true, force: true });
+    } else {
+      console.error(`El respaldo temporal quedó conservado en ${backupDir}.`);
+    }
+    throw error;
+  }
   await mkdir(join(destination, "proyectos"), { recursive: true });
   await mkdir(join(destination, ".solara-runtime"), { recursive: true });
-
-  if (overlaidPortable) {
-    console.warn(
-      "El portable anterior estaba ocupado; se actualizaron sus archivos sin borrar carpetas bloqueadas.",
-    );
-  }
 
   // 2. Copiar las tiendas del repo.
   const sourceProjects = resolve(root, "proyectos");
@@ -150,8 +189,15 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       if (!entry.isDirectory()) continue;
       const preservedStore = join(preservedProyectos, entry.name);
       const destinationStore = join(destination, "proyectos", entry.name);
-      if (await shouldKeepPortableStore(preservedStore, destinationStore)) {
+      const keepPreserved = await shouldKeepPortableStore(preservedStore, destinationStore);
+      if (keepPreserved) {
         await replaceDirectory(preservedStore, destinationStore);
+      } else if (!(await inspectStore(preservedStore)).healthy) {
+        const recoveryRoot = join(destination, "recovery", "portable-stores");
+        await mkdir(recoveryRoot, { recursive: true });
+        const quarantinePath = join(recoveryRoot, `${entry.name}-${Date.now()}`);
+        await cp(preservedStore, quarantinePath, { recursive: true });
+        console.warn(`Respaldo portable no verificable conservado en ${quarantinePath}`);
       }
     }
   }

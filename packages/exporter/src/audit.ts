@@ -11,7 +11,12 @@ import { imageFor } from "./assets.js";
 import { buildMerchantFeed } from "./feeds.js";
 import { escapeXml } from "./html.js";
 import type { AuditIssue, AuditReport, ExportMode } from "./index.js";
-import { buildCommerceSnapshot, dataUrlBytes, effectiveHomeSections } from "./index.js";
+import {
+  buildCommerceSnapshot,
+  dataUrlBytes,
+  effectiveHomeSections,
+  publicMediaUsage,
+} from "./index.js";
 
 export function auditProject(project: StoreProjectV1): AuditIssue[] {
   const issues: AuditIssue[] = [];
@@ -19,6 +24,7 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
   const categorySlugs = new Map<string, number>();
   const collectionSlugs = new Map<string, number>();
   const snapshot = buildCommerceSnapshot(project);
+  const mediaUsage = publicMediaUsage(project);
   const reservedSlugs = new Set([
     "assets",
     "categorias",
@@ -64,11 +70,24 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
     const placeholders = project.assets.filter((asset) =>
       isCatalogModernPlaceholderAsset(project, asset),
     );
-    if (placeholders.length > 0) {
+    const usedPlaceholders = placeholders.filter((asset) => mediaUsage.assetIds.has(asset.id));
+    if (usedPlaceholders.length > 0) {
       issues.push({
         code: "template.placeholder",
         severity: "critical",
-        message: "Reemplazá las imágenes de plantilla antes de publicar esta tienda.",
+        message:
+          "Reemplazá las imágenes de plantilla que todavía aparecen en el sitio antes de publicar esta tienda.",
+        path: "assets",
+        area: "content",
+        fixTarget: "assets",
+      });
+    }
+    const unusedPlaceholders = placeholders.length - usedPlaceholders.length;
+    if (unusedPlaceholders > 0) {
+      issues.push({
+        code: "template.placeholder.unused",
+        severity: "warning",
+        message: `${unusedPlaceholders} imagen${unusedPlaceholders === 1 ? "" : "es"} de plantilla no se usa${unusedPlaceholders === 1 ? "" : "n"} en el sitio público; podés eliminarla${unusedPlaceholders === 1 ? "" : "s"}.`,
         path: "assets",
         area: "content",
         fixTarget: "assets",

@@ -4,7 +4,11 @@
  * Vite; el código de UI no debe asumir que IndexedDB es siempre autoridad.
  */
 import type { NavigationItem, StoreProjectV1 } from "@solara/project-schema";
-import { getCategoryProductIds, StoreProjectV1Schema } from "@solara/project-schema";
+import {
+  getCategoryProductIds,
+  isCatalogModernPlaceholderAsset,
+  StoreProjectV1Schema,
+} from "@solara/project-schema";
 import {
   buildCatalogModernProject,
   catalogModernCleanStore,
@@ -172,6 +176,67 @@ export function buildScaleDemoProject(): StoreProjectV1 {
       },
     }),
   );
+}
+
+function collectReferencedAssetIds(
+  value: unknown,
+  key: string | undefined,
+  target: Set<string>,
+): void {
+  if (typeof value === "string") {
+    if (key && /(?:asset|image|poster|background)(?:asset|image)?ids?$/i.test(key) && value) {
+      target.add(value);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) collectReferencedAssetIds(item, key, target);
+    return;
+  }
+  if (typeof value !== "object" || value === null) return;
+  for (const [childKey, childValue] of Object.entries(value)) {
+    collectReferencedAssetIds(childValue, childKey, target);
+  }
+}
+
+/** Retira del demo reservado los datos de las páginas editoriales eliminadas. */
+export function removeRetiredDemoEditorialData(project: StoreProjectV1): StoreProjectV1 {
+  if (project.id !== SCALE_DEMO_PROJECT_ID || project.origin?.seed !== "placeholder") {
+    return project;
+  }
+
+  const pages = project.pages.filter((page) => page.kind !== "about" && page.kind !== "contact");
+  const referencedAssetIds = new Set<string>();
+  collectReferencedAssetIds(
+    {
+      pages,
+      sections: project.sections,
+      products: project.products,
+      categories: project.categories,
+      collections: project.collections,
+      videos: project.videos,
+    },
+    undefined,
+    referencedAssetIds,
+  );
+  const assets = project.assets.filter(
+    (asset) => referencedAssetIds.has(asset.id) && !/^asset-(?:about|contact)-/i.test(asset.id),
+  );
+
+  if (
+    pages.length === project.pages.length &&
+    assets.length === project.assets.length &&
+    assets.every((asset, index) => asset.id === project.assets[index]?.id)
+  ) {
+    return project;
+  }
+
+  return StoreProjectV1Schema.parse({
+    ...project,
+    pages,
+    assets,
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 function isLegacyDemoFixtureAsset(project: StoreProjectV1, assetId: string): boolean {
@@ -365,10 +430,14 @@ function toRecord(project: StoreProjectV1): StoredProject {
 }
 
 function repairModernGreeting(project: StoreProjectV1): StoreProjectV1 {
-  if (
-    project.commerceTemplates.designFamily !== "catalog-modern-v1" ||
-    project.whatsapp.greeting !== "Hola Casa Luma, quiero hacer este pedido:"
-  ) {
+  const legacyGreeting =
+    project.commerceTemplates.designFamily === "catalog-modern-v1" &&
+    project.whatsapp.greeting === "Hola Casa Luma, quiero hacer este pedido:";
+  const legacyCleanPhone =
+    project.origin?.templateId === "catalog-modern" &&
+    project.origin.seed === "clean" &&
+    project.whatsapp.phone === "5491100000000";
+  if (!legacyGreeting && !legacyCleanPhone) {
     return project;
   }
 
@@ -376,7 +445,10 @@ function repairModernGreeting(project: StoreProjectV1): StoreProjectV1 {
     ...project,
     whatsapp: {
       ...project.whatsapp,
-      greeting: `Hola ${project.identity.brandName}, quiero hacer este pedido:`,
+      ...(legacyGreeting
+        ? { greeting: `Hola ${project.identity.brandName}, quiero hacer este pedido:` }
+        : {}),
+      ...(legacyCleanPhone ? { phone: "" } : {}),
     },
   });
 }
@@ -497,8 +569,18 @@ async function embedFixtureAssets(project: StoreProjectV1): Promise<StoreProject
 }
 
 export async function migrateCatalogModernDemo(project: StoreProjectV1): Promise<StoreProjectV1> {
-  if (project.id !== SCALE_DEMO_PROJECT_ID || project.origin?.seed !== "demo") return project;
-  const expanded = expandCatalogModernDemoGalleries(normalizeScaleDemoProject(project));
+  if (project.id !== SCALE_DEMO_PROJECT_ID) return project;
+  await ready();
+  const cleaned = removeRetiredDemoEditorialData(project);
+  if (cleaned !== project) {
+    const retainedAssetIds = new Set(cleaned.assets.map((asset) => asset.id));
+    const removedHashes = project.assets
+      .filter((asset) => !retainedAssetIds.has(asset.id))
+      .map((asset) => asset.hash);
+    if (removedHashes.length > 0) await database.assetCache.bulkDelete(removedHashes);
+  }
+  if (cleaned.origin?.seed !== "demo") return cleaned;
+  const expanded = expandCatalogModernDemoGalleries(normalizeScaleDemoProject(cleaned));
   if (!expanded.assets.some((asset) => asset.source.startsWith("/fixtures/"))) return expanded;
   return embedFixtureAssets(expanded);
 }
@@ -754,6 +836,49 @@ export interface CreateProjectOptions {
   phone?: string;
 }
 
+/**
+ * Las tiendas nuevas arrancan sin media ficticia: el usuario agrega sus
+ * recursos desde Recursos y el exporter no bloquea Guardar por placeholders
+ * que todavía no eligió publicar.
+ */
+function removeCleanTemplateMedia(project: StoreProjectV1): StoreProjectV1 {
+  const placeholderIds = new Set(
+    project.assets
+      .filter((asset) => isCatalogModernPlaceholderAsset(project, asset))
+      .map((asset) => asset.id),
+  );
+  if (placeholderIds.size === 0) return project;
+  const isPlaceholderId = (value: unknown): boolean =>
+    typeof value === "string" &&
+    placeholderIds.has(value as StoreProjectV1["assets"][number]["id"]);
+  const stripSettings = (settings: Record<string, unknown>) =>
+    Object.fromEntries(Object.entries(settings).filter(([, value]) => !isPlaceholderId(value)));
+  return StoreProjectV1Schema.parse({
+    ...project,
+    assets: project.assets.filter((asset) => !placeholderIds.has(asset.id)),
+    identity: {
+      ...project.identity,
+      ...(isPlaceholderId(project.identity.logoAssetId) ? { logoAssetId: undefined } : {}),
+    },
+    seo: {
+      ...project.seo,
+      ...(isPlaceholderId(project.seo.faviconAssetId) ? { faviconAssetId: undefined } : {}),
+      ...(isPlaceholderId(project.seo.socialImageId) ? { socialImageId: undefined } : {}),
+    },
+    sections: project.sections.map((section) => ({
+      ...section,
+      settings: stripSettings(section.settings),
+    })),
+    pages: project.pages.map((page) => ({
+      ...page,
+      sections: page.sections.map((section) => ({
+        ...section,
+        settings: stripSettings(section.settings),
+      })),
+    })),
+  });
+}
+
 export async function createProject(input: string | CreateProjectOptions): Promise<StoreProjectV1> {
   const timestamp = new Date().toISOString();
   const suffix = crypto.randomUUID();
@@ -771,7 +896,7 @@ export async function createProject(input: string | CreateProjectOptions): Promi
   });
   const project = await embedFixtureAssets(
     StoreProjectV1Schema.parse({
-      ...template,
+      ...removeCleanTemplateMedia(template),
       identity: {
         ...template.identity,
         email: options.email?.trim() || "",
@@ -779,7 +904,7 @@ export async function createProject(input: string | CreateProjectOptions): Promi
       },
       whatsapp: {
         ...template.whatsapp,
-        phone: phone.length >= 8 && phone.length <= 15 ? phone : "5491100000000",
+        phone,
       },
       status: "active",
       createdAt: timestamp,
@@ -795,7 +920,9 @@ export async function ensureFirstProject(): Promise<StoreProjectV1> {
   const first = await database.projects.orderBy("updatedAt").reverse().first();
   if (first) {
     const parsed = StoreProjectV1Schema.parse(first.project);
-    const project = await optimizeDemoFixtureAssets(repairModernGreeting(parsed));
+    const project = await optimizeDemoFixtureAssets(
+      await migrateCatalogModernDemo(repairModernGreeting(parsed)),
+    );
     if (JSON.stringify(project) !== JSON.stringify(parsed)) await saveProject(project);
     return project;
   }
@@ -1040,27 +1167,37 @@ export async function putCachedAsset(
   asset: Omit<CachedAsset, "cacheKey" | "recipeVersion" | "lastUsedAt"> &
     Partial<Pick<CachedAsset, "recipeVersion" | "lastUsedAt">>,
 ): Promise<void> {
-  await ready();
-  const recipeVersion = asset.recipeVersion ?? ASSET_CACHE_RECIPE_VERSION;
-  const timestamp = asset.lastUsedAt ?? new Date().toISOString();
-  await database.assetCache.put({
-    ...asset,
-    cacheKey: createAssetCacheKey(asset.hash, recipeVersion),
-    recipeVersion,
-    lastUsedAt: timestamp,
-  });
+  try {
+    await ready();
+    const recipeVersion = asset.recipeVersion ?? ASSET_CACHE_RECIPE_VERSION;
+    const timestamp = asset.lastUsedAt ?? new Date().toISOString();
+    await database.assetCache.put({
+      ...asset,
+      cacheKey: createAssetCacheKey(asset.hash, recipeVersion),
+      recipeVersion,
+      lastUsedAt: timestamp,
+    });
+  } catch {
+    // La caché es regenerable; un registro corrupto o una cuota agotada no
+    // debe impedir conservar la imagen en el proyecto real.
+  }
 }
 
 export async function getCachedAsset(
   hash: string,
   recipeVersion = ASSET_CACHE_RECIPE_VERSION,
 ): Promise<CachedAsset | undefined> {
-  await ready();
-  const cached = await database.assetCache.get(hash);
-  if (!cached || cached.recipeVersion !== recipeVersion) return undefined;
-  const lastUsedAt = new Date().toISOString();
-  await database.assetCache.update(hash, { lastUsedAt });
-  return { ...cached, lastUsedAt };
+  try {
+    await ready();
+    const cached = await database.assetCache.get(hash);
+    if (!cached || cached.recipeVersion !== recipeVersion) return undefined;
+    const lastUsedAt = new Date().toISOString();
+    await database.assetCache.update(hash, { lastUsedAt });
+    return { ...cached, lastUsedAt };
+  } catch {
+    // Si el registro quedó ilegible, el caller vuelve a procesar el original.
+    return undefined;
+  }
 }
 
 export interface StorageEstimate {

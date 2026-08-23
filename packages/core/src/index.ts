@@ -37,6 +37,9 @@ type ProductPatch = Partial<
   >
 >;
 
+type CategoryPatch = Partial<Pick<Category, "slug" | "title" | "description" | "imageId">>;
+type CollectionPatch = Partial<Pick<Collection, "slug" | "title" | "description" | "imageId">>;
+
 interface CommandMetadata {
   at: string;
 }
@@ -98,16 +101,71 @@ export type DomainCommand =
       categories: Category[];
       collections: Collection[];
     })
-  | CategoryCommand;
+  | CategoryCommand
+  | CollectionCommand;
 
-// La reubicación conserva las asignaciones de productos y recalcula índices heredados.
-export type CategoryCommand = CommandMetadata & {
-  type: "category.reparent";
-  categoryId: CategoryId;
-  parentId?: CategoryId;
-};
+// Las operaciones de taxonomía conservan las asignaciones y recalculan índices derivados.
+export type CategoryCommand =
+  | (CommandMetadata & { type: "category.create"; category: Category })
+  | (CommandMetadata & { type: "category.update"; categoryId: CategoryId; changes: CategoryPatch })
+  | (CommandMetadata & {
+      type: "category.reparent";
+      categoryId: CategoryId;
+      parentId?: CategoryId;
+    });
+
+export type CollectionCommand =
+  | (CommandMetadata & { type: "collection.create"; collection: Collection })
+  | (CommandMetadata & {
+      type: "collection.update";
+      collectionId: CollectionId;
+      changes: CollectionPatch;
+    });
 
 const unique = <Value>(values: readonly Value[]): Value[] => [...new Set(values)];
+
+const RESERVED_PUBLIC_SLUGS = new Set([
+  "assets",
+  "categorias",
+  "colecciones",
+  "productos",
+  "envios",
+  "devoluciones",
+  "privacidad",
+  "terminos",
+  "contacto",
+  "nosotros",
+  "buscar",
+  "carrito",
+  "compra",
+]);
+
+function assertAvailableSlug(
+  slug: string,
+  entries: readonly { id: string; slug: string }[],
+  currentId: string | undefined,
+  label: string,
+): void {
+  if (RESERVED_PUBLIC_SLUGS.has(slug)) {
+    throw new Error(`El slug de ${label} "${slug}" está reservado por una ruta pública.`);
+  }
+  if (entries.some((entry) => entry.id !== currentId && entry.slug === slug)) {
+    throw new Error(`El slug de ${label} "${slug}" ya está en uso.`);
+  }
+}
+
+function assertCategoryParent(
+  project: StoreProjectV1,
+  categoryId: CategoryId,
+  parentId: CategoryId | undefined,
+): void {
+  if (!parentId) return;
+  const parent = project.categories.find((category) => category.id === parentId);
+  if (!parent) throw new Error(`La categoría padre no existe: ${parentId}.`);
+  if (parent.id === categoryId || parent.parentId !== undefined) {
+    throw new Error("Las categorías sólo pueden tener una raíz y un nivel de subcategorías.");
+  }
+}
 
 function assertTimestamp(value: string): void {
   if (Number.isNaN(Date.parse(value))) {
@@ -285,10 +343,41 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
     Date.parse(command.at) < Date.parse(project.updatedAt) ? project.updatedAt : command.at;
 
   switch (command.type) {
+    case "category.create": {
+      const category = CategorySchema.parse(command.category);
+      if (project.categories.some((candidate) => candidate.id === category.id)) {
+        throw new Error(`Ya existe la categoría ${category.id}.`);
+      }
+      assertAvailableSlug(category.slug, project.categories, undefined, "categoría");
+      assertCategoryParent(project, category.id, category.parentId);
+      return parseProject(
+        synchronizeAssignments({
+          ...project,
+          categories: [...project.categories, { ...category, productIds: [] }],
+          updatedAt: at,
+        }),
+      );
+    }
+    case "category.update": {
+      const category = project.categories.find((candidate) => candidate.id === command.categoryId);
+      if (!category) throw new Error(`La categoría no existe: ${command.categoryId}.`);
+      const candidate = CategorySchema.parse({ ...category, ...command.changes });
+      assertAvailableSlug(candidate.slug, project.categories, category.id, "categoría");
+      return parseProject(
+        synchronizeAssignments({
+          ...project,
+          categories: project.categories.map((item) =>
+            item.id === category.id ? { ...candidate, productIds: item.productIds } : item,
+          ),
+          updatedAt: at,
+        }),
+      );
+    }
     case "category.reparent": {
       const category = project.categories.find((candidate) => candidate.id === command.categoryId);
       if (!category) throw new Error(`La categoría no existe: ${command.categoryId}.`);
       if (category.parentId === command.parentId) return project;
+      assertCategoryParent(project, category.id, command.parentId);
       const hasChildren = project.categories.some(
         (candidate) => candidate.parentId === category.id,
       );
@@ -310,6 +399,37 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
         synchronizeAssignments({
           ...project,
           categories,
+          updatedAt: at,
+        }),
+      );
+    }
+    case "collection.create": {
+      const collection = CollectionSchema.parse(command.collection);
+      if (project.collections.some((candidate) => candidate.id === collection.id)) {
+        throw new Error(`Ya existe la colección ${collection.id}.`);
+      }
+      assertAvailableSlug(collection.slug, project.collections, undefined, "colección");
+      return parseProject(
+        synchronizeAssignments({
+          ...project,
+          collections: [...project.collections, { ...collection, productIds: [] }],
+          updatedAt: at,
+        }),
+      );
+    }
+    case "collection.update": {
+      const collection = project.collections.find(
+        (candidate) => candidate.id === command.collectionId,
+      );
+      if (!collection) throw new Error(`La colección no existe: ${command.collectionId}.`);
+      const candidate = CollectionSchema.parse({ ...collection, ...command.changes });
+      assertAvailableSlug(candidate.slug, project.collections, collection.id, "colección");
+      return parseProject(
+        synchronizeAssignments({
+          ...project,
+          collections: project.collections.map((item) =>
+            item.id === collection.id ? { ...candidate, productIds: item.productIds } : item,
+          ),
           updatedAt: at,
         }),
       );

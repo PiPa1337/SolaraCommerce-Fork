@@ -222,11 +222,21 @@ export function ExportPanel({
     setBusy("project");
     setError("");
     try {
-      downloadBlob(
-        await createProjectArchiveInWorker(project),
-        `${project.slug}.solara.json`,
-        "application/vnd.solara.project+json",
-      );
+      const archive = await createProjectArchiveInWorker(project);
+      if (desktopExport) {
+        const saved = await desktopExport.saveProjectArchive({
+          filename: `${project.slug}.solara.json`,
+          data: archive,
+        });
+        setNotice(
+          saved.cancelled
+            ? "Respaldo cancelado. No se guardó ningún archivo."
+            : `Respaldo guardado en ${saved.path}.`,
+        );
+      } else {
+        downloadBlob(archive, `${project.slug}.solara.json`, "application/vnd.solara.project+json");
+        setNotice("Respaldo descargado.");
+      }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo crear el respaldo.");
     } finally {

@@ -11,6 +11,7 @@ import {
   optionsText,
   PRODUCT_STATUS_OPTIONS,
   parseOptions,
+  productActivationRequirements,
   slugErrorFor,
   slugify,
   VARIANT_STOCK_OPTIONS,
@@ -164,6 +165,35 @@ describe("validateDraft", () => {
       [],
     );
     expect(valid.variantErrors[0]?.compareAtPrice).toBeUndefined();
+  });
+});
+
+describe("productActivationRequirements", () => {
+  it("exige contenido público mínimo antes de activar", () => {
+    expect(productActivationRequirements(baseProduct())).toEqual([
+      "una descripción",
+      "al menos una imagen",
+    ]);
+    expect(
+      productActivationRequirements(
+        baseProduct({
+          description: "Descripción",
+          imageIds: ["asset-test" as Product["imageIds"][number]],
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("detecta variantes sin precio positivo", () => {
+    expect(
+      productActivationRequirements(
+        baseProduct({
+          description: "Descripción",
+          imageIds: ["asset-test" as Product["imageIds"][number]],
+          variants: [{ ...baseProduct().variants[0], price: 0 as Variant["price"] }],
+        }),
+      ),
+    ).toEqual(["un precio mayor a cero"]);
   });
 });
 

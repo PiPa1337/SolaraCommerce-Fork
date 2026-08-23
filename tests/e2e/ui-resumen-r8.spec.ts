@@ -550,8 +550,8 @@ test("el estado de los colapsables persiste entre pestañas y tras recargar (R8-
 
   // Cambio de pestaña: StudioTabContent desmonta el panel, pero el pliegue se
   // restaura desde localStorage (clave por tienda, patrón del pane en Studio).
-  await page.getByRole("tab", { name: "Tema", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Tema", exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Tema de la tienda", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Tema de la tienda", exact: true })).toBeVisible();
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
   await expect(identityToggle).toHaveAttribute("aria-expanded", "false");

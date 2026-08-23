@@ -539,8 +539,10 @@ test.describe("SEO y Tema", () => {
         .locator("html")
         .evaluate((element) => getComputedStyle(element).backgroundColor);
 
-    await page.getByRole("tab", { name: "Tema", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Tema", exact: true })).toBeVisible();
+    await page.getByRole("tab", { name: "Tema de la tienda", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Tema de la tienda", exact: true }),
+    ).toBeVisible();
     await expect.poll(previewBackground, { timeout: 15_000 }).toBe("rgb(252, 252, 251)");
 
     // Preset: aplica la paleta real a los campos y al preview.

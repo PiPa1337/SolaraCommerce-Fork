@@ -19,7 +19,9 @@ export function assetExtension(asset: ImageAsset | VideoAsset): string {
 export function mimeTypeExtension(mimeType: string | undefined): string | undefined {
   const subtype = mimeType?.split("/")[1]?.split(";")[0]?.toLowerCase();
   if (!subtype) return undefined;
-  return subtype === "jpeg" ? "jpg" : subtype;
+  if (subtype === "jpeg") return "jpg";
+  if (subtype === "x-icon" || subtype === "vnd.microsoft.icon") return "ico";
+  return subtype;
 }
 
 const imageLookupCache = new WeakMap<object, ReadonlyMap<string, ImageAsset>>();

@@ -37,6 +37,9 @@ export function replaceCatalogBrandText<T>(value: T, source: string, target: str
 
 function ensureCatalogModernV2Assets(project: StoreProjectV1): StoreProjectV1 {
   if (project.commerceTemplates.designFamily !== "catalog-modern-v2") return project;
+  if (!project.pages.some((page) => page.kind === "about" || page.kind === "contact")) {
+    return project;
+  }
   const existing = new Set(project.assets.map((asset) => asset.id));
   const missing = catalogModernV2EditorialAssets.filter((asset) => !existing.has(asset.id));
   if (missing.length === 0) return project;
@@ -271,9 +274,8 @@ function cleanProject(options: BuildCatalogModernProjectOptions): StoreProjectV2
   const brandName = options.brandName?.trim() || name;
   const slug = options.slug || "nueva-tienda";
   // Base V2 construida localmente (sin importar el v2-fixture, que depende de
-  // esta plantilla): trae designFamily v2, los assets de plantilla y las
-  // páginas Nosotros/Contacto pobladas con los módulos V2 (editables en el
-  // constructor) — mismo patrón que catalog-modern-v2-fixture.
+  // esta plantilla): trae designFamily v2 y la estructura de Home. Las páginas
+  // editoriales y sus imágenes sólo viven en los fixtures de desarrollo.
   const project = replaceCatalogBrandText(
     ensureCatalogModernV2Sections({
       ...structuredClone(catalogModernStore),
@@ -373,7 +375,10 @@ function cleanProject(options: BuildCatalogModernProjectOptions): StoreProjectV2
     },
     whatsapp: {
       ...project.whatsapp,
-      phone: "5491100000000",
+      // Una tienda limpia no tiene un número configurado. El sentinel
+      // histórico se conserva sólo para migrar respaldos antiguos; no debe
+      // volver a persistirse porque puede confundirse con un número real.
+      phone: "",
       greeting: `Hola ${brandName}, quiero hacer este pedido:`,
     },
     seo: {
@@ -383,15 +388,17 @@ function cleanProject(options: BuildCatalogModernProjectOptions): StoreProjectV2
       searchConsoleVerification: "",
       merchantVerification: "",
     },
-    assets: project.assets.map((asset) => ({
-      ...asset,
-      name: "Imagen de plantilla",
-      alt: "Imagen de ejemplo para reemplazar",
-      source: CLEAN_TEMPLATE_IMAGE_SOURCE,
-      fallbackSource: undefined,
-      responsiveSources: undefined,
-      hash: `template-${asset.id}`,
-    })),
+    assets: project.assets
+      .filter((asset) => !/^asset-(?:about|contact)-/i.test(asset.id))
+      .map((asset) => ({
+        ...asset,
+        name: "Imagen de plantilla",
+        alt: "Imagen de ejemplo para reemplazar",
+        source: CLEAN_TEMPLATE_IMAGE_SOURCE,
+        fallbackSource: undefined,
+        responsiveSources: undefined,
+        hash: `template-${asset.id}`,
+      })),
     navigation: {
       ...project.navigation,
       mode: "automatic",

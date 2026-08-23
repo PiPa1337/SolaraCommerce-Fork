@@ -1,9 +1,13 @@
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { shouldKeepPortableStore } from "./create-portable-distribution.mjs";
+import {
+  replaceDirectory,
+  restorePreservedDirectoryIfMissing,
+  shouldKeepPortableStore,
+} from "./create-portable-distribution.mjs";
 
 async function writeStoreManifest(dir, version) {
   await mkdir(dir, { recursive: true });
@@ -64,8 +68,19 @@ describe("shouldKeepPortableStore", () => {
     const root = await mkdtemp(join(tmpdir(), "portable-only-"));
     try {
       const preserved = join(root, "preserved");
-      await writeStoreManifest(preserved, 7);
+      await writeHealthyStore(preserved, 7, "2026-08-07T11:00:00.000Z");
       expect(await shouldKeepPortableStore(preserved, join(root, "repo-missing"))).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("no recupera una carpeta portable sin respaldo verificable", async () => {
+    const root = await mkdtemp(join(tmpdir(), "portable-corrupt-"));
+    try {
+      const preserved = join(root, "preserved");
+      await writeStoreManifest(preserved, 7);
+      expect(await shouldKeepPortableStore(preserved, join(root, "repo-missing"))).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -107,6 +122,43 @@ describe("shouldKeepPortableStore", () => {
       await writeHealthyStore(preserved, 42, "2026-08-07T12:00:00.000Z", "portable");
       await writeHealthyStore(repo, 42, "2026-08-07T12:00:00.000Z", "repo");
       expect(await shouldKeepPortableStore(preserved, repo)).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("restorePreservedDirectoryIfMissing", () => {
+  it("recupera el respaldo cuando el overlay falló antes de crear el destino", async () => {
+    const root = await mkdtemp(join(tmpdir(), "portable-restore-"));
+    try {
+      const preserved = join(root, "preserved");
+      const destination = join(root, "destination");
+      await mkdir(preserved, { recursive: true });
+      await writeFile(join(preserved, "manifest.json"), "preserved", "utf8");
+      expect(await restorePreservedDirectoryIfMissing(preserved, destination)).toBe(true);
+      expect(await readFile(join(destination, "manifest.json"), "utf8")).toBe("preserved");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("replaceDirectory", () => {
+  it("reemplaza la carpeta completa sin conservar archivos obsoletos", async () => {
+    const root = await mkdtemp(join(tmpdir(), "portable-replace-"));
+    try {
+      const source = join(root, "source");
+      const destination = join(root, "destination");
+      await mkdir(source, { recursive: true });
+      await mkdir(destination, { recursive: true });
+      await writeFile(join(source, "nuevo.txt"), "nuevo", "utf8");
+      await writeFile(join(destination, "obsoleto.txt"), "obsoleto", "utf8");
+
+      await replaceDirectory(source, destination);
+
+      expect(await readFile(join(destination, "nuevo.txt"), "utf8")).toBe("nuevo");
+      expect(await readFile(join(destination, "obsoleto.txt")).catch(() => null)).toBeNull();
     } finally {
       await rm(root, { recursive: true, force: true });
     }

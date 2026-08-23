@@ -1160,6 +1160,11 @@ tbody tr:hover {
   gap: 7px;
 }
 
+.studio-brand-info {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .studio-breadcrumb__link {
   flex: 0 0 auto;
   padding: 3px 4px;
@@ -1183,9 +1188,16 @@ tbody tr:hover {
 }
 
 .studio-breadcrumb__current {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  max-height: 1.15em;
+  margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.15;
   font-size: 13px;
 }
 

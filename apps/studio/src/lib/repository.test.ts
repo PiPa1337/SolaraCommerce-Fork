@@ -30,6 +30,7 @@ import {
   clearAssetCache,
   clearRecoveryDraft,
   createAssetCacheKey,
+  createProject,
   DEMO_ONLY_PURGE_SENTINEL,
   DEPRECATED_CATEGORY_CLEANUP_SENTINEL,
   database,
@@ -50,6 +51,7 @@ import {
   PREDETERMINADO_V1_PROJECT_ID,
   purgeNonDemoStores,
   putCachedAsset,
+  removeRetiredDemoEditorialData,
   retireLegacyDemoProjects,
   SCALE_DEMO_PROJECT_ID,
   saveProject,
@@ -148,6 +150,19 @@ describe("repositorio local", () => {
     expect((await getProject(duplicate.id))?.status).toBe("archived");
     await setProjectArchived(duplicate.id, false);
     expect((await getProject(duplicate.id))?.status).toBe("active");
+  });
+
+  it("crea una tienda nueva sin inventar un teléfono de WhatsApp", async () => {
+    const clean = await createProject({ name: "Tienda nueva" });
+    expect(clean.whatsapp.phone).toBe("");
+    expect(clean.origin.seed).toBe("clean");
+    expect(clean.assets).toHaveLength(0);
+
+    const configured = await createProject({
+      name: "Tienda configurada",
+      phone: "+54 9 11 5555 1234",
+    });
+    expect(configured.whatsapp.phone).toBe("5491155551234");
   });
 
   it("conserva datos después de cerrar y reabrir Dexie", async () => {
@@ -278,6 +293,36 @@ describe("repositorio local", () => {
     expect(repaired?.commerceTemplates.designFamily).toBe("catalog-modern-v2");
     expect(repaired?.theme.container).toBe(1760);
     expect(repaired?.products[0]?.title).toBe("Nombre personalizado");
+  });
+
+  it("retira páginas editoriales y fotos residuales del demo reservado", async () => {
+    const staleDemo = StoreProjectV1Schema.parse({
+      ...structuredClone(buildScaleDemoProject()),
+      pages: structuredClone(catalogModernStore.pages),
+      assets: structuredClone(catalogModernStore.assets),
+    });
+    await putCachedAsset({
+      hash: "remote-unsplash-about-hero",
+      originalName: "Retrato editorial de la marca.jpg",
+      mimeType: "image/jpeg",
+      width: 1200,
+      height: 1800,
+      primary: "data:image/jpeg;base64,cmVzaWR1YWw=",
+      fallback: "data:image/jpeg;base64,cmVzaWR1YWw=",
+      responsive: [],
+      createdAt: "2026-08-23T00:00:00.000Z",
+    });
+    await saveProject(staleDemo);
+
+    expect(removeRetiredDemoEditorialData(staleDemo).pages.map((page) => page.kind)).toEqual([
+      "home",
+    ]);
+    expect(await ensureScaleDemoProject()).toBe(false);
+
+    const cleaned = await getProject(SCALE_DEMO_PROJECT_ID);
+    expect(cleaned?.pages.map((page) => page.kind)).toEqual(["home"]);
+    expect(cleaned?.assets.map((asset) => asset.id)).toEqual(["asset-hero"]);
+    expect(await getCachedAsset("remote-unsplash-about-hero")).toBeUndefined();
   });
 
   it("construye Predeterminado directamente con Editorial V2", () => {

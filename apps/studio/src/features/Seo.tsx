@@ -7,16 +7,18 @@ import {
   DownloadSimple,
   Info,
   MagnifyingGlass,
+  UploadSimple,
   WarningCircle,
   XCircle,
 } from "@phosphor-icons/react";
 import type { AuditReport, OptimizationReport } from "@solara/exporter";
-import type { StoreProjectV1 } from "@solara/project-schema";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ImageAsset, StoreProjectV1 } from "@solara/project-schema";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "../components/primitives";
 import { Button, Field, SectionHeader } from "../components/Ui";
 import { loadExporter } from "../lib/loadExporter";
 import { downloadBlob } from "../lib/projectArchive";
+import { createFaviconAsset, createSiteCoverAsset, SEO_IMAGE_ACCEPT } from "../lib/seoMedia";
 
 interface AuditIssue {
   id: string;
@@ -208,6 +210,10 @@ export function Seo({
   const [auditStatus, setAuditStatus] = useState<"loading" | "ready" | "error">("loading");
   const [auditError, setAuditError] = useState("");
   const [auditAttempt, setAuditAttempt] = useState(0);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
+  const siteCoverInputRef = useRef<HTMLInputElement>(null);
+  const [seoMediaBusy, setSeoMediaBusy] = useState<"favicon" | "cover" | null>(null);
+  const [seoMediaStatus, setSeoMediaStatus] = useState("");
   useEffect(() => {
     setSeoDraft(project.seo);
   }, [project.seo]);
@@ -260,6 +266,38 @@ export function Seo({
     setSeoDraft(seo);
     onChange({ ...project, seo, updatedAt: new Date().toISOString() });
   };
+  const uploadSeoImage = async (file: File, kind: "favicon" | "cover") => {
+    setSeoMediaBusy(kind);
+    setSeoMediaStatus("");
+    try {
+      const generated =
+        kind === "favicon" ? await createFaviconAsset(file) : await createSiteCoverAsset(file);
+      const referenceId = kind === "favicon" ? seoDraft.faviconAssetId : seoDraft.socialImageId;
+      const previous = project.assets.find((asset) => asset.id === referenceId);
+      const canReusePrevious = previous?.name === generated.name;
+      const asset: ImageAsset = canReusePrevious ? { ...generated, id: previous.id } : generated;
+      const assets = canReusePrevious
+        ? project.assets.map((candidate) => (candidate.id === asset.id ? asset : candidate))
+        : [...project.assets, asset];
+      const seo = {
+        ...seoDraft,
+        ...(kind === "favicon" ? { faviconAssetId: asset.id } : { socialImageId: asset.id }),
+      };
+      setSeoDraft(seo);
+      onChange({ ...project, assets, seo, updatedAt: new Date().toISOString() });
+      setSeoMediaStatus(
+        kind === "favicon"
+          ? "Favicon generado en ICO con resoluciones 16, 32, 48, 64, 128 y 256 px."
+          : "Portada adaptada a 1200 × 630 px para Open Graph y redes sociales.",
+      );
+    } catch (reason) {
+      setSeoMediaStatus(
+        reason instanceof Error ? reason.message : "No se pudo procesar la imagen.",
+      );
+    } finally {
+      setSeoMediaBusy(null);
+    }
+  };
   const errors = auditStatus === "ready" ? report.criticalCount : 0;
   const warnings = auditStatus === "ready" ? report.warningCount : 0;
   const socialAsset =
@@ -270,6 +308,8 @@ export function Seo({
   const titleError = fieldValidationError(validationError, "seo.title");
   const descriptionError = fieldValidationError(validationError, "seo.description");
   const socialImageError = fieldValidationError(validationError, "seo.socialImageId");
+  const faviconImageError = fieldValidationError(validationError, "seo.faviconAssetId");
+  const faviconAsset = project.assets.find((asset) => asset.id === project.seo.faviconAssetId);
   const seoKeywords = [
     project.identity.brandName,
     previewSeo.title,
@@ -385,14 +425,59 @@ export function Seo({
         </fieldset>
 
         <fieldset className="seo-fieldset seo-fieldset--social">
-          <legend>Imagen social</legend>
+          <legend>Identidad y portada</legend>
+          <div className="seo-media-control" data-testid="ui-seo-favicon">
+            <div>
+              <strong>Favicon del sitio</strong>
+              <p>
+                Subí una foto y la convertimos automáticamente a un ICO multirresolución, con
+                fallback para iPhone.
+              </p>
+            </div>
+            <div className="seo-media-control__actions">
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={UploadSimple}
+                loading={seoMediaBusy === "favicon"}
+                onClick={() => faviconInputRef.current?.click()}
+              >
+                Subir favicon
+              </Button>
+              <input
+                ref={faviconInputRef}
+                className="seo-upload-input"
+                type="file"
+                accept={SEO_IMAGE_ACCEPT}
+                aria-label="Subir imagen para favicon"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.currentTarget.value = "";
+                  if (file) void uploadSeoImage(file, "favicon");
+                }}
+              />
+              {faviconAsset ? (
+                <img
+                  className="seo-media-control__icon"
+                  src={faviconAsset.source}
+                  alt="Vista previa del favicon"
+                />
+              ) : null}
+            </div>
+            {faviconAsset ? (
+              <small>ICO 16–256 px · listo para buscadores y navegadores</small>
+            ) : (
+              <small>No hay favicon configurado.</small>
+            )}
+            {faviconImageError ? <small className="field-error">{faviconImageError}</small> : null}
+          </div>
           <Field
-            label="Recurso para compartir"
-            hint="Se usa para Open Graph y compartir la tienda."
+            label="Portada del sitio"
+            hint="La imagen se recorta sin deformarse a 1200 × 630 px para Open Graph y redes sociales."
             {...(socialImageError ? { error: socialImageError } : {})}
           >
             <select
-              aria-label="Recurso para compartir"
+              aria-label="Portada del sitio"
               value={seoDraft.socialImageId ?? ""}
               onChange={(event) =>
                 commit({
@@ -411,6 +496,38 @@ export function Seo({
               ))}
             </select>
           </Field>
+          <div className="seo-media-control seo-media-control--cover" data-testid="ui-seo-cover">
+            <div>
+              <strong>Subir una portada nueva</strong>
+              <p>Se usará para la etiqueta `og:image` y las tarjetas de compartir.</p>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={UploadSimple}
+              loading={seoMediaBusy === "cover"}
+              onClick={() => siteCoverInputRef.current?.click()}
+            >
+              Subir portada
+            </Button>
+            <input
+              ref={siteCoverInputRef}
+              className="seo-upload-input"
+              type="file"
+              accept={SEO_IMAGE_ACCEPT}
+              aria-label="Subir portada del sitio"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.currentTarget.value = "";
+                if (file) void uploadSeoImage(file, "cover");
+              }}
+            />
+          </div>
+          {seoMediaStatus ? (
+            <output className="seo-media-status" aria-live="polite">
+              {seoMediaStatus}
+            </output>
+          ) : null}
         </fieldset>
 
         <fieldset className="seo-fieldset seo-fieldset--derived" data-testid="ui-seo-derived">

@@ -1,10 +1,26 @@
 # Changelog
 
+### Flujo nativo de nuevas tiendas y persistencia segura (2026-08-23)
+
+- Las tiendas nuevas se crean sin media ficticia ni teléfonos WhatsApp
+  deterministas; el editor permite crear/editar categorías y colecciones desde
+  la interfaz y activar productos sólo cuando tienen descripción, imagen y
+  precio válido.
+- El audit de exportación distingue placeholders alcanzables (bloqueo) de
+  placeholders sin uso (advertencia), y el respaldo de proyecto usa el diálogo
+  nativo de Electron con escritura temporal y rename atómico.
+- El empaquetador conserva respaldos portables no verificables en `recovery/`
+  y usa un reemplazo transaccional: si un lock de Windows mantiene abierto el
+  portable, falla antes de aplicar un overlay parcial y restaura `proyectos/`.
+- Se agregó un flujo Playwright Electron que crea una tienda real en una copia
+  aislada, carga una imagen, crea taxonomía, activa un producto y comprueba que
+  la tienda demo original no se modifica.
+
 ### Runtime debuggeable completo: mapa en draft + gate extendido (2026-08-23)
 
-- El export draft emite `assets/storefront.js.map` (copiado desde
-  `packages/storefront-runtime/dist/` si `build-runtime.mjs` corrió;
-  fallback `{}` determinista). El JS draft agrega
+- El export draft emite `assets/storefront.js.map` con fallback `{}`
+  determinista. El recorrido compartido con el Worker del Studio evita
+  imports directos de `fs/path`; el JS draft agrega
   `//# sourceMappingURL=storefront.js.map` para que DevTools resuelva
   breakpoints contra el fuente. Production permanece inline byte-idéntico
   sin mapa ni sourceMappingURL.

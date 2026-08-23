@@ -96,7 +96,7 @@ StoreProjectV2
 ├── origin: { templateId, templateVersion, seed }
 │   └── seed: "clean" | "demo" | "duplicate" | "placeholder"
 ├── identity: { legalName, brandName, description, email, phone, address, logoAssetId }
-├── seo: { title, description, socialImageId, searchConsoleVerification, merchantVerification }
+├── seo: { title, description, faviconAssetId?, socialImageId?, searchConsoleVerification, merchantVerification }
 ├── theme: { colors{background,surface,text,muted,accent,accentText,border}, typography{display,body,scale}, radius, container, spacingScale, colorMode }
 ├── navigation: { mode:"automatic"|"manual", items[], showHome/Contact/About/Search/Cart, catalogLabel }
 ├── whatsapp: { phone, greeting, includeSku }

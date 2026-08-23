@@ -1,9 +1,115 @@
 import { StoreProjectV2Schema } from "@solara/project-schema";
+import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 import { describe, expect, it } from "vitest";
 import { createHistory, executeCommand, redo, reduceProject, undo } from "./index";
 
 describe("jerarquía de categorías en el dominio", () => {
+  it("crea y edita categorías y colecciones desde un proyecto limpio", () => {
+    const category = {
+      id: "category-ropa" as const,
+      slug: "ropa" as const,
+      title: "Ropa",
+      description: "Prendas de la colección.",
+      productIds: [],
+    };
+    const child = {
+      id: "category-ropa-invierno" as const,
+      slug: "ropa-invierno" as const,
+      title: "Invierno",
+      description: "Abrigos y prendas cálidas.",
+      parentId: category.id,
+      productIds: [],
+    };
+    const created = reduceProject(catalogModernCleanStore, {
+      type: "category.create",
+      category,
+      at: "2026-08-23T10:00:00.000Z",
+    });
+    const withChild = reduceProject(created, {
+      type: "category.create",
+      category: child,
+      at: "2026-08-23T10:01:00.000Z",
+    });
+    const withCollection = reduceProject(withChild, {
+      type: "collection.create",
+      collection: {
+        id: "collection-invierno",
+        slug: "invierno",
+        title: "Invierno",
+        description: "Selección de invierno.",
+        productIds: [],
+      },
+      at: "2026-08-23T10:02:00.000Z",
+    });
+    const edited = reduceProject(withCollection, {
+      type: "category.update",
+      categoryId: category.id,
+      changes: { title: "Ropa esencial", description: "Prendas esenciales." },
+      at: "2026-08-23T10:03:00.000Z",
+    });
+
+    expect(edited.categories.find((item) => item.id === category.id)?.title).toBe("Ropa esencial");
+    expect(edited.categories.find((item) => item.id === child.id)?.parentId).toBe(category.id);
+    expect(edited.collections).toHaveLength(1);
+    expect(() => StoreProjectV2Schema.parse(edited)).not.toThrow();
+  });
+
+  it("rechaza slugs públicos reservados y una tercera profundidad", () => {
+    const root = {
+      id: "category-root" as const,
+      slug: "ropa" as const,
+      title: "Ropa",
+      description: "",
+      productIds: [],
+    };
+    const child = {
+      id: "category-child" as const,
+      slug: "ropa-casual" as const,
+      title: "Casual",
+      description: "",
+      parentId: root.id,
+      productIds: [],
+    };
+    const project = reduceProject(catalogModernCleanStore, {
+      type: "category.create",
+      category: root,
+      at: "2026-08-23T11:00:00.000Z",
+    });
+    const nested = reduceProject(project, {
+      type: "category.create",
+      category: child,
+      at: "2026-08-23T11:01:00.000Z",
+    });
+    expect(() =>
+      reduceProject(nested, {
+        type: "category.create",
+        category: {
+          id: "category-third",
+          slug: "ropa-casual-invierno",
+          title: "Invierno",
+          description: "",
+          parentId: child.id,
+          productIds: [],
+        },
+        at: "2026-08-23T11:02:00.000Z",
+      }),
+    ).toThrow(/nivel/);
+    expect(() =>
+      reduceProject(catalogModernCleanStore, {
+        type: "collection.create",
+        collection: {
+          id: "collection-reserved",
+          slug: "productos",
+          title: "Productos",
+          description: "",
+          productIds: [],
+        },
+        at: "2026-08-23T11:03:00.000Z",
+      }),
+    ).toThrow(/reservado/);
+  });
+
   it("recalcula productos heredados al reubicar una categoría", () => {
     const textiles = catalogScaleStore.categories.find((category) => category.slug === "textiles");
     const cocina = catalogScaleStore.categories.find((category) => category.slug === "cocina");

@@ -665,7 +665,7 @@ test("A20: comparación — selección, conteo, acción con 2 y reporte del diá
   await page.locator(".dashboard-store-card").filter({ hasText: "Tienda A20" }).click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
-  await page.getByRole("tab", { name: "Tema", exact: true }).click();
+  await page.getByRole("tab", { name: "Tema de la tienda", exact: true }).click();
   await expect(page.getByTestId("ui-color-text-background")).toBeVisible();
   await page.getByTestId("ui-color-text-background").fill("#123456");
   await expect(page.locator(".save-indicator")).toContainText("Guardado", {

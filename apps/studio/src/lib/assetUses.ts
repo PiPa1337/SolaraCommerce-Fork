@@ -31,6 +31,9 @@ export function assetUses(project: StoreProjectV1, assetId: ImageAsset["id"]): A
   if (project.seo.socialImageId === assetId) {
     uses.push({ label: "Imagen social", detail: "SEO" });
   }
+  if (project.seo.faviconAssetId === assetId) {
+    uses.push({ label: "Favicon del sitio", detail: "SEO" });
+  }
   for (const product of project.products) {
     if (product.imageIds.includes(assetId)) {
       uses.push({ label: product.title, detail: "Imagen de producto" });

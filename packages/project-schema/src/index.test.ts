@@ -175,6 +175,11 @@ describe("StoreProjectV2Schema", () => {
     });
     expect(() => StoreProjectV2Schema.parse(missingAsset)).toThrow("Imagen del producto");
 
+    const missingFavicon = invalidProject((project) => {
+      project.seo.faviconAssetId = "missing-favicon";
+    });
+    expect(() => StoreProjectV2Schema.parse(missingFavicon)).toThrow("Favicon");
+
     const inconsistentIndex = invalidProject((project) => {
       const category = project.categories[0];
       if (category) category.productIds = [];

@@ -112,6 +112,15 @@ export function validateDraft(
   };
 }
 
+/** Requisitos mínimos para que un producto activo sea visible y vendible. */
+export function productActivationRequirements(product: Product): string[] {
+  return [
+    product.description.trim() ? undefined : "una descripción",
+    product.imageIds.length > 0 ? undefined : "al menos una imagen",
+    product.variants.every((variant) => variant.price > 0) ? undefined : "un precio mayor a cero",
+  ].filter((requirement): requirement is string => requirement !== undefined);
+}
+
 /** Variante nueva en blanco (botón "Agregar variante"). */
 export function createBlankVariant(): Variant {
   return {

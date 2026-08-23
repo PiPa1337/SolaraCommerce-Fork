@@ -21,6 +21,7 @@ import { ConfirmDialog } from "./components/ConfirmDialog";
 import { ToastProvider } from "./components/Toast";
 import { InlineError, Skeleton } from "./components/Ui";
 import { Dashboard } from "./features/Dashboard";
+import { getDesktopExportBridge } from "./lib/desktopBridge";
 import type { LocalStorageStatus } from "./lib/localStorage";
 import { downloadBlob } from "./lib/projectArchive";
 import {
@@ -756,11 +757,19 @@ function StudioShell() {
               const project = await getProject(id);
               if (!project) throw new Error("No se encontró la tienda.");
               const archive = await createProjectArchiveInWorker(project);
-              downloadBlob(
-                archive,
-                `${project.slug}-respaldo.solara.json`,
-                "application/vnd.solara.project+json",
-              );
+              const desktop = getDesktopExportBridge();
+              if (desktop) {
+                await desktop.saveProjectArchive({
+                  filename: `${project.slug}-respaldo.solara.json`,
+                  data: archive,
+                });
+              } else {
+                downloadBlob(
+                  archive,
+                  `${project.slug}-respaldo.solara.json`,
+                  "application/vnd.solara.project+json",
+                );
+              }
             })
           }
           {...(localStorageStatus.managed
@@ -771,11 +780,13 @@ function StudioShell() {
                     const { readLocalProject } = await loadLocalStorage();
                     const bytes = await readLocalProject(id);
                     const version = selected?.diskVersion ? `-v${selected.diskVersion}` : "";
-                    downloadBlob(
-                      bytes,
-                      `${selected?.project.slug ?? "tienda"}${version}.solara.json`,
-                      "application/vnd.solara.project+json",
-                    );
+                    const filename = `${selected?.project.slug ?? "tienda"}${version}.solara.json`;
+                    const desktop = getDesktopExportBridge();
+                    if (desktop) {
+                      await desktop.saveProjectArchive({ filename, data: bytes });
+                    } else {
+                      downloadBlob(bytes, filename, "application/vnd.solara.project+json");
+                    }
                   }),
               }
             : {})}

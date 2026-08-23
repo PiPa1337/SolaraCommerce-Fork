@@ -121,8 +121,8 @@ async function setupCleanStore(page: Page, name: string): Promise<void> {
 }
 
 async function openThemeTab(page: Page): Promise<void> {
-  await page.getByRole("tab", { name: "Tema", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Tema", exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Tema de la tienda", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Tema de la tienda", exact: true })).toBeVisible();
 }
 
 /** Colores confirmados del proyecto: los pickers nativos reflejan el commit. */

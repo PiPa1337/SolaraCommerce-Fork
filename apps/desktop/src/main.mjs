@@ -6,9 +6,9 @@
  * contrato `/__solara/*` que el launcher HTTP de desarrollo.
  */
 
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, renameSync, writeFileSync } from "node:fs";
 import { appendFile, mkdir } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { app, BrowserWindow, dialog, ipcMain, net, protocol, shell } from "electron";
 import {
@@ -252,6 +252,34 @@ function registerIpc() {
       folder: destination,
       filesWritten: result.filesWritten,
     };
+  });
+  ipcMain.handle("solara:save-project-archive", async (_event, payload) => {
+    if (!payload || typeof payload !== "object") {
+      throw new Error("El respaldo no contiene datos válidos.");
+    }
+    const filename = typeof payload.filename === "string" ? basename(payload.filename) : "";
+    if (!filename || filename !== payload.filename || !filename.endsWith(".solara.json")) {
+      throw new Error("El nombre del respaldo no es válido.");
+    }
+    const data =
+      typeof payload.data === "string" || payload.data instanceof Uint8Array
+        ? payload.data
+        : undefined;
+    if (data === undefined) throw new Error("El respaldo no contiene contenido.");
+    const selection = await dialog.showSaveDialog(mainWindow, {
+      title: "Guardar respaldo de SolaraCommerce",
+      defaultPath: join(app.getPath("documents"), filename),
+      buttonLabel: "Guardar respaldo",
+      filters: [{ name: "Respaldo SolaraCommerce", extensions: ["solara.json"] }],
+    });
+    if (selection.canceled || !selection.filePath) return { cancelled: true };
+    const destination = selection.filePath.endsWith(".solara.json")
+      ? selection.filePath
+      : `${selection.filePath}.solara.json`;
+    const temporary = `${destination}.${process.pid}.${Date.now()}.tmp`;
+    writeFileSync(temporary, data);
+    renameSync(temporary, destination);
+    return { cancelled: false, path: destination };
   });
 }
 

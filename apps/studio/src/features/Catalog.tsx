@@ -1374,25 +1374,26 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
             .filter((product) => product.id !== editor.product.id)
             .map((product) => product.slug)}
           onCancel={() => setEditor(undefined)}
-          onSave={(product) => {
+          onSave={(product, activate = false) => {
+            const savedProduct = activate ? { ...product, status: "active" as const } : product;
             if (editor.mode === "create") {
-              onCommand({ type: "product.create", product, at: now() });
+              onCommand({ type: "product.create", product: savedProduct, at: now() });
             } else {
               onCommand({
                 type: "product.update",
-                productId: product.id,
+                productId: savedProduct.id,
                 changes: {
-                  slug: product.slug,
-                  title: product.title,
-                  description: product.description,
-                  richDescription: product.richDescription,
-                  status: product.status,
-                  brand: product.brand,
-                  categoryIds: product.categoryIds,
-                  collectionIds: product.collectionIds,
-                  tags: product.tags,
-                  imageIds: product.imageIds,
-                  variants: product.variants,
+                  slug: savedProduct.slug,
+                  title: savedProduct.title,
+                  description: savedProduct.description,
+                  richDescription: savedProduct.richDescription,
+                  status: savedProduct.status,
+                  brand: savedProduct.brand,
+                  categoryIds: savedProduct.categoryIds,
+                  collectionIds: savedProduct.collectionIds,
+                  tags: savedProduct.tags,
+                  imageIds: savedProduct.imageIds,
+                  variants: savedProduct.variants,
                 },
                 at: now(),
               });

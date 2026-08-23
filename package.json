@@ -38,6 +38,7 @@
     "test:e2e:smoke": "node scripts/e2e-smoke.mjs",
     "test:e2e:ci": "playwright test",
     "test:e2e:portable": "corepack pnpm portable:smoke && node scripts/portable-e2e.mjs",
+    "test:e2e:portable:new-store": "node scripts/portable-new-store-e2e.mjs",
     "typecheck": "corepack pnpm -r --parallel --if-present typecheck",
     "build:all": "corepack pnpm -r --if-present build",
     "test:affected": "node scripts/test-affected.mjs",

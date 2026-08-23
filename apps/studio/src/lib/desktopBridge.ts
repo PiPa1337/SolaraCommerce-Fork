@@ -11,12 +11,21 @@ export interface DesktopExportResult {
   filesWritten?: number;
 }
 
+export interface DesktopProjectArchiveResult {
+  cancelled: boolean;
+  path?: string;
+}
+
 interface DesktopExportBridge {
   exportSite(payload: {
     storeSlug: string;
     mode: ExportMode;
     files: DesktopExportFile[];
   }): Promise<DesktopExportResult>;
+  saveProjectArchive(payload: {
+    filename: string;
+    data: string | Uint8Array;
+  }): Promise<DesktopProjectArchiveResult>;
 }
 
 /** El navegador normal no tiene acceso al selector nativo ni al filesystem. */

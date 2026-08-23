@@ -37,6 +37,12 @@ Los archivos confirmados y el formato de manifest (`manifestVersion: 2` con
 `instance.json` sólo identifica el formato local y la versión del layout. No
 guarda rutas absolutas ni identificadores del equipo.
 
+Si Windows bloquea una DLL durante una actualización, el empaquetador no hace un
+overlay parcial: el reemplazo transaccional falla antes de tocar la carpeta en
+uso y restaura automáticamente el estado preservado. Una tienda no verificable
+no se incorpora silenciosamente: queda en `recovery/portable-stores/` para
+diagnóstico manual.
+
 ## Cómo crear la carpeta portable
 
 Desde la raíz del checkout, con Node 22 o posterior y las dependencias
