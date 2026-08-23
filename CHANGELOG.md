@@ -1,5 +1,32 @@
 # Changelog
 
+### Runtime debuggeable completo: mapa en draft + gate extendido (2026-08-23)
+
+- El export draft emite `assets/storefront.js.map` (copiado desde
+  `packages/storefront-runtime/dist/` si `build-runtime.mjs` corrió;
+  fallback `{}` determinista). El JS draft agrega
+  `//# sourceMappingURL=storefront.js.map` para que DevTools resuelva
+  breakpoints contra el fuente. Production permanece inline byte-idéntico
+  sin mapa ni sourceMappingURL.
+- `check:runtime-serialization` extendido: probe nuevo verifica que el entry
+  draft (`entry-draft.ts`) compila exponiendo `storefrontBoot` + `solaraReady`,
+  usando plugin stub para externalizar imports no-relativos (evita el ascenso
+  de directorios que rompe esbuild bajo sandbox). 4/4 tests.
+
+### Favicon y portada SEO (2026-08-23)
+
+- El panel SEO permite cargar un favicon y genera un ICO multirresolución con
+  fallback Apple Touch Icon.
+- La portada del sitio se adapta automáticamente a 1200×630 para Open Graph y
+  tarjetas de redes sociales, con paridad entre preview y exportación.
+
+### Limpieza de imágenes residuales de páginas retiradas (2026-08-23)
+
+- La migración del demo Predeterminado elimina las páginas Nosotros/Contacto
+  heredadas, sus referencias de imágenes y la caché regenerable asociada.
+- Las nuevas tiendas limpias conservan sólo la imagen de plantilla de Home y
+  el portable actual fue saneado con un backup recuperable previo.
+
 ### Diez paletas claras y contrastadas (2026-08-23)
 
 - Reemplazadas las paletas anteriores por diez temas de colores variados con

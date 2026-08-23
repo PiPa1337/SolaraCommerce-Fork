@@ -4,7 +4,7 @@
  * y produce el sitio estático sin incluir estado interno del editor.
  */
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { normalizeSearchTokens } from "@solara/core";
 import { internalHref, renderImage } from "@solara/module-sdk";
@@ -1825,9 +1825,26 @@ function buildFiles(
   // scripts/build-runtime.mjs ya genera el mapa en local.
   const runtimeJs =
     mode === "draft"
-      ? `// DEBUG: modo draft — source map disponible via scripts/build-runtime.mjs\n${STOREFRONT_RUNTIME_JS}`
+      ? `// DEBUG: modo draft — source map disponible via scripts/build-runtime.mjs\n${STOREFRONT_RUNTIME_JS}\n//# sourceMappingURL=storefront.js.map`
       : STOREFRONT_RUNTIME_JS;
   files.set("assets/storefront.js", runtimeJs);
+  if (mode === "draft") {
+    // Copia el mapa generado por scripts/build-runtime.mjs (si existe) para
+    // debugging con breakpoints. Nunca se emite en production.
+    try {
+      const mapPath = resolve(
+        process.cwd(),
+        "packages/storefront-runtime/dist/storefront-runtime.js.map",
+      );
+      if (existsSync(mapPath)) {
+        files.set("assets/storefront.js.map", readFileSync(mapPath));
+      } else {
+        files.set("assets/storefront.js.map", "{}");
+      }
+    } catch {
+      files.set("assets/storefront.js.map", "{}");
+    }
+  }
   fontFilesFor(publicProject.theme.typography.display, publicProject.theme.typography.body).forEach(
     (bytes, path) => {
       files.set(path, bytes);

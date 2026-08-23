@@ -100,13 +100,13 @@ breakpoints contra el fuente.
 
 - [x] `packages/storefront-runtime/scripts/build-runtime.mjs`: compila el runtime
   a `dist/storefront-runtime.js` + `.map` (esbuild, ya en devDependencies).
-- [ ] Nuevo export `STOREFRONT_RUNTIME_EXTERNAL_URL` (o equivalente): el exporter,
+- [x] Nuevo export `STOREFRONT_RUNTIME_EXTERNAL_URL` (o equivalente): el exporter,
   en modo **draft**, emite `assets/storefront.runtime.js` + `.map` y referencia
   `<script src>` externo; en **production** mantiene el inline byte-idéntico al
   actual (los tests de determinismo deben pasar sin cambios de snapshot).
   Estado intermedio aceptado (2026-08-23): ambos modos inline; draft lleva la
   marca `// DEBUG: modo draft` y production queda sin cambios.
-- [ ] Servir el `.map` sólo desde el servidor local de preview (nunca en el
+- [x] Servir el `.map` sólo desde el servidor local de preview (nunca en el
   mapa de archivos de production).
 
 ### Task 6 — Paridad draft ↔ production

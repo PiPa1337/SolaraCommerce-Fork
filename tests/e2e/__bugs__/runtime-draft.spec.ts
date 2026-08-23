@@ -5,9 +5,12 @@ import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-f
 test("draft: runtime marcado como debuggeable", () => {
   const result = exportProject(catalogModernV2Store, { mode: "draft" });
   const js = String(result.files.get("assets/storefront.js"));
-  // El modo draft agrega una marca visible para identificar el bundle
-  // debuggeable; el source map real queda pendiente (ver TECHNICAL_DEBT).
+  const map = result.files.get("assets/storefront.js.map");
+  // El mapa se emite siempre en draft (placeholder {} si build-runtime.mjs
+  // no corrió); con él, DevTools resuelve breakpoints contra el fuente.
+  expect(map).toBeDefined();
   expect(js).toContain("// DEBUG: modo draft");
+  expect(js).toContain("//# sourceMappingURL=storefront.js.map");
 });
 
 test("production: runtime inline serializado sin sourcemap", () => {
