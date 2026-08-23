@@ -145,7 +145,7 @@ tienda seleccionada y se cierra al cerrar la instancia Electron.
 ## Canal nativo para agentes
 
 La carpeta portable incluye `SolaraCommerce-Agent.cmd`. El launcher inicia el
-`SolaraCommerce-Agent.cmd` inicia el mismo `.exe` con un entry de consola
+mismo `.exe` con un entry de consola
 embebido; por defecto usa JSONL protocol-only y con `--mcp` usa MCP stdio. El
 proceso no abre Studio ni expone HTTP. Los logs quedan en
 `.solara-runtime/logs/main.log`. Sin `--jsonl`, el proceso ofrece MCP por stdio
@@ -156,5 +156,8 @@ El protocolo v1 está documentado en [`AI_AGENT_GUIDE.md`](AI_AGENT_GUIDE.md) y
 planes tipados, `StoreProjectV2`, `@solara/core`, `@solara/exporter` y el storage
 local transaccional. Las tiendas de demo (`origin.seed` distinto de `clean`)
 son de sólo lectura; las tiendas existentes requieren `storeId` y
-`baseVersion`. Los assets pasan por staging con MIME, firma, tamaño, hash y
-dimensiones antes de poder adjuntarse.
+`baseVersion`. Los planes sobreviven al reinicio, devuelven diff y advertencias,
+mantienen locks cooperativos con Studio y registran jobs, idempotencia y
+auditoría en `.solara-runtime/agent/`. Los assets pasan por staging con MIME,
+firma, tamaño, hash y dimensiones; los archivos grandes también se pueden subir
+por chunks ordenados.

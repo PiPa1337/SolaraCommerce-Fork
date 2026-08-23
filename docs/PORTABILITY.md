@@ -25,6 +25,10 @@ SolaraCommerce-Portable/
     ├── electron-user-data/
     ├── logs/
     ├── transactions/
+    ├── agent/
+        ├── plans/ committed/ jobs/
+        ├── assets/ uploads/ locks/
+        └── audit.jsonl
     └── instance.json
 ```
 
@@ -84,13 +88,15 @@ Para actualizar una copia portable:
 4. conservá `proyectos/` y `.solara-runtime/electron-user-data/`;
 5. iniciá la nueva versión y revisá el estado de las tiendas.
 
-Para integrar una IA, cerrá Studio y ejecutá `SolaraCommerce-Agent.cmd`. El
+Para integrar una IA, ejecutá `SolaraCommerce-Agent.cmd`. El
 cliente mantiene el proceso abierto, escribe una solicitud JSON por línea y
 lee una respuesta JSON por línea. También puede ejecutar
 `SolaraCommerce-Agent.cmd --mcp` para usar MCP stdio. El agente y Studio
-deben ejecutarse por separado sobre la misma carpeta. El control de versión,
-locks de transacción y validación de hashes rechazan snapshots obsoletos, pero
-no sustituyen cerrar Studio antes de iniciar automatización.
+pueden ejecutarse sobre la misma carpeta: los locks cooperativos de tienda
+bloquean un guardado concurrente mientras un plan está activo y expiran si el
+agente muere. Usá `--read-only` o `--scopes=read,audit:read` para sesiones de
+inspección. El control de versión, locks de transacción, lock de agente y
+validación de hashes rechazan snapshots obsoletos.
 
 No se migran automáticamente datos del IndexedDB del navegador del sistema.
 Para traer una tienda antigua, exportá su `.solara.json` e importala desde la
@@ -151,6 +157,8 @@ modo soportado para búsqueda, índices o mejoras JavaScript que requieren HTTP.
 - `packages/exporter/scripts/serve.mjs`: adaptador Node HTTP de desarrollo.
 - `apps/desktop/src/main.mjs`: shell Electron, protocolo, lock y perfil.
 - `apps/desktop/src/agent-host.mjs`: host MCP/JSONL sin ventana.
+- `apps/desktop/src/agent-cli.mjs`: entry de consola con scopes configurables.
+- `packages/exporter/scripts/agent-lock.mjs`: lock cooperativo entre procesos.
 - `packages/agent-control/src/index.ts`: operaciones, planes y commit seguro.
 - `packages/agent-contracts/src/index.ts`: schemas Zod del protocolo v1.
 - `packages/agent-sdk/src/index.ts`: cliente tipado para integraciones.

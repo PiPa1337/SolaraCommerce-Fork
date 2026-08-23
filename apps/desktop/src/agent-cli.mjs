@@ -9,6 +9,18 @@ import { createLocalProjectStorage } from "../../../packages/exporter/scripts/lo
 import { resolvePortableLayout } from "../../../packages/exporter/scripts/portable-layout.mjs";
 import { runAgentHost } from "./agent-host.mjs";
 
+function resolveScopes() {
+  if (process.argv.includes("--read-only")) return ["read", "audit:read"];
+  const configured = process.argv
+    .find((argument) => argument.startsWith("--scopes="))
+    ?.slice("--scopes=".length);
+  if (configured) return configured.split(",").filter(Boolean);
+  if (process.env.SOLARA_AGENT_SCOPES) {
+    return process.env.SOLARA_AGENT_SCOPES.split(",").filter(Boolean);
+  }
+  return undefined;
+}
+
 async function main() {
   const portableRoot = process.env.SOLARA_PORTABLE_ROOT;
   const layout = resolvePortableLayout({
@@ -27,6 +39,7 @@ async function main() {
     applicationRoot: layout.portableRoot,
     appVersion: "portable-agent-v1",
     mode: process.argv.includes("--jsonl") ? "jsonl" : "mcp",
+    scopes: resolveScopes(),
   });
 }
 

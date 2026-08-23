@@ -11,7 +11,12 @@ describe("SDK del agente", () => {
       }),
     );
     await client.health();
+    await client.describeProtocol();
     await client.listStores();
-    expect(calls.map((call) => call.method)).toEqual(["health", "stores.list"]);
+    expect(calls.map((call) => call.method)).toEqual([
+      "health",
+      "protocol.describe",
+      "stores.list",
+    ]);
   });
 });

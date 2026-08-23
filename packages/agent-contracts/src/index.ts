@@ -123,12 +123,14 @@ export const PlanCreateParamsSchema = z.object({
   storeId: SafeIdSchema.optional(),
   baseVersion: z.number().int().nonnegative().nullable().optional(),
   idempotencyKey: z.string().min(8).max(160).optional(),
+  includeDiff: z.boolean().default(true),
   operations: z.array(AgentOperationSchema).min(1).max(500),
 });
 
 export const PlanCommitParamsSchema = z.object({
   planId: SafeIdSchema,
   idempotencyKey: z.string().min(8).max(160).optional(),
+  async: z.boolean().default(false),
 });
 
 export const StoreGetParamsSchema = z.object({
@@ -145,6 +147,58 @@ export const AssetStageParamsSchema = z.object({
     z.object({ kind: z.literal("inbox"), filename: z.string().min(1).max(160) }),
   ]),
 });
+
+export const AgentScopeSchema = z.enum([
+  "read",
+  "plans:write",
+  "commit",
+  "assets:write",
+  "audit:read",
+]);
+
+export const PlanGetParamsSchema = z.object({
+  planId: SafeIdSchema,
+  includeProject: z.boolean().default(false),
+});
+
+export const PlanDiscardParamsSchema = z.object({
+  planId: SafeIdSchema,
+});
+
+export const PlanHeartbeatParamsSchema = z.object({
+  planId: SafeIdSchema,
+});
+
+export const JobGetParamsSchema = z.object({
+  jobId: SafeIdSchema,
+});
+
+export const AuditListParamsSchema = z.object({
+  limit: z.number().int().min(1).max(200).default(50),
+});
+
+export const AssetUploadBeginParamsSchema = z.object({
+  name: z.string().min(1).max(160),
+  alt: z.string().max(500).default(""),
+  mimeType: z.enum(["image/png", "image/jpeg", "image/webp", "image/gif"]),
+  expectedBytes: z.number().int().positive().max(20_000_000).optional(),
+});
+
+export const AssetUploadChunkParamsSchema = z.object({
+  uploadId: SafeIdSchema,
+  sequence: z.number().int().nonnegative(),
+  data: z.string().min(1).max(1_400_000),
+});
+
+export const AssetUploadFinishParamsSchema = z.object({
+  uploadId: SafeIdSchema,
+  sha256: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/i)
+    .optional(),
+});
+
+export const ProtocolDescribeParamsSchema = z.object({});
 
 export const AgentRequestSchema = z.object({
   protocol: z.literal(AGENT_PROTOCOL).optional(),
@@ -172,8 +226,17 @@ export const AgentResponseSchema = z.object({
 export type AgentOperation = z.infer<typeof AgentOperationSchema>;
 export type PlanCreateParams = z.infer<typeof PlanCreateParamsSchema>;
 export type PlanCommitParams = z.infer<typeof PlanCommitParamsSchema>;
+export type PlanGetParams = z.infer<typeof PlanGetParamsSchema>;
+export type PlanDiscardParams = z.infer<typeof PlanDiscardParamsSchema>;
+export type PlanHeartbeatParams = z.infer<typeof PlanHeartbeatParamsSchema>;
+export type JobGetParams = z.infer<typeof JobGetParamsSchema>;
+export type AuditListParams = z.infer<typeof AuditListParamsSchema>;
 export type StoreGetParams = z.infer<typeof StoreGetParamsSchema>;
 export type AssetStageParams = z.infer<typeof AssetStageParamsSchema>;
+export type AssetUploadBeginParams = z.infer<typeof AssetUploadBeginParamsSchema>;
+export type AssetUploadChunkParams = z.infer<typeof AssetUploadChunkParamsSchema>;
+export type AssetUploadFinishParams = z.infer<typeof AssetUploadFinishParamsSchema>;
+export type AgentScope = z.infer<typeof AgentScopeSchema>;
 export type AgentRequest = z.infer<typeof AgentRequestSchema>;
 export type AgentResponse = z.infer<typeof AgentResponseSchema>;
 
@@ -199,7 +262,24 @@ export function protocolOk(id: string | number, result: unknown): AgentResponse 
 export const AgentProtocolJsonSchema = {
   protocol: AGENT_PROTOCOL,
   version: AGENT_PROTOCOL_VERSION,
-  methods: ["health", "stores.list", "stores.get", "plans.create", "plans.commit", "assets.stage"],
+  scopes: AgentScopeSchema.options,
+  methods: [
+    "health",
+    "protocol.describe",
+    "stores.list",
+    "stores.get",
+    "plans.create",
+    "plans.get",
+    "plans.commit",
+    "plans.discard",
+    "plans.heartbeat",
+    "jobs.get",
+    "audit.list",
+    "assets.stage",
+    "assets.upload.begin",
+    "assets.upload.chunk",
+    "assets.upload.finish",
+  ],
 } as const;
 
 void IsoDateSchema;

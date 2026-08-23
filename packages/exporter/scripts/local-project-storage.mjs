@@ -17,6 +17,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
+import { createAgentLockStore } from "./agent-lock.mjs";
 import {
   assertNoReparsePoints,
   resolvePortableLayout,
@@ -362,6 +363,7 @@ export function createLocalProjectStorage(options = {}) {
   // Cada ruta se reporta una sola vez por proceso: un respaldo anterior
   // bloqueado no debe loguear en cada reintento de guardado.
   const loggedCleanupFailures = new Set();
+  const agentLockStore = createAgentLockStore({ applicationRoot, now });
 
   async function ensureRoots() {
     await mkdir(projectsRoot, { recursive: true });
@@ -523,6 +525,10 @@ export function createLocalProjectStorage(options = {}) {
 
   async function beginSave(meta) {
     assertProjectId(meta.projectId);
+    await agentLockStore.assertAvailable(
+      meta.projectId,
+      meta.actor?.kind === "agent" ? meta.actor.id : undefined,
+    );
     if (projectLocks.has(meta.projectId)) {
       const stale = [...transactions.values()].find(
         (transaction) => transaction.metadata.projectId === meta.projectId,

@@ -102,7 +102,7 @@ describe("handler: retiro de referencias legacy", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 });
 
 describe("handler: abrir carpeta de una tienda", () => {

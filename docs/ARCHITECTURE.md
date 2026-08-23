@@ -28,6 +28,7 @@ flowchart LR
   AgentControl --> Core
   AgentControl --> Schema
   AgentControl --> Exporter
+  AgentControl --> AgentState[.solara-runtime/agent<br/>planes + jobs + audit + locks + assets]
   AgentControl --> Disk
 ```
 
@@ -36,11 +37,13 @@ por `Abrir SolaraCommerce.cmd`; su API está protegida por una cookie de sesión
 queda limitada a `127.0.0.1`.
 
 El modo agente es un transporte local adicional dentro del shell Electron. Se
-inicia con `--solara-agent`, no crea BrowserWindow ni puerto HTTP y sólo expone
-operaciones cerradas de `@solara/agent-control`. `plans.create` calcula un
-snapshot en memoria; `plans.commit` vuelve a leer la versión del disco y delega
-en la misma transacción de `local-project-storage.mjs` que Studio. El agente no
-puede escribir HTML, JavaScript ni parches genéricos.
+  inicia con el entry de consola portable, no crea BrowserWindow ni puerto HTTP y
+  sólo expone operaciones cerradas de `@solara/agent-control`. `plans.create`
+  persiste un snapshot y adquiere un lock con TTL; devuelve un diff acotado para
+  revisión. `plans.commit` vuelve a leer la versión del disco y delega en la misma
+  transacción de `local-project-storage.mjs` que Studio. Planes, jobs, assets,
+  auditoría e idempotencias viven en `.solara-runtime/agent/`. El agente no puede
+  escribir HTML, JavaScript ni parches genéricos.
 
 ## Capas y responsabilidades
 

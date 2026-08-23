@@ -85,7 +85,10 @@ try {
   const health = assertOk(await send(1, "health"));
   if (health.schemaVersion !== 2 || health.writable !== true)
     throw new Error("health no confirmó schema 2 y escritura.");
-  const before = assertOk(await send(2, "stores.list"));
+  const protocol = assertOk(await send(2, "protocol.describe"));
+  if (!protocol.methods.includes("jobs.get") || !protocol.methods.includes("assets.upload.chunk"))
+    throw new Error("protocol.describe no documentó jobs y uploads por chunks.");
+  const before = assertOk(await send(12, "stores.list"));
   const plan = assertOk(
     await send(3, "plans.create", {
       idempotencyKey: `portable-agent-${storeId}`,
@@ -110,14 +113,30 @@ try {
       ],
     }),
   );
-  const receipt = assertOk(
-    await send(4, "plans.commit", {
+  if (!plan.diff?.products || plan.requiresCommitApproval !== true)
+    throw new Error("El plan portable no devolvió diff y aprobación explícita.");
+  const planView = assertOk(await send(4, "plans.get", { planId: plan.planId }));
+  if (planView.planId !== plan.planId) throw new Error("El plan durable no pudo recuperarse.");
+  const job = assertOk(
+    await send(5, "plans.commit", {
       planId: plan.planId,
       idempotencyKey: `portable-agent-${storeId}`,
+      async: true,
     }),
   );
+  let jobView = assertOk(await send(6, "jobs.get", { jobId: job.jobId }));
+  for (
+    let attempt = 0;
+    attempt < 100 && ["queued", "running"].includes(jobView.status);
+    attempt += 1
+  ) {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    jobView = assertOk(await send(7, "jobs.get", { jobId: job.jobId }));
+  }
+  if (jobView.status !== "succeeded") throw new Error("El job portable no terminó correctamente.");
+  const receipt = jobView.result;
   if (receipt.storeId !== storeId) throw new Error("El commit no devolvió el storeId solicitado.");
-  const after = assertOk(await send(5, "stores.get", { storeId, include: "catalog" }));
+  const after = assertOk(await send(8, "stores.get", { storeId, include: "catalog" }));
   if (after.counts.products !== 1 || after.counts.categories !== 1)
     throw new Error("El catálogo creado por agente no quedó persistido.");
   if (after.protected !== false)
@@ -128,11 +147,11 @@ try {
   );
   if (protectedCandidate) {
     const protectedStore = assertOk(
-      await send(6, "stores.get", { storeId: protectedCandidate.projectId, include: "summary" }),
+      await send(9, "stores.get", { storeId: protectedCandidate.projectId, include: "summary" }),
     );
     if (protectedStore.protected !== true)
       throw new Error("La tienda demo no fue marcada como protegida.");
-    const response = await send(7, "plans.create", {
+    const response = await send(10, "plans.create", {
       storeId: protectedCandidate.projectId,
       baseVersion: protectedStore.version,
       operations: [{ type: "store.updateIdentity", changes: { description: "no tocar" } }],
@@ -140,6 +159,13 @@ try {
     if (response.ok || response.error?.code !== "PROTECTED_STORE")
       throw new Error("La tienda demo aceptó una mutación del agente.");
   }
+  const audit = assertOk(await send(13, "audit.list", { limit: 20 }));
+  if (
+    !audit.entries.some(
+      (entry) => entry.event === "plan.commit.succeeded" && entry.requestId !== undefined,
+    )
+  )
+    throw new Error("La auditoría portable no registró el commit.");
   child.stdin.end();
   await new Promise((resolveExit, rejectExit) => {
     const timer = setTimeout(() => {

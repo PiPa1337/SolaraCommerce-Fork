@@ -1,5 +1,15 @@
 # Changelog
 
+### Canal de agentes durable y cooperativo (2026-08-23)
+
+- Los planes del agente ahora sobreviven reinicios, exponen diff, advertencias,
+  heartbeat y descarte explícito; los commits largos pueden ejecutarse como jobs
+  consultables y quedan registrados en auditoría estructurada.
+- Se agregaron locks cooperativos entre agente y Studio, scopes de proceso,
+  protocolo autodocumentado y SDK de alto nivel.
+- Los assets grandes pueden subirse por chunks ordenados con progreso, hash y las
+  mismas validaciones binarias del staging existente.
+
 ### Canal nativo para agentes de IA y creación transaccional (2026-08-23)
 
 - Se agregó protocolo `solara-agent` v1 por MCP stdio y JSONL, con contracts Zod,

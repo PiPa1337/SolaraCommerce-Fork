@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { AgentOperationSchema, AgentRequestSchema, PlanCreateParamsSchema } from "./index";
+import {
+  AgentOperationSchema,
+  AgentProtocolJsonSchema,
+  AgentRequestSchema,
+  AssetUploadChunkParamsSchema,
+  PlanCreateParamsSchema,
+} from "./index";
 
 describe("contrato del agente", () => {
   it("acepta el flujo tipado de tienda nueva", () => {
@@ -16,5 +22,11 @@ describe("contrato del agente", () => {
   it("rechaza comandos arbitrarios y requests sin método", () => {
     expect(() => AgentOperationSchema.parse({ type: "project.patch", path: "x" })).toThrow();
     expect(() => AgentRequestSchema.parse({ id: 1 })).toThrow();
+  });
+
+  it("publica límites y métodos de recuperación del protocolo", () => {
+    expect(AgentProtocolJsonSchema.methods).toContain("jobs.get");
+    expect(AgentProtocolJsonSchema.methods).toContain("assets.upload.finish");
+    expect(() => AssetUploadChunkParamsSchema.parse({ uploadId: "u", sequence: 0 })).toThrow();
   });
 });

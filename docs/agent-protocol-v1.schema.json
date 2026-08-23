@@ -4,7 +4,7 @@
   "title": "SolaraCommerce Agent Protocol v1",
   "description": "Contrato cerrado para que una IA opere tiendas sin parches arbitrarios.",
   "type": "object",
-  "required": ["protocol", "version", "methods"],
+  "required": ["protocol", "version", "methods", "scopes"],
   "properties": {
     "protocol": { "const": "solara-agent" },
     "version": { "const": 1 },
@@ -13,12 +13,27 @@
       "items": {
         "enum": [
           "health",
+          "protocol.describe",
           "stores.list",
           "stores.get",
           "plans.create",
+          "plans.get",
           "plans.commit",
-          "assets.stage"
+          "plans.discard",
+          "plans.heartbeat",
+          "jobs.get",
+          "audit.list",
+          "assets.stage",
+          "assets.upload.begin",
+          "assets.upload.chunk",
+          "assets.upload.finish"
         ]
+      },
+      "scopes": {
+        "type": "array",
+        "items": {
+          "enum": ["read", "plans:write", "commit", "assets:write", "audit:read"]
+        }
       }
     }
   },
@@ -145,6 +160,7 @@
         "storeId": { "$ref": "#/$defs/id" },
         "baseVersion": { "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] },
         "idempotencyKey": { "type": "string", "minLength": 8 },
+        "includeDiff": { "type": "boolean", "default": true },
         "operations": {
           "type": "array",
           "minItems": 1,

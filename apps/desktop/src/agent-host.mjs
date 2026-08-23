@@ -17,6 +17,12 @@ const toolDefinitions = [
     method: "health",
   },
   {
+    name: "solara_protocol_describe",
+    description: "Describe métodos, scopes, límites y garantías de seguridad del canal.",
+    inputSchema: { type: "object", additionalProperties: false, properties: {} },
+    method: "protocol.describe",
+  },
+  {
     name: "solara_stores_list",
     description: "Lista tiendas y reportes de recuperación sin abrir el catálogo completo.",
     inputSchema: { type: "object", additionalProperties: false, properties: {} },
@@ -44,7 +50,30 @@ const toolDefinitions = [
         storeId: { type: "string" },
         baseVersion: { type: ["integer", "null"] },
         idempotencyKey: { type: "string" },
-        operations: { type: "array", maxItems: 500 },
+        includeDiff: { type: "boolean" },
+        operations: {
+          type: "array",
+          maxItems: 500,
+          items: {
+            type: "object",
+            required: ["type"],
+            properties: {
+              type: {
+                enum: [
+                  "store.create",
+                  "store.updateIdentity",
+                  "store.updateSeo",
+                  "category.create",
+                  "collection.create",
+                  "product.create",
+                  "product.update",
+                  "product.setStatus",
+                  "asset.attach",
+                ],
+              },
+            },
+          },
+        },
       },
     },
     method: "plans.create",
@@ -56,9 +85,67 @@ const toolDefinitions = [
       type: "object",
       additionalProperties: false,
       required: ["planId"],
-      properties: { planId: { type: "string" }, idempotencyKey: { type: "string" } },
+      properties: {
+        planId: { type: "string" },
+        idempotencyKey: { type: "string" },
+        async: { type: "boolean" },
+      },
     },
     method: "plans.commit",
+  },
+  {
+    name: "solara_plan_get",
+    description: "Obtiene un plan durable, su diff y advertencias antes del commit.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["planId"],
+      properties: { planId: { type: "string" }, includeProject: { type: "boolean" } },
+    },
+    method: "plans.get",
+  },
+  {
+    name: "solara_plan_discard",
+    description: "Descarta un plan y libera el lock cooperativo de la tienda.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["planId"],
+      properties: { planId: { type: "string" } },
+    },
+    method: "plans.discard",
+  },
+  {
+    name: "solara_plan_heartbeat",
+    description: "Renueva el lock de un plan que sigue siendo revisado por la IA.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["planId"],
+      properties: { planId: { type: "string" } },
+    },
+    method: "plans.heartbeat",
+  },
+  {
+    name: "solara_job_get",
+    description: "Consulta progreso y resultado de un commit asíncrono.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["jobId"],
+      properties: { jobId: { type: "string" } },
+    },
+    method: "jobs.get",
+  },
+  {
+    name: "solara_audit_list",
+    description: "Lee la bitácora estructurada de operaciones del agente.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: { limit: { type: "integer", minimum: 1, maximum: 200 } },
+    },
+    method: "audit.list",
   },
   {
     name: "solara_asset_stage",
@@ -76,6 +163,48 @@ const toolDefinitions = [
       },
     },
     method: "assets.stage",
+  },
+  {
+    name: "solara_asset_upload_begin",
+    description: "Inicia un upload de asset por chunks base64 con progreso durable.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["name", "mimeType"],
+      properties: {
+        name: { type: "string" },
+        alt: { type: "string" },
+        mimeType: { enum: ["image/png", "image/jpeg", "image/webp", "image/gif"] },
+        expectedBytes: { type: "integer", minimum: 1, maximum: 20000000 },
+      },
+    },
+    method: "assets.upload.begin",
+  },
+  {
+    name: "solara_asset_upload_chunk",
+    description: "Agrega un chunk ordenado al upload de un asset.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["uploadId", "sequence", "data"],
+      properties: {
+        uploadId: { type: "string" },
+        sequence: { type: "integer", minimum: 0 },
+        data: { type: "string", maxLength: 1400000 },
+      },
+    },
+    method: "assets.upload.chunk",
+  },
+  {
+    name: "solara_asset_upload_finish",
+    description: "Finaliza, verifica y stagea el asset subido por chunks.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["uploadId"],
+      properties: { uploadId: { type: "string" }, sha256: { type: "string" } },
+    },
+    method: "assets.upload.finish",
   },
 ];
 
@@ -108,8 +237,10 @@ export async function runAgentHost({
   applicationRoot,
   appVersion = "0.1.0",
   mode = "mcp",
+  scopes,
 }) {
-  const controller = createAgentController({ storage, applicationRoot });
+  const controller = createAgentController({ storage, applicationRoot, scopes });
+  await controller.ready();
 
   const handleJsonl = async (payload) => {
     let request;
@@ -130,7 +261,7 @@ export async function runAgentHost({
       writeLine(
         protocolOk(
           request.id,
-          await dispatchAgentMethod(controller, request.method, request.params),
+          await dispatchAgentMethod(controller, request.method, request.params, request.id),
         ),
       );
     } catch (error) {
@@ -153,7 +284,8 @@ export async function runAgentHost({
             protocolVersion: MCP_VERSION,
             capabilities: { tools: { listChanged: false } },
             serverInfo: { name: "solara-commerce-agent", version: appVersion },
-            instructions: "Usá planes tipados; no hay acceso a HTML, JS ni parches arbitrarios.",
+            instructions:
+              "Usá protocol.describe y planes tipados; no hay acceso a HTML, JS, parches arbitrarios ni shell.",
           }),
         );
         return;
@@ -179,6 +311,7 @@ export async function runAgentHost({
           controller,
           tool.method,
           payload.params?.arguments ?? {},
+          payload.id,
         );
         writeLine(
           mcpResult(payload.id, {

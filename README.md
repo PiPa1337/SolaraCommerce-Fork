@@ -19,8 +19,8 @@ el control no aparece y no intenta detener procesos ajenos.
 Para una IA que deba crear tiendas mediante la aplicación real, una distribución
 portable incluye [`SolaraCommerce-Agent.cmd`](SolaraCommerce-Agent.cmd) y el
 contrato [`docs/AI_AGENT_GUIDE.md`](docs/AI_AGENT_GUIDE.md). Ese canal usa MCP o
-JSONL stdio, planes tipados y el mismo guardado transaccional de Studio; no
-permite parches arbitrarios de archivos.
+JSONL stdio, planes tipados durables, diff previo, jobs consultables y el mismo
+guardado transaccional de Studio; no permite parches arbitrarios de archivos.
 
 ## Requisitos
 

@@ -233,7 +233,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       "",
       "Las tiendas y sus exportaciones viven en proyectos/.",
       "El estado regenerable y el perfil local viven en .solara-runtime/.",
-      "Para automatización cerrá la app y usá SolaraCommerce-Agent.cmd.",
+      "Para automatización usá SolaraCommerce-Agent.cmd; admite JSONL, --mcp, --read-only y --scopes=... .",
       "Podés copiar toda la carpeta a otra unidad o ruta, incluso si contiene espacios o Unicode.",
       "",
     ].join("\r\n"),
