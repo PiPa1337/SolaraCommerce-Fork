@@ -21,6 +21,10 @@ Los documentos históricos/auditorías cerradas viven en `docs/archive/`.
 | `PERPETUAL_QA_BACKLOG.md` + `perpetual-state.json` | Backlog y estado del run perpetuo | Continuar el ciclo QA |
 | `release-candidate.md` | Checklist de release | Cierre de versión |
 | `pilot-checklist.md` | Checklist de export piloto | Validar exportaciones |
+| `UI_SCALE.md` | Escala de espaciado y radios (editor + storefront) | Cambios visuales o CSS |
+| `DEVELOPMENT.md` | Setup, estructura del monorepo, pipeline, comandos | Onboarding o referencia diaria |
+| `STOREFRONT_ARCHITECTURE.md` | CSS del storefront: módulos, breakpoints, variables | Trabajo de estilos o módulos |
+| `GUARDIANS.md` | Catálogo de specs guardianes (geométricos, adversariales, seguridad) | Antes de agregar tests o cambiar layout |
 
 ## Regla de archivo
 
