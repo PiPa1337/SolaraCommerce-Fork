@@ -506,9 +506,11 @@ describe("repositorio local", () => {
     await saveRecoveryDraft(extraStore, 0);
     await markProjectMigration(extraStore.id, "done");
 
+    // v2: purga TODAS las tiendas (incluida la demo anterior) para re-seed
+    // con placeholder. El usuario arranca limpio.
     expect(await purgeNonDemoStores()).toBe(true);
     expect(await getProject(V1_DEMO_PROJECT_ID)).toBeUndefined();
-    expect(await getProject(SCALE_DEMO_PROJECT_ID)).toEqual(v2Reference);
+    expect(await getProject(SCALE_DEMO_PROJECT_ID)).toBeUndefined();
     expect(await getProject(PREDETERMINADO_V1_PROJECT_ID)).toBeUndefined();
     expect(await getProject("store-extra")).toBeUndefined();
     expect(await getRecoveryDraft("store-extra")).toBeUndefined();

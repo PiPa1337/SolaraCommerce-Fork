@@ -138,8 +138,10 @@ export const V1_DEMO_PROJECT_ID = "store-modo-sur";
 export const PREDETERMINADO_V1_PROJECT_ID = "store-modo-sur-demo-v1";
 /** Purga única de tiendas: conserva sólo la demo Predeterminado V2. */
 export const DEMO_ONLY_PURGE_SENTINEL = "solara-demo-only-purge";
-const DEMO_ONLY_PURGE_VERSION = "1";
-const DEMO_KEEP_PROJECT_IDS = new Set([SCALE_DEMO_PROJECT_ID]);
+const DEMO_ONLY_PURGE_VERSION = "2"; // v2: re-seed con placeholder seed
+// v2: no se conserva ninguna tienda previa. El re-seed crea Predeterminado
+// con el seed "placeholder" (base generadora limpia).
+const DEMO_KEEP_PROJECT_IDS = new Set<string>();
 const LEGACY_SCALE_DEMO_PROJECT_NAME = "Demo Modo Sur, catálogo moderno";
 const LEGACY_CLEAN_PROJECT_ID = "store-catalog-modern-clean-default";
 const LEGACY_CLEAN_PROJECT_NAME = "Mi primera tienda";
