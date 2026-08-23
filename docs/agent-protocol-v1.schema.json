@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solara.local/schemas/agent-protocol-v1.schema.json",
+  "title": "SolaraCommerce Agent Protocol v1",
+  "description": "Contrato cerrado para que una IA opere tiendas sin parches arbitrarios.",
+  "type": "object",
+  "required": ["protocol", "version", "methods"],
+  "properties": {
+    "protocol": { "const": "solara-agent" },
+    "version": { "const": 1 },
+    "methods": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "health",
+          "stores.list",
+          "stores.get",
+          "plans.create",
+          "plans.commit",
+          "assets.stage"
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$", "maxLength": 96 },
+    "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 120 },
+    "operation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["type", "name"],
+          "properties": {
+            "type": { "const": "store.create" },
+            "storeId": { "$ref": "#/$defs/id" },
+            "name": { "type": "string", "minLength": 1 },
+            "brandName": { "type": "string" },
+            "slug": { "$ref": "#/$defs/slug" },
+            "baseUrl": { "type": "string", "format": "uri" },
+            "email": { "type": "string" },
+            "phone": { "type": "string", "pattern": "^\\d{0,15}$" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "changes"],
+          "properties": {
+            "type": { "const": "store.updateIdentity" },
+            "changes": { "type": "object", "additionalProperties": false }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "changes"],
+          "properties": {
+            "type": { "const": "store.updateSeo" },
+            "changes": { "type": "object", "additionalProperties": false }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "slug", "title"],
+          "properties": {
+            "type": { "const": "category.create" },
+            "categoryId": { "$ref": "#/$defs/id" },
+            "slug": { "$ref": "#/$defs/slug" },
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "parentId": { "$ref": "#/$defs/id" },
+            "imageId": { "$ref": "#/$defs/id" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "slug", "title"],
+          "properties": {
+            "type": { "const": "collection.create" },
+            "collectionId": { "$ref": "#/$defs/id" },
+            "slug": { "$ref": "#/$defs/slug" },
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "imageId": { "$ref": "#/$defs/id" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "slug", "title"],
+          "properties": {
+            "type": { "const": "product.create" },
+            "productId": { "$ref": "#/$defs/id" },
+            "slug": { "$ref": "#/$defs/slug" },
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "priceCents": { "type": "integer", "minimum": 0 },
+            "categoryIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+            "collectionIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+            "imageIds": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "productId", "changes"],
+          "properties": {
+            "type": { "const": "product.update" },
+            "productId": { "$ref": "#/$defs/id" },
+            "changes": { "type": "object", "additionalProperties": false }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "productId", "status"],
+          "properties": {
+            "type": { "const": "product.setStatus" },
+            "productId": { "$ref": "#/$defs/id" },
+            "status": { "enum": ["active", "hidden", "archived"] }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "assetId", "target"],
+          "properties": {
+            "type": { "const": "asset.attach" },
+            "assetId": { "$ref": "#/$defs/id" },
+            "target": { "enum": ["identity.logo", "seo.favicon", "seo.social", "product"] },
+            "productId": { "$ref": "#/$defs/id" }
+          }
+        }
+      ]
+    },
+    "request": {
+      "type": "object",
+      "required": ["id", "method"],
+      "properties": {
+        "protocol": { "const": "solara-agent" },
+        "version": { "const": 1 },
+        "id": { "oneOf": [{ "type": "string" }, { "type": "integer" }] },
+        "method": { "type": "string" },
+        "params": {}
+      }
+    },
+    "planCreate": {
+      "type": "object",
+      "required": ["operations"],
+      "properties": {
+        "storeId": { "$ref": "#/$defs/id" },
+        "baseVersion": { "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] },
+        "idempotencyKey": { "type": "string", "minLength": 8 },
+        "operations": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 500,
+          "items": { "$ref": "#/$defs/operation" }
+        }
+      }
+    },
+    "assetStage": {
+      "type": "object",
+      "required": ["name", "mimeType", "source"],
+      "properties": {
+        "name": { "type": "string" },
+        "alt": { "type": "string" },
+        "mimeType": { "enum": ["image/png", "image/jpeg", "image/webp", "image/gif"] },
+        "source": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["kind", "data"],
+              "properties": {
+                "kind": { "const": "base64" },
+                "data": { "type": "string", "maxLength": 8000000 }
+              }
+            },
+            {
+              "type": "object",
+              "required": ["kind", "filename"],
+              "properties": { "kind": { "const": "inbox" }, "filename": { "type": "string" } }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

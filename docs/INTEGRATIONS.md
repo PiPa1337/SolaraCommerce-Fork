@@ -141,3 +141,20 @@ acceso a Node o filesystem.
 El sitio público continúa usando un servidor HTTP efímero en loopback cuando se
 elige “abrir sitio”. Ese servidor sólo recibe la carpeta pública validada de la
 tienda seleccionada y se cierra al cerrar la instancia Electron.
+
+## Canal nativo para agentes
+
+La carpeta portable incluye `SolaraCommerce-Agent.cmd`. El launcher inicia el
+`SolaraCommerce-Agent.cmd` inicia el mismo `.exe` con un entry de consola
+embebido; por defecto usa JSONL protocol-only y con `--mcp` usa MCP stdio. El
+proceso no abre Studio ni expone HTTP. Los logs quedan en
+`.solara-runtime/logs/main.log`. Sin `--jsonl`, el proceso ofrece MCP por stdio
+con `initialize`, `tools/list` y `tools/call`.
+
+El protocolo v1 está documentado en [`AI_AGENT_GUIDE.md`](AI_AGENT_GUIDE.md) y
+[`agent-protocol-v1.schema.json`](agent-protocol-v1.schema.json). El control usa
+planes tipados, `StoreProjectV2`, `@solara/core`, `@solara/exporter` y el storage
+local transaccional. Las tiendas de demo (`origin.seed` distinto de `clean`)
+son de sólo lectura; las tiendas existentes requieren `storeId` y
+`baseVersion`. Los assets pasan por staging con MIME, firma, tamaño, hash y
+dimensiones antes de poder adjuntarse.

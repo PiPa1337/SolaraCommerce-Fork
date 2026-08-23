@@ -31,6 +31,13 @@ importers:
         version: 3.2.4(@types/debug@4.1.13)(@types/node@24.3.0)
 
   apps/desktop:
+    dependencies:
+      '@solara/agent-contracts':
+        specifier: workspace:*
+        version: link:../../packages/agent-contracts
+      '@solara/agent-control':
+        specifier: workspace:*
+        version: link:../../packages/agent-control
     devDependencies:
       '@solara/studio':
         specifier: workspace:*
@@ -93,6 +100,33 @@ importers:
       vite:
         specifier: 7.1.3
         version: 7.1.3(@types/node@24.3.0)
+
+  packages/agent-contracts:
+    dependencies:
+      zod:
+        specifier: 4.1.5
+        version: 4.1.5
+
+  packages/agent-control:
+    dependencies:
+      '@solara/agent-contracts':
+        specifier: workspace:*
+        version: link:../agent-contracts
+      '@solara/core':
+        specifier: workspace:*
+        version: link:../core
+      '@solara/exporter':
+        specifier: workspace:*
+        version: link:../exporter
+      '@solara/project-schema':
+        specifier: workspace:*
+        version: link:../project-schema
+
+  packages/agent-sdk:
+    dependencies:
+      '@solara/agent-contracts':
+        specifier: workspace:*
+        version: link:../agent-contracts
 
   packages/core:
     dependencies:

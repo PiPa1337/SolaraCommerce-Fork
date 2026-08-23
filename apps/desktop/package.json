@@ -12,6 +12,10 @@
     "typecheck": "node --check src/main.mjs && node --check src/preload.mjs",
     "test": "node --test tests/*.test.mjs"
   },
+  "dependencies": {
+    "@solara/agent-contracts": "workspace:*",
+    "@solara/agent-control": "workspace:*"
+  },
   "devDependencies": {
     "@solara/studio": "workspace:*",
     "electron": "37.3.1",

@@ -1,0 +1,20 @@
+{
+  "name": "@solara/agent-control",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@solara/agent-contracts": "workspace:*",
+    "@solara/core": "workspace:*",
+    "@solara/exporter": "workspace:*",
+    "@solara/project-schema": "workspace:*"
+  }
+}

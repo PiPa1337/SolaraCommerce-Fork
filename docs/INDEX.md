@@ -13,6 +13,8 @@ Los documentos históricos/auditorías cerradas viven en `docs/archive/`.
 | `TECHNICAL_DEBT.md` | Deuda abierta/resuelta con evidencia | Antes de reportar un bug conocido |
 | `INTEGRATIONS.md` | Servidor local, hash sha256, migración ZIP | Tocar persistencia o endpoints |
 | `PORTABILITY.md` | Distribución portable Windows | Empaquetar o mover el portable |
+| `AI_AGENT_GUIDE.md` | MCP/JSONL, SDK y flujo seguro para IA | Crear o automatizar tiendas |
+| `agent-protocol-v1.schema.json` | Contrato machine-readable del agente | Generar clientes o validadores |
 | `STOREFRONT_V2.md` | Familia visual V2 y compatibilidad V1 | Trabajo de módulos/tema |
 | `backup-and-recovery.md` | Respaldo `.solara.json` y recovery drafts | Flujos de guardado |
 | `product-spec.md` | Spec de producto resumida | Contexto de negocio |

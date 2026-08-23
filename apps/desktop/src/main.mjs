@@ -11,6 +11,7 @@ import { appendFile, mkdir } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { app, BrowserWindow, dialog, ipcMain, net, protocol, shell } from "electron";
+import { createLocalProjectStorage } from "../../../packages/exporter/scripts/local-project-storage.mjs";
 import {
   detectPortableFirstRun,
   ensurePortableLayout,
@@ -20,6 +21,7 @@ import {
   createSolaraRequestHandler,
   resolveStaticFile,
 } from "../../../packages/exporter/scripts/solara-request-handler.mjs";
+import { runAgentHost } from "./agent-host.mjs";
 import { writeExportFiles } from "./export-site.mjs";
 import { GPU_CRASH_WINDOW_MS, gpuMarkerPath, shouldUseSoftwareMode } from "./gpu-mode.mjs";
 
@@ -49,6 +51,8 @@ const layout = resolvePortableLayout({
   executablePath: process.execPath,
 });
 const smokeMode = process.argv.includes("--solara-smoke");
+const agentMode = process.argv.includes("--solara-agent");
+const agentProtocolMode = process.argv.includes("--jsonl") ? "jsonl" : "mcp";
 const gpuMarkerPathValue = gpuMarkerPath(layout.profileRoot);
 const gpuSoftwareEnabled = shouldUseSoftwareMode(existsSync(gpuMarkerPathValue));
 if (gpuSoftwareEnabled) {
@@ -138,6 +142,24 @@ async function start() {
     }
     await ensurePortableLayout(layout, { appVersion: app.getVersion() });
     await app.whenReady();
+
+    if (agentMode) {
+      const agentStorage = createLocalProjectStorage({
+        applicationRoot: layout.portableRoot,
+        projectsRoot: layout.projectsRoot,
+        stagingRoot: layout.transactionRoot,
+      });
+      await log(`Modo agente iniciado (${agentProtocolMode}) en ${layout.portableRoot}`);
+      await runAgentHost({
+        storage: agentStorage,
+        applicationRoot: layout.portableRoot,
+        appVersion: app.getVersion(),
+        mode: agentProtocolMode,
+      });
+      await log("Modo agente cerrado");
+      app.quit();
+      return;
+    }
 
     requestHandler = createSolaraRequestHandler({
       staticRoot: resolve(bundleRoot, "studio"),

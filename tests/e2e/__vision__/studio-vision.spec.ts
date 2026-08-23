@@ -69,14 +69,6 @@ async function openStudio(page: import("@playwright/test").Page): Promise<void> 
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({ timeout: 20000 });
 }
 
-/** Entra a la primera tienda disponible. */
-async function openFirstStore(page: import("@playwright/test").Page): Promise<void> {
-  const card = page.locator("[data-store-card-id]").first();
-  await card.click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
-  await expect(page.getByRole("tab", { name: "Preparar" })).toBeVisible({ timeout: 20000 });
-}
-
 /** Cierra el panel de detalle del dashboard si quedó abierto. */
 async function closeDetailIfOpen(page: import("@playwright/test").Page): Promise<void> {
   const closeButton = page.getByRole("button", { name: "Cerrar detalle" });

@@ -16,6 +16,12 @@ navegador puede mantener la pestaña abierta, por lo que el último mensaje indi
 que ya se puede cerrar. Si Studio se sirve con Vite, Playwright u otro servidor,
 el control no aparece y no intenta detener procesos ajenos.
 
+Para una IA que deba crear tiendas mediante la aplicación real, una distribución
+portable incluye [`SolaraCommerce-Agent.cmd`](SolaraCommerce-Agent.cmd) y el
+contrato [`docs/AI_AGENT_GUIDE.md`](docs/AI_AGENT_GUIDE.md). Ese canal usa MCP o
+JSONL stdio, planes tipados y el mismo guardado transaccional de Studio; no
+permite parches arbitrarios de archivos.
+
 ## Requisitos
 
 - Node.js 22 o posterior

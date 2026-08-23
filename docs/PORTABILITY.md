@@ -16,6 +16,7 @@ incluye Chromium y el runtime necesario.
 ```text
 SolaraCommerce-Portable/
 ├── SolaraCommerce.exe
+├── SolaraCommerce-Agent.cmd
 ├── Abrir SolaraCommerce.cmd
 ├── README-PORTABLE.txt
 ├── proyectos/
@@ -83,6 +84,14 @@ Para actualizar una copia portable:
 4. conservá `proyectos/` y `.solara-runtime/electron-user-data/`;
 5. iniciá la nueva versión y revisá el estado de las tiendas.
 
+Para integrar una IA, cerrá Studio y ejecutá `SolaraCommerce-Agent.cmd`. El
+cliente mantiene el proceso abierto, escribe una solicitud JSON por línea y
+lee una respuesta JSON por línea. También puede ejecutar
+`SolaraCommerce-Agent.cmd --mcp` para usar MCP stdio. El agente y Studio
+deben ejecutarse por separado sobre la misma carpeta. El control de versión,
+locks de transacción y validación de hashes rechazan snapshots obsoletos, pero
+no sustituyen cerrar Studio antes de iniciar automatización.
+
 No se migran automáticamente datos del IndexedDB del navegador del sistema.
 Para traer una tienda antigua, exportá su `.solara.json` e importala desde la
 instalación portable.
@@ -141,6 +150,11 @@ modo soportado para búsqueda, índices o mejoras JavaScript que requieren HTTP.
   estáticos compartidos por HTTP y Electron.
 - `packages/exporter/scripts/serve.mjs`: adaptador Node HTTP de desarrollo.
 - `apps/desktop/src/main.mjs`: shell Electron, protocolo, lock y perfil.
+- `apps/desktop/src/agent-host.mjs`: host MCP/JSONL sin ventana.
+- `packages/agent-control/src/index.ts`: operaciones, planes y commit seguro.
+- `packages/agent-contracts/src/index.ts`: schemas Zod del protocolo v1.
+- `packages/agent-sdk/src/index.ts`: cliente tipado para integraciones.
+- `SolaraCommerce-Agent.cmd`: launcher de automatización portable.
 - `apps/desktop/src/preload.mjs`: puente mínimo de IPC.
 - `apps/desktop/electron-builder.yml`: empaquetado Windows por carpeta.
 - `scripts/create-portable-distribution.mjs`: salida portable final.

@@ -1,5 +1,17 @@
 # Changelog
 
+### Canal nativo para agentes de IA y creación transaccional (2026-08-23)
+
+- Se agregó protocolo `solara-agent` v1 por MCP stdio y JSONL, con contracts Zod,
+  SDK tipado y host Electron sin ventana ni servidor HTTP.
+- Las IA pueden crear tiendas limpias y modificar tiendas existentes mediante
+  planes tipados; Predeterminado y otros demos quedan protegidos, y los commits
+  revalidan versión, schema, exportación, SHA-256 e idempotencia.
+- El staging de imágenes valida bytes, MIME, firma, tamaño, hash y dimensiones;
+  los archivos grandes entran sólo desde `agent-inbox`.
+- Se documentó la guía operativa y se agregó `SolaraCommerce-Agent.cmd` al
+  portable.
+
 ### Flujo nativo de nuevas tiendas y persistencia segura (2026-08-23)
 
 - Las tiendas nuevas se crean sin media ficticia ni teléfonos WhatsApp

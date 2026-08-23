@@ -47,6 +47,5 @@ test("audit 2000 desglose", () => {
     const top = info.files.sort((a, b) => b[1] - a[1]).slice(0, 2);
     for (const [p, b] of top) console.log("  top", p, b);
   }
-  const prod = files.filter(([p]) => p.startsWith("productos/"));
   console.log("productos avg", Math.round(byCat["productos"].bytes / byCat["productos"].count));
 });

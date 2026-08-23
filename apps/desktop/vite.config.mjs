@@ -10,6 +10,7 @@ export default defineConfig({
       entry: {
         main: "src/main.mjs",
         preload: "src/preload.mjs",
+        "agent-cli": "src/agent-cli.mjs",
       },
       formats: ["cjs"],
       fileName: (_, entryName) => `${entryName}.cjs`,

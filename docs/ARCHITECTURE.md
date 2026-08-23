@@ -24,11 +24,23 @@ flowchart LR
   LocalAPI --> Disk[proyectos/<br/>manifest + versiones + sitios]
   Public --> Browser[Hosting estático / navegador]
   Browser --> WhatsApp[Enlace WhatsApp]
+  Agent[IA MCP/JSONL stdio] --> AgentControl[@solara/agent-control<br/>planes tipados]
+  AgentControl --> Core
+  AgentControl --> Schema
+  AgentControl --> Exporter
+  AgentControl --> Disk
 ```
 
 No existe un backend remoto. El único servidor es el proceso Node local iniciado
 por `Abrir SolaraCommerce.cmd`; su API está protegida por una cookie de sesión y
 queda limitada a `127.0.0.1`.
+
+El modo agente es un transporte local adicional dentro del shell Electron. Se
+inicia con `--solara-agent`, no crea BrowserWindow ni puerto HTTP y sólo expone
+operaciones cerradas de `@solara/agent-control`. `plans.create` calcula un
+snapshot en memoria; `plans.commit` vuelve a leer la versión del disco y delega
+en la misma transacción de `local-project-storage.mjs` que Studio. El agente no
+puede escribir HTML, JavaScript ni parches genéricos.
 
 ## Capas y responsabilidades
 

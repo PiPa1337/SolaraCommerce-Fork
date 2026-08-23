@@ -219,6 +219,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     resolve(root, "scripts/open-solara.ps1"),
     join(destination, "scripts", "open-solara.ps1"),
   );
+  await cp(
+    resolve(root, "SolaraCommerce-Agent.cmd"),
+    join(destination, "SolaraCommerce-Agent.cmd"),
+  );
   await writeFile(
     join(destination, "README-PORTABLE.txt"),
     [
@@ -229,6 +233,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       "",
       "Las tiendas y sus exportaciones viven en proyectos/.",
       "El estado regenerable y el perfil local viven en .solara-runtime/.",
+      "Para automatización cerrá la app y usá SolaraCommerce-Agent.cmd.",
       "Podés copiar toda la carpeta a otra unidad o ruta, incluso si contiene espacios o Unicode.",
       "",
     ].join("\r\n"),
