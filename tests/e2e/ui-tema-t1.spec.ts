@@ -1,6 +1,6 @@
 /**
  * Auditoría Tema T1 (2026-08-10) — Presets del panel Tema.
- * Cada uno de los 4 presets debe:
+ * Cada uno de los 10 presets debe:
  *   1. aplicar la paleta real al preview (variable CSS --solara-* computada);
  *   2. llegar al sitio exportado: exportProject() ANTES y DESPUÉS del click
  *      (patrón exported-store.spec.ts) y las 7 variables de color del preset
@@ -43,7 +43,7 @@ type ThemeColors = Record<ThemeColorKey, string>;
 
 /** Los mismos 7 colores que declara THEME_PRESETS en ThemeEditor.tsx. */
 const PRESET_COLORS: Record<string, ThemeColors> = {
-  "Editorial cálido": {
+  "Marfil editorial": {
     background: "#fcfcfb",
     surface: "#f0f0ee",
     text: "#0b0b0c",
@@ -52,32 +52,86 @@ const PRESET_COLORS: Record<string, ThemeColors> = {
     accentText: "#ffffff",
     border: "#dededa",
   },
-  "Salvia serena": {
-    background: "#f5f7f4",
-    surface: "#e7ece6",
-    text: "#18231f",
-    muted: "#5f6b62",
-    accent: "#3a5244",
-    accentText: "#fbfcfb",
-    border: "#d4dcd3",
+  "Jardín de salvia": {
+    background: "#f1f6f0",
+    surface: "#e0ece0",
+    text: "#1b2a20",
+    muted: "#526457",
+    accent: "#356248",
+    accentText: "#f6fff7",
+    border: "#c7d8c7",
   },
-  "Costa terracota": {
-    background: "#faf6f2",
-    surface: "#f1e9e1",
-    text: "#231510",
-    muted: "#7c6a5c",
-    accent: "#b4552d",
+  "Terracota solar": {
+    background: "#fff5ee",
+    surface: "#f8e4d4",
+    text: "#3a2118",
+    muted: "#76584b",
+    accent: "#9a442c",
     accentText: "#fff8f3",
-    border: "#e6dacd",
+    border: "#e8c8b3",
   },
-  "Tinta profunda": {
-    background: "#16151a",
-    surface: "#1f1e24",
-    text: "#f2f0f4",
-    muted: "#a29daa",
-    accent: "#e9e6ee",
-    accentText: "#16151a",
-    border: "#33313a",
+  "Azul mediterráneo": {
+    background: "#eff6fb",
+    surface: "#ddebf5",
+    text: "#172b3a",
+    muted: "#4a6272",
+    accent: "#1d5b7a",
+    accentText: "#f7fcff",
+    border: "#c5d8e5",
+  },
+  "Lavanda suave": {
+    background: "#f6f2fb",
+    surface: "#e9e0f3",
+    text: "#29213a",
+    muted: "#655978",
+    accent: "#6d4a92",
+    accentText: "#fbf8ff",
+    border: "#d8c9e7",
+  },
+  "Rosa pétalo": {
+    background: "#fff2f4",
+    surface: "#f6e0e5",
+    text: "#3a2028",
+    muted: "#76515c",
+    accent: "#9a3f56",
+    accentText: "#fff7f9",
+    border: "#e6c5cf",
+  },
+  "Menta fresca": {
+    background: "#effaf7",
+    surface: "#ddf1ea",
+    text: "#17352f",
+    muted: "#4d6a62",
+    accent: "#1e6b59",
+    accentText: "#f4fffc",
+    border: "#c2ded5",
+  },
+  "Mostaza clara": {
+    background: "#fff9e8",
+    surface: "#f6edc7",
+    text: "#332c18",
+    muted: "#756b43",
+    accent: "#766018",
+    accentText: "#fffbef",
+    border: "#e7d9a8",
+  },
+  "Coral suave": {
+    background: "#fff4f1",
+    surface: "#f6dfd8",
+    text: "#3b201d",
+    muted: "#765651",
+    accent: "#a64034",
+    accentText: "#fff8f6",
+    border: "#e6c6be",
+  },
+  "Azul lavanda": {
+    background: "#eef1fa",
+    surface: "#dce2f2",
+    text: "#202b4a",
+    muted: "#56627d",
+    accent: "#3d5592",
+    accentText: "#f8faff",
+    border: "#c8d0e5",
   },
 };
 
@@ -186,7 +240,7 @@ function exportedThemeVars(colors: ThemeColors): ThemeColors {
   return vars;
 }
 
-test("preset Editorial cálido: vuelve al default en preview, feedback y sitio exportado", async ({
+test("preset Marfil editorial: vuelve al default en preview, feedback y sitio exportado", async ({
   page,
 }) => {
   await setupCleanStore(page, "T1 editorial");
@@ -194,32 +248,32 @@ test("preset Editorial cálido: vuelve al default en preview, feedback y sitio e
 
   // La tienda vacía abre con la paleta editorial: es el estado ANTES.
   const defaultColors = await readThemeColors(page);
-  expect(defaultColors).toEqual(PRESET_COLORS["Editorial cálido"]);
+  expect(defaultColors).toEqual(PRESET_COLORS["Marfil editorial"]);
   const defaultVars = exportedThemeVars(defaultColors);
   await expect.poll(previewVar(page, "background"), { timeout: 15_000 }).toBe("#fcfcfb");
 
-  // Cambio previo a Tinta profunda para demostrar el diff de vuelta a editorial.
-  await applyPreset(page, "Tinta profunda");
+  // Cambio previo a Azul mediterráneo para demostrar el diff de vuelta a marfil.
+  await applyPreset(page, "Azul mediterráneo");
   const inkColors = await readThemeColors(page);
-  expect(inkColors).toEqual(PRESET_COLORS["Tinta profunda"]);
-  expect(exportedThemeVars(inkColors)).toEqual(PRESET_COLORS["Tinta profunda"]);
-  await expect.poll(previewVar(page, "background"), { timeout: 15_000 }).toBe("#16151a");
+  expect(inkColors).toEqual(PRESET_COLORS["Azul mediterráneo"]);
+  expect(exportedThemeVars(inkColors)).toEqual(PRESET_COLORS["Azul mediterráneo"]);
+  await expect.poll(previewVar(page, "background"), { timeout: 15_000 }).toBe("#eff6fb");
 
-  // Click real sobre el preset: vuelve a la paleta editorial en las 4 capas.
-  await applyPreset(page, "Editorial cálido");
+  // Click real sobre el preset: vuelve a la paleta marfil en las 4 capas.
+  await applyPreset(page, "Marfil editorial");
   await expect(page.getByTestId("ui-color-text-background")).toHaveValue("#fcfcfb");
-  expect(await readThemeColors(page)).toEqual(PRESET_COLORS["Editorial cálido"]);
-  await assertPreviewPalette(page, PRESET_COLORS["Editorial cálido"]);
-  await assertPresetFeedback(page, "Editorial cálido");
+  expect(await readThemeColors(page)).toEqual(PRESET_COLORS["Marfil editorial"]);
+  await assertPreviewPalette(page, PRESET_COLORS["Marfil editorial"]);
+  await assertPresetFeedback(page, "Marfil editorial");
   const backVars = exportedThemeVars(await readThemeColors(page));
-  expect(backVars).toEqual(PRESET_COLORS["Editorial cálido"]);
+  expect(backVars).toEqual(PRESET_COLORS["Marfil editorial"]);
   expect(backVars).toEqual(defaultVars);
   for (const key of THEME_COLOR_KEYS) {
     expect(backVars[key]).not.toBe(exportedThemeVars(inkColors)[key]);
   }
 });
 
-test("preset Salvia serena: paleta en preview, feedback y CSS exportado", async ({ page }) => {
+test("preset Jardín de salvia: paleta en preview, feedback y CSS exportado", async ({ page }) => {
   await setupCleanStore(page, "T1 salvia");
   await openThemeTab(page);
 
@@ -227,22 +281,22 @@ test("preset Salvia serena: paleta en preview, feedback y CSS exportado", async 
   const beforeVars = exportedThemeVars(before);
   await expect.poll(previewVar(page, "background"), { timeout: 15_000 }).toBe("#fcfcfb");
 
-  await applyPreset(page, "Salvia serena");
+  await applyPreset(page, "Jardín de salvia");
 
-  await expect(page.getByTestId("ui-color-text-background")).toHaveValue("#f5f7f4");
-  expect(await readThemeColors(page)).toEqual(PRESET_COLORS["Salvia serena"]);
-  await assertPreviewPalette(page, PRESET_COLORS["Salvia serena"]);
-  await assertPresetFeedback(page, "Salvia serena");
+  await expect(page.getByTestId("ui-color-text-background")).toHaveValue("#f1f6f0");
+  expect(await readThemeColors(page)).toEqual(PRESET_COLORS["Jardín de salvia"]);
+  await assertPreviewPalette(page, PRESET_COLORS["Jardín de salvia"]);
+  await assertPresetFeedback(page, "Jardín de salvia");
 
   const afterVars = exportedThemeVars(await readThemeColors(page));
-  expect(afterVars).toEqual(PRESET_COLORS["Salvia serena"]);
+  expect(afterVars).toEqual(PRESET_COLORS["Jardín de salvia"]);
   for (const key of THEME_COLOR_KEYS) {
-    if (before[key] === PRESET_COLORS["Salvia serena"][key]) continue;
+    if (before[key] === PRESET_COLORS["Jardín de salvia"][key]) continue;
     expect(afterVars[key]).not.toBe(beforeVars[key]);
   }
 });
 
-test("preset Costa terracota: paleta en preview, feedback y CSS exportado", async ({ page }) => {
+test("preset Terracota solar: paleta en preview, feedback y CSS exportado", async ({ page }) => {
   await setupCleanStore(page, "T1 costa");
   await openThemeTab(page);
 
@@ -250,22 +304,22 @@ test("preset Costa terracota: paleta en preview, feedback y CSS exportado", asyn
   const beforeVars = exportedThemeVars(before);
   await expect.poll(previewVar(page, "background"), { timeout: 15_000 }).toBe("#fcfcfb");
 
-  await applyPreset(page, "Costa terracota");
+  await applyPreset(page, "Terracota solar");
 
-  await expect(page.getByTestId("ui-color-text-background")).toHaveValue("#faf6f2");
-  expect(await readThemeColors(page)).toEqual(PRESET_COLORS["Costa terracota"]);
-  await assertPreviewPalette(page, PRESET_COLORS["Costa terracota"]);
-  await assertPresetFeedback(page, "Costa terracota");
+  await expect(page.getByTestId("ui-color-text-background")).toHaveValue("#fff5ee");
+  expect(await readThemeColors(page)).toEqual(PRESET_COLORS["Terracota solar"]);
+  await assertPreviewPalette(page, PRESET_COLORS["Terracota solar"]);
+  await assertPresetFeedback(page, "Terracota solar");
 
   const afterVars = exportedThemeVars(await readThemeColors(page));
-  expect(afterVars).toEqual(PRESET_COLORS["Costa terracota"]);
+  expect(afterVars).toEqual(PRESET_COLORS["Terracota solar"]);
   for (const key of THEME_COLOR_KEYS) {
-    if (before[key] === PRESET_COLORS["Costa terracota"][key]) continue;
+    if (before[key] === PRESET_COLORS["Terracota solar"][key]) continue;
     expect(afterVars[key]).not.toBe(beforeVars[key]);
   }
 });
 
-test("preset Tinta profunda: paleta en preview, feedback y CSS exportado", async ({ page }) => {
+test("preset Azul lavanda: paleta en preview, feedback y CSS exportado", async ({ page }) => {
   await setupCleanStore(page, "T1 tinta");
   await openThemeTab(page);
 
@@ -273,17 +327,32 @@ test("preset Tinta profunda: paleta en preview, feedback y CSS exportado", async
   const beforeVars = exportedThemeVars(before);
   await expect.poll(previewVar(page, "background"), { timeout: 15_000 }).toBe("#fcfcfb");
 
-  await applyPreset(page, "Tinta profunda");
+  await applyPreset(page, "Azul lavanda");
 
-  await expect(page.getByTestId("ui-color-text-background")).toHaveValue("#16151a");
-  expect(await readThemeColors(page)).toEqual(PRESET_COLORS["Tinta profunda"]);
-  await assertPreviewPalette(page, PRESET_COLORS["Tinta profunda"]);
-  await assertPresetFeedback(page, "Tinta profunda");
+  await expect(page.getByTestId("ui-color-text-background")).toHaveValue("#eef1fa");
+  expect(await readThemeColors(page)).toEqual(PRESET_COLORS["Azul lavanda"]);
+  await assertPreviewPalette(page, PRESET_COLORS["Azul lavanda"]);
+  await assertPresetFeedback(page, "Azul lavanda");
 
   const afterVars = exportedThemeVars(await readThemeColors(page));
-  expect(afterVars).toEqual(PRESET_COLORS["Tinta profunda"]);
+  expect(afterVars).toEqual(PRESET_COLORS["Azul lavanda"]);
   for (const key of THEME_COLOR_KEYS) {
-    if (before[key] === PRESET_COLORS["Tinta profunda"][key]) continue;
+    if (before[key] === PRESET_COLORS["Azul lavanda"][key]) continue;
     expect(afterVars[key]).not.toBe(beforeVars[key]);
+  }
+});
+
+test("las 10 paletas son visibles, claras y mantienen contraste WCAG", async ({ page }) => {
+  await setupCleanStore(page, "T1 diez paletas");
+  await openThemeTab(page);
+
+  await expect(page.getByTestId("ui-theme-preset")).toHaveCount(10);
+
+  for (const [presetName, colors] of Object.entries(PRESET_COLORS)) {
+    await applyPreset(page, presetName);
+    await expect(page.getByTestId("ui-color-text-background")).toHaveValue(colors.background);
+    await expect(page.getByTestId("ui-contrast-ok")).toHaveCount(3);
+    await expect(page.getByTestId("ui-contrast-warn")).toHaveCount(0);
+    await assertPresetFeedback(page, presetName);
   }
 });

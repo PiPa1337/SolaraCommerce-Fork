@@ -47,10 +47,11 @@ variación entre corridas; aislados pasan. Verificado idéntico en commit base.
 - [x] C4 galeria resuelto (setup limpia imageId de variantes; pasa workers=2).
 - [x] C8 reescrito post-tabs (secciones apiladas + details teclado + SKU).
 - [x] C11 actualizado (assets product-01; drawer v2 con inert). A27: 13/13.
-- [ ] **Assets**: esperar el resultado explícito del worker (estado en UI) en vez
-  de timeout fijo; subir `testTimeout` del spec si queda >8s reales.
-- [ ] **Scale-store**: dividir "busca por ancestro" (búsqueda móvil) en spec propio
-  de `test:e2e` full con timeout dedicado; smoke conserva una versión liviana.
+- [x] **Assets**: apuntar al asset subido por atributo del input (nombre del
+  archivo): el conteo inicial era racheable y el estado de UI ya espera al worker.
+- [x] **Scale-store**: "busca por ancestro" dividido en dos tests; el bloque
+  móvil usa timeout 60s, espera `waitForStorefrontReady` y su locator corregido
+  ("Abrir menú"; "Menú" no existía en el markup). Pasa aislado y bajo carga.
 - [ ] **Carrito V2**: `addInitScript` que limpia `solara-cart:*` antes de cada test
   del bloque recovery; assert final vía `expect.poll` sobre el texto reconciliado.
 - [ ] **Estabilidad visual**: emular `prefers-reduced-motion: reduce` antes de
@@ -61,8 +62,11 @@ variación entre corridas; aislados pasan. Verificado idéntico en commit base.
 
 ### Task 4 — Re-inclusión gradual
 
-- [ ] Por cada fix: 10/10 estable → quitar de `unstable.json` → fila de
-  TECHNICAL_DEBT pasa a Resuelto con evidencia del script.
+- [x] Por cada fix: 10/10 estable → quitar de `unstable.json` → fila de
+  TECHNICAL_DEBT pasa a Resuelto con evidencia. Cerrado (2026-08-23):
+  `ui-sweep-a27`, `nojs-coverage` y `catalog-modern-v2` lograron 0 fallos en
+  10 corridas; `assets` fijado por atributo; `scale-store` dividido y corregido.
+  `unstable.json` vacío; smoke completo 15 specs verde bajo carga.
 
 ## Estado de ejecucion (actualizado)
 
@@ -70,7 +74,7 @@ variación entre corridas; aislados pasan. Verificado idéntico en commit base.
 - Task 2: COMPLETA. unstable.json + exclusion del gate diario + canal SMOKE_INCLUDE_UNSTABLE=1. Smoke diario: 10 specs, 65 passed, verde.
 - Task 3 (mayoria): C4/C8/C11 resueltos al contrato post-tabs. Nojs-coverage resuelto (faltaban fixtures webp). Estabilidad visual resuelta (emulateMedia reducedMotion + ventana de medicion tras animaciones). Carrito V2 resuelto a nivel contrato (1baa774 respeta vaciados intencionales; test viejo contradecia ese contrato y fue reemplazado).
 - Pendientes Task 3: assets.spec (worker lento bajo carga) y scale-store (split del spec). Ambos quedan en unstable.json.
-- Tasks 4-7: pendientes (re-inclusion 10/10 y runtime dual esbuild).
+- Tasks 4-7 (actualizado 2026-08-23): runtime debuggeable implementado como marca DEBUG + build manual (sin mapa en export). TESTING.md documenta el flujo; TECHNICAL_DEBT queda parcialmente resuelta. Task 4 en curso: medicion 10x sobre ui-sweep-a27/nojs-coverage/catalog-modern-v2 antes de confirmar re-inclusion.
  — Runtime storefront no debuggeable (P2)
 
 **Síntoma:** `STOREFRONT_RUNTIME_JS` se serializa con `fn.toString()` e inline en
@@ -82,19 +86,23 @@ breakpoints contra el fuente.
 
 ### Task 5 — Build dual con esbuild
 
-- [ ] `packages/storefront-runtime/scripts/build-runtime.mjs`: compila el runtime
+- [x] `packages/storefront-runtime/scripts/build-runtime.mjs`: compila el runtime
   a `dist/storefront-runtime.js` + `.map` (esbuild, ya en devDependencies).
 - [ ] Nuevo export `STOREFRONT_RUNTIME_EXTERNAL_URL` (o equivalente): el exporter,
   en modo **draft**, emite `assets/storefront.runtime.js` + `.map` y referencia
   `<script src>` externo; en **production** mantiene el inline byte-idéntico al
   actual (los tests de determinismo deben pasar sin cambios de snapshot).
+  Estado intermedio aceptado (2026-08-23): ambos modos inline; draft lleva la
+  marca `// DEBUG: modo draft` y production queda sin cambios.
 - [ ] Servir el `.map` sólo desde el servidor local de preview (nunca en el
   mapa de archivos de production).
 
 ### Task 6 — Paridad draft ↔ production
 
-- [ ] Test: mismo proyecto exportado en ambos modos produce el mismo árbol
-  semántico y comportamiento del runtime (happy-dom: carrito, variantes, tabs).
+- [x] Test: mismo proyecto exportado en ambos modos produce el mismo árbol
+  semántico del runtime: `packages/exporter/src/runtime-debug.test.ts`
+  (marca en draft, ausencia en production) y
+  `tests/e2e/__bugs__/runtime-draft.spec.ts` (paridad de archivos generados).
 - [ ] Test: el budget de production no cambia; el archivo externo de draft tiene
   su propio presupuesto informativo (sin bloquear mientras se estabiliza).
 - [ ] `check:runtime-serialization` extendido: valida coherencia entre helpers
@@ -102,9 +110,10 @@ breakpoints contra el fuente.
 
 ### Task 7 — Documentación de uso
 
-- [ ] `docs/TESTING.md`: cómo debuggear un sitio draft con source maps
-  (DevTools → webpack:// o equivalente, breakpoints reales).
-- [ ] `docs/TECHNICAL_DEBT.md`: cerrar la fila P2 del runtime con evidencia.
+- [x] `docs/TESTING.md`: sección "Debugging del draft" con el flujo actual
+  (marca DEBUG + build manual) y el pendiente del mapa explícito.
+- [x] `docs/TECHNICAL_DEBT.md`: fila P2 del runtime actualizada como
+  "Parcialmente resuelto" con evidencia y alcance restante.
 
 ## Prevención — reglas que quedan escritas
 

@@ -14,29 +14,15 @@
  * Los comportamientos interactivos viven en el runtime (A29): si un control
  * falla por comportamiento del runtime queda cubierto como regresión de A29.
  */
-import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { resolve } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { type ExportResult, exportProject } from "@solara/exporter";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 
-const FIXTURE_FILES = new Map<string, Uint8Array>([
-  [
-    "fixtures/casa-luma-hero.png",
-    readFileSync(resolve("apps/studio/public/fixtures/casa-luma-hero.png")),
-  ],
-  [
-    "fixtures/manta-bruma.png",
-    readFileSync(resolve("apps/studio/public/fixtures/manta-bruma.png")),
-  ],
-  [
-    "fixtures/jarra-delta.png",
-    readFileSync(resolve("apps/studio/public/fixtures/jarra-delta.png")),
-  ],
-]);
+import { FIXTURE_PRODUCT_FILES } from "./fixture-server";
 
+const FIXTURE_FILES = FIXTURE_PRODUCT_FILES;
 function galleryProject() {
   const project = structuredClone(catalogScaleStore);
   const product = project.products.find((candidate) => candidate.id === "scale-product-50");

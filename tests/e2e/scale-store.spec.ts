@@ -1,25 +1,12 @@
-import { readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
-import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
+import { FIXTURE_PRODUCT_FILES } from "./fixture-server";
+import { waitForStorefrontReady } from "./storefront-helpers";
 
 const exported = exportProject(catalogScaleStore, { mode: "production" });
-const fixtureFiles = new Map<string, Uint8Array>([
-  [
-    "fixtures/casa-luma-hero.png",
-    readFileSync(resolve("apps/studio/public/fixtures/casa-luma-hero.png")),
-  ],
-  [
-    "fixtures/manta-bruma.png",
-    readFileSync(resolve("apps/studio/public/fixtures/manta-bruma.png")),
-  ],
-  [
-    "fixtures/jarra-delta.png",
-    readFileSync(resolve("apps/studio/public/fixtures/jarra-delta.png")),
-  ],
-]);
+const fixtureFiles = FIXTURE_PRODUCT_FILES;
 let server: Server;
 let serverUrl: string;
 
@@ -141,15 +128,22 @@ test("agrega descendientes, pagina Casa y expone el producto 50", async ({ page 
   await expect(page.getByRole("heading", { level: 1, name: "Pieza de escala 50" })).toBeVisible();
 });
 
-test("busca por ancestro y conserva el layout en móvil", async ({ page }) => {
+test("busca por ancestro en la escala completa", async ({ page }) => {
   await page.goto(storeUrl("/buscar/?q=Casa"));
   await expect(page.locator("[data-search-results]")).toContainText("Pieza de escala 01");
+});
+
+test("conserva el layout sin scroll lateral y navega por el menú móvil", async ({ page }) => {
+  test.setTimeout(60_000);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(storeUrl("/"));
+  // El summary del menú móvil dice "Abrir menú"; esperar la señal de listo
+  // evita interactuar antes de que el runtime hidrate.
+  await waitForStorefrontReady(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
     false,
   );
-  await page.getByText("Menú", { exact: true }).click();
+  await page.getByText("Abrir menú", { exact: true }).click();
   await page.locator(".solara-mobile-nav .solara-nav-dropdown > summary").click();
   await expect(
     page.locator(".solara-mobile-nav").getByRole("link", { name: "Casa", exact: true }),

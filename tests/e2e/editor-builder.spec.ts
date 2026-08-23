@@ -191,9 +191,9 @@ test("un preset de tema aplica los colores y el preview los refleja", async ({ p
   await page.getByRole("tab", { name: "Tema" }).click();
   await expect(page.getByRole("heading", { name: "Tema" })).toBeVisible();
 
-  await page.getByTestId("ui-theme-preset").filter({ hasText: "Salvia serena" }).click();
+  await page.getByTestId("ui-theme-preset").filter({ hasText: "Jardín de salvia" }).click();
   const backgroundHex = page.locator(".color-grid input[type='text']").first();
-  await expect(backgroundHex).toHaveValue("#f5f7f4");
+  await expect(backgroundHex).toHaveValue("#f1f6f0");
   await expect
     .poll(
       async () =>
@@ -205,7 +205,7 @@ test("un preset de tema aplica los colores y el preview los refleja", async ({ p
           ),
       { timeout: 20_000 },
     )
-    .toBe("#f5f7f4");
+    .toBe("#f1f6f0");
 });
 
 test("el hero permite subir un video desde el campo de video", async ({ page }) => {
@@ -350,6 +350,19 @@ test("el Builder mantiene el contacto de Home V2 y no ofrece páginas independie
   await expect(page.locator('[data-section-select="home-section-contact-channels"]')).toBeVisible();
 });
 
+test("el panel de configuración sólo conserva Home y sus controles vigentes", async ({ page }) => {
+  await openBuilder(page);
+  await page.getByRole("tab", { name: "Resumen" }).click();
+  await expect(page.getByRole("heading", { name: "Resumen" })).toBeVisible();
+  await expect(page.locator(".page-editor")).toHaveCount(1);
+  await expect(page.getByRole("switch", { name: "Mostrar Contacto" })).toHaveCount(0);
+  await expect(page.getByRole("switch", { name: "Mostrar Nosotros" })).toHaveCount(0);
+
+  await page.getByRole("tab", { name: "Tema de la tienda" }).click();
+  await expect(page.getByTestId("ui-design-family-v1")).toHaveCount(0);
+  await expect(page.getByTestId("ui-design-family-v2")).toBeVisible();
+});
+
 test("el hero V2 expone el modo sólo video (media 9:16)", async ({ page }) => {
   await openBuilder(page);
   await selectHero(page);
@@ -360,22 +373,19 @@ test("el hero V2 expone el modo sólo video (media 9:16)", async ({ page }) => {
   await expect(modeField).toHaveValue("video");
 });
 
-test("la familia Editorial V2 queda activa sin usar el preset V1", async ({ page }) => {
+test("la familia Editorial V2 queda como única opción visible", async ({ page }) => {
   await openBuilder(page);
   await page.getByRole("tab", { name: "Tema" }).click();
   await expect(page.getByRole("heading", { name: "Tema" })).toBeVisible();
 
-  const v1 = page.getByTestId("ui-design-family-v1");
+  await expect(page.getByTestId("ui-design-family-v1")).toHaveCount(0);
   const v2 = page.getByTestId("ui-design-family-v2");
-  await expect(v1).toHaveAttribute("aria-pressed", "false");
-  await expect(v2).toHaveAttribute("aria-pressed", "true");
+  await expect(v2).toBeVisible();
   const preview = page.frameLocator("iframe");
   await expect(preview.locator('[data-design-family="catalog-modern-v2"]')).toBeVisible({
     timeout: 20_000,
   });
-  await expect(preview.getByRole("heading", { level: 1 })).toHaveText(
-    "Vestite con lo que te representa.",
-  );
+  await expect(preview.getByRole("heading", { level: 1 })).toHaveText("Titulo del hero");
 });
 
 test("agregar un testimonio genera un ítem válido que commitea y persiste en el preview", async ({

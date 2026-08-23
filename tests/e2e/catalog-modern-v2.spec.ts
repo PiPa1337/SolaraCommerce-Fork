@@ -5,23 +5,22 @@ import { expect, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
+import { waitForStorefrontReady } from "./storefront-helpers";
 
 const exported = exportProject(catalogModernV2Store, { mode: "production" });
 const exportedV1 = exportProject(catalogModernStore, { mode: "production" });
 const fixtureBrand = catalogModernV2Store.identity.brandName;
+// Desde 9a22a95 los assets del fixture viajan embebidos como data URLs;
+// solo los 12 productos quedan como archivos webp servibles en /fixtures/.
 const fixtureFiles = new Map<string, Uint8Array>(
-  ["hero", "remera", "jean", "camisa"].map((name) => [
-    `fixtures/modo-sur-${name}.png`,
-    readFileSync(resolve(`apps/studio/public/fixtures/modo-sur-${name}.png`)),
-  ]),
+  Array.from({ length: 12 }, (_, index) => {
+    const number = String(index + 1).padStart(2, "0");
+    return [
+      `fixtures/modo-sur-product-${number}.webp`,
+      readFileSync(resolve(`apps/studio/public/fixtures/modo-sur-product-${number}.webp`)),
+    ] as const;
+  }),
 );
-for (let index = 1; index <= 12; index += 1) {
-  const number = String(index).padStart(2, "0");
-  fixtureFiles.set(
-    `fixtures/modo-sur-product-${number}.webp`,
-    readFileSync(resolve(`apps/studio/public/fixtures/modo-sur-product-${number}.webp`)),
-  );
-}
 
 let server: Server;
 let serverUrl: string;
@@ -1408,6 +1407,9 @@ test("V2 conserva nombres accesibles, foco visible y navegacion por teclado", as
   for (const route of routes) {
     await page.goto(new URL(route, serverUrl).toString());
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+    // La auditoria lee TODO el DOM: esperar la senal del runtime evita leer
+    // un arbol a medio hidratar (politica de estabilidad E2E).
+    await waitForStorefrontReady(page);
     const audit = await page.evaluate(() => {
       const ids = [...document.querySelectorAll<HTMLElement>("[id]")].map((element) => element.id);
       const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
@@ -1445,8 +1447,12 @@ test("V2 conserva nombres accesibles, foco visible y navegacion por teclado", as
   await page.goto(new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString());
   await page.evaluate(() => localStorage.clear());
   await page.reload();
+  await waitForStorefrontReady(page);
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
   const checkoutName = page.locator("#catalog-drawer-name");
+  // El drawer se abre por JS: esperar el input visible evita un focus sin
+  // efecto (elemento oculto => outline no aplicado).
+  await expect(checkoutName).toBeVisible();
   await checkoutName.focus();
   expect(
     await checkoutName.evaluate((element) => {

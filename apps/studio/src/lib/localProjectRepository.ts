@@ -69,7 +69,14 @@ export async function loadDiskProject(summary: LocalProjectSummary): Promise<Dis
 
 export async function loadAllDiskProjects(): Promise<{
   projects: DiskProject[];
-  recovery: Array<{ id: string; name: string; updatedAt: string; message: string }>;
+  recovery: Array<{
+    id: string;
+    name: string;
+    updatedAt: string;
+    message: string;
+    projectId?: string;
+    diskVersion?: number;
+  }>;
 }> {
   const listing = await listLocalProjects();
   const projects: DiskProject[] = [];
@@ -78,6 +85,8 @@ export async function loadAllDiskProjects(): Promise<{
     name: item.folder,
     updatedAt: "",
     message: item.message,
+    ...(item.projectId ? { projectId: item.projectId } : {}),
+    ...(Number.isInteger(item.version) ? { diskVersion: item.version } : {}),
   }));
   for (const summary of listing.projects) {
     try {

@@ -13,24 +13,17 @@ const SOLD_OUT_VARIANT = "modo-variant-01-08";
 const FIRST_VARIANT = "modo-variant-01-01";
 const ARENA_PILL = "modo-variant-01-05";
 
-const fixtureFiles = new Map<string, Uint8Array>([
-  [
-    "fixtures/modo-sur-hero.png",
-    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-hero.png")),
-  ],
-  [
-    "fixtures/modo-sur-remera.png",
-    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-remera.png")),
-  ],
-  [
-    "fixtures/modo-sur-jean.png",
-    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-jean.png")),
-  ],
-  [
-    "fixtures/modo-sur-camisa.png",
-    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-camisa.png")),
-  ],
-]);
+// Desde 9a22a95 los assets del fixture viajan embebidos como data URLs;
+// solo los 12 productos quedan como archivos webp servibles en /fixtures/.
+const fixtureFiles = new Map<string, Uint8Array>(
+  Array.from({ length: 12 }, (_, index) => {
+    const number = String(index + 1).padStart(2, "0");
+    return [
+      `fixtures/modo-sur-product-${number}.webp`,
+      readFileSync(resolve(`apps/studio/public/fixtures/modo-sur-product-${number}.webp`)),
+    ] as const;
+  }),
+);
 
 const galleryStore = structuredClone(catalogModernStore);
 {

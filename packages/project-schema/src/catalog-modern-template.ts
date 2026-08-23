@@ -400,22 +400,14 @@ function cleanProject(options: BuildCatalogModernProjectOptions): StoreProjectV2
       showContact: false,
       showAbout: false,
     },
-    pages: project.pages.map((page) => ({
-      ...page,
-      title:
-        page.kind === "about"
-          ? "Conocé nuestra historia."
-          : page.kind === "contact"
-            ? "Estamos para ayudarte."
-            : "Una tienda hecha para tu marca.",
-      seoTitle: `${page.kind === "home" ? brandName : `${page.kind === "about" ? "Nosotros" : "Contacto"} | ${brandName}`}`,
-      seoDescription:
-        page.kind === "about"
-          ? "Conocé la historia y los valores detrás de nuestra marca."
-          : page.kind === "contact"
-            ? "Encontrá nuestros canales de contacto y escribinos por WhatsApp."
-            : "Descubrí nuestros productos y novedades.",
-    })),
+    pages: project.pages
+      .filter((page) => page.kind === "home")
+      .map((page) => ({
+        ...page,
+        title: "Una tienda hecha para tu marca.",
+        seoTitle: brandName,
+        seoDescription: "Descubrí nuestros productos y novedades.",
+      })),
     products: [],
     categories: [],
     collections: [],
@@ -566,15 +558,9 @@ export function buildCatalogModernProject(
       return section;
     });
 
-    const pages = project.pages.map((page) => ({
-      ...page,
-      title:
-        page.kind === "about"
-          ? "Nosotros (editar)"
-          : page.kind === "contact"
-            ? "Contacto (editar)"
-            : "Titulo del hero",
-    }));
+    const pages = project.pages
+      .filter((page) => page.kind === "home")
+      .map((page) => ({ ...page, title: "Titulo del hero" }));
 
     return StoreProjectV2Schema.parse({
       ...project,

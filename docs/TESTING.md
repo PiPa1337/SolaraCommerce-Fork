@@ -93,6 +93,23 @@ detalle en `TECHNICAL_DEBT.md` y plan
    storefront, actualizar el helper compartido (`waitForStorefrontReady`);
    prohibido copiar esperas locales por spec.
 
+## Debugging del draft (2026-08-23)
+
+El modo draft marca su bundle con `// DEBUG: modo draft` para distinguirlo del
+runtime de producción, que sigue inline y byte-idéntico. Para depurar contra el
+código fuente:
+
+1. generar el bundle externo + mapa local:
+   `node packages/storefront-runtime/scripts/build-runtime.mjs`
+   (salida: `packages/storefront-runtime/dist/storefront-runtime.js.map`);
+2. abrir DevTools en la página draft y usar el mapa como referencia de símbolos
+   mientras se inspecciona el runtime inline;
+3. no publicar drafts: `robots.txt` los bloquea y el runtime de producción es
+   la única variante soportada en hosting.
+
+Pendiente documentado: emitir `assets/storefront.js.map` desde el exporter
+(fila P2 de `TECHNICAL_DEBT.md`).
+
 ## Flujos críticos que deben conservarse
 
 - crear una tienda limpia desde la plantilla Catalog Modern;

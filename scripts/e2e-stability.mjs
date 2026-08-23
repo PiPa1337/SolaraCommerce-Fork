@@ -7,6 +7,7 @@ import { spawn } from "node:child_process";
 //   node scripts/e2e-stability.mjs tests/e2e/assets.spec.ts tests/e2e/...  # specs puntuales
 // Salida: tabla spec -> fallos/N + JSON en test-results/stability/ (no versionado).
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const runs = Number(process.env.STABILITY_RUNS ?? 5);
@@ -39,7 +40,10 @@ function normalizeSpecPath(rawPath) {
 }
 
 console.log(`[stability] ${runs} corridas x ${specs.length} specs`);
-mkdirSync(resolve("test-results/stability"), { recursive: true });
+// El historial vive en el tmp del sistema: Playwright limpia test-results/
+// en cada corrida y borraria el JSON si se escribiera alla.
+const historyDirectory = join(tmpdir(), "solara-e2e-stability");
+mkdirSync(historyDirectory, { recursive: true });
 const failuresBySpec = new Map(specs.map((spec) => [spec, 0]));
 const history = [];
 
@@ -104,6 +108,6 @@ for (const row of report) {
 }
 
 const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-const outFile = join(resolve("test-results/stability"), `stability-${stamp}.json`);
+const outFile = join(historyDirectory, `stability-${stamp}.json`);
 writeFileSync(outFile, JSON.stringify({ runs, specs, report, history }, null, 2));
 console.log(`[stability] historial: ${outFile}`);

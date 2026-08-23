@@ -1,17 +1,12 @@
-import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { referenceStore } from "@solara/project-schema/fixture";
+import { FIXTURE_PRODUCT_FILES } from "./fixture-server";
 
 const exported = exportProject(referenceStore, { mode: "production" });
-const fixtureFiles = new Map<string, Uint8Array>(
-  ["casa-luma-hero.png", "manta-bruma.png", "jarra-delta.png"].map((name) => [
-    `fixtures/${name}`,
-    readFileSync(resolve("apps/studio/public/fixtures", name)),
-  ]),
-);
+const fixtureFiles = FIXTURE_PRODUCT_FILES;
 
 test("P4-4: el foco del teclado es visible en las rutas clave", async ({ browser }) => {
   const server = createServer((request, response) => {

@@ -544,10 +544,10 @@ test.describe("SEO y Tema", () => {
     await expect.poll(previewBackground, { timeout: 15_000 }).toBe("rgb(252, 252, 251)");
 
     // Preset: aplica la paleta real a los campos y al preview.
-    await page.getByRole("button", { name: "Aplicar paleta Costa terracota" }).click();
-    await expect(page.getByTestId("ui-color-text-accent")).toHaveValue("#b4552d");
-    await expect(page.getByTestId("ui-color-text-background")).toHaveValue("#faf6f2");
-    await expect.poll(previewBackground, { timeout: 15_000 }).toBe("rgb(250, 246, 242)");
+    await page.getByRole("button", { name: "Aplicar paleta Terracota solar" }).click();
+    await expect(page.getByTestId("ui-color-text-accent")).toHaveValue("#9a442c");
+    await expect(page.getByTestId("ui-color-text-background")).toHaveValue("#fff5ee");
+    await expect.poll(previewBackground, { timeout: 15_000 }).toBe("rgb(255, 245, 238)");
 
     // Hex inválido: error inline, no commitea y el nativo conserva el último válido.
     const accentText = page.getByTestId("ui-color-text-accent");

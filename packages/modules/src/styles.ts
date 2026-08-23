@@ -2508,15 +2508,27 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   min-height: 60px;
 }
 .cm.v2 .catalog-brand {
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
-  overflow: visible;
+  overflow: hidden;
   font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
   font-size: clamp(1.85rem, 2vw, 2.45rem);
   font-weight: 500;
   letter-spacing: -.03em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   transition: font-size var(--catalog-v2-motion-control) var(--catalog-v2-ease-out);
 }
-.cm.v2 .catalog-brand .solara-wordmark,
+.cm.v2 .catalog-brand .solara-wordmark {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
 .cm.v2 .catalog-mobile-brand .solara-wordmark {
   display: block;
   min-width: 0;
@@ -4369,14 +4381,27 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .solara-home-contact {
     width: min(calc(100% - 1.5rem), var(--catalog-v2-wide));
   }
-  .cm.v2 .catalog-brand,
+  .cm.v2 .catalog-brand {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    overflow-wrap: normal;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .cm.v2 .catalog-mobile-brand {
     min-width: 0;
     max-width: min(68vw, 16rem);
     overflow-wrap: anywhere;
     white-space: normal;
   }
-  .cm.v2 .catalog-brand .solara-wordmark,
+  .cm.v2 .catalog-brand .solara-wordmark {
+    white-space: nowrap;
+    overflow-wrap: normal;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
   .cm.v2 .catalog-mobile-brand .solara-wordmark {
     white-space: normal;
     overflow-wrap: anywhere;

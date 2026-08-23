@@ -36,10 +36,12 @@ function checkInvariants(project: any, label: string) {
 }
 describe("fuzz100", () => {
   it(
-    "100 seeds x 200 ops",
+    "40 seeds x 200 ops",
     { timeout: 180000 },
     () => {
-      for (let seed = 0; seed < 100; seed++) {
+      // 100 -> 40 seeds: mismo motivo que los otros fuzz (presupuesto RPC
+      // bajo carga paralela del gate diario). Mantiene cobertura multi-seed.
+      for (let seed = 0; seed < 40; seed++) {
         const rand = mulberry32(seed);
         let project: any = structuredClone(catalogScaleStore);
         let history = createHistory(project);

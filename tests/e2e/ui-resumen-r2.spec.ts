@@ -10,9 +10,7 @@
  *   <html>, URL wa.me real del checkout (runtime), fallback noscript del
  *   módulo y mensaje con SKU vs sin SKU.
  */
-import { readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
-import { resolve } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
@@ -50,25 +48,9 @@ function withWhatsapp(overrides: Partial<StoreProjectV1["whatsapp"]>): StoreProj
   });
 }
 
-const fixtureFiles = new Map<string, Uint8Array>([
-  [
-    "fixtures/modo-sur-hero.png",
-    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-hero.png")),
-  ],
-  [
-    "fixtures/modo-sur-remera.png",
-    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-remera.png")),
-  ],
-  [
-    "fixtures/modo-sur-jean.png",
-    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-jean.png")),
-  ],
-  [
-    "fixtures/modo-sur-camisa.png",
-    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-camisa.png")),
-  ],
-]);
+import { FIXTURE_PRODUCT_FILES } from "./fixture-server";
 
+const fixtureFiles = FIXTURE_PRODUCT_FILES;
 function createStaticServer(
   exported: ReturnType<typeof exportProject>,
 ): Promise<{ server: Server; url: string }> {

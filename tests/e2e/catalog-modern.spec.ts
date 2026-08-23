@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
@@ -6,25 +6,10 @@ import { exportProject } from "@solara/exporter";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 
 const exported = exportProject(catalogModernStore, { mode: "production" });
-const fixtureFiles = new Map<string, Uint8Array>([
-  [
-    "fixtures/modo-sur-hero.png",
-    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-hero.png")),
-  ],
-  [
-    "fixtures/modo-sur-remera.png",
-    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-remera.png")),
-  ],
-  [
-    "fixtures/modo-sur-jean.png",
-    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-jean.png")),
-  ],
-  [
-    "fixtures/modo-sur-camisa.png",
-    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-camisa.png")),
-  ],
-]);
 
+import { FIXTURE_PRODUCT_FILES } from "./fixture-server";
+
+const fixtureFiles = FIXTURE_PRODUCT_FILES;
 let server: Server;
 let serverUrl: string;
 

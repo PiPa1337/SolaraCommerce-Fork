@@ -22,13 +22,13 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
 test.setTimeout(process.env.CI ? 150_000 : 90_000);
 
 const SALVIA_COLORS: Theme["colors"] = {
-  background: "#f5f7f4",
-  surface: "#e7ece6",
-  text: "#18231f",
-  muted: "#5f6b62",
-  accent: "#3a5244",
-  accentText: "#fbfcfb",
-  border: "#d4dcd3",
+  background: "#f1f6f0",
+  surface: "#e0ece0",
+  text: "#1b2a20",
+  muted: "#526457",
+  accent: "#356248",
+  accentText: "#f6fff7",
+  border: "#c7d8c7",
 };
 
 const EDITED_TYPOGRAPHY: Theme["typography"] = {
@@ -161,7 +161,7 @@ async function readTheme(page: Page): Promise<Theme> {
 
 /** Edita los tres grupos con valores deterministas (dentro del schema). */
 async function applyEdits(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Aplicar paleta Salvia serena" }).click();
+  await page.getByRole("button", { name: "Aplicar paleta Jardín de salvia" }).click();
   await page.getByTestId("ui-font-display").selectOption(EDITED_TYPOGRAPHY.display);
   await page.getByTestId("ui-font-body").selectOption(EDITED_TYPOGRAPHY.body);
   await page.getByLabel(/Escala/).fill("1.15");
@@ -326,7 +326,7 @@ test("persistencia: recargar la pestaña conserva el tema editado y reancla los 
   await setupCleanStore(page, storeName);
   await openThemeTab(page);
 
-  await page.getByRole("button", { name: "Aplicar paleta Salvia serena" }).click();
+  await page.getByRole("button", { name: "Aplicar paleta Jardín de salvia" }).click();
   await page.getByTestId("ui-font-display").selectOption(EDITED_TYPOGRAPHY.display);
   await page.getByLabel("Ancho del contenedor").fill(String(EDITED_GEOMETRY.container));
   await flushSave(page);

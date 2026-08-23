@@ -31,7 +31,8 @@ test("procesa una imagen, muestra el lote y persiste el asset", async ({ page })
   await createCleanStore(page, "Tienda de recursos");
   await page.getByRole("tab", { name: "Recursos", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Recursos" })).toBeVisible();
-  const initialAssetCount = await page.locator(".asset-item").count();
+  // Scope a la grilla de recursos: .asset-item se reusa en previews SEO.
+  const assetGrid = page.locator(".asset-grid").first();
 
   const pixel = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -46,14 +47,21 @@ test("procesa una imagen, muestra el lote y persiste el asset", async ({ page })
   await expect(page.locator("output").filter({ hasText: "1 imagen agregada" })).toBeVisible({
     timeout: 15_000,
   });
-  await expect(page.locator(".asset-item")).toHaveCount(initialAssetCount + 1);
+  // El nombre vive en input[value]: filtrar por atributo es determinista
+  // (hasText no ve valores de inputs; un count() inicial es racheable).
+  const uploadedItem = assetGrid
+    .locator(".asset-item")
+    .filter({ has: page.locator('input[value="pixel"]') });
+  await expect(uploadedItem).toHaveCount(1);
   await expect(page.getByText(/^Guardado/, { exact: false })).toBeVisible();
 
   await page.reload();
   await page.getByRole("button", { name: "Tienda de recursos" }).click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await page.getByRole("tab", { name: "Recursos", exact: true }).click();
-  await expect(page.locator(".asset-item")).toHaveCount(initialAssetCount + 1);
+  await expect(
+    assetGrid.locator(".asset-item").filter({ has: page.locator('input[value="pixel"]') }),
+  ).toHaveCount(1);
 });
 
 test("el asset del hero de Predeterminado muestra su uso y no se puede borrar", async ({

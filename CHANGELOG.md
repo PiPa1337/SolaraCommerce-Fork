@@ -1,5 +1,76 @@
 # Changelog
 
+### Diez paletas claras y contrastadas (2026-08-23)
+
+- Reemplazadas las paletas anteriores por diez temas de colores variados con
+  fondos claros y texto legible.
+- Cada paleta mantiene contraste WCAG para texto principal, texto secundario y
+  texto sobre acento, y la interfaz valida las diez opciones.
+
+### Slug de tienda editable y validado (2026-08-23)
+
+- El slug interno se puede editar desde `Resumen > Dominio` con el mismo
+  contrato del schema: minúsculas, números, guiones, máximo 120 caracteres y
+  nombres reservados de Windows bloqueados.
+- Los valores inválidos quedan sólo como borrador; el guardado conserva el
+  `projectId` y la carpeta física de la tienda para no perder respaldos ni
+  historial.
+
+### Panel simplificado y familia visual única (2026-08-23)
+
+- Las nuevas tiendas conservan sólo la página Home; Nosotros y Contacto siguen
+  disponibles como módulos de contacto dentro de Home, sin páginas independientes.
+- El panel de configuración ya no muestra esos interruptores ni sus editores de
+  página, y Tema de la tienda deja Editorial V2 como única familia visible.
+
+### Navbar V2 con nombres de tienda largos (2026-08-23)
+
+- El nombre de la tienda aprovecha el ancho disponible del navbar del
+  storefront y sólo usa elipsis cuando el espacio real no alcanza; no envuelve
+  ni deforma verticalmente el header, sin alterar el nombre guardado ni su
+  etiqueta accesible.
+- Agregada una regresión de geometría para desktop, tablet y mobile hasta 320
+  px, además del contrato del módulo y exportador.
+
+### Recuperación portable y validación de respaldos (2026-08-23)
+
+- La recuperación de tiendas con hash desincronizado conserva `projectId` y
+  versión para importar el respaldo validado sin provocar un conflicto falso.
+- El arranque no vuelve a sembrar IndexedDB cuando el disco ya tiene una tienda
+  en recovery, evitando un segundo intento de guardado con versión nula.
+- El empaquetado portable compara salud, hash, versión y fecha antes de
+  elegir entre el estado preservado y el del checkout.
+- Reparado el store local `demo-catalogo-jerarquico` como versión 47; la
+  versión 46 quedó conservada en `respaldos/`.
+
+### E2E: specs reparados tras migracion webp + re-inclusion verificada (2026-08-23)
+
+- Barrido con playwright --list detecto 15 specs muertos en carga: leian
+  fixtures .png eliminados en 9a22a95. Nuevo helper compartido
+  tests/e2e/fixture-server.ts sirve los 12 productos webp reales (los demas
+  assets viajan embebidos como data URLs); migrados: storefront-nojs,
+  exported-store, focus-visible, catalog-modern, cdp-site, scale-store,
+  subfolder-site, ui-resumen-r2/r5, ui-sweep-a27/a28/a29/a30,
+  ui-tema-styles, nojs-coverage y catalog-modern-v2.
+- Medicion 10x (scripts/e2e-stability.mjs): ui-sweep-a27, nojs-coverage y
+  catalog-modern-v2 lograron 0 fallos => salen de unstable.json y vuelven al
+  smoke diario. catalog-modern-v2 ademas espera la senal determinista del
+  runtime (waitForStorefrontReady) y visibilidad del input del drawer antes
+  de leer DOM o aplicar focus (flaky 7/10 -> 0/10). assets.spec: conteos
+  scopeados a .asset-grid para no contar previews SEO.
+- scripts/e2e-stability.mjs: historial JSON al tmp del sistema porque
+  Playwright limpia test-results/ en cada corrida.
+- assets.spec: el asset subido se localiza por input[value=nombre] (hasText no
+  ve valores de inputs); scale-store dividido en dos tests, locator del menú
+  móvil corregido a "Abrir menú" y espera de runtime determinista.
+- catalog.spec: expectativas alineadas al re-seed v2 (5 productos/5 variantes)
+  y espera de debounce del filtro antes de interactuar con la fila.
+- unstable.json queda VACIO: los 15 specs del smoke pasan juntos (126 tests).
+- TECHNICAL_DEBT: fila specs E2E inestables marcada Resuelta con evidencia.
+- docs/TESTING.md: seccion "Debugging del draft" (marca DEBUG + build manual).
+- TECHNICAL_DEBT: fila specs inestables actualizada (6 -> pendiente medicion);
+  fila runtime P2 marcada parcialmente resuelta con alcance restante.
+
 ### Runtime debuggeable: build externo con esbuild (2026-08-21)
 
 - scripts/build-runtime.mjs genera storefront-runtime.js + source map

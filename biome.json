@@ -3,6 +3,7 @@
   "files": {
     "includes": [
       "**",
+      "!placeholder-dump.json",
       "!.superpowers/sdd",
       "!packages/exporter/src/fonts.ts",
       "!**/.solara-runtime",

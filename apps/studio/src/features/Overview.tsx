@@ -16,7 +16,7 @@ import {
   WhatsappLogo,
 } from "@phosphor-icons/react";
 import type { StoreProjectV1 } from "@solara/project-schema";
-import { catalogModernPhoneValue } from "@solara/project-schema";
+import { catalogModernPhoneValue, SlugSchema } from "@solara/project-schema";
 import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { StatusBadge, Toggle } from "../components/primitives";
@@ -257,6 +257,19 @@ function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function slugValidationError(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (trimmed === "") return "Completá el slug de la tienda.";
+  if (trimmed.length > 120) return "Usá hasta 120 caracteres.";
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(trimmed)) {
+    return "Usá sólo minúsculas, números y guiones; sin espacios ni acentos.";
+  }
+  const result = SlugSchema.safeParse(trimmed);
+  return result.success
+    ? undefined
+    : (result.error.issues[0]?.message ?? "El slug no es válido para una ruta.");
+}
+
 function destinationError(href: string): string | undefined {
   return href.trim() !== "" && !isValidDestination(href)
     ? "Usá http(s) o una ruta interna (ej. /contacto/)."
@@ -372,6 +385,8 @@ export function Overview({
       : !isValidUrl(urlDisplay)
         ? "Ingresá una URL válida con http(s)."
         : undefined;
+  const slugDisplay = fieldValue("slug", project.slug);
+  const slugError = slugValidationError(slugDisplay);
   const nameDisplay = fieldValue("name", project.name);
   const nameError = nameDisplay.trim() === "" ? "Completá el nombre de la tienda." : undefined;
   const descriptionDisplay = fieldValue("description", project.identity.description);
@@ -713,8 +728,30 @@ export function Overview({
                 }
               />
             </Field>
-            <Field label="Slug interno">
-              <input value={project.slug} readOnly aria-readonly />
+            <Field
+              label="Slug interno"
+              hint="Minúsculas, números y guiones. Cambia las rutas futuras del sitio."
+              {...(slugError ? { error: slugError } : {})}
+            >
+              <input
+                aria-label="Slug interno"
+                maxLength={120}
+                autoCapitalize="none"
+                autoComplete="off"
+                spellCheck={false}
+                value={slugDisplay}
+                onChange={(event) =>
+                  updateField(
+                    "slug",
+                    event.target.value,
+                    (next) => SlugSchema.safeParse(next.trim()).success,
+                    (next) => {
+                      const result = SlugSchema.safeParse(next.trim());
+                      if (result.success) commit({ slug: result.data });
+                    },
+                  )
+                }
+              />
             </Field>
           </div>
         </AccordionSection>
@@ -770,8 +807,6 @@ export function Overview({
               {(
                 [
                   ["showHome", "Mostrar Inicio"],
-                  ["showContact", "Mostrar Contacto"],
-                  ["showAbout", "Mostrar Nosotros"],
                   ["showSearch", "Mostrar búsqueda"],
                   ["showCart", "Mostrar carrito"],
                 ] as const
@@ -1058,8 +1093,8 @@ export function Overview({
         >
           <div className="form-grid">
             {project.pages.map((page) => {
-              const pageLabel =
-                page.kind === "home" ? "Home" : page.kind === "about" ? "Nosotros" : "Contacto";
+              if (page.kind !== "home") return null;
+              const pageLabel = "Home";
               const pageTitleDisplay = fieldValue(`page-title-${page.id}`, page.title);
               const pageTitleError =
                 pageTitleDisplay.trim() === "" ? "Completá el título visible." : undefined;

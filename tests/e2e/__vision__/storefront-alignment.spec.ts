@@ -122,4 +122,62 @@ test.describe("alineacion storefront exportado", () => {
     expect(overflow, `overflow horizontal: ${overflow}px`).toBeLessThanOrEqual(0);
     await context.close();
   });
+
+  test("el nombre largo de la tienda usa el ancho disponible sin deformar el navbar", async ({
+    browser,
+  }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const longBrand =
+      "Marca de tienda extremadamente larga que debe aprovechar el navbar sin saltar de línea";
+
+    for (const viewport of [
+      { width: 1440, height: 900 },
+      { width: 1024, height: 768 },
+      { width: 768, height: 900 },
+      { width: 450, height: 800 },
+      { width: 390, height: 800 },
+      { width: 320, height: 700 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.goto(`${serverUrl}/`);
+      const beforeHeight = (await boxesOf(page, ".catalog-header-inner"))[0]?.h ?? 0;
+      await page
+        .locator(".catalog-header-inner .catalog-brand .solara-wordmark")
+        .evaluate((element, text) => {
+          element.textContent = text;
+        }, longBrand);
+
+      const metrics = await page.evaluate(() => {
+        const headerElement = document.querySelector<HTMLElement>(".catalog-header-inner");
+        const brand = document.querySelector<HTMLElement>(".catalog-brand");
+        const wordmark = document.querySelector<HTMLElement>(".catalog-brand .solara-wordmark");
+        const headerBox = headerElement?.getBoundingClientRect();
+        const brandBox = brand?.getBoundingClientRect();
+        const wordmarkStyle = wordmark ? getComputedStyle(wordmark) : null;
+        return {
+          documentWidth: document.documentElement.scrollWidth,
+          clientWidth: document.documentElement.clientWidth,
+          headerHeight: headerBox?.height ?? 0,
+          brandWidth: brandBox?.width ?? 0,
+          whiteSpace: wordmarkStyle?.whiteSpace ?? "",
+          overflow: wordmarkStyle?.overflow ?? "",
+        };
+      });
+
+      expect(metrics.documentWidth, `overflow en ${viewport.width}px`).toBeLessThanOrEqual(
+        metrics.clientWidth,
+      );
+      expect(metrics.headerHeight, `alto del navbar en ${viewport.width}px`).toBeLessThanOrEqual(
+        beforeHeight + 1,
+      );
+      expect(metrics.whiteSpace).toBe("nowrap");
+      expect(metrics.overflow).toBe("hidden");
+      if (viewport.width >= 768) {
+        expect(metrics.brandWidth, `ancho de marca en ${viewport.width}px`).toBeGreaterThan(224);
+      }
+    }
+
+    await context.close();
+  });
 });

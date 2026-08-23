@@ -56,5 +56,6 @@ describe("seed placeholder", () => {
     expect(placeholder.products.length).not.toBe(catalogModernCleanStore.products.length);
     expect(placeholder.commerceTemplates.designFamily).toBe("catalog-modern-v2");
     expect(placeholder.origin?.seed).toBe("placeholder");
+    expect(placeholder.pages.map((page) => page.kind)).toEqual(["home"]);
   });
 });

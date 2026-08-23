@@ -31,6 +31,8 @@ export interface ProjectRecoveryIssue {
   name: string;
   updatedAt: string;
   message: string;
+  projectId?: string;
+  diskVersion?: number;
 }
 
 /**

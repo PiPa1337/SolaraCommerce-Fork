@@ -1,16 +1,11 @@
-import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
-import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { referenceStore } from "@solara/project-schema/fixture";
 
-const fixtureFiles = new Map<string, Uint8Array>(
-  ["casa-luma-hero.png", "manta-bruma.png", "jarra-delta.png"].map((name) => [
-    `fixtures/${name}`,
-    readFileSync(resolve("apps/studio/public/fixtures", name)),
-  ]),
-);
+import { FIXTURE_PRODUCT_FILES } from "./fixture-server";
+
+const fixtureFiles = FIXTURE_PRODUCT_FILES;
 
 test("C4b/c: el sitio con subcarpeta navega con prefijo y sin duplicados", async ({ browser }) => {
   const project = { ...referenceStore, baseUrl: "https://tienda-referencia.example/tienda/" };

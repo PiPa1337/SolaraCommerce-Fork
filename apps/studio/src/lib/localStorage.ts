@@ -26,6 +26,8 @@ export interface LocalProjectSummary {
 export interface LocalStorageRecovery {
   folder: string;
   message: string;
+  projectId?: string;
+  version?: number;
 }
 
 export interface LocalProjectManifestSummary {

@@ -92,8 +92,8 @@ describe("Catalog Modern guidance", () => {
     expect(clean.assets.every((asset) => isCatalogModernPlaceholderAsset(clean, asset))).toBe(true);
   });
 
-  it("todo target del checklist existe en el proyecto y coincide con su valor (sin typos de ruta)", () => {
-    for (const seed of ["clean", "demo"] as const) {
+  it("todo target del checklist existe en los seeds con páginas editoriales (sin typos)", () => {
+    for (const seed of ["demo", "placeholder"] as const) {
       const project = buildCatalogModernProject({ seed });
       for (const requirement of getCatalogModernContentRequirements(project)) {
         const resolved = resolveTarget(project, requirement.target);
@@ -108,5 +108,17 @@ describe("Catalog Modern guidance", () => {
         expect(asRequirementValue(resolved), message).toBe(expected);
       }
     }
+  });
+
+  it("el seed limpio sin Nosotros/Contacto no genera targets muertos en el checklist", () => {
+    const clean = buildCatalogModernProject({ seed: "clean" });
+    const editorialTargets = getCatalogModernContentRequirements(clean).filter(
+      (requirement) =>
+        requirement.target.startsWith("pages.about") ||
+        requirement.target.startsWith("pages.contact"),
+    );
+    // El seed clean filtra pages a sólo home; el guidance no debe emitir
+    // requisitos para rutas inexistentes (serían targets muertos).
+    expect(editorialTargets).toHaveLength(0);
   });
 });

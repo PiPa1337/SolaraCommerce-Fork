@@ -9,6 +9,7 @@
  * perder guardados del usuario.
  */
 
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { cp, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -19,13 +20,34 @@ const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const unpacked = resolve(root, ".release/portable/build/win-unpacked");
 const destination = resolve(root, ".release/portable/SolaraCommerce-Portable");
 
-/** Lee la versión del manifest de una tienda; 0 si no existe o está roto. */
-async function storeVersion(storeDir) {
+/** Inspecciona una tienda sin confiar sólo en la versión declarada. */
+async function inspectStore(storeDir) {
+  const root = resolve(storeDir);
+  const result = { exists: existsSync(root), healthy: false, version: 0, savedAt: 0 };
+  if (!result.exists) return result;
   try {
-    const manifest = JSON.parse(await readFile(join(storeDir, "manifest.json"), "utf8"));
-    return Number(manifest.current?.version) || 0;
+    const manifest = JSON.parse(await readFile(join(root, "manifest.json"), "utf8"));
+    const version = Number(manifest.current?.version) || 0;
+    const projectPath = manifest.current?.projectPath;
+    const currentPath = typeof projectPath === "string" ? resolve(root, projectPath) : "";
+    const inside =
+      currentPath === root ||
+      currentPath.startsWith(`${root}${process.platform === "win32" ? "\\" : "/"}`);
+    if (!inside || !currentPath) return { ...result, version };
+    const currentBytes = await readFile(currentPath);
+    const actualHash = createHash("sha256").update(currentBytes).digest("hex");
+    const healthy =
+      manifest.format === "solara-local-project" &&
+      manifest.manifestVersion === 2 &&
+      actualHash === manifest.current?.sha256;
+    return {
+      exists: true,
+      healthy,
+      version,
+      savedAt: Date.parse(manifest.current?.savedAt ?? "") || 0,
+    };
   } catch {
-    return 0;
+    return result;
   }
 }
 
@@ -36,7 +58,19 @@ async function storeVersion(storeDir) {
 export async function shouldKeepPortableStore(preservedStore, repoStore) {
   if (!existsSync(preservedStore)) return false;
   if (!existsSync(repoStore)) return true;
-  return (await storeVersion(preservedStore)) > (await storeVersion(repoStore));
+  const [preserved, repo] = await Promise.all([
+    inspectStore(preservedStore),
+    inspectStore(repoStore),
+  ]);
+  if (preserved.healthy !== repo.healthy) return preserved.healthy;
+  if (preserved.version !== repo.version) return preserved.version > repo.version;
+  if (preserved.healthy && preserved.savedAt !== repo.savedAt) {
+    return preserved.savedAt > repo.savedAt;
+  }
+  // Si ambos estados sanos empatan, el portable ya es la copia que el usuario
+  // estaba usando. Los manifests mínimos de tests o estados no verificables
+  // conservan la política anterior: el repo gana en empate.
+  return preserved.healthy;
 }
 
 /**

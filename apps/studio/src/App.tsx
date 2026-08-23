@@ -230,7 +230,9 @@ function StudioShell() {
         const diskListing = detectedStorage.managed
           ? await (await loadLocalProjectRepository()).loadAllDiskProjects()
           : undefined;
-        if (diskListing?.projects.length) {
+        // Un recovery de disco es estado administrado: no caer al seeding de
+        // IndexedDB, que intentaría volver a guardar con una versión nula.
+        if (diskListing && (diskListing.projects.length > 0 || diskListing.recovery.length > 0)) {
           if (detectedStorage.writable) {
             await purgeNonDemoStores();
             const reordered = await ensureDemoSectionOrder();
@@ -379,7 +381,9 @@ function StudioShell() {
         const existing = projects.find((item) => item.id === project.id) as
           | (StoredProject & { diskVersion?: number })
           | undefined;
-        const result = await persistToDisk(project, existing?.diskVersion ?? null);
+        const recovered = recovery.find((item) => item.projectId === project.id);
+        const expectedVersion = existing?.diskVersion ?? recovered?.diskVersion ?? null;
+        const result = await persistToDisk(project, expectedVersion);
         setActiveDiskVersion(result.receipt.version);
         setActiveDiskBaseProject(project);
       } else {
@@ -631,8 +635,8 @@ function StudioShell() {
             <div>
               <strong>{recovery.length} proyecto(s) requieren recuperación.</strong>
               <p>
-                Studio no los abrió porque no cumplen el schema actual. Conservá el archivo original
-                y recuperá una copia compatible desde un respaldo .solara.json.
+                Studio no los abrió porque el respaldo local no pudo validarse. Conservá el archivo
+                original y recuperá una copia compatible desde un respaldo .solara.json.
               </p>
               <ul>
                 {recovery.map((item) => (

@@ -1,33 +1,7 @@
 {
   "$comment": "Specs E2E con inestabilidad verificada bajo carga paralela. Excluidos del smoke diario; se corren en el canal semanal/manual con SMOKE_INCLUDE_UNSTABLE=1. Un spec sale de esta lista tras 10/10 corridas limpias con scripts/e2e-stability.mjs. Reglas completas: docs/TESTING.md (Política de estabilidad E2E).",
-  "updatedAt": "2026-08-21",
+  "updatedAt": "2026-08-23",
   "verifiedBaseline": "c4d71ae",
   "debtRef": "docs/TECHNICAL_DEBT.md (fila specs E2E inestables)",
-  "specs": [
-    {
-      "path": "tests/e2e/catalog-modern-v2.spec.ts",
-      "reason": "carrito recovery stale + layoutShift en estabilidad visual",
-      "failRate": "5/5"
-    },
-    {
-      "path": "tests/e2e/nojs-coverage.spec.ts",
-      "reason": "console/network error intermitente — requiere auditoría de causa raíz",
-      "failRate": "5/5"
-    },
-    {
-      "path": "tests/e2e/scale-store.spec.ts",
-      "reason": "búsqueda móvil excede testTimeout 30s bajo carga",
-      "failRate": "5/5"
-    },
-    {
-      "path": "tests/e2e/ui-sweep-a27.spec.ts",
-      "reason": "C4/C8/C11: asserts antes de que el runtime bootee (falta señal ready)",
-      "failRate": "5/5"
-    },
-    {
-      "path": "tests/e2e/assets.spec.ts",
-      "reason": "worker de imagen lento bajo CPU paralela, timeout fijo insuficiente",
-      "failRate": "4/5"
-    }
-  ]
+  "specs": []
 }

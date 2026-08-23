@@ -1,7 +1,6 @@
 /** Inspector de tokens visuales persistidos; no introduce estilos públicos paralelos. */
 import { ArrowCounterClockwise, PaintBrush, TextT, Wrench } from "@phosphor-icons/react";
 import type { StoreProjectV1, Theme } from "@solara/project-schema";
-import { ensureCatalogModernV2Sections } from "@solara/project-schema/catalog-modern-template";
 import { useEffect, useRef, useState } from "react";
 import { Button, Field, SectionHeader } from "../components/Ui";
 
@@ -139,8 +138,8 @@ const colorLabels: Record<keyof Theme["colors"], string> = {
  * el storefront público sobreescribe fondo, superficie, texto, secundario y
  * borde con valores fijos cuando colorMode es "dark" (styles.ts), así que el
  * preview y el sitio dejarían de reflejar la paleta elegida. Por eso la opción
- * "Oscuro" del selector está deshabilitada y las paletas oscuras se consiguen
- * con colores (ej. "Tinta profunda") sin cambiar colorMode.
+ * "Oscuro" del selector está deshabilitada. Las diez opciones son claras y
+ * mantienen contraste suficiente para texto principal, secundario y acentos.
  */
 const THEME_PRESETS: Array<{
   id: string;
@@ -149,9 +148,9 @@ const THEME_PRESETS: Array<{
   colors: Theme["colors"];
 }> = [
   {
-    id: "editorial-calido",
-    name: "Editorial cálido",
-    description: "La paleta actual: neutros cálidos y acento tinta.",
+    id: "marfil-editorial",
+    name: "Marfil editorial",
+    description: "Neutros cálidos y acento tinta para una base limpia.",
     colors: {
       background: "#fcfcfb",
       surface: "#f0f0ee",
@@ -163,45 +162,129 @@ const THEME_PRESETS: Array<{
     },
   },
   {
-    id: "salvia-serena",
-    name: "Salvia serena",
-    description: "Verdes fríos y neutros suaves para un tono calmado.",
+    id: "jardin-salvia",
+    name: "Jardín de salvia",
+    description: "Verdes suaves para una identidad natural y serena.",
     colors: {
-      background: "#f5f7f4",
-      surface: "#e7ece6",
-      text: "#18231f",
-      muted: "#5f6b62",
-      accent: "#3a5244",
-      accentText: "#fbfcfb",
-      border: "#d4dcd3",
+      background: "#f1f6f0",
+      surface: "#e0ece0",
+      text: "#1b2a20",
+      muted: "#526457",
+      accent: "#356248",
+      accentText: "#f6fff7",
+      border: "#c7d8c7",
     },
   },
   {
-    id: "costa-terracota",
-    name: "Costa terracota",
-    description: "Acento cálido de barro sobre neutros arena.",
+    id: "terracota-solar",
+    name: "Terracota solar",
+    description: "Barro cálido y arena para una tienda cercana y luminosa.",
     colors: {
-      background: "#faf6f2",
-      surface: "#f1e9e1",
-      text: "#231510",
-      muted: "#7c6a5c",
-      accent: "#b4552d",
+      background: "#fff5ee",
+      surface: "#f8e4d4",
+      text: "#3a2118",
+      muted: "#76584b",
+      accent: "#9a442c",
       accentText: "#fff8f3",
-      border: "#e6dacd",
+      border: "#e8c8b3",
     },
   },
   {
-    id: "tinta-profunda",
-    name: "Tinta profunda",
-    description: "Superficies oscuras con texto de alto contraste.",
+    id: "azul-mediterraneo",
+    name: "Azul mediterráneo",
+    description: "Azules frescos para una presencia confiable y abierta.",
     colors: {
-      background: "#16151a",
-      surface: "#1f1e24",
-      text: "#f2f0f4",
-      muted: "#a29daa",
-      accent: "#e9e6ee",
-      accentText: "#16151a",
-      border: "#33313a",
+      background: "#eff6fb",
+      surface: "#ddebf5",
+      text: "#172b3a",
+      muted: "#4a6272",
+      accent: "#1d5b7a",
+      accentText: "#f7fcff",
+      border: "#c5d8e5",
+    },
+  },
+  {
+    id: "lavanda-suave",
+    name: "Lavanda suave",
+    description: "Lavandas ligeras para una estética delicada y moderna.",
+    colors: {
+      background: "#f6f2fb",
+      surface: "#e9e0f3",
+      text: "#29213a",
+      muted: "#655978",
+      accent: "#6d4a92",
+      accentText: "#fbf8ff",
+      border: "#d8c9e7",
+    },
+  },
+  {
+    id: "rosa-petalo",
+    name: "Rosa pétalo",
+    description: "Rosas empolvados con contraste para una marca cálida.",
+    colors: {
+      background: "#fff2f4",
+      surface: "#f6e0e5",
+      text: "#3a2028",
+      muted: "#76515c",
+      accent: "#9a3f56",
+      accentText: "#fff7f9",
+      border: "#e6c5cf",
+    },
+  },
+  {
+    id: "menta-fresca",
+    name: "Menta fresca",
+    description: "Verdes agua para una sensación liviana y actual.",
+    colors: {
+      background: "#effaf7",
+      surface: "#ddf1ea",
+      text: "#17352f",
+      muted: "#4d6a62",
+      accent: "#1e6b59",
+      accentText: "#f4fffc",
+      border: "#c2ded5",
+    },
+  },
+  {
+    id: "mostaza-clara",
+    name: "Mostaza clara",
+    description: "Amarillos suaves para destacar con energía sin saturar.",
+    colors: {
+      background: "#fff9e8",
+      surface: "#f6edc7",
+      text: "#332c18",
+      muted: "#756b43",
+      accent: "#766018",
+      accentText: "#fffbef",
+      border: "#e7d9a8",
+    },
+  },
+  {
+    id: "coral-suave",
+    name: "Coral suave",
+    description: "Coral cálido para comunicar cercanía y movimiento.",
+    colors: {
+      background: "#fff4f1",
+      surface: "#f6dfd8",
+      text: "#3b201d",
+      muted: "#765651",
+      accent: "#a64034",
+      accentText: "#fff8f6",
+      border: "#e6c6be",
+    },
+  },
+  {
+    id: "azul-lavanda",
+    name: "Azul lavanda",
+    description: "Azules violetas para una identidad tranquila y precisa.",
+    colors: {
+      background: "#eef1fa",
+      surface: "#dce2f2",
+      text: "#202b4a",
+      muted: "#56627d",
+      accent: "#3d5592",
+      accentText: "#f8faff",
+      border: "#c8d0e5",
     },
   },
 ];
@@ -321,19 +404,6 @@ export function ThemeEditor({
   const updateTheme = (theme: Theme) =>
     onChange({ ...project, theme, updatedAt: new Date().toISOString() });
 
-  const updateDesignFamily = (designFamily: "catalog-modern-v1" | "catalog-modern-v2") => {
-    const nextProject = {
-      ...project,
-      commerceTemplates: { ...project.commerceTemplates, designFamily },
-      updatedAt: new Date().toISOString(),
-    };
-    onChange(
-      designFamily === "catalog-modern-v2"
-        ? ensureCatalogModernV2Sections(nextProject)
-        : nextProject,
-    );
-  };
-
   const commitColor = (key: keyof Theme["colors"], raw: string) => {
     const next = normalizeHexColor(raw);
     if (next === null) {
@@ -427,35 +497,19 @@ export function ThemeEditor({
         <fieldset className="theme-presets-panel">
           <legend>Familia visual</legend>
           <div className="theme-presets">
-            <button
-              type="button"
-              className="theme-preset"
-              data-testid="ui-design-family-v1"
-              aria-pressed={project.commerceTemplates.designFamily === "catalog-modern-v1"}
-              data-active={
-                project.commerceTemplates.designFamily === "catalog-modern-v1" || undefined
-              }
-              onClick={() => updateDesignFamily("catalog-modern-v1")}
-            >
-              <strong>Catálogo clásico V1</strong>
-              <small>Diseño estable original, conservado sin reinterpretar.</small>
-            </button>
-            <button
-              type="button"
+            <div
               className="theme-preset"
               data-testid="ui-design-family-v2"
-              aria-pressed={project.commerceTemplates.designFamily === "catalog-modern-v2"}
               data-active={
                 project.commerceTemplates.designFamily === "catalog-modern-v2" || undefined
               }
-              onClick={() => updateDesignFamily("catalog-modern-v2")}
             >
               <strong>Editorial V2</strong>
-              <small>Layout amplio, motion progresivo y controles responsive refinados.</small>
-            </button>
+              <small>Familia visual actual de SolaraCommerce.</small>
+            </div>
           </div>
           <p className="inspector-note">
-            Cambia sólo la presentación. Catálogo, contenido, SEO y configuración comercial se
+            La familia visual actual es única. Catálogo, contenido, SEO y configuración comercial se
             conservan.
           </p>
         </fieldset>
@@ -516,7 +570,7 @@ export function ThemeEditor({
           </div>
           <Field
             label="Modo"
-            hint="Oscuro está deshabilitado: el sitio lo sobreescribiría con colores fijos. Usá la paleta Tinta profunda."
+            hint="Oscuro está deshabilitado: el sitio lo sobreescribiría con colores fijos. Las paletas disponibles están diseñadas para fondos claros."
           >
             <select
               value={project.theme.colorMode}

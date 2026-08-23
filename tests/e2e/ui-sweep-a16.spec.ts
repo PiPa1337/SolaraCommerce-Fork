@@ -113,8 +113,8 @@ test("presets: aplicar y desaplicar actualiza la marca activa en ambos sentidos"
   await openThemeTab(page);
 
   const presets = page.getByTestId("ui-theme-preset");
-  const editorial = presets.filter({ hasText: "Editorial cálido" });
-  const terracotta = presets.filter({ hasText: "Costa terracota" });
+  const editorial = presets.filter({ hasText: "Marfil editorial" });
+  const terracotta = presets.filter({ hasText: "Terracota solar" });
 
   // Al abrir, la paleta por defecto del fixture está activa.
   await expect(editorial).toHaveAttribute("aria-pressed", "true");
@@ -140,9 +140,9 @@ test("un preset aplicado pierde la marca al editar un color a mano", async ({ pa
   await openThemeTab(page);
 
   const presets = page.getByTestId("ui-theme-preset");
-  const editorial = presets.filter({ hasText: "Editorial cálido" });
+  const editorial = presets.filter({ hasText: "Marfil editorial" });
 
-  await page.getByRole("button", { name: "Aplicar paleta Salvia serena" }).click();
+  await page.getByRole("button", { name: "Aplicar paleta Jardín de salvia" }).click();
   await expect(editorial).toHaveAttribute("aria-pressed", "false");
 
   const accentText = page.getByTestId("ui-color-text-accent");
@@ -151,7 +151,7 @@ test("un preset aplicado pierde la marca al editar un color a mano", async ({ pa
   await expect(page.getByTestId("ui-color-native-accent")).toHaveValue("#aa0000");
   await expect(editorial).toHaveAttribute("aria-pressed", "false");
 
-  // Restaurar vuelve a la paleta de apertura y la marca de "Editorial cálido".
+  // Restaurar vuelve a la paleta de apertura y la marca de "Marfil editorial".
   await page.getByTestId("ui-reset-colors").click();
   await expect(accentText).toHaveValue("#0b0b0c");
   await expect(editorial).toHaveAttribute("aria-pressed", "true");
@@ -384,26 +384,26 @@ test("resets por grupo: cada uno restaura sólo su grupo de valores de apertura"
     container: await container.inputValue(),
   };
 
-  await page.getByRole("button", { name: "Aplicar paleta Tinta profunda" }).click();
+  await page.getByRole("button", { name: "Aplicar paleta Azul mediterráneo" }).click();
   await display.selectOption('Georgia, "Times New Roman", serif');
   await container.fill(String(Number(opening.container) + 100));
-  await expect(backgroundText).toHaveValue("#16151a");
+  await expect(backgroundText).toHaveValue("#eff6fb");
 
   // Restaurar tipografía: sólo la familia vuelve; colores y contenedor siguen.
   await page.getByTestId("ui-reset-typography").click();
   await expect(display).toHaveValue(opening.display);
-  await expect(backgroundText).toHaveValue("#16151a");
+  await expect(backgroundText).toHaveValue("#eff6fb");
   await expect(container).toHaveValue(String(Number(opening.container) + 100));
 
   // Restaurar geometría: sólo el contenedor vuelve; los colores siguen.
   await page.getByTestId("ui-reset-geometry").click();
   await expect(container).toHaveValue(opening.container);
-  await expect(backgroundText).toHaveValue("#16151a");
+  await expect(backgroundText).toHaveValue("#eff6fb");
 
   // Restaurar colores: paleta de apertura y su preset marcado de nuevo.
   await page.getByTestId("ui-reset-colors").click();
   await expect(backgroundText).toHaveValue(opening.background);
   await expect(
-    page.getByTestId("ui-theme-preset").filter({ hasText: "Editorial cálido" }),
+    page.getByTestId("ui-theme-preset").filter({ hasText: "Marfil editorial" }),
   ).toHaveAttribute("aria-pressed", "true");
 });

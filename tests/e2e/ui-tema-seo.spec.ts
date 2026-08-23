@@ -61,11 +61,11 @@ test("los presets de Tema aplican la paleta real al preview (H8-09)", async ({ p
   const background = previewBackground(page);
   await expect.poll(background, { timeout: 15_000 }).toBe("rgb(252, 252, 251)");
 
-  await page.getByRole("button", { name: "Aplicar paleta Costa terracota" }).click();
+  await page.getByRole("button", { name: "Aplicar paleta Terracota solar" }).click();
 
-  await expect(accentText).toHaveValue("#b4552d");
-  await expect(page.getByTestId("ui-color-text-background")).toHaveValue("#faf6f2");
-  await expect.poll(background, { timeout: 15_000 }).toBe("rgb(250, 246, 242)");
+  await expect(accentText).toHaveValue("#9a442c");
+  await expect(page.getByTestId("ui-color-text-background")).toHaveValue("#fff5ee");
+  await expect.poll(background, { timeout: 15_000 }).toBe("rgb(255, 245, 238)");
 });
 
 test("el preset aplicado queda marcado como seleccionado en el panel (feedback visible)", async ({
@@ -76,22 +76,22 @@ test("el preset aplicado queda marcado como seleccionado en el panel (feedback v
 
   const presets = page.getByTestId("ui-theme-preset");
 
-  await page.getByRole("button", { name: "Aplicar paleta Tinta profunda" }).click();
+  await page.getByRole("button", { name: "Aplicar paleta Azul lavanda" }).click();
 
-  const deepInk = presets.filter({ hasText: "Tinta profunda" });
-  await expect(deepInk).toHaveAttribute("aria-pressed", "true");
-  await expect(deepInk).toHaveAttribute("data-active", "true");
+  const lavenderBlue = presets.filter({ hasText: "Azul lavanda" });
+  await expect(lavenderBlue).toHaveAttribute("aria-pressed", "true");
+  await expect(lavenderBlue).toHaveAttribute("data-active", "true");
   // La marca "✓ Aplicada" vive en el pseudo-elemento ::after.
   await expect
-    .poll(() => deepInk.evaluate((el) => getComputedStyle(el, "::after").content))
+    .poll(() => lavenderBlue.evaluate((el) => getComputedStyle(el, "::after").content))
     .toContain("Aplicada");
 
-  const editorial = presets.filter({ hasText: "Editorial cálido" });
+  const editorial = presets.filter({ hasText: "Marfil editorial" });
   await expect(editorial).toHaveAttribute("aria-pressed", "false");
 
   // El preview y el input de fondo reflejan la paleta aplicada.
-  await expect(page.getByTestId("ui-color-text-background")).toHaveValue("#16151a");
-  await expect.poll(previewBackground(page), { timeout: 15_000 }).toBe("rgb(22, 21, 26)");
+  await expect(page.getByTestId("ui-color-text-background")).toHaveValue("#eef1fa");
+  await expect.poll(previewBackground(page), { timeout: 15_000 }).toBe("rgb(238, 241, 250)");
 });
 
 test("Restaurar colores vuelve a los valores de apertura de la pestaña (H8-10)", async ({
@@ -105,9 +105,9 @@ test("Restaurar colores vuelve a los valores de apertura de la pestaña (H8-10)"
   const originalAccent = await accentText.inputValue();
   const originalBackground = await backgroundText.inputValue();
 
-  await page.getByRole("button", { name: "Aplicar paleta Salvia serena" }).click();
-  await expect(accentText).toHaveValue("#3a5244");
-  await expect(backgroundText).toHaveValue("#f5f7f4");
+  await page.getByRole("button", { name: "Aplicar paleta Jardín de salvia" }).click();
+  await expect(accentText).toHaveValue("#356248");
+  await expect(backgroundText).toHaveValue("#f1f6f0");
 
   await page.getByTestId("ui-reset-colors").click();
   await expect(accentText).toHaveValue(originalAccent);

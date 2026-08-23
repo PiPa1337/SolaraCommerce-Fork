@@ -16,9 +16,7 @@
  * Regresiones de A29 (index.ts): guard por término de 1 carácter, aria-live del
  * conteo de categoría y prefill/teclado del input visible en /buscar/ moderno.
  */
-import { readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
-import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
@@ -27,37 +25,9 @@ import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 const modernExport = exportProject(catalogModernStore, { mode: "production" });
 const scaleExport = exportProject(catalogScaleStore, { mode: "production" });
 
-const fixtureFiles = new Map<string, Uint8Array>([
-  [
-    "fixtures/modo-sur-hero.png",
-    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-hero.png")),
-  ],
-  [
-    "fixtures/modo-sur-remera.png",
-    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-remera.png")),
-  ],
-  [
-    "fixtures/modo-sur-jean.png",
-    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-jean.png")),
-  ],
-  [
-    "fixtures/modo-sur-camisa.png",
-    readFileSync(resolve("apps/studio/public/fixtures/modo-sur-camisa.png")),
-  ],
-  [
-    "fixtures/casa-luma-hero.png",
-    readFileSync(resolve("apps/studio/public/fixtures/casa-luma-hero.png")),
-  ],
-  [
-    "fixtures/manta-bruma.png",
-    readFileSync(resolve("apps/studio/public/fixtures/manta-bruma.png")),
-  ],
-  [
-    "fixtures/jarra-delta.png",
-    readFileSync(resolve("apps/studio/public/fixtures/jarra-delta.png")),
-  ],
-]);
+import { FIXTURE_PRODUCT_FILES } from "./fixture-server";
 
+const fixtureFiles = FIXTURE_PRODUCT_FILES;
 function serve(files: Map<string, Uint8Array>) {
   const server = createServer((request, response) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");

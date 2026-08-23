@@ -1,9 +1,10 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { resolve } from "node:path";
 import { test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { referenceStore } from "@solara/project-schema/fixture";
+import { FIXTURE_PRODUCT_FILES } from "./fixture-server";
 
 /**
  * Barrido visual del sitio exportado. Se ejecuta explícitamente con
@@ -34,15 +35,7 @@ const routes = [
 ];
 
 const exported = exportProject(referenceStore, { mode: "production" });
-const fixtureFiles = new Map<string, Uint8Array>([
-  ["fixtures/casa-luma-hero.png", readFixture("casa-luma-hero.png")],
-  ["fixtures/manta-bruma.png", readFixture("manta-bruma.png")],
-  ["fixtures/jarra-delta.png", readFixture("jarra-delta.png")],
-]);
-
-function readFixture(name: string): Uint8Array {
-  return readFileSync(resolve("apps/studio/public/fixtures", name));
-}
+const fixtureFiles = FIXTURE_PRODUCT_FILES;
 
 let server: Server;
 let serverUrl: string;

@@ -82,7 +82,7 @@ const COLOR_ERROR = "Ingresá un color hex como #1a2b3c.";
 
 /**
  * Valores de prueba por token: hex válidos de 6 dígitos, distintos entre sí y
- * distintos de la paleta default (Editorial cálido) del fixture.
+ * distintos de la paleta default (Marfil editorial) del fixture.
  */
 const TEXT_TARGET: ThemeColors = {
   background: "#17324d",

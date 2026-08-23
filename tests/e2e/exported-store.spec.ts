@@ -1,25 +1,13 @@
-import { readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
-import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { referenceStore } from "@solara/project-schema/fixture";
 
 const exported = exportProject(referenceStore, { mode: "production" });
-const fixtureFiles = new Map<string, Uint8Array>([
-  [
-    "fixtures/casa-luma-hero.png",
-    readFileSync(resolve("apps/studio/public/fixtures/casa-luma-hero.png")),
-  ],
-  [
-    "fixtures/manta-bruma.png",
-    readFileSync(resolve("apps/studio/public/fixtures/manta-bruma.png")),
-  ],
-  [
-    "fixtures/jarra-delta.png",
-    readFileSync(resolve("apps/studio/public/fixtures/jarra-delta.png")),
-  ],
-]);
+
+import { FIXTURE_PRODUCT_FILES } from "./fixture-server";
+
+const fixtureFiles = FIXTURE_PRODUCT_FILES;
 let server: Server;
 let serverUrl: string;
 

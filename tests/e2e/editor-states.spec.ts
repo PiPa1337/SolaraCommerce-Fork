@@ -334,11 +334,12 @@ test("el formulario de Resumen valida con errores inline y aria-describedby (T6.
 
   const phone = page.getByLabel("Número internacional");
   const originalPhone = await phone.inputValue();
+  const validPhone = originalPhone || "5491123456789";
   await phone.fill("12");
   const phoneField = fieldsetOf(phone);
   await expect(phoneField.getByTestId("ui-field-error")).toContainText("Usá entre 8 y 15 dígitos");
   await expect(phone).toHaveAttribute("aria-invalid", "true");
-  await phone.fill(originalPhone);
+  await phone.fill(validPhone);
   await expect(phoneField.getByTestId("ui-field-error")).toHaveCount(0);
 
   const url = page.getByLabel("URL pública");
@@ -354,6 +355,20 @@ test("el formulario de Resumen valida con errores inline y aria-describedby (T6.
   await expect(page.locator(`#${urlDescribedBy[1]}`)).toContainText("http(s)");
   await url.fill(originalUrl);
   await expect(urlField.getByTestId("ui-field-error")).toHaveCount(0);
+
+  const slug = page.getByLabel("Slug interno");
+  const originalSlug = await slug.inputValue();
+  const slugField = fieldsetOf(slug);
+  await slug.fill("slug inválido");
+  await expect(slugField.getByTestId("ui-field-error")).toContainText(
+    "minúsculas, números y guiones",
+  );
+  await expect(slug).toHaveAttribute("aria-invalid", "true");
+  await slug.fill("tienda-segura");
+  await expect(slugField.getByTestId("ui-field-error")).toHaveCount(0);
+  await expect(slug).toHaveValue("tienda-segura");
+  await slug.fill(originalSlug);
+  await expect(slugField.getByTestId("ui-field-error")).toHaveCount(0);
 });
 
 test("los destinos de navegación validan el borrador con error inline y no commitean valores inválidos (F3)", async ({

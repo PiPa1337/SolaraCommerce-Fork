@@ -377,7 +377,7 @@ test("Oscuro: deshabilitado con hint conectado por aria-describedby", async ({ p
 
   // Hint explicando por qué está deshabilitado, conectado por aria-describedby.
   const hintText =
-    "Oscuro está deshabilitado: el sitio lo sobreescribiría con colores fijos. Usá la paleta Tinta profunda.";
+    "Oscuro está deshabilitado: el sitio lo sobreescribiría con colores fijos. Las paletas disponibles están diseñadas para fondos claros.";
   const describedBy = await select.getAttribute("aria-describedby");
   expect(describedBy).not.toBeNull();
   await expect(page.locator(`#${describedBy}`)).toContainText(hintText);

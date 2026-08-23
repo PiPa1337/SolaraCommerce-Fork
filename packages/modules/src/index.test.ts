@@ -797,6 +797,39 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     expect(headerHtml).toMatch(/<noscript>[\s\S]*@media print/);
   });
 
+  it("mantiene el alto del navbar V2 con nombres de tienda largos", () => {
+    const styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!styles) throw new Error("Falta el bloque de estilos catalog-modern-v2");
+
+    const project = structuredClone(catalogModernV2Store);
+    project.identity.brandName =
+      "Marca de tienda extremadamente larga que no debe deformar el navbar";
+    const headerSection = createModuleSection({
+      id: "section-modern-header-long-brand-test" as StoreSection["id"],
+      slot: "header",
+      moduleId: "catalog-header",
+    });
+    const headerHtml = renderSections(project, [headerSection], { pageType: "home" });
+
+    expect(headerHtml).toContain(project.identity.brandName);
+    expect(styles).toMatch(
+      /\.cm\.v2 \.catalog-brand \{[\s\S]*width: 100%;[\s\S]*max-width: 100%;[\s\S]*overflow: hidden;[\s\S]*text-overflow: ellipsis;[\s\S]*white-space: nowrap;/,
+    );
+    expect(styles).toMatch(
+      /\.cm\.v2 \.catalog-brand \.solara-wordmark \{[\s\S]*overflow: hidden;[\s\S]*text-overflow: ellipsis;[\s\S]*white-space: nowrap;/,
+    );
+
+    const narrowStart = styles.indexOf("@media (max-width: 450px)");
+    const narrowEnd = styles.indexOf("@media (max-width: 900px)", narrowStart);
+    const narrowStyles = styles.slice(narrowStart, narrowEnd);
+    expect(narrowStyles).toMatch(
+      /\.cm\.v2 \.catalog-brand \{[\s\S]*width: 100%;[\s\S]*max-width: 100%;[\s\S]*overflow: hidden;[\s\S]*white-space: nowrap;/,
+    );
+    expect(narrowStyles).toContain(".cm.v2 .catalog-brand .solara-wordmark {");
+    expect(narrowStyles).toContain("white-space: nowrap;");
+    expect(narrowStyles).toContain("overflow: hidden;");
+  });
+
   it("mantiene visible la media LCP y usa zoom compositado sin clip-path", () => {
     const modernStyles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
     if (!modernStyles) throw new Error("Falta el bloque de estilos catalog-modern-v2");

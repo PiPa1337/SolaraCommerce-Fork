@@ -11,7 +11,7 @@
  *   3. un hex inválido NO commitea: el campo muestra el error inline y el
  *      panel sigue reflejando el último color confirmado (el estado
  *      "color no válido" del panel nunca aparece en este flujo).
- * El panel se lee desde la tienda demo default (paleta "Editorial cálido" del
+ * El panel se lee desde la tienda demo default (paleta "Marfil editorial" del
  * fixture catalog-modern: background #fcfcfb, text #0b0b0c, muted #696966,
  * accent #0b0b0c, accentText #ffffff).
  */

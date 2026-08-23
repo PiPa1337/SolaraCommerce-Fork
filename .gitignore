@@ -8,6 +8,7 @@ test-results/
 .solara-runtime/
 proyectos/
 .release/
+.local-backups/
 _qa/
 .lighthouseci/
 .env
@@ -20,3 +21,4 @@ _qa/
 .playwright-cli/
 
 placeholder-dump.json
+placeholder-dump.json.bak

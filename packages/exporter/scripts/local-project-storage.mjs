@@ -145,6 +145,15 @@ async function readJson(pathname) {
   return JSON.parse(await readFile(pathname, "utf8"));
 }
 
+function recoveryMetadata(manifest) {
+  const projectId = manifest?.projectId;
+  const version = manifest?.current?.version;
+  return {
+    ...(isSafeSegment(projectId) ? { projectId } : {}),
+    ...(Number.isInteger(version) && version >= 0 ? { version } : {}),
+  };
+}
+
 async function writeJsonAtomic(pathname, value) {
   const temporary = `${pathname}.tmp-${randomBytes(8).toString("hex")}`;
   try {
@@ -414,9 +423,10 @@ export function createLocalProjectStorage(options = {}) {
       }
       if (!entry.isDirectory()) continue;
       const root = join(projectsRoot, entry.name);
+      let manifest;
       try {
         await assertNoReparsePoints(projectsRoot, root);
-        const manifest = await readJson(join(root, "manifest.json"));
+        manifest = await readJson(join(root, "manifest.json"));
         if (manifest.format !== MANIFEST_FORMAT || manifest.manifestVersion !== MANIFEST_VERSION) {
           throw new Error("Manifest local incompatible.");
         }
@@ -462,21 +472,26 @@ export function createLocalProjectStorage(options = {}) {
         const message =
           error instanceof Error ? error.message : "No se pudo leer el manifest local.";
         const diagnosticPath = join(root, "recovery.json");
+        let metadata = recoveryMetadata(manifest);
+        let recoveryMessage = message;
         try {
           const existing = await readJson(diagnosticPath);
           if (typeof existing?.message === "string") {
-            recovery.push({ folder: entry.name, message: existing.message });
+            recoveryMessage = existing.message;
+            metadata = { ...recoveryMetadata(existing), ...metadata };
           } else {
             throw new Error("Diagnóstico sin mensaje.");
           }
         } catch {
-          recovery.push({ folder: entry.name, message });
+          // El diagnóstico puede no existir todavía o estar corrupto.
         }
+        recovery.push({ folder: entry.name, ...metadata, message: recoveryMessage });
         try {
           await writeJsonAtomic(diagnosticPath, {
             format: "solara-local-recovery",
             folder: entry.name,
-            message,
+            ...metadata,
+            message: recoveryMessage,
             detectedAt: new Date().toISOString(),
           });
         } catch {

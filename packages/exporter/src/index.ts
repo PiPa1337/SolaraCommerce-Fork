@@ -1819,10 +1819,10 @@ function buildFiles(
       `${themeCss(publicProject)}\n${exportedModuleStyles(publicProject)}\n${STOREFRONT_RUNTIME_CSS}`,
     ),
   );
-  // Draft: sirve el bundle externo con source map para debugging con breakpoints.
-  // Production: inline serializado (sin source map, menor peso).
-  // Draft incluye comentario de debug; production usa el mismo JS optimizado.
-  // El source map se genera por scripts/build-runtime.mjs en desarrollo local.
+  // Draft: mismo runtime inline con una marca para debugging manual.
+  // Production: inline serializado byte-idéntico (sin marca ni source map).
+  // Pendiente: emitir assets/storefront.js.map en draft (ver TECHNICAL_DEBT);
+  // scripts/build-runtime.mjs ya genera el mapa en local.
   const runtimeJs =
     mode === "draft"
       ? `// DEBUG: modo draft — source map disponible via scripts/build-runtime.mjs\n${STOREFRONT_RUNTIME_JS}`

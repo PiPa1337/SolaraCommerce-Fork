@@ -1240,6 +1240,53 @@ describe("almacenamiento local de proyectos", () => {
       expect(listing.projects).toHaveLength(0);
       expect(listing.recovery).toHaveLength(1);
       expect(listing.recovery[0].message).toMatch(/no coincide con su hash/i);
+      expect(listing.recovery[0].projectId).toBe(projectId);
+      expect(listing.recovery[0].version).toBe(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("permite importar un respaldo validado sobre una tienda con hash roto", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-recover-hash-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      const first = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, first.transactionId, "project", projectJson());
+      const firstReceipt = await storage.commit(first.transactionId);
+
+      const folder = (await storage.list()).projects[0].folder;
+      const currentPath = join(
+        root,
+        "proyectos",
+        folder,
+        "actual",
+        `${firstReceipt.key}.solara.json`,
+      );
+      await writeFile(currentPath, projectJson("Modificada"), "utf8");
+      const recovery = (await storage.list()).recovery[0];
+
+      const repaired = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T11:00:00.000Z",
+        expectedVersion: recovery.version,
+      });
+      await upload(storage, repaired.transactionId, "project", projectJson("Recuperada"));
+      const repairedReceipt = await storage.commit(repaired.transactionId);
+
+      expect(repairedReceipt.version).toBe(2);
+      const listing = await storage.list();
+      expect(listing.recovery).toHaveLength(0);
+      expect(listing.projects).toHaveLength(1);
+      expect((await storage.readCurrent(projectId)).manifest.current.version).toBe(2);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
