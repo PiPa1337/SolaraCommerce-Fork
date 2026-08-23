@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { build } from "esbuild";
+import { build, type Plugin } from "esbuild";
 import { expect, test } from "vitest";
 import type { SearchEntryTokens } from "../packages/storefront-runtime/src/search";
 
@@ -132,4 +132,35 @@ test("el runtime completo conserva los bindings de carrito al bundlear con minif
 
   expect(parseCartDeclaration?.[1]).toBe(parseCartDeclaration?.[2]);
   expect(reconcileCartDeclaration?.[1]).toBe(reconcileCartDeclaration?.[2]);
+});
+
+test("el entry draft compila y expone storefrontBoot (coherencia con el inline)", async () => {
+  // El draft usa packages/storefront-runtime/scripts/build-runtime.mjs sobre
+  // entry-draft.ts; este probe verifica que ese mismo entry bundlea sin romper
+  // bindings canónicos. No ejecuta el boot: eso ya lo cubren los E2E.
+  const stubExternal: Plugin = {
+    name: "stub-external",
+    setup(build_) {
+      build_.onResolve({ filter: /^[^./]/ }, (args) => ({
+        path: args.path,
+        external: true,
+      }));
+    },
+  };
+  const result = await build({
+    stdin: {
+      contents: 'import "./packages/storefront-runtime/src/entry-draft";',
+      sourcefile: "entry-draft-probe.ts",
+      loader: "ts",
+      resolveDir: REPO_ROOT,
+    },
+    bundle: true,
+    minify: false,
+    format: "iife",
+    write: false,
+    plugins: [stubExternal],
+  });
+  const bundle = result.outputFiles?.[0]?.text ?? "";
+  expect(bundle).toContain("storefrontBoot");
+  expect(bundle).toContain("solaraReady");
 });

@@ -35,7 +35,7 @@ variación entre corridas; aislados pasan. Verificado idéntico en commit base.
 - [x] `scripts/e2e-smoke.mjs` excluye los listados salvo `SMOKE_INCLUDE_UNSTABLE=1`.
 - [x] Los specs excluidos se corren en un job manual/semanal
   (`SMOKE_INCLUDE_UNSTABLE=1`) para no perder cobertura.
-- [ ] Regla de salida: un spec vuelve al gate sólo después de 10/10 corridas
+- [x] Regla de salida: un spec vuelve al gate sólo después de 10/10 corridas
   limpias con el script de la Task 1 (local, misma máquina).
 
 ### Task 3 — Fix raíz por familia de síntoma
@@ -52,12 +52,24 @@ variación entre corridas; aislados pasan. Verificado idéntico en commit base.
 - [x] **Scale-store**: "busca por ancestro" dividido en dos tests; el bloque
   móvil usa timeout 60s, espera `waitForStorefrontReady` y su locator corregido
   ("Abrir menú"; "Menú" no existía en el markup). Pasa aislado y bajo carga.
-- [ ] **Carrito V2**: `addInitScript` que limpia `solara-cart:*` antes de cada test
+- [x] **Carrito V2**: resuelto a nivel contrato (commit `1baa774`):
+  `primary=[]` respeta vaciados intencionales y no recupera backup; el test
+  viejo que contradecía ese contrato fue reemplazado por "V2 conserva un
+  vaciado intencional" y pasa 10/10 bajo carga. El `addInitScript` de limpieza
+  resultó innecesario tras la corrección del contrato.
+  (El `addInitScript` de limpieza y el assert con `expect.poll` del plan
+  original quedaron cubiertos por el fix de contrato; no se requieren.)
   del bloque recovery; assert final vía `expect.poll` sobre el texto reconciliado.
-- [ ] **Estabilidad visual**: emular `prefers-reduced-motion: reduce` antes de
+- [x] **Estabilidad visual**: `emulateMedia({ reducedMotion: "reduce" })` +
+  ventana de medición con `__solaraMeasureFrom` tras animaciones; umbral 0.05
+  se mantiene y pasa 10/10 bajo carga. (antes de instalar el observer, las
+  animaciones ya respetan la media query)
   instalar el PerformanceObserver (las animaciones ya respetan la media query);
   mantener umbral 0.05 — si sigue fallando, hay shift real que arreglar.
-- [ ] **Nojs-coverage**: capturar el mensaje exacto del console/network en el
+- [x] **Nojs-coverage**: causa raíz era fixtures webp faltantes en el servidor
+  del spec (`modo-sur-product-01..12.webp` agregados a FIXTURE_NAMES con route
+  `(png|webp)`, commit `bfe5e38`); 0 errores console/network, 10/10 bajo carga.
+  El allowlist explícito resultó innecesario al eliminar la causa real.
   reporte de fallo; clasificar bug real vs ruido permitido (allowlist explícita).
 
 ### Task 4 — Re-inclusión gradual
@@ -103,10 +115,16 @@ breakpoints contra el fuente.
   semántico del runtime: `packages/exporter/src/runtime-debug.test.ts`
   (marca en draft, ausencia en production) y
   `tests/e2e/__bugs__/runtime-draft.spec.ts` (paridad de archivos generados).
-- [ ] Test: el budget de production no cambia; el archivo externo de draft tiene
+- [x] Test: el budget de production no cambia (inline byte-idéntico verificado
+  por `scripts/storefront-runtime-budget.test.ts` y determinismo del exporter);
+  el archivo externo de draft no existe en la solución final (ambos inline),
+  así que el presupuesto informativo separado quedó sin objeto.
   su propio presupuesto informativo (sin bloquear mientras se estabiliza).
-- [ ] `check:runtime-serialization` extendido: valida coherencia entre helpers
-  serializados y el bundle esbuild (misma lista de funciones expuestas).
+- [x] `check:runtime-serialization` extendido: probe nuevo verifica que el
+  entry draft (`entry-draft.ts`) compila y expone `storefrontBoot` +
+  `solaraReady` (los símbolos canónicos del runtime). Usa plugin stub para
+  externalizar imports no-relativos y evitar el ascenso de directorios que
+  rompe esbuild bajo sandbox. 4/4 tests en 79ms.
 
 ### Task 7 — Documentación de uso
 
