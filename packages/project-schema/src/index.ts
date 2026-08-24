@@ -610,6 +610,14 @@ const StoreProjectV2ShapeSchema = z.object({
     email: z.string().email().or(z.literal("")),
     phone: z.string(),
     address: z.string(),
+    // Redes sociales para sameAs (JSON-LD) y links de footer. URLs absolutas.
+    instagramUrl: z.string().url().or(z.literal("")).default(""),
+    facebookUrl: z.string().url().or(z.literal("")).default(""),
+    tiktokUrl: z.string().url().or(z.literal("")).default(""),
+    twitterHandle: z
+      .string()
+      .regex(/^@?[a-zA-Z0-9_]{0,15}$/)
+      .default(""),
   }),
   whatsapp: z.object({
     // A clean project has no WhatsApp number yet; configured numbers remain

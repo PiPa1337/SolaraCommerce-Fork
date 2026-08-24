@@ -1,5 +1,15 @@
 # Changelog
 
+### Social links, SearchAction y limpieza head (2026-08-24)
+
+- `identity` acepta `instagramUrl`, `facebookUrl`, `tiktokUrl` y
+  `twitterHandle`; se emiten como `sameAs` en OnlineStore y `twitter:site`.
+- WebSite JSON-LD incluye `SearchAction` para el sitelinks search box.
+- Offer JSON-LD especifica precio previo cuando la variante tiene
+  `compareAtPrice`.
+- Se eliminó `<meta name="keywords">` (obsoleta desde 2009).
+- `_headers`: reglas de cache para `/sw.js` (no-cache), manifest y feed.
+
 ### X1 subcarpeta + guard raíz portable (2026-08-24)
 
 - El runtime del storefront lee `data-base-href` del html y prefija los fetch

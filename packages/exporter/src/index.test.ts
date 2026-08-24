@@ -895,6 +895,15 @@ describe("exporter", () => {
 
 /catalog-index.json
   Cache-Control: public, max-age=900, must-revalidate
+
+/sw.js
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/feed.xml
+  Cache-Control: public, max-age=900, must-revalidate
 `);
   });
 
@@ -1062,7 +1071,6 @@ describe("exporter", () => {
     const html = String(result.files.get("index.html"));
     const aboutHtml = String(result.files.get("nosotros/index.html"));
 
-    expect(html).toContain('<meta name="keywords" content="tienda, editorial');
     expect(html).toContain('<meta name="author" content="Tienda editorial">');
     expect(html).toContain('<meta name="publisher" content="Tienda editorial SRL">');
     expect(html).toContain('<meta name="robots" content="index,follow');

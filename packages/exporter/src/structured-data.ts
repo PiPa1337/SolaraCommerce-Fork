@@ -10,6 +10,19 @@ import { effectiveHomeSections } from "./index.js";
 import { absoluteResourceUrl, absoluteUrl, normalizeBaseUrl } from "./urls.js";
 import { publicWhatsAppPhone } from "./whatsapp.js";
 
+/**
+ * URLs de redes sociales declaradas en identity. Se emiten como sameAs en
+ * OnlineStore para que Google asocie los perfiles con el sitio.
+ */
+function buildSameAs(project: StoreProjectV1): string[] {
+  const links = [
+    project.identity.instagramUrl,
+    project.identity.facebookUrl,
+    project.identity.tiktokUrl,
+  ];
+  return links.filter((url): url is string => typeof url === "string" && url.length > 0);
+}
+
 export function storeStructuredData(project: StoreProjectV1): unknown[] {
   const logo = imageUrl(project, project.identity.logoAssetId);
   const hero = effectiveHomeSections(project).find(
@@ -30,6 +43,14 @@ export function storeStructuredData(project: StoreProjectV1): unknown[] {
       name: project.identity.brandName,
       url: normalizeBaseUrl(project.baseUrl),
       inLanguage: project.locale,
+      potentialAction: {
+        "@type": "SearchAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: `${normalizeBaseUrl(project.baseUrl)}/buscar/?q={search_term_string}`,
+        },
+        "query-input": "required name=search_term_string",
+      },
     },
     {
       "@context": "https://schema.org",
@@ -44,6 +65,7 @@ export function storeStructuredData(project: StoreProjectV1): unknown[] {
         ? { telephone: publicWhatsAppPhone(project) || project.identity.phone }
         : {}),
       ...(project.identity.address ? { address: project.identity.address } : {}),
+      ...(buildSameAs(project).length > 0 ? { sameAs: buildSameAs(project) } : {}),
       hasMerchantReturnPolicy: {
         "@type": "MerchantReturnPolicy",
         applicableCountry: project.policies.returns.countries,
@@ -90,6 +112,16 @@ export function offerData(project: StoreProjectV1, offer: CommerceOfferSnapshot)
     url: absoluteUrl(project, offer.variantPath),
     priceCurrency: offer.currency,
     price: (offer.priceMinor / 100).toFixed(2),
+    ...(offer.compareAtPriceMinor !== undefined && offer.compareAtPriceMinor > offer.priceMinor
+      ? {
+          priceSpecification: {
+            "@type": "UnitPriceSpecification",
+            price: (offer.compareAtPriceMinor / 100).toFixed(2),
+            priceCurrency: offer.currency,
+            valueAddedTaxIncluded: true,
+          },
+        }
+      : {}),
     availability:
       offer.availability === "in_stock"
         ? "https://schema.org/InStock"

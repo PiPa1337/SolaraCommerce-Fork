@@ -88,6 +88,7 @@ export interface CommerceOfferSnapshot {
   gtin?: string;
   mpn?: string;
   priceMinor: number;
+  compareAtPriceMinor?: number;
   currency: string;
   availability: "in_stock" | "out_of_stock" | "preorder";
   availabilityDate?: string;
@@ -289,6 +290,9 @@ export function buildCommerceSnapshot(project: StoreProjectV1): CommerceSnapshot
             ...(variant.gtin ? { gtin: variant.gtin } : {}),
             ...(variant.mpn ? { mpn: variant.mpn } : {}),
             priceMinor: variant.price,
+            ...(variant.compareAtPrice !== undefined
+              ? { compareAtPriceMinor: variant.compareAtPrice }
+              : {}),
             currency: project.currency,
             availability: offerAvailability(variant),
             ...(variant.availabilityDate ? { availabilityDate: variant.availabilityDate } : {}),
@@ -1081,7 +1085,6 @@ function renderDocument(
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${escapeHtml(page.title)}</title>
   <meta name="description" content="${escapeHtml(page.description)}">
-  <meta name="keywords" content="${escapeHtml(keywords)}">
   <meta name="author" content="${escapeHtml(author)}">
   <meta name="publisher" content="${escapeHtml(publisher)}">
   <meta name="robots" content="${robots}">
@@ -1106,6 +1109,7 @@ function renderDocument(
   <meta property="og:description" content="${escapeHtml(page.description)}">
   <meta property="og:url" content="${escapeHtml(canonical)}">
   ${socialImage ? `<meta property="og:image" content="${escapeHtml(socialImage)}"><meta property="og:image:alt" content="${escapeHtml(socialAsset?.alt || page.title)}">${socialAsset ? `<meta property="og:image:width" content="${socialAsset.width}"><meta property="og:image:height" content="${socialAsset.height}">` : ""}<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(page.title)}"><meta name="twitter:description" content="${escapeHtml(page.description)}"><meta name="twitter:image" content="${escapeHtml(socialImage)}">` : `<meta name="twitter:card" content="summary">`}
+  ${project.identity.twitterHandle ? `<meta name="twitter:site" content="${escapeHtml(project.identity.twitterHandle.startsWith("@") ? project.identity.twitterHandle : "@" + project.identity.twitterHandle)}">` : ""}
   ${pageVideo ? `<meta property="og:video" content="${escapeHtml(absoluteResourceUrl(project, pageVideo.source))}"><meta property="og:video:type" content="video/mp4">` : ""}
   <meta property="og:updated_time" content="${escapeHtml(project.updatedAt)}">
   ${page.pageType === "product" ? `<meta property="article:published_time" content="${escapeHtml(project.createdAt)}"><meta property="article:modified_time" content="${escapeHtml(project.updatedAt)}"><meta property="article:author" content="${escapeHtml(author)}">` : ""}
@@ -1964,6 +1968,15 @@ function buildFiles(
 
 /catalog-index.json
   Cache-Control: public, max-age=900, must-revalidate
+
+/sw.js
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/feed.xml
+  Cache-Control: public, max-age=900, must-revalidate
 `,
     );
   }
@@ -1973,7 +1986,7 @@ function buildFiles(
   files.set("favicon.ico", buildFaviconIco(publicProject.identity.brandName));
   files.set("offline/index.html", buildOfflinePage(publicProject));
   files.set("manifest.webmanifest", buildWebManifest(publicProject));
-  files.set("sw.js", buildServiceWorker());
+  files.set("sw.js", buildServiceWorker(publicProject));
   if (mode === "production") {
     const rss = buildRssFeed(publicProject);
     if (rss) files.set("feed.xml", rss);
@@ -1982,7 +1995,7 @@ function buildFiles(
     ).toISOString();
     files.set(
       ".well-known/security.txt",
-      `Contact: mailto:${publicProject.identity.email || "security@example.com"}\nExpires: ${expiresDate}\n`,
+      `Contact: mailto:${publicProject.identity.email || "security@example.com"}\nExpires: ${expiresDate}\nCanonical: ${absoluteUrl(publicProject, "/.well-known/security.txt")}\n`,
     );
     files.set("_redirects", "# Solara redirect rules\n");
   }
