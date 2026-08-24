@@ -185,6 +185,7 @@ function parseProject(projectInput: StoreProjectV1, operation: string): StorePro
 import { escapeAttribute, escapeHtml, escapeXml, jsonForScript } from "./html.js";
 import {
   buildFaviconIco,
+  buildLlmsFullTxt,
   buildOfflinePage,
   buildRssFeed,
   buildServiceWorker,
@@ -237,6 +238,7 @@ import {
 } from "./assets.js";
 import {
   breadcrumbData,
+  faqPageData,
   itemListData,
   itemListFromSnapshots,
   productStructuredData,
@@ -1383,6 +1385,7 @@ function buildPages(
             ${categoryMedia}
           </header>
           ${categoryChildrenMarkup(project, category)}
+          ${category.seoIntro ? `<section class="solara-category-intro solara-container"><h2 class="sr-only">Sobre ${escapeHtml(category.title)}</h2><p>${escapeHtml(category.seoIntro)}</p></section>` : ""}
           ${categoryListingMarkup(project, products, categoryGrid)}
           ${paginationNavigation(project, `/categorias/${category.slug}`, pageNumber, totalPages)}
         </main>`,
@@ -1643,6 +1646,8 @@ function buildPages(
         { name: copy.pages.home, path: "/" },
         { name: copy.pages.contact, path: "/contacto/" },
       ]),
+      // FAQ de politicas: rich snippets expandibles en busquedas informativas.
+      faqPageData(project),
     ],
     ...(socialImage ? { image: socialImage } : {}),
   };
@@ -1935,11 +1940,12 @@ function buildFiles(
     if (publicAiContext) {
       files.set("ai-context.json", buildAiContext(publicProject, { compact: true }));
       files.set("llms.txt", buildLlmsTxt(publicProject));
+      files.set("llms-full.txt", buildLlmsFullTxt(publicProject));
     }
     files.set(
       "_headers",
       `/*
-  Cache-Control: public, max-age=0, must-revalidate
+  Cache-Control: public, max-age=0, must-revalidate, stale-while-revalidate=86400
   Content-Security-Policy: default-src 'self'; img-src 'self' data: https: http:; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self'; media-src 'self' data: https: http:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types solara-storefront
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   Cross-Origin-Opener-Policy: same-origin
@@ -1967,6 +1973,9 @@ function buildFiles(
   Cache-Control: public, max-age=900, must-revalidate
 
 /llms.txt
+  Cache-Control: public, max-age=900, must-revalidate
+
+/llms-full.txt
   Cache-Control: public, max-age=900, must-revalidate
 
 /search-index.json

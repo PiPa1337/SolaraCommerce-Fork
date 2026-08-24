@@ -1,5 +1,17 @@
 # Changelog
 
+### FAQ schema, speakable, llms-full y headers de cache (2026-08-24)
+
+- `faqPageData`: FAQPage JSON-LD desde politicas (envios/cambios) en la
+  pagina de contacto, para rich snippets expandibles.
+- `speakable` en Product JSON-LD: marca h1 y descripcion como aptos para
+  asistentes de voz.
+- `llms-full.txt`: version extendida con precio, stock, categoria y
+  descripcion por producto activo.
+- `_headers` con stale-while-revalidate para HTML y reglas de cache para
+  sw.js (no-cache), manifest y feed.
+- Alt text semantico en cards de producto: producto + categoria + marca.
+
 ### Refuerzo SEO en todas las paginas (2026-08-24)
 
 - El home ahora emite ItemList JSON-LD con los primeros 12 productos del

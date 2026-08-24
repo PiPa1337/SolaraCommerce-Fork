@@ -226,3 +226,40 @@ export function buildOfflinePage(project: StoreProjectV1): string {
     ">Volver al inicio</a></p></div></body></html>"
   );
 }
+/**
+ * Version extendida de llms.txt con precio, stock y categoria por producto.
+ * Parte del modulo PWA/SEO del exporter.
+ */
+
+function clean(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+export function buildLlmsFullTxt(project: StoreProjectV1): string {
+  const lines: string[] = [];
+  lines.push(`# ${project.identity.brandName} (version completa)`);
+  lines.push("");
+  lines.push(clean(project.identity.description));
+  lines.push("");
+  lines.push(`Moneda: ${project.currency}.`);
+  lines.push("");
+  lines.push("## Productos");
+  for (const product of project.products) {
+    if (product.status !== "active") continue;
+    const price = product.variants[0]?.price ?? 0;
+    const hasStock = product.variants.some((v) => v.stockStatus === "in_stock");
+    const categoryName =
+      project.categories.find((c) => c.id === product.categoryIds[0])?.title ?? "general";
+    lines.push(`### ${clean(product.title)}`);
+    lines.push(`- URL: ${project.baseUrl}/productos/${product.slug}/`);
+    lines.push(`- Precio: ${(price / 100).toFixed(2)} ${project.currency}`);
+    lines.push(`- Disponibilidad: ${hasStock ? "disponible" : "consultar"}`);
+    lines.push(`- Categoria: ${categoryName}`);
+    lines.push(`- Descripcion: ${clean(product.description)}`);
+    lines.push("");
+  }
+  lines.push("## Politicas");
+  lines.push(`Envios: ${clean(project.policies.shipping.details)}`);
+  lines.push(`Cambios: ${clean(project.policies.returns.details)}`);
+  return lines.join("\n") + "\n";
+}

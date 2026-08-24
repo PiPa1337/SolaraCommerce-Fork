@@ -106,6 +106,32 @@ export function breadcrumbData(
   };
 }
 
+/**
+ * FAQPage desde politicas de envios/devoluciones: captura busquedas
+ * informativas y habilita rich snippets expandibles.
+ */
+export function faqPageData(project: StoreProjectV1): unknown {
+  const questions: Array<{ name: string; text: string }> = [
+    {
+      name: `\u00bfHacen env\u00edos?`,
+      text: project.policies.shipping.summary,
+    },
+    {
+      name: `\u00bfC\u00f3mo funcionan los cambios y devoluciones?`,
+      text: project.policies.returns.summary,
+    },
+  ];
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: questions.map((question) => ({
+      "@type": "Question",
+      name: question.name,
+      acceptedAnswer: { "@type": "Answer", text: question.text },
+    })),
+  };
+}
+
 export function offerData(project: StoreProjectV1, offer: CommerceOfferSnapshot): unknown {
   return {
     "@type": "Offer",
@@ -217,6 +243,11 @@ export function productStructuredData(
       description: product.description,
       brand: { "@type": "Brand", name: product.brand },
       url: absoluteUrl(project, productSnapshot.canonicalPath),
+      // Fragmentos aptos para asistentes de voz (Google Assistant).
+      speakable: {
+        "@type": "SpeakableSpecification",
+        cssSelector: ["h1", ".catalog-product-description"],
+      },
       ...(reviewNodes.length > 0 ? { review: reviewNodes } : {}),
       ...(averageRating !== null
         ? {

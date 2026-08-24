@@ -860,7 +860,7 @@ describe("exporter", () => {
     );
 
     expect(headers).toBe(`/*
-  Cache-Control: public, max-age=0, must-revalidate
+  Cache-Control: public, max-age=0, must-revalidate, stale-while-revalidate=86400
   Content-Security-Policy: default-src 'self'; img-src 'self' data: https: http:; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self'; media-src 'self' data: https: http:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types solara-storefront
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   Cross-Origin-Opener-Policy: same-origin
@@ -888,6 +888,9 @@ describe("exporter", () => {
   Cache-Control: public, max-age=900, must-revalidate
 
 /llms.txt
+  Cache-Control: public, max-age=900, must-revalidate
+
+/llms-full.txt
   Cache-Control: public, max-age=900, must-revalidate
 
 /search-index.json

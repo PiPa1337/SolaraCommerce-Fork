@@ -386,6 +386,21 @@ export const STORE_BASE_STYLES = `
 [data-solara-store] .solara-category-hero h1 {
   margin-bottom: 0;
 }
+/* Texto editorial de categoria (seoIntro): refuerza long-tail SEO. */
+[data-solara-store] .solara-category-intro {
+  max-width: 46rem;
+  margin: 1.5rem auto 0;
+  color: var(--catalog-muted, inherit);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+[data-solara-store] .solara-category-intro .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
 /* Título de categoría en caja frosted glass (mismo lenguaje que los
    beneficios del hero): translúcido de papel + blur + borde, sin radio. */
 [data-solara-store] .solara-category-hero .solara-category-title-glass {
