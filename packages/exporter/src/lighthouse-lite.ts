@@ -85,7 +85,7 @@ export function runLighthouseLite(html: string): LighthouseLiteResult {
   try {
     const ldMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
     if (ldMatch) {
-      JSON.parse(ldMatch[1]);
+      JSON.parse(ldMatch[1] ?? "{}");
       jsonLdOk = true;
     }
   } catch {

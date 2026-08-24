@@ -354,6 +354,75 @@ const toolDefinitions = [
     },
     method: "assets.upload.finish",
   },
+  {
+    name: "solara_qa_read_backlog",
+    description: "Lee el backlog perpetuo y retorna el siguiente item pendiente."
+    inputSchema: { type: "object", additionalProperties: false, properties: {} },
+    method: "qa.readBacklog",
+  },
+  {
+    name: "solara_qa_write_test",
+    description: "Escribe un archivo de test en packages/*/src/. Requiere scope qa:write.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["filePath", "content"],
+      properties: {
+        filePath: { type: "string" },
+        content: { type: "string" },
+      },
+    },
+    method: "qa.writeTest",
+  },
+  {
+    name: "solara_qa_run_gates",
+    description: "Ejecuta gates de test (quick/full/affected) via vitest.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        suite: { enum: ["quick", "full", "affected"] },
+        filter: { type: "string" },
+      },
+    },
+    method: "qa.runGates",
+  },
+  {
+    name: "solara_qa_detect_flaky",
+    description: "Detecta flakiness corriendo un test N veces.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["testFile"],
+      properties: {
+        testFile: { type: "string" },
+        runs: { type: "integer", minimum: 2, maximum: 20 },
+      },
+    },
+    method: "qa.detectFlaky",
+  },
+  {
+    name: "solara_qa_log_progress",
+    description: "Escribe al log de progreso perpetuo con timestamp.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["entry"],
+      properties: { entry: { type: "string" } },
+    },
+    method: "qa.logProgress",
+  },
+  {
+    name: "solara_qa_update_state",
+    description: "Actualiza campos del perpetual-state.json.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["patch"],
+      properties: { patch: { type: "object" } },
+    },
+    method: "qa.updateState",
+  },
 ];
 
 function mcpResult(id, result) {

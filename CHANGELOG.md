@@ -1,5 +1,11 @@
 # Changelog
 
+### QA perpetuo: tests y MCP tools (2026-08-24)
+
+- Tests para metodos QA: readBacklog, writeTest, scope check.
+- Tests para lighthouse-lite: score alto y bajo.
+- MCP tools para los 7 metodos QA en agent-host.mjs.
+
 ### QA perpetuo: scope qa:write y metodos del agente (2026-08-24)
 
 - Nuevo scope `qa:write` en el protocolo del agente con metodos para
