@@ -1,0 +1,59 @@
+import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
+import { describe, expect, it } from "vitest";
+import { auditProject } from "./audit";
+import { exportProject } from "./index";
+
+function makeResponsiveProject() {
+  const project = structuredClone(catalogModernStore);
+  return {
+    ...project,
+    assets: project.assets.map((a) => ({
+      ...a,
+      responsiveSources: [320, 480, 768].map((width) => ({ width, source: a.source })),
+    })),
+  };
+}
+
+describe("imagenes responsive", () => {
+  it("emite picture con webp en production", () => {
+    const result = exportProject(makeResponsiveProject(), { mode: "production" });
+    const html = String(result.files.get("index.html"));
+    expect(html).toContain("<picture>");
+    expect(html).toContain("webp");
+  });
+
+  it("escribe archivos fisicos para variantes responsive", () => {
+    const result = exportProject(makeResponsiveProject(), { mode: "production" });
+    const assetFiles = [...result.files.keys()].filter((k) => k.startsWith("assets/"));
+    expect(assetFiles.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("usa nombres semanticos cuando useSemanticNames esta activo", () => {
+    const result = exportProject(makeResponsiveProject(), {
+      mode: "production",
+      useSemanticNames: true,
+    });
+    const assetPaths = [...result.files.keys()].filter((k) => k.startsWith("assets/"));
+    const hasSemantic = assetPaths.some((k) => /\/[a-z]{4,}-/.test(k));
+    expect(hasSemantic).toBe(true);
+  });
+
+  it("determinismo con semantic names", () => {
+    const project = makeResponsiveProject();
+    const a = exportProject(project, { mode: "production", useSemanticNames: true });
+    const b = exportProject(project, { mode: "production", useSemanticNames: true });
+    const keysA = [...a.files.keys()].sort();
+    const keysB = [...b.files.keys()].sort();
+    expect(keysA).toEqual(keysB);
+  });
+
+  it("auditoria emite image.responsive sin variantes", () => {
+    const stripped = {
+      ...catalogModernStore,
+      assets: catalogModernStore.assets.map((a) => ({ ...a, responsiveSources: undefined })),
+    };
+    const issues = auditProject(stripped as typeof catalogModernStore);
+    const responsive = issues.filter((i) => i.code === "image.responsive");
+    expect(responsive.length).toBeGreaterThan(0);
+  });
+});

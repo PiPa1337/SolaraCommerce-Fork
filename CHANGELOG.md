@@ -1,5 +1,10 @@
 # Changelog
 
+### Tests de paridad para imágenes responsive (2026-08-24)
+
+- 5 tests nuevos: picture/webp en HTML, archivos físicos por variante,
+  semantic names activo, determinismo y auditoría image.responsive.
+
 ### Hardening del sitio exportado (2026-08-24)
 
 - Runtime público sin `innerHTML` ni políticas Trusted Types permisivas; carrito,

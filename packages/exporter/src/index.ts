@@ -386,7 +386,10 @@ function publicAssetPath(
   return `/assets/${baseName}-${asset.hash.slice(0, 8)}${suffix}.${extension}`;
 }
 
-function projectWithPublicAssetUrls(project: StoreProjectV1): StoreProjectV1 {
+function projectWithPublicAssetUrls(
+  project: StoreProjectV1,
+  semanticNames = false,
+): StoreProjectV1 {
   const whatsAppPhone = publicWhatsAppPhone(project);
   return {
     ...project,
@@ -397,12 +400,12 @@ function projectWithPublicAssetUrls(project: StoreProjectV1): StoreProjectV1 {
     assets: project.assets.map((asset) => ({
       ...asset,
       source: asset.source.startsWith("data:")
-        ? publicAssetPath(asset, "primary", asset.source)
+        ? publicAssetPath(asset, "primary", asset.source, undefined, semanticNames)
         : asset.source,
       ...(asset.fallbackSource
         ? {
             fallbackSource: asset.fallbackSource.startsWith("data:")
-              ? publicAssetPath(asset, "fallback", asset.fallbackSource)
+              ? publicAssetPath(asset, "fallback", asset.fallbackSource, undefined, semanticNames)
               : asset.fallbackSource,
           }
         : {}),
@@ -411,7 +414,7 @@ function projectWithPublicAssetUrls(project: StoreProjectV1): StoreProjectV1 {
             responsiveSources: asset.responsiveSources.map((source) => ({
               ...source,
               source: source.source.startsWith("data:")
-                ? publicAssetPath(asset, "primary", source.source, source.width)
+                ? publicAssetPath(asset, "primary", source.source, source.width, semanticNames)
                 : source.source,
             })),
           }
@@ -2069,8 +2072,9 @@ function buildFiles(
   project: StoreProjectV1,
   mode: ExportMode,
   publicAiContext: boolean,
+  semanticNames: boolean,
 ): Map<string, string | Uint8Array> {
-  const publicProject = projectWithPublicAssetUrls(project);
+  const publicProject = projectWithPublicAssetUrls(project, semanticNames);
   const snapshot = buildCommerceSnapshot(publicProject);
   const pages = buildPages(publicProject, snapshot);
   const manifest = createPublicExportManifest(publicProject, pages);
@@ -2199,11 +2203,19 @@ function buildFiles(
   files.set("favicon.ico", buildFaviconIco(publicProject.identity.brandName));
   files.set("offline/index.html", buildOfflinePage(publicProject));
   files.set("manifest.webmanifest", buildWebManifest(publicProject));
+  const precacheContent = new Map<string, string | Uint8Array>([
+    [assetHref(publicProject, "/"), files.get("index.html") ?? ""],
+    [assetHref(publicProject, "/offline/index.html"), files.get("offline/index.html") ?? ""],
+    [assetHref(publicProject, "/manifest.webmanifest"), files.get("manifest.webmanifest") ?? ""],
+    [assetHref(publicProject, runtimeAssets.css), css],
+    [assetHref(publicProject, runtimeAssets.js), runtimeSource],
+  ]);
   files.set(
     "sw.js",
     buildServiceWorker(publicProject, {
       runtimeCssPath: runtimeAssets.css,
       runtimeJsPath: runtimeAssets.js,
+      precacheContent,
     }),
   );
   if (mode === "production") {
@@ -2226,11 +2238,21 @@ function buildFiles(
     .filter((asset) => mediaUsage.assetIds.has(asset.id))
     .forEach((asset) => {
       const bytes = dataUrlBytes(asset.source);
-      if (bytes) files.set(publicAssetPath(asset, "primary", asset.source).slice(1), bytes);
+      if (bytes)
+        files.set(
+          publicAssetPath(asset, "primary", asset.source, undefined, semanticNames).slice(1),
+          bytes,
+        );
       const fallbackBytes = asset.fallbackSource ? dataUrlBytes(asset.fallbackSource) : undefined;
       if (fallbackBytes) {
         files.set(
-          publicAssetPath(asset, "fallback", asset.fallbackSource ?? "").slice(1),
+          publicAssetPath(
+            asset,
+            "fallback",
+            asset.fallbackSource ?? "",
+            undefined,
+            semanticNames,
+          ).slice(1),
           fallbackBytes,
         );
       }
@@ -2238,7 +2260,7 @@ function buildFiles(
         const responsiveBytes = dataUrlBytes(source.source);
         if (responsiveBytes) {
           files.set(
-            publicAssetPath(asset, "primary", source.source, source.width).slice(1),
+            publicAssetPath(asset, "primary", source.source, source.width, semanticNames).slice(1),
             responsiveBytes,
           );
         }
@@ -2305,7 +2327,7 @@ export function exportProject(projectInput: StoreProjectV1, options: ExportOptio
   }
 
   const files = withExportContext("la fase de archivos del sitio", () =>
-    buildFiles(project, options.mode, publicAiContext),
+    buildFiles(project, options.mode, publicAiContext, options.useSemanticNames ?? false),
   );
   return { files, audit, optimization };
 }
