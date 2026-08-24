@@ -60,6 +60,7 @@ import { DashboardToolbar } from "./dashboard/DashboardToolbar";
 import { DuplicateDialog } from "./dashboard/DuplicateDialog";
 import { NativeOperationsPanel } from "./dashboard/NativeOperationsPanel";
 import { formatCompactDate, ProjectCard, statusLabel } from "./dashboard/ProjectCard";
+import { QaStatusCard } from "./QaStatusCard";
 
 interface DashboardProps {
   projects: StoredProject[];
@@ -832,6 +833,7 @@ export function Dashboard({
               <strong>{stats.archivedStores}</strong>
               <span>Archivadas</span>
             </div>
+            <QaStatusCard />
           </section>
         </section>
 
