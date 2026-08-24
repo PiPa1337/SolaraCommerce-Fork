@@ -893,7 +893,10 @@ function modernProductCard(
     loading: index < 6 ? "eager" : "lazy",
     fetchPriority: index < 6 ? "high" : "auto",
     sizes: modernProductCardImageSizes(context),
-    fallbackAlt: product.title,
+    // Alt semantico: producto + categoria + marca para Google Images.
+    fallbackAlt: [product.title, category?.title, context.project.identity.brandName]
+      .filter(Boolean)
+      .join(" - "),
   });
   return `<article class="catalog-product-card" data-product-card data-product-id="${escapeAttribute(product.id)}" data-product-title="${escapeAttribute(product.title)}"${category ? ` data-product-category="${escapeAttribute(category.id)}"` : ""}><a class="catalog-product-media" href="/productos/${escapeAttribute(product.slug)}/" aria-label="Ver ${escapeAttribute(product.title)}">${image}</a><div class="catalog-product-card-copy">${category ? `<p class="catalog-product-category">${escapeHtml(category.title)}</p>` : ""}<h3><a href="/productos/${escapeAttribute(product.slug)}/">${escapeHtml(product.title)}</a></h3><p class="catalog-product-price"><strong>${escapeHtml(formatMoneyForProject(price, context.project))}</strong>${compare && compare > price ? ` <del>${escapeHtml(formatMoneyForProject(compare, context.project))}</del><span class="catalog-discount">-${Math.round((1 - price / compare) * 100)}%</span>` : ""}</p></div></article>`;
 }

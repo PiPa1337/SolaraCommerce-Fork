@@ -53,6 +53,8 @@ const RESTRICTED_COPY_FIELDS = new Set([
   "accessibility.mobileNavigation",
   "accessibility.mainNavigation",
   "accessibility.announcements",
+  "accessibility.heroSlides",
+  "accessibility.goToSlide",
 ]);
 
 /** Campos que contienen placeholders técnicos ({storeName}) que no deben eliminarse. */
@@ -276,6 +278,10 @@ const PUBLIC_COPY_FIELDS = [
   { group: "accessibility", key: "mobileNavigation", label: "Accesibilidad: navegación móvil" },
   { group: "accessibility", key: "mainNavigation", label: "Accesibilidad: navegación principal" },
   { group: "accessibility", key: "announcements", label: "Accesibilidad: avisos" },
+  { group: "accessibility", key: "heroSlides", label: "Accesibilidad: slides del hero" },
+  { group: "accessibility", key: "goToSlide", label: "Accesibilidad: ir al slide" },
+  { group: "accessibility", key: "heroSlides", label: "Accesibilidad: slides del hero" },
+  { group: "accessibility", key: "goToSlide", label: "Accesibilidad: ir al slide (usa {index})" },
 ] as const;
 
 type PendingNavigationDelete =

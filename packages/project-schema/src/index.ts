@@ -396,6 +396,8 @@ export const PublicCopySchema = z.object({
       mobileNavigation: z.string().min(1).default("Navegación móvil"),
       mainNavigation: z.string().min(1).default("Navegación principal"),
       announcements: z.string().min(1).default("Avisos"),
+      heroSlides: z.string().min(1).default("Slides del hero"),
+      goToSlide: z.string().min(1).default("Ir al slide {index}"),
     })
     .default(PUBLIC_COPY_DEFAULTS.accessibility),
 });
@@ -495,6 +497,8 @@ export const CategorySchema = z.object({
   slug: SlugSchema,
   title: z.string().min(1),
   description: z.string(),
+  // Texto editorial extendido para SEO (200-300 palabras recomendadas).
+  seoIntro: z.string().max(4000).optional(),
   imageId: AssetIdSchema.optional(),
   parentId: CategoryIdSchema.optional(),
   productIds: z.array(ProductIdSchema),

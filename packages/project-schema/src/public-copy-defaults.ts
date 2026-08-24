@@ -235,5 +235,7 @@ export const PUBLIC_COPY_DEFAULTS = {
     mobileNavigation: "Navegación móvil",
     mainNavigation: "Navegación principal",
     announcements: "Avisos",
+    heroSlides: "Slides del hero",
+    goToSlide: "Ir al slide {index}",
   },
 };

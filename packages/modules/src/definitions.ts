@@ -402,7 +402,7 @@ export const heroMedia: ModuleDefinition<"hero-media", z.infer<typeof heroMediaS
       })
       .join("");
     const indicators = slides.length
-      ? `<div class="solara-hero-indicators" role="tablist" aria-label="Slides del hero">${slides
+      ? `<div class="solara-hero-indicators" role="tablist" aria-label="${escapeAttribute(copy.accessibility.heroSlides)}">${slides
           .map(
             (_item, index) =>
               `<button type="button" data-hero-slide="${index}" role="tab" aria-controls="hero-slide-${escapeAttribute(context.section.id)}-${index}" aria-label="Ir al slide ${index + 1}" aria-selected="${index === 0 ? "true" : "false"}"></button>`,
