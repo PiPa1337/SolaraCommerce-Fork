@@ -90,6 +90,7 @@ const PUBLIC_COPY_FIELDS = [
   { group: "hero", key: "activeProducts", label: "Productos activos del hero" },
   { group: "hero", key: "categories", label: "Categorías del hero" },
   { group: "hero", key: "contact", label: "Contacto del hero" },
+  { group: "hero", key: "whatsapp", label: "WhatsApp del hero" },
   { group: "hero", key: "directOrder", label: "Pedido directo del hero" },
   { group: "hero", key: "inquiries", label: "Consultas del hero" },
   { group: "hero", key: "whatsappAction", label: "Acción WhatsApp del hero" },
