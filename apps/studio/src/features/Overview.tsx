@@ -55,6 +55,13 @@ const RESTRICTED_COPY_FIELDS = new Set([
   "accessibility.announcements",
   "accessibility.heroSlides",
   "accessibility.goToSlide",
+  "search.submit",
+  "search.close",
+  "search.loading",
+  "search.queryTooShort",
+  "navigation.close",
+  "filters.resultCount",
+  "hero.activeProducts",
 ]);
 
 /** Campos que contienen placeholders técnicos ({storeName}) que no deben eliminarse. */
@@ -76,6 +83,8 @@ const MIN_LENGTH_COPY_FIELDS: Record<string, number> = {
   "navigation.closeMenu": 5,
   "product.noStock": 3,
   "cart.unavailable": 3,
+  "filters.resultCount": 3,
+  "hero.activeProducts": 3,
 };
 
 const PUBLIC_COPY_FIELDS = [
