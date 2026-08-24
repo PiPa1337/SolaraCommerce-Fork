@@ -1,5 +1,16 @@
 # Changelog
 
+### Hardening del sitio exportado (2026-08-24)
+
+- Runtime público sin `innerHTML` ni políticas Trusted Types permisivas; carrito,
+  búsqueda y catálogo validan datos del navegador y muestran el aviso fijo de
+  verificación manual antes de WhatsApp.
+- Exportación con CSS/JavaScript y fuentes direccionados por contenido, PWA
+  compatible con subcarpetas, CSP/HSTS endurecidas y `deployment-manifest.json`.
+- Exportar en desktop crea una carpeta hija dedicada; se agregó el verificador
+  Cloudflare Pages, checklist no persistido y documentación de privacidad,
+  previews públicos y publicación manual.
+
 ### Dark mode toggle y styles tokenizados (2026-08-24)
 
 - El storefront runtime inicializa el dark mode toggle: lee y persiste
