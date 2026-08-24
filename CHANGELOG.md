@@ -1,5 +1,17 @@
 # Changelog
 
+### Restricción de textos legales y de accesibilidad en publicCopy (2026-08-24)
+
+- 11 campos de publicCopy marcados como restringidos: disclaimers legales
+  (whatsapp.confirmation, checkout.disclaimer), labels de accesibilidad WCAG
+  (accessibility.*: 6 keys) y skipToContent. El editor los muestra con hint
+  "Texto del sistema" pero permite edición con cuidado.
+- Campos con placeholder {storeName} (contact.emailSubject,
+  whatsapp.orderGreeting) muestran hint recordando que el placeholder es
+  obligatorio.
+- El agente IA rechaza store.updatePublicCopy que reduzca los disclaimers
+  legales a menos de 20 caracteres.
+
 ### Inputs de redes sociales en Studio (2026-08-24)
 
 - El inspector de identidad en Overview ahora incluye inputs para Instagram,

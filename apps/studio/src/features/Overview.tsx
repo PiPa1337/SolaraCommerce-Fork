@@ -29,6 +29,24 @@ const NAVIGATION_LABEL_MAX_LENGTH = 80;
 const NAVIGATION_ITEMS_MAX = 20;
 const NAVIGATION_CHILDREN_MAX = 12;
 
+/** Campos de publicCopy con restricción de edición por diseño. */
+const RESTRICTED_COPY_FIELDS = new Set([
+  "whatsapp.confirmation",
+  "checkout.disclaimer",
+  "contact.emailSubject",
+  "whatsapp.orderGreeting",
+  "export.skipToContent",
+  "accessibility.benefits",
+  "accessibility.productInfo",
+  "accessibility.catalogSummary",
+  "accessibility.mobileNavigation",
+  "accessibility.mainNavigation",
+  "accessibility.announcements",
+]);
+
+/** Campos que contienen placeholders técnicos ({storeName}) que no deben eliminarse. */
+const PLACEHOLDER_COPY_FIELDS = new Set(["contact.emailSubject", "whatsapp.orderGreeting"]);
+
 const PUBLIC_COPY_FIELDS = [
   { group: "navigation", key: "home", label: "Inicio" },
   { group: "navigation", key: "catalog", label: "Catálogo" },
@@ -1273,8 +1291,19 @@ export function Overview({
               ] as Record<string, string>;
               const fieldKey = `public-copy-${group}-${key}`;
               const value = fieldValue(fieldKey, copyGroup[key] ?? "");
+              const restrictedKey = `${group}.${key}`;
+              const isRestricted = RESTRICTED_COPY_FIELDS.has(restrictedKey);
+              const hasPlaceholder = PLACEHOLDER_COPY_FIELDS.has(restrictedKey);
               return (
-                <Field key={fieldKey} label={label} className="field--wide">
+                <Field
+                  key={fieldKey}
+                  label={label}
+                  className="field--wide"
+                  {...(isRestricted
+                    ? { description: "Texto del sistema. Editar con cuidado." }
+                    : {})}
+                  {...(hasPlaceholder ? { hint: "Debe contener {storeName}" } : {})}
+                >
                   <input
                     aria-label={label}
                     value={value}

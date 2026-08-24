@@ -2276,23 +2276,38 @@ export class AgentController {
           });
           break;
         }
-      case "store.updateSeo":
+        case "store.updateSeo":
           project = StoreProjectV2Schema.parse({
             ...project,
             seo: { ...project.seo, ...operation.changes },
             updatedAt: at,
           });
           break;
-        case "store.updatePublicCopy":
+        case "store.updatePublicCopy": {
+          const LEGAL_MIN_LENGTHS: Record<string, number> = {
+            "whatsapp.confirmation": 20,
+            "checkout.disclaimer": 20,
+          };
+          for (const [groupKey, changes] of Object.entries(operation.changes)) {
+            if (typeof changes !== "object" || changes === null) continue;
+            for (const [key, value] of Object.entries(changes as Record<string, unknown>)) {
+              if (typeof value !== "string") continue;
+              const fullKey = `${groupKey}.${key}`;
+              const minLength = LEGAL_MIN_LENGTHS[fullKey];
+              if (minLength !== undefined && value.trim().length < minLength) {
+                throw new Error(
+                  `${fullKey}: el texto es un aviso legal y debe tener al menos ${minLength} caracteres.`,
+                );
+              }
+            }
+          }
           project = StoreProjectV2Schema.parse({
             ...project,
-            publicCopy: {
-              ...project.publicCopy,
-              ...operation.changes,
-            },
+            publicCopy: { ...project.publicCopy, ...operation.changes },
             updatedAt: at,
           });
           break;
+        }
         case "store.updatePolicies":
           project = StoreProjectV2Schema.parse({
             ...project,
