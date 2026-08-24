@@ -14,6 +14,8 @@
   ("Todos los derechos reservados." → editable, año automático).
   "Hecho con ❤️ en solara.com.ar" se mantiene como marca de agua fija.
 - Nuevos comandos de agente IA: store.updatePublicCopy y store.updatePolicies.
+- Mapeo de países ahora editable via policies.countryNames (antes "AR" estaba
+  hardcodeado a "Argentina" en el exporter).
 
 ### Archivado de tiendas, advertencias tempranas y validación de imágenes (2026-08-24)
 

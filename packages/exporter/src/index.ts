@@ -183,6 +183,7 @@ function parseProject(projectInput: StoreProjectV1, operation: string): StorePro
 
 import { escapeAttribute, escapeHtml, escapeXml, jsonForScript } from "./html.js";
 import {
+  buildFaviconIco,
   buildOfflinePage,
   buildRssFeed,
   buildServiceWorker,
@@ -233,7 +234,12 @@ import {
   videoFor,
   videoUrl,
 } from "./assets.js";
-import { breadcrumbData, productStructuredData, storeStructuredData } from "./structured-data.js";
+import {
+  breadcrumbData,
+  itemListData,
+  productStructuredData,
+  storeStructuredData,
+} from "./structured-data.js";
 
 export {
   assetExtension,
@@ -1387,7 +1393,10 @@ function buildPages(
         canonicalPath,
         pageType: "category",
         body,
-        structuredData: [breadcrumbData(project, categoryBreadcrumbItems(project, category))],
+        structuredData: [
+          breadcrumbData(project, categoryBreadcrumbItems(project, category)),
+          itemListData(project, category.title, canonicalPath, paginated),
+        ],
         ...(categoryImage ? { image: categoryImage } : {}),
         ...(categoryImage ? { preloadImage: categoryImage } : {}),
         ...(pageNumber > 1
@@ -1702,7 +1711,7 @@ function buildPages(
       ? `${minimum} ${minimum === 1 ? "día" : "días"}`
       : `${minimum} a ${maximum} días`;
   const policyCoverage = (countries: readonly string[]) =>
-    countries.map((country) => (country === "AR" ? "Argentina" : country)).join(", ");
+    countries.map((country) => project.policies.countryNames?.[country] ?? country).join(", ");
   const policyContactAction = whatsAppContactLink
     ? `<a class="solara-primary-action" href="${escapeAttribute(whatsAppContactLink)}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.product.askWhatsApp)}</a>`
     : `<a class="solara-secondary-action" href="${escapeAttribute(internalHref(project, isV2Design ? "/#contact-form" : "/contacto/"))}">${escapeHtml(isV2Design ? copy.hero.contact : copy.pages.contact)}</a>`;
@@ -1961,6 +1970,7 @@ function buildFiles(
   // PWA: manifest y service worker para instalación y cache offline.
   files.set("icons/icon-192.png", generateIconPng(publicProject.identity.brandName + "-192", 192));
   files.set("icons/icon-512.png", generateIconPng(publicProject.identity.brandName + "-512", 512));
+  files.set("favicon.ico", buildFaviconIco(publicProject.identity.brandName));
   files.set("offline/index.html", buildOfflinePage(publicProject));
   files.set("manifest.webmanifest", buildWebManifest(publicProject));
   files.set("sw.js", buildServiceWorker());

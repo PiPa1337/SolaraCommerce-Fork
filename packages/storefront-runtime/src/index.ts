@@ -158,7 +158,8 @@ export function buildContactMailto(
   publicCopy?: Pick<PublicCopy, "contact" | "whatsapp">,
 ): string {
   const lines = getContactLines(brandName, details, publicCopy);
-  const subject = `Consulta para ${brandName.trim()}`;
+  const subjectTemplate = publicCopy?.contact?.emailSubject ?? "Consulta para {storeName}";
+  const subject = subjectTemplate.replace("{storeName}", brandName.trim());
   return `mailto:${email.trim()}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join("\n"))}`;
 }
 
@@ -413,7 +414,8 @@ function storefrontBoot(): void {
         message: string;
       }): string => {
         const lines = getContactLines(details);
-        const subject = `Consulta para ${brand}`;
+        const subjectTemplate = k.emailSubject ?? "Consulta para {storeName}";
+        const subject = subjectTemplate.replace("{storeName}", brand);
         return `mailto:${emailTarget}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join("\n"))}`;
       };
       const buildWaUrl = (details: {

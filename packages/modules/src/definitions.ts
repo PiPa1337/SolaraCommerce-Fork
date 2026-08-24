@@ -347,6 +347,7 @@ export const heroMedia: ModuleDefinition<"hero-media", z.infer<typeof heroMediaS
   styleAsset: scopedAssetId("hero-media"),
   render(context) {
     const settings = context.settings;
+    const copy = context.project.publicCopy;
     const fallbackImageId =
       settings.posterAssetId ||
       context.project.seo.socialImageId ||
@@ -410,7 +411,7 @@ export const heroMedia: ModuleDefinition<"hero-media", z.infer<typeof heroMediaS
       : "";
     const controls =
       slides.length > 1
-        ? `<div class="solara-hero-controls"><button type="button" data-hero-prev aria-label="Slide anterior">Anterior</button><button type="button" data-hero-next aria-label="Slide siguiente">Siguiente</button>${indicators}</div>`
+        ? `<div class="solara-hero-controls"><button type="button" data-hero-prev aria-label="${escapeAttribute(copy.hero?.slidePrev ?? "Slide anterior")}">${escapeHtml(copy.hero?.slidePrev ?? "Anterior")}</button><button type="button" data-hero-next aria-label="${escapeAttribute(copy.hero?.slideNext ?? "Slide siguiente")}">${escapeHtml(copy.hero?.slideNext ?? "Siguiente")}</button>${indicators}</div>`
         : "";
     return moduleRoot(
       "hero-media",

@@ -57,6 +57,8 @@ export const PUBLIC_COPY_DEFAULTS = {
     whatsappAction: "Escribir por WhatsApp",
     pauseVideo: "Pausar video",
     resumeVideo: "Reanudar video",
+    slidePrev: "Slide anterior",
+    slideNext: "Slide siguiente",
   },
   errors: {
     catalogLoad: "No se pudo cargar el catálogo.",
@@ -97,6 +99,7 @@ export const PUBLIC_COPY_DEFAULTS = {
     reason: "Motivo",
     orderNumber: "Número de pedido",
     message: "Mensaje",
+    emailSubject: "Consulta para {storeName}",
   },
   cart: {
     close: "Cerrar carrito",
@@ -112,6 +115,7 @@ export const PUBLIC_COPY_DEFAULTS = {
     remove: "Eliminar",
     unavailable: "Ya no disponible",
     exploreCategories: "Explorar categorías",
+    phoneInvalid: "Ingresá un teléfono válido",
   },
   checkout: {
     submit: "Preparar pedido",
