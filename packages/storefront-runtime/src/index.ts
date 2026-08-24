@@ -283,6 +283,7 @@ function setHtml(element: HTMLElement, value: string): void {
 
 function storefrontBoot(): void {
   const root = document.documentElement;
+  const baseHref = (root.dataset.baseHref ?? "").replace(/\/+$/, "");
   const storeId = root.dataset.storeId ?? "solara";
   const currency = root.dataset.currency ?? "ARS";
   const locale = root.lang || "es-AR";
@@ -602,7 +603,7 @@ function storefrontBoot(): void {
   const reconcileCart = (): Promise<boolean> => {
     if (paused) return Promise.resolve(false);
     if (freshCatalog) return freshCatalog;
-    freshCatalog = fetch("/catalog-index.json")
+    freshCatalog = fetch(`${baseHref}/catalog-index.json`)
       .then((response) => {
         if (!response.ok) throw new Error("No se pudo cargar el catálogo.");
         return response.json() as Promise<CatalogIndexEntry[]>;
@@ -1523,7 +1524,7 @@ function storefrontBoot(): void {
       } else {
         const controller = new AbortController();
         setHtml(searchGrid, `<p>${escapeText(s.loading)}</p>`);
-        fetch("/search-index.json", { signal: controller.signal })
+        fetch(`${baseHref}/search-index.json`, { signal: controller.signal })
           .then((response) => {
             if (!response.ok) throw new Error("No se pudo cargar el índice de búsqueda.");
             return response.json() as Promise<SearchEntryWithTokens[]>;

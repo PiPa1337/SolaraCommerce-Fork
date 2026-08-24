@@ -150,6 +150,32 @@ async function start() {
       join(layout.runtimeRoot, "instance.json"),
     );
     firstRunAt = firstRunDetection.firstRun ? layout.portableRoot : null;
+    if (
+      !firstRunDetection.firstRun &&
+      firstRunDetection.previousRoot &&
+      firstRunDetection.previousRoot !== layout.portableRoot
+    ) {
+      await app.whenReady();
+      const { response } = await dialog.showMessageBox({
+        type: "warning",
+        title: "Ubicación cambiada",
+        message: "SolaraCommerce se ejecutó desde una carpeta distinta.",
+        detail: [
+          `Carpeta anterior: ${firstRunDetection.previousRoot}`,
+          `Carpeta actual: ${layout.portableRoot}`,
+          "",
+          "Si moviste la aplicación sin su carpeta proyectos/, tus tiendas no están aquí.",
+          "Los datos guardados en la ubicación anterior permanecen intactos.",
+        ].join("\n"),
+        buttons: ["Continuar aquí", "Salir"],
+        defaultId: 0,
+        cancelId: 1,
+      });
+      if (response === 1) {
+        app.quit();
+        return;
+      }
+    }
     if (firstRunAt) {
       await log(
         `Primera ejecución en esta carpeta: ${layout.portableRoot}. Si moviste la aplicación, tus tiendas siguen en la carpeta anterior.`,

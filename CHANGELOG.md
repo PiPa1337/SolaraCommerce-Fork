@@ -1,6 +1,22 @@
 # Changelog
 
+### X1 subcarpeta + guard raíz portable (2026-08-24)
+
+- El runtime del storefront lee `data-base-href` del html y prefija los fetch
+  de catalog-index.json y search-index.json. Los hrefs del HTML ya se
+  prefijaban; con este fix los fetch dinámicos también respetan la subcarpeta.
+- Guard de raíz portable: instance.json guarda portableRoot; si difiere al
+  arrancar desde una carpeta distinta, dialog Electron permite continuar o salir.
+
 ### Archivado de tiendas, advertencias tempranas y validación de imágenes (2026-08-24)
+
+- Nuevo método `plans.createAndCommit` que crea el plan y lo commitea en una
+  sola llamada atómica, eliminando la necesidad de scripts de orquestación
+  externos para flujos transaccionales.
+- Nueva operación `assets.generatePlaceholder` que genera PNGs determinísticos
+  a partir de un seed sin depender de archivos externos.
+- Nueva operación `product.createBatch` para crear hasta 100 productos que
+  comparten categoría, imágenes y tags en una sola operación (~70% menos payload).
 
 - Los assets stageados ahora se resuelven desde disco en sesiones nuevas,
   eliminando el error "Imagen inexistente" cuando staging y plans.create

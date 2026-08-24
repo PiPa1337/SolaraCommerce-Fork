@@ -149,13 +149,20 @@ async function writeJsonAtomic(pathname, value) {
  */
 export async function detectPortableFirstRun(_portableRoot, instancePath) {
   let instanceExists = false;
+  let previousRoot = null;
   try {
     const info = await lstat(instancePath);
     instanceExists = info.isFile();
+    if (instanceExists) {
+      const raw = JSON.parse(
+        await import("node:fs/promises").then((m) => m.readFile(instancePath, "utf8")),
+      );
+      if (raw && typeof raw.portableRoot === "string") previousRoot = raw.portableRoot;
+    }
   } catch {
     instanceExists = false;
   }
-  return { firstRun: !instanceExists, instanceExists };
+  return { firstRun: !instanceExists, instanceExists, previousRoot };
 }
 
 /**
@@ -178,6 +185,7 @@ export async function ensurePortableLayout(layout, { appVersion = "0.1.0" } = {}
     version: 1,
     appVersion,
     layoutVersion: PORTABLE_LAYOUT_VERSION,
+    portableRoot: layout.portableRoot,
   };
   await writeJsonAtomic(instancePath, instance);
   return { ...layout, instancePath };

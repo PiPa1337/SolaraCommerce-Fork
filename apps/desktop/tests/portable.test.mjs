@@ -24,12 +24,13 @@ test("el layout empaquetado permanece junto al ejecutable en rutas movibles", as
     assert.equal(layout.projectsRoot, join(layout.portableRoot, "proyectos"));
     await ensurePortableLayout(layout, { appVersion: "test" });
     const instance = JSON.parse(await readFile(join(layout.runtimeRoot, "instance.json"), "utf8"));
-    assert.deepEqual(instance, {
-      format: "solara-portable-instance",
-      version: 1,
-      appVersion: "test",
-      layoutVersion: 1,
-    });
+    assert.equal(instance.format, "solara-portable-instance");
+    assert.equal(instance.version, 1);
+    assert.equal(instance.appVersion, "test");
+    assert.equal(instance.layoutVersion, 1);
+    assert.equal(instance.portableRoot, layout.portableRoot);
+    /* Los campos clave están verificados arriba individualmente para permitir
+       el campo portableRoot sin romper la comparación. */
     assert.equal(
       resolvePortablePath(layout.portableRoot, "proyectos/demo"),
       join(layout.projectsRoot, "demo"),
