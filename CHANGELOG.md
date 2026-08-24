@@ -21,6 +21,14 @@
 
 ### SEO head, PWA completa y performance (2026-08-24)
 
+### Sitemap, favicon.ico, ItemList y SW precache (2026-08-24)
+
+- Sitemap ahora incluye `<changefreq>` (daily para home, weekly para el resto)
+  y `<priority>` (1.0 home, 0.8 categorías, 0.7 colecciones, 0.6 productos).
+- `favicon.ico` binario genuino con PNG embebido de 64×64 px.
+- ItemList JSON-LD en páginas de categoría con posición de cada producto.
+- Service worker precachea `/`, `/offline/`, manifest y assets al instalar.
+
 - `rel=prev`/`rel=next` en `<head>` para categorías paginadas.
 - `priceValidUntil` determinístico en Offer JSON-LD (año de updatedAt).
 - Open Graph video tags (`og:video`) cuando el hero tiene video.

@@ -159,6 +159,8 @@ export const PublicCopySchema = z.object({
       whatsappAction: z.string().min(1).default("Escribir por WhatsApp"),
       pauseVideo: z.string().min(1).default("Pausar video"),
       resumeVideo: z.string().min(1).default("Reanudar video"),
+      slidePrev: z.string().min(1).default("Slide anterior"),
+      slideNext: z.string().min(1).default("Slide siguiente"),
     })
     .default(PUBLIC_COPY_DEFAULTS.hero),
   product: z
@@ -202,6 +204,7 @@ export const PublicCopySchema = z.object({
       reason: z.string().min(1).default("Motivo"),
       orderNumber: z.string().min(1).default("Número de pedido"),
       message: z.string().min(1).default("Mensaje"),
+      emailSubject: z.string().min(1).default("Consulta para {storeName}"),
     })
     .default(PUBLIC_COPY_DEFAULTS.contact),
   cart: z
@@ -219,6 +222,7 @@ export const PublicCopySchema = z.object({
       remove: z.string().min(1).default("Eliminar"),
       unavailable: z.string().min(1).default("Ya no disponible"),
       exploreCategories: z.string().min(1).default("Explorar categorías"),
+      phoneInvalid: z.string().min(1).default("Ingresá un teléfono válido"),
     })
     .default(PUBLIC_COPY_DEFAULTS.cart),
   checkout: z
@@ -652,6 +656,7 @@ const StoreProjectV2ShapeSchema = z.object({
     returns: CommercePolicySchema,
     privacy: z.string(),
     terms: z.string(),
+    countryNames: z.record(z.string(), z.string()).default({ AR: "Argentina" }),
   }),
   products: z.array(ProductSchema),
   categories: z.array(CategorySchema),

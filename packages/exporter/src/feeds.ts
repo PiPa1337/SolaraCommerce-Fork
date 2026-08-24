@@ -32,6 +32,8 @@ export function buildSitemap(
       (page) => `<url>
   <loc>${escapeXml(absoluteUrl(project, page.canonicalPath))}</loc>
   <lastmod>${project.updatedAt.slice(0, 10)}</lastmod>
+  <changefreq>${page.pageType === "home" ? "daily" : "weekly"}</changefreq>
+  <priority>${page.pageType === "home" ? "1.0" : page.pageType === "category" ? "0.8" : page.pageType === "collection" ? "0.7" : "0.6"}</priority>
   ${page.image ? `<image:image><image:loc>${escapeXml(absoluteResourceUrl(project, page.image))}</image:loc></image:image>` : ""}
 </url>`,
     );

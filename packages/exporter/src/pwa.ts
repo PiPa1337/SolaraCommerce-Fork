@@ -31,7 +31,11 @@ export function buildWebManifest(project: StoreProjectV1): string {
 export function buildServiceWorker(): string {
   const lines = [
     "const CACHE_NAME = 'solara-v1';",
-    "self.addEventListener('install', (event) => { self.skipWaiting(); });",
+    "const PRECACHE_URLS = ['/', '/offline/index.html', '/manifest.webmanifest', '/assets/storefront.css', '/assets/storefront.js'];",
+    "self.addEventListener('install', (event) => {",
+    "  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)));",
+    "  self.skipWaiting();",
+    "});",
     "self.addEventListener('activate', (event) => { event.waitUntil(clients.claim()); });",
     "self.addEventListener('fetch', (event) => {",
     "  if (event.request.method !== 'GET') return;",
@@ -57,6 +61,30 @@ export function buildServiceWorker(): string {
     "});",
   ];
   return lines.join(String.fromCharCode(10));
+}
+
+/**
+ * Genera un archivo .ico binario valido que embebe un PNG de 64x64.
+ * El formato ICO soporta PNG embebido desde Windows Vista.
+ */
+export function buildFaviconIco(seed: string): Uint8Array {
+  const png = generateIconPng(seed, 64);
+  const header = new Uint8Array(6);
+  const view = new DataView(header.buffer);
+  view.setUint16(0, 0, true); // reserved
+  view.setUint16(2, 1, true); // type: icon
+  view.setUint16(4, 1, true); // count: 1 image
+  const entry = new Uint8Array(16);
+  const entryView = new DataView(entry.buffer);
+  entry[0] = 64; // width 64
+  entry[1] = 64; // height 64
+  entry[2] = 0; // palette
+  entry[3] = 0; // reserved
+  entryView.setUint16(4, 1, true); // color planes
+  entryView.setUint16(6, 32, true); // bits per pixel
+  entryView.setUint32(8, png.byteLength, true); // data size
+  entryView.setUint32(12, 22, true); // data offset (6 + 16)
+  return new Uint8Array(Buffer.concat([header, entry, Buffer.from(png)]));
 }
 
 export function buildRssFeed(project: StoreProjectV1): string | undefined {

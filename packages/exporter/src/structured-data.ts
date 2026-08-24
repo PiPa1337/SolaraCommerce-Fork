@@ -238,3 +238,28 @@ export function productStructuredData(
     })(),
   };
 }
+
+/**
+ * ItemList para paginas de categoria: lista los productos con su posicion.
+ * Google lo usa para generar carruseles en resultados de busqueda.
+ */
+export function itemListData(
+  project: StoreProjectV1,
+  listName: string,
+  canonicalPath: string,
+  products: Product[],
+): unknown {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: listName,
+    itemListOrder: "https://schema.org/ItemListOrderAscending",
+    numberOfItems: products.length,
+    itemListElement: products.map((product, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      url: absoluteUrl(project, `/productos/${product.slug}/`),
+      name: product.title,
+    })),
+  };
+}
