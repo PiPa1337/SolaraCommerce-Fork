@@ -149,6 +149,8 @@ export interface DeploymentManifestV1 {
 interface RuntimeAssetPaths {
   css: string;
   js: string;
+  fontPaths?: ReadonlyMap<string, string>;
+  serviceWorker?: boolean;
 }
 
 export interface PageDescriptor {
@@ -1153,7 +1155,7 @@ function renderDocument(
   const baseHref = baseUrlPathname(project.baseUrl);
   const baseHrefAttribute = baseHref ? ` data-base-href="${escapeHtml(baseHref)}"` : "";
   const serviceWorkerAttribute =
-    mode === "production"
+    (runtimeAssets.serviceWorker ?? mode === "production")
       ? ` data-service-worker-url="${escapeAttribute(assetHref(project, "/sw.js"))}"`
       : "";
   const whatsAppPhone = publicWhatsAppPhone(project);
@@ -1175,7 +1177,7 @@ function renderDocument(
       ? activeFonts(project.theme.typography.display, project.theme.typography.body)
           .map(
             (font) =>
-              `<link rel="preload" as="font" type="font/woff2" href="${escapeAttribute(assetHref(project, `/${font.woff2Path}`))}" crossorigin>`,
+              `<link rel="preload" as="font" type="font/woff2" href="${escapeAttribute(assetHref(project, `/${runtimeAssets.fontPaths?.get(font.woff2Path) ?? font.woff2Path}`))}" crossorigin>`,
           )
           .join("\n  ")
       : "";
@@ -1975,6 +1977,92 @@ function buildPages(
   }));
 }
 
+function externalHosts(project: StoreProjectV1): string[] {
+  const values = [
+    ...project.assets.flatMap((asset) => [
+      asset.source,
+      asset.fallbackSource ?? "",
+      ...(asset.responsiveSources?.map((source) => source.source) ?? []),
+    ]),
+    ...project.videos.map((video) => video.source),
+  ];
+  const hosts = new Set<string>();
+  for (const value of values) {
+    if (!/^https?:\/\//i.test(value)) continue;
+    try {
+      hosts.add(new URL(value).hostname.toLowerCase());
+    } catch {
+      // La auditoría de URLs reporta la entrada inválida; no se publica como host.
+    }
+  }
+  if (publicWhatsAppPhone(project)) hosts.add("wa.me");
+  return [...hosts].sort();
+}
+
+function isAllowedPublicPath(path: string): boolean {
+  if (!path || /^[\\/]|^[A-Za-z]:[\\/]|(^|[\\/])\.\.(?:[\\/]|$)/.test(path)) return false;
+  return /^(?:index\.html|404\.html|[A-Za-z0-9._+-]+(?:\/[A-Za-z0-9._+-]+)*\/index\.html|assets\/[A-Za-z0-9._+-]+|icons\/icon-(?:192|512)\.png|offline\/index\.html|manifest\.webmanifest|sw\.js|favicon\.ico|robots\.txt|sitemap\.xml|image-sitemap\.xml|video-sitemap\.xml|google-merchant\.xml|ai-context\.json|llms(?:-full)?\.txt|search-index\.json|catalog-index\.json|feed\.xml|_headers|_redirects|\.well-known\/security\.txt|deployment-manifest\.json)$/.test(
+    path,
+  );
+}
+
+function assertPublicFileMap(files: ReadonlyMap<string, string | Uint8Array>): void {
+  for (const path of files.keys()) {
+    if (
+      path.includes(".solara.json") ||
+      path.includes("proyectos/") ||
+      path.includes(".local-backups")
+    ) {
+      throw new Error(`El mapa público contiene un archivo privado: ${path}`);
+    }
+    if (!isAllowedPublicPath(path)) {
+      throw new Error(`El mapa público contiene una ruta fuera de la allowlist: ${path}`);
+    }
+  }
+}
+
+function fileHash(value: string | Uint8Array): string {
+  return sha256Hex(value);
+}
+
+function addDeploymentManifest(
+  files: Map<string, string | Uint8Array>,
+  project: StoreProjectV1,
+  mode: ExportMode,
+  publicAiContext: boolean,
+  runtimeAssets: RuntimeAssetPaths,
+): DeploymentManifestV1 {
+  assertPublicFileMap(files);
+  const essentialPaths = [
+    "index.html",
+    runtimeAssets.css.slice(1),
+    runtimeAssets.js.slice(1),
+    "sw.js",
+    "manifest.webmanifest",
+    ...(mode === "production" ? ["_headers"] : []),
+  ].filter((path) => files.has(path));
+  const essentialFileHashes = Object.fromEntries(
+    essentialPaths.sort().map((path) => [path, fileHash(files.get(path) as string | Uint8Array)]),
+  );
+  const runtime = { css: runtimeAssets.css, js: runtimeAssets.js };
+  const revision = sha256Hex(
+    JSON.stringify({ mode, baseUrl: project.baseUrl, runtime, essentialFileHashes }),
+  ).slice(0, 16);
+  const deploymentManifest: DeploymentManifestV1 = {
+    version: 1,
+    mode,
+    baseUrl: project.baseUrl,
+    revision,
+    runtime,
+    publicAiContext,
+    externalHosts: externalHosts(project),
+    essentialFileHashes,
+  };
+  files.set("deployment-manifest.json", JSON.stringify(deploymentManifest, null, 2));
+  assertPublicFileMap(files);
+  return deploymentManifest;
+}
+
 function buildFiles(
   project: StoreProjectV1,
   mode: ExportMode,
@@ -1984,8 +2072,18 @@ function buildFiles(
   const snapshot = buildCommerceSnapshot(publicProject);
   const pages = buildPages(publicProject, snapshot);
   const manifest = createPublicExportManifest(publicProject, pages);
+  const fontFiles = fontFilesFor(
+    publicProject.theme.typography.display,
+    publicProject.theme.typography.body,
+  );
+  const fontPathOverrides = new Map(
+    [...fontFiles].map(([path, bytes]) => [
+      path,
+      `assets/font.${sha256Hex(bytes).slice(0, 16)}.woff2`,
+    ]),
+  );
   const css = minifyCss(
-    `${themeCss(publicProject)}\n${exportedModuleStyles(publicProject)}\n${STOREFRONT_RUNTIME_CSS}`,
+    `${themeCss(publicProject, "file", fontPathOverrides)}\n${exportedModuleStyles(publicProject)}\n${STOREFRONT_RUNTIME_CSS}`,
   );
   const runtimeSource =
     mode === "draft"
@@ -1994,6 +2092,8 @@ function buildFiles(
   const runtimeAssets: RuntimeAssetPaths = {
     css: `/assets/storefront.${sha256Hex(css).slice(0, 16)}.css`,
     js: `/assets/storefront.${sha256Hex(runtimeSource).slice(0, 16)}.js`,
+    fontPaths: fontPathOverrides,
+    serviceWorker: true,
   };
   const mediaUsage = {
     assetIds: new Set(manifest.usedAssetIds),
@@ -2011,11 +2111,9 @@ function buildFiles(
   });
   files.set(runtimeAssets.css.slice(1), css);
   files.set(runtimeAssets.js.slice(1), runtimeSource);
-  fontFilesFor(publicProject.theme.typography.display, publicProject.theme.typography.body).forEach(
-    (bytes, path) => {
-      files.set(path, bytes);
-    },
-  );
+  fontFiles.forEach((bytes, path) => {
+    files.set(fontPathOverrides.get(path) ?? path, bytes);
+  });
   if (manifest.searchEnabled) files.set("search-index.json", buildSearchIndex(publicProject));
   if (manifest.cartEnabled || manifest.checkoutEnabled || publicProject.siteShell.cart)
     files.set("catalog-index.json", buildCatalogIndex(publicProject));
@@ -2042,13 +2140,15 @@ function buildFiles(
       "_headers",
       `/*
   Cache-Control: public, max-age=0, must-revalidate, stale-while-revalidate=86400
-  Content-Security-Policy: default-src 'self'; img-src 'self' data: https: http:; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self'; media-src 'self' data: https: http:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types solara-storefront
-  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: https: http:; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self'; media-src 'self' data: https: http:; font-src 'self' data:; manifest-src 'self'; worker-src 'self'; form-action 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types 'none'
+  Strict-Transport-Security: max-age=31536000
   Cross-Origin-Opener-Policy: same-origin
   Referrer-Policy: strict-origin-when-cross-origin
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Access-Control-Allow-Origin: *
+  Access-Control-Expose-Headers: Content-Security-Policy, Strict-Transport-Security, X-Content-Type-Options, X-Frame-Options, Cache-Control, Referrer-Policy, Permissions-Policy
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
@@ -2097,17 +2197,26 @@ function buildFiles(
   files.set("favicon.ico", buildFaviconIco(publicProject.identity.brandName));
   files.set("offline/index.html", buildOfflinePage(publicProject));
   files.set("manifest.webmanifest", buildWebManifest(publicProject));
-  files.set("sw.js", buildServiceWorker(publicProject));
+  files.set(
+    "sw.js",
+    buildServiceWorker(publicProject, {
+      runtimeCssPath: runtimeAssets.css,
+      runtimeJsPath: runtimeAssets.js,
+    }),
+  );
   if (mode === "production") {
     const rss = buildRssFeed(publicProject);
     if (rss) files.set("feed.xml", rss);
     const expiresDate = new Date(
       new Date(publicProject.updatedAt).getTime() + 31536000000,
     ).toISOString();
-    files.set(
-      ".well-known/security.txt",
-      `Contact: mailto:${publicProject.identity.email || "security@example.com"}\nExpires: ${expiresDate}\nCanonical: ${absoluteUrl(publicProject, "/.well-known/security.txt")}\n`,
-    );
+    const securityEmail = publicProject.identity.email.trim();
+    if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(securityEmail)) {
+      files.set(
+        ".well-known/security.txt",
+        `Contact: mailto:${securityEmail}\nExpires: ${expiresDate}\nCanonical: ${absoluteUrl(publicProject, "/.well-known/security.txt")}\n`,
+      );
+    }
     files.set("_redirects", "# Solara redirect rules\n");
   }
 
@@ -2139,6 +2248,7 @@ function buildFiles(
       const bytes = dataUrlBytes(video.source);
       if (bytes) files.set(`assets/${video.hash}.${assetExtension(video)}`, bytes);
     });
+  addDeploymentManifest(files, publicProject, mode, publicAiContext, runtimeAssets);
   return files;
 }
 
@@ -2170,7 +2280,7 @@ export function exportProject(projectInput: StoreProjectV1, options: ExportOptio
     profile: options.optimizationProfile ?? "safe",
     publicAiContext,
   });
-  const baseAudit = auditProject(project);
+  const baseAudit = auditProject(project, publicAiContext);
   const existingPaths = new Set(baseAudit.map((issue) => issue.path).filter(Boolean));
   const optimizationAudit: AuditIssue[] = optimization.findings
     .filter((finding) => !finding.path || !existingPaths.has(finding.path))
@@ -2232,7 +2342,11 @@ export function renderPreviewHtml(
     pages[0];
   if (!page) throw new Error("No se pudo renderizar la página inicial.");
   let document = withExportContext("la fase de documentos del sitio", () =>
-    renderDocument(previewAssets.project, page, mode, false, manifest),
+    renderDocument(previewAssets.project, page, mode, false, manifest, {
+      css: "/assets/storefront.css",
+      js: "/assets/storefront.js",
+      serviceWorker: false,
+    }),
   );
   document = prefixDocumentHrefs(project, document);
   const usedSources = new Map(

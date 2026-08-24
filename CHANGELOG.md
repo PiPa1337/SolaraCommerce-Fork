@@ -1,5 +1,11 @@
 # Changelog
 
+### Fix: allowlist acepta assets SVG con + en MIME (2026-08-24)
+
+- `isAllowedPublicPath` ahora acepta el caracter + en rutas de assets,
+  necesario para archivos como `template-asset-hero.svg+xml` generados
+  por el template clean.
+
 ### qa.runCycle: ciclo TDD orquestado (2026-08-24)
 
 - Nuevo metodo `qa.runCycle` que ejecuta el ciclo completo: lee backlog,
