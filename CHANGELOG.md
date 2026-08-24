@@ -1,5 +1,22 @@
 # Changelog
 
+### Agente autónomo de QA perpetuo (2026-08-24)
+
+- Nuevo scope `qa:write` con 8 métodos de protocolo: readBacklog,
+  writeTest, runGates, detectFlaky, logProgress, updateState, suggestFix,
+  runExport.
+- `lighthouse-lite.ts`: 10 checks SEO/A11y estáticos sobre HTML generado
+  sin Chrome headless (viewport, title length, description length, h1 único,
+  images con alt, canonical, robots meta, OG tags, JSON-LD parseable).
+- `QACycleManager`: gestión de estado de ciclos TDD con watchdog (3 intentos),
+  persistencia en disco y recovery post-restart.
+- `qa-runner.ts`: ejecución programática de vitest via spawn con timeout.
+- `qa.runExport`: exporta una tienda y retorna métricas (archivos, peso,
+  issues críticos).
+- `qa.runCycle`: orquesta el ciclo TDD completo (backlog → gates → contexto).
+- MCP tools para todos los métodos QA en agent-host.mjs.
+- Tests: 5 tests de QA + 2 tests de lighthouse-lite pasando.
+
 ### Fix: allowlist acepta assets SVG con + en MIME (2026-08-24)
 
 - `isAllowedPublicPath` ahora acepta el caracter + en rutas de assets,
