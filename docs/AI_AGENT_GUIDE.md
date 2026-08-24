@@ -305,3 +305,22 @@ Un `plans.create` no demuestra persistencia: sólo `plans.commit` seguido de
 El contrato formal está en [`agent-protocol-v1.schema.json`](agent-protocol-v1.schema.json).
 El runtime se divide en `packages/agent-contracts`, `packages/agent-control`,
 `packages/agent-sdk` y `apps/desktop/src/agent-host.mjs`.
+### QA perpetuo
+
+El scope `qa:write` habilita metodos para ejecutar ciclos de calidad
+autonoma sobre el sitio exportado:
+
+```json
+{"method":"qa.readBacklog"}
+{"method":"qa.runGates","params":{"suite":"quick"}}
+{"method":"qa.detectFlaky","params":{"testFile":"packages/exporter/src/scale.test.ts","runs":5}}
+{"method":"qa.writeTest","params":{"filePath":"packages/exporter/src/qa-nuevo.test.ts","content":"..."}}
+{"method":"qa.logProgress","params":{"entry":"P10-1: auditoria completada, 0 criticos"}}
+{"method":"qa.updateState","params":{"patch":{"nextItem":"P10-2"}}}
+{"method":"qa.runExport","params":{"storeId":"store-modo-sur-demo"}}
+```
+
+El ciclo recomendado es: readBacklog -> writeTest (TDD rojo) -> runGates
+(confirma fallo) -> [implementar fix] -> runGates (verde) -> runExport
+(metricas) -> updateState + logProgress. Si un item falla 3 veces,
+marcarlo como bloqueado y saltar al siguiente.
