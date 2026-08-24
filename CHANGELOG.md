@@ -1,5 +1,14 @@
 # Changelog
 
+### QA perpetuo: scope qa:write y metodos del agente (2026-08-24)
+
+- Nuevo scope `qa:write` en el protocolo del agente con metodos para
+  leer backlog perpetuo, escribir tests, ejecutar gates, detectar flakiness
+  y actualizar estado del proyecto.
+- `lighthouse-lite.ts`: checks SEO/A11y estaticos sobre HTML generado
+  sin Chrome headless (viewport, title, description, h1, alt, canonical, OG).
+- `qa-methods.ts`: dispatcher de metodos QA con validacion de scope y audit.
+
 ### Imágenes responsive en canal de agentes y auditoría (2026-08-24)
 
 - `assets.stage` del canal de agentes ahora auto-genera descriptores

@@ -2638,6 +2638,16 @@ export async function dispatchAgentMethod(
       case "assets.upload.finish":
         return await controller.finishAssetUpload(params);
       default:
+        if (method.startsWith("qa.")) {
+          const { createQaContext, dispatchQaMethod } = await import("./qa-methods.js");
+          const qaCtx = createQaContext(
+            (controller as unknown as { options: { applicationRoot: string } }).options
+              .applicationRoot,
+            (controller as unknown as { scopes: Set<string> }).scopes,
+            async () => {},
+          );
+          return await dispatchQaMethod(qaCtx, method, (params ?? {}) as Record<string, unknown>);
+        }
         fail("METHOD_NOT_FOUND", `Método de agente desconocido: ${method}.`);
     }
   } finally {

@@ -215,6 +215,7 @@ export const AgentScopeSchema = z.enum([
   "commit",
   "assets:write",
   "audit:read",
+  "qa:write",
   "template:read",
   "template:write",
   "rollouts:read",
@@ -413,6 +414,14 @@ export const AgentProtocolJsonSchema = {
     "assets.upload.begin",
     "assets.upload.chunk",
     "assets.upload.finish",
+    "qa.runExport",
+    "qa.runGates",
+    "qa.detectFlaky",
+    "qa.writeTest",
+    "qa.readBacklog",
+    "qa.logProgress",
+    "qa.updateState",
+    "qa.suggestFix",
   ],
 } as const;
 
