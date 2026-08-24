@@ -122,6 +122,8 @@ export interface ExportOptions {
   mode: ExportMode;
   publicAiContext?: boolean;
   optimizationProfile?: OptimizationOptions["profile"];
+  /** Genera nombres de archivo semantico para assets (SEO para Google Images). */
+  useSemanticNames?: boolean;
 }
 
 export interface ExportResult {
@@ -345,10 +347,20 @@ function publicAssetPath(
   kind: "primary" | "fallback",
   source: string,
   width?: number,
+  semanticNames = false,
 ): string {
   const suffix = width ? `-${width}` : kind === "fallback" ? "-fallback" : "";
   const extension = sourceExtension(source, assetExtension(asset));
-  return `/assets/${asset.hash}${suffix}.${extension}`;
+  if (!semanticNames) return `/assets/${asset.hash}${suffix}.${extension}`;
+  const slug = (asset.alt || asset.name)
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+  const baseName = slug || asset.hash.slice(0, 12);
+  return `/assets/${baseName}-${asset.hash.slice(0, 8)}${suffix}.${extension}`;
 }
 
 function projectWithPublicAssetUrls(project: StoreProjectV1): StoreProjectV1 {

@@ -124,6 +124,14 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
           path: `products.${productIndex}.imageIds`,
         });
       }
+      if (asset && !asset.responsiveSources?.length) {
+        issues.push({
+          code: "image.responsive",
+          severity: "warning",
+          message: `${product.title} tiene una imagen sin variantes responsive (WebP/srcset).`,
+          path: `products.${productIndex}.imageIds`,
+        });
+      }
     });
     product.variants.forEach((variant, variantIndex) => {
       if (variant.price <= 0) {

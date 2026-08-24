@@ -1,5 +1,16 @@
 # Changelog
 
+### Imágenes responsive en canal de agentes y auditoría (2026-08-24)
+
+- `assets.stage` del canal de agentes ahora auto-genera descriptores
+  responsive (`responsiveSources`) apuntando a la misma imagen con anchos
+  estándar (320-1800px), para que `renderImage` emita `<picture>` con
+  `<srcset>` desde el primer commit.
+- Nueva auditoría `image.responsive` que advierte cuando un producto tiene
+  imágenes sin variantes responsive.
+- `ExportOptions.useSemanticNames` para nombres de archivo semánticos en
+  assets exportados (opt-in, default false).
+
 ### FAQ schema, speakable, llms-full y headers de cache (2026-08-24)
 
 - `faqPageData`: FAQPage JSON-LD desde politicas (envios/cambios) en la

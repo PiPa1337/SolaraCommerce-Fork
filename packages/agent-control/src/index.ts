@@ -206,6 +206,15 @@ function fail(code: string, message: string, details?: unknown): never {
   throw error;
 }
 
+/**
+ * Genera los anchos responsive basandose en el ancho original de la imagen.
+ * Mismos breakpoints que IMAGE_RECIPE.widths en el image worker de Studio.
+ */
+const RESPONSIVE_WIDTHS = [320, 480, 640, 768, 1024, 1280, 1600, 1800] as const;
+function buildResponsiveWidths(sourceWidth: number): number[] {
+  return RESPONSIVE_WIDTHS.filter((w) => w < sourceWidth).sort((a, b) => a - b);
+}
+
 function safeSlug(value: string): string {
   const slug = value
     .normalize("NFKD")
@@ -1604,6 +1613,13 @@ export class AgentController {
       width: dimensions.width,
       height: dimensions.height,
       hash,
+      // Auto-generar descriptores responsive apuntando al mismo archivo.
+      // Studio los reemplazara con variantes reales cuando procese la imagen
+      // con el image worker (OffscreenCanvas disponible en el navegador).
+      responsiveSources: buildResponsiveWidths(dimensions.width).map((width) => ({
+        width,
+        source: `data:${params.mimeType};base64,${bytesToBase64(bytes)}`,
+      })),
     });
     const bytesPath = join(this.assetsRoot, `${assetId}.bin`);
     const metadataPath = join(this.assetsRoot, `${assetId}.json`);
