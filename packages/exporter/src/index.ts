@@ -151,6 +151,10 @@ export interface PageDescriptor {
   image?: string;
   /** Image that is critical for this route, if one exists. Social images stay lazy. */
   preloadImage?: string;
+  /** URL canónica de la página anterior en paginación, si aplica. */
+  prevPath?: string;
+  /** URL canónica de la página siguiente en paginación, si aplica. */
+  nextPath?: string;
 }
 
 export interface PublicExportManifest {
@@ -178,7 +182,13 @@ function parseProject(projectInput: StoreProjectV1, operation: string): StorePro
 }
 
 import { escapeAttribute, escapeHtml, escapeXml, jsonForScript } from "./html.js";
-import { buildRssFeed, buildServiceWorker, buildWebManifest } from "./pwa.js";
+import {
+  buildOfflinePage,
+  buildRssFeed,
+  buildServiceWorker,
+  buildWebManifest,
+  generateIconPng,
+} from "./pwa.js";
 
 export { escapeAttribute, escapeHtml, escapeXml, jsonForScript };
 
@@ -972,6 +982,15 @@ function renderDocument(
     imageUrl(project, project.seo.socialImageId) ??
     imageUrl(project, project.assets[0]?.id);
   const socialImage = socialImageValue ? absoluteResourceUrl(project, socialImageValue) : undefined;
+  // Video de la página (hero del home o del producto) para Open Graph.
+  const heroVideoSetting =
+    page.pageType === "home"
+      ? project.sections.find((s) => s.slot === "hero")?.settings["videoAssetId"]
+      : undefined;
+  const pageVideo =
+    typeof heroVideoSetting === "string" && heroVideoSetting
+      ? videoFor(project, heroVideoSetting)
+      : undefined;
   const faviconAsset = imageFor(project, project.seo.faviconAssetId);
   const faviconHref = faviconAsset?.source ? assetHref(project, faviconAsset.source) : undefined;
   const faviconFallbackHref = faviconAsset?.fallbackSource
@@ -1081,12 +1100,16 @@ function renderDocument(
   <meta property="og:description" content="${escapeHtml(page.description)}">
   <meta property="og:url" content="${escapeHtml(canonical)}">
   ${socialImage ? `<meta property="og:image" content="${escapeHtml(socialImage)}"><meta property="og:image:alt" content="${escapeHtml(socialAsset?.alt || page.title)}">${socialAsset ? `<meta property="og:image:width" content="${socialAsset.width}"><meta property="og:image:height" content="${socialAsset.height}">` : ""}<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(page.title)}"><meta name="twitter:description" content="${escapeHtml(page.description)}"><meta name="twitter:image" content="${escapeHtml(socialImage)}">` : `<meta name="twitter:card" content="summary">`}
+  ${pageVideo ? `<meta property="og:video" content="${escapeHtml(absoluteResourceUrl(project, pageVideo.source))}"><meta property="og:video:type" content="video/mp4">` : ""}
   <meta property="og:updated_time" content="${escapeHtml(project.updatedAt)}">
   ${page.pageType === "product" ? `<meta property="article:published_time" content="${escapeHtml(project.createdAt)}"><meta property="article:modified_time" content="${escapeHtml(project.updatedAt)}"><meta property="article:author" content="${escapeHtml(author)}">` : ""}
   ${verification}
   ${lcpPreload}
   ${fontPreloads}
   ${aiContextLinks}
+  ${whatsAppAttributes ? `<link rel="preconnect" href="https://wa.me" crossorigin><link rel="dns-prefetch" href="https://wa.me">` : ""}
+  ${page.prevPath ? `<link rel="prev" href="${escapeHtml(absoluteUrl(project, page.prevPath))}">` : ""}
+  ${page.nextPath ? `<link rel="next" href="${escapeHtml(absoluteUrl(project, page.nextPath))}">` : ""}
   <link rel="manifest" href="${escapeAttribute(assetHref(project, "/manifest.webmanifest"))}">
   <script>${"if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); }); }"}</script>
   <link rel="stylesheet" href="${escapeAttribute(assetHref(project, "/assets/storefront.css"))}">
@@ -1367,6 +1390,17 @@ function buildPages(
         structuredData: [breadcrumbData(project, categoryBreadcrumbItems(project, category))],
         ...(categoryImage ? { image: categoryImage } : {}),
         ...(categoryImage ? { preloadImage: categoryImage } : {}),
+        ...(pageNumber > 1
+          ? {
+              prevPath:
+                pageNumber === 2
+                  ? `/categorias/${category.slug}/`
+                  : `/categorias/${category.slug}/pagina/${pageNumber - 1}/`,
+            }
+          : {}),
+        ...(pageNumber < totalPages
+          ? { nextPath: `/categorias/${category.slug}/pagina/${pageNumber + 1}/` }
+          : {}),
       });
     }
 
@@ -1925,6 +1959,9 @@ function buildFiles(
     );
   }
   // PWA: manifest y service worker para instalación y cache offline.
+  files.set("icons/icon-192.png", generateIconPng(publicProject.identity.brandName + "-192", 192));
+  files.set("icons/icon-512.png", generateIconPng(publicProject.identity.brandName + "-512", 512));
+  files.set("offline/index.html", buildOfflinePage(publicProject));
   files.set("manifest.webmanifest", buildWebManifest(publicProject));
   files.set("sw.js", buildServiceWorker());
   if (mode === "production") {

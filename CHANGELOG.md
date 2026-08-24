@@ -19,6 +19,18 @@
 
 ### Sitio exportado: PWA, SEO avanzado y compliance argentino (2026-08-24)
 
+### SEO head, PWA completa y performance (2026-08-24)
+
+- `rel=prev`/`rel=next` en `<head>` para categorías paginadas.
+- `priceValidUntil` determinístico en Offer JSON-LD (año de updatedAt).
+- Open Graph video tags (`og:video`) cuando el hero tiene video.
+- Preconnect/dns-prefetch a `wa.me` sólo cuando el proyecto tiene teléfono
+  real de WhatsApp (no sentinel).
+- Iconos PWA generados automáticamente en 192×192 y 512×512 px desde el seed
+  de la tienda.
+- Página `/offline/index.html` que el service worker sirve sin conexión.
+- Service worker actualizado para servir la página offline en requests HTML.
+
 - El exporter ahora genera `manifest.webmanifest` y `sw.js` para instalación
   como PWA con cache offline de assets.
 - Reviews y aggregateRating se incluyen en el JSON-LD de Product/ProductGroup

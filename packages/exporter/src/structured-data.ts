@@ -98,6 +98,9 @@ export function offerData(project: StoreProjectV1, offer: CommerceOfferSnapshot)
           : "https://schema.org/OutOfStock",
     ...(offer.availabilityDate ? { availabilityStarts: offer.availabilityDate } : {}),
     itemCondition: "https://schema.org/NewCondition",
+    // Google Merchant recomienda una fecha de validez del precio para rich
+    // snippets. Determinística a partir de updatedAt del proyecto.
+    priceValidUntil: `${new Date(project.updatedAt).getUTCFullYear()}-12-31`,
     seller: { "@type": "Organization", name: project.identity.brandName },
     shippingDetails: {
       "@type": "OfferShippingDetails",
