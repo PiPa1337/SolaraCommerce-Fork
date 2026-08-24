@@ -1,5 +1,10 @@
 # Changelog
 
+### qa.runExport: metricas de export desde el canal de agentes (2026-08-24)
+
+- Nuevo metodo `qa.runExport` que exporta una tienda y retorna metricas:
+  archivos generados, peso total, issues criticos de auditoria.
+
 ### Temas: operaciones de agente y tests visuales (2026-08-24)
 
 - `theme.applyPreset` y `theme.updateTokens` disponibles en el canal de

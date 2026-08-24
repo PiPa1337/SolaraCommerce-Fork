@@ -6,6 +6,8 @@
 import { spawn } from "node:child_process";
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { exportProject, runLighthouseLite } from "@solara/exporter";
+import type { StoreProjectV1 } from "@solara/project-schema";
 
 export interface QaContext {
   applicationRoot: string;
@@ -158,6 +160,27 @@ export async function dispatchQaMethod(
       const p = params as { testFile?: string; runs?: number };
       if (!p.testFile) throw new Error("testFile requerido");
       return detectFlaky(ctx, p.testFile, p.runs ?? 5);
+    }
+    case "qa.runExport": {
+      const p = params as { storeId?: string; projectData?: StoreProjectV1 };
+      if (!p.projectData) throw new Error("projectData requerido para export");
+      const result = exportProject(p.projectData, { mode: "draft" });
+      let totalBytes = 0;
+      let htmlFiles = 0;
+      for (const [path, content] of result.files) {
+        totalBytes += typeof content === "string" ? Buffer.byteLength(content) : content.byteLength;
+        if (path.endsWith(".html")) htmlFiles++;
+      }
+      const critical = result.audit.filter((i) => i.severity === "critical").length;
+      return {
+        storeId: p.storeId,
+        mode: "draft",
+        files: result.files.size,
+        htmlFiles,
+        totalBytes,
+        criticalAuditIssues: critical,
+        auditCount: result.audit.length,
+      };
     }
     default:
       throw Object.assign(new Error(`Metodo QA desconocido: ${method}`), {
