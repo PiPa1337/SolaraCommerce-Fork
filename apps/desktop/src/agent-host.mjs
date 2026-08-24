@@ -181,6 +181,7 @@ const toolDefinitions = [
                   "store.archive",
                   "asset.attach",
                   "section.updateSettings",
+                  "product.createBatch",
                 ],
               },
               source: {
@@ -223,6 +224,22 @@ const toolDefinitions = [
       },
     },
     method: "plans.commit",
+  },
+  {
+    name: "solara_plan_create_and_commit",
+    description: "Crea el plan y lo commitea en una sola llamada atómica.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["operations"],
+      properties: {
+        storeId: { type: "string" },
+        baseVersion: { type: ["integer", "null"] },
+        idempotencyKey: { type: "string" },
+        operations: { type: "array", maxItems: 500, items: { type: "object" } },
+      },
+    },
+    method: "plans.createAndCommit",
   },
   {
     name: "solara_plan_get",

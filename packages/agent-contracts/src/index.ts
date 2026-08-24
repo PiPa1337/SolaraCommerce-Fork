@@ -136,6 +136,24 @@ export const AgentOperationSchema = z.discriminatedUnion("type", [
     sectionId: SafeIdSchema,
     settings: z.record(z.string(), z.unknown()),
   }),
+  z.object({
+    type: z.literal("product.createBatch"),
+    categoryId: SafeIdSchema,
+    imageIds: z.array(SafeIdSchema).default([]),
+    tags: z.array(z.string().min(1).max(80)).default([]),
+    skuPrefix: z.string().min(1).max(40),
+    basePriceCents: z.number().int().nonnegative(),
+    priceStepCents: z.number().int().nonnegative().default(0),
+    items: z
+      .array(
+        z.object({
+          title: z.string().min(1).max(200),
+          description: z.string().max(10000).default(""),
+        }),
+      )
+      .min(1)
+      .max(100),
+  }),
 ]);
 
 export const PlanCreateParamsSchema = z.object({
@@ -152,6 +170,13 @@ export const PlanCommitParamsSchema = z.object({
   async: z.boolean().default(false),
 });
 
+export const PlanCreateAndCommitParamsSchema = z.object({
+  storeId: SafeIdSchema.optional(),
+  baseVersion: z.number().int().nonnegative().nullable().optional(),
+  idempotencyKey: z.string().min(8).max(160).optional(),
+  operations: z.array(AgentOperationSchema).min(1).max(500),
+});
+
 export const StoreGetParamsSchema = z.object({
   storeId: SafeIdSchema,
   include: z.enum(["summary", "catalog"]).default("summary"),
@@ -165,6 +190,15 @@ export const AssetStageParamsSchema = z.object({
     z.object({ kind: z.literal("base64"), data: z.string().min(1).max(8_000_000) }),
     z.object({ kind: z.literal("inbox"), filename: z.string().min(1).max(160) }),
   ]),
+});
+
+export const AssetGeneratePlaceholderParamsSchema = z.object({
+  name: z.string().min(1).max(160),
+  alt: z.string().max(500).default(""),
+  width: z.number().int().min(64).max(2000).default(512),
+  height: z.number().int().min(64).max(2000).default(512),
+  pattern: z.enum(["solid", "stripes", "circles", "triangles"]).default("stripes"),
+  seed: z.string().min(1).max(120),
 });
 
 export const AgentScopeSchema = z.enum([
@@ -298,6 +332,7 @@ export const AgentResponseSchema = z.object({
 export type AgentOperation = z.infer<typeof AgentOperationSchema>;
 export type PlanCreateParams = z.infer<typeof PlanCreateParamsSchema>;
 export type PlanCommitParams = z.infer<typeof PlanCommitParamsSchema>;
+export type PlanCreateAndCommitParams = z.infer<typeof PlanCreateAndCommitParamsSchema>;
 export type PlanGetParams = z.infer<typeof PlanGetParamsSchema>;
 export type PlanDiscardParams = z.infer<typeof PlanDiscardParamsSchema>;
 export type PlanHeartbeatParams = z.infer<typeof PlanHeartbeatParamsSchema>;
@@ -305,6 +340,7 @@ export type JobGetParams = z.infer<typeof JobGetParamsSchema>;
 export type AuditListParams = z.infer<typeof AuditListParamsSchema>;
 export type StoreGetParams = z.infer<typeof StoreGetParamsSchema>;
 export type AssetStageParams = z.infer<typeof AssetStageParamsSchema>;
+export type AssetGeneratePlaceholderParams = z.infer<typeof AssetGeneratePlaceholderParamsSchema>;
 export type AssetUploadBeginParams = z.infer<typeof AssetUploadBeginParamsSchema>;
 export type AssetUploadChunkParams = z.infer<typeof AssetUploadChunkParamsSchema>;
 export type AssetUploadFinishParams = z.infer<typeof AssetUploadFinishParamsSchema>;
@@ -359,11 +395,13 @@ export const AgentProtocolJsonSchema = {
     "plans.create",
     "plans.get",
     "plans.commit",
+    "plans.createAndCommit",
     "plans.discard",
     "plans.heartbeat",
     "jobs.get",
     "audit.list",
     "assets.stage",
+    "assets.generatePlaceholder",
     "assets.upload.begin",
     "assets.upload.chunk",
     "assets.upload.finish",

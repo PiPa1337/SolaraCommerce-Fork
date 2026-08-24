@@ -176,6 +176,40 @@ El merge es superficial: los settings no incluidos conservan su valor. Los
 IDs válidos dependen del template; usar `plans.get` con `includeProject: true`
 para inspeccionarlos antes de commitear.
 
+### Creación atómica con plans.createAndCommit
+
+Para flujos transaccionales donde el agente ya validó el contenido y quiere
+evitar tres invocaciones separadas (staging + plan + commit), usar
+`plans.createAndCommit`. Acepta los mismos parámetros que `plans.create` y
+devuelve directamente el receipt del commit:
+
+```json
+{"method":"plans.createAndCommit","params":{"idempotencyKey":"crear-tienda-v1","operations":[...]}},
+```
+
+Si el `idempotencyKey` ya fue commiteado, devuelve el receipt existente sin
+crear una nueva versión.
+
+### Generación de placeholders de imagen
+
+Nueva operación `assets.generatePlaceholder` que genera un PNG sólido
+determinístico a partir de un seed, sin depender de archivos externos:
+
+```json
+{"method":"assets.generatePlaceholder","params":{"name":"hero.png","alt":"Portada","seed":"talleres-del-sur"}}
+```
+
+Colores derivados de SHA-256 del seed. Dimensiones fijas en 128×128 px.
+
+### Creación batch de productos
+
+`product.createBatch` permite crear hasta 100 productos que comparten categoría,
+imágenes y tags en una sola operación, reduciendo el payload ~70%:
+
+```json
+{"type":"product.createBatch","categoryId":"cat-001","imageIds":["ASSET_ID"],"tags":["artesanal"],"skuPrefix":"TSUR","basePriceCents":350000,"priceStepCents":22000,"items":[{"title":"Chal Inca","description":"Tejido ancestral."},{"title":"Poncho Sagrado","description":"Pieza ceremonial."}]}
+```
+
 ## Imágenes
 
 Para imágenes pequeñas, usar `assets.stage` con base64 y MIME:

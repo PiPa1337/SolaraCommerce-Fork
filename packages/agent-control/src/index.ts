@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   type AgentOperation,
   AgentOperationSchema,
+  AssetGeneratePlaceholderParamsSchema,
   type AssetStageParams,
   AssetStageParamsSchema,
   AssetUploadBeginParamsSchema,
@@ -12,6 +13,7 @@ import {
   AuditListParamsSchema,
   JobGetParamsSchema,
   PlanCommitParamsSchema,
+  PlanCreateAndCommitParamsSchema,
   PlanCreateParamsSchema,
   PlanDiscardParamsSchema,
   PlanGetParamsSchema,
@@ -776,11 +778,13 @@ export class AgentController {
         "plans.create",
         "plans.get",
         "plans.commit",
+        "plans.createAndCommit",
         "plans.discard",
         "plans.heartbeat",
         "jobs.get",
         "audit.list",
         "assets.stage",
+        "assets.generatePlaceholder",
         "assets.upload.begin",
         "assets.upload.chunk",
         "assets.upload.finish",
@@ -797,6 +801,7 @@ export class AgentController {
         "store.archive",
         "asset.attach",
         "section.updateSettings",
+        "product.createBatch",
       ],
       limits: {
         maxOperationsPerPlan: 500,
@@ -1615,6 +1620,75 @@ export class AgentController {
     };
   }
 
+  /**
+   * Genera un placeholder PNG determinístico basado en el seed. Colores
+   * derivados de SHA-256 para que cada seed produzca un resultado estable.
+   */
+  async generatePlaceholderAsset(rawParams: unknown) {
+    await this.ready();
+    this.requireScope("assets:write");
+    const params = AssetGeneratePlaceholderParamsSchema.parse(rawParams);
+    const hash = createHash("sha256").update(params.seed).digest();
+    const png = this.generateSolidPng(128, 128, hash[0] ?? 0, hash[1] ?? 0, hash[2] ?? 0);
+    const result = await this.stageBytes(
+      { name: params.name, alt: params.alt, mimeType: "image/png" },
+      new Uint8Array(png),
+    );
+    await this.audit("asset.placeholder.generated", { assetId: result.assetId });
+    return result;
+  }
+
+  /** Genera un PNG RGB sólido mínimo sin dependencias externas. */
+  private generateSolidPng(width: number, height: number, r: number, g: number, b: number): Buffer {
+    const { deflateSync } = require("node:zlib") as typeof import("node:zlib");
+    const bytesPerRow = width * 3 + 1;
+    const rawData = Buffer.alloc(bytesPerRow * height);
+    for (let y = 0; y < height; y++) {
+      const rowOffset = y * bytesPerRow;
+      rawData[rowOffset] = 0;
+      for (let x = 0; x < width; x++) {
+        const offset = rowOffset + 1 + x * 3;
+        rawData[offset] = r;
+        rawData[offset + 1] = g;
+        rawData[offset + 2] = b;
+      }
+    }
+    const compressed = deflateSync(rawData);
+    const crcTable = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      crcTable[n] = c;
+    }
+    function crc32(buf: Uint8Array): number {
+      let crc = 0xffffffff;
+      for (const byte of buf) {
+        const tableEntry = crcTable[(crc ^ byte) & 0xff];
+        if (tableEntry !== undefined) crc = tableEntry ^ (crc >>> 8);
+      }
+      return (crc ^ 0xffffffff) >>> 0;
+    }
+    function chunk(type: string, data: Buffer): Buffer {
+      const len = Buffer.alloc(4);
+      len.writeUInt32BE(data.length);
+      const typeBuf = Buffer.from(type);
+      const crcBuf = Buffer.alloc(4);
+      crcBuf.writeUInt32BE(crc32(Buffer.concat([typeBuf, data])));
+      return Buffer.concat([len, typeBuf, data, crcBuf]);
+    }
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(width, 0);
+    ihdr.writeUInt32BE(height, 4);
+    ihdr[8] = 8;
+    ihdr[9] = 2;
+    return Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      chunk("IHDR", ihdr),
+      chunk("IDAT", compressed),
+      chunk("IEND", Buffer.alloc(0)),
+    ]);
+  }
+
   private async readStagedAsset(assetId: string): Promise<StagedAsset | undefined> {
     const cached = this.stagedAssets.get(assetId);
     if (cached) return cached;
@@ -1936,6 +2010,32 @@ export class AgentController {
       return this.jobResponse(job);
     }
     return this.commitPlanNow(params, this.requestId);
+  }
+
+  /**
+   * Crea el plan y lo commitea en la misma llamada. Elimina la necesidad de
+   * tres invocaciones separadas (stage -> plan.create -> plan.commit) para
+   * flujos transaccionales donde el agente ya revisó el diff previamente.
+   * Devuelve directamente el receipt del commit.
+   */
+  async createAndCommitPlan(rawParams: unknown) {
+    await this.ready();
+    this.requireScope("commit");
+    const params = PlanCreateAndCommitParamsSchema.parse(rawParams);
+    const plan = await this.createPlan({
+      storeId: params.storeId,
+      baseVersion: params.baseVersion,
+      idempotencyKey: params.idempotencyKey,
+      operations: params.operations,
+    });
+    if (typeof plan === "object" && plan !== null && "planId" in plan) {
+      return this.commitPlanNow(
+        { planId: (plan as { planId: string }).planId, idempotencyKey: params.idempotencyKey },
+        this.requestId,
+      );
+    }
+    // El plan ya estaba commiteado (idempotencia); devolver el receipt existente.
+    return plan;
   }
 
   private async commitPlanNow(rawParams: unknown, requestId = this.requestId) {
@@ -2346,6 +2446,46 @@ export class AgentController {
           });
           break;
         }
+        case "product.createBatch": {
+          for (let index = 0; index < operation.items.length; index++) {
+            const item = operation.items[index];
+            if (!item) continue;
+            const batchProductId = makeId("product-batch");
+            const batchPriceCents = operation.basePriceCents + index * operation.priceStepCents;
+            const batchSku = `${operation.skuPrefix}-${String(index + 1).padStart(3, "0")}`;
+            const batchSlug = item.title
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/^-+|-+$/g, "");
+            const product: Product = ProductSchema.parse({
+              id: batchProductId,
+              slug: batchSlug,
+              title: item.title,
+              description: item.description,
+              status: "active" as const,
+              brand: project.identity.brandName,
+              categoryIds: [operation.categoryId],
+              collectionIds: [],
+              tags: operation.tags,
+              imageIds: operation.imageIds,
+              variants: [
+                {
+                  id: makeId("variant-batch"),
+                  title: "Única",
+                  sku: batchSku,
+                  optionValues: {},
+                  price: batchPriceCents,
+                  available: true,
+                  stockStatus: "in_stock" as const,
+                },
+              ],
+              createdAt: at,
+              updatedAt: at,
+            });
+            project = reduceProject(project, { type: "product.create", product, at });
+          }
+          break;
+        }
       }
     }
     return StoreProjectV2Schema.parse(project);
@@ -2404,6 +2544,8 @@ export async function dispatchAgentMethod(
         return await controller.getPlan(params);
       case "plans.commit":
         return await controller.commitPlan(params);
+      case "plans.createAndCommit":
+        return await controller.createAndCommitPlan(params);
       case "plans.discard":
         return await controller.discardPlan(params);
       case "plans.heartbeat":
@@ -2414,6 +2556,8 @@ export async function dispatchAgentMethod(
         return await controller.listAudit(params);
       case "assets.stage":
         return await controller.stageAsset(params);
+      case "assets.generatePlaceholder":
+        return await controller.generatePlaceholderAsset(params);
       case "assets.upload.begin":
         return await controller.beginAssetUpload(params);
       case "assets.upload.chunk":
