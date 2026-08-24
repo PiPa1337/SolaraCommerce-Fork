@@ -238,6 +238,7 @@ import {
 import {
   breadcrumbData,
   itemListData,
+  itemListFromSnapshots,
   productStructuredData,
   storeStructuredData,
 } from "./structured-data.js";
@@ -1334,7 +1335,11 @@ function buildPages(
     canonicalPath: "/",
     pageType: "home",
     body: `<main class="solara-home">${renderProjectSections(project, homeSections, { pageType: "home" })}</main>`,
-    structuredData: storeStructuredData(project),
+    structuredData: [
+      ...storeStructuredData(project),
+      // ItemList de destacados: refuerza la senal de catalogo para Google.
+      itemListFromSnapshots(project, project.identity.brandName, snapshot.products.slice(0, 12)),
+    ],
     ...(socialImage ? { image: socialImage } : {}),
     ...(homePreloadImage ? { preloadImage: homePreloadImage } : {}),
   };
@@ -1631,6 +1636,7 @@ function buildPages(
           name: project.identity.brandName,
           email: project.identity.email || undefined,
           telephone: project.identity.phone || undefined,
+          ...(project.identity.address ? { address: project.identity.address } : {}),
         },
       },
       breadcrumbData(project, [

@@ -1,5 +1,13 @@
 # Changelog
 
+### Refuerzo SEO en todas las paginas (2026-08-24)
+
+- El home ahora emite ItemList JSON-LD con los primeros 12 productos del
+  catalogo (nombre, URL e imagen), ademas de WebSite/SearchAction/OnlineStore.
+- itemListFromSnapshots: variante liviana de ItemList que toma snapshots
+  directamente (incluye imagen por item).
+- ContactPage ahora referencia la direccion de identity cuando existe.
+
 ### Restricción de textos legales y de accesibilidad en publicCopy (2026-08-24)
 
 - 11 campos de publicCopy marcados como restringidos: disclaimers legales

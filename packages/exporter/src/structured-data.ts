@@ -5,7 +5,7 @@
  */
 import type { Product, StoreProjectV1 } from "@solara/project-schema";
 import { imageUrl, videoFor, videoUrl } from "./assets.js";
-import type { CommerceOfferSnapshot, CommerceSnapshot } from "./index.js";
+import type { CommerceOfferSnapshot, CommerceProductSnapshot, CommerceSnapshot } from "./index.js";
 import { effectiveHomeSections } from "./index.js";
 import { absoluteResourceUrl, absoluteUrl, normalizeBaseUrl } from "./urls.js";
 import { publicWhatsAppPhone } from "./whatsapp.js";
@@ -292,6 +292,28 @@ export function itemListData(
       position: index + 1,
       url: absoluteUrl(project, `/productos/${product.slug}/`),
       name: product.title,
+    })),
+  };
+}
+
+/** ItemList liviano desde snapshots de productos (para el home). */
+export function itemListFromSnapshots(
+  project: StoreProjectV1,
+  listName: string,
+  products: CommerceProductSnapshot[],
+): unknown {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: listName,
+    itemListOrder: "https://schema.org/ItemListOrderAscending",
+    numberOfItems: products.length,
+    itemListElement: products.map((product, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      url: absoluteUrl(project, product.canonicalPath),
+      name: product.title,
+      ...(product.imageUrls[0] ? { image: product.imageUrls[0] } : {}),
     })),
   };
 }
