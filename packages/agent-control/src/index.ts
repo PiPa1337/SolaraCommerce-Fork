@@ -2287,6 +2287,21 @@ export class AgentController {
           const LEGAL_MIN_LENGTHS: Record<string, number> = {
             "whatsapp.confirmation": 20,
             "checkout.disclaimer": 20,
+            "whatsapp.ask": 10,
+            "whatsapp.purchase": 10,
+            "cart.phoneInvalid": 10,
+            "navigation.openMenu": 5,
+            "navigation.closeMenu": 5,
+            "product.noStock": 3,
+            "cart.unavailable": 3,
+          };
+          const REQUIRED_PLACEHOLDERS: Record<string, string[]> = {
+            "contact.emailSubject": ["{storeName}"],
+            "whatsapp.orderGreeting": ["{storeName}"],
+            "search.suggestion": ["{query}"],
+            "export.pageOf": ["{page}", "{total}"],
+            "export.exploreCategory": ["{category}"],
+            "export.viewImage": ["{index}"],
           };
           for (const [groupKey, changes] of Object.entries(operation.changes)) {
             if (typeof changes !== "object" || changes === null) continue;
@@ -2298,6 +2313,14 @@ export class AgentController {
                 throw new Error(
                   `${fullKey}: el texto es un aviso legal y debe tener al menos ${minLength} caracteres.`,
                 );
+              }
+              const required = REQUIRED_PLACEHOLDERS[fullKey];
+              if (required) {
+                for (const placeholder of required) {
+                  if (!value.includes(placeholder)) {
+                    throw new Error(`${fullKey}: debe contener el placeholder ${placeholder}`);
+                  }
+                }
               }
             }
           }

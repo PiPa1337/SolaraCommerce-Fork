@@ -36,6 +36,17 @@ const RESTRICTED_COPY_FIELDS = new Set([
   "contact.emailSubject",
   "whatsapp.orderGreeting",
   "export.skipToContent",
+  "whatsapp.ask",
+  "whatsapp.purchase",
+  "hero.pauseVideo",
+  "hero.resumeVideo",
+  "hero.slidePrev",
+  "hero.slideNext",
+  "cart.phoneInvalid",
+  "navigation.openMenu",
+  "navigation.closeMenu",
+  "product.noStock",
+  "cart.unavailable",
   "accessibility.benefits",
   "accessibility.productInfo",
   "accessibility.catalogSummary",
@@ -45,7 +56,25 @@ const RESTRICTED_COPY_FIELDS = new Set([
 ]);
 
 /** Campos que contienen placeholders técnicos ({storeName}) que no deben eliminarse. */
-const PLACEHOLDER_COPY_FIELDS = new Set(["contact.emailSubject", "whatsapp.orderGreeting"]);
+const PLACEHOLDER_COPY_FIELDS = new Set([
+  "contact.emailSubject",
+  "whatsapp.orderGreeting",
+  "search.suggestion",
+  "export.pageOf",
+  "export.exploreCategory",
+  "export.viewImage",
+]);
+
+/** Campos con longitud mínima de validación. */
+const MIN_LENGTH_COPY_FIELDS: Record<string, number> = {
+  "whatsapp.ask": 10,
+  "whatsapp.purchase": 10,
+  "cart.phoneInvalid": 10,
+  "navigation.openMenu": 5,
+  "navigation.closeMenu": 5,
+  "product.noStock": 3,
+  "cart.unavailable": 3,
+};
 
 const PUBLIC_COPY_FIELDS = [
   { group: "navigation", key: "home", label: "Inicio" },
@@ -1294,6 +1323,7 @@ export function Overview({
               const restrictedKey = `${group}.${key}`;
               const isRestricted = RESTRICTED_COPY_FIELDS.has(restrictedKey);
               const hasPlaceholder = PLACEHOLDER_COPY_FIELDS.has(restrictedKey);
+              const minLength = MIN_LENGTH_COPY_FIELDS[restrictedKey];
               return (
                 <Field
                   key={fieldKey}
@@ -1302,7 +1332,10 @@ export function Overview({
                   {...(isRestricted
                     ? { description: "Texto del sistema. Editar con cuidado." }
                     : {})}
-                  {...(hasPlaceholder ? { hint: "Debe contener {storeName}" } : {})}
+                  {...(hasPlaceholder
+                    ? { hint: "Contiene placeholders técnicos que no deben eliminarse" }
+                    : {})}
+                  {...(minLength !== undefined ? { hint: `Mínimo ${minLength} caracteres` } : {})}
                 >
                   <input
                     aria-label={label}
