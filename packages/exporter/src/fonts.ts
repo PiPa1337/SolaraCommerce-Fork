@@ -87,11 +87,12 @@ export function fontCssFor(
   display: string,
   body: string,
   transport: FontTransport = "file",
+  filePathOverrides?: ReadonlyMap<string, string>,
 ): string {
   const src = (option: FontOption): string =>
     transport === "inline"
       ? `url("data:font/woff2;base64,${option.woff2Base64}") format("woff2")`
-      : `url("/${option.woff2Path}") format("woff2")`;
+      : `url("/${filePathOverrides?.get(option.woff2Path) ?? option.woff2Path}") format("woff2")`;
   return activeFonts(display, body)
     .map(
       (option) =>

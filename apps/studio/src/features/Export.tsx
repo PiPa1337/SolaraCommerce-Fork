@@ -10,11 +10,16 @@ import {
   UploadSimple,
   WarningCircle,
 } from "@phosphor-icons/react";
-import type { OptimizationReport } from "@solara/exporter";
+import type { DeploymentManifestV1, OptimizationReport } from "@solara/exporter";
+import { publicWhatsAppPhone } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Button, InlineError, SectionHeader } from "../components/Ui";
+import {
+  type CloudflareVerificationResult,
+  verifyCloudflareDeployment,
+} from "../lib/cloudflareVerification";
 import { getDesktopExportBridge } from "../lib/desktopBridge";
 import {
   clearExportHistory,
@@ -118,6 +123,11 @@ export function ExportPanel({
   );
   const [postDone, setPostDone] = useState<Set<string>>(new Set());
   const [siteOpening, setSiteOpening] = useState(false);
+  const [publishedSiteUrl, setPublishedSiteUrl] = useState(project.baseUrl);
+  const [cloudflareVerification, setCloudflareVerification] =
+    useState<CloudflareVerificationResult | null>(null);
+  const [cloudflareBusy, setCloudflareBusy] = useState(false);
+  const [cloudflareChecklist, setCloudflareChecklist] = useState<Set<string>>(new Set());
   const desktopExport = getDesktopExportBridge();
 
   /* biome-ignore lint/correctness/useExhaustiveDependencies: auditAttempt es la clave de reintento de la auditoría tras un fallo. */
@@ -181,10 +191,16 @@ export function ExportPanel({
         },
       );
       setOptimization(result.optimization);
+      const deploymentManifest = JSON.parse(
+        String(result.files.get("deployment-manifest.json") ?? "{}"),
+      ) as Partial<DeploymentManifestV1>;
       if (desktopExport) {
+        const revision =
+          typeof deploymentManifest.revision === "string" ? deploymentManifest.revision : undefined;
         const saved = await desktopExport.exportSite({
           storeSlug: project.slug,
           mode,
+          ...(revision ? { revision } : {}),
           files: [...result.files.entries()].map(([path, data]) => ({ path, data })),
         });
         if (saved.cancelled) {
@@ -193,7 +209,7 @@ export function ExportPanel({
           return;
         }
         setNotice(
-          `Exportación correcta: ${saved.filesWritten ?? result.files.size} archivos guardados en ${saved.folder}.`,
+          `Subí únicamente esta carpeta: ${saved.folder}. Modo: ${mode === "production" ? "producción" : "borrador"}. Revisión: ${saved.revision ?? revision ?? "no disponible"}. (${saved.filesWritten ?? result.files.size} archivos).`,
         );
       }
       recordHistory({
@@ -284,6 +300,46 @@ export function ExportPanel({
       document.getElementById("studio-tab-seo")?.focus();
     });
   };
+
+  const verifyCloudflare = async () => {
+    setCloudflareBusy(true);
+    setCloudflareVerification(null);
+    try {
+      setCloudflareVerification(await verifyCloudflareDeployment(publishedSiteUrl));
+    } finally {
+      setCloudflareBusy(false);
+    }
+  };
+
+  const toggleCloudflareCheck = (id: string) => {
+    setCloudflareChecklist((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const externalHosts = Array.from(
+    new Set(
+      project.assets
+        .flatMap((asset) => [
+          asset.source,
+          asset.fallbackSource ?? "",
+          ...(asset.responsiveSources?.map((source) => source.source) ?? []),
+        ])
+        .concat(project.videos.map((video) => video.source))
+        .flatMap((source) => {
+          try {
+            return /^https?:\/\//i.test(source) ? [new URL(source).hostname] : [];
+          } catch {
+            return [];
+          }
+        }),
+    ),
+  );
+  if (publicWhatsAppPhone(project)) externalHosts.push("wa.me");
+  externalHosts.sort();
 
   const postItems = [
     {
@@ -462,6 +518,96 @@ export function ExportPanel({
         />
         Publicar contexto público para agentes (`llms.txt` y `ai-context.json`)
       </label>
+      {publicAiContext || externalHosts.length > 0 ? (
+        <aside className="audit-panel" data-testid="ui-export-public-exposure">
+          <h3>Exposición pública deliberada</h3>
+          {publicAiContext ? (
+            <p>
+              Se publicarán contacto, políticas, SKUs, precios y productos activos para agentes.
+            </p>
+          ) : null}
+          {externalHosts.length > 0 ? (
+            <p>
+              Hosts externos de medios: {externalHosts.join(", ")}. Se mostrarán como advertencias.
+            </p>
+          ) : null}
+        </aside>
+      ) : null}
+      <section className="audit-panel" data-testid="ui-cloudflare-verifier">
+        <header>
+          <div>
+            <h3>Verificar publicación en Cloudflare Pages</h3>
+            <p>La comprobación usa CORS y nunca marca verde si el hosting no expone sus headers.</p>
+          </div>
+        </header>
+        <div className="export-actions">
+          <input
+            aria-label="URL pública para verificar"
+            value={publishedSiteUrl}
+            onChange={(event) => setPublishedSiteUrl(event.target.value)}
+            placeholder={project.baseUrl}
+          />
+          <Button
+            size="sm"
+            variant="quiet"
+            onClick={() => void verifyCloudflare()}
+            disabled={cloudflareBusy}
+          >
+            {cloudflareBusy ? "Verificando…" : "Verificar URL"}
+          </Button>
+        </div>
+        {cloudflareVerification ? (
+          <div data-testid="ui-cloudflare-result" data-status={cloudflareVerification.status}>
+            <p>
+              Resultado:{" "}
+              {cloudflareVerification.status === "pass"
+                ? "verificado"
+                : cloudflareVerification.status === "fail"
+                  ? "falló"
+                  : "no verificado"}
+              {cloudflareVerification.revision
+                ? ` · revisión ${cloudflareVerification.revision}`
+                : ""}
+            </p>
+            <ul>
+              {cloudflareVerification.checks.map((entry) => (
+                <li key={entry.id} data-status={entry.status}>
+                  {entry.label}: {entry.status} — {entry.detail}
+                </li>
+              ))}
+            </ul>
+            {cloudflareVerification.status === "unverified" ? (
+              <pre>{cloudflareVerification.curlCommands.join("\n")}</pre>
+            ) : null}
+          </div>
+        ) : null}
+        <ul aria-label="Checklist manual Cloudflare">
+          {(
+            [
+              ["upload", "Subí únicamente la carpeta hija dedicada"],
+              ["functions", "No hay Pages Functions"],
+              ["previews", "Previews desactivados o protegidos con Access"],
+              ["https", "Dominio HTTPS activo"],
+              ["verified", "Verificación posterior completada"],
+            ] as const
+          ).map(([id, label]) => (
+            <li key={id}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={cloudflareChecklist.has(id)}
+                  onChange={() => toggleCloudflareCheck(id)}
+                />
+                {label}
+              </label>
+            </li>
+          ))}
+        </ul>
+        <small>
+          Los previews de Cloudflare son públicos por defecto; protegé o eliminá las versiones
+          antiguas manualmente.
+        </small>
+      </section>
       {optimization ? (
         <output className="optimization-export-summary">
           <strong>Salud de exportación: {optimization.score}/100</strong>
@@ -605,8 +751,12 @@ export function ExportPanel({
             <p>
               Se generará el HTML final con sitemap, datos estructurados y feed de Merchant.
               {desktopExport
-                ? " Al terminar, se abrirá el explorador de Windows para elegir la carpeta de destino."
+                ? " Al terminar, se abrirá el explorador de Windows para elegir una carpeta padre; la app creará una hija dedicada y no mezclará exportaciones."
                 : " Revisá el preview y el checklist SEO antes de continuar."}
+              {publicAiContext
+                ? " El contexto público incluirá contacto, políticas, SKUs, precios y productos activos."
+                : ""}
+              {externalHosts.length > 0 ? ` Hosts externos: ${externalHosts.join(", ")}.` : ""}
             </p>
           }
           onConfirm={() => {

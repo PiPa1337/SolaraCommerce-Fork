@@ -95,7 +95,11 @@ describe("mutation-killers: exporter", () => {
   // M18: romper reduced motion → CSS debe contener prefers-reduced-motion
   it("declara prefers-reduced-motion en CSS", () => {
     const p: any = structuredClone(catalogModernV2Store);
-    const css = String(exportProject(p, { mode: "production" }).files.get("assets/storefront.css"));
+    const files = exportProject(p, { mode: "production" }).files;
+    const cssPath = [...files.keys()].find((path) =>
+      /^assets\/storefront\.[a-f0-9]+\.css$/i.test(path),
+    );
+    const css = String(files.get(cssPath!));
     expect(css).toContain("prefers-reduced-motion");
     // mutación que elimine el bloque rompería este test
   });

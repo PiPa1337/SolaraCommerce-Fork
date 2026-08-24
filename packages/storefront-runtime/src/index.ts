@@ -71,6 +71,24 @@ function validRuntimeDimension(value: unknown): boolean {
   );
 }
 
+function validRuntimeStringArray(value: unknown, maxItems: number, maxString: number): boolean {
+  return (
+    value === undefined ||
+    (Array.isArray(value) &&
+      value.length <= maxItems &&
+      value.every((item) => boundedRuntimeString(item, maxString, -1)))
+  );
+}
+
+function validRuntimeSearchTokens(value: unknown): boolean {
+  if (value === undefined) return true;
+  if (typeof value !== "object" || value === null) return false;
+  const tokens = value as Record<string, unknown>;
+  return ["title", "brand", "tags", "categories", "description"].every((key) =>
+    validRuntimeStringArray(tokens[key], 256, 120),
+  );
+}
+
 function validCatalogIndexEntry(entry: unknown): entry is CatalogIndexEntry {
   if (typeof entry !== "object" || entry === null) return false;
   const value = entry as CatalogIndexEntry;
@@ -148,7 +166,9 @@ export function parseCart(stored: unknown): StoredCartLine[] {
       value.quantity >= 1 &&
       value.quantity <= 99 &&
       (value.available === undefined || typeof value.available === "boolean") &&
-      (value.imageUrl === undefined || safeRuntimeImageUrl(value.imageUrl) !== "") &&
+      (value.imageUrl === undefined ||
+        value.imageUrl === "" ||
+        safeRuntimeImageUrl(value.imageUrl) !== "") &&
       validRuntimeDimension(value.imageWidth) &&
       validRuntimeDimension(value.imageHeight)
     );
@@ -1572,6 +1592,13 @@ function storefrontBoot(): void {
         typeof entry.available === "boolean" &&
         validRuntimeDimension(entry.imageWidth) &&
         validRuntimeDimension(entry.imageHeight) &&
+        validRuntimeStringArray(entry.tags, 64, 160) &&
+        validRuntimeStringArray(entry.categoryIds, 64, 128) &&
+        validRuntimeStringArray(entry.collectionIds, 64, 128) &&
+        validRuntimeStringArray(entry.categoryNames, 64, 160) &&
+        validRuntimeStringArray(entry.collectionNames, 64, 160) &&
+        validRuntimeStringArray(entry.options, 64, 160) &&
+        validRuntimeSearchTokens(entry.tokens) &&
         (entry.imageUrl === undefined || safeRuntimeImageUrl(entry.imageUrl) !== "")
       );
     };
@@ -1647,6 +1674,7 @@ function storefrontBoot(): void {
                 const message = node("p", s.suggestion.replace("{query}", query), {
                   class: "solara-search-summary",
                 });
+                message.append(document.createTextNode(" "));
                 message.append(node("a", suggestion, { href: url }));
                 message.append(document.createTextNode("?"));
                 searchGrid.replaceChildren(message);
@@ -1970,6 +1998,8 @@ const RUNTIME_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unk
   ["safeRuntimeImageUrl", safeRuntimeImageUrl],
   ["boundedRuntimeString", boundedRuntimeString],
   ["validRuntimeDimension", validRuntimeDimension],
+  ["validRuntimeStringArray", validRuntimeStringArray],
+  ["validRuntimeSearchTokens", validRuntimeSearchTokens],
   ["parseCart", parseCart],
   ["validCatalogIndexEntry", validCatalogIndexEntry],
   ["reconcileCartLines", reconcileCartLines],
@@ -2052,11 +2082,11 @@ export const STOREFRONT_RUNTIME_CSS = `
   border: 0;
   color: var(--solara-text);
   background: var(--solara-background);
-  box-shadow: -24px 0 64px rgb(18 25 21 / 0.14);
+  box-shadow: -24px 0 64px color-mix(in srgb, var(--solara-text) 14%, transparent);
 }
 
 [data-cart-drawer]::backdrop {
-  background: rgb(16 24 20 / 0.42);
+  background: color-mix(in srgb, var(--solara-text) 42%, transparent);
 }
 
 .solara-cart-line {
@@ -2102,7 +2132,7 @@ export const STOREFRONT_RUNTIME_CSS = `
 }
 
 .solara-cart-line-warning {
-  color: #9a3f2f !important;
+  color: var(--solara-sale, var(--solara-accent)) !important;
   font-weight: 650;
 }
 

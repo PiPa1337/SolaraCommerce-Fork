@@ -358,7 +358,7 @@ const toolDefinitions = [
   },
   {
     name: "solara_qa_read_backlog",
-    description: "Lee el backlog perpetuo y retorna el siguiente item pendiente."
+    description: "Lee el backlog perpetuo y retorna el siguiente item pendiente.",
     inputSchema: { type: "object", additionalProperties: false, properties: {} },
     method: "qa.readBacklog",
   },

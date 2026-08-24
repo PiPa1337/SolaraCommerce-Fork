@@ -161,3 +161,11 @@ mantienen locks cooperativos con Studio y registran jobs, idempotencia y
 auditoría en `.solara-runtime/agent/`. Los assets pasan por staging con MIME,
 firma, tamaño, hash y dimensiones; los archivos grandes también se pueden subir
 por chunks ordenados.
+
+## Cloudflare Pages (publicación manual)
+
+La app no configura Wrangler, Functions ni credenciales. Exportá una carpeta hija
+nueva y subí únicamente esa carpeta a Pages. Los previews son públicos por
+defecto: desactivalos o protegélos con Access y eliminá manualmente las versiones
+anteriores. Después del despliegue usá el verificador de URL de Exportar; un
+fallo de CORS o headers queda como “no verificado” y muestra comandos `curl.exe`.

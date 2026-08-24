@@ -173,9 +173,10 @@ describe("mutation-killers: storefront-runtime / dinero", () => {
     expect(STOREFRONT_RUNTIME_JS).not.toContain("scrollY");
     expect(STOREFRONT_RUNTIME_JS).not.toContain('addEventListener("wheel"');
   });
-  it("runtime serializado contiene Trusted Types y no deja innerHTML sin policy", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain('createPolicy("solara-storefront"');
-    expect(STOREFRONT_RUNTIME_JS).toContain("setHtml");
+  it("runtime serializado no contiene sinks HTML ni políticas permisivas", () => {
+    expect(STOREFRONT_RUNTIME_JS).not.toContain("innerHTML");
+    expect(STOREFRONT_RUNTIME_JS).not.toContain("createPolicy");
+    expect(STOREFRONT_RUNTIME_JS).not.toContain("setHtml");
   });
   it("runtime serializado respeta prefers-reduced-motion", () => {
     expect(STOREFRONT_RUNTIME_CSS).toContain("prefers-reduced-motion");

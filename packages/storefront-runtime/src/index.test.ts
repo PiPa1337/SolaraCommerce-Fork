@@ -66,10 +66,19 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("motionEntry");
   });
 
-  it("agrupa la medición del chrome y usa Trusted Types para HTML dinámico", () => {
+  it("usa los tokens de tema para el drawer y las alertas del carrito", () => {
+    expect(STOREFRONT_RUNTIME_CSS).toContain("var(--solara-text) 14%");
+    expect(STOREFRONT_RUNTIME_CSS).toContain("var(--solara-sale, var(--solara-accent))");
+    expect(STOREFRONT_RUNTIME_CSS).not.toContain("#9a3f2f");
+    expect(STOREFRONT_RUNTIME_CSS).not.toContain("rgb(18 25 21");
+  });
+
+  it("agrupa la medición del chrome y construye HTML dinámico con nodos", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("requestAnimationFrame(measureChromeHeight)");
-    expect(STOREFRONT_RUNTIME_JS).toContain("setHtml");
-    expect(STOREFRONT_RUNTIME_JS).toContain('createPolicy("solara-storefront"');
+    expect(STOREFRONT_RUNTIME_JS).toContain("replaceChildren");
+    expect(STOREFRONT_RUNTIME_JS).toContain("textContent");
+    expect(STOREFRONT_RUNTIME_JS).not.toContain("innerHTML");
+    expect(STOREFRONT_RUNTIME_JS).not.toContain("createPolicy");
   });
 
   it("incluye comportamiento accesible para el popup de búsqueda", () => {
@@ -319,7 +328,8 @@ describe("carrito sin líneas fantasma y conteos honestos (F-04, SF-B7, SF-B8, C
   });
 
   it("el input de cantidad del drawer arranca en 1 (NG-4)", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain('type="number" min="1" max="99"');
+    expect(STOREFRONT_RUNTIME_JS).toContain("min: 1");
+    expect(STOREFRONT_RUNTIME_JS).toContain("max: 99");
   });
 
   it("el menú móvil inertea a sus hermanos al abrir y los libera al cerrar (SF-B13)", () => {
@@ -388,7 +398,7 @@ describe("pausa y reanudación del runtime (contrato A3↔A4)", () => {
 
   it("declara sizes compactos para la grilla de resultados de búsqueda", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain(
-      'sizes="(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem"',
+      'sizes: "(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem"',
     );
   });
 });
@@ -414,9 +424,7 @@ describe("carrito y checkout del drawer (A29)", () => {
   });
 
   it("quita líneas por data-cart-remove y persiste el carrito", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain(
-      `data-cart-remove="\${escapeAttribute(line.variantId)}"`,
-    );
+    expect(STOREFRONT_RUNTIME_JS).toContain('"data-cart-remove": line.variantId');
     expect(STOREFRONT_RUNTIME_JS).toContain(
       "cart = cart.filter((line) => line.variantId !== variantId)",
     );

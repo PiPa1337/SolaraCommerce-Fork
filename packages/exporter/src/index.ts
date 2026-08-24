@@ -12,6 +12,7 @@ import {
   type PageRenderContext,
   renderSections,
   STORE_BASE_STYLES,
+  STORE_THEME_TOKEN_STYLES,
 } from "@solara/modules";
 import type {
   Category,
@@ -638,9 +639,12 @@ function themeCss(
   const sectionY = t.spacing?.sectionY ?? "clamp(3rem, 6vw, 6rem)";
   const cardGap = t.spacing?.cardGap ?? "clamp(1rem, 2vw, 2rem)";
   const padX = t.spacing?.containerPaddingX ?? "1rem";
-  const shadowCard = t.shadows?.card ?? "none";
-  const shadowElevated = t.shadows?.elevated ?? "none";
-  const shadowOverlay = t.shadows?.overlay ?? "0 24px 70px rgba(0,0,0,.14)";
+  const shadowCard =
+    t.shadows?.card ?? "0 18px 36px color-mix(in srgb, var(--solara-text), transparent 86%)";
+  const shadowElevated =
+    t.shadows?.elevated ?? "0 14px 30px color-mix(in srgb, var(--solara-text), transparent 82%)";
+  const shadowOverlay =
+    t.shadows?.overlay ?? "0 24px 70px color-mix(in srgb, var(--solara-text), transparent 86%)";
   const borderWidth = t.borders?.width ?? "1px";
   const borderStyle = t.borders?.style ?? "solid";
   const motionFast = t.motion?.durationFast ?? "150ms";
@@ -659,6 +663,11 @@ function themeCss(
   --solara-accent: ${colors.accent};
   --solara-accent-text: ${colors.accentText};
   --solara-border: ${colors.border};
+  --solara-dark-background: ${dc?.background ?? "#0d0d0f"};
+  --solara-dark-surface: ${dc?.surface ?? "#1a1a1e"};
+  --solara-dark-text: ${dc?.text ?? "#e8e8ea"};
+  --solara-dark-muted: ${dc?.muted ?? "#8a8a8e"};
+  --solara-dark-border: ${darkBorder};
   --solara-sale: ${saleColor};
   --solara-rating: ${ratingColor};
   --solara-font-display: ${typography.display};
@@ -688,24 +697,24 @@ function themeCss(
 
 @media (prefers-color-scheme: dark) {
   .solara-page[data-color-mode="auto"] {
-    --solara-background: ${dc?.background ?? "#0d0d0f"};
-    --solara-surface: ${dc?.surface ?? "#1a1a1e"};
-    --solara-text: ${dc?.text ?? "#e8e8ea"};
-    --solara-muted: ${dc?.muted ?? "#8a8a8e"};
+    --solara-background: var(--solara-dark-background);
+    --solara-surface: var(--solara-dark-surface);
+    --solara-text: var(--solara-dark-text);
+    --solara-muted: var(--solara-dark-muted);
     --solara-accent: ${darkAccent};
     --solara-accent-text: ${darkAccentText};
-    --solara-border: ${darkBorder};
+    --solara-border: var(--solara-dark-border);
     color-scheme: dark;
   }
 }
 .solara-page[data-color-mode="dark"] {
-  --solara-background: ${dc?.background ?? "#0d0d0f"};
-  --solara-surface: ${dc?.surface ?? "#1a1a1e"};
-  --solara-text: ${dc?.text ?? "#e8e8ea"};
-  --solara-muted: ${dc?.muted ?? "#8a8a8e"};
+  --solara-background: var(--solara-dark-background);
+  --solara-surface: var(--solara-dark-surface);
+  --solara-text: var(--solara-dark-text);
+  --solara-muted: var(--solara-dark-muted);
   --solara-accent: ${darkAccent};
   --solara-accent-text: ${darkAccentText};
-  --solara-border: ${darkBorder};
+  --solara-border: var(--solara-dark-border);
 }
 
 * { box-sizing: border-box; }
@@ -989,9 +998,12 @@ function moduleStylesForSections(
 }
 
 function stylesForProjectFamily(project: StoreProjectV1, styles: string): string {
-  if (project.commerceTemplates.designFamily !== "catalog-modern-v2") return styles;
+  if (project.commerceTemplates.designFamily !== "catalog-modern-v2") {
+    return `${styles}\n${STORE_THEME_TOKEN_STYLES}`;
+  }
   const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"] ?? "";
-  return v2Styles ? `${styles}\n${v2Styles}` : styles;
+  const withFamily = v2Styles ? `${styles}\n${v2Styles}` : styles;
+  return `${withFamily}\n${STORE_THEME_TOKEN_STYLES}`;
 }
 
 function exportedModuleStyles(project: StoreProjectV1): string {

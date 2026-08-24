@@ -10,15 +10,16 @@ import { optimizeProject } from "@solara/site-optimizer";
 import { imageFor } from "./assets.js";
 import { buildMerchantFeed } from "./feeds.js";
 import { escapeXml } from "./html.js";
-import type { AuditIssue, AuditReport, ExportMode } from "./index.js";
+import type { AuditIssue, AuditReport } from "./index.js";
 import {
   buildCommerceSnapshot,
   dataUrlBytes,
   effectiveHomeSections,
   publicMediaUsage,
 } from "./index.js";
+import { publicWhatsAppPhone } from "./whatsapp.js";
 
-export function auditProject(project: StoreProjectV1): AuditIssue[] {
+export function auditProject(project: StoreProjectV1, publicAiContext = true): AuditIssue[] {
   const issues: AuditIssue[] = [];
   const productSlugs = new Map<string, number>();
   const categorySlugs = new Map<string, number>();
@@ -61,8 +62,72 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
       code: "domain.baseurl-path",
       severity: "warning",
       message:
-        "La baseUrl usa una subcarpeta: canonical, sitemap, metadatos y recursos ya la respetan; la navegación interna del sitio y las búsquedas del runtime siguen asumiendo la raíz.",
+        "La baseUrl usa una subcarpeta; verificá que el hosting conserve el prefijo en navegación, runtime, PWA y recursos.",
       path: "baseUrl",
+    });
+  }
+
+  if (publicAiContext) {
+    issues.push({
+      code: "privacy.public-ai-context",
+      severity: "warning",
+      area: "ai",
+      message:
+        "El contexto público para agentes expone contacto, políticas, SKUs, precios y productos activos en ai-context.json y llms.txt.",
+      path: "publicAiContext",
+      fixTarget: "export",
+    });
+  }
+  const externalMediaHosts = new Map<string, Set<string>>();
+  const mediaSources = [
+    ...project.assets.flatMap((asset) => [
+      asset.source,
+      asset.fallbackSource ?? "",
+      ...(asset.responsiveSources?.map((source) => source.source) ?? []),
+    ]),
+    ...project.videos.map((video) => video.source),
+  ];
+  mediaSources.forEach((source) => {
+    if (!/^https?:\/\//i.test(source)) return;
+    try {
+      const url = new URL(source);
+      const host = url.hostname.toLowerCase();
+      const protocols = externalMediaHosts.get(host) ?? new Set<string>();
+      protocols.add(url.protocol);
+      externalMediaHosts.set(host, protocols);
+    } catch {
+      // El schema ya rechaza formatos imposibles; no duplica el diagnóstico aquí.
+    }
+  });
+  externalMediaHosts.forEach((protocols, host) => {
+    issues.push({
+      code: "privacy.external-media-host",
+      severity: "warning",
+      area: "technical",
+      message: `El sitio público carga medios desde ${host}; ese host puede recibir solicitudes de visitantes.`,
+      path: "assets",
+      fixTarget: "assets",
+    });
+    if (protocols.has("http:")) {
+      issues.push({
+        code: "privacy.http-media",
+        severity: "warning",
+        area: "technical",
+        message: `El medio remoto de ${host} usa HTTP sin cifrado; reemplazalo por HTTPS si el proveedor lo permite.`,
+        path: "assets",
+        fixTarget: "assets",
+      });
+    }
+  });
+  if (publicWhatsAppPhone(project)) {
+    issues.push({
+      code: "privacy.external-host",
+      severity: "warning",
+      area: "technical",
+      message:
+        "El checkout abre WhatsApp en wa.me; ese host externo recibe la solicitud cuando el cliente confirma.",
+      path: "whatsapp.phone",
+      fixTarget: "export",
     });
   }
 
@@ -369,8 +434,8 @@ export function auditProject(project: StoreProjectV1): AuditIssue[] {
   }));
 }
 
-export function auditReport(project: StoreProjectV1): AuditReport {
-  const baseIssues = auditProject(project);
+export function auditReport(project: StoreProjectV1, publicAiContext = true): AuditReport {
+  const baseIssues = auditProject(project, publicAiContext);
   const optimization = optimizeProject(project, { mode: "draft", publicAiContext: false });
   const existingPaths = new Set(baseIssues.map((issue) => issue.path).filter(Boolean));
   const optimizationIssues: AuditIssue[] = optimization.findings

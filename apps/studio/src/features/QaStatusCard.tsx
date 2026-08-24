@@ -31,7 +31,7 @@ export function QaStatusCard() {
         setError("QA no disponible");
       }
     }
-    fetchStatus();
+    void fetchStatus();
   }, []);
 
   if (error) return null;

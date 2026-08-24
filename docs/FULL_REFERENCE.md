@@ -97,7 +97,7 @@ StoreProjectV2
 │   └── seed: "clean" | "demo" | "duplicate" | "placeholder"
 ├── identity: { legalName, brandName, description, email, phone, address, logoAssetId }
 ├── seo: { title, description, faviconAssetId?, socialImageId?, searchConsoleVerification, merchantVerification }
-├── theme: { colors{background,surface,text,muted,accent,accentText,border}, typography{display,body,scale}, radius, container, spacingScale, colorMode }
+├── theme: { colors, typography, spacing, spacingScale, shadows, borders, motion, radius, container, colorMode }
 ├── navigation: { mode:"automatic"|"manual", items[], showHome/Contact/About/Search/Cart, catalogLabel }
 ├── whatsapp: { phone, greeting, includeSku }
 ├── commerceTemplates: { designFamily:"catalog-modern-v1"|"catalog-modern-v2", search:{enabled}, cart:{enabled}, checkout:{enabled}, ... }

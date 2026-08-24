@@ -3,7 +3,7 @@
  * Requiere una distribución creada por `pnpm desktop:package`.
  */
 
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { cp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -21,6 +21,19 @@ const testRoot = mkdtempSync(join(tmpdir(), "solara-portable-e2e-"));
 const copyA = join(testRoot, "Copia A - árbol");
 const copyB = join(testRoot, "Copia B - βeta");
 const movedA = join(testRoot, "Copia movida - espacio y ü");
+const activeInstances = new Set();
+
+async function preparePortableCopy(folder) {
+  await cp(source, folder, { recursive: true });
+  // La plantilla empaquetada en proyectos/ es parte del contrato que este
+  // E2E verifica; sólo se elimina el perfil/runtime regenerable y sus locks.
+  await rm(join(folder, ".solara-runtime"), {
+    recursive: true,
+    force: true,
+    maxRetries: 3,
+    retryDelay: 250,
+  });
+}
 
 async function openPortable(folder) {
   const app = await electron.launch({
@@ -30,16 +43,23 @@ async function openPortable(folder) {
     args: ["--disable-gpu", "--disable-gpu-compositing", "--in-process-gpu"],
     timeout: 20_000,
   });
-  const page = await app.firstWindow({ timeout: 20_000 });
-  await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 20_000 });
-  // El dashboard se monta antes de que la sesión administrada termine de
-  // cargar los manifiestos desde disco. Esperar la tarjeta de la plantilla
-  // evita convertir esa latencia normal en un falso negativo del E2E.
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').waitFor({
-    state: "visible",
-    timeout: 20_000,
-  });
-  return { app, page };
+  try {
+    const page = await app.firstWindow({ timeout: 20_000 });
+    await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 20_000 });
+    // El dashboard se monta antes de que la sesión administrada termine de
+    // cargar los manifiestos desde disco. Esperar la tarjeta de la plantilla
+    // evita convertir esa latencia normal en un falso negativo del E2E.
+    await page.locator('[data-store-card-id="store-modo-sur-demo"]').waitFor({
+      state: "visible",
+      timeout: 20_000,
+    });
+    const instance = { app, page };
+    activeInstances.add(instance);
+    return instance;
+  } catch (error) {
+    await app.close().catch(() => undefined);
+    throw error;
+  }
 }
 
 async function closePortable(instance) {
@@ -49,6 +69,21 @@ async function closePortable(instance) {
     // close() es el fallback si el puente Electron ya no está disponible.
   }
   await instance.app.close();
+  activeInstances.delete(instance);
+}
+
+async function cleanupTestRoot(path) {
+  let lastError;
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    try {
+      await rm(path, { recursive: true, force: true, maxRetries: 3, retryDelay: 250 });
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+  console.warn(`portable e2e: limpieza de ${path} incompleta (${lastError?.code ?? lastError})`);
 }
 
 async function assertPortableDiagnostics(instance, folder) {
@@ -73,10 +108,7 @@ async function assertPortableDiagnostics(instance, folder) {
 }
 
 try {
-  await Promise.all([
-    cp(source, copyA, { recursive: true }),
-    cp(source, copyB, { recursive: true }),
-  ]);
+  await Promise.all([preparePortableCopy(copyA), preparePortableCopy(copyB)]);
 
   const [instanceA, instanceB] = await Promise.all([openPortable(copyA), openPortable(copyB)]);
   const assertOnlyCurrentDemoIsIntegrated = async (page) => {
@@ -234,6 +266,14 @@ try {
   await closePortable(instanceB);
   await cp(copyA, movedA, { recursive: true });
   await rm(copyA, { recursive: true, force: true });
+  // El traslado conserva proyectos/sitio, pero no debe arrastrar locks del
+  // perfil Electron de la ubicación anterior.
+  await rm(join(movedA, ".solara-runtime"), {
+    recursive: true,
+    force: true,
+    maxRetries: 3,
+    retryDelay: 250,
+  });
 
   const moved = await openPortable(movedA);
   try {
@@ -251,17 +291,6 @@ try {
     throw new Error("Los perfiles portables colisionan.");
   console.log("portable e2e: OK");
 } finally {
-  for (let attempt = 1; attempt <= 5; attempt++) {
-    try {
-      rmSync(testRoot, { recursive: true, force: true });
-      break;
-    } catch (error) {
-      const retriable = error?.code === "EPERM" || error?.code === "EBUSY";
-      if (!retriable || attempt === 5) {
-        console.warn(`portable e2e: limpieza de ${testRoot} incompleta (${error?.code ?? error})`);
-        break;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 1_000 * attempt));
-    }
-  }
+  await Promise.all([...activeInstances].map((instance) => closePortable(instance)));
+  await cleanupTestRoot(testRoot);
 }

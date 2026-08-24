@@ -1,8 +1,8 @@
 /** Smoke test determinista para una carpeta portable ya empaquetada. */
 
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { cp } from "node:fs/promises";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { cp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,8 +17,43 @@ const copies = [
   join(testRoot, "Copia A con espacios - á"),
   join(testRoot, "Copia B con espacios - β"),
 ];
+
+async function cleanupTestRoot(path) {
+  let lastError;
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    try {
+      await rm(path, { recursive: true, force: true, maxRetries: 3, retryDelay: 250 });
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+  throw lastError;
+}
+
 try {
-  await Promise.all(copies.map((copy) => cp(source, copy, { recursive: true })));
+  await Promise.all(
+    copies.map(async (copy) => {
+      await cp(source, copy, { recursive: true });
+      // El paquete puede conservar estado de una ejecución local; cada copia
+      // debe probar un perfil y proyectos realmente aislados.
+      await Promise.all([
+        rm(join(copy, ".solara-runtime"), {
+          recursive: true,
+          force: true,
+          maxRetries: 3,
+          retryDelay: 250,
+        }),
+        rm(join(copy, "proyectos"), {
+          recursive: true,
+          force: true,
+          maxRetries: 3,
+          retryDelay: 250,
+        }),
+      ]);
+    }),
+  );
   const children = copies.map((copy) => {
     // El smoke no valida la composición GPU. Forzar rasterizado software evita
     // que una DLL gráfica ausente en el runner mate el proceso antes del test.
@@ -66,5 +101,7 @@ try {
   }
   console.log("portable smoke: OK");
 } finally {
-  rmSync(testRoot, { recursive: true, force: true });
+  // Electron puede conservar brevemente un handle de la copia Unicode tras
+  // emitir `exit`; los reintentos evitan que esa ventana oculte un smoke válido.
+  await cleanupTestRoot(testRoot);
 }

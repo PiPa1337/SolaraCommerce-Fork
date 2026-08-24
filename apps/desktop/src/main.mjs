@@ -26,7 +26,7 @@ import {
   resolveStaticFile,
 } from "../../../packages/exporter/scripts/solara-request-handler.mjs";
 import { runAgentHost } from "./agent-host.mjs";
-import { writeExportFiles } from "./export-site.mjs";
+import { createExportDestination, writeExportFiles } from "./export-site.mjs";
 import { GPU_CRASH_WINDOW_MS, gpuMarkerPath, shouldUseSoftwareMode } from "./gpu-mode.mjs";
 
 protocol.registerSchemesAsPrivileged([
@@ -322,11 +322,18 @@ function registerIpc() {
     });
     if (selection.canceled || !selection.filePaths[0]) return { cancelled: true };
 
-    const destination = selection.filePaths[0];
+    const parentFolder = selection.filePaths[0];
+    const destination = await createExportDestination(parentFolder, {
+      storeSlug,
+      mode: payload.mode,
+    });
     const result = await writeExportFiles(destination, payload.files);
     return {
       cancelled: false,
       folder: destination,
+      parentFolder,
+      mode: payload.mode === "draft" ? "draft" : "production",
+      revision: typeof payload.revision === "string" ? payload.revision : undefined,
       filesWritten: result.filesWritten,
     };
   });

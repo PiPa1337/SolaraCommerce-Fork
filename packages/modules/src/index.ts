@@ -49,7 +49,12 @@ import {
   splitHero,
   trustStrip,
 } from "./definitions";
-import { MODULE_STYLE_BLOCKS, MODULE_STYLES, STORE_BASE_STYLES } from "./styles";
+import {
+  MODULE_STYLE_BLOCKS,
+  MODULE_STYLES,
+  STORE_BASE_STYLES,
+  STORE_THEME_TOKEN_STYLES,
+} from "./styles";
 
 export {
   announcementBar,
@@ -68,6 +73,7 @@ export {
   productDetail,
   splitHero,
   STORE_BASE_STYLES,
+  STORE_THEME_TOKEN_STYLES,
   trustStrip,
   catalogAnnouncement,
   catalogBrandStrip,

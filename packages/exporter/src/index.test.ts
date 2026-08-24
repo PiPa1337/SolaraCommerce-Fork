@@ -14,6 +14,7 @@ import {
   readProjectArchive,
   renderPreviewHtml,
 } from "./index";
+import { sha256Hex } from "./pwa";
 
 function onlineStoreJsonLd(homeHtml: string): Record<string, unknown> {
   for (const script of homeHtml.matchAll(
@@ -29,7 +30,22 @@ function homeMetaDescription(homeHtml: string): string {
   return /<meta name="description" content="([^"]*)"/.exec(homeHtml)?.[1] ?? "";
 }
 
+function runtimeAsset(files: ReadonlyMap<string, string | Uint8Array>, kind: "css" | "js"): string {
+  const path = [...files.keys()].find((candidate) =>
+    new RegExp(`^assets/storefront\\.[a-f0-9]+\\.${kind}$`, "i").test(candidate),
+  );
+  if (!path) throw new Error(`Falta runtime ${kind} hasheado`);
+  return String(files.get(path));
+}
+
 describe("exporter", () => {
+  it("calcula SHA-256 de forma portable en browser y Node", () => {
+    expect(sha256Hex("")).toBe("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+    expect(sha256Hex("abc")).toBe(
+      "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    );
+  });
+
   it("transporta el copy global personalizado a preview y exportación", () => {
     const project = structuredClone(catalogModernV2Store);
     project.publicCopy.navigation.cart = "Bolsa";
@@ -124,6 +140,53 @@ describe("exporter", () => {
     expect(productHtml).toContain('href="/ai-context.json"');
   });
 
+  it("emite runtime hasheado y deployment-manifest v1 sin archivos privados", () => {
+    const result = exportProject(referenceStore, { mode: "production" });
+    const manifest = JSON.parse(String(result.files.get("deployment-manifest.json"))) as {
+      version: number;
+      mode: string;
+      runtime: { css: string; js: string };
+      essentialFileHashes: Record<string, string>;
+    };
+    expect(manifest.version).toBe(1);
+    expect(manifest.mode).toBe("production");
+    expect(manifest.runtime.css).toMatch(/^\/assets\/storefront\.[a-f0-9]+\.css$/);
+    expect(manifest.runtime.js).toMatch(/^\/assets\/storefront\.[a-f0-9]+\.js$/);
+    expect(result.files.has(manifest.runtime.css.slice(1))).toBe(true);
+    expect(result.files.has(manifest.runtime.js.slice(1))).toBe(true);
+    expect([...result.files.keys()].some((path) => path.includes(".solara.json"))).toBe(false);
+    expect([...result.files.keys()].some((path) => path.startsWith("proyectos/"))).toBe(false);
+    expect(manifest.essentialFileHashes["sw.js"]).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it("cambia las URLs de runtime cuando cambia el CSS", () => {
+    const baseline = exportProject(referenceStore, { mode: "production" });
+    const changed = structuredClone(referenceStore);
+    changed.theme.colors.accent = "#123456";
+    const baseManifest = JSON.parse(String(baseline.files.get("deployment-manifest.json"))) as any;
+    const changedManifest = JSON.parse(
+      String(exportProject(changed, { mode: "production" }).files.get("deployment-manifest.json")),
+    ) as any;
+    expect(changedManifest.runtime.css).not.toBe(baseManifest.runtime.css);
+    expect(changedManifest.runtime.js).toBe(baseManifest.runtime.js);
+  });
+
+  it("mantiene PWA y precache bajo la subcarpeta con versión basada en contenido", () => {
+    const project = { ...referenceStore, baseUrl: "https://example.test/tienda/" };
+    const result = exportProject(project, { mode: "production" });
+    const webManifest = JSON.parse(String(result.files.get("manifest.webmanifest"))) as {
+      start_url: string;
+      icons: Array<{ src: string }>;
+    };
+    const sw = String(result.files.get("sw.js"));
+    expect(webManifest.start_url).toBe("/tienda/");
+    expect(webManifest.icons.every((icon) => icon.src.startsWith("/tienda/"))).toBe(true);
+    expect(sw).toContain("/tienda/");
+    expect(sw).toContain("/tienda/assets/storefront.");
+    expect(sw).toContain("caches.open(CACHE_NAME)");
+    expect(sw).not.toContain("caches.match(");
+  });
+
   it("usa un snapshot comercial para HTML, variantes, sitemap y feed", () => {
     const snapshot = buildCommerceSnapshot(referenceStore);
     const result = exportProject(referenceStore, { mode: "production" });
@@ -167,14 +230,13 @@ describe("exporter", () => {
 
   it("mantiene contenido y SEO en el HTML inicial", () => {
     const preview = renderPreviewHtml(referenceStore);
-    const css = String(
-      exportProject(referenceStore, { mode: "draft" }).files.get("assets/storefront.css"),
-    );
+    const css = String(runtimeAsset(exportProject(referenceStore, { mode: "draft" }).files, "css"));
     expect(preview).toContain("Una casa con materia y calma.");
     expect(preview).toContain('<meta name="description"');
     expect(preview).toContain('<script type="application/ld+json">');
     expect(css).not.toContain("color-scheme: light dark");
-    expect(css).toContain('.solara-page[data-color-mode="auto"]{color-scheme:dark}');
+    expect(css).toContain('.solara-page[data-color-mode="auto"]');
+    expect(css).toContain("color-scheme:dark");
   });
 
   it("consume data-theme del html con color-scheme en el CSS exportado", () => {
@@ -183,14 +245,14 @@ describe("exporter", () => {
       theme: { ...referenceStore.theme, colorMode: "dark" },
     } as typeof referenceStore;
     const darkCss = String(
-      exportProject(darkProject, { mode: "draft" }).files.get("assets/storefront.css"),
+      runtimeAsset(exportProject(darkProject, { mode: "draft" }).files, "css"),
     );
     const darkHtml = String(exportProject(darkProject, { mode: "draft" }).files.get("index.html"));
     expect(darkHtml).toContain('data-theme="dark"');
     expect(darkCss).toContain('html[data-theme="dark"]{color-scheme:dark}');
 
     const lightCss = String(
-      exportProject(referenceStore, { mode: "draft" }).files.get("assets/storefront.css"),
+      runtimeAsset(exportProject(referenceStore, { mode: "draft" }).files, "css"),
     );
     expect(lightCss).toContain('html[data-theme="light"]{color-scheme:light}');
   });
@@ -225,20 +287,20 @@ describe("exporter", () => {
     };
     const result = exportProject(project as typeof referenceStore, { mode: "draft" });
     const baseline = exportProject(referenceStore, { mode: "draft" });
-    const css = String(result.files.get("assets/storefront.css"));
+    const css = runtimeAsset(result.files, "css");
     const html = String(result.files.get("index.html"));
 
-    expect(css).toBe(baseline.files.get("assets/storefront.css"));
+    expect(css).toBe(runtimeAsset(baseline.files, "css"));
     expect(css).not.toContain('[data-solara-module="editorial-hero"]');
     expect(html).not.toContain('data-solara-module="editorial-hero"');
-    expect([...result.files.keys()].filter((path) => path === "assets/storefront.js")).toHaveLength(
-      1,
-    );
+    expect(
+      [...result.files.keys()].filter((path) => /^assets\/storefront\.[a-f0-9]+\.js$/i.test(path)),
+    ).toHaveLength(1);
   });
 
   it("deduplica el bloque catalog-modern por style key en la exportación", () => {
     const css = String(
-      exportProject(catalogModernStore, { mode: "production" }).files.get("assets/storefront.css"),
+      runtimeAsset(exportProject(catalogModernStore, { mode: "production" }).files, "css"),
     );
     const distinctive = "catalog-modern .catalog-product-card h3 a:hover";
 
@@ -249,8 +311,8 @@ describe("exporter", () => {
   it("incluye la foundation V2 sólo en proyectos catalog-modern-v2", () => {
     const v1Result = exportProject(catalogModernStore, { mode: "production" });
     const v2Result = exportProject(catalogModernV2Store, { mode: "production" });
-    const v1Css = String(v1Result.files.get("assets/storefront.css"));
-    const v2Css = String(v2Result.files.get("assets/storefront.css"));
+    const v1Css = runtimeAsset(v1Result.files, "css");
+    const v2Css = runtimeAsset(v2Result.files, "css");
     const v1Home = String(v1Result.files.get("index.html"));
     const v2Home = String(v2Result.files.get("index.html"));
 
@@ -342,9 +404,7 @@ describe("exporter", () => {
     expect(product.match(/<link rel="preload" as="image"/g)).toHaveLength(1);
     expect(headers).toContain("/assets/*");
     expect(headers).toContain("max-age=31536000, immutable");
-    expect(headers).toContain(
-      "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload",
-    );
+    expect(headers).toContain("Strict-Transport-Security: max-age=31536000");
     expect(headers).toContain("/ai-context.json");
   });
 
@@ -377,8 +437,8 @@ describe("exporter", () => {
     const result = exportProject(catalogModernV2Store, { mode: "production" });
     const home = String(result.files.get("index.html"));
 
-    expect(home).toContain(
-      '<link rel="preload" as="font" type="font/woff2" href="/assets/fonts/archivo.woff2" crossorigin>',
+    expect(home).toMatch(
+      /<link rel="preload" as="font" type="font\/woff2" href="\/assets\/font\.[a-f0-9]+\.woff2" crossorigin>/,
     );
   });
 
@@ -411,7 +471,7 @@ describe("exporter", () => {
     };
     const result = exportProject(project, { mode: "draft" });
     const html = String(result.files.get("index.html"));
-    const css = String(result.files.get("assets/storefront.css"));
+    const css = runtimeAsset(result.files, "css");
 
     expect(html).not.toContain('data-solara-module="announcement-bar"');
     expect(html).not.toContain('data-solara-module="editorial-header"');
@@ -782,8 +842,8 @@ describe("exporter", () => {
     const home = String(result.files.get("index.html"));
     expect(home).toContain('<link rel="canonical" href="https://casa-luma.example/tienda/">');
     expect(home).toContain('<meta property="og:url" content="https://casa-luma.example/tienda/">');
-    expect(home).toContain('href="/tienda/assets/storefront.css"');
-    expect(home).toContain('src="/tienda/assets/storefront.js"');
+    expect(home).toMatch(/href="\/tienda\/assets\/storefront\.[a-f0-9]+\.css"/i);
+    expect(home).toMatch(/src="\/tienda\/assets\/storefront\.[a-f0-9]+\.js"/i);
     expect(home).toContain('href="/tienda/ai-context.json"');
     expect(home).toContain('href="/tienda/llms.txt"');
 
@@ -861,13 +921,15 @@ describe("exporter", () => {
 
     expect(headers).toBe(`/*
   Cache-Control: public, max-age=0, must-revalidate, stale-while-revalidate=86400
-  Content-Security-Policy: default-src 'self'; img-src 'self' data: https: http:; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self'; media-src 'self' data: https: http:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types solara-storefront
-  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: https: http:; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self'; media-src 'self' data: https: http:; font-src 'self' data:; manifest-src 'self'; worker-src 'self'; form-action 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types 'none'
+  Strict-Transport-Security: max-age=31536000
   Cross-Origin-Opener-Policy: same-origin
   Referrer-Policy: strict-origin-when-cross-origin
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Access-Control-Allow-Origin: *
+  Access-Control-Expose-Headers: Content-Security-Policy, Strict-Transport-Security, X-Content-Type-Options, X-Frame-Options, Cache-Control, Referrer-Policy, Permissions-Policy
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
@@ -914,6 +976,29 @@ describe("exporter", () => {
     expect(auditProject(referenceStore)).toContainEqual(
       expect.objectContaining({ code: "merchant.whatsapp-checkout", severity: "warning" }),
     );
+  });
+
+  it("advierte contexto IA y medios remotos sin bloquear producción", () => {
+    const project = structuredClone(referenceStore);
+    const asset = project.assets[0];
+    if (!asset) throw new Error("Fixture incompleto");
+    asset.source = "http://cdn.example.test/image.webp";
+    const issues = auditProject(project);
+    expect(issues).toContainEqual(
+      expect.objectContaining({ code: "privacy.public-ai-context", severity: "warning" }),
+    );
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        code: "privacy.external-media-host",
+        message: expect.stringContaining("cdn.example.test"),
+      }),
+    );
+    expect(issues).toContainEqual(
+      expect.objectContaining({ code: "privacy.http-media", severity: "warning" }),
+    );
+    expect(
+      exportProject(project, { mode: "production" }).files.has("deployment-manifest.json"),
+    ).toBe(true);
   });
 
   it("permite exportar sin contexto publico para agentes", () => {
@@ -1293,22 +1378,25 @@ describe("tema: carga real de fuentes y vars sin duplicados", () => {
 
   it("emite @font-face self-host cuando la familia es Google Fonts y agrega el woff2", () => {
     const result = exportProject(catalogModernStore, { mode: "draft" });
-    const css = String(result.files.get("assets/storefront.css"));
-    const font = result.files.get("assets/fonts/archivo.woff2");
+    const css = runtimeAsset(result.files, "css");
+    const fontPath = [...result.files.keys()].find((path) =>
+      /^assets\/font\.[a-f0-9]+\.woff2$/i.test(path),
+    );
+    const font = fontPath ? result.files.get(fontPath) : undefined;
 
     expect(css).toContain('@font-face{font-family:"Archivo"');
-    expect(css).toContain('url("/assets/fonts/archivo.woff2") format("woff2")');
+    expect(css).toMatch(/url\("\/assets\/font\.[a-f0-9]+\.woff2"\) format\("woff2"\)/);
     expect(css).toContain("font-weight:400 900");
     expect(css).not.toContain('local("Arial")');
     expect(css.split("@font-face").length - 1).toBe(1);
     expect(font).toBeInstanceOf(Uint8Array);
     expect((font as Uint8Array).length).toBeGreaterThan(30_000);
-    expect(result.files.has("assets/fonts/inter.woff2")).toBe(false);
+    expect([...result.files.keys()].some((path) => path.includes("inter"))).toBe(false);
   });
 
   it("no emite fuentes para familias del sistema ni archivos woff2", () => {
     const result = exportProject(referenceStore, { mode: "draft" });
-    const css = String(result.files.get("assets/storefront.css"));
+    const css = runtimeAsset(result.files, "css");
 
     expect(css).not.toContain("@font-face");
     expect([...result.files.keys()].some((path) => path.startsWith("assets/fonts/"))).toBe(false);
@@ -1326,7 +1414,7 @@ describe("tema: carga real de fuentes y vars sin duplicados", () => {
 
   it("emite una sola var por campo y el body usa el token canónico", () => {
     const css = String(
-      exportProject(catalogModernStore, { mode: "draft" }).files.get("assets/storefront.css"),
+      runtimeAsset(exportProject(catalogModernStore, { mode: "draft" }).files, "css"),
     );
 
     expect(css).toContain("--solara-font-display:");

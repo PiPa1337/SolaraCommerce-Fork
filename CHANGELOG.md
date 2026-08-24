@@ -1,5 +1,19 @@
 # Changelog
 
+### Contrato completo de tema en Editorial V2 (2026-08-24)
+
+- Contenedor, espaciado, radios, sombras, bordes, tipografía avanzada y motion
+  de Catalog Modern V2 consumen los tokens emitidos por el tema.
+- Las excepciones editoriales semánticas se conservan: pills redondas y
+  recortes full-bleed sin radio.
+
+### Storefront conectado a la paleta del tema (2026-08-24)
+
+- Hover, focus, overlays, badges, botones, carrito y navegación de Catalog Modern
+  usan tokens semánticos del tema en lugar de colores fijos.
+- Los overrides de modo oscuro heredan variables dedicadas y `sale/rating` ya no
+  pisan la paleta activa de cada tienda.
+
 ### Tests de paridad para imágenes responsive (2026-08-24)
 
 - 5 tests nuevos: picture/webp en HTML, archivos físicos por variante,

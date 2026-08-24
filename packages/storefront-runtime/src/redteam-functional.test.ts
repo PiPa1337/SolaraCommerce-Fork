@@ -3,6 +3,7 @@
 import { referenceStore } from "@solara/project-schema/fixture";
 import { describe, expect, it } from "vitest";
 import {
+  buildCartLine,
   buildWhatsAppMessage,
   formatMoney,
   parseCart,
@@ -172,6 +173,37 @@ describe("red-team storefront", () => {
       ]).length,
     ).toBe(0);
   });
+  it("BUG-11 parseCart rechaza dimensiones, URLs y strings peligrosos", () => {
+    const base = {
+      variantId: "v1",
+      title: "T",
+      variantTitle: "V",
+      sku: "S",
+      unitPrice: 100,
+      quantity: 1,
+    };
+    expect(parseCart([{ ...base, imageWidth: 0 } as any])).toHaveLength(0);
+    expect(parseCart([{ ...base, imageHeight: 1.5 } as any])).toHaveLength(0);
+    expect(parseCart([{ ...base, imageUrl: "javascript:alert(1)" } as any])).toHaveLength(0);
+    expect(parseCart([{ ...base, title: "x".repeat(241) } as any])).toHaveLength(0);
+    expect(
+      parseCart([{ ...base, imageUrl: "/assets/product.webp", imageWidth: 640 } as any]),
+    ).toHaveLength(1);
+  });
+  it("BUG-12 pedido muestra advertencia fija de verificación manual", () => {
+    const product = referenceStore.products[0];
+    const variant = product?.variants[0];
+    if (!product || !variant) throw new Error("Fixture incompleto");
+    expect(
+      buildWhatsAppMessage(
+        referenceStore,
+        [{ ...buildCartLine(product, variant), unitPrice: variant.price }],
+        { name: "A", phone: "1", address: "B", notes: "" },
+      ),
+    ).toContain(
+      "Solicitud sin confirmar; precio, stock, envío y pago deben verificarse con la tienda",
+    );
+  });
   it("corrupt localStorage: parseCart descarta JSON invalido sin throw", () => {
     expect(parseCart(null as any).length).toBe(0);
     expect(parseCart("invalid" as any).length).toBe(0);
@@ -295,9 +327,10 @@ describe("red-team storefront", () => {
     const r = reconcileCartLines(cart as any, catalogOut as any);
     expect(r[0].available).toBe(false);
   });
-  it("XSS: titulo con script se escapa en runtime", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain("escapeText(line.title)");
-    expect(STOREFRONT_RUNTIME_JS).toContain("escapeAttribute(line.variantId)");
+  it("XSS: titulo con script se inserta como texto y no como HTML", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("textContent");
+    expect(STOREFRONT_RUNTIME_JS).toContain("replaceChildren");
+    expect(STOREFRONT_RUNTIME_JS).not.toContain("innerHTML");
   });
   it("hash y query malformados no rompen variant select", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("new URL(window.location.href)");
@@ -334,6 +367,6 @@ describe("red-team storefront", () => {
     expect(msg).toContain(expectedTotal);
   });
   it("imagen que falla no rompe render (alt vacio)", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain('alt=""');
+    expect(STOREFRONT_RUNTIME_JS).toContain('alt: ""');
   });
 });

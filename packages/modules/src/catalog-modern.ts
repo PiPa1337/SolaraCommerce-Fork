@@ -1551,9 +1551,11 @@ export const catalogCartDrawer: ModuleDefinition<
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const copy = context.project.publicCopy;
-    const checkoutLinkMarkup = hasPublicWhatsApp(context.project.whatsapp)
-      ? `<a data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>${escapeHtml(copy.checkout.sendWhatsApp)}</a>`
-      : "";
+    const checkoutLinkMarkup = `${
+      hasPublicWhatsApp(context.project.whatsapp)
+        ? `<a data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>${escapeHtml(copy.checkout.sendWhatsApp)}</a>`
+        : ""
+    }<p data-order-verification-warning role="note">Solicitud sin confirmar; precio, stock, envío y pago deben verificarse con la tienda</p>`;
     return moduleRoot(
       "catalog-cart-drawer",
       context.section,

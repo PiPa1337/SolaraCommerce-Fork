@@ -10,9 +10,8 @@
  *   atributos data-color-mode / data-theme del HTML exportado;
  * - utilidad: el sitio exportado emite color-scheme + media query de
  *   prefers-color-scheme, el preview cambia de verdad al emular la media, y los
- *   overrides fijos del dark (styles.ts:23-29 y 513-521) quedan documentados:
- *   pisan 5 de 7 tokens del usuario y la capa --catalog-* (styles.ts:1942-1948)
- *   no los respeta → mezcla claro/oscuro ilegible si se habilitara "Oscuro".
+ *   el modo dark hereda sus tokens semánticos sin pisar la paleta activa ni
+ *   mezclar valores fijos de otra identidad visual.
  */
 import { createServer, type Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
@@ -43,15 +42,6 @@ interface StoredProjectRecord {
 }
 
 type ExportedProject = Parameters<typeof exportProject>[0];
-
-/** Overrides fijos del dark en STORE_BASE_STYLES (packages/modules/src/styles.ts). */
-const FIXED_DARK_TOKENS = [
-  "#1d1e19", // --solara-background (styles.ts:24 y 515)
-  "#292a23", // --solara-surface (styles.ts:25 y 516)
-  "#f3eee4", // --solara-text (styles.ts:26 y 517)
-  "#b8b2a5", // --solara-muted (styles.ts:27 y 518)
-  "#47483d", // --solara-border (styles.ts:28 y 519)
-] as const;
 
 /** Paleta por defecto de la tienda limpia catalog-modern (catalog-modern-fixture.ts:391-401). */
 const THEME_BACKGROUND = "#fcfcfb";
@@ -377,13 +367,13 @@ test("Oscuro: deshabilitado con hint conectado por aria-describedby", async ({ p
 
   // Hint explicando por qué está deshabilitado, conectado por aria-describedby.
   const hintText =
-    "Oscuro está deshabilitado: el sitio lo sobreescribiría con colores fijos. Las paletas disponibles están diseñadas para fondos claros.";
+    "Oscuro está deshabilitado: el editor todavía no permite configurar una paleta oscura independiente. Las paletas disponibles están diseñadas para fondos claros.";
   const describedBy = await select.getAttribute("aria-describedby");
   expect(describedBy).not.toBeNull();
   await expect(page.locator(`#${describedBy}`)).toContainText(hintText);
 });
 
-test("utilidad: los overrides fijos del dark ya viajan en el CSS exportado (qué rompería)", async ({
+test("utilidad: los overrides del dark heredan tokens semánticos en el CSS exportado", async ({
   page,
 }) => {
   const storeName = "Tienda T7 overrides";
@@ -393,33 +383,29 @@ test("utilidad: los overrides fijos del dark ya viajan en el CSS exportado (qué
   const project = (await readStoredProject(page, storeName)) as ExportedProject;
   const css = exportedCss(project);
 
-  // El selector [data-color-mode="dark"] (styles.ts:23-29) está en el sitio
-  // aunque el modo no exista en la UI: si se habilitara "Oscuro" pisa los
-  // 5 tokens con valores fijos ajenos a la paleta elegida.
-  const darkBlock = `[data-solara-store][data-color-mode="dark"]{--solara-background:${FIXED_DARK_TOKENS[0]};--solara-surface:${FIXED_DARK_TOKENS[1]};--solara-text:${FIXED_DARK_TOKENS[2]};--solara-muted:${FIXED_DARK_TOKENS[3]};--solara-border:${FIXED_DARK_TOKENS[4]}}`;
-  expect(css).toContain(darkBlock);
+  // El fallback queda encapsulado en la variable semántica; el selector dark
+  // ya no escribe una paleta fija directamente sobre la tienda.
+  expect(css).toContain("--solara-dark-background:");
+  expect(css).toContain("--solara-background:var(--solara-dark-background");
+  expect(css).toContain("--solara-surface:var(--solara-dark-surface");
+  expect(css).toContain("--solara-text:var(--solara-dark-text");
+  expect(css).toContain("--solara-muted:var(--solara-dark-muted");
+  expect(css).toContain("--solara-border:var(--solara-dark-border");
+  expect(css).not.toContain("--solara-background:#1d1e19");
+  expect(css).not.toContain("--solara-surface:#292a23");
+  expect(css).not.toContain("--solara-text:#f3eee4");
+  expect(css).not.toContain("--solara-muted:#b8b2a5");
+  expect(css).not.toContain("--solara-border:#47483d");
 
-  // La media query de auto (styles.ts:513-521) repite los mismos 5 valores:
-  // cada token fijo aparece exactamente 2 veces en el CSS.
-  for (const token of FIXED_DARK_TOKENS) {
-    expect(css.split(token).length - 1).toBe(2);
-  }
-
-  // Sólo 5 de los 7 tokens se sobreescriben: accent y accentText quedan fuera
-  // del override y conservan el valor del usuario.
-  expect(css).not.toMatch(
-    /data-color-mode="dark"\]\{[^}]*--solara-accent:|\]\[data-color-mode="dark"\]\s*\{[^}]*--solara-accent-text/,
-  );
-
-  // La capa --catalog-* del skin catalog-modern (styles.ts:1942-1948) es un
-  // alias de los tokens --solara-* con fallback al valor claro original
-  // (fix Ola 3): el override del dark SÍ alcanza las superficies modernas,
-  // salvo accent/accentText que el override no toca.
+  // La capa --catalog-* del skin catalog-modern es un alias de los tokens
+  // --solara-* y también conserva sale/rating de la paleta activa.
   expect(css).toContain("--catalog-ink:var(--solara-text,#0b0b0c)");
   expect(css).toContain("--catalog-paper:var(--solara-background,#fcfcfb)");
   expect(css).toContain("--catalog-surface:var(--solara-surface,#f0f0ee)");
   expect(css).toContain("--catalog-muted:var(--solara-muted,#696966)");
   expect(css).toContain("--catalog-border:var(--solara-border,#dededa)");
+  expect(css).toContain("--catalog-sale:var(--solara-sale");
+  expect(css).toContain("--catalog-rating:var(--solara-rating");
   expect(css).toContain("--catalog-ink:var(");
   expect(css).toContain("--catalog-paper:var(");
   expect(css).toContain("--catalog-surface:var(");

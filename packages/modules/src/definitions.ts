@@ -1022,6 +1022,7 @@ export const cartDrawer: ModuleDefinition<"cart-drawer", z.infer<typeof cartSett
             <label for="solara-drawer-customer-notes">${escapeHtml(copy.cart.notes)}</label>
             <textarea id="solara-drawer-customer-notes" name="notes"></textarea>
             <button type="submit">${escapeHtml(context.settings.checkoutLabel)}</button>
+            <p data-order-verification-warning role="note">Solicitud sin confirmar; precio, stock, envío y pago deben verificarse con la tienda</p>
             <pre data-order-preview aria-live="polite"></pre>
             ${checkoutLinkMarkup}
           </form>

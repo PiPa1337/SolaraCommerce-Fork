@@ -154,10 +154,14 @@ export async function detectPortableFirstRun(_portableRoot, instancePath) {
     const info = await lstat(instancePath);
     instanceExists = info.isFile();
     if (instanceExists) {
-      const raw = JSON.parse(
-        await import("node:fs/promises").then((m) => m.readFile(instancePath, "utf8")),
-      );
-      if (raw && typeof raw.portableRoot === "string") previousRoot = raw.portableRoot;
+      try {
+        const raw = JSON.parse(
+          await import("node:fs/promises").then((m) => m.readFile(instancePath, "utf8")),
+        );
+        if (raw && typeof raw.portableRoot === "string") previousRoot = raw.portableRoot;
+      } catch {
+        // Un archivo existente pero corrupto no es un primer arranque; ensurePortableLayout lo regenera.
+      }
     }
   } catch {
     instanceExists = false;

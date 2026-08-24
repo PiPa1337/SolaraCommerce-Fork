@@ -26,14 +26,30 @@ V2 añade la clase `.cm.v2` (~830 selectores). V1 legacy usa `.catalog-modern`.
   --solara-font-display: ${typography.display};
   --solara-font-body: ${typography.body};
   --solara-type-scale: ${typography.scale};
+  --solara-line-height-tight: ${typography.lineHeightTight};
+  --solara-line-height-body: ${typography.lineHeightBody};
+  --solara-letter-spacing-display: ${typography.letterSpacingDisplay};
+  --solara-font-weight-display: ${typography.fontWeightDisplay};
+  --solara-font-weight-body: ${typography.fontWeightBody};
   --solara-space-scale: ${spacingScale};
+  --solara-section-y: ${spacing.sectionY};
+  --solara-card-gap: ${spacing.cardGap};
   --solara-radius: ${radius}px;
   --solara-container: ${container}px;
+  --solara-border-width: ${borders.width};
+  --solara-border-style: ${borders.style};
+  --solara-shadow-card: ${shadows.card};
+  --solara-shadow-elevated: ${shadows.elevated};
+  --solara-shadow-overlay: ${shadows.overlay};
+  --solara-motion-fast: ${motion.durationFast};
+  --solara-motion-normal: ${motion.durationNormal};
+  --solara-motion-easing: ${motion.easing};
 }
 ```
 
 Estas variables provienen del tema configurado en Studio (ThemeEditor). El
-usuario cambia colores/tipografía sin tocar CSS.
+usuario cambia colores, tipografía y geometría sin tocar CSS; los presets y
+otros clientes del schema también pueden configurar bordes, sombras y motion.
 
 ## Módulos por página
 

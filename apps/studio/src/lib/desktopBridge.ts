@@ -8,6 +8,9 @@ export interface DesktopExportFile {
 export interface DesktopExportResult {
   cancelled: boolean;
   folder?: string;
+  parentFolder?: string;
+  mode?: ExportMode;
+  revision?: string;
   filesWritten?: number;
 }
 
@@ -20,6 +23,7 @@ interface DesktopExportBridge {
   exportSite(payload: {
     storeSlug: string;
     mode: ExportMode;
+    revision?: string;
     files: DesktopExportFile[];
   }): Promise<DesktopExportResult>;
   saveProjectArchive(payload: {

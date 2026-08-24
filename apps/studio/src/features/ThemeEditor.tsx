@@ -592,7 +592,7 @@ export function ThemeEditor({
           </div>
           <Field
             label="Modo"
-            hint="Oscuro está deshabilitado: el sitio lo sobreescribiría con colores fijos. Las paletas disponibles están diseñadas para fondos claros."
+            hint="Oscuro está deshabilitado: el editor todavía no permite configurar una paleta oscura independiente. Las paletas disponibles están diseñadas para fondos claros."
           >
             <select
               value={project.theme.colorMode}

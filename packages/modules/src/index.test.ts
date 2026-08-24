@@ -22,6 +22,8 @@ import {
   officialModules,
   renderSections,
   replaceModuleInSection,
+  STORE_BASE_STYLES,
+  STORE_THEME_TOKEN_STYLES,
 } from "./index";
 
 describe("official module system", () => {
@@ -156,6 +158,25 @@ describe("official module system", () => {
         }
       }
     }
+  });
+
+  it("hereda los estados visuales de la paleta activa en Catalog Modern", () => {
+    const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+
+    expect(v2Styles).toContain("--catalog-sale: var(--solara-sale");
+    expect(v2Styles).toContain("--catalog-rating: var(--solara-rating");
+    expect(v2Styles).toContain("color: var(--catalog-paper)");
+    expect(v2Styles).toContain("color-mix(in srgb, var(--catalog-ink)");
+    expect(v2Styles).not.toContain("--catalog-sale: #a63d2f;");
+    expect(v2Styles).not.toContain("rgb(11 11 12");
+    expect(v2Styles).toContain("--catalog-v2-wide: var(--solara-container");
+    expect(v2Styles).toContain("--catalog-v2-motion-component: var(--solara-motion-normal");
+    expect(v2Styles).toContain("calc(var(--solara-card-gap");
+    expect(v2Styles).toContain("var(--solara-border-width");
+
+    expect(STORE_BASE_STYLES).toContain("var(--solara-dark-background");
+    expect(STORE_BASE_STYLES).not.toContain("--solara-background: #1d1e19");
+    expect(STORE_THEME_TOKEN_STYLES).toContain("var(--solara-line-height-tight");
   });
 
   it("preserves compatible hero settings when replacing its visual treatment", () => {
