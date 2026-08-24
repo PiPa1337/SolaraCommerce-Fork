@@ -62,6 +62,15 @@ const RESTRICTED_COPY_FIELDS = new Set([
   "navigation.close",
   "filters.resultCount",
   "hero.activeProducts",
+  "search.queryLabel",
+  "product.availability",
+  "product.details",
+  "product.policies",
+  "hero.benefits",
+  "search.loading",
+  "search.empty",
+  "navigation.viewAll",
+  "export.categoryChildren",
 ]);
 
 /** Campos que contienen placeholders técnicos ({storeName}) que no deben eliminarse. */
