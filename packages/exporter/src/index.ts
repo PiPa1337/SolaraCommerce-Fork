@@ -591,8 +591,34 @@ function deferPreviewAssetMarkup(document: string, sources: ReadonlyMap<string, 
 }
 
 function themeCss(project: StoreProjectV1, transport: FontTransport = "file"): string {
-  const { colors, typography, spacingScale, radius, container } = project.theme;
-  const rootColorScheme = project.theme.colorMode === "dark" ? "dark" : "light";
+  const t = project.theme;
+  const { colors, typography, spacingScale, radius, container } = t;
+  const rootColorScheme = t.colorMode === "dark" ? "dark" : "light";
+  const dc = t.darkColors;
+
+  const darkAccent = dc?.accent || colors.accent;
+  const darkAccentText = dc?.accentText || colors.accentText;
+  const darkBorder = dc?.border || colors.border;
+
+  const lhTight = typography.lineHeightTight ?? 1.15;
+  const lhBody = typography.lineHeightBody ?? 1.6;
+  const lsDisplay = typography.letterSpacingDisplay ?? "-0.02em";
+  const fwDisplay = typography.fontWeightDisplay ?? 500;
+  const fwBody = typography.fontWeightBody ?? 400;
+  const sectionY = t.spacing?.sectionY ?? "clamp(3rem, 6vw, 6rem)";
+  const cardGap = t.spacing?.cardGap ?? "clamp(1rem, 2vw, 2rem)";
+  const padX = t.spacing?.containerPaddingX ?? "1rem";
+  const shadowCard = t.shadows?.card ?? "none";
+  const shadowElevated = t.shadows?.elevated ?? "none";
+  const shadowOverlay = t.shadows?.overlay ?? "0 24px 70px rgba(0,0,0,.14)";
+  const borderWidth = t.borders?.width ?? "1px";
+  const borderStyle = t.borders?.style ?? "solid";
+  const motionFast = t.motion?.durationFast ?? "150ms";
+  const motionNormal = t.motion?.durationNormal ?? "280ms";
+  const motionEasing = t.motion?.easing ?? "cubic-bezier(.16,1,.3,1)";
+  const saleColor = colors.sale ?? "#d94a55";
+  const ratingColor = colors.rating ?? "#d99a12";
+
   return `
 :root {
   color-scheme: ${rootColorScheme};
@@ -603,32 +629,68 @@ function themeCss(project: StoreProjectV1, transport: FontTransport = "file"): s
   --solara-accent: ${colors.accent};
   --solara-accent-text: ${colors.accentText};
   --solara-border: ${colors.border};
+  --solara-sale: ${saleColor};
+  --solara-rating: ${ratingColor};
   --solara-font-display: ${typography.display};
   --solara-font-body: ${typography.body};
   --solara-type-scale: ${typography.scale};
+  --solara-line-height-tight: ${lhTight};
+  --solara-line-height-body: ${lhBody};
+  --solara-letter-spacing-display: ${lsDisplay};
+  --solara-font-weight-display: ${fwDisplay};
+  --solara-font-weight-body: ${fwBody};
   --solara-space-scale: ${spacingScale};
+  --solara-section-y: ${sectionY};
+  --solara-card-gap: ${cardGap};
+  --solara-padding-x: ${padX};
   --solara-radius: ${radius}px;
   --solara-container: ${container}px;
   --solara-chrome-height: 116px;
+  --solara-border-width: ${borderWidth};
+  --solara-border-style: ${borderStyle};
+  --solara-shadow-card: ${shadowCard};
+  --solara-shadow-elevated: ${shadowElevated};
+  --solara-shadow-overlay: ${shadowOverlay};
+  --solara-motion-fast: ${motionFast};
+  --solara-motion-normal: ${motionNormal};
+  --solara-motion-easing: ${motionEasing};
+}
+
+@media (prefers-color-scheme: dark) {
+  .solara-page[data-color-mode="auto"] {
+    --solara-background: ${dc?.background ?? "#0d0d0f"};
+    --solara-surface: ${dc?.surface ?? "#1a1a1e"};
+    --solara-text: ${dc?.text ?? "#e8e8ea"};
+    --solara-muted: ${dc?.muted ?? "#8a8a8e"};
+    --solara-accent: ${darkAccent};
+    --solara-accent-text: ${darkAccentText};
+    --solara-border: ${darkBorder};
+    color-scheme: dark;
+  }
+}
+.solara-page[data-color-mode="dark"] {
+  --solara-background: ${dc?.background ?? "#0d0d0f"};
+  --solara-surface: ${dc?.surface ?? "#1a1a1e"};
+  --solara-text: ${dc?.text ?? "#e8e8ea"};
+  --solara-muted: ${dc?.muted ?? "#8a8a8e"};
+  --solara-accent: ${darkAccent};
+  --solara-accent-text: ${darkAccentText};
+  --solara-border: ${darkBorder};
 }
 
 * { box-sizing: border-box; }
 html { background: var(--solara-background); color: var(--solara-text); }
 html[data-theme="dark"] { color-scheme: dark; }
 html[data-theme="light"] { color-scheme: light; }
-body { margin: 0; min-width: 320px; font-family: var(--solara-font-body); line-height: 1.5; }
+body { margin: 0; min-width: 320px; font-family: var(--solara-font-body); line-height: var(--solara-line-height-body); }
 ${fontCssFor(typography.display, typography.body, transport)}
-.solara-page[data-color-mode="dark"] { color-scheme: dark; }
-@media (prefers-color-scheme: dark) {
-  .solara-page[data-color-mode="auto"] { color-scheme: dark; }
-}
 img { display: block; max-width: 100%; height: auto; }
 a { color: inherit; }
 button, input, select, textarea { font: inherit; }
 button, input, select, textarea, a { outline-offset: 3px; }
 :focus-visible { outline: 2px solid var(--solara-accent); }
 .solara-page { min-height: 100dvh; overflow: clip; }
-.solara-container { width: min(calc(100% - 2rem), var(--solara-container)); margin-inline: auto; }
+.solara-container { width: min(calc(100% - 2 * var(--solara-padding-x)), var(--solara-container)); margin-inline: auto; padding-inline: var(--solara-padding-x); }
 `.trim();
 }
 

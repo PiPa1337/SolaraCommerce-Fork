@@ -557,23 +557,72 @@ export const StoreSectionSchema = z.object({
   motion: MotionSettingsSchema,
 });
 
+export const ThemeColorsSchema = z.object({
+  background: z.string(),
+  surface: z.string(),
+  text: z.string(),
+  muted: z.string(),
+  accent: z.string(),
+  accentText: z.string(),
+  border: z.string(),
+  sale: z.string().default("#d94a55"),
+  rating: z.string().default("#d99a12"),
+});
+
+export const DarkColorsSchema = z.object({
+  background: z.string().default("#0d0d0f"),
+  surface: z.string().default("#1a1a1e"),
+  text: z.string().default("#e8e8ea"),
+  muted: z.string().default("#8a8a8e"),
+  accent: z.string().default(""),
+  accentText: z.string().default(""),
+  border: z.string().default(""),
+});
+
+export const ThemeTypographySchema = z.object({
+  display: z.string(),
+  body: z.string(),
+  scale: z.number().min(0.8).max(1.4),
+  lineHeightTight: z.number().min(0.9).max(2).default(1.15),
+  lineHeightBody: z.number().min(1).max(2.5).default(1.6),
+  letterSpacingDisplay: z.string().default("-0.02em"),
+  fontWeightDisplay: z.number().int().min(300).max(900).default(500),
+  fontWeightBody: z.number().int().min(300).max(900).default(400),
+});
+
+export const ThemeSpacingSchema = z.object({
+  sectionY: z.string().default("clamp(3rem, 6vw, 6rem)"),
+  cardGap: z.string().default("clamp(1rem, 2vw, 2rem)"),
+  containerPaddingX: z.string().default("1rem"),
+});
+
+export const ThemeShadowsSchema = z.object({
+  card: z.string().default("none"),
+  elevated: z.string().default("none"),
+  overlay: z.string().default("0 24px 70px rgba(0,0,0,.14)"),
+});
+
+export const ThemeBordersSchema = z.object({
+  width: z.string().default("1px"),
+  style: z.enum(["solid", "dashed", "none"]).default("solid"),
+});
+
+export const ThemeMotionSchema = z.object({
+  durationFast: z.string().default("150ms"),
+  durationNormal: z.string().default("280ms"),
+  easing: z.string().default("cubic-bezier(.16,1,.3,1)"),
+});
+
 export const ThemeSchema = z.object({
   colorMode: z.enum(["auto", "light", "dark"]),
-  colors: z.object({
-    background: z.string(),
-    surface: z.string(),
-    text: z.string(),
-    muted: z.string(),
-    accent: z.string(),
-    accentText: z.string(),
-    border: z.string(),
-  }),
-  typography: z.object({
-    display: z.string(),
-    body: z.string(),
-    scale: z.number().min(0.8).max(1.4),
-  }),
+  colors: ThemeColorsSchema,
+  darkColors: DarkColorsSchema.optional(),
+  typography: ThemeTypographySchema,
   spacingScale: z.number().min(0.75).max(1.5),
+  spacing: ThemeSpacingSchema.optional(),
+  shadows: ThemeShadowsSchema.optional(),
+  borders: ThemeBordersSchema.optional(),
+  motion: ThemeMotionSchema.optional(),
   radius: z.number().min(0).max(40),
   container: z.number().int().min(960).max(1800),
 });

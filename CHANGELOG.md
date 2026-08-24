@@ -1,5 +1,15 @@
 # Changelog
 
+### Design tokens completos y presets visuales (2026-08-24)
+
+- ThemeSchema expandido con ~40 tokens first-class: paleta dark independiente,
+  colores sale/rating, tipografia extendida (line-height, letter-spacing,
+  font-weight), espaciado granular, sombras, bordes configurables y transiciones.
+- Cinco presets visuales: Editorial, Minimal, Calido, Industrial y Botanico.
+- `applyPreset` hace merge profundo sobre el tema actual sin mutarlo.
+- themeCss genera todas las custom properties incluyendo dark palette.
+- Retrocompatible: proyectos existentes parsean sin migracion.
+
 ### QA perpetuo: tests y MCP tools (2026-08-24)
 
 - Tests para metodos QA: readBacklog, writeTest, scope check.

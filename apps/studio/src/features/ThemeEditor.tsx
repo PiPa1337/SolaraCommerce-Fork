@@ -131,6 +131,8 @@ const colorLabels: Record<keyof Theme["colors"], string> = {
   accent: "Acento",
   accentText: "Texto sobre acento",
   border: "Borde",
+  sale: "Descuento",
+  rating: "Rating",
 };
 
 /**
@@ -159,6 +161,8 @@ const THEME_PRESETS: Array<{
       accent: "#0b0b0c",
       accentText: "#ffffff",
       border: "#dededa",
+      sale: "#d94a55",
+      rating: "#d99a12",
     },
   },
   {
@@ -173,6 +177,8 @@ const THEME_PRESETS: Array<{
       accent: "#356248",
       accentText: "#f6fff7",
       border: "#c7d8c7",
+      sale: "#d94a55",
+      rating: "#d99a12",
     },
   },
   {
@@ -187,6 +193,8 @@ const THEME_PRESETS: Array<{
       accent: "#9a442c",
       accentText: "#fff8f3",
       border: "#e8c8b3",
+      sale: "#d94a55",
+      rating: "#d99a12",
     },
   },
   {
@@ -201,6 +209,8 @@ const THEME_PRESETS: Array<{
       accent: "#1d5b7a",
       accentText: "#f7fcff",
       border: "#c5d8e5",
+      sale: "#d94a55",
+      rating: "#d99a12",
     },
   },
   {
@@ -215,6 +225,8 @@ const THEME_PRESETS: Array<{
       accent: "#6d4a92",
       accentText: "#fbf8ff",
       border: "#d8c9e7",
+      sale: "#d94a55",
+      rating: "#d99a12",
     },
   },
   {
@@ -229,6 +241,8 @@ const THEME_PRESETS: Array<{
       accent: "#9a3f56",
       accentText: "#fff7f9",
       border: "#e6c5cf",
+      sale: "#d94a55",
+      rating: "#d99a12",
     },
   },
   {
@@ -243,6 +257,8 @@ const THEME_PRESETS: Array<{
       accent: "#1e6b59",
       accentText: "#f4fffc",
       border: "#c2ded5",
+      sale: "#d94a55",
+      rating: "#d99a12",
     },
   },
   {
@@ -257,6 +273,8 @@ const THEME_PRESETS: Array<{
       accent: "#766018",
       accentText: "#fffbef",
       border: "#e7d9a8",
+      sale: "#d94a55",
+      rating: "#d99a12",
     },
   },
   {
@@ -271,6 +289,8 @@ const THEME_PRESETS: Array<{
       accent: "#a64034",
       accentText: "#fff8f6",
       border: "#e6c6be",
+      sale: "#d94a55",
+      rating: "#d99a12",
     },
   },
   {
@@ -285,6 +305,8 @@ const THEME_PRESETS: Array<{
       accent: "#3d5592",
       accentText: "#f8faff",
       border: "#c8d0e5",
+      sale: "#d94a55",
+      rating: "#d99a12",
     },
   },
 ];
