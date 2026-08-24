@@ -294,6 +294,7 @@ function storefrontBoot(): void {
     contact: k,
     cart: a,
     product: p,
+    hero: h,
     checkout: x,
     empty: e,
     search: s,
@@ -603,9 +604,12 @@ function storefrontBoot(): void {
   const reconcileCart = (): Promise<boolean> => {
     if (paused) return Promise.resolve(false);
     if (freshCatalog) return freshCatalog;
+    const catalogError =
+      (copy as Record<string, Record<string, string>>).errors?.catalogLoad ??
+      "No se pudo cargar el catálogo.";
     freshCatalog = fetch(`${baseHref}/catalog-index.json`)
       .then((response) => {
-        if (!response.ok) throw new Error("No se pudo cargar el catálogo.");
+        if (!response.ok) throw new Error(catalogError);
         return response.json() as Promise<CatalogIndexEntry[]>;
       })
       .then((catalog) => {
@@ -1350,6 +1354,7 @@ function storefrontBoot(): void {
     });
 
   document.querySelectorAll<HTMLElement>("[data-hero-mode]").forEach((hero) => {
+    const heroCopy = h;
     const video = hero.querySelector<HTMLVideoElement>("video");
     const toggle = hero.querySelector<HTMLButtonElement>("[data-hero-video-toggle]");
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1365,11 +1370,11 @@ function storefrontBoot(): void {
       if (!video) return;
       if (video.paused) {
         void video.play();
-        toggle.textContent = "Pausar video";
+        toggle.textContent = heroCopy?.pauseVideo ?? "Pausar video";
         toggle.setAttribute("aria-pressed", "false");
       } else {
         video.pause();
-        toggle.textContent = "Reanudar video";
+        toggle.textContent = heroCopy?.resumeVideo ?? "Reanudar video";
         toggle.setAttribute("aria-pressed", "true");
       }
     });
@@ -1524,9 +1529,12 @@ function storefrontBoot(): void {
       } else {
         const controller = new AbortController();
         setHtml(searchGrid, `<p>${escapeText(s.loading)}</p>`);
+        const searchIndexError =
+          (copy as Record<string, Record<string, string>>).errors?.searchIndexLoad ??
+          "No se pudo cargar el índice de búsqueda.";
         fetch(`${baseHref}/search-index.json`, { signal: controller.signal })
           .then((response) => {
-            if (!response.ok) throw new Error("No se pudo cargar el índice de búsqueda.");
+            if (!response.ok) throw new Error(searchIndexError);
             return response.json() as Promise<SearchEntryWithTokens[]>;
           })
           .then((entries) => {

@@ -1303,7 +1303,7 @@ export const catalogCategoryBento: ModuleDefinition<
           context.project,
           category.id as CategoryId,
         ).filter((id) => activeProducts.has(id)).length;
-        return `<a class="catalog-category-bento-item catalog-category-bento-item--${layout}" href="/categorias/${escapeAttribute(category.slug)}/" aria-label="Explorar ${escapeAttribute(category.title)}"><span class="catalog-category-bento-label"><span class="catalog-category-bento-title">${escapeHtml(category.title)}</span></span>${productCount ? `<small>${productCount} productos</small>` : ""}<div class="catalog-category-bento-media">${image}</div></a>`;
+        return `<a class="catalog-category-bento-item catalog-category-bento-item--${layout}" href="/categorias/${escapeAttribute(category.slug)}/" aria-label="${escapeAttribute((context.project.publicCopy as any)?.export?.exploreCategory ?? "Explorar {category}").replace("{category}", category.title)}"><span class="catalog-category-bento-label"><span class="catalog-category-bento-title">${escapeHtml(category.title)}</span></span>${productCount ? `<small>${productCount} productos</small>` : ""}<div class="catalog-category-bento-media">${image}</div></a>`;
       })
       .filter(Boolean)
       .join("");

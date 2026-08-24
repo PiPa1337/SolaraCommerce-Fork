@@ -157,6 +157,8 @@ export const PublicCopySchema = z.object({
       directOrder: z.string().min(1).default("pedido directo"),
       inquiries: z.string().min(1).default("consultas"),
       whatsappAction: z.string().min(1).default("Escribir por WhatsApp"),
+      pauseVideo: z.string().min(1).default("Pausar video"),
+      resumeVideo: z.string().min(1).default("Reanudar video"),
     })
     .default(PUBLIC_COPY_DEFAULTS.hero),
   product: z
@@ -271,6 +273,12 @@ export const PublicCopySchema = z.object({
         .default("No hay productos que coincidan con estos filtros."),
     })
     .default(PUBLIC_COPY_DEFAULTS.empty),
+  errors: z
+    .object({
+      catalogLoad: z.string().min(1).default("No se pudo cargar el catálogo."),
+      searchIndexLoad: z.string().min(1).default("No se pudo cargar el índice de búsqueda."),
+    })
+    .default(PUBLIC_COPY_DEFAULTS.errors),
   pages: z
     .object({
       home: z.string().min(1).default("Inicio"),
@@ -327,7 +335,10 @@ export const PublicCopySchema = z.object({
       returnsConditions: z.string().min(1).default("Condiciones de cambio"),
       returnsInformedPeriod: z.string().min(1).default("Plazo informado"),
       privacyDataUsage: z.string().min(1).default("Uso de tus datos"),
-      privacyDescription: z.string().min(1).default("Cómo usamos los datos compartidos al realizar un pedido."),
+      privacyDescription: z
+        .string()
+        .min(1)
+        .default("Cómo usamos los datos compartidos al realizar un pedido."),
       termsSubtitle: z.string().min(1).default("Información vigente para coordinar una compra."),
       termsDescription: z.string().min(1).default("Condiciones comerciales de la tienda."),
     })

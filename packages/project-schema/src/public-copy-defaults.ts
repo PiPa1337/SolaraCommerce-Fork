@@ -55,6 +55,12 @@ export const PUBLIC_COPY_DEFAULTS = {
     directOrder: "pedido directo",
     inquiries: "consultas",
     whatsappAction: "Escribir por WhatsApp",
+    pauseVideo: "Pausar video",
+    resumeVideo: "Reanudar video",
+  },
+  errors: {
+    catalogLoad: "No se pudo cargar el catálogo.",
+    searchIndexLoad: "No se pudo cargar el índice de búsqueda.",
   },
   product: {
     available: "Disponible",
