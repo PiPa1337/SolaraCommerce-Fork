@@ -31,6 +31,9 @@
   obligatorio.
 - El agente IA rechaza store.updatePublicCopy que reduzca los disclaimers
   legales a menos de 20 caracteres.
+- Barrido exhaustivo adicional: 34 keys más restringidos (labels de filtros,
+  estados vacíos, errores de fetch, estructura de export). Total: 73 keys
+  restringidos de 198. Los 125 editables son contenido comercial genuino.
 
 ### Inputs de redes sociales en Studio (2026-08-24)
 
