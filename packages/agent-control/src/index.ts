@@ -68,6 +68,7 @@ import { createAgentLockStore } from "../../exporter/scripts/agent-lock.mjs";
 // incorpora al bundle y el contrato runtime se comprueba en los tests portables.
 // @ts-expect-error módulo .mjs compartido sin d.ts
 import { assertNoReparsePoints } from "../../exporter/scripts/portable-layout.mjs";
+import { generateResponsiveVariants } from "./image-processor.js";
 
 interface AgentLocalProjectStorage {
   applicationRoot: string;
@@ -1603,6 +1604,24 @@ export class AgentController {
       fail("ASSET_DIMENSIONS_INVALID", "Las dimensiones del asset no son válidas.");
     const assetId = makeId("asset-agent");
     const hash = digest(bytes);
+    // Generar variantes responsive para PNG grandes; fallback para otros.
+    let responsiveSources: Array<{ width: number; source: string }> = [];
+    if (params.mimeType === "image/png" && dimensions.width >= 480) {
+      try {
+        const variants = generateResponsiveVariants(bytes);
+        responsiveSources = variants.map((v) => ({
+          width: v.width,
+          source: `data:image/png;base64,${bytesToBase64(v.data)}`,
+        }));
+      } catch {
+        /* mantener vacío si falla el procesamiento */
+      }
+    } else {
+      responsiveSources = buildResponsiveWidths(dimensions.width).map((width) => ({
+        width,
+        source: `data:${params.mimeType};base64,${bytesToBase64(bytes)}`,
+      }));
+    }
     const asset = ImageAssetSchema.parse({
       kind: "image",
       id: assetId,
@@ -1613,13 +1632,7 @@ export class AgentController {
       width: dimensions.width,
       height: dimensions.height,
       hash,
-      // Auto-generar descriptores responsive apuntando al mismo archivo.
-      // Studio los reemplazara con variantes reales cuando procese la imagen
-      // con el image worker (OffscreenCanvas disponible en el navegador).
-      responsiveSources: buildResponsiveWidths(dimensions.width).map((width) => ({
-        width,
-        source: `data:${params.mimeType};base64,${bytesToBase64(bytes)}`,
-      })),
+      responsiveSources,
     });
     const bytesPath = join(this.assetsRoot, `${assetId}.bin`);
     const metadataPath = join(this.assetsRoot, `${assetId}.json`);

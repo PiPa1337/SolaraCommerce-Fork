@@ -1,5 +1,13 @@
 # Changelog
 
+### Procesamiento responsive real en canal de agentes (2026-08-24)
+
+- Nuevo módulo `image-processor.ts` que decodifica PNG, redimensiona con
+  nearest-neighbor y re-codifica en 320/480/768/1024 px usando zlib puro.
+  Sin dependencias de sharp ni canvas nativo.
+- `assets.stage` genera variantes PNG reales para imágenes ≥480px de ancho;
+  otros formatos reciben descriptores responsive apuntando al mismo archivo.
+
 ### Design tokens completos y presets visuales (2026-08-24)
 
 - ThemeSchema expandido con ~40 tokens first-class: paleta dark independiente,
