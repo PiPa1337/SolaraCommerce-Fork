@@ -1,5 +1,13 @@
 # Changelog
 
+### QA perpetuo: ciclo manager y metricas de export (2026-08-24)
+
+- `QACycleManager`: gestiona el estado de ciclos TDD con watchdog (3 intentos),
+  persistencia en disco y recovery post-restart.
+- `qa-exporter-metrics.ts`: mide peso HTML/JS/CSS, issues criticos y score
+  lighthouse-lite tras cada export.
+- Tests para ciclo manager (creacion, watchdog, persistencia) y metricas.
+
 ### Procesamiento responsive real en canal de agentes (2026-08-24)
 
 - Nuevo módulo `image-processor.ts` que decodifica PNG, redimensiona con
