@@ -257,6 +257,7 @@ export const PublicCopySchema = z.object({
       returns: z.string().min(1).default("Cambios"),
       privacy: z.string().min(1).default("Privacidad"),
       terms: z.string().min(1).default("Términos"),
+      copyright: z.string().min(1).default("Todos los derechos reservados."),
     })
     .default(PUBLIC_COPY_DEFAULTS.footer),
   empty: z
@@ -319,6 +320,16 @@ export const PublicCopySchema = z.object({
         .default("Podés volver al inicio o explorar nuestras colecciones."),
       returnHome: z.string().min(1).default("Volver al inicio"),
       viewCategories: z.string().min(1).default("Ver categorías"),
+      shippingDeliveryInfo: z.string().min(1).default("Información de entrega"),
+      shippingPreparation: z.string().min(1).default("Preparación del pedido"),
+      shippingTransit: z.string().min(1).default("Tiempo estimado de tránsito"),
+      policyCoverage: z.string().min(1).default("Cobertura"),
+      returnsConditions: z.string().min(1).default("Condiciones de cambio"),
+      returnsInformedPeriod: z.string().min(1).default("Plazo informado"),
+      privacyDataUsage: z.string().min(1).default("Uso de tus datos"),
+      privacyDescription: z.string().min(1).default("Cómo usamos los datos compartidos al realizar un pedido."),
+      termsSubtitle: z.string().min(1).default("Información vigente para coordinar una compra."),
+      termsDescription: z.string().min(1).default("Condiciones comerciales de la tienda."),
     })
     .default(PUBLIC_COPY_DEFAULTS.pages),
   whatsapp: z

@@ -69,6 +69,14 @@ export const AgentOperationSchema = z.discriminatedUnion("type", [
     }),
   }),
   z.object({
+    type: z.literal("store.updatePublicCopy"),
+    changes: z.record(z.string(), z.record(z.string(), z.unknown())),
+  }),
+  z.object({
+    type: z.literal("store.updatePolicies"),
+    changes: z.record(z.string(), z.unknown()),
+  }),
+  z.object({
     type: z.literal("category.create"),
     categoryId: SafeIdSchema.optional(),
     slug: SlugSchema,

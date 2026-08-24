@@ -793,6 +793,8 @@ export class AgentController {
         "store.create",
         "store.updateIdentity",
         "store.updateSeo",
+        "store.updatePublicCopy",
+        "store.updatePolicies",
         "category.create",
         "collection.create",
         "product.create",
@@ -2274,10 +2276,27 @@ export class AgentController {
           });
           break;
         }
-        case "store.updateSeo":
+      case "store.updateSeo":
           project = StoreProjectV2Schema.parse({
             ...project,
             seo: { ...project.seo, ...operation.changes },
+            updatedAt: at,
+          });
+          break;
+        case "store.updatePublicCopy":
+          project = StoreProjectV2Schema.parse({
+            ...project,
+            publicCopy: {
+              ...project.publicCopy,
+              ...operation.changes,
+            },
+            updatedAt: at,
+          });
+          break;
+        case "store.updatePolicies":
+          project = StoreProjectV2Schema.parse({
+            ...project,
+            policies: { ...project.policies, ...operation.changes },
             updatedAt: at,
           });
           break;

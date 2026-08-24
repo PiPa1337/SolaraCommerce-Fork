@@ -178,6 +178,7 @@ function parseProject(projectInput: StoreProjectV1, operation: string): StorePro
 }
 
 import { escapeAttribute, escapeHtml, escapeXml, jsonForScript } from "./html.js";
+import { buildRssFeed, buildServiceWorker, buildWebManifest } from "./pwa.js";
 
 export { escapeAttribute, escapeHtml, escapeXml, jsonForScript };
 
@@ -1086,12 +1087,15 @@ function renderDocument(
   ${lcpPreload}
   ${fontPreloads}
   ${aiContextLinks}
+  <link rel="manifest" href="${escapeAttribute(assetHref(project, "/manifest.webmanifest"))}">
+  <script>${"if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); }); }"}</script>
   <link rel="stylesheet" href="${escapeAttribute(assetHref(project, "/assets/storefront.css"))}">
   ${structuredData}
 </head>
 <body>
   <a class="solara-skip-link" href="#solara-main">${escapeHtml(copy.export.skipToContent)}</a>
   <div class="solara-page${modernProjectClass(project)}" data-solara-store data-design-family="${escapeHtml(project.commerceTemplates.designFamily ?? "legacy-editorial-v1")}" data-page-type="${page.pageType}" data-color-mode="${project.theme.colorMode}">${page.body.replace("<main", '<main id="solara-main"')}</div>
+  ${mode === "production" && page.pageType !== "legal" ? `<a href="https://www.argentina.gob.ar/defensa-del-consumidor" target="_blank" rel="noopener noreferrer" style="position:fixed;bottom:8px;left:8px;font-size:11px;color:inherit;opacity:0.5;text-decoration:none;z-index:1000">Botón de arrepentimiento</a>` : ""}
   <script src="${escapeAttribute(assetHref(project, "/assets/storefront.js"))}" defer></script>
 </body>
 </html>`;
@@ -1703,25 +1707,25 @@ function buildPages(
       body: isV2Design
         ? renderV2PolicyPage(
             copy.pages.shipping,
-            "Información de entrega",
+            copy.pages.shippingDeliveryInfo,
             project.policies.shipping.summary,
             project.policies.shipping.details,
             [
               [
-                "Preparación del pedido",
+                copy.pages.shippingPreparation,
                 formatPolicyDays(
                   project.policies.shipping.handlingDaysMin,
                   project.policies.shipping.handlingDaysMax,
                 ),
               ],
               [
-                "Tiempo estimado de tránsito",
+                copy.pages.shippingTransit,
                 formatPolicyDays(
                   project.policies.shipping.transitDaysMin,
                   project.policies.shipping.transitDaysMax,
                 ),
               ],
-              ["Cobertura", policyCoverage(project.policies.shipping.countries)],
+              [copy.pages.policyCoverage, policyCoverage(project.policies.shipping.countries)],
             ],
           )
         : `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>${escapeHtml(copy.pages.shipping)}</h1><p>${escapeHtml(project.policies.shipping.details)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
@@ -1736,18 +1740,18 @@ function buildPages(
       body: isV2Design
         ? renderV2PolicyPage(
             copy.pages.returns,
-            "Condiciones de cambio",
+            copy.pages.returnsConditions,
             project.policies.returns.summary,
             project.policies.returns.details,
             [
               [
-                "Plazo informado",
+                copy.pages.returnsInformedPeriod,
                 formatPolicyDays(
                   project.policies.returns.returnDays,
                   project.policies.returns.returnDays,
                 ),
               ],
-              ["Cobertura", policyCoverage(project.policies.returns.countries)],
+              [copy.pages.policyCoverage, policyCoverage(project.policies.returns.countries)],
             ],
           )
         : `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>${escapeHtml(copy.pages.returns)}</h1><p>${escapeHtml(project.policies.returns.details)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
@@ -1756,14 +1760,14 @@ function buildPages(
     {
       path: "privacidad/index.html",
       title: `${copy.pages.privacy} | ${project.identity.brandName}`,
-      description: "Cómo usamos los datos compartidos al realizar un pedido.",
+      description: copy.pages.privacyDescription,
       canonicalPath: "/privacidad/",
       pageType: "legal",
       body: isV2Design
         ? renderV2PolicyPage(
             copy.pages.privacy,
-            "Uso de tus datos",
-            "Cómo usamos los datos compartidos al realizar un pedido.",
+            copy.pages.privacyDataUsage,
+            copy.pages.privacyDescription,
             project.policies.privacy,
           )
         : `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>${escapeHtml(copy.pages.privacy)}</h1><p>${escapeHtml(project.policies.privacy)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
@@ -1772,14 +1776,14 @@ function buildPages(
     {
       path: "terminos/index.html",
       title: `${copy.pages.terms} | ${project.identity.brandName}`,
-      description: "Condiciones comerciales de la tienda.",
+      description: copy.pages.termsDescription,
       canonicalPath: "/terminos/",
       pageType: "legal",
       body: isV2Design
         ? renderV2PolicyPage(
             copy.pages.terms,
-            "Condiciones comerciales",
-            "Información vigente para coordinar una compra.",
+            copy.footer.terms,
+            copy.pages.termsSubtitle,
             project.policies.terms,
           )
         : `${renderProjectSections(project, sharedHeader, { pageType: "legal" })}<main class="solara-container"><h1>${escapeHtml(copy.pages.terms)}</h1><p>${escapeHtml(project.policies.terms)}</p></main>${renderProjectSections(project, sharedFooter, { pageType: "legal" })}`,
@@ -1920,6 +1924,15 @@ function buildFiles(
 `,
     );
   }
+    // PWA: manifest y service worker para instalación y cache offline.
+    files.set("manifest.webmanifest", buildWebManifest(publicProject));
+    files.set("sw.js", buildServiceWorker());
+    if (mode === "production") {
+      const rss = buildRssFeed(publicProject);
+      if (rss) files.set("feed.xml", rss);
+      files.set(".well-known/security.txt", `Contact: mailto:${publicProject.identity.email || "security@example.com"}\nExpires: ${new Date(Date.now() + 31536000000).toISOString()}\n`);
+      files.set("_redirects", "# Solara redirect rules\n");
+    }
 
   project.assets
     .filter((asset) => mediaUsage.assetIds.has(asset.id))

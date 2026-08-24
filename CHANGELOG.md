@@ -7,6 +7,13 @@
   prefijaban; con este fix los fetch dinámicos también respetan la subcarpeta.
 - Guard de raíz portable: instance.json guarda portableRoot; si difiere al
   arrancar desde una carpeta distinta, dialog Electron permite continuar o salir.
+- Todo el texto del sitio exportado ahora es editable via publicCopy:
+  labels estructurales de páginas legales V2 (Información de entrega,
+  Preparación del pedido, Tiempo estimado, Cobertura, Condiciones de cambio,
+  Plazo informado, Uso de tus datos, descripciones meta), copyright del footer
+  ("Todos los derechos reservados." → editable, año automático).
+  "Hecho con ❤️ en solara.com.ar" se mantiene como marca de agua fija.
+- Nuevos comandos de agente IA: store.updatePublicCopy y store.updatePolicies.
 
 ### Archivado de tiendas, advertencias tempranas y validación de imágenes (2026-08-24)
 
