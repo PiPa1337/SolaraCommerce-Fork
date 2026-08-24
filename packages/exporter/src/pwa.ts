@@ -28,15 +28,22 @@ export function buildWebManifest(project: StoreProjectV1): string {
   );
 }
 
-export function buildServiceWorker(): string {
+export function buildServiceWorker(project: StoreProjectV1): string {
+  const version = createHash("sha256").update(project.updatedAt).digest("hex").slice(0, 12);
   const lines = [
-    "const CACHE_NAME = 'solara-v1';",
+    `const CACHE_NAME = 'solara-${version}';`,
     "const PRECACHE_URLS = ['/', '/offline/index.html', '/manifest.webmanifest', '/assets/storefront.css', '/assets/storefront.js'];",
     "self.addEventListener('install', (event) => {",
     "  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)));",
     "  self.skipWaiting();",
     "});",
-    "self.addEventListener('activate', (event) => { event.waitUntil(clients.claim()); });",
+    "self.addEventListener('activate', (event) => {",
+    "  event.waitUntil(",
+    "    caches.keys().then((names) =>",
+    "      Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)))",
+    "    ).then(() => clients.claim())",
+    "  );",
+    "});",
     "self.addEventListener('fetch', (event) => {",
     "  if (event.request.method !== 'GET') return;",
     "  const url = new URL(event.request.url);",
@@ -116,6 +123,8 @@ export function buildRssFeed(project: StoreProjectV1): string | undefined {
   const brandName = escapeHtml(project.identity.brandName);
   const homeUrl = absoluteUrl(project, "/");
   const seoDesc = escapeHtml(project.seo.description);
+  const language = escapeHtml(project.locale);
+  const lastBuild = new Date(project.updatedAt).toUTCString();
   return (
     '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>' +
     brandName +
@@ -124,6 +133,11 @@ export function buildRssFeed(project: StoreProjectV1): string | undefined {
     "</link><description>" +
     seoDesc +
     "</description>" +
+    "<language>" +
+    language +
+    "</language><lastBuildDate>" +
+    lastBuild +
+    "</lastBuildDate>" +
     items +
     "</channel></rss>"
   );
