@@ -162,6 +162,14 @@ export const AgentOperationSchema = z.discriminatedUnion("type", [
       .min(1)
       .max(100),
   }),
+  z.object({
+    type: z.literal("theme.applyPreset"),
+    presetId: z.enum(["editorial", "minimal", "calido", "industrial", "botanico"]),
+  }),
+  z.object({
+    type: z.literal("theme.updateTokens"),
+    tokens: z.record(z.string(), z.unknown()),
+  }),
 ]);
 
 export const PlanCreateParamsSchema = z.object({

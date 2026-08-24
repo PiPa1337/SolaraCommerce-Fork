@@ -1990,8 +1990,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   --catalog-surface: var(--solara-surface, #f0f0ee);
   --catalog-muted: var(--solara-muted, #696966);
   --catalog-border: var(--solara-border, #dededa);
-  --catalog-sale: #d94a55;
-  --catalog-rating: #d99a12;
+  --catalog-sale: var(--solara-sale, #d94a55);
+  --catalog-rating: var(--solara-rating, #d99a12);
   background: var(--catalog-paper);
   color: var(--catalog-ink);
   font-family: var(--solara-font-body, "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif);

@@ -132,6 +132,25 @@ export interface ExportResult {
   optimization: OptimizationReport;
 }
 
+export interface DeploymentManifestV1 {
+  version: 1;
+  mode: ExportMode;
+  baseUrl: string;
+  revision: string;
+  runtime: {
+    css: string;
+    js: string;
+  };
+  publicAiContext: boolean;
+  externalHosts: readonly string[];
+  essentialFileHashes: Readonly<Record<string, string>>;
+}
+
+interface RuntimeAssetPaths {
+  css: string;
+  js: string;
+}
+
 export interface PageDescriptor {
   path: string;
   title: string;
@@ -193,9 +212,11 @@ import {
   buildServiceWorker,
   buildWebManifest,
   generateIconPng,
+  sha256Hex,
 } from "./pwa.js";
 
 export { escapeAttribute, escapeHtml, escapeXml, jsonForScript };
+export { runLighthouseLite } from "./lighthouse-lite.js";
 
 function formatMoney(amount: number, project: StoreProjectV1): string {
   return formatPrice(amount, {
@@ -590,7 +611,11 @@ function deferPreviewAssetMarkup(document: string, sources: ReadonlyMap<string, 
   return deferred;
 }
 
-function themeCss(project: StoreProjectV1, transport: FontTransport = "file"): string {
+function themeCss(
+  project: StoreProjectV1,
+  transport: FontTransport = "file",
+  fontPathOverrides?: ReadonlyMap<string, string>,
+): string {
   const t = project.theme;
   const { colors, typography, spacingScale, radius, container } = t;
   const rootColorScheme = t.colorMode === "dark" ? "dark" : "light";
@@ -683,7 +708,7 @@ html { background: var(--solara-background); color: var(--solara-text); }
 html[data-theme="dark"] { color-scheme: dark; }
 html[data-theme="light"] { color-scheme: light; }
 body { margin: 0; min-width: 320px; font-family: var(--solara-font-body); line-height: var(--solara-line-height-body); }
-${fontCssFor(typography.display, typography.body, transport)}
+${fontCssFor(typography.display, typography.body, transport, fontPathOverrides)}
 img { display: block; max-width: 100%; height: auto; }
 a { color: inherit; }
 button, input, select, textarea { font: inherit; }
@@ -1061,6 +1086,7 @@ function renderDocument(
   mode: ExportMode,
   publicAiContext = false,
   manifest?: PublicExportManifest,
+  runtimeAssets: RuntimeAssetPaths = { css: "/assets/storefront.css", js: "/assets/storefront.js" },
 ): string {
   const copy = project.publicCopy;
   const canonical = absoluteUrl(project, page.canonicalPath);
@@ -1126,6 +1152,10 @@ function renderDocument(
     project.theme.colorMode === "auto" ? "" : ` data-theme="${project.theme.colorMode}"`;
   const baseHref = baseUrlPathname(project.baseUrl);
   const baseHrefAttribute = baseHref ? ` data-base-href="${escapeHtml(baseHref)}"` : "";
+  const serviceWorkerAttribute =
+    mode === "production"
+      ? ` data-service-worker-url="${escapeAttribute(assetHref(project, "/sw.js"))}"`
+      : "";
   const whatsAppPhone = publicWhatsAppPhone(project);
   const whatsappGreeting = interpolatePublicCopy(
     project.whatsapp.greeting.trim() || copy.whatsapp.orderGreeting,
@@ -1156,7 +1186,7 @@ function renderDocument(
       : "";
 
   return `<!doctype html>
-<html lang="${project.locale}" data-store-id="${escapeHtml(project.id)}" data-currency="${project.currency}" data-price-fraction-display="${escapeHtml((project as any).priceFractionDisplay ?? "always")}"${whatsAppAttributes}${publicCopyAttribute} data-solara-runtime-features="${escapeAttribute((manifest?.runtimeFeatures ?? []).join(","))}"${colorMode}${baseHrefAttribute}>
+<html lang="${project.locale}" data-store-id="${escapeHtml(project.id)}" data-currency="${project.currency}" data-price-fraction-display="${escapeHtml((project as any).priceFractionDisplay ?? "always")}"${whatsAppAttributes}${publicCopyAttribute} data-solara-runtime-features="${escapeAttribute((manifest?.runtimeFeatures ?? []).join(","))}"${colorMode}${baseHrefAttribute}${serviceWorkerAttribute}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1198,15 +1228,14 @@ function renderDocument(
   ${page.prevPath ? `<link rel="prev" href="${escapeHtml(absoluteUrl(project, page.prevPath))}">` : ""}
   ${page.nextPath ? `<link rel="next" href="${escapeHtml(absoluteUrl(project, page.nextPath))}">` : ""}
   <link rel="manifest" href="${escapeAttribute(assetHref(project, "/manifest.webmanifest"))}">
-  <script>${"if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); }); }"}</script>
-  <link rel="stylesheet" href="${escapeAttribute(assetHref(project, "/assets/storefront.css"))}">
+  <link rel="stylesheet" href="${escapeAttribute(assetHref(project, runtimeAssets.css))}">
   ${structuredData}
 </head>
 <body>
   <a class="solara-skip-link" href="#solara-main">${escapeHtml(copy.export.skipToContent)}</a>
   <div class="solara-page${modernProjectClass(project)}" data-solara-store data-design-family="${escapeHtml(project.commerceTemplates.designFamily ?? "legacy-editorial-v1")}" data-page-type="${page.pageType}" data-color-mode="${project.theme.colorMode}">${page.body.replace("<main", '<main id="solara-main"')}</div>
   ${mode === "production" && page.pageType !== "legal" ? `<a href="https://www.argentina.gob.ar/defensa-del-consumidor" target="_blank" rel="noopener noreferrer" style="position:fixed;bottom:8px;left:8px;font-size:11px;color:inherit;opacity:0.5;text-decoration:none;z-index:1000">Botón de arrepentimiento</a>` : ""}
-  <script src="${escapeAttribute(assetHref(project, "/assets/storefront.js"))}" defer></script>
+  <script src="${escapeAttribute(assetHref(project, runtimeAssets.js))}" defer></script>
 </body>
 </html>`;
 }
@@ -1780,7 +1809,7 @@ function buildPages(
   const checkoutWhatsAppLink = whatsAppContactLink
     ? `<a class="solara-secondary-action" data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>${escapeHtml(copy.checkout.sendWhatsApp)}</a>`
     : "";
-  const checkoutFields = `<label for="solara-customer-name">${escapeHtml(copy.cart.name)}</label><input id="solara-customer-name" name="name" autocomplete="name" required><label for="solara-customer-phone">${escapeHtml(copy.cart.phone)}</label><input id="solara-customer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="Ingresá un teléfono válido" required><label for="solara-customer-address">${escapeHtml(copy.cart.address)}</label><textarea id="solara-customer-address" name="address" autocomplete="street-address" required></textarea><label for="solara-customer-notes">${escapeHtml(copy.cart.notes)}</label><textarea id="solara-customer-notes" name="notes"></textarea><button class="solara-primary-action" type="submit">${escapeHtml(copy.checkout.submit)}</button>`;
+  const checkoutFields = `<label for="solara-customer-name">${escapeHtml(copy.cart.name)}</label><input id="solara-customer-name" name="name" autocomplete="name" required><label for="solara-customer-phone">${escapeHtml(copy.cart.phone)}</label><input id="solara-customer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="Ingresá un teléfono válido" required><label for="solara-customer-address">${escapeHtml(copy.cart.address)}</label><textarea id="solara-customer-address" name="address" autocomplete="street-address" required></textarea><label for="solara-customer-notes">${escapeHtml(copy.cart.notes)}</label><textarea id="solara-customer-notes" name="notes"></textarea><button class="solara-primary-action" type="submit">${escapeHtml(copy.checkout.submit)}</button><p data-order-verification-warning role="note">Solicitud sin confirmar; precio, stock, envío y pago deben verificarse con la tienda</p>`;
   const checkoutForm =
     project.commerceTemplates.designFamily === "catalog-modern-v2"
       ? `<form class="solara-checkout-form solara-checkout-form-v2" data-checkout-form><div class="solara-checkout-fields">${checkoutFields}</div><aside class="solara-checkout-order-panel" aria-labelledby="solara-order-summary-title"><p class="solara-eyebrow">${escapeHtml(copy.checkout.selection)}</p><h2 id="solara-order-summary-title">${escapeHtml(copy.checkout.summary)}</h2><p>${escapeHtml(copy.checkout.prepare)}</p><pre data-order-preview aria-live="polite"></pre>${checkoutWhatsAppLink}</aside></form>`
@@ -1955,6 +1984,17 @@ function buildFiles(
   const snapshot = buildCommerceSnapshot(publicProject);
   const pages = buildPages(publicProject, snapshot);
   const manifest = createPublicExportManifest(publicProject, pages);
+  const css = minifyCss(
+    `${themeCss(publicProject)}\n${exportedModuleStyles(publicProject)}\n${STOREFRONT_RUNTIME_CSS}`,
+  );
+  const runtimeSource =
+    mode === "draft"
+      ? `// DEBUG: modo draft — source map disponible via scripts/build-runtime.mjs\n${STOREFRONT_RUNTIME_JS}`
+      : STOREFRONT_RUNTIME_JS;
+  const runtimeAssets: RuntimeAssetPaths = {
+    css: `/assets/storefront.${sha256Hex(css).slice(0, 16)}.css`,
+    js: `/assets/storefront.${sha256Hex(runtimeSource).slice(0, 16)}.js`,
+  };
   const mediaUsage = {
     assetIds: new Set(manifest.usedAssetIds),
     videoIds: new Set(manifest.usedVideoIds),
@@ -1965,30 +2005,12 @@ function buildFiles(
       page.path,
       prefixDocumentHrefs(
         publicProject,
-        renderDocument(publicProject, page, mode, publicAiContext, manifest),
+        renderDocument(publicProject, page, mode, publicAiContext, manifest, runtimeAssets),
       ),
     );
   });
-  files.set(
-    "assets/storefront.css",
-    minifyCss(
-      `${themeCss(publicProject)}\n${exportedModuleStyles(publicProject)}\n${STOREFRONT_RUNTIME_CSS}`,
-    ),
-  );
-  // Draft: mismo runtime inline con una marca para debugging manual.
-  // Production: inline serializado byte-idéntico (sin marca ni source map).
-  // Pendiente: emitir assets/storefront.js.map en draft (ver TECHNICAL_DEBT);
-  // scripts/build-runtime.mjs ya genera el mapa en local.
-  const runtimeJs =
-    mode === "draft"
-      ? `// DEBUG: modo draft — source map disponible via scripts/build-runtime.mjs\n${STOREFRONT_RUNTIME_JS}\n//# sourceMappingURL=storefront.js.map`
-      : STOREFRONT_RUNTIME_JS;
-  files.set("assets/storefront.js", runtimeJs);
-  if (mode === "draft") {
-    // El exporter también corre dentro del Worker del Studio; no importar
-    // fs/path aquí evita que Vite convierta el worker en un módulo Node.
-    files.set("assets/storefront.js.map", "{}");
-  }
+  files.set(runtimeAssets.css.slice(1), css);
+  files.set(runtimeAssets.js.slice(1), runtimeSource);
   fontFilesFor(publicProject.theme.typography.display, publicProject.theme.typography.body).forEach(
     (bytes, path) => {
       files.set(path, bytes);

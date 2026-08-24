@@ -182,6 +182,8 @@ const toolDefinitions = [
                   "asset.attach",
                   "section.updateSettings",
                   "product.createBatch",
+                  "theme.applyPreset",
+                  "theme.updateTokens",
                 ],
               },
               source: {

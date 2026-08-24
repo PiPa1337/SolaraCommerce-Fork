@@ -1,5 +1,14 @@
 # Changelog
 
+### Temas: operaciones de agente y tests visuales (2026-08-24)
+
+- `theme.applyPreset` y `theme.updateTokens` disponibles en el canal de
+  agentes para manipular temas via MCP/JSONL.
+- Presets re-exportados desde project-schema para uso cross-package.
+- Tests unitarios de presets (5 tests): unicidad, no-mutacion, colores validos.
+- Spec Playwright para regresion visual por preset (desktop + mobile).
+- styles.ts usa var(--solara-sale) y var(--solara-rating) en lugar de hex fijo.
+
 ### QA perpetuo: ciclo manager y metricas de export (2026-08-24)
 
 - `QACycleManager`: gestiona el estado de ciclos TDD con watchdog (3 intentos),

@@ -814,6 +814,8 @@ export class AgentController {
         "asset.attach",
         "section.updateSettings",
         "product.createBatch",
+        "theme.applyPreset",
+        "theme.updateTokens",
       ],
       limits: {
         maxOperationsPerPlan: 500,
@@ -2570,6 +2572,26 @@ export class AgentController {
             });
             project = reduceProject(project, { type: "product.create", product, at });
           }
+          break;
+        }
+        case "theme.applyPreset": {
+          const { applyPreset: applyThemePreset } = await import("@solara/project-schema");
+          project = StoreProjectV2Schema.parse({
+            ...project,
+            theme: applyThemePreset(project.theme, operation.presetId),
+            updatedAt: at,
+          });
+          break;
+        }
+        case "theme.updateTokens": {
+          project = StoreProjectV2Schema.parse({
+            ...project,
+            theme: StoreProjectV2Schema.shape.theme.parse({
+              ...project.theme,
+              ...operation.tokens,
+            }),
+            updatedAt: at,
+          });
           break;
         }
       }

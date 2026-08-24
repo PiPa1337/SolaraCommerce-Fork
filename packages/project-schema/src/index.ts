@@ -1320,3 +1320,5 @@ export function migrateProject(input: unknown): StoreProjectV2 {
 
   return parseProject(input);
 }
+
+export { THEME_PRESETS, applyPreset, type ThemePreset } from "./theme-presets.js";
