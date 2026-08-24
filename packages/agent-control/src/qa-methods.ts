@@ -182,9 +182,29 @@ export async function dispatchQaMethod(
         auditCount: result.audit.length,
       };
     }
+    case "qa.runCycle":
+      return runQaCycle(ctx);
     default:
       throw Object.assign(new Error(`Metodo QA desconocido: ${method}`), {
         code: "METHOD_NOT_FOUND",
       });
   }
+}
+
+export async function runQaCycle(ctx: QaContext): Promise<unknown> {
+  ctx.requireScope("qa:write");
+  const backlog = await readBacklog(ctx);
+  const nextItem = (backlog as { nextItem?: string }).nextItem;
+  if (!nextItem) return { error: "No hay item siguiente en el backlog" };
+  await logProgress(ctx, "Ciclo iniciado para " + nextItem);
+  const gates = await runGates(ctx, "quick");
+  return {
+    backlogItem: nextItem,
+    gatesSuccess: gates.success,
+    gatesPassed: gates.passed,
+    gatesFailed: gates.failed,
+    instruction: gates.success
+      ? "Los gates estan verdes. Escribi un test nuevo o implementa el fix."
+      : "Hay tests falliendo. Diagnostica y corrige antes de continuar.",
+  };
 }

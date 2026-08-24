@@ -1,5 +1,16 @@
 # Changelog
 
+### qa.runCycle: ciclo TDD orquestado (2026-08-24)
+
+- Nuevo metodo `qa.runCycle` que ejecuta el ciclo completo: lee backlog,
+  corre gates rapidos y retorna contexto para el LLM externo.
+
+### Hardening del sitio exportado (2026-08-24)
+
+- Runtime público sin `innerHTML` ni políticas Trusted Types permisivas, validación de carrito y aviso fijo de verificación manual para WhatsApp.
+- CSS, JavaScript y fuentes con rutas direccionadas por contenido; CSP/HSTS/PWA endurecidos y `deployment-manifest.json` v1.
+- Exportación desktop en carpeta hija dedicada, checklist y verificador de publicación para Cloudflare Pages.
+
 ### qa.runExport: metricas de export desde el canal de agentes (2026-08-24)
 
 - Nuevo metodo `qa.runExport` que exporta una tienda y retorna metricas:
