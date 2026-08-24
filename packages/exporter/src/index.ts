@@ -1924,15 +1924,21 @@ function buildFiles(
 `,
     );
   }
-    // PWA: manifest y service worker para instalación y cache offline.
-    files.set("manifest.webmanifest", buildWebManifest(publicProject));
-    files.set("sw.js", buildServiceWorker());
-    if (mode === "production") {
-      const rss = buildRssFeed(publicProject);
-      if (rss) files.set("feed.xml", rss);
-      files.set(".well-known/security.txt", `Contact: mailto:${publicProject.identity.email || "security@example.com"}\nExpires: ${new Date(Date.now() + 31536000000).toISOString()}\n`);
-      files.set("_redirects", "# Solara redirect rules\n");
-    }
+  // PWA: manifest y service worker para instalación y cache offline.
+  files.set("manifest.webmanifest", buildWebManifest(publicProject));
+  files.set("sw.js", buildServiceWorker());
+  if (mode === "production") {
+    const rss = buildRssFeed(publicProject);
+    if (rss) files.set("feed.xml", rss);
+    const expiresDate = new Date(
+      new Date(publicProject.updatedAt).getTime() + 31536000000,
+    ).toISOString();
+    files.set(
+      ".well-known/security.txt",
+      `Contact: mailto:${publicProject.identity.email || "security@example.com"}\nExpires: ${expiresDate}\n`,
+    );
+    files.set("_redirects", "# Solara redirect rules\n");
+  }
 
   project.assets
     .filter((asset) => mediaUsage.assetIds.has(asset.id))

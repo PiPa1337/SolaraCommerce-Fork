@@ -17,6 +17,20 @@
 
 ### Archivado de tiendas, advertencias tempranas y validación de imágenes (2026-08-24)
 
+### Sitio exportado: PWA, SEO avanzado y compliance argentino (2026-08-24)
+
+- El exporter ahora genera `manifest.webmanifest` y `sw.js` para instalación
+  como PWA con cache offline de assets.
+- Reviews y aggregateRating se incluyen en el JSON-LD de Product/ProductGroup
+  cuando el proyecto tiene reseñas visibles.
+- RSS feed (`feed.xml`) con los últimos 20 productos activos.
+- `security.txt` en `.well-known/` con contacto y fecha de expiración derivada
+  de project.updatedAt para determinismo.
+- `_redirects` como plantilla vacía para reglas futuras.
+- Meta tags `manifest` y registro de service worker en cada página.
+- Botón de arrepentimiento (Ley 24.240) visible en todas las páginas production.
+- Footer usa project.updatedAt para el año de copyright en lugar de Date.now.
+
 - Nuevo método `plans.createAndCommit` que crea el plan y lo commitea en una
   sola llamada atómica, eliminando la necesidad de scripts de orquestación
   externos para flujos transaccionales.

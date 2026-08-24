@@ -162,6 +162,19 @@ export function productStructuredData(
   }));
 
   if (product.variants.length === 1) {
+    const visibleReviews = (product.reviews ?? []).filter((review) => review.visible);
+    const reviewNodes = visibleReviews.slice(0, 10).map((review) => ({
+      "@type": "Review",
+      author: { "@type": "Person", name: review.authorName },
+      ...(review.title ? { name: review.title } : {}),
+      reviewBody: review.body,
+      datePublished: review.publishedAt,
+      reviewRating: { "@type": "Rating", ratingValue: review.rating, bestRating: 5 },
+    }));
+    const averageRating =
+      visibleReviews.length > 0
+        ? visibleReviews.reduce((sum, r) => sum + r.rating, 0) / visibleReviews.length
+        : null;
     return {
       "@context": "https://schema.org",
       ...variantNodes[0],
@@ -169,6 +182,17 @@ export function productStructuredData(
       description: product.description,
       brand: { "@type": "Brand", name: product.brand },
       url: absoluteUrl(project, productSnapshot.canonicalPath),
+      ...(reviewNodes.length > 0 ? { review: reviewNodes } : {}),
+      ...(averageRating !== null
+        ? {
+            aggregateRating: {
+              "@type": "AggregateRating",
+              ratingValue: averageRating.toFixed(1),
+              reviewCount: visibleReviews.length,
+              bestRating: 5,
+            },
+          }
+        : {}),
     };
   }
 
@@ -187,5 +211,27 @@ export function productStructuredData(
     ...(productSnapshot.imageUrls.length ? { image: productSnapshot.imageUrls } : {}),
     variesBy,
     hasVariant: variantNodes,
+    ...(() => {
+      const reviews = (product.reviews ?? []).filter((review) => review.visible);
+      if (reviews.length === 0) return {};
+      const reviewNodes = reviews.slice(0, 10).map((review) => ({
+        "@type": "Review",
+        author: { "@type": "Person", name: review.authorName },
+        ...(review.title ? { name: review.title } : {}),
+        reviewBody: review.body,
+        datePublished: review.publishedAt,
+        reviewRating: { "@type": "Rating", ratingValue: review.rating, bestRating: 5 },
+      }));
+      const avg = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+      return {
+        review: reviewNodes,
+        aggregateRating: {
+          "@type": "AggregateRating",
+          ratingValue: avg.toFixed(1),
+          reviewCount: reviews.length,
+          bestRating: 5,
+        },
+      };
+    })(),
   };
 }
