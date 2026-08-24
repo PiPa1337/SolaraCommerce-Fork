@@ -50,6 +50,41 @@ export interface CatalogIndexEntry {
   imageHeight?: number;
 }
 
+export const ORDER_VERIFICATION_WARNING =
+  "Solicitud sin confirmar; precio, stock, envío y pago deben verificarse con la tienda";
+
+function safeRuntimeImageUrl(value: unknown): string {
+  if (typeof value !== "string" || value.length === 0 || value.length > 2048) return "";
+  return /^(?:\/(?!\/)|https?:\/\/|data:image\/(?:avif|gif|jpe?g|png|webp);base64,)/i.test(value)
+    ? value
+    : "";
+}
+
+function boundedRuntimeString(value: unknown, max: number, min = 0): value is string {
+  return typeof value === "string" && value.length > min && value.length <= max;
+}
+
+function validRuntimeDimension(value: unknown): boolean {
+  return (
+    value === undefined ||
+    (typeof value === "number" && Number.isInteger(value) && value > 0 && value <= 32768)
+  );
+}
+
+function validCatalogIndexEntry(entry: unknown): entry is CatalogIndexEntry {
+  if (typeof entry !== "object" || entry === null) return false;
+  const value = entry as CatalogIndexEntry;
+  return (
+    boundedRuntimeString(value.productId, 128) &&
+    typeof value.price === "number" &&
+    Number.isInteger(value.price) &&
+    value.price >= 0 &&
+    value.price <= Number.MAX_SAFE_INTEGER &&
+    typeof value.available === "boolean" &&
+    parseCart([{ ...value, unitPrice: value.price, quantity: 1 }]).length === 1
+  );
+}
+
 /**
  * Reconciles stored cart lines against the current catalog index. Lines whose
  * variant no longer exists are kept but marked unavailable so the buyer can
@@ -93,27 +128,31 @@ export function reconcileCartLines(
 
 export function parseCart(stored: unknown): StoredCartLine[] {
   if (!Array.isArray(stored)) return [];
-  return stored.filter(
-    (line): line is StoredCartLine =>
-      typeof line === "object" &&
-      line !== null &&
-      typeof (line as StoredCartLine).variantId === "string" &&
-      (line as StoredCartLine).variantId.length > 0 &&
-      typeof (line as StoredCartLine).title === "string" &&
-      typeof (line as StoredCartLine).variantTitle === "string" &&
-      typeof (line as StoredCartLine).sku === "string" &&
-      typeof (line as StoredCartLine).unitPrice === "number" &&
-      Number.isFinite((line as StoredCartLine).unitPrice) &&
-      Number.isInteger((line as StoredCartLine).unitPrice) &&
-      (line as StoredCartLine).unitPrice >= 0 &&
-      typeof (line as StoredCartLine).quantity === "number" &&
-      Number.isFinite((line as StoredCartLine).quantity) &&
-      Number.isInteger((line as StoredCartLine).quantity) &&
-      (line as StoredCartLine).quantity >= 1 &&
-      (line as StoredCartLine).quantity <= 99 &&
-      ((line as StoredCartLine).imageUrl === undefined ||
-        typeof (line as StoredCartLine).imageUrl === "string"),
-  );
+  return stored.filter((line): line is StoredCartLine => {
+    if (typeof line !== "object" || line === null) return false;
+    const value = line as StoredCartLine;
+    return (
+      (value.productId === undefined || boundedRuntimeString(value.productId, 128)) &&
+      boundedRuntimeString(value.variantId, 128) &&
+      boundedRuntimeString(value.title, 240, -1) &&
+      boundedRuntimeString(value.variantTitle, 160, -1) &&
+      boundedRuntimeString(value.sku, 120, -1) &&
+      typeof value.unitPrice === "number" &&
+      Number.isFinite(value.unitPrice) &&
+      Number.isInteger(value.unitPrice) &&
+      value.unitPrice >= 0 &&
+      value.unitPrice <= Number.MAX_SAFE_INTEGER &&
+      typeof value.quantity === "number" &&
+      Number.isFinite(value.quantity) &&
+      Number.isInteger(value.quantity) &&
+      value.quantity >= 1 &&
+      value.quantity <= 99 &&
+      (value.available === undefined || typeof value.available === "boolean") &&
+      (value.imageUrl === undefined || safeRuntimeImageUrl(value.imageUrl) !== "") &&
+      validRuntimeDimension(value.imageWidth) &&
+      validRuntimeDimension(value.imageHeight)
+    );
+  });
 }
 
 export interface CustomerDetails {
@@ -253,7 +292,7 @@ export function buildWhatsAppMessage(
     `${copy.delivery}: ${customer.address.trim()}`,
     customer.notes.trim() ? `${copy.notes}: ${customer.notes.trim()}` : "",
     "",
-    checkoutCopy.disclaimer || copy.confirmation,
+    `${checkoutCopy.disclaimer || copy.confirmation}\n${ORDER_VERIFICATION_WARNING}`,
   ]
     .filter((line, index, all) => line !== "" || all[index - 1] !== "")
     .join("\n")
@@ -266,25 +305,21 @@ export function buildWhatsAppUrl(phone: string, message: string): string {
   return `https://wa.me/${clean}?text=${encodeURIComponent(message)}`;
 }
 
-function setHtml(element: HTMLElement, value: string): void {
-  const runtime = globalThis as typeof globalThis & {
-    __solaraTrustedTypesPolicy?: { createHTML: (input: string) => string } | undefined;
-    trustedTypes?: {
-      createPolicy: (
-        name: string,
-        rules: { createHTML: (input: string) => string },
-      ) => { createHTML: (input: string) => string };
-    };
-  };
-  runtime.__solaraTrustedTypesPolicy ??= runtime.trustedTypes?.createPolicy("solara-storefront", {
-    createHTML: (input) => input,
-  });
-  element.innerHTML = runtime.__solaraTrustedTypesPolicy?.createHTML(value) ?? value;
-}
-
 function storefrontBoot(): void {
   const root = document.documentElement;
   const baseHref = (root.dataset.baseHref ?? "").replace(/\/+$/, "");
+  const serviceWorkerUrl = root.dataset.serviceWorkerUrl;
+  if (serviceWorkerUrl && "serviceWorker" in navigator) {
+    window.addEventListener(
+      "load",
+      () => {
+        void navigator.serviceWorker.register(serviceWorkerUrl, {
+          scope: `${baseHref || ""}/`,
+        });
+      },
+      { once: true },
+    );
+  }
   const storeId = root.dataset.storeId ?? "solara";
   const currency = root.dataset.currency ?? "ARS";
   const locale = root.lang || "es-AR";
@@ -303,6 +338,8 @@ function storefrontBoot(): void {
   } = copy;
   const greeting = root.dataset.whatsappGreeting ?? "";
   const includeSku = root.dataset.whatsappIncludeSku !== "false";
+  const orderVerificationWarning =
+    "Solicitud sin confirmar; precio, stock, envío y pago deben verificarse con la tienda";
   const storageKey = `solara-cart:${storeId}`;
   const embed = parent !== window && location.protocol[0] !== "s";
   const priceFractionDisplay = (root.dataset.priceFractionDisplay ?? "always") as "always" | "auto";
@@ -324,6 +361,19 @@ function storefrontBoot(): void {
   const hasFeature = (feature: string): boolean => runtimeFeatures.has(feature);
   const backupKey = `${storageKey}:backup`;
 
+  const node = <K extends keyof HTMLElementTagNameMap>(
+    tag: K,
+    text?: string,
+    attributes?: Record<string, string | number | boolean | undefined>,
+  ): HTMLElementTagNameMap[K] => {
+    const element = document.createElement(tag);
+    if (text !== undefined) element.textContent = text;
+    for (const [name, value] of Object.entries(attributes ?? {})) {
+      if (value !== undefined) element.setAttribute(name, String(value));
+    }
+    return element;
+  };
+
   const parseSerializedCart = (serialized: string | null): StoredCartLine[] | null => {
     try {
       const stored = JSON.parse(serialized ?? "null");
@@ -337,8 +387,6 @@ function storefrontBoot(): void {
     if (embed) return [];
     try {
       const primary = parseSerializedCart(localStorage.getItem(storageKey));
-      // Diferenciar vacio intencional [] (no null) del fallo de parse (null).
-      // Antes se usaba primary?.length que resucitaba backup tras vaciar.
       if (primary !== null) return primary;
       return parseSerializedCart(localStorage.getItem(backupKey)) ?? [];
     } catch {
@@ -505,32 +553,56 @@ function storefrontBoot(): void {
     });
 
     document.querySelectorAll<HTMLElement>("[data-cart-lines]").forEach((container) => {
-      setHtml(
-        container,
-        cart.length === 0
-          ? `<p class="solara-cart-empty">${escapeText(e.cart)}</p>`
-          : cart
-              .map(
-                (line) => `
-            <article class="solara-cart-line">
-              <div>
-                ${line.imageUrl ? `<img src="${escapeAttribute(line.imageUrl)}" alt=""${line.imageWidth ? ` width="${line.imageWidth}"` : ""}${line.imageHeight ? ` height="${line.imageHeight}"` : ""} loading="lazy">` : ""}
-                <div>
-                <strong>${escapeText(line.title)}</strong>
-                <small>${escapeText(line.variantTitle)}</small>
-                ${line.available === false ? `<small class="solara-cart-line-warning">${escapeText(a.unavailable)}</small>` : ""}
-                </div>
-              </div>
-              <label>
-                <span class="sr-only">${escapeText(p.quantity)} de ${escapeText(line.title)}</span>
-                <input data-cart-quantity="${escapeAttribute(line.variantId)}" type="number" min="1" max="99" value="${line.quantity}"${line.available === false ? " disabled" : ""}>
-              </label>
-              <button type="button" data-cart-remove="${escapeAttribute(line.variantId)}" aria-label="${escapeAttribute(`${a.remove} ${line.title}`)}">${escapeText(a.remove)}</button>
-              <span>${money.format((line.unitPrice * line.quantity) / 100)}</span>
-            </article>`,
-              )
-              .join(""),
-      );
+      container.replaceChildren();
+      if (cart.length === 0) {
+        container.append(node("p", e.cart, { class: "solara-cart-empty" }));
+        return;
+      }
+      for (const line of cart) {
+        const identity = node("div");
+        const imageUrl = safeRuntimeImageUrl(line.imageUrl);
+        if (imageUrl) {
+          identity.append(
+            node("img", undefined, {
+              src: imageUrl,
+              alt: "",
+              ...(line.imageWidth ? { width: line.imageWidth } : {}),
+              ...(line.imageHeight ? { height: line.imageHeight } : {}),
+              loading: "lazy",
+            }),
+          );
+        }
+        const details = node("div");
+        details.append(node("strong", line.title), node("small", line.variantTitle));
+        if (line.available === false) {
+          details.append(node("small", a.unavailable, { class: "solara-cart-line-warning" }));
+        }
+        identity.append(details);
+        const quantityLabel = node("label");
+        quantityLabel.append(
+          node("span", `${p.quantity} de ${line.title}`, { class: "sr-only" }),
+          node("input", undefined, {
+            "data-cart-quantity": line.variantId,
+            type: "number",
+            min: 1,
+            max: 99,
+            value: line.quantity,
+            ...(line.available === false ? { disabled: true } : {}),
+          }),
+        );
+        const article = node("article", undefined, { class: "solara-cart-line" });
+        article.append(
+          identity,
+          quantityLabel,
+          node("button", a.remove, {
+            type: "button",
+            "data-cart-remove": line.variantId,
+            "aria-label": `${a.remove} ${line.title}`,
+          }),
+          node("span", money.format((line.unitPrice * line.quantity) / 100)),
+        );
+        container.append(article);
+      }
     });
 
     document.querySelectorAll<HTMLElement>("[data-cart-cta]").forEach((a, i) => {
@@ -555,34 +627,16 @@ function storefrontBoot(): void {
 
   if (embed) window.addEventListener("pagehide", () => persistCart());
 
-  // Sincroniza carrito entre pestanas: storage solo dispara en otras pestañas,
-  // asi que mergeamos sin pisar cambios locales no guardados.
   if (!embed && typeof window !== "undefined") {
     window.addEventListener("storage", (event) => {
       if (event.key !== storageKey && event.key !== backupKey) return;
       const external = readStoredCart();
-      // Evitar loop si es igual.
       if (JSON.stringify(external) !== JSON.stringify(cart)) {
         cart = external;
         renderCart(false);
       }
     });
   }
-
-  const escapeText = (value: string): string =>
-    value.replace(
-      /[&<>"']/g,
-      (character) =>
-        ({
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          '"': "&quot;",
-          "'": "&#039;",
-        })[character] ?? character,
-    );
-
-  const escapeAttribute = escapeText;
 
   const syncCartToggleExpanded = (expanded: boolean): void => {
     document.querySelectorAll<HTMLElement>("[data-solara-cart-open]").forEach((toggle) => {
@@ -615,7 +669,8 @@ function storefrontBoot(): void {
         return response.json() as Promise<CatalogIndexEntry[]>;
       })
       .then((catalog) => {
-        applyCatalog(catalog);
+        const safeCatalog = Array.isArray(catalog) ? catalog.filter(validCatalogIndexEntry) : [];
+        applyCatalog(safeCatalog);
         return true;
       })
       .catch(() => {
@@ -943,7 +998,6 @@ function storefrontBoot(): void {
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       if (cart.length === 0) {
-        // Checkout sin carrito: feedback visible en vez de submit silencioso.
         const emptyPreview = form.querySelector<HTMLElement>("[data-order-preview]");
         if (emptyPreview) {
           emptyPreview.textContent = x.emptyCart;
@@ -953,7 +1007,6 @@ function storefrontBoot(): void {
         return;
       }
       if (!form.reportValidity()) return;
-      // Fuerza fetch fresco para checkout (precio/autorización siempre del catálogo actual)
       freshCatalog = null;
       void reconcileCart().then((ok) => {
         if (!ok) {
@@ -995,7 +1048,7 @@ function storefrontBoot(): void {
           `${a.delivery}: ${String(data.get("address") ?? "").trim()}`,
           notes ? `${a.notes}: ${notes}` : "",
           "",
-          x.disclaimer,
+          `${x.disclaimer}\n${orderVerificationWarning}`,
         ]
           .filter((line, index, all) => line !== "" || all[index - 1] !== "")
           .join("\n")
@@ -1499,6 +1552,29 @@ function storefrontBoot(): void {
     const searchGrid = searchResults.querySelector<HTMLElement>(
       "[data-category-grid]",
     ) as HTMLElement;
+    const showSearchMessage = (text: string, className?: string, role?: string): void => {
+      searchGrid.replaceChildren(
+        node("p", text, { ...(className ? { class: className } : {}), ...(role ? { role } : {}) }),
+      );
+    };
+    const validSearchEntry = (entry: SearchEntryWithTokens): boolean => {
+      return (
+        boundedRuntimeString(entry.title, 240, -1) &&
+        boundedRuntimeString(entry.brand, 160, -1) &&
+        boundedRuntimeString(entry.description, 2000, -1) &&
+        boundedRuntimeString(entry.path, 512, -1) &&
+        entry.path.startsWith("/") &&
+        !entry.path.startsWith("//") &&
+        typeof entry.priceMin === "number" &&
+        Number.isInteger(entry.priceMin) &&
+        entry.priceMin >= 0 &&
+        entry.priceMin <= Number.MAX_SAFE_INTEGER &&
+        typeof entry.available === "boolean" &&
+        validRuntimeDimension(entry.imageWidth) &&
+        validRuntimeDimension(entry.imageHeight) &&
+        (entry.imageUrl === undefined || safeRuntimeImageUrl(entry.imageUrl) !== "")
+      );
+    };
     const suggestCorrection = (
       terms: string[],
       entries: SearchEntryWithTokens[],
@@ -1527,10 +1603,10 @@ function storefrontBoot(): void {
       document.querySelector('meta[name="robots"]')?.setAttribute("content", "noindex,follow");
       const terms = searchApi.normalizeSearchTokens(query);
       if (!terms.length || terms.some((t) => t.length < 2)) {
-        setHtml(searchGrid, `<p>${escapeText(s.queryTooShort)}</p>`);
+        showSearchMessage(s.queryTooShort);
       } else {
         const controller = new AbortController();
-        setHtml(searchGrid, `<p>${escapeText(s.loading)}</p>`);
+        showSearchMessage(s.loading);
         const searchIndexError =
           (copy as Record<string, Record<string, string>>).errors?.searchIndexLoad ??
           "No se pudo cargar el índice de búsqueda.";
@@ -1540,7 +1616,8 @@ function storefrontBoot(): void {
             return response.json() as Promise<SearchEntryWithTokens[]>;
           })
           .then((entries) => {
-            const ranked = entries
+            const safeEntries = Array.isArray(entries) ? entries.filter(validSearchEntry) : [];
+            const ranked = safeEntries
               .map((entry) => ({
                 entry,
                 score: searchApi.scoreEntry(
@@ -1564,32 +1641,59 @@ function storefrontBoot(): void {
                   left.entry.title.localeCompare(right.entry.title),
               );
             if (ranked.length === 0) {
-              const suggestion = suggestCorrection(terms, entries);
+              const suggestion = suggestCorrection(terms, safeEntries);
               if (suggestion) {
                 const url = `/buscar/?q=${encodeURIComponent(suggestion)}`;
-                setHtml(
-                  searchGrid,
-                  `<p class="solara-search-summary">${escapeText(s.suggestion.replace("{query}", query))} <a href="${escapeAttribute(url)}">${escapeText(suggestion)}</a>?</p>`,
-                );
+                const message = node("p", s.suggestion.replace("{query}", query), {
+                  class: "solara-search-summary",
+                });
+                message.append(node("a", suggestion, { href: url }));
+                message.append(document.createTextNode("?"));
+                searchGrid.replaceChildren(message);
                 return;
               }
-              setHtml(searchGrid, `<p>${escapeText(s.noResults)}</p>`);
+              showSearchMessage(s.noResults);
               return;
             }
-            setHtml(
-              searchGrid,
-              ranked
-                .slice(0, 48)
-                .map(({ entry }) => {
-                  const attrs = `data-product-card data-product-price="${entry.priceMin}" data-product-available="${entry.available}" data-product-tags="${escapeAttribute(String(entry.tags ?? []))}" data-product-options="${escapeAttribute((entry.options ?? []).join("|"))}"`;
-                  return `<article class="solara-search-result" ${attrs}><a href="${escapeAttribute(entry.path)}">${entry.imageUrl ? `<img src="${escapeAttribute(entry.imageUrl)}" alt="${escapeAttribute(entry.title)}" width="${entry.imageWidth ?? 1}" height="${entry.imageHeight ?? 1}" sizes="(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem" loading="lazy">` : ""}<div><h2>${escapeText(entry.title)}</h2><p>${escapeText(entry.brand)}</p><strong>${money.format(entry.priceMin / 100)}</strong></div></a></article>`;
-                })
-                .join(""),
+            searchGrid.replaceChildren(
+              ...ranked.slice(0, 48).map(({ entry }) => {
+                const article = node("article", undefined, {
+                  class: "solara-search-result",
+                  "data-product-card": "",
+                  "data-product-price": entry.priceMin,
+                  "data-product-available": entry.available,
+                  "data-product-tags": (entry.tags ?? []).join(","),
+                  "data-product-options": (entry.options ?? []).join("|"),
+                });
+                const link = node("a", undefined, { href: entry.path });
+                const imageUrl = safeRuntimeImageUrl(entry.imageUrl);
+                if (imageUrl) {
+                  link.append(
+                    node("img", undefined, {
+                      src: imageUrl,
+                      alt: entry.title,
+                      width: entry.imageWidth ?? 1,
+                      height: entry.imageHeight ?? 1,
+                      sizes: "(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem",
+                      loading: "lazy",
+                    }),
+                  );
+                }
+                const details = node("div");
+                details.append(
+                  node("h2", entry.title),
+                  node("p", entry.brand),
+                  node("strong", money.format(entry.priceMin / 100)),
+                );
+                link.append(details);
+                article.append(link);
+                return article;
+              }),
             );
             searchGrid.dispatchEvent(new Event("f"));
           })
           .catch(() => {
-            setHtml(searchGrid, `<p role="alert">${escapeText(s.error)}</p>`);
+            showSearchMessage(s.error, undefined, "alert");
           });
         window.addEventListener("pagehide", () => controller.abort(), { once: true });
       }
@@ -1787,6 +1891,21 @@ function storefrontBoot(): void {
     }
   }
   connectContactForms();
+  const darkToggle = document.querySelector("[data-solara-dark-toggle]");
+  if (darkToggle) {
+    darkToggle.addEventListener("click", () => {
+      const page = document.querySelector(".solara-page");
+      if (!page) return;
+      const current = page.getAttribute("data-color-mode") ?? "auto";
+      const next = current === "dark" ? "light" : "dark";
+      page.setAttribute("data-color-mode", next);
+      localStorage.setItem("solara-color-mode", next);
+    });
+    const saved = localStorage.getItem("solara-color-mode");
+    if (saved) {
+      document.querySelector(".solara-page")?.setAttribute("data-color-mode", saved);
+    }
+  }
   if (hasFeature("variants")) {
     document.querySelectorAll<HTMLElement>("[data-product]").forEach(syncVariant);
   }
@@ -1837,9 +1956,6 @@ function storefrontBoot(): void {
     else if (type === "solara-resume") resumeRuntime();
   });
   if (document.hidden) pauseRuntime();
-  // Señal determinista de inicialización completa. Los tests E2E esperan este
-  // atributo (waitForStorefrontReady) en lugar de timeouts fijos; ver
-  // docs/TESTING.md (Política de estabilidad E2E).
   root.dataset.solaraReady = "1";
 }
 
@@ -1851,9 +1967,12 @@ const SEARCH_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unkn
 
 const RUNTIME_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unknown]> = [
   ...SEARCH_HELPERS,
+  ["safeRuntimeImageUrl", safeRuntimeImageUrl],
+  ["boundedRuntimeString", boundedRuntimeString],
+  ["validRuntimeDimension", validRuntimeDimension],
   ["parseCart", parseCart],
+  ["validCatalogIndexEntry", validCatalogIndexEntry],
   ["reconcileCartLines", reconcileCartLines],
-  ["setHtml", setHtml],
   ["formatMoney", formatMoney],
 ];
 
@@ -1863,7 +1982,39 @@ const SERIALIZED_RUNTIME_HELPERS = RUNTIME_HELPERS.map(([name, fn]) => {
   return { name, bindingName, source };
 });
 
-export const STOREFRONT_RUNTIME_JS = `${SERIALIZED_RUNTIME_HELPERS.map(
+function stripRuntimeComments(source: string): string {
+  let output = "";
+  let quote = "";
+  let escaped = false;
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index] ?? "";
+    const next = source[index + 1] ?? "";
+    if (quote) {
+      output += character;
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === quote) quote = "";
+      continue;
+    }
+    if (character === '"' || character === "'" || character === "`") {
+      quote = character;
+      output += character;
+    } else if (character === "/" && next === "/") {
+      while (index < source.length && source[index] !== "\n") index += 1;
+      output += "\n";
+    } else if (character === "/" && next === "*") {
+      index += 2;
+      while (index < source.length && !(source[index] === "*" && source[index + 1] === "/"))
+        index += 1;
+      index += 1;
+    } else {
+      output += character;
+    }
+  }
+  return output.replace(/^[ \t]+/gm, "").replace(/\n{2,}/g, "\n");
+}
+
+export const STOREFRONT_RUNTIME_JS = stripRuntimeComments(`${SERIALIZED_RUNTIME_HELPERS.map(
   ({ bindingName, source }) => `const ${bindingName} = ${source};`,
 ).join("\n")}
 globalThis.__solaraSearchHelpers = { ${SERIALIZED_RUNTIME_HELPERS.filter(({ name }) =>
@@ -1871,7 +2022,7 @@ globalThis.__solaraSearchHelpers = { ${SERIALIZED_RUNTIME_HELPERS.filter(({ name
 )
   .map(({ name, bindingName }) => (name === bindingName ? name : `${name}: ${bindingName}`))
   .join(", ")} };
-(${storefrontBoot.toString()})();`;
+(${storefrontBoot.toString()})();`);
 
 /**
  * Entrada para el build externo con esbuild (modo draft): referencia a la

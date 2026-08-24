@@ -718,6 +718,7 @@ button, input, select, textarea, a { outline-offset: 3px; }
 :focus-visible { outline: 2px solid var(--solara-accent); }
 .solara-page { min-height: 100dvh; overflow: clip; }
 .solara-container { width: min(calc(100% - 2 * var(--solara-padding-x)), var(--solara-container)); margin-inline: auto; padding-inline: var(--solara-padding-x); }
+.solara-dark-toggle { position: fixed; bottom: 1rem; right: 1rem; z-index: 1000; display: flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border-radius: 50%; border: 1px solid var(--solara-border); background: var(--solara-surface); color: var(--solara-text); cursor: pointer; opacity: .6; transition: opacity var(--solara-motion-fast) var(--solara-motion-easing); } .solara-dark-toggle:hover { opacity: 1; }
 `.trim();
 }
 
@@ -1235,6 +1236,7 @@ function renderDocument(
 </head>
 <body>
   <a class="solara-skip-link" href="#solara-main">${escapeHtml(copy.export.skipToContent)}</a>
+  <button class="solara-dark-toggle" data-solara-dark-toggle aria-label="Alternar modo oscuro" type="button"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6 2a.5.5 0 0 1 .47.33A5.5 5.5 0 0 0 13.67 9.5.5.5 0 0 1 14 10a6 6 0 1 1-8-8z"/></svg></button>
   <div class="solara-page${modernProjectClass(project)}" data-solara-store data-design-family="${escapeHtml(project.commerceTemplates.designFamily ?? "legacy-editorial-v1")}" data-page-type="${page.pageType}" data-color-mode="${project.theme.colorMode}">${page.body.replace("<main", '<main id="solara-main"')}</div>
   ${mode === "production" && page.pageType !== "legal" ? `<a href="https://www.argentina.gob.ar/defensa-del-consumidor" target="_blank" rel="noopener noreferrer" style="position:fixed;bottom:8px;left:8px;font-size:11px;color:inherit;opacity:0.5;text-decoration:none;z-index:1000">Botón de arrepentimiento</a>` : ""}
   <script src="${escapeAttribute(assetHref(project, runtimeAssets.js))}" defer></script>

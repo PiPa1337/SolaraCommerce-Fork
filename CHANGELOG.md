@@ -1,5 +1,13 @@
 # Changelog
 
+### Dark mode toggle y styles tokenizados (2026-08-24)
+
+- El storefront runtime inicializa el dark mode toggle: lee y persiste
+  la preferencia del usuario en localStorage.
+- Boton flotante de dark mode agregado al HTML exportado con icono SVG.
+- styles.ts usa var(--solara-motion-normal), var(--solara-motion-easing) y
+  var(--solara-shadow-overlay) en lugar de valores hardcodeados.
+
 ### Agente autónomo de QA perpetuo (2026-08-24)
 
 - Nuevo scope `qa:write` con 8 métodos de protocolo: readBacklog,
