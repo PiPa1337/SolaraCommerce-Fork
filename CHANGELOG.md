@@ -1,5 +1,11 @@
 # Changelog
 
+### Inputs de redes sociales en Studio (2026-08-24)
+
+- El inspector de identidad en Overview ahora incluye inputs para Instagram,
+  Facebook, TikTok y usuario de X/Twitter, sincronizados con los campos
+  `sameAs` del sitio exportado.
+
 ### Social links, SearchAction y limpieza head (2026-08-24)
 
 - `identity` acepta `instagramUrl`, `facebookUrl`, `tiktokUrl` y

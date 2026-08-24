@@ -65,6 +65,7 @@ const PUBLIC_COPY_FIELDS = [
   { group: "filters", key: "priceAsc", label: "Orden precio menor" },
   { group: "filters", key: "priceDesc", label: "Orden precio mayor" },
   { group: "filters", key: "name", label: "Orden nombre" },
+  { group: "filters", key: "resultCount", label: "Contador de resultados" },
   { group: "product", key: "available", label: "Producto disponible" },
   { group: "product", key: "outOfStock", label: "Producto agotado" },
   { group: "product", key: "from", label: "Prefijo de precio" },
@@ -85,6 +86,12 @@ const PUBLIC_COPY_FIELDS = [
   { group: "product", key: "reviewEyebrow", label: "Introducción de reseñas" },
   { group: "product", key: "reviewTitle", label: "Título de reseñas" },
   { group: "product", key: "verifiedPurchase", label: "Compra verificada" },
+  { group: "hero", key: "benefits", label: "Beneficios del hero" },
+  { group: "hero", key: "activeProducts", label: "Productos activos del hero" },
+  { group: "hero", key: "categories", label: "Categorías del hero" },
+  { group: "hero", key: "contact", label: "Contacto del hero" },
+  { group: "hero", key: "directOrder", label: "Pedido directo del hero" },
+  { group: "hero", key: "inquiries", label: "Consultas del hero" },
   { group: "hero", key: "whatsappAction", label: "Acción WhatsApp del hero" },
   { group: "hero", key: "pauseVideo", label: "Pausar video del hero" },
   { group: "hero", key: "resumeVideo", label: "Reanudar video del hero" },
@@ -127,11 +134,14 @@ const PUBLIC_COPY_FIELDS = [
   { group: "checkout", key: "invalidItems", label: "Error de disponibilidad" },
   { group: "checkout", key: "total", label: "Total del pedido" },
   { group: "checkout", key: "disclaimer", label: "Aviso de confirmación" },
+  { group: "checkout", key: "delivery", label: "Entrega del checkout" },
+  { group: "checkout", key: "emptyCart", label: "Carrito vacío al comprar" },
   { group: "footer", key: "explore", label: "Footer: explorar" },
   { group: "footer", key: "help", label: "Footer: ayuda" },
   { group: "footer", key: "contact", label: "Footer: contacto" },
   { group: "footer", key: "privacy", label: "Footer: privacidad" },
   { group: "footer", key: "terms", label: "Footer: términos" },
+  { group: "footer", key: "policies", label: "Footer: políticas" },
   { group: "footer", key: "copyright", label: "Footer: copyright" },
   { group: "footer", key: "shipping", label: "Footer: envíos" },
   { group: "footer", key: "returns", label: "Footer: cambios" },
@@ -170,6 +180,7 @@ const PUBLIC_COPY_FIELDS = [
   { group: "pages", key: "contactPurchaseTitle", label: "Contacto: CTA" },
   { group: "pages", key: "contactPurchaseDescription", label: "Contacto: ayuda" },
   { group: "pages", key: "notFoundEyebrow", label: "404: introducción" },
+  { group: "pages", key: "notFound", label: "404: título de página" },
   { group: "pages", key: "notFoundTitle", label: "404: título" },
   { group: "pages", key: "notFoundDescription", label: "404: descripción" },
   { group: "pages", key: "returnHome", label: "404: volver al inicio" },
@@ -187,6 +198,18 @@ const PUBLIC_COPY_FIELDS = [
   { group: "export", key: "policyDetailsTitle", label: "Políticas: detalles" },
   { group: "export", key: "policyQuestionsTitle", label: "Políticas: preguntas" },
   { group: "export", key: "policyQuestionsBody", label: "Políticas: ayuda" },
+  { group: "export", key: "skipToContent", label: "Ir al contenido" },
+  { group: "export", key: "breadcrumbs", label: "Migas de pan" },
+  { group: "export", key: "pagination", label: "Paginación" },
+  { group: "export", key: "previous", label: "Anterior (paginación)" },
+  { group: "export", key: "next", label: "Siguiente (paginación)" },
+  { group: "export", key: "pageOf", label: "Página actual de total" },
+  { group: "export", key: "categoryChildren", label: "Subcategorías de categoría" },
+  { group: "export", key: "exploreCategory", label: "Explorar categoría" },
+  { group: "export", key: "categoryProducts", label: "Productos de categoría" },
+  { group: "export", key: "viewCollection", label: "Ver colección" },
+  { group: "export", key: "viewImage", label: "Ver imagen" },
+  { group: "export", key: "variantLinks", label: "Enlaces directos a variantes" },
   { group: "whatsapp", key: "ask", label: "Consulta de WhatsApp" },
   { group: "whatsapp", key: "purchase", label: "Compra de WhatsApp" },
   { group: "whatsapp", key: "orderGreeting", label: "Saludo del pedido" },
@@ -662,6 +685,45 @@ export function Overview({
                 value={project.identity.address}
                 onChange={(event) =>
                   commit({ identity: { ...project.identity, address: event.target.value } })
+                }
+              />
+            </Field>
+            <Field label="Instagram" hint="URL completa del perfil.">
+              <input
+                type="url"
+                aria-label="Instagram"
+                value={project.identity.instagramUrl ?? ""}
+                onChange={(event) =>
+                  commit({ identity: { ...project.identity, instagramUrl: event.target.value } })
+                }
+              />
+            </Field>
+            <Field label="Facebook" hint="URL completa de la página.">
+              <input
+                type="url"
+                aria-label="Facebook"
+                value={project.identity.facebookUrl ?? ""}
+                onChange={(event) =>
+                  commit({ identity: { ...project.identity, facebookUrl: event.target.value } })
+                }
+              />
+            </Field>
+            <Field label="TikTok" hint="URL completa del perfil.">
+              <input
+                type="url"
+                aria-label="TikTok"
+                value={project.identity.tiktokUrl ?? ""}
+                onChange={(event) =>
+                  commit({ identity: { ...project.identity, tiktokUrl: event.target.value } })
+                }
+              />
+            </Field>
+            <Field label="Usuario de X / Twitter" hint="Sólo el usuario, con o sin @.">
+              <input
+                aria-label="Usuario de X Twitter"
+                value={project.identity.twitterHandle ?? ""}
+                onChange={(event) =>
+                  commit({ identity: { ...project.identity, twitterHandle: event.target.value } })
                 }
               />
             </Field>
