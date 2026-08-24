@@ -188,7 +188,7 @@ export function CreateStoreDialog({
             </Button>
           ) : null}
           <Button variant="primary" icon={Plus} disabled={busy} type="submit">
-            {busy ? "Creando" : step === 4 ? "Crear tienda vacía" : "Continuar"}
+            {busy ? "Creando" : step === 4 ? "Crear tienda desde plantilla" : "Continuar"}
           </Button>
         </footer>
       </form>

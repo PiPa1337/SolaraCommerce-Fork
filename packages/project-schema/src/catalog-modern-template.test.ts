@@ -17,6 +17,8 @@ describe("plantilla Catalog Modern", () => {
       templateId: "catalog-modern",
       templateVersion: CATALOG_MODERN_TEMPLATE_VERSION,
       seed: "clean",
+      role: "store",
+      updatePolicy: "managed",
     });
     expect(catalogModernCleanStore.products).toHaveLength(0);
     expect(catalogModernCleanStore.categories).toHaveLength(0);

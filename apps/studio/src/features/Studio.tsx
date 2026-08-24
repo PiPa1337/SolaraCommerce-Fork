@@ -31,6 +31,7 @@ import {
   undo,
 } from "@solara/core";
 import { type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
+import { isBaseTemplate } from "@solara/project-schema/project-policy";
 import { motion, useReducedMotion } from "motion/react";
 import {
   type KeyboardEvent,
@@ -155,6 +156,7 @@ const StudioTabContent = memo(function StudioTabContent({
   onOpenSite,
   validationError,
 }: StudioTabContentProps) {
+  const immutableBase = isBaseTemplate(project);
   switch (tab) {
     case "guided":
       return (
@@ -187,9 +189,9 @@ const StudioTabContent = memo(function StudioTabContent({
             project={project}
             onChange={replaceProject}
             onPreviewRouteChange={onPreviewRouteChange}
-            protectedBase={!advancedMode && project.origin?.seed === "clean"}
-            advancedMode={advancedMode}
-            onEnableAdvanced={onEnableAdvanced}
+            protectedBase={immutableBase || (!advancedMode && project.origin?.seed === "clean")}
+            advancedMode={immutableBase ? false : advancedMode}
+            {...(immutableBase ? {} : { onEnableAdvanced })}
           />
         </Suspense>
       );
@@ -410,6 +412,7 @@ export function Studio({
   const dirtyRef = useRef(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const project = history.present;
+  const immutableBase = isBaseTemplate(project);
   // La ruta del preview no se descarta en silencio cuando sale de la muestra
   // de getPreviewRoutes: renderPreviewHtml resuelve cualquier página real del
   // sitio (p. ej. /envios/ fuera del datalist) y cae a la página inicial para
@@ -616,24 +619,42 @@ export function Studio({
     void performLeave();
   };
 
-  const replaceProject = useCallback((next: StoreProjectV1) => {
-    const result = StoreProjectV1Schema.safeParse(next);
-    if (!result.success) {
-      const issue = result.error.issues[0];
-      const path = issue?.path.join(".") || "project";
-      setValidationError(`${path}: ${issue?.message ?? "Proyecto inválido."}`);
-      return;
-    }
-    setValidationError("");
-    setHistory((current) => {
-      if (result.data === current.present) return current;
-      return { past: [...current.past, current.present], present: result.data, future: [] };
-    });
-  }, []);
+  const replaceProject = useCallback(
+    (next: StoreProjectV1) => {
+      if (immutableBase) {
+        setValidationError(
+          "La plantilla protegida es de solo lectura. Creá una tienda nueva para editarla.",
+        );
+        return;
+      }
+      const result = StoreProjectV1Schema.safeParse(next);
+      if (!result.success) {
+        const issue = result.error.issues[0];
+        const path = issue?.path.join(".") || "project";
+        setValidationError(`${path}: ${issue?.message ?? "Proyecto inválido."}`);
+        return;
+      }
+      setValidationError("");
+      setHistory((current) => {
+        if (result.data === current.present) return current;
+        return { past: [...current.past, current.present], present: result.data, future: [] };
+      });
+    },
+    [immutableBase],
+  );
 
-  const runCommand = useCallback((command: DomainCommand) => {
-    setHistory((current) => executeCommand(current, command));
-  }, []);
+  const runCommand = useCallback(
+    (command: DomainCommand) => {
+      if (immutableBase) {
+        setValidationError(
+          "La plantilla protegida es de solo lectura. Creá una tienda nueva para editarla.",
+        );
+        return;
+      }
+      setHistory((current) => executeCommand(current, command));
+    },
+    [immutableBase],
+  );
 
   const navigateFromGuided = useCallback(
     (destination: StudioTab) => {
@@ -657,6 +678,12 @@ export function Studio({
 
   const applyGuidedUpgrade = useCallback(
     (nextProject: StoreProjectV1) => {
+      if (immutableBase) {
+        setValidationError(
+          "La plantilla protegida sólo puede cambiarse mediante un upgrade explícito.",
+        );
+        return;
+      }
       void (async () => {
         try {
           await autosave.flush();
@@ -676,16 +703,20 @@ export function Studio({
         }
       })();
     },
-    [autosave, project, replaceProject],
+    [autosave, immutableBase, project, replaceProject],
   );
 
   const importFromExport = useCallback(
     async (imported: StoreProjectV1) => {
+      if (immutableBase) {
+        setValidationError("No se puede importar ni reemplazar la plantilla protegida.");
+        return;
+      }
       await autosave.flush();
       await onProjectImported(imported);
       setHistory(createHistory(imported));
     },
-    [autosave, onProjectImported],
+    [autosave, immutableBase, onProjectImported],
   );
 
   const selectTab = useCallback(
@@ -886,7 +917,7 @@ export function Studio({
                   onError={setValidationError}
                   onConflict={setConflict}
                   onSaved={handleDiskSaved}
-                  blocked={conflict !== null}
+                  blocked={conflict !== null || immutableBase}
                 />
               </Suspense>
             ) : (
@@ -941,7 +972,7 @@ export function Studio({
                 <IconButton
                   icon={ArrowUDownLeft}
                   label="Deshacer"
-                  disabled={history.past.length === 0}
+                  disabled={immutableBase || history.past.length === 0}
                   onClick={() => setHistory((current) => undo(current))}
                 />
               </Tooltip>
@@ -949,7 +980,7 @@ export function Studio({
                 <IconButton
                   icon={ArrowUDownRight}
                   label="Rehacer"
-                  disabled={history.future.length === 0}
+                  disabled={immutableBase || history.future.length === 0}
                   onClick={() => setHistory((current) => redo(current))}
                 />
               </Tooltip>
@@ -1008,6 +1039,14 @@ export function Studio({
           <output className="studio-notice" data-testid="ui-studio-notice">
             <span>{notice}</span>
             <IconButton icon={X} label="Cerrar aviso" onClick={() => setNotice("")} />
+          </output>
+        ) : null}
+        {immutableBase ? (
+          <output className="studio-notice" data-testid="ui-protected-template-notice">
+            <span>
+              Plantilla protegida: podés revisar y previsualizar la plantilla base, pero no
+              modificarla. Creá una tienda nueva para trabajar sobre una copia independiente.
+            </span>
           </output>
         ) : null}
 

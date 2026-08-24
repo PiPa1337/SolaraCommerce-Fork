@@ -470,7 +470,7 @@ test("tienda nueva (mode automatic): el enlace agregado en Resumen aparece en el
   await page.getByRole("button", { name: "Continuar", exact: true }).click();
   await page.getByRole("button", { name: "Continuar", exact: true }).click();
   await page.getByRole("button", { name: "Continuar", exact: true }).click();
-  await page.getByRole("button", { name: "Crear tienda vacía", exact: true }).click();
+  await page.getByRole("button", { name: "Crear tienda desde plantilla", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
     timeout: 30_000,
   });

@@ -33,6 +33,32 @@ Las secciones de páginas (`StoreSection`) guardan `moduleId`, `slot`, `settings
 y, cuando corresponde, movimiento declarado. El contenido persistido sólo
 contiene configuración; el HTML lo genera el registro de módulos.
 
+### Origen, plantilla y mutabilidad
+
+`origin` conserva la procedencia de una tienda sin cambiar `schemaVersion`:
+
+```json
+{
+  "templateId": "catalog-modern",
+  "templateVersion": 1,
+  "seed": "duplicate",
+  "role": "store",
+  "updatePolicy": "managed"
+}
+```
+
+`store-modo-sur-demo` es la plantilla visible y protegida. Su `role` es
+`base-template`, su política es `pinned` y sólo puede escribirse mediante
+`templates.commitUpgrade`, con `baseVersion`, backup, auditoría y confirmación.
+Las tiendas creadas desde Studio o `store.create` usan `seed: "duplicate"`,
+`role: "store"` y `updatePolicy: "managed"`. Los proyectos antiguos con una
+semilla distinta de `clean` siguen protegidos durante la compatibilidad.
+
+Un clon regenera IDs de productos, variantes, categorías, colecciones y assets;
+remapea todas sus referencias y copia los bytes, por lo que dos tiendas no
+comparten estado mutable. Los IDs de secciones se conservan como anclas de
+plantilla para upgrades tipados.
+
 ## Entidades principales
 
 ### Identidad, SEO y tema
@@ -161,6 +187,11 @@ fragmento sólo muestra las relaciones esenciales.
   valida `project` contra `StoreProjectV2Schema`.
 - No existe conversión automática desde un contrato comercial anterior. Toda
   futura versión debe agregar una migración explícita y pruebas de round-trip.
+
+Las migraciones de datos no son correcciones del renderer. Una migración
+registrada declara `migrationId`, `fromVersion`, `toVersion` y `scope`; es
+idempotente, compara contra el snapshot anterior de la plantilla, conserva
+personalizaciones y produce conflictos cuando no puede decidir con seguridad.
 
 ## Formato de transporte `.solara.json`
 

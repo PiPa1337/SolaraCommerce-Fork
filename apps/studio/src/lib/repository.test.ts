@@ -1,8 +1,13 @@
 import "fake-indexeddb/auto";
-import { getCategoryProductIds, StoreProjectV1Schema } from "@solara/project-schema";
+import {
+  getCategoryProductIds,
+  type StoreProjectV1,
+  StoreProjectV1Schema,
+} from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
 import { referenceStore } from "@solara/project-schema/fixture";
+import { isBaseTemplate } from "@solara/project-schema/project-policy";
 import Dexie from "dexie";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -54,12 +59,17 @@ import {
   removeRetiredDemoEditorialData,
   retireLegacyDemoProjects,
   SCALE_DEMO_PROJECT_ID,
-  saveProject,
+  saveProject as saveProjectToRepository,
   saveRecoveryDraft,
   setProjectArchived,
   shouldSeedRecoveryDraft,
   V1_DEMO_PROJECT_ID,
 } from "./repository";
+
+// Las fixtures protegidas se siembran sólo para probar migraciones explícitas;
+// el guard normal de saveProject sigue rechazando esas escrituras.
+const saveProject = (project: StoreProjectV1) =>
+  saveProjectToRepository(project, { allowProtectedWrite: isBaseTemplate(project) });
 
 describe("repositorio local", () => {
   beforeEach(async () => {
@@ -84,6 +94,12 @@ describe("repositorio local", () => {
     const records = await listProjects();
     expect(records).toHaveLength(1);
     expect(records[0]?.name).toBe(referenceStore.name);
+  });
+
+  it("rechaza guardar directamente la plantilla protegida", async () => {
+    await expect(saveProjectToRepository(buildScaleDemoProject())).rejects.toMatchObject({
+      code: "PROTECTED_STORE",
+    });
   });
 
   it("mantiene un borrador de recuperación separado del proyecto confirmado", async () => {
@@ -143,7 +159,11 @@ describe("repositorio local", () => {
     const duplicate = await duplicateProject(referenceStore.id);
 
     expect(duplicate.id).not.toBe(referenceStore.id);
-    expect(duplicate.products).toEqual(referenceStore.products);
+    expect(duplicate.products).toHaveLength(referenceStore.products.length);
+    expect(duplicate.products.map((product) => product.id)).not.toEqual(
+      referenceStore.products.map((product) => product.id),
+    );
+    expect(duplicate.origin?.seed).toBe("duplicate");
     expect(await getProject(referenceStore.id)).toEqual(referenceStore);
 
     await setProjectArchived(duplicate.id, true);
@@ -152,11 +172,13 @@ describe("repositorio local", () => {
     expect((await getProject(duplicate.id))?.status).toBe("active");
   });
 
-  it("crea una tienda nueva sin inventar un teléfono de WhatsApp", async () => {
+  it("crea una tienda nueva desde la plantilla sin inventar un teléfono de WhatsApp", async () => {
     const clean = await createProject({ name: "Tienda nueva" });
     expect(clean.whatsapp.phone).toBe("");
-    expect(clean.origin.seed).toBe("clean");
-    expect(clean.assets).toHaveLength(0);
+    expect(clean.origin?.seed).toBe("duplicate");
+    expect(clean.origin?.role).toBe("store");
+    expect(clean.products).toHaveLength(5);
+    expect(clean.assets.length).toBeGreaterThan(0);
 
     const configured = await createProject({
       name: "Tienda configurada",
@@ -244,7 +266,7 @@ describe("repositorio local", () => {
     expect(await getProject(referenceStore.id)).toEqual(referenceStore);
   });
 
-  it("regenera Predeterminado sin sobrescribir una base limpia anterior", async () => {
+  it("preserva Predeterminado y archiva la base limpia anterior", async () => {
     const legacyClean = {
       ...structuredClone(catalogModernCleanStore),
       id: "store-catalog-modern-clean-default" as typeof catalogModernCleanStore.id,
@@ -270,13 +292,13 @@ describe("repositorio local", () => {
     await saveProject(legacyDemo);
 
     expect(await ensureScaleDemoProject()).toBe(false);
-    expect((await getProject(legacyDemo.id))?.name).toBe("Predeterminado");
-    expect((await getProject(legacyDemo.id))?.identity.brandName).toBe("Predeterminado");
+    expect((await getProject(legacyDemo.id))?.name).toBe("Demo Modo Sur, catálogo moderno");
+    expect((await getProject(legacyDemo.id))?.identity.brandName).toBe("Modo Sur");
     expect((await getProject(legacyClean.id))?.status).toBe("archived");
     expect((await getProject(legacyClean.id))?.name).toBe("Base limpia anterior");
   });
 
-  it("actualiza la presentacion V2 de Predeterminado sin tocar su catalogo", async () => {
+  it("no actualiza silenciosamente la presentación V2 de Predeterminado", async () => {
     const staleDemo = StoreProjectV1Schema.parse({
       ...structuredClone(catalogModernStore),
       id: SCALE_DEMO_PROJECT_ID,
@@ -290,12 +312,12 @@ describe("repositorio local", () => {
 
     expect(await ensureScaleDemoProject()).toBe(false);
     const repaired = await getProject(SCALE_DEMO_PROJECT_ID);
-    expect(repaired?.commerceTemplates.designFamily).toBe("catalog-modern-v2");
-    expect(repaired?.theme.container).toBe(1760);
+    expect(repaired?.commerceTemplates.designFamily).toBe("catalog-modern-v1");
+    expect(repaired?.theme.container).not.toBe(1760);
     expect(repaired?.products[0]?.title).toBe("Nombre personalizado");
   });
 
-  it("retira páginas editoriales y fotos residuales del demo reservado", async () => {
+  it("no retira páginas editoriales ni fotos de la plantilla durante el arranque", async () => {
     const staleDemo = StoreProjectV1Schema.parse({
       ...structuredClone(buildScaleDemoProject()),
       pages: structuredClone(catalogModernStore.pages),
@@ -320,9 +342,13 @@ describe("repositorio local", () => {
     expect(await ensureScaleDemoProject()).toBe(false);
 
     const cleaned = await getProject(SCALE_DEMO_PROJECT_ID);
-    expect(cleaned?.pages.map((page) => page.kind)).toEqual(["home"]);
-    expect(cleaned?.assets.map((asset) => asset.id)).toEqual(["asset-hero"]);
-    expect(await getCachedAsset("remote-unsplash-about-hero")).toBeUndefined();
+    expect(cleaned?.pages.map((page) => page.kind)).toEqual(
+      staleDemo.pages.map((page) => page.kind),
+    );
+    expect(cleaned?.assets.map((asset) => asset.id)).toEqual(
+      expect.arrayContaining(staleDemo.assets.map((asset) => asset.id)),
+    );
+    expect(await getCachedAsset("remote-unsplash-about-hero")).toBeDefined();
   });
 
   it("construye Predeterminado directamente con Editorial V2", () => {
@@ -344,6 +370,12 @@ describe("repositorio local", () => {
     const stale = StoreProjectV1Schema.parse({
       ...structuredClone(catalogModernStore),
       id: "store-stale-categories",
+      origin: {
+        ...catalogModernStore.origin,
+        seed: "duplicate" as const,
+        role: "store" as const,
+        updatePolicy: "managed" as const,
+      },
       categories: [
         ...structuredClone(catalogModernStore.categories),
         {
@@ -420,10 +452,10 @@ describe("repositorio local", () => {
     await saveProject(staleDemo);
     await saveProject(referenceStore);
 
-    expect(await ensureCatalogModernDemoReviews()).toBe(true);
+    expect(await ensureCatalogModernDemoReviews({ allowProtectedWrite: true })).toBe(true);
     expect((await getProject(staleDemo.id))?.products[0]?.reviews).toHaveLength(6);
     expect(await getProject(referenceStore.id)).toEqual(referenceStore);
-    expect(await ensureCatalogModernDemoReviews()).toBe(false);
+    expect(await ensureCatalogModernDemoReviews({ allowProtectedWrite: true })).toBe(false);
   });
 
   it("amplía la galería del demo sin reescribir imágenes personalizadas", async () => {
@@ -437,12 +469,12 @@ describe("repositorio local", () => {
     await saveProject(staleDemo);
     await saveProject(referenceStore);
 
-    expect(await ensureCatalogModernDemoGallery()).toBe(true);
+    expect(await ensureCatalogModernDemoGallery({ allowProtectedWrite: true })).toBe(true);
     const expanded = await getProject(staleDemo.id);
     expect(expanded?.products[0]?.imageIds).toHaveLength(3);
     expect(expanded?.products[0]?.imageIds[0]).toBe(staleDemo.products[0]?.imageIds[0]);
     expect(await getProject(referenceStore.id)).toEqual(referenceStore);
-    expect(await ensureCatalogModernDemoGallery()).toBe(false);
+    expect(await ensureCatalogModernDemoGallery({ allowProtectedWrite: true })).toBe(false);
   });
 
   it("amplía las reseñas visibles del demo a doce sin tocar otras tiendas", async () => {
@@ -466,14 +498,14 @@ describe("repositorio local", () => {
     await saveProject(staleDemo);
     await saveProject(referenceStore);
 
-    expect(await ensureCatalogModernDemoTestimonials()).toBe(true);
+    expect(await ensureCatalogModernDemoTestimonials({ allowProtectedWrite: true })).toBe(true);
     const expanded = await getProject(staleDemo.id);
     const testimonials = expanded?.sections.find(
       (section) => section.moduleId === "catalog-testimonials",
     );
     expect(testimonials?.settings.items).toHaveLength(12);
     expect(await getProject(referenceStore.id)).toEqual(referenceStore);
-    expect(await ensureCatalogModernDemoTestimonials()).toBe(false);
+    expect(await ensureCatalogModernDemoTestimonials({ allowProtectedWrite: true })).toBe(false);
   });
 
   it("reordena el demo para que el bento siga a la franja de marcas", async () => {
@@ -484,7 +516,7 @@ describe("repositorio local", () => {
     });
     await saveProject(staleDemo);
 
-    expect(await ensureDemoSectionOrder()).toBe(true);
+    expect(await ensureDemoSectionOrder({ allowProtectedWrite: true })).toBe(true);
     const reordered = await getProject(SCALE_DEMO_PROJECT_ID);
     const moduleIds = reordered?.sections.map((section) => section.moduleId) ?? [];
     const brandIndex = moduleIds.indexOf("catalog-brand-strip");
@@ -497,7 +529,7 @@ describe("repositorio local", () => {
     expect(reordered?.sections.map((section) => section.id).sort()).toEqual(
       staleDemo.sections.map((section) => section.id).sort(),
     );
-    expect(await ensureDemoSectionOrder()).toBe(false);
+    expect(await ensureDemoSectionOrder({ allowProtectedWrite: true })).toBe(false);
   });
 
   it("no reordena el demo si el bento ya sigue a la franja de marcas", async () => {

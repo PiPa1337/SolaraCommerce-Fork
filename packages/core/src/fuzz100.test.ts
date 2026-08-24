@@ -38,7 +38,7 @@ describe("fuzz100", () => {
   it(
     "40 seeds x 200 ops",
     { timeout: 180000 },
-    () => {
+    async () => {
       // 100 -> 40 seeds: mismo motivo que los otros fuzz (presupuesto RPC
       // bajo carga paralela del gate diario). Mantiene cobertura multi-seed.
       for (let seed = 0; seed < 40; seed++) {
@@ -127,8 +127,11 @@ describe("fuzz100", () => {
           }
         }
         checkInvariants(project, `seed ${seed} final`);
+        // Ceder al event loop evita que el worker RPC de Vitest parezca
+        // bloqueado durante la batería multi-seed bajo carga paralela.
+        await new Promise<void>((resolve) => setImmediate(resolve));
       }
     },
-    60000,
+    180000,
   );
 });

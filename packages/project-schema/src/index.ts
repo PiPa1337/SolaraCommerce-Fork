@@ -411,6 +411,11 @@ export const ProjectOriginSchema = z
     templateId: z.literal("catalog-modern"),
     templateVersion: z.number().int().positive(),
     seed: z.enum(["clean", "demo", "duplicate", "placeholder"]),
+    // Los dos campos son opcionales para aceptar respaldos V2 anteriores. La
+    // política de mutabilidad aplica una compatibilidad explícita para esos
+    // respaldos antes de permitir una escritura.
+    role: z.enum(["base-template", "store"]).optional(),
+    updatePolicy: z.enum(["managed", "pinned"]).optional(),
   })
   .optional();
 

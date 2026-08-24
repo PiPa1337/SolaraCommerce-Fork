@@ -65,10 +65,11 @@ Una respuesta fallida conserva un código accionable:
 
 No parsear texto humano del proceso. `stdout` es protocol-only.
 
-## Crear una tienda limpia
+## Crear una tienda desde Predeterminado
 
-Una tienda nueva debe comenzar con `store.create`. La plantilla usa
-`seed: "clean"`: no copia productos ni categorías de Predeterminado.
+Una tienda nueva debe comenzar con `store.create` y usar explícitamente la
+fuente `base-template`. El flujo normal clona Predeterminado y genera IDs,
+referencias y assets independientes; no modifica la plantilla.
 
 ```json
 {
@@ -77,7 +78,7 @@ Una tienda nueva debe comenzar con `store.create`. La plantilla usa
   "params": {
     "idempotencyKey": "crear-lunaria-2026-01",
     "operations": [
-      {"type":"store.create","storeId":"store-lunaria","name":"Lunaria Cerámica","brandName":"Lunaria","slug":"lunaria-ceramica","email":"hola@lunaria.example","phone":"5491122334455"},
+      {"type":"store.create","storeId":"store-lunaria","name":"Lunaria Cerámica","brandName":"Lunaria","slug":"lunaria-ceramica","email":"hola@lunaria.example","phone":"5491122334455","source":{"kind":"base-template","templateId":"catalog-modern"}},
       {"type":"category.create","categoryId":"category-tazas","slug":"tazas","title":"Tazas","description":"Piezas para todos los días."},
       {"type":"product.create","productId":"product-taza-luna","slug":"taza-luna","title":"Taza Luna","description":"Taza esmaltada hecha a mano.","priceCents":185000,"sku":"LUN-TZA-001","categoryIds":["category-tazas"],"tags":["cerámica","hecho a mano"]}
     ]
@@ -102,6 +103,15 @@ La respuesta de `plans.create` contiene un diff acotado por IDs y grupos
 snapshot completo sólo se puede pedir explícitamente con `plans.get` y
 `includeProject: true`; no enviar catálogos completos a la IA por defecto.
 
+La respuesta incluye también `blockingIssues`: los errores críticos que la
+auditoría del exporter detecta sobre el proyecto planificado (por ejemplo, un
+producto sin imagen). Revisarlos antes de commitear evita ciclos de
+plan→commit→error→replan; el commit no se bloquea automáticamente porque
+algunos errores pueden resolverse en otro plan posterior.
+
+El origen técnico `{"kind":"clean"}` existe para fixtures o migraciones
+controladas, pero no es la opción normal de Studio ni del canal nativo.
+
 ## Tienda existente y protección
 
 Las tiendas existentes requieren `storeId` y `baseVersion`:
@@ -110,20 +120,61 @@ Las tiendas existentes requieren `storeId` y `baseVersion`:
 {"method":"plans.create","params":{"storeId":"store-lunaria","baseVersion":3,"operations":[{"type":"store.updateIdentity","changes":{"description":"Objetos cerámicos para rituales cotidianos."}},{"type":"product.setStatus","productId":"product-taza-luna","status":"active"}]}}
 ```
 
-Predeterminado y cualquier proyecto cuyo origen no sea `seed: "clean"` queda
-protegido por defecto. Se puede leer, pero intentar modificarlo devuelve
-`PROTECTED_STORE`. Para trabajar sobre una referencia, crear otra tienda y
-mantener intacto el proyecto original.
+Predeterminado tiene `origin.role: "base-template"` y `updatePolicy: "pinned"`.
+Se puede leer, previsualizar, exportar, auditar y clonar, pero intentar editar,
+guardar, importar, archivar o borrar devuelve `PROTECTED_STORE`. Los proyectos
+antiguos cuyo origen no era `clean` siguen protegidos por compatibilidad. Para
+trabajar sobre una referencia, crear otra tienda y mantener intacto el proyecto
+original.
 
 ## Operaciones permitidas
 
 El conjunto es cerrado: `store.create`, `store.updateIdentity`,
 `store.updateSeo`, `category.create`, `collection.create`, `product.create`,
-`product.update`, `product.setStatus` y `asset.attach`.
+`product.update`, `product.setStatus`, `store.archive`, `section.updateSettings`
+y `asset.attach`.
+
+Los valores válidos de `product.setStatus` son `active`, `hidden` y
+`archived`; no existe un estado `draft`. Para ocultar un producto del sitio
+público sin archivarlo, usar `hidden`.
+
+### Archivar y restaurar tiendas
+
+`store.archive` es una operación de plan que marca la tienda como
+`archived`: deja de aparecer en el dashboard como activa, conserva el
+respaldo completo en disco y puede restaurarse con el método
+`stores.restore`. Requiere confirmación literal `"ARCHIVAR_TIENDA"`:
+
+```json
+{"method":"plans.create","params":{"storeId":"store-lunaria","baseVersion":3,"operations":[{"type":"store.archive","confirmation":"ARCHIVAR_TIENDA"}]}}
+```
+
+Después de commitear el plan, restaurar con:
+
+```json
+{"id":40,"method":"stores.restore","params":{"storeId":"store-lunaria"}}
+```
+
+La plantilla protegida Predeterminado no se puede archivar ni restaurar por
+este canal. Los planes activos sobre una tienda archivada deben descartarse o
+expirar antes de llamar `stores.restore`.
 
 No existen `project.patch`, `file.write`, `html.inject`, `javascript.inject`,
-`eval`, comandos shell ni mutaciones de componentes arbitrarios. El renderer y
-la salida pública siguen perteneciendo a la aplicación.
+`eval` ni comandos shell. El renderer y la salida pública siguen perteneciendo
+a la aplicación.
+
+### Personalizar secciones
+
+`section.updateSettings` permite modificar parcialmente los settings de una
+sección existente (por ejemplo, cambiar la imagen de portada del hero):
+
+```json
+{"type":"section.updateSettings","sectionId":"modo-section-hero","settings":{"posterAssetId":"ASSET_ID"}}
+```
+
+El merge es superficial: los settings no incluidos conservan su valor. Los
+IDs válidos dependen del template; usar `plans.get` con `includeProject: true`
+para inspeccionarlos antes de commitear.
 
 ## Imágenes
 
@@ -141,7 +192,7 @@ usar el upload por chunks:
 {"method":"assets.stage","params":{"name":"hero.webp","mimeType":"image/webp","source":{"kind":"inbox","filename":"hero.webp"}}}
 ```
 
-El host valida tamaño, firma binaria, MIME, SHA-256 y dimensiones reales de PNG,
+El host valida tamaño, firma binaria, MIME, SHA-256 y dimensiones reales (mínimo 32×32 px) de PNG,
 JPEG, WebP o GIF. Staging no modifica una tienda. La respuesta devuelve
 `assetId`; usarlo en el mismo plan:
 
@@ -177,6 +228,35 @@ El flujo por chunks es:
 La persistencia final conserva envelope `.solara.json`, SHA-256, manifest,
 versiones, planes, jobs, auditoría, locks por tienda y rename atómico. El agente nunca escribe
 directamente dentro de `proyectos/`, `actual/`, `respaldos/` o `sitios/`.
+
+## Upgrades de plantilla y rollouts
+
+Los upgrades de `Predeterminado` no usan `plans.create` ni `plans.commit`.
+Requieren scopes `template:read` y `template:write`, preview, `baseVersion` y
+la confirmación literal `ACTUALIZAR_PLANTILLA`:
+
+```json
+{"id":10,"method":"templates.get","params":{}}
+{"id":11,"method":"templates.previewUpgrade","params":{"baseVersion":1}}
+{"id":12,"method":"templates.commitUpgrade","params":{"previewId":"PREVIEW_ID","baseVersion":1,"confirmation":"ACTUALIZAR_PLANTILLA","idempotencyKey":"template-upgrade-2026-08-23"}}
+```
+
+Para un bug de CSS o renderer usar `site-rebuild`; no migrar datos. Para un
+cambio persistido usar `project-migration` y revisar conflictos por tienda:
+
+```json
+{"id":20,"method":"rollouts.preview","params":{"kind":"site-rebuild","target":{"status":"active","excludeProtected":true}}}
+{"id":21,"method":"rollouts.commit","params":{"previewId":"ROLLOUT_PREVIEW_ID","async":true,"idempotencyKey":"rebuild-renderer-v2-2026-08-23"}}
+{"id":22,"method":"rollouts.get","params":{"rolloutId":"ROLLOUT_PREVIEW_ID"}}
+{"id":23,"method":"rollouts.rollback","params":{"rolloutId":"ROLLOUT_PREVIEW_ID","storeId":"store-lunaria","expectedVersion":3}}
+```
+
+Los rollouts son jobs durables. Por defecto incluyen tiendas activas no
+protegidas, continúan aunque una tienda falle y no sobrescriben una versión que
+cambió después del preview: el resultado es `VERSION_CONFLICT`. Cada tienda
+queda como `aplicada`, `omitida`, `conflicto` o `fallida`; el rollback es
+individual y condicionado a la versión esperada. Consultar `audit.list` para la
+evidencia y no repetir una operación sin `idempotencyKey` estable.
 
 ## Disciplina de una IA autónoma
 

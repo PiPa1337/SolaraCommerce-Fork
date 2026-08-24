@@ -89,6 +89,14 @@ try {
   if (!protocol.methods.includes("jobs.get") || !protocol.methods.includes("assets.upload.chunk"))
     throw new Error("protocol.describe no documentó jobs y uploads por chunks.");
   const before = assertOk(await send(12, "stores.list"));
+  const protectedCandidate = (before.projects ?? []).find(
+    (item) => item.projectId === "store-modo-sur-demo",
+  );
+  const protectedBefore = protectedCandidate
+    ? assertOk(
+        await send(11, "stores.get", { storeId: protectedCandidate.projectId, include: "catalog" }),
+      )
+    : undefined;
   const plan = assertOk(
     await send(3, "plans.create", {
       idempotencyKey: `portable-agent-${storeId}`,
@@ -137,14 +145,25 @@ try {
   const receipt = jobView.result;
   if (receipt.storeId !== storeId) throw new Error("El commit no devolvió el storeId solicitado.");
   const after = assertOk(await send(8, "stores.get", { storeId, include: "catalog" }));
-  if (after.counts.products !== 1 || after.counts.categories !== 1)
-    throw new Error("El catálogo creado por agente no quedó persistido.");
+  if (after.counts.products < 1 || after.counts.categories < 1)
+    throw new Error("El catálogo clonado y creado por agente no quedó persistido.");
+  if (!after.catalog.products.some((product) => product.id === "product-agent-e2e"))
+    throw new Error("El producto creado por agente no quedó persistido.");
+  if (!after.catalog.categories.some((category) => category.id === "category-agent-e2e"))
+    throw new Error("La categoría creada por agente no quedó persistida.");
+  if (protectedBefore) {
+    const baseProductIds = new Set(protectedBefore.catalog.products.map((product) => product.id));
+    const baseCategoryIds = new Set(
+      protectedBefore.catalog.categories.map((category) => category.id),
+    );
+    if (after.catalog.products.some((product) => baseProductIds.has(product.id)))
+      throw new Error("La tienda creada por agente compartió IDs de productos con la plantilla.");
+    if (after.catalog.categories.some((category) => baseCategoryIds.has(category.id)))
+      throw new Error("La tienda creada por agente compartió IDs de categorías con la plantilla.");
+  }
   if (after.protected !== false)
     throw new Error("La tienda nueva quedó protegida inesperadamente.");
 
-  const protectedCandidate = (before.projects ?? []).find(
-    (item) => item.projectId === "store-modo-sur-demo",
-  );
   if (protectedCandidate) {
     const protectedStore = assertOk(
       await send(9, "stores.get", { storeId: protectedCandidate.projectId, include: "summary" }),
@@ -158,6 +177,14 @@ try {
     });
     if (response.ok || response.error?.code !== "PROTECTED_STORE")
       throw new Error("La tienda demo aceptó una mutación del agente.");
+    const protectedAfter = assertOk(
+      await send(14, "stores.get", { storeId: protectedCandidate.projectId, include: "catalog" }),
+    );
+    if (
+      protectedAfter.version !== protectedBefore?.version ||
+      JSON.stringify(protectedAfter.catalog) !== JSON.stringify(protectedBefore?.catalog)
+    )
+      throw new Error("La plantilla cambió durante la creación de la tienda del agente.");
   }
   const audit = assertOk(await send(13, "audit.list", { limit: 20 }));
   if (

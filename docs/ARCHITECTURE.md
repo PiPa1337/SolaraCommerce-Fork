@@ -137,6 +137,24 @@ draft mantiene `noindex` y permite revisar.
 
 `renderPreviewHtml` usa las mismas páginas y módulos con un transporte especial de
 assets para el iframe. No debe crearse un renderer alternativo dentro de Studio.
+Cada sitio guarda `rendererFingerprint` en su metadata. Un cambio de CSS, módulo o
+renderer no muta proyectos: se aplica con `rollouts.preview/commit` de tipo
+`site-rebuild`, que reconstruye sitios no protegidos, conserva el proyecto y
+mantiene el sitio anterior para rollback.
+
+### Protección, clones y rollouts
+
+`packages/project-schema/src/project-policy.ts` es la política central de origen
+y mutabilidad. Studio, `@solara/agent-control` y el storage local rechazan toda
+escritura normal sobre la plantilla. `cloneProjectFromTemplate` crea snapshots
+independientes y remapea referencias internas.
+
+Los upgrades de la plantilla y las migraciones persistidas son flujos separados:
+primero generan diff, luego exigen la versión base y confirmación, crean backup y
+publican de forma atómica. `rollouts` persiste previews, jobs, locks cooperativos,
+resultados por tienda y auditoría en `.solara-runtime/agent/rollouts`. Una tienda
+conflictiva o fallida no detiene las demás; rollback exige que no haya cambiado la
+versión esperada.
 
 ### `packages/storefront-runtime`
 

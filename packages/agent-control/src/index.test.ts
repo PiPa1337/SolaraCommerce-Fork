@@ -1,15 +1,78 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createLocalProjectStorage } from "../../exporter/scripts/local-project-storage.mjs";
-import { readProjectArchive } from "../../exporter/src/index";
+import { createProjectArchive, readProjectArchive } from "../../exporter/src/index";
+import { buildCatalogModernProject } from "../../project-schema/src/catalog-modern-template";
+import { StoreProjectV2Schema } from "../../project-schema/src/index";
 import { createAgentController } from "./index";
 
-const onePixelPng =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+const validPng =
+  "iVBORw0KGgoAAAAASUhEUgAAAGQAAABkCAYAAABw4pVUAAAAAElEQVR4nO3RMQ0AIBDAwJeD/yAMByCDDjfc3qRz9rp0zO8ADEkzJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJOYBf9ogFAWt/vEAAAAASUVORK5CYII=";
 
 describe("control nativo del agente", () => {
+  it("crea el clon por defecto desde la plantilla y rechaza editarla", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-agent-template-"));
+    try {
+      const storage = createLocalProjectStorage({
+        applicationRoot: root,
+        projectsRoot: join(root, "proyectos"),
+        stagingRoot: join(root, ".solara-runtime", "transactions"),
+      });
+      const template = buildCatalogModernProject({
+        seed: "placeholder",
+        id: "store-modo-sur-demo",
+        name: "Predeterminado",
+        slug: "predeterminado",
+      });
+      const seed = await storage.beginSave({
+        projectId: template.id,
+        name: template.name,
+        slug: template.slug,
+        projectUpdatedAt: template.updatedAt,
+        expectedVersion: null,
+        actor: { kind: "template-upgrade", id: "test-template-seed" },
+        allowProtectedWrite: true,
+      });
+      await storage.upload(
+        seed.transactionId,
+        "project",
+        (async function* () {
+          yield new TextEncoder().encode(createProjectArchive(template));
+        })(),
+      );
+      await storage.commit(seed.transactionId);
+
+      const controller = createAgentController({ storage, applicationRoot: root });
+      const plan = await controller.createPlan({
+        operations: [
+          {
+            type: "store.create",
+            storeId: "store-clon-agent",
+            name: "Clon agente",
+            slug: "clon-agente",
+          },
+        ],
+      });
+      const planned = await controller.getPlan({ planId: plan.planId, includeProject: true });
+      expect(planned.project?.origin).toMatchObject({ seed: "duplicate", role: "store" });
+      expect(planned.project?.id).toBe("store-clon-agent");
+      expect(planned.project?.products.map((product) => product.id)).not.toEqual(
+        template.products.map((product) => product.id),
+      );
+      await expect(
+        controller.createPlan({
+          storeId: template.id,
+          baseVersion: 1,
+          operations: [{ type: "store.updateIdentity", changes: { description: "No" } }],
+        }),
+      ).rejects.toMatchObject({ code: "PROTECTED_STORE" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("crea, stagea, adjunta y publica una tienda sin copiar el demo", async () => {
     const root = await mkdtemp(join(tmpdir(), "solara-agent-control-"));
     try {
@@ -23,7 +86,7 @@ describe("control nativo del agente", () => {
         name: "taza.png",
         alt: "Taza",
         mimeType: "image/png",
-        source: { kind: "base64", data: onePixelPng },
+        source: { kind: "base64", data: validPng },
       });
       const plan = await controller.createPlan({
         idempotencyKey: "agent-test-create-001",
@@ -33,6 +96,7 @@ describe("control nativo del agente", () => {
             storeId: "store-agent-test",
             name: "Tienda de prueba",
             slug: "tienda-prueba",
+            source: { kind: "clean" },
           },
           {
             type: "product.create",
@@ -80,18 +144,24 @@ describe("control nativo del agente", () => {
         name: "marca.png",
         alt: "Marca",
         mimeType: "image/png",
-        expectedBytes: Buffer.from(onePixelPng, "base64").byteLength,
+        expectedBytes: Buffer.from(validPng, "base64").byteLength,
       });
       await first.uploadAssetChunk({
         uploadId: upload.uploadId,
         sequence: 0,
-        data: onePixelPng,
+        data: validPng,
       });
       const staged = await first.finishAssetUpload({ uploadId: upload.uploadId });
       const plan = await first.createPlan({
         idempotencyKey: "durable-agent-plan-001",
         operations: [
-          { type: "store.create", storeId: "store-durable", name: "Durable", slug: "durable" },
+          {
+            type: "store.create",
+            storeId: "store-durable",
+            name: "Durable",
+            slug: "durable",
+            source: { kind: "clean" },
+          },
           {
             type: "product.create",
             productId: "product-durable",
@@ -165,5 +235,385 @@ describe("control nativo del agente", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  }, 15000);
+
+  it("excluye la plantilla de site-rebuild y permite rollback; migra tiendas por separado", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-agent-rollout-"));
+    try {
+      const storage = createLocalProjectStorage({
+        applicationRoot: root,
+        projectsRoot: join(root, "proyectos"),
+        stagingRoot: join(root, ".solara-runtime", "transactions"),
+      });
+      const template = buildCatalogModernProject({
+        seed: "placeholder",
+        id: "store-modo-sur-demo",
+        name: "Predeterminado",
+        slug: "predeterminado",
+      });
+      const seed = await storage.beginSave({
+        projectId: template.id,
+        name: template.name,
+        slug: template.slug,
+        projectUpdatedAt: template.updatedAt,
+        expectedVersion: null,
+        actor: { kind: "template-upgrade", id: "rollout-template-seed" },
+        allowProtectedWrite: true,
+      });
+      await storage.upload(
+        seed.transactionId,
+        "project",
+        (async function* () {
+          yield new TextEncoder().encode(createProjectArchive(template));
+        })(),
+      );
+      await storage.commit(seed.transactionId);
+
+      const controller = createAgentController({ storage, applicationRoot: root });
+      const clonePlan = await controller.createPlan({
+        operations: [
+          {
+            type: "store.create",
+            storeId: "store-rollout-clone",
+            name: "Clon rollout",
+            slug: "clon-rollout",
+          },
+        ],
+      });
+      await controller.commitPlan({ planId: clonePlan.planId });
+
+      const sitePreview = await controller.previewRollout({ kind: "site-rebuild" });
+      expect(sitePreview.stores.find((store) => store.storeId === template.id)).toMatchObject({
+        status: "skipped",
+        reason: "protected",
+      });
+      expect(
+        sitePreview.stores.find((store) => store.storeId === "store-rollout-clone"),
+      ).toMatchObject({ status: "ready" });
+      const siteJob = await controller.commitRollout({
+        previewId: sitePreview.previewId,
+        idempotencyKey: "rollout-site-rebuild-001",
+        async: false,
+      });
+      expect(siteJob.status).toBe("succeeded");
+      const siteResult = siteJob.result.results.find(
+        (result: { storeId: string }) => result.storeId === "store-rollout-clone",
+      );
+      expect(siteResult).toMatchObject({ status: "applied" });
+      expect(siteResult.site.previousSite).not.toBeNull();
+      await expect(
+        controller.rollbackRollout({
+          rolloutId: sitePreview.previewId,
+          storeId: "store-rollout-clone",
+          expectedVersion: 1,
+        }),
+      ).resolves.toMatchObject({ version: 1, status: "synced" });
+      expect(
+        Number(
+          (
+            (await storage.readCurrent(template.id))?.manifest as {
+              current?: { version?: number };
+            }
+          )?.current?.version,
+        ),
+      ).toBe(1);
+
+      const migrationSource = buildCatalogModernProject({ seed: "demo" });
+      const stale = StoreProjectV2Schema.parse({
+        ...migrationSource,
+        id: "store-rollout-migration",
+        name: "Migrable",
+        slug: "migrable",
+        baseUrl: "https://migrable.example",
+        navigation: {
+          ...migrationSource.navigation,
+          catalogLabel: "Colecciones",
+        },
+        origin: {
+          ...migrationSource.origin,
+          seed: "duplicate",
+          role: "store",
+          updatePolicy: "managed",
+          templateVersion: 1,
+        },
+      });
+      const staleSeed = await storage.beginSave({
+        projectId: stale.id,
+        name: stale.name,
+        slug: stale.slug,
+        projectUpdatedAt: stale.updatedAt,
+        expectedVersion: null,
+        actor: { kind: "rollout", id: "migration-seed" },
+      });
+      await storage.upload(
+        staleSeed.transactionId,
+        "project",
+        (async function* () {
+          yield new TextEncoder().encode(createProjectArchive(stale));
+        })(),
+      );
+      await storage.commit(staleSeed.transactionId);
+
+      const migrationPreview = await controller.previewRollout({
+        kind: "project-migration",
+        target: { storeIds: [stale.id], status: "active", excludeProtected: true },
+      });
+      expect(migrationPreview.stores).toHaveLength(1);
+      expect(migrationPreview.stores[0]).toMatchObject({ status: "ready" });
+      const migrationJob = await controller.commitRollout({
+        previewId: migrationPreview.previewId,
+        idempotencyKey: "rollout-project-migration-001",
+        async: false,
+      });
+      const migrationResult = migrationJob.result.results[0];
+      expect(migrationResult).toMatchObject({ status: "applied" });
+      const migrated = readProjectArchive(
+        Buffer.from((await storage.readCurrent(stale.id))?.bytes ?? "").toString("utf8"),
+      );
+      expect(migrated.navigation.catalogLabel).toBe("Categorías");
+      expect(migrated.origin?.templateVersion).not.toBe(1);
+      await expect(
+        controller.rollbackRollout({
+          rolloutId: migrationPreview.previewId,
+          storeId: stale.id,
+          expectedVersion: migrationResult.result.version,
+        }),
+      ).resolves.toMatchObject({ status: "synced" });
+      const restored = readProjectArchive(
+        Buffer.from((await storage.readCurrent(stale.id))?.bytes ?? "").toString("utf8"),
+      );
+      expect(restored.navigation.catalogLabel).toBe("Colecciones");
+      expect(restored.origin?.templateVersion).toBe(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it(
+    "archiva y restaura una tienda con store.archive y stores.restore",
+    { timeout: 20000 },
+    async () => {
+      const root = await mkdtemp(join(tmpdir(), "solara-agent-archive-"));
+      try {
+        const storage = createLocalProjectStorage({
+          applicationRoot: root,
+          projectsRoot: join(root, "proyectos"),
+          stagingRoot: join(root, ".solara-runtime", "transactions"),
+        });
+        const controller = createAgentController({ storage, applicationRoot: root });
+        const plan = await controller.createPlan({
+          idempotencyKey: "archive-store-test-001",
+          operations: [
+            {
+              type: "store.create",
+              storeId: "store-archivo",
+              name: "Archivo",
+              slug: "archivo",
+              source: { kind: "clean" },
+            },
+            {
+              type: "product.create",
+              productId: "product-a",
+              slug: "a",
+              title: "A",
+              priceCents: 100,
+            },
+          ],
+        });
+        await controller.commitPlan({
+          planId: plan.planId,
+          idempotencyKey: "archive-store-test-001",
+        });
+
+        // Verificar que la tienda existe antes de archivar.
+        const before = await controller.getStore({ storeId: "store-archivo" });
+        expect(before.status).toBe("active");
+
+        // Archivar mediante un plan de actualización.
+        const archivePlan = await controller.createPlan({
+          storeId: "store-archivo",
+          baseVersion: 1,
+          operations: [{ type: "store.archive", confirmation: "ARCHIVAR_TIENDA" }],
+        });
+        const archiveReceipt = await controller.commitPlan({ planId: archivePlan.planId });
+        expect(archiveReceipt.status).toBeDefined();
+
+        const archived = await controller.getStore({ storeId: "store-archivo" });
+        expect(archived.status).toBe("archived");
+
+        // Restaurar.
+        const restoreResult = await controller.restoreStore({ storeId: "store-archivo" });
+        expect(restoreResult.storeId).toBe("store-archivo");
+        expect(restoreResult.status).toBe("synced");
+
+        const restored = await controller.getStore({ storeId: "store-archivo" });
+        expect(restored.status).toBe("active");
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it("reanuda un rollout durable después de reiniciar el controlador", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-agent-resume-"));
+    try {
+      const storage = createLocalProjectStorage({
+        applicationRoot: root,
+        projectsRoot: join(root, "proyectos"),
+        stagingRoot: join(root, ".solara-runtime", "transactions"),
+      });
+      const first = createAgentController({ storage, applicationRoot: root });
+      const plan = await first.createPlan({
+        operations: [
+          {
+            type: "store.create",
+            storeId: "store-resumable-rollout",
+            name: "Rollout reanudable",
+            slug: "rollout-reanudable",
+            source: { kind: "clean" },
+          },
+        ],
+      });
+      await first.commitPlan({ planId: plan.planId });
+      const preview = await first.previewRollout({ kind: "site-rebuild" });
+      const jobPath = join(root, ".solara-runtime", "agent", "jobs", "job-restart.json");
+      await writeFile(
+        jobPath,
+        `${JSON.stringify(
+          {
+            jobId: "job-restart",
+            kind: "rollout",
+            rolloutId: preview.previewId,
+            idempotencyKey: "resume-rollout-001",
+            status: "running",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          null,
+          2,
+        )}\n`,
+        "utf8",
+      );
+
+      const recovered = createAgentController({ storage, applicationRoot: root });
+      let finalJob: { status?: string } | undefined;
+      for (let attempt = 0; attempt < 40; attempt += 1) {
+        const result = await recovered.getRollout({ rolloutId: preview.previewId });
+        finalJob = result.job as { status?: string } | undefined;
+        if (finalJob?.status === "succeeded") break;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      expect(finalJob?.status).toBe("succeeded");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
+
+  it("reporta blockingIssues en plans.create para productos sin imagen", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-agent-blocking-"));
+    try {
+      const storage = createLocalProjectStorage({
+        applicationRoot: root,
+        projectsRoot: join(root, "proyectos"),
+        stagingRoot: join(root, ".solara-runtime", "transactions"),
+      });
+      const controller = createAgentController({ storage, applicationRoot: root });
+      const plan = await controller.createPlan({
+        operations: [
+          {
+            type: "store.create",
+            storeId: "store-sin-imagen",
+            name: "Sin imagen",
+            slug: "sin-imagen",
+            source: { kind: "clean" },
+          },
+          {
+            type: "product.create",
+            productId: "product-b",
+            slug: "b",
+            title: "B",
+            priceCents: 100,
+          },
+        ],
+      });
+      expect(plan.blockingIssues).toBeDefined();
+      expect(Array.isArray(plan.blockingIssues)).toBe(true);
+      expect(plan.blockingIssues.some((issue) => issue.code === "product.image")).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it(
+    "actualiza settings de una sección y acepta assets stageados en sesión previa",
+    { timeout: 20000 },
+    async () => {
+      const root = await mkdtemp(join(tmpdir(), "solara-agent-section-"));
+      try {
+        const storage = createLocalProjectStorage({
+          applicationRoot: root,
+          projectsRoot: join(root, "proyectos"),
+          stagingRoot: join(root, ".solara-runtime", "transactions"),
+        });
+        const first = createAgentController({ storage, applicationRoot: root });
+        const staged = await first.stageAsset({
+          name: "hero.png",
+          alt: "Hero",
+          mimeType: "image/png",
+          source: { kind: "base64", data: validPng },
+        });
+
+        const plan = await first.createPlan({
+          idempotencyKey: "section-test-001",
+          operations: [
+            {
+              type: "store.create",
+              storeId: "store-section-test",
+              name: "Section Test",
+              slug: "section-test",
+              source: { kind: "clean" },
+            },
+            // Referencia el asset desde product.create sin asset.attach explícito.
+            // Esto valida la recolección de imageIds en applyOperations.
+            {
+              type: "product.create",
+              productId: "product-hero",
+              slug: "hero-product",
+              title: "Hero Product",
+              description: "Test",
+              priceCents: 1000,
+              imageIds: [staged.assetId],
+            },
+            {
+              type: "section.updateSettings",
+              sectionId: "modo-section-hero",
+              settings: { posterAssetId: staged.assetId },
+            },
+          ],
+        });
+        const receipt = await first.commitPlan({
+          planId: plan.planId,
+          idempotencyKey: "section-test-001",
+        });
+        expect(receipt.storeId).toBe("store-section-test");
+
+        // Un segundo controlador (nueva "sesión") debe poder leer los assets del disco.
+        const second = createAgentController({ storage, applicationRoot: root });
+        const update = await second.createPlan({
+          storeId: "store-section-test",
+          baseVersion: receipt.version,
+          operations: [
+            {
+              type: "section.updateSettings",
+              sectionId: "modo-section-hero",
+              settings: { backgroundImageId: staged.assetId },
+            },
+          ],
+        });
+        await second.commitPlan({ planId: update.planId });
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
 });

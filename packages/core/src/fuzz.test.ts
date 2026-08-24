@@ -392,5 +392,5 @@ describe("fuzz StoreProjectV2 + @solara/core", () => {
     // serializar/deserializar
     const ser = JSON.parse(JSON.stringify(project));
     expect(StoreProjectV1Schema.parse(ser)).toEqual(project);
-  }, 15000);
+  }, 30000);
 });

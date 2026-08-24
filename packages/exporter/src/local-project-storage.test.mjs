@@ -44,6 +44,57 @@ async function upload(storage, transactionId, kind, bytes) {
 }
 
 describe("almacenamiento local de proyectos", () => {
+  it("rechaza crear o sobrescribir la plantilla mediante un guardado normal", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-protected-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      await expect(
+        storage.beginSave({
+          projectId: "store-modo-sur-demo",
+          name: "Predeterminado",
+          slug: "predeterminado",
+          projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+          expectedVersion: null,
+        }),
+      ).rejects.toMatchObject({ code: "PROTECTED_STORE" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rechaza falsificar el rol protegido dentro del respaldo subido", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-protected-role-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      const transaction = await storage.beginSave({
+        projectId: "store-fake-template",
+        name: "Falsa plantilla",
+        slug: "falsa-plantilla",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      const archive = JSON.stringify({
+        format: "solara-project",
+        version: 2,
+        projectId: "store-fake-template",
+        exportedAt: "2026-08-07T10:00:00.000Z",
+        project: {
+          schemaVersion: 2,
+          id: "store-fake-template",
+          name: "Falsa plantilla",
+          slug: "falsa-plantilla",
+          origin: { role: "base-template", seed: "duplicate" },
+        },
+      });
+      await upload(storage, transaction.transactionId, "project", archive);
+      await expect(storage.commit(transaction.transactionId)).rejects.toMatchObject({
+        code: "PROTECTED_STORE",
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("versiona el respaldo y extrae el sitio público", async () => {
     const root = await mkdtemp(join(tmpdir(), "solara-storage-"));
     try {

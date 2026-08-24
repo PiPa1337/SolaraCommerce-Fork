@@ -10,5 +10,6 @@ contextBridge.exposeInMainWorld("solaraDesktop", {
   openSite: (projectId) => ipcRenderer.invoke("solara:open-site", projectId),
   exportSite: (payload) => ipcRenderer.invoke("solara:export-site", payload),
   saveProjectArchive: (payload) => ipcRenderer.invoke("solara:save-project-archive", payload),
+  agentCall: (payload) => ipcRenderer.invoke("solara:agent-call", payload),
   diagnostics: () => ipcRenderer.invoke("solara:diagnostics"),
 });

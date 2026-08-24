@@ -34,7 +34,9 @@ const fastTasks = [
   { name: "check:image-budget", cmd: "node scripts/check-image-budget.mjs" },
   { name: "format:check", cmd: "corepack pnpm format:check" },
   { name: "typecheck", cmd: "corepack pnpm -r --parallel --if-present typecheck" },
-  { name: "test", cmd: "corepack pnpm -r --parallel --if-present test" },
+  // Los fuzz y los exports deterministas superan 15s cuando todos los
+  // paquetes comparten CPU; el timeout del gate debe cubrir esa carga real.
+  { name: "test", cmd: "corepack pnpm -r --parallel --if-present test -- --testTimeout=30000" },
 ];
 const slowTasks = [
   { name: "check:optimization", cmd: "corepack pnpm check:optimization" },

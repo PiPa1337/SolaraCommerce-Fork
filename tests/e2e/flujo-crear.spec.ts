@@ -30,8 +30,8 @@ test("P4-C2: crear una tienda desde el dashboard en pasos con validacion", async
   await dialog.getByLabel("Email de contacto (opcional)").fill("hola@plan.example");
   await dialog.getByLabel("WhatsApp (opcional)").fill("5491100000000");
   await dialog.getByRole("button", { name: "Continuar" }).click();
-  await expect(dialog.getByText("Crear tienda vacía")).toBeVisible();
-  await dialog.getByRole("button", { name: "Crear tienda vacía" }).click();
+  await expect(dialog.getByText("Crear tienda desde plantilla")).toBeVisible();
+  await dialog.getByRole("button", { name: "Crear tienda desde plantilla" }).click();
   await dialog.waitFor({ state: "hidden", timeout: 20000 });
   const elapsed = Date.now() - start;
 
@@ -64,7 +64,7 @@ test("F2-B5: la tienda nueva concentra Contacto al final de Home V2", async ({ p
   for (let step = 0; step < 3; step += 1) {
     await page.getByRole("button", { name: "Continuar" }).click();
   }
-  await page.getByRole("button", { name: "Crear tienda vacía" }).click();
+  await page.getByRole("button", { name: "Crear tienda desde plantilla" }).click();
   await page.getByRole("navigation", { name: "Áreas de la tienda" }).waitFor({ timeout: 30_000 });
 
   await page.getByRole("tab", { name: "Constructor", exact: true }).click();

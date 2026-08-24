@@ -505,7 +505,7 @@ test("A12: la X de creación se deshabilita mientras la tienda se crea", async (
     const closeCreation = page.getByRole("button", { name: "Cerrar creación" });
     // El nombre cambia a «Creando» durante la transacción: el locator por regex
     // resuelve en ambos estados.
-    const submit = dialog.getByRole("button", { name: /Crear tienda vacía|Creando/ });
+    const submit = dialog.getByRole("button", { name: /Crear tienda desde plantilla|Creando/ });
     await submit.click();
     await expect(submit).toBeDisabled();
     await expect(submit).toHaveText("Creando");

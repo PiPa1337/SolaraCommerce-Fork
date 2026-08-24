@@ -14,3 +14,12 @@ SolaraCommerce es un estudio local-first (Catalog Modern V2) que edita identidad
 - `docs/TECHNICAL_DEBT.md` — riesgos abiertos
 
 Para historia detallada ver `CHANGELOG.md` y `git log`.
+
+## Decisión vigente: plantilla protegida y rollouts
+
+`store-modo-sur-demo` es una plantilla visible de sólo lectura. Las tiendas
+nuevas se clonan con IDs y assets independientes. Los cambios de renderer se
+distribuyen mediante reconstrucción de sitios; los cambios persistidos usan
+migraciones tipadas con preview, conflictos, backups y rollback. El canal nativo
+expone `templates.*` y `rollouts.*` con scopes separados; no usar parches JSON ni
+escritura arbitraria para modificar la base.

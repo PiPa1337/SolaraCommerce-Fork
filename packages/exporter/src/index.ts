@@ -46,6 +46,9 @@ export type { OptimizationReport } from "@solara/site-optimizer";
 export type { FontOption, FontTransport } from "./fonts";
 export { FONT_OPTIONS, fontCssFor, fontFilesFor } from "./fonts";
 
+/** Fingerprint compartido por Preview, exportación y reconstrucciones globales. */
+export const EXPORTER_RENDERER_FINGERPRINT = "catalog-modern-renderer-v2";
+
 export type ExportMode = "draft" | "production";
 export type AuditSeverity = "critical" | "warning" | "info";
 export type AuditArea =

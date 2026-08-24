@@ -36,6 +36,7 @@ const TRANSACTION_TTL_MS = 30 * 60 * 1000;
 // el próximo commit exitoso; los de menos de un día se conservan por si
 // otro proceso todavía los está finalizando.
 const STALE_TMP_SWEEP_MS = 24 * 60 * 60 * 1000;
+const BASE_TEMPLATE_STORE_ID = "store-modo-sur-demo";
 
 function isSafeSegment(value) {
   return typeof value === "string" && /^[a-z0-9][a-z0-9_-]{0,95}$/i.test(value);
@@ -232,6 +233,17 @@ function parseProjectJson(bytes, expectedProjectId) {
   return project;
 }
 
+function isProtectedProject(project, protectedStoreIds) {
+  if (protectedStoreIds.has(project.id) || project.id === BASE_TEMPLATE_STORE_ID) return true;
+  if (!project.origin) return false;
+  if (project.origin?.role === "store") return false;
+  if (project.origin?.role === "base-template") return true;
+  // Compatibilidad con respaldos V2 que todavía no tienen role. Los seeds
+  // históricos de demo/placeholder siguen siendo no editables hasta que se
+  // reescriban con metadatos explícitos.
+  return project.origin?.seed !== "clean";
+}
+
 async function writeSiteFiles(siteMapPath, destination, limits) {
   let entries;
   try {
@@ -329,6 +341,7 @@ export function createLocalProjectStorage(options = {}) {
   const maxExtractedBytes = options.maxExtractedBytes ?? DEFAULT_MAX_EXTRACTED_BYTES;
   const maxFileBytes = options.maxFileBytes ?? DEFAULT_MAX_EXTRACTED_BYTES;
   const maxFiles = options.maxFiles ?? DEFAULT_MAX_FILES;
+  const protectedStoreIds = new Set([BASE_TEMPLATE_STORE_ID, ...(options.protectedStoreIds ?? [])]);
   // Sólo los tests inyectan fallos deterministas. Mantener el hook fuera del
   // handler HTTP permite comprobar que una interrupción no reemplaza el
   // manifest anterior sin agregar una ruta de producción ni una dependencia.
@@ -525,10 +538,16 @@ export function createLocalProjectStorage(options = {}) {
 
   async function beginSave(meta) {
     assertProjectId(meta.projectId);
-    await agentLockStore.assertAvailable(
-      meta.projectId,
-      meta.actor?.kind === "agent" ? meta.actor.id : undefined,
-    );
+    const protectedWrite =
+      meta.actor?.kind === "template-upgrade" && meta.allowProtectedWrite === true;
+    if (protectedStoreIds.has(meta.projectId) && !protectedWrite) {
+      const error = new Error(
+        "La plantilla protegida sólo puede cambiarse mediante un upgrade explícito.",
+      );
+      error.code = "PROTECTED_STORE";
+      throw error;
+    }
+    await agentLockStore.assertAvailable(meta.projectId, meta.actor?.id);
     if (projectLocks.has(meta.projectId)) {
       const stale = [...transactions.values()].find(
         (transaction) => transaction.metadata.projectId === meta.projectId,
@@ -557,6 +576,17 @@ export function createLocalProjectStorage(options = {}) {
       }
       const existing = await findManifest(meta.projectId);
       const currentVersion = existing?.manifest.current?.version ?? 0;
+      if (existing) {
+        const currentPath = manifestPath(existing.root, existing.manifest.current.projectPath);
+        const currentProject = parseProjectJson(await readFile(currentPath), meta.projectId);
+        if (isProtectedProject(currentProject, protectedStoreIds) && !protectedWrite) {
+          const error = new Error(
+            "La plantilla protegida sólo puede cambiarse mediante un upgrade explícito.",
+          );
+          error.code = "PROTECTED_STORE";
+          throw error;
+        }
+      }
       if (existing && meta.expectedVersion !== currentVersion) {
         const error = new Error("La tienda cambió en otra pestaña.");
         error.code = "VERSION_CONFLICT";
@@ -655,6 +685,15 @@ export function createLocalProjectStorage(options = {}) {
         await readFile(join(transaction.root, "project.json")),
         metadata.projectId,
       );
+      const protectedWrite =
+        metadata.actor?.kind === "template-upgrade" && metadata.allowProtectedWrite === true;
+      if (isProtectedProject(project, protectedStoreIds) && !protectedWrite) {
+        const error = new Error(
+          "La plantilla protegida sólo puede cambiarse mediante un upgrade explícito.",
+        );
+        error.code = "PROTECTED_STORE";
+        throw error;
+      }
       const storeRoot = join(projectsRoot, metadata.folder);
       const actualRoot = join(storeRoot, "actual");
       const backupsRoot = join(storeRoot, "respaldos");
@@ -704,6 +743,7 @@ export function createLocalProjectStorage(options = {}) {
           directoryPath: relative(applicationRoot, finalSite).replaceAll("\\", "/"),
           sha256: transaction.site.sha256,
           savedAt: savedAt.toISOString(),
+          rendererFingerprint: metadata.rendererFingerprint ?? null,
         };
       }
 
@@ -837,6 +877,90 @@ export function createLocalProjectStorage(options = {}) {
     }
   }
 
+  async function rebuildSite(projectId, request, options = {}) {
+    assertProjectId(projectId);
+    await ensureRoots();
+    const ownerId = options.actor?.id ?? `site-rebuild-${process.pid}`;
+    await agentLockStore.assertAvailable(projectId, ownerId);
+    const found = await findManifest(projectId);
+    if (!found) throw new Error("La tienda no existe en disco.");
+    const currentPath = manifestPath(found.root, found.manifest.current.projectPath);
+    const currentProject = parseProjectJson(await readFile(currentPath), projectId);
+    if (isProtectedProject(currentProject, protectedStoreIds)) {
+      const error = new Error("La plantilla protegida no se incluye en reconstrucciones globales.");
+      error.code = "PROTECTED_STORE";
+      throw error;
+    }
+    const transactionId = randomBytes(18).toString("hex");
+    const transactionRoot = join(stagingRoot, `site-rebuild-${transactionId}`);
+    const sitesRoot = join(found.root, "sitios");
+    await mkdir(transactionRoot, { recursive: true });
+    try {
+      const mapPath = join(transactionRoot, "site-map.json");
+      const uploaded = await streamToFile(request, mapPath, maxUploadBytes, guardWrite);
+      const savedAt = now();
+      const version = found.manifest.current.version;
+      const key = versionKey(found.manifest.slug, savedAt, version);
+      const temporarySite = join(sitesRoot, `.${key}.${transactionId}.tmp`);
+      const finalSite = join(sitesRoot, key);
+      await rm(temporarySite, { recursive: true, force: true });
+      await writeSiteFiles(mapPath, temporarySite, { maxFiles, maxExtractedBytes, maxFileBytes });
+      await rm(finalSite, { recursive: true, force: true });
+      await renameWithRetry(temporarySite, finalSite, renameFile);
+      const siteInfo = {
+        version,
+        key,
+        directoryPath: relative(applicationRoot, finalSite).replaceAll("\\", "/"),
+        sha256: uploaded.sha256,
+        savedAt: savedAt.toISOString(),
+        rendererFingerprint: options.rendererFingerprint ?? null,
+      };
+      const previousSite = found.manifest.lastValidSite;
+      const manifest = {
+        ...found.manifest,
+        status: "synced",
+        lastValidSite: siteInfo,
+        ...(previousSite && previousSite.key !== siteInfo.key
+          ? {
+              siteHistory: [previousSite, ...(found.manifest.siteHistory ?? [])].slice(0, 10),
+            }
+          : {}),
+      };
+      await writeJsonAtomic(found.manifestPath, manifest);
+      return {
+        projectId,
+        version,
+        status: "synced",
+        site: siteInfo,
+        previousSite: previousSite ?? null,
+      };
+    } finally {
+      await rm(transactionRoot, { recursive: true, force: true });
+    }
+  }
+
+  async function restoreSite(projectId, expectedVersion, site) {
+    assertProjectId(projectId);
+    await ensureRoots();
+    const found = await findManifest(projectId);
+    if (!found) throw new Error("La tienda no existe en disco.");
+    if (found.manifest.current.version !== expectedVersion) {
+      const error = new Error("La tienda cambió después del rollout.");
+      error.code = "VERSION_CONFLICT";
+      throw error;
+    }
+    if (!site || typeof site.key !== "string") throw new Error("El sitio anterior es inválido.");
+    const target = assertInside(join(found.root, "sitios"), join(found.root, "sitios", site.key));
+    if (!(await directoryExists(target)))
+      throw new Error("El sitio anterior ya no está disponible.");
+    await writeJsonAtomic(found.manifestPath, {
+      ...found.manifest,
+      status: "synced",
+      lastValidSite: site,
+    });
+    return { projectId, version: expectedVersion, status: "synced", site };
+  }
+
   async function readCurrent(projectId) {
     const found = await findManifest(projectId);
     if (!found) return undefined;
@@ -875,6 +999,13 @@ export function createLocalProjectStorage(options = {}) {
   async function removeProject(projectId) {
     const found = await findManifest(projectId);
     if (!found) return false;
+    const currentPath = manifestPath(found.root, found.manifest.current.projectPath);
+    const project = parseProjectJson(await readFile(currentPath), projectId);
+    if (isProtectedProject(project, protectedStoreIds)) {
+      const error = new Error("La plantilla protegida no se puede borrar.");
+      error.code = "PROTECTED_STORE";
+      throw error;
+    }
     await rm(found.root, { recursive: true, force: true });
     return true;
   }
@@ -930,6 +1061,8 @@ export function createLocalProjectStorage(options = {}) {
     upload,
     commit,
     readCurrent,
+    rebuildSite,
+    restoreSite,
     getLastValidSiteDirectory,
     openFolder,
     removeProject,

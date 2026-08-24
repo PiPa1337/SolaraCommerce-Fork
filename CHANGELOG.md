@@ -1,5 +1,42 @@
 # Changelog
 
+### Archivado de tiendas, advertencias tempranas y validación de imágenes (2026-08-24)
+
+- Los assets stageados ahora se resuelven desde disco en sesiones nuevas,
+  eliminando el error "Imagen inexistente" cuando staging y plans.create
+  ocurren en procesos separados.
+- `applyOperations` deduplica los assets referenciados por múltiples
+  operaciones (`asset.attach` o `product.create.imageIds`) antes de
+  agregarlos al proyecto, evitando "ID de recurso duplicado".
+- Nueva operación `section.updateSettings` para modificar parcialmente los
+  settings de una sección existente desde el canal nativo.
+- El template clean genera el hero sin imagen de fondo por defecto,
+  eliminando el bloqueo de producción por `template.placeholder`.
+
+- El canal nativo para agentes ahora permite archivar tiendas con la operación
+  `store.archive` (confirmación literal `ARCHIVAR_TIENDA`) y restaurarlas con
+  `stores.restore`, conservando el respaldo en disco sin comandos destructivos.
+- `plans.create` devuelve `blockingIssues` con los errores críticos que la
+  auditoría del exporter detecta sobre el proyecto planificado, para que el
+  agente corrija antes de commitear en lugar de descubrirlos al fallar.
+- El staging de imágenes exige dimensiones mínimas de 32×32 px; se rechazan
+  assets inutilizables con `ASSET_DIMENSIONS_INVALID` antes de adjuntarlos.
+- La guía documenta los valores válidos de `product.setStatus`
+  (`active`, `hidden`, `archived`) y el flujo completo de archivado/restauración.
+
+### Plantilla protegida, clones seguros y rollouts globales (2026-08-23)
+
+- `Predeterminado` ahora se identifica como `base-template` y queda protegido en
+  Studio, el canal nativo y el storage local; sólo admite lectura, preview,
+  exportación, auditoría y clonación.
+- Las nuevas tiendas se clonan con `seed: "duplicate"`, IDs y referencias
+  remapeadas, assets independientes y política `managed`.
+- Se agregaron upgrades explícitos de plantilla y rollouts durables para
+  reconstruir sitios o aplicar migraciones con preview, locks, backups,
+  idempotencia, auditoría, conflictos y rollback.
+- Los sitios registran el fingerprint del renderer para detectar exportaciones
+  antiguas sin modificar el proyecto editable.
+
 ### Canal de agentes durable y cooperativo (2026-08-23)
 
 - Los planes del agente ahora sobreviven reinicios, exponen diff, advertencias,

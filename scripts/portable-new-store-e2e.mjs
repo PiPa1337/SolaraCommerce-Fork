@@ -72,6 +72,10 @@ function stableStoreSnapshot(project) {
   });
 }
 
+function containsId(ids, value) {
+  return ids.includes(value);
+}
+
 async function openPortable() {
   const app = await electron.launch({
     executablePath: join(copy, "SolaraCommerce.exe"),
@@ -95,6 +99,9 @@ async function openPortable() {
     void dialog.dismiss().catch(() => undefined);
   });
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 20_000 });
+  await page
+    .getByRole("heading", { name: "Plantilla, reconstrucciones y migraciones" })
+    .waitFor({ timeout: 20_000 });
   return { app, page };
 }
 
@@ -117,6 +124,9 @@ try {
   await cp(source, copy, { recursive: true });
   currentStep = "abrir dashboard";
   const defaultBefore = readProject(copy, "store-modo-sur-demo");
+  const defaultProductIds = defaultBefore.products.map((product) => product.id);
+  const defaultCategoryIds = defaultBefore.categories.map((category) => category.id);
+  const defaultCollectionIds = defaultBefore.collections.map((collection) => collection.id);
   instance = await openPortable();
 
   const page = instance.page;
@@ -127,7 +137,9 @@ try {
   for (let step = 0; step < 3; step += 1) {
     await createDialog.getByRole("button", { name: "Continuar", exact: true }).click();
   }
-  await createDialog.getByRole("button", { name: "Crear tienda vacía", exact: true }).click();
+  await createDialog
+    .getByRole("button", { name: "Crear tienda desde plantilla", exact: true })
+    .click();
   currentStep = "esperar editor de tienda nueva";
   await page.getByRole("navigation", { name: "Áreas de la tienda" }).waitFor({ timeout: 20_000 });
 
@@ -216,17 +228,22 @@ try {
   if (created.whatsapp.phone !== "") {
     throw new Error("La nueva tienda volvió a guardar un teléfono WhatsApp ficticio.");
   }
-  if (created.categories.length !== 1 || created.categories[0]?.title !== "Ropa exterior") {
+  if (!created.categories.some((category) => category.title === "Ropa exterior")) {
     throw new Error("La categoría creada desde la UI no quedó persistida.");
   }
-  if (
-    created.collections.length !== 1 ||
-    created.collections[0]?.title !== "Selección de invierno"
-  ) {
+  if (!created.collections.some((collection) => collection.title === "Selección de invierno")) {
     throw new Error("La colección creada desde la UI no quedó persistida.");
   }
-  if (created.products.length !== 1 || created.products[0]?.status !== "active") {
+  const createdProduct = created.products.find((product) => product.title === "Campera Bruma");
+  if (!createdProduct || createdProduct.status !== "active") {
     throw new Error("El producto no quedó activo después del flujo nativo.");
+  }
+  if (
+    created.products.some((product) => containsId(defaultProductIds, product.id)) ||
+    created.categories.some((category) => containsId(defaultCategoryIds, category.id)) ||
+    created.collections.some((collection) => containsId(defaultCollectionIds, collection.id))
+  ) {
+    throw new Error("La nueva tienda comparte IDs de catálogo con la plantilla.");
   }
   const defaultAfter = readProject(copy, "store-modo-sur-demo");
   if (stableStoreSnapshot(defaultBefore) !== stableStoreSnapshot(defaultAfter)) {

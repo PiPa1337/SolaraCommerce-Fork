@@ -4,11 +4,7 @@
  * Vite; el código de UI no debe asumir que IndexedDB es siempre autoridad.
  */
 import type { NavigationItem, StoreProjectV1 } from "@solara/project-schema";
-import {
-  getCategoryProductIds,
-  isCatalogModernPlaceholderAsset,
-  StoreProjectV1Schema,
-} from "@solara/project-schema";
+import { getCategoryProductIds, StoreProjectV1Schema } from "@solara/project-schema";
 import {
   buildCatalogModernProject,
   catalogModernCleanStore,
@@ -16,6 +12,7 @@ import {
   replaceCatalogBrandText,
 } from "@solara/project-schema/catalog-modern-template";
 import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
+import { cloneProjectFromTemplate, isBaseTemplate } from "@solara/project-schema/project-policy";
 import Dexie, { type EntityTable } from "dexie";
 import { slugify as slugifySlug } from "./slugify";
 import { processImageInWorker } from "./workers";
@@ -709,6 +706,7 @@ export async function ensureDeprecatedCategoriesRemoved(): Promise<boolean> {
       hasInvalidRecord = true;
       continue;
     }
+    if (isBaseTemplate(parsed.data)) continue;
     const cleaned = removeDeprecatedCatalogCategories(parsed.data);
     if (JSON.stringify(cleaned) !== JSON.stringify(parsed.data)) updates.push(toRecord(cleaned));
   }
@@ -770,9 +768,23 @@ export async function getProject(id: string): Promise<StoreProjectV1 | undefined
   return ensureCatalogModernV2Sections(parsed.data);
 }
 
-export async function saveProject(project: StoreProjectV1): Promise<void> {
+export interface SaveProjectOptions {
+  allowProtectedWrite?: boolean;
+}
+
+export async function saveProject(
+  project: StoreProjectV1,
+  options: SaveProjectOptions = {},
+): Promise<void> {
   await ready();
   const validProject = ensureCatalogModernV2Sections(StoreProjectV1Schema.parse(project));
+  if (isBaseTemplate(validProject) && !options.allowProtectedWrite) {
+    const error = new Error(
+      "La plantilla protegida sólo puede cambiarse mediante un upgrade explícito.",
+    ) as Error & { code?: string };
+    error.code = "PROTECTED_STORE";
+    throw error;
+  }
   await database.transaction("rw", database.projects, async () => {
     await database.projects.put(toRecord(validProject));
   });
@@ -784,6 +796,7 @@ export async function saveRecoveryDraft(
 ): Promise<void> {
   await ready();
   const validProject = ensureCatalogModernV2Sections(StoreProjectV1Schema.parse(project));
+  if (isBaseTemplate(validProject)) return;
   const existing = await database.recoveryDrafts.get(validProject.id);
   if (existing) {
     const existingTime = Date.parse(existing.project.updatedAt);
@@ -836,67 +849,32 @@ export interface CreateProjectOptions {
   phone?: string;
 }
 
-/**
- * Las tiendas nuevas arrancan sin media ficticia: el usuario agrega sus
- * recursos desde Recursos y el exporter no bloquea Guardar por placeholders
- * que todavía no eligió publicar.
- */
-function removeCleanTemplateMedia(project: StoreProjectV1): StoreProjectV1 {
-  const placeholderIds = new Set(
-    project.assets
-      .filter((asset) => isCatalogModernPlaceholderAsset(project, asset))
-      .map((asset) => asset.id),
-  );
-  if (placeholderIds.size === 0) return project;
-  const isPlaceholderId = (value: unknown): boolean =>
-    typeof value === "string" &&
-    placeholderIds.has(value as StoreProjectV1["assets"][number]["id"]);
-  const stripSettings = (settings: Record<string, unknown>) =>
-    Object.fromEntries(Object.entries(settings).filter(([, value]) => !isPlaceholderId(value)));
-  return StoreProjectV1Schema.parse({
-    ...project,
-    assets: project.assets.filter((asset) => !placeholderIds.has(asset.id)),
-    identity: {
-      ...project.identity,
-      ...(isPlaceholderId(project.identity.logoAssetId) ? { logoAssetId: undefined } : {}),
-    },
-    seo: {
-      ...project.seo,
-      ...(isPlaceholderId(project.seo.faviconAssetId) ? { faviconAssetId: undefined } : {}),
-      ...(isPlaceholderId(project.seo.socialImageId) ? { socialImageId: undefined } : {}),
-    },
-    sections: project.sections.map((section) => ({
-      ...section,
-      settings: stripSettings(section.settings),
-    })),
-    pages: project.pages.map((page) => ({
-      ...page,
-      sections: page.sections.map((section) => ({
-        ...section,
-        settings: stripSettings(section.settings),
-      })),
-    })),
-  });
-}
-
 export async function createProject(input: string | CreateProjectOptions): Promise<StoreProjectV1> {
+  await ready();
   const timestamp = new Date().toISOString();
   const suffix = crypto.randomUUID();
   const options = typeof input === "string" ? { name: input } : input;
   const normalizedName = options.name.trim() || "Nueva tienda";
   const slug = slugify(normalizedName, suffix.slice(0, 6));
   const phone = (options.phone ?? "").replace(/\D/g, "");
-  const template = buildCatalogModernProject({
-    seed: "clean",
+  const baseRecord = await database.projects.get(SCALE_DEMO_PROJECT_ID);
+  const base = baseRecord
+    ? StoreProjectV1Schema.parse(baseRecord.project)
+    : buildScaleDemoProject();
+  if (!isBaseTemplate(base)) {
+    throw new Error("No se puede crear una tienda: la plantilla base no está protegida.");
+  }
+  const template = cloneProjectFromTemplate(base, {
     id: `store-${suffix}`,
     name: normalizedName,
     brandName: options.brandName?.trim() || normalizedName,
     slug,
     baseUrl: `https://${slug}.example`,
+    now: timestamp,
   });
   const project = await embedFixtureAssets(
     StoreProjectV1Schema.parse({
-      ...removeCleanTemplateMedia(template),
+      ...template,
       identity: {
         ...template.identity,
         email: options.email?.trim() || "",
@@ -920,6 +898,7 @@ export async function ensureFirstProject(): Promise<StoreProjectV1> {
   const first = await database.projects.orderBy("updatedAt").reverse().first();
   if (first) {
     const parsed = StoreProjectV1Schema.parse(first.project);
+    if (isBaseTemplate(parsed)) return parsed;
     const project = await optimizeDemoFixtureAssets(
       await migrateCatalogModernDemo(repairModernGreeting(parsed)),
     );
@@ -927,7 +906,7 @@ export async function ensureFirstProject(): Promise<StoreProjectV1> {
     return project;
   }
   const initial = await embedFixtureAssets(buildScaleDemoProject());
-  await saveProject(initial);
+  await saveProject(initial, { allowProtectedWrite: true });
   return initial;
 }
 
@@ -1034,6 +1013,7 @@ export async function ensureScaleDemoProject(): Promise<boolean> {
   const existing = await database.projects.get(SCALE_DEMO_PROJECT_ID);
   if (existing) {
     const parsed = StoreProjectV1Schema.parse(existing.project);
+    if (isBaseTemplate(parsed)) return false;
     const repaired = repairModernGreeting(normalizeScaleDemoProject(parsed));
     const migrated = await migrateCatalogModernDemo(repaired);
     const project = expandCatalogModernDemoTestimonials(migrated);
@@ -1044,16 +1024,19 @@ export async function ensureScaleDemoProject(): Promise<boolean> {
   }
 
   const demo = buildScaleDemoProject();
-  await saveProject(await embedFixtureAssets(demo));
+  await saveProject(await embedFixtureAssets(demo), { allowProtectedWrite: true });
   return true;
 }
 
-export async function ensureCatalogModernDemoReviews(): Promise<boolean> {
+export async function ensureCatalogModernDemoReviews(
+  options: SaveProjectOptions = {},
+): Promise<boolean> {
   await ready();
   const record = await database.projects.get(SCALE_DEMO_PROJECT_ID);
   if (!record) return false;
   const parsed = StoreProjectV1Schema.parse(record.project);
   if (parsed.id !== SCALE_DEMO_PROJECT_ID) return false;
+  if (isBaseTemplate(parsed) && !options.allowProtectedWrite) return false;
 
   const reference = buildCatalogModernProject({ seed: "demo" });
   const referenceReviews = new Map(
@@ -1071,29 +1054,35 @@ export async function ensureCatalogModernDemoReviews(): Promise<boolean> {
     return { ...product, reviews };
   });
   if (!changed) return false;
-  await saveProject(StoreProjectV1Schema.parse({ ...parsed, products }));
+  await saveProject(StoreProjectV1Schema.parse({ ...parsed, products }), options);
   return true;
 }
 
-export async function ensureCatalogModernDemoGallery(): Promise<boolean> {
+export async function ensureCatalogModernDemoGallery(
+  options: SaveProjectOptions = {},
+): Promise<boolean> {
   await ready();
   const record = await database.projects.get(SCALE_DEMO_PROJECT_ID);
   if (!record) return false;
   const parsed = StoreProjectV1Schema.parse(record.project);
+  if (isBaseTemplate(parsed) && !options.allowProtectedWrite) return false;
   const expanded = await migrateCatalogModernDemo(parsed);
   if (expanded === parsed) return false;
-  await saveProject(expanded);
+  await saveProject(expanded, options);
   return true;
 }
 
-export async function ensureCatalogModernDemoTestimonials(): Promise<boolean> {
+export async function ensureCatalogModernDemoTestimonials(
+  options: SaveProjectOptions = {},
+): Promise<boolean> {
   await ready();
   const record = await database.projects.get(SCALE_DEMO_PROJECT_ID);
   if (!record) return false;
   const parsed = StoreProjectV1Schema.parse(record.project);
+  if (isBaseTemplate(parsed) && !options.allowProtectedWrite) return false;
   const expanded = expandCatalogModernDemoTestimonials(parsed);
   if (expanded === parsed) return false;
-  await saveProject(expanded);
+  await saveProject(expanded, options);
   return true;
 }
 
@@ -1105,12 +1094,13 @@ export async function ensureCatalogModernDemoTestimonials(): Promise<boolean> {
  * de dos grillas consecutivas y luego el bento) y no agrega sentinels, así un
  * reordenamiento manual del usuario nunca se vuelve a tocar.
  */
-export async function ensureDemoSectionOrder(): Promise<boolean> {
+export async function ensureDemoSectionOrder(options: SaveProjectOptions = {}): Promise<boolean> {
   await ready();
   const record = await database.projects.get(SCALE_DEMO_PROJECT_ID);
   if (!record) return false;
   const parsed = StoreProjectV1Schema.parse(record.project);
   if (parsed.id !== SCALE_DEMO_PROJECT_ID) return false;
+  if (isBaseTemplate(parsed) && !options.allowProtectedWrite) return false;
 
   const bentoIndex = parsed.sections.findIndex(
     (section) => section.moduleId === "catalog-category-bento",
@@ -1129,7 +1119,7 @@ export async function ensureDemoSectionOrder(): Promise<boolean> {
   if (!bento) return false;
   // El patrón garantiza que el brand-strip está en bentoIndex - 3.
   sections.splice(bentoIndex - 2, 0, bento);
-  await saveProject(StoreProjectV1Schema.parse({ ...parsed, sections }));
+  await saveProject(StoreProjectV1Schema.parse({ ...parsed, sections }), options);
   return true;
 }
 
@@ -1138,14 +1128,12 @@ export async function duplicateProject(id: string): Promise<StoreProjectV1> {
   if (!source) throw new Error("No se encontró la tienda para duplicar.");
   const timestamp = new Date().toISOString();
   const suffix = crypto.randomUUID();
-  const project = StoreProjectV1Schema.parse({
-    ...structuredClone(source),
+  const project = cloneProjectFromTemplate(source, {
     id: `store-${suffix}`,
     name: `${source.name} copia`,
     slug: slugify(`${source.slug}-copia`, suffix.slice(0, 6)),
-    status: "active",
-    createdAt: timestamp,
-    updatedAt: timestamp,
+    baseUrl: `https://${slugify(`${source.slug}-copia`, suffix.slice(0, 6))}.example`,
+    now: timestamp,
   });
   await saveProject(project);
   return project;
@@ -1154,6 +1142,9 @@ export async function duplicateProject(id: string): Promise<StoreProjectV1> {
 export async function setProjectArchived(id: string, archived: boolean): Promise<void> {
   const project = await getProject(id);
   if (!project) throw new Error("No se encontró la tienda.");
+  if (isBaseTemplate(project)) {
+    throw new Error("La plantilla protegida no se puede archivar ni restaurar.");
+  }
   await saveProject(
     StoreProjectV1Schema.parse({
       ...project,

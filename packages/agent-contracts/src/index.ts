@@ -15,6 +15,11 @@ const SlugSchema = z
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 const IsoDateSchema = z.string().datetime();
 
+export const StoreCreateSourceSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("base-template"), templateId: z.literal("catalog-modern") }),
+  z.object({ kind: z.literal("clean") }),
+]);
+
 export const ProductVariantInputSchema = z.object({
   title: z.string().min(1).max(160),
   sku: z.string().max(120).default(""),
@@ -38,6 +43,10 @@ export const AgentOperationSchema = z.discriminatedUnion("type", [
       .string()
       .regex(/^\d{0,15}$/)
       .optional(),
+    source: StoreCreateSourceSchema.default({
+      kind: "base-template",
+      templateId: "catalog-modern",
+    }),
   }),
   z.object({
     type: z.literal("store.updateIdentity"),
@@ -112,10 +121,20 @@ export const AgentOperationSchema = z.discriminatedUnion("type", [
     status: z.enum(["active", "hidden", "archived"]),
   }),
   z.object({
+    type: z.literal("store.archive"),
+    storeId: SafeIdSchema.optional(),
+    confirmation: z.literal("ARCHIVAR_TIENDA"),
+  }),
+  z.object({
     type: z.literal("asset.attach"),
     assetId: SafeIdSchema,
     target: z.enum(["identity.logo", "seo.favicon", "seo.social", "product"]),
     productId: SafeIdSchema.optional(),
+  }),
+  z.object({
+    type: z.literal("section.updateSettings"),
+    sectionId: SafeIdSchema,
+    settings: z.record(z.string(), z.unknown()),
   }),
 ]);
 
@@ -154,6 +173,10 @@ export const AgentScopeSchema = z.enum([
   "commit",
   "assets:write",
   "audit:read",
+  "template:read",
+  "template:write",
+  "rollouts:read",
+  "rollouts:write",
 ]);
 
 export const PlanGetParamsSchema = z.object({
@@ -200,6 +223,55 @@ export const AssetUploadFinishParamsSchema = z.object({
 
 export const ProtocolDescribeParamsSchema = z.object({});
 
+export const TemplateGetParamsSchema = z.object({
+  templateId: z.literal("catalog-modern").default("catalog-modern"),
+});
+
+export const TemplatePreviewUpgradeParamsSchema = z.object({
+  templateId: z.literal("catalog-modern").default("catalog-modern"),
+  baseVersion: z.number().int().nonnegative().optional(),
+});
+
+export const TemplateCommitUpgradeParamsSchema = z.object({
+  previewId: SafeIdSchema,
+  baseVersion: z.number().int().nonnegative(),
+  confirmation: z.literal("ACTUALIZAR_PLANTILLA"),
+  idempotencyKey: z.string().min(8).max(160).optional(),
+});
+
+export const RolloutTargetSchema = z.object({
+  status: z.literal("active").default("active"),
+  excludeProtected: z.boolean().default(true),
+  storeIds: z.array(SafeIdSchema).max(500).optional(),
+});
+
+export const RolloutPreviewParamsSchema = z.object({
+  kind: z.enum(["site-rebuild", "project-migration"]),
+  migrationId: z.string().min(1).max(160).optional(),
+  target: RolloutTargetSchema.default({ status: "active", excludeProtected: true }),
+});
+
+export const RolloutCommitParamsSchema = z.object({
+  previewId: SafeIdSchema,
+  idempotencyKey: z.string().min(8).max(160).optional(),
+  async: z.boolean().default(true),
+});
+
+export const RolloutGetParamsSchema = z.object({
+  rolloutId: SafeIdSchema,
+});
+
+export const RolloutRollbackParamsSchema = z.object({
+  rolloutId: SafeIdSchema,
+  storeId: SafeIdSchema,
+  expectedVersion: z.number().int().nonnegative(),
+});
+
+export const StoreRestoreParamsSchema = z.object({
+  storeId: SafeIdSchema,
+  expectedVersion: z.number().int().nonnegative().optional(),
+});
+
 export const AgentRequestSchema = z.object({
   protocol: z.literal(AGENT_PROTOCOL).optional(),
   version: z.literal(AGENT_PROTOCOL_VERSION).optional(),
@@ -236,6 +308,14 @@ export type AssetStageParams = z.infer<typeof AssetStageParamsSchema>;
 export type AssetUploadBeginParams = z.infer<typeof AssetUploadBeginParamsSchema>;
 export type AssetUploadChunkParams = z.infer<typeof AssetUploadChunkParamsSchema>;
 export type AssetUploadFinishParams = z.infer<typeof AssetUploadFinishParamsSchema>;
+export type TemplateGetParams = z.infer<typeof TemplateGetParamsSchema>;
+export type TemplatePreviewUpgradeParams = z.infer<typeof TemplatePreviewUpgradeParamsSchema>;
+export type TemplateCommitUpgradeParams = z.infer<typeof TemplateCommitUpgradeParamsSchema>;
+export type RolloutPreviewParams = z.infer<typeof RolloutPreviewParamsSchema>;
+export type RolloutCommitParams = z.infer<typeof RolloutCommitParamsSchema>;
+export type RolloutGetParams = z.infer<typeof RolloutGetParamsSchema>;
+export type RolloutRollbackParams = z.infer<typeof RolloutRollbackParamsSchema>;
+export type StoreRestoreParams = z.infer<typeof StoreRestoreParamsSchema>;
 export type AgentScope = z.infer<typeof AgentScopeSchema>;
 export type AgentRequest = z.infer<typeof AgentRequestSchema>;
 export type AgentResponse = z.infer<typeof AgentResponseSchema>;
@@ -268,6 +348,14 @@ export const AgentProtocolJsonSchema = {
     "protocol.describe",
     "stores.list",
     "stores.get",
+    "stores.restore",
+    "templates.get",
+    "templates.previewUpgrade",
+    "templates.commitUpgrade",
+    "rollouts.preview",
+    "rollouts.commit",
+    "rollouts.get",
+    "rollouts.rollback",
     "plans.create",
     "plans.get",
     "plans.commit",

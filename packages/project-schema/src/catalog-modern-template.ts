@@ -363,6 +363,8 @@ function cleanProject(options: BuildCatalogModernProjectOptions): StoreProjectV2
       templateId: "catalog-modern",
       templateVersion: CATALOG_MODERN_TEMPLATE_VERSION,
       seed: "clean",
+      role: "store",
+      updatePolicy: "managed",
     },
     identity: {
       ...project.identity,
@@ -579,6 +581,8 @@ export function buildCatalogModernProject(
         templateId: "catalog-modern",
         templateVersion: CATALOG_MODERN_TEMPLATE_VERSION,
         seed: "placeholder",
+        role: "base-template",
+        updatePolicy: "pinned",
       },
       identity: {
         ...project.identity,
@@ -623,6 +627,8 @@ export function buildCatalogModernProject(
       templateId: "catalog-modern",
       templateVersion: CATALOG_MODERN_TEMPLATE_VERSION,
       seed: "demo",
+      role: "base-template",
+      updatePolicy: "pinned",
     },
   });
 }

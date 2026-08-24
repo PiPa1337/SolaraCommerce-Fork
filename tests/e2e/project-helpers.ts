@@ -7,6 +7,6 @@ export async function createCleanStore(page: Page, name = "Tienda de prueba"): P
   await page.getByRole("button", { name: "Continuar", exact: true }).click();
   await page.getByRole("button", { name: "Continuar", exact: true }).click();
   await page.getByRole("button", { name: "Continuar", exact: true }).click();
-  await page.getByRole("button", { name: "Crear tienda vacía", exact: true }).click();
+  await page.getByRole("button", { name: "Crear tienda desde plantilla", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
 }

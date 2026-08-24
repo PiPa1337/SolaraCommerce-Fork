@@ -30,10 +30,16 @@ async function openCatalog(page: import("@playwright/test").Page) {
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.getByRole("button", { name: /Predeterminado/ }).click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  // La plantilla base es de solo lectura: el flujo de catálogo debe trabajar
+  // sobre una tienda derivada para no mutar Predeterminado.
+  await page.getByRole("button", { name: "Nueva tienda", exact: true }).click();
+  await page.getByLabel("Nueva tienda").fill("Tienda de catálogo");
+  for (let step = 0; step < 3; step += 1) {
+    await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  }
+  await page.getByRole("button", { name: "Crear tienda desde plantilla", exact: true }).click();
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
 }
 
 async function uploadCsv(page: import("@playwright/test").Page, csv: string, name: string) {
@@ -85,7 +91,7 @@ test("edita variantes y conserva el último cambio al volver, recargar y reabrir
   await variants.nth(1).getByRole("textbox", { name: "SKU" }).fill("LUZ-HOR-02");
   await variants.nth(1).getByRole("textbox", { name: "Opciones" }).fill("Color=Arena");
   await variants.nth(1).getByRole("spinbutton", { name: "Precio en centavos" }).fill("129000");
-  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  await dialog.getByRole("button", { name: /Guardar borrador|Crear producto/ }).click();
 
   await page.getByPlaceholder("Buscar por producto, marca o estado").fill("Lámpara Horizonte");
   await expect(page.getByLabel("Nombre de Lámpara Horizonte")).toBeVisible();
@@ -97,7 +103,7 @@ test("edita variantes y conserva el último cambio al volver, recargar y reabrir
   await page.getByRole("button", { name: "Volver a tiendas" }).click();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   await page.reload();
-  await page.getByRole("button", { name: /Predeterminado/ }).click();
+  await page.getByRole("button", { name: /Tienda de catálogo/ }).click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await page.getByPlaceholder("Buscar por producto, marca o estado").fill("Lámpara Horizonte");
@@ -107,7 +113,10 @@ test("edita variantes y conserva el último cambio al volver, recargar y reabrir
   // El filtro tiene debounce de 300 ms: esperar que la tabla se reduzca antes
   // de interactuar con la única fila visible.
   await expect(page.locator("tbody tr")).toHaveCount(1);
-  await page.getByRole("button", { name: "Editar" }).click();
+  await page
+    .getByRole("cell", { name: /Lámpara Horizonte/ })
+    .getByRole("button", { name: "Editar" })
+    .click();
   await expect(page.getByRole("dialog").locator(".variant-editor")).toHaveCount(2);
 });
 
@@ -120,7 +129,7 @@ test("previsualiza, cancela y edita en masa entre páginas", async ({ page }) =>
   await expect(review.getByText("120", { exact: true })).toBeVisible();
   await expect(review).toContainText("Nuevos");
   await clickDom(page.getByRole("button", { name: "Cancelar" }));
-  // Re-seed v2: Predeterminado arranca con 5 productos placeholder x 1 variante.
+  // La tienda derivada arranca con 5 productos placeholder x 1 variante.
   await expect(page.getByText("5 productos y 5 variantes.")).toBeVisible();
 
   await uploadCsv(page, selectionCsv, "catalogo-120.csv");

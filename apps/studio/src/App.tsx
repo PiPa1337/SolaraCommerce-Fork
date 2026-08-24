@@ -6,6 +6,7 @@
  */
 import { WarningCircle } from "@phosphor-icons/react";
 import { type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
+import { isBaseTemplate } from "@solara/project-schema/project-policy";
 import {
   Component,
   type ErrorInfo,
@@ -29,7 +30,6 @@ import {
   consumeStorageResetNotice,
   createProject,
   duplicateProject,
-  ensureDemoSectionOrder,
   ensureDeprecatedCategoriesRemoved,
   ensureFirstProject,
   ensureScaleDemoProject,
@@ -44,7 +44,6 @@ import {
   purgeNonDemoStores,
   purgeRolledBackDemoRecords,
   retireLegacyDemoProjects,
-  SCALE_DEMO_PROJECT_ID,
   type StoredProject,
   saveProject,
   saveRecoveryDraft,
@@ -236,26 +235,10 @@ function StudioShell() {
         if (diskListing && (diskListing.projects.length > 0 || diskListing.recovery.length > 0)) {
           if (detectedStorage.writable) {
             await purgeNonDemoStores();
-            const reordered = await ensureDemoSectionOrder();
-            if (reordered) {
-              // El reorden vive en IndexedDB; se confirma en disco para que
-              // el arranque no quede con un draft divergente y el siguiente
-              // Guardar exporte la home con el orden nuevo.
-              const demo = await getProject(SCALE_DEMO_PROJECT_ID);
-              const diskDemo = diskListing.projects.find(
-                (item) => item.id === SCALE_DEMO_PROJECT_ID,
-              );
-              if (demo) {
-                await markProjectMigration(demo.id, "pending");
-                const saved = await persistToDisk(demo, diskDemo?.diskVersion ?? null);
-                await markProjectMigration(demo.id, "done");
-                if (diskDemo) {
-                  diskDemo.project = demo;
-                  diskDemo.diskVersion = saved.receipt.version;
-                }
-              }
-            }
             for (const diskProject of diskListing.projects) {
+              // Las actualizaciones de datos de la plantilla sólo pueden
+              // pasar por templates.previewUpgrade/commitUpgrade.
+              if (isBaseTemplate(diskProject.project)) continue;
               const migrated = await migrateCatalogModernDemo(diskProject.project);
               const testimonialsExpanded = expandCatalogModernDemoTestimonials(migrated);
               if (testimonialsExpanded === diskProject.project) continue;

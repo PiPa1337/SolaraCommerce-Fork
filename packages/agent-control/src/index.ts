@@ -17,10 +17,24 @@ import {
   PlanGetParamsSchema,
   PlanHeartbeatParamsSchema,
   ProtocolDescribeParamsSchema,
+  RolloutCommitParamsSchema,
+  RolloutGetParamsSchema,
+  RolloutPreviewParamsSchema,
+  RolloutRollbackParamsSchema,
   StoreGetParamsSchema,
+  StoreRestoreParamsSchema,
+  TemplateCommitUpgradeParamsSchema,
+  TemplateGetParamsSchema,
+  TemplatePreviewUpgradeParamsSchema,
 } from "@solara/agent-contracts";
 import { reduceProject } from "@solara/core";
-import { createProjectArchive, exportProject, readProjectArchive } from "@solara/exporter";
+import {
+  auditProject,
+  createProjectArchive,
+  EXPORTER_RENDERER_FINGERPRINT,
+  exportProject,
+  readProjectArchive,
+} from "@solara/exporter";
 import {
   CategorySchema,
   CollectionSchema,
@@ -33,6 +47,17 @@ import {
   StoreProjectV2Schema,
 } from "@solara/project-schema";
 import { buildCatalogModernProject } from "@solara/project-schema/catalog-modern-template";
+import {
+  applyCatalogModernUpgrade,
+  planCatalogModernUpgrade,
+  type TemplateUpgradePlan,
+} from "@solara/project-schema/catalog-modern-upgrade";
+import {
+  BASE_TEMPLATE_STORE_ID,
+  cloneProjectFromTemplate,
+  getStorePolicy,
+  isBaseTemplate,
+} from "@solara/project-schema/project-policy";
 // El lock es compartido por el agente y el storage de Studio para coordinar
 // procesos separados sin habilitar escritura arbitraria.
 // @ts-expect-error módulo .mjs compartido sin d.ts
@@ -54,7 +79,9 @@ interface AgentLocalProjectStorage {
     slug: string;
     projectUpdatedAt: string;
     expectedVersion: number | null;
-    actor?: { kind: "agent"; id: string };
+    rendererFingerprint?: string;
+    actor?: { kind: "agent" | "template-upgrade" | "rollout"; id: string };
+    allowProtectedWrite?: boolean;
   }): Promise<{ transactionId: string; version: number; folder: string }>;
   upload(
     transactionId: string,
@@ -64,6 +91,16 @@ interface AgentLocalProjectStorage {
   commit(transactionId: string, options?: { protectedSiteKeys?: string[] }): Promise<unknown>;
   abort(transactionId: string): Promise<void>;
   readCurrent(projectId: string): Promise<{ manifest: unknown; bytes: Uint8Array } | undefined>;
+  rebuildSite(
+    projectId: string,
+    request: AsyncIterable<Uint8Array> & { headers?: Record<string, string> },
+    options?: { actor?: { kind: "rollout"; id: string }; rendererFingerprint?: string },
+  ): Promise<unknown>;
+  restoreSite(
+    projectId: string,
+    expectedVersion: number,
+    site: Record<string, unknown>,
+  ): Promise<unknown>;
 }
 
 type AgentError = Error & { code?: string; details?: unknown };
@@ -79,8 +116,39 @@ interface PlanDraft {
   expiresAt: string;
   diff: PlanDiff;
   warnings: string[];
+  blockingIssues: Array<{ code: string; severity: string; message: string }>;
   includeDiff: boolean;
   idempotencyKey?: string;
+}
+
+interface TemplateUpgradeDraft {
+  previewId: string;
+  storeId: string;
+  baseVersion: number;
+  project: StoreProjectV1;
+  plan: TemplateUpgradePlan;
+  createdAt: string;
+  expiresAt: string;
+}
+
+interface RolloutStorePreview {
+  storeId: string;
+  name: string;
+  baseVersion: number;
+  status: "ready" | "conflict" | "skipped";
+  reason?: string;
+  safeChanges?: string[];
+  conflicts?: string[];
+}
+
+interface RolloutDraft {
+  previewId: string;
+  kind: "site-rebuild" | "project-migration";
+  migrationId?: string;
+  createdAt: string;
+  expiresAt: string;
+  stores: RolloutStorePreview[];
+  target: { status: "active"; excludeProtected: boolean; storeIds?: string[] | undefined };
 }
 
 interface StagedAsset {
@@ -101,12 +169,15 @@ interface PlanDiff {
 
 interface AgentJob {
   jobId: string;
-  kind: "plans.commit";
-  planId: string;
+  kind: "plans.commit" | "rollout";
+  planId?: string;
+  rolloutId?: string;
   requestId?: string | number;
+  idempotencyKey?: string;
   status: "queued" | "running" | "succeeded" | "failed";
   createdAt: string;
   updatedAt: string;
+  partialResults?: Array<Record<string, unknown>>;
   result?: unknown;
   error?: { code: string; message: string; details?: unknown };
 }
@@ -116,6 +187,7 @@ interface ControllerOptions {
   applicationRoot: string;
   now?: () => Date;
   protectedStoreIds?: Iterable<string>;
+  baseTemplateStoreId?: string;
   scopes?: Iterable<string>;
   actorId?: string;
 }
@@ -177,7 +249,7 @@ function bytesStream(
 }
 
 function projectIsProtected(project: StoreProjectV1, explicit: Set<string>): boolean {
-  return explicit.has(project.id) || project.origin?.seed !== "clean";
+  return isBaseTemplate(project, explicit);
 }
 
 function summary(project: StoreProjectV1, version: number | null, protectedStore: boolean) {
@@ -189,6 +261,9 @@ function summary(project: StoreProjectV1, version: number | null, protectedStore
     schemaVersion: project.schemaVersion,
     originSeed: project.origin?.seed ?? "unknown",
     protected: protectedStore,
+    role: getStorePolicy(project, protectedStore ? [project.id] : []).role,
+    updatePolicy: project.origin?.updatePolicy ?? "managed",
+    templateVersion: project.origin?.templateVersion ?? null,
     version,
     counts: {
       products: project.products.length,
@@ -379,14 +454,19 @@ function createCleanProject(
 
 export class AgentController {
   private readonly plans = new Map<string, PlanDraft>();
+  private readonly templateUpgrades = new Map<string, TemplateUpgradeDraft>();
+  private readonly rollouts = new Map<string, RolloutDraft>();
   private readonly stagedAssets = new Map<string, StagedAsset>();
   private readonly jobs = new Map<string, AgentJob>();
   private readonly protectedStoreIds: Set<string>;
+  private readonly baseTemplateStoreId: string;
   private readonly scopes: Set<string>;
   private readonly now: () => Date;
   private readonly inboxRoot: string;
   private readonly agentRoot: string;
   private readonly plansRoot: string;
+  private readonly templateUpgradesRoot: string;
+  private readonly rolloutsRoot: string;
   private readonly committedRoot: string;
   private readonly assetsRoot: string;
   private readonly uploadsRoot: string;
@@ -399,13 +479,26 @@ export class AgentController {
 
   constructor(private readonly options: ControllerOptions) {
     this.protectedStoreIds = new Set(options.protectedStoreIds ?? []);
+    this.baseTemplateStoreId = options.baseTemplateStoreId ?? BASE_TEMPLATE_STORE_ID;
     this.scopes = new Set(
-      options.scopes ?? ["read", "plans:write", "commit", "assets:write", "audit:read"],
+      options.scopes ?? [
+        "read",
+        "template:read",
+        "template:write",
+        "rollouts:read",
+        "rollouts:write",
+        "plans:write",
+        "commit",
+        "assets:write",
+        "audit:read",
+      ],
     );
     this.now = options.now ?? (() => new Date());
     this.inboxRoot = join(options.applicationRoot, "agent-inbox");
     this.agentRoot = join(options.applicationRoot, ".solara-runtime", "agent");
     this.plansRoot = join(this.agentRoot, "plans");
+    this.templateUpgradesRoot = join(this.agentRoot, "template-upgrades");
+    this.rolloutsRoot = join(this.agentRoot, "rollouts");
     this.committedRoot = join(this.agentRoot, "committed");
     this.assetsRoot = join(this.agentRoot, "assets");
     this.uploadsRoot = join(this.agentRoot, "uploads");
@@ -431,12 +524,16 @@ export class AgentController {
     await this.options.storage.ensureRoots();
     await mkdir(this.agentRoot, { recursive: true });
     await mkdir(this.plansRoot, { recursive: true });
+    await mkdir(this.templateUpgradesRoot, { recursive: true });
+    await mkdir(this.rolloutsRoot, { recursive: true });
     await mkdir(this.committedRoot, { recursive: true });
     await mkdir(this.assetsRoot, { recursive: true });
     await mkdir(this.uploadsRoot, { recursive: true });
     await mkdir(this.jobsRoot, { recursive: true });
     await assertNoReparsePoints(this.options.applicationRoot, this.agentRoot);
     await this.loadPlans();
+    await this.loadTemplateUpgrades();
+    await this.loadRollouts();
     await this.loadJobs();
   }
 
@@ -513,6 +610,63 @@ export class AgentController {
     }
   }
 
+  private templateUpgradePath(previewId: string): string {
+    return join(this.templateUpgradesRoot, `${previewId}.json`);
+  }
+
+  private async persistTemplateUpgrade(preview: TemplateUpgradeDraft): Promise<void> {
+    this.templateUpgrades.set(preview.previewId, preview);
+    await writeAtomic(
+      this.templateUpgradePath(preview.previewId),
+      `${JSON.stringify(preview, null, 2)}\n`,
+    );
+  }
+
+  private async loadTemplateUpgrades(): Promise<void> {
+    const entries = await readdir(this.templateUpgradesRoot, { withFileTypes: true });
+    for (const entry of entries.filter((item) => item.isFile() && item.name.endsWith(".json"))) {
+      try {
+        const preview = JSON.parse(
+          await readFile(join(this.templateUpgradesRoot, entry.name), "utf8"),
+        ) as TemplateUpgradeDraft;
+        if (!preview.previewId || Date.parse(preview.expiresAt) <= this.now().getTime()) {
+          await rm(join(this.templateUpgradesRoot, entry.name), { force: true });
+          continue;
+        }
+        this.templateUpgrades.set(preview.previewId, preview);
+      } catch {
+        // Un preview corrupto se conserva como recovery, nunca se ejecuta.
+      }
+    }
+  }
+
+  private rolloutPath(previewId: string): string {
+    return join(this.rolloutsRoot, `${previewId}.json`);
+  }
+
+  private async persistRollout(rollout: RolloutDraft): Promise<void> {
+    this.rollouts.set(rollout.previewId, rollout);
+    await writeAtomic(this.rolloutPath(rollout.previewId), `${JSON.stringify(rollout, null, 2)}\n`);
+  }
+
+  private async loadRollouts(): Promise<void> {
+    const entries = await readdir(this.rolloutsRoot, { withFileTypes: true });
+    for (const entry of entries.filter((item) => item.isFile() && item.name.endsWith(".json"))) {
+      try {
+        const rollout = JSON.parse(
+          await readFile(join(this.rolloutsRoot, entry.name), "utf8"),
+        ) as RolloutDraft;
+        if (!rollout.previewId || Date.parse(rollout.expiresAt) <= this.now().getTime()) {
+          await rm(join(this.rolloutsRoot, entry.name), { force: true });
+          continue;
+        }
+        this.rollouts.set(rollout.previewId, rollout);
+      } catch {
+        // Un preview de rollout corrupto no debe bloquear el host.
+      }
+    }
+  }
+
   private async persistJob(job: AgentJob): Promise<void> {
     this.jobs.set(job.jobId, job);
     await writeAtomic(this.jobPath(job.jobId), `${JSON.stringify(job, null, 2)}\n`);
@@ -520,10 +674,21 @@ export class AgentController {
 
   private async loadJobs(): Promise<void> {
     const entries = await readdir(this.jobsRoot, { withFileTypes: true });
+    const resumable: AgentJob[] = [];
     for (const entry of entries.filter((item) => item.isFile() && item.name.endsWith(".json"))) {
       try {
         const job = JSON.parse(await readFile(join(this.jobsRoot, entry.name), "utf8")) as AgentJob;
-        if (job.status === "queued" || job.status === "running") {
+        if (
+          (job.status === "queued" || job.status === "running") &&
+          job.kind === "rollout" &&
+          job.rolloutId
+        ) {
+          job.status = "queued";
+          job.updatedAt = this.now().toISOString();
+          delete job.error;
+          await writeAtomic(join(this.jobsRoot, entry.name), `${JSON.stringify(job, null, 2)}\n`);
+          resumable.push(job);
+        } else if (job.status === "queued" || job.status === "running") {
           job.status = "failed";
           job.error = {
             code: "AGENT_RESTARTED",
@@ -537,6 +702,7 @@ export class AgentController {
         // Un trabajo corrupto no debe impedir iniciar el host.
       }
     }
+    for (const job of resumable) void this.runRolloutJob(job, job.idempotencyKey);
   }
 
   private planResponse(plan: PlanDraft, includeProject = false, includeDiff = true) {
@@ -551,6 +717,7 @@ export class AgentController {
       expiresAt: plan.expiresAt,
       ...(includeDiff ? { diff: plan.diff } : {}),
       warnings: plan.warnings,
+      blockingIssues: plan.blockingIssues,
       requiresCommitApproval: true,
       ...(includeProject ? { project: plan.project } : {}),
     };
@@ -598,6 +765,14 @@ export class AgentController {
         "protocol.describe",
         "stores.list",
         "stores.get",
+        "stores.restore",
+        "templates.get",
+        "templates.previewUpgrade",
+        "templates.commitUpgrade",
+        "rollouts.preview",
+        "rollouts.commit",
+        "rollouts.get",
+        "rollouts.rollback",
         "plans.create",
         "plans.get",
         "plans.commit",
@@ -619,7 +794,9 @@ export class AgentController {
         "product.create",
         "product.update",
         "product.setStatus",
+        "store.archive",
         "asset.attach",
+        "section.updateSettings",
       ],
       limits: {
         maxOperationsPerPlan: 500,
@@ -632,6 +809,10 @@ export class AgentController {
         arbitraryShell: false,
         arbitraryHtml: false,
         protectedDemosWritable: false,
+      },
+      operationSchemas: {
+        "product.setStatus": { status: ["active", "hidden", "archived"] },
+        "store.archive": { confirmation: "ARCHIVAR_TIENDA" },
       },
     };
   }
@@ -701,6 +882,665 @@ export class AgentController {
     return result;
   }
 
+  private async readTemplateProject(): Promise<{
+    project: StoreProjectV1;
+    version: number;
+  }> {
+    const current = await this.options.storage.readCurrent(this.baseTemplateStoreId);
+    if (!current) fail("TEMPLATE_NOT_FOUND", `No existe la plantilla ${this.baseTemplateStoreId}.`);
+    const project = readProjectArchive(Buffer.from(current.bytes).toString("utf8"));
+    if (!isBaseTemplate(project, this.protectedStoreIds))
+      fail("TEMPLATE_INVALID", "La tienda base no está marcada como protegida.");
+    return {
+      project,
+      version: Number(
+        (current.manifest as { current?: { version?: number } })?.current?.version ?? 0,
+      ),
+    };
+  }
+
+  async getTemplate(rawParams: unknown = {}) {
+    await this.ready();
+    this.requireScope("template:read");
+    TemplateGetParamsSchema.parse(rawParams);
+    const { project, version } = await this.readTemplateProject();
+    return {
+      ...summary(project, version, true),
+      templateId: project.origin?.templateId ?? "catalog-modern",
+      templateVersion: project.origin?.templateVersion ?? null,
+      updatePolicy: "pinned",
+    };
+  }
+
+  async previewTemplateUpgrade(rawParams: unknown) {
+    await this.ready();
+    this.requireScope("template:read");
+    TemplatePreviewUpgradeParamsSchema.parse(rawParams);
+    const { project, version } = await this.readTemplateProject();
+    const baseVersion =
+      rawParams && typeof rawParams === "object" && "baseVersion" in rawParams
+        ? (rawParams as { baseVersion?: number }).baseVersion
+        : undefined;
+    if (baseVersion !== undefined && baseVersion !== version)
+      fail("VERSION_CONFLICT", "La plantilla cambió; generá un preview nuevo.", {
+        expected: baseVersion,
+        actual: version,
+      });
+    const plan = planCatalogModernUpgrade(project);
+    const preview: TemplateUpgradeDraft = {
+      previewId: makeId("template-preview"),
+      storeId: project.id,
+      baseVersion: version,
+      project,
+      plan,
+      createdAt: this.now().toISOString(),
+      expiresAt: new Date(this.now().getTime() + PLAN_TTL_MS).toISOString(),
+    };
+    await this.persistTemplateUpgrade(preview);
+    await this.audit("template.upgrade.previewed", {
+      previewId: preview.previewId,
+      storeId: project.id,
+      fromVersion: plan.fromVersion,
+      toVersion: plan.toVersion,
+    });
+    return {
+      previewId: preview.previewId,
+      storeId: project.id,
+      baseVersion: version,
+      ...plan,
+      requiresConfirmation: "ACTUALIZAR_PLANTILLA",
+      expiresAt: preview.expiresAt,
+    };
+  }
+
+  async commitTemplateUpgrade(rawParams: unknown) {
+    await this.ready();
+    this.requireScope("template:write");
+    const params = TemplateCommitUpgradeParamsSchema.parse(rawParams);
+    if (params.idempotencyKey) {
+      const committed = await this.readCommitted(params.idempotencyKey);
+      if (committed) return committed;
+    }
+    const preview = this.templateUpgrades.get(params.previewId);
+    if (!preview) fail("PREVIEW_NOT_FOUND", "El preview de plantilla no existe o expiró.");
+    if (Date.parse(preview.expiresAt) <= this.now().getTime()) {
+      this.templateUpgrades.delete(preview.previewId);
+      await rm(this.templateUpgradePath(preview.previewId), { force: true });
+      fail("PREVIEW_EXPIRED", "El preview de plantilla expiró; generá uno nuevo.");
+    }
+    if (preview.baseVersion !== params.baseVersion)
+      fail("VERSION_CONFLICT", "La plantilla cambió desde el preview.");
+    const current = await this.readTemplateProject();
+    if (current.version !== preview.baseVersion)
+      fail("VERSION_CONFLICT", "La plantilla cambió desde el preview.");
+    const upgraded = StoreProjectV2Schema.parse({
+      ...applyCatalogModernUpgrade(
+        current.project,
+        preview.plan.safeChanges.map((change) => change.id),
+      ),
+      updatedAt: this.now().toISOString(),
+      origin: {
+        ...current.project.origin,
+        role: "base-template" as const,
+        updatePolicy: "pinned" as const,
+      },
+    });
+    const exportResult = exportProject(upgraded, { mode: "production" });
+    const archive = new TextEncoder().encode(createProjectArchive(upgraded));
+    const tx = await this.options.storage.beginSave({
+      projectId: upgraded.id,
+      name: upgraded.name,
+      slug: upgraded.slug,
+      projectUpdatedAt: upgraded.updatedAt,
+      expectedVersion: preview.baseVersion,
+      actor: { kind: "template-upgrade", id: preview.previewId },
+      allowProtectedWrite: true,
+      rendererFingerprint: EXPORTER_RENDERER_FINGERPRINT,
+    });
+    try {
+      await this.options.storage.upload(tx.transactionId, "project", bytesStream(archive));
+      await this.options.storage.upload(
+        tx.transactionId,
+        "site",
+        bytesStream(new TextEncoder().encode(siteMap(exportResult.files))),
+      );
+      const receipt = await this.options.storage.commit(tx.transactionId);
+      const result = {
+        storeId: upgraded.id,
+        version: tx.version,
+        receipt,
+        status: "synced",
+        fromTemplateVersion: preview.plan.fromVersion,
+        toTemplateVersion: preview.plan.toVersion,
+      };
+      if (params.idempotencyKey)
+        await writeAtomic(
+          this.committedPath(params.idempotencyKey),
+          `${JSON.stringify(result, null, 2)}\n`,
+        );
+      await rm(this.templateUpgradePath(preview.previewId), { force: true });
+      this.templateUpgrades.delete(preview.previewId);
+      await this.audit("template.upgrade.succeeded", {
+        previewId: preview.previewId,
+        storeId: upgraded.id,
+        version: tx.version,
+      });
+      return result;
+    } catch (error) {
+      await this.options.storage.abort(tx.transactionId).catch(() => undefined);
+      await this.audit("template.upgrade.failed", {
+        previewId: preview.previewId,
+        storeId: upgraded.id,
+        error: agentError(error),
+      });
+      throw error;
+    }
+  }
+
+  private async commitProjectSnapshot(
+    project: StoreProjectV1,
+    expectedVersion: number,
+    actor: "rollout" | "agent",
+    actorId: string,
+  ) {
+    const validated = StoreProjectV2Schema.parse(project);
+    let exportResult: ReturnType<typeof exportProject> | undefined;
+    let exportWarning: string | undefined;
+    try {
+      exportResult = exportProject(validated, { mode: "production" });
+    } catch (error) {
+      exportWarning = error instanceof Error ? error.message : String(error);
+      exportResult = exportProject(validated, { mode: "draft" });
+    }
+    const archive = new TextEncoder().encode(createProjectArchive(validated));
+    const tx = await this.options.storage.beginSave({
+      projectId: validated.id,
+      name: validated.name,
+      slug: validated.slug,
+      projectUpdatedAt: validated.updatedAt,
+      expectedVersion,
+      actor: { kind: actor, id: actorId },
+      rendererFingerprint: EXPORTER_RENDERER_FINGERPRINT,
+    });
+    try {
+      await this.options.storage.upload(tx.transactionId, "project", bytesStream(archive));
+      if (exportResult) {
+        await this.options.storage.upload(
+          tx.transactionId,
+          "site",
+          bytesStream(new TextEncoder().encode(siteMap(exportResult.files))),
+        );
+      }
+      const receipt = await this.options.storage.commit(tx.transactionId);
+      return {
+        receipt,
+        storeId: validated.id,
+        version: tx.version,
+        status: exportWarning ? "site-outdated" : "synced",
+        ...(exportWarning ? { exportWarning } : {}),
+      };
+    } catch (error) {
+      await this.options.storage.abort(tx.transactionId).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  async previewRollout(rawParams: unknown) {
+    await this.ready();
+    this.requireScope("rollouts:read");
+    const params = RolloutPreviewParamsSchema.parse(rawParams);
+    const listing = (await this.options.storage.list()) as {
+      projects?: Array<Record<string, unknown>>;
+    };
+    const requested = params.target.storeIds ? new Set(params.target.storeIds) : undefined;
+    const stores: RolloutStorePreview[] = [];
+    for (const item of listing.projects ?? []) {
+      const storeId = typeof item.projectId === "string" ? item.projectId : undefined;
+      if (!storeId || (requested && !requested.has(storeId))) continue;
+      const name = typeof item.name === "string" ? item.name : storeId;
+      const current = await this.options.storage.readCurrent(storeId);
+      if (!current) {
+        stores.push({ storeId, name, baseVersion: 0, status: "skipped", reason: "missing" });
+        continue;
+      }
+      const project = readProjectArchive(Buffer.from(current.bytes).toString("utf8"));
+      if (project.status !== params.target.status) {
+        stores.push({
+          storeId,
+          name,
+          baseVersion: Number(
+            (current.manifest as { current?: { version?: number } })?.current?.version ?? 0,
+          ),
+          status: "skipped",
+          reason: "inactive",
+        });
+        continue;
+      }
+      const protectedStore = isBaseTemplate(project, this.protectedStoreIds);
+      if (params.target.excludeProtected && protectedStore) {
+        stores.push({
+          storeId,
+          name,
+          baseVersion: Number(
+            (current.manifest as { current?: { version?: number } })?.current?.version ?? 0,
+          ),
+          status: "skipped",
+          reason: "protected",
+        });
+        continue;
+      }
+      const baseVersion = Number(
+        (current.manifest as { current?: { version?: number } })?.current?.version ?? 0,
+      );
+      if (params.kind === "site-rebuild") {
+        stores.push({ storeId, name, baseVersion, status: "ready" });
+        continue;
+      }
+      const upgrade = planCatalogModernUpgrade(project);
+      stores.push({
+        storeId,
+        name,
+        baseVersion,
+        status: upgrade.conflicts.length > 0 ? "conflict" : "ready",
+        safeChanges: upgrade.safeChanges.map((change) => change.id),
+        conflicts: upgrade.conflicts.map((conflict) => conflict.id),
+        ...(upgrade.conflicts.length > 0 ? { reason: "template-conflict" } : {}),
+      });
+    }
+    const rollout: RolloutDraft = {
+      previewId: makeId("rollout-preview"),
+      kind: params.kind,
+      ...(params.migrationId ? { migrationId: params.migrationId } : {}),
+      createdAt: this.now().toISOString(),
+      expiresAt: new Date(this.now().getTime() + PLAN_TTL_MS).toISOString(),
+      stores,
+      target: params.target,
+    };
+    await this.persistRollout(rollout);
+    await this.audit("rollout.previewed", {
+      previewId: rollout.previewId,
+      kind: rollout.kind,
+      storeCount: stores.filter((store) => store.status === "ready").length,
+    });
+    return {
+      previewId: rollout.previewId,
+      kind: rollout.kind,
+      stores,
+      expiresAt: rollout.expiresAt,
+      requiresCommitApproval: true,
+    };
+  }
+
+  async commitRollout(rawParams: unknown) {
+    await this.ready();
+    this.requireScope("rollouts:write");
+    const params = RolloutCommitParamsSchema.parse(rawParams);
+    const preview = this.rollouts.get(params.previewId);
+    if (!preview) fail("PREVIEW_NOT_FOUND", "El preview de rollout no existe o expiró.");
+    if (params.idempotencyKey) {
+      const committed = await this.readCommitted(params.idempotencyKey);
+      if (committed) return committed;
+    }
+    const existingJob = [...this.jobs.values()].find(
+      (job) => job.rolloutId === preview.previewId && ["queued", "running"].includes(job.status),
+    );
+    if (existingJob) return this.jobResponse(existingJob);
+    const job: AgentJob = {
+      jobId: makeId("job-rollout"),
+      kind: "rollout",
+      rolloutId: preview.previewId,
+      ...(params.idempotencyKey ? { idempotencyKey: params.idempotencyKey } : {}),
+      status: "queued",
+      createdAt: this.now().toISOString(),
+      updatedAt: this.now().toISOString(),
+    };
+    await this.persistJob(job);
+    if (params.async) {
+      void this.runRolloutJob(job, params.idempotencyKey);
+      return this.jobResponse(job);
+    }
+    await this.runRolloutJob(job, params.idempotencyKey);
+    return this.jobResponse(job);
+  }
+
+  private async runRolloutJob(job: AgentJob, idempotencyKey?: string): Promise<void> {
+    const previewId = job.rolloutId;
+    if (!previewId) return;
+    const running = {
+      ...job,
+      ...(idempotencyKey ? { idempotencyKey } : {}),
+      status: "running" as const,
+      updatedAt: this.now().toISOString(),
+    };
+    await this.persistJob(running);
+    Object.assign(job, running);
+    try {
+      const preview = this.rollouts.get(previewId);
+      if (!preview) fail("PREVIEW_NOT_FOUND", "El preview de rollout no existe o expiró.");
+      const results: Array<Record<string, unknown>> = [...(running.partialResults ?? [])];
+      const replaceResult = (next: Record<string, unknown>) => {
+        const index = results.findIndex((item) => item.storeId === next.storeId);
+        if (index === -1) results.push(next);
+        else results[index] = next;
+      };
+      const savePartial = async () => {
+        const snapshot = {
+          ...job,
+          status: "running" as const,
+          partialResults: results,
+          updatedAt: this.now().toISOString(),
+        };
+        await this.persistJob(snapshot);
+        Object.assign(job, snapshot);
+      };
+      for (const target of preview.stores.filter((store) => store.status === "ready")) {
+        const previousResult = results.find((item) => item.storeId === target.storeId);
+        if (
+          previousResult &&
+          ["applied", "skipped", "conflict"].includes(String(previousResult.status))
+        ) {
+          continue;
+        }
+        let lockAcquired = false;
+        let inProgress: Record<string, unknown> | undefined;
+        try {
+          await this.agentLocks.claim(target.storeId, previewId, {
+            kind: "rollout",
+            rolloutId: previewId,
+          });
+          lockAcquired = true;
+          const current = await this.options.storage.readCurrent(target.storeId);
+          if (!current) throw new Error("La tienda ya no existe.");
+          const currentVersion = Number(
+            (current.manifest as { current?: { version?: number } })?.current?.version ?? 0,
+          );
+          if (currentVersion !== target.baseVersion) {
+            if (
+              preview.kind === "project-migration" &&
+              previousResult?.status === "pending" &&
+              typeof previousResult.projectHash === "string"
+            ) {
+              const recoveredProject = readProjectArchive(
+                Buffer.from(current.bytes).toString("utf8"),
+              );
+              if (
+                digest(new TextEncoder().encode(stable(recoveredProject))) ===
+                previousResult.projectHash
+              ) {
+                replaceResult({
+                  ...previousResult,
+                  status: "applied",
+                  result: {
+                    storeId: target.storeId,
+                    version: currentVersion,
+                    status: "synced",
+                    recovered: true,
+                  },
+                });
+                await savePartial();
+                continue;
+              }
+            }
+            replaceResult({
+              storeId: target.storeId,
+              status: "conflict",
+              reason: "VERSION_CONFLICT",
+            });
+            await savePartial();
+            continue;
+          }
+          const project = readProjectArchive(Buffer.from(current.bytes).toString("utf8"));
+          if (preview.kind === "site-rebuild") {
+            inProgress = {
+              storeId: target.storeId,
+              status: "pending",
+              previousSite:
+                (current.manifest as { lastValidSite?: Record<string, unknown> })?.lastValidSite ??
+                null,
+            };
+            replaceResult(inProgress);
+            await savePartial();
+            const exported = exportProject(project, { mode: "production" });
+            const siteResult = await this.options.storage.rebuildSite(
+              target.storeId,
+              bytesStream(new TextEncoder().encode(siteMap(exported.files))),
+              {
+                actor: { kind: "rollout", id: previewId },
+                rendererFingerprint: EXPORTER_RENDERER_FINGERPRINT,
+              },
+            );
+            const siteRecord = siteResult as {
+              previousSite?: Record<string, unknown> | null;
+              [key: string]: unknown;
+            };
+            const originalPreviousSite = Object.hasOwn(inProgress, "previousSite")
+              ? inProgress.previousSite
+              : siteRecord.previousSite;
+            replaceResult({
+              storeId: target.storeId,
+              status: "applied",
+              site: { ...siteRecord, previousSite: originalPreviousSite },
+            });
+            await savePartial();
+            continue;
+          }
+          const upgrade = planCatalogModernUpgrade(project);
+          if (upgrade.conflicts.length > 0) {
+            replaceResult({
+              storeId: target.storeId,
+              status: "conflict",
+              conflicts: upgrade.conflicts,
+            });
+            await savePartial();
+            continue;
+          }
+          if (upgrade.safeChanges.length === 0) {
+            replaceResult({
+              storeId: target.storeId,
+              status: "skipped",
+              reason: "already-current",
+            });
+            await savePartial();
+            continue;
+          }
+          const next = StoreProjectV2Schema.parse({
+            ...applyCatalogModernUpgrade(
+              project,
+              upgrade.safeChanges.map((change) => change.id),
+            ),
+            updatedAt: this.now().toISOString(),
+          });
+          inProgress = {
+            storeId: target.storeId,
+            status: "pending",
+            previousProject: project,
+            projectHash: digest(new TextEncoder().encode(stable(next))),
+          };
+          replaceResult(inProgress);
+          await savePartial();
+          const result = await this.commitProjectSnapshot(
+            next,
+            target.baseVersion,
+            "rollout",
+            previewId,
+          );
+          replaceResult({
+            storeId: target.storeId,
+            status: "applied",
+            previousProject: project,
+            result,
+          });
+          await savePartial();
+        } catch (error) {
+          replaceResult({
+            ...(inProgress ?? { storeId: target.storeId }),
+            status: "failed",
+            error: agentError(error),
+          });
+          await savePartial().catch(() => undefined);
+        } finally {
+          if (lockAcquired) await this.agentLocks.release(target.storeId, previewId);
+        }
+      }
+      const counts: Record<string, number> = {};
+      for (const item of results) {
+        const key = String(item.status);
+        counts[key] = (counts[key] ?? 0) + 1;
+      }
+      const result = {
+        rolloutId: previewId,
+        kind: preview.kind,
+        results,
+        counts,
+      };
+      if (idempotencyKey)
+        await writeAtomic(
+          this.committedPath(idempotencyKey),
+          `${JSON.stringify(result, null, 2)}\n`,
+        );
+      const succeeded = {
+        ...job,
+        result,
+        partialResults: results,
+        status: "succeeded" as const,
+        updatedAt: this.now().toISOString(),
+      };
+      await this.persistJob(succeeded);
+      Object.assign(job, succeeded);
+      await this.audit("rollout.succeeded", {
+        rolloutId: previewId,
+        kind: preview.kind,
+        counts: result.counts,
+      });
+    } catch (error) {
+      const failed = {
+        ...job,
+        status: "failed" as const,
+        error: agentError(error),
+        updatedAt: this.now().toISOString(),
+      };
+      await this.persistJob(failed);
+      Object.assign(job, failed);
+      await this.audit("rollout.failed", { rolloutId: previewId, error: agentError(error) });
+    }
+  }
+
+  async getRollout(rawParams: unknown) {
+    await this.ready();
+    this.requireScope("rollouts:read");
+    const params = RolloutGetParamsSchema.parse(rawParams);
+    const preview = this.rollouts.get(params.rolloutId);
+    const job = [...this.jobs.values()].find((item) => item.rolloutId === params.rolloutId);
+    if (!preview && !job) fail("ROLLOUT_NOT_FOUND", "El rollout no existe o expiró.");
+    return { ...(preview ? { preview } : {}), ...(job ? { job: this.jobResponse(job) } : {}) };
+  }
+
+  async rollbackRollout(rawParams: unknown) {
+    await this.ready();
+    this.requireScope("rollouts:write");
+    const params = RolloutRollbackParamsSchema.parse(rawParams);
+    const job = [...this.jobs.values()].find((item) => item.rolloutId === params.rolloutId);
+    const result = job?.result as { results?: Array<Record<string, unknown>> } | undefined;
+    const storeResult = result?.results?.find((item) => item.storeId === params.storeId);
+    if (!storeResult || storeResult.status !== "applied")
+      fail("ROLLBACK_NOT_AVAILABLE", "No existe un resultado aplicado para esa tienda.");
+    const current = await this.options.storage.readCurrent(params.storeId);
+    const currentVersion = Number(
+      (current?.manifest as { current?: { version?: number } })?.current?.version ?? 0,
+    );
+    if (currentVersion !== params.expectedVersion)
+      fail("VERSION_CONFLICT", "La tienda cambió después del rollout.");
+    if (storeResult.previousProject) {
+      const rollbackProject = StoreProjectV2Schema.parse(storeResult.previousProject);
+      const rollback = await this.commitProjectSnapshot(
+        rollbackProject,
+        params.expectedVersion,
+        "rollout",
+        params.rolloutId,
+      );
+      await this.audit("rollout.rollback.succeeded", {
+        rolloutId: params.rolloutId,
+        storeId: params.storeId,
+        version: rollback.version,
+      });
+      return rollback;
+    }
+    const site = (storeResult.site as { previousSite?: Record<string, unknown> } | undefined)
+      ?.previousSite;
+    if (site) {
+      const rollback = await this.options.storage.restoreSite(
+        params.storeId,
+        params.expectedVersion,
+        site,
+      );
+      await this.audit("rollout.rollback.succeeded", {
+        rolloutId: params.rolloutId,
+        storeId: params.storeId,
+      });
+      return rollback;
+    }
+    fail("ROLLBACK_NOT_AVAILABLE", "El sitio o respaldo anterior ya no está disponible.");
+  }
+
+  async restoreStore(rawParams: unknown) {
+    await this.ready();
+    this.requireScope("plans:write");
+    const params = StoreRestoreParamsSchema.parse(rawParams);
+    const current = await this.options.storage.readCurrent(params.storeId);
+    if (!current) fail("STORE_NOT_FOUND", `No existe la tienda ${params.storeId}.`);
+    const project = readProjectArchive(Buffer.from(current.bytes).toString("utf8"));
+    if (project.status !== "archived")
+      fail("STORE_NOT_ARCHIVED", `La tienda ${params.storeId} no está archivada.`);
+    const currentVersion = Number(
+      (current.manifest as { current?: { version?: number } })?.current?.version ?? 0,
+    );
+    if (params.expectedVersion !== undefined && params.expectedVersion !== currentVersion)
+      fail("VERSION_CONFLICT", "La tienda cambió desde la lectura.", {
+        expected: params.expectedVersion,
+        actual: currentVersion,
+      });
+    const lock = await this.agentLocks.read(params.storeId);
+    if (lock) fail("AGENT_LOCKED", "La tienda tiene un lock activo; esperá a que expire.");
+    const restored = StoreProjectV2Schema.parse({
+      ...project,
+      status: "active" as const,
+      updatedAt: this.now().toISOString(),
+    });
+    let exportResult: ReturnType<typeof exportProject> | undefined;
+    try {
+      exportResult = exportProject(restored, { mode: "production" });
+    } catch {
+      // La restauración no debe fallar por contenido pendiente; exporta draft.
+      exportResult = exportProject(restored, { mode: "draft" });
+    }
+    const archive = new TextEncoder().encode(createProjectArchive(restored));
+    const tx = await this.options.storage.beginSave({
+      projectId: restored.id,
+      name: restored.name,
+      slug: restored.slug,
+      projectUpdatedAt: restored.updatedAt,
+      expectedVersion: currentVersion,
+      actor: { kind: "agent" as const, id: this.actorId },
+      rendererFingerprint: EXPORTER_RENDERER_FINGERPRINT,
+    });
+    try {
+      await this.options.storage.upload(tx.transactionId, "project", bytesStream(archive));
+      await this.options.storage.upload(
+        tx.transactionId,
+        "site",
+        bytesStream(new TextEncoder().encode(siteMap(exportResult.files))),
+      );
+      const receipt = await this.options.storage.commit(tx.transactionId);
+      await this.audit("stores.restore.succeeded", {
+        storeId: params.storeId,
+        version: tx.version,
+      });
+      return { receipt, storeId: restored.id, version: tx.version, status: "synced" };
+    } catch (error) {
+      await this.options.storage.abort(tx.transactionId).catch(() => undefined);
+      throw error;
+    }
+  }
   async stageAsset(rawParams: unknown) {
     await this.ready();
     this.requireScope("assets:write");
@@ -742,7 +1582,8 @@ export class AgentController {
       fail("ASSET_TOO_LARGE", "El asset supera el límite permitido.");
     validateImageSignature(params.mimeType, bytes);
     const dimensions = imageDimensions(params.mimeType, bytes);
-    if (dimensions.width <= 0 || dimensions.height <= 0)
+    // Mínimo razonable para evitar imágenes inutilizables en el sitio público.
+    if (dimensions.width < 32 || dimensions.height < 32)
       fail("ASSET_DIMENSIONS_INVALID", "Las dimensiones del asset no son válidas.");
     const assetId = makeId("asset-agent");
     const hash = digest(bytes);
@@ -946,7 +1787,40 @@ export class AgentController {
       fail("VERSION_INVALID", "Una tienda nueva debe usar baseVersion null o 0.");
     let base: StoreProjectV1;
     if (isNew) {
-      base = createCleanProject(createOperation, storeId, this.now());
+      if (createOperation.source.kind === "clean") {
+        base = createCleanProject(createOperation, storeId, this.now());
+      } else {
+        const templateCurrent = await this.options.storage.readCurrent(this.baseTemplateStoreId);
+        if (!templateCurrent) {
+          fail(
+            "TEMPLATE_NOT_FOUND",
+            `No existe la plantilla base ${this.baseTemplateStoreId}; no se puede crear la tienda.`,
+          );
+        }
+        const template = readProjectArchive(Buffer.from(templateCurrent.bytes).toString("utf8"));
+        if (!isBaseTemplate(template, this.protectedStoreIds)) {
+          fail(
+            "TEMPLATE_INVALID",
+            "La fuente solicitada no está marcada como plantilla protegida.",
+          );
+        }
+        base = cloneProjectFromTemplate(template, {
+          id: storeId,
+          name: createOperation.name,
+          slug: createOperation.slug ?? safeSlug(createOperation.name),
+          ...(createOperation.baseUrl ? { baseUrl: createOperation.baseUrl } : {}),
+          ...(createOperation.brandName ? { brandName: createOperation.brandName } : {}),
+          now: this.now().toISOString(),
+        });
+        base = StoreProjectV2Schema.parse({
+          ...base,
+          identity: {
+            ...base.identity,
+            ...(createOperation.email === undefined ? {} : { email: createOperation.email }),
+            ...(createOperation.phone === undefined ? {} : { phone: createOperation.phone }),
+          },
+        });
+      }
     } else {
       if (!current) fail("STORE_NOT_FOUND", `No existe la tienda ${storeId}.`);
       base = readProjectArchive(Buffer.from(current.bytes).toString("utf8"));
@@ -957,6 +1831,13 @@ export class AgentController {
         );
     }
     const project = await this.applyOperations(base, isNew ? operations.slice(1) : operations);
+    const diff = planDiff(isNew ? undefined : base, project, operations, isNew);
+    const warnings = planWarnings(project, diff);
+    // Ejecutar la auditoría del exporter antes de crear el plan para que el
+    // agente vea errores críticos (p. ej. producto sin imagen) sin commitear.
+    const blockingIssues = auditProject(project)
+      .filter((issue) => issue.severity === "critical")
+      .map((issue) => ({ code: issue.code, severity: issue.severity, message: issue.message }));
     const planId = makeId("plan-agent");
     const createdAt = this.now().toISOString();
     const plan: PlanDraft = {
@@ -968,11 +1849,9 @@ export class AgentController {
       createdNewStore: isNew,
       createdAt,
       expiresAt: new Date(this.now().getTime() + PLAN_TTL_MS).toISOString(),
-      diff: planDiff(isNew ? undefined : base, project, operations, isNew),
-      warnings: planWarnings(
-        project,
-        planDiff(isNew ? undefined : base, project, operations, isNew),
-      ),
+      diff,
+      warnings,
+      blockingIssues,
       includeDiff: params.includeDiff,
       ...(params.idempotencyKey ? { idempotencyKey: params.idempotencyKey } : {}),
     };
@@ -1102,6 +1981,7 @@ export class AgentController {
       projectUpdatedAt: validated.updatedAt,
       expectedVersion: plan.baseVersion,
       actor: { kind: "agent", id: plan.planId },
+      rendererFingerprint: EXPORTER_RENDERER_FINGERPRINT,
     });
     try {
       await this.options.storage.upload(tx.transactionId, "project", bytesStream(archive));
@@ -1226,17 +2106,29 @@ export class AgentController {
     base: StoreProjectV1,
     rawOperations: AgentOperation[],
   ): Promise<StoreProjectV1> {
-    const stagedForPlan = (
-      await Promise.all(
-        rawOperations
-          .filter(
-            (operation): operation is Extract<AgentOperation, { type: "asset.attach" }> =>
-              operation.type === "asset.attach",
-          )
-          .map(async (operation) => (await this.readStagedAsset(operation.assetId))?.asset),
-      )
-    ).filter((asset): asset is ImageAsset => asset !== undefined);
-    const stagedIds = new Set(stagedForPlan.map((asset) => asset.id));
+    // Recolectar todos los assets stageados referenciados por el plan, tanto
+    // desde asset.attach como desde product.create.imageIds, y deduplicarlos
+    // para evitar "ID de recurso duplicado" cuando varios attach/productos
+    // usan el mismo asset.
+    const referencedAssetIds = new Set<string>();
+    for (const operation of rawOperations) {
+      if (operation.type === "asset.attach") {
+        referencedAssetIds.add(operation.assetId);
+      } else if (operation.type === "product.create") {
+        for (const imageId of operation.imageIds) referencedAssetIds.add(imageId);
+      } else if (operation.type === "product.update") {
+        if (operation.changes.imageIds) {
+          for (const imageId of operation.changes.imageIds) {
+            referencedAssetIds.add(imageId);
+          }
+        }
+      }
+    }
+    const stagedForPlan: ImageAsset[] = [];
+    for (const assetId of referencedAssetIds) {
+      const staged = await this.readStagedAsset(assetId);
+      if (staged) stagedForPlan.push(staged.asset);
+    }
     let project =
       stagedForPlan.length === 0
         ? base
@@ -1245,10 +2137,7 @@ export class AgentController {
             assets: [
               ...base.assets,
               ...stagedForPlan.filter(
-                (asset) =>
-                  !base.assets.some(
-                    (candidate) => candidate.id === asset.id && stagedIds.has(candidate.id),
-                  ),
+                (asset) => !base.assets.some((candidate) => candidate.id === asset.id),
               ),
             ],
           });
@@ -1374,6 +2263,20 @@ export class AgentController {
             at,
           });
           break;
+        case "store.archive": {
+          // La operación de archivado requiere que la tienda objetivo sea la
+          // misma del plan y que no esté protegida (validado en createPlan).
+          // La operacion siempre aplica al proyecto del plan; el storeId
+          // opcional del contrato se valida para evitar ambigüedad.
+          if (operation.storeId !== undefined && operation.storeId !== project.id)
+            fail("PLAN_INVALID", "store.archive sólo puede archivar la tienda del plan.");
+          project = StoreProjectV2Schema.parse({
+            ...project,
+            status: "archived" as const,
+            updatedAt: at,
+          });
+          break;
+        }
         case "asset.attach": {
           const staged = await this.readStagedAsset(operation.assetId);
           const assetExists = project.assets.some((asset) => asset.id === operation.assetId);
@@ -1427,6 +2330,22 @@ export class AgentController {
           }
           break;
         }
+        case "section.updateSettings": {
+          const section = project.sections.find((item) => item.id === operation.sectionId);
+          if (!section) fail("SECTION_NOT_FOUND", `No existe la sección ${operation.sectionId}.`);
+          // Merge parcial de settings; el schema del proyecto valida los tipos
+          // al final con StoreProjectV2Schema.parse.
+          project = StoreProjectV2Schema.parse({
+            ...project,
+            sections: project.sections.map((item) =>
+              item.id === operation.sectionId
+                ? { ...item, settings: { ...item.settings, ...operation.settings } }
+                : item,
+            ),
+            updatedAt: at,
+          });
+          break;
+        }
       }
     }
     return StoreProjectV2Schema.parse(project);
@@ -1463,6 +2382,22 @@ export async function dispatchAgentMethod(
         return await controller.listStores();
       case "stores.get":
         return await controller.getStore(params);
+      case "stores.restore":
+        return await controller.restoreStore(params);
+      case "templates.get":
+        return await controller.getTemplate(params);
+      case "templates.previewUpgrade":
+        return await controller.previewTemplateUpgrade(params);
+      case "templates.commitUpgrade":
+        return await controller.commitTemplateUpgrade(params);
+      case "rollouts.preview":
+        return await controller.previewRollout(params);
+      case "rollouts.commit":
+        return await controller.commitRollout(params);
+      case "rollouts.get":
+        return await controller.getRollout(params);
+      case "rollouts.rollback":
+        return await controller.rollbackRollout(params);
       case "plans.create":
         return await controller.createPlan(params);
       case "plans.get":

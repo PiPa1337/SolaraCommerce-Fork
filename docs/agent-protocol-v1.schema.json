@@ -16,6 +16,14 @@
           "protocol.describe",
           "stores.list",
           "stores.get",
+          "stores.restore",
+          "templates.get",
+          "templates.previewUpgrade",
+          "templates.commitUpgrade",
+          "rollouts.preview",
+          "rollouts.commit",
+          "rollouts.get",
+          "rollouts.rollback",
           "plans.create",
           "plans.get",
           "plans.commit",
@@ -28,12 +36,22 @@
           "assets.upload.chunk",
           "assets.upload.finish"
         ]
-      },
-      "scopes": {
-        "type": "array",
-        "items": {
-          "enum": ["read", "plans:write", "commit", "assets:write", "audit:read"]
-        }
+      }
+    },
+    "scopes": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "read",
+          "plans:write",
+          "commit",
+          "assets:write",
+          "audit:read",
+          "template:read",
+          "template:write",
+          "rollouts:read",
+          "rollouts:write"
+        ]
       }
     }
   },
@@ -53,7 +71,26 @@
             "slug": { "$ref": "#/$defs/slug" },
             "baseUrl": { "type": "string", "format": "uri" },
             "email": { "type": "string" },
-            "phone": { "type": "string", "pattern": "^\\d{0,15}$" }
+            "phone": { "type": "string", "pattern": "^\\d{0,15}$" },
+            "source": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "required": ["kind", "templateId"],
+                  "properties": {
+                    "kind": { "const": "base-template" },
+                    "templateId": { "const": "catalog-modern" }
+                  },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "required": ["kind"],
+                  "properties": { "kind": { "const": "clean" } },
+                  "additionalProperties": false
+                }
+              ]
+            }
           }
         },
         {
@@ -128,6 +165,24 @@
             "type": { "const": "product.setStatus" },
             "productId": { "$ref": "#/$defs/id" },
             "status": { "enum": ["active", "hidden", "archived"] }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "confirmation"],
+          "properties": {
+            "type": { "const": "store.archive" },
+            "storeId": { "$ref": "#/$defs/id" },
+            "confirmation": { "const": "ARCHIVAR_TIENDA" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "sectionId", "settings"],
+          "properties": {
+            "type": { "const": "section.updateSettings" },
+            "sectionId": { "$ref": "#/$defs/id" },
+            "settings": { "type": "object" }
           }
         },
         {

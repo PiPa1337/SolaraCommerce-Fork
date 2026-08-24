@@ -11,6 +11,7 @@ import {
   Star,
   Storefront,
 } from "@phosphor-icons/react";
+import { isBaseTemplate } from "@solara/project-schema/project-policy";
 import { motion, useReducedMotion } from "motion/react";
 import {
   memo,
@@ -57,6 +58,7 @@ import { CompareView } from "./dashboard/CompareView";
 import { CreateStoreDialog } from "./dashboard/CreateStoreDialog";
 import { DashboardToolbar } from "./dashboard/DashboardToolbar";
 import { DuplicateDialog } from "./dashboard/DuplicateDialog";
+import { NativeOperationsPanel } from "./dashboard/NativeOperationsPanel";
 import { formatCompactDate, ProjectCard, statusLabel } from "./dashboard/ProjectCard";
 
 interface DashboardProps {
@@ -112,6 +114,7 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
 }: DashboardStoreCardProps) {
   const metrics = getProjectMetrics(record.project);
   const updatedLabel = formatDate(record.updatedAt);
+  const protectedTemplate = isBaseTemplate(record.project);
   return (
     <motion.article
       className={`dashboard-store-card${isSelected ? " is-selected" : ""}${
@@ -168,6 +171,9 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
           <span aria-hidden />
           {statusLabel(record.status)}
         </span>
+        {protectedTemplate ? (
+          <span className="dashboard-store-card__status is-protected">Plantilla protegida</span>
+        ) : null}
         <span className="dashboard-store-card__meta">
           {metrics.activeProducts.toLocaleString("es-AR")} productos
         </span>
@@ -952,6 +958,8 @@ export function Dashboard({
               </div>
             ) : null}
           </div>
+
+          <NativeOperationsPanel projects={projects} />
 
           <div className={`dashboard-cosmic-results dashboard-cosmic-results--${view}`}>
             <div className="dashboard-cosmic-store-groups" aria-live="polite">

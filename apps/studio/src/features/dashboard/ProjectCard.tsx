@@ -10,6 +10,7 @@ import {
   Package,
   X,
 } from "@phosphor-icons/react";
+import { isBaseTemplate } from "@solara/project-schema/project-policy";
 import type { RefObject } from "react";
 import { Button, IconButton } from "../../components/Ui";
 import { getProjectMetrics, storeMark } from "../../lib/dashboardModel";
@@ -71,6 +72,7 @@ export function ProjectCard({
   onDuplicate,
   onArchive,
 }: ProjectCardProps) {
+  const protectedTemplate = project ? isBaseTemplate(project.project) : false;
   return (
     <section
       ref={detailRef}
@@ -87,7 +89,7 @@ export function ProjectCard({
       {project ? (
         <>
           <header className="dashboard-store-detail__header">
-            <span>Tienda seleccionada</span>
+            <span>{protectedTemplate ? "Plantilla protegida" : "Tienda seleccionada"}</span>
             <IconButton icon={X} label="Cerrar detalle" onClick={onClose} />
           </header>
           <div className="dashboard-store-detail__identity">
@@ -100,6 +102,9 @@ export function ProjectCard({
                 <span aria-hidden />
                 {statusLabel(project.status)}
               </span>
+              {protectedTemplate ? (
+                <span className="dashboard-store-card__status is-protected">Solo lectura</span>
+              ) : null}
             </div>
           </div>
           <dl className="dashboard-store-detail__facts">
@@ -192,9 +197,14 @@ export function ProjectCard({
               variant={project.status === "archived" ? "secondary" : "danger"}
               icon={project.status === "archived" ? ArrowCounterClockwise : Archive}
               loading={archivingId === project.id}
+              disabled={protectedTemplate}
               onClick={() => void onArchive(project.id, project.status !== "archived")}
             >
-              {project.status === "archived" ? "Restaurar" : "Archivar"}
+              {protectedTemplate
+                ? "Plantilla protegida"
+                : project.status === "archived"
+                  ? "Restaurar"
+                  : "Archivar"}
             </Button>
           </div>
           {actionNotice ? (

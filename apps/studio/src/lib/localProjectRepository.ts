@@ -5,6 +5,7 @@
  */
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { ensureCatalogModernV2Sections } from "@solara/project-schema/catalog-modern-template";
+import { isBaseTemplate } from "@solara/project-schema/project-policy";
 import {
   type LocalProjectSummary,
   type LocalSaveReceipt,
@@ -93,7 +94,12 @@ export async function loadAllDiskProjects(): Promise<{
       const loaded = await loadDiskProject(summary);
       // IndexedDB queda como caché para operaciones que aún no necesitan disco;
       // el archivo y su manifest siguen siendo la autoridad al abrir la tienda.
-      await saveProject(loaded.project);
+      // La carga desde disco actualiza la caché de lectura de IndexedDB; no
+      // es una edición de la plantilla. El permiso explícito mantiene la
+      // protección para cualquier otro caller de saveProject.
+      await saveProject(loaded.project, {
+        allowProtectedWrite: isBaseTemplate(loaded.project),
+      });
       projects.push(loaded);
     } catch (error) {
       recovery.push({

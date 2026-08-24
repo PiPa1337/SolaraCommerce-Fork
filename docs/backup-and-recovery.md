@@ -29,6 +29,17 @@ coincidir. El guardado usa staging, bloqueo por tienda y rename atómico; una
 interrupción no debe reemplazar el manifest anterior. Los respaldos y sitios
 confirmados no se borran automáticamente.
 
+La carpeta protegida `store-modo-sur-demo` se puede leer, previsualizar, exportar
+y clonar, pero no guardar, archivar, importar ni borrar. El storage devuelve
+`PROTECTED_STORE` incluso si se intenta crear esa ID desde cero. Sólo un upgrade
+de plantilla autorizado puede escribirla, y siempre conserva el backup previo.
+
+Los rollouts generan backup por tienda antes de una migración de proyecto. Un
+`site-rebuild` sólo cambia el sitio público y registra el fingerprint del
+renderer; un `project-migration` cambia proyecto y sitio. Ambos guardan el
+resultado individual y el sitio/proyecto anterior para rollback condicionado a
+la versión esperada.
+
 ## Qué se debe respaldar
 
 Desde `Exportar`, descargar periódicamente `{tienda}.solara.json`; contiene el

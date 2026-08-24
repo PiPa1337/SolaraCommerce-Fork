@@ -32,15 +32,21 @@ async function openPortable(folder) {
   });
   const page = await app.firstWindow({ timeout: 20_000 });
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 20_000 });
+  // El dashboard se monta antes de que la sesión administrada termine de
+  // cargar los manifiestos desde disco. Esperar la tarjeta de la plantilla
+  // evita convertir esa latencia normal en un falso negativo del E2E.
+  await page.locator('[data-store-card-id="store-modo-sur-demo"]').waitFor({
+    state: "visible",
+    timeout: 20_000,
+  });
   return { app, page };
 }
 
 async function closePortable(instance) {
   try {
-    const closeButton = instance.page.getByRole("button", { name: "Cerrar app" });
-    if (await closeButton.isVisible({ timeout: 1_000 })) await closeButton.click();
+    await instance.app.evaluate(({ app }) => app.exit(0));
   } catch {
-    // close() es el fallback si el renderer ya no está disponible.
+    // close() es el fallback si el puente Electron ya no está disponible.
   }
   await instance.app.close();
 }
@@ -96,10 +102,9 @@ try {
   ]);
   const openedStoreId = async (page) => {
     const id = await page
-      .locator("[data-store-card-id]")
-      .first()
+      .locator('[data-store-card-id="store-modo-sur-demo"]')
       .getAttribute("data-store-card-id");
-    if (!id) throw new Error("El dashboard no expuso la tienda a abrir.");
+    if (!id) throw new Error("El dashboard no expuso la plantilla protegida.");
     return id;
   };
   const storeFolder = (folder, storeId) => {
@@ -119,7 +124,10 @@ try {
   const initialA = JSON.parse(readFileSync(manifestAPath, "utf8"));
   const initialB = JSON.parse(readFileSync(manifestBPath, "utf8"));
 
-  await instanceA.page.getByRole("button", { name: "Abrir esta tienda" }).first().click();
+  await instanceA.page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
+  const selectedBase = instanceA.page.getByRole("region", { name: /Tienda seleccionada/ });
+  await selectedBase.getByText("store-modo-sur-demo", { exact: true }).waitFor({ timeout: 20_000 });
+  await selectedBase.getByRole("button", { name: "Abrir tienda" }).click();
   const previewFrame = instanceA.page.locator('iframe[title="Vista previa desktop"]');
   await previewFrame.waitFor({ state: "visible", timeout: 20_000 });
   const previewState = await previewFrame.evaluate((frame) => ({
@@ -144,7 +152,12 @@ try {
     .evaluateAll((links) =>
       [...new Set(links.map((link) => link.getAttribute("href")))].filter(Boolean),
     );
-  if (productPaths.length < 2) throw new Error("El preview portable no expuso dos productos.");
+  if (productPaths.length < 2) {
+    const previewStoreId = await preview.locator("html").getAttribute("data-store-id");
+    throw new Error(
+      `El preview portable no expuso dos productos (storeId=${previewStoreId ?? "desconocido"}, paths=${productPaths.join(",")}).`,
+    );
+  }
   const storeId = await preview.locator("html").getAttribute("data-store-id");
   if (!storeId) throw new Error("El preview portable no expuso el ID de la tienda.");
   await instanceA.page.evaluate((id) => localStorage.removeItem(`solara-cart:${id}`), storeId);
@@ -186,14 +199,11 @@ try {
     await instanceA.page.waitForTimeout(1_000);
   }
   await instanceA.page.getByRole("tab", { name: "Resumen", exact: true }).click();
-  const name = instanceA.page.getByLabel("Nombre de la tienda");
-  await name.fill("Predeterminado portable A");
-  await instanceA.page.locator("[data-studio-save]").click();
-  await instanceA.page.locator(".save-indicator--saved").waitFor({ timeout: 30_000 });
+  await instanceA.page.getByTestId("ui-protected-template-notice").waitFor({ timeout: 20_000 });
 
   const savedA = JSON.parse(readFileSync(manifestAPath, "utf8"));
-  if (savedA.current.version <= initialA.current.version) {
-    throw new Error("Guardar no incrementó la versión en la copia A.");
+  if (savedA.current.version !== initialA.current.version) {
+    throw new Error("La plantilla protegida cambió su versión durante el E2E.");
   }
   if (!savedA.lastValidSite?.directoryPath) {
     throw new Error("Guardar no conservó un sitio público válido en la copia A.");
@@ -215,10 +225,6 @@ try {
     throw new Error("El servidor temporal permitió leer fuera de la carpeta pública.");
   }
 
-  const bodyB = await instanceB.page.locator("body").innerText();
-  if (bodyB.includes("Predeterminado portable A")) {
-    throw new Error("La copia B vio cambios guardados exclusivamente en A.");
-  }
   const unchangedB = JSON.parse(readFileSync(manifestBPath, "utf8"));
   if (unchangedB.current.version !== initialB.current.version) {
     throw new Error("La copia B cambió su versión al guardar A.");
@@ -232,8 +238,8 @@ try {
   const moved = await openPortable(movedA);
   try {
     const movedBody = await moved.page.locator("body").innerText();
-    if (!movedBody.includes("Predeterminado portable A")) {
-      throw new Error("La copia movida no recuperó el proyecto guardado.");
+    if (!movedBody.includes("Plantilla protegida")) {
+      throw new Error("La copia movida no recuperó el estado protegido de la plantilla.");
     }
   } finally {
     await closePortable(moved);

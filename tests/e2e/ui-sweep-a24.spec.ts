@@ -87,7 +87,7 @@ test("A13: crear — diálogo con foco, validación de nombre y pasos con indica
   await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
   await expect(steps.nth(3)).toHaveClass(/is-active/);
   await expect(dialog).toContainText("diseño Catalog Modern");
-  await expect(dialog.getByRole("button", { name: "Crear tienda vacía" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Crear tienda desde plantilla" })).toBeVisible();
 });
 
 test("A13: crear — cancelar con Escape y con X devuelve el foco al botón", async ({ page }) => {
@@ -116,7 +116,7 @@ test("A13: crear — el contrato de datos agrega la card con su id y persiste", 
   await page.getByLabel("Email de contacto (opcional)").fill("hola@a13.test");
   await page.getByLabel("WhatsApp (opcional)").fill("5491100000000");
   await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
-  await dialog.getByRole("button", { name: "Crear tienda vacía" }).click();
+  await dialog.getByRole("button", { name: "Crear tienda desde plantilla" }).click();
 
   // Efecto real: la creación navega al editor con la tienda nueva activa.
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
@@ -507,7 +507,7 @@ test("A12: la «X» de creación se deshabilita mientras la tienda se crea", asy
     const closeCreation = page.getByRole("button", { name: "Cerrar creación" });
     // El nombre cambia a «Creando» durante la transacción: el locator por regex
     // resuelve en ambos estados.
-    const submit = dialog.getByRole("button", { name: /Crear tienda vacía|Creando/ });
+    const submit = dialog.getByRole("button", { name: /Crear tienda desde plantilla|Creando/ });
     await submit.click();
     await expect(submit).toBeDisabled();
     await expect(submit).toHaveText("Creando");

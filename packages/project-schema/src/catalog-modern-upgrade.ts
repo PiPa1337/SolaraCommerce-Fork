@@ -32,7 +32,12 @@ export interface TemplateUpgradePlan {
 
 export function planCatalogModernUpgrade(project: StoreProjectV2): TemplateUpgradePlan {
   const fromVersion = project.origin?.templateVersion ?? CATALOG_MODERN_TEMPLATE_VERSION;
-  const seed = project.origin?.seed === "demo" ? "demo" : "clean";
+  const seed =
+    project.origin?.seed === "demo"
+      ? "demo"
+      : project.origin?.seed === "placeholder"
+        ? "placeholder"
+        : "clean";
   const latest = buildCatalogModernProject({ seed });
   const currentIds = new Set(project.sections.map((section) => section.id));
   const safeChanges: TemplateChange[] = [];

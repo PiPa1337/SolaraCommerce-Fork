@@ -40,6 +40,116 @@ const toolDefinitions = [
     method: "stores.get",
   },
   {
+    name: "solara_store_restore",
+    description: "Restaura una tienda archivada a estado activo.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["storeId"],
+      properties: {
+        storeId: { type: "string" },
+        expectedVersion: { type: "integer", minimum: 0 },
+      },
+    },
+    method: "stores.restore",
+  },
+  {
+    name: "solara_template_get",
+    description: "Obtiene el estado y la versión de la plantilla protegida.",
+    inputSchema: { type: "object", additionalProperties: false, properties: {} },
+    method: "templates.get",
+  },
+  {
+    name: "solara_template_preview_upgrade",
+    description: "Previsualiza un upgrade explícito de la plantilla base.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: { baseVersion: { type: "integer", minimum: 0 } },
+    },
+    method: "templates.previewUpgrade",
+  },
+  {
+    name: "solara_template_commit_upgrade",
+    description: "Aplica un upgrade previamente previsualizado y confirmado.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["previewId", "baseVersion", "confirmation"],
+      properties: {
+        previewId: { type: "string" },
+        baseVersion: { type: "integer", minimum: 0 },
+        confirmation: { const: "ACTUALIZAR_PLANTILLA" },
+        idempotencyKey: { type: "string" },
+      },
+    },
+    method: "templates.commitUpgrade",
+  },
+  {
+    name: "solara_rollout_preview",
+    description: "Previsualiza una reconstrucción o migración para tiendas activas.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["kind"],
+      properties: {
+        kind: { enum: ["site-rebuild", "project-migration"] },
+        migrationId: { type: "string" },
+        target: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            status: { const: "active" },
+            excludeProtected: { type: "boolean" },
+            storeIds: { type: "array", items: { type: "string" }, maxItems: 500 },
+          },
+        },
+      },
+    },
+    method: "rollouts.preview",
+  },
+  {
+    name: "solara_rollout_commit",
+    description: "Ejecuta un rollout previsualizado como trabajo durable.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["previewId"],
+      properties: {
+        previewId: { type: "string" },
+        idempotencyKey: { type: "string" },
+        async: { type: "boolean" },
+      },
+    },
+    method: "rollouts.commit",
+  },
+  {
+    name: "solara_rollout_get",
+    description: "Consulta el estado y resultados de un rollout.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["rolloutId"],
+      properties: { rolloutId: { type: "string" } },
+    },
+    method: "rollouts.get",
+  },
+  {
+    name: "solara_rollout_rollback",
+    description: "Revierte una tienda al backup anterior de un rollout.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["rolloutId", "storeId", "expectedVersion"],
+      properties: {
+        rolloutId: { type: "string" },
+        storeId: { type: "string" },
+        expectedVersion: { type: "integer", minimum: 0 },
+      },
+    },
+    method: "rollouts.rollback",
+  },
+  {
     name: "solara_plan_create",
     description: "Valida y prepara operaciones tipadas sin escribir en disco.",
     inputSchema: {
@@ -68,7 +178,28 @@ const toolDefinitions = [
                   "product.create",
                   "product.update",
                   "product.setStatus",
+                  "store.archive",
                   "asset.attach",
+                  "section.updateSettings",
+                ],
+              },
+              source: {
+                oneOf: [
+                  {
+                    type: "object",
+                    required: ["kind", "templateId"],
+                    properties: {
+                      kind: { const: "base-template" },
+                      templateId: { const: "catalog-modern" },
+                    },
+                    additionalProperties: false,
+                  },
+                  {
+                    type: "object",
+                    required: ["kind"],
+                    properties: { kind: { const: "clean" } },
+                    additionalProperties: false,
+                  },
                 ],
               },
             },

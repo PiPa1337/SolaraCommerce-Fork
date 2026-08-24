@@ -26,6 +26,11 @@ interface DesktopExportBridge {
     filename: string;
     data: string | Uint8Array;
   }): Promise<DesktopProjectArchiveResult>;
+  agentCall?(payload: {
+    method: string;
+    params?: unknown;
+    requestId?: string | number;
+  }): Promise<unknown>;
 }
 
 /** El navegador normal no tiene acceso al selector nativo ni al filesystem. */
@@ -33,4 +38,19 @@ export function getDesktopExportBridge(): DesktopExportBridge | undefined {
   if (typeof window === "undefined") return undefined;
   const candidate = (window as Window & { solaraDesktop?: DesktopExportBridge }).solaraDesktop;
   return candidate && typeof candidate.exportSite === "function" ? candidate : undefined;
+}
+
+export interface DesktopAgentBridge {
+  agentCall(payload: {
+    method: string;
+    params?: unknown;
+    requestId?: string | number;
+  }): Promise<unknown>;
+}
+
+/** El panel administrativo sólo usa el controlador nativo, nunca filesystem. */
+export function getDesktopAgentBridge(): DesktopAgentBridge | undefined {
+  if (typeof window === "undefined") return undefined;
+  const candidate = (window as Window & { solaraDesktop?: DesktopAgentBridge }).solaraDesktop;
+  return candidate && typeof candidate.agentCall === "function" ? candidate : undefined;
 }

@@ -11,6 +11,10 @@ import { appendFile, mkdir } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { app, BrowserWindow, dialog, ipcMain, net, protocol, shell } from "electron";
+import {
+  createAgentController,
+  dispatchAgentMethod,
+} from "../../../packages/agent-control/src/index.ts";
 import { createLocalProjectStorage } from "../../../packages/exporter/scripts/local-project-storage.mjs";
 import {
   detectPortableFirstRun,
@@ -85,8 +89,19 @@ app.on("child-process-gone", (_event, details) => {
 
 let mainWindow;
 let requestHandler;
+let agentController;
 let firstRunAt = null;
 let shuttingDown = false;
+
+const nativeAdminMethods = new Set([
+  "templates.get",
+  "templates.previewUpgrade",
+  "templates.commitUpgrade",
+  "rollouts.preview",
+  "rollouts.commit",
+  "rollouts.get",
+  "rollouts.rollback",
+]);
 
 // Los paths se fijan antes de `ready`, pero las carpetas se crean dentro de
 // `start()` para que un disco sin permisos termine en el diálogo accionable de
@@ -172,6 +187,10 @@ async function start() {
       allowProtocolOrigin: true,
       onShutdown: shutdown,
     });
+    agentController = createAgentController({
+      storage: requestHandler.storage,
+      applicationRoot: layout.portableRoot,
+    });
     await requestHandler.storage.cleanupStaging();
 
     protocol.handle("solara", async (request) => {
@@ -242,6 +261,16 @@ function registerIpc() {
     gpuFeatureStatus: app.getGPUFeatureStatus?.() ?? {},
     ...(firstRunAt ? { portableFirstRunAt: firstRunAt } : {}),
   }));
+  ipcMain.handle("solara:agent-call", async (_event, payload) => {
+    if (!payload || typeof payload !== "object" || typeof payload.method !== "string") {
+      throw new Error("La operación nativa no es válida.");
+    }
+    if (!nativeAdminMethods.has(payload.method)) {
+      throw new Error("El Studio sólo puede invocar operaciones administrativas tipadas.");
+    }
+    if (!agentController) throw new Error("El controlador nativo todavía no está disponible.");
+    return dispatchAgentMethod(agentController, payload.method, payload.params, payload.requestId);
+  });
   ipcMain.handle("solara:open-site", async (_event, projectId) => {
     if (typeof projectId !== "string") throw new Error("ID de tienda inválido.");
     const result = await requestHandler.handle({
