@@ -1,12 +1,36 @@
+import type { Server } from "node:http";
 import { expect, test } from "@playwright/test";
+import { createCleanStore } from "./project-helpers";
+import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(180_000);
 
-const STUDIO_URL = "http://localhost:4173";
+let server: Server;
+let studioUrl: string;
+
+test.beforeAll(async () => {
+  const running = await startStudioServer();
+  server = running.server;
+  studioUrl = running.url;
+});
+
+test.afterAll(async () => {
+  await stopStudioServer(server);
+});
+
+async function selectMutableStore(
+  page: import("@playwright/test").Page,
+  name: string,
+): Promise<void> {
+  await createCleanStore(page, name);
+  await page.getByRole("button", { name: "Volver a tiendas", exact: true }).click();
+  await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30_000 });
+  await page.locator(".dashboard-store-card").filter({ hasText: name }).click();
+}
 
 test("P4-C2: crear una tienda desde el dashboard en pasos con validacion", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.goto(studioUrl, { waitUntil: "load" });
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
 
   const start = Date.now();
@@ -56,7 +80,7 @@ test("P4-C2: crear una tienda desde el dashboard en pasos con validacion", async
 
 test("F2-B5: la tienda nueva concentra Contacto al final de Home V2", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.goto(studioUrl, { waitUntil: "load" });
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
 
   await page.getByRole("button", { name: "Nueva tienda" }).click();
@@ -78,10 +102,10 @@ test("F2-B5: la tienda nueva concentra Contacto al final de Home V2", async ({ p
 
 test("P4-B4: archivar una tienda desde el panel de detalle y restaurarla", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.goto(studioUrl, { waitUntil: "load" });
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
 
-  await page.locator(".dashboard-store-card").first().click();
+  await selectMutableStore(page, "Tienda archivable");
   await page.waitForTimeout(600);
   const archiveButton = page.locator(".dashboard-store-detail").getByRole("button", {
     name: "Archivar",
@@ -108,10 +132,10 @@ test("P4-B4: archivar una tienda desde el panel de detalle y restaurarla", async
 
 test("P4-B6: restaurar una tienda archivada desde el filtro Archivadas", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.goto(studioUrl, { waitUntil: "load" });
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
 
-  await page.locator(".dashboard-store-card").first().click();
+  await selectMutableStore(page, "Tienda restaurable");
   await page.waitForTimeout(500);
   await page.locator(".dashboard-store-detail").getByRole("button", { name: "Archivar" }).click();
   await page
@@ -138,7 +162,7 @@ test("P4-B6: restaurar una tienda archivada desde el filtro Archivadas", async (
 
 test("R3-P2-B5: duplicar una tienda desde el panel de detalle", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.goto(studioUrl, { waitUntil: "load" });
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
 
   await page.locator(".dashboard-store-card").first().click();

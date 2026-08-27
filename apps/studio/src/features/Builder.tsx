@@ -14,6 +14,7 @@ import {
   Swap,
   Trash,
 } from "@phosphor-icons/react";
+import { applyMutation, createMutationRegistry } from "@solara/core";
 import {
   createModuleSection,
   defaultSettingsForModule,
@@ -349,6 +350,18 @@ export function Builder({
 
   const updateSection = (id: string, update: (section: StoreSection) => StoreSection) => {
     replaceSections(pageSections.map((section) => (section.id === id ? update(section) : section)));
+  };
+
+  const updateSectionSettings = (id: string, settings: Record<string, unknown>) => {
+    // Mismo núcleo de mutaciones que el canal IA y el Canvas: valida campos
+    // contra el settingsSchema del módulo y parsea el snapshot resultante.
+    const applied = applyMutation(project, createMutationRegistry(), {
+      type: "section.updateSettings",
+      sectionId: id,
+      settings,
+    });
+    const nextSection = applied.project.sections.find((section) => section.id === id);
+    if (nextSection) updateSection(id, () => nextSection);
   };
 
   const move = (index: number, delta: -1 | 1) => {
@@ -719,9 +732,7 @@ export function Builder({
                   fields={selectedModule?.settingsFields ?? []}
                   schema={selectedModule?.settingsSchema}
                   project={project}
-                  onChange={(settings) =>
-                    updateSection(selected.id, (section) => ({ ...section, settings }))
-                  }
+                  onChange={(settings) => updateSectionSettings(selected.id, settings)}
                   onProjectChange={onChange}
                   sectionId={selected.id}
                   moduleId={selectedModule?.manifest.id}

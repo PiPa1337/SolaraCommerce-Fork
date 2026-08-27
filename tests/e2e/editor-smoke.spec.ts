@@ -73,7 +73,7 @@ test("recorre el editor de punta a punta: tabs, producto, sección, exportación
     { tab: "Resumen", heading: "Resumen" },
     { tab: "Catálogo", heading: "Catálogo" },
     { tab: "Constructor", heading: "Constructor" },
-    { tab: "Tema", heading: "Tema" },
+    { tab: "Tema de la tienda", heading: "Tema de la tienda" },
     { tab: "Recursos", heading: "Recursos" },
     { tab: "SEO", heading: "SEO y Google" },
     { tab: "Exportar", heading: "Exportar" },

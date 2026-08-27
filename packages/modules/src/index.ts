@@ -93,6 +93,7 @@ export {
   contactV2ModuleIds,
 };
 export type { RepeaterItemField } from "@solara/module-sdk";
+export { sanitizeRichText } from "@solara/module-sdk";
 
 // The registry is intentionally heterogeneous because each module owns its settings schema.
 // Settings = any conserva la varianza previa: con el default unknown, settingsFields no sería
@@ -168,6 +169,8 @@ export interface PageRenderContext {
   category?: Category;
   collection?: Collection;
   products?: readonly Product[];
+  /** Presente sólo en el preview del editor; activa los atributos data-canvas. */
+  canvasSectionId?: string;
 }
 
 export function getModuleDefinition(id: string): RegisteredModule | undefined {
@@ -239,6 +242,15 @@ export function renderSections(
           ...(pageContext.category ? { category: pageContext.category } : {}),
           ...(pageContext.collection ? { collection: pageContext.collection } : {}),
           ...(pageContext.products ? { products: pageContext.products } : {}),
+          ...(pageContext.canvasSectionId !== undefined
+            ? {
+                canvas: {
+                  editorMode: true as const,
+                  sectionId:
+                    pageContext.canvasSectionId === "*" ? section.id : pageContext.canvasSectionId,
+                },
+              }
+            : {}),
         });
       }),
   );

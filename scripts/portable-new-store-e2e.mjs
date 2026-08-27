@@ -5,7 +5,7 @@
  */
 
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
-import { cp } from "node:fs/promises";
+import { cp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -80,9 +80,17 @@ async function openPortable() {
   const app = await electron.launch({
     executablePath: join(copy, "SolaraCommerce.exe"),
     args: ["--disable-gpu", "--disable-gpu-compositing", "--in-process-gpu"],
-    timeout: 20_000,
+    timeout: 45_000,
   });
-  const page = await app.firstWindow({ timeout: 20_000 });
+  let page;
+  try {
+    page = await app.firstWindow({ timeout: 45_000 });
+  } catch (error) {
+    try {
+      await app.close();
+    } catch {}
+    throw error;
+  }
   closingExpected = false;
   page.on("close", () => {
     if (!closingExpected) console.error(`Ventana Electron cerrada durante: ${currentStep}`);
@@ -122,6 +130,14 @@ async function closePortable(instance) {
 let instance;
 try {
   await cp(source, copy, { recursive: true });
+  // El portable fuente puede traer estado regenerable de una corrida anterior;
+  // la prueba de UI necesita un perfil nuevo dentro de esta copia aislada.
+  await rm(join(copy, ".solara-runtime"), {
+    recursive: true,
+    force: true,
+    maxRetries: 3,
+    retryDelay: 250,
+  });
   currentStep = "abrir dashboard";
   const defaultBefore = readProject(copy, "store-modo-sur-demo");
   const defaultProductIds = defaultBefore.products.map((product) => product.id);
@@ -208,7 +224,9 @@ try {
 
   await page.locator("[data-studio-save]").click();
   currentStep = "guardar en disco y verificar preview";
-  await page.locator(".save-indicator--saved").waitFor({ timeout: 30_000 });
+  await page
+    .locator(".save-indicator--saved, .save-indicator--site-outdated")
+    .waitFor({ timeout: 30_000 });
 
   const preview = page.locator('iframe[title="Vista previa desktop"]');
   await preview.waitFor({ state: "visible", timeout: 20_000 });
@@ -251,7 +269,10 @@ try {
   }
   console.log(`portable new-store e2e: OK (${created.id})`);
 } catch (reason) {
-  console.error(`portable new-store e2e: fallo durante ${currentStep}`);
+  console.error(
+    `portable new-store e2e: fallo durante ${currentStep}`,
+    reason instanceof Error ? (reason.stack ?? reason.message) : String(reason),
+  );
   if (instance && !instance.page.isClosed()) {
     console.error(
       `Tabs visibles: ${(await instance.page.getByRole("tab").allTextContents()).join(" | ")}`,
@@ -266,6 +287,8 @@ try {
   if (process.env.SOLARA_KEEP_E2E_ARTIFACTS === "1") {
     console.error(`Artefactos E2E conservados en ${testRoot}`);
   } else {
-    rmSync(testRoot, { recursive: true, force: true });
+    try {
+      rmSync(testRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 500 });
+    } catch {}
   }
 }

@@ -651,10 +651,22 @@ function StudioShell() {
             setError("");
             try {
               const project = await createProject(input);
-              if (storageModeRef.current) await persistToDisk(project, null);
-              await refresh();
-              if (storageModeRef.current) setActiveDiskVersion(1);
-              setActive(project);
+              let activeProject = project;
+              if (storageModeRef.current) {
+                const saved = await persistToDisk(project, null);
+                setActiveDiskVersion(saved.receipt.version);
+                setActiveDiskBaseProject(project);
+                const refreshed = await refresh();
+                const refreshedProject = refreshed.projects.find((item) => item.id === project.id);
+                if (refreshedProject) {
+                  activeProject = refreshedProject.project;
+                  setActiveDiskVersion(refreshedProject.diskVersion ?? saved.receipt.version);
+                  setActiveDiskBaseProject(refreshedProject.project);
+                }
+              } else {
+                await refresh();
+              }
+              setActive(activeProject);
             } catch (reason) {
               const message =
                 reason instanceof Error ? reason.message : "No se pudo crear la tienda.";

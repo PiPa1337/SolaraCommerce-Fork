@@ -258,7 +258,7 @@ test("el inventario ui-* mantiene estilos coherentes por estado en todas las pan
     "Resumen",
     "Catálogo",
     "Constructor",
-    "Tema",
+    "Tema de la tienda",
     "Recursos",
     "SEO",
     "Exportar",

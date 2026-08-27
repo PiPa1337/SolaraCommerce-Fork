@@ -10,6 +10,7 @@ import {
 } from "@solara/project-schema";
 import { useEffect, useId, useRef, useState } from "react";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
+import { ImageAssetPicker, ImageUploadButton } from "../../components/ImageAssetPicker";
 import { Button, Field, IconButton, InlineError } from "../../components/Ui";
 import {
   createBlankVariant,
@@ -33,6 +34,7 @@ interface ProductEditorProps {
   mode: "create" | "edit";
   onCancel(): void;
   onSave(product: Product, activate?: boolean): void;
+  onAssetUpload?(asset: ImageAsset): void;
 }
 
 type EditorStep = "details" | "media" | "organization" | "variants";
@@ -130,6 +132,7 @@ export function ProductEditor({
   mode,
   onCancel,
   onSave,
+  onAssetUpload,
 }: ProductEditorProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
@@ -202,6 +205,26 @@ export function ProductEditor({
   });
 
   const firstImage = assets.find((asset) => asset.id === draft.imageIds[0]);
+  const addUploadedAssetToProduct = (asset: ImageAsset) => {
+    setDraft((current) =>
+      current.imageIds.includes(asset.id)
+        ? current
+        : { ...current, imageIds: [...current.imageIds, asset.id] },
+    );
+    onAssetUpload?.(asset);
+  };
+  const addUploadedAssetToVariant = (variantId: Variant["id"], asset: ImageAsset) => {
+    setDraft((current) => ({
+      ...current,
+      imageIds: current.imageIds.includes(asset.id)
+        ? current.imageIds
+        : [...current.imageIds, asset.id],
+      variants: current.variants.map((variant) =>
+        variant.id === variantId ? { ...variant, imageId: asset.id } : variant,
+      ),
+    }));
+    onAssetUpload?.(asset);
+  };
   const minimumPrice =
     draft.variants.length > 0
       ? Math.min(
@@ -490,10 +513,16 @@ export function ProductEditor({
           }}
         >
           <legend>Imágenes del producto</legend>
+          {onAssetUpload ? (
+            <ImageUploadButton
+              assets={assets}
+              onUpload={addUploadedAssetToProduct}
+              label="Subir imagen nueva"
+            />
+          ) : null}
           {assets.length === 0 ? (
             <p className="editor-empty-hint">
-              Todavía no hay recursos cargados. Podés agregarlos desde Recursos o importar una
-              carpeta.
+              Todavía no hay recursos cargados. Subí una imagen nueva o agregala desde Recursos.
             </p>
           ) : (
             <div className="product-asset-picker">
@@ -803,26 +832,24 @@ export function ProductEditor({
                       />
                     </Field>
                     <Field label="Imagen de variante">
-                      <select
+                      <ImageAssetPicker
                         value={variant.imageId ?? ""}
-                        onChange={(event) =>
+                        assets={assets.filter((asset) => draft.imageIds.includes(asset.id))}
+                        knownAssets={assets}
+                        noneLabel="Usar imagen principal"
+                        onChange={(next) =>
                           updateVariant(variant.id, (current) => ({
                             ...current,
-                            imageId: event.target.value
-                              ? (event.target.value as ImageAsset["id"])
-                              : undefined,
+                            imageId: next ? (next as ImageAsset["id"]) : undefined,
                           }))
                         }
-                      >
-                        <option value="">Usar imagen principal</option>
-                        {assets
-                          .filter((asset) => draft.imageIds.includes(asset.id))
-                          .map((asset) => (
-                            <option value={asset.id} key={asset.id}>
-                              {asset.name}
-                            </option>
-                          ))}
-                      </select>
+                        {...(onAssetUpload
+                          ? {
+                              onUpload: (asset: ImageAsset) =>
+                                addUploadedAssetToVariant(variant.id, asset),
+                            }
+                          : {})}
+                      />
                     </Field>
                     <label className="check-field">
                       <input

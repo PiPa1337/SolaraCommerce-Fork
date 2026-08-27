@@ -13,7 +13,12 @@ import {
   readLocalProject,
   saveLocalProject,
 } from "./localStorage";
-import { type StoredProject, saveProject } from "./repository";
+import {
+  optimizeProjectAssets,
+  repairProjectMediaMetadata,
+  type StoredProject,
+  saveProject,
+} from "./repository";
 import {
   createProjectArchiveInWorker,
   exportSiteInWorker,
@@ -23,6 +28,7 @@ import {
 export interface DiskProject extends StoredProject {
   diskVersion: number;
   diskStatus: "synced" | "site-outdated";
+  mediaRepairPending: boolean;
 }
 
 /**
@@ -31,7 +37,7 @@ export interface DiskProject extends StoredProject {
  * normalizado que usa el repositorio IndexedDB y el exporter.
  */
 export function normalizeLoadedProject(project: StoreProjectV1): StoreProjectV1 {
-  return ensureCatalogModernV2Sections(project);
+  return repairProjectMediaMetadata(ensureCatalogModernV2Sections(project));
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
@@ -55,7 +61,9 @@ export function serializeSiteFiles(files: ReadonlyMap<string, string | Uint8Arra
 
 export async function loadDiskProject(summary: LocalProjectSummary): Promise<DiskProject> {
   const archive = await readLocalProject(summary.projectId);
-  const project = normalizeLoadedProject(await readProjectArchiveBytesInWorker(archive));
+  const storedProject = await readProjectArchiveBytesInWorker(archive);
+  const normalized = normalizeLoadedProject(storedProject);
+  const project = await optimizeProjectAssets(normalized);
   return {
     id: project.id,
     name: project.name,
@@ -65,6 +73,10 @@ export async function loadDiskProject(summary: LocalProjectSummary): Promise<Dis
     diskVersion: summary.version,
     diskSiteStatus: summary.siteOutdated ? "site-outdated" : "synced",
     diskStatus: summary.siteOutdated ? "site-outdated" : "synced",
+    // Los normalizadores pueden devolver un objeto nuevo aunque el snapshot
+    // no haya cambiado. Persistir por referencia creaba versiones espurias y
+    // dejaba stale la expectedVersion del editor tras crear una tienda.
+    mediaRepairPending: JSON.stringify(project) !== JSON.stringify(storedProject),
   };
 }
 
@@ -92,6 +104,12 @@ export async function loadAllDiskProjects(): Promise<{
   for (const summary of listing.projects) {
     try {
       const loaded = await loadDiskProject(summary);
+      if (loaded.mediaRepairPending && !isBaseTemplate(loaded.project)) {
+        const receipt = await persistProjectToDisk(loaded.project, summary.version);
+        loaded.diskVersion = receipt.receipt.version;
+        loaded.diskStatus = receipt.receipt.status;
+        loaded.diskSiteStatus = receipt.receipt.status;
+      }
       // IndexedDB queda como caché para operaciones que aún no necesitan disco;
       // el archivo y su manifest siguen siendo la autoridad al abrir la tienda.
       // La carga desde disco actualiza la caché de lectura de IndexedDB; no

@@ -27,29 +27,15 @@ function crc32(buf: Uint8Array): number {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
-function chunk(type: string, data: Uint8Array): Uint8Array {
-  const len = new Uint8Array(4);
-  new DataView(len.buffer).setUint32(0, data.length);
-  const typeBytes = new TextEncoder().encode(type);
-  const crcInput = new Uint8Array(typeBytes.length + data.length);
-  crcInput.set(typeBytes);
-  crcInput.set(data, typeBytes.length);
-  const crcVal = new Uint8Array(4);
-  new DataView(crcVal.buffer).setUint32(0, crc32(crcInput));
-  const result = new Uint8Array(12 + data.length);
-  result.set(len);
-  result.set(typeBytes, 4);
-  result.set(data, 8);
-  result.set(crcVal, 8 + data.length);
-  return result;
-}
-
 function decodePng(buffer: Uint8Array): DecodedPng {
   for (let i = 0; i < 4; i++)
     if ((buffer[i] ?? 0) !== [0x89, 0x50, 0x4e, 0x47][i]) throw new Error("Not a PNG");
   let offset = 8;
   let width = 0,
-    height = 0;
+    height = 0,
+    bitDepth = 0,
+    colorType = 0,
+    interlace = 0;
   const idatChunks: Uint8Array[] = [];
   while (offset < buffer.length) {
     const view = new DataView(buffer.buffer, buffer.byteOffset + offset);
@@ -63,9 +49,15 @@ function decodePng(buffer: Uint8Array): DecodedPng {
     if (ct === "IHDR") {
       width = view.getUint32(8);
       height = view.getUint32(12);
+      bitDepth = buffer[offset + 16] ?? 0;
+      colorType = buffer[offset + 17] ?? 0;
+      interlace = buffer[offset + 20] ?? 0;
     } else if (ct === "IDAT") idatChunks.push(buffer.subarray(offset + 8, offset + 8 + chunkLen));
     else if (ct === "IEND") break;
     offset += 12 + chunkLen;
+  }
+  if (bitDepth !== 8 || colorType !== 2 || interlace !== 0) {
+    throw new Error("PNG no compatible con el procesador responsive.");
   }
   const combined = new Uint8Array(idatChunks.reduce((s, c) => s + c.length, 0));
   let pos = 0;
@@ -74,15 +66,37 @@ function decodePng(buffer: Uint8Array): DecodedPng {
     pos += c.length;
   }
   const inflated = inflateSync(combined);
-  const stride = width * 3 + 1;
+  const bytesPerPixel = 3;
+  const stride = width * bytesPerPixel + 1;
   const pixels = new Uint8Array(width * height * 3);
   for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const si = y * stride + 1 + x * 3,
-        di = (y * width + x) * 3;
-      pixels[di] = inflated[si] ?? 0;
-      pixels[di + 1] = inflated[si + 1] ?? 0;
-      pixels[di + 2] = inflated[si + 2] ?? 0;
+    const rowOffset = y * stride;
+    const filter = inflated[rowOffset] ?? 0;
+    if (filter > 4) throw new Error("PNG usa un filtro de fila inválido.");
+    for (let x = 0; x < width * bytesPerPixel; x++) {
+      const raw = inflated[rowOffset + 1 + x] ?? 0;
+      const left = x >= bytesPerPixel ? (pixels[y * width * 3 + x - bytesPerPixel] ?? 0) : 0;
+      const up = y > 0 ? (pixels[(y - 1) * width * 3 + x] ?? 0) : 0;
+      const upperLeft =
+        y > 0 && x >= bytesPerPixel ? (pixels[(y - 1) * width * 3 + x - bytesPerPixel] ?? 0) : 0;
+      let reconstructed = raw;
+      if (filter === 1) reconstructed = raw + left;
+      else if (filter === 2) reconstructed = raw + up;
+      else if (filter === 3) reconstructed = raw + Math.floor((left + up) / 2);
+      else if (filter === 4) {
+        const predictor = left + up - upperLeft;
+        const leftDistance = Math.abs(predictor - left);
+        const upDistance = Math.abs(predictor - up);
+        const upperLeftDistance = Math.abs(predictor - upperLeft);
+        reconstructed =
+          raw +
+          (leftDistance <= upDistance && leftDistance <= upperLeftDistance
+            ? left
+            : upDistance <= upperLeftDistance
+              ? up
+              : upperLeft);
+      }
+      pixels[y * width * 3 + x] = reconstructed & 0xff;
     }
   }
   return { width, height, pixels };

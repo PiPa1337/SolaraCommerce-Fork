@@ -116,6 +116,7 @@ function buildCategories(
         slug: rootSlug as Category["slug"],
         title: rootTitle,
         description: "",
+        status: "active",
         productIds: [],
       };
       categories.push(root);
@@ -137,6 +138,7 @@ function buildCategories(
         slug: childSlug as Category["slug"],
         title: childTitle,
         description: "",
+        status: "active",
         parentId: root.id,
         productIds: [],
       };
@@ -171,6 +173,7 @@ function buildCollections(
         slug: slug as Collection["slug"],
         title: name,
         description: "",
+        status: "active",
         productIds: [],
       };
       collections.push(collection);

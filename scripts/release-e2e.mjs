@@ -1,7 +1,11 @@
 import { spawnSync } from "node:child_process";
-import { delimiter, resolve } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
 
-const command = process.platform === "win32" ? "corepack.cmd" : "corepack";
+const command = process.platform === "win32" ? process.execPath : "corepack";
+const commandArgs =
+  process.platform === "win32"
+    ? [join(dirname(process.execPath), "node_modules", "corepack", "dist", "corepack.js")]
+    : [];
 const workspaceNodePath = resolve("node_modules/.pnpm/node_modules");
 
 if (!process.versions.node.startsWith("22.")) {
@@ -10,14 +14,13 @@ if (!process.versions.node.startsWith("22.")) {
 }
 
 function run(args) {
-  const result = spawnSync(command, args, {
+  const result = spawnSync(command, [...commandArgs, ...args], {
     stdio: "inherit",
     env: {
       ...process.env,
       NODE_PATH: [workspaceNodePath, process.env.NODE_PATH].filter(Boolean).join(delimiter),
       PLAYWRIGHT_MULTI_BROWSER: "1",
     },
-    shell: process.platform === "win32",
   });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);

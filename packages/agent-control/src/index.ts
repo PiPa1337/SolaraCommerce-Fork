@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { appendFile, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { deflateSync } from "node:zlib";
 import {
   type AgentOperation,
   AgentOperationSchema,
@@ -29,7 +30,12 @@ import {
   TemplateGetParamsSchema,
   TemplatePreviewUpgradeParamsSchema,
 } from "@solara/agent-contracts";
-import { reduceProject } from "@solara/core";
+import {
+  applyMutation,
+  createMutationRegistry,
+  type ProjectMutation,
+  reduceProject,
+} from "@solara/core";
 import {
   auditProject,
   createProjectArchive,
@@ -44,7 +50,6 @@ import {
   ImageAssetSchema,
   type Product,
   ProductSchema,
-  personalizeWhatsAppGreeting,
   type StoreProjectV1,
   StoreProjectV2Schema,
 } from "@solara/project-schema";
@@ -69,6 +74,7 @@ import { createAgentLockStore } from "../../exporter/scripts/agent-lock.mjs";
 // @ts-expect-error módulo .mjs compartido sin d.ts
 import { assertNoReparsePoints } from "../../exporter/scripts/portable-layout.mjs";
 import { generateResponsiveVariants } from "./image-processor.js";
+import { migrationApplies, resolveMigration } from "./migration-registry.js";
 
 interface AgentLocalProjectStorage {
   applicationRoot: string;
@@ -798,6 +804,15 @@ export class AgentController {
         "assets.upload.begin",
         "assets.upload.chunk",
         "assets.upload.finish",
+        "qa.runExport",
+        "qa.runGates",
+        "qa.detectFlaky",
+        "qa.writeTest",
+        "qa.readBacklog",
+        "qa.logProgress",
+        "qa.updateState",
+        "qa.runCycle",
+        "qa.status",
       ],
       operationTypes: [
         "store.create",
@@ -806,12 +821,16 @@ export class AgentController {
         "store.updatePublicCopy",
         "store.updatePolicies",
         "category.create",
+        "category.update",
+        "category.setStatus",
         "collection.create",
+        "collection.update",
         "product.create",
         "product.update",
         "product.setStatus",
         "store.archive",
         "asset.attach",
+        "asset.remove",
         "section.updateSettings",
         "product.createBatch",
         "theme.applyPreset",
@@ -1154,6 +1173,33 @@ export class AgentController {
       if (params.kind === "site-rebuild") {
         stores.push({ storeId, name, baseVersion, status: "ready" });
         continue;
+      }
+      // Con migrationId explícito el rollout resuelve por el registro real:
+      // un ID desconocido o no aplicable se marca como conflicto con motivo.
+      if (params.migrationId !== undefined) {
+        const migration = resolveMigration(params.migrationId);
+        if (!migration) {
+          stores.push({
+            storeId,
+            name,
+            baseVersion,
+            status: "conflict",
+            safeChanges: [],
+            conflicts: [],
+            reason: `migrationId desconocido: ${params.migrationId}`,
+          });
+          continue;
+        }
+        if (!migrationApplies(params.migrationId, project)) {
+          stores.push({
+            storeId,
+            name,
+            baseVersion,
+            status: "skipped",
+            reason: "migration-not-applicable",
+          });
+          continue;
+        }
       }
       const upgrade = planCatalogModernUpgrade(project);
       stores.push({
@@ -1673,7 +1719,6 @@ export class AgentController {
 
   /** Genera un PNG RGB sólido mínimo sin dependencias externas. */
   private generateSolidPng(width: number, height: number, r: number, g: number, b: number): Buffer {
-    const { deflateSync } = require("node:zlib") as typeof import("node:zlib");
     const bytesPerRow = width * 3 + 1;
     const rawData = Buffer.alloc(bytesPerRow * height);
     for (let y = 0; y < height; y++) {
@@ -2255,6 +2300,8 @@ export class AgentController {
             referencedAssetIds.add(imageId);
           }
         }
+      } else if (operation.type === "product.createBatch") {
+        for (const imageId of operation.imageIds) referencedAssetIds.add(imageId);
       }
     }
     const stagedForPlan: ImageAsset[] = [];
@@ -2274,6 +2321,16 @@ export class AgentController {
               ),
             ],
           });
+    const mutationRegistry = createMutationRegistry();
+    const applyRegistered = (mutation: ProjectMutation, at: string): void => {
+      project = applyMutation(
+        project,
+        mutationRegistry,
+        mutation,
+        { kind: "agent", actorId: this.actorId, requestId: this.requestId ?? "plan" },
+        { at },
+      ).project;
+    };
     for (const rawOperation of rawOperations) {
       const operation = AgentOperationSchema.parse(rawOperation);
       const at = this.now().toISOString();
@@ -2286,33 +2343,11 @@ export class AgentController {
           break;
         }
         case "store.updateIdentity": {
-          const identity = {
-            ...project.identity,
-            ...operation.changes,
-            brandName: operation.changes.brandName ?? project.identity.brandName,
-          };
-          const whatsappPhone =
-            operation.changes.phone?.replace(/\D/g, "") ?? project.whatsapp.phone;
-          project = StoreProjectV2Schema.parse({
-            ...project,
-            identity,
-            whatsapp: {
-              ...project.whatsapp,
-              ...(whatsappPhone.length >= 8 && whatsappPhone.length <= 15
-                ? { phone: whatsappPhone }
-                : {}),
-              greeting: personalizeWhatsAppGreeting(project.whatsapp.greeting, identity.brandName),
-            },
-            updatedAt: at,
-          });
+          applyRegistered({ type: "identity.update", changes: operation.changes as never }, at);
           break;
         }
         case "store.updateSeo":
-          project = StoreProjectV2Schema.parse({
-            ...project,
-            seo: { ...project.seo, ...operation.changes },
-            updatedAt: at,
-          });
+          applyRegistered({ type: "seo.update", changes: operation.changes as never }, at);
           break;
         case "store.updatePublicCopy": {
           const LEGAL_MIN_LENGTHS: Record<string, number> = {
@@ -2355,19 +2390,30 @@ export class AgentController {
               }
             }
           }
-          project = StoreProjectV2Schema.parse({
-            ...project,
-            publicCopy: { ...project.publicCopy, ...operation.changes },
-            updatedAt: at,
-          });
+          for (const [group, changes] of Object.entries(operation.changes)) {
+            if (!changes || typeof changes !== "object" || Array.isArray(changes)) continue;
+            for (const [field, value] of Object.entries(changes)) {
+              if (typeof value !== "string") continue;
+              applyRegistered(
+                { type: "publicCopy.update", group: group as never, field, value },
+                at,
+              );
+            }
+          }
           break;
         }
         case "store.updatePolicies":
-          project = StoreProjectV2Schema.parse({
-            ...project,
-            policies: { ...project.policies, ...operation.changes },
-            updatedAt: at,
-          });
+          {
+            const { navigation, ...policyChanges } = operation.changes;
+            let updated = { ...project, policies: { ...project.policies, ...policyChanges } };
+            if (navigation && typeof navigation === "object") {
+              updated = {
+                ...updated,
+                navigation: { ...project.navigation, ...(navigation as Record<string, unknown>) },
+              };
+            }
+            project = StoreProjectV2Schema.parse(updated);
+          }
           break;
         case "category.create": {
           const category = CategorySchema.parse({
@@ -2392,6 +2438,41 @@ export class AgentController {
             productIds: [],
           });
           project = reduceProject(project, { type: "collection.create", collection, at });
+          break;
+        }
+        case "category.update": {
+          applyRegistered(
+            {
+              type: "category.update",
+              categoryId: operation.categoryId,
+              changes: operation.changes as never,
+            },
+            at,
+          );
+          break;
+        }
+        case "category.setStatus": {
+          if (!project.categories.some((candidate) => candidate.id === operation.categoryId))
+            fail("PLAN_INVALID", `La categoría no existe: ${operation.categoryId}.`);
+          applyRegistered(
+            {
+              type: "category.update",
+              categoryId: operation.categoryId,
+              changes: { status: operation.status },
+            },
+            at,
+          );
+          break;
+        }
+        case "collection.update": {
+          applyRegistered(
+            {
+              type: "collection.update",
+              collectionId: operation.collectionId,
+              changes: operation.changes as never,
+            },
+            at,
+          );
           break;
         }
         case "product.create": {
@@ -2436,12 +2517,22 @@ export class AgentController {
           break;
         }
         case "product.update":
-          project = reduceProject(project, {
-            type: "product.update",
-            productId: operation.productId as Product["id"],
-            changes: operation.changes as never,
-            at,
-          });
+          {
+            const { priceCents, ...productChanges } = operation.changes;
+            if (Object.keys(productChanges).length > 0 || priceCents !== undefined) {
+              applyRegistered(
+                {
+                  type: "product.update",
+                  productId: operation.productId,
+                  changes: {
+                    ...productChanges,
+                    ...(priceCents === undefined ? {} : { price: priceCents }),
+                  } as never,
+                },
+                at,
+              );
+            }
+          }
           break;
         case "product.setStatus":
           project = reduceProject(project, {
@@ -2518,20 +2609,33 @@ export class AgentController {
           }
           break;
         }
-        case "section.updateSettings": {
-          const section = project.sections.find((item) => item.id === operation.sectionId);
-          if (!section) fail("SECTION_NOT_FOUND", `No existe la sección ${operation.sectionId}.`);
-          // Merge parcial de settings; el schema del proyecto valida los tipos
-          // al final con StoreProjectV2Schema.parse.
+        case "asset.remove": {
+          const assetExists = project.assets.some((asset) => asset.id === operation.assetId);
+          if (!assetExists) fail("ASSET_NOT_FOUND", `No existe el asset ${operation.assetId}.`);
+          const { assets: _assets, ...withoutAssetDefinitions } = project;
+          const serialized = JSON.stringify(withoutAssetDefinitions);
+          if (serialized.includes(`"${operation.assetId}"`)) {
+            fail(
+              "ASSET_IN_USE",
+              `El asset ${operation.assetId} todavía está referenciado por la tienda.`,
+            );
+          }
           project = StoreProjectV2Schema.parse({
             ...project,
-            sections: project.sections.map((item) =>
-              item.id === operation.sectionId
-                ? { ...item, settings: { ...item.settings, ...operation.settings } }
-                : item,
-            ),
+            assets: project.assets.filter((asset) => asset.id !== operation.assetId),
             updatedAt: at,
           });
+          break;
+        }
+        case "section.updateSettings": {
+          // Mismo núcleo de mutaciones que Canvas y sidebar: el snapshot
+          // resultante es idéntico sin importar la superficie de origen.
+          const applied = applyMutation(project, createMutationRegistry(), {
+            type: "section.updateSettings",
+            sectionId: operation.sectionId,
+            settings: operation.settings,
+          });
+          project = applied.project;
           break;
         }
         case "product.createBatch": {
@@ -2584,14 +2688,7 @@ export class AgentController {
           break;
         }
         case "theme.updateTokens": {
-          project = StoreProjectV2Schema.parse({
-            ...project,
-            theme: StoreProjectV2Schema.shape.theme.parse({
-              ...project.theme,
-              ...operation.tokens,
-            }),
-            updatedAt: at,
-          });
+          applyRegistered({ type: "theme.updateTokens", tokens: operation.tokens as never }, at);
           break;
         }
       }

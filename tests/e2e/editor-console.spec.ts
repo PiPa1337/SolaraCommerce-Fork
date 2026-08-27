@@ -67,7 +67,7 @@ test("el editor recorre dashboard, tabs y acciones clave sin errores de consola"
     { button: "Resumen", heading: "Resumen" },
     { button: "Catálogo", heading: "Catálogo" },
     { button: "Constructor", heading: "Constructor" },
-    { button: "Tema", heading: "Tema" },
+    { button: "Tema de la tienda", heading: "Tema de la tienda" },
     { button: "Recursos", heading: "Recursos" },
     { button: "SEO", heading: "SEO y Google" },
     { button: "Exportar", heading: "Exportar" },

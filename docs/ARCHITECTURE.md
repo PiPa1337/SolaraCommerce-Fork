@@ -69,7 +69,9 @@ Las vistas principales son:
 - `features/ThemeEditor.tsx`, `Assets.tsx`, `Seo.tsx` y `Export.tsx`: tema,
   recursos, auditoría y exportación.
 - `features/Preview.tsx`: iframe con el mismo renderer público y transporte de
-  assets por `postMessage`.
+  assets por `postMessage`. En modo editor consume el manifest Live Canvas,
+  escucha Ctrl/Ctrl+clic dentro del iframe y aplica cambios mediante el núcleo
+  semántico de mutaciones.
 
 El estado de edición vive en React (`HistoryState`). No hay Redux ni un store
 global externo. El historial guarda snapshots completos validados, por lo que una
@@ -137,6 +139,10 @@ draft mantiene `noindex` y permite revisar.
 
 `renderPreviewHtml` usa las mismas páginas y módulos con un transporte especial de
 assets para el iframe. No debe crearse un renderer alternativo dentro de Studio.
+El modo editor agrega bindings sólo al HTML del preview: un bridge con sesión,
+nonce de un solo uso, `event.source` y manifest limita la selección. Los valores
+confirmados vuelven a `applyMutation`, por lo que el DOM del iframe nunca es la
+fuente de persistencia. El exportador público omite esos atributos.
 Cada sitio guarda `rendererFingerprint` en su metadata. Un cambio de CSS, módulo o
 renderer no muta proyectos: se aplica con `rollouts.preview/commit` de tipo
 `site-rebuild`, que reconstruye sitios no protegidos, conserva el proyecto y
@@ -163,6 +169,10 @@ partir de este paquete. `storefrontBoot` detecta capabilities en el documento y
 activa sólo lo necesario: carrito, variantes, galería, búsqueda, filtros, menú,
 hero/video y motion. El carrito usa `localStorage` con clave
 `solara-cart:{storeId}` y reconcilia datos contra `catalog-index.json`.
+
+En páginas grandes el atributo de copy del runtime se reduce a los grupos que
+esa ruta necesita; así el benchmark de 2.000 productos conserva el comportamiento
+dinámico y evita repetir todo el copy público en cada HTML.
 
 ### `packages/site-optimizer`
 

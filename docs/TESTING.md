@@ -26,10 +26,12 @@ corepack pnpm --filter @solara/storefront-runtime test
 los paquetes y checks de optimizer de forma secuencial (CI/cierre). `build` comprueba que los paquetes se
 compilan en orden.
 
-Para iteración diaria en 9800X3D usar `check:quick` — mismos gates en paralelo (~40-60% más rápido, <90s):
+Para iteración diaria en 9800X3D usar `check:quick` — seis gates en paralelo
+(repository, hardcoded-content, image-budget, format, typecheck y tests; ~40-60%
+más rápido, <90s):
 
 ```powershell
-corepack pnpm check:quick   # 7 gates en paralelo (repository, hardcoded-content, format, typecheck, test, optimization, runtime-serialization)
+corepack pnpm check:quick   # 6 gates en paralelo
 corepack pnpm check:full    # secuencial, para cierre/CI
 corepack pnpm check         # alias de check:full
 corepack pnpm build
@@ -57,7 +59,7 @@ Para iteración diaria usar smoke ampliado (15 specs, ~45s-2min) con cache de bu
 ```powershell
 corepack pnpm playwright:install:chromium
 corepack pnpm test:e2e:smoke  # 15 specs criticos + build cacheado
-corepack pnpm test:e2e        # 74 specs full (~3-4 min con 8 workers)
+corepack pnpm test:e2e        # suite full (961 tests observados; puede requerir menos workers)
 corepack pnpm test:e2e:ci     # sin build, CI usa dist ya compilado
 ```
 
@@ -96,19 +98,19 @@ detalle en `TECHNICAL_DEBT.md` y plan
 ## Debugging del draft (2026-08-23)
 
 El modo draft marca su bundle con `// DEBUG: modo draft` para distinguirlo del
-runtime de producción, que sigue inline y byte-idéntico. Para depurar contra el
+runtime de producción, que sigue inline y byte-idéntico. El exporter publica el
+runtime bajo un nombre con fingerprint reproducible; para depurar contra el
 código fuente:
 
 1. generar el bundle externo + mapa local:
    `node packages/storefront-runtime/scripts/build-runtime.mjs`
    (salida: `packages/storefront-runtime/dist/storefront-runtime.js.map`);
-2. abrir DevTools en la página draft y usar el mapa como referencia de símbolos
-   mientras se inspecciona el runtime inline;
+2. abrir DevTools en la página draft e inspeccionar el bundle marcado DEBUG;
 3. no publicar drafts: `robots.txt` los bloquea y el runtime de producción es
    la única variante soportada en hosting.
 
-Pendiente documentado: emitir `assets/storefront.js.map` desde el exporter
-(fila P2 de `TECHNICAL_DEBT.md`).
+Pendiente documentado: emitir un source map desde el exporter si el debugging
+del draft lo requiere (la validación actual exige sólo la marca DEBUG).
 
 ## Flujos críticos que deben conservarse
 
@@ -214,3 +216,14 @@ La suite no simula disco lleno ni permisos revocados del sistema operativo en
 cada cambio; esos casos quedan documentados como matriz de release. El E2E
 portable sí valida dos copias, Guardar, aislamiento, sitio público, traslado y
 recuperación desde disco.
+
+La prueba `test:e2e:portable:new-store` elimina sólo `.solara-runtime` de su copia
+temporal antes de abrirla; así no reutiliza perfiles Electron stale. La matriz
+MCP/JSONL del release debe ejecutarse contra el EXE portable, no contra módulos
+fuente.
+
+Evidencia de la sesión 2026-08-26: `check:quick` 6/6, smoke 129/129,
+`check:runtime-serialization` 4/4 (fuera del sandbox por Access Denied de
+esbuild), budget público con bytes no cero, benchmark 2.000 productos dentro de
+48 MiB y los tres E2E portable (smoke, UI nueva y agente) verdes. Node 22 y el
+full E2E quedan pendientes/bloqueados en este host.

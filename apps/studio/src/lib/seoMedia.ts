@@ -140,6 +140,7 @@ export async function createFaviconAsset(file: File): Promise<ImageAsset> {
 export async function createSiteCoverAsset(file: File): Promise<ImageAsset> {
   const prepared = await prepareSource(file);
   const image = await loadImage(prepared.source);
+  const responsiveWidths = [320, 480, 640, 768, 1024] as const;
   return {
     kind: "image",
     id: `asset-site-cover-${crypto.randomUUID()}` as ImageAsset["id"],
@@ -148,6 +149,16 @@ export async function createSiteCoverAsset(file: File): Promise<ImageAsset> {
     mimeType: "image/webp",
     source: renderCrop(image, SITE_COVER_WIDTH, SITE_COVER_HEIGHT, "image/webp", false),
     fallbackSource: renderCrop(image, SITE_COVER_WIDTH, SITE_COVER_HEIGHT, "image/jpeg", false),
+    responsiveSources: responsiveWidths.map((width) => ({
+      width,
+      source: renderCrop(
+        image,
+        width,
+        Math.round((width / SITE_COVER_WIDTH) * SITE_COVER_HEIGHT),
+        "image/webp",
+        false,
+      ),
+    })),
     width: SITE_COVER_WIDTH,
     height: SITE_COVER_HEIGHT,
     hash: `${prepared.hash}-site-cover-v1`,

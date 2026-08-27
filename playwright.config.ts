@@ -26,6 +26,7 @@ export default defineConfig({
     : "list",
   use: {
     trace: "retain-on-failure",
+    serviceWorkers: "block",
   },
   projects:
     process.env.PLAYWRIGHT_MULTI_BROWSER === "1"

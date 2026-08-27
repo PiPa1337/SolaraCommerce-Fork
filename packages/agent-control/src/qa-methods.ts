@@ -5,9 +5,10 @@
 
 import { spawn } from "node:child_process";
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { exportProject, runLighthouseLite } from "@solara/exporter";
+import { join, resolve } from "node:path";
+import { exportProject } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
+import { QACycleManager } from "./qa-cycle-manager.js";
 
 export interface QaContext {
   applicationRoot: string;
@@ -18,11 +19,20 @@ export interface QaContext {
 async function runVitest(args: string[], timeoutMs: number) {
   return new Promise<{ success: boolean; passed: number; failed: number; output: string }>(
     (res) => {
-      const cmd = process.platform === "win32" ? "npx.cmd" : "npx";
-      const child = spawn(cmd, ["vitest", "run", ...args], {
-        shell: true,
+      // Mismo hardening que qa-runner: binario local sin shell.
+      const vitestBin = resolve(
+        import.meta.dirname ?? ".",
+        "..",
+        "..",
+        "..",
+        "node_modules",
+        ".bin",
+        process.platform === "win32" ? "vitest.CMD" : "vitest",
+      );
+      const child = spawn(vitestBin, ["run", ...args], {
         timeout: timeoutMs,
         env: { ...process.env, CI: "true" },
+        windowsVerbatimArguments: false,
       });
       let output = "";
       child.stdout?.on("data", (c: Buffer) => {
@@ -60,7 +70,7 @@ export async function logProgress(ctx: QaContext, entry: string) {
   ctx.requireScope("qa:write");
   const logPath = join(ctx.applicationRoot, "docs", "perpetual-progress.log");
   await mkdir(join(logPath, ".."), { recursive: true });
-  const ts = new Date().toISOString().replace("T", " ").slice(0, 16) + "Z";
+  const ts = `${new Date().toISOString().replace("T", " ").slice(0, 16)}Z`;
   await appendFile(logPath, `- ${ts} ${entry}\n`, "utf8");
   await ctx.audit("qa.progress.logged", { entry });
   return { logged: true };
@@ -184,6 +194,8 @@ export async function dispatchQaMethod(
     }
     case "qa.runCycle":
       return runQaCycle(ctx);
+    case "qa.status":
+      return qaStatus(ctx);
     default:
       throw Object.assign(new Error(`Metodo QA desconocido: ${method}`), {
         code: "METHOD_NOT_FOUND",
@@ -196,9 +208,34 @@ export async function runQaCycle(ctx: QaContext): Promise<unknown> {
   const backlog = await readBacklog(ctx);
   const nextItem = (backlog as { nextItem?: string }).nextItem;
   if (!nextItem) return { error: "No hay item siguiente en el backlog" };
-  await logProgress(ctx, "Ciclo iniciado para " + nextItem);
+  // Ciclo con estado durable: el manager persiste la fase, el watchdog de 3
+  // intentos y el historial para que qa.status y la UI lean el mismo estado.
+  const manager = new QACycleManager(ctx.applicationRoot);
+  await manager.loadCycles();
+  const active = manager.getActiveCycle();
+  const cycle = active ?? manager.createCycle(nextItem);
+  manager.updatePhase(cycle.cycleId, "gates");
+  await logProgress(ctx, `Ciclo iniciado para ${nextItem}`);
   const gates = await runGates(ctx, "quick");
+  if (manager.shouldBlock(cycle.cycleId)) {
+    manager.blockCycle(cycle.cycleId, `gates fallando tras 3 intentos: ${gates.failed} tests`);
+    await manager.persist(cycle.cycleId);
+    return {
+      cycleId: cycle.cycleId,
+      blocked: true,
+      backlogItem: nextItem,
+      gatesFailed: gates.failed,
+    };
+  }
+  manager.updatePhase(cycle.cycleId, "done");
+  await manager.persist(cycle.cycleId);
+  await logProgress(
+    ctx,
+    `Ciclo ${cycle.cycleId}: gates ${gates.passed} pass / ${gates.failed} fail`,
+  );
   return {
+    cycleId: cycle.cycleId,
+    blocked: false,
     backlogItem: nextItem,
     gatesSuccess: gates.success,
     gatesPassed: gates.passed,
@@ -207,4 +244,11 @@ export async function runQaCycle(ctx: QaContext): Promise<unknown> {
       ? "Los gates estan verdes. Escribi un test nuevo o implementa el fix."
       : "Hay tests falliendo. Diagnostica y corrige antes de continuar.",
   };
+}
+
+export async function qaStatus(ctx: QaContext) {
+  ctx.requireScope("qa:write");
+  const manager = new QACycleManager(ctx.applicationRoot);
+  await manager.loadCycles();
+  return manager.getStatus();
 }

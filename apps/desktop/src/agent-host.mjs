@@ -174,7 +174,9 @@ const toolDefinitions = [
                   "store.updateIdentity",
                   "store.updateSeo",
                   "category.create",
+                  "category.update",
                   "collection.create",
+                  "collection.update",
                   "product.create",
                   "product.update",
                   "product.setStatus",
@@ -424,6 +426,18 @@ const toolDefinitions = [
       properties: { patch: { type: "object" } },
     },
     method: "qa.updateState",
+  },
+  {
+    name: "solara_qa_run_cycle",
+    description: "Ejecuta un ciclo completo del QA perpetuo sobre el backlog.",
+    inputSchema: { type: "object", additionalProperties: false, properties: {} },
+    method: "qa.runCycle",
+  },
+  {
+    name: "solara_qa_status",
+    description: "Estado del QA perpetuo: ciclo activo, completados y bloqueados.",
+    inputSchema: { type: "object", additionalProperties: false, properties: {} },
+    method: "qa.status",
   },
 ];
 

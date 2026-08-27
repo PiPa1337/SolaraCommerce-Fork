@@ -134,6 +134,7 @@ function isPlaceholder(value: string, project: StoreProjectV2): boolean {
     "descubrí nuestra selección de productos",
     "conocé nuestra historia",
     "estamos para ayudarte",
+    "descripcion corta de tu tienda",
     "imagen de plantilla",
     "imagen de ejemplo para reemplazar",
   ].some((candidate) => normalized.includes(candidate));

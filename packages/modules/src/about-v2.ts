@@ -1,4 +1,9 @@
 import {
+  type CanvasBinding,
+  canvasEntityAttributes,
+  canvasImageAttributes,
+  canvasRepeaterItemAttributes,
+  canvasTextAttributes,
   escapeAttribute,
   escapeHtml,
   type ModuleDefinition,
@@ -10,6 +15,7 @@ import {
   type SettingsFieldDefinition,
   safeHtml,
   safeUrl,
+  sanitizeRichText,
 } from "@solara/module-sdk";
 import {
   aboutDefaultExperience,
@@ -62,6 +68,7 @@ type AboutModuleInput<Id extends string, Settings> = {
   settingsSchema: z.ZodType<Settings>;
   settingsFields: readonly SettingsFieldDefinition<Settings>[];
   motionZones: readonly MotionZoneDefinition[];
+  canvasBindings?: readonly CanvasBinding[];
   render(context: RenderContext<Settings>): SafeHtml;
 };
 
@@ -72,9 +79,17 @@ const aboutModule = <Id extends string, Settings>(
   settingsSchema: input.settingsSchema,
   settingsFields: input.settingsFields,
   motionZones: input.motionZones,
+  ...(input.canvasBindings === undefined ? {} : { canvasBindings: input.canvasBindings }),
   styleAsset: scopedAssetId("catalog-modern"),
   render: input.render,
 });
+
+function aboutCanvasContext(context: Pick<RenderContext<unknown>, "canvas" | "section">) {
+  return {
+    editorMode: context.canvas?.editorMode === true,
+    sectionId: context.section.id,
+  } as const;
+}
 
 const iconPaths: Record<string, string> = {
   bag: '<path d="M5 8h14l1 12H4z"></path><path d="M8 8a4 4 0 0 1 8 0"></path>',
@@ -89,8 +104,8 @@ const iconPaths: Record<string, string> = {
   user: '<circle cx="12" cy="8" r="3.5"></circle><path d="M4.5 20a7.5 7.5 0 0 1 15 0"></path>',
 };
 
-const aboutIcon = (name: string): string =>
-  `<span class="solara-about-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${iconPaths[name] ?? iconPaths.spark}</svg></span>`;
+const aboutIcon = (name: string, attributes = ""): string =>
+  `<span class="solara-about-icon" aria-hidden="true"${attributes}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${iconPaths[name] ?? iconPaths.spark}</svg></span>`;
 
 const aboutLink = (href: string, label: string, className = ""): string =>
   href.trim()
@@ -235,10 +250,69 @@ export const aboutHero: ModuleDefinition<
     { key: "imageAssetId", type: "asset", label: "Imagen vertical" },
   ],
   motionZones: aboutRevealZone,
+  canvasBindings: [
+    {
+      id: "title",
+      label: "Título de Nosotros",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "title" },
+      capabilities: ["edit-text"],
+      multiline: true,
+      maxLength: 200,
+    },
+    {
+      id: "body",
+      label: "Texto de Nosotros",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "body" },
+      capabilities: ["edit-text"],
+      multiline: true,
+      maxLength: 600,
+    },
+    {
+      id: "eyebrow",
+      label: "Antetítulo de Nosotros",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "eyebrow" },
+      capabilities: ["edit-text"],
+      maxLength: 120,
+    },
+    {
+      id: "actionLabel",
+      label: "Botón de Nosotros",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "actionLabel" },
+      capabilities: ["edit-text"],
+      maxLength: 120,
+    },
+    {
+      id: "actionHref",
+      label: "Destino del botón de Nosotros",
+      kind: "link",
+      source: { kind: "section-setting", fieldKey: "actionHref" },
+      capabilities: ["edit-link"],
+    },
+    {
+      id: "imageAssetId",
+      label: "Imagen de Nosotros",
+      kind: "image",
+      source: { kind: "section-setting", fieldKey: "imageAssetId" },
+      capabilities: ["edit-image"],
+    },
+    {
+      id: "asset-alt",
+      label: "Texto alternativo de la imagen",
+      kind: "text",
+      source: { kind: "asset", entityId: "*", field: "alt" },
+      capabilities: ["edit-alt", "edit-text"],
+      maxLength: 500,
+    },
+  ],
   render(context) {
     const settings = context.settings;
+    const editor = aboutCanvasContext(context);
     const actions = settings.actionLabel
-      ? `<a class="catalog-primary-action" href="${escapeAttribute(safeUrl(settings.actionHref))}">${escapeHtml(settings.actionLabel)} →</a>`
+      ? `<a class="catalog-primary-action" href="${escapeAttribute(safeUrl(settings.actionHref))}"${canvasTextAttributes(editor, "actionHref")}><span${canvasTextAttributes(editor, "actionLabel", 120)}>${escapeHtml(settings.actionLabel)}</span> →</a>`
       : "";
     return renderCatalogModernEditorialHero(context, {
       moduleId: "about-hero",
@@ -251,6 +325,7 @@ export const aboutHero: ModuleDefinition<
       imageAssetId: settings.imageAssetId,
       benefits: [],
       actions,
+      canvasBindingIds: ["eyebrow", "title", "body", "imageAssetId"],
     });
   },
 });
@@ -279,13 +354,57 @@ export const aboutHistory: ModuleDefinition<
     { key: "country", type: "text", label: "País" },
   ],
   motionZones: aboutRevealZone,
+  canvasBindings: [
+    {
+      id: "title",
+      label: "Título de la historia",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "title" },
+      capabilities: ["edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "paragraph-body",
+      label: "Párrafo de historia",
+      kind: "text",
+      source: { kind: "section-repeater-item", fieldKey: "paragraphs", itemFieldKey: "body" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      multiline: true,
+      maxLength: 1000,
+    },
+    {
+      id: "year",
+      label: "Año de la historia",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "year" },
+      capabilities: ["edit-text"],
+      maxLength: 40,
+    },
+    {
+      id: "city",
+      label: "Ciudad de la historia",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "city" },
+      capabilities: ["edit-text"],
+      maxLength: 80,
+    },
+    {
+      id: "country",
+      label: "País de la historia",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "country" },
+      capabilities: ["edit-text"],
+      maxLength: 80,
+    },
+  ],
   render(context) {
     const settings = context.settings;
+    const editor = aboutCanvasContext(context);
     return moduleRoot(
       "about-history",
       context.section,
       safeHtml(
-        `<div class="about-history" data-motion-zone="content"><header><p class="solara-eyebrow">Nuestra historia</p><h2>${escapeHtml(settings.title)}</h2></header><div class="about-history-copy">${settings.paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph.body)}</p>`).join("")}<p class="about-history-meta"><span>${escapeHtml(settings.year)}</span><span>${escapeHtml(settings.city)}</span><span>${escapeHtml(settings.country)}</span></p></div></div>`,
+        `<div class="about-history" data-motion-zone="content"><header><p class="solara-eyebrow">Nuestra historia</p><h2${canvasTextAttributes(editor, "title", 160)}>${escapeHtml(settings.title)}</h2></header><div class="about-history-copy">${settings.paragraphs.map((paragraph) => `<p${canvasRepeaterItemAttributes(editor, "paragraph-body", paragraph.id)}>${escapeHtml(paragraph.body)}</p>`).join("")}<p class="about-history-meta"><span${canvasTextAttributes(editor, "year", 40)}>${escapeHtml(settings.year)}</span><span${canvasTextAttributes(editor, "city", 80)}>${escapeHtml(settings.city)}</span><span${canvasTextAttributes(editor, "country", 80)}>${escapeHtml(settings.country)}</span></p></div></div>`,
       ),
     );
   },
@@ -317,13 +436,57 @@ export const aboutPrinciples: ModuleDefinition<
     },
   ],
   motionZones: aboutItemsZone,
+  canvasBindings: [
+    {
+      id: "title",
+      label: "Título de principios",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "title" },
+      capabilities: ["edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "item-number",
+      label: "Número de principio",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "number" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 40,
+    },
+    {
+      id: "item-icon",
+      label: "Ícono de principio",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "icon" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 40,
+    },
+    {
+      id: "item-title",
+      label: "Título de principio",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "title" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "item-body",
+      label: "Texto de principio",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "body" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      multiline: true,
+      maxLength: 600,
+    },
+  ],
   render(context) {
     const settings = context.settings;
+    const editor = aboutCanvasContext(context);
     return moduleRoot(
       "about-principles",
       context.section,
       safeHtml(
-        `<section class="about-principles" data-motion-zone="items"><header><p class="solara-eyebrow">Criterio</p><h2>${escapeHtml(settings.title)}</h2></header><div class="about-principles-grid">${settings.items.map((item) => `<article class="about-principle-item"><span class="about-principle-number">${escapeHtml(item.number)}</span>${aboutIcon(item.icon)}<h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.body)}</p></article>`).join("")}</div></section>`,
+        `<section class="about-principles" data-motion-zone="items"><header><p class="solara-eyebrow">Criterio</p><h2${canvasTextAttributes(editor, "title", 160)}>${escapeHtml(settings.title)}</h2></header><div class="about-principles-grid">${settings.items.map((item) => `<article class="about-principle-item"><span class="about-principle-number"${canvasRepeaterItemAttributes(editor, "item-number", item.id)}>${escapeHtml(item.number)}</span>${aboutIcon(item.icon, canvasRepeaterItemAttributes(editor, "item-icon", item.id))}<h3${canvasRepeaterItemAttributes(editor, "item-title", item.id)}>${escapeHtml(item.title)}</h3><p${canvasRepeaterItemAttributes(editor, "item-body", item.id)}>${escapeHtml(item.body)}</p></article>`).join("")}</div></section>`,
       ),
     );
   },
@@ -346,6 +509,55 @@ export const aboutEditorialImage: ModuleDefinition<
     { key: "imageAssetId", type: "asset", label: "Imagen horizontal" },
   ],
   motionZones: aboutRevealZone,
+  canvasBindings: [
+    {
+      id: "enabled",
+      label: "Mostrar imagen editorial",
+      kind: "boolean",
+      source: { kind: "section-setting", fieldKey: "enabled" },
+      capabilities: ["toggle-boolean"],
+    },
+    {
+      id: "eyebrow",
+      label: "Antetítulo editorial",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "eyebrow" },
+      capabilities: ["edit-text"],
+      maxLength: 120,
+    },
+    {
+      id: "title",
+      label: "Título editorial",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "title" },
+      capabilities: ["edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "body",
+      label: "Texto editorial",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "body" },
+      capabilities: ["edit-text"],
+      multiline: true,
+      maxLength: 800,
+    },
+    {
+      id: "imageAssetId",
+      label: "Imagen editorial",
+      kind: "image",
+      source: { kind: "section-setting", fieldKey: "imageAssetId" },
+      capabilities: ["edit-image"],
+    },
+    {
+      id: "asset-alt",
+      label: "Texto alternativo editorial",
+      kind: "text",
+      source: { kind: "asset", entityId: "*", field: "alt" },
+      capabilities: ["edit-alt", "edit-text"],
+      maxLength: 500,
+    },
+  ],
   render(context) {
     const settings = context.settings;
     if (!settings.enabled || !settings.imageAssetId) return safeHtml("");
@@ -355,11 +567,16 @@ export const aboutEditorialImage: ModuleDefinition<
       sizes: "(max-width: 767px) 100vw, 90vw",
       fallbackAlt: settings.title,
     });
+    const editor = aboutCanvasContext(context);
+    const imageMarkup = image.replace(
+      "<img",
+      `<img${canvasEntityAttributes(editor, "asset-alt", "asset", settings.imageAssetId, "alt")}`,
+    );
     return moduleRoot(
       "about-editorial-image",
       context.section,
       safeHtml(
-        `<section class="about-editorial-image" data-motion-zone="content"><div class="about-editorial-image-media">${image}</div><div class="about-editorial-image-copy"><div><p class="solara-eyebrow">${escapeHtml(settings.eyebrow)}</p><h2>${escapeHtml(settings.title)}</h2></div><p>${escapeHtml(settings.body)}</p></div></section>`,
+        `<section class="about-editorial-image" data-motion-zone="content"><div class="about-editorial-image-media"${canvasImageAttributes(editor, "imageAssetId")}>${imageMarkup}</div><div class="about-editorial-image-copy"><div><p class="solara-eyebrow"${canvasTextAttributes(editor, "eyebrow", 120)}>${escapeHtml(settings.eyebrow)}</p><h2${canvasTextAttributes(editor, "title", 160)}>${escapeHtml(settings.title)}</h2></div><p${canvasTextAttributes(editor, "body", 800)}>${escapeHtml(settings.body)}</p></div></section>`,
       ),
     );
   },
@@ -391,13 +608,56 @@ export const aboutProcess: ModuleDefinition<
     },
   ],
   motionZones: aboutItemsZone,
+  canvasBindings: [
+    {
+      id: "title",
+      label: "Título del proceso",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "title" },
+      capabilities: ["edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "item-number",
+      label: "Número de paso",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "number" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 40,
+    },
+    {
+      id: "item-title",
+      label: "Título de paso",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "title" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "item-body",
+      label: "Texto de paso",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "body" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      multiline: true,
+      maxLength: 600,
+    },
+    {
+      id: "item-href",
+      label: "Destino de paso",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "href" },
+      capabilities: ["edit-repeater-item", "edit-link"],
+    },
+  ],
   render(context) {
     const settings = context.settings;
+    const editor = aboutCanvasContext(context);
     return moduleRoot(
       "about-process",
       context.section,
       safeHtml(
-        `<section class="about-process" data-motion-zone="items"><header><p class="solara-eyebrow">El proceso</p><h2>${escapeHtml(settings.title)}</h2></header><div class="about-process-grid">${settings.items.map((item) => `<article class="about-process-item"><span class="about-process-number">${escapeHtml(item.number)}</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.body)}</p>${aboutLink(item.href, "Explorar")}</article>`).join("")}</div></section>`,
+        `<section class="about-process" data-motion-zone="items"><header><p class="solara-eyebrow">El proceso</p><h2${canvasTextAttributes(editor, "title", 160)}>${escapeHtml(settings.title)}</h2></header><div class="about-process-grid">${settings.items.map((item) => `<article class="about-process-item"><span class="about-process-number"${canvasRepeaterItemAttributes(editor, "item-number", item.id)}>${escapeHtml(item.number)}</span><h3${canvasRepeaterItemAttributes(editor, "item-title", item.id)}>${escapeHtml(item.title)}</h3><p${canvasRepeaterItemAttributes(editor, "item-body", item.id)}>${escapeHtml(item.body)}</p>${item.href.trim() ? `<a href="${escapeAttribute(safeUrl(item.href))}"${canvasRepeaterItemAttributes(editor, "item-href", item.id)}>Explorar →</a>` : ""}</article>`).join("")}</div></section>`,
       ),
     );
   },
@@ -417,13 +677,33 @@ export const aboutManifesto: ModuleDefinition<
     { key: "accentLabel", type: "text", label: "Acento" },
   ],
   motionZones: aboutRevealZone,
+  canvasBindings: [
+    {
+      id: "quote",
+      label: "Manifiesto",
+      kind: "rich-text",
+      source: { kind: "section-setting", fieldKey: "quote" },
+      capabilities: ["edit-rich-text"],
+      multiline: true,
+      maxLength: 600,
+    },
+    {
+      id: "accentLabel",
+      label: "Acento del manifiesto",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "accentLabel" },
+      capabilities: ["edit-text"],
+      maxLength: 160,
+    },
+  ],
   render(context) {
     const settings = context.settings;
+    const editor = aboutCanvasContext(context);
     return moduleRoot(
       "about-manifesto",
       context.section,
       safeHtml(
-        `<section class="about-manifesto" data-motion-zone="content"><blockquote>${escapeHtml(settings.quote)}</blockquote>${settings.accentLabel ? `<p class="about-manifesto-accent">${escapeHtml(settings.accentLabel)}</p>` : ""}</section>`,
+        `<section class="about-manifesto" data-motion-zone="content"><blockquote${canvasTextAttributes(editor, "quote", 600)}>${sanitizeRichText(settings.quote)}</blockquote>${settings.accentLabel ? `<p class="about-manifesto-accent"${canvasTextAttributes(editor, "accentLabel", 160)}>${escapeHtml(settings.accentLabel)}</p>` : ""}</section>`,
       ),
     );
   },
@@ -454,13 +734,49 @@ export const aboutExperience: ModuleDefinition<
     },
   ],
   motionZones: aboutItemsZone,
+  canvasBindings: [
+    {
+      id: "title",
+      label: "Título de experiencia",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "title" },
+      capabilities: ["edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "item-icon",
+      label: "Ícono de experiencia",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "icon" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 40,
+    },
+    {
+      id: "item-title",
+      label: "Título de experiencia",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "title" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "item-body",
+      label: "Texto de experiencia",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "body" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      multiline: true,
+      maxLength: 600,
+    },
+  ],
   render(context) {
     const settings = context.settings;
+    const editor = aboutCanvasContext(context);
     return moduleRoot(
       "about-experience",
       context.section,
       safeHtml(
-        `<section class="about-experience" data-motion-zone="items"><header><p class="solara-eyebrow">La diferencia</p><h2>${escapeHtml(settings.title)}</h2></header><div class="about-experience-grid">${settings.items.map((item) => `<article>${aboutIcon(item.icon)}<h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.body)}</p></article>`).join("")}</div></section>`,
+        `<section class="about-experience" data-motion-zone="items"><header><p class="solara-eyebrow">La diferencia</p><h2${canvasTextAttributes(editor, "title", 160)}>${escapeHtml(settings.title)}</h2></header><div class="about-experience-grid">${settings.items.map((item) => `<article>${aboutIcon(item.icon, canvasRepeaterItemAttributes(editor, "item-icon", item.id))}<h3${canvasRepeaterItemAttributes(editor, "item-title", item.id)}>${escapeHtml(item.title)}</h3><p${canvasRepeaterItemAttributes(editor, "item-body", item.id)}>${escapeHtml(item.body)}</p></article>`).join("")}</div></section>`,
       ),
     );
   },
@@ -493,14 +809,72 @@ export const aboutTeam: ModuleDefinition<
     },
   ],
   motionZones: aboutItemsZone,
+  canvasBindings: [
+    {
+      id: "enabled",
+      label: "Mostrar equipo",
+      kind: "boolean",
+      source: { kind: "section-setting", fieldKey: "enabled" },
+      capabilities: ["toggle-boolean"],
+    },
+    {
+      id: "title",
+      label: "Título del equipo",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "title" },
+      capabilities: ["edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "item-image",
+      label: "Imagen de integrante",
+      kind: "image",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "imageAssetId" },
+      capabilities: ["edit-repeater-item", "edit-image"],
+    },
+    {
+      id: "item-name",
+      label: "Nombre de integrante",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "name" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "item-role",
+      label: "Función de integrante",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "role" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "item-body",
+      label: "Descripción de integrante",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "body" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      multiline: true,
+      maxLength: 600,
+    },
+    {
+      id: "asset-alt",
+      label: "Texto alternativo del integrante",
+      kind: "text",
+      source: { kind: "asset", entityId: "*", field: "alt" },
+      capabilities: ["edit-alt", "edit-text"],
+      maxLength: 500,
+    },
+  ],
   render(context) {
     const settings = context.settings;
     if (!settings.enabled || settings.items.length === 0) return safeHtml("");
+    const editor = aboutCanvasContext(context);
     return moduleRoot(
       "about-team",
       context.section,
       safeHtml(
-        `<section class="about-team" data-motion-zone="items"><header><p class="solara-eyebrow">La marca</p><h2>${escapeHtml(settings.title)}</h2></header><div class="about-team-grid">${settings.items
+        `<section class="about-team" data-motion-zone="items"><header><p class="solara-eyebrow">La marca</p><h2${canvasTextAttributes(editor, "title", 160)}>${escapeHtml(settings.title)}</h2></header><div class="about-team-grid">${settings.items
           .map((member) => {
             const image = member.imageAssetId
               ? renderImage(context.project, member.imageAssetId, {
@@ -510,7 +884,13 @@ export const aboutTeam: ModuleDefinition<
                   fallbackAlt: `${member.name} · ${member.role}`,
                 })
               : "";
-            return `<article class="about-team-member">${image}<h3>${escapeHtml(member.name)}</h3><span class="about-team-member-role">${escapeHtml(member.role)}</span>${member.body ? `<p>${escapeHtml(member.body)}</p>` : ""}</article>`;
+            const imageMarkup = image
+              ? image.replace(
+                  "<img",
+                  `<img${canvasEntityAttributes(editor, "asset-alt", "asset", member.imageAssetId, "alt")}`,
+                )
+              : "";
+            return `<article class="about-team-member">${imageMarkup ? `<div${canvasRepeaterItemAttributes(editor, "item-image", member.id)}>${imageMarkup}</div>` : ""}<h3${canvasRepeaterItemAttributes(editor, "item-name", member.id)}>${escapeHtml(member.name)}</h3><span class="about-team-member-role"${canvasRepeaterItemAttributes(editor, "item-role", member.id)}>${escapeHtml(member.role)}</span>${member.body ? `<p${canvasRepeaterItemAttributes(editor, "item-body", member.id)}>${escapeHtml(member.body)}</p>` : ""}</article>`;
           })
           .join("")}</div></section>`,
       ),
@@ -542,12 +922,40 @@ export const aboutStats: ModuleDefinition<
     },
   ],
   motionZones: aboutItemsZone,
+  canvasBindings: [
+    {
+      id: "item-icon",
+      label: "Ícono del dato",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "icon" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 40,
+    },
+    {
+      id: "item-title",
+      label: "Título del dato",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "title" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "item-body",
+      label: "Texto del dato",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "body" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      multiline: true,
+      maxLength: 600,
+    },
+  ],
   render(context) {
+    const editor = aboutCanvasContext(context);
     return moduleRoot(
       "about-stats",
       context.section,
       safeHtml(
-        `<section class="about-stats" data-motion-zone="items"><div class="about-stats-grid">${context.settings.items.map((item) => `<article>${aboutIcon(item.icon)}<strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.body)}</p></article>`).join("")}</div></section>`,
+        `<section class="about-stats" data-motion-zone="items"><div class="about-stats-grid">${context.settings.items.map((item) => `<article>${aboutIcon(item.icon, canvasRepeaterItemAttributes(editor, "item-icon", item.id))}<strong${canvasRepeaterItemAttributes(editor, "item-title", item.id)}>${escapeHtml(item.title)}</strong><p${canvasRepeaterItemAttributes(editor, "item-body", item.id)}>${escapeHtml(item.body)}</p></article>`).join("")}</div></section>`,
       ),
     );
   },
@@ -569,13 +977,48 @@ export const aboutProductsCta: ModuleDefinition<
     { key: "actionHref", type: "url", label: "Destino" },
   ],
   motionZones: aboutRevealZone,
+  canvasBindings: [
+    {
+      id: "title",
+      label: "Título del cierre",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "title" },
+      capabilities: ["edit-text"],
+      maxLength: 120,
+    },
+    {
+      id: "body",
+      label: "Texto del cierre",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "body" },
+      capabilities: ["edit-text"],
+      multiline: true,
+      maxLength: 400,
+    },
+    {
+      id: "actionLabel",
+      label: "Botón de productos",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "actionLabel" },
+      capabilities: ["edit-text"],
+      maxLength: 120,
+    },
+    {
+      id: "actionHref",
+      label: "Destino del botón de productos",
+      kind: "link",
+      source: { kind: "section-setting", fieldKey: "actionHref" },
+      capabilities: ["edit-link"],
+    },
+  ],
   render(context) {
     const settings = context.settings;
+    const editor = aboutCanvasContext(context);
     return moduleRoot(
       "about-products-cta",
       context.section,
       safeHtml(
-        `<section class="about-products-cta" data-motion-zone="content"><h2>${escapeHtml(settings.title)}</h2><p>${escapeHtml(settings.body)}</p><a class="catalog-primary-action" href="${escapeAttribute(safeUrl(settings.actionHref))}">${escapeHtml(settings.actionLabel)} →</a></section>`,
+        `<section class="about-products-cta" data-motion-zone="content"><h2${canvasTextAttributes(editor, "title", 120)}>${escapeHtml(settings.title)}</h2><p${canvasTextAttributes(editor, "body", 400)}>${escapeHtml(settings.body)}</p><a class="catalog-primary-action" href="${escapeAttribute(safeUrl(settings.actionHref))}"${canvasTextAttributes(editor, "actionHref")}><span${canvasTextAttributes(editor, "actionLabel", 120)}>${escapeHtml(settings.actionLabel)}</span> →</a></section>`,
       ),
     );
   },

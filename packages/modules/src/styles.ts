@@ -36,6 +36,11 @@ export const STORE_BASE_STYLES = `
   display: block;
   max-width: 100%;
 }
+[data-solara-store] picture,
+[data-solara-store] figure {
+  display: block;
+  max-width: 100%;
+}
 [data-solara-store] a {
   color: inherit;
   text-underline-offset: 0.2em;
@@ -2142,6 +2147,15 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-testimonials-track { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(280px, 1fr); gap: calc(.8rem * var(--solara-space-scale, 1)); overflow-x: auto; overscroll-behavior-inline: contain; scroll-snap-type: x proximity; padding-bottom: .5rem; }
 [data-solara-store].catalog-modern .catalog-testimonials-track:focus-visible { outline: 2px solid var(--catalog-ink); outline-offset: 2px; }
 [data-solara-store].catalog-modern .catalog-testimonials-controls button:focus-visible { outline: 2px solid var(--catalog-ink); outline-offset: 2px; }
+@media (min-width: 1200px) {
+  [data-solara-store].catalog-modern .catalog-testimonials-track {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+}
 [data-solara-store].catalog-modern .catalog-testimonial { min-height: 190px; padding: 1.25rem; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); scroll-snap-align: start; text-align: left; }
 [data-solara-store].catalog-modern .catalog-testimonial-rating { color: var(--catalog-rating); letter-spacing: .08em; }
 [data-solara-store].catalog-modern .catalog-testimonial h3 { margin-top: .9rem; font-size: 1rem; font-weight: 800; }
@@ -2520,13 +2534,17 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   border-color: color-mix(in srgb, var(--catalog-border), transparent 18%);
   transition: min-height var(--catalog-v2-motion-control) var(--catalog-v2-ease-out);
 }
+.cm.v2 .catalog-nav-menu:not([open]) .catalog-mega-menu {
+  display: none;
+}
 .cm.v2 [data-scrolled="true"] .catalog-header-inner {
   min-height: 60px;
 }
 .cm.v2 .catalog-brand {
-  width: 100%;
+  width: fit-content;
   max-width: 100%;
   min-width: 0;
+  justify-self: start;
   overflow: hidden;
   font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
   font-size: clamp(1.85rem, 2vw, 2.45rem);
@@ -2544,6 +2562,12 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow-wrap: normal;
+}
+.cm.v2 .catalog-brand .solara-logo,
+.cm.v2 .catalog-footer-brand .catalog-brand .solara-logo {
+  height: 100%;
+  object-fit: contain;
+  width: auto;
 }
 .cm.v2 .catalog-mobile-brand .solara-wordmark {
   display: block;
@@ -2659,7 +2683,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-eyebrow {
   margin-bottom: .85rem;
-  color: var(--catalog-sale);
+  color: var(--solara-accent);
   font-size: .68rem;
   letter-spacing: .2em;
 }
@@ -2670,7 +2694,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   font-weight: 500;
   letter-spacing: -.065em;
   line-height: .88;
-  overflow-wrap: normal;
+  overflow-wrap: anywhere;
   hyphens: none;
   word-break: normal;
   text-wrap: balance;
@@ -2680,7 +2704,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-body,
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-copy strong,
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-copy small {
-  text-shadow: 0 1px 0 color-mix(in srgb, var(--catalog-ink) 26%, transparent), 0 2px 8px color-mix(in srgb, var(--catalog-ink) 34%, transparent);
+  text-shadow: none;
 }
 .cm.v2 .catalog-hero-copy .catalog-hero-reveal--body > p {
   max-width: 54ch;
@@ -2826,6 +2850,19 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   gap: clamp(1.5rem, 2.4vw, 3rem) clamp(.8rem, 1.4vw, 1.6rem);
   margin: 0 auto;
 }
+@media (min-width: 1200px) {
+  .cm.v2 main.solara-container:has(> [data-solara-module="catalog-product-grid"]) {
+    padding-inline: 0;
+  }
+  .cm.v2 main.solara-container:has(> [data-solara-module="catalog-product-grid"]) > [data-solara-module="catalog-product-grid"] > .catalog-product-grid-section {
+    width: min(calc(100% - 1.5rem), var(--catalog-v2-wide));
+  }
+  .cm.v2 main.solara-container > [data-solara-module="catalog-product-grid"] > .catalog-product-grid-section .catalog-product-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    width: 100%;
+    max-width: none;
+  }
+}
 /* Máximo 5 columnas en desktop: el tope min(100% / 5, 20rem) nunca genera más
    de 5 tracks; con el gap el auto-fit da 5 columnas recién a partir de un
    contenedor de ~1702px, por eso entre 1366px y 1919px se fijan las 5 y desde
@@ -2899,8 +2936,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-product-media {
   aspect-ratio: 1;
   border-radius: 0;
+  box-shadow: 0 0 0 1px var(--catalog-border);
 }
 .cm.v2 .catalog-product-card-image {
+  object-fit: cover;
   transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out);
 }
 .cm.v2 .catalog-product-card:hover .catalog-product-card-image,
@@ -3153,7 +3192,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   line-height: .88;
   overflow-wrap: normal;
 }
-.cm.v2 .solara-category-hero img { aspect-ratio: 5 / 3; object-fit: contain; object-position: center; background: var(--catalog-surface); border-radius: var(--catalog-v2-radius); }
+.cm.v2 .solara-category-hero img { aspect-ratio: 5 / 3; object-fit: cover; object-position: center; background: var(--catalog-surface); border-radius: var(--catalog-v2-radius); }
 .cm.v2 .solara-search-page .solara-page-intro { max-width: none; padding: clamp(3rem, 5vw, 5rem) 0 1.5rem; }
 .cm.v2 .solara-search-page .solara-page-intro h1 { max-width: none; font-size: calc(clamp(3.5rem, 4.5vw, 5.75rem) * var(--solara-type-scale, 1)); line-height: .95; }
 .cm.v2 .solara-search-page .solara-page-intro > p:not(.solara-eyebrow) { margin: 1rem 0 0; color: var(--catalog-muted); font-size: 1rem; line-height: 1.55; }
@@ -3241,6 +3280,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   height: 100%;
 }
 .cm.v2 .catalog-product-gallery-image {
+  object-fit: cover;
   transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out);
 }
 .cm.v2 .catalog-product-gallery-main:hover .catalog-product-gallery-image {
@@ -3556,6 +3596,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
 }
 @media (max-width: 767px) {
+  .cm.v2 .catalog-header-inner {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: .75rem;
+    min-height: 64px;
+  }
   .cm.v2 .catalog-header-inner,
   .cm.v2 .catalog-hero-inner,
   .cm.v2 .catalog-brand-strip-inner,
@@ -4040,7 +4085,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .contact-channel-row:hover > span:last-child,
 .cm.v2 .contact-channel-row:focus-visible > span:last-child {
-  color: var(--catalog-sale);
+  color: var(--solara-accent);
   transform: translateX(3px);
 }
 .cm.v2 .contact-help,
@@ -4398,9 +4443,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     width: min(calc(100% - 1.5rem), var(--catalog-v2-wide));
   }
   .cm.v2 .catalog-brand {
-    width: 100%;
+    width: fit-content;
     min-width: 0;
     max-width: 100%;
+    justify-self: start;
     overflow: hidden;
     overflow-wrap: normal;
     text-overflow: ellipsis;
@@ -4909,7 +4955,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-product-card:focus-within,
   .cm.v2 .catalog-category-bento-item:hover,
   .cm.v2 .catalog-category-bento-item:focus-visible {
-    box-shadow: var(--catalog-v2-shadow-card);
+    box-shadow: none;
   }
   .cm.v2 [data-solara-module="catalog-header"][data-scrolled="true"],
   .cm.v2 .catalog-cart-drawer,

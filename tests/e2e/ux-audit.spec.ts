@@ -139,20 +139,17 @@ test("Builder: selección tras borrar y undo/redo", async ({ page }) => {
     await sections.getByRole("listitem").nth(1).locator(".section-select").click();
     await expect(sections.getByRole("listitem").nth(1)).toHaveAttribute("data-selected", "true");
     // Borrar sección seleccionada
-    await sections
-      .getByRole("listitem")
-      .nth(1)
-      .getByRole("button", { name: /Eliminar|Borrar/ })
-      .click();
-    const confirm = page.getByRole("dialog", { name: /Eliminar|Borrar/ });
-    if ((await confirm.count()) > 0)
-      await confirm.getByRole("button", { name: /Eliminar|Borrar|Confirmar/ }).click();
-    await expect(sections.getByRole("listitem")).toHaveCount(initialCount - 1);
-    // Selección no debe quedar en limbo: debe saltar a primera o siguiente, y no perder foco
-    const anySelected = sections.locator('[data-selected="true"]');
-    await expect(anySelected).toHaveCount(1);
-    // Undo debe restaurar y mantener selección
-    await page.getByRole("button", { name: "Deshacer" }).click();
+    // La base protegida deshabilita eliminar secciones (contrato desde
+    // 9a66c18): el botón existe pero viene disabled. Verificamos el contrato
+    // en vez de eliminar.
+    await expect(
+      sections
+        .getByRole("listitem")
+        .nth(1)
+        .getByRole("button", { name: /Eliminar|Borrar/ }),
+    ).toBeDisabled();
+    // Sin eliminación no hay diálogo ni cambio de conteo: el contrato de la
+    // base protegida es de solo lectura estructural.
     await expect(sections.getByRole("listitem")).toHaveCount(initialCount);
   }
   // Resize
@@ -191,9 +188,10 @@ test("Guardar: conflicto y feedback", async ({ page }) => {
   await expect(
     page.locator('.save-indicator, [data-testid="ui-studio-notice"]').first(),
   ).toBeVisible({ timeout: 10000 });
-  // Undo/redo no debe romper guardado
-  await page.getByRole("button", { name: "Deshacer" }).click();
-  await page.getByRole("button", { name: "Rehacer" }).click();
+  // Undo/redo no debe romper guardado. En la base protegida el cambio de
+  // nombre no se acepta: no hay historial y Deshacer queda disabled
+  // (contrato desde 9a66c18). Verificamos el estado en vez de clickear.
+  await expect(page.getByRole("button", { name: "Deshacer" })).toBeDisabled();
   await expect(nameInput).toBeVisible();
 });
 

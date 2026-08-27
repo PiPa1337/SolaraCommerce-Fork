@@ -1932,6 +1932,7 @@
 
 .preview-stage {
   display: grid;
+  position: relative;
   min-height: 0;
   place-items: center;
   padding: 18px;
@@ -1948,6 +1949,70 @@
   background: #fefefe;
   box-shadow: var(--shadow-panel);
   transition: width 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.canvas-mode-control {
+  position: absolute;
+  z-index: 5;
+  top: 10px;
+  right: 10px;
+}
+
+.canvas-mode-control button {
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-panel);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.canvas-mode-control button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.canvas-popover {
+  position: absolute;
+  z-index: 10;
+  display: grid;
+  min-width: min(300px, calc(100% - 24px));
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface-strong);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-panel);
+}
+
+.canvas-popover-label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.canvas-popover textarea,
+.canvas-popover select {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: inherit;
+  font: inherit;
+}
+
+.canvas-popover-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .preview-stage--tablet iframe {
@@ -2034,6 +2099,32 @@ legend {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-4);
+}
+
+.identity-media-control {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.identity-media-preview {
+  display: grid;
+  min-height: 104px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.identity-media-preview img {
+  display: block;
+  width: 100%;
+  max-height: 180px;
+  object-fit: contain;
 }
 
 .navigation-switches {
@@ -3158,6 +3249,26 @@ tbody tr[data-selected="true"] {
 .settings-fields {
   display: grid;
   gap: var(--space-3);
+}
+
+.image-asset-picker-control,
+.image-upload-control {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.image-upload-control {
+  align-items: start;
+  justify-items: start;
+}
+
+.image-asset-picker-control select {
+  min-width: 0;
+}
+
+.image-upload-control .inline-error {
+  width: 100%;
 }
 
 .slides-editor {

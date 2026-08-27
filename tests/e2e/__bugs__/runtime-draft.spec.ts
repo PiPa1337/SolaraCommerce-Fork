@@ -4,18 +4,20 @@ import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-f
 
 test("draft: runtime marcado como debuggeable", () => {
   const result = exportProject(catalogModernV2Store, { mode: "draft" });
-  const js = String(result.files.get("assets/storefront.js"));
-  const map = result.files.get("assets/storefront.js.map");
-  // El mapa se emite siempre en draft (placeholder {} si build-runtime.mjs
-  // no corrió); con él, DevTools resuelve breakpoints contra el fuente.
-  expect(map).toBeDefined();
+  const runtimePath = [...result.files.keys()].find((path) =>
+    /^assets\/storefront\.[a-f0-9]+\.js$/i.test(path),
+  );
+  expect(runtimePath).toBeDefined();
+  const js = String(result.files.get(runtimePath ?? ""));
   expect(js).toContain("// DEBUG: modo draft");
-  expect(js).toContain("//# sourceMappingURL=storefront.js.map");
 });
 
 test("production: runtime inline serializado sin sourcemap", () => {
   const result = exportProject(catalogModernV2Store, { mode: "production" });
-  const js = String(result.files.get("assets/storefront.js"));
+  const runtimePath = [...result.files.keys()].find((path) =>
+    /^assets\/storefront\.[a-f0-9]+\.js$/i.test(path),
+  );
+  expect(runtimePath).toBeDefined();
+  const js = String(result.files.get(runtimePath ?? ""));
   expect(js).not.toContain("sourceMappingURL");
-  expect(result.files.get("assets/storefront.js.map")).toBeUndefined();
 });

@@ -23,14 +23,16 @@ import {
   X,
 } from "@phosphor-icons/react";
 import {
+  applyMutation,
   createHistory,
+  createMutationRegistry,
   type DomainCommand,
   executeCommand,
   type HistoryState,
   redo,
   undo,
 } from "@solara/core";
-import { type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
+import { type ImageAsset, type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
 import { isBaseTemplate } from "@solara/project-schema/project-policy";
 import { motion, useReducedMotion } from "motion/react";
 import {
@@ -240,12 +242,30 @@ const MemoizedPreview = memo(function MemoizedPreview({
   size,
   zoom,
   onRouteChange,
+  onCanvasEdit,
+  onCanvasItemEdit,
+  onCanvasEntityEdit,
+  onCanvasImageUpload,
 }: {
   project: StoreProjectV1;
   route: string;
   size: PreviewSize;
   zoom: PreviewZoom;
   onRouteChange(route: string): void;
+  onCanvasEdit(sectionId: string, fieldKey: string, value: unknown): void;
+  onCanvasItemEdit(sectionId: string, fieldKey: string, itemId: string, value: unknown): void;
+  onCanvasEntityEdit(sourceKind: string, entityId: string, field: string, value: unknown): void;
+  onCanvasImageUpload(
+    asset: ImageAsset,
+    target: {
+      sectionId: string;
+      fieldKey: string;
+      itemId?: string;
+      sourceKind?: string;
+      entityId?: string;
+      entityField?: string;
+    },
+  ): void;
 }) {
   return (
     <Preview
@@ -254,6 +274,10 @@ const MemoizedPreview = memo(function MemoizedPreview({
       size={size}
       zoom={zoom}
       onRouteChange={onRouteChange}
+      onCanvasEdit={onCanvasEdit}
+      onCanvasItemEdit={onCanvasItemEdit}
+      onCanvasEntityEdit={onCanvasEntityEdit}
+      onCanvasImageUpload={onCanvasImageUpload}
     />
   );
 });
@@ -410,8 +434,59 @@ export function Studio({
   // Transición sucio → guardado: la marca de "todo visitado" sólo se aplica
   // cuando un guardado termina, nunca en el commit del cambio (H3-B1).
   const dirtyRef = useRef(false);
+  const activeStoreIdRef = useRef("");
+  // Señal de cambio administrado: el canal IA puede commitear mientras Studio
+  // está abierto. Un poll liviano del manifest detecta versiones nuevas.
+  useEffect(() => {
+    if (!managedStorage) return;
+    let lastVersion: number | null = null;
+    const poll = window.setInterval(() => {
+      void (async () => {
+        try {
+          const response = await fetch("/__solara/storage/projects");
+          if (!response.ok) return;
+          const data = (await response.json()) as {
+            projects?: Array<{ projectId: string; version: number }>;
+          };
+          const current = data.projects?.find(
+            (candidate) => candidate.projectId === activeStoreIdRef.current,
+          );
+          if (!current) return;
+          if (lastVersion === null) {
+            lastVersion = current.version;
+            return;
+          }
+          if (current.version > lastVersion) {
+            lastVersion = current.version;
+            const dirty = managedStorage ? managedDirty : saveState !== "saved";
+            if (dirty) {
+              setConflict(
+                Object.assign(
+                  new Error(
+                    "El agente IA publicó una versión nueva de esta tienda mientras tenías cambios sin guardar.",
+                  ),
+                  { code: "AGENT_VERSION_CONFLICT" },
+                ),
+              );
+            } else {
+              void onReloadFromDisk?.().then((outcome) => {
+                if (outcome && !outcome.ok) setNotice(outcome.message);
+              });
+            }
+          }
+        } catch {
+          /* sin servidor local: silencio */
+        }
+      })();
+    }, 5000);
+    return () => window.clearInterval(poll);
+  }, [managedStorage, managedDirty, saveState, onReloadFromDisk]);
+  // Señal de cambio administrado: el canal IA puede commitear mientras Studio
+  // está abierto. Un poll liviano del manifest detecta versiones nuevas.
+
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const project = history.present;
+  activeStoreIdRef.current = project.id;
   const immutableBase = isBaseTemplate(project);
   // La ruta del preview no se descarta en silencio cuando sale de la muestra
   // de getPreviewRoutes: renderPreviewHtml resuelve cualquier página real del
@@ -1095,6 +1170,151 @@ export function Studio({
             size={previewSize}
             zoom={previewZoom}
             onRouteChange={setPreviewRoute}
+            onCanvasEdit={(sectionId, fieldKey, value) => {
+              const applied = applyMutation(project, createMutationRegistry(), {
+                type: "section.field.update",
+                sectionId,
+                fieldKey,
+                value,
+              });
+              replaceProject(applied.project);
+            }}
+            onCanvasItemEdit={(sectionId, fieldKey, itemId, value) => {
+              const applied = applyMutation(project, createMutationRegistry(), {
+                type: "section.repeater.item.update",
+                sectionId,
+                fieldKey,
+                itemId,
+                changes:
+                  typeof value === "object" && value !== null
+                    ? (value as Record<string, unknown>)
+                    : { title: value },
+              });
+              replaceProject(applied.project);
+            }}
+            onCanvasEntityEdit={(sourceKind, entityId, field, value) => {
+              const scalar = typeof value === "string" ? value : String(value ?? "");
+              const imageId = scalar || undefined;
+              let mutation: Parameters<typeof applyMutation>[2] | undefined;
+              if (sourceKind === "identity") {
+                mutation = {
+                  type: "identity.update",
+                  changes: { [field]: field === "logoAssetId" ? imageId : scalar },
+                } as Parameters<typeof applyMutation>[2];
+              } else if (sourceKind === "product") {
+                mutation = {
+                  type: "product.update",
+                  productId: entityId,
+                  changes:
+                    field === "imageIds"
+                      ? { imageIds: imageId ? [imageId] : [] }
+                      : field === "price"
+                        ? { price: Number(scalar) }
+                        : { [field]: scalar },
+                } as Parameters<typeof applyMutation>[2];
+              } else if (sourceKind === "category") {
+                mutation = {
+                  type: "category.update",
+                  categoryId: entityId,
+                  changes: field === "imageId" ? { imageId } : { [field]: scalar },
+                } as Parameters<typeof applyMutation>[2];
+              } else if (sourceKind === "collection") {
+                mutation = {
+                  type: "collection.update",
+                  collectionId: entityId,
+                  changes: field === "imageId" ? { imageId } : { [field]: scalar },
+                } as Parameters<typeof applyMutation>[2];
+              } else if (sourceKind === "asset") {
+                mutation = {
+                  type: "asset.update",
+                  assetId: entityId,
+                  changes: { [field]: scalar },
+                } as Parameters<typeof applyMutation>[2];
+              } else if (sourceKind === "public-copy") {
+                mutation = {
+                  type: "publicCopy.update",
+                  group: entityId,
+                  field,
+                  value: scalar,
+                } as Parameters<typeof applyMutation>[2];
+              }
+              if (!mutation) return;
+              const applied = applyMutation(project, createMutationRegistry(), mutation, {
+                kind: "canvas",
+                sessionId: "studio",
+              });
+              replaceProject(applied.project);
+            }}
+            onCanvasImageUpload={(asset, target) => {
+              const existing = project.assets.find((candidate) => candidate.hash === asset.hash);
+              const assetToUse = existing ?? asset;
+              const withAsset = existing
+                ? project
+                : StoreProjectV1Schema.parse({
+                    ...project,
+                    assets: [...project.assets, asset],
+                  });
+              let applied = withAsset;
+              if (target.itemId !== undefined) {
+                applied = applyMutation(
+                  withAsset,
+                  createMutationRegistry(),
+                  {
+                    type: "section.repeater.item.update",
+                    sectionId: target.sectionId,
+                    fieldKey: target.fieldKey,
+                    itemId: target.itemId,
+                    changes: { [target.entityField ?? "imageId"]: assetToUse.id },
+                  },
+                  { kind: "canvas", sessionId: "studio" },
+                ).project;
+              } else if (target.sourceKind && target.entityId && target.entityField) {
+                let mutation: Parameters<typeof applyMutation>[2] | undefined;
+                if (target.sourceKind === "product") {
+                  mutation = {
+                    type: "product.update",
+                    productId: target.entityId,
+                    changes: { imageIds: [assetToUse.id] },
+                  } as Parameters<typeof applyMutation>[2];
+                } else if (target.sourceKind === "category") {
+                  mutation = {
+                    type: "category.update",
+                    categoryId: target.entityId,
+                    changes: { imageId: assetToUse.id },
+                  } as Parameters<typeof applyMutation>[2];
+                } else if (target.sourceKind === "collection") {
+                  mutation = {
+                    type: "collection.update",
+                    collectionId: target.entityId,
+                    changes: { imageId: assetToUse.id },
+                  } as Parameters<typeof applyMutation>[2];
+                } else if (target.sourceKind === "identity") {
+                  mutation = {
+                    type: "identity.update",
+                    changes: { logoAssetId: assetToUse.id },
+                  } as Parameters<typeof applyMutation>[2];
+                }
+                if (mutation) {
+                  applied = applyMutation(withAsset, createMutationRegistry(), mutation, {
+                    kind: "canvas",
+                    sessionId: "studio",
+                  }).project;
+                }
+              } else {
+                applied = applyMutation(
+                  withAsset,
+                  createMutationRegistry(),
+                  {
+                    type: "section.field.update",
+                    sectionId: target.sectionId,
+                    fieldKey: target.fieldKey,
+                    value: assetToUse.id,
+                  },
+                  { kind: "canvas", sessionId: "studio" },
+                ).project;
+              }
+              replaceProject(applied);
+            }}
           />
         </main>
 

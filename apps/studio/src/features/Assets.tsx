@@ -16,15 +16,9 @@ import { ProgressBar } from "../components/primitives";
 import { Button, EmptyState, IconButton, InlineError, SectionHeader } from "../components/Ui";
 import { assetUses } from "../lib/assetUses";
 import { bytesToSize } from "../lib/format";
-import {
-  ASSET_CACHE_RECIPE_VERSION,
-  clearAssetCache,
-  getCachedAsset,
-  getStorageEstimate,
-  putCachedAsset,
-  requestPersistentStorage,
-} from "../lib/repository";
-import { hashFile, type ProcessedImage, processImageInWorker } from "../lib/workers";
+import { processImageFile } from "../lib/imageUpload";
+import { clearAssetCache, getStorageEstimate, requestPersistentStorage } from "../lib/repository";
+import { hashFile } from "../lib/workers";
 import {
   readFileAsDataUrl,
   readVideoMetadata,
@@ -101,49 +95,6 @@ export function Assets({
       ),
       updatedAt: new Date().toISOString(),
     });
-  };
-
-  const cacheProcessedImage = async (hash: string, file: File, processed: ProcessedImage) => {
-    await putCachedAsset({
-      hash,
-      recipeVersion: ASSET_CACHE_RECIPE_VERSION,
-      originalName: file.name,
-      mimeType: "image/webp",
-      width: processed.width,
-      height: processed.height,
-      primary: processed.primary,
-      fallback: processed.fallback,
-      responsive: processed.responsive,
-      createdAt: new Date().toISOString(),
-    });
-  };
-
-  const processImageFile = async (file: File): Promise<{ asset: ImageAsset; reused: boolean }> => {
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      throw new Error("formato no compatible");
-    }
-    const hash = await hashFile(file);
-    const cached = await getCachedAsset(hash, ASSET_CACHE_RECIPE_VERSION);
-    const processed = cached ?? (await processImageInWorker(file));
-    if (!cached) {
-      await cacheProcessedImage(hash, file, processed);
-    }
-    return {
-      reused: Boolean(cached),
-      asset: {
-        kind: "image",
-        id: `asset-${crypto.randomUUID()}` as ImageAsset["id"],
-        name: file.name.replace(/\.[^.]+$/, ""),
-        alt: "",
-        mimeType: "image/webp",
-        source: processed.primary,
-        fallbackSource: processed.fallback,
-        responsiveSources: processed.responsive,
-        width: processed.width,
-        height: processed.height,
-        hash,
-      },
-    };
   };
 
   const addFiles = async (files: FileList) => {

@@ -42,6 +42,14 @@ function fieldOf(input: Locator): Locator {
   return input.locator("xpath=ancestor::fieldset[contains(@class, 'field')]");
 }
 
+test("el editor de producto ofrece subir una imagen nueva", async ({ page }) => {
+  test.setTimeout(60_000);
+  const dialog = await openProductEditor(page);
+  await expect(dialog.getByRole("button", { name: "Subir imagen nueva" })).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(dialog).toBeHidden();
+});
+
 test("valida slug duplicado, precio inválido y opciones repetidas con errores inline", async ({
   page,
 }) => {
@@ -70,7 +78,7 @@ test("valida slug duplicado, precio inválido y opciones repetidas con errores i
   await expect(priceInput).toHaveAttribute("aria-invalid", "true");
   await expect(priceField.getByTestId("ui-field-error")).toContainText("entero en centavos");
 
-  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  await dialog.getByRole("button", { name: "Guardar borrador" }).click();
   await expect(dialog).toBeVisible();
   await expect(slugField.getByTestId("ui-field-error")).toHaveCount(0);
   await expect(priceField.getByTestId("ui-field-error")).toHaveCount(1);
@@ -86,7 +94,7 @@ test("valida slug duplicado, precio inválido y opciones repetidas con errores i
   await priceInput.fill("12500");
   await expect(priceField.getByTestId("ui-field-error")).toHaveCount(0);
 
-  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  await dialog.getByRole("button", { name: "Guardar borrador" }).click();
   await expect(dialog).toBeHidden();
 });
 
@@ -129,13 +137,14 @@ test("duplica, reordena y elimina variantes sin bajar del mínimo", async ({ pag
   await expect(variants).toHaveCount(1);
   await expect(variants.nth(0).getByRole("button", { name: "Eliminar Arena" })).toBeDisabled();
 
-  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  await dialog.getByRole("button", { name: "Guardar borrador" }).click();
   await expect(dialog).toBeHidden();
 });
 
 test("la mini-preview refleja en vivo título, precio mínimo y estado", async ({ page }) => {
   test.setTimeout(60_000);
   const dialog = await openProductEditor(page);
+  await expect(dialog.getByRole("button", { name: "Subir imagen nueva" })).toBeVisible();
   const preview = dialog.getByTestId("ui-product-mini-preview");
   await expect(preview).toBeVisible();
   await expect(preview).toContainText("Nuevo producto");
@@ -154,7 +163,7 @@ test("la mini-preview refleja en vivo título, precio mínimo y estado", async (
   await variants.nth(1).getByRole("spinbutton", { name: "Precio en centavos" }).fill("12000");
   await expect(preview).toContainText("Desde $12.000");
 
-  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  await dialog.getByRole("button", { name: "Guardar borrador" }).click();
   await expect(dialog).toBeHidden();
 });
 

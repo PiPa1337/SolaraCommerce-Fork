@@ -12,6 +12,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@solara/modules": "workspace:*",
     "@solara/project-schema": "workspace:*"
   }
 }

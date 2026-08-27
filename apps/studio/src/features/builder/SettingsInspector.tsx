@@ -1,7 +1,8 @@
 import type { RegisteredModule } from "@solara/modules";
-import type { StoreProjectV1 } from "@solara/project-schema";
+import type { ImageAsset, StoreProjectV1 } from "@solara/project-schema";
 import type { ChangeEvent } from "react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { ImageAssetPicker } from "../../components/ImageAssetPicker";
 import { Button, Field, InlineError } from "../../components/Ui";
 import { hashFile } from "../../lib/workers";
 import { HeroSlidesEditor } from "./HeroSlidesEditor";
@@ -96,7 +97,14 @@ export function SettingsInspector({
     return result.success ? "" : formatIssuePaths(result.error.issues);
   }, [draft, schema, values]);
 
-  if (fields.length === 0) {
+  const visibleFields =
+    moduleId === "catalog-hero" && project.commerceTemplates.designFamily === "catalog-modern-v2"
+      ? fields.filter(
+          (field) => field.key !== "backgroundImageId" && field.key !== "backgroundDarkness",
+        )
+      : fields;
+
+  if (visibleFields.length === 0) {
     return <p className="inspector-note">Este módulo no requiere configuración.</p>;
   }
 
@@ -187,6 +195,41 @@ export function SettingsInspector({
     setNestedErrors(mapped.nested);
   };
 
+  /** Agrega el asset y cambia el setting en una sola actualización validada. */
+  const applyUploadedAsset = (candidate: Record<string, unknown>, asset: ImageAsset) => {
+    if (!schema) return;
+    const result = schema.safeParse(candidate);
+    if (!result.success) {
+      const mapped = splitSchemaIssues(result.error.issues);
+      setErrors(mapped.topLevel);
+      setNestedErrors(mapped.nested);
+      return;
+    }
+    const nextSettings = result.data as Record<string, unknown>;
+    const nextAssets = project.assets.some((current) => current.id === asset.id)
+      ? project.assets
+      : [...project.assets, asset];
+    setDraft(nextSettings);
+    setErrors({});
+    setNestedErrors({});
+    setRawArrays({});
+    if (!onProjectChange || !sectionId) {
+      onChange(nextSettings);
+      if (onProjectChange && nextAssets !== project.assets) {
+        onProjectChange({ ...project, assets: nextAssets, updatedAt: new Date().toISOString() });
+      }
+      return;
+    }
+    onProjectChange({
+      ...project,
+      assets: nextAssets,
+      sections: project.sections.map((section) =>
+        section.id === sectionId ? { ...section, settings: nextSettings } : section,
+      ),
+      updatedAt: new Date().toISOString(),
+    });
+  };
+
   return (
     <div className="settings-fields">
       {draftError ? (
@@ -197,7 +240,7 @@ export function SettingsInspector({
           </InlineError>
         </div>
       ) : null}
-      {fields.map((field) => {
+      {visibleFields.map((field) => {
         const value = draft[field.key];
         const error = errors[field.key];
         const feedback = error ? { error } : field.description ? { hint: field.description } : {};
@@ -252,29 +295,37 @@ export function SettingsInspector({
           const acceptsVideo = field.key.toLowerCase().includes("video");
           return (
             <Field label={field.label} {...feedback} key={field.key}>
-              <select
-                value={String(value ?? "")}
-                aria-invalid={Boolean(error)}
-                onChange={(event) => setValue(field.key, event.target.value)}
-              >
-                <option value="">Sin imagen</option>
-                {!acceptsVideo
-                  ? project.assets.map((asset) => (
-                      <option key={asset.id} value={asset.id}>
-                        {asset.name}
-                      </option>
-                    ))
-                  : null}
-                {acceptsVideo && project.videos.length > 0 ? (
-                  <optgroup label="Videos">
-                    {project.videos.map((video) => (
-                      <option key={video.id} value={video.id}>
-                        {video.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ) : null}
-              </select>
+              {acceptsVideo ? (
+                <select
+                  value={String(value ?? "")}
+                  aria-invalid={Boolean(error)}
+                  onChange={(event) => setValue(field.key, event.target.value)}
+                >
+                  <option value="">Sin video</option>
+                  {project.videos.length > 0 ? (
+                    <optgroup label="Videos">
+                      {project.videos.map((video) => (
+                        <option key={video.id} value={video.id}>
+                          {video.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null}
+                </select>
+              ) : (
+                <ImageAssetPicker
+                  value={String(value ?? "")}
+                  assets={project.assets}
+                  ariaLabel={field.label}
+                  onChange={(next) => setValue(field.key, next)}
+                  {...(onProjectChange
+                    ? {
+                        onUpload: (asset: ImageAsset) =>
+                          applyUploadedAsset({ ...draft, [field.key]: asset.id }, asset),
+                      }
+                    : {})}
+                />
+              )}
               {acceptsVideo && onProjectChange ? (
                 <div className="inspector-video-upload">
                   <input
@@ -337,6 +388,12 @@ export function SettingsInspector({
                 fieldErrors={nestedErrors}
                 {...(error ? { error } : {})}
                 onChange={(next) => setValue(field.key, next)}
+                {...(onProjectChange
+                  ? {
+                      onAssetUpload: (next: unknown[], asset: ImageAsset) =>
+                        applyUploadedAsset({ ...draft, [field.key]: next }, asset),
+                    }
+                  : {})}
               />
             );
           }
@@ -376,6 +433,12 @@ export function SettingsInspector({
               {...(error === undefined ? {} : { error })}
               project={project}
               onChange={(next) => setValue(field.key, next)}
+              {...(onProjectChange
+                ? {
+                    onAssetUpload: (next: unknown[], asset: ImageAsset) =>
+                      applyUploadedAsset({ ...draft, [field.key]: next }, asset),
+                  }
+                : {})}
             />
           );
         }

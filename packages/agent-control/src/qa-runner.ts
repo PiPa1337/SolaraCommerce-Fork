@@ -27,12 +27,19 @@ const MONOREPO_ROOT = resolve(import.meta.dirname ?? ".", "..", "..", "..");
 function runVitest(args: string[], timeoutMs: number): Promise<GatesResult> {
   return new Promise((resolvePromise) => {
     const start = Date.now();
-    const npxCmd = process.platform === "win32" ? "npx.cmd" : "npx";
-    const child = spawn(npxCmd, ["vitest", "run", ...args], {
+    // Binario local del workspace, sin shell: los args nunca pasan por un
+    // intérprete y un path con metacaracteres no puede inyectar comandos.
+    const vitestBin = resolve(
+      MONOREPO_ROOT,
+      "node_modules",
+      ".bin",
+      process.platform === "win32" ? "vitest.CMD" : "vitest",
+    );
+    const child = spawn(vitestBin, ["run", "--reporter=dot", ...args], {
       cwd: MONOREPO_ROOT,
-      shell: true,
       timeout: timeoutMs,
       env: { ...process.env, CI: "true" },
+      windowsVerbatimArguments: false,
     });
     let output = "";
     child.stdout?.on("data", (chunk: Buffer) => {
@@ -68,7 +75,7 @@ function runVitest(args: string[], timeoutMs: number): Promise<GatesResult> {
 }
 
 export async function runQuickGates(): Promise<GatesResult> {
-  return runVitest(["--reporter=dot"], 120_000);
+  return runVitest([], 120_000);
 }
 
 export async function runTestFile(testPath: string): Promise<GatesResult> {

@@ -5,6 +5,7 @@ import type { Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { type Browser, expect, type Page, test } from "@playwright/test";
+import { createCleanStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 let server: Server;
@@ -35,6 +36,11 @@ async function openDefaultStore(page: Page): Promise<void> {
   await expect(card).toBeVisible();
   await card.getByRole("button", { name: "Abrir esta tienda" }).click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+}
+
+async function openMutableStore(page: Page): Promise<void> {
+  await openDashboard(page);
+  await createCleanStore(page, "Tienda a11y mutable");
 }
 
 async function expectFocusVisible(
@@ -210,7 +216,7 @@ test("las referencias aria-controls del panel izquierdo siempre tienen destino",
     "Resumen",
     "Catálogo",
     "Constructor",
-    "Tema",
+    "Tema de la tienda",
     "Recursos",
     "SEO",
     "Exportar",
@@ -702,10 +708,11 @@ async function openBuilderForPicker(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
     timeout: 20_000,
   });
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await createCleanStore(page, "Tienda picker");
   await page.getByRole("tab", { name: "Constructor" }).click();
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
+  const unlock = page.getByRole("button", { name: "Desbloquear", exact: true });
+  if (await unlock.count()) await unlock.click();
 }
 
 test("el selector de módulos es modal, enfoca la búsqueda y atrapa el foco (ST-B8)", async ({
@@ -791,7 +798,7 @@ test("vaciar un número en un repeater no commitea 0 y muestra el error de esque
 test("un cambio inválido en SEO anuncia el error de validación sin servidor (ST-B3)", async ({
   page,
 }) => {
-  await openDefaultStore(page);
+  await openMutableStore(page);
   await page.getByRole("tab", { name: "SEO", exact: true }).click();
   const title = page.getByRole("textbox", { name: "Título SEO" });
   await expect(title).toBeVisible();

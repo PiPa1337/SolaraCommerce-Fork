@@ -10,11 +10,20 @@ import {
   EyeSlash,
   SidebarSimple,
 } from "@phosphor-icons/react";
-import type { StoreProjectV1 } from "@solara/project-schema";
+import type { ImageAsset, StoreProjectV1 } from "@solara/project-schema";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { ImageUploadButton } from "../components/ImageAssetPicker";
 import { Tooltip } from "../components/primitives";
 import { Button, IconButton } from "../components/Ui";
 import { loadExporter } from "../lib/loadExporter";
+import {
+  type CanvasManifestEntryLike,
+  canvasBridgeScript,
+  makeCanvasNonce,
+  parseCanvasMessage,
+  type ValidatedSelection,
+  validateCanvasSelection,
+} from "./canvas/canvasBridge";
 
 export type PreviewSize = "desktop" | "tablet" | "mobile";
 export type PreviewZoom = 100 | 75 | 50;
@@ -126,6 +135,14 @@ function addPreviewNavigationBridge(document: string): string {
   const bodyEnd = document.indexOf("</body>");
   if (bodyEnd === -1) return `${document}${bridge}`;
   return `${document.slice(0, bodyEnd)}${bridge}\n${document.slice(bodyEnd)}`;
+}
+
+/** Inyecta el bridge del Live Canvas con la sesión y el nonce del render. */
+function addPreviewCanvasBridge(document: string, session: string, nonce: string): string {
+  const script = canvasBridgeScript(session, nonce);
+  const bodyEnd = document.indexOf("</body>");
+  if (bodyEnd === -1) return `${document}${script}`;
+  return `${document.slice(0, bodyEnd)}${script}\n${document.slice(bodyEnd)}`;
 }
 
 /**
@@ -312,12 +329,33 @@ export function Preview({
   size,
   zoom,
   onRouteChange,
+  onCanvasEdit,
+  onCanvasItemEdit,
+  onCanvasEntityEdit,
+  onCanvasImageUpload,
 }: {
   project: StoreProjectV1;
   route: string;
   size: PreviewSize;
   zoom: PreviewZoom;
   onRouteChange(route: string): void;
+  /** Aplica section.field.update por el núcleo único de mutaciones. */
+  onCanvasEdit?(sectionId: string, fieldKey: string, value: unknown): void;
+  /** Aplica section.repeater.item.update para bindings de repeater. */
+  onCanvasItemEdit?(sectionId: string, fieldKey: string, itemId: string, value: unknown): void;
+  /** Aplica una mutación tipada sobre una entidad real del proyecto. */
+  onCanvasEntityEdit?(sourceKind: string, entityId: string, field: string, value: unknown): void;
+  onCanvasImageUpload?(
+    asset: ImageAsset,
+    target: {
+      sectionId: string;
+      fieldKey: string;
+      itemId?: string;
+      sourceKind?: string;
+      entityId?: string;
+      entityField?: string;
+    },
+  ): void;
 }) {
   const [html, setHtml] = useState("");
   const [error, setError] = useState("");
@@ -334,6 +372,11 @@ export function Preview({
   const pausedRef = useRef(false);
   const intersectingRef = useRef(true);
   const visibleRef = useRef(!document.hidden);
+  const canvasNonceRef = useRef("");
+  const canvasManifestRef = useRef<Array<CanvasManifestEntryLike & { itemFieldKey?: string }>>([]);
+  const [canvasSelection, setCanvasSelection] = useState<ValidatedSelection | null>(null);
+  const [canvasMode, setCanvasMode] = useState(false);
+  const canvasValueId = useId();
   const previewSandbox =
     typeof window !== "undefined" && window.location.protocol === "solara:"
       ? "allow-forms allow-scripts allow-same-origin"
@@ -465,6 +508,127 @@ export function Preview({
     return () => window.removeEventListener("message", handlePreviewAssetRequest);
   }, [onRouteChange, project.id]);
 
+  // Listener del Live Canvas: valida sesión + nonce + manifest antes de fijar
+  // la selección. Un mensaje spoofed desde otra ventana se rechaza por
+  // event.source y por sesión/nonce.
+  useEffect(() => {
+    const handleCanvasSelect = (event: MessageEvent<unknown>) => {
+      if (event.source !== previewFrame.current?.contentWindow) return;
+      const message = parseCanvasMessage(event.data);
+      if (!message) return;
+      const pendingNonces = new Set(canvasNonceRef.current ? [canvasNonceRef.current] : []);
+      const valid = validateCanvasSelection(message, {
+        activeSession: activePreviewSessionRef.current,
+        manifestEntries: canvasManifestRef.current,
+        pendingNonces,
+        consumeNonce: (nonce) => {
+          if (nonce === canvasNonceRef.current) canvasNonceRef.current = "";
+        },
+      });
+      if (valid) setCanvasSelection(valid);
+    };
+    window.addEventListener("message", handleCanvasSelect);
+    return () => window.removeEventListener("message", handleCanvasSelect);
+  }, []);
+
+  // El estado del popover es específico de la ruta, aunque route sólo se usa
+  // como disparador del reset intencional.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: route changes must clear the active canvas target
+  useEffect(() => {
+    setCanvasSelection(null);
+    setCanvasMode(false);
+  }, [route]);
+
+  // Datos actuales del binding seleccionado: el textarea arranca con el valor
+  // real del proyecto para que cancelar restaure exactamente lo anterior.
+  const manifestEntry =
+    canvasSelection === null
+      ? undefined
+      : canvasManifestRef.current.find((entry) => entry.editId === canvasSelection.editId);
+  // El binding seleccionado puede ser imagen: el popover cambia a selector.
+  const isImageSelection = manifestEntry?.kind === "image";
+  const manifestFieldKey = manifestEntry?.fieldKey ?? "";
+  const manifestValue =
+    canvasSelection === null || manifestFieldKey === ""
+      ? ""
+      : (() => {
+          const settings = project.sections.find(
+            (section) => section.id === canvasSelection.sectionId,
+          )?.settings as Record<string, unknown> | undefined;
+          const current = settings?.[manifestFieldKey];
+          if (canvasSelection.itemId !== undefined && manifestEntry?.itemFieldKey) {
+            const item = Array.isArray(current)
+              ? current.find(
+                  (candidate) =>
+                    typeof candidate === "object" &&
+                    candidate !== null &&
+                    (candidate as { id?: unknown }).id === canvasSelection.itemId,
+                )
+              : undefined;
+            return String(
+              item && typeof item === "object"
+                ? ((item as Record<string, unknown>)[manifestEntry.itemFieldKey] ?? "")
+                : "",
+            );
+          }
+          if (manifestEntry?.sourceKind && manifestEntry.entityId) {
+            const field = manifestEntry.entityField ?? manifestFieldKey;
+            let value: unknown;
+            switch (manifestEntry.sourceKind) {
+              case "identity":
+                value = (project.identity as Record<string, unknown>)[field];
+                break;
+              case "product": {
+                const entity = project.products.find((item) => item.id === manifestEntry.entityId);
+                value = entity ? (entity as Record<string, unknown>)[field] : "";
+                if (field === "price" && entity) value = entity.variants[0]?.price ?? "";
+                break;
+              }
+              case "category": {
+                const entity = project.categories.find(
+                  (item) => item.id === manifestEntry.entityId,
+                );
+                value = entity ? (entity as Record<string, unknown>)[field] : "";
+                break;
+              }
+              case "collection": {
+                const entity = project.collections.find(
+                  (item) => item.id === manifestEntry.entityId,
+                );
+                value = entity ? (entity as Record<string, unknown>)[field] : "";
+                break;
+              }
+              case "asset": {
+                const entity = project.assets.find((item) => item.id === manifestEntry.entityId);
+                value = entity ? (entity as Record<string, unknown>)[field] : "";
+                break;
+              }
+              case "public-copy": {
+                const group = (project.publicCopy as Record<string, unknown>)[
+                  manifestEntry.entityId
+                ];
+                value =
+                  group && typeof group === "object"
+                    ? (group as Record<string, unknown>)[field]
+                    : "";
+                break;
+              }
+              default:
+                value = "";
+            }
+            return Array.isArray(value) ? String(value[0] ?? "") : String(value ?? "");
+          }
+          return String(current ?? "");
+        })();
+
+  useEffect(() => {
+    if (!iframeReady) return;
+    previewFrame.current?.contentWindow?.postMessage(
+      { type: "solara-canvas-mode", enabled: canvasMode },
+      "*",
+    );
+  }, [canvasMode, iframeReady]);
+
   // El render del sitio completo es caro: agrupa los cambios rápidos (typing,
   // sliders) en una sola regeneración por ráfaga. El debounce no retrasa la
   // edición (el estado siempre está al día) y el preview queda a 150ms del
@@ -485,16 +649,46 @@ export function Preview({
               previewCartStateRef.current?.key === cartKey
                 ? previewCartStateRef.current.serialized
                 : readPreviewCartState(project.id);
+            const rendered = renderPreviewHtml(project, "draft", route, {
+              assetTransport: "parent",
+              editor: { enabled: true, sectionId: "*" },
+            });
+            const previewHtml = typeof rendered === "string" ? rendered : rendered.html;
+            if (typeof rendered !== "string") {
+              canvasManifestRef.current = rendered.canvasManifest.entries.map((entry) => ({
+                editId: entry.editId,
+                sectionId: entry.sectionId,
+                fieldKey: entry.fieldKey,
+                kind: entry.kind,
+                ...(entry.itemFieldKey === undefined ? {} : { itemFieldKey: entry.itemFieldKey }),
+                ...(entry.sourceKind === undefined ? {} : { sourceKind: entry.sourceKind }),
+                ...(entry.entityId === undefined ? {} : { entityId: entry.entityId }),
+                ...(entry.entityField === undefined ? {} : { entityField: entry.entityField }),
+                ...(entry.label === undefined ? {} : { label: entry.label }),
+                ...(entry.multiline === undefined ? {} : { multiline: entry.multiline }),
+                ...(entry.maxLength === undefined ? {} : { maxLength: entry.maxLength }),
+                ...(entry.itemIds === undefined ? {} : { itemIds: entry.itemIds }),
+                ...(entry.moduleId === undefined ? {} : { moduleId: entry.moduleId }),
+              }));
+            } else {
+              canvasManifestRef.current = [];
+            }
+            // Nonce fresco por render: un mensaje de una sesión anterior no
+            // puede seleccionar elementos del preview actual.
+            const nonce = makeCanvasNonce();
+            canvasNonceRef.current = nonce;
             setHtml(
-              addPreviewNavigationBridge(
-                addPreviewCartState(
-                  addPreviewScrollbarPolicy(
-                    renderPreviewHtml(project, "draft", route, { assetTransport: "parent" }),
+              addPreviewCanvasBridge(
+                addPreviewNavigationBridge(
+                  addPreviewCartState(
+                    addPreviewScrollbarPolicy(previewHtml),
+                    project.id,
+                    previewSession,
+                    serializedCart,
                   ),
-                  project.id,
-                  previewSession,
-                  serializedCart,
                 ),
+                previewSession,
+                nonce,
               ),
             );
             setIframeReady(false);
@@ -524,6 +718,16 @@ export function Preview({
   return (
     <aside className="preview-pane" aria-label="Vista previa de la tienda">
       <div className={`preview-stage preview-stage--${size}`}>
+        <div className="canvas-mode-control">
+          <button
+            type="button"
+            data-testid="ui-canvas-toggle"
+            aria-pressed={canvasMode}
+            onClick={() => setCanvasMode((active) => !active)}
+          >
+            {canvasMode ? "Salir de edición en canvas" : "Editar en canvas"}
+          </button>
+        </div>
         {error ? (
           <div className="preview-error">
             <EyeSlash aria-hidden size={28} />
@@ -572,6 +776,135 @@ export function Preview({
                 <span className="save-spinner" aria-hidden />
                 Cargando vista previa
               </output>
+            ) : null}
+            {canvasSelection ? (
+              <form
+                className="canvas-popover"
+                role="dialog"
+                aria-label={`Editar ${manifestEntry?.label ?? canvasSelection.editId}`}
+                style={{
+                  // El rect llega en coordenadas del iframe (CSS zoom del
+                  // stage escala el iframe): convertir a coordenadas del stage
+                  // dividiendo por el factor de zoom.
+                  left: canvasSelection.rect.x / (zoom / 100),
+                  top: (canvasSelection.rect.y + canvasSelection.rect.height) / (zoom / 100),
+                }}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const data = new FormData(event.currentTarget);
+                  const value =
+                    manifestEntry?.kind === "boolean"
+                      ? data.get("canvas-value") === "on"
+                      : String(data.get("canvas-value") ?? "");
+                  if (canvasSelection.itemId !== undefined) {
+                    onCanvasItemEdit?.(
+                      canvasSelection.sectionId,
+                      manifestEntry?.fieldKey ?? "",
+                      canvasSelection.itemId,
+                      manifestEntry?.itemFieldKey ? { [manifestEntry.itemFieldKey]: value } : {},
+                    );
+                  } else if (
+                    manifestEntry?.sourceKind &&
+                    manifestEntry.entityId &&
+                    manifestEntry.entityField
+                  ) {
+                    onCanvasEntityEdit?.(
+                      manifestEntry.sourceKind,
+                      manifestEntry.entityId,
+                      manifestEntry.entityField,
+                      value,
+                    );
+                  } else {
+                    onCanvasEdit?.(canvasSelection.sectionId, manifestFieldKey, value);
+                  }
+                  setCanvasSelection(null);
+                }}
+              >
+                {isImageSelection ? (
+                  <>
+                    <label htmlFor={canvasValueId} className="canvas-popover-label">
+                      <strong>Imagen</strong>
+                    </label>
+                    <select
+                      id={canvasValueId}
+                      name="canvas-value"
+                      defaultValue={manifestValue}
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") setCanvasSelection(null);
+                      }}
+                    >
+                      <option value="">Sin imagen</option>
+                      {project.assets
+                        .filter((asset) => asset.kind === "image")
+                        .map((asset) => (
+                          <option key={asset.id} value={asset.id}>
+                            {asset.name}
+                          </option>
+                        ))}
+                    </select>
+                    <ImageUploadButton
+                      assets={project.assets.filter((asset) => asset.kind === "image")}
+                      label="Subir y aplicar imagen"
+                      onUpload={(asset) => {
+                        if (!manifestEntry) return;
+                        onCanvasImageUpload?.(asset, {
+                          sectionId: canvasSelection.sectionId,
+                          fieldKey: manifestEntry.fieldKey,
+                          ...(canvasSelection.itemId === undefined
+                            ? {}
+                            : { itemId: canvasSelection.itemId }),
+                          ...(manifestEntry.sourceKind === undefined
+                            ? {}
+                            : { sourceKind: manifestEntry.sourceKind }),
+                          ...(manifestEntry.entityId === undefined
+                            ? {}
+                            : { entityId: manifestEntry.entityId }),
+                          ...(manifestEntry.entityField === undefined
+                            ? manifestEntry.itemFieldKey === undefined
+                              ? {}
+                              : { entityField: manifestEntry.itemFieldKey }
+                            : { entityField: manifestEntry.entityField }),
+                        });
+                        setCanvasSelection(null);
+                      }}
+                    />
+                  </>
+                ) : manifestEntry?.kind === "boolean" ? (
+                  <>
+                    <label htmlFor={canvasValueId} className="canvas-popover-label">
+                      <strong>{manifestEntry?.label ?? "Activar"}</strong>
+                    </label>
+                    <input
+                      id={canvasValueId}
+                      name="canvas-value"
+                      type="checkbox"
+                      defaultChecked={manifestValue === "true"}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <label htmlFor={canvasValueId} className="canvas-popover-label">
+                      <strong>{manifestEntry?.label ?? "Editar"}</strong>
+                    </label>
+                    <textarea
+                      id={canvasValueId}
+                      name="canvas-value"
+                      rows={manifestEntry?.multiline ? 5 : 2}
+                      maxLength={manifestEntry?.maxLength}
+                      defaultValue={manifestValue}
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") setCanvasSelection(null);
+                      }}
+                    />
+                  </>
+                )}
+                <div className="canvas-popover-actions">
+                  <button type="submit">Aplicar</button>
+                  <button type="button" onClick={() => setCanvasSelection(null)}>
+                    Cancelar
+                  </button>
+                </div>
+              </form>
             ) : null}
           </>
         )}

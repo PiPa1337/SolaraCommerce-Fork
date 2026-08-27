@@ -1,7 +1,8 @@
 import { ArrowDown, ArrowUp, Copy, Plus, Trash } from "@phosphor-icons/react";
-import type { StoreProjectV1 } from "@solara/project-schema";
+import type { ImageAsset, StoreProjectV1 } from "@solara/project-schema";
 import { useEffect, useId, useRef, useState } from "react";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
+import { ImageAssetPicker } from "../../components/ImageAssetPicker";
 import { Button, Field, IconButton } from "../../components/Ui";
 
 type HeroSlideDraft = {
@@ -48,6 +49,7 @@ export function HeroSlidesEditor({
   fieldErrors,
   error,
   onChange,
+  onAssetUpload,
 }: {
   value: unknown;
   project: StoreProjectV1;
@@ -55,6 +57,7 @@ export function HeroSlidesEditor({
   fieldErrors?: Readonly<Record<string, string>>;
   error?: string;
   onChange(next: HeroSlideDraft[]): void;
+  onAssetUpload?(next: HeroSlideDraft[], asset: ImageAsset): void;
 }) {
   const titleId = useId();
   const errorId = useId();
@@ -200,18 +203,22 @@ export function HeroSlidesEditor({
                 </div>
               </header>
               <Field label="Imagen" {...fieldErrorProps(fieldError(index, "imageId"))}>
-                <select
+                <ImageAssetPicker
                   value={slide.imageId}
-                  aria-label={`Imagen del slide ${index + 1}`}
-                  onChange={(event) => updateSlide(index, "imageId", event.target.value)}
-                >
-                  <option value="">Sin imagen</option>
-                  {project.assets.map((asset) => (
-                    <option key={asset.id} value={asset.id}>
-                      {asset.name}
-                    </option>
-                  ))}
-                </select>
+                  assets={project.assets}
+                  ariaLabel={`Imagen del slide ${index + 1}`}
+                  onChange={(next) => updateSlide(index, "imageId", next)}
+                  {...(onAssetUpload
+                    ? {
+                        onUpload: (asset: ImageAsset) => {
+                          const next = slides.map((current, slideIndex) =>
+                            slideIndex === index ? { ...current, imageId: asset.id } : current,
+                          );
+                          onAssetUpload(next, asset);
+                        },
+                      }
+                    : {})}
+                />
               </Field>
               <Field label="Antetítulo" {...fieldErrorProps(fieldError(index, "eyebrow"))}>
                 <input

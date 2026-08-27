@@ -133,6 +133,96 @@ const PRESET_COLORS: Record<string, ThemeColors> = {
     accentText: "#f8faff",
     border: "#c8d0e5",
   },
+  "Blanco y naranja": {
+    background: "#fffaf5",
+    surface: "#fff0e5",
+    text: "#2a170f",
+    muted: "#755043",
+    accent: "#b84d12",
+    accentText: "#ffffff",
+    border: "#edcdb8",
+  },
+  "Grafito lima": {
+    background: "#111416",
+    surface: "#1b2023",
+    text: "#f5f7f6",
+    muted: "#bac3c6",
+    accent: "#b4e34a",
+    accentText: "#182000",
+    border: "#3a464a",
+  },
+  "Azul noche": {
+    background: "#101828",
+    surface: "#18243a",
+    text: "#f3f7ff",
+    muted: "#b8c5d9",
+    accent: "#57b8ff",
+    accentText: "#062036",
+    border: "#344766",
+  },
+  "Ciruela nocturna": {
+    background: "#1b1220",
+    surface: "#291a31",
+    text: "#fff5fc",
+    muted: "#d3b7ce",
+    accent: "#ed8bc3",
+    accentText: "#351326",
+    border: "#55345e",
+  },
+  "Café espresso": {
+    background: "#1a120e",
+    surface: "#2a1d17",
+    text: "#fff3e8",
+    muted: "#d9bca7",
+    accent: "#f0a35b",
+    accentText: "#2b1709",
+    border: "#5a3d2c",
+  },
+  "Bosque profundo": {
+    background: "#0d1b17",
+    surface: "#142923",
+    text: "#effaf4",
+    muted: "#b1cfc0",
+    accent: "#6fdbad",
+    accentText: "#06261c",
+    border: "#31564a",
+  },
+  "Azul petróleo": {
+    background: "#eef8fa",
+    surface: "#dceff1",
+    text: "#12333a",
+    muted: "#4d6970",
+    accent: "#087f86",
+    accentText: "#f5ffff",
+    border: "#c2dfe2",
+  },
+  "Arena y azul": {
+    background: "#fbf7ed",
+    surface: "#eee6d5",
+    text: "#232c3a",
+    muted: "#5f6874",
+    accent: "#2c4c7a",
+    accentText: "#f8fbff",
+    border: "#d9ccb2",
+  },
+  "Uva crema": {
+    background: "#fbf7ff",
+    surface: "#eee5fa",
+    text: "#281a3d",
+    muted: "#635577",
+    accent: "#70459e",
+    accentText: "#ffffff",
+    border: "#d9c8ec",
+  },
+  "Durazno mineral": {
+    background: "#fff6f0",
+    surface: "#f7e5da",
+    text: "#3a211b",
+    muted: "#76584d",
+    accent: "#a7472e",
+    accentText: "#fffaf7",
+    border: "#e8c9b9",
+  },
 };
 
 const THEME_COLOR_KEYS: readonly ThemeColorKey[] = [
@@ -342,11 +432,11 @@ test("preset Azul lavanda: paleta en preview, feedback y CSS exportado", async (
   }
 });
 
-test("las 10 paletas son visibles, claras y mantienen contraste WCAG", async ({ page }) => {
-  await setupCleanStore(page, "T1 diez paletas");
+test("las 20 paletas son visibles y mantienen contraste WCAG", async ({ page }) => {
+  await setupCleanStore(page, "T1 veinte paletas");
   await openThemeTab(page);
 
-  await expect(page.getByTestId("ui-theme-preset")).toHaveCount(10);
+  await expect(page.getByTestId("ui-theme-preset")).toHaveCount(20);
 
   for (const [presetName, colors] of Object.entries(PRESET_COLORS)) {
     await applyPreset(page, presetName);

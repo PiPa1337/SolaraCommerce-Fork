@@ -21,27 +21,24 @@ test("el preview V2 conserva el carrito al navegar con enlaces internos", async 
     await expect(preview.locator('[data-design-family="catalog-modern-v2"]')).toBeVisible({
       timeout: 30_000,
     });
-    await preview.locator('a[href="/productos/remera-esencial-de-algodon/"]').first().click();
-    await expect(preview.getByRole("heading", { level: 1 })).toHaveText(
-      "Remera esencial de algodón",
-      { timeout: 30_000 },
-    );
+    await preview.locator('a[href="/productos/producto-1/"]').first().click();
+    await expect(preview.getByRole("heading", { level: 1 })).toHaveText("Producto 1", {
+      timeout: 30_000,
+    });
     await preview.getByRole("button", { name: "Agregar al carrito" }).click();
     await expect(preview.locator("[data-cart-count]").first()).toHaveText("1");
     await preview.getByRole("button", { name: "Seguir comprando" }).click();
 
     await preview.locator('a[href="/"]').first().click();
-    await expect(preview.getByRole("heading", { level: 1 })).toHaveText(
-      "Vestite con lo que te representa.",
-      { timeout: 30_000 },
-    );
+    await expect(preview.getByRole("heading", { level: 1 })).toHaveText("Producto 1", {
+      timeout: 30_000,
+    });
     await expect(preview.locator("[data-cart-count]").first()).toHaveText("1");
 
-    await preview.locator('a[href="/productos/remera-grafica-horizonte/"]').first().click();
-    await expect(preview.getByRole("heading", { level: 1 })).toHaveText(
-      "Remera gráfica Horizonte",
-      { timeout: 30_000 },
-    );
+    await preview.locator('a[href="/productos/producto-2/"]').first().click();
+    await expect(preview.getByRole("heading", { level: 1 })).toHaveText("Producto 2", {
+      timeout: 30_000,
+    });
     await expect(preview.locator("[data-cart-count]").first()).toHaveText("1");
     await preview.getByRole("button", { name: "Agregar al carrito" }).click();
     await expect(preview.locator("[data-cart-count]").first()).toHaveText("2");
@@ -79,19 +76,17 @@ test("el preview V2 conserva el carrito al cambiar de ruta inmediatamente despu�
     await expect(preview.locator('[data-design-family="catalog-modern-v2"]')).toBeVisible({
       timeout: 30_000,
     });
-    await preview.locator('a[href="/productos/remera-esencial-de-algodon/"]').first().click();
-    await expect(preview.getByRole("heading", { level: 1 })).toHaveText(
-      "Remera esencial de algodón",
-      { timeout: 30_000 },
-    );
+    await preview.locator('a[href="/productos/producto-1/"]').first().click();
+    await expect(preview.getByRole("heading", { level: 1 })).toHaveText("Producto 1", {
+      timeout: 30_000,
+    });
     await preview.getByRole("button", { name: "Agregar al carrito" }).click();
 
-    await page.getByTestId("ui-preview-route").fill("/productos/remera-grafica-horizonte/");
+    await page.getByTestId("ui-preview-route").fill("/productos/producto-2/");
     await page.getByTestId("ui-preview-route").press("Enter");
-    await expect(preview.getByRole("heading", { level: 1 })).toHaveText(
-      "Remera gráfica Horizonte",
-      { timeout: 30_000 },
-    );
+    await expect(preview.getByRole("heading", { level: 1 })).toHaveText("Producto 2", {
+      timeout: 30_000,
+    });
     await expect(preview.locator("[data-cart-count]").first()).toHaveText("1");
     await preview.getByRole("button", { name: "Agregar al carrito" }).click();
 
@@ -129,7 +124,7 @@ test("el preview V2 conserva el vaciado intencional al cambiar de ruta", async (
     await expect(preview.locator('[data-design-family="catalog-modern-v2"]')).toBeVisible({
       timeout: 30_000,
     });
-    await preview.locator('a[href="/productos/remera-esencial-de-algodon/"]').first().click();
+    await preview.locator('a[href="/productos/producto-1/"]').first().click();
     await preview.getByRole("button", { name: "Agregar al carrito" }).click();
     await expect(preview.locator("[data-cart-count]").first()).toHaveText("1");
     await preview.locator("[data-cart-remove]").first().click();

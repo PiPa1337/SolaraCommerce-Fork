@@ -80,6 +80,17 @@ describe("Nosotros V2 module contracts", () => {
     expect(html).not.toContain("catalog-hero-benefits--band");
     expect(html).not.toContain("<video");
     expect(html).toContain("images.unsplash.com");
+    const editorHtml = String(
+      aboutHero.render?.({
+        project: catalogModernV2Store,
+        section,
+        settings: aboutHeroSettings.parse({}),
+        pageType: "about",
+        canvas: { editorMode: true, sectionId: section.id },
+      }),
+    );
+    expect(editorHtml).toContain(`data-canvas-edit="ce-${section.id}-title"`);
+    expect(editorHtml).toContain(`data-canvas-edit="ce-${section.id}-body"`);
   });
 
   it("no deja markup cuando los módulos opcionales están desactivados", () => {

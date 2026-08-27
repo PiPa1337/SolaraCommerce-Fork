@@ -141,9 +141,9 @@ export const V1_DEMO_PROJECT_ID = "store-modo-sur";
 export const PREDETERMINADO_V1_PROJECT_ID = "store-modo-sur-demo-v1";
 /** Purga única de tiendas: conserva sólo la demo Predeterminado V2. */
 export const DEMO_ONLY_PURGE_SENTINEL = "solara-demo-only-purge";
-const DEMO_ONLY_PURGE_VERSION = "2"; // v2: re-seed con placeholder seed
-// v2: no se conserva ninguna tienda previa. El re-seed crea Predeterminado
-// con el seed "placeholder" (base generadora limpia).
+const DEMO_ONLY_PURGE_VERSION = "3"; // v3: la demo protegida vuelve a ser la fixture de escala
+// La demo protegida es la fixture de escala para QA; las tiendas nuevas se
+// clonan desde la semilla placeholder en createProject().
 const DEMO_KEEP_PROJECT_IDS = new Set<string>();
 const LEGACY_SCALE_DEMO_PROJECT_NAME = "Demo Modo Sur, catálogo moderno";
 const LEGACY_CLEAN_PROJECT_ID = "store-catalog-modern-clean-default";
@@ -151,7 +151,7 @@ const LEGACY_CLEAN_PROJECT_NAME = "Mi primera tienda";
 
 export function buildScaleDemoProject(): StoreProjectV1 {
   const demo = buildCatalogModernProject({
-    seed: "placeholder",
+    seed: "demo",
     id: SCALE_DEMO_PROJECT_ID,
     name: SCALE_DEMO_PROJECT_NAME,
     brandName: SCALE_DEMO_PROJECT_NAME,
@@ -553,6 +553,138 @@ export async function optimizeDemoFixtureAssets(project: StoreProjectV1): Promis
   });
 }
 
+/**
+ * Corrige metadatos seguros que quedaron de versiones anteriores del editor.
+ * No elimina assets: una imagen sin referencias puede seguir siendo útil para
+ * el usuario y su limpieza requiere una decisión explícita.
+ */
+export function repairProjectMediaMetadata(project: StoreProjectV1): StoreProjectV1 {
+  const labels = new Map<string, string>();
+  if (project.identity.logoAssetId) {
+    labels.set(project.identity.logoAssetId, `Logo de ${project.identity.brandName}`);
+  }
+  for (const product of project.products) {
+    for (const assetId of product.imageIds) labels.set(assetId, product.title);
+    for (const variant of product.variants) {
+      if (variant.imageId) labels.set(variant.imageId, product.title);
+    }
+  }
+  for (const category of project.categories) {
+    if (category.imageId) labels.set(category.imageId, category.title);
+  }
+  for (const collection of project.collections) {
+    if (collection.imageId) labels.set(collection.imageId, collection.title);
+  }
+
+  let changed = false;
+  const assets = project.assets.map((asset) => {
+    const label = labels.get(asset.id);
+    if (!label || asset.alt.trim()) return asset;
+    changed = true;
+    return { ...asset, alt: label };
+  });
+  const sections = project.sections.map((section) => {
+    if (section.moduleId !== "catalog-header") return section;
+    const settings = Object.fromEntries(
+      Object.entries(section.settings).filter(
+        ([key]) => key !== "brandMode" && key !== "brandAssetId",
+      ),
+    );
+    if (Object.keys(settings).length === Object.keys(section.settings).length) return section;
+    changed = true;
+    return { ...section, settings };
+  });
+  return changed
+    ? StoreProjectV1Schema.parse({
+        ...project,
+        assets,
+        sections,
+        updatedAt: new Date().toISOString(),
+      })
+    : project;
+}
+
+function referencedAssetIds(project: StoreProjectV1): Set<string> {
+  const assetIds = new Set<string>(project.assets.map((asset) => String(asset.id)));
+  const referenced = new Set<string>();
+  const visit = (value: unknown): void => {
+    if (typeof value === "string") {
+      if (assetIds.has(value)) referenced.add(value);
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (typeof value !== "object" || value === null) return;
+    Object.values(value).forEach(visit);
+  };
+  const { assets: _assets, ...withoutAssetDefinitions } = project;
+  visit(withoutAssetDefinitions);
+  return referenced;
+}
+
+function needsImageOptimization(asset: StoreProjectV1["assets"][number]): boolean {
+  return (
+    asset.mimeType !== "image/x-icon" &&
+    (!asset.fallbackSource || !asset.responsiveSources?.length || asset.mimeType !== "image/webp")
+  );
+}
+
+async function optimizeImageAsset(
+  asset: StoreProjectV1["assets"][number],
+): Promise<StoreProjectV1["assets"][number]> {
+  if (!asset.source.startsWith("data:image/") || !needsImageOptimization(asset)) return asset;
+  const response = await fetch(asset.source);
+  if (!response.ok) throw new Error(`No se pudo cargar la imagen ${asset.name}.`);
+  const blob = await response.blob();
+  const file = new File([blob], `${asset.name}.image`, {
+    type: blob.type || asset.mimeType,
+  });
+  const processed = await processImageInWorker(file);
+  return {
+    ...asset,
+    mimeType: "image/webp",
+    source: processed.primary,
+    fallbackSource: processed.fallback,
+    responsiveSources: processed.responsive,
+    width: processed.width,
+    height: processed.height,
+  };
+}
+
+/**
+ * Aplica la misma receta del upload a assets legacy/custom que llegaron antes
+ * de que el pipeline responsive existiera. Sólo toca imágenes referenciadas;
+ * si el navegador no puede decodificar una imagen, conserva el original.
+ */
+export async function optimizeProjectAssets(project: StoreProjectV1): Promise<StoreProjectV1> {
+  if (!canProcessImagesInBrowser()) return project;
+  const projectWithFixtureAssets = await optimizeDemoFixtureAssets(project);
+  const referenced = referencedAssetIds(projectWithFixtureAssets);
+  let changed = projectWithFixtureAssets !== project;
+  const assets = [] as StoreProjectV1["assets"];
+  for (const asset of projectWithFixtureAssets.assets) {
+    if (!referenced.has(asset.id) || !needsImageOptimization(asset)) {
+      assets.push(asset);
+      continue;
+    }
+    try {
+      const optimized = await optimizeImageAsset(asset);
+      assets.push(optimized);
+      changed ||= optimized !== asset;
+    } catch {
+      assets.push(asset);
+    }
+  }
+  if (!changed) return project;
+  return StoreProjectV1Schema.parse({
+    ...projectWithFixtureAssets,
+    assets,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
 async function embedFixtureAssets(project: StoreProjectV1): Promise<StoreProjectV1> {
   if (!canProcessImagesInBrowser()) return project;
   const assets = await Promise.all(
@@ -864,13 +996,30 @@ export async function createProject(input: string | CreateProjectOptions): Promi
   if (!isBaseTemplate(base)) {
     throw new Error("No se puede crear una tienda: la plantilla base no está protegida.");
   }
-  const template = cloneProjectFromTemplate(base, {
+  // Predeterminado conserva un catálogo grande para inspección/QA, pero una
+  // tienda nueva nace desde la semilla placeholder y no obliga a borrar la
+  // demo antes de empezar. Ambas rutas pasan por el mismo cloner de IDs.
+  const newStoreTemplate = buildCatalogModernProject({
+    seed: "placeholder",
+    id: base.id,
+    name: base.name,
+    brandName: base.identity.brandName,
+    slug: base.slug,
+    baseUrl: base.baseUrl,
+  });
+  const cloned = cloneProjectFromTemplate(newStoreTemplate, {
     id: `store-${suffix}`,
     name: normalizedName,
     brandName: options.brandName?.trim() || normalizedName,
     slug,
     baseUrl: `https://${slug}.example`,
     now: timestamp,
+  });
+  const template = StoreProjectV1Schema.parse({
+    ...cloned,
+    // Una tienda creada desde la plantilla sigue siendo editable, pero el
+    // auditor la trata como clean hasta reemplazar sus placeholders.
+    origin: { ...cloned.origin, seed: "clean" as const },
   });
   const project = await embedFixtureAssets(
     StoreProjectV1Schema.parse({
@@ -1013,7 +1162,18 @@ export async function ensureScaleDemoProject(): Promise<boolean> {
   const existing = await database.projects.get(SCALE_DEMO_PROJECT_ID);
   if (existing) {
     const parsed = StoreProjectV1Schema.parse(existing.project);
-    if (isBaseTemplate(parsed)) return false;
+    if (isBaseTemplate(parsed)) {
+      // La versión 2.0 sembró Predeterminado con placeholders. Como la base
+      // es protegida, la migración puede reemplazar sólo ese seed reservado
+      // por la demo de escala sin tocar tiendas del usuario.
+      if (parsed.origin?.seed === "placeholder") {
+        await saveProject(await embedFixtureAssets(buildScaleDemoProject()), {
+          allowProtectedWrite: true,
+        });
+        return true;
+      }
+      return false;
+    }
     const repaired = repairModernGreeting(normalizeScaleDemoProject(parsed));
     const migrated = await migrateCatalogModernDemo(repaired);
     const project = expandCatalogModernDemoTestimonials(migrated);

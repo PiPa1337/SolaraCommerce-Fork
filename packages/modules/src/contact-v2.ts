@@ -1,4 +1,8 @@
 import {
+  canvasEntityAttributes,
+  canvasImageAttributes,
+  canvasRepeaterItemAttributes,
+  canvasTextAttributes,
   escapeAttribute,
   escapeHtml,
   type ModuleDefinition,
@@ -7,6 +11,7 @@ import {
   renderImage,
   safeHtml,
   safeUrl,
+  sanitizeRichText,
 } from "@solara/module-sdk";
 import {
   CATALOG_MODERN_PLACEHOLDER_PHONE,
@@ -220,6 +225,13 @@ const contactModule = <Id extends string, Settings>(
   };
 };
 
+function contactCanvasContext(context: Pick<RenderContext<unknown>, "canvas" | "section">) {
+  return {
+    editorMode: context.canvas?.editorMode === true,
+    sectionId: context.section.id,
+  } as const;
+}
+
 export const contactHero: ModuleDefinition<
   "contact-hero",
   z.infer<typeof contactHeroSettings>
@@ -260,14 +272,116 @@ export const contactHero: ModuleDefinition<
     },
   ],
   motionZones: [...contactRevealZone, ...contactItemsZone],
+  canvasBindings: [
+    {
+      id: "eyebrow",
+      label: "Antetítulo de Contacto",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "eyebrow" },
+      capabilities: ["edit-text"],
+      maxLength: 120,
+    },
+    {
+      id: "title",
+      label: "Título de Contacto",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "title" },
+      capabilities: ["edit-text"],
+      maxLength: 200,
+    },
+    {
+      id: "body",
+      label: "Texto de Contacto",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "body" },
+      capabilities: ["edit-text"],
+      multiline: true,
+      maxLength: 600,
+    },
+    {
+      id: "actionLabel",
+      label: "Botón de Contacto",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "actionLabel" },
+      capabilities: ["edit-text"],
+      maxLength: 120,
+    },
+    {
+      id: "actionHref",
+      label: "Destino de Contacto",
+      kind: "link",
+      source: { kind: "section-setting", fieldKey: "actionHref" },
+      capabilities: ["edit-link"],
+    },
+    {
+      id: "imageAssetId",
+      label: "Imagen de Contacto",
+      kind: "image",
+      source: { kind: "section-setting", fieldKey: "imageAssetId" },
+      capabilities: ["edit-image"],
+    },
+    {
+      id: "asset-alt",
+      label: "Texto alternativo de Contacto",
+      kind: "text",
+      source: { kind: "asset", entityId: "*", field: "alt" },
+      capabilities: ["edit-alt", "edit-text"],
+      maxLength: 500,
+    },
+    {
+      id: "item-icon",
+      label: "Ícono de acceso rápido",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "quickLinks", itemFieldKey: "icon" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 40,
+    },
+    {
+      id: "item-title",
+      label: "Título de acceso rápido",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "quickLinks", itemFieldKey: "title" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "item-body",
+      label: "Texto de acceso rápido",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "quickLinks", itemFieldKey: "body" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      multiline: true,
+      maxLength: 400,
+    },
+    {
+      id: "item-href",
+      label: "Destino de acceso rápido",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "quickLinks", itemFieldKey: "href" },
+      capabilities: ["edit-repeater-item", "edit-link"],
+    },
+    {
+      id: "item-action-label",
+      label: "Acción de acceso rápido",
+      kind: "repeater-item",
+      source: {
+        kind: "section-repeater-item",
+        fieldKey: "quickLinks",
+        itemFieldKey: "actionLabel",
+      },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 120,
+    },
+  ],
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const settings = context.settings;
+    const editor = contactCanvasContext(context);
     const actions = settings.actionLabel
-      ? `<a class="catalog-primary-action" href="${escapeAttribute(safeUrl(settings.actionHref))}">${escapeHtml(settings.actionLabel)} →</a>`
+      ? `<a class="catalog-primary-action" href="${escapeAttribute(safeUrl(settings.actionHref))}"${canvasTextAttributes(editor, "actionHref")}><span${canvasTextAttributes(editor, "actionLabel", 120)}>${escapeHtml(settings.actionLabel)}</span> →</a>`
       : "";
     const quickLinks = settings.quickLinks.length
-      ? `<div class="contact-quick-links contact-hero-links" data-motion-zone="items">${settings.quickLinks.map((item) => `<a class="contact-quick-link" href="${escapeAttribute(safeUrl(item.href))}">${contactIconMarkup(item.icon)}<span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.body)}</small></span><span>${escapeHtml(item.actionLabel || "→")} ${item.actionLabel ? "→" : ""}</span></a>`).join("")}</div>`
+      ? `<div class="contact-quick-links contact-hero-links" data-motion-zone="items">${settings.quickLinks.map((item) => `<a class="contact-quick-link" href="${escapeAttribute(safeUrl(item.href))}"${canvasRepeaterItemAttributes(editor, "item-href", item.id)}>${contactIconMarkup(item.icon)}<span><strong${canvasRepeaterItemAttributes(editor, "item-title", item.id)}>${escapeHtml(item.title)}</strong><small${canvasRepeaterItemAttributes(editor, "item-body", item.id)}>${escapeHtml(item.body)}</small></span><span${canvasRepeaterItemAttributes(editor, "item-action-label", item.id)}>${escapeHtml(item.actionLabel || "→")} ${item.actionLabel ? "→" : ""}</span></a>`).join("")}</div>`
       : "";
     return renderCatalogModernEditorialHero(context, {
       moduleId: "contact-hero",
@@ -281,6 +395,7 @@ export const contactHero: ModuleDefinition<
       benefits: [],
       actions,
       trailing: quickLinks,
+      canvasBindingIds: ["eyebrow", "title", "body", "imageAssetId", "asset-alt"],
     });
   },
 });
@@ -316,10 +431,85 @@ export const contactForm: ModuleDefinition<
     { key: "whatsappActionLabel", type: "text", label: "Botón WhatsApp" },
   ],
   motionZones: contactRevealZone,
+  canvasBindings: [
+    {
+      id: "title",
+      label: "Título del formulario",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "title" },
+      capabilities: ["edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "body",
+      label: "Texto del formulario",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "body" },
+      capabilities: ["edit-text"],
+      multiline: true,
+      maxLength: 600,
+    },
+    {
+      id: "showPhone",
+      label: "Mostrar teléfono",
+      kind: "boolean",
+      source: { kind: "section-setting", fieldKey: "showPhone" },
+      capabilities: ["toggle-boolean"],
+    },
+    {
+      id: "nameLabel",
+      label: "Etiqueta de nombre",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "nameLabel" },
+      capabilities: ["edit-text"],
+      maxLength: 80,
+    },
+    {
+      id: "emailLabel",
+      label: "Etiqueta de email",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "emailLabel" },
+      capabilities: ["edit-text"],
+      maxLength: 80,
+    },
+    {
+      id: "phoneLabel",
+      label: "Etiqueta de teléfono",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "phoneLabel" },
+      capabilities: ["edit-text"],
+      maxLength: 80,
+    },
+    {
+      id: "messageLabel",
+      label: "Etiqueta de mensaje",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "messageLabel" },
+      capabilities: ["edit-text"],
+      maxLength: 80,
+    },
+    {
+      id: "emailActionLabel",
+      label: "Botón de email",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "emailActionLabel" },
+      capabilities: ["edit-text"],
+      maxLength: 120,
+    },
+    {
+      id: "whatsappActionLabel",
+      label: "Botón de WhatsApp",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "whatsappActionLabel" },
+      capabilities: ["edit-text"],
+      maxLength: 120,
+    },
+  ],
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const copy = context.project.publicCopy;
     const settings = context.settings;
+    const editor = contactCanvasContext(context);
     const phone = contactPhone(context);
     const email = context.project.identity.email.trim();
     const hasWhatsapp = phone.length > 0;
@@ -333,11 +523,12 @@ export const contactForm: ModuleDefinition<
       hasEmail || hasWhatsapp
         ? `<p>${hasEmail ? `<a href="mailto:${escapeAttribute(email)}">${escapeHtml(copy.contact.emailAction || settings.emailActionLabel)}</a> ` : escapeHtml(copy.contact.emailFallback)}${hasEmail && hasWhatsapp ? " · " : ""}${hasWhatsapp ? `<a href="${whatsappHref}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.contact.whatsappAction)}</a> ` : escapeHtml(copy.contact.whatsappFallback)}</p>`
         : `<p>${escapeHtml(copy.contact.whatsappFallback)}</p>`;
+    const reasonField = `<label>Tema de consulta<select name="reason"><option>Consulta de producto</option><option>Disponibilidad</option><option>Envíos</option><option>Otro</option></select></label>`;
     return moduleRoot(
       "contact-form",
       context.section,
       safeHtml(
-        `<section id="contact-form" class="contact-main-grid" data-motion-zone="content"><form class="contact-form" data-solara-contact-form data-contact-brand="${escapeAttribute(brand)}" data-contact-email="${escapeAttribute(email)}" data-contact-whatsapp="${escapeAttribute(phone)}" action="${action}" method="get" target="_blank"><h2>${escapeHtml(settings.title)}</h2><p>${escapeHtml(settings.body)}</p><div class="contact-form-fields"><label>${escapeHtml(settings.nameLabel)}<input name="name" autocomplete="name" required></label><label>${escapeHtml(settings.emailLabel)}<input name="email" type="email" autocomplete="email" required></label>${settings.showPhone ? `<label>${escapeHtml(settings.phoneLabel)}<input name="phone" type="tel" autocomplete="tel" required></label>` : ""}<label class="contact-form-message">${escapeHtml(settings.messageLabel)}<textarea name="message" rows="5" required></textarea></label></div><div class="contact-form-actions"><button class="catalog-primary-action solara-primary-action" data-contact-channel="email" type="submit"${emailDisabled}><span class="catalog-hero-cta-label">${escapeHtml(settings.emailActionLabel)}</span><span class="catalog-hero-cta-icon" aria-hidden="true">→</span></button><button class="catalog-primary-action solara-primary-action contact-form-whatsapp" data-contact-channel="whatsapp" type="button"${whatsappDisabled}><span class="catalog-hero-cta-label">${escapeHtml(settings.whatsappActionLabel)}</span><svg class="catalog-hero-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${catalogHeroBenefitIcons.chat}</svg></button></div><p class="contact-form-status" data-contact-status aria-live="polite"></p><noscript>${noscriptFallback}<p>Activá JavaScript o usá los enlaces para enviar la consulta.</p></noscript></form></section>`,
+        `<section id="contact-form" class="contact-main-grid" data-motion-zone="content"><form class="contact-form" data-solara-contact-form data-contact-brand="${escapeAttribute(brand)}" data-contact-email="${escapeAttribute(email)}" data-contact-whatsapp="${escapeAttribute(phone)}" action="${action}" method="get" target="_blank"><h2${canvasTextAttributes(editor, "title", 160)}>${escapeHtml(settings.title)}</h2><p${canvasTextAttributes(editor, "body", 600)}>${escapeHtml(settings.body)}</p><div class="contact-form-fields"><label><span${canvasTextAttributes(editor, "nameLabel", 80)}>${escapeHtml(settings.nameLabel)}</span><input name="name" autocomplete="name" required></label><label><span${canvasTextAttributes(editor, "emailLabel", 80)}>${escapeHtml(settings.emailLabel)}</span><input name="email" type="email" autocomplete="email" required></label>${settings.showPhone ? `<label><span${canvasTextAttributes(editor, "phoneLabel", 80)}>${escapeHtml(settings.phoneLabel)}</span><input name="phone" type="tel" autocomplete="tel" required></label>` : ""}${reasonField}<label class="contact-form-message"><span${canvasTextAttributes(editor, "messageLabel", 80)}>${escapeHtml(settings.messageLabel)}</span><textarea name="message" rows="5" required></textarea></label></div><div class="contact-form-actions"><button class="catalog-primary-action solara-primary-action" data-contact-channel="email" type="submit"${emailDisabled}><span class="catalog-hero-cta-label"${canvasTextAttributes(editor, "emailActionLabel", 120)}>${escapeHtml(settings.emailActionLabel)}</span><span class="catalog-hero-cta-icon" aria-hidden="true">→</span></button><button class="catalog-primary-action solara-primary-action contact-form-whatsapp" data-contact-channel="whatsapp" type="button"${whatsappDisabled}><span class="catalog-hero-cta-label"${canvasTextAttributes(editor, "whatsappActionLabel", 120)}>${escapeHtml(settings.whatsappActionLabel)}</span><svg class="catalog-hero-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${catalogHeroBenefitIcons.chat}</svg></button></div><p class="contact-form-status" data-contact-status aria-live="polite"></p><noscript>${noscriptFallback}<p>Activá JavaScript o usá los enlaces para enviar la consulta.</p></noscript></form></section>`,
       ),
     );
   },
@@ -382,9 +573,137 @@ export const contactChannels: ModuleDefinition<
     { key: "hoursActionLabel", type: "text", label: "Acción horarios" },
   ],
   motionZones: contactItemsZone,
+  canvasBindings: [
+    {
+      id: "title",
+      label: "Título de canales",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "title" },
+      capabilities: ["edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "body",
+      label: "Texto de canales",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "body" },
+      capabilities: ["edit-text"],
+      multiline: true,
+      maxLength: 600,
+    },
+    {
+      id: "showWhatsapp",
+      label: "Mostrar WhatsApp",
+      kind: "boolean",
+      source: { kind: "section-setting", fieldKey: "showWhatsapp" },
+      capabilities: ["toggle-boolean"],
+    },
+    {
+      id: "showEmail",
+      label: "Mostrar email",
+      kind: "boolean",
+      source: { kind: "section-setting", fieldKey: "showEmail" },
+      capabilities: ["toggle-boolean"],
+    },
+    {
+      id: "showPhone",
+      label: "Mostrar teléfono",
+      kind: "boolean",
+      source: { kind: "section-setting", fieldKey: "showPhone" },
+      capabilities: ["toggle-boolean"],
+    },
+    {
+      id: "showAddress",
+      label: "Mostrar dirección",
+      kind: "boolean",
+      source: { kind: "section-setting", fieldKey: "showAddress" },
+      capabilities: ["toggle-boolean"],
+    },
+    {
+      id: "showHours",
+      label: "Mostrar horarios",
+      kind: "boolean",
+      source: { kind: "section-setting", fieldKey: "showHours" },
+      capabilities: ["toggle-boolean"],
+    },
+    {
+      id: "hoursText",
+      label: "Horarios de atención",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "hoursText" },
+      capabilities: ["edit-text"],
+      multiline: true,
+      maxLength: 400,
+    },
+    {
+      id: "whatsappActionLabel",
+      label: "Acción WhatsApp",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "whatsappActionLabel" },
+      capabilities: ["edit-text"],
+      maxLength: 120,
+    },
+    {
+      id: "emailActionLabel",
+      label: "Acción email",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "emailActionLabel" },
+      capabilities: ["edit-text"],
+      maxLength: 120,
+    },
+    {
+      id: "phoneActionLabel",
+      label: "Acción teléfono",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "phoneActionLabel" },
+      capabilities: ["edit-text"],
+      maxLength: 120,
+    },
+    {
+      id: "addressActionLabel",
+      label: "Acción dirección",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "addressActionLabel" },
+      capabilities: ["edit-text"],
+      maxLength: 120,
+    },
+    {
+      id: "hoursActionLabel",
+      label: "Acción horarios",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "hoursActionLabel" },
+      capabilities: ["edit-text"],
+      maxLength: 120,
+    },
+    {
+      id: "identity-email",
+      label: "Email de contacto",
+      kind: "text",
+      source: { kind: "identity", field: "email" },
+      capabilities: ["edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "identity-phone",
+      label: "Teléfono de contacto",
+      kind: "text",
+      source: { kind: "identity", field: "phone" },
+      capabilities: ["edit-text"],
+      maxLength: 80,
+    },
+    {
+      id: "identity-address",
+      label: "Dirección de contacto",
+      kind: "text",
+      source: { kind: "identity", field: "address" },
+      capabilities: ["edit-text"],
+      maxLength: 500,
+    },
+  ],
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const settings = context.settings;
+    const editor = contactCanvasContext(context);
     const phone = contactPhone(context);
     const rows: Array<[string, string, string, string, string] | null> = [
       settings.showWhatsapp && phone
@@ -440,7 +759,41 @@ export const contactChannels: ModuleDefinition<
       "contact-channels",
       context.section,
       safeHtml(
-        `<section id="contact-channels" class="contact-channels" data-motion-zone="items"><header><h2>${escapeHtml(settings.title)}</h2><p>${escapeHtml(settings.body)}</p></header><div class="contact-channel-list">${activeRows.map(([rowIcon, title, body, action, href]) => `<a class="contact-channel-row" href="${escapeAttribute(safeUrl(href))}">${contactIconMarkup(rowIcon)}<span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(body)}</small></span><span>${escapeHtml(action)} →</span></a>`).join("")}</div></section>`,
+        `<section id="contact-channels" class="contact-channels" data-motion-zone="items"><header><h2${canvasTextAttributes(editor, "title", 160)}>${escapeHtml(settings.title)}</h2><p${canvasTextAttributes(editor, "body", 600)}>${escapeHtml(settings.body)}</p></header><div class="contact-channel-list">${activeRows
+          .map(([rowIcon, title, body, action, href]) => {
+            const identityField =
+              rowIcon === "mail"
+                ? "email"
+                : rowIcon === "phone"
+                  ? "phone"
+                  : rowIcon === "pin"
+                    ? "address"
+                    : undefined;
+            const actionField =
+              rowIcon === "chat"
+                ? "whatsappActionLabel"
+                : rowIcon === "mail"
+                  ? "emailActionLabel"
+                  : rowIcon === "phone"
+                    ? "phoneActionLabel"
+                    : rowIcon === "pin"
+                      ? "addressActionLabel"
+                      : "hoursActionLabel";
+            const identityAttributes = identityField
+              ? canvasEntityAttributes(
+                  editor,
+                  `identity-${identityField}`,
+                  "identity",
+                  context.project.id,
+                  identityField,
+                )
+              : "";
+            const valueAttributes =
+              identityAttributes ||
+              (rowIcon === "clock" ? canvasTextAttributes(editor, "hoursText", 400) : "");
+            return `<a class="contact-channel-row" href="${escapeAttribute(safeUrl(href))}">${contactIconMarkup(rowIcon)}<span><strong>${escapeHtml(title)}</strong><small${valueAttributes}>${escapeHtml(body)}</small></span><span${canvasTextAttributes(editor, actionField, 120)}>${escapeHtml(action)} →</span></a>`;
+          })
+          .join("")}</div></section>`,
       ),
     );
   },
@@ -474,14 +827,74 @@ export const contactHelpGrid: ModuleDefinition<
     },
   ],
   motionZones: contactItemsZone,
+  canvasBindings: [
+    {
+      id: "title",
+      label: "Título del centro de ayuda",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "title" },
+      capabilities: ["edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "body",
+      label: "Texto del centro de ayuda",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "body" },
+      capabilities: ["edit-text"],
+      multiline: true,
+      maxLength: 600,
+    },
+    {
+      id: "item-icon",
+      label: "Ícono de ayuda",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "icon" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 40,
+    },
+    {
+      id: "item-title",
+      label: "Título de ayuda",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "title" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "item-body",
+      label: "Texto de ayuda",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "body" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      multiline: true,
+      maxLength: 600,
+    },
+    {
+      id: "item-href",
+      label: "Destino de ayuda",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "href" },
+      capabilities: ["edit-repeater-item", "edit-link"],
+    },
+    {
+      id: "item-action-label",
+      label: "Acción de ayuda",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "actionLabel" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 120,
+    },
+  ],
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const settings = context.settings;
+    const editor = contactCanvasContext(context);
     return moduleRoot(
       "contact-help-grid",
       context.section,
       safeHtml(
-        `<section class="contact-help" data-motion-zone="items"><header><h2>${escapeHtml(settings.title)}</h2><p>${escapeHtml(settings.body)}</p></header><div class="contact-help-grid">${settings.items.map((item) => `<a class="contact-help-item" href="${escapeAttribute(safeUrl(item.href))}">${contactIconMarkup(item.icon)}<strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.body)}</p><span>${escapeHtml(item.actionLabel)} →</span></a>`).join("")}</div></section>`,
+        `<section class="contact-help" data-motion-zone="items"><header><h2${canvasTextAttributes(editor, "title", 160)}>${escapeHtml(settings.title)}</h2><p${canvasTextAttributes(editor, "body", 600)}>${escapeHtml(settings.body)}</p></header><div class="contact-help-grid">${settings.items.map((item) => `<a class="contact-help-item" href="${escapeAttribute(safeUrl(item.href))}"${canvasRepeaterItemAttributes(editor, "item-href", item.id)}>${contactIconMarkup(item.icon)}<strong${canvasRepeaterItemAttributes(editor, "item-title", item.id)}>${escapeHtml(item.title)}</strong><p${canvasRepeaterItemAttributes(editor, "item-body", item.id)}>${escapeHtml(item.body)}</p><span${canvasRepeaterItemAttributes(editor, "item-action-label", item.id)}>${escapeHtml(item.actionLabel)} →</span></a>`).join("")}</div></section>`,
       ),
     );
   },
@@ -502,16 +915,44 @@ export const contactWhatsappCta: ModuleDefinition<
     { key: "actionLabel", type: "text", label: "Botón" },
   ],
   motionZones: contactRevealZone,
+  canvasBindings: [
+    {
+      id: "title",
+      label: "Título de WhatsApp",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "title" },
+      capabilities: ["edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "body",
+      label: "Texto de WhatsApp",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "body" },
+      capabilities: ["edit-text"],
+      multiline: true,
+      maxLength: 600,
+    },
+    {
+      id: "actionLabel",
+      label: "Botón de WhatsApp",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "actionLabel" },
+      capabilities: ["edit-text"],
+      maxLength: 120,
+    },
+  ],
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const phone = contactPhone(context);
     if (!phone) return safeHtml("");
     const settings = context.settings;
+    const editor = contactCanvasContext(context);
     return moduleRoot(
       "contact-whatsapp-cta",
       context.section,
       safeHtml(
-        `<section class="contact-whatsapp-cta" data-motion-zone="content"><div><h2>${escapeHtml(settings.title)}</h2><p>${escapeHtml(settings.body)}</p></div><a class="catalog-primary-action" href="https://wa.me/${escapeAttribute(phone)}">${escapeHtml(settings.actionLabel)} →</a></section>`,
+        `<section class="contact-whatsapp-cta" data-motion-zone="content"><div><h2${canvasTextAttributes(editor, "title", 160)}>${escapeHtml(settings.title)}</h2><p${canvasTextAttributes(editor, "body", 600)}>${escapeHtml(settings.body)}</p></div><a class="catalog-primary-action" href="https://wa.me/${escapeAttribute(phone)}"><span${canvasTextAttributes(editor, "actionLabel", 120)}>${escapeHtml(settings.actionLabel)}</span> →</a></section>`,
       ),
     );
   },
@@ -543,13 +984,56 @@ export const contactPurchaseInfo: ModuleDefinition<
     },
   ],
   motionZones: contactItemsZone,
+  canvasBindings: [
+    {
+      id: "item-icon",
+      label: "Ícono de compra",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "icon" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 40,
+    },
+    {
+      id: "item-title",
+      label: "Título de compra",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "title" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "item-body",
+      label: "Texto de compra",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "body" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      multiline: true,
+      maxLength: 600,
+    },
+    {
+      id: "item-href",
+      label: "Destino de compra",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "href" },
+      capabilities: ["edit-repeater-item", "edit-link"],
+    },
+    {
+      id: "item-action-label",
+      label: "Acción de compra",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "actionLabel" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 120,
+    },
+  ],
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
+    const editor = contactCanvasContext(context);
     return moduleRoot(
       "contact-purchase-info",
       context.section,
       safeHtml(
-        `<section class="contact-purchase-info" data-motion-zone="items">${context.settings.items.map((item) => `<article><div>${contactIconMarkup(item.icon)}<strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.body)}</p><a href="${escapeAttribute(safeUrl(item.href))}">${escapeHtml(item.actionLabel)} →</a></div></article>`).join("")}</section>`,
+        `<section class="contact-purchase-info" data-motion-zone="items">${context.settings.items.map((item) => `<article><div>${contactIconMarkup(item.icon)}<strong${canvasRepeaterItemAttributes(editor, "item-title", item.id)}>${escapeHtml(item.title)}</strong><p${canvasRepeaterItemAttributes(editor, "item-body", item.id)}>${escapeHtml(item.body)}</p><a href="${escapeAttribute(safeUrl(item.href))}"${canvasRepeaterItemAttributes(editor, "item-href", item.id)}><span${canvasRepeaterItemAttributes(editor, "item-action-label", item.id)}>${escapeHtml(item.actionLabel)}</span> →</a></div></article>`).join("")}</section>`,
       ),
     );
   },
@@ -581,14 +1065,58 @@ export const contactFaq: ModuleDefinition<
     },
   ],
   motionZones: contactItemsZone,
+  canvasBindings: [
+    {
+      id: "title",
+      label: "Título de preguntas",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "title" },
+      capabilities: ["edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "body",
+      label: "Texto de preguntas",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "body" },
+      capabilities: ["edit-text"],
+      multiline: true,
+      maxLength: 600,
+    },
+    {
+      id: "item-question",
+      label: "Pregunta frecuente",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "question" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 300,
+    },
+    {
+      id: "item-answer",
+      label: "Respuesta frecuente",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "answer" },
+      capabilities: ["edit-repeater-item", "edit-rich-text"],
+      multiline: true,
+      maxLength: 1000,
+    },
+    {
+      id: "item-enabled",
+      label: "Pregunta activa",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "items", itemFieldKey: "enabled" },
+      capabilities: ["edit-repeater-item", "toggle-boolean"],
+    },
+  ],
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const activeItems = context.settings.items.filter((item) => item.enabled);
+    const editor = contactCanvasContext(context);
     return moduleRoot(
       "contact-faq",
       context.section,
       safeHtml(
-        `<section id="contact-faq" class="contact-faq" data-motion-zone="items"><header><h2>${escapeHtml(context.settings.title)}</h2><p>${escapeHtml(context.settings.body)}</p></header><div>${activeItems.map((item) => `<details><summary>${escapeHtml(item.question)}</summary><p>${escapeHtml(item.answer)}</p></details>`).join("")}</div></section>`,
+        `<section id="contact-faq" class="contact-faq" data-motion-zone="items"><header><h2${canvasTextAttributes(editor, "title", 160)}>${escapeHtml(context.settings.title)}</h2><p${canvasTextAttributes(editor, "body", 600)}>${escapeHtml(context.settings.body)}</p></header><div>${activeItems.map((item) => `<details><summary${canvasRepeaterItemAttributes(editor, "item-question", item.id)}>${escapeHtml(item.question)}</summary><p${canvasRepeaterItemAttributes(editor, "item-answer", item.id)}>${sanitizeRichText(item.answer)}</p></details>`).join("")}</div></section>`,
       ),
     );
   },
@@ -623,6 +1151,78 @@ export const contactLocation: ModuleDefinition<
     { key: "mapImageAssetId", type: "asset", label: "Imagen del mapa" },
   ],
   motionZones: contactRevealZone,
+  canvasBindings: [
+    {
+      id: "enabled",
+      label: "Mostrar ubicación",
+      kind: "boolean",
+      source: { kind: "section-setting", fieldKey: "enabled" },
+      capabilities: ["toggle-boolean"],
+    },
+    {
+      id: "title",
+      label: "Título de ubicación",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "title" },
+      capabilities: ["edit-text"],
+      maxLength: 160,
+    },
+    {
+      id: "body",
+      label: "Texto de ubicación",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "body" },
+      capabilities: ["edit-text"],
+      multiline: true,
+      maxLength: 600,
+    },
+    {
+      id: "address",
+      label: "Dirección de ubicación",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "address" },
+      capabilities: ["edit-text"],
+      maxLength: 500,
+    },
+    {
+      id: "hoursText",
+      label: "Horarios de ubicación",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "hoursText" },
+      capabilities: ["edit-text"],
+      multiline: true,
+      maxLength: 400,
+    },
+    {
+      id: "imageAssetId",
+      label: "Fotografía del local",
+      kind: "image",
+      source: { kind: "section-setting", fieldKey: "imageAssetId" },
+      capabilities: ["edit-image"],
+    },
+    {
+      id: "mapImageAssetId",
+      label: "Imagen del mapa",
+      kind: "image",
+      source: { kind: "section-setting", fieldKey: "mapImageAssetId" },
+      capabilities: ["edit-image"],
+    },
+    {
+      id: "mapHref",
+      label: "Destino del mapa",
+      kind: "link",
+      source: { kind: "section-setting", fieldKey: "mapHref" },
+      capabilities: ["edit-link"],
+    },
+    {
+      id: "asset-alt",
+      label: "Texto alternativo de ubicación",
+      kind: "text",
+      source: { kind: "asset", entityId: "*", field: "alt" },
+      capabilities: ["edit-alt", "edit-text"],
+      maxLength: 500,
+    },
+  ],
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const settings = context.settings;
@@ -632,13 +1232,17 @@ export const contactLocation: ModuleDefinition<
     ) {
       return safeHtml("");
     }
+    const editor = contactCanvasContext(context);
     const image = settings.imageAssetId
       ? renderImage(context.project, settings.imageAssetId, {
           className: "contact-location-image",
           loading: "lazy",
           sizes: "(max-width: 767px) 100vw, 50vw",
           fallbackAlt: settings.title,
-        })
+        }).replace(
+          "<img",
+          `<img${canvasEntityAttributes(editor, "asset-alt", "asset", settings.imageAssetId, "alt")}`,
+        )
       : "";
     const map = settings.mapImageAssetId
       ? renderImage(context.project, settings.mapImageAssetId, {
@@ -646,13 +1250,16 @@ export const contactLocation: ModuleDefinition<
           loading: "lazy",
           sizes: "(max-width: 767px) 100vw, 50vw",
           fallbackAlt: "Mapa de ubicación",
-        })
+        }).replace(
+          "<img",
+          `<img${canvasEntityAttributes(editor, "asset-alt", "asset", settings.mapImageAssetId, "alt")}`,
+        )
       : "";
     return moduleRoot(
       "contact-location",
       context.section,
       safeHtml(
-        `<section id="contact-location" class="contact-location" data-motion-zone="content"><header><h2>${escapeHtml(settings.title)}</h2><p>${escapeHtml(settings.body)}</p></header><div class="contact-location-grid">${image}${map}</div><div class="contact-location-meta">${settings.address ? `<p><strong>Dirección</strong>${escapeHtml(settings.address)}</p>` : ""}${settings.hoursText ? `<p><strong>Horarios</strong>${escapeHtml(settings.hoursText)}</p>` : ""}${settings.mapHref ? `<a class="solara-secondary-action" href="${escapeAttribute(safeUrl(settings.mapHref))}">Cómo llegar →</a>` : ""}</div></section>`,
+        `<section id="contact-location" class="contact-location" data-motion-zone="content"><header><h2${canvasTextAttributes(editor, "title", 160)}>${escapeHtml(settings.title)}</h2><p${canvasTextAttributes(editor, "body", 600)}>${escapeHtml(settings.body)}</p></header><div class="contact-location-grid">${image ? `<div${canvasImageAttributes(editor, "imageAssetId")}>${image}</div>` : ""}${map ? `<div${canvasImageAttributes(editor, "mapImageAssetId")}>${map}</div>` : ""}</div><div class="contact-location-meta">${settings.address ? `<p><strong>Dirección</strong><span${canvasTextAttributes(editor, "address", 500)}>${escapeHtml(settings.address)}</span></p>` : ""}${settings.hoursText ? `<p><strong>Horarios</strong><span${canvasTextAttributes(editor, "hoursText", 400)}>${escapeHtml(settings.hoursText)}</span></p>` : ""}${settings.mapHref ? `<a class="solara-secondary-action" href="${escapeAttribute(safeUrl(settings.mapHref))}"${canvasTextAttributes(editor, "mapHref")}>Cómo llegar →</a>` : ""}</div></section>`,
       ),
     );
   },

@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 // e2e-smoke — smoke ampliado (~2min, 15 specs) con cache de build Studio
 // Valida flujos criticos sin compilar Studio si no hay cambios.
@@ -111,7 +111,15 @@ function shouldBuild() {
 
 function spawnCmd(cmd, args, opts = {}) {
   return new Promise((resolve) => {
-    const child = spawn(cmd, args, { shell: true, stdio: "inherit", ...opts });
+    const executable = process.platform === "win32" && cmd === "corepack" ? process.execPath : cmd;
+    const finalArgs =
+      process.platform === "win32" && cmd === "corepack"
+        ? [
+            join(dirname(process.execPath), "node_modules", "corepack", "dist", "corepack.js"),
+            ...args,
+          ]
+        : args;
+    const child = spawn(executable, finalArgs, { stdio: "inherit", ...opts });
     child.on("close", (code) => resolve(code));
     child.on("error", () => resolve(1));
   });

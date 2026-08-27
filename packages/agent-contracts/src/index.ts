@@ -86,12 +86,37 @@ export const AgentOperationSchema = z.discriminatedUnion("type", [
     imageId: SafeIdSchema.optional(),
   }),
   z.object({
+    type: z.literal("category.update"),
+    categoryId: SafeIdSchema,
+    changes: z.object({
+      slug: SlugSchema.optional(),
+      title: z.string().min(1).max(160).optional(),
+      description: z.string().max(2000).optional(),
+      imageId: SafeIdSchema.optional(),
+    }),
+  }),
+  z.object({
+    type: z.literal("category.setStatus"),
+    categoryId: SafeIdSchema,
+    status: z.enum(["active", "hidden"]),
+  }),
+  z.object({
     type: z.literal("collection.create"),
     collectionId: SafeIdSchema.optional(),
     slug: SlugSchema,
     title: z.string().min(1).max(160),
     description: z.string().max(2000).default(""),
     imageId: SafeIdSchema.optional(),
+  }),
+  z.object({
+    type: z.literal("collection.update"),
+    collectionId: SafeIdSchema,
+    changes: z.object({
+      slug: SlugSchema.optional(),
+      title: z.string().min(1).max(160).optional(),
+      description: z.string().max(2000).optional(),
+      imageId: SafeIdSchema.optional(),
+    }),
   }),
   z.object({
     type: z.literal("product.create"),
@@ -121,6 +146,7 @@ export const AgentOperationSchema = z.discriminatedUnion("type", [
       collectionIds: z.array(SafeIdSchema).optional(),
       tags: z.array(z.string().min(1).max(80)).optional(),
       imageIds: z.array(SafeIdSchema).optional(),
+      priceCents: z.number().int().nonnegative().optional(),
     }),
   }),
   z.object({
@@ -138,6 +164,10 @@ export const AgentOperationSchema = z.discriminatedUnion("type", [
     assetId: SafeIdSchema,
     target: z.enum(["identity.logo", "seo.favicon", "seo.social", "product"]),
     productId: SafeIdSchema.optional(),
+  }),
+  z.object({
+    type: z.literal("asset.remove"),
+    assetId: SafeIdSchema,
   }),
   z.object({
     type: z.literal("section.updateSettings"),
@@ -429,7 +459,8 @@ export const AgentProtocolJsonSchema = {
     "qa.readBacklog",
     "qa.logProgress",
     "qa.updateState",
-    "qa.suggestFix",
+    "qa.runCycle",
+    "qa.status",
   ],
 } as const;
 

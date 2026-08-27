@@ -1,5 +1,153 @@
 # Changelog
 
+### Continuación Live Canvas + Quality Forge (2026-08-27)
+
+- Live Canvas cubre bindings editor-only para Catalog Modern, About V2, Contact
+  V2 y legacy; el manifest expande entidades reales, alt, rich text, precio en
+  centavos y PDP generado. El bridge acepta Ctrl/Cmd+clic y rechaza tipos de
+  binding falsificados.
+- Canvas, mutaciones de entidad y agente convergen en `ProjectMutationRegistry`,
+  con índices de categorías/colecciones sincronizados y precio de primera
+  variante validado como entero seguro.
+- Predeterminado vuelve a ser la demo protegida de escala (50 productos); las
+  tiendas nuevas conservan 5 placeholders y se auditan como clean hasta
+  reemplazarlos. Se agregó migración del seed placeholder reservado.
+- Smoke directo sin reintentos: 129/129. Live Canvas: 2/2. `check:quick`:
+  6/6. Full E2E continúa parcial por specs históricos desalineados, Node 22 no
+  está instalado y no se autorizó rollout sobre tiendas reales.
+
+### Cierre de validación Live Canvas + Quality Forge (2026-08-26)
+
+- Se completó la cobertura declarativa de los 11 módulos Catalog Modern y el
+  Preview editor global; repeaters conservan `itemId` y aplican el campo
+  correcto mediante la mutación semántica.
+- Se corrigió el harness `about-v2` para servir CSS con MIME correcto y se
+  cerró el overflow falso de 1584 px. Smoke V2: 41/41; smoke crítico: 129/129.
+- El export grande pasó a ~48,9 MB (48.892.403 B en la corrida final) para 2.000 productos al reducir el copy
+  serializado al subconjunto que necesita cada tipo de página; el benchmark
+  conserva el límite de 48 MiB.
+- Portable: `desktop:build`, `desktop:package`, `portable:smoke`, E2E portable,
+  agente JSONL, MCP real y JSONL read-only verificados. Node 22 y full E2E aún
+  no se declaran verdes.
+
+### Live Canvas + Autonomous Quality Forge (2026-08-25)
+
+- Live Canvas: edición directa desde el preview con bindings declarativos
+  por módulo, manifest editor-only, bridge con sesión/nonce anti-replay y
+  popover accesible. Texto, imágenes (selector de assets) y repeaters por
+  itemId estable. Cero metadata en el sitio exportado.
+- Núcleo único de mutaciones (ProjectMutationRegistry): canvas, sidebar y
+  canal IA producen el mismo snapshot byte a byte con timestamp controlado.
+- category.setStatus y collection status (active/hidden) retrocompatible
+  sin bump de schemaVersion; el renderer oculta de navegación/bento y el
+  exporter omite páginas de categorías ocultas.
+- Registro real de migraciones por migrationId con preview determinista;
+  el rollout rechaza IDs desconocidos y marca no aplicables.
+- Fingerprint del renderer derivado del contenido real (sha256 de estilos
+  y runtime), reproducible entre builds.
+- Presupuesto público mide assets hasheados desde el deployment manifest
+  (antes media 0 bytes) con guardas contra medición vacía.
+- QA perpetuo: qa.runCycle usa QACycleManager con estado durable y watchdog
+  de 3 intentos; qa.status nuevo; endpoint /__solara/storage/qa-status para
+  la card del dashboard; runner sin shell (binario local de vitest).
+- Fábrica autónoma: 20 tiendas por el canal oficial (plans/commit) con
+  matriz de rubros, tamaños y paletas; base sin cambios.
+- Smoke reparado: 129/129 (colecciones 5 columnas, hero sin sombras
+  documentado, búsqueda 334px, timeout de imágenes por service worker en
+  tracing resuelto con serviceWorkers: block).
+- Quality Forge: matriz de 7 viewports, 5 paletas, reduced motion y no-JS;
+  chaos del canvas (spoofing, replay, XSS) verificado.
+
+### RM: optimización automática y limpieza de residuos (2026-08-25)
+
+- Las tiendas administradas reparan metadatos heredados y procesan imágenes
+  referenciadas con la receta responsive existente al abrirse; el resultado se
+  persiste automáticamente en disco.
+- La portada SEO genera variantes responsive y los títulos de paginación o
+  productos repetidos reciben una diferenciación SEO sin renombrar el catálogo.
+- RM eliminó 11 assets no referenciados mediante una operación nativa segura.
+
+### Favicon configurable desde Identidad (2026-08-25)
+
+- El mismo bloque de Identidad donde se configura logo y portada ahora permite
+  subir la imagen del favicon; reutiliza la conversión ICO multirresolución y
+  el fallback para iPhone ya existente en SEO.
+
+### Veinte paletas visibles (2026-08-25)
+
+- Se agregaron 10 paletas nuevas al editor: blanco y naranja, cinco de fondo
+  oscuro con texto claro y cuatro de fondo claro para ampliar la variedad.
+- Las nuevas combinaciones mantienen contraste WCAG AA para texto, secundarios
+  y acciones.
+
+### Guardado manual sin cambios (2026-08-25)
+
+- El botón `Guardar` queda habilitado aunque el proyecto esté limpio y fuerza
+  una persistencia versionada; sólo se bloquea durante el guardado, ante errores
+  o en tiendas protegidas.
+
+### Identidad compartida en navbar y footer (2026-08-25)
+
+- El logo se configura una sola vez desde `Resumen → Identidad` y se replica en
+  navbar, navegación mobile y footer.
+- La portada SEO también se configura allí con selector, subida y preview; el
+  Constructor ya no expone un control duplicado para la marca del navbar.
+
+### Hero V2 sin fondo ancho ni sombras (2026-08-25)
+
+- Catalog Modern V2 conserva sólo la imagen frontal 9:16 y omite el fondo
+  editorial desktop en todas las tiendas.
+- Se eliminó la sombra de la tipografía y beneficios del hero.
+
+### Variantes PNG seguras para cualquier tienda (2026-08-25)
+
+- El procesador nativo ahora respeta los cinco filtros estándar de PNG antes de
+  generar variantes responsive; se evita que una imagen válida se vea como
+  ruido en el storefront.
+
+### Portada RM y compatibilidad del navegador (2026-08-25)
+
+- Se generó una portada editorial para RM Descartables, se sanitizó a JPEG
+  compatible y se publicó sin ruido de decodificación.
+- RM quedó en la versión 51; la portada usa una sola imagen frontal para evitar
+  duplicación visible en el hero responsive.
+
+### Subida contextual y media maximizada (2026-08-25)
+
+- Los selectores de imágenes del Constructor, slides, categorías y productos
+  ahora permiten subir una imagen nueva usando el mismo pipeline de Recursos.
+- Las imágenes de categorías, cards y fichas de producto llenan su marco visual
+  sin quedar reducidas por `object-fit: contain`.
+
+### Hover conectado al acento del tema (2026-08-25)
+
+- El eyebrow superior, los hovers de productos y categorías y los items de
+  contacto usan `--solara-accent`; `sale` queda reservado para descuentos y
+  warnings.
+- Beneficios, footer, decoraciones de páginas internas y focus del checkout
+  siguen la misma identidad de cada tema.
+- RM y Predeterminado fueron republicadas con el renderer actualizado.
+
+### Header mobile y export global (2026-08-25)
+
+- El header V2 ya no solapa el botón de menú con la marca en 320px.
+- Predeterminado y RM fueron republicadas con el renderer global actualizado.
+
+### Auditoría visual RM Descartables (2026-08-25)
+
+- Se eliminó el overflow horizontal del viewport mínimo de 320px y se ajustó el
+  título frosted de categorías para envolver dentro de su contenedor.
+- Se corrigieron acentos de categorías y se republicó RM con el renderer actual
+  como versión 42, conservando los 177 productos activos.
+
+### RM Descartables y heroes sin recorte (2026-08-24)
+
+- Se limpiaron residuos de plantilla de RM Descartables, se actualizaron sus
+  metadatos SEO y se republicó la tienda como versión 39, conservando los 177
+  productos activos.
+- Los títulos de todos los heroes ahora envuelven según el ancho real y el
+  contenedor puede crecer cuando la tipografía necesita más altura.
+
 ### Contrato completo de tema en Editorial V2 (2026-08-24)
 
 - Contenedor, espaciado, radios, sombras, bordes, tipografía avanzada y motion

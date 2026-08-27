@@ -1,5 +1,6 @@
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
+import { createCleanStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 60_000 : 30_000);
@@ -34,12 +35,11 @@ async function openBuilder(page: Page) {
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
     timeout: 20_000,
   });
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
-  // Predeterminado se conserva en la familia Editorial V2; los recorridos
-  // parten de la demo integrada sin mutarla durante el setup.
+  await createCleanStore(page, "Tienda builder");
   await page.getByRole("tab", { name: "Constructor" }).click();
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
+  const unlock = page.getByRole("button", { name: "Desbloquear", exact: true });
+  if (await unlock.count()) await unlock.click();
 }
 
 /** Re-entrada a la tienda sin limpiar IndexedDB (conserva lo autoguardado). */
@@ -47,7 +47,7 @@ async function reopenStore(page: Page) {
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
     timeout: 20_000,
   });
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
+  await page.locator(".dashboard-store-card").filter({ hasText: "Tienda builder" }).click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await page.getByRole("tab", { name: "Constructor" }).click();
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
@@ -57,6 +57,20 @@ async function selectHero(page: Page) {
   const hero = page.getByRole("listitem").filter({ hasText: "Hero de catálogo" });
   await hero.getByRole("button").first().click();
 }
+
+test("el logo se configura desde Identidad y no desde el Constructor", async ({ page }) => {
+  await openBuilder(page);
+  const header = page.getByRole("listitem").filter({ hasText: "Navbar de catálogo" });
+  await header.getByRole("button").first().click();
+  await expect(page.getByLabel("Marca del navbar")).toHaveCount(0);
+  await expect(page.getByLabel("Imagen del navbar")).toHaveCount(0);
+
+  await page.getByRole("tab", { name: "Resumen", exact: true }).click();
+  await expect(page.getByLabel("Logo de la tienda")).toBeVisible();
+  await expect(page.getByLabel("Favicon del sitio")).toBeVisible();
+  await expect(page.getByLabel("Imagen de portada para SEO")).toBeVisible();
+  await expect(page.locator(".identity-media-preview")).toHaveCount(3);
+});
 
 test("la sección seleccionada y sus acciones exponen el contexto accesible", async ({ page }) => {
   await openBuilder(page);
@@ -188,8 +202,8 @@ test("un valor fuera de rango muestra el error de esquema y no se aplica", async
 
 test("un preset de tema aplica los colores y el preview los refleja", async ({ page }) => {
   await openBuilder(page);
-  await page.getByRole("tab", { name: "Tema" }).click();
-  await expect(page.getByRole("heading", { name: "Tema" })).toBeVisible();
+  await page.getByRole("tab", { name: "Tema de la tienda" }).click();
+  await expect(page.getByRole("heading", { name: "Tema de la tienda" })).toBeVisible();
 
   await page.getByTestId("ui-theme-preset").filter({ hasText: "Jardín de salvia" }).click();
   const backgroundHex = page.locator(".color-grid input[type='text']").first();
@@ -222,6 +236,46 @@ test("el hero permite subir un video desde el campo de video", async ({ page }) 
       buffer: Buffer.from("esto no es un video"),
     });
   await expect(page.getByText("Sólo se aceptan videos MP4 o WebM.")).toBeVisible();
+});
+
+test("los campos de imagen del hero permiten subir una imagen nueva", async ({ page }) => {
+  await openBuilder(page);
+  await selectHero(page);
+  const upload = page.getByRole("button", { name: "Subir imagen" }).first();
+  await expect(upload).toBeVisible();
+  await upload.click();
+  await page
+    .locator('input[type="file"][accept*="image/"]')
+    .first()
+    .setInputFiles({
+      name: "no-es-imagen.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("esto no es una imagen"),
+    });
+  await expect(page.getByText("Sólo se aceptan imágenes JPEG, PNG o WebP.")).toBeVisible();
+});
+
+test("una imagen válida se procesa sin romper el inspector", async ({ page }) => {
+  test.setTimeout(60_000);
+  await openBuilder(page);
+  await selectHero(page);
+  const upload = page.getByRole("button", { name: "Subir imagen" }).first();
+  await upload.click();
+  await page
+    .locator('input[type="file"][accept*="image/"]')
+    .first()
+    .setInputFiles({
+      name: "prueba-valida.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+        "base64",
+      ),
+    });
+  await expect(page.getByRole("button", { name: "Subir imagen" }).first()).toBeEnabled({
+    timeout: 25_000,
+  });
+  await expect(page.getByTestId("ui-schema-errors")).toHaveCount(0);
 });
 
 test("subir un video real genera el poster con el primer frame exacto", async ({ page }) => {
@@ -338,7 +392,7 @@ test("el Builder mantiene el contacto de Home V2 y no ofrece páginas independie
   page,
 }) => {
   await openBuilder(page);
-  await page.getByRole("tab", { name: "Tema" }).click();
+  await page.getByRole("tab", { name: "Tema de la tienda" }).click();
   await page.getByTestId("ui-design-family-v2").click();
   await page.getByRole("tab", { name: "Constructor" }).click();
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
@@ -375,8 +429,8 @@ test("el hero V2 expone el modo sólo video (media 9:16)", async ({ page }) => {
 
 test("la familia Editorial V2 queda como única opción visible", async ({ page }) => {
   await openBuilder(page);
-  await page.getByRole("tab", { name: "Tema" }).click();
-  await expect(page.getByRole("heading", { name: "Tema" })).toBeVisible();
+  await page.getByRole("tab", { name: "Tema de la tienda" }).click();
+  await expect(page.getByRole("heading", { name: "Tema de la tienda" })).toBeVisible();
 
   await expect(page.getByTestId("ui-design-family-v1")).toHaveCount(0);
   const v2 = page.getByTestId("ui-design-family-v2");
@@ -433,8 +487,8 @@ test("un par de bajo contraste muestra la advertencia y el reset por grupo la li
   page,
 }) => {
   await openBuilder(page);
-  await page.getByRole("tab", { name: "Tema" }).click();
-  await expect(page.getByRole("heading", { name: "Tema" })).toBeVisible();
+  await page.getByRole("tab", { name: "Tema de la tienda" }).click();
+  await expect(page.getByRole("heading", { name: "Tema de la tienda" })).toBeVisible();
 
   const textHex = page.locator(".color-grid input[type='text']").nth(2);
   await textHex.fill("#fdfdfd");
@@ -547,7 +601,7 @@ test("R4-P6-B5: Restaurar tipografía revierte las fuentes a los valores de aper
   page,
 }) => {
   await openBuilder(page);
-  await page.getByRole("tab", { name: "Tema" }).click();
+  await page.getByRole("tab", { name: "Tema de la tienda" }).click();
   await page.waitForTimeout(1000);
 
   const fontSelect = page.getByTestId("ui-font-display");

@@ -1,11 +1,24 @@
 import { mkdirSync, writeFileSync } from "node:fs";
+import type { Server } from "node:http";
 import { resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { test } from "@playwright/test";
+import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(300_000);
 
-const STUDIO_URL = "http://localhost:4173";
+let server: Server;
+let studioUrl: string;
+
+test.beforeAll(async () => {
+  const running = await startStudioServer();
+  server = running.server;
+  studioUrl = running.url;
+});
+
+test.afterAll(async () => {
+  await stopStudioServer(server);
+});
 
 test("P1-L1: axe sobre el Studio (dashboard y pestañas del editor)", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -25,7 +38,7 @@ test("P1-L1: axe sobre el Studio (dashboard y pestañas del editor)", async ({ p
     }
   };
 
-  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.goto(studioUrl, { waitUntil: "load" });
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
   await page.waitForTimeout(1500);
   await check("dashboard");
@@ -39,7 +52,15 @@ test("P1-L1: axe sobre el Studio (dashboard y pestañas del editor)", async ({ p
   await page.waitForTimeout(1500);
   await check("editor-guided");
 
-  for (const tab of ["Resumen", "Catálogo", "Constructor", "Tema", "Recursos", "SEO", "Exportar"]) {
+  for (const tab of [
+    "Resumen",
+    "Catálogo",
+    "Constructor",
+    "Tema de la tienda",
+    "Recursos",
+    "SEO",
+    "Exportar",
+  ]) {
     await page.getByRole("tab", { name: tab, exact: true }).click();
     await page.waitForTimeout(1200);
     await check(`editor-${tab.toLowerCase()}`);

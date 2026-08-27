@@ -1919,21 +1919,6 @@ function storefrontBoot(): void {
     }
   }
   connectContactForms();
-  const darkToggle = document.querySelector("[data-solara-dark-toggle]");
-  if (darkToggle) {
-    darkToggle.addEventListener("click", () => {
-      const page = document.querySelector(".solara-page");
-      if (!page) return;
-      const current = page.getAttribute("data-color-mode") ?? "auto";
-      const next = current === "dark" ? "light" : "dark";
-      page.setAttribute("data-color-mode", next);
-      localStorage.setItem("solara-color-mode", next);
-    });
-    const saved = localStorage.getItem("solara-color-mode");
-    if (saved) {
-      document.querySelector(".solara-page")?.setAttribute("data-color-mode", saved);
-    }
-  }
   if (hasFeature("variants")) {
     document.querySelectorAll<HTMLElement>("[data-product]").forEach(syncVariant);
   }

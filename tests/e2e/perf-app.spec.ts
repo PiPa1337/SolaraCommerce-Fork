@@ -1,8 +1,21 @@
+import type { Server } from "node:http";
 import { test } from "@playwright/test";
+import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(180_000);
 
-const STUDIO_URL = "http://localhost:4173";
+let server: Server;
+let studioUrl: string;
+
+test.beforeAll(async () => {
+  const running = await startStudioServer();
+  server = running.server;
+  studioUrl = running.url;
+});
+
+test.afterAll(async () => {
+  await stopStudioServer(server);
+});
 
 test("P1-K1/K2: boot de la app, interacciones y memoria (baseline)", async ({ browser }) => {
   const context = await browser.newContext();
@@ -12,7 +25,7 @@ test("P1-K1/K2: boot de la app, interacciones y memoria (baseline)", async ({ br
   await cdp.send("Performance.enable");
 
   let start = Date.now();
-  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.goto(studioUrl, { waitUntil: "load" });
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
   const dashboardBoot = Date.now() - start;
   await page.waitForTimeout(2000);
@@ -32,7 +45,7 @@ test("P1-K1/K2: boot de la app, interacciones y memoria (baseline)", async ({ br
       (performance as unknown as { memory?: { usedJSHeapSize?: number } }).memory?.usedJSHeapSize,
   );
 
-  const tabs = ["Catálogo", "Constructor", "Tema", "Recursos", "SEO", "Exportar"];
+  const tabs = ["Catálogo", "Constructor", "Tema de la tienda", "Recursos", "SEO", "Exportar"];
   const tabTimes: Record<string, number> = {};
   for (const tab of tabs) {
     start = Date.now();

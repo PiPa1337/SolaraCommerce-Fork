@@ -33,6 +33,13 @@ Las secciones de páginas (`StoreSection`) guardan `moduleId`, `slot`, `settings
 y, cuando corresponde, movimiento declarado. El contenido persistido sólo
 contiene configuración; el HTML lo genera el registro de módulos.
 
+El contrato Live Canvas no se persiste dentro de `StoreProjectV2`: cada módulo
+declara `canvasBindings` en código y el exporter genera un manifest temporal del
+preview. Los atributos `data-canvas-*` sólo aparecen con `editor: enabled` y
+no forman parte de exportaciones draft o production. Los repeaters que se
+seleccionan en canvas usan el `id` estable del ítem y se actualizan con
+`section.repeater.item.update`, nunca por índice.
+
 ### Origen, plantilla y mutabilidad
 
 `origin` conserva la procedencia de una tienda sin cambiar `schemaVersion`:
@@ -50,8 +57,10 @@ contiene configuración; el HTML lo genera el registro de módulos.
 `store-modo-sur-demo` es la plantilla visible y protegida. Su `role` es
 `base-template`, su política es `pinned` y sólo puede escribirse mediante
 `templates.commitUpgrade`, con `baseVersion`, backup, auditoría y confirmación.
-Las tiendas creadas desde Studio o `store.create` usan `seed: "duplicate"`,
-`role: "store"` y `updatePolicy: "managed"`. Los proyectos antiguos con una
+Las tiendas creadas desde Studio nacen con `seed: "clean"`, `role: "store"` y
+`updatePolicy: "managed"`; el auditor conserva los placeholders como bloqueos
+hasta que se reemplacen. Un `store.create` genérico puede usar `seed:
+"duplicate"` cuando clona una fuente existente. Los proyectos antiguos con una
 semilla distinta de `clean` siguen protegidos durante la compatibilidad.
 
 Un clon regenera IDs de productos, variantes, categorías, colecciones y assets;

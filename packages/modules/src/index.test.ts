@@ -173,6 +173,9 @@ describe("official module system", () => {
     expect(v2Styles).toContain("--catalog-v2-motion-component: var(--solara-motion-normal");
     expect(v2Styles).toContain("calc(var(--solara-card-gap");
     expect(v2Styles).toContain("var(--solara-border-width");
+    expect(v2Styles).toMatch(/\.cm\.v2 \.catalog-eyebrow\s*\{[^}]*color: var\(--solara-accent\)/);
+    expect(v2Styles).toContain(".cm.v2 .contact-channel-row:hover > span:last-child");
+    expect(v2Styles).toContain("color: var(--solara-accent);");
 
     expect(STORE_BASE_STYLES).toContain("var(--solara-dark-background");
     expect(STORE_BASE_STYLES).not.toContain("--solara-background: #1d1e19");
@@ -332,6 +335,17 @@ describe("official module system", () => {
     expect(videoTag).toMatch(/\sautoplay\b/);
     expect(videoTag).toContain('src="data:video/mp4;base64,AAAA"');
     expect(hero).not.toContain('class="catalog-hero-image"');
+  });
+
+  it("V2 conserva sólo la media frontal y omite el fondo ancho del hero", () => {
+    const project = structuredClone(catalogModernV2Store);
+    const section = project.sections.find((candidate) => candidate.moduleId === "catalog-hero");
+    if (!section) throw new Error("Fixture V2 sin hero");
+    section.settings = { ...section.settings, backgroundImageId: "asset-hero" };
+    const hero = renderSections(project, [section], { pageType: "home" });
+
+    expect(hero).toContain('class="catalog-hero-media"');
+    expect(hero).not.toContain('class="catalog-hero-background"');
   });
 
   it("en modo video autoplay es obligatorio aunque el setting diga false", () => {
@@ -834,21 +848,60 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
 
     expect(headerHtml).toContain(project.identity.brandName);
     expect(styles).toMatch(
-      /\.cm\.v2 \.catalog-brand \{[\s\S]*width: 100%;[\s\S]*max-width: 100%;[\s\S]*overflow: hidden;[\s\S]*text-overflow: ellipsis;[\s\S]*white-space: nowrap;/,
+      /\.cm\.v2 \.catalog-brand \{[\s\S]*width: fit-content;[\s\S]*max-width: 100%;[\s\S]*justify-self: start;[\s\S]*overflow: hidden;[\s\S]*text-overflow: ellipsis;[\s\S]*white-space: nowrap;/,
     );
     expect(styles).toMatch(
       /\.cm\.v2 \.catalog-brand \.solara-wordmark \{[\s\S]*overflow: hidden;[\s\S]*text-overflow: ellipsis;[\s\S]*white-space: nowrap;/,
+    );
+    expect(styles).toMatch(
+      /\.cm\.v2 \.catalog-brand \.solara-logo,[\s\S]*height: 100%;[\s\S]*object-fit: contain;/,
     );
 
     const narrowStart = styles.indexOf("@media (max-width: 450px)");
     const narrowEnd = styles.indexOf("@media (max-width: 900px)", narrowStart);
     const narrowStyles = styles.slice(narrowStart, narrowEnd);
     expect(narrowStyles).toMatch(
-      /\.cm\.v2 \.catalog-brand \{[\s\S]*width: 100%;[\s\S]*max-width: 100%;[\s\S]*overflow: hidden;[\s\S]*white-space: nowrap;/,
+      /\.cm\.v2 \.catalog-brand \{[\s\S]*width: fit-content;[\s\S]*max-width: 100%;[\s\S]*justify-self: start;[\s\S]*overflow: hidden;[\s\S]*white-space: nowrap;/,
     );
     expect(narrowStyles).toContain(".cm.v2 .catalog-brand .solara-wordmark {");
     expect(narrowStyles).toContain("white-space: nowrap;");
     expect(narrowStyles).toContain("overflow: hidden;");
+  });
+
+  it("usa una única imagen de identidad en navbar y footer", () => {
+    const project = structuredClone(catalogModernStore);
+    const logo = project.assets[0];
+    if (!logo) throw new Error("Fixture sin asset para el logo");
+    project.identity.logoAssetId = logo.id;
+    const header = createModuleSection({
+      id: "section-modern-header-brand-mode-test" as StoreSection["id"],
+      slot: "header",
+      moduleId: "catalog-header",
+    });
+    const footer = createModuleSection({
+      id: "section-modern-footer-brand-mode-test" as StoreSection["id"],
+      slot: "footer",
+      moduleId: "catalog-footer",
+    });
+
+    header.settings = { ...header.settings, brandMode: "text", brandAssetId: "" };
+    const headerHtml = renderSections(project, [header], { pageType: "home" });
+    const footerHtml = renderSections(project, [footer], { pageType: "home" });
+    expect(headerHtml).toContain('class="solara-logo"');
+    expect(footerHtml).toContain('class="solara-logo"');
+    expect(headerHtml).not.toContain(
+      `<span class="solara-wordmark">${project.identity.brandName}</span>`,
+    );
+    expect(footerHtml).not.toContain(
+      `<span class="solara-wordmark">${project.identity.brandName}</span>`,
+    );
+
+    const headerDefinition = getModuleDefinition("catalog-header");
+    expect(headerDefinition?.manifest.compatibleSettings).toEqual(["cartLabel", "searchLabel"]);
+    expect(headerDefinition?.settingsFields.map((field) => field.key)).toEqual([
+      "cartLabel",
+      "searchLabel",
+    ]);
   });
 
   it("mantiene visible la media LCP y usa zoom compositado sin clip-path", () => {
@@ -860,7 +913,7 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     );
     expect(modernStyles).toContain("@keyframes solara-hero-media-zoom");
     expect(modernStyles).toContain(".catalog-hero-line-inner");
-    expect(modernStyles).toContain("text-shadow:");
+    expect(modernStyles).toContain("text-shadow: none;");
     expect(modernStyles).toContain("@media (min-width: 768px) and (max-width: 899px)");
     expect(modernStyles).toContain(".catalog-hero-benefits--band");
     expect(modernStyles).not.toContain("clip-path");
@@ -1047,11 +1100,11 @@ describe("catalog-hero V2: contrato de markup para motion (beneficios y líneas)
     expect(html).not.toContain("data-hero-benefits");
   });
 
-  it("divide el título en líneas deterministas y conserva el texto íntegro", () => {
+  it("conserva saltos explícitos y deja el wrapping responsive al navegador", () => {
     const base = heroSection(catalogModernV2Store);
     const section = {
       ...base,
-      settings: { ...base.settings, title: "Vestite con lo que te representa." },
+      settings: { ...base.settings, title: "Vestite con\nlo que te\nrepresenta." },
     };
     const html = renderSections(catalogModernV2Store, [section], { pageType: "home" });
 
@@ -1080,8 +1133,8 @@ describe("catalog-hero V2: contrato de markup para motion (beneficios y líneas)
       [{ ...base, settings: { ...base.settings, title: "Una bici verde" } }],
       { pageType: "home" },
     );
-    expect(odd).toContain(">Una bici</span></span> <span");
-    expect(odd).toContain(">verde</span></span>");
+    expect(odd.match(/data-hero-line-inner/g) ?? []).toHaveLength(1);
+    expect(odd).toContain(">Una bici verde</span></span>");
   });
 
   it("usa check como ícono de respaldo cuando el ícono no existe", () => {

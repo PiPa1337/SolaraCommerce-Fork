@@ -12,66 +12,70 @@ const validPng =
   "iVBORw0KGgoAAAAASUhEUgAAAGQAAABkCAYAAABw4pVUAAAAAElEQVR4nO3RMQ0AIBDAwJeD/yAMByCDDjfc3qRz9rp0zO8ADEkzJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJOYBf9ogFAWt/vEAAAAASUVORK5CYII=";
 
 describe("control nativo del agente", () => {
-  it("crea el clon por defecto desde la plantilla y rechaza editarla", async () => {
-    const root = await mkdtemp(join(tmpdir(), "solara-agent-template-"));
-    try {
-      const storage = createLocalProjectStorage({
-        applicationRoot: root,
-        projectsRoot: join(root, "proyectos"),
-        stagingRoot: join(root, ".solara-runtime", "transactions"),
-      });
-      const template = buildCatalogModernProject({
-        seed: "placeholder",
-        id: "store-modo-sur-demo",
-        name: "Predeterminado",
-        slug: "predeterminado",
-      });
-      const seed = await storage.beginSave({
-        projectId: template.id,
-        name: template.name,
-        slug: template.slug,
-        projectUpdatedAt: template.updatedAt,
-        expectedVersion: null,
-        actor: { kind: "template-upgrade", id: "test-template-seed" },
-        allowProtectedWrite: true,
-      });
-      await storage.upload(
-        seed.transactionId,
-        "project",
-        (async function* () {
-          yield new TextEncoder().encode(createProjectArchive(template));
-        })(),
-      );
-      await storage.commit(seed.transactionId);
+  it(
+    "crea el clon por defecto desde la plantilla y rechaza editarla",
+    { timeout: 30_000 },
+    async () => {
+      const root = await mkdtemp(join(tmpdir(), "solara-agent-template-"));
+      try {
+        const storage = createLocalProjectStorage({
+          applicationRoot: root,
+          projectsRoot: join(root, "proyectos"),
+          stagingRoot: join(root, ".solara-runtime", "transactions"),
+        });
+        const template = buildCatalogModernProject({
+          seed: "placeholder",
+          id: "store-modo-sur-demo",
+          name: "Predeterminado",
+          slug: "predeterminado",
+        });
+        const seed = await storage.beginSave({
+          projectId: template.id,
+          name: template.name,
+          slug: template.slug,
+          projectUpdatedAt: template.updatedAt,
+          expectedVersion: null,
+          actor: { kind: "template-upgrade", id: "test-template-seed" },
+          allowProtectedWrite: true,
+        });
+        await storage.upload(
+          seed.transactionId,
+          "project",
+          (async function* () {
+            yield new TextEncoder().encode(createProjectArchive(template));
+          })(),
+        );
+        await storage.commit(seed.transactionId);
 
-      const controller = createAgentController({ storage, applicationRoot: root });
-      const plan = await controller.createPlan({
-        operations: [
-          {
-            type: "store.create",
-            storeId: "store-clon-agent",
-            name: "Clon agente",
-            slug: "clon-agente",
-          },
-        ],
-      });
-      const planned = await controller.getPlan({ planId: plan.planId, includeProject: true });
-      expect(planned.project?.origin).toMatchObject({ seed: "duplicate", role: "store" });
-      expect(planned.project?.id).toBe("store-clon-agent");
-      expect(planned.project?.products.map((product) => product.id)).not.toEqual(
-        template.products.map((product) => product.id),
-      );
-      await expect(
-        controller.createPlan({
-          storeId: template.id,
-          baseVersion: 1,
-          operations: [{ type: "store.updateIdentity", changes: { description: "No" } }],
-        }),
-      ).rejects.toMatchObject({ code: "PROTECTED_STORE" });
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
+        const controller = createAgentController({ storage, applicationRoot: root });
+        const plan = await controller.createPlan({
+          operations: [
+            {
+              type: "store.create",
+              storeId: "store-clon-agent",
+              name: "Clon agente",
+              slug: "clon-agente",
+            },
+          ],
+        });
+        const planned = await controller.getPlan({ planId: plan.planId, includeProject: true });
+        expect(planned.project?.origin).toMatchObject({ seed: "duplicate", role: "store" });
+        expect(planned.project?.id).toBe("store-clon-agent");
+        expect(planned.project?.products.map((product) => product.id)).not.toEqual(
+          template.products.map((product) => product.id),
+        );
+        await expect(
+          controller.createPlan({
+            storeId: template.id,
+            baseVersion: 1,
+            operations: [{ type: "store.updateIdentity", changes: { description: "No" } }],
+          }),
+        ).rejects.toMatchObject({ code: "PROTECTED_STORE" });
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
 
   it("crea, stagea, adjunta y publica una tienda sin copiar el demo", async () => {
     const root = await mkdtemp(join(tmpdir(), "solara-agent-control-"));

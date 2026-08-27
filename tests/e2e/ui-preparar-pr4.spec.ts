@@ -367,7 +367,7 @@ test("sin pendientes, Siguiente desaparece y Revisar publicación lleva a Export
     "Resumen",
     "Catálogo",
     "Constructor",
-    "Tema",
+    "Tema de la tienda",
     "Recursos",
     "SEO",
     "Exportar",

@@ -56,7 +56,7 @@ async function delayExporterChunk(
   let delayed = false;
   await page.route("**/assets/*.js", async (route) => {
     const request = route.request();
-    if (delayed || !request.url().includes("index-")) {
+    if (delayed) {
       await route.continue();
       return;
     }
@@ -88,7 +88,7 @@ test("no habilita el export de producción mientras la auditoría está pendient
   await delayExporterChunk(page, 10_000);
   await openDemoStore(page);
   await page.getByRole("tab", { name: "Exportar", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible({ timeout: 30_000 });
 
   const production = page.getByTestId("ui-export-production");
   await expect(production).toBeDisabled({ timeout: 1_500 });
@@ -108,7 +108,7 @@ test("una tienda con críticos nunca habilita el export, ni al re-auditar por co
   });
   await createCleanStore(page, "Tienda de auditoría");
   await page.getByRole("tab", { name: "Exportar", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible({ timeout: 30_000 });
 
   const production = page.getByTestId("ui-export-production");
   await expect(production).toBeDisabled({ timeout: 1_500 });

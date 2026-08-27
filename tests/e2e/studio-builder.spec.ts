@@ -1,5 +1,6 @@
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
+import { createCleanStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 60_000 : 30_000);
@@ -32,10 +33,11 @@ async function openBuilder(page: Page) {
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.getByRole("button", { name: /Predeterminado/ }).click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await createCleanStore(page, "Tienda builder");
   await page.getByRole("tab", { name: "Constructor" }).click();
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
+  const unlock = page.getByRole("button", { name: "Desbloquear", exact: true });
+  if (await unlock.count()) await unlock.click();
 }
 
 async function confirmSectionDeletion(page: Page, section: Locator) {
@@ -63,7 +65,7 @@ test("edita el hero moderno, actualiza el preview y persiste tras recargar", asy
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.getByRole("button", { name: /Predeterminado/ }).click();
+  await page.getByRole("button", { name: /Tienda builder/ }).click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await page.getByRole("tab", { name: "Constructor" }).click();
   await page

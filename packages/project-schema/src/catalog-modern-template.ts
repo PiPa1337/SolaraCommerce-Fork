@@ -451,7 +451,11 @@ export function buildCatalogModernProject(
     );
 
     // Assets placeholder compartido (SVG gris del template, cero peso).
-    const placeholderAsset = { ...project.assets[0] };
+    const placeholderAsset = {
+      ...project.assets[0],
+      name: "Imagen de plantilla",
+      alt: "Imagen de ejemplo para reemplazar",
+    };
     const assets = [placeholderAsset];
 
     const products = Array.from({ length: 5 }, (_, index) => ({

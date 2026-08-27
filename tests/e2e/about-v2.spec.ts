@@ -17,7 +17,16 @@ test.beforeAll(async () => {
       response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not found");
       return;
     }
-    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }).end(content);
+    const extension = path.split(".").pop();
+    const contentType =
+      extension === "html"
+        ? "text/html; charset=utf-8"
+        : extension === "css"
+          ? "text/css; charset=utf-8"
+          : extension === "js"
+            ? "text/javascript; charset=utf-8"
+            : "application/octet-stream";
+    response.writeHead(200, { "Content-Type": contentType }).end(content);
   });
   await new Promise<void>((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
   const address = server.address();

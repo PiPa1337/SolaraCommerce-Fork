@@ -1,5 +1,6 @@
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
+import { createCleanStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 60_000 : 30_000);
@@ -32,8 +33,7 @@ async function openStore(page: Page) {
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await createCleanStore(page, "Tienda shell");
   await page.getByRole("tab", { name: "Constructor", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
 }

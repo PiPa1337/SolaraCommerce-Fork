@@ -75,6 +75,8 @@ export interface RenderContext<Settings> {
   category?: Category;
   collection?: Collection;
   products?: readonly Product[];
+  /** Presente sólo en el preview del editor; el export público nunca lo setea. */
+  canvas?: CanvasEditorContext;
 }
 
 interface SettingsFieldBase<Settings> {
@@ -124,9 +126,136 @@ export interface ModuleDefinition<Id extends string = string, Settings = unknown
   settingsSchema: ZodType<Settings>;
   settingsFields: readonly SettingsFieldDefinition<Settings>[];
   motionZones: readonly MotionZoneDefinition[];
+  /** Bindings declarativos de edición directa (Live Canvas). Vacío = módulo no
+      editable en canvas (la UI muestra la razón, nunca selectores CSS). */
+  canvasBindings?: readonly CanvasBinding[];
   render(context: RenderContext<Settings>): SafeHtml;
   clientAsset?: AssetId;
   styleAsset: AssetId;
+}
+
+export type CanvasCapability =
+  | "edit-text"
+  | "edit-rich-text"
+  | "edit-image"
+  | "edit-alt"
+  | "edit-link"
+  | "edit-number"
+  | "toggle-boolean"
+  | "edit-repeater-item"
+  | "open-section-settings";
+
+export type CanvasBindingSource =
+  | { kind: "section-setting"; fieldKey: string }
+  | { kind: "section-repeater-item"; fieldKey: string; itemFieldKey: string }
+  | { kind: "identity"; field: keyof StoreProjectV1["identity"] }
+  | {
+      kind: "product";
+      entityId: string;
+      field: "title" | "description" | "richDescription" | "brand" | "imageIds" | "price";
+    }
+  | {
+      kind: "category";
+      entityId: string;
+      field: "title" | "description" | "imageId";
+    }
+  | {
+      kind: "collection";
+      entityId: string;
+      field: "title" | "description" | "imageId";
+    }
+  | { kind: "asset"; entityId: string; field: "name" | "alt" }
+  | { kind: "public-copy"; group: string; field: string };
+
+/** ID estable del item de repeater que el canvas debe enviar al padre. */
+export function canvasRepeaterItemAttributes(
+  context: CanvasEditorContext,
+  bindingId: string,
+  itemId: string,
+): string {
+  return context.editorMode
+    ? ` data-canvas-edit="${canvasEditId(context, bindingId)}" data-canvas-item="${escapeAttribute(
+        itemId,
+      )}"`
+    : "";
+}
+
+export interface CanvasBinding {
+  id: string;
+  label: string;
+  kind: "text" | "rich-text" | "image" | "link" | "number" | "boolean" | "repeater-item";
+  source: CanvasBindingSource;
+  capabilities: readonly CanvasCapability[];
+  multiline?: boolean;
+  maxLength?: number;
+}
+
+export interface CanvasEditorContext {
+  /** Sólo los renderers de Preview del editor lo activan; export público nunca. */
+  editorMode: boolean;
+  sectionId: string;
+}
+
+/** ID opaco y determinista por sección+binding; no revela paths internos. */
+export function canvasEditId(context: CanvasEditorContext, bindingId: string): string {
+  return `ce-${context.sectionId}-${bindingId}`;
+}
+
+/**
+ * Builds the opaque DOM/manifest key for an entity binding. Entity IDs are
+ * already constrained by StoreProjectV2; they are included only as an opaque
+ * lookup key and never as a persisted path.
+ */
+export function canvasEntityEditId(
+  sectionId: string,
+  bindingId: string,
+  entityKind: "identity" | "product" | "category" | "collection" | "asset" | "public-copy",
+  entityId: string,
+  field: string,
+): string {
+  return canvasEditId(
+    { editorMode: true, sectionId },
+    `${bindingId}-${entityKind}-${entityId}-${field}`,
+  );
+}
+
+/** Atributos data-* que el bridge del canvas reconoce; vacío fuera del editor. */
+export function canvasTextAttributes(
+  context: CanvasEditorContext,
+  bindingId: string,
+  maxLength?: number,
+): string {
+  if (!context.editorMode) return "";
+  const max = maxLength === undefined ? "" : ` data-canvas-maxlength="${maxLength}"`;
+  return ` data-canvas-edit="${canvasEditId(context, bindingId)}"${max}`;
+}
+
+export function canvasImageAttributes(context: CanvasEditorContext, bindingId: string): string {
+  return context.editorMode ? ` data-canvas-image="${canvasEditId(context, bindingId)}"` : "";
+}
+
+export function canvasEntityAttributes(
+  context: CanvasEditorContext,
+  bindingId: string,
+  entityKind: "identity" | "product" | "category" | "collection" | "asset" | "public-copy",
+  entityId: string,
+  field: string,
+  attributeKind: "text" | "image" = "text",
+): string {
+  if (!context.editorMode) return "";
+  const editId = canvasEntityEditId(context.sectionId, bindingId, entityKind, entityId, field);
+  const marker = attributeKind === "image" ? "data-canvas-image" : "data-canvas-edit";
+  return ` ${marker}="${escapeAttribute(editId)}" data-canvas-entity-kind="${escapeAttribute(entityKind)}" data-canvas-entity-id="${escapeAttribute(entityId)}" data-canvas-field="${escapeAttribute(field)}"`;
+}
+
+export function canvasRepeaterAttributes(
+  context: CanvasEditorContext,
+  bindingId: string,
+  itemId: string,
+): string {
+  return context.editorMode
+    ? ` data-canvas-repeater="${canvasEditId(context, bindingId)}" data-canvas-item="${escapeAttribute(itemId)}"`
+    : "";
 }
 
 export function safeHtml(value: string): SafeHtml {
@@ -369,6 +498,9 @@ export function formatMoneyForProject(
   return formatPrice(amount, {
     locale: project.locale,
     currency: project.currency,
+    // El alias V1 no exponía este token en tipos antiguos, pero el renderer
+    // debe conservarlo cuando llega desde un proyecto V2.
+    // biome-ignore lint/suspicious/noExplicitAny: compatibilidad con snapshots V1 sin el campo tipado
     priceFractionDisplay: (project as any).priceFractionDisplay ?? "always",
   });
 }

@@ -175,7 +175,7 @@ describe("repositorio local", () => {
   it("crea una tienda nueva desde la plantilla sin inventar un teléfono de WhatsApp", async () => {
     const clean = await createProject({ name: "Tienda nueva" });
     expect(clean.whatsapp.phone).toBe("");
-    expect(clean.origin?.seed).toBe("duplicate");
+    expect(clean.origin?.seed).toBe("clean");
     expect(clean.origin?.role).toBe("store");
     expect(clean.products).toHaveLength(5);
     expect(clean.assets.length).toBeGreaterThan(0);
@@ -317,9 +317,10 @@ describe("repositorio local", () => {
     expect(repaired?.products[0]?.title).toBe("Nombre personalizado");
   });
 
-  it("no retira páginas editoriales ni fotos de la plantilla durante el arranque", async () => {
+  it("migra el seed placeholder reservado de Predeterminado a la demo de escala", async () => {
     const staleDemo = StoreProjectV1Schema.parse({
       ...structuredClone(buildScaleDemoProject()),
+      origin: { ...buildScaleDemoProject().origin, seed: "placeholder" as const },
       pages: structuredClone(catalogModernStore.pages),
       assets: structuredClone(catalogModernStore.assets),
     });
@@ -339,15 +340,11 @@ describe("repositorio local", () => {
     expect(removeRetiredDemoEditorialData(staleDemo).pages.map((page) => page.kind)).toEqual([
       "home",
     ]);
-    expect(await ensureScaleDemoProject()).toBe(false);
+    expect(await ensureScaleDemoProject()).toBe(true);
 
     const cleaned = await getProject(SCALE_DEMO_PROJECT_ID);
-    expect(cleaned?.pages.map((page) => page.kind)).toEqual(
-      staleDemo.pages.map((page) => page.kind),
-    );
-    expect(cleaned?.assets.map((asset) => asset.id)).toEqual(
-      expect.arrayContaining(staleDemo.assets.map((asset) => asset.id)),
-    );
+    expect(cleaned?.origin?.seed).toBe("demo");
+    expect(cleaned?.products).toHaveLength(50);
     expect(await getCachedAsset("remote-unsplash-about-hero")).toBeDefined();
   });
 
@@ -358,10 +355,9 @@ describe("repositorio local", () => {
     expect(JSON.stringify(demo)).not.toContain("Modo Sur");
     expect(demo.commerceTemplates.designFamily).toBe("catalog-modern-v2");
     expect(demo.theme.container).toBe(1760);
-    // La base es placeholder: 5 productos genericos para que el usuario
-    // reemplace sin borrar contenido demo.
-    expect(demo.products).toHaveLength(5);
-    expect(demo.products[0]?.title).toBe("Producto 1");
+    // Predeterminado es la demo protegida de escala; las tiendas nuevas usan
+    // la semilla placeholder en createProject().
+    expect(demo.products).toHaveLength(50);
   });
 
   it("retira Sale y Novedades de todos los proyectos sin perder productos", async () => {

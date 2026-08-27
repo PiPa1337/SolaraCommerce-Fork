@@ -1,7 +1,8 @@
 import type { RepeaterItemField } from "@solara/modules";
-import type { StoreProjectV1 } from "@solara/project-schema";
+import type { ImageAsset, StoreProjectV1 } from "@solara/project-schema";
 import { useId, useRef, useState } from "react";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
+import { ImageAssetPicker } from "../../components/ImageAssetPicker";
 import { Field } from "../../components/Ui";
 import { defaultRepeaterItem } from "./repeaterDefaults";
 
@@ -26,6 +27,7 @@ export function RepeaterEditor({
   error,
   project,
   onChange,
+  onAssetUpload,
 }: {
   label: string;
   value: unknown;
@@ -38,6 +40,7 @@ export function RepeaterEditor({
   error?: string;
   project: StoreProjectV1;
   onChange(next: unknown[]): void;
+  onAssetUpload?(next: unknown[], asset: ImageAsset): void;
 }) {
   const items = Array.isArray(value)
     ? value.filter((item): item is Record<string, unknown> =>
@@ -190,17 +193,21 @@ export function RepeaterEditor({
                   {...fieldErrorProps(fieldError)}
                   key={field.key}
                 >
-                  <select
+                  <ImageAssetPicker
                     value={String(current ?? "")}
-                    onChange={(event) => update(index, field.key, event.target.value)}
-                  >
-                    <option value="">Sin asset</option>
-                    {project.assets.map((asset) => (
-                      <option key={asset.id} value={asset.id}>
-                        {asset.name}
-                      </option>
-                    ))}
-                  </select>
+                    assets={project.assets}
+                    onChange={(next) => update(index, field.key, next)}
+                    {...(onAssetUpload
+                      ? {
+                          onUpload: (asset: ImageAsset) => {
+                            const next = items.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, [field.key]: asset.id } : item,
+                            );
+                            onAssetUpload(next, asset);
+                          },
+                        }
+                      : {})}
+                  />
                 </Field>
               );
             }

@@ -234,6 +234,8 @@ describe("exporter", () => {
     expect(preview).toContain("Una casa con materia y calma.");
     expect(preview).toContain('<meta name="description"');
     expect(preview).toContain('<script type="application/ld+json">');
+    expect(preview).not.toContain("data-solara-dark-toggle");
+    expect(css).not.toContain(".solara-dark-toggle");
     expect(css).not.toContain("color-scheme: light dark");
     expect(css).toContain('.solara-page[data-color-mode="auto"]');
     expect(css).toContain("color-scheme:dark");
@@ -408,7 +410,7 @@ describe("exporter", () => {
     expect(headers).toContain("/ai-context.json");
   });
 
-  it("incluye el fondo editorial del hero en los assets del export", () => {
+  it("no publica el fondo editorial ancho del hero V2", () => {
     const project = structuredClone(catalogModernV2Store);
     const hero = project.sections.find((section) => section.moduleId === "catalog-hero");
     const heroAsset = project.assets.find((asset) => asset.id === "asset-hero");
@@ -429,8 +431,7 @@ describe("exporter", () => {
     const result = exportProject(project, { mode: "production" });
     const home = String(result.files.get("index.html"));
 
-    expect(home).toContain("/assets/test-hero-background.webp");
-    expect(result.files.has("assets/test-hero-background.webp")).toBe(true);
+    expect(home).not.toContain("/assets/test-hero-background.webp");
   });
 
   it("precarga las fuentes locales activas en production", () => {

@@ -140,8 +140,9 @@ const colorLabels: Record<keyof Theme["colors"], string> = {
  * el storefront público sobreescribe fondo, superficie, texto, secundario y
  * borde con valores fijos cuando colorMode es "dark" (styles.ts), así que el
  * preview y el sitio dejarían de reflejar la paleta elegida. Por eso la opción
- * "Oscuro" del selector está deshabilitada. Las diez opciones son claras y
- * mantienen contraste suficiente para texto principal, secundario y acentos.
+ * "Oscuro" del selector está deshabilitada. Las paletas oscuras usan tokens
+ * oscuros directamente, sin reactivar el toggle de dark mode, y mantienen
+ * contraste suficiente para texto principal, secundario y acentos.
  */
 const THEME_PRESETS: Array<{
   id: string;
@@ -307,6 +308,166 @@ const THEME_PRESETS: Array<{
       border: "#c8d0e5",
       sale: "#d94a55",
       rating: "#d99a12",
+    },
+  },
+  {
+    id: "blanco-naranja",
+    name: "Blanco y naranja",
+    description: "Blanco luminoso con naranja profundo para acciones visibles.",
+    colors: {
+      background: "#fffaf5",
+      surface: "#fff0e5",
+      text: "#2a170f",
+      muted: "#755043",
+      accent: "#b84d12",
+      accentText: "#ffffff",
+      border: "#edcdb8",
+      sale: "#a52e32",
+      rating: "#9b6800",
+    },
+  },
+  {
+    id: "grafito-lima",
+    name: "Grafito lima",
+    description: "Grafito profundo con lima eléctrica y texto de alto contraste.",
+    colors: {
+      background: "#111416",
+      surface: "#1b2023",
+      text: "#f5f7f6",
+      muted: "#bac3c6",
+      accent: "#b4e34a",
+      accentText: "#182000",
+      border: "#3a464a",
+      sale: "#ff8f87",
+      rating: "#f6c84d",
+    },
+  },
+  {
+    id: "azul-noche",
+    name: "Azul noche",
+    description: "Azul profundo con celeste eléctrico para una presencia tecnológica.",
+    colors: {
+      background: "#101828",
+      surface: "#18243a",
+      text: "#f3f7ff",
+      muted: "#b8c5d9",
+      accent: "#57b8ff",
+      accentText: "#062036",
+      border: "#344766",
+      sale: "#ff918d",
+      rating: "#ffd36b",
+    },
+  },
+  {
+    id: "ciruela-nocturna",
+    name: "Ciruela nocturna",
+    description: "Ciruela oscura con rosa suave para una identidad expresiva.",
+    colors: {
+      background: "#1b1220",
+      surface: "#291a31",
+      text: "#fff5fc",
+      muted: "#d3b7ce",
+      accent: "#ed8bc3",
+      accentText: "#351326",
+      border: "#55345e",
+      sale: "#ff9e9b",
+      rating: "#f5cb65",
+    },
+  },
+  {
+    id: "cafe-espresso",
+    name: "Café espresso",
+    description: "Marrón espresso con ámbar cálido para una tienda acogedora.",
+    colors: {
+      background: "#1a120e",
+      surface: "#2a1d17",
+      text: "#fff3e8",
+      muted: "#d9bca7",
+      accent: "#f0a35b",
+      accentText: "#2b1709",
+      border: "#5a3d2c",
+      sale: "#ff958c",
+      rating: "#f4c75c",
+    },
+  },
+  {
+    id: "bosque-profundo",
+    name: "Bosque profundo",
+    description: "Verde bosque con menta clara para una estética natural y premium.",
+    colors: {
+      background: "#0d1b17",
+      surface: "#142923",
+      text: "#effaf4",
+      muted: "#b1cfc0",
+      accent: "#6fdbad",
+      accentText: "#06261c",
+      border: "#31564a",
+      sale: "#ff958d",
+      rating: "#f2c65d",
+    },
+  },
+  {
+    id: "azul-petroleo",
+    name: "Azul petróleo",
+    description: "Turquesa mineral y fondo claro para una marca fresca y confiable.",
+    colors: {
+      background: "#eef8fa",
+      surface: "#dceff1",
+      text: "#12333a",
+      muted: "#4d6970",
+      accent: "#087f86",
+      accentText: "#f5ffff",
+      border: "#c2dfe2",
+      sale: "#b73542",
+      rating: "#936600",
+    },
+  },
+  {
+    id: "arena-azul",
+    name: "Arena y azul",
+    description: "Arena cálida con azul marino para una identidad sobria y versátil.",
+    colors: {
+      background: "#fbf7ed",
+      surface: "#eee6d5",
+      text: "#232c3a",
+      muted: "#5f6874",
+      accent: "#2c4c7a",
+      accentText: "#f8fbff",
+      border: "#d9ccb2",
+      sale: "#a93638",
+      rating: "#8a6100",
+    },
+  },
+  {
+    id: "uva-crema",
+    name: "Uva crema",
+    description: "Violeta profundo sobre crema para una propuesta delicada y distintiva.",
+    colors: {
+      background: "#fbf7ff",
+      surface: "#eee5fa",
+      text: "#281a3d",
+      muted: "#635577",
+      accent: "#70459e",
+      accentText: "#ffffff",
+      border: "#d9c8ec",
+      sale: "#b23d55",
+      rating: "#956600",
+    },
+  },
+  {
+    id: "durazno-mineral",
+    name: "Durazno mineral",
+    description: "Durazno suave con ladrillo para una energía cálida y equilibrada.",
+    colors: {
+      background: "#fff6f0",
+      surface: "#f7e5da",
+      text: "#3a211b",
+      muted: "#76584d",
+      accent: "#a7472e",
+      accentText: "#fffaf7",
+      border: "#e8c9b9",
+      sale: "#a83239",
+      rating: "#956600",
     },
   },
 ];
@@ -595,6 +756,7 @@ export function ThemeEditor({
             hint="Oscuro está deshabilitado: el editor todavía no permite configurar una paleta oscura independiente. Las paletas disponibles están diseñadas para fondos claros."
           >
             <select
+              aria-label="Modo de color"
               value={project.theme.colorMode}
               onChange={(event) =>
                 updateTheme({

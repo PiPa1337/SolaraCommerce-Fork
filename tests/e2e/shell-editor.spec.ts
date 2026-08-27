@@ -1,12 +1,25 @@
+import type { Server } from "node:http";
 import { expect, test } from "@playwright/test";
+import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(180_000);
 
-const STUDIO_URL = "http://localhost:4173";
+let server: Server;
+let studioUrl: string;
+
+test.beforeAll(async () => {
+  const running = await startStudioServer();
+  server = running.server;
+  studioUrl = running.url;
+});
+
+test.afterAll(async () => {
+  await stopStudioServer(server);
+});
 
 test("P3-B2: el pane conserva scroll y foco al cambiar de pestaña y reabrir", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.goto(studioUrl, { waitUntil: "load" });
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
   await page
     .locator(".dashboard-store-card")
@@ -61,7 +74,7 @@ test("P3-B2: el pane conserva scroll y foco al cambiar de pestaña y reabrir", a
 
 test("P3-B3: Ctrl+Z deshace un cambio y Ctrl+S guarda en modo navegador", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.goto(studioUrl, { waitUntil: "load" });
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
   await page
     .locator(".dashboard-store-card")
@@ -95,7 +108,7 @@ test("P3-B3: Ctrl+Z deshace un cambio y Ctrl+S guarda en modo navegador", async 
 
 test("P3-B4: el modo foco oculta el panel y Esc lo restaura", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.goto(studioUrl, { waitUntil: "load" });
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
   await page
     .locator(".dashboard-store-card")
@@ -128,7 +141,7 @@ test("P3-B4: el modo foco oculta el panel y Esc lo restaura", async ({ page }) =
 
 test("P3-B6: Ctrl+Shift+F alterna el modo foco desde el teclado", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.goto(studioUrl, { waitUntil: "load" });
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
   await page
     .locator(".dashboard-store-card")
@@ -153,7 +166,7 @@ test("P3-B6: Ctrl+Shift+F alterna el modo foco desde el teclado", async ({ page 
 
 test("R3-P3-B5: Ctrl+Shift+Z rehace el cambio deshecho por teclado", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.goto(studioUrl, { waitUntil: "load" });
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
   await page
     .locator(".dashboard-store-card")
@@ -184,7 +197,7 @@ test("R3-P3-B5: Ctrl+Shift+Z rehace el cambio deshecho por teclado", async ({ pa
 
 test("R4-P3-B5: el panel cerrado se conserva al recargar la tienda", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.goto(studioUrl, { waitUntil: "load" });
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
   await page
     .locator(".dashboard-store-card")

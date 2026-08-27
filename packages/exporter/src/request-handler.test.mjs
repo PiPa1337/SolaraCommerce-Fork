@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
@@ -418,6 +418,74 @@ describe("handler: abrir el sitio público", () => {
         }),
       );
       expect(status.status).toBe(200);
+    } finally {
+      await handler?.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("handler: estado del QA perpetuo", () => {
+  it("devuelve conteos reales de ciclos y ciclo activo", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-handler-qa-"));
+    let handler;
+    try {
+      const cyclesRoot = join(root, ".solara-runtime", "agent", "qa-cycles");
+      await mkdir(cyclesRoot, { recursive: true });
+      await writeFile(
+        join(cyclesRoot, "qa-cycle-done.json"),
+        JSON.stringify({
+          cycleId: "qa-cycle-done",
+          phase: "done",
+          backlogItem: "P1",
+          attempts: 1,
+          startedAt: "2026-08-25T00:00:00.000Z",
+          updatedAt: "2026-08-25T00:01:00.000Z",
+        }),
+        "utf8",
+      );
+      await writeFile(
+        join(cyclesRoot, "qa-cycle-active.json"),
+        JSON.stringify({
+          cycleId: "qa-cycle-active",
+          phase: "gates",
+          backlogItem: "P2",
+          attempts: 2,
+          startedAt: "2026-08-25T00:02:00.000Z",
+          updatedAt: "2026-08-25T00:03:00.000Z",
+        }),
+        "utf8",
+      );
+      await writeFile(
+        join(cyclesRoot, "qa-cycle-blocked.json"),
+        JSON.stringify({
+          cycleId: "qa-cycle-blocked",
+          phase: "blocked",
+          backlogItem: "P3",
+          attempts: 3,
+          error: "x",
+          startedAt: "2026-08-25T00:04:00.000Z",
+          updatedAt: "2026-08-25T00:05:00.000Z",
+        }),
+        "utf8",
+      );
+      const handler = createSolaraRequestHandler({
+        staticRoot: root,
+        applicationRoot: root,
+        shutdownToken: "token-test",
+        onShutdown: () => {},
+      });
+      const response = await handler.handle(
+        request("GET", "/__solara/storage/qa-status", {
+          cookie: `${shutdownCookieName}=token-test`,
+        }),
+      );
+      expect(response.status).toBe(200);
+      const body = JSON.parse(Buffer.from(response.body).toString("utf8"));
+      expect(body.ok).toBe(true);
+      expect(body.completedCount).toBe(1);
+      expect(body.blockedCount).toBe(1);
+      expect(body.activeCycle).toMatchObject({ backlogItem: "P2", phase: "gates", attempts: 2 });
     } finally {
       await handler?.close();
       await rm(root, { recursive: true, force: true });

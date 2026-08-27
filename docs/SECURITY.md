@@ -31,3 +31,16 @@ exportar se advierte que publica contacto, políticas, SKUs, precios y productos
 activos. Los medios HTTP/HTTPS externos se mantienen por compatibilidad, pero
 cada host aparece como advertencia y puede recibir solicitudes de visitantes.
 
+## Live Canvas y procesos auxiliares
+
+Los atributos `data-canvas-*` sólo se generan en el HTML temporal del Preview;
+el export público no los contiene. El bridge exige que el mensaje provenga del
+iframe actual, coincida con la sesión, use un nonce pendiente y apunte a una
+entrada del manifest; los repeaters además requieren `itemFieldKey`. El texto
+confirmado pasa por `applyMutation` y el sanitizer existente, nunca se extrae
+del DOM para persistirlo.
+
+Los runners de QA y el canal del agente usan `spawn` con binarios/argumentos
+construidos de listas allowlisted, sin `shell: true`. `--read-only` sólo recibe
+scopes de lectura/auditoría y el handler rechaza mutaciones con
+`PERMISSION_DENIED`.

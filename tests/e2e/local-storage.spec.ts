@@ -4,6 +4,51 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import { createProjectArchive, exportProject } from "@solara/exporter";
+import { buildCatalogModernProject } from "@solara/project-schema/catalog-modern-template";
+// @ts-expect-error módulo ESM compartido sin declaraciones públicas.
+import { createLocalProjectStorage } from "../../packages/exporter/scripts/local-project-storage.mjs";
+
+async function* bytesStream(bytes: Uint8Array): AsyncIterable<Uint8Array> {
+  yield bytes;
+}
+
+function serializeSiteFiles(files: ReadonlyMap<string, string | Uint8Array>): string {
+  return JSON.stringify(
+    [...files.entries()].map(([path, value]) =>
+      typeof value === "string"
+        ? { path, encoding: "utf8", data: value }
+        : { path, encoding: "base64", data: Buffer.from(value).toString("base64") },
+    ),
+  );
+}
+
+async function seedManagedStore(applicationRoot: string): Promise<void> {
+  const project = buildCatalogModernProject({
+    seed: "clean",
+    id: "store-managed-save-test",
+    name: "Tienda de guardado",
+    slug: "tienda-de-guardado",
+    baseUrl: "https://tienda-de-guardado.example",
+  });
+  const storage = createLocalProjectStorage({ applicationRoot });
+  const transaction = await storage.beginSave({
+    projectId: project.id,
+    name: project.name,
+    slug: project.slug,
+    projectUpdatedAt: project.updatedAt,
+    expectedVersion: null,
+  });
+  const archive = new TextEncoder().encode(createProjectArchive(project));
+  const exported = exportProject(project, { mode: "draft" });
+  await storage.upload(transaction.transactionId, "project", bytesStream(archive));
+  await storage.upload(
+    transaction.transactionId,
+    "site",
+    bytesStream(new TextEncoder().encode(serializeSiteFiles(exported.files))),
+  );
+  await storage.commit(transaction.transactionId);
+}
 
 async function waitForServer(url: string): Promise<void> {
   await expect
@@ -38,6 +83,7 @@ test("el lanzador persiste el proyecto y el sitio fuera de IndexedDB", async ({ 
   );
 
   try {
+    await seedManagedStore(applicationRoot);
     await waitForServer(url);
     await page.goto(url);
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
@@ -46,27 +92,44 @@ test("el lanzador persiste el proyecto y el sitio fuera de IndexedDB", async ({ 
       .toBe(true);
 
     await page
-      .locator('article:has([data-store-card-id="store-modo-sur-demo"])')
+      .locator('article:has([data-store-card-id="store-managed-save-test"])')
       .getByRole("button", { name: "Abrir esta tienda" })
       .click();
     await page.getByRole("tab", { name: "Resumen" }).click();
+    const beforeSave = await page.evaluate(async () => {
+      const response = await fetch("/__solara/storage/projects", { credentials: "same-origin" });
+      return response.json();
+    });
+    const baseVersion = beforeSave.projects[0]?.version ?? 0;
+    await expect(page.locator("[data-studio-save]")).toBeEnabled();
+    await page.locator("[data-studio-save]").click();
+    await expect(page.locator(".save-indicator")).toContainText(
+      /Guardado|Sitio anterior conservado/,
+    );
+    const unchangedListing = await page.evaluate(async () => {
+      const response = await fetch("/__solara/storage/projects", { credentials: "same-origin" });
+      return response.json();
+    });
+    expect(unchangedListing.projects[0].version).toBe(baseVersion + 1);
     const name = page.getByLabel("Nombre de la tienda");
     await name.fill("Predeterminado editado");
     await page.locator("[data-studio-save]").click();
-    await expect(page.locator(".save-indicator")).toContainText("Guardado");
+    await expect(page.locator(".save-indicator")).toContainText(
+      /Guardado|Sitio anterior conservado/,
+    );
 
     const manifests = await page.evaluate(async () => {
       const response = await fetch("/__solara/storage/projects", { credentials: "same-origin" });
       return response.json();
     });
     expect(manifests.projects).toHaveLength(1);
-    expect(manifests.projects[0].version).toBe(2);
+    expect(manifests.projects[0].version).toBe(baseVersion + 2);
 
     const folder = manifests.projects[0].folder as string;
     const manifest = JSON.parse(
       readFileSync(join(applicationRoot, "proyectos", folder, "manifest.json"), "utf8"),
     ) as { current: { version: number }; lastValidSite?: { directoryPath: string } };
-    expect(manifest.current.version).toBe(2);
+    expect(manifest.current.version).toBe(baseVersion + 2);
     expect(manifest.lastValidSite?.directoryPath).toBeTruthy();
     expect(
       existsSync(join(applicationRoot, manifest.lastValidSite?.directoryPath ?? "", "index.html")),
@@ -74,21 +137,23 @@ test("el lanzador persiste el proyecto y el sitio fuera de IndexedDB", async ({ 
 
     await name.fill("Predeterminado con atajo");
     await page.keyboard.press("Control+s");
-    await expect(page.locator(".save-indicator--saved")).toContainText("Guardado");
+    await expect(page.locator(".save-indicator")).toContainText(
+      /Guardado|Sitio anterior conservado/,
+    );
     const shortcutListing = await page.evaluate(async () => {
       const response = await fetch("/__solara/storage/projects", { credentials: "same-origin" });
       return response.json();
     });
-    expect(shortcutListing.projects[0].version).toBe(3);
+    expect(shortcutListing.projects[0].version).toBe(baseVersion + 3);
 
     await page.getByRole("button", { name: "Volver a tiendas" }).click();
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-    await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
+    await page.locator('[data-store-card-id="store-managed-save-test"]').click();
     const popupPromise = page.waitForEvent("popup");
     await page.getByRole("button", { name: "Abrir sitio público" }).click();
     const popup = await popupPromise;
     await popup.waitForLoadState("domcontentloaded");
-    await expect(popup).toHaveTitle(/Predeterminado/i);
+    await expect(popup).toHaveTitle(/Tienda de guardado/i);
     await popup.close();
   } finally {
     if (serverProcess.exitCode === null) serverProcess.kill();

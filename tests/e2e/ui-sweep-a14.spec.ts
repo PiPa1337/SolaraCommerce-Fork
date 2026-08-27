@@ -207,7 +207,7 @@ test("A14.1 tabs — el click cambia el panel, aria-selected, roving tabindex y 
     "Resumen",
     "Catálogo",
     "Constructor",
-    "Tema",
+    "Tema de la tienda",
     "Recursos",
     "SEO",
     "Exportar",

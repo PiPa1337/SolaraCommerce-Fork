@@ -1,4 +1,5 @@
 import { execSync, spawn } from "node:child_process";
+import { resolve } from "node:path";
 
 // test-affected.mjs — ejecuta solo tests de paquetes afectados por git diff
 // Uso: node scripts/test-affected.mjs [--base=origin/main] [--all]
@@ -93,7 +94,15 @@ if (!pkgs) {
   for (const p of pkgs) cmdArgs.push("--filter", p);
   cmdArgs.push("test");
 }
-const child = spawn(cmd, cmdArgs, { shell: true, stdio: "inherit" });
+const executable = process.platform === "win32" && cmd === "corepack" ? process.execPath : cmd;
+const finalArgs =
+  process.platform === "win32" && cmd === "corepack"
+    ? [
+        resolve(process.execPath, "..", "node_modules", "corepack", "dist", "corepack.js"),
+        ...cmdArgs,
+      ]
+    : cmdArgs;
+const child = spawn(executable, finalArgs, { stdio: "inherit" });
 child.on("close", (code) => process.exit(code ?? 1));
 child.on("error", (err) => {
   console.error(err);

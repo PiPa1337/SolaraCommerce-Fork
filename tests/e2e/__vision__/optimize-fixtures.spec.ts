@@ -3,7 +3,7 @@
  * Genera variantes por ancho y reemplaza los originales. Correr una sola vez:
  *   npx playwright test tests/e2e/__vision__/optimize-fixtures.spec.ts
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { test } from "@playwright/test";
 
 const WIDTHS = [320, 640, 1024, 1536];
@@ -19,6 +19,9 @@ const FILES = [
 
 test("optimizar fixtures a webp responsive", async ({ page }) => {
   test.setTimeout(120000);
+  if (!existsSync(`apps/studio/public/fixtures/${FILES[0]}.png`)) {
+    test.skip(true, "Las fuentes PNG históricas fueron reemplazadas por fixtures WebP.");
+  }
   mkdirSync("apps/studio/public/fixtures/optimized", { recursive: true });
   for (const name of FILES) {
     const png = readFileSync(`apps/studio/public/fixtures/${name}.png`);

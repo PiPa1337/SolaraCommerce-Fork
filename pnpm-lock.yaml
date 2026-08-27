@@ -130,6 +130,9 @@ importers:
 
   packages/core:
     dependencies:
+      '@solara/modules':
+        specifier: workspace:*
+        version: link:../modules
       '@solara/project-schema':
         specifier: workspace:*
         version: link:../project-schema

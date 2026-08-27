@@ -1373,6 +1373,14 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
           existingSlugs={project.products
             .filter((product) => product.id !== editor.product.id)
             .map((product) => product.slug)}
+          onAssetUpload={(asset) => {
+            if (project.assets.some((current) => current.id === asset.id)) return;
+            onChange({
+              ...project,
+              assets: [...project.assets, asset],
+              updatedAt: now(),
+            });
+          }}
           onCancel={() => setEditor(undefined)}
           onSave={(product, activate = false) => {
             const savedProduct = activate ? { ...product, status: "active" as const } : product;

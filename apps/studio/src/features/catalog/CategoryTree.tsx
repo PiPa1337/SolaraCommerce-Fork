@@ -199,6 +199,7 @@ export function CategoryTree({
               slug: slug as Category["slug"],
               title,
               description: taxonomyDraft.description.trim(),
+              status: "active",
               ...(taxonomyDraft.parentId
                 ? { parentId: taxonomyDraft.parentId as Category["id"] }
                 : {}),
@@ -226,6 +227,7 @@ export function CategoryTree({
             slug: slug as Collection["slug"],
             title,
             description: taxonomyDraft.description.trim(),
+            status: "active",
             productIds: [],
           },
           at: now(),

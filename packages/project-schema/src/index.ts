@@ -497,6 +497,10 @@ export const CategorySchema = z.object({
   slug: SlugSchema,
   title: z.string().min(1),
   description: z.string(),
+  // "hidden" retira la categoría de la navegación automática y del listado
+  // público sin borrar su historial de productos (retrocompatible: default
+  // "active", sin bump de schemaVersion).
+  status: z.enum(["active", "hidden"]).default("active"),
   // Texto editorial extendido para SEO (200-300 palabras recomendadas).
   seoIntro: z.string().max(4000).optional(),
   imageId: AssetIdSchema.optional(),
@@ -509,6 +513,7 @@ export const CollectionSchema = z.object({
   slug: SlugSchema,
   title: z.string().min(1),
   description: z.string(),
+  status: z.enum(["active", "hidden"]).default("active"),
   imageId: AssetIdSchema.optional(),
   productIds: z.array(ProductIdSchema),
 });

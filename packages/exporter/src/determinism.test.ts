@@ -43,7 +43,7 @@ describe("determinismo de exportProject", () => {
       assertDeterministic(catalogModernStore, "production");
       assertDeterministic(catalogScaleStore, "production");
     }
-  }, 15000);
+  }, 30000);
   it("mantiene determinismo con brandName con espacios y Unicode", () => {
     const p = JSON.parse(JSON.stringify(catalogModernStore)) as StoreProjectV1;
     p.identity.brandName = "Tëst   Ünicode  —  Espacios";

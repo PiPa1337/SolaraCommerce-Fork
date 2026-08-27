@@ -19,6 +19,14 @@ import {
 } from "@solara/project-schema";
 import { referenceStore } from "@solara/project-schema/fixture";
 
+export {
+  type AppliedMutation,
+  applyMutation,
+  createMutationRegistry,
+  type ProjectMutation,
+  type ProjectMutationActor,
+} from "./project-mutations.js";
+
 type ProductStatus = Product["status"];
 type ProductPatch = Partial<
   Pick<
@@ -37,8 +45,12 @@ type ProductPatch = Partial<
   >
 >;
 
-type CategoryPatch = Partial<Pick<Category, "slug" | "title" | "description" | "imageId">>;
-type CollectionPatch = Partial<Pick<Collection, "slug" | "title" | "description" | "imageId">>;
+type CategoryPatch = Partial<
+  Pick<Category, "slug" | "title" | "description" | "imageId" | "status">
+>;
+type CollectionPatch = Partial<
+  Pick<Collection, "slug" | "title" | "description" | "imageId" | "status">
+>;
 
 interface CommandMetadata {
   at: string;

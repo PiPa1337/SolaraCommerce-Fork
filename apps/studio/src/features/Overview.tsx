@@ -15,13 +15,15 @@ import {
   Trash,
   WhatsappLogo,
 } from "@phosphor-icons/react";
-import type { StoreProjectV1 } from "@solara/project-schema";
+import type { ImageAsset, StoreProjectV1 } from "@solara/project-schema";
 import { catalogModernPhoneValue, SlugSchema } from "@solara/project-schema";
 import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { ImageAssetPicker } from "../components/ImageAssetPicker";
 import { StatusBadge, Toggle } from "../components/primitives";
 import { useToast } from "../components/Toast";
 import { Button, Field, IconButton, SectionHeader } from "../components/Ui";
+import { createFaviconAsset, createSiteCoverAsset } from "../lib/seoMedia";
 
 const PHONE_PATTERN = /^\d{8,15}$/;
 const CATALOG_LABEL_MAX_LENGTH = 40;
@@ -593,6 +595,75 @@ export function Overview({
     markUnsaved();
     onChange({ ...project, ...patch, updatedAt: new Date().toISOString() });
   };
+  const setIdentityImage = (target: "logo" | "cover" | "favicon", assetId: string) => {
+    const selectedAssetId = project.assets.find((asset) => asset.id === assetId)?.id;
+    if (target === "logo") {
+      commit({
+        identity: {
+          ...project.identity,
+          logoAssetId: selectedAssetId,
+        },
+      });
+      return;
+    }
+    if (target === "favicon") {
+      commit({
+        seo: {
+          ...project.seo,
+          faviconAssetId: selectedAssetId,
+        },
+      });
+      return;
+    }
+    commit({
+      seo: {
+        ...project.seo,
+        socialImageId: selectedAssetId,
+      },
+    });
+  };
+  const uploadIdentityImage = (target: "logo" | "cover" | "favicon", asset: ImageAsset) => {
+    const assets = project.assets.some((current) => current.id === asset.id)
+      ? project.assets
+      : [...project.assets, asset];
+    if (target === "logo") {
+      commit({
+        assets,
+        identity: { ...project.identity, logoAssetId: asset.id },
+      });
+      return;
+    }
+    if (target === "favicon") {
+      commit({
+        assets,
+        seo: { ...project.seo, faviconAssetId: asset.id },
+      });
+      return;
+    }
+    commit({
+      assets,
+      seo: { ...project.seo, socialImageId: asset.id },
+    });
+  };
+  const identityImagePreview = (assetId: string | undefined, label: string) => {
+    const asset = project.assets.find((current) => current.id === assetId);
+    return (
+      <div className="identity-media-preview">
+        {asset ? (
+          <img
+            src={
+              asset.mimeType === "image/x-icon"
+                ? (asset.fallbackSource ?? asset.source)
+                : asset.source
+            }
+            alt={asset.alt || label}
+          />
+        ) : (
+          <span>No hay una imagen configurada.</span>
+        )}
+      </div>
+    );
+  };
   const updateNavigation = (patch: Partial<StoreProjectV1["navigation"]>) =>
     commit({ navigation: { ...project.navigation, ...patch } });
   const updatePublicCopy = (group: string, key: string, value: string) => {
@@ -761,6 +832,56 @@ export function Overview({
                 }
               />
             </Field>
+            <Field
+              label="Logo de la tienda"
+              hint="Se usa la misma imagen en el navbar y en el footer."
+              className="field--wide"
+            >
+              <div className="identity-media-control">
+                <ImageAssetPicker
+                  value={project.identity.logoAssetId ?? ""}
+                  assets={project.assets}
+                  ariaLabel="Logo de la tienda"
+                  onChange={(next) => setIdentityImage("logo", next)}
+                  onUpload={(asset) => uploadIdentityImage("logo", asset)}
+                />
+                {identityImagePreview(project.identity.logoAssetId, "Logo de la tienda")}
+              </div>
+            </Field>
+            <Field
+              label="Favicon del sitio"
+              hint="La imagen se convierte automáticamente en ICO multirresolución y fallback para iPhone."
+              className="field--wide"
+            >
+              <div className="identity-media-control">
+                <ImageAssetPicker
+                  value={project.seo.faviconAssetId ?? ""}
+                  assets={project.assets}
+                  ariaLabel="Favicon del sitio"
+                  onChange={(next) => setIdentityImage("favicon", next)}
+                  onUpload={(asset) => uploadIdentityImage("favicon", asset)}
+                  processFile={createFaviconAsset}
+                />
+                {identityImagePreview(project.seo.faviconAssetId, "Favicon del sitio")}
+              </div>
+            </Field>
+            <Field
+              label="Imagen de portada para SEO"
+              hint="Se usa como imagen social al compartir la portada del sitio."
+              className="field--wide"
+            >
+              <div className="identity-media-control">
+                <ImageAssetPicker
+                  value={project.seo.socialImageId ?? ""}
+                  assets={project.assets}
+                  ariaLabel="Imagen de portada para SEO"
+                  onChange={(next) => setIdentityImage("cover", next)}
+                  onUpload={(asset) => uploadIdentityImage("cover", asset)}
+                  processFile={createSiteCoverAsset}
+                />
+                {identityImagePreview(project.seo.socialImageId, "Imagen de portada para SEO")}
+              </div>
+            </Field>
             <Field label="Email" {...(emailError ? { error: emailError } : {})}>
               <input
                 type="email"
@@ -859,6 +980,7 @@ export function Overview({
             >
               <input
                 inputMode="tel"
+                aria-label="Número internacional"
                 value={phoneDisplay}
                 onChange={(event) =>
                   updateField(
@@ -872,6 +994,7 @@ export function Overview({
             </Field>
             <Field label="Saludo del pedido" className="field--wide">
               <input
+                aria-label="Saludo del pedido"
                 value={project.whatsapp.greeting}
                 onChange={(event) =>
                   commit({ whatsapp: { ...project.whatsapp, greeting: event.target.value } })
@@ -1302,6 +1425,7 @@ export function Overview({
                     {...(pageTitleError ? { error: pageTitleError } : {})}
                   >
                     <input
+                      aria-label="Título visible"
                       value={pageTitleDisplay}
                       onChange={(event) =>
                         updateField(

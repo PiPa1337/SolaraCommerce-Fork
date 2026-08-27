@@ -8,7 +8,7 @@ import { spawn } from "node:child_process";
 // Salida: tabla spec -> fallos/N + JSON en test-results/stability/ (no versionado).
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 const runs = Number(process.env.STABILITY_RUNS ?? 5);
 if (!Number.isInteger(runs) || runs < 1 || runs > 20) {
@@ -51,11 +51,16 @@ for (let run = 1; run <= runs; run += 1) {
   console.log(`\n[stability] ▶ corrida ${run}/${runs}`);
   let out = "";
   const code = await new Promise((resolve) => {
-    const child = spawn(
-      "corepack",
-      ["pnpm", "exec", "playwright", "test", ...specs, "--workers=8"],
-      { shell: true },
-    );
+    const command = process.platform === "win32" ? process.execPath : "corepack";
+    const args = ["pnpm", "exec", "playwright", "test", ...specs, "--workers=8"];
+    const finalArgs =
+      process.platform === "win32"
+        ? [
+            join(dirname(process.execPath), "node_modules", "corepack", "dist", "corepack.js"),
+            ...args,
+          ]
+        : args;
+    const child = spawn(command, finalArgs, {});
     child.stdout.on("data", (chunk) => {
       const text = chunk.toString();
       out += text;

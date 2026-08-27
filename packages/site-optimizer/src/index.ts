@@ -161,6 +161,15 @@ function buildRoutes(project: StoreProjectV1): OptimizationRoute[] {
   const contact = pageByKind.get("contact");
   const isV2 = project.commerceTemplates.designFamily === "catalog-modern-v2";
   const pageSize = project.commerceTemplates.category.productsPerPage;
+  const activeProductTitleCounts = new Map<string, number>();
+  for (const product of project.products) {
+    if (product.status === "active") {
+      activeProductTitleCounts.set(
+        product.title,
+        (activeProductTitleCounts.get(product.title) ?? 0) + 1,
+      );
+    }
+  }
   const routes: OptimizationRoute[] = [
     route(
       "/",
@@ -287,7 +296,7 @@ function buildRoutes(project: StoreProjectV1): OptimizationRoute[] {
           "category",
           true,
           path,
-          `${category.title} | ${project.identity.brandName}`,
+          `${category.title}${page > 1 ? ` — Página ${page}` : ""} | ${project.identity.brandName}`,
           category.description,
           page === 1,
         ),
@@ -309,7 +318,7 @@ function buildRoutes(project: StoreProjectV1): OptimizationRoute[] {
           "collection",
           true,
           path,
-          `${collection.title} | ${project.identity.brandName}`,
+          `${collection.title}${page > 1 ? ` — Página ${page}` : ""} | ${project.identity.brandName}`,
           collection.description,
           page === 1,
         ),
@@ -327,7 +336,7 @@ function buildRoutes(project: StoreProjectV1): OptimizationRoute[] {
           "product",
           true,
           path,
-          `${product.title} | ${project.identity.brandName}`,
+          `${product.title}${(activeProductTitleCounts.get(product.title) ?? 0) > 1 ? ` — ${product.slug}` : ""} | ${project.identity.brandName}`,
           product.description,
           true,
         ),

@@ -1,14 +1,27 @@
+import type { Server } from "node:http";
 import { expect, test } from "@playwright/test";
+import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(180_000);
 
-const STUDIO_URL = "http://localhost:4173";
+let server: Server;
+let studioUrl: string;
+
+test.beforeAll(async () => {
+  const running = await startStudioServer();
+  server = running.server;
+  studioUrl = running.url;
+});
+
+test.afterAll(async () => {
+  await stopStudioServer(server);
+});
 
 test("P1-L2: el foco del teclado es visible en tabs, pane y botones del editor", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.goto(studioUrl, { waitUntil: "load" });
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
   await page
     .locator(".dashboard-store-card")

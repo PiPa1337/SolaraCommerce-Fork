@@ -1,4 +1,5 @@
 import { execSync, spawn } from "node:child_process";
+import { dirname, join } from "node:path";
 
 // Fallback sandbox: si C:\Users\PiPa no es legible, esbuild falla con Access denied.
 // Se crea un drive X: via subst para que el bundling no tenga que leer el directorio denegado.
@@ -44,13 +45,28 @@ const slowTasks = [
 ];
 const tasks = isFull ? [...fastTasks, ...slowTasks] : fastTasks;
 
+function spawnTask(command, args, options) {
+  if (process.platform === "win32" && command === "corepack") {
+    const corepack = join(
+      dirname(process.execPath),
+      "node_modules",
+      "corepack",
+      "dist",
+      "corepack.js",
+    );
+    return spawn(process.execPath, [corepack, ...args], options);
+  }
+  return spawn(command, args, options);
+}
+
 function runTask(task) {
   return new Promise((resolve) => {
     const start = Date.now();
     console.log(`[34m[quick][0m \u25B6 ${task.name}`);
     const isRuntime = task.name === "check:runtime-serialization" && SUBST_DRIVE;
     const cwd = isRuntime ? `${SUBST_DRIVE}\\` : undefined;
-    const child = spawn(task.cmd, { shell: true, stdio: "inherit", cwd });
+    const [command, ...args] = task.cmd.split(" ");
+    const child = spawnTask(command, args, { stdio: "inherit", cwd });
     child.on("close", (code) => {
       const elapsed = ((Date.now() - start) / 1000).toFixed(1);
       if (code === 0) {

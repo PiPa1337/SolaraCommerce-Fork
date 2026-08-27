@@ -178,8 +178,7 @@ Los links de navegación apuntan a `#contact-form` y `/#about-hero`.
 | Archivo | Condición | Contenido |
 | --- | --- | --- |
 | `assets/storefront.css` | Siempre | CSS minificado combinado (base + módulos + runtime) |
-| `assets/storefront.js` | Siempre | Runtime serializado inline (production) o bundle externo (draft) |
-| `assets/storefront.js.map` | Solo draft | Source map para debugging |
+| `assets/storefront.<fingerprint>.js` | Siempre | Runtime serializado inline (production) o bundle externo (draft); el fingerprint es reproducible |
 | `sitemap.xml` | production | URLs indexables (sin search/cart/checkout/not-found) |
 | `image-sitemap.xml` | production | URLs con imagen por producto/categoría |
 | `video-sitemap.xml` | Solo si hay video hero | URLs con video schema |

@@ -113,7 +113,7 @@ export function ManagedPersistenceControls({
   }, [dirty, onDirtyChange]);
 
   const save = useCallback(async () => {
-    if (blocked || !dirty || saveInFlightRef.current) return;
+    if (blocked || saveInFlightRef.current) return;
     saveInFlightRef.current = true;
     setState("saving");
     onError("");
@@ -141,7 +141,7 @@ export function ManagedPersistenceControls({
     } finally {
       saveInFlightRef.current = false;
     }
-  }, [blocked, dirty, draftQueue, onConflict, onError, onSaved, project]);
+  }, [blocked, draftQueue, onConflict, onError, onSaved, project]);
 
   useEffect(() => {
     saveRef.current = save;
@@ -167,7 +167,7 @@ export function ManagedPersistenceControls({
         type="button"
         className="save-button"
         data-studio-save
-        disabled={!dirty || state === "saving" || blocked}
+        disabled={state === "saving" || blocked}
         aria-busy={state === "saving"}
         onClick={() => void save()}
       >

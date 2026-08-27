@@ -75,7 +75,7 @@ const tabActions: Array<{ tab: string; heading: string; action: string }> = [
   { tab: "Constructor", heading: "Constructor", action: "Agregar sección" },
   { tab: "Recursos", heading: "Recursos", action: "Cargar imágenes" },
   { tab: "SEO", heading: "SEO y Google", action: "Descargar informe" },
-  { tab: "Tema", heading: "Tema", action: "Modo" },
+  { tab: "Tema de la tienda", heading: "Tema de la tienda", action: "Modo" },
   { tab: "Exportar", heading: "Exportar", action: "Exportar borrador" },
 ];
 
