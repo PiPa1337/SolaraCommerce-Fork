@@ -41,6 +41,9 @@ export interface LocalSaveMetadata {
   slug: string;
   projectUpdatedAt: string;
   expectedVersion: number | null;
+  /** Canal autorizado de plantilla: sólo el bootstrap/migración de la base protegida lo envía. */
+  actor?: { kind: "template-upgrade" };
+  allowProtectedWrite?: boolean;
 }
 
 export interface LocalSaveReceipt {

@@ -193,8 +193,8 @@ function StudioShell() {
 
   const persistToDisk = useCallback(
     async (project: StoreProjectV1, expectedVersion: number | null) => {
-      const { persistProjectToDisk } = await loadLocalProjectRepository();
-      const result = await persistProjectToDisk(project, expectedVersion);
+      const { persistProjectToDisk: persist } = await loadLocalProjectRepository();
+      const result = await persist(project, expectedVersion);
       await clearRecoveryDraft(project.id);
       if (result.siteError) {
         setNotice(`Proyecto guardado · sitio público pendiente: ${result.siteError}`);
@@ -302,9 +302,12 @@ function StudioShell() {
         const browserResult = await refreshBrowser();
         if (detectedStorage.managed && detectedStorage.writable) {
           for (const stored of browserResult.projects) {
+            if (isBaseTemplate(stored.project)) continue;
             await markProjectMigration(stored.id, "pending");
-            await persistToDisk(stored.project, null);
+            const { persistProjectToDisk } = await loadLocalProjectRepository();
+            const result = await persistProjectToDisk(stored.project, null);
             await markProjectMigration(stored.id, "done");
+            void result;
           }
           await refreshDisk();
           notify("Las tiendas locales se migraron a proyectos/.");
@@ -606,6 +609,7 @@ function StudioShell() {
             </button>
           </div>
         ) : null}
+        {error ? <span data-testid="ui-global-error-text" className="visually-hidden">{error}</span> : null}
         {notice ? (
           <output className="global-notice" aria-live="polite">
             <span>{notice}</span>

@@ -81,6 +81,24 @@ async function openDemoStore(page: Page): Promise<void> {
   await expect(page.getByLabel("Nombre de la tienda")).toBeVisible();
 }
 
+/** Crea una tienda editable (semilla placeholder) y queda dentro del Studio. */
+async function createCleanStoreManaged(page: Page, url: string, name: string): Promise<void> {
+  await page.goto(url);
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 30_000,
+  });
+  await page.getByRole("button", { name: "Nueva tienda", exact: true }).click();
+  await page.getByLabel("Nueva tienda").fill(name);
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await page.getByRole("button", { name: "Crear tienda desde plantilla", exact: true }).click();
+  // Ãreas lleva acento en la UI; usar matcher insensible al resto del texto.
+  await expect(page.getByRole("navigation", { name: /de la tienda/ })).toBeVisible({
+    timeout: 30_000,
+  });
+}
+
 async function renameAndSave(page: Page, name: string): Promise<void> {
   await page.getByLabel("Nombre de la tienda").fill(name);
   await page.locator("[data-studio-save]").click();
@@ -242,7 +260,12 @@ test("R3-P4-B5: salir con cambios sin guardar pide confirmación explícita en m
   try {
     const page = await browser.newPage();
     await openDashboard(page, managed.url);
-    await openDemoStore(page);
+    // Nightwatch: Predeterminado es plantilla protegida (solo lectura) y no
+    // puede generar estado "dirty". Crear una tienda editable es el camino
+    // válido para probar el diálogo de salida sin guardar.
+    await createCleanStoreManaged(page, managed.url, "Tienda R3-P4-B5");
+    await page.getByRole("tab", { name: "Resumen" }).click();
+    await expect(page.getByLabel("Nombre de la tienda")).toBeVisible();
     await page.getByLabel("Nombre de la tienda").fill("Nombre sin guardar");
     await page.getByRole("button", { name: "Volver a tiendas" }).click();
     const dialog = page.getByRole("dialog", { name: "Salir sin guardar" });

@@ -146,6 +146,7 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
         className="dashboard-store-card__pin"
         aria-pressed={isPinned}
         aria-label={isPinned ? "Quitar de fijadas" : "Fijar tienda"}
+        aria-description={record.name}
         data-testid="ui-card-pin"
         onClick={() => onPin(record.id)}
       >
@@ -191,6 +192,7 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
         type="button"
         data-testid="ui-card-open"
         aria-label="Abrir esta tienda"
+        aria-description={record.name}
         onClick={() => onOpen(record.id)}
       >
         Abrir <ArrowUpRight aria-hidden size={13} />

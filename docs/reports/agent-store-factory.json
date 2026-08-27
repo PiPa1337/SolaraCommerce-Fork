@@ -1,0 +1,225 @@
+{
+  "total": 20,
+  "results": [
+    {
+      "storeId": "store-factory-1",
+      "name": "Fábrica Hogar normal 1",
+      "version": 1,
+      "products": 30,
+      "files": 52,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 341
+    },
+    {
+      "storeId": "store-factory-2",
+      "name": "Fábrica Tecnología mediana 2",
+      "version": 1,
+      "products": 120,
+      "files": 146,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 554
+    },
+    {
+      "storeId": "store-factory-3",
+      "name": "Fábrica Alimentos mini 3",
+      "version": 1,
+      "products": 6,
+      "files": 26,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 222
+    },
+    {
+      "storeId": "store-factory-4",
+      "name": "Fábrica Cosmética normal 4",
+      "version": 1,
+      "products": 30,
+      "files": 52,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 270
+    },
+    {
+      "storeId": "store-factory-5",
+      "name": "Fábrica Arte mediana 5",
+      "version": 1,
+      "products": 120,
+      "files": 146,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 498
+    },
+    {
+      "storeId": "store-factory-6",
+      "name": "Fábrica Librería mini 6",
+      "version": 1,
+      "products": 6,
+      "files": 27,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 212
+    },
+    {
+      "storeId": "store-factory-7",
+      "name": "Fábrica Mayorista normal 7",
+      "version": 1,
+      "products": 30,
+      "files": 53,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 275
+    },
+    {
+      "storeId": "store-factory-8",
+      "name": "Fábrica Indumentaria mediana 8",
+      "version": 1,
+      "products": 120,
+      "files": 144,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 551
+    },
+    {
+      "storeId": "store-factory-9",
+      "name": "Fábrica Hogar mini 9",
+      "version": 1,
+      "products": 6,
+      "files": 27,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 250
+    },
+    {
+      "storeId": "store-factory-10",
+      "name": "Fábrica Tecnología normal 10",
+      "version": 1,
+      "products": 30,
+      "files": 53,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 331
+    },
+    {
+      "storeId": "store-factory-11",
+      "name": "Fábrica Alimentos mediana 11",
+      "version": 1,
+      "products": 120,
+      "files": 145,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 653
+    },
+    {
+      "storeId": "store-factory-12",
+      "name": "Fábrica Cosmética mini 12",
+      "version": 1,
+      "products": 6,
+      "files": 28,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 267
+    },
+    {
+      "storeId": "store-factory-13",
+      "name": "Fábrica Arte normal 13",
+      "version": 1,
+      "products": 30,
+      "files": 51,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 326
+    },
+    {
+      "storeId": "store-factory-14",
+      "name": "Fábrica Librería mediana 14",
+      "version": 1,
+      "products": 120,
+      "files": 145,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 615
+    },
+    {
+      "storeId": "store-factory-15",
+      "name": "Fábrica Mayorista mini 15",
+      "version": 1,
+      "products": 6,
+      "files": 28,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 266
+    },
+    {
+      "storeId": "store-factory-16",
+      "name": "Fábrica Indumentaria normal 16",
+      "version": 1,
+      "products": 30,
+      "files": 52,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 335
+    },
+    {
+      "storeId": "store-factory-17",
+      "name": "Fábrica Hogar mediana 17",
+      "version": 1,
+      "products": 120,
+      "files": 146,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 622
+    },
+    {
+      "storeId": "store-factory-18",
+      "name": "Fábrica Tecnología mini 18",
+      "version": 1,
+      "products": 6,
+      "files": 26,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 263
+    },
+    {
+      "storeId": "store-factory-19",
+      "name": "Fábrica Alimentos normal 19",
+      "version": 1,
+      "products": 30,
+      "files": 52,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 371
+    },
+    {
+      "storeId": "store-factory-20",
+      "name": "Fábrica Cosmética mediana 20",
+      "version": 1,
+      "products": 120,
+      "files": 146,
+      "criticalIssues": 0,
+      "unexpectedCriticalIssues": 0,
+      "criticalSample": [],
+      "durationMs": 652
+    }
+  ]
+}

@@ -76,7 +76,7 @@ test("los puntos de sucio aparecen, se limpian al visitar y tras guardar (T3.7)"
   const hero = page.getByRole("listitem").filter({ hasText: "Hero de catálogo" });
   await hero.getByRole("button").first().click();
 
-  const title = page.getByRole("textbox", { name: "Título", exact: true });
+  const title = page.getByRole("textbox", { name: "Título", exact: true }).first();
   await title.fill("Título con cambios");
   await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
 
@@ -97,28 +97,19 @@ test("los puntos de sucio aparecen, se limpian al visitar y tras guardar (T3.7)"
   await expect(page.getByTestId("ui-tab-dirty")).toHaveCount(0);
 });
 
-test("el tema oscuro es predeterminado y el claro persiste al recargar (T3.8)", async ({
+test("el tema oscuro es predeterminado y persiste al recargar (T3.8)", async ({
   page,
 }) => {
   await openStore(page);
   const root = page.locator("html");
-  const themeToggle = page.getByTestId("ui-theme-toggle");
-
   await expect(root).toHaveAttribute("data-studio-theme", "dark");
-  await expect(themeToggle).toHaveAttribute("aria-pressed", "true");
-
-  await themeToggle.click();
-  await expect(root).toHaveAttribute("data-studio-theme", "light");
-  await expect(themeToggle).toHaveAttribute("aria-pressed", "false");
-
+  // Dark-only: el toggle de tema claro fue deprecado, no debe existir.
+  await expect(page.getByTestId("ui-theme-toggle")).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await expect(root).toHaveAttribute("data-studio-theme", "light");
+  await expect(root).toHaveAttribute("data-studio-theme", "dark");
   await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
-  await expect(root).toHaveAttribute("data-studio-theme", "light");
-
-  await page.getByTestId("ui-theme-toggle").click();
   await expect(root).toHaveAttribute("data-studio-theme", "dark");
 });
 

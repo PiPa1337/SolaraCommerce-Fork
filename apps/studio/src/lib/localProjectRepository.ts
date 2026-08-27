@@ -137,6 +137,7 @@ export async function loadAllDiskProjects(): Promise<{
 export async function persistProjectToDisk(
   project: StoreProjectV1,
   expectedVersion: number | null,
+  options: { allowProtectedWrite?: boolean } = {},
 ): Promise<{ receipt: LocalSaveReceipt; siteError?: string }> {
   const projectArchive = await createProjectArchiveInWorker(project);
   const verifiedProject = await readProjectArchiveBytesInWorker(
@@ -161,6 +162,11 @@ export async function persistProjectToDisk(
       slug: project.slug,
       projectUpdatedAt: project.updatedAt,
       expectedVersion,
+      // El servidor exige el canal de upgrade explícito para tocar la plantilla
+      // protegida; sin esta marca, beginSave rechaza con PROTECTED_STORE.
+      ...(options.allowProtectedWrite
+        ? { actor: { kind: "template-upgrade" as const }, allowProtectedWrite: true }
+        : {}),
     },
     projectArchive,
     siteMap,
