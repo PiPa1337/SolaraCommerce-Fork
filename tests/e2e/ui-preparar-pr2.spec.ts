@@ -19,7 +19,8 @@ import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
 import { auditReport, exportProject } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
-import { createCleanStore } from "./project-helpers";
+import { evaluateCatalogModernReadiness } from "@solara/project-schema/catalog-modern-guidance";
+import { createCleanStore, openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 180_000 : 120_000);
@@ -255,20 +256,21 @@ test("baseline demo: 297 requisitos listos, 0 críticos y producción exportable
 test("paridad: sin descripción de producto el requisito falta, el crítico aparece y bloquea producción; completarla lo libera (product.description)", async ({
   page,
 }) => {
-  await openDemoStore(page);
+  await resetIndexedDb(page);
+  const storeKey = await openMutableScaleStore(page, "PR2 descripción mutable");
 
   // 1. Romper: vaciar la descripción del primer producto activo.
-  const before = await readStoredProject(page, DEMO_PROJECT_ID);
+  const before = await readStoredProject(page, storeKey);
   const product = (before as StoreProjectV1).products.find((item) => item.status === "active");
   expect(product).toBeDefined();
   const requirementId = `product.${product?.id}.description`;
-  await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+  await mutateStoredProject(page, storeKey, (project) => {
     const target = project.products.find((item) => item.status === "active");
     if (target) target.description = "";
   });
 
   // 2. El checklist marca "Falta completar" y el gate del tab ve 1 bloqueo.
-  const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  const broken = await reloadAndOpen(page, storeKey);
   await openPrepararTab(page);
   await expect(requirement(page, requirementId)).toHaveAttribute(
     "data-requirement-status",
@@ -295,24 +297,22 @@ test("paridad: sin descripción de producto el requisito falta, el crítico apar
   const dialog = page.locator("dialog.product-dialog");
   await expect(dialog).toBeVisible();
   await dialog.getByRole("textbox", { name: "Descripción" }).fill("PR2 descripción completa");
-  await dialog.getByRole("button", { name: "Guardar producto" }).click();
+  await dialog.getByRole("button", { name: "Guardar cambios" }).click();
   await expect(dialog).toHaveCount(0);
   // El payload llega al proyecto autoservado (mismo receptor del editor).
   await expect
     .poll(
       async () =>
-        (await readStoredProject(page, DEMO_PROJECT_ID))?.products.find(
-          (item) => item.status === "active",
-        )?.description,
+        (await readStoredProject(page, storeKey))?.products.find((item) => item.status === "active")
+          ?.description,
       { timeout: 15_000 },
     )
     .toBe("PR2 descripción completa");
 
   await openPrepararTab(page);
-  await expect(page.getByTestId("ui-guided-ready")).toBeVisible();
   await expect(page.getByText("La tienda puede pasar a revisión de publicación.")).toBeVisible();
 
-  const completed = await readStoredProject(page, DEMO_PROJECT_ID);
+  const completed = await readStoredProject(page, storeKey);
   const completedProduct = (completed as StoreProjectV1).products.find(
     (item) => item.status === "active",
   );
@@ -397,18 +397,32 @@ test("paridad tienda limpia: las imágenes de plantilla pendientes bloquean prod
   expect(storeKey).toBeDefined();
   const cleanStoreKey = storeKey as string;
 
-  // 1. La tienda limpia: 5 de 18 requisitos listos y los assets en estado
-  // "Reemplazar texto de plantilla" (el checklist muestra 12 y oculta el resto).
+  // 1. La tienda limpia usa el catálogo placeholder vigente; el progreso y la
+  // cantidad de assets se derivan del proyecto persistido.
   await openPrepararTab(page);
+  const clean = await readStoredProject(page, cleanStoreKey);
+  expect(clean).not.toBeNull();
+  const readiness = evaluateCatalogModernReadiness(clean as StoreProjectV1);
   const placeholderAssets = page.locator(
     '[data-testid="ui-guided-requirement"][data-requirement-id^="asset."][data-requirement-status="placeholder"]',
   );
-  await expect(page.getByText("5 de 18 requisitos listos")).toBeVisible();
-  await expect(placeholderAssets).toHaveCount(3);
-  await expect(page.getByText("+1 más")).toBeVisible();
+  await expect(
+    page.getByText(`${readiness.ready} de ${readiness.requirements.length} requisitos listos`),
+  ).toBeVisible();
+  const placeholderAssetCount = clean?.assets.filter(
+    (asset) =>
+      asset.name === "Imagen de plantilla" || asset.alt === "Imagen de ejemplo para reemplazar",
+  ).length;
+  await expect(placeholderAssets).toHaveCount(Math.min(12, placeholderAssetCount ?? 0));
+  if ((placeholderAssetCount ?? 0) > 12) {
+    await expect(page.locator(".guided-checklist__more")).toHaveText(
+      `+${(placeholderAssetCount ?? 0) - 12} más`,
+    );
+  } else {
+    await expect(page.locator(".guided-checklist__more")).toHaveCount(0);
+  }
   await expect(page.getByText("1 pendiente bloquea producción.")).toBeVisible();
 
-  const clean = await readStoredProject(page, cleanStoreKey);
   expect(criticalCodes(clean as StoreProjectV1)).toEqual(["template.placeholder"]);
   const outcome = exportOutcome(clean as StoreProjectV1);
   expect(outcome.ok).toBe(false);
@@ -565,6 +579,12 @@ test("paridad: una imagen de plantilla sigue pendiente si solo se corrige su alt
   const storeKey = await projectIdByName(page, storeName);
   expect(storeKey).toBeDefined();
   const cleanStoreKey = storeKey as string;
+  const before = await readStoredProject(page, cleanStoreKey);
+  expect(before).not.toBeNull();
+  const placeholderAssetCount = before?.assets.filter(
+    (asset) =>
+      asset.name === "Imagen de plantilla" || asset.alt === "Imagen de ejemplo para reemplazar",
+  ).length;
   await mutateStoredProject(page, cleanStoreKey, (project) => {
     project.assets.forEach((asset) => {
       asset.alt = "Texto alternativo real";
@@ -576,8 +596,8 @@ test("paridad: una imagen de plantilla sigue pendiente si solo se corrige su alt
     page.locator(
       '[data-testid="ui-guided-requirement"][data-requirement-id^="asset."][data-requirement-status="placeholder"]',
     ),
-  ).toHaveCount(3);
-  await expect(page.getByText("+1 más")).toBeVisible();
+  ).toHaveCount(Math.min(12, placeholderAssetCount ?? 0));
+  await expect(page.locator(".guided-checklist__more")).toHaveCount(0);
   expect(criticalCodes(broken)).toEqual(["template.placeholder"]);
   const outcome = exportOutcome(broken);
   expect(outcome.ok).toBe(false);

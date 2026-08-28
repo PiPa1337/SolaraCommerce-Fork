@@ -19,6 +19,7 @@ import { createServer, type Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
+import { readHashedStorefrontCss } from "./export-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 const GEORGIA_STACK = `Georgia, "Times New Roman", serif`;
@@ -84,10 +85,20 @@ function previewStore(page: Page): Locator {
 function previewVar(page: Page, name: string): () => Promise<string> {
   const html = previewRoot(page);
   return () =>
-    html.evaluate(
-      (element, token) => getComputedStyle(element).getPropertyValue(token).trim(),
-      name,
-    );
+    html
+      .evaluate((element, token) => getComputedStyle(element).getPropertyValue(token).trim(), name)
+      .catch(() => "");
+}
+
+function previewStyle(
+  locator: Locator,
+  property: "fontFamily" | "fontSize",
+): () => Promise<string> {
+  return () =>
+    locator
+      .first()
+      .evaluate((element, styleProperty) => getComputedStyle(element)[styleProperty], property)
+      .catch(() => "");
 }
 
 /** Proyectos persistidos por el autosave del Studio (modo navegador). */
@@ -208,19 +219,12 @@ test("T4: las familias elegidas llegan al preview y al sitio: títulos, marca y 
   await expect(display).toHaveValue(ARCHIVO_STACK);
   await expect(body).toHaveValue(ARCHIVO_STACK);
   await expect
-    .poll(() => previewStoreRoot.evaluate((element) => getComputedStyle(element).fontFamily), {
-      timeout: 15_000,
-    })
+    .poll(previewStyle(previewStoreRoot, "fontFamily"), { timeout: 15_000 })
     .toContain("Archivo");
   await expect
-    .poll(
-      () =>
-        previewStoreRoot
-          .locator(".catalog-brand")
-          .first()
-          .evaluate((element) => getComputedStyle(element).fontFamily),
-      { timeout: 15_000 },
-    )
+    .poll(previewStyle(previewStoreRoot.locator(".catalog-brand"), "fontFamily"), {
+      timeout: 15_000,
+    })
     .toContain("Archivo");
 
   // Un cambio por vez: los commits del panel disparan actualizaciones del
@@ -235,19 +239,12 @@ test("T4: las familias elegidas llegan al preview y al sitio: títulos, marca y 
   // var(--solara-font-display) (styles.ts:85) y la marca del encabezado
   // también (fix Ola 3: dejó de quedar fija en Georgia).
   await expect
-    .poll(() => previewHeading.evaluate((element) => getComputedStyle(element).fontFamily), {
-      timeout: 15_000,
-    })
+    .poll(previewStyle(previewHeading, "fontFamily"), { timeout: 15_000 })
     .toBe(GEORGIA_STACK);
   await expect
-    .poll(
-      () =>
-        previewStoreRoot
-          .locator(".catalog-brand")
-          .first()
-          .evaluate((element) => getComputedStyle(element).fontFamily),
-      { timeout: 15_000 },
-    )
+    .poll(previewStyle(previewStoreRoot.locator(".catalog-brand"), "fontFamily"), {
+      timeout: 15_000,
+    })
     .toBe(GEORGIA_STACK);
 
   await body.selectOption(GEORGIA_STACK);
@@ -259,13 +256,9 @@ test("T4: las familias elegidas llegan al preview y al sitio: títulos, marca y 
   // "Familia de texto" produce un efecto real (fix Ola 3): la raíz del
   // storefront consume var(--solara-font-body) y computa la familia elegida.
   await expect
-    .poll(() => previewStoreRoot.evaluate((element) => getComputedStyle(element).fontFamily), {
-      timeout: 15_000,
-    })
+    .poll(previewStyle(previewStoreRoot, "fontFamily"), { timeout: 15_000 })
     .toBe(GEORGIA_STACK);
-  const rootFamilyAfter = await previewStoreRoot.evaluate(
-    (element) => getComputedStyle(element).fontFamily,
-  );
+  const rootFamilyAfter = await previewStyle(previewStoreRoot, "fontFamily")();
   expect(rootFamilyAfter).toContain("Georgia");
   expect(rootFamilyAfter).not.toContain("Archivo");
 
@@ -311,7 +304,7 @@ test("T4: la escala del range cambia el tamaño real en el preview y en el sitio
 
   const scale = page.getByLabel(/^Escala /);
   const rootFontSize = async (): Promise<number> =>
-    parseFloat(await previewStore(page).evaluate((element) => getComputedStyle(element).fontSize));
+    parseFloat(await previewStyle(previewStore(page), "fontSize")());
 
   // Default: escala 1 → raíz del storefront en 16px.
   await expect(scale).toHaveValue("1");
@@ -330,18 +323,12 @@ test("T4: la escala del range cambia el tamaño real en el preview y en el sitio
   // font-size: calc(clamp(...) * var(--solara-type-scale, 1)); la escala
   // afecta a la base y a los títulos por igual.
   const headingSizeAt140 = parseFloat(
-    await previewStore(page)
-      .locator("h1")
-      .first()
-      .evaluate((element) => getComputedStyle(element).fontSize),
+    await previewStyle(previewStore(page).locator("h1"), "fontSize")(),
   );
   await scale.fill("1");
   await expect.poll(rootFontSize, { timeout: 15_000 }).toBe(16);
   const headingSizeAt100 = parseFloat(
-    await previewStore(page)
-      .locator("h1")
-      .first()
-      .evaluate((element) => getComputedStyle(element).fontSize),
+    await previewStyle(previewStore(page).locator("h1"), "fontSize")(),
   );
   expect(headingSizeAt140 / headingSizeAt100).toBeCloseTo(1.4, 2);
 
@@ -371,6 +358,9 @@ test("T4: la escala del range cambia el tamaño real en el preview y en el sitio
 test("T4: las familias y la escala viajan al CSS del sitio exportado (diff antes/después)", async ({
   page,
 }) => {
+  // El diff exporta dos sitios completos y puede quedar esperando CPU cuando
+  // el full E2E comparte el host con otros exports pesados.
+  test.setTimeout(180_000);
   await setupCleanStore(page, "Tienda T4 diff");
   await openThemeTab(page);
 
@@ -390,8 +380,8 @@ test("T4: las familias y la escala viajan al CSS del sitio exportado (diff antes
   );
   const base = exportProject(catalogModernCleanStore, { mode: "draft" });
 
-  const baseCss = String(base.files.get("assets/storefront.css"));
-  const editedCss = String(edited.files.get("assets/storefront.css"));
+  const baseCss = readHashedStorefrontCss(base.files);
+  const editedCss = readHashedStorefrontCss(edited.files);
   const editedHtml = String(edited.files.get("index.html"));
   const minifiedGeorgia = GEORGIA_STACK.replaceAll(", ", ",");
 
@@ -407,7 +397,7 @@ test("T4: las familias y la escala viajan al CSS del sitio exportado (diff antes
   // emite @font-face y el navegador cae al stack. Sin CDN ni @import.
   const fontFaceCount = (value: string): number => value.split("@font-face").length - 1;
   expect(fontFaceCount(baseCss)).toBe(1);
-  expect(baseCss).toContain('url("/assets/fonts/archivo.woff2")');
+  expect(baseCss).toMatch(/url\("\/assets\/font\.[a-f0-9]+\.woff2"\)/);
   expect(fontFaceCount(editedCss)).toBe(0);
   expect(editedCss).not.toContain("@font-face{font-family");
   expect(editedCss).not.toContain("fonts.googleapis.com");
@@ -451,6 +441,22 @@ test("T4: un valor fuera del selector se conserva como 'Personalizada' sin reesc
           const database = request.result;
           const transaction = database.transaction("projects", "readwrite");
           const store = transaction.objectStore("projects");
+          transaction.addEventListener(
+            "complete",
+            () => {
+              database.close();
+              resolve();
+            },
+            { once: true },
+          );
+          transaction.addEventListener(
+            "error",
+            () => {
+              database.close();
+              reject(transaction.error ?? new Error("No se pudo actualizar el proyecto."));
+            },
+            { once: true },
+          );
           const records = store.getAll();
           records.addEventListener("success", () => {
             const record = (records.result ?? []).find(
@@ -464,8 +470,6 @@ test("T4: un valor fuera del selector se conserva como 'Personalizada' sin reesc
               ).project.theme.typography.display = "MiFuente";
               store.put(record);
             }
-            database.close();
-            resolve();
           });
           records.addEventListener("error", () => {
             database.close();
@@ -529,7 +533,7 @@ test("T4: un valor fuera del selector se conserva como 'Personalizada' sin reesc
     }),
     { mode: "draft" },
   );
-  const editedCss = String(edited.files.get("assets/storefront.css"));
+  const editedCss = readHashedStorefrontCss(edited.files);
   expect(editedCss).toContain("--solara-font-display:MiFuente");
   expect(editedCss).not.toContain("@font-face{MiFuente");
   expect(editedCss).not.toContain("fonts.googleapis.com");

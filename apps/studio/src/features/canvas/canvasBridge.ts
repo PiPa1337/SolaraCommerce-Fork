@@ -182,7 +182,7 @@ export function canvasBridgeScript(session: string, nonce: string): string {
   return `<script data-solara-canvas-bridge>
 (() => {
   const session = ${JSON.stringify(session)};
-  const nonce = ${JSON.stringify(nonce)};
+  let activeNonce = ${JSON.stringify(nonce)};
   let ctrlActive = false;
   let explicitActive = false;
   const inspectionActive = () => ctrlActive || explicitActive;
@@ -198,7 +198,7 @@ export function canvasBridgeScript(session: string, nonce: string): string {
     parent.postMessage({
       type: "solara-canvas-select",
       session,
-      nonce,
+      nonce: activeNonce,
       editId,
       sectionId: section.getAttribute("data-solara-section") ?? "",
       ...(itemId ? { itemId } : {}),
@@ -218,6 +218,10 @@ export function canvasBridgeScript(session: string, nonce: string): string {
   window.addEventListener("message", (event) => {
     if (!event.data || typeof event.data !== "object") return;
     const message = event.data;
+    if (message.type === "solara-canvas-nonce" && typeof message.nonce === "string" && message.nonce.length > 0 && message.nonce.length <= 200) {
+      activeNonce = message.nonce;
+      return;
+    }
     if (message.type === "solara-canvas-mode" && typeof message.enabled === "boolean") {
       explicitActive = message.enabled;
       if (!explicitActive) {
@@ -237,6 +241,32 @@ export function canvasBridgeScript(session: string, nonce: string): string {
   label.setAttribute("data-canvas-overlay-label", "");
   label.style.cssText = "position:fixed;pointer-events:none;z-index:2147483001;display:none;font:600 11px/1.4 system-ui,sans-serif;background:#2563eb;color:#fff;padding:2px 6px;border-radius:2px;";
   document.body.appendChild(label);
+  // Un binding puede estar dentro de un enlace (por ejemplo, el título de una
+  // card). Chromium puede reportar el enlace como event.target aunque el clic
+  // haya caído sobre el descendiente instrumentado; en ese caso resolvemos el
+  // binding visible por coordenadas y elegimos el más específico.
+  const editableAtPoint = (event) => {
+    const source = event.target;
+    const direct = source instanceof Element ? source.closest("[data-canvas-edit], [data-canvas-image]") : null;
+    if (direct) return direct;
+    const hitStack = document.elementsFromPoint(event.clientX, event.clientY);
+    for (const element of hitStack) {
+      const candidate = element.closest?.("[data-canvas-edit], [data-canvas-image]");
+      if (candidate) return candidate;
+    }
+    let best = null;
+    let bestArea = Number.POSITIVE_INFINITY;
+    document.querySelectorAll("[data-canvas-edit], [data-canvas-image]").forEach((candidate) => {
+      const rect = candidate.getBoundingClientRect();
+      if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) return;
+      const area = rect.width * rect.height;
+      if (area > 0 && area < bestArea) {
+        best = candidate;
+        bestArea = area;
+      }
+    });
+    return best;
+  };
   let pending = null;
   let pendingTarget = null;
   const paint = () => {
@@ -257,19 +287,17 @@ export function canvasBridgeScript(session: string, nonce: string): string {
   };
   document.addEventListener("mousemove", (event) => {
     if (!inspectionActive()) { if (pendingTarget || overlay.style.display === "block") { pendingTarget = null; if (pending === null) pending = requestAnimationFrame(() => { pending = null; overlay.style.display = "none"; label.style.display = "none"; }); } return; }
-    const target = event.target instanceof Element ? event.target.closest("[data-canvas-edit], [data-canvas-image]") : null;
+    const target = editableAtPoint(event);
     if (target === pendingTarget) return;
     pendingTarget = target;
     if (pending === null) pending = requestAnimationFrame(paint);
   }, { passive: true });
   document.addEventListener("click", (event) => {
     if (!inspectionActive() && !event.ctrlKey && !event.metaKey) return;
-    const target = event.target;
-    if (!(target instanceof Element)) return;
-    const editable = target.closest("[data-canvas-edit], [data-canvas-image]");
+    const editable = editableAtPoint(event);
     if (!editable) return;
     event.preventDefault();
-    event.stopPropagation();
+    event.stopImmediatePropagation();
     send(editable);
   }, true);
 })();

@@ -182,7 +182,7 @@ test("R3-P2-B5: duplicar una tienda desde el panel de detalle", async ({ page })
 
 test("R4-P4-B5: cancelar la creación de tienda no crea nada", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(STUDIO_URL, { waitUntil: "load" });
+  await page.goto(studioUrl, { waitUntil: "load" });
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
   const cardsBefore = await page.locator(".dashboard-store-card").count();
 

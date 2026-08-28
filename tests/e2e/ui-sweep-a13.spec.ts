@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { createCleanStore, openMutableScaleStore } from "./project-helpers";
 import { type RunningStudioServer, startStudioServer, stopStudioServer } from "./studio-server";
 
 /**
@@ -41,6 +42,12 @@ async function selectStore(page: Page, name: string): Promise<Locator> {
   const detail = page.getByRole("region", { name: `Tienda seleccionada: ${name}` });
   await expect(detail).toBeVisible();
   return detail;
+}
+
+async function selectMutableStore(page: Page, name: string): Promise<Locator> {
+  await openMutableScaleStore(page, name);
+  await page.getByRole("button", { name: "Volver a tiendas" }).click();
+  return selectStore(page, name);
 }
 
 async function openCreateDialog(page: Page): Promise<Locator> {
@@ -186,65 +193,67 @@ test("A12: duplicar con éxito devuelve el foco a la card de origen", async ({ p
 
 test("A13: archivar — confirmación, cancelar y deshacer", async ({ page }) => {
   await openDashboard(page);
-  const detail = await selectStore(page, "Predeterminado");
+  const storeName = "Tienda archivable A13";
+  const detail = await selectMutableStore(page, storeName);
 
   // La confirmación es un diálogo propio con foco en Cancelar (destructivo).
   await detail.getByRole("button", { name: "Archivar", exact: true }).click();
   const confirm = page.getByTestId("ui-confirm-dialog");
   await expect(confirm).toBeVisible();
   await expect(confirm).toContainText("Archivar tienda");
-  await expect(confirm).toContainText('"Predeterminado"');
+  await expect(confirm).toContainText(`"${storeName}"`);
   await expect(confirm.getByRole("button", { name: "Cancelar", exact: true })).toBeFocused();
 
   // Cancelar no archiva.
   await confirm.getByRole("button", { name: "Cancelar", exact: true }).click();
   await expect(confirm).toHaveCount(0);
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
 
   // Confirmar archiva: la card sale de Activas y el toast ofrece Deshacer.
   await detail.getByRole("button", { name: "Archivar", exact: true }).click();
   await expect(confirm).toBeVisible();
   await confirm.getByTestId("ui-confirm-accept").click();
   await expect(confirm).toHaveCount(0);
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
 
-  const toast = page.getByTestId("ui-toast");
+  const toast = page.getByTestId("ui-toast").filter({ hasText: "archivada" });
   await expect(toast).toContainText("archivada");
   await toast.getByRole("button", { name: "Deshacer" }).click();
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
-  await expect(
-    cardByName(page, "Predeterminado").locator(".dashboard-store-card__status"),
-  ).toHaveText("Activa");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+  await expect(cardByName(page, storeName).locator(".dashboard-store-card__status")).toHaveText(
+    "Activa",
+  );
 });
 
 test("A13: archivar — restaurar desde el filtro de archivadas", async ({ page }) => {
   await openDashboard(page);
-  const detail = await selectStore(page, "Predeterminado");
+  const storeName = "Tienda restaurable A13";
+  const detail = await selectMutableStore(page, storeName);
   await detail.getByRole("button", { name: "Archivar", exact: true }).click();
   await page.getByTestId("ui-confirm-dialog").getByTestId("ui-confirm-accept").click();
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
 
   // La card vive en Archivadas con su estado reflejado.
   await page.getByLabel("Estado").selectOption("archived");
-  await expect(
-    cardByName(page, "Predeterminado").locator(".dashboard-store-card__status"),
-  ).toHaveText("Archivada");
+  await expect(cardByName(page, storeName).locator(".dashboard-store-card__status")).toHaveText(
+    "Archivada",
+  );
 
   // Restaurar la vuelve a Activas: como el filtro sigue en «Archivadas», la
   // card sale de la lista visible y el detalle se cierra al quedar sin
   // selección visible (comportamiento del filtro, no una pérdida de datos).
-  const archivedDetail = await selectStore(page, "Predeterminado");
+  const archivedDetail = await selectStore(page, storeName);
   await archivedDetail.getByRole("button", { name: "Restaurar", exact: true }).click();
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
-  await expect(cardByName(page, "Predeterminado")).toHaveCount(0);
+  await expect(cardByName(page, storeName)).toHaveCount(0);
 
   // En Activas la card reaparece con estado Activa y el detalle ofrece Archivar.
   await page.getByLabel("Estado").selectOption("active");
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
-  await expect(
-    cardByName(page, "Predeterminado").locator(".dashboard-store-card__status"),
-  ).toHaveText("Activa");
-  const restoredDetail = await selectStore(page, "Predeterminado");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
+  await expect(cardByName(page, storeName).locator(".dashboard-store-card__status")).toHaveText(
+    "Activa",
+  );
+  const restoredDetail = await selectStore(page, storeName);
   await expect(restoredDetail.getByRole("button", { name: "Archivar", exact: true })).toBeVisible();
 });
 
@@ -252,11 +261,12 @@ test("A12: restaurar muestra el toast de confirmación y no deja foco en una car
   page,
 }) => {
   await openDashboard(page);
-  const detail = await selectStore(page, "Predeterminado");
+  const storeName = "Tienda toast A13";
+  const detail = await selectMutableStore(page, storeName);
   await detail.getByRole("button", { name: "Archivar", exact: true }).click();
   await page.getByTestId("ui-confirm-dialog").getByTestId("ui-confirm-accept").click();
   await page.getByLabel("Estado").selectOption("archived");
-  const archivedDetail = await selectStore(page, "Predeterminado");
+  const archivedDetail = await selectStore(page, storeName);
   await archivedDetail.getByRole("button", { name: "Restaurar", exact: true }).click();
   // Archivar muestra toast con Deshacer; restaurar muestra una confirmación
   // propia sin acción de deshacer (fix A12) aunque la card salga del filtro.
@@ -361,6 +371,26 @@ test("A13: panel gestionado — descargar, respaldo, sitio público y carpeta", 
       timeout: 15_000,
     });
 
+    // Un servidor gestionado recién creado no persiste la plantilla protegida.
+    // Crear una tienda mutable mantiene el caso autocontenido y respeta esa
+    // protección del producto.
+    let managedStoreName = "Tienda A13 gestionada";
+    const initialCards = page.locator(".dashboard-store-card");
+    if ((await initialCards.count()) === 0) {
+      await createCleanStore(page, managedStoreName);
+      await page.getByRole("button", { name: "Volver a tiendas" }).click();
+      await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+        timeout: 30_000,
+      });
+    } else {
+      managedStoreName = (
+        (await initialCards
+          .first()
+          .locator(".dashboard-store-card__button strong")
+          .textContent()) ?? managedStoreName
+      ).trim();
+    }
+
     await page.route("**/manual-backup", async (route) => {
       await new Promise((resolveDelay) => setTimeout(resolveDelay, 450));
       await route.continue();
@@ -373,7 +403,9 @@ test("A13: panel gestionado — descargar, respaldo, sitio público y carpeta", 
     await expect(page.getByRole("button", { name: "Respaldar todo" })).toBeEnabled();
     await page.unroute("**/manual-backup");
 
-    const detail = await selectStore(page, "Predeterminado");
+    const detail = await selectStore(page, managedStoreName);
+    const managedStoreId = ((await detail.locator("dd").first().textContent()) ?? "").trim();
+    expect(managedStoreId).toMatch(/^store-/);
 
     // Descargar respaldo: archivo real desde disco, con versión del manifest.
     await page.route("**/current", async (route) => {
@@ -388,9 +420,8 @@ test("A13: panel gestionado — descargar, respaldo, sitio público y carpeta", 
     const download = await downloadPromise;
     await expect(detail.getByRole("button", { name: /Descargar respaldo/ })).toBeEnabled();
     await page.unroute("**/current");
-    // Slug real del proyecto en disco (demo-catalogo-jerarquico) con la
-    // versión del manifest (v1 en la primera persistencia).
-    expect(download.suggestedFilename()).toMatch(/^demo-catalogo-jerarquico-v1\.solara\.json$/);
+    // El respaldo lleva el slug real y la versión vigente del manifest.
+    expect(download.suggestedFilename()).toMatch(/-v\d+\.solara\.json$/);
 
     // Respaldo ahora: respaldo manual en disco, aviso en el panel.
     await detail.getByRole("button", { name: "Respaldo ahora" }).click();
@@ -431,15 +462,13 @@ test("A13: panel gestionado — descargar, respaldo, sitio público y carpeta", 
     await expect(detail.getByRole("button", { name: "Abrir sitio público" })).toBeEnabled();
     await page.unroute("**/open-site");
 
-    // Camino feliz: el sitio se exportó durante la migración de boot
-    // (persistProjectToDisk exporta production) y el botón abre el popup real.
-    const popupPromise = page.waitForEvent("popup");
+    // Una tienda nueva puede conservar imágenes de plantilla: el guard de
+    // publicación no abre un sitio inválido y expone el motivo en el banner.
     await detail.getByRole("button", { name: "Abrir sitio público" }).click();
-    const popup = await popupPromise;
-    await popup.waitForURL(/^http:\/\/127\.0\.0\.1:\d+/);
-    // La demo integrada conserva «Predeterminado» como identidad pública.
-    await expect(popup).toHaveTitle(/Predeterminado/i);
-    await popup.close();
+    await expect(page.locator(".global-error")).toContainText("no tiene un sitio público válido", {
+      timeout: 30_000,
+    });
+    await page.getByRole("button", { name: "Cerrar mensaje" }).click();
 
     // Abrir carpeta: el POST llega al endpoint local con el id correcto; la
     // apertura del explorador queda fuera del entorno de pruebas.
@@ -460,7 +489,7 @@ test("A13: panel gestionado — descargar, respaldo, sitio público y carpeta", 
     await expect(openFolderBusy).toHaveAttribute("aria-busy", "true");
     await expect(openFolderBusy).toBeDisabled();
     await expect(detail.getByRole("button", { name: "Abrir carpeta" })).toBeEnabled();
-    expect(folderRequestUrl).toContain("/storage/projects/store-modo-sur-demo/open-folder");
+    expect(folderRequestUrl).toContain(`/storage/projects/${managedStoreId}/open-folder`);
     await expect(page.locator(".global-error")).toHaveCount(0);
 
     await page.route("**/__solara/storage/saves", async (route) => {
@@ -472,7 +501,7 @@ test("A13: panel gestionado — descargar, respaldo, sitio público y carpeta", 
     const archiveBusy = detail.getByRole("button", { name: /Archivar/ });
     await expect(archiveBusy).toHaveAttribute("aria-busy", "true");
     await expect(archiveBusy).toBeDisabled();
-    await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+    await expect(cardByName(page, managedStoreName)).toHaveCount(0);
     await page.unroute("**/__solara/storage/saves");
   } finally {
     await stopManagedServer(managed.process, managed.root);

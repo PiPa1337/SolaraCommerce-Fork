@@ -38,16 +38,17 @@ ProductEditor, ThemeEditor y Overview) se commitearon dentro de `c92f99f`
 junto a los de T3 por una carrera de staging de la ola paralela; las filas de
 esos fixes citan ese commit.
 
-Actualización de cierre 2026-08-26: el smoke crítico y el portable están verdes,
-pero estas filas siguen abiertas y no deben ocultarse en un release.
+Actualización de cierre 2026-08-28: el smoke crítico, el portable y el full E2E
+final están verdes en Chromium/Node 24; las filas de release externo siguen
+abiertas y no deben ocultarse.
 
 | Prioridad | Problema y ubicación | Riesgo/impacto | Recomendación |
 | --- | --- | --- | --- |
 | P1 | La matriz release Node 22 no se pudo ejecutar: este host sólo tiene Node 24.18.0 (el runtime bundled es 24.19.0). | El build local no equivale a la validación exigida por CI/release. | Ejecutar `test:e2e:release` y los gates de cierre en un runner Windows con Node 22. |
-| P1 | `test:e2e` full permanece rojo fuera del smoke por specs de fixtures/UI (`bugfix-csv-dupes`, `bugfix-export`, `catalog-guided`, `catalog-modern`, `contact-v2`) y timeouts bajo carga. | No permite afirmar E2E completo verde; no debe resolverse relajando aserciones. | Reproducir cada spec aislado, revisar el contrato vigente y corregir la causa o registrar estabilidad con evidencia. |
-| P2 | Resuelto parcial (2026-08-27): Live Canvas declara bindings para Catalog Modern, About V2, Contact V2 y legacy; el manifest expande entidades, alt, rich text, precio entero, PDP generado y repeaters por ID. E2E focal 2/2 sin reintentos. | La suite E2E histórica completa aún mezcla contratos anteriores y no permite declarar release verde. | Reconciliar los specs históricos con plantilla protegida/checklist vigente y ejecutar la matriz completa. |
-| P2 | `check:budgets` conserva una advertencia por el bundle inicial JS de Studio (1.750.959 B / 737.280 B); los budgets públicos reales sí pasan. | El editor tiene coste inicial alto aunque el storefront está dentro de presupuesto. | Separar/cargar por demanda el código del Studio sin aumentar el runtime público. |
-| P3 | `check:runtime-serialization` requiere ejecución fuera del sandbox en este host porque esbuild recibe `Access is denied` al resolver rutas temporales ascendentes. | La validación local no es reproducible dentro del aislamiento actual. | Mantener un job de release con permisos de workspace adecuados y conservar el resultado 4/4. |
+| P1 | Full E2E final verificado en Chromium con 985/988 pasadas, 3 omitidas por contrato explícito y 0 fallos; la familia visual tuvo timeouts sólo bajo contención a 8/4 workers. | La estabilidad a máxima paralelización no queda certificada como release; no debe resolverse relajando aserciones. | Conservar la evidencia aislada y el full verde a 2 workers; repetir en el runner release y otros navegadores. |
+| P2 | Resuelto (2026-08-28): Live Canvas declara bindings para Catalog Modern, About V2, Contact V2 y legacy; el manifest expande entidades, alt, rich text, precio entero, PDP generado y repeaters por ID. `live-canvas-coverage.spec.ts` 12/12. | La matriz Firefox/WebKit y Node 22 todavía quedan fuera de este host. | Repetir la matriz completa en el runner release. |
+| P2 | `check:budgets` conserva una advertencia por el bundle inicial JS de Studio (1.751.296 B / 737.280 B); los budgets públicos reales sí pasan. | El editor tiene coste inicial alto aunque el storefront está dentro de presupuesto. | Separar/cargar por demanda el código del Studio sin aumentar el runtime público. |
+| P3 | `check:runtime-serialization` pasó 4/4 fuera del sandbox; dentro del sandbox esbuild recibe `Access is denied` al resolver rutas temporales ascendentes. | La validación local no es reproducible dentro del aislamiento actual. | Mantener un job de release con permisos de workspace adecuados y conservar el resultado 4/4. |
 
 | Prioridad | Problema y ubicación | Riesgo/impacto | Recomendación |
 | --- | --- | --- | --- |

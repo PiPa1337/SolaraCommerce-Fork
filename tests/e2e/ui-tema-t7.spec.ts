@@ -16,6 +16,7 @@
 import { createServer, type Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
+import { readHashedStorefrontCss } from "./export-helpers";
 import { createCleanStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
@@ -45,6 +46,8 @@ type ExportedProject = Parameters<typeof exportProject>[0];
 
 /** Paleta por defecto de la tienda limpia catalog-modern (catalog-modern-fixture.ts:391-401). */
 const THEME_BACKGROUND = "#fcfcfb";
+const DEFAULT_DARK_BACKGROUND = "#0d0d0f";
+const DEFAULT_DARK_TEXT = "#e8e8ea";
 
 async function setupCleanStore(page: Page, name: string): Promise<void> {
   await page.goto(studioUrl);
@@ -67,7 +70,7 @@ async function openThemeTab(page: Page): Promise<void> {
 }
 
 function modeSelect(page: Page): Locator {
-  return page.getByLabel("Modo", { exact: true });
+  return page.getByLabel("Modo de color", { exact: true });
 }
 
 /**
@@ -84,7 +87,8 @@ function previewVar(page: Page, variable: string): () => Promise<string> {
       .evaluate(
         (element, name) => getComputedStyle(element).getPropertyValue(name).trim(),
         variable,
-      );
+      )
+      .catch(() => "");
 }
 
 /** color-scheme computado del .solara-page del preview desktop. */
@@ -93,7 +97,8 @@ function previewColorScheme(page: Page): () => Promise<string> {
     page
       .frameLocator('iframe[title="Vista previa desktop"]')
       .locator(".solara-page")
-      .evaluate((element) => getComputedStyle(element).colorScheme);
+      .evaluate((element) => getComputedStyle(element).colorScheme)
+      .catch(() => "");
 }
 
 /** data-color-mode del .solara-page del preview desktop. */
@@ -102,7 +107,8 @@ function previewDataColorMode(page: Page): () => Promise<string | null> {
     page
       .frameLocator('iframe[title="Vista previa desktop"]')
       .locator(".solara-page")
-      .evaluate((element) => element.getAttribute("data-color-mode"));
+      .evaluate((element) => element.getAttribute("data-color-mode"))
+      .catch(() => null);
 }
 
 /** backgroundColor computado del root catalog-modern del preview (capa --catalog-*). */
@@ -111,7 +117,8 @@ function previewCatalogBackground(page: Page): () => Promise<string> {
     page
       .frameLocator('iframe[title="Vista previa desktop"]')
       .locator(".catalog-modern")
-      .evaluate((element) => getComputedStyle(element).backgroundColor);
+      .evaluate((element) => getComputedStyle(element).backgroundColor)
+      .catch(() => "");
 }
 
 /** Proyecto persistido en IndexedDB (store `projects`) para la tienda con ese nombre. */
@@ -152,9 +159,7 @@ function exportedHtml(project: ExportedProject): string {
 
 function exportedCss(project: ExportedProject): string {
   const result = exportProject(project, { mode: "draft" });
-  const file = result.files.get("assets/storefront.css");
-  if (file === undefined) throw new Error("El sitio exportado no contiene assets/storefront.css");
-  return typeof file === "string" ? file : new TextDecoder().decode(file);
+  return readHashedStorefrontCss(result.files);
 }
 
 async function startExportedServer(
@@ -224,16 +229,18 @@ test("Sistema: el preview sigue prefers-color-scheme al emular la media", async 
   await modeSelect(page).selectOption("auto");
   await expect.poll(previewDataColorMode(page), { timeout: 15_000 }).toBe("auto");
 
-  // Con el sistema en oscuro, el modo auto aplica el override fijo del dark:
-  // pisa 5 de los 7 tokens del usuario (styles.ts:513-521).
-  await expect.poll(previewVar(page, "--solara-background"), { timeout: 15_000 }).toBe("#1d1e19");
-  await expect.poll(previewVar(page, "--solara-text"), { timeout: 15_000 }).toBe("#f3eee4");
+  // Con el sistema en oscuro, el modo auto aplica los tokens dark semánticos
+  // del proyecto; la tienda limpia usa los defaults del exporter.
+  await expect
+    .poll(previewVar(page, "--solara-background"), { timeout: 15_000 })
+    .toBe(DEFAULT_DARK_BACKGROUND);
+  await expect.poll(previewVar(page, "--solara-text"), { timeout: 15_000 }).toBe(DEFAULT_DARK_TEXT);
   await expect.poll(previewColorScheme(page), { timeout: 15_000 }).toBe("dark");
 
   // Fix Ola 3: la capa --catalog-* del skin catalog-modern deriva de los
-  // tokens --solara-* (styles.ts:1942-1948), así que el root del skin sigue
-  // al override del dark (#1d1e19) y la mezcla ilegible ya no existe.
-  await expect.poll(previewCatalogBackground(page), { timeout: 15_000 }).toBe("rgb(29, 30, 25)");
+  // tokens --solara-*, así que el root del skin sigue al override del dark y
+  // la mezcla ilegible ya no existe.
+  await expect.poll(previewCatalogBackground(page), { timeout: 15_000 }).toBe("rgb(13, 13, 15)");
 
   // Con el sistema en claro, el modo auto respeta la paleta del usuario. El
   // cambio de emulación requiere un iframe nuevo: un cambio de modo (idempotente
@@ -267,11 +274,15 @@ test("Sistema: el sitio exportado sigue prefers-color-scheme al emular la media"
   expect(html).not.toContain('data-theme="');
 
   // Utilidad: el CSS exportado emite color-scheme y la media query que sigue al
-  // sistema (index.ts:601-604) + el override fijo de los 5 tokens (styles.ts:513-521).
-  expect(css).toContain('.solara-page[data-color-mode="auto"]{color-scheme:dark}');
-  expect(css).toMatch(/@media \(prefers-color-scheme:dark\)/);
-  expect(css).toContain('[data-solara-store][data-color-mode="auto"]{');
-  expect(css).toContain("--solara-background:#1d1e19");
+  // sistema (index.ts) y los tokens dark semánticos.
+  const normalizedCss = css.replaceAll(/\\+(?=")/g, "");
+  expect(normalizedCss).toContain(
+    '.solara-page[data-color-mode="auto"]{--solara-background:var(--solara-dark-background)',
+  );
+  expect(normalizedCss).toContain("color-scheme:dark");
+  expect(normalizedCss).toMatch(/@media \(prefers-color-scheme:dark\)/);
+  expect(normalizedCss).toContain('[data-solara-store][data-color-mode="auto"]{');
+  expect(normalizedCss).toContain(`--solara-dark-background:${DEFAULT_DARK_BACKGROUND}`);
 
   const exported = exportProject(project, { mode: "draft" });
   const siteServer = await startExportedServer(exported.files);
@@ -289,7 +300,7 @@ test("Sistema: el sitio exportado sigue prefers-color-scheme al emular la media"
           };
         }),
       )
-      .toEqual({ background: "#1d1e19", colorScheme: "dark" });
+      .toEqual({ background: DEFAULT_DARK_BACKGROUND, colorScheme: "dark" });
 
     await page.emulateMedia({ colorScheme: "light" });
     await expect

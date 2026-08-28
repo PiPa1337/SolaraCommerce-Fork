@@ -20,6 +20,7 @@ import type { Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(60_000);
@@ -49,8 +50,7 @@ async function openCatalog(page: Page): Promise<void> {
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await openMutableScaleStore(page, "Tienda escala A01");
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
   await expect(rows(page)).toHaveCount(50);
@@ -119,20 +119,20 @@ test.describe("A1 — Catálogo: filtro de categoría", () => {
   test("filtra por raíz e hija y restaurar devuelve las 50", async ({ page }) => {
     await openCatalog(page);
 
-    await categoryFilter(page).selectOption("category-remeras");
+    await categoryFilter(page).selectOption({ label: "Remeras" });
     await expect(rows(page)).toHaveCount(7);
     await expect(paginationSummary(page)).toHaveText("1–7 de 7");
     await expect(titleOf(page, 0)).resolves.toBe("Remera esencial de algodón");
 
-    await categoryFilter(page).selectOption("category-basicas");
+    await categoryFilter(page).selectOption({ label: "Básicas" });
     await expect(rows(page)).toHaveCount(3);
     await expect(titleOf(page, 0)).resolves.toBe("Remera esencial de algodón");
 
-    await categoryFilter(page).selectOption("category-camisas");
+    await categoryFilter(page).selectOption({ label: "Camisas" });
     await expect(rows(page)).toHaveCount(7);
     await expect(titleOf(page, 0)).resolves.toBe("Remera gráfica Horizonte");
 
-    await categoryFilter(page).selectOption("category-jeans");
+    await categoryFilter(page).selectOption({ label: "Jeans" });
     await expect(rows(page)).toHaveCount(2);
     await expect(paginationSummary(page)).toHaveText("1–2 de 2");
     await expect(titleOf(page, 0)).resolves.toBe("Gorra Visera");
@@ -145,7 +145,7 @@ test.describe("A1 — Catálogo: filtro de categoría", () => {
   test("el filtro de categoría se combina con la búsqueda", async ({ page }) => {
     await openCatalog(page);
 
-    await categoryFilter(page).selectOption("category-remeras");
+    await categoryFilter(page).selectOption({ label: "Remeras" });
     await searchBox(page).fill("Remera");
     await expect(rows(page)).toHaveCount(3);
 

@@ -72,15 +72,6 @@ async function openDashboard(page: Page, url: string): Promise<void> {
   });
 }
 
-async function openDemoStore(page: Page): Promise<void> {
-  await page
-    .locator('article:has([data-store-card-id="store-modo-sur-demo"])')
-    .getByRole("button", { name: "Abrir esta tienda" })
-    .click();
-  await page.getByRole("tab", { name: "Resumen" }).click();
-  await expect(page.getByLabel("Nombre de la tienda")).toBeVisible();
-}
-
 /** Crea una tienda editable (semilla placeholder) y queda dentro del Studio. */
 async function createCleanStoreManaged(page: Page, url: string, name: string): Promise<void> {
   await page.goto(url);
@@ -99,10 +90,27 @@ async function createCleanStoreManaged(page: Page, url: string, name: string): P
   });
 }
 
+async function openManagedStoreByName(page: Page, name: string): Promise<void> {
+  const card = page.locator(".dashboard-store-card").filter({
+    has: page.getByText(name, { exact: true }),
+  });
+  await expect(card).toBeVisible({ timeout: 30_000 });
+  await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+  const navigation = page.getByRole("navigation", { name: /de la tienda/ });
+  const recovery = page.getByTestId("ui-confirm-dialog");
+  await expect
+    .poll(async () => (await navigation.isVisible()) || (await recovery.isVisible()), {
+      timeout: 30_000,
+    })
+    .toBe(true);
+}
+
 async function renameAndSave(page: Page, name: string): Promise<void> {
   await page.getByLabel("Nombre de la tienda").fill(name);
   await page.locator("[data-studio-save]").click();
-  await expect(page.locator(".save-indicator")).toContainText("Guardado", { timeout: 60_000 });
+  await expect(page.locator(".save-indicator")).toHaveText(/Guardado|Sitio anterior conservado/, {
+    timeout: 60_000,
+  });
 }
 
 /** Abre una segunda ventana aislada (IndexedDB propio) sobre el mismo servidor. */
@@ -122,11 +130,13 @@ async function createConflict(
   const contextA = await browser.newContext();
   const pageA = await contextA.newPage();
   await openDashboard(pageA, url);
-  await openDemoStore(pageA);
+  await createCleanStoreManaged(pageA, url, `${first} inicial`);
+  await pageA.getByRole("tab", { name: "Resumen" }).click();
   await renameAndSave(pageA, first);
 
   const pageB = await openSecondTab(browser, url);
-  await openDemoStore(pageB);
+  await openManagedStoreByName(pageB, first);
+  await pageB.getByRole("tab", { name: "Resumen" }).click();
   await renameAndSave(pageB, second);
 
   await pageA.getByLabel("Nombre de la tienda").fill(`${first} (borrador local)`);
@@ -140,12 +150,7 @@ test("dos pestañas: la segunda guardada genera 409 con opciones y conservar bor
 }) => {
   const managed = await startManagedServer();
   try {
-    const { pageA } = await createConflict(
-      browser,
-      managed.url,
-      "Predeterminado A",
-      "Predeterminado B",
-    );
+    const { pageA } = await createConflict(browser, managed.url, "Tienda P0 A", "Tienda P0 B");
     await expect(pageA.getByTestId("ui-conflict-dialog")).toContainText("otra pestaña");
 
     // F2 (fix 409): el diálogo toma el foco inicial, el Tab queda atrapado
@@ -178,7 +183,7 @@ test("dos pestañas: la segunda guardada genera 409 con opciones y conservar bor
       })
       .toBe(false);
     await expect(pageA.getByLabel("Nombre de la tienda")).toHaveValue(
-      "Predeterminado A (borrador local)",
+      "Tienda P0 A (borrador local)",
     );
 
     // T4.12: la recuperación del borrador ya no usa window.confirm; el
@@ -187,10 +192,7 @@ test("dos pestañas: la segunda guardada genera 409 con opciones y conservar bor
     await expect(pageA.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
       timeout: 30_000,
     });
-    await pageA
-      .locator('article:has([data-store-card-id="store-modo-sur-demo"])')
-      .getByRole("button", { name: "Abrir esta tienda" })
-      .click();
+    await openManagedStoreByName(pageA, "Tienda P0 B");
     const recovery = pageA.getByTestId("ui-confirm-dialog");
     await expect(recovery).toBeVisible({ timeout: 30_000 });
     await expect(recovery).toContainText("borrador");
@@ -198,7 +200,7 @@ test("dos pestañas: la segunda guardada genera 409 con opciones y conservar bor
     await expect(pageA.getByRole("tab", { name: "Resumen" })).toBeVisible();
     await pageA.getByRole("tab", { name: "Resumen" }).click();
     await expect(pageA.getByLabel("Nombre de la tienda")).toHaveValue(
-      "Predeterminado A (borrador local)",
+      "Tienda P0 A (borrador local)",
       { timeout: 30_000 },
     );
   } finally {
@@ -211,19 +213,14 @@ test("el conflicto 409 permite recargar desde disco y descarta el borrador local
 }) => {
   const managed = await startManagedServer();
   try {
-    const { pageA } = await createConflict(
-      browser,
-      managed.url,
-      "Predeterminado C",
-      "Predeterminado D",
-    );
+    const { pageA } = await createConflict(browser, managed.url, "Tienda P0 C", "Tienda P0 D");
     await pageA.getByTestId("ui-conflict-reload").click();
 
-    await expect(pageA.locator(".studio-brand strong")).toHaveText("Predeterminado D", {
+    await expect(pageA.locator(".studio-breadcrumb__current")).toHaveText("Tienda P0 D", {
       timeout: 60_000,
     });
     await pageA.getByRole("tab", { name: "Resumen" }).click();
-    await expect(pageA.getByLabel("Nombre de la tienda")).toHaveValue("Predeterminado D");
+    await expect(pageA.getByLabel("Nombre de la tienda")).toHaveValue("Tienda P0 D");
   } finally {
     await stopManagedServer(managed);
   }
@@ -234,18 +231,13 @@ test("P9-B6: Esc en el conflicto 409 conserva el borrador (mismo contrato que Co
 }) => {
   const managed = await startManagedServer();
   try {
-    const { pageA } = await createConflict(
-      browser,
-      managed.url,
-      "Predeterminado E",
-      "Predeterminado F",
-    );
+    const { pageA } = await createConflict(browser, managed.url, "Tienda P0 E", "Tienda P0 F");
     await pageA.keyboard.press("Escape");
     await expect(pageA.getByTestId("ui-conflict-dialog")).toHaveCount(0);
     await expect(pageA.getByTestId("ui-studio-notice")).toContainText("Borrador conservado");
     await pageA.getByRole("tab", { name: "Resumen" }).click();
     await expect(pageA.getByLabel("Nombre de la tienda")).toHaveValue(
-      "Predeterminado E (borrador local)",
+      "Tienda P0 E (borrador local)",
     );
     console.log("P9-B6 Esc conserva el borrador");
   } finally {
@@ -286,22 +278,17 @@ test("el conflicto 409 permite duplicar con el borrador local y persiste la copi
 }) => {
   const managed = await startManagedServer();
   try {
-    const { pageA } = await createConflict(
-      browser,
-      managed.url,
-      "Predeterminado E",
-      "Predeterminado F",
-    );
+    const { pageA } = await createConflict(browser, managed.url, "Tienda P0 G", "Tienda P0 H");
     await pageA.getByTestId("ui-conflict-duplicate").click();
 
-    await expect(pageA.locator(".studio-brand strong")).toHaveText(
-      "Predeterminado E (borrador local) copia",
+    await expect(pageA.locator(".studio-breadcrumb__current")).toHaveText(
+      "Tienda P0 G (borrador local) copia",
       { timeout: 60_000 },
     );
     await pageA.getByRole("button", { name: "Volver a tiendas" }).click();
     await expect(pageA.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
     await expect(
-      pageA.locator(".dashboard-store-card").getByText("Predeterminado E (borrador local) copia", {
+      pageA.locator(".dashboard-store-card").getByText("Tienda P0 G (borrador local) copia", {
         exact: true,
       }),
     ).toBeVisible();
@@ -311,7 +298,7 @@ test("el conflicto 409 permite duplicar con el borrador local y persiste la copi
       return response.json();
     });
     const names = listing.projects.map((project: { name: string }) => project.name);
-    expect(names).toContain("Predeterminado E (borrador local) copia");
+    expect(names).toContain("Tienda P0 G (borrador local) copia");
     expect(listing.projects).toHaveLength(2);
   } finally {
     await stopManagedServer(managed);
@@ -326,8 +313,9 @@ test("al recargar con cambios sin guardar, el diálogo de borrador recupera la e
   const page = await context.newPage();
   try {
     await openDashboard(page, managed.url);
-    await openDemoStore(page);
-    await page.getByLabel("Nombre de la tienda").fill("Predeterminado borrador");
+    await createCleanStoreManaged(page, managed.url, "Tienda recovery");
+    await page.getByRole("tab", { name: "Resumen" }).click();
+    await page.getByLabel("Nombre de la tienda").fill("Tienda recovery borrador");
     await page.waitForTimeout(1_200);
 
     // T4.12: la recuperación del borrador se confirma con el diálogo unificado.
@@ -335,17 +323,14 @@ test("al recargar con cambios sin guardar, el diálogo de borrador recupera la e
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
       timeout: 30_000,
     });
-    await page
-      .locator('article:has([data-store-card-id="store-modo-sur-demo"])')
-      .getByRole("button", { name: "Abrir esta tienda" })
-      .click();
+    await openManagedStoreByName(page, "Tienda recovery");
     const recovery = page.getByTestId("ui-confirm-dialog");
     await expect(recovery).toBeVisible({ timeout: 30_000 });
     await expect(recovery).toContainText("borrador");
     await recovery.getByRole("button", { name: "Recuperar borrador" }).click();
     await expect(page.getByRole("tab", { name: "Resumen" })).toBeVisible();
     await page.getByRole("tab", { name: "Resumen" }).click();
-    await expect(page.getByLabel("Nombre de la tienda")).toHaveValue("Predeterminado borrador", {
+    await expect(page.getByLabel("Nombre de la tienda")).toHaveValue("Tienda recovery borrador", {
       timeout: 30_000,
     });
   } finally {
@@ -359,12 +344,7 @@ test("el diálogo de conflicto 409 es modal, con nombre y opciones accesibles (T
 }) => {
   const managed = await startManagedServer();
   try {
-    const { pageA } = await createConflict(
-      browser,
-      managed.url,
-      "Predeterminado G",
-      "Predeterminado H",
-    );
+    const { pageA } = await createConflict(browser, managed.url, "Tienda P0 I", "Tienda P0 J");
     const dialog = pageA.getByTestId("ui-conflict-dialog");
     await expect(dialog).toHaveAttribute("role", "dialog");
     await expect(dialog).toHaveAttribute("aria-modal", "true");

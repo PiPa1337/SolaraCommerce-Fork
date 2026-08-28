@@ -47,8 +47,8 @@ describe("saveIndicatorLabel", () => {
     expect(saveIndicatorLabel("saved", false, 1_700_000_000_000)).toMatch(/^Guardado \d{2}:\d{2}$/);
   });
 
-  it("conserva «Sitio anterior conservado» cuando el sitio quedó atrasado", () => {
-    expect(saveIndicatorLabel("site-outdated", true, null)).toBe("Sitio anterior conservado");
+  it("prioriza «Cambios pendientes» si se edita después de un guardado con sitio atrasado", () => {
+    expect(saveIndicatorLabel("site-outdated", true, null)).toBe("Cambios pendientes");
     expect(saveIndicatorLabel("site-outdated", false, null)).toBe("Sitio anterior conservado");
   });
 

@@ -135,6 +135,12 @@ describe("canvas bridge", () => {
     expect(script).toContain("pendingTarget = null;");
   });
 
+  it("permite rotar el nonce entre selecciones sin desactivar el bridge", () => {
+    const script = canvasBridgeScript("session", "nonce");
+    expect(script).toContain('message.type === "solara-canvas-nonce"');
+    expect(script).toContain("nonce: activeNonce");
+  });
+
   it("rechaza rectángulos enormes y items que ya no existen", () => {
     expect(
       parseCanvasMessage({

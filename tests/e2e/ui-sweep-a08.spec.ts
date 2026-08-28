@@ -12,7 +12,7 @@
  */
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { createCleanStore } from "./project-helpers";
+import { createCleanStore, openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 120_000 : 90_000);
@@ -62,11 +62,11 @@ async function setupCleanStore(page: Page, name: string): Promise<void> {
   await openResumenTab(page);
 }
 
-async function setupDemoStore(page: Page): Promise<void> {
+async function setupDemoStore(page: Page): Promise<string> {
   await wipeAndOpenDashboard(page);
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  const projectId = await openMutableScaleStore(page, "Tienda A08 mutable");
   await openResumenTab(page);
+  return projectId;
 }
 
 async function openResumenTab(page: Page): Promise<void> {
@@ -128,7 +128,8 @@ async function storedProject(page: Page, lookup: ProjectLookup): Promise<StoredR
           all.addEventListener("success", () => {
             const records = all.result as StoredRecord[];
             resolve(
-              records.find((record) => (id ? record.id === id : record.name === name)) ?? null,
+              records.find((record) => (id ? record.id === id : record.project.name === name)) ??
+                null,
             );
           });
           all.addEventListener("error", () => reject(all.error));
@@ -166,7 +167,7 @@ const fieldsetByLegend = (parent: Locator, legend: string) =>
 test("Añadir enlace de catálogo agrega el enlace visible con destino por defecto y persiste (capa 1+2+3)", async ({
   page,
 }) => {
-  await setupDemoStore(page);
+  const projectId = await setupDemoStore(page);
 
   const initialCount = await navItems(page).count();
   await page.getByRole("button", { name: "Añadir enlace de catálogo", exact: true }).click();
@@ -178,7 +179,7 @@ test("Añadir enlace de catálogo agrega el enlace visible con destino por defec
     "Nueva categoría",
   );
 
-  const demo = { id: "store-modo-sur-demo" };
+  const demo = { id: projectId };
   const project = await readProject(page, demo);
   const expectedHref = `/categorias/${project.categories[0].slug}/`;
   await expect(itemDest).toHaveValue(expectedHref);
@@ -449,6 +450,7 @@ test("vacíos de campos obligatorios: error inline en español sin rechazo globa
     .toBe("Descripción corregida.");
 
   const seoInput = homeEditor(page).getByLabel("Título SEO", { exact: true });
+  const initialSeoTitle = await seoInput.inputValue();
   await seoInput.fill("");
   await expect(
     fieldsetByLegend(homeEditor(page), "Título SEO").getByTestId("ui-field-error"),
@@ -459,7 +461,7 @@ test("vacíos de campos obligatorios: error inline en español sin rechazo globa
       const home = (await storedProject(page, store))?.project.pages.find((p) => p.kind === "home");
       return home?.seoTitle;
     })
-    .toBe("Tienda B1 A08");
+    .toBe(initialSeoTitle);
 });
 
 test("los límites de navegación respetan el schema y anuncian los controles deshabilitados", async ({

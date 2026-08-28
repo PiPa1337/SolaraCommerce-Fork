@@ -127,6 +127,9 @@ describe("metadata del editor (Live Canvas)", () => {
     expect(collectionPreview.html).toContain(
       `data-canvas-edit="ce-generated-collection-${collection.id}-collection-title-collection-${collection.id}-title"`,
     );
+    expect(collectionPreview.html).toContain(
+      `data-canvas-image="ce-generated-collection-${collection.id}-collection-image-collection-${collection.id}-imageId"`,
+    );
 
     const productPreview = renderPreviewHtml(
       catalogModernStore,
@@ -138,7 +141,41 @@ describe("metadata del editor (Live Canvas)", () => {
     expect(productPreview.html).toContain(
       `data-canvas-edit="ce-catalog-product-detail-${product.id}-product-title-product-${product.id}-title"`,
     );
+    expect(productPreview.html).toContain(
+      `data-canvas-edit="ce-catalog-product-detail-${product.id}-product-description-product-${product.id}-description"`,
+    );
+    expect(productPreview.html).toContain(
+      `data-canvas-edit="ce-catalog-product-detail-${product.id}-product-price-product-${product.id}-price"`,
+    );
+    expect(
+      productPreview.canvasManifest.entries.find(
+        (entry) =>
+          entry.editId ===
+          `ce-catalog-product-detail-${product.id}-product-price-product-${product.id}-price`,
+      ),
+    ).toMatchObject({
+      label: "Precio del producto",
+      kind: "number",
+      sourceKind: "product",
+      entityId: product.id,
+      entityField: "price",
+    });
     expect(productPreview.html).toContain('data-canvas-entity-kind="asset"');
+  });
+
+  it("publica los IDs de los ítems automáticos del bento de categorías", () => {
+    const section = catalogModernStore.sections.find(
+      (item) => item.moduleId === "catalog-category-bento",
+    );
+    const rootCategory = catalogModernStore.categories.find((item) => !item.parentId);
+    if (!section || !rootCategory) throw new Error("Fixture sin bento o categoría raíz");
+
+    const { entries } = buildCanvasManifest(catalogModernStore);
+    const itemBinding = entries.find(
+      (entry) => entry.sectionId === section.id && entry.bindingId === "item-category",
+    );
+
+    expect(itemBinding?.itemIds).toContain(`automatic-category-${rootCategory.id}`);
   });
 
   it("incluye metadata de todos los módulos presentes con bindings o razón", () => {

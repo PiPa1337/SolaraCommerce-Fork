@@ -47,6 +47,7 @@ export function CreateStoreDialog({
       setEmail("");
       setPhone("");
       dialog.showModal();
+      nameInputRef.current?.focus();
       requestAnimationFrame(() => nameInputRef.current?.focus());
     }
     if (!open && dialog.open) {

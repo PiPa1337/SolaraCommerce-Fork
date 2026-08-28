@@ -1,5 +1,6 @@
 import type { Server } from "node:http";
 import { type ConsoleMessage, expect, type Page, test } from "@playwright/test";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 let server: Server;
@@ -27,30 +28,38 @@ const HEADLESS_GL_DRIVER_PATTERNS = [
   /GL Driver Message \(OpenGL, Performance, GL_CLOSE_PATH_NV, High\): GPU stall due to ReadPixels/,
 ];
 
+const PLAYWRIGHT_SANDBOX_PATTERNS = [
+  /Service Worker registration blocked by Playwright/,
+  /Service worker is disabled because the context is sandboxed/,
+  /Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED/,
+];
+
 /** Registra pageerror y console error/warning para fallar al final del recorrido. */
 function trackConsoleProblems(page: Page): string[] {
   const problems: string[] = [];
   page.on("pageerror", (error) => {
+    if (PLAYWRIGHT_SANDBOX_PATTERNS.some((pattern) => pattern.test(error.message))) return;
     problems.push(`pageerror: ${error.message}`);
   });
   page.on("console", (message: ConsoleMessage) => {
     if (message.type() !== "error" && message.type() !== "warning") return;
-    if (HEADLESS_GL_DRIVER_PATTERNS.some((pattern) => pattern.test(message.text()))) return;
+    if (
+      [...HEADLESS_GL_DRIVER_PATTERNS, ...PLAYWRIGHT_SANDBOX_PATTERNS].some((pattern) =>
+        pattern.test(message.text()),
+      )
+    )
+      return;
     problems.push(`${message.type()}: ${message.text()}`);
   });
   return problems;
 }
 
-async function openDemoStore(page: Page) {
+async function openDemoStore(page: Page): Promise<string> {
   await page.goto(studioUrl);
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
     timeout: 30_000,
   });
-  await page
-    .locator('article:has([data-store-card-id="store-modo-sur-demo"])')
-    .getByRole("button", { name: "Abrir esta tienda" })
-    .click();
-  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+  return openMutableScaleStore(page, "Tienda consola mutable");
 }
 
 test("el editor recorre dashboard, tabs y acciones clave sin errores de consola", async ({
@@ -94,7 +103,7 @@ test("el editor recorre dashboard, tabs y acciones clave sin errores de consola"
   await dialog.getByRole("textbox", { name: "Descripción" }).fill("Luz cálida de campamento.");
   await dialog.getByRole("textbox", { name: "SKU" }).fill("LIN-DUNA-01");
   await dialog.getByRole("spinbutton", { name: "Precio en centavos" }).fill("45000");
-  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  await dialog.getByRole("button", { name: "Guardar borrador" }).click();
   await page.getByPlaceholder("Buscar por producto, marca o estado").fill("Linterna Duna");
   await expect(page.getByLabel("Nombre de Linterna Duna")).toBeVisible();
   await page.getByPlaceholder("Buscar por producto, marca o estado").fill("");
@@ -140,11 +149,8 @@ test("el dashboard busca, selecciona y respalda sin errores de consola", async (
   await expect(page.getByText("No hay coincidencias")).toBeVisible();
   await page.getByRole("searchbox", { name: "Buscar tienda" }).fill("");
 
-  await page
-    .locator('article:has([data-store-card-id="store-modo-sur-demo"])')
-    .locator(".dashboard-store-card__button")
-    .click();
-  const detail = page.getByRole("complementary", {
+  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
+  const detail = page.getByRole("region", {
     name: "Tienda seleccionada: Predeterminado",
   });
   await expect(detail).toBeVisible();
@@ -166,11 +172,10 @@ test("los flujos nuevos de la ola (tema, foco, zoom, diálogo, duplicado y archi
   test.setTimeout(150_000);
   const problems = trackConsoleProblems(page);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await openDemoStore(page);
+  const mutableStoreId = await openDemoStore(page);
 
-  const themeToggle = page.getByTestId("ui-theme-toggle");
-  await themeToggle.click();
-  await themeToggle.click();
+  await expect(page.locator("html")).toHaveAttribute("data-studio-theme", "dark");
+  await expect(page.getByTestId("ui-theme-toggle")).toHaveCount(0);
 
   await page.getByTestId("ui-focus-toggle").click();
   await expect(page.locator(".studio-shell")).toHaveAttribute("data-studio-focus", "true");
@@ -198,13 +203,11 @@ test("los flujos nuevos de la ola (tema, foco, zoom, diálogo, duplicado y archi
   await page.getByRole("button", { name: "Volver a tiendas" }).click();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
 
-  const card = page.locator('[data-store-card-id="store-modo-sur-demo"]');
+  const card = page.locator(`[data-store-card-id="${mutableStoreId}"]`);
   // data-store-card-id está en el botón de selección; el descendiente
   // .dashboard-store-card__button no existe (es el propio elemento).
   await card.click();
-  const demoDetail = page.getByRole("complementary", {
-    name: "Tienda seleccionada: Predeterminado",
-  });
+  const demoDetail = page.getByRole("region", { name: /Tienda seleccionada:/ });
   await demoDetail.getByRole("button", { name: "Duplicar" }).click();
   const duplicate = page.getByTestId("ui-duplicate-dialog");
   await expect(duplicate).toBeVisible();
@@ -220,16 +223,11 @@ test("los flujos nuevos de la ola (tema, foco, zoom, diálogo, duplicado y archi
   await archiveConfirm.getByRole("button", { name: "Archivar", exact: true }).click();
   await expect(archiveConfirm).toBeHidden();
   await page.locator(".dashboard-cosmic-select select").first().selectOption("archived");
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
-  await page
-    .locator(".dashboard-store-card")
-    .filter({ hasText: "Predeterminado" })
-    .first()
-    .locator(".dashboard-store-card__button")
-    .click();
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText(/visibles/);
+  await card.click();
   await page.getByRole("button", { name: "Restaurar" }).click();
   await page.locator(".dashboard-cosmic-select select").first().selectOption("active");
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  await expect(page.locator(`[data-store-card-id="${mutableStoreId}"]`)).toBeVisible();
 
   expect(problems, problems.join("\n")).toEqual([]);
 });

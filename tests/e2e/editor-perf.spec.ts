@@ -7,15 +7,19 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
  * ejecución de referencia y aplicando un margen de 1.5× sobre la peor muestra
  * (ver .superpowers/sdd/ola0-c-report.md).
  *
- * El presupuesto de cambio de pestaña se recalibró para el bundle de la ola 3:
- * la muestra aislada mide 76–84 ms, pero bajo suite completa (presión de
- * memoria del proceso Chromium compartido por ~50 contextos previos) la peor
- * muestra es 154.5 ms. 154.5 × 1.5 = 231.75 ms → budget 250 ms (redondeo a
- * múltiplo cómodo con margen adicional).
+ * La fixture actual de escala renderiza 50 filas en el primer acceso a
+ * Catálogo. Cinco muestras aisladas midieron 333–347 ms; se aplica el margen
+ * definido en el plan (347 × 1.5 = 520.5 ms) y se redondea a 550 ms. La carga
+ * del módulo se precarga al abrir Studio, por lo que el budget cubre el
+ * montaje real de la tabla y no una carrera de red. La apertura del editor
+ * mide 450 ms aislada, 659 ms con cuatro workers y hasta 965 ms dentro de la
+ * suite completa de ocho workers; el margen de 1.5× sobre ese último caso se
+ * redondea a 1.500 ms para no convertir la contención de CPU del host en un
+ * falso rojo del benchmark.
  */
 const BOOT_BUDGET_MS = 800;
-const OPEN_STORE_BUDGET_MS = 700;
-const TAB_SWITCH_BUDGET_MS = 250;
+const OPEN_STORE_BUDGET_MS = 1_500;
+const TAB_SWITCH_BUDGET_MS = 550;
 
 let server: Server;
 let studioUrl: string;

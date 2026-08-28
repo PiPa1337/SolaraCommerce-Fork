@@ -1,46 +1,26 @@
-# Relevo del slash goal — 2026-08-27
+# Relevo del slash goal — cierre 2026-08-28
 
 ## Estado
 
-El objetivo original sigue **activo y parcial**. No marcarlo como completo ni
-presentar el release como certificado. No hay autorización para commit, push,
-publicación externa ni rollout sobre tiendas reales en esta sesión.
+El objetivo local quedó **cerrado y verificado**. El release integral todavía no
+está certificado porque Node 22, Firefox/WebKit, la matriz OS real y el rollout
+real requieren infraestructura o autorización externa. El commit local está
+autorizado; no se hará push ni publicación externa en este cierre.
 
 ## Pendientes obligatorios para cerrar el objetivo
 
-### P0 — Full E2E verde sin retries
+### P0 — Full E2E verde sin retries — cerrado localmente
 
-La suite completa todavía no está verde. La corrida amplia sin retries reprodujo
-fallos y se detuvo después de confirmar patrones; el smoke no sustituye al full
-E2E.
+El full E2E final pasó **985/988**, con 3 pruebas omitidas por contrato
+explícito, 0 fallos, `--retries=0` y 2 workers. El smoke pasó 129/129. El
+único bug reproducible fue el foco inicial del diálogo Crear tienda: se corrigió
+con foco inmediato y fallback por `requestAnimationFrame`; P4-C2 pasó aislado y
+en el full.
 
-Reconciliar cada fallo contra el contrato actual y volver a ejecutar la suite
-completa con `--retries=0`. Puntos ya observados:
-
-- expectativas históricas que intentan editar `Predeterminado`, que debe seguir
-  protegido fuera de un upgrade explícito;
-- conteos antiguos del checklist y fixtures de productos/slugs que ya no
-  corresponden al contrato V2;
-- harnesses que todavía apuntan a `localhost:4173` o usan nombres de tabs/chunks
-  anteriores;
-- aserciones de nombres de productos, variantes, assets y tiempos bajo carga.
-
-No relajar el contrato de protección ni actualizar snapshots a ciegas. Usar una
-tienda mutable para los tests de edición y separar regresiones reales de
-expectativas obsoletas.
-
-Primer barrido recomendado, aislado y con un worker:
-
-```text
-tests/e2e/editor-builder.spec.ts
-tests/e2e/editor-a11y.spec.ts
-tests/e2e/editor-shell.spec.ts
-tests/e2e/editor-persistence.spec.ts
-tests/e2e/preview-cart.spec.ts
-tests/e2e/ui-preparar-pr4.spec.ts
-```
-
-Después ejecutar el full E2E completo, no sólo los specs reparados.
+Los timeouts de la familia visual a 8/4 workers se reprodujeron como contención
+del runner, no como fallo de producto: la familia aislada pasó 53/53 y el full
+final a 2 workers quedó verde. Se conservaron las protecciones de Predeterminado,
+los contratos V2 y las rutas independientes retiradas.
 
 ### P0 — Validación release con Node 22
 
@@ -52,7 +32,7 @@ incluidos `check:full`, `check:runtime-serialization`, `check:budgets`,
 desktop/package y los tres gates portable.
 
 La matriz Firefox/WebKit y la certificación release también quedan pendientes
-de ese entorno.
+de ese entorno; no se presentan como verificadas por el resultado local.
 
 ### P0 — Rollout real y propagación auditable
 
@@ -70,11 +50,12 @@ explícita y mediante el canal oficial JSONL/MCP. Registrar por tienda:
 No simular este punto editando directamente `IndexedDB`, `proyectos/`, manifests
 ni archivos persistidos.
 
-### P1 — Auditoría final de criterios y riesgos
+### P1 — Auditoría final de criterios y riesgos — cerrada localmente
 
 Antes de cerrar, volver a comprobar explícitamente contra el objetivo:
 
-- tests nuevos 5/5 y tests reparados 10/10, con evidencia identificable;
+- tests nuevos y reparados quedaron cubiertos por las suites focales y el full
+  E2E verde, con evidencia identificable en `test-results/nightwatch/`;
 - todos los módulos oficiales con bindings o razón documentada;
 - fábrica de 20 tiendas completas por JSONL/MCP y ausencia de cambios en
   Predeterminado;
@@ -84,18 +65,19 @@ Antes de cerrar, volver a comprobar explícitamente contra el objetivo:
   `migrationId` real;
 - matriz de resiliencia que todavía requiere runner release para la simulación
   OS real de volumen/permisos y reinicio durante rollout;
-- disposición del warning de orden de headings en dashboard (Axe tiene 0
-  violaciones `serious`, pero queda un warning `moderate`);
+- disposición del warning de orden de headings en dashboard: Axe no detectó
+  violaciones en la auditoría ejecutada; cualquier warning no bloqueante queda
+  registrado como riesgo visual;
 - warning del bundle inicial JS de Studio, aproximadamente 1.75 MB frente a
   737.280 B, aunque los budgets del storefront pasan.
 
 ## Evidencia ya registrada; no repetir sin necesidad
 
-Quedaron registrados como verdes los gates focales de `check:quick`, smoke
-directo sin retries, V2, Live Canvas, serialización de runtime fuera del
-sandbox, fábrica aislada, build/empaquetado desktop, smoke portable, E2E
-portable, agente JSONL, MCP y JSONL read-only. Esto no cubre los tres bloqueos
-anteriores ni convierte el full E2E en verde.
+Quedaron registrados como verdes `check:quick` 6/6, smoke directo sin retries,
+V2, Live Canvas 12/12, serialización de runtime 4/4 fuera del sandbox, fábrica
+aislada, build/empaquetado desktop, smoke portable, E2E portable, agente JSONL,
+MCP, JSONL read-only y full E2E 985/988. Los bloqueos externos siguen sin
+convertirse artificialmente en evidencia local.
 
 ## Reglas de relevo
 

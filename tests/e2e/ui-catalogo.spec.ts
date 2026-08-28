@@ -5,6 +5,7 @@
  */
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 let server: Server;
@@ -32,10 +33,9 @@ async function openCatalog(page: Page) {
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await openMutableScaleStore(page, "Catálogo mutable H4-S2");
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
 }
 
 const searchBox = (page: Page) => page.getByPlaceholder("Buscar por producto, marca o estado");

@@ -97,9 +97,7 @@ test("los puntos de sucio aparecen, se limpian al visitar y tras guardar (T3.7)"
   await expect(page.getByTestId("ui-tab-dirty")).toHaveCount(0);
 });
 
-test("el tema oscuro es predeterminado y persiste al recargar (T3.8)", async ({
-  page,
-}) => {
+test("el tema oscuro es predeterminado y persiste al recargar (T3.8)", async ({ page }) => {
   await openStore(page);
   const root = page.locator("html");
   await expect(root).toHaveAttribute("data-studio-theme", "dark");

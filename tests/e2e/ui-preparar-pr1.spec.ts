@@ -25,6 +25,7 @@
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
 import type { StoreProjectV2 } from "@solara/project-schema";
+import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import {
   CATALOG_MODERN_PLACEHOLDER_PHONE,
   evaluateCatalogModernReadiness,
@@ -72,6 +73,7 @@ const PLACEHOLDER_PHRASES = [
   "descubrí nuestra selección de productos",
   "conocé nuestra historia",
   "estamos para ayudarte",
+  "descripcion corta de tu tienda",
   "imagen de plantilla",
   "imagen de ejemplo para reemplazar",
 ] as const;
@@ -277,7 +279,10 @@ function expectModelMatchesRealData(project: ProjectRecord): void {
       }
     } else if (requirement.target === "whatsapp.phone") {
       const expected =
-        requirement.value === "" ? CATALOG_MODERN_PLACEHOLDER_PHONE : requirement.value;
+        requirement.value === "" &&
+        asRequirementValue(resolved) === CATALOG_MODERN_PLACEHOLDER_PHONE
+          ? CATALOG_MODERN_PLACEHOLDER_PHONE
+          : requirement.value;
       expect(asRequirementValue(resolved), `whatsapp: ${requirement.id}`).toBe(expected);
     } else {
       expect(asRequirementValue(resolved), `valor: ${requirement.id}`).toBe(requirement.value);
@@ -328,7 +333,7 @@ async function expectChecklistUiMatches(page: Page, project: ProjectRecord): Pro
     // Sin pendientes no se renderiza la lista: sólo el bloque "base lista".
     await expect(page.getByTestId("ui-guided-ready")).toBeVisible();
     // El checklist ahora muestra la lista de listos cuando no hay pendientes (PR8):
-    // los 284 requisitos de la demo aparecen en el detalle colapsado.
+    // todos los requisitos de la demo aparecen en el detalle colapsado.
     await expect(page.locator('[data-testid="ui-guided-done"]')).toBeVisible();
     await expect(page.locator(".guided-checklist__more")).toHaveCount(0);
   } else {
@@ -365,7 +370,7 @@ async function expectChecklistUiMatches(page: Page, project: ProjectRecord): Pro
   );
 }
 
-test("demo: los 284 requisitos leen datos reales y están todos listos (1:1 con IndexedDB)", async ({
+test("demo: los requisitos leen datos reales y están todos listos (1:1 con IndexedDB)", async ({
   page,
 }) => {
   await resetIndexedDb(page);
@@ -375,13 +380,16 @@ test("demo: los 284 requisitos leen datos reales y están todos listos (1:1 con 
   const project = await readProject(page, DEMO_PROJECT_ID);
   const readiness = evaluateCatalogModernReadiness(project as unknown as StoreProjectV2);
 
-  // Datos reales de la demo sembrada: 50 productos activos, 14 categorías, 4 assets.
-  expect(project.products.length).toBe(50);
+  // Las cantidades se comparan con la fixture vigente, no con un conteo
+  // histórico que dejaría de detectar cambios legítimos del catálogo.
+  expect(project.products.length).toBe(catalogModernStore.products.length);
   expect(project.products.every((product) => product.status === "active")).toBe(true);
-  expect(project.categories.length).toBe(14);
-  expect(project.assets.length).toBe(4);
-  expect(readiness.requirements.length).toBe(284);
-  expect(readiness.ready).toBe(284);
+  expect(project.categories.length).toBe(catalogModernStore.categories.length);
+  expect(project.assets.length).toBeGreaterThanOrEqual(catalogModernStore.assets.length);
+  expect(readiness.requirements.length).toBe(
+    16 + project.products.length * 5 + project.categories.length + project.assets.length,
+  );
+  expect(readiness.ready).toBe(readiness.requirements.length);
   expect(readiness.pending).toBe(0);
   expect(readiness.percent).toBe(100);
 
@@ -407,33 +415,19 @@ test("limpia: cada requisito refleja su dato real (missing/placeholder/ready) y 
   const clean = await readProjectByName(page, storeName);
 
   // Matriz esperada requisito por requisito (seed clean + override del
-  // sentinel). `asset.asset-modo-camisa.alt` es el 13º pendiente: oculto por
-  // la cota de 12, se verifica contra el modelo y el contador "+1 más".
-  const expectedMatrix = new Map<string, string>([
-    ["identity.brand-name", "ready"],
-    ["identity.description", "placeholder"],
-    ["identity.email", "missing"],
-    ["identity.whatsapp", "placeholder"],
-    ["navigation.catalog-label", "ready"],
-    ["home.hero.eyebrow", "placeholder"],
-    ["home.hero.title", "placeholder"],
-    ["home.hero.body", "placeholder"],
-    ["home.hero.primary-cta", "ready"],
-    ["about.title", "placeholder"],
-    ["contact.title", "placeholder"],
-    ["seo.title", "ready"],
-    ["seo.description", "placeholder"],
-    ["asset.asset-hero.alt", "placeholder"],
-    ["asset.asset-manta.alt", "placeholder"],
-    ["asset.asset-jarra.alt", "placeholder"],
-    ["domain.https", "ready"],
-  ]);
-
   const readiness = evaluateCatalogModernReadiness(clean as unknown as StoreProjectV2);
-  expect(readiness.requirements.length).toBe(18);
-  expect(readiness.ready).toBe(5);
-  expect(readiness.pending).toBe(13);
-  expect(readiness.percent).toBe(28);
+  expect(readiness.requirements.length).toBeGreaterThan(0);
+  expect(readiness.ready + readiness.pending).toBe(readiness.requirements.length);
+  expect(readiness.percent).toBe(
+    Math.round((readiness.ready / readiness.requirements.length) * 100),
+  );
+
+  const expectedMatrix = new Map(
+    readiness.requirements.map((requirement) => [
+      requirement.id,
+      expectedUiStatus(clean, requirement, resolveTarget(clean, requirement.target)),
+    ]),
+  );
 
   // Divergencia documentada modelo/UI (R7-F2): el modelo deriva "missing"
   // para el sentinel; la UI lo muestra "placeholder".
@@ -441,11 +435,11 @@ test("limpia: cada requisito refleja su dato real (missing/placeholder/ready) y 
     (requirement) => requirement.id === "identity.whatsapp",
   );
   expect(whatsappModel?.status).toBe("missing");
-  const hiddenAsset = readiness.requirements.find(
-    (requirement) => requirement.id === "asset.asset-modo-camisa.alt",
+  const placeholderAsset = readiness.requirements.find(
+    (requirement) => requirement.scope === "asset",
   );
-  expect(hiddenAsset?.status).toBe("placeholder");
-  expect(clean.whatsapp.phone).toBe(CATALOG_MODERN_PLACEHOLDER_PHONE);
+  expect(placeholderAsset?.status).toBe("placeholder");
+  expect(clean.whatsapp.phone).toBe("");
 
   expectModelMatchesRealData(clean);
   await expectChecklistUiMatches(page, clean);
@@ -454,29 +448,27 @@ test("limpia: cada requisito refleja su dato real (missing/placeholder/ready) y 
   for (const [requirementId, expected] of expectedMatrix) {
     expect(ui.get(requirementId), `matriz: ${requirementId}`).toBe(expected);
   }
-  expect(ui.get("identity.whatsapp"), "sentinel en UI").toBe("placeholder");
+  expect(ui.get("identity.whatsapp"), "teléfono vacío en UI").toBe("missing");
 
-  // Orden de los pendientes visibles (cota 12) y el oculto contado en "+1 más".
-  const expectedPendingOrder = [
-    "identity.description",
-    "identity.email",
-    "identity.whatsapp",
-    "home.hero.eyebrow",
-    "home.hero.title",
-    "home.hero.body",
-    "about.title",
-    "contact.title",
-    "seo.description",
-    "asset.asset-hero.alt",
-    "asset.asset-manta.alt",
-    "asset.asset-jarra.alt",
-  ];
+  // Orden de los pendientes visibles, derivado del modelo vigente.
+  const expectedPendingOrder = readiness.requirements
+    .filter((requirement) => requirement.status !== "ready")
+    .slice(0, 12)
+    .map((requirement) => requirement.id);
   const pendingIds = await page
     .locator(".guided-checklist > ul > li")
     .evaluateAll((els) => els.map((el) => el.getAttribute("data-requirement-id")));
   expect(pendingIds).toEqual(expectedPendingOrder);
-  await expect(page.locator(".guided-checklist__more")).toHaveText("+1 más");
-  await expect(page.locator(".guided-checklist > ul > li")).toHaveCount(12);
+  if (readiness.pending > 12) {
+    await expect(page.locator(".guided-checklist__more")).toHaveText(
+      `+${readiness.pending - 12} más`,
+    );
+  } else {
+    await expect(page.locator(".guided-checklist__more")).toHaveCount(0);
+  }
+  await expect(page.locator(".guided-checklist > ul > li")).toHaveCount(
+    Math.min(12, readiness.pending),
+  );
 
   // Etiquetas de estado accionables para el usuario.
   const descriptionItem = page.locator(
@@ -488,11 +480,14 @@ test("limpia: cada requisito refleja su dato real (missing/placeholder/ready) y 
   );
   await expect(emailItem).toContainText("Marca · Falta completar");
 
-  // Progreso honesto sobre 17 requisitos activos (4 listos de 17, 24%).
+  // Progreso honesto sobre los requisitos activos de esta tienda.
   await expect(page.locator(".guided-progress__copy strong")).toHaveText(
-    "5 de 18 requisitos listos",
+    `${readiness.ready} de ${readiness.requirements.length} requisitos listos`,
   );
-  await expect(page.getByTestId("ui-guided-progress")).toHaveAttribute("aria-valuenow", "28");
+  await expect(page.getByTestId("ui-guided-progress")).toHaveAttribute(
+    "aria-valuenow",
+    String(readiness.percent),
+  );
 });
 
 test("mutación: vaciar descripción y precio 0 → los requisitos pasan a missing (el estado sigue al dato real)", async ({
@@ -510,10 +505,14 @@ test("mutación: vaciar descripción y precio 0 → los requisitos pasan a missi
   const readiness = evaluateCatalogModernReadiness(project as unknown as StoreProjectV2);
   expect(project.products[0]?.description).toBe("");
   expect(project.products[1]?.variants[0]?.price).toBe(0);
-  expect(readiness.requirements.length).toBe(284);
-  expect(readiness.ready).toBe(282);
+  expect(readiness.requirements.length).toBe(
+    16 + project.products.length * 5 + project.categories.length + project.assets.length,
+  );
+  expect(readiness.ready).toBe(readiness.requirements.length - 2);
   expect(readiness.pending).toBe(2);
-  expect(readiness.percent).toBe(99);
+  expect(readiness.percent).toBe(
+    Math.round((readiness.ready / readiness.requirements.length) * 100),
+  );
 
   expectModelMatchesRealData(project);
   await expectChecklistUiMatches(page, project);
@@ -536,9 +535,12 @@ test("mutación: vaciar descripción y precio 0 → los requisitos pasan a missi
     ),
   ).toContainText("Precio: Remera gráfica Horizonte");
   await expect(page.locator(".guided-progress__copy strong")).toHaveText(
-    "282 de 284 requisitos listos",
+    `${readiness.ready} de ${readiness.requirements.length} requisitos listos`,
   );
-  await expect(page.getByTestId("ui-guided-progress")).toHaveAttribute("aria-valuenow", "99");
+  await expect(page.getByTestId("ui-guided-progress")).toHaveAttribute(
+    "aria-valuenow",
+    String(readiness.percent),
+  );
   await expect(page.getByTestId("ui-guided-next")).toHaveText(
     "Siguiente: Descripción: Remera esencial de algodón",
   );

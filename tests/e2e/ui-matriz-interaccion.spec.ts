@@ -14,7 +14,7 @@
  */
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { createCleanStore } from "./project-helpers";
+import { createCleanStore, openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 120_000 : 90_000);
@@ -63,11 +63,7 @@ async function resetIndexedDb(page: Page): Promise<void> {
 
 async function openDemoStore(page: Page): Promise<void> {
   await resetIndexedDb(page);
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
-  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
-    timeout: 20_000,
-  });
+  await openMutableScaleStore(page, "Tienda escala matriz");
 }
 
 async function openDemoTab(page: Page, tab: string, heading: string): Promise<void> {
@@ -106,7 +102,7 @@ async function openCreateDialog(page: Page): Promise<Locator> {
 
 async function saveProduct(dialog: Locator, create: boolean): Promise<void> {
   await dialog
-    .getByRole("button", { name: create ? "Crear producto" : "Guardar producto" })
+    .getByRole("button", { name: create ? "Guardar borrador" : "Guardar cambios" })
     .click();
   await expect(dialog).toBeHidden();
 }
@@ -197,16 +193,10 @@ test.describe("Shell", () => {
     );
   });
 
-  test("el toggle de tema cambia data-studio-theme en el documento", async ({ page }) => {
+  test("el shell permanece dark-only y no expone un toggle de tema", async ({ page }) => {
     await openDemoStore(page);
-    const themeBefore = await page.evaluate(() =>
-      document.documentElement.getAttribute("data-studio-theme"),
-    );
-    await page.getByTestId("ui-theme-toggle").click();
-    await expect(page.locator("html")).toHaveAttribute(
-      "data-studio-theme",
-      themeBefore === "dark" ? "light" : "dark",
-    );
+    await expect(page.locator("html")).toHaveAttribute("data-studio-theme", "dark");
+    await expect(page.getByTestId("ui-theme-toggle")).toHaveCount(0);
   });
 
   test("guardar en el navegador pasa por Cambios pendientes y llega a Guardado", async ({
@@ -303,9 +293,14 @@ test.describe("Producto", () => {
 
     const dialog = await openCreateDialog(page);
     await dialog.getByRole("textbox", { name: "Título" }).fill("Remera Matriz F14");
+    await dialog
+      .getByRole("textbox", { name: "Descripción" })
+      .fill("Descripción de Remera Matriz F14.");
     await dialog.getByRole("spinbutton", { name: "Precio en centavos" }).fill("42900");
-    await dialog.getByLabel("Estado").selectOption("active");
-    await saveProduct(dialog, true);
+    await dialog.getByRole("button", { name: "Imágenes", exact: true }).click();
+    await dialog.locator(".product-asset-picker input").first().check();
+    await dialog.getByRole("button", { name: "Crear y activar", exact: true }).click();
+    await expect(dialog).toBeHidden();
 
     const row = await filterRow(page, "Remera Matriz F14");
     await expect(row.getByRole("textbox", { name: "Nombre de Remera Matriz F14" })).toBeVisible();
@@ -341,7 +336,7 @@ test.describe("Assets", () => {
     await resetIndexedDb(page);
     await createCleanStore(page, "Tienda recursos matriz");
     await page.getByRole("tab", { name: "Recursos", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Recursos" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Recursos", exact: true })).toBeVisible();
 
     await page.locator(IMAGE_INPUT).setInputFiles({
       name: "pixel.png",
@@ -475,10 +470,10 @@ test.describe("Dashboard", () => {
     // Archivar con confirmación y restaurar desde el deshacer.
     const card = page
       .locator(".dashboard-store-card")
-      .filter({ has: page.getByText("Predeterminado", { exact: true }) });
+      .filter({ has: page.getByText("Tienda Matriz F14", { exact: true }) });
     await card.locator(".dashboard-store-card__button").click();
     await page
-      .getByRole("region", { name: "Tienda seleccionada: Predeterminado" })
+      .getByRole("region", { name: "Tienda seleccionada: Tienda Matriz F14" })
       .getByRole("button", { name: "Archivar" })
       .click();
     const confirm = page.getByTestId("ui-confirm-dialog");
@@ -492,12 +487,14 @@ test.describe("Dashboard", () => {
     await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
 
     // Al archivar (filtro por defecto "Activas") la selección salta a la
-    // primera visible; se vuelve a elegir Predeterminado para duplicarla.
+    // primera visible; se vuelve a elegir la tienda creada para duplicarla.
     const restoredCard = page
       .locator(".dashboard-store-card")
-      .filter({ has: page.getByText("Predeterminado", { exact: true }) });
+      .filter({ has: page.getByText("Tienda Matriz F14", { exact: true }) });
     await restoredCard.locator(".dashboard-store-card__button").click();
-    const detail = page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" });
+    const detail = page.getByRole("region", {
+      name: "Tienda seleccionada: Tienda Matriz F14",
+    });
     await expect(detail).toBeVisible();
 
     // Duplicar: la copia aparece con id nuevo.

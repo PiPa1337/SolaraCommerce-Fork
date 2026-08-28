@@ -1296,6 +1296,13 @@ export const catalogProductDetail: ModuleDefinition<
       capabilities: ["edit-image"],
     },
     {
+      id: "product-price",
+      label: "Precio del producto",
+      kind: "number",
+      source: { kind: "product", entityId: "*", field: "price" },
+      capabilities: ["edit-number"],
+    },
+    {
       id: "asset-alt",
       label: "Texto alternativo de imagen",
       kind: "text",
@@ -1418,7 +1425,7 @@ export const catalogProductDetail: ModuleDefinition<
     const detailsPanelId = `catalog-product-details-${context.section.id}`;
     const descriptionPanelId = `catalog-product-description-${context.section.id}`;
     const description = context.settings.showDescription
-      ? `<div id="${escapeAttribute(descriptionPanelId)}" class="catalog-rich-text"${canvasEntityAttributes(canvasContext(context), "product-rich-description", "product", product.id, "richDescription")}>${product.richDescription ? sanitizeRichText(product.richDescription) : `<p>${escapeHtml(product.description)}</p>`}</div>`
+      ? `<div id="${escapeAttribute(descriptionPanelId)}" class="catalog-rich-text"${canvasEntityAttributes(canvasContext(context), "product-rich-description", "product", product.id, "richDescription")}>${product.richDescription ? sanitizeRichText(product.richDescription) : `<p${canvasEntityAttributes(canvasContext(context), "product-description", "product", product.id, "description")}>${escapeHtml(product.description)}</p>`}</div>`
       : "";
     const policiesPanelId = `catalog-product-policies-${context.section.id}`;
     const variantLabel =
@@ -1433,7 +1440,7 @@ export const catalogProductDetail: ModuleDefinition<
         <div class="catalog-product-info">
           <p class="catalog-product-brand">${escapeHtml(product.brand)}</p>
           <h1${canvasEntityAttributes(canvasContext(context), "product-title", "product", product.id, "title")}>${escapeHtml(product.title)}</h1>
-          <p class="catalog-detail-price"><span data-product-price>${escapeHtml(formatMoneyForProject(lowestPrice(product), context.project))}</span><del data-product-compare${compareAt ? "" : " hidden"}>${escapeHtml(compareAt)}</del></p>
+          <p class="catalog-detail-price"><span data-product-price${canvasEntityAttributes(canvasContext(context), "product-price", "product", product.id, "price")}>${escapeHtml(formatMoneyForProject(lowestPrice(product), context.project))}</span><del data-product-compare${compareAt ? "" : " hidden"}>${escapeHtml(compareAt)}</del></p>
           ${description}
           <form class="catalog-add-form" action="/carrito/" method="get" data-solara-add-form>
             <input type="hidden" name="product" value="${escapeAttribute(product.id)}">

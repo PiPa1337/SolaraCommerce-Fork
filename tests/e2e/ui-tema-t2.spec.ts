@@ -19,6 +19,7 @@ import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { referenceStore } from "@solara/project-schema/fixture";
+import { readHashedStorefrontCss } from "./export-helpers";
 import { createCleanStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
@@ -136,11 +137,20 @@ async function readCommittedColors(page: Page): Promise<ThemeColors> {
 /** Variable CSS computada del preview para un token. */
 function previewVar(page: Page, key: ThemeColorKey) {
   const html = page.frameLocator('iframe[title="Vista previa desktop"]').locator("html");
-  return () =>
-    html.evaluate(
-      (element, variable) => getComputedStyle(element).getPropertyValue(variable),
-      `--solara-${VAR_SUFFIX[key]}`,
-    );
+  return async () => {
+    try {
+      return await html.evaluate(
+        (element, variable) => getComputedStyle(element).getPropertyValue(variable),
+        `--solara-${VAR_SUFFIX[key]}`,
+      );
+    } catch (reason) {
+      // Cambiar un token reemplaza el srcdoc del iframe; durante ese único
+      // frame intermedio la lectura puede observar un documento detached.
+      // expect.poll vuelve a consultar el mismo token en el iframe nuevo.
+      if (reason instanceof Error && reason.message.includes("Frame was detached")) return "";
+      throw reason;
+    }
+  };
 }
 
 /** Exporta el sitio con la paleta dada y devuelve CSS + las 7 vars declaradas. */
@@ -148,9 +158,7 @@ function exportedWith(colors: ThemeColors): { css: string; vars: ThemeColors } {
   const store = structuredClone(referenceStore);
   store.theme = { ...store.theme, colors: { ...colors } };
   const result = exportProject(store, { mode: "production" });
-  const file = result.files.get("assets/storefront.css");
-  if (file === undefined) throw new Error("El sitio exportado no contiene assets/storefront.css");
-  const css = typeof file === "string" ? file : new TextDecoder().decode(file);
+  const css = readHashedStorefrontCss(result.files);
   const vars = {} as ThemeColors;
   for (const key of THEME_COLOR_KEYS) {
     const suffix = VAR_SUFFIX[key];

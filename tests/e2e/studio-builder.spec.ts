@@ -1,5 +1,5 @@
 import type { Server } from "node:http";
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 import { createCleanStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
@@ -55,7 +55,10 @@ test("edita el hero moderno, actualiza el preview y persiste tras recargar", asy
   const hero = page.getByRole("listitem").filter({ hasText: "Hero de catálogo" });
   await hero.getByRole("button").first().click();
 
-  const title = page.getByRole("textbox", { name: "Título", exact: true });
+  const title = page
+    .getByRole("complementary", { name: "Inspector de sección" })
+    .getByRole("textbox", { name: "Título", exact: true })
+    .first();
   await title.fill("Una portada persistente");
   await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
   await expect(
@@ -74,9 +77,12 @@ test("edita el hero moderno, actualiza el preview y persiste tras recargar", asy
     .getByRole("button")
     .first()
     .click();
-  await expect(page.getByRole("textbox", { name: "Título", exact: true })).toHaveValue(
-    "Una portada persistente",
-  );
+  await expect(
+    page
+      .getByRole("complementary", { name: "Inspector de sección" })
+      .getByRole("textbox", { name: "Título", exact: true })
+      .first(),
+  ).toHaveValue("Una portada persistente");
   await expect(
     page.frameLocator("iframe").locator('[data-solara-module="catalog-hero"] h1'),
   ).toHaveText("Una portada persistente", { timeout: 15_000 });
@@ -91,30 +97,31 @@ test("edita slides modernos con el inspector generado por metadata", async ({ pa
     .first()
     .click();
 
-  const addItem = page.getByRole("button", { name: "Agregar elemento" });
+  const slides = page.getByRole("group", { name: "Slides" });
+  const addItem = slides.getByRole("button", { name: "Agregar elemento" });
   await addItem.click();
   await addItem.click();
-  await expect(page.locator(".repeater-editor__item")).toHaveCount(2);
+  await expect(slides.locator(".repeater-editor__item")).toHaveCount(2);
   await expect(
-    page.locator(".repeater-editor__item").nth(0).getByRole("button", { name: "Bajar elemento" }),
+    slides.locator(".repeater-editor__item").nth(0).getByRole("button", { name: "Bajar elemento" }),
   ).toHaveAttribute("aria-description", "Slides 1 de 2");
   await expect(
-    page
+    slides
       .locator(".repeater-editor__item")
       .nth(1)
       .getByRole("button", { name: "Eliminar elemento" }),
   ).toHaveAttribute("aria-description", "Slides 2 de 2");
-  await page.locator(".repeater-editor__item").nth(0).getByRole("textbox").nth(0).fill("Primero");
-  await page.locator(".repeater-editor__item").nth(1).getByRole("textbox").nth(0).fill("Segundo");
-  await page
+  await slides.locator(".repeater-editor__item").nth(0).getByRole("textbox").nth(0).fill("Primero");
+  await slides.locator(".repeater-editor__item").nth(1).getByRole("textbox").nth(0).fill("Segundo");
+  await slides
     .locator(".repeater-editor__item")
     .nth(0)
     .getByRole("button", { name: "Bajar elemento" })
     .click();
   await expect(
-    page.locator(".repeater-editor__item").nth(0).getByRole("textbox").nth(0),
+    slides.locator(".repeater-editor__item").nth(0).getByRole("textbox").nth(0),
   ).toHaveValue("Segundo");
-  await page
+  await slides
     .locator(".repeater-editor__item")
     .nth(0)
     .getByRole("button", { name: "Eliminar elemento" })
@@ -123,8 +130,8 @@ test("edita slides modernos con el inspector generado por metadata", async ({ pa
   await expect(repeaterDialog).toBeVisible();
   await expect(repeaterDialog.locator(".confirm-dialog__body")).toContainText("Segundo");
   await repeaterDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
-  await expect(page.locator(".repeater-editor__item")).toHaveCount(2);
-  await page
+  await expect(slides.locator(".repeater-editor__item")).toHaveCount(2);
+  await slides
     .locator(".repeater-editor__item")
     .nth(0)
     .getByRole("button", { name: "Eliminar elemento" })
@@ -133,7 +140,7 @@ test("edita slides modernos con el inspector generado por metadata", async ({ pa
     .getByTestId("ui-confirm-dialog")
     .getByRole("button", { name: "Eliminar elemento", exact: true })
     .click();
-  await expect(page.locator(".repeater-editor__item")).toHaveCount(1);
+  await expect(slides.locator(".repeater-editor__item")).toHaveCount(1);
 });
 
 test("los repetidores completan duplicado, límites, error asociado y foco tras borrar", async ({
@@ -161,8 +168,8 @@ test("los repetidores completan duplicado, límites, error asociado y foco tras 
   await items.nth(1).getByRole("textbox", { name: "Nombre" }).fill("Duplicado");
   await expect(items.nth(0).getByRole("textbox", { name: "Nombre" })).toHaveValue("Primero");
 
-  for (let index = 3; index < 8; index += 1) await addItem.click();
-  await expect(items).toHaveCount(8);
+  for (let index = 3; index < 12; index += 1) await addItem.click();
+  await expect(items).toHaveCount(12);
   await expect(addItem).toBeDisabled();
   await expect(items.nth(0).getByRole("button", { name: "Duplicar elemento" })).toBeDisabled();
 
@@ -174,7 +181,7 @@ test("los repetidores completan duplicado, límites, error asociado y foco tras 
   await expect(firstDelete).toBeFocused();
   await firstDelete.click();
   await dialog.getByRole("button", { name: "Eliminar elemento", exact: true }).click();
-  await expect(items).toHaveCount(7);
+  await expect(items).toHaveCount(11);
   await expect(items.nth(0).getByRole("button", { name: "Eliminar elemento" })).toBeFocused();
 
   const firstName = items.nth(0).getByRole("textbox", { name: "Nombre" });
@@ -239,14 +246,15 @@ test("agrega, ordena, duplica, oculta, deshace y elimina secciones modernas", as
   );
 
   const hero = sections.getByRole("listitem").filter({ hasText: "Hero de catálogo" });
+  const heroTitle = page.frameLocator("iframe").locator('[data-solara-module="catalog-hero"] h1');
+  const initialHeroTitle = await heroTitle.textContent();
+  expect(initialHeroTitle).toBeTruthy();
   await hero.getByRole("button", { name: "Ocultar sección" }).click();
   await expect(
     page.frameLocator("iframe").locator('[data-solara-module="catalog-hero"]'),
   ).toHaveCount(0, { timeout: 15_000 });
   await page.getByRole("button", { name: "Deshacer" }).click();
-  await expect(
-    page.frameLocator("iframe").locator('[data-solara-module="catalog-hero"] h1'),
-  ).toHaveText("Vestite con lo que te representa.", { timeout: 15_000 });
+  await expect(heroTitle).toHaveText(initialHeroTitle ?? "", { timeout: 15_000 });
   await page.getByRole("button", { name: "Rehacer" }).click();
   await expect(
     page.frameLocator("iframe").locator('[data-solara-module="catalog-hero"]'),

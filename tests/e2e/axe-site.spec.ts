@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { referenceStore } from "@solara/project-schema/fixture";
@@ -101,6 +101,7 @@ test("A1: axe sobre las rutas del sitio exportado (3 fixtures)", async ({ page }
     console.log("A1 axe:", JSON.stringify(counts));
     for (const f of findings.slice(0, 8))
       console.log(" ", f.fixture, f.route, f.impact, f.id, f.target);
+    expect(findings, JSON.stringify(findings, null, 2)).toEqual([]);
   } finally {
     await new Promise((resolveClose) => server.close(() => resolveClose()));
   }

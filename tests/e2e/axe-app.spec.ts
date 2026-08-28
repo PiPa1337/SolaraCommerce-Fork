@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import type { Server } from "node:http";
 import { resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(300_000);
@@ -82,4 +82,5 @@ test("P1-L1: axe sobre el Studio (dashboard y pestañas del editor)", async ({ p
   }, {});
   console.log("P1-L1 axe:", JSON.stringify({ counts, byArea }));
   for (const f of findings.slice(0, 12)) console.log(" ", f.area, f.impact, f.id, f.target);
+  expect(findings, JSON.stringify(findings, null, 2)).toEqual([]);
 });

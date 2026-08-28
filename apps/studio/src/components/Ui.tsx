@@ -54,6 +54,7 @@ export const Button = forwardRef<
     size = "md",
     loading = false,
     disabled,
+    className,
     ...props
   },
   ref,
@@ -61,7 +62,7 @@ export const Button = forwardRef<
   return (
     <button
       ref={ref}
-      className={`button button--${variant} button--${size}${loading ? " button--loading" : ""}`}
+      className={`button button--${variant} button--${size}${loading ? " button--loading" : ""}${className ? ` ${className}` : ""}`}
       type="button"
       data-testid="ui-button"
       disabled={disabled || loading}

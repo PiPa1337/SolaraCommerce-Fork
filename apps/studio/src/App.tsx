@@ -254,6 +254,10 @@ function StudioShell() {
             const browserProjects = await listProjectsWithRecovery();
             const diskById = new Map(diskListing.projects.map((item) => [item.id, item]));
             for (const stored of browserProjects.projects) {
+              // La plantilla protegida vive en IndexedDB como referencia local,
+              // pero no debe migrarse a proyectos/ como si fuera una tienda del
+              // usuario: el canal de upgrade explícito es el único autorizado.
+              if (isBaseTemplate(stored.project)) continue;
               const diskProject = diskById.get(stored.id);
               if (!diskProject) {
                 await markProjectMigration(stored.id, "pending");
@@ -558,8 +562,8 @@ function StudioShell() {
 
   return (
     <ToastProvider>
-      {banners}
       <div className="app-root app-root--dashboard-cosmic">
+        <div className="dashboard-cosmic__banners">{banners}</div>
         <a className="skip-link" href="#tiendas">
           Saltar al contenido
         </a>
@@ -609,7 +613,11 @@ function StudioShell() {
             </button>
           </div>
         ) : null}
-        {error ? <span data-testid="ui-global-error-text" className="visually-hidden">{error}</span> : null}
+        {error ? (
+          <span data-testid="ui-global-error-text" className="visually-hidden">
+            {error}
+          </span>
+        ) : null}
         {notice ? (
           <output className="global-notice" aria-live="polite">
             <span>{notice}</span>

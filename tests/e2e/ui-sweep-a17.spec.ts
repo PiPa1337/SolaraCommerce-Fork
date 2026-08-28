@@ -325,22 +325,28 @@ test("el detalle muestra usos coherentes con las referencias del proyecto", asyn
   await expect(detail).toContainText("Sección hero");
   await expect(detail).toContainText("Recién llegados");
   await expect(detail).toContainText("Fin de temporada");
-  await expect(detail).toContainText("Imagen de categoría");
-  expect(await detail.getByTestId("ui-asset-use").count()).toBeGreaterThanOrEqual(4);
+  await expect(detail).toContainText("Imagen de colección");
+  expect(await detail.getByTestId("ui-asset-use").count()).toBeGreaterThanOrEqual(3);
   await expect(page.getByTestId("ui-asset-delete")).toBeDisabled();
 
   await page.getByTestId("ui-asset-detail-close").click();
   await expect(detail).not.toBeAttached();
   await expect(heroAsset.getByTestId("ui-asset-detail-open")).toBeFocused();
 
-  const productAsset = page.locator(".asset-item").filter({
-    has: page.locator('input[value="Remera esencial negra"]'),
-  });
+  const productAsset = page
+    .locator(".asset-item")
+    .filter({
+      has: page.locator('input[value="Remera esencial negra"]'),
+    })
+    .last();
   await expect(productAsset).toBeVisible();
   await productAsset.getByTestId("ui-asset-detail-open").click();
   await expect(detail).toBeVisible();
   await expect(detail).toContainText("Imagen de producto");
-  await expect(detail).toContainText("Más elegidos");
+  await expect(detail).toContainText("Imagen de categoría");
+  // La pertenencia del producto a una colección no convierte el asset del
+  // producto en la imagen de esa colección: sólo se listan referencias directas.
+  await expect(detail).not.toContainText("Imagen de colección");
   await expect(page.getByTestId("ui-asset-delete")).toBeDisabled();
 });
 

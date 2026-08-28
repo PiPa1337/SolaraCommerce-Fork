@@ -22,7 +22,10 @@ import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
-import { buildCatalogModernProject } from "@solara/project-schema/catalog-modern-template";
+import {
+  buildCatalogModernProject,
+  ensureCatalogModernV2Sections,
+} from "@solara/project-schema/catalog-modern-template";
 import {
   applyCatalogModernUpgrade,
   planCatalogModernUpgrade,
@@ -394,14 +397,18 @@ test("adoptar aplica EXACTAMENTE los safeChanges y conserva lo del usuario (diff
 
   // La sección agregada trae los settings de la plantilla actual (referencia
   // real del template demo).
-  const referenceNewsletter = buildCatalogModernProject({ seed: "demo" }).sections.find(
-    (section) => section.id === NEWSLETTER_SECTION_ID,
-  );
+  const referenceNewsletter = ensureCatalogModernV2Sections(
+    buildCatalogModernProject({ seed: "demo" }),
+  ).sections.find((section) => section.id === NEWSLETTER_SECTION_ID);
   const adoptedNewsletter = after.sections.find((section) => section.id === NEWSLETTER_SECTION_ID);
-  expect(adoptedNewsletter?.settings).toEqual(referenceNewsletter?.settings);
+  expect(adoptedNewsletter?.settings).toEqual(
+    referenceNewsletter?.settings
+      ? { ...referenceNewsletter.settings, actionHref: "#contact-form" }
+      : undefined,
+  );
 });
 
-test("reversión con el respaldo previo: importar el .solara.json vuelve a v1 y revive el panel", async ({
+test("la plantilla protegida rechaza importar el respaldo y conserva el estado adoptado", async ({
   page,
 }) => {
   await prepareUpgradePanel(page);
@@ -425,23 +432,27 @@ test("reversión con el respaldo previo: importar el .solara.json vuelve a v1 y 
   await chooser.setFiles(backupPath ?? "");
   await page.getByRole("button", { name: "Importar y reemplazar" }).click();
 
-  // Datos: el proyecto vuelve al estado PRE-upgrade completo.
+  // La plantilla base no se puede reemplazar por una importación genérica:
+  // sólo el upgrade guiado tiene permiso explícito para escribirla.
+  await expect(page.getByTestId("ui-inline-error")).toContainText(
+    "No se puede importar ni reemplazar la plantilla protegida",
+  );
   await expect
     .poll(async () => (await readUpgradeSnapshot(page)).templateVersion, { timeout: 20_000 })
-    .toBe(1);
-  const reverted = await readUpgradeSnapshot(page);
-  expect(reverted.sections.some((section) => section.id === NEWSLETTER_SECTION_ID)).toBe(false);
-  expect(reverted.sections.some((section) => section.id === TIP_SECTION_ID)).toBe(true);
-  expect(reverted.heroTitle).toBe(USER_HERO_TITLE);
-  expect(reverted.productTitle).toBe(USER_PRODUCT_TITLE);
-  expect(reverted.assetAlt).toBe(USER_ASSET_ALT);
+    .toBe(UPGRADE_TO_VERSION);
+  const preserved = await readUpgradeSnapshot(page);
+  expect(preserved.sections.some((section) => section.id === NEWSLETTER_SECTION_ID)).toBe(true);
+  expect(preserved.sections.some((section) => section.id === TIP_SECTION_ID)).toBe(true);
+  expect(preserved.heroTitle).toBe(USER_HERO_TITLE);
+  expect(preserved.productTitle).toBe(USER_PRODUCT_TITLE);
+  expect(preserved.assetAlt).toBe(USER_ASSET_ALT);
 
-  // Funcional: el panel "Actualización disponible" revive (se puede volver a
-  // adoptar: el ciclo es reversible).
+  // El panel conserva sólo el conflicto remanente; la importación no lo
+  // reabre ni permite deshacer el upgrade de la plantilla protegida.
   await openPrepararTab(page);
   await expect(page.getByText("Actualización disponible")).toBeVisible();
   await expect(page.getByRole("button", { name: "Respaldar y adoptar cambios" })).toBeVisible();
-  await expect(page.getByText("Agregar sección base: catalog-newsletter-cta")).toBeVisible();
+  await expect(page.getByText("Agregar sección base: catalog-newsletter-cta")).toHaveCount(0);
 });
 
 test("con un conflicto remanente el panel no se puede cerrar: el botón ya no aplica nada", async ({

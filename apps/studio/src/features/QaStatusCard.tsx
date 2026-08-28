@@ -44,7 +44,7 @@ export function QaStatusCard() {
       className="qa-status-card"
       style={{ padding: "1rem", border: "1px solid #ddd", borderRadius: "8px", marginTop: "1rem" }}
     >
-      <h3 style={{ margin: "0 0 0.5rem", fontSize: "0.9rem" }}>QA Perpetuo</h3>
+      <h2 style={{ margin: "0 0 0.5rem", fontSize: "0.9rem" }}>QA Perpetuo</h2>
       {cycle ? (
         <p style={{ margin: 0, fontSize: "0.85rem" }}>
           Ciclo activo: {cycle.backlogItem} ({cycle.phase}, intento {cycle.attempts + 1})

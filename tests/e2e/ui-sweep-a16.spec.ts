@@ -80,17 +80,14 @@ function previewPage(page: Page): Locator {
 }
 
 function previewBackground(page: Page): () => Promise<string> {
-  const html = previewRoot(page);
-  return () => html.evaluate((element) => getComputedStyle(element).backgroundColor);
+  return () => previewRoot(page).evaluate((element) => getComputedStyle(element).backgroundColor);
 }
 
 function previewVar(page: Page, name: string): () => Promise<string> {
-  const html = previewRoot(page);
   return () =>
-    html.evaluate(
-      (element, token) => getComputedStyle(element).getPropertyValue(token).trim(),
-      name,
-    );
+    previewRoot(page)
+      .evaluate((element, token) => getComputedStyle(element).getPropertyValue(token).trim(), name)
+      .catch(() => "");
 }
 
 /** Cambia un input type="color" como lo haría el picker nativo y commitea. */
@@ -214,7 +211,7 @@ test("colorMode: Sistema cambia el preview y Oscuro está deshabilitado con avis
   await setupCleanStore(page, "A16 colorMode");
   await openThemeTab(page);
 
-  const modeSelect = page.getByLabel("Modo", { exact: true });
+  const modeSelect = page.getByLabel("Modo de color", { exact: true });
   const modeField = fieldsetOf(modeSelect);
   // La tienda nueva (fixture Catalog Modern) inicia en "light".
   await expect(modeSelect).toHaveValue("light");

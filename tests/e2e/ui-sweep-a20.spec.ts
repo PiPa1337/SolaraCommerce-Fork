@@ -685,14 +685,15 @@ test("A20: comparación — selección, conteo, acción con 2 y reporte del diá
   await expect(dialog).toContainText("Tienda A20");
   await expect(dialog).toContainText("Sin sitio en disco");
 
-  // Contrato de datos: conteos de Predeterminado (50 productos) vs tienda limpia (0).
+  // Contrato de datos: conteos de Predeterminado (50 productos) vs la tienda
+  // limpia vigente (5 productos placeholder).
   const productsRow = compareRow(page, "Productos activos");
   await expect(productsRow.locator("strong").nth(0)).toHaveText("50");
-  await expect(productsRow.locator("strong").nth(1)).toHaveText("0");
+  await expect(productsRow.locator("strong").nth(1)).toHaveText("5");
   await expect(productsRow.locator(".compare-view__badge")).toHaveText("Difiere");
   const variantsRow = compareRow(page, "Variantes");
   await expect(variantsRow.locator("strong").nth(0)).toHaveText("60");
-  await expect(variantsRow.locator("strong").nth(1)).toHaveText("0");
+  await expect(variantsRow.locator("strong").nth(1)).toHaveText("5");
   const categoriesRow = compareRow(page, "Categorías");
   await expect(categoriesRow.locator("strong").nth(0)).toHaveText("14");
 

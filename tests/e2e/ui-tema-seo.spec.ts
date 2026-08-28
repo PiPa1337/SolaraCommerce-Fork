@@ -50,7 +50,8 @@ function fieldsetOf(input: Locator): Locator {
 
 function previewBackground(page: Page): () => Promise<string> {
   const html = page.frameLocator('iframe[title="Vista previa desktop"]').locator("html");
-  return () => html.evaluate((element) => getComputedStyle(element).backgroundColor);
+  return () =>
+    html.evaluate((element) => getComputedStyle(element).backgroundColor).catch(() => "");
 }
 
 test("los presets de Tema aplican la paleta real al preview (H8-09)", async ({ page }) => {
@@ -243,11 +244,15 @@ test("los accesos de auditoría SEO navegan y devuelven el foco al tab destino",
 
   const fix = page.getByTestId("ui-seo-audit-fix").first();
   await expect(fix).toBeVisible();
+  const fixLabel = await fix.getAttribute("aria-label");
+  const destination = fixLabel?.match(/^Ir a (.+?) para resolver:/)?.[1];
+  if (!destination)
+    throw new Error(`Destino de auditoría SEO inesperado: ${fixLabel ?? "sin aria-label"}`);
   await fix.click();
 
-  const assetsTab = page.getByRole("tab", { name: "Recursos", exact: true });
-  await expect(assetsTab).toHaveAttribute("aria-selected", "true");
-  await expect(assetsTab).toBeFocused();
+  const destinationTab = page.getByRole("tab", { name: destination, exact: true });
+  await expect(destinationTab).toHaveAttribute("aria-selected", "true");
+  await expect(destinationTab).toBeFocused();
 });
 
 test("R3-P7-B5: las vistas previas de Google/OG/WhatsApp reflejan el título de la home", async ({

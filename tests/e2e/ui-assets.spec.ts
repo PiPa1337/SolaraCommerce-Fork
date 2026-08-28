@@ -1,6 +1,6 @@
 import type { Server } from "node:http";
 import { expect, test } from "@playwright/test";
-import { createCleanStore } from "./project-helpers";
+import { createCleanStore, openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 let server: Server;
@@ -31,7 +31,7 @@ const IMAGE_INPUT = 'input[type="file"][accept*="image/"]';
 
 async function openAssetsTab(page: import("@playwright/test").Page): Promise<void> {
   await page.getByRole("tab", { name: "Recursos", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Recursos" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Recursos", exact: true })).toBeVisible();
 }
 
 async function replaceSelectedAsset(
@@ -100,11 +100,7 @@ test("reemplazar un asset en uso conserva usos y el guard de borrado lo bloquea"
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
     timeout: 20_000,
   });
-  const card = page
-    .locator(".dashboard-store-card")
-    .filter({ has: page.getByText("Predeterminado", { exact: true }) });
-  await expect(card).toBeVisible();
-  await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+  await openMutableScaleStore(page, "Tienda de recursos mutable");
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
   await openAssetsTab(page);
 

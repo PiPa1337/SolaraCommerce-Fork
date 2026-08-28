@@ -7,7 +7,7 @@
 import type { Server } from "node:http";
 import { expect, test } from "@playwright/test";
 import { exportProductsCsv, generatePerformanceFixture } from "@solara/core";
-import { createCleanStore } from "./project-helpers";
+import { createCleanStore, openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 120_000 : 60_000);
@@ -25,7 +25,7 @@ test.afterAll(async () => {
   await stopStudioServer(server);
 });
 
-async function openDemoCatalog(page: import("@playwright/test").Page) {
+async function openDemoCatalog(page: import("@playwright/test").Page): Promise<string> {
   await page.goto(studioUrl);
   await page.evaluate(
     () =>
@@ -37,10 +37,10 @@ async function openDemoCatalog(page: import("@playwright/test").Page) {
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  const projectId = await openMutableScaleStore(page, "Workers mutable");
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
+  return projectId;
 }
 
 async function openDemoAssets(page: import("@playwright/test").Page) {
@@ -195,7 +195,9 @@ test("reporta por archivo las imágenes que no se pudieron procesar y conserva e
   await expect(failures).toContainText("logo.svg");
   await expect(failures).toContainText("JPEG, PNG o WebP");
   await expect(page.getByTestId("ui-asset-batch-status")).toContainText("1 imagen agregada");
-  await expect(page.locator(".asset-item").last().locator("input").first()).toHaveValue("taza");
+  await expect(
+    page.locator(".asset-item").filter({ has: page.locator('input[value="taza"]') }),
+  ).toBeVisible();
 });
 
 test("exporta el borrador con estado generando y resultado de éxito", async ({ page }) => {

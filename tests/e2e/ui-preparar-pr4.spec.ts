@@ -226,7 +226,8 @@ test("cada scope pendiente de la tienda limpia aterriza en su tab con el pane ab
   // La plantilla limpia evoluciona: derivar el checklist real en lugar de fijar 12 IDs históricos.
   // El contrato es que cada pendiente visible navegue a su tab correcta.
   function destinationForId(id: string): DestinationKey {
-    if (id.startsWith("identity.") || id.startsWith("about.") || id.startsWith("contact.")) return "overview";
+    if (id.startsWith("identity.") || id.startsWith("about.") || id.startsWith("contact."))
+      return "overview";
     if (id.startsWith("home.")) return "builder";
     if (id.startsWith("seo.")) return "seo";
     if (id.startsWith("asset.")) return "assets";

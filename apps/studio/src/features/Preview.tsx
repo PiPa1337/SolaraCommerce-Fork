@@ -525,7 +525,18 @@ export function Preview({
           if (nonce === canvasNonceRef.current) canvasNonceRef.current = "";
         },
       });
-      if (valid) setCanvasSelection(valid);
+      if (valid) {
+        // El iframe conserva el bridge durante toda la edición. Rotamos el
+        // nonce después de cada selección para mantener anti-replay sin
+        // limitar a un solo clic editable por render.
+        const nextNonce = makeCanvasNonce();
+        canvasNonceRef.current = nextNonce;
+        previewFrame.current?.contentWindow?.postMessage(
+          { type: "solara-canvas-nonce", nonce: nextNonce },
+          "*",
+        );
+        setCanvasSelection(valid);
+      }
     };
     window.addEventListener("message", handleCanvasSelect);
     return () => window.removeEventListener("message", handleCanvasSelect);
@@ -621,12 +632,13 @@ export function Preview({
           return String(current ?? "");
         })();
 
+  // Reenvía el modo cuando el iframe termina de montarse; aunque el closure
+  // no lea el contador, iframeReady es la señal que vuelve disponible el target.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: iframeReady retriggers the postMessage after iframe mount.
   useEffect(() => {
-    if (!iframeReady) return;
-    previewFrame.current?.contentWindow?.postMessage(
-      { type: "solara-canvas-mode", enabled: canvasMode },
-      "*",
-    );
+    const frameWindow = previewFrame.current?.contentWindow;
+    if (!frameWindow) return;
+    frameWindow.postMessage({ type: "solara-canvas-mode", enabled: canvasMode }, "*");
   }, [canvasMode, iframeReady]);
 
   // El render del sitio completo es caro: agrupa los cambios rápidos (typing,
@@ -678,17 +690,17 @@ export function Preview({
             const nonce = makeCanvasNonce();
             canvasNonceRef.current = nonce;
             setHtml(
-              addPreviewCanvasBridge(
-                addPreviewNavigationBridge(
+              addPreviewNavigationBridge(
+                addPreviewCanvasBridge(
                   addPreviewCartState(
                     addPreviewScrollbarPolicy(previewHtml),
                     project.id,
                     previewSession,
                     serializedCart,
                   ),
+                  previewSession,
+                  nonce,
                 ),
-                previewSession,
-                nonce,
               ),
             );
             setIframeReady(false);

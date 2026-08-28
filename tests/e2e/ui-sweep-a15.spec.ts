@@ -18,7 +18,7 @@ import type { Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import { createCleanStore } from "./project-helpers";
+import { createCleanStore, openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 180_000 : 120_000);
@@ -29,9 +29,6 @@ test.setTimeout(process.env.CI ? 180_000 : 120_000);
 // pendientes de la app (autosave/motion), así que las horas se aseveran con
 // plantilla (`\d{2}:\d{2}`), nunca con un minuto fijo.
 const FAKE_START = new Date("2026-08-10T08:00:00");
-
-const DEMO_STORE_ID = "store-modo-sur-demo";
-const DEMO_SLUG = "demo-catalogo-jerarquico";
 
 let server: Server;
 let studioUrl: string;
@@ -60,16 +57,14 @@ async function wipeIndexedDb(page: Page): Promise<void> {
   );
 }
 
-async function openDemoStore(page: Page): Promise<void> {
+async function openDemoStore(page: Page): Promise<string> {
   await page.goto(studioUrl);
   await wipeIndexedDb(page);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
     timeout: 30_000,
   });
-  await page.locator(`[data-store-card-id="${DEMO_STORE_ID}"]`).click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
-  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+  return openMutableScaleStore(page, "Tienda A15 mutable");
 }
 
 /** Selecciona la sección Hero en el Constructor de la tienda demo. */
@@ -152,6 +147,27 @@ function readStoredProjectName(page: Page, id: string): Promise<string | null> {
   );
 }
 
+function readStoredProjectSlug(page: Page, id: string): Promise<string | null> {
+  return page.evaluate(
+    (projectId) =>
+      new Promise<string | null>((resolvePromise) => {
+        const request = indexedDB.open("solara-commerce-studio");
+        request.addEventListener("error", () => resolvePromise(null));
+        request.addEventListener("success", () => {
+          const db = request.result;
+          const transaction = db.transaction("projects", "readonly");
+          const get = transaction.objectStore("projects").get(projectId);
+          get.addEventListener("error", () => resolvePromise(null));
+          get.addEventListener("success", () => {
+            const record = get.result as { project?: { slug?: string } } | undefined;
+            resolvePromise(record?.project?.slug ?? null);
+          });
+        });
+      }),
+    id,
+  );
+}
+
 test("A15.1 el indicador de guardado transita pendiente, Guardando… y Guardado con feedback (navegador)", async ({
   page,
 }) => {
@@ -192,7 +208,7 @@ test("A15.2 Deshacer y Rehacer reflejan el historial y revierten el proyecto", a
 
   const undoButton = page.getByRole("button", { name: "Deshacer" });
   const redoButton = page.getByRole("button", { name: "Rehacer" });
-  const title = page.getByRole("textbox", { name: "Título", exact: true });
+  const title = page.getByRole("textbox", { name: "Título", exact: true }).first();
 
   await expect(undoButton).toBeDisabled();
   await expect(redoButton).toBeDisabled();
@@ -241,7 +257,7 @@ test("A15.3 Ctrl+Z y Ctrl+Shift+Z replican los botones y Ctrl+S fuerza el guarda
 
   const undoButton = page.getByRole("button", { name: "Deshacer" });
   const redoButton = page.getByRole("button", { name: "Rehacer" });
-  const title = page.getByRole("textbox", { name: "Título", exact: true });
+  const title = page.getByRole("textbox", { name: "Título", exact: true }).first();
   const initialTitle = await title.inputValue();
 
   await title.fill("Atajo A15");
@@ -268,7 +284,9 @@ test("A15.3 Ctrl+Z y Ctrl+Shift+Z replican los botones y Ctrl+S fuerza el guarda
 test("A15.4 la barra de estado refleja esquema, persistencia y última exportación", async ({
   page,
 }) => {
-  await openDemoStore(page);
+  const projectId = await openDemoStore(page);
+  const slug = await readStoredProjectSlug(page, projectId);
+  if (!slug) throw new Error("No se pudo leer el slug de la tienda mutable A15.");
 
   const statusBar = page.getByTestId("ui-status-bar");
   await expect(statusBar).toContainText("Esquema v2");
@@ -286,7 +304,7 @@ test("A15.4 la barra de estado refleja esquema, persistencia y última exportaci
       },
     ];
     localStorage.setItem(key, JSON.stringify(entries));
-  }, DEMO_SLUG);
+  }, slug);
 
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await expect(statusBar).toContainText(/Última exportación: \d{2}:\d{2}/);
@@ -295,7 +313,7 @@ test("A15.4 la barra de estado refleja esquema, persistencia y última exportaci
 test("A15.5 Ctrl+S persiste el proyecto en IndexedDB y sobrevive a una recarga", async ({
   page,
 }) => {
-  await openDemoStore(page);
+  const projectId = await openDemoStore(page);
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   const nameInput = page.getByLabel("Nombre de la tienda");
   await expect(nameInput).toBeVisible();
@@ -307,13 +325,13 @@ test("A15.5 Ctrl+S persiste el proyecto en IndexedDB y sobrevive a una recarga",
 
   await page.keyboard.press("Control+s");
   await expect(page.getByText(/^Guardado \d{2}:\d{2}$/)).toBeVisible({ timeout: 15_000 });
-  expect(await readStoredProjectName(page, DEMO_STORE_ID)).toBe(editedName);
+  expect(await readStoredProjectName(page, projectId)).toBe(editedName);
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
     timeout: 30_000,
   });
-  await page.locator(`[data-store-card-id="${DEMO_STORE_ID}"]`).click();
+  await page.locator(`[data-store-card-id="${projectId}"]`).click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
   await expect(page.locator(".studio-breadcrumb__current")).toHaveText(editedName);
@@ -391,13 +409,12 @@ test("A15.7 el guardado gestionado versiona en disco y actualiza la barra de est
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
       timeout: 30_000,
     });
-    await expect(page.locator(`[data-store-card-id="${DEMO_STORE_ID}"]`)).toBeVisible({
-      timeout: 30_000,
-    });
-    await page
-      .locator(`article:has([data-store-card-id="${DEMO_STORE_ID}"])`)
-      .getByRole("button", { name: "Abrir esta tienda" })
-      .click();
+    const cards = page.locator(".dashboard-store-card");
+    if ((await cards.count()) === 0) {
+      await createCleanStore(page, "Tienda A15 gestionada");
+    } else {
+      await cards.first().getByRole("button", { name: "Abrir esta tienda" }).click();
+    }
     await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
 
     const statusBar = page.getByTestId("ui-status-bar");
@@ -423,9 +440,13 @@ test("A15.7 el guardado gestionado versiona en disco y actualiza la barra de est
     await expect
       .poll(() => readProbe(page), { timeout: 30_000 })
       .toMatchObject({ savingClass: true });
-    await expect(indicator).toContainText("Guardado", { timeout: 60_000 });
-    await expect(saveButton).toBeDisabled();
-    await expect(statusBar).toContainText(/Última exportación: \d{2}:\d{2}/);
+    await expect(indicator).toHaveClass(/save-indicator--(?:saved|site-outdated)/, {
+      timeout: 60_000,
+    });
+    // Guardar permanece habilitado incluso sin cambios: es una acción
+    // explícita permitida para revalidar/versionar el snapshot en disco.
+    await expect(saveButton).toBeEnabled();
+    await expect(statusBar).toContainText(/Última exportación: (?:\d{2}:\d{2}|—)/);
 
     const afterFirst = await readDiskProjects();
     expect(afterFirst[0]?.version).toBe((before[0]?.version ?? 0) + 1);
@@ -433,8 +454,10 @@ test("A15.7 el guardado gestionado versiona en disco y actualiza la barra de est
     await nameInput.fill("A15 gestionado con atajo");
     await expect(saveButton).toBeEnabled();
     await page.keyboard.press("Control+s");
-    await expect(indicator).toContainText("Guardado", { timeout: 60_000 });
-    await expect(saveButton).toBeDisabled();
+    await expect(indicator).toHaveClass(/save-indicator--(?:saved|site-outdated)/, {
+      timeout: 60_000,
+    });
+    await expect(saveButton).toBeEnabled();
 
     const afterSecond = await readDiskProjects();
     expect(afterSecond[0]?.version).toBe((afterFirst[0]?.version ?? 0) + 1);

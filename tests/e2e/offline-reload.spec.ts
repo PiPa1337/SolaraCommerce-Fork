@@ -1,6 +1,9 @@
 import type { Server } from "node:http";
 import { expect, test } from "@playwright/test";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
+
+test.use({ serviceWorkers: "allow" });
 
 let server: Server;
 let studioUrl: string;
@@ -15,9 +18,24 @@ test.afterAll(async () => {
   await stopStudioServer(server);
 });
 
+async function waitForServiceWorker(page: import("@playwright/test").Page): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(async () => {
+          if (!("serviceWorker" in navigator)) return false;
+          const registration = await navigator.serviceWorker.getRegistration();
+          return Boolean(registration?.active && navigator.serviceWorker.controller);
+        }),
+      { timeout: 15_000, message: "El service worker de Studio no tomó control de la página." },
+    )
+    .toBe(true);
+}
+
 async function openStudio(page: import("@playwright/test").Page) {
   await page.goto(studioUrl);
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({ timeout: 30000 });
+  await waitForServiceWorker(page);
   // limpiar solo local/session storage sin bloquear IndexedDB
   await page
     .evaluate(() => {
@@ -31,19 +49,16 @@ async function openStudio(page: import("@playwright/test").Page) {
     .catch(() => {});
 }
 
-async function openDemo(page: import("@playwright/test").Page) {
-  await page
-    .getByRole("button", { name: /Predeterminado/ })
-    .first()
-    .click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+async function openDemo(page: import("@playwright/test").Page): Promise<string> {
+  const projectId = await openMutableScaleStore(page, "Offline mutable");
   // esperar a que cargue Studio (tab Resumen)
   await expect(page.getByRole("tab", { name: "Resumen" })).toBeVisible({ timeout: 30000 });
+  return projectId;
 }
 
 test("reload durante edicion: fallback sincrono preserva cambios <550ms", async ({ page }) => {
   await openStudio(page);
-  await openDemo(page);
+  const projectId = await openDemo(page);
   // ir a Resumen y cambiar nombre
   await page.getByRole("tab", { name: "Resumen" }).click();
   const nameInput = page.getByLabel("Nombre de la tienda");
@@ -54,8 +69,9 @@ test("reload durante edicion: fallback sincrono preserva cambios <550ms", async 
   // sin esperar 550ms, disparar pagehide (simula cerrar/recargar rapido)
   await page.evaluate(() => window.dispatchEvent(new Event("pagehide")));
   // verificar fallback en localStorage
-  const fallback = await page.evaluate(() =>
-    localStorage.getItem("solara-recovery-fallback:store-modo-sur-demo"),
+  const fallback = await page.evaluate(
+    (id) => localStorage.getItem(`solara-recovery-fallback:${id}`),
+    projectId,
   );
   expect(fallback).toBeTruthy();
   expect(fallback).toContain(newName);
@@ -65,7 +81,7 @@ test("reload durante edicion: fallback sincrono preserva cambios <550ms", async 
   // abrir de nuevo y verificar que el nombre nuevo aparece o que hay opcion de recuperar
   await page.evaluate(() => new Promise<void>((resolve) => setTimeout(resolve, 800)));
   // el proyecto en lista deberia seguir con nombre viejo, pero el recovery draft debe existir
-  const hasFallbackAfterReload = await page.evaluate(async () => {
+  const hasFallbackAfterReload = await page.evaluate(async (id) => {
     // intentar leer via Dexie
     try {
       const dbName = "solara-commerce-studio";
@@ -80,7 +96,7 @@ test("reload durante edicion: fallback sincrono preserva cambios <550ms", async 
           }
           const tx = db.transaction("recoveryDrafts", "readonly");
           const store = tx.objectStore("recoveryDrafts");
-          const getReq = store.get("store-modo-sur-demo");
+          const getReq = store.get(id);
           getReq.onsuccess = () => {
             const val = getReq.result;
             db.close();
@@ -96,10 +112,11 @@ test("reload durante edicion: fallback sincrono preserva cambios <550ms", async 
     } catch {
       return false;
     }
-  });
+  }, projectId);
   // fallback debe haber sido promovido a recoveryDrafts o permanecer en localStorage
   const fallbackStill = await page.evaluate(
-    () => !!localStorage.getItem("solara-recovery-fallback:store-modo-sur-demo"),
+    (id) => !!localStorage.getItem(`solara-recovery-fallback:${id}`),
+    projectId,
   );
   expect(hasFallbackAfterReload || fallbackStill).toBeTruthy();
 });
@@ -136,7 +153,7 @@ test("navegador offline: banner y carga sin error", async ({ page, context }) =>
 
 test("service worker: cache v3 y asset cache separada, no fixtures", async ({ page }) => {
   await openStudio(page);
-  await page.waitForTimeout(1500);
+  await waitForServiceWorker(page);
   const swInfo = await page.evaluate(async () => {
     if (!("caches" in window)) return { keys: [] as string[] };
     const keys = await caches.keys();
@@ -159,7 +176,7 @@ test("service worker: cache v3 y asset cache separada, no fixtures", async ({ pa
 
 test("hard reload: draft sobrevive", async ({ page }) => {
   await openStudio(page);
-  await openDemo(page);
+  const projectId = await openDemo(page);
   await page.getByRole("tab", { name: "Resumen" }).click();
   const nameInput = page.getByLabel("Nombre de la tienda");
   const newName = `Hard Reload ${Date.now()}`;
@@ -169,8 +186,9 @@ test("hard reload: draft sobrevive", async ({ page }) => {
   // hard reload simulado via page.reload (bypass cache en PW es similar)
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({ timeout: 30000 });
-  const fallback = await page.evaluate(() =>
-    localStorage.getItem("solara-recovery-fallback:store-modo-sur-demo"),
+  const fallback = await page.evaluate(
+    (id) => localStorage.getItem(`solara-recovery-fallback:${id}`),
+    projectId,
   );
   // debe existir fallback o el proyecto ya se guardo via autosave
   expect(fallback !== null || true).toBeTruthy();
@@ -313,7 +331,7 @@ test("IndexedDB temporalmente inaccesible: getRecoveryDraft fallback", async ({ 
 
 test("actualizacion Studio con recovery draft: no pierde borrador", async ({ page }) => {
   await openStudio(page);
-  await openDemo(page);
+  const projectId = await openDemo(page);
   await page.getByRole("tab", { name: "Resumen" }).click();
   const newName = `Update Draft ${Date.now()}`;
   await page.getByLabel("Nombre de la tienda").fill(newName);
@@ -323,8 +341,9 @@ test("actualizacion Studio con recovery draft: no pierde borrador", async ({ pag
   await page.waitForTimeout(500);
   // banner no requerido en App HEAD, solo verificar borrador persiste
   // verificar que el borrador sigue en localStorage a pesar del update
-  const fallback = await page.evaluate(() =>
-    localStorage.getItem("solara-recovery-fallback:store-modo-sur-demo"),
+  const fallback = await page.evaluate(
+    (id) => localStorage.getItem(`solara-recovery-fallback:${id}`),
+    projectId,
   );
   expect(fallback).toContain(newName);
   // cerrar banner sin recargar
@@ -375,7 +394,7 @@ test("cache vieja despues de actualizar Studio: shell nuevo no sirve assets viej
   page,
 }) => {
   await openStudio(page);
-  await page.waitForTimeout(1000);
+  await waitForServiceWorker(page);
   const keys = await page.evaluate(async () => {
     if (!("caches" in window)) return [];
     return await caches.keys();

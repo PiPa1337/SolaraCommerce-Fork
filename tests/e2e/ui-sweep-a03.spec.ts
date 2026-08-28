@@ -24,6 +24,7 @@ import type { Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Download, expect, type Page, test } from "@playwright/test";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 120_000 : 90_000);
@@ -127,8 +128,7 @@ async function openCatalog(page: Page): Promise<void> {
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await openMutableScaleStore(page, "Tienda escala A03");
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
   await expect(page.getByText(catalogHeading)).toBeVisible();
@@ -225,7 +225,7 @@ test("Exportar CSV descarga el catálogo completo con feedback de ocupado", asyn
   await assertBusyFeedback(page, "Generando", null, 2);
 
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe("demo-catalogo-jerarquico-productos.csv");
+  expect(download.suggestedFilename()).toMatch(/-productos\.csv$/);
   const csv = await readDownload(download);
   const lines = csv.split(/\r?\n/);
   expect(lines[0]).toMatch(/^product_id,slug,title,description/);
@@ -246,7 +246,7 @@ test("CSV comercial descarga el catálogo comercial con cabecera y títulos", as
   await assertBusyFeedback(page, "Generando", null, 2);
 
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe("demo-catalogo-jerarquico-catalogo-comercial.csv");
+  expect(download.suggestedFilename()).toMatch(/-catalogo-comercial\.csv$/);
   const csv = await readDownload(download);
   expect(csv.split(/\r?\n/)[0]).toMatch(/^producto_id,variante_id,slug,titulo,/);
   expect(csv).toContain("Remera esencial de algodón");

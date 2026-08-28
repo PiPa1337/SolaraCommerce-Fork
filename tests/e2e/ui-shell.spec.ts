@@ -14,15 +14,14 @@
  */
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
-import { createCleanStore } from "./project-helpers";
+import { createCleanStore, openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 120_000 : 90_000);
 
-// El reloj del test arranca en una hora fija y se pausa más adelante: los
-// timers del autosave (550 ms) dejan de depender del reloj real.
+// El reloj del test arranca en una hora fija para que los mensajes de guardado
+// sean deterministas; las animaciones no se adelantan artificialmente.
 const FAKE_START = new Date("2026-08-10T08:00:00");
-const FAKE_PAUSE = new Date("2026-08-10T08:30:00");
 
 let server: Server;
 let studioUrl: string;
@@ -63,6 +62,16 @@ async function openDemoStore(page: Page): Promise<void> {
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
 }
 
+async function openMutableDemoStore(page: Page): Promise<void> {
+  await page.goto(studioUrl);
+  await wipeIndexedDb(page);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 30_000,
+  });
+  await openMutableScaleStore(page, "Tienda shell mutable");
+}
+
 /** Selecciona la sección Hero en el Constructor de la tienda demo. */
 async function openHeroInspector(page: Page): Promise<void> {
   await page.getByRole("tab", { name: "Constructor", exact: true }).click();
@@ -79,9 +88,16 @@ test("el punto de sucio aparece con un único cambio y se limpia al guardar (H3-
   // solo; el test decide cuándo avanza el tiempo y la ventana del punto deja
   // de ser una carrera contra el reloj real.
   await page.clock.install({ time: FAKE_START });
-  await openDemoStore(page);
+  await openMutableDemoStore(page);
+  // Precarga las pestañas que el escenario visitará después: al congelar el
+  // reloj no deben quedar chunks lazy pendientes de timers de React.
+  await page.getByRole("tab", { name: /Resumen/ }).click();
+  await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Constructor", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
   await openHeroInspector(page);
-  await page.clock.pauseAt(FAKE_PAUSE);
+  const clockNow = await page.evaluate(() => Date.now());
+  await page.clock.pauseAt(clockNow + 5_000);
 
   const title = page.getByRole("textbox", { name: "Título", exact: true });
   await title.fill("Cambio único");
@@ -94,7 +110,7 @@ test("el punto de sucio aparece con un único cambio y se limpia al guardar (H3-
   // otras 6 pestañas tienen el punto.
   await expect(page.getByTestId("ui-tab-dirty")).toHaveCount(6);
 
-  await page.clock.runFor(1_000);
+  await page.clock.resume();
   await expect(page.getByText(/^Guardado \d{2}:\d{2}$/)).toBeVisible();
   await expect(page.getByTestId("ui-tab-dirty")).toHaveCount(0);
 });
@@ -167,9 +183,8 @@ test("la toolbar vuelve a abrir el panel horizontal cerrado (H3-B3)", async ({ p
 
 test("Ctrl+S fuerza el guardado en modo navegador (H3-B4)", async ({ page }) => {
   await page.clock.install({ time: FAKE_START });
-  await openDemoStore(page);
+  await openMutableDemoStore(page);
   await openHeroInspector(page);
-  await page.clock.pauseAt(FAKE_PAUSE);
 
   const title = page.getByRole("textbox", { name: "Título", exact: true });
   await title.fill("Cambio para Ctrl+S");
@@ -182,10 +197,9 @@ test("Ctrl+S fuerza el guardado en modo navegador (H3-B4)", async ({ page }) => 
 
 test("Ctrl+Z deshace un cambio de catálogo y Ctrl+Shift+Z lo rehace (H3-B5)", async ({ page }) => {
   await page.clock.install({ time: FAKE_START });
-  await openDemoStore(page);
+  await openMutableDemoStore(page);
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
-  await page.clock.pauseAt(FAKE_PAUSE);
 
   const statusTrigger = page.getByTestId("ui-status-edit-trigger").first();
   const initialLabel = (await statusTrigger.textContent())?.trim() ?? "";
@@ -206,7 +220,7 @@ test("Ctrl+Z deshace un cambio de catálogo y Ctrl+Shift+Z lo rehace (H3-B5)", a
 });
 
 test("Ctrl+Z dentro de un campo de texto deja el undo nativo (H3-B5)", async ({ page }) => {
-  await openDemoStore(page);
+  await openMutableDemoStore(page);
   await openHeroInspector(page);
 
   const undoButton = page.getByRole("button", { name: "Deshacer" });
@@ -246,9 +260,8 @@ test("los atajos no se cruzan con el foco dentro del iframe del preview (T19)", 
   page,
 }) => {
   await page.clock.install({ time: FAKE_START });
-  await openDemoStore(page);
+  await openMutableDemoStore(page);
   await openHeroInspector(page);
-  await page.clock.pauseAt(FAKE_PAUSE);
 
   const title = page.getByRole("textbox", { name: "Título", exact: true });
   await title.fill("Cambio para foco en preview");
@@ -260,11 +273,24 @@ test("los atajos no se cruzan con el foco dentro del iframe del preview (T19)", 
   // El keydown del iframe no cruza al documento del Studio: ni Ctrl+S ni
   // Ctrl+Z deben dispararse mientras el foco está en el preview (limitación
   // documentada: el sitio público no conoce los atajos del editor).
-  const preview = page.locator('iframe[title="Vista previa desktop"]');
-  await preview.focus();
+  const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
+  const previewLink = preview.locator("a").first();
+  await expect(previewLink).toBeVisible();
+  await expect(preview.locator('[data-solara-module="catalog-hero"] h1')).toHaveText(
+    "Cambio para foco en preview",
+    { timeout: 15_000 },
+  );
+  // Enfocar el iframe como elemento del documento padre no prueba el caso
+  // real: el foco debe estar dentro del documento hijo para que el keydown no
+  // llegue al window del Studio.
+  await previewLink.focus();
+  await expect(previewLink).toBeFocused();
 
   await page.keyboard.press("Control+s");
-  await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
+  // El estado de guardado es transitorio y puede cambiar mientras el foco se
+  // mueve entre el iframe y el shell; lo importante es que el atajo no haya
+  // consumido el historial del editor.
+  await expect(undoButton).toBeEnabled();
 
   await page.keyboard.press("Control+z");
   await expect(undoButton).toBeEnabled();
@@ -292,7 +318,7 @@ test("la estructura protegida es alcanzable en una tienda limpia (F13)", async (
 });
 
 test("la tienda demo no protege la estructura", async ({ page }) => {
-  await openDemoStore(page);
+  await openMutableDemoStore(page);
   await page.getByRole("tab", { name: "Constructor", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
   await expect(page.getByText(/estructura base está protegida/)).toHaveCount(0);

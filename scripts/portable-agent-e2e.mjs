@@ -45,16 +45,23 @@ function assertOk(response) {
 
 try {
   await cp(source, copy, { recursive: true });
-  child = spawn(
-    join(copy, "SolaraCommerce.exe"),
-    [join(copy, "resources", "app.asar", "dist", "agent-cli.cjs"), "--jsonl"],
-    {
-      cwd: copy,
-      env: { ...process.env, ELECTRON_RUN_AS_NODE: "1", SOLARA_PORTABLE_ROOT: copy },
-      stdio: ["pipe", "pipe", "pipe"],
-      windowsHide: true,
-    },
-  );
+  const spawnOptions = {
+    cwd: copy,
+    env: { ...process.env, ELECTRON_RUN_AS_NODE: "1", SOLARA_PORTABLE_ROOT: copy },
+    stdio: ["pipe", "pipe", "pipe"],
+    windowsHide: true,
+  };
+  child =
+    process.env.SOLARA_AGENT_USE_WRAPPER === "1"
+      ? spawn(`"${join(copy, "SolaraCommerce-Agent.cmd")}"`, [], {
+          ...spawnOptions,
+          shell: true,
+        })
+      : spawn(
+          join(copy, "SolaraCommerce.exe"),
+          [join(copy, "resources", "app.asar", "dist", "agent-cli.cjs"), "--jsonl"],
+          spawnOptions,
+        );
   child.stdout.setEncoding("utf8");
   child.stdout.on("data", (chunk) => {
     lineBuffer += chunk;
@@ -77,6 +84,13 @@ try {
   child.stderr.setEncoding("utf8");
   child.stderr.on("data", (chunk) => {
     stderr += chunk;
+  });
+  child.once("exit", (code, signal) => {
+    if (pending.length === 0) return;
+    const error = new Error(
+      `El agente terminó antes de responder (${code ?? "signal"} ${signal ?? ""}). ${stderr}`,
+    );
+    for (const item of pending.splice(0)) item.reject(error);
   });
   child.once("error", (error) => {
     for (const item of pending.splice(0)) item.reject(error);

@@ -16,6 +16,7 @@ import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 180_000 : 120_000);
@@ -79,12 +80,8 @@ async function resetIndexedDb(page: Page): Promise<void> {
   });
 }
 
-async function openDemoStore(page: Page): Promise<void> {
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
-  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
-    timeout: 30_000,
-  });
+async function openDemoStore(page: Page): Promise<string> {
+  return openMutableScaleStore(page, "Tienda R1 mutable");
 }
 
 async function openResumenTab(page: Page): Promise<void> {
@@ -112,24 +109,22 @@ function fieldError(page: Page, text: string) {
 /** El proyecto autoservado en IndexedDB, receptor del payload commiteado.
  *  La tienda demo vive bajo su id `store-modo-sur-demo` (su `name` inicial es
  *  "Predeterminado", con la identidad pública de la demo integrada. */
-async function readStoredProject(page: Page): Promise<StoreProjectV1 | null> {
+async function readStoredProject(page: Page, projectId: string): Promise<StoreProjectV1 | null> {
   const record = await page.evaluate(
-    () =>
+    (id) =>
       new Promise<StoredProjectRecord | null>((resolve, reject) => {
         const request = indexedDB.open("solara-commerce-studio");
         request.addEventListener("error", () => reject(request.error));
         request.addEventListener("success", () => {
           const db = request.result;
-          const found = db
-            .transaction("projects")
-            .objectStore("projects")
-            .get("store-modo-sur-demo");
+          const found = db.transaction("projects").objectStore("projects").get(id);
           found.addEventListener("error", () => reject(found.error));
           found.addEventListener("success", () => {
             resolve((found.result as StoredProjectRecord | undefined) ?? null);
           });
         });
       }),
+    projectId,
   );
   return record?.project ?? null;
 }
@@ -171,7 +166,7 @@ test("nombre y email validan en vivo con errores inline y sólo commitean valore
   page,
 }) => {
   await resetIndexedDb(page);
-  await openDemoStore(page);
+  const projectId = await openDemoStore(page);
   await openResumenTab(page);
 
   // Nombre vacío → error inline "Completá el nombre de la tienda." sin commit.
@@ -195,7 +190,7 @@ test("nombre y email validan en vivo con errores inline y sólo commitean valore
   const legalNameDescribedBy = await legalNameInput.getAttribute("aria-describedby");
   expect(legalNameDescribedBy).toContain(await legalNameError.getAttribute("id"));
   await expect
-    .poll(async () => readStoredProject(page), { timeout: 15_000 })
+    .poll(async () => readStoredProject(page, projectId), { timeout: 15_000 })
     .toMatchObject({
       identity: { legalName: ORIGINAL.legalName },
     });
@@ -209,8 +204,10 @@ test("nombre y email validan en vivo con errores inline y sólo commitean valore
   await emailInput.fill("r1-invalido");
   await expect(emailInput).toHaveAttribute("aria-invalid", "true");
   await expect(fieldError(page, "Ingresá un email válido.")).toBeVisible();
-  await expect.poll(async () => readStoredProject(page), { timeout: 15_000 }).not.toBeNull();
-  expect((await readStoredProject(page))?.identity.email).toBe(ORIGINAL.email);
+  await expect
+    .poll(async () => readStoredProject(page, projectId), { timeout: 15_000 })
+    .not.toBeNull();
+  expect((await readStoredProject(page, projectId))?.identity.email).toBe(ORIGINAL.email);
 
   await emailInput.fill(VALUES.email);
   await expect(emailInput).not.toHaveAttribute("aria-invalid", "true");
@@ -219,7 +216,7 @@ test("nombre y email validan en vivo con errores inline y sólo commitean valore
 
   // El payload válido llega al proyecto autoservado (capa de datos).
   await expect
-    .poll(async () => readStoredProject(page), { timeout: 15_000 })
+    .poll(async () => readStoredProject(page, projectId), { timeout: 15_000 })
     .toMatchObject({
       name: VALUES.name,
       identity: { brandName: VALUES.name, email: VALUES.email },
@@ -230,11 +227,11 @@ test("identidad completa: persiste tras recarga y cada campo llega al sitio expo
   page,
 }) => {
   await resetIndexedDb(page);
-  await openDemoStore(page);
+  const projectId = await openDemoStore(page);
   await openResumenTab(page);
 
   // ANTES: el proyecto demo autoservado se exporta y sirve de línea de base.
-  const storeBefore = await readStoredProject(page);
+  const storeBefore = await readStoredProject(page, projectId);
   expect(storeBefore).not.toBeNull();
   expect(storeBefore?.identity.brandName).toBe(ORIGINAL.name);
   const before = exportProject(storeBefore as StoreProjectV1, { mode: "production" });
@@ -274,13 +271,13 @@ test("identidad completa: persiste tras recarga y cada campo llega al sitio expo
   await expect(inputs.address).toHaveValue(VALUES.address);
 
   // DESPUÉS: el proyecto guardado (mismo receptor del payload) se exporta.
-  const storeAfter = await readStoredProject(page);
+  const storeAfter = await readStoredProject(page, projectId);
   expect(storeAfter).not.toBeNull();
   const after = exportProject(storeAfter as StoreProjectV1, { mode: "production" });
   const home = fileText(after, "index.html");
-  const about = fileText(after, "nosotros/index.html");
-  const contact = fileText(after, "contacto/index.html");
   const feed = fileText(after, "google-merchant.xml");
+  expect(after.files.has("nosotros/index.html")).toBe(false);
+  expect(after.files.has("contacto/index.html")).toBe(false);
 
   // 1. Nombre de la tienda → footer, og:site_name y JSON-LD (WebSite + OnlineStore).
   expect(home).toMatch(new RegExp(`© \\d{4} ${VALUES.name}`));
@@ -292,35 +289,25 @@ test("identidad completa: persiste tras recarga y cada campo llega al sitio expo
   // 2. Razón social → JSON-LD OnlineStore.
   expect(home).toContain(`"legalName":"${VALUES.legalName}"`);
 
-  // 3. Descripción → JSON-LD, cuerpo de la página Nosotros y feed Merchant.
+  // 3. Descripción → JSON-LD de la Home y feed Merchant.
   expect(home).toContain(`"description":"${VALUES.description}"`);
-  expect(about).toContain(VALUES.description);
   expect(feed).toContain(`<description>${VALUES.description}</description>`);
   // Hallazgo documentado: NINGUNA meta description usa la Descripción de la
   // marca. La Home usa seo.description y la de Nosotros usa page.seoDescription
   // (exporter: index.ts:1305 y index.ts:1482/1499).
   expect(metaDescription(home)).toContain("Indumentaria y accesorios para todos los días");
   expect(metaDescription(home)).not.toContain(VALUES.description);
-  expect(metaDescription(about)).toContain("Conocé la mirada detrás de la tienda de referencia");
-  expect(metaDescription(about)).not.toContain(VALUES.description);
 
-  // 4. Email → footer (mailto), página Contacto y JSON-LD.
+  // 4. Email → footer (mailto) y JSON-LD.
   expect(home).toContain(`mailto:${VALUES.email}`);
   expect(home).toContain(`"email":"${VALUES.email}"`);
-  expect(contact).toContain(`mailto:${VALUES.email}`);
 
-  // 5. Teléfono → footer (tel:), página Contacto y JSON-LD. El JSON-LD del
+  // 5. Teléfono → footer (tel:) y JSON-LD. El JSON-LD del
   // negocio prefiere whatsapp.phone y cae a identity.phone (R2-1 resuelto en
   // Ola 3, exporter storeStructuredData); la demo no edita WhatsApp.
   expect(home).toContain(`tel:${VALUES.phone}`);
-  expect(home).toContain(`"telephone":"${ORIGINAL.phone}"`);
-  expect(contact).toContain(`tel:${VALUES.phone}`);
+  expect(home).toContain(`"telephone":"${VALUES.phone}"`);
 
-  // 6. Dirección → JSON-LD y página Contacto (el footer moderno no la muestra).
+  // 6. Dirección → JSON-LD (el footer moderno no la muestra).
   expect(home).toContain(`"address":"${VALUES.address}"`);
-  expect(contact).toContain("Dirección");
-  expect(contact).toContain(VALUES.address);
-
-  // El contacto completo también llega a la página Nosotros (Atención directa).
-  expect(about).toContain(VALUES.email);
 });

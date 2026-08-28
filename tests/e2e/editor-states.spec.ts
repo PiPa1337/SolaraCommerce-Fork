@@ -25,18 +25,43 @@ test.afterAll(async () => {
 
 async function openStore(page: Page): Promise<void> {
   await page.goto(studioUrl);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.deleteDatabase("solara-commerce-studio");
+        request.addEventListener("success", () => resolve());
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("blocked", () =>
+          reject(new Error("No se pudo limpiar la base de estados del editor.")),
+        );
+      }),
+  );
+  await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   const card = page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }).first();
   await card.locator(".dashboard-store-card__button").click();
+  const baseDetail = page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" });
+  await baseDetail.getByRole("button", { name: "Duplicar", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Duplicar tienda" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByTestId("ui-duplicate-name").fill("Tienda estados mutable");
+  await dialog.getByRole("button", { name: "Duplicar", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await page
+    .locator(".dashboard-store-card")
+    .filter({ has: page.getByText("Tienda estados mutable", { exact: true }) })
+    .last()
+    .locator(".dashboard-store-card__button")
+    .click();
   await expect(
-    page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" }),
+    page.getByRole("region", { name: "Tienda seleccionada: Tienda estados mutable" }),
   ).toBeVisible();
 }
 
 async function openStudio(page: Page): Promise<void> {
   await openStore(page);
   await page
-    .getByRole("region", { name: "Tienda seleccionada: Predeterminado" })
+    .getByRole("region", { name: "Tienda seleccionada: Tienda estados mutable" })
     .getByRole("button", { name: "Abrir tienda" })
     .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
@@ -147,7 +172,7 @@ test("el detalle de tienda y el Studio distinguen disabled, hover y focus", asyn
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStore(page);
 
-  const detail = page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" });
+  const detail = page.getByRole("region", { name: "Tienda seleccionada: Tienda estados mutable" });
   const backup = detail.getByRole("button", { name: "Respaldo ahora" });
   await expectEnabledButton(backup, "Respaldo ahora");
   await expectFocusRing(backup, "Respaldo ahora");
@@ -288,6 +313,15 @@ test("los empty states ofrecen una acción concreta y funcional (T6.2)", async (
 
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
+  const emptyCsvHeader =
+    "producto_id,variante_id,slug,titulo,descripcion,marca,estado,categorias,colecciones,etiquetas,imagenes,variante,sku,opciones,precio_centavos,precio_anterior_centavos,disponible,estado_stock,gtin,mpn,imagen_variante,creado_en,actualizado_en";
+  await page.locator('input[aria-label="Seleccionar archivo CSV"]').setInputFiles({
+    name: "catalogo-vacio.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(emptyCsvHeader, "utf8"),
+  });
+  await expect(page.getByRole("heading", { name: "catalogo-vacio.csv" })).toBeVisible();
+  await page.getByRole("button", { name: "Reemplazar catálogo", exact: true }).click();
   // En una tienda limpia el tab muestra dos empty states legítimos: el panel de
   // categorías ("No hay categorías") y el área de productos. Se apunta al de
   // productos para ejercitar su acción.

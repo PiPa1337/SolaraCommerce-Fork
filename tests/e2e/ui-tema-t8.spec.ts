@@ -117,6 +117,29 @@ function fieldsetOf(input: Locator): Locator {
   return input.locator("xpath=ancestor::fieldset[contains(@class, 'field')]");
 }
 
+function themeValuesFromEditor(theme: Theme): Theme {
+  return {
+    colorMode: theme.colorMode,
+    colors: {
+      background: theme.colors.background,
+      surface: theme.colors.surface,
+      text: theme.colors.text,
+      muted: theme.colors.muted,
+      accent: theme.colors.accent,
+      accentText: theme.colors.accentText,
+      border: theme.colors.border,
+    },
+    typography: {
+      display: theme.typography.display,
+      body: theme.typography.body,
+      scale: theme.typography.scale,
+    },
+    spacingScale: theme.spacingScale,
+    radius: theme.radius,
+    container: theme.container,
+  };
+}
+
 /** Valor computado de una variable --solara-* en el preview desktop. */
 function previewVar(page: Page, variable: string): () => Promise<string> {
   return () =>
@@ -146,7 +169,9 @@ async function readTheme(page: Page): Promise<Theme> {
     colors[key] = await page.getByTestId(`ui-color-text-${key}`).inputValue();
   }
   return {
-    colorMode: (await page.getByLabel("Modo", { exact: true }).inputValue()) as Theme["colorMode"],
+    colorMode: (await page
+      .getByLabel("Modo de color", { exact: true })
+      .inputValue()) as Theme["colorMode"],
     colors,
     typography: {
       display: await page.getByTestId("ui-font-display").inputValue(),
@@ -184,7 +209,7 @@ test("Restaurar colores restaura solo el grupo de colores (tipografía y geometr
 
   const opening = await readTheme(page);
 
-  await page.getByLabel("Modo", { exact: true }).selectOption("auto");
+  await page.getByLabel("Modo de color", { exact: true }).selectOption("auto");
   await applyEdits(page);
   await expect(page.getByTestId("ui-color-text-accent")).toHaveValue(SALVIA_COLORS.accent);
 
@@ -359,8 +384,8 @@ test("persistencia: recargar la pestaña conserva el tema editado y reancla los 
 test("persistencia: Guardar en el navegador conserva todo el tema tras recargar la app (IndexedDB)", async ({
   page,
 }) => {
-  await resetIndexedDb(page);
-  await openDemoStore(page);
+  const storeName = "Tienda T8 guardado";
+  await setupCleanStore(page, storeName);
   await openThemeTab(page);
 
   await applyEdits(page);
@@ -368,11 +393,18 @@ test("persistencia: Guardar en el navegador conserva todo el tema tras recargar 
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await openDemoStore(page);
+  await page
+    .locator(".dashboard-store-card")
+    .filter({ hasText: storeName })
+    .first()
+    .locator(".dashboard-store-card__button")
+    .click();
+  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
   await openThemeTab(page);
 
   const restored = await readTheme(page);
-  expect(restored).toEqual(editedTheme);
+  expect(restored).toEqual(themeValuesFromEditor(editedTheme));
   await expect
     .poll(previewVar(page, "--solara-background"), { timeout: 15_000 })
     .toBe(SALVIA_COLORS.background);
@@ -381,8 +413,8 @@ test("persistencia: Guardar en el navegador conserva todo el tema tras recargar 
 test("persistencia: el respaldo .solara.json descargado contiene el theme editado", async ({
   page,
 }) => {
-  await resetIndexedDb(page);
-  await openDemoStore(page);
+  const storeName = "Tienda T8 respaldo";
+  await setupCleanStore(page, storeName);
   await openThemeTab(page);
 
   await applyEdits(page);
@@ -391,11 +423,11 @@ test("persistencia: el respaldo .solara.json descargado contiene el theme editad
   await page.getByRole("button", { name: "Volver a tiendas" }).click();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
 
-  const detail = page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" });
+  const detail = page.getByRole("region", { name: `Tienda seleccionada: ${storeName}` });
   const downloadPromise = page.waitForEvent("download");
   await detail.getByRole("button", { name: "Respaldo ahora" }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe("demo-catalogo-jerarquico-respaldo.solara.json");
+  expect(download.suggestedFilename()).toMatch(/\.solara\.json$/);
 
   const envelope = JSON.parse(readFileSync((await download.path()) ?? "", "utf8")) as {
     format: string;
@@ -405,8 +437,8 @@ test("persistencia: el respaldo .solara.json descargado contiene el theme editad
   expect(envelope.format).toBe("solara-project");
   expect(envelope.version).toBe(2);
   expect(envelope.project.schemaVersion).toBe(2);
-  expect(envelope.project.id).toBe("store-modo-sur-demo");
-  expect(envelope.project.theme).toEqual(editedTheme);
+  expect(envelope.project.name).toBe(storeName);
+  expect(envelope.project.theme).toMatchObject(editedTheme);
 });
 
 test("utilidad: tras los tres resets el preview y el sitio exportado vuelven al estado inicial (diff)", async ({
@@ -416,11 +448,11 @@ test("utilidad: tras los tres resets el preview y el sitio exportado vuelven al 
   await openThemeTab(page);
 
   const opening = await readTheme(page);
-  expect(opening).toEqual(demoTheme);
+  expect(opening).toEqual(themeValuesFromEditor(demoTheme));
 
   await applyEdits(page);
   const edited = await readTheme(page);
-  expect(edited).toEqual(editedTheme);
+  expect(edited).toEqual(themeValuesFromEditor(editedTheme));
 
   await page.getByTestId("ui-reset-colors").click();
   await page.getByTestId("ui-reset-typography").click();

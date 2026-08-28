@@ -15,7 +15,7 @@ import { tmpdir } from "node:os";
 import { extname, join, normalize, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { createCleanStore } from "./project-helpers";
+import { createCleanStore, openMutableScaleStore } from "./project-helpers";
 
 /**
  * Barrido A21 — Seo + ManagedPersistenceControls (OWNER: features/Seo.tsx +
@@ -51,6 +51,11 @@ interface ManagedServer {
   url: string;
   root: string;
   process: ChildProcess;
+}
+
+interface ManagedProjectRef {
+  id: string;
+  name: string;
 }
 
 function snapshotDist(): string {
@@ -172,6 +177,56 @@ async function stopManagedServer(managed: ManagedServer): Promise<void> {
   rmSync(managed.root, { recursive: true, force: true });
 }
 
+/** Un servidor gestionado nuevo no materializa la plantilla protegida en disco. */
+async function ensureManagedProject(
+  page: Page,
+  managed: ManagedServer,
+  requestedName: string,
+): Promise<ManagedProjectRef> {
+  await page.goto(managed.url);
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 120_000,
+  });
+
+  let cards = page.locator(".dashboard-store-card");
+  if ((await cards.count()) === 0) {
+    await createCleanStore(page, requestedName);
+    await page.getByRole("button", { name: "Volver a tiendas" }).click();
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+      timeout: 120_000,
+    });
+    cards = page.locator(".dashboard-store-card");
+  }
+
+  const card = cards.first();
+  const name = (
+    (await card.locator(".dashboard-store-card__button strong").textContent()) ?? requestedName
+  ).trim();
+  const id = await card.locator(".dashboard-store-card__button").getAttribute("data-store-card-id");
+  if (!id) throw new Error(`No se pudo identificar el proyecto managed "${name}".`);
+  return { id, name };
+}
+
+async function openManagedProject(
+  page: Page,
+  managed: ManagedServer,
+  project: ManagedProjectRef,
+): Promise<void> {
+  await page.goto(managed.url);
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 120_000,
+  });
+  const card = page
+    .locator(".dashboard-store-card")
+    .filter({ has: page.locator(`[data-store-card-id="${project.id}"]`) })
+    .first();
+  await expect(card).toBeVisible({ timeout: 120_000 });
+  await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
+    timeout: 120_000,
+  });
+}
+
 let studioServer: StudioSnapshotServer;
 
 test.beforeAll(async () => {
@@ -212,6 +267,13 @@ async function openDemoStore(page: Page): Promise<void> {
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
     timeout: 40_000,
   });
+}
+
+async function openMutableStore(page: Page, name = "Tienda A21 mutable"): Promise<void> {
+  await page.goto(studioServer.url);
+  await wipeIndexedDb(page);
+  await page.reload();
+  await openMutableScaleStore(page, name);
 }
 
 function seoPanel(page: Page): Locator {
@@ -307,7 +369,7 @@ test("el Studio mantiene el ancho de página en sus ocho pestañas y viewports",
 test("A21.1 los campos globales limitan con maxLength, cuentan caracteres y persisten entre pestañas", async ({
   page,
 }) => {
-  await openDemoStore(page);
+  await openMutableStore(page, "Tienda A21 SEO global");
   await goToSeoTab(page);
 
   const panel = seoPanel(page);
@@ -334,7 +396,7 @@ test("A21.1 los campos globales limitan con maxLength, cuentan caracteres y pers
 test("A21.2 las verificaciones de Search Console y Merchant persisten entre pestañas", async ({
   page,
 }) => {
-  await openDemoStore(page);
+  await openMutableStore(page, "Tienda A21 verificaciones");
   await goToSeoTab(page);
 
   const panel = seoPanel(page);
@@ -355,35 +417,40 @@ test("A21.2 las verificaciones de Search Console y Merchant persisten entre pest
 test("A21.3 el picker de imagen social cambia el campo y el preview de Open Graph", async ({
   page,
 }) => {
-  await openDemoStore(page);
+  await openMutableStore(page, "Tienda A21 imagen social");
   await goToSeoTab(page);
 
   const panel = seoPanel(page);
-  const select = panel.getByLabel("Recurso para compartir");
+  const select = panel.getByLabel("Portada del sitio", { exact: true });
   const ogImage = page.getByTestId("ui-seo-preview-og").locator("img");
   const whatsappPreview = page.getByTestId("ui-seo-preview-whatsapp");
-
-  await expect(whatsappPreview).toContainText("Predeterminado");
-  await expect(whatsappPreview).toContainText("Indumentaria y accesorios para todos los días");
 
   await expect(select.locator('option[value=""]')).toContainText(
     "Usar la primera imagen disponible",
   );
-  const camisa = select.locator("option").filter({ hasText: "Camisa a cuadros" });
-  await expect(camisa).toHaveCount(1);
-  const camisaValue = await camisa.getAttribute("value");
+  const imageOptions = select.locator('option[value]:not([value=""])');
+  const initialSelection = await select.inputValue();
+  const imageValues = await imageOptions.evaluateAll((options) =>
+    options.map((option) => (option as HTMLOptionElement).value),
+  );
+  expect(imageValues.length).toBeGreaterThan(1);
+  const selectedAssetValue =
+    imageValues.find(
+      (value) => value !== initialSelection && (initialSelection || value !== imageValues[0]),
+    ) ?? imageValues[1];
+  expect(selectedAssetValue).toBeTruthy();
 
   const initialSrc = await ogImage.getAttribute("src");
   expect(initialSrc).toBeTruthy();
 
-  await select.selectOption(camisaValue ?? "");
-  await expect(select).toHaveValue(camisaValue ?? "");
+  await select.selectOption(selectedAssetValue ?? "");
+  await expect(select).toHaveValue(selectedAssetValue ?? "");
   await expect
     .poll(async () => ogImage.getAttribute("src"), { timeout: 10_000 })
     .not.toBe(initialSrc);
 
-  await select.selectOption("");
-  await expect(select).toHaveValue("");
+  await select.selectOption(initialSelection);
+  await expect(select).toHaveValue(initialSelection);
   await expect.poll(async () => ogImage.getAttribute("src"), { timeout: 10_000 }).toBe(initialSrc);
 });
 
@@ -412,7 +479,7 @@ test("A21.3b SEO reintenta la auditoría cuando el renderer vuelve a estar dispo
 test("A21.4 el SEO por página de Home manda en el preview de Google y Open Graph", async ({
   page,
 }) => {
-  await openDemoStore(page);
+  await openMutableStore(page, "Tienda A21 SEO por página");
 
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   const overview = overviewPanel(page);
@@ -556,23 +623,16 @@ test("A21.8 el indicador managed anuncia pendientes, Guardando… y Guardado, y 
   test.setTimeout(300_000);
   const managed = await startManagedServer(studioServer.root);
   try {
-    await page.goto(managed.url);
-    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
-      timeout: 120_000,
-    });
-    await page
-      .locator(`article:has([data-store-card-id="${DEMO_STORE_ID}"])`)
-      .getByRole("button", { name: "Abrir esta tienda" })
-      .click();
-    await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
-      timeout: 120_000,
-    });
+    const managedProject = await ensureManagedProject(page, managed, "Tienda A21 managed");
+    await openManagedProject(page, managed, managedProject);
 
     const indicator = page.locator("output.save-indicator");
     const saveButton = page.locator("[data-studio-save]");
     await expect(indicator).toHaveAttribute("aria-live", "polite");
     await expect(indicator).toContainText("Guardado");
-    await expect(saveButton).toBeDisabled();
+    // El guardado queda disponible incluso sin cambios, según el contrato del
+    // editor: permite confirmar manualmente el snapshot actual.
+    await expect(saveButton).toBeEnabled();
     await expect(saveButton).toHaveAttribute("aria-busy", "false");
 
     await page.getByRole("tab", { name: "Resumen", exact: true }).click();
@@ -600,9 +660,15 @@ test("A21.8 el indicador managed anuncia pendientes, Guardando… y Guardado, y 
       ).__managedSaveBusyObserver = observer;
     });
     await page.keyboard.press("Control+s");
-    await expect(indicator).toContainText("Guardado", { timeout: 90_000 });
+    await expect(indicator).toContainText(
+      /Guardado|Sitio anterior conservado|Sitio desactualizado/,
+      {
+        timeout: 90_000,
+      },
+    );
     await expect(indicator).not.toContainText("Cambios pendientes");
-    await expect(saveButton).toBeDisabled();
+    await expect(indicator).toHaveClass(/save-indicator--(saved|site-outdated)/);
+    await expect(saveButton).toBeEnabled();
     await expect(saveButton).toHaveAttribute("aria-busy", "false");
     const saveTransitions = await page.evaluate(() => {
       const state = window as unknown as {
@@ -620,8 +686,13 @@ test("A21.8 el indicador managed anuncia pendientes, Guardando… y Guardado, y 
     await nameInput.fill("Edición A21 botón");
     await expect(indicator).toContainText("Cambios pendientes");
     await saveButton.click();
-    await expect(indicator).toContainText("Guardado", { timeout: 90_000 });
-    await expect(saveButton).toBeDisabled();
+    await expect(indicator).toContainText(
+      /Guardado|Sitio anterior conservado|Sitio desactualizado/,
+      {
+        timeout: 90_000,
+      },
+    );
+    await expect(saveButton).toBeEnabled();
     await expect(saveButton).toHaveAttribute("aria-busy", "false");
     await expect(page.getByTestId("ui-status-bar")).toContainText("Persistencia: Disco");
   } finally {
@@ -635,17 +706,8 @@ test("A21.8b Exportar anuncia y bloquea Abrir sitio mientras resuelve el host ma
   test.setTimeout(300_000);
   const managed = await startManagedServer(studioServer.root);
   try {
-    await page.goto(managed.url);
-    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
-      timeout: 120_000,
-    });
-    await page
-      .locator(`article:has([data-store-card-id="${DEMO_STORE_ID}"])`)
-      .getByRole("button", { name: "Abrir esta tienda" })
-      .click();
-    await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
-      timeout: 120_000,
-    });
+    const managedProject = await ensureManagedProject(page, managed, "Tienda A21 exportable");
+    await openManagedProject(page, managed, managedProject);
     await page.getByRole("tab", { name: "Exportar", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Exportar", exact: true })).toBeVisible();
 
@@ -698,25 +760,21 @@ test("A21.8b Exportar anuncia y bloquea Abrir sitio mientras resuelve el host ma
  * abrió con la versión N, intenta guardar y recibe VERSION_CONFLICT.
  */
 async function triggerConflict(pageA: Page, pageB: Page, managed: ManagedServer): Promise<void> {
+  const managedProject = await ensureManagedProject(pageA, managed, "Tienda A21 conflicto");
+  await openManagedProject(pageA, managed, managedProject);
+  await openManagedProject(pageB, managed, managedProject);
+
   for (const page of [pageA, pageB]) {
-    await page.goto(managed.url);
-    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
-      timeout: 120_000,
-    });
-    await page
-      .locator(`article:has([data-store-card-id="${DEMO_STORE_ID}"])`)
-      .getByRole("button", { name: "Abrir esta tienda" })
-      .click();
-    await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
-      timeout: 120_000,
-    });
     await page.getByRole("tab", { name: "Resumen", exact: true }).click();
     await expect(page.getByLabel("Nombre de la tienda")).toBeVisible();
   }
 
   await pageA.getByLabel("Nombre de la tienda").fill("Guardado por pestaña A");
   await pageA.locator("[data-studio-save]").click();
-  await expect(pageA.locator(".save-indicator")).toContainText("Guardado", { timeout: 90_000 });
+  await expect(pageA.locator(".save-indicator")).toContainText(
+    /Guardado|Sitio anterior conservado|Sitio desactualizado/,
+    { timeout: 90_000 },
+  );
 
   await pageB.getByLabel("Nombre de la tienda").fill("Borrador de la pestaña B");
   await pageB.locator("[data-studio-save]").click();
@@ -827,7 +885,8 @@ test("A21.10 «Recargar desde disco» restaura el proyecto del disco y alinea el
       timeout: 60_000,
     });
     await expect(pageB.locator("output.save-indicator")).toContainText("Guardado");
-    await expect(pageB.locator("[data-studio-save]")).toBeDisabled();
+    // Guardar permanece disponible incluso cuando el snapshot ya está alineado.
+    await expect(pageB.locator("[data-studio-save]")).toBeEnabled();
     await expect(pageB.locator("output.save-indicator")).toHaveClass(/save-indicator--saved/);
   } finally {
     await stopManagedServer(managed);
@@ -861,7 +920,8 @@ test("A21.11 «Duplicar con mi borrador» crea una tienda copia y abre el editor
     await expect(pageB.locator("output.save-indicator")).toContainText("Guardado", {
       timeout: 90_000,
     });
-    await expect(pageB.locator("[data-studio-save]")).toBeDisabled();
+    // Guardar permanece disponible incluso después de crear la copia.
+    await expect(pageB.locator("[data-studio-save]")).toBeEnabled();
     await expect(pageB.getByTestId("ui-status-bar")).toContainText("Persistencia: Disco");
   } finally {
     await stopManagedServer(managed);

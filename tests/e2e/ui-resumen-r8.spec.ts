@@ -26,6 +26,7 @@ import {
   applyCatalogModernUpgrade,
   planCatalogModernUpgrade,
 } from "@solara/project-schema/catalog-modern-upgrade";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 150_000 : 90_000);
@@ -119,12 +120,16 @@ async function resetIndexedDb(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
 }
 
-async function openDemoStore(page: Page): Promise<void> {
-  await page.locator(`[data-store-card-id="${DEMO_PROJECT_ID}"]`).click();
+async function openStore(page: Page, projectId: string): Promise<void> {
+  await page.locator(`[data-store-card-id="${projectId}"]`).click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
     timeout: 30_000,
   });
+}
+
+async function openDemoStore(page: Page): Promise<void> {
+  await openStore(page, DEMO_PROJECT_ID);
 }
 
 async function openResumenTab(page: Page): Promise<void> {
@@ -138,7 +143,10 @@ async function openPrepararTab(page: Page): Promise<void> {
 }
 
 /** Lee el proyecto guardado en IndexedDB (contrato de datos). */
-async function readProjectRecord(page: Page): Promise<ProjectRecordSnapshot | null> {
+async function readProjectRecord(
+  page: Page,
+  projectId = DEMO_PROJECT_ID,
+): Promise<ProjectRecordSnapshot | null> {
   return page.evaluate(
     (projectId) =>
       new Promise<ProjectRecordSnapshot | null>((resolve, reject) => {
@@ -184,7 +192,7 @@ async function readProjectRecord(page: Page): Promise<ProjectRecordSnapshot | nu
           all.addEventListener("error", () => reject(all.error));
         });
       }),
-    DEMO_PROJECT_ID,
+    projectId,
   );
 }
 
@@ -284,7 +292,10 @@ async function applyResumenEdits(page: Page): Promise<void> {
   await page.getByLabel("Descripción", { exact: true }).fill(EDITED_RESUMEN.description);
   await page.getByLabel("Email", { exact: true }).fill(EDITED_RESUMEN.email);
   await page.getByLabel("Número internacional").fill(EDITED_RESUMEN.phone);
-  await page.getByLabel("Saludo del pedido").fill(EDITED_RESUMEN.greeting);
+  const whatsappSection = page.locator('[data-accordion-id="whatsapp"]');
+  await whatsappSection
+    .getByLabel("Saludo del pedido", { exact: true })
+    .fill(EDITED_RESUMEN.greeting);
   await page.getByLabel("URL pública").fill(EDITED_RESUMEN.baseUrl);
   await page.getByLabel("Nombre del catálogo").fill(EDITED_RESUMEN.catalogLabel);
   await page.getByLabel("Enlace 1", { exact: true }).fill(EDITED_RESUMEN.navLabel);
@@ -296,12 +307,13 @@ async function applyResumenEdits(page: Page): Promise<void> {
 
 /** Lee el Resumen completo desde los inputs del panel (contrato de datos UI). */
 async function readResumen(page: Page): Promise<typeof EDITED_RESUMEN> {
+  const whatsappSection = page.locator('[data-accordion-id="whatsapp"]');
   return {
     name: await page.getByLabel("Nombre de la tienda").inputValue(),
     description: await page.getByLabel("Descripción", { exact: true }).inputValue(),
     email: await page.getByLabel("Email", { exact: true }).inputValue(),
     phone: await page.getByLabel("Número internacional").inputValue(),
-    greeting: await page.getByLabel("Saludo del pedido").inputValue(),
+    greeting: await whatsappSection.getByLabel("Saludo del pedido", { exact: true }).inputValue(),
     baseUrl: await page.getByLabel("URL pública").inputValue(),
     catalogLabel: await page.getByLabel("Nombre del catálogo").inputValue(),
     navLabel: await page.getByLabel("Enlace 1", { exact: true }).inputValue(),
@@ -414,7 +426,7 @@ test("persistencia: recargar la pestaña conserva identidad, WhatsApp, dominio y
   page,
 }) => {
   await resetIndexedDb(page);
-  await openDemoStore(page);
+  const projectId = await openMutableScaleStore(page, "Tienda R8 pestaña");
   await openResumenTab(page);
 
   await applyResumenEdits(page);
@@ -426,11 +438,11 @@ test("persistencia: recargar la pestaña conserva identidad, WhatsApp, dominio y
   // El autosave (550 ms) termina antes de recargar: el registro de IndexedDB
   // ya es la versión editada.
   await expect
-    .poll(async () => (await readProjectRecord(page))?.name, { timeout: 15_000 })
+    .poll(async () => (await readProjectRecord(page, projectId))?.name, { timeout: 15_000 })
     .toBe(EDITED_RESUMEN.name);
 
   await page.reload();
-  await openDemoStore(page);
+  await openStore(page, projectId);
   await openResumenTab(page);
 
   const restored = await readResumen(page);
@@ -441,17 +453,17 @@ test("persistencia: Guardar (Ctrl+S) conserva los campos tras recargar la app (I
   page,
 }) => {
   await resetIndexedDb(page);
-  await openDemoStore(page);
+  const projectId = await openMutableScaleStore(page, "Tienda R8 guardar");
   await openResumenTab(page);
 
   await applyResumenEdits(page);
   await flushSave(page);
 
-  const stored = await readProjectRecord(page);
+  const stored = await readProjectRecord(page, projectId);
   expect(stored).toEqual({ ...EDITED_RESUMEN });
 
   await page.reload();
-  await openDemoStore(page);
+  await openStore(page, projectId);
   await openResumenTab(page);
 
   const restored = await readResumen(page);
@@ -462,7 +474,7 @@ test("persistencia: el respaldo .solara.json descargado contiene los valores edi
   page,
 }) => {
   await resetIndexedDb(page);
-  await openDemoStore(page);
+  const projectId = await openMutableScaleStore(page, "Tienda R8 respaldo");
   await openResumenTab(page);
 
   await applyResumenEdits(page);
@@ -476,7 +488,7 @@ test("persistencia: el respaldo .solara.json descargado contiene los valores edi
   const downloadPromise = page.waitForEvent("download");
   await page.getByTestId("ui-export-backup").click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe("demo-catalogo-jerarquico.solara.json");
+  expect(download.suggestedFilename()).toBe("demo-catalogo-jerarquico-copia.solara.json");
 
   const envelope = JSON.parse(readFileSync((await download.path()) ?? "", "utf8")) as {
     format: string;
@@ -496,7 +508,7 @@ test("persistencia: el respaldo .solara.json descargado contiene los valores edi
   };
   expect(envelope.format).toBe("solara-project");
   expect(envelope.version).toBe(2);
-  expect(envelope.projectId).toBe(DEMO_PROJECT_ID);
+  expect(envelope.projectId).toBe(projectId);
   expect(envelope.project.name).toBe(EDITED_RESUMEN.name);
   expect(envelope.project.identity.description).toBe(EDITED_RESUMEN.description);
   expect(envelope.project.identity.email).toBe(EDITED_RESUMEN.email);

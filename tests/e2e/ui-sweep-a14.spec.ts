@@ -11,7 +11,7 @@
  * Cobertura: tabs (cambio de panel, aria-selected, roving tabindex, puntos
  * sucios), pane abrir/cerrar (clase, aria-hidden, foco restaurado, persistencia
  * y Ctrl+\), modo foco (cambio visual + foco restaurado + Escape y Ctrl+Shift+F),
- * tema (oscuro predeterminado, persistencia y aria-pressed/label coherentes),
+ * tema del shell (dark-only, sin toggle),
  * breadcrumb volver y teclado de tabs
  * (flechas con wrap, Home/End).
  */
@@ -23,12 +23,12 @@ import type { Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { createCleanStore, openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 180_000 : 120_000);
 
 const FAKE_START = new Date("2026-08-10T08:00:00");
-const FAKE_PAUSE = new Date("2026-08-10T08:30:00");
 
 const DEMO_STORE_ID = "store-modo-sur-demo";
 
@@ -69,6 +69,17 @@ async function openDemoStore(page: Page): Promise<void> {
   await page.locator(`[data-store-card-id="${DEMO_STORE_ID}"]`).click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+}
+
+async function openMutableDemoStore(page: Page): Promise<void> {
+  await page.goto(studioUrl);
+  await wipeIndexedDb(page);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 30_000,
+  });
+  await openMutableScaleStore(page, "Tienda A14 mutable");
+  await expect(page.locator(".toast")).toHaveCount(0, { timeout: 10_000 });
 }
 
 /** Selecciona la sección Hero en el Constructor de la tienda demo. */
@@ -185,10 +196,16 @@ async function openDemoStoreManaged(page: Page, url: string): Promise<void> {
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
     timeout: 120_000,
   });
-  await page
-    .locator(`article:has([data-store-card-id="${DEMO_STORE_ID}"])`)
-    .getByRole("button", { name: "Abrir esta tienda" })
-    .click();
+  const cards = page.locator(".dashboard-store-card");
+  if ((await cards.count()) === 0) {
+    // El servidor gestionado arranca con un projects/ temporal vacío. El
+    // objetivo de estos casos es la persistencia/conflicto, no la fixture
+    // protegida de escala, así que crear una tienda mutable evita depender de
+    // un ID que sólo existe en IndexedDB del modo no gestionado.
+    await createCleanStore(page, "Tienda A14 gestionada");
+    return;
+  }
+  await cards.first().getByRole("button", { name: "Abrir esta tienda" }).click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
     timeout: 120_000,
   });
@@ -241,9 +258,16 @@ test("A14.2 tabs — los puntos sucios aparecen con el cambio, se limpian al vis
   page,
 }) => {
   await page.clock.install({ time: FAKE_START });
-  await openDemoStore(page);
+  await openMutableDemoStore(page);
+  // Precarga las pestañas que el escenario visitará después antes de pausar
+  // el reloj; así el lazy loading no queda esperando un timer artificial.
+  await page.getByRole("tab", { name: /Resumen/ }).click();
+  await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Constructor", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
   await openHeroInspector(page);
-  await page.clock.pauseAt(FAKE_PAUSE);
+  const clockNow = await page.evaluate(() => Date.now());
+  await page.clock.pauseAt(clockNow + 5_000);
 
   // Sin cambios: ningún punto.
   await expect(page.getByTestId("ui-tab-dirty")).toHaveCount(0);
@@ -259,14 +283,13 @@ test("A14.2 tabs — los puntos sucios aparecen con el cambio, se limpian al vis
 
   // Visitar una pestaña limpia su punto; el guardado limpia el resto.
   await tabByName(page, "Resumen").click();
-  // Los paneles son lazy y el reloj está pausado en este barrido: avanzamos
-  // sólo lo necesario para resolver Suspense, antes del debounce de autosave.
-  await page.clock.runFor(500);
   await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
   await expect(page.getByTestId("ui-tab-dirty")).toHaveCount(6);
   await expect(tabByName(page, "Resumen").getByTestId("ui-tab-dirty")).toHaveCount(0);
 
-  await page.clock.runFor(1_000);
+  // El reloj falso se reanuda sólo después de medir los estados transitorios;
+  // así no adelantamos las animaciones del shell al usar pauseAt.
+  await page.clock.resume();
   await expect(page.getByText(/^Guardado \d{2}:\d{2}$/)).toBeVisible();
   await expect(page.getByTestId("ui-tab-dirty")).toHaveCount(0);
 });
@@ -318,7 +341,7 @@ test("A14.3 pane — cerrar/abrir con efecto real, persistencia y foco restaurad
 test("A14.4 pane — Ctrl+\\ cierra con el foco dentro del panel y lo devuelve al tab", async ({
   page,
 }) => {
-  await openDemoStore(page);
+  await openMutableDemoStore(page);
   await openHeroInspector(page);
   const title = page.getByRole("textbox", { name: "Título", exact: true });
   await title.focus();
@@ -398,9 +421,7 @@ test("A14.6 modo foco — cambio visual del shell, foco restaurado y salida con 
   await expect(toggle).toBeFocused();
 });
 
-test("A14.7 tema — el toggle re-estiliza el chrome, refleja su estado y persiste", async ({
-  page,
-}) => {
+test("A14.7 tema — el shell permanece oscuro aunque el sistema sea claro", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto(studioUrl);
   await wipeIndexedDb(page);
@@ -408,89 +429,30 @@ test("A14.7 tema — el toggle re-estiliza el chrome, refleja su estado y persis
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   const root = page.locator("html");
 
-  // Sin preferencia guardada: el Dashboard ya nace oscuro aunque el sistema sea claro.
+  // El shell no sigue la preferencia del sistema: su contrato es dark-only.
   await expect(root).toHaveAttribute("data-studio-theme", "dark");
   await expect
     .poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor))
-    .toBe("rgb(23, 26, 23)");
+    .toBe("rgb(8, 9, 10)");
 
   await page.locator(`[data-store-card-id="${DEMO_STORE_ID}"]`).click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
-  const toggle = page.getByTestId("ui-theme-toggle");
-  await expect(toggle).toHaveAttribute("aria-pressed", "true");
-  await expect(toggle).toHaveAttribute("aria-label", "Usar tema claro");
-
-  // Primer click: tema claro aplicado + feedback del control coherente.
-  await toggle.click();
-  await expect(root).toHaveAttribute("data-studio-theme", "light");
-  await expect
-    .poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor))
-    .toBe("rgb(238, 234, 225)");
-  await expect(toggle).toHaveAttribute("aria-pressed", "false");
-  await expect(toggle).toHaveAttribute("aria-label", "Usar tema oscuro");
-  await expect(page.evaluate(() => localStorage.getItem("solara-studio-theme"))).resolves.toBe(
-    "light",
-  );
-
-  // Segundo click: vuelve al oscuro, con el mismo contrato de feedback.
-  await toggle.click();
   await expect(root).toHaveAttribute("data-studio-theme", "dark");
-  await expect
-    .poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor))
-    .toBe("rgb(23, 26, 23)");
-  await expect(toggle).toHaveAttribute("aria-pressed", "true");
-  await expect(toggle).toHaveAttribute("aria-label", "Usar tema claro");
-
-  // Persistencia: la recarga conserva una elección clara desde el Dashboard,
-  // antes de volver a abrir el editor.
-  await toggle.click();
-  await expect(root).toHaveAttribute("data-studio-theme", "light");
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await expect(root).toHaveAttribute("data-studio-theme", "light");
-  await expect
-    .poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor))
-    .toBe("rgb(238, 234, 225)");
-  await page.locator(`[data-store-card-id="${DEMO_STORE_ID}"]`).click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
-  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
-  await expect(root).toHaveAttribute("data-studio-theme", "light");
-  await expect
-    .poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor))
-    .toBe("rgb(238, 234, 225)");
-  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByTestId("ui-theme-toggle")).toHaveCount(0);
 });
 
-test("A14.8 tema — con preferencia del sistema oscura el toggle refleja el tema efectivo", async ({
-  page,
-}) => {
+test("A14.8 tema — el shell sigue oscuro con preferencia del sistema oscura", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await openDemoStore(page);
-  const toggle = page.getByTestId("ui-theme-toggle");
   const root = page.locator("html");
 
-  // El valor predeterminado oscuro coincide con el sistema y el toggle lo dice.
+  // El sistema oscuro coincide, pero no hay un control de alternancia.
   await expect(root).toHaveAttribute("data-studio-theme", "dark");
   await expect
     .poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor))
-    .toBe("rgb(23, 26, 23)");
-  await expect(toggle).toHaveAttribute("aria-pressed", "true");
-  await expect(toggle).toHaveAttribute("aria-label", "Usar tema claro");
-
-  // El primer click NO es un no-op: fija el override claro sobre el sistema.
-  await toggle.click();
-  await expect(root).toHaveAttribute("data-studio-theme", "light");
-  await expect
-    .poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor))
-    .toBe("rgb(238, 234, 225)");
-  await expect(toggle).toHaveAttribute("aria-pressed", "false");
-  await expect(toggle).toHaveAttribute("aria-label", "Usar tema oscuro");
-
-  // Y un segundo click vuelve al oscuro explícito.
-  await toggle.click();
-  await expect(root).toHaveAttribute("data-studio-theme", "dark");
-  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    .toBe("rgb(8, 9, 10)");
+  await expect(page.getByTestId("ui-theme-toggle")).toHaveCount(0);
 });
 
 test("A14.9 breadcrumb — volver al dashboard con la flecha y con el enlace Tiendas", async ({
@@ -588,7 +550,7 @@ test("A14.11 error de guardado — el indicador anuncia el fallo y Reintentar es
       return originalPut.apply(this, args);
     };
   });
-  await openDemoStore(page);
+  await openMutableDemoStore(page);
   await openHeroInspector(page);
 
   const indicator = page.locator("output.save-indicator");
@@ -616,9 +578,16 @@ test("A14.11 error de guardado — el indicador anuncia el fallo y Reintentar es
   const hitTest = await retry.evaluate((element) => {
     const rect = element.getBoundingClientRect();
     const top = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
-    return top === element || element.contains(top);
+    return {
+      ok: top === element || element.contains(top),
+      top:
+        top instanceof Element
+          ? { tag: top.tagName, className: top.className, text: top.textContent?.trim() }
+          : null,
+      rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+    };
   });
-  expect(hitTest).toBe(true);
+  expect(hitTest.ok, JSON.stringify(hitTest)).toBe(true);
 
   // Reintentar dispara un intento real: Guardando… y vuelta al error.
   await installSavingProbe(page);
@@ -705,9 +674,10 @@ test("A14.14 conflicto — Escape conserva el borrador y restaura el foco al bot
 
     await page.getByLabel("Nombre de la tienda").fill("Guardado por pestaña A");
     await page.locator("[data-studio-save]").click();
-    await expect(page.locator("output.save-indicator")).toContainText("Guardado", {
-      timeout: 90_000,
-    });
+    await expect(page.locator("output.save-indicator")).toHaveClass(
+      /save-indicator--(?:saved|site-outdated)/,
+      { timeout: 90_000 },
+    );
 
     await pageB.getByLabel("Nombre de la tienda").fill("Borrador de la pestaña B");
     await pageB.locator("[data-studio-save]").click();
@@ -735,10 +705,8 @@ test("A14.14 conflicto — Escape conserva el borrador y restaura el foco al bot
 test("A14: el punto sucio no se anuncia a lectores de pantalla (span aria-hidden con title)", async ({
   page,
 }) => {
-  await page.clock.install({ time: FAKE_START });
-  await openDemoStore(page);
+  await openMutableDemoStore(page);
   await openHeroInspector(page);
-  await page.clock.pauseAt(FAKE_PAUSE);
 
   const title = page.getByRole("textbox", { name: "Título", exact: true });
   await title.fill("Cambio único A14");

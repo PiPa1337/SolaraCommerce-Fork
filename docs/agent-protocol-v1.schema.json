@@ -25,6 +25,7 @@
           "rollouts.get",
           "rollouts.rollback",
           "plans.create",
+          "plans.createAndCommit",
           "plans.get",
           "plans.commit",
           "plans.discard",
@@ -32,9 +33,19 @@
           "jobs.get",
           "audit.list",
           "assets.stage",
+          "assets.generatePlaceholder",
           "assets.upload.begin",
           "assets.upload.chunk",
-          "assets.upload.finish"
+          "assets.upload.finish",
+          "qa.runExport",
+          "qa.runGates",
+          "qa.detectFlaky",
+          "qa.writeTest",
+          "qa.readBacklog",
+          "qa.logProgress",
+          "qa.updateState",
+          "qa.runCycle",
+          "qa.status"
         ]
       }
     },
@@ -50,7 +61,8 @@
           "template:read",
           "template:write",
           "rollouts:read",
-          "rollouts:write"
+          "rollouts:write",
+          "qa:write"
         ]
       }
     }
@@ -111,6 +123,22 @@
         },
         {
           "type": "object",
+          "required": ["type", "changes"],
+          "properties": {
+            "type": { "const": "store.updatePublicCopy" },
+            "changes": { "type": "object" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "changes"],
+          "properties": {
+            "type": { "const": "store.updatePolicies" },
+            "changes": { "type": "object" }
+          }
+        },
+        {
+          "type": "object",
           "required": ["type", "slug", "title"],
           "properties": {
             "type": { "const": "category.create" },
@@ -124,6 +152,24 @@
         },
         {
           "type": "object",
+          "required": ["type", "categoryId", "changes"],
+          "properties": {
+            "type": { "const": "category.update" },
+            "categoryId": { "$ref": "#/$defs/id" },
+            "changes": { "type": "object", "additionalProperties": false }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "categoryId", "status"],
+          "properties": {
+            "type": { "const": "category.setStatus" },
+            "categoryId": { "$ref": "#/$defs/id" },
+            "status": { "enum": ["active", "hidden"] }
+          }
+        },
+        {
+          "type": "object",
           "required": ["type", "slug", "title"],
           "properties": {
             "type": { "const": "collection.create" },
@@ -132,6 +178,15 @@
             "title": { "type": "string" },
             "description": { "type": "string" },
             "imageId": { "$ref": "#/$defs/id" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "collectionId", "changes"],
+          "properties": {
+            "type": { "const": "collection.update" },
+            "collectionId": { "$ref": "#/$defs/id" },
+            "changes": { "type": "object", "additionalProperties": false }
           }
         },
         {
@@ -193,6 +248,56 @@
             "assetId": { "$ref": "#/$defs/id" },
             "target": { "enum": ["identity.logo", "seo.favicon", "seo.social", "product"] },
             "productId": { "$ref": "#/$defs/id" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "assetId"],
+          "properties": {
+            "type": { "const": "asset.remove" },
+            "assetId": { "$ref": "#/$defs/id" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "categoryId", "skuPrefix", "basePriceCents", "items"],
+          "properties": {
+            "type": { "const": "product.createBatch" },
+            "categoryId": { "$ref": "#/$defs/id" },
+            "imageIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+            "tags": { "type": "array", "items": { "type": "string" } },
+            "skuPrefix": { "type": "string", "minLength": 1 },
+            "basePriceCents": { "type": "integer", "minimum": 0 },
+            "priceStepCents": { "type": "integer", "minimum": 0 },
+            "items": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 100,
+              "items": {
+                "type": "object",
+                "required": ["title"],
+                "properties": {
+                  "title": { "type": "string", "minLength": 1 },
+                  "description": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "presetId"],
+          "properties": {
+            "type": { "const": "theme.applyPreset" },
+            "presetId": { "enum": ["editorial", "minimal", "calido", "industrial", "botanico"] }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "tokens"],
+          "properties": {
+            "type": { "const": "theme.updateTokens" },
+            "tokens": { "type": "object" }
           }
         }
       ]

@@ -20,6 +20,25 @@ export const STORE_BASE_STYLES = `
 .solara-skip-link:focus {
   transform: translateY(0);
 }
+[data-solara-store] .solara-consumer-rights {
+  position: fixed;
+  z-index: 1000;
+  right: .5rem;
+  bottom: .5rem;
+  max-width: min(calc(100vw - 1rem), 22rem);
+  padding: .3rem .55rem;
+  border: 1px solid var(--solara-text);
+  border-radius: var(--solara-radius);
+  background: var(--solara-text);
+  color: var(--solara-background);
+  font-size: .75rem;
+  line-height: 1.35;
+}
+[data-solara-store] .solara-consumer-rights a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: .15em;
+}
 [data-solara-store][data-color-mode="dark"] {
   --solara-background: var(--solara-dark-background, #1d1e19);
   --solara-surface: var(--solara-dark-surface, #292a23);

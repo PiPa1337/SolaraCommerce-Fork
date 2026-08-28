@@ -1,6 +1,4 @@
-import { readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
-import { resolve } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { referenceStore } from "@solara/project-schema/fixture";
@@ -24,20 +22,6 @@ test.beforeAll(async () => {
   studioUrl = studio.url;
 
   const exported = exportProject(referenceStore, { mode: "production" });
-  const fixtureFiles = new Map<string, Uint8Array>([
-    [
-      "fixtures/casa-luma-hero.png",
-      readFileSync(resolve("apps/studio/public/fixtures/casa-luma-hero.png")),
-    ],
-    [
-      "fixtures/manta-bruma.png",
-      readFileSync(resolve("apps/studio/public/fixtures/manta-bruma.png")),
-    ],
-    [
-      "fixtures/jarra-delta.png",
-      readFileSync(resolve("apps/studio/public/fixtures/jarra-delta.png")),
-    ],
-  ]);
   storefrontServer = createServer((request, response) => {
     const requested = decodeURIComponent(
       new URL(request.url ?? "/", "http://localhost").pathname,
@@ -48,7 +32,7 @@ test.beforeAll(async () => {
         : requested.endsWith("/")
           ? `${requested}index.html`
           : requested;
-    const content = exported.files.get(path) ?? fixtureFiles.get(path);
+    const content = exported.files.get(path);
     if (content === undefined) {
       response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not found");
       return;
@@ -216,7 +200,16 @@ test("dashboard permite abrir, buscar, cambiar vista, respaldar y administrar un
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
 
   // T4.12: el archivo de tienda confirma con el diálogo unificado.
-  await detail.getByRole("button", { name: "Archivar" }).click();
+  const duplicateCard = page
+    .locator(".dashboard-store-card")
+    .filter({ hasText: "Predeterminado (copia)" })
+    .first();
+  await duplicateCard.locator(".dashboard-store-card__button").click();
+  const duplicateDetail = page.getByRole("region", {
+    name: "Tienda seleccionada: Predeterminado (copia)",
+  });
+  await expect(duplicateDetail).toBeVisible();
+  await duplicateDetail.getByRole("button", { name: "Archivar" }).click();
   const archiveConfirm = page.getByTestId("ui-confirm-dialog");
   await expect(archiveConfirm).toBeVisible();
   await archiveConfirm.getByRole("button", { name: "Archivar", exact: true }).click();
@@ -481,7 +474,10 @@ test("Studio respeta foco, modo oscuro y movimiento reducido", async ({ page }) 
       () =>
         focused.evaluate((element) => {
           const style = getComputedStyle(element);
-          return style.outlineStyle !== "none" && Number.parseFloat(style.outlineWidth) > 0;
+          return (
+            (style.outlineStyle !== "none" && Number.parseFloat(style.outlineWidth) > 0) ||
+            style.boxShadow !== "none"
+          );
         }),
       { message: "El elemento enfocado debe tener un contorno visible" },
     )

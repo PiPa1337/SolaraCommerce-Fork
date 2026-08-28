@@ -5,10 +5,12 @@
  */
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 let server: Server;
 let studioUrl: string;
+const SCALE_STORE_NAME = "Tienda escala editor";
 
 test.beforeAll(async () => {
   const running = await startStudioServer();
@@ -32,14 +34,18 @@ async function openCatalog(page: Page) {
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await openMutableScaleStore(page, SCALE_STORE_NAME);
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
 }
 
 async function reopenCatalog(page: Page) {
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
+  await page
+    .locator(".dashboard-store-card")
+    .filter({ hasText: SCALE_STORE_NAME })
+    .first()
+    .locator(".dashboard-store-card__button")
+    .click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();

@@ -102,13 +102,13 @@ test("los pasos del checklist llevan a su área y el modo avanzado conserva el e
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
 
-  // Un requisito del hero (Inicio) navega al Constructor.
-  const homeRequirement = page
+  // Un requisito pendiente de contenido navega al área correspondiente.
+  const brandRequirement = page
     .getByTestId("ui-guided-requirement")
-    .filter({ hasText: "Inicio ·" })
+    .filter({ hasText: "Descripción de marca" })
     .first();
-  await homeRequirement.getByRole("button", { name: /^Editar / }).click();
-  await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
+  await brandRequirement.getByRole("button", { name: /^Editar / }).click();
+  await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
 
   // El estado editado en Resumen sobrevive a la ida y vuelta de modos.
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
@@ -117,9 +117,11 @@ test("los pasos del checklist llevan a su área y el modo avanzado conserva el e
     timeout: 5_000,
   });
 
-  // El modo avanzado conserva su estado al volver de Preparar (contrato PT4
-  // Opción A): el toggle del guiado refleja el modo activo y el Constructor
-  // sigue desprotegido.
+  // Activar el modo avanzado desde Preparar lleva al Constructor y conserva su
+  // estado al volver al flujo guiado (contrato PT4, Opción A).
+  await page.getByRole("tab", { name: "Preparar", exact: true }).click();
+  await page.getByRole("button", { name: "Modo avanzado", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
   await expect(page.getByRole("button", { name: "Modo avanzado activado" })).toHaveAttribute(
     "aria-pressed",

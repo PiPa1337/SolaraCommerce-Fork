@@ -18,6 +18,7 @@
  */
 import type { Server } from "node:http";
 import { expect, test } from "@playwright/test";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 180_000 : 150_000);
@@ -56,6 +57,11 @@ async function openDemoStore(page: import("@playwright/test").Page) {
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
     timeout: 30_000,
   });
+}
+
+async function openMutableDemoStore(page: import("@playwright/test").Page) {
+  await resetIndexedDb(page);
+  await openMutableScaleStore(page, "Tienda A26 mutable");
 }
 
 async function openGallery(page: import("@playwright/test").Page) {
@@ -340,14 +346,18 @@ test("catálogo real: el segmented cambia la vista y la paginación navega las 5
 test("resumen real: los toggles commitean y el status badge reacciona al teléfono", async ({
   page,
 }) => {
-  await openDemoStore(page);
+  await openMutableDemoStore(page);
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Resumen" })).toBeVisible();
 
+  const phone = page.getByLabel("Número internacional");
+  const initiallyMissing = page.locator(".ui-status-badge--idle").filter({ hasText: "Pendiente" });
+  await expect(initiallyMissing).toBeVisible();
+
   const phoneBadge = page.locator(".ui-status-badge--ok").filter({ hasText: "Formato correcto" });
+  await phone.fill("5491123456789");
   await expect(phoneBadge).toBeVisible();
 
-  const phone = page.getByLabel("Número internacional");
   await phone.fill("123");
   const warning = page.locator(".ui-status-badge--warning").filter({ hasText: "Revisar formato" });
   await expect(warning).toBeVisible();

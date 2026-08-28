@@ -52,6 +52,7 @@ import { Tooltip } from "../components/primitives";
 import { Button, IconButton, InlineError } from "../components/Ui";
 import { AutosaveQueue, type AutosaveState } from "../lib/autosave";
 import { readExportHistory } from "../lib/exportHistory";
+import { moveHistory, pushHistorySnapshot } from "../lib/history";
 import type { LocalSaveReceipt, LocalStorageError } from "../lib/localStorage";
 import { downloadBlob } from "../lib/projectArchive";
 import { saveProject } from "../lib/repository";
@@ -71,12 +72,12 @@ import {
 const LazyGuidedOverview = lazy(() =>
   import("./GuidedOverview").then(({ GuidedOverview: Component }) => ({ default: Component })),
 );
-const LazyOverview = lazy(() =>
-  import("./Overview").then(({ Overview: Component }) => ({ default: Component })),
-);
-const LazyCatalog = lazy(() =>
-  import("./Catalog").then(({ Catalog: Component }) => ({ default: Component })),
-);
+const loadOverview = () =>
+  import("./Overview").then(({ Overview: Component }) => ({ default: Component }));
+const LazyOverview = lazy(loadOverview);
+const loadCatalog = () =>
+  import("./Catalog").then(({ Catalog: Component }) => ({ default: Component }));
+const LazyCatalog = lazy(loadCatalog);
 const LazyBuilder = lazy(() =>
   import("./Builder").then(({ Builder: Component }) => ({ default: Component })),
 );
@@ -126,7 +127,7 @@ interface StudioTabContentProps {
   tab: StudioTab;
   project: StoreProjectV1;
   advancedMode: boolean;
-  replaceProject(next: StoreProjectV1): void;
+  replaceProject(next: StoreProjectV1, options?: { allowProtectedWrite?: boolean }): void;
   runCommand(command: DomainCommand): void;
   onNavigate(destination: StudioTab): void;
   onApplyUpgrade(nextProject: StoreProjectV1): void;
@@ -307,6 +308,13 @@ export function Studio({
   ): Promise<{ ok: true } | { ok: false; message: string }>;
   onOpenSite?(id: string): Promise<void>;
 }) {
+  useEffect(() => {
+    // Los paneles siguen montándose bajo demanda, pero sus chunks se precargan
+    // cuando el Studio ya está abierto para que el primer cambio de pestaña no
+    // bloquee la interacción del editor.
+    void loadOverview();
+    void loadCatalog();
+  }, []);
   const [history, setHistory] = useState<HistoryState>(() => createHistory(initialProject));
   const [tab, setTab] = useState<StudioTab>("guided");
   const [editorOpen, setEditorOpen] = useState<boolean>(() => {
@@ -408,6 +416,7 @@ export function Studio({
   const [leaving, setLeaving] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [managedDirty, setManagedDirty] = useState(false);
+  const [protectedWriteApproved, setProtectedWriteApproved] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [lastExportedAt, setLastExportedAt] = useState("");
   const [exportTick, setExportTick] = useState(0);
@@ -420,7 +429,18 @@ export function Studio({
       {} as Partial<Record<StudioTab, string>>,
     ),
   );
-  const [autosave] = useState(() => new AutosaveQueue(saveProject, 550));
+  // Un upgrade guiado es el único flujo que puede escribir la plantilla
+  // protegida. El permiso se consume al completar ese snapshot y no abre el
+  // resto de los editores ni deja habilitados guardados posteriores.
+  const protectedWriteProjectIdRef = useRef<string | null>(null);
+  const [autosave] = useState(
+    () =>
+      new AutosaveQueue(async (snapshot: StoreProjectV1) => {
+        const allowProtectedWrite = protectedWriteProjectIdRef.current === snapshot.id;
+        await saveProject(snapshot, { allowProtectedWrite });
+        if (allowProtectedWrite) protectedWriteProjectIdRef.current = null;
+      }, 550),
+  );
   const editorPaneId = useId();
   const conflictTitleId = useId();
   const focusToggleId = useId();
@@ -695,8 +715,8 @@ export function Studio({
   };
 
   const replaceProject = useCallback(
-    (next: StoreProjectV1) => {
-      if (immutableBase) {
+    (next: StoreProjectV1, options: { allowProtectedWrite?: boolean } = {}) => {
+      if (immutableBase && !options.allowProtectedWrite) {
         setValidationError(
           "La plantilla protegida es de solo lectura. Creá una tienda nueva para editarla.",
         );
@@ -710,9 +730,11 @@ export function Studio({
         return;
       }
       setValidationError("");
+      if (options.allowProtectedWrite && immutableBase) {
+        protectedWriteProjectIdRef.current = result.data.id;
+      }
       setHistory((current) => {
-        if (result.data === current.present) return current;
-        return { past: [...current.past, current.present], present: result.data, future: [] };
+        return pushHistorySnapshot(current, result.data);
       });
     },
     [immutableBase],
@@ -753,12 +775,6 @@ export function Studio({
 
   const applyGuidedUpgrade = useCallback(
     (nextProject: StoreProjectV1) => {
-      if (immutableBase) {
-        setValidationError(
-          "La plantilla protegida sólo puede cambiarse mediante un upgrade explícito.",
-        );
-        return;
-      }
       void (async () => {
         try {
           await autosave.flush();
@@ -768,7 +784,8 @@ export function Studio({
             `${project.slug}-antes-de-actualizar.solara.json`,
             "application/vnd.solara.project+json",
           );
-          replaceProject(nextProject);
+          if (managedStorage && immutableBase) setProtectedWriteApproved(true);
+          replaceProject(nextProject, { allowProtectedWrite: immutableBase });
         } catch (reason) {
           setValidationError(
             reason instanceof Error
@@ -778,7 +795,7 @@ export function Studio({
         }
       })();
     },
-    [autosave, immutableBase, project, replaceProject],
+    [autosave, immutableBase, managedStorage, project, replaceProject],
   );
 
   const importFromExport = useCallback(
@@ -879,11 +896,11 @@ export function Studio({
         if (event.shiftKey) {
           if (history.future.length === 0) return;
           event.preventDefault();
-          setHistory((current) => redo(current));
+          setHistory((current) => moveHistory(current, redo));
         } else {
           if (history.past.length === 0) return;
           event.preventDefault();
-          setHistory((current) => undo(current));
+          setHistory((current) => moveHistory(current, undo));
         }
       }
     };
@@ -991,8 +1008,12 @@ export function Studio({
                   onDirtyChange={setManagedDirty}
                   onError={setValidationError}
                   onConflict={setConflict}
-                  onSaved={handleDiskSaved}
-                  blocked={conflict !== null || immutableBase}
+                  onSaved={(receipt) => {
+                    setProtectedWriteApproved(false);
+                    handleDiskSaved(receipt);
+                  }}
+                  allowProtectedWrite={protectedWriteApproved}
+                  blocked={conflict !== null || (immutableBase && !protectedWriteApproved)}
                 />
               </Suspense>
             ) : (
@@ -1048,7 +1069,7 @@ export function Studio({
                   icon={ArrowUDownLeft}
                   label="Deshacer"
                   disabled={immutableBase || history.past.length === 0}
-                  onClick={() => setHistory((current) => undo(current))}
+                  onClick={() => setHistory((current) => moveHistory(current, undo))}
                 />
               </Tooltip>
               <Tooltip tip="Rehacer" position="bottom">
@@ -1056,7 +1077,7 @@ export function Studio({
                   icon={ArrowUDownRight}
                   label="Rehacer"
                   disabled={immutableBase || history.future.length === 0}
-                  onClick={() => setHistory((current) => redo(current))}
+                  onClick={() => setHistory((current) => moveHistory(current, redo))}
                 />
               </Tooltip>
             </div>

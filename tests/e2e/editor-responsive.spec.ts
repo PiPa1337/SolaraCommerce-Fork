@@ -1,6 +1,9 @@
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { createCleanStore, openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
+
+test.setTimeout(process.env.CI ? 120_000 : 90_000);
 
 /**
  * T0.3 — Matriz responsive del editor.
@@ -75,13 +78,17 @@ const tabActions: Array<{ tab: string; heading: string; action: string }> = [
   { tab: "Constructor", heading: "Constructor", action: "Agregar sección" },
   { tab: "Recursos", heading: "Recursos", action: "Cargar imágenes" },
   { tab: "SEO", heading: "SEO y Google", action: "Descargar informe" },
-  { tab: "Tema de la tienda", heading: "Tema de la tienda", action: "Modo" },
+  { tab: "Tema de la tienda", heading: "Tema de la tienda", action: "Modo de color" },
   { tab: "Exportar", heading: "Exportar", action: "Exportar borrador" },
 ];
 
 test("el dashboard no desborda y mantiene acciones usables en los 7 viewports", async ({
   page,
 }) => {
+  const storeName = "Responsive dashboard";
+  await page.goto(studioUrl);
+  await createCleanStore(page, storeName);
+
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     await page.goto(studioUrl);
@@ -100,14 +107,14 @@ test("el dashboard no desborda y mantiene acciones usables en los 7 viewports", 
 
     const closeDetail = page.getByRole("button", { name: "Cerrar detalle" });
     if (await closeDetail.isVisible().catch(() => false)) {
-      await closeDetail.click();
+      // En el drawer móvil el panel de salud puede quedar bajo el punto de
+      // scroll automático del navegador; Enter ejercita la misma acción sin
+      // depender de una coordenada cubierta por ese panel.
+      await closeDetail.press("Enter");
     }
-    const card = page
-      .locator(".dashboard-store-card")
-      .filter({ hasText: "Predeterminado" })
-      .first();
+    const card = page.locator(".dashboard-store-card").filter({ hasText: storeName }).first();
     await card.locator(".dashboard-store-card__button").click();
-    const detail = page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" });
+    const detail = page.getByRole("region", { name: `Tienda seleccionada: ${storeName}` });
     await expect(detail).toBeVisible();
     await expectNoPageOverflow(page, `Dashboard detalle ${viewport.name}`, false);
     await expectActionUsable(
@@ -149,7 +156,7 @@ test("el dashboard no desborda y mantiene acciones usables en los 7 viewports", 
       expect(position, `Panel lateral apilado en ${viewport.name}`).toBe("sticky");
     }
 
-    await detail.getByRole("button", { name: "Cerrar detalle" }).click();
+    await detail.getByRole("button", { name: "Cerrar detalle" }).press("Enter");
   }
 });
 
@@ -157,12 +164,7 @@ test("cada pestaña del Studio no desborda y conserva su acción principal", asy
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(studioUrl);
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  const card = page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }).first();
-  await card.locator(".dashboard-store-card__button").click();
-  await page
-    .getByRole("region", { name: "Tienda seleccionada: Predeterminado" })
-    .getByRole("button", { name: "Abrir tienda" })
-    .click();
+  await openMutableScaleStore(page, "Responsive tabs");
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
 
   for (const viewport of viewports) {
@@ -213,7 +215,7 @@ test("cada pestaña del Studio no desborda y conserva su acción principal", asy
         sectionMetrics.scrollWidth,
         `${tab} ${viewport.name}: el contenido debe caber dentro del panel`,
       ).toBeLessThanOrEqual(sectionMetrics.clientWidth + 1);
-      if (tab === "Tema") {
+      if (tab === "Tema de la tienda") {
         const themeFieldsets = await pane
           .locator(".theme-layout fieldset")
           .evaluateAll((elements) =>
@@ -226,13 +228,15 @@ test("cada pestaña del Studio no desborda y conserva su acción principal", asy
       }
       await expectActionUsable(
         page,
-        page.getByRole(tab === "Tema" ? "combobox" : "button", { name: action, exact: true }),
+        page.getByRole(tab === "Tema de la tienda" ? "combobox" : "button", {
+          name: action,
+          exact: true,
+        }),
         action,
       );
       if (viewport.name === "desktop real 1920" && (tab === "Preparar" || tab === "Resumen")) {
         await page.screenshot({
           path: `test-results/${tab.toLowerCase()}-dark-1920x968.png`,
-          fullPage: true,
         });
       }
       if (tab === "Constructor") {
@@ -320,7 +324,6 @@ test("cada pestaña del Studio no desborda y conserva su acción principal", asy
             await firstCard.scrollIntoViewIfNeeded();
             await page.screenshot({
               path: "test-results/catalog-scale-compact-1024.png",
-              fullPage: true,
             });
           }
         } else {
@@ -355,7 +358,6 @@ test("cada pestaña del Studio no desborda y conserva su acción principal", asy
             ).toBe(false);
             await page.screenshot({
               path: `test-results/catalog-scale-table-${viewport.width}x${viewport.height}.png`,
-              fullPage: true,
             });
           }
         }
@@ -378,12 +380,7 @@ test("el preview y su toolbar responden en los 7 viewports", async ({ page }) =>
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(studioUrl);
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  const card = page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }).first();
-  await card.locator(".dashboard-store-card__button").click();
-  await page
-    .getByRole("region", { name: "Tienda seleccionada: Predeterminado" })
-    .getByRole("button", { name: "Abrir tienda" })
-    .click();
+  await openMutableScaleStore(page, "Responsive preview");
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
 
   for (const viewport of viewports) {

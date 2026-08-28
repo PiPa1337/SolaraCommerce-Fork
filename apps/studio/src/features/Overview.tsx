@@ -495,6 +495,14 @@ export function Overview({
   const [unsaved, setUnsaved] = useState(false);
   const navigationItemsLimitId = useId();
   const unsavedTimer = useRef<number | undefined>(undefined);
+  /**
+   * Mantiene la base más reciente entre eventos de controles distintos. La
+   * vista recibe el proyecto por props y React puede agrupar varios commits;
+   * usar sólo `project` dentro de callbacks consecutivos podía hacer que el
+   * último campo pisara el anterior.
+   */
+  const latestProjectRef = useRef(project);
+  latestProjectRef.current = project;
   /** Último campo que SÍ commiteó (no el último editado): sólo su borrador se
    *  limpia cuando el proyecto cambia. Un borrador inválido sin commitear no
    *  debe ser destruido por un commit de otro campo. */
@@ -587,20 +595,27 @@ export function Overview({
 
   const deleteNavItem = (itemId: string) => {
     updateNavigation({
-      items: project.navigation.items.filter((current) => current.id !== itemId),
+      items: latestProjectRef.current.navigation.items.filter((current) => current.id !== itemId),
     });
     success("Enlace de navegación eliminado");
   };
   const commit = (patch: Partial<StoreProjectV1>) => {
     markUnsaved();
-    onChange({ ...project, ...patch, updatedAt: new Date().toISOString() });
+    const nextProject = {
+      ...latestProjectRef.current,
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    };
+    latestProjectRef.current = nextProject;
+    onChange(nextProject);
   };
   const setIdentityImage = (target: "logo" | "cover" | "favicon", assetId: string) => {
-    const selectedAssetId = project.assets.find((asset) => asset.id === assetId)?.id;
+    const currentProject = latestProjectRef.current;
+    const selectedAssetId = currentProject.assets.find((asset) => asset.id === assetId)?.id;
     if (target === "logo") {
       commit({
         identity: {
-          ...project.identity,
+          ...currentProject.identity,
           logoAssetId: selectedAssetId,
         },
       });
@@ -609,7 +624,7 @@ export function Overview({
     if (target === "favicon") {
       commit({
         seo: {
-          ...project.seo,
+          ...currentProject.seo,
           faviconAssetId: selectedAssetId,
         },
       });
@@ -617,32 +632,33 @@ export function Overview({
     }
     commit({
       seo: {
-        ...project.seo,
+        ...currentProject.seo,
         socialImageId: selectedAssetId,
       },
     });
   };
   const uploadIdentityImage = (target: "logo" | "cover" | "favicon", asset: ImageAsset) => {
-    const assets = project.assets.some((current) => current.id === asset.id)
-      ? project.assets
-      : [...project.assets, asset];
+    const currentProject = latestProjectRef.current;
+    const assets = currentProject.assets.some((current) => current.id === asset.id)
+      ? currentProject.assets
+      : [...currentProject.assets, asset];
     if (target === "logo") {
       commit({
         assets,
-        identity: { ...project.identity, logoAssetId: asset.id },
+        identity: { ...currentProject.identity, logoAssetId: asset.id },
       });
       return;
     }
     if (target === "favicon") {
       commit({
         assets,
-        seo: { ...project.seo, faviconAssetId: asset.id },
+        seo: { ...currentProject.seo, faviconAssetId: asset.id },
       });
       return;
     }
     commit({
       assets,
-      seo: { ...project.seo, socialImageId: asset.id },
+      seo: { ...currentProject.seo, socialImageId: asset.id },
     });
   };
   const identityImagePreview = (assetId: string | undefined, label: string) => {
@@ -665,15 +681,15 @@ export function Overview({
     );
   };
   const updateNavigation = (patch: Partial<StoreProjectV1["navigation"]>) =>
-    commit({ navigation: { ...project.navigation, ...patch } });
+    commit({ navigation: { ...latestProjectRef.current.navigation, ...patch } });
   const updatePublicCopy = (group: string, key: string, value: string) => {
-    const currentGroup = project.publicCopy[group as keyof StoreProjectV1["publicCopy"]] as Record<
-      string,
-      string
-    >;
+    const currentProject = latestProjectRef.current;
+    const currentGroup = currentProject.publicCopy[
+      group as keyof StoreProjectV1["publicCopy"]
+    ] as Record<string, string>;
     commit({
       publicCopy: {
-        ...project.publicCopy,
+        ...currentProject.publicCopy,
         [group]: { ...currentGroup, [key]: value },
       },
     });
@@ -683,7 +699,7 @@ export function Overview({
     patch: Partial<StoreProjectV1["navigation"]["items"][number]>,
   ) =>
     updateNavigation({
-      items: project.navigation.items.map((item) =>
+      items: latestProjectRef.current.navigation.items.map((item) =>
         item.id === itemId ? { ...item, ...patch } : item,
       ),
     });
@@ -692,7 +708,9 @@ export function Overview({
     if (pendingNavDelete.kind === "item") {
       deleteNavItem(pendingNavDelete.itemId);
     } else {
-      const parent = project.navigation.items.find((item) => item.id === pendingNavDelete.itemId);
+      const parent = latestProjectRef.current.navigation.items.find(
+        (item) => item.id === pendingNavDelete.itemId,
+      );
       if (parent) {
         updateNavigationItem(parent.id, {
           children: (parent.children ?? []).filter(
@@ -705,10 +723,11 @@ export function Overview({
     setPendingNavDelete(null);
   };
   const moveNavigationItem = (itemId: string, delta: -1 | 1) => {
-    const index = project.navigation.items.findIndex((item) => item.id === itemId);
+    const currentItems = latestProjectRef.current.navigation.items;
+    const index = currentItems.findIndex((item) => item.id === itemId);
     const target = index + delta;
-    if (index < 0 || target < 0 || target >= project.navigation.items.length) return;
-    const items = [...project.navigation.items];
+    if (index < 0 || target < 0 || target >= currentItems.length) return;
+    const items = [...currentItems];
     const current = items[index];
     const next = items[target];
     if (!current || !next) return;
@@ -717,7 +736,7 @@ export function Overview({
     updateNavigation({ items });
   };
   const moveNavigationChild = (itemId: string, childId: string, delta: -1 | 1) => {
-    const parent = project.navigation.items.find((item) => item.id === itemId);
+    const parent = latestProjectRef.current.navigation.items.find((item) => item.id === itemId);
     if (!parent?.children) return;
     const index = parent.children.findIndex((child) => child.id === childId);
     const target = index + delta;
@@ -732,7 +751,9 @@ export function Overview({
   };
   const updatePage = (pageId: string, patch: Partial<StoreProjectV1["pages"][number]>) =>
     commit({
-      pages: project.pages.map((page) => (page.id === pageId ? { ...page, ...patch } : page)),
+      pages: latestProjectRef.current.pages.map((page) =>
+        page.id === pageId ? { ...page, ...patch } : page,
+      ),
     });
 
   /** Input con borrador local: edita sin commitear y confirma al salir sólo si el destino es válido. */
@@ -793,7 +814,7 @@ export function Overview({
                     (next) =>
                       commit({
                         name: next,
-                        identity: { ...project.identity, brandName: next },
+                        identity: { ...latestProjectRef.current.identity, brandName: next },
                       }),
                   )
                 }
@@ -808,7 +829,10 @@ export function Overview({
                     "legalName",
                     event.target.value,
                     (next) => next.trim() !== "",
-                    (next) => commit({ identity: { ...project.identity, legalName: next } }),
+                    (next) =>
+                      commit({
+                        identity: { ...latestProjectRef.current.identity, legalName: next },
+                      }),
                   )
                 }
               />
@@ -827,7 +851,10 @@ export function Overview({
                     "description",
                     event.target.value,
                     (next) => next.trim() !== "",
-                    (next) => commit({ identity: { ...project.identity, description: next } }),
+                    (next) =>
+                      commit({
+                        identity: { ...latestProjectRef.current.identity, description: next },
+                      }),
                   )
                 }
               />
@@ -892,7 +919,10 @@ export function Overview({
                     "email",
                     event.target.value,
                     (next) => next === "" || isValidEmail(next),
-                    (next) => commit({ identity: { ...project.identity, email: next } }),
+                    (next) =>
+                      commit({
+                        identity: { ...latestProjectRef.current.identity, email: next },
+                      }),
                   )
                 }
               />
@@ -902,7 +932,9 @@ export function Overview({
                 aria-label="Teléfono"
                 value={project.identity.phone}
                 onChange={(event) =>
-                  commit({ identity: { ...project.identity, phone: event.target.value } })
+                  commit({
+                    identity: { ...latestProjectRef.current.identity, phone: event.target.value },
+                  })
                 }
               />
             </Field>
@@ -911,7 +943,12 @@ export function Overview({
                 aria-label="Dirección"
                 value={project.identity.address}
                 onChange={(event) =>
-                  commit({ identity: { ...project.identity, address: event.target.value } })
+                  commit({
+                    identity: {
+                      ...latestProjectRef.current.identity,
+                      address: event.target.value,
+                    },
+                  })
                 }
               />
             </Field>
@@ -921,7 +958,12 @@ export function Overview({
                 aria-label="Instagram"
                 value={project.identity.instagramUrl ?? ""}
                 onChange={(event) =>
-                  commit({ identity: { ...project.identity, instagramUrl: event.target.value } })
+                  commit({
+                    identity: {
+                      ...latestProjectRef.current.identity,
+                      instagramUrl: event.target.value,
+                    },
+                  })
                 }
               />
             </Field>
@@ -931,7 +973,12 @@ export function Overview({
                 aria-label="Facebook"
                 value={project.identity.facebookUrl ?? ""}
                 onChange={(event) =>
-                  commit({ identity: { ...project.identity, facebookUrl: event.target.value } })
+                  commit({
+                    identity: {
+                      ...latestProjectRef.current.identity,
+                      facebookUrl: event.target.value,
+                    },
+                  })
                 }
               />
             </Field>
@@ -941,7 +988,12 @@ export function Overview({
                 aria-label="TikTok"
                 value={project.identity.tiktokUrl ?? ""}
                 onChange={(event) =>
-                  commit({ identity: { ...project.identity, tiktokUrl: event.target.value } })
+                  commit({
+                    identity: {
+                      ...latestProjectRef.current.identity,
+                      tiktokUrl: event.target.value,
+                    },
+                  })
                 }
               />
             </Field>
@@ -950,7 +1002,12 @@ export function Overview({
                 aria-label="Usuario de X Twitter"
                 value={project.identity.twitterHandle ?? ""}
                 onChange={(event) =>
-                  commit({ identity: { ...project.identity, twitterHandle: event.target.value } })
+                  commit({
+                    identity: {
+                      ...latestProjectRef.current.identity,
+                      twitterHandle: event.target.value,
+                    },
+                  })
                 }
               />
             </Field>
@@ -987,7 +1044,10 @@ export function Overview({
                     "phone",
                     event.target.value.replace(/\D/g, ""),
                     (next) => next !== "" && PHONE_PATTERN.test(next),
-                    (next) => commit({ whatsapp: { ...project.whatsapp, phone: next } }),
+                    (next) =>
+                      commit({
+                        whatsapp: { ...latestProjectRef.current.whatsapp, phone: next },
+                      }),
                   )
                 }
               />
@@ -997,14 +1057,21 @@ export function Overview({
                 aria-label="Saludo del pedido"
                 value={project.whatsapp.greeting}
                 onChange={(event) =>
-                  commit({ whatsapp: { ...project.whatsapp, greeting: event.target.value } })
+                  commit({
+                    whatsapp: {
+                      ...latestProjectRef.current.whatsapp,
+                      greeting: event.target.value,
+                    },
+                  })
                 }
               />
             </Field>
             <Toggle
               checked={project.whatsapp.includeSku}
               onChange={(checked) =>
-                commit({ whatsapp: { ...project.whatsapp, includeSku: checked } })
+                commit({
+                  whatsapp: { ...latestProjectRef.current.whatsapp, includeSku: checked },
+                })
               }
               label="Incluir SKU en el mensaje"
             />
@@ -1142,7 +1209,9 @@ export function Overview({
                   key={key}
                   checked={project.siteShell[key]}
                   onChange={(checked) =>
-                    commit({ siteShell: { ...project.siteShell, [key]: checked } })
+                    commit({
+                      siteShell: { ...latestProjectRef.current.siteShell, [key]: checked },
+                    })
                   }
                   label={label}
                 />
@@ -1173,7 +1242,7 @@ export function Overview({
                         {...(itemLabelError ? { error: itemLabelError } : {})}
                       >
                         <input
-                          aria-label="Enlace"
+                          aria-label={`Enlace ${index + 1}`}
                           maxLength={NAVIGATION_LABEL_MAX_LENGTH}
                           value={itemLabelDisplay}
                           onChange={(event) =>
@@ -1242,7 +1311,7 @@ export function Overview({
                               {...(childLabelError ? { error: childLabelError } : {})}
                             >
                               <input
-                                aria-label="Enlace"
+                                aria-label={`Subenlace ${childIndex + 1}`}
                                 maxLength={NAVIGATION_LABEL_MAX_LENGTH}
                                 value={childLabelDisplay}
                                 onChange={(event) =>

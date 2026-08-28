@@ -9,7 +9,7 @@ import { agentError, createAgentController, dispatchAgentMethod } from "@solara/
 
 const MCP_VERSION = "2024-11-05";
 
-const toolDefinitions = [
+export const AGENT_MCP_TOOL_DEFINITIONS = [
   {
     name: "solara_health",
     description: "Comprueba que SolaraCommerce está disponible y puede escribir.",
@@ -317,6 +317,24 @@ const toolDefinitions = [
     method: "assets.stage",
   },
   {
+    name: "solara_asset_generate_placeholder",
+    description: "Genera una imagen PNG determinística para completar un catálogo.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["name", "seed"],
+      properties: {
+        name: { type: "string", minLength: 1, maxLength: 160 },
+        alt: { type: "string", maxLength: 500 },
+        width: { type: "integer", minimum: 64, maximum: 2000 },
+        height: { type: "integer", minimum: 64, maximum: 2000 },
+        pattern: { enum: ["solid", "stripes", "circles", "triangles"] },
+        seed: { type: "string", minLength: 1, maxLength: 120 },
+      },
+    },
+    method: "assets.generatePlaceholder",
+  },
+  {
     name: "solara_asset_upload_begin",
     description: "Inicia un upload de asset por chunks base64 con progreso durable.",
     inputSchema: {
@@ -363,6 +381,21 @@ const toolDefinitions = [
     description: "Lee el backlog perpetuo y retorna el siguiente item pendiente.",
     inputSchema: { type: "object", additionalProperties: false, properties: {} },
     method: "qa.readBacklog",
+  },
+  {
+    name: "solara_qa_run_export",
+    description: "Ejecuta una exportación draft acotada para auditar una tienda.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["storeId", "projectData"],
+      properties: {
+        storeId: { type: "string", minLength: 1, maxLength: 96 },
+        mode: { enum: ["draft", "production"] },
+        projectData: { type: "object" },
+      },
+    },
+    method: "qa.runExport",
   },
   {
     name: "solara_qa_write_test",
@@ -529,13 +562,15 @@ export async function runAgentHost({
       }
       if (payload.method === "tools/list") {
         writeLine(
-          mcpResult(payload.id, { tools: toolDefinitions.map(({ method, ...tool }) => tool) }),
+          mcpResult(payload.id, {
+            tools: AGENT_MCP_TOOL_DEFINITIONS.map(({ method, ...tool }) => tool),
+          }),
         );
         return;
       }
       if (payload.method === "tools/call") {
         const name = payload.params?.name;
-        const tool = toolDefinitions.find((candidate) => candidate.name === name);
+        const tool = AGENT_MCP_TOOL_DEFINITIONS.find((candidate) => candidate.name === name);
         if (!tool)
           throw Object.assign(new Error(`Herramienta MCP desconocida: ${String(name)}.`), {
             code: "METHOD_NOT_FOUND",

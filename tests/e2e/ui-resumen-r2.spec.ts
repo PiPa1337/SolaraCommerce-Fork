@@ -15,13 +15,13 @@ import { expect, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
-import { createCleanStore } from "./project-helpers";
+import { createCleanStore, openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 150_000 : 90_000);
 
 const EDITED_PHONE = "5492212345678";
-const EDITED_GREETING = "Hola Marca Aurora editada, preparo mi pedido:";
+const EDITED_GREETING = "Gracias por elegirnos, preparo mi pedido:";
 const PRODUCT_PATH = "/productos/remera-esencial-de-algodon/";
 // El formato es-AR de Intl separa el símbolo del monto con NBSP (U+00A0),
 // tanto en el runtime del sitio como en el formatMoney del exporter.
@@ -145,14 +145,6 @@ async function resetIndexedDb(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
 }
 
-async function openDemoStore(page: Page): Promise<void> {
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
-  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
-    timeout: 30_000,
-  });
-}
-
 async function openResumenTab(page: Page): Promise<void> {
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Resumen" })).toBeVisible();
@@ -239,14 +231,17 @@ test("editar número, saludo y SKU: efecto real en preview y persistencia al rec
   page,
 }) => {
   await resetIndexedDb(page);
-  await openDemoStore(page);
+  const editableStoreId = await openMutableScaleStore(page, "Tienda R2 editable");
   await openResumenTab(page);
 
   const section = page.locator('[data-accordion-id="whatsapp"]');
   const phoneInput = page.getByLabel("Número internacional");
-  const greetingInput = page.getByLabel("Saludo del pedido");
+  const greetingInput = section.getByLabel("Saludo del pedido", { exact: true });
   const skuToggle = page.getByRole("switch", { name: "Incluir SKU en el mensaje" });
 
+  // La plantilla Predeterminado es inmutable; la copia mutable empieza sin
+  // teléfono para que el flujo pruebe una edición real del proyecto.
+  await phoneInput.fill("5491123456789");
   await expect(phoneInput).toHaveValue("5491123456789");
   await expect(section).toContainText("Formato correcto");
   await expect(greetingInput).toHaveValue("Hola Predeterminado, quiero hacer este pedido:");
@@ -272,11 +267,17 @@ test("editar número, saludo y SKU: efecto real en preview y persistencia al rec
   await flushSave(page);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await openDemoStore(page);
+  await page.locator(`[data-store-card-id="${editableStoreId}"]`).click();
+  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
+    timeout: 30_000,
+  });
   await openResumenTab(page);
 
   await expect(page.getByLabel("Número internacional")).toHaveValue(EDITED_PHONE);
-  await expect(page.getByLabel("Saludo del pedido")).toHaveValue(EDITED_GREETING);
+  await expect(section.getByLabel("Saludo del pedido", { exact: true })).toHaveValue(
+    EDITED_GREETING,
+  );
   await expect(page.getByRole("switch", { name: "Incluir SKU en el mensaje" })).toHaveAttribute(
     "aria-checked",
     "false",

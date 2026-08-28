@@ -51,8 +51,12 @@ async function disableServiceWorker(page: import("@playwright/test").Page): Prom
 async function delayExporterChunk(
   page: import("@playwright/test").Page,
   delayMs: number,
-): Promise<void> {
+): Promise<() => void> {
   await disableServiceWorker(page);
+  let releaseDelay = () => {};
+  const delayGate = new Promise<void>((resolve) => {
+    releaseDelay = resolve;
+  });
   let delayed = false;
   await page.route("**/assets/*.js", async (route) => {
     const request = route.request();
@@ -64,10 +68,48 @@ async function delayExporterChunk(
     const body = await response.body();
     delayed = body.includes("policies.incomplete");
     if (delayed) {
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      // El test libera el chunk cuando ya observó el botón bloqueado. El
+      // fallback temporal conserva la reproducción si el flujo no llega al
+      // panel (por ejemplo, durante una navegación abortada).
+      await Promise.race([delayGate, new Promise<void>((resolve) => setTimeout(resolve, delayMs))]);
     }
     await route.fulfill({ response, body });
   });
+  return () => releaseDelay();
+}
+
+/** Mantiene pendientes sólo las auditorías del worker sin bloquear el Studio. */
+async function delayAuditWorker(
+  page: import("@playwright/test").Page,
+): Promise<() => Promise<void>> {
+  await page.addInitScript(() => {
+    type AuditGateWindow = Window & { __solaraReleaseAudit?: () => void };
+    const scopedWindow = window as AuditGateWindow;
+    let releaseGate = () => {};
+    const gate = new Promise<void>((resolve) => {
+      releaseGate = resolve;
+    });
+    scopedWindow.__solaraReleaseAudit = releaseGate;
+
+    const originalPostMessage = Worker.prototype.postMessage;
+    Worker.prototype.postMessage = function (message, transfer) {
+      const isAudit =
+        message && typeof message === "object" && (message as { type?: unknown }).type === "audit";
+      if (isAudit) {
+        void gate.then(() => {
+          if (transfer === undefined) originalPostMessage.call(this, message);
+          else originalPostMessage.call(this, message, transfer);
+        });
+        return;
+      }
+      if (transfer === undefined) return originalPostMessage.call(this, message);
+      return originalPostMessage.call(this, message, transfer);
+    };
+  });
+  return () =>
+    page.evaluate(() => {
+      (window as Window & { __solaraReleaseAudit?: () => void }).__solaraReleaseAudit?.();
+    });
 }
 
 async function openDemoStore(page: import("@playwright/test").Page) {
@@ -85,13 +127,14 @@ async function openDemoStore(page: import("@playwright/test").Page) {
 test("no habilita el export de producción mientras la auditoría está pendiente", async ({
   page,
 }) => {
-  await delayExporterChunk(page, 10_000);
+  const releaseAudit = await delayAuditWorker(page);
   await openDemoStore(page);
   await page.getByRole("tab", { name: "Exportar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible({ timeout: 30_000 });
 
   const production = page.getByTestId("ui-export-production");
   await expect(production).toBeDisabled({ timeout: 1_500 });
+  await releaseAudit();
   await expect(production).toBeEnabled({ timeout: 30_000 });
   await expect(page.getByText("Salud de exportación", { exact: false })).toBeVisible({
     timeout: 10_000,

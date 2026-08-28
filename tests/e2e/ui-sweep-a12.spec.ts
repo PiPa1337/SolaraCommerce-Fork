@@ -245,10 +245,10 @@ test("el filtro de estado cambia las cards y la selección se sincroniza con la 
 
   await status.selectOption("active");
   await expect(visibleCount(page)).toHaveText("1 visibles");
-  await expect(card(page, "Predeterminado").locator(".dashboard-store-card__status")).toHaveText(
-    "Activa",
-  );
-  await expect(detailPanel(page, "Predeterminado")).toBeVisible();
+  await expect(
+    card(page, "Predeterminado").locator(".dashboard-store-card__status.is-active"),
+  ).toHaveText("Activa");
+  await expect(detailPanel(page, "Zeta")).toBeVisible();
 });
 
 test("el orden reordena las cards de verdad y actualiza el índice visible", async ({ page }) => {
@@ -536,35 +536,34 @@ test("A12: restaurar muestra toast de confirmación y devuelve el foco a la card
   page,
 }) => {
   await openDashboard(page);
-  await selectCardByName(page, "Predeterminado");
-  await detailPanel(page, "Predeterminado")
-    .getByRole("button", { name: "Archivar", exact: true })
-    .click();
+  const storeName = "Tienda restaurable A12";
+  await duplicateAs(page, storeName);
+  await selectCardByName(page, storeName);
+  await detailPanel(page, storeName).getByRole("button", { name: "Archivar", exact: true }).click();
   await page.getByTestId("ui-confirm-dialog").getByTestId("ui-confirm-accept").click();
-  await expect(page.getByTestId("ui-toast")).toContainText("archivada");
+  const archivedToast = page.getByTestId("ui-toast").filter({ hasText: "archivada" });
+  await expect(archivedToast).toContainText("archivada");
 
   // Con el filtro «Todas» la card restaurada sigue visible: la restauración
   // debe dejarla seleccionada y enfocada (simetría con el foco de archivar).
   const status = toolbarCombobox(page, 0);
   await status.selectOption("all");
-  await expect(visibleCount(page)).toHaveText("1 visibles");
-  await selectCardByName(page, "Predeterminado");
-  await expect(detailPanel(page, "Predeterminado")).toBeVisible();
+  await expect(visibleCount(page)).toHaveText("2 visibles");
+  await selectCardByName(page, storeName);
+  await expect(detailPanel(page, storeName)).toBeVisible();
 
-  await detailPanel(page, "Predeterminado")
+  await detailPanel(page, storeName)
     .getByRole("button", { name: "Restaurar", exact: true })
     .click();
-  const restoredCard = card(page, "Predeterminado").locator(".dashboard-store-card__button");
+  const restoredCard = card(page, storeName).locator(".dashboard-store-card__button");
   const restoredToast = page.locator("[data-testid='ui-toast']").filter({ hasText: "restaurada" });
   await expect(restoredToast).toBeVisible();
   await expect(restoredToast).not.toContainText("Deshacer");
   await expect(restoredCard).toHaveAttribute("aria-pressed", "true");
   await expect(restoredCard).toBeFocused();
-  await expect(card(page, "Predeterminado").locator(".dashboard-store-card__status")).toHaveText(
-    "Activa",
-  );
-  await expect(detailPanel(page, "Predeterminado")).toBeVisible();
+  await expect(card(page, storeName).locator(".dashboard-store-card__status")).toHaveText("Activa");
+  await expect(detailPanel(page, storeName)).toBeVisible();
   await expect(
-    detailPanel(page, "Predeterminado").getByRole("button", { name: "Archivar", exact: true }),
+    detailPanel(page, storeName).getByRole("button", { name: "Archivar", exact: true }),
   ).toBeVisible();
 });

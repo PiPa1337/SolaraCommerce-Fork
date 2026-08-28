@@ -1,6 +1,20 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { Field } from "./Ui";
+import { Button, Field } from "./Ui";
+
+describe("Button", () => {
+  it("conserva sus clases base al recibir una clase adicional", () => {
+    const markup = renderToStaticMarkup(
+      <Button variant="danger" className="dashboard-store-detail__danger">
+        Archivar
+      </Button>,
+    );
+
+    expect(markup).toContain(
+      'class="button button--danger button--md dashboard-store-detail__danger"',
+    );
+  });
+});
 
 describe("Field", () => {
   it("conserva la ayuda y el error en aria-describedby junto a una referencia existente", () => {

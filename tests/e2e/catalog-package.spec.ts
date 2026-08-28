@@ -32,6 +32,15 @@ test("importa una carpeta comercial con imagen y crea categorías faltantes", as
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   await createCleanStore(page, "Tienda de importación");
   await page.getByRole("tab", { name: /Cat/ }).click();
+  const catalogDescription = page.getByText(/^\d+ productos y \d+ variantes\.$/);
+  const initialCatalogDescription = await catalogDescription.innerText();
+  const initialCatalogCounts = initialCatalogDescription.match(
+    /^(\d+) productos y (\d+) variantes\.$/,
+  );
+  if (!initialCatalogCounts)
+    throw new Error(`Descripción de catálogo inesperada: ${initialCatalogDescription}`);
+  const initialProductCount = Number(initialCatalogCounts[1]);
+  const initialVariantCount = Number(initialCatalogCounts[2]);
 
   const csv = [
     "producto_id,variante_id,slug,titulo,descripcion,marca,estado,categorias,colecciones,etiquetas,imagenes,variante,sku,opciones,precio_centavos,precio_anterior_centavos,disponible,estado_stock,gtin,mpn,imagen_variante,creado_en,actualizado_en",
@@ -60,7 +69,10 @@ test("importa una carpeta comercial con imagen y crea categorías faltantes", as
   });
   await expect(page.getByText("Productos nuevos").locator("..")).toContainText("1");
   await page.getByRole("button", { name: "Agregar y actualizar" }).click();
-  await expect(page.getByText(/1 productos y 1 variantes/)).toBeVisible({ timeout: 15_000 });
+  await expect(catalogDescription).toHaveText(
+    `${initialProductCount + 1} productos y ${initialVariantCount + 1} variantes.`,
+    { timeout: 15_000 },
+  );
   const categoryTree = page.getByRole("region", { name: /rbol de categor/ });
   const categoryList = categoryTree.getByRole("list", { name: /Categor/ });
   await expect(categoryList.getByText("Cocina", { exact: true })).toBeVisible();

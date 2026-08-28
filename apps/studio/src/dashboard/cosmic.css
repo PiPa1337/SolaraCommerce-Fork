@@ -1706,6 +1706,34 @@
   padding: clamp(34px, 7vw, 84px) clamp(18px, 5vw, 72px);
 }
 
+/* El dashboard ocupa el viewport completo y su biblioteca es la región que
+ * scrollea. Esto evita que avisos globales y el contenido de la biblioteca
+ * conviertan el scroll de página en un segundo scroll accidental. */
+.app-root--dashboard-cosmic {
+  display: flex;
+  height: 100dvh;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dashboard-cosmic__banners {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+}
+
+.app-root--dashboard-cosmic > .app-header--dashboard-cosmic {
+  flex: 0 0 auto;
+}
+
+.app-root--dashboard-cosmic > .dashboard-page.dashboard-cosmic {
+  min-height: 0;
+  flex: 1 1 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 .dashboard-wrap {
   width: min(1120px, 100%);
   margin-inline: auto;

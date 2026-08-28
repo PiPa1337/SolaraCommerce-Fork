@@ -5,7 +5,7 @@ import type { Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { type Browser, expect, type Page, test } from "@playwright/test";
-import { createCleanStore } from "./project-helpers";
+import { createCleanStore, openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 let server: Server;
@@ -291,32 +291,36 @@ test("los estados ARIA interactivos usan roles y valores coherentes", async ({ p
 });
 
 async function expectAriaReferencesToExist(page: Page, surface: string): Promise<void> {
-  const danglingReferences = await page
-    .locator(
-      "[aria-labelledby], [aria-describedby], [aria-controls], [aria-owns], [aria-activedescendant]",
+  const references = page.locator(
+    "[aria-labelledby], [aria-describedby], [aria-controls], [aria-owns], [aria-activedescendant]",
+  );
+  await expect
+    .poll(
+      () =>
+        references.evaluateAll((elements) =>
+          elements.flatMap((element) => {
+            const attributes = [
+              "aria-labelledby",
+              "aria-describedby",
+              "aria-controls",
+              "aria-owns",
+              "aria-activedescendant",
+            ];
+            return attributes.flatMap((attribute) => {
+              const value = element.getAttribute(attribute)?.trim();
+              if (!value) return [];
+              const missing = value.split(/\s+/).filter((id) => !document.getElementById(id));
+              return missing.length > 0
+                ? [
+                    `${element.tagName.toLowerCase()}[${attribute}="${value}"] -> ${missing.join(",")}`,
+                  ]
+                : [];
+            });
+          }),
+        ),
+      { timeout: 10_000, message: `${surface}: referencias ARIA sin destino` },
     )
-    .evaluateAll((elements) =>
-      elements.flatMap((element) => {
-        const references = [
-          "aria-labelledby",
-          "aria-describedby",
-          "aria-controls",
-          "aria-owns",
-          "aria-activedescendant",
-        ].flatMap((attribute) => {
-          const value = element.getAttribute(attribute)?.trim();
-          return value ? [[attribute, value] as const] : [];
-        });
-        return references.flatMap(([attribute, value]) => {
-          const missing = value.split(/\s+/).filter((id) => !document.getElementById(id));
-          return missing.length > 0
-            ? [`${element.tagName.toLowerCase()}[${attribute}="${value}"] -> ${missing.join(",")}`]
-            : [];
-        });
-      }),
-    );
-
-  expect(danglingReferences, `${surface}: referencias ARIA sin destino`).toEqual([]);
+    .toEqual([]);
 }
 
 async function expectAriaHiddenSubtreesToBeInert(page: Page, surface: string): Promise<void> {
@@ -543,7 +547,9 @@ test("los controles repetidos conservan contexto accesible por superficie", asyn
   await distinctDescriptions(sectionSelects);
   // Nightwatch: el producto aún no provee aria-description para todas las acciones de sección.
   // Verificar que existan acciones, sin exigir descripción estricta.
-  await expect(page.locator(".section-row-actions [data-testid='ui-icon-button']")).not.toHaveCount(0);
+  await expect(page.locator(".section-row-actions [data-testid='ui-icon-button']")).not.toHaveCount(
+    0,
+  );
 
   await page.getByRole("tab", { name: "SEO", exact: true }).click();
   await expect(page.getByRole("heading", { name: "SEO y Google", exact: true })).toBeVisible();
@@ -556,7 +562,8 @@ test("los controles repetidos conservan contexto accesible por superficie", asyn
 test("el ConfirmDialog de eliminar enlace enfoca, atrapa el foco, cancela con Escape y devuelve el foco (T6.4)", async ({
   page,
 }) => {
-  await openDefaultStore(page);
+  await openDashboard(page);
+  await openMutableScaleStore(page, "Tienda a11y eliminar enlace");
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Resumen" })).toBeVisible();
 
@@ -601,24 +608,17 @@ test("el ConfirmDialog de eliminar enlace enfoca, atrapa el foco, cancela con Es
   await expect(confirm).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(dialog).toBeHidden();
-  await expect(page.getByTestId("ui-toast")).toContainText("Enlace de navegación eliminado");
-  // Nightwatch: el toast usa Deshacer con el borrado aplicado en memoria; el
-  // botón Eliminar puede seguir en el DOM hasta re-render de la lista.
-  // Verificar que la fila del enlace eliminado ya no está en la navegación.
-  const deletedButton = page.getByRole("button", { name: deletedLabel });
-  try {
-    await expect(deletedButton).toBeHidden({ timeout: 3000 });
-  } catch {
-    console.log("T6.4 botón Eliminar sigue visible tras confirmar; verificar lista por item label");
-  }
+  await expect(
+    page.getByTestId("ui-toast").filter({ hasText: "Enlace de navegación eliminado" }),
+  ).toBeVisible();
+  // La prueba usa una copia mutable: la operación debe sacar el enlace de la
+  // navegación y dejar disponible la reversión en la barra del editor.
+  const deletedButton = page.getByRole("button", { name: deletedLabel, exact: true });
+  await expect(deletedButton).toHaveCount(0);
 
-  // Nightwatch: la navegación de Predeterminado está protegida; el borrado
-  // puede no commitear y "Deshacer" queda deshabilitado. En ese caso el
-  // contrato de protección exige que el enlace se conserve.
   const undo = page.getByRole("button", { name: "Deshacer" });
-  if (await undo.isEnabled()) {
-    await undo.click();
-  }
+  await expect(undo).toBeEnabled();
+  await undo.click();
   await expect(page.getByRole("button", { name: deletedLabel })).toBeVisible();
 });
 
@@ -890,11 +890,20 @@ async function stopManagedServer(managed: ManagedServer): Promise<void> {
   rmSync(managed.root, { recursive: true, force: true });
 }
 
-async function openDemoStoreManaged(page: Page): Promise<void> {
-  await page
-    .locator('article:has([data-store-card-id="store-modo-sur-demo"])')
-    .getByRole("button", { name: "Abrir esta tienda" })
-    .click();
+async function openManagedStoreByName(page: Page, name: string): Promise<void> {
+  const card = page.locator(".dashboard-store-card").filter({
+    has: page.getByText(name, { exact: true }),
+  });
+  await expect(card).toBeVisible({ timeout: 30_000 });
+  await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+  const navigation = page.getByRole("navigation", { name: /de la tienda/ });
+  const recovery = page.getByTestId("ui-confirm-dialog");
+  await expect
+    .poll(async () => (await navigation.isVisible()) || (await recovery.isVisible()), {
+      timeout: 30_000,
+    })
+    .toBe(true);
+  await expect(page.getByRole("tab", { name: "Resumen" })).toBeVisible({ timeout: 30_000 });
   await page.getByRole("tab", { name: "Resumen" }).click();
   await expect(page.getByLabel("Nombre de la tienda")).toBeVisible();
 }
@@ -902,7 +911,9 @@ async function openDemoStoreManaged(page: Page): Promise<void> {
 async function renameAndSave(page: Page, name: string): Promise<void> {
   await page.getByLabel("Nombre de la tienda").fill(name);
   await page.locator("[data-studio-save]").click();
-  await expect(page.locator(".save-indicator")).toContainText("Guardado", { timeout: 60_000 });
+  await expect(page.locator(".save-indicator")).toHaveText(/Guardado|Sitio anterior conservado/, {
+    timeout: 60_000,
+  });
 }
 
 async function openSecondTab(browser: Browser, url: string): Promise<Page> {
@@ -927,11 +938,12 @@ async function createConflict(
   await expect(pageA.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
     timeout: 30_000,
   });
-  await openDemoStoreManaged(pageA);
+  await createCleanStore(pageA, `${first} inicial`);
+  await pageA.getByRole("tab", { name: "Resumen" }).click();
   await renameAndSave(pageA, first);
 
   const pageB = await openSecondTab(browser, url);
-  await openDemoStoreManaged(pageB);
+  await openManagedStoreByName(pageB, first);
   await renameAndSave(pageB, second);
 
   await pageA.getByLabel("Nombre de la tienda").fill(`${first} (borrador local)`);
@@ -1004,21 +1016,24 @@ test("el diálogo de salida sin guardar queda fuera del foco cuando llega el 409
     await expect(pageA.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
       timeout: 30_000,
     });
-    await openDemoStoreManaged(pageA);
+    await createCleanStore(pageA, "F06 A inicial");
+    await pageA.getByRole("tab", { name: "Resumen" }).click();
     await renameAndSave(pageA, "F06 A");
 
     const pageB = await openSecondTab(browser, managed.url);
-    await openDemoStoreManaged(pageB);
+    await openManagedStoreByName(pageB, "F06 A");
     await renameAndSave(pageB, "F06 B");
 
-    await pageA.getByLabel("Nombre de la tienda").fill("F06 A (borrador local)");
-    await pageA.route("**/__solara/storage/saves/*/commit", async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 2500));
+    await pageA.route("**/__solara/storage/saves", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 10_000));
       await route.continue();
     });
+    await pageA.getByLabel("Nombre de la tienda").fill("F06 A (borrador local)");
 
-    await pageA.locator("[data-studio-save]").click();
+    const saveClick = pageA.locator("[data-studio-save]").click();
+    await expect(pageA.locator("[data-studio-save]")).toHaveAttribute("aria-busy", "true");
     await pageA.getByRole("button", { name: "Volver a tiendas" }).click();
+    await saveClick;
 
     const leaveDialog = pageA.getByTestId("ui-confirm-dialog");
     await expect(leaveDialog).toBeVisible();

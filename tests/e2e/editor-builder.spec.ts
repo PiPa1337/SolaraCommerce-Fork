@@ -334,50 +334,57 @@ test("subir un video real genera el poster con el primer frame exacto", async ({
   });
 
   // Leer el poster generado desde IndexedDB y decodificarlo en la página.
-  const posterInfo = await page.evaluate(async () => {
-    const open = indexedDB.open("solara-commerce-studio");
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      open.onsuccess = () => resolve(open.result);
-      open.onerror = () => reject(open.error);
+  const readPosterInfo = () =>
+    page.evaluate(async () => {
+      const open = indexedDB.open("solara-commerce-studio");
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        open.onsuccess = () => resolve(open.result);
+        open.onerror = () => reject(open.error);
+      });
+      const transaction = db.transaction("projects", "readonly");
+      const store = transaction.objectStore("projects");
+      const all = await new Promise<
+        Array<{
+          project?: {
+            videos?: Array<{ posterAssetId?: string }>;
+            assets?: Array<{ id: string; source: string }>;
+          };
+        }>
+      >((resolve) => {
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result ?? []);
+      });
+      const record = all.find((item) => (item.project?.videos?.length ?? 0) > 0);
+      const video = record?.project?.videos?.[0];
+      const poster = record?.project?.assets?.find((asset) => asset.id === video?.posterAssetId);
+      if (!poster) return null;
+      const image = new Image();
+      image.src = poster.source;
+      await image.decode();
+      const probe = document.createElement("canvas");
+      probe.width = image.naturalWidth;
+      probe.height = image.naturalHeight;
+      const probeContext = probe.getContext("2d");
+      if (!probeContext) return null;
+      probeContext.drawImage(image, 0, 0);
+      const center = probeContext.getImageData(
+        Math.floor(image.naturalWidth / 2),
+        Math.floor(image.naturalHeight / 2),
+        1,
+        1,
+      ).data;
+      return {
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+        center: Array.from(center),
+      };
     });
-    const transaction = db.transaction("projects", "readonly");
-    const store = transaction.objectStore("projects");
-    const all = await new Promise<
-      Array<{
-        project?: {
-          videos?: Array<{ posterAssetId?: string }>;
-          assets?: Array<{ id: string; source: string }>;
-        };
-      }>
-    >((resolve) => {
-      const request = store.getAll();
-      request.onsuccess = () => resolve(request.result ?? []);
-    });
-    const record = all.find((item) => (item.project?.videos?.length ?? 0) > 0);
-    const video = record?.project?.videos?.[0];
-    const poster = record?.project?.assets?.find((asset) => asset.id === video?.posterAssetId);
-    if (!poster) return null;
-    const image = new Image();
-    image.src = poster.source;
-    await image.decode();
-    const probe = document.createElement("canvas");
-    probe.width = image.naturalWidth;
-    probe.height = image.naturalHeight;
-    const probeContext = probe.getContext("2d");
-    if (!probeContext) return null;
-    probeContext.drawImage(image, 0, 0);
-    const center = probeContext.getImageData(
-      Math.floor(image.naturalWidth / 2),
-      Math.floor(image.naturalHeight / 2),
-      1,
-      1,
-    ).data;
-    return {
-      width: image.naturalWidth,
-      height: image.naturalHeight,
-      center: Array.from(center),
-    };
-  });
+
+  // El botón se habilita al terminar el procesamiento del inspector, pero el
+  // autosave a IndexedDB tiene su propio debounce. Esperar el registro real
+  // evita leer el snapshot anterior bajo carga de la suite.
+  await expect.poll(readPosterInfo, { timeout: 30_000, intervals: [100, 250, 500] }).not.toBeNull();
+  const posterInfo = await readPosterInfo();
 
   expect(posterInfo).not.toBeNull();
   expect(posterInfo?.width).toBe(360);
@@ -538,7 +545,9 @@ test("P6-B5: el modo avanzado se enciende desde Preparar y se revierte", async (
   } catch {
     console.log("P6-B5 badge no visible en Constructor, verificando toggle en Preparar");
     await page.getByRole("tab", { name: "Preparar" }).click();
-    await expect(page.getByRole("button", { name: "Modo avanzado activado" })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: "Modo avanzado activado" })).toBeVisible({
+      timeout: 10000,
+    });
     await page.getByRole("tab", { name: "Constructor" }).click();
     await expect(constructorHeading).toBeVisible({ timeout: 10000 });
   }

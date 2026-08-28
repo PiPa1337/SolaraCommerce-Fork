@@ -1,6 +1,7 @@
 import { createServer, type Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
+import { readHashedStorefrontCss } from "./export-helpers";
 import { createCleanStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
@@ -14,7 +15,7 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
  *   3. datos: el valor commiteado llega a --solara-container del preview y al
  *      proyecto persistido en IndexedDB (el mismo token que emite el exporter);
  *   4. utilidad: el ancho cambia el render — layout más ancho en el preview y
- *      en el sitio exportado (diff de assets/storefront.css + medición real).
+ *      en el sitio exportado (diff del CSS hasheado + medición real).
  */
 
 test.setTimeout(process.env.CI ? 90_000 : 60_000);
@@ -41,13 +42,17 @@ interface StoredProjectRecord {
 
 type ExportedProject = Parameters<typeof exportProject>[0];
 
-/** Selectores de elementos cuyo ancho sigue min(calc(100% - 2rem), var(--solara-container)). */
+/** Selectores de elementos cuyo ancho sigue el contenedor de la familia activa. */
 const LAYOUT_SELECTORS = [
   ".solara-container",
   ".catalog-header-inner",
   ".catalog-hero-inner",
   ".catalog-footer-inner",
 ];
+
+// Editorial V2 reserva 1.5rem por lado en su shell; el token controla el
+// máximo sin alterar ese gutter visual deliberado.
+const V2_HORIZONTAL_GUTTER = 48;
 
 async function setupCleanStore(page: Page, name: string): Promise<void> {
   await page.goto(studioUrl);
@@ -80,10 +85,16 @@ function fieldsetOf(input: Locator): Locator {
 /** Variable CSS computada --solara-container del preview. */
 function previewContainerVar(page: Page): () => Promise<string> {
   const html = page.frameLocator('iframe[title="Vista previa desktop"]').locator("html");
-  return () =>
-    html.evaluate((element) =>
-      getComputedStyle(element).getPropertyValue("--solara-container").trim(),
-    );
+  return async () => {
+    try {
+      return await html.evaluate((element) =>
+        getComputedStyle(element).getPropertyValue("--solara-container").trim(),
+      );
+    } catch (reason) {
+      if (reason instanceof Error && reason.message.includes("Frame was detached")) return "";
+      throw reason;
+    }
+  };
 }
 
 /** Ancho del viewport del iframe y del primer elemento de layout dentro de él. */
@@ -136,9 +147,7 @@ async function readStoredContainer(page: Page, name: string): Promise<number | u
 /** CSS del sitio exportado (assets/storefront.css) para un proyecto dado. */
 function exportedCss(project: ExportedProject): string {
   const result = exportProject(project, { mode: "draft" });
-  const file = result.files.get("assets/storefront.css");
-  if (file === undefined) throw new Error("El sitio exportado no contiene assets/storefront.css");
-  return typeof file === "string" ? file : new TextDecoder().decode(file);
+  return readHashedStorefrontCss(result.files);
 }
 
 async function startExportedServer(
@@ -212,7 +221,9 @@ async function siteLayoutMetrics(
         break;
       }
     }
-    return { viewport: document.documentElement.clientWidth, containerWidth: width };
+    // clientWidth excludes the vertical scrollbar; CSS percentages use the
+    // layout viewport, so innerWidth is the reference for the width formula.
+    return { viewport: window.innerWidth, containerWidth: width };
   }, LAYOUT_SELECTORS);
 }
 
@@ -402,10 +413,15 @@ test("contenedor: el valor llega al CSS exportado y al render del sitio (diff)",
     expect(beforeMetrics.containerWidth).not.toBe(-1);
     expect(afterMetrics.containerWidth).not.toBe(-1);
     expect(
-      Math.abs(beforeMetrics.containerWidth - Math.min(beforeMetrics.viewport - 32, opening)),
+      Math.abs(
+        beforeMetrics.containerWidth -
+          Math.min(beforeMetrics.viewport - V2_HORIZONTAL_GUTTER, opening),
+      ),
     ).toBeLessThanOrEqual(2);
     expect(
-      Math.abs(afterMetrics.containerWidth - Math.min(afterMetrics.viewport - 32, 1800)),
+      Math.abs(
+        afterMetrics.containerWidth - Math.min(afterMetrics.viewport - V2_HORIZONTAL_GUTTER, 1800),
+      ),
     ).toBeLessThanOrEqual(2);
     expect(afterMetrics.containerWidth).toBeGreaterThan(beforeMetrics.containerWidth);
   } finally {

@@ -837,6 +837,7 @@ export function ProductEditor({
                         assets={assets.filter((asset) => draft.imageIds.includes(asset.id))}
                         knownAssets={assets}
                         noneLabel="Usar imagen principal"
+                        ariaLabel="Imagen de variante"
                         onChange={(next) =>
                           updateVariant(variant.id, (current) => ({
                             ...current,

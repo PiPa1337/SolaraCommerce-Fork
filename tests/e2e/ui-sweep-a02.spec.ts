@@ -10,12 +10,15 @@
  */
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(60_000);
 
 let server: Server;
 let studioUrl: string;
+const SCALE_STORE_NAME = "Tienda escala A02";
+let scaleStoreId = "";
 
 test.beforeAll(async () => {
   const running = await startStudioServer();
@@ -39,15 +42,19 @@ async function openCatalog(page: Page): Promise<void> {
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  scaleStoreId = await openMutableScaleStore(page, SCALE_STORE_NAME);
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
   await expect(page.locator("tbody tr")).toHaveCount(50);
 }
 
 async function reopenCatalog(page: Page): Promise<void> {
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
+  await page
+    .locator(".dashboard-store-card")
+    .filter({ hasText: SCALE_STORE_NAME })
+    .first()
+    .locator(".dashboard-store-card__button")
+    .click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
@@ -257,13 +264,13 @@ test.describe("A2 — Catálogo: acciones masivas", () => {
     const untouchedCategory = (await untouchedCategoryCell.innerText()).trim();
     expect(untouchedCategory).not.toBe("");
 
-    await categoryAssignmentSelect(page).selectOption("category-camisas");
+    await categoryAssignmentSelect(page).selectOption({ label: "Camisas" });
     await bulkPanel(page).getByRole("button", { name: "Establecer categorías" }).click();
     await expect(rows(page).nth(0).getByText("Camisas", { exact: true })).toBeVisible();
     await expect(rows(page).nth(1).getByText("Camisas", { exact: true })).toBeVisible();
     await expect(untouchedCategoryCell).toHaveText(untouchedCategory);
 
-    await collectionAssignmentSelect(page).selectOption("collection-mas-elegidos");
+    await collectionAssignmentSelect(page).selectOption({ label: "Más elegidos" });
     await bulkPanel(page).getByRole("button", { name: "Establecer colecciones" }).click();
 
     await bulkTagsInput(page).fill(" auditoria, masiva ");
@@ -365,8 +372,9 @@ test.describe("A2 — Catálogo: columnas y vista", () => {
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
 
-    const stored = await page.evaluate(() =>
-      JSON.parse(localStorage.getItem("solara-catalog-columns:store-modo-sur-demo") ?? "{}"),
+    const stored = await page.evaluate(
+      (id) => JSON.parse(localStorage.getItem(`solara-catalog-columns:${id}`) ?? "{}"),
+      scaleStoreId,
     );
     expect(stored.price).toBe(false);
 
@@ -393,7 +401,7 @@ test.describe("A2 — Catálogo: columnas y vista", () => {
     await expect(page.locator(".table-shell")).toHaveCount(0);
 
     expect(
-      await page.evaluate(() => localStorage.getItem("solara-catalog-view:store-modo-sur-demo")),
+      await page.evaluate((id) => localStorage.getItem(`solara-catalog-view:${id}`), scaleStoreId),
     ).toBe("cards");
 
     await page.reload();

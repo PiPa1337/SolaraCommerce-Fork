@@ -13,6 +13,7 @@ import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { referenceStore } from "@solara/project-schema/fixture";
+import { readHashedStorefrontCss } from "./export-helpers";
 import { createCleanStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
@@ -283,17 +284,19 @@ async function readThemeColors(page: Page): Promise<ThemeColors> {
 function previewVar(page: Page, key: ThemeColorKey) {
   const html = page.frameLocator('iframe[title="Vista previa desktop"]').locator("html");
   return () =>
-    html.evaluate(
-      (element, variable) => getComputedStyle(element).getPropertyValue(variable),
-      `--solara-${VAR_SUFFIX[key]}`,
-    );
+    html
+      .evaluate(
+        (element, variable) => getComputedStyle(element).getPropertyValue(variable),
+        `--solara-${VAR_SUFFIX[key]}`,
+      )
+      .catch(() => "");
 }
 
 async function assertPreviewPalette(page: Page, colors: ThemeColors): Promise<void> {
   await expect.poll(previewVar(page, "background"), { timeout: 15_000 }).toBe(colors.background);
   for (const key of THEME_COLOR_KEYS) {
     if (key === "background") continue;
-    expect(await previewVar(page, key)()).toBe(colors[key]);
+    await expect.poll(previewVar(page, key), { timeout: 15_000 }).toBe(colors[key]);
   }
 }
 
@@ -317,9 +320,7 @@ function exportedThemeVars(colors: ThemeColors): ThemeColors {
   const store = structuredClone(referenceStore);
   store.theme = { ...store.theme, colors: { ...colors } };
   const result = exportProject(store, { mode: "production" });
-  const file = result.files.get("assets/storefront.css");
-  if (file === undefined) throw new Error("El sitio exportado no contiene assets/storefront.css");
-  const css = typeof file === "string" ? file : new TextDecoder().decode(file);
+  const css = readHashedStorefrontCss(result.files);
   const vars = {} as ThemeColors;
   for (const key of THEME_COLOR_KEYS) {
     const suffix = VAR_SUFFIX[key];

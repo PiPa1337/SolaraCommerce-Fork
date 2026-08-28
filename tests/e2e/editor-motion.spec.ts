@@ -7,6 +7,7 @@
  */
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 120_000 : 60_000);
@@ -33,7 +34,7 @@ test.afterAll(async () => {
   await stopStudioServer(server);
 });
 
-async function openStore(page: Page, tab: string) {
+async function openStore(page: Page, tab: string, mutable = false) {
   await page.goto(studioUrl);
   await page.evaluate(
     () =>
@@ -45,8 +46,12 @@ async function openStore(page: Page, tab: string) {
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  if (mutable) {
+    await openMutableScaleStore(page, "T5 motion mutable");
+  } else {
+    await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
+    await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  }
   await page.getByRole("tab", { name: tab, exact: true }).click();
   await expect(page.getByRole("heading", { name: tab })).toBeVisible();
 }
@@ -142,7 +147,7 @@ test("con reduced-motion las transiciones y animaciones del editor quedan anulad
 test("el indicador de guardado pulsa mientras guarda y anima el check al confirmar (T5.2)", async ({
   page,
 }) => {
-  await openStore(page, "Constructor");
+  await openStore(page, "Constructor", true);
   const hero = page.getByRole("listitem").filter({ hasText: "Hero de catálogo" });
   await hero.getByRole("button").first().click();
 

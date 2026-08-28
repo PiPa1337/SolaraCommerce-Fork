@@ -24,6 +24,7 @@
  */
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 90_000 : 60_000);
@@ -41,7 +42,7 @@ test.afterAll(async () => {
   await stopStudioServer(server);
 });
 
-async function openBuilder(page: Page): Promise<void> {
+async function openBuilder(page: Page): Promise<string> {
   await page.goto(studioUrl);
   await page.evaluate(
     () =>
@@ -55,18 +56,18 @@ async function openBuilder(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
     timeout: 20_000,
   });
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  const projectId = await openMutableScaleStore(page, "Tienda A11 mutable");
   await page.getByRole("tab", { name: "Constructor" }).click();
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
+  return projectId;
 }
 
 /** Re-entrada a la tienda sin limpiar IndexedDB (conserva lo autoguardado). */
-async function reopenBuilder(page: Page): Promise<void> {
+async function reopenBuilder(page: Page, projectId: string): Promise<void> {
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
     timeout: 20_000,
   });
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
+  await page.locator(`[data-store-card-id="${projectId}"]`).click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await page.getByRole("tab", { name: "Constructor" }).click();
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
@@ -90,11 +91,18 @@ function rowName(page: Page, index: number): Promise<string | null> {
 }
 
 async function previewModuleOrder(page: Page): Promise<string[]> {
-  return previewFrame(page)
-    .locator("[data-solara-module]")
-    .evaluateAll((elements) =>
-      elements.map((element) => element.getAttribute("data-solara-module") ?? ""),
-    );
+  try {
+    return await previewFrame(page)
+      .locator("[data-solara-module]")
+      .evaluateAll((elements) =>
+        elements.map((element) => element.getAttribute("data-solara-module") ?? ""),
+      );
+  } catch {
+    // El renderer reemplaza el iframe al publicar cada snapshot. Durante ese
+    // frame intermedio Playwright puede observar el documento desprendido;
+    // devolver una muestra vacía permite que expect.poll reintente.
+    return [];
+  }
 }
 
 async function selectHero(page: Page): Promise<void> {
@@ -246,6 +254,12 @@ test("mover abajo con botón reordena lista y preview y deshabilita en los lími
   await expect(rowName(page, 0)).resolves.toBe(secondBefore);
   await expect(rowName(page, 1)).resolves.toBe(firstBefore);
 
+  const expectedOrder = [...orderBefore];
+  [expectedOrder[indexOfFirst], expectedOrder[indexOfSecond]] = [
+    expectedOrder[indexOfSecond],
+    expectedOrder[indexOfFirst],
+  ];
+  await expect.poll(() => previewModuleOrder(page), { timeout: 15_000 }).toEqual(expectedOrder);
   const orderAfter = await previewModuleOrder(page);
   expect(orderAfter.indexOf(await previewModuleId(secondBefore))).toBeLessThan(
     orderAfter.indexOf(await previewModuleId(firstBefore)),
@@ -401,7 +415,7 @@ test("V2 no permite seleccionar páginas editoriales archivadas en el Builder", 
 test("guardar un valor válido del inspector aplica al preview y persiste tras recarga", async ({
   page,
 }) => {
-  await openBuilder(page);
+  const projectId = await openBuilder(page);
   await selectHero(page);
 
   const title = page.getByRole("textbox", { name: "Título", exact: true }).first();
@@ -418,7 +432,7 @@ test("guardar un valor válido del inspector aplica al preview y persiste tras r
   // El autosave persiste el valor: esperar el guardado y reabrir.
   await expect(page.getByText(/^Guardado/)).toBeVisible({ timeout: 15_000 });
   await page.reload();
-  await reopenBuilder(page);
+  await reopenBuilder(page, projectId);
   await selectHero(page);
   await expect(page.getByRole("textbox", { name: "Título", exact: true }).first()).toHaveValue(
     "Título persistente del barrido A11",

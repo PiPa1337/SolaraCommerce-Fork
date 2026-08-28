@@ -237,8 +237,22 @@ export function ExportPanel({
   const backup = async () => {
     setBusy("project");
     setError("");
+    const busyStartedAt = performance.now();
     try {
+      // Garantiza que el estado "creando respaldo" llegue a pintarse incluso
+      // cuando el worker ya está caliente y termina en el mismo tick. Dos
+      // frames dejan que React commitée el estado antes de resolver el worker.
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
       const archive = await createProjectArchiveInWorker(project);
+      // Un respaldo pequeño puede terminar antes de que el usuario llegue a
+      // percibir el estado ocupado. Mantenerlo visible brevemente conserva el
+      // feedback y evita que los controles parezcan haber ignorado el click.
+      const remainingBusyMs = 180 - (performance.now() - busyStartedAt);
+      if (remainingBusyMs > 0) {
+        await new Promise<void>((resolve) => setTimeout(resolve, remainingBusyMs));
+      }
       if (desktopExport) {
         const saved = await desktopExport.saveProjectArchive({
           filename: `${project.slug}.solara.json`,

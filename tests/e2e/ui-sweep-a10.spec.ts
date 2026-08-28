@@ -22,6 +22,7 @@
  */
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 90_000 : 45_000);
@@ -39,7 +40,7 @@ test.afterAll(async () => {
   await stopStudioServer(server);
 });
 
-async function openBuilder(page: Page) {
+async function openBuilder(page: Page): Promise<string> {
   await page.goto(studioUrl);
   await page.evaluate(
     () =>
@@ -56,10 +57,10 @@ async function openBuilder(page: Page) {
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
     timeout: 20_000,
   });
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  const projectId = await openMutableScaleStore(page, "Tienda A10 mutable");
   await page.getByRole("tab", { name: "Constructor" }).click();
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
+  return projectId;
 }
 
 const sectionsList = (page: Page) => page.getByRole("list", { name: "Secciones de la tienda" });
@@ -124,8 +125,12 @@ test("elegir un módulo lo agrega al slot indicado y el preview lo refleja", asy
   await expect(added.locator(".section-select span")).toHaveText("Catálogo");
   await expect(page.locator(".inspector header span")).toHaveText("Catálogo");
 
+  const addedId = await added.locator(".section-select").getAttribute("data-section-select");
+  expect(addedId).toBeTruthy();
   await expect(
-    previewFrame(page).locator('[data-solara-module="catalog-category-bento"]'),
+    previewFrame(page).locator(
+      `[data-solara-section="${addedId}"][data-solara-module="catalog-category-bento"]`,
+    ),
   ).toBeVisible({ timeout: 15_000 });
 });
 
@@ -239,7 +244,7 @@ test("un motion fuera de rango no se commitea y el studio avisa el error de sche
 });
 
 test("los controles de movimiento válidos actualizan preview y persisten", async ({ page }) => {
-  await openBuilder(page);
+  const projectId = await openBuilder(page);
   await selectHero(page);
 
   const preset = page.getByRole("combobox", { name: "Preset" });
@@ -265,16 +270,13 @@ test("los controles de movimiento válidos actualizan preview y persisten", asyn
     .poll(
       () =>
         page.evaluate(
-          () =>
+          (id) =>
             new Promise<Record<string, unknown> | null>((resolve, reject) => {
               const request = indexedDB.open("solara-commerce-studio");
               request.addEventListener("error", () => reject(request.error));
               request.addEventListener("success", () => {
                 const db = request.result;
-                const get = db
-                  .transaction("projects")
-                  .objectStore("projects")
-                  .get("store-modo-sur-demo");
+                const get = db.transaction("projects").objectStore("projects").get(id);
                 get.addEventListener("success", () => {
                   const section = get.result?.project?.sections?.find(
                     (candidate: { moduleId?: string }) => candidate.moduleId === "catalog-hero",
@@ -285,6 +287,7 @@ test("los controles de movimiento válidos actualizan preview y persisten", asyn
                 get.addEventListener("error", () => reject(get.error));
               });
             }),
+          projectId,
         ),
       { timeout: 15_000 },
     )
@@ -292,7 +295,7 @@ test("los controles de movimiento válidos actualizan preview y persisten", asyn
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({ timeout: 20_000 });
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
+  await page.locator(`[data-store-card-id="${projectId}"]`).click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await page.getByRole("tab", { name: "Constructor" }).click();
   await selectHero(page);
@@ -304,8 +307,8 @@ test("los controles de movimiento válidos actualizan preview y persisten", asyn
   await expect(page.getByRole("checkbox", { name: "Ejecutar una vez" })).not.toBeChecked();
 });
 
-async function seedInvalidHeroSettings(page: Page): Promise<void> {
-  await page.evaluate(async () => {
+async function seedInvalidHeroSettings(page: Page, projectId: string): Promise<void> {
+  await page.evaluate(async (id) => {
     const openDatabase = () =>
       new Promise<IDBDatabase>((resolve, reject) => {
         // Sin versión fija: la base puede haber sido migrada por un release
@@ -330,7 +333,7 @@ async function seedInvalidHeroSettings(page: Page): Promise<void> {
 
     const database = await openDatabase();
     const records = await read(database);
-    const demo = records.find((record) => record.id === "store-modo-sur-demo");
+    const demo = records.find((record) => record.id === id);
     if (!demo) throw new Error("No se encontró la tienda demo para seedear.");
     const project = demo.project as {
       sections: Array<{ moduleId: string; settings: Record<string, unknown> }>;
@@ -342,7 +345,7 @@ async function seedInvalidHeroSettings(page: Page): Promise<void> {
     hero.settings = { ...hero.settings, mode: "invalid-mode" };
     await write(database, demo);
     database.close();
-  });
+  }, projectId);
   await page.reload();
 }
 
@@ -365,12 +368,15 @@ test("una sección con settings inválidos para su módulo muestra el panel de e
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
     timeout: 20_000,
   });
-  await seedInvalidHeroSettings(page);
+  const projectId = await openMutableScaleStore(page, "Tienda A10 inválida");
+  await page.getByRole("button", { name: "Volver a tiendas" }).click();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await seedInvalidHeroSettings(page, projectId);
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
     timeout: 20_000,
   });
 
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
+  await page.locator(`[data-store-card-id="${projectId}"]`).click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await page.getByRole("tab", { name: "Constructor" }).click();
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();

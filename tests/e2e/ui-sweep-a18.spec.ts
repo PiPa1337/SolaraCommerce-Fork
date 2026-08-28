@@ -1,5 +1,6 @@
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 /**
@@ -25,8 +26,6 @@ test.afterAll(async () => {
   await stopStudioServer(server);
 });
 
-const DEMO_ID = "store-modo-sur-demo";
-
 async function resetStudio(page: Page): Promise<void> {
   await page.goto(studioUrl);
   await page.evaluate(
@@ -45,7 +44,7 @@ async function resetStudio(page: Page): Promise<void> {
  * Convierte el hero del demo (catalog-hero) en un hero-media legacy con
  * slides SIN id (respaldo envejecido) para ejercitar el editor de slides.
  */
-async function seedLegacyHero(page: Page): Promise<void> {
+async function seedLegacyHero(page: Page, projectId: string): Promise<void> {
   await page.evaluate(
     (projectId) =>
       new Promise<void>((resolve, reject) => {
@@ -112,14 +111,14 @@ async function seedLegacyHero(page: Page): Promise<void> {
         };
         open.onerror = () => reject(open.error);
       }),
-    DEMO_ID,
+    projectId,
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({ timeout: 20_000 });
 }
 
-async function openHeroInspector(page: Page): Promise<void> {
-  await page.getByRole("button", { name: /Predeterminado/ }).click();
+async function openHeroInspector(page: Page, projectId: string): Promise<void> {
+  await page.locator(`[data-store-card-id="${projectId}"]`).click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await page.getByRole("tab", { name: "Constructor" }).click();
   await expect(page.getByRole("heading", { name: "Constructor" })).toBeVisible();
@@ -130,7 +129,7 @@ async function openHeroInspector(page: Page): Promise<void> {
 }
 
 /** Lee las slides del hero desde IndexedDB (persistencia del autosave). */
-async function readHeroSlides(page: Page): Promise<unknown[] | null> {
+async function readHeroSlides(page: Page, projectId: string): Promise<unknown[] | null> {
   return page.evaluate(
     (projectId) =>
       new Promise<unknown[] | null>((resolve, reject) => {
@@ -156,8 +155,19 @@ async function readHeroSlides(page: Page): Promise<unknown[] | null> {
         };
         open.onerror = () => reject(open.error);
       }),
-    DEMO_ID,
+    projectId,
   );
+}
+
+async function prepareLegacyHero(page: Page, name: string): Promise<string> {
+  const projectId = await openMutableScaleStore(page, name);
+  await page.getByRole("button", { name: "Volver a tiendas" }).click();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await seedLegacyHero(page, projectId);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({ timeout: 20_000 });
+  await openHeroInspector(page, projectId);
+  return projectId;
 }
 
 const preview = (page: Page) => page.frameLocator("iframe");
@@ -165,9 +175,7 @@ const preview = (page: Page) => page.frameLocator("iframe");
 test("A18 T1: agregar slide crea una diapositiva con id válido y el preview la muestra", async ({
   page,
 }) => {
-  await resetStudio(page);
-  await seedLegacyHero(page);
-  await openHeroInspector(page);
+  const projectId = await resetStudio(page).then(() => prepareLegacyHero(page, "Tienda A18 hero"));
 
   await expect(page.getByText("2 configurados", { exact: true })).toBeVisible();
   await expect(preview(page).locator('.solara-hero-indicators [role="tab"]')).toHaveCount(2, {
@@ -183,11 +191,14 @@ test("A18 T1: agregar slide crea una diapositiva con id válido y el preview la 
 
   await expect
     .poll(async () => {
-      const slides = (await readHeroSlides(page)) as Array<{ id: string; title: string }>;
+      const slides = (await readHeroSlides(page, projectId)) as Array<{
+        id: string;
+        title: string;
+      }>;
       return slides?.length;
     })
     .toBe(3);
-  const slides = (await readHeroSlides(page)) as Array<{ id: string; title: string }>;
+  const slides = (await readHeroSlides(page, projectId)) as Array<{ id: string; title: string }>;
   const ids = slides.map((slide) => slide.id);
   expect(
     ids.every((id) => typeof id === "string" && id.length > 0),
@@ -207,9 +218,7 @@ test("A18 T1: agregar slide crea una diapositiva con id válido y el preview la 
 test("A18 T2: los campos de slide persisten y llegan al proyecto y al preview", async ({
   page,
 }) => {
-  await resetStudio(page);
-  await seedLegacyHero(page);
-  await openHeroInspector(page);
+  const projectId = await resetStudio(page).then(() => prepareLegacyHero(page, "Tienda A18 hero"));
 
   await page.getByLabel("Antetítulo del slide 1").fill("Eyebrow editado");
   await page.getByLabel("Título del slide 1", { exact: true }).fill("Diapo editada");
@@ -231,11 +240,11 @@ test("A18 T2: los campos de slide persisten y llegan al proyecto y al preview", 
 
   await expect
     .poll(async () => {
-      const slides = (await readHeroSlides(page)) as Array<Record<string, string>>;
+      const slides = (await readHeroSlides(page, projectId)) as Array<Record<string, string>>;
       return slides?.[0]?.title;
     })
     .toBe("Diapo editada");
-  const slides = (await readHeroSlides(page)) as Array<Record<string, string>>;
+  const slides = (await readHeroSlides(page, projectId)) as Array<Record<string, string>>;
   expect(slides[0].eyebrow).toBe("Eyebrow editado");
   expect(slides[0].actionLabel).toBe("Comprar ya");
   expect(slides[0].actionHref).toBe("/categorias/remeras/");
@@ -262,9 +271,7 @@ test("A18 T2: los campos de slide persisten y llegan al proyecto y al preview", 
 test("A18 T3: duplicar inserta una copia con el mismo contenido y un id nuevo", async ({
   page,
 }) => {
-  await resetStudio(page);
-  await seedLegacyHero(page);
-  await openHeroInspector(page);
+  const projectId = await resetStudio(page).then(() => prepareLegacyHero(page, "Tienda A18 hero"));
 
   await page.getByRole("button", { name: "Duplicar slide" }).first().click();
   await expect(page.locator(".slide-card")).toHaveCount(3);
@@ -274,11 +281,14 @@ test("A18 T3: duplicar inserta una copia con el mismo contenido y un id nuevo", 
 
   await expect
     .poll(async () => {
-      const current = (await readHeroSlides(page)) as Array<{ id: string; title: string }>;
+      const current = (await readHeroSlides(page, projectId)) as Array<{
+        id: string;
+        title: string;
+      }>;
       return current?.length;
     })
     .toBe(3);
-  const slides = (await readHeroSlides(page)) as Array<{ id: string; title: string }>;
+  const slides = (await readHeroSlides(page, projectId)) as Array<{ id: string; title: string }>;
   const ids = slides.map((slide) => slide.id);
   expect(new Set(ids).size, "los ids siguen siendo únicos tras duplicar").toBe(3);
   expect(slides[1].title).toBe("Diapo base");
@@ -287,9 +297,7 @@ test("A18 T3: duplicar inserta una copia con el mismo contenido y un id nuevo", 
 });
 
 test("A18 T4: quitar elimina la slide y el preview se actualiza", async ({ page }) => {
-  await resetStudio(page);
-  await seedLegacyHero(page);
-  await openHeroInspector(page);
+  const projectId = await resetStudio(page).then(() => prepareLegacyHero(page, "Tienda A18 hero"));
 
   const deleteSlide = page.getByRole("button", { name: "Eliminar slide" }).first();
   await deleteSlide.click();
@@ -309,11 +317,11 @@ test("A18 T4: quitar elimina la slide y el preview se actualiza", async ({ page 
 
   await expect
     .poll(async () => {
-      const slides = (await readHeroSlides(page)) as Array<{ title: string }>;
+      const slides = (await readHeroSlides(page, projectId)) as Array<{ title: string }>;
       return slides?.length;
     })
     .toBe(1);
-  const slides = (await readHeroSlides(page)) as Array<{ title: string }>;
+  const slides = (await readHeroSlides(page, projectId)) as Array<{ title: string }>;
   expect(slides[0].title).toBe("Segunda diapo");
 
   await expect(preview(page).locator('.solara-hero-indicators [role="tab"]')).toHaveCount(0, {
@@ -329,9 +337,7 @@ test("A18 T4: quitar elimina la slide y el preview se actualiza", async ({ page 
 test("A18 T5: mover prev/next cambia el orden real del editor, del proyecto y del preview", async ({
   page,
 }) => {
-  await resetStudio(page);
-  await seedLegacyHero(page);
-  await openHeroInspector(page);
+  const projectId = await resetStudio(page).then(() => prepareLegacyHero(page, "Tienda A18 hero"));
 
   await page.getByRole("button", { name: "Agregar slide" }).click();
   await expect(page.locator(".slide-card")).toHaveCount(3);
@@ -344,7 +350,7 @@ test("A18 T5: mover prev/next cambia el orden real del editor, del proyecto y de
 
   await expect
     .poll(async () => {
-      const slides = (await readHeroSlides(page)) as Array<{ title: string }>;
+      const slides = (await readHeroSlides(page, projectId)) as Array<{ title: string }>;
       return slides.map((slide) => slide.title);
     })
     .toEqual(["Diapo base", "Tercera diapo", "Segunda diapo"]);
@@ -372,8 +378,7 @@ test("A18 T5: mover prev/next cambia el orden real del editor, del proyecto y de
 
 test("A18 T6: mover se deshabilita en los límites (auto-feedback)", async ({ page }) => {
   await resetStudio(page);
-  await seedLegacyHero(page);
-  await openHeroInspector(page);
+  await prepareLegacyHero(page, "Tienda A18 hero");
 
   const firstCard = page.locator(".slide-card").first();
   const lastCard = page.locator(".slide-card").last();
@@ -399,8 +404,7 @@ test("A18 T6: mover se deshabilita en los límites (auto-feedback)", async ({ pa
 
 test("A18 T7: el slide activo queda marcado en las pestañas del preview", async ({ page }) => {
   await resetStudio(page);
-  await seedLegacyHero(page);
-  await openHeroInspector(page);
+  await prepareLegacyHero(page, "Tienda A18 hero");
 
   const frame = preview(page);
   const tabs = frame.locator('.solara-hero-indicators [role="tab"]');
@@ -441,14 +445,12 @@ test("A18 T7: el slide activo queda marcado en las pestañas del preview", async
 test("A18 T8: título vacío muestra error y no se commitea; al corregirlo se aplica", async ({
   page,
 }) => {
-  await resetStudio(page);
-  await seedLegacyHero(page);
-  await openHeroInspector(page);
+  const projectId = await resetStudio(page).then(() => prepareLegacyHero(page, "Tienda A18 hero"));
 
   await page.getByLabel("Título del slide 1", { exact: true }).fill("Diapo editada");
   await expect
     .poll(async () => {
-      const slides = (await readHeroSlides(page)) as Array<{ title: string }>;
+      const slides = (await readHeroSlides(page, projectId)) as Array<{ title: string }>;
       return slides?.[0]?.title;
     })
     .toBe("Diapo editada");
@@ -464,7 +466,7 @@ test("A18 T8: título vacío muestra error y no se commitea; al corregirlo se ap
   expect(titleDescribedBy).toContain(await titleError.getAttribute("id"));
   await expect
     .poll(async () => {
-      const slides = (await readHeroSlides(page)) as Array<{ title: string }>;
+      const slides = (await readHeroSlides(page, projectId)) as Array<{ title: string }>;
       return slides?.[0]?.title;
     })
     .toBe("Diapo editada");
@@ -475,7 +477,7 @@ test("A18 T8: título vacío muestra error y no se commitea; al corregirlo se ap
   await expect(titleField.getByTestId("ui-field-error")).toHaveCount(0);
   await expect
     .poll(async () => {
-      const slides = (await readHeroSlides(page)) as Array<{ title: string }>;
+      const slides = (await readHeroSlides(page, projectId)) as Array<{ title: string }>;
       return slides?.[0]?.title;
     })
     .toBe("Diapo corregida");
@@ -491,9 +493,10 @@ const PIXEL_PNG = Buffer.from(
   "base64",
 );
 
-async function openAssetDeleteDialog(page: Page) {
+async function openAssetDeleteDialog(page: Page, openStore = true) {
+  if (openStore) await openMutableScaleStore(page, "Tienda A18 recursos");
   await page.getByRole("tab", { name: "Recursos", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Recursos" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Recursos", exact: true })).toBeVisible();
 
   const existing = page
     .locator(".asset-item")
@@ -525,8 +528,6 @@ test("A18 T9: cancelar cierra el diálogo, devuelve el foco y conserva el recurs
   page,
 }) => {
   await resetStudio(page);
-  await page.getByRole("button", { name: /Predeterminado/ }).click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   const { dialog, deleteBtn } = await openAssetDeleteDialog(page);
 
   await expect(dialog.getByRole("button", { name: "Cancelar", exact: true })).toBeFocused();
@@ -540,8 +541,6 @@ test("A18 T9: cancelar cierra el diálogo, devuelve el foco y conserva el recurs
 
 test("A18 T10: confirmar borra el recurso y cierra el diálogo", async ({ page }) => {
   await resetStudio(page);
-  await page.getByRole("button", { name: /Predeterminado/ }).click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   const { dialog } = await openAssetDeleteDialog(page);
 
   const countBefore = await page.locator(".asset-item").count();
@@ -556,8 +555,6 @@ test("A18 T11: Escape cancela y devuelve el foco al control que abrió el diálo
   page,
 }) => {
   await resetStudio(page);
-  await page.getByRole("button", { name: /Predeterminado/ }).click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   const { dialog, deleteBtn } = await openAssetDeleteDialog(page);
   const countBefore = await page.locator(".asset-item").count();
 
@@ -571,8 +568,6 @@ test("A18 T12: Enter confirma desde el botón principal y cancela desde el secun
   page,
 }) => {
   await resetStudio(page);
-  await page.getByRole("button", { name: /Predeterminado/ }).click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
 
   let flow = await openAssetDeleteDialog(page);
   const countBeforeCancel = await page.locator(".asset-item").count();
@@ -581,7 +576,7 @@ test("A18 T12: Enter confirma desde el botón principal y cancela desde el secun
   await expect(flow.deleteBtn).toBeFocused();
   await expect(page.locator(".asset-item")).toHaveCount(countBeforeCancel);
 
-  flow = await openAssetDeleteDialog(page);
+  flow = await openAssetDeleteDialog(page, false);
   await page.keyboard.press("Tab");
   await expect(flow.dialog.getByTestId("ui-confirm-accept")).toBeFocused();
   const countBefore = await page.locator(".asset-item").count();
@@ -594,8 +589,6 @@ test("A18 T13: el diálogo expone aria-labelledby hacia su título y el botón X
   page,
 }) => {
   await resetStudio(page);
-  await page.getByRole("button", { name: /Predeterminado/ }).click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   const { dialog, deleteBtn } = await openAssetDeleteDialog(page);
 
   const labelledBy = await dialog.getAttribute("aria-labelledby");

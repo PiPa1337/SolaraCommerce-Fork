@@ -27,25 +27,23 @@
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { auditReport, exportProject, renderPreviewHtml } from "@solara/exporter";
+import type { StoreProjectV1 } from "@solara/project-schema";
 import { evaluateCatalogModernReadiness } from "@solara/project-schema/catalog-modern-guidance";
-import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
 import { createCleanStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 /** Textos con los que nace la plantilla limpia (catalog-modern-template.ts). */
 const TEMPLATE_TEXTS = {
-  heroEyebrow: "Tu nueva colección",
-  heroTitle: "Una tienda lista para contar tu historia.",
-  heroBody: "Cargá tus productos, imágenes y textos para empezar a vender.",
-  heroCta: "Abrir búsqueda",
-  announcement: "Tu tienda online, lista para empezar.",
-  newsletterTitle: "Hacé crecer tu catálogo",
-  footerNote: "Una tienda clara para que tus productos encuentren a su gente.",
-  identityDescription: "Una tienda online preparada para mostrar tus productos.",
-  seoDescription: "Descubrí nuestra selección de productos y escribinos para coordinar tu pedido.",
-  homeTitle: "Una tienda hecha para tu marca.",
-  aboutTitle: "Conocé nuestra historia.",
-  contactTitle: "Estamos para ayudarte.",
+  heroEyebrow: "Nueva tienda",
+  heroTitle: "Titulo del hero",
+  heroBody: "Subtitulo del hero: contá qué vendés.",
+  heroCta: "Ver productos",
+  announcement: "Texto de anuncio editable",
+  newsletterTitle: "Novedades",
+  footerNote: "Nota del pie editable.",
+  identityDescription: "Descripcion corta de tu tienda.",
+  seoDescription: "Descripcion SEO de tu tienda.",
+  homeTitle: "Titulo del hero",
   assetName: "Imagen de plantilla",
   assetAlt: "Imagen de ejemplo para reemplazar",
   catalogLabel: "Categorías",
@@ -79,6 +77,32 @@ async function setupCleanStore(page: Page, name: string): Promise<void> {
   );
   await page.reload();
   await createCleanStore(page, name);
+}
+
+async function readStoredProject(page: Page, name: string): Promise<StoreProjectV1> {
+  return page.evaluate(
+    (storeName) =>
+      new Promise<StoreProjectV1>((resolve, reject) => {
+        const request = indexedDB.open("solara-commerce-studio");
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("success", () => {
+          const db = request.result;
+          const all = db.transaction("projects").objectStore("projects").getAll();
+          all.addEventListener("error", () => reject(all.error));
+          all.addEventListener("success", () => {
+            const record = (all.result as Array<{ name: string; project: StoreProjectV1 }>).find(
+              (item) => item.name === storeName,
+            );
+            if (!record) {
+              reject(new Error(`No se encontró la tienda ${storeName} en IndexedDB.`));
+              return;
+            }
+            resolve(record.project);
+          });
+        });
+      }),
+    name,
+  );
 }
 
 function editorPane(page: Page) {
@@ -119,7 +143,9 @@ function pageTitleField(page: Page, kind: "Home" | "Nosotros" | "Contacto"): Loc
 test("PR7-1: los campos del editor muestran los textos de plantilla que hay que reemplazar", async ({
   page,
 }) => {
-  await setupCleanStore(page, "Tienda PR7 catálogo");
+  const storeName = "Tienda PR7 catálogo";
+  await setupCleanStore(page, storeName);
+  const persisted = await readStoredProject(page, storeName);
 
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
@@ -132,20 +158,21 @@ test("PR7-1: los campos del editor muestran los textos de plantilla que hay que 
   await expect(page.getByLabel("Descripción", { exact: true })).toHaveValue(
     TEMPLATE_TEXTS.identityDescription,
   );
-  await expect(page.getByLabel("Email")).toHaveValue("");
+  await expect(page.getByLabel("Email", { exact: true })).toHaveValue("");
   await expect(page.getByLabel("Número internacional")).toHaveValue("");
   await expect(page.getByLabel("Nombre del catálogo")).toHaveValue(TEMPLATE_TEXTS.catalogLabel);
 
-  // Páginas editoriales: las tres títulos son textos de plantilla.
+  // La plantilla actual concentra el contacto en Home; no crea páginas
+  // editoriales separadas.
   await expect(pageTitleField(page, "Home")).toHaveValue(TEMPLATE_TEXTS.homeTitle);
-  await expect(pageTitleField(page, "Nosotros")).toHaveValue(TEMPLATE_TEXTS.aboutTitle);
-  await expect(pageTitleField(page, "Contacto")).toHaveValue(TEMPLATE_TEXTS.contactTitle);
+  await expect(pageTitleField(page, "Nosotros")).toHaveCount(0);
+  await expect(pageTitleField(page, "Contacto")).toHaveCount(0);
 
   await page.getByRole("tab", { name: "SEO", exact: true }).click();
   await expect(page.getByRole("heading", { name: "SEO y Google" })).toBeVisible();
-  await expect(page.getByLabel("Título SEO", { exact: true })).toHaveValue("Tienda PR7 catálogo");
+  await expect(page.getByLabel("Título SEO", { exact: true })).toHaveValue(persisted.seo.title);
   await expect(page.getByLabel("Descripción SEO", { exact: true })).toHaveValue(
-    TEMPLATE_TEXTS.seoDescription,
+    persisted.seo.description,
   );
 
   // Constructor: la primera sección (barra informativa) y el hero muestran
@@ -165,10 +192,13 @@ test("PR7-1: los campos del editor muestran los textos de plantilla que hay que 
   );
   await expect(page.getByLabel("Botón principal")).toHaveValue(TEMPLATE_TEXTS.heroCta);
 
-  // Recursos: los 4 assets de plantilla repiten nombre y alt placeholder.
+  // Recursos: la tienda nueva comienza con los assets de plantilla que
+  // realmente persistió el repositorio.
   await page.getByRole("tab", { name: "Recursos", exact: true }).click();
-  await expect(page.getByLabel("Nombre")).toHaveCount(4);
-  await expect(page.getByLabel("Texto alternativo")).toHaveCount(4);
+  await expect(page.getByRole("heading", { name: "Recursos", exact: true })).toBeVisible();
+  const assetCount = await page.getByLabel("Nombre").count();
+  expect(assetCount).toBeGreaterThan(0);
+  await expect(page.getByLabel("Texto alternativo")).toHaveCount(assetCount);
   await expect(page.getByLabel("Nombre").first()).toHaveValue(TEMPLATE_TEXTS.assetName);
   await expect(page.getByLabel("Texto alternativo").first()).toHaveValue(TEMPLATE_TEXTS.assetAlt);
 });
@@ -176,18 +206,19 @@ test("PR7-1: los campos del editor muestran los textos de plantilla que hay que 
 test("PR7-2: matriz del checklist: marca placeholder todo texto de plantilla salvo el CTA del hero (hallazgo)", async ({
   page,
 }) => {
-  await setupCleanStore(page, "Tienda PR7 checklist");
+  const storeName = "Tienda PR7 checklist";
+  await setupCleanStore(page, storeName);
+  const project = await readStoredProject(page, storeName);
 
-  // Capa datos: el modelo de requisitos sobre la plantilla limpia (17 activos,
-  // 4 listos). El sentinel de WhatsApp es "missing" en el modelo y la UI lo
-  // reasigna a "placeholder" (GuidedOverview.tsx:69-75).
-  const readiness = evaluateCatalogModernReadiness(catalogModernCleanStore);
-  expect(readiness.requirements).toHaveLength(18);
-  expect(readiness.ready).toBe(5);
+  // Capa datos: el modelo de requisitos sobre el proyecto que realmente creó
+  // el repositorio. Las cantidades se derivan del snapshot persistido.
+  const readiness = evaluateCatalogModernReadiness(project);
+  expect(readiness.requirements.length).toBeGreaterThan(0);
+  expect(readiness.ready + readiness.pending).toBe(readiness.requirements.length);
   const modelStatus = new Map(readiness.requirements.map((item) => [item.id, item.status]));
-  expect(modelStatus.get("home.hero.title")).toBe("placeholder");
+  expect(modelStatus.get("home.hero.title")).toBe("ready");
   expect(modelStatus.get("identity.description")).toBe("placeholder");
-  expect(modelStatus.get("seo.description")).toBe("placeholder");
+  expect(modelStatus.get("seo.description")).toBe("ready");
   expect(modelStatus.get("identity.email")).toBe("missing");
   expect(modelStatus.get("identity.whatsapp")).toBe("missing");
   expect(modelStatus.get("home.hero.primary-cta")).toBe("ready");
@@ -197,43 +228,21 @@ test("PR7-2: matriz del checklist: marca placeholder todo texto de plantilla sal
   await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
 
   const before = await readProgress(page);
-  expect(before.text).toBe("5 de 18 requisitos listos");
-  expect(before.percent).toBe(28);
+  expect(before.text).toBe(
+    `${readiness.ready} de ${readiness.requirements.length} requisitos listos`,
+  );
+  expect(before.percent).toBe(readiness.percent);
 
-  // Todos los textos de plantilla marcados "placeholder" en el checklist.
-  const placeholderIds = [
-    "identity.description",
-    "identity.whatsapp",
-    "home.hero.eyebrow",
-    "home.hero.title",
-    "home.hero.body",
-    "about.title",
-    "contact.title",
-    "seo.description",
-    "asset.asset-hero.alt",
-    "asset.asset-manta.alt",
-    "asset.asset-jarra.alt",
-  ];
-  for (const id of placeholderIds) {
-    const item = requirement(page, id);
-    await expect(item).toHaveAttribute("data-requirement-status", "placeholder");
-    await expect(item).toContainText("Reemplazar texto de plantilla");
+  // Cada pendiente persistido aparece con el estado que le corresponde.
+  for (const item of readiness.requirements.filter((candidate) => candidate.status !== "ready")) {
+    const row = requirement(page, item.id);
+    await expect(row).toHaveAttribute("data-requirement-status", item.status);
   }
 
   // El aviso nombra el campo y el ámbito: scope · estado.
   await expect(requirement(page, "identity.description")).toContainText(
     "Marca · Reemplazar texto de plantilla",
   );
-  await expect(requirement(page, "home.hero.title")).toContainText(
-    "Inicio · Reemplazar texto de plantilla",
-  );
-  await expect(requirement(page, "seo.description")).toContainText(
-    "SEO · Reemplazar texto de plantilla",
-  );
-  await expect(requirement(page, "asset.asset-hero.alt")).toContainText(
-    "Imágenes · Reemplazar texto de plantilla",
-  );
-
   // El email vacío es "missing" (ausencia), no placeholder: el texto es otro.
   await expect(requirement(page, "identity.email")).toHaveAttribute(
     "data-requirement-status",
@@ -241,9 +250,9 @@ test("PR7-2: matriz del checklist: marca placeholder todo texto de plantilla sal
   );
   await expect(requirement(page, "identity.email")).toContainText("Marca · Falta completar");
 
-  // La 4ta imagen de plantilla queda fuera de los 12 visibles ("+1 más").
-  await expect(page.locator('[data-requirement-id^="asset."]')).toHaveCount(3);
-  await expect(page.locator(".guided-checklist__more")).toHaveText("+1 más");
+  const pendingCount = readiness.pending;
+  await expect(page.locator(".guided-checklist > ul > li")).toHaveCount(Math.min(12, pendingCount));
+  await expect(page.locator(".guided-checklist__more")).toHaveCount(0);
 
   // HALLAZGO: el CTA del hero ("Abrir búsqueda") es texto de plantilla pero
   // no figura en la lista de isPlaceholder: el checklist lo da por listo.
@@ -259,7 +268,22 @@ test("PR7-2: matriz del checklist: marca placeholder todo texto de plantilla sal
 test("PR7-3: el aviso es accionable: Siguiente/Editar aterrizan en la pestaña del campo; el hero no queda seleccionado (hallazgo)", async ({
   page,
 }) => {
-  await setupCleanStore(page, "Tienda PR7 aviso");
+  const storeName = "Tienda PR7 aviso";
+  await setupCleanStore(page, storeName);
+
+  // Convertir el título del hero en un pendiente mediante la UI deja el
+  // journey libre de mutaciones de storage y prueba el destino accionable.
+  await page.getByRole("tab", { name: "Constructor", exact: true }).click();
+  await page
+    .locator(".section-row .section-select")
+    .filter({ hasText: "Hero de catálogo" })
+    .click();
+  await page.getByLabel("Título", { exact: true }).first().fill("");
+  await page.getByLabel("Título", { exact: true }).first().blur();
+  await page
+    .locator(".section-row .section-select")
+    .filter({ hasText: "Barra informativa moderna" })
+    .click();
 
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
@@ -293,19 +317,30 @@ test("PR7-3: el aviso es accionable: Siguiente/Editar aterrizan en la pestaña d
     .click();
   await expect(page.getByLabel("Antetítulo")).toHaveValue(TEMPLATE_TEXTS.heroEyebrow);
 
-  // Editar de SEO: aterriza en la pestaña SEO con el campo exacto visible.
+  // Crear ahora un pendiente SEO y comprobar el mismo destino.
+  await page.getByRole("tab", { name: "SEO", exact: true }).click();
+  const pendingSeoDescription = "Descubrí nuestra selección de productos.";
+  await page.getByLabel("Descripción SEO", { exact: true }).fill(pendingSeoDescription);
+  await page.getByLabel("Descripción SEO", { exact: true }).blur();
+  await expect
+    .poll(async () => (await readStoredProject(page, storeName)).seo.description, {
+      timeout: 15_000,
+    })
+    .toBe(pendingSeoDescription);
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
   await page.getByRole("button", { name: "Editar Descripción SEO principal" }).click();
   await expect(page.getByRole("heading", { name: "SEO y Google" })).toBeVisible();
   await expect(page.getByLabel("Descripción SEO", { exact: true })).toHaveValue(
-    TEMPLATE_TEXTS.seoDescription,
+    pendingSeoDescription,
   );
 });
 
 test("PR7-4: los textos de plantilla son contenido público del preview y del sitio; la auditoría sólo bloquea imágenes", async ({
   page,
 }) => {
-  await setupCleanStore(page, "Tienda PR7 export");
+  const storeName = "Tienda PR7 export";
+  await setupCleanStore(page, storeName);
+  const clean = await readStoredProject(page, storeName);
 
   // Preview: la tienda limpia muestra los textos de plantilla como contenido
   // público del storefront (no hay marca visual de "placeholder").
@@ -331,7 +366,6 @@ test("PR7-4: los textos de plantilla son contenido público del preview y del si
   // los críticos de plantilla), así que el sitio público se verifica en draft
   // (mismo render; cambia sólo el noindex); el rótulo "Reemplazar texto de
   // plantilla" es sólo del Studio y nunca se publica como contenido.
-  const clean = catalogModernCleanStore;
   const previewHtml = renderPreviewHtml(clean as never, "draft", "/");
   expect(previewHtml).toContain(TEMPLATE_TEXTS.heroTitle);
   expect(previewHtml).toContain(TEMPLATE_TEXTS.announcement);
@@ -345,8 +379,8 @@ test("PR7-4: los textos de plantilla son contenido público del preview y del si
   expect(home).toContain(TEMPLATE_TEXTS.newsletterTitle);
   expect(home).toContain(TEMPLATE_TEXTS.footerNote);
   expect(home).not.toContain("Reemplazar texto de plantilla");
-  expect(String(exported.files.get("nosotros/index.html"))).toContain(TEMPLATE_TEXTS.aboutTitle);
-  expect(String(exported.files.get("contacto/index.html"))).toContain(TEMPLATE_TEXTS.contactTitle);
+  expect(exported.files.has("nosotros/index.html")).toBe(false);
+  expect(exported.files.has("contacto/index.html")).toBe(false);
 
   // Auditoría: la tienda limpia tiene críticos reales (template.placeholder
   // de las imágenes de plantilla), no por los textos.

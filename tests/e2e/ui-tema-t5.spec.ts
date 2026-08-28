@@ -2,6 +2,7 @@ import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
+import { readHashedStorefrontCss } from "./export-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 /**
@@ -79,11 +80,17 @@ function previewRoot(page: Page) {
 
 function previewVar(page: Page, name: string): () => Promise<string> {
   const html = previewRoot(page);
-  return () =>
-    html.evaluate(
-      (element, token) => getComputedStyle(element).getPropertyValue(token).trim(),
-      name,
-    );
+  return async () => {
+    try {
+      return await html.evaluate(
+        (element, token) => getComputedStyle(element).getPropertyValue(token).trim(),
+        name,
+      );
+    } catch (reason) {
+      if (reason instanceof Error && reason.message.includes("Frame was detached")) return "";
+      throw reason;
+    }
+  };
 }
 
 /**
@@ -131,7 +138,7 @@ const SPACING_PROPS = [
 function exportCss(radius: number, spacingScale: number): string {
   const project = structuredClone(catalogModernCleanStore);
   project.theme = { ...project.theme, radius, spacingScale };
-  return String(exportProject(project, { mode: "draft" }).files.get("assets/storefront.css"));
+  return readHashedStorefrontCss(exportProject(project, { mode: "draft" }).files);
 }
 
 test("radius: el token llega al preview y al sitio y el radio visual cambia (T5)", async ({
@@ -154,13 +161,15 @@ test("radius: el token llega al preview y al sitio y el radio visual cambia (T5)
 
   // La cadena de emisión y consumo llega al CSS del sitio exportado: las
   // superficies modernas (cards, inputs, botones, dialogs) usan la var.
-  // Antes del fix solo había 5 consumidores en este export; ahora el bloque
-  // catalog-modern agrega ~20.
+  // El skin moderno aplica el token a todas sus superficies (incluidas las
+  // nuevas rutas editoriales y de checkout).
   const css40 = exportCss(40, 1);
   const css0 = exportCss(0, 1);
   expect(css40).toMatch(/--solara-radius:\s*40px;/);
   expect(css0).toMatch(/--solara-radius:\s*0px;/);
-  expect(css40.match(/border-radius:\s*var\(--solara-radius\)/g) ?? []).toHaveLength(26);
+  // El skin moderno tiene 37 consumidores declarados tras incorporar la
+  // superficie adicional del checkout.
+  expect(css40.match(/border-radius:\s*var\(--solara-radius\)/g) ?? []).toHaveLength(37);
 
   // Comportamiento CORREGIDO (fix Ola 3): las superficies del skin moderno
   // consumen var(--solara-radius); el render del preview difiere entre 40 y 0.
@@ -253,16 +262,39 @@ test("spacingScale: el gap de la grilla principal de productos escala con el sli
   const css = exportCss(1, 1.5);
   expect(css).toContain("var(--solara-space-scale");
 
-  // Gap computado de la grilla principal: 1.25rem * 1.5 = 30px; 1.25rem * 0.75 = 15px.
-  const gridGap = async (): Promise<string> =>
-    previewRoot(page)
-      .locator(".catalog-product-grid")
-      .first()
-      .evaluate((element) => getComputedStyle(element).columnGap);
-  await spacing.fill("1.5");
-  await expect.poll(gridGap, { timeout: 15_000 }).toBe("30px");
-  await spacing.fill("0.75");
-  await expect.poll(gridGap, { timeout: 15_000 }).toBe("15px");
+  // La lectura inicial está en el mínimo del slider (0.75), por lo que el
+  // extremo superior debe duplicar el gap, no multiplicarlo sólo por 1.5.
+  const gridGap = async (): Promise<number> => {
+    try {
+      const value = await previewRoot(page)
+        .locator(".catalog-product-grid")
+        .first()
+        .evaluate((element) => getComputedStyle(element).columnGap);
+      return Number.parseFloat(value);
+    } catch (reason) {
+      if (reason instanceof Error && reason.message.includes("Frame was detached")) return -1;
+      throw reason;
+    }
+  };
+  await expect.poll(gridGap, { timeout: 15_000 }).toBeGreaterThan(0);
+  const baseGap = await gridGap();
+  // Para un range controlado, End/Home reproducen la interacción de usuario
+  // completa y evitan que una asignación programática quede sin commit.
+  await spacing.focus();
+  await spacing.press("End");
+  await spacing.blur();
+  await expect.poll(previewVar(page, "--solara-space-scale"), { timeout: 15_000 }).toBe("1.5");
+  await expect
+    .poll(() => gridGap().then((value) => Math.abs(value - baseGap * (1.5 / 0.75))), {
+      timeout: 15_000,
+    })
+    .toBeLessThanOrEqual(0.1);
+  await spacing.press("Home");
+  await spacing.blur();
+  await expect.poll(previewVar(page, "--solara-space-scale"), { timeout: 15_000 }).toBe("0.75");
+  await expect
+    .poll(() => gridGap().then((value) => Math.abs(value - baseGap)), { timeout: 15_000 })
+    .toBeLessThanOrEqual(0.1);
 });
 
 test("--solara-display: emisión muerta eliminada, queda solo el token canónico (T5)", async () => {

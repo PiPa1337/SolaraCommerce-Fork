@@ -118,5 +118,11 @@
     "literal": "Predeterminado",
     "category": "technical-contract",
     "reason": "Identifica la plantilla protegida en el panel nativo; no es contenido editable de una tienda."
+  },
+  {
+    "path": "scripts/nightwatch-probe-managed.mjs",
+    "literal": "Predeterminado",
+    "category": "fixture",
+    "reason": "El probe de integración ejerce el rechazo de escrituras sobre la plantilla protegida."
   }
 ]

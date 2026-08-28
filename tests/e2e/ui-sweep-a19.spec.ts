@@ -20,6 +20,7 @@
  */
 import type { Server } from "node:http";
 import { expect, test } from "@playwright/test";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 180_000 : 150_000);
@@ -58,6 +59,13 @@ async function openDemoStore(page: import("@playwright/test").Page) {
   await resetIndexedDb(page);
   await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await page.getByRole("tab", { name: "Exportar", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible();
+}
+
+async function openMutableExportStore(page: import("@playwright/test").Page) {
+  await resetIndexedDb(page);
+  await openMutableScaleStore(page, "Tienda A19 mutable");
   await page.getByRole("tab", { name: "Exportar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible();
 }
@@ -390,7 +398,7 @@ test("descarga real de .solara.json e importación inválida con error accionabl
 test("el diálogo de importación cancela sin efectos y un respaldo válido reemplaza el proyecto", async ({
   page,
 }) => {
-  await openDemoStore(page);
+  await openMutableExportStore(page);
   await expect(page.locator(".optimization-export-summary")).toBeVisible({ timeout: 30_000 });
 
   await page.locator('input[type="file"]').setInputFiles({
@@ -461,7 +469,9 @@ test("el toast de Overview aparece con rol status y se descarta con su botón", 
   await expect(toast).toHaveCount(1, { timeout: 10_000 });
   await expect(toast).toHaveAttribute("role", "status");
   await expect(toast).toContainText("Enlace de navegación eliminado");
-  await expect(page.getByLabel("Avisos")).toContainText("Enlace de navegación eliminado");
+  await expect(page.getByRole("region", { name: "Avisos" })).toContainText(
+    "Enlace de navegación eliminado",
+  );
 
   await toast.getByRole("button", { name: "Cerrar aviso" }).click();
   await expect(toast).toHaveCount(0);

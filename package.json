@@ -40,6 +40,7 @@
     "test:e2e:ci": "playwright test",
     "test:e2e:portable": "corepack pnpm portable:smoke && node scripts/portable-e2e.mjs",
     "test:e2e:portable:agent": "node scripts/portable-agent-e2e.mjs",
+    "test:e2e:portable:agent:mcp": "node scripts/portable-agent-mcp-e2e.mjs",
     "test:e2e:portable:new-store": "node scripts/portable-new-store-e2e.mjs",
     "typecheck": "corepack pnpm -r --parallel --if-present typecheck",
     "build:all": "corepack pnpm -r --if-present build",

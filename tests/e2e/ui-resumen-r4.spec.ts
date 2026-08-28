@@ -34,6 +34,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { referenceStore } from "@solara/project-schema/fixture";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 90_000 : 60_000);
@@ -51,10 +52,10 @@ test.afterAll(async () => {
   await stopStudioServer(server);
 });
 
-const DEMO_STORE_NAME = "Predeterminado";
+const R4_STORE_NAME = "Tienda R4 curada";
 
-/** Abre la tienda demo (seed demo, mode curado) y la pestaña Resumen. */
-async function openDemoResumen(page: Page): Promise<void> {
+/** Abre una copia mutable de la plantilla demo y la pestaña Resumen. */
+async function openDemoResumen(page: Page): Promise<string> {
   await page.goto(studioUrl);
   await page.evaluate(
     () =>
@@ -67,34 +68,10 @@ async function openDemoResumen(page: Page): Promise<void> {
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  const card = page.locator(".dashboard-store-card", { hasText: DEMO_STORE_NAME });
-  await expect(card.getByTestId("ui-card-open")).toBeVisible();
-  await card.getByTestId("ui-card-open").click();
+  await openMutableScaleStore(page, R4_STORE_NAME);
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
-}
-
-/** Lee el proyecto persistido de la tienda demo desde IndexedDB. */
-async function readDemoProject(page: Page): Promise<StoreProjectV1> {
-  return page.evaluate(
-    (storeName) =>
-      new Promise<StoreProjectV1>((resolve, reject) => {
-        const request = indexedDB.open("solara-commerce-studio");
-        request.addEventListener("error", () => reject(request.error));
-        request.addEventListener("success", () => {
-          const db = request.result;
-          const all = db.transaction("projects").objectStore("projects").getAll();
-          all.addEventListener("error", () => reject(all.error));
-          all.addEventListener("success", () => {
-            const records = all.result as Array<{ name: string; project: StoreProjectV1 }>;
-            const record = records.find((item) => item.name === storeName);
-            if (!record) reject(new Error(`No se encontró la tienda "${storeName}" en IDB.`));
-            else resolve(record.project);
-          });
-        });
-      }),
-    DEMO_STORE_NAME,
-  );
+  return R4_STORE_NAME;
 }
 
 /** Lee el proyecto persistido de cualquier tienda de IndexedDB. */
@@ -118,16 +95,6 @@ async function readProjectByName(page: Page, storeName: string): Promise<StorePr
       }),
     storeName,
   );
-}
-
-/** Espera a que el proyecto persistido cumpla una condición. */
-async function pollProject(
-  page: Page,
-  predicate: (project: StoreProjectV1) => boolean,
-  timeout = 15_000,
-): Promise<StoreProjectV1> {
-  await expect.poll(async () => predicate(await readDemoProject(page)), { timeout }).toBe(true);
-  return readDemoProject(page);
 }
 
 /** Espera a que el proyecto de una tienda concreta cumpla una condición. */
@@ -190,9 +157,13 @@ function legacyDropdownLinks(html: string): Array<{ href: string; label: string 
 test("agregar y editar un enlace: persiste y aparece en el header moderno exportado (ANTES/DESPUÉS)", async ({
   page,
 }) => {
-  await openDemoResumen(page);
+  const storeName = await openDemoResumen(page);
 
-  const before = await pollProject(page, (project) => project.navigation.items.length > 0);
+  const before = await pollStoreProject(
+    page,
+    storeName,
+    (project) => project.navigation.items.length > 0,
+  );
   const beforeLabels = before.navigation.items.map((item) => item.label);
   const beforeHtml = exportHomeHtml(before);
   expect(beforeHtml).not.toContain("Enlace R4");
@@ -222,7 +193,7 @@ test("agregar y editar un enlace: persiste y aparece en el header moderno export
   await newItem.getByLabel("Destino", { exact: true }).blur();
   await expect(saveIndicator(page)).toContainText("Cambios guardados", { timeout: 5_000 });
 
-  const after = await pollProject(page, (project) =>
+  const after = await pollStoreProject(page, storeName, (project) =>
     project.navigation.items.some(
       (item) => item.label === "Enlace R4" && item.href === "/categorias/camisas/",
     ),
@@ -250,9 +221,13 @@ test("agregar y editar un enlace: persiste y aparece en el header moderno export
 });
 
 test("el destino inválido `//` no persiste y mailto/tel son aceptados", async ({ page }) => {
-  await openDemoResumen(page);
+  const storeName = await openDemoResumen(page);
 
-  const before = await pollProject(page, (project) => project.navigation.items.length > 0);
+  const before = await pollStoreProject(
+    page,
+    storeName,
+    (project) => project.navigation.items.length > 0,
+  );
   const beforeItems = before.navigation.items;
 
   await page.getByRole("button", { name: "Añadir enlace de catálogo", exact: true }).click();
@@ -265,8 +240,9 @@ test("el destino inválido `//` no persiste y mailto/tel son aceptados", async (
     newItem.getByRole("alert").getByText("Usá http(s) o una ruta interna (ej. /contacto/)."),
   ).toBeVisible();
 
-  const rejected = await pollProject(
+  const rejected = await pollStoreProject(
     page,
+    storeName,
     (project) => project.navigation.items.length === beforeItems.length + 1,
   );
   const defaultHref = `/categorias/${rejected.categories[0]?.slug ?? ""}/`;
@@ -278,7 +254,7 @@ test("el destino inválido `//` no persiste y mailto/tel son aceptados", async (
   await expect(newItem.getByRole("alert")).toHaveCount(0);
   await expect(saveIndicator(page)).toContainText("Cambios guardados", { timeout: 5_000 });
 
-  const withMailto = await pollProject(page, (project) =>
+  const withMailto = await pollStoreProject(page, storeName, (project) =>
     project.navigation.items.some((item) => item.href === "mailto:hola@tienda.example"),
   );
   expect(withMailto.navigation.items.at(-1)?.href).toBe("mailto:hola@tienda.example");
@@ -292,9 +268,13 @@ test("el destino inválido `//` no persiste y mailto/tel son aceptados", async (
 test("eliminar un enlace: confirmación con o sin subenlaces y ausencia en el sitio", async ({
   page,
 }) => {
-  await openDemoResumen(page);
+  const storeName = await openDemoResumen(page);
 
-  const before = await pollProject(page, (project) => project.navigation.items.length >= 2);
+  const before = await pollStoreProject(
+    page,
+    storeName,
+    (project) => project.navigation.items.length >= 2,
+  );
   const first = before.navigation.items[0];
   if (!first || !(first.children?.length ?? 0)) {
     throw new Error("El primer enlace de la tienda demo debe tener subenlaces.");
@@ -306,7 +286,7 @@ test("eliminar un enlace: confirmación con o sin subenlaces y ausencia en el si
   const newItem = lastItem(page);
   await newItem.getByLabel(`Enlace ${beforeCount + 1}`, { exact: true }).fill("Enlace R4");
   await expect(saveIndicator(page)).toContainText("Cambios guardados", { timeout: 5_000 });
-  await pollProject(page, (project) =>
+  await pollStoreProject(page, storeName, (project) =>
     project.navigation.items.some((item) => item.label === "Enlace R4"),
   );
   await page.getByRole("button", { name: "Eliminar enlace Enlace R4", exact: true }).click();
@@ -329,8 +309,9 @@ test("eliminar un enlace: confirmación con o sin subenlaces y ausencia en el si
   await page.getByRole("button", { name: `Eliminar enlace ${first.label}`, exact: true }).click();
   await page.getByRole("button", { name: "Eliminar enlace", exact: true }).click();
   await expect(page.getByTestId("ui-toast").last()).toContainText("Enlace de navegación eliminado");
-  const after = await pollProject(
+  const after = await pollStoreProject(
     page,
+    storeName,
     (project) =>
       project.navigation.items.length === beforeCount - 1 &&
       !project.navigation.items.some((item) => item.id === first.id),
@@ -350,16 +331,21 @@ test("eliminar un enlace: confirmación con o sin subenlaces y ausencia en el si
 test("reordenar: subir/bajar cambia el orden del editor y del sitio exportado", async ({
   page,
 }) => {
-  await openDemoResumen(page);
+  const storeName = await openDemoResumen(page);
 
-  const before = await pollProject(page, (project) => project.navigation.items.length >= 2);
+  const before = await pollStoreProject(
+    page,
+    storeName,
+    (project) => project.navigation.items.length >= 2,
+  );
   const [first, second] = before.navigation.items;
   if (!first || !second) throw new Error("La tienda demo necesita al menos 2 enlaces.");
 
   // Bajar el primero: pasa a segundo lugar.
   await page.getByRole("button", { name: `Mover ${first.label} abajo`, exact: true }).click();
-  const movedDown = await pollProject(
+  const movedDown = await pollStoreProject(
     page,
+    storeName,
     (project) => project.navigation.items[0]?.label === second.label,
   );
   expect(movedDown.navigation.items[1]?.label).toBe(first.label);
@@ -378,8 +364,9 @@ test("reordenar: subir/bajar cambia el orden del editor y del sitio exportado", 
 
   // Volver a subirlo: restaura el orden original (Remeras quedó en segundo lugar).
   await page.getByRole("button", { name: `Mover ${first.label} arriba`, exact: true }).click();
-  const movedUp = await pollProject(
+  const movedUp = await pollStoreProject(
     page,
+    storeName,
     (project) => project.navigation.items[0]?.label === first.label,
   );
   expect(movedUp.navigation.items.map((item) => item.label)).toEqual(
@@ -477,14 +464,15 @@ test("tienda nueva (mode automatic): el enlace agregado en Resumen aparece en el
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
 
-  // ANTES: sin items ni categorías el header no tiene menú de categorías.
+  // ANTES: no hay enlaces curados; la plantilla limpia todavía puede mostrar
+  // categorías automáticas, pero nunca el enlace que agregaremos.
   const before = await pollStoreProject(page, storeName, (project) =>
     project.navigation.items.every((item) => item.label !== "Enlace R4 auto"),
   );
   expect(before.navigation.mode).toBe("automatic");
   expect(before.navigation.items).toHaveLength(0);
   const beforeHtml = exportHomeHtml(before);
-  expect(beforeHtml).not.toContain("catalog-mega-group__link");
+  expect(beforeHtml).not.toContain("Enlace R4 auto");
 
   // Agregar un enlace en el Resumen (la tienda limpia empieza sin items).
   await page.getByRole("button", { name: "Añadir enlace de catálogo", exact: true }).click();
@@ -507,7 +495,7 @@ test("tienda nueva (mode automatic): el enlace agregado en Resumen aparece en el
   // Utilidad: el header moderno exportado muestra el enlace del editor
   // aunque el modo siga siendo automatic (fix P0 de Ola 3).
   const afterHtml = exportHomeHtml(after);
-  expect(afterHtml).toContain('class="catalog-mega-group__link" href="/contacto/"');
+  expect(afterHtml).toContain('class="catalog-mega-group__link" href="/#contact-form"');
   expect(afterHtml).toContain("Enlace R4 auto");
   expect(afterHtml).not.toContain('class="catalog-mega-group__link" href="/categorias/');
 

@@ -1,6 +1,6 @@
 import type { RepeaterItemField } from "@solara/modules";
 import type { ImageAsset, StoreProjectV1 } from "@solara/project-schema";
-import { useId, useRef, useState } from "react";
+import { useId, useLayoutEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { ImageAssetPicker } from "../../components/ImageAssetPicker";
 import { Field } from "../../components/Ui";
@@ -50,6 +50,7 @@ export function RepeaterEditor({
   const editorId = useId();
   const errorId = useId();
   const editorRef = useRef<HTMLFieldSetElement>(null);
+  const pendingFocusIndexRef = useRef<number | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingRepeaterDelete | null>(null);
   const defaults = () => defaultRepeaterItem(fields, project, itemLabelKey);
   const update = (index: number, key: string, next: unknown) =>
@@ -79,19 +80,25 @@ export function RepeaterEditor({
   const removeItem = (index: number) => {
     if (index < 0 || index >= items.length) return;
     const nextFocusIndex = items[index + 1] ? index : index - 1;
+    pendingFocusIndexRef.current = nextFocusIndex;
     onChange(items.filter((_, itemIndex) => itemIndex !== index));
-    requestAnimationFrame(() => {
-      const focusTarget =
-        nextFocusIndex >= 0
-          ? editorRef.current?.querySelector<HTMLElement>(
-              `[data-repeater-delete-index="${nextFocusIndex}"]`,
-            )
-          : null;
-      (
-        focusTarget ?? editorRef.current?.querySelector<HTMLElement>("[data-repeater-add]")
-      )?.focus();
-    });
   };
+  // The item count is the commit signal: focus must run after the new row is mounted.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: items.length intentionally triggers focus after the repeater DOM commit.
+  useLayoutEffect(() => {
+    const focusIndex = pendingFocusIndexRef.current;
+    if (focusIndex === null) return;
+    pendingFocusIndexRef.current = null;
+    const focusTarget =
+      focusIndex >= 0
+        ? editorRef.current?.querySelector<HTMLElement>(
+            `[data-repeater-delete-index="${focusIndex}"]`,
+          )
+        : null;
+    (focusTarget ?? editorRef.current?.querySelector<HTMLElement>("[data-repeater-add]"))?.focus({
+      preventScroll: true,
+    });
+  }, [items.length]);
   return (
     <fieldset
       className="repeater-editor"

@@ -1,5 +1,17 @@
 # Changelog
 
+### Solara Nightwatch 360 — cierre local (2026-08-28)
+
+- Se corrigió el foco inicial de `Crear tienda` con foco inmediato y fallback
+  por frame; P4-C2 quedó verde sin reintentos.
+- Full E2E Chromium: 985/988 pasaron, 3 se omitieron por contrato explícito y
+  0 fallaron con 2 workers y retries 0. Los timeouts visuales a 8/4 workers
+  quedaron clasificados como flake/contención y pasaron aislados.
+- `check:quick` 6/6, serialización 4/4 fuera del sandbox, build/empaquetado
+  desktop y `portable:smoke` quedaron verificados.
+- Node 22, Firefox/WebKit, la matriz OS real y el rollout real requieren un
+  runner/autorización externa; no se hizo commit ni push.
+
 ### Continuación Live Canvas + Quality Forge (2026-08-27)
 
 - Live Canvas cubre bindings editor-only para Catalog Modern, About V2, Contact

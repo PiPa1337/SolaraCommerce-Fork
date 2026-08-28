@@ -1,9 +1,8 @@
 /**
  * Auditoría Resumen R3 (2026-08-11) — Dominio: URL pública (baseUrl) y slug interno.
  * Contrato de 4 capas (plan docs/superpowers/plans/2026-08-10-auditoria-resumen.md):
- * - funcional: editar la URL pública commitea el nuevo valor al proyecto; el
- *   slug interno es identidad de solo lectura (readOnly) que se asigna al
- *   crear o duplicar la tienda;
+ * - funcional: editar la URL pública y el slug interno commitea los nuevos
+ *   valores al proyecto;
  * - auto-feedback: vacío → "Completá la URL pública." (post-fix A8), inválida
  *   → "Ingresá una URL válida con http(s).", con aria-invalid en el input; la
  *   auditoría de SEO advierte subcarpeta (domain.baseurl-path) y exige HTTPS
@@ -18,8 +17,9 @@
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
-import { SlugSchema, StoreProjectV1Schema } from "@solara/project-schema";
+import { SlugSchema, type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 150_000 : 90_000);
@@ -56,8 +56,8 @@ async function resetIndexedDb(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
 }
 
-async function openDemoStore(page: Page): Promise<void> {
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
+async function openStore(page: Page, projectId: string): Promise<void> {
+  await page.locator(`[data-store-card-id="${projectId}"]`).click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
 }
@@ -74,23 +74,34 @@ const urlInput = (page: Page) => domainSection(page).getByLabel("URL pública", 
 const slugInput = (page: Page) => domainSection(page).getByLabel("Slug interno", { exact: true });
 
 /** baseUrl autoservada en IndexedDB (receptor del payload commiteado). */
-async function storedBaseUrl(page: Page): Promise<string | undefined> {
+async function storedDomain(
+  page: Page,
+  projectId: string,
+): Promise<Pick<StoreProjectV1, "baseUrl" | "slug"> | undefined> {
   return page.evaluate(
-    () =>
-      new Promise<string | undefined>((resolve, reject) => {
+    (id) =>
+      new Promise<Pick<StoreProjectV1, "baseUrl" | "slug"> | undefined>((resolve, reject) => {
         const request = indexedDB.open("solara-commerce-studio");
         request.addEventListener("error", () => reject(request.error));
         request.addEventListener("success", () => {
           const db = request.result;
           const all = db.transaction("projects").objectStore("projects").getAll();
           all.addEventListener("success", () => {
-            const records = all.result as Array<{ id: string; project: { baseUrl: string } }>;
-            resolve(records.find((record) => record.id === "store-modo-sur-demo")?.project.baseUrl);
+            const records = all.result as Array<{
+              id: string;
+              project: Pick<StoreProjectV1, "baseUrl" | "slug">;
+            }>;
+            resolve(records.find((record) => record.id === id)?.project);
           });
           all.addEventListener("error", () => reject(all.error));
         });
       }),
+    projectId,
   );
+}
+
+async function storedBaseUrl(page: Page, projectId: string): Promise<string | undefined> {
+  return (await storedDomain(page, projectId))?.baseUrl;
 }
 
 /** Guardar del modo navegador: flush del autosave con Ctrl+S y aviso "Guardado". */
@@ -124,7 +135,7 @@ const otherSlugExport = exportProject(
   { mode: "production" },
 );
 
-const OLD_HOST = "https://tienda-aurora.example";
+const OLD_HOST = "https://tienda-referencia-modern.example";
 const beforeText = asText(beforeExport.files);
 const afterText = asText(afterExport.files);
 const otherSlugText = asText(otherSlugExport.files);
@@ -133,11 +144,11 @@ test("URL pública: edición válida commitea, vacío e inválido muestran error
   page,
 }) => {
   await resetIndexedDb(page);
-  await openDemoStore(page);
+  const projectId = await openMutableScaleStore(page, "Tienda R3 URL");
   await openResumenTab(page);
 
   const initialUrl = await urlInput(page).inputValue();
-  expect(initialUrl).toBe("https://demo-catalogo-jerarquico.example");
+  expect(initialUrl).toBe("https://demo-catalogo-jerarquico-copia.example");
 
   // Vacío: error inline sin commit (post-fix A8).
   await urlInput(page).fill("");
@@ -146,7 +157,7 @@ test("URL pública: edición válida commitea, vacío e inválido muestran error
   );
   await expect(urlInput(page)).toHaveAttribute("aria-invalid", "true");
   await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
-  await expect.poll(() => storedBaseUrl(page)).toBe(initialUrl);
+  await expect.poll(() => storedBaseUrl(page, projectId)).toBe(initialUrl);
 
   // Inválida: error inline sin commit.
   await urlInput(page).fill("sin-protocolo");
@@ -154,39 +165,54 @@ test("URL pública: edición válida commitea, vacío e inválido muestran error
     "Ingresá una URL válida con http(s).",
   );
   await expect(urlInput(page)).toHaveAttribute("aria-invalid", "true");
-  await expect.poll(() => storedBaseUrl(page)).toBe(initialUrl);
+  await expect.poll(() => storedBaseUrl(page, projectId)).toBe(initialUrl);
 
   // Válida: se commitea y el error desaparece.
   await urlInput(page).fill(NEW_BASE_URL);
   await expect(urlField(page).getByTestId("ui-field-error")).toHaveCount(0);
   await expect(urlInput(page)).not.toHaveAttribute("aria-invalid", "true");
-  await expect.poll(() => storedBaseUrl(page)).toBe(NEW_BASE_URL);
+  await expect.poll(() => storedBaseUrl(page, projectId)).toBe(NEW_BASE_URL);
 
   // Datos: persiste tras recargar la app (IndexedDB).
   await flushSave(page);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await openDemoStore(page);
+  await openStore(page, projectId);
   await openResumenTab(page);
   await expect(urlInput(page)).toHaveValue(NEW_BASE_URL);
 });
 
-test("Slug interno: identidad de solo lectura, validada por el schema (no editable)", async ({
+test("Slug interno: se puede editar, valida el schema y persiste en la tienda", async ({
   page,
 }) => {
   await resetIndexedDb(page);
-  await openDemoStore(page);
+  const projectId = await openMutableScaleStore(page, "Tienda R3 slug");
   await openResumenTab(page);
 
-  // El slug de la tienda demo se asignó al crearla (identidad, no contenido).
-  await expect(slugInput(page)).toHaveValue("demo-catalogo-jerarquico");
-  await expect(slugInput(page)).toHaveAttribute("readonly", "");
-  await expect(slugInput(page)).toHaveAttribute("aria-readonly", "true");
+  // El slug se asigna al crear o duplicar la tienda, pero luego queda editable
+  // con la misma regla de formato que aplica el schema persistido.
+  const initialSlug = await slugInput(page).inputValue();
+  expect(SlugSchema.safeParse(initialSlug).success).toBe(true);
+  await expect(slugInput(page)).not.toHaveAttribute("readonly");
+  await expect(slugInput(page)).not.toHaveAttribute("aria-readonly", "true");
   await expect(
     domainSection(page).getByText(
       "La exportación de producción usa esta URL para canonical y feeds.",
     ),
   ).toBeVisible();
+
+  const editedSlug = "r3-slug-editado";
+  await slugInput(page).fill(editedSlug);
+  await expect(slugInput(page)).toHaveValue(editedSlug);
+  await expect(domainSection(page).getByTestId("ui-field-error")).toHaveCount(0);
+  await expect.poll(async () => (await storedDomain(page, projectId))?.slug).toBe(editedSlug);
+
+  await flushSave(page);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await openStore(page, projectId);
+  await openResumenTab(page);
+  await expect(slugInput(page)).toHaveValue(editedSlug);
 
   // El contrato del schema: patrón ^[a-z0-9]+(?:-[a-z0-9]+)*$ (SlugSchema).
   expect(SlugSchema.safeParse("demo-catalogo-jerarquico").success).toBe(true);
@@ -200,7 +226,7 @@ test("Auditoría: subcarpeta en la URL pública advierte domain.baseurl-path y h
   page,
 }) => {
   await resetIndexedDb(page);
-  await openDemoStore(page);
+  const projectId = await openMutableScaleStore(page, "Tienda R3 auditoría");
   await openResumenTab(page);
 
   const openSeoTab = async () => {
@@ -214,19 +240,17 @@ test("Auditoría: subcarpeta en la URL pública advierte domain.baseurl-path y h
   // advierte que rompe los assets root-relativos.
   await urlInput(page).fill(SUBFOLDER_BASE_URL);
   await expect(urlField(page).getByTestId("ui-field-error")).toHaveCount(0);
-  await expect.poll(() => storedBaseUrl(page)).toBe(SUBFOLDER_BASE_URL);
+  await expect.poll(() => storedBaseUrl(page, projectId)).toBe(SUBFOLDER_BASE_URL);
   await openSeoTab();
   await expect(urlAlert("domain.baseurl-path")).toBeVisible();
   await expect(
-    page
-      .locator(".audit-item--warning")
-      .filter({ hasText: "una baseUrl con subcarpeta rompe los assets" }),
+    page.locator(".audit-item--warning").filter({ hasText: "La baseUrl usa una subcarpeta" }),
   ).toBeVisible();
 
   // HTTP: crítico de auditoría (el export de producción queda bloqueado).
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   await urlInput(page).fill(HTTP_BASE_URL);
-  await expect.poll(() => storedBaseUrl(page)).toBe(HTTP_BASE_URL);
+  await expect.poll(() => storedBaseUrl(page, projectId)).toBe(HTTP_BASE_URL);
   await openSeoTab();
   await expect(urlAlert("domain.https")).toBeVisible();
   await expect(
@@ -237,7 +261,7 @@ test("Auditoría: subcarpeta en la URL pública advierte domain.baseurl-path y h
   // Restaurar una URL raíz HTTPS: ambos hallazgos desaparecen.
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   await urlInput(page).fill("https://tienda-aurora.example");
-  await expect.poll(() => storedBaseUrl(page)).toBe("https://tienda-aurora.example");
+  await expect.poll(() => storedBaseUrl(page, projectId)).toBe("https://tienda-aurora.example");
   await openSeoTab();
   await expect(urlAlert("domain.https")).toHaveCount(0);
   await expect(urlAlert("domain.baseurl-path")).toHaveCount(0);

@@ -22,14 +22,28 @@ test("el preview V2 conserva el carrito al navegar con enlaces internos", async 
       timeout: 30_000,
     });
     // Nightwatch: Predeterminado es la fixture de escala (slugs reales, no
-    // placeholder-1); derivar los enlaces de producto desde el DOM.
-    const firstProduct = preview.locator('a[href^="/productos/"]').first();
-    const firstHref = await firstProduct.getAttribute("href");
-    if (!firstHref) throw new Error("No se encontro un enlace de producto en el preview");
-    await firstProduct.click();
-    await expect(preview.getByRole("heading", { level: 1 })).toHaveText(/.+/, {
+    // placeholder-1); derivar tarjetas con IDs de producto distintos desde el DOM.
+    const productTargets = await preview.locator("[data-product-card]").evaluateAll((cards) => {
+      const targets: Array<{ id: string; href: string }> = [];
+      for (const card of cards) {
+        const id = card.getAttribute("data-product-id");
+        const href = card.querySelector('a[href^="/productos/"]')?.getAttribute("href");
+        if (id && href && !targets.some((target) => target.id === id)) targets.push({ id, href });
+      }
+      return targets;
+    });
+    const firstTarget = productTargets[0];
+    const secondTarget = productTargets[1];
+    if (!firstTarget || !secondTarget) throw new Error("Se necesitan dos tarjetas de producto");
+    await preview
+      .locator(`[data-product-card][data-product-id="${firstTarget.id}"] a`)
+      .first()
+      .click();
+    const firstTitle = preview.getByRole("heading", { level: 1 });
+    await expect(firstTitle).toHaveText(/.+/, {
       timeout: 30_000,
     });
+    const firstTitleText = await firstTitle.textContent();
     await preview.getByRole("button", { name: "Agregar al carrito" }).click();
     await expect(preview.locator("[data-cart-count]").first()).toHaveText("1");
     await preview.getByRole("button", { name: "Seguir comprando" }).click();
@@ -40,47 +54,24 @@ test("el preview V2 conserva el carrito al navegar con enlaces internos", async 
     });
     await expect(preview.locator("[data-cart-count]").first()).toHaveText("1");
 
-    const otherProducts = preview.locator('a[href^="/productos/"]:not([href="' + firstHref + '"])');
-    const otherCount = await otherProducts.count();
-    if (otherCount > 0) {
-      await otherProducts.first().click();
-      await expect(preview.getByRole("heading", { level: 1 })).toHaveText(/.+/, {
-        timeout: 30_000,
-      });
-      await expect(preview.locator("[data-cart-count]").first()).toHaveText("1");
-      await preview.getByRole("button", { name: "Agregar al carrito" }).click();
-      await expect(preview.locator("[data-cart-count]").first()).toHaveText("2");
-    } else {
-      await expect(preview.locator("[data-cart-count]").first()).toHaveText("1");
-    }
-    await expect(preview.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 30_000 });
-    await expect(preview.locator(".solara-cart-page [data-cart-lines] .solara-cart-line")).toHaveCount(
-      otherCount > 0 ? 2 : 1,
-    );
-  } finally {
-    await stopStudioServer(running.server);
-  }
-});
-
-// REMOVED_BLOCK_START
-test.skip(true, "eliminado por Nightwatch");
-test("placeholder-cart-2-REMOVED", async ({ page }) => {
-  const running = await startStudioServer();
-  try {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto(running.url);
-    await expect(preview.getByRole("heading", { level: 1 })).toHaveText(/.+/, {
+    await preview
+      .locator(`[data-product-card][data-product-id="${secondTarget.id}"] a`)
+      .first()
+      .click();
+    const secondTitle = preview.getByRole("heading", { level: 1 });
+    await expect(secondTitle).toHaveText(/.+/, {
       timeout: 30_000,
     });
+    await expect(secondTitle).not.toHaveText(firstTitleText ?? "");
     await expect(preview.locator("[data-cart-count]").first()).toHaveText("1");
     await preview.getByRole("button", { name: "Agregar al carrito" }).click();
     await expect(preview.locator("[data-cart-count]").first()).toHaveText("2");
-
     await page.getByTestId("ui-preview-route").fill("/carrito/");
     await page.getByTestId("ui-preview-route").press("Enter");
     await expect(preview.getByRole("heading", { level: 1 })).toHaveText("Carrito", {
       timeout: 30_000,
     });
+    await expect(preview.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 30_000 });
     await expect(
       preview.locator(".solara-cart-page [data-cart-lines] .solara-cart-line"),
     ).toHaveCount(2);
@@ -109,15 +100,30 @@ test("el preview V2 conserva el carrito al cambiar de ruta inmediatamente despuÃ
     await expect(preview.locator('[data-design-family="catalog-modern-v2"]')).toBeVisible({
       timeout: 30_000,
     });
-    await preview.locator('a[href="/productos/producto-1/"]').first().click();
-    await expect(preview.getByRole("heading", { level: 1 })).toHaveText("Producto 1", {
+    const productTargets = await preview.locator("[data-product-card]").evaluateAll((cards) => {
+      const targets: Array<{ id: string; href: string }> = [];
+      for (const card of cards) {
+        const id = card.getAttribute("data-product-id");
+        const href = card.querySelector('a[href^="/productos/"]')?.getAttribute("href");
+        if (id && href && !targets.some((target) => target.id === id)) targets.push({ id, href });
+      }
+      return targets;
+    });
+    const firstTarget = productTargets[0];
+    const secondTarget = productTargets[1];
+    if (!firstTarget || !secondTarget) throw new Error("Se necesitan dos tarjetas de producto");
+    await preview
+      .locator(`[data-product-card][data-product-id="${firstTarget.id}"] a`)
+      .first()
+      .click();
+    await expect(preview.getByRole("heading", { level: 1 })).toHaveText(/.+/, {
       timeout: 30_000,
     });
     await preview.getByRole("button", { name: "Agregar al carrito" }).click();
 
-    await page.getByTestId("ui-preview-route").fill("/productos/producto-2/");
+    await page.getByTestId("ui-preview-route").fill(secondTarget.href);
     await page.getByTestId("ui-preview-route").press("Enter");
-    await expect(preview.getByRole("heading", { level: 1 })).toHaveText("Producto 2", {
+    await expect(preview.getByRole("heading", { level: 1 })).toHaveText(/.+/, {
       timeout: 30_000,
     });
     await expect(preview.locator("[data-cart-count]").first()).toHaveText("1");
@@ -157,7 +163,7 @@ test("el preview V2 conserva el vaciado intencional al cambiar de ruta", async (
     await expect(preview.locator('[data-design-family="catalog-modern-v2"]')).toBeVisible({
       timeout: 30_000,
     });
-    await preview.locator('a[href="/productos/producto-1/"]').first().click();
+    await preview.locator('a[href^="/productos/"]').first().click();
     await preview.getByRole("button", { name: "Agregar al carrito" }).click();
     await expect(preview.locator("[data-cart-count]").first()).toHaveText("1");
     await preview.locator("[data-cart-remove]").first().click();

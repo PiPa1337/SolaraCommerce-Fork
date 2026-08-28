@@ -46,8 +46,6 @@ const EDITED_TEXT = {
   email: "hola@tienda-pr8.example",
   greeting: "Hola, quiero hacer este pedido:",
   baseUrl: "https://tienda-pr8.example",
-  aboutTitle: "Nuestra historia en cerámica.",
-  contactTitle: "Escribinos por WhatsApp.",
   seoDescription: "Catálogo de cerámica artesanal hecha a mano, pieza por pieza.",
   heroEyebrow: "Cerámica artesanal",
   heroTitle: "Piezas hechas a mano para tu mesa.",
@@ -129,6 +127,19 @@ function requirement(page: Page, id: string) {
   return page.locator(`[data-testid="ui-guided-requirement"][data-requirement-id="${id}"]`);
 }
 
+async function readProgress(
+  page: Page,
+): Promise<{ ready: number; total: number; percent: number }> {
+  const text = await page.locator(".guided-progress__copy strong").innerText();
+  const match = text.match(/^(\d+) de (\d+) requisitos listos$/);
+  if (!match) throw new Error(`Progreso guiado inesperado: ${text}`);
+  return {
+    ready: Number(match[1]),
+    total: Number(match[2]),
+    percent: Number(await page.getByTestId("ui-guided-progress").getAttribute("aria-valuenow")),
+  };
+}
+
 /** Espera a que el autosave (550 ms) persista el valor esperado en IndexedDB
  *  (válido en cualquier pestaña: el indicador de guardado es del Resumen). */
 async function pollStoredProject(page: Page, path: string, expected: unknown): Promise<void> {
@@ -193,7 +204,7 @@ async function importCatalogFolder(page: Page): Promise<void> {
       timeout: 20_000,
     });
     await page.getByRole("button", { name: "Agregar y actualizar" }).click();
-    await expect(page.getByText(/1 productos y 1 variantes/)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/\d+ productos y \d+ variantes/)).toBeVisible({ timeout: 20_000 });
     await expect(
       page
         .getByRole("list", { name: "Categorías ordenadas" })
@@ -205,12 +216,12 @@ async function importCatalogFolder(page: Page): Promise<void> {
 }
 
 /** Lee el proyecto REAL completo que el journey guardó en IndexedDB. */
-async function readStoredProject(page: Page): Promise<unknown> {
+async function readStoredProject(page: Page, expectedProductCount: number): Promise<unknown> {
   await expect
     .poll(
       async () =>
         page.evaluate(
-          (name) =>
+          ([name, expectedProductCount]: [string, number]) =>
             new Promise<boolean>((resolve, reject) => {
               const request = indexedDB.open("solara-commerce-studio");
               request.addEventListener("error", () => reject(request.error));
@@ -224,12 +235,15 @@ async function readStoredProject(page: Page): Promise<unknown> {
                     return;
                   }
                   const project = record.project as { products: unknown[] };
-                  resolve(Array.isArray(project.products) && project.products.length === 1);
+                  resolve(
+                    Array.isArray(project.products) &&
+                      project.products.length === expectedProductCount,
+                  );
                 });
                 all.addEventListener("error", () => reject(all.error));
               });
             }),
-          STORE_NAME,
+          [STORE_NAME, expectedProductCount] as const,
         ),
       { timeout: 20_000 },
     )
@@ -271,20 +285,41 @@ test("journey: tienda limpia → completar Preparar por destinos → exportar pr
 }) => {
   await resetIndexedDb(page);
   await createCleanStore(page, STORE_NAME);
+
+  // Preparar el destino de Constructor desde el estado real de la tienda:
+  // el recorrido necesita un pendiente de Home para verificar que "Editar"
+  // aterriza en el panel correcto.
+  await page.getByRole("tab", { name: "Constructor", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
+  await page
+    .locator(".section-stack")
+    .getByRole("button", { name: /Portada/ })
+    .click();
+  await page.getByLabel("Antetítulo").fill("");
+  await page.getByLabel("Antetítulo").blur();
+  await page.getByRole("tab", { name: "SEO", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "SEO y Google", exact: true })).toBeVisible();
+  await page
+    .getByLabel("Descripción SEO", { exact: true })
+    .fill("Descubrí nuestra selección de productos.");
+  await page.getByLabel("Descripción SEO", { exact: true }).blur();
   await openPrepararTab(page);
 
-  // (1) Estado inicial honesto de la tienda limpia: 5 de 18 requisitos listos,
-  // el único bloqueo real es template.placeholder (crítico del exporter).
-  await expect(page.locator(".guided-progress__copy strong")).toHaveText(
-    "5 de 18 requisitos listos",
+  // (1) Estado inicial de la tienda que realmente crea la app. La plantilla
+  // actual conserva cinco productos placeholder, una imagen y los campos
+  // pendientes; no se fija un conteo histórico de la plantilla anterior.
+  const initialProgress = await readProgress(page);
+  expect(initialProgress.ready).toBeLessThan(initialProgress.total);
+  expect(initialProgress.percent).toBe(
+    Math.round((initialProgress.ready / initialProgress.total) * 100),
   );
-  await expect(page.getByTestId("ui-guided-progress")).toHaveAttribute("aria-valuenow", "28");
   await expect(page.locator(".guided-progress__copy > span")).toHaveText(
     "1 pendiente bloquea producción.",
     { timeout: 20_000 },
   );
-  await expect(pendingRequirements(page)).toHaveCount(12);
-  await expect(page.locator(".guided-checklist__more")).toHaveText("+1 más");
+  await expect(pendingRequirements(page)).toHaveCount(
+    initialProgress.total - initialProgress.ready,
+  );
   const firstPending = pendingRequirements(page).first();
   await expect(firstPending).toHaveAttribute("data-requirement-id", "identity.description");
   await expect(firstPending).toHaveAttribute("data-requirement-status", "placeholder");
@@ -305,22 +340,26 @@ test("journey: tienda limpia → completar Preparar por destinos → exportar pr
     .click();
   await expect(page.getByRole("heading", { name: "SEO y Google", exact: true })).toBeVisible();
   await openPrepararTab(page);
-  await requirement(page, "asset.asset-hero.alt")
+  await page
+    .locator('[data-testid="ui-guided-requirement"][data-requirement-id^="asset."]')
+    .first()
     .getByRole("button", { name: /^Editar / })
     .click();
   await expect(page.getByRole("heading", { name: "Recursos", exact: true })).toBeVisible();
 
-  // (3) Resumen: identidad, WhatsApp, dominio y páginas editoriales.
+  // (3) Resumen: identidad, WhatsApp y dominio. La plantilla V2 ya no crea
+  // páginas editoriales separadas de Nosotros/Contacto.
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
   await page.getByLabel("Nombre de la tienda").fill(EDITED_TEXT.name);
   await page.getByLabel("Descripción", { exact: true }).fill(EDITED_TEXT.description);
   await page.getByLabel("Email", { exact: true }).fill(EDITED_TEXT.email);
   await page.getByLabel("Número internacional").fill(WHATSAPP_PHONE);
-  await page.getByLabel("Saludo del pedido").fill(EDITED_TEXT.greeting);
+  await page
+    .getByRole("region", { name: "Pedido por WhatsApp Formato" })
+    .getByLabel("Saludo del pedido")
+    .fill(EDITED_TEXT.greeting);
   await page.getByLabel("URL pública").fill(EDITED_TEXT.baseUrl);
-  await page.getByLabel("Título visible").nth(1).fill(EDITED_TEXT.aboutTitle);
-  await page.getByLabel("Título visible").nth(2).fill(EDITED_TEXT.contactTitle);
   await pollStoredProject(page, "identity.description", EDITED_TEXT.description);
   await pollStoredProject(page, "whatsapp.phone", WHATSAPP_PHONE);
 
@@ -338,46 +377,55 @@ test("journey: tienda limpia → completar Preparar por destinos → exportar pr
     .getByRole("button", { name: /Portada/ })
     .click();
   await page.getByLabel("Antetítulo").fill(EDITED_TEXT.heroEyebrow);
-  await page.getByLabel("Título", { exact: true }).fill(EDITED_TEXT.heroTitle);
-  await page.getByLabel("Descripción", { exact: true }).fill(EDITED_TEXT.heroBody);
+  await page.getByLabel("Título", { exact: true }).first().fill(EDITED_TEXT.heroTitle);
+  await page.getByLabel("Descripción", { exact: true }).first().fill(EDITED_TEXT.heroBody);
   await pollStoredProject(page, "sections.modo-section-hero.settings.title", EDITED_TEXT.heroTitle);
 
-  // (6) Recursos: las 4 imágenes de plantilla se renombran y reciben alt.
+  // (6) Recursos: todas las imágenes que realmente trae la tienda reciben
+  // nombre y texto alternativo.
   await page.getByRole("tab", { name: "Recursos", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Recursos", exact: true })).toBeVisible();
   const templateAssets = await page.getByLabel("Texto alternativo").count();
-  expect(templateAssets).toBe(4);
+  expect(templateAssets).toBeGreaterThan(0);
   for (let index = 0; index < templateAssets; index += 1) {
     await page.getByLabel("Nombre").nth(index).fill(`${EDITED_TEXT.assetName}-${index}.png`);
     await page.getByLabel("Nombre").nth(index).blur();
     await page.getByLabel("Texto alternativo").nth(index).fill(EDITED_TEXT.assetAlt);
     await page.getByLabel("Texto alternativo").nth(index).blur();
   }
-  await pollStoredProject(page, "assets.3.alt", EDITED_TEXT.assetAlt);
+  await pollStoredProject(page, `assets.${templateAssets - 1}.alt`, EDITED_TEXT.assetAlt);
 
   // (7) Catálogo: la importación de carpeta crea categorías y el producto
-  // (el único camino de la UI para crear categorías).
+  // (el único camino de la UI para crear categorías) y lo suma al catálogo
+  // placeholder que trae una tienda nueva.
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
+  const initialProductCount = await page.locator("tbody tr").count();
   await importCatalogFolder(page);
-  await expect(page.locator("tbody tr")).toHaveCount(1);
-  await pollStoredProject(page, "products.length", 1);
+  await expect(page.locator("tbody tr")).toHaveCount(initialProductCount + 1);
+  await pollStoredProject(page, "products.length", initialProductCount + 1);
 
   // (8) Recursos: la imagen importada recibe su texto alternativo.
   await page.getByRole("tab", { name: "Recursos", exact: true }).click();
-  await expect(page.getByLabel("Texto alternativo")).toHaveCount(5);
-  await page.getByLabel("Texto alternativo").nth(4).fill("Taza de cerámica esmaltada a mano.");
-  await page.getByLabel("Texto alternativo").nth(4).blur();
-  await pollStoredProject(page, "assets.4.alt", "Taza de cerámica esmaltada a mano.");
+  await expect(page.getByLabel("Texto alternativo")).toHaveCount(templateAssets + 1);
+  await page
+    .getByLabel("Texto alternativo")
+    .nth(templateAssets)
+    .fill("Taza de cerámica esmaltada a mano.");
+  await page.getByLabel("Texto alternativo").nth(templateAssets).blur();
+  await pollStoredProject(
+    page,
+    `assets.${templateAssets}.alt`,
+    "Taza de cerámica esmaltada a mano.",
+  );
 
   // (9) Preparar al final del journey: todos los requisitos cubiertos por el
   // modelo guiado quedan listos y el gate real ya no bloquea producción. Las
   // descripciones de categoría no forman parte del checklist porque el Studio
-  // no tiene editor para ese campo. 28 listos, 0 pendientes.
+  // no tiene editor para ese campo.
   await openPrepararTab(page);
-  await expect(page.locator(".guided-progress__copy strong")).toHaveText(
-    "28 de 28 requisitos listos",
-  );
+  const finalProgress = await readProgress(page);
+  expect(finalProgress.ready).toBe(finalProgress.total);
   await expect(page.getByTestId("ui-guided-progress")).toHaveAttribute("aria-valuenow", "100");
   await expect(page.locator(".guided-progress__copy > span")).toHaveText(
     "La tienda puede pasar a revisión de publicación.",
@@ -386,7 +434,7 @@ test("journey: tienda limpia → completar Preparar por destinos → exportar pr
   await expect(pendingRequirements(page)).toHaveCount(0);
   await page.getByTestId("ui-guided-done").locator("summary").click();
   await expect(page.getByTestId("ui-guided-done").locator("summary")).toHaveText(
-    "Requisitos listos (28)",
+    `Requisitos listos (${finalProgress.total})`,
   );
   await expect(requirement(page, "identity.description")).toHaveAttribute(
     "data-requirement-status",
@@ -408,10 +456,10 @@ test("journey: tienda limpia → completar Preparar por destinos → exportar pr
     "data-requirement-status",
     "ready",
   );
-  // Los 5 assets (4 de plantilla + el importado) quedan con alt listo.
+  // Todas las imágenes iniciales más la importada quedan con alt listo.
   await expect(
     page.locator('[data-testid="ui-guided-done"] [data-requirement-id^="asset."]'),
-  ).toHaveCount(5);
+  ).toHaveCount(templateAssets + 1);
 
   // (10) Export: el gate real muestra 0 críticos y la producción se genera.
   await page.getByRole("tab", { name: "Exportar", exact: true }).click();
@@ -432,21 +480,20 @@ test("journey: tienda limpia → completar Preparar por destinos → exportar pr
 
   // (11) Utilidad: el proyecto REAL del journey es schema-válido, tiene 0
   // críticos y exporta un sitio production completo y reproducible.
-  const stored = await readStoredProject(page);
+  const stored = await readStoredProject(page, initialProductCount + 1);
   const project = StoreProjectV1Schema.parse(stored);
   expect(project.identity.brandName).toBe(EDITED_TEXT.name);
   expect(project.whatsapp.phone).toBe(WHATSAPP_PHONE);
-  expect(project.products).toHaveLength(1);
-  expect(project.products[0]?.title).toBe("Taza PR8");
-  expect(project.categories.length).toBe(2);
+  expect(project.products).toHaveLength(initialProductCount + 1);
+  expect(project.products.some((product) => product.slug === "taza-pr8")).toBe(true);
+  expect(project.categories.some((category) => category.slug === "ceramica")).toBe(true);
+  expect(project.categories.some((category) => category.slug === "vasos")).toBe(true);
   expect(auditReport(project).criticalCount).toBe(0);
 
   const exported = exportProject(project, { mode: "production" });
   const files = exportedTexts(exported.files);
   const home = files.get("index.html") ?? "";
   const productPage = files.get("productos/taza-pr8/index.html") ?? "";
-  const contactPage = files.get("contacto/index.html") ?? "";
-  const checkoutPage = files.get("compra/index.html") ?? "";
   const sitemap = files.get("sitemap.xml") ?? "";
 
   // Header con navegación real (categorías) y hero reemplazado.
@@ -463,16 +510,18 @@ test("journey: tienda limpia → completar Preparar por destinos → exportar pr
   expect(files.get("categorias/ceramica/index.html") ?? "").toContain("Cerámica");
   expect(files.has("categorias/vasos/index.html")).toBe(true);
 
-  // Checkout WhatsApp funcional: contacto con wa.me real, compra con el
-  // formulario que el runtime completa y el teléfono en el documento.
-  expect(contactPage).toContain(`https://wa.me/5491123456789?text=`);
-  expect(checkoutPage).toContain("data-checkout-form");
-  expect(checkoutPage).toContain("data-whatsapp-link");
+  // Checkout WhatsApp funcional: en V2 el formulario vive en el drawer de
+  // carrito dentro de Home; no se publica una ruta separada de compra.
+  expect(files.has("nosotros/index.html")).toBe(false);
+  expect(files.has("contacto/index.html")).toBe(false);
+  expect(files.has("compra/index.html")).toBe(false);
+  expect(home).toContain("data-checkout-form");
+  expect(home).toContain("data-whatsapp-link");
 
   // Sitemap con las rutas públicas del sitio.
   expect(sitemap).toContain("https://tienda-pr8.example/productos/taza-pr8/");
   expect(sitemap).toContain("https://tienda-pr8.example/categorias/ceramica/");
-  expect(sitemap).toContain("https://tienda-pr8.example/contacto/");
+  expect(sitemap).not.toContain("https://tienda-pr8.example/contacto/");
 });
 
 test("contenido recomendado: un producto agregado a mano puede quedar sin categoría sin bloquear producción", async ({
@@ -482,6 +531,8 @@ test("contenido recomendado: un producto agregado a mano puede quedar sin catego
   await createCleanStore(page, STORE_NAME);
   await openPrepararTab(page);
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
+  const initialProductCount = await page.locator("tbody tr").count();
   await page.getByRole("button", { name: "Agregar producto" }).first().click();
   const dialog = page.locator("dialog.product-dialog");
   await dialog.getByRole("textbox", { name: "Título" }).fill("Taza PR8 manual");
@@ -490,14 +541,10 @@ test("contenido recomendado: un producto agregado a mano puede quedar sin catego
   await dialog.getByRole("button", { name: "Imágenes", exact: true }).click();
   await dialog.locator(".product-asset-option").first().click();
   await dialog.getByRole("spinbutton", { name: "Precio en centavos" }).fill("1000");
-  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  await dialog.getByRole("button", { name: "Crear y activar" }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await expect(page.locator("tbody tr")).toHaveCount(initialProductCount + 1);
   await openPrepararTab(page);
-  const showAll = page.getByTestId("ui-guided-show-all");
-  await expect(showAll).toHaveAttribute("aria-expanded", "false");
-  await showAll.click();
-  await expect(showAll).toHaveAttribute("aria-expanded", "true");
   const categoryRequirement = page
     .getByTestId("ui-guided-requirement")
     .filter({ hasText: "Categoría: Taza PR8 manual" });

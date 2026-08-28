@@ -819,6 +819,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
   };
 
   const exportCsv = async () => {
+    const busyStartedAt = performance.now();
     setBusy("export");
     setError("");
     try {
@@ -827,11 +828,16 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo exportar el CSV.");
     } finally {
+      const remainingBusyMs = 180 - (performance.now() - busyStartedAt);
+      if (remainingBusyMs > 0) {
+        await new Promise<void>((resolve) => window.setTimeout(resolve, remainingBusyMs));
+      }
       setBusy("");
     }
   };
 
   const exportCommercialCsv = async () => {
+    const busyStartedAt = performance.now();
     setBusy("export");
     setError("");
     try {
@@ -840,6 +846,10 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo exportar el CSV comercial.");
     } finally {
+      const remainingBusyMs = 180 - (performance.now() - busyStartedAt);
+      if (remainingBusyMs > 0) {
+        await new Promise<void>((resolve) => window.setTimeout(resolve, remainingBusyMs));
+      }
       setBusy("");
     }
   };

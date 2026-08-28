@@ -1,4 +1,5 @@
-import { StoreProjectV1Schema } from "@solara/project-schema";
+import type { NavigationItem } from "@solara/project-schema";
+import { type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 import { describe, expect, it } from "vitest";
 
@@ -24,7 +25,7 @@ describe("fuzz navigation/modules", () => {
     () => {
       for (let seed = 0; seed < 100; seed++) {
         const rand = mulberry32(seed);
-        let project: any = structuredClone(catalogScaleStore);
+        let project: StoreProjectV1 = structuredClone(catalogScaleStore);
         for (let step = 0; step < 100; step++) {
           const before = JSON.stringify(project);
           const op = Math.floor(rand() * 5);
@@ -35,7 +36,7 @@ describe("fuzz navigation/modules", () => {
                 rand() < 0.3
                   ? (project.navigation.items[0]?.id ?? "nav-1")
                   : `nav-${randomString(rand, 4)}`;
-              const item: any = {
+              const item: NavigationItem = {
                 id,
                 label: randomString(rand, 6),
                 href: rand() < 0.5 ? `/categorias/${project.categories[0]?.slug ?? "test"}/` : "/",
@@ -54,7 +55,7 @@ describe("fuzz navigation/modules", () => {
               // duplicate product (simula duplicateProject)
               const orig = project.products[0];
               if (!orig) continue;
-              const dup: any = {
+              const dup: StoreProjectV1["products"][number] = {
                 ...structuredClone(orig),
                 id: `store-${randomString(rand, 6)}`,
                 slug: randomString(rand, 6),
@@ -68,14 +69,14 @@ describe("fuzz navigation/modules", () => {
               const p = project.products[0];
               if (!p) continue;
               project = structuredClone(project);
-              const prod = project.products.find((x: any) => x.id === p.id);
+              const prod = project.products.find((x) => x.id === p.id);
               if (prod) prod.imageIds.push(`nonexistent-asset-${randomString(rand, 4)}`);
             } else if (op === 4) {
               // collection productIds huérfano
               const col = project.collections[0];
               if (!col) continue;
               project = structuredClone(project);
-              const c = project.collections.find((x: any) => x.id === col.id);
+              const c = project.collections.find((x) => x.id === col.id);
               if (c) c.productIds.push("nonexistent-product");
             }
             const parsed = StoreProjectV1Schema.safeParse(project);
@@ -86,7 +87,7 @@ describe("fuzz navigation/modules", () => {
             } else {
               // si parsea, verificar invariantes básicas
               const p = parsed.data;
-              const catIds = new Set(p.categories.map((c: any) => c.id));
+              const catIds = new Set(p.categories.map((c) => c.id));
               for (const prod of p.products)
                 for (const cid of prod.categoryIds) expect(catIds.has(cid)).toBe(true);
             }

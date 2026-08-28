@@ -4,15 +4,23 @@
  * Herramienta de diagnóstico manual — no es gate de CI.
  */
 
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 
 const exported = exportProject(catalogModernV2Store, { mode: "production" });
-const OUTPUT_ROOT = "screenshots/storefront-vision";
+const fixtureFiles = new Map<string, Uint8Array>(
+  Array.from({ length: 12 }, (_, index) => {
+    const number = String(index + 1).padStart(2, "0");
+    return [
+      `fixtures/modo-sur-product-${number}.webp`,
+      readFileSync(resolve(`apps/studio/public/fixtures/modo-sur-product-${number}.webp`)),
+    ] as const;
+  }),
+);
 
 const VIEWPORTS = [
   { name: "320", width: 320, height: 800 },
@@ -63,18 +71,24 @@ test.beforeAll(async () => {
         : requested.endsWith("/")
           ? `${requested}index.html`
           : requested;
-    const file = exported.files.get(path);
-    if (!file) {
+    const file = exported.files.get(path) ?? fixtureFiles.get(path);
+    if (file === undefined) {
       response.writeHead(404, { "Content-Type": "text/html; charset=utf-8" });
       response.end(exported.files.get("404.html") ?? "<h1>Not found</h1>");
       return;
     }
     const extension = path.split(".").pop();
     const types = {
+      avif: "image/avif",
+      gif: "image/gif",
+      ico: "image/x-icon",
+      jpeg: "image/jpeg",
+      jpg: "image/jpeg",
       css: "text/css; charset=utf-8",
       js: "text/javascript; charset=utf-8",
       webp: "image/webp",
       png: "image/png",
+      svg: "image/svg+xml",
     };
     response.writeHead(200, {
       "Content-Type":
@@ -109,13 +123,26 @@ for (const viewport of VIEWPORTS) {
   test.describe(`deep ${viewport.name}`, () => {
     test.use({ viewport: { width: viewport.width, height: viewport.height } });
 
-    test("captura de rutas", async ({ page }) => {
-      mkdirSync(join(OUTPUT_ROOT, viewport.name), { recursive: true });
+    test("captura de rutas", async ({ page }, testInfo) => {
+      // Cada viewport/test necesita su propio directorio: con ocho workers
+      // otros barridos visuales pueden capturar las mismas rutas al mismo
+      // tiempo. Las capturas diagnósticas no deben competir con screenshots
+      // versionados del repositorio.
+      const outputRoot = testInfo.outputPath("storefront-vision");
+      mkdirSync(outputRoot, { recursive: true });
       for (const route of PAGES) {
         await page.goto(new URL(route.path, serverUrl).toString());
         await revealPage(page);
+        const brokenImages = await page
+          .locator("img")
+          .evaluateAll((images) =>
+            images
+              .filter((image) => image.complete && image.naturalWidth === 0)
+              .map((image) => image.getAttribute("src") || image.getAttribute("alt") || "sin src"),
+          );
+        expect(brokenImages, `${route.path}: imágenes que no cargaron`).toEqual([]);
         await page.screenshot({
-          path: join(OUTPUT_ROOT, viewport.name, `${route.dir}.png`),
+          path: join(outputRoot, `${route.dir}.png`),
           fullPage: true,
         });
       }

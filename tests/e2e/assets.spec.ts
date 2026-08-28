@@ -30,7 +30,7 @@ test("procesa una imagen, muestra el lote y persiste el asset", async ({ page })
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   await createCleanStore(page, "Tienda de recursos");
   await page.getByRole("tab", { name: "Recursos", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Recursos" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Recursos", exact: true })).toBeVisible();
   // Scope a la grilla de recursos: .asset-item se reusa en previews SEO.
   const assetGrid = page.locator(".asset-grid").first();
 

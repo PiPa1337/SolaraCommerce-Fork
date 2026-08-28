@@ -67,13 +67,14 @@ async function expectSaved(page: Page): Promise<void> {
 /** Receptor del payload commiteado: el proyecto autoservado en IndexedDB. */
 interface StoredProject {
   baseUrl?: string;
+  slug?: string;
   origin?: { templateVersion?: number };
   identity?: { legalName?: string; phone?: string; address?: string };
   whatsapp?: { phone?: string; greeting?: string };
   navigation?: {
     showHome?: boolean;
-    showContact?: boolean;
-    showAbout?: boolean;
+    showSearch?: boolean;
+    showCart?: boolean;
     items?: Array<{ children?: Array<{ label?: string; href?: string }> }>;
   };
   siteShell?: { announcement?: boolean; header?: boolean; footer?: boolean; cart?: boolean };
@@ -335,7 +336,10 @@ test("campos restantes: razón social, teléfono, dirección, saludo, URL y slug
   await page.getByLabel("Razón social", { exact: true }).fill("Razón Social A9 SRL");
   await page.getByLabel("Teléfono", { exact: true }).fill("1122334455");
   await page.getByLabel("Dirección", { exact: true }).fill("Av. Siempre Viva 742");
-  await page.getByLabel("Saludo del pedido", { exact: true }).fill("Hola, quiero este pedido:");
+  await page
+    .locator('[data-accordion-id="whatsapp"]')
+    .getByLabel("Saludo del pedido", { exact: true })
+    .fill("Hola, quiero este pedido:");
   await expectSaved(page);
 
   // Teléfono inválido: sin commit, error y badge "Revisar formato".
@@ -368,13 +372,14 @@ test("campos restantes: razón social, teléfono, dirección, saludo, URL y slug
   await expect(page.getByTestId("ui-field-error")).toHaveCount(0);
   await expectStoredProject(page, storeName, { baseUrl: "https://tienda-a9.example" });
 
-  // Slug interno: de solo lectura (aria-readonly) y a prueba de escritura.
+  // Slug interno: editable y validado como cualquier otro campo de identidad.
   const slugInput = page.getByLabel("Slug interno", { exact: true });
-  await expect(slugInput).toHaveAttribute("aria-readonly", "true");
   const slugValue = await slugInput.inputValue();
-  await slugInput.click();
-  await page.keyboard.type("xyz");
-  await expect(slugInput).toHaveValue(slugValue);
+  const editedSlug = `${slugValue}-editada`;
+  await expect(slugInput).toBeEditable();
+  await slugInput.fill(editedSlug);
+  await expect(slugInput).toHaveValue(editedSlug);
+  await expectStoredProject(page, storeName, { slug: editedSlug });
 
   // Capa 3: los cuatro campos de texto llegaron al proyecto autoservado.
   await expectStoredProject(page, storeName, {
@@ -394,7 +399,7 @@ test("switches restantes: navegación y shell commitean con aria-checked (capa 1
   await setupCleanStore(page, storeName);
   await openStudioTab(page, "Resumen");
 
-  const navSwitches = ["Mostrar Inicio", "Mostrar Contacto", "Mostrar Nosotros"] as const;
+  const navSwitches = ["Mostrar Inicio", "Mostrar búsqueda", "Mostrar carrito"] as const;
   const shellSwitches = [
     "Mostrar barra informativa",
     "Mostrar encabezado",
@@ -410,7 +415,7 @@ test("switches restantes: navegación y shell commitean con aria-checked (capa 1
   }
 
   await expectStoredProject(page, storeName, {
-    navigation: { showHome: false, showContact: false, showAbout: false },
+    navigation: { showHome: false, showSearch: false, showCart: false },
     siteShell: {
       announcement: false,
       header: false,

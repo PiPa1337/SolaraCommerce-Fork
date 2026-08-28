@@ -13,6 +13,7 @@
  */
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 let server: Server;
@@ -90,8 +91,7 @@ async function openCatalog(page: Page) {
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await openMutableScaleStore(page, "Tienda escala A05");
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
 }
@@ -128,7 +128,7 @@ async function variantsStep(dialog: Locator): Promise<Locator> {
 
 async function saveProduct(dialog: Locator, create: boolean) {
   await dialog
-    .getByRole("button", { name: create ? "Crear producto" : "Guardar producto" })
+    .getByRole("button", { name: create ? "Guardar borrador" : "Guardar cambios" })
     .click();
   await expect(dialog).toBeHidden();
 }
@@ -158,7 +158,7 @@ test("A05: agregar variante muestra fila nueva con id válido y contrato del sch
   // Auto-feedback de borde: con una sola variante, subir/bajar/eliminar están
   // deshabilitados en la fila única.
   const only = rows.first();
-  await expect(only.getByRole("button", { name: /^Subir/ })).toBeDisabled();
+  await expect(only.getByRole("button", { name: /^Subir (?!imagen)/ })).toBeDisabled();
   await expect(only.getByRole("button", { name: /^Bajar/ })).toBeDisabled();
   await expect(only.getByRole("button", { name: /^Eliminar/ })).toBeDisabled();
 
@@ -169,7 +169,7 @@ test("A05: agregar variante muestra fila nueva con id válido y contrato del sch
   const added = rows.nth(1);
   await expect(added.locator("header strong")).toHaveText("Variante 2");
   await expect(added.getByRole("textbox", { name: "Nombre" })).toHaveValue("Nueva variante");
-  await expect(added.getByRole("button", { name: /^Subir/ })).toBeEnabled();
+  await expect(added.getByRole("button", { name: /^Subir (?!imagen)/ })).toBeEnabled();
   await expect(added.getByRole("button", { name: /^Bajar/ })).toBeDisabled();
   await expect(added.getByRole("button", { name: /^Eliminar/ })).toBeEnabled();
   await expect(rows.nth(0).getByRole("button", { name: /^Eliminar/ })).toBeEnabled();
@@ -208,7 +208,7 @@ test("A05: duplicar variante conserva SKU, opciones y precios con id nuevo", asy
   const first = rows.nth(0);
   const sku = await first.getByRole("textbox", { name: "SKU" }).inputValue();
   const price = await first.getByRole("spinbutton", { name: "Precio en centavos" }).inputValue();
-  await expect(first.getByRole("button", { name: /^Subir/ })).toBeDisabled();
+  await expect(first.getByRole("button", { name: /^Subir (?!imagen)/ })).toBeDisabled();
 
   await first.getByRole("button", { name: "Duplicar Negro / S" }).click();
   rows = edit.locator(".variant-editor");
@@ -305,7 +305,7 @@ test("A05: opciones de variante persisten y validan con feedback inline", async 
   await expect(fieldOf(optionsInput).getByTestId("ui-field-error")).toContainText(
     'La opción "Talle" debe usar el formato Nombre=Valor.',
   );
-  await edit.getByRole("button", { name: "Guardar producto" }).click();
+  await edit.getByRole("button", { name: "Guardar cambios" }).click();
   await expect(edit).toBeVisible();
 
   // Nombre de opción repetido: rama distinta de validación.
@@ -362,7 +362,7 @@ test("A05: precio y SKU persisten y el precio entero valida con feedback", async
   await expect(fieldOf(priceInput).getByTestId("ui-field-error")).toContainText(
     "El precio debe ser un número entero en centavos, mayor o igual a 0.",
   );
-  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  await dialog.getByRole("button", { name: "Guardar borrador" }).click();
   await expect(dialog).toBeVisible();
 
   await priceInput.fill("42900");
@@ -458,11 +458,11 @@ test("A05: reordenar variantes intercambia filas y persiste el orden", async ({ 
   rows = edit.locator(".variant-editor");
   await expect(nameOf(rows.nth(0))).toHaveValue("Negro / S");
   await expect(nameOf(rows.nth(1))).toHaveValue("Negro / M");
-  await expect(rows.nth(0).getByRole("button", { name: /^Subir/ })).toBeDisabled();
-  await expect(rows.nth(1).getByRole("button", { name: /^Subir/ })).toBeEnabled();
+  await expect(rows.nth(0).getByRole("button", { name: /^Subir (?!imagen)/ })).toBeDisabled();
+  await expect(rows.nth(1).getByRole("button", { name: /^Subir (?!imagen)/ })).toBeEnabled();
 
   // Borde: primera fila no sube y última no baja.
-  await expect(rows.nth(0).getByRole("button", { name: /^Subir/ })).toBeDisabled();
+  await expect(rows.nth(0).getByRole("button", { name: /^Subir (?!imagen)/ })).toBeDisabled();
   await expect(rows.nth(7).getByRole("button", { name: /^Bajar/ })).toBeDisabled();
 
   await rows.nth(0).getByRole("button", { name: "Bajar Negro / S" }).click();
@@ -517,7 +517,7 @@ test("A05: precio anterior, GTIN, MPN e imagen de variante persisten", async ({ 
   await expect(fieldOf(compareAt).getByTestId("ui-field-error")).toContainText(
     "El precio anterior debe ser un número entero en centavos, mayor o igual a 0.",
   );
-  await edit.getByRole("button", { name: "Guardar producto" }).click();
+  await edit.getByRole("button", { name: "Guardar cambios" }).click();
   await expect(edit).toBeVisible();
   await expect(fieldOf(compareAt).getByTestId("ui-field-error")).toBeVisible();
 

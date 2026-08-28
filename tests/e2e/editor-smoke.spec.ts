@@ -7,6 +7,7 @@
  */
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 240_000 : 180_000);
@@ -33,14 +34,7 @@ async function openDashboard(page: Page): Promise<void> {
 
 /** Entra a la tienda demo desde un dashboard ya cargado. */
 async function openDemoStore(page: Page): Promise<void> {
-  // El atributo data-store-card-id vive en el botón principal de la card, no
-  // en el article; el botón "Abrir esta tienda" es un hermano. Se enmarca con
-  // article:has(...) igual que editor-console.spec.ts.
-  await page
-    .locator('article:has([data-store-card-id="store-modo-sur-demo"])')
-    .getByRole("button", { name: "Abrir esta tienda" })
-    .click();
-  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+  await openMutableScaleStore(page, "Tienda smoke mutable");
 }
 
 test("recorre el editor de punta a punta: tabs, producto, sección, exportación y vuelta", async ({
@@ -96,7 +90,7 @@ test("recorre el editor de punta a punta: tabs, producto, sección, exportación
   await dialog.getByRole("textbox", { name: "Slug" }).fill("linterna-bruma");
   await dialog.getByRole("textbox", { name: "SKU" }).fill("LIN-BRUMA-01");
   await dialog.getByRole("spinbutton", { name: "Precio en centavos" }).fill("45000");
-  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  await dialog.getByRole("button", { name: "Guardar borrador" }).click();
   await expect(dialog).toBeHidden();
   await page.getByPlaceholder("Buscar por producto, marca o estado").fill("Linterna Bruma");
   await expect(page.getByLabel("Nombre de Linterna Bruma")).toBeVisible();
@@ -107,7 +101,10 @@ test("recorre el editor de punta a punta: tabs, producto, sección, exportación
   const hero = page.getByRole("listitem").filter({ hasText: "Hero de catálogo" });
   await hero.getByRole("button").first().click();
   await expect(page.getByRole("complementary", { name: "Inspector de sección" })).toBeVisible();
-  const title = page.getByRole("textbox", { name: "Título", exact: true });
+  const title = page
+    .getByRole("complementary", { name: "Inspector de sección" })
+    .getByRole("textbox", { name: "Título", exact: true })
+    .first();
   await title.fill("Título del smoke");
   await expect(title).toHaveValue("Título del smoke");
   await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
@@ -131,11 +128,15 @@ test("archiva la tienda demo desde el dashboard y la restaura", async ({ page })
   await page.setViewportSize({ width: 1440, height: 900 });
   await openDashboard(page);
 
-  const card = page.locator('[data-store-card-id="store-modo-sur-demo"]');
-  // El locator ya es el botón de selección de la card (data-store-card-id vive
-  // en él); un selector descendente .dashboard-store-card__button no matchea.
-  await card.click();
-  const detail = page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" });
+  await openMutableScaleStore(page, "Tienda smoke archivable");
+  await page.getByRole("button", { name: "Volver a tiendas" }).click();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  const card = page
+    .locator(".dashboard-store-card")
+    .filter({ hasText: "Tienda smoke archivable" })
+    .first();
+  await card.locator(".dashboard-store-card__button").click();
+  const detail = page.getByRole("region", { name: "Tienda seleccionada: Tienda smoke archivable" });
   await expect(detail).toBeVisible();
 
   // T4.12: el archivo de tienda confirma con el diálogo unificado en vez de
@@ -143,7 +144,7 @@ test("archiva la tienda demo desde el dashboard y la restaura", async ({ page })
   await detail.getByRole("button", { name: "Archivar" }).click();
   const confirm = page.getByTestId("ui-confirm-dialog");
   await expect(confirm).toBeVisible();
-  await expect(confirm).toContainText("Predeterminado");
+  await expect(confirm).toContainText("Tienda smoke archivable");
   await confirm.getByRole("button", { name: "Archivar", exact: true }).click();
   await expect(confirm).toBeHidden();
   await page.locator(".dashboard-cosmic-select select").first().selectOption("archived");
@@ -151,16 +152,19 @@ test("archiva la tienda demo desde el dashboard y la restaura", async ({ page })
 
   const archivedCard = page
     .locator(".dashboard-store-card")
-    .filter({ hasText: "Predeterminado" })
+    .filter({ hasText: "Tienda smoke archivable" })
     .first();
   await archivedCard.locator(".dashboard-store-card__button").click();
   await expect(
-    page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" }),
+    page.getByRole("region", { name: "Tienda seleccionada: Tienda smoke archivable" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Restaurar" }).click();
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
 
   await page.locator(".dashboard-cosmic-select select").first().selectOption("active");
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
   await expect(page.locator('[data-store-card-id="store-modo-sur-demo"]')).toBeVisible();
+  await expect(
+    page.locator(".dashboard-store-card").filter({ hasText: "Tienda smoke archivable" }),
+  ).toBeVisible();
 });

@@ -12,7 +12,6 @@
  */
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
-import { createCleanStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(120_000);
@@ -315,25 +314,20 @@ test.describe("A22 — Primitivas Ui en uso real", () => {
   });
 
   test("EmptyState en catálogo vacío con acción y InlineError con role=alert", async ({ page }) => {
-    await page.goto(studioUrl);
-    await page.evaluate(
-      () =>
-        new Promise<void>((resolveDelete, reject) => {
-          const request = indexedDB.deleteDatabase("solara-commerce-studio");
-          request.addEventListener("success", () => resolveDelete());
-          request.addEventListener("error", () => reject(request.error));
-        }),
+    // Las tiendas creadas desde el wizard reciben placeholders de catálogo;
+    // la variante verdaderamente vacía se cubre en la galería canónica de Ui.
+    await page.route("**/__studio/components", (route) =>
+      route.fulfill({ path: "apps/studio/dist/index.html" }),
     );
-    await page.reload();
-    await createCleanStore(page, "Tienda A22");
-    await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
+    await page.goto(`${studioUrl}/__studio/components`);
+    await expect(page.getByRole("heading", { name: "Galería de componentes" })).toBeVisible();
 
     const empty = page.getByTestId("ui-empty-state").filter({ hasText: "El catálogo está vacío" });
     await expect(empty).toBeVisible();
     await expect(empty.getByRole("button", { name: "Agregar producto" })).toBeVisible();
 
-    await page.getByRole("button", { name: "Volver a tiendas" }).click();
+    await page.unroute("**/__studio/components");
+    await page.goto(studioUrl);
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
     await page.getByRole("button", { name: "Nueva tienda", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Crear tienda" });

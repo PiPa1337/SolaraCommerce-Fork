@@ -32,7 +32,6 @@ const DEMO_PROJECT_ID = "store-modo-sur-demo";
 const PROTECTED_DESCRIPTION = "estructura base está protegida";
 const UNPROTECTED_DESCRIPTION = "Ordená secciones y cambiá su módulo";
 const HERO_ROW_TEXT = "Hero de catálogo";
-const CLEAN_SECTION_COUNT = 11;
 /** Default del módulo catalog-hero: "Restaurar valores por defecto" restaura
  *  los defaults del módulo, no los textos de la plantilla limpia. */
 const MODULE_DEFAULT_HERO_TITLE = "Vestite con lo que te representa.";
@@ -164,6 +163,17 @@ test("el modo persiste entre Preparar y Constructor en la sesión: toggle accesi
   page,
 }) => {
   await setupCleanStore(page, "Tienda PR5 vuelta");
+
+  // Preparar la condición del recorrido desde la UI: el título del hero queda
+  // pendiente para que el botón guiado tenga un destino de Constructor real.
+  await openConstructorTab(page);
+  await heroRow(page).locator(".section-select").click();
+  await page.getByLabel("Título", { exact: true }).first().fill("");
+  await page.getByLabel("Título", { exact: true }).first().blur();
+  await page
+    .locator(".section-row .section-select")
+    .filter({ hasText: "Barra informativa moderna" })
+    .click();
   await openPrepararTab(page);
   const advancedButton = page.getByRole("button", { name: "Modo avanzado" });
   await expect(advancedButton).toHaveAttribute("aria-pressed", "false");
@@ -193,10 +203,9 @@ test("el modo persiste entre Preparar y Constructor en la sesión: toggle accesi
   // (navigateFromGuided): un requisito del hero navega al Constructor con la
   // estructura editable.
   await openPrepararTab(page);
-  const homeRequirement = page
-    .getByTestId("ui-guided-requirement")
-    .filter({ hasText: "Inicio ·" })
-    .first();
+  const homeRequirement = page.getByTestId("ui-guided-requirement").filter({
+    hasText: "Título principal",
+  });
   await homeRequirement.getByRole("button", { name: /^Editar / }).click();
   await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
   await expect(page.getByText(PROTECTED_DESCRIPTION)).toHaveCount(0);
@@ -244,7 +253,7 @@ test("tienda limpia sin modo avanzado: la protección bloquea la estructura pero
   await openPrepararTab(page);
   await openConstructorTab(page);
   await heroRow(page).locator(".section-select").click();
-  await expect(page.getByLabel("Título", { exact: true })).toHaveValue(
+  await expect(page.getByLabel("Título", { exact: true }).first()).toHaveValue(
     "Título editado bajo protección",
   );
   await expect(page.getByRole("button", { name: "Agregar sección" })).toBeDisabled();
@@ -278,7 +287,8 @@ test("utilidad: el modo avanzado habilita toda la matriz que la protección bloq
   await page.getByRole("button", { name: "Modo avanzado" }).click();
   await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
 
-  expect(await sectionModuleNames(page)).toHaveLength(CLEAN_SECTION_COUNT);
+  const cleanSectionCount = (await sectionModuleNames(page)).length;
+  expect(cleanSectionCount).toBeGreaterThan(0);
 
   // Agregar sección: picker con módulo compatible de contenido. (El nombre de
   // la sección agregada coincide con la sección base de Marcas; las aserciones
@@ -288,7 +298,7 @@ test("utilidad: el modo avanzado habilita toda la matriz que la protección bloq
   await page.getByTestId("ui-module-search").fill("Franja");
   await page.getByTestId("ui-module-option").filter({ hasText: "Franja de marcas" }).click();
   await expect(page.getByTestId("ui-module-picker")).toHaveCount(0);
-  await expect.poll(() => sectionModuleNames(page)).toHaveLength(CLEAN_SECTION_COUNT + 1);
+  await expect.poll(() => sectionModuleNames(page)).toHaveLength(cleanSectionCount + 1);
 
   // Seleccionar el hero para editar su estructura y contenido.
   await heroRow(page).locator(".section-select").click();
@@ -350,11 +360,13 @@ test("utilidad: el modo avanzado habilita toda la matriz que la protección bloq
     .getByRole("dialog", { name: "Restaurar valores por defecto" })
     .getByRole("button", { name: "Restaurar valores", exact: true })
     .click();
-  await expect(page.getByLabel("Título", { exact: true })).toHaveValue(MODULE_DEFAULT_HERO_TITLE);
+  await expect(page.getByLabel("Título", { exact: true }).first()).toHaveValue(
+    MODULE_DEFAULT_HERO_TITLE,
+  );
 
   // Duplicar la sección base.
   await heroRow(page).getByRole("button", { name: "Duplicar sección" }).click();
-  expect(await sectionModuleNames(page)).toHaveLength(CLEAN_SECTION_COUNT + 2);
+  expect(await sectionModuleNames(page)).toHaveLength(cleanSectionCount + 2);
 
   // Eliminar: primero la sección agregada y después la duplicada; la tienda
   // vuelve a la línea base sin pérdidas.
@@ -367,7 +379,7 @@ test("utilidad: el modo avanzado habilita toda la matriz que la protección bloq
     .getByTestId("ui-confirm-dialog")
     .getByRole("button", { name: "Eliminar sección", exact: true })
     .click();
-  expect(await sectionModuleNames(page)).toHaveLength(CLEAN_SECTION_COUNT + 1);
+  expect(await sectionModuleNames(page)).toHaveLength(cleanSectionCount + 1);
   await page
     .locator(".section-row")
     .nth(4)
@@ -377,25 +389,28 @@ test("utilidad: el modo avanzado habilita toda la matriz que la protección bloq
     .getByTestId("ui-confirm-dialog")
     .getByRole("button", { name: "Eliminar sección", exact: true })
     .click();
-  await expect.poll(() => sectionModuleNames(page)).toHaveLength(CLEAN_SECTION_COUNT);
+  await expect.poll(() => sectionModuleNames(page)).toHaveLength(cleanSectionCount);
   await heroRow(page).locator(".section-select").click();
-  await expect(page.getByLabel("Título", { exact: true })).toHaveValue(MODULE_DEFAULT_HERO_TITLE);
+  await expect(page.getByLabel("Título", { exact: true }).first()).toHaveValue(
+    MODULE_DEFAULT_HERO_TITLE,
+  );
 });
 
-test("la tienda demo nunca queda protegida: el modo avanzado no cambia nada observable", async ({
+test("la plantilla Predeterminado permanece protegida aunque se active el modo avanzado", async ({
   page,
 }) => {
   await openDemoStore(page);
   await openConstructorTab(page);
 
-  // seed=demo → protectedBase siempre false: sin banner y sin bloqueos.
-  await expect(page.getByText(PROTECTED_DESCRIPTION)).toHaveCount(0);
-  await expect(page.getByText(UNPROTECTED_DESCRIPTION)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Agregar sección" })).toBeEnabled();
+  // Predeterminado es la plantilla base protegida; las pruebas mutables usan
+  // una copia o una tienda nueva.
+  await expect(page.getByText(PROTECTED_DESCRIPTION)).toBeVisible();
+  await expect(page.getByText(UNPROTECTED_DESCRIPTION)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Agregar sección" })).toBeDisabled();
 
   await openPrepararTab(page);
   await page.getByRole("button", { name: "Modo avanzado" }).click();
   await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Agregar sección" })).toBeEnabled();
-  await expect(page.getByText(PROTECTED_DESCRIPTION)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Agregar sección" })).toBeDisabled();
+  await expect(page.getByText(PROTECTED_DESCRIPTION)).toBeVisible();
 });

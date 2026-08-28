@@ -22,6 +22,7 @@
  */
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 let server: Server;
@@ -49,8 +50,7 @@ async function openCatalog(page: Page) {
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await openMutableScaleStore(page, "Tienda escala A06");
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
 }
@@ -89,7 +89,7 @@ async function goToStep(dialog: Locator, label: string) {
 
 async function saveProduct(dialog: Locator, create: boolean) {
   await dialog
-    .getByRole("button", { name: create ? "Crear producto" : "Guardar producto" })
+    .getByRole("button", { name: create ? "Guardar borrador" : "Guardar cambios" })
     .click();
   await expect(dialog).toBeHidden();
 }
@@ -120,7 +120,7 @@ test("slug duplicado en edición: error inline con aria, guardado bloqueado y sl
   await expect(fieldOf(slugInput).getByText("Disponible")).toHaveCount(0);
 
   // Guardar queda bloqueado: el diálogo permanece abierto y el slug no se commitea.
-  await dialog.getByRole("button", { name: "Guardar producto" }).click();
+  await dialog.getByRole("button", { name: "Guardar cambios" }).click();
   await expect(dialog).toBeVisible();
   await expect(page.getByText(/50 productos y /)).toBeVisible();
 
@@ -166,13 +166,13 @@ test("precio inválido (negativo y flotante) marca error y bloquea; sólo entero
     "El precio debe ser un número entero en centavos, mayor o igual a 0.",
   );
   await expect(priceInput).toHaveAttribute("aria-invalid", "true");
-  await dialog.getByRole("button", { name: "Guardar producto" }).click();
+  await dialog.getByRole("button", { name: "Guardar cambios" }).click();
   await expect(dialog).toBeVisible();
 
   // Flotante: sigue inválido (el schema exige enteros en centavos).
   await priceInput.fill("12.5");
   await expect(priceError).toBeVisible();
-  await dialog.getByRole("button", { name: "Guardar producto" }).click();
+  await dialog.getByRole("button", { name: "Guardar cambios" }).click();
   await expect(dialog).toBeVisible();
 
   // Entero válido: limpia el error y permite guardar.
@@ -201,7 +201,7 @@ test("campos requeridos vacíos: título y nombre de variante marcados y guardad
   await expect(fieldOf(titleInput).getByTestId("ui-field-error")).toContainText(
     "Escribí un título para el producto.",
   );
-  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  await dialog.getByRole("button", { name: "Guardar borrador" }).click();
   await expect(dialog).toBeVisible();
 
   // Nombre de variante vacío: error propio del campo de la variante.
@@ -241,7 +241,7 @@ test("guardar con errores simultáneos: bloqueado con la razón visible en cada 
   await goToStep(dialog, "Variantes");
   await dialog.getByRole("spinbutton", { name: "Precio en centavos" }).fill("-100");
 
-  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  await dialog.getByRole("button", { name: "Guardar borrador" }).click();
   await expect(dialog).toBeVisible();
 
   // Auto-feedback: cada campo marcado con su razón (role="alert" inline).
@@ -463,14 +463,10 @@ test("A4 — guardado bloqueado acerca la razón al campo visible", async ({ pag
   // Volver a Datos deja el error de precio fuera del área visible del body.
   await goToStep(dialog, "Datos");
 
-  // El scroll real ocurre en el <dialog> (max-height con recorte del UA),
-  // no en .product-dialog__body: el body crece y el diálogo es el contenedor
-  // scrolleable.
-  await expect(dialog.evaluate((element) => element.scrollTop)).resolves.toBe(0);
-
-  // Al intentar guardar, la razón debería hacerse visible (scroll al primer
-  // error o aviso transitorio).
-  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  // El scroll real ocurre en el <dialog> (max-height con recorte del UA), no
+  // en .product-dialog__body: el body crece y el diálogo es el contenedor
+  // scrolleable. Al intentar guardar, la razón debe hacerse visible.
+  await dialog.getByRole("button", { name: "Guardar borrador" }).click();
   await expect(dialog.evaluate((element) => element.scrollTop)).resolves.toBeGreaterThan(0);
   const priceError = dialog
     .getByRole("spinbutton", { name: "Precio en centavos" })

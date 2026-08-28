@@ -30,9 +30,26 @@ async function openDemoDetail(page: Page) {
   return page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" });
 }
 
+async function openMutableDetail(page: Page) {
+  const baseDetail = await openDemoDetail(page);
+  await baseDetail.getByRole("button", { name: "Duplicar", exact: true }).click();
+  const duplicateDialog = page.getByRole("dialog", { name: "Duplicar tienda" });
+  await expect(duplicateDialog).toBeVisible();
+  await duplicateDialog.getByTestId("ui-duplicate-name").fill("Tienda archivable QA");
+  await duplicateDialog.getByRole("button", { name: "Duplicar", exact: true }).click();
+  await expect(duplicateDialog).toBeHidden();
+  await page
+    .locator(".dashboard-store-card")
+    .filter({ hasText: "Tienda archivable QA" })
+    .first()
+    .locator(".dashboard-store-card__button")
+    .click();
+  return page.getByRole("region", { name: "Tienda seleccionada: Tienda archivable QA" });
+}
+
 test("archivar confirma, muestra deshacer y restaura la tienda", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  const detail = await openDemoDetail(page);
+  const detail = await openMutableDetail(page);
 
   // T4.12: el archivo de tienda confirma con el diálogo unificado (ya no hay
   // window.confirm nativo).
@@ -41,21 +58,24 @@ test("archivar confirma, muestra deshacer y restaura la tienda", async ({ page }
   await expect(confirm).toBeVisible();
   await confirm.getByRole("button", { name: "Archivar", exact: true }).click();
   await expect(confirm).toBeHidden();
-  // El storage reset siembra sólo Predeterminado: archivarla deja cero visibles.
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
+  // Predeterminado permanece protegido; la copia mutable archivada deja una
+  // tienda activa visible.
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
 
-  const toast = page.getByTestId("ui-toast");
+  const toast = page.getByTestId("ui-toast").filter({ hasText: "archivada" });
   await expect(toast).toBeVisible();
   await expect(toast).toContainText("Deshacer");
   await toast.getByRole("button", { name: "Deshacer" }).click();
 
-  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
+  await expect(page.locator(".dashboard-cosmic-count")).toHaveText("2 visibles");
   // A12: restaurar confirma con un toast propio (asimetría con archivar resuelta).
-  await expect(page.getByTestId("ui-toast")).toContainText("restaurada");
+  await expect(page.getByTestId("ui-toast").filter({ hasText: "restaurada" })).toContainText(
+    "restaurada",
+  );
   await expect(
     page
       .locator(".dashboard-store-card")
-      .filter({ hasText: "Predeterminado" })
+      .filter({ hasText: "Tienda archivable QA" })
       .first()
       .locator(".dashboard-store-card__status"),
   ).toHaveText("Activa");

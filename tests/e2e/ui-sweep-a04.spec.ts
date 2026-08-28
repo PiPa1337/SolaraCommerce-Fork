@@ -12,6 +12,7 @@
  */
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 let server: Server;
@@ -45,8 +46,7 @@ async function openCatalog(page: Page) {
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await openMutableScaleStore(page, "Tienda escala A04");
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
 }
@@ -76,7 +76,7 @@ async function openEditDialog(page: Page, title: string): Promise<Locator> {
 
 async function saveDialog(dialog: Locator, create: boolean) {
   await dialog
-    .getByRole("button", { name: create ? "Crear producto" : "Guardar producto" })
+    .getByRole("button", { name: create ? "Guardar borrador" : "Guardar cambios" })
     .click();
   await expect(dialog).toBeHidden();
 }
@@ -153,16 +153,20 @@ test("el picker de imágenes cambia la imagen del mini preview y persiste", asyn
   await expect(previewImg).toBeVisible();
 
   // Quitar la imagen principal: el preview pasa al placeholder (efecto real).
-  const jeanOption = dialog.locator(".product-asset-option").filter({ hasText: "Jean recto azul" });
-  const jeanInput = jeanOption.locator("input");
-  await expect(jeanInput).toBeChecked();
-  await jeanInput.uncheck();
+  const productAssets = dialog.locator(".product-asset-picker").first();
+  const selectedAssets = productAssets.locator("input:checked");
+  const selectedCount = await selectedAssets.count();
+  expect(selectedCount).toBeGreaterThan(0);
+  for (let index = selectedCount - 1; index >= 0; index -= 1) {
+    await selectedAssets.nth(index).uncheck();
+  }
   await expect(previewCard(dialog).getByText("Sin imagen")).toBeVisible();
 
   // Agregar otra imagen: el preview muestra su source exacto.
-  const camisaOption = dialog
+  const camisaOption = productAssets
     .locator(".product-asset-option")
-    .filter({ hasText: "Camisa a cuadros" });
+    .filter({ hasText: "Camisa a cuadros" })
+    .first();
   await camisaOption.locator("input").check();
   const camisaSrc = await camisaOption.locator("img").getAttribute("src");
   await expect(previewImg).toHaveAttribute("src", camisaSrc ?? "");
@@ -176,13 +180,15 @@ test("el picker de imágenes cambia la imagen del mini preview y persiste", asyn
     reopened
       .locator(".product-asset-option")
       .filter({ hasText: "Camisa a cuadros" })
-      .locator("input"),
+      .locator("input")
+      .first(),
   ).toBeChecked();
   await expect(
     reopened
       .locator(".product-asset-option")
       .filter({ hasText: "Jean recto azul" })
-      .locator("input"),
+      .locator("input")
+      .first(),
   ).not.toBeChecked();
 });
 
@@ -210,7 +216,7 @@ test("el precio en centavos vacío da error inline con aria, bloquea y permite r
   await expect(price).toHaveAttribute("aria-describedby", /./);
 
   // Guardar bloqueado: el diálogo permanece abierto.
-  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  await dialog.getByRole("button", { name: "Guardar borrador" }).click();
   await expect(dialog).toBeVisible();
 
   // Texto no entero: error específico visible + aria, sin rebote al valor previo.
@@ -222,7 +228,7 @@ test("el precio en centavos vacío da error inline con aria, bloquea y permite r
   await expect(integerError).toBeVisible();
   await expect(integerError).toHaveAttribute("role", "alert");
   await expect(price).toHaveAttribute("aria-invalid", "true");
-  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  await dialog.getByRole("button", { name: "Guardar borrador" }).click();
   await expect(dialog).toBeVisible();
 
   // Retipear desde cero: el valor entra limpio (sin dígitos residuales del viejo).
@@ -367,7 +373,7 @@ test("el título vacío muestra error inline visible con aria y bloquea el guard
   await expect(fieldError).toHaveAttribute("role", "alert");
   await expect(titleInput).toHaveAttribute("aria-invalid", "true");
 
-  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  await dialog.getByRole("button", { name: "Guardar borrador" }).click();
   await expect(dialog).toBeVisible();
 
   await titleInput.fill("Título válido A04");
@@ -395,7 +401,7 @@ test("el slug inválido y el duplicado muestran error inline con aria y bloquean
   await expect(slugInput).toHaveAttribute("aria-invalid", "true");
   await expect(slugField.getByText("Disponible", { exact: true })).toHaveCount(0);
 
-  await dialog.getByRole("button", { name: "Guardar producto" }).click();
+  await dialog.getByRole("button", { name: "Guardar cambios" }).click();
   await expect(dialog).toBeVisible();
 
   // Slug duplicado (otro producto del catálogo): error específico y bloqueo.
@@ -406,7 +412,7 @@ test("el slug inválido y el duplicado muestran error inline con aria y bloquean
   await expect(duplicateError).toBeVisible();
   await expect(slugInput).toHaveAttribute("aria-invalid", "true");
 
-  await dialog.getByRole("button", { name: "Guardar producto" }).click();
+  await dialog.getByRole("button", { name: "Guardar cambios" }).click();
   await expect(dialog).toBeVisible();
 
   // Al corregir, el slug vuelve a estar disponible y el guardado persiste.
@@ -440,7 +446,7 @@ test("guardar con error en otro paso acerca la razón al primer error (regresió
   await expect(priceError).not.toBeInViewport();
 
   // Al intentar guardar, la razón debe hacerse visible (scroll al primer error).
-  await dialog.getByRole("button", { name: "Crear producto" }).click();
+  await dialog.getByRole("button", { name: "Guardar borrador" }).click();
   await expect(dialog).toBeVisible();
   await expect.poll(() => dialog.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
   await expect(priceError).toBeInViewport();

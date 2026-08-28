@@ -28,7 +28,7 @@ export function saveIndicatorLabel(
   savedAt: number | null,
 ): string {
   if (state === "saving") return "Guardando…";
-  if (state === "saved" && dirty) return "Cambios pendientes";
+  if (state !== "error" && dirty) return "Cambios pendientes";
   if (state === "saved") return savedAt ? `Guardado ${formatSaveTime(savedAt)}` : "Guardado";
   if (state === "site-outdated") return "Sitio anterior conservado";
   return "Error al guardar";
@@ -59,6 +59,7 @@ export function ManagedPersistenceControls({
   onError,
   onConflict,
   onSaved,
+  allowProtectedWrite = false,
   blocked = false,
 }: {
   project: StoreProjectV1;
@@ -69,6 +70,7 @@ export function ManagedPersistenceControls({
   onError(message: string): void;
   onConflict?(reason: LocalStorageError): void;
   onSaved?(receipt: LocalSaveReceipt): void;
+  allowProtectedWrite?: boolean;
   blocked?: boolean;
 }) {
   const [state, setState] = useState<DiskSaveState>("saved");
@@ -120,7 +122,9 @@ export function ManagedPersistenceControls({
     try {
       await draftQueue.flush();
       const { persistProjectToDisk } = await import("../lib/localProjectRepository");
-      const result = await persistProjectToDisk(project, diskVersionRef.current);
+      const result = await persistProjectToDisk(project, diskVersionRef.current, {
+        allowProtectedWrite,
+      });
       await clearRecoveryDraft(project.id);
       savedProjectRef.current = project;
       diskVersionRef.current = result.receipt.version;
@@ -141,7 +145,7 @@ export function ManagedPersistenceControls({
     } finally {
       saveInFlightRef.current = false;
     }
-  }, [blocked, draftQueue, onConflict, onError, onSaved, project]);
+  }, [allowProtectedWrite, blocked, draftQueue, onConflict, onError, onSaved, project]);
 
   useEffect(() => {
     saveRef.current = save;

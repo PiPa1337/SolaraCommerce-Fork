@@ -13,6 +13,7 @@ import { createServer } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
+import { readHashedStorefrontCss } from "./export-helpers";
 
 test.setTimeout(process.env.CI ? 60_000 : 30_000);
 
@@ -42,7 +43,7 @@ function exportWith(theme: ThemeOverride): {
   const store = structuredClone(catalogModernStore);
   store.theme = { ...store.theme, ...theme };
   const files = exportProject(store, { mode: "production" }).files;
-  const css = String(files.get("assets/storefront.css") ?? "");
+  const css = readHashedStorefrontCss(files);
   return { files, css };
 }
 
