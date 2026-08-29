@@ -135,6 +135,77 @@ describe("control nativo del agente", () => {
     }
   });
 
+  it("incorpora un asset stageado al actualizar la imagen de una categoría", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-agent-category-image-"));
+    try {
+      const storage = createLocalProjectStorage({
+        applicationRoot: root,
+        projectsRoot: join(root, "proyectos"),
+        stagingRoot: join(root, ".solara-runtime", "transactions"),
+      });
+      const controller = createAgentController({ storage, applicationRoot: root });
+      const storeId = "store-category-image-test";
+      const categoryId = "category-image-test";
+      const initialPlan = await controller.createPlan({
+        idempotencyKey: "agent-test-category-image-initial-001",
+        operations: [
+          {
+            type: "store.create",
+            storeId,
+            name: "Categorías",
+            slug: "categorias",
+            source: { kind: "clean" },
+          },
+          {
+            type: "category.create",
+            categoryId,
+            slug: "categoria",
+            title: "Categoría",
+            description: "Categoría de prueba.",
+          },
+        ],
+      });
+      await controller.commitPlan({
+        planId: initialPlan.planId,
+        idempotencyKey: "agent-test-category-image-initial-001",
+      });
+      const staged = await controller.stageAsset({
+        name: "categoria.png",
+        alt: "Categoría",
+        mimeType: "image/png",
+        source: { kind: "base64", data: validPng },
+      });
+      const plan = await controller.createPlan({
+        storeId,
+        baseVersion: 1,
+        idempotencyKey: "agent-test-category-image-001",
+        operations: [
+          {
+            type: "category.update",
+            categoryId,
+            changes: { imageId: staged.assetId },
+          },
+        ],
+      });
+      expect(plan.diff.categories.updated).toContain(categoryId);
+      expect(plan.diff.assets.created).toContain(staged.assetId);
+
+      await controller.commitPlan({
+        planId: plan.planId,
+        idempotencyKey: "agent-test-category-image-001",
+      });
+      const current = await storage.readCurrent(storeId);
+      if (!current) throw new Error("Falta el respaldo del test.");
+      const project = readProjectArchive(Buffer.from(current.bytes).toString("utf8"));
+      expect(project.categories.find((candidate) => candidate.id === categoryId)?.imageId).toBe(
+        staged.assetId,
+      );
+      expect(project.assets.some((asset) => asset.id === staged.assetId)).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("recupera planes, sube assets por chunks, mantiene lock y ejecuta jobs", async () => {
     const root = await mkdtemp(join(tmpdir(), "solara-agent-durable-"));
     try {

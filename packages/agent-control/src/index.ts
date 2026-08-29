@@ -2279,6 +2279,10 @@ export class AgentController {
     for (const operation of rawOperations) {
       if (operation.type === "asset.attach") {
         referencedAssetIds.add(operation.assetId);
+      } else if (operation.type === "category.create") {
+        if (operation.imageId) referencedAssetIds.add(operation.imageId);
+      } else if (operation.type === "category.update") {
+        if (operation.changes.imageId) referencedAssetIds.add(operation.changes.imageId);
       } else if (operation.type === "product.create") {
         for (const imageId of operation.imageIds) referencedAssetIds.add(imageId);
       } else if (operation.type === "product.update") {

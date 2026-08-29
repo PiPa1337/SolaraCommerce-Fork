@@ -1,5 +1,13 @@
 # Changelog
 
+### Portadas cuadradas para categorías por canal nativo (2026-08-29)
+
+- RM Descartables ahora usa las seis portadas cuadradas generadas para sus
+  categorías públicas, cargadas y vinculadas mediante `SolaraCommerce-Agent`.
+- El canal nativo incorpora correctamente los assets stageados cuando una
+  operación `category.create` o `category.update` define `imageId`, incluyendo
+  sus variantes responsive y la validación de dimensiones.
+
 ### Etiquetas de categorías con más presencia (2026-08-29)
 
 - Se amplió el padding de la caja de fondo del nombre de categoría en Catalog
