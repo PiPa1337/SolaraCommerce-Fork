@@ -1,5 +1,11 @@
 # Changelog
 
+### Controles de búsqueda cuadrados (2026-08-29)
+
+- La búsqueda pública, el diálogo, el acceso del navbar, el menú móvil y sus
+  fallbacks sin JavaScript usan esquinas cuadradas en desktop, tablet y mobile.
+- Se agregó una regresión responsive que mide los radios computados y verifica
+  que no aparezca overflow horizontal.
 ### Footer con categorías públicas y acceso al carrito (2026-08-29)
 
 - `Explorar` conserva Inicio y Buscar productos, y suma Abrir carrito con

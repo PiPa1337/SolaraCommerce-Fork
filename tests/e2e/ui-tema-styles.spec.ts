@@ -159,7 +159,7 @@ test("colores: los 7 tokens del editor pintan las superficies modernas del sitio
   }
 });
 
-test("radio: las superficies modernas siguen el slider y el buscador usa el mismo radio", async ({
+test("radio: las superficies siguen el slider y los controles de búsqueda son cuadrados", async ({
   page,
 }) => {
   const base = {
@@ -190,7 +190,7 @@ test("radio: las superficies modernas siguen el slider y el buscador usa el mism
       });
     expect(metrics.media).toBe("40px");
     expect(metrics.hero).toBe("40px");
-    expect(metrics.search).toBe("40px");
+    expect(metrics.search).toBe("0px");
   } finally {
     await site40.close();
   }

@@ -167,16 +167,16 @@ test("radius: el token llega al preview y al sitio y el radio visual cambia (T5)
   const css0 = exportCss(0, 1);
   expect(css40).toMatch(/--solara-radius:\s*40px;/);
   expect(css0).toMatch(/--solara-radius:\s*0px;/);
-  // El skin moderno tiene 37 consumidores declarados tras incorporar la
-  // superficie adicional del checkout.
-  expect(css40.match(/border-radius:\s*var\(--solara-radius\)/g) ?? []).toHaveLength(37);
+  // El skin moderno tiene 38 consumidores declarados; los controles de
+  // búsqueda son deliberadamente cuadrados y no dependen del radio del tema.
+  expect(css40.match(/border-radius:\s*var\(--solara-radius\)/g) ?? []).toHaveLength(38);
 
   // Comportamiento CORREGIDO (fix Ola 3): las superficies del skin moderno
   // consumen var(--solara-radius); el render del preview difiere entre 40 y 0.
   expect(fingerprint40).not.toBe(fingerprint0);
 });
 
-test("radius: el buscador del header sigue el radio configurable (T5)", async ({ page }) => {
+test("radius: los controles de búsqueda permanecen cuadrados (T5)", async ({ page }) => {
   await setupCleanStore(page, "T5 radius fix");
   await openThemeTab(page);
 
@@ -198,12 +198,12 @@ test("radius: el buscador del header sigue el radio configurable (T5)", async ({
     .evaluate((element) => getComputedStyle(element).borderRadius);
   expect(heroRadius).toBe("40px");
 
-  // ...y el campo de búsqueda del header usa el mismo radio que el resto.
+  // ...pero los controles de búsqueda mantienen la geometría cuadrada.
   const searchRadius = await previewRoot(page)
     .locator(".catalog-search-link")
     .first()
     .evaluate((element) => getComputedStyle(element).borderRadius);
-  expect(searchRadius).toBe("40px");
+  expect(searchRadius).toBe("0px");
 });
 
 test("spacingScale: el valor llega a la var y las grillas modernas cambian su gap (T5)", async ({

@@ -857,14 +857,19 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     expect(styles).not.toMatch(/\.solara-pagination a \{[^}]*border-radius: 999px/);
   });
 
-  it("aplica el radio del tema al input del diálogo de búsqueda", () => {
+  it("mantiene cuadrados todos los controles de búsqueda", () => {
     const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
     if (!styles) throw new Error("Falta el bloque de estilos catalog-modern");
 
-    expect(styles).toMatch(
-      /\.catalog-search-dialog-controls input \{[^}]*border-radius: var\(--solara-radius\)[^}]*\}/,
+    expect(STORE_BASE_STYLES).toContain(
+      "[data-solara-store] .solara-search-form input {\n  border-radius: 0;\n}",
     );
-    expect(styles).not.toMatch(/\.catalog-search-dialog-controls input \{[^}]*border-radius: 999px/);
+    expect(styles).toMatch(/\.catalog-search-link \{[^}]*border-radius: 0[^}]*\}/);
+    expect(styles).toMatch(/\.catalog-search-dialog-heading button \{[^}]*border-radius: 0[^}]*\}/);
+    expect(styles).toMatch(/\.catalog-search-dialog-controls input \{[^}]*border-radius: 0[^}]*\}/);
+    expect(styles).toMatch(
+      /\.catalog-search-dialog-controls \.catalog-primary-action \{[^}]*border-radius: 0[^}]*\}/,
+    );
   });
 
   it("evita que el email del footer se parta a mitad de palabra", () => {

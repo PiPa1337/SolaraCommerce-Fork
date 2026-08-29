@@ -2553,6 +2553,84 @@ test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, t
       path: testInfo.outputPath(`cart-page-${viewport.width}x${viewport.height}.png`),
       fullPage: true,
     });
+test("V2 búsqueda: todos los controles son cuadrados en desktop, tablet y mobile", async ({
+  page,
+}, testInfo) => {
+  for (const viewport of [
+    { width: 1920, height: 968, label: "desktop" },
+    { width: 1024, height: 768, label: "tablet" },
+    { width: 390, height: 844, label: "mobile" },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(new URL("/buscar/", serverUrl).toString());
+
+    const searchForm = page.locator(".solara-search-form");
+    await expect(searchForm).toBeVisible();
+    const pageSearchRadii = await searchForm.evaluate((form) => {
+      const input = form.querySelector<HTMLElement>("input");
+      const submit = form.querySelector<HTMLElement>("button[type='submit']");
+      if (!input || !submit) throw new Error("Faltan controles en el formulario de búsqueda.");
+      return {
+        input: getComputedStyle(input).borderRadius,
+        submit: getComputedStyle(submit).borderRadius,
+      };
+    });
+    expect(pageSearchRadii, viewport.label).toEqual({ input: "0px", submit: "0px" });
+
+    await page.goto(serverUrl);
+    await page.locator("[data-catalog-search-open]").first().click();
+    const dialog = page.locator("#catalog-search-dialog");
+    await expect(dialog).toBeVisible();
+    const dialogRadii = await dialog.evaluate((root) => {
+      const radiusOf = (selector: string): string => {
+        const element = root.querySelector<HTMLElement>(selector);
+        if (!element) throw new Error(`Falta ${selector} en el diálogo de búsqueda.`);
+        return getComputedStyle(element).borderRadius;
+      };
+      return {
+        dialog: getComputedStyle(root).borderRadius,
+        close: radiusOf("[data-catalog-search-close]"),
+        input: radiusOf(".catalog-search-dialog-controls input"),
+        submit: radiusOf(".catalog-search-dialog-controls button[type='submit']"),
+      };
+    });
+    expect(dialogRadii, viewport.label).toEqual({
+      dialog: "0px",
+      close: "0px",
+      input: "0px",
+      submit: "0px",
+    });
+
+    await page.screenshot({
+      path: testInfo.outputPath(
+        `search-square-${viewport.label}-${viewport.width}x${viewport.height}.png`,
+      ),
+      fullPage: true,
+    });
+    await page.locator("[data-catalog-search-close]").click();
+
+    if (viewport.width <= 767) {
+      await page.locator("[data-catalog-menu-open]").click();
+      const mobileSearch = page.locator(".catalog-mobile-search__field");
+      await expect(mobileSearch).toBeVisible();
+      const mobileSearchRadii = await mobileSearch.evaluate((field) => {
+        const submit = field.querySelector<HTMLElement>("button");
+        if (!submit) throw new Error("Falta el botón del buscador móvil.");
+        return {
+          field: getComputedStyle(field).borderRadius,
+          submit: getComputedStyle(submit).borderRadius,
+        };
+      });
+      expect(mobileSearchRadii, viewport.label).toEqual({ field: "0px", submit: "0px" });
+      await page.locator("[data-catalog-menu-close]").click();
+    }
+
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+      viewport.label,
+    ).toBeLessThanOrEqual(viewport.width);
+  }
+});
   }
 });
 
