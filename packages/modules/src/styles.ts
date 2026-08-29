@@ -2328,6 +2328,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-review small { color: var(--catalog-muted); font-size: .7rem; }
 [data-solara-store].catalog-modern .catalog-cart-drawer { position: fixed; z-index: 50; inset: 0 0 0 auto; display: flex; width: min(440px, 100%); flex-direction: column; padding: 1.25rem; overflow: hidden; transform: translateX(105%); background: var(--catalog-paper); box-shadow: -16px 0 50px color-mix(in srgb, var(--catalog-ink) 14%, transparent); transition: transform var(--solara-motion-normal, 260ms) var(--solara-motion-easing, cubic-bezier(.16,1,.3,1)); }
 [data-solara-store].catalog-modern .catalog-cart-drawer .catalog-cart-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+[data-solara-store].catalog-modern .catalog-cart-drawer[data-cart-empty="true"] .catalog-cart-scroll { flex: 0 0 auto; overflow: hidden; }
+[data-solara-store].catalog-modern .catalog-cart-drawer[data-cart-empty="true"] .catalog-cart-summary,
+[data-solara-store].catalog-modern .catalog-cart-drawer[data-cart-empty="true"] .catalog-checkout-form,
+[data-solara-store].catalog-modern .catalog-cart-drawer[data-cart-empty="true"] .catalog-drawer-footer { display: none; }
 [data-solara-store].catalog-modern .catalog-cart-drawer .catalog-drawer-footer { flex: 0 0 auto; display: grid; gap: .4rem; margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--catalog-border); background: var(--catalog-paper); }
 [data-solara-store].catalog-modern .catalog-cart-drawer .catalog-drawer-footer .catalog-primary-action { width: 100%; }
 [data-solara-store].catalog-modern .catalog-cart-drawer[data-open="true"] { transform: translateX(0); }

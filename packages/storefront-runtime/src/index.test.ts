@@ -418,6 +418,12 @@ describe("carrito y checkout del drawer (A29)", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain(`\`\${label}, \${count} productos\``);
   });
 
+  it("marca el drawer cuando el carrito está vacío para compactar su estado", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      "drawer.dataset.cartEmpty = String(cart.length === 0);",
+    );
+  });
+
   it("cierra el drawer con Escape y devuelve el foco al trigger", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain('event.key === "Escape"');
     expect(STOREFRONT_RUNTIME_JS).toContain("trigger ?? document.activeElement");
@@ -425,7 +431,7 @@ describe("carrito y checkout del drawer (A29)", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("syncCartToggleExpanded(false)");
   });
 
-  it("permite seguir comprando desde el drawer sin perder el carrito", () => {
+  it("conserva el cierre del drawer y la persistencia del carrito", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain('target.closest("[data-close-cart]")');
     expect(STOREFRONT_RUNTIME_JS).toContain("renderCart(true)");
   });

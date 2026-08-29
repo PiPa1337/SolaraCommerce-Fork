@@ -647,6 +647,9 @@ function storefrontBoot(): void {
     document.querySelectorAll<HTMLElement>("[data-cart-count]").forEach((element) => {
       element.textContent = count > 99 ? "99+" : String(count);
     });
+    document.querySelectorAll<HTMLElement>("[data-cart-drawer]").forEach((drawer) => {
+      drawer.dataset.cartEmpty = String(cart.length === 0);
+    });
     document.querySelectorAll<HTMLElement>("[data-solara-cart-open]").forEach((element) => {
       const label = element.dataset.cartLabel ?? "";
       element.setAttribute(

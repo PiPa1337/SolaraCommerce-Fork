@@ -1,5 +1,12 @@
 # Changelog
 
+### Drawer de carrito vacío compacto (2026-08-29)
+
+- El drawer del carrito vacío ya no muestra el botón «Seguir comprando» ni
+  controles de checkout sin productos, y no genera scroll interno innecesario.
+- El flujo con productos conserva el resumen, el formulario y el envío por
+  WhatsApp.
+
 ### Botón de WhatsApp con acento alternativo del tema (2026-08-29)
 
 - El botón de WhatsApp del formulario de contacto usa el token semántico

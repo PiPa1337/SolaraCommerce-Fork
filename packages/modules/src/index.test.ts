@@ -1029,6 +1029,20 @@ describe("catalog-product-grid: nombres accesibles únicos", () => {
   });
 });
 
+describe("catalog-cart-drawer: estado vacío", () => {
+  it("no renderiza un CTA de seguir comprando dentro del drawer", () => {
+    const section = catalogModernV2Store.sections.find(
+      (candidate) => candidate.moduleId === "catalog-cart-drawer",
+    );
+    if (!section) throw new Error("Fixture V2 sin drawer de carrito");
+    const html = renderSections(catalogModernV2Store, [section], { pageType: "home" });
+
+    expect(html).not.toContain("catalog-secondary-action");
+    expect(html).toContain("data-cart-drawer");
+    expect(html).toContain("data-cart-lines");
+  });
+});
+
 describe("catalog-hero V2 con CTA único de WhatsApp", () => {
   it("reemplaza las acciones del hero V2 por un único enlace wa.me sin mensaje", () => {
     const section = catalogModernV2Store.sections.find(

@@ -1701,10 +1701,43 @@ test("V2 ofrece una salida útil cuando el carrito está vacío", async ({ page 
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
-  await page.getByRole("button", { name: "Seguir comprando" }).click();
+  await page.getByRole("button", { name: "Cerrar carrito" }).click();
   await page.goto(new URL("/carrito/", serverUrl).toString());
   await expect(cartAction).toHaveText("Escribinos para coordinar");
   await expect(cartAction).toHaveAttribute("href", "/#contact-form");
+});
+
+test("V2 compacta el drawer cuando el carrito está vacío y no deja scroll en desktop", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(new URL("/", serverUrl).toString());
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+
+  const drawer = page.locator(".catalog-cart-drawer");
+  await page.locator("[data-solara-cart-open]").first().click();
+  await expect(drawer).toHaveAttribute("data-open", "true");
+  await expect(drawer).toHaveAttribute("data-cart-empty", "true");
+  await expect(drawer.getByRole("button", { name: "Seguir comprando" })).toHaveCount(0);
+  await expect(drawer.locator(".catalog-cart-summary")).toBeHidden();
+  await expect(drawer.locator(".catalog-checkout-form")).toBeHidden();
+  await expect(drawer.locator(".catalog-drawer-footer")).toBeHidden();
+
+  const scrollState = await drawer.evaluate((element) => {
+    const scroll = element.querySelector<HTMLElement>(".catalog-cart-scroll");
+    if (!scroll) throw new Error("No se encontró el área del carrito");
+    return {
+      drawerOverflowY: getComputedStyle(element).overflowY,
+      scrollOverflowY: getComputedStyle(scroll).overflowY,
+      drawerScrollable: element.scrollHeight - element.clientHeight,
+      scrollScrollable: scroll.scrollHeight - scroll.clientHeight,
+    };
+  });
+  expect(scrollState.drawerOverflowY).toBe("hidden");
+  expect(scrollState.scrollOverflowY).toBe("hidden");
+  expect(scrollState.drawerScrollable).toBeLessThanOrEqual(1);
+  expect(scrollState.scrollScrollable).toBeLessThanOrEqual(1);
 });
 
 test("V2 conserva el carrito cuando la navegación ocurre inmediatamente después de agregar", async ({
@@ -1806,8 +1839,8 @@ test("V2 conserva el carrito al navegar con enlaces del storefront", async ({ pa
   await page.reload();
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
   await expect(page.locator("[data-cart-count]").first()).toHaveText("1");
-  await expect(page.getByRole("button", { name: "Seguir comprando" })).toBeVisible();
-  await page.getByRole("button", { name: "Seguir comprando" }).click();
+  await expect(page.getByRole("button", { name: "Cerrar carrito" })).toBeVisible();
+  await page.getByRole("button", { name: "Cerrar carrito" }).click();
 
   await page.locator('a[href="/"]').first().click();
   await expect(page).toHaveURL(/\/$/);
@@ -1830,13 +1863,13 @@ test("V2 conserva todas las líneas y ofrece contacto desde el carrito", async (
   await page.reload();
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
   await expect(page.locator("[data-cart-count]").first()).toHaveText("1");
-  await page.getByRole("button", { name: "Seguir comprando" }).click();
+  await page.getByRole("button", { name: "Cerrar carrito" }).click();
 
   await page.goto(secondProduct);
   await expect(page.locator("[data-cart-count]").first()).toHaveText("1");
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
   await expect(page.locator("[data-cart-count]").first()).toHaveText("2");
-  await page.getByRole("button", { name: "Seguir comprando" }).click();
+  await page.getByRole("button", { name: "Cerrar carrito" }).click();
 
   await page.goto(new URL("/carrito/", serverUrl).toString());
   await expect(

@@ -46,7 +46,7 @@ test("el preview V2 conserva el carrito al navegar con enlaces internos", async 
     const firstTitleText = await firstTitle.textContent();
     await preview.getByRole("button", { name: "Agregar al carrito" }).click();
     await expect(preview.locator("[data-cart-count]").first()).toHaveText("1");
-    await preview.getByRole("button", { name: "Seguir comprando" }).click();
+    await preview.locator("[data-cart-drawer]").press("Escape");
 
     await preview.locator('a[href="/"]').first().click();
     await expect(preview.getByRole("heading", { level: 1 })).toBeVisible({
