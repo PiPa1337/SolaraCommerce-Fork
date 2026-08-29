@@ -301,8 +301,10 @@ export const STORE_BASE_STYLES = `
 }
 [data-solara-store] .solara-search-result img {
   width: 100%;
+  height: auto;
   aspect-ratio: 4 / 5;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   background: var(--solara-surface);
 }
 [data-solara-store] .solara-search-result h2 {
@@ -3327,7 +3329,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .solara-search-results-grid { grid-template-columns: repeat(auto-fill,minmax(11rem,1fr)); justify-content: start; gap: 3rem clamp(.8rem, 1.4vw, 1.6rem); max-width: 1320px; margin: 0 auto; }
 .cm.v2 .solara-search-result { min-width: 0; overflow: hidden; }
 .cm.v2 .solara-search-result a { gap: .75rem; }
-.cm.v2 .solara-search-result img { aspect-ratio: 1; object-fit: contain; transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out); }
+.cm.v2 .solara-search-result img { height: auto; aspect-ratio: 1; object-fit: contain; object-position: center; transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out); }
 .cm.v2 .solara-search-result a:hover img { transform: scale(1.035); }
 .cm.v2 .solara-search-result a > div { display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; }
 .cm.v2 .solara-search-result h2 { font-family: var(--solara-font-body, Arial, sans-serif); font-size: .98rem; font-weight: 600; letter-spacing: -.02em; }

@@ -2286,6 +2286,23 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
       "sizes",
       "(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem",
     );
+    await expect(results.locator("img").first()).toHaveCSS("object-fit", "contain");
+    const imageMetrics = await results
+      .locator("img")
+      .first()
+      .evaluate((element) => {
+        const imageRect = element.getBoundingClientRect();
+        const cardRect = element
+          .closest<HTMLElement>(".solara-search-result")
+          ?.getBoundingClientRect();
+        return {
+          imageWidth: imageRect.width,
+          imageHeight: imageRect.height,
+          cardWidth: cardRect?.width ?? 0,
+        };
+      });
+    expect(imageMetrics.imageWidth).toBeGreaterThan(imageMetrics.cardWidth * 0.98);
+    expect(imageMetrics.imageHeight).toBeCloseTo(imageMetrics.imageWidth, 0);
     if (viewport.width >= 1024) {
       const resultsMetrics = await results.evaluate((element) => {
         const gridRect = element.getBoundingClientRect();

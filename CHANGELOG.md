@@ -1,5 +1,10 @@
 # Changelog
 
+### Imágenes de búsqueda sin recorte (2026-08-29)
+
+- Las tarjetas de resultados de búsqueda mantienen una celda uniforme y muestran
+  completa la imagen del producto en Predeterminada, RM y nuevas tiendas.
+
 ### Drawer de carrito vacío compacto (2026-08-29)
 
 - El drawer del carrito vacío ya no muestra el botón «Seguir comprando» ni

@@ -899,6 +899,19 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     );
   });
 
+  it("muestra completa la imagen de cada resultado de búsqueda", () => {
+    const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
+    const modernStyles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!styles || !modernStyles) throw new Error("Faltan estilos de búsqueda");
+
+    expect(STORE_BASE_STYLES).toMatch(
+      /\.solara-search-result img \{[\s\S]*height: auto;[\s\S]*object-fit: contain;/,
+    );
+    expect(modernStyles).toMatch(
+      /\.cm\.v2 \.solara-search-result img \{[\s\S]*height: auto;[\s\S]*object-fit: contain;/,
+    );
+  });
+
   it("evita que el email del footer se parta a mitad de palabra", () => {
     const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
     if (!styles) throw new Error("Falta el bloque de estilos catalog-modern");
