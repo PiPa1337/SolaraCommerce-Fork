@@ -9,6 +9,8 @@
 - En CI, los tests de los workspaces se ejecutan serialmente para evitar
   contención entre fuzz/exportaciones; los límites extendidos sólo cubren
   tests deterministas de larga duración.
+- El job Linux de portabilidad instala Chromium antes de ejecutar sus pruebas
+  adversariales y visuales.
 
 ### CI E2E fragmentada (2026-08-28)
 

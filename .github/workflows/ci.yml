@@ -188,6 +188,9 @@ jobs:
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
+      - name: Instalar Chromium
+        run: pnpm playwright:install:chromium
+
       - name: Formato, tipos y tests unitarios
         run: pnpm check
 
