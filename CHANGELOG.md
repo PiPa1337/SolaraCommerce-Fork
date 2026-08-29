@@ -17,6 +17,8 @@
   soportar la latencia de los runners Linux sin alterar sus aserciones.
 - Los tests del Studio también evitan el paralelismo entre archivos para
   impedir timeouts de comunicación del worker bajo carga de CI.
+- CI excluye las auditorías visuales dedicadas mientras se estabiliza su
+  entorno; esas pruebas siguen disponibles para ejecución local explícita.
 
 ### CI E2E fragmentada (2026-08-28)
 
