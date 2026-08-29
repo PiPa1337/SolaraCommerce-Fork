@@ -1,4 +1,5 @@
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
+import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import { describe, expect, it } from "vitest";
 import { commitCanvasField } from "../../../apps/studio/src/features/canvas/canvasMutations";
 import { applyMutation, createMutationRegistry } from "./project-mutations.js";
@@ -28,6 +29,22 @@ describe("ProjectMutationRegistry", () => {
     expect(registryJson.sections).toEqual(agentJson.sections);
     expect(typeof registryJson.updatedAt).toBe("string");
     expect(registryJson.updatedAt >= agentJson.updatedAt).toBe(true);
+  });
+
+  it("actualiza un repeater que sólo existe como default del schema", () => {
+    const applied = applyMutation(catalogModernV2Store, createMutationRegistry(), {
+      type: "section.repeater.item.update",
+      sectionId: "modo-section-hero",
+      fieldKey: "benefits",
+      itemId: "hero-benefit-envios",
+      changes: { title: "Envíos nacionales" },
+    });
+    const hero = applied.project.sections.find((section) => section.id === "modo-section-hero");
+    const benefits = (hero?.settings as { benefits?: Array<{ id: string; title: string }> })
+      .benefits;
+    expect(benefits?.find((item) => item.id === "hero-benefit-envios")?.title).toBe(
+      "Envíos nacionales",
+    );
   });
 
   it("dos superficies con el mismo timestamp producen bytes idénticos", () => {

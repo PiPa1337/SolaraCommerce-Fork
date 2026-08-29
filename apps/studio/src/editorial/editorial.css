@@ -239,10 +239,9 @@
   width: min(1200px, calc(100% - 88px));
   border-right: 1px solid var(--line-strong);
   background: var(--bg);
-  box-shadow: 24px 0 70px rgb(45 39 30 / 0.16);
-  transition:
-    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 220ms ease;
+  contain: strict;
+  content-visibility: auto;
+  contain-intrinsic-size: 800px 600px;
 }
 
 .editor-pane--closed {
@@ -560,6 +559,9 @@ tbody tr:hover {
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
+  contain: layout paint;
+  content-visibility: auto;
+  contain-intrinsic-size: 72px;
 }
 
 .section-row:hover {

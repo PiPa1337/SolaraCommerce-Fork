@@ -12,7 +12,6 @@ import {
   Storefront,
 } from "@phosphor-icons/react";
 import { isBaseTemplate } from "@solara/project-schema/project-policy";
-import { motion, useReducedMotion } from "motion/react";
 import {
   memo,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -86,7 +85,6 @@ interface DashboardStoreCardProps {
   isPinned: boolean;
   compareMode: boolean;
   isCompared: boolean;
-  reduceMotion: boolean | null;
   cardButtonRefs: RefObject<Map<string, HTMLButtonElement>>;
   onOpen(id: string): void;
   onSelect(id: string): void;
@@ -95,9 +93,6 @@ interface DashboardStoreCardProps {
   onKeyDown(event: ReactKeyboardEvent<HTMLElement>, record: StoredProject): void;
 }
 
-/** Card de tienda memoizada (T5.4): los handlers son useCallback estables y
- *  los datos vienen por referencia, así la selección/fijación sólo re-renderiza
- *  las cards afectadas mientras se escribe en la búsqueda. */
 const DashboardStoreCard = memo(function DashboardStoreCard({
   record,
   index,
@@ -105,7 +100,6 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
   isPinned,
   compareMode,
   isCompared,
-  reduceMotion,
   cardButtonRefs,
   onOpen,
   onSelect,
@@ -117,18 +111,10 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
   const updatedLabel = formatDate(record.updatedAt);
   const protectedTemplate = isBaseTemplate(record.project);
   return (
-    <motion.article
+    <article
       className={`dashboard-store-card${isSelected ? " is-selected" : ""}${
         compareMode ? " is-compare-mode" : ""
       }`}
-      initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2, delay: Math.min(index * 0.025, 0.25) }}
-      // La elevación al hover debe pasar por motion: la animación de entrada
-      // deja un transform inline y el CSS `:hover` no puede pisarlo (T5.1).
-      {...(reduceMotion
-        ? {}
-        : { whileHover: { y: -2, transition: { duration: 0.16, delay: 0 } } as const })}
       onKeyDown={(event) => onKeyDown(event, record)}
     >
       {compareMode ? (
@@ -197,7 +183,7 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
       >
         Abrir <ArrowUpRight aria-hidden size={13} />
       </button>
-    </motion.article>
+    </article>
   );
 });
 
@@ -253,7 +239,6 @@ export function Dashboard({
   const selectionInitializedRef = useRef(false);
   const focusCardOnSelectRef = useRef(false);
   const actionNoticeTimerRef = useRef<number | undefined>(undefined);
-  const reduceMotion = useReducedMotion();
   const dashboardTitleId = useId();
   const libraryTitleId = useId();
   const shutdownTitleId = useId();
@@ -629,6 +614,8 @@ export function Dashboard({
 
   useEffect(() => {
     let cancelled = false;
+    let idleId: number | undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     setAuditSkipped(0);
     setCriticalIssues(null);
     const active = projects.filter((record) => record.status === "active");
@@ -636,24 +623,35 @@ export function Dashboard({
       setCriticalIssues(0);
       return;
     }
-    void import("@solara/exporter")
-      .then(({ auditProject }) => {
-        const { critical, skipped } = auditStoreHealth(
-          active,
-          (project) =>
-            auditProject(project).filter((issue) => issue.severity === "critical").length,
-          300,
-          () => performance.now(),
-        );
-        if (cancelled) return;
-        setCriticalIssues(critical);
-        setAuditSkipped(skipped);
-      })
-      .catch(() => {
-        if (!cancelled) setAuditSkipped(active.length);
-      });
+    const runAudit = () => {
+      void import("@solara/exporter")
+        .then(({ auditProject }) => {
+          const { critical, skipped } = auditStoreHealth(
+            active,
+            (project) =>
+              auditProject(project).filter((issue) => issue.severity === "critical").length,
+            300,
+            () => performance.now(),
+          );
+          if (cancelled) return;
+          setCriticalIssues(critical);
+          setAuditSkipped(skipped);
+        })
+        .catch(() => {
+          if (!cancelled) setAuditSkipped(active.length);
+        });
+    };
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      idleId = (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(runAudit, { timeout: 2000 });
+    } else {
+      timeoutId = globalThis.setTimeout(runAudit, 600);
+    }
     return () => {
       cancelled = true;
+      if (idleId !== undefined && "cancelIdleCallback" in window) {
+        (window as unknown as { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== undefined) globalThis.clearTimeout(timeoutId);
     };
   }, [projects]);
 
@@ -1002,7 +1000,6 @@ export function Dashboard({
                             isPinned={pinnedIds.includes(record.id)}
                             compareMode={compareMode}
                             isCompared={compareIds.includes(record.id)}
-                            reduceMotion={reduceMotion}
                             cardButtonRefs={cardButtonRefs}
                             onOpen={onOpen}
                             onSelect={selectCard}
@@ -1026,7 +1023,6 @@ export function Dashboard({
                           isPinned={pinnedIds.includes(record.id)}
                           compareMode={compareMode}
                           isCompared={compareIds.includes(record.id)}
-                          reduceMotion={reduceMotion}
                           cardButtonRefs={cardButtonRefs}
                           onOpen={onOpen}
                           onSelect={selectCard}

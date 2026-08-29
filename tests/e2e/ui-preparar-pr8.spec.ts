@@ -516,7 +516,7 @@ test("journey: tienda limpia → completar Preparar por destinos → exportar pr
   expect(files.has("contacto/index.html")).toBe(false);
   expect(files.has("compra/index.html")).toBe(false);
   expect(home).toContain("data-checkout-form");
-  expect(home).toContain("data-whatsapp-link");
+  expect(home).not.toContain("data-whatsapp-link");
 
   // Sitemap con las rutas públicas del sitio.
   expect(sitemap).toContain("https://tienda-pr8.example/productos/taza-pr8/");

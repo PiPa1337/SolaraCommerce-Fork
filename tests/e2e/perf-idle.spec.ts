@@ -62,6 +62,7 @@ declare global {
   interface Window {
     __solaraRafProbe?: { perSecond: () => number };
     __solaraSetHidden?: (hidden: boolean) => void;
+    __solaraFrameRateCap?: { maxFps: number; frameIntervalMs: number };
   }
 }
 
@@ -142,6 +143,19 @@ async function setHiddenInAllFrames(page: Page, hidden: boolean): Promise<void> 
   }
 }
 
+async function previewHasFrameRateCap(page: Page): Promise<boolean> {
+  for (const frame of page.frames().filter((candidate) => candidate !== page.mainFrame())) {
+    const cap = await frame
+      .evaluate(() => ({
+        maxFps: window.__solaraFrameRateCap?.maxFps ?? null,
+        attribute: document.documentElement.dataset.solaraFpsCap ?? null,
+      }))
+      .catch(() => null);
+    if (cap?.maxFps === 140 && cap.attribute === "140") return true;
+  }
+  return false;
+}
+
 async function openDashboard(page: Page): Promise<void> {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(studioUrl);
@@ -191,6 +205,30 @@ test("editor con preview en reposo: queda bajo el presupuesto", async ({ page })
   expect(idle.scriptMsPerSecond).toBeLessThanOrEqual(EDITOR_SCRIPT_BUDGET_MS_PER_S);
   expect(idle.taskMsPerSecond).toBeLessThanOrEqual(EDITOR_TASK_BUDGET_MS_PER_S);
   expect(raf).toBeLessThanOrEqual(RAF_BUDGET_PER_S);
+});
+
+test("Studio y preview comparten el límite global de 140 FPS", async ({ page }) => {
+  await openEditor(page);
+  await expect.poll(() => previewHasFrameRateCap(page), { timeout: 10_000 }).toBe(true);
+
+  const studioCap = await page.evaluate(() => ({
+    maxFps: window.__solaraFrameRateCap?.maxFps ?? null,
+    attribute: document.documentElement.dataset.solaraFpsCap ?? null,
+  }));
+  expect(studioCap).toEqual({ maxFps: 140, attribute: "140" });
+
+  const previewCaps = await Promise.all(
+    page
+      .frames()
+      .filter((frame) => frame !== page.mainFrame())
+      .map((frame) =>
+        frame.evaluate(() => ({
+          maxFps: window.__solaraFrameRateCap?.maxFps ?? null,
+          attribute: document.documentElement.dataset.solaraFpsCap ?? null,
+        })),
+      ),
+  );
+  expect(previewCaps).toContainEqual({ maxFps: 140, attribute: "140" });
 });
 
 test("editor con preview oculto: la pestaña escondida no trabaja", async ({ page }) => {

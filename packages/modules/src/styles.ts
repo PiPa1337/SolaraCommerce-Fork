@@ -21,16 +21,15 @@ export const STORE_BASE_STYLES = `
   transform: translateY(0);
 }
 [data-solara-store] .solara-consumer-rights {
-  position: fixed;
-  z-index: 1000;
-  right: .5rem;
-  bottom: .5rem;
+  grid-column: 1 / -1;
+  justify-self: end;
   max-width: min(calc(100vw - 1rem), 22rem);
-  padding: .3rem .55rem;
-  border: 1px solid var(--solara-text);
+  margin-top: 1rem;
+  padding: .45rem .7rem;
+  border: 1px solid var(--solara-border);
   border-radius: var(--solara-radius);
-  background: var(--solara-text);
-  color: var(--solara-background);
+  background: var(--solara-surface);
+  color: var(--solara-text);
   font-size: .75rem;
   line-height: 1.35;
 }
@@ -38,6 +37,10 @@ export const STORE_BASE_STYLES = `
   color: inherit;
   text-decoration: underline;
   text-underline-offset: .15em;
+}
+[data-solara-store] .solara-consumer-rights a:hover,
+[data-solara-store] .solara-consumer-rights a:focus-visible {
+  color: var(--solara-accent);
 }
 [data-solara-store][data-color-mode="dark"] {
   --solara-background: var(--solara-dark-background, #1d1e19);
@@ -59,6 +62,16 @@ export const STORE_BASE_STYLES = `
 [data-solara-store] figure {
   display: block;
   max-width: 100%;
+}
+[data-solara-store] .solara-product-media > picture,
+[data-solara-store] .catalog-product-media > picture {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+[data-solara-store] .solara-product-media > picture > img,
+[data-solara-store] .catalog-product-media > picture > img {
+  object-position: center;
 }
 [data-solara-store] a {
   color: inherit;
@@ -374,9 +387,6 @@ export const STORE_BASE_STYLES = `
   width: fit-content;
   margin-top: .8rem;
 }
-[data-solara-store] [data-whatsapp-link][hidden] {
-  display: none !important;
-}
 [data-solara-store] .solara-checkout-form pre {
   max-width: 100%;
   margin: 1.4rem 0 0;
@@ -398,17 +408,23 @@ export const STORE_BASE_STYLES = `
 }
 [data-solara-store] .solara-category-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(14rem, 0.42fr);
-  align-items: end;
-  gap: 2rem;
-  padding-top: 3rem;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.52fr);
+  grid-template-areas: "copy media";
+  align-items: start;
+  gap: clamp(1.25rem, 3vw, 3rem);
+  padding-top: clamp(2rem, 4vw, 3rem);
 }
-[data-solara-store] .solara-category-hero h1,
-[data-solara-store] .solara-category-hero p {
-  grid-column: 1;
+[data-solara-store] .solara-category-hero-copy {
+  grid-area: copy;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(.65rem, 1.5vw, 1rem);
 }
 [data-solara-store] .solara-category-hero h1 {
-  margin-bottom: 0;
+  min-width: 0;
+  margin: 0;
 }
 /* Texto editorial de categoria (seoIntro): refuerza long-tail SEO. */
 [data-solara-store] .solara-category-intro {
@@ -425,29 +441,34 @@ export const STORE_BASE_STYLES = `
   overflow: hidden;
   clip-path: inset(50%);
 }
-/* Título de categoría en caja frosted glass (mismo lenguaje que los
-   beneficios del hero): translúcido de papel + blur + borde, sin radio. */
+/* El título mantiene su ancla de edición sin agregar una caja visual alrededor. */
 [data-solara-store] .solara-category-hero .solara-category-title-glass {
-  display: inline-block;
-  padding: .5rem 1.1rem;
-  background: color-mix(in srgb, var(--catalog-paper) 38%, transparent);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  border: 1px solid color-mix(in srgb, var(--catalog-ink) 10%, transparent);
+  display: inline;
+  padding: 0;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border: 0;
 }
 [data-solara-store] .solara-category-hero p {
-  margin-top: .5rem;
+  max-width: 62ch;
+  margin: 0;
   color: var(--solara-muted);
 }
+[data-solara-store] .solara-category-hero > img,
+[data-solara-store] .solara-category-hero > picture {
+  grid-area: media;
+  align-self: start;
+  width: 100%;
+  min-width: 0;
+}
 [data-solara-store] .solara-category-hero img {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    width: 100%;
-    aspect-ratio: 4 / 3;
-    object-fit: contain;
-    object-position: center;
-    background: var(--solara-surface);
-  }
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  object-position: center;
+  background: var(--solara-surface);
+}
 [data-solara-store] .solara-category-children {
   margin-top: 2rem;
   padding: 1rem 0;
@@ -561,12 +582,12 @@ export const STORE_BASE_STYLES = `
   }
   [data-solara-store] .solara-category-hero {
     grid-template-columns: 1fr;
+    grid-template-areas: "copy" "media";
     gap: 1rem;
   }
-  [data-solara-store] .solara-category-hero img {
-    grid-column: 1;
-    grid-row: auto;
-  }
+  [data-solara-store] .solara-category-hero-copy { width: 100%; }
+  [data-solara-store] .solara-category-hero > img,
+  [data-solara-store] .solara-category-hero > picture { grid-area: media; }
   [data-solara-store] .solara-category-children ul {
     grid-template-columns: 1fr;
   }
@@ -2066,11 +2087,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-mega-group__children { display: grid; gap: .25rem; margin: .55rem 0 0; padding: 0; list-style: none; }
 [data-solara-store].catalog-modern .catalog-mega-group__children a { display: block; min-height: 2.25rem; padding: .25rem 0; color: var(--catalog-muted); font-size: .9rem; font-weight: 500; text-decoration: none; }
 [data-solara-store].catalog-modern .catalog-mega-group__children a:hover { color: var(--catalog-ink); text-decoration: underline; text-underline-offset: .25em; }
-[data-solara-store].catalog-modern .catalog-mega-menu__all { display: inline-flex; align-items: center; gap: .5rem; margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--catalog-border); color: var(--catalog-ink); font-size: .9rem; text-decoration: underline; text-underline-offset: .25em; }
+[data-solara-store].catalog-modern .catalog-mega-menu__all { display: inline-flex; align-items: center; gap: .5rem; margin-top: 2rem; padding-top: 1.25rem; color: var(--catalog-ink); font-size: .9rem; text-decoration: none; }
 [data-solara-store].catalog-modern .catalog-header-actions { display: flex; align-items: center; justify-content: end; gap: .75rem; min-width: 0; }
 [data-solara-store].catalog-modern .catalog-search-link,
 [data-solara-store].catalog-modern .catalog-cart-link { display: inline-flex; align-items: center; gap: .25rem; min-height: 44px; border: 0; background: transparent; font-size: .82rem; text-decoration: none; cursor: pointer; -webkit-user-select: none; user-select: none; }
-[data-solara-store].catalog-modern .catalog-search-link { width: min(18rem, 100%); max-width: 18rem; padding: .5rem 1rem; border: 1px solid var(--catalog-border); border-radius: 999px; background: var(--catalog-surface); color: var(--catalog-muted); overflow: hidden; }
+[data-solara-store].catalog-modern .catalog-search-link { width: min(18rem, 100%); max-width: 18rem; padding: .5rem 1rem; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); background: var(--catalog-surface); color: var(--catalog-muted); overflow: hidden; }
 [data-solara-store].catalog-modern .catalog-search-link span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 [data-solara-store].catalog-modern .catalog-search-noscript { display: none; }
 [data-solara-store].catalog-modern .catalog-search-dialog { width: min(34rem, calc(100% - 2rem)); margin: auto; padding: 0; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); background: var(--catalog-paper); color: var(--catalog-ink); box-shadow: 0 24px 80px color-mix(in srgb, var(--catalog-ink) 20%, transparent); }
@@ -2081,7 +2102,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-search-dialog-heading button { min-height: 44px; padding: .5rem .8rem; border: 1px solid var(--catalog-border); border-radius: 999px; background: transparent; color: inherit; cursor: pointer; }
 [data-solara-store].catalog-modern .catalog-search-dialog-form label { color: var(--catalog-muted); font-size: .8rem; }
 [data-solara-store].catalog-modern .catalog-search-dialog-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .75rem; }
-[data-solara-store].catalog-modern .catalog-search-dialog-controls input { min-height: 48px; padding: .75rem .85rem; border: 1px solid var(--catalog-border); border-radius: 999px; background: var(--catalog-surface); color: var(--catalog-ink); }
+[data-solara-store].catalog-modern .catalog-search-dialog-controls input { min-height: 48px; padding: .75rem .85rem; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); background: var(--catalog-surface); color: var(--catalog-ink); }
 :root.catalog-search-open { overflow: hidden; }
 [data-solara-store].catalog-modern .catalog-cart-link strong { display: inline-flex; align-items: center; justify-content: center; min-width: 1.9rem; height: 1.35rem; min-height: 1.35rem; padding: 0 .45rem; border-radius: 999px; background: var(--catalog-ink); color: var(--catalog-paper); font-size: .68rem; font-variant-numeric: tabular-nums; line-height: 1; text-align: center; box-sizing: border-box; flex-shrink: 0; white-space: nowrap; }
 .cm.v2 .catalog-cart-link strong { display: inline-flex; align-items: center; justify-content: center; min-width: 1.9rem; height: 1.35rem; min-height: 1.35rem; padding: 0 .45rem; border-radius: 999px; background: var(--catalog-ink); color: var(--catalog-paper); font-size: .68rem; font-variant-numeric: tabular-nums; line-height: 1; text-align: center; box-sizing: border-box; flex-shrink: 0; white-space: nowrap; }
@@ -2093,7 +2114,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-hero-inner { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); align-items: stretch; width: min(calc(100% - 2rem), var(--solara-container)); min-height: min(680px, calc(100svh - 104px)); margin: 1.5rem auto 0; overflow: hidden; border-radius: var(--solara-radius); background: var(--catalog-surface); }
 [data-solara-store].catalog-modern .catalog-hero-copy { display: flex; flex-direction: column; justify-content: center; padding: clamp(2rem, 5vw, 5rem); }
 [data-solara-store].catalog-modern .catalog-eyebrow { margin-bottom: 1rem; color: var(--catalog-muted); font-size: .75rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
-[data-solara-store].catalog-modern .catalog-hero-copy h1 { max-width: 11ch; font-size: calc(clamp(3.2rem, 6vw, 6.5rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.055em; line-height: .95; text-wrap: balance; overflow-wrap: break-word; }
+[data-solara-store].catalog-modern .catalog-hero-copy h1 { max-width: 11ch; font-size: calc(clamp(3.2rem, 6vw, 6.5rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.055em; line-height: 1.15; text-wrap: balance; overflow-wrap: break-word; }
 [data-solara-store].catalog-modern .catalog-hero-copy > p:not(.catalog-eyebrow) { max-width: 32ch; margin-top: 1.25rem; color: var(--catalog-muted); }
 [data-solara-store].catalog-modern .catalog-hero-actions { display: flex; flex-wrap: wrap; gap: calc(.65rem * var(--solara-space-scale, 1)); margin-top: 1.5rem; }
 [data-solara-store].catalog-modern .catalog-primary-action,
@@ -2157,6 +2178,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-category-bento-item--wide { grid-column: span 2; grid-row: span 1; }
 [data-solara-store].catalog-modern .catalog-category-bento-item--tall { grid-column: span 1; grid-row: span 2; }
 [data-solara-store].catalog-modern .catalog-category-bento-item span { position: relative; z-index: 2; margin: 1.25rem; color: var(--catalog-ink); font-size: 1rem; font-weight: 700; line-height: 1.15; min-width: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+[data-solara-store].catalog-modern .catalog-category-bento-item .catalog-category-bento-title { margin: 0; }
 [data-solara-store].catalog-modern .catalog-category-bento-item small { position: absolute; z-index: 2; right: 1rem; bottom: .9rem; padding: .25rem .55rem; border: 1px solid color-mix(in srgb, var(--catalog-ink) 10%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--catalog-paper) 92%, transparent); box-shadow: 0 1px 2px color-mix(in srgb, var(--catalog-ink) 8%, transparent); color: var(--catalog-ink); font-size: .72rem; font-weight: 700; line-height: 1; }
 [data-solara-store].catalog-modern .catalog-category-bento-item::after { position: absolute; z-index: 1; inset: 0; content: ""; background: linear-gradient(to top, color-mix(in srgb, var(--catalog-ink) 16%, transparent), transparent 42%); pointer-events: none; }
 [data-solara-store].catalog-modern .catalog-category-bento-image { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .78; transition: transform var(--solara-motion-normal) var(--solara-motion-easing); }
@@ -2187,17 +2209,31 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-newsletter-inner h2 { max-width: 16ch; font-size: calc(clamp(1.8rem, 4vw, 3rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.08em; line-height: .95; }
 [data-solara-store].catalog-modern .catalog-newsletter-inner p { max-width: 38ch; margin-top: .6rem; color: color-mix(in srgb, var(--catalog-paper) 72%, transparent); }
 [data-solara-store].catalog-modern .catalog-newsletter-action { flex-shrink: 0; background: var(--catalog-paper); color: var(--catalog-ink); }
-[data-solara-store].catalog-modern .catalog-footer-inner { display: grid; grid-template-columns: 1.5fr repeat(3, 1fr); gap: calc(2rem * var(--solara-space-scale, 1)); width: min(calc(100% - 2rem), var(--solara-container)); margin: 0 auto; padding: calc(3rem * var(--solara-space-scale, 1)) 0 calc(2rem * var(--solara-space-scale, 1)); border-top: 1px solid var(--catalog-border); }
+[data-solara-store].catalog-modern .catalog-footer-inner { display: grid; grid-template-columns: minmax(15rem, 1.45fr) repeat(3, minmax(0, 1fr)); gap: calc(2rem * var(--solara-space-scale, 1)); width: min(calc(100% - 2rem), var(--solara-container)); margin: 0 auto; padding: calc(3rem * var(--solara-space-scale, 1)) 0 calc(2rem * var(--solara-space-scale, 1)); border-top: 2px solid var(--solara-accent); }
 [data-solara-store].catalog-modern .catalog-footer-inner > * { min-width: 0; }
 [data-solara-store].catalog-modern .catalog-footer-inner nav a,
 [data-solara-store].catalog-modern .catalog-footer-inner address,
 [data-solara-store].catalog-modern .catalog-footer-brand p,
 [data-solara-store].catalog-modern .catalog-footer-inner small { overflow-wrap: anywhere; }
-[data-solara-store].catalog-modern .catalog-footer-inner nav { display: grid; align-content: start; gap: .5rem; font-size: .84rem; }
-[data-solara-store].catalog-modern .catalog-footer-inner nav a { text-decoration: none; }
-[data-solara-store].catalog-modern .catalog-footer-inner nav a:hover { text-decoration: underline; text-underline-offset: .16em; }
-[data-solara-store].catalog-modern .catalog-footer-brand p { max-width: 28ch; margin-top: .8rem; color: var(--catalog-muted); font-size: .84rem; }
-[data-solara-store].catalog-modern .catalog-footer-inner address { display: grid; align-content: start; gap: .5rem; font-style: normal; font-size: .84rem; }
+[data-solara-store].catalog-modern .catalog-footer-inner a[href^="mailto:"] { word-break: keep-all; overflow-wrap: normal; }
+[data-solara-store].catalog-modern .catalog-footer-inner nav { display: grid; align-content: start; gap: .6rem; font-size: .84rem; }
+[data-solara-store].catalog-modern .catalog-footer-inner nav strong,
+[data-solara-store].catalog-modern .catalog-footer-inner address strong { color: var(--catalog-muted); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; }
+[data-solara-store].catalog-modern .catalog-footer-inner nav a { text-decoration: none; transition: color 180ms ease, transform 180ms ease; }
+[data-solara-store].catalog-modern .catalog-footer-inner nav a:hover,
+[data-solara-store].catalog-modern .catalog-footer-inner nav a:focus-visible { color: var(--solara-accent); transform: translateX(.2rem); }
+[data-solara-store].catalog-modern .catalog-footer-brand { display: flex; flex-direction: column; align-items: flex-start; padding-inline-start: clamp(.9rem, 1.8vw, 1.5rem); border-inline-start: 2px solid var(--solara-accent); }
+[data-solara-store].catalog-modern .catalog-footer-brand .catalog-brand { display: inline-flex; align-items: center; width: fit-content; max-width: min(100%, 16rem); min-height: 3rem; }
+[data-solara-store].catalog-modern .catalog-footer-brand .catalog-brand .solara-logo { display: block; width: auto; max-width: 100%; height: clamp(2.75rem, 4vw, 4.75rem); object-fit: contain; object-position: left center; }
+[data-solara-store].catalog-modern .catalog-footer-brand .catalog-brand .solara-wordmark { max-width: 100%; overflow-wrap: anywhere; font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(1.25rem, 2.4vw, 2rem); line-height: 1; }
+[data-solara-store].catalog-modern .catalog-footer-brand p { max-width: 28ch; margin: 1rem 0 0; color: var(--catalog-muted); font-size: .84rem; }
+[data-solara-store].catalog-modern .catalog-footer-whatsapp { display: inline-flex; align-items: center; justify-content: space-between; gap: 1rem; width: min(100%, 16rem); min-height: 2.75rem; margin-top: 1rem; padding: .65rem .8rem; border: 1px solid var(--solara-accent); border-radius: var(--solara-radius); color: var(--solara-accent); font-size: .78rem; font-weight: 800; text-decoration: none; }
+[data-solara-store].catalog-modern .catalog-footer-whatsapp:hover,
+[data-solara-store].catalog-modern .catalog-footer-whatsapp:focus-visible { background: var(--solara-accent); color: var(--solara-accent-text); }
+[data-solara-store].catalog-modern .catalog-footer-inner address { display: grid; align-content: start; gap: .6rem; padding-inline-start: clamp(.9rem, 1.8vw, 1.5rem); border-inline-start: 1px solid var(--catalog-border); font-style: normal; font-size: .84rem; }
+[data-solara-store].catalog-modern .catalog-footer-contact a { text-decoration: none; transition: color 180ms ease, transform 180ms ease; }
+[data-solara-store].catalog-modern .catalog-footer-contact a:hover,
+[data-solara-store].catalog-modern .catalog-footer-contact a:focus-visible { color: var(--solara-accent); transform: translateX(.2rem); }
 [data-solara-store].catalog-modern .catalog-footer-meta { display: flex; flex: 1 1 100%; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1.5rem; min-width: 0; padding-top: 1rem; border-top: 1px solid var(--catalog-border); grid-column: 1 / -1; }
 [data-solara-store].catalog-modern .catalog-footer-meta > * { min-width: 0; margin: 0; flex: 1 1 18rem; }
 [data-solara-store].catalog-modern .catalog-footer-meta small { color: var(--catalog-muted); }
@@ -2270,7 +2306,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-review h3 { margin-top: .75rem; font-size: 1rem; font-weight: 800; }
 [data-solara-store].catalog-modern .catalog-review blockquote { margin: .65rem 0; color: var(--catalog-muted); font-size: .88rem; overflow-wrap: anywhere; }
 [data-solara-store].catalog-modern .catalog-review small { color: var(--catalog-muted); font-size: .7rem; }
-[data-solara-store].catalog-modern .catalog-cart-drawer { position: fixed; z-index: 50; inset: 0 0 0 auto; display: flex; width: min(440px, 100%); flex-direction: column; padding: 1.25rem; overflow-y: auto; transform: translateX(105%); background: var(--catalog-paper); box-shadow: -16px 0 50px color-mix(in srgb, var(--catalog-ink) 14%, transparent); transition: transform var(--solara-motion-normal, 260ms) var(--solara-motion-easing, cubic-bezier(.16,1,.3,1)); }
+[data-solara-store].catalog-modern .catalog-cart-drawer { position: fixed; z-index: 50; inset: 0 0 0 auto; display: flex; width: min(440px, 100%); flex-direction: column; padding: 1.25rem; overflow: hidden; transform: translateX(105%); background: var(--catalog-paper); box-shadow: -16px 0 50px color-mix(in srgb, var(--catalog-ink) 14%, transparent); transition: transform var(--solara-motion-normal, 260ms) var(--solara-motion-easing, cubic-bezier(.16,1,.3,1)); }
+[data-solara-store].catalog-modern .catalog-cart-drawer .catalog-cart-items { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 [data-solara-store].catalog-modern .catalog-cart-drawer[data-open="true"] { transform: translateX(0); }
 [data-solara-store].catalog-modern .catalog-cart-drawer header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--catalog-border); }
 [data-solara-store].catalog-modern .catalog-cart-drawer header button { min-height: 44px; padding: .5rem .8rem; border: 1px solid var(--catalog-border); border-radius: 999px; background: transparent; cursor: pointer; }
@@ -2301,19 +2338,19 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-checkout-form { display: grid; gap: .5rem; padding-top: .5rem; }
 [data-solara-store].catalog-modern .catalog-checkout-form label { margin-top: .4rem; font-size: .78rem; font-weight: 700; }
 [data-solara-store].catalog-modern .catalog-checkout-form textarea { min-height: 76px; resize: vertical; }
+[data-solara-store].catalog-modern .catalog-cart-drawer .catalog-checkout-form textarea { min-height: 3rem; }
 [data-solara-store].catalog-modern .catalog-checkout-form pre { white-space: pre-wrap; font-size: .75rem; }
-[data-solara-store].catalog-modern .catalog-checkout-form [data-whatsapp-link] { margin-top: .4rem; font-weight: 700; }
 [data-solara-store].catalog-modern .solara-category-page,
 [data-solara-store].catalog-modern .solara-category-hero,
 [data-solara-store].catalog-modern .solara-search-page,
 [data-solara-store].catalog-modern .solara-cart-page,
 [data-solara-store].catalog-modern .solara-checkout-page,
 [data-solara-store].catalog-modern .solara-editorial-page { font-family: inherit; }
-[data-solara-store].catalog-modern .solara-category-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .42fr); align-items: end; gap: 2rem; padding: 3rem 0 1.5rem; }
-[data-solara-store].catalog-modern .solara-category-hero h1,
+[data-solara-store].catalog-modern .solara-category-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, .52fr); align-items: start; gap: clamp(1.25rem, 3vw, 2.75rem); padding: clamp(2rem, 4vw, 3.5rem) 0 clamp(1.25rem, 2.5vw, 2rem); }
 [data-solara-store].catalog-modern .solara-page-intro h1,
 [data-solara-store].catalog-modern .solara-cart-page h1,
 [data-solara-store].catalog-modern .solara-checkout-page h1 { font-size: calc(clamp(2.8rem, 6vw, 5.5rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.03em; line-height: .9; }
+[data-solara-store].catalog-modern .solara-category-hero h1 { max-width: 14ch; font-size: calc(clamp(2.4rem, 4.2vw, 4.75rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.03em; line-height: 1.05; overflow-wrap: break-word; text-wrap: balance; }
 [data-solara-store].catalog-modern .solara-category-hero img { width: 100%; aspect-ratio: 16 / 7; object-fit: contain; object-position: center; background: var(--catalog-surface); border-radius: var(--solara-radius); }
 [data-solara-store].catalog-modern .solara-category-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 1rem 0 1.5rem; padding: .75rem 0; border-block: 1px solid var(--catalog-border); }
 [data-solara-store].catalog-modern .solara-category-toolbar select,
@@ -2351,7 +2388,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .solara-category-children a { display: grid; gap: .25rem; padding: .75rem .8rem; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); background: var(--catalog-paper); text-decoration: none; }
 [data-solara-store].catalog-modern .solara-category-children small { color: var(--catalog-muted); }
 [data-solara-store].catalog-modern .solara-pagination { display: flex; align-items: center; justify-content: center; gap: .75rem; margin: 2rem auto 3rem; }
-[data-solara-store].catalog-modern .solara-pagination a { padding: .5rem .8rem; border: 1px solid var(--catalog-border); border-radius: 999px; text-decoration: none; }
+[data-solara-store].catalog-modern .solara-pagination a { padding: .5rem .8rem; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); text-decoration: none; }
 [data-solara-store].catalog-modern .solara-search-page .solara-page-intro { max-width: 56rem; padding: clamp(2.5rem, 5vw, 4rem) 0 2.5rem; }
 [data-solara-store].catalog-modern .solara-search-page .solara-page-intro h1 { max-width: 16ch; }
 [data-solara-store].catalog-modern .solara-search-page-trigger { display: inline-flex; align-items: center; justify-content: center; width: fit-content; min-height: 44px; margin-top: 1.25rem; padding: .75rem 1rem; border: 1px solid var(--catalog-border); border-radius: 999px; background: transparent; color: var(--catalog-ink); cursor: pointer; }
@@ -2393,7 +2430,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   [data-solara-store].catalog-modern .catalog-mobile-menu__close:focus-visible,
   [data-solara-store].catalog-modern .catalog-mobile-menu-button:focus-visible { outline: 2px solid var(--catalog-ink); outline-offset: 4px; }
   [data-solara-store].catalog-modern .catalog-mobile-search { margin: 1.25rem 0 1rem; }
-  [data-solara-store].catalog-modern .catalog-mobile-search__field { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .75rem; min-height: 52px; padding: 0 .8rem 0 1rem; border: 1px solid var(--catalog-border); border-radius: 999px; background: var(--catalog-surface); }
+  [data-solara-store].catalog-modern .catalog-mobile-search__field { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .75rem; min-height: 52px; padding: 0 .8rem 0 1rem; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); background: var(--catalog-surface); }
   [data-solara-store].catalog-modern .catalog-mobile-search__field > svg { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentcolor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
   [data-solara-store].catalog-modern .catalog-mobile-search__field input { min-width: 0; min-height: 48px; padding: 0; border: 0; outline: 0; background: transparent; color: var(--catalog-ink); font: inherit; }
   [data-solara-store].catalog-modern .catalog-mobile-search__field input::placeholder { color: var(--catalog-muted); }
@@ -2432,7 +2469,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   [data-solara-store].catalog-modern .catalog-mobile-categories[open] > summary .catalog-nav-chevron { transform: rotate(180deg); }
   [data-solara-store].catalog-modern .catalog-hero-inner { display: flex; flex-direction: column; min-height: calc(100svh - 96px); margin-top: .75rem; border-radius: var(--solara-radius); }
   [data-solara-store].catalog-modern .catalog-hero-copy { padding: 2rem 1.25rem 1.5rem; }
-  [data-solara-store].catalog-modern .catalog-hero-copy h1 { max-width: 10ch; font-size: calc(clamp(2.7rem, 13vw, 4.5rem) * var(--solara-type-scale, 1)); line-height: .96; }
+  [data-solara-store].catalog-modern .catalog-hero-copy h1 { max-width: 10ch; font-size: calc(clamp(2.7rem, 13vw, 4.5rem) * var(--solara-type-scale, 1)); line-height: 1.15; }
   [data-solara-store].catalog-modern .catalog-hero-copy > p:not(.catalog-eyebrow) { max-width: 34ch; }
   [data-solara-store].catalog-modern .catalog-hero-actions { display: grid; grid-template-columns: 1fr; }
   [data-solara-store].catalog-modern .catalog-primary-action,
@@ -2474,11 +2511,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   [data-solara-store].catalog-modern .catalog-product-reviews > header { align-items: start; flex-direction: column; }
   [data-solara-store].catalog-modern .catalog-review-grid { grid-template-columns: 1fr; }
   [data-solara-store].catalog-modern .solara-category-hero { display: flex; flex-direction: column; align-items: stretch; gap: 1rem; padding: 2rem 0 1rem; }
-  [data-solara-store].catalog-modern .solara-category-hero h1,
   [data-solara-store].catalog-modern .solara-page-intro h1,
   [data-solara-store].catalog-modern .solara-cart-page h1,
   [data-solara-store].catalog-modern .solara-checkout-page h1 { font-size: calc(clamp(2.7rem, 14vw, 4.5rem) * var(--solara-type-scale, 1)); }
-  [data-solara-store].catalog-modern.cm.v2 .catalog-category-layout { grid-template-columns: 1fr; gap: 1rem; }
+  [data-solara-store].catalog-modern .solara-category-hero h1 { max-width: 14ch; font-size: calc(clamp(2.1rem, 8.5vw, 3.6rem) * var(--solara-type-scale, 1)); line-height: 1.05; }
+  [data-solara-store].catalog-modern .catalog-category-layout { grid-template-columns: 1fr; gap: 1rem; }
   [data-solara-store].catalog-modern .catalog-category-filters { position: static; padding: 0; border-radius: var(--solara-radius); }
   [data-solara-store].catalog-modern .catalog-category-filters details > summary { display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: .75rem .8rem; }
   [data-solara-store].catalog-modern .catalog-category-filters details[open] > summary { border-bottom: 1px solid var(--catalog-border); }
@@ -2587,6 +2624,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   height: 100%;
   object-fit: contain;
   width: auto;
+}
+.cm.v2 .catalog-footer-brand .catalog-brand .solara-logo {
+  height: clamp(2.75rem, 4vw, 4.75rem);
+  max-width: 100%;
 }
 .cm.v2 .catalog-mobile-brand .solara-wordmark {
   display: block;
@@ -2712,7 +2753,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   font-size: calc(clamp(4.75rem, 6.4vw, 8rem) * var(--solara-type-scale, 1));
   font-weight: 500;
   letter-spacing: -.065em;
-  line-height: .88;
+  line-height: 1.15;
   overflow-wrap: anywhere;
   hyphens: none;
   word-break: normal;
@@ -2889,6 +2930,13 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 @media (min-width: 1366px) and (max-width: 1919px) {
   .cm.v2 .catalog-product-grid {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+/* Relacionados del product-detail: hasta 8 items pedían 5+3 con la grilla
+   general; cuatro por fila deja 4+4, 4+2 o 4+1 simétricas. */
+@media (min-width: 1200px) {
+  .cm.v2 [data-solara-section$="-related"] .catalog-product-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 /* Tablets de 768px a 1023px: 3 columnas (el auto-fit daría 4 con cards angostas). */
@@ -3068,8 +3116,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
   display: inline-block;
   align-self: flex-start;
-  margin: 1rem;
-  padding: .5rem .65rem;
+  width: fit-content;
+  max-width: calc(100% - 1.5rem);
+  margin: .75rem;
+  padding: .25rem .5rem;
   border-radius: var(--catalog-v2-radius);
   background: transparent;
   color: var(--catalog-ink);
@@ -3077,6 +3127,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   letter-spacing: -.02em;
   line-height: 1.12;
   transition: background-color var(--catalog-v2-motion-control) var(--catalog-v2-ease-out), transform var(--catalog-v2-motion-control) var(--catalog-v2-ease-out);
+}
+.cm.v2 .catalog-category-bento-title {
+  margin: 0;
 }
 .cm.v2 .catalog-category-bento-item:has(.catalog-category-bento-image) > span:not(.catalog-category-bento-fallback) {
   background: color-mix(in srgb, var(--catalog-paper) 92%, transparent);
@@ -3195,21 +3248,27 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   margin-top: 2rem;
 }
 .cm.v2 .solara-category-hero {
-  grid-template-columns: minmax(0, 1.15fr) minmax(22rem, .45fr);
-  gap: clamp(1rem, 2vw, 2rem);
-  padding-top: clamp(2rem, 4vw, 4rem);
+  grid-template-columns: minmax(0, 1.08fr) minmax(20rem, .58fr);
+  align-items: start;
+  gap: clamp(1.25rem, 3vw, 3rem);
+  padding: clamp(2rem, 4vw, 3.5rem) 0 clamp(1.25rem, 2.5vw, 2rem);
 }
-.cm.v2 .solara-category-hero h1,
 .cm.v2 .solara-page-intro h1,
 .cm.v2 .solara-cart-page h1,
 .cm.v2 .solara-checkout-page h1 {
-  max-width: 10ch;
   font-family: var(--solara-font-display, Georgia, "Times New Roman", serif);
   font-size: calc(clamp(3.8rem, 5vw, 6rem) * var(--solara-type-scale, 1));
   font-weight: 500;
   letter-spacing: -.03em;
   line-height: .88;
   overflow-wrap: normal;
+}
+.cm.v2 .solara-category-hero h1 {
+  max-width: 14ch;
+  font-size: calc(clamp(3rem, 4.2vw, 4.75rem) * var(--solara-type-scale, 1));
+  overflow-wrap: break-word;
+  text-wrap: balance;
+  line-height: 1.15;
 }
 .cm.v2 .solara-category-hero img { aspect-ratio: 5 / 3; object-fit: cover; object-position: center; background: var(--catalog-surface); border-radius: var(--catalog-v2-radius); }
 .cm.v2 .solara-search-page .solara-page-intro { max-width: none; padding: clamp(3rem, 5vw, 5rem) 0 1.5rem; }
@@ -3401,6 +3460,18 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .solara-cart-page-grid [data-cart-lines] .solara-cart-line input { width: 100%; min-height: 44px; }
 .cm.v2 .solara-cart-page-grid [data-cart-lines] .solara-cart-line > button { grid-column: 3; grid-row: 2; justify-self: end; }
 .cm.v2 .solara-cart-page-grid [data-cart-lines] .solara-cart-line > span:last-child { grid-column: 3; grid-row: 1; font-family: var(--solara-font-body, Arial, sans-serif); font-weight: 650; white-space: nowrap; }
+/* Carrito sin líneas: la columna izquierda vacía dejaba un hueco enorme; sin
+   items la grilla pasa a una columna con el resumen debajo. */
+.cm.v2 .solara-cart-page-grid:has([data-cart-lines] > .solara-empty-state),
+.cm.v2 .solara-cart-page-grid:has([data-cart-lines] > .solara-cart-empty) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.cm.v2 .solara-cart-page-grid:has([data-cart-lines] > .solara-empty-state) > aside,
+.cm.v2 .solara-cart-page-grid:has([data-cart-lines] > .solara-cart-empty) > aside {
+  position: static;
+  padding: 1.5rem 0 0;
+  border-left: 0;
+}
 .cm.v2 .solara-error-hero { display: grid; grid-template-columns: minmax(0, .8fr) minmax(28rem, 1.2fr); min-height: min(520px, calc(100svh - 220px)); overflow: hidden; }
 .cm.v2 .solara-error-copy { padding-block: 2rem; }
 .cm.v2 .solara-error-copy h1 { margin-top: 1rem; font-size: calc(clamp(4rem, 5.5vw, 7rem) * var(--solara-type-scale, 1)); letter-spacing: -.07em; line-height: .92; }
@@ -3491,13 +3562,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .solara-checkout-order-panel pre:empty {
   display: none;
-}
-.cm.v2 .solara-checkout-order-panel [data-whatsapp-link]:not([hidden]) {
-  display: inline-flex;
-  width: 100%;
-  min-height: 52px;
-  align-items: center;
-  justify-content: center;
 }
 @media (max-width: 1199px) {
   .cm.v2 .solara-search-results-grid {
@@ -3792,10 +3856,15 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     font-size: calc(clamp(3.1rem, 15vw, 5.5rem) * var(--solara-type-scale, 1));
   }
   .cm.v2 .solara-search-page .solara-page-intro { padding: 2.5rem 0 1.25rem; }
-  .cm.v2 .solara-category-hero h1,
   .cm.v2 .solara-page-intro h1 {
     font-size: calc(clamp(3.25rem, 14vw, 5.2rem) * var(--solara-type-scale, 1));
   }
+  .cm.v2 .solara-category-hero h1 {
+    max-width: 14ch;
+    font-size: calc(clamp(2.1rem, 8.5vw, 3.6rem) * var(--solara-type-scale, 1));
+    line-height: 1.05;
+  }
+  .cm.v2 .catalog-category-layout { grid-template-columns: 1fr; }
   .cm.v2 .solara-search-page .solara-page-intro h1,
   .cm.v2 .solara-cart-page > .solara-page-intro h1 { font-size: calc(clamp(3.15rem, 13.5vw, 4.25rem) * var(--solara-type-scale, 1)); line-height: .98; }
   .cm.v2 .solara-search-page .solara-page-intro > p:not(.solara-eyebrow) { margin-top: .85rem; }
@@ -3920,7 +3989,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   font-size: clamp(4rem, 7vw, 7.5rem);
   font-weight: 500;
   letter-spacing: -.065em;
-  line-height: .86;
+  line-height: 1.15;
   text-wrap: balance;
 }
 .cm.v2 .contact-hero-copy > p:last-child {
@@ -4549,7 +4618,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-hero-editorial .catalog-hero-copy h1 {
     max-width: 10ch;
     font-size: calc(clamp(2.65rem, 12.5vw, 4.2rem) * var(--solara-type-scale, 1));
-    line-height: .92;
+    line-height: 1.15;
     overflow-wrap: anywhere;
   }
   .cm.v2 .catalog-hero-editorial .catalog-hero-body {
@@ -4695,7 +4764,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .solara-about-sections > [data-solara-module] { min-width: 0; border-top: 1px solid var(--catalog-border); }
   .cm.v2 .about-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, .75fr); gap: clamp(3rem, 9vw, 10rem); align-items: stretch; padding-block: clamp(3rem, 8vw, 7rem); }
   .cm.v2 .about-hero-copy { align-self: center; max-width: 48rem; }
-  .cm.v2 .about-hero-copy h1 { max-width: 9ch; margin: .65rem 0 1.1rem; font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(4rem, 8vw, 8.5rem); font-weight: 500; letter-spacing: -.07em; line-height: .86; text-wrap: balance; }
+  .cm.v2 .about-hero-copy h1 { max-width: 9ch; margin: .65rem 0 1.1rem; font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(4rem, 8vw, 8.5rem); font-weight: 500; letter-spacing: -.07em; line-height: 1.15; text-wrap: balance; }
   .cm.v2 .about-hero-copy > p:last-child, .cm.v2 .about-history-copy > p, .cm.v2 .about-editorial-image-copy > p { max-width: 42ch; color: var(--catalog-muted); }
   .cm.v2 .about-hero-media img { width: 100%; aspect-ratio: 9 / 16; object-fit: cover; }
   .cm.v2 .about-history { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: clamp(2rem, 8vw, 9rem); padding-block: clamp(3rem, 8vw, 7rem); }
@@ -4787,7 +4856,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     font-size: calc(clamp(4.75rem, 6.4vw, 8rem) * var(--solara-type-scale, 1));
     font-weight: 500;
     letter-spacing: -.065em;
-    line-height: .88;
+    line-height: 1.15;
     overflow-wrap: normal;
     hyphens: none;
     word-break: normal;
@@ -5013,9 +5082,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     border-left-width: var(--solara-border-width, 1px);
     border-left-style: var(--solara-border-style, solid);
   }
-  .cm.v2 .catalog-search-link {
-    border-radius: 999px;
-  }
   .cm.v2 .catalog-hero-inner,
   .cm.v2 .catalog-hero-media,
   .cm.v2 .catalog-product-media,
@@ -5063,6 +5129,101 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .solara-primary-action,
   .cm.v2 .contact-form-actions .catalog-primary-action {
     border-radius: var(--catalog-v2-radius);
+  }
+  /* La media V2 monta picture directamente dentro del figure. Las reglas
+     antiguas apuntaban a un figure interno que el renderer ya no genera, por
+     lo que la imagen conservaba su alto intrínseco y dejaba un vacío. */
+  .cm.v2 .catalog-hero-media > picture,
+  .cm.v2 .catalog-hero-media > img,
+  .cm.v2 .catalog-hero-media > video,
+  .cm.v2 .catalog-hero-media > .catalog-hero-slide-stage {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 100%;
+    margin: 0;
+  }
+  .cm.v2 .catalog-hero-media > picture > img,
+  .cm.v2 .catalog-hero-media > img,
+  .cm.v2 .catalog-hero-media > video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+  .cm.v2 .catalog-hero-media > .catalog-hero-slide-stage > figure,
+  .cm.v2 .catalog-hero-media > .catalog-hero-slide-stage > figure > picture,
+  .cm.v2 .catalog-hero-media > .catalog-hero-slide-stage > figure > img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    margin: 0;
+  }
+  .cm.v2 .catalog-hero-media > .catalog-hero-slide-stage > figure > picture > img,
+  .cm.v2 .catalog-hero-media > .catalog-hero-slide-stage > figure > img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+  /* En tablet angosta la portada conserva su carril vertical 9:16. El layout
+     deja de convertirla en un fondo casi cuadrado, que recortaba la foto y
+     hacía inconsistente la misma imagen entre breakpoints. */
+  @media (min-width: 768px) and (max-width: 899px) {
+    .cm.v2 .catalog-hero-editorial .catalog-hero-inner,
+    .cm.v2 .catalog-hero-page .catalog-hero-inner {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(15rem, min(42vw, 26rem));
+      width: min(calc(100% - 3rem), var(--catalog-v2-wide));
+      height: auto;
+      min-height: 0;
+    }
+    .cm.v2 .catalog-hero-editorial [data-hero-media],
+    .cm.v2 .catalog-hero-page .catalog-hero-media {
+      position: relative;
+      inset: auto;
+      width: 100%;
+      height: auto;
+      min-height: 0;
+      margin: 0;
+      aspect-ratio: 9 / 16;
+      border-radius: var(--catalog-v2-radius);
+    }
+    .cm.v2 .catalog-hero-editorial .catalog-hero-copy,
+    .cm.v2 .catalog-hero-page .catalog-hero-copy {
+      color: var(--catalog-ink);
+    }
+    .cm.v2 .catalog-hero-editorial .catalog-hero-copy .catalog-hero-body,
+    .cm.v2 .catalog-hero-page .catalog-hero-copy .catalog-hero-body {
+      color: var(--catalog-muted);
+    }
+    .cm.v2 .catalog-hero-editorial [data-hero-media]::after,
+    .cm.v2 .catalog-hero-page .catalog-hero-media::after {
+      display: none;
+    }
+    .cm.v2 .catalog-hero-editorial .catalog-hero-benefits--copy,
+    .cm.v2 .catalog-hero-page .catalog-hero-benefits--copy {
+      display: none;
+    }
+  }
+  /* En mobile la foto también mantiene el encuadre vertical; la altura del
+     copy sigue pudiendo crecer si un título personalizado ocupa más líneas. */
+  @media (max-width: 767px) {
+    .cm.v2 .catalog-hero-editorial .catalog-hero-inner,
+    .cm.v2 .catalog-hero-page .catalog-hero-inner {
+      min-height: calc(100vw * 16 / 9);
+    }
+    .cm.v2 .catalog-hero-editorial [data-hero-media],
+    .cm.v2 .catalog-hero-page .catalog-hero-media {
+      aspect-ratio: 9 / 16;
+    }
   }
   @media (prefers-reduced-motion: reduce) {
     .cm.v2 .catalog-hero-page [data-motion-zone],

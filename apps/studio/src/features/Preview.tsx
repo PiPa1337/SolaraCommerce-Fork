@@ -10,12 +10,13 @@ import {
   EyeSlash,
   SidebarSimple,
 } from "@phosphor-icons/react";
+import { getModuleDefinition } from "@solara/modules";
 import type { ImageAsset, StoreProjectV1 } from "@solara/project-schema";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ImageUploadButton } from "../components/ImageAssetPicker";
 import { Tooltip } from "../components/primitives";
 import { Button, IconButton } from "../components/Ui";
-import { loadExporter } from "../lib/loadExporter";
+import { renderPreviewInWorker } from "../lib/workers";
 import {
   type CanvasManifestEntryLike,
   canvasBridgeScript,
@@ -51,10 +52,29 @@ body::-webkit-scrollbar {
 }
 </style>`;
 
+const PREVIEW_PERF_STYLE = `<style data-solara-preview-perf>
+html { scroll-behavior: auto !important; }
+* { scroll-behavior: auto !important; }
+:root { --solara-motion-fast: 0.01ms !important; --solara-motion-normal: 0.01ms !important; --solara-motion-easing: linear !important; }
+*, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+[data-solara-module], .catalog-hero, .catalog-category-bento, .catalog-product-grid {
+  contain: layout paint;
+  content-visibility: auto;
+  contain-intrinsic-size: 600px 400px;
+}
+img, video { content-visibility: auto; contain-intrinsic-size: 300px 200px; }
+[data-solara-module], .catalog-hero, .catalog-product-grid, .catalog-category-bento-item {
+  box-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+}
+.catalog-hero, .catalog-product-grid { background-image: none !important; }
+</style>`;
+
 function addPreviewScrollbarPolicy(document: string): string {
   const headEnd = document.indexOf("</head>");
-  if (headEnd === -1) return `${PREVIEW_SCROLLBAR_STYLE}${document}`;
-  return `${document.slice(0, headEnd)}${PREVIEW_SCROLLBAR_STYLE}\n${document.slice(headEnd)}`;
+  if (headEnd === -1) return `${PREVIEW_SCROLLBAR_STYLE}${PREVIEW_PERF_STYLE}${document}`;
+  return `${document.slice(0, headEnd)}${PREVIEW_SCROLLBAR_STYLE}\n${PREVIEW_PERF_STYLE}\n${document.slice(headEnd)}`;
 }
 
 function readPreviewCartState(storeId: string): string {
@@ -563,9 +583,15 @@ export function Preview({
     canvasSelection === null || manifestFieldKey === ""
       ? ""
       : (() => {
-          const settings = project.sections.find(
-            (section) => section.id === canvasSelection.sectionId,
-          )?.settings as Record<string, unknown> | undefined;
+          const selectedSection = [
+            ...project.sections,
+            ...project.pages.flatMap((page) => page.sections),
+          ].find((section) => section.id === canvasSelection.sectionId);
+          const settings = selectedSection
+            ? (getModuleDefinition(selectedSection.moduleId)?.settingsSchema.parse(
+                selectedSection.settings,
+              ) as Record<string, unknown>)
+            : undefined;
           const current = settings?.[manifestFieldKey];
           if (canvasSelection.itemId !== undefined && manifestEntry?.itemFieldKey) {
             const item = Array.isArray(current)
@@ -646,77 +672,66 @@ export function Preview({
   // edición (el estado siempre está al día) y el preview queda a 150ms del
   // último cambio, imperceptible al ojo.
   useEffect(() => {
+    void renderToken;
     let active = true;
     const timer = window.setTimeout(() => {
       const previewSession = String(++previewRenderSessionRef.current);
-      void loadExporter(renderToken)
-        .then(({ getPreviewAssetSources, renderPreviewHtml }) => {
+      void renderPreviewInWorker(project, route, {
+        assetTransport: "parent",
+        editor: { enabled: true, sectionId: "*" },
+      })
+        .then(({ html: previewHtml, canvasManifest, assetSources }) => {
           if (!active) return;
-          try {
-            previewAssetSources.current = getPreviewAssetSources(project);
-            activePreviewSessionRef.current = previewSession;
-            setHtmlSession(previewSession);
-            const cartKey = `solara-cart:${project.id}`;
-            const serializedCart =
-              previewCartStateRef.current?.key === cartKey
-                ? previewCartStateRef.current.serialized
-                : readPreviewCartState(project.id);
-            const rendered = renderPreviewHtml(project, "draft", route, {
-              assetTransport: "parent",
-              editor: { enabled: true, sectionId: "*" },
-            });
-            const previewHtml = typeof rendered === "string" ? rendered : rendered.html;
-            if (typeof rendered !== "string") {
-              canvasManifestRef.current = rendered.canvasManifest.entries.map((entry) => ({
-                editId: entry.editId,
-                sectionId: entry.sectionId,
-                fieldKey: entry.fieldKey,
-                kind: entry.kind,
-                ...(entry.itemFieldKey === undefined ? {} : { itemFieldKey: entry.itemFieldKey }),
-                ...(entry.sourceKind === undefined ? {} : { sourceKind: entry.sourceKind }),
-                ...(entry.entityId === undefined ? {} : { entityId: entry.entityId }),
-                ...(entry.entityField === undefined ? {} : { entityField: entry.entityField }),
-                ...(entry.label === undefined ? {} : { label: entry.label }),
-                ...(entry.multiline === undefined ? {} : { multiline: entry.multiline }),
-                ...(entry.maxLength === undefined ? {} : { maxLength: entry.maxLength }),
-                ...(entry.itemIds === undefined ? {} : { itemIds: entry.itemIds }),
-                ...(entry.moduleId === undefined ? {} : { moduleId: entry.moduleId }),
-              }));
-            } else {
-              canvasManifestRef.current = [];
-            }
-            // Nonce fresco por render: un mensaje de una sesión anterior no
-            // puede seleccionar elementos del preview actual.
-            const nonce = makeCanvasNonce();
-            canvasNonceRef.current = nonce;
-            setHtml(
-              addPreviewNavigationBridge(
-                addPreviewCanvasBridge(
-                  addPreviewCartState(
-                    addPreviewScrollbarPolicy(previewHtml),
-                    project.id,
-                    previewSession,
-                    serializedCart,
-                  ),
+          previewAssetSources.current = new Map(Object.entries(assetSources));
+          activePreviewSessionRef.current = previewSession;
+          setHtmlSession(previewSession);
+          const cartKey = `solara-cart:${project.id}`;
+          const serializedCart =
+            previewCartStateRef.current?.key === cartKey
+              ? previewCartStateRef.current.serialized
+              : readPreviewCartState(project.id);
+          canvasManifestRef.current = canvasManifest.entries.map((entry) => ({
+            editId: entry.editId as string,
+            sectionId: entry.sectionId as string,
+            fieldKey: entry.fieldKey as string,
+            kind: entry.kind as CanvasManifestEntryLike["kind"],
+            ...(entry.itemFieldKey === undefined
+              ? {}
+              : { itemFieldKey: entry.itemFieldKey as string }),
+            ...(entry.sourceKind === undefined ? {} : { sourceKind: entry.sourceKind as string }),
+            ...(entry.entityId === undefined ? {} : { entityId: entry.entityId as string }),
+            ...(entry.entityField === undefined
+              ? {}
+              : { entityField: entry.entityField as string }),
+            ...(entry.label === undefined ? {} : { label: entry.label as string }),
+            ...(entry.multiline === undefined ? {} : { multiline: entry.multiline as boolean }),
+            ...(entry.maxLength === undefined ? {} : { maxLength: entry.maxLength as number }),
+            ...(entry.itemIds === undefined ? {} : { itemIds: entry.itemIds as string[] }),
+            ...(entry.moduleId === undefined ? {} : { moduleId: entry.moduleId as string }),
+          })) as unknown as (CanvasManifestEntryLike & { itemFieldKey?: string })[];
+          const nonce = makeCanvasNonce();
+          canvasNonceRef.current = nonce;
+          setHtml(
+            addPreviewNavigationBridge(
+              addPreviewCanvasBridge(
+                addPreviewCartState(
+                  addPreviewScrollbarPolicy(previewHtml),
+                  project.id,
                   previewSession,
-                  nonce,
+                  serializedCart,
                 ),
+                previewSession,
+                nonce,
               ),
-            );
-            setIframeReady(false);
-            setError("");
-          } catch (reason) {
-            setError(
-              reason instanceof Error ? reason.message : "No se pudo generar la vista previa.",
-            );
-          }
+            ),
+          );
+          setIframeReady(false);
+          setError("");
         })
         .catch((reason: unknown) => {
           if (active) {
             setError(
-              reason instanceof Error
-                ? reason.message
-                : "No se pudo cargar el renderer de preview.",
+              reason instanceof Error ? reason.message : "No se pudo generar la vista previa.",
             );
           }
         });

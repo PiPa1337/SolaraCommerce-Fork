@@ -91,6 +91,35 @@ describe("exporter", () => {
     );
   });
 
+  it("coloca el botón de arrepentimiento dentro del footer sólo en production", () => {
+    for (const project of [catalogModernV2Store, referenceStore]) {
+      const productionHome = String(
+        exportProject(project, { mode: "production" }).files.get("index.html"),
+      );
+      const footerStart = productionHome.indexOf("<footer");
+      const footerEnd = productionHome.indexOf("</footer>", footerStart);
+      const consumerRightsStart = productionHome.indexOf('class="solara-consumer-rights"');
+      const footer = productionHome.slice(footerStart, footerEnd);
+
+      expect(footerStart).toBeGreaterThanOrEqual(0);
+      expect(footerEnd).toBeGreaterThan(footerStart);
+      expect(consumerRightsStart).toBeGreaterThan(footerStart);
+      expect(consumerRightsStart).toBeLessThan(footerEnd);
+      expect(footer).toContain('class="solara-consumer-rights"');
+      expect(footer).toContain("https://www.argentina.gob.ar/defensa-del-consumidor");
+
+      const draftHome = String(exportProject(project, { mode: "draft" }).files.get("index.html"));
+      expect(draftHome).not.toContain("solara-consumer-rights");
+
+      for (const legalPath of ["privacidad/index.html", "terminos/index.html"]) {
+        const legalPage = String(
+          exportProject(project, { mode: "production" }).files.get(legalPath),
+        );
+        expect(legalPage).not.toContain("solara-consumer-rights");
+      }
+    }
+  });
+
   it("mantiene el fallback de Nosotros para proyectos no V2", () => {
     const project = structuredClone(catalogModernStore);
     const result = exportProject(project, { mode: "production" });
@@ -764,9 +793,10 @@ describe("exporter", () => {
 
     expect(result.files.has("assets/fixture-manta.webp")).toBe(true);
     expect(result.files.has("assets/fixture-manta-fallback.jpg")).toBe(true);
-    expect(result.files.has("assets/fixture-manta-480.webp")).toBe(true);
+    expect(result.files.has("assets/fixture-manta-480.webp")).toBe(false);
     expect(result.files.has("assets/fixture-manta-960.webp")).toBe(true);
-    expect(html).toContain("/assets/fixture-manta-480.webp 480w");
+    expect(html).toContain("/assets/fixture-manta-960.webp 960w");
+    expect(html).toContain('<source type="image/webp" srcset="/assets/fixture-manta.webp 1152w"');
   });
 
   it("usa la extensión del MIME real para fallback y variantes responsive", () => {
@@ -1125,6 +1155,9 @@ describe("exporter", () => {
     const contactHtml = String(result.files.get("contacto/index.html"));
     expect(contactHtml).toContain(`wa.me/${referenceStore.whatsapp.phone}`);
     expect(contactHtml).toContain("Escribir por WhatsApp");
+    const checkoutHtml = String(result.files.get("compra/index.html"));
+    expect(checkoutHtml).toContain("data-checkout-form");
+    expect(checkoutHtml).not.toContain("data-whatsapp-link");
   });
 
   it("la meta description de Home prefiere la página y el seo global antes que la identidad", () => {

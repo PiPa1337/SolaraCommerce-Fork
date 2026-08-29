@@ -15,6 +15,7 @@
     "@solara/exporter": "workspace:*",
     "@solara/modules": "workspace:*",
     "@solara/project-schema": "workspace:*",
+    "@solara/storefront-runtime": "workspace:*",
     "@tanstack/react-table": "8.21.3",
     "dexie": "4.2.0",
     "motion": "12.23.12",

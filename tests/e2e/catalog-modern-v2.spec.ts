@@ -16,9 +16,21 @@ const longTitleHero = longTitleProject.sections.find(
 if (!longTitleHero) throw new Error("La fixture V2 no tiene hero para la prueba de wrapping.");
 longTitleHero.settings = {
   ...longTitleHero.settings,
-  title: "Descartables para gastronomía, packaging y envíos mayoristas en Trelew",
+  title: "Descartables y packaging para tu negocio",
 };
 const exportedLongTitle = exportProject(longTitleProject, { mode: "production" });
+const longCategoryProject = structuredClone(catalogModernV2Store);
+const longCategory = longCategoryProject.categories.find((category) => !category.parentId);
+if (!longCategory)
+  throw new Error("La fixture V2 no tiene categoría madre para la prueba de wrapping.");
+longCategory.title = "Gastronomía y Descartables";
+const exportedLongCategory = exportProject(longCategoryProject, { mode: "production" });
+const longCategoryV1Project = structuredClone(catalogModernStore);
+const longCategoryV1 = longCategoryV1Project.categories.find((category) => !category.parentId);
+if (!longCategoryV1)
+  throw new Error("La fixture V1 no tiene categoría madre para la prueba de wrapping.");
+longCategoryV1.title = "Gastronomía y Descartables";
+const exportedLongCategoryV1 = exportProject(longCategoryV1Project, { mode: "production" });
 const fixtureBrand = catalogModernV2Store.identity.brandName;
 // Desde 9a22a95 los assets del fixture viajan embebidos como data URLs;
 // solo los 12 productos quedan como archivos webp servibles en /fixtures/.
@@ -54,8 +66,23 @@ test.beforeAll(async () => {
         : requested.endsWith("/")
           ? `${requested}index.html`
           : requested;
-    const source = url.searchParams.has("longTitle") ? exportedLongTitle : exported;
-    const content = source.files.get(path) ?? fixtureFiles.get(path);
+    const source = url.searchParams.has("longCategory")
+      ? exportedLongCategory
+      : url.searchParams.has("longCategoryV1")
+        ? exportedLongCategoryV1
+        : url.searchParams.has("longTitle")
+          ? exportedLongTitle
+          : exported;
+    const content =
+      source.files.get(path) ??
+      (path.startsWith("assets/")
+        ? (exportedLongCategoryV1.files.get(path) ??
+          exportedV1.files.get(path) ??
+          exportedLongCategory.files.get(path) ??
+          exportedLongTitle.files.get(path) ??
+          exported.files.get(path))
+        : undefined) ??
+      fixtureFiles.get(path);
     if (content === undefined) {
       response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not found");
       return;
@@ -320,36 +347,405 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
   await page.screenshot({ path: testInfo.outputPath("home-1920x968.png"), fullPage: true });
 });
 
-test("V2 no recorta títulos largos del hero en mobile", async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 844 });
-  await page.goto(`${serverUrl}/?longTitle=1`);
+test("V2 conserva el encuadre 9:16 y llena la media del hero", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const viewports = [
+    { width: 1920, height: 968 },
+    { width: 1024, height: 768 },
+    { width: 768, height: 823 },
+    { width: 390, height: 844 },
+    { width: 320, height: 844 },
+  ];
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    await page.goto(serverUrl);
+    await waitForStorefrontReady(page);
+    const metrics = await page.evaluate(() => {
+      const media = document.querySelector<HTMLElement>("[data-hero-media]");
+      const picture = media?.querySelector<HTMLElement>(":scope > picture");
+      const image = media?.querySelector<HTMLImageElement>("img");
+      if (!media || !image) return null;
+      const mediaRect = media.getBoundingClientRect();
+      const content = picture ?? image;
+      const contentRect = content.getBoundingClientRect();
+      const pictureRect = picture?.getBoundingClientRect();
+      const imageRect = image.getBoundingClientRect();
+      return {
+        media: { width: mediaRect.width, height: mediaRect.height },
+        picture: pictureRect
+          ? { width: pictureRect.width, height: pictureRect.height }
+          : null,
+        image: { width: imageRect.width, height: imageRect.height },
+        content: { width: contentRect.width, height: contentRect.height },
+        natural: { width: image.naturalWidth, height: image.naturalHeight },
+        objectFit: getComputedStyle(image).objectFit,
+        position: getComputedStyle(media).position,
+      };
+    });
+    if (!metrics) throw new Error(`No se pudo medir el hero en ${viewport.width}px.`);
+    expect(metrics.media.width / metrics.media.height).toBeCloseTo(9 / 16, 2);
+    expect(Math.abs(metrics.content.width - metrics.media.width)).toBeLessThanOrEqual(1);
+    expect(Math.abs(metrics.content.height - metrics.media.height)).toBeLessThanOrEqual(1);
+    expect(Math.abs(metrics.image.width - metrics.content.width)).toBeLessThanOrEqual(1);
+    expect(Math.abs(metrics.image.height - metrics.content.height)).toBeLessThanOrEqual(1);
+    expect(metrics.objectFit).toBe("cover");
+    await page.screenshot({
+      path: testInfo.outputPath(`hero-media-${viewport.width}.png`),
+      fullPage: false,
+    });
+  }
+});
 
-  const metrics = await page.evaluate(() => {
-    const hero = document.querySelector<HTMLElement>(".catalog-hero-inner");
-    const title = document.querySelector<HTMLElement>(".catalog-hero-title");
-    const body = document.querySelector<HTMLElement>(".catalog-hero-body");
-    if (!hero || !title || !body) return null;
-    const heroRect = hero.getBoundingClientRect();
-    const titleRect = title.getBoundingClientRect();
-    const bodyRect = body.getBoundingClientRect();
-    return {
-      documentWidth: document.documentElement.scrollWidth,
-      titleHeight: titleRect.height,
-      titleBottom: titleRect.bottom,
-      heroBottom: heroRect.bottom,
-      bodyTop: bodyRect.top,
-      titleOverflow: getComputedStyle(title).overflow,
-      titleWrap: getComputedStyle(title).overflowWrap,
-    };
-  });
+test("V2 mantiene espacio para descendentes en títulos largos del hero", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const viewport of [
+    { width: 1760, height: 810 },
+    { width: 1024, height: 768 },
+    { width: 320, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(`${serverUrl}/?longTitle=1`);
+    await waitForStorefrontReady(page);
+    await expect(page.locator('[data-solara-module="catalog-hero"]')).toHaveCSS(
+      "opacity",
+      "1",
+    );
+    const metrics = await page.evaluate(() => {
+      const hero = document.querySelector<HTMLElement>(".catalog-hero-inner");
+      const title = document.querySelector<HTMLElement>(".catalog-hero-title");
+      const body = document.querySelector<HTMLElement>(".catalog-hero-body");
+      if (!hero || !title || !body) return null;
+      const heroRect = hero.getBoundingClientRect();
+      const titleRect = title.getBoundingClientRect();
+      const bodyRect = body.getBoundingClientRect();
+      const style = getComputedStyle(title);
+      const fontSize = Number.parseFloat(style.fontSize);
+      const lineHeight = Number.parseFloat(style.lineHeight);
+      return {
+        documentWidth: document.documentElement.scrollWidth,
+        titleBottom: titleRect.bottom,
+        heroBottom: heroRect.bottom,
+        bodyTop: bodyRect.top,
+        titleOverflow: style.overflow,
+        lineHeightRatio: lineHeight / fontSize,
+      };
+    });
 
-  expect(metrics).not.toBeNull();
-  expect(metrics?.documentWidth).toBeLessThanOrEqual(320);
-  expect(metrics?.titleHeight).toBeGreaterThan(220);
-  expect(metrics?.titleBottom).toBeLessThanOrEqual(metrics?.heroBottom ?? 0);
-  expect(metrics?.bodyTop).toBeGreaterThanOrEqual(metrics?.titleBottom ?? 0);
-  expect(metrics?.titleOverflow).toBe("visible");
-  expect(metrics?.titleWrap).toBe("anywhere");
+    expect(metrics).not.toBeNull();
+    expect(metrics?.documentWidth).toBeLessThanOrEqual(viewport.width);
+    expect(metrics?.titleBottom).toBeLessThanOrEqual((metrics?.heroBottom ?? 0) + 1);
+    expect(metrics?.bodyTop).toBeGreaterThanOrEqual((metrics?.titleBottom ?? 0) - 1);
+    expect(metrics?.titleOverflow).toBe("visible");
+    expect(metrics?.lineHeightRatio).toBeGreaterThanOrEqual(1.14);
+    await revealWholePage(page);
+    await expect(page.locator("[data-hero-benefit]").nth(2)).toHaveCSS("opacity", "1");
+    await page.screenshot({ path: testInfo.outputPath(`hero-line-height-${viewport.width}.png`) });
+  }
+});
+
+test("V2 mantiene compactos los h1 largos de categorías en todos los tamaños", async ({
+  page,
+}, testInfo) => {
+  for (const viewport of [
+    { width: 1760, height: 810 },
+    { width: 1024, height: 768 },
+    { width: 320, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(`${serverUrl}/categorias/remeras/?longCategory=1`);
+    const hero = page.locator(".solara-category-hero");
+    const title = hero.locator("h1");
+    const description = hero.locator(".solara-category-hero-copy > p");
+    await expect(title).toHaveText("Gastronomía y Descartables");
+
+    const metrics = await title.evaluate((element) => {
+      const heroElement = element.closest<HTMLElement>(".solara-category-hero");
+      const copyElement = heroElement?.querySelector<HTMLElement>(
+        ":scope > .solara-category-hero-copy",
+      );
+      const descriptionElement = copyElement?.querySelector<HTMLElement>(":scope > p");
+      const mediaElement = heroElement
+        ? [...heroElement.children].find((child) => child.matches("img, picture"))
+        : undefined;
+      if (
+        !heroElement ||
+        !copyElement ||
+        !descriptionElement ||
+        !(mediaElement instanceof HTMLElement)
+      )
+        return null;
+      const titleRect = element.getBoundingClientRect();
+      const copyRect = copyElement.getBoundingClientRect();
+      const descriptionRect = descriptionElement.getBoundingClientRect();
+      const mediaRect = mediaElement.getBoundingClientRect();
+      const heroRect = heroElement.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      const fontSize = Number.parseFloat(style.fontSize);
+      const lineHeight = Number.parseFloat(style.lineHeight);
+      return {
+        fontSize,
+        lineHeightRatio: lineHeight / fontSize,
+        titleHeight: titleRect.height,
+        titleBottom: titleRect.bottom,
+        copyTop: copyRect.top,
+        copyBottom: copyRect.bottom,
+        descriptionTop: descriptionRect.top,
+        mediaTop: mediaRect.top,
+        heroHeight: heroRect.height,
+        overflowWrap: style.overflowWrap,
+        maxWidth: style.maxWidth,
+        documentWidth: document.documentElement.scrollWidth,
+      };
+    });
+
+    expect(metrics).not.toBeNull();
+    if (!metrics) throw new Error("No se pudieron medir los h1 de categoría.");
+    const maxFontSize = viewport.width >= 1200 ? 80 : viewport.width >= 768 ? 56 : 42;
+    expect(metrics.fontSize).toBeLessThanOrEqual(maxFontSize);
+    expect(metrics.lineHeightRatio).toBeGreaterThanOrEqual(1.04);
+    expect(metrics.titleHeight).toBeLessThanOrEqual(viewport.width <= 767 ? 190 : 210);
+    expect(metrics.titleBottom).toBeLessThanOrEqual(metrics.descriptionTop + 1);
+    expect(metrics.descriptionTop - metrics.titleBottom).toBeGreaterThanOrEqual(8);
+    expect(metrics.descriptionTop - metrics.titleBottom).toBeLessThanOrEqual(24);
+    if (viewport.width >= 768) {
+      expect(Math.abs(metrics.mediaTop - metrics.copyTop)).toBeLessThanOrEqual(2);
+      expect(metrics.heroHeight).toBeLessThan(480);
+    } else {
+      expect(metrics.mediaTop).toBeGreaterThanOrEqual(metrics.copyBottom - 1);
+    }
+    expect(metrics.overflowWrap).toBe("break-word");
+    expect(metrics.maxWidth).not.toBe("10ch");
+    expect(metrics.documentWidth).toBeLessThanOrEqual(viewport.width);
+    await expect(description).toBeVisible();
+    await hero.screenshot({ path: testInfo.outputPath(`category-title-${viewport.width}.png`) });
+  }
+});
+
+test("V1 mantiene compactos los h1 largos de categorías en todos los tamaños", async ({
+  page,
+}, testInfo) => {
+  for (const viewport of [
+    { width: 1760, height: 810 },
+    { width: 1024, height: 768 },
+    { width: 320, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(`${serverUrl}/categorias/remeras/?longCategoryV1=1`);
+    const hero = page.locator(".solara-category-hero");
+    const title = hero.locator("h1");
+    await expect(title).toHaveText("Gastronomía y Descartables");
+
+    const metrics = await title.evaluate((element) => {
+      const hero = element.closest<HTMLElement>(".solara-category-hero");
+      const copy = hero?.querySelector<HTMLElement>(":scope > .solara-category-hero-copy");
+      const description = copy?.querySelector<HTMLElement>(":scope > p");
+      const media = hero
+        ? [...hero.children].find((child) => child.matches("img, picture"))
+        : undefined;
+      const visualAnchor = element.querySelector<HTMLElement>(".solara-category-title-glass");
+      if (!hero || !copy || !description || !(media instanceof HTMLElement) || !visualAnchor)
+        return null;
+      const titleRect = element.getBoundingClientRect();
+      const copyRect = copy.getBoundingClientRect();
+      const descriptionRect = description.getBoundingClientRect();
+      const mediaRect = media.getBoundingClientRect();
+      const heroRect = hero.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      const visualStyle = getComputedStyle(visualAnchor);
+      const fontSize = Number.parseFloat(style.fontSize);
+      return {
+        fontSize,
+        titleHeight: titleRect.height,
+        titleBottom: titleRect.bottom,
+        copyTop: copyRect.top,
+        copyBottom: copyRect.bottom,
+        descriptionTop: descriptionRect.top,
+        mediaTop: mediaRect.top,
+        heroHeight: heroRect.height,
+        overflowWrap: style.overflowWrap,
+        visualDisplay: visualStyle.display,
+        visualPadding: visualStyle.padding,
+        visualBackground: visualStyle.backgroundColor,
+        visualBackdropFilter: visualStyle.backdropFilter,
+        visualBorderWidth: visualStyle.borderWidth,
+        visualBorderStyle: visualStyle.borderStyle,
+        documentWidth: document.documentElement.scrollWidth,
+      };
+    });
+
+    expect(metrics).not.toBeNull();
+    if (!metrics) throw new Error("No se pudieron medir los h1 de categoría V1.");
+    const maxFontSize = viewport.width >= 1200 ? 80 : viewport.width >= 768 ? 56 : 42;
+    expect(metrics.fontSize).toBeLessThanOrEqual(maxFontSize);
+    expect(metrics.titleHeight).toBeLessThanOrEqual(viewport.width <= 767 ? 190 : 210);
+    expect(metrics.titleBottom).toBeLessThanOrEqual(metrics.descriptionTop + 1);
+    expect(metrics.descriptionTop - metrics.titleBottom).toBeGreaterThanOrEqual(8);
+    expect(metrics.descriptionTop - metrics.titleBottom).toBeLessThanOrEqual(24);
+    if (viewport.width >= 768) {
+      expect(Math.abs(metrics.mediaTop - metrics.copyTop)).toBeLessThanOrEqual(2);
+      expect(metrics.heroHeight).toBeLessThan(430);
+    } else {
+      expect(metrics.mediaTop).toBeGreaterThanOrEqual(metrics.copyBottom - 1);
+    }
+    expect(metrics.visualDisplay).toBe("inline");
+    expect(metrics.visualPadding).toBe("0px");
+    expect(metrics.visualBackground).toBe("rgba(0, 0, 0, 0)");
+    expect(metrics.visualBackdropFilter).toBe("none");
+    expect(metrics.visualBorderWidth).toBe("0px");
+    expect(metrics.visualBorderStyle).toBe("none");
+    expect(metrics.documentWidth).toBeLessThanOrEqual(viewport.width);
+    await hero.screenshot({ path: testInfo.outputPath(`category-title-v1-${viewport.width}.png`) });
+  }
+});
+
+test("V2 mantiene compacta la caja del nombre de categoría en todos los tamaños", async ({
+  page,
+}, testInfo) => {
+  for (const viewport of [
+    { width: 1760, height: 810 },
+    { width: 1024, height: 768 },
+    { width: 320, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(serverUrl);
+
+    const item = page.locator(".catalog-category-bento-item").first();
+    const label = item.locator(".catalog-category-bento-label");
+    const title = label.locator(".catalog-category-bento-title");
+    await expect(label).toBeVisible();
+    await title.evaluate((element) => {
+      element.textContent = "Gastronomía y Descartables";
+    });
+
+    const metrics = await label.evaluate((element) => {
+      const itemElement = element.closest<HTMLElement>(".catalog-category-bento-item");
+      const titleElement = element.querySelector<HTMLElement>(".catalog-category-bento-title");
+      if (!itemElement || !titleElement) return null;
+      const labelRect = element.getBoundingClientRect();
+      const itemRect = itemElement.getBoundingClientRect();
+      const titleRect = titleElement.getBoundingClientRect();
+      return {
+        labelWidth: labelRect.width,
+        labelHeight: labelRect.height,
+        itemWidth: itemRect.width,
+        itemRight: itemRect.right,
+        labelRight: labelRect.right,
+        titleHeight: titleRect.height,
+        titleMargin: getComputedStyle(titleElement).margin,
+        documentWidth: document.documentElement.scrollWidth,
+      };
+    });
+
+    expect(metrics).not.toBeNull();
+    expect(metrics?.labelWidth).toBeLessThan((metrics?.itemWidth ?? 0) * 0.98);
+    expect(metrics?.labelRight).toBeLessThanOrEqual((metrics?.itemRight ?? 0) + 1);
+    expect(metrics?.titleMargin).toBe("0px");
+    expect((metrics?.labelHeight ?? 0) - (metrics?.titleHeight ?? 0)).toBeLessThanOrEqual(20);
+    expect(metrics?.documentWidth).toBeLessThanOrEqual(viewport.width);
+
+    await item.screenshot({ path: testInfo.outputPath(`category-label-${viewport.width}.png`) });
+  }
+});
+
+test("V1 y V2 alinean las fotos de producto dentro de su media", async ({ page }, testInfo) => {
+  const viewports = [
+    { width: 1760, height: 810 },
+    { width: 1024, height: 768 },
+    { width: 320, height: 844 },
+  ];
+  const measureImage = async () => {
+    const image = page.locator(".catalog-product-card-image").first();
+    await expect(image).toBeVisible();
+    await expect
+      .poll(() => image.evaluate((element) => (element as HTMLImageElement).complete))
+      .toBe(true);
+    return image.evaluate((element) => {
+      const media = element.closest<HTMLElement>(".catalog-product-media");
+      const wrapper = element.parentElement;
+      if (!media || !wrapper) return null;
+      const mediaRect = media.getBoundingClientRect();
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const imageRect = element.getBoundingClientRect();
+      return {
+        mediaWidth: mediaRect.width,
+        mediaHeight: mediaRect.height,
+        wrapperWidth: wrapperRect.width,
+        wrapperHeight: wrapperRect.height,
+        imageWidth: imageRect.width,
+        imageHeight: imageRect.height,
+        wrapperDisplay: getComputedStyle(wrapper).display,
+        objectPosition: getComputedStyle(element).objectPosition,
+        documentWidth: document.documentElement.scrollWidth,
+      };
+    });
+  };
+  const useNonSquareImage = async () => {
+    const image = page.locator(".catalog-product-card-image").first();
+    await image.evaluate((element) => {
+      element.parentElement?.querySelectorAll("source").forEach((source) => {
+        source.remove();
+      });
+      element.removeAttribute("width");
+      element.removeAttribute("height");
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800"><rect width="1200" height="800" fill="#fff"/><rect x="210" y="130" width="780" height="540" rx="44" fill="#e87917"/></svg>`;
+      element.setAttribute("src", `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
+    });
+    await expect
+      .poll(() => image.evaluate((element) => (element as HTMLImageElement).naturalWidth))
+      .toBeGreaterThan(0);
+  };
+
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    await page.goto(serverUrl);
+    await useNonSquareImage();
+    const metrics = await measureImage();
+    expect(metrics).not.toBeNull();
+    expect(metrics?.wrapperDisplay).toBe("block");
+    expect(metrics?.wrapperWidth).toBeCloseTo(metrics?.mediaWidth ?? 0, 0);
+    expect(metrics?.wrapperHeight).toBeCloseTo(metrics?.mediaHeight ?? 0, 0);
+    expect(metrics?.imageWidth).toBeCloseTo(metrics?.mediaWidth ?? 0, 0);
+    expect(metrics?.imageHeight).toBeCloseTo(metrics?.mediaHeight ?? 0, 0);
+    expect(metrics?.objectPosition).toBe("50% 50%");
+    expect(metrics?.documentWidth).toBeLessThanOrEqual(viewport.width);
+    await page
+      .locator(".catalog-product-card")
+      .first()
+      .screenshot({
+        path: testInfo.outputPath(`product-card-v2-${viewport.width}.png`),
+      });
+  }
+
+  const v1HtmlFile = exportedV1.files.get("index.html");
+  const v1CssFile = [...exportedV1.files.entries()].find(([path]) => path.endsWith(".css"))?.[1];
+  if (!v1HtmlFile || !v1CssFile)
+    throw new Error("La exportación V1 no generó los archivos necesarios.");
+  const v1Html = (
+    typeof v1HtmlFile === "string" ? v1HtmlFile : new TextDecoder().decode(v1HtmlFile)
+  ).replace(
+    "</head>",
+    `<base href="${serverUrl}/"><style>${typeof v1CssFile === "string" ? v1CssFile : new TextDecoder().decode(v1CssFile)}</style></head>`,
+  );
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    await page.setContent(v1Html, { waitUntil: "networkidle" });
+    await useNonSquareImage();
+    const metrics = await measureImage();
+    expect(metrics).not.toBeNull();
+    expect(metrics?.wrapperDisplay).toBe("block");
+    expect(metrics?.wrapperWidth).toBeCloseTo(metrics?.mediaWidth ?? 0, 0);
+    expect(metrics?.wrapperHeight).toBeCloseTo(metrics?.mediaHeight ?? 0, 0);
+    expect(metrics?.imageWidth).toBeCloseTo(metrics?.mediaWidth ?? 0, 0);
+    expect(metrics?.imageHeight).toBeCloseTo(metrics?.mediaHeight ?? 0, 0);
+    expect(metrics?.objectPosition).toBe("50% 50%");
+    expect(metrics?.documentWidth).toBeLessThanOrEqual(viewport.width);
+    await page
+      .locator(".catalog-product-card")
+      .first()
+      .screenshot({
+        path: testInfo.outputPath(`product-card-v1-${viewport.width}.png`),
+      });
+  }
 });
 
 test("V2 no solapa el menú móvil con la marca", async ({ page }) => {
@@ -404,6 +800,32 @@ test("V2 no deja el mega menú cerrado fuera del layout", async ({ page }) => {
   expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.clientWidth);
 });
 
+test("V2 muestra el acceso a todos los productos sin divisor estático", async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto(serverUrl);
+
+  const menu = page.locator(".catalog-nav-menu");
+  await menu.locator(":scope > summary").click();
+  const allProducts = menu.locator(".catalog-mega-menu__all");
+  await expect(allProducts).toBeVisible();
+
+  const styles = await allProducts.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const hoverUnderline = getComputedStyle(element, "::after");
+    return {
+      textDecorationLine: style.textDecorationLine,
+      borderTopStyle: style.borderTopStyle,
+      hoverUnderlineDisplay: hoverUnderline.display,
+      hoverUnderlineHeight: hoverUnderline.height,
+    };
+  });
+
+  expect(styles.textDecorationLine).toBe("none");
+  expect(styles.borderTopStyle).toBe("none");
+  expect(styles.hoverUnderlineDisplay).toBe("block");
+  expect(styles.hoverUnderlineHeight).toBe("1px");
+});
+
 test("V2 usa el ancho completo en colecciones y mantiene cards cuadradas", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 968 });
   await page.goto(new URL("/colecciones/recien-llegados/", serverUrl).toString());
@@ -434,7 +856,7 @@ test("V2 usa el ancho completo en colecciones y mantiene cards cuadradas", async
   expect(metrics.mediaRatio).toBeCloseTo(1, 1);
 });
 
-test("V2 ajusta las imágenes al ancho renderizado y mantiene una galería PDP usable", async ({
+test("V2 ajusta las imágenes, muestra 8 recomendaciones y mantiene una galería PDP usable", async ({
   page,
 }) => {
   const productUrl = new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString();
@@ -474,7 +896,7 @@ test("V2 ajusta las imágenes al ancho renderizado y mantiene una galería PDP u
   await expect(figures.nth(1)).toHaveAttribute("data-gallery-active", "true");
   await expect(thumbs.nth(1)).toHaveAttribute("aria-current", "true");
   const relatedImages = page.locator(".solara-related-products .catalog-product-card-image");
-  await expect(relatedImages).toHaveCount(6);
+  await expect(relatedImages).toHaveCount(8);
   await expect(relatedImages.first()).toHaveCSS("object-fit", "cover");
   const relatedGrid = page.locator(".solara-related-products .catalog-product-grid");
   const relatedGridMetrics = await relatedGrid.evaluate((element) => {
@@ -501,7 +923,7 @@ test("V2 ajusta las imágenes al ancho renderizado y mantiene una galería PDP u
         (images) => images.filter((image) => image.complete && image.naturalWidth > 0).length,
       ),
     )
-    .toBe(6);
+    .toBe(8);
 
   for (const viewport of [
     { width: 1024, height: 768 },
@@ -555,6 +977,7 @@ test("V2 ajusta las imágenes al ancho renderizado y mantiene una galería PDP u
   expect(mobileMetrics.layout).toBe("flex");
   expect(mobileMetrics.scrollWidth).toBeLessThanOrEqual(390);
   await expect(mobileDetail.locator(".catalog-product-gallery-thumbs button")).toHaveCount(3);
+  await expect(page.locator(".solara-related-products .catalog-product-card-image")).toHaveCount(8);
 });
 
 test("V2 mantiene feedback equivalente para hover y teclado en cards y bento", async ({ page }) => {
@@ -922,13 +1345,12 @@ test("V2 audita composición en viewports intermedios", async ({ page }, testInf
     expect(metrics.titleTextShadow).toBe("none");
     expect(metrics.bodyTextShadow).toBe("none");
     if (viewport.width <= 899) {
-      expect(metrics.heroDisplay).toBe("flex");
-      expect(metrics.heroFlexDirection).toBe("column");
-      expect(metrics.mediaPosition).toBe("absolute");
+      expect(metrics.heroDisplay).toBe("grid");
+      expect(metrics.mediaPosition).toBe("relative");
       expect(metrics.benefitsBandDisplay).toBe("grid");
-      // El copy sobre la media usa el paper del tema (contraste AA verificado
-      // visualmente), ya no blanco puro.
-      expect(metrics.copyColor).toBe("rgb(247, 245, 240)");
+      // La portada vertical ocupa un carril propio para no convertirse en un
+      // recorte cuadrado; el copy conserva la tinta del tema fuera de la foto.
+      expect(metrics.copyColor).not.toBe("rgb(247, 245, 240)");
     }
     await expect
       .poll(
@@ -1403,10 +1825,23 @@ test("V2 compone el checkout del drawer sin overflow en desktop y movil", async 
   await form.locator("#catalog-drawer-name").fill("Ana Prueba");
   await form.locator("#catalog-drawer-phone").fill("5491112345678");
   await form.locator("#catalog-drawer-address").fill("Calle de prueba 123");
+  await page.evaluate(() => {
+    const originalOpen = window.open.bind(window);
+    window.open = ((url, target, features) => {
+      document.documentElement.dataset.solaraWhatsappUrl = String(url ?? "");
+      return originalOpen(url, target, features);
+    }) as typeof window.open;
+  });
+  const whatsappPopupPromise = page.waitForEvent("popup");
   await form.getByRole("button", { name: "Continuar por WhatsApp" }).click();
+  const whatsappPopup = await whatsappPopupPromise;
   await expect(form.locator("[data-order-preview]")).toContainText("Remera esencial");
-  await expect(form.locator("[data-whatsapp-link]")).toBeVisible();
-  await expect(form.locator("[data-whatsapp-link]")).toHaveAttribute("href", /^https:\/\/wa\.me\//);
+  await expect(form.locator("[data-whatsapp-link]")).toHaveCount(0);
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-solara-whatsapp-url",
+    /^https:\/\/wa\.me\//,
+  );
+  await whatsappPopup.close();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1920);
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -1810,16 +2245,30 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
   }
 });
 
-test("V2 envuelve el título de categoría en la caja frosted glass", async ({ page }) => {
+test("V2 no agrega una caja visual alrededor del título de categoría", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 968 });
   await page.goto(new URL("/categorias/remeras/", serverUrl).toString());
   await expect(page.locator('[data-design-family="catalog-modern-v2"]')).toBeVisible();
   const glass = page.locator(".solara-category-title-glass");
   await expect(glass).toBeVisible();
   await expect(glass).toHaveText("Remeras");
-  expect(await glass.evaluate((element) => getComputedStyle(element).backdropFilter)).not.toBe(
-    "none",
-  );
+  const styles = await glass.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      display: style.display,
+      padding: style.padding,
+      background: style.backgroundColor,
+      backdropFilter: style.backdropFilter,
+      borderWidth: style.borderWidth,
+      borderStyle: style.borderStyle,
+    };
+  });
+  expect(styles.display).toBe("inline");
+  expect(styles.padding).toBe("0px");
+  expect(styles.background).toBe("rgba(0, 0, 0, 0)");
+  expect(styles.backdropFilter).toBe("none");
+  expect(styles.borderWidth).toBe("0px");
+  expect(styles.borderStyle).toBe("none");
 });
 
 test("V2 anima 'Ver todo el catálogo' como 'Ver todos'", async ({ page }) => {
@@ -1893,6 +2342,22 @@ test("V2 footer: copyright con año y nombre + Hecho con ❤️ en solara.com.ar
   const made = footer.locator(".catalog-footer-made a");
   await expect(made).toHaveText("Hecho con ❤️ en solara.com.ar");
   await expect(made).toHaveAttribute("href", "https://solara.com.ar");
+  const consumerRights = footer.locator(".solara-consumer-rights");
+  await expect(consumerRights).toHaveCount(1);
+  await expect(consumerRights.locator("a")).toHaveAttribute(
+    "href",
+    "https://www.argentina.gob.ar/defensa-del-consumidor",
+  );
+  await expect(consumerRights).toHaveCSS("position", "static");
+  const footerBounds = await footer.boundingBox();
+  const consumerRightsBounds = await consumerRights.boundingBox();
+  if (!footerBounds || !consumerRightsBounds) {
+    throw new Error("No se pudo medir el footer o el botón de arrepentimiento.");
+  }
+  expect(consumerRightsBounds.y).toBeGreaterThanOrEqual(footerBounds.y);
+  expect(consumerRightsBounds.y + consumerRightsBounds.height).toBeLessThanOrEqual(
+    footerBounds.y + footerBounds.height,
+  );
 });
 
 test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, testInfo) => {

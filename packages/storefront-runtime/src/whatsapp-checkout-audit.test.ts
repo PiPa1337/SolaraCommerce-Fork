@@ -508,6 +508,12 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
     expect(idxReset).toBeGreaterThan(-1);
     expect(idxReset).toBeLessThan(idxReconcile);
   });
+  it("checkout muestra el resumen y abre WhatsApp sin enlace secundario", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain('const whatsappWindow = window.open(url, "_blank");');
+    expect(STOREFRONT_RUNTIME_JS).toContain("if (whatsappWindow) whatsappWindow.opener = null;");
+    expect(STOREFRONT_RUNTIME_JS).toContain("else window.location.assign(url);");
+    expect(STOREFRONT_RUNTIME_JS).not.toContain("data-whatsapp-link");
+  });
   it("buildWhatsAppUrl con telefono vacio retorna vacio (no wa.me invalido)", () => {
     expect(buildWhatsAppUrl("", "Hola")).toBe("");
     expect(buildWhatsAppUrl("   ", "Hola")).toBe("");

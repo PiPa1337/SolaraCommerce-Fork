@@ -34,7 +34,6 @@ import {
 } from "@solara/core";
 import { type ImageAsset, type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
 import { isBaseTemplate } from "@solara/project-schema/project-policy";
-import { motion, useReducedMotion } from "motion/react";
 import {
   type KeyboardEvent,
   lazy,
@@ -118,10 +117,7 @@ const tabs: Array<{ id: StudioTab; label: string; icon: typeof Storefront }> = [
   { id: "export", label: "Exportar", icon: BoxArrowDown },
 ];
 
-// Referencias estables para la transición del indicador de tab: el shell
-// recrea el objeto inline en cada render y obliga a motion a re-renderizar.
-const NAV_INDICATOR_TRANSITION = { type: "spring", stiffness: 420, damping: 34 } as const;
-const NAV_INDICATOR_TRANSITION_STILL = { duration: 0 } as const;
+
 
 interface StudioTabContentProps {
   tab: StudioTab;
@@ -518,7 +514,6 @@ export function Studio({
     () => `solara-editor-pane:${initialProject.id}`,
     [initialProject.id],
   );
-  const reduceMotion = useReducedMotion();
   // biome-ignore lint/correctness/useExhaustiveDependencies: exportTick fuerza el recálculo del rótulo al volver a la ventana (focus y visibilitychange), así no queda viejo tras exportar.
   const lastExportLabel = useMemo(
     () =>
@@ -1117,14 +1112,7 @@ export function Studio({
                   </>
                 ) : null}
                 {tab === id ? (
-                  <motion.span
-                    layoutId="studio-nav-indicator"
-                    className="studio-nav-indicator"
-                    aria-hidden
-                    transition={
-                      reduceMotion ? NAV_INDICATOR_TRANSITION_STILL : NAV_INDICATOR_TRANSITION
-                    }
-                  />
+                  <span className="studio-nav-indicator" aria-hidden />
                 ) : null}
               </button>
             ))}
@@ -1147,7 +1135,7 @@ export function Studio({
         ) : null}
 
         <main className="studio-workspace">
-          <motion.section
+          <section
             ref={paneRef}
             id={editorPaneId}
             data-studio-editor-pane
@@ -1157,7 +1145,6 @@ export function Studio({
             aria-hidden={!editorOpen}
             tabIndex={-1}
             className={`editor-pane${editorOpen ? " editor-pane--open" : " editor-pane--closed"}`}
-            initial={false}
             onScroll={(event) => {
               paneScrollPositionsRef.current[tab] = event.currentTarget.scrollTop;
             }}
@@ -1184,7 +1171,7 @@ export function Studio({
               onOpenSite={onOpenSite}
               validationError={validationError}
             />
-          </motion.section>
+          </section>
           <MemoizedPreview
             project={project}
             route={previewRoute}

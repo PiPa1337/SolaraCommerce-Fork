@@ -4,7 +4,9 @@ import {
   auditReport,
   buildOptimizationReport,
   exportProject,
+  getPreviewAssetSources,
   type OptimizationReport,
+  renderPreviewHtml,
 } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { createProjectArchive, readProjectArchive } from "../lib/projectArchive";
@@ -22,6 +24,16 @@ type ExportRequest =
       type: "audit";
       project: StoreProjectV1;
       publicAiContext: boolean;
+    }
+  | {
+      id: string;
+      type: "preview";
+      project: StoreProjectV1;
+      route: string;
+      options?: {
+        assetTransport?: "inline" | "parent";
+        editor?: { enabled: true; sectionId: string };
+      };
     }
   | {
       id: string;
@@ -71,6 +83,25 @@ self.onmessage = (event: MessageEvent<ExportRequest>) => {
             publicAiContext: request.publicAiContext,
           }),
         },
+      });
+      return;
+    }
+
+    if (request.type === "preview") {
+      const rendered = renderPreviewHtml(request.project, "draft", request.route, {
+        ...(request.options?.assetTransport
+          ? { assetTransport: request.options.assetTransport }
+          : {}),
+        ...(request.options?.editor ? { editor: request.options.editor } : {}),
+      });
+      const html = typeof rendered === "string" ? rendered : rendered.html;
+      const canvasManifest =
+        typeof rendered === "string" ? { entries: [], coverage: [] } : rendered.canvasManifest;
+      const assetSources = Object.fromEntries(getPreviewAssetSources(request.project).entries());
+      self.postMessage({
+        id: request.id,
+        ok: true,
+        result: { html, canvasManifest, assetSources },
       });
       return;
     }

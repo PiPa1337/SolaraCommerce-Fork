@@ -7,6 +7,87 @@ import type { Product, PublicCopy, StoreProjectV1, Variant } from "@solara/proje
 import { personalizeWhatsAppGreeting } from "@solara/project-schema";
 import { levenshtein, normalizeSearchTokens, type SearchEntryTokens, scoreEntry } from "./search";
 
+export const MAX_APP_FPS = 140;
+
+export interface FrameRateCapTarget {
+  requestAnimationFrame: (callback: FrameRequestCallback) => number;
+  cancelAnimationFrame: (handle: number) => void;
+  setTimeout: (handler: () => void, timeout?: number) => number;
+  clearTimeout: (handle: number) => void;
+  __solaraFrameRateCap?: { maxFps: number; frameIntervalMs: number };
+}
+
+/**
+ * Limita los callbacks JavaScript de animación sin mantener un frame loop cuando
+ * no hay trabajo pendiente. El compositor del navegador sigue sincronizado con
+ * el monitor; este guard evita que un loop accidental consuma más de 140 FPS.
+ */
+export function installFrameRateCap(target: FrameRateCapTarget, maxFps = MAX_APP_FPS): void {
+  if (target.__solaraFrameRateCap) return;
+  if (!Number.isFinite(maxFps) || maxFps <= 0) {
+    throw new Error("El límite de FPS debe ser un número positivo.");
+  }
+
+  const frameIntervalMs = 1000 / maxFps;
+  const nativeRequestAnimationFrame = target.requestAnimationFrame.bind(target);
+  const nativeCancelAnimationFrame = target.cancelAnimationFrame.bind(target);
+  let nextHandle = 1;
+  let lastFrameAt = Number.NEGATIVE_INFINITY;
+  let nativeFrameHandle: number | null = null;
+  let timerHandle: number | null = null;
+  const callbacks = new Map<number, FrameRequestCallback>();
+
+  const schedule = (): void => {
+    if (callbacks.size === 0 || nativeFrameHandle !== null || timerHandle !== null) return;
+    nativeFrameHandle = nativeRequestAnimationFrame((timestamp) => {
+      nativeFrameHandle = null;
+      const elapsed = timestamp - lastFrameAt;
+      if (elapsed < frameIntervalMs) {
+        timerHandle = target.setTimeout(() => {
+          timerHandle = null;
+          schedule();
+        }, frameIntervalMs - elapsed);
+        return;
+      }
+
+      lastFrameAt = timestamp;
+      const batch = [...callbacks.values()];
+      callbacks.clear();
+      for (const callback of batch) {
+        try {
+          callback(timestamp);
+        } catch (error) {
+          queueMicrotask(() => {
+            throw error;
+          });
+        }
+      }
+      schedule();
+    });
+  };
+
+  target.requestAnimationFrame = (callback) => {
+    const handle = nextHandle;
+    nextHandle += 1;
+    callbacks.set(handle, callback);
+    schedule();
+    return handle;
+  };
+  target.cancelAnimationFrame = (handle) => {
+    callbacks.delete(handle);
+    if (callbacks.size > 0) return;
+    if (nativeFrameHandle !== null) {
+      nativeCancelAnimationFrame(nativeFrameHandle);
+      nativeFrameHandle = null;
+    }
+    if (timerHandle !== null) {
+      target.clearTimeout(timerHandle);
+      timerHandle = null;
+    }
+  };
+  target.__solaraFrameRateCap = { maxFps, frameIntervalMs };
+}
+
 const DEFAULT_CONTACT_COPY = {
   email: "Email",
   phone: "Teléfono",
@@ -327,6 +408,8 @@ export function buildWhatsAppUrl(phone: string, message: string): string {
 
 function storefrontBoot(): void {
   const root = document.documentElement;
+  installFrameRateCap(window, 140);
+  root.dataset.solaraFpsCap = "140";
   const baseHref = (root.dataset.baseHref ?? "").replace(/\/+$/, "");
   const serviceWorkerUrl = root.dataset.serviceWorkerUrl;
   if (serviceWorkerUrl && "serviceWorker" in navigator) {
@@ -1085,13 +1168,10 @@ function storefrontBoot(): void {
         }
         const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
         const preview = form.querySelector<HTMLElement>("[data-order-preview]");
-        const link = form.querySelector<HTMLAnchorElement>("[data-whatsapp-link]");
         if (preview) preview.textContent = message;
-        if (link) {
-          link.href = url;
-          link.hidden = false;
-          link.focus();
-        }
+        const whatsappWindow = window.open(url, "_blank");
+        if (whatsappWindow) whatsappWindow.opener = null;
+        else window.location.assign(url);
       });
     });
   });
@@ -1979,6 +2059,7 @@ const SEARCH_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unkn
 ];
 
 const RUNTIME_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unknown]> = [
+  ["installFrameRateCap", installFrameRateCap],
   ...SEARCH_HELPERS,
   ["safeRuntimeImageUrl", safeRuntimeImageUrl],
   ["boundedRuntimeString", boundedRuntimeString],

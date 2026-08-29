@@ -1,6 +1,12 @@
 /** Transformaciones de imagen deterministas compartidas por caché y exportación. */
+import {
+  RESPONSIVE_IMAGE_MAX_WIDTH,
+  RESPONSIVE_IMAGE_WIDTHS,
+  responsiveImageWidths,
+} from "@solara/project-schema";
+
 export const IMAGE_RECIPE = {
-  widths: [320, 480, 640, 768, 1024, 1280, 1600, 1800] as const,
+  widths: RESPONSIVE_IMAGE_WIDTHS,
   maxBytes: 25 * 1024 * 1024,
   maxPixels: 50_000_000,
   webpQuality: 0.82,
@@ -27,7 +33,7 @@ export interface ImagePlan {
 export function createImagePlan(
   sourceWidth: number,
   sourceHeight: number,
-  maxWidth = 1800,
+  maxWidth = RESPONSIVE_IMAGE_MAX_WIDTH,
 ): ImagePlan {
   if (!Number.isInteger(sourceWidth) || !Number.isInteger(sourceHeight)) {
     throw new Error("La imagen no tiene dimensiones válidas.");
@@ -39,11 +45,9 @@ export function createImagePlan(
     throw new Error("La imagen supera el límite de 50 megapíxeles.");
   }
 
-  const safeMaxWidth = Math.max(1, Math.min(Math.floor(maxWidth), 1800));
+  const safeMaxWidth = Math.max(1, Math.min(Math.floor(maxWidth), RESPONSIVE_IMAGE_MAX_WIDTH));
   const width = Math.min(sourceWidth, safeMaxWidth);
-  const responsiveWidths = [
-    ...new Set([...IMAGE_RECIPE.widths.filter((candidate) => candidate < width), width]),
-  ].sort((left, right) => left - right);
+  const responsiveWidths = responsiveImageWidths(sourceWidth, safeMaxWidth);
 
   return {
     width,

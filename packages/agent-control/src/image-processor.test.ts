@@ -25,7 +25,7 @@ function pngChunk(type: string, data: Uint8Array): Uint8Array {
 }
 
 function filteredPng(): Uint8Array {
-  const width = 321;
+  const width = 769;
   const height = 1;
   const row = new Uint8Array(width * 3 + 1);
   row[0] = 1;

@@ -1,4 +1,4 @@
-import type { ImageAsset } from "@solara/project-schema";
+import { type ImageAsset, RESPONSIVE_IMAGE_INTERMEDIATE_WIDTH } from "@solara/project-schema";
 import { hashFile, processImageInWorker } from "./workers";
 
 export const SEO_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp";
@@ -140,7 +140,7 @@ export async function createFaviconAsset(file: File): Promise<ImageAsset> {
 export async function createSiteCoverAsset(file: File): Promise<ImageAsset> {
   const prepared = await prepareSource(file);
   const image = await loadImage(prepared.source);
-  const responsiveWidths = [320, 480, 640, 768, 1024] as const;
+  const responsiveWidths = [RESPONSIVE_IMAGE_INTERMEDIATE_WIDTH, SITE_COVER_WIDTH] as const;
   return {
     kind: "image",
     id: `asset-site-cover-${crypto.randomUUID()}` as ImageAsset["id"],

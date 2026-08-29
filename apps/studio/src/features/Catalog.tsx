@@ -351,7 +351,11 @@ function CatalogCard({
   const first = product.variants[0];
   const titleId = `catalog-card-title-${product.id}`;
   return (
-    <article className="catalog-card" data-testid="ui-catalog-card">
+    <article
+      className="catalog-card"
+      data-testid="ui-catalog-card"
+      style={{ contentVisibility: "auto", containIntrinsicSize: "180px" } as React.CSSProperties}
+    >
       <label className="check-field">
         <input
           type="checkbox"
@@ -408,7 +412,7 @@ const CatalogRow = memo(
     columnVisibility: VisibilityState;
   }) {
     return (
-      <tr data-selected={selected}>
+      <tr data-selected={selected} style={{ contentVisibility: "auto", containIntrinsicSize: "56px" } as React.CSSProperties}>
         {row.getVisibleCells().map((cell) => (
           <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
         ))}

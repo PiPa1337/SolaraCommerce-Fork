@@ -80,6 +80,43 @@ describe("HTML safety", () => {
     expect(html).not.toContain("<script");
   });
 
+  it("sirve la variante intermedia en tablet/mobile y la máxima en desktop", () => {
+    const asset = referenceStore.assets[0];
+    if (!asset) throw new Error("Fixture incompleto");
+    const project = {
+      ...referenceStore,
+      assets: [
+        {
+          ...asset,
+          source: "/assets/foto-1800.webp",
+          fallbackSource: "/assets/foto-fallback.jpg",
+          width: 1800,
+          height: 1200,
+          responsiveSources: [
+            { width: 320, source: "/assets/foto-320.webp" },
+            { width: 480, source: "/assets/foto-480.webp" },
+            { width: 640, source: "/assets/foto-640.webp" },
+            { width: 768, source: "/assets/foto-768.webp" },
+            { width: 1024, source: "/assets/foto-1024.webp" },
+            { width: 1280, source: "/assets/foto-1280.webp" },
+            { width: 1600, source: "/assets/foto-1600.webp" },
+            { width: 1800, source: "/assets/foto-1800.webp" },
+          ],
+        },
+        ...referenceStore.assets.slice(1),
+      ],
+    };
+
+    const html = renderImage(project, asset.id);
+
+    expect(html).toContain(
+      '<source type="image/webp" media="(max-width: 1023px)" srcset="/assets/foto-768.webp 768w"',
+    );
+    expect(html).toContain('<source type="image/webp" srcset="/assets/foto-1800.webp 1800w"');
+    expect(html).not.toContain("foto-320.webp");
+    expect(html).not.toContain("foto-1024.webp");
+  });
+
   it("prioriza WebP y conserva fallback cuando no hay variantes responsive", () => {
     const asset = referenceStore.assets[0];
     if (!asset) throw new Error("Fixture incompleto");

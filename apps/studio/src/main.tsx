@@ -1,11 +1,14 @@
+import { installFrameRateCap, MAX_APP_FPS } from "@solara/storefront-runtime";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { applyStudioTheme } from "./lib/studioTheme";
 import "./styles.css";
 
+installFrameRateCap(window, MAX_APP_FPS);
 applyStudioTheme("dark");
 document.documentElement.style.colorScheme = "dark";
+document.documentElement.dataset.solaraFpsCap = String(MAX_APP_FPS);
 
 const container = document.getElementById("root");
 if (!container) {

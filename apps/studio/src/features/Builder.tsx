@@ -27,7 +27,6 @@ import {
 } from "@solara/modules";
 import { type StoreProjectV1, type StoreSection, StoreSectionSchema } from "@solara/project-schema";
 import { catalogModernTemplateManifest } from "@solara/project-schema/catalog-modern-guidance";
-import { motion, useReducedMotion } from "motion/react";
 import {
   type KeyboardEvent,
   type RefObject,
@@ -284,7 +283,6 @@ export function Builder({
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
   const lastPickerToggleAtRef = useRef(0);
-  const reduceMotion = useReducedMotion();
   const editablePage = project.pages.find((page) => page.kind === pageKind);
   const pageSections = pageKind === "home" ? project.sections : (editablePage?.sections ?? []);
   const selected = pageSections.find((section) => section.id === selectedId);
@@ -555,14 +553,10 @@ export function Builder({
             const definition = allModules.find((module) => module.manifest.id === section.moduleId);
             const sectionLabelId = `section-row-label-${section.id}`;
             return (
-              <motion.li
+              <li
                 className="section-row"
                 data-selected={section.id === selectedId}
                 key={section.id}
-                layout
-                transition={
-                  reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34 }
-                }
               >
                 <button
                   className="section-select"
@@ -634,7 +628,7 @@ export function Builder({
                     }
                   />
                 </div>
-              </motion.li>
+              </li>
             );
           })}
         </ul>

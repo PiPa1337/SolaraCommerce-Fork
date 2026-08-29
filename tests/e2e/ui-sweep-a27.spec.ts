@@ -482,9 +482,7 @@ test("C9b: un producto con todas las variantes agotadas inicia el botón deshabi
   await expect(page.locator('[data-variant-option][data-option-value="Único"]')).toBeDisabled();
 });
 
-test("C10: el checkout del drawer moderno genera el enlace de WhatsApp con el pedido", async ({
-  page,
-}) => {
+test("C10: el checkout del drawer moderno abre WhatsApp con el pedido", async ({ page }) => {
   test.info().annotations.push({ type: "contrato", description: "A27 · C10 · checkout" });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(storeUrl(basePort, PRODUCT_PATH));
@@ -497,19 +495,27 @@ test("C10: el checkout del drawer moderno genera el enlace de WhatsApp con el pe
   await page.locator("#catalog-drawer-phone").fill("11 5555 0142");
   await page.locator("#catalog-drawer-address").fill("Av. Forest 842, CABA");
   await page.locator("#catalog-drawer-notes").fill("Entregar por la tarde");
+  await page.evaluate(() => {
+    const originalOpen = window.open.bind(window);
+    window.open = ((url, target, features) => {
+      document.documentElement.dataset.solaraWhatsappUrl = String(url ?? "");
+      return originalOpen(url, target, features);
+    }) as typeof window.open;
+  });
+  const whatsappPopupPromise = page.waitForEvent("popup");
   await drawer.getByRole("button", { name: "Continuar por WhatsApp" }).click();
+  const whatsappPopup = await whatsappPopupPromise;
 
-  const link = drawer.locator("[data-whatsapp-link]");
-  await expect(link).toBeVisible();
-  await expect(link).toBeFocused();
-  const href = await link.getAttribute("href");
-  expect(href).toMatch(/^https:\/\/wa\.me\/5491123456789\?text=/);
-  const message = decodeURIComponent(href ?? "");
+  await expect(drawer.locator("[data-whatsapp-link]")).toHaveCount(0);
+  const openedUrl = await page.locator("html").getAttribute("data-solara-whatsapp-url");
+  expect(openedUrl).toMatch(/^https:\/\/wa\.me\/5491123456789\?text=/);
+  const message = decodeURIComponent(openedUrl ?? "");
   expect(message).toContain("1 x Remera esencial de algodón (Negro / S) [MS-001-NE-S]");
   expect(message).toContain("Total estimado: $");
   expect(message).toContain("Entregar por la tarde");
   await expect(drawer.locator("[data-order-preview]")).toContainText("Nombre: Malena Ortiz");
   await expect(drawer.locator("[data-order-preview]")).toContainText("11 5555 0142");
+  await whatsappPopup.close();
 });
 
 test("A29: el drawer de carrito abierto inertea a los hermanos de la página (como el menú móvil)", async ({

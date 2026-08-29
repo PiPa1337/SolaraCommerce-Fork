@@ -4,7 +4,11 @@
  * Vite; el código de UI no debe asumir que IndexedDB es siempre autoridad.
  */
 import type { NavigationItem, StoreProjectV1 } from "@solara/project-schema";
-import { getCategoryProductIds, StoreProjectV1Schema } from "@solara/project-schema";
+import {
+  compactResponsiveSources,
+  getCategoryProductIds,
+  StoreProjectV1Schema,
+} from "@solara/project-schema";
 import {
   buildCatalogModernProject,
   catalogModernCleanStore,
@@ -85,7 +89,7 @@ export interface ProjectMigrationRecord {
   updatedAt: string;
 }
 
-export const ASSET_CACHE_RECIPE_VERSION = 2;
+export const ASSET_CACHE_RECIPE_VERSION = 3;
 
 export function createAssetCacheKey(
   hash: string,
@@ -525,15 +529,50 @@ async function optimizeEmbeddedFixtureImage(
   };
 }
 
+function sameResponsiveSources(
+  left: StoreProjectV1["assets"][number]["responsiveSources"],
+  right: StoreProjectV1["assets"][number]["responsiveSources"],
+): boolean {
+  if (left === right) return true;
+  if (!left || !right || left.length !== right.length) return false;
+  return left.every(
+    (source, index) =>
+      source.width === right[index]?.width && source.source === right[index]?.source,
+  );
+}
+
+/** Reduce assets legacy a la receta actual sin volver a codificar sus bytes. */
+export function compactProjectResponsiveAssets(project: StoreProjectV1): StoreProjectV1 {
+  let changed = false;
+  const assets = project.assets.map((asset) => {
+    if (asset.mimeType === "image/x-icon" || !asset.responsiveSources?.length) return asset;
+    const responsiveSources = compactResponsiveSources(asset.responsiveSources, asset.width, {
+      width: asset.width,
+      source: asset.source,
+    });
+    if (sameResponsiveSources(asset.responsiveSources, responsiveSources)) return asset;
+    changed = true;
+    return { ...asset, responsiveSources };
+  });
+  return changed
+    ? StoreProjectV1Schema.parse({
+        ...project,
+        assets,
+        updatedAt: new Date().toISOString(),
+      })
+    : project;
+}
+
 /**
  * Completa la receta responsive de los fixtures que ya estaban guardados en
- * versiones anteriores. Sólo reconoce hashes `fixture-*`, por lo que nunca
- * reinterpreta una imagen personalizada del usuario.
+ * versiones anteriores y compacta cualquier receta legacy sin recodificar
+ * imágenes personalizadas del usuario.
  */
 export async function optimizeDemoFixtureAssets(project: StoreProjectV1): Promise<StoreProjectV1> {
-  if (!canProcessImagesInBrowser()) return project;
+  const compactedProject = compactProjectResponsiveAssets(project);
+  if (!canProcessImagesInBrowser()) return compactedProject;
   const assets = await Promise.all(
-    project.assets.map(async (asset) => {
+    compactedProject.assets.map(async (asset) => {
       if (!isFixtureImage(asset) || asset.responsiveSources?.length) return asset;
       try {
         return await optimizeEmbeddedFixtureImage(asset);
@@ -545,9 +584,11 @@ export async function optimizeDemoFixtureAssets(project: StoreProjectV1): Promis
       }
     }),
   );
-  if (assets.every((asset, index) => asset === project.assets[index])) return project;
+  if (assets.every((asset, index) => asset === compactedProject.assets[index])) {
+    return compactedProject;
+  }
   return StoreProjectV1Schema.parse({
-    ...project,
+    ...compactedProject,
     assets,
     updatedAt: new Date().toISOString(),
   });
@@ -659,12 +700,13 @@ async function optimizeImageAsset(
  * si el navegador no puede decodificar una imagen, conserva el original.
  */
 export async function optimizeProjectAssets(project: StoreProjectV1): Promise<StoreProjectV1> {
-  if (!canProcessImagesInBrowser()) return project;
+  if (!canProcessImagesInBrowser()) return compactProjectResponsiveAssets(project);
   const projectWithFixtureAssets = await optimizeDemoFixtureAssets(project);
-  const referenced = referencedAssetIds(projectWithFixtureAssets);
-  let changed = projectWithFixtureAssets !== project;
+  const compactedProject = compactProjectResponsiveAssets(projectWithFixtureAssets);
+  const referenced = referencedAssetIds(compactedProject);
+  let changed = compactedProject !== project;
   const assets = [] as StoreProjectV1["assets"];
-  for (const asset of projectWithFixtureAssets.assets) {
+  for (const asset of compactedProject.assets) {
     if (!referenced.has(asset.id) || !needsImageOptimization(asset)) {
       assets.push(asset);
       continue;
@@ -679,7 +721,7 @@ export async function optimizeProjectAssets(project: StoreProjectV1): Promise<St
   }
   if (!changed) return project;
   return StoreProjectV1Schema.parse({
-    ...projectWithFixtureAssets,
+    ...compactedProject,
     assets,
     updatedAt: new Date().toISOString(),
   });

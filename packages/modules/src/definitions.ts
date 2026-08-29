@@ -956,11 +956,6 @@ const productDetailSettings = z.object({
   deliveryNote: z.string().default("Coordinamos entrega y pago por WhatsApp."),
 });
 
-function hasPublicWhatsApp(whatsapp: { phone: string }): boolean {
-  const rawPhone = whatsapp.phone;
-  return rawPhone !== CATALOG_MODERN_PLACEHOLDER_PHONE && rawPhone.replace(/\D/g, "").length > 0;
-}
-
 function buildWhatsAppInquiryLink(
   context: Parameters<NonNullable<(typeof productDetail)["render"]>>[0],
   product: Product,
@@ -1336,9 +1331,6 @@ export const cartDrawer: ModuleDefinition<"cart-drawer", z.infer<typeof cartSett
   render(context) {
     const copy = context.project.publicCopy;
     const canvas = legacyCanvasContext(context);
-    const checkoutLinkMarkup = hasPublicWhatsApp(context.project.whatsapp)
-      ? `<a data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>${escapeHtml(copy.checkout.sendWhatsApp)}</a>`
-      : "";
     return moduleRoot(
       "cart-drawer",
       context.section,
@@ -1359,7 +1351,6 @@ export const cartDrawer: ModuleDefinition<"cart-drawer", z.infer<typeof cartSett
             <button type="submit"${canvasTextAttributes(canvas, "checkoutLabel", 120)}>${escapeHtml(context.settings.checkoutLabel)}</button>
             <p data-order-verification-warning role="note">Solicitud sin confirmar; precio, stock, envío y pago deben verificarse con la tienda</p>
             <pre data-order-preview aria-live="polite"></pre>
-            ${checkoutLinkMarkup}
           </form>
         </aside>`),
     );

@@ -45,6 +45,13 @@ async function openPortable(folder) {
   });
   try {
     const page = await app.firstWindow({ timeout: 20_000 });
+    const isMaximized = await app.evaluate(({ BrowserWindow }) => {
+      const [window] = BrowserWindow.getAllWindows();
+      return window?.isMaximized() ?? false;
+    });
+    if (process.platform === "win32" && !isMaximized) {
+      throw new Error("La ventana portable no inició maximizada.");
+    }
     await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 20_000 });
     // El dashboard se monta antes de que la sesión administrada termine de
     // cargar los manifiestos desde disco. Esperar la tarjeta de la plantilla

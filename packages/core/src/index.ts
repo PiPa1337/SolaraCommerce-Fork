@@ -573,6 +573,14 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
  * catálogos grandes; los estados más antiguos se descartan primero.
  */
 export const MAX_HISTORY_LENGTH = 50;
+export const MAX_HISTORY_LENGTH_LARGE = 20;
+export const LARGE_CATALOG_THRESHOLD = 500;
+
+export function getMaxHistoryLength(project: StoreProjectV1): number {
+  return project.products.length > LARGE_CATALOG_THRESHOLD
+    ? MAX_HISTORY_LENGTH_LARGE
+    : MAX_HISTORY_LENGTH;
+}
 
 export interface HistoryState {
   past: StoreProjectV1[];
@@ -589,8 +597,9 @@ export function executeCommand(history: HistoryState, command: DomainCommand): H
   if (next === history.present) {
     return history;
   }
+  const maxLen = getMaxHistoryLength(next);
   return {
-    past: [...history.past, history.present].slice(-MAX_HISTORY_LENGTH),
+    past: [...history.past, history.present].slice(-maxLen),
     present: next,
     future: [],
   };
@@ -614,7 +623,7 @@ export function redo(history: HistoryState): HistoryState {
     return history;
   }
   return {
-    past: [...history.past, history.present].slice(-MAX_HISTORY_LENGTH),
+    past: [...history.past, history.present].slice(-getMaxHistoryLength(history.present)),
     present: next,
     future: history.future.slice(1),
   };

@@ -60,6 +60,27 @@ describe("metadata del editor (Live Canvas)", () => {
     expect(heroEntry).toMatchObject({ moduleId: "catalog-hero", fieldKey: "title" });
   });
 
+  it("publica los IDs de los repeaters que nacen de defaults del schema", () => {
+    const { entries } = buildCanvasManifest(catalogModernV2Store);
+    const benefitTitle = entries.find(
+      (entry) => entry.moduleId === "catalog-hero" && entry.bindingId === "benefit-title",
+    );
+    expect(benefitTitle).toMatchObject({
+      fieldKey: "benefits",
+      itemFieldKey: "title",
+      itemIds: ["hero-benefit-envios", "hero-benefit-pedido", "hero-benefit-compra"],
+    });
+
+    const preview = renderPreviewHtml(catalogModernV2Store, "draft", "/", {
+      assetTransport: "parent",
+      editor: { enabled: true, sectionId: "*" },
+    });
+    if (typeof preview === "string") throw new Error("editor debe devolver objeto");
+    expect(preview.html).toContain(
+      'data-canvas-edit="ce-modo-section-hero-benefit-title" data-canvas-item="hero-benefit-envios"',
+    );
+  });
+
   it("production y draft exportable no contienen ningún atributo data-canvas", () => {
     for (const mode of ["draft", "production"] as const) {
       const exported = exportProject(catalogModernStore, { mode });

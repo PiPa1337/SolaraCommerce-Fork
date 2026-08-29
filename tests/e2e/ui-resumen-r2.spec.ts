@@ -164,7 +164,7 @@ function previewAttribute(page: Page, attribute: string): () => Promise<string |
       .getAttribute(attribute);
 }
 
-/** Flujo real de compra en el sitio exportado: carrito + checkout → URL wa.me. */
+/** Flujo real de compra en el sitio exportado: carrito + checkout → popup wa.me. */
 async function prepareWhatsAppOrder(page: Page, baseUrl: string): Promise<string> {
   await page.goto(`${baseUrl}${PRODUCT_PATH}`);
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
@@ -173,13 +173,22 @@ async function prepareWhatsAppOrder(page: Page, baseUrl: string): Promise<string
   await drawer.getByLabel("Nombre").fill("Malena Ortiz");
   await drawer.getByLabel(/Telefono|Tel/).fill("11 5555 0142");
   await drawer.getByLabel(/Direccion|Direcci/).fill("Av. Forest 842, CABA");
+  await page.evaluate(() => {
+    const originalOpen = window.open.bind(window);
+    window.open = ((url, target, features) => {
+      document.documentElement.dataset.solaraWhatsappUrl = String(url ?? "");
+      return originalOpen(url, target, features);
+    }) as typeof window.open;
+  });
+  const whatsappPopupPromise = page.waitForEvent("popup");
   await drawer.getByRole("button", { name: "Continuar por WhatsApp" }).click();
 
-  const link = page.getByRole("link", { name: "Enviar pedido en WhatsApp" });
-  await expect(link).toBeVisible();
-  const href = await link.getAttribute("href");
-  expect(href).not.toBeNull();
-  return href ?? "";
+  const whatsappPopup = await whatsappPopupPromise;
+  await expect(page.locator("[data-whatsapp-link]")).toHaveCount(0);
+  const url = await page.locator("html").getAttribute("data-solara-whatsapp-url");
+  expect(url).toMatch(/^https:\/\/wa\.me\/\d+\?text=/);
+  await whatsappPopup.close();
+  return url ?? "";
 }
 
 test("sentinel: el número placeholder se muestra vacío con error y badge Pendiente", async ({

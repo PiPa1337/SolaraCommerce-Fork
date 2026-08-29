@@ -176,9 +176,7 @@ test("radius: el token llega al preview y al sitio y el radio visual cambia (T5)
   expect(fingerprint40).not.toBe(fingerprint0);
 });
 
-test("radius: el efecto visible se mantiene y las pills semánticas conservan 999px (T5)", async ({
-  page,
-}) => {
+test("radius: el buscador del header sigue el radio configurable (T5)", async ({ page }) => {
   await setupCleanStore(page, "T5 radius fix");
   await openThemeTab(page);
 
@@ -200,12 +198,12 @@ test("radius: el efecto visible se mantiene y las pills semánticas conservan 99
     .evaluate((element) => getComputedStyle(element).borderRadius);
   expect(heroRadius).toBe("40px");
 
-  // ...y una pill semántica (campo de búsqueda del header) queda redonda.
-  const pillRadius = await previewRoot(page)
+  // ...y el campo de búsqueda del header usa el mismo radio que el resto.
+  const searchRadius = await previewRoot(page)
     .locator(".catalog-search-link")
     .first()
     .evaluate((element) => getComputedStyle(element).borderRadius);
-  expect(pillRadius).toBe("999px");
+  expect(searchRadius).toBe("40px");
 });
 
 test("spacingScale: el valor llega a la var y las grillas modernas cambian su gap (T5)", async ({

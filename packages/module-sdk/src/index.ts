@@ -12,6 +12,10 @@ import type {
   StoreSection,
   VideoAsset,
 } from "@solara/project-schema";
+import {
+  compactResponsiveSources,
+  RESPONSIVE_IMAGE_INTERMEDIATE_WIDTH,
+} from "@solara/project-schema";
 import { formatPrice } from "@solara/project-schema/money";
 import type { ZodType } from "zod";
 
@@ -540,28 +544,53 @@ export function renderImage(
     : "";
   const decoding = ` decoding="${escapeAttribute(options.decoding ?? "async")}"`;
   const fallbackSource = safeAssetUrl(asset.fallbackSource ?? asset.source, "");
-  const responsiveByMime = new Map<string, string[]>();
-  asset.responsiveSources?.forEach((source) => {
-    const safeSource = safeAssetUrl(source.source, "");
-    if (!safeSource) return;
-    const mime = imageMimeType(source.source);
-    const entries = responsiveByMime.get(mime) ?? [];
-    entries.push(`${escapeAttribute(safeSource)} ${source.width}w`);
-    responsiveByMime.set(mime, entries);
-  });
   const primarySource = safeAssetUrl(asset.source, "");
   const primaryMime = imageMimeType(asset.source);
-  if (primarySource && primarySource !== fallbackSource && !responsiveByMime.has(primaryMime)) {
-    responsiveByMime.set(primaryMime, [`${escapeAttribute(primarySource)} ${asset.width}w`]);
-  }
-  const responsiveSources = [...responsiveByMime.entries()]
-    .sort(([left], [right]) => {
-      if (left === "image/webp") return -1;
-      if (right === "image/webp") return 1;
-      return left.localeCompare(right);
+  const normalizedResponsive =
+    asset.mimeType === "image/x-icon"
+      ? asset.responsiveSources
+      : compactResponsiveSources(asset.responsiveSources, asset.width, {
+          width: asset.width,
+          source: asset.source,
+        });
+  const responsiveEntries = (normalizedResponsive ?? [])
+    .map((source) => {
+      const safeSource = safeAssetUrl(source.source, "");
+      return safeSource
+        ? { mime: imageMimeType(source.source), source: safeSource, width: source.width }
+        : undefined;
     })
-    .map(([mime, sources]) => `<source type="${mime}" srcset="${sources.join(", ")}"${sizes}>`)
-    .join("");
+    .filter(
+      (
+        source,
+      ): source is {
+        mime: ReturnType<typeof imageMimeType>;
+        source: string;
+        width: number;
+      } => Boolean(source),
+    );
+  const lowerCandidates = responsiveEntries.filter((source) => source.width < asset.width);
+  const primaryMimeCandidates = lowerCandidates.filter((source) => source.mime === primaryMime);
+  const intermediate = [
+    ...(primaryMimeCandidates.length ? primaryMimeCandidates : lowerCandidates),
+  ].sort((left, right) => {
+    const distance =
+      Math.abs(left.width - RESPONSIVE_IMAGE_INTERMEDIATE_WIDTH) -
+      Math.abs(right.width - RESPONSIVE_IMAGE_INTERMEDIATE_WIDTH);
+    return distance || right.width - left.width;
+  })[0];
+  const sourceBlocks: string[] = [];
+  if (intermediate) {
+    sourceBlocks.push(
+      `<source type="${intermediate.mime}" media="(max-width: 1023px)" srcset="${escapeAttribute(intermediate.source)} ${intermediate.width}w"${sizes}>`,
+    );
+  }
+  if (primarySource && (primarySource !== fallbackSource || intermediate)) {
+    sourceBlocks.push(
+      `<source type="${primaryMime}" srcset="${escapeAttribute(primarySource)} ${asset.width}w"${sizes}>`,
+    );
+  }
+  const responsiveSources = sourceBlocks.join("");
   const image = `<img${className} src="${escapeAttribute(fallbackSource)}" alt="${escapeAttribute(asset.alt || options.fallbackAlt || "")}" width="${asset.width}" height="${asset.height}" loading="${options.loading ?? "lazy"}"${fetchPriority}${decoding}${sizes}>`;
   if (responsiveSources) {
     return safeHtml(`<picture>${responsiveSources}${image}</picture>`);

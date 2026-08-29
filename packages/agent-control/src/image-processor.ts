@@ -2,6 +2,7 @@
  * Procesador de imagenes pure-JS para el canal de agentes.
  */
 import { deflateSync, inflateSync } from "node:zlib";
+import { RESPONSIVE_IMAGE_INTERMEDIATE_WIDTH } from "@solara/project-schema";
 
 export interface ResponsiveVariant {
   width: number;
@@ -176,7 +177,7 @@ function concatU8(arrays: Uint8Array[]): Uint8Array {
 
 export function generateResponsiveVariants(buffer: Uint8Array): ResponsiveVariant[] {
   const decoded = decodePng(buffer);
-  const widths = [320, 480, 768, 1024].filter((w) => w < decoded.width);
+  const widths = [RESPONSIVE_IMAGE_INTERMEDIATE_WIDTH].filter((w) => w < decoded.width);
   if (widths.length === 0) return [];
   return widths.map((width) => {
     const resized = resizeNearest(decoded.pixels, decoded.width, decoded.height, width);

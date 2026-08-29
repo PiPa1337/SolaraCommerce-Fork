@@ -6,6 +6,7 @@ import {
   buildWhatsAppMessage,
   buildWhatsAppUrl,
   formatMoney,
+  MAX_APP_FPS,
   parseCart,
   reconcileCartLines,
   STOREFRONT_RUNTIME_CSS,
@@ -64,6 +65,12 @@ describe("storefront runtime", () => {
       'html[data-motion-ready="true"] [data-motion-root]:not',
     );
     expect(STOREFRONT_RUNTIME_JS).toContain("motionEntry");
+  });
+
+  it("serializa el límite global de 140 FPS y no deja un loop sin callbacks", () => {
+    expect(MAX_APP_FPS).toBe(140);
+    expect(STOREFRONT_RUNTIME_JS).toContain("installFrameRateCap(window, 140)");
+    expect(STOREFRONT_RUNTIME_JS).toContain('solaraFpsCap = "140"');
   });
 
   it("usa los tokens de tema para el drawer y las alertas del carrito", () => {

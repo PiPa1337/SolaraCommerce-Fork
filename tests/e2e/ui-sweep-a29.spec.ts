@@ -250,7 +250,7 @@ test("drawer: trampa de foco con Tab y Shift+Tab dentro del panel", async ({ pag
   await expect(first).toBeFocused();
 });
 
-test("checkout del drawer: URL wa.me con saludo, líneas, SKU y total en centavos", async ({
+test("checkout del drawer: abre URL wa.me con saludo, líneas, SKU y total en centavos", async ({
   page,
 }) => {
   await clearCart(page);
@@ -264,14 +264,21 @@ test("checkout del drawer: URL wa.me con saludo, líneas, SKU y total en centavo
   await drawer.getByLabel("Teléfono").fill("11 5555 0142");
   await drawer.getByLabel("Dirección o punto de entrega").fill("Av. Forest 842, CABA");
   await drawer.getByLabel("Notas opcionales").fill("Entregar por la tarde");
+  await page.evaluate(() => {
+    const originalOpen = window.open.bind(window);
+    window.open = ((url, target, features) => {
+      document.documentElement.dataset.solaraWhatsappUrl = String(url ?? "");
+      return originalOpen(url, target, features);
+    }) as typeof window.open;
+  });
+  const whatsappPopupPromise = page.waitForEvent("popup");
   await drawer.locator('button[type="submit"]').click();
+  const whatsappPopup = await whatsappPopupPromise;
 
-  const link = drawer.locator("[data-whatsapp-link]");
-  await expect(link).toBeVisible();
-  await expect(link).toBeFocused();
-  const href = await link.getAttribute("href");
-  expect(href).not.toBeNull();
-  const url = new URL(href ?? "");
+  await expect(drawer.locator("[data-whatsapp-link]")).toHaveCount(0);
+  const openedUrl = await page.locator("html").getAttribute("data-solara-whatsapp-url");
+  expect(openedUrl).toMatch(/^https:\/\/wa\.me\/5491123456789\?text=/);
+  const url = new URL(openedUrl ?? "");
   expect(url.protocol).toBe("https:");
   expect(url.host).toBe("wa.me");
   expect(url.pathname).toBe("/5491123456789");
@@ -287,6 +294,7 @@ test("checkout del drawer: URL wa.me con saludo, líneas, SKU y total en centavo
   expect(message).toContain("Notas opcionales: Entregar por la tarde");
   expect(message).toContain("Entiendo que precio, disponibilidad, envío y pago se confirman");
   await expect(drawer.locator("[data-order-preview]")).toContainText("Total estimado: $ 57.700,00");
+  await whatsappPopup.close();
 });
 
 test("línea no disponible: se conserva con aviso y el checkout la bloquea", async ({ page }) => {
@@ -338,15 +346,27 @@ test("línea no disponible: se conserva con aviso y el checkout la bloquea", asy
   await expect(drawer.locator("[data-order-preview]")).toContainText(
     "Retirá los productos no disponibles del carrito antes de enviar el pedido.",
   );
-  await expect(drawer.locator("[data-whatsapp-link]")).toBeHidden();
+  await expect(drawer.locator("[data-whatsapp-link]")).toHaveCount(0);
 
   await line.getByRole("button", { name: "Eliminar Remera retirada" }).click();
   await expect(drawer.locator(".solara-cart-line")).toHaveCount(1);
+  await page.evaluate(() => {
+    const originalOpen = window.open.bind(window);
+    window.open = ((url, target, features) => {
+      document.documentElement.dataset.solaraWhatsappUrl = String(url ?? "");
+      return originalOpen(url, target, features);
+    }) as typeof window.open;
+  });
+  const whatsappPopupPromise = page.waitForEvent("popup");
   await drawer.locator('button[type="submit"]').click();
-  const link = drawer.locator("[data-whatsapp-link]");
-  await expect(link).toBeVisible();
-  await expect(link).toBeFocused();
+  const whatsappPopup = await whatsappPopupPromise;
+  await expect(drawer.locator("[data-whatsapp-link]")).toHaveCount(0);
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-solara-whatsapp-url",
+    /^https:\/\/wa\.me\/5491123456789\?text=/,
+  );
   await expect(drawer.locator("[data-order-preview]")).toContainText("Total estimado: $ 28.850,00");
+  await whatsappPopup.close();
   expect(((await storedCart(page)) as Array<Record<string, unknown>>)[0]).toEqual(
     expect.objectContaining({
       variantId: VARIANT_ID,

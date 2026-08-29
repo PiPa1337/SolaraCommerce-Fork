@@ -392,6 +392,8 @@ function createWindow() {
       preload: resolve(bundleRoot, "preload.cjs"),
     },
   });
+  // El Studio aprovecha el espacio completo desde el primer render.
+  mainWindow.maximize();
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
     return { action: "deny" };

@@ -65,7 +65,7 @@ test.afterAll(async () => {
   });
 });
 
-test("selecciona una variante, agrega al carrito y genera WhatsApp", async ({ page }) => {
+test("selecciona una variante, agrega al carrito y abre WhatsApp", async ({ page }) => {
   await page.goto(storeUrl("/productos/manta-bruma/"));
   await page.getByLabel("Variante", { exact: true }).selectOption("variant-manta-piedra");
   await page.getByLabel("Cantidad").fill("2");
@@ -81,13 +81,22 @@ test("selecciona una variante, agrega al carrito y genera WhatsApp", async ({ pa
   await page.getByLabel(/Telefono|Tel/).fill("11 5555 0142");
   await page.getByLabel(/Direccion|Direcci/).fill("Av. Forest 842, CABA");
   await page.getByLabel(/Notas/).fill("Entregar por la tarde");
+  await page.evaluate(() => {
+    const originalOpen = window.open.bind(window);
+    window.open = ((url, target, features) => {
+      document.documentElement.dataset.solaraWhatsappUrl = String(url ?? "");
+      return originalOpen(url, target, features);
+    }) as typeof window.open;
+  });
+  const whatsappPopupPromise = page.waitForEvent("popup");
   await page.getByRole("button", { name: "Continuar por WhatsApp" }).click();
 
-  const link = page.getByRole("link", { name: "Enviar pedido en WhatsApp" });
-  await expect(link).toBeVisible();
-  const href = await link.getAttribute("href");
-  expect(href).toContain("https://wa.me/5491123456789?text=");
-  expect(decodeURIComponent(href ?? "")).toContain("2 x Manta Bruma (Piedra) [ML-BRU-PIE]");
+  const whatsappPopup = await whatsappPopupPromise;
+  await expect(page.locator("[data-whatsapp-link]")).toHaveCount(0);
+  const openedUrl = await page.locator("html").getAttribute("data-solara-whatsapp-url");
+  expect(openedUrl).toContain("https://wa.me/5491123456789?text=");
+  expect(decodeURIComponent(openedUrl ?? "")).toContain("2 x Manta Bruma (Piedra) [ML-BRU-PIE]");
+  await whatsappPopup.close();
 });
 
 test("mantiene producto, precio y descripcion sin JavaScript", async ({ browser }) => {

@@ -31,6 +31,7 @@ import type {
   VideoAsset,
 } from "@solara/project-schema";
 import {
+  compactResponsiveSources,
   getCategoryAncestors,
   getCategoryBreadcrumb,
   getCategoryProductIds,
@@ -401,6 +402,16 @@ function publicAssetPath(
   return `/assets/${baseName}-${asset.hash.slice(0, 8)}${suffix}.${extension}`;
 }
 
+function responsiveSourcesForAsset(asset: ImageAsset): ImageAsset["responsiveSources"] {
+  if (asset.mimeType === "image/x-icon" || !asset.responsiveSources) {
+    return asset.responsiveSources;
+  }
+  return compactResponsiveSources(asset.responsiveSources, asset.width, {
+    width: asset.width,
+    source: asset.source,
+  });
+}
+
 function projectWithPublicAssetUrls(
   project: StoreProjectV1,
   semanticNames = false,
@@ -412,29 +423,35 @@ function projectWithPublicAssetUrls(
       ...project.whatsapp,
       phone: whatsAppPhone,
     },
-    assets: project.assets.map((asset) => ({
-      ...asset,
-      source: asset.source.startsWith("data:")
+    assets: project.assets.map((asset) => {
+      const publicPrimarySource = asset.source.startsWith("data:")
         ? publicAssetPath(asset, "primary", asset.source, undefined, semanticNames)
-        : asset.source,
-      ...(asset.fallbackSource
-        ? {
-            fallbackSource: asset.fallbackSource.startsWith("data:")
-              ? publicAssetPath(asset, "fallback", asset.fallbackSource, undefined, semanticNames)
-              : asset.fallbackSource,
-          }
-        : {}),
-      ...(asset.responsiveSources
-        ? {
-            responsiveSources: asset.responsiveSources.map((source) => ({
-              ...source,
-              source: source.source.startsWith("data:")
-                ? publicAssetPath(asset, "primary", source.source, source.width, semanticNames)
-                : source.source,
-            })),
-          }
-        : {}),
-    })),
+        : asset.source;
+      const responsiveSources = responsiveSourcesForAsset(asset);
+      return {
+        ...asset,
+        source: publicPrimarySource,
+        ...(asset.fallbackSource
+          ? {
+              fallbackSource: asset.fallbackSource.startsWith("data:")
+                ? publicAssetPath(asset, "fallback", asset.fallbackSource, undefined, semanticNames)
+                : asset.fallbackSource,
+            }
+          : {}),
+        ...(responsiveSources
+          ? {
+              responsiveSources: responsiveSources.map((source) => ({
+                ...source,
+                source: source.source.startsWith("data:")
+                  ? source.source === asset.source
+                    ? publicPrimarySource
+                    : publicAssetPath(asset, "primary", source.source, source.width, semanticNames)
+                  : source.source,
+              })),
+            }
+          : {}),
+      };
+    }),
     videos: project.videos.map((video) => ({
       ...video,
       source: video.source.startsWith("data:")
@@ -463,21 +480,28 @@ function createPreviewAssetBundle(project: StoreProjectV1): PreviewAssetBundle {
   return {
     project: {
       ...project,
-      assets: project.assets.map((asset) => ({
-        ...asset,
-        source: addSource(asset, asset.source),
-        ...(asset.fallbackSource
-          ? { fallbackSource: addSource(asset, asset.fallbackSource, "-fallback") }
-          : {}),
-        ...(asset.responsiveSources
-          ? {
-              responsiveSources: asset.responsiveSources.map((responsive) => ({
-                ...responsive,
-                source: addSource(asset, responsive.source, `-${responsive.width}`),
-              })),
-            }
-          : {}),
-      })),
+      assets: project.assets.map((asset) => {
+        const primarySource = addSource(asset, asset.source);
+        const responsiveSources = responsiveSourcesForAsset(asset);
+        return {
+          ...asset,
+          source: primarySource,
+          ...(asset.fallbackSource
+            ? { fallbackSource: addSource(asset, asset.fallbackSource, "-fallback") }
+            : {}),
+          ...(responsiveSources
+            ? {
+                responsiveSources: responsiveSources.map((responsive) => ({
+                  ...responsive,
+                  source:
+                    responsive.source === asset.source
+                      ? primarySource
+                      : addSource(asset, responsive.source, `-${responsive.width}`),
+                })),
+              }
+            : {}),
+        };
+      }),
       videos: project.videos.map((video) => ({
         ...video,
         source: addSource(video, video.source),
@@ -1279,6 +1303,11 @@ function renderDocument(
       ? `<link rel="alternate" type="application/json" title="Contexto publico para agentes" href="${escapeAttribute(assetHref(project, "/ai-context.json"))}">
   <link rel="alternate" type="text/plain" title="Resumen publico para agentes" href="${escapeAttribute(assetHref(project, "/llms.txt"))}">`
       : "";
+  const consumerRightsLink =
+    mode === "production" && page.pageType !== "legal"
+      ? `<aside class="solara-consumer-rights" aria-label="Información legal"><a href="https://www.argentina.gob.ar/defensa-del-consumidor" target="_blank" rel="noopener noreferrer">Botón de arrepentimiento</a></aside>`
+      : "";
+  const bodyWithConsumerRights = appendToFooter(page.body, consumerRightsLink);
 
   return `<!doctype html>
 <html lang="${project.locale}" data-store-id="${escapeHtml(project.id)}" data-currency="${project.currency}" data-price-fraction-display="${escapeHtml((project as any).priceFractionDisplay ?? "always")}"${whatsAppAttributes}${publicCopyAttribute} data-solara-runtime-features="${escapeAttribute((manifest?.runtimeFeatures ?? []).join(","))}"${colorMode}${baseHrefAttribute}${serviceWorkerAttribute}>
@@ -1328,10 +1357,17 @@ function renderDocument(
 </head>
 <body>
   <a class="solara-skip-link" href="#solara-main">${escapeHtml(copy.export.skipToContent)}</a>
-  <div class="solara-page${modernProjectClass(project)}" data-solara-store data-design-family="${escapeHtml(project.commerceTemplates.designFamily ?? "legacy-editorial-v1")}" data-page-type="${page.pageType}" data-color-mode="${project.theme.colorMode}">${page.body.replace("<main", '<main id="solara-main"')}${mode === "production" && page.pageType !== "legal" ? `<aside class="solara-consumer-rights" aria-label="Información legal"><a href="https://www.argentina.gob.ar/defensa-del-consumidor" target="_blank" rel="noopener noreferrer">Botón de arrepentimiento</a></aside>` : ""}</div>
+  <div class="solara-page${modernProjectClass(project)}" data-solara-store data-design-family="${escapeHtml(project.commerceTemplates.designFamily ?? "legacy-editorial-v1")}" data-page-type="${page.pageType}" data-color-mode="${project.theme.colorMode}">${bodyWithConsumerRights.replace("<main", '<main id="solara-main"')}</div>
   <script src="${escapeAttribute(assetHref(project, runtimeAssets.js))}" defer></script>
 </body>
 </html>`;
+}
+
+function appendToFooter(body: string, content: string): string {
+  if (!content) return body;
+  const footerInnerEnd = body.lastIndexOf("</div></footer>");
+  if (footerInnerEnd < 0) return body;
+  return `${body.slice(0, footerInnerEnd)}${content}${body.slice(footerInnerEnd)}`;
 }
 
 function paginationNavigation(
@@ -1609,8 +1645,10 @@ function buildPages(
         `<main class="solara-container catalog-category-page"${categoryCanvasRoot}>
           ${categoryBreadcrumbMarkup(project, category)}
           <header class="solara-category-hero">
-            <h1><span class="solara-category-title-glass"${canvasEntityAttributes(categoryCanvas, "category-title", "category", category.id, "title")}>${escapeHtml(category.title)}</span></h1>
-            <p${canvasEntityAttributes(categoryCanvas, "category-description", "category", category.id, "description")}>${escapeHtml(category.description)}</p>
+            <div class="solara-category-hero-copy">
+              <h1><span class="solara-category-title-glass"${canvasEntityAttributes(categoryCanvas, "category-title", "category", category.id, "title")}>${escapeHtml(category.title)}</span></h1>
+              <p${canvasEntityAttributes(categoryCanvas, "category-description", "category", category.id, "description")}>${escapeHtml(category.description)}</p>
+            </div>
             ${categoryMediaWithBinding}
           </header>
           ${categoryChildrenMarkup(project, category)}
@@ -1697,8 +1735,10 @@ function buildPages(
         renderPageSections(sharedHeader, { pageType: "collection", collection }),
         `<main class="solara-container"${collectionCanvasRoot}>
           <header class="solara-category-hero solara-collection-hero">
-            <h1${canvasEntityAttributes(collectionCanvas, "collection-title", "collection", collection.id, "title")}>${escapeHtml(collection.title)}</h1>
-            <p${canvasEntityAttributes(collectionCanvas, "collection-description", "collection", collection.id, "description")}>${escapeHtml(collection.description)}</p>
+            <div class="solara-category-hero-copy">
+              <h1${canvasEntityAttributes(collectionCanvas, "collection-title", "collection", collection.id, "title")}>${escapeHtml(collection.title)}</h1>
+              <p${canvasEntityAttributes(collectionCanvas, "collection-description", "collection", collection.id, "description")}>${escapeHtml(collection.description)}</p>
+            </div>
             ${collectionHeroMarkup}
           </header>
           ${renderPageSections(collectionSections, {
@@ -1752,10 +1792,10 @@ function buildPages(
             candidate.collectionIds.some((id) => product.collectionIds.includes(id))
           );
         })
-        .slice(0, 6);
+        .slice(0, 8);
       // En catálogos chicos completamos la fila con productos activos para
       // conservar una sección de recomendaciones útil y visualmente estable.
-      if (relatedProducts.length < 6) {
+      if (relatedProducts.length < 8) {
         const relatedIds = new Set(relatedProducts.map((candidate) => candidate.id));
         relatedProducts.push(
           ...project.products
@@ -1765,11 +1805,11 @@ function buildPages(
                 candidate.id !== product.id &&
                 !relatedIds.has(candidate.id),
             )
-            .slice(0, 6 - relatedProducts.length),
+            .slice(0, 8 - relatedProducts.length),
         );
       }
       const relatedSections = project.commerceTemplates.product.showRelated
-        ? listingSections(project, "related", 6)
+        ? listingSections(project, "related", 8)
         : [];
       const body = [
         renderPageSections(sharedHeader, { pageType: "product", product }),
@@ -1957,14 +1997,11 @@ function buildPages(
     `<a data-cart-cta href="${escapeAttribute(emptyCartHref)}"><span class="solara-primary-action">${escapeHtml(copy.cart.exploreCategories)}</span></a><a data-cart-cta href="${escapeAttribute(cartContinueHref)}" hidden><span class="solara-primary-action">${escapeHtml(cartContinueLabel)}</span></a>`,
   );
 
-  const checkoutWhatsAppLink = whatsAppContactLink
-    ? `<a class="solara-secondary-action" data-whatsapp-link href="#" target="_blank" rel="noopener noreferrer" hidden>${escapeHtml(copy.checkout.sendWhatsApp)}</a>`
-    : "";
   const checkoutFields = `<label for="solara-customer-name">${escapeHtml(copy.cart.name)}</label><input id="solara-customer-name" name="name" autocomplete="name" required><label for="solara-customer-phone">${escapeHtml(copy.cart.phone)}</label><input id="solara-customer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="Ingresá un teléfono válido" required><label for="solara-customer-address">${escapeHtml(copy.cart.address)}</label><textarea id="solara-customer-address" name="address" autocomplete="street-address" required></textarea><label for="solara-customer-notes">${escapeHtml(copy.cart.notes)}</label><textarea id="solara-customer-notes" name="notes"></textarea><button class="solara-primary-action" type="submit">${escapeHtml(copy.checkout.submit)}</button><p data-order-verification-warning role="note">Solicitud sin confirmar; precio, stock, envío y pago deben verificarse con la tienda</p>`;
   const checkoutForm =
     project.commerceTemplates.designFamily === "catalog-modern-v2"
-      ? `<form class="solara-checkout-form solara-checkout-form-v2" data-checkout-form><div class="solara-checkout-fields">${checkoutFields}</div><aside class="solara-checkout-order-panel" aria-labelledby="solara-order-summary-title"><p class="solara-eyebrow">${escapeHtml(copy.checkout.selection)}</p><h2 id="solara-order-summary-title">${escapeHtml(copy.checkout.summary)}</h2><p>${escapeHtml(copy.checkout.prepare)}</p><pre data-order-preview aria-live="polite"></pre>${checkoutWhatsAppLink}</aside></form>`
-      : `<form class="solara-checkout-form" data-checkout-form>${checkoutFields}<pre data-order-preview aria-live="polite"></pre>${checkoutWhatsAppLink}</form>`;
+      ? `<form class="solara-checkout-form solara-checkout-form-v2" data-checkout-form><div class="solara-checkout-fields">${checkoutFields}</div><aside class="solara-checkout-order-panel" aria-labelledby="solara-order-summary-title"><p class="solara-eyebrow">${escapeHtml(copy.checkout.selection)}</p><h2 id="solara-order-summary-title">${escapeHtml(copy.checkout.summary)}</h2><p>${escapeHtml(copy.checkout.prepare)}</p><pre data-order-preview aria-live="polite"></pre></aside></form>`
+      : `<form class="solara-checkout-form" data-checkout-form>${checkoutFields}<pre data-order-preview aria-live="polite"></pre></form>`;
   const checkoutPage: PageDescriptor = {
     path: "compra/index.html",
     title: `${copy.pages.checkout} por WhatsApp | ${project.identity.brandName}`,
@@ -2400,7 +2437,8 @@ function buildFiles(
           fallbackBytes,
         );
       }
-      asset.responsiveSources?.forEach((source) => {
+      responsiveSourcesForAsset(asset)?.forEach((source) => {
+        if (source.source === asset.source) return;
         const responsiveBytes = dataUrlBytes(source.source);
         if (responsiveBytes) {
           files.set(
@@ -2541,8 +2579,12 @@ export function buildCanvasManifest(
         })),
       ),
   ];
-  const repeaterItemIds = (section: StoreSection, fieldKey: string): string[] => {
-    const rawItems = (section.settings as Record<string, unknown>)[fieldKey];
+  const repeaterItemIds = (
+    section: StoreSection,
+    fieldKey: string,
+    settings: Record<string, unknown> = section.settings as Record<string, unknown>,
+  ): string[] => {
+    const rawItems = settings[fieldKey];
     const persistedIds = Array.isArray(rawItems)
       ? rawItems
           .map((item) =>
@@ -2592,6 +2634,7 @@ export function buildCanvasManifest(
     sourceKind?: string,
     entityId?: string,
     entityField?: string,
+    settings: Record<string, unknown> = section.settings as Record<string, unknown>,
   ): void => {
     if (!binding) return;
     const source = binding.source;
@@ -2611,7 +2654,7 @@ export function buildCanvasManifest(
       ...(source.kind === "section-repeater-item" ? { itemFieldKey: source.itemFieldKey } : {}),
       ...(source.kind === "section-repeater-item"
         ? {
-            itemIds: repeaterItemIds(section, source.fieldKey),
+            itemIds: repeaterItemIds(section, source.fieldKey, settings),
           }
         : {}),
       ...(sourceKind === undefined ? {} : { sourceKind }),
@@ -2625,6 +2668,7 @@ export function buildCanvasManifest(
   for (const section of sections) {
     const definition = moduleRegistry[section.moduleId];
     if (!definition) continue;
+    const settings = definition.settingsSchema.parse(section.settings) as Record<string, unknown>;
     const bindings = definition.canvasBindings ?? [];
     if (!seenModules.has(section.moduleId)) {
       seenModules.set(section.moduleId, {
@@ -2635,7 +2679,15 @@ export function buildCanvasManifest(
     for (const binding of bindings) {
       const source = binding.source;
       if (source.kind === "section-setting" || source.kind === "section-repeater-item") {
-        addEntry(section, binding, `ce-${section.id}-${binding.id}`);
+        addEntry(
+          section,
+          binding,
+          `ce-${section.id}-${binding.id}`,
+          undefined,
+          undefined,
+          undefined,
+          settings,
+        );
         continue;
       }
       const entities =
@@ -2670,6 +2722,7 @@ export function buildCanvasManifest(
           source.kind,
           entity.id,
           entity.field,
+          settings,
         );
       }
     }

@@ -9,10 +9,28 @@ import {
   categoryDescendantIds,
   categoryProductIds,
 } from "./category-helpers.js";
-import { ImageAssetSchema, MediaAssetSchema, VideoAssetSchema } from "./media.js";
+import {
+  compactResponsiveSources,
+  ImageAssetSchema,
+  MediaAssetSchema,
+  RESPONSIVE_IMAGE_INTERMEDIATE_WIDTH,
+  RESPONSIVE_IMAGE_MAX_WIDTH,
+  RESPONSIVE_IMAGE_WIDTHS,
+  responsiveImageWidths,
+  VideoAssetSchema,
+} from "./media.js";
 import { PUBLIC_COPY_DEFAULTS } from "./public-copy-defaults.js";
 
-export { ImageAssetSchema, MediaAssetSchema, VideoAssetSchema };
+export {
+  compactResponsiveSources,
+  ImageAssetSchema,
+  MediaAssetSchema,
+  RESPONSIVE_IMAGE_INTERMEDIATE_WIDTH,
+  RESPONSIVE_IMAGE_MAX_WIDTH,
+  RESPONSIVE_IMAGE_WIDTHS,
+  responsiveImageWidths,
+  VideoAssetSchema,
+};
 
 export { PUBLIC_COPY_DEFAULTS };
 

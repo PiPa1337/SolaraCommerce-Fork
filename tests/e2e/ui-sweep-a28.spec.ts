@@ -224,14 +224,23 @@ test("C2: agregar al carrito legacy crea la línea, actualiza conteo/totales y p
   await drawer.getByLabel("Nombre").fill("Malena Ortiz");
   await drawer.getByLabel("Teléfono").fill("11 5555 0142");
   await drawer.getByLabel("Dirección o punto de entrega").fill("Av. Forest 842, CABA");
+  await page.evaluate(() => {
+    const originalOpen = window.open.bind(window);
+    window.open = ((url, target, features) => {
+      document.documentElement.dataset.solaraWhatsappUrl = String(url ?? "");
+      return originalOpen(url, target, features);
+    }) as typeof window.open;
+  });
+  const whatsappPopupPromise = page.waitForEvent("popup");
   await drawer.locator('button[type="submit"]').click();
-  const link = drawer.locator("[data-whatsapp-link]");
-  await expect(link).toBeVisible();
-  const href = await link.getAttribute("href");
-  expect(href).toMatch(/^https:\/\/wa\.me\/5491123456789\?text=/);
-  const message = decodeURIComponent(href ?? "").replace(/[\u202F\u00A0]/g, " ");
+  const whatsappPopup = await whatsappPopupPromise;
+  await expect(drawer.locator("[data-whatsapp-link]")).toHaveCount(0);
+  const openedUrl = await page.locator("html").getAttribute("data-solara-whatsapp-url");
+  expect(openedUrl).toMatch(/^https:\/\/wa\.me\/5491123456789\?text=/);
+  const message = decodeURIComponent(openedUrl ?? "").replace(/[\u202F\u00A0]/g, " ");
   expect(message).toContain("3 x Pieza de escala 10 (Natural) [CL-SCL-010-A]: $ 43.500,00");
   expect(message).toContain("Total estimado: $ 43.500,00");
+  await whatsappPopup.close();
 
   await page.reload();
   await page.locator("[data-solara-cart-open]").first().click();
@@ -480,15 +489,35 @@ test("C9: la toolbar de categoría legacy filtra por etiqueta/precio y ordena co
 
 test("C10: la paginación legacy navega prev/next con rel y respeta los límites", async ({
   page,
-}) => {
+}, testInfo) => {
   test.info().annotations.push({ type: "contrato", description: "A28 · C10 · pagination" });
+
+  for (const viewport of [
+    { width: 1280, height: 800 },
+    { width: 768, height: 900 },
+    { width: 320, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(storeUrl(basePort, "/categorias/casa/"));
+
+    await expect(page.locator(".solara-pagination a[rel='prev']")).toHaveCount(0);
+    const next = page.locator(".solara-pagination a[rel='next']");
+    const pagination = page.locator(".solara-pagination");
+    await expect(next).toHaveAttribute("href", "/categorias/casa/pagina/2/");
+    await expect(pagination).toContainText("Página 1 de 2");
+    const pageRadius = await pagination
+      .locator("span")
+      .evaluate((element) => getComputedStyle(element).borderRadius);
+    await expect(next).toHaveCSS("border-radius", pageRadius);
+    expect(pageRadius).not.toBe("999px");
+    await pagination.screenshot({
+      path: testInfo.outputPath(`pagination-square-${viewport.width}.png`),
+    });
+  }
+
+  await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto(storeUrl(basePort, "/categorias/casa/"));
-
-  await expect(page.locator(".solara-pagination a[rel='prev']")).toHaveCount(0);
   const next = page.locator(".solara-pagination a[rel='next']");
-  await expect(next).toHaveAttribute("href", "/categorias/casa/pagina/2/");
-  await expect(page.locator(".solara-pagination")).toContainText("Página 1 de 2");
-
   await next.click();
   await expect(page).toHaveURL(/\/categorias\/casa\/pagina\/2\/$/);
   await expect(page.locator(".solara-pagination a[rel='next']")).toHaveCount(0);

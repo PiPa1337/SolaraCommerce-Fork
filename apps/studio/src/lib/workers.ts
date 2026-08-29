@@ -5,7 +5,12 @@
  */
 import type { CatalogCsvContext } from "@solara/core";
 import type { AuditIssue, ExportMode, OptimizationReport } from "@solara/exporter";
-import type { Product, StoreProjectV1 } from "@solara/project-schema";
+import {
+  type Product,
+  RESPONSIVE_IMAGE_MAX_WIDTH,
+  responsiveImageWidths,
+  type StoreProjectV1,
+} from "@solara/project-schema";
 
 interface WorkerSuccess<Result> {
   id: string;
@@ -29,13 +34,14 @@ export interface ProcessedImage {
   responsive: Array<{ width: number; source: string }>;
 }
 
-const IMAGE_WIDTHS = [320, 480, 640, 768, 1024, 1280, 1600, 1800] as const;
-
-function fallbackImagePlan(sourceWidth: number, sourceHeight: number, maxWidth = 1800) {
-  const width = Math.min(sourceWidth, Math.max(1, Math.min(Math.floor(maxWidth), 1800)));
-  const responsiveWidths = [
-    ...new Set([...IMAGE_WIDTHS.filter((candidate) => candidate < width), width]),
-  ].sort((left, right) => left - right);
+function fallbackImagePlan(
+  sourceWidth: number,
+  sourceHeight: number,
+  maxWidth = RESPONSIVE_IMAGE_MAX_WIDTH,
+) {
+  const safeMaxWidth = Math.max(1, Math.min(Math.floor(maxWidth), RESPONSIVE_IMAGE_MAX_WIDTH));
+  const width = Math.min(sourceWidth, safeMaxWidth);
+  const responsiveWidths = responsiveImageWidths(sourceWidth, safeMaxWidth);
   return {
     width,
     height: Math.max(1, Math.round((sourceHeight / sourceWidth) * width)),
@@ -290,7 +296,7 @@ export async function processImageInWorker(file: File): Promise<ProcessedImage> 
         buffer: workerBuffer,
         name: file.name,
         type: file.type,
-        maxWidth: 1800,
+        maxWidth: RESPONSIVE_IMAGE_MAX_WIDTH,
       },
       [workerBuffer],
       recreateWorker(() => {
@@ -452,4 +458,25 @@ export function auditProjectInWorker(
         reject(reason);
       });
   });
+}
+
+export interface PreviewWorkerResult {
+  html: string;
+  canvasManifest: { entries: Array<Record<string, unknown>>; coverage: unknown[] };
+  assetSources: Record<string, string>;
+}
+
+export function renderPreviewInWorker(
+  project: StoreProjectV1,
+  route: string,
+  options?: { assetTransport?: "inline" | "parent"; editor?: { enabled: true; sectionId: string } },
+): Promise<PreviewWorkerResult> {
+  return requestWorker(
+    getExportWorker(),
+    { type: "preview", project, route, options },
+    [],
+    recreateWorker(() => {
+      exportWorker = undefined;
+    }, getExportWorker),
+  );
 }

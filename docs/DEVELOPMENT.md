@@ -79,13 +79,16 @@ El preview y el sitio exportado usan **el mismo renderer**. No hay divergencia.
 Toda imagen que entra por Assets pasa automáticamente por:
 
 ```text
-Upload → image.worker.ts → 8 variantes WebP responsive → responsiveSources
-         (320/480/640/768/1024/1280/1600/1800px, quality 0.82)
+Upload → image.worker.ts → 2 variantes WebP responsive → responsiveSources
+         (768px intermedia / 1800px máxima, quality 0.82)
          → fallback JPEG/PNG según transparencia
 ```
 
-El exporter arma `<picture>` con `<source srcset>` por MIME y `sizes`
-específico por módulo. Móvil recibe ~30-50KB, desktop ~100-200KB.
+El exporter arma `<picture>` con la variante intermedia para tablet/mobile y la
+máxima para desktop, más `sizes` específico por módulo. Las imágenes menores
+que un ancho objetivo nunca se amplían. El favicon conserva sus resoluciones ICO.
+El canal Node del agente conserva el original en formatos que no puede
+redimensionar con su encoder puro-JS; sólo agrega una intermedia real para PNG.
 
 **Guard permanente:** `scripts/check-image-budget.mjs` falla si un PNG >200KB
 aparece en `public/fixtures/`. Ver `docs/UI_SCALE.md` para la escala completa.

@@ -213,15 +213,6 @@ function fail(code: string, message: string, details?: unknown): never {
   throw error;
 }
 
-/**
- * Genera los anchos responsive basandose en el ancho original de la imagen.
- * Mismos breakpoints que IMAGE_RECIPE.widths en el image worker de Studio.
- */
-const RESPONSIVE_WIDTHS = [320, 480, 640, 768, 1024, 1280, 1600, 1800] as const;
-function buildResponsiveWidths(sourceWidth: number): number[] {
-  return RESPONSIVE_WIDTHS.filter((w) => w < sourceWidth).sort((a, b) => a - b);
-}
-
 function safeSlug(value: string): string {
   const slug = value
     .normalize("NFKD")
@@ -1652,7 +1643,8 @@ export class AgentController {
       fail("ASSET_DIMENSIONS_INVALID", "Las dimensiones del asset no son válidas.");
     const assetId = makeId("asset-agent");
     const hash = digest(bytes);
-    // Generar variantes responsive para PNG grandes; fallback para otros.
+    // El encoder puro-JS disponible sólo redimensiona PNG; otros formatos
+    // conservan únicamente su source original, sin descriptores engañosos.
     let responsiveSources: Array<{ width: number; source: string }> = [];
     if (params.mimeType === "image/png" && dimensions.width >= 480) {
       try {
@@ -1664,11 +1656,6 @@ export class AgentController {
       } catch {
         /* mantener vacío si falla el procesamiento */
       }
-    } else {
-      responsiveSources = buildResponsiveWidths(dimensions.width).map((width) => ({
-        width,
-        source: `data:${params.mimeType};base64,${bytesToBase64(bytes)}`,
-      }));
     }
     const asset = ImageAssetSchema.parse({
       kind: "image",

@@ -225,7 +225,11 @@ function updateRepeaterItem(
   if (!definition) throw new Error(`Módulo desconocido: ${section.moduleId}`);
   // El campo debe ser un array del settings y los cambios sólo pueden tocar
   // claves ya presentes en los items (sin inventar columnas).
-  const current = (section.settings as Record<string, unknown>)[fieldKey];
+  const parsedSettings = definition.settingsSchema.parse(section.settings) as Record<
+    string,
+    unknown
+  >;
+  const current = parsedSettings[fieldKey];
   if (!Array.isArray(current)) throw new Error(`El campo ${fieldKey} no es un repeater.`);
   const itemIndex = current.findIndex(
     (item) => typeof item === "object" && item !== null && (item as { id?: unknown }).id === itemId,
@@ -251,7 +255,13 @@ function updateRepeaterItemOrder(
 ): StoreProjectV1 {
   const section = project.sections.find((item) => item.id === sectionId);
   if (!section) throw new Error(`No existe la sección ${sectionId}.`);
-  const current = (section.settings as Record<string, unknown>)[fieldKey];
+  const definition = getModuleDefinition(section.moduleId);
+  if (!definition) throw new Error(`Módulo desconocido: ${section.moduleId}`);
+  const parsedSettings = definition.settingsSchema.parse(section.settings) as Record<
+    string,
+    unknown
+  >;
+  const current = parsedSettings[fieldKey];
   if (!Array.isArray(current)) throw new Error(`El campo ${fieldKey} no es un repeater.`);
   const itemIndex = current.findIndex(
     (item) => typeof item === "object" && item !== null && (item as { id?: unknown }).id === itemId,

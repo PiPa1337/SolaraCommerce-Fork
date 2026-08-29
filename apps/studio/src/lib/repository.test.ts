@@ -34,6 +34,7 @@ import {
   buildScaleDemoProject,
   clearAssetCache,
   clearRecoveryDraft,
+  compactProjectResponsiveAssets,
   createAssetCacheKey,
   createProject,
   DEMO_ONLY_PURGE_SENTINEL,
@@ -94,6 +95,41 @@ describe("repositorio local", () => {
     const records = await listProjects();
     expect(records).toHaveLength(1);
     expect(records[0]?.name).toBe(referenceStore.name);
+  });
+
+  it("compacta variantes legacy sin tocar el favicon", () => {
+    const project = structuredClone(referenceStore);
+    const firstAsset = project.assets[0];
+    if (!firstAsset) throw new Error("Fixture incompleto");
+    firstAsset.width = 1800;
+    firstAsset.height = 1200;
+    firstAsset.source = "data:image/webp;base64,AA==";
+    firstAsset.responsiveSources = [320, 480, 640, 768, 1024, 1280, 1600, 1800].map((width) => ({
+      width,
+      source: `data:image/webp;base64,${btoa(String(width))}`,
+    }));
+    const favicon = {
+      ...firstAsset,
+      id: "asset-test-favicon",
+      name: "Favicon",
+      alt: "Favicon",
+      mimeType: "image/x-icon",
+      source: "data:image/x-icon;base64,AA==",
+      responsiveSources: [16, 32, 48, 64, 128, 256].map((width) => ({
+        width,
+        source: `data:image/png;base64,${btoa(String(width))}`,
+      })),
+      width: 256,
+      height: 256,
+    };
+    project.assets.push(favicon);
+
+    const compacted = compactProjectResponsiveAssets(project);
+
+    expect(compacted.assets[0]?.responsiveSources?.map((source) => source.width)).toEqual([
+      768, 1800,
+    ]);
+    expect(compacted.assets.at(-1)?.responsiveSources).toHaveLength(6);
   });
 
   it("rechaza guardar directamente la plantilla protegida", async () => {

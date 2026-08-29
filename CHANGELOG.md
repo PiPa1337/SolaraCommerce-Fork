@@ -1,5 +1,108 @@
 # Changelog
 
+### Hero V2: media vertical 9:16 consistente (2026-08-29)
+
+- La imagen del hero ahora llena correctamente su `<picture>`/`<img>` en el
+  preview y en el sitio exportado, sin dejar espacios vacíos por el markup
+  responsive.
+- Desktop, tablet angosta y mobile conservan el encuadre 9:16; tablet usa un
+  carril vertical propio y mobile mantiene el overlay del copy.
+
+### Límite global de renderizado a 140 FPS (2026-08-29)
+
+- Studio y el runtime del storefront limitan los callbacks de animación a un
+  máximo de 140 FPS y no mantienen un frame loop cuando no hay trabajo.
+
+### Interlineado adicional para títulos de hero (2026-08-29)
+
+- Se aumentó nuevamente en `0.05` el `line-height` de los títulos de hero,
+  incluidos sus breakpoints responsive, para preservar el espacio de las letras
+  descendentes sin modificar el tamaño de fuente.
+
+### Studio inicia maximizado (2026-08-29)
+
+- La ventana principal de la aplicación de escritorio se maximiza al iniciar.
+
+### Recomendaciones ampliadas en la ficha de producto (2026-08-29)
+
+- “También puede interesarte” ahora muestra hasta 8 productos relacionados y
+  completa con productos activos disponibles cuando la coincidencia es menor.
+
+### Checkout abre WhatsApp automáticamente (2026-08-29)
+
+- El botón principal genera y deja visible el resumen del pedido y abre
+  automáticamente WhatsApp con el mensaje preparado.
+- Se eliminó globalmente el enlace secundario subrayado en los drawers y en la
+  página exportada de checkout; se conserva un fallback si el navegador bloquea
+  la nueva ventana.
+
+### Buscador del navbar con radio consistente (2026-08-29)
+
+- El buscador de Catalog Modern, incluido su acceso sin JavaScript y la versión
+  móvil, ahora usa el radio configurable del tema en lugar de una pastilla fija.
+
+### Receta responsive de imágenes reducida (2026-08-29)
+
+- El pipeline global conserva sólo la variante intermedia de `768px` y la
+  máxima disponible (hasta `1800px`) por asset, sin ampliar imágenes pequeñas.
+- Desktop recibe la máxima y tablet/mobile la intermedia; las recetas legacy se
+  compactan al abrir/exportar y el favicon mantiene sus resoluciones ICO.
+
+### Paginación con controles cuadrados (2026-08-29)
+
+- El botón `Siguiente` de las categorías y colecciones de Catalog Modern ahora
+  comparte el radio cuadrado del indicador de página y deja de mostrarse como
+  una pastilla.
+
+### Cabecera compacta de categorías y colecciones (2026-08-29)
+
+- Se agruparon título y descripción junto a la imagen en una composición
+  editorial compacta, eliminando el espacio vertical desaprovechado.
+- El layout compartido mantiene la imagen alineada arriba en desktop/tablet y
+  apila los bloques de forma segura hasta 320 px.
+
+### Títulos de categorías sin caja visual (2026-08-29)
+
+- Se eliminó globalmente el fondo, blur, padding y borde del envoltorio de los
+  títulos de categorías, conservando el ancla de edición.
+- Las páginas Catalog Modern V1 y V2 mantienen el título compacto y el layout de
+  categorías pasa a una sola columna en mobile hasta 320 px.
+
+### Botón de arrepentimiento integrado al footer (2026-08-29)
+
+- Se quitó el botón legal flotante y ahora se muestra dentro del footer de los
+  exports production, sin cubrir contenido ni permanecer fijo en pantalla.
+
+### Footer de identidad para tiendas (2026-08-28)
+
+- Se reforzó globalmente el footer de Catalog Modern con el logo, descripción,
+  CTA de WhatsApp, navegación y contacto de cada tienda, conectado a la paleta
+  activa y responsive hasta 320 px.
+
+### Separación visible de líneas en héroes (2026-08-28)
+
+- Se elevó globalmente el interlineado de los títulos editoriales a `1.1` para
+  dejar espacio real a los descendentes de Georgia, como `g` y `p`, sin reducir
+  el tamaño de la tipografía en desktop, tablet ni mobile.
+
+### Alineación de imágenes en cards de productos (2026-08-28)
+
+- Se dimensionó globalmente el `<picture>` responsive de las cards y se fijó
+  el centrado de la imagen para evitar que fotos con transparencia o formatos
+  apaisados queden pegadas al borde superior en desktop, tablet y mobile.
+
+### Etiquetas compactas de categorías (2026-08-28)
+
+- Se corrigió el margen heredado del texto anidado y se redujo globalmente la
+  caja de nombres del mosaico de categorías, sin modificar el tamaño de letra ni
+  el área clickeable; el comportamiento queda cubierto hasta 320 px.
+
+### Títulos de hero sin solapamiento (2026-08-28)
+
+- Se ajustó globalmente el interlineado de los héroes editoriales para que los
+  descendentes de letras como `g` y `p` no invadan la línea siguiente en
+  desktop, tablet ni mobile.
+
 ### Robustez de CI en Windows y Linux (2026-08-29)
 
 - El chequeo de instalaciones portables ya no confunde diferencias de ruta o

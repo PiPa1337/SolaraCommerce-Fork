@@ -159,7 +159,7 @@ test("colores: los 7 tokens del editor pintan las superficies modernas del sitio
   }
 });
 
-test("radio: las superficies modernas siguen el slider y las pills conservan 999px", async ({
+test("radio: las superficies modernas siguen el slider y el buscador usa el mismo radio", async ({
   page,
 }) => {
   const base = {
@@ -185,12 +185,12 @@ test("radio: las superficies modernas siguen el slider y las pills conservan 999
         return {
           media: radiusOf(".catalog-product-media"),
           hero: radiusOf(".catalog-hero-inner"),
-          pill: radiusOf(".catalog-search-link"),
+          search: radiusOf(".catalog-search-link"),
         };
       });
     expect(metrics.media).toBe("40px");
     expect(metrics.hero).toBe("40px");
-    expect(metrics.pill).toBe("999px");
+    expect(metrics.search).toBe("40px");
   } finally {
     await site40.close();
   }
@@ -205,6 +205,11 @@ test("radio: las superficies modernas siguen el slider y las pills conservan 999
       .first()
       .evaluate((element) => getComputedStyle(element).borderRadius);
     expect(mediaRadius).toBe("0px");
+    const searchRadius = await page
+      .locator(".catalog-search-link")
+      .first()
+      .evaluate((element) => getComputedStyle(element).borderRadius);
+    expect(searchRadius).toBe("0px");
   } finally {
     await site0.close();
   }

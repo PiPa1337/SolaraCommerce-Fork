@@ -55,6 +55,39 @@ test("Ctrl+clic selecciona un binding, edita texto y conserva undo/redo", async 
   );
 });
 
+test("Ctrl+clic permite editar título y descripción de los beneficios del hero", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await openCleanStore(page);
+  const frame = page.frameLocator('iframe[title="Vista previa desktop"]');
+  const title = frame.locator('[data-canvas-edit*="-benefit-title"][data-canvas-item]').first();
+  await expect(title).toHaveText("Envíos a todo el país", { timeout: 20_000 });
+  await title.click({ modifiers: ["Control"] });
+
+  const titlePopover = page.getByRole("dialog", { name: "Editar Título del beneficio" });
+  await expect(titlePopover).toBeVisible();
+  await expect(titlePopover.getByRole("textbox")).toHaveValue("Envíos a todo el país");
+  await titlePopover.getByRole("textbox").fill("Envíos nacionales");
+  await titlePopover.getByRole("button", { name: "Aplicar" }).click();
+  await expect(title).toHaveText("Envíos nacionales", { timeout: 20_000 });
+
+  const description = frame
+    .locator('[data-canvas-edit*="-benefit-text"][data-canvas-item]')
+    .first();
+  await description.click({ modifiers: ["Control"] });
+  const descriptionPopover = page.getByRole("dialog", {
+    name: "Editar Descripción del beneficio",
+  });
+  await expect(descriptionPopover).toBeVisible();
+  await expect(descriptionPopover.getByRole("textbox")).toHaveValue(
+    "Coordinamos la entrega por WhatsApp",
+  );
+  await descriptionPopover.getByRole("textbox").fill("Entregamos en todo el país");
+  await descriptionPopover.getByRole("button", { name: "Aplicar" }).click();
+  await expect(description).toHaveText("Entregamos en todo el país", { timeout: 20_000 });
+});
+
 test("el modo accesible permite seleccionar y subir una imagen desde Canvas", async ({ page }) => {
   test.setTimeout(60_000);
   await openCleanStore(page);

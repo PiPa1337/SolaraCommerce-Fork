@@ -179,6 +179,9 @@ describe("official module system", () => {
 
     expect(STORE_BASE_STYLES).toContain("var(--solara-dark-background");
     expect(STORE_BASE_STYLES).not.toContain("--solara-background: #1d1e19");
+    expect(STORE_BASE_STYLES).toContain(".solara-consumer-rights {");
+    expect(STORE_BASE_STYLES).toContain("grid-column: 1 / -1;");
+    expect(STORE_BASE_STYLES).not.toMatch(/\.solara-consumer-rights\s*\{[^}]*position:\s*fixed/);
     expect(STORE_THEME_TOKEN_STYLES).toContain("var(--solara-line-height-tight");
   });
 
@@ -832,6 +835,66 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     expect(headerHtml).toMatch(/<noscript>[\s\S]*@media print/);
   });
 
+  it("mantiene centrada la imagen responsive dentro de la media de cada card", () => {
+    expect(STORE_BASE_STYLES).toContain("[data-solara-store] .solara-product-media > picture,");
+    expect(STORE_BASE_STYLES).toContain("[data-solara-store] .catalog-product-media > picture {");
+    expect(STORE_BASE_STYLES).toContain("width: 100%;\n  height: 100%;");
+    expect(STORE_BASE_STYLES).toContain(
+      "[data-solara-store] .solara-product-media > picture > img,",
+    );
+    expect(STORE_BASE_STYLES).toContain("object-position: center;");
+  });
+
+  it("mantiene cuadrados los controles de paginación de Catalog Modern", () => {
+    const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
+    if (!styles) throw new Error("Falta el bloque de estilos catalog-modern");
+
+    expect(styles).toMatch(
+      /\.solara-pagination a \{[^}]*border-radius: var\(--solara-radius\)[^}]*\}/,
+    );
+    expect(styles).not.toMatch(/\.solara-pagination a \{[^}]*border-radius: 999px/);
+  });
+
+  it("aplica el radio del tema al input del diálogo de búsqueda", () => {
+    const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
+    if (!styles) throw new Error("Falta el bloque de estilos catalog-modern");
+
+    expect(styles).toMatch(
+      /\.catalog-search-dialog-controls input \{[^}]*border-radius: var\(--solara-radius\)[^}]*\}/,
+    );
+    expect(styles).not.toMatch(/\.catalog-search-dialog-controls input \{[^}]*border-radius: 999px/);
+  });
+
+  it("evita que el email del footer se parta a mitad de palabra", () => {
+    const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
+    if (!styles) throw new Error("Falta el bloque de estilos catalog-modern");
+
+    expect(styles).toMatch(
+      /\.catalog-footer-inner a\[href\^="mailto:"\] \{[^}]*word-break: keep-all;[^}]*overflow-wrap: normal;[^}]*\}/,
+    );
+  });
+
+  it("colapsa las grillas de producto a una columna hasta 360px en V2", () => {
+    const styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!styles) throw new Error("Falta el bloque de estilos catalog-modern-v2");
+
+    expect(styles).toMatch(
+      /@media \(max-width: 360px\)[\s\S]*?\.cm\.v2 \.catalog-product-grid,[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/,
+    );
+    expect(styles).toMatch(
+      /@media \(max-width: 360px\)[\s\S]*?\.cm\.v2 \.catalog-category-results \.catalog-product-grid,[\s\S]*?\.cm\.v2 \.catalog-search-results-grid \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/,
+    );
+  });
+
+  it("muestra hasta cuatro relacionados por fila en desktop", () => {
+    const styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!styles) throw new Error("Falta el bloque de estilos catalog-modern-v2");
+
+    expect(styles).toMatch(
+      /\.cm\.v2 \[data-solara-section\$="-related"\] \.catalog-product-grid \{[^}]*repeat\(4, ?minmax\(0, 1fr\)\)/,
+    );
+  });
+
   it("mantiene el alto del navbar V2 con nombres de tienda largos", () => {
     const styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
     if (!styles) throw new Error("Falta el bloque de estilos catalog-modern-v2");
@@ -913,6 +976,7 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     );
     expect(modernStyles).toContain("@keyframes solara-hero-media-zoom");
     expect(modernStyles).toContain(".catalog-hero-line-inner");
+    expect(modernStyles).toContain("line-height: 1.1;");
     expect(modernStyles).toContain("text-shadow: none;");
     expect(modernStyles).toContain("@media (min-width: 768px) and (max-width: 899px)");
     expect(modernStyles).toContain(".catalog-hero-benefits--band");
@@ -1265,6 +1329,41 @@ describe("auditoría Resumen — fixes Ola 3 (navegación y footer moderno)", ()
     expect(html).toContain("<span>Av. Siempre Viva 123</span>");
     expect(html).toContain("mailto:");
     expect(html).toContain("tel:");
+  });
+
+  it("conecta el footer con la identidad y la paleta activa", () => {
+    const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
+    if (!styles) throw new Error("Falta el bloque de estilos catalog-modern");
+
+    expect(styles).toContain("border-top: 2px solid var(--solara-accent);");
+    expect(styles).toContain("border-inline-start: 2px solid var(--solara-accent);");
+    expect(styles).toContain(".catalog-footer-whatsapp");
+    expect(styles).toContain("var(--solara-accent-text)");
+  });
+
+  it("deja sólo el subrayado animado en el acceso a todos los productos", () => {
+    const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
+    const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!styles) throw new Error("Falta el bloque de estilos catalog-modern");
+    if (!v2Styles) throw new Error("Falta el bloque de estilos catalog-modern-v2");
+
+    const baseRule = styles.match(
+      /\.catalog-mega-menu__all \{[^}]*text-decoration: none;[^}]*\}/,
+    )?.[0];
+    expect(baseRule).toBeDefined();
+    expect(baseRule).not.toContain("border-top");
+    expect(v2Styles).toContain(".cm.v2 .catalog-mega-menu__all::after");
+    expect(v2Styles).toContain(".cm.v2 .catalog-mega-menu__all:hover::after");
+  });
+
+  it("ofrece un acceso de WhatsApp desde el bloque de identidad del footer", () => {
+    const project = structuredClone(catalogModernStore);
+    project.whatsapp.phone = "5492804558845";
+    const html = renderSections(project, [footerSection], { pageType: "home" });
+
+    expect(html).toContain('class="catalog-footer-whatsapp"');
+    expect(html).toContain('href="https://wa.me/5492804558845"');
+    expect(html).toContain(project.publicCopy.contact.whatsappAction);
   });
 
   it("usa navigation.catalogLabel como eyebrow del diálogo de búsqueda", () => {
