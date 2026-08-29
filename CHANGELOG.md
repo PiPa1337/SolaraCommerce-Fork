@@ -1,5 +1,12 @@
 # Changelog
 
+### Robustez de CI en Windows y Linux (2026-08-29)
+
+- El chequeo de instalaciones portables ya no confunde diferencias de ruta o
+  metadatos de NTFS con junctions reales en Windows.
+- Los dos fuzz tests de `agent-control` que superan 5 segundos bajo carga de
+  CI declaran un timeout de 30 segundos sin cambiar sus aserciones.
+
 ### CI E2E fragmentada (2026-08-28)
 
 - El workflow de GitHub reutiliza el build de Studio y distribuye el E2E

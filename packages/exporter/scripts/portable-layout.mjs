@@ -8,7 +8,7 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { lstat, mkdir, realpath, rename, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, realpath, rename, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 export const PORTABLE_INSTANCE_FORMAT = "solara-portable-instance";
@@ -204,9 +204,22 @@ export async function assertNoReparsePoints(root, target = root) {
   const rootPath = resolve(root);
   const targetPath = inside(rootPath, target);
   const relativePath = relative(rootPath, targetPath);
+  let canonicalRoot = rootPath;
+  try {
+    canonicalRoot = await realpath(rootPath);
+  } catch {
+    // El caller suele crear la raíz antes de auditarla; conservar la ruta
+    // textual permite que el helper siga siendo útil durante una creación.
+  }
+  const normalizeFsPath = (pathname) => {
+    const normalized = resolve(pathname).replace(/^\\\\\?\\/, "");
+    return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+  };
   let current = rootPath;
+  let expected = canonicalRoot;
   for (const segment of relativePath ? relativePath.split(sep) : []) {
     current = join(current, segment);
+    expected = join(expected, segment);
     let info;
     try {
       info = await lstat(current);
@@ -219,12 +232,7 @@ export async function assertNoReparsePoints(root, target = root) {
     // Junctions en Windows no son symlinks pero son reparse points: detectar via realpath
     try {
       const real = await realpath(current);
-      if (resolve(real) !== resolve(current)) {
-        throw new Error("La instalación contiene un enlace simbólico no permitido.");
-      }
-      // También comparar stat vs lstat para detectar reparse (ino diferente)
-      const st = await stat(current);
-      if (info.ino !== st.ino || info.dev !== st.dev) {
+      if (normalizeFsPath(real) !== normalizeFsPath(expected)) {
         throw new Error("La instalación contiene un enlace simbólico no permitido.");
       }
     } catch (e) {

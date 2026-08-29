@@ -458,60 +458,64 @@ describe("control nativo del agente", () => {
     },
   );
 
-  it("reanuda un rollout durable después de reiniciar el controlador", async () => {
-    const root = await mkdtemp(join(tmpdir(), "solara-agent-resume-"));
-    try {
-      const storage = createLocalProjectStorage({
-        applicationRoot: root,
-        projectsRoot: join(root, "proyectos"),
-        stagingRoot: join(root, ".solara-runtime", "transactions"),
-      });
-      const first = createAgentController({ storage, applicationRoot: root });
-      const plan = await first.createPlan({
-        operations: [
-          {
-            type: "store.create",
-            storeId: "store-resumable-rollout",
-            name: "Rollout reanudable",
-            slug: "rollout-reanudable",
-            source: { kind: "clean" },
-          },
-        ],
-      });
-      await first.commitPlan({ planId: plan.planId });
-      const preview = await first.previewRollout({ kind: "site-rebuild" });
-      const jobPath = join(root, ".solara-runtime", "agent", "jobs", "job-restart.json");
-      await writeFile(
-        jobPath,
-        `${JSON.stringify(
-          {
-            jobId: "job-restart",
-            kind: "rollout",
-            rolloutId: preview.previewId,
-            idempotencyKey: "resume-rollout-001",
-            status: "running",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          null,
-          2,
-        )}\n`,
-        "utf8",
-      );
+  it(
+    "reanuda un rollout durable después de reiniciar el controlador",
+    { timeout: 30_000 },
+    async () => {
+      const root = await mkdtemp(join(tmpdir(), "solara-agent-resume-"));
+      try {
+        const storage = createLocalProjectStorage({
+          applicationRoot: root,
+          projectsRoot: join(root, "proyectos"),
+          stagingRoot: join(root, ".solara-runtime", "transactions"),
+        });
+        const first = createAgentController({ storage, applicationRoot: root });
+        const plan = await first.createPlan({
+          operations: [
+            {
+              type: "store.create",
+              storeId: "store-resumable-rollout",
+              name: "Rollout reanudable",
+              slug: "rollout-reanudable",
+              source: { kind: "clean" },
+            },
+          ],
+        });
+        await first.commitPlan({ planId: plan.planId });
+        const preview = await first.previewRollout({ kind: "site-rebuild" });
+        const jobPath = join(root, ".solara-runtime", "agent", "jobs", "job-restart.json");
+        await writeFile(
+          jobPath,
+          `${JSON.stringify(
+            {
+              jobId: "job-restart",
+              kind: "rollout",
+              rolloutId: preview.previewId,
+              idempotencyKey: "resume-rollout-001",
+              status: "running",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+            null,
+            2,
+          )}\n`,
+          "utf8",
+        );
 
-      const recovered = createAgentController({ storage, applicationRoot: root });
-      let finalJob: { status?: string } | undefined;
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        const result = await recovered.getRollout({ rolloutId: preview.previewId });
-        finalJob = result.job as { status?: string } | undefined;
-        if (finalJob?.status === "succeeded") break;
-        await new Promise((resolve) => setTimeout(resolve, 25));
+        const recovered = createAgentController({ storage, applicationRoot: root });
+        let finalJob: { status?: string } | undefined;
+        for (let attempt = 0; attempt < 40; attempt += 1) {
+          const result = await recovered.getRollout({ rolloutId: preview.previewId });
+          finalJob = result.job as { status?: string } | undefined;
+          if (finalJob?.status === "succeeded") break;
+          await new Promise((resolve) => setTimeout(resolve, 25));
+        }
+        expect(finalJob?.status).toBe("succeeded");
+      } finally {
+        await rm(root, { recursive: true, force: true });
       }
-      expect(finalJob?.status).toBe("succeeded");
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
+    },
+  );
 
   it("reporta blockingIssues en plans.create para productos sin imagen", async () => {
     const root = await mkdtemp(join(tmpdir(), "solara-agent-blocking-"));

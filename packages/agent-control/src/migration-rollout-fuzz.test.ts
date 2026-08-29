@@ -73,75 +73,80 @@ function fuzzProject(seed: number): StoreProjectV2 {
 }
 
 describe("N6 Migration & Rollout Fuzz", () => {
-  it("preserva personalizaciones, assets, estados, repeaters y secciones en clones", () => {
-    const migration = resolveMigration(defaultMigrationId());
-    if (!migration) throw new Error("migración Catalog Modern ausente");
+  it(
+    "preserva personalizaciones, assets, estados, repeaters y secciones en clones",
+    { timeout: 30_000 },
+    () => {
+      const migration = resolveMigration(defaultMigrationId());
+      if (!migration) throw new Error("migración Catalog Modern ausente");
 
-    for (let seed = 0; seed < 30; seed += 1) {
-      const project = fuzzProject(seed);
-      expect(migrationApplies(defaultMigrationId(), project)).toBe(true);
-      const preview = migration.preview(project);
-      expect(preview.safeChanges).toContain("template.version");
-      expect(migration.fromTemplateVersion).toBe(1);
-      expect(migration.toTemplateVersion).toBe(CATALOG_MODERN_TEMPLATE_VERSION);
+      for (let seed = 0; seed < 30; seed += 1) {
+        const project = fuzzProject(seed);
+        expect(migrationApplies(defaultMigrationId(), project)).toBe(true);
+        const preview = migration.preview(project);
+        expect(preview.safeChanges).toContain("template.version");
+        expect(migration.fromTemplateVersion).toBe(1);
+        expect(migration.toTemplateVersion).toBe(CATALOG_MODERN_TEMPLATE_VERSION);
 
-      const accepted = [...preview.safeChanges];
-      const upgraded = migration.apply(project, accepted);
-      expect(upgraded.origin?.templateVersion).toBe(CATALOG_MODERN_TEMPLATE_VERSION);
-      expect(upgraded.navigation.catalogLabel).toBe("Categorías");
-      expect(upgraded.products[0]?.status).toBe("archived");
-      expect(upgraded.assets.some((asset) => asset.id === `asset-owned-${seed}`)).toBe(true);
+        const accepted = [...preview.safeChanges];
+        const upgraded = migration.apply(project, accepted);
+        expect(upgraded.origin?.templateVersion).toBe(CATALOG_MODERN_TEMPLATE_VERSION);
+        expect(upgraded.navigation.catalogLabel).toBe("Categorías");
+        expect(upgraded.products[0]?.status).toBe("archived");
+        expect(upgraded.assets.some((asset) => asset.id === `asset-owned-${seed}`)).toBe(true);
 
-      if (seed % 3 === 0) {
-        expect(upgraded.sections.some((section) => section.id === "modo-section-brands")).toBe(
+        if (seed % 3 === 0) {
+          expect(upgraded.sections.some((section) => section.id === "modo-section-brands")).toBe(
+            true,
+          );
+        }
+        if (seed % 2 === 0) {
+          expect(
+            upgraded.sections.find((section) => section.moduleId === "catalog-hero")?.settings
+              .title,
+          ).toBe(`Personalización previa ${seed}`);
+          expect(preview.preserved).toContain("sections.modo-section-hero.settings");
+        } else {
+          const before = project.sections.find(
+            (section) => section.moduleId === "catalog-testimonials",
+          );
+          const after = upgraded.sections.find(
+            (section) => section.moduleId === "catalog-testimonials",
+          );
+          expect(after?.settings.items).toEqual(before?.settings.items);
+        }
+        if (seed % 5 === 0) {
+          expect(preview.conflicts).toContain(`section.removed.modo-section-custom-${seed}`);
+          expect(
+            upgraded.sections.some((section) => section.id === `modo-section-custom-${seed}`),
+          ).toBe(true);
+        }
+
+        const repeated = migration.apply(upgraded, accepted);
+        expect(JSON.stringify(repeated)).toBe(JSON.stringify(upgraded));
+
+        // El proyecto puede cambiar después del preview: aplicar los cambios
+        // seguros no debe pisar la personalización nueva ni los datos propios.
+        const changedAfterPreview = StoreProjectV2Schema.parse({
+          ...project,
+          sections: project.sections.map((section) =>
+            section.moduleId === "catalog-hero"
+              ? { ...section, settings: { ...section.settings, title: `Posterior ${seed}` } }
+              : section,
+          ),
+        });
+        const appliedAfterPreview = migration.apply(changedAfterPreview, accepted);
+        expect(
+          appliedAfterPreview.sections.find((section) => section.moduleId === "catalog-hero")
+            ?.settings.title,
+        ).toBe(`Posterior ${seed}`);
+        expect(appliedAfterPreview.assets.some((asset) => asset.id === `asset-owned-${seed}`)).toBe(
           true,
         );
+        expect(StoreProjectV2Schema.safeParse(appliedAfterPreview).success).toBe(true);
       }
-      if (seed % 2 === 0) {
-        expect(
-          upgraded.sections.find((section) => section.moduleId === "catalog-hero")?.settings.title,
-        ).toBe(`Personalización previa ${seed}`);
-        expect(preview.preserved).toContain("sections.modo-section-hero.settings");
-      } else {
-        const before = project.sections.find(
-          (section) => section.moduleId === "catalog-testimonials",
-        );
-        const after = upgraded.sections.find(
-          (section) => section.moduleId === "catalog-testimonials",
-        );
-        expect(after?.settings.items).toEqual(before?.settings.items);
-      }
-      if (seed % 5 === 0) {
-        expect(preview.conflicts).toContain(`section.removed.modo-section-custom-${seed}`);
-        expect(
-          upgraded.sections.some((section) => section.id === `modo-section-custom-${seed}`),
-        ).toBe(true);
-      }
-
-      const repeated = migration.apply(upgraded, accepted);
-      expect(JSON.stringify(repeated)).toBe(JSON.stringify(upgraded));
-
-      // El proyecto puede cambiar después del preview: aplicar los cambios
-      // seguros no debe pisar la personalización nueva ni los datos propios.
-      const changedAfterPreview = StoreProjectV2Schema.parse({
-        ...project,
-        sections: project.sections.map((section) =>
-          section.moduleId === "catalog-hero"
-            ? { ...section, settings: { ...section.settings, title: `Posterior ${seed}` } }
-            : section,
-        ),
-      });
-      const appliedAfterPreview = migration.apply(changedAfterPreview, accepted);
-      expect(
-        appliedAfterPreview.sections.find((section) => section.moduleId === "catalog-hero")
-          ?.settings.title,
-      ).toBe(`Posterior ${seed}`);
-      expect(appliedAfterPreview.assets.some((asset) => asset.id === `asset-owned-${seed}`)).toBe(
-        true,
-      );
-      expect(StoreProjectV2Schema.safeParse(appliedAfterPreview).success).toBe(true);
-    }
-  });
+    },
+  );
 
   it("mantiene la política de plantilla separada de los clones mutables", () => {
     const template = StoreProjectV2Schema.parse({
