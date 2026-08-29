@@ -71,10 +71,42 @@ img, video { content-visibility: auto; contain-intrinsic-size: 300px 200px; }
 .catalog-hero, .catalog-product-grid { background-image: none !important; }
 </style>`;
 
+const PREVIEW_PERF_SCRIPT = `<script data-solara-preview-perf>
+(() => {
+  try {
+    const c = window.IntersectionObserver;
+    window.IntersectionObserver = class extends (c || Object) {
+      constructor(cb, opts) { super(cb, opts); }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  } catch {}
+  try {
+    const r = window.ResizeObserver;
+    window.ResizeObserver = class extends (r || Object) {
+      constructor(cb) { super(cb); }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  } catch {}
+  try {
+    const raf = window.requestAnimationFrame;
+    let last = 0;
+    window.requestAnimationFrame = (cb) => raf.call(window, (t) => {
+      if (t - last < 7) return raf.call(window, cb);
+      last = t;
+      cb(t);
+    });
+  } catch {}
+})();
+</script>`;
+
 function addPreviewScrollbarPolicy(document: string): string {
   const headEnd = document.indexOf("</head>");
-  if (headEnd === -1) return `${PREVIEW_SCROLLBAR_STYLE}${PREVIEW_PERF_STYLE}${document}`;
-  return `${document.slice(0, headEnd)}${PREVIEW_SCROLLBAR_STYLE}\n${PREVIEW_PERF_STYLE}\n${document.slice(headEnd)}`;
+  if (headEnd === -1) return `${PREVIEW_SCROLLBAR_STYLE}${PREVIEW_PERF_STYLE}${PREVIEW_PERF_SCRIPT}${document}`;
+  return `${document.slice(0, headEnd)}${PREVIEW_SCROLLBAR_STYLE}\n${PREVIEW_PERF_STYLE}\n${PREVIEW_PERF_SCRIPT}\n${document.slice(headEnd)}`;
 }
 
 function readPreviewCartState(storeId: string): string {
