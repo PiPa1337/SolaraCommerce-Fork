@@ -11,6 +11,8 @@
   tests deterministas de larga duración.
 - El job Linux de portabilidad instala Chromium antes de ejecutar sus pruebas
   adversariales y visuales.
+- El suite de `@solara/core` evita el paralelismo entre archivos para que los
+  fuzz tests largos no pierdan comunicación con el worker de Vitest en CI.
 
 ### CI E2E fragmentada (2026-08-28)
 
