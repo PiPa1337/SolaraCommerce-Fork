@@ -1,5 +1,12 @@
 # Changelog
 
+### Footer con categorías públicas y acceso al carrito (2026-08-29)
+
+- `Explorar` conserva Inicio y Buscar productos, y suma Abrir carrito con
+  fallback a `/carrito/` cuando JavaScript no está disponible.
+- Se agregó una columna `Categorías` con todas las categorías públicas y sus
+  rutas `/categorias/<slug>/`, también en el footer exportado.
+
 ### Hero V2: media vertical 9:16 consistente (2026-08-29)
 
 - La imagen del hero ahora llena correctamente su `<picture>`/`<img>` en el

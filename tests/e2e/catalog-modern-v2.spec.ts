@@ -2373,6 +2373,70 @@ test("V2 footer: copyright con año y nombre + Hecho con ❤️ en solara.com.ar
   );
 });
 
+test("V2 footer: Explorar conserva sus rutas, agrega carrito y lista todas las categorías públicas", async ({
+  page,
+}, testInfo) => {
+  const publicCategories = catalogModernV2Store.categories.filter(
+    (category) => category.status !== "hidden",
+  );
+
+  for (const viewport of [
+    { width: 1920, height: 968, label: "desktop" },
+    { width: 1024, height: 768, label: "tablet" },
+    { width: 390, height: 844, label: "mobile" },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(serverUrl);
+    const footer = page.locator('[data-solara-module="catalog-footer"]');
+    const explore = footer.locator(".catalog-footer-nav--explore");
+    const categories = footer.locator(".catalog-footer-nav--categories");
+
+    await expect(explore.getByRole("link", { name: "Inicio", exact: true })).toHaveAttribute(
+      "href",
+      "/",
+    );
+    await expect(
+      explore.getByRole("link", { name: "Buscar productos", exact: true }),
+    ).toHaveAttribute("href", "/buscar/");
+    const cartLink = explore.locator("a[data-open-cart]");
+    await expect(cartLink).toHaveText("Abrir carrito");
+    await expect(cartLink).toHaveAttribute("href", "/carrito/");
+    await expect(cartLink).toHaveAttribute("data-open-cart", "");
+    await expect(categories.locator('a[href^="/categorias/"]')).toHaveCount(
+      publicCategories.length,
+    );
+    for (const category of publicCategories) {
+      await expect(
+        categories.getByRole("link", { name: category.title, exact: true }),
+      ).toHaveAttribute("href", `/categorias/${category.slug}/`);
+    }
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+      viewport.label,
+    ).toBeLessThanOrEqual(viewport.width);
+
+    await revealWholePage(page);
+    await page.evaluate(() => {
+      for (const animation of document.getAnimations()) animation.finish();
+    });
+    await page.screenshot({
+      path: testInfo.outputPath(
+        `footer-${viewport.label}-${viewport.width}x${viewport.height}.png`,
+      ),
+      fullPage: true,
+    });
+
+    await footer.scrollIntoViewIfNeeded();
+    await cartLink.click();
+    await expect(page.locator("[data-cart-drawer]")).toHaveAttribute("data-open", "true");
+    await page
+      .locator("[data-cart-drawer] [data-close-cart]:not(.catalog-cart-backdrop)")
+      .first()
+      .click();
+    await expect(page.locator("[data-cart-drawer]")).not.toHaveAttribute("data-open", "true");
+  }
+});
+
 test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, testInfo) => {
   const routes = [
     ["buscar", "/buscar/"],

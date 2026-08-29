@@ -1892,29 +1892,29 @@ export const catalogFooter: ModuleDefinition<
     ]
       .filter(Boolean)
       .join("");
-    const activeProductIds = new Set(
-      context.project.products
-        .filter((product) => product.status === "active")
-        .map((product) => product.id),
+    const publicCategories = context.project.categories.filter(
+      (category) => category.status !== "hidden",
     );
-    const firstCollection = context.project.collections.find((collection) =>
-      collection.productIds.some((productId) => activeProductIds.has(productId)),
-    );
-    const firstCategory = context.project.categories.find((category) => !category.parentId);
+    const categoryLinks = publicCategories
+      .map(
+        (category) =>
+          `<a href="/categorias/${escapeAttribute(category.slug)}/">${escapeHtml(category.title)}</a>`,
+      )
+      .join("");
+    const categoriesNav = publicCategories.length
+      ? `<nav class="catalog-footer-nav catalog-footer-nav--categories" aria-label="${escapeAttribute(copy.navigation.catalog)}"><strong>${escapeHtml(copy.navigation.catalog)}</strong>${categoryLinks}</nav>`
+      : "";
     const searchEnabled =
       context.project.navigation.showSearch && context.project.commerceTemplates.search.enabled;
-    const catalogLink = firstCollection
-      ? { label: firstCollection.title, href: `/colecciones/${firstCollection.slug}/` }
-      : firstCategory
-        ? { label: firstCategory.title, href: `/categorias/${firstCategory.slug}/` }
-        : searchEnabled
-          ? { label: context.project.navigation.catalogLabel, href: "/buscar/" }
-          : undefined;
-    const catalogLinkMarkup = catalogLink
-      ? `<a href="${escapeAttribute(catalogLink.href)}">${escapeHtml(catalogLink.label)}</a>`
-      : "";
     const searchLink = searchEnabled
       ? `<a href="/buscar/">${escapeHtml(copy.navigation.search)}</a>`
+      : "";
+    const cartEnabled =
+      context.project.siteShell.cart &&
+      (context.project.commerceTemplates.cart.enabled ||
+        context.project.commerceTemplates.checkout.enabled);
+    const openCartLink = cartEnabled
+      ? `<a class="catalog-footer-cart-link" href="/carrito/" data-solara-cart-open data-open-cart data-cart-label="Abrir carrito" aria-controls="solara-cart" aria-expanded="false" aria-haspopup="dialog">Abrir carrito</a>`
       : "";
     const helpPageLinks = isV2
       ? ""
@@ -1923,7 +1923,7 @@ export const catalogFooter: ModuleDefinition<
       "catalog-footer",
       context.section,
       safeHtml(
-        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project, canvasContext(context))}</a><p${canvasTextAttributes(canvasContext(context), "note", 300)}>${escapeHtml(note)}</p>${whatsappAction}</div><nav class="catalog-footer-nav catalog-footer-nav--explore" aria-label="${escapeAttribute(copy.footer.explore)}"><strong>${escapeHtml(copy.footer.explore)}</strong><a href="/">${escapeHtml(copy.navigation.home)}</a>${catalogLinkMarkup}${searchLink}</nav><nav class="catalog-footer-nav catalog-footer-nav--help" aria-label="${escapeAttribute(copy.footer.help)}"><strong>${escapeHtml(copy.footer.help)}</strong>${helpPageLinks}${policyLinks}</nav><address class="catalog-footer-contact"><strong>${escapeHtml(copy.footer.contact)}</strong>${contact}</address><div class="catalog-footer-meta"><small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)}. ${escapeHtml(copy.footer.copyright ?? "Todos los derechos reservados.")}</small><p class="catalog-footer-made"><a href="https://solara.com.ar" target="_blank" rel="noopener noreferrer">Hecho con ❤️ en solara.com.ar</a></p></div></div>`,
+        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project, canvasContext(context))}</a><p${canvasTextAttributes(canvasContext(context), "note", 300)}>${escapeHtml(note)}</p>${whatsappAction}</div><nav class="catalog-footer-nav catalog-footer-nav--explore" aria-label="${escapeAttribute(copy.footer.explore)}"><strong>${escapeHtml(copy.footer.explore)}</strong><a href="/">${escapeHtml(copy.navigation.home)}</a>${searchLink}${openCartLink}</nav>${categoriesNav}<nav class="catalog-footer-nav catalog-footer-nav--help" aria-label="${escapeAttribute(copy.footer.help)}"><strong>${escapeHtml(copy.footer.help)}</strong>${helpPageLinks}${policyLinks}</nav><address class="catalog-footer-contact"><strong>${escapeHtml(copy.footer.contact)}</strong>${contact}</address><div class="catalog-footer-meta"><small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)}. ${escapeHtml(copy.footer.copyright ?? "Todos los derechos reservados.")}</small><p class="catalog-footer-made"><a href="https://solara.com.ar" target="_blank" rel="noopener noreferrer">Hecho con ❤️ en solara.com.ar</a></p></div></div>`,
       ),
       { tag: "footer" },
     );

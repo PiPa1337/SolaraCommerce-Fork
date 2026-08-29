@@ -428,7 +428,9 @@ describe("official module system", () => {
     const html = renderSections(catalogModernStore, catalogModernStore.sections, {
       pageType: "home",
     });
-    const bento = html.slice(html.indexOf('data-solara-module="catalog-category-bento"'));
+    const bentoStart = html.indexOf('data-solara-module="catalog-category-bento"');
+    const bentoEnd = html.indexOf('data-solara-module="catalog-testimonials"', bentoStart);
+    const bento = html.slice(bentoStart, bentoEnd);
     const rootCategories = catalogModernStore.categories.filter((category) => !category.parentId);
     const childCategories = catalogModernStore.categories.filter((category) => category.parentId);
     expect(bento.match(/class="catalog-category-bento-item /g) ?? []).toHaveLength(
@@ -1329,6 +1331,27 @@ describe("auditoría Resumen — fixes Ola 3 (navegación y footer moderno)", ()
     expect(html).toContain("<span>Av. Siempre Viva 123</span>");
     expect(html).toContain("mailto:");
     expect(html).toContain("tel:");
+  });
+
+  it("separa las categorías públicas del resto de Explorar y enlaza el carrito", () => {
+    const html = renderSections(catalogModernV2Store, [footerSection], { pageType: "home" });
+    const exploreStart = html.indexOf('class="catalog-footer-nav catalog-footer-nav--explore"');
+    const exploreEnd = html.indexOf("</nav>", exploreStart);
+    const explore = html.slice(exploreStart, exploreEnd);
+    const publicCategories = catalogModernV2Store.categories.filter(
+      (category) => category.status !== "hidden",
+    );
+
+    expect(explore).toContain('href="/"');
+    expect(explore).toContain('href="/buscar/"');
+    expect(explore).toContain(
+      'href="/carrito/" data-solara-cart-open data-open-cart data-cart-label="Abrir carrito"',
+    );
+    expect(explore.match(/<a /g) ?? []).toHaveLength(3);
+    expect(html).toContain('class="catalog-footer-nav catalog-footer-nav--categories"');
+    for (const category of publicCategories) {
+      expect(html).toContain(`href="/categorias/${category.slug}/">${category.title}</a>`);
+    }
   });
 
   it("conecta el footer con la identidad y la paleta activa", () => {

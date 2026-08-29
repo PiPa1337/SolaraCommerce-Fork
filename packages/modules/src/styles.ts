@@ -2209,7 +2209,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-newsletter-inner h2 { max-width: 16ch; font-size: calc(clamp(1.8rem, 4vw, 3rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.08em; line-height: .95; }
 [data-solara-store].catalog-modern .catalog-newsletter-inner p { max-width: 38ch; margin-top: .6rem; color: color-mix(in srgb, var(--catalog-paper) 72%, transparent); }
 [data-solara-store].catalog-modern .catalog-newsletter-action { flex-shrink: 0; background: var(--catalog-paper); color: var(--catalog-ink); }
-[data-solara-store].catalog-modern .catalog-footer-inner { display: grid; grid-template-columns: minmax(15rem, 1.45fr) repeat(3, minmax(0, 1fr)); gap: calc(2rem * var(--solara-space-scale, 1)); width: min(calc(100% - 2rem), var(--solara-container)); margin: 0 auto; padding: calc(3rem * var(--solara-space-scale, 1)) 0 calc(2rem * var(--solara-space-scale, 1)); border-top: 2px solid var(--solara-accent); }
+[data-solara-store].catalog-modern .catalog-footer-inner { display: grid; grid-template-columns: minmax(15rem, 1.45fr) repeat(4, minmax(0, 1fr)); gap: calc(2rem * var(--solara-space-scale, 1)); width: min(calc(100% - 2rem), var(--solara-container)); margin: 0 auto; padding: calc(3rem * var(--solara-space-scale, 1)) 0 calc(2rem * var(--solara-space-scale, 1)); border-top: 2px solid var(--solara-accent); }
 [data-solara-store].catalog-modern .catalog-footer-inner > * { min-width: 0; }
 [data-solara-store].catalog-modern .catalog-footer-inner nav a,
 [data-solara-store].catalog-modern .catalog-footer-inner address,
@@ -2530,6 +2530,15 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   [data-solara-store].catalog-modern .solara-editorial-page .solara-story-grid { gap: 2.5rem; }
   [data-solara-store].catalog-modern .solara-editorial-page .solara-values-grid article { padding-inline: 0; }
   [data-solara-store].catalog-modern .solara-cart-page-grid { grid-template-columns: 1fr; padding-bottom: 3rem; }
+}
+@media (min-width: 768px) and (max-width: 1199px) {
+  [data-solara-store].catalog-modern .catalog-footer-inner {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: calc(1.5rem * var(--solara-space-scale, 1));
+  }
+  [data-solara-store].catalog-modern .catalog-footer-brand {
+    grid-column: 1 / -1;
+  }
 }
 @media print {
   [data-solara-store].catalog-modern [data-cart-drawer],

@@ -1042,7 +1042,10 @@ function storefrontBoot(): void {
     }
 
     const cartTrigger = target.closest<HTMLElement>("[data-open-cart]");
-    if (cartTrigger) openCart(cartTrigger);
+    if (cartTrigger) {
+      if (cartTrigger instanceof HTMLAnchorElement) event.preventDefault();
+      openCart(cartTrigger);
+    }
 
     if (target.closest("[data-close-cart]")) {
       closeCart();
