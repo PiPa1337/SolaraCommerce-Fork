@@ -5,12 +5,13 @@ import {
   Copy,
   Image,
   Info,
+  MagnifyingGlass,
   UploadSimple,
   VideoCamera,
   X,
 } from "@phosphor-icons/react";
 import type { ImageAsset, StoreProjectV1, VideoAsset } from "@solara/project-schema";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ProgressBar } from "../components/primitives";
 import { Button, EmptyState, IconButton, InlineError, SectionHeader } from "../components/Ui";
@@ -25,6 +26,8 @@ import {
   VIDEO_MAX_BYTES,
   VIDEO_MAX_DURATION_SECONDS,
 } from "./builder/videoUpload";
+
+const ASSET_BATCH_SIZE = 24;
 
 export function Assets({
   project,
@@ -52,6 +55,8 @@ export function Assets({
   const selectedAssetOpenerRef = useRef<HTMLElement | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<ImageAsset["id"] | null>(null);
   const [replaceTargetId, setReplaceTargetId] = useState<ImageAsset["id"] | null>(null);
+  const [assetQuery, setAssetQuery] = useState("");
+  const [visibleAssetCount, setVisibleAssetCount] = useState(ASSET_BATCH_SIZE);
 
   useEffect(() => {
     void requestPersistentStorage().catch(() => false);
@@ -287,6 +292,14 @@ export function Assets({
   const selectedAsset = project.assets.find((asset) => asset.id === selectedAssetId) ?? null;
   const selectedUses = selectedAsset ? assetUses(project, selectedAsset.id) : [];
   const confirmDeleteAsset = project.assets.find((asset) => asset.id === confirmDeleteId) ?? null;
+  const filteredAssets = useMemo(() => {
+    const query = assetQuery.trim().toLocaleLowerCase("es");
+    if (!query) return project.assets;
+    return project.assets.filter((asset) =>
+      `${asset.name} ${asset.alt} ${asset.id}`.toLocaleLowerCase("es").includes(query),
+    );
+  }, [assetQuery, project.assets]);
+  const visibleAssets = filteredAssets.slice(0, visibleAssetCount);
 
   /** Enruta una selección (picker o drop) y reporta archivos no compatibles. */
   const dispatchFiles = (files: File[]) => {
@@ -586,6 +599,26 @@ export function Assets({
             </div>
           </aside>
         ) : null}
+        {project.assets.length > 0 ? (
+          <div className="asset-library-toolbar">
+            <label className="search-box">
+              <MagnifyingGlass aria-hidden size={17} />
+              <span className="visually-hidden">Buscar recursos</span>
+              <input
+                type="search"
+                value={assetQuery}
+                placeholder="Buscar por nombre, texto alternativo o ID"
+                onChange={(event) => {
+                  setAssetQuery(event.target.value);
+                  setVisibleAssetCount(ASSET_BATCH_SIZE);
+                }}
+              />
+            </label>
+            <output aria-live="polite">
+              {visibleAssets.length} de {filteredAssets.length} imágenes
+            </output>
+          </div>
+        ) : null}
         {project.assets.length === 0 ? (
           <EmptyState
             icon={Image}
@@ -602,77 +635,116 @@ export function Assets({
               </Button>
             }
           />
+        ) : filteredAssets.length === 0 ? (
+          <EmptyState
+            icon={MagnifyingGlass}
+            title="No encontramos recursos"
+            body="Probá con otro nombre, texto alternativo o ID."
+            action={
+              <Button
+                variant="quiet"
+                onClick={() => {
+                  setAssetQuery("");
+                  setVisibleAssetCount(ASSET_BATCH_SIZE);
+                }}
+              >
+                Limpiar búsqueda
+              </Button>
+            }
+          />
         ) : (
-          <div className="asset-grid">
-            {project.assets.map((asset) => (
-              <article className="asset-item" key={asset.id}>
-                <img
-                  src={asset.source}
-                  alt={asset.alt || asset.name}
-                  width={asset.width}
-                  height={asset.height}
-                />
-                <div>
-                  <label>
-                    <span>Nombre</span>
-                    <input
-                      key={`${asset.id}-${asset.hash}`}
-                      defaultValue={asset.name}
-                      aria-description={`Recurso ${asset.name}`}
-                      onBlur={(event) => {
-                        const name = event.target.value.trim();
-                        if (name && name !== asset.name) updateAsset(asset.id, { name });
-                      }}
-                    />
-                  </label>
-                  <label>
-                    <span>Texto alternativo</span>
-                    <input
-                      defaultValue={asset.alt}
-                      placeholder="Describí lo visible en la imagen"
-                      aria-description={`Recurso ${asset.name}`}
-                      onBlur={(event) => {
-                        const alt = event.target.value.trim();
-                        if (alt !== asset.alt) updateAsset(asset.id, { alt });
-                      }}
-                    />
-                  </label>
-                  <span>
-                    {asset.width} × {asset.height},{" "}
-                    {bytesToSize(Math.round(asset.source.length * 0.75))}
-                  </span>
-                  <div className="asset-actions">
-                    <button
-                      type="button"
-                      aria-label={`Detalle de ${asset.name}`}
-                      data-testid="ui-asset-detail-open"
-                      onClick={() => openAssetDetail(asset.id)}
-                    >
-                      <Info aria-hidden size={15} />
-                      Detalle
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={`${copied === asset.id ? "Copiado" : "Copiar ID"} de ${asset.name}`}
-                      onClick={() => void copyAssetId(asset.id)}
-                    >
-                      {copied === asset.id ? (
-                        <Check aria-hidden size={15} />
-                      ) : (
-                        <Copy aria-hidden size={15} />
-                      )}
-                      {copied === asset.id ? "Copiado" : "Copiar ID"}
-                    </button>
-                    {copyErrorId === asset.id ? (
-                      <small className="field-error" role="alert" data-testid="ui-asset-copy-error">
-                        No se pudo copiar el ID. Podés seleccionarlo manualmente desde el detalle.
-                      </small>
-                    ) : null}
+          <>
+            <div className="asset-grid">
+              {visibleAssets.map((asset) => (
+                <article className="asset-item" key={asset.id}>
+                  <img
+                    src={asset.source}
+                    alt={asset.alt || asset.name}
+                    width={asset.width}
+                    height={asset.height}
+                  />
+                  <div>
+                    <label>
+                      <span>Nombre</span>
+                      <input
+                        key={`${asset.id}-${asset.hash}`}
+                        defaultValue={asset.name}
+                        aria-description={`Recurso ${asset.name}`}
+                        onBlur={(event) => {
+                          const name = event.target.value.trim();
+                          if (name && name !== asset.name) updateAsset(asset.id, { name });
+                        }}
+                      />
+                    </label>
+                    <label>
+                      <span>Texto alternativo</span>
+                      <input
+                        defaultValue={asset.alt}
+                        placeholder="Describí lo visible en la imagen"
+                        aria-description={`Recurso ${asset.name}`}
+                        onBlur={(event) => {
+                          const alt = event.target.value.trim();
+                          if (alt !== asset.alt) updateAsset(asset.id, { alt });
+                        }}
+                      />
+                    </label>
+                    <span>
+                      {asset.width} × {asset.height},{" "}
+                      {bytesToSize(Math.round(asset.source.length * 0.75))}
+                    </span>
+                    <div className="asset-actions">
+                      <button
+                        type="button"
+                        aria-label={`Detalle de ${asset.name}`}
+                        data-testid="ui-asset-detail-open"
+                        onClick={() => openAssetDetail(asset.id)}
+                      >
+                        <Info aria-hidden size={15} />
+                        Detalle
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`${copied === asset.id ? "Copiado" : "Copiar ID"} de ${asset.name}`}
+                        onClick={() => void copyAssetId(asset.id)}
+                      >
+                        {copied === asset.id ? (
+                          <Check aria-hidden size={15} />
+                        ) : (
+                          <Copy aria-hidden size={15} />
+                        )}
+                        {copied === asset.id ? "Copiado" : "Copiar ID"}
+                      </button>
+                      {copyErrorId === asset.id ? (
+                        <small
+                          className="field-error"
+                          role="alert"
+                          data-testid="ui-asset-copy-error"
+                        >
+                          No se pudo copiar el ID. Podés seleccionarlo manualmente desde el detalle.
+                        </small>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
-          </div>
+                </article>
+              ))}
+            </div>
+            {visibleAssets.length < filteredAssets.length ? (
+              <div className="asset-library-more">
+                <Button
+                  variant="quiet"
+                  onClick={() =>
+                    setVisibleAssetCount((current) =>
+                      Math.min(current + ASSET_BATCH_SIZE, filteredAssets.length),
+                    )
+                  }
+                >
+                  Mostrar {Math.min(ASSET_BATCH_SIZE, filteredAssets.length - visibleAssets.length)}
+                  más
+                </Button>
+                <span>{filteredAssets.length - visibleAssets.length} pendientes</span>
+              </div>
+            ) : null}
+          </>
         )}
         {project.videos.length > 0 ? (
           <div className="asset-grid asset-grid--videos">

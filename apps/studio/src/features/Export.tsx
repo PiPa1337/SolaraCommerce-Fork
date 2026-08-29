@@ -533,7 +533,10 @@ export function ExportPanel({
         Publicar contexto público para agentes (`llms.txt` y `ai-context.json`)
       </label>
       {publicAiContext || externalHosts.length > 0 ? (
-        <aside className="audit-panel" data-testid="ui-export-public-exposure">
+        <aside
+          className="audit-panel export-public-exposure"
+          data-testid="ui-export-public-exposure"
+        >
           <h3>Exposición pública deliberada</h3>
           {publicAiContext ? (
             <p>
@@ -547,7 +550,10 @@ export function ExportPanel({
           ) : null}
         </aside>
       ) : null}
-      <section className="audit-panel" data-testid="ui-cloudflare-verifier">
+      <section
+        className="audit-panel export-cloudflare-verifier"
+        data-testid="ui-cloudflare-verifier"
+      >
         <header>
           <div>
             <h3>Verificar publicación en Cloudflare Pages</h3>

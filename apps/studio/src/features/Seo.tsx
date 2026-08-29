@@ -361,15 +361,17 @@ export function Seo({
                     className="seo-header-score"
                     aria-label={`Score SEO: ${optimization.score}/100`}
                   >
-                    <Badge tone={errors > 0 ? "danger" : "success"}>
+                    <Badge tone={errors > 0 ? "danger" : warnings > 0 ? "warning" : "success"}>
                       Score SEO: {optimization.score}/100
                     </Badge>
                   </output>
                 ) : null}
                 {errors > 0 ? (
                   <Badge tone="danger">{errors} críticos</Badge>
+                ) : warnings > 0 ? (
+                  <Badge tone="warning">{warnings} advertencias</Badge>
                 ) : (
-                  <Badge tone="success">Auditoría lista</Badge>
+                  <Badge tone="success">Sin observaciones</Badge>
                 )}
               </>
             )}
@@ -579,8 +581,13 @@ export function Seo({
               ) : null}
             </div>
             {auditStatus === "ready" && errors === 0 ? (
-              <span className="audit-ready">
-                <CheckCircle aria-hidden size={18} weight="fill" /> Lista para revisar
+              <span className={`audit-ready${warnings > 0 ? " audit-ready--warning" : ""}`}>
+                {warnings > 0 ? (
+                  <WarningCircle aria-hidden size={18} weight="fill" />
+                ) : (
+                  <CheckCircle aria-hidden size={18} weight="fill" />
+                )}
+                {warnings > 0 ? "Requiere revisión" : "Sin observaciones"}
               </span>
             ) : null}
           </header>

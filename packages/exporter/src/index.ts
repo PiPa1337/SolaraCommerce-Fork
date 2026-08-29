@@ -655,11 +655,15 @@ function deferPreviewAssetMarkup(document: string, sources: ReadonlyMap<string, 
   return deferred;
 }
 
+const themeCssCache = new Map<string, string>();
 function themeCss(
   project: StoreProjectV1,
   transport: FontTransport = "file",
   fontPathOverrides?: ReadonlyMap<string, string>,
 ): string {
+  const cacheKey = `${transport}:${JSON.stringify(project.theme)}:${[...(fontPathOverrides?.entries() ?? [])].map(([k, v]) => `${k}=${v}`).join(",")}`;
+  const cached = themeCssCache.get(cacheKey);
+  if (cached) return cached;
   const t = project.theme;
   const { colors, typography, spacingScale, radius, container } = t;
   const rootColorScheme = t.colorMode === "dark" ? "dark" : "light";
@@ -693,7 +697,7 @@ function themeCss(
   const accentAltColor =
     colors.accentAlt ?? `color-mix(in srgb, ${colors.accent} 68%, ${colors.background})`;
 
-  return `
+  const result = `
 :root {
   color-scheme: ${rootColorScheme};
   --solara-background: ${colors.background};
@@ -772,6 +776,12 @@ button, input, select, textarea, a { outline-offset: 3px; }
 .solara-page { min-height: 100dvh; overflow: clip; }
 .solara-container { width: min(calc(100% - 2 * var(--solara-padding-x)), var(--solara-container)); margin-inline: auto; padding-inline: var(--solara-padding-x); }
 `.trim();
+  themeCssCache.set(cacheKey, result);
+  if (themeCssCache.size > 64) {
+    const firstKey = themeCssCache.keys().next().value;
+    if (firstKey) themeCssCache.delete(firstKey);
+  }
+  return result;
 }
 
 /** Remove CSS transport whitespace while preserving quoted content and calc spacing. */
@@ -1371,6 +1381,15 @@ function renderDocument(
 
 function appendToFooter(body: string, content: string): string {
   if (!content) return body;
+  const whatsappMarker = 'class="catalog-footer-whatsapp"';
+  const whatsappIndex = body.indexOf(whatsappMarker);
+  if (whatsappIndex >= 0) {
+    const closeAnchor = body.indexOf("</a>", whatsappIndex);
+    if (closeAnchor >= 0) {
+      const insertAt = closeAnchor + "</a>".length;
+      return `${body.slice(0, insertAt)}${content}${body.slice(insertAt)}`;
+    }
+  }
   const footerInnerEnd = body.lastIndexOf("</div></footer>");
   if (footerInnerEnd < 0) return body;
   return `${body.slice(0, footerInnerEnd)}${content}${body.slice(footerInnerEnd)}`;
@@ -2044,6 +2063,290 @@ function buildPages(
       `<main class="solara-editorial-page solara-policy-page solara-container"><nav class="solara-breadcrumbs" aria-label="${escapeAttribute(copy.export.breadcrumbs)}"><a href="${internalHref(project, "/")}">${escapeHtml(copy.pages.home)}</a><span aria-hidden="true">/</span><span>${escapeHtml(title)}</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">${escapeHtml(eyebrow)}</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(summary)}</p></header><section class="solara-story-grid"><div><h2>${escapeHtml(copy.export.policyDetailsTitle)}</h2><p>${escapeHtml(details)}</p></div><div><h2>${escapeHtml(copy.export.policyQuestionsTitle)}</h2><p>${escapeHtml(copy.export.policyQuestionsBody)}</p>${policyContactAction}</div></section>${facts.length ? `<section class="solara-values-grid">${facts.map(([label, value]) => `<article><h2>${escapeHtml(label)}</h2><p>${escapeHtml(value)}</p></article>`).join("")}</section>` : ""}</main>`,
       renderPageSections(sharedFooter, { pageType: "legal" }),
     ].join("");
+  const LEGACY_PRIVACY_TEXT = "Usamos tus datos únicamente para responder y coordinar el pedido.";
+  const LEGACY_TERMS_TEXT = "Los precios y la disponibilidad se confirman antes del pago.";
+  const isLegacyPrivacyText = (value: string) => value.trim() === LEGACY_PRIVACY_TEXT;
+  const isLegacyTermsText = (value: string) => value.trim() === LEGACY_TERMS_TEXT;
+  const formatRichPolicyText = (raw: string): string => {
+    const blocks = raw
+      .split(/\n\s*\n/)
+      .map((block) => block.trim())
+      .filter(Boolean);
+    if (blocks.length === 0) return `<p>${escapeHtml(raw.trim())}</p>`;
+    let html = "";
+    for (const block of blocks) {
+      if (block.startsWith("## ") || block.startsWith("### ")) {
+        const isH2 = block.startsWith("## ");
+        const prefixLen = isH2 ? 3 : 4;
+        const linesInBlock = block.split("\n");
+        const headingLine = (linesInBlock[0] ?? "").slice(prefixLen).trim();
+        html += isH2
+          ? `<h2>${escapeHtml(headingLine)}</h2>`
+          : `<h3>${escapeHtml(headingLine)}</h3>`;
+        const remaining = linesInBlock.slice(1).join("\n").trim();
+        if (!remaining) continue;
+        const remLines = remaining
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean);
+        const bulletCount = remLines.findIndex((l) => !/^[-•*]\s+/.test(l));
+        const orderedCount = remLines.findIndex((l) => !/^\d+\.\s+/.test(l));
+        const isRemainingBullet = remLines.length > 0 && remLines.every((l) => /^[-•*]\s+/.test(l));
+        const isRemainingOrdered =
+          remLines.length > 1 && remLines.every((l) => /^\d+\.\s+/.test(l));
+        if (isRemainingBullet) {
+          html += `<ul>${remLines.map((l) => `<li>${escapeHtml(l.replace(/^[-•*]\s+/, "").trim())}</li>`).join("")}</ul>`;
+          continue;
+        }
+        if (isRemainingOrdered) {
+          html += `<ol>${remLines.map((l) => `<li>${escapeHtml(l.replace(/^\d+\.\s+/, "").trim())}</li>`).join("")}</ol>`;
+          continue;
+        }
+        if (bulletCount > 0 && bulletCount < remLines.length) {
+          const bulletLines = remLines.slice(0, bulletCount);
+          const restLines = remLines.slice(bulletCount);
+          html += `<ul>${bulletLines.map((l) => `<li>${escapeHtml(l.replace(/^[-•*]\s+/, "").trim())}</li>`).join("")}</ul>`;
+          if (restLines.length > 0) html += `<p>${escapeHtml(restLines.join(" "))}</p>`;
+          continue;
+        }
+        if (orderedCount > 0 && orderedCount < remLines.length) {
+          const orderedLines = remLines.slice(0, orderedCount);
+          const restLines = remLines.slice(orderedCount);
+          html += `<ol>${orderedLines.map((l) => `<li>${escapeHtml(l.replace(/^\d+\.\s+/, "").trim())}</li>`).join("")}</ol>`;
+          if (restLines.length > 0) html += `<p>${escapeHtml(restLines.join(" "))}</p>`;
+          continue;
+        }
+        if (
+          remaining.includes("\n- ") ||
+          remaining.includes("\n• ") ||
+          remaining.includes("\n* ")
+        ) {
+          const introLines: string[] = [];
+          const listLines: string[] = [];
+          const postListLines: string[] = [];
+          let state: "intro" | "list" | "post" = "intro";
+          for (const rawLine of remaining.split("\n")) {
+            const line = rawLine.trim();
+            if (!line) continue;
+            const isBullet = /^[-•*]\s+/.test(line);
+            if (state === "intro") {
+              if (isBullet) {
+                state = "list";
+                listLines.push(line);
+              } else introLines.push(line);
+            } else if (state === "list") {
+              if (isBullet) listLines.push(line);
+              else {
+                state = "post";
+                postListLines.push(line);
+              }
+            } else {
+              postListLines.push(line);
+            }
+          }
+          if (introLines.length > 0) html += `<p>${escapeHtml(introLines.join(" "))}</p>`;
+          if (listLines.length > 0)
+            html += `<ul>${listLines.map((l) => `<li>${escapeHtml(l.replace(/^[-•*]\s+/, "").trim())}</li>`).join("")}</ul>`;
+          if (postListLines.length > 0) html += `<p>${escapeHtml(postListLines.join(" "))}</p>`;
+          continue;
+        }
+        html += `<p>${escapeHtml(remaining).replace(/\n/g, "<br>")}</p>`;
+        continue;
+      }
+      const lines = block
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+      const isBulletList = lines.length > 0 && lines.every((line) => /^[-•*]\s+/.test(line));
+      const isOrderedList = lines.length > 1 && lines.every((line) => /^\d+\.\s+/.test(line));
+      if (isBulletList) {
+        html += `<ul>${lines.map((line) => `<li>${escapeHtml(line.replace(/^[-•*]\s+/, "").trim())}</li>`).join("")}</ul>`;
+        continue;
+      }
+      if (isOrderedList) {
+        html += `<ol>${lines.map((line) => `<li>${escapeHtml(line.replace(/^\d+\.\s+/, "").trim())}</li>`).join("")}</ol>`;
+        continue;
+      }
+      if (block.includes("\n- ") || block.includes("\n• ") || block.includes("\n* ")) {
+        const introLines: string[] = [];
+        const listLines: string[] = [];
+        const postListLines: string[] = [];
+        let state: "intro" | "list" | "post" = "intro";
+        for (const rawLine of block.split("\n")) {
+          const line = rawLine.trim();
+          if (!line) continue;
+          const isBullet = /^[-•*]\s+/.test(line);
+          if (state === "intro") {
+            if (isBullet) {
+              state = "list";
+              listLines.push(line);
+            } else introLines.push(line);
+          } else if (state === "list") {
+            if (isBullet) listLines.push(line);
+            else {
+              state = "post";
+              postListLines.push(line);
+            }
+          } else {
+            postListLines.push(line);
+          }
+        }
+        if (introLines.length > 0) html += `<p>${escapeHtml(introLines.join(" "))}</p>`;
+        if (listLines.length > 0)
+          html += `<ul>${listLines.map((line) => `<li>${escapeHtml(line.replace(/^[-•*]\s+/, "").trim())}</li>`).join("")}</ul>`;
+        if (postListLines.length > 0) html += `<p>${escapeHtml(postListLines.join(" "))}</p>`;
+        continue;
+      }
+      html += `<p>${escapeHtml(block).replace(/\n/g, "<br>")}</p>`;
+    }
+    return html;
+  };
+  const buildDefaultPrivacyRichText = (target: StoreProjectV1): string => {
+    const brand = target.identity.brandName;
+    const legal = target.identity.legalName || brand;
+    const email = target.identity.email || "el email publicado en la web";
+    const phone = target.whatsapp.phone || target.identity.phone || "";
+    const phoneDisplay = phone ? ` · WhatsApp ${phone}` : "";
+    const address = target.identity.address || "Argentina";
+    const base = target.baseUrl || "tu dominio";
+    return `Usamos tus datos únicamente para responder y coordinar el pedido. Esta política explica, en lenguaje claro, qué información trata ${brand} y cómo funciona técnicamente esta web.
+
+## 1. Responsable y alcance
+Responsable: ${legal} (${brand}). Contacto: ${email}${phoneDisplay} · ${address}. Sitio: ${base}. Esta política aplica al sitio estático y catálogo online. No comprende servicios externos que abras voluntariamente (WhatsApp, redes sociales o medios de pago que coordines por fuera). Última actualización: agosto de 2026.
+
+## 2. Qué datos recopilamos y cuándo
+- Datos que vos nos proporcionás voluntariamente al preparar un pedido o consultarnos: nombre, teléfono, dirección o punto de entrega, notas opcionales y contenido del carrito (productos, variantes, cantidades y subtotal estimado).
+- Mensajes que enviás por WhatsApp, email u otros canales publicados.
+- Datos técnicos mínimos del hosting estático: registros de acceso (IP, fecha, recurso solicitado, código de respuesta) generados por el proveedor para servir los archivos, prevenir abusos y medir disponibilidad.
+- Preferencias guardadas únicamente en tu navegador (localStorage, sessionStorage e IndexedDB) para mantener el carrito y un borrador de recuperación si cerrás la pestaña. No creamos cuentas de usuario en el sitio público.
+No solicitamos datos sensibles ni realizamos perfilado automatizado.
+
+## 3. Para qué usamos tus datos
+Usamos tus datos únicamente para responder y coordinar el pedido: confirmar disponibilidad y precio vigente, calcular envío, acordar forma de pago, coordinar entrega o retiro y brindar soporte postventa. No usamos tus datos para publicidad sin tu consentimiento, no los vendemos ni los cedemos con fines comerciales.
+
+## 4. Base legal
+Tratamos tus datos con tu consentimiento al completarlos y enviarlos voluntariamente por el formulario o por WhatsApp, y en el marco de gestiones previas a una compra (Ley 25.326 de Protección de Datos Personales, Argentina). Podés revocarlo en cualquier momento sin efecto retroactivo.
+
+## 5. Conservación
+Conservamos mensajes y detalles del pedido el tiempo necesario para gestionar la venta, cumplir obligaciones legales e impositivas y atender reclamos. El carrito en tu navegador permanece hasta que lo vacíes o borres datos del sitio. Los logs del hosting se conservan según política del proveedor (habitualmente 30 a 90 días) y luego se rotan o anonimizan.
+
+## 6. Con quién se comparten
+- WhatsApp / Meta: al tocar “Enviar pedido por WhatsApp” o “Consultar por WhatsApp”, tu mensaje y los datos incluidos se transmiten a WhatsApp bajo sus propias condiciones. Te mostramos el contenido antes de abrir la app.
+- Proveedor de hosting estático y CDN: alojan archivos HTML, CSS, JS e imágenes y pueden procesar logs técnicos para entregarlos. No tienen acceso al contenido de tu carrito más allá de la descarga de archivos públicos.
+- No cedemos datos a terceros con fines de marketing. Si en el futuro sumáramos analítica, píxeles o servicios externos, lo informaremos aquí y solicitaremos consentimiento cuando corresponda.
+
+## 7. Cookies y almacenamiento local
+Este sitio es estático y no utiliza cookies de seguimiento. Utiliza exclusivamente almacenamiento local funcional:
+- localStorage para carrito y preferencias de catálogo
+- sessionStorage para estados transitorios de navegación
+- IndexedDB para borrador de recuperación del editor local (sólo Studio)
+No hay cookies de terceros, fingerprinting ni publicidad programática. Podés borrar estos datos desde la configuración del navegador sin impedir la navegación, aunque perderás el carrito.
+
+## 8. Seguridad
+El sitio se sirve por HTTPS y los archivos públicos no contienen información privada. El pedido no se guarda en una base de datos central: se compone en tu navegador y viaja como mensaje directo a nuestro WhatsApp. Aplicamos buenas prácticas de control de acceso en el hosting y validamos el contenido publicado. Ningún sistema es infalible: no envíes datos innecesarios y verificá que hablás con nuestros canales oficiales.
+
+## 9. Tus derechos
+Podés ejercer los derechos de acceso, rectificación, actualización y supresión previstos en la Ley 25.326 y el derecho a la información del art. 14 inc. 3. Para hacerlo, escribinos a ${email}${phone ? ` o por WhatsApp al ${phone}` : ""} indicando qué necesitás consultar, corregir o eliminar. Respondemos en plazo razonable y sin costo. También podés presentar reclamo ante la Agencia de Acceso a la Información Pública (AAIP) www.argentina.gob.ar/aaip.
+
+## 10. Menores
+El sitio no está dirigido a menores de 13 años y no recopilamos deliberadamente sus datos. Si sos menor, navegá con asistencia de un adulto.
+
+## 11. Cambios en esta política
+Publicaremos la versión actualizada en esta misma URL con nueva fecha de vigencia. Cambios relevantes se anunciarán en la web. Te recomendamos revisarla antes de coordinar un nuevo pedido.`;
+  };
+  const buildDefaultTermsRichText = (target: StoreProjectV1): string => {
+    const brand = target.identity.brandName;
+    const legal = target.identity.legalName || brand;
+    const email = target.identity.email || "el email publicado en la web";
+    const phone = target.whatsapp.phone || target.identity.phone || "";
+    const phoneDisplay = phone ? ` · WhatsApp ${phone}` : "";
+    const address = target.identity.address || "Argentina";
+    const base = target.baseUrl || "tu dominio";
+    const currencyLabel = target.currency === "ARS" ? "pesos argentinos (ARS)" : target.currency;
+    const handling = formatPolicyDays(
+      target.policies.shipping.handlingDaysMin,
+      target.policies.shipping.handlingDaysMax,
+    );
+    const transit = formatPolicyDays(
+      target.policies.shipping.transitDaysMin,
+      target.policies.shipping.transitDaysMax,
+    );
+    const coverage = policyCoverage(target.policies.shipping.countries) || "Argentina";
+    const returnsDays = String(target.policies.returns.returnDays);
+    return `Los precios y la disponibilidad se confirman antes del pago. Este sitio funciona como catálogo y carrito local para preparar un pedido que luego se coordina directamente con ${brand}.
+
+## 1. Identificación y objeto
+Titular: ${legal} (${brand}) · ${address} · Contacto: ${email}${phoneDisplay} · Sitio: ${base}. Este documento regula el uso del catálogo online, la preparación del pedido en el navegador y las condiciones para coordinar una compra por WhatsApp o email.
+
+## 2. Naturaleza del sitio y del carrito
+El sitio es una vidriera estática sin carrito en servidor ni cobro online. Podés navegar categorías, productos, colecciones, buscar y armar un carrito. El carrito vive en tu navegador y no genera reserva de stock ni contrato hasta que lo confirmemos por WhatsApp o email. El botón “Preparar pedido” genera un resumen que vos enviás voluntariamente. Sin confirmación bilateral, no hay venta perfeccionada.
+
+## 3. Precios, moneda y disponibilidad
+- Todos los precios se exhiben en ${currencyLabel} y corresponden al momento de la navegación. Pueden variar sin previo aviso por actualización de listas, impuestos o costos logísticos.
+- El subtotal y total que ves son estimativos y no incluyen envío salvo que se indique lo contrario.
+- La disponibilidad se actualiza periódicamente pero no es en tiempo real; el stock definitivo y el precio vigente se confirman al responder tu mensaje.
+- Errores evidentes de tipografía o carga no obligan a honrar un precio manifiestamente irrisorio; te lo informaremos antes de avanzar.
+
+## 4. Cómo coordinar un pedido
+1. Agregás productos y variantes al carrito, indicás cantidad.
+2. Completás nombre, teléfono, dirección o punto de entrega y notas opcionales.
+3. Presionás “Preparar pedido” y luego “Enviar pedido en WhatsApp”. Se abrirá WhatsApp con un mensaje pre-armado que incluye el detalle.
+4. Respondemos verificando precio, stock, opciones de pago y costo/tiempos de envío.
+5. Si aceptás, coordinamos el pago y la entrega.
+Podés consultar sin comprar usando “Consultar por WhatsApp” en cada producto.
+
+## 5. Pagos
+El sitio no cobra online. No ingresás tarjetas ni datos bancarios aquí. Las formas de pago se acuerdan por WhatsApp/email (transferencia, efectivo en punto de entrega/retiro u otras que informemos). El pedido se considera pagado cuando el medio elegido lo acredita y nosotros lo confirmamos. No compartas comprobantes sensibles fuera de nuestros canales oficiales.
+
+## 6. Entregas y envíos
+- Coordinamos el envío y su costo antes de confirmar el pedido. Plazos informativos de preparación: ${handling}; tránsito estimado: ${transit} — son orientativos y dependen de localidad, operador y demanda.
+- Cobertura principal: ${coverage}. Otras zonas se cotizan a pedido.
+- El costo de envío, si aplica, se informa antes del pago y puede variar según peso, volumen y domicilio.
+- Entregas pueden verse afectadas por feriados, clima o incidencias del transporte; te mantenemos informado por el mismo canal.
+
+## 7. Cambios, devoluciones y garantía
+- Tenés ${returnsDays} días corridos desde la recepción para solicitar cambio. El producto debe conservar su estado original, sin uso, con embalaje y etiquetas. Para descartables y productos de higiene/packaging, el cambio se evalúa por lote y condición higiénica; te lo informaremos antes de confirmar.
+- Coordiná el cambio por WhatsApp/email con fotos y número de pedido. El costo de reenvío se acuerda según el motivo.
+- Productos en promoción, liquidación o personalizados pueden tener condiciones específicas informadas en el detalle.
+- Garantía legal conforme al Código Civil y Comercial y Ley 24.240 de Defensa del Consumidor por vicios o defectos. No cubre mal uso o almacenamiento inadecuado.
+
+## 8. Uso del contenido y propiedad intelectual
+Textos, fotos, gráficos, logo y diseño pertenecen a ${brand} o a sus proveedores y están protegidos. Podés compartir enlaces al sitio, pero no copiar, modificar ni usar el contenido con fines comerciales sin autorización.
+
+## 9. Disponibilidad y responsabilidad
+Hacemos esfuerzos razonables para que el sitio esté disponible y la información sea precisa, pero al ser provisto “tal cual” no garantizamos ausencia de errores o interrupciones. No somos responsables por daños derivados del uso del sitio, incompatibilidades de tu dispositivo o fallas de servicios externos (WhatsApp, hosting, red).
+
+## 10. Contacto, arrepentimiento y reclamos
+Escribinos a ${email}${phone ? ` o por WhatsApp al ${phone}` : ""} para consultas, correcciones o ejercicio de derechos. Botón de arrepentimiento (10 días desde la compra, art. 34 Ley 24.240) disponible en el footer cuando corresponda según el canal de venta: https://www.argentina.gob.ar/defensa-del-consumidor. Para controversias, podés acudir a la autoridad de Defensa del Consumidor local.
+
+## 11. Ley aplicable y jurisdicción
+Estas condiciones se rigen por las leyes de la República Argentina. Para cualquier divergencia, serán competentes los tribunales ordinarios del domicilio del consumidor, sin perjuicio de los derechos que te otorga la Ley 24.240.
+
+## 12. Actualizaciones
+Podemos actualizar estos Términos para reflejar cambios operativos o legales. La versión vigente es la publicada en esta página con fecha de actualización. Al continuar usando el sitio o coordinar un nuevo pedido aceptás las condiciones actualizadas. Última actualización: agosto de 2026.`;
+  };
+  const renderV2LegalArticle = (
+    title: string,
+    eyebrow: string,
+    summary: string,
+    rawDetails: string,
+  ) => {
+    const isPrivacy = title === copy.pages.privacy;
+    const isTerms = title === copy.pages.terms;
+    let details = rawDetails;
+    if (isPrivacy && isLegacyPrivacyText(rawDetails))
+      details = buildDefaultPrivacyRichText(project);
+    if (isTerms && isLegacyTermsText(rawDetails)) details = buildDefaultTermsRichText(project);
+    const hasRichMarkers = details.includes("## ") || details.includes("\n\n");
+    const formatted = hasRichMarkers
+      ? formatRichPolicyText(details)
+      : `<p>${escapeHtml(details)}</p>`;
+    return [
+      renderPageSections(sharedHeader, { pageType: "legal" }),
+      `<main class="solara-editorial-page solara-policy-page solara-container"><nav class="solara-breadcrumbs" aria-label="${escapeAttribute(copy.export.breadcrumbs)}"><a href="${internalHref(project, "/")}">${escapeHtml(copy.pages.home)}</a><span aria-hidden="true">/</span><span>${escapeHtml(title)}</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">${escapeHtml(eyebrow)}</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(summary)}</p></header><article class="solara-legal-article">${formatted}</article></main>`,
+      renderPageSections(sharedFooter, { pageType: "legal" }),
+    ].join("");
+  };
 
   const notFoundPage: PageDescriptor = {
     path: "404.html",
@@ -2124,7 +2427,7 @@ function buildPages(
       canonicalPath: "/privacidad/",
       pageType: "legal",
       body: isV2Design
-        ? renderV2PolicyPage(
+        ? renderV2LegalArticle(
             copy.pages.privacy,
             copy.pages.privacyDataUsage,
             copy.pages.privacyDescription,
@@ -2140,7 +2443,7 @@ function buildPages(
       canonicalPath: "/terminos/",
       pageType: "legal",
       body: isV2Design
-        ? renderV2PolicyPage(
+        ? renderV2LegalArticle(
             copy.pages.terms,
             copy.footer.terms,
             copy.pages.termsSubtitle,
@@ -2280,16 +2583,27 @@ function buildFiles(
       `assets/font.${sha256Hex(bytes).slice(0, 16)}.woff2`,
     ]),
   );
-  const css = minifyCss(
+  const cssFull = minifyCss(
     `${themeCss(publicProject, "file", fontPathOverrides)}\n${exportedModuleStyles(publicProject)}\n${STOREFRONT_RUNTIME_CSS}`,
   );
+  const cssHome = minifyCss(
+    `${themeCss(publicProject, "file", fontPathOverrides)}\n${previewModuleStyles(publicProject, "/")}\n${STOREFRONT_RUNTIME_CSS}`,
+  );
+  const cssFullPath = `/assets/storefront.${sha256Hex(cssFull).slice(0, 16)}.css`;
+  const cssHomePath = `/assets/storefront-home.${sha256Hex(cssHome).slice(0, 16)}.css`;
   const runtimeSource =
     mode === "draft"
       ? `// DEBUG: modo draft — source map disponible via scripts/build-runtime.mjs\n${STOREFRONT_RUNTIME_JS}`
       : STOREFRONT_RUNTIME_JS;
-  const runtimeAssets: RuntimeAssetPaths = {
-    css: `/assets/storefront.${sha256Hex(css).slice(0, 16)}.css`,
+  const runtimeAssetsFull: RuntimeAssetPaths = {
+    css: cssFullPath,
     js: `/assets/storefront.${sha256Hex(runtimeSource).slice(0, 16)}.js`,
+    fontPaths: fontPathOverrides,
+    serviceWorker: true,
+  };
+  const runtimeAssetsHome: RuntimeAssetPaths = {
+    css: cssHomePath,
+    js: runtimeAssetsFull.js,
     fontPaths: fontPathOverrides,
     serviceWorker: true,
   };
@@ -2299,16 +2613,20 @@ function buildFiles(
   };
   const files = new Map<string, string | Uint8Array>();
   pages.forEach((page) => {
+    const assets = page.pageType === "home" ? runtimeAssetsHome : runtimeAssetsFull;
     files.set(
       page.path,
       prefixDocumentHrefs(
         publicProject,
-        renderDocument(publicProject, page, mode, publicAiContext, manifest, runtimeAssets),
+        renderDocument(publicProject, page, mode, publicAiContext, manifest, assets),
       ),
     );
   });
-  files.set(runtimeAssets.css.slice(1), css);
-  files.set(runtimeAssets.js.slice(1), runtimeSource);
+  files.set(cssFullPath.slice(1), cssFull);
+  if (cssHomePath !== cssFullPath) files.set(cssHomePath.slice(1), cssHome);
+  files.set(runtimeAssetsFull.js.slice(1), runtimeSource);
+  const copyJson = JSON.stringify(publicProject.publicCopy);
+  files.set(`assets/copy.${sha256Hex(copyJson).slice(0, 16)}.json`, copyJson);
   fontFiles.forEach((bytes, path) => {
     files.set(fontPathOverrides.get(path) ?? path, bytes);
   });
@@ -2392,21 +2710,34 @@ function buildFiles(
   // PWA: manifest y service worker para instalación y cache offline.
   files.set("icons/icon-192.png", generateIconPng(publicProject.identity.brandName + "-192", 192));
   files.set("icons/icon-512.png", generateIconPng(publicProject.identity.brandName + "-512", 512));
-  files.set("favicon.ico", buildFaviconIco(publicProject.identity.brandName));
+  {
+    const customFaviconAsset = project.assets.find(
+      (asset) => asset.id === project.seo.faviconAssetId,
+    );
+    const customFaviconBytes = customFaviconAsset
+      ? dataUrlBytes(customFaviconAsset.source)
+      : undefined;
+    files.set(
+      "favicon.ico",
+      customFaviconBytes && customFaviconBytes.length > 0
+        ? customFaviconBytes
+        : buildFaviconIco(publicProject.identity.brandName),
+    );
+  }
   files.set("offline/index.html", buildOfflinePage(publicProject));
   files.set("manifest.webmanifest", buildWebManifest(publicProject));
   const precacheContent = new Map<string, string | Uint8Array>([
     [assetHref(publicProject, "/"), files.get("index.html") ?? ""],
     [assetHref(publicProject, "/offline/index.html"), files.get("offline/index.html") ?? ""],
     [assetHref(publicProject, "/manifest.webmanifest"), files.get("manifest.webmanifest") ?? ""],
-    [assetHref(publicProject, runtimeAssets.css), css],
-    [assetHref(publicProject, runtimeAssets.js), runtimeSource],
+    [assetHref(publicProject, runtimeAssetsFull.css), cssFull],
+    [assetHref(publicProject, runtimeAssetsFull.js), runtimeSource],
   ]);
   files.set(
     "sw.js",
     buildServiceWorker(publicProject, {
-      runtimeCssPath: runtimeAssets.css,
-      runtimeJsPath: runtimeAssets.js,
+      runtimeCssPath: runtimeAssetsFull.css,
+      runtimeJsPath: runtimeAssetsFull.js,
       precacheContent,
     }),
   );
@@ -2465,7 +2796,7 @@ function buildFiles(
       const bytes = dataUrlBytes(video.source);
       if (bytes) files.set(`assets/${video.hash}.${assetExtension(video)}`, bytes);
     });
-  addDeploymentManifest(files, publicProject, mode, publicAiContext, runtimeAssets);
+  addDeploymentManifest(files, publicProject, mode, publicAiContext, runtimeAssetsFull);
   return files;
 }
 

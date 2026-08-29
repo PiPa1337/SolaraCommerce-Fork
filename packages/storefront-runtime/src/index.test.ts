@@ -74,7 +74,7 @@ describe("storefront runtime", () => {
   });
 
   it("usa los tokens de tema para el drawer y las alertas del carrito", () => {
-    expect(STOREFRONT_RUNTIME_CSS).toContain("var(--solara-text) 14%");
+    expect(STOREFRONT_RUNTIME_CSS).toContain("var(--solara-shadow-overlay)");
     expect(STOREFRONT_RUNTIME_CSS).toContain("var(--solara-sale, var(--solara-accent))");
     expect(STOREFRONT_RUNTIME_CSS).not.toContain("#9a3f2f");
     expect(STOREFRONT_RUNTIME_CSS).not.toContain("rgb(18 25 21");

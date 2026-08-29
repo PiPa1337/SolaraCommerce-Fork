@@ -128,7 +128,7 @@ export function sourceCanContainAlpha(type: SupportedImageType, buffer: ArrayBuf
 async function canvasToDataUrl(
   bitmap: ImageBitmap,
   width: number,
-  mimeType: "image/webp" | "image/jpeg" | "image/png",
+  mimeType: "image/webp" | "image/jpeg" | "image/png" | "image/avif",
   preserveAlpha: boolean,
 ): Promise<string> {
   const height = Math.max(1, Math.round((bitmap.height / bitmap.width) * width));
@@ -141,11 +141,19 @@ async function canvasToDataUrl(
   }
   context.drawImage(bitmap, 0, 0, width, height);
   const quality =
-    mimeType === "image/webp"
-      ? IMAGE_RECIPE.webpQuality
-      : mimeType === "image/jpeg"
-        ? IMAGE_RECIPE.jpegQuality
-        : undefined;
+    mimeType === "image/avif"
+      ? width >= 1200
+        ? 0.5
+        : 0.55
+      : mimeType === "image/webp"
+        ? width >= 1200
+          ? 0.75
+          : IMAGE_RECIPE.webpQuality
+        : mimeType === "image/jpeg"
+          ? width >= 1200
+            ? 0.8
+            : IMAGE_RECIPE.jpegQuality
+          : undefined;
   const blob = await canvas.convertToBlob(
     quality === undefined ? { type: mimeType } : { type: mimeType, quality },
   );
@@ -165,16 +173,34 @@ async function processImage(request: ImageRequest) {
   const bitmap = await createImageBitmap(source, { imageOrientation: "from-image" });
   try {
     const plan = createImagePlan(bitmap.width, bitmap.height, request.maxWidth);
-    const responsive = await Promise.all(
-      plan.responsiveWidths.map(async (width) => ({
-        width,
-        source: await canvasToDataUrl(bitmap, width, "image/webp", preserveAlpha),
-      })),
-    );
-    const primary = responsive.at(-1)?.source;
+    let responsive: Array<{ width: number; source: string }> = [];
+    let primary: string | undefined;
+    try {
+      const avifCandidates = await Promise.all(
+        plan.responsiveWidths.map(async (width) => ({
+          width,
+          source: await canvasToDataUrl(bitmap, width, "image/avif", preserveAlpha),
+        })),
+      );
+      if (avifCandidates.length > 0 && avifCandidates[0]?.source.startsWith("data:image/avif")) {
+        responsive = avifCandidates;
+        primary = responsive.at(-1)?.source;
+      } else {
+        throw new Error("AVIF not supported");
+      }
+    } catch {
+      responsive = await Promise.all(
+        plan.responsiveWidths.map(async (width) => ({
+          width,
+          source: await canvasToDataUrl(bitmap, width, "image/webp", preserveAlpha),
+        })),
+      );
+      primary = responsive.at(-1)?.source;
+    }
     if (!primary) throw new Error("No se pudo generar la imagen principal.");
     const fallbackType = preserveAlpha ? "image/png" : "image/jpeg";
-    const fallback = await canvasToDataUrl(bitmap, plan.width, fallbackType, preserveAlpha);
+    const fallbackWidth = Math.min(plan.width, 768);
+    const fallback = await canvasToDataUrl(bitmap, fallbackWidth, fallbackType, preserveAlpha);
     return { ...plan, primary, fallback, responsive };
   } finally {
     bitmap.close();

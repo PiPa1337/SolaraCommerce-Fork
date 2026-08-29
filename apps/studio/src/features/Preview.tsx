@@ -54,43 +54,16 @@ body::-webkit-scrollbar {
 
 const PREVIEW_PERF_STYLE = `<style data-solara-preview-perf>
 html { scroll-behavior: auto !important; }
-* { scroll-behavior: auto !important; }
-:root { --solara-motion-fast: 0.01ms !important; --solara-motion-normal: 0.01ms !important; --solara-motion-easing: linear !important; }
-*, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 [data-solara-module], .catalog-hero, .catalog-category-bento, .catalog-product-grid {
   contain: layout paint;
   content-visibility: auto;
   contain-intrinsic-size: 600px 400px;
 }
 img, video { content-visibility: auto; contain-intrinsic-size: 300px 200px; }
-[data-solara-module], .catalog-hero, .catalog-product-grid, .catalog-category-bento-item {
-  box-shadow: none !important;
-  filter: none !important;
-  backdrop-filter: none !important;
-}
-.catalog-hero, .catalog-product-grid { background-image: none !important; }
 </style>`;
 
 const PREVIEW_PERF_SCRIPT = `<script data-solara-preview-perf>
 (() => {
-  try {
-    const c = window.IntersectionObserver;
-    window.IntersectionObserver = class extends (c || Object) {
-      constructor(cb, opts) { super(cb, opts); }
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    };
-  } catch {}
-  try {
-    const r = window.ResizeObserver;
-    window.ResizeObserver = class extends (r || Object) {
-      constructor(cb) { super(cb); }
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    };
-  } catch {}
   try {
     const raf = window.requestAnimationFrame;
     let last = 0;
@@ -105,7 +78,8 @@ const PREVIEW_PERF_SCRIPT = `<script data-solara-preview-perf>
 
 function addPreviewScrollbarPolicy(document: string): string {
   const headEnd = document.indexOf("</head>");
-  if (headEnd === -1) return `${PREVIEW_SCROLLBAR_STYLE}${PREVIEW_PERF_STYLE}${PREVIEW_PERF_SCRIPT}${document}`;
+  if (headEnd === -1)
+    return `${PREVIEW_SCROLLBAR_STYLE}${PREVIEW_PERF_STYLE}${PREVIEW_PERF_SCRIPT}${document}`;
   return `${document.slice(0, headEnd)}${PREVIEW_SCROLLBAR_STYLE}\n${PREVIEW_PERF_STYLE}\n${PREVIEW_PERF_SCRIPT}\n${document.slice(headEnd)}`;
 }
 
@@ -380,6 +354,8 @@ export function Preview({
   route,
   size,
   zoom,
+  canvasMode = false,
+  onCanvasModeChange,
   onRouteChange,
   onCanvasEdit,
   onCanvasItemEdit,
@@ -390,6 +366,8 @@ export function Preview({
   route: string;
   size: PreviewSize;
   zoom: PreviewZoom;
+  canvasMode?: boolean;
+  onCanvasModeChange?(next: boolean): void;
   onRouteChange(route: string): void;
   /** Aplica section.field.update por el núcleo único de mutaciones. */
   onCanvasEdit?(sectionId: string, fieldKey: string, value: unknown): void;
@@ -427,7 +405,6 @@ export function Preview({
   const canvasNonceRef = useRef("");
   const canvasManifestRef = useRef<Array<CanvasManifestEntryLike & { itemFieldKey?: string }>>([]);
   const [canvasSelection, setCanvasSelection] = useState<ValidatedSelection | null>(null);
-  const [canvasMode, setCanvasMode] = useState(false);
   const canvasValueId = useId();
   const previewSandbox =
     typeof window !== "undefined" && window.location.protocol === "solara:"
@@ -599,8 +576,8 @@ export function Preview({
   // biome-ignore lint/correctness/useExhaustiveDependencies: route changes must clear the active canvas target
   useEffect(() => {
     setCanvasSelection(null);
-    setCanvasMode(false);
-  }, [route]);
+    onCanvasModeChange?.(false);
+  }, [route, onCanvasModeChange]);
 
   // Datos actuales del binding seleccionado: el textarea arranca con el valor
   // real del proyecto para que cancelar restaure exactamente lo anterior.
@@ -777,16 +754,6 @@ export function Preview({
   return (
     <aside className="preview-pane" aria-label="Vista previa de la tienda">
       <div className={`preview-stage preview-stage--${size}`}>
-        <div className="canvas-mode-control">
-          <button
-            type="button"
-            data-testid="ui-canvas-toggle"
-            aria-pressed={canvasMode}
-            onClick={() => setCanvasMode((active) => !active)}
-          >
-            {canvasMode ? "Salir de edición en canvas" : "Editar en canvas"}
-          </button>
-        </div>
         {error ? (
           <div className="preview-error">
             <EyeSlash aria-hidden size={28} />

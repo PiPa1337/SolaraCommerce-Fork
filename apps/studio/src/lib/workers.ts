@@ -34,12 +34,8 @@ export interface ProcessedImage {
   responsive: Array<{ width: number; source: string }>;
 }
 
-function fallbackImagePlan(
-  sourceWidth: number,
-  sourceHeight: number,
-  maxWidth = RESPONSIVE_IMAGE_MAX_WIDTH,
-) {
-  const safeMaxWidth = Math.max(1, Math.min(Math.floor(maxWidth), RESPONSIVE_IMAGE_MAX_WIDTH));
+function fallbackImagePlan(sourceWidth: number, sourceHeight: number, maxWidth = 768) {
+  const safeMaxWidth = Math.max(1, Math.min(Math.floor(maxWidth), 768));
   const width = Math.min(sourceWidth, safeMaxWidth);
   const responsiveWidths = responsiveImageWidths(sourceWidth, safeMaxWidth);
   return {

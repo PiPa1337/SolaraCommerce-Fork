@@ -428,6 +428,14 @@ test("el panel de trabajo se despliega desde la izquierda y deja crecer el previ
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
   await expect(editor).toHaveClass(/editor-pane--open/);
   await expect(page.getByRole("button", { name: "Cerrar panel de edición" })).toBeVisible();
+  const openEditorBox = await editor.boundingBox();
+  const openPreviewBox = await preview.boundingBox();
+  expect(openEditorBox).not.toBeNull();
+  expect(openPreviewBox).not.toBeNull();
+  expect((openEditorBox?.x ?? 0) + (openEditorBox?.width ?? 0)).toBeLessThanOrEqual(
+    (openPreviewBox?.x ?? 0) + 1,
+  );
+  expect(openPreviewBox?.width ?? 0).toBeGreaterThan(520);
   const editorTransition = await editor.evaluate((element) => ({
     opacity: getComputedStyle(element).opacity,
     transitionProperty: getComputedStyle(element).transitionProperty,
@@ -452,6 +460,25 @@ test("el panel de trabajo se despliega desde la izquierda y deja crecer el previ
   await page.getByRole("button", { name: "Abrir panel de edición" }).click();
   await expect(editor).toHaveClass(/editor-pane--open/);
   await expect(page.getByRole("button", { name: "Cerrar panel de edición" })).toBeVisible();
+});
+
+test("Exportar conserva separados la exposición pública y el verificador", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 991 });
+  await openProject(page);
+  await page.getByRole("tab", { name: "Exportar", exact: true }).click();
+
+  const exposure = page.getByTestId("ui-export-public-exposure");
+  const verifier = page.getByTestId("ui-cloudflare-verifier");
+  await expect(exposure).toBeVisible();
+  await expect(verifier).toBeVisible();
+
+  const exposureBox = await exposure.boundingBox();
+  const verifierBox = await verifier.boundingBox();
+  expect(exposureBox).not.toBeNull();
+  expect(verifierBox).not.toBeNull();
+  expect((exposureBox?.y ?? 0) + (exposureBox?.height ?? 0)).toBeLessThanOrEqual(
+    (verifierBox?.y ?? 0) + 1,
+  );
 });
 
 test("Studio respeta foco, modo oscuro y movimiento reducido", async ({ page }) => {

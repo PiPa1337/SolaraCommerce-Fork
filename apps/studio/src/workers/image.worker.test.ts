@@ -12,15 +12,15 @@ function buffer(...bytes: number[]): ArrayBuffer {
 
 describe("receta de imágenes", () => {
   it("mantiene anchos estables y nunca amplía la imagen", () => {
-    expect(IMAGE_RECIPE.widths).toEqual([768, 1800]);
+    expect(IMAGE_RECIPE.widths).toEqual([480, 768, 1800]);
     expect(createImagePlan(320, 200)).toEqual({
       width: 320,
       height: 200,
       responsiveWidths: [320],
     });
-    expect(createImagePlan(700, 400).responsiveWidths).toEqual([700]);
-    expect(createImagePlan(1000, 500).responsiveWidths).toEqual([768, 1000]);
-    expect(createImagePlan(2400, 1200).responsiveWidths).toEqual([768, 1800]);
+    expect(createImagePlan(700, 400).responsiveWidths).toEqual([480, 700]);
+    expect(createImagePlan(1000, 500).responsiveWidths).toEqual([480, 768, 1000]);
+    expect(createImagePlan(2400, 1200).responsiveWidths).toEqual([480, 768, 1800]);
   });
 
   it("conserva la relación de aspecto al limitar el ancho", () => {

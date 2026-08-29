@@ -209,8 +209,8 @@ export function NativeOperationsPanel({ projects }: NativeOperationsPanelProps) 
 
   const results = rolloutJob?.result?.results ?? [];
   return (
-    <section className="native-operations" aria-labelledby={titleId}>
-      <header className="native-operations__header">
+    <details className="native-operations" aria-labelledby={titleId}>
+      <summary className="native-operations__header">
         <div>
           <span className="dashboard-cosmic-kicker">Operaciones protegidas</span>
           <h2 id={titleId}>Plantilla, reconstrucciones y migraciones</h2>
@@ -219,7 +219,7 @@ export function NativeOperationsPanel({ projects }: NativeOperationsPanelProps) 
           </p>
         </div>
         <ShieldCheck aria-hidden size={24} />
-      </header>
+      </summary>
 
       {error ? <InlineError>{error}</InlineError> : null}
 
@@ -361,6 +361,6 @@ export function NativeOperationsPanel({ projects }: NativeOperationsPanelProps) 
           ) : null}
         </article>
       </div>
-    </section>
+    </details>
   );
 }

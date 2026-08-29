@@ -3,10 +3,10 @@ import { compactResponsiveSources, RESPONSIVE_IMAGE_WIDTHS, responsiveImageWidth
 
 describe("receta de imágenes responsive", () => {
   it("define sólo la variante intermedia y la máxima sin ampliar imágenes", () => {
-    expect(RESPONSIVE_IMAGE_WIDTHS).toEqual([768, 1800]);
-    expect(responsiveImageWidths(2400)).toEqual([768, 1800]);
-    expect(responsiveImageWidths(1000)).toEqual([768, 1000]);
-    expect(responsiveImageWidths(700)).toEqual([700]);
+    expect(RESPONSIVE_IMAGE_WIDTHS).toEqual([480, 768, 1800]);
+    expect(responsiveImageWidths(2400)).toEqual([480, 768, 1800]);
+    expect(responsiveImageWidths(1000)).toEqual([480, 768, 1000]);
+    expect(responsiveImageWidths(700)).toEqual([480, 700]);
   });
 
   it("compacta recetas antiguas conservando la mejor y el punto intermedio", () => {

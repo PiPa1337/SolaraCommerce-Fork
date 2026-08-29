@@ -207,12 +207,17 @@ function StudioShell() {
   useEffect(() => {
     void (async () => {
       try {
-        await purgeRolledBackDemoRecords();
-        const { getLocalStorageStatus } = await loadLocalStorage();
-        const detectedStorage = await getLocalStorageStatus().catch(() => ({
-          managed: false,
-          writable: false,
-        }));
+        const purgePromise = purgeRolledBackDemoRecords();
+        const storagePromise = loadLocalStorage()
+          .then(({ getLocalStorageStatus }) =>
+            getLocalStorageStatus().catch(() => ({
+              managed: false,
+              writable: false,
+            })),
+          )
+          .catch(() => ({ managed: false, writable: false }));
+        await purgePromise;
+        const detectedStorage = await storagePromise;
         storageModeRef.current = detectedStorage.managed;
         setLocalStorageStatus(detectedStorage);
         let retiredLegacyProjects = false;
@@ -272,7 +277,8 @@ function StudioShell() {
                 shouldSeedRecoveryDraft(
                   stored.project,
                   diskProject.project,
-                  JSON.stringify(stored.project) !== JSON.stringify(diskProject.project),
+                  stored.project.updatedAt !== diskProject.project.updatedAt ||
+                    stored.project.id !== diskProject.project.id,
                 )
               ) {
                 await saveRecoveryDraft(stored.project, diskProject.diskVersion ?? 0);

@@ -13,7 +13,7 @@ import {
 import { isBaseTemplate } from "@solara/project-schema/project-policy";
 import type { RefObject } from "react";
 import { Button, IconButton } from "../../components/Ui";
-import { getProjectMetrics, storeMark } from "../../lib/dashboardModel";
+import { getProjectMetrics, storeFaviconSrc, storeMark } from "../../lib/dashboardModel";
 import { formatDate } from "../../lib/format";
 import type { StoredProject } from "../../lib/repository";
 
@@ -73,6 +73,7 @@ export function ProjectCard({
   onArchive,
 }: ProjectCardProps) {
   const protectedTemplate = project ? isBaseTemplate(project.project) : false;
+  const faviconSrc = project ? storeFaviconSrc(project.project) : undefined;
   return (
     <section
       ref={detailRef}
@@ -94,17 +95,30 @@ export function ProjectCard({
           </header>
           <div className="dashboard-store-detail__identity">
             <span className="dashboard-store-detail__mark" aria-hidden>
-              {storeMark(project.name)}
+              {faviconSrc ? (
+                <img
+                  src={faviconSrc}
+                  alt=""
+                  width={46}
+                  height={46}
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                storeMark(project.name)
+              )}
             </span>
             <div>
               <h3>{project.name}</h3>
-              <span className={`dashboard-store-card__status is-${project.status}`}>
-                <span aria-hidden />
-                {statusLabel(project.status)}
-              </span>
-              {protectedTemplate ? (
-                <span className="dashboard-store-card__status is-protected">Solo lectura</span>
-              ) : null}
+              <div className="dashboard-store-detail__statuses">
+                <span className={`dashboard-store-card__status is-${project.status}`}>
+                  <span aria-hidden />
+                  {statusLabel(project.status)}
+                </span>
+                {protectedTemplate ? (
+                  <span className="dashboard-store-card__status is-protected">Solo lectura</span>
+                ) : null}
+              </div>
             </div>
           </div>
           <dl className="dashboard-store-detail__facts">

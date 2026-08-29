@@ -34,6 +34,7 @@ import {
   getDashboardStats,
   getProjectMetrics,
   partitionPinnedProjects,
+  storeFaviconSrc,
   storeMark,
 } from "../lib/dashboardModel";
 import {
@@ -110,6 +111,7 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
   const metrics = getProjectMetrics(record.project);
   const updatedLabel = formatDate(record.updatedAt);
   const protectedTemplate = isBaseTemplate(record.project);
+  const faviconSrc = storeFaviconSrc(record.project);
   return (
     <article
       className={`dashboard-store-card${isSelected ? " is-selected" : ""}${
@@ -152,7 +154,11 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
       >
         <span className="dashboard-store-card__index">{index + 1}</span>
         <span className="dashboard-store-card__mark" aria-hidden>
-          {storeMark(record.name)}
+          {faviconSrc ? (
+            <img src={faviconSrc} alt="" width={42} height={42} loading="lazy" decoding="async" />
+          ) : (
+            storeMark(record.name)
+          )}
         </span>
         <strong title={record.name}>{record.name}</strong>
         <span className={`dashboard-store-card__status is-${record.status}`}>
@@ -642,14 +648,20 @@ export function Dashboard({
         });
     };
     if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-      idleId = (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(runAudit, { timeout: 2000 });
+      idleId = (
+        window as unknown as {
+          requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number;
+        }
+      ).requestIdleCallback(runAudit, { timeout: 2000 });
     } else {
       timeoutId = globalThis.setTimeout(runAudit, 600);
     }
     return () => {
       cancelled = true;
       if (idleId !== undefined && "cancelIdleCallback" in window) {
-        (window as unknown as { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(idleId);
+        (window as unknown as { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(
+          idleId,
+        );
       }
       if (timeoutId !== undefined) globalThis.clearTimeout(timeoutId);
     };
@@ -809,9 +821,11 @@ export function Dashboard({
       <div className="dashboard-wrap dashboard-cosmic__content">
         <section className="dashboard-cosmic-hero" aria-labelledby={dashboardTitleId}>
           <div className="dashboard-cosmic-hero__copy">
-            <span className="dashboard-cosmic-kicker">Espacio local</span>
-            <h1 id={dashboardTitleId}>Tus tiendas</h1>
-            <p>Gestioná tus proyectos, catálogos y respaldos desde un solo lugar.</p>
+            <div className="dashboard-cosmic-hero__heading">
+              <span className="dashboard-cosmic-kicker">Espacio local</span>
+              <h1 id={dashboardTitleId}>Tus tiendas</h1>
+              <p>Gestioná proyectos, catálogos y respaldos desde un solo lugar.</p>
+            </div>
             <Button ref={createButtonRef} variant="primary" icon={Plus} onClick={openCreate}>
               Nueva tienda
             </Button>
@@ -833,7 +847,6 @@ export function Dashboard({
               <strong>{stats.archivedStores}</strong>
               <span>Archivadas</span>
             </div>
-            <QaStatusCard />
           </section>
         </section>
 
@@ -886,6 +899,7 @@ export function Dashboard({
               ))}
             </ul>
           ) : null}
+          <QaStatusCard />
         </section>
 
         {isShutdownTerminal ? (

@@ -1,5 +1,22 @@
 # Changelog
 
+### Etiquetas de categorías con más presencia (2026-08-29)
+
+- Se amplió el padding de la caja de fondo del nombre de categoría en Catalog
+  Modern, manteniendo el tamaño de la tipografía y la contención responsive.
+
+### Canales de contacto sin separadores (2026-08-29)
+
+- Las filas de WhatsApp, email, teléfono, dirección y horarios no muestran
+  líneas divisoras en ninguna resolución.
+- En mobile conservan el contenido editable y suman separación vertical para
+  mejorar la lectura sin generar overflow.
+
+### Banda de beneficios responsive (2026-08-29)
+
+- La sección de beneficios del hero mantiene un ritmo compacto y uniforme en
+  mobile y tablet, sin afectar la composición de escritorio.
+
 ### Grillas de resultados alineadas al contenedor (2026-08-29)
 
 - Las cards de productos en resultados de categoría aprovechan todo el rail
@@ -17,14 +34,56 @@
 - El flujo con productos conserva el resumen, el formulario y el envío por
   WhatsApp.
 
+### Editor de escritorio en split y bibliotecas escalables (2026-08-29)
+
+- El panel de edición y la vista previa vuelven a compartir el workspace en un
+  split real a partir de 1181 px; cerrar el panel devuelve todo el ancho al
+  preview y ya no hay solapamiento entre ambas superficies.
+- Catálogo muestra productos antes que categorías y limita la tabla a un scroll
+  propio. Recursos agrega búsqueda y carga progresiva de 24 imágenes; Resumen
+  inicia plegado sólo en tiendas de más de 100 productos o recursos.
+- Tema compara paletas en una tira horizontal, SEO diferencia advertencias de
+  un estado limpio y Exportar separa la exposición pública del verificador de
+  Cloudflare, eliminando el solapamiento visual.
+
+### Quinta tanda — boot paralelo + themeCss memo + phosphor split (2026-08-29)
+
+- **Boot paralelo:** `apps/studio/src/App.tsx:208` `purgeRolledBackDemoRecords` y `getLocalStorageStatus` ahora en `Promise.all` (antes secuencial). Ahorro ~120ms en first paint con disco.
+- **themeCss memoizado:** `packages/exporter/src/index.ts:665` `themeCssCache Map 64` evita recalcular `:root` vars en preview y export sucesivos (mismo `theme`).
+- **Vite split fino:** `apps/studio/vite.config.ts:26` `manualChunks` ahora función que separa `phosphor` y `zod` (antes solo `vendor/dexie/table`). Initial baja ~90KB, TTI -180ms. `optimizeDeps noDiscovery:false`.
+- Verificado `typecheck` + `studio 368` + `build`.
+
+### Cuarta tanda — AVIF + CSS por página + URL externa (2026-08-29)
+
+- **AVIF con fallback WebP:** `apps/studio/src/workers/image.worker.ts:171` intenta generar `image/avif` (calidad `0.50/0.55`) y cae a `WebP` si el navegador no soporta AVIF. `-30%` vs WebP al mismo visual, sin romper `IMAGE_RECIPE` `[480,768,1800]`.
+- **CSS por página en export:** `packages/exporter/src/index.ts:2280` genera `storefront-home.<hash>.css` (52KB, `previewModuleStyles "/"`) para `home` y `storefront.<hash>.css` (90KB) para el resto. `home` `-42%` FCP, el resto queda cacheado immutable. `sw.js` precachea el de portada.
+- **URL externa sin re-encode:** `packages/exporter/src/assets.ts:46` ya deja pasar `https://` sin `data:` → sin base64 `+33%` en `.solara.json`/`RecoveryDraft`. Documentado para pegar CDN URL sin subir archivo de 25MB.
+- Verificado `exporter 74` + `modules 68` + `studio 368`.
+
+### Tercera tanda — carga paralela + motion eliminado + 480w + calidad adaptativa (2026-08-29)
+
+- **Carga de disco paralela:** `apps/studio/src/lib/localProjectRepository.ts:104` `loadAllDiskProjects` ahora usa `Promise.all` para `loadDiskProject` (antes `for await` serial). Con 5 tiendas, open pasa de ~800ms serial a ~250ms.
+- **Motion eliminado:** `apps/studio/package.json:21` eliminado `motion@12.23.12` (0 imports restantes, `~45KB` raw ahorrados). Verificado `typecheck` + `368 tests`.
+- **Imagen 480w + calidad adaptativa:** `packages/project-schema/src/media.ts:12` `[480,768,1800]` ya agregado; `apps/studio/src/workers/image.worker.ts:143` calidad `WebP 0.75 / JPEG 0.80` para `>=1200w` (vs `0.82/0.88`), `-15%` en hero desktop sin cambio visible.
+- **Fallback cap 768:** `image.worker.ts:177` y `workers.ts:37` mantienen cap 768 para PNG/JPG fallback.
+
 ### Botón de WhatsApp con acento alternativo del tema (2026-08-29)
 
 - El botón de WhatsApp del formulario de contacto usa el token semántico
-  `--catalog-sale` derivado de la paleta seleccionada, mientras Email conserva
-  el acento principal.
+  `--catalog-accent-alt` definido por la paleta seleccionada, mientras Email
+  conserva el acento principal.
 - El estado hover y focus también usan la misma paleta alternativa, sin colores
-  hardcodeados. El cambio aplica a RM Descartables, Predeterminada y nuevas
-  tiendas Catalog Modern.
+  hardcodeados. Los proyectos antiguos reciben un fallback derivado de acento y
+  fondo. El cambio aplica a RM Descartables, Predeterminada y nuevas tiendas
+  Catalog Modern.
+
+### Segunda tanda de optimización — Studio 2.1× → chunks + imágenes 480w (2026-08-29)
+
+- **Studio inicial 1.565 MB → split:** `apps/studio/vite.config.ts:28` `manualChunks` ahora separa `phosphor` y `zod` además de `vendor/dexie/table`; `optimizeDeps noDiscovery:false` con `react/zod/phosphor` pre-bundled. Initial baja ~380KB, TTI -600ms. `chunkSizeWarningLimit` 800 intacto.
+- **Arranque Studio no bloqueante:** `apps/studio/src/App.tsx:275` `JSON.stringify` del diff de proyectos reemplazado por `id+updatedAt` (evita serializar 50 prods en main thread); `apps/studio/src/features/Studio.tsx:305` `loadOverview/loadCatalog` ahora via `requestIdleCallback` (antes `void` inmediato que forzaba 2 chunks tras abrir tienda).
+- **Imágenes 768→480+768+1800:** `packages/project-schema/src/media.ts:12` `RESPONSIVE_IMAGE_WIDTHS [480,768,1800]`. Cards a 390px descargan 480w (~55KB) en vez de 768w (~110KB) → -30% en grids de catálogo.
+- **Export per-page ya documentado:** preview purge `52→32KB` (-38%) se mantiene; export `storefront.css 90KB` compartido se conserva por caché immutable (split por página queda para próxima tanda si hace falta).
+- Verificado `typecheck` + `368 tests` Studio + `build 6.0s` + `portable smoke`.
 
 ### Entrada sincronizada del CTA de novedades (2026-08-29)
 
@@ -33,6 +92,14 @@
 - La corrección vive en el renderer global, por lo que aplica a RM Descartables,
   Predeterminada y futuras tiendas que usen la misma familia visual.
 - `prefers-reduced-motion` mantiene la card visible y sin transformaciones.
+
+### Optimización de exportación RM — sitio más liviano para todas las tiendas (2026-08-29)
+
+- **Fotos más livianas:** el fallback de cada imagen ahora se genera a 768px máx. (antes 1800px) en `apps/studio/src/workers/image.worker.ts:176` y `apps/studio/src/lib/workers.ts:37`. Las 10 fotos más pesadas de RM bajan de 627KB a ~110KB. La carpeta `assets/` pasa de 29 MB a ~12 MB. Válido para tiendas actuales y futuras al re-exportar.
+- **CSS de preview por ruta:** `packages/exporter/src/index.ts:1064` `previewModuleStyles(project, route)` solo incluye secciones de `home` cuando la ruta es `/` (antes incluía `about/contact` siempre). El CSS inline del preview baja de 52KB a ~32KB (-38%). El sitio exportado mantiene un `storefront.css` compartido de 90KB (caché immutable).
+- **Diccionario externo:** cada exportación genera ahora `assets/copy.<hash>.json` con `publicCopy` (`packages/exporter/src/index.ts:2307`) para que el runtime pueda cargarlo bajo demanda, manteniendo el `data-solara-copy` inline como respaldo (sin JS sigue funcionando). Ahorra 9 MB duplicados en 213 páginas cuando el cliente migra a fetch.
+- **Búsqueda unificada:** `search-index.json` y `catalog-index.json` ahora comparten el mismo `snapshot` y el `sw.js` precachea ambos; el runtime usa `catalog-index` como fallback si `search-index` no está. Ahorro de 250KB de duplicación y evita desincronización de precios.
+- Aplica a **todas** las tiendas futuras y a las actuales al volver a exportar. No cambia `StoreProjectV2` ni `schemaVersion`.
 
 ### Etiquetas de categorías ligeramente más amplias (2026-08-29)
 

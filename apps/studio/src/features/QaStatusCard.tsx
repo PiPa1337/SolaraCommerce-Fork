@@ -40,20 +40,22 @@ export function QaStatusCard() {
   const cycle = status.activeCycle;
 
   return (
-    <div
-      className="qa-status-card"
-      style={{ padding: "1rem", border: "1px solid #ddd", borderRadius: "8px", marginTop: "1rem" }}
-    >
-      <h2 style={{ margin: "0 0 0.5rem", fontSize: "0.9rem" }}>QA Perpetuo</h2>
+    <div className="qa-status-card">
+      <h2>QA perpetuo</h2>
       {cycle ? (
-        <p style={{ margin: 0, fontSize: "0.85rem" }}>
+        <p className="qa-status-card__state">
           Ciclo activo: {cycle.backlogItem} ({cycle.phase}, intento {cycle.attempts + 1})
         </p>
       ) : (
-        <p style={{ margin: 0, fontSize: "0.85rem" }}>Sin ciclo activo</p>
+        <p className="qa-status-card__state">Sin ciclo activo</p>
       )}
-      <p style={{ margin: "0.25rem 0 0", fontSize: "0.8rem", color: "#666" }}>
-        Completados: {status.completedCount} | Bloqueados: {status.blockedCount}
+      <p className="qa-status-card__counts">
+        <span>
+          <strong>{status.completedCount}</strong> completados
+        </span>
+        <span>
+          <strong>{status.blockedCount}</strong> bloqueados
+        </span>
       </p>
     </div>
   );

@@ -71,7 +71,25 @@ export const STORE_BASE_STYLES = `
 }
 [data-solara-store] .solara-product-media > picture > img,
 [data-solara-store] .catalog-product-media > picture > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   object-position: center;
+}
+/* Fix global: todas las imágenes de producto/categoría usan cover centrado para evitar letterboxing */
+[data-solara-store] .catalog-product-card-image,
+[data-solara-store] .catalog-product-gallery-main img,
+[data-solara-store] .catalog-product-gallery-image,
+[data-solara-store] .catalog-product-gallery-thumbs img,
+[data-solara-store] img.catalog-product-gallery-thumb,
+[data-solara-store] .solara-category-hero img,
+[data-solara-store] .catalog-product-media img,
+[data-solara-store] .solara-product-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
 }
 [data-solara-store] a {
   color: inherit;
@@ -87,11 +105,11 @@ export const STORE_BASE_STYLES = `
 [data-solara-store] button,
 [data-solara-store] a {
   transition:
-    background-color 180ms ease,
-    border-color 180ms ease,
-    color 180ms ease,
-    opacity 180ms ease,
-    transform 180ms ease;
+    background-color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease),
+    border-color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease),
+    color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease),
+    opacity var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease),
+    transform var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease);
 }
 [data-solara-store] button:disabled,
 [data-solara-store] input:disabled,
@@ -473,7 +491,7 @@ export const STORE_BASE_STYLES = `
 [data-solara-store] .solara-category-hero img {
   width: 100%;
   aspect-ratio: 4 / 3;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
   background: var(--solara-surface);
 }
@@ -755,7 +773,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     right: 1rem;
     top: 58px;
     width: min(18rem, calc(100vw - 2rem));
-    box-shadow: 0 18px 48px color-mix(in srgb, var(--solara-text) 16%, transparent);
+    box-shadow: var(--solara-shadow-overlay);
   }
   [data-solara-module="editorial-header"] .solara-nav-dropdown--wide > ul {
     grid-template-columns: 1fr;
@@ -798,7 +816,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   padding: .75rem;
   border: 1px solid var(--solara-border);
   background: var(--solara-background);
-  box-shadow: 0 18px 48px color-mix(in srgb, var(--solara-text) 15%, transparent);
+  box-shadow: var(--solara-shadow-overlay);
   list-style: none;
 }
 [data-solara-module="editorial-header"] .solara-nav-dropdown--wide > ul {
@@ -1692,7 +1710,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-module="cart-drawer"] .solara-cart-drawer {
   background: var(--solara-background);
   border-left: 1px solid var(--solara-border);
-  box-shadow: -24px 0 80px color-mix(in srgb, var(--solara-text) 24%, transparent);
+  box-shadow: var(--solara-shadow-overlay);
   display: grid;
   gap: 1.5rem;
   grid-template-rows: auto minmax(0, 1fr) auto auto;
@@ -2103,7 +2121,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-search-link { width: min(18rem, 100%); max-width: 18rem; padding: .5rem 1rem; border: 1px solid var(--catalog-border); border-radius: 0; background: var(--catalog-surface); color: var(--catalog-muted); overflow: hidden; }
 [data-solara-store].catalog-modern .catalog-search-link span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 [data-solara-store].catalog-modern .catalog-search-noscript { display: none; }
-[data-solara-store].catalog-modern .catalog-search-dialog { width: min(34rem, calc(100% - 2rem)); margin: auto; padding: 0; border: 1px solid var(--catalog-border); border-radius: 0; background: var(--catalog-paper); color: var(--catalog-ink); box-shadow: 0 24px 80px color-mix(in srgb, var(--catalog-ink) 20%, transparent); }
+[data-solara-store].catalog-modern .catalog-search-dialog { width: min(34rem, calc(100% - 2rem)); margin: auto; padding: 0; border: 1px solid var(--catalog-border); border-radius: 0; background: var(--catalog-paper); color: var(--catalog-ink); box-shadow: var(--solara-shadow-overlay); }
 [data-solara-store].catalog-modern .catalog-search-dialog::backdrop { background: color-mix(in srgb, var(--catalog-ink) 50%, transparent); }
 [data-solara-store].catalog-modern .catalog-search-dialog-form { display: grid; gap: 1rem; padding: clamp(1.25rem, 4vw, 2rem); }
 [data-solara-store].catalog-modern .catalog-search-dialog-heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
@@ -2168,7 +2186,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-product-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: calc(1.25rem * var(--solara-space-scale, 1)); }
 [data-solara-store].catalog-modern .catalog-product-card { min-width: 0; }
 [data-solara-store].catalog-modern .catalog-product-media { display: block; overflow: hidden; aspect-ratio: 1; border-radius: var(--solara-radius); background: var(--catalog-surface); }
-[data-solara-store].catalog-modern .catalog-product-card-image { width: 100%; height: 100%; object-fit: contain; transition: transform var(--solara-motion-normal) var(--solara-motion-easing); }
+[data-solara-store].catalog-modern .catalog-product-card-image { width: 100%; height: 100%; object-fit: cover; object-position: center; transition: transform var(--solara-motion-normal) var(--solara-motion-easing); }
 [data-solara-store].catalog-modern .catalog-product-card:hover .catalog-product-card-image { transform: scale(1.02); }
 [data-solara-store].catalog-modern .catalog-product-card-copy { padding-top: .75rem; min-width: 0; }
 [data-solara-store].catalog-modern .catalog-product-category { min-height: 1em; color: var(--catalog-muted); font-size: .72rem; font-weight: 700; letter-spacing: .08em; line-height: 1.25; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -2189,7 +2207,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-category-bento-item--tall { grid-column: span 1; grid-row: span 2; }
 [data-solara-store].catalog-modern .catalog-category-bento-item span { position: relative; z-index: 2; margin: 1.25rem; color: var(--catalog-ink); font-size: 1rem; font-weight: 700; line-height: 1.15; min-width: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 [data-solara-store].catalog-modern .catalog-category-bento-item .catalog-category-bento-title { margin: 0; }
-[data-solara-store].catalog-modern .catalog-category-bento-item small { position: absolute; z-index: 2; right: 1rem; bottom: .9rem; padding: .25rem .55rem; border: 1px solid color-mix(in srgb, var(--catalog-ink) 10%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--catalog-paper) 92%, transparent); box-shadow: 0 1px 2px color-mix(in srgb, var(--catalog-ink) 8%, transparent); color: var(--catalog-ink); font-size: .72rem; font-weight: 700; line-height: 1; }
+[data-solara-store].catalog-modern .catalog-category-bento-item small { position: absolute; z-index: 2; right: 1rem; bottom: .9rem; padding: .25rem .55rem; border: 1px solid color-mix(in srgb, var(--catalog-ink) 10%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--catalog-paper) 92%, transparent); box-shadow: var(--solara-shadow-card); color: var(--catalog-ink); font-size: .72rem; font-weight: 700; line-height: 1; }
 [data-solara-store].catalog-modern .catalog-category-bento-item::after { position: absolute; z-index: 1; inset: 0; content: ""; background: linear-gradient(to top, color-mix(in srgb, var(--catalog-ink) 16%, transparent), transparent 42%); pointer-events: none; }
 [data-solara-store].catalog-modern .catalog-category-bento-image { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .78; transition: transform var(--solara-motion-normal) var(--solara-motion-easing); }
 [data-solara-store].catalog-modern .catalog-category-bento-item:hover .catalog-category-bento-image { transform: scale(1.02); }
@@ -2229,7 +2247,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-footer-inner nav { display: grid; align-content: start; gap: .6rem; font-size: .84rem; }
 [data-solara-store].catalog-modern .catalog-footer-inner nav strong,
 [data-solara-store].catalog-modern .catalog-footer-inner address strong { color: var(--catalog-muted); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; }
-[data-solara-store].catalog-modern .catalog-footer-inner nav a { text-decoration: none; transition: color 180ms ease, transform 180ms ease; }
+[data-solara-store].catalog-modern .catalog-footer-inner nav a { text-decoration: none; transition: color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease), transform var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease); }
 [data-solara-store].catalog-modern .catalog-footer-inner nav a:hover,
 [data-solara-store].catalog-modern .catalog-footer-inner nav a:focus-visible { color: var(--solara-accent); transform: translateX(.2rem); }
 [data-solara-store].catalog-modern .catalog-footer-brand { display: flex; flex-direction: column; align-items: flex-start; padding-inline-start: clamp(.9rem, 1.8vw, 1.5rem); border-inline-start: 2px solid var(--solara-accent); }
@@ -2250,10 +2268,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .solara-search-form .solara-primary-action:focus-visible,
 [data-solara-store].catalog-modern .catalog-search-dialog-controls .catalog-primary-action:hover,
 [data-solara-store].catalog-modern .catalog-search-dialog-controls .catalog-primary-action:focus-visible { transform: none; box-shadow: none; }
-[data-solara-store].catalog-modern .catalog-footer-whatsapp:hover,
-[data-solara-store].catalog-modern .catalog-footer-whatsapp:focus-visible { background: var(--solara-accent); color: var(--solara-accent-text); }
 [data-solara-store].catalog-modern .catalog-footer-inner address { display: grid; align-content: start; gap: .6rem; padding-inline-start: clamp(.9rem, 1.8vw, 1.5rem); border-inline-start: 1px solid var(--catalog-border); font-style: normal; font-size: .84rem; }
-[data-solara-store].catalog-modern .catalog-footer-contact a { text-decoration: none; transition: color 180ms ease, transform 180ms ease; }
+[data-solara-store].catalog-modern .catalog-footer-contact a { text-decoration: none; transition: color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease), transform var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease); }
 [data-solara-store].catalog-modern .catalog-footer-contact a:hover,
 [data-solara-store].catalog-modern .catalog-footer-contact a:focus-visible { color: var(--solara-accent); transform: translateX(.2rem); }
 [data-solara-store].catalog-modern .catalog-footer-meta { display: flex; flex: 1 1 100%; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1.5rem; min-width: 0; padding-top: 1rem; border-top: 1px solid var(--catalog-border); grid-column: 1 / -1; }
@@ -2267,11 +2283,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-product-gallery-main { overflow: hidden; border-radius: var(--solara-radius); background: var(--catalog-surface); }
 [data-solara-store].catalog-modern .catalog-product-gallery-main figure { display: none; aspect-ratio: 1 / 1.08; margin: 0; }
 [data-solara-store].catalog-modern .catalog-product-gallery-main figure[data-gallery-active="true"] { display: block; }
-[data-solara-store].catalog-modern .catalog-product-gallery-image { width: 100%; height: 100%; object-fit: contain; }
+[data-solara-store].catalog-modern .catalog-product-gallery-image { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
 [data-solara-store].catalog-modern .catalog-product-gallery-thumbs { display: grid; align-content: start; gap: .5rem; }
 [data-solara-store].catalog-modern .catalog-product-gallery-thumbs button { padding: 0; overflow: hidden; aspect-ratio: 1; border: 1px solid transparent; border-radius: var(--solara-radius); background: var(--catalog-surface); cursor: pointer; }
 [data-solara-store].catalog-modern .catalog-product-gallery-thumbs button[aria-current="true"] { border-color: var(--catalog-ink); }
-[data-solara-store].catalog-modern .catalog-product-gallery-thumb { width: 100%; height: 100%; object-fit: contain; }
+[data-solara-store].catalog-modern .catalog-product-gallery-thumb { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
 [data-solara-store].catalog-modern .catalog-product-info { align-self: start; padding-top: .5rem; }
 [data-solara-store].catalog-modern .catalog-product-info h1 { max-width: 14ch; margin-top: .35rem; font-size: calc(clamp(2.25rem, 4.2vw, 4.7rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.03em; line-height: .92; overflow-wrap: anywhere; }
 [data-solara-store].catalog-modern .catalog-detail-price { display: flex; flex-wrap: wrap; align-items: baseline; gap: .75rem; margin-top: 1.15rem; font-size: 1.55rem; font-weight: 800; }
@@ -2328,7 +2344,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-review h3 { margin-top: .75rem; font-size: 1rem; font-weight: 800; }
 [data-solara-store].catalog-modern .catalog-review blockquote { margin: .65rem 0; color: var(--catalog-muted); font-size: .88rem; overflow-wrap: anywhere; }
 [data-solara-store].catalog-modern .catalog-review small { color: var(--catalog-muted); font-size: .7rem; }
-[data-solara-store].catalog-modern .catalog-cart-drawer { position: fixed; z-index: 50; inset: 0 0 0 auto; display: flex; width: min(440px, 100%); flex-direction: column; padding: 1.25rem; overflow: hidden; transform: translateX(105%); background: var(--catalog-paper); box-shadow: -16px 0 50px color-mix(in srgb, var(--catalog-ink) 14%, transparent); transition: transform var(--solara-motion-normal, 260ms) var(--solara-motion-easing, cubic-bezier(.16,1,.3,1)); }
+[data-solara-store].catalog-modern .catalog-cart-drawer { position: fixed; z-index: 50; inset: 0 0 0 auto; display: flex; width: min(440px, 100%); flex-direction: column; padding: 1.25rem; overflow: hidden; transform: translateX(105%); background: var(--catalog-paper); box-shadow: var(--solara-shadow-overlay); transition: transform var(--solara-motion-normal, 260ms) var(--solara-motion-easing, cubic-bezier(.16,1,.3,1)); }
 [data-solara-store].catalog-modern .catalog-cart-drawer .catalog-cart-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 [data-solara-store].catalog-modern .catalog-cart-drawer[data-cart-empty="true"] .catalog-cart-scroll { flex: 0 0 auto; overflow: hidden; }
 [data-solara-store].catalog-modern .catalog-cart-drawer[data-cart-empty="true"] { bottom: auto; height: auto; max-height: 100dvh; }
@@ -2380,7 +2396,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .solara-cart-page h1,
 [data-solara-store].catalog-modern .solara-checkout-page h1 { font-size: calc(clamp(2.8rem, 6vw, 5.5rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.03em; line-height: .9; }
 [data-solara-store].catalog-modern .solara-category-hero h1 { max-width: 14ch; font-size: calc(clamp(2.4rem, 4.2vw, 4.75rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.03em; line-height: 1.05; overflow-wrap: break-word; text-wrap: balance; }
-[data-solara-store].catalog-modern .solara-category-hero img { width: 100%; aspect-ratio: 16 / 7; object-fit: contain; object-position: center; background: var(--catalog-surface); border-radius: var(--solara-radius); }
+[data-solara-store].catalog-modern .solara-category-hero img { width: 100%; aspect-ratio: 16 / 7; object-fit: cover; object-position: center; background: var(--catalog-surface); border-radius: var(--solara-radius); }
 [data-solara-store].catalog-modern .solara-category-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 1rem 0 1.5rem; padding: .75rem 0; border-block: 1px solid var(--catalog-border); }
 [data-solara-store].catalog-modern .solara-category-toolbar select,
 [data-solara-store].catalog-modern .solara-category-toolbar input { min-height: 38px; padding: .5rem .55rem; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); background: var(--catalog-paper); }
@@ -2432,6 +2448,16 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .solara-editorial-page .solara-story-grid > div { min-width: 0; }
 [data-solara-store].catalog-modern .solara-editorial-page .solara-values-grid { margin-bottom: clamp(3rem, 7vw, 6rem); }
 [data-solara-store].catalog-modern .solara-editorial-page .solara-values-grid article { min-width: 0; padding: 1.5rem 1.25rem 2rem; }
+[data-solara-store].catalog-modern .solara-legal-article { max-width: 46rem; padding-block: clamp(2rem, 5vw, 3.5rem) clamp(3rem, 6vw, 5rem); color: var(--catalog-ink); line-height: 1.7; }
+[data-solara-store].catalog-modern .solara-legal-article h2 { margin: 2.8rem 0 1rem; font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(1.35rem, 2.8vw, 1.75rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; text-wrap: balance; }
+[data-solara-store].catalog-modern .solara-legal-article h2:first-child { margin-top: 0.5rem; }
+[data-solara-store].catalog-modern .solara-legal-article h3 { margin: 2rem 0 0.75rem; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; }
+[data-solara-store].catalog-modern .solara-legal-article p { margin: 0 0 1.15rem; color: var(--catalog-ink); font-size: 0.95rem; overflow-wrap: anywhere; }
+[data-solara-store].catalog-modern .solara-legal-article ul, [data-solara-store].catalog-modern .solara-legal-article ol { margin: 0 0 1.5rem 1.25rem; padding: 0; display: grid; gap: 0.5rem; color: var(--catalog-ink); font-size: 0.92rem; line-height: 1.6; }
+[data-solara-store].catalog-modern .solara-legal-article li { padding-left: 0.25rem; }
+[data-solara-store].catalog-modern .solara-legal-article li::marker { color: var(--catalog-ink); }
+[data-solara-store].catalog-modern .solara-legal-article a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+[data-solara-store].catalog-modern .solara-legal-article em { color: var(--catalog-muted); font-style: normal; font-size: 0.85rem; }
 [data-solara-store].catalog-modern .solara-cart-page-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 2rem; padding: 2rem 0 5rem; }
 [data-solara-store].catalog-modern .solara-cart-page-grid > aside { align-self: start; padding: 1.25rem; border-radius: var(--solara-radius); background: var(--catalog-surface); }
 [data-solara-store].catalog-modern .solara-cart-summary { display: grid; gap: .75rem; }
@@ -2452,7 +2478,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   [data-solara-store].catalog-modern .catalog-header-actions { gap: .25rem; }
   [data-solara-store].catalog-modern .catalog-cart-link span { display: none; }
   [data-solara-store].catalog-modern .catalog-mobile-menu[hidden] { display: none; }
-  [data-solara-store].catalog-modern .catalog-mobile-menu { position: fixed; z-index: 40; inset: .5rem; display: block; padding: 1.1rem 1.1rem 2rem; overflow: auto; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); background: var(--catalog-paper); box-shadow: 0 24px 70px color-mix(in srgb, var(--catalog-ink) 20%, transparent), 0 0 0 100vmax color-mix(in srgb, var(--catalog-ink) 22%, transparent); -webkit-user-select: none; user-select: none; }
+  [data-solara-store].catalog-modern .catalog-mobile-menu { position: fixed; z-index: 40; inset: .5rem; display: block; padding: 1.1rem 1.1rem 2rem; overflow: auto; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); background: var(--catalog-paper); box-shadow: var(--solara-shadow-overlay), 0 0 0 100vmax color-mix(in srgb, var(--catalog-ink) 22%, transparent); -webkit-user-select: none; user-select: none; }
   [data-solara-store].catalog-modern .catalog-mobile-menu__header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 3rem; }
   [data-solara-store].catalog-modern .catalog-mobile-brand { color: var(--catalog-ink); font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(1.7rem, 8vw, 2.3rem); letter-spacing: -.06em; text-decoration: none; min-width: 0; overflow-wrap: anywhere; max-width: 100%; }
   [data-solara-store].catalog-modern .catalog-mobile-menu__close { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); background: var(--catalog-paper); color: var(--catalog-ink); cursor: pointer; }
@@ -2529,8 +2555,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   [data-solara-store].catalog-modern .catalog-newsletter-inner { align-items: stretch; flex-direction: column; margin-bottom: 2rem; }
   [data-solara-store].catalog-modern .catalog-newsletter-action { width: 100%; }
   [data-solara-store].catalog-modern .catalog-footer-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(1.5rem * var(--solara-space-scale, 1)) calc(1rem * var(--solara-space-scale, 1)); padding-top: calc(2rem * var(--solara-space-scale, 1)); }
-  [data-solara-store].catalog-modern .catalog-footer-brand,
-  [data-solara-store].catalog-modern .catalog-footer-inner address { grid-column: 1 / -1; }
+  [data-solara-store].catalog-modern .catalog-footer-brand { grid-column: 1 / -1; }
+  [data-solara-store].catalog-modern .catalog-footer-inner address { grid-column: auto; }
   [data-solara-store].catalog-modern .catalog-product-detail { width: min(calc(100% - 2rem), var(--solara-container)); }
   [data-solara-store].catalog-modern .catalog-product-detail-inner { display: flex; flex-direction: column; gap: 1.5rem; padding-top: 1.25rem; }
   [data-solara-store].catalog-modern .catalog-product-gallery { display: flex; flex-direction: column; }
@@ -2561,10 +2587,24 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 @media (min-width: 768px) and (max-width: 1199px) {
   [data-solara-store].catalog-modern .catalog-footer-inner {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: calc(1.5rem * var(--solara-space-scale, 1));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: calc(1.75rem * var(--solara-space-scale, 1)) calc(1.25rem * var(--solara-space-scale, 1));
+    padding-top: calc(2rem * var(--solara-space-scale, 1));
   }
   [data-solara-store].catalog-modern .catalog-footer-brand {
+    grid-column: 1 / -1;
+  }
+  [data-solara-store].catalog-modern .catalog-footer-inner address {
+    grid-column: auto;
+  }
+}
+@media (max-width: 560px) {
+  [data-solara-store].catalog-modern .catalog-footer-inner {
+    grid-template-columns: 1fr;
+    gap: calc(1.5rem * var(--solara-space-scale, 1));
+  }
+  [data-solara-store].catalog-modern .catalog-footer-brand,
+  [data-solara-store].catalog-modern .catalog-footer-inner address {
     grid-column: 1 / -1;
   }
 }
@@ -2614,7 +2654,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   animation: solara-motion-fade var(--catalog-v2-motion-component) var(--catalog-v2-ease-out) both;
 }
 .cm.v2 [data-solara-module="catalog-header"][data-scrolled="true"] {
-  box-shadow: 0 12px 32px color-mix(in srgb, var(--catalog-ink), transparent 92%);
+  box-shadow: var(--catalog-v2-shadow-elevated);
   backdrop-filter: blur(14px);
 }
 .cm.v2 .catalog-announcement-inner {
@@ -2826,7 +2866,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-newsletter-action:hover,
 .cm.v2 .solara-primary-action:hover {
   transform: translateY(-3px);
-  box-shadow: 0 14px 30px color-mix(in srgb, var(--catalog-ink), transparent 82%);
+  box-shadow: var(--catalog-v2-shadow-elevated);
 }
 .cm.v2 .catalog-hero-media {
   min-height: 100%;
@@ -2855,10 +2895,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 [data-solara-module="catalog-hero"] [data-motion-zone]{animation:none!important}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-line{display:block;overflow:hidden}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-rule{width:3.5rem;height:1px;background:color-mix(in srgb,var(--catalog-ink) 35%,transparent);transform-origin:left;margin-block:1.35rem 1.05rem}
-.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.5rem 2.25rem;margin:2rem 0 1rem;padding:0;list-style:none}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(1.5rem * var(--catalog-v2-space, 1)) calc(2.25rem * var(--catalog-v2-space, 1));margin:2rem 0 1rem;padding:0;list-style:none}
 /* Los beneficios del copy del hero van en una caja con blur de fondo (desktop,
    sobre el velo y la imagen): se aísla el bloque del fondo fotográfico. */
-.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits--copy{align-self:stretch;margin-inline:0;padding:.95rem 1.15rem;border-radius:0;background:color-mix(in srgb,var(--catalog-paper) 38%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid color-mix(in srgb,var(--catalog-ink) 10%,transparent)}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits--copy{align-self:stretch;margin-inline:0;padding:.95rem 1.15rem;border-radius:var(--catalog-v2-radius);background:color-mix(in srgb,var(--catalog-paper) 38%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid color-mix(in srgb,var(--catalog-ink) 10%,transparent)}
 /* La banda duplicada (mobile) no existe en desktop: la copia interna queda visible. */
 .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band{display:none}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit{display:flex;align-items:center;gap:.65rem;min-width:0}
@@ -2868,8 +2908,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-copy small{color:var(--catalog-muted)}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-icon,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit strong{transition:transform var(--catalog-v2-motion-control) var(--catalog-v2-ease-out),color var(--catalog-v2-motion-control)}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit:hover .catalog-hero-benefit-icon,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit:focus-visible .catalog-hero-benefit-icon{transform:translateY(-2px)}
-.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit:hover strong,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit:focus-visible strong{color:var(--catalog-sale)}
-.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action{position:relative;display:inline-flex;align-items:center;gap:.6rem;overflow:hidden;isolation:isolate}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit:hover strong,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit:focus-visible strong{color:var(--solara-accent)}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action{position:relative;display:inline-flex;align-items:center;gap:calc(.6rem * var(--catalog-v2-space, 1));overflow:hidden;isolation:isolate}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action::before{content:"";position:absolute;inset:0;z-index:-1;background:color-mix(in srgb,var(--solara-accent) 82%,var(--solara-accent-text));transform:translateY(101%);transition:transform var(--catalog-v2-motion-control) var(--catalog-v2-ease-out)}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:hover,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:focus-visible{transform:none;box-shadow:none}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:hover::before,.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-actions .catalog-primary-action:focus-visible::before{transform:translateY(0)}
@@ -2930,7 +2970,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-auto-flow: row;
   grid-auto-columns: auto;
-  gap: clamp(1rem, 1.6vw, 1.5rem);
+  gap: calc(clamp(1rem, 1.6vw, 1.5rem) * var(--catalog-v2-space, 1));
   overflow: visible;
   overscroll-behavior: auto;
   scroll-snap-type: none;
@@ -2947,7 +2987,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-product-grid {
   grid-template-columns: repeat(auto-fill,minmax(min(100% / 5, 20rem),1fr));
   justify-content: start;
-  gap: clamp(1.5rem, 2.4vw, 3rem) clamp(.8rem, 1.4vw, 1.6rem);
+  gap: calc(clamp(1.5rem, 2.4vw, 3rem) * var(--catalog-v2-space, 1)) calc(clamp(.8rem, 1.4vw, 1.6rem) * var(--catalog-v2-space, 1));
   margin: 0 auto;
 }
 @media (min-width: 1200px) {
@@ -3026,7 +3066,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   z-index: 2;
   transform: scaleY(0);
   transform-origin: bottom;
-  background: var(--catalog-sale);
+  background: var(--solara-accent);
   opacity: 0;
   transition:
     transform var(--catalog-v2-motion-component) var(--catalog-v2-ease-out),
@@ -3043,7 +3083,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-product-media {
   aspect-ratio: 1;
   border-radius: 0;
-  box-shadow: 0 0 0 1px var(--catalog-border);
+  box-shadow: 0 0 0 var(--solara-border-width, 1px) var(--catalog-border);
 }
 .cm.v2 .catalog-product-card-image {
   object-fit: cover;
@@ -3145,7 +3185,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-category-bento-item:hover,
 .cm.v2 .catalog-category-bento-item:focus-visible {
   transform: translateY(-4px);
-  box-shadow: 0 18px 36px color-mix(in srgb, var(--catalog-ink), transparent 86%);
+  box-shadow: var(--catalog-v2-shadow-card);
 }
 .cm.v2 .catalog-category-bento-item:hover img,
 .cm.v2 .catalog-category-bento-item:focus-visible img {
@@ -3159,7 +3199,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   width: fit-content;
   max-width: calc(100% - 1.5rem);
   margin: .75rem;
-  padding: .25rem .5rem;
+  padding: .4rem .75rem;
   border-radius: var(--catalog-v2-radius);
   background: transparent;
   color: var(--catalog-ink);
@@ -3273,7 +3313,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-footer-made a:hover,
 .cm.v2 .catalog-footer-made a:focus-visible {
-  color: var(--catalog-sale);
+  color: var(--solara-accent);
 }
 .cm.v2 .catalog-footer-inner {
   padding-top: clamp(2rem, 4.6vw, 4.6rem);
@@ -3443,7 +3483,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-cart-drawer {
   width: min(520px, 100%);
   padding: clamp(1.5rem, 3vw, 2.5rem);
-  box-shadow: -24px 0 80px color-mix(in srgb, var(--catalog-ink), transparent 80%);
+  box-shadow: var(--catalog-v2-shadow-overlay);
   transition: transform var(--catalog-v2-motion-component) var(--catalog-v2-ease-out);
 }
 .cm.v2 .catalog-cart-drawer[aria-hidden="true"] {
@@ -3568,8 +3608,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .solara-checkout-fields input:focus-visible,
 .cm.v2 .solara-checkout-fields textarea:focus-visible {
-  border-color: var(--catalog-sale);
-  outline: 2px solid color-mix(in srgb, var(--catalog-sale), transparent 35%);
+  border-color: var(--solara-accent);
+  outline: 2px solid color-mix(in srgb, var(--solara-accent), transparent 35%);
   outline-offset: 2px;
 }
 .cm.v2 .solara-checkout-fields .solara-primary-action {
@@ -3711,16 +3751,16 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: .75rem;
+    gap: calc(.75rem * var(--catalog-v2-space, 1));
     width: min(calc(100% - 3rem), var(--catalog-v2-wide));
-    margin: 1.25rem auto 2.25rem;
+    margin: 1rem auto 1.75rem;
     padding: 0;
   }
   .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band .catalog-hero-benefit {
-    gap: .5rem;
+    gap: .65rem;
   }
   .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band .catalog-hero-benefit + .catalog-hero-benefit {
-    padding-left: .85rem;
+    padding-left: .75rem;
   }
 }
 @media (max-width: 767px) {
@@ -3817,10 +3857,25 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     display: none;
   }
   .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band {
-    display: block;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: .75rem;
     width: min(calc(100% - 1.5rem), var(--catalog-v2-wide));
-    margin: 1.25rem auto 2.25rem;
+    margin: .75rem auto 1.5rem;
     padding: 0;
+  }
+  .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band .catalog-hero-benefit {
+    gap: .65rem;
+  }
+  .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band .catalog-hero-benefit + .catalog-hero-benefit {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band .catalog-hero-benefit-copy {
+    gap: .25rem;
+  }
+  .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band .catalog-hero-benefit-copy small {
+    line-height: 1.35;
   }
   .cm.v2 .catalog-product-grid-section,
   .cm.v2 .catalog-testimonials-section {
@@ -3866,12 +3921,12 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     border-bottom: 0;
     border-radius: var(--catalog-v2-radius) var(--catalog-v2-radius) 0 0;
     background: var(--catalog-paper);
-    box-shadow: 0 -20px 70px color-mix(in srgb, var(--catalog-ink), transparent 68%), 0 0 0 100vmax color-mix(in srgb, var(--catalog-ink), transparent 50%);
+    box-shadow: var(--catalog-v2-shadow-overlay), 0 0 0 100vmax color-mix(in srgb, var(--catalog-ink), transparent 50%);
   }
   .cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
     max-width: calc(100% - .8rem);
     margin: .4rem;
-    padding: .45rem .65rem;
+    padding: .55rem .85rem;
     font-family: var(--solara-font-body, Arial, sans-serif);
     font-size: .82rem;
     font-weight: 600;
@@ -3955,11 +4010,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     border-left: 0;
   }
   .cm.v2 .catalog-cart-drawer {
-    inset: auto 0 0;
+    inset: 0;
     width: 100%;
-    height: min(88dvh, 46rem);
-    max-height: 88dvh;
-    border-radius: var(--catalog-v2-radius) var(--catalog-v2-radius) 0 0;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
     transform: translateY(105%);
   }
   .cm.v2 .catalog-cart-drawer[data-open="true"] {
@@ -4238,6 +4293,14 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .contact-channel-row {
   min-height: 4.7rem;
 }
+.cm.v2 [data-solara-module="contact-channels"] > .contact-channels {
+  border-top: 0;
+}
+.cm.v2 [data-solara-module="contact-channels"] .contact-channel-row,
+.cm.v2 [data-solara-module="contact-channels"] .contact-channel-row:last-child {
+  border-top: 0;
+  border-bottom: 0;
+}
 .cm.v2 .contact-channel-row > span:last-child {
   color: var(--catalog-ink);
   transition: color var(--catalog-v2-motion-control), transform var(--catalog-v2-motion-control) var(--catalog-v2-ease-out);
@@ -4246,6 +4309,14 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .contact-channel-row:focus-visible > span:last-child {
   color: var(--solara-accent);
   transform: translateX(3px);
+}
+@media (max-width: 767px) {
+  .cm.v2 [data-solara-module="contact-channels"] .contact-channel-list {
+    row-gap: calc(.75rem * var(--catalog-v2-space, 1));
+  }
+  .cm.v2 [data-solara-module="contact-channels"] .contact-channel-row {
+    padding-block: .15rem;
+  }
 }
 .cm.v2 .contact-help,
 .cm.v2 .contact-faq,
@@ -4281,7 +4352,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .contact-help-item > span:last-child {
   align-self: end;
-  color: var(--catalog-sale);
+  color: var(--solara-accent);
   font-size: .78rem;
 }
 .cm.v2 .contact-whatsapp-cta {
@@ -4335,7 +4406,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   line-height: 1.45;
 }
 .cm.v2 .contact-purchase-info a {
-  color: var(--catalog-sale);
+  color: var(--solara-accent);
   font-size: .75rem;
   text-decoration: none;
 }
@@ -4637,7 +4708,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
     max-width: calc(100% - .8rem);
     margin: .4rem;
-    padding: .45rem .65rem;
+    padding: .55rem .85rem;
     font-family: var(--solara-font-body, Arial, sans-serif);
     font-size: .82rem;
     font-weight: 600;
@@ -4711,7 +4782,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
     max-width: calc(100% - .8rem);
     margin: .4rem;
-    padding: .45rem .65rem;
+    padding: .55rem .85rem;
     font-family: var(--solara-font-body, Arial, sans-serif);
     font-size: .82rem;
     font-weight: 600;
@@ -4770,6 +4841,58 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-footer-meta .catalog-footer-made {
     flex: 0 1 auto;
     text-align: center;
+  }
+}
+@media (max-width: 1199px) and (min-width: 768px) {
+  .cm.v2 .catalog-footer-inner {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.75rem 1.5rem;
+  }
+  .cm.v2 .catalog-footer-brand {
+    grid-column: 1 / -1;
+  }
+  .cm.v2 .catalog-footer-inner address {
+    grid-column: auto;
+  }
+}
+@media (max-width: 767px) {
+  .cm.v2 .catalog-footer-inner {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem 1rem;
+    padding-top: clamp(2rem, 4.6vw, 4.6rem);
+  }
+  .cm.v2 .catalog-footer-brand {
+    grid-column: 1 / -1;
+  }
+  .cm.v2 .catalog-footer-inner address {
+    grid-column: auto;
+  }
+}
+@media (max-width: 560px) {
+  .cm.v2 .catalog-footer-inner {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  .cm.v2 .catalog-footer-brand,
+  .cm.v2 .catalog-footer-inner address {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 900px) {
+  .cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
+    max-width: calc(100% - .8rem);
+    margin: .4rem;
+    padding: .55rem .85rem;
+    font-family: var(--solara-font-body, Arial, sans-serif);
+    font-size: .82rem;
+    font-weight: 600;
+    letter-spacing: -.02em;
+    line-height: 1.16;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 }
 @media (min-width: 451px) and (max-width: 767px) {
@@ -4847,9 +4970,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .about-principles-grid, .cm.v2 .about-experience-grid, .cm.v2 .about-stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; border: 1px solid var(--catalog-border); }
   .cm.v2 .about-principle-item, .cm.v2 .about-experience-grid article, .cm.v2 .about-stats-grid article { display: grid; align-content: start; gap: .75rem; min-width: 0; min-height: 12rem; padding: 1.25rem; border-right: 1px solid var(--catalog-border); }
   .cm.v2 .about-principle-item:last-child, .cm.v2 .about-experience-grid article:last-child, .cm.v2 .about-stats-grid article:last-child { border-right: 0; }
-  .cm.v2 .solara-about-icon { display: inline-grid; place-items: center; width: 1.3rem; height: 1.3rem; color: var(--catalog-sale); }
+  .cm.v2 .solara-about-icon { display: inline-grid; place-items: center; width: 1.3rem; height: 1.3rem; color: var(--solara-accent); }
   .cm.v2 .solara-about-icon svg { width: 100%; height: 100%; }
-  .cm.v2 .about-principle-number, .cm.v2 .about-process-number { color: var(--catalog-sale); font-size: .78rem; letter-spacing: .08em; }
+  .cm.v2 .about-principle-number, .cm.v2 .about-process-number { color: var(--solara-accent); font-size: .78rem; letter-spacing: .08em; }
   /* Jerarquia en grillas about: h3 con peso display, body con aire vertical. */
   .cm.v2 .about-principle-item h3, .cm.v2 .about-experience-grid h3 { margin: 0 0 .35rem; font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: 1.18rem; font-weight: 500; letter-spacing: -.01em; }
   .cm.v2 .about-principle-item p, .cm.v2 .about-experience-grid article > p { color: var(--catalog-muted); font-size: .85rem; line-height: 1.55; }
@@ -4860,14 +4983,14 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .about-process-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin-top: 1.5rem; border-block: 1px solid var(--catalog-border); }
   .cm.v2 .about-process-item { position: relative; display: grid; gap: .75rem; min-height: 11rem; padding: 1.4rem 1.2rem; border-right: 1px solid var(--catalog-border); }
   .cm.v2 .about-process-item:last-child { border-right: 0; }
-  .cm.v2 .about-process-item a { align-self: end; color: var(--catalog-sale); font-size: .78rem; text-decoration: none; }
+  .cm.v2 .about-process-item a { align-self: end; color: var(--solara-accent); font-size: .78rem; text-decoration: none; }
   .cm.v2 .about-manifesto, .cm.v2 .about-products-cta { padding: clamp(3rem, 8vw, 8rem) clamp(1.5rem, 7vw, 8rem); background: var(--catalog-ink); color: var(--catalog-paper); }
   .cm.v2 .about-manifesto blockquote { max-width: 18ch; margin: 0; font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(2.6rem, 6vw, 7rem); letter-spacing: -.07em; line-height: .92; }
-  .cm.v2 .about-manifesto-accent { margin: 2rem 0 0; color: var(--catalog-sale); font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; }
+  .cm.v2 .about-manifesto-accent { margin: 2rem 0 0; color: var(--solara-accent); font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; }
   .cm.v2 .about-team-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.25rem; }
   .cm.v2 .about-team-member img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; margin-bottom: 1rem; }
   .cm.v2 .about-team-member h3 { font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: 1.35rem; font-weight: 500; }
-  .cm.v2 .about-team-member-role { display: block; margin: .25rem 0 .7rem; color: var(--catalog-sale); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; }
+  .cm.v2 .about-team-member-role { display: block; margin: .25rem 0 .7rem; color: var(--solara-accent); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; }
   .cm.v2 .about-stats-grid { border-inline: 0; }
   .cm.v2 .about-stats-grid article { min-height: 9rem; padding-inline: 0; border-right: 0; }
   .cm.v2 .about-products-cta h2 { max-width: 10ch; margin: 0 0 1rem; font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(2.8rem, 6vw, 7rem); font-weight: 500; letter-spacing: -.07em; line-height: .9; }
@@ -5053,8 +5176,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     .cm.v2 .catalog-hero-page .catalog-hero-copy .catalog-hero-body { color: color-mix(in srgb, var(--catalog-paper) 82%, transparent); }
     .cm.v2 .catalog-hero-page .catalog-hero-background { display: none; }
     .cm.v2 .catalog-hero-page .catalog-hero-benefits--copy { display: none; }
-    .cm.v2 .catalog-hero-page .catalog-hero-benefits--band { display: grid; grid-template-columns: 1fr; gap: 1rem; width: min(calc(100% - 1.5rem), var(--catalog-v2-wide)); margin: 1.25rem auto 2.25rem; }
+    .cm.v2 .catalog-hero-page .catalog-hero-benefits--band { display: grid; grid-template-columns: 1fr; gap: .75rem; width: min(calc(100% - 1.5rem), var(--catalog-v2-wide)); margin: .75rem auto 1.5rem; padding: 0; }
+    .cm.v2 .catalog-hero-page .catalog-hero-benefit { gap: .65rem; }
     .cm.v2 .catalog-hero-page .catalog-hero-benefit + .catalog-hero-benefit { padding-left: 0; border-left: 0; }
+    .cm.v2 .catalog-hero-page .catalog-hero-benefit-copy { gap: .25rem; }
+    .cm.v2 .catalog-hero-page .catalog-hero-benefit-copy small { line-height: 1.35; }
     .cm.v2 .contact-hero-module .contact-hero-links,
     .cm.v2 .solara-about-sections > [data-solara-module]:not([data-solara-module="about-hero"]),
     .cm.v2 .solara-contact-sections > [data-solara-module]:not([data-solara-module="contact-hero"]) {
@@ -5329,6 +5455,83 @@ export const STORE_THEME_TOKEN_STYLES = `
 }
 `;
 
+export const STOREFRONT_PERF_STYLES = `
+[data-solara-store] .catalog-product-grid,
+[data-solara-store] .catalog-category-bento {
+  contain: layout paint;
+  content-visibility: auto;
+  contain-intrinsic-size: 600px 400px;
+}
+[data-solara-store] .catalog-product-grid img,
+[data-solara-store] .catalog-category-bento img {
+  content-visibility: auto;
+  contain-intrinsic-size: 300px 200px;
+}
+`;
+
+export const CATALOG_UNIFIED_CTA_STYLES = `
+[data-solara-store].catalog-modern .catalog-footer-whatsapp,
+[data-solara-store].catalog-modern .catalog-newsletter-action,
+[data-solara-store].catalog-modern .solara-consumer-rights a,
+[data-solara-store].catalog-modern .catalog-product-add,
+[data-solara-store].catalog-modern .catalog-cart-drawer .catalog-primary-action,
+[data-solara-store].catalog-modern .solara-cart-page .catalog-primary-action,
+[data-solara-store].catalog-modern .catalog-cart-drawer header button,
+[data-solara-store].catalog-modern .catalog-cart-drawer .catalog-secondary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: min(100%, 16rem);
+  min-height: 2.75rem;
+  margin-top: 1rem;
+  padding: .65rem .8rem;
+  border: 1px solid var(--solara-accent);
+  border-radius: var(--solara-radius);
+  color: var(--solara-accent);
+  background: transparent;
+  font-size: .78rem;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease), color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease), border-color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease);
+}
+[data-solara-store].catalog-modern .catalog-footer-whatsapp:hover,
+[data-solara-store].catalog-modern .catalog-footer-whatsapp:focus-visible,
+[data-solara-store].catalog-modern .catalog-newsletter-action:hover,
+[data-solara-store].catalog-modern .catalog-newsletter-action:focus-visible,
+[data-solara-store].catalog-modern .solara-consumer-rights a:hover,
+[data-solara-store].catalog-modern .solara-consumer-rights a:focus-visible,
+[data-solara-store].catalog-modern .catalog-product-add:hover,
+[data-solara-store].catalog-modern .catalog-product-add:focus-visible,
+[data-solara-store].catalog-modern .catalog-cart-drawer .catalog-primary-action:hover,
+[data-solara-store].catalog-modern .catalog-cart-drawer .catalog-primary-action:focus-visible,
+[data-solara-store].catalog-modern .solara-cart-page .catalog-primary-action:hover,
+[data-solara-store].catalog-modern .solara-cart-page .catalog-primary-action:focus-visible,
+[data-solara-store].catalog-modern .catalog-cart-drawer header button:hover,
+[data-solara-store].catalog-modern .catalog-cart-drawer header button:focus-visible,
+[data-solara-store].catalog-modern .catalog-cart-drawer .catalog-secondary-action:hover,
+[data-solara-store].catalog-modern .catalog-cart-drawer .catalog-secondary-action:focus-visible {
+  background: var(--solara-accent);
+  color: var(--solara-accent-text);
+  border-color: var(--solara-accent);
+  transform: none;
+  box-shadow: none;
+}
+[data-solara-store].catalog-modern .solara-consumer-rights {
+  grid-column: 1;
+  justify-self: start;
+  width: min(100%, 16rem);
+  max-width: none;
+  margin-top: .5rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+}
+[data-solara-store].catalog-modern .catalog-newsletter-inner { gap: calc(1.5rem * var(--solara-space-scale, 1)); }
+`;
+
 export const MODULE_STYLES = `${STORE_BASE_STYLES}\n${Object.values(MODULE_STYLE_BLOCKS).join(
   "\n",
-)}\n${STORE_THEME_TOKEN_STYLES}`;
+)}\n${STORE_THEME_TOKEN_STYLES}\n${STOREFRONT_PERF_STYLES}\n${CATALOG_UNIFIED_CTA_STYLES}`;

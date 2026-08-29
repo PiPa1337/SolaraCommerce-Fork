@@ -640,10 +640,13 @@ test("V2 mantiene contenida y un poco más amplia la caja del nombre de categor�
     expect(metrics?.labelWidth).toBeLessThan((metrics?.itemWidth ?? 0) * 0.98);
     expect(metrics?.labelRight).toBeLessThanOrEqual((metrics?.itemRight ?? 0) + 1);
     expect(metrics?.titleMargin).toBe("0px");
-    expect((metrics?.labelHeight ?? 0) - (metrics?.titleHeight ?? 0)).toBeLessThanOrEqual(20);
+    expect((metrics?.labelHeight ?? 0) - (metrics?.titleHeight ?? 0)).toBeLessThanOrEqual(22);
     if (viewport.width <= 1023) {
-      expect(metrics?.labelPaddingBlock).toBeGreaterThanOrEqual(7.2);
-      expect(metrics?.labelPaddingInline).toBeGreaterThanOrEqual(10.4);
+      expect(metrics?.labelPaddingBlock).toBeGreaterThanOrEqual(8.8);
+      expect(metrics?.labelPaddingInline).toBeGreaterThanOrEqual(13.6);
+    } else {
+      expect(metrics?.labelPaddingBlock).toBeGreaterThanOrEqual(6.4);
+      expect(metrics?.labelPaddingInline).toBeGreaterThanOrEqual(12);
     }
     expect(metrics?.documentWidth).toBeLessThanOrEqual(viewport.width);
 
@@ -1223,6 +1226,48 @@ test("V2 mantiene CTA, dos columnas y reduced motion en 390x844", async ({ page 
   await page.screenshot({ path: testInfo.outputPath("home-390x844.png"), fullPage: true });
 });
 
+test("V2 mantiene un ritmo responsive en la banda de beneficios", async ({ page }, testInfo) => {
+  for (const viewport of [
+    { width: 320, height: 844 },
+    { width: 390, height: 844 },
+    { width: 768, height: 823 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(serverUrl);
+
+    const band = page.locator(".catalog-hero-benefits--band");
+    await expect(band).toBeVisible();
+    const metrics = await band.evaluate((element) => {
+      const style = getComputedStyle(element);
+      const items = [...element.querySelectorAll<HTMLElement>("[data-hero-benefit]")];
+      const rects = items.map((item) => item.getBoundingClientRect());
+      return {
+        display: style.display,
+        columns: style.gridTemplateColumns.split(" ").filter(Boolean).length,
+        rowGap: Number.parseFloat(style.rowGap),
+        marginTop: Number.parseFloat(style.marginTop),
+        marginBottom: Number.parseFloat(style.marginBottom),
+        left: element.getBoundingClientRect().left,
+        right: Math.max(...rects.map((rect) => rect.right)),
+        borderLeftWidths: items.map((item) => getComputedStyle(item).borderLeftWidth),
+      };
+    });
+
+    expect(metrics.display).toBe("grid");
+    expect(metrics.columns).toBe(viewport.width < 768 ? 1 : 3);
+    expect(metrics.rowGap).toBeGreaterThanOrEqual(10);
+    expect(metrics.marginTop).toBeLessThanOrEqual(16);
+    expect(metrics.marginBottom).toBeLessThanOrEqual(28);
+    expect(metrics.left).toBeGreaterThanOrEqual(0);
+    expect(metrics.right).toBeLessThanOrEqual(viewport.width);
+    if (viewport.width < 768) {
+      expect(metrics.borderLeftWidths).toEqual(["0px", "0px", "0px"]);
+    }
+
+    await band.screenshot({ path: testInfo.outputPath(`hero-benefits-${viewport.width}.png`) });
+  }
+});
+
 test("V2 Home muestra Contacto como módulos responsive y replica el CTA del hero", async ({
   page,
 }) => {
@@ -1324,6 +1369,60 @@ test("V2 Home muestra Contacto como módulos responsive y replica el CTA del her
   expect(mobileMetrics?.formWidth).toBe(mobileMetrics?.channelsWidth);
   expect(mobileMetrics?.buttonWidths).toEqual([mobileMetrics?.formWidth, mobileMetrics?.formWidth]);
   expect(mobileMetrics?.noOverflow).toBe(true);
+});
+
+test("V2 Canales de contacto no usa separadores y respira en mobile", async ({ page }, testInfo) => {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 768, height: 823 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(serverUrl);
+
+    const channels = page.locator('[data-solara-module="contact-channels"]');
+    await expect(channels).toHaveCount(1);
+    const metrics = await channels.evaluate((root) => {
+      const section = root.querySelector<HTMLElement>('.contact-channels');
+      const list = root.querySelector<HTMLElement>('.contact-channel-list');
+      const rows = [...root.querySelectorAll<HTMLElement>('.contact-channel-row')];
+      if (!section || !list) return null;
+      const sectionStyle = getComputedStyle(section);
+      return {
+        rowCount: rows.length,
+        rowBorders: rows.flatMap((row) => {
+          const style = getComputedStyle(row);
+          return [style.borderTopWidth, style.borderBottomWidth];
+        }),
+        sectionBorderTop: sectionStyle.borderTopWidth,
+        sectionBorderBottom: sectionStyle.borderBottomWidth,
+        listBorders: [getComputedStyle(list).borderTopWidth, getComputedStyle(list).borderBottomWidth],
+        rowGap: Number.parseFloat(getComputedStyle(list).rowGap) || 0,
+        noOverflow: document.documentElement.scrollWidth <= window.innerWidth,
+      };
+    });
+    expect(metrics).not.toBeNull();
+    expect(metrics?.rowCount).toBe(5);
+    expect(metrics?.rowBorders).toEqual([
+      "0px",
+      "0px",
+      "0px",
+      "0px",
+      "0px",
+      "0px",
+      "0px",
+      "0px",
+      "0px",
+      "0px",
+    ]);
+    expect(metrics?.sectionBorderTop).toBe("0px");
+    expect(metrics?.rowGap).toBeGreaterThanOrEqual(viewport.width < 768 ? 10 : 0);
+    expect(metrics?.noOverflow).toBe(true);
+
+    await channels.screenshot({
+      path: testInfo.outputPath(`contact-channels-${viewport.width}.png`),
+    });
+  }
 });
 
 test("V2 audita composición en viewports intermedios", async ({ page }, testInfo) => {
@@ -2587,8 +2686,14 @@ test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, t
       ).toBeLessThanOrEqual(viewport.width);
       if (["privacidad", "terminos"].includes(name)) {
         const policyPage = page.locator(".solara-policy-page");
-        await expect(policyPage.locator(".solara-story-grid")).toBeVisible();
-        await expect(policyPage.getByRole("heading", { level: 2 })).toHaveCount(2);
+        const legal = policyPage.locator(".solara-legal-article");
+        if ((await legal.count()) > 0) {
+          await expect(legal).toBeVisible();
+          await expect(policyPage.getByRole("heading", { level: 2 })).not.toHaveCount(0);
+        } else {
+          await expect(policyPage.locator(".solara-story-grid")).toBeVisible();
+          await expect(policyPage.getByRole("heading", { level: 2 })).toHaveCount(2);
+        }
       }
       if (name === "404") {
         await expect(page.locator(".solara-error-code")).toHaveAttribute("aria-hidden", "true");

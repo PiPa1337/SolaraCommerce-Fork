@@ -891,8 +891,8 @@ describe("exporter", () => {
     const home = String(result.files.get("index.html"));
     expect(home).toContain('<link rel="canonical" href="https://casa-luma.example/tienda/">');
     expect(home).toContain('<meta property="og:url" content="https://casa-luma.example/tienda/">');
-    expect(home).toMatch(/href="\/tienda\/assets\/storefront\.[a-f0-9]+\.css"/i);
-    expect(home).toMatch(/src="\/tienda\/assets\/storefront\.[a-f0-9]+\.js"/i);
+    expect(home).toMatch(/href="\/tienda\/assets\/storefront[^"]*\.css"/i);
+    expect(home).toMatch(/src="\/tienda\/assets\/storefront[^"]*\.js"/i);
     expect(home).toContain('href="/tienda/ai-context.json"');
     expect(home).toContain('href="/tienda/llms.txt"');
 

@@ -356,19 +356,34 @@ type PendingNavigationDelete =
 /** Clave de localStorage del estado plegado del Resumen (R8-B1): por tienda,
  *  con el mismo patrón que el pane del editor en Studio.tsx. */
 const COLLAPSED_SECTIONS_KEY = "solara-resumen-collapsed";
+const DEFAULT_COLLAPSED_SECTIONS = [
+  "whatsapp",
+  "domain",
+  "price-format",
+  "navigation",
+  "pages",
+  "public-copy",
+] as const;
 
-function readCollapsedSections(projectId: string): ReadonlySet<string> {
+function defaultCollapsedSections(): ReadonlySet<string> {
+  return new Set(DEFAULT_COLLAPSED_SECTIONS);
+}
+
+function readCollapsedSections(
+  projectId: string,
+  preferCompactStart: boolean,
+): ReadonlySet<string> {
   try {
     const raw = window.localStorage.getItem(`${COLLAPSED_SECTIONS_KEY}:${projectId}`);
-    if (!raw) return new Set();
+    if (!raw) return preferCompactStart ? defaultCollapsedSections() : new Set();
     const parsed: unknown = JSON.parse(raw);
     if (Array.isArray(parsed)) {
       return new Set(parsed.filter((value): value is string => typeof value === "string"));
     }
   } catch {
-    // Almacenamiento no disponible o contenido inválido: secciones abiertas.
+    // Almacenamiento no disponible o contenido inválido: aplicar el inicio según la escala.
   }
-  return new Set();
+  return preferCompactStart ? defaultCollapsedSections() : new Set();
 }
 
 function writeCollapsedSections(projectId: string, sections: ReadonlySet<string>): void {
@@ -488,7 +503,7 @@ export function Overview({
 }) {
   const [pendingNavDelete, setPendingNavDelete] = useState<PendingNavigationDelete | null>(null);
   const [collapsedSections, setCollapsedSections] = useState<ReadonlySet<string>>(() =>
-    readCollapsedSections(project.id),
+    readCollapsedSections(project.id, project.products.length > 100 || project.assets.length > 100),
   );
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [fieldDrafts, setFieldDrafts] = useState<Record<string, string>>({});

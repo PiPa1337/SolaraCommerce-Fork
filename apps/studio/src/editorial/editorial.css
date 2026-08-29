@@ -1637,3 +1637,314 @@ button.status-label:focus-visible {
   font-size: 12px;
   line-height: 1.4;
 }
+
+/* ---------------------------------------------------------------------------
+   Editor desktop 2026: split real entre herramientas y preview.
+   El pane deja de cubrir el sitio; cada superficie conserva su propio scroll.
+--------------------------------------------------------------------------- */
+
+@media (min-width: 1181px) {
+  .studio-workspace {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .editor-pane {
+    position: relative;
+    z-index: 1;
+    inset: auto;
+    width: clamp(560px, 38vw, 720px);
+    max-width: 52vw;
+    border-right: 1px solid var(--line-strong);
+    box-shadow: none;
+    contain: layout paint size;
+    transform: none;
+  }
+
+  .editor-pane[data-tab="overview"],
+  .editor-pane[data-tab="theme"],
+  .editor-pane[data-tab="assets"] {
+    width: clamp(650px, 43vw, 800px);
+  }
+
+  .editor-pane[data-tab="catalog"],
+  .editor-pane[data-tab="builder"] {
+    width: clamp(760px, 48vw, 900px);
+  }
+
+  .editor-pane--closed {
+    display: none;
+  }
+
+  .studio-workspace:has(.editor-pane--closed) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .studio-workspace:has(.editor-pane--closed) .preview-pane {
+    grid-column: 1 / -1;
+  }
+
+  .preview-pane {
+    grid-column: 2;
+    min-width: 0;
+  }
+}
+
+.editor-pane .workspace-section {
+  gap: 18px;
+  padding: 24px clamp(20px, 2.2vw, 32px) 48px;
+}
+
+.editor-pane .section-header {
+  align-items: center;
+  gap: 14px;
+  padding-top: 10px;
+  padding-right: 48px;
+  padding-bottom: 14px;
+}
+
+.editor-pane .section-header h2 {
+  max-width: none;
+  margin-bottom: 4px;
+  font-size: clamp(1.7rem, 2.15vw, 2.25rem);
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+.editor-pane .section-header p {
+  max-width: 62ch;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.editor-pane .section-actions {
+  gap: 6px;
+}
+
+.editor-pane input,
+.editor-pane select,
+.editor-pane textarea,
+.editor-pane button {
+  font-size: max(12px, 0.75rem);
+}
+
+.editor-pane .editor-pane-close {
+  top: 14px;
+  right: 14px;
+}
+
+/* Resumen: encabezados más compactos y medios acotados para que cada bloque
+ * sea escaneable sin alterar qué secciones guarda abiertas cada tienda. */
+.editor-pane[data-tab="overview"] .form-clusters {
+  gap: 10px;
+}
+
+.editor-pane[data-tab="overview"] .overview-accordion__toggle {
+  min-height: 48px;
+  padding: 10px 14px;
+}
+
+.editor-pane[data-tab="overview"] .overview-accordion__panel {
+  padding: 0 14px 16px;
+}
+
+.editor-pane[data-tab="overview"] .identity-media-preview {
+  min-height: 84px;
+}
+
+.editor-pane[data-tab="overview"] .identity-media-preview img {
+  max-height: 128px;
+}
+
+/* Catálogo: productos primero; categorías quedan como área secundaria al pie.
+ * La tabla administra su scroll, como una grilla de datos de escritorio. */
+.editor-pane[data-tab="catalog"] .catalog-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.editor-pane[data-tab="catalog"] .catalog-toolbar {
+  position: sticky;
+  z-index: 4;
+  top: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.editor-pane[data-tab="catalog"] .catalog-table-region .table-shell {
+  max-height: clamp(360px, calc(100dvh - 330px), 620px);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  scrollbar-gutter: stable;
+}
+
+.editor-pane[data-tab="catalog"] .catalog-table-region th {
+  top: 0;
+}
+
+.editor-pane[data-tab="catalog"] .category-tree-panel {
+  margin-top: 4px;
+}
+
+/* Recursos: búsqueda y carga progresiva evitan montar una biblioteca completa
+ * como un único formulario de veinte mil píxeles. */
+.asset-library-toolbar {
+  position: sticky;
+  z-index: 3;
+  top: 74px;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.asset-library-toolbar .search-box {
+  width: 100%;
+}
+
+.asset-library-toolbar output,
+.asset-library-more span {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.editor-pane[data-tab="assets"] .asset-grid {
+  grid-template-columns: repeat(auto-fill, minmax(205px, 1fr));
+  gap: 12px;
+}
+
+.editor-pane[data-tab="assets"] .asset-item {
+  content-visibility: auto;
+  contain-intrinsic-size: 240px 300px;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.editor-pane[data-tab="assets"] .asset-item:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+
+.editor-pane[data-tab="assets"] .asset-item img {
+  height: 118px;
+}
+
+.editor-pane[data-tab="assets"] .asset-item > div {
+  gap: 7px;
+  padding: 9px;
+}
+
+.editor-pane[data-tab="assets"] .asset-item label span,
+.editor-pane[data-tab="assets"] .asset-item > div > span,
+.editor-pane[data-tab="assets"] .asset-actions button {
+  font-size: 11px;
+}
+
+.asset-library-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 6px 0 12px;
+}
+
+/* Constructor: una sola superficie vertical; el inspector ya no compite con
+ * el scroll principal del pane en escritorio. */
+@media (min-width: 1181px) {
+  .editor-pane[data-tab="builder"] .inspector {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+/* Tema: las paletas se comparan como una tira curada en vez de formar un muro
+ * de tarjetas antes de los controles reales. */
+.editor-pane[data-tab="theme"] .theme-presets {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 2px 2px 10px;
+  scroll-snap-type: x proximity;
+  scrollbar-gutter: stable;
+}
+
+.editor-pane[data-tab="theme"] .theme-preset {
+  flex: 0 0 188px;
+  scroll-snap-align: start;
+}
+
+/* Exportar: las dos auditorías son filas independientes. La clase genérica
+ * audit-panel usa grid-area en SEO y no debe apilar estos hermanos. */
+.editor-pane[data-tab="export"] .export-public-exposure,
+.editor-pane[data-tab="export"] .export-cloudflare-verifier {
+  grid-area: auto;
+  align-self: start;
+}
+
+.export-public-exposure {
+  padding: 15px 16px;
+  border-left: 3px solid var(--accent);
+}
+
+.export-public-exposure h3,
+.export-public-exposure p {
+  margin: 0;
+}
+
+.export-public-exposure p {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.export-cloudflare-verifier {
+  margin-top: 0;
+}
+
+.export-cloudflare-verifier > ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 14px 16px;
+  list-style: none;
+}
+
+.export-cloudflare-verifier > ul label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.audit-ready--warning {
+  color: var(--warning);
+}
+
+@media (max-width: 1180px) {
+  .asset-library-toolbar {
+    position: static;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-pane[data-tab="assets"] .asset-item {
+    transform: none;
+    transition: none;
+  }
+}

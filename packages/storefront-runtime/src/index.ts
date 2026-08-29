@@ -2154,7 +2154,7 @@ export const STOREFRONT_RUNTIME_CSS = `
   border: 0;
   color: var(--solara-text);
   background: var(--solara-background);
-  box-shadow: -24px 0 64px color-mix(in srgb, var(--solara-text) 14%, transparent);
+  box-shadow: var(--solara-shadow-overlay);
 }
 
 [data-cart-drawer]::backdrop {

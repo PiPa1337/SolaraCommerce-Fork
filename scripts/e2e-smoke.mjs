@@ -24,6 +24,14 @@ const smokeSpecs = [
   "tests/e2e/exported-store.spec.ts",
 ];
 
+const quickSmokeSpecs = [
+  "tests/e2e/exported-store.spec.ts",
+  "tests/e2e/storefront-nojs.spec.ts",
+  "tests/e2e/catalog.spec.ts",
+  "tests/e2e/assets.spec.ts",
+  "tests/e2e/interacciones.spec.ts",
+];
+
 function maxMtimeRecursive(dir) {
   let max = 0;
   if (!existsSync(dir)) return 0;
@@ -127,7 +135,8 @@ function spawnCmd(cmd, args, opts = {}) {
 
 const rawArgs = process.argv.slice(2);
 const isFull = rawArgs.includes("--full");
-const extraArgs = rawArgs.filter((a) => a !== "--full");
+const isQuick = rawArgs.includes("--quick") || process.env.SMOKE_QUICK === "1";
+const extraArgs = rawArgs.filter((a) => a !== "--full" && a !== "--quick");
 // Contención de inestabilidad: los specs listados en unstable.json salen del
 // gate diario (fallan intermitentemente bajo carga; ver TECHNICAL_DEBT.md y
 // docs/TESTING.md). SMOKE_INCLUDE_UNSTABLE=1 los vuelve a incluir para el canal
@@ -142,7 +151,8 @@ if (existsSync(unstablePath) && process.env.SMOKE_INCLUDE_UNSTABLE !== "1") {
     console.warn("[smoke] unstable.json inválido: se corren todos los specs");
   }
 }
-const activeSpecs = smokeSpecs.filter((spec) => !unstableSpecs.includes(spec));
+const baseSpecs = isQuick ? quickSmokeSpecs : smokeSpecs;
+const activeSpecs = baseSpecs.filter((spec) => !unstableSpecs.includes(spec));
 if (unstableSpecs.length > 0) {
   console.log(
     `[smoke] ⏭ ${unstableSpecs.length} specs inestables excluidos (SMOKE_INCLUDE_UNSTABLE=1 para incluirlos):`,
@@ -169,10 +179,16 @@ if (isFull) {
   process.exit(0);
 }
 // Construir comando playwright con workers optimizados (8 por defecto, env override)
-// y solo Chromium (smoke no necesita Firefox/WebKit)
+// y solo Chromium (smoke no necesita Firefox/WebKit). Quick usa retries 0 y 0 trace para ahorrar ~10s.
+const smokeMode = isQuick ? "quick (5 specs, ~20-30s)" : "full (15 specs, ~30-45s)";
+console.log(`[smoke] ▶ modo ${smokeMode}`);
 const playwrightArgs = ["exec", "playwright", "test", ...activeSpecs, ...extraArgs];
+if (isQuick && !extraArgs.includes("--retries")) playwrightArgs.push("--retries", "0");
 console.log(`[smoke] ▶ corepack pnpm ${playwrightArgs.join(" ")}`);
-const code = await spawnCmd("corepack", ["pnpm", ...playwrightArgs]);
+const env = isQuick
+  ? { ...process.env, PLAYWRIGHT_WORKERS: process.env.PLAYWRIGHT_WORKERS ?? "8" }
+  : undefined;
+const code = await spawnCmd("corepack", ["pnpm", ...playwrightArgs], env ? { env } : {});
 if (code !== 0) {
   console.error(`[smoke] ✖ smoke fallo con codigo ${code}`);
   process.exit(code ?? 1);

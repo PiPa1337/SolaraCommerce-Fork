@@ -101,33 +101,39 @@ export async function loadAllDiskProjects(): Promise<{
     ...(item.projectId ? { projectId: item.projectId } : {}),
     ...(Number.isInteger(item.version) ? { diskVersion: item.version } : {}),
   }));
-  for (const summary of listing.projects) {
-    try {
-      const loaded = await loadDiskProject(summary);
-      if (loaded.mediaRepairPending && !isBaseTemplate(loaded.project)) {
-        const receipt = await persistProjectToDisk(loaded.project, summary.version);
-        loaded.diskVersion = receipt.receipt.version;
-        loaded.diskStatus = receipt.receipt.status;
-        loaded.diskSiteStatus = receipt.receipt.status;
+  const loadedResults = await Promise.all(
+    listing.projects.map(async (summary) => {
+      try {
+        const loaded = await loadDiskProject(summary);
+        if (loaded.mediaRepairPending && !isBaseTemplate(loaded.project)) {
+          const receipt = await persistProjectToDisk(loaded.project, summary.version);
+          loaded.diskVersion = receipt.receipt.version;
+          loaded.diskStatus = receipt.receipt.status;
+          loaded.diskSiteStatus = receipt.receipt.status;
+        }
+        await saveProject(loaded.project, {
+          allowProtectedWrite: isBaseTemplate(loaded.project),
+        });
+        return { ok: true as const, loaded };
+      } catch (error) {
+        return {
+          ok: false as const,
+          summary,
+          message:
+            error instanceof Error ? error.message : "No se pudo validar el respaldo en disco.",
+        };
       }
-      // IndexedDB queda como caché para operaciones que aún no necesitan disco;
-      // el archivo y su manifest siguen siendo la autoridad al abrir la tienda.
-      // La carga desde disco actualiza la caché de lectura de IndexedDB; no
-      // es una edición de la plantilla. El permiso explícito mantiene la
-      // protección para cualquier otro caller de saveProject.
-      await saveProject(loaded.project, {
-        allowProtectedWrite: isBaseTemplate(loaded.project),
-      });
-      projects.push(loaded);
-    } catch (error) {
+    }),
+  );
+  for (const result of loadedResults) {
+    if (result.ok) projects.push(result.loaded);
+    else
       recovery.push({
-        id: `disk:${summary.projectId}`,
-        name: summary.name,
-        updatedAt: summary.updatedAt,
-        message:
-          error instanceof Error ? error.message : "No se pudo validar el respaldo en disco.",
+        id: `disk:${result.summary.projectId}`,
+        name: result.summary.name,
+        updatedAt: result.summary.updatedAt,
+        message: result.message,
       });
-    }
   }
   projects.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
   return { projects, recovery };

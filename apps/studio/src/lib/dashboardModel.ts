@@ -38,6 +38,14 @@ export function storeMark(name: string): string {
     .toUpperCase();
 }
 
+export function storeFaviconSrc(project: StoredProject["project"]): string | undefined {
+  const faviconId = project.seo.faviconAssetId;
+  if (!faviconId) return undefined;
+  const asset = project.assets.find((candidate) => candidate.id === faviconId);
+  if (!asset) return undefined;
+  return asset.fallbackSource ?? asset.source;
+}
+
 export function auditStoreHealth(
   projects: readonly StoredProject[],
   audit: (project: StoredProject["project"]) => number,

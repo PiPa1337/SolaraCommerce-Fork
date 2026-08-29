@@ -412,7 +412,10 @@ const CatalogRow = memo(
     columnVisibility: VisibilityState;
   }) {
     return (
-      <tr data-selected={selected} style={{ contentVisibility: "auto", containIntrinsicSize: "56px" } as React.CSSProperties}>
+      <tr
+        data-selected={selected}
+        style={{ contentVisibility: "auto", containIntrinsicSize: "56px" } as React.CSSProperties}
+      >
         {row.getVisibleCells().map((cell) => (
           <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
         ))}
@@ -1122,17 +1125,6 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
           onViewChange={changeView}
         />
 
-        <CategoryTree
-          project={project}
-          collapsedCategoryIds={collapsedCategoryIds}
-          setCollapsedCategoryIds={setCollapsedCategoryIds}
-          reparentCategoryId={reparentCategoryId}
-          setReparentCategoryId={setReparentCategoryId}
-          reparentParentId={reparentParentId}
-          setReparentParentId={setReparentParentId}
-          onCommand={onCommand}
-        />
-
         {project.products.length === 0 ? (
           <EmptyState
             icon={Package}
@@ -1375,6 +1367,17 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
             </div>
           </section>
         ) : null}
+
+        <CategoryTree
+          project={project}
+          collapsedCategoryIds={collapsedCategoryIds}
+          setCollapsedCategoryIds={setCollapsedCategoryIds}
+          reparentCategoryId={reparentCategoryId}
+          setReparentCategoryId={setReparentCategoryId}
+          reparentParentId={reparentParentId}
+          setReparentParentId={setReparentParentId}
+          onCommand={onCommand}
+        />
       </div>
 
       {editor ? (

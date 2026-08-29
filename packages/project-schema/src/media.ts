@@ -9,7 +9,7 @@ import { AssetIdSchema } from "./ids.js";
  * Receta compartida por Studio, el agente y el sitio exportado. La variante
  * intermedia cubre tablet y mobile; la máxima queda para desktop.
  */
-export const RESPONSIVE_IMAGE_WIDTHS = [768, 1800] as const;
+export const RESPONSIVE_IMAGE_WIDTHS = [480, 768, 1800] as const;
 export const RESPONSIVE_IMAGE_INTERMEDIATE_WIDTH = 768;
 export const RESPONSIVE_IMAGE_MAX_WIDTH = 1800;
 

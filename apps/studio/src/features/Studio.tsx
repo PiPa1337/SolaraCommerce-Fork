@@ -19,6 +19,7 @@ import {
   MagnifyingGlass,
   Package,
   PaintBrush,
+  PencilSimple,
   Storefront,
   X,
 } from "@phosphor-icons/react";
@@ -116,8 +117,6 @@ const tabs: Array<{ id: StudioTab; label: string; icon: typeof Storefront }> = [
   { id: "seo", label: "SEO", icon: MagnifyingGlass },
   { id: "export", label: "Exportar", icon: BoxArrowDown },
 ];
-
-
 
 interface StudioTabContentProps {
   tab: StudioTab;
@@ -238,6 +237,8 @@ const MemoizedPreview = memo(function MemoizedPreview({
   route,
   size,
   zoom,
+  canvasMode,
+  onCanvasModeChange,
   onRouteChange,
   onCanvasEdit,
   onCanvasItemEdit,
@@ -248,6 +249,8 @@ const MemoizedPreview = memo(function MemoizedPreview({
   route: string;
   size: PreviewSize;
   zoom: PreviewZoom;
+  canvasMode: boolean;
+  onCanvasModeChange(next: boolean): void;
   onRouteChange(route: string): void;
   onCanvasEdit(sectionId: string, fieldKey: string, value: unknown): void;
   onCanvasItemEdit(sectionId: string, fieldKey: string, itemId: string, value: unknown): void;
@@ -270,6 +273,8 @@ const MemoizedPreview = memo(function MemoizedPreview({
       route={route}
       size={size}
       zoom={zoom}
+      canvasMode={canvasMode}
+      onCanvasModeChange={onCanvasModeChange}
       onRouteChange={onRouteChange}
       onCanvasEdit={onCanvasEdit}
       onCanvasItemEdit={onCanvasItemEdit}
@@ -305,11 +310,37 @@ export function Studio({
   onOpenSite?(id: string): Promise<void>;
 }) {
   useEffect(() => {
-    // Los paneles siguen montándose bajo demanda, pero sus chunks se precargan
-    // cuando el Studio ya está abierto para que el primer cambio de pestaña no
-    // bloquee la interacción del editor.
-    void loadOverview();
-    void loadCatalog();
+    let idleId: number | ReturnType<typeof setTimeout> | undefined;
+    if ("requestIdleCallback" in window) {
+      idleId = (
+        window as unknown as {
+          requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number;
+        }
+      ).requestIdleCallback(
+        () => {
+          void loadOverview();
+          void loadCatalog();
+        },
+        { timeout: 2000 },
+      );
+    } else {
+      idleId = globalThis.setTimeout(() => {
+        void loadOverview();
+        void loadCatalog();
+      }, 1200);
+    }
+    return () => {
+      if (idleId === undefined) return;
+      if ("cancelIdleCallback" in window && typeof idleId === "number") {
+        try {
+          (window as unknown as { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(
+            idleId as number,
+          );
+        } catch {}
+      } else {
+        clearTimeout(idleId as unknown as number);
+      }
+    };
   }, []);
   const [history, setHistory] = useState<HistoryState>(() => createHistory(initialProject));
   const [tab, setTab] = useState<StudioTab>("guided");
@@ -414,6 +445,7 @@ export function Studio({
   const [managedDirty, setManagedDirty] = useState(false);
   const [protectedWriteApproved, setProtectedWriteApproved] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [canvasMode, setCanvasMode] = useState(false);
   const [lastExportedAt, setLastExportedAt] = useState("");
   const [exportTick, setExportTick] = useState(0);
   const [lastVisitedAt, setLastVisitedAt] = useState<Partial<Record<StudioTab, string>>>(() =>
@@ -1046,6 +1078,27 @@ export function Studio({
               </div>
             )}
             <Tooltip
+              tip={
+                canvasMode
+                  ? "Salir de edición en canvas — clic en el sitio para editar"
+                  : "Editar en canvas — habilita la edición directa en la vista previa"
+              }
+              position="bottom"
+            >
+              <button
+                type="button"
+                className={`studio-canvas-toggle${canvasMode ? " is-active" : ""}`}
+                data-testid="ui-canvas-toggle"
+                aria-pressed={canvasMode}
+                onClick={() => setCanvasMode((active) => !active)}
+              >
+                <PencilSimple aria-hidden size={16} weight={canvasMode ? "fill" : "regular"} />
+                <span className="studio-canvas-toggle__label">
+                  {canvasMode ? "Salir de edición" : "Editar en canvas"}
+                </span>
+              </button>
+            </Tooltip>
+            <Tooltip
               tip={focusMode ? "Salir del modo foco" : "Modo foco de la vista previa"}
               position="bottom"
             >
@@ -1111,9 +1164,7 @@ export function Studio({
                     />
                   </>
                 ) : null}
-                {tab === id ? (
-                  <span className="studio-nav-indicator" aria-hidden />
-                ) : null}
+                {tab === id ? <span className="studio-nav-indicator" aria-hidden /> : null}
               </button>
             ))}
           </div>
@@ -1177,6 +1228,8 @@ export function Studio({
             route={previewRoute}
             size={previewSize}
             zoom={previewZoom}
+            canvasMode={canvasMode}
+            onCanvasModeChange={setCanvasMode}
             onRouteChange={setPreviewRoute}
             onCanvasEdit={(sectionId, fieldKey, value) => {
               const applied = applyMutation(project, createMutationRegistry(), {
@@ -1327,20 +1380,40 @@ export function Studio({
         </main>
 
         {focusMode ? (
-          <Tooltip tip="Salir del modo foco" position="bottom" className="studio-focus-exit">
-            <IconButton
-              id={focusExitId}
-              icon={ArrowsInSimple}
-              label="Salir del modo foco"
-              data-testid="ui-focus-exit"
-              onClick={() => {
-                setFocusMode(false);
-                requestAnimationFrame(() => {
-                  document.getElementById(focusToggleId)?.focus();
-                });
-              }}
-            />
-          </Tooltip>
+          <>
+            <Tooltip tip="Salir del modo foco" position="bottom" className="studio-focus-exit">
+              <IconButton
+                id={focusExitId}
+                icon={ArrowsInSimple}
+                label="Salir del modo foco"
+                data-testid="ui-focus-exit"
+                onClick={() => {
+                  setFocusMode(false);
+                  requestAnimationFrame(() => {
+                    document.getElementById(focusToggleId)?.focus();
+                  });
+                }}
+              />
+            </Tooltip>
+            <Tooltip
+              tip={canvasMode ? "Salir de edición en canvas" : "Editar en canvas"}
+              position="bottom"
+              className="studio-focus-canvas"
+            >
+              <button
+                type="button"
+                className={`studio-canvas-toggle studio-canvas-toggle--floating${canvasMode ? " is-active" : ""}`}
+                data-testid="ui-canvas-toggle-floating"
+                aria-pressed={canvasMode}
+                onClick={() => setCanvasMode((active) => !active)}
+              >
+                <PencilSimple aria-hidden size={16} weight={canvasMode ? "fill" : "regular"} />
+                <span className="studio-canvas-toggle__label">
+                  {canvasMode ? "Salir edición" : "Editar en canvas"}
+                </span>
+              </button>
+            </Tooltip>
+          </>
         ) : null}
 
         <footer className="studio-statusbar" data-testid="ui-status-bar">
