@@ -1730,12 +1730,14 @@ test("V2 compacta el drawer cuando el carrito está vacío y no deja scroll en d
     return {
       drawerOverflowY: getComputedStyle(element).overflowY,
       scrollOverflowY: getComputedStyle(scroll).overflowY,
+      drawerHeight: element.getBoundingClientRect().height,
       drawerScrollable: element.scrollHeight - element.clientHeight,
       scrollScrollable: scroll.scrollHeight - scroll.clientHeight,
     };
   });
   expect(scrollState.drawerOverflowY).toBe("hidden");
   expect(scrollState.scrollOverflowY).toBe("hidden");
+  expect(scrollState.drawerHeight).toBeLessThan(900);
   expect(scrollState.drawerScrollable).toBeLessThanOrEqual(1);
   expect(scrollState.scrollScrollable).toBeLessThanOrEqual(1);
 });
