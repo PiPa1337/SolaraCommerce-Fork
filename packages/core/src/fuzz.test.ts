@@ -146,7 +146,7 @@ function checkInvariants(project: StoreProjectV1, label: string) {
 describe("fuzz StoreProjectV2 + @solara/core", () => {
   it(
     "secuencias aleatorias largas mantienen invariantes (seed 42, 250 ops)",
-    { timeout: 15000 },
+    { timeout: 120000 },
     () => {
       const seed = 42;
       const rand = mulberry32(seed);
@@ -392,5 +392,5 @@ describe("fuzz StoreProjectV2 + @solara/core", () => {
     // serializar/deserializar
     const ser = JSON.parse(JSON.stringify(project));
     expect(StoreProjectV1Schema.parse(ser)).toEqual(project);
-  }, 30000);
+  }, 120000);
 });

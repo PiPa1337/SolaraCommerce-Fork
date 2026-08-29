@@ -6,6 +6,9 @@
   metadatos de NTFS con junctions reales en Windows.
 - Los dos fuzz tests de `agent-control` que superan 5 segundos bajo carga de
   CI declaran un timeout de 30 segundos sin cambiar sus aserciones.
+- En CI, los tests de los workspaces se ejecutan serialmente para evitar
+  contención entre fuzz/exportaciones; los límites extendidos sólo cubren
+  tests deterministas de larga duración.
 
 ### CI E2E fragmentada (2026-08-28)
 

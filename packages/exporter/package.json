@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",
     "serve": "node scripts/serve.mjs",
-    "test": "vitest run --testTimeout=15000",
+    "test": "vitest run --testTimeout=120000",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

@@ -29,6 +29,10 @@ const SUBST_DRIVE = getSubstFallback();
 // Mantiene la misma cobertura que `pnpm check` pero en ~40-60% menos tiempo.
 // Uso: corepack pnpm check:quick
 const isFull = process.argv.includes("--full");
+const testCommand =
+  process.env.CI === "true"
+    ? "corepack pnpm -r --workspace-concurrency=1 --if-present test"
+    : "corepack pnpm -r --parallel --if-present test -- --testTimeout=30000";
 const fastTasks = [
   { name: "check:repository", cmd: "corepack pnpm check:repository" },
   { name: "check:hardcoded-content", cmd: "corepack pnpm check:hardcoded-content" },
@@ -37,7 +41,7 @@ const fastTasks = [
   { name: "typecheck", cmd: "corepack pnpm -r --parallel --if-present typecheck" },
   // Los fuzz y los exports deterministas superan 15s cuando todos los
   // paquetes comparten CPU; el timeout del gate debe cubrir esa carga real.
-  { name: "test", cmd: "corepack pnpm -r --parallel --if-present test -- --testTimeout=30000" },
+  { name: "test", cmd: testCommand },
 ];
 const slowTasks = [
   { name: "check:optimization", cmd: "corepack pnpm check:optimization" },
