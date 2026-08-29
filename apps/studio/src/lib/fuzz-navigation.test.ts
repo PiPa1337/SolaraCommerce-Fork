@@ -21,7 +21,7 @@ function randomString(rand: () => number, len = 8): string {
 describe("fuzz navigation/modules", () => {
   it(
     "100 seeds navigation/modules mutaciones mantienen parse y sin referencias huérfanas",
-    { timeout: 60000 },
+    { timeout: 120000 },
     () => {
       for (let seed = 0; seed < 100; seed++) {
         const rand = mulberry32(seed);

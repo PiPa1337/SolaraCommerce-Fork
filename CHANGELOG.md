@@ -13,6 +13,8 @@
   adversariales y visuales.
 - El suite de `@solara/core` evita el paralelismo entre archivos para que los
   fuzz tests largos no pierdan comunicación con el worker de Vitest en CI.
+- El fuzz de navegación del Studio declara un límite de 120 segundos para
+  soportar la latencia de los runners Linux sin alterar sus aserciones.
 
 ### CI E2E fragmentada (2026-08-28)
 
