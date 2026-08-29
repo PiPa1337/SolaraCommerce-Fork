@@ -51,35 +51,115 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Guardar build de Studio para los shards E2E
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-dist
+          path: apps/studio/dist
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Revisar budgets de bundles
         run: pnpm check:budgets
 
       - name: Benchmark de exportación
         run: pnpm benchmark:export
 
+  e2e:
+    name: Windows, Node 22, Chromium — shard ${{ matrix.shard }}/4
+    needs: verify
+    runs-on: windows-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      CI: true
+      PLAYWRIGHT_WORKERS: 2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+          run_install: false
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Recuperar build de Studio
+        uses: actions/download-artifact@v4
+        with:
+          name: studio-dist
+          path: apps/studio/dist
+
       - name: Instalar Chromium
         run: pnpm playwright:install:chromium
 
       - name: Playwright Chromium
-        id: e2e
-        run: pnpm test:e2e:ci
+        run: pnpm test:e2e:ci --shard=${{ matrix.shard }}/4
+
+      - name: Publicar diagnóstico E2E
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-diagnostics-${{ github.run_id }}-shard-${{ matrix.shard }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  portable:
+    name: Windows, portable E2E
+    needs: [verify, e2e]
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      CI: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+          run_install: false
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Recuperar build de Studio
+        uses: actions/download-artifact@v4
+        with:
+          name: studio-dist
+          path: apps/studio/dist
 
       - name: Construir shell portable
         run: pnpm desktop:package
 
       - name: E2E portable
         run: pnpm test:e2e:portable
-
-      - name: Publicar diagnóstico E2E
-        if: ${{ failure() && steps.e2e.outcome == 'failure' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-diagnostics-${{ github.run_id }}
-          path: |
-            playwright-report/
-            test-results/
-          if-no-files-found: ignore
-          retention-days: 7
 
   portability:
     name: Linux, Node 22 (portabilidad Node)

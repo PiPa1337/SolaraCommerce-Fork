@@ -1,5 +1,11 @@
 # Changelog
 
+### CI E2E fragmentada (2026-08-28)
+
+- El workflow de GitHub reutiliza el build de Studio y distribuye el E2E
+  Chromium de Windows en cuatro shards paralelos con dos workers por shard;
+  el empaquetado portable queda condicionado a que todos pasen.
+
 ### Solara Nightwatch 360 — cierre local (2026-08-28)
 
 - Se corrigió el foco inicial de `Crear tienda` con foco inmediato y fallback
