@@ -2308,6 +2308,14 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-review small { color: var(--catalog-muted); font-size: .7rem; }
 [data-solara-store].catalog-modern .catalog-cart-drawer { position: fixed; z-index: 50; inset: 0 0 0 auto; display: flex; width: min(440px, 100%); flex-direction: column; padding: 1.25rem; overflow: hidden; transform: translateX(105%); background: var(--catalog-paper); box-shadow: -16px 0 50px color-mix(in srgb, var(--catalog-ink) 14%, transparent); transition: transform var(--solara-motion-normal, 260ms) var(--solara-motion-easing, cubic-bezier(.16,1,.3,1)); }
 [data-solara-store].catalog-modern .catalog-cart-drawer .catalog-cart-items { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+[data-solara-store].catalog-modern .catalog-cart-drawer .catalog-secondary-action,
+[data-solara-store].catalog-modern .catalog-cart-drawer [data-solara-cart-close].catalog-secondary-action,
+[data-solara-store].catalog-modern .catalog-cart-drawer .catalog-cart-summary,
+[data-solara-store].catalog-modern .catalog-cart-drawer .catalog-checkout-form { flex: 0 0 auto; }
+@media (max-height: 700px) {
+  [data-solara-store].catalog-modern .catalog-cart-drawer { overflow-y: auto; }
+  [data-solara-store].catalog-modern .catalog-cart-drawer .catalog-cart-items { flex: 0 0 auto; overflow: visible; }
+}
 [data-solara-store].catalog-modern .catalog-cart-drawer[data-open="true"] { transform: translateX(0); }
 [data-solara-store].catalog-modern .catalog-cart-drawer header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--catalog-border); }
 [data-solara-store].catalog-modern .catalog-cart-drawer header button { min-height: 44px; padding: .5rem .8rem; border: 1px solid var(--catalog-border); border-radius: 999px; background: transparent; cursor: pointer; }
@@ -3927,6 +3935,15 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-reveal--actions{--hero-v2-rise:9px}
   .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits{grid-template-columns:1fr;gap:1rem}
   .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit + .catalog-hero-benefit{border-left:0;padding-left:0}
+}
+/* Retratos angostos (≤360px): dos columnas dejaban títulos de producto casi
+   ilegibles por truncado; una columna mantiene el catálogo leíble. */
+@media (max-width: 360px) {
+  .cm.v2 .catalog-product-grid,
+  .cm.v2 .catalog-category-results .catalog-product-grid,
+  .cm.v2 .catalog-search-results-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 /* Contacto V2 modular: reutiliza los tokens de Home y mantiene una grilla
    editorial de líneas finas, sin tarjetas redondeadas. */
