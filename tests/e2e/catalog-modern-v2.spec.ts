@@ -1833,7 +1833,7 @@ test("V2 compone el checkout del drawer sin overflow en desktop y movil", async 
     }) as typeof window.open;
   });
   const whatsappPopupPromise = page.waitForEvent("popup");
-  await form.getByRole("button", { name: "Continuar por WhatsApp" }).click();
+  await page.locator(".catalog-cart-drawer .catalog-drawer-footer button[type='submit']").click();
   const whatsappPopup = await whatsappPopupPromise;
   await expect(form.locator("[data-order-preview]")).toContainText("Remera esencial");
   await expect(form.locator("[data-whatsapp-link]")).toHaveCount(0);
@@ -1849,6 +1849,19 @@ test("V2 compone el checkout del drawer sin overflow en desktop y movil", async 
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
   await expect(page.locator(".catalog-cart-drawer")).toHaveAttribute("data-open", "true");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  // F-01: el submit del checkout del drawer vive en un footer fijo y debe
+  // quedar visible sin scrollear; si el contenido excede, scrollea el área
+  // intermedia (.catalog-cart-scroll), no el drawer entero.
+  const mobileDrawer = page.locator(".catalog-cart-drawer");
+  const submit = mobileDrawer.locator(".catalog-drawer-footer button[type='submit']");
+  await expect(submit).toBeInViewport();
+  await expect(submit).toHaveText(/Continuar por WhatsApp/);
+  const drawerScroll = await mobileDrawer.evaluate((element) => ({
+    drawerScrollable: element.scrollHeight - element.clientHeight,
+    scrollAreaExists: Boolean(element.querySelector<HTMLElement>(".catalog-cart-scroll")),
+  }));
+  expect(drawerScroll.scrollAreaExists).toBe(true);
+  expect(drawerScroll.drawerScrollable).toBeLessThanOrEqual(1);
 });
 
 test("V2 mantiene equilibrados el resumen y las líneas del carrito en desktop", async ({
