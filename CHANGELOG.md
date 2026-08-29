@@ -15,6 +15,8 @@
   fuzz tests largos no pierdan comunicación con el worker de Vitest en CI.
 - El fuzz de navegación del Studio declara un límite de 120 segundos para
   soportar la latencia de los runners Linux sin alterar sus aserciones.
+- Los tests del Studio también evitan el paralelismo entre archivos para
+  impedir timeouts de comunicación del worker bajo carga de CI.
 
 ### CI E2E fragmentada (2026-08-28)
 
