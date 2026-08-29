@@ -369,6 +369,9 @@ describe("exporter", () => {
     expect(terms).toContain(catalogModernV2Store.policies.terms);
     expect(notFound).toContain('class="solara-error-code" aria-hidden="true">404');
     expect(notFound).toContain("Volver al inicio");
+    // F-11: el CTA de novedades conserva en páginas legales pero no en 404.
+    expect(privacy).toContain("catalog-newsletter-inner");
+    expect(notFound).not.toContain("catalog-newsletter-inner");
   });
 
   it("rechaza proyectos inválidos con una ruta accionable en cada límite público", () => {

@@ -8,11 +8,11 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import {
-  REAL_STORES,
-  SWEEP_VIEWPORTS,
   type LoadedStore,
   loadStore,
+  REAL_STORES,
   revealPage,
+  SWEEP_VIEWPORTS,
   serve,
 } from "./real-store-loader";
 
@@ -24,7 +24,10 @@ async function brokenImages(page: import("@playwright/test").Page): Promise<stri
     .evaluateAll((images) =>
       images
         .filter((image) => image.complete && image.naturalWidth === 0)
-        .map((image) => image.currentSrc || image.getAttribute("src") || image.getAttribute("alt") || "sin src"),
+        .map(
+          (image) =>
+            image.currentSrc || image.getAttribute("src") || image.getAttribute("alt") || "sin src",
+        ),
     );
 }
 
@@ -33,7 +36,12 @@ for (const store of REAL_STORES) {
     let loaded: LoadedStore;
     let url = "";
     let server: import("node:http").Server;
-    const summary: Record<string, unknown> = { store: store.label, capturas: [], rotas: [], errores: [] };
+    const summary: Record<string, unknown> = {
+      store: store.label,
+      capturas: [],
+      rotas: [],
+      errores: [],
+    };
 
     test.beforeAll(async () => {
       test.setTimeout(420_000);
@@ -78,7 +86,9 @@ for (const store of REAL_STORES) {
               await page.waitForTimeout(600);
               const drawerRotas = await brokenImages(page);
               if (drawerRotas.length > 0) {
-                (summary.rotas as string[]).push(`${viewport.name}/drawer: ${drawerRotas.join(", ")}`);
+                (summary.rotas as string[]).push(
+                  `${viewport.name}/drawer: ${drawerRotas.join(", ")}`,
+                );
               }
               await page.screenshot({ path: join(outDir, "drawer-carrito.png"), fullPage: false });
               (summary.capturas as string[]).push(`${viewport.name}/drawer-carrito.png`);
@@ -93,7 +103,9 @@ for (const store of REAL_STORES) {
                 (summary.capturas as string[]).push(`${viewport.name}/checkout-lleno.png`);
               }
             } else {
-              (summary.errores as string[]).push(`${viewport.name}: no se encontró botón Agregar en ${producto.path}`);
+              (summary.errores as string[]).push(
+                `${viewport.name}: no se encontró botón Agregar en ${producto.path}`,
+              );
             }
           }
         }

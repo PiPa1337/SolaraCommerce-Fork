@@ -9,11 +9,11 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "@playwright/test";
 import {
-  REAL_STORES,
-  SWEEP_VIEWPORTS,
   type LoadedStore,
   loadStore,
+  REAL_STORES,
   revealPage,
+  SWEEP_VIEWPORTS,
   serve,
 } from "./real-store-loader";
 
@@ -50,17 +50,22 @@ function inPageProbe(): RouteMetrics {
   for (const e of Array.from(document.querySelectorAll("h1,h2,h3"))) {
     const clippedH = e.scrollHeight > e.clientHeight + 1;
     const clippedW = e.scrollWidth > e.clientWidth + 1;
-    if (clippedH || clippedW) titulosRecortados.push(`${e.tagName}:${(e.textContent ?? "").trim().slice(0, 40)}`);
+    if (clippedH || clippedW)
+      titulosRecortados.push(`${e.tagName}:${(e.textContent ?? "").trim().slice(0, 40)}`);
   }
   const searchInput = document.querySelector(
     '.catalog-search input, [data-solara-search] input, form[action*="buscar"] input[type="search"], form[action*="buscar"] input[type="text"], input[name="q"]',
   );
-  const themeRadius = getComputedStyle(document.documentElement).getPropertyValue("--solara-radius").trim();
+  const themeRadius = getComputedStyle(document.documentElement)
+    .getPropertyValue("--solara-radius")
+    .trim();
   const radioBuscador = searchInput
     ? { borderRadius: getComputedStyle(searchInput).borderRadius, themeRadius }
     : null;
   const pag = Array.from(
-    document.querySelectorAll('.catalog-pagination a, .catalog-pagination button, [data-pagination] a, nav[aria-label*="agi" i] a, nav[aria-label*="agi" i] button'),
+    document.querySelectorAll(
+      '.catalog-pagination a, .catalog-pagination button, [data-pagination] a, nav[aria-label*="agi" i] a, nav[aria-label*="agi" i] button',
+    ),
   );
   const radiosPaginacion = Array.from(new Set(pag.map((e) => getComputedStyle(e).borderRadius)));
   const h1 = document.querySelector("main h1, header h1, h1");

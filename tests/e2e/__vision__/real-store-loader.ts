@@ -32,9 +32,7 @@ export interface LoadedStore {
 export function loadStore(label: string, dir: string): LoadedStore {
   const projectDir = join(PROJECTS_ROOT, dir);
   const manifest = JSON.parse(readFileSync(join(projectDir, "manifest.json"), "utf8"));
-  const envelope = JSON.parse(
-    readFileSync(join(projectDir, manifest.current.projectPath), "utf8"),
-  );
+  const envelope = JSON.parse(readFileSync(join(projectDir, manifest.current.projectPath), "utf8"));
   const project = StoreProjectV2Schema.parse(envelope.project ?? envelope);
   const exported = exportProject(project, { mode: "production" });
   const files = exported.files;
@@ -86,7 +84,11 @@ export function serve(files: Map<string, Uint8Array>): Promise<{ url: string; se
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
     const requested = decodeURIComponent(url.pathname).replace(/^\/+/, "");
     const path =
-      requested === "" ? "index.html" : requested.endsWith("/") ? `${requested}index.html` : requested;
+      requested === ""
+        ? "index.html"
+        : requested.endsWith("/")
+          ? `${requested}index.html`
+          : requested;
     const file = files.get(path);
     if (file === undefined) {
       response.writeHead(404, { "Content-Type": "text/html; charset=utf-8" });
@@ -96,7 +98,8 @@ export function serve(files: Map<string, Uint8Array>): Promise<{ url: string; se
     const extension = path.split(".").pop() ?? "";
     response.writeHead(200, {
       "Content-Type":
-        types[extension] ?? (path.endsWith(".html") ? "text/html; charset=utf-8" : "application/octet-stream"),
+        types[extension] ??
+        (path.endsWith(".html") ? "text/html; charset=utf-8" : "application/octet-stream"),
       "Cache-Control": "no-store",
     });
     response.end(file);

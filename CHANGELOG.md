@@ -1,17 +1,56 @@
 # Changelog
 
+### Etiquetas de categorías ligeramente más amplias (2026-08-29)
+
+- Se amplió sólo el padding de las etiquetas del mosaico de categorías en los
+  breakpoints responsive, manteniendo la tipografía, el contenido y el tamaño de
+  las cards sin cambios.
+- La regla permanece en el estilo global de Catalog Modern para RM Descartables,
+  Predeterminada y cualquier otra tienda que use el mismo renderer.
+
 ### Controles de búsqueda cuadrados (2026-08-29)
 
 - La búsqueda pública, el diálogo, el acceso del navbar, el menú móvil y sus
   fallbacks sin JavaScript usan esquinas cuadradas en desktop, tablet y mobile.
 - Se agregó una regresión responsive que mide los radios computados y verifica
   que no aparezca overflow horizontal.
+
+### Fixes del barrido visual de tiendas reales (2026-08-29)
+
+- El drawer de carrito fija el CTA de checkout en un pie propio: items, resumen y
+  formulario scrollean en un área interna y "Continuar por WhatsApp" con la nota
+  legal quedan siempre visibles sin scrollear (mobile y desktop).
+- El email del footer ya no se parte a mitad de palabra: los enlaces `mailto:` del
+  bloque de contacto usan `word-break: keep-all` (confirmado por métricas en 768px).
+- El input del diálogo de búsqueda usa el radio del tema en lugar de una pastilla.
+- A ≤360px las grillas de producto V2 (home, categorías y búsqueda) pasan a una
+  columna para que los títulos largos sean legibles.
+- "También puede interesarte" muestra hasta cuatro relacionados por fila en
+  desktop, con ocho items en dos filas simétricas 4+4.
+- La página de carrito vacío deja de reservar la columna del resumen: con el
+  carrito sin líneas, el estado vacío y el resumen se apilan en una columna.
+- El CTA "Novedades" se excluye del footer de la página 404; se conserva en
+  páginas legales y comerciales.
+- Nuevas herramientas de diagnóstico: `tests/e2e/__vision__/real-store-loader.ts`,
+  `real-stores-vision.spec.ts` y `store-metrics.spec.ts` (métricas DOM por tienda
+  real, viewport y dpr; salida en `_qa/vision-stores-2026-08-29/`).
+
 ### Footer con categorías públicas y acceso al carrito (2026-08-29)
 
 - `Explorar` conserva Inicio y Buscar productos, y suma Abrir carrito con
   fallback a `/carrito/` cuando JavaScript no está disponible.
 - Se agregó una columna `Categorías` con todas las categorías públicas y sus
   rutas `/categorias/<slug>/`, también en el footer exportado.
+
+### Dashboard inicial compacto y sin scroll (2026-08-29)
+
+- Se redistribuyeron cabecera, métricas, salud, QA, biblioteca y detalle para
+  priorizar las tiendas y aprovechar la aplicación maximizada.
+- El dashboard completo cabe sin scroll horizontal ni vertical en 1920×950 y
+  1920×1080, con tipografía operativa más legible y estados protegidos neutrales.
+- En el portable, las operaciones protegidas quedan plegadas como herramienta
+  avanzada y el detalle usa acciones compactas para respetar el viewport real de
+  Windows con varias tiendas, sin ocultar ninguna función.
 
 ### Hero V2: media vertical 9:16 consistente (2026-08-29)
 

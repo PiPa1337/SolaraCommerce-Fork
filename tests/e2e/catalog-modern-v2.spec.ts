@@ -372,9 +372,7 @@ test("V2 conserva el encuadre 9:16 y llena la media del hero", async ({ page }, 
       const imageRect = image.getBoundingClientRect();
       return {
         media: { width: mediaRect.width, height: mediaRect.height },
-        picture: pictureRect
-          ? { width: pictureRect.width, height: pictureRect.height }
-          : null,
+        picture: pictureRect ? { width: pictureRect.width, height: pictureRect.height } : null,
         image: { width: imageRect.width, height: imageRect.height },
         content: { width: contentRect.width, height: contentRect.height },
         natural: { width: image.naturalWidth, height: image.naturalHeight },
@@ -396,7 +394,9 @@ test("V2 conserva el encuadre 9:16 y llena la media del hero", async ({ page }, 
   }
 });
 
-test("V2 mantiene espacio para descendentes en títulos largos del hero", async ({ page }, testInfo) => {
+test("V2 mantiene espacio para descendentes en títulos largos del hero", async ({
+  page,
+}, testInfo) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   for (const viewport of [
     { width: 1760, height: 810 },
@@ -406,10 +406,7 @@ test("V2 mantiene espacio para descendentes en títulos largos del hero", async 
     await page.setViewportSize(viewport);
     await page.goto(`${serverUrl}/?longTitle=1`);
     await waitForStorefrontReady(page);
-    await expect(page.locator('[data-solara-module="catalog-hero"]')).toHaveCSS(
-      "opacity",
-      "1",
-    );
+    await expect(page.locator('[data-solara-module="catalog-hero"]')).toHaveCSS("opacity", "1");
     const metrics = await page.evaluate(() => {
       const hero = document.querySelector<HTMLElement>(".catalog-hero-inner");
       const title = document.querySelector<HTMLElement>(".catalog-hero-title");
@@ -598,7 +595,7 @@ test("V1 mantiene compactos los h1 largos de categorías en todos los tamaños",
   }
 });
 
-test("V2 mantiene compacta la caja del nombre de categoría en todos los tamaños", async ({
+test("V2 mantiene contenida y un poco más amplia la caja del nombre de categoría", async ({
   page,
 }, testInfo) => {
   for (const viewport of [
@@ -624,6 +621,7 @@ test("V2 mantiene compacta la caja del nombre de categoría en todos los tamaño
       const labelRect = element.getBoundingClientRect();
       const itemRect = itemElement.getBoundingClientRect();
       const titleRect = titleElement.getBoundingClientRect();
+      const labelStyle = getComputedStyle(element);
       return {
         labelWidth: labelRect.width,
         labelHeight: labelRect.height,
@@ -632,6 +630,8 @@ test("V2 mantiene compacta la caja del nombre de categoría en todos los tamaño
         labelRight: labelRect.right,
         titleHeight: titleRect.height,
         titleMargin: getComputedStyle(titleElement).margin,
+        labelPaddingBlock: Number.parseFloat(labelStyle.paddingBlockStart),
+        labelPaddingInline: Number.parseFloat(labelStyle.paddingInlineStart),
         documentWidth: document.documentElement.scrollWidth,
       };
     });
@@ -641,6 +641,10 @@ test("V2 mantiene compacta la caja del nombre de categoría en todos los tamaño
     expect(metrics?.labelRight).toBeLessThanOrEqual((metrics?.itemRight ?? 0) + 1);
     expect(metrics?.titleMargin).toBe("0px");
     expect((metrics?.labelHeight ?? 0) - (metrics?.titleHeight ?? 0)).toBeLessThanOrEqual(20);
+    if (viewport.width <= 1023) {
+      expect(metrics?.labelPaddingBlock).toBeGreaterThanOrEqual(7.2);
+      expect(metrics?.labelPaddingInline).toBeGreaterThanOrEqual(10.4);
+    }
     expect(metrics?.documentWidth).toBeLessThanOrEqual(viewport.width);
 
     await item.screenshot({ path: testInfo.outputPath(`category-label-${viewport.width}.png`) });
@@ -2553,6 +2557,9 @@ test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, t
       path: testInfo.outputPath(`cart-page-${viewport.width}x${viewport.height}.png`),
       fullPage: true,
     });
+  }
+});
+
 test("V2 búsqueda: todos los controles son cuadrados en desktop, tablet y mobile", async ({
   page,
 }, testInfo) => {
@@ -2629,8 +2636,6 @@ test("V2 búsqueda: todos los controles son cuadrados en desktop, tablet y mobil
       await page.evaluate(() => document.documentElement.scrollWidth),
       viewport.label,
     ).toBeLessThanOrEqual(viewport.width);
-  }
-});
   }
 });
 

@@ -1061,10 +1061,13 @@ function exportedModuleStyles(project: StoreProjectV1): string {
   );
 }
 
-function previewModuleStyles(project: StoreProjectV1): string {
-  const pageSections = project.pages
-    .filter((page) => isPublishedEditablePage(project, page))
-    .flatMap((page) => page.sections);
+function previewModuleStyles(project: StoreProjectV1, route = "/"): string {
+  const isHome = route === "/" || route === "";
+  const pageSections = isHome
+    ? []
+    : project.pages
+        .filter((page) => isPublishedEditablePage(project, page))
+        .flatMap((page) => page.sections);
   const productModule = isModernProject(project) ? "catalog-product-detail" : "product-detail";
   return stylesForProjectFamily(
     project,
@@ -1543,6 +1546,11 @@ function buildPages(
     isModernProject(project)
       ? ["cart", "footer"].includes(section.slot) || section.moduleId === "catalog-newsletter-cta"
       : ["trust", "cart", "footer"].includes(section.slot),
+  );
+  // F-11: el CTA de novedades conserva en páginas comerciales y legales, pero
+  // una 404 ya pide volver al catálogo; repetirlo ahí solo diluye la acción.
+  const notFoundFooter = sharedFooter.filter(
+    (section) => section.moduleId !== "catalog-newsletter-cta",
   );
   const homeHero = effectiveHomeSections(project).find(
     (section) => section.enabled && section.slot === "hero",
@@ -2041,8 +2049,8 @@ function buildPages(
     canonicalPath: "/404.html",
     pageType: "not-found",
     body: isV2Design
-      ? `${renderPageSections(sharedHeader, { pageType: "legal" })}<main class="solara-container solara-error-page"><nav class="solara-breadcrumbs" aria-label="${escapeAttribute(copy.export.breadcrumbs)}"><a href="${internalHref(project, "/")}">${escapeHtml(copy.pages.home)}</a><span aria-hidden="true">/</span><span>404</span></nav><section class="solara-error-hero"><div class="solara-error-copy"><p class="solara-eyebrow">${escapeHtml(copy.pages.notFoundEyebrow)}</p><h1>${escapeHtml(copy.pages.notFoundTitle)}</h1><p>${escapeHtml(copy.pages.notFoundDescription)}</p><div class="solara-error-actions"><a class="solara-primary-action" href="${internalHref(project, "/")}">${escapeHtml(copy.pages.returnHome)}</a>${project.categories[0] ? `<a class="solara-secondary-action" href="${escapeAttribute(internalHref(project, `/categorias/${project.categories[0].slug}/`))}">${escapeHtml(copy.pages.viewCategories)}</a>` : ""}</div></div><p class="solara-error-code" aria-hidden="true">404</p></section></main>${renderPageSections(sharedFooter, { pageType: "legal" })}`
-      : `${renderPageSections(sharedHeader, { pageType: "legal" })}<main class="solara-container solara-error-page"><p class="solara-eyebrow">404</p><h1>${escapeHtml(copy.pages.notFoundTitle)}</h1><p>${escapeHtml(copy.pages.notFoundDescription)}</p><a class="solara-primary-action" href="${internalHref(project, "/")}">${escapeHtml(copy.pages.returnHome)}</a></main>${renderPageSections(sharedFooter, { pageType: "legal" })}`,
+      ? `${renderPageSections(sharedHeader, { pageType: "legal" })}<main class="solara-container solara-error-page"><nav class="solara-breadcrumbs" aria-label="${escapeAttribute(copy.export.breadcrumbs)}"><a href="${internalHref(project, "/")}">${escapeHtml(copy.pages.home)}</a><span aria-hidden="true">/</span><span>404</span></nav><section class="solara-error-hero"><div class="solara-error-copy"><p class="solara-eyebrow">${escapeHtml(copy.pages.notFoundEyebrow)}</p><h1>${escapeHtml(copy.pages.notFoundTitle)}</h1><p>${escapeHtml(copy.pages.notFoundDescription)}</p><div class="solara-error-actions"><a class="solara-primary-action" href="${internalHref(project, "/")}">${escapeHtml(copy.pages.returnHome)}</a>${project.categories[0] ? `<a class="solara-secondary-action" href="${escapeAttribute(internalHref(project, `/categorias/${project.categories[0].slug}/`))}">${escapeHtml(copy.pages.viewCategories)}</a>` : ""}</div></div><p class="solara-error-code" aria-hidden="true">404</p></section></main>${renderPageSections(notFoundFooter, { pageType: "legal" })}`
+      : `${renderPageSections(sharedHeader, { pageType: "legal" })}<main class="solara-container solara-error-page"><p class="solara-eyebrow">404</p><h1>${escapeHtml(copy.pages.notFoundTitle)}</h1><p>${escapeHtml(copy.pages.notFoundDescription)}</p><a class="solara-primary-action" href="${internalHref(project, "/")}">${escapeHtml(copy.pages.returnHome)}</a></main>${renderPageSections(notFoundFooter, { pageType: "legal" })}`,
     structuredData: [],
   };
 
@@ -2995,7 +3003,7 @@ export function renderPreviewHtml(
       "data:text/css;base64,PREVIEW_STYLE",
       `data:text/css;base64,${toBase64(
         minifyCss(
-          `${themeCss(project, "inline")}\n${previewModuleStyles(project)}\n${STOREFRONT_RUNTIME_CSS}`,
+          `${themeCss(project, "inline")}\n${previewModuleStyles(project, path)}\n${STOREFRONT_RUNTIME_CSS}`,
         ),
       )}`,
     );
