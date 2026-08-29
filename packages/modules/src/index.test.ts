@@ -185,6 +185,24 @@ describe("official module system", () => {
     expect(STORE_THEME_TOKEN_STYLES).toContain("var(--solara-line-height-tight");
   });
 
+  it("hace aparecer la superficie del CTA de novedades junto con su contenido", () => {
+    const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!v2Styles) throw new Error("Falta el bloque de estilos catalog-modern-v2");
+
+    expect(v2Styles).toContain(
+      '.cm.v2 [data-solara-module="catalog-newsletter-cta"][data-motion-visible="true"] .catalog-newsletter-inner {',
+    );
+    expect(v2Styles).toMatch(
+      /\.cm\.v2 \[data-solara-module="catalog-newsletter-cta"\]\[data-motion-visible="true"\] \.catalog-newsletter-inner \{[\s\S]*animation: solara-hero-rise[\s\S]*60ms both;/,
+    );
+
+    const reducedMotionStart = v2Styles.indexOf("@media (prefers-reduced-motion: reduce)");
+    const reducedMotionStyles = v2Styles.slice(reducedMotionStart);
+    expect(reducedMotionStyles).toContain(
+      '.cm.v2 [data-solara-module="catalog-newsletter-cta"] .catalog-newsletter-inner,',
+    );
+  });
+
   it("preserves compatible hero settings when replacing its visual treatment", () => {
     const hero = referenceStore.sections.find((section) => section.moduleId === "hero-media");
     expect(hero).toBeDefined();

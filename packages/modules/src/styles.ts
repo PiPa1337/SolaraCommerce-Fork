@@ -3218,7 +3218,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 [data-solara-module="catalog-testimonials"][data-motion-visible="true"] .catalog-testimonial:nth-child(12) {
   --catalog-t-index: 12;
 }
-  /* CTA de novedades: título, texto y acción entran escalonados. */
+  /* CTA de novedades: la superficie y su contenido aparecen como una sola unidad. */
+  .cm.v2 [data-solara-module="catalog-newsletter-cta"][data-motion-visible="true"] .catalog-newsletter-inner {
+    --hero-v2-rise: 14px;
+    animation: solara-hero-rise var(--catalog-v2-motion-component) var(--catalog-v2-ease-out) 60ms both;
+  }
   .cm.v2 [data-solara-module="catalog-newsletter-cta"][data-motion-visible="true"] .catalog-newsletter-inner > div {
     --hero-v2-rise: 14px;
     animation: solara-hero-rise var(--catalog-v2-motion-component) var(--catalog-v2-ease-out) 80ms backwards;
@@ -4749,6 +4753,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     .cm.v2 .catalog-category-bento-item img,
     .cm.v2 [data-solara-module="catalog-testimonials"] .catalog-testimonials-section > header,
     .cm.v2 [data-solara-module="catalog-testimonials"] .catalog-testimonial,
+    .cm.v2 [data-solara-module="catalog-newsletter-cta"] .catalog-newsletter-inner,
     .cm.v2 [data-solara-module="catalog-newsletter-cta"] .catalog-newsletter-inner > div,
     .cm.v2 [data-solara-module="catalog-newsletter-cta"] .catalog-newsletter-action,
     .cm.v2 [data-solara-module="catalog-footer"] .catalog-footer-inner,

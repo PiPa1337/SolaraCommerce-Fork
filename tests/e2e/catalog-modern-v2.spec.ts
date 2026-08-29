@@ -2321,6 +2321,29 @@ test("V2 anima reseñas y novedades con entrada estilo hero", async ({ page }) =
   expect(
     await newsletterText.evaluate((element) => getComputedStyle(element).animationName),
   ).not.toBe("none");
+  const newsletterCard = page.locator(
+    '[data-solara-module="catalog-newsletter-cta"] .catalog-newsletter-inner',
+  );
+  expect(await newsletterCard.evaluate((element) => getComputedStyle(element).animationName)).toBe(
+    "solara-hero-rise",
+  );
+});
+
+test("V2 deja visible la card de novedades con movimiento reducido", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(serverUrl);
+  const newsletterCard = page.locator(
+    '[data-solara-module="catalog-newsletter-cta"] .catalog-newsletter-inner',
+  );
+  await expect(newsletterCard).toBeVisible();
+  await expect
+    .poll(() =>
+      newsletterCard.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return { opacity: style.opacity, transform: style.transform };
+      }),
+    )
+    .toEqual({ opacity: "1", transform: "none" });
 });
 
 test("V2 cards: línea glow con puntito en la imagen al hover", async ({ page }) => {

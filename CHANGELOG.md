@@ -1,5 +1,13 @@
 # Changelog
 
+### Entrada sincronizada del CTA de novedades (2026-08-29)
+
+- La card de fondo de "Novedades" ahora aparece junto con su título, texto y
+  acción en la entrada animada de Catalog Modern V2.
+- La corrección vive en el renderer global, por lo que aplica a RM Descartables,
+  Predeterminada y futuras tiendas que usen la misma familia visual.
+- `prefers-reduced-motion` mantiene la card visible y sin transformaciones.
+
 ### Etiquetas de categorías ligeramente más amplias (2026-08-29)
 
 - Se amplió sólo el padding de las etiquetas del mosaico de categorías en los
