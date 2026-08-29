@@ -1396,6 +1396,21 @@ describe("auditoría Resumen — fixes Ola 3 (navegación y footer moderno)", ()
     expect(styles).toContain("var(--solara-accent-text)");
   });
 
+  it("comparte el hover temático del footer con los botones de búsqueda", () => {
+    const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
+    if (!styles) throw new Error("Falta el bloque de estilos catalog-modern");
+
+    expect(styles).toMatch(
+      /\.solara-search-form \.solara-primary-action,\s*\[data-solara-store\]\.catalog-modern \.catalog-search-dialog-controls \.catalog-primary-action \{[^}]*border: 1px solid var\(--solara-accent\);[^}]*background: transparent;[^}]*color: var\(--solara-accent\);[^}]*transition: background-color var\(--solara-motion-fast/,
+    );
+    expect(styles).toMatch(
+      /\.catalog-footer-whatsapp:hover,\s*\[data-solara-store\]\.catalog-modern \.catalog-footer-whatsapp:focus-visible,\s*\[data-solara-store\]\.catalog-modern \.solara-search-form \.solara-primary-action:hover,\s*\[data-solara-store\]\.catalog-modern \.solara-search-form \.solara-primary-action:focus-visible,\s*\[data-solara-store\]\.catalog-modern \.catalog-search-dialog-controls \.catalog-primary-action:hover,\s*\[data-solara-store\]\.catalog-modern \.catalog-search-dialog-controls \.catalog-primary-action:focus-visible \{[^}]*background: var\(--solara-accent\);[^}]*color: var\(--solara-accent-text\);/,
+    );
+    expect(styles).toMatch(
+      /\.solara-search-form \.solara-primary-action:hover,\s*\[data-solara-store\]\.catalog-modern \.solara-search-form \.solara-primary-action:focus-visible,\s*\[data-solara-store\]\.catalog-modern \.catalog-search-dialog-controls \.catalog-primary-action:hover,\s*\[data-solara-store\]\.catalog-modern \.catalog-search-dialog-controls \.catalog-primary-action:focus-visible \{[^}]*transform: none;[^}]*box-shadow: none;/,
+    );
+  });
+
   it("deja sólo el subrayado animado en el acceso a todos los productos", () => {
     const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
     const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];

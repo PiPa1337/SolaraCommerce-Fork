@@ -2692,6 +2692,46 @@ test("V2 búsqueda: todos los controles son cuadrados en desktop, tablet y mobil
   }
 });
 
+test("V2 búsqueda comparte el hover temático del CTA del footer", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(new URL("/buscar/", serverUrl).toString());
+
+  const searchButton = page.locator(".solara-search-form button[type='submit']");
+  const footerButton = page.locator(".catalog-footer-whatsapp");
+  await expect(searchButton).toBeVisible();
+  await expect(footerButton).toBeVisible();
+
+  const surface = async (locator: typeof searchButton) =>
+    locator.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return {
+        background: styles.backgroundColor,
+        border: styles.borderTopColor,
+        color: styles.color,
+        transform: styles.transform,
+        shadow: styles.boxShadow,
+      };
+    });
+
+  const searchRest = await surface(searchButton);
+  const footerRest = await surface(footerButton);
+  expect(searchRest).toMatchObject({
+    background: footerRest.background,
+    border: footerRest.border,
+    color: footerRest.color,
+  });
+
+  await searchButton.hover();
+  await page.waitForTimeout(240);
+  const searchHover = await surface(searchButton);
+  await footerButton.hover();
+  await page.waitForTimeout(240);
+  const footerHover = await surface(footerButton);
+  expect(searchHover).toEqual(footerHover);
+  expect(searchHover.background).not.toBe(searchRest.background);
+  expect(searchHover.color).not.toBe(searchRest.color);
+});
+
 test("V1 y V2 conservan contenido y aislamiento en capturas equivalentes", async ({
   page,
 }, testInfo) => {

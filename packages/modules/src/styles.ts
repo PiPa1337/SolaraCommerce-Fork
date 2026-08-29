@@ -2236,6 +2236,18 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-footer-brand .catalog-brand .solara-wordmark { max-width: 100%; overflow-wrap: anywhere; font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(1.25rem, 2.4vw, 2rem); line-height: 1; }
 [data-solara-store].catalog-modern .catalog-footer-brand p { max-width: 28ch; margin: 1rem 0 0; color: var(--catalog-muted); font-size: .84rem; }
 [data-solara-store].catalog-modern .catalog-footer-whatsapp { display: inline-flex; align-items: center; justify-content: space-between; gap: 1rem; width: min(100%, 16rem); min-height: 2.75rem; margin-top: 1rem; padding: .65rem .8rem; border: 1px solid var(--solara-accent); border-radius: var(--solara-radius); color: var(--solara-accent); font-size: .78rem; font-weight: 800; text-decoration: none; }
+[data-solara-store].catalog-modern .solara-search-form .solara-primary-action,
+[data-solara-store].catalog-modern .catalog-search-dialog-controls .catalog-primary-action { border: 1px solid var(--solara-accent); background: transparent; color: var(--solara-accent); transition: background-color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease), border-color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease), color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease); }
+[data-solara-store].catalog-modern .catalog-footer-whatsapp:hover,
+[data-solara-store].catalog-modern .catalog-footer-whatsapp:focus-visible,
+[data-solara-store].catalog-modern .solara-search-form .solara-primary-action:hover,
+[data-solara-store].catalog-modern .solara-search-form .solara-primary-action:focus-visible,
+[data-solara-store].catalog-modern .catalog-search-dialog-controls .catalog-primary-action:hover,
+[data-solara-store].catalog-modern .catalog-search-dialog-controls .catalog-primary-action:focus-visible { background: var(--solara-accent); color: var(--solara-accent-text); }
+[data-solara-store].catalog-modern .solara-search-form .solara-primary-action:hover,
+[data-solara-store].catalog-modern .solara-search-form .solara-primary-action:focus-visible,
+[data-solara-store].catalog-modern .catalog-search-dialog-controls .catalog-primary-action:hover,
+[data-solara-store].catalog-modern .catalog-search-dialog-controls .catalog-primary-action:focus-visible { transform: none; box-shadow: none; }
 [data-solara-store].catalog-modern .catalog-footer-whatsapp:hover,
 [data-solara-store].catalog-modern .catalog-footer-whatsapp:focus-visible { background: var(--solara-accent); color: var(--solara-accent-text); }
 [data-solara-store].catalog-modern .catalog-footer-inner address { display: grid; align-content: start; gap: .6rem; padding-inline-start: clamp(.9rem, 1.8vw, 1.5rem); border-inline-start: 1px solid var(--catalog-border); font-style: normal; font-size: .84rem; }
