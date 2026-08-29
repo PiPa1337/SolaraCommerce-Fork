@@ -141,6 +141,9 @@ describe("Contacto V2 module contracts", () => {
     expect(html).toContain(`action="mailto:${catalogModernV2Store.identity.email}`);
     expect(html).toContain('data-contact-channel="email"');
     expect(html).toContain('data-contact-channel="whatsapp"');
+    expect(html).toContain(
+      'class="catalog-primary-action solara-primary-action contact-form-whatsapp"',
+    );
     expect(html).toContain("Enviar por Email");
     expect(html).toContain("Enviar por WhatsApp");
     expect(html).not.toContain("Motivo");

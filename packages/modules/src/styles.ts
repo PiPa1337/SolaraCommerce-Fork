@@ -4145,6 +4145,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   isolation: isolate;
   margin-top: 0;
 }
+.cm.v2 .contact-form-actions .contact-form-whatsapp {
+  background: var(--catalog-sale);
+  color: var(--catalog-paper);
+}
 .cm.v2 .contact-form-actions .catalog-primary-action::before {
   position: absolute;
   z-index: -1;
@@ -4154,10 +4158,17 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   transform: translateY(101%);
   transition: transform var(--catalog-v2-motion-control) var(--catalog-v2-ease-out);
 }
+.cm.v2 .contact-form-actions .contact-form-whatsapp::before {
+  background: color-mix(in srgb, var(--catalog-sale) 82%, var(--catalog-paper));
+}
 .cm.v2 .contact-form-actions .catalog-primary-action:hover,
 .cm.v2 .contact-form-actions .catalog-primary-action:focus-visible {
   transform: none;
   box-shadow: none;
+}
+.cm.v2 .contact-form-actions .contact-form-whatsapp:hover,
+.cm.v2 .contact-form-actions .contact-form-whatsapp:focus-visible {
+  background: var(--catalog-sale);
 }
 .cm.v2 .contact-form-actions .catalog-primary-action:hover::before,
 .cm.v2 .contact-form-actions .catalog-primary-action:focus-visible::before {
@@ -4180,6 +4191,12 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .contact-form-actions .catalog-primary-action:hover .catalog-hero-cta-icon,
 .cm.v2 .contact-form-actions .catalog-primary-action:focus-visible .catalog-hero-cta-icon {
   color: color-mix(in srgb, var(--solara-accent-text) 80%, var(--catalog-paper) 20%);
+}
+.cm.v2 .contact-form-actions .contact-form-whatsapp:hover .catalog-hero-cta-label,
+.cm.v2 .contact-form-actions .contact-form-whatsapp:focus-visible .catalog-hero-cta-label,
+.cm.v2 .contact-form-actions .contact-form-whatsapp:hover .catalog-hero-cta-icon,
+.cm.v2 .contact-form-actions .contact-form-whatsapp:focus-visible .catalog-hero-cta-icon {
+  color: color-mix(in srgb, var(--catalog-paper) 80%, var(--catalog-sale) 20%);
 }
 .cm.v2 .contact-form-fallback:not(.catalog-primary-action),
 .cm.v2 .contact-form noscript {

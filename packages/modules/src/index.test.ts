@@ -176,6 +176,14 @@ describe("official module system", () => {
     expect(v2Styles).toMatch(/\.cm\.v2 \.catalog-eyebrow\s*\{[^}]*color: var\(--solara-accent\)/);
     expect(v2Styles).toContain(".cm.v2 .contact-channel-row:hover > span:last-child");
     expect(v2Styles).toContain("color: var(--solara-accent);");
+    expect(v2Styles).toMatch(
+      /\.cm\.v2 \.contact-form-actions \.contact-form-whatsapp\s*\{[\s\S]*background: var\(--catalog-sale\);[\s\S]*color: var\(--catalog-paper\);/,
+    );
+    expect(v2Styles).toContain(".cm.v2 .contact-form-actions .contact-form-whatsapp::before");
+    expect(v2Styles).toContain(
+      "background: color-mix(in srgb, var(--catalog-sale) 82%, var(--catalog-paper));",
+    );
+    expect(v2Styles).not.toContain(".contact-form-whatsapp { background: #");
 
     expect(STORE_BASE_STYLES).toContain("var(--solara-dark-background");
     expect(STORE_BASE_STYLES).not.toContain("--solara-background: #1d1e19");

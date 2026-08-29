@@ -1,5 +1,14 @@
 # Changelog
 
+### Botón de WhatsApp con acento alternativo del tema (2026-08-29)
+
+- El botón de WhatsApp del formulario de contacto usa el token semántico
+  `--catalog-sale` derivado de la paleta seleccionada, mientras Email conserva
+  el acento principal.
+- El estado hover y focus también usan la misma paleta alternativa, sin colores
+  hardcodeados. El cambio aplica a RM Descartables, Predeterminada y nuevas
+  tiendas Catalog Modern.
+
 ### Entrada sincronizada del CTA de novedades (2026-08-29)
 
 - La card de fondo de "Novedades" ahora aparece junto con su título, texto y

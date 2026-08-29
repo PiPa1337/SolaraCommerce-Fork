@@ -1248,16 +1248,41 @@ test("V2 Home muestra Contacto como módulos responsive y replica el CTA del her
     const contactButton = formRoot?.querySelector<HTMLElement>(
       ".contact-form-actions .catalog-primary-action",
     );
-    if (!formRoot || !channelsRoot || !heroButton || !contactButton) return null;
+    const emailButton = formRoot?.querySelector<HTMLElement>(
+      '.contact-form-actions [data-contact-channel="email"]',
+    );
+    const whatsappButton = formRoot?.querySelector<HTMLElement>(
+      '.contact-form-actions [data-contact-channel="whatsapp"]',
+    );
+    if (
+      !formRoot ||
+      !channelsRoot ||
+      !heroButton ||
+      !contactButton ||
+      !emailButton ||
+      !whatsappButton
+    )
+      return null;
     const formRect = formRoot.getBoundingClientRect();
     const channelsRect = channelsRoot.getBoundingClientRect();
     const heroStyle = getComputedStyle(heroButton);
     const contactStyle = getComputedStyle(contactButton);
+    const emailStyle = getComputedStyle(emailButton);
+    const whatsappStyle = getComputedStyle(whatsappButton);
+    const saleProbe = document.createElement("span");
+    saleProbe.style.color = "var(--solara-sale)";
+    document.body.append(saleProbe);
+    const saleColor = getComputedStyle(saleProbe).color;
+    saleProbe.remove();
     return {
       columns: getComputedStyle(element).gridTemplateColumns.split(" ").length,
       sameRow: Math.abs(formRect.top - channelsRect.top) < 1,
       noOverflow: document.documentElement.scrollWidth <= window.innerWidth,
-      sameButtonBackground: heroStyle.backgroundColor === contactStyle.backgroundColor,
+      sameButtonBackground: heroStyle.backgroundColor === emailStyle.backgroundColor,
+      whatsappUsesThemeSale: whatsappStyle.backgroundColor === saleColor,
+      whatsappHasAlternateBackground:
+        whatsappStyle.backgroundColor !== emailStyle.backgroundColor &&
+        whatsappStyle.backgroundColor !== contactStyle.backgroundColor,
       sameButtonRadius: heroStyle.borderRadius === contactStyle.borderRadius,
       sameButtonHeight: heroStyle.minHeight === contactStyle.minHeight,
     };
@@ -1267,6 +1292,8 @@ test("V2 Home muestra Contacto como módulos responsive y replica el CTA del her
     sameRow: true,
     noOverflow: true,
     sameButtonBackground: true,
+    whatsappUsesThemeSale: true,
+    whatsappHasAlternateBackground: true,
     sameButtonRadius: true,
     sameButtonHeight: true,
   });
@@ -1274,25 +1301,28 @@ test("V2 Home muestra Contacto como módulos responsive y replica el CTA del her
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
   const mobileMetrics = await contact.evaluate((element) => {
-    const formButton = element.querySelector<HTMLElement>(
-      '[data-solara-module="contact-form"] .contact-form-actions .catalog-primary-action',
-    );
+    const formButtons = [
+      ...element.querySelectorAll<HTMLElement>(
+        '[data-solara-module="contact-form"] .contact-form-actions .catalog-primary-action',
+      ),
+    ];
     const channelsRoot = element.querySelector<HTMLElement>(
       '[data-solara-module="contact-channels"]',
     );
     const formRoot = element.querySelector<HTMLElement>('[data-solara-module="contact-form"]');
-    if (!formButton || !channelsRoot || !formRoot) return null;
+    if (formButtons.length !== 2 || !channelsRoot || !formRoot) return null;
+    const formWidth = formRoot.getBoundingClientRect().width;
     return {
       columns: getComputedStyle(element).gridTemplateColumns.split(" ").length,
-      formWidth: formRoot.getBoundingClientRect().width,
+      formWidth,
       channelsWidth: channelsRoot.getBoundingClientRect().width,
-      buttonWidth: formButton.getBoundingClientRect().width,
+      buttonWidths: formButtons.map((button) => button.getBoundingClientRect().width),
       noOverflow: document.documentElement.scrollWidth <= window.innerWidth,
     };
   });
   expect(mobileMetrics?.columns).toBe(1);
   expect(mobileMetrics?.formWidth).toBe(mobileMetrics?.channelsWidth);
-  expect(mobileMetrics?.buttonWidth).toBe(mobileMetrics?.formWidth);
+  expect(mobileMetrics?.buttonWidths).toEqual([mobileMetrics?.formWidth, mobileMetrics?.formWidth]);
   expect(mobileMetrics?.noOverflow).toBe(true);
 });
 
