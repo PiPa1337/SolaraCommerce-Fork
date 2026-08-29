@@ -2043,6 +2043,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   --catalog-border: var(--solara-border, #dededa);
   --catalog-sale: var(--solara-sale, #d94a55);
   --catalog-rating: var(--solara-rating, #d99a12);
+  --catalog-accent-alt: var(--solara-accent-alt, var(--solara-accent));
   background: var(--catalog-paper);
   color: var(--catalog-ink);
   font-family: var(--solara-font-body, "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif);
@@ -2574,6 +2575,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   --catalog-border: var(--solara-border, #d8d2c7);
   --catalog-sale: var(--solara-sale, var(--solara-accent, #a63d2f));
   --catalog-rating: var(--solara-rating, var(--solara-accent, #8d6424));
+  --catalog-accent-alt: var(--solara-accent-alt, var(--solara-accent));
   --catalog-v2-motion-response: var(--solara-motion-fast, 120ms);
   --catalog-v2-motion-control: var(--solara-motion-fast, 220ms);
   --catalog-v2-motion-component: var(--solara-motion-normal, 380ms);
@@ -4146,8 +4148,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   margin-top: 0;
 }
 .cm.v2 .contact-form-actions .contact-form-whatsapp {
-  background: var(--catalog-sale);
-  color: var(--catalog-paper);
+  background: var(--catalog-accent-alt);
+  color: var(--solara-accent-text);
 }
 .cm.v2 .contact-form-actions .catalog-primary-action::before {
   position: absolute;
@@ -4159,7 +4161,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   transition: transform var(--catalog-v2-motion-control) var(--catalog-v2-ease-out);
 }
 .cm.v2 .contact-form-actions .contact-form-whatsapp::before {
-  background: color-mix(in srgb, var(--catalog-sale) 82%, var(--catalog-paper));
+  background: color-mix(in srgb, var(--catalog-accent-alt) 82%, var(--catalog-paper));
 }
 .cm.v2 .contact-form-actions .catalog-primary-action:hover,
 .cm.v2 .contact-form-actions .catalog-primary-action:focus-visible {
@@ -4168,7 +4170,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .contact-form-actions .contact-form-whatsapp:hover,
 .cm.v2 .contact-form-actions .contact-form-whatsapp:focus-visible {
-  background: var(--catalog-sale);
+  background: var(--catalog-accent-alt);
 }
 .cm.v2 .contact-form-actions .catalog-primary-action:hover::before,
 .cm.v2 .contact-form-actions .catalog-primary-action:focus-visible::before {
@@ -4196,7 +4198,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .contact-form-actions .contact-form-whatsapp:focus-visible .catalog-hero-cta-label,
 .cm.v2 .contact-form-actions .contact-form-whatsapp:hover .catalog-hero-cta-icon,
 .cm.v2 .contact-form-actions .contact-form-whatsapp:focus-visible .catalog-hero-cta-icon {
-  color: color-mix(in srgb, var(--catalog-paper) 80%, var(--catalog-sale) 20%);
+  color: color-mix(in srgb, var(--solara-accent-text) 80%, var(--catalog-accent-alt) 20%);
 }
 .cm.v2 .contact-form-fallback:not(.catalog-primary-action),
 .cm.v2 .contact-form noscript {

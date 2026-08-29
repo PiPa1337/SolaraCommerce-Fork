@@ -690,6 +690,8 @@ function themeCss(
   const motionEasing = t.motion?.easing ?? "cubic-bezier(.16,1,.3,1)";
   const saleColor = colors.sale ?? "#d94a55";
   const ratingColor = colors.rating ?? "#d99a12";
+  const accentAltColor =
+    colors.accentAlt ?? `color-mix(in srgb, ${colors.accent} 68%, ${colors.background})`;
 
   return `
 :root {
@@ -708,6 +710,7 @@ function themeCss(
   --solara-dark-border: ${darkBorder};
   --solara-sale: ${saleColor};
   --solara-rating: ${ratingColor};
+  --solara-accent-alt: ${accentAltColor};
   --solara-font-display: ${typography.display};
   --solara-font-body: ${typography.body};
   --solara-type-scale: ${typography.scale};

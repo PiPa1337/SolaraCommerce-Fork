@@ -130,10 +130,20 @@ const colorLabels: Record<keyof Theme["colors"], string> = {
   muted: "Texto secundario",
   accent: "Acento",
   accentText: "Texto sobre acento",
+  accentAlt: "Acento alternativo",
   border: "Borde",
   sale: "Descuento",
   rating: "Rating",
 };
+
+/**
+ * Los proyectos anteriores todavía no guardan el token alternativo. El
+ * editor muestra el acento principal como valor editable hasta que la persona
+ * elija o confirme un valor alternativo explícito.
+ */
+function editableThemeColor(colors: Theme["colors"], key: keyof Theme["colors"]): string {
+  return colors[key] ?? (key === "accentAlt" ? colors.accent : "");
+}
 
 /**
  * Paletas curadas derivadas de los tokens existentes. Sólo aplican colores:
@@ -161,6 +171,7 @@ const THEME_PRESETS: Array<{
       muted: "#696966",
       accent: "#0b0b0c",
       accentText: "#ffffff",
+      accentAlt: "#9b4332",
       border: "#dededa",
       sale: "#d94a55",
       rating: "#d99a12",
@@ -177,6 +188,7 @@ const THEME_PRESETS: Array<{
       muted: "#526457",
       accent: "#356248",
       accentText: "#f6fff7",
+      accentAlt: "#9e4b38",
       border: "#c7d8c7",
       sale: "#d94a55",
       rating: "#d99a12",
@@ -193,6 +205,7 @@ const THEME_PRESETS: Array<{
       muted: "#76584b",
       accent: "#9a442c",
       accentText: "#fff8f3",
+      accentAlt: "#176b68",
       border: "#e8c8b3",
       sale: "#d94a55",
       rating: "#d99a12",
@@ -209,6 +222,7 @@ const THEME_PRESETS: Array<{
       muted: "#4a6272",
       accent: "#1d5b7a",
       accentText: "#f7fcff",
+      accentAlt: "#8a4c15",
       border: "#c5d8e5",
       sale: "#d94a55",
       rating: "#d99a12",
@@ -225,6 +239,7 @@ const THEME_PRESETS: Array<{
       muted: "#655978",
       accent: "#6d4a92",
       accentText: "#fbf8ff",
+      accentAlt: "#944064",
       border: "#d8c9e7",
       sale: "#d94a55",
       rating: "#d99a12",
@@ -241,6 +256,7 @@ const THEME_PRESETS: Array<{
       muted: "#76515c",
       accent: "#9a3f56",
       accentText: "#fff7f9",
+      accentAlt: "#176b68",
       border: "#e6c5cf",
       sale: "#d94a55",
       rating: "#d99a12",
@@ -257,6 +273,7 @@ const THEME_PRESETS: Array<{
       muted: "#4d6a62",
       accent: "#1e6b59",
       accentText: "#f4fffc",
+      accentAlt: "#a8443a",
       border: "#c2ded5",
       sale: "#d94a55",
       rating: "#d99a12",
@@ -273,6 +290,7 @@ const THEME_PRESETS: Array<{
       muted: "#756b43",
       accent: "#766018",
       accentText: "#fffbef",
+      accentAlt: "#3d4f86",
       border: "#e7d9a8",
       sale: "#d94a55",
       rating: "#d99a12",
@@ -289,6 +307,7 @@ const THEME_PRESETS: Array<{
       muted: "#765651",
       accent: "#a64034",
       accentText: "#fff8f6",
+      accentAlt: "#2e5d82",
       border: "#e6c6be",
       sale: "#d94a55",
       rating: "#d99a12",
@@ -305,6 +324,7 @@ const THEME_PRESETS: Array<{
       muted: "#56627d",
       accent: "#3d5592",
       accentText: "#f8faff",
+      accentAlt: "#80406f",
       border: "#c8d0e5",
       sale: "#d94a55",
       rating: "#d99a12",
@@ -321,6 +341,7 @@ const THEME_PRESETS: Array<{
       muted: "#755043",
       accent: "#b84d12",
       accentText: "#ffffff",
+      accentAlt: "#12656b",
       border: "#edcdb8",
       sale: "#a52e32",
       rating: "#9b6800",
@@ -337,6 +358,7 @@ const THEME_PRESETS: Array<{
       muted: "#bac3c6",
       accent: "#b4e34a",
       accentText: "#182000",
+      accentAlt: "#e67269",
       border: "#3a464a",
       sale: "#ff8f87",
       rating: "#f6c84d",
@@ -353,6 +375,7 @@ const THEME_PRESETS: Array<{
       muted: "#b8c5d9",
       accent: "#57b8ff",
       accentText: "#062036",
+      accentAlt: "#f27d78",
       border: "#344766",
       sale: "#ff918d",
       rating: "#ffd36b",
@@ -369,6 +392,7 @@ const THEME_PRESETS: Array<{
       muted: "#d3b7ce",
       accent: "#ed8bc3",
       accentText: "#351326",
+      accentAlt: "#efb64d",
       border: "#55345e",
       sale: "#ff9e9b",
       rating: "#f5cb65",
@@ -385,6 +409,7 @@ const THEME_PRESETS: Array<{
       muted: "#d9bca7",
       accent: "#f0a35b",
       accentText: "#2b1709",
+      accentAlt: "#55c7a4",
       border: "#5a3d2c",
       sale: "#ff958c",
       rating: "#f4c75c",
@@ -401,6 +426,7 @@ const THEME_PRESETS: Array<{
       muted: "#b1cfc0",
       accent: "#6fdbad",
       accentText: "#06261c",
+      accentAlt: "#e1ac4e",
       border: "#31564a",
       sale: "#ff958d",
       rating: "#f2c65d",
@@ -417,6 +443,7 @@ const THEME_PRESETS: Array<{
       muted: "#4d6970",
       accent: "#087f86",
       accentText: "#f5ffff",
+      accentAlt: "#a84436",
       border: "#c2dfe2",
       sale: "#b73542",
       rating: "#936600",
@@ -433,6 +460,7 @@ const THEME_PRESETS: Array<{
       muted: "#5f6874",
       accent: "#2c4c7a",
       accentText: "#f8fbff",
+      accentAlt: "#a64b3d",
       border: "#d9ccb2",
       sale: "#a93638",
       rating: "#8a6100",
@@ -449,6 +477,7 @@ const THEME_PRESETS: Array<{
       muted: "#635577",
       accent: "#70459e",
       accentText: "#ffffff",
+      accentAlt: "#b74b65",
       border: "#d9c8ec",
       sale: "#b23d55",
       rating: "#956600",
@@ -465,6 +494,7 @@ const THEME_PRESETS: Array<{
       muted: "#76584d",
       accent: "#a7472e",
       accentText: "#fffaf7",
+      accentAlt: "#2f5c85",
       border: "#e8c9b9",
       sale: "#a83239",
       rating: "#956600",
@@ -476,6 +506,7 @@ const PRESET_SWATCH_KEYS: Array<keyof Theme["colors"]> = [
   "background",
   "text",
   "accent",
+  "accentAlt",
   "accentText",
 ];
 
@@ -530,6 +561,12 @@ const CONTRAST_PAIRS: Array<{
     background: "background",
   },
   { id: "accent", label: "Texto sobre acento", foreground: "accentText", background: "accent" },
+  {
+    id: "accent-alt",
+    label: "Texto sobre acento alternativo",
+    foreground: "accentText",
+    background: "accentAlt",
+  },
 ];
 
 const CONTRAST_THRESHOLD = 4.5;
@@ -664,8 +701,8 @@ export function ThemeEditor({
   const contrastChecks = CONTRAST_PAIRS.map((pair) => ({
     ...pair,
     ratio: contrastRatio(
-      project.theme.colors[pair.foreground],
-      project.theme.colors[pair.background],
+      editableThemeColor(project.theme.colors, pair.foreground),
+      editableThemeColor(project.theme.colors, pair.background),
     ),
   }));
 
@@ -784,14 +821,14 @@ export function ThemeEditor({
                 <span className="color-input">
                   <input
                     type="color"
-                    value={project.theme.colors[key]}
+                    value={editableThemeColor(project.theme.colors, key)}
                     aria-label={`${colorLabels[key]} selector de color`}
                     data-testid={`ui-color-native-${key}`}
                     onChange={(event) => commitColor(key, event.target.value)}
                   />
                   <input
                     type="text"
-                    value={colorDrafts[key] ?? project.theme.colors[key]}
+                    value={colorDrafts[key] ?? editableThemeColor(project.theme.colors, key)}
                     aria-label={`${colorLabels[key]} valor hexadecimal`}
                     aria-invalid={colorErrors[key] ? true : undefined}
                     aria-describedby={colorErrors[key] ? `theme-color-error-${key}` : undefined}

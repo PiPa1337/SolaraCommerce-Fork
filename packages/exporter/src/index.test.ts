@@ -46,6 +46,21 @@ describe("exporter", () => {
     );
   });
 
+  it("emite el acento alternativo del tema y deriva uno para proyectos antiguos", () => {
+    const themed = structuredClone(catalogModernV2Store);
+    themed.theme.colors.accentAlt = "#123456";
+    const themedCss = runtimeAsset(exportProject(themed, { mode: "production" }).files, "css");
+
+    expect(themedCss).toContain("--solara-accent-alt:#123456");
+    expect(themedCss).toContain("var(--solara-accent-alt");
+
+    const legacy = structuredClone(catalogModernV2Store);
+    delete legacy.theme.colors.accentAlt;
+    const legacyCss = runtimeAsset(exportProject(legacy, { mode: "production" }).files, "css");
+
+    expect(legacyCss).toContain("--solara-accent-alt:color-mix(in srgb,#a63d2f 68%,#f7f5f0)");
+  });
+
   it("transporta el copy global personalizado a preview y exportación", () => {
     const project = structuredClone(catalogModernV2Store);
     project.publicCopy.navigation.cart = "Bolsa";

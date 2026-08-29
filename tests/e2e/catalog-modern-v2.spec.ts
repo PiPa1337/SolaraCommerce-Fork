@@ -1269,17 +1269,17 @@ test("V2 Home muestra Contacto como módulos responsive y replica el CTA del her
     const contactStyle = getComputedStyle(contactButton);
     const emailStyle = getComputedStyle(emailButton);
     const whatsappStyle = getComputedStyle(whatsappButton);
-    const saleProbe = document.createElement("span");
-    saleProbe.style.color = "var(--solara-sale)";
-    document.body.append(saleProbe);
-    const saleColor = getComputedStyle(saleProbe).color;
-    saleProbe.remove();
+    const accentAltProbe = document.createElement("span");
+    accentAltProbe.style.color = "var(--solara-accent-alt)";
+    document.body.append(accentAltProbe);
+    const accentAltColor = getComputedStyle(accentAltProbe).color;
+    accentAltProbe.remove();
     return {
       columns: getComputedStyle(element).gridTemplateColumns.split(" ").length,
       sameRow: Math.abs(formRect.top - channelsRect.top) < 1,
       noOverflow: document.documentElement.scrollWidth <= window.innerWidth,
       sameButtonBackground: heroStyle.backgroundColor === emailStyle.backgroundColor,
-      whatsappUsesThemeSale: whatsappStyle.backgroundColor === saleColor,
+      whatsappUsesThemeAccentAlt: whatsappStyle.backgroundColor === accentAltColor,
       whatsappHasAlternateBackground:
         whatsappStyle.backgroundColor !== emailStyle.backgroundColor &&
         whatsappStyle.backgroundColor !== contactStyle.backgroundColor,
@@ -1292,7 +1292,7 @@ test("V2 Home muestra Contacto como módulos responsive y replica el CTA del her
     sameRow: true,
     noOverflow: true,
     sameButtonBackground: true,
-    whatsappUsesThemeSale: true,
+    whatsappUsesThemeAccentAlt: true,
     whatsappHasAlternateBackground: true,
     sameButtonRadius: true,
     sameButtonHeight: true,

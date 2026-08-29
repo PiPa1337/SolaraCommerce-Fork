@@ -34,6 +34,7 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
         muted: "#8c8578",
         accent: "#8b6914",
         accentText: "#ffffff",
+        accentAlt: "#6d3c74",
         border: "#e0dbd3",
       },
       typography: {
@@ -66,6 +67,7 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
         muted: "#777777",
         accent: "#000000",
         accentText: "#ffffff",
+        accentAlt: "#a33d32",
         border: "#eeeeee",
       },
       typography: {
@@ -98,6 +100,7 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
         muted: "#a08464",
         accent: "#c17817",
         accentText: "#ffffff",
+        accentAlt: "#286b63",
         border: "#e8d5be",
       },
       typography: {
@@ -128,6 +131,7 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
         muted: "#888888",
         accent: "#00ff88",
         accentText: "#000000",
+        accentAlt: "#ff6f61",
         border: "#333333",
       },
       typography: {
@@ -156,6 +160,7 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
         muted: "#5c735c",
         accent: "#2d6a2d",
         accentText: "#ffffff",
+        accentAlt: "#a84336",
         border: "#c5d1c0",
       },
       typography: {

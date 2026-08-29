@@ -51,6 +51,10 @@ const THEME_TOKEN_LABELS: Array<
   ["Texto atenuado", (project) => project.theme.colors.muted],
   ["Color de acento", (project) => project.theme.colors.accent],
   ["Texto sobre acento", (project) => project.theme.colors.accentText],
+  [
+    "Color de acento alternativo",
+    (project) => project.theme.colors.accentAlt ?? project.theme.colors.accent,
+  ],
   ["Color de borde", (project) => project.theme.colors.border],
   ["Tipografía display", (project) => project.theme.typography.display],
   ["Tipografía de texto", (project) => project.theme.typography.body],

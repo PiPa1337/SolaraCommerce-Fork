@@ -587,6 +587,8 @@ export const ThemeColorsSchema = z.object({
   muted: z.string(),
   accent: z.string(),
   accentText: z.string(),
+  /** Optional for old projects; the exporter derives a theme-aware fallback. */
+  accentAlt: z.string().optional(),
   border: z.string(),
   sale: z.string().default("#d94a55"),
   rating: z.string().default("#d99a12"),

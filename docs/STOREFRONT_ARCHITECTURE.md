@@ -22,6 +22,7 @@ V2 añade la clase `.cm.v2` (~830 selectores). V1 legacy usa `.catalog-modern`.
   --solara-text: ${colors.text};
   --solara-muted: ${colors.muted};
   --solara-accent: ${colors.accent};
+  --solara-accent-alt: ${accentAltColor};
   --solara-border: ${colors.border};
   --solara-font-display: ${typography.display};
   --solara-font-body: ${typography.body};
@@ -50,6 +51,8 @@ V2 añade la clase `.cm.v2` (~830 selectores). V1 legacy usa `.catalog-modern`.
 Estas variables provienen del tema configurado en Studio (ThemeEditor). El
 usuario cambia colores, tipografía y geometría sin tocar CSS; los presets y
 otros clientes del schema también pueden configurar bordes, sombras y motion.
+El acento alternativo alimenta acciones secundarias como el botón de WhatsApp;
+si un respaldo antiguo no lo tiene, se deriva de los colores del mismo tema.
 
 ## Módulos por página
 

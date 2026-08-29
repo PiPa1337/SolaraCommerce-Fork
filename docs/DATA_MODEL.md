@@ -80,7 +80,9 @@ plantilla para upgrades tipados.
   asset ICO multirresolución y la imagen social se normaliza a 1200×630 al
   cargarla desde Studio. No tiene `robots` ni URL base: esas decisiones
   pertenecen al proyecto y a las rutas exportadas.
-- `theme`: tokens de color, tipografía, espaciado, radios y modo visual.
+- `theme`: tokens de color, tipografía, espaciado, radios y modo visual. El
+  color `theme.colors.accentAlt` es opcional para compatibilidad con respaldos
+  antiguos; el exporter deriva un valor desde acento y fondo cuando falta.
 - `navigation`: etiqueta de catálogo, enlaces curados y sus hijos (máximo un
   nivel adicional), además de búsqueda y carrito.
 - `siteShell`: configuración de announcement, header, footer y drawer de carrito.

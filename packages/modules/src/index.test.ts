@@ -165,6 +165,7 @@ describe("official module system", () => {
 
     expect(v2Styles).toContain("--catalog-sale: var(--solara-sale");
     expect(v2Styles).toContain("--catalog-rating: var(--solara-rating");
+    expect(v2Styles).toContain("--catalog-accent-alt: var(--solara-accent-alt");
     expect(v2Styles).toContain("color: var(--catalog-paper)");
     expect(v2Styles).toContain("color-mix(in srgb, var(--catalog-ink)");
     expect(v2Styles).not.toContain("--catalog-sale: #a63d2f;");
@@ -177,11 +178,11 @@ describe("official module system", () => {
     expect(v2Styles).toContain(".cm.v2 .contact-channel-row:hover > span:last-child");
     expect(v2Styles).toContain("color: var(--solara-accent);");
     expect(v2Styles).toMatch(
-      /\.cm\.v2 \.contact-form-actions \.contact-form-whatsapp\s*\{[\s\S]*background: var\(--catalog-sale\);[\s\S]*color: var\(--catalog-paper\);/,
+      /\.cm\.v2 \.contact-form-actions \.contact-form-whatsapp\s*\{[\s\S]*background: var\(--catalog-accent-alt\);[\s\S]*color: var\(--solara-accent-text\);/,
     );
     expect(v2Styles).toContain(".cm.v2 .contact-form-actions .contact-form-whatsapp::before");
     expect(v2Styles).toContain(
-      "background: color-mix(in srgb, var(--catalog-sale) 82%, var(--catalog-paper));",
+      "background: color-mix(in srgb, var(--catalog-accent-alt) 82%, var(--catalog-paper));",
     );
     expect(v2Styles).not.toContain(".contact-form-whatsapp { background: #");
 
