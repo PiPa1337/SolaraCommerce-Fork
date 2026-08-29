@@ -3828,7 +3828,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
     max-width: calc(100% - .8rem);
     margin: .4rem;
-    padding: .25rem .4rem;
+    padding: .35rem .55rem;
     font-family: var(--solara-font-body, Arial, sans-serif);
     font-size: .82rem;
     font-weight: 600;
@@ -4577,7 +4577,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
     max-width: calc(100% - .8rem);
     margin: .4rem;
-    padding: .25rem .4rem;
+    padding: .35rem .55rem;
     font-family: var(--solara-font-body, Arial, sans-serif);
     font-size: .82rem;
     font-weight: 600;
@@ -4651,7 +4651,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
     max-width: calc(100% - .8rem);
     margin: .4rem;
-    padding: .25rem .4rem;
+    padding: .35rem .55rem;
     font-family: var(--solara-font-body, Arial, sans-serif);
     font-size: .82rem;
     font-weight: 600;
