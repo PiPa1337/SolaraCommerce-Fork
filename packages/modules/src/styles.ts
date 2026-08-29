@@ -2405,9 +2405,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-category-results .catalog-product-grid-section > header { margin-bottom: 1rem; }
 [data-solara-store].catalog-modern .catalog-category-results .catalog-product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem 1rem; }
 [data-solara-store].catalog-modern .catalog-product-grid[data-product-count="1"] { grid-template-columns: minmax(0, 20rem); justify-content: start; }
-[data-solara-store].catalog-modern .catalog-product-grid[data-product-count="2"] { grid-template-columns: repeat(2, minmax(0, 20rem)); justify-content: start; }
-[data-solara-store].catalog-modern .catalog-product-grid[data-product-count="3"] { grid-template-columns: repeat(3, minmax(0, 20rem)); justify-content: start; }
-[data-solara-store].catalog-modern .catalog-product-grid[data-product-count="4"] { grid-template-columns: repeat(4, minmax(0, 20rem)); justify-content: start; }
+[data-solara-store].catalog-modern .catalog-product-grid[data-product-count="2"] { grid-template-columns: repeat(2, minmax(0, 20rem)); justify-content: space-between; }
+[data-solara-store].catalog-modern .catalog-product-grid[data-product-count="3"] { grid-template-columns: repeat(3, minmax(0, 20rem)); justify-content: space-between; }
+[data-solara-store].catalog-modern .catalog-product-grid[data-product-count="4"] { grid-template-columns: repeat(4, minmax(0, 20rem)); justify-content: space-between; }
 [data-solara-store].catalog-modern .catalog-category-results .catalog-product-card-copy { padding-top: .55rem; }
 [data-solara-store].catalog-modern .catalog-category-results .catalog-product-card h3 { font-size: .92rem; }
 [data-solara-store].catalog-modern .catalog-category-page > .solara-pagination { margin-top: 1rem; }
@@ -3359,9 +3359,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   min-height: 54px;
   margin-bottom: 1.75rem;
 }
-.cm.v2 .catalog-category-results .catalog-product-grid{grid-template-columns:repeat(auto-fill,minmax(min(100% / 5, 20rem),1fr));justify-content:start;gap:2rem 1.5rem;max-width:1320px}
-/* La grilla de categorías es más angosta (rail de 270px + tope de 1320px):
-   conserva 3 columnas hasta 1199px como antes del tope de 5. */
+.cm.v2 .catalog-category-results .catalog-product-grid{grid-template-columns:repeat(auto-fill,minmax(min(100% / 5, 20rem),1fr));justify-content:space-between;gap:2rem 1.5rem;width:100%;max-width:none;margin-inline:0}
+/* La grilla de categorías usa todo el rail disponible y conserva 3 columnas
+   hasta 1199px para mantener una lectura cómoda en tablet. */
 @media (max-width: 1199px) {
   .cm.v2 .catalog-category-results .catalog-product-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -4516,15 +4516,15 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-product-grid[data-product-count="2"] {
   grid-template-columns: repeat(2, minmax(0, 20rem));
-  justify-content: start;
+  justify-content: space-between;
 }
 .cm.v2 .catalog-product-grid[data-product-count="3"] {
   grid-template-columns: repeat(3, minmax(0, 20rem));
-  justify-content: start;
+  justify-content: space-between;
 }
 .cm.v2 .catalog-product-grid[data-product-count="4"] {
   grid-template-columns: repeat(4, minmax(0, 20rem));
-  justify-content: start;
+  justify-content: space-between;
 }
 @media (max-width: 1199px) {
   .cm.v2 .catalog-product-grid[data-product-count="3"] {

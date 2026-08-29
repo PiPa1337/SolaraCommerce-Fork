@@ -1434,16 +1434,33 @@ test("V2 ordena categoría y filtros como rail editorial y sheet móvil", async 
   ).toBe(4);
   const categoryGridMetrics = await grid.evaluate((element) => {
     const gridRect = element.getBoundingClientRect();
-    const cardRect = element
-      .querySelector<HTMLElement>(".catalog-product-card")
+    const resultsRect = element
+      .closest<HTMLElement>(".catalog-category-results")
       ?.getBoundingClientRect();
-    return { gridWidth: gridRect.width, cardWidth: cardRect?.width ?? 0 };
+    const cardRects = Array.from(element.querySelectorAll<HTMLElement>(".catalog-product-card"))
+      .slice(0, 4)
+      .map((card) => card.getBoundingClientRect());
+    const firstCardRect = cardRects[0];
+    const lastCardRect = cardRects[cardRects.length - 1];
+    return {
+      gridWidth: gridRect.width,
+      cardWidth: firstCardRect?.width ?? 0,
+      leftGap: gridRect.left - (resultsRect?.left ?? gridRect.left),
+      rightGap: (resultsRect?.right ?? gridRect.right) - gridRect.right,
+      firstCardGap: firstCardRect ? firstCardRect.left - gridRect.left : 0,
+      lastCardGap: lastCardRect ? gridRect.right - lastCardRect.right : 0,
+      resultsWidth: resultsRect?.width ?? 0,
+    };
   });
-  expect(categoryGridMetrics.gridWidth).toBeGreaterThan(1290);
-  expect(categoryGridMetrics.gridWidth).toBeLessThanOrEqual(1320);
-  // 4 columnas sobre 1320px con gap 1.5rem: card ≈ 312px.
+  expect(categoryGridMetrics.gridWidth).toBeGreaterThan(categoryGridMetrics.resultsWidth * 0.98);
+  expect(categoryGridMetrics.gridWidth).toBeLessThanOrEqual(categoryGridMetrics.resultsWidth + 1);
+  expect(categoryGridMetrics.leftGap).toBeLessThanOrEqual(1);
+  expect(categoryGridMetrics.rightGap).toBeLessThanOrEqual(1);
+  expect(categoryGridMetrics.firstCardGap).toBeLessThanOrEqual(1);
+  expect(categoryGridMetrics.lastCardGap).toBeLessThanOrEqual(1);
+  // 4 columnas distribuidas dentro del contenedor de resultados.
   expect(categoryGridMetrics.cardWidth).toBeGreaterThan(295);
-  expect(categoryGridMetrics.cardWidth).toBeLessThan(330);
+  expect(categoryGridMetrics.cardWidth * 4).toBeLessThanOrEqual(categoryGridMetrics.gridWidth);
   expect(await grid.locator(".catalog-product-card-image").first().getAttribute("sizes")).toBe(
     "(max-width: 767px) calc((100vw - 2.2rem) / 2), (max-width: 1199px) min(22vw, 11.5rem), min(20vw, 13rem)",
   );

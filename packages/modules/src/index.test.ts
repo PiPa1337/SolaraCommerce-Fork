@@ -942,6 +942,28 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     );
   });
 
+  it("distribuye los resultados de categoría hasta los bordes del contenedor", () => {
+    const baseStyles = MODULE_STYLE_BLOCKS["catalog-modern"];
+    const modernStyles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!baseStyles || !modernStyles) throw new Error("Faltan estilos de catálogo");
+
+    for (const count of ["2", "3", "4"]) {
+      expect(baseStyles).toMatch(
+        new RegExp(
+          `\\.catalog-product-grid\\[data-product-count="${count}"\\][^}]*justify-content: space-between;`,
+        ),
+      );
+      expect(modernStyles).toMatch(
+        new RegExp(
+          `\\.cm\\.v2 \\.catalog-product-grid\\[data-product-count="${count}"\\] \\{[^}]*justify-content: space-between;`,
+        ),
+      );
+    }
+    expect(modernStyles).toMatch(
+      /\.cm\.v2 \.catalog-category-results \.catalog-product-grid\{[^}]*justify-content:space-between;[^}]*width:100%;[^}]*max-width:none[^}]*margin-inline:0/,
+    );
+  });
+
   it("mantiene el alto del navbar V2 con nombres de tienda largos", () => {
     const styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
     if (!styles) throw new Error("Falta el bloque de estilos catalog-modern-v2");

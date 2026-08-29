@@ -1,5 +1,10 @@
 # Changelog
 
+### Grillas de resultados alineadas al contenedor (2026-08-29)
+
+- Las cards de productos en resultados de categoría aprovechan todo el rail
+  disponible y distribuyen los listados cortos entre sus bordes.
+
 ### Imágenes de búsqueda sin recorte (2026-08-29)
 
 - Las tarjetas de resultados de búsqueda mantienen una celda uniforme y muestran
