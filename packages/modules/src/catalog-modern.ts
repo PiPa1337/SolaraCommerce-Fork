@@ -1171,11 +1171,17 @@ export const catalogProductGrid: ModuleDefinition<
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const products = modernProducts(context, context.settings);
+    const isCategoryPage = context.pageType === "category";
+    const sectionTitle = isCategoryPage
+      ? context.category
+        ? `Productos de ${context.category.title}`
+        : "Productos"
+      : context.settings.title;
     const searchEnabled =
       context.project.navigation.showSearch && context.project.commerceTemplates.search.enabled;
     const viewAllHref = catalogSearchHref(searchEnabled, context.settings.viewAllHref);
-    const viewAllAriaLabel = context.settings.title.trim()
-      ? `Ver todos los productos de ${context.settings.title.trim()}`
+    const viewAllAriaLabel = sectionTitle.trim()
+      ? `Ver todos los productos de ${sectionTitle.trim()}`
       : "Ver todos los productos de esta sección";
     const categoryGrid = context.pageType === "category" ? " data-category-grid" : "";
     const cards = products
@@ -1200,7 +1206,7 @@ export const catalogProductGrid: ModuleDefinition<
       "catalog-product-grid",
       context.section,
       safeHtml(
-        `<div class="catalog-product-grid-section"><header><h2${canvasTextAttributes(canvasContext(context), "title", 120)}>${escapeHtml(context.settings.title)}</h2>${context.settings.showViewAll ? `<a class="catalog-view-all" href="${escapeAttribute(safeUrl(viewAllHref))}" aria-label="${escapeAttribute(viewAllAriaLabel)}">${escapeHtml(context.project.publicCopy.navigation.viewAll)}</a>` : ""}</header><div class="catalog-product-grid" data-motion-zone="items" data-product-count="${products.length}"${categoryGrid}>${cards || `<p class="catalog-empty">${escapeHtml(context.project.publicCopy.empty.products)}</p>`}</div></div>`,
+        `<div class="catalog-product-grid-section"><header><h2${isCategoryPage ? "" : canvasTextAttributes(canvasContext(context), "title", 120)}>${escapeHtml(sectionTitle)}</h2>${context.settings.showViewAll && !isCategoryPage ? `<a class="catalog-view-all" href="${escapeAttribute(safeUrl(viewAllHref))}" aria-label="${escapeAttribute(viewAllAriaLabel)}">${escapeHtml(context.project.publicCopy.navigation.viewAll)}</a>` : ""}</header><div class="catalog-product-grid" data-motion-zone="items" data-product-count="${products.length}"${categoryGrid}>${cards || `<p class="catalog-empty">${escapeHtml(context.project.publicCopy.empty.products)}</p>`}</div></div>`,
       ),
     );
   },
@@ -1428,6 +1434,9 @@ export const catalogProductDetail: ModuleDefinition<
       ? `<div id="${escapeAttribute(descriptionPanelId)}" class="catalog-rich-text"${canvasEntityAttributes(canvasContext(context), "product-rich-description", "product", product.id, "richDescription")}>${product.richDescription ? sanitizeRichText(product.richDescription) : `<p${canvasEntityAttributes(canvasContext(context), "product-description", "product", product.id, "description")}>${escapeHtml(product.description)}</p>`}</div>`
       : "";
     const policiesPanelId = `catalog-product-policies-${context.section.id}`;
+    const isV2 = context.project.commerceTemplates.designFamily === "catalog-modern-v2";
+    const descriptionBeforePurchase = isV2 ? "" : description;
+    const descriptionAfterPurchase = isV2 ? description : "";
     const variantLabel =
       context.project.commerceTemplates.designFamily === "catalog-modern-v1"
         ? "Elegí talle y color"
@@ -1441,7 +1450,7 @@ export const catalogProductDetail: ModuleDefinition<
           <p class="catalog-product-brand">${escapeHtml(product.brand)}</p>
           <h1${canvasEntityAttributes(canvasContext(context), "product-title", "product", product.id, "title")}>${escapeHtml(product.title)}</h1>
           <p class="catalog-detail-price"><span data-product-price${canvasEntityAttributes(canvasContext(context), "product-price", "product", product.id, "price")}>${escapeHtml(formatMoneyForProject(lowestPrice(product), context.project))}</span><del data-product-compare${compareAt ? "" : " hidden"}>${escapeHtml(compareAt)}</del></p>
-          ${description}
+          ${descriptionBeforePurchase}
           <form class="catalog-add-form" action="/carrito/" method="get" data-solara-add-form>
             <input type="hidden" name="product" value="${escapeAttribute(product.id)}">
             <label for="catalog-variant-${escapeAttribute(context.section.id)}">${escapeHtml(variantLabel)}</label>
@@ -1451,6 +1460,7 @@ export const catalogProductDetail: ModuleDefinition<
             <button class="catalog-product-add" type="submit" data-add-to-cart${canvasTextAttributes(canvasContext(context), "actionLabel", 100)}>${escapeHtml(context.settings.actionLabel)}</button>
             ${whatsappFallback ? `<noscript><style>[data-solara-store].catalog-modern .catalog-add-form .catalog-add-fallback{display:inline-flex}[data-solara-store].catalog-modern .catalog-add-form .catalog-product-add{display:none}</style><a class="catalog-add-fallback" href="${escapeAttribute(whatsappFallback)}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.product.askWhatsApp)}</a></noscript>` : ""}
           </form>
+          ${descriptionAfterPurchase}
           <nav class="catalog-variant-links" aria-label="${escapeAttribute(copy.export.variantLinks)}">${variantLinks}</nav>
           <p class="catalog-delivery-note"${canvasTextAttributes(canvasContext(context), "deliveryNote", 240)}>${escapeHtml(context.settings.deliveryNote)}</p>
           <dl id="${escapeAttribute(detailsPanelId)}" class="catalog-product-specs"><div><dt>${escapeHtml(copy.product.sku)}</dt><dd data-product-sku>${escapeHtml(firstVariant?.sku ?? "")}</dd></div><div><dt>${escapeHtml(copy.product.availability)}</dt><dd data-product-availability>${firstVariant?.available ? escapeHtml(copy.product.available) : escapeHtml(copy.product.outOfStock)}</dd></div></dl>

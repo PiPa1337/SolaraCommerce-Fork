@@ -1,5 +1,15 @@
 # Changelog
 
+### Storefront responsive continuo y compra visible (2026-08-29)
+
+- Catalog Modern evita los saltos abruptos del hero y de las grillas en 767,
+  360/361 y 1199/1200 px, conservando el CTA dentro del primer viewport.
+- El detalle V2 equilibra galería e información en desktop y mantiene la acción
+  de compra accesible en mobile; la descripción pasa después de variantes,
+  cantidad y CTA.
+- Las categorías muestran un título contextual sin el enlace redundante «Ver
+  todos los productos», y los controles compactos alcanzan 44 px de alto.
+
 ### Portadas cuadradas para categorías por canal nativo (2026-08-29)
 
 - RM Descartables ahora usa las seis portadas cuadradas generadas para sus

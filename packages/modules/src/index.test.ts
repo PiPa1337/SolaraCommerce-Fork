@@ -921,15 +921,15 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     );
   });
 
-  it("colapsa las grillas de producto a una columna hasta 360px en V2", () => {
+  it("colapsa las grillas de producto a una columna sólo debajo de 340px en V2", () => {
     const styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
     if (!styles) throw new Error("Falta el bloque de estilos catalog-modern-v2");
 
     expect(styles).toMatch(
-      /@media \(max-width: 360px\)[\s\S]*?\.cm\.v2 \.catalog-product-grid,[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/,
+      /@media \(max-width: 339px\)[\s\S]*?\.cm\.v2 \.catalog-product-grid,[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/,
     );
     expect(styles).toMatch(
-      /@media \(max-width: 360px\)[\s\S]*?\.cm\.v2 \.catalog-category-results \.catalog-product-grid,[\s\S]*?\.cm\.v2 \.catalog-search-results-grid \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/,
+      /@media \(max-width: 339px\)[\s\S]*?\.cm\.v2 \.catalog-category-results \.catalog-product-grid,[\s\S]*?\.cm\.v2 \.catalog-search-results-grid \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/,
     );
   });
 
@@ -1061,6 +1061,22 @@ describe("catalog-product-grid: nombres accesibles únicos", () => {
 
     expect(html).toContain('aria-label="Ver todos los productos de Recién llegados"');
     expect(html).toContain('aria-label="Ver todos los productos de Más elegidos"');
+  });
+
+  it("usa un título contextual y omite el enlace redundante en categorías", () => {
+    const section = catalogModernV2Store.sections.find(
+      (candidate) => candidate.moduleId === "catalog-product-grid",
+    );
+    const category = catalogModernV2Store.categories.find((candidate) => !candidate.parentId);
+    if (!section || !category) throw new Error("Fixture V2 sin grilla o categoría");
+
+    const html = renderSections(catalogModernV2Store, [section], {
+      pageType: "category",
+      category,
+    });
+
+    expect(html).toContain(`<h2>Productos de ${category.title}</h2>`);
+    expect(html).not.toContain('class="catalog-view-all"');
   });
 });
 

@@ -19,6 +19,13 @@ longTitleHero.settings = {
   title: "Descartables y packaging para tu negocio",
 };
 const exportedLongTitle = exportProject(longTitleProject, { mode: "production" });
+const longProductProject = structuredClone(catalogModernV2Store);
+const longProduct = longProductProject.products.find(
+  (product) => product.slug === "remera-esencial-de-algodon",
+);
+if (!longProduct) throw new Error("La fixture V2 no tiene producto para la prueba de PDP.");
+longProduct.title = "Bandeja 101 PP Gualco x 50 unidades con tapa transparente";
+const exportedLongProduct = exportProject(longProductProject, { mode: "production" });
 const longCategoryProject = structuredClone(catalogModernV2Store);
 const longCategory = longCategoryProject.categories.find((category) => !category.parentId);
 if (!longCategory)
@@ -70,15 +77,18 @@ test.beforeAll(async () => {
       ? exportedLongCategory
       : url.searchParams.has("longCategoryV1")
         ? exportedLongCategoryV1
-        : url.searchParams.has("longTitle")
-          ? exportedLongTitle
-          : exported;
+        : url.searchParams.has("longProduct")
+          ? exportedLongProduct
+          : url.searchParams.has("longTitle")
+            ? exportedLongTitle
+            : exported;
     const content =
       source.files.get(path) ??
       (path.startsWith("assets/")
         ? (exportedLongCategoryV1.files.get(path) ??
           exportedV1.files.get(path) ??
           exportedLongCategory.files.get(path) ??
+          exportedLongProduct.files.get(path) ??
           exportedLongTitle.files.get(path) ??
           exported.files.get(path))
         : undefined) ??
@@ -1371,7 +1381,9 @@ test("V2 Home muestra Contacto como módulos responsive y replica el CTA del her
   expect(mobileMetrics?.noOverflow).toBe(true);
 });
 
-test("V2 Canales de contacto no usa separadores y respira en mobile", async ({ page }, testInfo) => {
+test("V2 Canales de contacto no usa separadores y respira en mobile", async ({
+  page,
+}, testInfo) => {
   for (const viewport of [
     { width: 1440, height: 900 },
     { width: 768, height: 823 },
@@ -1383,9 +1395,9 @@ test("V2 Canales de contacto no usa separadores y respira en mobile", async ({ p
     const channels = page.locator('[data-solara-module="contact-channels"]');
     await expect(channels).toHaveCount(1);
     const metrics = await channels.evaluate((root) => {
-      const section = root.querySelector<HTMLElement>('.contact-channels');
-      const list = root.querySelector<HTMLElement>('.contact-channel-list');
-      const rows = [...root.querySelectorAll<HTMLElement>('.contact-channel-row')];
+      const section = root.querySelector<HTMLElement>(".contact-channels");
+      const list = root.querySelector<HTMLElement>(".contact-channel-list");
+      const rows = [...root.querySelectorAll<HTMLElement>(".contact-channel-row")];
       if (!section || !list) return null;
       const sectionStyle = getComputedStyle(section);
       return {
@@ -1396,7 +1408,10 @@ test("V2 Canales de contacto no usa separadores y respira en mobile", async ({ p
         }),
         sectionBorderTop: sectionStyle.borderTopWidth,
         sectionBorderBottom: sectionStyle.borderBottomWidth,
-        listBorders: [getComputedStyle(list).borderTopWidth, getComputedStyle(list).borderBottomWidth],
+        listBorders: [
+          getComputedStyle(list).borderTopWidth,
+          getComputedStyle(list).borderBottomWidth,
+        ],
         rowGap: Number.parseFloat(getComputedStyle(list).rowGap) || 0,
         noOverflow: document.documentElement.scrollWidth <= window.innerWidth,
       };
@@ -1501,6 +1516,93 @@ test("V2 audita composición en viewports intermedios", async ({ page }, testInf
   }
 });
 
+test("V2 suaviza los breakpoints críticos del hero y las grillas", async ({ page }) => {
+  for (const viewport of [
+    { width: 767, height: 1024 },
+    { width: 768, height: 1024 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(new URL("/?longTitle", serverUrl).toString());
+    await waitForStorefrontReady(page);
+
+    const heroMetrics = await page.locator(".catalog-hero-inner").evaluate((element) => {
+      const action = element.querySelector<HTMLElement>(".catalog-primary-action");
+      const rect = element.getBoundingClientRect();
+      return {
+        height: rect.height,
+        actionBottom: action?.getBoundingClientRect().bottom ?? Number.POSITIVE_INFINITY,
+        documentWidth: document.documentElement.scrollWidth,
+      };
+    });
+    expect(heroMetrics.height).toBeLessThanOrEqual(viewport.height);
+    expect(heroMetrics.actionBottom).toBeLessThanOrEqual(viewport.height);
+    expect(heroMetrics.documentWidth).toBeLessThanOrEqual(viewport.width);
+  }
+
+  for (const [width, expectedColumns] of [
+    [1200, 4],
+    [1199, 3],
+  ] as const) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(serverUrl);
+    expect(
+      await page
+        .locator(".catalog-category-bento-grid")
+        .evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length),
+    ).toBe(expectedColumns);
+  }
+
+  for (const [width, expectedColumns] of [
+    [361, 2],
+    [360, 2],
+    [320, 1],
+  ] as const) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto(serverUrl);
+    const gridMetrics = await page
+      .locator(".catalog-product-grid")
+      .first()
+      .evaluate((element) => {
+        const firstCard = element.querySelector<HTMLElement>(".catalog-product-card");
+        return {
+          columns: getComputedStyle(element).gridTemplateColumns.split(" ").length,
+          cardWidth: firstCard?.getBoundingClientRect().width ?? 0,
+          documentWidth: document.documentElement.scrollWidth,
+        };
+      });
+    expect(gridMetrics.columns).toBe(expectedColumns);
+    expect(gridMetrics.cardWidth).toBeGreaterThan(145);
+    expect(gridMetrics.documentWidth).toBeLessThanOrEqual(width);
+  }
+});
+
+test("V2 acerca la compra al primer pliegue en una PDP móvil con título largo", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(
+    new URL("/productos/remera-esencial-de-algodon/?longProduct", serverUrl).toString(),
+  );
+  await waitForStorefrontReady(page);
+
+  const metrics = await page.locator(".catalog-product-detail-inner").evaluate((element) => {
+    const gallery = element.querySelector<HTMLElement>(".catalog-product-gallery-main");
+    const action = element.querySelector<HTMLElement>(".catalog-product-add");
+    const description = element.querySelector<HTMLElement>(".catalog-rich-text");
+    const actionRect = action?.getBoundingClientRect();
+    return {
+      galleryHeight: gallery?.getBoundingClientRect().height ?? Number.POSITIVE_INFINITY,
+      actionBottom: actionRect?.bottom ?? Number.POSITIVE_INFINITY,
+      descriptionTop: description?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY,
+      documentWidth: document.documentElement.scrollWidth,
+    };
+  });
+  expect(metrics.galleryHeight).toBeLessThanOrEqual(300);
+  expect(metrics.actionBottom).toBeLessThanOrEqual(844);
+  expect(metrics.descriptionTop).toBeGreaterThan(metrics.actionBottom);
+  expect(metrics.documentWidth).toBeLessThanOrEqual(390);
+});
+
 test("V2 ordena categoría y filtros como rail editorial y sheet móvil", async ({
   page,
 }, testInfo) => {
@@ -1585,7 +1687,9 @@ test("V2 ordena categoría y filtros como rail editorial y sheet móvil", async 
   expect(mobileLayout.toolbarWidth).toBeGreaterThan(300);
   expect(mobileLayout.toolbarScrollWidth).toBeLessThanOrEqual(mobileLayout.toolbarWidth);
   await expect(layout.locator(".solara-category-toolbar span")).toBeVisible();
-  await expect(layout.locator(".solara-category-toolbar select")).toBeVisible();
+  const mobileSort = layout.locator(".solara-category-toolbar select");
+  await expect(mobileSort).toBeVisible();
+  expect((await mobileSort.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   await expect(filters.locator(".catalog-filter-groups")).toBeHidden();
   await expect(filters.locator("details")).not.toHaveAttribute("open", "");
   await filters.locator("summary").click();
@@ -1622,6 +1726,15 @@ test("V2 presenta PDP editorial y carrito lateral o inferior según viewport", a
     /^\d+(\.\d+)?px \d+(\.\d+)?px$/,
   );
   expect(await info.evaluate((element) => getComputedStyle(element).position)).toBe("sticky");
+  const desktopBalance = await detail.evaluate((element) => {
+    const gallery = element.querySelector<HTMLElement>(".catalog-product-gallery");
+    const productInfo = element.querySelector<HTMLElement>(".catalog-product-info");
+    return {
+      galleryWidth: gallery?.getBoundingClientRect().width ?? 0,
+      infoWidth: productInfo?.getBoundingClientRect().width ?? 0,
+    };
+  });
+  expect(desktopBalance.galleryWidth / desktopBalance.infoWidth).toBeLessThan(1.6);
   const galleryRatio = await page.locator(".catalog-product-gallery-main").evaluate((element) => {
     const rect = element.getBoundingClientRect();
     return rect.width / rect.height;
