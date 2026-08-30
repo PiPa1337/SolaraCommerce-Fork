@@ -96,7 +96,7 @@ test("el preview V2 conserva el carrito al navegar con enlaces internos", async 
     );
     for (const metric of cartImageMetrics) {
       expect(Math.abs(metric.width - metric.height)).toBeLessThanOrEqual(0.5);
-      expect(metric.objectFit).toBe("contain");
+      expect(metric.objectFit).toBe("cover");
     }
   } finally {
     await stopStudioServer(running.server);

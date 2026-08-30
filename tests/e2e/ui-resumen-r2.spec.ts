@@ -170,9 +170,13 @@ async function prepareWhatsAppOrder(page: Page, baseUrl: string): Promise<string
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
   const drawer = page.locator("[data-cart-drawer]");
   await expect(drawer).toHaveAttribute("aria-hidden", "false");
+  await drawer.locator("[data-cart-checkout-next]").click();
+  await expect(drawer.locator("[data-checkout-form]")).toBeVisible();
   await drawer.getByLabel("Nombre").fill("Malena Ortiz");
   await drawer.getByLabel(/Telefono|Tel/).fill("11 5555 0142");
   await drawer.getByLabel(/Direccion|Direcci/).fill("Av. Forest 842, CABA");
+  await drawer.getByLabel("Localidad").fill("CABA");
+  await drawer.getByLabel(/Codigo postal|Código postal/).fill("1427");
   await page.evaluate(() => {
     const originalOpen = window.open.bind(window);
     window.open = ((url, target, features) => {

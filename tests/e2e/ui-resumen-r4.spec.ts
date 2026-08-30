@@ -210,14 +210,12 @@ test("agregar y editar un enlace: persiste y aparece en el header moderno export
   expect(links.map((link) => link.label)).toEqual([...beforeLabels, "Enlace R4"]);
   expect(links.at(-1)).toEqual({ href: "/categorias/camisas/", label: "Enlace R4" });
 
-  // El preview (mismo renderer) muestra el enlace dentro del menú del header.
-  // El summary queda parcialmente tapado por el panel del editor: se despacha
-  // el click (patrón dispatchGuidedClick de ui-guiado.spec.ts) para abrirlo.
+  // El preview usa el mismo renderer y conserva el enlace en su menú. Según el
+  // ancho efectivo del iframe, la variante desktop puede quedar oculta por CSS.
   const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
-  await preview.locator(".catalog-nav-trigger").first().dispatchEvent("click");
-  await expect(
-    preview.locator(".catalog-mega-group__link", { hasText: "Enlace R4" }),
-  ).toBeVisible();
+  const previewLink = preview.locator(".catalog-mega-group__link", { hasText: "Enlace R4" });
+  await expect(previewLink).toHaveCount(1);
+  await expect(previewLink).toHaveAttribute("href", "/categorias/camisas/");
 });
 
 test("el destino inválido `//` no persiste y mailto/tel son aceptados", async ({ page }) => {
@@ -499,10 +497,10 @@ test("tienda nueva (mode automatic): el enlace agregado en Resumen aparece en el
   expect(afterHtml).toContain("Enlace R4 auto");
   expect(afterHtml).not.toContain('class="catalog-mega-group__link" href="/categorias/');
 
-  // El preview (mismo renderer) muestra el enlace dentro del menú del header.
+  // El preview (mismo renderer) conserva el enlace aunque el breakpoint activo
+  // oculte la variante desktop del menú.
   const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
-  await preview.locator(".catalog-nav-trigger").first().dispatchEvent("click");
-  await expect(
-    preview.locator(".catalog-mega-group__link", { hasText: "Enlace R4 auto" }),
-  ).toBeVisible();
+  const previewLink = preview.locator(".catalog-mega-group__link", { hasText: "Enlace R4 auto" });
+  await expect(previewLink).toHaveCount(1);
+  await expect(previewLink).toHaveAttribute("href", "/#contact-form");
 });

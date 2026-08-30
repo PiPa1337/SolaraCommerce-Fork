@@ -57,11 +57,14 @@ async function openCheckoutDrawer(
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await page.locator(".catalog-cart-drawer [data-cart-checkout-next]").click();
   const form = page.locator(".catalog-cart-drawer [data-checkout-form]");
   await expect(form).toBeVisible();
   await form.locator("#catalog-drawer-name").fill(payload);
   await form.locator("#catalog-drawer-phone").fill("5491100000000");
   await form.locator("#catalog-drawer-address").fill(payload);
+  await form.locator("#catalog-drawer-locality").fill(payload);
+  await form.locator("#catalog-drawer-postal-code").fill("1000");
 }
 
 test("checkout: payloads hostiles no ejecutan ni inyectan HTML", async ({ page }) => {
@@ -82,7 +85,7 @@ test("campos de 10k caracteres y solo espacios no rompen el preview del pedido",
   await openCheckoutDrawer(page, "A".repeat(10000));
   const form = page.locator(".catalog-cart-drawer [data-checkout-form]");
   await form.locator("#catalog-drawer-notes").fill(String.fromCodePoint(0x1f680).repeat(2500));
-  await form.locator('button[type="submit"]').click();
+  await page.locator(".catalog-cart-drawer [data-cart-checkout-submit]").click();
   await page.waitForTimeout(500);
   const previewText = await page.evaluate(
     () => document.querySelector("[data-order-preview]")?.textContent ?? "",
