@@ -1,5 +1,12 @@
 # Changelog
 
+### Imágenes de carrito completas y cuadradas (2026-08-30)
+
+- El preview hidrata también las imágenes que el carrito agrega dinámicamente,
+  evitando íconos rotos en la página de carrito y checkout.
+- Las cajas de imágenes del carrito y del drawer son cuadradas en desktop y
+  mobile, y muestran la foto completa centrada con `object-fit: contain`.
+
 ### Galerías de producto alineadas (2026-08-30)
 
 - Las galerías principales y previews de producto ocupan correctamente su

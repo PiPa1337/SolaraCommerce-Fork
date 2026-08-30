@@ -515,46 +515,100 @@ function previewAssetMarkup(
   sources: ReadonlyMap<string, string>,
   transport: "inline" | "parent" = "inline",
 ): string {
-  if (sources.size === 0) return "";
   if (transport === "parent") {
     const paths = JSON.stringify([...sources.keys()]);
     return `<script>
 (() => {
   const paths = ${paths};
+  const receivedSources = new Map();
+  const objectUrls = new Map();
+  const requestedPaths = new Set(paths);
+  const hydratedImages = new WeakSet();
+  const requestMissing = (values) => {
+    const missing = [...new Set(values)].filter((value) => value && !requestedPaths.has(value));
+    if (missing.length === 0) return;
+    missing.forEach((value) => requestedPaths.add(value));
+    window.parent.postMessage({ type: "solara-preview-assets-request", paths: missing }, "*");
+  };
+  const sourceFor = async (value) => {
+    const source = receivedSources.get(value);
+    if (!source) return "";
+    const cached = objectUrls.get(value);
+    if (cached) return cached;
+    try {
+      const response = await fetch(source);
+      const objectUrl = URL.createObjectURL(await response.blob());
+      objectUrls.set(value, objectUrl);
+      return objectUrl;
+    } catch {
+      objectUrls.set(value, source);
+      return source;
+    }
+  };
+  const hydrateImage = (element) => {
+    // Preview images use object URLs and must not wait for an iframe scroll
+    // before decoding. Public exports keep their native lazy-loading policy.
+    if (element.tagName === "IMG") {
+      element.setAttribute("loading", "eager");
+      element.setAttribute("fetchpriority", "high");
+    }
+  };
+  const previewPathFor = (element) => {
+    const deferred = element.getAttribute("data-solara-preview-src");
+    if (deferred) return deferred;
+    const source = element.getAttribute("src") || "";
+    return source.startsWith("/__solara-preview-assets/") ? source : "";
+  };
+  const hydrateDynamicImage = async (element) => {
+    const path = previewPathFor(element);
+    if (!path || hydratedImages.has(element)) return;
+    if (!receivedSources.has(path)) {
+      requestMissing([path]);
+      return;
+    }
+    const source = await sourceFor(path);
+    if (!source) return;
+    hydratedImages.add(element);
+    hydrateImage(element);
+    element.setAttribute("src", source);
+  };
+  const observeDynamicImages = () => {
+    if (!("MutationObserver" in window) || !document.documentElement) return;
+    const scan = (node) => {
+      if (!(node instanceof Element)) return;
+      if (node.tagName === "IMG") void hydrateDynamicImage(node);
+      node.querySelectorAll("img").forEach((element) => void hydrateDynamicImage(element));
+    };
+    new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === "childList") {
+          mutation.addedNodes.forEach(scan);
+        } else if (mutation.target instanceof HTMLImageElement) {
+          void hydrateDynamicImage(mutation.target);
+        }
+      });
+    }).observe(document.documentElement, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["src", "data-solara-preview-src"],
+    });
+  };
   const hydrate = async (sources) => {
-    const objectUrls = new Map();
-    const sourceFor = async (value) => {
-      const source = sources[value];
-      if (!source) return "";
-      const cached = objectUrls.get(value);
-      if (cached) return cached;
-      try {
-        const response = await fetch(source);
-        const objectUrl = URL.createObjectURL(await response.blob());
-        objectUrls.set(value, objectUrl);
-        return objectUrl;
-      } catch {
-        objectUrls.set(value, source);
-        return source;
-      }
-    };
-    const hydrateImage = (element) => {
-      // Preview images use object URLs and must not wait for an iframe scroll
-      // before decoding. Public exports keep their native lazy-loading policy.
-      if (element.tagName === "IMG") {
-        element.setAttribute("loading", "eager");
-        element.setAttribute("fetchpriority", "high");
-      }
-    };
+    Object.entries(sources || {}).forEach(([path, source]) => {
+      if (typeof source === "string" && source) receivedSources.set(path, source);
+    });
     document.querySelectorAll("img").forEach(hydrateImage);
-    await Promise.all(paths.map((value) => sourceFor(value)));
+    await Promise.all([...receivedSources.keys()].map((value) => sourceFor(value)));
     await Promise.all([...document.querySelectorAll("[data-solara-preview-src]")].map(async (element) => {
       const source = await sourceFor(element.getAttribute("data-solara-preview-src") || "");
       if (source) {
         hydrateImage(element);
         element.setAttribute("src", source);
+        hydratedImages.add(element);
       }
     }));
+    await Promise.all([...document.querySelectorAll("img")].map(hydrateDynamicImage));
     await Promise.all([...document.querySelectorAll("[data-solara-preview-srcset]")].map(async (element) => {
       const srcset = element.getAttribute("data-solara-preview-srcset") || "";
       const entries = srcset.split(",");
@@ -570,6 +624,7 @@ function previewAssetMarkup(
       if (source) element.setAttribute("poster", source);
     }));
   };
+  observeDynamicImages();
   window.addEventListener("message", (event) => {
     if (event.data?.type !== "solara-preview-assets-response") return;
     void hydrate(event.data.sources || {});
@@ -578,6 +633,7 @@ function previewAssetMarkup(
 })();
 </script>`;
   }
+  if (sources.size === 0) return "";
   const serialized = jsonForScript(Object.fromEntries(sources));
   return `<script type="application/json" id="solara-preview-assets">${serialized}</script>
 <script>

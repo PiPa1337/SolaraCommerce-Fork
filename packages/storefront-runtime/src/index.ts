@@ -2193,8 +2193,10 @@ export const STOREFRONT_RUNTIME_CSS = `
 
 .solara-cart-line > div:first-child > img {
   width: 3.4rem;
-  height: 4.2rem;
-  object-fit: cover;
+  height: 3.4rem;
+  object-fit: contain;
+  object-position: center;
+  display: block;
   background: var(--solara-surface);
 }
 

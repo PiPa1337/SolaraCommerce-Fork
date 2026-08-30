@@ -75,6 +75,29 @@ test("el preview V2 conserva el carrito al navegar con enlaces internos", async 
     await expect(
       preview.locator(".solara-cart-page [data-cart-lines] .solara-cart-line"),
     ).toHaveCount(2);
+    const cartImages = preview.locator(".solara-cart-page [data-cart-lines] .solara-cart-line img");
+    await expect(cartImages).toHaveCount(2);
+    await expect
+      .poll(() =>
+        cartImages.evaluateAll(
+          (images) => images.filter((image) => image.complete && image.naturalWidth > 0).length,
+        ),
+      )
+      .toBe(2);
+    const cartImageMetrics = await cartImages.evaluateAll((images) =>
+      images.map((image) => {
+        const rect = image.getBoundingClientRect();
+        return {
+          width: rect.width,
+          height: rect.height,
+          objectFit: getComputedStyle(image).objectFit,
+        };
+      }),
+    );
+    for (const metric of cartImageMetrics) {
+      expect(Math.abs(metric.width - metric.height)).toBeLessThanOrEqual(0.5);
+      expect(metric.objectFit).toBe("contain");
+    }
   } finally {
     await stopStudioServer(running.server);
   }
