@@ -1,5 +1,12 @@
 # Changelog
 
+### Filtros de categorías sin separadores (2026-08-30)
+
+- Se eliminaron las líneas horizontales decorativas del rail de filtros y de la
+  barra de resultados de categorías en todas las tiendas Catalog Modern.
+- Los selects y campos de precio mantienen sus bordes propios para conservar la
+  claridad y el estado visual de los controles.
+
 ### Storefront responsive continuo y compra visible (2026-08-29)
 
 - Catalog Modern evita los saltos abruptos del hero y de las grillas en 767,

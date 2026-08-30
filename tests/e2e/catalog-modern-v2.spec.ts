@@ -1616,6 +1616,18 @@ test("V2 ordena categoría y filtros como rail editorial y sheet móvil", async 
   await expect(layout).toBeVisible();
   await expect(filters.locator(".catalog-filter-groups")).toBeVisible();
   await expect(filters.locator("details + .catalog-filter-groups")).toHaveCount(1);
+  const toolbar = page.locator(".catalog-category-results .solara-category-toolbar");
+  await expect(toolbar).toHaveCSS("border-top-width", "0px");
+  await expect(toolbar).toHaveCSS("border-bottom-width", "0px");
+  await expect(filters).toHaveCSS("border-top-width", "0px");
+  await expect(filters).toHaveCSS("border-bottom-width", "0px");
+  const filterFieldsets = filters.locator(".catalog-filter-groups fieldset");
+  await expect(filterFieldsets).toHaveCount(5);
+  for (let index = 0; index < 5; index += 1) {
+    await expect(filterFieldsets.nth(index)).toHaveCSS("border-bottom-width", "0px");
+  }
+  await expect(filters.locator("select").first()).toHaveCSS("border-top-width", "1px");
+  await expect(filters.locator("input[type=number]").first()).toHaveCSS("border-top-width", "1px");
   expect(
     await categoryImage.evaluate((element) => {
       const rect = element.getBoundingClientRect();

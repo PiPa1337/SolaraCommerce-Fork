@@ -428,7 +428,7 @@ export const STORE_BASE_STYLES = `
   gap: 1rem;
   margin: 2rem 0 1.25rem;
   padding-block: 0.85rem;
-  border-block: 1px solid var(--solara-border);
+  border-block: 0;
   color: var(--solara-muted);
   font-size: 0.88rem;
 }
@@ -2397,16 +2397,16 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .solara-checkout-page h1 { font-size: calc(clamp(2.8rem, 6vw, 5.5rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.03em; line-height: .9; }
 [data-solara-store].catalog-modern .solara-category-hero h1 { max-width: 14ch; font-size: calc(clamp(2.4rem, 4.2vw, 4.75rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.03em; line-height: 1.05; overflow-wrap: break-word; text-wrap: balance; }
 [data-solara-store].catalog-modern .solara-category-hero img { width: 100%; aspect-ratio: 16 / 7; object-fit: cover; object-position: center; background: var(--catalog-surface); border-radius: var(--solara-radius); }
-[data-solara-store].catalog-modern .solara-category-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 1rem 0 1.5rem; padding: .75rem 0; border-block: 1px solid var(--catalog-border); }
+[data-solara-store].catalog-modern .solara-category-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 1rem 0 1.5rem; padding: .75rem 0; border-block: 0; }
 [data-solara-store].catalog-modern .solara-category-toolbar select,
 [data-solara-store].catalog-modern .solara-category-toolbar input { min-height: 44px; padding: .5rem .55rem; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); background: var(--catalog-paper); }
 [data-solara-store].catalog-modern .catalog-category-page { padding-bottom: clamp(2rem, 5vw, 5rem); }
 [data-solara-store].catalog-modern .catalog-category-layout { display: grid; grid-template-columns: minmax(190px, 230px) minmax(0, 1fr); gap: clamp(1.5rem, 3vw, 3rem); align-items: start; }
 [data-solara-store].catalog-modern .catalog-category-layout .solara-empty-state { grid-column: 1 / -1; padding: 2rem 0; color: var(--catalog-muted); }
-[data-solara-store].catalog-modern .catalog-category-filters { position: sticky; top: 7.5rem; min-width: 0; padding: 1rem; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); background: var(--catalog-surface); }
+[data-solara-store].catalog-modern .catalog-category-filters { position: sticky; top: 7.5rem; min-width: 0; padding: 1rem; border: 1px solid var(--catalog-border); border-block: 0; border-radius: var(--solara-radius); background: var(--catalog-surface); }
 [data-solara-store].catalog-modern .catalog-category-filters details > summary { display: none; cursor: pointer; font-weight: 800; list-style: none; }
 [data-solara-store].catalog-modern .catalog-filter-groups { display: grid; gap: 1rem; }
-[data-solara-store].catalog-modern .catalog-filter-groups fieldset { min-width: 0; margin: 0; padding: 0 0 1rem; border: 0; border-bottom: 1px solid var(--catalog-border); }
+[data-solara-store].catalog-modern .catalog-filter-groups fieldset { min-width: 0; margin: 0; padding: 0 0 1rem; border: 0; }
 [data-solara-store].catalog-modern .catalog-filter-groups fieldset:last-child { padding-bottom: 0; border-bottom: 0; }
 [data-solara-store].catalog-modern .catalog-filter-groups legend { margin-bottom: .55rem; font-size: .78rem; font-weight: 800; overflow-wrap: anywhere; }
 [data-solara-store].catalog-modern .catalog-filter-groups label { display: flex; align-items: center; gap: .5rem; color: var(--catalog-muted); font-size: .78rem; min-width: 0; overflow-wrap: anywhere; }
@@ -3386,7 +3386,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   max-height: calc(100dvh - 6.5rem);
   overflow-y: auto;
   padding: 1.25rem 0;
-  border-width: 1px 0;
+  border: 0;
   border-radius: 0;
   background: transparent;
 }
@@ -5271,10 +5271,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     border-style: var(--solara-border-style, solid);
   }
   .cm.v2 .catalog-category-filters {
-    border-top-width: var(--solara-border-width, 1px);
-    border-bottom-width: var(--solara-border-width, 1px);
-    border-top-style: var(--solara-border-style, solid);
-    border-bottom-style: var(--solara-border-style, solid);
+    border-top: 0;
+    border-bottom: 0;
   }
   .cm.v2 .solara-checkout-order-panel {
     border-left-width: var(--solara-border-width, 1px);
