@@ -1960,6 +1960,57 @@ test("V2 conserva varias líneas del carrito al navegar entre páginas", async (
   await expect(page.locator("[data-cart-drawer] .solara-cart-line")).toHaveCount(2);
 });
 
+test("V2 mantiene el resumen sticky debajo del header y sin líneas de borde", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 968 });
+  const cartLines = catalogModernV2Store.products
+    .filter((product) => product.status === "active")
+    .slice(0, 8)
+    .map((product) => {
+      const variant = product.variants.find((candidate) => candidate.available);
+      if (!variant) throw new Error(`El producto ${product.id} no tiene una variante disponible.`);
+      return {
+        productId: product.id,
+        variantId: variant.id,
+        title: product.title,
+        variantTitle: variant.title,
+        sku: variant.sku,
+        unitPrice: variant.price,
+        quantity: 1,
+        available: true,
+      };
+    });
+  await page.goto(new URL("/", serverUrl).toString());
+  await page.evaluate(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), {
+    key: `solara-cart:${catalogModernV2Store.id}`,
+    value: cartLines,
+  });
+  await page.goto(new URL("/carrito/", serverUrl).toString());
+  await expect(
+    page.locator(".solara-cart-page-grid [data-cart-lines] .solara-cart-line"),
+  ).toHaveCount(cartLines.length);
+
+  await page.evaluate(() => window.scrollTo({ top: 520, behavior: "instant" }));
+  await page.waitForTimeout(100);
+  const stickyMetrics = await page.locator(".solara-cart-page-grid > aside").evaluate((element) => {
+    const header = document.querySelector<HTMLElement>('[data-solara-module="catalog-header"]');
+    const total = element.querySelector<HTMLElement>("p:nth-of-type(3)");
+    const summaryRect = element.getBoundingClientRect();
+    return {
+      position: getComputedStyle(element).position,
+      top: summaryRect.top,
+      headerBottom: header?.getBoundingClientRect().bottom ?? 0,
+      borderTop: getComputedStyle(element).borderTopWidth,
+      borderLeft: getComputedStyle(element).borderLeftWidth,
+      totalBorderTop: total ? getComputedStyle(total).borderTopWidth : "missing",
+    };
+  });
+  expect(stickyMetrics.position).toBe("sticky");
+  expect(stickyMetrics.top).toBeGreaterThanOrEqual(stickyMetrics.headerBottom - 1);
+  expect(stickyMetrics.borderTop).toBe("0px");
+  expect(stickyMetrics.borderLeft).toBe("0px");
+  expect(stickyMetrics.totalBorderTop).toBe("0px");
+});
+
 test("V2 acumula la misma variante sin reemplazarla al volver desde otra página", async ({
   page,
 }) => {

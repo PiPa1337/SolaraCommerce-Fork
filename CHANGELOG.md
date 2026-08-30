@@ -1,5 +1,12 @@
 # Changelog
 
+### Sticky de carrito visible y sin bordes (2026-08-30)
+
+- El resumen sticky del carrito queda debajo del header al hacer scroll, sin
+  quedar oculto por el hero ni por el encabezado fijo.
+- Se quitaron los bordes exteriores y el divisor interno del resumen en todas
+  las tiendas Catalog Modern.
+
 ### Imágenes de carrito completas y cuadradas (2026-08-30)
 
 - El preview hidrata también las imágenes que el carrito agrega dinámicamente,

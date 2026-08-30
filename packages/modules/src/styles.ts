@@ -372,7 +372,6 @@ export const STORE_BASE_STYLES = `
   display: grid;
   gap: .75rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--solara-border);
 }
 [data-solara-store] .solara-cart-summary > p {
   display: flex;
@@ -2484,7 +2483,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .solara-cart-summary { display: grid; gap: .75rem; }
 [data-solara-store].catalog-modern .solara-cart-summary > p { display: flex; justify-content: space-between; gap: 1rem; margin: 0; color: var(--catalog-muted); font-size: .85rem; }
 [data-solara-store].catalog-modern .solara-cart-summary > p strong { color: var(--catalog-ink); }
-[data-solara-store].catalog-modern .solara-cart-summary > p:nth-of-type(3) { padding-top: .75rem; border-top: 1px solid var(--catalog-border); font-size: 1rem; }
+[data-solara-store].catalog-modern .solara-cart-summary > p:nth-of-type(3) { padding-top: .75rem; font-size: 1rem; }
 [data-solara-store].catalog-modern .solara-cart-page-grid > aside .solara-primary-action { width: 100%; }
 [data-solara-store].catalog-modern .solara-cart-page-grid [data-cart-lines] .solara-cart-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem; padding: 1rem 0; border-bottom: 1px solid var(--catalog-border); }
 @media (max-width: 1199px) {
@@ -3550,7 +3549,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .solara-cart-page > .solara-page-intro { max-width: none; padding: clamp(2rem, 4vw, 4rem) 0 1rem; }
 .cm.v2 .solara-cart-page > .solara-page-intro h1 { max-width: none; font-size: calc(clamp(3.5rem, 4.5vw, 5.75rem) * var(--solara-type-scale, 1)); line-height: .95; }
 .cm.v2 .solara-cart-page-grid { grid-template-columns: minmax(0, 1fr) clamp(22.5rem, 27vw, 24rem); gap: clamp(3rem, 6vw, 5rem); padding: 2rem 0 clamp(5rem, 8vw, 8rem); }
-.cm.v2 .solara-cart-page-grid > aside { position: sticky; top: 2rem; padding: 1.25rem 0 1.5rem clamp(2rem, 4vw, 4rem); border-left: 1px solid var(--catalog-border); border-radius: 0; background: transparent; }
+.cm.v2 .solara-cart-page-grid > aside { position: sticky; top: 6.5rem; padding: 1.25rem 0 1.5rem clamp(2rem, 4vw, 4rem); border: 0; border-radius: 0; background: transparent; }
 .cm.v2 .solara-cart-summary { gap: 1rem; }
 .cm.v2 .solara-cart-summary > p { min-height: 2rem; align-items: center; font-size: .92rem; }
 .cm.v2 .solara-cart-summary > p strong,
@@ -3997,7 +3996,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .solara-search-results-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2rem .7rem; }
   .cm.v2 .solara-cart-page > .solara-page-intro { padding: 2.5rem 0 1rem; }
   .cm.v2 .solara-cart-page-grid { grid-template-columns: minmax(0, 1fr); gap: 3rem; padding: 1.5rem 0 4rem; }
-  .cm.v2 .solara-cart-page-grid > aside { position: static; padding: 2rem 0 0; border-left: 0; }
+  .cm.v2 .solara-cart-page-grid > aside { position: static; padding: 2rem 0 0; border: 0; }
   .cm.v2 .solara-cart-summary > p strong,
   .cm.v2 .solara-cart-page-grid aside strong { max-width: 55%; font-size: 1rem; }
   .cm.v2 .solara-cart-summary > p:nth-of-type(3) strong { font-size: 1.25rem; }
