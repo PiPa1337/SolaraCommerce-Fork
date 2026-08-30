@@ -706,6 +706,7 @@ test("V1 y V2 alinean las fotos de producto dentro de su media", async ({ page }
         imageWidth: imageRect.width,
         imageHeight: imageRect.height,
         wrapperDisplay: getComputedStyle(wrapper).display,
+        objectFit: getComputedStyle(element).objectFit,
         objectPosition: getComputedStyle(element).objectPosition,
         documentWidth: document.documentElement.scrollWidth,
       };
@@ -738,6 +739,7 @@ test("V1 y V2 alinean las fotos de producto dentro de su media", async ({ page }
     expect(metrics?.wrapperHeight).toBeCloseTo(metrics?.mediaHeight ?? 0, 0);
     expect(metrics?.imageWidth).toBeCloseTo(metrics?.mediaWidth ?? 0, 0);
     expect(metrics?.imageHeight).toBeCloseTo(metrics?.mediaHeight ?? 0, 0);
+    expect(metrics?.objectFit).toBe("contain");
     expect(metrics?.objectPosition).toBe("50% 50%");
     expect(metrics?.documentWidth).toBeLessThanOrEqual(viewport.width);
     await page
@@ -769,6 +771,7 @@ test("V1 y V2 alinean las fotos de producto dentro de su media", async ({ page }
     expect(metrics?.wrapperHeight).toBeCloseTo(metrics?.mediaHeight ?? 0, 0);
     expect(metrics?.imageWidth).toBeCloseTo(metrics?.mediaWidth ?? 0, 0);
     expect(metrics?.imageHeight).toBeCloseTo(metrics?.mediaHeight ?? 0, 0);
+    expect(metrics?.objectFit).toBe("contain");
     expect(metrics?.objectPosition).toBe("50% 50%");
     expect(metrics?.documentWidth).toBeLessThanOrEqual(viewport.width);
     await page
@@ -965,7 +968,7 @@ test("V2 ajusta las imágenes, muestra 8 recomendaciones y mantiene una galería
   await expect(thumbs.nth(1)).toHaveAttribute("aria-current", "true");
   const relatedImages = page.locator(".solara-related-products .catalog-product-card-image");
   await expect(relatedImages).toHaveCount(8);
-  await expect(relatedImages.first()).toHaveCSS("object-fit", "cover");
+  await expect(relatedImages.first()).toHaveCSS("object-fit", "contain");
   const relatedGrid = page.locator(".solara-related-products .catalog-product-grid");
   const relatedGridMetrics = await relatedGrid.evaluate((element) => {
     const gridRect = element.getBoundingClientRect();

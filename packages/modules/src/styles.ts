@@ -86,8 +86,8 @@ export const STORE_BASE_STYLES = `
   object-fit: cover;
   object-position: center;
 }
-/* Las cards y medios editoriales recortan de forma consistente; la galería
-   conserva la foto completa dentro de su marco. */
+/* Los medios editoriales recortan de forma consistente; las cards de producto
+   y la galería conservan la foto completa dentro de su marco. */
 [data-solara-store] .catalog-product-card-image,
 [data-solara-store] .solara-category-hero img,
 [data-solara-store] .catalog-product-media img,
@@ -2206,7 +2206,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-product-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: calc(1.25rem * var(--solara-space-scale, 1)); }
 [data-solara-store].catalog-modern .catalog-product-card { min-width: 0; }
 [data-solara-store].catalog-modern .catalog-product-media { display: block; overflow: hidden; aspect-ratio: 1; border-radius: var(--solara-radius); background: var(--catalog-surface); }
-[data-solara-store].catalog-modern .catalog-product-card-image { width: 100%; height: 100%; object-fit: cover; object-position: center; transition: transform var(--solara-motion-normal) var(--solara-motion-easing); }
+[data-solara-store].catalog-modern .catalog-product-card-image { width: 100%; height: 100%; object-fit: contain; object-position: center; transition: transform var(--solara-motion-normal) var(--solara-motion-easing); }
 [data-solara-store].catalog-modern .catalog-product-card:hover .catalog-product-card-image { transform: scale(1.02); }
 [data-solara-store].catalog-modern .catalog-product-card-copy { padding-top: .75rem; min-width: 0; }
 [data-solara-store].catalog-modern .catalog-product-category { min-height: 1em; color: var(--catalog-muted); font-size: .72rem; font-weight: 700; letter-spacing: .08em; line-height: 1.25; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -3106,7 +3106,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   box-shadow: 0 0 0 var(--solara-border-width, 1px) var(--catalog-border);
 }
 .cm.v2 .catalog-product-card-image {
-  object-fit: cover;
+  object-fit: contain;
   transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out);
 }
 .cm.v2 .catalog-product-card:hover .catalog-product-card-image,

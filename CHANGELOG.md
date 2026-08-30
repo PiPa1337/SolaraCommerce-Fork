@@ -1,5 +1,10 @@
 # Changelog
 
+### Cards de producto sin recorte horizontal (2026-08-30)
+
+- Las imágenes de las cards de productos se muestran completas y centradas,
+  sin cortar el contenido de los extremos en las grillas de las tiendas.
+
 ### Footer sin separador antes de Contacto (2026-08-30)
 
 - Se eliminó la línea vertical a la izquierda de la sección Contacto en el
