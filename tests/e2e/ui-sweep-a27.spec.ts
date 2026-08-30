@@ -490,6 +490,7 @@ test("C10: el checkout del drawer moderno abre WhatsApp con el pedido", async ({
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
   const drawer = page.locator("[data-cart-drawer]");
   await expect(drawer).toHaveAttribute("data-open", "true");
+  await drawer.getByRole("button", { name: "Continuar a compra" }).click();
 
   await page.locator("#catalog-drawer-name").fill("Malena Ortiz");
   await page.locator("#catalog-drawer-phone").fill("11 5555 0142");

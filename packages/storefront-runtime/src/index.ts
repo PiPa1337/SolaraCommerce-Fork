@@ -636,6 +636,38 @@ function storefrontBoot(): void {
     } catch {}
   };
 
+  const setCartDrawerStep = (
+    drawer: HTMLElement,
+    step: "review" | "checkout",
+    focusTarget = false,
+  ): void => {
+    const checkout = step === "checkout";
+    const reviewPanel = drawer.querySelector<HTMLElement>("[data-cart-review-panel]");
+    const checkoutPanel = drawer.querySelector<HTMLElement>("[data-cart-checkout-panel]");
+    const nextButton = drawer.querySelector<HTMLButtonElement>("[data-cart-checkout-next]");
+
+    drawer.dataset.cartStep = step;
+    if (reviewPanel) {
+      reviewPanel.hidden = checkout;
+      reviewPanel.toggleAttribute("inert", checkout);
+      reviewPanel.setAttribute("aria-hidden", String(checkout));
+    }
+    if (checkoutPanel) {
+      checkoutPanel.hidden = !checkout;
+      checkoutPanel.toggleAttribute("inert", !checkout);
+      checkoutPanel.setAttribute("aria-hidden", String(!checkout));
+      if (checkout) checkoutPanel.scrollTop = 0;
+    }
+
+    if (!focusTarget) return;
+    window.requestAnimationFrame(() => {
+      (checkout
+        ? drawer.querySelector<HTMLElement>("[data-cart-review-back]")
+        : nextButton
+      )?.focus();
+    });
+  };
+
   const renderCart = (persist = false): void => {
     const active = document.activeElement;
     const focusedQuantity =
@@ -649,6 +681,7 @@ function storefrontBoot(): void {
     });
     document.querySelectorAll<HTMLElement>("[data-cart-drawer]").forEach((drawer) => {
       drawer.dataset.cartEmpty = String(cart.length === 0);
+      if (cart.length === 0) setCartDrawerStep(drawer, "review");
     });
     document.querySelectorAll<HTMLElement>("[data-solara-cart-open]").forEach((element) => {
       const label = element.dataset.cartLabel ?? "";
@@ -795,6 +828,7 @@ function storefrontBoot(): void {
   const openCart = (trigger?: HTMLElement): void => {
     const drawer = document.querySelector<HTMLElement>("[data-cart-drawer]");
     if (!drawer) return;
+    setCartDrawerStep(drawer, "review");
     syncCartToggleExpanded(true);
     void reconcileCart();
     lastCartTrigger = trigger ?? (document.activeElement as HTMLElement);
@@ -1062,6 +1096,20 @@ function storefrontBoot(): void {
       openCart(cartTrigger);
     }
 
+    const checkoutNext = target.closest<HTMLElement>("[data-cart-checkout-next]");
+    if (checkoutNext) {
+      const drawer = checkoutNext.closest<HTMLElement>("[data-cart-drawer]");
+      if (drawer && cart.length > 0) setCartDrawerStep(drawer, "checkout", true);
+      return;
+    }
+
+    const reviewBack = target.closest<HTMLElement>("[data-cart-review-back]");
+    if (reviewBack) {
+      const drawer = reviewBack.closest<HTMLElement>("[data-cart-drawer]");
+      if (drawer) setCartDrawerStep(drawer, "review", true);
+      return;
+    }
+
     if (target.closest("[data-close-cart]")) {
       closeCart();
     }
@@ -1098,7 +1146,12 @@ function storefrontBoot(): void {
       drawer.querySelectorAll<HTMLElement>(
         'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
       ),
-    ).filter((element) => !element.hidden && element.getAttribute("aria-hidden") !== "true");
+    ).filter(
+      (element) =>
+        !element.hidden &&
+        element.getAttribute("aria-hidden") !== "true" &&
+        element.getClientRects().length > 0,
+    );
     if (focusable.length === 0) {
       event.preventDefault();
       drawer.focus();

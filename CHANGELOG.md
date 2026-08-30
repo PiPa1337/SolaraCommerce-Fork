@@ -1,5 +1,21 @@
 # Changelog
 
+### Carrito responsive en dos pasos (2026-08-30)
+
+- El drawer separa la revisión de productos de los datos de entrega para evitar
+  un único scroll excesivamente largo cuando el carrito tiene muchas líneas.
+- Productos y formulario usan áreas de scroll independientes, mientras resumen
+  y acción principal permanecen visibles sin tapar precios en desktop, tablet o
+  mobile.
+- El drawer lateral se conserva hasta 600 px y pasa a pantalla completa por
+  debajo de ese breakpoint, con controles táctiles y filas compactas.
+
+### Bordes completos y encuadre restituido en cards (2026-08-30)
+
+- Las imágenes de las cards vuelven a usar su encuadre editorial `cover`.
+- El borde de las medias se dibuja dentro de la caja para que las cards
+  laterales no lo pierdan contra el límite de la grilla.
+
 ### Búsqueda y cantidades del carrito consistentes (2026-08-30)
 
 - Enter envía los formularios de búsqueda visibles y del diálogo en todas las

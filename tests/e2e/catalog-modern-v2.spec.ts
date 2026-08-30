@@ -698,6 +698,7 @@ test("V1 y V2 alinean las fotos de producto dentro de su media", async ({ page }
       const mediaRect = media.getBoundingClientRect();
       const wrapperRect = wrapper.getBoundingClientRect();
       const imageRect = element.getBoundingClientRect();
+      const mediaStyle = getComputedStyle(media);
       return {
         mediaWidth: mediaRect.width,
         mediaHeight: mediaRect.height,
@@ -705,6 +706,12 @@ test("V1 y V2 alinean las fotos de producto dentro de su media", async ({ page }
         wrapperHeight: wrapperRect.height,
         imageWidth: imageRect.width,
         imageHeight: imageRect.height,
+        mediaBorderWidth:
+          Number.parseFloat(mediaStyle.borderLeftWidth) +
+          Number.parseFloat(mediaStyle.borderRightWidth),
+        mediaBorderHeight:
+          Number.parseFloat(mediaStyle.borderTopWidth) +
+          Number.parseFloat(mediaStyle.borderBottomWidth),
         wrapperDisplay: getComputedStyle(wrapper).display,
         objectFit: getComputedStyle(element).objectFit,
         objectPosition: getComputedStyle(element).objectPosition,
@@ -737,9 +744,19 @@ test("V1 y V2 alinean las fotos de producto dentro de su media", async ({ page }
     expect(metrics?.wrapperDisplay).toBe("block");
     expect(metrics?.wrapperWidth).toBeCloseTo(metrics?.mediaWidth ?? 0, 0);
     expect(metrics?.wrapperHeight).toBeCloseTo(metrics?.mediaHeight ?? 0, 0);
-    expect(metrics?.imageWidth).toBeCloseTo(metrics?.mediaWidth ?? 0, 0);
-    expect(metrics?.imageHeight).toBeCloseTo(metrics?.mediaHeight ?? 0, 0);
-    expect(metrics?.objectFit).toBe("contain");
+    expect(
+      Math.abs(
+        (metrics?.imageWidth ?? 0) -
+          ((metrics?.mediaWidth ?? 0) - (metrics?.mediaBorderWidth ?? 0)),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(
+        (metrics?.imageHeight ?? 0) -
+          ((metrics?.mediaHeight ?? 0) - (metrics?.mediaBorderHeight ?? 0)),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(metrics?.objectFit).toBe("cover");
     expect(metrics?.objectPosition).toBe("50% 50%");
     expect(metrics?.documentWidth).toBeLessThanOrEqual(viewport.width);
     await page
@@ -769,9 +786,19 @@ test("V1 y V2 alinean las fotos de producto dentro de su media", async ({ page }
     expect(metrics?.wrapperDisplay).toBe("block");
     expect(metrics?.wrapperWidth).toBeCloseTo(metrics?.mediaWidth ?? 0, 0);
     expect(metrics?.wrapperHeight).toBeCloseTo(metrics?.mediaHeight ?? 0, 0);
-    expect(metrics?.imageWidth).toBeCloseTo(metrics?.mediaWidth ?? 0, 0);
-    expect(metrics?.imageHeight).toBeCloseTo(metrics?.mediaHeight ?? 0, 0);
-    expect(metrics?.objectFit).toBe("contain");
+    expect(
+      Math.abs(
+        (metrics?.imageWidth ?? 0) -
+          ((metrics?.mediaWidth ?? 0) - (metrics?.mediaBorderWidth ?? 0)),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(
+        (metrics?.imageHeight ?? 0) -
+          ((metrics?.mediaHeight ?? 0) - (metrics?.mediaBorderHeight ?? 0)),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(metrics?.objectFit).toBe("cover");
     expect(metrics?.objectPosition).toBe("50% 50%");
     expect(metrics?.documentWidth).toBeLessThanOrEqual(viewport.width);
     await page
@@ -780,6 +807,55 @@ test("V1 y V2 alinean las fotos de producto dentro de su media", async ({ page }
       .screenshot({
         path: testInfo.outputPath(`product-card-v1-${viewport.width}.png`),
       });
+  }
+});
+
+test("V2 conserva visibles los bordes externos de las cards en cualquier grilla", async ({
+  page,
+}) => {
+  for (const viewport of [
+    { width: 1760, height: 810 },
+    { width: 1024, height: 768 },
+    { width: 390, height: 844 },
+    { width: 320, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(serverUrl);
+    await waitForStorefrontReady(page);
+
+    const metrics = await page
+      .locator(".catalog-product-grid")
+      .first()
+      .evaluate((element) => {
+        const gridRect = element.getBoundingClientRect();
+        const media = Array.from(element.querySelectorAll<HTMLElement>(".catalog-product-media"));
+        return {
+          gridLeft: gridRect.left,
+          gridRight: gridRect.right,
+          items: media.map((item) => {
+            const rect = item.getBoundingClientRect();
+            const style = getComputedStyle(item);
+            return {
+              left: rect.left,
+              right: rect.right,
+              borderLeft: style.borderLeftWidth,
+              borderRight: style.borderRightWidth,
+              boxShadow: style.boxShadow,
+            };
+          }),
+          documentWidth: document.documentElement.scrollWidth,
+        };
+      });
+
+    expect(metrics.items.length).toBeGreaterThan(0);
+    expect(metrics.documentWidth).toBeLessThanOrEqual(viewport.width);
+    for (const item of metrics.items) {
+      expect(item.left).toBeGreaterThanOrEqual(metrics.gridLeft - 0.1);
+      expect(item.right).toBeLessThanOrEqual(metrics.gridRight + 0.1);
+      expect(item.borderLeft).not.toBe("0px");
+      expect(item.borderRight).not.toBe("0px");
+      expect(item.boxShadow).toBe("none");
+    }
   }
 });
 
@@ -968,7 +1044,7 @@ test("V2 ajusta las imágenes, muestra 8 recomendaciones y mantiene una galería
   await expect(thumbs.nth(1)).toHaveAttribute("aria-current", "true");
   const relatedImages = page.locator(".solara-related-products .catalog-product-card-image");
   await expect(relatedImages).toHaveCount(8);
-  await expect(relatedImages.first()).toHaveCSS("object-fit", "contain");
+  await expect(relatedImages.first()).toHaveCSS("object-fit", "cover");
   const relatedGrid = page.locator(".solara-related-products .catalog-product-grid");
   const relatedGridMetrics = await relatedGrid.evaluate((element) => {
     const gridRect = element.getBoundingClientRect();
@@ -1066,13 +1142,16 @@ test("V2 mantiene feedback equivalente para hover y teclado en cards y bento", a
   await expect
     .poll(() => productCard.evaluate((element) => getComputedStyle(element).transform))
     .not.toBe(initialProductTransform);
-  const hoverShadows = await productCard.evaluate((element) => ({
+  const hoverFeedback = await productCard.evaluate((element) => ({
     card: getComputedStyle(element).boxShadow,
-    media: getComputedStyle(element.querySelector<HTMLElement>(".catalog-product-media") ?? element)
-      .boxShadow,
+    media: getComputedStyle(
+      element.querySelector<HTMLElement>(".catalog-product-media") ?? element,
+    ),
   }));
-  expect(hoverShadows.card).toBe("none");
-  expect(hoverShadows.media).not.toBe("none");
+  expect(hoverFeedback.card).toBe("none");
+  expect(hoverFeedback.media.boxShadow).toBe("none");
+  expect(hoverFeedback.media.borderLeftWidth).not.toBe("0px");
+  expect(hoverFeedback.media.borderRightWidth).not.toBe("0px");
 
   const bentoItem = page.locator(".catalog-category-bento-item").first();
   const bentoImage = bentoItem.locator("img");
@@ -2237,6 +2316,7 @@ test("V2 compone el checkout del drawer sin overflow en desktop y movil", async 
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await page.locator(".catalog-cart-drawer [data-cart-checkout-next]").click();
   const form = page.locator(".catalog-cart-drawer [data-checkout-form]");
   await expect(form).toBeVisible();
   await form.locator("#catalog-drawer-name").fill("Ana Prueba");
@@ -2266,10 +2346,10 @@ test("V2 compone el checkout del drawer sin overflow en desktop y movil", async 
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
   await expect(page.locator(".catalog-cart-drawer")).toHaveAttribute("data-open", "true");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-  // F-01: el submit del checkout del drawer vive en un footer fijo y debe
-  // quedar visible sin scrollear; si el contenido excede, scrollea el área
-  // intermedia (.catalog-cart-scroll), no el drawer entero.
   const mobileDrawer = page.locator(".catalog-cart-drawer");
+  await mobileDrawer.locator("[data-cart-checkout-next]").click();
+  // F-01: el submit del segundo paso vive en un footer fijo y debe quedar
+  // visible; si el formulario excede, scrollea sólo su panel intermedio.
   const submit = mobileDrawer.locator(".catalog-drawer-footer button[type='submit']");
   await expect(submit).toBeInViewport();
   await expect(submit).toHaveText(/Continuar por WhatsApp/);
@@ -2394,9 +2474,10 @@ test("V2 conserva nombres accesibles, foco visible y navegacion por teclado", as
   await page.reload();
   await waitForStorefrontReady(page);
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await page.getByRole("button", { name: "Continuar a compra" }).click();
   const checkoutName = page.locator("#catalog-drawer-name");
-  // El drawer se abre por JS: esperar el input visible evita un focus sin
-  // efecto (elemento oculto => outline no aplicado).
+  // El segundo paso se abre por JS: esperar el input visible evita un focus
+  // sin efecto (elemento oculto => outline no aplicado).
   await expect(checkoutName).toBeVisible();
   await checkoutName.focus();
   expect(

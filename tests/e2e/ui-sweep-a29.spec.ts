@@ -260,7 +260,7 @@ test("drawer: trampa de foco con Tab y Shift+Tab dentro del panel", async ({ pag
   await expect(drawer).toHaveAttribute("data-open", "true");
 
   const first = drawer.locator("button:not([disabled])").first();
-  const last = drawer.locator("button:not([disabled])").last();
+  const last = drawer.locator("button:not([disabled]):visible").last();
   await expect(first).toBeFocused();
   await page.keyboard.press("Shift+Tab");
   await expect(last).toBeFocused();
@@ -277,6 +277,7 @@ test("checkout del drawer: abre URL wa.me con saludo, líneas, SKU y total en ce
   await page.locator('input[name="quantity"]').press("Enter");
   const drawer = page.locator("[data-cart-drawer]");
   await expect(drawer.locator("[data-cart-quantity]").first()).toHaveValue("2");
+  await drawer.locator("[data-cart-checkout-next]").click();
 
   await drawer.getByLabel("Nombre").fill("Malena Ortiz");
   await drawer.getByLabel("Teléfono").fill("11 5555 0142");
@@ -356,6 +357,7 @@ test("línea no disponible: se conserva con aviso y el checkout la bloquea", asy
     ),
   ).toBe(true);
 
+  await drawer.locator("[data-cart-checkout-next]").click();
   await drawer.getByLabel("Nombre").fill("Malena Ortiz");
   await drawer.getByLabel("Teléfono").fill("11 5555 0142");
   await drawer.getByLabel("Dirección o punto de entrega").fill("Av. Forest 842, CABA");
@@ -366,8 +368,10 @@ test("línea no disponible: se conserva con aviso y el checkout la bloquea", asy
   );
   await expect(drawer.locator("[data-whatsapp-link]")).toHaveCount(0);
 
+  await drawer.locator("[data-cart-review-back]").click();
   await line.getByRole("button", { name: "Eliminar Remera retirada" }).click();
   await expect(drawer.locator(".solara-cart-line")).toHaveCount(1);
+  await drawer.locator("[data-cart-checkout-next]").click();
   await page.evaluate(() => {
     const originalOpen = window.open.bind(window);
     window.open = ((url, target, features) => {
