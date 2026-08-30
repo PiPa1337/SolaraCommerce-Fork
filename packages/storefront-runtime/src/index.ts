@@ -934,6 +934,30 @@ function storefrontBoot(): void {
     });
   }
 
+  const updateCartQuantity = (target: HTMLElement, restoreInvalid: boolean): void => {
+    const variantId = target.dataset.cartQuantity;
+    const input = target as HTMLInputElement;
+    const previous = cart.find((line) => line.variantId === variantId);
+    if (!previous) return;
+    const raw = input.value.trim();
+    const parsed = Number(raw);
+    if (raw === "" || !Number.isFinite(parsed) || parsed <= 0) {
+      if (restoreInvalid) input.value = String(previous.quantity);
+      return;
+    }
+    const quantity = Math.min(99, Math.trunc(parsed));
+    if (quantity === previous.quantity) return;
+    cart = cart.map((line) => (line.variantId === variantId ? { ...line, quantity } : line));
+    renderCart(true);
+  };
+
+  document.addEventListener("input", (event) => {
+    if (!hasFeature("cart")) return;
+    const target = event.target;
+    if (!(target instanceof HTMLElement) || !target.matches("[data-cart-quantity]")) return;
+    updateCartQuantity(target, false);
+  });
+
   document.addEventListener("change", (event) => {
     if (!hasFeature("product") && !hasFeature("cart")) return;
     const target = event.target;
@@ -951,19 +975,7 @@ function storefrontBoot(): void {
     }
 
     if (target.matches("[data-cart-quantity]")) {
-      const variantId = target.dataset.cartQuantity;
-      const input = target as HTMLInputElement;
-      const previous = cart.find((line) => line.variantId === variantId);
-      if (!previous) return;
-      const raw = input.value.trim();
-      const parsed = Number(raw);
-      if (raw === "" || !Number.isFinite(parsed) || parsed <= 0) {
-        input.value = String(previous.quantity);
-        return;
-      }
-      const quantity = Math.min(99, Math.trunc(parsed));
-      cart = cart.map((line) => (line.variantId === variantId ? { ...line, quantity } : line));
-      renderCart(true);
+      updateCartQuantity(target, true);
     }
   });
 
@@ -1813,6 +1825,19 @@ function storefrontBoot(): void {
       }
     }
   }
+
+  const submitSearchOnEnter = (input: HTMLInputElement | null | undefined): void => {
+    input?.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || event.isComposing) return;
+      const form = input.form;
+      if (!form) return;
+      event.preventDefault();
+      if (typeof form.requestSubmit === "function") form.requestSubmit();
+      else form.submit();
+    });
+  };
+  submitSearchOnEnter(searchInput);
+  submitSearchOnEnter(modernSearchInput);
 
   searchInput?.addEventListener("keydown", (event) => {
     if (event.key !== "ArrowDown") return;

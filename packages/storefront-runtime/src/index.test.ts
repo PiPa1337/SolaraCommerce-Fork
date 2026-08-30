@@ -470,6 +470,16 @@ describe("carrito y checkout del drawer (A29)", () => {
 });
 
 describe("fixmes del barrido A29 (index.ts)", () => {
+  it("envía los formularios de búsqueda con Enter", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("submitSearchOnEnter");
+    expect(STOREFRONT_RUNTIME_JS).toContain("requestSubmit");
+  });
+
+  it("actualiza la cantidad del carrito mientras se edita", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain('document.addEventListener("input"');
+    expect(STOREFRONT_RUNTIME_JS).toContain("updateCartQuantity");
+  });
+
   it("el drawer de carrito inertea a los hermanos al abrir y los libera al cerrar", () => {
     expect(STOREFRONT_RUNTIME_JS.match(/pageSiblingsOf\(drawer\)/g)?.length).toBe(2);
     expect(STOREFRONT_RUNTIME_JS).toContain('s2.setAttribute("inert", "")');

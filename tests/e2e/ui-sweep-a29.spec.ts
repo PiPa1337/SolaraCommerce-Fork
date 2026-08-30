@@ -193,6 +193,24 @@ test("edición de cantidad: restaura en vacío y cero, acota a 1–99", async ({
   expect(((await storedCart(page)) as Array<Record<string, unknown>>)[0]?.quantity).toBe(7);
 });
 
+test("edición de cantidad: recalcula mientras se escribe", async ({ page }) => {
+  await clearCart(page);
+  await page.goto(storeUrl(PRODUCT_URL));
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  const drawer = page.locator("[data-cart-drawer]");
+  const input = drawer.locator("[data-cart-quantity]").first();
+
+  await input.click();
+  await input.press("Control+A");
+  await input.pressSequentially("2");
+
+  await expect(input).toHaveValue("2");
+  await expect(page.locator("[data-cart-count]").first()).toHaveText("2");
+  await expect(drawer.locator("[data-cart-subtotal]")).toHaveText("$ 57.700,00");
+  await expect(drawer.locator("[data-cart-total]")).toHaveText("$ 57.700,00");
+  expect(((await storedCart(page)) as Array<Record<string, unknown>>)[0]?.quantity).toBe(2);
+});
+
 test("quitar línea: desaparece, badge y totales recalculan y persisten vacío", async ({ page }) => {
   await clearCart(page);
   await page.goto(storeUrl(PRODUCT_URL));

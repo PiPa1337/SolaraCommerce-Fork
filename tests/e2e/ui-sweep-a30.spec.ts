@@ -228,6 +228,18 @@ test("búsqueda no-JS: el form de /buscar/ navega con GET", async ({ browser }) 
   await context.close();
 });
 
+test("búsqueda principal: Enter envía el término del input visible", async ({ page }) => {
+  await page.goto(modernUrlFor("/buscar/"));
+  const input = page.locator("main #solara-search-input");
+
+  await input.click();
+  await input.pressSequentially("quilted");
+  await input.press("Enter");
+
+  await expect(page).toHaveURL(/\/buscar\/\?q=quilted$/);
+  await expect(page.locator("[data-search-results]")).toContainText("Campera quilted");
+});
+
 test("categoría: filtro por etiqueta aplica y el conteo es honesto", async ({ page }) => {
   await page.goto(scaleUrlFor("/categorias/casa/"));
   const grid = page.locator("[data-category-grid]");

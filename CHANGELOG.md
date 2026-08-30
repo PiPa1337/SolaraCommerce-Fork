@@ -1,5 +1,12 @@
 # Changelog
 
+### Búsqueda y cantidades del carrito consistentes (2026-08-30)
+
+- Enter envía los formularios de búsqueda visibles y del diálogo en todas las
+  tiendas.
+- La edición de cantidad recalcula al instante badge, subtotal, total y carrito
+  persistido, manteniendo la validación al salir del campo.
+
 ### Abrir carrito funcional en el Preview (2026-08-30)
 
 - El enlace `Abrir carrito` ya no queda interceptado por la navegación interna
