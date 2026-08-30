@@ -8,6 +8,21 @@ import { exportProject, renderPreviewHtml } from "./index";
 describe("tienda base catalog-modern de 50 productos", () => {
   const exported = exportProject(catalogModernStore, { mode: "production" });
 
+  const checkoutMarkers = [
+    'data-cart-step="review"',
+    "data-cart-review-panel",
+    "data-cart-checkout-panel",
+    "data-cart-checkout-next",
+    "data-cart-review-back",
+    "data-cart-checkout-submit",
+  ];
+
+  const expectCheckoutContract = (html: string, surface: string): void => {
+    for (const marker of checkoutMarkers) {
+      expect(html, `${surface}: falta ${marker}`).toContain(marker);
+    }
+  };
+
   it("genera el catálogo completo y conserva la familia visual moderna", () => {
     const productPages = [...exported.files.keys()].filter((path) =>
       /^productos\/[^/]+\/index\.html$/.test(path),
@@ -80,6 +95,23 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(v2Sitemap).toContain("/productos/remera-esencial-de-algodon/");
     expect(moduleTree(v2Preview)).toEqual(moduleTree(v2Home));
     expect(v1Home).not.toContain("catalog-modern-v2");
+  });
+
+  it("mantiene el contrato de checkout V2 en export y Preview para cada raíz moderna", () => {
+    for (const project of [catalogModernStore, catalogModernV2Store]) {
+      const exportedProject = exportProject(project, { mode: "production" });
+      const exportedHome = exportedProject.files.get("index.html");
+      const exportedCart = exportedProject.files.get("carrito/index.html");
+      expect(exportedHome).toBeDefined();
+      expect(exportedCart).toBeDefined();
+      expectCheckoutContract(String(exportedHome), `${project.name} export home`);
+      expectCheckoutContract(String(exportedCart), `${project.name} export carrito`);
+
+      const previewHome = renderPreviewHtml(project, "draft", "/");
+      const previewCart = renderPreviewHtml(project, "draft", "/carrito/");
+      expectCheckoutContract(String(previewHome), `${project.name} Preview home`);
+      expectCheckoutContract(String(previewCart), `${project.name} Preview carrito`);
+    }
   });
 
   it("bloquea production en la plantilla limpia hasta reemplazar placeholders", () => {

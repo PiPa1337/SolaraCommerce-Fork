@@ -236,6 +236,8 @@ export const PublicCopySchema = z.object({
       name: z.string().min(1).default("Nombre"),
       phone: z.string().min(1).default("Teléfono"),
       address: z.string().min(1).default("Dirección o punto de entrega"),
+      locality: z.string().min(1).default("Localidad / Provincia"),
+      postalCode: z.string().min(1).default("Código postal"),
       notes: z.string().min(1).default("Notas opcionales"),
       remove: z.string().min(1).default("Eliminar"),
       unavailable: z.string().min(1).default("Ya no disponible"),

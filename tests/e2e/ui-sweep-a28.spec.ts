@@ -224,6 +224,8 @@ test("C2: agregar al carrito legacy crea la línea, actualiza conteo/totales y p
   await drawer.getByLabel("Nombre").fill("Malena Ortiz");
   await drawer.getByLabel("Teléfono").fill("11 5555 0142");
   await drawer.getByLabel("Dirección o punto de entrega").fill("Av. Forest 842, CABA");
+  await drawer.getByLabel("Localidad / Provincia").fill("Trelew, Chubut");
+  await drawer.getByLabel("Código postal").fill("9100");
   await page.evaluate(() => {
     const originalOpen = window.open.bind(window);
     window.open = ((url, target, features) => {
@@ -301,13 +303,13 @@ test("C4: la cantidad respeta los límites 1–99 en el detalle y dentro del dra
 
   await drawerQuantity.fill("0");
   await drawerQuantity.blur();
-  await expect(drawerQuantity).toHaveValue("99");
+  await expect(drawerQuantity).toHaveValue("1");
   await drawerQuantity.fill("");
   await drawerQuantity.blur();
-  await expect(drawerQuantity).toHaveValue("99");
+  await expect(drawerQuantity).toHaveValue("1");
   await drawerQuantity.fill("-2");
   await drawerQuantity.blur();
-  await expect(drawerQuantity).toHaveValue("99");
+  await expect(drawerQuantity).toHaveValue("1");
 
   await drawerQuantity.fill("7");
   await drawerQuantity.blur();

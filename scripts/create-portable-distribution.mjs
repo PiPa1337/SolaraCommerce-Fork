@@ -118,6 +118,26 @@ export async function replaceDirectory(source, destinationPath) {
     if (destinationMoved) await rm(backupPath, { recursive: true, force: true });
     return false;
   } catch (error) {
+    const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
+    // OneDrive/Windows puede impedir renombrar la carpeta raíz aunque permita
+    // sobrescribir sus archivos. En ese caso el estado persistente ya fue
+    // retirado a backupDir por el caller: copiamos el build en sitio y dejamos
+    // que las etapas siguientes restauren proyectos/ y .solara-runtime/.
+    if (
+      !destinationMoved &&
+      destinationPath === destination &&
+      ["EPERM", "EXDEV", "EBUSY"].includes(code)
+    ) {
+      await mkdir(destinationPath, { recursive: true });
+      const entries = await readdir(source, { withFileTypes: true });
+      for (const entry of entries) {
+        await cp(join(source, entry.name), join(destinationPath, entry.name), {
+          recursive: true,
+          force: true,
+        });
+      }
+      return true;
+    }
     if (destinationMoved) {
       try {
         if (existsSync(destinationPath)) {

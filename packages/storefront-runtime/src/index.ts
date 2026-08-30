@@ -134,6 +134,17 @@ export interface CatalogIndexEntry {
 export const ORDER_VERIFICATION_WARNING =
   "Solicitud sin confirmar; precio, stock, envío y pago deben verificarse con la tienda";
 
+/**
+ * Mantiene todas las entradas de cantidad dentro del contrato comercial del
+ * storefront. Los valores vacíos o no numéricos vuelven a una unidad, los
+ * decimales se truncan y el máximo evita cantidades que el checkout no puede
+ * representar de forma segura.
+ */
+export function normalizeCartQuantity(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(1, Math.min(99, Math.trunc(parsed))) : 1;
+}
+
 function safeRuntimeImageUrl(value: unknown): string {
   if (typeof value !== "string" || value.length === 0 || value.length > 2048) return "";
   return /^(?:\/(?!\/)|https?:\/\/|data:image\/(?:avif|gif|jpe?g|png|webp);base64,)/i.test(value)
@@ -260,6 +271,8 @@ export interface CustomerDetails {
   name: string;
   phone: string;
   address: string;
+  locality?: string;
+  postalCode?: string;
   notes: string;
 }
 
@@ -391,6 +404,12 @@ export function buildWhatsAppMessage(
     `${copy.customerName}: ${customer.name.trim()}`,
     `${copy.customerPhone}: ${customer.phone.trim()}`,
     `${copy.delivery}: ${customer.address.trim()}`,
+    customer.locality?.trim()
+      ? `${project.publicCopy.cart.locality}: ${customer.locality.trim()}`
+      : "",
+    customer.postalCode?.trim()
+      ? `${project.publicCopy.cart.postalCode}: ${customer.postalCode.trim()}`
+      : "",
     customer.notes.trim() ? `${copy.notes}: ${customer.notes.trim()}` : "",
     "",
     `${checkoutCopy.disclaimer || copy.confirmation}\n${ORDER_VERIFICATION_WARNING}`,
@@ -587,7 +606,7 @@ function storefrontBoot(): void {
         const details = getDetails();
         const mailto = buildMailto(details);
         window.open(mailto, "_blank", "noopener");
-        status?.replaceChildren(k.success);
+        status?.replaceChildren();
       };
       const handleWhatsapp = (): void => {
         const clean = whatsappTarget.replace(/\D/g, "");
@@ -601,7 +620,7 @@ function storefrontBoot(): void {
         const details = getDetails();
         const url = buildWaUrl(details);
         window.open(url, "_blank", "noopener");
-        status?.replaceChildren(k.success);
+        status?.replaceChildren();
       };
       form.addEventListener("submit", (event) => {
         event.preventDefault();
@@ -976,10 +995,10 @@ function storefrontBoot(): void {
     const raw = input.value.trim();
     const parsed = Number(raw);
     if (raw === "" || !Number.isFinite(parsed) || parsed <= 0) {
-      if (restoreInvalid) input.value = String(previous.quantity);
-      return;
+      if (!restoreInvalid) return;
     }
-    const quantity = Math.min(99, Math.trunc(parsed));
+    const quantity = normalizeCartQuantity(parsed);
+    if (restoreInvalid) input.value = String(quantity);
     if (quantity === previous.quantity) return;
     cart = cart.map((line) => (line.variantId === variantId ? { ...line, quantity } : line));
     renderCart(true);
@@ -1020,7 +1039,8 @@ function storefrontBoot(): void {
     if (!embed) cart = readStoredCart();
     const variantId = variant.dataset.variantId ?? "";
     const quantityInput = productRoot.querySelector<HTMLInputElement>('input[name="quantity"]');
-    const quantity = Math.max(1, Math.min(99, Math.trunc(Number(quantityInput?.value ?? "1"))));
+    const quantity = normalizeCartQuantity(quantityInput?.value ?? "1");
+    if (quantityInput) quantityInput.value = String(quantity);
     const existing = cart.find((line) => line.variantId === variantId);
     if (existing) {
       existing.quantity = Math.min(99, existing.quantity + quantity);
@@ -1220,6 +1240,8 @@ function storefrontBoot(): void {
           `${a.name}: ${String(data.get("name") ?? "").trim()}`,
           `${a.phone}: ${String(data.get("phone") ?? "").trim()}`,
           `${a.delivery}: ${String(data.get("address") ?? "").trim()}`,
+          `${a.locality}: ${String(data.get("locality") ?? "").trim()}`,
+          `${a.postalCode}: ${String(data.get("postalCode") ?? "").trim()}`,
           notes ? `${a.notes}: ${notes}` : "",
           "",
           `${x.disclaimer}\n${orderVerificationWarning}`,
@@ -2164,6 +2186,7 @@ const RUNTIME_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unk
   ["validRuntimeStringArray", validRuntimeStringArray],
   ["validRuntimeSearchTokens", validRuntimeSearchTokens],
   ["parseCart", parseCart],
+  ["normalizeCartQuantity", normalizeCartQuantity],
   ["validCatalogIndexEntry", validCatalogIndexEntry],
   ["reconcileCartLines", reconcileCartLines],
   ["formatMoney", formatMoney],

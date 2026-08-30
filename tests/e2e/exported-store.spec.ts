@@ -80,6 +80,8 @@ test("selecciona una variante, agrega al carrito y abre WhatsApp", async ({ page
   await page.getByLabel("Nombre").fill("Malena Ortiz");
   await page.getByLabel(/Telefono|Tel/).fill("11 5555 0142");
   await page.getByLabel(/Direccion|Direcci/).fill("Av. Forest 842, CABA");
+  await page.getByLabel(/Localidad|Provincia/).fill("Trelew, Chubut");
+  await page.getByLabel(/Codigo postal|Código postal/).fill("9100");
   await page.getByLabel(/Notas/).fill("Entregar por la tarde");
   await page.evaluate(() => {
     const originalOpen = window.open.bind(window);

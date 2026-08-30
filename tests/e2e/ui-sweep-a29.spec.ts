@@ -163,7 +163,7 @@ test("Enter en el campo de cantidad agrega al carrito (listener de submit)", asy
   expect(((await storedCart(page)) as Array<Record<string, unknown>>)[0]?.quantity).toBe(3);
 });
 
-test("edición de cantidad: restaura en vacío y cero, acota a 1–99", async ({ page }) => {
+test("edición de cantidad: normaliza vacío, cero y negativos, y acota a 1–99", async ({ page }) => {
   await clearCart(page);
   await page.goto(storeUrl(PRODUCT_URL));
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
@@ -185,12 +185,41 @@ test("edición de cantidad: restaura en vacío y cero, acota a 1–99", async ({
 
   await input.fill("-2");
   await input.blur();
-  await expect(input).toHaveValue("99");
+  await expect(input).toHaveValue("1");
 
   await input.fill("7");
   await input.blur();
   await expect(input).toHaveValue("7");
   expect(((await storedCart(page)) as Array<Record<string, unknown>>)[0]?.quantity).toBe(7);
+});
+
+test("cantidad del producto: refleja inmediatamente la normalización en el campo visible", async ({
+  page,
+}) => {
+  for (const [raw, expected] of [
+    ["", "1"],
+    ["0", "1"],
+    ["-2", "1"],
+    ["3.9", "3"],
+    ["100", "99"],
+  ] as const) {
+    await page.goto(storeUrl("/"));
+    await page.evaluate((key) => {
+      localStorage.removeItem(key);
+      localStorage.removeItem(`${key}:backup`);
+    }, STORAGE_KEY);
+    await page.goto(storeUrl(PRODUCT_URL));
+    const input = page.locator('input[name="quantity"]');
+    await input.fill(raw);
+    await page.getByRole("button", { name: "Agregar al carrito" }).click();
+    await expect(input).toHaveValue(expected);
+    await expect(page.locator("[data-cart-drawer] [data-cart-quantity]").first()).toHaveValue(
+      expected,
+    );
+    expect(((await storedCart(page)) as Array<Record<string, unknown>>)[0]?.quantity).toBe(
+      Number(expected),
+    );
+  }
 });
 
 test("edición de cantidad: recalcula mientras se escribe", async ({ page }) => {
@@ -282,6 +311,8 @@ test("checkout del drawer: abre URL wa.me con saludo, líneas, SKU y total en ce
   await drawer.getByLabel("Nombre").fill("Malena Ortiz");
   await drawer.getByLabel("Teléfono").fill("11 5555 0142");
   await drawer.getByLabel("Dirección o punto de entrega").fill("Av. Forest 842, CABA");
+  await drawer.getByLabel("Localidad / Provincia").fill("Trelew, Chubut");
+  await drawer.getByLabel("Código postal").fill("9100");
   await drawer.getByLabel("Notas opcionales").fill("Entregar por la tarde");
   await page.evaluate(() => {
     const originalOpen = window.open.bind(window);
@@ -361,6 +392,8 @@ test("línea no disponible: se conserva con aviso y el checkout la bloquea", asy
   await drawer.getByLabel("Nombre").fill("Malena Ortiz");
   await drawer.getByLabel("Teléfono").fill("11 5555 0142");
   await drawer.getByLabel("Dirección o punto de entrega").fill("Av. Forest 842, CABA");
+  await drawer.getByLabel("Localidad / Provincia").fill("Trelew, Chubut");
+  await drawer.getByLabel("Código postal").fill("9100");
   await drawer.locator('button[type="submit"]').click();
   await expect(drawer.locator("[data-order-preview]")).toHaveAttribute("role", "alert");
   await expect(drawer.locator("[data-order-preview]")).toContainText(
@@ -431,6 +464,37 @@ test("página de carrito: reconciliación con precios frescos de catalog-index.j
       available: true,
     }),
   );
+});
+
+test("página de carrito: editar la cantidad actualiza todos los subtotales y totales", async ({
+  page,
+}) => {
+  await seedCart(page, [
+    {
+      productId: "p-stale",
+      variantId: VARIANT_ID,
+      title: "Título viejo",
+      variantTitle: "Stale",
+      sku: "OLD-1",
+      unitPrice: FRESH_PRICE,
+      quantity: 2,
+      available: true,
+    },
+  ]);
+  await page.goto(storeUrl("/carrito/"));
+  const pageMain = page.locator("main.solara-cart-page");
+  const input = pageMain.locator("[data-cart-quantity]").first();
+
+  await expect(input).toHaveValue("2");
+  await input.fill("3");
+  await input.blur();
+
+  await expect(input).toHaveValue("3");
+  await expect(pageMain.locator("[data-cart-subtotal]")).toHaveText("$ 86.550,00");
+  await expect(pageMain.locator("[data-cart-total]")).toHaveText("$ 86.550,00");
+  await expect(page.locator("[data-cart-drawer] [data-cart-subtotal]")).toHaveText("$ 86.550,00");
+  await expect(page.locator("[data-cart-drawer] [data-cart-total]")).toHaveText("$ 86.550,00");
+  expect(((await storedCart(page)) as Array<Record<string, unknown>>)[0]?.quantity).toBe(3);
 });
 
 test("totales del carrito anuncian con aria-live", async ({ page }) => {

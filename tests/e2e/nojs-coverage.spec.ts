@@ -4,7 +4,9 @@ import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
+import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import { referenceStore } from "@solara/project-schema/fixture";
+import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 
 // Desde 9a22a95 los assets de hero/galería viajan embebidos como data URLs;
 // solo los 12 productos quedan como archivos webp servibles en /fixtures/.
@@ -23,6 +25,8 @@ const fixtureFiles = new Map<string, Uint8Array>(
 const projects = {
   reference: referenceStore,
   catalogModern: catalogModernStore,
+  catalogModernV2: catalogModernV2Store,
+  catalogScale: catalogScaleStore,
 } as const;
 
 function routesFor(project: (typeof projects)[keyof typeof projects]): string[] {
@@ -33,14 +37,15 @@ function routesFor(project: (typeof projects)[keyof typeof projects]): string[] 
   const category = [...exported.files.keys()].find((path) =>
     /^categorias\/[^/]+\/index\.html$/.test(path),
   );
-  return [
+  const routes = [
     "/",
     product ? `/${product.slice(0, -"index.html".length)}` : "/productos/",
     category ? `/${category.slice(0, -"index.html".length)}` : "/categorias/",
     "/buscar/",
     "/carrito/",
-    "/compra/",
   ];
+  if (exported.files.has("compra/index.html")) routes.push("/compra/");
+  return routes;
 }
 
 test("E1/C2: rutas útiles sin JavaScript y sin errores de consola/red", async ({ browser }) => {

@@ -1346,6 +1346,10 @@ export const cartDrawer: ModuleDefinition<"cart-drawer", z.infer<typeof cartSett
             <input id="solara-drawer-customer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="${escapeHtml(copy.cart.phoneInvalid ?? "Ingresá un teléfono válido")}" required>
             <label for="solara-drawer-customer-address">${escapeHtml(copy.cart.address)}</label>
             <textarea id="solara-drawer-customer-address" name="address" autocomplete="street-address" required></textarea>
+            <label for="solara-drawer-customer-locality">${escapeHtml(copy.cart.locality)}</label>
+            <input id="solara-drawer-customer-locality" name="locality" autocomplete="address-level2" required>
+            <label for="solara-drawer-customer-postal-code">${escapeHtml(copy.cart.postalCode)}</label>
+            <input id="solara-drawer-customer-postal-code" name="postalCode" autocomplete="postal-code" required>
             <label for="solara-drawer-customer-notes">${escapeHtml(copy.cart.notes)}</label>
             <textarea id="solara-drawer-customer-notes" name="notes"></textarea>
             <button type="submit"${canvasTextAttributes(canvas, "checkoutLabel", 120)}>${escapeHtml(context.settings.checkoutLabel)}</button>

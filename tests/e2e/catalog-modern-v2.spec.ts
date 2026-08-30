@@ -1033,8 +1033,8 @@ test("V2 ajusta las imágenes, muestra 8 recomendaciones y mantiene una galería
         elements.filter((element) => getComputedStyle(element).display !== "none").length,
     ),
   ).toBe(1);
-  await expect(figures.first().locator("img")).toHaveCSS("object-fit", "contain");
-  await expect(thumbs.first().locator("img")).toHaveCSS("object-fit", "contain");
+  await expect(figures.first().locator("img")).toHaveCSS("object-fit", "cover");
+  await expect(thumbs.first().locator("img")).toHaveCSS("object-fit", "cover");
   await expect(figures.first().locator("img")).toHaveAttribute(
     "sizes",
     "(max-width: 767px) 92vw, (max-width: 1199px) 94vw, 60vw",
@@ -1459,17 +1459,21 @@ test("V2 Home muestra Contacto como módulos responsive y replica el CTA del her
     const contactStyle = getComputedStyle(contactButton);
     const emailStyle = getComputedStyle(emailButton);
     const whatsappStyle = getComputedStyle(whatsappButton);
-    const accentAltProbe = document.createElement("span");
-    accentAltProbe.style.color = "var(--solara-accent-alt)";
-    document.body.append(accentAltProbe);
-    const accentAltColor = getComputedStyle(accentAltProbe).color;
-    accentAltProbe.remove();
+    const themeProbe = document.createElement("span");
+    themeProbe.style.backgroundColor = "var(--catalog-ink)";
+    themeProbe.style.color = "var(--catalog-paper)";
+    element.append(themeProbe);
+    const themeProbeStyle = getComputedStyle(themeProbe);
+    const themeInk = themeProbeStyle.backgroundColor;
+    const themePaper = themeProbeStyle.color;
+    themeProbe.remove();
     return {
       columns: getComputedStyle(element).gridTemplateColumns.split(" ").length,
       sameRow: Math.abs(formRect.top - channelsRect.top) < 1,
       noOverflow: document.documentElement.scrollWidth <= window.innerWidth,
       sameButtonBackground: heroStyle.backgroundColor === emailStyle.backgroundColor,
-      whatsappUsesThemeAccentAlt: whatsappStyle.backgroundColor === accentAltColor,
+      whatsappUsesThemeInk:
+        whatsappStyle.backgroundColor === themeInk && whatsappStyle.color === themePaper,
       whatsappHasAlternateBackground:
         whatsappStyle.backgroundColor !== emailStyle.backgroundColor &&
         whatsappStyle.backgroundColor !== contactStyle.backgroundColor,
@@ -1482,7 +1486,7 @@ test("V2 Home muestra Contacto como módulos responsive y replica el CTA del her
     sameRow: true,
     noOverflow: true,
     sameButtonBackground: true,
-    whatsappUsesThemeAccentAlt: true,
+    whatsappUsesThemeInk: true,
     whatsappHasAlternateBackground: true,
     sameButtonRadius: true,
     sameButtonHeight: true,
@@ -2000,7 +2004,35 @@ test("V2 presenta PDP editorial y carrito lateral o inferior según viewport", a
     return { width: Math.round(rect.width), bottom: Math.round(innerHeight - rect.bottom) };
   });
   expect(drawerMetrics).toEqual({ width: 390, bottom: 0 });
+  const expectCompactSummary = async () => {
+    const metrics = await drawer.locator(".catalog-cart-summary").evaluate((summary) => {
+      const summaryRect = summary.getBoundingClientRect();
+      const rows = summary.querySelectorAll<HTMLElement>(":scope > p");
+      const deliveryValue = rows[1]?.querySelector("strong")?.getBoundingClientRect();
+      const totalStyle = rows[2] ? getComputedStyle(rows[2]) : null;
+      const footer = summary
+        .closest(".catalog-cart-drawer")
+        ?.querySelector<HTMLElement>(".catalog-drawer-footer");
+      return {
+        leftGap: Math.abs((rows[0]?.getBoundingClientRect().left ?? 0) - summaryRect.left),
+        rightGap: Math.abs(summaryRect.right - (deliveryValue?.right ?? 0)),
+        summaryBorder: getComputedStyle(summary).borderTopWidth,
+        totalBorder: totalStyle?.borderTopWidth,
+        footerBorder: footer ? getComputedStyle(footer).borderTopWidth : null,
+      };
+    });
+    expect(metrics.leftGap).toBeLessThanOrEqual(1);
+    expect(metrics.rightGap).toBeLessThanOrEqual(1);
+    expect(metrics).toEqual(
+      expect.objectContaining({ summaryBorder: "0px", totalBorder: "0px", footerBorder: "0px" }),
+    );
+  };
+  await expectCompactSummary();
   await page.screenshot({ path: testInfo.outputPath("cart-390x844.png"), fullPage: false });
+
+  await page.setViewportSize({ width: 700, height: 900 });
+  await expectCompactSummary();
+  await page.screenshot({ path: testInfo.outputPath("cart-700x900.png"), fullPage: false });
 });
 
 test("V2 muestra las 12 reseñas en una grilla sin scroll lateral y rotula el footer", async ({
@@ -2365,6 +2397,8 @@ test("V2 compone el checkout del drawer sin overflow en desktop y movil", async 
   await form.locator("#catalog-drawer-name").fill("Ana Prueba");
   await form.locator("#catalog-drawer-phone").fill("5491112345678");
   await form.locator("#catalog-drawer-address").fill("Calle de prueba 123");
+  await form.locator("#catalog-drawer-locality").fill("Trelew, Chubut");
+  await form.locator("#catalog-drawer-postal-code").fill("9100");
   await page.evaluate(() => {
     const originalOpen = window.open.bind(window);
     window.open = ((url, target, features) => {
@@ -2376,6 +2410,10 @@ test("V2 compone el checkout del drawer sin overflow en desktop y movil", async 
   await page.locator(".catalog-cart-drawer .catalog-drawer-footer button[type='submit']").click();
   const whatsappPopup = await whatsappPopupPromise;
   await expect(form.locator("[data-order-preview]")).toContainText("Remera esencial");
+  await expect(form.locator("[data-order-preview]")).toContainText(
+    "Localidad / Provincia: Trelew, Chubut",
+  );
+  await expect(form.locator("[data-order-preview]")).toContainText("Código postal: 9100");
   await expect(form.locator("[data-whatsapp-link]")).toHaveCount(0);
   await expect(page.locator("html")).toHaveAttribute(
     "data-solara-whatsapp-url",
@@ -2852,7 +2890,7 @@ test("V2 presenta resultados de búsqueda en grilla editorial", async ({ page },
       "sizes",
       "(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem",
     );
-    await expect(results.locator("img").first()).toHaveCSS("object-fit", "contain");
+    await expect(results.locator("img").first()).toHaveCSS("object-fit", "cover");
     const imageMetrics = await results
       .locator("img")
       .first()
@@ -3048,7 +3086,7 @@ test("V2 footer: copyright con año y nombre + Hecho con ❤️ en solara.com.ar
   );
 });
 
-test("V2 footer: Contacto no tiene separador vertical", async ({ page }) => {
+test("V2 footer: Contacto no tiene separador ni sangría lateral", async ({ page }) => {
   for (const viewport of [
     { width: 1920, height: 968 },
     { width: 1024, height: 768 },
@@ -3056,9 +3094,9 @@ test("V2 footer: Contacto no tiene separador vertical", async ({ page }) => {
   ]) {
     await page.setViewportSize(viewport);
     await page.goto(serverUrl);
-    await expect(
-      page.locator('[data-solara-module="catalog-footer"] .catalog-footer-contact'),
-    ).toHaveCSS("border-left-width", "0px");
+    const contact = page.locator('[data-solara-module="catalog-footer"] .catalog-footer-contact');
+    await expect(contact).toHaveCSS("border-left-width", "0px");
+    await expect(contact).toHaveCSS("padding-left", "0px");
   }
 });
 
@@ -3421,6 +3459,92 @@ test("V2 búsqueda comparte el hover temático del CTA del footer", async ({ pag
   expect(searchHover).toEqual(footerHover);
   expect(searchHover.background).not.toBe(searchRest.background);
   expect(searchHover.color).not.toBe(searchRest.color);
+});
+
+test("V2 carrito comparte el tratamiento visual del CTA de WhatsApp del footer", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString());
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+
+  const cartButton = page.getByRole("button", { name: "Continuar a compra" });
+  const footerButton = page.locator(".catalog-footer-whatsapp");
+  await expect(cartButton).toBeVisible();
+
+  const surface = async (locator: typeof cartButton) =>
+    locator.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return {
+        background: styles.backgroundColor,
+        border: styles.borderTopColor,
+        color: styles.color,
+        transform: styles.transform,
+        shadow: styles.boxShadow,
+      };
+    });
+
+  expect(await surface(cartButton)).toEqual(await surface(footerButton));
+  await cartButton.hover();
+  await page.waitForTimeout(240);
+  const cartHover = await surface(cartButton);
+  await page.getByRole("button", { name: "Cerrar carrito" }).click();
+  await footerButton.hover();
+  await page.waitForTimeout(240);
+  const footerHover = await surface(footerButton);
+  expect(cartHover).toMatchObject({
+    background: footerHover.background,
+    border: footerHover.border,
+    color: footerHover.color,
+  });
+});
+
+test("V2 producto comparte el hover visual del CTA de WhatsApp del footer", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString());
+
+  const productButton = page.getByRole("button", { name: "Agregar al carrito" });
+  const footerButton = page.locator(".catalog-footer-whatsapp");
+  const surface = async (locator: typeof productButton) =>
+    locator.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return {
+        background: styles.backgroundColor,
+        border: styles.borderTopColor,
+        color: styles.color,
+        transform: styles.transform,
+        shadow: styles.boxShadow,
+      };
+    });
+
+  await expect(productButton).toBeVisible();
+  expect(await surface(productButton)).toEqual(await surface(footerButton));
+
+  await productButton.hover();
+  await page.waitForTimeout(240);
+  const productHover = await surface(productButton);
+  await footerButton.hover();
+  await page.waitForTimeout(240);
+  const footerHover = await surface(footerButton);
+
+  expect(productHover).toEqual(footerHover);
+  expect(productHover.background).not.toBe("rgba(0, 0, 0, 0)");
+});
+
+test("V2 CTA de Contacto vuelve al formulario de Inicio desde una página interna", async ({
+  page,
+}) => {
+  await page.goto(new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString());
+  const contactAction = page.locator(
+    '[data-solara-module="catalog-newsletter-cta"] .catalog-newsletter-action',
+  );
+
+  await expect(contactAction).toHaveAttribute("href", "/#contact-form");
+  await contactAction.click();
+  await expect(page).toHaveURL(new URL("/#contact-form", serverUrl).toString());
+  await expect(page.locator("#contact-form")).toBeVisible();
 });
 
 test("V1 y V2 conservan contenido y aislamiento en capturas equivalentes", async ({

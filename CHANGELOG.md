@@ -1,11 +1,91 @@
 # Changelog
 
+### Correcciones integrales del storefront (2026-08-30)
+
+- Las cantidades del producto, drawer y página de carrito se normalizan de forma
+  compartida a enteros entre 1 y 99, reflejando el valor corregido y actualizando
+  líneas, contador, subtotales y total.
+- Dirección y horarios del contacto enlazan a una ubicación activa o a un
+  formulario/canal disponible, sin crear secciones persistidas nuevas.
+- Preview y exportación conservan el checkout V2 de dos pasos y sus contratos;
+  se amplió la cobertura transversal de fixtures, no-JS, accesibilidad y
+  navegación para RM Descartables, Predeterminada y el renderer compartido.
+- El drawer legacy mantiene sus líneas y formulario en zonas con scroll propio,
+  evitando que el resumen intercepte los botones en alturas reducidas.
+
+### Resumen del carrito limpio en tablet y mobile (2026-08-30)
+
+- Subtotal y Entrega se alinean con los extremos del ancho útil del drawer en
+  pantallas de hasta 767 px.
+- Se eliminan los tres separadores horizontales que rodeaban Subtotal, Entrega y
+  Total estimado en esos viewports.
+
 ### Menú responsive de navegación rediseñado (2026-08-30)
 
 - Mobile usa una hoja de pantalla completa y tablet un panel compacto de 480 px
   con fondo atenuado, jerarquía más clara y scroll interno para categorías.
 - Se agregaron transiciones con soporte para movimiento reducido, objetivos
   táctiles de 48 px, foco visible y limpieza segura al cruzar 767/768 px.
+
+### Localidad y código postal en pedidos por WhatsApp (2026-08-30)
+
+- El checkout del carrito agrega los campos obligatorios “Localidad / Provincia”
+  y “Código postal” en el drawer y en la página dedicada.
+- Ambos datos se incorporan al resumen y al mensaje que abre WhatsApp en todas
+  las tiendas.
+
+### Envío de Contacto sin confirmación redundante (2026-08-30)
+
+- El formulario deja de mostrar “Listo” después de abrir Email o WhatsApp.
+- Los avisos necesarios por email o teléfono sin configurar permanecen visibles.
+
+### Acciones de contacto vinculadas a la paleta activa (2026-08-30)
+
+- Email conserva el acento principal del tema y WhatsApp usa la combinación
+  texto/fondo del mismo tema, manteniendo dos superficies diferenciadas.
+- Se eliminó la dependencia visual de `accentAlt` en el botón de WhatsApp para
+  evitar matices ajenos a la identidad seleccionada.
+
+### CTA de Contacto independiente de la ruta (2026-08-30)
+
+- El botón de Novedades y ofertas normaliza su destino a `/#contact-form` en
+  Catalog Modern V2, por lo que funciona desde Inicio y desde páginas internas.
+- Los destinos personalizados que no representan Contacto permanecen intactos.
+
+### Contacto alineado en el footer responsive (2026-08-30)
+
+- La columna Contacto deja de heredar una sangría lateral propia y comparte la
+  misma línea de inicio que Explorar, Categorías y Ayuda en todos los breakpoints.
+- Se agregó una regresión que verifica padding y separador en desktop, tablet y
+  mobile.
+
+### Hover del CTA de producto alineado con WhatsApp (2026-08-30)
+
+- “Agregar al carrito” conserva un estado outline visible y adopta el mismo
+  relleno temático en hover y foco de teclado que el CTA de WhatsApp del footer.
+- La regla vive en el CSS seleccionado por Preview y exportación para todas las
+  tiendas Catalog Modern.
+
+### Galería de producto a marco completo (2026-08-30)
+
+- La imagen principal y las miniaturas laterales de la ficha de producto llenan
+  sus cajas con recorte proporcional y centrado en todas las tiendas Catalog Modern.
+- Se agregó cobertura de regresión para los estilos compartidos, V1 y V2, además
+  de la galería responsive exportada.
+
+### Resultados de búsqueda a marco completo (2026-08-30)
+
+- Las imágenes de productos llenan su caja cuadrada y conservan el centro sin
+  deformarse en los resultados de búsqueda de desktop, tablet y mobile.
+- El encuadre compartido cubre Catalog Modern V1 y V2 en todas las tiendas
+  actuales y futuras.
+
+### CTA del carrito alineado con WhatsApp (2026-08-30)
+
+- El botón principal del drawer y de la página de carrito comparte el estilo
+  outline, los colores temáticos y el hover del CTA de WhatsApp del footer.
+- La paridad se aplica desde el renderer compartido a todas las tiendas Catalog
+  Modern actuales y futuras.
 
 ### Imágenes del carrito a marco completo (2026-08-30)
 

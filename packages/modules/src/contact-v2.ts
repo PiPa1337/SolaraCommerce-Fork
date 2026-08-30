@@ -18,6 +18,7 @@ import {
   contactDefaultFaqItems,
   contactDefaultHelpItems,
   contactDefaultPurchaseItems,
+  type StoreSection,
 } from "@solara/project-schema";
 import { z } from "zod";
 import { catalogHeroBenefitIcons, renderCatalogModernEditorialHero } from "./catalog-modern";
@@ -193,6 +194,42 @@ export const contactLocationSettings = z.object({
   mapHref: z.string().default(""),
   mapImageAssetId: z.string().default(""),
 });
+
+function contactSectionsForPage(
+  project: RenderContext<unknown>["project"],
+  pageType: RenderContext<unknown>["pageType"],
+): readonly StoreSection[] {
+  if (pageType === "home") {
+    const home = project.pages.find((page) => page.kind === "home");
+    return home?.sections.length ? home.sections : project.sections;
+  }
+  if (pageType === "contact") {
+    return project.pages.find((page) => page.kind === "contact")?.sections ?? [];
+  }
+  return [];
+}
+
+function hasLocationContent(settings: Record<string, unknown>): boolean {
+  return (
+    settings.enabled === true &&
+    ["address", "imageAssetId", "mapImageAssetId"].some(
+      (key) => typeof settings[key] === "string" && settings[key].length > 0,
+    )
+  );
+}
+
+function contactLocationHref(context: RenderContext<unknown>): string {
+  const sections = contactSectionsForPage(context.project, context.pageType);
+  const location = sections.find(
+    (section) => section.enabled && section.moduleId === "contact-location",
+  );
+  if (location && hasLocationContent(location.settings)) return "#contact-location";
+
+  if (sections.some((section) => section.enabled && section.moduleId === "contact-form")) {
+    return "#contact-form";
+  }
+  return "#contact-channels";
+}
 
 const contactHasPublicPhone = (phone: string): boolean =>
   phone !== CATALOG_MODERN_PLACEHOLDER_PHONE && phone.replace(/\D/g, "").length > 0;
@@ -704,6 +741,7 @@ export const contactChannels: ModuleDefinition<
   render(context) {
     const settings = context.settings;
     const editor = contactCanvasContext(context);
+    const locationHref = contactLocationHref(context);
     const phone = contactPhone(context);
     const rows: Array<[string, string, string, string, string] | null> = [
       settings.showWhatsapp && phone
@@ -739,7 +777,7 @@ export const contactChannels: ModuleDefinition<
             "Dirección",
             context.project.identity.address,
             settings.addressActionLabel,
-            "#contact-location",
+            locationHref,
           ]
         : null,
       settings.showHours && settings.hoursText
@@ -748,7 +786,7 @@ export const contactChannels: ModuleDefinition<
             "Horarios de atención",
             settings.hoursText,
             settings.hoursActionLabel,
-            "#contact-location",
+            locationHref,
           ]
         : null,
     ];

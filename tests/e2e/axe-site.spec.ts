@@ -8,6 +8,8 @@ import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixtur
 import { referenceStore } from "@solara/project-schema/fixture";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 
+test.setTimeout(120_000);
+
 const projects = {
   reference: referenceStore,
   catalogModern: catalogModernStore,
@@ -64,9 +66,15 @@ test("A1: axe sobre las rutas del sitio exportado (3 fixtures)", async ({ page }
   const address = server.address();
   const serverUrl = `http://127.0.0.1:${typeof address === "object" && address ? address.port : 0}`;
   try {
+    const viewports = [
+      { name: "desktop", width: 1440, height: 900 },
+      { name: "tablet", width: 1024, height: 768 },
+      { name: "mobile", width: 390, height: 844 },
+    ] as const;
     const findings: Array<{
       fixture: string;
       route: string;
+      viewport: string;
       impact: string;
       id: string;
       target: string;
@@ -74,17 +82,21 @@ test("A1: axe sobre las rutas del sitio exportado (3 fixtures)", async ({ page }
     for (const [fixtureName, project] of Object.entries(projects)) {
       exported = exportProject(project, { mode: "production" });
       const fixtureRoutes = routesFor(project);
-      for (const route of fixtureRoutes) {
-        await page.goto(`${serverUrl}${route}`, { waitUntil: "networkidle" });
-        const results = await new AxeBuilder({ page }).analyze();
-        for (const violation of results.violations) {
-          findings.push({
-            fixture: fixtureName,
-            route,
-            impact: violation.impact ?? "unknown",
-            id: violation.id,
-            target: violation.nodes[0]?.target.join(" ") ?? "",
-          });
+      for (const viewport of viewports) {
+        await page.setViewportSize(viewport);
+        for (const route of fixtureRoutes) {
+          await page.goto(`${serverUrl}${route}`, { waitUntil: "networkidle" });
+          const results = await new AxeBuilder({ page }).analyze();
+          for (const violation of results.violations) {
+            findings.push({
+              fixture: fixtureName,
+              route,
+              viewport: viewport.name,
+              impact: violation.impact ?? "unknown",
+              id: violation.id,
+              target: violation.nodes[0]?.target.join(" ") ?? "",
+            });
+          }
         }
       }
     }
@@ -100,7 +112,7 @@ test("A1: axe sobre las rutas del sitio exportado (3 fixtures)", async ({ page }
     }, {});
     console.log("A1 axe:", JSON.stringify(counts));
     for (const f of findings.slice(0, 8))
-      console.log(" ", f.fixture, f.route, f.impact, f.id, f.target);
+      console.log(" ", f.fixture, f.viewport, f.route, f.impact, f.id, f.target);
     expect(findings, JSON.stringify(findings, null, 2)).toEqual([]);
   } finally {
     await new Promise((resolveClose) => server.close(() => resolveClose()));

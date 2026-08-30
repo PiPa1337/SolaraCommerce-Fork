@@ -81,6 +81,7 @@ test("Contacto V2 vive al final de Home y mantiene el formulario funcional", asy
     `Hola ${fixtureBrand}, quiero hacer una consulta.`,
   );
   expect(decodeURIComponent(contactUrl)).toContain("Quiero consultar un talle");
+  await expect(form.locator("[data-contact-status]")).toBeEmpty();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     await page.evaluate(() => window.innerWidth),
   );

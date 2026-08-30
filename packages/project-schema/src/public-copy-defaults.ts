@@ -111,6 +111,8 @@ export const PUBLIC_COPY_DEFAULTS = {
     name: "Nombre",
     phone: "Teléfono",
     address: "Dirección o punto de entrega",
+    locality: "Localidad / Provincia",
+    postalCode: "Código postal",
     notes: "Notas opcionales",
     remove: "Eliminar",
     unavailable: "Ya no disponible",

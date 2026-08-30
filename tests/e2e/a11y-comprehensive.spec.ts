@@ -161,31 +161,36 @@ test("a11y: search dialog y mobile menu", async ({ page }) => {
   const addr: any = server.address();
   const base = `http://127.0.0.1:${addr.port}`;
   try {
-    await page.goto(`${base}/`, { waitUntil: "load" });
-    // search dialog
-    const searchOpen = page.locator("[data-catalog-search-open]").first();
-    if ((await searchOpen.count()) > 0) {
-      await searchOpen.click();
-      const dialog = page.locator("#catalog-search-dialog");
-      await expect(dialog).toBeVisible();
-      expect(await dialog.getAttribute("aria-labelledby")).toBe("catalog-search-title");
-      await expect(page.locator("#catalog-search-input")).toBeFocused();
-      await page.keyboard.press("Escape");
-      await expect(dialog).toBeHidden();
-      await expect(searchOpen).toBeFocused();
-    }
-    // mobile menu
-    await page.setViewportSize({ width: 390, height: 800 });
-    const menuOpen = page.locator("[data-catalog-menu-open]").first();
-    if ((await menuOpen.count()) > 0) {
-      await menuOpen.click();
-      const menu = page.locator("#catalog-mobile-menu");
-      await expect(menu).toBeVisible();
-      expect(await menu.getAttribute("role")).toBe("dialog");
-      // Escape should close
-      await page.keyboard.press("Escape");
-      await expect(menu).toBeHidden();
-      await expect(menuOpen).toBeFocused();
+    for (const viewport of [
+      { width: 1440, height: 900 },
+      { width: 1024, height: 768 },
+      { width: 390, height: 800 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.goto(`${base}/`, { waitUntil: "load" });
+      // search dialog
+      const searchOpen = page.locator("[data-catalog-search-open]").first();
+      if ((await searchOpen.count()) > 0 && (await searchOpen.isVisible())) {
+        await searchOpen.click();
+        const dialog = page.locator("#catalog-search-dialog");
+        await expect(dialog).toBeVisible();
+        expect(await dialog.getAttribute("aria-labelledby")).toBe("catalog-search-title");
+        await expect(page.locator("#catalog-search-input")).toBeFocused();
+        await page.keyboard.press("Escape");
+        await expect(dialog).toBeHidden();
+        await expect(searchOpen).toBeFocused();
+      }
+      // mobile menu, when the responsive trigger is exposed
+      const menuOpen = page.locator("[data-catalog-menu-open]").first();
+      if ((await menuOpen.count()) > 0 && (await menuOpen.isVisible())) {
+        await menuOpen.click();
+        const menu = page.locator("#catalog-mobile-menu");
+        await expect(menu).toBeVisible();
+        expect(await menu.getAttribute("role")).toBe("dialog");
+        await page.keyboard.press("Escape");
+        await expect(menu).toBeHidden();
+        await expect(menuOpen).toBeFocused();
+      }
     }
   } finally {
     await new Promise<void>((r) => server.close(() => r()));

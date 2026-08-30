@@ -86,8 +86,7 @@ export const STORE_BASE_STYLES = `
   object-fit: cover;
   object-position: center;
 }
-/* Los medios editoriales recortan de forma consistente; las cards de producto
-   y la galería conservan la foto completa dentro de su marco. */
+/* Los medios comerciales llenan su marco con un recorte centrado y consistente. */
 [data-solara-store] .catalog-product-card-image,
 [data-solara-store] .solara-category-hero img,
 [data-solara-store] .catalog-product-media img,
@@ -108,7 +107,7 @@ export const STORE_BASE_STYLES = `
 [data-solara-store] img.catalog-product-gallery-thumb {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
   display: block;
 }
@@ -341,8 +340,8 @@ export const STORE_BASE_STYLES = `
 [data-solara-store] .solara-search-result img {
   width: 100%;
   height: auto;
-  aspect-ratio: 4 / 5;
-  object-fit: contain;
+  aspect-ratio: 1;
+  object-fit: cover;
   object-position: center;
   background: var(--solara-surface);
 }
@@ -1413,7 +1412,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 [data-solara-module="product-detail"] .solara-product-gallery-image {
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   width: 100%;
 }
 [data-solara-module="product-detail"] .solara-product-gallery-thumbs {
@@ -1437,7 +1436,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-module="product-detail"] .solara-product-gallery-thumb {
   aspect-ratio: 1;
   height: auto;
-  object-fit: contain;
+  object-fit: cover;
   width: 100%;
 }
 [data-solara-module="product-detail"] .solara-product-image {
@@ -1733,10 +1732,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   box-shadow: var(--solara-shadow-overlay);
   display: grid;
   gap: 1.5rem;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto minmax(8rem, 1fr) auto minmax(0, 1fr);
   height: 100dvh;
   max-width: 30rem;
-  overflow-y: auto;
+  overflow: hidden;
   padding: clamp(1.25rem, 3vw, 2rem);
   position: fixed;
   right: 0;
@@ -1770,6 +1769,13 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-module="cart-drawer"] .solara-empty-state {
   color: var(--solara-muted);
   padding: 2rem 0;
+}
+[data-solara-module="cart-drawer"] .solara-cart-drawer > [data-cart-lines],
+[data-solara-module="cart-drawer"] .solara-cart-drawer > form {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 [data-solara-module="cart-drawer"] .solara-cart-empty {
   color: var(--solara-muted);
@@ -2277,18 +2283,24 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-footer-brand p { max-width: 28ch; margin: 1rem 0 0; color: var(--catalog-muted); font-size: .84rem; }
 [data-solara-store].catalog-modern .catalog-footer-whatsapp { display: inline-flex; align-items: center; justify-content: space-between; gap: 1rem; width: min(100%, 16rem); min-height: 2.75rem; margin-top: 1rem; padding: .65rem .8rem; border: 1px solid var(--solara-accent); border-radius: var(--solara-radius); color: var(--solara-accent); font-size: .78rem; font-weight: 800; text-decoration: none; }
 [data-solara-store].catalog-modern .solara-search-form .solara-primary-action,
-[data-solara-store].catalog-modern .catalog-search-dialog-controls .catalog-primary-action { border: 1px solid var(--solara-accent); background: transparent; color: var(--solara-accent); transition: background-color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease), border-color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease), color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease); }
+[data-solara-store].catalog-modern .catalog-search-dialog-controls .catalog-primary-action,
+[data-solara-store].catalog-modern .catalog-cart-drawer .catalog-drawer-footer .catalog-primary-action,
+[data-solara-store].catalog-modern .solara-cart-page .catalog-primary-action { border: 1px solid var(--solara-accent); background: transparent; color: var(--solara-accent); transition: background-color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease), border-color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease), color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease); }
 [data-solara-store].catalog-modern .catalog-footer-whatsapp:hover,
 [data-solara-store].catalog-modern .catalog-footer-whatsapp:focus-visible,
 [data-solara-store].catalog-modern .solara-search-form .solara-primary-action:hover,
 [data-solara-store].catalog-modern .solara-search-form .solara-primary-action:focus-visible,
 [data-solara-store].catalog-modern .catalog-search-dialog-controls .catalog-primary-action:hover,
-[data-solara-store].catalog-modern .catalog-search-dialog-controls .catalog-primary-action:focus-visible { background: var(--solara-accent); color: var(--solara-accent-text); }
+[data-solara-store].catalog-modern .catalog-search-dialog-controls .catalog-primary-action:focus-visible,
+[data-solara-store].catalog-modern .catalog-cart-drawer .catalog-drawer-footer .catalog-primary-action:hover,
+[data-solara-store].catalog-modern .catalog-cart-drawer .catalog-drawer-footer .catalog-primary-action:focus-visible,
+[data-solara-store].catalog-modern .solara-cart-page .catalog-primary-action:hover,
+[data-solara-store].catalog-modern .solara-cart-page .catalog-primary-action:focus-visible { background: var(--solara-accent); color: var(--solara-accent-text); }
 [data-solara-store].catalog-modern .solara-search-form .solara-primary-action:hover,
 [data-solara-store].catalog-modern .solara-search-form .solara-primary-action:focus-visible,
 [data-solara-store].catalog-modern .catalog-search-dialog-controls .catalog-primary-action:hover,
 [data-solara-store].catalog-modern .catalog-search-dialog-controls .catalog-primary-action:focus-visible { transform: none; box-shadow: none; }
-[data-solara-store].catalog-modern .catalog-footer-inner address { display: grid; align-content: start; gap: .6rem; padding-inline-start: clamp(.9rem, 1.8vw, 1.5rem); border-inline-start: 0; font-style: normal; font-size: .84rem; }
+[data-solara-store].catalog-modern .catalog-footer-inner address { display: grid; align-content: start; gap: .6rem; padding-inline-start: 0; border-inline-start: 0; font-style: normal; font-size: .84rem; }
 [data-solara-store].catalog-modern .catalog-footer-contact a { text-decoration: none; transition: color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease), transform var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease); }
 [data-solara-store].catalog-modern .catalog-footer-contact a:hover,
 [data-solara-store].catalog-modern .catalog-footer-contact a:focus-visible { color: var(--solara-accent); transform: translateX(.2rem); }
@@ -2303,11 +2315,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-product-gallery-main { overflow: hidden; border-radius: var(--solara-radius); background: var(--catalog-surface); }
 [data-solara-store].catalog-modern .catalog-product-gallery-main figure { display: none; aspect-ratio: 1 / 1.08; margin: 0; }
 [data-solara-store].catalog-modern .catalog-product-gallery-main figure[data-gallery-active="true"] { display: block; }
-[data-solara-store].catalog-modern .catalog-product-gallery-image { width: 100%; height: 100%; object-fit: contain; object-position: center; display: block; }
+[data-solara-store].catalog-modern .catalog-product-gallery-image { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
 [data-solara-store].catalog-modern .catalog-product-gallery-thumbs { display: grid; align-content: start; gap: .5rem; }
 [data-solara-store].catalog-modern .catalog-product-gallery-thumbs button { padding: 0; overflow: hidden; aspect-ratio: 1; border: 1px solid transparent; border-radius: var(--solara-radius); background: var(--catalog-surface); cursor: pointer; }
 [data-solara-store].catalog-modern .catalog-product-gallery-thumbs button[aria-current="true"] { border-color: var(--catalog-ink); }
-[data-solara-store].catalog-modern .catalog-product-gallery-thumb { width: 100%; height: 100%; object-fit: contain; object-position: center; display: block; }
+[data-solara-store].catalog-modern .catalog-product-gallery-thumb { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
 [data-solara-store].catalog-modern .catalog-product-info { align-self: start; padding-top: .5rem; }
 [data-solara-store].catalog-modern .catalog-product-info h1 { max-width: 14ch; margin-top: .35rem; font-size: calc(clamp(2.25rem, 4.2vw, 4.7rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.03em; line-height: .92; overflow-wrap: anywhere; }
 [data-solara-store].catalog-modern .catalog-detail-price { display: flex; flex-wrap: wrap; align-items: baseline; gap: .75rem; margin-top: 1.15rem; font-size: 1.55rem; font-weight: 800; }
@@ -2323,7 +2335,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-checkout-form input,
 [data-solara-store].catalog-modern .catalog-checkout-form textarea { width: 100%; min-height: 46px; padding: .75rem .8rem; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); background: var(--catalog-paper); color: var(--catalog-ink); }
 [data-solara-store].catalog-modern .catalog-quantity-row { display: grid; grid-template-columns: 1fr 6rem; align-items: center; gap: .75rem; margin-top: .55rem; }
-[data-solara-store].catalog-modern .catalog-product-add { min-height: 50px; margin-top: .55rem; border: 0; border-radius: var(--solara-radius); background: var(--solara-accent); color: var(--solara-accent-text); font-weight: 800; cursor: pointer; }
+[data-solara-store].catalog-modern .catalog-product-add { min-height: 50px; margin-top: .55rem; border: 1px solid var(--solara-accent); border-radius: var(--solara-radius); background: transparent; color: var(--solara-accent); font-weight: 800; cursor: pointer; transition: background-color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease), border-color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease), color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease); }
+[data-solara-store].catalog-modern .catalog-product-add:hover,
+[data-solara-store].catalog-modern .catalog-product-add:focus-visible { background: var(--solara-accent); color: var(--solara-accent-text); border-color: var(--solara-accent); transform: none; box-shadow: none; }
 [data-solara-store].catalog-modern .catalog-product-add:disabled { cursor: not-allowed; opacity: .5; }
 [data-solara-store].catalog-modern .catalog-add-fallback { align-items: center; display: none; justify-content: center; min-height: 50px; margin-top: .55rem; border-radius: var(--solara-radius); background: var(--solara-accent); color: var(--solara-accent-text); font-weight: 800; text-decoration: none; }
 [data-solara-store].catalog-modern .catalog-variant-links { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; font-size: .75rem; }
@@ -3428,7 +3442,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .solara-search-results-grid { grid-template-columns: repeat(auto-fill,minmax(11rem,1fr)); justify-content: start; gap: 3rem clamp(.8rem, 1.4vw, 1.6rem); max-width: 1320px; margin: 0 auto; }
 .cm.v2 .solara-search-result { min-width: 0; overflow: hidden; }
 .cm.v2 .solara-search-result a { gap: .75rem; }
-.cm.v2 .solara-search-result img { height: auto; aspect-ratio: 1; object-fit: contain; object-position: center; transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out); }
+.cm.v2 .solara-search-result img { height: auto; aspect-ratio: 1; object-fit: cover; object-position: center; transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out); }
 .cm.v2 .solara-search-result a:hover img { transform: scale(1.035); }
 .cm.v2 .solara-search-result a > div { display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; }
 .cm.v2 .solara-search-result h2 { font-family: var(--solara-font-body, Arial, sans-serif); font-size: .98rem; font-weight: 600; letter-spacing: -.02em; }
@@ -3502,7 +3516,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   height: 100%;
 }
 .cm.v2 .catalog-product-gallery-image {
-  object-fit: contain;
+  object-fit: cover;
   transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out);
 }
 .cm.v2 .catalog-product-gallery-main:hover .catalog-product-gallery-image {
@@ -4066,6 +4080,18 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-cart-drawer[data-open="true"] {
     transform: translateY(0);
   }
+  .cm.v2 .catalog-cart-summary {
+    padding-inline: 0;
+    border-top: 0;
+  }
+  .cm.v2 .catalog-cart-summary > p:nth-child(2) {
+    justify-items: end;
+    text-align: right;
+  }
+  .cm.v2 .catalog-cart-summary .catalog-cart-total,
+  .cm.v2 .catalog-cart-drawer .catalog-drawer-footer {
+    border-top: 0;
+  }
   .cm.v2 [data-solara-module="catalog-hero"]{--hero-v2-dur-eyebrow:var(--catalog-v2-motion-component);--hero-v2-dur-title:var(--catalog-v2-motion-component);--hero-v2-dur-line:var(--catalog-v2-motion-component);--hero-v2-dur-rule:var(--catalog-v2-motion-component);--hero-v2-dur-body:var(--catalog-v2-motion-component);--hero-v2-dur-actions:var(--catalog-v2-motion-component);--hero-v2-dur-benefit:var(--catalog-v2-motion-component);--hero-v2-dur-media:var(--catalog-v2-motion-editorial);--hero-v2-dur-zoom:var(--catalog-v2-motion-editorial)}
   .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-reveal--eyebrow{--hero-v2-rise:7px}
   .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-title{--hero-v2-rise:-5px}
@@ -4349,8 +4375,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   margin-top: 0;
 }
 .cm.v2 .contact-form-actions .contact-form-whatsapp {
-  background: var(--catalog-accent-alt);
-  color: var(--solara-accent-text);
+  background: var(--catalog-ink);
+  color: var(--catalog-paper);
 }
 .cm.v2 .contact-form-actions .catalog-primary-action::before {
   position: absolute;
@@ -4362,7 +4388,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   transition: transform var(--catalog-v2-motion-control) var(--catalog-v2-ease-out);
 }
 .cm.v2 .contact-form-actions .contact-form-whatsapp::before {
-  background: color-mix(in srgb, var(--catalog-accent-alt) 82%, var(--catalog-paper));
+  background: color-mix(in srgb, var(--catalog-ink) 82%, var(--catalog-paper));
 }
 .cm.v2 .contact-form-actions .catalog-primary-action:hover,
 .cm.v2 .contact-form-actions .catalog-primary-action:focus-visible {
@@ -4371,7 +4397,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .contact-form-actions .contact-form-whatsapp:hover,
 .cm.v2 .contact-form-actions .contact-form-whatsapp:focus-visible {
-  background: var(--catalog-accent-alt);
+  background: var(--catalog-ink);
 }
 .cm.v2 .contact-form-actions .catalog-primary-action:hover::before,
 .cm.v2 .contact-form-actions .catalog-primary-action:focus-visible::before {
@@ -4399,7 +4425,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .contact-form-actions .contact-form-whatsapp:focus-visible .catalog-hero-cta-label,
 .cm.v2 .contact-form-actions .contact-form-whatsapp:hover .catalog-hero-cta-icon,
 .cm.v2 .contact-form-actions .contact-form-whatsapp:focus-visible .catalog-hero-cta-icon {
-  color: color-mix(in srgb, var(--solara-accent-text) 80%, var(--catalog-accent-alt) 20%);
+  color: color-mix(in srgb, var(--catalog-paper) 80%, var(--catalog-ink) 20%);
 }
 .cm.v2 .contact-form-fallback:not(.catalog-primary-action),
 .cm.v2 .contact-form noscript {

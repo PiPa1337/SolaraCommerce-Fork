@@ -204,8 +204,8 @@ test("C2: agregar al carrito crea la línea, actualiza contador y subtotales con
 
   await quantityInput.fill("0");
   await quantityInput.blur();
-  await expect(quantityInput).toHaveValue("99");
-  await expect(toggle.locator("[data-cart-count]")).toHaveText("99");
+  await expect(quantityInput).toHaveValue("1");
+  await expect(toggle.locator("[data-cart-count]")).toHaveText("1");
 
   await drawer.locator("[data-cart-remove]").first().click();
   await expect(toggle.locator("[data-cart-count]")).toHaveText("0");
@@ -497,6 +497,8 @@ test("C10: el checkout del drawer moderno abre WhatsApp con el pedido", async ({
   await page.locator("#catalog-drawer-name").fill("Malena Ortiz");
   await page.locator("#catalog-drawer-phone").fill("11 5555 0142");
   await page.locator("#catalog-drawer-address").fill("Av. Forest 842, CABA");
+  await page.locator("#catalog-drawer-locality").fill("Trelew, Chubut");
+  await page.locator("#catalog-drawer-postal-code").fill("9100");
   await page.locator("#catalog-drawer-notes").fill("Entregar por la tarde");
   await page.evaluate(() => {
     const originalOpen = window.open.bind(window);

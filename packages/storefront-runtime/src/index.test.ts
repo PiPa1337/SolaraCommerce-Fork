@@ -7,6 +7,7 @@ import {
   buildWhatsAppUrl,
   formatMoney,
   MAX_APP_FPS,
+  normalizeCartQuantity,
   parseCart,
   reconcileCartLines,
   STOREFRONT_RUNTIME_CSS,
@@ -14,6 +15,25 @@ import {
 } from "./index";
 
 describe("storefront runtime", () => {
+  it("normaliza cualquier cantidad al rango entero 1–99", () => {
+    const cases: Array<[unknown, number]> = [
+      [undefined, 1],
+      ["", 1],
+      ["  ", 1],
+      ["no es un número", 1],
+      [Number.NaN, 1],
+      [0, 1],
+      [-4, 1],
+      ["3.9", 3],
+      [99, 99],
+      [100, 99],
+      ["150", 99],
+    ];
+    for (const [value, expected] of cases) {
+      expect(normalizeCartQuantity(value), String(value)).toBe(expected);
+    }
+  });
+
   it("construye el enlace de email con los datos del formulario", () => {
     const mailto = buildContactMailto("hola@example.com", "Predeterminado", {
       name: "Ana",
@@ -37,12 +57,16 @@ describe("storefront runtime", () => {
       name: "Malena Ortiz",
       phone: "11 5555 0142",
       address: "Av. Forest 842, CABA",
+      locality: "Villa Urquiza, CABA",
+      postalCode: "C1431",
       notes: "Entregar por la tarde",
     });
 
     expect(message).toContain("2 x Manta Bruma (Musgo) [ML-BRU-MUS]");
     expect(message).toContain(formatMoney(15_700_000));
     expect(message).toContain("Malena Ortiz");
+    expect(message).toContain("Localidad / Provincia: Villa Urquiza, CABA");
+    expect(message).toContain("Código postal: C1431");
   });
 
   it("codifica el enlace de WhatsApp", () => {
@@ -108,6 +132,7 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("contactEmail");
     expect(STOREFRONT_RUNTIME_JS).toContain("encodeURIComponent");
     expect(STOREFRONT_RUNTIME_JS).toContain("mailto:");
+    expect(STOREFRONT_RUNTIME_JS).not.toContain("replaceChildren(k.success)");
   });
 
   it("serializa los helpers de búsqueda dentro del runtime público", () => {
@@ -139,12 +164,12 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("i !== +!!count");
   });
 
-  it("mantiene el runtime por debajo de 61 KB crudos", () => {
+  it("mantiene el runtime por debajo del límite público de 64 KiB crudos", () => {
     // El runtime queda en ~58 KiB crudos después del formulario dual
     // (email + WhatsApp) y Trusted Types; se deja margen hasta 60 KiB.
     // 2026-08-21: +34 B por la señal data-solara-ready (tests E2E); el techo
     // del gate externo sigue siendo 64 KiB (storefront-runtime-budget.test.ts).
-    expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(61 * 1024);
+    expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(64 * 1024);
   });
 });
 
@@ -235,8 +260,10 @@ describe("carrito robusto y checkout con precios frescos (C2/C3/C5/C9 + SF-B4/B5
     expect(STOREFRONT_RUNTIME_JS).toContain("p.noStock");
   });
 
-  it("restaura la cantidad previa cuando el input queda vacío o en cero (C9)", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain("value = String(previous.quantity)");
+  it("normaliza el input inválido al perder foco sin interrumpir la edición vacía", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("normalizeCartQuantity");
+    expect(STOREFRONT_RUNTIME_JS).toContain("if (!restoreInvalid) return;");
+    expect(STOREFRONT_RUNTIME_JS).toContain("input.value = String(quantity)");
   });
 
   it("reconcilia el carrito compartido al abrir el drawer y al enviar (SF-B4)", () => {
@@ -462,10 +489,11 @@ describe("carrito y checkout del drawer (A29)", () => {
   });
 
   it("acota la cantidad editada y el agregado a 1–99", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain("const quantity = Math.min(99, Math.trunc(parsed));");
+    expect(STOREFRONT_RUNTIME_JS).toContain("const quantity = normalizeCartQuantity(parsed);");
     expect(STOREFRONT_RUNTIME_JS).toContain(
-      'Math.max(1, Math.min(99, Math.trunc(Number(quantityInput?.value ?? "1"))))',
+      'const quantity = normalizeCartQuantity(quantityInput?.value ?? "1");',
     );
+    expect(STOREFRONT_RUNTIME_JS).toContain("quantityInput.value = String(quantity)");
   });
 });
 

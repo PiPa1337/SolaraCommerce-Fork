@@ -178,13 +178,15 @@ describe("official module system", () => {
     expect(v2Styles).toContain(".cm.v2 .contact-channel-row:hover > span:last-child");
     expect(v2Styles).toContain("color: var(--solara-accent);");
     expect(v2Styles).toMatch(
-      /\.cm\.v2 \.contact-form-actions \.contact-form-whatsapp\s*\{[\s\S]*background: var\(--catalog-accent-alt\);[\s\S]*color: var\(--solara-accent-text\);/,
+      /\.cm\.v2 \.contact-form-actions \.contact-form-whatsapp\s*\{[\s\S]*background: var\(--catalog-ink\);[\s\S]*color: var\(--catalog-paper\);/,
     );
     expect(v2Styles).toContain(".cm.v2 .contact-form-actions .contact-form-whatsapp::before");
     expect(v2Styles).toContain(
-      "background: color-mix(in srgb, var(--catalog-accent-alt) 82%, var(--catalog-paper));",
+      "background: color-mix(in srgb, var(--catalog-ink) 82%, var(--catalog-paper));",
     );
-    expect(v2Styles).not.toContain(".contact-form-whatsapp { background: #");
+    expect(v2Styles).not.toMatch(
+      /\.contact-form-whatsapp\s*\{[^}]*background: var\(--catalog-accent-alt\)/,
+    );
 
     expect(STORE_BASE_STYLES).toContain("var(--solara-dark-background");
     expect(STORE_BASE_STYLES).not.toContain("--solara-background: #1d1e19");
@@ -901,16 +903,32 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     );
   });
 
-  it("muestra completa la imagen de cada resultado de búsqueda", () => {
+  it("hace que la imagen de cada resultado llene su caja cuadrada", () => {
     const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
     const modernStyles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
     if (!styles || !modernStyles) throw new Error("Faltan estilos de búsqueda");
 
     expect(STORE_BASE_STYLES).toMatch(
-      /\.solara-search-result img \{[\s\S]*height: auto;[\s\S]*object-fit: contain;/,
+      /\.solara-search-result img \{[\s\S]*height: auto;[\s\S]*aspect-ratio: 1;[\s\S]*object-fit: cover;/,
     );
     expect(modernStyles).toMatch(
-      /\.cm\.v2 \.solara-search-result img \{[\s\S]*height: auto;[\s\S]*object-fit: contain;/,
+      /\.cm\.v2 \.solara-search-result img \{[\s\S]*height: auto;[\s\S]*aspect-ratio: 1;[\s\S]*object-fit: cover;/,
+    );
+  });
+
+  it("hace que la galería de producto llene el marco principal y las miniaturas", () => {
+    const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
+    const modernStyles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!styles || !modernStyles) throw new Error("Faltan estilos de galería de producto");
+
+    expect(STORE_BASE_STYLES).toMatch(
+      /\.solara-product-gallery-main img,[\s\S]*\.catalog-product-gallery-thumb \{[\s\S]*object-fit: cover;/,
+    );
+    expect(styles).toMatch(
+      /\.catalog-product-gallery-image \{[^}]*object-fit: cover;[^}]*\}[\s\S]*\.catalog-product-gallery-thumb \{[^}]*object-fit: cover;/,
+    );
+    expect(modernStyles).toMatch(
+      /\.cm\.v2 \.catalog-product-gallery-image \{[^}]*object-fit: cover;/,
     );
   });
 
@@ -927,12 +945,48 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     );
   });
 
+  it("mantiene accesibles las líneas y controles del drawer legacy en alturas reducidas", () => {
+    const legacyStyles = MODULE_STYLE_BLOCKS["cart-drawer"];
+    if (!legacyStyles) throw new Error("Faltan estilos de carrito legacy");
+
+    expect(legacyStyles).toContain(
+      "grid-template-rows: auto minmax(8rem, 1fr) auto minmax(0, 1fr);",
+    );
+    expect(legacyStyles).toMatch(
+      /\.solara-cart-drawer > \[data-cart-lines\],[\s\S]*\.solara-cart-drawer > form \{[\s\S]*overflow-y: auto;/,
+    );
+  });
+
+  it("alinea el resumen del carrito y elimina sus separadores en tablet y mobile", () => {
+    const modernStyles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!modernStyles) throw new Error("Faltan estilos de carrito V2");
+
+    expect(modernStyles).toMatch(
+      /@media \(max-width: 767px\)[\s\S]*\.cm\.v2 \.catalog-cart-summary \{[^}]*padding-inline: 0;[^}]*border-top: 0;/,
+    );
+    expect(modernStyles).toMatch(
+      /@media \(max-width: 767px\)[\s\S]*\.cm\.v2 \.catalog-cart-summary > p:nth-child\(2\) \{[^}]*justify-items: end;[^}]*text-align: right;/,
+    );
+    expect(modernStyles).toMatch(
+      /@media \(max-width: 767px\)[\s\S]*\.cm\.v2 \.catalog-cart-summary \.catalog-cart-total,[\s\S]*\.cm\.v2 \.catalog-cart-drawer \.catalog-drawer-footer \{[^}]*border-top: 0;/,
+    );
+  });
+
   it("evita que el email del footer se parta a mitad de palabra", () => {
     const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
     if (!styles) throw new Error("Falta el bloque de estilos catalog-modern");
 
     expect(styles).toMatch(
       /\.catalog-footer-inner a\[href\^="mailto:"\] \{[^}]*word-break: keep-all;[^}]*overflow-wrap: normal;[^}]*\}/,
+    );
+  });
+
+  it("alinea Contacto con las demás columnas del footer", () => {
+    const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
+    if (!styles) throw new Error("Falta el bloque de estilos catalog-modern");
+
+    expect(styles).toMatch(
+      /\.catalog-footer-inner address \{[^}]*padding-inline-start: 0;[^}]*border-inline-start: 0;/,
     );
   });
 
@@ -1476,18 +1530,24 @@ describe("auditoría Resumen — fixes Ola 3 (navegación y footer moderno)", ()
     expect(styles).toContain("var(--solara-accent-text)");
   });
 
-  it("comparte el hover temático del footer con los botones de búsqueda", () => {
+  it("comparte el tratamiento temático del footer con búsqueda y carrito", () => {
     const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
     if (!styles) throw new Error("Falta el bloque de estilos catalog-modern");
 
     expect(styles).toMatch(
-      /\.solara-search-form \.solara-primary-action,\s*\[data-solara-store\]\.catalog-modern \.catalog-search-dialog-controls \.catalog-primary-action \{[^}]*border: 1px solid var\(--solara-accent\);[^}]*background: transparent;[^}]*color: var\(--solara-accent\);[^}]*transition: background-color var\(--solara-motion-fast/,
+      /\.solara-search-form \.solara-primary-action,\s*\[data-solara-store\]\.catalog-modern \.catalog-search-dialog-controls \.catalog-primary-action,\s*\[data-solara-store\]\.catalog-modern \.catalog-cart-drawer \.catalog-drawer-footer \.catalog-primary-action,\s*\[data-solara-store\]\.catalog-modern \.solara-cart-page \.catalog-primary-action \{[^}]*border: 1px solid var\(--solara-accent\);[^}]*background: transparent;[^}]*color: var\(--solara-accent\);[^}]*transition: background-color var\(--solara-motion-fast/,
     );
     expect(styles).toMatch(
-      /\.catalog-footer-whatsapp:hover,\s*\[data-solara-store\]\.catalog-modern \.catalog-footer-whatsapp:focus-visible,\s*\[data-solara-store\]\.catalog-modern \.solara-search-form \.solara-primary-action:hover,\s*\[data-solara-store\]\.catalog-modern \.solara-search-form \.solara-primary-action:focus-visible,\s*\[data-solara-store\]\.catalog-modern \.catalog-search-dialog-controls \.catalog-primary-action:hover,\s*\[data-solara-store\]\.catalog-modern \.catalog-search-dialog-controls \.catalog-primary-action:focus-visible \{[^}]*background: var\(--solara-accent\);[^}]*color: var\(--solara-accent-text\);/,
+      /\.catalog-footer-whatsapp:hover,\s*\[data-solara-store\]\.catalog-modern \.catalog-footer-whatsapp:focus-visible,\s*\[data-solara-store\]\.catalog-modern \.solara-search-form \.solara-primary-action:hover,\s*\[data-solara-store\]\.catalog-modern \.solara-search-form \.solara-primary-action:focus-visible,\s*\[data-solara-store\]\.catalog-modern \.catalog-search-dialog-controls \.catalog-primary-action:hover,\s*\[data-solara-store\]\.catalog-modern \.catalog-search-dialog-controls \.catalog-primary-action:focus-visible,\s*\[data-solara-store\]\.catalog-modern \.catalog-cart-drawer \.catalog-drawer-footer \.catalog-primary-action:hover,\s*\[data-solara-store\]\.catalog-modern \.catalog-cart-drawer \.catalog-drawer-footer \.catalog-primary-action:focus-visible,\s*\[data-solara-store\]\.catalog-modern \.solara-cart-page \.catalog-primary-action:hover,\s*\[data-solara-store\]\.catalog-modern \.solara-cart-page \.catalog-primary-action:focus-visible \{[^}]*background: var\(--solara-accent\);[^}]*color: var\(--solara-accent-text\);/,
     );
     expect(styles).toMatch(
       /\.solara-search-form \.solara-primary-action:hover,\s*\[data-solara-store\]\.catalog-modern \.solara-search-form \.solara-primary-action:focus-visible,\s*\[data-solara-store\]\.catalog-modern \.catalog-search-dialog-controls \.catalog-primary-action:hover,\s*\[data-solara-store\]\.catalog-modern \.catalog-search-dialog-controls \.catalog-primary-action:focus-visible \{[^}]*transform: none;[^}]*box-shadow: none;/,
+    );
+    expect(styles).toMatch(
+      /\.catalog-product-add \{[^}]*border: 1px solid var\(--solara-accent\);[^}]*background: transparent;[^}]*color: var\(--solara-accent\);[^}]*transition: background-color/,
+    );
+    expect(styles).toMatch(
+      /\.catalog-product-add:hover,\s*\[data-solara-store\]\.catalog-modern \.catalog-product-add:focus-visible \{[^}]*background: var\(--solara-accent\);[^}]*color: var\(--solara-accent-text\);[^}]*transform: none;[^}]*box-shadow: none;/,
     );
   });
 

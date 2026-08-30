@@ -1,6 +1,7 @@
 import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import { describe, expect, it } from "vitest";
 import {
+  contactChannels,
   contactChannelsSettings,
   contactFaqSettings,
   contactFormSettings,
@@ -48,6 +49,26 @@ describe("Contacto V2 module contracts", () => {
     expect(isModuleAvailableOnPage(channels, "home", "catalog-modern-v2")).toBe(true);
     expect(isModuleAvailableOnPage(hero, "contact", "catalog-modern-v1")).toBe(false);
     expect(isModuleAvailableOnPage(newsletter, "contact", "catalog-modern-v2")).toBe(true);
+  });
+
+  it("hace que el CTA de novedades llegue al formulario desde cualquier ruta", () => {
+    const newsletter = getModuleDefinition("catalog-newsletter-cta");
+    if (!newsletter?.render) throw new Error("Falta el módulo catalog-newsletter-cta");
+    const section = {
+      ...renderSection,
+      moduleId: "catalog-newsletter-cta" as const,
+    };
+    const html = String(
+      newsletter.render({
+        project: catalogModernV2Store,
+        section,
+        settings: newsletter.settingsSchema.parse({ actionHref: "#contact-form" }),
+        pageType: "product",
+      }),
+    );
+
+    expect(html).toContain('class="catalog-newsletter-action" href="/#contact-form"');
+    expect(html).not.toContain('href="#contact-form"');
   });
 
   it("aplica los defaults comerciales y los límites de repeaters", () => {
@@ -149,6 +170,46 @@ describe("Contacto V2 module contracts", () => {
     expect(html).not.toContain("Motivo");
     expect(html).not.toContain("N\u00famero de pedido");
     expect(html).toContain("data-contact-status");
+  });
+
+  it("apunta dirección y horarios al contacto disponible en la página actual", () => {
+    const settings = contactChannelsSettings.parse({});
+    const renderChannels = (
+      project: typeof catalogModernV2Store,
+      pageType: "home" | "contact",
+    ): string =>
+      String(
+        contactChannels.render?.({
+          project,
+          section: renderSection,
+          settings,
+          pageType,
+        }),
+      );
+
+    const withoutLocation = renderChannels(catalogModernV2Store, "home");
+    expect(withoutLocation).toContain('href="#contact-form"');
+    expect(withoutLocation).not.toContain('href="#contact-location"');
+
+    const withLocation = structuredClone(catalogModernV2Store);
+    const homeLocation = withLocation.pages
+      .find((page) => page.kind === "contact")
+      ?.sections.find((section) => section.moduleId === "contact-location");
+    if (!homeLocation) throw new Error("Fixture sin sección de ubicación de contacto");
+    homeLocation.enabled = true;
+    homeLocation.settings = {
+      ...homeLocation.settings,
+      enabled: true,
+      address: "Av. de prueba 123",
+    };
+    withLocation.sections.push(structuredClone(homeLocation));
+
+    const homeWithLocation = renderChannels(withLocation, "home");
+    expect(homeWithLocation).toContain('href="#contact-location"');
+    expect(homeWithLocation).not.toContain('href="#contact-form"');
+
+    const contactWithLocation = renderChannels(withLocation, "contact");
+    expect(contactWithLocation).toContain('href="#contact-location"');
   });
 
   it("no renderiza ubicación desactivada ni deja markup vacío", () => {
