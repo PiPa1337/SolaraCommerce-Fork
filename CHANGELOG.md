@@ -1,5 +1,10 @@
 # Changelog
 
+### Footer sin separador antes de Contacto (2026-08-30)
+
+- Se eliminó la línea vertical a la izquierda de la sección Contacto en el
+  footer compartido de todas las tiendas Catalog Modern.
+
 ### 404 sin superposición y CTA alineados (2026-08-30)
 
 - El código decorativo `404` queda detrás del título y no invade el texto en

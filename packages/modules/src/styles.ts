@@ -2288,7 +2288,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .solara-search-form .solara-primary-action:focus-visible,
 [data-solara-store].catalog-modern .catalog-search-dialog-controls .catalog-primary-action:hover,
 [data-solara-store].catalog-modern .catalog-search-dialog-controls .catalog-primary-action:focus-visible { transform: none; box-shadow: none; }
-[data-solara-store].catalog-modern .catalog-footer-inner address { display: grid; align-content: start; gap: .6rem; padding-inline-start: clamp(.9rem, 1.8vw, 1.5rem); border-inline-start: 1px solid var(--catalog-border); font-style: normal; font-size: .84rem; }
+[data-solara-store].catalog-modern .catalog-footer-inner address { display: grid; align-content: start; gap: .6rem; padding-inline-start: clamp(.9rem, 1.8vw, 1.5rem); border-inline-start: 0; font-style: normal; font-size: .84rem; }
 [data-solara-store].catalog-modern .catalog-footer-contact a { text-decoration: none; transition: color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease), transform var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease); }
 [data-solara-store].catalog-modern .catalog-footer-contact a:hover,
 [data-solara-store].catalog-modern .catalog-footer-contact a:focus-visible { color: var(--solara-accent); transform: translateX(.2rem); }

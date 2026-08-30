@@ -2827,6 +2827,20 @@ test("V2 footer: copyright con año y nombre + Hecho con ❤️ en solara.com.ar
   );
 });
 
+test("V2 footer: Contacto no tiene separador vertical", async ({ page }) => {
+  for (const viewport of [
+    { width: 1920, height: 968 },
+    { width: 1024, height: 768 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(serverUrl);
+    await expect(
+      page.locator('[data-solara-module="catalog-footer"] .catalog-footer-contact'),
+    ).toHaveCSS("border-left-width", "0px");
+  }
+});
+
 test("V2 footer: Explorar conserva sus rutas, agrega carrito y lista todas las categorías públicas", async ({
   page,
 }, testInfo) => {
