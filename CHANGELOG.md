@@ -1,5 +1,12 @@
 # Changelog
 
+### 404 sin superposición y CTA alineados (2026-08-30)
+
+- El código decorativo `404` queda detrás del título y no invade el texto en
+  anchos tablet.
+- Las acciones de recuperación se alinean con el mismo ancho en layouts
+  estrechos, sin cambiar la composición horizontal de escritorio.
+
 ### Sticky de carrito visible y sin bordes (2026-08-30)
 
 - El resumen sticky del carrito queda debajo del header al hacer scroll, sin

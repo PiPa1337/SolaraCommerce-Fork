@@ -3577,12 +3577,21 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   padding: 1.5rem 0 0;
   border-left: 0;
 }
-.cm.v2 .solara-error-hero { display: grid; grid-template-columns: minmax(0, .8fr) minmax(28rem, 1.2fr); min-height: min(520px, calc(100svh - 220px)); overflow: hidden; }
+.cm.v2 .solara-error-hero { display: grid; grid-template-columns: minmax(0, .8fr) minmax(28rem, 1.2fr); min-height: min(520px, calc(100svh - 220px)); overflow: hidden; position: relative; isolation: isolate; }
 .cm.v2 .solara-error-copy { padding-block: 2rem; }
+.cm.v2 .solara-error-copy { position: relative; z-index: 1; }
 .cm.v2 .solara-error-copy h1 { margin-top: 1rem; font-size: calc(clamp(4rem, 5.5vw, 7rem) * var(--solara-type-scale, 1)); letter-spacing: -.07em; line-height: .92; }
 .cm.v2 .solara-error-copy > p:not(.solara-eyebrow) { max-width: 36rem; margin-top: 1.5rem; color: var(--catalog-muted); font-size: 1.05rem; }
-.cm.v2 .solara-error-code { color: color-mix(in srgb, var(--catalog-border), transparent 25%); font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(18rem, 31vw, 36rem); letter-spacing: -.1em; line-height: .7; text-align: center; }
-.cm.v2 .solara-error-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; }
+.cm.v2 .solara-error-code { position: relative; z-index: 0; pointer-events: none; color: color-mix(in srgb, var(--catalog-border), transparent 25%); font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(18rem, 31vw, 36rem); letter-spacing: -.1em; line-height: .7; text-align: center; }
+.cm.v2 .solara-error-actions { display: flex; align-items: flex-start; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; }
+@media (max-width: 899px) {
+  .cm.v2 .solara-error-hero { display: flex; min-height: 0; flex-direction: column; align-items: stretch; padding: 2rem 0 4rem; }
+  .cm.v2 .solara-error-copy { padding-block: 1rem 0; }
+  .cm.v2 .solara-error-copy h1 { font-size: calc(clamp(3.4rem, 14vw, 4.8rem) * var(--solara-type-scale, 1)); }
+  .cm.v2 .solara-error-code { order: 2; margin: 2rem 0 .5rem; font-size: clamp(10rem, 48vw, 14rem); }
+  .cm.v2 .solara-error-actions { display: grid; width: 100%; }
+  .cm.v2 .solara-error-actions > * { width: 100%; }
+}
 .cm.v2 .solara-checkout-page {
   padding-bottom: clamp(5rem, 9vw, 9rem);
 }
@@ -4006,11 +4015,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .solara-cart-page-grid [data-cart-lines] .solara-cart-line > label { grid-column: 1; grid-row: 2; width: 7rem; }
   .cm.v2 .solara-cart-page-grid [data-cart-lines] .solara-cart-line > button { grid-column: 2; grid-row: 3; }
   .cm.v2 .solara-cart-page-grid [data-cart-lines] .solara-cart-line > span:last-child { grid-column: 2; grid-row: 2; justify-self: end; }
-  .cm.v2 .solara-error-hero { display: flex; min-height: 0; flex-direction: column; align-items: stretch; padding: 2rem 0 4rem; }
-  .cm.v2 .solara-error-copy { padding-block: 1rem 0; }
-  .cm.v2 .solara-error-copy h1 { font-size: calc(clamp(3.4rem, 14vw, 4.8rem) * var(--solara-type-scale, 1)); }
-  .cm.v2 .solara-error-code { order: 2; margin: 2rem 0 .5rem; font-size: clamp(10rem, 48vw, 14rem); }
-  .cm.v2 .solara-error-actions { display: grid; }
   .cm.v2 .solara-checkout-page h1 {
     max-width: 10ch;
     font-size: calc(clamp(3.25rem, 14vw, 5rem) * var(--solara-type-scale, 1));

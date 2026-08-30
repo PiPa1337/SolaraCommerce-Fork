@@ -3016,6 +3016,59 @@ test("V2 mantiene rutas secundarias legibles y sin overflow", async ({ page }, t
   }
 });
 
+test("V2 mantiene el 404 detrás del título y alinea sus acciones", async ({ page }) => {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 1024, height: 768 },
+    { width: 768, height: 844 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(new URL("/404.html", serverUrl).toString());
+    const metrics = await page.locator(".solara-error-hero").evaluate((hero) => {
+      const copy = hero.querySelector<HTMLElement>(".solara-error-copy");
+      const code = hero.querySelector<HTMLElement>(".solara-error-code");
+      const actions = hero.querySelector<HTMLElement>(".solara-error-actions");
+      const buttonBoxes = Array.from(
+        hero.querySelectorAll<HTMLElement>(".solara-error-actions > *"),
+        (element) => {
+          const box = element.getBoundingClientRect();
+          return {
+            left: box.left,
+            top: box.top,
+            width: box.width,
+          };
+        },
+      );
+      const codeBox = code?.getBoundingClientRect();
+      const actionsBox = actions?.getBoundingClientRect();
+      return {
+        copyZIndex: copy ? Number.parseInt(getComputedStyle(copy).zIndex, 10) : -1,
+        codeZIndex: code ? Number.parseInt(getComputedStyle(code).zIndex, 10) : -1,
+        codePointerEvents: code ? getComputedStyle(code).pointerEvents : "missing",
+        codeTop: codeBox?.top ?? 0,
+        actionsBottom: actionsBox?.bottom ?? 0,
+        actionsDisplay: actions ? getComputedStyle(actions).display : "missing",
+        buttonBoxes,
+      };
+    });
+    expect(metrics.copyZIndex).toBeGreaterThan(metrics.codeZIndex);
+    expect(metrics.codePointerEvents).toBe("none");
+    expect(metrics.buttonBoxes).toHaveLength(2);
+    if (viewport.width <= 899) {
+      expect(metrics.actionsDisplay).toBe("grid");
+      expect(
+        Math.abs(metrics.buttonBoxes[0].width - metrics.buttonBoxes[1].width),
+      ).toBeLessThanOrEqual(1);
+      expect(metrics.buttonBoxes[0].left).toBe(metrics.buttonBoxes[1].left);
+      expect(metrics.codeTop).toBeGreaterThanOrEqual(metrics.actionsBottom);
+    } else {
+      expect(metrics.actionsDisplay).toBe("flex");
+      expect(metrics.buttonBoxes[0].top).toBe(metrics.buttonBoxes[1].top);
+    }
+  }
+});
+
 test("V2 búsqueda: todos los controles son cuadrados en desktop, tablet y mobile", async ({
   page,
 }, testInfo) => {
