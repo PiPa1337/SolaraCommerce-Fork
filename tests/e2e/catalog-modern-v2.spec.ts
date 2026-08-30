@@ -38,6 +38,18 @@ if (!longCategoryV1)
   throw new Error("La fixture V1 no tiene categoría madre para la prueba de wrapping.");
 longCategoryV1.title = "Gastronomía y Descartables";
 const exportedLongCategoryV1 = exportProject(longCategoryV1Project, { mode: "production" });
+const responsiveGalleryProject = structuredClone(catalogModernV2Store);
+const responsiveGalleryProduct = responsiveGalleryProject.products.find(
+  (product) => product.slug === "remera-esencial-de-algodon",
+);
+if (!responsiveGalleryProduct)
+  throw new Error("La fixture V2 no tiene producto para la prueba de picture en galería.");
+responsiveGalleryProduct.imageIds = ["asset-hero", "asset-jarra", "asset-modo-camisa"];
+responsiveGalleryProduct.variants = responsiveGalleryProduct.variants.map((variant) => ({
+  ...variant,
+  imageId: "asset-hero",
+}));
+const exportedResponsiveGallery = exportProject(responsiveGalleryProject, { mode: "production" });
 const fixtureBrand = catalogModernV2Store.identity.brandName;
 // Desde 9a22a95 los assets del fixture viajan embebidos como data URLs;
 // solo los 12 productos quedan como archivos webp servibles en /fixtures/.
@@ -73,15 +85,17 @@ test.beforeAll(async () => {
         : requested.endsWith("/")
           ? `${requested}index.html`
           : requested;
-    const source = url.searchParams.has("longCategory")
-      ? exportedLongCategory
-      : url.searchParams.has("longCategoryV1")
-        ? exportedLongCategoryV1
-        : url.searchParams.has("longProduct")
-          ? exportedLongProduct
-          : url.searchParams.has("longTitle")
-            ? exportedLongTitle
-            : exported;
+    const source = url.searchParams.has("responsiveGallery")
+      ? exportedResponsiveGallery
+      : url.searchParams.has("longCategory")
+        ? exportedLongCategory
+        : url.searchParams.has("longCategoryV1")
+          ? exportedLongCategoryV1
+          : url.searchParams.has("longProduct")
+            ? exportedLongProduct
+            : url.searchParams.has("longTitle")
+              ? exportedLongTitle
+              : exported;
     const content =
       source.files.get(path) ??
       (path.startsWith("assets/")
@@ -90,6 +104,7 @@ test.beforeAll(async () => {
           exportedLongCategory.files.get(path) ??
           exportedLongProduct.files.get(path) ??
           exportedLongTitle.files.get(path) ??
+          exportedResponsiveGallery.files.get(path) ??
           exported.files.get(path))
         : undefined) ??
       fixtureFiles.get(path);
@@ -876,7 +891,10 @@ test("V2 usa el ancho completo en colecciones y mantiene cards cuadradas", async
 test("V2 ajusta las imágenes, muestra 8 recomendaciones y mantiene una galería PDP usable", async ({
   page,
 }) => {
-  const productUrl = new URL("/productos/remera-esencial-de-algodon/", serverUrl).toString();
+  const productUrl = new URL(
+    "/productos/remera-esencial-de-algodon/?responsiveGallery",
+    serverUrl,
+  ).toString();
   await page.setViewportSize({ width: 1920, height: 968 });
   await page.goto(productUrl);
 
@@ -898,13 +916,46 @@ test("V2 ajusta las imágenes, muestra 8 recomendaciones y mantiene una galería
   const thumbs = page.locator(".catalog-product-gallery-thumbs button");
   await expect(figures).toHaveCount(3);
   await expect(thumbs).toHaveCount(3);
+  const expectGalleryPictureAlignment = async () => {
+    const pictureAlignment = await page.locator(".catalog-product-gallery").evaluate((gallery) => {
+      const measure = (frame: HTMLElement | null) => {
+        const picture = frame
+          ? (Array.from(frame.children).find((child) => child.tagName === "PICTURE") as
+              | HTMLElement
+              | undefined)
+          : undefined;
+        if (!frame || !picture) return null;
+        const pictureRect = picture.getBoundingClientRect();
+        return {
+          widthDelta: Math.abs(frame.clientWidth - pictureRect.width),
+          heightDelta: Math.abs(frame.clientHeight - pictureRect.height),
+        };
+      };
+      return {
+        main: measure(
+          gallery.querySelector<HTMLElement>(
+            ".catalog-product-gallery-main figure[data-gallery-active=true]",
+          ),
+        ),
+        thumb: measure(
+          gallery.querySelector<HTMLElement>(".catalog-product-gallery-thumbs button"),
+        ),
+      };
+    });
+    expect(pictureAlignment.main?.widthDelta ?? Number.POSITIVE_INFINITY).toBeLessThan(1);
+    expect(pictureAlignment.main?.heightDelta ?? Number.POSITIVE_INFINITY).toBeLessThan(1);
+    expect(pictureAlignment.thumb?.widthDelta ?? Number.POSITIVE_INFINITY).toBeLessThan(1);
+    expect(pictureAlignment.thumb?.heightDelta ?? Number.POSITIVE_INFINITY).toBeLessThan(1);
+  };
+  await expectGalleryPictureAlignment();
   expect(
     await figures.evaluateAll(
       (elements) =>
         elements.filter((element) => getComputedStyle(element).display !== "none").length,
     ),
   ).toBe(1);
-  await expect(figures.first().locator("img")).toHaveCSS("object-fit", "cover");
+  await expect(figures.first().locator("img")).toHaveCSS("object-fit", "contain");
+  await expect(thumbs.first().locator("img")).toHaveCSS("object-fit", "contain");
   await expect(figures.first().locator("img")).toHaveAttribute(
     "sizes",
     "(max-width: 767px) 92vw, (max-width: 1199px) 94vw, 60vw",
@@ -948,6 +999,7 @@ test("V2 ajusta las imágenes, muestra 8 recomendaciones y mantiene una galería
   ]) {
     await page.setViewportSize(viewport);
     await page.goto(productUrl);
+    await expectGalleryPictureAlignment();
     const intermediateMetrics = await page
       .locator(".catalog-product-detail-inner")
       .evaluate((element) => {
@@ -978,6 +1030,7 @@ test("V2 ajusta las imágenes, muestra 8 recomendaciones y mantiene una galería
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(productUrl);
+  await expectGalleryPictureAlignment();
   const mobileDetail = page.locator('[data-solara-module="catalog-product-detail"]');
   const mobileMetrics = await mobileDetail.evaluate((element) => {
     const rect = element.getBoundingClientRect();

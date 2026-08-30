@@ -1,5 +1,13 @@
 # Changelog
 
+### Galerías de producto alineadas (2026-08-30)
+
+- Las galerías principales y previews de producto ocupan correctamente su
+  marco en Catalog Modern y en el detalle legacy, también cuando la imagen usa
+  fuentes responsive dentro de `<picture>`.
+- Las fotos se muestran completas y centradas en la galería, sin recortes
+  inesperados; las cards y medios editoriales conservan su recorte consistente.
+
 ### Filtros de categorías sin separadores (2026-08-30)
 
 - Se eliminaron las líneas horizontales decorativas del rail de filtros y de la
