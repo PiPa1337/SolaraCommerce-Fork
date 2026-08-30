@@ -1652,9 +1652,16 @@ test("V2 audita composición en viewports intermedios", async ({ page }, testInf
 });
 
 test("V2 suaviza los breakpoints críticos del hero y las grillas", async ({ page }) => {
+  const heroHeights: Record<number, number> = {};
   for (const viewport of [
     { width: 767, height: 1024 },
     { width: 768, height: 1024 },
+    { width: 899, height: 900 },
+    { width: 900, height: 900 },
+    { width: 1023, height: 900 },
+    { width: 1024, height: 900 },
+    { width: 1199, height: 900 },
+    { width: 1200, height: 900 },
   ]) {
     await page.setViewportSize(viewport);
     await page.goto(new URL("/?longTitle", serverUrl).toString());
@@ -1672,7 +1679,21 @@ test("V2 suaviza los breakpoints críticos del hero y las grillas", async ({ pag
     expect(heroMetrics.height).toBeLessThanOrEqual(viewport.height);
     expect(heroMetrics.actionBottom).toBeLessThanOrEqual(viewport.height);
     expect(heroMetrics.documentWidth).toBeLessThanOrEqual(viewport.width);
+    heroHeights[viewport.width] = heroMetrics.height;
+
+    if (viewport.width >= 768 && viewport.width < 1200) {
+      await expect(page.locator(".catalog-hero-benefits--band")).toBeVisible();
+      await expect(page.locator(".catalog-hero-benefits--copy")).toBeHidden();
+    } else if (viewport.width >= 1200) {
+      await expect(page.locator(".catalog-hero-benefits--band")).toBeHidden();
+      await expect(page.locator(".catalog-hero-benefits--copy")).toBeVisible();
+    }
   }
+
+  expect(Math.abs(heroHeights[767] - heroHeights[768])).toBeLessThanOrEqual(140);
+  expect(Math.abs(heroHeights[899] - heroHeights[900])).toBeLessThanOrEqual(24);
+  expect(Math.abs(heroHeights[1023] - heroHeights[1024])).toBeLessThanOrEqual(2);
+  expect(Math.abs(heroHeights[1199] - heroHeights[1200])).toBeLessThanOrEqual(90);
 
   for (const [width, expectedColumns] of [
     [1200, 4],
@@ -1690,7 +1711,7 @@ test("V2 suaviza los breakpoints críticos del hero y las grillas", async ({ pag
   for (const [width, expectedColumns] of [
     [361, 2],
     [360, 2],
-    [320, 1],
+    [320, 2],
   ] as const) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto(serverUrl);
@@ -1709,6 +1730,28 @@ test("V2 suaviza los breakpoints críticos del hero y las grillas", async ({ pag
     expect(gridMetrics.cardWidth).toBeGreaterThan(145);
     expect(gridMetrics.documentWidth).toBeLessThanOrEqual(width);
   }
+
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto(serverUrl);
+  const categoryLabelMetrics = await page
+    .locator(".catalog-category-bento-title")
+    .first()
+    .evaluate((element) => {
+      element.textContent = "Gastronomía y Descartables";
+      const label = element.parentElement;
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const rects = [...range.getClientRects()];
+      const textBottom = Math.max(...rects.map((rect) => rect.bottom));
+      const labelBottom = label?.getBoundingClientRect().bottom ?? 0;
+      return {
+        readable: Boolean(label && textBottom <= labelBottom + 1),
+        lines: rects.length,
+      };
+    });
+  expect(categoryLabelMetrics).toEqual(
+    expect.objectContaining({ readable: true, lines: expect.any(Number) }),
+  );
 });
 
 test("V2 acerca la compra al primer pliegue en una PDP móvil con título largo", async ({

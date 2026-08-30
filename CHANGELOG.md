@@ -1,5 +1,14 @@
 # Changelog
 
+### Home responsive sin saltos de densidad (2026-08-30)
+
+- La grilla destacada conserva dos columnas hasta 320 px sin afectar los
+  resultados de búsqueda y categoría, reduciendo el scroll excesivo en mobile.
+- El hero usa una composición tablet estable entre 768 y 1199 px, con los
+  beneficios en una banda legible y sin el salto visual de 899 a 900 px.
+- Los nombres largos de categorías dejan visible el nombre completo en
+  retratos mínimos.
+
 ### Carrito responsive en dos pasos (2026-08-30)
 
 - El drawer separa la revisión de productos de los datos de entrega para evitar

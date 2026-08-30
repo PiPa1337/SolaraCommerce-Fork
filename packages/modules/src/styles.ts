@@ -3745,51 +3745,34 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     position: static;
   }
 }
-/* En tablet angosta el hero editorial usa la misma composición legible que
-   mobile: imagen de fondo, copy superpuesto y beneficios en una banda aparte.
-   Así no se comprimen tres beneficios dentro de una columna de 17-20rem. */
-@media (min-width: 768px) and (max-width: 899px) {
+/* En tablet el hero editorial conserva una única composición hasta 1199px:
+   copy y media en carriles propios, con los beneficios en una banda aparte. */
+@media (min-width: 768px) and (max-width: 1199px) {
   .cm.v2 .catalog-hero-editorial .catalog-hero-inner {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(15rem, min(42vw, 26rem));
     width: min(calc(100% - 3rem), var(--catalog-v2-wide));
-    height: round(up, 90svh, 1px);
+    height: auto;
     min-height: 0;
   }
   .cm.v2 .catalog-hero-editorial [data-hero-media] {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
+    position: relative;
+    inset: auto;
     width: 100%;
-    height: 100%;
+    height: auto;
     min-height: 0;
-    aspect-ratio: auto;
+    aspect-ratio: 9 / 16;
     margin: 0;
-    border-radius: 0;
+    border-radius: var(--catalog-v2-radius);
   }
   .cm.v2 .catalog-hero-editorial [data-hero-media]::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--catalog-ink) 10%, transparent) 0%,
-      color-mix(in srgb, var(--catalog-ink) 24%, transparent) 45%,
-      color-mix(in srgb, var(--catalog-ink) 78%, transparent) 100%
-    );
-    pointer-events: none;
+    display: none;
   }
   .cm.v2 .catalog-hero-editorial .catalog-hero-copy {
-    position: relative;
-    z-index: 2;
-    padding: clamp(2.5rem, 7vw, 4.5rem) clamp(2rem, 5vw, 3.5rem) clamp(3.5rem, 7vw, 4.25rem);
-    color: var(--catalog-paper);
+    color: var(--catalog-ink);
   }
   .cm.v2 .catalog-hero-editorial .catalog-hero-copy .catalog-hero-body {
-    color: color-mix(in srgb, var(--catalog-paper) 84%, transparent);
+    color: var(--catalog-muted);
   }
   .cm.v2 .catalog-hero-editorial .catalog-hero-benefits--copy {
     display: none;
@@ -3987,7 +3970,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .cm.v2 .catalog-category-bento-title {
+  .cm.v2 .catalog-category-bento-item .catalog-category-bento-title {
     display: block;
     max-width: 100%;
     overflow-wrap: anywhere;
@@ -4146,13 +4129,20 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     padding-top: .5rem;
   }
 }
-/* En retratos realmente angostos una columna conserva títulos y precios
-   legibles sin introducir un salto de densidad entre 360 y 361px. */
+/* En resultados de búsqueda y categoría, una columna conserva el detalle en
+   retratos mínimos. La grilla destacada de Home mantiene dos columnas para no
+   duplicar el largo de la portada por un solo píxel. */
 @media (max-width: 339px) {
-  .cm.v2 .catalog-product-grid,
   .cm.v2 .catalog-category-results .catalog-product-grid,
   .cm.v2 .catalog-search-results-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .cm.v2 [data-solara-module="catalog-product-grid"] .catalog-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap-inline: .5rem;
+  }
+  .cm.v2 [data-solara-module="catalog-product-grid"] > .catalog-product-grid-section {
+    width: min(calc(100% - .75rem), var(--catalog-v2-wide));
   }
 }
 /* Contacto V2 modular: reutiliza los tokens de Home y mantiene una grilla
@@ -5013,6 +5003,23 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     overflow: hidden;
   }
 }
+@media (max-width: 339px) {
+  .cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
+    max-width: calc(100% - .6rem);
+    margin: .3rem;
+    padding: .55rem .85rem;
+    font-size: .78rem;
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: unset;
+  }
+  .cm.v2 .catalog-category-bento-item .catalog-category-bento-title {
+    display: block;
+    overflow: visible;
+    -webkit-box-orient: initial;
+    -webkit-line-clamp: unset;
+  }
+}
 @media (min-width: 451px) and (max-width: 767px) {
   .cm.v2 .catalog-footer-meta {
     justify-content: space-between;
@@ -5486,11 +5493,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     object-fit: cover;
     object-position: center;
   }
-  /* En tablet angosta la portada conserva su carril vertical 9:16. El layout
-     deja de convertirla en un fondo casi cuadrado, que recortaba la foto y
-     hacía inconsistente la misma imagen entre breakpoints. */
+  /* Las portadas internas conservan su carril vertical en tablet angosta. */
   @media (min-width: 768px) and (max-width: 899px) {
-    .cm.v2 .catalog-hero-editorial .catalog-hero-inner,
     .cm.v2 .catalog-hero-page .catalog-hero-inner {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(15rem, min(42vw, 26rem));
@@ -5498,7 +5502,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
       height: auto;
       min-height: 0;
     }
-    .cm.v2 .catalog-hero-editorial [data-hero-media],
     .cm.v2 .catalog-hero-page .catalog-hero-media {
       position: relative;
       inset: auto;
@@ -5509,19 +5512,15 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
       aspect-ratio: 9 / 16;
       border-radius: var(--catalog-v2-radius);
     }
-    .cm.v2 .catalog-hero-editorial .catalog-hero-copy,
     .cm.v2 .catalog-hero-page .catalog-hero-copy {
       color: var(--catalog-ink);
     }
-    .cm.v2 .catalog-hero-editorial .catalog-hero-copy .catalog-hero-body,
     .cm.v2 .catalog-hero-page .catalog-hero-copy .catalog-hero-body {
       color: var(--catalog-muted);
     }
-    .cm.v2 .catalog-hero-editorial [data-hero-media]::after,
     .cm.v2 .catalog-hero-page .catalog-hero-media::after {
       display: none;
     }
-    .cm.v2 .catalog-hero-editorial .catalog-hero-benefits--copy,
     .cm.v2 .catalog-hero-page .catalog-hero-benefits--copy {
       display: none;
     }
@@ -5531,7 +5530,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   @media (max-width: 767px) {
     .cm.v2 .catalog-hero-editorial .catalog-hero-inner,
     .cm.v2 .catalog-hero-page .catalog-hero-inner {
-      min-height: clamp(35.5rem, min(82svh, calc(100vw * 16 / 9)), 50rem);
+      min-height: clamp(35.5rem, min(82svh, calc(100vw * 16 / 9)), 43rem);
     }
     .cm.v2 .catalog-hero-editorial [data-hero-media],
     .cm.v2 .catalog-hero-page .catalog-hero-media {
