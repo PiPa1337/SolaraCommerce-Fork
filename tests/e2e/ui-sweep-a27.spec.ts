@@ -313,6 +313,8 @@ test("C5: el menú móvil abre con aria-expanded, cierra con foco y navega por s
   await expect(openButton).toBeFocused();
 
   await openButton.click();
+  await categories.locator(":scope > summary").click();
+  await page.locator(".catalog-mobile-category").first().locator(":scope > summary").click();
   await page.locator('.catalog-mobile-category__parent[href="/categorias/remeras/"]').click();
   await expect(page).toHaveURL(/\/categorias\/remeras\/$/);
   await expect(page.getByRole("heading", { level: 1, name: "Remeras" })).toBeVisible();
@@ -552,8 +554,10 @@ test("C11: el contrato del detalle moderno declara los atributos que lee el runt
   expect(productHtml).toContain("catalog-product-description-");
   expect(baseIndexHtml).toContain('aria-controls="solara-cart" aria-expanded="false"');
   expect(baseIndexHtml).toContain(
-    'id="catalog-mobile-menu" class="catalog-mobile-menu" data-catalog-menu hidden role="dialog" aria-modal="true" aria-hidden="true"',
+    'id="catalog-mobile-menu" class="catalog-mobile-menu" data-catalog-menu',
   );
+  expect(baseIndexHtml).toContain('hidden role="dialog" aria-modal="true" aria-hidden="true"');
+  expect(baseIndexHtml).toContain('data-state="closed"');
   // Drawer v2: <aside> con role dialog, tabindex -1 e inert (el orden de
   // atributos puede variar; se afirman los atributos clave por separado).
   const drawerMatch = baseIndexHtml.match(/<aside id="solara-cart"[^>]*>/);

@@ -1398,6 +1398,7 @@ function storefrontBoot(): void {
       : [];
   const closeModernMenu = (): void => {
     if (!modernMenu) return;
+    modernMenu.dataset.state = "closed";
     modernMenu.hidden = true;
     modernMenu.setAttribute("inert", "");
     modernMenu.setAttribute("aria-hidden", "true");
@@ -1406,6 +1407,9 @@ function storefrontBoot(): void {
     });
     modernMenuOpen?.setAttribute("aria-expanded", "false");
     document.documentElement.classList.remove("catalog-mobile-menu-open");
+    modernMenu.querySelectorAll<HTMLDetailsElement>("details").forEach((details) => {
+      details.open = false;
+    });
     modernMenuOpen?.focus();
   };
   modernMenuOpen?.addEventListener("click", () => {
@@ -1418,11 +1422,17 @@ function storefrontBoot(): void {
     });
     modernMenuOpen.setAttribute("aria-expanded", "true");
     document.documentElement.classList.add("catalog-mobile-menu-open");
-    modernMenuClose?.focus();
+    modernMenu.getBoundingClientRect();
+    window.requestAnimationFrame(() => {
+      if (modernMenu.hidden) return;
+      modernMenu.dataset.state = "open";
+      modernMenuClose?.focus();
+    });
   });
   modernMenuClose?.addEventListener("click", closeModernMenu);
   modernMenu?.addEventListener("click", (event) => {
-    if (event.target instanceof Element && event.target.closest("a")) closeModernMenu();
+    if (event.target instanceof Element && event.target.closest("a,[data-catalog-menu-dismiss]"))
+      closeModernMenu();
   });
   modernMenu?.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
@@ -1449,6 +1459,9 @@ function storefrontBoot(): void {
         .querySelector<HTMLElement>(":scope > summary")
         ?.setAttribute("aria-expanded", String(details.open));
     });
+  });
+  window.matchMedia("(max-width: 767px)").addEventListener("change", (event) => {
+    if (!event.matches) closeModernMenu();
   });
 
   const modernNavMenu = document.querySelector<HTMLDetailsElement>(

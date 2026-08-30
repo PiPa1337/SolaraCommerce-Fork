@@ -738,8 +738,10 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
 
     expect(noscripts.some((block) => block?.includes(".catalog-mobile-menu[hidden]"))).toBe(true);
     expect(html).toContain(
-      '<div id="catalog-mobile-menu" class="catalog-mobile-menu" data-catalog-menu hidden role="dialog"',
+      '<div id="catalog-mobile-menu" class="catalog-mobile-menu" data-catalog-menu data-state="closed" hidden role="dialog"',
     );
+    expect(html).toContain('class="catalog-mobile-menu__backdrop" data-catalog-menu-backdrop');
+    expect(html).toContain('class="catalog-mobile-menu__panel"');
     expect(html).not.toContain('<aside id="catalog-mobile-menu"');
     const homeHtml = renderSections(catalogModernStore, catalogModernStore.sections, {
       pageType: "home",

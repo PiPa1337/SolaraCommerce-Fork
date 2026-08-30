@@ -2547,7 +2547,7 @@ test("V2 conserva nombres accesibles, foco visible y navegacion por teclado", as
     };
   });
   expect(openMenuMetrics.height).toBeGreaterThan(800);
-  expect(openMenuMetrics.width).toBeLessThanOrEqual(374);
+  expect(openMenuMetrics.width).toBeLessThanOrEqual(390);
   expect(openMenuMetrics.scrollWidth).toBeLessThanOrEqual(openMenuMetrics.clientWidth);
   await expect(page.getByRole("button", { name: "Cerrar menú" })).toBeFocused();
   await mobileMenu.locator(".catalog-mobile-categories > summary").click();
@@ -2558,6 +2558,100 @@ test("V2 conserva nombres accesibles, foco visible y navegacion por teclado", as
   await page.keyboard.press("Escape");
   await expect(page.locator("#catalog-mobile-menu")).toBeHidden();
   await expect(openMenu).toBeFocused();
+});
+
+test("V2 adapta el menu movil como sheet compacto con foco visible", async ({ page }) => {
+  for (const viewport of [
+    { width: 320, height: 800 },
+    { width: 390, height: 844 },
+    { width: 600, height: 960 },
+    { width: 767, height: 1024 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(serverUrl);
+    await page.locator("[data-catalog-menu-open]").click();
+
+    const menu = page.locator("#catalog-mobile-menu");
+    const panel = menu.locator(".catalog-mobile-menu__panel");
+    const close = menu.locator(".catalog-mobile-menu__close");
+    const metrics = await menu.evaluate((element) => {
+      const panelElement = element.querySelector<HTMLElement>(".catalog-mobile-menu__panel");
+      const closeElement = element.querySelector<HTMLElement>(".catalog-mobile-menu__close");
+      const logoElement = element.querySelector<HTMLElement>(".catalog-mobile-brand img");
+      if (!panelElement || !closeElement) throw new Error("Falta la estructura del menu movil.");
+      const panelRect = panelElement.getBoundingClientRect();
+      const closeRect = closeElement.getBoundingClientRect();
+      const logoRect = logoElement?.getBoundingClientRect();
+      return {
+        panelWidth: panelRect.width,
+        closeWidth: closeRect.width,
+        closeHeight: closeRect.height,
+        logoWidth: logoRect?.width ?? 0,
+        documentWidth: document.documentElement.scrollWidth,
+        transitionDuration: getComputedStyle(panelElement).transitionDuration,
+      };
+    });
+
+    expect(metrics.closeWidth, `${viewport.width}px`).toBeGreaterThanOrEqual(44);
+    expect(metrics.closeHeight, `${viewport.width}px`).toBeGreaterThanOrEqual(44);
+    expect(metrics.logoWidth, `${viewport.width}px`).toBeLessThanOrEqual(224);
+    expect(metrics.documentWidth, `${viewport.width}px`).toBeLessThanOrEqual(viewport.width);
+    expect(metrics.transitionDuration, `${viewport.width}px`).not.toBe("0s");
+    if (viewport.width >= 481) {
+      expect(metrics.panelWidth, `${viewport.width}px`).toBeLessThanOrEqual(480);
+    } else {
+      expect(metrics.panelWidth, `${viewport.width}px`).toBe(viewport.width);
+    }
+
+    const searchField = menu.locator(".catalog-mobile-search__field");
+    const restingFocusSurface = await searchField.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return { border: styles.borderTopColor, shadow: styles.boxShadow };
+    });
+    await menu.locator("#catalog-mobile-search-input").focus();
+    const focusedSurface = await searchField.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return { border: styles.borderTopColor, shadow: styles.boxShadow };
+    });
+    expect(focusedSurface).not.toEqual(restingFocusSurface);
+
+    await menu.locator(".catalog-mobile-categories > summary").click();
+    await close.click();
+    await expect(menu).toBeHidden();
+    await page.locator("[data-catalog-menu-open]").click();
+    await expect(menu.locator(".catalog-mobile-categories")).not.toHaveAttribute("open", "");
+
+    if (viewport.width >= 481) {
+      await menu
+        .locator("[data-catalog-menu-backdrop]")
+        .click({ position: { x: viewport.width - 2, y: 2 } });
+    } else {
+      await close.click();
+    }
+    await expect(menu).toBeHidden();
+    await expect(page.locator("[data-catalog-menu-open]")).toBeFocused();
+    await expect(panel).toBeHidden();
+  }
+});
+
+test("V2 limpia el estado modal del menu al entrar en desktop", async ({ page }) => {
+  await page.setViewportSize({ width: 767, height: 1024 });
+  await page.goto(serverUrl);
+  const opener = page.locator("[data-catalog-menu-open]");
+  const menu = page.locator("#catalog-mobile-menu");
+  await opener.click();
+  await expect(menu).toHaveAttribute("aria-hidden", "false");
+
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await expect(menu).toBeHidden();
+  await expect(menu).toHaveAttribute("hidden", "");
+  await expect(menu).toHaveAttribute("aria-hidden", "true");
+  await expect(opener).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator("html")).not.toHaveClass(/catalog-mobile-menu-open/);
+  await expect(page.locator(".catalog-desktop-nav")).not.toHaveAttribute("inert", "");
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow)).not.toBe(
+    "hidden",
+  );
 });
 
 test("V2 indica la ruta activa en la navegacion", async ({ page }) => {

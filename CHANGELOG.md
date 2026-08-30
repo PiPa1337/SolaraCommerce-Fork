@@ -1,5 +1,12 @@
 # Changelog
 
+### Menú responsive de navegación rediseñado (2026-08-30)
+
+- Mobile usa una hoja de pantalla completa y tablet un panel compacto de 480 px
+  con fondo atenuado, jerarquía más clara y scroll interno para categorías.
+- Se agregaron transiciones con soporte para movimiento reducido, objetivos
+  táctiles de 48 px, foco visible y limpieza segura al cruzar 767/768 px.
+
 ### Imágenes del carrito a marco completo (2026-08-30)
 
 - Los thumbnails del drawer y de la página de carrito llenan su marco cuadrado
