@@ -103,6 +103,32 @@ test("el preview V2 conserva el carrito al navegar con enlaces internos", async 
   }
 });
 
+test("el enlace Abrir carrito del footer abre el drawer sin cambiar de ruta", async ({ page }) => {
+  const running = await startStudioServer();
+  try {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(running.url);
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+      timeout: 30_000,
+    });
+    const card = page.locator(".dashboard-store-card").filter({
+      has: page.getByText("Predeterminado", { exact: true }),
+    });
+    await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+
+    const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
+    const footerCartLink = preview.locator("a.catalog-footer-cart-link");
+    await expect(footerCartLink).toHaveCount(1, { timeout: 30_000 });
+    await footerCartLink.scrollIntoViewIfNeeded();
+    await footerCartLink.click();
+
+    await expect(page.getByTestId("ui-preview-route")).toHaveValue("/");
+    await expect(preview.locator("[data-cart-drawer]")).toHaveAttribute("data-open", "true");
+  } finally {
+    await stopStudioServer(running.server);
+  }
+});
+
 test("el preview V2 conserva el carrito al cambiar de ruta inmediatamente después de agregar", async ({
   page,
 }) => {

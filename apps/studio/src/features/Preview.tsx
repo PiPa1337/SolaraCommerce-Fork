@@ -54,7 +54,9 @@ body::-webkit-scrollbar {
 
 const PREVIEW_PERF_STYLE = `<style data-solara-preview-perf>
 html { scroll-behavior: auto !important; }
-[data-solara-module], .catalog-hero, .catalog-category-bento, .catalog-product-grid {
+/* Los drawers son overlays: no deben quedar atrapados en paint containment. */
+[data-solara-module]:not([data-solara-module="catalog-cart-drawer"]):not([data-solara-module="cart-drawer"]),
+.catalog-hero, .catalog-category-bento, .catalog-product-grid {
   contain: layout paint;
   content-visibility: auto;
   contain-intrinsic-size: 600px 400px;
@@ -133,7 +135,7 @@ function addPreviewCartState(
   return `${document.slice(0, headEnd)}${element}\n${document.slice(headEnd)}`;
 }
 
-function addPreviewNavigationBridge(document: string): string {
+export function addPreviewNavigationBridge(document: string): string {
   const bridge = `<script data-solara-preview-navigation>
 (() => {
   const state = document.getElementById("solara-preview-cart");
@@ -143,6 +145,7 @@ function addPreviewNavigationBridge(document: string): string {
     if (!(target instanceof Element)) return;
     const anchor = target.closest("a[href]");
     if (!(anchor instanceof HTMLAnchorElement) || anchor.target === "_blank" || anchor.hasAttribute("download")) return;
+    if (anchor.hasAttribute("data-open-cart")) return;
     const href = anchor.getAttribute("href") ?? "";
     if (!href.startsWith("/") || href.startsWith("//") || href.startsWith("/#")) return;
     event.preventDefault();

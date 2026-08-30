@@ -1,5 +1,10 @@
 # Changelog
 
+### Abrir carrito funcional en el Preview (2026-08-30)
+
+- El enlace `Abrir carrito` ya no queda interceptado por la navegación interna
+  del Preview y abre el drawer sin cambiar de ruta en todas las tiendas.
+
 ### Cards de producto sin recorte horizontal (2026-08-30)
 
 - Las imágenes de las cards de productos se muestran completas y centradas,

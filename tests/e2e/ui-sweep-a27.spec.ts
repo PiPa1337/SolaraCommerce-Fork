@@ -128,7 +128,7 @@ test("C1: el toggle de carrito abre el drawer, refleja aria-expanded y devuelve 
   );
   expect(baseIndexHtml).toContain('data-solara-cart-count data-cart-count aria-live="polite"');
 
-  const toggle = page.locator("[data-solara-cart-open]");
+  const toggle = page.locator("button[data-solara-cart-open]");
   const drawer = page.locator("[data-cart-drawer]");
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
   await expect(toggle).toHaveAttribute("aria-label", "Carrito vacío");
@@ -170,7 +170,7 @@ test("C2: agregar al carrito crea la línea, actualiza contador y subtotales con
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(storeUrl(basePort, PRODUCT_PATH));
 
-  const toggle = page.locator("[data-solara-cart-open]");
+  const toggle = page.locator("button[data-solara-cart-open]");
   const addButton = page.getByRole("button", { name: "Agregar al carrito" });
   await expect(addButton).toBeEnabled();
   await page.locator('input[name="quantity"]').fill("2");
@@ -525,7 +525,7 @@ test("A29: el drawer de carrito abierto inertea a los hermanos de la página (co
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(storeUrl(basePort, "/"));
 
-  await page.locator("[data-solara-cart-open]").click();
+  await page.locator("button[data-solara-cart-open]").click();
   await expect(page.locator('[data-solara-module="catalog-hero"]')).toHaveAttribute("inert", "");
 });
 
