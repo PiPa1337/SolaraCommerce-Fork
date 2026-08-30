@@ -1,5 +1,12 @@
 # Changelog
 
+### Imágenes del carrito a marco completo (2026-08-30)
+
+- Los thumbnails del drawer y de la página de carrito llenan su marco cuadrado
+  sin deformarse en desktop, tablet y mobile.
+- La corrección vive en el renderer compartido y se aplica a todas las tiendas
+  Catalog Modern actuales y futuras.
+
 ### Home responsive sin saltos de densidad (2026-08-30)
 
 - La grilla destacada conserva dos columnas hasta 320 px sin afectar los

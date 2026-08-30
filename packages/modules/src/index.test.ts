@@ -912,6 +912,19 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     );
   });
 
+  it("hace que las imágenes del carrito llenen su marco cuadrado", () => {
+    const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
+    const modernStyles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!styles || !modernStyles) throw new Error("Faltan estilos de carrito");
+
+    expect(styles).toMatch(
+      /\.catalog-cart-items \.solara-cart-line img \{[^}]*width: 3\.5rem;[^}]*height: 3\.5rem;[^}]*object-fit: cover;/,
+    );
+    expect(modernStyles).toMatch(
+      /\.solara-cart-page-grid \[data-cart-lines\] \.solara-cart-line img \{[^}]*width: 8rem;[^}]*height: 8rem;[^}]*object-fit: cover;/,
+    );
+  });
+
   it("evita que el email del footer se parta a mitad de palabra", () => {
     const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
     if (!styles) throw new Error("Falta el bloque de estilos catalog-modern");

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { getPreviewAssetSources, renderPreviewHtml } from "@solara/exporter";
 import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 
-test("el preview hidrata imágenes dinámicas del carrito y las mantiene cuadradas", async ({
+test("el preview hidrata imágenes dinámicas del carrito y llena su marco cuadrado", async ({
   page,
 }) => {
   const product = catalogModernV2Store.products.find((candidate) => candidate.status === "active");
@@ -74,5 +74,5 @@ test("el preview hidrata imágenes dinámicas del carrito y las mantiene cuadrad
     };
   });
   expect(Math.abs(metrics.width - metrics.height)).toBeLessThanOrEqual(0.5);
-  expect(metrics.objectFit).toBe("contain");
+  expect(metrics.objectFit).toBe("cover");
 });
