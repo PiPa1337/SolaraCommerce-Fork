@@ -65,6 +65,11 @@ describe("seo audit", () => {
     expect(extractRobots(prodHome)).toContain("index,follow");
     expect(extractRobots(prodSearch)).toBe("noindex,follow");
     expect(extractRobots(prodCart)).toBe("noindex,follow");
+    expect(prodHome).toContain('rel="alternate" type="application/rss+xml"');
+    expect(prodHome).toContain('href="/feed.xml"');
+    expect(prodSearch).not.toContain('type="application/rss+xml"');
+    expect(prodCart).not.toContain('type="application/rss+xml"');
+    expect(draftHome).not.toContain('type="application/rss+xml"');
     expect(draft.files.has("sitemap.xml")).toBe(false);
     expect(prod.files.has("sitemap.xml")).toBe(true);
     const sitemap = getHtml(prod.files as any, "sitemap.xml");
@@ -145,6 +150,40 @@ describe("seo audit", () => {
     const locs = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
     expect(new Set(locs).size).toBe(locs.length);
     for (const loc of locs) expect(loc).toMatch(/^https:\/\//);
+  });
+
+  it("sitemap usa la fecha propia de cada producto y no emite captions obsoletos", () => {
+    const store = structuredClone(catalogModernV2Store);
+    const product = store.products[0];
+    product.createdAt = "2024-01-01T12:00:00.000Z";
+    product.updatedAt = "2024-05-06T12:00:00.000Z";
+    store.updatedAt = "2026-08-31T12:00:00.000Z";
+
+    const result = exportProject(store, { mode: "production" });
+    const sitemap = getHtml(result.files as any, "sitemap.xml");
+    const productLoc = `<loc>${store.baseUrl.replace(/\/+$/, "")}/productos/${product.slug}/</loc>`;
+    const productStart = sitemap.indexOf(productLoc);
+    expect(productStart).toBeGreaterThanOrEqual(0);
+    expect(sitemap.slice(productStart, sitemap.indexOf("</url>", productStart))).toContain(
+      "<lastmod>2024-05-06</lastmod>",
+    );
+    expect(sitemap).toContain(`<loc>${store.baseUrl.replace(/\/+$/, "")}/</loc>`);
+    expect(getHtml(result.files as any, "image-sitemap.xml")).not.toContain("<image:caption>");
+  });
+
+  it("mantiene las imágenes del sitemap principal dentro del image-sitemap", () => {
+    const store = structuredClone(catalogModernV2Store);
+    const result = exportProject(store, { mode: "production" });
+    const sitemap = getHtml(result.files as any, "sitemap.xml");
+    const imageSitemap = getHtml(result.files as any, "image-sitemap.xml");
+
+    for (const block of sitemap.matchAll(/<url>[\s\S]*?<\/url>/g)) {
+      const pageLoc = /<loc>([^<]+)<\/loc>/.exec(block[0] ?? "")?.[1];
+      const imageLoc = /<image:loc>([^<]+)<\/image:loc>/.exec(block[0] ?? "")?.[1];
+      if (!pageLoc || !imageLoc) continue;
+      expect(imageSitemap).toContain(`<loc>${pageLoc}</loc>`);
+      expect(imageSitemap).toContain(`<image:loc>${imageLoc}</image:loc>`);
+    }
   });
 
   it("title/description/og:image y alt y no-JS", () => {

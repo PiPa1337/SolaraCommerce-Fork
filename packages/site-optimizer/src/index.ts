@@ -137,6 +137,15 @@ function publicUrl(project: StoreProjectV1, path: string): string {
   return `${project.baseUrl.replace(/\/+$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+function uniqueRoutes(routes: readonly OptimizationRoute[]): OptimizationRoute[] {
+  const seen = new Set<string>();
+  return routes.filter((item) => {
+    if (seen.has(item.canonicalPath)) return false;
+    seen.add(item.canonicalPath);
+    return true;
+  });
+}
+
 function route(
   path: string,
   pageType: OptimizationRoute["pageType"],
@@ -161,15 +170,7 @@ function buildRoutes(project: StoreProjectV1): OptimizationRoute[] {
   const contact = pageByKind.get("contact");
   const isV2 = project.commerceTemplates.designFamily === "catalog-modern-v2";
   const pageSize = project.commerceTemplates.category.productsPerPage;
-  const activeProductTitleCounts = new Map<string, number>();
-  for (const product of project.products) {
-    if (product.status === "active") {
-      activeProductTitleCounts.set(
-        product.title,
-        (activeProductTitleCounts.get(product.title) ?? 0) + 1,
-      );
-    }
-  }
+  const activeProductTitleCounts = buildPublicProductTitleCounts(project);
   const routes: OptimizationRoute[] = [
     route(
       "/",
@@ -284,25 +285,27 @@ function buildRoutes(project: StoreProjectV1): OptimizationRoute[] {
     );
   }
 
-  project.categories.forEach((category) => {
-    const products = categoryProducts(project, category);
-    const pages = Math.max(1, Math.ceil(products.length / pageSize));
-    for (let page = 1; page <= pages; page += 1) {
-      const suffix = page === 1 ? "" : `pagina/${page}/`;
-      const path = `/categorias/${category.slug}/${suffix}`;
-      routes.push(
-        route(
-          path,
-          "category",
-          true,
-          path,
-          `${category.title}${page > 1 ? ` — Página ${page}` : ""} | ${project.identity.brandName}`,
-          category.description,
-          page === 1,
-        ),
-      );
-    }
-  });
+  project.categories
+    .filter((category) => category.status !== "hidden")
+    .forEach((category) => {
+      const products = categoryProducts(project, category);
+      const pages = Math.max(1, Math.ceil(products.length / pageSize));
+      for (let page = 1; page <= pages; page += 1) {
+        const suffix = page === 1 ? "" : `pagina/${page}/`;
+        const path = `/categorias/${category.slug}/${suffix}`;
+        routes.push(
+          route(
+            path,
+            "category",
+            true,
+            path,
+            `${category.title}${page > 1 ? ` — Página ${page}` : ""} | ${project.identity.brandName}`,
+            category.description,
+            page === 1,
+          ),
+        );
+      }
+    });
 
   project.collections.forEach((collection) => {
     const products = collection.productIds
@@ -336,13 +339,42 @@ function buildRoutes(project: StoreProjectV1): OptimizationRoute[] {
           "product",
           true,
           path,
-          `${product.title}${(activeProductTitleCounts.get(product.title) ?? 0) > 1 ? ` — ${product.slug}` : ""} | ${project.identity.brandName}`,
+          `${product.title}${(activeProductTitleCounts.get(cleanText(product.title)) ?? 0) > 1 ? ` — ${product.slug}` : ""} | ${project.identity.brandName}`,
           product.description,
           true,
         ),
       );
     });
   return routes;
+}
+
+/** Rutas indexables compartidas por el contexto AI y los archivos llms. */
+export function buildIndexableRoutes(project: StoreProjectV1): OptimizationRoute[] {
+  return buildRoutes(project).filter((item) => item.indexable);
+}
+
+/** Cuenta títulos de productos activos una sola vez por snapshot de exportación. */
+export function buildPublicProductTitleCounts(
+  project: StoreProjectV1,
+): ReadonlyMap<string, number> {
+  const counts = new Map<string, number>();
+  for (const product of project.products) {
+    if (product.status !== "active") continue;
+    const title = cleanText(product.title);
+    counts.set(title, (counts.get(title) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/** Desambigua automáticamente productos activos que comparten título. */
+export function publicProductTitle(
+  project: StoreProjectV1,
+  product: Product,
+  titleCounts = buildPublicProductTitleCounts(project),
+): string {
+  const title = cleanText(product.title);
+  const sameTitleCount = titleCounts.get(title) ?? 0;
+  return `${title}${sameTitleCount > 1 ? ` — ${product.slug}` : ""}`;
 }
 
 function addFinding(
@@ -757,7 +789,7 @@ export function buildAiContext(
   project: StoreProjectV1,
   options: { compact?: boolean } = {},
 ): string {
-  const routes = buildRoutes(project).filter((item) => item.indexable);
+  const routes = buildIndexableRoutes(project);
   const products = project.products
     .filter((product) => product.status === "active")
     .map((product) => ({
@@ -768,12 +800,14 @@ export function buildAiContext(
       description: cleanText(product.description),
       categories: product.categoryIds
         .flatMap((id) => [
-          project.categories.find((category) => category.id === id),
+          project.categories.find((category) => category.id === id && category.status !== "hidden"),
           ...getCategoryAncestors(project, id as Category["id"]),
         ])
         .filter(
           (category, index, all) =>
-            category && all.findIndex((item) => item?.id === category.id) === index,
+            category !== undefined &&
+            category.status !== "hidden" &&
+            all.findIndex((item) => item?.id === category.id) === index,
         )
         .map((category) => category?.title)
         .filter((title): title is string => Boolean(title)),
@@ -813,14 +847,20 @@ export function buildAiContext(
       title,
       description: cleanText(description),
     })),
-    categories: project.categories.map((category) => ({
-      id: category.id,
-      name: category.title,
-      ...(category.parentId ? { parentId: category.parentId } : {}),
-      url: publicUrl(project, `/categorias/${category.slug}/`),
-      description: cleanText(category.description),
-      productCount: getCategoryProductIds(project, category.id).length,
-    })),
+    categories: project.categories
+      .filter((category) => category.status !== "hidden")
+      .map((category) => ({
+        id: category.id,
+        name: category.title,
+        ...(category.parentId ? { parentId: category.parentId } : {}),
+        url: publicUrl(project, `/categorias/${category.slug}/`),
+        description: cleanText(category.description),
+        productCount: getCategoryProductIds(project, category.id).filter((productId) =>
+          project.products.some(
+            (product) => product.id === productId && product.status === "active",
+          ),
+        ).length,
+      })),
     policies: {
       shipping: cleanText(project.policies.shipping.details),
       returns: cleanText(project.policies.returns.details),
@@ -832,42 +872,68 @@ export function buildAiContext(
 }
 
 export function buildLlmsTxt(project: StoreProjectV1): string {
-  const routes = buildRoutes(project).filter((item) => item.indexable);
-  const products = project.products.filter((product) => product.status === "active");
+  const routes = uniqueRoutes(buildIndexableRoutes(project));
+  const primaryRoutes = routes.filter(
+    (item) =>
+      item.pageType !== "category" && item.pageType !== "collection" && item.pageType !== "product",
+  );
+  const categoryRoutes = routes.filter((item) => item.pageType === "category");
+  const collectionRoutes = routes.filter((item) => item.pageType === "collection");
+  const seenProductSlugs = new Set<string>();
+  const productTitleCounts = buildPublicProductTitleCounts(project);
+  const products = project.products.filter((product) => {
+    if (product.status !== "active" || seenProductSlugs.has(product.slug)) return false;
+    seenProductSlugs.add(product.slug);
+    return true;
+  });
 
   const contactPath =
     project.commerceTemplates.designFamily === "catalog-modern-v2"
       ? "/#contact-form"
       : "/contacto/";
+  const routeLines = (items: readonly OptimizationRoute[]) =>
+    items.map(
+      (item) =>
+        `- [${cleanText(item.title)}](${publicUrl(project, item.canonicalPath)}): ${cleanText(item.description)}`,
+    );
+  const whatsappPhone = project.whatsapp.phone.replace(/\D/g, "");
+  const contactLines = [
+    cleanText(project.identity.email) ? `- Email: ${cleanText(project.identity.email)}` : "",
+    cleanText(project.identity.phone) ? `- Teléfono: ${cleanText(project.identity.phone)}` : "",
+    cleanText(project.identity.address)
+      ? `- Dirección: ${cleanText(project.identity.address)}`
+      : "",
+    whatsappPhone ? `- WhatsApp: https://wa.me/${whatsappPhone}` : "",
+    `- Formulario: ${publicUrl(project, contactPath)}`,
+  ].filter((line): line is string => Boolean(line));
+
   const lines = [
-    `# ${project.identity.brandName}`,
+    `# ${cleanText(project.identity.brandName)}`,
     "",
     cleanText(project.identity.description),
     "",
-    "## Paginas principales",
-    ...routes
-      .slice(0, 80)
-      .map(
-        (item) =>
-          `- [${cleanText(item.title)}](${publicUrl(project, item.canonicalPath)}): ${cleanText(item.description)}`,
-      ),
+    `- Moneda: ${project.currency}`,
+    `- Última actualización: ${project.updatedAt}`,
     "",
-    "## Categorias",
-    ...project.categories.map(
-      (category) =>
-        `- [${cleanText(category.title)}](${publicUrl(project, `/categorias/${category.slug}/`)}): ${cleanText(category.description)}`,
-    ),
+    "## Páginas principales",
+    ...routeLines(primaryRoutes),
+    ...(categoryRoutes.length > 0 ? ["", "## Categorías", ...routeLines(categoryRoutes)] : []),
+    ...(collectionRoutes.length > 0 ? ["", "## Colecciones", ...routeLines(collectionRoutes)] : []),
     "",
     "## Productos",
     ...products.map(
       (product) =>
-        `- [${cleanText(product.title)}](${publicUrl(project, `/productos/${product.slug}/`)}): ${cleanText(product.description)}`,
+        `- [${publicProductTitle(project, product, productTitleCounts)}](${publicUrl(project, `/productos/${product.slug}/`)}): ${cleanText(product.description)}`,
     ),
     "",
-    "## Politicas",
-    `- Envios: ${cleanText(project.policies.shipping.details)}`,
+    "## Políticas",
+    `- Envíos: ${cleanText(project.policies.shipping.details)}`,
     `- Cambios y devoluciones: ${cleanText(project.policies.returns.details)}`,
-    `- Contacto: ${publicUrl(project, contactPath)}`,
+    "",
+    "## Contacto",
+    ...contactLines,
+    "",
+    `Nota comercial: los precios, la disponibilidad, el envío y el pago deben verificarse con ${cleanText(project.identity.brandName)} antes de confirmar el pedido.`,
   ];
   return `${lines.join("\n")}\n`;
 }

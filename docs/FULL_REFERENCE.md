@@ -183,11 +183,13 @@ Los links de navegación apuntan a `#contact-form` y `/#about-hero`.
 | `image-sitemap.xml` | production | URLs con imagen por producto/categoría |
 | `video-sitemap.xml` | Solo si hay video hero | URLs con video schema |
 | `google-merchant.xml` | production | Feed Google Merchant (RSS 2.0) |
+| `feed.xml` | production con productos activos | RSS 2.0 de descubrimiento de productos publicados; no reemplaza el feed de Google Merchant |
 | `search-index.json` | searchEnabled | Array de entries con tokens normalizados |
 | `catalog-index.json` | cartEnabled o checkoutEnabled o siteShell.cart | Array de variantes para reconciliación de carrito |
 | `robots.txt` | Siempre | Draft: Disallow all / Production: Allow all + Sitemap |
 | `ai-context.json` | publicAiContext && production | Contexto estructurado para agentes IA |
-| `llms.txt` | publicAiContext && production | Resumen en texto plano para LLMs |
+| `llms.txt` | publicAiContext && production | Resumen en texto plano para LLMs, con rutas sin duplicados, contacto y fecha del snapshot |
+| `llms-full.txt` | publicAiContext && production | Catálogo completo en texto plano, con categorías, variantes, precios, disponibilidad, contacto y fecha del snapshot |
 | `manifest.webmanifest` | Siempre (Studio) | PWA manifest |
 
 ---

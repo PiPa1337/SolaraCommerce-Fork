@@ -117,6 +117,31 @@ describe("HTML safety", () => {
     expect(html).not.toContain("foto-1024.webp");
   });
 
+  it("conserva AVIF en el MIME de picture cuando la ruta lo declara", () => {
+    const asset = referenceStore.assets[0];
+    if (!asset) throw new Error("Fixture incompleto");
+    const project = {
+      ...referenceStore,
+      assets: [
+        {
+          ...asset,
+          mimeType: "image/avif",
+          source: "/assets/foto-1800.avif",
+          width: 1800,
+          responsiveSources: [{ width: 768, source: "/assets/foto-768.avif" }],
+        },
+        ...referenceStore.assets.slice(1),
+      ],
+    };
+
+    const html = renderImage(project, asset.id);
+
+    expect(html).toContain(
+      '<source type="image/avif" media="(max-width: 1023px)" srcset="/assets/foto-768.avif 768w"',
+    );
+    expect(html).toContain('<source type="image/avif" srcset="/assets/foto-1800.avif 1800w"');
+  });
+
   it("prioriza WebP y conserva fallback cuando no hay variantes responsive", () => {
     const asset = referenceStore.assets[0];
     if (!asset) throw new Error("Fixture incompleto");

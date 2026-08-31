@@ -10,11 +10,18 @@ import {
   createProjectArchive,
   createPublicExportManifest,
   exportProject,
+  getPreviewAssetSources,
   minifyCss,
   readProjectArchive,
   renderPreviewHtml,
 } from "./index";
-import { sha256Hex } from "./pwa";
+import { buildLlmsFullTxt, sha256Hex } from "./pwa";
+
+const VALID_PNG_DATA_URL =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+const VALID_JPEG_DATA_URL = "data:image/jpeg;base64,/9j/2Q==";
+const VALID_WEBP_DATA_URL = "data:image/webp;base64,UklGRgAAAABXRUJQ";
+const VALID_AVIF_DATA_URL = "data:image/avif;base64,AAAAFGZ0eXBhdmlmAAAAAGF2aWY=";
 
 function onlineStoreJsonLd(homeHtml: string): Record<string, unknown> {
   for (const script of homeHtml.matchAll(
@@ -199,6 +206,76 @@ describe("exporter", () => {
     expect(result.files.has("llms.txt")).toBe(true);
     expect(result.optimization.aiReadiness.structuredDataSource).toBe("shared-snapshot");
     expect(productHtml).toContain('href="/ai-context.json"');
+  });
+
+  it("emite llms-full con URLs normalizadas e información comercial completa", () => {
+    const project = structuredClone(referenceStore);
+    project.baseUrl = `${project.baseUrl.replace(/\/+$/, "")}/`;
+    const result = exportProject(project, { mode: "production" });
+    const full = String(result.files.get("llms-full.txt"));
+
+    expect(full).toContain("## Categorías");
+    expect(full).toContain("## Contacto");
+    expect(full).toContain(`Última actualización: ${project.updatedAt}`);
+    expect(full).toContain(`- Email: ${project.identity.email}`);
+    expect(full).not.toMatch(/https?:\/\/[^/]+\/\/productos\//);
+    expect(full).toContain(`- URL: ${project.baseUrl.replace(/\/+$/, "")}/productos/manta-bruma/`);
+    const urls = [
+      ...full.matchAll(/\]\((https?:\/\/[^)]+)\)/g),
+      ...full.matchAll(/^- URL: (https?:\/\/\S+)$/gm),
+    ].map((match) => match[1]);
+    expect(new Set(urls).size).toBe(urls.length);
+    expect(full.match(/^### /gm) ?? []).toHaveLength(
+      project.products.filter((product) => product.status === "active").length,
+    );
+  });
+
+  it("representa cada variante en llms-full sin reducir el catálogo a la primera", () => {
+    const project = structuredClone(referenceStore);
+    const product = project.products[0];
+    const variant = product?.variants[0];
+    if (!product || !variant) throw new Error("Fixture sin variante");
+    product.variants.push({
+      ...variant,
+      id: `${variant.id}-alternativa` as typeof variant.id,
+      sku: "SKU-ALTERNATIVA",
+      title: "Alternativa",
+      price: variant.price + 100,
+      available: false,
+      stockStatus: "out_of_stock",
+    });
+
+    const full = buildLlmsFullTxt(project);
+
+    expect(full).toContain("- Precio: desde ");
+    expect(full).toContain("- Variantes:");
+    expect(full).toContain("Alternativa");
+    expect(full).toContain("SKU: SKU-ALTERNATIVA");
+    expect(full).toContain("sin stock");
+  });
+
+  it("genera un RSS completo, estable y autodetectable para productos activos", () => {
+    const project = structuredClone(catalogScaleStore);
+    project.baseUrl = "https://example.test/tienda/";
+    const product = project.products.find((candidate) => candidate.status === "active");
+    if (!product) throw new Error("Fixture sin productos activos");
+    product.createdAt = "2024-01-01T12:00:00.000Z";
+    product.updatedAt = "2024-05-06T12:00:00.000Z";
+    project.updatedAt = "2026-08-31T12:00:00.000Z";
+
+    const result = exportProject(project, { mode: "production", publicAiContext: false });
+    const feed = String(result.files.get("feed.xml"));
+    const home = String(result.files.get("index.html"));
+    const activeProducts = project.products.filter((candidate) => candidate.status === "active");
+
+    expect(feed.match(/<item>/g) ?? []).toHaveLength(activeProducts.length);
+    expect(feed).toContain(`<guid isPermaLink="false">${product.id}</guid>`);
+    expect(feed).toContain(`<pubDate>${new Date(product.updatedAt).toUTCString()}</pubDate>`);
+    expect(feed).toContain(
+      '<atom:link href="https://example.test/tienda/feed.xml" rel="self" type="application/rss+xml" />',
+    );
+    expect(home).toContain('type="application/rss+xml"');
+    expect(home).toContain('href="/tienda/feed.xml"');
   });
 
   it("emite runtime hasheado y deployment-manifest v1 sin archivos privados", () => {
@@ -437,6 +514,7 @@ describe("exporter", () => {
   it("excluye feed y agrega noindex en borrador", () => {
     const result = exportProject(referenceStore, { mode: "draft" });
     expect(result.files.has("google-merchant.xml")).toBe(false);
+    expect(result.files.has("feed.xml")).toBe(false);
     expect(result.files.has("sitemap.xml")).toBe(false);
     expect(result.files.get("robots.txt")).toContain("Disallow: /");
     expect(result.files.get("index.html")).toContain("noindex,nofollow");
@@ -484,7 +562,7 @@ describe("exporter", () => {
       ...heroAsset,
       id: "asset-hero-background-test" as typeof heroAsset.id,
       name: "Fondo editorial de prueba",
-      source: "data:image/webp;base64,UklGRg==",
+      source: VALID_WEBP_DATA_URL,
       fallbackSource: undefined,
       responsiveSources: [],
       hash: "test-hero-background",
@@ -553,7 +631,7 @@ describe("exporter", () => {
       ...baseAsset,
       id: "asset-disabled-hero" as typeof baseAsset.id,
       name: "Poster deshabilitado",
-      source: "data:image/png;base64,AA==",
+      source: VALID_PNG_DATA_URL,
       width: 1,
       height: 1,
       hash: "disabled-hero",
@@ -572,8 +650,63 @@ describe("exporter", () => {
       ),
     };
     const result = exportProject(project, { mode: "draft" });
+    const html = String(result.files.get("index.html"));
 
     expect(result.files.has("assets/disabled-hero.png")).toBe(false);
+    expect(html).not.toContain("disabled-hero");
+  });
+
+  it("omite rutas, nombres y media de colecciones ocultas", () => {
+    const baseAsset = referenceStore.assets[0];
+    const collection = referenceStore.collections[0];
+    if (!baseAsset || !collection) throw new Error("Fixture incompleto");
+    const hiddenAsset = {
+      ...baseAsset,
+      id: "asset-hidden-collection" as typeof baseAsset.id,
+      name: "Imagen de colección oculta",
+      source: VALID_PNG_DATA_URL,
+      width: 1,
+      height: 1,
+      hash: "hidden-collection",
+    };
+    const project = structuredClone(referenceStore);
+    project.assets.push(hiddenAsset);
+    project.collections[0] = {
+      ...collection,
+      status: "hidden",
+      imageId: hiddenAsset.id,
+    };
+
+    const result = exportProject(project, { mode: "production" });
+    const searchIndex = JSON.parse(String(result.files.get("search-index.json"))) as Array<{
+      collectionIds: string[];
+      collectionNames: string[];
+    }>;
+    const imageSitemap = String(result.files.get("image-sitemap.xml"));
+
+    expect(result.files.has(`colecciones/${collection.slug}/index.html`)).toBe(false);
+    expect(result.files.has("assets/hidden-collection.png")).toBe(false);
+    expect(imageSitemap).not.toContain(`/colecciones/${collection.slug}/`);
+    expect(searchIndex.every((entry) => !entry.collectionIds.includes(collection.id))).toBe(true);
+    expect(searchIndex.every((entry) => !entry.collectionNames.includes(collection.title))).toBe(
+      true,
+    );
+  });
+
+  it("no deja enlaces públicos a una categoría oculta", () => {
+    const category = referenceStore.categories[0];
+    if (!category) throw new Error("Fixture incompleto");
+    const project = structuredClone(referenceStore);
+    project.categories[0] = { ...category, status: "hidden" };
+
+    const result = exportProject(project, { mode: "draft" });
+    const hiddenPath = `/categorias/${category.slug}/`;
+    const cartHtml = String(result.files.get("carrito/index.html"));
+    const notFoundHtml = String(result.files.get("404.html"));
+
+    expect(result.files.has(`categorias/${category.slug}/index.html`)).toBe(false);
+    expect(cartHtml).not.toContain(`href="${hiddenPath}"`);
+    expect(notFoundHtml).not.toContain(`href="${hiddenPath}"`);
   });
 
   it("renderiza rutas comerciales en el preview compartido", () => {
@@ -813,11 +946,11 @@ describe("exporter", () => {
         {
           ...firstAsset,
           mimeType: "image/webp",
-          source: "data:image/webp;base64,AA==",
-          fallbackSource: "data:image/jpeg;base64,AQ==",
+          source: VALID_WEBP_DATA_URL,
+          fallbackSource: VALID_JPEG_DATA_URL,
           responsiveSources: [
-            { width: 480, source: "data:image/webp;base64,Ag==" },
-            { width: 960, source: "data:image/webp;base64,Aw==" },
+            { width: 480, source: "data:image/webp;base64,UklGRgEAAABXRUJQ" },
+            { width: 960, source: "data:image/webp;base64,UklGRgIAAABXRUJQ" },
           ],
         },
         ...referenceStore.assets.slice(1),
@@ -843,9 +976,9 @@ describe("exporter", () => {
         {
           ...firstAsset,
           mimeType: "image/webp",
-          source: "data:image/webp;base64,AA==",
-          fallbackSource: "data:image/png;base64,AQ==",
-          responsiveSources: [{ width: 480, source: "data:image/jpeg;base64,Ag==" }],
+          source: VALID_WEBP_DATA_URL,
+          fallbackSource: VALID_PNG_DATA_URL,
+          responsiveSources: [{ width: 480, source: VALID_JPEG_DATA_URL }],
         },
         ...referenceStore.assets.slice(1),
       ],
@@ -861,13 +994,94 @@ describe("exporter", () => {
     expect(html).toContain("/assets/fixture-manta-480.jpg 480w");
   });
 
+  it("ajusta automáticamente extensión, MIME, preview y sitemaps a los bytes reales", () => {
+    const firstAsset = referenceStore.assets[0];
+    if (!firstAsset) throw new Error("Fixture incompleto");
+    const mislabeledPng = VALID_PNG_DATA_URL.replace("data:image/png", "data:image/avif");
+    const project = {
+      ...referenceStore,
+      assets: [
+        {
+          ...firstAsset,
+          mimeType: "image/avif",
+          source: mislabeledPng,
+          responsiveSources: [{ width: 480, source: VALID_PNG_DATA_URL }],
+        },
+        ...referenceStore.assets.slice(1),
+      ],
+      seo: { ...referenceStore.seo, socialImageId: firstAsset.id },
+    };
+
+    const result = exportProject(project as typeof referenceStore, { mode: "production" });
+    const home = String(result.files.get("index.html"));
+    const product = String(result.files.get("productos/manta-bruma/index.html"));
+    const sitemap = String(result.files.get("sitemap.xml"));
+    const imageSitemap = String(result.files.get("image-sitemap.xml"));
+    const bytes = result.files.get("assets/fixture-manta.png");
+    const previewSources = getPreviewAssetSources(project as typeof referenceStore);
+
+    expect(bytes).toBeInstanceOf(Uint8Array);
+    expect([...((bytes as Uint8Array) ?? []).slice(0, 8)]).toEqual([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ]);
+    expect(result.files.has("assets/fixture-manta.avif")).toBe(false);
+    expect(result.files.has("assets/fixture-manta-480.png")).toBe(true);
+    expect(home).toContain(
+      'property="og:image" content="https://tienda-referencia.example/assets/fixture-manta.png"',
+    );
+    expect(home).toContain('<meta property="og:image:type" content="image/png">');
+    expect(product).toContain('<source type="image/png"');
+    expect(product).toContain("/assets/fixture-manta-480.png 480w");
+    expect(sitemap).toContain("https://tienda-referencia.example/assets/fixture-manta.png");
+    expect(imageSitemap).toContain("https://tienda-referencia.example/assets/fixture-manta.png");
+    expect(imageSitemap).not.toContain("fixture-manta.avif");
+    expect(previewSources.get("/__solara-preview-assets/fixture-manta.png")).toBe(
+      VALID_PNG_DATA_URL,
+    );
+  });
+
+  it("rechaza una data URL de imagen cuyos bytes no tienen un formato reconocible", () => {
+    const project = structuredClone(referenceStore);
+    project.assets[0] = {
+      ...project.assets[0],
+      source: "data:image/png;base64,AA==",
+    };
+
+    expect(() => exportProject(project, { mode: "draft" })).toThrow(
+      /bytes de imagen irreconocibles/i,
+    );
+  });
+
+  it("descarta una portada social corrupta y usa otra imagen pública verificable", () => {
+    const baseAsset = referenceStore.assets[0];
+    if (!baseAsset) throw new Error("Fixture incompleto");
+    const invalidSocialAsset = {
+      ...baseAsset,
+      id: "asset-invalid-social" as typeof baseAsset.id,
+      name: "Portada social corrupta",
+      source: "data:image/jpeg;base64,AA==",
+      fallbackSource: undefined,
+      hash: "invalid-social",
+    };
+    const project = structuredClone(referenceStore);
+    project.assets.push(invalidSocialAsset);
+    project.seo.socialImageId = invalidSocialAsset.id;
+
+    const result = exportProject(project, { mode: "production" });
+    const homeHtml = String(result.files.get("index.html"));
+
+    expect(result.files.has("assets/invalid-social.jpg")).toBe(false);
+    expect(homeHtml).not.toContain("invalid-social");
+    expect(homeHtml).toContain('<meta property="og:image"');
+  });
+
   it("deduplica rutas y binarios de assets con el mismo hash", () => {
     const firstAsset = referenceStore.assets[0];
     if (!firstAsset) throw new Error("Fixture incompleto");
     const duplicate = {
       ...firstAsset,
       id: "asset-duplicate",
-      source: "data:image/webp;base64,AA==",
+      source: VALID_WEBP_DATA_URL,
       mimeType: "image/webp",
       hash: "shared-content-hash",
     };
@@ -1011,6 +1225,7 @@ describe("exporter", () => {
 
 /google-merchant.xml
   Cache-Control: public, max-age=900, must-revalidate
+  Content-Type: application/xml; charset=utf-8
 
 /ai-context.json
   Cache-Control: public, max-age=900, must-revalidate
@@ -1035,6 +1250,7 @@ describe("exporter", () => {
 
 /feed.xml
   Cache-Control: public, max-age=900, must-revalidate
+  Content-Type: application/rss+xml; charset=utf-8
 `);
   });
 
@@ -1252,6 +1468,11 @@ describe("exporter", () => {
         brandName: "Tienda editorial",
         legalName: "Tienda editorial SRL",
       },
+      assets: referenceStore.assets.map((asset) =>
+        asset.id === "asset-manta"
+          ? { ...asset, fallbackSource: VALID_PNG_DATA_URL, width: 1200, height: 630 }
+          : asset,
+      ),
       seo: { ...referenceStore.seo, socialImageId: "asset-manta" },
       updatedAt: "2026-08-18T18:00:00.000Z",
     };
@@ -1264,7 +1485,7 @@ describe("exporter", () => {
     expect(html).toContain('<meta name="robots" content="index,follow');
     expect(html).toContain('<meta name="googlebot" content="index,follow');
     expect(aboutHtml).toContain(
-      '<meta property="og:image" content="https://tienda-referencia.example/assets/fixture-manta.webp">',
+      '<meta property="og:image" content="https://tienda-referencia.example/assets/fixture-manta-fallback.png">',
     );
     expect(aboutHtml).toContain(
       '<meta property="og:image:alt" content="Manta de algodón verde sobre un sillón claro">',
@@ -1344,13 +1565,16 @@ describe("exporter", () => {
   it("og:image sale de project.seo.socialImageId", () => {
     const project = {
       ...referenceStore,
+      assets: referenceStore.assets.map((asset) =>
+        asset.id === "asset-jarra" ? { ...asset, fallbackSource: VALID_PNG_DATA_URL } : asset,
+      ),
       seo: { ...referenceStore.seo, socialImageId: "asset-jarra" as const },
     };
     const homeHtml = String(
       exportProject(project as typeof referenceStore, { mode: "draft" }).files.get("index.html"),
     );
     expect(homeHtml).toContain(
-      '<meta property="og:image" content="https://tienda-referencia.example/assets/fixture-jarra.webp">',
+      '<meta property="og:image" content="https://tienda-referencia.example/assets/fixture-jarra-fallback.png">',
     );
   });
 
@@ -1363,8 +1587,8 @@ describe("exporter", () => {
       name: "Portada social AVIF",
       alt: "Portada social de la tienda",
       mimeType: "image/avif",
-      source: "data:image/avif;base64,AA==",
-      fallbackSource: "data:image/jpeg;base64,AQ==",
+      source: VALID_AVIF_DATA_URL,
+      fallbackSource: VALID_JPEG_DATA_URL,
       width: 1200,
       height: 630,
       hash: "social-avif",

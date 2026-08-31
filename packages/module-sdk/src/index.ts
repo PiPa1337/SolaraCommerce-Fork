@@ -509,15 +509,25 @@ export function formatMoneyForProject(
   });
 }
 
-function imageMimeType(source: string): "image/webp" | "image/jpeg" | "image/png" {
-  const dataMime = /^data:(image\/(?:webp|jpeg|png));/i.exec(source)?.[1]?.toLowerCase();
-  if (dataMime === "image/jpeg" || dataMime === "image/png" || dataMime === "image/webp") {
-    return dataMime;
-  }
+function canonicalImageMimeType(value: string | undefined): string | undefined {
+  const normalized = value?.split(";", 1)[0]?.trim().toLowerCase();
+  if (!normalized) return undefined;
+  if (normalized === "image/jpg" || normalized === "image/pjpeg") return "image/jpeg";
+  return normalized.startsWith("image/") ? normalized : undefined;
+}
+
+function imageMimeType(source: string, declaredMimeType?: string): string {
+  const dataMime = canonicalImageMimeType(/^data:([^;,]+)/i.exec(source)?.[1]);
+  if (dataMime) return dataMime;
   const extension = source.split(/[?#]/, 1)[0]?.split(".").pop()?.toLowerCase();
   if (extension === "jpg" || extension === "jpeg") return "image/jpeg";
   if (extension === "png") return "image/png";
-  return "image/webp";
+  if (extension === "webp") return "image/webp";
+  if (extension === "avif") return "image/avif";
+  if (extension === "gif") return "image/gif";
+  if (extension === "svg" || extension === "svgz") return "image/svg+xml";
+  if (extension === "ico") return "image/x-icon";
+  return canonicalImageMimeType(declaredMimeType) ?? "image/webp";
 }
 
 export function renderImage(
@@ -545,9 +555,9 @@ export function renderImage(
   const decoding = ` decoding="${escapeAttribute(options.decoding ?? "async")}"`;
   const fallbackSource = safeAssetUrl(asset.fallbackSource ?? asset.source, "");
   const primarySource = safeAssetUrl(asset.source, "");
-  const primaryMime = imageMimeType(asset.source);
+  const primaryMime = imageMimeType(asset.source, asset.mimeType);
   const normalizedResponsive =
-    asset.mimeType === "image/x-icon"
+    primaryMime === "image/x-icon"
       ? asset.responsiveSources
       : compactResponsiveSources(asset.responsiveSources, asset.width, {
           width: asset.width,
@@ -557,7 +567,11 @@ export function renderImage(
     .map((source) => {
       const safeSource = safeAssetUrl(source.source, "");
       return safeSource
-        ? { mime: imageMimeType(source.source), source: safeSource, width: source.width }
+        ? {
+            mime: imageMimeType(source.source, asset.mimeType),
+            source: safeSource,
+            width: source.width,
+          }
         : undefined;
     })
     .filter(

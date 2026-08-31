@@ -20,6 +20,7 @@ import {
   effectiveHomeSections,
   publicMediaUsage,
 } from "./index.js";
+import { merchantIdMap } from "./merchant.js";
 import { publicWhatsAppPhone } from "./whatsapp.js";
 
 export function auditProject(
@@ -245,6 +246,7 @@ export function auditProject(
       (section) =>
         section.enabled &&
         section.slot === "hero" &&
+        section.settings.mode === "video" &&
         section.settings.videoAssetId === video.id &&
         typeof section.settings.posterAssetId === "string" &&
         section.settings.posterAssetId.length > 0,
@@ -401,6 +403,17 @@ export function auditProject(
           entity: { type: "variant", id: variant.id, label: `${product.title} - ${variant.title}` },
         });
       }
+      if (variant.available !== (variant.stockStatus !== "out_of_stock")) {
+        issues.push({
+          code: "variant.availability-mismatch",
+          severity: "warning",
+          message: `${product.title}, ${variant.title} combina Disponible para vender=${String(variant.available)} con estado de stock=${variant.stockStatus}; sincronizá ambos campos para que el HTML y Merchant expresen la misma disponibilidad.`,
+          path: `products.${productIndex}.variants.${variantIndex}`,
+          area: "merchant",
+          fixTarget: "catalog",
+          entity: { type: "variant", id: variant.id, label: `${product.title} - ${variant.title}` },
+        });
+      }
       if (variant.stockStatus !== "preorder" && variant.availabilityDate) {
         issues.push({
           code: "variant.availability-date.unused",
@@ -415,6 +428,7 @@ export function auditProject(
   });
 
   const feed = buildMerchantFeed(project, snapshot);
+  const merchantOfferIds = merchantIdMap(snapshot.offers.map((offer) => offer.variantId));
   // Verificar cada oferta con `feed.includes(markup)` es O(ofertas × feed):
   // con 3.600 ofertas y un feed de ~1 MB son ~10 GB de comparación de strings.
   // El feed se construye desde el MISMO snapshot (price/availability no pueden
@@ -423,7 +437,7 @@ export function auditProject(
     [...feed.matchAll(/<g:id>([^<]+)<\/g:id>/g)].map((match) => match[1]),
   );
   snapshot.offers.forEach((offer) => {
-    if (!feedItemIds.has(escapeXml(offer.variantId))) {
+    if (!feedItemIds.has(escapeXml(merchantOfferIds.get(offer.variantId) ?? offer.variantId))) {
       issues.push({
         code: "merchant.snapshot-mismatch",
         severity: "critical",

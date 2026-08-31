@@ -38,7 +38,6 @@ import {
   getCategoryAncestors,
   getCategoryBreadcrumb,
   getCategoryProductIds,
-  isCatalogModernPlaceholderAsset,
   personalizeWhatsAppGreeting,
   resolveLegalCountryName,
   StoreProjectV1Schema,
@@ -99,6 +98,7 @@ export interface CommerceOfferSnapshot {
   productId: string;
   variantId: string;
   itemGroupId: string;
+  itemGroupTitle: string;
   canonicalPath: string;
   variantPath: string;
   title: string;
@@ -178,6 +178,8 @@ export interface PageDescriptor {
   title: string;
   description: string;
   canonicalPath: string;
+  /** Fecha de modificación significativa de esta URL para el sitemap. */
+  lastModifiedAt?: string;
   pageType:
     | "home"
     | "category"
@@ -274,11 +276,19 @@ export { buildWhatsAppLink, interpolatePublicCopy, publicWhatsAppPhone };
 
 import {
   assetExtension,
-  socialImageValue as compatibleSocialImageValue,
+  imageExtensionFromSource,
   imageFor,
+  imageMimeTypeFromBytes,
+  imageMimeTypeFromSource,
   imageUrl,
   mimeTypeExtension,
+  normalizeDataUrlMimeType,
+  parseDataUrl,
   productImagePaths,
+  resolveSocialImage,
+  type SocialImageResolutionOptions,
+  socialImageCompatibility,
+  socialImageCompatibilityByAssetId,
   videoFor,
   videoUrl,
 } from "./assets.js";
@@ -293,10 +303,18 @@ import {
 
 export {
   assetExtension,
+  imageExtensionFromSource,
   imageFor,
   imageUrl,
+  imageMimeTypeFromBytes,
+  imageMimeTypeFromSource,
   mimeTypeExtension,
+  normalizeDataUrlMimeType,
+  parseDataUrl,
   productImagePaths,
+  socialImageCompatibility,
+  socialImageCompatibilityByAssetId,
+  resolveSocialImage,
   videoFor,
   videoUrl,
 };
@@ -311,14 +329,25 @@ import {
   buildSitemap,
   buildVideoSitemap,
 } from "./feeds.js";
+import { merchantItemGroupIdMap } from "./merchant.js";
 
 export { auditProject, auditReport };
+export {
+  MERCHANT_ITEM_GROUP_ID_MAX_LENGTH,
+  merchantIdMap,
+  merchantItemGroupIdMap,
+  normalizeMerchantId,
+  normalizeMerchantItemGroupId,
+} from "./merchant.js";
 
 function offerAvailability(variant: Variant): CommerceOfferSnapshot["availability"] {
   return variant.stockStatus;
 }
 
 export function buildCommerceSnapshot(project: StoreProjectV1): CommerceSnapshot {
+  const itemGroupIds = merchantItemGroupIdMap(
+    project.products.filter((product) => product.status === "active").map((product) => product.id),
+  );
   const products = project.products
     .filter((product) => product.status === "active")
     .map((product) => {
@@ -329,7 +358,8 @@ export function buildCommerceSnapshot(project: StoreProjectV1): CommerceSnapshot
           ({
             productId: product.id,
             variantId: variant.id,
-            itemGroupId: product.id,
+            itemGroupId: itemGroupIds.get(product.id) ?? product.id,
+            itemGroupTitle: product.title,
             canonicalPath,
             variantPath: `${canonicalPath}?variant=${encodeURIComponent(variant.id)}`,
             title: `${product.title} - ${variant.title}`,
@@ -368,22 +398,11 @@ export function buildCommerceSnapshot(project: StoreProjectV1): CommerceSnapshot
 }
 
 function sourceExtension(source: string, fallback: string): string {
-  const mimeType = /^data:([^;,]+)/i.exec(source)?.[1];
-  return mimeTypeExtension(mimeType) ?? fallback;
+  return imageExtensionFromSource(source, fallback) ?? fallback;
 }
 
 export function dataUrlBytes(source: string): Uint8Array | undefined {
-  const match = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(source);
-  if (!match) return undefined;
-  const payload = match[3] ?? "";
-  if (match[2]) {
-    if (typeof atob === "function") {
-      const binary = atob(payload);
-      return Uint8Array.from(binary, (character) => character.charCodeAt(0));
-    }
-    return Uint8Array.from(Buffer.from(payload, "base64"));
-  }
-  return encoder.encode(decodeURIComponent(payload));
+  return parseDataUrl(source)?.bytes;
 }
 
 function publicAssetPath(
@@ -408,7 +427,10 @@ function publicAssetPath(
 }
 
 function responsiveSourcesForAsset(asset: ImageAsset): ImageAsset["responsiveSources"] {
-  if (asset.mimeType === "image/x-icon" || !asset.responsiveSources) {
+  if (
+    imageMimeTypeFromSource(asset.source, asset.mimeType) === "image/x-icon" ||
+    !asset.responsiveSources
+  ) {
     return asset.responsiveSources;
   }
   return compactResponsiveSources(asset.responsiveSources, asset.width, {
@@ -420,25 +442,32 @@ function responsiveSourcesForAsset(asset: ImageAsset): ImageAsset["responsiveSou
 function projectWithPublicAssetUrls(
   project: StoreProjectV1,
   semanticNames = false,
+  socialImageOptions: SocialImageResolutionOptions = {},
 ): StoreProjectV1 {
   const whatsAppPhone = publicWhatsAppPhone(project);
-  return {
+  const allowedAssetIds = publicMediaUsage(project, socialImageOptions).assetIds;
+  const resolverOptions = { ...socialImageOptions, allowedAssetIds };
+  const expectedSocial = resolveSocialImage(project, undefined, resolverOptions);
+  const publicProject = {
     ...project,
     whatsapp: {
       ...project.whatsapp,
       phone: whatsAppPhone,
     },
     assets: project.assets.map((asset) => {
-      const publicPrimarySource = asset.source.startsWith("data:")
+      const effectiveMimeType =
+        imageMimeTypeFromSource(asset.source, asset.mimeType) ?? asset.mimeType;
+      const publicPrimarySource = /^data:/i.test(asset.source)
         ? publicAssetPath(asset, "primary", asset.source, undefined, semanticNames)
         : asset.source;
       const responsiveSources = responsiveSourcesForAsset(asset);
       return {
         ...asset,
+        mimeType: effectiveMimeType,
         source: publicPrimarySource,
         ...(asset.fallbackSource
           ? {
-              fallbackSource: asset.fallbackSource.startsWith("data:")
+              fallbackSource: /^data:/i.test(asset.fallbackSource)
                 ? publicAssetPath(asset, "fallback", asset.fallbackSource, undefined, semanticNames)
                 : asset.fallbackSource,
             }
@@ -447,7 +476,7 @@ function projectWithPublicAssetUrls(
           ? {
               responsiveSources: responsiveSources.map((source) => ({
                 ...source,
-                source: source.source.startsWith("data:")
+                source: /^data:/i.test(source.source)
                   ? source.source === asset.source
                     ? publicPrimarySource
                     : publicAssetPath(asset, "primary", source.source, source.width, semanticNames)
@@ -459,11 +488,16 @@ function projectWithPublicAssetUrls(
     }),
     videos: project.videos.map((video) => ({
       ...video,
-      source: video.source.startsWith("data:")
+      source: /^data:/i.test(video.source)
         ? `/assets/${video.hash}.${assetExtension(video)}`
         : video.source,
     })),
   };
+  const publicSocial = resolveSocialImage(publicProject, undefined, resolverOptions);
+  if (expectedSocial.status === "resolved" && publicSocial.status !== "resolved") {
+    throw new Error("La portada social se perdió al convertir los assets a rutas públicas.");
+  }
+  return publicProject;
 }
 
 const PREVIEW_ASSET_PREFIX = "/__solara-preview-assets/";
@@ -476,9 +510,18 @@ interface PreviewAssetBundle {
 function createPreviewAssetBundle(project: StoreProjectV1): PreviewAssetBundle {
   const sources = new Map<string, string>();
   const addSource = (asset: ImageAsset | VideoAsset, source: string, suffix = ""): string => {
-    if (!source.startsWith("data:")) return source;
-    const path = `${PREVIEW_ASSET_PREFIX}${asset.hash}${suffix}.${assetExtension(asset)}`;
-    sources.set(path, source);
+    if (!/^data:/i.test(source)) return source;
+    const normalizedSource = asset.kind === "image" ? normalizeDataUrlMimeType(source) : source;
+    const extension =
+      asset.kind === "image"
+        ? (imageExtensionFromSource(source, assetExtension(asset)) ?? assetExtension(asset))
+        : assetExtension(asset);
+    const path = `${PREVIEW_ASSET_PREFIX}${asset.hash}${suffix}.${extension}`;
+    const previous = sources.get(path);
+    if (previous !== undefined && previous !== normalizedSource) {
+      throw new Error(`Dos assets distintos intentan ocupar la misma ruta de preview: ${path}`);
+    }
+    sources.set(path, normalizedSource);
     return path;
   };
 
@@ -906,7 +949,10 @@ function modernProjectClass(project: StoreProjectV1): string {
     : " catalog-modern";
 }
 
-export function publicMediaUsage(project: StoreProjectV1): {
+export function publicMediaUsage(
+  project: StoreProjectV1,
+  socialImageOptions: SocialImageResolutionOptions = {},
+): {
   assetIds: Set<string>;
   videoIds: Set<string>;
 } {
@@ -919,23 +965,8 @@ export function publicMediaUsage(project: StoreProjectV1): {
     if (knownAssetIds.has(value)) assetIds.add(value);
     if (knownVideoIds.has(value)) videoIds.add(value);
   };
-  const scan = (value: unknown): void => {
-    if (typeof value === "string") {
-      addValue(value);
-      return;
-    }
-    if (Array.isArray(value)) {
-      value.forEach(scan);
-      return;
-    }
-    if (typeof value === "object" && value !== null) {
-      Object.values(value).forEach(scan);
-    }
-  };
-
   addValue(project.identity.logoAssetId);
   addValue(project.seo.faviconAssetId);
-  addValue(project.seo.socialImageId);
   project.products
     .filter((product) => product.status === "active")
     .forEach((product) => {
@@ -944,31 +975,80 @@ export function publicMediaUsage(project: StoreProjectV1): {
         addValue(variant.imageId);
       });
     });
-  project.categories.forEach((category) => {
-    addValue(category.imageId);
-  });
-  project.collections.forEach((collection) => {
-    addValue(collection.imageId);
-  });
-  [
+  project.categories
+    .filter((category) => category.status !== "hidden")
+    .forEach((category) => {
+      addValue(category.imageId);
+    });
+  project.collections
+    .filter((collection) => collection.status !== "hidden")
+    .forEach((collection) => {
+      addValue(collection.imageId);
+    });
+  const sections = [
     ...project.sections,
     ...project.pages
       .filter((page) => isPublishedEditablePage(project, page))
       .flatMap((page) => page.sections),
-  ]
+  ];
+  sections
     .filter((section) => section.enabled && shellSectionEnabled(project, section))
     .forEach((section) => {
-      scan(section.settings);
+      if (section.settings.enabled === false) return;
+      const definition = getModuleDefinition(section.moduleId);
+      if (!definition) return;
+      const mode = section.settings.mode;
+      const isHero = section.moduleId === "hero-media" || section.moduleId === "catalog-hero";
+      const scanField = (fieldKey: string): boolean => {
+        if (isHero && fieldKey === "videoAssetId" && mode !== "video") return false;
+        if (isHero && fieldKey === "slides" && mode !== "carousel") return false;
+        if (
+          section.moduleId === "catalog-hero" &&
+          project.commerceTemplates.designFamily === "catalog-modern-v2" &&
+          mode !== "carousel" &&
+          fieldKey === "backgroundImageId"
+        ) {
+          return false;
+        }
+        return true;
+      };
+      for (const field of definition.settingsFields) {
+        if (!scanField(field.key)) continue;
+        if (field.type === "asset") {
+          addValue(section.settings[field.key]);
+          continue;
+        }
+        if (field.type === "array") {
+          const items = section.settings[field.key];
+          if (!Array.isArray(items)) continue;
+          for (const item of items) {
+            if (typeof item !== "object" || item === null) continue;
+            Object.values(item).forEach(addValue);
+          }
+          continue;
+        }
+        if (field.type !== "repeater") continue;
+        const items = section.settings[field.key];
+        if (!Array.isArray(items)) continue;
+        for (const item of items) {
+          if (typeof item !== "object" || item === null) continue;
+          for (const itemField of field.fields) {
+            if (itemField.type === "asset") {
+              addValue((item as Record<string, unknown>)[itemField.key]);
+            }
+          }
+        }
+      }
     });
 
   project.videos.forEach((video) => {
     if (videoIds.has(video.id)) addValue(video.posterAssetId);
   });
-  const socialAsset = project.assets.find((asset) => asset.id === project.seo.socialImageId);
-  const fallbackAsset = project.assets.find(
-    (asset) => !isCatalogModernPlaceholderAsset(project, asset),
-  );
-  if (!socialAsset && fallbackAsset) assetIds.add(fallbackAsset.id);
+  const socialAsset = resolveSocialImage(project, undefined, {
+    ...socialImageOptions,
+    allowedAssetIds: assetIds,
+  }).asset;
+  if (socialAsset) assetIds.add(socialAsset.id);
   return { assetIds, videoIds };
 }
 
@@ -979,6 +1059,7 @@ export function publicMediaUsage(project: StoreProjectV1): {
 export function createPublicExportManifest(
   project: StoreProjectV1,
   pages: readonly PageDescriptor[] = buildPages(project),
+  socialImageOptions: SocialImageResolutionOptions = {},
 ): PublicExportManifest {
   const sections = activeProjectSections(project, [
     ...project.sections,
@@ -987,7 +1068,22 @@ export function createPublicExportManifest(
       .flatMap((page) => page.sections),
   ]);
   const activeModules = [...new Set(sections.map((section) => section.moduleId))].sort();
-  const media = publicMediaUsage(project);
+  const media = publicMediaUsage(project, socialImageOptions);
+  pages.forEach((page) => {
+    const preloadAsset = page.preloadImage
+      ? project.assets.find((asset) =>
+          [asset.source, asset.fallbackSource, imageUrl(project, asset.id)]
+            .filter((value): value is string => Boolean(value))
+            .includes(page.preloadImage as string),
+        )
+      : undefined;
+    if (preloadAsset) media.assetIds.add(preloadAsset.id);
+    const socialAsset = resolveSocialImage(project, page.image, {
+      ...socialImageOptions,
+      allowedAssetIds: media.assetIds,
+    }).asset;
+    if (socialAsset) media.assetIds.add(socialAsset.id);
+  });
   const runtimeFeatures = new Set<string>();
 
   if (project.siteShell.header && activeModules.some((moduleId) => moduleId.includes("header"))) {
@@ -1231,21 +1327,22 @@ function renderDocument(
   publicAiContext = false,
   manifest?: PublicExportManifest,
   runtimeAssets: RuntimeAssetPaths = { css: "/assets/storefront.css", js: "/assets/storefront.js" },
+  socialImageOptions: SocialImageResolutionOptions = {},
 ): string {
   const copy = project.publicCopy;
   const canonical = absoluteUrl(project, page.canonicalPath);
-  const socialImageValue =
-    page.image ??
-    imageUrl(project, project.seo.socialImageId) ??
-    imageUrl(project, project.assets[0]?.id);
-  const socialImageSource = compatibleSocialImageValue(project, socialImageValue);
-  const socialImage = socialImageSource
-    ? absoluteResourceUrl(project, socialImageSource)
-    : undefined;
+  const social = resolveSocialImage(project, page.image, {
+    ...socialImageOptions,
+    ...(manifest ? { allowedAssetIds: new Set(manifest.usedAssetIds) } : {}),
+  });
+  const socialImage = social.source ? absoluteResourceUrl(project, social.source) : undefined;
   // Video de la página (hero del home o del producto) para Open Graph.
+  const homeHeroSection = effectiveHomeSections(project).find(
+    (section) => section.slot === "hero" && section.enabled,
+  );
   const heroVideoSetting =
-    page.pageType === "home"
-      ? project.sections.find((s) => s.slot === "hero")?.settings["videoAssetId"]
+    page.pageType === "home" && homeHeroSection?.settings.mode === "video"
+      ? homeHeroSection.settings.videoAssetId
       : undefined;
   const pageVideo =
     typeof heroVideoSetting === "string" && heroVideoSetting
@@ -1253,21 +1350,21 @@ function renderDocument(
       : undefined;
   const faviconAsset = imageFor(project, project.seo.faviconAssetId);
   const faviconHref = faviconAsset?.source ? assetHref(project, faviconAsset.source) : undefined;
+  const faviconMimeType = faviconAsset
+    ? (imageMimeTypeFromSource(faviconAsset.source, faviconAsset.mimeType) ?? "image/x-icon")
+    : undefined;
   const faviconFallbackHref = faviconAsset?.fallbackSource
     ? assetHref(project, faviconAsset.fallbackSource)
     : undefined;
-  const socialAsset = page.image
-    ? project.assets.find(
-        (asset) => imageUrl(project, asset.id) === page.image || asset.source === page.image,
-      )
-    : (imageFor(project, project.seo.socialImageId) ?? project.assets[0]);
   const keywords = [
     project.identity.brandName,
     page.title,
     ...project.categories
-      .filter((category) => !category.parentId)
+      .filter((category) => !category.parentId && category.status !== "hidden")
       .map((category) => category.title),
-    ...project.collections.map((collection) => collection.title),
+    ...project.collections
+      .filter((collection) => collection.status !== "hidden")
+      .map((collection) => collection.title),
   ]
     .flatMap((value) => normalizeSearchTokens(value))
     .filter((value, index, values) => value.length >= 3 && values.indexOf(value) === index)
@@ -1284,10 +1381,10 @@ function renderDocument(
         : "index,follow,max-image-preview:large,max-video-preview:-1,max-snippet:-1";
   const verification = [
     project.seo.searchConsoleVerification
-      ? `<meta name="google-site-verification" content="${escapeHtml(project.seo.searchConsoleVerification)}">`
+      ? `<meta name="google-site-verification" content="${escapeAttribute(project.seo.searchConsoleVerification)}">`
       : "",
     project.seo.merchantVerification
-      ? `<meta name="google-site-verification" content="${escapeHtml(project.seo.merchantVerification)}">`
+      ? `<meta name="google-site-verification" content="${escapeAttribute(project.seo.merchantVerification)}">`
       : "",
   ]
     .filter(Boolean)
@@ -1296,9 +1393,11 @@ function renderDocument(
     .map((data) => `<script type="application/ld+json">${jsonForScript(data)}</script>`)
     .join("\n");
   const colorMode =
-    project.theme.colorMode === "auto" ? "" : ` data-theme="${project.theme.colorMode}"`;
+    project.theme.colorMode === "auto"
+      ? ""
+      : ` data-theme="${escapeAttribute(project.theme.colorMode)}"`;
   const baseHref = baseUrlPathname(project.baseUrl);
-  const baseHrefAttribute = baseHref ? ` data-base-href="${escapeHtml(baseHref)}"` : "";
+  const baseHrefAttribute = baseHref ? ` data-base-href="${escapeAttribute(baseHref)}"` : "";
   const serviceWorkerAttribute =
     (runtimeAssets.serviceWorker ?? mode === "production")
       ? ` data-service-worker-url="${escapeAttribute(assetHref(project, "/sw.js"))}"`
@@ -1309,7 +1408,7 @@ function renderDocument(
     { storeName: project.identity.brandName },
   );
   const whatsAppAttributes = whatsAppPhone
-    ? ` data-whatsapp="${escapeHtml(whatsAppPhone)}" data-whatsapp-greeting="${escapeHtml(personalizeWhatsAppGreeting(whatsappGreeting, project.identity.brandName))}" data-whatsapp-include-sku="${String(project.whatsapp.includeSku)}"`
+    ? ` data-whatsapp="${escapeAttribute(whatsAppPhone)}" data-whatsapp-greeting="${escapeAttribute(personalizeWhatsAppGreeting(whatsappGreeting, project.identity.brandName))}" data-whatsapp-include-sku="${String(project.whatsapp.includeSku)}"`
     : "";
   // Sólo el runtime necesita estos grupos; el resto del copy ya está renderizado
   // en HTML y repetirlo en cada página de un catálogo grande infla la salida.
@@ -1387,6 +1486,12 @@ function renderDocument(
       ? `<link rel="alternate" type="application/json" title="Contexto publico para agentes" href="${escapeAttribute(assetHref(project, "/ai-context.json"))}">
   <link rel="alternate" type="text/plain" title="Resumen publico para agentes" href="${escapeAttribute(assetHref(project, "/llms.txt"))}">`
       : "";
+  const rssFeedLink =
+    mode === "production" &&
+    !nonIndexablePage &&
+    project.products.some((product) => product.status === "active")
+      ? `<link rel="alternate" type="application/rss+xml" title="${escapeAttribute(`${project.identity.brandName} — productos publicados`)}" href="${escapeAttribute(assetHref(project, "/feed.xml"))}">`
+      : "";
   const consumerRightsLink =
     mode === "production" &&
     page.pageType !== "legal" &&
@@ -1394,24 +1499,31 @@ function renderDocument(
       ? `<aside class="solara-consumer-rights" aria-label="${escapeAttribute(copy.pages.privacy)}"><a href="${escapeAttribute(ARGENTINA_LEGAL_PROFILE.withdrawal.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(ARGENTINA_LEGAL_PROFILE.withdrawal.label)}</a></aside>`
       : "";
   const bodyWithConsumerRights = appendToFooter(page.body, consumerRightsLink);
+  const socialDimensions =
+    social.asset?.width === 1200 && social.asset.height === 630
+      ? `<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">`
+      : "";
+  const socialMetadata = socialImage
+    ? `<meta property="og:image" content="${escapeAttribute(socialImage)}"><meta property="og:image:type" content="${escapeAttribute(social.mimeType ?? "")}"><meta property="og:image:alt" content="${escapeAttribute(social.asset?.alt || page.title)}">${socialDimensions}<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeAttribute(page.title)}"><meta name="twitter:description" content="${escapeAttribute(page.description)}"><meta name="twitter:image" content="${escapeAttribute(socialImage)}">`
+    : `<meta name="twitter:card" content="summary">`;
 
   return `<!doctype html>
-<html lang="${project.locale}" data-store-id="${escapeHtml(project.id)}" data-currency="${project.currency}" data-price-fraction-display="${escapeHtml((project as any).priceFractionDisplay ?? "always")}"${whatsAppAttributes}${publicCopyAttribute} data-solara-runtime-features="${escapeAttribute((manifest?.runtimeFeatures ?? []).join(","))}"${colorMode}${baseHrefAttribute}${serviceWorkerAttribute}>
+<html lang="${escapeAttribute(project.locale)}" data-store-id="${escapeAttribute(project.id)}" data-currency="${escapeAttribute(project.currency)}" data-price-fraction-display="${escapeAttribute((project as any).priceFractionDisplay ?? "always")}"${whatsAppAttributes}${publicCopyAttribute} data-solara-runtime-features="${escapeAttribute((manifest?.runtimeFeatures ?? []).join(","))}"${colorMode}${baseHrefAttribute}${serviceWorkerAttribute}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${escapeHtml(page.title)}</title>
-  <meta name="description" content="${escapeHtml(page.description)}">
-  <meta name="author" content="${escapeHtml(author)}">
-  <meta name="publisher" content="${escapeHtml(publisher)}">
-  <meta name="robots" content="${robots}">
-  <meta name="googlebot" content="${robots}">
-  <link rel="canonical" href="${escapeHtml(canonical)}">
-  <meta name="theme-color" content="${escapeHtml(project.theme.colors.background)}">
+  <meta name="description" content="${escapeAttribute(page.description)}">
+  <meta name="author" content="${escapeAttribute(author)}">
+  <meta name="publisher" content="${escapeAttribute(publisher)}">
+  <meta name="robots" content="${escapeAttribute(robots)}">
+  <meta name="googlebot" content="${escapeAttribute(robots)}">
+  <link rel="canonical" href="${escapeAttribute(canonical)}">
+  <meta name="theme-color" content="${escapeAttribute(project.theme.colors.background)}">
   ${
     faviconHref
-      ? `<link rel="icon" href="${escapeAttribute(faviconHref)}" sizes="16x16 32x32 48x48 64x64 128x128 256x256" type="image/x-icon">
-  <link rel="shortcut icon" href="${escapeAttribute(faviconHref)}" type="image/x-icon">${
+      ? `<link rel="icon" href="${escapeAttribute(faviconHref)}" sizes="16x16 32x32 48x48 64x64 128x128 256x256" type="${escapeAttribute(faviconMimeType ?? "image/x-icon")}">
+  <link rel="shortcut icon" href="${escapeAttribute(faviconHref)}" type="${escapeAttribute(faviconMimeType ?? "image/x-icon")}">${
     faviconFallbackHref
       ? `
   <link rel="apple-touch-icon" sizes="180x180" href="${escapeAttribute(faviconFallbackHref)}">`
@@ -1419,24 +1531,25 @@ function renderDocument(
   }`
       : ""
   }
-  <meta property="og:type" content="${page.pageType === "product" ? "product" : "website"}">
+  <meta property="og:type" content="${escapeAttribute(page.pageType === "product" ? "product" : "website")}">
   <meta property="og:locale" content="es_AR">
-  <meta property="og:site_name" content="${escapeHtml(project.identity.brandName)}">
-  <meta property="og:title" content="${escapeHtml(page.title)}">
-  <meta property="og:description" content="${escapeHtml(page.description)}">
-  <meta property="og:url" content="${escapeHtml(canonical)}">
-  ${socialImage ? `<meta property="og:image" content="${escapeHtml(socialImage)}"><meta property="og:image:alt" content="${escapeHtml(socialAsset?.alt || page.title)}">${socialAsset ? `<meta property="og:image:width" content="${socialAsset.width}"><meta property="og:image:height" content="${socialAsset.height}">` : ""}<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(page.title)}"><meta name="twitter:description" content="${escapeHtml(page.description)}"><meta name="twitter:image" content="${escapeHtml(socialImage)}">` : `<meta name="twitter:card" content="summary">`}
-  ${project.identity.twitterHandle ? `<meta name="twitter:site" content="${escapeHtml(project.identity.twitterHandle.startsWith("@") ? project.identity.twitterHandle : "@" + project.identity.twitterHandle)}">` : ""}
-  ${pageVideo ? `<meta property="og:video" content="${escapeHtml(absoluteResourceUrl(project, pageVideo.source))}"><meta property="og:video:type" content="video/mp4">` : ""}
-  <meta property="og:updated_time" content="${escapeHtml(project.updatedAt)}">
-  ${page.pageType === "product" ? `<meta property="article:published_time" content="${escapeHtml(project.createdAt)}"><meta property="article:modified_time" content="${escapeHtml(project.updatedAt)}"><meta property="article:author" content="${escapeHtml(author)}">` : ""}
+  <meta property="og:site_name" content="${escapeAttribute(project.identity.brandName)}">
+  <meta property="og:title" content="${escapeAttribute(page.title)}">
+  <meta property="og:description" content="${escapeAttribute(page.description)}">
+  <meta property="og:url" content="${escapeAttribute(canonical)}">
+  ${socialMetadata}
+  ${project.identity.twitterHandle ? `<meta name="twitter:site" content="${escapeAttribute(project.identity.twitterHandle.startsWith("@") ? project.identity.twitterHandle : `@${project.identity.twitterHandle}`)}">` : ""}
+  ${pageVideo ? `<meta property="og:video" content="${escapeAttribute(absoluteResourceUrl(project, pageVideo.source))}"><meta property="og:video:type" content="${escapeAttribute(pageVideo.mimeType)}">` : ""}
+  <meta property="og:updated_time" content="${escapeAttribute(project.updatedAt)}">
+  ${page.pageType === "product" ? `<meta property="article:published_time" content="${escapeAttribute(project.createdAt)}"><meta property="article:modified_time" content="${escapeAttribute(project.updatedAt)}"><meta property="article:author" content="${escapeAttribute(author)}">` : ""}
   ${verification}
   ${lcpPreload}
   ${fontPreloads}
   ${aiContextLinks}
+  ${rssFeedLink}
   ${whatsAppAttributes ? `<link rel="preconnect" href="https://wa.me" crossorigin><link rel="dns-prefetch" href="https://wa.me">` : ""}
-  ${page.prevPath ? `<link rel="prev" href="${escapeHtml(absoluteUrl(project, page.prevPath))}">` : ""}
-  ${page.nextPath ? `<link rel="next" href="${escapeHtml(absoluteUrl(project, page.nextPath))}">` : ""}
+  ${page.prevPath ? `<link rel="prev" href="${escapeAttribute(absoluteUrl(project, page.prevPath))}">` : ""}
+  ${page.nextPath ? `<link rel="next" href="${escapeAttribute(absoluteUrl(project, page.nextPath))}">` : ""}
   <link rel="manifest" href="${escapeAttribute(assetHref(project, "/manifest.webmanifest"))}">
   <link rel="stylesheet" href="${escapeAttribute(assetHref(project, runtimeAssets.css))}">
   ${structuredData}
@@ -1621,7 +1734,7 @@ export function productCategoryScope(project: StoreProjectV1, product: Product):
 function buildPages(
   project: StoreProjectV1,
   snapshot = buildCommerceSnapshot(project),
-  options: { editor?: boolean } = {},
+  options: { editor?: boolean; socialImageOptions?: SocialImageResolutionOptions } = {},
 ): PageDescriptor[] {
   const renderPageSections = (
     sections: readonly StoreSection[],
@@ -1649,16 +1762,14 @@ function buildPages(
     (section) => section.enabled && section.slot === "hero",
   );
   const homeHeroVideo =
-    typeof homeHero?.settings.videoAssetId === "string"
+    homeHero?.settings.mode === "video" && typeof homeHero.settings.videoAssetId === "string"
       ? videoFor(project, homeHero.settings.videoAssetId)
       : undefined;
-  const socialImage =
-    imageUrl(project, project.seo.socialImageId) ??
-    (typeof homeHero?.settings.posterAssetId === "string"
-      ? imageUrl(project, homeHero.settings.posterAssetId)
-      : undefined) ??
-    imageUrl(project, homeHeroVideo?.posterAssetId) ??
-    imageUrl(project, project.assets[0]?.id);
+  const socialMedia = publicMediaUsage(project, options.socialImageOptions);
+  const socialImage = resolveSocialImage(project, undefined, {
+    ...options.socialImageOptions,
+    allowedAssetIds: socialMedia.assetIds,
+  }).source;
   const defaultSeoDescription =
     project.seo.description.trim() ||
     project.identity.description.trim() ||
@@ -1796,45 +1907,47 @@ function buildPages(
     return pages;
   });
 
-  const collections = project.collections.flatMap((collection) => {
-    const products = collection.productIds
-      .map((id) => project.products.find((product) => product.id === id))
-      .filter((product): product is Product => Boolean(product && product.status === "active"));
-    const pages: PageDescriptor[] = [];
-    const pageSize = project.commerceTemplates.category.productsPerPage;
+  const collections = project.collections
+    .filter((collection) => collection.status !== "hidden")
+    .flatMap((collection) => {
+      const products = collection.productIds
+        .map((id) => project.products.find((product) => product.id === id))
+        .filter((product): product is Product => Boolean(product && product.status === "active"));
+      const pages: PageDescriptor[] = [];
+      const pageSize = project.commerceTemplates.category.productsPerPage;
 
-    const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
-    for (let offset = 0; offset < Math.max(products.length, 1); offset += pageSize) {
-      const pageNumber = Math.floor(offset / pageSize) + 1;
-      const collectionCanvas = {
-        editorMode: options.editor === true,
-        sectionId: `generated-collection-${collection.id}`,
-      } as const;
-      const collectionCanvasRoot = options.editor
-        ? ` data-solara-module="generated-collection-page" data-solara-section="${escapeAttribute(collectionCanvas.sectionId)}"`
-        : "";
-      const paginated = products.slice(offset, offset + pageSize);
-      const collectionSections = listingSections(project, "collection", pageSize);
-      const collectionHeroAsset = imageFor(project, collection.imageId);
-      const collectionHeroImage = imageUrl(project, collection.imageId);
-      const collectionHeroMarkup =
-        collectionHeroAsset && collectionHeroImage
-          ? String(
-              renderImage(project, collection.imageId, {
-                className: "solara-collection-hero-image",
-                loading: "eager",
-                fetchPriority: "high",
-                sizes: "100vw",
-                fallbackAlt: collection.title,
-              }),
-            ).replace(
-              "<img",
-              `<img${canvasEntityAttributes(collectionCanvas, "collection-image", "collection", collection.id, "imageId", "image")}`,
-            )
+      const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
+      for (let offset = 0; offset < Math.max(products.length, 1); offset += pageSize) {
+        const pageNumber = Math.floor(offset / pageSize) + 1;
+        const collectionCanvas = {
+          editorMode: options.editor === true,
+          sectionId: `generated-collection-${collection.id}`,
+        } as const;
+        const collectionCanvasRoot = options.editor
+          ? ` data-solara-module="generated-collection-page" data-solara-section="${escapeAttribute(collectionCanvas.sectionId)}"`
           : "";
-      const body = [
-        renderPageSections(sharedHeader, { pageType: "collection", collection }),
-        `<main class="solara-container"${collectionCanvasRoot}>
+        const paginated = products.slice(offset, offset + pageSize);
+        const collectionSections = listingSections(project, "collection", pageSize);
+        const collectionHeroAsset = imageFor(project, collection.imageId);
+        const collectionHeroImage = imageUrl(project, collection.imageId);
+        const collectionHeroMarkup =
+          collectionHeroAsset && collectionHeroImage
+            ? String(
+                renderImage(project, collection.imageId, {
+                  className: "solara-collection-hero-image",
+                  loading: "eager",
+                  fetchPriority: "high",
+                  sizes: "100vw",
+                  fallbackAlt: collection.title,
+                }),
+              ).replace(
+                "<img",
+                `<img${canvasEntityAttributes(collectionCanvas, "collection-image", "collection", collection.id, "imageId", "image")}`,
+              )
+            : "";
+        const body = [
+          renderPageSections(sharedHeader, { pageType: "collection", collection }),
+          `<main class="solara-container"${collectionCanvasRoot}>
           <header class="solara-category-hero solara-collection-hero">
             <div class="solara-category-hero-copy">
               <h1${canvasEntityAttributes(collectionCanvas, "collection-title", "collection", collection.id, "title")}>${escapeHtml(collection.title)}</h1>
@@ -1849,35 +1962,35 @@ function buildPages(
           })}
           ${paginationNavigation(project, `/colecciones/${collection.slug}`, pageNumber, totalPages)}
         </main>`,
-        renderPageSections(sharedFooter, { pageType: "collection", collection }),
-      ].join("");
-      const canonicalPath =
-        pageNumber === 1
-          ? `/colecciones/${collection.slug}/`
-          : `/colecciones/${collection.slug}/pagina/${pageNumber}/`;
-      const collectionImage = imageUrl(project, collection.imageId);
-      pages.push({
-        path:
+          renderPageSections(sharedFooter, { pageType: "collection", collection }),
+        ].join("");
+        const canonicalPath =
           pageNumber === 1
-            ? `colecciones/${collection.slug}/index.html`
-            : `colecciones/${collection.slug}/pagina/${pageNumber}/index.html`,
-        title: `${collection.title}${pageNumber > 1 ? ` — Página ${pageNumber}` : ""} | ${project.identity.brandName}`,
-        description: collection.description || project.seo.description,
-        canonicalPath,
-        pageType: "collection",
-        body,
-        structuredData: [
-          breadcrumbData(project, [
-            { name: copy.pages.home, path: "/" },
-            { name: collection.title, path: `/colecciones/${collection.slug}/` },
-          ]),
-        ],
-        ...(collectionImage ? { image: collectionImage } : {}),
-        ...(collectionImage ? { preloadImage: collectionImage } : {}),
-      });
-    }
-    return pages;
-  });
+            ? `/colecciones/${collection.slug}/`
+            : `/colecciones/${collection.slug}/pagina/${pageNumber}/`;
+        const collectionImage = imageUrl(project, collection.imageId);
+        pages.push({
+          path:
+            pageNumber === 1
+              ? `colecciones/${collection.slug}/index.html`
+              : `colecciones/${collection.slug}/pagina/${pageNumber}/index.html`,
+          title: `${collection.title}${pageNumber > 1 ? ` — Página ${pageNumber}` : ""} | ${project.identity.brandName}`,
+          description: collection.description || project.seo.description,
+          canonicalPath,
+          pageType: "collection",
+          body,
+          structuredData: [
+            breadcrumbData(project, [
+              { name: copy.pages.home, path: "/" },
+              { name: collection.title, path: `/colecciones/${collection.slug}/` },
+            ]),
+          ],
+          ...(collectionImage ? { image: collectionImage } : {}),
+          ...(collectionImage ? { preloadImage: collectionImage } : {}),
+        });
+      }
+      return pages;
+    });
 
   const products = project.products
     .filter((product) => product.status === "active")
@@ -1926,6 +2039,7 @@ function buildPages(
         title: `${product.title}${(activeProductTitleCounts.get(product.title) ?? 0) > 1 ? ` — ${product.slug}` : ""} | ${project.identity.brandName}`,
         description: product.description || project.seo.description,
         canonicalPath: `/productos/${product.slug}/`,
+        lastModifiedAt: product.updatedAt,
         pageType: "product",
         body,
         structuredData: [
@@ -1962,7 +2076,7 @@ function buildPages(
   ].join("");
   const legacyAboutBody = [
     renderPageSections(sharedHeader, { pageType: "about" }),
-    `<main class="solara-editorial-page solara-container"><nav class="solara-breadcrumbs" aria-label="${escapeAttribute(copy.export.breadcrumbs)}"><a href="${internalHref(project, "/")}">${escapeHtml(copy.pages.home)}</a><span aria-hidden="true">/</span><span>${escapeHtml(copy.pages.about)}</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">${escapeHtml(copy.pages.aboutEyebrow)}</p><h1>${escapeHtml(aboutConfig?.title ?? copy.pages.aboutFallbackTitle)}</h1><p>${escapeHtml(project.identity.description)}</p></header><section class="solara-story-grid"><div><h2>${escapeHtml(copy.pages.aboutGuidanceTitle)}</h2><p>${escapeHtml(project.identity.description)}</p></div><div><h2>${escapeHtml(copy.pages.aboutInformationTitle)}</h2><p>${escapeHtml(project.policies.shipping.summary)}</p><a class="solara-secondary-action" href="${escapeAttribute(internalHref(project, "/contacto/"))}">${escapeHtml(copy.pages.aboutContactAction)}</a></div></section><section class="solara-values-grid"><article><h2>${escapeHtml(copy.pages.aboutSelectionTitle)}</h2><p>${escapeHtml(project.collections[0]?.description ?? copy.pages.aboutSelectionFallback)}</p></article><article><h2>${escapeHtml(copy.pages.aboutDeliveryTitle)}</h2><p>${escapeHtml(project.policies.shipping.summary)}</p></article><article><h2>${escapeHtml(copy.pages.aboutDirectTitle)}</h2><p>${escapeHtml(project.identity.email || project.identity.phone || copy.pages.aboutDirectFallback)}</p></article></section></main>`,
+    `<main class="solara-editorial-page solara-container"><nav class="solara-breadcrumbs" aria-label="${escapeAttribute(copy.export.breadcrumbs)}"><a href="${internalHref(project, "/")}">${escapeHtml(copy.pages.home)}</a><span aria-hidden="true">/</span><span>${escapeHtml(copy.pages.about)}</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">${escapeHtml(copy.pages.aboutEyebrow)}</p><h1>${escapeHtml(aboutConfig?.title ?? copy.pages.aboutFallbackTitle)}</h1><p>${escapeHtml(project.identity.description)}</p></header><section class="solara-story-grid"><div><h2>${escapeHtml(copy.pages.aboutGuidanceTitle)}</h2><p>${escapeHtml(project.identity.description)}</p></div><div><h2>${escapeHtml(copy.pages.aboutInformationTitle)}</h2><p>${escapeHtml(project.policies.shipping.summary)}</p><a class="solara-secondary-action" href="${escapeAttribute(internalHref(project, "/contacto/"))}">${escapeHtml(copy.pages.aboutContactAction)}</a></div></section><section class="solara-values-grid"><article><h2>${escapeHtml(copy.pages.aboutSelectionTitle)}</h2><p>${escapeHtml(project.collections.find((collection) => collection.status !== "hidden")?.description ?? copy.pages.aboutSelectionFallback)}</p></article><article><h2>${escapeHtml(copy.pages.aboutDeliveryTitle)}</h2><p>${escapeHtml(project.policies.shipping.summary)}</p></article><article><h2>${escapeHtml(copy.pages.aboutDirectTitle)}</h2><p>${escapeHtml(project.identity.email || project.identity.phone || copy.pages.aboutDirectFallback)}</p></article></section></main>`,
     editableSections("about").length
       ? renderPageSections(editableSections("about"), { pageType: "about" })
       : "",
@@ -2076,7 +2190,9 @@ function buildPages(
     ],
   };
 
-  const firstRootCategory = project.categories.find((category) => !category.parentId);
+  const firstRootCategory = project.categories.find(
+    (category) => !category.parentId && category.status !== "hidden",
+  );
   const emptyCartHref = firstRootCategory
     ? internalHref(project, `/categorias/${firstRootCategory.slug}/`)
     : internalHref(project, "/buscar/");
@@ -2447,7 +2563,7 @@ Podemos actualizar estos Términos para reflejar cambios operativos o legales. L
     canonicalPath: "/404.html",
     pageType: "not-found",
     body: isV2Design
-      ? `${renderPageSections(sharedHeader, { pageType: "legal" })}<main class="solara-container solara-error-page"><nav class="solara-breadcrumbs" aria-label="${escapeAttribute(copy.export.breadcrumbs)}"><a href="${internalHref(project, "/")}">${escapeHtml(copy.pages.home)}</a><span aria-hidden="true">/</span><span>404</span></nav><section class="solara-error-hero"><div class="solara-error-copy"><p class="solara-eyebrow">${escapeHtml(copy.pages.notFoundEyebrow)}</p><h1>${escapeHtml(copy.pages.notFoundTitle)}</h1><p>${escapeHtml(copy.pages.notFoundDescription)}</p><div class="solara-error-actions"><a class="solara-primary-action" href="${internalHref(project, "/")}">${escapeHtml(copy.pages.returnHome)}</a>${project.categories[0] ? `<a class="solara-secondary-action" href="${escapeAttribute(internalHref(project, `/categorias/${project.categories[0].slug}/`))}">${escapeHtml(copy.pages.viewCategories)}</a>` : ""}</div></div><p class="solara-error-code" aria-hidden="true">404</p></section></main>${renderPageSections(notFoundFooter, { pageType: "legal" })}`
+      ? `${renderPageSections(sharedHeader, { pageType: "legal" })}<main class="solara-container solara-error-page"><nav class="solara-breadcrumbs" aria-label="${escapeAttribute(copy.export.breadcrumbs)}"><a href="${internalHref(project, "/")}">${escapeHtml(copy.pages.home)}</a><span aria-hidden="true">/</span><span>404</span></nav><section class="solara-error-hero"><div class="solara-error-copy"><p class="solara-eyebrow">${escapeHtml(copy.pages.notFoundEyebrow)}</p><h1>${escapeHtml(copy.pages.notFoundTitle)}</h1><p>${escapeHtml(copy.pages.notFoundDescription)}</p><div class="solara-error-actions"><a class="solara-primary-action" href="${internalHref(project, "/")}">${escapeHtml(copy.pages.returnHome)}</a>${firstRootCategory ? `<a class="solara-secondary-action" href="${escapeAttribute(internalHref(project, `/categorias/${firstRootCategory.slug}/`))}">${escapeHtml(copy.pages.viewCategories)}</a>` : ""}</div></div><p class="solara-error-code" aria-hidden="true">404</p></section></main>${renderPageSections(notFoundFooter, { pageType: "legal" })}`
       : `${renderPageSections(sharedHeader, { pageType: "legal" })}<main class="solara-container solara-error-page"><p class="solara-eyebrow">404</p><h1>${escapeHtml(copy.pages.notFoundTitle)}</h1><p>${escapeHtml(copy.pages.notFoundDescription)}</p><a class="solara-primary-action" href="${internalHref(project, "/")}">${escapeHtml(copy.pages.returnHome)}</a></main>${renderPageSections(notFoundFooter, { pageType: "legal" })}`,
     structuredData: [],
   };
@@ -2613,8 +2729,145 @@ function assertPublicFileMap(files: ReadonlyMap<string, string | Uint8Array>): v
   }
 }
 
+function exportedAssetPath(project: StoreProjectV1, value: string): string | undefined {
+  if (/^data:/i.test(value)) return undefined;
+  let url: URL;
+  try {
+    url = new URL(value, `${normalizeBaseUrl(project.baseUrl)}/`);
+  } catch {
+    return undefined;
+  }
+  let pathname = url.pathname;
+  const prefix = baseUrlPathname(project.baseUrl);
+  if (prefix) {
+    if (pathname === prefix) pathname = "/";
+    else if (pathname.startsWith(`${prefix}/`)) pathname = pathname.slice(prefix.length);
+    else return undefined;
+  }
+  const path = pathname.replace(/^\/+/, "");
+  return path.startsWith("assets/") ? path : undefined;
+}
+
+function assertPublicArtifactReferences(
+  files: ReadonlyMap<string, string | Uint8Array>,
+  project: StoreProjectV1,
+): void {
+  const assertReference = (value: string, context: string): void => {
+    const path = exportedAssetPath(project, value);
+    if (path && !files.has(path)) {
+      throw new Error(
+        `El artefacto público referencia un asset inexistente (${context}): ${value}`,
+      );
+    }
+  };
+
+  for (const [path, value] of files) {
+    if (typeof value !== "string") continue;
+    if (path.endsWith(".html")) {
+      for (const match of value.matchAll(/\b(?:href|src|poster)=["']([^"']+)["']/gi)) {
+        assertReference(match[1] ?? "", path);
+      }
+      for (const match of value.matchAll(/\bsrcset=["']([^"']+)["']/gi)) {
+        for (const candidate of (match[1] ?? "").split(",")) {
+          assertReference(candidate.trim().split(/\s+/)[0] ?? "", path);
+        }
+      }
+      const ogImage = value.match(/<meta\s+[^>]*property="og:image"[^>]*content="([^"]*)"/i)?.[1];
+      if (ogImage) {
+        const ogType = value.match(
+          /<meta\s+[^>]*property="og:image:type"[^>]*content="([^"]*)"/i,
+        )?.[1];
+        const twitterImage = value.match(
+          /<meta\s+[^>]*name="twitter:image"[^>]*content="([^"]*)"/i,
+        )?.[1];
+        if (!ogType || !/^image\/[a-z0-9.+-]+$/i.test(ogType)) {
+          throw new Error(
+            `La metadata social de ${path} declara un MIME inválido: ${ogType ?? "ausente"}.`,
+          );
+        }
+        if (twitterImage !== ogImage) {
+          throw new Error(`La metadata social de ${path} desincroniza og:image y twitter:image.`);
+        }
+        const localPath = exportedAssetPath(project, ogImage);
+        const bytes = localPath ? files.get(localPath) : undefined;
+        if (localPath && !bytes) {
+          throw new Error(
+            `La metadata social de ${path} apunta a un archivo inexistente: ${ogImage}`,
+          );
+        }
+        if (bytes && typeof bytes !== "string") {
+          const actualMimeType = imageMimeTypeFromBytes(bytes);
+          if (actualMimeType && actualMimeType !== ogType) {
+            throw new Error(
+              `La metadata social de ${path} declara ${ogType}, pero el archivo es ${actualMimeType}.`,
+            );
+          }
+        }
+      }
+    }
+    if (path.endsWith(".xml")) {
+      for (const match of value.matchAll(/<(?:image:loc|video:content_loc)>([^<]+)</gi)) {
+        assertReference(match[1] ?? "", path);
+      }
+    }
+  }
+}
+
 function fileHash(value: string | Uint8Array): string {
   return sha256Hex(value);
+}
+
+function sameFileContent(left: string | Uint8Array, right: string | Uint8Array): boolean {
+  if (typeof left === "string" || typeof right === "string") return left === right;
+  if (left.length !== right.length) return false;
+  return left.every((byte, index) => byte === right[index]);
+}
+
+function setFileChecked(
+  files: Map<string, string | Uint8Array>,
+  path: string,
+  value: string | Uint8Array,
+): void {
+  const previous = files.get(path);
+  if (previous === undefined) {
+    files.set(path, value);
+    return;
+  }
+  if (!sameFileContent(previous, value)) {
+    throw new Error(
+      `La exportación detectó una colisión de archivos con contenido distinto: ${path}`,
+    );
+  }
+}
+
+function writeDataAsset(
+  files: Map<string, string | Uint8Array>,
+  asset: ImageAsset,
+  kind: "primary" | "fallback",
+  source: string,
+  width: number | undefined,
+  semanticNames: boolean,
+): void {
+  const bytes = dataUrlBytes(source);
+  if (!bytes) {
+    if (/^data:/i.test(source)) {
+      throw new Error(`El asset ${asset.id} contiene una data URL inválida.`);
+    }
+    return;
+  }
+  const actualMimeType = imageMimeTypeFromBytes(bytes);
+  if (!actualMimeType) {
+    throw new Error(`El asset ${asset.id} contiene bytes de imagen irreconocibles.`);
+  }
+  const actualExtension = mimeTypeExtension(actualMimeType);
+  const outputExtension = imageExtensionFromSource(source, assetExtension(asset));
+  if (actualExtension && outputExtension !== actualExtension) {
+    throw new Error(
+      `El asset ${asset.id} declara una extensión incompatible con sus bytes reales (${outputExtension} vs ${actualExtension}).`,
+    );
+  }
+  const path = publicAssetPath(asset, kind, source, width, semanticNames).slice(1);
+  setFileChecked(files, path, bytes);
 }
 
 function addDeploymentManifest(
@@ -2661,10 +2914,13 @@ function buildFiles(
   publicAiContext: boolean,
   semanticNames: boolean,
 ): Map<string, string | Uint8Array> {
-  const publicProject = projectWithPublicAssetUrls(project, semanticNames);
+  const socialImageOptions: SocialImageResolutionOptions = {
+    compatibilityByAssetId: socialImageCompatibilityByAssetId(project),
+  };
+  const publicProject = projectWithPublicAssetUrls(project, semanticNames, socialImageOptions);
   const snapshot = buildCommerceSnapshot(publicProject);
-  const pages = buildPages(publicProject, snapshot);
-  const manifest = createPublicExportManifest(publicProject, pages);
+  const pages = buildPages(publicProject, snapshot, { socialImageOptions });
+  const manifest = createPublicExportManifest(publicProject, pages, socialImageOptions);
   const fontFiles = fontFilesFor(
     publicProject.theme.typography.display,
     publicProject.theme.typography.body,
@@ -2710,7 +2966,15 @@ function buildFiles(
       page.path,
       prefixDocumentHrefs(
         publicProject,
-        renderDocument(publicProject, page, mode, publicAiContext, manifest, assets),
+        renderDocument(
+          publicProject,
+          page,
+          mode,
+          publicAiContext,
+          manifest,
+          assets,
+          socialImageOptions,
+        ),
       ),
     );
   });
@@ -2733,7 +2997,7 @@ function buildFiles(
   );
   if (mode === "production") {
     files.set("sitemap.xml", buildSitemap(publicProject, pages, manifest));
-    files.set("image-sitemap.xml", buildImageSitemap(publicProject));
+    files.set("image-sitemap.xml", buildImageSitemap(publicProject, pages));
     if (manifest.usedVideoIds.length > 0)
       files.set("video-sitemap.xml", buildVideoSitemap(publicProject));
   }
@@ -2772,6 +3036,7 @@ function buildFiles(
 
 /google-merchant.xml
   Cache-Control: public, max-age=900, must-revalidate
+  Content-Type: application/xml; charset=utf-8
 
 /ai-context.json
   Cache-Control: public, max-age=900, must-revalidate
@@ -2796,12 +3061,13 @@ function buildFiles(
 
 /feed.xml
   Cache-Control: public, max-age=900, must-revalidate
+  Content-Type: application/rss+xml; charset=utf-8
 `,
     );
   }
   // PWA: manifest y service worker para instalación y cache offline.
-  files.set("icons/icon-192.png", generateIconPng(publicProject.identity.brandName + "-192", 192));
-  files.set("icons/icon-512.png", generateIconPng(publicProject.identity.brandName + "-512", 512));
+  files.set("icons/icon-192.png", generateIconPng(`${publicProject.identity.brandName}-192`, 192));
+  files.set("icons/icon-512.png", generateIconPng(`${publicProject.identity.brandName}-512`, 512));
   {
     const customFaviconAsset = project.assets.find(
       (asset) => asset.id === project.seo.faviconAssetId,
@@ -2809,11 +3075,13 @@ function buildFiles(
     const customFaviconBytes = customFaviconAsset
       ? dataUrlBytes(customFaviconAsset.source)
       : undefined;
+    const validCustomFavicon =
+      customFaviconBytes && imageMimeTypeFromBytes(customFaviconBytes) === "image/x-icon"
+        ? customFaviconBytes
+        : undefined;
     files.set(
       "favicon.ico",
-      customFaviconBytes && customFaviconBytes.length > 0
-        ? customFaviconBytes
-        : buildFaviconIco(publicProject.identity.brandName),
+      validCustomFavicon ?? buildFaviconIco(publicProject.identity.brandName),
     );
   }
   files.set("offline/index.html", buildOfflinePage(publicProject));
@@ -2852,42 +3120,26 @@ function buildFiles(
   project.assets
     .filter((asset) => mediaUsage.assetIds.has(asset.id))
     .forEach((asset) => {
-      const bytes = dataUrlBytes(asset.source);
-      if (bytes)
-        files.set(
-          publicAssetPath(asset, "primary", asset.source, undefined, semanticNames).slice(1),
-          bytes,
-        );
-      const fallbackBytes = asset.fallbackSource ? dataUrlBytes(asset.fallbackSource) : undefined;
-      if (fallbackBytes) {
-        files.set(
-          publicAssetPath(
-            asset,
-            "fallback",
-            asset.fallbackSource ?? "",
-            undefined,
-            semanticNames,
-          ).slice(1),
-          fallbackBytes,
-        );
-      }
+      writeDataAsset(files, asset, "primary", asset.source, undefined, semanticNames);
+      if (asset.fallbackSource)
+        writeDataAsset(files, asset, "fallback", asset.fallbackSource, undefined, semanticNames);
       responsiveSourcesForAsset(asset)?.forEach((source) => {
         if (source.source === asset.source) return;
-        const responsiveBytes = dataUrlBytes(source.source);
-        if (responsiveBytes) {
-          files.set(
-            publicAssetPath(asset, "primary", source.source, source.width, semanticNames).slice(1),
-            responsiveBytes,
-          );
-        }
+        writeDataAsset(files, asset, "primary", source.source, source.width, semanticNames);
       });
     });
   project.videos
     .filter((video) => mediaUsage.videoIds.has(video.id))
     .forEach((video) => {
       const bytes = dataUrlBytes(video.source);
-      if (bytes) files.set(`assets/${video.hash}.${assetExtension(video)}`, bytes);
+      if (/^data:/i.test(video.source)) {
+        if (!bytes || bytes.length === 0) {
+          throw new Error(`El video ${video.id} contiene una data URL inválida.`);
+        }
+        setFileChecked(files, `assets/${video.hash}.${assetExtension(video)}`, bytes);
+      }
     });
+  assertPublicArtifactReferences(files, publicProject);
   addDeploymentManifest(files, publicProject, mode, publicAiContext, runtimeAssetsFull);
   return files;
 }
@@ -3356,11 +3608,17 @@ export function renderPreviewHtml(
   } = {},
 ): string | { html: string; canvasManifest: ReturnType<typeof buildCanvasManifest> } {
   const project = parseProject(projectInput, "renderizar la vista previa");
+  const socialImageOptions: SocialImageResolutionOptions = {
+    compatibilityByAssetId: socialImageCompatibilityByAssetId(project),
+  };
   const previewAssets = createPreviewAssetBundle(project);
   const pages = withExportContext("la fase de páginas del sitio", () =>
-    buildPages(previewAssets.project, undefined, { editor: options.editor?.enabled === true }),
+    buildPages(previewAssets.project, undefined, {
+      editor: options.editor?.enabled === true,
+      socialImageOptions,
+    }),
   );
-  const manifest = createPublicExportManifest(previewAssets.project, pages);
+  const manifest = createPublicExportManifest(previewAssets.project, pages, socialImageOptions);
   const canvasManifest = options.editor?.enabled
     ? buildCanvasManifest(previewAssets.project, { path })
     : undefined;
@@ -3403,11 +3661,19 @@ export function renderPreviewHtml(
         })()
       : page;
   let document = withExportContext("la fase de documentos del sitio", () =>
-    renderDocument(previewAssets.project, pageForRender, mode, false, manifest, {
-      css: "/assets/storefront.css",
-      js: "/assets/storefront.js",
-      serviceWorker: false,
-    }),
+    renderDocument(
+      previewAssets.project,
+      pageForRender,
+      mode,
+      false,
+      manifest,
+      {
+        css: "/assets/storefront.css",
+        js: "/assets/storefront.js",
+        serviceWorker: false,
+      },
+      socialImageOptions,
+    ),
   );
   document = prefixDocumentHrefs(project, document);
   const usedSources = new Map(

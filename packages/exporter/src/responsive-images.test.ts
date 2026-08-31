@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import { auditProject } from "./audit";
 import { exportProject } from "./index";
 
+const VALID_JPEG_DATA_URL = "data:image/jpeg;base64,/9j/2Q==";
+const VALID_WEBP_DATA_URL = "data:image/webp;base64,UklGRgAAAABXRUJQ";
+
 function makeResponsiveProject() {
   const project = structuredClone(catalogModernStore);
   return {
@@ -23,14 +26,14 @@ describe("imagenes responsive", () => {
       assets: [
         {
           ...firstAsset,
-          source: "data:image/webp;base64,AA==",
-          fallbackSource: "data:image/jpeg;base64,AQ==",
+          source: VALID_WEBP_DATA_URL,
+          fallbackSource: VALID_JPEG_DATA_URL,
           width: 1800,
           height: 1200,
           hash: "responsive-contract",
           responsiveSources: [320, 480, 640, 768, 1024, 1280, 1600, 1800].map((width) => ({
             width,
-            source: `data:image/webp;base64,${btoa(String(width))}`,
+            source: `data:image/webp;base64,${btoa(`RIFF${String(width).padStart(4, "\0")}WEBP`)}`,
           })),
         },
         ...catalogModernStore.assets.slice(1),

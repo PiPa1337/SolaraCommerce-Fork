@@ -102,6 +102,9 @@ rutas son archivos estáticos. No requiere endpoints del sitio en producción.
   un error accionable. WhatsApp reemplaza al pago online en v1.
 - **Google Merchant:** `google-merchant.xml` se genera localmente desde el
   mismo snapshot que HTML y JSON-LD. No se usa la Merchant API.
+- **RSS:** `feed.xml` se genera en producción desde el mismo snapshot y contiene
+  todos los productos activos. El HTML indexable publica su autodetección; no
+  reemplaza `google-merchant.xml`.
 - **Search Console:** el export incluye tokens opcionales y `sitemap.xml`; la
   verificación y envío se hacen manualmente en el dominio publicado.
 - **Hosting estático:** `_headers` contiene sugerencias compatibles con hosts

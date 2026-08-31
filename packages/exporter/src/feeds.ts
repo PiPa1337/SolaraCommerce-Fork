@@ -14,10 +14,11 @@ import {
   effectiveHomeSections,
   productCategoryScope,
 } from "./index.js";
+import { merchantIdMap, merchantItemGroupIdMap } from "./merchant.js";
 import { absoluteResourceUrl, absoluteUrl, normalizeBaseUrl } from "./urls.js";
 export function buildSitemap(
   project: StoreProjectV1,
-  pages: PageDescriptor[],
+  pages: readonly PageDescriptor[],
   manifest?: PublicExportManifest,
 ): string {
   const indexableRoutes = new Set(
@@ -31,7 +32,7 @@ export function buildSitemap(
     .map(
       (page) => `<url>
   <loc>${escapeXml(absoluteUrl(project, page.canonicalPath))}</loc>
-  <lastmod>${project.updatedAt.slice(0, 10)}</lastmod>
+  <lastmod>${(page.lastModifiedAt ?? project.updatedAt).slice(0, 10)}</lastmod>
   <changefreq>${page.pageType === "home" ? "daily" : "weekly"}</changefreq>
   <priority>${page.pageType === "home" ? "1.0" : page.pageType === "category" ? "0.8" : page.pageType === "collection" ? "0.7" : "0.6"}</priority>
   ${page.image ? `<image:image><image:loc>${escapeXml(absoluteResourceUrl(project, page.image))}</image:loc></image:image>` : ""}
@@ -43,75 +44,73 @@ ${urls.join("\n")}
 </urlset>`;
 }
 
-export function buildImageSitemap(project: StoreProjectV1): string {
-  const byPage = new Map<string, Array<{ url: string; caption: string }>>();
-  const add = (pagePath: string, url: string | undefined, caption: string): void => {
+export function buildImageSitemap(
+  project: StoreProjectV1,
+  pages: readonly PageDescriptor[] = [],
+): string {
+  const byPage = new Map<string, string[]>();
+  const add = (pagePath: string, url: string | undefined): void => {
     if (!url) return;
     const entries = byPage.get(pagePath) ?? [];
-    if (!entries.some((entry) => entry.url === url)) entries.push({ url, caption });
+    if (!entries.includes(url)) entries.push(url);
     byPage.set(pagePath, entries);
   };
+  pages
+    .filter((page) => !["search", "cart", "checkout", "not-found"].includes(page.pageType))
+    .forEach((page) => {
+      add(page.canonicalPath, page.image);
+      add(page.canonicalPath, page.preloadImage);
+    });
   const pageSize = project.commerceTemplates.category.productsPerPage;
   project.products
     .filter((product) => product.status === "active")
     .forEach((product) => {
       productImagePaths(project, product).forEach((url) => {
-        add(`/productos/${product.slug}/`, url, product.title);
+        add(`/productos/${product.slug}/`, url);
       });
     });
-  project.categories.forEach((category) => {
-    const totalPages = Math.max(
-      1,
-      Math.ceil(categoryProducts(project, category).length / pageSize),
-    );
-    for (let page = 1; page <= totalPages; page += 1) {
-      add(
-        page === 1
-          ? `/categorias/${category.slug}/`
-          : `/categorias/${category.slug}/pagina/${page}/`,
-        imageUrl(project, category.imageId),
-        category.title,
+  project.categories
+    .filter((category) => category.status !== "hidden")
+    .forEach((category) => {
+      const totalPages = Math.max(
+        1,
+        Math.ceil(categoryProducts(project, category).length / pageSize),
       );
-    }
-  });
-  project.collections.forEach((collection) => {
-    const products = collection.productIds
-      .map((id) => project.products.find((product) => product.id === id))
-      .filter((product): product is Product => Boolean(product && product.status === "active"));
-    const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
-    for (let page = 1; page <= totalPages; page += 1) {
-      add(
-        page === 1
-          ? `/colecciones/${collection.slug}/`
-          : `/colecciones/${collection.slug}/pagina/${page}/`,
-        imageUrl(project, collection.imageId),
-        collection.title,
-      );
-    }
-  });
-  const homeHero = effectiveHomeSections(project).find(
-    (section) => section.slot === "hero" && section.enabled,
-  );
-  const homeHeroVideo =
-    typeof homeHero?.settings.videoAssetId === "string"
-      ? videoFor(project, homeHero.settings.videoAssetId)
-      : undefined;
-  const homeImage =
-    (typeof homeHero?.settings.posterAssetId === "string"
-      ? imageUrl(project, homeHero.settings.posterAssetId)
-      : undefined) ??
-    imageUrl(project, homeHeroVideo?.posterAssetId) ??
-    imageUrl(project, project.seo.socialImageId) ??
-    imageUrl(project, project.assets[0]?.id);
-  add("/", homeImage, project.identity.brandName);
+      for (let page = 1; page <= totalPages; page += 1) {
+        add(
+          page === 1
+            ? `/categorias/${category.slug}/`
+            : `/categorias/${category.slug}/pagina/${page}/`,
+          imageUrl(project, category.imageId),
+        );
+      }
+    });
+  project.collections
+    .filter((collection) => collection.status !== "hidden")
+    .forEach((collection) => {
+      const products = collection.productIds
+        .map((id) => project.products.find((product) => product.id === id))
+        .filter((product): product is Product => Boolean(product && product.status === "active"));
+      const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
+      for (let page = 1; page <= totalPages; page += 1) {
+        add(
+          page === 1
+            ? `/colecciones/${collection.slug}/`
+            : `/colecciones/${collection.slug}/pagina/${page}/`,
+          imageUrl(project, collection.imageId),
+        );
+      }
+    });
+  const homePage = pages.find((page) => page.pageType === "home");
+  const homeImage = homePage?.preloadImage ?? homePage?.image;
+  add("/", homeImage);
   const urls = [...byPage.entries()].map(
     ([pagePath, entries]) => `<url>
   <loc>${escapeXml(absoluteUrl(project, pagePath))}</loc>
   ${entries
     .map(
-      (entry) => `<image:image>
-    <image:loc>${escapeXml(absoluteResourceUrl(project, entry.url))}</image:loc>
-    <image:caption>${escapeXml(entry.caption)}</image:caption>
+      (url) => `<image:image>
+    <image:loc>${escapeXml(absoluteResourceUrl(project, url))}</image:loc>
   </image:image>`,
     )
     .join("\n  ")}
@@ -128,7 +127,9 @@ export function buildVideoSitemap(project: StoreProjectV1): string {
     (section) => section.slot === "hero" && section.enabled,
   );
   const videoId =
-    typeof hero?.settings.videoAssetId === "string" ? hero.settings.videoAssetId : undefined;
+    hero?.settings.mode === "video" && typeof hero.settings.videoAssetId === "string"
+      ? hero.settings.videoAssetId
+      : undefined;
   const video = videoFor(project, videoId);
   if (!video) {
     return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"></urlset>`;
@@ -149,6 +150,8 @@ export function buildMerchantFeed(
   project: StoreProjectV1,
   snapshot = buildCommerceSnapshot(project),
 ): string {
+  const offerIds = merchantIdMap(snapshot.offers.map((offer) => offer.variantId));
+  const itemGroupIds = merchantItemGroupIdMap(snapshot.offers.map((offer) => offer.itemGroupId));
   const items = snapshot.offers.map((offer) => {
     const identifier = offer.gtin
       ? `<g:gtin>${escapeXml(offer.gtin)}</g:gtin>`
@@ -159,16 +162,18 @@ export function buildMerchantFeed(
       .slice(1)
       .map((image) => `<g:additional_image_link>${escapeXml(image)}</g:additional_image_link>`)
       .join("\n  ");
+    const availabilityDate = offer.availability === "preorder" ? offer.availabilityDate : undefined;
     return `<item>
-  <g:id>${escapeXml(offer.variantId)}</g:id>
-  <g:item_group_id>${escapeXml(offer.itemGroupId)}</g:item_group_id>
+  <g:id>${escapeXml(offerIds.get(offer.variantId) ?? offer.variantId)}</g:id>
+  <g:item_group_id>${escapeXml(itemGroupIds.get(offer.itemGroupId) ?? offer.itemGroupId)}</g:item_group_id>
+  <g:item_group_title>${escapeXml(offer.itemGroupTitle)}</g:item_group_title>
   <title>${escapeXml(offer.title)}</title>
   <description>${escapeXml(offer.description)}</description>
   <link>${escapeXml(absoluteUrl(project, offer.variantPath))}</link>
   <g:image_link>${escapeXml(offer.imageUrls[0] ?? "")}</g:image_link>
   ${additionalImages}
   <g:availability>${offer.availability}</g:availability>
-  ${offer.availabilityDate ? `<g:availability_date>${escapeXml(offer.availabilityDate)}</g:availability_date>` : ""}
+  ${availabilityDate ? `<g:availability_date>${escapeXml(availabilityDate)}</g:availability_date>` : ""}
   <g:price>${(offer.priceMinor / 100).toFixed(2)} ${offer.currency}</g:price>
   <g:condition>new</g:condition>
   <g:brand>${escapeXml(offer.brand)}</g:brand>
@@ -194,12 +199,21 @@ export function buildSearchIndex(project: StoreProjectV1): string {
       const prices = product.variants.map((variant) => variant.price);
       const image = imageUrl(project, product.imageIds[0]);
       const imageAsset = imageFor(project, product.imageIds[0]);
-      const categoryIds = [...productCategoryScope(project, product)];
+      const categoryIds = [...productCategoryScope(project, product)].filter(
+        (id) => project.categories.find((category) => category.id === id)?.status !== "hidden",
+      );
       const categoryNames = categoryIds
-        .map((id) => project.categories.find((category) => category.id === id)?.title)
+        .map((id) => project.categories.find((category) => category.id === id))
+        .filter((category) => category?.status !== "hidden")
+        .map((category) => category?.title)
         .filter((value): value is string => Boolean(value));
-      const collectionNames = product.collectionIds
-        .map((id) => project.collections.find((collection) => collection.id === id)?.title)
+      const collectionIds = product.collectionIds.filter(
+        (id) => project.collections.find((collection) => collection.id === id)?.status !== "hidden",
+      );
+      const collectionNames = collectionIds
+        .map((id) => project.collections.find((collection) => collection.id === id))
+        .filter((collection) => collection?.status !== "hidden")
+        .map((collection) => collection?.title)
         .filter((value): value is string => Boolean(value));
       const options = [
         ...new Set(
@@ -216,7 +230,7 @@ export function buildSearchIndex(project: StoreProjectV1): string {
         description: product.description,
         tags: product.tags,
         categoryIds,
-        collectionIds: product.collectionIds,
+        collectionIds,
         categoryNames,
         collectionNames,
         options,

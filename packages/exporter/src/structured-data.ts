@@ -154,7 +154,9 @@ export function offerData(project: StoreProjectV1, offer: CommerceOfferSnapshot)
         : offer.availability === "preorder"
           ? "https://schema.org/PreOrder"
           : "https://schema.org/OutOfStock",
-    ...(offer.availabilityDate ? { availabilityStarts: offer.availabilityDate } : {}),
+    ...(offer.availability === "preorder" && offer.availabilityDate
+      ? { availabilityStarts: offer.availabilityDate }
+      : {}),
     itemCondition: "https://schema.org/NewCondition",
     // Google Merchant recomienda una fecha de validez del precio para rich
     // snippets. Determinística a partir de updatedAt del proyecto.
@@ -269,7 +271,7 @@ export function productStructuredData(
   return {
     "@context": "https://schema.org",
     "@type": "ProductGroup",
-    productGroupID: product.id,
+    productGroupID: productSnapshot.offers[0]?.itemGroupId ?? product.id,
     name: product.title,
     description: product.description,
     brand: { "@type": "Brand", name: product.brand },

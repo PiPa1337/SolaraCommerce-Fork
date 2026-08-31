@@ -24,6 +24,7 @@ import {
   type AssetId,
   CATALOG_MODERN_PLACEHOLDER_PHONE,
   type Product,
+  type StoreProjectV1,
 } from "@solara/project-schema";
 import { z } from "zod";
 import {
@@ -59,6 +60,19 @@ function legacyCanvasContext(
     editorMode: context.canvas?.editorMode === true,
     sectionId: context.section.id,
   };
+}
+
+function isPublicNavigationHref(project: StoreProjectV1, href: string | undefined): boolean {
+  if (!href) return false;
+  const path = href.split(/[?#]/, 1)[0]?.replace(/\/+$/, "") || "/";
+  return (
+    !project.categories.some(
+      (category) => category.status === "hidden" && path === `/categorias/${category.slug}`,
+    ) &&
+    !project.collections.some(
+      (collection) => collection.status === "hidden" && path === `/colecciones/${collection.slug}`,
+    )
+  );
 }
 
 function sectionTextBinding(
@@ -277,10 +291,13 @@ export const editorialHeader: ModuleDefinition<
         return href;
       };
       const href = normalizeHref(item.href);
-      if (isV2 && !href) return [];
+      if ((isV2 && !href) || !isPublicNavigationHref(context.project, href)) return [];
       const children = item.children
         ?.map((child) => ({ ...child, href: normalizeHref(child.href) }))
-        .filter((child): child is typeof child & { href: string } => Boolean(child.href));
+        .filter(
+          (child): child is typeof child & { href: string } =>
+            Boolean(child.href) && isPublicNavigationHref(context.project, child.href),
+        );
       return [
         {
           ...item,
@@ -382,8 +399,8 @@ function heroFallbackImageId(context: RenderContext<HeroSettings>): string | und
   return (
     context.settings.imageId ||
     context.project.seo.socialImageId ||
-    context.project.collections[0]?.imageId ||
-    context.project.products[0]?.imageIds[0]
+    context.project.collections.find((collection) => collection.status !== "hidden")?.imageId ||
+    context.project.products.find((product) => product.status === "active")?.imageIds[0]
   );
 }
 
@@ -543,8 +560,8 @@ export const heroMedia: ModuleDefinition<"hero-media", z.infer<typeof heroMediaS
     const fallbackImageId =
       settings.posterAssetId ||
       context.project.seo.socialImageId ||
-      context.project.collections[0]?.imageId ||
-      context.project.products[0]?.imageIds[0];
+      context.project.collections.find((collection) => collection.status !== "hidden")?.imageId ||
+      context.project.products.find((product) => product.status === "active")?.imageIds[0];
     const slide = settings.slides[0];
     const title = slide?.title || settings.title;
     const body = slide?.body || settings.body;
@@ -829,7 +846,9 @@ export const collectionGrid: ModuleDefinition<
   styleAsset: scopedAssetId("collection-grid"),
   render(context) {
     const canvas = legacyCanvasContext(context);
-    const collections = context.project.collections.slice(0, context.settings.limit);
+    const collections = context.project.collections
+      .filter((collection) => collection.status !== "hidden")
+      .slice(0, context.settings.limit);
     const items = collections.map((collection) => {
       const image = renderImage(context.project, collection.imageId, {
         className: "solara-collection-image",
@@ -1201,8 +1220,8 @@ export const imageTextContent: ModuleDefinition<
     const imageId =
       context.settings.imageId ||
       context.project.seo.socialImageId ||
-      context.project.collections[0]?.imageId ||
-      context.project.products[0]?.imageIds[0];
+      context.project.collections.find((collection) => collection.status !== "hidden")?.imageId ||
+      context.project.products.find((product) => product.status === "active")?.imageIds[0];
     const image = renderImage(context.project, imageId, {
       className: "solara-content-image",
       sizes: "(max-width: 767px) 92vw, 50vw",

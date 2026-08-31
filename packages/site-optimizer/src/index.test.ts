@@ -75,6 +75,45 @@ describe("site optimizer", () => {
     expect(text.endsWith("\n")).toBe(true);
   });
 
+  it("mantiene llms.txt resumido, sin duplicados y con datos de contacto", () => {
+    const project = structuredClone(catalogModernStore);
+    const firstProduct = project.products[0];
+    const secondProduct = project.products[1];
+    if (!firstProduct || !secondProduct) throw new Error("Fixture sin productos suficientes");
+    secondProduct.title = firstProduct.title;
+
+    const text = buildLlmsTxt(project);
+    const primaryStart = text.indexOf("## Páginas principales");
+    const categoriesStart = text.indexOf("## Categorías");
+    const primarySection = text.slice(primaryStart, categoriesStart);
+    const urls = [...text.matchAll(/\]\((https?:\/\/[^)]+)\)/g)].map((match) => match[1]);
+
+    expect(primarySection).not.toContain("/productos/");
+    expect(new Set(urls).size).toBe(urls.length);
+    expect(text).toContain(`${firstProduct.title} — ${firstProduct.slug}`);
+    expect(text).toContain(`${firstProduct.title} — ${secondProduct.slug}`);
+    expect(text).toContain("Última actualización:");
+    expect(text).toContain("Email:");
+  });
+
+  it("no enlaza categorías ocultas en el contexto ni en llms.txt", () => {
+    const project = structuredClone(catalogModernStore);
+    const hiddenCategory = project.categories[0];
+    if (!hiddenCategory) throw new Error("Fixture sin categorías");
+    hiddenCategory.status = "hidden";
+
+    const context = JSON.parse(buildAiContext(project)) as {
+      pages: Array<{ path: string }>;
+      categories: Array<{ id: string }>;
+    };
+    const hiddenPath = `/categorias/${hiddenCategory.slug}/`;
+    const llms = buildLlmsTxt(project);
+
+    expect(context.pages.some((page) => page.path === hiddenPath)).toBe(false);
+    expect(context.categories.some((category) => category.id === hiddenCategory.id)).toBe(false);
+    expect(llms).not.toContain(hiddenPath);
+  });
+
   it("advierte cuando una seccion de catalogo apunta a un origen inexistente", () => {
     const project = structuredClone(catalogModernStore);
     const section = project.sections.find(

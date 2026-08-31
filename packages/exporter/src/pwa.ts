@@ -3,7 +3,8 @@
  */
 
 import type { StoreProjectV1 } from "@solara/project-schema";
-import { escapeHtml } from "./html.js";
+import { buildIndexableRoutes, publicProductTitle } from "@solara/site-optimizer";
+import { escapeHtml, escapeXml } from "./html.js";
 import { absoluteUrl, baseUrlPathname } from "./urls.js";
 
 const SHA256_K = new Uint32Array([
@@ -225,52 +226,51 @@ export function buildFaviconIco(seed: string): Uint8Array {
 }
 
 export function buildRssFeed(project: StoreProjectV1): string | undefined {
-  const items = project.products
+  const products = project.products
     .filter((p) => p.status === "active")
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .slice(0, 20)
+    .sort(
+      (a, b) =>
+        b.updatedAt.localeCompare(a.updatedAt) ||
+        b.createdAt.localeCompare(a.createdAt) ||
+        a.id.localeCompare(b.id),
+    );
+  if (products.length === 0) return undefined;
+  const items = products
     .map((p) => {
       const url = absoluteUrl(project, `/productos/${p.slug}/`);
-      const desc = escapeHtml(p.description.slice(0, 300));
-      const title = escapeHtml(p.title);
-      const date = new Date(p.createdAt).toUTCString();
-      return (
-        "<item><title>" +
-        title +
-        "</title><link>" +
-        url +
-        "</link><guid>" +
-        url +
-        "</guid><pubDate>" +
-        date +
-        "</pubDate><description>" +
-        desc +
-        "</description></item>"
-      );
+      const desc = escapeXml(p.description.trim().slice(0, 300));
+      const title = escapeXml(p.title.trim());
+      const date = new Date(p.updatedAt).toUTCString();
+      return `<item>
+  <title>${title}</title>
+  <link>${escapeXml(url)}</link>
+  <guid isPermaLink="false">${escapeXml(p.id)}</guid>
+  <pubDate>${date}</pubDate>
+  <description>${desc}</description>
+</item>`;
     })
-    .join("");
-  if (!items) return undefined;
-  const brandName = escapeHtml(project.identity.brandName);
+    .join("\n");
+  const brandName = escapeXml(project.identity.brandName.trim());
   const homeUrl = absoluteUrl(project, "/");
-  const seoDesc = escapeHtml(project.seo.description);
-  const language = escapeHtml(project.locale);
-  const lastBuild = new Date(project.updatedAt).toUTCString();
-  return (
-    '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>' +
-    brandName +
-    "</title><link>" +
-    homeUrl +
-    "</link><description>" +
-    seoDesc +
-    "</description>" +
-    "<language>" +
-    language +
-    "</language><lastBuildDate>" +
-    lastBuild +
-    "</lastBuildDate>" +
-    items +
-    "</channel></rss>"
+  const feedUrl = absoluteUrl(project, "/feed.xml");
+  const seoDesc = escapeXml(project.seo.description.trim());
+  const language = escapeXml(project.locale);
+  const lastBuild = products.reduce(
+    (latest, product) => (product.updatedAt > latest ? product.updatedAt : latest),
+    project.updatedAt,
   );
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+<channel>
+  <title>${brandName}</title>
+  <link>${escapeXml(homeUrl)}</link>
+  <description>${seoDesc}</description>
+  <language>${language}</language>
+  <lastBuildDate>${new Date(lastBuild).toUTCString()}</lastBuildDate>
+  <atom:link href="${escapeXml(feedUrl)}" rel="self" type="application/rss+xml" />
+${items}
+</channel>
+</rss>`;
 }
 
 /**
@@ -388,7 +388,7 @@ export function buildOfflinePage(project: StoreProjectV1): string {
   );
 }
 /**
- * Version extendida de llms.txt con precio, stock y categoria por producto.
+ * Versión extendida de llms.txt con precio, stock y categoría por producto.
  * Parte del modulo PWA/SEO del exporter.
  */
 
@@ -396,31 +396,138 @@ function clean(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
+type ProjectVariant = StoreProjectV1["products"][number]["variants"][number];
+
+function formatMinorPrice(price: number, currency: string): string {
+  return `${(price / 100).toFixed(2)} ${currency}`;
+}
+
+function variantAvailability(variant: ProjectVariant): string {
+  if (variant.stockStatus === "preorder") return "preventa";
+  if (variant.stockStatus === "in_stock" && variant.available) return "disponible";
+  if (variant.stockStatus === "in_stock") return "no disponible";
+  return "sin stock";
+}
+
+function productAvailability(variants: readonly ProjectVariant[]): string {
+  const inStock = variants.filter(
+    (variant) => variant.available && variant.stockStatus === "in_stock",
+  ).length;
+  if (inStock === variants.length) return "disponible";
+  if (inStock > 0) return `parcial (${inStock}/${variants.length} variantes disponibles)`;
+
+  const preorder = variants.filter((variant) => variant.stockStatus === "preorder").length;
+  if (preorder === variants.length) return "preventa";
+  if (preorder > 0) return `preventa (${preorder}/${variants.length} variantes)`;
+  return "consultar";
+}
+
+function productPriceSummary(variants: readonly ProjectVariant[], currency: string): string {
+  const prices = [...new Set(variants.map((variant) => variant.price))].sort((a, b) => a - b);
+  const first = prices[0] ?? 0;
+  const last = prices[prices.length - 1] ?? first;
+  if (first === last) return formatMinorPrice(first, currency);
+  return `desde ${formatMinorPrice(first, currency)} hasta ${formatMinorPrice(last, currency)}`;
+}
+
 export function buildLlmsFullTxt(project: StoreProjectV1): string {
-  const lines: string[] = [];
-  lines.push(`# ${project.identity.brandName} (version completa)`);
-  lines.push("");
-  lines.push(clean(project.identity.description));
-  lines.push("");
-  lines.push(`Moneda: ${project.currency}.`);
-  lines.push("");
-  lines.push("## Productos");
-  for (const product of project.products) {
-    if (product.status !== "active") continue;
-    const price = product.variants[0]?.price ?? 0;
-    const hasStock = product.variants.some((v) => v.stockStatus === "in_stock");
-    const categoryName =
-      project.categories.find((c) => c.id === product.categoryIds[0])?.title ?? "general";
-    lines.push(`### ${clean(product.title)}`);
-    lines.push(`- URL: ${project.baseUrl}/productos/${product.slug}/`);
-    lines.push(`- Precio: ${(price / 100).toFixed(2)} ${project.currency}`);
-    lines.push(`- Disponibilidad: ${hasStock ? "disponible" : "consultar"}`);
-    lines.push(`- Categoria: ${categoryName}`);
-    lines.push(`- Descripcion: ${clean(product.description)}`);
+  const routes = [
+    ...new Map(
+      buildIndexableRoutes(project).map((item) => [item.canonicalPath, item] as const),
+    ).values(),
+  ];
+  const primaryRoutes = routes.filter(
+    (item) =>
+      item.pageType !== "category" && item.pageType !== "collection" && item.pageType !== "product",
+  );
+  const categoryRoutes = routes.filter((item) => item.pageType === "category");
+  const collectionRoutes = routes.filter((item) => item.pageType === "collection");
+  const seenProductSlugs = new Set<string>();
+  const products = project.products.filter((product) => {
+    if (product.status !== "active" || seenProductSlugs.has(product.slug)) return false;
+    seenProductSlugs.add(product.slug);
+    return true;
+  });
+  const routeLines = (items: typeof routes) =>
+    items.map(
+      (item) =>
+        `- [${clean(item.title)}](${absoluteUrl(project, item.canonicalPath)}): ${clean(item.description)}`,
+    );
+  const contactPath =
+    project.commerceTemplates.designFamily === "catalog-modern-v2"
+      ? "/#contact-form"
+      : "/contacto/";
+  const whatsappPhone = project.whatsapp.phone.replace(/\D/g, "");
+  const contactLines = [
+    clean(project.identity.email) ? `- Email: ${clean(project.identity.email)}` : "",
+    clean(project.identity.phone) ? `- Teléfono: ${clean(project.identity.phone)}` : "",
+    clean(project.identity.address) ? `- Dirección: ${clean(project.identity.address)}` : "",
+    whatsappPhone ? `- WhatsApp: https://wa.me/${whatsappPhone}` : "",
+    `- Formulario: ${absoluteUrl(project, contactPath)}`,
+  ].filter((line): line is string => Boolean(line));
+
+  const lines: string[] = [
+    `# ${clean(project.identity.brandName)} (versión completa)`,
+    "",
+    clean(project.identity.description),
+    `- Moneda: ${project.currency}`,
+    `- Última actualización: ${project.updatedAt}`,
+    "",
+    "## Páginas principales",
+    ...routeLines(primaryRoutes),
+    ...(categoryRoutes.length > 0 ? ["", "## Categorías", ...routeLines(categoryRoutes)] : []),
+    ...(collectionRoutes.length > 0 ? ["", "## Colecciones", ...routeLines(collectionRoutes)] : []),
+    "",
+    "## Productos",
+  ];
+
+  for (const product of products) {
+    const variants = product.variants;
+    const categories = project.categories
+      .filter(
+        (category) => category.status !== "hidden" && product.categoryIds.includes(category.id),
+      )
+      .map((category) => clean(category.title));
+    const categoryLabel = categories.length > 0 ? categories.join(", ") : "general";
+
+    lines.push(`### ${publicProductTitle(project, product)}`);
+    lines.push(`- URL: ${absoluteUrl(project, `/productos/${product.slug}/`)}`);
+    lines.push(`- Precio: ${productPriceSummary(variants, project.currency)}`);
+    lines.push(`- Disponibilidad: ${productAvailability(variants)}`);
+    lines.push(`- Categorías: ${categoryLabel}`);
+    lines.push(`- Descripción: ${clean(product.description)}`);
+    lines.push(`- Actualizado: ${product.updatedAt}`);
+
+    if (variants.length === 1) {
+      const variant = variants[0];
+      if (variant?.sku.trim()) lines.push(`- SKU: ${clean(variant.sku)}`);
+      if (variant?.availabilityDate)
+        lines.push(`- Fecha de disponibilidad: ${variant.availabilityDate}`);
+    } else {
+      lines.push("- Variantes:");
+      variants.forEach((variant) => {
+        const details = [
+          clean(variant.title),
+          formatMinorPrice(variant.price, project.currency),
+          variantAvailability(variant),
+        ];
+        if (variant.sku.trim()) details.push(`SKU: ${clean(variant.sku)}`);
+        if (variant.availabilityDate) details.push(`disponible desde: ${variant.availabilityDate}`);
+        lines.push(`  - ${details.join("; ")}`);
+      });
+    }
     lines.push("");
   }
-  lines.push("## Politicas");
-  lines.push(`Envios: ${clean(project.policies.shipping.details)}`);
-  lines.push(`Cambios: ${clean(project.policies.returns.details)}`);
+
+  lines.push(
+    "## Políticas",
+    `- Envíos: ${clean(project.policies.shipping.details)}`,
+    `- Cambios y devoluciones: ${clean(project.policies.returns.details)}`,
+    "",
+    "## Contacto",
+    ...contactLines,
+    "",
+    `Nota comercial: los precios, la disponibilidad, el envío y el pago deben verificarse con ${clean(project.identity.brandName)} antes de confirmar el pedido.`,
+  );
   return `${lines.join("\n")}\n`;
 }

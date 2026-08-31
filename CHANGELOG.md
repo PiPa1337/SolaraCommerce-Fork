@@ -8,6 +8,34 @@
 
 # Changelog
 
+### Feed Merchant autoajustado por exportación (2026-08-31)
+
+- `g:id` y `g:item_group_id` se normalizan de forma determinista a un máximo
+  de 50 caracteres, conservando los IDs válidos y evitando colisiones.
+- Cada variante publica `g:item_group_title`; las fechas de disponibilidad sólo
+  se emiten para variantes en preorden y el JSON-LD mantiene la misma regla.
+- El auditor detecta divergencias entre `Disponible para vender` y `stockStatus`
+  sin inventar stock ni identificadores comerciales.
+
+### Feeds públicos coherentes en exportación (2026-08-31)
+
+- `feed.xml` ahora emite todos los productos activos, ordenados por actualización,
+  con GUID estable y autodetección RSS desde las páginas indexables.
+- La exportación publica MIME explícito para RSS y Google Merchant.
+
+### Contexto público para agentes coherente (2026-08-31)
+
+- `llms.txt` separa páginas principales, categorías, colecciones y productos sin
+  repetir URLs, desambigua títulos duplicados y publica contacto, moneda y fecha.
+- `llms-full.txt` normaliza URLs, incluye rutas públicas, contacto y snapshot, y
+  representa precios, disponibilidad y SKU de todas las variantes.
+
+### Fechas precisas en sitemaps para productos (2026-08-31)
+
+- El sitemap de producción usa la fecha de modificación propia de cada
+  producto en lugar de repetir la fecha global de la tienda.
+- El image-sitemap deja de emitir la etiqueta obsoleta `image:caption`.
+
 ### Matriz release compatible con Node 22 o posterior (2026-08-31)
 
 - `test:e2e:release` conserva Node 22 como referencia, pero ya no bloquea la

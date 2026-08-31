@@ -28,6 +28,7 @@ import {
   type Product,
   type ProductReview,
   personalizeWhatsAppGreeting,
+  type StoreProjectV1,
 } from "@solara/project-schema";
 import { z } from "zod";
 import { lowestPrice, renderBrand, scopedAssetId } from "./helpers";
@@ -80,6 +81,19 @@ function canvasContext(
     editorMode: context.canvas?.editorMode === true,
     sectionId: context.section.id,
   };
+}
+
+function isPublicNavigationHref(project: StoreProjectV1, href: string | undefined): boolean {
+  if (!href) return false;
+  const path = href.split(/[?#]/, 1)[0]?.replace(/\/+$/, "") || "/";
+  return (
+    !project.categories.some(
+      (category) => category.status === "hidden" && path === `/categorias/${category.slug}`,
+    ) &&
+    !project.collections.some(
+      (collection) => collection.status === "hidden" && path === `/colecciones/${collection.slug}`,
+    )
+  );
 }
 
 function textBinding(
@@ -206,13 +220,13 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
     const showContact = !isV2 && navigation.showContact;
     const showAbout = !isV2 && navigation.showAbout;
     const automaticItems = context.project.categories
-      .filter((category) => !category.parentId)
+      .filter((category) => !category.parentId && category.status !== "hidden")
       .map((category) => ({
         id: `automatic-nav-${category.id}`,
         label: category.title,
         href: `/categorias/${category.slug}/`,
         children: context.project.categories
-          .filter((child) => child.parentId === category.id)
+          .filter((child) => child.parentId === category.id && child.status !== "hidden")
           .map((child) => ({
             id: `automatic-nav-${child.id}`,
             label: child.title,
@@ -236,10 +250,13 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
     };
     const navigationItems = configuredNavigationItems.flatMap((item) => {
       const href = normalizeV2NavigationHref(item.href);
-      if (isV2 && !href) return [];
+      if ((isV2 && !href) || !isPublicNavigationHref(context.project, href)) return [];
       const children = item.children
         ?.map((child) => ({ ...child, href: normalizeV2NavigationHref(child.href) }))
-        .filter((child): child is typeof child & { href: string } => Boolean(child.href));
+        .filter(
+          (child): child is typeof child & { href: string } =>
+            Boolean(child.href) && isPublicNavigationHref(context.project, child.href),
+        );
       return [
         {
           ...item,
@@ -558,7 +575,10 @@ function modernFallbackAsset(
   requested?: string,
 ): string {
   return (
-    requested || context.project.seo.socialImageId || context.project.products[0]?.imageIds[0] || ""
+    requested ||
+    context.project.seo.socialImageId ||
+    context.project.products.find((product) => product.status === "active")?.imageIds[0] ||
+    ""
   );
 }
 
@@ -860,7 +880,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
       ? `<div class="catalog-hero-slide-stage">${slidePanels}</div>`
       : String(media);
     const stats = settings.showCatalogStats
-      ? `<dl class="catalog-hero-stats" aria-label="${escapeAttribute(copy.accessibility.catalogSummary)}"><div data-stat="products"><dt>${context.project.products.filter((product) => product.status === "active").length}</dt><dd>${escapeHtml(copy.hero.activeProducts)}</dd></div><div data-stat="categories"><dt>${context.project.categories.filter((category) => !category.parentId).length}</dt><dd>${escapeHtml(copy.hero.categories)}</dd></div><div data-stat="whatsapp"><dt>${context.project.whatsapp.phone ? escapeHtml(copy.hero.whatsapp) : escapeHtml(copy.hero.contact)}</dt><dd>${context.project.whatsapp.phone ? escapeHtml(copy.hero.directOrder) : escapeHtml(copy.hero.inquiries)}</dd></div></dl>`
+      ? `<dl class="catalog-hero-stats" aria-label="${escapeAttribute(copy.accessibility.catalogSummary)}"><div data-stat="products"><dt>${context.project.products.filter((product) => product.status === "active").length}</dt><dd>${escapeHtml(copy.hero.activeProducts)}</dd></div><div data-stat="categories"><dt>${context.project.categories.filter((category) => !category.parentId && category.status !== "hidden").length}</dt><dd>${escapeHtml(copy.hero.categories)}</dd></div><div data-stat="whatsapp"><dt>${context.project.whatsapp.phone ? escapeHtml(copy.hero.whatsapp) : escapeHtml(copy.hero.contact)}</dt><dd>${context.project.whatsapp.phone ? escapeHtml(copy.hero.directOrder) : escapeHtml(copy.hero.inquiries)}</dd></div></dl>`
       : "";
     // La familia V2 (fuera del modo carousel) expone el contrato de markup que
     // la tarea de motion usa para entrada cinematográfica, máscaras y parallax:
@@ -1028,14 +1048,14 @@ function modernProducts(
     : context.project.products.filter((product) => product.status === "active");
   if (settings.source === "collection" && settings.sourceId) {
     const collection = context.project.collections.find((item) => item.id === settings.sourceId);
-    const ids = new Set(collection?.productIds ?? []);
+    const ids = new Set(collection?.status === "hidden" ? [] : (collection?.productIds ?? []));
     products = context.project.products.filter(
       (product) => ids.has(product.id) && product.status === "active",
     );
   }
   if (settings.source === "category" && settings.sourceId) {
     const category = context.project.categories.find((item) => item.id === settings.sourceId);
-    const ids = new Set(category?.productIds ?? []);
+    const ids = new Set(category?.status === "hidden" ? [] : (category?.productIds ?? []));
     products = context.project.products.filter(
       (product) => ids.has(product.id) && product.status === "active",
     );
@@ -1050,7 +1070,7 @@ function productCategory(
   const categories = product.categoryIds
     .map((categoryId) => context.project.categories.find((category) => category.id === categoryId))
     .filter((category): category is (typeof context.project.categories)[number] =>
-      Boolean(category),
+      Boolean(category && category.status !== "hidden"),
     );
   return [...categories].sort((left, right) => {
     const depthDifference =
@@ -1608,7 +1628,9 @@ export const catalogCategoryBento: ModuleDefinition<
         .filter((product) => product.status === "active")
         .map((product) => product.id),
     );
-    const rootCategories = context.project.categories.filter((category) => !category.parentId);
+    const rootCategories = context.project.categories.filter(
+      (category) => !category.parentId && category.status !== "hidden",
+    );
     const automaticLayout = automaticCategoryBentoLayout(rootCategories.length);
     const automaticItems = rootCategories.map((category, index) => ({
       id: `automatic-category-${category.id}`,
