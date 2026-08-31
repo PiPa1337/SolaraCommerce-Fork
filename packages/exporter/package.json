@@ -10,6 +10,7 @@
     "build": "tsc -p tsconfig.json --noEmit",
     "serve": "node scripts/serve.mjs",
     "test": "vitest run --testTimeout=120000",
+    "test:ci": "vitest run --testTimeout=120000 --no-file-parallelism",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
