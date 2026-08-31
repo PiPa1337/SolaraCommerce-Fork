@@ -8,6 +8,7 @@
   },
   "scripts": {
     "benchmark:export": "vitest run scripts/export-benchmark.test.ts --testTimeout=30000",
+    "benchmark:export:ci": "vitest run scripts/export-benchmark.test.ts --testTimeout=90000",
     "build": "corepack pnpm --filter @solara/studio build",
     "check:budgets": "node scripts/check-budgets.mjs && vitest run scripts/storefront-runtime-budget.test.ts scripts/public-storefront-budget.test.ts",
     "check:image-budget": "node scripts/check-image-budget.mjs",

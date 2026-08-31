@@ -63,7 +63,7 @@ jobs:
         run: pnpm check:budgets
 
       - name: Benchmark de exportación
-        run: pnpm benchmark:export
+        run: pnpm benchmark:export:ci
         env:
           SOLARA_EXPORT_BENCHMARK_BUDGET_MS: 60000
           SOLARA_EXPORT_BENCHMARK_FILES_BUDGET_BYTES: 52428800
