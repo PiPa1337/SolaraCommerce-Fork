@@ -93,18 +93,45 @@ export function getProjectMetrics(project: StoredProject["project"]): ProjectMet
   };
 }
 
+/**
+ * Configuración de precios mensual — centralizada para que el popup de
+ * Calculadora y la card de Mensualidad usen la misma fuente de verdad.
+ * Ajustar aquí modifica ambos lugares sin tocar la UI.
+ */
+export const MONTHLY_PRICING = {
+  base: 20000,
+  included: 20,
+  tiers: [
+    { upTo: 100, price: 300 }, // 21..100
+    { upTo: 200, price: 200 }, // 101..200
+    { upTo: Infinity, price: 100 }, // 201+
+  ],
+} as const;
+
+/**
+ * Calcula el coste mensual según cantidad de productos activos.
+ * Fórmula: base (incluye `included`) + tramos adicionales.
+ * Ej: 50 → 20.000 + 30×300 = 29.000
+ */
+export function calculateMonthlyCostForCount(count: number): number {
+  const { base, included, tiers } = MONTHLY_PRICING;
+  if (count <= included) return base;
+  let total = base;
+  let previousUpTo = included;
+  for (const tier of tiers) {
+    if (count <= previousUpTo) break;
+    const upper = Math.min(count, tier.upTo);
+    const productsInTier = upper - previousUpTo;
+    total += productsInTier * tier.price;
+    previousUpTo = tier.upTo;
+    if (count <= tier.upTo) break;
+  }
+  return total;
+}
+
 export function calculateMonthlyCost(project: StoredProject["project"]): number {
   const metrics = getProjectMetrics(project);
-  // Base: $2.490 ARS + $12 por producto activo + $35 por categoría + $2 por recurso + $40 por colección
-  // Valores fijos para mantener la mensualidad estable y legible; se ajustan al volumen del catálogo.
-  const base = 2490;
-  const cost =
-    base +
-    metrics.activeProducts * 12 +
-    metrics.categories * 35 +
-    metrics.assets * 2 +
-    metrics.collections * 40;
-  return Math.round(cost);
+  return calculateMonthlyCostForCount(metrics.activeProducts);
 }
 
 export function formatMonthlyCost(value: number): string {
@@ -113,6 +140,41 @@ export function formatMonthlyCost(value: number): string {
     currency: "ARS",
     maximumFractionDigits: 0,
   }).format(value);
+}
+
+/** Desglose por tramo para el popup de Calculadora. */
+export function getMonthlyCostBreakdown(count: number): Array<{
+  label: string;
+  products: number;
+  price: number;
+  subtotal: number;
+}> {
+  const { base, included, tiers } = MONTHLY_PRICING;
+  const breakdown: Array<{ label: string; products: number; price: number; subtotal: number }> = [];
+  if (count <= included) return breakdown;
+  let previousUpTo = included;
+  for (const tier of tiers) {
+    if (count <= previousUpTo) break;
+    const upper = Math.min(count, tier.upTo);
+    const productsInTier = upper - previousUpTo;
+    if (productsInTier <= 0) {
+      previousUpTo = tier.upTo;
+      continue;
+    }
+    const label =
+      tier.upTo === Infinity
+        ? `Productos 201 en adelante`
+        : `Productos ${previousUpTo + 1} al ${tier.upTo}`;
+    breakdown.push({
+      label,
+      products: productsInTier,
+      price: tier.price,
+      subtotal: productsInTier * tier.price,
+    });
+    previousUpTo = tier.upTo;
+    if (count <= tier.upTo) break;
+  }
+  return breakdown;
 }
 
 export function getDashboardStats(projects: readonly StoredProject[]): DashboardStats {

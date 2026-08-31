@@ -15,8 +15,11 @@ import { isBaseTemplate } from "@solara/project-schema/project-policy";
 import { type RefObject, useEffect, useId, useRef, useState } from "react";
 import { Button, IconButton } from "../../components/Ui";
 import {
+  MONTHLY_PRICING,
   calculateMonthlyCost,
+  calculateMonthlyCostForCount,
   formatMonthlyCost,
+  getMonthlyCostBreakdown,
   getProjectMetrics,
   storeFaviconSrc,
   storeMark,
@@ -85,6 +88,9 @@ export function ProjectCard({
   const [calculatorOpen, setCalculatorOpen] = useState(false);
   const calculatorTitleId = useId();
   const monthlyCost = project ? calculateMonthlyCost(project.project) : 0;
+  const activeProducts = project ? getProjectMetrics(project.project).activeProducts : 0;
+  const breakdown = project ? getMonthlyCostBreakdown(activeProducts) : [];
+  const pricingExamples = [20, 50, 100, 150, 200, 300, 500];
 
   const openCalculator = () => setCalculatorOpen(true);
   const closeCalculator = () => setCalculatorOpen(false);
@@ -266,30 +272,89 @@ export function ProjectCard({
           >
             <form method="dialog" className="dashboard-calculator-dialog__content">
               <header className="dashboard-calculator-dialog__header">
-                <h3 id={calculatorTitleId}>Calculadora</h3>
+                <div className="dashboard-calculator-dialog__title">
+                  <h2 id={calculatorTitleId}>
+                    Precio de tu <span>tienda online</span>
+                  </h2>
+                  <div className="dashboard-calculator-dialog__subtitle">
+                    <span />
+                    <p>Fórmula mensual</p>
+                    <span />
+                  </div>
+                </div>
                 <IconButton icon={X} label="Cerrar calculadora" onClick={closeCalculator} />
               </header>
-              <div className="dashboard-calculator-dialog__body">
-                <p>Próximamente: desglose detallado de costes y proyección de mensualidad.</p>
-                <dl className="dashboard-calculator-dialog__facts">
-                  <div>
-                    <dt>Mensualidad actual</dt>
-                    <dd>{formatMonthlyCost(monthlyCost)}</dd>
-                  </div>
-                  <div>
-                    <dt>Productos</dt>
-                    <dd>{getProjectMetrics(project.project).activeProducts}</dd>
-                  </div>
-                  <div>
-                    <dt>Categorías</dt>
-                    <dd>{getProjectMetrics(project.project).categories}</dd>
-                  </div>
-                  <div>
-                    <dt>Recursos</dt>
-                    <dd>{getProjectMetrics(project.project).assets}</dd>
-                  </div>
-                </dl>
+
+              <div className="dashboard-calculator-dialog__base">
+                <div className="dashboard-calculator-dialog__base-main">
+                  Base: <strong>{formatMonthlyCost(MONTHLY_PRICING.base)}</strong> <span>/ mes</span>
+                </div>
+                <small>Incluye hasta {MONTHLY_PRICING.included} productos</small>
               </div>
+
+              <div className="dashboard-calculator-dialog__columns">
+                <div className="dashboard-calculator-dialog__tiers">
+                  <h4>Productos adicionales</h4>
+                  <ul>
+                    <li>
+                      <span>Productos 21 al 100:</span> <strong>+{formatMonthlyCost(300)}</strong> <small>c/u</small>
+                    </li>
+                    <li>
+                      <span>Productos 101 al 200:</span> <strong>+{formatMonthlyCost(200)}</strong> <small>c/u</small>
+                    </li>
+                    <li>
+                      <span>Productos 201 en adelante:</span> <strong>+{formatMonthlyCost(100)}</strong> <small>c/u</small>
+                    </li>
+                  </ul>
+                </div>
+                <div className="dashboard-calculator-dialog__examples">
+                  <h4>Ejemplos</h4>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Productos</th>
+                        <th>Precio mensual</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pricingExamples.map((count) => (
+                        <tr key={count} className={count === activeProducts ? "is-current" : ""}>
+                          <td>{count}</td>
+                          <td>{formatMonthlyCost(calculateMonthlyCostForCount(count))}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="dashboard-calculator-dialog__total">
+                Total = <strong>{formatMonthlyCost(MONTHLY_PRICING.base)}</strong> + adicionales por tramo
+              </div>
+
+              <div className="dashboard-calculator-dialog__current">
+                <div className="dashboard-calculator-dialog__current-header">
+                  <span>Tu tienda</span>
+                  <strong>
+                    {activeProducts} productos → {formatMonthlyCost(monthlyCost)}/mes
+                  </strong>
+                </div>
+                {breakdown.length > 0 ? (
+                  <ul className="dashboard-calculator-dialog__breakdown">
+                    {breakdown.map((item) => (
+                      <li key={item.label}>
+                        <span>{item.label}</span>
+                        <span>
+                          {item.products} × {formatMonthlyCost(item.price)} = {formatMonthlyCost(item.subtotal)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="dashboard-calculator-dialog__current-note">Dentro del plan base (≤20 productos).</p>
+                )}
+              </div>
+
               <div className="dashboard-calculator-dialog__actions">
                 <Button variant="primary" onClick={closeCalculator}>
                   Cerrar
