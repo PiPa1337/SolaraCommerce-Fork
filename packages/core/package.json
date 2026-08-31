@@ -10,6 +10,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --no-file-parallelism",
+    "test:ci": "vitest run --no-file-parallelism --pool=forks --poolOptions.forks.singleFork",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

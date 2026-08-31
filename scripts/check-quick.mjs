@@ -31,7 +31,7 @@ const SUBST_DRIVE = getSubstFallback();
 const isFull = process.argv.includes("--full");
 const isCi = process.env.CI === "true";
 const testCommand = isCi
-  ? "corepack pnpm -r --workspace-concurrency=1 --if-present --filter=!@solara/studio --filter=!@solara/exporter test"
+  ? "corepack pnpm -r --workspace-concurrency=1 --if-present --filter=!@solara/studio --filter=!@solara/exporter --filter=!@solara/core test"
   : "corepack pnpm -r --parallel --if-present test -- --testTimeout=30000";
 const fastTasks = [
   { name: "check:repository", cmd: "corepack pnpm check:repository" },
@@ -47,10 +47,17 @@ const fastTasks = [
         {
           name: "test:studio",
           cmd: "corepack pnpm --filter @solara/studio test:ci",
+          serial: true,
         },
         {
           name: "test:exporter",
           cmd: "corepack pnpm --filter @solara/exporter test:ci",
+          serial: true,
+        },
+        {
+          name: "test:core",
+          cmd: "corepack pnpm --filter @solara/core test:ci",
+          serial: true,
         },
       ]
     : []),
@@ -101,10 +108,17 @@ function runTask(task) {
 }
 
 const startAll = Date.now();
+const parallelTasks = tasks.filter((task) => !task.serial);
+const serialTasks = tasks.filter((task) => task.serial);
 console.log(
-  `[quick] Iniciando ${tasks.length} gates en paralelo (${isFull ? "full" : "fast"}, 9800X3D optimizado)...`,
+  `[quick] Iniciando ${tasks.length} gates (${parallelTasks.length} en paralelo, ${serialTasks.length} serializados; ${isFull ? "full" : "fast"}, 9800X3D optimizado)...`,
 );
-const results = await Promise.all(tasks.map(runTask));
+const parallelResults = await Promise.all(parallelTasks.map(runTask));
+const serialResults = [];
+for (const task of serialTasks) {
+  serialResults.push(await runTask(task));
+}
+const results = [...parallelResults, ...serialResults];
 const total = ((Date.now() - startAll) / 1000).toFixed(1);
 const failed = results.filter((r) => !r.ok);
 if (failed.length) {
