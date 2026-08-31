@@ -10,7 +10,7 @@
     "build": "tsc -p tsconfig.json --noEmit",
     "serve": "node scripts/serve.mjs",
     "test": "vitest run --testTimeout=120000",
-    "test:ci": "vitest run --testTimeout=120000 --no-file-parallelism --pool=forks --poolOptions.forks.singleFork",
+    "test:ci": "vitest run --testTimeout=120000 --no-file-parallelism --pool=threads --poolOptions.threads.singleThread",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
