@@ -12,7 +12,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { isBaseTemplate } from "@solara/project-schema/project-policy";
-import { type RefObject, useEffect, useId, useRef, useState } from "react";
+import { type RefObject, useEffect, useId, useState } from "react";
 import { Button, IconButton } from "../../components/Ui";
 import {
   calculateMonthlyCost,
@@ -89,38 +89,33 @@ export function ProjectCard({
 }: ProjectCardProps) {
   const protectedTemplate = project ? isBaseTemplate(project.project) : false;
   const faviconSrc = project ? storeFaviconSrc(project.project) : undefined;
-  const calculatorDialogRef = useRef<HTMLDialogElement>(null);
-  const [calculatorOpen, setCalculatorOpen] = useState(false);
-  const calculatorTitleId = useId();
-
-  // Configuración global (misma tarifa para todas las tiendas) + descuento por tienda
+  // Mensualidad y métricas siempre actualizadas con config global + descuento
   const [pricingConfig, setPricingConfig] = useState<PricingConfig>(() => loadPricingConfig());
   const [storeDiscount, setStoreDiscount] = useState<number>(() =>
     project ? loadStoreDiscount(project.id) : 0,
   );
 
-  // Recargar descuento cuando cambia la tienda seleccionada
   useEffect(() => {
     if (project) setStoreDiscount(loadStoreDiscount(project.id));
     else setStoreDiscount(0);
   }, [project?.id]);
 
-  // Recalcular mensualidad con config actual y descuento
   const activeProducts = project ? getProjectMetrics(project.project).activeProducts : 0;
   const monthlyCost = project ? calculateMonthlyCost(project.project, project.id, pricingConfig) : 0;
   const baseMonthlyCost = project ? calculateMonthlyCostForCount(activeProducts, pricingConfig) : 0;
   const breakdown = project ? getMonthlyCostBreakdown(activeProducts, pricingConfig) : [];
 
-  const pricingExamples = [20, 50, 100, 150, 200, 300, 500];
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const calculatorTitleId = useId();
 
   const handlePricingChange = (patch: Partial<PricingConfig>) => {
     const next = { ...pricingConfig, ...patch };
-    // Validar rangos
     next.base = Math.max(0, Math.round(next.base));
-    next.included = Math.max(0, Math.min(1000, Math.round(next.included)));
     next.tier1Price = Math.max(0, Math.round(next.tier1Price));
     next.tier2Price = Math.max(0, Math.round(next.tier2Price));
     next.tier3Price = Math.max(0, Math.round(next.tier3Price));
+    // incluido fijo en 20
+    next.included = 20;
     setPricingConfig(next);
     savePricingConfig(next);
   };
@@ -133,13 +128,6 @@ export function ProjectCard({
 
   const openCalculator = () => setCalculatorOpen(true);
   const closeCalculator = () => setCalculatorOpen(false);
-
-  useEffect(() => {
-    const dialog = calculatorDialogRef.current;
-    if (!dialog) return;
-    if (calculatorOpen && !dialog.open) dialog.showModal();
-    if (!calculatorOpen && dialog.open) dialog.close();
-  }, [calculatorOpen]);
 
   return (
     <section
@@ -299,17 +287,14 @@ export function ProjectCard({
                   : "Archivar"}
             </Button>
           </div>
-          <dialog
-            ref={calculatorDialogRef}
-            className="dashboard-calculator-dialog"
-            aria-labelledby={calculatorTitleId}
-            onClose={closeCalculator}
-            onCancel={(event) => {
-              event.preventDefault();
-              closeCalculator();
-            }}
-          >
-            <form method="dialog" className="dashboard-calculator-dialog__content dashboard-calculator-dialog__content--compact">
+          {calculatorOpen && (
+            <div
+              className="dashboard-calculator-dialog is-open"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={calculatorTitleId}
+            >
+              <form className="dashboard-calculator-dialog__content dashboard-calculator-dialog__content--compact" onSubmit={(e) => e.preventDefault()}>
               <header className="dashboard-calculator-dialog__header">
                 <div className="dashboard-calculator-dialog__title">
                   <h2 id={calculatorTitleId}>
@@ -437,15 +422,16 @@ export function ProjectCard({
               </section>
 
               <div className="dashboard-calculator-dialog__actions">
-                <Button variant="quiet" onClick={() => handlePricingChange(DEFAULT_PRICING)}>
+                <Button variant="quiet" type="button" onClick={() => handlePricingChange(DEFAULT_PRICING)}>
                   Restablecer tarifa
                 </Button>
-                <Button variant="primary" onClick={closeCalculator}>
+                <Button variant="primary" type="button" onClick={closeCalculator}>
                   Cerrar
                 </Button>
               </div>
-            </form>
-          </dialog>
+              </form>
+            </div>
+          )}
           {actionNotice ? (
             <output
               className="dashboard-store-detail__notice"

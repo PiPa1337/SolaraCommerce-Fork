@@ -793,7 +793,13 @@
   line-height: 1.45;
 }
 
+.dashboard-store-detail {
+  /* Necesario para que el dialog absolute se ancle a la card */
+  position: sticky;
+}
+
 .dashboard-calculator-dialog {
+  /* Por defecto (showModal) es fixed centrado; al estar dentro de la card lo anclamos a ella */
   width: min(560px, calc(100% - 24px));
   max-height: min(90dvh, 560px);
   overflow: hidden;
@@ -805,9 +811,34 @@
   box-shadow: 0 24px 64px rgb(0 0 0 / 0.55);
 }
 
+.dashboard-calculator-dialog[open] {
+  /* Cuando está abierto sobre la card, ocupa exactamente el mismo espacio que la card */
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+}
+
+.dashboard-store-detail .dashboard-calculator-dialog {
+  /* Anclado a la card, cubre exactamente el mismo borde (320x450) */
+  position: absolute;
+  inset: -1px;
+  width: auto;
+  height: auto;
+  max-height: none;
+  border-radius: 14px;
+}
+
 .dashboard-calculator-dialog::backdrop {
-  background: rgb(0 0 0 / 0.62);
-  backdrop-filter: blur(3px);
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.dashboard-store-detail .dashboard-calculator-dialog::backdrop {
+  display: none;
 }
 
 .dashboard-calculator-dialog__content {
@@ -817,10 +848,62 @@
 }
 
 .dashboard-calculator-dialog__content--compact {
-  gap: 10px;
-  padding: 16px;
-  max-height: none;
-  overflow: visible;
+  gap: 8px;
+  padding: 12px;
+  max-height: 100%;
+  overflow: hidden;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.dashboard-store-detail .dashboard-calculator-dialog__content {
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  padding: 10px;
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+.dashboard-store-detail .dashboard-calculator-dialog__title h2 {
+  font-size: 15px;
+}
+
+.dashboard-store-detail .dashboard-calculator-dialog__subtitle p {
+  font-size: 10px;
+}
+
+.dashboard-store-detail .dashboard-calculator-dialog__section {
+  padding: 6px 8px;
+  gap: 5px;
+}
+
+.dashboard-store-detail .dashboard-calculator-dialog__grid--3 {
+  gap: 4px;
+}
+
+.dashboard-store-detail .dashboard-calculator-dialog__field input {
+  min-height: 24px;
+  font-size: 11px;
+  padding: 0 6px;
+}
+
+.dashboard-store-detail .dashboard-calculator-dialog__current--compact {
+  padding: 6px 8px;
+  gap: 3px;
+}
+
+.dashboard-store-detail .dashboard-calculator-dialog__section-title {
+  font-size: 10px;
+}
+
+.dashboard-store-detail .dashboard-calculator-dialog__breakdown-row {
+  padding: 3px 5px;
+  font-size: 10px;
+}
+
+.dashboard-store-detail .dashboard-calculator-dialog__hint {
+  font-size: 9px;
 }
 
 .dashboard-calculator-dialog__header {
