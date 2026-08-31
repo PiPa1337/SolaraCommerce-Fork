@@ -1,10 +1,7 @@
 import { performance } from "node:perf_hooks";
 import { describe, it } from "vitest";
-import {
-  createHistory,
-  executeCommand,
-  generatePerformanceFixture,
-} from "../packages/core/src/index";
+import { createHistory, executeCommand } from "../packages/core/src/index";
+import { generatePerformanceFixture } from "../packages/core/src/performance";
 import { exportProject, renderPreviewHtml } from "../packages/exporter/src/index";
 import { StoreProjectV1Schema } from "../packages/project-schema/src/index";
 

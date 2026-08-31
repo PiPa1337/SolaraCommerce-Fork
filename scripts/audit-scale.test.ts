@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { generatePerformanceFixture } from "../packages/core/src/index";
+import { generatePerformanceFixture } from "../packages/core/src/performance";
 import { auditProject } from "../packages/exporter/src/index";
 
 test("O4: el audit del catálogo grande no paga O(n^2) y no genera falsos mismatch", () => {

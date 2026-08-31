@@ -489,6 +489,7 @@ export function Studio({
     if (!managedStorage) return;
     let lastVersion: number | null = null;
     const poll = window.setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
       void (async () => {
         try {
           const response = await fetch("/__solara/storage/projects");

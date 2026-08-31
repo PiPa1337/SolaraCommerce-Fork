@@ -1,6 +1,6 @@
 import { performance } from "node:perf_hooks";
 import { describe, it } from "vitest";
-import { generatePerformanceFixture } from "../packages/core/src/index";
+import { generatePerformanceFixture } from "../packages/core/src/performance";
 import { exportProject } from "../packages/exporter/src/index";
 import { StoreProjectV1Schema } from "../packages/project-schema/src/index";
 

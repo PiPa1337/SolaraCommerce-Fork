@@ -33,6 +33,9 @@ export class AutosaveQueue<Value> {
     this.setState("pending");
     if (this.draining !== undefined) return;
     this.clearTimer();
+    if (typeof document !== "undefined" && document.hidden) {
+      return;
+    }
     this.timer = setTimeout(() => {
       this.timer = undefined;
       void this.drain().catch(() => undefined);
