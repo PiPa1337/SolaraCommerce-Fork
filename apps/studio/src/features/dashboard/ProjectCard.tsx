@@ -327,7 +327,7 @@ export function ProjectCard({
               {/* Configuración global — misma tarifa para todas las tiendas */}
               <section className="dashboard-calculator-dialog__section">
                 <h4 className="dashboard-calculator-dialog__section-title">Tarifa global</h4>
-                <div className="dashboard-calculator-dialog__grid dashboard-calculator-dialog__grid--2">
+                <div className="dashboard-calculator-dialog__grid dashboard-calculator-dialog__grid--2" style={{ gridTemplateColumns: "1fr auto" }}>
                   <label className="dashboard-calculator-dialog__field">
                     <span>Base / mes</span>
                     <input
@@ -338,17 +338,10 @@ export function ProjectCard({
                       onChange={(e) => handlePricingChange({ base: Number(e.target.value) })}
                     />
                   </label>
-                  <label className="dashboard-calculator-dialog__field">
-                    <span>Incluye productos</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={1000}
-                      step={1}
-                      value={pricingConfig.included}
-                      onChange={(e) => handlePricingChange({ included: Number(e.target.value) })}
-                    />
-                  </label>
+                  <div className="dashboard-calculator-dialog__field" style={{ justifyContent: "center", textAlign: "center" }}>
+                    <span style={{ opacity: 0.7 }}>Incluye</span>
+                    <strong style={{ fontSize: "13px", color: "var(--cosmic-ink)" }}>hasta 20 productos</strong>
+                  </div>
                 </div>
                 <div className="dashboard-calculator-dialog__grid dashboard-calculator-dialog__grid--3">
                   <label className="dashboard-calculator-dialog__field">

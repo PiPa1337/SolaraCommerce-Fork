@@ -100,7 +100,7 @@ export function getProjectMetrics(project: StoredProject["project"]): ProjectMet
  */
 export interface PricingConfig {
   base: number;
-  included: number;
+  included: number; // fijo en 20, no editable en UI
   tier1Price: number; // 21..100
   tier2Price: number; // 101..200
   tier3Price: number; // 201+
@@ -135,7 +135,8 @@ function readPricingConfigSafe(): PricingConfig {
     if (!raw) return DEFAULT_PRICING;
     const parsed = JSON.parse(raw) as Partial<PricingConfig>;
     const base = typeof parsed.base === "number" && Number.isFinite(parsed.base) && parsed.base >= 0 ? Math.round(parsed.base) : DEFAULT_PRICING.base;
-    const included = typeof parsed.included === "number" && Number.isFinite(parsed.included) && parsed.included >= 0 ? Math.round(parsed.included) : DEFAULT_PRICING.included;
+    // incluido fijo en 20 — se ignora valor guardado para evitar tarifa inconsistente
+    const included = DEFAULT_PRICING.included;
     const t1 = typeof parsed.tier1Price === "number" && Number.isFinite(parsed.tier1Price) && parsed.tier1Price >= 0 ? Math.round(parsed.tier1Price) : DEFAULT_PRICING.tier1Price;
     const t2 = typeof parsed.tier2Price === "number" && Number.isFinite(parsed.tier2Price) && parsed.tier2Price >= 0 ? Math.round(parsed.tier2Price) : DEFAULT_PRICING.tier2Price;
     const t3 = typeof parsed.tier3Price === "number" && Number.isFinite(parsed.tier3Price) && parsed.tier3Price >= 0 ? Math.round(parsed.tier3Price) : DEFAULT_PRICING.tier3Price;
@@ -151,7 +152,9 @@ export function loadPricingConfig(): PricingConfig {
 
 export function savePricingConfig(config: PricingConfig): void {
   if (typeof window === "undefined" || typeof localStorage === "undefined") return;
-  localStorage.setItem(PRICING_STORAGE_KEY, JSON.stringify(config));
+  // incluido siempre 20
+  const toSave = { ...config, included: DEFAULT_PRICING.included };
+  localStorage.setItem(PRICING_STORAGE_KEY, JSON.stringify(toSave));
 }
 
 export function loadStoreDiscounts(): Record<string, number> {
