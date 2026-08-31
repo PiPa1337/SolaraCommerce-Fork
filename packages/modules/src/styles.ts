@@ -2389,7 +2389,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-cart-review[hidden],
 [data-solara-store].catalog-modern .catalog-cart-checkout-panel[hidden] { display: none; }
 [data-solara-store].catalog-modern .catalog-cart-drawer .catalog-cart-scroll,
-[data-solara-store].catalog-modern .catalog-cart-checkout-panel { flex: 1 1 auto; min-height: 0; padding-inline-end: 1rem; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: color-mix(in srgb, var(--catalog-ink) 34%, transparent) transparent; scrollbar-gutter: stable; scrollbar-width: thin; }
+[data-solara-store].catalog-modern .catalog-cart-checkout-panel { flex: 1 1 auto; min-height: 0; padding-inline: .5rem 1rem; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: color-mix(in srgb, var(--catalog-ink) 34%, transparent) transparent; scrollbar-gutter: stable; scrollbar-width: thin; }
 [data-solara-store].catalog-modern .catalog-cart-drawer .catalog-cart-scroll::-webkit-scrollbar,
 [data-solara-store].catalog-modern .catalog-cart-checkout-panel::-webkit-scrollbar { width: .55rem; }
 [data-solara-store].catalog-modern .catalog-cart-drawer .catalog-cart-scroll::-webkit-scrollbar-thumb,

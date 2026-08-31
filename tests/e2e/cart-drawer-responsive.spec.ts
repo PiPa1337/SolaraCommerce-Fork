@@ -113,6 +113,32 @@ test("separa revisión y checkout sin cambiar el submit de WhatsApp", async ({ p
   await expect(next).toBeFocused();
 });
 
+test("mantiene el borde y el foco de los inputs dentro del panel de checkout", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openPopulatedCart(page);
+
+  const drawer = page.locator(".catalog-cart-drawer");
+  await drawer.locator("[data-cart-checkout-next]").click();
+  const panel = drawer.locator("[data-cart-checkout-panel]");
+  const firstInput = panel.locator("input").first();
+  await firstInput.focus();
+
+  const metrics = await panel.evaluate((element) => {
+    const input = element.querySelector<HTMLInputElement>("input");
+    if (!input) return null;
+    const panelRect = element.getBoundingClientRect();
+    const inputRect = input.getBoundingClientRect();
+    return {
+      leftInset: inputRect.left - panelRect.left,
+      rightInset: panelRect.right - inputRect.right,
+    };
+  });
+
+  expect(metrics).not.toBeNull();
+  expect(metrics?.leftInset).toBeGreaterThanOrEqual(6);
+  expect(metrics?.rightInset).toBeGreaterThanOrEqual(6);
+});
+
 test("compacta doce líneas y reserva espacio para la scrollbar en mobile", async ({ page }) => {
   for (const viewport of [
     { width: 390, height: 844 },

@@ -1,5 +1,11 @@
 # Changelog
 
+### Borde visible en inputs del carrito (2026-08-30)
+
+- Los campos del checkout mantienen una separación interna respecto del panel
+  desplazable, evitando que el borde y el foco visible se recorten a la izquierda
+  en mobile y en cualquier tienda que use Catalog Modern.
+
 ### Correcciones integrales del storefront (2026-08-30)
 
 - Las cantidades del producto, drawer y página de carrito se normalizan de forma
