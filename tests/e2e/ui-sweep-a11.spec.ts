@@ -92,11 +92,11 @@ function rowName(page: Page, index: number): Promise<string | null> {
 
 async function previewModuleOrder(page: Page): Promise<string[]> {
   try {
-    return await previewFrame(page)
-      .locator("[data-solara-module]")
-      .evaluateAll((elements) =>
-        elements.map((element) => element.getAttribute("data-solara-module") ?? ""),
-      );
+    const modules = previewFrame(page).locator("[data-solara-module]");
+    await expect(modules.first()).toBeAttached({ timeout: 15_000 });
+    return await modules.evaluateAll((elements) =>
+      elements.map((element) => element.getAttribute("data-solara-module") ?? ""),
+    );
   } catch {
     // El renderer reemplaza el iframe al publicar cada snapshot. Durante ese
     // frame intermedio Playwright puede observar el documento desprendido;
@@ -198,7 +198,7 @@ test("reemplazar módulo cambia el módulo y conserva sólo los settings compati
   await expect(moduleSelect).toHaveValue("catalog-testimonials");
   await expect(
     previewFrame(page).locator('[data-solara-module="catalog-testimonials"]'),
-  ).toHaveCount(2, { timeout: 15_000 });
+  ).toHaveCount(1, { timeout: 15_000 });
 
   // Contrato: "title" se conserva; "limit" (incompatible) se descarta y el
   // campo Cantidad desaparece del inspector; "items" vuelve a defaults.

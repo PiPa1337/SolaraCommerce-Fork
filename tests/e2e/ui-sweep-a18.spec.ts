@@ -510,6 +510,7 @@ async function openAssetDeleteDialog(page: Page, openStore = true) {
     await expect(page.getByText("1 imagen agregada", { exact: false })).toBeVisible({
       timeout: 15_000,
     });
+    await page.getByRole("searchbox", { name: "Buscar recursos" }).fill("pixel");
   }
 
   const item = page.locator(".asset-item").filter({ has: page.locator('input[value="pixel"]') });

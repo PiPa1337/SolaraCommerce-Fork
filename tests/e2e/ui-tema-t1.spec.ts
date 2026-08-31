@@ -442,7 +442,7 @@ test("las 20 paletas son visibles y mantienen contraste WCAG", async ({ page }) 
   for (const [presetName, colors] of Object.entries(PRESET_COLORS)) {
     await applyPreset(page, presetName);
     await expect(page.getByTestId("ui-color-text-background")).toHaveValue(colors.background);
-    await expect(page.getByTestId("ui-contrast-ok")).toHaveCount(3);
+    await expect(page.getByTestId("ui-contrast-ok")).toHaveCount(4);
     await expect(page.getByTestId("ui-contrast-warn")).toHaveCount(0);
     await assertPresetFeedback(page, presetName);
   }

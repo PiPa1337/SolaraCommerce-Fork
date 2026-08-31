@@ -9,6 +9,7 @@ import {
   categoryDescendantIds,
   categoryProductIds,
 } from "./category-helpers.js";
+import { ARGENTINA_LEGAL_PROFILE, LegalProfileSchema } from "./legal-profile.js";
 import {
   compactResponsiveSources,
   ImageAssetSchema,
@@ -33,6 +34,15 @@ export {
 };
 
 export { PUBLIC_COPY_DEFAULTS };
+export {
+  ARGENTINA_LEGAL_PROFILE,
+  formatLegalCountryCoverage,
+  formatLegalRevisionAt,
+  LegalProfileSchema,
+  resolveLegalCountryName,
+  resolveLegalRevisionAt,
+  unresolvedLegalCountryCodes,
+} from "./legal-profile.js";
 
 import {
   AssetIdSchema,
@@ -214,10 +224,18 @@ export const PublicCopySchema = z.object({
       emailFallback: z.string().min(1).default("Configurá un email para recibir consultas."),
       emailAction: z.string().min(1).default("Enviar consulta por email"),
       success: z.string().min(1).default("Listo"),
+      reasonLabel: z.string().min(1).default("Tema de consulta"),
+      optionsAction: z.string().min(1).default("Ver opciones de contacto"),
       email: z.string().min(1).default("Email"),
       phone: z.string().min(1).default("Teléfono"),
       whatsapp: z.string().min(1).default("WhatsApp"),
       address: z.string().min(1).default("Dirección"),
+      hours: z.string().min(1).default("Horarios de atención"),
+      directions: z.string().min(1).default("Cómo llegar"),
+      javascriptFallback: z
+        .string()
+        .min(1)
+        .default("Activá JavaScript o usá los enlaces para enviar la consulta."),
       whatsappAction: z.string().min(1).default("Escribir por WhatsApp"),
       reason: z.string().min(1).default("Motivo"),
       orderNumber: z.string().min(1).default("Número de pedido"),
@@ -267,6 +285,12 @@ export const PublicCopySchema = z.object({
         .default("Tu carrito está vacío: agregá productos antes de preparar el pedido."),
       total: z.string().min(1).default("Total estimado"),
       delivery: z.string().min(1).default("Entrega"),
+      verificationWarning: z
+        .string()
+        .min(1)
+        .default(
+          "Solicitud sin confirmar; precio, stock, envío y pago deben verificarse con la tienda",
+        ),
       disclaimer: z
         .string()
         .min(1)
@@ -284,6 +308,7 @@ export const PublicCopySchema = z.object({
       privacy: z.string().min(1).default("Privacidad"),
       terms: z.string().min(1).default("Términos"),
       copyright: z.string().min(1).default("Todos los derechos reservados."),
+      madeWith: z.string().min(1).default("Hecho con ❤️ en solara.com.ar"),
     })
     .default(PUBLIC_COPY_DEFAULTS.footer),
   empty: z
@@ -291,6 +316,8 @@ export const PublicCopySchema = z.object({
       products: z.string().min(1).default("No hay productos para mostrar."),
       collections: z.string().min(1).default("Todavía no hay colecciones publicadas."),
       cart: z.string().min(1).default("Tu carrito está vacío."),
+      categories: z.string().min(1).default("Todavía no hay categorías para mostrar."),
+      page: z.string().min(1).default("No hay contenido publicado."),
       filteredProducts: z
         .string()
         .min(1)
@@ -416,6 +443,10 @@ export const PublicCopySchema = z.object({
       mobileNavigation: z.string().min(1).default("Navegación móvil"),
       mainNavigation: z.string().min(1).default("Navegación principal"),
       announcements: z.string().min(1).default("Avisos"),
+      testimonials: z.string().min(1).default("Testimonios de clientes"),
+      testimonialsControls: z.string().min(1).default("Controles de testimonios"),
+      previousTestimonial: z.string().min(1).default("Testimonio anterior"),
+      nextTestimonial: z.string().min(1).default("Testimonio siguiente"),
       heroSlides: z.string().min(1).default("Slides del hero"),
       goToSlide: z.string().min(1).default("Ir al slide {index}"),
     })
@@ -682,6 +713,16 @@ const StoreProjectV2ShapeSchema = z.object({
   updatedAt: z.string().datetime(),
   origin: ProjectOriginSchema,
   publicCopy: PublicCopySchema.default(PUBLIC_COPY_DEFAULTS),
+  legalProfile: LegalProfileSchema.default({
+    countryCode: ARGENTINA_LEGAL_PROFILE.countryCode,
+    taxId: "",
+    jurisdiction: "",
+    paymentMethods: [],
+    salesChannels: [],
+    consumerRights: { enabled: true },
+    privacyOverride: "",
+    termsOverride: "",
+  }),
   identity: z.object({
     legalName: z.string().min(1),
     brandName: z.string().min(1),

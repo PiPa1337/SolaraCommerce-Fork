@@ -77,6 +77,20 @@ export const AgentOperationSchema = z.discriminatedUnion("type", [
     changes: z.record(z.string(), z.unknown()),
   }),
   z.object({
+    type: z.literal("store.updateLegalProfile"),
+    changes: z.object({
+      countryCode: z.literal("AR").optional(),
+      revisionAt: z.string().datetime().optional(),
+      taxId: z.string().max(120).optional(),
+      jurisdiction: z.string().max(200).optional(),
+      paymentMethods: z.array(z.string().min(1).max(120)).max(12).optional(),
+      salesChannels: z.array(z.string().min(1).max(120)).max(12).optional(),
+      consumerRights: z.object({ enabled: z.boolean() }).optional(),
+      privacyOverride: z.string().optional(),
+      termsOverride: z.string().optional(),
+    }),
+  }),
+  z.object({
     type: z.literal("category.create"),
     categoryId: SafeIdSchema.optional(),
     slug: SlugSchema,

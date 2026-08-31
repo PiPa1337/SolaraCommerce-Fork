@@ -811,6 +811,7 @@ export class AgentController {
         "store.updateSeo",
         "store.updatePublicCopy",
         "store.updatePolicies",
+        "store.updateLegalProfile",
         "category.create",
         "category.update",
         "category.setStatus",
@@ -2406,6 +2407,21 @@ export class AgentController {
             project = StoreProjectV2Schema.parse(updated);
           }
           break;
+        case "store.updateLegalProfile": {
+          project = StoreProjectV2Schema.parse({
+            ...project,
+            legalProfile: {
+              ...project.legalProfile,
+              ...operation.changes,
+              consumerRights: {
+                ...project.legalProfile.consumerRights,
+                ...(operation.changes.consumerRights ?? {}),
+              },
+              revisionAt: operation.changes.revisionAt ?? at,
+            },
+          });
+          break;
+        }
         case "category.create": {
           const category = CategorySchema.parse({
             id: operation.categoryId ?? makeId("category-agent"),

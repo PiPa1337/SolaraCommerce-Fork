@@ -8,6 +8,19 @@
 
 # Changelog
 
+### Matriz release compatible con Node 22 o posterior (2026-08-31)
+
+- `test:e2e:release` conserva Node 22 como referencia, pero ya no bloquea la
+  ejecución local con Node 24: muestra una advertencia y continúa la matriz.
+
+### Cards de categorías con información separada (2026-08-31)
+
+- Las cards compartidas de Catalog Modern muestran una foto cuadrada y ubican
+  debajo el nombre, la cantidad de productos y una flecha de navegación,
+  respetando el tema y la tipografía de cada tienda.
+- Se conserva el hover existente de elevación, zoom, filtro y línea animada; la
+  línea queda contenida dentro de la imagen y la flecha acompaña la interacción.
+
 ### Portada social compatible con WhatsApp (2026-08-31)
 
 - La exportación usa el fallback JPG de un asset AVIF para `og:image` y

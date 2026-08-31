@@ -16,7 +16,11 @@ import {
   WhatsappLogo,
 } from "@phosphor-icons/react";
 import type { ImageAsset, StoreProjectV1 } from "@solara/project-schema";
-import { catalogModernPhoneValue, SlugSchema } from "@solara/project-schema";
+import {
+  ARGENTINA_LEGAL_PROFILE,
+  catalogModernPhoneValue,
+  SlugSchema,
+} from "@solara/project-schema";
 import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ImageAssetPicker } from "../components/ImageAssetPicker";
@@ -35,6 +39,7 @@ const NAVIGATION_CHILDREN_MAX = 12;
 const RESTRICTED_COPY_FIELDS = new Set([
   "whatsapp.confirmation",
   "checkout.disclaimer",
+  "checkout.verificationWarning",
   "contact.emailSubject",
   "whatsapp.orderGreeting",
   "export.skipToContent",
@@ -205,10 +210,15 @@ const PUBLIC_COPY_FIELDS = [
   { group: "contact", key: "emailFallback", label: "Fallback sin email" },
   { group: "contact", key: "emailAction", label: "Acción de email" },
   { group: "contact", key: "success", label: "Confirmación de contacto" },
+  { group: "contact", key: "reasonLabel", label: "Etiqueta del motivo" },
+  { group: "contact", key: "optionsAction", label: "Acción de opciones de contacto" },
   { group: "contact", key: "email", label: "Campo email" },
   { group: "contact", key: "phone", label: "Campo teléfono" },
   { group: "contact", key: "whatsapp", label: "Canal WhatsApp" },
   { group: "contact", key: "address", label: "Campo dirección" },
+  { group: "contact", key: "hours", label: "Etiqueta de horarios" },
+  { group: "contact", key: "directions", label: "Acción de ubicación" },
+  { group: "contact", key: "javascriptFallback", label: "Fallback sin JavaScript" },
   { group: "contact", key: "whatsappAction", label: "Acción WhatsApp" },
   { group: "contact", key: "reason", label: "Campo motivo" },
   { group: "contact", key: "orderNumber", label: "Campo número de pedido" },
@@ -223,6 +233,8 @@ const PUBLIC_COPY_FIELDS = [
   { group: "cart", key: "name", label: "Nombre del comprador" },
   { group: "cart", key: "phone", label: "Teléfono del comprador" },
   { group: "cart", key: "address", label: "Dirección de entrega" },
+  { group: "cart", key: "locality", label: "Localidad / provincia" },
+  { group: "cart", key: "postalCode", label: "Código postal" },
   { group: "cart", key: "notes", label: "Notas del pedido" },
   { group: "cart", key: "remove", label: "Eliminar del carrito" },
   { group: "cart", key: "unavailable", label: "Producto no disponible" },
@@ -238,6 +250,7 @@ const PUBLIC_COPY_FIELDS = [
   { group: "checkout", key: "invalidItems", label: "Error de disponibilidad" },
   { group: "checkout", key: "total", label: "Total del pedido" },
   { group: "checkout", key: "disclaimer", label: "Aviso de confirmación" },
+  { group: "checkout", key: "verificationWarning", label: "Advertencia de verificación" },
   { group: "checkout", key: "delivery", label: "Entrega del checkout" },
   { group: "checkout", key: "emptyCart", label: "Carrito vacío al comprar" },
   { group: "footer", key: "explore", label: "Footer: explorar" },
@@ -247,11 +260,14 @@ const PUBLIC_COPY_FIELDS = [
   { group: "footer", key: "terms", label: "Footer: términos" },
   { group: "footer", key: "policies", label: "Footer: políticas" },
   { group: "footer", key: "copyright", label: "Footer: copyright" },
+  { group: "footer", key: "madeWith", label: "Footer: atribución" },
   { group: "footer", key: "shipping", label: "Footer: envíos" },
   { group: "footer", key: "returns", label: "Footer: cambios" },
   { group: "empty", key: "products", label: "Estado vacío: productos" },
   { group: "empty", key: "collections", label: "Estado vacío: colecciones" },
   { group: "empty", key: "cart", label: "Estado vacío: carrito" },
+  { group: "empty", key: "categories", label: "Estado vacío: categorías" },
+  { group: "empty", key: "page", label: "Estado vacío: página" },
   { group: "empty", key: "filteredProducts", label: "Estado vacío: filtros" },
   { group: "errors", key: "catalogLoad", label: "Error al cargar catálogo" },
   { group: "errors", key: "searchIndexLoad", label: "Error al cargar búsqueda" },
@@ -332,6 +348,18 @@ const PUBLIC_COPY_FIELDS = [
   { group: "accessibility", key: "mobileNavigation", label: "Accesibilidad: navegación móvil" },
   { group: "accessibility", key: "mainNavigation", label: "Accesibilidad: navegación principal" },
   { group: "accessibility", key: "announcements", label: "Accesibilidad: avisos" },
+  { group: "accessibility", key: "testimonials", label: "Accesibilidad: testimonios" },
+  {
+    group: "accessibility",
+    key: "testimonialsControls",
+    label: "Accesibilidad: controles de testimonios",
+  },
+  {
+    group: "accessibility",
+    key: "previousTestimonial",
+    label: "Accesibilidad: testimonio anterior",
+  },
+  { group: "accessibility", key: "nextTestimonial", label: "Accesibilidad: testimonio siguiente" },
   { group: "accessibility", key: "heroSlides", label: "Accesibilidad: slides del hero" },
   { group: "accessibility", key: "goToSlide", label: "Accesibilidad: ir al slide" },
   { group: "accessibility", key: "heroSlides", label: "Accesibilidad: slides del hero" },
@@ -708,6 +736,10 @@ export function Overview({
         [group]: { ...currentGroup, [key]: value },
       },
     });
+  };
+  const updateLegalProfile = (patch: Partial<StoreProjectV1["legalProfile"]>) => {
+    const currentProject = latestProjectRef.current;
+    commit({ legalProfile: { ...currentProject.legalProfile, ...patch } });
   };
   const updateNavigationItem = (
     itemId: string,
@@ -1143,6 +1175,116 @@ export function Overview({
                     },
                   )
                 }
+              />
+            </Field>
+          </div>
+        </AccordionSection>
+
+        <AccordionSection
+          sectionKey="legal-profile"
+          label="Perfil legal"
+          icon={Article}
+          collapsed={collapsedSections.has("legal-profile")}
+          onToggle={() => toggleSection("legal-profile")}
+        >
+          <p className="form-help">
+            El perfil determina la jurisdicción y las referencias legales del sitio. Los datos
+            fiscales y comerciales deben ser los de tu tienda.
+          </p>
+          <div className="form-grid">
+            <Field
+              label="País legal"
+              hint={`Perfil disponible actualmente para ${ARGENTINA_LEGAL_PROFILE.countryName}.`}
+            >
+              <input
+                aria-label="País legal"
+                value={`${ARGENTINA_LEGAL_PROFILE.countryName} (${project.legalProfile.countryCode})`}
+                readOnly
+              />
+            </Field>
+            <Field
+              label="Última revisión"
+              hint={`Fecha registrada: ${project.legalProfile.revisionAt?.slice(0, 10) ?? project.createdAt.slice(0, 10)}`}
+            >
+              <Button
+                variant="secondary"
+                data-testid="ui-legal-profile-review"
+                onClick={() => updateLegalProfile({ revisionAt: new Date().toISOString() })}
+              >
+                Registrar revisión de políticas
+              </Button>
+            </Field>
+            <Field label="CUIT / identificación fiscal">
+              <input
+                aria-label="CUIT identificación fiscal"
+                value={project.legalProfile.taxId}
+                onChange={(event) => updateLegalProfile({ taxId: event.target.value })}
+              />
+            </Field>
+            <Field label="Jurisdicción declarada">
+              <input
+                aria-label="Jurisdicción declarada"
+                value={project.legalProfile.jurisdiction}
+                onChange={(event) => updateLegalProfile({ jurisdiction: event.target.value })}
+              />
+            </Field>
+            <Field
+              label="Medios de pago"
+              hint="Separalos con comas; se muestran como información declarada por la tienda."
+            >
+              <input
+                aria-label="Medios de pago"
+                value={project.legalProfile.paymentMethods.join(", ")}
+                onChange={(event) =>
+                  updateLegalProfile({
+                    paymentMethods: event.target.value
+                      .split(",")
+                      .map((value) => value.trim())
+                      .filter(Boolean),
+                  })
+                }
+              />
+            </Field>
+            <Field
+              label="Canales de venta"
+              hint="Separalos con comas; no agregues canales que la tienda no use."
+            >
+              <input
+                aria-label="Canales de venta"
+                value={project.legalProfile.salesChannels.join(", ")}
+                onChange={(event) =>
+                  updateLegalProfile({
+                    salesChannels: event.target.value
+                      .split(",")
+                      .map((value) => value.trim())
+                      .filter(Boolean),
+                  })
+                }
+              />
+            </Field>
+            <Toggle
+              checked={project.legalProfile.consumerRights.enabled}
+              onChange={(checked) => updateLegalProfile({ consumerRights: { enabled: checked } })}
+              label="Habilitar botón de arrepentimiento"
+            />
+            <p className="form-help">
+              Se deriva del perfil protegido: {ARGENTINA_LEGAL_PROFILE.withdrawal.label} de{" "}
+              {ARGENTINA_LEGAL_PROFILE.withdrawal.defaultDays} días y su autoridad oficial.
+            </p>
+            <Field label="Texto legal avanzado de privacidad" className="field--wide">
+              <textarea
+                aria-label="Texto legal avanzado de privacidad"
+                rows={4}
+                value={project.legalProfile.privacyOverride}
+                onChange={(event) => updateLegalProfile({ privacyOverride: event.target.value })}
+              />
+            </Field>
+            <Field label="Texto legal avanzado de términos" className="field--wide">
+              <textarea
+                aria-label="Texto legal avanzado de términos"
+                rows={4}
+                value={project.legalProfile.termsOverride}
+                onChange={(event) => updateLegalProfile({ termsOverride: event.target.value })}
               />
             </Field>
           </div>

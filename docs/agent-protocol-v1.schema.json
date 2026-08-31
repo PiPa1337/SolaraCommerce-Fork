@@ -139,6 +139,14 @@
         },
         {
           "type": "object",
+          "required": ["type", "changes"],
+          "properties": {
+            "type": { "const": "store.updateLegalProfile" },
+            "changes": { "type": "object", "additionalProperties": false }
+          }
+        },
+        {
+          "type": "object",
           "required": ["type", "slug", "title"],
           "properties": {
             "type": { "const": "category.create" },

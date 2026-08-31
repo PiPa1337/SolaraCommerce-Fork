@@ -99,6 +99,19 @@ export function planCatalogModernUpgrade(project: StoreProjectV2): TemplateUpgra
     }
   });
 
+  if (project.commerceTemplates.designFamily === "catalog-modern-v2") {
+    project.pages.forEach((page) => {
+      if ((page.kind !== "about" && page.kind !== "contact") || page.sections.length === 0) return;
+      conflicts.push({
+        id: `page.archived.${page.kind}`,
+        path: `pages.${page.id}`,
+        label: `Contenido de ${page.kind === "about" ? "Nosotros" : "Contacto"} archivado`,
+        reason:
+          "Catalog Modern V2 ya no publica esta página standalone; se conserva para compatibilidad y revisión.",
+      });
+    });
+  }
+
   return {
     fromVersion,
     toVersion: CATALOG_MODERN_TEMPLATE_VERSION,

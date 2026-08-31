@@ -166,7 +166,7 @@ test("input de color: hex válido commitea en preview y picker nativo", async ({
   await expect(accentNative).toHaveValue("#b4552d");
   await expect(accentText).not.toHaveAttribute("aria-invalid", "true");
   // El contraste del par acento reacciona al nuevo color en vivo (aria-live).
-  await expect(page.getByTestId("ui-contrast-ok")).toHaveCount(3);
+  await expect(page.getByTestId("ui-contrast-ok")).toHaveCount(4);
 });
 
 test("input de color: hex inválido se rechaza con error inline y sin commit", async ({ page }) => {

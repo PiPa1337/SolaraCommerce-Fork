@@ -104,6 +104,18 @@ const contactPurchaseItemSchema = z.object({
   actionLabel: z.string().default("Más información"),
 });
 
+const contactReasonOptionSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+});
+
+const CONTACT_REASON_OPTIONS = [
+  { id: "product", label: "Consulta de producto" },
+  { id: "availability", label: "Disponibilidad" },
+  { id: "shipping", label: "Envíos" },
+  { id: "other", label: "Otro" },
+] as const;
+
 const contactFaqItemSchema = z.object({
   id: z.string().min(1),
   question: z.string().min(1),
@@ -127,6 +139,13 @@ export const contactFormSettings = z.object({
   title: z.string().default("Escribinos"),
   body: z.string().default("Completá el formulario y nuestro equipo te responderá a la brevedad."),
   showPhone: z.boolean().default(true),
+  /** Compatibilidad con configuraciones antiguas; el copy global es la fuente nueva. */
+  reasonLabel: z.string().default(""),
+  reasonOptions: z
+    .array(contactReasonOptionSchema)
+    .min(1)
+    .max(12)
+    .default([...CONTACT_REASON_OPTIONS]),
   nameLabel: z.string().default("Nombre"),
   emailLabel: z.string().default("Email"),
   phoneLabel: z.string().default("Teléfono"),
@@ -448,6 +467,8 @@ export const contactForm: ModuleDefinition<
     "title",
     "body",
     "showPhone",
+    "reasonLabel",
+    "reasonOptions",
     "nameLabel",
     "emailLabel",
     "phoneLabel",
@@ -460,6 +481,16 @@ export const contactForm: ModuleDefinition<
     { key: "title", type: "text", label: "Título" },
     { key: "body", type: "text", label: "Texto" },
     { key: "showPhone", type: "boolean", label: "Mostrar teléfono" },
+    { key: "reasonLabel", type: "text", label: "Label del motivo" },
+    {
+      key: "reasonOptions",
+      type: "repeater",
+      label: "Motivos de consulta",
+      minItems: 1,
+      maxItems: 12,
+      itemLabelKey: "label",
+      fields: [{ key: "label", label: "Motivo", type: "text" }],
+    },
     { key: "nameLabel", type: "text", label: "Label nombre" },
     { key: "emailLabel", type: "text", label: "Label email" },
     { key: "phoneLabel", type: "text", label: "Label teléfono" },
@@ -492,6 +523,22 @@ export const contactForm: ModuleDefinition<
       kind: "boolean",
       source: { kind: "section-setting", fieldKey: "showPhone" },
       capabilities: ["toggle-boolean"],
+    },
+    {
+      id: "reasonLabel",
+      label: "Etiqueta del motivo",
+      kind: "text",
+      source: { kind: "section-setting", fieldKey: "reasonLabel" },
+      capabilities: ["edit-text"],
+      maxLength: 80,
+    },
+    {
+      id: "reason-option-label",
+      label: "Motivo de consulta",
+      kind: "repeater-item",
+      source: { kind: "section-repeater-item", fieldKey: "reasonOptions", itemFieldKey: "label" },
+      capabilities: ["edit-repeater-item", "edit-text"],
+      maxLength: 120,
     },
     {
       id: "nameLabel",
@@ -560,12 +607,19 @@ export const contactForm: ModuleDefinition<
       hasEmail || hasWhatsapp
         ? `<p>${hasEmail ? `<a href="mailto:${escapeAttribute(email)}">${escapeHtml(copy.contact.emailAction || settings.emailActionLabel)}</a> ` : escapeHtml(copy.contact.emailFallback)}${hasEmail && hasWhatsapp ? " · " : ""}${hasWhatsapp ? `<a href="${whatsappHref}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.contact.whatsappAction)}</a> ` : escapeHtml(copy.contact.whatsappFallback)}</p>`
         : `<p>${escapeHtml(copy.contact.whatsappFallback)}</p>`;
-    const reasonField = `<label>Tema de consulta<select name="reason"><option>Consulta de producto</option><option>Disponibilidad</option><option>Envíos</option><option>Otro</option></select></label>`;
+    const reasonOptions = settings.reasonOptions
+      .map(
+        (option) =>
+          `<option value="${escapeAttribute(option.id)}"${canvasRepeaterItemAttributes(editor, "reason-option-label", option.id)}>${escapeHtml(option.label)}</option>`,
+      )
+      .join("");
+    const reasonLabel = settings.reasonLabel.trim() || copy.contact.reasonLabel;
+    const reasonField = `<label><span${canvasTextAttributes(editor, "reasonLabel", 80)}>${escapeHtml(reasonLabel)}</span><select name="reason" required>${reasonOptions}</select></label>`;
     return moduleRoot(
       "contact-form",
       context.section,
       safeHtml(
-        `<section id="contact-form" class="contact-main-grid" data-motion-zone="content"><form class="contact-form" data-solara-contact-form data-contact-brand="${escapeAttribute(brand)}" data-contact-email="${escapeAttribute(email)}" data-contact-whatsapp="${escapeAttribute(phone)}" action="${action}" method="get" target="_blank"><h2${canvasTextAttributes(editor, "title", 160)}>${escapeHtml(settings.title)}</h2><p${canvasTextAttributes(editor, "body", 600)}>${escapeHtml(settings.body)}</p><div class="contact-form-fields"><label><span${canvasTextAttributes(editor, "nameLabel", 80)}>${escapeHtml(settings.nameLabel)}</span><input name="name" autocomplete="name" required></label><label><span${canvasTextAttributes(editor, "emailLabel", 80)}>${escapeHtml(settings.emailLabel)}</span><input name="email" type="email" autocomplete="email" required></label>${settings.showPhone ? `<label><span${canvasTextAttributes(editor, "phoneLabel", 80)}>${escapeHtml(settings.phoneLabel)}</span><input name="phone" type="tel" autocomplete="tel" required></label>` : ""}${reasonField}<label class="contact-form-message"><span${canvasTextAttributes(editor, "messageLabel", 80)}>${escapeHtml(settings.messageLabel)}</span><textarea name="message" rows="5" required></textarea></label></div><div class="contact-form-actions"><button class="catalog-primary-action solara-primary-action" data-contact-channel="email" type="submit"${emailDisabled}><span class="catalog-hero-cta-label"${canvasTextAttributes(editor, "emailActionLabel", 120)}>${escapeHtml(settings.emailActionLabel)}</span><span class="catalog-hero-cta-icon" aria-hidden="true">→</span></button><button class="catalog-primary-action solara-primary-action contact-form-whatsapp" data-contact-channel="whatsapp" type="button"${whatsappDisabled}><span class="catalog-hero-cta-label"${canvasTextAttributes(editor, "whatsappActionLabel", 120)}>${escapeHtml(settings.whatsappActionLabel)}</span><svg class="catalog-hero-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${catalogHeroBenefitIcons.chat}</svg></button></div><p class="contact-form-status" data-contact-status aria-live="polite"></p><noscript>${noscriptFallback}<p>Activá JavaScript o usá los enlaces para enviar la consulta.</p></noscript></form></section>`,
+        `<section id="contact-form" class="contact-main-grid" data-motion-zone="content"><form class="contact-form" data-solara-contact-form data-contact-brand="${escapeAttribute(brand)}" data-contact-email="${escapeAttribute(email)}" data-contact-whatsapp="${escapeAttribute(phone)}" action="${action}" method="get" target="_blank"><h2${canvasTextAttributes(editor, "title", 160)}>${escapeHtml(settings.title)}</h2><p${canvasTextAttributes(editor, "body", 600)}>${escapeHtml(settings.body)}</p><div class="contact-form-fields"><label><span${canvasTextAttributes(editor, "nameLabel", 80)}>${escapeHtml(settings.nameLabel)}</span><input name="name" autocomplete="name" required></label><label><span${canvasTextAttributes(editor, "emailLabel", 80)}>${escapeHtml(settings.emailLabel)}</span><input name="email" type="email" autocomplete="email" required></label>${settings.showPhone ? `<label><span${canvasTextAttributes(editor, "phoneLabel", 80)}>${escapeHtml(settings.phoneLabel)}</span><input name="phone" type="tel" autocomplete="tel" required></label>` : ""}${reasonField}<label class="contact-form-message"><span${canvasTextAttributes(editor, "messageLabel", 80)}>${escapeHtml(settings.messageLabel)}</span><textarea name="message" rows="5" required></textarea></label></div><div class="contact-form-actions"><button class="catalog-primary-action solara-primary-action" data-contact-channel="email" type="submit"${emailDisabled}><span class="catalog-hero-cta-label"${canvasTextAttributes(editor, "emailActionLabel", 120)}>${escapeHtml(settings.emailActionLabel)}</span><span class="catalog-hero-cta-icon" aria-hidden="true">→</span></button><button class="catalog-primary-action solara-primary-action contact-form-whatsapp" data-contact-channel="whatsapp" type="button"${whatsappDisabled}><span class="catalog-hero-cta-label"${canvasTextAttributes(editor, "whatsappActionLabel", 120)}>${escapeHtml(settings.whatsappActionLabel)}</span><svg class="catalog-hero-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${catalogHeroBenefitIcons.chat}</svg></button></div><p class="contact-form-status" data-contact-status aria-live="polite"></p><noscript>${noscriptFallback}<p>${escapeHtml(copy.contact.javascriptFallback)}</p></noscript></form></section>`,
       ),
     );
   },
@@ -740,6 +794,7 @@ export const contactChannels: ModuleDefinition<
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const settings = context.settings;
+    const copy = context.project.publicCopy;
     const editor = contactCanvasContext(context);
     const locationHref = contactLocationHref(context);
     const phone = contactPhone(context);
@@ -747,8 +802,8 @@ export const contactChannels: ModuleDefinition<
       settings.showWhatsapp && phone
         ? [
             "chat",
-            "WhatsApp",
-            "Respondemos de lunes a viernes.",
+            copy.contact.whatsapp,
+            settings.hoursText,
             settings.whatsappActionLabel,
             `https://wa.me/${phone}`,
           ]
@@ -756,7 +811,7 @@ export const contactChannels: ModuleDefinition<
       settings.showEmail && context.project.identity.email
         ? [
             "mail",
-            "Email",
+            copy.contact.email,
             context.project.identity.email,
             settings.emailActionLabel,
             `mailto:${context.project.identity.email}`,
@@ -765,7 +820,7 @@ export const contactChannels: ModuleDefinition<
       settings.showPhone && context.project.identity.phone
         ? [
             "phone",
-            "Teléfono",
+            copy.contact.phone,
             context.project.identity.phone,
             settings.phoneActionLabel,
             `tel:${context.project.identity.phone}`,
@@ -774,20 +829,14 @@ export const contactChannels: ModuleDefinition<
       settings.showAddress && context.project.identity.address
         ? [
             "pin",
-            "Dirección",
+            copy.contact.address,
             context.project.identity.address,
             settings.addressActionLabel,
             locationHref,
           ]
         : null,
       settings.showHours && settings.hoursText
-        ? [
-            "clock",
-            "Horarios de atención",
-            settings.hoursText,
-            settings.hoursActionLabel,
-            locationHref,
-          ]
+        ? ["clock", copy.contact.hours, settings.hoursText, settings.hoursActionLabel, locationHref]
         : null,
     ];
     const activeRows = rows.filter(
@@ -1297,7 +1346,7 @@ export const contactLocation: ModuleDefinition<
       "contact-location",
       context.section,
       safeHtml(
-        `<section id="contact-location" class="contact-location" data-motion-zone="content"><header><h2${canvasTextAttributes(editor, "title", 160)}>${escapeHtml(settings.title)}</h2><p${canvasTextAttributes(editor, "body", 600)}>${escapeHtml(settings.body)}</p></header><div class="contact-location-grid">${image ? `<div${canvasImageAttributes(editor, "imageAssetId")}>${image}</div>` : ""}${map ? `<div${canvasImageAttributes(editor, "mapImageAssetId")}>${map}</div>` : ""}</div><div class="contact-location-meta">${settings.address ? `<p><strong>Dirección</strong><span${canvasTextAttributes(editor, "address", 500)}>${escapeHtml(settings.address)}</span></p>` : ""}${settings.hoursText ? `<p><strong>Horarios</strong><span${canvasTextAttributes(editor, "hoursText", 400)}>${escapeHtml(settings.hoursText)}</span></p>` : ""}${settings.mapHref ? `<a class="solara-secondary-action" href="${escapeAttribute(safeUrl(settings.mapHref))}"${canvasTextAttributes(editor, "mapHref")}>Cómo llegar →</a>` : ""}</div></section>`,
+        `<section id="contact-location" class="contact-location" data-motion-zone="content"><header><h2${canvasTextAttributes(editor, "title", 160)}>${escapeHtml(settings.title)}</h2><p${canvasTextAttributes(editor, "body", 600)}>${escapeHtml(settings.body)}</p></header><div class="contact-location-grid">${image ? `<div${canvasImageAttributes(editor, "imageAssetId")}>${image}</div>` : ""}${map ? `<div${canvasImageAttributes(editor, "mapImageAssetId")}>${map}</div>` : ""}</div><div class="contact-location-meta">${settings.address ? `<p><strong>${escapeHtml(context.project.publicCopy.contact.address)}</strong><span${canvasTextAttributes(editor, "address", 500)}>${escapeHtml(settings.address)}</span></p>` : ""}${settings.hoursText ? `<p><strong>${escapeHtml(context.project.publicCopy.contact.hours)}</strong><span${canvasTextAttributes(editor, "hoursText", 400)}>${escapeHtml(settings.hoursText)}</span></p>` : ""}${settings.mapHref ? `<a class="solara-secondary-action" href="${escapeAttribute(safeUrl(settings.mapHref))}"${canvasTextAttributes(editor, "mapHref")}>${escapeHtml(context.project.publicCopy.contact.directions)} →</a>` : ""}</div></section>`,
       ),
     );
   },

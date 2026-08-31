@@ -31,12 +31,16 @@ import type {
   VideoAsset,
 } from "@solara/project-schema";
 import {
+  ARGENTINA_LEGAL_PROFILE,
   compactResponsiveSources,
+  formatLegalCountryCoverage,
+  formatLegalRevisionAt,
   getCategoryAncestors,
   getCategoryBreadcrumb,
   getCategoryProductIds,
   isCatalogModernPlaceholderAsset,
   personalizeWhatsAppGreeting,
+  resolveLegalCountryName,
   StoreProjectV1Schema,
 } from "@solara/project-schema";
 import { ensureCatalogModernV2Sections } from "@solara/project-schema/catalog-modern-template";
@@ -1318,6 +1322,7 @@ function renderDocument(
             remove: copy.cart.remove,
             name: copy.cart.name,
             phone: copy.cart.phone,
+            phoneInvalid: copy.cart.phoneInvalid,
             delivery: copy.cart.delivery,
             locality: copy.cart.locality,
             postalCode: copy.cart.postalCode,
@@ -1334,6 +1339,7 @@ function renderDocument(
             emptyCart: copy.checkout.emptyCart,
             invalidItems: copy.checkout.invalidItems,
             total: copy.checkout.total,
+            verificationWarning: copy.checkout.verificationWarning,
             disclaimer: copy.checkout.disclaimer,
           },
           empty: { cart: copy.empty.cart },
@@ -1382,8 +1388,10 @@ function renderDocument(
   <link rel="alternate" type="text/plain" title="Resumen publico para agentes" href="${escapeAttribute(assetHref(project, "/llms.txt"))}">`
       : "";
   const consumerRightsLink =
-    mode === "production" && page.pageType !== "legal"
-      ? `<aside class="solara-consumer-rights" aria-label="Información legal"><a href="https://www.argentina.gob.ar/defensa-del-consumidor" target="_blank" rel="noopener noreferrer">Botón de arrepentimiento</a></aside>`
+    mode === "production" &&
+    page.pageType !== "legal" &&
+    project.legalProfile.consumerRights.enabled
+      ? `<aside class="solara-consumer-rights" aria-label="${escapeAttribute(copy.pages.privacy)}"><a href="${escapeAttribute(ARGENTINA_LEGAL_PROFILE.withdrawal.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(ARGENTINA_LEGAL_PROFILE.withdrawal.label)}</a></aside>`
       : "";
   const bodyWithConsumerRights = appendToFooter(page.body, consumerRightsLink);
 
@@ -1524,9 +1532,10 @@ function categoryListingMarkup(
     .slice(0, 12)
     .map((tag) => `<option value="${escapeAttribute(tag)}">${escapeHtml(tag)}</option>`)
     .join("");
+  const filterCopy = copy.filters;
   return `<div class="solara-category-toolbar" data-category-toolbar>
     ${resultCount}
-    <details><summary>Filtrar</summary><div><label><input type="checkbox" data-category-available> Sólo disponibles</label><label>Etiqueta <select data-category-tag><option value="">Todas</option>${tagOptions}</select></label><label>Precio mínimo <input type="number" min="0" step="1" data-category-min-price inputmode="decimal"></label><label>Precio máximo <input type="number" min="0" step="1" data-category-max-price inputmode="decimal"></label></div></details>
+    <details><summary>${escapeHtml(filterCopy.title)}</summary><div><label><input type="checkbox" data-category-available> ${escapeHtml(filterCopy.availableOnly)}</label><label>${escapeHtml(filterCopy.tag)} <select data-category-tag><option value="">${escapeHtml(filterCopy.all)}</option>${tagOptions}</select></label><label>${escapeHtml(filterCopy.minimum)} <input type="number" min="0" step="1" data-category-min-price inputmode="decimal"></label><label>${escapeHtml(filterCopy.maximum)} <input type="number" min="0" step="1" data-category-max-price inputmode="decimal"></label></div></details>
     ${categorySortSelect(project)}
   </div>
   ${grid}`;
@@ -2089,7 +2098,7 @@ function buildPages(
     `<a data-cart-cta href="${escapeAttribute(emptyCartHref)}"><span class="solara-primary-action">${escapeHtml(copy.cart.exploreCategories)}</span></a><a data-cart-cta href="${escapeAttribute(cartContinueHref)}" hidden><span class="solara-primary-action">${escapeHtml(cartContinueLabel)}</span></a>`,
   );
 
-  const checkoutFields = `<label for="solara-customer-name">${escapeHtml(copy.cart.name)}</label><input id="solara-customer-name" name="name" autocomplete="name" required><label for="solara-customer-phone">${escapeHtml(copy.cart.phone)}</label><input id="solara-customer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="Ingresá un teléfono válido" required><label for="solara-customer-address">${escapeHtml(copy.cart.address)}</label><textarea id="solara-customer-address" name="address" autocomplete="street-address" required></textarea><label for="solara-customer-locality">${escapeHtml(copy.cart.locality)}</label><input id="solara-customer-locality" name="locality" autocomplete="address-level2" required><label for="solara-customer-postal-code">${escapeHtml(copy.cart.postalCode)}</label><input id="solara-customer-postal-code" name="postalCode" autocomplete="postal-code" required><label for="solara-customer-notes">${escapeHtml(copy.cart.notes)}</label><textarea id="solara-customer-notes" name="notes"></textarea><button class="solara-primary-action" type="submit">${escapeHtml(copy.checkout.submit)}</button><p data-order-verification-warning role="note">Solicitud sin confirmar; precio, stock, envío y pago deben verificarse con la tienda</p>`;
+  const checkoutFields = `<label for="solara-customer-name">${escapeHtml(copy.cart.name)}</label><input id="solara-customer-name" name="name" autocomplete="name" required><label for="solara-customer-phone">${escapeHtml(copy.cart.phone)}</label><input id="solara-customer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="${escapeAttribute(copy.cart.phoneInvalid)}" required><label for="solara-customer-address">${escapeHtml(copy.cart.address)}</label><textarea id="solara-customer-address" name="address" autocomplete="street-address" required></textarea><label for="solara-customer-locality">${escapeHtml(copy.cart.locality)}</label><input id="solara-customer-locality" name="locality" autocomplete="address-level2" required><label for="solara-customer-postal-code">${escapeHtml(copy.cart.postalCode)}</label><input id="solara-customer-postal-code" name="postalCode" autocomplete="postal-code" required><label for="solara-customer-notes">${escapeHtml(copy.cart.notes)}</label><textarea id="solara-customer-notes" name="notes"></textarea><button class="solara-primary-action" type="submit">${escapeHtml(copy.checkout.submit)}</button><p data-order-verification-warning role="note">${escapeHtml(copy.checkout.verificationWarning)}</p>`;
   const checkoutForm =
     project.commerceTemplates.designFamily === "catalog-modern-v2"
       ? `<form class="solara-checkout-form solara-checkout-form-v2" data-checkout-form><div class="solara-checkout-fields">${checkoutFields}</div><aside class="solara-checkout-order-panel" aria-labelledby="solara-order-summary-title"><p class="solara-eyebrow">${escapeHtml(copy.checkout.selection)}</p><h2 id="solara-order-summary-title">${escapeHtml(copy.checkout.summary)}</h2><p>${escapeHtml(copy.checkout.prepare)}</p><pre data-order-preview aria-live="polite"></pre></aside></form>`
@@ -2109,7 +2118,7 @@ function buildPages(
       ? `${minimum} ${minimum === 1 ? "día" : "días"}`
       : `${minimum} a ${maximum} días`;
   const policyCoverage = (countries: readonly string[]) =>
-    countries.map((country) => project.policies.countryNames?.[country] ?? country).join(", ");
+    formatLegalCountryCoverage(project, countries);
   const policyContactAction = whatsAppContactLink
     ? `<a class="solara-primary-action" href="${escapeAttribute(whatsAppContactLink)}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.product.askWhatsApp)}</a>`
     : `<a class="solara-secondary-action" href="${escapeAttribute(internalHref(project, isV2Design ? "/#contact-form" : "/contacto/"))}">${escapeHtml(isV2Design ? copy.hero.contact : copy.pages.contact)}</a>`;
@@ -2266,15 +2275,19 @@ function buildPages(
   const buildDefaultPrivacyRichText = (target: StoreProjectV1): string => {
     const brand = target.identity.brandName;
     const legal = target.identity.legalName || brand;
+    const legalProfile = target.legalProfile;
+    const countryName =
+      resolveLegalCountryName(target, legalProfile.countryCode) ?? legalProfile.countryCode;
+    const jurisdiction = legalProfile.jurisdiction || countryName;
     const email = target.identity.email || "el email publicado en la web";
     const phone = target.whatsapp.phone || target.identity.phone || "";
     const phoneDisplay = phone ? ` · WhatsApp ${phone}` : "";
-    const address = target.identity.address || "Argentina";
+    const address = target.identity.address || jurisdiction;
     const base = target.baseUrl || "tu dominio";
     return `Usamos tus datos únicamente para responder y coordinar el pedido. Esta política explica, en lenguaje claro, qué información trata ${brand} y cómo funciona técnicamente esta web.
 
 ## 1. Responsable y alcance
-Responsable: ${legal} (${brand}). Contacto: ${email}${phoneDisplay} · ${address}. Sitio: ${base}. Esta política aplica al sitio estático y catálogo online. No comprende servicios externos que abras voluntariamente (WhatsApp, redes sociales o medios de pago que coordines por fuera). Última actualización: agosto de 2026.
+Responsable: ${legal} (${brand}). Contacto: ${email}${phoneDisplay} · ${address}. Sitio: ${base}. Esta política aplica al sitio estático y catálogo online en ${countryName}. No comprende servicios externos que abras voluntariamente (WhatsApp, redes sociales o medios de pago que coordines por fuera). Última actualización: ${formatLegalRevisionAt(target)}.
 
 ## 2. Qué datos recopilamos y cuándo
 - Datos que vos nos proporcionás voluntariamente al preparar un pedido o consultarnos: nombre, teléfono, dirección o punto de entrega, notas opcionales y contenido del carrito (productos, variantes, cantidades y subtotal estimado).
@@ -2284,10 +2297,10 @@ Responsable: ${legal} (${brand}). Contacto: ${email}${phoneDisplay} · ${address
 No solicitamos datos sensibles ni realizamos perfilado automatizado.
 
 ## 3. Para qué usamos tus datos
-Usamos tus datos únicamente para responder y coordinar el pedido: confirmar disponibilidad y precio vigente, calcular envío, acordar forma de pago, coordinar entrega o retiro y brindar soporte postventa. No usamos tus datos para publicidad sin tu consentimiento, no los vendemos ni los cedemos con fines comerciales.
+Usamos tus datos únicamente para responder y coordinar el pedido: confirmar disponibilidad y precio vigente, calcular envío, acordar forma de pago, coordinar entrega o retiro y brindar soporte postventa. La operación se informa según la política de envíos ("${target.policies.shipping.summary}") y la política de cambios ("${target.policies.returns.summary}"). No usamos tus datos para publicidad sin tu consentimiento, no los vendemos ni los cedemos con fines comerciales.
 
 ## 4. Base legal
-Tratamos tus datos con tu consentimiento al completarlos y enviarlos voluntariamente por el formulario o por WhatsApp, y en el marco de gestiones previas a una compra (Ley 25.326 de Protección de Datos Personales, Argentina). Podés revocarlo en cualquier momento sin efecto retroactivo.
+Tratamos tus datos con tu consentimiento al completarlos y enviarlos voluntariamente por el formulario o por WhatsApp, y en el marco de gestiones previas a una compra (${ARGENTINA_LEGAL_PROFILE.privacyLaw.label}, ${countryName}). Podés revocarlo en cualquier momento sin efecto retroactivo.
 
 ## 5. Conservación
 Conservamos mensajes y detalles del pedido el tiempo necesario para gestionar la venta, cumplir obligaciones legales e impositivas y atender reclamos. El carrito en tu navegador permanece hasta que lo vacíes o borres datos del sitio. Los logs del hosting se conservan según política del proveedor (habitualmente 30 a 90 días) y luego se rotan o anonimizan.
@@ -2308,7 +2321,7 @@ No hay cookies de terceros, fingerprinting ni publicidad programática. Podés b
 El sitio se sirve por HTTPS y los archivos públicos no contienen información privada. El pedido no se guarda en una base de datos central: se compone en tu navegador y viaja como mensaje directo a nuestro WhatsApp. Aplicamos buenas prácticas de control de acceso en el hosting y validamos el contenido publicado. Ningún sistema es infalible: no envíes datos innecesarios y verificá que hablás con nuestros canales oficiales.
 
 ## 9. Tus derechos
-Podés ejercer los derechos de acceso, rectificación, actualización y supresión previstos en la Ley 25.326 y el derecho a la información del art. 14 inc. 3. Para hacerlo, escribinos a ${email}${phone ? ` o por WhatsApp al ${phone}` : ""} indicando qué necesitás consultar, corregir o eliminar. Respondemos en plazo razonable y sin costo. También podés presentar reclamo ante la Agencia de Acceso a la Información Pública (AAIP) www.argentina.gob.ar/aaip.
+Podés ejercer los derechos de acceso, rectificación, actualización y supresión previstos en ${ARGENTINA_LEGAL_PROFILE.privacyLaw.label} y el derecho a la información del art. 14 inc. 3. Para hacerlo, escribinos a ${email}${phone ? ` o por WhatsApp al ${phone}` : ""} indicando qué necesitás consultar, corregir o eliminar. Respondemos en plazo razonable y sin costo. También podés presentar reclamo ante ${ARGENTINA_LEGAL_PROFILE.privacyAuthority.label}: ${ARGENTINA_LEGAL_PROFILE.privacyAuthority.href}.
 
 ## 10. Menores
 El sitio no está dirigido a menores de 13 años y no recopilamos deliberadamente sus datos. Si sos menor, navegá con asistencia de un adulto.
@@ -2319,10 +2332,14 @@ Publicaremos la versión actualizada en esta misma URL con nueva fecha de vigenc
   const buildDefaultTermsRichText = (target: StoreProjectV1): string => {
     const brand = target.identity.brandName;
     const legal = target.identity.legalName || brand;
+    const legalProfile = target.legalProfile;
+    const countryName =
+      resolveLegalCountryName(target, legalProfile.countryCode) ?? legalProfile.countryCode;
+    const jurisdiction = legalProfile.jurisdiction || countryName;
     const email = target.identity.email || "el email publicado en la web";
     const phone = target.whatsapp.phone || target.identity.phone || "";
     const phoneDisplay = phone ? ` · WhatsApp ${phone}` : "";
-    const address = target.identity.address || "Argentina";
+    const address = target.identity.address || jurisdiction;
     const base = target.baseUrl || "tu dominio";
     const currencyLabel = target.currency === "ARS" ? "pesos argentinos (ARS)" : target.currency;
     const handling = formatPolicyDays(
@@ -2333,12 +2350,19 @@ Publicaremos la versión actualizada en esta misma URL con nueva fecha de vigenc
       target.policies.shipping.transitDaysMin,
       target.policies.shipping.transitDaysMax,
     );
-    const coverage = policyCoverage(target.policies.shipping.countries) || "Argentina";
+    const coverage = policyCoverage(target.policies.shipping.countries);
     const returnsDays = String(target.policies.returns.returnDays);
+    const paymentMethods =
+      legalProfile.paymentMethods.join(", ") || "los medios informados por la tienda";
+    const salesChannels =
+      legalProfile.salesChannels.join(", ") || "los canales publicados por la tienda";
+    const withdrawal = legalProfile.consumerRights.enabled
+      ? `${ARGENTINA_LEGAL_PROFILE.withdrawal.label} (${ARGENTINA_LEGAL_PROFILE.withdrawal.defaultDays} días desde la compra, ${ARGENTINA_LEGAL_PROFILE.withdrawal.reference}) disponible cuando corresponda según el canal de venta: ${ARGENTINA_LEGAL_PROFILE.withdrawal.href}.`
+      : "La tienda no declara habilitado un botón de arrepentimiento en su perfil legal.";
     return `Los precios y la disponibilidad se confirman antes del pago. Este sitio funciona como catálogo y carrito local para preparar un pedido que luego se coordina directamente con ${brand}.
 
 ## 1. Identificación y objeto
-Titular: ${legal} (${brand}) · ${address} · Contacto: ${email}${phoneDisplay} · Sitio: ${base}. Este documento regula el uso del catálogo online, la preparación del pedido en el navegador y las condiciones para coordinar una compra por WhatsApp o email.
+Titular: ${legal} (${brand}) · ${address} · Contacto: ${email}${phoneDisplay} · Sitio: ${base}. Este documento regula el uso del catálogo online en ${countryName}, la preparación del pedido en el navegador y las condiciones para coordinar una compra por WhatsApp o email.
 
 ## 2. Naturaleza del sitio y del carrito
 El sitio es una vidriera estática sin carrito en servidor ni cobro online. Podés navegar categorías, productos, colecciones, buscar y armar un carrito. El carrito vive en tu navegador y no genera reserva de stock ni contrato hasta que lo confirmemos por WhatsApp o email. El botón “Preparar pedido” genera un resumen que vos enviás voluntariamente. Sin confirmación bilateral, no hay venta perfeccionada.
@@ -2358,7 +2382,7 @@ El sitio es una vidriera estática sin carrito en servidor ni cobro online. Pod�
 Podés consultar sin comprar usando “Consultar por WhatsApp” en cada producto.
 
 ## 5. Pagos
-El sitio no cobra online. No ingresás tarjetas ni datos bancarios aquí. Las formas de pago se acuerdan por WhatsApp/email (transferencia, efectivo en punto de entrega/retiro u otras que informemos). El pedido se considera pagado cuando el medio elegido lo acredita y nosotros lo confirmamos. No compartas comprobantes sensibles fuera de nuestros canales oficiales.
+El sitio no cobra online. No ingresás tarjetas ni datos bancarios aquí. Las formas de pago declaradas por la tienda son: ${paymentMethods}. Los canales de venta declarados son: ${salesChannels}. El pedido se considera pagado cuando el medio elegido lo acredita y nosotros lo confirmamos. No compartas comprobantes sensibles fuera de nuestros canales oficiales.
 
 ## 6. Entregas y envíos
 - Coordinamos el envío y su costo antes de confirmar el pedido. Plazos informativos de preparación: ${handling}; tránsito estimado: ${transit} — son orientativos y dependen de localidad, operador y demanda.
@@ -2370,7 +2394,7 @@ El sitio no cobra online. No ingresás tarjetas ni datos bancarios aquí. Las fo
 - Tenés ${returnsDays} días corridos desde la recepción para solicitar cambio. El producto debe conservar su estado original, sin uso, con embalaje y etiquetas. Para descartables y productos de higiene/packaging, el cambio se evalúa por lote y condición higiénica; te lo informaremos antes de confirmar.
 - Coordiná el cambio por WhatsApp/email con fotos y número de pedido. El costo de reenvío se acuerda según el motivo.
 - Productos en promoción, liquidación o personalizados pueden tener condiciones específicas informadas en el detalle.
-- Garantía legal conforme al Código Civil y Comercial y Ley 24.240 de Defensa del Consumidor por vicios o defectos. No cubre mal uso o almacenamiento inadecuado.
+- Garantía legal conforme al Código Civil y Comercial y ${ARGENTINA_LEGAL_PROFILE.consumerLaw.label} por vicios o defectos. No cubre mal uso o almacenamiento inadecuado.
 
 ## 8. Uso del contenido y propiedad intelectual
 Textos, fotos, gráficos, logo y diseño pertenecen a ${brand} o a sus proveedores y están protegidos. Podés compartir enlaces al sitio, pero no copiar, modificar ni usar el contenido con fines comerciales sin autorización.
@@ -2379,13 +2403,13 @@ Textos, fotos, gráficos, logo y diseño pertenecen a ${brand} o a sus proveedor
 Hacemos esfuerzos razonables para que el sitio esté disponible y la información sea precisa, pero al ser provisto “tal cual” no garantizamos ausencia de errores o interrupciones. No somos responsables por daños derivados del uso del sitio, incompatibilidades de tu dispositivo o fallas de servicios externos (WhatsApp, hosting, red).
 
 ## 10. Contacto, arrepentimiento y reclamos
-Escribinos a ${email}${phone ? ` o por WhatsApp al ${phone}` : ""} para consultas, correcciones o ejercicio de derechos. Botón de arrepentimiento (10 días desde la compra, art. 34 Ley 24.240) disponible en el footer cuando corresponda según el canal de venta: https://www.argentina.gob.ar/defensa-del-consumidor. Para controversias, podés acudir a la autoridad de Defensa del Consumidor local.
+Escribinos a ${email}${phone ? ` o por WhatsApp al ${phone}` : ""} para consultas, correcciones o ejercicio de derechos. ${withdrawal} Para controversias, podés acudir a ${ARGENTINA_LEGAL_PROFILE.consumerAuthority.label}: ${ARGENTINA_LEGAL_PROFILE.consumerAuthority.href}.
 
 ## 11. Ley aplicable y jurisdicción
-Estas condiciones se rigen por las leyes de la República Argentina. Para cualquier divergencia, serán competentes los tribunales ordinarios del domicilio del consumidor, sin perjuicio de los derechos que te otorga la Ley 24.240.
+Estas condiciones se rigen por las leyes de ${jurisdiction}. Para cualquier divergencia, serán competentes los tribunales ordinarios del domicilio del consumidor, sin perjuicio de los derechos que te otorga ${ARGENTINA_LEGAL_PROFILE.consumerLaw.label}.
 
 ## 12. Actualizaciones
-Podemos actualizar estos Términos para reflejar cambios operativos o legales. La versión vigente es la publicada en esta página con fecha de actualización. Al continuar usando el sitio o coordinar un nuevo pedido aceptás las condiciones actualizadas. Última actualización: agosto de 2026.`;
+Podemos actualizar estos Términos para reflejar cambios operativos o legales. La versión vigente es la publicada en esta página con fecha de actualización. Al continuar usando el sitio o coordinar un nuevo pedido aceptás las condiciones actualizadas. Última actualización: ${formatLegalRevisionAt(target)}.`;
   };
   const renderV2LegalArticle = (
     title: string,
@@ -2395,10 +2419,16 @@ Podemos actualizar estos Términos para reflejar cambios operativos o legales. L
   ) => {
     const isPrivacy = title === copy.pages.privacy;
     const isTerms = title === copy.pages.terms;
-    let details = rawDetails;
-    if (isPrivacy && isLegacyPrivacyText(rawDetails))
+    const override = isPrivacy
+      ? project.legalProfile.privacyOverride.trim()
+      : isTerms
+        ? project.legalProfile.termsOverride.trim()
+        : "";
+    let details = override || rawDetails;
+    if (!override && isPrivacy && isLegacyPrivacyText(rawDetails))
       details = buildDefaultPrivacyRichText(project);
-    if (isTerms && isLegacyTermsText(rawDetails)) details = buildDefaultTermsRichText(project);
+    if (!override && isTerms && isLegacyTermsText(rawDetails))
+      details = buildDefaultTermsRichText(project);
     const hasRichMarkers = details.includes("## ") || details.includes("\n\n");
     const formatted = hasRichMarkers
       ? formatRichPolicyText(details)
@@ -2535,7 +2565,7 @@ Podemos actualizar estos Términos para reflejar cambios operativos o legales. L
     ...publishedLegalPages,
   ].map((page) => ({
     ...page,
-    body: page.body || `<main><p>No hay contenido publicado.</p></main>`,
+    body: page.body || `<main><p>${escapeHtml(project.publicCopy.empty.page)}</p></main>`,
   }));
 }
 
@@ -2890,7 +2920,7 @@ export function exportProject(projectInput: StoreProjectV1, options: ExportOptio
     profile: options.optimizationProfile ?? "safe",
     publicAiContext,
   });
-  const baseAudit = auditProject(project, publicAiContext);
+  const baseAudit = auditProject(project, publicAiContext, options.mode);
   const existingPaths = new Set(baseAudit.map((issue) => issue.path).filter(Boolean));
   const optimizationAudit: AuditIssue[] = optimization.findings
     .filter((finding) => !finding.path || !existingPaths.has(finding.path))

@@ -105,12 +105,6 @@ export async function loadAllDiskProjects(): Promise<{
     listing.projects.map(async (summary) => {
       try {
         const loaded = await loadDiskProject(summary);
-        if (loaded.mediaRepairPending && !isBaseTemplate(loaded.project)) {
-          const receipt = await persistProjectToDisk(loaded.project, summary.version);
-          loaded.diskVersion = receipt.receipt.version;
-          loaded.diskStatus = receipt.receipt.status;
-          loaded.diskSiteStatus = receipt.receipt.status;
-        }
         await saveProject(loaded.project, {
           allowProtectedWrite: isBaseTemplate(loaded.project),
         });

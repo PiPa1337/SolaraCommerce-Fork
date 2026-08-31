@@ -304,6 +304,66 @@ describe("official module system", () => {
     expect(editorialHtml).toContain("solara-editorial-head");
   });
 
+  it("deriva los textos accesibles del carrusel y video legacy del copy global", () => {
+    const source = referenceStore.sections.find((section) => section.moduleId === "hero-media");
+    const image = referenceStore.assets[0];
+    if (!source || !image) throw new Error("Fixture sin hero o imagen");
+    const project = structuredClone(referenceStore);
+    project.publicCopy.hero.pauseVideo = "Pausar campaña";
+    project.publicCopy.accessibility.heroSlides = "Historias destacadas";
+    project.publicCopy.accessibility.goToSlide = "Abrir historia {index}";
+    const carousel = {
+      ...source,
+      settings: {
+        ...source.settings,
+        mode: "carousel",
+        slides: [
+          {
+            id: "hero-slide-copy",
+            eyebrow: "",
+            title: "Historia",
+            body: "",
+            actionLabel: "",
+            actionHref: "#",
+            imageId: image.id,
+          },
+          {
+            id: "hero-slide-copy-2",
+            eyebrow: "",
+            title: "Historia 2",
+            body: "",
+            actionLabel: "",
+            actionHref: "#",
+            imageId: image.id,
+          },
+        ],
+      },
+    };
+
+    const carouselHtml = renderSections(project, [carousel]);
+    expect(carouselHtml).toContain('aria-label="Historias destacadas"');
+    expect(carouselHtml).toContain('aria-label="Abrir historia 1"');
+
+    const videoAsset: VideoAsset = {
+      kind: "video",
+      id: "hero-copy-video" as VideoAsset["id"],
+      name: "Video de campaña",
+      alt: "Video de campaña",
+      mimeType: "video/mp4",
+      source: "data:video/mp4;base64,AAAA",
+      width: 640,
+      height: 360,
+      durationSeconds: 2,
+      hash: "hero-copy-video-hash",
+    };
+    project.videos = [videoAsset];
+    const video = {
+      ...source,
+      settings: { ...source.settings, mode: "video", videoAssetId: videoAsset.id },
+    };
+    expect(renderSections(project, [video])).toContain("Pausar campaña");
+  });
+
   it("muestra doce productos en la grilla principal de la home de escala", () => {
     const html = renderSections(catalogScaleStore, catalogScaleStore.sections, {
       pageType: "home",
@@ -480,8 +540,23 @@ describe("official module system", () => {
     ).toEqual(["wide", "tall", "tall", "wide", "compact", "compact", "compact", "compact"]);
     expect(bento).toContain('sizes="(max-width: 767px) calc(100vw - 3.5rem)');
     expect(bento).toContain('sizes="(max-width: 767px) calc((100vw - 4.25rem) / 2)');
-    expect(bento).toContain("Ver todo el catálogo");
+    expect(bento).toContain(catalogModernStore.publicCopy.navigation.viewAll);
     expect(bento).toContain('href="/categorias/');
+  });
+
+  it("separa la imagen cuadrada de la información y expone contador y flecha", () => {
+    const html = renderSections(catalogModernStore, catalogModernStore.sections, {
+      pageType: "home",
+    });
+    const bentoStart = html.indexOf('data-solara-module="catalog-category-bento"');
+    const bentoEnd = html.indexOf('data-solara-module="catalog-testimonials"', bentoStart);
+    const bento = html.slice(bentoStart, bentoEnd);
+
+    expect(bento).toMatch(
+      /catalog-category-bento-media[^>]*>.*?<\/div><div class="catalog-category-bento-copy">/s,
+    );
+    expect(bento).toContain('class="catalog-category-bento-count"');
+    expect(bento).toContain('class="catalog-category-bento-arrow" aria-hidden="true"');
   });
 
   it("recalcula el mosaico automático al cambiar las categorías madre", () => {
@@ -572,6 +647,16 @@ describe("official module system", () => {
     expect(html).toContain('aria-label="Testimonios de clientes"');
     expect(html).toMatch(/aria-controls="catalog-testimonials-track-[^"]+"/);
     expect(html).toContain('aria-label="Testimonios de clientes" role="region"');
+  });
+
+  it("oculta testimonios cuando el repeater está vacío", () => {
+    const section = catalogModernStore.sections.find(
+      (item) => item.moduleId === "catalog-testimonials",
+    );
+    if (!section) throw new Error("Fixture sin testimonios");
+    const empty = { ...section, settings: { ...section.settings, items: [] } };
+    const html = renderSections(catalogModernStore, [empty], { pageType: "home" });
+    expect(html).not.toContain('data-solara-module="catalog-testimonials"');
   });
 
   it("omite beneficios de confianza sin datos configurados", () => {
@@ -1128,8 +1213,12 @@ describe("catalog-product-grid: nombres accesibles únicos", () => {
       pageType: "home",
     });
 
-    expect(html).toContain('aria-label="Ver todos los productos de Recién llegados"');
-    expect(html).toContain('aria-label="Ver todos los productos de Más elegidos"');
+    expect(html).toContain(
+      `aria-label="${catalogModernV2Store.publicCopy.navigation.viewAll} de Recién llegados"`,
+    );
+    expect(html).toContain(
+      `aria-label="${catalogModernV2Store.publicCopy.navigation.viewAll} de Más elegidos"`,
+    );
   });
 
   it("usa un título contextual y omite el enlace redundante en categorías", () => {
@@ -1511,7 +1600,7 @@ describe("auditoría Resumen — fixes Ola 3 (navegación y footer moderno)", ()
     expect(explore).toContain('href="/"');
     expect(explore).toContain('href="/buscar/"');
     expect(explore).toContain(
-      'href="/carrito/" data-solara-cart-open data-open-cart data-cart-label="Abrir carrito"',
+      `href="/carrito/" data-solara-cart-open data-open-cart data-cart-label="${catalogModernV2Store.publicCopy.navigation.cart}"`,
     );
     expect(explore.match(/<a /g) ?? []).toHaveLength(3);
     expect(html).toContain('class="catalog-footer-nav catalog-footer-nav--categories"');

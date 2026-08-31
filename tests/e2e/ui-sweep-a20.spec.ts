@@ -3,7 +3,6 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
-  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -214,31 +213,24 @@ async function createSecondStore(page: Page, name: string): Promise<void> {
 
 async function failPreviewRenderer(page: Page): Promise<void> {
   await page.addInitScript(() => {
-    try {
-      Object.defineProperty(navigator, "serviceWorker", {
-        value: undefined,
-        configurable: true,
-      });
-    } catch {
-      // Los navegadores sin service workers ya permiten interceptar el chunk.
-    }
-  });
-  const rendererAsset = readdirSync(resolve("apps/studio/dist/assets")).find((asset) => {
-    if (!asset.endsWith(".js")) return false;
-    return readFileSync(resolve("apps/studio/dist/assets", asset), "utf8").includes(
-      "renderPreviewHtml",
-    );
-  });
-  if (!rendererAsset) throw new Error("No se encontró el chunk del renderer de preview.");
-  const rendererPath = `/assets/${rendererAsset}`;
-  let blocked = false;
-  await page.route("**/assets/*.js", async (route) => {
-    if (!blocked && new URL(route.request().url()).pathname === rendererPath) {
-      blocked = true;
-      await route.abort("failed");
-      return;
-    }
-    await route.continue();
+    const originalPostMessage = Worker.prototype.postMessage;
+    let previewFailurePending = true;
+    Worker.prototype.postMessage = function (
+      message: unknown,
+      transferOrOptions?: Transferable[] | StructuredSerializeOptions,
+    ) {
+      if (
+        previewFailurePending &&
+        typeof message === "object" &&
+        message !== null &&
+        "type" in message &&
+        message.type === "preview"
+      ) {
+        previewFailurePending = false;
+        throw new Error("Fallo controlado del renderer de preview.");
+      }
+      return originalPostMessage.call(this, message, transferOrOptions as Transferable[]);
+    };
   });
 }
 
@@ -645,7 +637,6 @@ test("A20: preview — el error del renderer ofrece recargar y recupera el ifram
   const reload = error.getByRole("button", { name: "Recargar vista previa", exact: true });
   await expect(reload).toBeEnabled();
 
-  await page.unroute("**/assets/*.js");
   await reload.click();
   await expect(error).toHaveCount(0, { timeout: 30_000 });
   await expect(previewFrame(page)).toBeVisible({ timeout: 30_000 });

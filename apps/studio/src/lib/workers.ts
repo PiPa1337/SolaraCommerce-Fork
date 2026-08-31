@@ -115,13 +115,16 @@ function requestWorker<Request extends object, Result>(
   request: Request,
   transfer: Transferable[] = [],
   recreate?: () => Worker,
+  timeoutMs = 0,
 ): Promise<Result> {
   const id = crypto.randomUUID();
   return new Promise((resolve, reject) => {
     const perform = (current: Worker, retried: boolean) => {
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
       const detach = () => {
         current.removeEventListener("message", handleMessage);
         current.removeEventListener("error", handleError);
+        if (timeoutId !== undefined) clearTimeout(timeoutId);
       };
       const handleMessage = (event: MessageEvent<WorkerResponse<Result>>) => {
         if (event.data.id !== id) return;
@@ -144,9 +147,19 @@ function requestWorker<Request extends object, Result>(
           ),
         );
       };
+      const handleTimeout = () => {
+        detach();
+        current.terminate();
+        if (!retried && recreate) {
+          perform(recreate(), true);
+          return;
+        }
+        reject(new Error("el worker no respondió dentro del tiempo esperado."));
+      };
       current.addEventListener("message", handleMessage);
       current.addEventListener("error", handleError);
       current.postMessage({ ...request, id }, transfer);
+      if (timeoutMs > 0) timeoutId = setTimeout(handleTimeout, timeoutMs);
     };
     perform(worker, false);
   });
@@ -433,27 +446,16 @@ export function auditProjectInWorker(
   project: StoreProjectV1,
   publicAiContext: boolean,
 ): Promise<AuditResult> {
-  const worker = getExportWorker();
-  return new Promise((resolve, reject) => {
-    const handleError = () => {
+  return requestWorker(
+    getExportWorker(),
+    { type: "audit", project, publicAiContext },
+    [],
+    recreateWorker(() => {
       exportWorker?.terminate();
       exportWorker = undefined;
-      reject(new Error("el worker del exportador no respondió"));
-    };
-    worker.addEventListener("error", handleError);
-    requestWorker<
-      { type: "audit"; project: StoreProjectV1; publicAiContext: boolean },
-      AuditResult
-    >(worker, { type: "audit", project, publicAiContext })
-      .then((result) => {
-        worker.removeEventListener("error", handleError);
-        resolve(result);
-      })
-      .catch((reason) => {
-        worker.removeEventListener("error", handleError);
-        reject(reason);
-      });
-  });
+    }, getExportWorker),
+    10_000,
+  );
 }
 
 export interface PreviewWorkerResult {

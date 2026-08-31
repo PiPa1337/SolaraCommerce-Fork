@@ -37,18 +37,18 @@ describe("Contacto V2 module contracts", () => {
     );
   });
 
-  it("restringe los módulos a Contacto V2 y conserva el newsletter compartido", () => {
+  it("conserva Contacto V2 sólo para lectura y mantiene el formulario de Home", () => {
     const hero = getModuleDefinition("contact-hero");
     const form = getModuleDefinition("contact-form");
     const channels = getModuleDefinition("contact-channels");
     const newsletter = getModuleDefinition("catalog-newsletter-cta");
     if (!hero || !form || !channels || !newsletter) throw new Error("Faltan módulos registrados");
-    expect(isModuleAvailableOnPage(hero, "contact", "catalog-modern-v2")).toBe(true);
+    expect(isModuleAvailableOnPage(hero, "contact", "catalog-modern-v2")).toBe(false);
     expect(isModuleAvailableOnPage(hero, "home", "catalog-modern-v2")).toBe(false);
     expect(isModuleAvailableOnPage(form, "home", "catalog-modern-v2")).toBe(true);
     expect(isModuleAvailableOnPage(channels, "home", "catalog-modern-v2")).toBe(true);
     expect(isModuleAvailableOnPage(hero, "contact", "catalog-modern-v1")).toBe(false);
-    expect(isModuleAvailableOnPage(newsletter, "contact", "catalog-modern-v2")).toBe(true);
+    expect(isModuleAvailableOnPage(newsletter, "contact", "catalog-modern-v2")).toBe(false);
   });
 
   it("hace que el CTA de novedades llegue al formulario desde cualquier ruta", () => {
@@ -80,6 +80,8 @@ describe("Contacto V2 module contracts", () => {
     expect(contactFaqSettings.parse({}).items).toHaveLength(6);
     expect(contactChannelsSettings.parse({}).showWhatsapp).toBe(true);
     expect(contactFormSettings.parse({}).showPhone).toBe(true);
+    expect(contactFormSettings.parse({}).reasonOptions.length).toBeGreaterThan(0);
+    expect(contactFormSettings.safeParse({ reasonOptions: [] }).success).toBe(false);
     expect(contactFormSettings.parse({}).emailActionLabel).toBe("Enviar por Email");
     expect(contactFormSettings.parse({}).whatsappActionLabel).toBe("Enviar por WhatsApp");
     expect(contactWhatsappCtaSettings.parse({}).actionLabel).toBe("Iniciar conversación");
@@ -94,6 +96,27 @@ describe("Contacto V2 module contracts", () => {
     expect(
       contactFaqSettings.safeParse({ items: Array.from({ length: 9 }, () => ({})) }).success,
     ).toBe(false);
+  });
+
+  it("usa la etiqueta global, el repeater de motivos y el fallback sin JS", () => {
+    const project = structuredClone(catalogModernV2Store);
+    project.publicCopy.contact.reasonLabel = "Tipo de consulta";
+    project.publicCopy.contact.javascriptFallback = "Consultá por los canales publicados.";
+    const form = getModuleDefinition("contact-form");
+    if (!form?.render) throw new Error("Falta el módulo contact-form");
+    const html = String(
+      form.render({
+        project,
+        section: renderSection,
+        settings: contactFormSettings.parse({
+          reasonOptions: [{ id: "catalog", label: "Catálogo" }],
+        }),
+        pageType: "home",
+      }),
+    );
+    expect(html).toContain("Tipo de consulta");
+    expect(html).toContain('<option value="catalog"');
+    expect(html).toContain("Consultá por los canales publicados.");
   });
 
   it("renderiza el hero con accesos rápidos semánticos", () => {

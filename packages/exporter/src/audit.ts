@@ -5,12 +5,15 @@
  */
 
 import type { StoreProjectV1 } from "@solara/project-schema";
-import { isCatalogModernPlaceholderAsset } from "@solara/project-schema";
+import {
+  isCatalogModernPlaceholderAsset,
+  unresolvedLegalCountryCodes,
+} from "@solara/project-schema";
 import { optimizeProject } from "@solara/site-optimizer";
 import { imageFor } from "./assets.js";
 import { buildMerchantFeed } from "./feeds.js";
 import { escapeXml } from "./html.js";
-import type { AuditIssue, AuditReport } from "./index.js";
+import type { AuditIssue, AuditReport, ExportMode } from "./index.js";
 import {
   buildCommerceSnapshot,
   dataUrlBytes,
@@ -19,7 +22,11 @@ import {
 } from "./index.js";
 import { publicWhatsAppPhone } from "./whatsapp.js";
 
-export function auditProject(project: StoreProjectV1, publicAiContext = true): AuditIssue[] {
+export function auditProject(
+  project: StoreProjectV1,
+  publicAiContext = true,
+  mode: ExportMode = "draft",
+): AuditIssue[] {
   const issues: AuditIssue[] = [];
   const productSlugs = new Map<string, number>();
   const categorySlugs = new Map<string, number>();
@@ -128,6 +135,21 @@ export function auditProject(project: StoreProjectV1, publicAiContext = true): A
         "El checkout abre WhatsApp en wa.me; ese host externo recibe la solicitud cuando el cliente confirma.",
       path: "whatsapp.phone",
       fixTarget: "export",
+    });
+  }
+
+  const legalCountryCodes = [
+    ...new Set([...project.policies.shipping.countries, ...project.policies.returns.countries]),
+  ];
+  const unresolvedCountries = unresolvedLegalCountryCodes(project, legalCountryCodes);
+  if (unresolvedCountries.length > 0) {
+    issues.push({
+      code: "legal.country-name",
+      severity: mode === "production" ? "critical" : "warning",
+      area: "content",
+      message: `Falta configurar el nombre legal de los países: ${unresolvedCountries.join(", ")}. Completá policies.countryNames antes de publicar producción.`,
+      path: "policies.countryNames",
+      fixTarget: "summary",
     });
   }
 
@@ -334,6 +356,23 @@ export function auditProject(project: StoreProjectV1, publicAiContext = true): A
       message: "La tienda debería publicar teléfono y dirección comercial.",
       area: "content",
       fixTarget: "summary",
+    });
+  }
+
+  const contactPage = project.pages.find((page) => page.kind === "contact");
+  if (
+    project.commerceTemplates.designFamily !== "catalog-modern-v2" &&
+    contactPage &&
+    contactPage.seoDescription.trim() === project.publicCopy.pages.contactDescription.trim()
+  ) {
+    issues.push({
+      code: "seo.contact-description",
+      severity: "warning",
+      area: "content",
+      message:
+        "La página Contacto usa una descripción genérica; configurá una descripción SEO propia.",
+      path: `pages.${contactPage.id}.seoDescription`,
+      fixTarget: "seo",
     });
   }
 

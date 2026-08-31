@@ -195,6 +195,7 @@ test("reporta por archivo las imágenes que no se pudieron procesar y conserva e
   await expect(failures).toContainText("logo.svg");
   await expect(failures).toContainText("JPEG, PNG o WebP");
   await expect(page.getByTestId("ui-asset-batch-status")).toContainText("1 imagen agregada");
+  await page.getByPlaceholder("Buscar por nombre, texto alternativo o ID").fill("taza");
   await expect(
     page.locator(".asset-item").filter({ has: page.locator('input[value="taza"]') }),
   ).toBeVisible();

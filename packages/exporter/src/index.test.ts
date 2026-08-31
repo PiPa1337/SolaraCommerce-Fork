@@ -65,6 +65,9 @@ describe("exporter", () => {
     const project = structuredClone(catalogModernV2Store);
     project.publicCopy.navigation.cart = "Bolsa";
     project.publicCopy.search.title = "Encontrar productos";
+    project.publicCopy.contact.javascriptFallback = "Usá email o WhatsApp para consultarnos.";
+    project.publicCopy.checkout.verificationWarning = "La tienda debe confirmar el pedido.";
+    project.publicCopy.cart.phoneInvalid = "Revisá el teléfono de contacto.";
 
     const preview = renderPreviewHtml(project, "draft", "/");
     const exported = String(exportProject(project, { mode: "draft" }).files.get("index.html"));
@@ -73,6 +76,20 @@ describe("exporter", () => {
     expect(exported).toContain("Bolsa");
     expect(exported).toContain("data-solara-copy=");
     expect(exported).toContain("Encontrar productos");
+    expect(exported).toContain("Usá email o WhatsApp para consultarnos.");
+    expect(exported).toContain("La tienda debe confirmar el pedido.");
+    expect(exported).toContain('title="Revisá el teléfono de contacto."');
+  });
+
+  it("transporta la advertencia y validación telefónica custom al runtime de carrito", () => {
+    const project = structuredClone(catalogModernV2Store);
+    project.publicCopy.checkout.verificationWarning = "Pedido sujeto a confirmación manual.";
+    project.publicCopy.cart.phoneInvalid = "Indicá un teléfono con código de área.";
+
+    const cart = String(exportProject(project, { mode: "draft" }).files.get("carrito/index.html"));
+    expect(cart).toContain("Pedido sujeto a confirmación manual.");
+    expect(cart).toContain("Indicá un teléfono con código de área.");
+    expect(cart).toContain("data-solara-copy=");
   });
 
   it("usa el copy global en páginas legacy, políticas y recuperación 404", () => {
@@ -1024,6 +1041,37 @@ describe("exporter", () => {
   it("advierte el riesgo Merchant del checkout por WhatsApp", () => {
     expect(auditProject(referenceStore)).toContainEqual(
       expect.objectContaining({ code: "merchant.whatsapp-checkout", severity: "warning" }),
+    );
+  });
+
+  it("deriva la cobertura legal del perfil y diferencia draft de producción", () => {
+    const project = structuredClone(catalogModernV2Store);
+    project.policies = {
+      ...project.policies,
+      countryNames: {},
+      shipping: { ...project.policies.shipping, countries: ["UY"] },
+      returns: { ...project.policies.returns, countries: ["UY"] },
+    };
+
+    expect(auditProject(project, true, "draft")).toContainEqual(
+      expect.objectContaining({ code: "legal.country-name", severity: "warning" }),
+    );
+    expect(auditProject(project, true, "production")).toContainEqual(
+      expect.objectContaining({ code: "legal.country-name", severity: "critical" }),
+    );
+
+    project.legalProfile = {
+      ...project.legalProfile,
+      revisionAt: "2026-08-31T12:00:00.000Z",
+      jurisdiction: "Provincia de Buenos Aires",
+      privacyOverride: "Texto privado de prueba.",
+      termsOverride: "Texto de términos de prueba.",
+    };
+    project.policies.countryNames = { UY: "Uruguay" };
+    const result = exportProject(project, { mode: "production" });
+    expect(String(result.files.get("privacidad/index.html"))).toContain("Texto privado de prueba.");
+    expect(String(result.files.get("terminos/index.html"))).toContain(
+      "Texto de términos de prueba.",
     );
   });
 

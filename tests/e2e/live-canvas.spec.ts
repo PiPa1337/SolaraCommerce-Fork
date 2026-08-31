@@ -29,8 +29,11 @@ test("Ctrl+clic selecciona un binding, edita texto y conserva undo/redo", async 
   const frame = page.frameLocator('iframe[title="Vista previa desktop"]');
   const title = frame.locator('[data-canvas-edit="ce-modo-section-hero-title"]');
   await expect(title).toBeVisible({ timeout: 20_000 });
+  // El header V2 es sticky; centrar el binding evita que el scroll automático
+  // de Playwright lo deje debajo de la navegación antes del Ctrl+clic.
+  await title.evaluate((element) => element.scrollIntoView({ block: "center", inline: "nearest" }));
 
-  await title.click({ modifiers: ["Control"] });
+  await title.click({ modifiers: ["Control"], force: true });
 
   const popover = page.getByRole("dialog", { name: "Editar Título del hero" });
   await expect(popover).toBeVisible();
@@ -61,7 +64,9 @@ test("Ctrl+clic permite editar título y descripción de los beneficios del hero
   test.setTimeout(60_000);
   await openCleanStore(page);
   const frame = page.frameLocator('iframe[title="Vista previa desktop"]');
-  const title = frame.locator('[data-canvas-edit*="-benefit-title"][data-canvas-item]').first();
+  const title = frame
+    .locator('[data-canvas-edit*="-benefit-title"][data-canvas-item]:visible')
+    .first();
   await expect(title).toHaveText("Envíos a todo el país", { timeout: 20_000 });
   await title.click({ modifiers: ["Control"] });
 
@@ -73,7 +78,7 @@ test("Ctrl+clic permite editar título y descripción de los beneficios del hero
   await expect(title).toHaveText("Envíos nacionales", { timeout: 20_000 });
 
   const description = frame
-    .locator('[data-canvas-edit*="-benefit-text"][data-canvas-item]')
+    .locator('[data-canvas-edit*="-benefit-text"][data-canvas-item]:visible')
     .first();
   await description.click({ modifiers: ["Control"] });
   const descriptionPopover = page.getByRole("dialog", {

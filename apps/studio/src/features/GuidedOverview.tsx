@@ -28,7 +28,7 @@ interface GuidedOverviewProps {
   advancedMode: boolean;
   onNavigate(destination: GuidedDestination): void;
   onToggleAdvancedMode(): void;
-  onApplyUpgrade(project: StoreProjectV1): void;
+  onApplyUpgrade(project: StoreProjectV1): Promise<boolean>;
 }
 
 const scopeLabels: Record<ContentRequirement["scope"], string> = {
@@ -234,14 +234,16 @@ export function GuidedOverview({
           ) : null}
           <Button
             variant="primary"
-            onClick={() =>
-              onApplyUpgrade(
+            onClick={() => {
+              void onApplyUpgrade(
                 applyCatalogModernUpgrade(
                   project,
                   upgrade.safeChanges.map((change) => change.id),
                 ),
-              )
-            }
+              ).then((applied) => {
+                if (applied) setUpgradeDismissed(true);
+              });
+            }}
           >
             Respaldar y adoptar cambios
           </Button>

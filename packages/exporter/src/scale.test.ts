@@ -104,6 +104,29 @@ describe("exporter con catálogo jerárquico de escala", () => {
     expect(casa).toContain("data-category-sort");
   });
 
+  it("usa el copy global para los filtros legacy", () => {
+    const project = structuredClone(catalogScaleStore);
+    project.publicCopy.filters = {
+      ...project.publicCopy.filters,
+      title: "Refinar catálogo",
+      availableOnly: "Con stock",
+      tag: "Tema",
+      all: "Cualquier tema",
+      minimum: "Desde",
+      maximum: "Hasta",
+    };
+    const category = String(
+      exportProject(project, { mode: "production" }).files.get("categorias/casa/index.html"),
+    );
+
+    expect(category).toContain("Refinar catálogo");
+    expect(category).toContain("Con stock");
+    expect(category).toContain("Tema");
+    expect(category).toContain("Cualquier tema");
+    expect(category).toContain("Desde");
+    expect(category).toContain("Hasta");
+  });
+
   it("mantiene paridad entre preview y exportación en categoría hija y página 2", () => {
     const moduleTree = (html: string) =>
       [...html.matchAll(/data-solara-module="([^"]+)"/g)].map((match) => match[1]);

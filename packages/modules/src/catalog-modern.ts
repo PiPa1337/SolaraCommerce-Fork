@@ -276,7 +276,7 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
       .map((item) => {
         const hasChildren = Boolean(item.children?.length);
         const children = hasChildren
-          ? `<ul class="catalog-mega-group__children" aria-label="${escapeAttribute(`Subcategorías de ${item.label}`)}">${item.children
+          ? `<ul class="catalog-mega-group__children" aria-label="${escapeAttribute(copy.export.categoryChildren.replace("{category}", item.label))}">${item.children
               ?.map(
                 (child) =>
                   `<li><a href="${escapeAttribute(safeUrl(child.href ?? "#"))}">${escapeHtml(child.label)}</a></li>`,
@@ -302,7 +302,7 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
           return `<a class="catalog-mobile-category-link" href="${escapeAttribute(safeUrl(item.href ?? "#"))}"><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("categories")}</span><span>${escapeHtml(item.label)}</span>${forwardChevron}</a>`;
         }
         const panelId = `catalog-mobile-category-${index}-panel`;
-        return `<details class="catalog-mobile-category"><summary aria-controls="${panelId}" aria-expanded="false"><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("categories")}</span><span>${escapeHtml(item.label)}</span>${chevron}</summary><ul id="${panelId}" class="catalog-mobile-category__children"><li><a class="catalog-mobile-category__parent" href="${escapeAttribute(safeUrl(item.href ?? "#"))}">Ver ${escapeHtml(item.label)}</a></li>${children
+        return `<details class="catalog-mobile-category"><summary aria-controls="${panelId}" aria-expanded="false"><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("categories")}</span><span>${escapeHtml(item.label)}</span>${chevron}</summary><ul id="${panelId}" class="catalog-mobile-category__children"><li><a class="catalog-mobile-category__parent" href="${escapeAttribute(safeUrl(item.href ?? "#"))}">${escapeHtml(copy.export.exploreCategory.replace("{category}", item.label))}</a></li>${children
           .map(
             (child) =>
               `<li><a href="${escapeAttribute(safeUrl(child.href ?? "#"))}">${escapeHtml(child.label)}</a></li>`,
@@ -926,8 +926,8 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
       settings.mode === "carousel"
         ? settings.slides
             .map(
-              (slide, index) =>
-                `<button type="button" role="tab" data-catalog-hero-slide="${index}" aria-label="Mostrar ${escapeAttribute(slide.title)}" aria-selected="${String(index === 0)}"></button>`,
+              (_slide, index) =>
+                `<button type="button" role="tab" data-catalog-hero-slide="${index}" aria-label="${escapeAttribute(copy.accessibility.goToSlide.replace("{index}", String(index + 1)))}" aria-selected="${String(index === 0)}"></button>`,
             )
             .join("")
         : "";
@@ -948,8 +948,8 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
       ? canvasRepeaterItemAttributes(canvasContext(context), "slide-body", activeSlide.id)
       : canvasTextAttributes(canvasContext(context), "body", 300);
     const heroInner = isV2Hero
-      ? `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}">${heroBackgroundWrap}<div class="catalog-hero-copy"><div class="catalog-hero-reveal catalog-hero-reveal--eyebrow"><p class="catalog-eyebrow"${canvasTextAttributes(canvasContext(context), "eyebrow", 100)}>${escapeHtml(settings.eyebrow)}</p></div><h1 class="catalog-hero-title" data-hero-title${titleCanvasAttributes}>${titleLinesMarkup}</h1><div class="catalog-hero-rule" data-hero-rule aria-hidden="true"></div><div class="catalog-hero-reveal catalog-hero-reveal--body"><p class="catalog-hero-body"${bodyCanvasAttributes}>${escapeHtml(body)}</p></div><div class="catalog-hero-reveal catalog-hero-reveal--actions"><div class="catalog-hero-actions">${actions}</div></div>${benefitsMarkup}</div><figure class="catalog-hero-media" data-motion-zone="media" data-hero-media>${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" role="tablist" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>${benefitsBand}`
-      : `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}"><div class="catalog-hero-copy"><p class="catalog-eyebrow"${canvasTextAttributes(canvasContext(context), "eyebrow", 100)}>${escapeHtml(settings.eyebrow)}</p><h1${titleCanvasAttributes}>${escapeHtml(title)}</h1><p class="catalog-hero-body"${bodyCanvasAttributes}>${escapeHtml(body)}</p><div class="catalog-hero-actions">${actions}</div>${stats}</div><figure class="catalog-hero-media" data-motion-zone="media">${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" role="tablist" aria-label="Controles del carrusel">${slides}</div>` : ""}</div>`;
+      ? `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}">${heroBackgroundWrap}<div class="catalog-hero-copy"><div class="catalog-hero-reveal catalog-hero-reveal--eyebrow"><p class="catalog-eyebrow"${canvasTextAttributes(canvasContext(context), "eyebrow", 100)}>${escapeHtml(settings.eyebrow)}</p></div><h1 class="catalog-hero-title" data-hero-title${titleCanvasAttributes}>${titleLinesMarkup}</h1><div class="catalog-hero-rule" data-hero-rule aria-hidden="true"></div><div class="catalog-hero-reveal catalog-hero-reveal--body"><p class="catalog-hero-body"${bodyCanvasAttributes}>${escapeHtml(body)}</p></div><div class="catalog-hero-reveal catalog-hero-reveal--actions"><div class="catalog-hero-actions">${actions}</div></div>${benefitsMarkup}</div><figure class="catalog-hero-media" data-motion-zone="media" data-hero-media>${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" role="tablist" aria-label="${escapeAttribute(copy.accessibility.heroSlides)}">${slides}</div>` : ""}</div>${benefitsBand}`
+      : `<div class="catalog-hero-inner" data-motion-zone="content" data-autoplay="${String(settings.autoplay)}" data-interval="${settings.intervalMs}"><div class="catalog-hero-copy"><p class="catalog-eyebrow"${canvasTextAttributes(canvasContext(context), "eyebrow", 100)}>${escapeHtml(settings.eyebrow)}</p><h1${titleCanvasAttributes}>${escapeHtml(title)}</h1><p class="catalog-hero-body"${bodyCanvasAttributes}>${escapeHtml(body)}</p><div class="catalog-hero-actions">${actions}</div>${stats}</div><figure class="catalog-hero-media" data-motion-zone="media">${heroMedia}</figure>${slides ? `<div class="catalog-hero-controls" role="tablist" aria-label="${escapeAttribute(copy.accessibility.heroSlides)}">${slides}</div>` : ""}</div>`;
     const heroRootClass = [
       isV2Hero ? "catalog-hero-editorial" : "",
       heroBackgroundWrap ? "catalog-hero-editorial--has-background" : "",
@@ -1187,9 +1187,7 @@ export const catalogProductGrid: ModuleDefinition<
     const searchEnabled =
       context.project.navigation.showSearch && context.project.commerceTemplates.search.enabled;
     const viewAllHref = catalogSearchHref(searchEnabled, context.settings.viewAllHref);
-    const viewAllAriaLabel = sectionTitle.trim()
-      ? `Ver todos los productos de ${sectionTitle.trim()}`
-      : "Ver todos los productos de esta sección";
+    const viewAllAriaLabel = `${context.project.publicCopy.navigation.viewAll} de ${sectionTitle}`;
     const categoryGrid = context.pageType === "category" ? " data-category-grid" : "";
     const cards = products
       .map((product, index) => {
@@ -1604,6 +1602,7 @@ export const catalogCategoryBento: ModuleDefinition<
   ],
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
+    const copy = context.project.publicCopy;
     const activeProducts = new Set(
       context.project.products
         .filter((product) => product.status === "active")
@@ -1662,7 +1661,8 @@ export const catalogCategoryBento: ModuleDefinition<
           context.project,
           category.id as CategoryId,
         ).filter((id) => activeProducts.has(id)).length;
-        return `<a class="catalog-category-bento-item catalog-category-bento-item--${layout}"${canvasRepeaterItemAttributes(canvasContext(context), "item-category", item.id)} href="/categorias/${escapeAttribute(category.slug)}/" aria-label="${escapeAttribute((context.project.publicCopy as any)?.export?.exploreCategory ?? "Explorar {category}").replace("{category}", category.title)}"><span class="catalog-category-bento-label"><span class="catalog-category-bento-title"${canvasEntityAttributes(canvasContext(context), "category-title", "category", category.id, "title")}>${escapeHtml(category.title)}</span></span>${productCount ? `<small>${productCount} productos</small>` : ""}<div class="catalog-category-bento-media"${canvasRepeaterItemAttributes(canvasContext(context), "item-image", item.id)}>${categoryImageMarkup}</div></a>`;
+        const productCountLabel = `${productCount} ${copy.export.categoryProducts}`;
+        return `<a class="catalog-category-bento-item catalog-category-bento-item--${layout}"${canvasRepeaterItemAttributes(canvasContext(context), "item-category", item.id)} href="/categorias/${escapeAttribute(category.slug)}/" aria-label="${escapeAttribute(copy.export.exploreCategory.replace("{category}", category.title))}"><div class="catalog-category-bento-media"${canvasRepeaterItemAttributes(canvasContext(context), "item-image", item.id)}>${categoryImageMarkup}</div><div class="catalog-category-bento-copy"><span class="catalog-category-bento-label"><span class="catalog-category-bento-title"${canvasEntityAttributes(canvasContext(context), "category-title", "category", category.id, "title")}>${escapeHtml(category.title)}</span><small class="catalog-category-bento-count">${productCountLabel}</small></span><svg class="catalog-category-bento-arrow" aria-hidden="true" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg></div></a>`;
       })
       .filter(Boolean)
       .join("");
@@ -1672,7 +1672,7 @@ export const catalogCategoryBento: ModuleDefinition<
       "catalog-category-bento",
       context.section,
       safeHtml(
-        `<div class="catalog-category-bento-section"><header><h2 class="catalog-category-bento-heading"><span class="catalog-category-bento-heading-inner"${canvasTextAttributes(canvasContext(context), "title", 120)}>${escapeHtml(context.settings.title)}</span></h2>${items && searchEnabled ? '<a class="catalog-category-bento-all" href="/buscar/">Ver todo el catálogo</a>' : ""}</header><div class="catalog-category-bento-grid" data-category-count="${sourceItems.length}" data-motion-zone="items">${items || '<p class="catalog-empty">Todavía no hay categorías para mostrar.</p>'}</div></div>`,
+        `<div class="catalog-category-bento-section"><header><h2 class="catalog-category-bento-heading"><span class="catalog-category-bento-heading-inner"${canvasTextAttributes(canvasContext(context), "title", 120)}>${escapeHtml(context.settings.title)}</span></h2>${items && searchEnabled ? `<a class="catalog-category-bento-all" href="/buscar/">${escapeHtml(context.project.publicCopy.navigation.viewAll)}</a>` : ""}</header><div class="catalog-category-bento-grid" data-category-count="${sourceItems.length}" data-motion-zone="items">${items || `<p class="catalog-empty">${escapeHtml(context.project.publicCopy.empty.categories)}</p>`}</div></div>`,
       ),
     );
   },
@@ -1758,17 +1758,17 @@ export const catalogTestimonials: ModuleDefinition<
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const items = context.settings.items;
-    if (!items.length) return moduleRoot("catalog-testimonials", context.section, safeHtml(""));
+    if (!items.length) return safeHtml("");
     const trackId = `catalog-testimonials-track-${context.section.id}`;
     const controls =
       context.project.commerceTemplates.designFamily === "catalog-modern-v2"
         ? ""
-        : `<div class="catalog-testimonials-controls" role="group" aria-label="Controles de testimonios"><button type="button" data-testimonials-prev aria-controls="${escapeAttribute(trackId)}" aria-label="Testimonio anterior">←</button><button type="button" data-testimonials-next aria-controls="${escapeAttribute(trackId)}" aria-label="Testimonio siguiente">→</button></div>`;
+        : `<div class="catalog-testimonials-controls" role="group" aria-label="${escapeAttribute(context.project.publicCopy.accessibility.testimonialsControls)}"><button type="button" data-testimonials-prev aria-controls="${escapeAttribute(trackId)}" aria-label="${escapeAttribute(context.project.publicCopy.accessibility.previousTestimonial)}">←</button><button type="button" data-testimonials-next aria-controls="${escapeAttribute(trackId)}" aria-label="${escapeAttribute(context.project.publicCopy.accessibility.nextTestimonial)}">→</button></div>`;
     return moduleRoot(
       "catalog-testimonials",
       context.section,
       safeHtml(
-        `<div class="catalog-testimonials-section"><header><h2${canvasTextAttributes(canvasContext(context), "title", 120)}>${escapeHtml(context.settings.title)}</h2>${controls}</header><div id="${escapeAttribute(trackId)}" class="catalog-testimonials-track" data-motion-zone="items" aria-label="Testimonios de clientes" role="region" tabindex="0">${items.map((item) => `<article class="catalog-testimonial"><p class="catalog-testimonial-rating"${canvasRepeaterItemAttributes(canvasContext(context), "item-rating", item.id)} aria-label="${item.rating} de 5">${"★".repeat(item.rating)}</p><h3${canvasRepeaterItemAttributes(canvasContext(context), "item-author", item.id)}>${escapeHtml(item.author)}</h3>${item.context ? `<p class="catalog-testimonial-context"${canvasRepeaterItemAttributes(canvasContext(context), "item-context", item.id)}>${escapeHtml(item.context)}</p>` : ""}<blockquote${canvasRepeaterItemAttributes(canvasContext(context), "item-body", item.id)}>“${escapeHtml(item.body)}”</blockquote></article>`).join("")}</div></div>`,
+        `<div class="catalog-testimonials-section"><header><h2${canvasTextAttributes(canvasContext(context), "title", 120)}>${escapeHtml(context.settings.title)}</h2>${controls}</header><div id="${escapeAttribute(trackId)}" class="catalog-testimonials-track" data-motion-zone="items" aria-label="${escapeAttribute(context.project.publicCopy.accessibility.testimonials)}" role="region" tabindex="0">${items.map((item) => `<article class="catalog-testimonial"><p class="catalog-testimonial-rating"${canvasRepeaterItemAttributes(canvasContext(context), "item-rating", item.id)} aria-label="${item.rating} de 5">${"★".repeat(item.rating)}</p><h3${canvasRepeaterItemAttributes(canvasContext(context), "item-author", item.id)}>${escapeHtml(item.author)}</h3>${item.context ? `<p class="catalog-testimonial-context"${canvasRepeaterItemAttributes(canvasContext(context), "item-context", item.id)}>${escapeHtml(item.context)}</p>` : ""}<blockquote${canvasRepeaterItemAttributes(canvasContext(context), "item-body", item.id)}>“${escapeHtml(item.body)}”</blockquote></article>`).join("")}</div></div>`,
       ),
     );
   },
@@ -1827,8 +1827,8 @@ export const catalogNewsletterCta: ModuleDefinition<
         actionHref === "#contact-form" ||
         actionHref === "/#contact-form") &&
       configuredActionLabel.toLowerCase() === "escribir por whatsapp"
-        ? "Ver opciones de contacto"
-        : configuredActionLabel || "Ver opciones de contacto";
+        ? context.project.publicCopy.contact.optionsAction
+        : configuredActionLabel || context.project.publicCopy.contact.optionsAction;
     return moduleRoot(
       "catalog-newsletter-cta",
       context.section,
@@ -1934,16 +1934,16 @@ export const catalogFooter: ModuleDefinition<
       (context.project.commerceTemplates.cart.enabled ||
         context.project.commerceTemplates.checkout.enabled);
     const openCartLink = cartEnabled
-      ? `<a class="catalog-footer-cart-link" href="/carrito/" data-solara-cart-open data-open-cart data-cart-label="Abrir carrito" aria-controls="solara-cart" aria-expanded="false" aria-haspopup="dialog">Abrir carrito</a>`
+      ? `<a class="catalog-footer-cart-link" href="/carrito/" data-solara-cart-open data-open-cart data-cart-label="${escapeAttribute(copy.navigation.cart)}" aria-controls="solara-cart" aria-expanded="false" aria-haspopup="dialog">${escapeHtml(copy.navigation.cart)}</a>`
       : "";
     const helpPageLinks = isV2
       ? ""
-      : `<a href="/contacto/">Contacto</a><a href="/nosotros/">Nosotros</a>`;
+      : `<a href="/contacto/">${escapeHtml(copy.pages.contact)}</a><a href="/nosotros/">${escapeHtml(copy.pages.about)}</a>`;
     return moduleRoot(
       "catalog-footer",
       context.section,
       safeHtml(
-        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project, canvasContext(context))}</a><p${canvasTextAttributes(canvasContext(context), "note", 300)}>${escapeHtml(note)}</p>${whatsappAction}</div><nav class="catalog-footer-nav catalog-footer-nav--explore" aria-label="${escapeAttribute(copy.footer.explore)}"><strong>${escapeHtml(copy.footer.explore)}</strong><a href="/">${escapeHtml(copy.navigation.home)}</a>${searchLink}${openCartLink}</nav>${categoriesNav}<nav class="catalog-footer-nav catalog-footer-nav--help" aria-label="${escapeAttribute(copy.footer.help)}"><strong>${escapeHtml(copy.footer.help)}</strong>${helpPageLinks}${policyLinks}</nav><address class="catalog-footer-contact"><strong>${escapeHtml(copy.footer.contact)}</strong>${contact}</address><div class="catalog-footer-meta"><small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)}. ${escapeHtml(copy.footer.copyright ?? "Todos los derechos reservados.")}</small><p class="catalog-footer-made"><a href="https://solara.com.ar" target="_blank" rel="noopener noreferrer">Hecho con ❤️ en solara.com.ar</a></p></div></div>`,
+        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project, canvasContext(context))}</a><p${canvasTextAttributes(canvasContext(context), "note", 300)}>${escapeHtml(note)}</p>${whatsappAction}</div><nav class="catalog-footer-nav catalog-footer-nav--explore" aria-label="${escapeAttribute(copy.footer.explore)}"><strong>${escapeHtml(copy.footer.explore)}</strong><a href="/">${escapeHtml(copy.navigation.home)}</a>${searchLink}${openCartLink}</nav>${categoriesNav}<nav class="catalog-footer-nav catalog-footer-nav--help" aria-label="${escapeAttribute(copy.footer.help)}"><strong>${escapeHtml(copy.footer.help)}</strong>${helpPageLinks}${policyLinks}</nav><address class="catalog-footer-contact"><strong>${escapeHtml(copy.footer.contact)}</strong>${contact}</address><div class="catalog-footer-meta"><small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)}. ${escapeHtml(copy.footer.copyright)}</small><p class="catalog-footer-made"><a href="https://solara.com.ar" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.footer.madeWith)}</a></p></div></div>`,
       ),
       { tag: "footer" },
     );
@@ -1983,12 +1983,12 @@ export const catalogCartDrawer: ModuleDefinition<
   styleAsset: scopedAssetId("catalog-modern"),
   render(context) {
     const copy = context.project.publicCopy;
-    const checkoutVerificationMarkup = `<p data-order-verification-warning role="note">Solicitud sin confirmar; precio, stock, envío y pago deben verificarse con la tienda</p>`;
+    const checkoutVerificationMarkup = `<p data-order-verification-warning role="note">${escapeHtml(copy.checkout.verificationWarning)}</p>`;
     return moduleRoot(
       "catalog-cart-drawer",
       context.section,
       safeHtml(
-        `<div class="solara-cart-backdrop catalog-cart-backdrop" data-solara-cart-close data-close-cart hidden></div><aside id="solara-cart" class="catalog-cart-drawer" data-cart-drawer data-cart-step="review" role="dialog" aria-label="${escapeAttribute(context.settings.title)}" aria-modal="true" aria-hidden="true" inert tabindex="-1"><header><div class="catalog-cart-heading"><span class="catalog-cart-step-label"><span data-cart-review-label>${escapeHtml(copy.checkout.selection)}</span><span data-cart-checkout-label>${escapeHtml(copy.checkout.submit)}</span></span><h2${canvasTextAttributes(canvasContext(context), "title", 120)}>${escapeHtml(context.settings.title)}</h2></div><button type="button" data-solara-cart-close data-close-cart aria-label="${escapeAttribute(copy.cart.close)}">${escapeHtml(copy.navigation.close)}</button></header><section id="catalog-cart-review" class="catalog-cart-review" data-cart-review-panel aria-hidden="false"><div class="catalog-cart-scroll"><div class="catalog-cart-items" data-solara-cart-items data-cart-lines><p class="catalog-empty"${canvasTextAttributes(canvasContext(context), "emptyText", 240)}>${escapeHtml(context.settings.emptyText || copy.empty.cart)}</p></div></div><div class="catalog-cart-summary"><p><span>${escapeHtml(copy.cart.subtotal)}</span><strong data-cart-subtotal aria-live="polite">${escapeHtml(formatMoneyForProject(0, context.project))}</strong></p><p><span>${escapeHtml(copy.cart.delivery)}</span><strong>${escapeHtml(copy.cart.deliveryToCoordinate)}</strong></p><p class="catalog-cart-total"><span>${escapeHtml(copy.cart.estimatedTotal)}</span><strong data-solara-cart-total data-cart-total aria-live="polite">${escapeHtml(formatMoneyForProject(0, context.project))}</strong></p></div></section><section id="catalog-cart-checkout" class="catalog-cart-checkout-panel" data-cart-checkout-panel aria-hidden="true" hidden inert><button class="catalog-cart-review-back" type="button" data-cart-review-back aria-controls="catalog-cart-review">← ${escapeHtml(copy.checkout.selection)}</button><p class="catalog-cart-checkout-intro">${escapeHtml(copy.checkout.prepare)}</p><form class="catalog-checkout-form" data-solara-checkout data-checkout-form id="catalog-drawer-checkout"><label for="catalog-drawer-name">${escapeHtml(copy.cart.name)}</label><input id="catalog-drawer-name" name="name" autocomplete="name" required><label for="catalog-drawer-phone">${escapeHtml(copy.cart.phone)}</label><input id="catalog-drawer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="Ingresá un teléfono válido" required><label for="catalog-drawer-address">${escapeHtml(copy.cart.address)}</label><textarea id="catalog-drawer-address" name="address" autocomplete="street-address" required></textarea><label for="catalog-drawer-locality">${escapeHtml(copy.cart.locality)}</label><input id="catalog-drawer-locality" name="locality" autocomplete="address-level2" required><label for="catalog-drawer-postal-code">${escapeHtml(copy.cart.postalCode)}</label><input id="catalog-drawer-postal-code" name="postalCode" autocomplete="postal-code" required><label for="catalog-drawer-notes">${escapeHtml(copy.cart.notes)}</label><textarea id="catalog-drawer-notes" name="notes"></textarea><pre data-order-preview aria-live="polite" role="status"></pre></form></section><div class="catalog-drawer-footer"><button class="catalog-primary-action" type="button" data-cart-checkout-next aria-controls="catalog-cart-checkout">${escapeHtml(copy.checkout.continue)}</button><button class="catalog-primary-action" type="submit" form="catalog-drawer-checkout" data-cart-checkout-submit${canvasTextAttributes(canvasContext(context), "checkoutLabel", 120)}>${escapeHtml(context.settings.checkoutLabel)}</button>${checkoutVerificationMarkup}</div></aside>`,
+        `<div class="solara-cart-backdrop catalog-cart-backdrop" data-solara-cart-close data-close-cart hidden></div><aside id="solara-cart" class="catalog-cart-drawer" data-cart-drawer data-cart-step="review" role="dialog" aria-label="${escapeAttribute(context.settings.title)}" aria-modal="true" aria-hidden="true" inert tabindex="-1"><header><div class="catalog-cart-heading"><span class="catalog-cart-step-label"><span data-cart-review-label>${escapeHtml(copy.checkout.selection)}</span><span data-cart-checkout-label>${escapeHtml(copy.checkout.submit)}</span></span><h2${canvasTextAttributes(canvasContext(context), "title", 120)}>${escapeHtml(context.settings.title)}</h2></div><button type="button" data-solara-cart-close data-close-cart aria-label="${escapeAttribute(copy.cart.close)}">${escapeHtml(copy.navigation.close)}</button></header><section id="catalog-cart-review" class="catalog-cart-review" data-cart-review-panel aria-hidden="false"><div class="catalog-cart-scroll"><div class="catalog-cart-items" data-solara-cart-items data-cart-lines><p class="catalog-empty"${canvasTextAttributes(canvasContext(context), "emptyText", 240)}>${escapeHtml(context.settings.emptyText || copy.empty.cart)}</p></div></div><div class="catalog-cart-summary"><p><span>${escapeHtml(copy.cart.subtotal)}</span><strong data-cart-subtotal aria-live="polite">${escapeHtml(formatMoneyForProject(0, context.project))}</strong></p><p><span>${escapeHtml(copy.cart.delivery)}</span><strong>${escapeHtml(copy.cart.deliveryToCoordinate)}</strong></p><p class="catalog-cart-total"><span>${escapeHtml(copy.cart.estimatedTotal)}</span><strong data-solara-cart-total data-cart-total aria-live="polite">${escapeHtml(formatMoneyForProject(0, context.project))}</strong></p></div></section><section id="catalog-cart-checkout" class="catalog-cart-checkout-panel" data-cart-checkout-panel aria-hidden="true" hidden inert><button class="catalog-cart-review-back" type="button" data-cart-review-back aria-controls="catalog-cart-review">← ${escapeHtml(copy.checkout.selection)}</button><p class="catalog-cart-checkout-intro">${escapeHtml(copy.checkout.prepare)}</p><form class="catalog-checkout-form" data-solara-checkout data-checkout-form id="catalog-drawer-checkout"><label for="catalog-drawer-name">${escapeHtml(copy.cart.name)}</label><input id="catalog-drawer-name" name="name" autocomplete="name" required><label for="catalog-drawer-phone">${escapeHtml(copy.cart.phone)}</label><input id="catalog-drawer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="${escapeAttribute(copy.cart.phoneInvalid)}" required><label for="catalog-drawer-address">${escapeHtml(copy.cart.address)}</label><textarea id="catalog-drawer-address" name="address" autocomplete="street-address" required></textarea><label for="catalog-drawer-locality">${escapeHtml(copy.cart.locality)}</label><input id="catalog-drawer-locality" name="locality" autocomplete="address-level2" required><label for="catalog-drawer-postal-code">${escapeHtml(copy.cart.postalCode)}</label><input id="catalog-drawer-postal-code" name="postalCode" autocomplete="postal-code" required><label for="catalog-drawer-notes">${escapeHtml(copy.cart.notes)}</label><textarea id="catalog-drawer-notes" name="notes"></textarea><pre data-order-preview aria-live="polite" role="status"></pre></form></section><div class="catalog-drawer-footer"><button class="catalog-primary-action" type="button" data-cart-checkout-next aria-controls="catalog-cart-checkout">${escapeHtml(copy.checkout.continue)}</button><button class="catalog-primary-action" type="submit" form="catalog-drawer-checkout" data-cart-checkout-submit${canvasTextAttributes(canvasContext(context), "checkoutLabel", 120)}>${escapeHtml(context.settings.checkoutLabel)}</button>${checkoutVerificationMarkup}</div></aside>`,
       ),
     );
   },

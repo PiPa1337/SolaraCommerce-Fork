@@ -600,13 +600,13 @@ export const heroMedia: ModuleDefinition<"hero-media", z.infer<typeof heroMediaS
       ? `<div class="solara-hero-indicators" role="tablist" aria-label="${escapeAttribute(copy.accessibility.heroSlides)}">${slides
           .map(
             (_item, index) =>
-              `<button type="button" data-hero-slide="${index}" role="tab" aria-controls="hero-slide-${escapeAttribute(context.section.id)}-${index}" aria-label="Ir al slide ${index + 1}" aria-selected="${index === 0 ? "true" : "false"}"></button>`,
+              `<button type="button" data-hero-slide="${index}" role="tab" aria-controls="hero-slide-${escapeAttribute(context.section.id)}-${index}" aria-label="${escapeAttribute(copy.accessibility.goToSlide.replace("{index}", String(index + 1)))}" aria-selected="${index === 0 ? "true" : "false"}"></button>`,
           )
           .join("")}</div>`
       : "";
     const controls =
       slides.length > 1
-        ? `<div class="solara-hero-controls"><button type="button" data-hero-prev aria-label="${escapeAttribute(copy.hero?.slidePrev ?? "Slide anterior")}">${escapeHtml(copy.hero?.slidePrev ?? "Anterior")}</button><button type="button" data-hero-next aria-label="${escapeAttribute(copy.hero?.slideNext ?? "Slide siguiente")}">${escapeHtml(copy.hero?.slideNext ?? "Siguiente")}</button>${indicators}</div>`
+        ? `<div class="solara-hero-controls"><button type="button" data-hero-prev aria-label="${escapeAttribute(copy.hero.slidePrev)}">${escapeHtml(copy.hero.slidePrev)}</button><button type="button" data-hero-next aria-label="${escapeAttribute(copy.hero.slideNext)}">${escapeHtml(copy.hero.slideNext)}</button>${indicators}</div>`
         : "";
     const titleAttributes = slide
       ? canvasRepeaterItemAttributes(canvas, "slide-title", slide.id)
@@ -623,7 +623,7 @@ export const heroMedia: ModuleDefinition<"hero-media", z.infer<typeof heroMediaS
     return moduleRoot(
       "hero-media",
       context.section,
-      safeHtml(`<div class="solara-hero-media-shell solara-hero-media-shell--${settings.alignment} solara-hero-media-shell--overlay-${settings.overlay}" data-hero-mode="${settings.mode}" data-hero-autoplay="${String(settings.autoplay)}" data-hero-interval="${settings.intervalMs}" data-motion-zone="media"${slides.length > 1 ? ' role="region" aria-roledescription="carousel" aria-label="Carrusel principal"' : ""}>
+      safeHtml(`<div class="solara-hero-media-shell solara-hero-media-shell--${settings.alignment} solara-hero-media-shell--overlay-${settings.overlay}" data-hero-mode="${settings.mode}" data-hero-autoplay="${String(settings.autoplay)}" data-hero-interval="${settings.intervalMs}" data-motion-zone="media"${slides.length > 1 ? ` role="region" aria-roledescription="carousel" aria-label="${escapeAttribute(copy.accessibility.heroSlides)}"` : ""}>
         <div class="solara-hero-media-backdrop">${settings.mode === "carousel" && slidePanels ? slidePanels : media}</div>
         <div class="solara-hero-media-copy" data-motion-zone="content">
           ${eyebrow ? `<p class="solara-eyebrow"${eyebrowAttributes}>${escapeHtml(eyebrow)}</p>` : ""}
@@ -631,7 +631,7 @@ export const heroMedia: ModuleDefinition<"hero-media", z.infer<typeof heroMediaS
           <p class="solara-hero-body"${bodyAttributes}>${escapeHtml(body)}</p>
           <a class="solara-primary-action" href="${escapeAttribute(safeUrl(actionHref))}"${actionAttributes}>${escapeHtml(actionLabel)}</a>
         </div>
-        ${settings.mode === "video" && video ? '<button type="button" class="solara-hero-video-toggle" data-hero-video-toggle aria-pressed="false">Pausar video</button>' : ""}
+        ${settings.mode === "video" && video ? `<button type="button" class="solara-hero-video-toggle" data-hero-video-toggle aria-pressed="false">${escapeHtml(copy.hero.pauseVideo)}</button>` : ""}
         ${controls}
       </div>`),
     );
@@ -1343,7 +1343,7 @@ export const cartDrawer: ModuleDefinition<"cart-drawer", z.infer<typeof cartSett
             <label for="solara-drawer-customer-name">${escapeHtml(copy.cart.name)}</label>
             <input id="solara-drawer-customer-name" name="name" autocomplete="name" required>
             <label for="solara-drawer-customer-phone">${escapeHtml(copy.cart.phone)}</label>
-            <input id="solara-drawer-customer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="${escapeHtml(copy.cart.phoneInvalid ?? "Ingresá un teléfono válido")}" required>
+            <input id="solara-drawer-customer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="${escapeHtml(copy.cart.phoneInvalid)}" required>
             <label for="solara-drawer-customer-address">${escapeHtml(copy.cart.address)}</label>
             <textarea id="solara-drawer-customer-address" name="address" autocomplete="street-address" required></textarea>
             <label for="solara-drawer-customer-locality">${escapeHtml(copy.cart.locality)}</label>
@@ -1353,7 +1353,7 @@ export const cartDrawer: ModuleDefinition<"cart-drawer", z.infer<typeof cartSett
             <label for="solara-drawer-customer-notes">${escapeHtml(copy.cart.notes)}</label>
             <textarea id="solara-drawer-customer-notes" name="notes"></textarea>
             <button type="submit"${canvasTextAttributes(canvas, "checkoutLabel", 120)}>${escapeHtml(context.settings.checkoutLabel)}</button>
-            <p data-order-verification-warning role="note">Solicitud sin confirmar; precio, stock, envío y pago deben verificarse con la tienda</p>
+            <p data-order-verification-warning role="note">${escapeHtml(copy.checkout.verificationWarning)}</p>
             <pre data-order-preview aria-live="polite"></pre>
           </form>
         </aside>`),
@@ -1412,11 +1412,12 @@ export const editorialFooter: ModuleDefinition<
   styleAsset: scopedAssetId("editorial-footer"),
   render(context) {
     const canvas = legacyCanvasContext(context);
+    const copy = context.project.publicCopy;
     const isV2 = context.project.commerceTemplates.designFamily === "catalog-modern-v2";
     const policies = context.settings.showPolicies
       ? isV2
-        ? '<nav aria-label="Políticas"><a href="/privacidad/">Privacidad</a><a href="/terminos/">Términos</a></nav>'
-        : '<nav aria-label="Políticas"><a href="/envios/">Envíos</a><a href="/devoluciones/">Devoluciones</a><a href="/privacidad/">Privacidad</a><a href="/terminos/">Términos</a></nav>'
+        ? `<nav aria-label="${escapeAttribute(copy.footer.policies)}"><a href="/privacidad/">${escapeHtml(copy.footer.privacy)}</a><a href="/terminos/">${escapeHtml(copy.footer.terms)}</a></nav>`
+        : `<nav aria-label="${escapeAttribute(copy.footer.policies)}"><a href="/envios/">${escapeHtml(copy.footer.shipping)}</a><a href="/devoluciones/">${escapeHtml(copy.footer.returns)}</a><a href="/privacidad/">${escapeHtml(copy.footer.privacy)}</a><a href="/terminos/">${escapeHtml(copy.footer.terms)}</a></nav>`
       : "";
     const note = context.settings.note || context.project.identity.description;
     const email = context.project.identity.email
@@ -1435,7 +1436,7 @@ export const editorialFooter: ModuleDefinition<
         <div><a class="solara-brand" href="/">${renderBrand(context.project, canvas)}</a><p${canvasTextAttributes(canvas, "note", 240)}>${escapeHtml(note)}</p></div>
         ${policies}
         <address>${email}${phone}${address}</address>
-        <small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)}</small>
+         <small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)} · ${escapeHtml(copy.footer.copyright)}</small>
       </div>`),
       { tag: "footer" },
     );

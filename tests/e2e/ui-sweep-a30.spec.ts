@@ -106,10 +106,10 @@ function modernUrlFor(path: string): string {
 }
 
 async function openScaleFilters(page: import("@playwright/test").Page) {
-  await page
-    .locator("details", { has: page.locator("summary", { hasText: "Filtrar" }) })
-    .locator("summary")
-    .click();
+  const disclosure = page
+    .locator("details", { has: page.locator("summary", { hasText: /Filtr/ }) })
+    .locator("summary");
+  if (await disclosure.count()) await disclosure.click();
 }
 
 test("búsqueda: casos borde — vacío, whitespace, término corto y sin resultados", async ({

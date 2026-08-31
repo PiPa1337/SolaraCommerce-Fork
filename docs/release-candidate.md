@@ -20,7 +20,8 @@ corepack pnpm reference:export
 corepack pnpm release:manifest
 ```
 
-El comando exige Node 22, igual que CI. Studio se valida con la suite completa
+Node 22 es la referencia de CI, pero el comando permite Node 22 o posterior y
+advierte cuando la versión difiere. Studio se valida con la suite completa
 en Chromium (la combinación oficialmente soportada en v1). Firefox y WebKit
 repiten una lista explícita de specs del storefront exportado —rutas modernas y
 legacy, carrito, variantes, búsqueda, filtros, escala y estado sin JavaScript—

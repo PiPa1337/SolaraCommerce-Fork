@@ -319,9 +319,9 @@ test("cada pestaña del Studio no desborda y conserva su acción principal", asy
           if (viewport.width === 1024) {
             await selection.check();
             await expect(page.getByText("1 seleccionados", { exact: true })).toBeVisible();
-            await selection.uncheck();
-            await expect(page.getByText("0 seleccionados", { exact: true })).toBeVisible();
             await firstCard.scrollIntoViewIfNeeded();
+            await selection.press("Space");
+            await expect(page.getByText("0 seleccionados", { exact: true })).toBeVisible();
             await page.screenshot({
               path: "test-results/catalog-scale-compact-1024.png",
             });
@@ -388,9 +388,10 @@ test("el preview y su toolbar responden en los 7 viewports", async ({ page }) =>
     await page.getByRole("tab", { name: "Preparar", exact: true }).click();
     // Seleccionar la pestaña recupera el panel aunque se haya cerrado en la
     // iteración anterior; el botón de la toolbar queda como segunda vía.
+    const guidedHeading = page.getByRole("heading", { name: "Preparar tienda", exact: true });
     const openPane = page.getByRole("button", { name: "Abrir panel de edición" });
-    if (await openPane.isVisible().catch(() => false)) await openPane.click();
-    await expect(page.getByRole("heading", { name: "Preparar tienda", exact: true })).toBeVisible();
+    if (!(await guidedHeading.isVisible().catch(() => false))) await openPane.click();
+    await expect(guidedHeading).toBeVisible();
     await page.getByRole("button", { name: "Cerrar panel de edición" }).click();
     await expect(page.getByRole("button", { name: "Abrir panel de edición" })).toBeVisible();
     await expectNoPageOverflow(page, `Preview ${viewport.name}`);

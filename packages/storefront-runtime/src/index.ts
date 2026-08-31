@@ -131,9 +131,6 @@ export interface CatalogIndexEntry {
   imageHeight?: number;
 }
 
-export const ORDER_VERIFICATION_WARNING =
-  "Solicitud sin confirmar; precio, stock, envío y pago deben verificarse con la tienda";
-
 /**
  * Mantiene todas las entradas de cantidad dentro del contrato comercial del
  * storefront. Los valores vacíos o no numéricos vuelven a una unidad, los
@@ -412,7 +409,7 @@ export function buildWhatsAppMessage(
       : "",
     customer.notes.trim() ? `${copy.notes}: ${customer.notes.trim()}` : "",
     "",
-    `${checkoutCopy.disclaimer || copy.confirmation}\n${ORDER_VERIFICATION_WARNING}`,
+    `${checkoutCopy.disclaimer || copy.confirmation}\n${checkoutCopy.verificationWarning || ""}`,
   ]
     .filter((line, index, all) => line !== "" || all[index - 1] !== "")
     .join("\n")
@@ -460,8 +457,7 @@ function storefrontBoot(): void {
   } = copy;
   const greeting = root.dataset.whatsappGreeting ?? "";
   const includeSku = root.dataset.whatsappIncludeSku !== "false";
-  const orderVerificationWarning =
-    "Solicitud sin confirmar; precio, stock, envío y pago deben verificarse con la tienda";
+  const orderVerificationWarning = x.verificationWarning || x.disclaimer || w.confirmation || "";
   const storageKey = `solara-cart:${storeId}`;
   const embed = parent !== window && location.protocol[0] !== "s";
   const priceFractionDisplay = (root.dataset.priceFractionDisplay ?? "always") as "always" | "auto";
@@ -1254,7 +1250,7 @@ function storefrontBoot(): void {
         if (!cleanPhone) {
           const p = form.querySelector<HTMLElement>("[data-order-preview]");
           if (p) {
-            p.textContent = (k as any).whatsappFallback ?? x.invalidItems;
+            p.textContent = a.phoneInvalid || x.invalidItems;
             p.setAttribute("role", "alert");
           }
           return;
@@ -1631,11 +1627,11 @@ function storefrontBoot(): void {
       if (!video) return;
       if (video.paused) {
         void video.play();
-        toggle.textContent = heroCopy?.pauseVideo ?? "Pausar video";
+        toggle.textContent = heroCopy?.pauseVideo ?? "";
         toggle.setAttribute("aria-pressed", "false");
       } else {
         video.pause();
-        toggle.textContent = heroCopy?.resumeVideo ?? "Reanudar video";
+        toggle.textContent = heroCopy?.resumeVideo ?? "";
         toggle.setAttribute("aria-pressed", "true");
       }
     });

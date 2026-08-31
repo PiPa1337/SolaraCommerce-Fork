@@ -24,4 +24,31 @@ describe("actualización revisable de Catalog Modern", () => {
       upgraded.sections.find((section) => section.id === "modo-section-hero")?.settings.title,
     ).toBe("Título propio");
   });
+
+  it("diagnostica contenido standalone antiguo sin eliminarlo", () => {
+    const project = buildCatalogModernProject({ seed: "clean" });
+    const firstSection = project.sections[0];
+    if (!firstSection) throw new Error("Fixture sin secciones");
+    const legacyPage = {
+      id: "page-about-legacy",
+      kind: "about" as const,
+      slug: "nosotros",
+      title: "Nosotros antiguo",
+      seoTitle: "Nosotros antiguo",
+      seoDescription: "Contenido antiguo",
+      sections: [{ ...firstSection, id: "archived-about-section" }],
+    };
+    const withArchivedContent = {
+      ...project,
+      pages: [...project.pages, legacyPage],
+    };
+    const plan = planCatalogModernUpgrade(withArchivedContent);
+    expect(plan.conflicts).toContainEqual(
+      expect.objectContaining({
+        id: "page.archived.about",
+        path: "pages.page-about-legacy",
+      }),
+    );
+    expect(applyCatalogModernUpgrade(withArchivedContent, []).pages).toContainEqual(legacyPage);
+  });
 });

@@ -18,6 +18,8 @@ import {
   type StoreProjectV1,
 } from "@solara/project-schema";
 
+export { generatePerformanceFixture } from "./performance.js";
+
 export {
   type AppliedMutation,
   applyMutation,

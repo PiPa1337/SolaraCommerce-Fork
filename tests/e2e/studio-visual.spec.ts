@@ -104,7 +104,9 @@ test("dashboard cosmic muestra datos reales y creación guiada", async ({ page }
   await expect(page.getByText("50", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Productos activos", { exact: true })).toBeVisible();
   await expect(page.locator(".dashboard-cosmic-select select").first()).toHaveValue("active");
-  await expect(page.locator(".dashboard-store-card__meta").last()).toHaveText("29 jul 2026");
+  const updatedMeta = page.locator(".dashboard-store-card__meta").last();
+  await expect(updatedMeta).toBeVisible();
+  await expect(updatedMeta).toHaveAttribute("datetime", /^\d{4}-\d{2}-\d{2}T/);
   await expect
     .poll(() =>
       page

@@ -40,12 +40,17 @@ async function openTextDialog(
   await target.scrollIntoViewIfNeeded();
   await target.evaluate(async (element) => {
     const module = element.closest("[data-solara-module]") ?? element;
-    await Promise.all(
-      module
-        .getAnimations({ subtree: true })
-        .filter((animation) => animation.playState === "running")
-        .map((animation) => animation.finished.catch(() => undefined)),
-    );
+    const finiteAnimations = module
+      .getAnimations({ subtree: true })
+      .filter(
+        (animation) =>
+          animation.playState === "running" &&
+          animation.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY,
+      );
+    await Promise.race([
+      Promise.all(finiteAnimations.map((animation) => animation.finished.catch(() => undefined))),
+      new Promise<void>((resolve) => window.setTimeout(resolve, 2_000)),
+    ]);
   });
   await expect(target).toBeVisible({ timeout: 30_000 });
   await target.click();

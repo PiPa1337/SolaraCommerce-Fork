@@ -2166,6 +2166,14 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-mobile-nav-icon svg { width: 1.45rem; height: 1.45rem; fill: none; stroke: currentcolor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.6; }
 :root.catalog-mobile-menu-open { overflow: hidden; }
 [data-solara-store].catalog-modern .catalog-hero-inner { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); align-items: stretch; width: min(calc(100% - 2rem), var(--solara-container)); min-height: min(680px, calc(100svh - 104px)); margin: 1.5rem auto 0; overflow: hidden; border-radius: var(--solara-radius); background: var(--catalog-surface); }
+@media (min-width: 1920px) and (max-height: 1080px) {
+  [data-solara-store].catalog-modern .catalog-hero-inner { min-height: min(560px, calc(100dvh - 160px)); margin-top: 1rem; }
+  [data-solara-store].catalog-modern .catalog-hero-copy { padding: clamp(1.5rem, 3vw, 3rem); }
+  [data-solara-store].catalog-modern .catalog-hero-copy h1 { font-size: calc(clamp(2.6rem, 4.2vw, 4.6rem) * var(--solara-type-scale, 1)); line-height: 1.1; }
+  [data-solara-store].catalog-modern .catalog-hero-copy > p:not(.catalog-eyebrow) { margin-top: 1rem; }
+  [data-solara-store].catalog-modern .catalog-hero-actions { margin-top: 1.25rem; }
+  [data-solara-store].catalog-modern .catalog-hero-stats { margin-top: 1.25rem; }
+}
 [data-solara-store].catalog-modern .catalog-hero-copy { display: flex; flex-direction: column; justify-content: center; padding: clamp(2rem, 5vw, 5rem); }
 [data-solara-store].catalog-modern .catalog-eyebrow { margin-bottom: 1rem; color: var(--catalog-muted); font-size: .75rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
 [data-solara-store].catalog-modern .catalog-hero-copy h1 { max-width: 11ch; font-size: calc(clamp(3.2rem, 6vw, 6.5rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.055em; line-height: 1.15; text-wrap: balance; overflow-wrap: break-word; }
@@ -2228,13 +2236,17 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-category-bento-section { margin-top: 1rem; padding: clamp(1.5rem, 3vw, 2.5rem); border-radius: var(--solara-radius); background: var(--catalog-surface); }
 [data-solara-store].catalog-modern .catalog-category-bento-section > header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 1rem; }
 [data-solara-store].catalog-modern .catalog-category-bento-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-flow: dense; grid-auto-rows: clamp(9rem, 10vw, 12rem); gap: calc(.75rem * var(--solara-space-scale, 1)); margin-top: 1.5rem; }
-[data-solara-store].catalog-modern .catalog-category-bento-item { position: relative; display: flex; min-height: 0; overflow: hidden; grid-column: span 1; grid-row: span 1; border-radius: var(--solara-radius); background: var(--catalog-paper); text-decoration: none; }
+[data-solara-store].catalog-modern .catalog-category-bento-item { position: relative; display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; overflow: hidden; grid-column: span 1; grid-row: span 1; border-radius: var(--solara-radius); background: var(--catalog-paper); text-decoration: none; }
 [data-solara-store].catalog-modern .catalog-category-bento-item--wide { grid-column: span 2; grid-row: span 1; }
 [data-solara-store].catalog-modern .catalog-category-bento-item--tall { grid-column: span 1; grid-row: span 2; }
-[data-solara-store].catalog-modern .catalog-category-bento-item span { position: relative; z-index: 2; margin: 1.25rem; color: var(--catalog-ink); font-size: 1rem; font-weight: 700; line-height: 1.15; min-width: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-[data-solara-store].catalog-modern .catalog-category-bento-item .catalog-category-bento-title { margin: 0; }
-[data-solara-store].catalog-modern .catalog-category-bento-item small { position: absolute; z-index: 2; right: 1rem; bottom: .9rem; padding: .25rem .55rem; border: 1px solid color-mix(in srgb, var(--catalog-ink) 10%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--catalog-paper) 92%, transparent); box-shadow: var(--solara-shadow-card); color: var(--catalog-ink); font-size: .72rem; font-weight: 700; line-height: 1; }
-[data-solara-store].catalog-modern .catalog-category-bento-item::after { position: absolute; z-index: 1; inset: 0; content: ""; background: linear-gradient(to top, color-mix(in srgb, var(--catalog-ink) 16%, transparent), transparent 42%); pointer-events: none; }
+[data-solara-store].catalog-modern .catalog-category-bento-copy { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .75rem; min-width: 0; padding: 1rem; }
+[data-solara-store].catalog-modern .catalog-category-bento-label { min-width: 0; color: var(--catalog-ink); }
+[data-solara-store].catalog-modern .catalog-category-bento-title { display: -webkit-box; overflow: hidden; color: var(--catalog-ink); font-size: 1rem; font-weight: 700; line-height: 1.15; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+[data-solara-store].catalog-modern .catalog-category-bento-count { display: block; margin-top: .35rem; color: var(--catalog-muted); font-size: .72rem; font-weight: 600; line-height: 1.2; }
+[data-solara-store].catalog-modern .catalog-category-bento-arrow { width: 1.1rem; height: 1.1rem; fill: none; stroke: currentcolor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; transition: transform var(--solara-motion-normal) var(--solara-motion-easing); }
+[data-solara-store].catalog-modern .catalog-category-bento-item:hover .catalog-category-bento-arrow,
+[data-solara-store].catalog-modern .catalog-category-bento-item:focus-visible .catalog-category-bento-arrow { transform: translateX(.2rem); }
+[data-solara-store].catalog-modern .catalog-category-bento-media { position: relative; overflow: hidden; aspect-ratio: 1; background: var(--catalog-surface); }
 [data-solara-store].catalog-modern .catalog-category-bento-image { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .78; transition: transform var(--solara-motion-normal) var(--solara-motion-easing); }
 [data-solara-store].catalog-modern .catalog-category-bento-item:hover .catalog-category-bento-image { transform: scale(1.02); }
 [data-solara-store].catalog-modern .catalog-category-bento-fallback { position: absolute; z-index: 0; inset: 0; display: grid; place-items: center; margin: 0; background: var(--catalog-surface); color: var(--catalog-ink); font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(3rem, 5vw, 4.5rem); font-weight: 500; letter-spacing: -.06em; line-height: 1; }
@@ -3129,7 +3141,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   position: relative;
 }
 .cm.v2 .catalog-product-media::before,
-.cm.v2 .catalog-category-bento-item::before {
+.cm.v2 .catalog-category-bento-media::before {
   content: "";
   position: absolute;
   left: 0;
@@ -3148,8 +3160,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-product-card:hover .catalog-product-media::before,
 .cm.v2 .catalog-product-card:focus-within .catalog-product-media::before,
-.cm.v2 .catalog-category-bento-item:hover::before,
-.cm.v2 .catalog-category-bento-item:focus-within::before {
+.cm.v2 .catalog-category-bento-item:hover .catalog-category-bento-media::before,
+.cm.v2 .catalog-category-bento-item:focus-within .catalog-category-bento-media::before {
   transform: scaleY(1);
   opacity: 1;
 }
@@ -3244,7 +3256,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-category-bento-item--tall {
   grid-column: span 1;
   grid-row: span 1;
-  aspect-ratio: 1;
 }
 .cm.v2 .catalog-category-bento-grid[data-category-count="1"] .catalog-category-bento-item {
   grid-column: 1 / -1;
@@ -3265,39 +3276,23 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   transform: scale(1.06);
   filter: saturate(.82) contrast(1.06);
 }
-/* Título del mosaico como chip editorial: visible sobre cualquier imagen. */
-.cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
-  display: inline-block;
-  align-self: flex-start;
-  width: fit-content;
-  max-width: calc(100% - 1.5rem);
-  margin: .75rem;
-  padding: .4rem .75rem;
-  border-radius: var(--catalog-v2-radius);
-  background: transparent;
-  color: var(--catalog-ink);
-  font-size: 1.1rem;
-  letter-spacing: -.02em;
-  line-height: 1.12;
-  transition: background-color var(--catalog-v2-motion-control) var(--catalog-v2-ease-out), transform var(--catalog-v2-motion-control) var(--catalog-v2-ease-out);
+.cm.v2 .catalog-category-bento-copy {
+  padding: 1rem 0;
+}
+.cm.v2 .catalog-category-bento-label {
+  font-family: var(--solara-font-body, Arial, sans-serif);
 }
 .cm.v2 .catalog-category-bento-title {
-  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: -.02em;
 }
-.cm.v2 .catalog-category-bento-item:has(.catalog-category-bento-image) > span:not(.catalog-category-bento-fallback) {
-  background: color-mix(in srgb, var(--catalog-paper) 92%, transparent);
-}
-.cm.v2 .catalog-category-bento-item:hover > span:not(.catalog-category-bento-fallback),
-.cm.v2 .catalog-category-bento-item:focus-visible > span:not(.catalog-category-bento-fallback) {
-  background: var(--catalog-paper);
-  transform: translateY(-2px);
-}
-/* Contador de productos: oculto en V2. */
-.cm.v2 .catalog-category-bento-item small {
-  display: none;
+.cm.v2 .catalog-category-bento-count {
+  color: var(--catalog-muted);
+  font-size: .72rem;
+  font-weight: 500;
 }
 .cm.v2 .catalog-category-bento-item::after {
-  background: linear-gradient(to top, color-mix(in srgb, var(--catalog-ink) 20%, transparent), transparent 60%);
+  content: none;
 }
 .cm.v2 .catalog-category-bento-image {
   opacity: 1;
@@ -5080,7 +5075,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     .cm.v2 .catalog-product-card,
     .cm.v2 .catalog-product-card .catalog-product-media::before,
     .cm.v2 .catalog-product-card-image,
-    .cm.v2 .catalog-category-bento-item::before,
+    .cm.v2 .catalog-category-bento-media::before,
     .cm.v2 .catalog-category-bento-item img,
     .cm.v2 [data-solara-module="catalog-testimonials"] .catalog-testimonials-section > header,
     .cm.v2 [data-solara-module="catalog-testimonials"] .catalog-testimonial,

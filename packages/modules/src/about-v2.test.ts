@@ -35,15 +35,15 @@ describe("Nosotros V2 module contracts", () => {
     );
   });
 
-  it("limita los módulos a Nosotros V2 y conserva el newsletter compartido", () => {
+  it("conserva los módulos de Nosotros sólo para compatibilidad", () => {
     const hero = getModuleDefinition("about-hero");
     const newsletter = getModuleDefinition("catalog-newsletter-cta");
     if (!hero || !newsletter) throw new Error("Faltan módulos registrados");
     expect(isCatalogModernModule(hero)).toBe(true);
-    expect(isModuleAvailableOnPage(hero, "about", "catalog-modern-v2")).toBe(true);
+    expect(isModuleAvailableOnPage(hero, "about", "catalog-modern-v2")).toBe(false);
     expect(isModuleAvailableOnPage(hero, "contact", "catalog-modern-v2")).toBe(false);
     expect(isModuleAvailableOnPage(hero, "about", "catalog-modern-v1")).toBe(false);
-    expect(isModuleAvailableOnPage(newsletter, "about", "catalog-modern-v2")).toBe(true);
+    expect(isModuleAvailableOnPage(newsletter, "about", "catalog-modern-v2")).toBe(false);
   });
 
   it("aplica defaults y límites de repeaters", () => {

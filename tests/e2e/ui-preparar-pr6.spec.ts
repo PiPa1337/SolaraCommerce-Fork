@@ -455,7 +455,7 @@ test("la plantilla protegida rechaza importar el respaldo y conserva el estado a
   await expect(page.getByText("Agregar sección base: catalog-newsletter-cta")).toHaveCount(0);
 });
 
-test("con un conflicto remanente el panel no se puede cerrar: el botón ya no aplica nada", async ({
+test("con un conflicto remanente el panel se descarta tras adoptar los cambios seguros", async ({
   page,
 }) => {
   await prepareUpgradePanel(page);
@@ -467,26 +467,11 @@ test("con un conflicto remanente el panel no se puede cerrar: el botón ya no ap
     .poll(async () => (await readUpgradeSnapshot(page)).templateVersion, { timeout: 20_000 })
     .toBe(UPGRADE_TO_VERSION);
 
-  // Auto-feedback: la sección se adoptó (el listado de safeChanges se vació)
-  // pero el panel SIGUE visible porque el conflict se conservó: queda sólo el
-  // conteo y el botón, que ya no tiene cambios que aplicar.
+  // Auto-feedback: la sección se adoptó (el listado de safeChanges se vació) y
+  // el panel se descarta durante la sesión. El conflicto sigue conservado en
+  // el proyecto, verificado arriba junto con el resto del snapshot.
   const panel = page.locator(".template-update");
-  await expect(panel).toBeVisible();
-  await expect(panel.getByText("Agregar sección base: catalog-newsletter-cta")).toHaveCount(0);
-  await expect(panel.getByText(/Sección no presente en la plantilla actual/)).toBeVisible();
-  await expect(page.getByText("Actualización disponible")).toBeVisible();
-
-  // Funcional: un segundo clic no aplica nada nuevo (mismo estado) y vuelve a
-  // descargar otro respaldo: no hay forma de cerrar el panel.
-  const stateBefore = JSON.stringify(await readUpgradeSnapshot(page));
-  const secondDownloadPromise = page.waitForEvent("download");
-  await updateButton.click();
-  expect((await secondDownloadPromise).suggestedFilename()).toBe(BACKUP_FILENAME);
-  await expect
-    .poll(async () => JSON.stringify(await readUpgradeSnapshot(page)), { timeout: 20_000 })
-    .toBe(stateBefore);
-  await expect(page.getByText("Actualización disponible")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Respaldar y adoptar cambios" })).toBeVisible();
+  await expect(panel).toHaveCount(0);
 });
 
 test("utilidad: tras adoptar el sitio exportado incorpora la sección y conserva el contenido del usuario (diff)", async () => {

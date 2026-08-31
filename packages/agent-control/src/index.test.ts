@@ -103,6 +103,18 @@ describe("control nativo del agente", () => {
             source: { kind: "clean" },
           },
           {
+            type: "store.updateLegalProfile",
+            changes: {
+              countryCode: "AR",
+              taxId: "20-12345678-9",
+              jurisdiction: "Provincia de Buenos Aires",
+              paymentMethods: ["Transferencia bancaria"],
+              salesChannels: ["WhatsApp"],
+              consumerRights: { enabled: true },
+              revisionAt: "2026-08-31T12:00:00.000Z",
+            },
+          },
+          {
             type: "product.create",
             productId: "product-taza",
             slug: "taza",
@@ -130,6 +142,14 @@ describe("control nativo del agente", () => {
       expect(project.name).toBe("Tienda de prueba");
       expect(project.products).toHaveLength(1);
       expect(project.products[0]?.imageIds).toContain(staged.assetId);
+      expect(project.legalProfile).toMatchObject({
+        countryCode: "AR",
+        taxId: "20-12345678-9",
+        jurisdiction: "Provincia de Buenos Aires",
+        paymentMethods: ["Transferencia bancaria"],
+        salesChannels: ["WhatsApp"],
+        revisionAt: "2026-08-31T12:00:00.000Z",
+      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

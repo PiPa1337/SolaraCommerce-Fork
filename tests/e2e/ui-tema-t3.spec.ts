@@ -135,7 +135,9 @@ async function readCommittedColors(page: Page): Promise<Record<ThemeColorKey, st
 }
 
 function contrastRow(page: Page, label: string): Locator {
-  return page.locator(".contrast-check__row", { hasText: label });
+  return page
+    .locator(".contrast-check__row")
+    .filter({ has: page.getByText(label, { exact: true }) });
 }
 
 test("pares del panel: 3 pares declarados OK coinciden con el cálculo WCAG propio", async ({

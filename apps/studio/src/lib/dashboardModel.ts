@@ -134,12 +134,30 @@ function readPricingConfigSafe(): PricingConfig {
     const raw = localStorage.getItem(PRICING_STORAGE_KEY);
     if (!raw) return DEFAULT_PRICING;
     const parsed = JSON.parse(raw) as Partial<PricingConfig>;
-    const base = typeof parsed.base === "number" && Number.isFinite(parsed.base) && parsed.base >= 0 ? Math.round(parsed.base) : DEFAULT_PRICING.base;
+    const base =
+      typeof parsed.base === "number" && Number.isFinite(parsed.base) && parsed.base >= 0
+        ? Math.round(parsed.base)
+        : DEFAULT_PRICING.base;
     // incluido fijo en 20 — se ignora valor guardado para evitar tarifa inconsistente
     const included = DEFAULT_PRICING.included;
-    const t1 = typeof parsed.tier1Price === "number" && Number.isFinite(parsed.tier1Price) && parsed.tier1Price >= 0 ? Math.round(parsed.tier1Price) : DEFAULT_PRICING.tier1Price;
-    const t2 = typeof parsed.tier2Price === "number" && Number.isFinite(parsed.tier2Price) && parsed.tier2Price >= 0 ? Math.round(parsed.tier2Price) : DEFAULT_PRICING.tier2Price;
-    const t3 = typeof parsed.tier3Price === "number" && Number.isFinite(parsed.tier3Price) && parsed.tier3Price >= 0 ? Math.round(parsed.tier3Price) : DEFAULT_PRICING.tier3Price;
+    const t1 =
+      typeof parsed.tier1Price === "number" &&
+      Number.isFinite(parsed.tier1Price) &&
+      parsed.tier1Price >= 0
+        ? Math.round(parsed.tier1Price)
+        : DEFAULT_PRICING.tier1Price;
+    const t2 =
+      typeof parsed.tier2Price === "number" &&
+      Number.isFinite(parsed.tier2Price) &&
+      parsed.tier2Price >= 0
+        ? Math.round(parsed.tier2Price)
+        : DEFAULT_PRICING.tier2Price;
+    const t3 =
+      typeof parsed.tier3Price === "number" &&
+      Number.isFinite(parsed.tier3Price) &&
+      parsed.tier3Price >= 0
+        ? Math.round(parsed.tier3Price)
+        : DEFAULT_PRICING.tier3Price;
     return { base, included, tier1Price: t1, tier2Price: t2, tier3Price: t3 };
   } catch {
     return DEFAULT_PRICING;
@@ -165,7 +183,8 @@ export function loadStoreDiscounts(): Record<string, number> {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     const out: Record<string, number> = {};
     for (const [key, value] of Object.entries(parsed)) {
-      if (typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100) out[key] = value;
+      if (typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100)
+        out[key] = value;
     }
     return out;
   } catch {
@@ -199,7 +218,10 @@ function pricingToTiers(config: PricingConfig): Array<{ upTo: number; price: num
  * Fórmula: base (incluye `included`) + tramos adicionales.
  * Ej: 50 → 20.000 + 30×300 = 29.000
  */
-export function calculateMonthlyCostForCount(count: number, config: PricingConfig = loadPricingConfig()): number {
+export function calculateMonthlyCostForCount(
+  count: number,
+  config: PricingConfig = loadPricingConfig(),
+): number {
   const { base, included } = config;
   const tiers = pricingToTiers(config);
   if (count <= included) return base;
@@ -216,7 +238,11 @@ export function calculateMonthlyCostForCount(count: number, config: PricingConfi
   return total;
 }
 
-export function calculateMonthlyCost(project: StoredProject["project"], storeId?: string, config?: PricingConfig): number {
+export function calculateMonthlyCost(
+  project: StoredProject["project"],
+  storeId?: string,
+  config?: PricingConfig,
+): number {
   const metrics = getProjectMetrics(project);
   const effectiveConfig = config ?? loadPricingConfig();
   const baseCost = calculateMonthlyCostForCount(metrics.activeProducts, effectiveConfig);
@@ -235,7 +261,10 @@ export function formatMonthlyCost(value: number): string {
 }
 
 /** Desglose por tramo para el popup de Calculadora. */
-export function getMonthlyCostBreakdown(count: number, config: PricingConfig = loadPricingConfig()): Array<{
+export function getMonthlyCostBreakdown(
+  count: number,
+  config: PricingConfig = loadPricingConfig(),
+): Array<{
   label: string;
   products: number;
   price: number;

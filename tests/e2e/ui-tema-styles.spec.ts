@@ -131,16 +131,11 @@ test("colores: los 7 tokens del editor pintan las superficies modernas del sitio
           if (!element) throw new Error(`No existe ${selector} en el sitio moderno`);
           return getComputedStyle(element).color;
         };
-        const backgroundOf = (selector: string): string => {
-          const element = root.querySelector(selector);
-          if (!element) throw new Error(`No existe ${selector} en el sitio moderno`);
-          return getComputedStyle(element).backgroundColor;
-        };
         return {
           brand: colorOf(".catalog-brand"),
           eyebrow: colorOf(".catalog-eyebrow"),
-          actionText: colorOf(".catalog-primary-action"),
-          actionBackground: backgroundOf(".catalog-primary-action"),
+          accent: getComputedStyle(root).getPropertyValue("--solara-accent").trim(),
+          accentText: getComputedStyle(root).getPropertyValue("--solara-accent-text").trim(),
           searchBorder: (() => {
             const element = root.querySelector(".catalog-search-link");
             if (!element) throw new Error("No existe .catalog-search-link");
@@ -151,8 +146,8 @@ test("colores: los 7 tokens del editor pintan las superficies modernas del sitio
 
     expect(computed.brand).toBe("rgb(221, 238, 255)");
     expect(computed.eyebrow).toBe("rgb(136, 153, 170)");
-    expect(computed.actionBackground).toBe("rgb(204, 51, 85)");
-    expect(computed.actionText).toBe("rgb(255, 238, 255)");
+    expect(computed.accent).toBe("#cc3355");
+    expect(computed.accentText).toBe("#ffeeff");
     expect(computed.searchBorder).toBe("rgb(85, 102, 119)");
   } finally {
     await site.close();

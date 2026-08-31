@@ -56,7 +56,9 @@ const aboutManifest = <Id extends string>(input: {
   ...input,
   version: 1 as const,
   family: "catalog-modern-v2" as const,
-  availability: "default" as const,
+  // Se conserva para leer y renderizar proyectos persistidos, pero no se puede
+  // agregar a nuevas páginas desde el Builder.
+  availability: "compatibility-only" as const,
   slots: ["content"] as const,
 });
 

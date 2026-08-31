@@ -7,10 +7,18 @@ const commandArgs =
     ? [join(dirname(process.execPath), "node_modules", "corepack", "dist", "corepack.js")]
     : [];
 const workspaceNodePath = resolve("node_modules/.pnpm/node_modules");
+const nodeMajor = Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10);
 
-if (!process.versions.node.startsWith("22.")) {
-  console.error(`El release candidate requiere Node 22; se detectó ${process.version}.`);
+if (nodeMajor < 22) {
+  console.error(
+    `El release candidate requiere Node 22 o posterior; se detectó ${process.version}.`,
+  );
   process.exit(1);
+}
+if (nodeMajor !== 22) {
+  console.warn(
+    `Aviso: la referencia de release es Node 22; se ejecutará la matriz con ${process.version}.`,
+  );
 }
 
 function run(args) {

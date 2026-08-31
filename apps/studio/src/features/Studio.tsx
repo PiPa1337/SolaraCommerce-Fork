@@ -125,7 +125,7 @@ interface StudioTabContentProps {
   replaceProject(next: StoreProjectV1, options?: { allowProtectedWrite?: boolean }): void;
   runCommand(command: DomainCommand): void;
   onNavigate(destination: StudioTab): void;
-  onApplyUpgrade(nextProject: StoreProjectV1): void;
+  onApplyUpgrade(nextProject: StoreProjectV1): Promise<boolean>;
   onToggleAdvancedMode(): void;
   onEnableAdvanced(): void;
   onPreviewRouteChange(route: string): void;
@@ -748,14 +748,14 @@ export function Studio({
         setValidationError(
           "La plantilla protegida es de solo lectura. Creá una tienda nueva para editarla.",
         );
-        return;
+        return false;
       }
       const result = StoreProjectV1Schema.safeParse(next);
       if (!result.success) {
         const issue = result.error.issues[0];
         const path = issue?.path.join(".") || "project";
         setValidationError(`${path}: ${issue?.message ?? "Proyecto inválido."}`);
-        return;
+        return false;
       }
       setValidationError("");
       if (options.allowProtectedWrite && immutableBase) {
@@ -764,6 +764,7 @@ export function Studio({
       setHistory((current) => {
         return pushHistorySnapshot(current, result.data);
       });
+      return true;
     },
     [immutableBase],
   );
@@ -802,26 +803,25 @@ export function Studio({
   const enableAdvancedMode = useCallback(() => setAdvancedMode(true), []);
 
   const applyGuidedUpgrade = useCallback(
-    (nextProject: StoreProjectV1) => {
-      void (async () => {
-        try {
-          await autosave.flush();
-          const archive = await createProjectArchiveInWorker(project);
-          downloadBlob(
-            archive,
-            `${project.slug}-antes-de-actualizar.solara.json`,
-            "application/vnd.solara.project+json",
-          );
-          if (managedStorage && immutableBase) setProtectedWriteApproved(true);
-          replaceProject(nextProject, { allowProtectedWrite: immutableBase });
-        } catch (reason) {
-          setValidationError(
-            reason instanceof Error
-              ? `No se pudo crear el respaldo: ${reason.message}`
-              : "No se pudo crear el respaldo antes de actualizar.",
-          );
-        }
-      })();
+    async (nextProject: StoreProjectV1) => {
+      try {
+        await autosave.flush();
+        const archive = await createProjectArchiveInWorker(project);
+        downloadBlob(
+          archive,
+          `${project.slug}-antes-de-actualizar.solara.json`,
+          "application/vnd.solara.project+json",
+        );
+        if (managedStorage && immutableBase) setProtectedWriteApproved(true);
+        return replaceProject(nextProject, { allowProtectedWrite: immutableBase });
+      } catch (reason) {
+        setValidationError(
+          reason instanceof Error
+            ? `No se pudo crear el respaldo: ${reason.message}`
+            : "No se pudo crear el respaldo antes de actualizar.",
+        );
+        return false;
+      }
     },
     [autosave, immutableBase, managedStorage, project, replaceProject],
   );

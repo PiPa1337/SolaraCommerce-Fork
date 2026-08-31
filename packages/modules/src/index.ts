@@ -147,12 +147,7 @@ export function isModuleAvailableOnPage(
   const isAboutV2 = pageKind === "about" && designFamily === "catalog-modern-v2";
   const isContactV2 = pageKind === "contact" && designFamily === "catalog-modern-v2";
   const isHomeV2 = pageKind === "home" && designFamily === "catalog-modern-v2";
-  if (isAboutV2) {
-    return aboutV2ModuleIds.has(moduleId) || moduleId === "catalog-newsletter-cta";
-  }
-  if (isContactV2) {
-    return contactV2ModuleIds.has(moduleId) || moduleId === "catalog-newsletter-cta";
-  }
+  if (isAboutV2 || isContactV2) return false;
   if (isHomeV2) {
     return (
       moduleId === "contact-form" ||

@@ -39,6 +39,9 @@ test("el preview V2 conserva el carrito al navegar con enlaces internos", async 
       .locator(`[data-product-card][data-product-id="${firstTarget.id}"] a`)
       .first()
       .click();
+    await expect(
+      preview.locator(`[data-product][data-product-id="${firstTarget.id}"]`),
+    ).toBeVisible({ timeout: 30_000 });
     const firstTitle = preview.getByRole("heading", { level: 1 });
     await expect(firstTitle).toHaveText(/.+/, {
       timeout: 30_000,
@@ -58,6 +61,9 @@ test("el preview V2 conserva el carrito al navegar con enlaces internos", async 
       .locator(`[data-product-card][data-product-id="${secondTarget.id}"] a`)
       .first()
       .click();
+    await expect(
+      preview.locator(`[data-product][data-product-id="${secondTarget.id}"]`),
+    ).toBeVisible({ timeout: 30_000 });
     const secondTitle = preview.getByRole("heading", { level: 1 });
     await expect(secondTitle).toHaveText(/.+/, {
       timeout: 30_000,
@@ -66,6 +72,20 @@ test("el preview V2 conserva el carrito al navegar con enlaces internos", async 
     await expect(preview.locator("[data-cart-count]").first()).toHaveText("1");
     await preview.getByRole("button", { name: "Agregar al carrito" }).click();
     await expect(preview.locator("[data-cart-count]").first()).toHaveText("2");
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            try {
+              return JSON.parse(localStorage.getItem("solara-cart:store-modo-sur-demo") ?? "[]")
+                .length;
+            } catch {
+              return -1;
+            }
+          }),
+        { timeout: 10_000 },
+      )
+      .toBe(2);
     await page.getByTestId("ui-preview-route").fill("/carrito/");
     await page.getByTestId("ui-preview-route").press("Enter");
     await expect(preview.getByRole("heading", { level: 1 })).toHaveText("Carrito", {

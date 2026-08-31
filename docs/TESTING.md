@@ -126,7 +126,7 @@ del draft lo requiere (la validación actual exige sólo la marca DEBUG).
 
 ## Qué probar ante cada tipo de cambio
 
-> Validación diaria = `check:quick` + `test:e2e:smoke` (~2-3 min). Cierre/CI = `check:full` + `test:e2e` full + `benchmark:export` si toca exporter. Release (3 browsers + desktop:package) solo on-demand con Node 22.
+> Validación diaria = `check:quick` + `test:e2e:smoke` (~2-3 min). Cierre/CI = `check:full` + `test:e2e` full + `benchmark:export` si toca exporter. Release (3 browsers + desktop:package) solo on-demand; Node 22 es la referencia, no un bloqueo local.
 
 | Cambio | Mínimo (quick) | Cierre recomendado |
 | --- | --- | --- |
@@ -141,7 +141,7 @@ del draft lo requiere (la validación actual exige sólo la marca DEBUG).
 
 - Un test E2E fallido deja reportes en `playwright-report/` y traces según la
   configuración de Playwright.
-- `test:e2e:release` requiere los navegadores instalados y Node 22 en CI. No ejecutar en Node 24 (falla) ni como parte de `check:quick` — solo on-demand al cierre.
+- `test:e2e:release` requiere los navegadores instalados. Node 22 sigue siendo la referencia de CI, pero Node 24 puede ejecutar la matriz con una advertencia; no forma parte de `check:quick` y se usa sólo on-demand al cierre.
 - El servidor de tests usa loopback; no debe apuntarse a una tienda publicada.
 - Validación rápida diaria: `pnpm check:quick && pnpm test:e2e:smoke` (~2-3 min en 9800X3D, 8 workers). Cierre: `pnpm check && pnpm test:e2e`.
 - Workers Playwright por defecto 8 (env `PLAYWRIGHT_WORKERS` para limitar a 6 si hay lag). Antes era 4.

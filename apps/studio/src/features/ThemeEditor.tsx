@@ -739,7 +739,7 @@ export function ThemeEditor({
         <legend>Paletas</legend>
         <div className="theme-presets">
           {THEME_PRESETS.map((preset) => {
-            const active = Object.keys(preset.colors).every(
+            const active = Object.keys(project.theme.colors).every(
               (key) =>
                 project.theme.colors[key as keyof Theme["colors"]] ===
                 preset.colors[key as keyof Theme["colors"]],

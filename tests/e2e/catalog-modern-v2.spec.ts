@@ -620,7 +620,7 @@ test("V1 mantiene compactos los h1 largos de categorías en todos los tamaños",
   }
 });
 
-test("V2 mantiene contenida y un poco más amplia la caja del nombre de categoría", async ({
+test("V2 separa la foto cuadrada del nombre, contador y flecha de categoría", async ({
   page,
 }, testInfo) => {
   for (const viewport of [
@@ -632,50 +632,48 @@ test("V2 mantiene contenida y un poco más amplia la caja del nombre de categor�
     await page.goto(serverUrl);
 
     const item = page.locator(".catalog-category-bento-item").first();
-    const label = item.locator(".catalog-category-bento-label");
+    const media = item.locator(".catalog-category-bento-media");
+    const copy = item.locator(".catalog-category-bento-copy");
+    const label = copy.locator(".catalog-category-bento-label");
     const title = label.locator(".catalog-category-bento-title");
-    await expect(label).toBeVisible();
+    const count = copy.locator(".catalog-category-bento-count");
+    const arrow = copy.locator(".catalog-category-bento-arrow");
+    await expect(media).toBeVisible();
+    await expect(copy).toBeVisible();
+    await expect(count).toContainText(/\d+ productos?/);
+    await expect(arrow).toBeVisible();
     await title.evaluate((element) => {
       element.textContent = "Gastronomía y Descartables";
     });
 
-    const metrics = await label.evaluate((element) => {
+    const metrics = await copy.evaluate((element) => {
       const itemElement = element.closest<HTMLElement>(".catalog-category-bento-item");
+      const mediaElement = itemElement?.querySelector<HTMLElement>(".catalog-category-bento-media");
       const titleElement = element.querySelector<HTMLElement>(".catalog-category-bento-title");
-      if (!itemElement || !titleElement) return null;
-      const labelRect = element.getBoundingClientRect();
+      if (!itemElement || !mediaElement || !titleElement) return null;
+      const copyRect = element.getBoundingClientRect();
+      const mediaRect = mediaElement.getBoundingClientRect();
       const itemRect = itemElement.getBoundingClientRect();
       const titleRect = titleElement.getBoundingClientRect();
-      const labelStyle = getComputedStyle(element);
       return {
-        labelWidth: labelRect.width,
-        labelHeight: labelRect.height,
-        itemWidth: itemRect.width,
+        mediaRatio: mediaRect.width / mediaRect.height,
+        mediaBottom: mediaRect.bottom,
+        copyTop: copyRect.top,
+        copyRight: copyRect.right,
         itemRight: itemRect.right,
-        labelRight: labelRect.right,
-        titleHeight: titleRect.height,
-        titleMargin: getComputedStyle(titleElement).margin,
-        labelPaddingBlock: Number.parseFloat(labelStyle.paddingBlockStart),
-        labelPaddingInline: Number.parseFloat(labelStyle.paddingInlineStart),
+        titleContained: titleRect.bottom <= copyRect.bottom + 1,
         documentWidth: document.documentElement.scrollWidth,
       };
     });
 
     expect(metrics).not.toBeNull();
-    expect(metrics?.labelWidth).toBeLessThan((metrics?.itemWidth ?? 0) * 0.98);
-    expect(metrics?.labelRight).toBeLessThanOrEqual((metrics?.itemRight ?? 0) + 1);
-    expect(metrics?.titleMargin).toBe("0px");
-    expect((metrics?.labelHeight ?? 0) - (metrics?.titleHeight ?? 0)).toBeLessThanOrEqual(22);
-    if (viewport.width <= 1023) {
-      expect(metrics?.labelPaddingBlock).toBeGreaterThanOrEqual(8.8);
-      expect(metrics?.labelPaddingInline).toBeGreaterThanOrEqual(13.6);
-    } else {
-      expect(metrics?.labelPaddingBlock).toBeGreaterThanOrEqual(6.4);
-      expect(metrics?.labelPaddingInline).toBeGreaterThanOrEqual(12);
-    }
+    expect(metrics?.mediaRatio).toBeCloseTo(1, 2);
+    expect(metrics?.copyTop).toBeGreaterThanOrEqual((metrics?.mediaBottom ?? 0) - 1);
+    expect(metrics?.copyRight).toBeLessThanOrEqual((metrics?.itemRight ?? 0) + 1);
+    expect(metrics?.titleContained).toBe(true);
     expect(metrics?.documentWidth).toBeLessThanOrEqual(viewport.width);
 
-    await item.screenshot({ path: testInfo.outputPath(`category-label-${viewport.width}.png`) });
+    await item.screenshot({ path: testInfo.outputPath(`category-card-${viewport.width}.png`) });
   }
 });
 
@@ -3048,12 +3046,13 @@ test("V2 cards: línea glow con puntito en la imagen al hover", async ({ page })
 
   const bento = page.locator(".catalog-category-bento-item").first();
   await bento.scrollIntoViewIfNeeded();
-  const bentoRest = await bento.evaluate(
+  const bentoMedia = bento.locator(".catalog-category-bento-media");
+  const bentoRest = await bentoMedia.evaluate(
     (element) => getComputedStyle(element, "::before").transform,
   );
   await bento.hover();
   await expect
-    .poll(() => bento.evaluate((element) => getComputedStyle(element, "::before").transform))
+    .poll(() => bentoMedia.evaluate((element) => getComputedStyle(element, "::before").transform))
     .not.toBe(bentoRest);
 });
 
@@ -3126,7 +3125,7 @@ test("V2 footer: Explorar conserva sus rutas, agrega carrito y lista todas las c
       explore.getByRole("link", { name: "Buscar productos", exact: true }),
     ).toHaveAttribute("href", "/buscar/");
     const cartLink = explore.locator("a[data-open-cart]");
-    await expect(cartLink).toHaveText("Abrir carrito");
+    await expect(cartLink).toHaveText("Carrito");
     await expect(cartLink).toHaveAttribute("href", "/carrito/");
     await expect(cartLink).toHaveAttribute("data-open-cart", "");
     await expect(categories.locator('a[href^="/categorias/"]')).toHaveCount(

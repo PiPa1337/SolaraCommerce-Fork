@@ -472,6 +472,7 @@ describe("carrito y checkout del drawer (A29)", () => {
 
   it("bloquea el checkout con role=alert y conserva la línea no disponible", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("x.invalidItems");
+    expect(STOREFRONT_RUNTIME_JS).toContain("a.phoneInvalid || x.invalidItems");
     expect(STOREFRONT_RUNTIME_JS).toContain('setAttribute("role", "alert")');
     // El bloqueo ahora da feedback visible (emptyCart con role=alert) antes de
     // validar el formulario, en lugar de un return silencioso combinado.

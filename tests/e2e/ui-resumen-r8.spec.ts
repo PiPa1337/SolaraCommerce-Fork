@@ -3,7 +3,8 @@
  * Resumen. Contrato de 4 capas (plan docs/superpowers/plans/2026-08-10-auditoria-resumen.md):
  * - funcional: "Respaldar y adoptar cambios" descarga el respaldo previo,
  *   aplica los safeChanges (versión + secciones de plantilla), deja de
- *   mostrarse y persiste templateVersion 1→2 (recargar → sin panel); los
+ *   mostrarse durante la sesión y persiste templateVersion 1→2; al recargar,
+ *   sólo permanecen los conflictos de compatibilidad; los
  *   campos del Resumen (identidad/whatsapp/dominio/navegación) sobreviven la
  *   recarga de pestaña y de la app;
  * - auto-feedback: panel de actualización con los cambios, indicador de
@@ -31,7 +32,8 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 150_000 : 90_000);
 
-const DEMO_PROJECT_ID = "store-modo-sur-demo";
+const SOURCE_PROJECT_ID = "store-modo-sur-demo";
+const DEMO_PROJECT_ID = "store-r8-upgrade";
 const UPGRADE_TO_VERSION = 2;
 const NEWSLETTER_SECTION_ID = "modo-section-newsletter";
 
@@ -128,8 +130,8 @@ async function openStore(page: Page, projectId: string): Promise<void> {
   });
 }
 
-async function openDemoStore(page: Page): Promise<void> {
-  await openStore(page, DEMO_PROJECT_ID);
+async function openDemoStore(page: Page, projectId = SOURCE_PROJECT_ID): Promise<void> {
+  await openStore(page, projectId);
 }
 
 async function openResumenTab(page: Page): Promise<void> {
@@ -225,11 +227,19 @@ async function seedUpgradeState(page: Page): Promise<void> {
               );
               return;
             }
+            store.delete(projectId);
             store.put({
               ...record,
+              id: "store-r8-upgrade",
               project: {
                 ...record.project,
-                origin: { ...(record.project.origin ?? {}), templateVersion: 1 },
+                id: "store-r8-upgrade",
+                origin: {
+                  ...(record.project.origin ?? {}),
+                  templateVersion: 1,
+                  role: "store",
+                  updatePolicy: "managed",
+                },
                 sections: (record.project.sections ?? []).filter(
                   (section) => section.id !== "modo-section-newsletter",
                 ),
@@ -241,7 +251,7 @@ async function seedUpgradeState(page: Page): Promise<void> {
           transaction.addEventListener("error", () => reject(transaction.error));
         });
       }),
-    DEMO_PROJECT_ID,
+    SOURCE_PROJECT_ID,
   );
   expect(seeded).toBe("true");
 }
@@ -334,7 +344,7 @@ async function flushSave(page: Page): Promise<void> {
   await expect(page.locator(".save-indicator")).toContainText("Guardado", { timeout: 30_000 });
 }
 
-test("Respaldar y adoptar cambios descarga el respaldo, aplica la actualización y persiste (recarga → sin panel)", async ({
+test("Respaldar y adoptar cambios descarga, adopta y persiste (recarga → sólo conflictos)", async ({
   page,
 }) => {
   await resetIndexedDb(page);
@@ -344,7 +354,7 @@ test("Respaldar y adoptar cambios descarga el respaldo, aplica la actualización
   await seedUpgradeState(page);
 
   await page.reload();
-  await openDemoStore(page);
+  await openDemoStore(page, DEMO_PROJECT_ID);
   await openPrepararTab(page);
 
   // Auto-feedback: el panel lista los cambios de plantilla propuestos.
@@ -387,12 +397,16 @@ test("Respaldar y adoptar cambios descarga el respaldo, aplica la actualización
   const adopted = await readUpgradeState(page);
   expect(adopted.sectionIds).toContain(NEWSLETTER_SECTION_ID);
 
-  // Persistencia: recargar la app no revive el panel.
+  // Persistencia: recargar la app conserva v2 + newsletter. Los conflictos de
+  // compatibilidad no se adoptan y por eso el panel vuelve a mostrarlos, pero
+  // el safe change ya no reaparece.
   await page.reload();
-  await openDemoStore(page);
+  await openDemoStore(page, DEMO_PROJECT_ID);
   await openPrepararTab(page);
-  await expect(page.getByText("Actualización disponible")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Respaldar y adoptar cambios" })).toHaveCount(0);
+  await expect(page.getByText("Actualización disponible")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Respaldar y adoptar cambios" })).toBeVisible();
+  await expect(page.getByText("Agregar sección base: catalog-newsletter-cta")).toHaveCount(0);
+  await expect(page.getByText(/Contenido de Nosotros archivado/)).toBeVisible();
 });
 
 test("utilidad: adoptar la actualización agrega la sección de plantilla al sitio exportado (diff)", async () => {

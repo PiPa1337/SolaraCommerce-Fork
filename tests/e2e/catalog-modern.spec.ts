@@ -357,17 +357,18 @@ test("las cards, el bento y la búsqueda moderna usan contenido real", async ({ 
   await expect(bento.locator(".catalog-category-bento-item--wide")).not.toHaveCount(0);
   await expect(bento.locator(".catalog-category-bento-item--tall")).not.toHaveCount(0);
   await expect(bento.locator(".catalog-category-bento-item--compact")).not.toHaveCount(0);
-  await expect(bento.locator(".catalog-category-bento-item small").first()).toBeVisible();
-  expect(
-    await bento
-      .locator(".catalog-category-bento-item small")
-      .first()
-      .evaluate((element) => getComputedStyle(element).backgroundColor),
-  ).not.toBe("rgba(0, 0, 0, 0)");
-  await expect(bento.getByRole("link", { name: "Ver todo el catálogo" })).toHaveAttribute(
-    "href",
-    "/buscar/",
+  const firstCategory = bento.locator(".catalog-category-bento-item").first();
+  await expect(firstCategory.locator(".catalog-category-bento-count")).toContainText(
+    /\d+ productos?/,
   );
+  await expect(firstCategory.locator(".catalog-category-bento-arrow")).toBeVisible();
+  expect(
+    await firstCategory.locator(".catalog-category-bento-media").evaluate((element) => {
+      const { width, height } = element.getBoundingClientRect();
+      return width / height;
+    }),
+  ).toBeCloseTo(1, 2);
+  await expect(bento.getByRole("link", { name: "Ver todos" })).toHaveAttribute("href", "/buscar/");
 
   const searchTrigger = page.locator(".catalog-search-link");
   await searchTrigger.click();

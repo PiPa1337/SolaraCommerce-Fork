@@ -470,7 +470,7 @@ test("A21.3b SEO reintenta la auditoría cuando el renderer vuelve a estar dispo
   await page.unroute("**/assets/*.js");
   await retry.click();
   await expect(error).toHaveCount(0, { timeout: 30_000 });
-  await expect(page.getByTestId("ui-seo-audit-state")).toContainText("Auditoría lista");
+  await expect(page.getByTestId("ui-seo-audit-state")).toContainText("Score SEO:");
   await expect(page.getByTestId("ui-seo-crawler")).toBeVisible();
 });
 
