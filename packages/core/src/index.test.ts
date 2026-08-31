@@ -15,13 +15,13 @@ import {
   executeCommand,
   exportCatalogCsv,
   exportProductsCsv,
-  generatePerformanceFixture,
   importCatalogCsv,
   importProductsCsv,
   redo,
   reduceProject,
   undo,
 } from "./index";
+import { generatePerformanceFixture } from "./performance.js";
 
 const timestamp = "2026-07-30T10:00:00.000Z";
 const firstProduct = referenceStore.products[0];

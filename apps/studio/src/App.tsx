@@ -53,8 +53,20 @@ import {
 } from "./lib/repository";
 import { createProjectArchiveInWorker, readProjectArchiveInWorker } from "./lib/workers";
 
-const loadLocalStorage = () => import("./lib/localStorage");
-const loadLocalProjectRepository = () => import("./lib/localProjectRepository");
+const loadLocalStorage = (() => {
+  let cached: Promise<typeof import("./lib/localStorage")> | null = null;
+  return () => {
+    if (cached === null) cached = import("./lib/localStorage");
+    return cached;
+  };
+})();
+const loadLocalProjectRepository = (() => {
+  let cached: Promise<typeof import("./lib/localProjectRepository")> | null = null;
+  return () => {
+    if (cached === null) cached = import("./lib/localProjectRepository");
+    return cached;
+  };
+})();
 const ComponentGallery = lazy(() =>
   import("./debug/ComponentGallery").then(({ ComponentGallery: Gallery }) => ({
     default: Gallery,
@@ -230,19 +242,28 @@ function StudioShell() {
             })),
           )
           .catch(() => ({ managed: false, writable: false }));
-        await purgePromise;
-        const detectedStorage = await storagePromise;
+        const [, detectedStorage] = await Promise.all([purgePromise, storagePromise]);
         storageModeRef.current = detectedStorage.managed;
         setLocalStorageStatus(detectedStorage);
-        let retiredLegacyProjects = false;
-        if (detectedStorage.managed && detectedStorage.writable) {
-          const { retireLegacyDemoProjectsOnDisk } = await loadLocalStorage();
-          const removedFromDisk = await retireLegacyDemoProjectsOnDisk();
-          retiredLegacyProjects = removedFromDisk.length > 0;
-        }
-        if (!detectedStorage.managed || detectedStorage.writable) {
-          retiredLegacyProjects = (await retireLegacyDemoProjects()) || retiredLegacyProjects;
-        }
+        const retireDiskPromise = (async () => {
+          if (detectedStorage.managed && detectedStorage.writable) {
+            const { retireLegacyDemoProjectsOnDisk } = await loadLocalStorage();
+            const removedFromDisk = await retireLegacyDemoProjectsOnDisk();
+            return removedFromDisk.length > 0;
+          }
+          return false;
+        })();
+        const retireBrowserPromise = (async () => {
+          if (!detectedStorage.managed || detectedStorage.writable) {
+            return retireLegacyDemoProjects();
+          }
+          return false;
+        })();
+        const [retiredDisk, retiredBrowser] = await Promise.all([
+          retireDiskPromise,
+          retireBrowserPromise,
+        ]);
+        const retiredLegacyProjects = retiredDisk || retiredBrowser;
         if (retiredLegacyProjects) {
           notify("Se retiraron las referencias legacy; la demo V2 es la única demo integrada.");
         }
@@ -254,50 +275,49 @@ function StudioShell() {
         if (diskListing && (diskListing.projects.length > 0 || diskListing.recovery.length > 0)) {
           if (detectedStorage.writable) {
             await purgeNonDemoStores();
-            for (const diskProject of diskListing.projects) {
-              // Las actualizaciones de datos de la plantilla sólo pueden
-              // pasar por templates.previewUpgrade/commitUpgrade.
-              if (isBaseTemplate(diskProject.project)) continue;
-              const migrated = await migrateCatalogModernDemo(diskProject.project);
-              const testimonialsExpanded = expandCatalogModernDemoTestimonials(migrated);
-              if (testimonialsExpanded === diskProject.project) continue;
-              await markProjectMigration(diskProject.id, "pending");
-              const saved = await persistToDisk(
-                testimonialsExpanded,
-                diskProject.diskVersion ?? null,
-              );
-              await markProjectMigration(diskProject.id, "done");
-              diskProject.project = testimonialsExpanded;
-              diskProject.diskVersion = saved.receipt.version;
-            }
+            await Promise.allSettled(
+              diskListing.projects.map(async (diskProject) => {
+                if (isBaseTemplate(diskProject.project)) return;
+                const migrated = await migrateCatalogModernDemo(diskProject.project);
+                const testimonialsExpanded = expandCatalogModernDemoTestimonials(migrated);
+                if (testimonialsExpanded === diskProject.project) return;
+                await markProjectMigration(diskProject.id, "pending");
+                const saved = await persistToDisk(
+                  testimonialsExpanded,
+                  diskProject.diskVersion ?? null,
+                );
+                await markProjectMigration(diskProject.id, "done");
+                diskProject.project = testimonialsExpanded;
+                diskProject.diskVersion = saved.receipt.version;
+              }),
+            );
             const browserProjects = await listProjectsWithRecovery();
             const diskById = new Map(diskListing.projects.map((item) => [item.id, item]));
-            for (const stored of browserProjects.projects) {
-              // La plantilla protegida vive en IndexedDB como referencia local,
-              // pero no debe migrarse a proyectos/ como si fuera una tienda del
-              // usuario: el canal de upgrade explícito es el único autorizado.
-              if (isBaseTemplate(stored.project)) continue;
-              const diskProject = diskById.get(stored.id);
-              if (!diskProject) {
-                await markProjectMigration(stored.id, "pending");
-                await persistToDisk(stored.project, null);
-                await markProjectMigration(stored.id, "done");
-                continue;
-              }
-              if (await getProjectMigration(diskProject.id)) {
-                await markProjectMigration(diskProject.id, "done");
-              }
-              if (
-                shouldSeedRecoveryDraft(
-                  stored.project,
-                  diskProject.project,
-                  stored.project.updatedAt !== diskProject.project.updatedAt ||
-                    stored.project.id !== diskProject.project.id,
-                )
-              ) {
-                await saveRecoveryDraft(stored.project, diskProject.diskVersion ?? 0);
-              }
-            }
+            await Promise.allSettled(
+              browserProjects.projects.map(async (stored) => {
+                if (isBaseTemplate(stored.project)) return;
+                const diskProject = diskById.get(stored.id);
+                if (!diskProject) {
+                  await markProjectMigration(stored.id, "pending");
+                  await persistToDisk(stored.project, null);
+                  await markProjectMigration(stored.id, "done");
+                  return;
+                }
+                if (await getProjectMigration(diskProject.id)) {
+                  await markProjectMigration(diskProject.id, "done");
+                }
+                if (
+                  shouldSeedRecoveryDraft(
+                    stored.project,
+                    diskProject.project,
+                    stored.project.updatedAt !== diskProject.project.updatedAt ||
+                      stored.project.id !== diskProject.project.id,
+                  )
+                ) {
+                  await saveRecoveryDraft(stored.project, diskProject.diskVersion ?? 0);
+                }
+              }),
+            );
           }
           await refreshDisk();
           return;
@@ -325,14 +345,16 @@ function StudioShell() {
         }
         const browserResult = await refreshBrowser();
         if (detectedStorage.managed && detectedStorage.writable) {
-          for (const stored of browserResult.projects) {
-            if (isBaseTemplate(stored.project)) continue;
-            await markProjectMigration(stored.id, "pending");
-            const { persistProjectToDisk } = await loadLocalProjectRepository();
-            const result = await persistProjectToDisk(stored.project, null);
-            await markProjectMigration(stored.id, "done");
-            void result;
-          }
+          await Promise.allSettled(
+            browserResult.projects.map(async (stored) => {
+              if (isBaseTemplate(stored.project)) return;
+              await markProjectMigration(stored.id, "pending");
+              const { persistProjectToDisk } = await loadLocalProjectRepository();
+              const result = await persistProjectToDisk(stored.project, null);
+              await markProjectMigration(stored.id, "done");
+              void result;
+            }),
+          );
           await refreshDisk();
           notify("Las tiendas locales se migraron a proyectos/.");
         }

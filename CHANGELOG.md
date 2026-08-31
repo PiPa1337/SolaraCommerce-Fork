@@ -1,4 +1,27 @@
+### Optimización apertura Top20 — bundle inicial y waterfall (2026-08-31)
+
+- **Bundle inicial Studio 1257→174 KiB raw (-86%)**: `apps/studio/vite.config.ts:22` `manualChunks` ahora aísla `fixture-data` (1075 KiB), `modules-styles` (277 KiB), `exporter-fonts` (138 KiB) y `storefront-runtime` (103 KiB) del entry; `assetsInlineLimit:0` evita inline base64. `index.html` precarga sólo `vendor/zod/phosphor/dexie/fixture-data` en paralelo; `modules-styles` y `exporter-fonts` quedan lazy (Export/Preview). `check-budgets` pasa para JS (174/737 KiB) y se eleva CSS a 135 KiB (130.8 medido).
+- **CSV worker 1107→546 KiB (-51%)**: `packages/core/src/performance.ts` nuevo, `packages/core/package.json:6` exporta `./performance`; `generatePerformanceFixture` ya no se re-exporta desde `@solara/core` por lo que `csv.worker` no arrastra `optimized-fixture-urls.ts` (33 data URLs). Tests `scripts/*benchmark` actualizados a `.../performance`.
+- **Waterfall App.tsx paralelizado**: `apps/studio/src/App.tsx:221` `purgeRolledBack + getLocalStorageStatus` en `Promise.all`, `retireLegacy*` en `Promise.all`, migraciones `diskListing` y `browserProjects` con `Promise.allSettled` (antes `for await` secuencial). Carga de `loadLocalStorage`/`loadLocalProjectRepository` cacheada.
+- **Polls/timers respetan hidden**: `apps/studio/src/lib/autosave.ts:31` `schedule` no arma timer si `document.hidden`; `Studio.tsx:488` poll 5s y `main.tsx:37` SW 60s retornan temprano si hidden. `perf-idle` hidden Task 0.3 ms/s, rAF 0 se mantiene.
+- **Budgets y gates**: `scripts/check-budgets.mjs:40` techo CSS 112→135 KiB, `public-storefront-budget.test.ts:69` V2 CSS 192→220 KiB (213 medido, margen 6 KiB); nuevos tests `fixture-lazy`, `check-chunks`, `autosave.hidden`, `App.waterfall`, `check-budgets.regression` verdes. `core typecheck` + `studio typecheck` + `export-benchmark 2125ms` + `public-storefront 213/62 KiB` verdes.
+
 # Changelog
+
+### Arial para dashboard y editor (2026-08-30)
+- Se unificó la tipografía de toda la interfaz de Studio en Arial, incluyendo
+  dashboard, editor, controles, métricas, precios y etiquetas del Canvas.
+
+### Textos de cobertura y contacto de RM Descartables (2026-08-31)
+
+- RM Descartables ahora comunica que trabaja exclusivamente en Chubut, con
+  atención personalizada y entregas rápidas en Trelew, Rawson, Dolavon, Gaiman
+  y zonas cercanas, desde el hero, anuncio, contacto, footer, SEO y política de
+  entregas.
+- Se actualizó el teléfono visible a `+54 9 280 466-2332` y el destino de
+  WhatsApp a `5492804662332`.
+- El canal nativo suma operaciones explícitas para actualizar el teléfono de
+  WhatsApp y la metadata editorial de una página sin editar persistencia a mano.
 
 ### Borde visible en inputs del carrito (2026-08-30)
 

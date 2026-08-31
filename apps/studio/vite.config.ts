@@ -22,6 +22,7 @@ export default defineConfig({
   build: {
     target: "es2022",
     sourcemap: true,
+    assetsInlineLimit: 0,
     chunkSizeWarningLimit: 800,
     rollupOptions: {
       output: {
@@ -32,6 +33,19 @@ export default defineConfig({
             return "vendor";
           if (id.includes("node_modules/dexie/")) return "dexie";
           if (id.includes("@tanstack/react-table")) return "table";
+          if (id.includes("packages/project-schema/src/optimized-fixture-urls"))
+            return "fixture-data";
+          if (id.includes("packages/project-schema/src/catalog-modern-fixture"))
+            return "fixture-data";
+          if (id.includes("packages/project-schema/src/fixture.ts")) return "fixture-data";
+          if (id.includes("packages/project-schema/src/catalog-modern-template"))
+            return "fixture-data";
+          if (id.includes("packages/modules/src/styles")) return "modules-styles";
+          if (id.includes("packages/exporter/src/fonts")) return "exporter-fonts";
+          if (id.includes("packages/storefront-runtime/src/index")) return "storefront-runtime";
+          if (id.includes("packages/project-schema/src/scale-fixture")) return "fixture-data";
+          if (id.includes("packages/project-schema/src/catalog-modern-v2-fixture"))
+            return "fixture-data";
           return undefined;
         },
       },

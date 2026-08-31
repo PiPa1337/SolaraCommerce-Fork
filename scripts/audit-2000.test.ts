@@ -1,5 +1,5 @@
 import { test } from "vitest";
-import { generatePerformanceFixture } from "../packages/core/src/index";
+import { generatePerformanceFixture } from "../packages/core/src/performance";
 import { exportProject } from "../packages/exporter/src/index";
 
 test("audit 2000 desglose", () => {

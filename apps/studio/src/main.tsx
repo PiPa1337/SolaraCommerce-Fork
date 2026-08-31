@@ -35,6 +35,7 @@ if (
       .then((registration) => {
         // Chequeo periodico para detectar deploys nuevos mientras la tab queda abierta.
         window.setInterval(() => {
+          if (typeof document !== "undefined" && document.hidden) return;
           registration.update().catch(() => undefined);
         }, 60_000);
 

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { generatePerformanceFixture } from "../packages/core/src/index";
+import { generatePerformanceFixture } from "../packages/core/src/performance";
 import { exportProject } from "../packages/exporter/src/index";
 
 test("exporta catalog-modern-v2 con 2.000 productos dentro del presupuesto", () => {
