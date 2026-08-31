@@ -2166,14 +2166,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-mobile-nav-icon svg { width: 1.45rem; height: 1.45rem; fill: none; stroke: currentcolor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.6; }
 :root.catalog-mobile-menu-open { overflow: hidden; }
 [data-solara-store].catalog-modern .catalog-hero-inner { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); align-items: stretch; width: min(calc(100% - 2rem), var(--solara-container)); min-height: min(680px, calc(100svh - 104px)); margin: 1.5rem auto 0; overflow: hidden; border-radius: var(--solara-radius); background: var(--catalog-surface); }
-@media (min-width: 1920px) and (max-height: 1080px) {
-  [data-solara-store].catalog-modern .catalog-hero-inner { min-height: min(560px, calc(100dvh - 160px)); margin-top: 1rem; }
-  [data-solara-store].catalog-modern .catalog-hero-copy { padding: clamp(1.5rem, 3vw, 3rem); }
-  [data-solara-store].catalog-modern .catalog-hero-copy h1 { font-size: calc(clamp(2.6rem, 4.2vw, 4.6rem) * var(--solara-type-scale, 1)); line-height: 1.1; }
-  [data-solara-store].catalog-modern .catalog-hero-copy > p:not(.catalog-eyebrow) { margin-top: 1rem; }
-  [data-solara-store].catalog-modern .catalog-hero-actions { margin-top: 1.25rem; }
-  [data-solara-store].catalog-modern .catalog-hero-stats { margin-top: 1.25rem; }
-}
 [data-solara-store].catalog-modern .catalog-hero-copy { display: flex; flex-direction: column; justify-content: center; padding: clamp(2rem, 5vw, 5rem); }
 [data-solara-store].catalog-modern .catalog-eyebrow { margin-bottom: 1rem; color: var(--catalog-muted); font-size: .75rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
 [data-solara-store].catalog-modern .catalog-hero-copy h1 { max-width: 11ch; font-size: calc(clamp(3.2rem, 6vw, 6.5rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.055em; line-height: 1.15; text-wrap: balance; overflow-wrap: break-word; }
@@ -2837,10 +2829,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-hero-inner {
   grid-template-columns: minmax(20rem, .84fr) minmax(0, 1.16fr);
   width: min(calc(100% - 3rem), var(--catalog-v2-wide));
-  /* Altura en píxeles enteros: el borde del layer de la media (poster/video)
-     queda alineado a la rejilla del compositor y no se antialiasa contra la
-     foto de fondo (franja de 1px en el borde derecho con el preview). */
-  height: round(up, 90svh, 1px);
+  /* La fila crece con el copy y con la proporción de la media; no se recorta
+     contra una altura derivada del viewport. */
+  height: auto;
   min-height: 0;
   margin-top: 0;
   overflow: hidden;
@@ -2855,13 +2846,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 .cm.v2 .catalog-hero-editorial [data-hero-media] {
-  /* Overscan de 1-2px por los 4 lados: los bordes del layer del video/poster
-     (que el compositor antialiasa contra el fondo) quedan FUERA del hero y el
-     overflow:hidden del hero-inner los recorta. El borde visible es un clip
-     duro: sin franjas ni espacios a ningún DPR/escala de pantalla. */
+  /* El overscan evita que el borde de la media deje una franja al componerla
+     contra el fondo; su alto intrínseco mantiene la proporción 9:16. */
   width: calc(min(90svh * 9 / 16, 45vw) + 2px);
-  height: calc(100% + 2px);
-  aspect-ratio: auto;
+  height: auto;
+  aspect-ratio: 9 / 16;
   margin: -1px -2px -1px 0;
   min-height: 0;
   position: relative;
@@ -3731,7 +3720,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
   .cm.v2 .catalog-hero-inner {
     grid-template-columns: minmax(17rem, 1.5fr) minmax(0, 1fr);
-    height: round(up, 90svh, 1px);
+    height: auto;
     min-height: 0;
   }
   .cm.v2 .catalog-hero-copy {
@@ -5190,7 +5179,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0;
     width: 100%;
-    height: round(up, 90svh, 1px);
+    height: auto;
     min-height: 0;
     margin: 0 auto;
     padding: 0;
@@ -5233,7 +5222,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     position: relative;
     z-index: 1;
     width: calc(min(90svh * 9 / 16, 45vw) + 2px);
-    height: calc(100% + 2px);
+    height: auto;
+    aspect-ratio: 9 / 16;
     min-height: 0;
     margin: -1px -2px -1px 0;
     overflow: hidden;

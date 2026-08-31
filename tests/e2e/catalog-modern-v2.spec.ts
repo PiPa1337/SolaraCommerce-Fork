@@ -19,6 +19,18 @@ longTitleHero.settings = {
   title: "Descartables y packaging para tu negocio",
 };
 const exportedLongTitle = exportProject(longTitleProject, { mode: "production" });
+const autoHeightProject = structuredClone(catalogModernV2Store);
+const autoHeightHero = autoHeightProject.sections.find(
+  (section) => section.moduleId === "catalog-hero",
+);
+if (!autoHeightHero)
+  throw new Error("La fixture V2 no tiene hero para la prueba de altura automática.");
+autoHeightHero.settings = {
+  ...autoHeightHero.settings,
+  title: "Descartables y packaging para tu negocio",
+  body: "Bandejas, bolsas, potes, cajas y más para tu negocio. Trabajamos exclusivamente en Chubut, con atención personalizada y entregas rápidas en Trelew, Rawson, Dolavon, Gaiman y zonas cercanas. Esta descripción extensa verifica que el contenido completo del hero conserve su espacio y no dependa de una altura rígida del viewport.",
+};
+const exportedAutoHeight = exportProject(autoHeightProject, { mode: "production" });
 const longProductProject = structuredClone(catalogModernV2Store);
 const longProduct = longProductProject.products.find(
   (product) => product.slug === "remera-esencial-de-algodon",
@@ -95,7 +107,9 @@ test.beforeAll(async () => {
             ? exportedLongProduct
             : url.searchParams.has("longTitle")
               ? exportedLongTitle
-              : exported;
+              : url.searchParams.has("autoHeight")
+                ? exportedAutoHeight
+                : exported;
     const content =
       source.files.get(path) ??
       (path.startsWith("assets/")
@@ -463,6 +477,35 @@ test("V2 mantiene espacio para descendentes en títulos largos del hero", async 
     await expect(page.locator("[data-hero-benefit]").nth(2)).toHaveCSS("opacity", "1");
     await page.screenshot({ path: testInfo.outputPath(`hero-line-height-${viewport.width}.png`) });
   }
+});
+
+test("V2 adapta automáticamente la altura del hero a un copy extenso en desktop", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 1920, height: 968 });
+  await page.goto(`${serverUrl}/?autoHeight=1`);
+  await waitForStorefrontReady(page);
+
+  const metrics = await page.locator(".catalog-hero-inner").evaluate((element) => {
+    const hero = element.getBoundingClientRect();
+    const copy = element.querySelector<HTMLElement>(".catalog-hero-copy");
+    const body = element.querySelector<HTMLElement>(".catalog-hero-body");
+    const copyRect = copy?.getBoundingClientRect();
+    return {
+      heroHeight: hero.height,
+      copyBottom: copyRect?.bottom ?? Number.POSITIVE_INFINITY,
+      heroBottom: hero.bottom,
+      copyScrollHeight: copy?.scrollHeight ?? 0,
+      copyClientHeight: copy?.clientHeight ?? 0,
+      bodyBottom: body?.getBoundingClientRect().bottom ?? Number.POSITIVE_INFINITY,
+    };
+  });
+
+  expect(metrics.heroHeight).toBeGreaterThan(968 * 0.89);
+  expect(metrics.copyBottom).toBeLessThanOrEqual(metrics.heroBottom + 1);
+  expect(metrics.bodyBottom).toBeLessThanOrEqual(metrics.heroBottom + 1);
+  expect(metrics.copyScrollHeight - metrics.copyClientHeight).toBeLessThanOrEqual(1);
 });
 
 test("V2 mantiene compactos los h1 largos de categorías en todos los tamaños", async ({
