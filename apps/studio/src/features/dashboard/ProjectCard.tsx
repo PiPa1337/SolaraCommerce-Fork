@@ -15,14 +15,19 @@ import { isBaseTemplate } from "@solara/project-schema/project-policy";
 import { type RefObject, useEffect, useId, useRef, useState } from "react";
 import { Button, IconButton } from "../../components/Ui";
 import {
-  MONTHLY_PRICING,
   calculateMonthlyCost,
   calculateMonthlyCostForCount,
+  DEFAULT_PRICING,
   formatMonthlyCost,
   getMonthlyCostBreakdown,
   getProjectMetrics,
+  loadPricingConfig,
+  loadStoreDiscount,
+  savePricingConfig,
+  saveStoreDiscount,
   storeFaviconSrc,
   storeMark,
+  type PricingConfig,
 } from "../../lib/dashboardModel";
 import { formatDate } from "../../lib/format";
 import type { StoredProject } from "../../lib/repository";
@@ -87,10 +92,44 @@ export function ProjectCard({
   const calculatorDialogRef = useRef<HTMLDialogElement>(null);
   const [calculatorOpen, setCalculatorOpen] = useState(false);
   const calculatorTitleId = useId();
-  const monthlyCost = project ? calculateMonthlyCost(project.project) : 0;
+
+  // Configuración global (misma tarifa para todas las tiendas) + descuento por tienda
+  const [pricingConfig, setPricingConfig] = useState<PricingConfig>(() => loadPricingConfig());
+  const [storeDiscount, setStoreDiscount] = useState<number>(() =>
+    project ? loadStoreDiscount(project.id) : 0,
+  );
+
+  // Recargar descuento cuando cambia la tienda seleccionada
+  useEffect(() => {
+    if (project) setStoreDiscount(loadStoreDiscount(project.id));
+    else setStoreDiscount(0);
+  }, [project?.id]);
+
+  // Recalcular mensualidad con config actual y descuento
   const activeProducts = project ? getProjectMetrics(project.project).activeProducts : 0;
-  const breakdown = project ? getMonthlyCostBreakdown(activeProducts) : [];
+  const monthlyCost = project ? calculateMonthlyCost(project.project, project.id, pricingConfig) : 0;
+  const baseMonthlyCost = project ? calculateMonthlyCostForCount(activeProducts, pricingConfig) : 0;
+  const breakdown = project ? getMonthlyCostBreakdown(activeProducts, pricingConfig) : [];
+
   const pricingExamples = [20, 50, 100, 150, 200, 300, 500];
+
+  const handlePricingChange = (patch: Partial<PricingConfig>) => {
+    const next = { ...pricingConfig, ...patch };
+    // Validar rangos
+    next.base = Math.max(0, Math.round(next.base));
+    next.included = Math.max(0, Math.min(1000, Math.round(next.included)));
+    next.tier1Price = Math.max(0, Math.round(next.tier1Price));
+    next.tier2Price = Math.max(0, Math.round(next.tier2Price));
+    next.tier3Price = Math.max(0, Math.round(next.tier3Price));
+    setPricingConfig(next);
+    savePricingConfig(next);
+  };
+
+  const handleDiscountChange = (value: number) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(value)));
+    setStoreDiscount(clamped);
+    if (project) saveStoreDiscount(project.id, clamped);
+  };
 
   const openCalculator = () => setCalculatorOpen(true);
   const closeCalculator = () => setCalculatorOpen(false);
@@ -270,7 +309,7 @@ export function ProjectCard({
               closeCalculator();
             }}
           >
-            <form method="dialog" className="dashboard-calculator-dialog__content">
+            <form method="dialog" className="dashboard-calculator-dialog__content dashboard-calculator-dialog__content--compact">
               <header className="dashboard-calculator-dialog__header">
                 <div className="dashboard-calculator-dialog__title">
                   <h2 id={calculatorTitleId}>
@@ -285,77 +324,129 @@ export function ProjectCard({
                 <IconButton icon={X} label="Cerrar calculadora" onClick={closeCalculator} />
               </header>
 
-              <div className="dashboard-calculator-dialog__base">
-                <div className="dashboard-calculator-dialog__base-main">
-                  Base: <strong>{formatMonthlyCost(MONTHLY_PRICING.base)}</strong> <span>/ mes</span>
+              {/* Configuración global — misma tarifa para todas las tiendas */}
+              <section className="dashboard-calculator-dialog__section">
+                <h4 className="dashboard-calculator-dialog__section-title">Tarifa global</h4>
+                <div className="dashboard-calculator-dialog__grid dashboard-calculator-dialog__grid--2">
+                  <label className="dashboard-calculator-dialog__field">
+                    <span>Base / mes</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={100}
+                      value={pricingConfig.base}
+                      onChange={(e) => handlePricingChange({ base: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="dashboard-calculator-dialog__field">
+                    <span>Incluye productos</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={1000}
+                      step={1}
+                      value={pricingConfig.included}
+                      onChange={(e) => handlePricingChange({ included: Number(e.target.value) })}
+                    />
+                  </label>
                 </div>
-                <small>Incluye hasta {MONTHLY_PRICING.included} productos</small>
-              </div>
-
-              <div className="dashboard-calculator-dialog__columns">
-                <div className="dashboard-calculator-dialog__tiers">
-                  <h4>Productos adicionales</h4>
-                  <ul>
-                    <li>
-                      <span>Productos 21 al 100:</span> <strong>+{formatMonthlyCost(300)}</strong> <small>c/u</small>
-                    </li>
-                    <li>
-                      <span>Productos 101 al 200:</span> <strong>+{formatMonthlyCost(200)}</strong> <small>c/u</small>
-                    </li>
-                    <li>
-                      <span>Productos 201 en adelante:</span> <strong>+{formatMonthlyCost(100)}</strong> <small>c/u</small>
-                    </li>
-                  </ul>
+                <div className="dashboard-calculator-dialog__grid dashboard-calculator-dialog__grid--3">
+                  <label className="dashboard-calculator-dialog__field">
+                    <span>21–100 c/u</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={10}
+                      value={pricingConfig.tier1Price}
+                      onChange={(e) => handlePricingChange({ tier1Price: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="dashboard-calculator-dialog__field">
+                    <span>101–200 c/u</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={10}
+                      value={pricingConfig.tier2Price}
+                      onChange={(e) => handlePricingChange({ tier2Price: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="dashboard-calculator-dialog__field">
+                    <span>201+ c/u</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={10}
+                      value={pricingConfig.tier3Price}
+                      onChange={(e) => handlePricingChange({ tier3Price: Number(e.target.value) })}
+                    />
+                  </label>
                 </div>
-                <div className="dashboard-calculator-dialog__examples">
-                  <h4>Ejemplos</h4>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Productos</th>
-                        <th>Precio mensual</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pricingExamples.map((count) => (
-                        <tr key={count} className={count === activeProducts ? "is-current" : ""}>
-                          <td>{count}</td>
-                          <td>{formatMonthlyCost(calculateMonthlyCostForCount(count))}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="dashboard-calculator-dialog__hint">
+                  Cambios se aplican a todas las tiendas. Base {formatMonthlyCost(pricingConfig.base)} + tramos.
                 </div>
-              </div>
+              </section>
 
-              <div className="dashboard-calculator-dialog__total">
-                Total = <strong>{formatMonthlyCost(MONTHLY_PRICING.base)}</strong> + adicionales por tramo
-              </div>
+              {/* Descuento específico para la tienda seleccionada */}
+              <section className="dashboard-calculator-dialog__section dashboard-calculator-dialog__section--accent">
+                <h4 className="dashboard-calculator-dialog__section-title">Precio especial — {project.name}</h4>
+                <label className="dashboard-calculator-dialog__field dashboard-calculator-dialog__field--inline">
+                  <span>Descuento %</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={storeDiscount}
+                    onChange={(e) => handleDiscountChange(Number(e.target.value))}
+                    placeholder="0"
+                  />
+                  <small>0–100% (vacío = 0)</small>
+                </label>
+              </section>
 
-              <div className="dashboard-calculator-dialog__current">
+              {/* Cálculo desglosado para la tienda seleccionada — sin scroll */}
+              <section className="dashboard-calculator-dialog__current dashboard-calculator-dialog__current--compact">
                 <div className="dashboard-calculator-dialog__current-header">
-                  <span>Tu tienda</span>
-                  <strong>
-                    {activeProducts} productos → {formatMonthlyCost(monthlyCost)}/mes
-                  </strong>
+                  <span>
+                    {activeProducts} productos
+                    {storeDiscount > 0 ? ` · -${storeDiscount}%` : ""}
+                  </span>
+                  <strong>{formatMonthlyCost(monthlyCost)}/mes</strong>
                 </div>
-                {breakdown.length > 0 ? (
-                  <ul className="dashboard-calculator-dialog__breakdown">
-                    {breakdown.map((item) => (
-                      <li key={item.label}>
-                        <span>{item.label}</span>
-                        <span>
-                          {item.products} × {formatMonthlyCost(item.price)} = {formatMonthlyCost(item.subtotal)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="dashboard-calculator-dialog__current-note">Dentro del plan base (≤20 productos).</p>
+                <div className="dashboard-calculator-dialog__breakdown-compact">
+                  <div className="dashboard-calculator-dialog__breakdown-row">
+                    <span>Base ({pricingConfig.included} incl.)</span>
+                    <strong>{formatMonthlyCost(pricingConfig.base)}</strong>
+                  </div>
+                  {breakdown.map((item) => (
+                    <div key={item.label} className="dashboard-calculator-dialog__breakdown-row">
+                      <span>{item.label}</span>
+                      <span>
+                        {item.products} × {formatMonthlyCost(item.price)} = {formatMonthlyCost(item.subtotal)}
+                      </span>
+                    </div>
+                  ))}
+                  {storeDiscount > 0 && (
+                    <div className="dashboard-calculator-dialog__breakdown-row is-discount">
+                      <span>Descuento {storeDiscount}%</span>
+                      <span>-{formatMonthlyCost(baseMonthlyCost - monthlyCost)}</span>
+                    </div>
+                  )}
+                  <div className="dashboard-calculator-dialog__breakdown-row is-total">
+                    <span>Total</span>
+                    <strong>{formatMonthlyCost(monthlyCost)}</strong>
+                  </div>
+                </div>
+                {breakdown.length === 0 && storeDiscount === 0 && (
+                  <p className="dashboard-calculator-dialog__current-note">Dentro del plan base.</p>
                 )}
-              </div>
+              </section>
 
               <div className="dashboard-calculator-dialog__actions">
+                <Button variant="quiet" onClick={() => handlePricingChange(DEFAULT_PRICING)}>
+                  Restablecer tarifa
+                </Button>
                 <Button variant="primary" onClick={closeCalculator}>
                   Cerrar
                 </Button>

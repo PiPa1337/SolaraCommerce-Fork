@@ -94,27 +94,111 @@ export function getProjectMetrics(project: StoredProject["project"]): ProjectMet
 }
 
 /**
- * Configuración de precios mensual — centralizada para que el popup de
- * Calculadora y la card de Mensualidad usen la misma fuente de verdad.
- * Ajustar aquí modifica ambos lugares sin tocar la UI.
+ * Configuración de precios mensual — centralizada y configurable.
+ * `base` + `included` + `tiers` es global (misma tarifa para todas las tiendas).
+ * Los cambios se persisten en localStorage y se reflejan en card y popup sin reload.
  */
-export const MONTHLY_PRICING = {
+export interface PricingConfig {
+  base: number;
+  included: number;
+  tier1Price: number; // 21..100
+  tier2Price: number; // 101..200
+  tier3Price: number; // 201+
+}
+
+export const DEFAULT_PRICING: PricingConfig = {
   base: 20000,
   included: 20,
+  tier1Price: 300,
+  tier2Price: 200,
+  tier3Price: 100,
+};
+
+// Mantener compatibilidad con código que importaba MONTHLY_PRICING
+export const MONTHLY_PRICING = {
+  base: DEFAULT_PRICING.base,
+  included: DEFAULT_PRICING.included,
   tiers: [
-    { upTo: 100, price: 300 }, // 21..100
-    { upTo: 200, price: 200 }, // 101..200
-    { upTo: Infinity, price: 100 }, // 201+
+    { upTo: 100, price: DEFAULT_PRICING.tier1Price },
+    { upTo: 200, price: DEFAULT_PRICING.tier2Price },
+    { upTo: Infinity, price: DEFAULT_PRICING.tier3Price },
   ],
 } as const;
 
+const PRICING_STORAGE_KEY = "solara-pricing-config";
+const DISCOUNT_STORAGE_KEY = "solara-store-discounts";
+
+function readPricingConfigSafe(): PricingConfig {
+  if (typeof window === "undefined" || typeof localStorage === "undefined") return DEFAULT_PRICING;
+  try {
+    const raw = localStorage.getItem(PRICING_STORAGE_KEY);
+    if (!raw) return DEFAULT_PRICING;
+    const parsed = JSON.parse(raw) as Partial<PricingConfig>;
+    const base = typeof parsed.base === "number" && Number.isFinite(parsed.base) && parsed.base >= 0 ? Math.round(parsed.base) : DEFAULT_PRICING.base;
+    const included = typeof parsed.included === "number" && Number.isFinite(parsed.included) && parsed.included >= 0 ? Math.round(parsed.included) : DEFAULT_PRICING.included;
+    const t1 = typeof parsed.tier1Price === "number" && Number.isFinite(parsed.tier1Price) && parsed.tier1Price >= 0 ? Math.round(parsed.tier1Price) : DEFAULT_PRICING.tier1Price;
+    const t2 = typeof parsed.tier2Price === "number" && Number.isFinite(parsed.tier2Price) && parsed.tier2Price >= 0 ? Math.round(parsed.tier2Price) : DEFAULT_PRICING.tier2Price;
+    const t3 = typeof parsed.tier3Price === "number" && Number.isFinite(parsed.tier3Price) && parsed.tier3Price >= 0 ? Math.round(parsed.tier3Price) : DEFAULT_PRICING.tier3Price;
+    return { base, included, tier1Price: t1, tier2Price: t2, tier3Price: t3 };
+  } catch {
+    return DEFAULT_PRICING;
+  }
+}
+
+export function loadPricingConfig(): PricingConfig {
+  return readPricingConfigSafe();
+}
+
+export function savePricingConfig(config: PricingConfig): void {
+  if (typeof window === "undefined" || typeof localStorage === "undefined") return;
+  localStorage.setItem(PRICING_STORAGE_KEY, JSON.stringify(config));
+}
+
+export function loadStoreDiscounts(): Record<string, number> {
+  if (typeof window === "undefined" || typeof localStorage === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(DISCOUNT_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const out: Record<string, number> = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100) out[key] = value;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+export function loadStoreDiscount(storeId: string): number {
+  return loadStoreDiscounts()[storeId] ?? 0;
+}
+
+export function saveStoreDiscount(storeId: string, discountPercent: number): void {
+  if (typeof window === "undefined" || typeof localStorage === "undefined") return;
+  const all = loadStoreDiscounts();
+  const clamped = Math.max(0, Math.min(100, Math.round(discountPercent)));
+  if (clamped === 0) delete all[storeId];
+  else all[storeId] = clamped;
+  localStorage.setItem(DISCOUNT_STORAGE_KEY, JSON.stringify(all));
+}
+
+function pricingToTiers(config: PricingConfig): Array<{ upTo: number; price: number }> {
+  return [
+    { upTo: 100, price: config.tier1Price },
+    { upTo: 200, price: config.tier2Price },
+    { upTo: Infinity, price: config.tier3Price },
+  ];
+}
+
 /**
- * Calcula el coste mensual según cantidad de productos activos.
+ * Calcula el coste mensual según cantidad de productos activos y config.
  * Fórmula: base (incluye `included`) + tramos adicionales.
  * Ej: 50 → 20.000 + 30×300 = 29.000
  */
-export function calculateMonthlyCostForCount(count: number): number {
-  const { base, included, tiers } = MONTHLY_PRICING;
+export function calculateMonthlyCostForCount(count: number, config: PricingConfig = loadPricingConfig()): number {
+  const { base, included } = config;
+  const tiers = pricingToTiers(config);
   if (count <= included) return base;
   let total = base;
   let previousUpTo = included;
@@ -129,9 +213,14 @@ export function calculateMonthlyCostForCount(count: number): number {
   return total;
 }
 
-export function calculateMonthlyCost(project: StoredProject["project"]): number {
+export function calculateMonthlyCost(project: StoredProject["project"], storeId?: string, config?: PricingConfig): number {
   const metrics = getProjectMetrics(project);
-  return calculateMonthlyCostForCount(metrics.activeProducts);
+  const effectiveConfig = config ?? loadPricingConfig();
+  const baseCost = calculateMonthlyCostForCount(metrics.activeProducts, effectiveConfig);
+  if (!storeId) return baseCost;
+  const discount = loadStoreDiscount(storeId);
+  if (discount <= 0) return baseCost;
+  return Math.max(0, Math.round(baseCost * (1 - discount / 100)));
 }
 
 export function formatMonthlyCost(value: number): string {
@@ -143,13 +232,14 @@ export function formatMonthlyCost(value: number): string {
 }
 
 /** Desglose por tramo para el popup de Calculadora. */
-export function getMonthlyCostBreakdown(count: number): Array<{
+export function getMonthlyCostBreakdown(count: number, config: PricingConfig = loadPricingConfig()): Array<{
   label: string;
   products: number;
   price: number;
   subtotal: number;
 }> {
-  const { base, included, tiers } = MONTHLY_PRICING;
+  const { included } = config;
+  const tiers = pricingToTiers(config);
   const breakdown: Array<{ label: string; products: number; price: number; subtotal: number }> = [];
   if (count <= included) return breakdown;
   let previousUpTo = included;
