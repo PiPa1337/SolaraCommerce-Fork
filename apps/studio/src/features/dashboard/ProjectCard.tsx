@@ -2,6 +2,7 @@ import {
   Archive,
   ArrowCounterClockwise,
   ArrowUpRight,
+  Calculator,
   CloudArrowDown,
   Copy,
   DownloadSimple,
@@ -11,9 +12,15 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { isBaseTemplate } from "@solara/project-schema/project-policy";
-import type { RefObject } from "react";
+import { type RefObject, useEffect, useId, useRef, useState } from "react";
 import { Button, IconButton } from "../../components/Ui";
-import { getProjectMetrics, storeFaviconSrc, storeMark } from "../../lib/dashboardModel";
+import {
+  calculateMonthlyCost,
+  formatMonthlyCost,
+  getProjectMetrics,
+  storeFaviconSrc,
+  storeMark,
+} from "../../lib/dashboardModel";
 import { formatDate } from "../../lib/format";
 import type { StoredProject } from "../../lib/repository";
 
@@ -74,25 +81,37 @@ export function ProjectCard({
 }: ProjectCardProps) {
   const protectedTemplate = project ? isBaseTemplate(project.project) : false;
   const faviconSrc = project ? storeFaviconSrc(project.project) : undefined;
+  const calculatorDialogRef = useRef<HTMLDialogElement>(null);
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const calculatorTitleId = useId();
+  const monthlyCost = project ? calculateMonthlyCost(project.project) : 0;
+
+  const openCalculator = () => setCalculatorOpen(true);
+  const closeCalculator = () => setCalculatorOpen(false);
+
+  useEffect(() => {
+    const dialog = calculatorDialogRef.current;
+    if (!dialog) return;
+    if (calculatorOpen && !dialog.open) dialog.showModal();
+    if (!calculatorOpen && dialog.open) dialog.close();
+  }, [calculatorOpen]);
+
   return (
     <section
       ref={detailRef}
       className={`dashboard-store-detail${project ? " is-open" : ""}`}
-      aria-label={project ? `Tienda seleccionada: ${project.name}` : "Tienda seleccionada"}
+      aria-label={project ? `Tienda: ${project.name}` : "Seleccioná una tienda"}
       tabIndex={project ? 0 : -1}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           event.preventDefault();
-          onClose();
+          if (calculatorOpen) closeCalculator();
+          else onClose();
         }
       }}
     >
       {project ? (
         <>
-          <header className="dashboard-store-detail__header">
-            <span>{protectedTemplate ? "Plantilla protegida" : "Tienda seleccionada"}</span>
-            <IconButton icon={X} label="Cerrar detalle" onClick={onClose} />
-          </header>
           <div className="dashboard-store-detail__identity">
             <span className="dashboard-store-detail__mark" aria-hidden>
               {faviconSrc ? (
@@ -108,7 +127,7 @@ export function ProjectCard({
                 storeMark(project.name)
               )}
             </span>
-            <div>
+            <div className="dashboard-store-detail__title">
               <h3>{project.name}</h3>
               <div className="dashboard-store-detail__statuses">
                 <span className={`dashboard-store-card__status is-${project.status}`}>
@@ -120,6 +139,12 @@ export function ProjectCard({
                 ) : null}
               </div>
             </div>
+            <IconButton
+              icon={X}
+              label="Cerrar detalle"
+              onClick={onClose}
+              className="dashboard-store-detail__close"
+            />
           </div>
           <dl className="dashboard-store-detail__facts">
             <div>
@@ -139,8 +164,8 @@ export function ProjectCard({
               <dd>{getProjectMetrics(project.project).categories}</dd>
             </div>
             <div>
-              <dt>Colecciones</dt>
-              <dd>{getProjectMetrics(project.project).collections}</dd>
+              <dt>Mensualidad</dt>
+              <dd title={formatMonthlyCost(monthlyCost)}>{formatMonthlyCost(monthlyCost)}</dd>
             </div>
             <div>
               <dt>Recursos</dt>
@@ -207,6 +232,14 @@ export function ProjectCard({
               Duplicar
             </Button>
             <Button
+              className="dashboard-store-detail__calculator"
+              variant="secondary"
+              icon={Calculator}
+              onClick={openCalculator}
+            >
+              Calculadora
+            </Button>
+            <Button
               className="dashboard-store-detail__danger"
               variant={project.status === "archived" ? "secondary" : "danger"}
               icon={project.status === "archived" ? ArrowCounterClockwise : Archive}
@@ -221,6 +254,49 @@ export function ProjectCard({
                   : "Archivar"}
             </Button>
           </div>
+          <dialog
+            ref={calculatorDialogRef}
+            className="dashboard-calculator-dialog"
+            aria-labelledby={calculatorTitleId}
+            onClose={closeCalculator}
+            onCancel={(event) => {
+              event.preventDefault();
+              closeCalculator();
+            }}
+          >
+            <form method="dialog" className="dashboard-calculator-dialog__content">
+              <header className="dashboard-calculator-dialog__header">
+                <h3 id={calculatorTitleId}>Calculadora</h3>
+                <IconButton icon={X} label="Cerrar calculadora" onClick={closeCalculator} />
+              </header>
+              <div className="dashboard-calculator-dialog__body">
+                <p>Próximamente: desglose detallado de costes y proyección de mensualidad.</p>
+                <dl className="dashboard-calculator-dialog__facts">
+                  <div>
+                    <dt>Mensualidad actual</dt>
+                    <dd>{formatMonthlyCost(monthlyCost)}</dd>
+                  </div>
+                  <div>
+                    <dt>Productos</dt>
+                    <dd>{getProjectMetrics(project.project).activeProducts}</dd>
+                  </div>
+                  <div>
+                    <dt>Categorías</dt>
+                    <dd>{getProjectMetrics(project.project).categories}</dd>
+                  </div>
+                  <div>
+                    <dt>Recursos</dt>
+                    <dd>{getProjectMetrics(project.project).assets}</dd>
+                  </div>
+                </dl>
+              </div>
+              <div className="dashboard-calculator-dialog__actions">
+                <Button variant="primary" onClick={closeCalculator}>
+                  Cerrar
+                </Button>
+              </div>
+            </form>
+          </dialog>
           {actionNotice ? (
             <output
               className="dashboard-store-detail__notice"

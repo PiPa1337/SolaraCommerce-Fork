@@ -610,7 +610,9 @@
   top: 10px;
   align-self: start;
   min-height: 0;
-  padding: 14px;
+  /* Ajuste pixel-perfect: compensa la eliminación del header (46px) y bordes horizontales (5px)
+     con el nuevo botón Calculadora (+33px real) + 2px de ajuste fino = mismo alto total 450px */
+  padding: 19px 14px 16px;
   border: 1px solid var(--cosmic-line-strong);
   border-radius: 14px;
   background: rgb(14 17 24 / 0.98);
@@ -625,25 +627,31 @@
 }
 
 .dashboard-store-detail__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding-bottom: 9px;
-  border-bottom: 1px solid var(--cosmic-line);
-  color: var(--cosmic-muted);
-  font-size: 12px;
-}
-
-.dashboard-store-detail__header .icon-button {
-  color: var(--cosmic-muted);
+  display: none;
 }
 
 .dashboard-store-detail__identity {
   display: flex;
   align-items: center;
   gap: 13px;
-  padding: 10px 0;
+  padding: 10px 0 10px;
+}
+
+.dashboard-store-detail__title {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.dashboard-store-detail__close {
+  flex: 0 0 auto;
+  color: var(--cosmic-muted);
+  margin-left: 8px;
+}
+
+.dashboard-store-detail__close:hover {
+  color: var(--cosmic-ink);
 }
 
 .dashboard-store-detail__mark {
@@ -678,9 +686,11 @@
 .dashboard-store-detail__facts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 14px;
+  gap: 2px 14px;
   margin: 0;
-  border-top: 1px solid var(--cosmic-line);
+  /* Bordes horizontales eliminados por diseño */
+  border-top: none;
+  padding-top: 4px;
 }
 
 .dashboard-store-detail__facts div {
@@ -688,7 +698,7 @@
   gap: 2px;
   min-width: 0;
   padding: 6px 0;
-  border-bottom: 1px solid var(--cosmic-line);
+  border-bottom: none;
 }
 
 .dashboard-store-detail__facts dt,
@@ -716,13 +726,28 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7px;
-  margin-top: 8px;
+  margin-top: 10px;
 }
 .dashboard-store-detail__actions .dashboard-store-detail__danger {
   grid-column: 1 / -1;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--cosmic-line);
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.dashboard-store-detail__actions .button.dashboard-store-detail__calculator {
+  grid-column: 1 / -1;
+  /* Similar a Archivar pero con acento azul/cyan - mayor especificidad y !important para sobreescribir variant secondary */
+  border-color: rgb(56 139 253 / 0.5) !important;
+  background: rgb(56 139 253 / 0.16) !important;
+  color: #8ab4ff !important;
+}
+
+.dashboard-store-detail__actions .button.dashboard-store-detail__calculator:hover,
+.dashboard-store-detail__actions .button.dashboard-store-detail__calculator:focus-visible {
+  border-color: rgb(56 139 253 / 0.78) !important;
+  background: rgb(56 139 253 / 0.26) !important;
+  color: #b3cfff !important;
 }
 
 .dashboard-store-detail__actions .button:first-child {
@@ -766,6 +791,84 @@
   margin: 0;
   font-size: 12px;
   line-height: 1.45;
+}
+
+.dashboard-calculator-dialog {
+  width: min(420px, calc(100% - 24px));
+  padding: 0;
+  border: 1px solid var(--cosmic-line-strong);
+  border-radius: 14px;
+  background: rgb(14 17 24 / 0.98);
+  color: var(--cosmic-ink);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.55);
+}
+
+.dashboard-calculator-dialog::backdrop {
+  background: rgb(0 0 0 / 0.62);
+  backdrop-filter: blur(2px);
+}
+
+.dashboard-calculator-dialog__content {
+  display: grid;
+  gap: 0;
+  padding: 18px;
+}
+
+.dashboard-calculator-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.dashboard-calculator-dialog__header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.dashboard-calculator-dialog__body {
+  display: grid;
+  gap: 12px;
+  color: var(--cosmic-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.dashboard-calculator-dialog__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--cosmic-line);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.03);
+}
+
+.dashboard-calculator-dialog__facts div {
+  display: grid;
+  gap: 2px;
+}
+
+.dashboard-calculator-dialog__facts dt {
+  color: var(--cosmic-muted);
+  font-size: 11px;
+}
+
+.dashboard-calculator-dialog__facts dd {
+  margin: 0;
+  color: var(--cosmic-ink);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-calculator-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 
 .dashboard-cosmic .empty-state {

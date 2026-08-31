@@ -93,6 +93,28 @@ export function getProjectMetrics(project: StoredProject["project"]): ProjectMet
   };
 }
 
+export function calculateMonthlyCost(project: StoredProject["project"]): number {
+  const metrics = getProjectMetrics(project);
+  // Base: $2.490 ARS + $12 por producto activo + $35 por categoría + $2 por recurso + $40 por colección
+  // Valores fijos para mantener la mensualidad estable y legible; se ajustan al volumen del catálogo.
+  const base = 2490;
+  const cost =
+    base +
+    metrics.activeProducts * 12 +
+    metrics.categories * 35 +
+    metrics.assets * 2 +
+    metrics.collections * 40;
+  return Math.round(cost);
+}
+
+export function formatMonthlyCost(value: number): string {
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 export function getDashboardStats(projects: readonly StoredProject[]): DashboardStats {
   return projects.reduce<DashboardStats>(
     (stats, record) => {
