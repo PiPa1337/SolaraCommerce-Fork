@@ -579,11 +579,12 @@ function StudioShell() {
               className="app-wordmark__logo"
               src="/branding/solara-orbit-64.png"
               alt="Logo de SolaraCommerce"
-              width="64"
-              height="64"
-              srcSet="/branding/solara-orbit-32.png 32w, /branding/solara-orbit-64.png 64w, /branding/solara-orbit-128.png 128w, /branding/solara-orbit-256.png 256w"
-              sizes="40px"
+              width="42"
+              height="42"
+              srcSet="/branding/solara-orbit-32.png 32w, /branding/solara-orbit-64.png 64w, /branding/solara-orbit-128.png 128w, /branding/solara-orbit-192.png 192w, /branding/solara-orbit-256.png 256w"
+              sizes="42px"
               decoding="async"
+              fetchPriority="high"
             />
             <span>SolaraCommerce</span>
           </a>
