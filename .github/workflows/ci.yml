@@ -64,6 +64,9 @@ jobs:
 
       - name: Benchmark de exportación
         run: pnpm benchmark:export
+        env:
+          SOLARA_EXPORT_BENCHMARK_BUDGET_MS: 60000
+          SOLARA_EXPORT_BENCHMARK_FILES_BUDGET_BYTES: 52428800
 
   e2e:
     name: Windows, Node 22, Chromium — shard ${{ matrix.shard }}/4
