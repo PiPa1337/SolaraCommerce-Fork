@@ -1306,6 +1306,38 @@ describe("exporter", () => {
     );
   });
 
+  it("usa el fallback JPG de un asset AVIF para las tarjetas sociales", () => {
+    const firstAsset = referenceStore.assets[0];
+    if (!firstAsset) throw new Error("Fixture incompleto");
+    const socialAsset = {
+      ...firstAsset,
+      id: "asset-social-avif" as typeof firstAsset.id,
+      name: "Portada social AVIF",
+      alt: "Portada social de la tienda",
+      mimeType: "image/avif",
+      source: "data:image/avif;base64,AA==",
+      fallbackSource: "data:image/jpeg;base64,AQ==",
+      width: 1200,
+      height: 630,
+      hash: "social-avif",
+    };
+    const project = {
+      ...referenceStore,
+      assets: [...referenceStore.assets, socialAsset],
+      seo: { ...referenceStore.seo, socialImageId: socialAsset.id },
+    };
+    const homeHtml = String(
+      exportProject(project as typeof referenceStore, { mode: "draft" }).files.get("index.html"),
+    );
+
+    expect(homeHtml).toContain(
+      '<meta property="og:image" content="https://tienda-referencia.example/assets/social-avif-fallback.jpg">',
+    );
+    expect(homeHtml).toContain(
+      '<meta name="twitter:image" content="https://tienda-referencia.example/assets/social-avif-fallback.jpg">',
+    );
+  });
+
   it("emite el favicon ICO y su fallback Apple cuando SEO lo configura", () => {
     const favicon = {
       kind: "image" as const,

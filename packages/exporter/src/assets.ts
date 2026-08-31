@@ -47,6 +47,25 @@ export function imageUrl(project: StoreProjectV1, assetId: string | undefined): 
   return asset.source;
 }
 
+/**
+ * Las tarjetas sociales necesitan un formato ampliamente aceptado por los
+ * rastreadores. Mantener AVIF para el storefront, pero preferir el fallback
+ * editorial del asset cuando existe.
+ */
+export function socialImageValue(
+  project: StoreProjectV1,
+  value: string | undefined,
+): string | undefined {
+  if (!value) return undefined;
+  const asset = project.assets.find(
+    (candidate) =>
+      candidate.source === value ||
+      candidate.fallbackSource === value ||
+      imageUrl(project, candidate.id) === value,
+  );
+  return asset?.fallbackSource ?? value;
+}
+
 export function videoFor(
   project: StoreProjectV1,
   assetId: string | undefined,

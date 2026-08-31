@@ -270,6 +270,7 @@ export { buildWhatsAppLink, interpolatePublicCopy, publicWhatsAppPhone };
 
 import {
   assetExtension,
+  socialImageValue as compatibleSocialImageValue,
   imageFor,
   imageUrl,
   mimeTypeExtension,
@@ -1233,7 +1234,10 @@ function renderDocument(
     page.image ??
     imageUrl(project, project.seo.socialImageId) ??
     imageUrl(project, project.assets[0]?.id);
-  const socialImage = socialImageValue ? absoluteResourceUrl(project, socialImageValue) : undefined;
+  const socialImageSource = compatibleSocialImageValue(project, socialImageValue);
+  const socialImage = socialImageSource
+    ? absoluteResourceUrl(project, socialImageSource)
+    : undefined;
   // Video de la página (hero del home o del producto) para Open Graph.
   const heroVideoSetting =
     page.pageType === "home"

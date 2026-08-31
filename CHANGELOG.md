@@ -8,6 +8,11 @@
 
 # Changelog
 
+### Portada social compatible con WhatsApp (2026-08-31)
+
+- La exportación usa el fallback JPG de un asset AVIF para `og:image` y
+  `twitter:image`, manteniendo AVIF para las imágenes normales del storefront.
+
 ### Arial para dashboard y editor (2026-08-30)
 - Se unificó la tipografía de toda la interfaz de Studio en Arial, incluyendo
   dashboard, editor, controles, métricas, precios y etiquetas del Canvas.
