@@ -5,9 +5,7 @@ import { exportProject } from "../packages/exporter/src/index";
 test("exporta catalog-modern-v2 con 2.000 productos dentro del presupuesto", () => {
   const project = generatePerformanceFixture(2_000);
   project.commerceTemplates.designFamily = "catalog-modern-v2";
-  const benchmarkBudgetMs = Number(
-    process.env.SOLARA_EXPORT_BENCHMARK_BUDGET_MS ?? 30_000,
-  );
+  const benchmarkBudgetMs = Number(process.env.SOLARA_EXPORT_BENCHMARK_BUDGET_MS ?? 30_000);
   const benchmarkFilesBudgetBytes = Number(
     process.env.SOLARA_EXPORT_BENCHMARK_FILES_BUDGET_BYTES ?? 48 * 1024 * 1024,
   );
