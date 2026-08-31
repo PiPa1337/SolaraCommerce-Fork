@@ -2,12 +2,12 @@
 /* Dashboard cosmic selectors intentionally sit alongside legacy Studio rules. */
 :root {
   color-scheme: dark;
-  font-family: "Segoe UI Variable", "Aptos", system-ui, sans-serif;
+  font-family: Arial, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --font-display: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
-  --font-ui: "Segoe UI Variable", "Aptos", system-ui, sans-serif;
-  --font-mono: "Cascadia Mono", Consolas, monospace;
+  --font-display: Arial, sans-serif;
+  --font-ui: Arial, sans-serif;
+  --font-mono: Arial, sans-serif;
   --bg: #08090a;
   --surface: #111214;
   --surface-strong: #1b1c1f;
@@ -509,6 +509,33 @@ Las reglas CSS fijan el tamaño real pintado aunque el atributo `size` del
   font-size: 18px;
   font-weight: 600;
   letter-spacing: -0.08em;
+}
+
+.brand-mark--orbit {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: transparent;
+  object-fit: cover;
+  box-shadow: 0 0 24px rgb(231 170 61 / 0.22);
+  border: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.studio-topbar .brand-mark--orbit,
+.studio-brand .brand-mark--orbit {
+  width: 32px;
+  height: 32px;
+  box-shadow: none;
+  border: none;
+}
+
+.boot-screen__subtitle {
+  max-width: 36ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
 }
 
 .app-root {

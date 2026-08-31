@@ -92,9 +92,16 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, AppErrorBounda
     if (this.state.error === null) return this.props.children;
     return (
       <main className="boot-screen" role="alert" aria-live="assertive">
-        <span className="brand-mark" aria-hidden>
-          S
-        </span>
+        <img
+          className="brand-mark brand-mark--orbit"
+          src="/branding/solara-orbit-64.png"
+          srcSet="/branding/solara-orbit-32.png 32w, /branding/solara-orbit-64.png 64w, /branding/solara-orbit-128.png 128w"
+          sizes="64px"
+          alt=""
+          width={64}
+          height={64}
+          decoding="async"
+        />
         <h1>Algo salió mal</h1>
         <p>
           SolaraCommerce encontró un error inesperado y detuvo la edición para evitar perder
@@ -121,11 +128,18 @@ function AppInner() {
       <Suspense
         fallback={
           <main className="boot-screen">
-            <span className="brand-mark" aria-hidden>
-              S
-            </span>
+            <img
+              className="brand-mark brand-mark--orbit"
+              src="/branding/solara-orbit-64.png"
+              srcSet="/branding/solara-orbit-32.png 32w, /branding/solara-orbit-64.png 64w, /branding/solara-orbit-128.png 128w"
+              sizes="64px"
+              alt=""
+              width={64}
+              height={64}
+              decoding="async"
+            />
             <h1>SolaraCommerce</h1>
-            <Skeleton lines={3} />
+            <p className="boot-screen__subtitle">Cargando galería de componentes…</p>
           </main>
         }
       >
@@ -395,11 +409,21 @@ function StudioShell() {
     return (
       <ToastProvider>
         <main className="boot-screen">
-          <span className="brand-mark" aria-hidden>
-            S
-          </span>
+          <img
+            className="brand-mark brand-mark--orbit"
+            src="/branding/solara-orbit-64.png"
+            srcSet="/branding/solara-orbit-32.png 32w, /branding/solara-orbit-64.png 64w, /branding/solara-orbit-128.png 128w, /branding/solara-orbit-256.png 256w"
+            sizes="64px"
+            alt=""
+            width={64}
+            height={64}
+            decoding="async"
+            fetchPriority="high"
+          />
           <h1>SolaraCommerce</h1>
-          <Skeleton lines={3} />
+          <p className="boot-screen__subtitle">
+            Sincronizando tu espacio local — tiendas, catálogos y respaldos
+          </p>
         </main>
       </ToastProvider>
     );
@@ -481,11 +505,20 @@ function StudioShell() {
         <Suspense
           fallback={
             <main className="boot-screen">
-              <span className="brand-mark" aria-hidden>
-                S
-              </span>
+              <img
+                className="brand-mark brand-mark--orbit"
+                src="/branding/solara-orbit-64.png"
+                srcSet="/branding/solara-orbit-32.png 32w, /branding/solara-orbit-64.png 64w, /branding/solara-orbit-128.png 128w, /branding/solara-orbit-256.png 256w"
+                sizes="64px"
+                alt=""
+                width={64}
+                height={64}
+                decoding="async"
+              />
               <h1>SolaraCommerce</h1>
-              <Skeleton lines={3} />
+              <p className="boot-screen__subtitle">
+                Abriendo tu tienda — catálogo y contenido al instante
+              </p>
             </main>
           }
         >

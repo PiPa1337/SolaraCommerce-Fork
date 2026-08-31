@@ -982,9 +982,16 @@ export function Studio({
                 onClick={() => requestLeave()}
               />
             </Tooltip>
-            <span className="brand-mark" aria-hidden>
-              S
-            </span>
+            <img
+              className="brand-mark brand-mark--orbit"
+              src="/branding/solara-orbit-32.png"
+              srcSet="/branding/solara-orbit-32.png 32w, /branding/solara-orbit-64.png 64w"
+              sizes="32px"
+              alt=""
+              width={32}
+              height={32}
+              decoding="async"
+            />
             <div className="studio-brand-info">
               <nav className="studio-breadcrumb" aria-label="Navegación">
                 <button
