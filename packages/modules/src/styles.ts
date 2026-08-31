@@ -2971,11 +2971,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(1.5rem * var(--catalog-v2-space, 1)) calc(2.25rem * var(--catalog-v2-space, 1));margin:2rem 0 1rem;padding:0;list-style:none}
 /* Los beneficios del copy del hero van en una caja con blur de fondo (desktop,
    sobre el velo y la imagen): se aísla el bloque del fondo fotográfico. */
-.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits--copy{align-self:stretch;margin-inline:0;padding:.95rem 1.15rem;border-radius:var(--catalog-v2-radius);background:color-mix(in srgb,var(--catalog-paper) 38%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid color-mix(in srgb,var(--catalog-ink) 10%,transparent)}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits--copy{align-self:stretch;margin-inline:0;padding:.95rem 1.15rem;border-radius:var(--catalog-v2-radius);background:color-mix(in srgb,var(--catalog-paper) 38%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:none}
 /* La banda duplicada (mobile) no existe en desktop: la copia interna queda visible. */
 .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band{display:none}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit{display:flex;align-items:center;gap:.65rem;min-width:0}
-.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit + .catalog-hero-benefit{border-left:1px solid color-mix(in srgb,var(--catalog-border) 55%,transparent);padding-left:1.25rem}
+.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit + .catalog-hero-benefit{border-left:none;padding-left:1.25rem}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-icon{width:22px;height:22px;flex:0 0 auto}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-copy{display:flex;flex-direction:column;gap:.15rem;min-width:0}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefit-copy small{color:var(--catalog-muted)}
@@ -5251,10 +5251,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-hero-page .catalog-hero-background img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.92); transform: scale(1.01); }
   .cm.v2 .catalog-hero-page .catalog-hero-background::after { position: absolute; inset: 0; background: linear-gradient(90deg, color-mix(in srgb, var(--catalog-paper) 92%, transparent), color-mix(in srgb, var(--catalog-paper) 64%, transparent) 45%, color-mix(in srgb, var(--catalog-paper) 26%, transparent) 78%, transparent); content: ""; opacity: calc(.3 + var(--catalog-hero-bg-dark, .6) * .7); }
   .cm.v2 .catalog-hero-page .catalog-hero-benefits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem 2.25rem; margin: 2rem 0 1rem; padding: 0; list-style: none; }
-  .cm.v2 .catalog-hero-page .catalog-hero-benefits--copy { align-self: stretch; margin-inline: 0; padding: .95rem 1.15rem; border: 1px solid color-mix(in srgb, var(--catalog-ink) 10%, transparent); border-radius: 0; background: color-mix(in srgb, var(--catalog-paper) 38%, transparent); backdrop-filter: blur(14px); }
+  .cm.v2 .catalog-hero-page .catalog-hero-benefits--copy { align-self: stretch; margin-inline: 0; padding: .95rem 1.15rem; border: none; border-radius: 0; background: color-mix(in srgb, var(--catalog-paper) 38%, transparent); backdrop-filter: blur(14px); }
   .cm.v2 .catalog-hero-page .catalog-hero-benefits--band { display: none; }
   .cm.v2 .catalog-hero-page .catalog-hero-benefit { display: flex; align-items: center; gap: .75rem; min-width: 0; }
-  .cm.v2 .catalog-hero-page .catalog-hero-benefit + .catalog-hero-benefit { padding-left: 1.25rem; border-left: 1px solid color-mix(in srgb, var(--catalog-border) 55%, transparent); }
+  .cm.v2 .catalog-hero-page .catalog-hero-benefit + .catalog-hero-benefit { padding-left: 1.25rem; border-left: none; }
   .cm.v2 .catalog-hero-page .catalog-hero-benefit-icon { flex: 0 0 auto; width: 22px; height: 22px; }
   .cm.v2 .catalog-hero-page .catalog-hero-benefit-copy { display: flex; min-width: 0; flex-direction: column; gap: .25rem; }
   .cm.v2 .catalog-hero-page .catalog-hero-benefit-copy small { color: var(--catalog-muted); }
