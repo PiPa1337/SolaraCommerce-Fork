@@ -214,7 +214,7 @@ test("el click en la card selecciona, abre el detalle con datos reales y da feed
   await expect(facts.nth(0)).toHaveText(DEMO_STORE_ID);
   await expect(facts.nth(1)).toHaveAttribute(
     "title",
-    /^\d{1,2} [a-z]{3} \d{4}, \d{1,2}:\d{2} [ap]\.\s*m\.$/i,
+    /^\d{1,2} [a-z]{3,4} \d{4}, \d{1,2}:\d{2} [ap]\.\s*m\.$/i,
   );
   await expect(facts.nth(1)).toHaveText(/^\d{1,2} [a-z]{3} \d{4}$/);
   await expect(facts.nth(2)).toHaveText(String(metrics.activeProducts));

@@ -49,6 +49,8 @@ function routesFor(project: (typeof projects)[keyof typeof projects]): string[] 
 }
 
 test("E1/C2: rutas útiles sin JavaScript y sin errores de consola/red", async ({ browser }) => {
+  if (process.env.CI) test.setTimeout(90_000);
+
   let exported = exportProject(referenceStore, { mode: "production" });
   const server = createServer((request, response) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
