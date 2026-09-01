@@ -8,6 +8,18 @@
 
 # Changelog
 
+### Calculadora de tarifas responsive y simulador (2026-09-01)
+
+- La calculadora del dashboard ahora usa un diálogo opaco y responsive, con
+  jerarquía, contraste, campos y desglose legibles en desktop, tablet y mobile.
+- Se incorpora una simulación local de cantidad de productos con controles
+  `−/+`, validación y cálculo en vivo, sin modificar el catálogo ni persistir
+  la cantidad simulada.
+- El detalle de cada tienda muestra la mensualidad calculada en lugar del total
+  de colecciones, usando la misma tarifa global y descuento del popup.
+- Resumen y configuración se separan en vistas sin scroll para que el popup entre
+  completo en desktop, tablet y mobile; Escape, foco y reduced motion se conservan.
+
 ### Release 0.1.1 (2026-08-31)
 
 - Se actualiza la versión de la aplicación portable y del manifiesto de release.

@@ -219,7 +219,8 @@ test("el click en la card selecciona, abre el detalle con datos reales y da feed
   await expect(facts.nth(1)).toHaveText(/^\d{1,2} [a-z]{3,4} \d{4}$/);
   await expect(facts.nth(2)).toHaveText(String(metrics.activeProducts));
   await expect(facts.nth(3)).toHaveText(String(metrics.categories));
-  await expect(facts.nth(4)).toHaveText(String(metrics.collections));
+  await expect(panel.locator(".dashboard-store-detail__facts dt").nth(4)).toHaveText("Mensualidad");
+  await expect(facts.nth(4)).toHaveText("$ 29.000");
   await expect(facts.nth(5)).toHaveText(String(metrics.assets));
   await expect(await page.evaluate(() => localStorage.getItem("solara-dashboard-selected"))).toBe(
     DEMO_STORE_ID,
@@ -243,6 +244,97 @@ test("Escape cierra el detalle, restaura el foco a la card y limpia la selecció
   await expect(
     await page.evaluate(() => localStorage.getItem("solara-dashboard-selected")),
   ).toBeNull();
+});
+
+test("la calculadora simula cantidades sin modificar el catálogo y se adapta a mobile", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  await page.evaluate(() => {
+    localStorage.removeItem("solara-pricing-config");
+    localStorage.removeItem("solara-store-discounts");
+  });
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+
+  const before = await recordById(page, DEMO_STORE_ID);
+  expect(before).toBeTruthy();
+  const actualProducts = metricsOf(before as StoredProjectRecord).activeProducts;
+  const launcher = detailPanel(page, DEMO_STORE_NAME).getByRole("button", {
+    name: "Calculadora",
+  });
+  await launcher.click();
+
+  const dialog = page.getByRole("dialog", { name: "Precio de tu tienda online" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText(`${actualProducts} productos`, { exact: true })).toBeVisible();
+  await expect(
+    detailPanel(page, DEMO_STORE_NAME)
+      .locator(".dashboard-store-detail__facts div")
+      .filter({ hasText: "Mensualidad" })
+      .locator("dd"),
+  ).toHaveText("$ 29.000");
+  await expect(dialog.getByText("$ 29.000/mes", { exact: true })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Cerrar calculadora" })).toBeFocused();
+
+  await dialog.getByRole("button", { name: "Simular cantidad" }).click();
+  const quantity = dialog.getByRole("spinbutton", { name: "Cantidad de productos" });
+  await expect(quantity).toHaveValue(String(actualProducts));
+  await quantity.fill("250");
+  await expect(dialog.getByText("Simulación", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("250 productos", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("$ 69.000/mes", { exact: true })).toBeVisible();
+  await expect(dialog).toContainText("No modifica el catálogo ni la tarifa guardada.");
+
+  await quantity.fill("0");
+  await expect(quantity).toHaveAttribute("aria-invalid", "true");
+  await expect(dialog.getByText("Ingresá al menos 1 producto.")).toBeVisible();
+  await quantity.fill("250");
+
+  for (const viewport of [
+    { width: 1920, height: 1080 },
+    { width: 768, height: 1024 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const fit = await dialog.evaluate((element) => {
+      const content = element.querySelector<HTMLElement>(".dashboard-calculator-dialog__content");
+      const body = element.querySelector<HTMLElement>(".dashboard-calculator-dialog__body");
+      return {
+        contentFits: Boolean(content && content.scrollHeight <= content.clientHeight + 1),
+        bodyFits: Boolean(body && body.scrollHeight <= body.clientHeight + 1),
+        pageFits: document.documentElement.scrollWidth <= window.innerWidth,
+      };
+    });
+    expect(fit, `${viewport.width}x${viewport.height}`).toEqual({
+      contentFits: true,
+      bodyFits: true,
+      pageFits: true,
+    });
+  }
+
+  await dialog.getByRole("tab", { name: "Configurar tarifa" }).click();
+  for (const viewport of [
+    { width: 1920, height: 1080 },
+    { width: 768, height: 1024 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const bodyFits = await dialog
+      .locator(".dashboard-calculator-dialog__body")
+      .evaluate((body) => body.scrollHeight <= body.clientHeight + 1);
+    expect(bodyFits, `tarifa ${viewport.width}x${viewport.height}`).toBe(true);
+  }
+
+  await dialog.getByRole("tab", { name: "Resumen y simulación" }).click();
+  await dialog.getByRole("button", { name: "Volver a la cantidad actual" }).click();
+  await expect(dialog.getByText(`${actualProducts} productos`, { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(launcher).toBeFocused();
+
+  const after = await recordById(page, DEMO_STORE_ID);
+  expect(metricsOf(after as StoredProjectRecord).activeProducts).toBe(actualProducts);
 });
 
 test("el botón Abrir tienda del panel abre el editor con el proyecto", async ({ page }) => {

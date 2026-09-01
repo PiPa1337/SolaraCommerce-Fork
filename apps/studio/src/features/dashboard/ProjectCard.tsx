@@ -8,14 +8,16 @@ import {
   DownloadSimple,
   FolderOpen,
   Globe,
+  Minus,
   Package,
+  Plus,
   X,
 } from "@phosphor-icons/react";
 import { isBaseTemplate } from "@solara/project-schema/project-policy";
-import { type RefObject, useEffect, useId, useState } from "react";
+import { type KeyboardEvent, type RefObject, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button, IconButton } from "../../components/Ui";
 import {
-  calculateMonthlyCost,
   calculateMonthlyCostForCount,
   DEFAULT_PRICING,
   formatMonthlyCost,
@@ -102,14 +104,58 @@ export function ProjectCard({
   }, [projectId]);
 
   const activeProducts = project ? getProjectMetrics(project.project).activeProducts : 0;
-  const monthlyCost = project
-    ? calculateMonthlyCost(project.project, project.id, pricingConfig)
-    : 0;
-  const baseMonthlyCost = project ? calculateMonthlyCostForCount(activeProducts, pricingConfig) : 0;
-  const breakdown = project ? getMonthlyCostBreakdown(activeProducts, pricingConfig) : [];
-
   const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const [calculatorView, setCalculatorView] = useState<"quote" | "pricing">("quote");
+  const [simulatorOpen, setSimulatorOpen] = useState(false);
+  const [simulatedProducts, setSimulatedProducts] = useState(String(activeProducts));
+  const [resetArmed, setResetArmed] = useState(false);
   const calculatorTitleId = useId();
+  const quotePanelId = useId();
+  const pricingPanelId = useId();
+  const discountHelpId = useId();
+  const simulatorInputId = useId();
+  const simulatorHelpId = useId();
+  const simulatorErrorId = useId();
+  const calculatorButtonRef = useRef<HTMLButtonElement>(null);
+  const calculatorDialogRef = useRef<HTMLDivElement>(null);
+
+  const parsedSimulatedProducts = Number(simulatedProducts);
+  const validSimulatedProducts =
+    /^\d+$/.test(simulatedProducts) &&
+    Number.isSafeInteger(parsedSimulatedProducts) &&
+    parsedSimulatedProducts >= 1;
+  const quotedProducts =
+    simulatorOpen && validSimulatedProducts ? parsedSimulatedProducts : activeProducts;
+  const actualBaseMonthlyCost = project
+    ? calculateMonthlyCostForCount(activeProducts, pricingConfig)
+    : 0;
+  const actualMonthlyCost = Math.max(
+    0,
+    Math.round(actualBaseMonthlyCost * (1 - storeDiscount / 100)),
+  );
+  const quotedBaseMonthlyCost = project
+    ? calculateMonthlyCostForCount(quotedProducts, pricingConfig)
+    : 0;
+  const quotedMonthlyCost = Math.max(
+    0,
+    Math.round(quotedBaseMonthlyCost * (1 - storeDiscount / 100)),
+  );
+  const quotedBreakdown = project ? getMonthlyCostBreakdown(quotedProducts, pricingConfig) : [];
+
+  useEffect(() => {
+    if (!calculatorOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const frame = window.requestAnimationFrame(() => {
+      calculatorDialogRef.current
+        ?.querySelector<HTMLButtonElement>('[aria-label="Cerrar calculadora"]')
+        ?.focus();
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [calculatorOpen]);
 
   const handlePricingChange = (patch: Partial<PricingConfig>) => {
     const next = { ...pricingConfig, ...patch };
@@ -121,6 +167,7 @@ export function ProjectCard({
     next.included = 20;
     setPricingConfig(next);
     savePricingConfig(next);
+    setResetArmed(false);
   };
 
   const handleDiscountChange = (value: number) => {
@@ -129,8 +176,51 @@ export function ProjectCard({
     if (project) saveStoreDiscount(project.id, clamped);
   };
 
-  const openCalculator = () => setCalculatorOpen(true);
-  const closeCalculator = () => setCalculatorOpen(false);
+  const openCalculator = () => {
+    setCalculatorView("quote");
+    setSimulatedProducts(String(activeProducts));
+    setSimulatorOpen(false);
+    setResetArmed(false);
+    setCalculatorOpen(true);
+  };
+  const closeCalculator = () => {
+    setCalculatorOpen(false);
+    setCalculatorView("quote");
+    setSimulatorOpen(false);
+    setResetArmed(false);
+    window.requestAnimationFrame(() => calculatorButtonRef.current?.focus());
+  };
+
+  const handleCalculatorKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      closeCalculator();
+      return;
+    }
+    if (event.key !== "Tab") return;
+
+    const focusable = Array.from(
+      calculatorDialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ) ?? [],
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  };
+
+  const changeSimulatedProducts = (delta: number) => {
+    const current = validSimulatedProducts ? parsedSimulatedProducts : 1;
+    setSimulatedProducts(String(Math.max(1, current + delta)));
+  };
 
   return (
     <section
@@ -200,8 +290,8 @@ export function ProjectCard({
               <dd>{getProjectMetrics(project.project).categories}</dd>
             </div>
             <div>
-              <dt>Colecciones</dt>
-              <dd>{getProjectMetrics(project.project).collections}</dd>
+              <dt>Mensualidad</dt>
+              <dd>{formatMonthlyCost(actualMonthlyCost)}</dd>
             </div>
             <div>
               <dt>Recursos</dt>
@@ -268,6 +358,7 @@ export function ProjectCard({
               Duplicar
             </Button>
             <Button
+              ref={calculatorButtonRef}
               className="dashboard-store-detail__calculator"
               variant="secondary"
               icon={Calculator}
@@ -290,178 +381,329 @@ export function ProjectCard({
                   : "Archivar"}
             </Button>
           </div>
-          {calculatorOpen && (
-            <div
-              className="dashboard-calculator-dialog is-open"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby={calculatorTitleId}
-            >
-              <form
-                className="dashboard-calculator-dialog__content dashboard-calculator-dialog__content--compact"
-                onSubmit={(e) => e.preventDefault()}
-              >
-                <header className="dashboard-calculator-dialog__header">
-                  <div className="dashboard-calculator-dialog__title">
-                    <h2 id={calculatorTitleId}>
-                      Precio de tu <span>tienda online</span>
-                    </h2>
-                    <div className="dashboard-calculator-dialog__subtitle">
-                      <span />
-                      <p>Fórmula mensual</p>
-                      <span />
-                    </div>
-                  </div>
-                  <IconButton icon={X} label="Cerrar calculadora" onClick={closeCalculator} />
-                </header>
-
-                {/* Configuración global — misma tarifa para todas las tiendas */}
-                <section className="dashboard-calculator-dialog__section">
-                  <h4 className="dashboard-calculator-dialog__section-title">Tarifa global</h4>
-                  <div
-                    className="dashboard-calculator-dialog__grid dashboard-calculator-dialog__grid--2"
-                    style={{ gridTemplateColumns: "1fr auto" }}
+          {calculatorOpen
+            ? createPortal(
+                <div
+                  ref={calculatorDialogRef}
+                  className="dashboard-calculator-dialog is-open"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby={calculatorTitleId}
+                  onKeyDown={handleCalculatorKeyDown}
+                  onMouseDown={(event) => {
+                    if (event.target === event.currentTarget) closeCalculator();
+                  }}
+                >
+                  <form
+                    className="dashboard-calculator-dialog__content"
+                    onSubmit={(e) => e.preventDefault()}
+                    onMouseDown={(event) => event.stopPropagation()}
                   >
-                    <label className="dashboard-calculator-dialog__field">
-                      <span>Base / mes</span>
-                      <input
-                        type="number"
-                        min={0}
-                        step={100}
-                        value={pricingConfig.base}
-                        onChange={(e) => handlePricingChange({ base: Number(e.target.value) })}
-                      />
-                    </label>
-                    <div
-                      className="dashboard-calculator-dialog__field"
-                      style={{ justifyContent: "center", textAlign: "center" }}
-                    >
-                      <span style={{ opacity: 0.7 }}>Incluye</span>
-                      <strong style={{ fontSize: "13px", color: "var(--cosmic-ink)" }}>
-                        hasta 20 productos
-                      </strong>
-                    </div>
-                  </div>
-                  <div className="dashboard-calculator-dialog__grid dashboard-calculator-dialog__grid--3">
-                    <label className="dashboard-calculator-dialog__field">
-                      <span>21–100 c/u</span>
-                      <input
-                        type="number"
-                        min={0}
-                        step={10}
-                        value={pricingConfig.tier1Price}
-                        onChange={(e) =>
-                          handlePricingChange({ tier1Price: Number(e.target.value) })
-                        }
-                      />
-                    </label>
-                    <label className="dashboard-calculator-dialog__field">
-                      <span>101–200 c/u</span>
-                      <input
-                        type="number"
-                        min={0}
-                        step={10}
-                        value={pricingConfig.tier2Price}
-                        onChange={(e) =>
-                          handlePricingChange({ tier2Price: Number(e.target.value) })
-                        }
-                      />
-                    </label>
-                    <label className="dashboard-calculator-dialog__field">
-                      <span>201+ c/u</span>
-                      <input
-                        type="number"
-                        min={0}
-                        step={10}
-                        value={pricingConfig.tier3Price}
-                        onChange={(e) =>
-                          handlePricingChange({ tier3Price: Number(e.target.value) })
-                        }
-                      />
-                    </label>
-                  </div>
-                  <div className="dashboard-calculator-dialog__hint">
-                    Cambios se aplican a todas las tiendas. Base{" "}
-                    {formatMonthlyCost(pricingConfig.base)} + tramos.
-                  </div>
-                </section>
-
-                {/* Descuento específico para la tienda seleccionada */}
-                <section className="dashboard-calculator-dialog__section dashboard-calculator-dialog__section--accent">
-                  <h4 className="dashboard-calculator-dialog__section-title">
-                    Precio especial — {project.name}
-                  </h4>
-                  <label className="dashboard-calculator-dialog__field dashboard-calculator-dialog__field--inline">
-                    <span>Descuento %</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      step={1}
-                      value={storeDiscount}
-                      onChange={(e) => handleDiscountChange(Number(e.target.value))}
-                      placeholder="0"
-                    />
-                    <small>0–100% (vacío = 0)</small>
-                  </label>
-                </section>
-
-                {/* Cálculo desglosado para la tienda seleccionada — sin scroll */}
-                <section className="dashboard-calculator-dialog__current dashboard-calculator-dialog__current--compact">
-                  <div className="dashboard-calculator-dialog__current-header">
-                    <span>
-                      {activeProducts} productos
-                      {storeDiscount > 0 ? ` · -${storeDiscount}%` : ""}
-                    </span>
-                    <strong>{formatMonthlyCost(monthlyCost)}/mes</strong>
-                  </div>
-                  <div className="dashboard-calculator-dialog__breakdown-compact">
-                    <div className="dashboard-calculator-dialog__breakdown-row">
-                      <span>Base ({pricingConfig.included} incl.)</span>
-                      <strong>{formatMonthlyCost(pricingConfig.base)}</strong>
-                    </div>
-                    {breakdown.map((item) => (
-                      <div key={item.label} className="dashboard-calculator-dialog__breakdown-row">
-                        <span>{item.label}</span>
-                        <span>
-                          {item.products} × {formatMonthlyCost(item.price)} ={" "}
-                          {formatMonthlyCost(item.subtotal)}
-                        </span>
+                    <header className="dashboard-calculator-dialog__header">
+                      <div className="dashboard-calculator-dialog__title">
+                        <span className="dashboard-calculator-dialog__eyebrow">Tarifas</span>
+                        <h2 id={calculatorTitleId}>Precio de tu tienda online</h2>
+                        <p>Configurá la tarifa y revisá el total mensual de esta tienda.</p>
                       </div>
-                    ))}
-                    {storeDiscount > 0 && (
-                      <div className="dashboard-calculator-dialog__breakdown-row is-discount">
-                        <span>Descuento {storeDiscount}%</span>
-                        <span>-{formatMonthlyCost(baseMonthlyCost - monthlyCost)}</span>
-                      </div>
-                    )}
-                    <div className="dashboard-calculator-dialog__breakdown-row is-total">
-                      <span>Total</span>
-                      <strong>{formatMonthlyCost(monthlyCost)}</strong>
-                    </div>
-                  </div>
-                  {breakdown.length === 0 && storeDiscount === 0 && (
-                    <p className="dashboard-calculator-dialog__current-note">
-                      Dentro del plan base.
-                    </p>
-                  )}
-                </section>
+                      <IconButton
+                        icon={X}
+                        label="Cerrar calculadora"
+                        className="dashboard-calculator-dialog__close"
+                        autoFocus
+                        onClick={closeCalculator}
+                      />
+                    </header>
 
-                <div className="dashboard-calculator-dialog__actions">
-                  <Button
-                    variant="quiet"
-                    type="button"
-                    onClick={() => handlePricingChange(DEFAULT_PRICING)}
-                  >
-                    Restablecer tarifa
-                  </Button>
-                  <Button variant="primary" type="button" onClick={closeCalculator}>
-                    Cerrar
-                  </Button>
-                </div>
-              </form>
-            </div>
-          )}
+                    <div className="dashboard-calculator-dialog__body">
+                      <div
+                        className="dashboard-calculator-dialog__tabs"
+                        role="tablist"
+                        aria-label="Vista de la calculadora"
+                      >
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={calculatorView === "quote"}
+                          aria-controls={quotePanelId}
+                          onClick={() => {
+                            setCalculatorView("quote");
+                            setResetArmed(false);
+                          }}
+                        >
+                          Resumen y simulación
+                        </button>
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={calculatorView === "pricing"}
+                          aria-controls={pricingPanelId}
+                          onClick={() => {
+                            setCalculatorView("pricing");
+                            setResetArmed(false);
+                          }}
+                        >
+                          Configurar tarifa
+                        </button>
+                      </div>
+
+                      {calculatorView === "pricing" ? (
+                        <div
+                          id={pricingPanelId}
+                          className="dashboard-calculator-dialog__panel"
+                          role="tabpanel"
+                        >
+                          {/* Configuración global — misma tarifa para todas las tiendas */}
+                          <section className="dashboard-calculator-dialog__section">
+                            <div className="dashboard-calculator-dialog__section-heading">
+                              <div>
+                                <span>Configuración global</span>
+                                <h3>Tarifa mensual</h3>
+                              </div>
+                              <p>Se aplica a todas las tiendas.</p>
+                            </div>
+                            <div className="dashboard-calculator-dialog__base-row">
+                              <label className="dashboard-calculator-dialog__field">
+                                <span>Base por mes</span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  step={100}
+                                  value={pricingConfig.base}
+                                  onChange={(e) =>
+                                    handlePricingChange({ base: Number(e.target.value) })
+                                  }
+                                />
+                              </label>
+                              <div className="dashboard-calculator-dialog__included">
+                                <span>Productos incluidos</span>
+                                <strong>Hasta {pricingConfig.included}</strong>
+                              </div>
+                            </div>
+                            <div className="dashboard-calculator-dialog__grid dashboard-calculator-dialog__grid--3">
+                              <label className="dashboard-calculator-dialog__field">
+                                <span>Del 21 al 100</span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  step={10}
+                                  value={pricingConfig.tier1Price}
+                                  onChange={(e) =>
+                                    handlePricingChange({ tier1Price: Number(e.target.value) })
+                                  }
+                                />
+                                <small>por producto</small>
+                              </label>
+                              <label className="dashboard-calculator-dialog__field">
+                                <span>Del 101 al 200</span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  step={10}
+                                  value={pricingConfig.tier2Price}
+                                  onChange={(e) =>
+                                    handlePricingChange({ tier2Price: Number(e.target.value) })
+                                  }
+                                />
+                                <small>por producto</small>
+                              </label>
+                              <label className="dashboard-calculator-dialog__field">
+                                <span>Desde 201</span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  step={10}
+                                  value={pricingConfig.tier3Price}
+                                  onChange={(e) =>
+                                    handlePricingChange({ tier3Price: Number(e.target.value) })
+                                  }
+                                />
+                                <small>por producto</small>
+                              </label>
+                            </div>
+                            <p className="dashboard-calculator-dialog__hint">
+                              Base {formatMonthlyCost(pricingConfig.base)} más los productos que
+                              excedan el tramo incluido.
+                            </p>
+                          </section>
+
+                          {/* Descuento específico para la tienda seleccionada */}
+                          <section className="dashboard-calculator-dialog__section dashboard-calculator-dialog__section--store">
+                            <div className="dashboard-calculator-dialog__section-heading">
+                              <div>
+                                <span>Esta tienda</span>
+                                <h3>{project.name}</h3>
+                              </div>
+                              <p>El descuento no afecta a las demás.</p>
+                            </div>
+                            <label className="dashboard-calculator-dialog__field">
+                              <span>Descuento especial</span>
+                              <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                step={1}
+                                value={storeDiscount}
+                                onChange={(e) => handleDiscountChange(Number(e.target.value))}
+                                aria-describedby={discountHelpId}
+                              />
+                              <small id={discountHelpId}>Entre 0% y 100%.</small>
+                            </label>
+                          </section>
+                        </div>
+                      ) : (
+                        <section
+                          id={quotePanelId}
+                          className="dashboard-calculator-dialog__quote"
+                          role="tabpanel"
+                          aria-live="polite"
+                        >
+                          <div className="dashboard-calculator-dialog__quote-header">
+                            <div>
+                              <div className="dashboard-calculator-dialog__quote-label">
+                                {simulatorOpen && validSimulatedProducts ? (
+                                  <span className="dashboard-calculator-dialog__badge">
+                                    Simulación
+                                  </span>
+                                ) : null}
+                                <span>{quotedProducts} productos</span>
+                                {storeDiscount > 0 ? <span>−{storeDiscount}%</span> : null}
+                              </div>
+                              <strong>{formatMonthlyCost(quotedMonthlyCost)}/mes</strong>
+                            </div>
+                            {simulatorOpen ? (
+                              <Button
+                                variant="quiet"
+                                size="sm"
+                                type="button"
+                                onClick={() => {
+                                  setSimulatorOpen(false);
+                                  setSimulatedProducts(String(activeProducts));
+                                }}
+                              >
+                                Volver a la cantidad actual
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                icon={Calculator}
+                                type="button"
+                                onClick={() => {
+                                  setSimulatedProducts(String(activeProducts));
+                                  setSimulatorOpen(true);
+                                }}
+                              >
+                                Simular cantidad
+                              </Button>
+                            )}
+                          </div>
+
+                          {simulatorOpen ? (
+                            <div className="dashboard-calculator-dialog__simulator">
+                              <div>
+                                <label htmlFor={simulatorInputId}>Cantidad de productos</label>
+                                <p id={simulatorHelpId}>
+                                  No modifica el catálogo ni la tarifa guardada.
+                                </p>
+                              </div>
+                              <div className="dashboard-calculator-dialog__stepper">
+                                <IconButton
+                                  icon={Minus}
+                                  label="Restar un producto"
+                                  onClick={() => changeSimulatedProducts(-1)}
+                                />
+                                <input
+                                  id={simulatorInputId}
+                                  type="number"
+                                  min={1}
+                                  step={1}
+                                  inputMode="numeric"
+                                  value={simulatedProducts}
+                                  aria-describedby={`${simulatorHelpId}${validSimulatedProducts ? "" : ` ${simulatorErrorId}`}`}
+                                  aria-invalid={!validSimulatedProducts || undefined}
+                                  onChange={(event) => setSimulatedProducts(event.target.value)}
+                                />
+                                <IconButton
+                                  icon={Plus}
+                                  label="Sumar un producto"
+                                  onClick={() => changeSimulatedProducts(1)}
+                                />
+                              </div>
+                              {!validSimulatedProducts ? (
+                                <p
+                                  id={simulatorErrorId}
+                                  className="dashboard-calculator-dialog__simulator-error"
+                                >
+                                  Ingresá al menos 1 producto.
+                                </p>
+                              ) : null}
+                            </div>
+                          ) : null}
+
+                          <div className="dashboard-calculator-dialog__breakdown">
+                            <div className="dashboard-calculator-dialog__breakdown-row">
+                              <span>Base ({pricingConfig.included} incluidos)</span>
+                              <strong>{formatMonthlyCost(pricingConfig.base)}</strong>
+                            </div>
+                            {quotedBreakdown.map((item) => (
+                              <div
+                                key={item.label}
+                                className="dashboard-calculator-dialog__breakdown-row"
+                              >
+                                <span>{item.label}</span>
+                                <span>
+                                  {item.products} × {formatMonthlyCost(item.price)} ={" "}
+                                  {formatMonthlyCost(item.subtotal)}
+                                </span>
+                              </div>
+                            ))}
+                            {storeDiscount > 0 ? (
+                              <div className="dashboard-calculator-dialog__breakdown-row is-discount">
+                                <span>Descuento {storeDiscount}%</span>
+                                <span>
+                                  −{formatMonthlyCost(quotedBaseMonthlyCost - quotedMonthlyCost)}
+                                </span>
+                              </div>
+                            ) : null}
+                            <div className="dashboard-calculator-dialog__breakdown-row is-total">
+                              <span>Total mensual</span>
+                              <strong>{formatMonthlyCost(quotedMonthlyCost)}</strong>
+                            </div>
+                          </div>
+                        </section>
+                      )}
+                    </div>
+
+                    <footer className="dashboard-calculator-dialog__actions">
+                      {resetArmed && calculatorView === "pricing" ? (
+                        <output>Volvé a presionar para confirmar.</output>
+                      ) : (
+                        <span />
+                      )}
+                      {calculatorView === "pricing" ? (
+                        <Button
+                          variant="quiet"
+                          type="button"
+                          icon={ArrowCounterClockwise}
+                          onClick={() => {
+                            if (resetArmed) handlePricingChange(DEFAULT_PRICING);
+                            else setResetArmed(true);
+                          }}
+                        >
+                          {resetArmed ? "Confirmar restablecimiento" : "Restablecer tarifa"}
+                        </Button>
+                      ) : (
+                        <span />
+                      )}
+                      <Button variant="primary" type="button" onClick={closeCalculator}>
+                        Listo
+                      </Button>
+                    </footer>
+                  </form>
+                </div>,
+                document.body,
+              )
+            : null}
           {actionNotice ? (
             <output
               className="dashboard-store-detail__notice"
