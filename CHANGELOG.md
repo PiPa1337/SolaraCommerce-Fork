@@ -8,6 +8,11 @@
 
 # Changelog
 
+### Release 0.1.1 (2026-08-31)
+
+- Se actualiza la versión de la aplicación portable y del manifiesto de release.
+- Incluye las correcciones de exportación pública y feeds ya publicadas en `origin/main`.
+
 ### Feed Merchant autoajustado por exportación (2026-08-31)
 
 - `g:id` y `g:item_group_id` se normalizan de forma determinista a un máximo
