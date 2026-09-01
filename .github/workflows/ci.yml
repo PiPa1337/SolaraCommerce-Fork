@@ -161,6 +161,9 @@ jobs:
       - name: Construir shell portable
         run: pnpm desktop:package
 
+      - name: Preparar fixture demo del portable
+        run: pnpm portable:seed-demo
+
       - name: E2E portable
         run: pnpm test:e2e:portable
 

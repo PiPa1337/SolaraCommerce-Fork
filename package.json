@@ -31,6 +31,7 @@
     "pilot:export": "vitest run scripts/write-pilot-export.test.ts",
     "qa:factory": "node --experimental-transform-types --experimental-loader ./scripts/ts-workspace-loader.mjs scripts/store-factory.mjs",
     "portable:clean": "node scripts/portable-clean.mjs",
+    "portable:seed-demo": "node --experimental-transform-types --experimental-loader ./scripts/ts-workspace-loader.mjs scripts/prepare-portable-fixture.mjs",
     "portable:smoke": "node scripts/portable-smoke.mjs",
     "reference:export": "vitest run scripts/write-reference-export.test.ts",
     "release:manifest": "node scripts/create-release-manifest.mjs",
