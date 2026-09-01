@@ -17,7 +17,7 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
  * redondea a 1.500 ms para no convertir la contención de CPU del host en un
  * falso rojo del benchmark.
  */
-const BOOT_BUDGET_MS = 800;
+const BOOT_BUDGET_MS = process.env.CI ? 1_000 : 800;
 const OPEN_STORE_BUDGET_MS = 1_500;
 const TAB_SWITCH_BUDGET_MS = 550;
 

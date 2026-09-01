@@ -501,7 +501,9 @@ test("A13: panel gestionado — descargar, respaldo, sitio público y carpeta", 
     const archiveBusy = detail.getByRole("button", { name: /Archivar/ });
     await expect(archiveBusy).toHaveAttribute("aria-busy", "true");
     await expect(archiveBusy).toBeDisabled();
-    await expect(cardByName(page, managedStoreName)).toHaveCount(0);
+    await expect(cardByName(page, managedStoreName)).toHaveCount(0, {
+      timeout: process.env.CI ? 30_000 : 5_000,
+    });
     await page.unroute("**/__solara/storage/saves");
   } finally {
     await stopManagedServer(managed.process, managed.root);

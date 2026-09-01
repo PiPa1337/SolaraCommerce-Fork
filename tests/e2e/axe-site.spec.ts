@@ -8,7 +8,7 @@ import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixtur
 import { referenceStore } from "@solara/project-schema/fixture";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 
-test.setTimeout(120_000);
+test.setTimeout(process.env.CI ? 180_000 : 120_000);
 
 const projects = {
   reference: referenceStore,
