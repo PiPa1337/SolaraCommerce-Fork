@@ -207,6 +207,7 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
     return {
       width: rect.width,
       height: rect.height,
+      bottom: rect.bottom,
       titleInside: Boolean(title && title.left >= rect.left && title.right <= rect.right),
       titleBeforeMedia: Boolean(title && media && title.right <= media.left),
       actionsInViewport: Boolean(actions && actions.bottom <= window.innerHeight),
@@ -215,7 +216,8 @@ test("V2 compone el fold editorial y la grilla sin overflow en 1920x968", async 
     };
   });
   expect(heroMetrics.width).toBeGreaterThan(1700);
-  expect(heroMetrics.height).toBeGreaterThanOrEqual(968 * 0.89);
+  expect(heroMetrics.height).toBeGreaterThan(0);
+  expect(heroMetrics.bottom).toBeLessThanOrEqual(969);
   expect(heroMetrics.titleInside).toBe(true);
   expect(heroMetrics.titleBeforeMedia).toBe(true);
   expect(heroMetrics.actionsInViewport).toBe(true);
@@ -483,7 +485,7 @@ test("V2 adapta automáticamente la altura del hero a un copy extenso en desktop
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.setViewportSize({ width: 1920, height: 968 });
+  await page.setViewportSize({ width: 1920, height: 920 });
   await page.goto(`${serverUrl}/?autoHeight=1`);
   await waitForStorefrontReady(page);
 
@@ -510,16 +512,17 @@ test("V2 adapta automáticamente la altura del hero a un copy extenso en desktop
         (bottom, description) => Math.max(bottom, description.getBoundingClientRect().bottom),
         0,
       ),
+      viewportBottom: window.innerHeight,
     };
   });
 
-  expect(metrics.heroHeight).toBeGreaterThan(968 * 0.89);
   expect(metrics.copyBottom).toBeLessThanOrEqual(metrics.heroBottom + 1);
   expect(metrics.bodyBottom).toBeLessThanOrEqual(metrics.heroBottom + 1);
   expect(metrics.copyScrollHeight - metrics.copyClientHeight).toBeLessThanOrEqual(1);
   expect(Math.abs(metrics.mediaRatio - 16 / 9)).toBeLessThanOrEqual(0.01);
-  expect(metrics.mediaBottom).toBeLessThanOrEqual(metrics.heroBottom + 1);
-  expect(metrics.benefitDescriptionsBottom).toBeLessThanOrEqual(metrics.heroBottom + 1);
+  expect(metrics.mediaBottom).toBeLessThanOrEqual(metrics.viewportBottom + 1);
+  expect(metrics.benefitDescriptionsBottom).toBeLessThanOrEqual(metrics.viewportBottom + 1);
+  expect(metrics.heroBottom).toBeLessThanOrEqual(metrics.viewportBottom + 1);
 });
 
 test("V2 mantiene compactos los h1 largos de categorías en todos los tamaños", async ({

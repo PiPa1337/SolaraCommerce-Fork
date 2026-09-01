@@ -2846,9 +2846,10 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 .cm.v2 .catalog-hero-editorial [data-hero-media] {
-  /* El overscan evita que el borde de la media deje una franja al componerla
-     contra el fondo; su alto intrínseco mantiene la proporción 9:16. */
-  width: calc(min(90svh * 9 / 16, 45vw) + 2px);
+  /* El viewport del navegador ya descuenta el chrome del sistema; el límite
+     adicional contempla la banda y el header para que la media no invada el
+     borde inferior del primer viewport. */
+  width: calc(min(45vw, max(0px, calc((100svh - 7rem) * 9 / 16))) + 2px);
   height: auto;
   aspect-ratio: 9 / 16;
   margin: -1px -2px -1px 0;
@@ -2856,6 +2857,17 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   align-self: start;
   position: relative;
   z-index: 1;
+}
+.cm.v2 .catalog-hero-editorial .catalog-hero-copy {
+  padding-top: clamp(1.5rem, 4svh, 3.5rem);
+  padding-bottom: clamp(.75rem, 1.25svh, 2rem);
+}
+.cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits {
+  margin-top: clamp(.85rem, 1.75svh, 2rem);
+  margin-bottom: clamp(.25rem, .75svh, 1rem);
+}
+.cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--copy {
+  padding-block: clamp(.5rem, 1svh, .95rem);
 }
 .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial--has-background [data-hero-media] {
   background: transparent;
