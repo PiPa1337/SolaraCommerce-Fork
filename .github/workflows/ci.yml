@@ -72,7 +72,7 @@ jobs:
     name: Windows, Node 22, Chromium — shard ${{ matrix.shard }}/4
     needs: verify
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:

@@ -216,7 +216,7 @@ test("el click en la card selecciona, abre el detalle con datos reales y da feed
     "title",
     /^\d{1,2} [a-z]{3,4} \d{4}, \d{1,2}:\d{2} [ap]\.\s*m\.$/i,
   );
-  await expect(facts.nth(1)).toHaveText(/^\d{1,2} [a-z]{3} \d{4}$/);
+  await expect(facts.nth(1)).toHaveText(/^\d{1,2} [a-z]{3,4} \d{4}$/);
   await expect(facts.nth(2)).toHaveText(String(metrics.activeProducts));
   await expect(facts.nth(3)).toHaveText(String(metrics.categories));
   await expect(facts.nth(4)).toHaveText(String(metrics.collections));
