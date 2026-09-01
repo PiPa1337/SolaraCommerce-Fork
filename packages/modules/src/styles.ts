@@ -2853,6 +2853,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   aspect-ratio: 9 / 16;
   margin: -1px -2px -1px 0;
   min-height: 0;
+  align-self: start;
   position: relative;
   z-index: 1;
 }

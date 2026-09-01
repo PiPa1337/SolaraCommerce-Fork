@@ -491,7 +491,12 @@ test("V2 adapta automáticamente la altura del hero a un copy extenso en desktop
     const hero = element.getBoundingClientRect();
     const copy = element.querySelector<HTMLElement>(".catalog-hero-copy");
     const body = element.querySelector<HTMLElement>(".catalog-hero-body");
+    const media = element.querySelector<HTMLElement>("[data-hero-media]");
+    const benefitDescriptions = [
+      ...element.querySelectorAll<HTMLElement>(".catalog-hero-benefits--copy small"),
+    ];
     const copyRect = copy?.getBoundingClientRect();
+    const mediaRect = media?.getBoundingClientRect();
     return {
       heroHeight: hero.height,
       copyBottom: copyRect?.bottom ?? Number.POSITIVE_INFINITY,
@@ -499,6 +504,12 @@ test("V2 adapta automáticamente la altura del hero a un copy extenso en desktop
       copyScrollHeight: copy?.scrollHeight ?? 0,
       copyClientHeight: copy?.clientHeight ?? 0,
       bodyBottom: body?.getBoundingClientRect().bottom ?? Number.POSITIVE_INFINITY,
+      mediaRatio: mediaRect ? mediaRect.height / mediaRect.width : 0,
+      mediaBottom: mediaRect?.bottom ?? Number.POSITIVE_INFINITY,
+      benefitDescriptionsBottom: benefitDescriptions.reduce(
+        (bottom, description) => Math.max(bottom, description.getBoundingClientRect().bottom),
+        0,
+      ),
     };
   });
 
@@ -506,6 +517,9 @@ test("V2 adapta automáticamente la altura del hero a un copy extenso en desktop
   expect(metrics.copyBottom).toBeLessThanOrEqual(metrics.heroBottom + 1);
   expect(metrics.bodyBottom).toBeLessThanOrEqual(metrics.heroBottom + 1);
   expect(metrics.copyScrollHeight - metrics.copyClientHeight).toBeLessThanOrEqual(1);
+  expect(Math.abs(metrics.mediaRatio - 16 / 9)).toBeLessThanOrEqual(0.01);
+  expect(metrics.mediaBottom).toBeLessThanOrEqual(metrics.heroBottom + 1);
+  expect(metrics.benefitDescriptionsBottom).toBeLessThanOrEqual(metrics.heroBottom + 1);
 });
 
 test("V2 mantiene compactos los h1 largos de categorías en todos los tamaños", async ({
