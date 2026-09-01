@@ -12,6 +12,8 @@ export interface DashboardStats {
 
 export interface ProjectMetrics {
   activeProducts: number;
+  billableProducts: number;
+  variantExtras: number;
   categories: number;
   collections: number;
   assets: number;
@@ -85,8 +87,15 @@ export function partitionPinnedProjects<T extends { id: string }>(
 }
 
 export function getProjectMetrics(project: StoredProject["project"]): ProjectMetrics {
+  const activeProducts = project.products.filter((product) => product.status === "active");
+  const variantExtras = activeProducts.reduce(
+    (total, product) => total + Math.max(0, product.variants.length - 1),
+    0,
+  );
   return {
-    activeProducts: project.products.filter((product) => product.status === "active").length,
+    activeProducts: activeProducts.length,
+    billableProducts: activeProducts.length + variantExtras,
+    variantExtras,
     categories: project.categories.length,
     collections: project.collections.length,
     assets: project.assets.length,
@@ -214,7 +223,7 @@ function pricingToTiers(config: PricingConfig): Array<{ upTo: number; price: num
 }
 
 /**
- * Calcula el coste mensual según cantidad de productos activos y config.
+ * Calcula el coste mensual según cantidad de unidades facturables y config.
  * Fórmula: base (incluye `included`) + tramos adicionales.
  * Ej: 50 → 20.000 + 30×300 = 29.000
  */
@@ -245,7 +254,7 @@ export function calculateMonthlyCost(
 ): number {
   const metrics = getProjectMetrics(project);
   const effectiveConfig = config ?? loadPricingConfig();
-  const baseCost = calculateMonthlyCostForCount(metrics.activeProducts, effectiveConfig);
+  const baseCost = calculateMonthlyCostForCount(metrics.billableProducts, effectiveConfig);
   if (!storeId) return baseCost;
   const discount = loadStoreDiscount(storeId);
   if (discount <= 0) return baseCost;

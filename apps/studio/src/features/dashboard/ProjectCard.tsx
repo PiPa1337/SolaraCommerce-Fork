@@ -103,11 +103,13 @@ export function ProjectCard({
     else setStoreDiscount(0);
   }, [projectId]);
 
-  const activeProducts = project ? getProjectMetrics(project.project).activeProducts : 0;
+  const projectMetrics = project ? getProjectMetrics(project.project) : undefined;
+  const billableProducts = projectMetrics?.billableProducts ?? 0;
+  const variantExtras = projectMetrics?.variantExtras ?? 0;
   const [calculatorOpen, setCalculatorOpen] = useState(false);
   const [calculatorView, setCalculatorView] = useState<"quote" | "pricing">("quote");
   const [simulatorOpen, setSimulatorOpen] = useState(false);
-  const [simulatedProducts, setSimulatedProducts] = useState(String(activeProducts));
+  const [simulatedProducts, setSimulatedProducts] = useState(String(billableProducts));
   const [resetArmed, setResetArmed] = useState(false);
   const calculatorTitleId = useId();
   const quotePanelId = useId();
@@ -125,9 +127,9 @@ export function ProjectCard({
     Number.isSafeInteger(parsedSimulatedProducts) &&
     parsedSimulatedProducts >= 1;
   const quotedProducts =
-    simulatorOpen && validSimulatedProducts ? parsedSimulatedProducts : activeProducts;
+    simulatorOpen && validSimulatedProducts ? parsedSimulatedProducts : billableProducts;
   const actualBaseMonthlyCost = project
-    ? calculateMonthlyCostForCount(activeProducts, pricingConfig)
+    ? calculateMonthlyCostForCount(billableProducts, pricingConfig)
     : 0;
   const actualMonthlyCost = Math.max(
     0,
@@ -178,7 +180,7 @@ export function ProjectCard({
 
   const openCalculator = () => {
     setCalculatorView("quote");
-    setSimulatedProducts(String(activeProducts));
+    setSimulatedProducts(String(billableProducts));
     setSimulatorOpen(false);
     setResetArmed(false);
     setCalculatorOpen(true);
@@ -283,7 +285,10 @@ export function ProjectCard({
             </div>
             <div>
               <dt>Productos</dt>
-              <dd>{getProjectMetrics(project.project).activeProducts}</dd>
+              <dd>
+                {billableProducts}
+                {variantExtras > 0 ? ` (${variantExtras} extra)` : ""}
+              </dd>
             </div>
             <div>
               <dt>Categorías</dt>
@@ -566,6 +571,9 @@ export function ProjectCard({
                                   </span>
                                 ) : null}
                                 <span>{quotedProducts} productos</span>
+                                {!simulatorOpen && variantExtras > 0 ? (
+                                  <span>({variantExtras} extra)</span>
+                                ) : null}
                                 {storeDiscount > 0 ? <span>−{storeDiscount}%</span> : null}
                               </div>
                               <strong>{formatMonthlyCost(quotedMonthlyCost)}/mes</strong>
@@ -577,7 +585,7 @@ export function ProjectCard({
                                 type="button"
                                 onClick={() => {
                                   setSimulatorOpen(false);
-                                  setSimulatedProducts(String(activeProducts));
+                                  setSimulatedProducts(String(billableProducts));
                                 }}
                               >
                                 Volver a la cantidad actual
@@ -589,7 +597,7 @@ export function ProjectCard({
                                 icon={Calculator}
                                 type="button"
                                 onClick={() => {
-                                  setSimulatedProducts(String(activeProducts));
+                                  setSimulatedProducts(String(billableProducts));
                                   setSimulatorOpen(true);
                                 }}
                               >
@@ -601,9 +609,10 @@ export function ProjectCard({
                           {simulatorOpen ? (
                             <div className="dashboard-calculator-dialog__simulator">
                               <div>
-                                <label htmlFor={simulatorInputId}>Cantidad de productos</label>
+                                <label htmlFor={simulatorInputId}>Cantidad facturable</label>
                                 <p id={simulatorHelpId}>
-                                  No modifica el catálogo ni la tarifa guardada.
+                                  Incluye productos y variantes adicionales. No modifica el catálogo
+                                  ni la tarifa guardada.
                                 </p>
                               </div>
                               <div className="dashboard-calculator-dialog__stepper">

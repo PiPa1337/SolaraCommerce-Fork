@@ -3,6 +3,8 @@ import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-t
 import { describe, expect, it } from "vitest";
 import {
   auditStoreHealth,
+  calculateMonthlyCost,
+  DEFAULT_PRICING,
   filterDashboardProjects,
   getDashboardStats,
   getProjectMetrics,
@@ -26,9 +28,72 @@ describe("modelo del dashboard", () => {
     const metrics = getProjectMetrics(catalogModernStore);
 
     expect(metrics.activeProducts).toBe(50);
+    expect(metrics.billableProducts).toBe(60);
+    expect(metrics.variantExtras).toBe(10);
     expect(metrics.categories).toBe(14);
     expect(metrics.collections).toBeGreaterThan(0);
     expect(metrics.assets).toBeGreaterThan(0);
+  });
+
+  it("cuenta cada variante adicional de productos activos aunque no esté disponible", () => {
+    const first = catalogModernStore.products[0];
+    const second = catalogModernStore.products[1];
+    if (!first || !second) throw new Error("Fixture sin productos suficientes");
+
+    const project = {
+      ...catalogModernStore,
+      products: [
+        {
+          ...first,
+          variants: first.variants.slice(0, 5).map((variant, index) => ({
+            ...variant,
+            available: index !== 4,
+          })),
+        },
+        { ...second, variants: second.variants.slice(0, 1) },
+        { ...first, id: "product-hidden", status: "hidden" as const },
+      ],
+    };
+
+    expect(getProjectMetrics(project)).toMatchObject({
+      activeProducts: 2,
+      billableProducts: 6,
+      variantExtras: 4,
+    });
+  });
+
+  it("no agrega extras cuando cada producto activo tiene una sola variante", () => {
+    const metrics = getProjectMetrics(catalogModernCleanStore);
+
+    expect(metrics.variantExtras).toBe(0);
+    expect(metrics.billableProducts).toBe(metrics.activeProducts);
+  });
+
+  it("convierte 164 productos con dos grupos de cinco variantes en 172 facturables", () => {
+    const multiVariant = catalogModernStore.products[0];
+    const singleVariant = catalogModernStore.products[1];
+    if (!multiVariant || !singleVariant) throw new Error("Fixture sin productos suficientes");
+
+    const project = {
+      ...catalogModernStore,
+      products: Array.from({ length: 164 }, (_, index) => ({
+        ...(index < 2 ? multiVariant : singleVariant),
+        id: `product-billable-${index}`,
+        status: "active" as const,
+        variants:
+          index < 2 ? multiVariant.variants.slice(0, 5) : singleVariant.variants.slice(0, 1),
+      })),
+    };
+
+    expect(getProjectMetrics(project)).toMatchObject({
+      activeProducts: 164,
+      billableProducts: 172,
+      variantExtras: 8,
+    });
+  });
+
+  it("calcula la mensualidad con productos facturables, no con el inventario real", () => {
+    expect(calculateMonthlyCost(catalogModernStore, undefined, DEFAULT_PRICING)).toBe(32_000);
   });
 
   it("suma tiendas activas y archivadas sin inventar métricas", () => {

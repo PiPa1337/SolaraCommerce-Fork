@@ -48,7 +48,7 @@ interface StoredProjectRecord {
   project: {
     name: string;
     origin?: { templateVersion?: number; seed?: string };
-    products: Array<{ status: string }>;
+    products: Array<{ status: string; variants: Array<{ available: boolean }> }>;
     categories: unknown[];
     collections: unknown[];
     assets: unknown[];
@@ -136,12 +136,21 @@ async function recordById(page: Page, id: string): Promise<StoredProjectRecord |
 
 function metricsOf(record: StoredProjectRecord): {
   activeProducts: number;
+  billableProducts: number;
+  variantExtras: number;
   categories: number;
   collections: number;
   assets: number;
 } {
+  const activeProducts = record.project.products.filter((product) => product.status === "active");
+  const variantExtras = activeProducts.reduce(
+    (total, product) => total + Math.max(0, product.variants.length - 1),
+    0,
+  );
   return {
-    activeProducts: record.project.products.filter((product) => product.status === "active").length,
+    activeProducts: activeProducts.length,
+    billableProducts: activeProducts.length + variantExtras,
+    variantExtras,
     categories: record.project.categories.length,
     collections: record.project.collections.length,
     assets: record.project.assets.length,
@@ -207,6 +216,9 @@ test("el click en la card selecciona, abre el detalle con datos reales y da feed
   await expect(card(page, DEMO_STORE_NAME)).toHaveClass(/is-selected/);
   await expect(panel).toHaveClass(/is-open/);
   await expect(panel.getByRole("heading", { name: DEMO_STORE_NAME })).toBeVisible();
+  await expect(cardButton(page, DEMO_STORE_NAME)).toContainText(
+    `${metrics.activeProducts} productos`,
+  );
 
   // Capa 3: las métricas del detalle son las del proyecto persistido.
   const facts = panel.locator(".dashboard-store-detail__facts dd");
@@ -217,10 +229,12 @@ test("el click en la card selecciona, abre el detalle con datos reales y da feed
     /^\d{1,2} [a-z]{3,4} \d{4}, \d{1,2}:\d{2} [ap]\.\s*m\.$/i,
   );
   await expect(facts.nth(1)).toHaveText(/^\d{1,2} [a-z]{3,4} \d{4}$/);
-  await expect(facts.nth(2)).toHaveText(String(metrics.activeProducts));
+  await expect(facts.nth(2)).toHaveText(
+    `${metrics.billableProducts} (${metrics.variantExtras} extra)`,
+  );
   await expect(facts.nth(3)).toHaveText(String(metrics.categories));
   await expect(panel.locator(".dashboard-store-detail__facts dt").nth(4)).toHaveText("Mensualidad");
-  await expect(facts.nth(4)).toHaveText("$ 29.000");
+  await expect(facts.nth(4)).toHaveText("$ 32.000");
   await expect(facts.nth(5)).toHaveText(String(metrics.assets));
   await expect(await page.evaluate(() => localStorage.getItem("solara-dashboard-selected"))).toBe(
     DEMO_STORE_ID,
@@ -259,7 +273,7 @@ test("la calculadora simula cantidades sin modificar el catálogo y se adapta a 
 
   const before = await recordById(page, DEMO_STORE_ID);
   expect(before).toBeTruthy();
-  const actualProducts = metricsOf(before as StoredProjectRecord).activeProducts;
+  const actualMetrics = metricsOf(before as StoredProjectRecord);
   const launcher = detailPanel(page, DEMO_STORE_NAME).getByRole("button", {
     name: "Calculadora",
   });
@@ -267,22 +281,30 @@ test("la calculadora simula cantidades sin modificar el catálogo y se adapta a 
 
   const dialog = page.getByRole("dialog", { name: "Precio de tu tienda online" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByText(`${actualProducts} productos`, { exact: true })).toBeVisible();
+  await expect(
+    dialog.getByText(`${actualMetrics.billableProducts} productos`, { exact: true }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByText(`(${actualMetrics.variantExtras} extra)`, { exact: true }),
+  ).toBeVisible();
   await expect(
     detailPanel(page, DEMO_STORE_NAME)
       .locator(".dashboard-store-detail__facts div")
       .filter({ hasText: "Mensualidad" })
       .locator("dd"),
-  ).toHaveText("$ 29.000");
-  await expect(dialog.getByText("$ 29.000/mes", { exact: true })).toBeVisible();
+  ).toHaveText("$ 32.000");
+  await expect(dialog.getByText("$ 32.000/mes", { exact: true })).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Cerrar calculadora" })).toBeFocused();
 
   await dialog.getByRole("button", { name: "Simular cantidad" }).click();
-  const quantity = dialog.getByRole("spinbutton", { name: "Cantidad de productos" });
-  await expect(quantity).toHaveValue(String(actualProducts));
+  const quantity = dialog.getByRole("spinbutton", { name: "Cantidad facturable" });
+  await expect(quantity).toHaveValue(String(actualMetrics.billableProducts));
   await quantity.fill("250");
   await expect(dialog.getByText("Simulación", { exact: true })).toBeVisible();
   await expect(dialog.getByText("250 productos", { exact: true })).toBeVisible();
+  await expect(
+    dialog.getByText(`(${actualMetrics.variantExtras} extra)`, { exact: true }),
+  ).toHaveCount(0);
   await expect(dialog.getByText("$ 69.000/mes", { exact: true })).toBeVisible();
   await expect(dialog).toContainText("No modifica el catálogo ni la tarifa guardada.");
 
@@ -328,13 +350,18 @@ test("la calculadora simula cantidades sin modificar el catálogo y se adapta a 
 
   await dialog.getByRole("tab", { name: "Resumen y simulación" }).click();
   await dialog.getByRole("button", { name: "Volver a la cantidad actual" }).click();
-  await expect(dialog.getByText(`${actualProducts} productos`, { exact: true })).toBeVisible();
+  await expect(
+    dialog.getByText(`${actualMetrics.billableProducts} productos`, { exact: true }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByText(`(${actualMetrics.variantExtras} extra)`, { exact: true }),
+  ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   await expect(launcher).toBeFocused();
 
   const after = await recordById(page, DEMO_STORE_ID);
-  expect(metricsOf(after as StoredProjectRecord).activeProducts).toBe(actualProducts);
+  expect(metricsOf(after as StoredProjectRecord).activeProducts).toBe(actualMetrics.activeProducts);
 });
 
 test("el botón Abrir tienda del panel abre el editor con el proyecto", async ({ page }) => {

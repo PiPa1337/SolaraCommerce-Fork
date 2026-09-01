@@ -8,6 +8,15 @@
 
 # Changelog
 
+### Productos facturables por variantes (2026-09-01)
+
+- La mensualidad del dashboard ahora cuenta la primera variante dentro del
+  producto base y suma cada variante adicional como una unidad facturable.
+- El detalle y la calculadora muestran el total facturable junto con sus extras,
+  mientras las tarjetas, estadísticas y catálogo conservan el inventario real.
+- Las variantes agotadas o no disponibles siguen contando para que los cambios
+  temporales de stock no alteren la tarifa de la tienda.
+
 ### Calculadora de tarifas responsive y simulador (2026-09-01)
 
 - La calculadora del dashboard ahora usa un diálogo opaco y responsive, con
