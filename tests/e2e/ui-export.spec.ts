@@ -181,12 +181,8 @@ test("R3-P8-B5: importar un respaldo inválido muestra error y no rompe la app",
   await dialog.getByRole("button", { name: "Importar y reemplazar" }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("tab", { name: "Exportar" })).toBeVisible();
-  const errorVisible = await page
-    .getByTestId("ui-inline-error")
-    .isVisible()
-    .catch(() => false);
-  console.log("R3-P8-B5 error de importación visible:", errorVisible);
-  expect(errorVisible).toBe(true);
+  await expect(page.getByTestId("ui-inline-error")).toBeVisible();
+  console.log("R3-P8-B5 error de importación visible: true");
 });
 
 test("R4-P8-B5: exportar producción pasa por confirmación y completa las etapas", async ({

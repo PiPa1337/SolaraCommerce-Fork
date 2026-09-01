@@ -1812,6 +1812,7 @@ button.status-label:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 .editor-pane[data-tab="catalog"] .catalog-toolbar {
@@ -1831,6 +1832,10 @@ button.status-label:focus-visible {
   border: 1px solid var(--line);
   border-radius: var(--radius-panel);
   scrollbar-gutter: stable;
+}
+
+.editor-pane[data-tab="catalog"] .catalog-table-region {
+  min-width: 0;
 }
 
 .editor-pane[data-tab="catalog"] .catalog-table-region th {
