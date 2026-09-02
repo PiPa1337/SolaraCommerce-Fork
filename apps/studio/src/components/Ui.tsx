@@ -15,6 +15,7 @@ export function IconButton({
   icon: IconComponent,
   label,
   tooltip,
+  className,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   icon: Icon;
@@ -23,9 +24,10 @@ export function IconButton({
    * evita el `title` nativo duplicado cuando está presente. */
   tooltip?: string;
 }) {
+  const mergedClassName = `icon-button${className ? ` ${className}` : ""}`;
   const button = (
     <button
-      className="icon-button"
+      className={mergedClassName}
       type="button"
       data-testid="ui-icon-button"
       aria-label={label}

@@ -1,3 +1,8 @@
+### Botones de cierre del dashboard unificados (2026-09-02)
+
+- **Causa**: `IconButton` (`apps/studio/src/components/Ui.tsx:14`) sobrescribía `className` con `...props` después de `className="icon-button"`, por lo que los botones con clase custom (`dashboard-store-detail__close` y `dashboard-calculator-dialog__close`) perdían la base y el selector `.dashboard-calculator-dialog__close.icon-button` nunca matcheaba en el portal. Además la calculadora se renderiza con `createPortal(document.body)` fuera de `.app-root--dashboard-cosmic` y sus `var(--cosmic-*)` quedaban indefinidos, viéndose como el cuadrado gris viejo. El botón del detalle era solo texto sin caja.
+- **Fix**: `IconButton` ahora fusiona `icon-button` + `className` custom. Ambos cierres comparten el lenguaje cosmic: `36×36` (detalle, `radius 10px`) y `40×40` (calculadora, `radius 12px`), `1px solid var(--cosmic-line-strong)`, `bg rgb(255 255 255 / 0.04)`, hover `border rgb(231 170 61 / 0.45)` + `bg rgb(231 170 61 / 0.09)` + `color var(--cosmic-amber)`, `focus-visible` con outline ámbar y `active scale(0.97)`. El diálogo define sus `--cosmic-*` localmente para el portal y los selectores aceptan ` .close` y `.close.icon-button`. `tsc --noEmit` verde.
+
 ### Menú hamburguesa a pantalla completa en todo el rango móvil (2026-09-02)
 
 - **Causa**: el rediseño del menú responsive (2026-08-30) dejó el rango

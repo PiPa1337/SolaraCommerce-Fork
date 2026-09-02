@@ -822,6 +822,11 @@
 }
 
 .dashboard-calculator-dialog {
+  --cosmic-line: rgb(255 255 255 / 0.12);
+  --cosmic-line-strong: rgb(255 255 255 / 0.2);
+  --cosmic-muted: #a7a9b0;
+  --cosmic-amber: #e7aa3d;
+  --cosmic-ink: #f5f1e8;
   position: fixed;
   z-index: 80;
   inset: 0;
@@ -936,6 +941,7 @@
   line-height: 1.45;
 }
 
+.dashboard-calculator-dialog__close,
 .dashboard-calculator-dialog__close.icon-button {
   flex: 0 0 40px;
   width: 40px;
@@ -951,12 +957,14 @@
     transform 120ms ease;
 }
 
+.dashboard-calculator-dialog__close:hover,
 .dashboard-calculator-dialog__close.icon-button:hover {
   border-color: rgb(231 170 61 / 0.45);
   background: rgb(231 170 61 / 0.09);
   color: var(--cosmic-amber);
 }
 
+.dashboard-calculator-dialog__close:focus-visible,
 .dashboard-calculator-dialog__close.icon-button:focus-visible {
   border-color: rgb(231 170 61 / 0.45);
   outline: 2px solid var(--cosmic-amber);
@@ -964,6 +972,7 @@
   color: var(--cosmic-ink);
 }
 
+.dashboard-calculator-dialog__close:active,
 .dashboard-calculator-dialog__close.icon-button:active {
   transform: translateY(1px) scale(0.97);
 }
