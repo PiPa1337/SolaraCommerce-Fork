@@ -488,6 +488,7 @@ export function renderCatalogModernEditorialHero(
     loading: "eager",
     fetchPriority: "high",
     sizes: "(max-width: 767px) 100vw, 45vw",
+    responsiveMode: "cover",
     fallbackAlt: options.title,
   });
   const imageMarkup = hasCanvasBinding("imageAssetId")
@@ -609,6 +610,7 @@ function renderCatalogHeroMedia(
     loading: "eager",
     fetchPriority: "high",
     sizes: "(max-width: 767px) 100vw, 52vw",
+    responsiveMode: "cover",
     fallbackAlt: title,
   });
   return image.replace(
@@ -865,6 +867,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
                   loading: index === 0 ? "eager" : "lazy",
                   fetchPriority: index === 0 ? "high" : "auto",
                   sizes: "(max-width: 767px) 100vw, 45vw",
+                  responsiveMode: "cover",
                   fallbackAlt: slide.title,
                 },
               );

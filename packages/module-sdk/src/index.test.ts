@@ -117,6 +117,30 @@ describe("HTML safety", () => {
     expect(html).not.toContain("foto-1024.webp");
   });
 
+  it("sirve la fuente máxima en media responsive cuando la imagen se recorta con cover", () => {
+    const asset = referenceStore.assets[0];
+    if (!asset) throw new Error("Fixture incompleto");
+    const project = {
+      ...referenceStore,
+      assets: [
+        {
+          ...asset,
+          source: "/assets/foto-1800.webp",
+          width: 1800,
+          height: 1200,
+          responsiveSources: [{ width: 768, source: "/assets/foto-768.webp" }],
+        },
+        ...referenceStore.assets.slice(1),
+      ],
+    };
+
+    const html = renderImage(project, asset.id, { responsiveMode: "cover" });
+
+    expect(html).toContain(
+      '<source type="image/webp" media="(max-width: 1023px)" srcset="/assets/foto-768.webp 768w, /assets/foto-1800.webp 1800w"',
+    );
+  });
+
   it("conserva AVIF en el MIME de picture cuando la ruta lo declara", () => {
     const asset = referenceStore.assets[0];
     if (!asset) throw new Error("Fixture incompleto");

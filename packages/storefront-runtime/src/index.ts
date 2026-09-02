@@ -545,6 +545,24 @@ function storefrontBoot(): void {
     if (previewCartState !== null) cart = previewCartState;
   }
   let lastCartTrigger: HTMLElement | null = null;
+  let cartScrollLockOffset = 0;
+  const lockCartPageScroll = (): void => {
+    if (document.documentElement.dataset.cartScrollLock === "true") return;
+    cartScrollLockOffset = window.pageYOffset;
+    document.documentElement.dataset.cartScrollLock = "true";
+    document.body.style.position = "fixed";
+    document.body.style.top = `${-cartScrollLockOffset}px`;
+    document.body.style.width = "100%";
+  };
+  const unlockCartPageScroll = (): void => {
+    if (document.documentElement.dataset.cartScrollLock !== "true") return;
+    delete document.documentElement.dataset.cartScrollLock;
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.width = "";
+    window.scrollTo(0, cartScrollLockOffset);
+    cartScrollLockOffset = 0;
+  };
   let paused = false;
   const heroAutoplayControls: Array<{ stop: () => void; start: () => void }> = [];
 
@@ -886,6 +904,7 @@ function storefrontBoot(): void {
         });
     }
     for (const s of pageSiblingsOf(drawer)) s.setAttribute("inert", "");
+    lockCartPageScroll();
     setTimeout(() => {
       drawer
         .querySelector<HTMLElement>(
@@ -912,7 +931,8 @@ function storefrontBoot(): void {
         });
     }
     for (const s of pageSiblingsOf(drawer)) s.removeAttribute("inert");
-    window.setTimeout(() => lastCartTrigger?.focus());
+    unlockCartPageScroll();
+    window.setTimeout(() => lastCartTrigger?.focus({ preventScroll: true }));
   };
 
   const selectedVariant = (productRoot: HTMLElement): HTMLElement | null => {
@@ -2292,6 +2312,7 @@ export const STOREFRONT_RUNTIME_CSS = `
   color: var(--solara-text);
   background: var(--solara-background);
   box-shadow: var(--solara-shadow-overlay);
+  overscroll-behavior: contain;
 }
 
 [data-cart-drawer]::backdrop {

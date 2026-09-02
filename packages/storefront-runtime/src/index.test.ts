@@ -460,8 +460,16 @@ describe("carrito y checkout del drawer (A29)", () => {
   it("cierra el drawer con Escape y devuelve el foco al trigger", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain('event.key === "Escape"');
     expect(STOREFRONT_RUNTIME_JS).toContain("trigger ?? document.activeElement");
-    expect(STOREFRONT_RUNTIME_JS).toContain("lastCartTrigger?.focus()");
+    expect(STOREFRONT_RUNTIME_JS).toContain("lastCartTrigger?.focus({ preventScroll: true })");
     expect(STOREFRONT_RUNTIME_JS).toContain("syncCartToggleExpanded(false)");
+  });
+
+  it("bloquea el scroll de la página mientras el drawer está abierto y lo restaura al cerrar", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("lockCartPageScroll()");
+    expect(STOREFRONT_RUNTIME_JS).toContain("unlockCartPageScroll()");
+    expect(STOREFRONT_RUNTIME_JS).toContain('document.body.style.position = "fixed"');
+    expect(STOREFRONT_RUNTIME_JS).toContain("window.scrollTo(0, cartScrollLockOffset)");
+    expect(STOREFRONT_RUNTIME_CSS).toContain("overscroll-behavior: contain");
   });
 
   it("conserva el cierre del drawer y la persistencia del carrito", () => {

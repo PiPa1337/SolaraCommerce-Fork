@@ -539,6 +539,7 @@ export function renderImage(
     fetchPriority?: "high" | "low" | "auto";
     decoding?: "async" | "sync" | "auto";
     sizes?: string;
+    responsiveMode?: "compact" | "cover";
     fallbackAlt?: string;
   } = {},
 ): SafeHtml {
@@ -595,8 +596,17 @@ export function renderImage(
   })[0];
   const sourceBlocks: string[] = [];
   if (intermediate) {
+    const responsiveSrcset = [
+      `${escapeAttribute(intermediate.source)} ${intermediate.width}w`,
+      ...(options.responsiveMode === "cover" &&
+      primarySource &&
+      intermediate.mime === primaryMime &&
+      primarySource !== intermediate.source
+        ? [`${escapeAttribute(primarySource)} ${asset.width}w`]
+        : []),
+    ].join(", ");
     sourceBlocks.push(
-      `<source type="${intermediate.mime}" media="(max-width: 1023px)" srcset="${escapeAttribute(intermediate.source)} ${intermediate.width}w"${sizes}>`,
+      `<source type="${intermediate.mime}" media="(max-width: 1023px)" srcset="${responsiveSrcset}"${sizes}>`,
     );
   }
   if (primarySource && (primarySource !== fallbackSource || intermediate)) {

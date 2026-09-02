@@ -1,3 +1,15 @@
+### Hero con fuente máxima en mobile y scroll de fondo bloqueado por el carrito (2026-09-02)
+
+- **Imágenes de hero**: `renderImage` (`packages/module-sdk/src/index.ts`) acepta
+  `responsiveMode: "cover"`; cuando la imagen se recorta con `cover` en media
+  ≤1023px, el `srcset` del `<source>` responsive incluye también la fuente
+  máxima además de la intermedia, evitando recortes pobres. Los heroes de
+  `catalog-modern` (editorial, página y carrusel) lo usan.
+- **Drawer del carrito**: al abrirse bloquea el scroll de la página de fondo
+  (`packages/storefront-runtime/src/index.ts`, `position: fixed` + offset
+  restaurado al cerrar, foco con `preventScroll`) y el drawer declara
+  `overscroll-behavior: contain`. E2E en `tests/e2e/ui-sweep-a29.spec.ts`.
+
 ### Optimización apertura Top20 — bundle inicial y waterfall (2026-08-31)
 
 - **Bundle inicial Studio 1257→174 KiB raw (-86%)**: `apps/studio/vite.config.ts:22` `manualChunks` ahora aísla `fixture-data` (1075 KiB), `modules-styles` (277 KiB), `exporter-fonts` (138 KiB) y `storefront-runtime` (103 KiB) del entry; `assetsInlineLimit:0` evita inline base64. `index.html` precarga sólo `vendor/zod/phosphor/dexie/fixture-data` en paralelo; `modules-styles` y `exporter-fonts` quedan lazy (Export/Preview). `check-budgets` pasa para JS (174/737 KiB) y se eleva CSS a 135 KiB (130.8 medido).

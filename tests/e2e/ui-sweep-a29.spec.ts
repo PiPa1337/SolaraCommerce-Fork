@@ -521,6 +521,34 @@ test("drawer: inertea a los hermanos de la página al abrir y los libera al cerr
   await expect(hero).not.toHaveAttribute("inert", "");
 });
 
+test("drawer: el scroll dentro del carrito no mueve la página de fondo y se restaura al cerrar", async ({
+  page,
+}) => {
+  await clearCart(page);
+  await page.goto(storeUrl(PRODUCT_URL));
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await expect(page.locator("[data-cart-drawer]")).toHaveAttribute("data-open", "true");
+  await page.keyboard.press("Escape");
+  await expect(page.locator("[data-cart-drawer]")).not.toHaveAttribute("data-open", "true");
+
+  await page.evaluate(() => window.scrollTo(0, 600));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(600);
+
+  await page.evaluate(() =>
+    (document.querySelector("[data-solara-cart-open]") as HTMLElement | null)?.click(),
+  );
+  const drawer = page.locator("[data-cart-drawer]");
+  await expect(drawer).toHaveAttribute("data-open", "true");
+
+  await drawer.hover();
+  await page.mouse.wheel(0, 1200);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+
+  await page.keyboard.press("Escape");
+  await expect(drawer).not.toHaveAttribute("data-open", "true");
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(600);
+});
+
 test("búsqueda: el término con espacios internos corta por término de 1 carácter (A29)", async ({
   page,
 }) => {
