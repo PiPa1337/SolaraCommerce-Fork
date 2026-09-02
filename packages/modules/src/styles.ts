@@ -2658,10 +2658,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   [data-solara-store].catalog-modern .solara-editorial-page .solara-values-grid article { padding-inline: 0; }
   [data-solara-store].catalog-modern .solara-cart-page-grid { grid-template-columns: 1fr; padding-bottom: 3rem; }
 }
-@media (min-width: 481px) and (max-width: 767px) {
-  [data-solara-store].catalog-modern .catalog-mobile-menu { align-items: center; padding: 1rem; }
-  [data-solara-store].catalog-modern .catalog-mobile-menu__panel { width: min(30rem, calc(100vw - 2rem)); height: min(56rem, calc(100dvh - 2rem)); max-height: calc(100dvh - 2rem); transform: translateX(calc(-100% - 1.5rem)); border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); }
-}
 @media (min-width: 768px) and (max-width: 1199px) {
   [data-solara-store].catalog-modern .catalog-footer-inner {
     grid-template-columns: repeat(2, minmax(0, 1fr));

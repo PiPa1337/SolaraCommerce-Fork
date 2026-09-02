@@ -2713,11 +2713,14 @@ test("V2 abre el menú móvil a pantalla completa aunque el header esté scrolle
   await expect(menu).toBeHidden();
 });
 
-test("V2 adapta el menu movil como sheet compacto con foco visible", async ({ page }) => {
+test("V2 abre el menu movil a pantalla completa en todo el rango mobil con foco visible", async ({
+  page,
+}) => {
   for (const viewport of [
     { width: 320, height: 800 },
     { width: 390, height: 844 },
     { width: 600, height: 960 },
+    { width: 755, height: 908 },
     { width: 767, height: 1024 },
   ]) {
     await page.setViewportSize(viewport);
@@ -2727,6 +2730,12 @@ test("V2 adapta el menu movil como sheet compacto con foco visible", async ({ pa
     const menu = page.locator("#catalog-mobile-menu");
     const panel = menu.locator(".catalog-mobile-menu__panel");
     const close = menu.locator(".catalog-mobile-menu__close");
+    await expect
+      .poll(
+        async () => panel.evaluate((element) => element.getBoundingClientRect().left),
+        `${viewport.width}px`,
+      )
+      .toBe(0);
     const metrics = await menu.evaluate((element) => {
       const panelElement = element.querySelector<HTMLElement>(".catalog-mobile-menu__panel");
       const closeElement = element.querySelector<HTMLElement>(".catalog-mobile-menu__close");
@@ -2737,6 +2746,9 @@ test("V2 adapta el menu movil como sheet compacto con foco visible", async ({ pa
       const logoRect = logoElement?.getBoundingClientRect();
       return {
         panelWidth: panelRect.width,
+        panelHeight: panelRect.height,
+        panelLeft: panelRect.left,
+        panelTop: panelRect.top,
         closeWidth: closeRect.width,
         closeHeight: closeRect.height,
         logoWidth: logoRect?.width ?? 0,
@@ -2750,11 +2762,10 @@ test("V2 adapta el menu movil como sheet compacto con foco visible", async ({ pa
     expect(metrics.logoWidth, `${viewport.width}px`).toBeLessThanOrEqual(224);
     expect(metrics.documentWidth, `${viewport.width}px`).toBeLessThanOrEqual(viewport.width);
     expect(metrics.transitionDuration, `${viewport.width}px`).not.toBe("0s");
-    if (viewport.width >= 481) {
-      expect(metrics.panelWidth, `${viewport.width}px`).toBeLessThanOrEqual(480);
-    } else {
-      expect(metrics.panelWidth, `${viewport.width}px`).toBe(viewport.width);
-    }
+    expect(metrics.panelWidth, `${viewport.width}px`).toBe(viewport.width);
+    expect(metrics.panelHeight, `${viewport.width}px`).toBeGreaterThanOrEqual(viewport.height);
+    expect(metrics.panelLeft, `${viewport.width}px`).toBe(0);
+    expect(metrics.panelTop, `${viewport.width}px`).toBe(0);
 
     const searchField = menu.locator(".catalog-mobile-search__field");
     const restingFocusSurface = await searchField.evaluate((element) => {
@@ -2774,13 +2785,8 @@ test("V2 adapta el menu movil como sheet compacto con foco visible", async ({ pa
     await page.locator("[data-catalog-menu-open]").click();
     await expect(menu.locator(".catalog-mobile-categories")).not.toHaveAttribute("open", "");
 
-    if (viewport.width >= 481) {
-      await menu
-        .locator("[data-catalog-menu-backdrop]")
-        .click({ position: { x: viewport.width - 2, y: 2 } });
-    } else {
-      await close.click();
-    }
+    // El panel cubre todo el viewport: el cierre siempre pasa por el botón.
+    await close.click();
     await expect(menu).toBeHidden();
     await expect(page.locator("[data-catalog-menu-open]")).toBeFocused();
     await expect(panel).toBeHidden();
