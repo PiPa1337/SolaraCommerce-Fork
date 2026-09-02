@@ -1640,6 +1640,18 @@ describe("auditoría Resumen — fixes Ola 3 (navegación y footer moderno)", ()
     );
   });
 
+  it("mantiene el botón de agregar al carrito en el flujo en mobile", () => {
+    const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!v2Styles) throw new Error("Falta el bloque de estilos catalog-modern-v2");
+
+    expect(v2Styles).not.toMatch(/\.cm\.v2 \.catalog-product-add \{[^}]*position: fixed/);
+    expect(v2Styles).not.toMatch(
+      /\.cm\.v2 \.catalog-product-detail-shell \{[^}]*padding-bottom: calc\(4\.75rem/,
+    );
+    expect(v2Styles).not.toMatch(/body:has\([^)]*\) \.cm\.v2 \.catalog-product-add/);
+    expect(v2Styles).toMatch(/\.cm\.v2 \.catalog-product-add \{[^}]*width: 100%;/);
+  });
+
   it("deja sólo el subrayado animado en el acceso a todos los productos", () => {
     const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
     const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];

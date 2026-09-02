@@ -1,3 +1,16 @@
+### Corrige el botón "Agregar al carrito" en mobile (2026-09-02)
+
+- **Causa**: en PDP mobile (≤767px) `.cm.v2 .catalog-product-add` era
+  `position: fixed` al pie del viewport (`packages/modules/src/styles.ts`); sólo
+  se ocultaba con drawer/búsqueda/menú abiertos y el `padding-bottom` del shell
+  sólo ayudaba al final de página, así que al scrollear tapaba cantidad,
+  descripción, specs y footer.
+- **Fix**: el botón vuelve al flujo del formulario (`position` estático,
+  `width: 100%` en mobile) y se eliminan el fixed, las reglas `body:has(...)`
+  y el padding compensatorio. Sin JS no cambia (el `noscript` ya ocultaba el
+  botón). Test unitario de contrato CSS + e2e `V2 mantiene la compra en flujo
+  en una PDP móvil con título largo` reescrito al nuevo contrato.
+
 ### Hero con fuente máxima en mobile y scroll de fondo bloqueado por el carrito (2026-09-02)
 
 - **Imágenes de hero**: `renderImage` (`packages/module-sdk/src/index.ts`) acepta

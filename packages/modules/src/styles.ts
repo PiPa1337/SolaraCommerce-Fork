@@ -2730,8 +2730,17 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   transition: box-shadow var(--catalog-v2-motion-control) ease;
   animation: solara-motion-fade var(--catalog-v2-motion-component) var(--catalog-v2-ease-out) both;
 }
+.cm.v2 [data-solara-module="catalog-header"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
 .cm.v2 [data-solara-module="catalog-header"][data-scrolled="true"] {
   box-shadow: var(--catalog-v2-shadow-elevated);
+}
+.cm.v2 [data-solara-module="catalog-header"][data-scrolled="true"]::before {
   backdrop-filter: blur(14px);
 }
 .cm.v2 .catalog-announcement-inner {
@@ -3910,7 +3919,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     color: var(--catalog-paper);
   }
   .cm.v2 .catalog-hero-editorial .catalog-hero-copy .catalog-hero-body {
-    color: color-mix(in srgb, var(--catalog-paper) 82%, transparent);
+    color: var(--catalog-paper);
   }
   .cm.v2 .catalog-hero-editorial .catalog-hero-benefits--copy {
     display: none;
@@ -5579,9 +5588,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     .cm.v2 .catalog-hero-page .catalog-hero-media {
       aspect-ratio: 9 / 16;
     }
-    .cm.v2 .catalog-product-detail-shell {
-      padding-bottom: calc(4.75rem + env(safe-area-inset-bottom));
-    }
     .cm.v2 .catalog-category-bento-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -5631,19 +5637,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
       padding-top: 1rem;
     }
     .cm.v2 .catalog-product-add {
-      position: fixed;
-      z-index: 48;
-      right: .75rem;
-      bottom: calc(.75rem + env(safe-area-inset-bottom));
-      left: .75rem;
-      width: auto;
-      margin: 0;
-      box-shadow: 0 10px 30px color-mix(in srgb, var(--catalog-ink) 22%, transparent);
-    }
-    body:has(.catalog-cart-drawer[aria-hidden="false"]) .cm.v2 .catalog-product-add,
-    body:has(.catalog-search-dialog[open]) .cm.v2 .catalog-product-add,
-    body:has(.catalog-mobile-menu[aria-hidden="false"]) .cm.v2 .catalog-product-add {
-      visibility: hidden;
+      width: 100%;
     }
   }
   @media (prefers-reduced-motion: reduce) {

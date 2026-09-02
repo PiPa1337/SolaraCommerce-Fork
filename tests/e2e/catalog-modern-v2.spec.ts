@@ -428,11 +428,37 @@ test("V2 conserva el encuadre 9:16 y llena la media del hero", async ({ page }, 
     expect(Math.abs(metrics.image.width - metrics.content.width)).toBeLessThanOrEqual(1);
     expect(Math.abs(metrics.image.height - metrics.content.height)).toBeLessThanOrEqual(1);
     expect(metrics.objectFit).toBe("cover");
+    if (viewport.width < 1024) {
+      expect(metrics.natural.width).toBeGreaterThan(768);
+    }
     await page.screenshot({
       path: testInfo.outputPath(`hero-media-${viewport.width}.png`),
       fullPage: false,
     });
   }
+});
+
+test("V2 refuerza el copy del hero en mobile sin alterar el CTA", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(serverUrl);
+  await waitForStorefrontReady(page);
+
+  const colors = await page.locator(".catalog-hero-editorial").evaluate((hero) => {
+    const title = hero.querySelector<HTMLElement>(".catalog-hero-title");
+    const body = hero.querySelector<HTMLElement>(".catalog-hero-body");
+    const action = hero.querySelector<HTMLElement>(".catalog-hero-actions .catalog-primary-action");
+    if (!title || !body || !action) return null;
+    return {
+      titleColor: getComputedStyle(title).color,
+      bodyColor: getComputedStyle(body).color,
+      actionColor: getComputedStyle(action).color,
+    };
+  });
+
+  expect(colors).not.toBeNull();
+  expect(colors?.bodyColor).toBe(colors?.titleColor);
+  expect(colors?.actionColor).toBe("rgb(255, 255, 255)");
 });
 
 test("V2 mantiene espacio para descendentes en títulos largos del hero", async ({
@@ -1816,9 +1842,7 @@ test("V2 suaviza los breakpoints críticos del hero y las grillas", async ({ pag
   );
 });
 
-test("V2 acerca la compra al primer pliegue en una PDP móvil con título largo", async ({
-  page,
-}) => {
+test("V2 mantiene la compra en flujo en una PDP móvil con título largo", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(
     new URL("/productos/remera-esencial-de-algodon/?longProduct", serverUrl).toString(),
@@ -1828,18 +1852,21 @@ test("V2 acerca la compra al primer pliegue en una PDP móvil con título largo"
   const metrics = await page.locator(".catalog-product-detail-inner").evaluate((element) => {
     const gallery = element.querySelector<HTMLElement>(".catalog-product-gallery-main");
     const action = element.querySelector<HTMLElement>(".catalog-product-add");
-    const description = element.querySelector<HTMLElement>(".catalog-rich-text");
+    const form = element.querySelector<HTMLElement>(".catalog-add-form");
     const actionRect = action?.getBoundingClientRect();
     return {
       galleryHeight: gallery?.getBoundingClientRect().height ?? Number.POSITIVE_INFINITY,
-      actionBottom: actionRect?.bottom ?? Number.POSITIVE_INFINITY,
-      descriptionTop: description?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY,
+      actionPosition: action ? getComputedStyle(action).position : "none",
+      actionTop: actionRect?.top ?? Number.POSITIVE_INFINITY,
+      formBottom: form?.getBoundingClientRect().bottom ?? Number.POSITIVE_INFINITY,
+      actionWidth: actionRect?.width ?? 0,
       documentWidth: document.documentElement.scrollWidth,
     };
   });
   expect(metrics.galleryHeight).toBeLessThanOrEqual(300);
-  expect(metrics.actionBottom).toBeLessThanOrEqual(844);
-  expect(metrics.descriptionTop).toBeGreaterThan(metrics.actionBottom);
+  expect(metrics.actionPosition).toBe("static");
+  expect(metrics.actionTop).toBeLessThan(metrics.formBottom);
+  expect(metrics.actionWidth).toBeGreaterThanOrEqual(300);
   expect(metrics.documentWidth).toBeLessThanOrEqual(390);
 });
 
@@ -2654,6 +2681,34 @@ test("V2 conserva nombres accesibles, foco visible y navegacion por teclado", as
   await page.keyboard.press("Escape");
   await expect(page.locator("#catalog-mobile-menu")).toBeHidden();
   await expect(openMenu).toBeFocused();
+});
+
+test("V2 abre el menú móvil a pantalla completa aunque el header esté scrolleado", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(serverUrl);
+
+  const header = page.locator('[data-solara-module="catalog-header"]');
+  await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight / 2 }));
+  await expect(header).toHaveAttribute("data-scrolled", "true");
+
+  await page.locator("[data-catalog-menu-open]").click();
+  const menu = page.locator("#catalog-mobile-menu");
+  await expect(menu).toBeVisible();
+  const menuMetrics = await menu.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return { height: rect.height, width: rect.width };
+  });
+  expect(menuMetrics.height).toBeGreaterThan(800);
+  expect(menuMetrics.width).toBeLessThanOrEqual(390);
+
+  const panel = menu.locator(".catalog-mobile-menu__panel");
+  const panelHeight = await panel.evaluate((element) => element.getBoundingClientRect().height);
+  expect(panelHeight).toBeGreaterThan(800);
+
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
 });
 
 test("V2 adapta el menu movil como sheet compacto con foco visible", async ({ page }) => {
