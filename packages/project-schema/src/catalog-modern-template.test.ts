@@ -42,6 +42,27 @@ describe("plantilla Catalog Modern", () => {
     expect(catalogModernCleanStore.whatsapp.phone).toBe("");
   });
 
+  it("desactiva el appear del CTA de novedades desde motion declarativo", () => {
+    const newsletter = catalogModernStore.sections.find(
+      (section) => section.moduleId === "catalog-newsletter-cta",
+    );
+    if (!newsletter) throw new Error("Fixture sin CTA de novedades");
+    expect(newsletter.motion.preset).toBe("none");
+
+    const legacy = structuredClone(catalogModernV2Store);
+    const legacyNewsletter = legacy.sections.find(
+      (section) => section.moduleId === "catalog-newsletter-cta",
+    );
+    if (!legacyNewsletter) throw new Error("Fixture V2 sin CTA de novedades");
+    legacyNewsletter.motion = { ...legacyNewsletter.motion, preset: "fade-up" };
+
+    const normalized = ensureCatalogModernV2Sections(legacy);
+    expect(
+      normalized.sections.find((section) => section.moduleId === "catalog-newsletter-cta")?.motion
+        .preset,
+    ).toBe("none");
+  });
+
   it("mantiene la demo de 50 productos y 14 categorías desde la misma plantilla", () => {
     const demo = buildCatalogModernProject({ seed: "demo" });
     expect(demo.origin?.seed).toBe("demo");

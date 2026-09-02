@@ -67,6 +67,7 @@ export type DomainCommand =
       productId: ProductId;
       changes: ProductPatch;
     })
+  | (CommandMetadata & { type: "product.delete"; productId: ProductId })
   | (CommandMetadata & { type: "product.archive"; productId: ProductId })
   | (CommandMetadata & {
       type: "product.restore";
@@ -542,6 +543,20 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
         ...product,
         status: "archived",
       }));
+    case "product.delete": {
+      const product = project.products.find((candidate) => candidate.id === command.productId);
+      if (!product) throw new Error(`El producto no existe: ${command.productId}.`);
+      if (product.status !== "archived") {
+        throw new Error(`Sólo se pueden eliminar productos archivados: ${command.productId}.`);
+      }
+      return parseProject(
+        synchronizeAssignments({
+          ...project,
+          products: project.products.filter((candidate) => candidate.id !== command.productId),
+          updatedAt: at,
+        }),
+      );
+    }
     case "product.restore":
       return activateCatalogModernDefaults(
         updateSelectedProducts(project, [command.productId], at, (product) => ({

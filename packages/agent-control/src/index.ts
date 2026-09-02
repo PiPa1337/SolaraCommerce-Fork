@@ -819,6 +819,7 @@ export class AgentController {
         "collection.update",
         "product.create",
         "product.update",
+        "product.delete",
         "product.setStatus",
         "store.archive",
         "asset.attach",
@@ -842,6 +843,10 @@ export class AgentController {
       },
       operationSchemas: {
         "product.setStatus": { status: ["active", "hidden", "archived"] },
+        "product.delete": {
+          confirmation: "ELIMINAR_PRODUCTO",
+          requiresStatus: "archived",
+        },
         "store.archive": { confirmation: "ARCHIVAR_TIENDA" },
       },
     };
@@ -2549,6 +2554,24 @@ export class AgentController {
             at,
           });
           break;
+        case "product.delete": {
+          const product = project.products.find(
+            (candidate) => candidate.id === operation.productId,
+          );
+          if (!product) fail("PRODUCT_NOT_FOUND", `No existe el producto ${operation.productId}.`);
+          if (product.status !== "archived") {
+            fail(
+              "PRODUCT_DELETE_REQUIRES_ARCHIVED",
+              `El producto ${operation.productId} debe estar archivado antes de eliminarlo.`,
+            );
+          }
+          project = reduceProject(project, {
+            type: "product.delete",
+            productId: operation.productId as Product["id"],
+            at,
+          });
+          break;
+        }
         case "store.archive": {
           // La operación de archivado requiere que la tienda objetivo sea la
           // misma del plan y que no esté protegida (validado en createPlan).

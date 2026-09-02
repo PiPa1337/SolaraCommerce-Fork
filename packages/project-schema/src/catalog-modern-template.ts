@@ -94,6 +94,20 @@ function ensureHomeV2ContactLinks(project: StoreProjectV1): StoreProjectV1 {
   return changed ? { ...project, sections } : project;
 }
 
+function ensureNewsletterCtaMotion(project: StoreProjectV1): StoreProjectV1 {
+  if (project.commerceTemplates.designFamily !== "catalog-modern-v2") return project;
+
+  let changed = false;
+  const sections = project.sections.map((section) => {
+    if (section.moduleId !== "catalog-newsletter-cta" || section.motion.preset === "none") {
+      return section;
+    }
+    changed = true;
+    return { ...section, motion: { ...section.motion, preset: "none" as const } };
+  });
+  return changed ? { ...project, sections } : project;
+}
+
 function ensureHomeV2Navigation(project: StoreProjectV1): StoreProjectV1 {
   if (
     project.commerceTemplates.designFamily !== "catalog-modern-v2" ||
@@ -252,8 +266,10 @@ export function ensureAboutV2Sections(project: StoreProjectV1): StoreProjectV1 {
 
 export function ensureCatalogModernV2Sections(project: StoreProjectV1): StoreProjectV1 {
   return ensureHomeV2Navigation(
-    ensureHomeV2ContactLinks(
-      ensureHomeContactV2Sections(ensureAboutV2Sections(ensureContactV2Sections(project))),
+    ensureNewsletterCtaMotion(
+      ensureHomeV2ContactLinks(
+        ensureHomeContactV2Sections(ensureAboutV2Sections(ensureContactV2Sections(project))),
+      ),
     ),
   );
 }

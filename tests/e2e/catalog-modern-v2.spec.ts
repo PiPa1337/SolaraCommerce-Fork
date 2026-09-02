@@ -3100,7 +3100,7 @@ test("V2 anima 'Ver todo el catálogo' como 'Ver todos'", async ({ page }) => {
     .not.toBe(rest);
 });
 
-test("V2 anima reseñas y novedades con entrada estilo hero", async ({ page }) => {
+test("V2 anima reseñas y deja estático el CTA de novedades", async ({ page }) => {
   await page.goto(serverUrl);
   await revealWholePage(page);
   await page.waitForTimeout(1200);
@@ -3119,15 +3119,22 @@ test("V2 anima reseñas y novedades con entrada estilo hero", async ({ page }) =
     '[data-solara-module="catalog-newsletter-cta"] .catalog-newsletter-inner > div',
   );
   await expect(newsletterText).toBeVisible();
-  expect(
-    await newsletterText.evaluate((element) => getComputedStyle(element).animationName),
-  ).not.toBe("none");
+  expect(await newsletterText.evaluate((element) => getComputedStyle(element).animationName)).toBe(
+    "none",
+  );
   const newsletterCard = page.locator(
     '[data-solara-module="catalog-newsletter-cta"] .catalog-newsletter-inner',
   );
   expect(await newsletterCard.evaluate((element) => getComputedStyle(element).animationName)).toBe(
-    "solara-hero-rise",
+    "none",
   );
+  const newsletterAction = page.locator(
+    '[data-solara-module="catalog-newsletter-cta"] .catalog-newsletter-action',
+  );
+  await expect(newsletterAction).toBeVisible();
+  expect(
+    await newsletterAction.evaluate((element) => getComputedStyle(element).animationName),
+  ).toBe("none");
 });
 
 test("V2 deja visible la card de novedades con movimiento reducido", async ({ page }) => {

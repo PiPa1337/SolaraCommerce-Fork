@@ -2,36 +2,16 @@
 
 Este registro evita que una futura IA confunda una limitación conocida con un
 bug nuevo. Las filas marcadas como "Resuelto" se cerraron con el plan de deuda
-[`docs/superpowers/plans/2026-08-07-deuda-tecnica.md`](../docs/superpowers/plans/2026-08-07-deuda-tecnica.md),
-la eliminación de ZIP
-([`2026-08-07-eliminar-zip.md`](../docs/superpowers/plans/2026-08-07-eliminar-zip.md))
-y los cierres de las revisiones de bugfixes 2 y 3
-([`2026-08-09-bugfix-review-2.md`](../docs/superpowers/plans/2026-08-09-bugfix-review-2.md)
-y [`2026-08-09-bugfix-review-3.md`](../docs/superpowers/plans/2026-08-09-bugfix-review-3.md),
-con los commits de los fixes referenciados en cada fila);
-y el cierre del plan de optimización de rendimiento y UI
-([`2026-08-09-optimizacion-rendimiento-ui.md`](../docs/superpowers/plans/2026-08-09-optimizacion-rendimiento-ui.md),
-con los commits de A1-A8 y U1-U7/U11 referenciados en cada fila);
-y el cierre de la auditoría funcional de controles y su traza de datos
-([`2026-08-10-auditoria-controles.md`](../docs/superpowers/plans/2026-08-10-auditoria-controles.md),
-con los commits de los 12 controles rotos y de los desajustes de contrato
-referenciados en cada fila);
-y el cierre del barrido total de controles
-([`2026-08-10-barrido-total-controles.md`](../docs/superpowers/plans/2026-08-10-barrido-total-controles.md),
-cuyos fixes y gaps documentados se agrupan en la sección
-"Barrido total de controles (2026-08-10)" más abajo);
-y el cierre de la auditoría total de la pestaña Tema
-([`2026-08-10-auditoria-tema.md`](../docs/superpowers/plans/2026-08-10-auditoria-tema.md),
-cuyos fixes y decisiones abiertas se agrupan en la sección
-"Auditoría total de la pestaña Tema (2026-08-10)" más abajo);
-y el cierre de la auditoría total de la pestaña Resumen
-([`2026-08-10-auditoria-resumen.md`](../docs/superpowers/plans/2026-08-10-auditoria-resumen.md),
-cuyos fixes y decisiones abiertas se agrupan en la sección
-"Auditoría total de la pestaña Resumen (2026-08-10)" más abajo);
-y el cierre de la auditoría total de la pestaña Preparar
-([`2026-08-10-auditoria-preparar.md`](../docs/superpowers/plans/2026-08-10-auditoria-preparar.md),
-cuyos fixes y decisiones abiertas se agrupan en la sección
-"Auditoría total de la pestaña Preparar (2026-08-10)" más abajo);
+(`2026-08-07-deuda-tecnica.md`), la eliminación de ZIP (`2026-08-07-eliminar-zip.md`),
+los cierres de las revisiones de bugfixes 2 y 3 (`2026-08-09-bugfix-review-2.md`
+y `2026-08-09-bugfix-review-3.md`), el cierre del plan de optimización de
+rendimiento y UI (`2026-08-09-optimizacion-rendimiento-ui.md`), el cierre de la
+auditoría funcional de controles y su traza de datos
+(`2026-08-10-auditoria-controles.md`), el barrido total de controles
+(`2026-08-10-barrido-total-controles.md`) y las auditorías de las pestañas Tema,
+Resumen y Preparar (`2026-08-10-auditoria-*.md`); esos planes históricos fueron
+eliminados del repo y sólo quedan en el historial de git, con los commits de los
+fixes referenciados en cada fila y en las secciones históricas de más abajo;
 lo que sigue pendiente son decisiones de producto o matrices que exigen release.
 Nota de proceso (ola paralela): los archivos de T6 (CSV, Catalog,
 ProductEditor, ThemeEditor y Overview) se commitearon dentro de `c92f99f`
@@ -183,8 +163,8 @@ abiertas y no deben ocultarse.
 
 ## Barrido total de controles (2026-08-10)
 
-Cierre del plan
-[`docs/superpowers/plans/2026-08-10-barrido-total-controles.md`](../docs/superpowers/plans/2026-08-10-barrido-total-controles.md):
+Cierre del plan `2026-08-10-barrido-total-controles.md` (eliminado del repo,
+ver historial de git):
 30 bins (A1-A30) auditaron ~300 controles de Studio y storefront con el contrato
 de 3 capas — (1) click → efecto real, (2) auto-feedback del control, (3) contrato
 de datos payload → receptor — y dejaron 325 tests de barrido (`ui-sweep-*`) como
@@ -225,8 +205,8 @@ seleccionado/activo/expandido en el HTML inicial y mantenerlo sincronizado.
 
 ## Auditoría total de la pestaña Tema (2026-08-10)
 
-Cierre del plan
-[`docs/superpowers/plans/2026-08-10-auditoria-tema.md`](../docs/superpowers/plans/2026-08-10-auditoria-tema.md):
+Cierre del plan `2026-08-10-auditoria-tema.md` (eliminado del repo,
+ver historial de git):
 la caza (T1-T8) y la traza (U1-U4) auditaron ~40 controles del panel Tema con
 el contrato de 4 capas (funcional / auto-feedback / datos / utilidad).
 Hallazgo central: la plantilla moderna pisaba los colores, el radio, la fuente
@@ -260,8 +240,8 @@ evidencia en `.superpowers/sdd/tema-*.md`; resumen de usuario en el
 
 ## Auditoría total de la pestaña Resumen (2026-08-10)
 
-Cierre del plan
-[`docs/superpowers/plans/2026-08-10-auditoria-resumen.md`](../docs/superpowers/plans/2026-08-10-auditoria-resumen.md):
+Cierre del plan `2026-08-10-auditoria-resumen.md` (eliminado del repo,
+ver historial de git):
 la caza (R1-R8) y la traza (P1-P4) auditaron ~40 controles del tab Resumen con
 el contrato de 4 capas (funcional / auto-feedback / datos / utilidad).
 Hallazgo central: los enlaces de navegación editados no renderizaban en
@@ -299,8 +279,8 @@ verificaciones campo×ruta, P2); sin divergencias en campos del Resumen.
 
 ## Auditoría total de la pestaña Preparar (2026-08-10)
 
-Cierre del plan
-[`docs/superpowers/plans/2026-08-10-auditoria-preparar.md`](../docs/superpowers/plans/2026-08-10-auditoria-preparar.md):
+Cierre del plan `2026-08-10-auditoria-preparar.md` (eliminado del repo,
+ver historial de git):
 la caza (PR1-PR8) y la traza (PT1-PT4) auditaron el flujo guiado
 (`GuidedOverview.tsx` + `catalog-modern-guidance.ts`) contra el proyecto REAL y
 contra el gate real del export (`auditReport`), con el contrato de 4 capas

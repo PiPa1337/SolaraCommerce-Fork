@@ -1,8 +1,8 @@
 # Componentes del editor — referencia (T1.9, 2026-08-07)
 
 Referencia de los componentes de UI del Studio (`apps/studio/src/components/`),
-la escala de iconos, los tokens `--ui-*` y la galería de desarrollo. Parte del
-plan [Editor UI/UX](../../../docs/superpowers/plans/2026-08-07-editor-uiux.md).
+la escala de iconos, los tokens `--ui-*` y la galería de desarrollo. Origen:
+plan Editor UI/UX (2026-08-07, eliminado del repo, ver historial de git).
 
 Convenciones transversales de toda mejora visible:
 

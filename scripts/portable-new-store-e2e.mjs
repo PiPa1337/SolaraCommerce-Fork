@@ -16,7 +16,7 @@ const source = resolve(
   process.env.SOLARA_NEW_STORE_SOURCE ?? ".release/portable/SolaraCommerce-Portable",
 );
 const executable = join(source, "SolaraCommerce.exe");
-const imagePath = resolve(root, "qa-assets/luna-norte/luna-norte-editorial.png");
+const imagePath = resolve(root, "tests/fixtures/luna-norte/luna-norte-editorial.png");
 
 if (!existsSync(executable)) {
   throw new Error("No existe la distribución portable. Ejecutá `pnpm desktop:package` primero.");

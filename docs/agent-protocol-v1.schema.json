@@ -232,6 +232,15 @@
         },
         {
           "type": "object",
+          "required": ["type", "productId", "confirmation"],
+          "properties": {
+            "type": { "const": "product.delete" },
+            "productId": { "$ref": "#/$defs/id" },
+            "confirmation": { "const": "ELIMINAR_PRODUCTO" }
+          }
+        },
+        {
+          "type": "object",
           "required": ["type", "confirmation"],
           "properties": {
             "type": { "const": "store.archive" },

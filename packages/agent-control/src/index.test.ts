@@ -608,6 +608,102 @@ describe("control nativo del agente", () => {
     },
   );
 
+  it("elimina físicamente productos archivados y libera sus índices derivados", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-agent-product-delete-"));
+    try {
+      const storage = createLocalProjectStorage({
+        applicationRoot: root,
+        projectsRoot: join(root, "proyectos"),
+        stagingRoot: join(root, ".solara-runtime", "transactions"),
+      });
+      const controller = createAgentController({ storage, applicationRoot: root });
+      const storeId = "store-product-delete";
+      const archivedProductId = "product-delete-archived";
+      const activeProductId = "product-delete-active";
+      const initial = await controller.createPlan({
+        idempotencyKey: "agent-product-delete-initial-001",
+        operations: [
+          {
+            type: "store.create",
+            storeId,
+            name: "Borrado de productos",
+            slug: "borrado-de-productos",
+            source: { kind: "clean" },
+          },
+          {
+            type: "category.create",
+            categoryId: "category-delete-test",
+            slug: "categoria-delete-test",
+            title: "Categoría de prueba",
+          },
+          {
+            type: "product.create",
+            productId: archivedProductId,
+            slug: "producto-archivado",
+            title: "Producto archivado",
+            status: "archived",
+            categoryIds: ["category-delete-test"],
+            priceCents: 100,
+          },
+          {
+            type: "product.create",
+            productId: activeProductId,
+            slug: "producto-activo",
+            title: "Producto activo",
+            categoryIds: ["category-delete-test"],
+            priceCents: 200,
+          },
+        ],
+      });
+      const initialReceipt = await controller.commitPlan({
+        planId: initial.planId,
+        idempotencyKey: "agent-product-delete-initial-001",
+      });
+
+      const protocol = await controller.describeProtocol({});
+      expect(protocol.operationTypes).toContain("product.delete");
+      await expect(
+        controller.createPlan({
+          storeId,
+          baseVersion: initialReceipt.version,
+          operations: [
+            {
+              type: "product.delete",
+              productId: activeProductId,
+              confirmation: "ELIMINAR_PRODUCTO",
+            },
+          ],
+        }),
+      ).rejects.toMatchObject({ code: "PRODUCT_DELETE_REQUIRES_ARCHIVED" });
+
+      const plan = await controller.createPlan({
+        storeId,
+        baseVersion: initialReceipt.version,
+        idempotencyKey: "agent-product-delete-001",
+        operations: [
+          {
+            type: "product.delete",
+            productId: archivedProductId,
+            confirmation: "ELIMINAR_PRODUCTO",
+          },
+        ],
+      });
+      expect(plan.diff.products.removed).toContain(archivedProductId);
+      await controller.commitPlan({
+        planId: plan.planId,
+        idempotencyKey: "agent-product-delete-001",
+      });
+
+      const current = await storage.readCurrent(storeId);
+      if (!current) throw new Error("Falta el respaldo del test.");
+      const project = readProjectArchive(Buffer.from(current.bytes).toString("utf8"));
+      expect(project.products.map((product) => product.id)).toEqual([activeProductId]);
+      expect(project.categories[0]?.productIds).toEqual([activeProductId]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("reporta blockingIssues en plans.create para productos sin imagen", async () => {
     const root = await mkdtemp(join(tmpdir(), "solara-agent-blocking-"));
     try {

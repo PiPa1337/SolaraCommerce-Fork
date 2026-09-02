@@ -31,10 +31,11 @@ guardado transaccional de Studio; no permite parches arbitrarios de archivos.
 ## Para quien forkea el repositorio
 
 La lectura inicial recomendada es [`AGENTS.md`](AGENTS.md), seguida por el
+[`índice de documentación`](docs/INDEX.md), el
 [`mapa del proyecto`](docs/PROJECT_MAP.md) y la
-[`arquitectura`](docs/ARCHITECTURE.md). El estado y los riesgos conocidos están
-en [`HANDOFF.md`](HANDOFF.md); el modelo, las integraciones y la estrategia de
-tests están en [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md),
+[`arquitectura`](docs/ARCHITECTURE.md). Los riesgos conocidos están en
+[`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md); el modelo, las integraciones
+y la estrategia de tests están en [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md),
 [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md) y
 [`docs/TESTING.md`](docs/TESTING.md).
 

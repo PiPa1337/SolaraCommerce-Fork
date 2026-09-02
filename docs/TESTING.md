@@ -102,8 +102,8 @@ versiona.
 Un gate que falla intermitentemente entrena al equipo a ignorar el rojo.
 Estas reglas son obligatorias y existen porque el smoke llegó a acumular ~7
 specs inestables bajo carga paralela (verificado contra baseline `c4d71ae`;
-detalle en `TECHNICAL_DEBT.md` y plan
-`superpowers/plans/2026-08-21-flaky-e2e-runtime-debuggeable.md`).
+detalle en `TECHNICAL_DEBT.md`; el plan histórico
+`2026-08-21-flaky-e2e-runtime-debuggeable.md` quedó en el historial de git).
 
 1. **Incorporación**: un spec nuevo entra al smoke sólo después de 5 corridas
    consecutivas limpias (local, misma máquina, 8 workers).

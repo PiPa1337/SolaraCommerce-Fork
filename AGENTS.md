@@ -220,7 +220,7 @@ La guía de distribución autocontenida está en
       respecto del código (`.release/` y `dist/` son regenerables y no se commitean).
 - [ ] Actualizar [`CHANGELOG.md`](CHANGELOG.md) con los cambios notables de la
       sesión (formato Keep a Changelog, en español).
-- [ ] Actualizar documentación y [`HANDOFF.md`](HANDOFF.md) si cambia una decisión.
+- [ ] Actualizar documentación si cambia una decisión.
 
 ## Plan perpetuo de QA y optimización (obligatorio si se invoca)
 
@@ -258,4 +258,4 @@ por sesión → checkpoint y aviso de reanudación.
 - respetar una instrucción explícita del usuario de no publicar un cambio.
 
 La documentación de arquitectura, datos, integraciones, testing, deuda y mapa
-está indexada desde [`HANDOFF.md`](HANDOFF.md).
+está indexada desde [`docs/INDEX.md`](docs/INDEX.md).

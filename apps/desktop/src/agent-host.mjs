@@ -179,6 +179,7 @@ export const AGENT_MCP_TOOL_DEFINITIONS = [
                   "collection.update",
                   "product.create",
                   "product.update",
+                  "product.delete",
                   "product.setStatus",
                   "store.archive",
                   "asset.attach",

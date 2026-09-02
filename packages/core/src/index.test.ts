@@ -5,6 +5,7 @@ import {
   StoreProjectV2Schema,
   type StoreSection,
 } from "@solara/project-schema";
+import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { buildCatalogModernProject } from "@solara/project-schema/catalog-modern-template";
 import { referenceStore } from "@solara/project-schema/fixture";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
@@ -56,6 +57,42 @@ describe("reduceProject", () => {
       at: "2026-07-30T11:00:00.000Z",
     });
     expect(restored.products[0]?.status).toBe("active");
+  });
+
+  it("elimina sólo productos archivados y recalcula índices derivados", () => {
+    const source = structuredClone(catalogModernStore);
+    const product = source.products[0];
+    const categoryId = product?.categoryIds[0];
+    const collectionId = product?.collectionIds[0];
+    if (!product || !categoryId || !collectionId) {
+      throw new Error("El fixture debe asignar categoría y colección al primer producto.");
+    }
+
+    const archived = reduceProject(source, {
+      type: "product.archive",
+      productId: product.id,
+      at: timestamp,
+    });
+    const deleted = reduceProject(archived, {
+      type: "product.delete",
+      productId: product.id,
+      at: "2026-07-30T11:00:00.000Z",
+    });
+
+    expect(deleted.products.some((candidate) => candidate.id === product.id)).toBe(false);
+    expect(
+      deleted.categories.find((candidate) => candidate.id === categoryId)?.productIds,
+    ).not.toContain(product.id);
+    expect(
+      deleted.collections.find((candidate) => candidate.id === collectionId)?.productIds,
+    ).not.toContain(product.id);
+    expect(() =>
+      reduceProject(source, {
+        type: "product.delete",
+        productId: product.id,
+        at: timestamp,
+      }),
+    ).toThrow("Sólo se pueden eliminar productos archivados");
   });
 
   it("aplica una importación de catálogo como una sola operación", () => {

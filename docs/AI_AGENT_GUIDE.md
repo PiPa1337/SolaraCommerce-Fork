@@ -131,12 +131,17 @@ original.
 
 El conjunto es cerrado: `store.create`, `store.updateIdentity`,
 `store.updateSeo`, `category.create`, `collection.create`, `product.create`,
-`product.update`, `product.setStatus`, `store.archive`, `section.updateSettings`
-y `asset.attach`.
+`product.update`, `product.setStatus`, `product.delete`, `store.archive`,
+`section.updateSettings` y `asset.attach`.
 
 Los valores válidos de `product.setStatus` son `active`, `hidden` y
 `archived`; no existe un estado `draft`. Para ocultar un producto del sitio
 público sin archivarlo, usar `hidden`.
+
+`product.delete` elimina físicamente un producto del respaldo vigente y exige la
+confirmación literal `"ELIMINAR_PRODUCTO"`. Sólo acepta productos que ya estén
+en estado `archived`; las referencias derivadas de categorías y colecciones se
+recalculan durante la operación.
 
 ### Archivar y restaurar tiendas
 

@@ -1,7 +1,7 @@
 # Deuda de código del editor — informe (T0.5, 2026-08-07)
 
 Informe de la auditoría de deuda del editor del Studio (ola 0 del plan
-[Editor UI/UX](../../../docs/superpowers/plans/2026-08-07-editor-uiux.md)).
+Editor UI/UX, 2026-08-07, eliminado del repo, ver historial de git).
 Método: scan mecánico de selectores CSS (duplicados y muertos), imports sin
 uso, `displayName` y `key` en listas; cada hallazgo se confirmó contra el
 código fuente antes de tocar nada.

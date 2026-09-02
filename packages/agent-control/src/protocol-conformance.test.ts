@@ -26,6 +26,7 @@ const QA_METHODS = [
 const OPERATION_TYPES = [
   "category.setStatus",
   "asset.remove",
+  "product.delete",
   "product.setStatus",
   "store.archive",
 ] as const;

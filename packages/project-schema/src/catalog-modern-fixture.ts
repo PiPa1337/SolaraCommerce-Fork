@@ -816,7 +816,7 @@ export const catalogModernStore = StoreProjectV2Schema.parse({
         actionLabel: "Escribir por WhatsApp",
         actionHref: "/contacto/",
       },
-      motion: motion("fade-up"),
+      motion: motion("none"),
     },
     {
       id: "modo-section-cart",

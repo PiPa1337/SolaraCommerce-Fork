@@ -196,20 +196,17 @@ describe("official module system", () => {
     expect(STORE_THEME_TOKEN_STYLES).toContain("var(--solara-line-height-tight");
   });
 
-  it("hace aparecer la superficie del CTA de novedades junto con su contenido", () => {
+  it("delega el appear del CTA de novedades al motion declarativo", () => {
     const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
     if (!v2Styles) throw new Error("Falta el bloque de estilos catalog-modern-v2");
 
-    expect(v2Styles).toContain(
-      '.cm.v2 [data-solara-module="catalog-newsletter-cta"][data-motion-visible="true"] .catalog-newsletter-inner {',
-    );
-    expect(v2Styles).toMatch(
-      /\.cm\.v2 \[data-solara-module="catalog-newsletter-cta"\]\[data-motion-visible="true"\] \.catalog-newsletter-inner \{[\s\S]*animation: solara-hero-rise[\s\S]*60ms both;/,
+    expect(v2Styles).not.toContain(
+      '.cm.v2 [data-solara-module="catalog-newsletter-cta"][data-motion-visible="true"]',
     );
 
     const reducedMotionStart = v2Styles.indexOf("@media (prefers-reduced-motion: reduce)");
     const reducedMotionStyles = v2Styles.slice(reducedMotionStart);
-    expect(reducedMotionStyles).toContain(
+    expect(reducedMotionStyles).not.toContain(
       '.cm.v2 [data-solara-module="catalog-newsletter-cta"] .catalog-newsletter-inner,',
     );
   });

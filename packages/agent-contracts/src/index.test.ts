@@ -19,6 +19,22 @@ describe("contrato del agente", () => {
     expect(AgentOperationSchema.parse(parsed.operations[1]).type).toBe("product.create");
   });
 
+  it("acepta el borrado físico protegido de un producto archivado", () => {
+    const operation = AgentOperationSchema.parse({
+      type: "product.delete",
+      productId: "product-archived",
+      confirmation: "ELIMINAR_PRODUCTO",
+    });
+    expect(operation.type).toBe("product.delete");
+    expect(() =>
+      AgentOperationSchema.parse({
+        type: "product.delete",
+        productId: "product-archived",
+        confirmation: "BORRAR",
+      }),
+    ).toThrow();
+  });
+
   it("rechaza comandos arbitrarios y requests sin método", () => {
     expect(() => AgentOperationSchema.parse({ type: "project.patch", path: "x" })).toThrow();
     expect(() => AgentRequestSchema.parse({ id: 1 })).toThrow();

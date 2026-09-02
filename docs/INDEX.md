@@ -18,7 +18,6 @@ Los documentos históricos/auditorías cerradas viven en `docs/archive/`.
 | `STOREFRONT_V2.md` | Familia visual V2 y compatibilidad V1 | Trabajo de módulos/tema |
 | `backup-and-recovery.md` | Respaldo `.solara.json` y recovery drafts | Flujos de guardado |
 | `product-spec.md` | Spec de producto resumida | Contexto de negocio |
-| `current-phase.md` | Fase actual del desarrollo | Orientación de sesión |
 | `PERPETUAL_PLAN_APP_10X.md` | Plan QA perpetuo activo | Invocación "plan perpetuo" |
 | `PERPETUAL_QA_BACKLOG.md` + `perpetual-state.json` | Backlog y estado del run perpetuo | Continuar el ciclo QA |
 | `release-candidate.md` | Checklist de release | Cierre de versión |
@@ -31,5 +30,5 @@ Los documentos históricos/auditorías cerradas viven en `docs/archive/`.
 ## Regla de archivo
 
 Las auditorías puntuales y planes cerrados se mueven a `docs/archive/`
-(ej: `PERPETUAL_PLAN_10X.md`, auditorías fechadas). No se borran: quedan
+(ej: auditorías fechadas, revisiones arquitectónicas). No se borran: quedan
 como referencia histórica fuera del nivel principal.

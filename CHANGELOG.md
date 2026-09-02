@@ -1,3 +1,14 @@
+### CTA de novedades sin appear por defecto (2026-09-02)
+
+- El módulo `catalog-newsletter-cta` usa `motion: none` desde la plantilla y
+  normaliza proyectos V2 existentes; se elimina su coreografía CSS específica.
+
+### Borrado físico protegido de productos (2026-09-02)
+
+- Se agrega `product.delete` al protocolo del agente. Sólo elimina productos
+  archivados, exige confirmación literal y recalcula las referencias derivadas
+  de categorías y colecciones.
+
 ### Menú móvil a pantalla completa con header scrolleado y hero 9:16 nítido (2026-09-02)
 
 - **Menú móvil (V2)**: en Catalog Modern V2 el header scrolleado aplicaba

@@ -164,6 +164,11 @@ export const AgentOperationSchema = z.discriminatedUnion("type", [
     }),
   }),
   z.object({
+    type: z.literal("product.delete"),
+    productId: SafeIdSchema,
+    confirmation: z.literal("ELIMINAR_PRODUCTO"),
+  }),
+  z.object({
     type: z.literal("product.setStatus"),
     productId: SafeIdSchema,
     status: z.enum(["active", "hidden", "archived"]),
