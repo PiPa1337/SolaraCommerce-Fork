@@ -5331,6 +5331,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
       color: var(--catalog-paper);
     }
     .cm.v2 .catalog-hero-page .catalog-hero-copy .catalog-hero-body { color: var(--catalog-paper); }
+    .cm.v2 .catalog-hero-page .catalog-hero-copy .catalog-eyebrow { color: color-mix(in oklab, var(--solara-accent) 24%, var(--catalog-paper)); font-weight: 700; }
     .cm.v2 .catalog-hero-page .catalog-hero-background { display: none; }
     .cm.v2 .catalog-hero-page .catalog-hero-benefits--copy { display: none; }
     .cm.v2 .catalog-hero-page .catalog-hero-benefits--band { display: grid; grid-template-columns: 1fr; gap: .75rem; width: min(calc(100% - 1.5rem), var(--catalog-v2-wide)); margin: .75rem auto 1.5rem; padding: 0; }

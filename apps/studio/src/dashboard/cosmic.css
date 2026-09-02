@@ -650,13 +650,36 @@
 }
 
 .dashboard-store-detail__close {
-  flex: 0 0 auto;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--cosmic-line-strong);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.04);
   color: var(--cosmic-muted);
   margin-left: 8px;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 120ms ease;
 }
 
 .dashboard-store-detail__close:hover {
+  border-color: rgb(231 170 61 / 0.45);
+  background: rgb(231 170 61 / 0.09);
+  color: var(--cosmic-amber);
+}
+
+.dashboard-store-detail__close:focus-visible {
+  border-color: rgb(231 170 61 / 0.45);
+  outline: 2px solid var(--cosmic-amber);
+  outline-offset: 2px;
   color: var(--cosmic-ink);
+}
+
+.dashboard-store-detail__close:active {
+  transform: translateY(1px) scale(0.97);
 }
 
 .dashboard-store-detail__mark {
@@ -914,25 +937,35 @@
 }
 
 .dashboard-calculator-dialog__close.icon-button {
-  flex: 0 0 44px;
-  width: 44px;
-  height: 44px;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
   border: 1px solid var(--cosmic-line-strong);
   border-radius: 12px;
-  background: rgb(255 255 255 / 0.035);
+  background: rgb(255 255 255 / 0.04);
   color: var(--cosmic-muted);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 120ms ease;
 }
 
 .dashboard-calculator-dialog__close.icon-button:hover {
-  border-color: rgb(231 170 61 / 0.5);
-  background: rgb(231 170 61 / 0.08);
+  border-color: rgb(231 170 61 / 0.45);
+  background: rgb(231 170 61 / 0.09);
   color: var(--cosmic-amber);
 }
 
 .dashboard-calculator-dialog__close.icon-button:focus-visible {
+  border-color: rgb(231 170 61 / 0.45);
   outline: 2px solid var(--cosmic-amber);
   outline-offset: 2px;
   color: var(--cosmic-ink);
+}
+
+.dashboard-calculator-dialog__close.icon-button:active {
+  transform: translateY(1px) scale(0.97);
 }
 
 .dashboard-calculator-dialog__base {
