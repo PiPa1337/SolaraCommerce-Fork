@@ -1,3 +1,8 @@
+### Contrato de datos: la portable es la única ubicación de la data real (2026-09-02)
+
+- **Causa**: los agentes confundían dónde buscar la data: inspeccionaban el código y el `proyectos/` del repo en lugar de la carpeta portable donde el usuario trabaja, y el paso 2 de `create-portable-distribution.mjs` copiaba el `proyectos/` del checkout (tiendas de prueba de la IA en modo dev) dentro de la portable, con riesgo de contaminar la data real.
+- **Fix**: nueva sección "Dónde vive la data real" en `AGENTS.md` (data del usuario sólo en `.release/portable/SolaraCommerce-Portable/proyectos/`; la IA elige la app para probar código; escrituras de tiendas por canal del agente o rebuild), marcador `proyectos/LEEME.md` comprometido con excepción en `.gitignore`, nota en `docs/PORTABILITY.md` y eliminación de la copia automática repo → portable en el empaquetado (las tiendas preservadas del portable anterior se restauran igual; verificado con `portable:smoke`).
+
 ### Eyebrow del hero V2 como pill del tema en mobile (2026-09-02)
 
 - **Causa**: en mobile el antetítulo del hero (`RM DESCARTABLES`) quedaba como texto plano `var(--solara-accent)` sobre la imagen con overlay, y el primer intento (`color-mix` 24% accent + paper) lo volvió pálido: perdía contraste sobre la zona clara del degradado. Además los reintentos no eran visibles porque la app se ejecuta desde el portable EXE (`SolaraCommerce-Portable/`), que conserva su propio `proyectos/` y empaqueta el CSS en `resources/app.asar` al momento del `desktop:package`; las correcciones posteriores solo llegaban al `dist` del repo.
