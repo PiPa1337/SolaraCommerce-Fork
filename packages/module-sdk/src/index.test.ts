@@ -137,8 +137,9 @@ describe("HTML safety", () => {
     const html = renderImage(project, asset.id, { responsiveMode: "cover" });
 
     expect(html).toContain(
-      '<source type="image/webp" media="(max-width: 1023px)" srcset="/assets/foto-768.webp 768w, /assets/foto-1800.webp 1800w"',
+      '<source type="image/webp" media="(max-width: 1023px)" srcset="/assets/foto-1800.webp 1800w"',
     );
+    expect(html).not.toContain("foto-768.webp 768w");
   });
 
   it("conserva AVIF en el MIME de picture cuando la ruta lo declara", () => {

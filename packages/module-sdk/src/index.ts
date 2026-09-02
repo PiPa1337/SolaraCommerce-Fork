@@ -595,18 +595,21 @@ export function renderImage(
     return distance || right.width - left.width;
   })[0];
   const sourceBlocks: string[] = [];
-  if (intermediate) {
-    const responsiveSrcset = [
-      `${escapeAttribute(intermediate.source)} ${intermediate.width}w`,
-      ...(options.responsiveMode === "cover" &&
-      primarySource &&
-      intermediate.mime === primaryMime &&
-      primarySource !== intermediate.source
-        ? [`${escapeAttribute(primarySource)} ${asset.width}w`]
-        : []),
-    ].join(", ");
+  // Un hero 9:16 con object-fit: cover necesita la fuente completa: el navegador
+  // calcula `sizes` contra la columna visible, pero la imagen se amplía por su
+  // altura y una variante intermedia puede quedar pixelada.
+  const useCoverSource = options.responsiveMode === "cover" && Boolean(primarySource);
+  const mediaSources = useCoverSource
+    ? [
+        { mime: primaryMime, source: primarySource, width: asset.width },
+        ...(intermediate && intermediate.mime !== primaryMime ? [intermediate] : []),
+      ]
+    : intermediate
+      ? [intermediate]
+      : [];
+  for (const mediaSource of mediaSources) {
     sourceBlocks.push(
-      `<source type="${intermediate.mime}" media="(max-width: 1023px)" srcset="${responsiveSrcset}"${sizes}>`,
+      `<source type="${mediaSource.mime}" media="(max-width: 1023px)" srcset="${escapeAttribute(mediaSource.source)} ${mediaSource.width}w"${sizes}>`,
     );
   }
   if (primarySource && (primarySource !== fallbackSource || intermediate)) {

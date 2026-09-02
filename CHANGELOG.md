@@ -1,3 +1,22 @@
+### Menú móvil a pantalla completa con header scrolleado y hero 9:16 nítido (2026-09-02)
+
+- **Menú móvil (V2)**: en Catalog Modern V2 el header scrolleado aplicaba
+  `backdrop-filter: blur(14px)` directo sobre `[data-solara-module="catalog-header"]`
+  (`packages/modules/src/styles.ts`); un valor de `backdrop-filter` distinto de
+  `none` convierte al header en containing block de los descendientes
+  `position: fixed`, así que el menú móvil (fijo y dentro del header) quedaba
+  recortado al alto del header (~60px) al abrirlo después de scrollear. El blur
+  ahora vive en una capa `::before` (`position: absolute; z-index: -1`), mismo
+  efecto visual sin crear containing block. E2E nuevo: `V2 abre el menú móvil a
+  pantalla completa aunque el header esté scrolleado`.
+- **Hero 9:16 en mobile**: `renderImage` (`packages/module-sdk/src/index.ts`) con
+  `responsiveMode: "cover"` ahora sirve la fuente completa en el `<source>` de
+  media ≤1023px en lugar de la intermedia 768w: con `object-fit: cover` la
+  variante intermedia quedaba pixelada al ampliarse por altura. El copy del hero
+  page móvil usa `--catalog-paper` sólido para contraste estable sobre la foto.
+  Test unitario de module-sdk y e2e `V2 conserva el encuadre 9:16 y llena la
+  media del hero` actualizados al nuevo contrato.
+
 ### Corrige el botón "Agregar al carrito" en mobile (2026-09-02)
 
 - **Causa**: en PDP mobile (≤767px) `.cm.v2 .catalog-product-add` era

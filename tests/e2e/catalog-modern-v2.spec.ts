@@ -417,6 +417,7 @@ test("V2 conserva el encuadre 9:16 y llena la media del hero", async ({ page }, 
         image: { width: imageRect.width, height: imageRect.height },
         content: { width: contentRect.width, height: contentRect.height },
         natural: { width: image.naturalWidth, height: image.naturalHeight },
+        currentSrc: image.currentSrc,
         objectFit: getComputedStyle(image).objectFit,
         position: getComputedStyle(media).position,
       };
@@ -429,7 +430,8 @@ test("V2 conserva el encuadre 9:16 y llena la media del hero", async ({ page }, 
     expect(Math.abs(metrics.image.height - metrics.content.height)).toBeLessThanOrEqual(1);
     expect(metrics.objectFit).toBe("cover");
     if (viewport.width < 1024) {
-      expect(metrics.natural.width).toBeGreaterThan(768);
+      expect(metrics.currentSrc).toContain("fixture-modo-sur-hero.webp");
+      expect(metrics.currentSrc).not.toContain("-768.webp");
     }
     await page.screenshot({
       path: testInfo.outputPath(`hero-media-${viewport.width}.png`),
