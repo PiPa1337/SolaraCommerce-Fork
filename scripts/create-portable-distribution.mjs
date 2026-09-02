@@ -1,12 +1,13 @@
 /**
  * Convierte el directorio `win-unpacked` de electron-builder en una carpeta
- * portable estable. Sólo copia datos de `proyectos/` si ya existen; los builds
- * y el runtime permanecen fuera del repositorio gracias a `.gitignore`.
+ * portable estable. El `proyectos/` del checkout no se copia: es la zona de
+ * pruebas de la IA en modo desarrollo; la data real del usuario vive en la
+ * propia carpeta portable. Los builds y el runtime permanecen fuera del
+ * repositorio gracias a `.gitignore`.
  *
  * Preserva el estado del portable anterior: las tiendas guardadas por la app
- * (versión de manifest más nueva que la del repo) y `.solara-runtime/` se
- * conservan a través de cada rebuild. Así un `desktop:package` nunca vuelve a
- * perder guardados del usuario.
+ * y `.solara-runtime/` se conservan a través de cada rebuild. Así un
+ * `desktop:package` nunca vuelve a perder guardados del usuario.
  */
 
 import { createHash } from "node:crypto";
@@ -196,13 +197,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   await mkdir(join(destination, "proyectos"), { recursive: true });
   await mkdir(join(destination, ".solara-runtime"), { recursive: true });
 
-  // 2. Copiar las tiendas del repo.
-  const sourceProjects = resolve(root, "proyectos");
-  if (existsSync(sourceProjects)) {
-    await cp(sourceProjects, join(destination, "proyectos"), { recursive: true, force: true });
-  }
-
-  // 3. Reemplazar por las versiones más nuevas guardadas en el portable.
+  // 2. Restaurar las tiendas preservadas del portable anterior: la data real
+  // del usuario vive sólo en la portable; el proyectos/ del repo (zona de
+  // pruebas de la IA) nunca viaja a la distribución.
   if (existsSync(preservedProyectos)) {
     const entries = await readdir(preservedProyectos, { withFileTypes: true });
     for (const entry of entries) {
@@ -222,7 +219,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     }
   }
 
-  // 4. Restaurar el perfil/runtime del portable.
+  // 3. Restaurar el perfil/runtime del portable.
   if (existsSync(preservedRuntime)) {
     await replaceDirectory(preservedRuntime, join(destination, ".solara-runtime"));
   }
