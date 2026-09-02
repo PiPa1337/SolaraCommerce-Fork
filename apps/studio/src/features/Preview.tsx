@@ -52,10 +52,12 @@ body::-webkit-scrollbar {
 }
 </style>`;
 
-const PREVIEW_PERF_STYLE = `<style data-solara-preview-perf>
+export const PREVIEW_PERF_STYLE = `<style data-solara-preview-perf>
 html { scroll-behavior: auto !important; }
-/* Los drawers son overlays: no deben quedar atrapados en paint containment. */
-[data-solara-module]:not([data-solara-module="catalog-cart-drawer"]):not([data-solara-module="cart-drawer"]),
+/* Los drawers son overlays: no deben quedar atrapados en paint containment.
+   Los headers también: sus dropdowns de navegación cuelgan fuera de la caja
+   del módulo y el menú móvil del catálogo es position: fixed. */
+[data-solara-module]:not([data-solara-module="catalog-cart-drawer"]):not([data-solara-module="cart-drawer"]):not([data-solara-module="catalog-header"]):not([data-solara-module="editorial-header"]),
 .catalog-hero, .catalog-category-bento, .catalog-product-grid {
   contain: layout paint;
   content-visibility: auto;

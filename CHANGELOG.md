@@ -1,3 +1,32 @@
+### Menú hamburguesa a pantalla completa en todo el rango móvil (2026-09-02)
+
+- **Causa**: el rediseño del menú responsive (2026-08-30) dejó el rango
+  481-767 px con un panel compacto de 480 px centrado; en viewports de ese
+  rango (por ejemplo 755 px) el menú no cubría la pantalla y parecía roto.
+- **Fix**: se elimina la excepción de panel compacto en
+  `packages/modules/src/styles.ts`; el menú móvil es ahora una hoja de
+  pantalla completa en todo el rango ≤767 px. El e2e
+  `V2 abre el menu movil a pantalla completa en todo el rango mobil con foco
+  visible` verifica ancho, alto y origen (0,0) del panel en 320/390/600/755/767
+  px.
+
+### Mega-menú de categorías invisible en el preview del editor (2026-09-02)
+
+- **Causa**: el estilo de rendimiento del preview (`PREVIEW_PERF_STYLE` en
+  `apps/studio/src/features/Preview.tsx`) aplicaba `contain: layout paint` a
+  todos los `[data-solara-module]` excepto los drawers de carrito. El mega-menú
+  de la navbar (`catalog-header`) y el dropdown de navegación
+  (`editorial-header`) son overlays absolutos que cuelgan por debajo de la caja
+  del módulo, así que `contain: paint` los recortaba y quedaban invisibles; el
+  menú móvil del catálogo (`position: fixed` dentro del header) quedaba atrapado
+  por el containment de layout. El sitio exportado nunca recibe ese estilo, por
+  eso sólo fallaba dentro del editor.
+- **Fix**: los headers con menús overlay quedan excluidos del paint containment
+  del preview, mismo tratamiento que ya tenían los drawers. Test unitario del
+  selector en `Preview.test.ts` y e2e de regresión
+  `tests/e2e/preview-navbar.spec.ts` (verifica hit-testing real dentro del
+  mega-menú abierto en el preview).
+
 ### CTA de novedades sin appear por defecto (2026-09-02)
 
 - El módulo `catalog-newsletter-cta` usa `motion: none` desde la plantilla y

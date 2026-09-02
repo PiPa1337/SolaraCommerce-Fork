@@ -1,6 +1,6 @@
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
-import { addPreviewNavigationBridge } from "./Preview";
+import { addPreviewNavigationBridge, PREVIEW_PERF_STYLE } from "./Preview";
 
 class FakeElement {
   readonly attributes: Set<string>;
@@ -92,5 +92,22 @@ describe("puente de navegación del Preview", () => {
         session: "preview-session",
       },
     ]);
+  });
+});
+
+describe("estilo de rendimiento del Preview", () => {
+  it("no atrapa en paint containment los headers con menús overlay (SF navbar)", () => {
+    const selector = PREVIEW_PERF_STYLE.match(/([^{}]+)\{\s*contain: layout paint/);
+    expect(selector).not.toBeNull();
+    expect(selector?.[1]).toContain(
+      ':not([data-solara-module="catalog-header"]):not([data-solara-module="editorial-header"])',
+    );
+  });
+
+  it("conserva el paint containment para los módulos sin overlays", () => {
+    const selector = PREVIEW_PERF_STYLE.match(/([^{}]+)\{\s*contain: layout paint/);
+    expect(selector?.[1]).toContain(
+      '[data-solara-module]:not([data-solara-module="catalog-cart-drawer"])',
+    );
   });
 });
