@@ -49,6 +49,32 @@ Los fixtures pequeños verifican render visual; `catalogScaleStore` verifica 50
 productos, jerarquía y 60 variantes; el benchmark de core exporta
 `catalog-modern-v2` con 2.000 productos sin versionar un fixture masivo.
 
+### Auditoría read-only de RM Descartables
+
+La auditoría integral de rendimiento usa el snapshot actual de RM Descartables
+como fixture externo y no guarda, migra, exporta ni modifica la tienda original.
+El loader sólo abre `manifest.json` y `manifest.current.projectPath`; la carpeta
+temporal del portable contiene únicamente una copia del runtime, el manifest y
+ese snapshot. Los reportes machine-readable se escriben en
+`test-results/performance/rm-descartables/`, que no se versiona.
+
+```powershell
+corepack pnpm audit:performance:rm:readonly  # mock administrado writable:false
+corepack pnpm audit:performance:rm:node      # Node/exporter, 1 fría + 5 calientes
+corepack pnpm audit:performance:rm:browser   # Studio + storefront, Chromium aislado
+corepack pnpm audit:performance:rm:portable  # portable en carpeta temporal aislada
+corepack pnpm audit:performance:rm:merge     # agrega las capas en report.json
+corepack pnpm audit:performance:rm           # build + todas las capas + merge
+```
+
+La auditoría mide rutas del preview y storefront, feeds, bundles, recursos,
+requests, imágenes, long tasks, CDP, heap, RSS, CPU de Node, storage de lectura,
+reaperturas y reposo visible/oculto. Antes y después compara hash SHA-256,
+tamaño, versión, fechas y el inventario metadata-only de RM. Una optimización
+posterior debe repetir el mismo instrumento y demostrar paridad antes de
+considerarse segura. `benchmark:export` sigue siendo un gate separado: no se
+sube su límite para hacer pasar la auditoría.
+
 ### Playwright
 
 `test:e2e` compila Studio y ejecuta Chromium (8 workers por defecto en 9800X3D, override con `PLAYWRIGHT_WORKERS=6`) contra un servidor local. En CI el
@@ -126,7 +152,7 @@ del draft lo requiere (la validación actual exige sólo la marca DEBUG).
 
 ## Qué probar ante cada tipo de cambio
 
-> Validación diaria = `check:quick` + `test:e2e:smoke` (~2-3 min). Cierre/CI = `check:full` + `test:e2e` full + `benchmark:export` si toca exporter. Release (3 browsers + desktop:package) solo on-demand; Node 22 es la referencia, no un bloqueo local.
+> Validación diaria = `check:quick` + `test:e2e:smoke` (~2-3 min). Cierre/CI = `check:full` + `test:e2e` full + `benchmark:export` si toca exporter. Release (3 browsers + desktop:package) solo on-demand; Node 24.x es el único runtime soportado.
 
 | Cambio | Mínimo (quick) | Cierre recomendado |
 | --- | --- | --- |
@@ -141,7 +167,12 @@ del draft lo requiere (la validación actual exige sólo la marca DEBUG).
 
 - Un test E2E fallido deja reportes en `playwright-report/` y traces según la
   configuración de Playwright.
-- `test:e2e:release` requiere los navegadores instalados. Node 22 sigue siendo la referencia de CI, pero Node 24 puede ejecutar la matriz con una advertencia; no forma parte de `check:quick` y se usa sólo on-demand al cierre.
+- Fuera de CI, `check:quick` y `benchmark:export` operan automáticamente en modo
+  `advisory`: los diagnósticos de formato y el exceso de bytes se informan sin
+  bloquear el flujo. `CI=true` o `SOLARA_VALIDATION_MODE=strict` conserva el
+  gate estricto.
+- `test:e2e:release` requiere Node 24.x y los navegadores instalados. La salida
+  identifica el runtime validado.
 - El servidor de tests usa loopback; no debe apuntarse a una tienda publicada.
 - Validación rápida diaria: `pnpm check:quick && pnpm test:e2e:smoke` (~2-3 min en 9800X3D, 8 workers). Cierre: `pnpm check && pnpm test:e2e`.
 - Workers Playwright por defecto 8 (env `PLAYWRIGHT_WORKERS` para limitar a 6 si hay lag). Antes era 4.
@@ -225,5 +256,6 @@ fuente.
 Evidencia de la sesión 2026-08-26: `check:quick` 6/6, smoke 129/129,
 `check:runtime-serialization` 4/4 (fuera del sandbox por Access Denied de
 esbuild), budget público con bytes no cero, benchmark 2.000 productos dentro de
-48 MiB y los tres E2E portable (smoke, UI nueva y agente) verdes. Node 22 y el
-full E2E quedan pendientes/bloqueados en este host.
+48 MiB y los tres E2E portable (smoke, UI nueva y agente) verdes. La matriz
+release completa bajo Node 24.x y el full E2E quedan pendientes/bloqueados en
+este host.

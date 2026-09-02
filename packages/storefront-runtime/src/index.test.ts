@@ -74,6 +74,12 @@ describe("storefront runtime", () => {
     expect(url).toBe("https://wa.me/5491123456789?text=Pedido%0AManta");
   });
 
+  it("compara el carrito sin serializarlo para detectar reconciliaciones reales", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("function cartLinesEqual");
+    expect(STOREFRONT_RUNTIME_JS).toContain("if (!cartLinesEqual(external, cart))");
+    expect(STOREFRONT_RUNTIME_JS).toContain("const changed = !cartLinesEqual(reconciled, cart)");
+  });
+
   it("usa observadores sin listeners táctiles ni scrollY para el estado de scroll", () => {
     expect(STOREFRONT_RUNTIME_JS).not.toContain("scrollY");
     expect(STOREFRONT_RUNTIME_JS).not.toContain('addEventListener("wheel"');

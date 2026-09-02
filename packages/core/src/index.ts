@@ -10,7 +10,6 @@ import {
   type Collection,
   type CollectionId,
   CollectionSchema,
-  getCategoryProductIds,
   type Product,
   type ProductId,
   ProductSchema,
@@ -226,19 +225,83 @@ export function adjustPrice(price: number, adjustment: PriceAdjustment): number 
   return result;
 }
 
-function synchronizeAssignments(project: StoreProjectV1): StoreProjectV1 {
-  const categories = project.categories.map((category) => ({
-    ...category,
-    productIds: getCategoryProductIds(project, category.id),
-  }));
-  const collections = project.collections.map((collection) => ({
-    ...collection,
-    productIds: project.products
-      .filter((product) => product.collectionIds.includes(collection.id))
-      .map((product) => product.id),
-  }));
+function sameValue(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (typeof left !== "object" || left === null || typeof right !== "object" || right === null) {
+    return false;
+  }
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
+    return left.every((value, index) => sameValue(value, right[index]));
+  }
+  const leftRecord = left as Record<string, unknown>;
+  const rightRecord = right as Record<string, unknown>;
+  const leftKeys = Object.keys(leftRecord);
+  const rightKeys = Object.keys(rightRecord);
+  if (leftKeys.length !== rightKeys.length) return false;
+  return leftKeys.every(
+    (key) => Object.hasOwn(rightRecord, key) && sameValue(leftRecord[key], rightRecord[key]),
+  );
+}
 
-  return { ...project, categories, collections };
+function synchronizeAssignments(project: StoreProjectV1): StoreProjectV1 {
+  const categoryById = new Map<CategoryId, Category>(
+    project.categories.map((category) => [category.id, category]),
+  );
+  const categoryProductIds = new Map<CategoryId, ProductId[]>();
+  const categoryScopeCache = new Map<CategoryId, readonly CategoryId[]>();
+  const categoryScope = (categoryId: CategoryId): readonly CategoryId[] => {
+    const cached = categoryScopeCache.get(categoryId);
+    if (cached) return cached;
+    const scope = new Set<CategoryId>([categoryId]);
+    const seen = new Set<CategoryId>([categoryId]);
+    let current = categoryById.get(categoryId)?.parentId;
+    while (current && !seen.has(current)) {
+      seen.add(current);
+      scope.add(current);
+      current = categoryById.get(current)?.parentId;
+    }
+    const resolved = [...scope];
+    categoryScopeCache.set(categoryId, resolved);
+    return resolved;
+  };
+
+  const collectionProductIds = new Map<CollectionId, ProductId[]>();
+  for (const product of project.products) {
+    const productCategoryScope = new Set<CategoryId>();
+    for (const categoryId of product.categoryIds) {
+      for (const id of categoryScope(categoryId)) productCategoryScope.add(id);
+    }
+    productCategoryScope.forEach((categoryId) => {
+      const ids = categoryProductIds.get(categoryId) ?? [];
+      ids.push(product.id);
+      categoryProductIds.set(categoryId, ids);
+    });
+    for (const collectionId of product.collectionIds) {
+      const ids = collectionProductIds.get(collectionId) ?? [];
+      ids.push(product.id);
+      collectionProductIds.set(collectionId, ids);
+    }
+  }
+
+  let categoriesChanged = false;
+  const categories = project.categories.map((category) => {
+    const productIds = categoryProductIds.get(category.id) ?? [];
+    if (sameValue(category.productIds, productIds)) return category;
+    categoriesChanged = true;
+    return { ...category, productIds };
+  });
+  let collectionsChanged = false;
+  const collections = project.collections.map((collection) => {
+    const productIds = collectionProductIds.get(collection.id) ?? [];
+    if (sameValue(collection.productIds, productIds)) return collection;
+    collectionsChanged = true;
+    return { ...collection, productIds };
+  });
+
+  return categoriesChanged || collectionsChanged
+    ? { ...project, categories, collections }
+    : project;
 }
 
 function activateCatalogModernDefaults(project: StoreProjectV1): StoreProjectV1 {
@@ -304,9 +367,8 @@ function updateSelectedProducts(
     return project;
   }
 
-  const missing = [...selected].filter(
-    (productId) => !project.products.some((product) => product.id === productId),
-  );
+  const existingProductIds = new Set(project.products.map((product) => product.id));
+  const missing = [...selected].filter((productId) => !existingProductIds.has(productId));
   if (missing.length > 0) {
     throw new Error(`Productos inexistentes: ${missing.join(", ")}.`);
   }
@@ -318,7 +380,7 @@ function updateSelectedProducts(
       return product;
     }
     const candidate = update(product);
-    if (JSON.stringify(candidate) === JSON.stringify(product)) {
+    if (sameValue(candidate, product)) {
       return product;
     }
     changed = true;
@@ -376,6 +438,7 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
       if (!category) throw new Error(`La categoría no existe: ${command.categoryId}.`);
       const candidate = CategorySchema.parse({ ...category, ...command.changes });
       assertAvailableSlug(candidate.slug, project.categories, category.id, "categoría");
+      if (sameValue(candidate, category)) return project;
       return parseProject(
         synchronizeAssignments({
           ...project,
@@ -437,6 +500,7 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
       if (!collection) throw new Error(`La colección no existe: ${command.collectionId}.`);
       const candidate = CollectionSchema.parse({ ...collection, ...command.changes });
       assertAvailableSlug(candidate.slug, project.collections, collection.id, "colección");
+      if (sameValue(candidate, collection)) return project;
       return parseProject(
         synchronizeAssignments({
           ...project,
@@ -532,7 +596,7 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
         project,
         command.products.map((product) => ProductSchema.parse(product)),
       );
-      if (JSON.stringify(products) === JSON.stringify(project.products)) {
+      if (sameValue(products, project.products)) {
         return project;
       }
       return parseProject(
@@ -564,7 +628,7 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
           }),
         ),
       );
-      return JSON.stringify(next) === JSON.stringify(project) ? project : next;
+      return sameValue(next, project) ? project : next;
     }
   }
 }
@@ -814,7 +878,7 @@ export function importProductsCsv(csv: string): Product[] {
       createdAt: record.created_at,
       updatedAt: record.updated_at,
     };
-    if (existing !== undefined && JSON.stringify(existing.base) !== JSON.stringify(base)) {
+    if (existing !== undefined && !sameValue(existing.base, base)) {
       throw new Error(`Las filas del producto ${record.product_id} no comparten los mismos datos.`);
     }
     const group = existing ?? {
@@ -1067,7 +1131,7 @@ export function importCatalogCsv(csv: string, context: CatalogCsvContext): Produ
       updatedAt: record.actualizado_en.trim() || context.defaultTimestamp || "",
     };
     const existing = grouped.get(productId);
-    if (existing && JSON.stringify(existing.base) !== JSON.stringify(base)) {
+    if (existing && !sameValue(existing.base, base)) {
       throw new Error(`Las filas del producto ${productId} no comparten los mismos datos.`);
     }
     const available = record.disponible.trim() !== "false";

@@ -233,6 +233,32 @@ export function reconcileCartLines(
   return [...merged.values()];
 }
 
+/** Compara sólo los campos que tienen significado comercial en el carrito. */
+function cartLinesEqual(
+  left: readonly StoredCartLine[],
+  right: readonly StoredCartLine[],
+): boolean {
+  if (left === right) return true;
+  if (left.length !== right.length) return false;
+  return left.every((line, index) => {
+    const other = right[index];
+    return (
+      other !== undefined &&
+      line.productId === other.productId &&
+      line.variantId === other.variantId &&
+      line.title === other.title &&
+      line.variantTitle === other.variantTitle &&
+      line.sku === other.sku &&
+      line.unitPrice === other.unitPrice &&
+      line.quantity === other.quantity &&
+      line.imageUrl === other.imageUrl &&
+      line.imageWidth === other.imageWidth &&
+      line.imageHeight === other.imageHeight &&
+      line.available === other.available
+    );
+  });
+}
+
 export function parseCart(stored: unknown): StoredCartLine[] {
   if (!Array.isArray(stored)) return [];
   return stored.filter((line): line is StoredCartLine => {
@@ -785,7 +811,7 @@ function storefrontBoot(): void {
     window.addEventListener("storage", (event) => {
       if (event.key !== storageKey && event.key !== backupKey) return;
       const external = readStoredCart();
-      if (JSON.stringify(external) !== JSON.stringify(cart)) {
+      if (!cartLinesEqual(external, cart)) {
         cart = external;
         renderCart(false);
       }
@@ -806,7 +832,7 @@ function storefrontBoot(): void {
       return;
     }
     const reconciled = reconcileCartLines(cart, catalog);
-    const changed = JSON.stringify(reconciled) !== JSON.stringify(cart);
+    const changed = !cartLinesEqual(reconciled, cart);
     cart = reconciled;
     renderCart(changed);
   };
@@ -2185,6 +2211,7 @@ const RUNTIME_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unk
   ["normalizeCartQuantity", normalizeCartQuantity],
   ["validCatalogIndexEntry", validCatalogIndexEntry],
   ["reconcileCartLines", reconcileCartLines],
+  ["cartLinesEqual", cartLinesEqual],
   ["formatMoney", formatMoney],
 ];
 

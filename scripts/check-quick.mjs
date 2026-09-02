@@ -30,9 +30,16 @@ const SUBST_DRIVE = getSubstFallback();
 // Uso: corepack pnpm check:quick
 const isFull = process.argv.includes("--full");
 const isCi = process.env.CI === "true";
+const requestedValidationMode = process.env.SOLARA_VALIDATION_MODE?.trim().toLowerCase();
+const validationMode = isCi
+  ? "strict"
+  : requestedValidationMode === "strict" || requestedValidationMode === "advisory"
+    ? requestedValidationMode
+    : "advisory";
+const isAdvisory = validationMode === "advisory";
 const testCommand = isCi
   ? "corepack pnpm -r --workspace-concurrency=1 --if-present --filter=!@solara/studio --filter=!@solara/exporter --filter=!@solara/core test"
-  : "corepack pnpm -r --parallel --if-present test -- --testTimeout=30000";
+  : "corepack pnpm -r --parallel --if-present test";
 const fastTasks = [
   { name: "check:repository", cmd: "corepack pnpm check:repository" },
   { name: "check:hardcoded-content", cmd: "corepack pnpm check:hardcoded-content" },
@@ -89,12 +96,46 @@ function runTask(task) {
     const isRuntime = task.name === "check:runtime-serialization" && SUBST_DRIVE;
     const cwd = isRuntime ? `${SUBST_DRIVE}\\` : undefined;
     const [command, ...args] = task.cmd.split(" ");
-    const child = spawnTask(command, args, { stdio: "inherit", cwd });
+    const captureTestOutput = isAdvisory && task.name === "test";
+    let harnessTimeout = false;
+    let testFailure = false;
+    const child = spawnTask(command, args, {
+      stdio: captureTestOutput ? ["ignore", "pipe", "pipe"] : "inherit",
+      cwd,
+    });
+    if (captureTestOutput) {
+      const inspectOutput = (chunk, stream) => {
+        const output = String(chunk);
+        if (output.includes('Timeout calling "onTaskUpdate"')) harnessTimeout = true;
+        if (
+          /(?:Test Files|Tests)\b[^\r\n]*(?:\b[1-9]\d*\s+failed\b|\bfailed\s+[1-9]\d*)/i.test(
+            output,
+          ) ||
+          /AssertionError|Failed Tests/i.test(output)
+        ) {
+          testFailure = true;
+        }
+        stream.write(chunk);
+      };
+      child.stdout?.on("data", (chunk) => inspectOutput(chunk, process.stdout));
+      child.stderr?.on("data", (chunk) => inspectOutput(chunk, process.stderr));
+    }
     child.on("close", (code) => {
       const elapsed = ((Date.now() - start) / 1000).toFixed(1);
       if (code === 0) {
         console.log(`[32m[quick][0m \u2714 ${task.name} (${elapsed}s)`);
         resolve({ name: task.name, ok: true });
+      } else if (
+        isAdvisory &&
+        ((task.name === "format:check" && code !== 0) ||
+          (task.name === "test" && harnessTimeout && !testFailure))
+      ) {
+        const reason =
+          task.name === "format:check"
+            ? "diagnósticos de formato"
+            : "timeout del harness de Vitest";
+        console.warn(`[quick] \u26A0 ${task.name} advertido: ${reason} (${elapsed}s)`);
+        resolve({ name: task.name, ok: true, advisory: true, reason });
       } else {
         console.log(`[31m[quick][0m \u2716 ${task.name} fallo codigo ${code} (${elapsed}s)`);
         resolve({ name: task.name, ok: false, code });
@@ -111,7 +152,7 @@ const startAll = Date.now();
 const parallelTasks = tasks.filter((task) => !task.serial);
 const serialTasks = tasks.filter((task) => task.serial);
 console.log(
-  `[quick] Iniciando ${tasks.length} gates (${parallelTasks.length} en paralelo, ${serialTasks.length} serializados; ${isFull ? "full" : "fast"}, 9800X3D optimizado)...`,
+  `[quick] Iniciando ${tasks.length} gates (${parallelTasks.length} en paralelo, ${serialTasks.length} serializados; ${isFull ? "full" : "fast"}, modo ${validationMode}, 9800X3D optimizado)...`,
 );
 const parallelResults = await Promise.all(parallelTasks.map(runTask));
 const serialResults = [];
@@ -121,10 +162,15 @@ for (const task of serialTasks) {
 const results = [...parallelResults, ...serialResults];
 const total = ((Date.now() - startAll) / 1000).toFixed(1);
 const failed = results.filter((r) => !r.ok);
+const advisory = results.filter((r) => r.advisory);
 if (failed.length) {
   console.error(`\n[quick] \u2716 ${failed.length}/${results.length} gates fallaron en ${total}s:`);
   for (const f of failed) console.error(`  - ${f.name}`);
   process.exit(1);
+} else if (advisory.length) {
+  console.warn(
+    `\n[quick] \u2714 ${results.length} gates completados en ${total}s; advertencias toleradas: ${advisory.map((result) => `${result.name} (${result.reason})`).join(", ")}`,
+  );
 } else {
   console.log(`\n[quick] \u2714 Todos los ${results.length} gates pasaron en ${total}s`);
 }

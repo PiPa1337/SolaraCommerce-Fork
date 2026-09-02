@@ -114,4 +114,44 @@ describe("requestWorker con reintento", () => {
     second.respond({ id: secondId, ok: false, error: "respaldo corrupto" });
     await expect(promise).rejects.toThrow("respaldo corrupto");
   });
+
+  it("reutiliza la revisión del preview y la reenvía tras recrear el worker", async () => {
+    const project = {
+      id: "preview-project",
+    } as unknown as import("@solara/project-schema").StoreProjectV1;
+    const result = {
+      html: "<html></html>",
+      canvasManifest: { entries: [], coverage: [] },
+      assetSources: {},
+    };
+    const firstPromise = workers.renderPreviewInWorker(project, "/");
+    const first = instances.find((instance) => instance.url.includes("export.worker"));
+    if (!first) throw new Error("primer worker export no creado");
+    const firstMessage = first.posted[0] as { id: string; project?: unknown; revision: number };
+    expect(firstMessage.project).toBe(project);
+    first.respond({ id: firstMessage.id, ok: true, result });
+    await expect(firstPromise).resolves.toEqual(result);
+
+    const secondPromise = workers.renderPreviewInWorker(project, "/categorias/");
+    const secondMessage = first.posted[1] as { id: string; project?: unknown; revision: number };
+    expect(secondMessage.project).toBeUndefined();
+    expect(secondMessage.revision).toBe(firstMessage.revision);
+    first.respond({
+      id: secondMessage.id,
+      ok: true,
+      result: { html: result.html, canvasManifest: result.canvasManifest },
+    });
+    await expect(secondPromise).resolves.toEqual(result);
+
+    const thirdPromise = workers.renderPreviewInWorker(project, "/productos/p/");
+    first.fail();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const exportInstances = instances.filter((instance) => instance.url.includes("export.worker"));
+    const retry = exportInstances.at(-1);
+    if (!retry || retry === first) throw new Error("worker de preview no recreado");
+    const retryMessage = retry.posted[0] as { id: string; project?: unknown; revision: number };
+    expect(retryMessage.project).toBe(project);
+    retry.respond({ id: retryMessage.id, ok: true, result });
+    await expect(thirdPromise).resolves.toEqual(result);
+  });
 });

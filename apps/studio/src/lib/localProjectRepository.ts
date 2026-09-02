@@ -22,7 +22,7 @@ import {
 import {
   createProjectArchiveInWorker,
   exportSiteInWorker,
-  readProjectArchiveBytesInWorker,
+  readProjectArchiveOwnedBytesInWorker,
 } from "./workers";
 
 export interface DiskProject extends StoredProject {
@@ -61,7 +61,7 @@ export function serializeSiteFiles(files: ReadonlyMap<string, string | Uint8Arra
 
 export async function loadDiskProject(summary: LocalProjectSummary): Promise<DiskProject> {
   const archive = await readLocalProject(summary.projectId);
-  const storedProject = await readProjectArchiveBytesInWorker(archive);
+  const storedProject = await readProjectArchiveOwnedBytesInWorker(archive);
   const normalized = normalizeLoadedProject(storedProject);
   const project = await optimizeProjectAssets(normalized);
   return {
@@ -73,10 +73,10 @@ export async function loadDiskProject(summary: LocalProjectSummary): Promise<Dis
     diskVersion: summary.version,
     diskSiteStatus: summary.siteOutdated ? "site-outdated" : "synced",
     diskStatus: summary.siteOutdated ? "site-outdated" : "synced",
-    // Los normalizadores pueden devolver un objeto nuevo aunque el snapshot
-    // no haya cambiado. Persistir por referencia creaba versiones espurias y
-    // dejaba stale la expectedVersion del editor tras crear una tienda.
-    mediaRepairPending: JSON.stringify(project) !== JSON.stringify(storedProject),
+    // Los normalizadores conservan la referencia cuando no cambian nada. Usar
+    // esa señal evita serializar otra vez snapshots grandes sólo para decidir
+    // si hay que ofrecer la reparación de metadatos.
+    mediaRepairPending: project !== storedProject,
   };
 }
 
@@ -140,7 +140,7 @@ export async function persistProjectToDisk(
   options: { allowProtectedWrite?: boolean } = {},
 ): Promise<{ receipt: LocalSaveReceipt; siteError?: string }> {
   const projectArchive = await createProjectArchiveInWorker(project);
-  const verifiedProject = await readProjectArchiveBytesInWorker(
+  const verifiedProject = await readProjectArchiveOwnedBytesInWorker(
     new TextEncoder().encode(projectArchive),
   );
   if (verifiedProject.id !== project.id) {

@@ -177,6 +177,11 @@ let csvWorker: Worker | undefined;
 let imageWorker: Worker | undefined;
 let exportWorker: Worker | undefined;
 let catalogPackageWorker: Worker | undefined;
+let previewProjectRef: StoreProjectV1 | undefined;
+let previewProjectRevision = 0;
+let previewLoadedRevision: number | undefined;
+let previewAssetSourcesRevision: number | undefined;
+let previewAssetSources: Record<string, string> | undefined;
 
 function getCsvWorker(): Worker {
   csvWorker ??= new Worker(new URL("../workers/csv.worker.ts", import.meta.url), {
@@ -197,6 +202,14 @@ function getExportWorker(): Worker {
     type: "module",
   });
   return exportWorker;
+}
+
+function resetExportWorker(): void {
+  exportWorker?.terminate?.();
+  exportWorker = undefined;
+  previewLoadedRevision = undefined;
+  previewAssetSourcesRevision = undefined;
+  previewAssetSources = undefined;
 }
 
 function getCatalogPackageWorker(): Worker {
@@ -335,7 +348,7 @@ export function exportSiteInWorker(
     { type: "site", project, mode, options },
     onStage,
     recreateWorker(() => {
-      exportWorker = undefined;
+      resetExportWorker();
     }, getExportWorker),
   );
 }
@@ -400,19 +413,23 @@ export function createProjectArchiveInWorker(project: StoreProjectV1): Promise<s
     { type: "project-write", project },
     [],
     recreateWorker(() => {
-      exportWorker = undefined;
+      resetExportWorker();
     }, getExportWorker),
   );
 }
 
 export async function readProjectArchiveInWorker(file: File): Promise<StoreProjectV1> {
   const buffer = await file.arrayBuffer();
+  return readProjectArchiveBufferInWorker(buffer);
+}
+
+function readProjectArchiveBufferInWorker(buffer: ArrayBuffer): Promise<StoreProjectV1> {
   return requestWorker(
     getExportWorker(),
     { type: "project-read", buffer },
     [buffer],
     recreateWorker(() => {
-      exportWorker = undefined;
+      resetExportWorker();
     }, getExportWorker),
   );
 }
@@ -420,14 +437,15 @@ export async function readProjectArchiveInWorker(file: File): Promise<StoreProje
 export function readProjectArchiveBytesInWorker(bytes: Uint8Array): Promise<StoreProjectV1> {
   const copy = new Uint8Array(bytes.byteLength);
   copy.set(bytes);
-  return requestWorker(
-    getExportWorker(),
-    { type: "project-read", buffer: copy.buffer },
-    [copy.buffer],
-    recreateWorker(() => {
-      exportWorker = undefined;
-    }, getExportWorker),
-  );
+  return readProjectArchiveBufferInWorker(copy.buffer);
+}
+
+/** Transfiere un buffer de lectura que el llamador ya no necesita conservar. */
+export function readProjectArchiveOwnedBytesInWorker(bytes: Uint8Array): Promise<StoreProjectV1> {
+  if (bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength) {
+    return readProjectArchiveBufferInWorker(bytes.buffer as ArrayBuffer);
+  }
+  return readProjectArchiveBytesInWorker(bytes);
 }
 
 export interface AuditResult {
@@ -451,8 +469,7 @@ export function auditProjectInWorker(
     { type: "audit", project, publicAiContext },
     [],
     recreateWorker(() => {
-      exportWorker?.terminate();
-      exportWorker = undefined;
+      resetExportWorker();
     }, getExportWorker),
     10_000,
   );
@@ -469,12 +486,50 @@ export function renderPreviewInWorker(
   route: string,
   options?: { assetTransport?: "inline" | "parent"; editor?: { enabled: true; sectionId: string } },
 ): Promise<PreviewWorkerResult> {
-  return requestWorker(
+  if (previewProjectRef !== project) {
+    previewProjectRef = project;
+    previewProjectRevision += 1;
+    previewLoadedRevision = undefined;
+  }
+  const revision = previewProjectRevision;
+  const request: {
+    type: "preview";
+    project?: StoreProjectV1;
+    revision: number;
+    route: string;
+    options?: {
+      assetTransport?: "inline" | "parent";
+      editor?: { enabled: true; sectionId: string };
+    };
+  } = {
+    type: "preview",
+    revision,
+    route,
+    ...(options ? { options } : {}),
+    ...(previewLoadedRevision === revision ? {} : { project }),
+  };
+  type PreviewWorkerResponse = Omit<PreviewWorkerResult, "assetSources"> & {
+    assetSources?: Record<string, string>;
+  };
+  return requestWorker<typeof request, PreviewWorkerResponse>(
     getExportWorker(),
-    { type: "preview", project, route, options },
+    request,
     [],
     recreateWorker(() => {
-      exportWorker = undefined;
+      resetExportWorker();
+      request.project = project;
     }, getExportWorker),
-  );
+  ).then((result: PreviewWorkerResponse): PreviewWorkerResult => {
+    if (result.assetSources !== undefined) {
+      previewAssetSourcesRevision = revision;
+      previewAssetSources = result.assetSources;
+    }
+    if (previewAssetSourcesRevision !== revision || previewAssetSources === undefined) {
+      throw new Error("El worker de preview no devolvió los assets de la revisión solicitada.");
+    }
+    if (previewProjectRef === project && previewProjectRevision === revision) {
+      previewLoadedRevision = revision;
+    }
+    return { ...result, assetSources: previewAssetSources };
+  });
 }

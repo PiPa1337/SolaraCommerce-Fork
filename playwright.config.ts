@@ -35,6 +35,7 @@ export default defineConfig({
     trace: "retain-on-failure",
     serviceWorkers: "block",
   },
+  outputDir: process.env.SOLARA_PERF_PLAYWRIGHT_OUTPUT_DIR ?? "test-results",
   projects:
     process.env.PLAYWRIGHT_MULTI_BROWSER === "1"
       ? [

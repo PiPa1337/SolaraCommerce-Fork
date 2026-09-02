@@ -8,17 +8,25 @@ const commandArgs =
     : [];
 const workspaceNodePath = resolve("node_modules/.pnpm/node_modules");
 const nodeMajor = Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10);
+const releaseNodeMajor = 24;
+const requestedValidationMode = process.env.SOLARA_VALIDATION_MODE?.trim().toLowerCase();
+const validationMode =
+  process.env.CI === "true"
+    ? "strict"
+    : requestedValidationMode === "strict" || requestedValidationMode === "advisory"
+      ? requestedValidationMode
+      : "advisory";
+const runtimeOnly = process.argv.includes("--check-runtime");
 
-if (nodeMajor < 22) {
+if (nodeMajor !== releaseNodeMajor) {
   console.error(
-    `El release candidate requiere Node 22 o posterior; se detectó ${process.version}.`,
+    `El release candidate requiere Node ${releaseNodeMajor}.x; se detectó ${process.version}.`,
   );
   process.exit(1);
 }
-if (nodeMajor !== 22) {
-  console.warn(
-    `Aviso: la referencia de release es Node 22; se ejecutará la matriz con ${process.version}.`,
-  );
+console.log(`Release ${validationMode}: runtime soportado Node ${nodeMajor}.`);
+if (runtimeOnly) {
+  process.exit(0);
 }
 
 function run(args) {

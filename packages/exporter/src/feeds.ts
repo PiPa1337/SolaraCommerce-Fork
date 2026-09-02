@@ -4,16 +4,11 @@
  * index.ts como parte de la división por responsabilidad (2026-08-21).
  */
 import { normalizeSearchTokens } from "@solara/core";
-import type { Category, Collection, Product, StoreProjectV1 } from "@solara/project-schema";
+import type { Category, Product, StoreProjectV1 } from "@solara/project-schema";
 import { imageFor, imageUrl, productImagePaths, videoFor, videoUrl } from "./assets.js";
 import { escapeXml } from "./html.js";
-import type { CommerceSnapshot, PageDescriptor, PublicExportManifest } from "./index.js";
-import {
-  buildCommerceSnapshot,
-  categoryProducts,
-  effectiveHomeSections,
-  productCategoryScope,
-} from "./index.js";
+import type { PageDescriptor, PublicExportManifest } from "./index.js";
+import { buildCommerceSnapshot, categoryProducts, effectiveHomeSections } from "./index.js";
 import { merchantIdMap, merchantItemGroupIdMap } from "./merchant.js";
 import { absoluteResourceUrl, absoluteUrl, normalizeBaseUrl } from "./urls.js";
 export function buildSitemap(
@@ -62,6 +57,7 @@ export function buildImageSitemap(
       add(page.canonicalPath, page.preloadImage);
     });
   const pageSize = project.commerceTemplates.category.productsPerPage;
+  const productById = new Map(project.products.map((product) => [product.id, product]));
   project.products
     .filter((product) => product.status === "active")
     .forEach((product) => {
@@ -89,7 +85,7 @@ export function buildImageSitemap(
     .filter((collection) => collection.status !== "hidden")
     .forEach((collection) => {
       const products = collection.productIds
-        .map((id) => project.products.find((product) => product.id === id))
+        .map((id) => productById.get(id))
         .filter((product): product is Product => Boolean(product && product.status === "active"));
       const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
       for (let page = 1; page <= totalPages; page += 1) {
@@ -193,25 +189,46 @@ export function buildMerchantFeed(
 }
 
 export function buildSearchIndex(project: StoreProjectV1): string {
+  const categoryById = new Map<string, Category>(
+    project.categories.map((category) => [category.id, category]),
+  );
+  const collectionById = new Map(
+    project.collections.map((collection) => [collection.id, collection]),
+  );
+  const categoryScopeCache = new Map<string, ReadonlySet<string>>();
+  const categoryScope = (categoryId: string): ReadonlySet<string> => {
+    const cached = categoryScopeCache.get(categoryId);
+    if (cached) return cached;
+    const scope = new Set<string>([categoryId]);
+    const seen = new Set<string>([categoryId]);
+    let current = categoryById.get(categoryId)?.parentId;
+    while (current && !seen.has(current)) {
+      seen.add(current);
+      scope.add(current);
+      current = categoryById.get(current)?.parentId;
+    }
+    categoryScopeCache.set(categoryId, scope);
+    return scope;
+  };
   const entries = project.products
     .filter((product) => product.status === "active")
     .map((product) => {
       const prices = product.variants.map((variant) => variant.price);
       const image = imageUrl(project, product.imageIds[0]);
       const imageAsset = imageFor(project, product.imageIds[0]);
-      const categoryIds = [...productCategoryScope(project, product)].filter(
-        (id) => project.categories.find((category) => category.id === id)?.status !== "hidden",
-      );
+      const categoryIds = [
+        ...new Set(product.categoryIds.flatMap((id) => [...categoryScope(id)])),
+      ].filter((id) => categoryById.get(id)?.status !== "hidden");
       const categoryNames = categoryIds
-        .map((id) => project.categories.find((category) => category.id === id))
+        .map((id) => categoryById.get(id))
         .filter((category) => category?.status !== "hidden")
         .map((category) => category?.title)
         .filter((value): value is string => Boolean(value));
       const collectionIds = product.collectionIds.filter(
-        (id) => project.collections.find((collection) => collection.id === id)?.status !== "hidden",
+        (id) => collectionById.get(id)?.status !== "hidden",
       );
       const collectionNames = collectionIds
-        .map((id) => project.collections.find((collection) => collection.id === id))
+        .map((id) => collectionById.get(id))
         .filter((collection) => collection?.status !== "hidden")
         .map((collection) => collection?.title)
         .filter((value): value is string => Boolean(value));

@@ -4,11 +4,17 @@
   "private": true,
   "packageManager": "pnpm@10.15.1",
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=24.0.0 <25.0.0"
   },
   "scripts": {
     "benchmark:export": "vitest run scripts/export-benchmark.test.ts --testTimeout=30000",
     "benchmark:export:ci": "vitest run scripts/export-benchmark.test.ts --testTimeout=90000",
+    "audit:performance:rm": "node scripts/rm-performance-audit.mjs",
+    "audit:performance:rm:readonly": "vitest run scripts/rm-performance-readonly.test.ts --testTimeout=120000",
+    "audit:performance:rm:node": "vitest run scripts/rm-performance-node.test.ts --testTimeout=1800000 --no-file-parallelism --pool=threads --poolOptions.threads.singleThread",
+    "audit:performance:rm:browser": "node scripts/rm-performance-browser.mjs",
+    "audit:performance:rm:portable": "node scripts/rm-performance-portable.mjs",
+    "audit:performance:rm:merge": "node scripts/rm-performance-merge.mjs",
     "build": "corepack pnpm --filter @solara/studio build",
     "check:budgets": "node scripts/check-budgets.mjs && vitest run scripts/storefront-runtime-budget.test.ts scripts/public-storefront-budget.test.ts",
     "check:image-budget": "node scripts/check-image-budget.mjs",

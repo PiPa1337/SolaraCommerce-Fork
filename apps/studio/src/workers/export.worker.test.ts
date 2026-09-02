@@ -1,5 +1,5 @@
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 interface SentExportMessage {
   id: string;
@@ -20,7 +20,7 @@ interface WorkerStub {
   postMessage: (message: unknown) => void;
 }
 
-let send: (data: unknown) => SentExportMessage[];
+let send: (data: unknown) => Promise<SentExportMessage[]>;
 
 function withBrokenDescription(project: typeof catalogModernStore): typeof catalogModernStore {
   const clone = structuredClone(project);
@@ -38,26 +38,28 @@ beforeAll(async () => {
   await import("./export.worker");
   if (!stub.onmessage) throw new Error("El worker no registró onmessage.");
   const handler = stub.onmessage;
-  send = (data) => {
+  send = async (data) => {
     const messages: SentExportMessage[] = [];
     stub.postMessage = (message) => {
       messages.push(message as SentExportMessage);
     };
-    handler({ data });
+    void handler({ data });
+    await vi.waitFor(() => expect(messages.length).toBeGreaterThan(0), { timeout: 120_000 });
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
     return messages;
   };
 });
 
 describe("export.worker", () => {
-  it("emite las etapas en orden y entrega files, audit, optimization y criticalCount", () => {
-    const messages = send({
+  it("emite las etapas en orden y entrega files, audit, optimization y criticalCount", async () => {
+    const messages = await send({
       id: "site-1",
       type: "site",
       project: catalogModernStore,
       mode: "draft",
       options: { publicAiContext: false, optimizationProfile: "safe" },
     });
-    expect(messages).toHaveLength(4);
+    await vi.waitFor(() => expect(messages).toHaveLength(4), { timeout: 120_000 });
     expect(messages.slice(0, 3).map((message) => message.stage)).toEqual([
       "validate",
       "render",
@@ -77,29 +79,31 @@ describe("export.worker", () => {
     );
   });
 
-  it("reporta el mismo conteo de críticos que la auditoría para el mismo proyecto", () => {
-    const site = send({
+  it("reporta el mismo conteo de críticos que la auditoría para el mismo proyecto", async () => {
+    const siteMessages = await send({
       id: "site-2",
       type: "site",
       project: catalogModernStore,
       mode: "draft",
       options: { publicAiContext: false },
-    }).at(-1);
-    const audit = send({
+    });
+    const auditMessages = await send({
       id: "audit-1",
       type: "audit",
       project: catalogModernStore,
       publicAiContext: false,
-    }).at(-1);
+    });
+    const site = siteMessages.at(-1);
+    const audit = auditMessages.at(-1);
     expect(site?.ok).toBe(true);
     expect(audit?.ok).toBe(true);
     expect(audit?.result?.criticalCount).toBeDefined();
     expect(site?.result?.criticalCount).toBe(audit?.result?.criticalCount);
   });
 
-  it("contabiliza los críticos del proyecto en el resultado del sitio", () => {
+  it("contabiliza los críticos del proyecto en el resultado del sitio", async () => {
     const broken = withBrokenDescription(catalogModernStore);
-    const messages = send({
+    const messages = await send({
       id: "site-3",
       type: "site",
       project: broken,
@@ -110,9 +114,9 @@ describe("export.worker", () => {
     expect(messages.at(-1)?.result?.criticalCount).toBeGreaterThanOrEqual(1);
   });
 
-  it("bloquea la producción con críticos y devuelve el error", () => {
+  it("bloquea la producción con críticos y devuelve el error", async () => {
     const broken = withBrokenDescription(catalogModernStore);
-    const messages = send({
+    const messages = await send({
       id: "site-4",
       type: "site",
       project: broken,

@@ -7,11 +7,99 @@ const studioRoot = resolve("apps/studio/dist");
 export interface RunningStudioServer {
   server: Server;
   url: string;
+  writeAttempts: Array<{ method: string; path: string }>;
 }
 
-export async function startStudioServer(): Promise<RunningStudioServer> {
+export interface ReadOnlyManagedProject {
+  projectId: string;
+  name: string;
+  slug: string;
+  version: number;
+  updatedAt: string;
+  savedAt: string;
+  folder: string;
+  currentBytes: Uint8Array;
+}
+
+export async function startStudioServer(
+  options: { managedProject?: ReadOnlyManagedProject } = {},
+): Promise<RunningStudioServer> {
+  const writeAttempts: Array<{ method: string; path: string }> = [];
   const server = createServer((request, response) => {
-    const requested = decodeURIComponent(new URL(request.url ?? "/", "http://localhost").pathname);
+    const requestUrl = new URL(request.url ?? "/", "http://localhost");
+    const requested = decodeURIComponent(requestUrl.pathname);
+    const managedProject = options.managedProject;
+    if (managedProject && requested.startsWith("/__solara/")) {
+      const method = request.method ?? "GET";
+      if (method !== "GET") {
+        writeAttempts.push({ method, path: requested });
+        response.writeHead(405, {
+          Allow: "GET",
+          "Content-Type": "application/json; charset=utf-8",
+        });
+        response.end(
+          JSON.stringify({
+            ok: false,
+            error: "Performance fixture read-only: no se permiten escrituras.",
+          }),
+        );
+        return;
+      }
+      if (requested === "/__solara/session") {
+        response.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        response.end(JSON.stringify({ managed: true }));
+        return;
+      }
+      if (requested === "/__solara/storage/status") {
+        response.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        response.end(JSON.stringify({ ok: true, managed: true, writable: false }));
+        return;
+      }
+      if (requested === "/__solara/storage/qa-status") {
+        response.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        response.end(
+          JSON.stringify({ ok: true, activeCycle: null, completedCount: 0, blockedCount: 0 }),
+        );
+        return;
+      }
+      if (requested === "/__solara/storage/projects") {
+        response.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        response.end(
+          JSON.stringify({
+            ok: true,
+            projects: [
+              {
+                projectId: managedProject.projectId,
+                name: managedProject.name,
+                slug: managedProject.slug,
+                status: "synced",
+                updatedAt: managedProject.updatedAt,
+                savedAt: managedProject.savedAt,
+                version: managedProject.version,
+                folder: managedProject.folder,
+                siteVersion: null,
+                siteOutdated: false,
+              },
+            ],
+            recovery: [],
+          }),
+        );
+        return;
+      }
+      const currentMatch = /^\/__solara\/storage\/projects\/([^/]+)\/current$/.exec(requested);
+      if (currentMatch && decodeURIComponent(currentMatch[1]) === managedProject.projectId) {
+        response.writeHead(200, {
+          "Cache-Control": "no-store",
+          "Content-Type": "application/vnd.solara.project+json",
+          "X-Solara-Project-Version": String(managedProject.version),
+        });
+        response.end(managedProject.currentBytes);
+        return;
+      }
+      response.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
+      response.end(JSON.stringify({ ok: false, error: "Endpoint fuera del fixture read-only." }));
+      return;
+    }
     // El launcher real siempre responde /__solara/session; el servidor de
     // pruebas emula el host no gestionado para que el editor no reciba un 404
     // en su sondeo de modo de persistencia (que Chromium loguea como error).
@@ -67,7 +155,7 @@ export async function startStudioServer(): Promise<RunningStudioServer> {
   if (!address || typeof address === "string") {
     throw new Error("No se pudo obtener el puerto del servidor de Studio.");
   }
-  return { server, url: `http://127.0.0.1:${address.port}` };
+  return { server, url: `http://127.0.0.1:${address.port}`, writeAttempts };
 }
 
 export async function stopStudioServer(server: Server): Promise<void> {

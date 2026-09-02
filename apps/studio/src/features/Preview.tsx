@@ -16,7 +16,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ImageUploadButton } from "../components/ImageAssetPicker";
 import { Tooltip } from "../components/primitives";
 import { Button, IconButton } from "../components/Ui";
-import { renderPreviewInWorker } from "../lib/workers";
+import { type PreviewWorkerResult, renderPreviewInWorker } from "../lib/workers";
 import {
   type CanvasManifestEntryLike,
   canvasBridgeScript,
@@ -396,6 +396,9 @@ export function Preview({
   const [iframeReady, setIframeReady] = useState(false);
   const [htmlSession, setHtmlSession] = useState("");
   const previewAssetSources = useRef<ReadonlyMap<string, string>>(new Map());
+  const previewCacheRef = useRef<
+    Array<{ project: StoreProjectV1; route: string; result: PreviewWorkerResult }>
+  >([]);
   const previewFrameWindows = useRef<Window[]>([]);
   const previewRenderSessionRef = useRef(0);
   const activePreviewSessionRef = useRef("");
@@ -688,12 +691,34 @@ export function Preview({
     let active = true;
     const timer = window.setTimeout(() => {
       const previewSession = String(++previewRenderSessionRef.current);
-      void renderPreviewInWorker(project, route, {
-        assetTransport: "parent",
-        editor: { enabled: true, sectionId: "*" },
-      })
+      const cached = previewCacheRef.current.find(
+        (entry) => entry.project === project && entry.route === route,
+      );
+      const renderPromise = cached
+        ? Promise.resolve(cached.result)
+        : renderPreviewInWorker(project, route, {
+            assetTransport: "parent",
+            editor: { enabled: true, sectionId: "*" },
+          });
+      void renderPromise
         .then(({ html: previewHtml, canvasManifest, assetSources }) => {
           if (!active) return;
+          if (!cached) {
+            const projectAssetSources = previewCacheRef.current.find(
+              (entry) => entry.project === project,
+            )?.result.assetSources;
+            const stableAssetSources = projectAssetSources ?? assetSources;
+            previewCacheRef.current = [
+              ...previewCacheRef.current.filter(
+                (entry) => entry.project === project && entry.route !== route,
+              ),
+              {
+                project,
+                route,
+                result: { html: previewHtml, canvasManifest, assetSources: stableAssetSources },
+              },
+            ].slice(-2);
+          }
           previewAssetSources.current = new Map(Object.entries(assetSources));
           activePreviewSessionRef.current = previewSession;
           setHtmlSession(previewSession);

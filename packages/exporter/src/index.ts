@@ -215,6 +215,11 @@ export interface PublicExportManifest {
   checkoutEnabled: boolean;
 }
 
+interface PublicMediaUsage {
+  assetIds: Set<string>;
+  videoIds: Set<string>;
+}
+
 const encoder = new TextEncoder();
 
 function parseProject(projectInput: StoreProjectV1, operation: string): StoreProjectV1 {
@@ -348,11 +353,25 @@ export function buildCommerceSnapshot(project: StoreProjectV1): CommerceSnapshot
   const itemGroupIds = merchantItemGroupIdMap(
     project.products.filter((product) => product.status === "active").map((product) => product.id),
   );
+  const baseImagePaths = new Map<string, readonly string[]>();
+  const productImages = (product: Product): readonly string[] => {
+    const cached = baseImagePaths.get(product.id);
+    if (cached) return cached;
+    const paths = productImagePaths(project, product);
+    baseImagePaths.set(product.id, paths);
+    return paths;
+  };
+  const variantImages = (product: Product, variant: Variant): readonly string[] => {
+    if (!variant.imageId) return productImages(product);
+    const variantImage = imageUrl(project, variant.imageId);
+    if (!variantImage) return productImages(product);
+    return [...new Set([variantImage, ...productImages(product)])];
+  };
   const products = project.products
     .filter((product) => product.status === "active")
     .map((product) => {
       const canonicalPath = `/productos/${product.slug}/`;
-      const productImages = productImagePaths(project, product);
+      const productImagePathsForProduct = productImages(product);
       const offers = product.variants.map(
         (variant) =>
           ({
@@ -375,7 +394,7 @@ export function buildCommerceSnapshot(project: StoreProjectV1): CommerceSnapshot
             currency: project.currency,
             availability: offerAvailability(variant),
             ...(variant.availabilityDate ? { availabilityDate: variant.availabilityDate } : {}),
-            imageUrls: productImagePaths(project, product, variant).map((url) =>
+            imageUrls: variantImages(product, variant).map((url) =>
               absoluteResourceUrl(project, url),
             ),
           }) satisfies CommerceOfferSnapshot,
@@ -384,7 +403,7 @@ export function buildCommerceSnapshot(project: StoreProjectV1): CommerceSnapshot
         productId: product.id,
         canonicalPath,
         title: product.title,
-        imageUrls: productImages.map((url) => absoluteResourceUrl(project, url)),
+        imageUrls: productImagePathsForProduct.map((url) => absoluteResourceUrl(project, url)),
         offers,
       } satisfies CommerceProductSnapshot;
     });
@@ -443,9 +462,10 @@ function projectWithPublicAssetUrls(
   project: StoreProjectV1,
   semanticNames = false,
   socialImageOptions: SocialImageResolutionOptions = {},
+  mediaUsage?: PublicMediaUsage,
 ): StoreProjectV1 {
   const whatsAppPhone = publicWhatsAppPhone(project);
-  const allowedAssetIds = publicMediaUsage(project, socialImageOptions).assetIds;
+  const allowedAssetIds = (mediaUsage ?? publicMediaUsage(project, socialImageOptions)).assetIds;
   const resolverOptions = { ...socialImageOptions, allowedAssetIds };
   const expectedSocial = resolveSocialImage(project, undefined, resolverOptions);
   const publicProject = {
@@ -1058,8 +1078,24 @@ export function publicMediaUsage(
  */
 export function createPublicExportManifest(
   project: StoreProjectV1,
-  pages: readonly PageDescriptor[] = buildPages(project),
+  pages?: readonly PageDescriptor[],
   socialImageOptions: SocialImageResolutionOptions = {},
+): PublicExportManifest {
+  const media = publicMediaUsage(project, socialImageOptions);
+  const resolvedPages =
+    pages ??
+    buildPages(project, undefined, {
+      socialImageOptions,
+      mediaUsage: media,
+    });
+  return createPublicExportManifestWithMedia(project, resolvedPages, socialImageOptions, media);
+}
+
+function createPublicExportManifestWithMedia(
+  project: StoreProjectV1,
+  pages: readonly PageDescriptor[],
+  socialImageOptions: SocialImageResolutionOptions,
+  baseMedia: PublicMediaUsage,
 ): PublicExportManifest {
   const sections = activeProjectSections(project, [
     ...project.sections,
@@ -1068,7 +1104,10 @@ export function createPublicExportManifest(
       .flatMap((page) => page.sections),
   ]);
   const activeModules = [...new Set(sections.map((section) => section.moduleId))].sort();
-  const media = publicMediaUsage(project, socialImageOptions);
+  const media: PublicMediaUsage = {
+    assetIds: new Set(baseMedia.assetIds),
+    videoIds: new Set(baseMedia.videoIds),
+  };
   pages.forEach((page) => {
     const preloadAsset = page.preloadImage
       ? project.assets.find((asset) =>
@@ -1602,7 +1641,12 @@ export function categoryProducts(project: StoreProjectV1, category: Category): P
   );
 }
 
-function categoryChildrenMarkup(project: StoreProjectV1, category: Category): string {
+function categoryChildrenMarkup(
+  project: StoreProjectV1,
+  category: Category,
+  productCountForCategory: (categoryId: Category["id"]) => number = (categoryId) =>
+    getCategoryProductIds(project, categoryId).length,
+): string {
   const children = project.categories.filter(
     (candidate) => candidate.parentId === category.id && candidate.status !== "hidden",
   );
@@ -1611,7 +1655,7 @@ function categoryChildrenMarkup(project: StoreProjectV1, category: Category): st
   return `<nav class="solara-category-children" aria-label="${escapeAttribute(interpolatePublicCopy(copy.categoryChildren, { category: category.title }))}"><h2>${escapeHtml(interpolatePublicCopy(copy.exploreCategory, { category: category.title }))}</h2><ul>${children
     .map(
       (child) =>
-        `<li><a href="${internalHref(project, `/categorias/${child.slug}/`)}"><span>${escapeHtml(child.title)}</span><small>${getCategoryProductIds(project, child.id).length} ${escapeHtml(copy.categoryProducts)}</small></a></li>`,
+        `<li><a href="${internalHref(project, `/categorias/${child.slug}/`)}"><span>${escapeHtml(child.title)}</span><small>${productCountForCategory(child.id)} ${escapeHtml(copy.categoryProducts)}</small></a></li>`,
     )
     .join("")}</ul></nav>`;
 }
@@ -1734,7 +1778,11 @@ export function productCategoryScope(project: StoreProjectV1, product: Product):
 function buildPages(
   project: StoreProjectV1,
   snapshot = buildCommerceSnapshot(project),
-  options: { editor?: boolean; socialImageOptions?: SocialImageResolutionOptions } = {},
+  options: {
+    editor?: boolean;
+    socialImageOptions?: SocialImageResolutionOptions;
+    mediaUsage?: PublicMediaUsage;
+  } = {},
 ): PageDescriptor[] {
   const renderPageSections = (
     sections: readonly StoreSection[],
@@ -1765,7 +1813,7 @@ function buildPages(
     homeHero?.settings.mode === "video" && typeof homeHero.settings.videoAssetId === "string"
       ? videoFor(project, homeHero.settings.videoAssetId)
       : undefined;
-  const socialMedia = publicMediaUsage(project, options.socialImageOptions);
+  const socialMedia = options.mediaUsage ?? publicMediaUsage(project, options.socialImageOptions);
   const socialImage = resolveSocialImage(project, undefined, {
     ...options.socialImageOptions,
     allowedAssetIds: socialMedia.assetIds,
@@ -1784,14 +1832,45 @@ function buildPages(
   const homeSections = homeConfig?.sections.length
     ? [...sharedHeader, ...homeConfig.sections, ...sharedFooter]
     : project.sections;
+  const activeProducts = project.products.filter((product) => product.status === "active");
+  const productById = new Map(project.products.map((product) => [product.id, product]));
+  const categoryProductsCache = new Map<string, Product[]>();
+  const categoryProductCountCache = new Map<string, number>();
+  const productCountForCategory = (categoryId: Category["id"]): number => {
+    const cached = categoryProductCountCache.get(categoryId);
+    if (cached !== undefined) return cached;
+    const count = getCategoryProductIds(project, categoryId).length;
+    categoryProductCountCache.set(categoryId, count);
+    return count;
+  };
+  const productsForCategory = (category: Category): Product[] => {
+    const cached = categoryProductsCache.get(category.id);
+    if (cached) return cached;
+    const productIds = new Set(getCategoryProductIds(project, category.id));
+    const products = activeProducts.filter((product) => productIds.has(product.id));
+    categoryProductsCache.set(category.id, products);
+    return products;
+  };
+  const productCategoryScopeCache = new Map<string, Set<string>>();
+  const categoryScopeForProduct = (product: Product): Set<string> => {
+    const cached = productCategoryScopeCache.get(product.id);
+    if (cached) return cached;
+    const scope = productCategoryScope(project, product);
+    productCategoryScopeCache.set(product.id, scope);
+    return scope;
+  };
+  const pageSize = project.commerceTemplates.category.productsPerPage;
+  const categorySections = listingSections(project, "category", pageSize);
+  const collectionSections = listingSections(project, "collection", pageSize);
+  const relatedSections = project.commerceTemplates.product.showRelated
+    ? listingSections(project, "related", 8)
+    : [];
   const activeProductTitleCounts = new Map<string, number>();
-  for (const product of project.products) {
-    if (product.status === "active") {
-      activeProductTitleCounts.set(
-        product.title,
-        (activeProductTitleCounts.get(product.title) ?? 0) + 1,
-      );
-    }
+  for (const product of activeProducts) {
+    activeProductTitleCounts.set(
+      product.title,
+      (activeProductTitleCounts.get(product.title) ?? 0) + 1,
+    );
   }
 
   const home: PageDescriptor = {
@@ -1813,10 +1892,9 @@ function buildPages(
 
   const categories = project.categories.flatMap((category) => {
     if (category.status === "hidden") return [];
-    const products = categoryProducts(project, category);
+    const products = productsForCategory(category);
     const pages: PageDescriptor[] = [];
 
-    const pageSize = project.commerceTemplates.category.productsPerPage;
     const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
     for (let offset = 0; offset < Math.max(products.length, 1); offset += pageSize) {
       const pageNumber = Math.floor(offset / pageSize) + 1;
@@ -1846,7 +1924,6 @@ function buildPages(
         "<img",
         `<img${canvasEntityAttributes(categoryCanvas, "category-image", "category", category.id, "imageId", "image")}`,
       );
-      const categorySections = listingSections(project, "category", pageSize);
       const categoryGrid = renderPageSections(categorySections, {
         pageType: "category",
         category: { ...category, productIds: paginated.map((product) => product.id) },
@@ -1863,7 +1940,7 @@ function buildPages(
             </div>
             ${categoryMediaWithBinding}
           </header>
-          ${categoryChildrenMarkup(project, category)}
+          ${categoryChildrenMarkup(project, category, productCountForCategory)}
           ${category.seoIntro ? `<section class="solara-category-intro solara-container"><h2 class="sr-only">Sobre ${escapeHtml(category.title)}</h2><p${canvasEntityAttributes(categoryCanvas, "category-seo-intro", "category", category.id, "seoIntro")}>${escapeHtml(category.seoIntro)}</p></section>` : ""}
           ${categoryListingMarkup(project, products, categoryGrid)}
           ${paginationNavigation(project, `/categorias/${category.slug}`, pageNumber, totalPages)}
@@ -1911,11 +1988,9 @@ function buildPages(
     .filter((collection) => collection.status !== "hidden")
     .flatMap((collection) => {
       const products = collection.productIds
-        .map((id) => project.products.find((product) => product.id === id))
+        .map((id) => productById.get(id))
         .filter((product): product is Product => Boolean(product && product.status === "active"));
       const pages: PageDescriptor[] = [];
-      const pageSize = project.commerceTemplates.category.productsPerPage;
-
       const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
       for (let offset = 0; offset < Math.max(products.length, 1); offset += pageSize) {
         const pageNumber = Math.floor(offset / pageSize) + 1;
@@ -1927,7 +2002,6 @@ function buildPages(
           ? ` data-solara-module="generated-collection-page" data-solara-section="${escapeAttribute(collectionCanvas.sectionId)}"`
           : "";
         const paginated = products.slice(offset, offset + pageSize);
-        const collectionSections = listingSections(project, "collection", pageSize);
         const collectionHeroAsset = imageFor(project, collection.imageId);
         const collectionHeroImage = imageUrl(project, collection.imageId);
         const collectionHeroMarkup =
@@ -1992,68 +2066,58 @@ function buildPages(
       return pages;
     });
 
-  const products = project.products
-    .filter((product) => product.status === "active")
-    .map((product): PageDescriptor => {
-      const productImage = imageUrl(project, product.imageIds[0]);
-      const productCategoryIds = productCategoryScope(project, product);
-      const relatedProducts = project.products
-        .filter((candidate) => {
-          if (candidate.status !== "active" || candidate.id === product.id) return false;
-          const candidateCategoryIds = productCategoryScope(project, candidate);
-          return (
-            [...candidateCategoryIds].some((id) => productCategoryIds.has(id)) ||
-            candidate.collectionIds.some((id) => product.collectionIds.includes(id))
-          );
-        })
-        .slice(0, 8);
-      // En catálogos chicos completamos la fila con productos activos para
-      // conservar una sección de recomendaciones útil y visualmente estable.
-      if (relatedProducts.length < 8) {
-        const relatedIds = new Set(relatedProducts.map((candidate) => candidate.id));
-        relatedProducts.push(
-          ...project.products
-            .filter(
-              (candidate) =>
-                candidate.status === "active" &&
-                candidate.id !== product.id &&
-                !relatedIds.has(candidate.id),
-            )
-            .slice(0, 8 - relatedProducts.length),
+  const products = activeProducts.map((product): PageDescriptor => {
+    const productImage = imageUrl(project, product.imageIds[0]);
+    const productCategoryIds = categoryScopeForProduct(product);
+    const relatedProducts = activeProducts
+      .filter((candidate) => {
+        if (candidate.id === product.id) return false;
+        const candidateCategoryIds = categoryScopeForProduct(candidate);
+        return (
+          [...candidateCategoryIds].some((id) => productCategoryIds.has(id)) ||
+          candidate.collectionIds.some((id) => product.collectionIds.includes(id))
         );
-      }
-      const relatedSections = project.commerceTemplates.product.showRelated
-        ? listingSections(project, "related", 8)
-        : [];
-      const body = [
-        renderPageSections(sharedHeader, { pageType: "product", product }),
-        `<main>${productDetailSection(project, product, options.editor)}${
-          relatedProducts.length && relatedSections.length
-            ? `<section class="solara-related-products"><div class="solara-container">${renderPageSections(relatedSections, { pageType: "product", products: relatedProducts })}</div></section>`
-            : ""
-        }</main>`,
-        renderPageSections(sharedFooter, { pageType: "product", product }),
-      ].join("");
-      return {
-        path: `productos/${product.slug}/index.html`,
-        title: `${product.title}${(activeProductTitleCounts.get(product.title) ?? 0) > 1 ? ` — ${product.slug}` : ""} | ${project.identity.brandName}`,
-        description: product.description || project.seo.description,
-        canonicalPath: `/productos/${product.slug}/`,
-        lastModifiedAt: product.updatedAt,
-        pageType: "product",
-        body,
-        structuredData: [
-          breadcrumbData(project, [
-            { name: copy.pages.home, path: "/" },
-            { name: copy.pages.products, path: "/" },
-            { name: product.title, path: `/productos/${product.slug}/` },
-          ]),
-          productStructuredData(project, product, snapshot),
-        ],
-        ...(productImage ? { image: productImage } : {}),
-        ...(productImage ? { preloadImage: productImage } : {}),
-      };
-    });
+      })
+      .slice(0, 8);
+    // En catálogos chicos completamos la fila con productos activos para
+    // conservar una sección de recomendaciones útil y visualmente estable.
+    if (relatedProducts.length < 8) {
+      const relatedIds = new Set(relatedProducts.map((candidate) => candidate.id));
+      relatedProducts.push(
+        ...activeProducts
+          .filter((candidate) => candidate.id !== product.id && !relatedIds.has(candidate.id))
+          .slice(0, 8 - relatedProducts.length),
+      );
+    }
+    const body = [
+      renderPageSections(sharedHeader, { pageType: "product", product }),
+      `<main>${productDetailSection(project, product, options.editor)}${
+        relatedProducts.length && relatedSections.length
+          ? `<section class="solara-related-products"><div class="solara-container">${renderPageSections(relatedSections, { pageType: "product", products: relatedProducts })}</div></section>`
+          : ""
+      }</main>`,
+      renderPageSections(sharedFooter, { pageType: "product", product }),
+    ].join("");
+    return {
+      path: `productos/${product.slug}/index.html`,
+      title: `${product.title}${(activeProductTitleCounts.get(product.title) ?? 0) > 1 ? ` — ${product.slug}` : ""} | ${project.identity.brandName}`,
+      description: product.description || project.seo.description,
+      canonicalPath: `/productos/${product.slug}/`,
+      lastModifiedAt: product.updatedAt,
+      pageType: "product",
+      body,
+      structuredData: [
+        breadcrumbData(project, [
+          { name: copy.pages.home, path: "/" },
+          { name: copy.pages.products, path: "/" },
+          { name: product.title, path: `/productos/${product.slug}/` },
+        ]),
+        productStructuredData(project, product, snapshot),
+      ],
+      ...(productImage ? { image: productImage } : {}),
+      ...(productImage ? { preloadImage: productImage } : {}),
+    };
+  });
 
   const aboutConfig = project.pages.find((page) => page.kind === "about");
   const contactConfig = project.pages.find((page) => page.kind === "contact");
@@ -2162,7 +2226,7 @@ function buildPages(
   };
 
   const searchControls = `<form class="solara-search-form" role="search" action="/buscar/" method="get"><label for="solara-search-input">${escapeHtml(copy.search.title)}</label><div><input id="solara-search-input" name="q" type="search" autocomplete="off" placeholder="${escapeAttribute(copy.search.placeholder)}"><button class="solara-primary-action" type="submit">${escapeHtml(copy.search.submit)}</button></div></form>`;
-  const searchProducts = project.products.filter((product) => product.status === "active");
+  const searchProducts = activeProducts;
   const searchFilters = modernCategoryFilters(
     project,
     searchProducts,
@@ -2917,10 +2981,24 @@ function buildFiles(
   const socialImageOptions: SocialImageResolutionOptions = {
     compatibilityByAssetId: socialImageCompatibilityByAssetId(project),
   };
-  const publicProject = projectWithPublicAssetUrls(project, semanticNames, socialImageOptions);
+  const sourceMedia = publicMediaUsage(project, socialImageOptions);
+  const publicProject = projectWithPublicAssetUrls(
+    project,
+    semanticNames,
+    socialImageOptions,
+    sourceMedia,
+  );
   const snapshot = buildCommerceSnapshot(publicProject);
-  const pages = buildPages(publicProject, snapshot, { socialImageOptions });
-  const manifest = createPublicExportManifest(publicProject, pages, socialImageOptions);
+  const pages = buildPages(publicProject, snapshot, {
+    socialImageOptions,
+    mediaUsage: sourceMedia,
+  });
+  const manifest = createPublicExportManifestWithMedia(
+    publicProject,
+    pages,
+    socialImageOptions,
+    sourceMedia,
+  );
   const fontFiles = fontFilesFor(
     publicProject.theme.typography.display,
     publicProject.theme.typography.body,
@@ -3238,14 +3316,10 @@ export interface CanvasManifestEntry {
  * Manifest de bindings editables del proyecto. Sólo para el preview del
  * editor: nunca se incluye en exportProject ni en el HTML público.
  */
-export function buildCanvasManifest(
-  projectInput: StoreProjectV1,
-  options: { path?: string } = {},
-): {
+function buildCanvasManifestFromProject(project: StoreProjectV1): {
   entries: CanvasManifestEntry[];
   coverage: Array<{ moduleId: string; editable: boolean; bindings: number; reason?: string }>;
 } {
-  const project = parseProject(projectInput, "construir el manifest del canvas");
   const entries: CanvasManifestEntry[] = [];
   const seenModules = new Map<string, { bindings: number; reason?: string }>();
   const persistedSections = [
@@ -3596,6 +3670,15 @@ export function buildCanvasManifest(
   };
 }
 
+export function buildCanvasManifest(
+  projectInput: StoreProjectV1,
+  _options: { path?: string } = {},
+): ReturnType<typeof buildCanvasManifestFromProject> {
+  return buildCanvasManifestFromProject(
+    parseProject(projectInput, "construir el manifest del canvas"),
+  );
+}
+
 /** Renderiza el mismo árbol de exportProject sin escribir archivos. */
 export function renderPreviewHtml(
   projectInput: StoreProjectV1,
@@ -3611,16 +3694,23 @@ export function renderPreviewHtml(
   const socialImageOptions: SocialImageResolutionOptions = {
     compatibilityByAssetId: socialImageCompatibilityByAssetId(project),
   };
+  const sourceMedia = publicMediaUsage(project, socialImageOptions);
   const previewAssets = createPreviewAssetBundle(project);
   const pages = withExportContext("la fase de páginas del sitio", () =>
     buildPages(previewAssets.project, undefined, {
       editor: options.editor?.enabled === true,
       socialImageOptions,
+      mediaUsage: sourceMedia,
     }),
   );
-  const manifest = createPublicExportManifest(previewAssets.project, pages, socialImageOptions);
+  const manifest = createPublicExportManifestWithMedia(
+    previewAssets.project,
+    pages,
+    socialImageOptions,
+    sourceMedia,
+  );
   const canvasManifest = options.editor?.enabled
-    ? buildCanvasManifest(previewAssets.project, { path })
+    ? buildCanvasManifestFromProject(previewAssets.project)
     : undefined;
   const page =
     pages.find((candidate) => candidate.canonicalPath === path) ??

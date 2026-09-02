@@ -13,6 +13,10 @@ vi.mock("./workers", async () => {
       const text = new TextDecoder().decode(bytes);
       return JSON.parse(text);
     }),
+    readProjectArchiveOwnedBytesInWorker: vi.fn(async (bytes: Uint8Array) => {
+      const text = new TextDecoder().decode(bytes);
+      return JSON.parse(text);
+    }),
     readProjectArchiveInWorker: vi.fn(async (file: File) => {
       const text = await file.text();
       return JSON.parse(text);

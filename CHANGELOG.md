@@ -8,6 +8,43 @@
 
 # Changelog
 
+### Optimización conservadora post-auditoría (2026-09-01)
+
+- Se reutilizan índices, decisiones de media y buffers dentro de cada operación
+  del exporter, y se eliminan recorridos lineales y serializaciones completas
+  repetidas sin cambiar rutas, MIME, hashes ni orden determinista.
+- Preview y export worker conservan snapshots por revisión, cargan módulos
+  pesados por demanda y limitan el cache de rutas; core mantiene structural
+  sharing y no-op por referencia para proteger undo/redo y persistencia.
+- La lectura administrada transfiere buffers cuando es seguro y el runtime
+  compara líneas del carrito semánticamente. No se modifican RM Descartables,
+  schema, APIs, imágenes originales, backups ni retención.
+- La repetición de exportación midió 26,681 s y 51.527.135 B para 2.000
+  productos: el tiempo mejoró frente a 27,713 s, pero no alcanza el 10% exigido
+  y el exceso de bytes continúa documentado como advisory.
+
+### Auditoría integral de rendimiento read-only (2026-09-01)
+
+- Se incorpora el harness reproducible de RM Descartables para medir Studio,
+  IndexedDB y transporte administrado, preview/exporter, storefront y portable
+  Electron sin escribir en la tienda original.
+- El harness valida el snapshot V2, registra hash/tamaño/versión/fechas antes y
+  después, rechaza explícitamente POST/PUT y separa los reportes Node, browser y
+  portable en `test-results/performance/rm-descartables/`.
+- Se documentan los hotspots observados, las propuestas, los tests protectores
+  y el backlog de optimización conservadora en
+  `docs/PERFORMANCE_RM_DESCARTABLES.md`.
+
+### Validación local advisory (2026-09-01)
+
+- `check:quick` y `benchmark:export` detectan automáticamente el entorno local
+  y convierten los diagnósticos de formato, el timeout RPC conocido de Vitest y
+  el exceso de bytes en advertencias no bloqueantes.
+- CI y `SOLARA_VALIDATION_MODE=strict` mantienen los gates duros; Node 24.x es el
+  único runtime oficial de release, sin duplicar la matriz.
+- El contrato, CI, release, launcher y documentación dejan de declarar Node 22
+  como runtime soportado.
+
 ### Productos facturables por variantes (2026-09-01)
 
 - La mensualidad del dashboard ahora cuenta la primera variante dentro del

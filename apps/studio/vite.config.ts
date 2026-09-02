@@ -19,6 +19,9 @@ export default defineConfig({
     include: ["dexie", "react-dom/client", "react", "zod", "@phosphor-icons/react"],
     noDiscovery: false,
   },
+  worker: {
+    format: "es",
+  },
   build: {
     target: "es2022",
     sourcemap: true,

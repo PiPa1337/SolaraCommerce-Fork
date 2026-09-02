@@ -216,4 +216,27 @@ describe("jerarquía de categorías en el dominio", () => {
         ?.parentId,
     ).toBe(cocina.id);
   });
+
+  it("mantiene la misma referencia para actualizaciones sin cambios", () => {
+    const category = catalogScaleStore.categories[0];
+    const collection = catalogScaleStore.collections[0];
+    if (!category || !collection) throw new Error("Fixture incompleto");
+
+    expect(
+      reduceProject(catalogScaleStore, {
+        type: "category.update",
+        categoryId: category.id,
+        changes: { title: category.title },
+        at: "2026-08-23T12:00:00.000Z",
+      }),
+    ).toBe(catalogScaleStore);
+    expect(
+      reduceProject(catalogScaleStore, {
+        type: "collection.update",
+        collectionId: collection.id,
+        changes: { title: collection.title },
+        at: "2026-08-23T12:00:00.000Z",
+      }),
+    ).toBe(catalogScaleStore);
+  });
 });
