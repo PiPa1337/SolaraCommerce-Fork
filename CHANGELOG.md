@@ -6,6 +6,38 @@
 - **Polls/timers respetan hidden**: `apps/studio/src/lib/autosave.ts:31` `schedule` no arma timer si `document.hidden`; `Studio.tsx:488` poll 5s y `main.tsx:37` SW 60s retornan temprano si hidden. `perf-idle` hidden Task 0.3 ms/s, rAF 0 se mantiene.
 - **Budgets y gates**: `scripts/check-budgets.mjs:40` techo CSS 112→135 KiB, `public-storefront-budget.test.ts:69` V2 CSS 192→220 KiB (213 medido, margen 6 KiB); nuevos tests `fixture-lazy`, `check-chunks`, `autosave.hidden`, `App.waterfall`, `check-budgets.regression` verdes. `core typecheck` + `studio typecheck` + `export-benchmark 2125ms` + `public-storefront 213/62 KiB` verdes.
 
+### Exportación y guardado hasta 18× más rápidos (2026-09-02)
+
+- **Causa raíz**: el CPU profile de `exportProject` mostró 66% del tiempo en
+  `parseDataUrl` (`packages/exporter/src/assets.ts`): cada consulta de
+  extensión/MIME (`imageUrl` → `assetExtension`, snapshot de variantes,
+  escritura de assets) re-decodificaba el base64 completo de las mismas
+  imágenes, con `decodeURIComponent` sobre payloads de MB y `Uint8Array.from`
+  byte por byte. Medido: 24,8 s auditando 2.000 productos (el gate O4
+  `audit-scale` llevaba tiempo fallando sin estar en ningún gate diario).
+- **Memoización de data URLs por fuente** con tope LRU de 64 MB de bytes
+  decodificados y cache de resultados inválidos; decodificación rápida
+  (Buffer → `Uint8Array.fromBase64` → atob+loop) y `decodeURIComponent` sólo
+  cuando el payload contiene `%`. El exporter es byte-idéntico (tests de
+  determinismo verdes). `audit-scale` pasó de 24.814 ms a 52 ms.
+- **Exportación**: 2.000 productos 26.885→1.492 ms (18×), 1.000 → 647 ms,
+  200 → 225 ms, 50 → 120 ms; `benchmark:export` mide 1.762 ms.
+- **Guardado**: `persistProjectToDisk` reutiliza el sitio vigente cuando el
+  sha256 del respaldo coincide con el último sitio sincronizado de la sesión
+  (el exporter es determinista); el server confirma `synced` sólo si los bytes
+  del proyecto son idénticos y el renderer no cambió, y marca `site-outdated`
+  en caso contrario. Guardar sin cambios ya no re-exporta production.
+- **Apertura**: el boot adopta el listing ya validado salvo migración real
+  (antes releía todo el disco 2×) y `onOpen` reutiliza el estado en memoria
+  verificando la versión del listing (metadata barata) en lugar de re-validar
+  todas las tiendas; nueva prueba E2E que cuenta re-descargas del respaldo
+  (0 esperadas). El dashboard cachea la auditoría de salud por snapshot
+  (`auditStoreHealth` con cache opcional).
+- Gates: `check:quick`, `check:slow`, `test:e2e:smoke` (158), editor-perf,
+  editor-persistence, dashboard-actions, local-storage (17) y suite completa
+  (1.019 passed) verdes. A21.3b falla también en HEAD (flake pre-existente de
+  inyección del renderer; fuera de alcance de esta sesión).
+
 # Changelog
 
 ### Optimización conservadora post-auditoría (2026-09-01)

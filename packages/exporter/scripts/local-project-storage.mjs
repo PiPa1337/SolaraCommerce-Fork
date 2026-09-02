@@ -769,6 +769,17 @@ export function createLocalProjectStorage(options = {}) {
       }
 
       const lastValidSite = siteInfo ?? previous?.lastValidSite;
+      // Sin sitio subido, el sitio vigente sigue siendo correcto cuando los
+      // bytes del proyecto son idénticos a los del último sitio sincronizado
+      // (el exporter es determinista) y el renderer no cambió.
+      const siteUnchanged =
+        !siteInfo &&
+        previous?.status === "synced" &&
+        previous?.lastValidSite != null &&
+        typeof previous?.current?.sha256 === "string" &&
+        previous.current.sha256 === transaction.project.sha256 &&
+        (previous.lastValidSite.rendererFingerprint ?? null) ===
+          (metadata.rendererFingerprint ?? null);
       const manifest = {
         format: MANIFEST_FORMAT,
         manifestVersion: MANIFEST_VERSION,
@@ -776,7 +787,7 @@ export function createLocalProjectStorage(options = {}) {
         storeName: project.name,
         slug: project.slug,
         schemaVersion: project.schemaVersion,
-        status: siteInfo ? "synced" : "site-outdated",
+        status: siteInfo || siteUnchanged ? "synced" : "site-outdated",
         current: {
           version: metadata.version,
           key,

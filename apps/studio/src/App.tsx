@@ -273,6 +273,9 @@ function StudioShell() {
         // Un recovery de disco es estado administrado: no caer al seeding de
         // IndexedDB, que intentaría volver a guardar con una versión nula.
         if (diskListing && (diskListing.projects.length > 0 || diskListing.recovery.length > 0)) {
+          // El listing ya está validado en memoria; sólo hay que releer el disco
+          // cuando una migración escribe sobre él.
+          let diskMutated = false;
           if (detectedStorage.writable) {
             await purgeNonDemoStores();
             await Promise.allSettled(
@@ -289,6 +292,7 @@ function StudioShell() {
                 await markProjectMigration(diskProject.id, "done");
                 diskProject.project = testimonialsExpanded;
                 diskProject.diskVersion = saved.receipt.version;
+                diskMutated = true;
               }),
             );
             const browserProjects = await listProjectsWithRecovery();
@@ -301,6 +305,7 @@ function StudioShell() {
                   await markProjectMigration(stored.id, "pending");
                   await persistToDisk(stored.project, null);
                   await markProjectMigration(stored.id, "done");
+                  diskMutated = true;
                   return;
                 }
                 if (await getProjectMigration(diskProject.id)) {
@@ -319,7 +324,12 @@ function StudioShell() {
               }),
             );
           }
-          await refreshDisk();
+          if (diskMutated) {
+            await refreshDisk();
+          } else {
+            setProjects(diskListing.projects);
+            setRecovery(diskListing.recovery);
+          }
           return;
         }
 
@@ -752,10 +762,28 @@ function StudioShell() {
             void guard(async () => {
               let project: StoreProjectV1 | undefined;
               if (storageModeRef.current) {
-                const result = await refreshDisk();
-                const selected = result.projects.find((item) => item.id === id) as
+                // El listing es metadata barata; el respaldo completo sólo se
+                // re-descarga si el disco avanzó respecto del estado cargado.
+                const { loadDiskProject } = await loadLocalProjectRepository();
+                const { listLocalProjects } = await loadLocalStorage();
+                const listing = await listLocalProjects();
+                const summary = listing.projects.find((item) => item.projectId === id);
+                const cached = projects.find((item) => item.id === id) as
                   | (StoredProject & { diskVersion?: number })
                   | undefined;
+                let selected: (StoredProject & { diskVersion?: number }) | undefined;
+                if (cached && summary && cached.diskVersion === summary.version) {
+                  selected = cached;
+                } else if (summary) {
+                  const loaded = await loadDiskProject(summary);
+                  selected = loaded;
+                  setProjects((previous) => {
+                    const withoutId = previous.filter((item) => item.id !== id);
+                    return [...withoutId, loaded].sort((left, right) =>
+                      right.updatedAt.localeCompare(left.updatedAt),
+                    );
+                  });
+                }
                 const diskProject = selected?.project;
                 project = diskProject;
                 setActiveDiskVersion(selected?.diskVersion ?? null);

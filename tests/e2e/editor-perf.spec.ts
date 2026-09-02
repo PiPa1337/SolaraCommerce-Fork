@@ -1,6 +1,7 @@
 import type { Server } from "node:http";
 import { expect, test } from "@playwright/test";
-import { startStudioServer, stopStudioServer } from "./studio-server";
+import { catalogModernV2Store } from "../../packages/project-schema/src/catalog-modern-v2-fixture";
+import { type ReadOnlyManagedProject, startStudioServer, stopStudioServer } from "./studio-server";
 
 /**
  * Budgets de arranque del editor, en milisegundos. Se fijaron midiendo una
@@ -102,4 +103,48 @@ test("mide la apertura de Predeterminado hasta Resumen y el cambio a Catálogo",
   );
   expect(results.openMs).toBeLessThanOrEqual(OPEN_STORE_BUDGET_MS);
   expect(results.switchMs).toBeLessThanOrEqual(TAB_SWITCH_BUDGET_MS);
+});
+
+test("abrir una tienda administrada no vuelve a descargar el respaldo desde disco", async ({
+  page,
+}) => {
+  const managedProject: ReadOnlyManagedProject = {
+    projectId: catalogModernV2Store.id,
+    name: catalogModernV2Store.name,
+    slug: catalogModernV2Store.slug,
+    version: 7,
+    updatedAt: catalogModernV2Store.updatedAt,
+    savedAt: catalogModernV2Store.updatedAt,
+    folder: "editor-perf--managed-open",
+    currentBytes: new TextEncoder().encode(
+      `${JSON.stringify({
+        format: "solara-project",
+        version: 2,
+        projectId: catalogModernV2Store.id,
+        exportedAt: catalogModernV2Store.updatedAt,
+        project: catalogModernV2Store,
+      })}\n`,
+    ),
+  };
+  const managed = await startStudioServer({ managedProject });
+  let archiveFetchesDuringOpen = 0;
+  try {
+    await page.goto(managed.url);
+    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+    await page.locator(".dashboard-store-card").first().waitFor();
+    page.on("request", (request) => {
+      if (/\/__solara\/storage\/projects\/[^/]+\/current$/.test(new URL(request.url()).pathname)) {
+        archiveFetchesDuringOpen += 1;
+      }
+    });
+    await page
+      .locator(".dashboard-store-card")
+      .first()
+      .locator(".dashboard-store-card__open")
+      .click();
+    await expect(page.locator('[role="tablist"]')).toBeVisible({ timeout: 30_000 });
+    expect(archiveFetchesDuringOpen).toBe(0);
+  } finally {
+    await stopStudioServer(managed.server);
+  }
 });

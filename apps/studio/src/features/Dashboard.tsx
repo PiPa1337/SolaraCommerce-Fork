@@ -33,6 +33,7 @@ import {
   filterDashboardProjects,
   getDashboardStats,
   getProjectMetrics,
+  type HealthAuditCacheEntry,
   partitionPinnedProjects,
   storeFaviconSrc,
   storeMark,
@@ -245,6 +246,7 @@ export function Dashboard({
   const selectionInitializedRef = useRef(false);
   const focusCardOnSelectRef = useRef(false);
   const actionNoticeTimerRef = useRef<number | undefined>(undefined);
+  const healthAuditCacheRef = useRef(new Map<string, HealthAuditCacheEntry>());
   const dashboardTitleId = useId();
   const libraryTitleId = useId();
   const shutdownTitleId = useId();
@@ -638,6 +640,7 @@ export function Dashboard({
               auditProject(project).filter((issue) => issue.severity === "critical").length,
             300,
             () => performance.now(),
+            healthAuditCacheRef.current,
           );
           if (cancelled) return;
           setCriticalIssues(critical);

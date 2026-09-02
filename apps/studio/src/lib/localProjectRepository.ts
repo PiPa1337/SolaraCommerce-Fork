@@ -59,6 +59,22 @@ export function serializeSiteFiles(files: ReadonlyMap<string, string | Uint8Arra
   );
 }
 
+/**
+ * Índice de sesión: sha256 del respaldo cuyo sitio quedó sincronizado en
+ * disco. Guardar el mismo snapshot no debe re-exportar production: el sitio
+ * vigente ya corresponde exactamente a esos bytes (el exporter es
+ * determinista). Vive sólo en memoria; al reiniciar la app la primera
+ * guarda vuelve a exportar.
+ */
+const siteSyncIndex = new Map<string, string>();
+
+async function sha256Hex(bytes: Uint8Array): Promise<string> {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  const digest = await crypto.subtle.digest("SHA-256", copy.buffer);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 export async function loadDiskProject(summary: LocalProjectSummary): Promise<DiskProject> {
   const archive = await readLocalProject(summary.projectId);
   const storedProject = await readProjectArchiveOwnedBytesInWorker(archive);
@@ -140,20 +156,27 @@ export async function persistProjectToDisk(
   options: { allowProtectedWrite?: boolean } = {},
 ): Promise<{ receipt: LocalSaveReceipt; siteError?: string }> {
   const projectArchive = await createProjectArchiveInWorker(project);
-  const verifiedProject = await readProjectArchiveOwnedBytesInWorker(
-    new TextEncoder().encode(projectArchive),
-  );
+  const archiveBytes = new TextEncoder().encode(projectArchive);
+  // El hash debe calcularse antes del round-trip: la lectura por worker
+  // transfiere el buffer y lo deja inutilizable para el llamador.
+  const archiveSha256 = await sha256Hex(archiveBytes);
+  const verifiedProject = await readProjectArchiveOwnedBytesInWorker(archiveBytes);
   if (verifiedProject.id !== project.id) {
     throw new Error("El respaldo generado no coincide con la tienda actual.");
   }
+  const siteIsCurrent = siteSyncIndex.get(project.id) === archiveSha256;
   let siteMap: string | undefined;
   let siteError: string | undefined;
-  try {
-    const site = await exportSiteInWorker(project, "production");
-    siteMap = serializeSiteFiles(site.files);
-  } catch (error) {
-    siteError =
-      error instanceof Error ? error.message : "La exportación de producción no pudo completarse.";
+  if (!siteIsCurrent) {
+    try {
+      const site = await exportSiteInWorker(project, "production");
+      siteMap = serializeSiteFiles(site.files);
+    } catch (error) {
+      siteError =
+        error instanceof Error
+          ? error.message
+          : "La exportación de producción no pudo completarse.";
+    }
   }
   const receipt = await saveLocalProject(
     {
@@ -171,5 +194,9 @@ export async function persistProjectToDisk(
     projectArchive,
     siteMap,
   );
+  if (!siteError) {
+    if (receipt.status === "synced") siteSyncIndex.set(project.id, archiveSha256);
+    else siteSyncIndex.delete(project.id);
+  }
   return { receipt, ...(siteError ? { siteError } : {}) };
 }

@@ -160,3 +160,64 @@ test("el lanzador persiste el proyecto y el sitio fuera de IndexedDB", async ({ 
     rmSync(applicationRoot, { recursive: true, force: true });
   }
 });
+
+test("commit sin sitio conserva el sitio vigente cuando los bytes del proyecto no cambian", async () => {
+  const applicationRoot = mkdtempSync(join(tmpdir(), "solara-site-reuse-"));
+  try {
+    const project = buildCatalogModernProject({
+      seed: "clean",
+      id: "store-site-reuse-test",
+      name: "Tienda sitio vigente",
+      slug: "tienda-sitio-vigente",
+      baseUrl: "https://tienda-sitio-vigente.example",
+    });
+    const storage = createLocalProjectStorage({ applicationRoot });
+    const archive = new TextEncoder().encode(createProjectArchive(project));
+
+    const first = await storage.beginSave({
+      projectId: project.id,
+      name: project.name,
+      slug: project.slug,
+      projectUpdatedAt: project.updatedAt,
+      expectedVersion: null,
+    });
+    const exported = exportProject(project, { mode: "draft" });
+    await storage.upload(first.transactionId, "project", bytesStream(archive));
+    await storage.upload(
+      first.transactionId,
+      "site",
+      bytesStream(new TextEncoder().encode(serializeSiteFiles(exported.files))),
+    );
+    const firstReceipt = await storage.commit(first.transactionId);
+    expect(firstReceipt.status).toBe("synced");
+
+    const second = await storage.beginSave({
+      projectId: project.id,
+      name: project.name,
+      slug: project.slug,
+      projectUpdatedAt: project.updatedAt,
+      expectedVersion: firstReceipt.version,
+    });
+    await storage.upload(second.transactionId, "project", bytesStream(archive));
+    const secondReceipt = await storage.commit(second.transactionId);
+    expect(secondReceipt.status).toBe("synced");
+    expect(secondReceipt.site?.key).toBe(firstReceipt.site?.key);
+
+    const editedArchive = new TextEncoder().encode(
+      createProjectArchive({ ...project, name: "Tienda sitio vigente editada" }),
+    );
+    const third = await storage.beginSave({
+      projectId: project.id,
+      name: "Tienda sitio vigente editada",
+      slug: project.slug,
+      projectUpdatedAt: project.updatedAt,
+      expectedVersion: secondReceipt.version,
+    });
+    await storage.upload(third.transactionId, "project", bytesStream(editedArchive));
+    const thirdReceipt = await storage.commit(third.transactionId);
+    expect(thirdReceipt.status).toBe("site-outdated");
+    expect(thirdReceipt.site?.key).toBe(firstReceipt.site?.key);
+  } finally {
+    rmSync(applicationRoot, { recursive: true, force: true });
+  }
+});

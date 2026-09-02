@@ -48,15 +48,31 @@ export function storeFaviconSrc(project: StoredProject["project"]): string | und
   return asset.fallbackSource ?? asset.source;
 }
 
+export interface HealthAuditCacheEntry {
+  project: StoredProject["project"];
+  critical: number;
+}
+
+/**
+ * Audita la salud de cada tienda respetando un presupuesto por tienda. El
+ * cache opcional evita re-auditar snapshots sin cambios: la identidad del
+ * objeto proyecto garantiza que el resultado sigue vigente.
+ */
 export function auditStoreHealth(
   projects: readonly StoredProject[],
   audit: (project: StoredProject["project"]) => number,
   timeoutMs: number,
   now: () => number,
+  cache?: Map<string, HealthAuditCacheEntry>,
 ): HealthAuditResult {
   let critical = 0;
   let skipped = 0;
   for (const record of projects) {
+    const cached = cache?.get(record.id);
+    if (cached && cached.project === record.project) {
+      critical += cached.critical;
+      continue;
+    }
     const startedAt = now();
     let issues: number | undefined;
     try {
@@ -66,8 +82,10 @@ export function auditStoreHealth(
     }
     if (now() - startedAt > timeoutMs) {
       skipped += 1;
+      cache?.delete(record.id);
     } else if (issues !== undefined) {
       critical += issues;
+      cache?.set(record.id, { project: record.project, critical: issues });
     }
   }
   return { critical, skipped };

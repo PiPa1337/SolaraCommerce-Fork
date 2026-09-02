@@ -1,6 +1,6 @@
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   auditStoreHealth,
   calculateMonthlyCost,
@@ -228,6 +228,35 @@ describe("modelo del dashboard", () => {
         () => 0,
       ),
     ).toEqual({ critical: 0, skipped: 0 });
+  });
+
+  it("reutiliza la auditoría cacheada mientras el snapshot no cambie", () => {
+    const records = [
+      record("a", "Una", "2026-08-01T00:00:00.000Z"),
+      record("b", "Dos", "2026-08-02T00:00:00.000Z"),
+    ];
+    const audit = vi.fn(() => 2);
+    const cache = new Map<string, { project: StoredProject["project"]; critical: number }>();
+
+    const first = auditStoreHealth(records, audit, 300, () => 0, cache);
+    const second = auditStoreHealth(records, audit, 300, () => 0, cache);
+
+    expect(first).toEqual({ critical: 4, skipped: 0 });
+    expect(second).toEqual({ critical: 4, skipped: 0 });
+    expect(audit).toHaveBeenCalledTimes(2);
+  });
+
+  it("re-audita cuando el snapshot de la tienda cambió", () => {
+    const original = record("a", "Una", "2026-08-01T00:00:00.000Z");
+    const edited = { ...original, project: { ...original.project, name: "Otra" } };
+    const audit = vi.fn(() => 2);
+    const cache = new Map<string, { project: StoredProject["project"]; critical: number }>();
+
+    auditStoreHealth([original], audit, 300, () => 0, cache);
+    const second = auditStoreHealth([edited], audit, 300, () => 0, cache);
+
+    expect(audit).toHaveBeenCalledTimes(2);
+    expect(second).toEqual({ critical: 2, skipped: 0 });
   });
 
   it("marca la tienda con iniciales por palabra, no con las dos primeras letras", () => {

@@ -59,10 +59,55 @@ export interface ParsedDataUrl {
 }
 
 /**
- * Decodifica data URLs con parámetros, base64 y payloads percent-encoded. El
- * exporter y sus validaciones deben interpretar una URL exactamente igual.
+ * Cache de data URLs decodificadas. La misma imagen se consulta muchas veces
+ * por exportación (extensión, MIME real, escritura del archivo) y decodificar
+ * el base64 completo por consulta era el coste dominante de exportar y auditar.
+ * Los bytes decodificados nunca se mutan; el tope acota la memoria del worker.
  */
-export function parseDataUrl(source: string): ParsedDataUrl | undefined {
+const dataUrlCache = new Map<string, ParsedDataUrl | undefined>();
+const dataUrlCacheMaxBytes = 64 * 1024 * 1024;
+let dataUrlCacheBytes = 0;
+
+function rememberParsedDataUrl(source: string, parsed: ParsedDataUrl | undefined): void {
+  const previous = dataUrlCache.get(source);
+  if (previous) dataUrlCacheBytes -= previous.bytes.byteLength;
+  dataUrlCache.set(source, parsed);
+  if (parsed) dataUrlCacheBytes += parsed.bytes.byteLength;
+  while (dataUrlCacheBytes > dataUrlCacheMaxBytes) {
+    const oldest = dataUrlCache.keys().next();
+    if (oldest.done) break;
+    const evicted = dataUrlCache.get(oldest.value);
+    dataUrlCache.delete(oldest.value);
+    if (evicted) dataUrlCacheBytes -= evicted.bytes.byteLength;
+  }
+}
+
+function decodeBase64Payload(payload: string): Uint8Array | undefined {
+  // Buffer prioriza la ruta nativa de Node (el exporter también corre allí);
+  // fromBase64 cubre navegadores recientes y atob+loop el resto.
+  if (typeof Buffer !== "undefined") {
+    return Buffer.from(payload, "base64");
+  }
+  const fromBase64 = (
+    Uint8Array as unknown as {
+      fromBase64?: (input: string) => Uint8Array;
+    }
+  ).fromBase64;
+  if (typeof fromBase64 === "function") {
+    return fromBase64(payload);
+  }
+  if (typeof atob === "function") {
+    const binary = atob(payload);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    return bytes;
+  }
+  return undefined;
+}
+
+function computeParsedDataUrl(source: string): ParsedDataUrl | undefined {
   if (!/^data:/i.test(source)) return undefined;
   const comma = source.indexOf(",");
   if (comma < 5) return undefined;
@@ -72,11 +117,15 @@ export function parseDataUrl(source: string): ParsedDataUrl | undefined {
   const mimeType = rawMimeType?.includes("/") ? rawMimeType.toLowerCase() : undefined;
   const isBase64 = tokens.some((token) => token.trim().toLowerCase() === "base64");
   const rawPayload = source.slice(comma + 1);
-  let payload: string;
-  try {
-    payload = decodeURIComponent(rawPayload);
-  } catch {
-    return undefined;
+  // El percent-decoding sólo puede cambiar el payload cuando hay '%'; saltarlo
+  // evita escanear y copiar payloads base64 de megabytes en cada consulta.
+  let payload = rawPayload;
+  if (rawPayload.includes("%")) {
+    try {
+      payload = decodeURIComponent(rawPayload);
+    } catch {
+      return undefined;
+    }
   }
   if (isBase64) {
     const normalizedPayload = payload.replace(/\s/g, "");
@@ -84,24 +133,8 @@ export function parseDataUrl(source: string): ParsedDataUrl | undefined {
       return undefined;
     }
     try {
-      if (typeof atob === "function") {
-        const binary = atob(normalizedPayload);
-        return {
-          ...(mimeType ? { mimeType } : {}),
-          bytes: Uint8Array.from(binary, (character) => character.charCodeAt(0)),
-        };
-      }
-    } catch {
-      // Node's Buffer fallback below handles environments without atob and
-      // produces the same bytes as the browser decoder.
-    }
-    try {
-      if (typeof Buffer !== "undefined") {
-        return {
-          ...(mimeType ? { mimeType } : {}),
-          bytes: Uint8Array.from(Buffer.from(normalizedPayload, "base64")),
-        };
-      }
+      const bytes = decodeBase64Payload(normalizedPayload);
+      if (bytes) return { ...(mimeType ? { mimeType } : {}), bytes };
     } catch {
       return undefined;
     }
@@ -111,6 +144,25 @@ export function parseDataUrl(source: string): ParsedDataUrl | undefined {
     ...(mimeType ? { mimeType } : {}),
     bytes: new TextEncoder().encode(payload),
   };
+}
+
+/**
+ * Decodifica data URLs con parámetros, base64 y payloads percent-encoded. El
+ * exporter y sus validaciones deben interpretar una URL exactamente igual.
+ */
+export function parseDataUrl(source: string): ParsedDataUrl | undefined {
+  if (dataUrlCache.has(source)) {
+    const cached = dataUrlCache.get(source);
+    if (cached) {
+      // Refrescar recencia para que la política de expulsión sea LRU real.
+      dataUrlCache.delete(source);
+      dataUrlCache.set(source, cached);
+    }
+    return cached;
+  }
+  const parsed = computeParsedDataUrl(source);
+  rememberParsedDataUrl(source, parsed);
+  return parsed;
 }
 
 function ascii(bytes: Uint8Array, start: number, length: number): string {
