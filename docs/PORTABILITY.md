@@ -50,7 +50,7 @@ diagnóstico manual.
 
 ## Cómo crear la carpeta portable
 
-Desde la raíz del checkout, con Node 22 o posterior y las dependencias
+Desde la raíz del checkout, con Node 24.x y las dependencias
 instaladas:
 
 ```powershell

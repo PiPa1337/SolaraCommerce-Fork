@@ -14,8 +14,9 @@ el producto y cada bloque V2 se integra con commits pequeños sobre `main`.
 - `StoreProjectV2` y `schemaVersion: 2` son la autoridad persistida.
 - Preview y exportación usan el renderer de `@solara/exporter`.
 - El storefront inicial es útil sin JavaScript.
-- El release Node 22 ejecuta 698 casos Chromium y 85 contratos públicos en cada
-  uno de Firefox y WebKit.
+- La evidencia histórica del release Node 22 ejecutó 698 casos Chromium y 85
+  contratos públicos en cada uno de Firefox y WebKit; el runtime oficial actual
+  de release es Node 24.x.
 - Último gate release: 865 aprobados, 3 omitidos deliberadamente, 0 fallos.
 - `catalogModernStore` y `catalogScaleStore` pasan sus contratos de exportación.
 

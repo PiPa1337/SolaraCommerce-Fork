@@ -2,7 +2,7 @@
 
 ## Antes de publicar
 
-- Ejecutar desde Node 22:
+- Ejecutar desde Node 24.x:
 
   ```bash
   corepack pnpm install --frozen-lockfile

@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   verify:
-    name: Windows, Node 22, Chromium
+    name: Windows, Node 24, Chromium
     runs-on: windows-latest
     timeout-minutes: 15
     env:
@@ -35,7 +35,7 @@ jobs:
       - name: Configurar Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
@@ -69,7 +69,7 @@ jobs:
           SOLARA_EXPORT_BENCHMARK_FILES_BUDGET_BYTES: 52428800
 
   e2e:
-    name: Windows, Node 22, Chromium — shard ${{ matrix.shard }}/4
+    name: Windows, Node 24, Chromium — shard ${{ matrix.shard }}/4
     needs: verify
     runs-on: windows-latest
     timeout-minutes: 20
@@ -94,7 +94,7 @@ jobs:
       - name: Configurar Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
@@ -145,7 +145,7 @@ jobs:
       - name: Configurar Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
@@ -168,7 +168,7 @@ jobs:
         run: pnpm test:e2e:portable
 
   portability:
-    name: Linux, Node 22 (portabilidad Node)
+    name: Linux, Node 24 (portabilidad Node)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -187,7 +187,7 @@ jobs:
       - name: Configurar Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 

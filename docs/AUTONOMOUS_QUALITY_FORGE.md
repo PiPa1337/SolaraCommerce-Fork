@@ -11,9 +11,9 @@ MCP real (`initialize/tools/list/tools/call`) y JSONL `--read-only`. La fábrica
 aislada verificó 20 tiendas por Vitest y el benchmark de exportación de 2.000
 productos pasó con 48.892.403 B, sin relajar el límite de 48 MiB.
 
-No se certifica aún como release completo: Node 22 no está instalado, el full
-E2E tiene fallos fuera del smoke y el rollout global con entidades persistidas
-requiere una corrida autorizada sobre tiendas reales.
+No se certifica aún como release completo: la matriz release Node 24.x no se ha
+ejecutado completa, el full E2E tiene fallos fuera del smoke y el rollout global
+con entidades persistidas requiere una corrida autorizada sobre tiendas reales.
 
 ## Fábrica de tiendas
 

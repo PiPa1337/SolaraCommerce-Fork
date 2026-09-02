@@ -73,15 +73,15 @@ try {
   Set-Location -LiteralPath $projectRoot
 
   if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-    throw "Node.js 22 o posterior no está instalado o no está disponible en PATH."
+    throw "Node.js 24.x no está instalado o no está disponible en PATH."
   }
   $nodeVersion = & node -v
   if ($LASTEXITCODE -ne 0 -or -not $nodeVersion) {
     throw "No se pudo verificar la versión de Node.js instalada."
   }
   $nodeMajor = [int]($nodeVersion -replace "^v(\d+).*", '$1')
-  if ($nodeMajor -lt 22) {
-    throw "Se requiere Node.js 22 o posterior; la versión instalada es $nodeVersion."
+  if ($nodeMajor -ne 24) {
+    throw "Se requiere Node.js 24.x; la versión instalada es $nodeVersion."
   }
   if (-not (Get-Command corepack -ErrorAction SilentlyContinue)) {
     throw "Corepack no está disponible. Instalá una versión actual de Node.js."

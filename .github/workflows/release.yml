@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   release:
-    name: Release, Node 22, Chromium Firefox WebKit
+    name: Release, Node 24, Chromium Firefox WebKit
     runs-on: windows-latest
     timeout-minutes: 30
     env:
@@ -35,7 +35,7 @@ jobs:
       - name: Configurar Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 

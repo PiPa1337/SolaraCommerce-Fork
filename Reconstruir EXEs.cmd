@@ -13,7 +13,7 @@ echo.
 REM -- Verificaciones basicas --
 where node >nul 2>nul
 if errorlevel 1 (
-  echo [ERROR] Node.js no esta instalado o no esta en PATH. Requiere Node 22+.
+  echo [ERROR] Node.js no esta instalado o no esta en PATH. Requiere Node 24.x.
   pause
   exit /b 1
 )
@@ -21,8 +21,8 @@ if errorlevel 1 (
 for /f "tokens=1 delims=v" %%a in ('node -v') do set NODE_MAJOR=%%a
 for /f "tokens=1 delims=." %%b in ("%NODE_MAJOR%") do set NODE_MAJOR=%%b
 set NODE_MAJOR=%NODE_MAJOR:v=%
-if %NODE_MAJOR% LSS 22 (
-  echo [ERROR] Se requiere Node.js 22 o posterior. Instalado: 
+if not "%NODE_MAJOR%"=="24" (
+  echo [ERROR] Se requiere Node.js 24.x. Instalado:
   node -v
   pause
   exit /b 1

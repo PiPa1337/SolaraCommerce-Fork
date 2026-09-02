@@ -20,9 +20,9 @@ corepack pnpm reference:export
 corepack pnpm release:manifest
 ```
 
-Node 22 es la referencia de CI, pero el comando permite Node 22 o posterior y
-advierte cuando la versión difiere. Studio se valida con la suite completa
-en Chromium (la combinación oficialmente soportada en v1). Firefox y WebKit
+Node 24.x es el único runtime oficial de CI y release; el comando rechaza otras
+versiones. Studio se valida con la suite completa en Chromium (la combinación
+oficialmente soportada en v1). Firefox y WebKit
 repiten una lista explícita de specs del storefront exportado —rutas modernas y
 legacy, carrito, variantes, búsqueda, filtros, escala y estado sin JavaScript—
 para cubrir Safari y Firefox sin ejecutar allí los barridos internos del Studio.

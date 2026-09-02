@@ -44,10 +44,11 @@ todos los elementos en su estado final y elimina las transiciones espaciales.
 - comparación visual equivalente en 1920x968: V1 conserva su composición y no
   recibe estilos `.cm.v2`; ambas familias mantienen el mismo contenido.
 
-La matriz release se validó con Node 22.18.0: los contratos públicos V2 pasaron
-en Chromium, Firefox y WebKit. La ejecución completa registró 903 tests verdes,
-2 casos Chromium que pasaron al reintentar y 3 capturas visuales opcionales
-omitidas.
+La evidencia histórica de la matriz release con Node 22.18.0 se conserva como
+referencia de compatibilidad: los contratos públicos V2 pasaron en Chromium,
+Firefox y WebKit. El contrato actual exige repetir la certificación bajo Node
+24.x. Aquella ejecución registró 903 tests verdes, 2 casos Chromium que pasaron
+al reintentar y 3 capturas visuales opcionales omitidas.
 
 ## Evidencia visual
 

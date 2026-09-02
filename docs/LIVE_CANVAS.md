@@ -15,8 +15,8 @@ directo pasó 129/129 con `--retries=0`; el spec de Live Canvas pasó 2/2 sin
 reintentos.
 
 Pendiente de certificación: una matriz E2E completa alineada con el contrato
-actual de plantilla protegida y checklist, la prueba release Node 22 y el
-rollout autorizado sobre tiendas reales. El host sólo dispone de Node 24.
+actual de plantilla protegida y checklist, la prueba release bajo Node 24.x y el
+rollout autorizado sobre tiendas reales.
 
 ## Arquitectura
 

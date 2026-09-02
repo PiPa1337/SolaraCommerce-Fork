@@ -21,13 +21,13 @@
 - `StoreProjectV2Schema` autoridad, `schemaVersion:2` sin migración explícita.
 - Preview === exporter renderer (`@solara/exporter`). Dinero en centavos. No floats.
 - No commitear `dist/`, `.release/`, `proyectos/`, `.solara-runtime/`, reportes, binarios.
-- Stack: Node 22+ (release exige 22, dev puede 24), pnpm 10.15.1, React 19+Vite, TS estricto, Biome, Vitest, Playwright Chromium 8 workers (9800X3D, env `PLAYWRIGHT_WORKERS=6` si lag), Zod, Dexie, `motion`.
+- Stack: Node 24.x, pnpm 10.15.1, React 19+Vite, TS estricto, Biome, Vitest, Playwright Chromium 8 workers (9800X3D, env `PLAYWRIGHT_WORKERS=6` si lag), Zod, Dexie, `motion`.
 - `catalogScaleStore` 50p/16c fixture determinista siempre alineada.
 
 ## 4. Gates y performance (9800X3D 8C/16T)
 - **Diaria iteración**: `pnpm check:quick` 7 gates paralelo ~14s (<90s) + `pnpm test:e2e:smoke` 15 specs ~45s-2min (Chromium, build cacheado). No incluye budgets/release.
 - **Cierre**: `pnpm check` (alias `check:full` secuencial) + `pnpm test:e2e` 74/74 ~3-4min con 8 workers.
-- **On-demand**: `pnpm test:e2e:release` (Node 22, 3 browsers), `pnpm desktop:package`, `pnpm benchmark:export`.
+- **On-demand**: `pnpm test:e2e:release` (Node 24, 3 browsers), `pnpm desktop:package`, `pnpm benchmark:export`.
 - **Budgets actuales (2026-08-20, no bloqueantes)**: Studio JS 720 KiB (688 medido), CSS 112 KiB (102 medido), runtime JS 64 KiB (59 medido), V2 CSS 180 KiB (169 medido), `continue-on-error: true` en CI. `pnpm check:budgets` siempre pasa.
 
 ## 5. Build portable — obligatorio si toca app/shell

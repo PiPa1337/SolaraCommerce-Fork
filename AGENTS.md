@@ -44,7 +44,7 @@ El flujo principal es:
 
 ## Stack y arquitectura resumida
 
-- Node.js 22+ y Corepack.
+- Node.js 24.x y Corepack.
 - pnpm 10.15.1 con workspace sin Nx, Turbo ni Docker.
 - React 19 + Vite para `apps/studio`.
 - TypeScript estricto, Biome y Vitest.
@@ -167,7 +167,7 @@ corepack pnpm check:full        # secuencial, para cierre
 corepack pnpm build
 corepack pnpm benchmark:export
 corepack pnpm test:e2e          # 74 specs full (~3-4 min con 8 workers)
-corepack pnpm test:e2e:release       # Node 22 + navegadores instalados (solo on-demand)
+corepack pnpm test:e2e:release       # Node 24 + navegadores instalados (solo on-demand)
 corepack pnpm desktop:build
 corepack pnpm desktop:package
 corepack pnpm portable:smoke
@@ -196,8 +196,8 @@ La guía de distribución autocontenida está en
   endpoints debe probar ambos transportes.
 - El artefacto portable es una carpeta `win-unpacked`, no un instalador. No se
   deben mover `proyectos/` o `.solara-runtime/` fuera de la carpeta del `.exe`.
-- La matriz release exige Node 22. El desarrollo puede ejecutarse con una versión
-  posterior, pero no debe presentarse como validación release.
+- La matriz release exige Node 24.x. No se deben presentar otras versiones como
+  validación release.
 - Playwright usa 8 workers por defecto (9800X3D) con override `PLAYWRIGHT_WORKERS=6`; `check:quick` paraleliza typecheck/test con `pnpm -r --parallel`.
 - El checkout termina en WhatsApp y puede limitar la elegibilidad de Merchant.
 - La publicación real, DNS, Search Console y Merchant Center son manuales.
@@ -209,7 +209,7 @@ La guía de distribución autocontenida está en
 - [ ] Mantener `catalogModernStore`, `catalogScaleStore` y la plantilla limpia
       coherentes cuando corresponda.
 - [ ] Agregar primero una prueba del comportamiento nuevo o del bug.
-- [ ] Ejecutar el bucle local del paquete afectado y luego el gate proporcional: diaria `check:quick` + `test:e2e:smoke` (~2-3 min); cierre `check` + `test:e2e` full. `test:e2e:release` y `desktop:package` solo on-demand (Node 22).
+- [ ] Ejecutar el bucle local del paquete afectado y luego el gate proporcional: diaria `check:quick` + `test:e2e:smoke` (~2-3 min); cierre `check` + `test:e2e` full. `test:e2e:release` y `desktop:package` solo on-demand (Node 24).
 - [ ] Revisar HTML inicial, responsive, teclado, reduced motion y no-JavaScript si
       se toca storefront.
 - [ ] Ejecutar `git diff --check` y `corepack pnpm check:repository`.

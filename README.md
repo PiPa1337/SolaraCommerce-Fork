@@ -24,7 +24,7 @@ guardado transaccional de Studio; no permite parches arbitrarios de archivos.
 
 ## Requisitos
 
-- Node.js 22 o posterior
+- Node.js 24.x
 - Corepack
 - pnpm 10.15.1, fijado por el repositorio
 
@@ -248,7 +248,7 @@ en el sitio público.
 
 ## Resolución de problemas
 
-- **El launcher no abre:** verificá Node 22+, Corepack y que el puerto 4173–4180
+- **El launcher no abre:** verificá Node 24.x, Corepack y que el puerto 4173–4180
   no esté ocupado. El launcher registra el estado en `.solara-runtime/`.
 - **No aparece Guardar en disco:** Studio no detectó el servidor gestionado;
   abrí la aplicación con `Abrir SolaraCommerce.cmd`, no con Vite directo.
@@ -258,14 +258,13 @@ en el sitio público.
   `proyectos/`; no borres respaldos hasta recuperar o exportar una copia.
 - **Falla Playwright:** instalá Chromium con
   `corepack pnpm playwright:install:chromium` y revisá `playwright-report/`.
-- **Falla el gate de release:** ejecutalo con Node 22 y los tres navegadores;
-  el entorno local con Node 24 puede diferir de CI.
+- **Falla el gate de release:** ejecutalo con Node 24.x y los tres navegadores;
+  es el mismo runtime que usa CI.
 
 El benchmark exporta `catalog-modern-v2` con 2.000 productos y falla si supera
 30 segundos. Playwright usa Chromium para el bucle local; la matriz completa y
 Lighthouse se reservan para el gate de release. El gate release requiere Node
-22 (igual que CI) y ejecuta Chromium, Firefox y WebKit; en equipos con otra
-versión de Node, ejecutalo dentro del entorno de CI.
+24.x (igual que CI) y ejecuta Chromium, Firefox y WebKit.
 
 Los tests de Studio usan una IndexedDB en memoria para comprobar guardado,
 reapertura, duplicación, archivo, restauración y ráfagas de autosave sin depender
@@ -274,7 +273,7 @@ de un navegador durante el bucle unitario.
 ## Integración continua
 
 [GitHub Actions](https://github.com/PiPa1337/SolaraCommerce/actions/workflows/ci.yml)
-ejecuta sobre Windows, Node 22 y pnpm 10.15.1:
+ejecuta sobre Windows, Node 24 y pnpm 10.15.1:
 
 1. instalación con lockfile congelado;
 2. revisión de secretos y archivos mayores a 10 MB;

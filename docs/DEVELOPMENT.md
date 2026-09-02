@@ -6,7 +6,7 @@ cambio, y cómo las piezas se conectan entre sí.
 
 ## Requisitos
 
-- Node.js 22+ y Corepack (pnpm 10.15.1)
+- Node.js 24.x y Corepack (pnpm 10.15.1)
 - Windows 10/11 (el portable es Windows-only; el código Node es cross-platform)
 - Chromium para Playwright E2E (`corepack pnpm playwright:install:chromium`)
 
