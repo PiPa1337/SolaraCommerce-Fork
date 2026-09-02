@@ -42,6 +42,25 @@ El flujo principal es:
 - No enviar el catálogo completo a una IA: usar el schema, fixtures pequeñas o
   muestras deterministas.
 
+## Dónde vive la data real
+
+- El usuario siempre trabaja con la distribución portable: sus tiendas, respaldos
+  y sitios viven únicamente en
+  `.release/portable/SolaraCommerce-Portable/proyectos/` (perfil y logs en
+  `.solara-runtime/`). Esa carpeta no está en Git y es la única copia de la data.
+- La IA puede usar la app que prefiera (portable o modo dev `pnpm dev` /
+  `Abrir SolaraCommerce.cmd`) para probar y depurar código; sólo el usuario
+  opera la portable para trabajar.
+- El `proyectos/` del repo es la zona de pruebas de la IA (modo dev): puede
+  contener tiendas de prueba transitorias. La data real del usuario nunca vive
+  ahí ni viaja a la portable: `desktop:package` no copia `proyectos/` del repo.
+- Inspeccionar la portable: lectura directa permitida. Escribir tiendas: canal
+  del agente (`SolaraCommerce-Agent.cmd`, JSONL/MCP) o cambiar código y
+  reconstruir (`desktop:build`, `desktop:package`). Nunca editar a mano
+  `.solara.json`, manifests ni staging de la portable.
+- Antes de regenerar o limpiar la portable, verificar que se preserva
+  `proyectos/`; nunca borrar la carpeta a mano.
+
 ## Stack y arquitectura resumida
 
 - Node.js 24.x y Corepack.

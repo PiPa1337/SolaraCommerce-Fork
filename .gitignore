@@ -7,7 +7,8 @@ test-results/
 screenshots/
 .vite/
 .solara-runtime/
-proyectos/
+proyectos/*
+!proyectos/LEEME.md
 .release/
 .local-backups/
 _qa/

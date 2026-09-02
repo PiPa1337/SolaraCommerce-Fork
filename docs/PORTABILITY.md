@@ -67,8 +67,11 @@ El resultado queda en:
 ```
 
 `desktop:package` genera una carpeta `win-unpacked`, la convierte en la carpeta
-portable final y copia `proyectos/` si existe en el checkout. `.release/` está
-ignorado por Git. `portable:clean` elimina únicamente esa salida generada.
+portable final y preserva `proyectos/` y `.solara-runtime/` del portable
+anterior. El `proyectos/` del checkout no se copia: es la zona de pruebas de la
+IA en modo desarrollo (ver `AGENTS.md`); la data real del usuario vive en la
+copia portable. `.release/` está ignorado por Git. `portable:clean` elimina
+únicamente esa salida generada.
 
 Para distribuirla, copiá o comprimí la carpeta completa. No copies sólo el
 `.exe`: `resources/app.asar`, `proyectos/` y `.solara-runtime/` forman una única
