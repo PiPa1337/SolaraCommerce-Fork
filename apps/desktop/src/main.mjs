@@ -10,7 +10,7 @@ import { existsSync, renameSync, writeFileSync } from "node:fs";
 import { appendFile, mkdir } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { app, BrowserWindow, dialog, ipcMain, net, protocol, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, net, protocol, shell } from "electron";
 import {
   createAgentController,
   dispatchAgentMethod,
@@ -368,6 +368,13 @@ function registerIpc() {
 }
 
 function createWindow() {
+  // El menú default de Electron (File/Edit/View/Window/Help) ocupaba una franja
+  // del editor sin aportar nada propio. Al eliminarlo también desaparecen sus
+  // aceleradores default: se repueblan a mano los que importan (DevTools y
+  // zoom de accesibilidad abajo) y se dejan fuera Ctrl+R/F11, que podían
+  // recargar la app o alternar pantalla completa por accidente perdiendo
+  // edición no guardada.
+  Menu.setApplicationMenu(null);
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
@@ -394,6 +401,31 @@ function createWindow() {
   });
   // El Studio aprovecha el espacio completo desde el primer render.
   mainWindow.maximize();
+  // Atajos conservados sin menú: F12 / Ctrl+Shift+I (DevTools) y Ctrl +/-/0
+  // (zoom del shell). El handler sólo interviene en esas combinaciones: la
+  // escritura normal en el editor no pasa por preventDefault.
+  mainWindow.webContents.on("before-input-event", (event, input) => {
+    if (input.type !== "keyDown" || input.autoRepeated) return;
+    const contents = mainWindow?.webContents;
+    if (!contents) return;
+    const key = input.key;
+    if (key === "F12" || (input.control && input.shift && (key === "I" || key === "i"))) {
+      event.preventDefault();
+      contents.toggleDevTools();
+      return;
+    }
+    if (!input.control || input.alt || input.meta || input.shift) return;
+    if (key === "=" || key === "+") {
+      event.preventDefault();
+      contents.setZoomLevel(Math.min(contents.getZoomLevel() + 0.5, 6));
+    } else if (key === "-") {
+      event.preventDefault();
+      contents.setZoomLevel(Math.max(contents.getZoomLevel() - 0.5, -6));
+    } else if (key === "0") {
+      event.preventDefault();
+      contents.setZoomLevel(0);
+    }
+  });
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
     return { action: "deny" };

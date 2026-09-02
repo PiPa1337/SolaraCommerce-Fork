@@ -639,7 +639,12 @@ function StudioShell() {
           Saltar al contenido
         </a>
         <header className="app-header app-header--dashboard-cosmic">
-          <a className="app-wordmark" href="/" aria-label="SolaraCommerce, inicio">
+          <a
+            className="app-wordmark"
+            href="/"
+            aria-label="SolaraCommerce, inicio"
+            title={`Build ${__BUILD_HASH__} · ${__BUILD_DATE__}`}
+          >
             <img
               className="app-wordmark__logo"
               src="/branding/solara-orbit-64.png"
@@ -659,10 +664,6 @@ function StudioShell() {
             </a>
           </nav>
           <div className="app-header__actions">
-            <span className="app-local-status">
-              Studio local · {__BUILD_HASH__} · {__BUILD_DATE__}
-            </span>
-            <span className="app-local-indicator" aria-hidden />
             {sessionManaged && !shutdownTerminal ? (
               <button
                 className="app-shutdown-button"

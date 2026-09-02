@@ -92,22 +92,6 @@
   margin-left: auto;
 }
 
-.app-local-status {
-  padding: 8px 12px;
-  border: 1px solid var(--cosmic-line);
-  border-radius: 9px;
-  color: var(--cosmic-muted);
-  font-size: 12px;
-}
-
-.app-local-indicator {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--cosmic-green);
-  box-shadow: 0 0 12px rgb(123 217 138 / 0.72);
-}
-
 .app-shutdown-button {
   min-height: 34px;
   padding: 6px 10px;
@@ -2100,8 +2084,7 @@
     font-size: 14px;
   }
 
-  .app-header__nav,
-  .app-local-status {
+  .app-header__nav {
     display: none;
   }
 

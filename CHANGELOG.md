@@ -20,6 +20,24 @@
   visible` verifica ancho, alto y origen (0,0) del panel en 320/390/600/755/767
   px.
 
+### Header del dashboard sin la píldora "Studio local" (2026-09-02)
+
+- Se elimina la píldora `Studio local · <hash> · <fecha>` y su punto verde
+  decorativo del header del dashboard (`App.tsx`, `cosmic.css`): el punto no
+  reflejaba ningún estado real y nadie consumía el elemento. El hash del commit
+  y la fecha de build pasan a un tooltip (`title`) en el logo SolaraCommerce,
+  conservando la forma de identificar la build instalada del portable.
+
+### Shell portable sin la barra de menú default de Electron (2026-09-02)
+
+- El shell portable mostraba File/Edit/View/Window/Help (menú default de
+  Electron) porque `apps/desktop/src/main.mjs` nunca definía uno propio. Ahora
+  `Menu.setApplicationMenu(null)` lo elimina. Los aceleradores que importan se
+  repueblan vía `before-input-event`: F12 y Ctrl+Shift+I abren DevTools y
+  Ctrl +/-/0 ajustan o resetean el zoom del shell. Quedan fuera Ctrl+R y F11
+  para evitar recargas o pantalla completa accidentales que pierden edición no
+  guardada; la recuperación ante renderer caído sigue siendo automática.
+
 ### Mega-menú de categorías invisible en el preview del editor (2026-09-02)
 
 - **Causa**: el estilo de rendimiento del preview (`PREVIEW_PERF_STYLE` en
