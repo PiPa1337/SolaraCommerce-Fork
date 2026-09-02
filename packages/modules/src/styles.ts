@@ -5331,7 +5331,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
       color: var(--catalog-paper);
     }
     .cm.v2 .catalog-hero-page .catalog-hero-copy .catalog-hero-body { color: var(--catalog-paper); }
-    .cm.v2 .catalog-hero-page .catalog-hero-copy .catalog-eyebrow { color: color-mix(in oklab, var(--solara-accent) 24%, var(--catalog-paper)); font-weight: 700; }
+    .cm.v2 .catalog-hero-page .catalog-hero-copy .catalog-eyebrow { display: inline-flex; align-items: center; padding: .32rem .72rem; background: var(--solara-accent); color: var(--solara-accent-text); border-radius: 999px; font-size: .72rem; font-weight: 800; letter-spacing: .12em; box-shadow: 0 2px 10px color-mix(in srgb, var(--catalog-ink) 16%, transparent); }
+    .cm.v2 [data-solara-module="catalog-hero"] .catalog-eyebrow { display: inline-flex; align-items: center; padding: .32rem .72rem; background: var(--solara-accent); color: var(--solara-accent-text); border-radius: 999px; font-size: .72rem; font-weight: 800; letter-spacing: .12em; box-shadow: 0 2px 10px color-mix(in srgb, var(--catalog-ink) 16%, transparent); }
     .cm.v2 .catalog-hero-page .catalog-hero-background { display: none; }
     .cm.v2 .catalog-hero-page .catalog-hero-benefits--copy { display: none; }
     .cm.v2 .catalog-hero-page .catalog-hero-benefits--band { display: grid; grid-template-columns: 1fr; gap: .75rem; width: min(calc(100% - 1.5rem), var(--catalog-v2-wide)); margin: .75rem auto 1.5rem; padding: 0; }
