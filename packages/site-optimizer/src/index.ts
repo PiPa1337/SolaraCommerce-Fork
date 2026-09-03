@@ -124,13 +124,97 @@ function dataUrlBytes(source: string): number {
   }
 }
 
-function hashString(value: string): string {
+/**
+ * El snapshot incluye data URLs embebidas que pueden superar el límite de
+ * cadena de V8 (~536 MB de caracteres) en tiendas grandes: concatenar el
+ * proyecto completo en una sola cadena lanza `RangeError: Invalid string
+ * length` y tumba la auditoría. El hash se calcula entonces en forma
+ * incremental y con muestras acotadas para las cadenas enormes: el coste
+ * queda acotado aunque el proyecto pese cientos de megabytes, y el valor
+ * sigue siendo determinista y sensible a cambios de contenido.
+ */
+const SNAPSHOT_HASH_STRING_SAMPLE = 128 * 1024;
+
+interface SnapshotHasher {
+  update(value: string): void;
+  digest(): string;
+}
+
+function createSnapshotHasher(): SnapshotHasher {
   let hash = 2166136261;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
+  return {
+    update(value: string): void {
+      for (let index = 0; index < value.length; index += 1) {
+        hash ^= value.charCodeAt(index);
+        hash = Math.imul(hash, 16777619);
+      }
+    },
+    digest(): string {
+      return (hash >>> 0).toString(16).padStart(8, "0");
+    },
+  };
+}
+
+function updateHashedString(hasher: SnapshotHasher, value: string): void {
+  hasher.update(`s${value.length}:`);
+  if (value.length <= SNAPSHOT_HASH_STRING_SAMPLE * 2) {
+    hasher.update(value);
+    return;
   }
-  return (hash >>> 0).toString(16).padStart(8, "0");
+  hasher.update(value.slice(0, SNAPSHOT_HASH_STRING_SAMPLE));
+  hasher.update(value.slice(-SNAPSHOT_HASH_STRING_SAMPLE));
+}
+
+function hashProjectInto(hasher: SnapshotHasher, value: unknown): void {
+  if (value === null) {
+    hasher.update("null");
+    return;
+  }
+  if (Array.isArray(value)) {
+    hasher.update("[");
+    for (const item of value) {
+      hashProjectInto(hasher, item);
+      hasher.update(",");
+    }
+    hasher.update("]");
+    return;
+  }
+  switch (typeof value) {
+    case "object": {
+      hasher.update("{");
+      const entries = Object.entries(value as Record<string, unknown>).sort(([left], [right]) =>
+        left < right ? -1 : left > right ? 1 : 0,
+      );
+      for (const [key, item] of entries) {
+        hasher.update(JSON.stringify(key));
+        hasher.update(":");
+        hashProjectInto(hasher, item);
+        hasher.update(",");
+      }
+      hasher.update("}");
+      return;
+    }
+    case "string":
+      updateHashedString(hasher, value);
+      return;
+    case "number":
+      hasher.update(`n${value}`);
+      return;
+    case "boolean":
+      hasher.update(value ? "b1" : "b0");
+      return;
+    case "undefined":
+      hasher.update("u");
+      return;
+    default:
+      hasher.update("?");
+  }
+}
+
+function hashProjectSnapshot(project: StoreProjectV1): string {
+  const hasher = createSnapshotHasher();
+  hashProjectInto(hasher, project);
+  return hasher.digest();
 }
 
 function publicUrl(project: StoreProjectV1, path: string): string {
@@ -672,17 +756,6 @@ function auditProject(
   return findings;
 }
 
-function normalizeForHash(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(normalizeForHash).join(",")}]`;
-  if (value && typeof value === "object") {
-    return `{${Object.entries(value as Record<string, unknown>)
-      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
-      .map(([key, item]) => `${JSON.stringify(key)}:${normalizeForHash(item)}`)
-      .join(",")}}`;
-  }
-  return JSON.stringify(value);
-}
-
 /** Produce hallazgos deterministas y contexto público opcional para un snapshot. */
 export function optimizeProject(
   project: StoreProjectV1,
@@ -745,7 +818,7 @@ export function optimizeProject(
       : []),
   ];
   return {
-    snapshotHash: hashString(normalizeForHash(project)),
+    snapshotHash: hashProjectSnapshot(project),
     score,
     findings,
     appliedFixes,

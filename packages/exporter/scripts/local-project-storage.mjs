@@ -17,6 +17,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
+import { parseJsonBytesChunked } from "../src/json-stream.mjs";
 import { createAgentLockStore } from "./agent-lock.mjs";
 import {
   assertNoReparsePoints,
@@ -219,7 +220,9 @@ async function streamToFile(request, pathname, maxBytes, guardWrite) {
 function parseProjectJson(bytes, expectedProjectId) {
   let envelope;
   try {
-    envelope = JSON.parse(bytes.toString("utf8"));
+    // Códec acotado: con proyectos > ~512 MB, JSON.parse de la cadena
+    // completa supera el límite de cadena de V8 (Invalid string length).
+    envelope = parseJsonBytesChunked(bytes);
   } catch {
     throw new Error("El respaldo de la tienda está corrupto o no es JSON válido.");
   }
