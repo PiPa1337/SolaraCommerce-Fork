@@ -799,11 +799,6 @@ function themeCss(
   const t = project.theme;
   const { colors, typography, spacingScale, radius, container } = t;
   const rootColorScheme = t.colorMode === "dark" ? "dark" : "light";
-  const dc = t.darkColors;
-
-  const darkAccent = dc?.accent || colors.accent;
-  const darkAccentText = dc?.accentText || colors.accentText;
-  const darkBorder = dc?.border || colors.border;
 
   const lhTight = typography.lineHeightTight ?? 1.15;
   const lhBody = typography.lineHeightBody ?? 1.6;
@@ -839,11 +834,6 @@ function themeCss(
   --solara-accent: ${colors.accent};
   --solara-accent-text: ${colors.accentText};
   --solara-border: ${colors.border};
-  --solara-dark-background: ${dc?.background ?? "#0d0d0f"};
-  --solara-dark-surface: ${dc?.surface ?? "#1a1a1e"};
-  --solara-dark-text: ${dc?.text ?? "#e8e8ea"};
-  --solara-dark-muted: ${dc?.muted ?? "#8a8a8e"};
-  --solara-dark-border: ${darkBorder};
   --solara-sale: ${saleColor};
   --solara-rating: ${ratingColor};
   --solara-accent-alt: ${accentAltColor};
@@ -870,28 +860,6 @@ function themeCss(
   --solara-motion-fast: ${motionFast};
   --solara-motion-normal: ${motionNormal};
   --solara-motion-easing: ${motionEasing};
-}
-
-@media (prefers-color-scheme: dark) {
-  .solara-page[data-color-mode="auto"] {
-    --solara-background: var(--solara-dark-background);
-    --solara-surface: var(--solara-dark-surface);
-    --solara-text: var(--solara-dark-text);
-    --solara-muted: var(--solara-dark-muted);
-    --solara-accent: ${darkAccent};
-    --solara-accent-text: ${darkAccentText};
-    --solara-border: var(--solara-dark-border);
-    color-scheme: dark;
-  }
-}
-.solara-page[data-color-mode="dark"] {
-  --solara-background: var(--solara-dark-background);
-  --solara-surface: var(--solara-dark-surface);
-  --solara-text: var(--solara-dark-text);
-  --solara-muted: var(--solara-dark-muted);
-  --solara-accent: ${darkAccent};
-  --solara-accent-text: ${darkAccentText};
-  --solara-border: var(--solara-dark-border);
 }
 
 * { box-sizing: border-box; }

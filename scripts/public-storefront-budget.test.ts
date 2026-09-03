@@ -71,9 +71,11 @@ test("mantiene la foundation V2 dentro de un presupuesto público explícito", (
   // STOREFRONT_PERF (206 KiB sólo familia). Se eleva a 220 KiB con margen
   // ~6 KiB; la reducción real requiere granularizar styles por familia
   // (Task 4 del plan) y quedó como débito documentado.
+  // 2026-09-03 (task 11): eliminado el css dark muerto (decisión F4); medición
+  // real 211.265 B, tope baja de 220 a 212 KiB con margen ~5,8 KiB.
   expect(cssBytes).toBeGreaterThan(0);
   expect(javascriptBytes).toBeGreaterThan(0);
-  expect(cssBytes).toBeLessThanOrEqual(220 * 1024);
+  expect(cssBytes).toBeLessThanOrEqual(212 * 1024);
   // Task 9: skeletons de búsqueda, contador visible, título con query y guards del índice suman ~450 B; tope 68 KiB autorizado por el brief.
   expect(javascriptBytes).toBeLessThanOrEqual(68 * 1024);
 });

@@ -426,8 +426,21 @@ describe("exporter", () => {
     expect(preview).not.toContain("data-solara-dark-toggle");
     expect(css).not.toContain(".solara-dark-toggle");
     expect(css).not.toContain("color-scheme: light dark");
-    expect(css).toContain('.solara-page[data-color-mode="auto"]');
+    expect(css).not.toContain("data-color-mode");
     expect(css).toContain("color-scheme:dark");
+  });
+
+  it("no emite el css dark muerto por la decision f4", () => {
+    const production = exportProject(referenceStore, { mode: "production" });
+    const css = runtimeAsset(production.files, "css");
+    expect(css).not.toContain("prefers-color-scheme");
+    expect(css).not.toContain('data-color-mode="dark"');
+    expect((css.match(/\{/g) ?? []).length).toBe((css.match(/\}/g) ?? []).length);
+    expect(css).not.toMatch(/\{\s*\}/);
+    const home = String(
+      exportProject(catalogModernStore, { mode: "production" }).files.get("index.html"),
+    );
+    expect(home).toContain('data-color-mode="light"');
   });
 
   it("consume data-theme del html con color-scheme en el CSS exportado", () => {

@@ -42,13 +42,6 @@ export const STORE_BASE_STYLES = `
 [data-solara-store] .solara-consumer-rights a:focus-visible {
   color: var(--solara-accent);
 }
-[data-solara-store][data-color-mode="dark"] {
-  --solara-background: var(--solara-dark-background, #1d1e19);
-  --solara-surface: var(--solara-dark-surface, #292a23);
-  --solara-text: var(--solara-dark-text, #f3eee4);
-  --solara-muted: var(--solara-dark-muted, #b8b2a5);
-  --solara-border: var(--solara-dark-border, #47483d);
-}
 [data-solara-store] *,
 [data-solara-store] *::before,
 [data-solara-store] *::after {
@@ -652,15 +645,6 @@ export const STORE_BASE_STYLES = `
   }
   [data-solara-store] .solara-search-form .solara-primary-action {
     width: 100%;
-  }
-}
-@media (prefers-color-scheme: dark) {
-  [data-solara-store][data-color-mode="auto"] {
-    --solara-background: var(--solara-dark-background, #1d1e19);
-    --solara-surface: var(--solara-dark-surface, #292a23);
-    --solara-text: var(--solara-dark-text, #f3eee4);
-    --solara-muted: var(--solara-dark-muted, #b8b2a5);
-    --solara-border: var(--solara-dark-border, #47483d);
   }
 }
 @media (prefers-reduced-motion: reduce) {

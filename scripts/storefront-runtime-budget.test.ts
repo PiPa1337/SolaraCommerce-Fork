@@ -30,6 +30,8 @@ test("mantiene el runtime storefront dentro del presupuesto", () => {
   if (publicCss === undefined) throw new Error(`Asset runtime CSS ausente: ${cssPath}`);
   const cssGzip = Buffer.byteLength(gzipSync(String(publicCss), { level: 9 }), "utf8");
   console.log({ publicStorefrontCssGzip: cssGzip });
-  // El CSS público exportado mide ~28 KiB gz: 40 KiB gz es presupuesto anti-exceso, no límite de negocio.
-  expect(cssGzip).toBeLessThanOrEqual(40 * 1024);
+  // 2026-09-03 (task 11): css dark muerto eliminado (decisión F4); el CSS
+  // público exportado mide ~13,6 KiB gz: 32 KiB gz es presupuesto anti-exceso,
+  // no límite de negocio.
+  expect(cssGzip).toBeLessThanOrEqual(32 * 1024);
 });

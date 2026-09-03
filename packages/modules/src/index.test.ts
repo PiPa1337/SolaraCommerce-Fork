@@ -188,7 +188,7 @@ describe("official module system", () => {
       /\.contact-form-whatsapp\s*\{[^}]*background: var\(--catalog-accent-alt\)/,
     );
 
-    expect(STORE_BASE_STYLES).toContain("var(--solara-dark-background");
+    expect(STORE_BASE_STYLES).not.toContain("var(--solara-dark-");
     expect(STORE_BASE_STYLES).not.toContain("--solara-background: #1d1e19");
     expect(STORE_BASE_STYLES).toContain(".solara-consumer-rights {");
     expect(STORE_BASE_STYLES).toContain("grid-column: 1 / -1;");
