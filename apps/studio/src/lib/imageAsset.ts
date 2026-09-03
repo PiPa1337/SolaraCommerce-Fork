@@ -9,9 +9,13 @@ import type { ProcessedImage } from "./workers";
 const PRIMARY_IMAGE_MIME_TYPES = new Set(["image/avif", "image/webp"]);
 const FALLBACK_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png"]);
 
+export const IMAGE_ASSET_RECIPE_V2 = "responsive-alpha-v2";
+
+const KNOWN_IMAGE_ASSET_RECIPES = new Set([IMAGE_ASSET_RECIPE, IMAGE_ASSET_RECIPE_V2]);
+
 /** Devuelve el MIME declarado por una data URL sin inspeccionar sus bytes. */
-export function dataUrlMimeType(source: string): string | undefined {
-  return /^data:([^;,]+)[;,]/i.exec(source)?.[1]?.toLowerCase();
+export function dataUrlMimeType(source: string | undefined): string | undefined {
+  return source ? /^data:([^;,]+)[;,]/i.exec(source)?.[1]?.toLowerCase() : undefined;
 }
 
 function isDataUrlWithMime(source: string | undefined, mimeTypes: Set<string>): boolean {
@@ -64,7 +68,8 @@ export function isOptimizedImageAsset(asset: ImageAsset): boolean {
   const primaryMimeType = dataUrlMimeType(asset.source);
   return (
     isSystemImageAsset(asset) ||
-    (asset.optimizationRecipe === IMAGE_ASSET_RECIPE &&
+    (asset.optimizationRecipe !== undefined &&
+      KNOWN_IMAGE_ASSET_RECIPES.has(asset.optimizationRecipe) &&
       isStructurallyOptimizedImageAsset(asset) &&
       (asset.mimeType === "image/x-icon" || asset.mimeType === primaryMimeType))
   );
@@ -80,7 +85,7 @@ export function markImageAssetAsOptimized(asset: ImageAsset): ImageAsset | undef
   return {
     ...asset,
     ...(asset.mimeType !== "image/x-icon" && primaryMimeType ? { mimeType: primaryMimeType } : {}),
-    optimizationRecipe: IMAGE_ASSET_RECIPE,
+    optimizationRecipe: IMAGE_ASSET_RECIPE_V2,
   };
 }
 
@@ -97,7 +102,7 @@ export function createImageAssetFromProcessed(
     kind: "image",
     ...metadata,
     mimeType,
-    optimizationRecipe: IMAGE_ASSET_RECIPE,
+    optimizationRecipe: IMAGE_ASSET_RECIPE_V2,
     source: processed.primary,
     fallbackSource: processed.fallback,
     responsiveSources: processed.responsive,

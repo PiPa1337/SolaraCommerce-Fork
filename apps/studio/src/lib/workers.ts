@@ -11,6 +11,7 @@ import {
   responsiveImageWidths,
   type StoreProjectV1,
 } from "@solara/project-schema";
+import { hasVisibleAlpha } from "./image-alpha";
 
 interface WorkerSuccess<Result> {
   id: string;
@@ -79,6 +80,24 @@ function canvasDataUrl(
   return quality === undefined ? canvas.toDataURL(mimeType) : canvas.toDataURL(mimeType, quality);
 }
 
+const IMAGE_ALPHA_PROBE_MAX_WIDTH = 128;
+
+function probeImageAlpha(image: HTMLImageElement): boolean {
+  const scale = Math.min(
+    1,
+    IMAGE_ALPHA_PROBE_MAX_WIDTH / Math.max(image.naturalWidth, image.naturalHeight),
+  );
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d", { alpha: true, willReadFrequently: true });
+  if (!context) return true;
+  context.drawImage(image, 0, 0, width, height);
+  return hasVisibleAlpha(context.getImageData(0, 0, width, height));
+}
+
 async function processImageOnMainThread(file: File, buffer: ArrayBuffer): Promise<ProcessedImage> {
   if (typeof document === "undefined") {
     throw new Error("El navegador no pudo procesar la imagen.");
@@ -96,7 +115,14 @@ async function processImageOnMainThread(file: File, buffer: ArrayBuffer): Promis
       throw new Error("La imagen supera el límite de 50 megapíxeles.");
     }
     const plan = fallbackImagePlan(image.naturalWidth, image.naturalHeight);
-    const preserveAlpha = file.type !== "image/jpeg";
+    let preserveAlpha = file.type !== "image/jpeg";
+    if (preserveAlpha) {
+      try {
+        preserveAlpha = probeImageAlpha(image);
+      } catch {
+        preserveAlpha = true;
+      }
+    }
     const responsive = plan.responsiveWidths.map((width) => ({
       width,
       source: canvasDataUrl(image, width, "image/webp", preserveAlpha),
@@ -319,9 +345,9 @@ export async function hashFile(file: File): Promise<string> {
 }
 
 export async function processImageInWorker(file: File): Promise<ProcessedImage> {
-  const supportedTypes = ["image/jpeg", "image/png", "image/webp"];
+  const supportedTypes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
   if (!supportedTypes.includes(file.type)) {
-    throw new Error("Formato no compatible. Usá una imagen JPEG, PNG o WebP.");
+    throw new Error("Formato no compatible. Usá una imagen JPEG, PNG, WebP o AVIF.");
   }
   if (file.size === 0) throw new Error("La imagen está vacía.");
   if (file.size > 25 * 1024 * 1024) throw new Error("La imagen supera el límite de 25 MB.");

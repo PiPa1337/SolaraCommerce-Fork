@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createImagePlan,
   IMAGE_RECIPE,
+  processImage,
   sourceCanContainAlpha,
   validateImageInput,
 } from "./image.worker";
@@ -46,7 +47,7 @@ describe("validación de archivos de imagen", () => {
   });
 
   it("rechaza tipo, vacío, firma falsa y tamaño excesivo", () => {
-    expect(() => validateImageInput("image/gif", jpeg)).toThrow("JPEG, PNG o WebP");
+    expect(() => validateImageInput("image/gif", jpeg)).toThrow("JPEG, PNG, WebP o AVIF");
     expect(() => validateImageInput("image/png", new ArrayBuffer(0))).toThrow("vacía");
     expect(() => validateImageInput("image/png", jpeg)).toThrow("no coincide");
     expect(() =>
@@ -66,5 +67,106 @@ describe("validación de archivos de imagen", () => {
     alphaWebp.set([0x56, 0x50, 0x38, 0x58], 12);
     alphaWebp[20] = 0x10;
     expect(sourceCanContainAlpha("image/webp", alphaWebp.buffer)).toBe(true);
+  });
+
+  it("acepta la firma AVIF y rechaza un falso AVIF", () => {
+    const avif = new Uint8Array(24);
+    avif.set([0x66, 0x74, 0x79, 0x70], 4);
+    avif.set([0x61, 0x76, 0x69, 0x66], 8);
+    expect(validateImageInput("image/avif", avif.buffer)).toBe("image/avif");
+    expect(() => validateImageInput("image/png", avif.buffer)).toThrow("no coincide");
+  });
+});
+
+let probeAlpha = 255;
+
+function rgbaWithAlpha(pixels: number, alpha: number): Uint8ClampedArray {
+  const data = new Uint8ClampedArray(pixels * 4);
+  for (let index = 0; index < pixels; index += 1) data[index * 4 + 3] = alpha;
+  return data;
+}
+
+class FakeOffscreenCanvas {
+  constructor(
+    public width: number,
+    public height: number,
+  ) {}
+  getContext() {
+    return {
+      fillStyle: "",
+      fillRect: () => {},
+      drawImage: () => {},
+      getImageData: (_x: number, _y: number, width: number, height: number) => ({
+        data: rgbaWithAlpha(width * height, probeAlpha),
+        width,
+        height,
+        colorSpace: "srgb",
+      }),
+    };
+  }
+  convertToBlob(options?: { type?: string }) {
+    return Promise.resolve(
+      new Blob([new Uint8Array([0, 1, 2])], { type: options?.type ?? "image/png" }),
+    );
+  }
+}
+
+function pngBufferWithColorType(colorType: number): ArrayBuffer {
+  const bytes = new Uint8Array(32);
+  bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  bytes[25] = colorType;
+  return bytes.buffer;
+}
+
+function avifBuffer(): ArrayBuffer {
+  const bytes = new Uint8Array(24);
+  bytes.set([0x66, 0x74, 0x79, 0x70], 4);
+  bytes.set([0x61, 0x76, 0x69, 0x66], 8);
+  return bytes.buffer;
+}
+
+describe("procesamiento con alfa real", () => {
+  beforeEach(() => {
+    probeAlpha = 255;
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(async () => ({ width: 64, height: 64, close: () => {} })),
+    );
+    vi.stubGlobal("OffscreenCanvas", FakeOffscreenCanvas);
+  });
+
+  it("genera fallback jpeg para un PNG RGBA visualmente opaco", async () => {
+    const result = await processImage({
+      id: "png-opaco",
+      buffer: pngBufferWithColorType(6),
+      name: "foto.png",
+      type: "image/png",
+      maxWidth: 1800,
+    });
+    expect(result.fallback.startsWith("data:image/jpeg;")).toBe(true);
+  });
+
+  it("conserva fallback png cuando el PNG tiene alfa visible", async () => {
+    probeAlpha = 0;
+    const result = await processImage({
+      id: "png-alfa",
+      buffer: pngBufferWithColorType(6),
+      name: "logo.png",
+      type: "image/png",
+      maxWidth: 1800,
+    });
+    expect(result.fallback.startsWith("data:image/png;")).toBe(true);
+  });
+
+  it("reprocesa una fuente AVIF optimizada con alfa real", async () => {
+    const result = await processImage({
+      id: "avif-opaco",
+      buffer: avifBuffer(),
+      name: "foto.avif",
+      type: "image/avif",
+      maxWidth: 1800,
+    });
+    expect(result.primary.startsWith("data:image/avif;")).toBe(true);
+    expect(result.fallback.startsWith("data:image/jpeg;")).toBe(true);
   });
 });

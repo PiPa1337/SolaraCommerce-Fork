@@ -1,6 +1,8 @@
 import "fake-indexeddb/auto";
 import {
   getCategoryProductIds,
+  IMAGE_ASSET_RECIPE,
+  type ImageAsset,
   type StoreProjectV1,
   StoreProjectV1Schema,
 } from "@solara/project-schema";
@@ -54,6 +56,7 @@ import {
   listProjects,
   listProjectsWithRecovery,
   markProjectMigration,
+  needsImageOptimization,
   PREDETERMINADO_V1_PROJECT_ID,
   purgeNonDemoStores,
   putCachedAsset,
@@ -673,6 +676,74 @@ describe("repositorio local", () => {
     expect(await getProjectMigration(PREDETERMINADO_V1_PROJECT_ID)).toBeUndefined();
     expect(await getProject(userProject.id)).toEqual(userProject);
     expect(await retireLegacyDemoProjects()).toBe(false);
+  });
+});
+
+describe("predicado de optimización de imágenes", () => {
+  const avifVariant = (width: number) => ({
+    width,
+    source: "data:image/avif;base64,dmFyaWFudGU=",
+  });
+  const pngVariant = (width: number) => ({ width, source: "data:image/png;base64,cG5n" });
+
+  function imageAsset(overrides: Partial<ImageAsset>): ImageAsset {
+    return {
+      kind: "image",
+      id: "asset-predicado" as ImageAsset["id"],
+      name: "Imagen",
+      alt: "Imagen de prueba",
+      mimeType: "image/avif",
+      source: "data:image/avif;base64,cHJpbWFyeQ==",
+      optimizationRecipe: IMAGE_ASSET_RECIPE,
+      fallbackSource: "data:image/jpeg;base64,ZmFsbGJhY2s=",
+      responsiveSources: [avifVariant(480), avifVariant(768), avifVariant(1800)],
+      width: 1800,
+      height: 1200,
+      hash: "hash-predicado",
+      ...overrides,
+    };
+  }
+
+  it("marca para reproceso un asset del canal agente sin variantes webp o avif", () => {
+    const agentAsset = imageAsset({
+      mimeType: "image/png",
+      source: "data:image/png;base64,b3JpZ2luYWw=",
+      optimizationRecipe: undefined,
+      fallbackSource: undefined,
+      responsiveSources: [pngVariant(768)],
+    });
+    expect(needsImageOptimization(agentAsset)).toBe(true);
+  });
+
+  it("marca para reproceso una foto auditada con fallback png y receta legacy", () => {
+    const auditedPhoto = imageAsset({
+      fallbackSource: "data:image/png;base64,cGVzb3M=",
+    });
+    expect(needsImageOptimization(auditedPhoto)).toBe(true);
+  });
+
+  it("mantiene estable un asset ya reprocesado con fallback jpeg", () => {
+    expect(needsImageOptimization(imageAsset({}))).toBe(false);
+  });
+
+  it("mantiene estable un asset transparente ya reprocesado con receta actual", () => {
+    const transparent = imageAsset({
+      optimizationRecipe: "responsive-alpha-v2",
+      fallbackSource: "data:image/png;base64,dHJhbnNwYXJlbnRl",
+    });
+    expect(needsImageOptimization(transparent)).toBe(false);
+  });
+
+  it("excluye los favicons de la migración responsive", () => {
+    const favicon = imageAsset({
+      mimeType: "image/x-icon",
+      source: "data:image/x-icon;base64,AA==",
+      fallbackSource: "data:image/png;base64,ZmF2aWNvbg==",
+      responsiveSources: [pngVariant(16), pngVariant(32), pngVariant(256)],
+      width: 256,
+      height: 256,
+    });
+    expect(needsImageOptimization(favicon)).toBe(false);
   });
 });
 

@@ -6,6 +6,7 @@ import {
 } from "@solara/project-schema";
 import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import { describe, expect, it } from "vitest";
+import { IMAGE_ASSET_RECIPE_V2 } from "../../lib/imageAsset";
 import {
   applyVideoPoster,
   applyVideoToSection,
@@ -130,7 +131,7 @@ describe("buildVideoAsset", () => {
       source: "data:image/webp;base64,UFJJTUVSQV9GUkFNRQ==",
       fallbackSource: "data:image/jpeg;base64,QU5USUdVQQ==",
       responsiveSources: [{ width: 360, source: "data:image/webp;base64,UFJJTUVSQV9GUkFNRQ==" }],
-      optimizationRecipe: IMAGE_ASSET_RECIPE,
+      optimizationRecipe: IMAGE_ASSET_RECIPE_V2,
       width: 360,
       height: 640,
     });

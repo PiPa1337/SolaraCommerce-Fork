@@ -7,6 +7,7 @@ import {
   assertProjectImagesOptimized,
   createImageAssetFromProcessed,
   dataUrlMimeType,
+  IMAGE_ASSET_RECIPE_V2,
   isOptimizedImageAsset,
   markImageAssetAsOptimized,
 } from "./imageAsset";
@@ -41,8 +42,9 @@ describe("invariante de assets de imagen", () => {
     const asset = processedAsset();
 
     expect(asset.mimeType).toBe("image/avif");
-    expect(asset.optimizationRecipe).toBe(IMAGE_ASSET_RECIPE);
+    expect(asset.optimizationRecipe).toBe(IMAGE_ASSET_RECIPE_V2);
     expect(isOptimizedImageAsset(asset)).toBe(true);
+    expect(isOptimizedImageAsset({ ...asset, optimizationRecipe: IMAGE_ASSET_RECIPE })).toBe(true);
     expect(dataUrlMimeType(asset.source)).toBe("image/avif");
 
     const rawCandidate = {
@@ -72,7 +74,7 @@ describe("invariante de assets de imagen", () => {
     const repaired = markImageAssetAsOptimized(legacy);
 
     expect(repaired?.mimeType).toBe("image/avif");
-    expect(repaired?.optimizationRecipe).toBe(IMAGE_ASSET_RECIPE);
+    expect(repaired?.optimizationRecipe).toBe(IMAGE_ASSET_RECIPE_V2);
     expect(repaired && isOptimizedImageAsset(repaired)).toBe(true);
   });
 

@@ -4,6 +4,7 @@ import {
   RESPONSIVE_IMAGE_WIDTHS,
   responsiveImageWidths,
 } from "@solara/project-schema";
+import { hasVisibleAlpha } from "../lib/image-alpha";
 
 export const IMAGE_RECIPE = {
   widths: RESPONSIVE_IMAGE_WIDTHS,
@@ -13,7 +14,7 @@ export const IMAGE_RECIPE = {
   jpegQuality: 0.88,
 } as const;
 
-const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"] as const;
 type SupportedImageType = (typeof SUPPORTED_IMAGE_TYPES)[number];
 
 interface ImageRequest {
@@ -58,7 +59,7 @@ export function createImagePlan(
 
 export function validateImageInput(type: string, buffer: ArrayBuffer): SupportedImageType {
   if (!SUPPORTED_IMAGE_TYPES.includes(type as SupportedImageType)) {
-    throw new Error("Formato no compatible. Usá una imagen JPEG, PNG o WebP.");
+    throw new Error("Formato no compatible. Usá una imagen JPEG, PNG, WebP o AVIF.");
   }
   if (buffer.byteLength === 0) throw new Error("La imagen está vacía.");
   if (buffer.byteLength > IMAGE_RECIPE.maxBytes) {
@@ -81,10 +82,16 @@ export function validateImageInput(type: string, buffer: ArrayBuffer): Supported
     bytes.length >= 12 &&
     String.fromCharCode(...bytes.subarray(0, 4)) === "RIFF" &&
     String.fromCharCode(...bytes.subarray(8, 12)) === "WEBP";
+  const avifBrand = bytes.length >= 12 ? String.fromCharCode(...bytes.subarray(8, 12)) : undefined;
+  const isAvif =
+    bytes.length >= 12 &&
+    String.fromCharCode(...bytes.subarray(4, 8)) === "ftyp" &&
+    (avifBrand === "avif" || avifBrand === "avis");
   const matchesSignature =
     (type === "image/jpeg" && isJpeg) ||
     (type === "image/png" && isPng) ||
-    (type === "image/webp" && isWebp);
+    (type === "image/webp" && isWebp) ||
+    (type === "image/avif" && isAvif);
 
   if (!matchesSignature) {
     throw new Error("El contenido del archivo no coincide con su formato de imagen.");
@@ -94,6 +101,7 @@ export function validateImageInput(type: string, buffer: ArrayBuffer): Supported
 
 export function sourceCanContainAlpha(type: SupportedImageType, buffer: ArrayBuffer): boolean {
   if (type === "image/jpeg") return false;
+  if (type === "image/avif") return true;
   const bytes = new Uint8Array(buffer);
   if (type === "image/png") {
     const colorType = bytes[25];
@@ -167,12 +175,38 @@ async function canvasToDataUrl(
   return `data:${actualMimeType};base64,${btoa(binary)}`;
 }
 
-async function processImage(request: ImageRequest) {
+const IMAGE_ALPHA_PROBE_MAX_WIDTH = 128;
+
+async function probeBitmapAlpha(bitmap: ImageBitmap): Promise<boolean> {
+  const scale = Math.min(1, IMAGE_ALPHA_PROBE_MAX_WIDTH / Math.max(bitmap.width, bitmap.height));
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = new OffscreenCanvas(width, height);
+  const context = canvas.getContext("2d", { alpha: true, willReadFrequently: true });
+  if (!context) return true;
+  context.drawImage(bitmap, 0, 0, width, height);
+  return hasVisibleAlpha(context.getImageData(0, 0, width, height));
+}
+
+async function resolvePreserveAlpha(
+  type: SupportedImageType,
+  buffer: ArrayBuffer,
+  bitmap: ImageBitmap,
+): Promise<boolean> {
+  if (!sourceCanContainAlpha(type, buffer)) return false;
+  try {
+    return await probeBitmapAlpha(bitmap);
+  } catch {
+    return true;
+  }
+}
+
+export async function processImage(request: ImageRequest) {
   const type = validateImageInput(request.type, request.buffer);
-  const preserveAlpha = sourceCanContainAlpha(type, request.buffer);
   const source = new Blob([request.buffer], { type });
   const bitmap = await createImageBitmap(source, { imageOrientation: "from-image" });
   try {
+    const preserveAlpha = await resolvePreserveAlpha(type, request.buffer, bitmap);
     const plan = createImagePlan(bitmap.width, bitmap.height, request.maxWidth);
     let responsive: Array<{ width: number; source: string }> = [];
     let primary: string | undefined;

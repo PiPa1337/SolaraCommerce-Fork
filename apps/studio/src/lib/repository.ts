@@ -3,7 +3,7 @@
  * gestionado está activo y fallback de desarrollo cuando Studio corre sólo con
  * Vite; el código de UI no debe asumir que IndexedDB es siempre autoridad.
  */
-import type { NavigationItem, StoreProjectV1 } from "@solara/project-schema";
+import type { ImageAsset, NavigationItem, StoreProjectV1 } from "@solara/project-schema";
 import {
   compactResponsiveSources,
   getCategoryProductIds,
@@ -21,6 +21,8 @@ import Dexie, { type EntityTable } from "dexie";
 import {
   assertProjectImagesOptimized,
   createImageAssetFromProcessed,
+  dataUrlMimeType,
+  IMAGE_ASSET_RECIPE_V2,
   isOptimizedImageAsset,
   isSystemImageAsset,
   markImageAssetAsOptimized,
@@ -652,8 +654,29 @@ export function repairProjectMediaMetadata(project: StoreProjectV1): StoreProjec
     : project;
 }
 
-function needsImageOptimization(asset: StoreProjectV1["assets"][number]): boolean {
-  return !isOptimizedImageAsset(asset);
+const WEBP_OR_AVIF_MIME_TYPES = new Set(["image/webp", "image/avif"]);
+
+function hasWebpOrAvifResponsiveVariant(asset: ImageAsset): boolean {
+  return (asset.responsiveSources ?? []).some((source) => {
+    const mimeType = dataUrlMimeType(source.source);
+    return mimeType !== undefined && WEBP_OR_AVIF_MIME_TYPES.has(mimeType);
+  });
+}
+
+function hasLegacyPngFallback(asset: ImageAsset): boolean {
+  return (
+    dataUrlMimeType(asset.fallbackSource) === "image/png" &&
+    asset.optimizationRecipe !== IMAGE_ASSET_RECIPE_V2
+  );
+}
+
+function needsResponsiveImageRepair(asset: StoreProjectV1["assets"][number]): boolean {
+  if (asset.kind !== "image" || asset.mimeType === "image/x-icon") return false;
+  return !hasWebpOrAvifResponsiveVariant(asset) || hasLegacyPngFallback(asset);
+}
+
+export function needsImageOptimization(asset: StoreProjectV1["assets"][number]): boolean {
+  return !isOptimizedImageAsset(asset) || needsResponsiveImageRepair(asset);
 }
 
 async function optimizeImageAsset(
@@ -701,7 +724,7 @@ export async function optimizeProjectAssets(project: StoreProjectV1): Promise<St
       assets.push(asset);
       continue;
     }
-    const marked = markImageAssetAsOptimized(asset);
+    const marked = needsResponsiveImageRepair(asset) ? undefined : markImageAssetAsOptimized(asset);
     if (marked) {
       assets.push(marked);
       changed = true;
