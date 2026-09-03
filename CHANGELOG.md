@@ -1,3 +1,47 @@
+### Resolución de la auditoría del sitio exportado: Cloudflare, PWA, imágenes, WhatsApp y a11y (2026-09-03)
+
+Cierre de `docs/AUDITORIA.md` (auditorías #1 y #2 sobre la exportación de RM
+Descartables en Cloudflare Pages). La tabla hallazgo por hallazgo, con estados
+honestos (resuelto, deuda aceptada, acción del dueño), está en el apéndice
+"Resolución 2026-09-02 (rama `auditoria-rm-fixes`)" de ese documento.
+
+**Changed**
+
+- `_headers` reescrito para Cloudflare Pages: CSP sin `require-trusted-types-for`/`trusted-types` (el Service Worker moría en el host real), `img-src`/`media-src` sin `http:`, sin `Access-Control-Allow-Origin: *`, HSTS con `includeSubDomains` y detach `! Cache-Control` por regla (con la semántica Netlify anterior, Cloudflare joineaba los duplicados con coma y los assets hasheados se revalidaban en cada visita); regla de `/video-sitemap.xml` condicional a tiendas con videos (`b9bcb686`, verificador Cloudflare del Studio alineado en `87c0a8d3`).
+- `sw.js`: runtime cache acotado a allowlist (`/assets/`, índices JSON, `/offline/`), `CACHE_NAME` derivado del `revision` del deployment-manifest y precache coherente que incluye la CSS de home cuando diverge (`1d2dcc79`, `9e843b97`).
+- Pipeline de imágenes con alfa real: el worker escanea el canal alfa (no el contenedor), las fotos PNG opacas pasan a fallback JPG + variantes WebP, AVIF se acepta como entrada y los assets sin WebP o con fallback PNG opaco se re-optimizan solos al abrir/guardar la tienda (receta `responsive-alpha-v2`, `ec75220d`); preload del LCP partido por `media` espejando el `<picture>` (`904af642`, `0744b668`); og:image con dimensiones reales y `og.jpg` 1200×630 (cover, q0.82) por imagen única vía `ExportOptions.socialImageCrops` (`0744b668`).
+- README actualizado a la receta real de imágenes: variantes 768 + máxima ≤1800 y og.jpg 1200×630; 480/1200 no se generan por decisión (2026-08-29, deuda aceptada en `docs/TECHNICAL_DEBT.md`).
+- Mensaje de WhatsApp compacto: dedupe de líneas, sin SKU (`includeSku` deprecado y siempre ignorado por el runtime; schema intacto), variante visible salvo "Única/Único", tope de 25 ítems con aviso visible en el drawer, total real siempre y builder único para drawer y página; URL ≤4000 verificada con 30 ítems ×2 unidades (`98807f07`, `dc8e15bf`).
+- Presupuestos CSS re-medidos tras F4: CSS pública V1 ~13,6 KiB gz con techo 32 KiB (`scripts/storefront-runtime-budget.test.ts`) y foundation V2 211.179 B raw con tope 212 KiB (`scripts/public-storefront-budget.test.ts`).
+- `data-theme` queda emitido pero inerte (sin CSS dark); su retiro es la deuda T15 de `docs/TECHNICAL_DEBT.md`.
+
+**Fixed**
+
+- CSS duplicada byte a byte entre home y resto del sitio: una sola CSS pública cuando home y resto comparten bytes (bug del guard por ruta); el caso divergente sigue soportado (`fddd29fe`).
+- `pattern` del teléfono inválido en modo `v` (`SyntaxError` silencioso en cada validación): `[\d\+\(\)\- ]{8,}` en drawer legacy, drawer V2 y checkout `/compra/` (`98807f07`).
+- Doble fetch de `catalog-index.json` al cargar página de producto (guard en la invalidación del memo).
+- aria-label del carrito con los tokens exactos del texto visible y espacio en el markup (axe `label-content-name-mismatch`, verificado con `@axe-core/playwright`; `70592d9d`, `77c9a0fc`).
+- CLS de `/buscar/` ≈ 0: 8 skeleton cards con estructura de card real y shimmer con reduced-motion; contador "Mostrando 48 de M" y `document.title` con la query (`77c9a0fc`).
+- Selector de variante oculto en productos mono-variante (select hidden, lógica intacta) en ambas familias; placeholder de tema para categorías sin imagen en el bento (`77c9a0fc`).
+- Paginación numérica (ventana ±2, elipses y `aria-current`) además de prev/next; hit-area de la hamburguesa ≥44px garantizada; clamp del hero móvil más compacto (<768px) y títulos de páginas acotados a ≤60 caracteres (`fitTitle` con límite de palabra, marca intacta) (`ac88f26a`).
+- Íconos PWA y favicon: PNG cuantizados a paleta vía fflate derivados del logo de la tienda (icon-512 de 787 KB → ~349 B en sólido), manifest con `id`/`description`/`purpose` any+maskable, favicon sin copia duplicada y `/offline/` con noindex (`c60b601f`, `e9104a67`).
+
+**Added**
+
+- `_worker.js` (sólo production) para Cloudflare Pages advanced mode, donde `_headers` no se procesa: noindex de `*.pages.dev`, 301 www→apex y headers de seguridad + Cache-Control por ruta idempotentes, con paridad total contra `_headers` testeada (`b8812358`, `56c2baab`).
+- Gate E2E `axe-site.spec.ts` con `@axe-core/playwright` sobre el sitio exportado.
+- Migración automática `needsImageOptimization` (canal agente incluido) con receta `responsive-alpha-v2`.
+
+**Removed**
+
+- CSS dark muerta (decisión F4): -1,4 KiB, `color-scheme` siempre light y el selector "Oscuro" del tema sigue deshabilitado (`673a728a`, `d46b7138`, `a90ffaa3`).
+- `og:updated_time`, `Access-Control-Allow-Origin: *` global y las directivas `trusted-types` de la CSP (`b9bcb686`).
+- SKU del mensaje de WhatsApp (el campo `includeSku` queda deprecado en el schema, sin migración).
+
+**Verificación**: `git diff --check` y `corepack pnpm check:repository` ✔ al
+cerrar la documentación; el detalle de pruebas por fix está en el apéndice de
+`docs/AUDITORIA.md` y en los commits citados de la rama.
+
 ### Pipeline de imágenes del Studio: AVIF/WebP con receta verificable y contraste del hero (2026-09-02)
 
 - **Causa**: la auditoría del sitio exportado de RM Descartables (`docs/AUDITORIA.md`) mostró fotos servidas como PNG originales (home de 4,5 MB) y el editor acumulaba cientos de data URLs sin marca de receta ni verificación: cada guardado podía re-codificar o heredar variantes viejas, y las imágenes de la UI no aprovechaban las variantes responsive. Además el overlay del hero V2 dejaba texto poco legible sobre fotos claras.

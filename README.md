@@ -214,11 +214,21 @@ conversión automática.
 
 ## Imágenes responsive
 
-Los recursos se procesan en un Web Worker con una receta determinista de anchos
-480, 768, 1200 y 1800 px. Solara valida el formato, corrige la orientación,
-conserva transparencia, reutiliza transformaciones por hash y deduplica los
-binarios del sitio público. La caché es regenerable y puede limpiarse sin tocar
-los proyectos guardados.
+Los recursos se procesan en un Web Worker con una receta determinista que
+genera la variante intermedia de 768 px (tablet y móvil) y la máxima hasta
+1800 px (desktop). Las variantes de 480 y 1200 px no se generan por decisión
+registrada (2026-08-29): el preload del LCP espeja el `<picture>` por `media`,
+así que cada viewport descarga una sola variante. El worker acepta JPEG, PNG,
+WebP y AVIF, escanea el canal alfa real de la imagen (no el contenedor) y
+convierte a JPG de fallback las fotos PNG opacas: el formato PNG queda
+reservado a gráficos con transparencia verdadera. Los assets que llegaron sin
+variantes WebP o con fallback PNG opaco se re-optimizan solos al abrir o
+guardar la tienda (receta `responsive-alpha-v2`). Para redes sociales se genera
+un `og.jpg` de 1200×630 (recorte cover, calidad 0,82) por imagen única y
+`og:image` declara las dimensiones reales del archivo. Solara valida el
+formato, corrige la orientación, reutiliza transformaciones por hash y
+deduplica los binarios del sitio público. La caché es regenerable y puede
+limpiarse sin tocar los proyectos guardados.
 
 ## Verificación
 

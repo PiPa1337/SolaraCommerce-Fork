@@ -208,3 +208,45 @@ Recomendación oficial de CF para evitar indexación del host alterno (los canon
 4. **WhatsApp: compactar mensaje (A2-P1)** antes de campaña de adquisición B2B.
 5. SEO fino: og:image dims (A2-P2), priceValidUntil dinámico (A2-P2), X-Robots-Tag pages.dev (A2-P2), re-export antes de 2026-12-31.
 6. Contenido: imagen de Papelería y Varios, texto de entrega, ocultar selector "Única", pulido móvil (A2-P2/P3).
+
+---
+
+## Resolución 2026-09-02 (rama auditoria-rm-fixes)
+
+Cierre de ambas auditorías dentro del producto (exporter/Studio/runtime): el
+sitio se regenera desde la tienda, no hay post-proceso de la exportación. Los
+commits citados pertenecen a la rama `auditoria-rm-fixes`; la deuda aceptada y
+el backlog nuevo quedaron registrados en `docs/TECHNICAL_DEBT.md`, el detalle
+de usuario en `CHANGELOG.md` (2026-09-03) y la receta real de imágenes en el
+`README.md`.
+
+| Hallazgo | Resolución | Estado |
+| --- | --- | --- |
+| #1 P0 · CSP rompe el Service Worker | `_headers` sin `require-trusted-types-for`/`trusted-types` (`b9bcb686`); paridad idempotente en `_worker.js` (`b8812358`, `56c2baab`); verificador Cloudflare del Studio alineado (`87c0a8d3`). El SW vuelve a registrarse en el host que procesa `_headers`. | Resuelto |
+| #2 P0 · fotos PNG sin conversión a WebP | Alfa real en el worker: escaneo del canal alfa (no el contenedor); fotos PNG opacas → fallback JPG + variantes WebP; AVIF aceptado como entrada; migración automática al abrir/guardar la tienda (receta `responsive-alpha-v2`) (`ec75220d`). | Resuelto |
+| #3 P1 · CSS duplicada byte a byte | Una sola CSS pública cuando home y resto comparten bytes (bug del guard por ruta); el caso divergente sigue soportado (`fddd29fe`). | Resuelto |
+| #4 P1 · pipeline sin 480/1200 | Decisión 2026-08-29: la receta pública sigue en 2 candidatos (768 + máxima ≤1800); no se generan 480/1200. El preload del LCP espeja el `<picture>` por `media` y elimina la doble descarga del banner móvil (`904af642`, `0744b668`). README actualizado a la receta real. | Aceptado como deuda |
+| #5 P1 · fallbacks PNG de tamaño completo | Con alfa real, el `src` de las fotos es el fallback JPG y las variantes son WebP; los PNG completos dejan de viajar como `src` de `<img>` (`ec75220d`). | Resuelto |
+| #6 P2 · runtime cache del SW sin límites | Allowlist del runtime cache: `/assets/`, índices JSON y `/offline/` (`1d2dcc79`). | Resuelto |
+| #7 P2 · precache sin la CSS de home | El precache incluye la CSS de home cuando diverge de la del resto (`9e843b97`); con la CSS unificada el caso desaparece. | Resuelto |
+| #8 P2 · íconos y favicon sobredimensionados | Íconos PNG cuantizados a paleta vía fflate, derivados del logo de la tienda cuando existe (icon-512 de 787 KB → ~349 B en sólido), manifest con `id`/`description`/`purpose` any+maskable, favicon sin copia duplicada y gate <60 KB (`c60b601f`, `e9104a67`). | Resuelto |
+| #9 P2 · pattern de teléfono inválido | `pattern="[\d\+\(\)\- ]{8,}"` válido en modo `v` en drawer legacy, drawer V2 y checkout `/compra/` (`98807f07`). | Resuelto |
+| #10 P2 · reglas muertas en `_headers` y `_redirects` | Regla de `/video-sitemap.xml` condicional a tiendas con videos (`b9bcb686`). `_redirects` vacío se mantiene por decisión argumentada. | Resuelto (headers) · Wontfix (_redirects) |
+| #11 P2 · `/offline/` sin noindex | `offline/index.html` emite robots `noindex` (`c60b601f`). | Resuelto |
+| #12 P2 · ruido de metadatos | `og:updated_time` eliminado, sin `Access-Control-Allow-Origin: *` global, HSTS con `includeSubDomains`, `img-src`/`media-src` sin `http:` (`b9bcb686`, `87c0a8d3`). | Resuelto |
+| #13 P2 · duplicación inline menor | Doble fetch de `catalog-index.json` en página de producto eliminado (guard en la invalidación del memo). `data-solara-copy` inline se mantiene por decisión (~2 KiB gz por página, evita un fetch y flash de textos). | Resuelto (doble fetch) · Wontfix (data-solara-copy) |
+| #14 P2 · ajuste fino de metas | Títulos de páginas acotados a ≤60 caracteres con `fitTitle` (límite de palabra, marca intacta) (`ac88f26a`). Las descripciones cortas (<70) dependen del contenido cargado por la tienda. | Resuelto (títulos) · Acción del dueño (descripciones) |
+| A2-P1 · Cache-Control roto en Cloudflare Pages | Detach `! Cache-Control` por regla en `_headers` y `_worker.js` con headers de seguridad y Cache-Control por ruta idempotentes; paridad total testeada para advanced mode, donde CF no procesa `_headers` (`b9bcb686`, `b8812358`, `56c2baab`). | Resuelto |
+| A2-P1 · LCP móvil de categorías + doble descarga del banner | Preload del LCP partido por `media` espejando el `<picture>` (`904af642`, `0744b668`) más WebP/JPG del pipeline de alfa real para el banner (`ec75220d`). | Resuelto |
+| A2-P1 · mensaje de WhatsApp supera el límite | Mensaje compacto: dedupe de líneas, sin SKU, variante visible salvo unic[oa], tope de 25 ítems con aviso visible en el drawer, total real y builder único drawer/página; URL ≤4000 verificada con 30 ítems ×2 unidades (`98807f07`, `dc8e15bf`). | Resuelto |
+| A2-P2 · og:image con dimensiones mal declaradas | Dimensiones reales en `og:image` y `og.jpg` 1200×630 (cover, q0.82) por imagen única vía `ExportOptions.socialImageCrops` (`0744b668`). | Resuelto |
+| A2-P2 · `priceValidUntil` hardcodeado | Sin cambios en la rama: la oferta sigue derivando del año de `updatedAt` (`packages/exporter/src/structured-data.ts`). Re-exportar antes del fin de año; derivar exportación + 90 días quedó como backlog del exporter. | Acción del dueño (re-export) · Pendiente (exporter) |
+| A2-P2 · modo oscuro declarado pero desactivado | CSS dark muerta eliminada (decisión F4, -1,4 KiB), `color-scheme` siempre light y budgets re-medidos; `data-theme` queda emitido pero inerte hasta el retiro T15 (`673a728a`, `d46b7138`, `a90ffaa3`, `868be5ec`). | Resuelto (claim removido) |
+| A2-P2 · contenido/UX de severidad media-alta | Placeholder de tema para categorías sin imagen en el bento y selector "Única" oculto en productos mono-variante, resueltos en el producto (`77c9a0fc`, `dc8e15bf`). La imagen de "Papelería y Varios" y el texto de "Entrega: A coordinar" son contenido de la tienda. | Resuelto (producto) · Acción del dueño (contenido) |
+| A2-P2 · falta X-Robots-Tag para `*.pages.dev` | Emitido por `_worker.js` (no vía dashboard), sumando el header sólo cuando falta (`b8812358`). | Resuelto |
+| A2-P3 · a11y/UX de producto | aria-label del carrito con los tokens exactos del texto visible más el espacio en el markup (axe `label-content-name-mismatch` resuelto, gate E2E `axe-site.spec.ts` con `@axe-core/playwright`) (`70592d9d`, `77c9a0fc`); CLS de `/buscar/` ≈ 0 con 8 skeleton cards de estructura real y shimmer con reduced-motion (`77c9a0fc`); contador "Mostrando 48 de M" y `document.title` con la query; hamburguesa con hit-area ≥44px y clamp de hero móvil más compacto (`ac88f26a`); paginación numérica con elipses y `aria-current`; `CACHE_NAME` derivado del `revision` del deployment-manifest (`1d2dcc79`). El gate numérico de CLS quedó en backlog. | Resuelto (backlog: gate CLS) |
+| A2-P3 · contenido/UX del dueño | Acordeones de envíos/cambios cerrados en ficha, CTA secundario del hero, barra de aviso que corta texto, filtros colapsados por defecto y footer (email gmail, branding de plataforma): contenido/copy de la tienda, sin cambio de producto en la rama. `postMessage(..., "*")` sólo aplica al preview del Studio, no al sitio público. | Acción del dueño · No aplica (preview del Studio) |
+
+Backlog nuevo registrado en `docs/TECHNICAL_DEBT.md`: gate numérico de CLS para
+`/buscar/` en el spec E2E de performance, mapear `/favicon.ico` en el preview y
+parallelismo de `generateSocialCrops`.
