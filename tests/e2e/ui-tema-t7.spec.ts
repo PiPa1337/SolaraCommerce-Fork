@@ -1,17 +1,17 @@
 /**
- * Auditoría Tema T7 (2026-08-11) — colorMode (Sistema / Claro / Oscuro deshabilitado).
- * Contrato de 4 capas (plan docs/superpowers/plans/2026-08-10-auditoria-tema.md):
- * - funcional: "Sistema" sigue prefers-color-scheme en preview y sitio exportado
- *   (emulando la media), "Claro" fuerza light aunque el sistema sea oscuro y
- *   "Oscuro" no se puede elegir (option deshabilitada);
- * - auto-feedback: el select Modo expone la opción Oscuro deshabilitada y el
- *   hint "Oscuro está deshabilitado..." conectado por aria-describedby;
- * - datos: el valor llega a project.theme.colorMode (IndexedDB) y a los
- *   atributos data-color-mode / data-theme del HTML exportado;
- * - utilidad: el sitio exportado emite color-scheme + media query de
- *   prefers-color-scheme, el preview cambia de verdad al emular la media, y los
- *   el modo dark hereda sus tokens semánticos sin pisar la paleta activa ni
- *   mezclar valores fijos de otra identidad visual.
+ * Auditoría Tema T7 (actualizada 2026-09-03 — decisión F4: el sitio siempre light).
+ * Contrato de 4 capas:
+ * - funcional: la paleta servida es siempre la del usuario (light). Ni el modo
+ *   auto ni un colorMode "dark" declarado en el proyecto cambian los tokens;
+ *   el CSS exportado no contiene media query de prefers-color-scheme ni
+ *   override [data-color-mode="dark"];
+ * - auto-feedback: el select Modo mantiene la opción Oscuro deshabilitada con
+ *   el hint conectado por aria-describedby;
+ * - datos: el valor llega a project.theme.colorMode (IndexedDB) y al atributo
+ *   data-color-mode del .solara-page del HTML exportado;
+ * - utilidad: los tokens --solara-* y la capa --catalog-* del skin
+ *   catalog-modern se resuelven sobre la paleta activa; el CSS ya no define
+ *   variables --solara-dark-*.
  */
 import { createServer, type Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
@@ -46,8 +46,7 @@ type ExportedProject = Parameters<typeof exportProject>[0];
 
 /** Paleta por defecto de la tienda limpia catalog-modern (catalog-modern-fixture.ts:391-401). */
 const THEME_BACKGROUND = "#fcfcfb";
-const DEFAULT_DARK_BACKGROUND = "#0d0d0f";
-const DEFAULT_DARK_TEXT = "#e8e8ea";
+const THEME_BACKGROUND_RGB = "rgb(252, 252, 251)";
 
 async function setupCleanStore(page: Page, name: string): Promise<void> {
   await page.goto(studioUrl);
@@ -74,10 +73,10 @@ function modeSelect(page: Page): Locator {
 }
 
 /**
- * Valor computado de una variable --solara-* en el preview desktop. Se lee
- * sobre .solara-page: el override fijo del dark (styles.ts:513-521) pisa los
- * tokens ahí (data-color-mode="auto"), no en <html> (que conserva la paleta
- * del :root emitida por themeCss).
+ * Valor computado de una variable --solara-* en el preview desktop. Desde la
+ * decisión F4 los tokens sólo viven en :root (no hay override dark por
+ * data-color-mode), así que leerlos sobre .solara-page refleja la paleta
+ * activa servida.
  */
 function previewVar(page: Page, variable: string): () => Promise<string> {
   return () =>
@@ -119,6 +118,37 @@ function previewCatalogBackground(page: Page): () => Promise<string> {
       .locator(".catalog-modern")
       .evaluate((element) => getComputedStyle(element).backgroundColor)
       .catch(() => "");
+}
+
+/** Tokens y color-scheme computados del .solara-page de una página servida. */
+function servedTheme(page: Page): () => Promise<{ background: string; colorScheme: string }> {
+  return () =>
+    page.locator(".solara-page").evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        background: style.getPropertyValue("--solara-background").trim(),
+        colorScheme: style.colorScheme,
+      };
+    });
+}
+
+/** backgroundColor computado del root catalog-modern de una página servida. */
+function servedCatalogBackground(page: Page): () => Promise<string> {
+  return () =>
+    page
+      .locator(".catalog-modern")
+      .evaluate((element) => getComputedStyle(element).backgroundColor)
+      .catch(() => "");
+}
+
+/**
+ * El CSS servido no puede volver a traer la capa dark muerta: ni media query
+ * del sistema, ni overrides por data-color-mode, ni variables --solara-dark-*.
+ */
+function expectNoDarkCss(css: string): void {
+  expect(css).not.toContain("prefers-color-scheme");
+  expect(css).not.toContain("data-color-mode");
+  expect(css).not.toContain("--solara-dark-");
 }
 
 /** Proyecto persistido en IndexedDB (store `projects`) para la tienda con ese nombre. */
@@ -218,46 +248,36 @@ async function closeServer(siteServer: Server): Promise<void> {
   });
 }
 
-test("Sistema: el preview sigue prefers-color-scheme al emular la media", async ({ page }) => {
-  // La emulación debe estar activa ANTES de que se cree el documento del iframe
-  // de preview (srcDoc): los iframes existentes no reaccionan a un cambio de
-  // emulateMedia posterior, pero los nuevos documentos sí la heredan.
+test("estabilidad light: el preview no cambia con el sistema en oscuro (auto incluido)", async ({
+  page,
+}) => {
+  // La emulación queda activa antes de crear el iframe del preview: si
+  // reapareciera cualquier regla dark por prefers-color-scheme, este test la
+  // detectaría.
   await page.emulateMedia({ colorScheme: "dark" });
-  await setupCleanStore(page, "Tienda T7 sistema");
+  await setupCleanStore(page, "Tienda T7 preview light");
   await openThemeTab(page);
 
-  await modeSelect(page).selectOption("auto");
-  await expect.poll(previewDataColorMode(page), { timeout: 15_000 }).toBe("auto");
-
-  // Con el sistema en oscuro, el modo auto aplica los tokens dark semánticos
-  // del proyecto; la tienda limpia usa los defaults del exporter.
-  await expect
-    .poll(previewVar(page, "--solara-background"), { timeout: 15_000 })
-    .toBe(DEFAULT_DARK_BACKGROUND);
-  await expect.poll(previewVar(page, "--solara-text"), { timeout: 15_000 }).toBe(DEFAULT_DARK_TEXT);
-  await expect.poll(previewColorScheme(page), { timeout: 15_000 }).toBe("dark");
-
-  // Fix Ola 3: la capa --catalog-* del skin catalog-modern deriva de los
-  // tokens --solara-*, así que el root del skin sigue al override del dark y
-  // la mezcla ilegible ya no existe.
-  await expect.poll(previewCatalogBackground(page), { timeout: 15_000 }).toBe("rgb(13, 13, 15)");
-
-  // Con el sistema en claro, el modo auto respeta la paleta del usuario. El
-  // cambio de emulación requiere un iframe nuevo: un cambio de modo (idempotente
-  // al volver a auto) reconstruye el documento bajo la emulación vigente.
-  await page.emulateMedia({ colorScheme: "light" });
-  await modeSelect(page).selectOption("light");
-  await modeSelect(page).selectOption("auto");
+  // La tienda limpia arranca en Claro: la paleta activa se mantiene intacta.
   await expect
     .poll(previewVar(page, "--solara-background"), { timeout: 15_000 })
     .toBe(THEME_BACKGROUND);
   await expect.poll(previewColorScheme(page), { timeout: 15_000 }).toBe("light");
+  await expect.poll(previewCatalogBackground(page), { timeout: 15_000 }).toBe(THEME_BACKGROUND_RGB);
+
+  // Pasar a auto no introduce dark: data-color-mode se emite como dato pero no
+  // existe regla CSS que convierta la paleta, aunque el sistema siga en oscuro.
+  await modeSelect(page).selectOption("auto");
+  await expect.poll(previewDataColorMode(page), { timeout: 15_000 }).toBe("auto");
+  await expect
+    .poll(previewVar(page, "--solara-background"), { timeout: 15_000 })
+    .toBe(THEME_BACKGROUND);
+  await expect.poll(previewColorScheme(page), { timeout: 15_000 }).toBe("light");
+  await expect.poll(previewCatalogBackground(page), { timeout: 15_000 }).toBe(THEME_BACKGROUND_RGB);
 });
 
-test("Sistema: el sitio exportado sigue prefers-color-scheme al emular la media", async ({
-  page,
-}) => {
-  const storeName = "Tienda T7 sitio sistema";
+test("estabilidad light: el sitio exportado con auto no sigue el sistema", async ({ page }) => {
+  const storeName = "Tienda T7 sitio auto";
   await setupCleanStore(page, storeName);
   await openThemeTab(page);
 
@@ -269,20 +289,15 @@ test("Sistema: el sitio exportado sigue prefers-color-scheme al emular la media"
   const css = exportedCss(project);
 
   // Datos en el HTML exportado: .solara-page lleva data-color-mode="auto" y el
-  // <html> NO lleva data-theme (index.ts:1104-1105 sólo lo emite para light/dark).
+  // <html> NO lleva data-theme (sólo se emite para light/dark).
   expect(html).toContain('data-color-mode="auto"');
   expect(html).not.toContain('data-theme="');
 
-  // Utilidad: el CSS exportado emite color-scheme y la media query que sigue al
-  // sistema (index.ts) y los tokens dark semánticos.
+  // Utilidad: el CSS servido no trae capa dark y fija la paleta clara en :root.
   const normalizedCss = css.replaceAll(/\\+(?=")/g, "");
-  expect(normalizedCss).toContain(
-    '.solara-page[data-color-mode="auto"]{--solara-background:var(--solara-dark-background)',
-  );
-  expect(normalizedCss).toContain("color-scheme:dark");
-  expect(normalizedCss).toMatch(/@media \(prefers-color-scheme:dark\)/);
-  expect(normalizedCss).toContain('[data-solara-store][data-color-mode="auto"]{');
-  expect(normalizedCss).toContain(`--solara-dark-background:${DEFAULT_DARK_BACKGROUND}`);
+  expectNoDarkCss(normalizedCss);
+  expect(normalizedCss).toContain(":root{color-scheme:light");
+  expect(normalizedCss).toContain(`--solara-background:${THEME_BACKGROUND}`);
 
   const exported = exportProject(project, { mode: "draft" });
   const siteServer = await startExportedServer(exported.files);
@@ -290,73 +305,60 @@ test("Sistema: el sitio exportado sigue prefers-color-scheme al emular la media"
     await page.emulateMedia({ colorScheme: "dark" });
     await page.goto(siteServer.url);
     await page.locator(".solara-page").waitFor({ state: "attached" });
-    await expect
-      .poll(() =>
-        page.locator(".solara-page").evaluate((element) => {
-          const style = getComputedStyle(element);
-          return {
-            background: style.getPropertyValue("--solara-background").trim(),
-            colorScheme: style.colorScheme,
-          };
-        }),
-      )
-      .toEqual({ background: DEFAULT_DARK_BACKGROUND, colorScheme: "dark" });
+    await expect.poll(servedTheme(page)).toEqual({
+      background: THEME_BACKGROUND,
+      colorScheme: "light",
+    });
 
+    // Con el sistema en claro el resultado es idéntico: estabilidad light.
     await page.emulateMedia({ colorScheme: "light" });
-    await expect
-      .poll(() =>
-        page.locator(".solara-page").evaluate((element) => {
-          const style = getComputedStyle(element);
-          return {
-            background: style.getPropertyValue("--solara-background").trim(),
-            colorScheme: style.colorScheme,
-          };
-        }),
-      )
-      .toEqual({ background: THEME_BACKGROUND, colorScheme: "light" });
+    await expect.poll(servedTheme(page)).toEqual({
+      background: THEME_BACKGROUND,
+      colorScheme: "light",
+    });
   } finally {
     await closeServer(siteServer.siteServer);
   }
 });
 
-test("Claro: fuerza light aunque el sistema sea oscuro (preview y sitio)", async ({ page }) => {
-  const storeName = "Tienda T7 claro";
-  // Emulación activa antes de crear el iframe del preview (ver test 1).
-  await page.emulateMedia({ colorScheme: "dark" });
+test("estabilidad light: el sitio exportado con colorMode dark mantiene la paleta clara", async ({
+  page,
+}) => {
+  const storeName = "Tienda T7 sitio dark";
   await setupCleanStore(page, storeName);
-  await openThemeTab(page);
 
-  await modeSelect(page).selectOption("light");
-  await expect.poll(() => readStoredColorMode(page, storeName), { timeout: 15_000 }).toBe("light");
+  // La UI no permite elegir Oscuro (option deshabilitada), pero el schema sigue
+  // aceptando colorMode "dark": un proyecto heredado puede traerlo y el sitio
+  // exportado debe verse igual de light.
+  const stored = (await readStoredProject(page, storeName)) as ExportedProject;
+  const darkProject = {
+    ...stored,
+    theme: { ...stored.theme, colorMode: "dark" as const },
+  } as ExportedProject;
 
-  // Preview: con el sistema en oscuro, la paleta del usuario se conserva.
-  await expect
-    .poll(previewVar(page, "--solara-background"), { timeout: 15_000 })
-    .toBe(THEME_BACKGROUND);
-  await expect.poll(previewColorScheme(page), { timeout: 15_000 }).toBe("light");
+  const html = exportedHtml(darkProject);
+  const css = exportedCss(darkProject);
 
-  const project = (await readStoredProject(page, storeName)) as ExportedProject;
-  const html = exportedHtml(project);
-  expect(html).toContain('data-theme="light"');
-  expect(html).toContain('data-color-mode="light"');
+  // data-color-mode sigue presente en el HTML (incluido "dark") y el <html>
+  // conserva data-theme="dark"; la paleta en cambio no cambia.
+  expect(html).toContain('data-color-mode="dark"');
+  expect(html).toContain('data-theme="dark"');
+  expectNoDarkCss(css.replaceAll(/\\+(?=")/g, ""));
 
-  // Sitio exportado: también conserva la paleta con el sistema en oscuro.
-  const exported = exportProject(project, { mode: "draft" });
+  const exported = exportProject(darkProject, { mode: "draft" });
   const siteServer = await startExportedServer(exported.files);
   try {
+    await page.emulateMedia({ colorScheme: "dark" });
     await page.goto(siteServer.url);
     await page.locator(".solara-page").waitFor({ state: "attached" });
+    // La paleta servida es la clara del proyecto; el color-scheme del root
+    // sigue el colorMode declarado pero ya no arrastra tokens dark.
     await expect
-      .poll(() =>
-        page.locator(".solara-page").evaluate((element) => {
-          const style = getComputedStyle(element);
-          return {
-            background: style.getPropertyValue("--solara-background").trim(),
-            colorScheme: style.colorScheme,
-          };
-        }),
-      )
-      .toEqual({ background: THEME_BACKGROUND, colorScheme: "light" });
+      .poll(() => servedTheme(page)().then((theme) => theme.background), { timeout: 15_000 })
+      .toBe(THEME_BACKGROUND);
+    await expect
+      .poll(servedCatalogBackground(page), { timeout: 15_000 })
+      .toBe(THEME_BACKGROUND_RGB);
   } finally {
     await closeServer(siteServer.siteServer);
   }
@@ -384,24 +386,19 @@ test("Oscuro: deshabilitado con hint conectado por aria-describedby", async ({ p
   await expect(page.locator(`#${describedBy}`)).toContainText(hintText);
 });
 
-test("utilidad: los overrides del dark heredan tokens semánticos en el CSS exportado", async ({
+test("tokens: el CSS exportado no define capa dark y catalog-modern hereda --solara-*", async ({
   page,
 }) => {
-  const storeName = "Tienda T7 overrides";
+  const storeName = "Tienda T7 tokens";
   await setupCleanStore(page, storeName);
-  await openThemeTab(page);
 
   const project = (await readStoredProject(page, storeName)) as ExportedProject;
   const css = exportedCss(project);
 
-  // El fallback queda encapsulado en la variable semántica; el selector dark
-  // ya no escribe una paleta fija directamente sobre la tienda.
-  expect(css).toContain("--solara-dark-background:");
-  expect(css).toContain("--solara-background:var(--solara-dark-background");
-  expect(css).toContain("--solara-surface:var(--solara-dark-surface");
-  expect(css).toContain("--solara-text:var(--solara-dark-text");
-  expect(css).toContain("--solara-muted:var(--solara-dark-muted");
-  expect(css).toContain("--solara-border:var(--solara-dark-border");
+  // Sin capa dark: ni variables --solara-dark-* ni overrides por color-mode.
+  expectNoDarkCss(css);
+
+  // La paleta fija heredada del skin antiguo nunca debe volver como dark fijo.
   expect(css).not.toContain("--solara-background:#1d1e19");
   expect(css).not.toContain("--solara-surface:#292a23");
   expect(css).not.toContain("--solara-text:#f3eee4");
@@ -409,7 +406,7 @@ test("utilidad: los overrides del dark heredan tokens semánticos en el CSS expo
   expect(css).not.toContain("--solara-border:#47483d");
 
   // La capa --catalog-* del skin catalog-modern es un alias de los tokens
-  // --solara-* y también conserva sale/rating de la paleta activa.
+  // --solara-* y conserva sale/rating de la paleta activa.
   expect(css).toContain("--catalog-ink:var(--solara-text,#0b0b0c)");
   expect(css).toContain("--catalog-paper:var(--solara-background,#fcfcfb)");
   expect(css).toContain("--catalog-surface:var(--solara-surface,#f0f0ee)");
