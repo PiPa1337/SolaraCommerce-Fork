@@ -3016,6 +3016,7 @@ function buildFiles(
   );
   const cssFullPath = `/assets/storefront.${sha256Hex(cssFull).slice(0, 16)}.css`;
   const cssHomePath = `/assets/storefront-home.${sha256Hex(cssHome).slice(0, 16)}.css`;
+  const unifiedHomeCss = cssHome === cssFull;
   const runtimeSource =
     mode === "draft"
       ? `// DEBUG: modo draft — source map disponible via scripts/build-runtime.mjs\n${STOREFRONT_RUNTIME_JS}`
@@ -3027,7 +3028,7 @@ function buildFiles(
     serviceWorker: true,
   };
   const runtimeAssetsHome: RuntimeAssetPaths = {
-    css: cssHomePath,
+    css: unifiedHomeCss ? cssFullPath : cssHomePath,
     js: runtimeAssetsFull.js,
     fontPaths: fontPathOverrides,
     serviceWorker: true,
@@ -3056,7 +3057,7 @@ function buildFiles(
     );
   });
   files.set(cssFullPath.slice(1), cssFull);
-  if (cssHomePath !== cssFullPath) files.set(cssHomePath.slice(1), cssHome);
+  if (!unifiedHomeCss) files.set(cssHomePath.slice(1), cssHome);
   files.set(runtimeAssetsFull.js.slice(1), runtimeSource);
   const copyJson = JSON.stringify(publicProject.publicCopy);
   files.set(`assets/copy.${sha256Hex(copyJson).slice(0, 16)}.json`, copyJson);

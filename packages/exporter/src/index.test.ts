@@ -309,6 +309,56 @@ describe("exporter", () => {
     expect(changedManifest.runtime.js).toBe(baseManifest.runtime.js);
   });
 
+  it("emite una sola CSS pública cuando la home comparte bytes con el resto del sitio", () => {
+    const result = exportProject(catalogModernStore, { mode: "production" });
+    const cssPaths = [...result.files.keys()].filter((path) =>
+      /^assets\/storefront[^/]*\.css$/.test(path),
+    );
+    expect(cssPaths).toHaveLength(1);
+
+    const home = String(result.files.get("index.html"));
+    const categoryPath = [...result.files.keys()].find((path) =>
+      /^categorias\/[^/]+\/index\.html$/.test(path),
+    );
+    if (!categoryPath) throw new Error("Fixture sin página de categoría");
+    const category = String(result.files.get(categoryPath));
+    const homeHref = /<link rel="stylesheet" href="([^"]+)"/.exec(home)?.[1];
+    const categoryHref = /<link rel="stylesheet" href="([^"]+)"/.exec(category)?.[1];
+    expect(homeHref).toMatch(/^\/assets\/storefront\.[a-f0-9]+\.css$/);
+    expect(categoryHref).toBe(homeHref);
+  });
+
+  it("mantiene dos CSS públicas cuando la home no cubre los módulos del resto del sitio", () => {
+    const project = structuredClone(catalogModernStore);
+    const aboutPage = project.pages.find((page) => page.kind === "about");
+    if (!aboutPage) throw new Error("Fixture sin página nosotros");
+    const trustSection = referenceStore.sections.find(
+      (section) => section.moduleId === "trust-strip",
+    );
+    if (!trustSection) throw new Error("Fixture sin sección trust-strip");
+    aboutPage.sections = [structuredClone(trustSection)];
+
+    const result = exportProject(project, { mode: "production" });
+    const cssPaths = [...result.files.keys()].filter((path) =>
+      /^assets\/storefront[^/]*\.css$/.test(path),
+    );
+    expect(cssPaths).toHaveLength(2);
+    expect(cssPaths.some((path) => /^assets\/storefront-home\.[a-f0-9]+\.css$/.test(path))).toBe(
+      true,
+    );
+    const home = String(result.files.get("index.html"));
+    const categoryPath = [...result.files.keys()].find((path) =>
+      /^categorias\/[^/]+\/index\.html$/.test(path),
+    );
+    if (!categoryPath) throw new Error("Fixture sin página de categoría");
+    const category = String(result.files.get(categoryPath));
+    const homeHref = /<link rel="stylesheet" href="([^"]+)"/.exec(home)?.[1];
+    const categoryHref = /<link rel="stylesheet" href="([^"]+)"/.exec(category)?.[1];
+    expect(homeHref).toMatch(/^\/assets\/storefront-home\.[a-f0-9]+\.css$/);
+    expect(categoryHref).toMatch(/^\/assets\/storefront\.[a-f0-9]+\.css$/);
+    expect(homeHref).not.toBe(categoryHref);
+  });
+
   it("mantiene PWA y precache bajo la subcarpeta con versión basada en contenido", () => {
     const project = { ...referenceStore, baseUrl: "https://example.test/tienda/" };
     const result = exportProject(project, { mode: "production" });
