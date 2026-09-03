@@ -508,8 +508,10 @@ test("C10: la paginación legacy navega prev/next con rel y respeta los límites
     const pagination = page.locator(".solara-pagination");
     await expect(next).toHaveAttribute("href", "/categorias/casa/pagina/2/");
     await expect(pagination).toContainText("Página 1 de 2");
+    // T10 agregó links numéricos: el chip de la página actual es el span con
+    // aria-current, y comparte con prev/next el radio del tema.
     const pageRadius = await pagination
-      .locator("span")
+      .locator('span[aria-current="page"]')
       .evaluate((element) => getComputedStyle(element).borderRadius);
     await expect(next).toHaveCSS("border-radius", pageRadius);
     expect(pageRadius).not.toBe("999px");
