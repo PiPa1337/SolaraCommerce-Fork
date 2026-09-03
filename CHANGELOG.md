@@ -17,6 +17,7 @@ honestos (resuelto, deuda aceptada, acción del dueño), está en el apéndice
 
 **Fixed**
 
+- `priceValidUntil` hardcodeado al 31-dic del año del proyecto en las ofertas: ahora deriva de `updatedAt` + 90 días en UTC (formato `YYYY-MM-DD`, determinista); los sitios publicados siguen sirviendo el valor viejo hasta la re-exportación (`1304d034`).
 - CSS duplicada byte a byte entre home y resto del sitio: una sola CSS pública cuando home y resto comparten bytes (bug del guard por ruta); el caso divergente sigue soportado (`fddd29fe`).
 - `pattern` del teléfono inválido en modo `v` (`SyntaxError` silencioso en cada validación): `[\d\+\(\)\- ]{8,}` en drawer legacy, drawer V2 y checkout `/compra/` (`98807f07`).
 - Doble fetch de `catalog-index.json` al cargar página de producto (guard en la invalidación del memo).
