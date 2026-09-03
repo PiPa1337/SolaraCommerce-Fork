@@ -913,6 +913,16 @@ describe("exporter", () => {
     expect(home).toContain(`src="/assets/${video.hash}.mp4"`);
     expect(result.files.has(`assets/${video.hash}.mp4`)).toBe(true);
     expect(String(result.files.get("video-sitemap.xml"))).toContain(`${video.hash}.mp4`);
+
+    const headersConVideo = String(result.files.get("_headers"));
+    expect(headersConVideo).toContain("/video-sitemap.xml");
+    expect(headersConVideo).toMatch(
+      /\/video-sitemap\.xml\n\s*! Cache-Control\n\s*Cache-Control: public, max-age=3600, must-revalidate\n/,
+    );
+    const headersSinVideo = String(
+      exportProject(referenceStore, { mode: "production" }).files.get("_headers"),
+    );
+    expect(headersSinVideo).not.toContain("/video-sitemap.xml");
   });
 
   it("mantiene el preload LCP dentro del sitio aunque la baseUrl siga siendo de ejemplo", () => {

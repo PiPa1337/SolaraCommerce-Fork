@@ -32,6 +32,16 @@ describe("detección de alfa visible", () => {
     expect(hasVisibleAlpha(data)).toBe(true);
   });
 
+  it("detecta alfa parcial sólo alcanzable con stride > 1 en imágenes de más de 65.536 píxeles", () => {
+    const data = rgbaData(300 * 300, () => 255);
+    data[89_998 * 4 + 3] = 128;
+    expect(hasVisibleAlpha(data)).toBe(true);
+  });
+
+  it("devuelve false en una imagen grande y opaca que exige stride > 1", () => {
+    expect(hasVisibleAlpha(rgbaData(300 * 300, () => 255))).toBe(false);
+  });
+
   it("acepta ImageData y arrays crudos", () => {
     const data = rgbaData(16, () => 255);
     data[7 * 4 + 3] = 64;
