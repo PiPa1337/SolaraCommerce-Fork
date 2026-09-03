@@ -3,13 +3,15 @@ import { describe, expect, it, vi } from "vitest";
 import { normalizeLoadedProject } from "./localProjectRepository";
 
 const createProjectArchiveInWorker = vi.fn(async (project: unknown) =>
-  JSON.stringify({
-    projectId: (project as { id: string }).id,
-    id: (project as { id: string }).id,
-    project,
-  }),
+  new TextEncoder().encode(
+    JSON.stringify({
+      projectId: (project as { id: string }).id,
+      id: (project as { id: string }).id,
+      project,
+    }),
+  ),
 );
-const readProjectArchiveOwnedBytesInWorker = vi.fn(async (bytes: Uint8Array) =>
+const readProjectArchiveBytesInWorker = vi.fn(async (bytes: Uint8Array) =>
   JSON.parse(new TextDecoder().decode(bytes)),
 );
 const exportSiteInWorker = vi.fn(async () => ({
@@ -27,8 +29,7 @@ const saveLocalProject = vi.fn(async () => ({
 
 vi.mock("./workers", () => ({
   createProjectArchiveInWorker: (...args: unknown[]) => createProjectArchiveInWorker(...args),
-  readProjectArchiveOwnedBytesInWorker: (...args: unknown[]) =>
-    readProjectArchiveOwnedBytesInWorker(...args),
+  readProjectArchiveBytesInWorker: (...args: unknown[]) => readProjectArchiveBytesInWorker(...args),
   exportSiteInWorker: (...args: unknown[]) => exportSiteInWorker(...args),
 }));
 

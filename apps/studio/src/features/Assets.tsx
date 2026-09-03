@@ -14,6 +14,7 @@ import type { ImageAsset, StoreProjectV1, VideoAsset } from "@solara/project-sch
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ProgressBar } from "../components/primitives";
+import { ResponsiveAssetImage } from "../components/ResponsiveAssetImage";
 import { Button, EmptyState, IconButton, InlineError, SectionHeader } from "../components/Ui";
 import { assetUses } from "../lib/assetUses";
 import { bytesToSize } from "../lib/format";
@@ -182,6 +183,7 @@ export function Assets({
       const outcome = await processImageFile(file);
       updateAsset(asset.id, {
         mimeType: outcome.asset.mimeType,
+        optimizationRecipe: outcome.asset.optimizationRecipe,
         source: outcome.asset.source,
         fallbackSource: outcome.asset.fallbackSource,
         responsiveSources: outcome.asset.responsiveSources,
@@ -657,11 +659,13 @@ export function Assets({
             <div className="asset-grid">
               {visibleAssets.map((asset) => (
                 <article className="asset-item" key={asset.id}>
-                  <img
-                    src={asset.source}
+                  <ResponsiveAssetImage
+                    asset={asset}
                     alt={asset.alt || asset.name}
                     width={asset.width}
                     height={asset.height}
+                    sizes="(min-width: 1181px) 205px, (min-width: 700px) 25vw, 45vw"
+                    loading="lazy"
                   />
                   <div>
                     <label>

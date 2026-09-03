@@ -170,6 +170,21 @@ describe("repositorio local", () => {
     expect(await listProjects()).toHaveLength(0);
   });
 
+  it("no guarda un proyecto que contiene una imagen sin optimizar", async () => {
+    const raw = structuredClone(referenceStore);
+    const firstAsset = raw.assets[0];
+    if (!firstAsset) throw new Error("Fixture incompleto");
+    delete firstAsset.fallbackSource;
+    delete firstAsset.responsiveSources;
+    delete firstAsset.optimizationRecipe;
+    firstAsset.mimeType = "image/jpeg";
+    firstAsset.source = "data:image/jpeg;base64,cmF3";
+    firstAsset.hash = "hash-raw";
+
+    await expect(saveProject(raw)).rejects.toMatchObject({ code: "IMAGE_NOT_OPTIMIZED" });
+    expect(await listProjects()).toHaveLength(0);
+  });
+
   it("separa registros corruptos y deja una ruta de recuperacion accionable", async () => {
     await database.projects.put({
       id: referenceStore.id,

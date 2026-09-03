@@ -1,4 +1,8 @@
-import { type ImageAsset, RESPONSIVE_IMAGE_INTERMEDIATE_WIDTH } from "@solara/project-schema";
+import {
+  IMAGE_ASSET_RECIPE,
+  type ImageAsset,
+  RESPONSIVE_IMAGE_INTERMEDIATE_WIDTH,
+} from "@solara/project-schema";
 import { hashFile, processImageInWorker } from "./workers";
 
 export const SEO_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp";
@@ -125,6 +129,7 @@ export async function createFaviconAsset(file: File): Promise<ImageAsset> {
     name: "Favicon del sitio",
     alt: "Favicon del sitio",
     mimeType: "image/x-icon",
+    optimizationRecipe: IMAGE_ASSET_RECIPE,
     source: bytesToDataUrl("image/x-icon", encodeIco(pngImages)),
     fallbackSource,
     responsiveSources: pngImages.map(({ width, data }) => ({
@@ -147,6 +152,7 @@ export async function createSiteCoverAsset(file: File): Promise<ImageAsset> {
     name: "Portada del sitio",
     alt: "Portada del sitio",
     mimeType: "image/webp",
+    optimizationRecipe: IMAGE_ASSET_RECIPE,
     source: renderCrop(image, SITE_COVER_WIDTH, SITE_COVER_HEIGHT, "image/webp", false),
     fallbackSource: renderCrop(image, SITE_COVER_WIDTH, SITE_COVER_HEIGHT, "image/jpeg", false),
     responsiveSources: responsiveWidths.map((width) => ({

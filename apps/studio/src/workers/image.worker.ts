@@ -163,7 +163,8 @@ async function canvasToDataUrl(
   for (let offset = 0; offset < bytes.length; offset += block) {
     binary += String.fromCharCode(...bytes.subarray(offset, offset + block));
   }
-  return `data:${mimeType};base64,${btoa(binary)}`;
+  const actualMimeType = blob.type.startsWith("image/") ? blob.type : mimeType;
+  return `data:${actualMimeType};base64,${btoa(binary)}`;
 }
 
 async function processImage(request: ImageRequest) {

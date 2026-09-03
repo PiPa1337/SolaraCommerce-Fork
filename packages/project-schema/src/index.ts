@@ -12,6 +12,7 @@ import {
 import { ARGENTINA_LEGAL_PROFILE, LegalProfileSchema } from "./legal-profile.js";
 import {
   compactResponsiveSources,
+  IMAGE_ASSET_RECIPE,
   ImageAssetSchema,
   MediaAssetSchema,
   RESPONSIVE_IMAGE_INTERMEDIATE_WIDTH,
@@ -24,6 +25,7 @@ import { PUBLIC_COPY_DEFAULTS } from "./public-copy-defaults.js";
 
 export {
   compactResponsiveSources,
+  IMAGE_ASSET_RECIPE,
   ImageAssetSchema,
   MediaAssetSchema,
   RESPONSIVE_IMAGE_INTERMEDIATE_WIDTH,

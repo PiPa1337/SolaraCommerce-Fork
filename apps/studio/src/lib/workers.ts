@@ -34,8 +34,12 @@ export interface ProcessedImage {
   responsive: Array<{ width: number; source: string }>;
 }
 
-function fallbackImagePlan(sourceWidth: number, sourceHeight: number, maxWidth = 768) {
-  const safeMaxWidth = Math.max(1, Math.min(Math.floor(maxWidth), 768));
+function fallbackImagePlan(
+  sourceWidth: number,
+  sourceHeight: number,
+  maxWidth = RESPONSIVE_IMAGE_MAX_WIDTH,
+) {
+  const safeMaxWidth = Math.max(1, Math.min(Math.floor(maxWidth), RESPONSIVE_IMAGE_MAX_WIDTH));
   const width = Math.min(sourceWidth, safeMaxWidth);
   const responsiveWidths = responsiveImageWidths(sourceWidth, safeMaxWidth);
   return {
@@ -62,7 +66,16 @@ function canvasDataUrl(
     context.fillRect(0, 0, width, height);
   }
   context.drawImage(image, 0, 0, width, height);
-  const quality = mimeType === "image/webp" ? 0.82 : mimeType === "image/jpeg" ? 0.88 : undefined;
+  const quality =
+    mimeType === "image/webp"
+      ? width >= 1200
+        ? 0.75
+        : 0.82
+      : mimeType === "image/jpeg"
+        ? width >= 1200
+          ? 0.8
+          : 0.88
+        : undefined;
   return quality === undefined ? canvas.toDataURL(mimeType) : canvas.toDataURL(mimeType, quality);
 }
 
@@ -78,6 +91,9 @@ async function processImageOnMainThread(file: File, buffer: ArrayBuffer): Promis
     await image.decode();
     if (image.naturalWidth < 1 || image.naturalHeight < 1) {
       throw new Error("La imagen no tiene dimensiones válidas.");
+    }
+    if (image.naturalWidth * image.naturalHeight > 50_000_000) {
+      throw new Error("La imagen supera el límite de 50 megapíxeles.");
     }
     const plan = fallbackImagePlan(image.naturalWidth, image.naturalHeight);
     const preserveAlpha = file.type !== "image/jpeg";
@@ -407,7 +423,7 @@ function requestWorkerWithStages<Request extends object, Result>(
   });
 }
 
-export function createProjectArchiveInWorker(project: StoreProjectV1): Promise<string> {
+export function createProjectArchiveInWorker(project: StoreProjectV1): Promise<Uint8Array> {
   return requestWorker(
     getExportWorker(),
     { type: "project-write", project },
@@ -454,6 +470,35 @@ export interface AuditResult {
 }
 
 /**
+ * Peso aproximado del proyecto en caracteres de cadenas embebidas (data URLs
+ * y descripciones). Recorre estructuras, nunca concatena: es O(recursos) y
+ * acotado, sin riesgo de Invalid string length.
+ */
+function estimateProjectWeight(project: StoreProjectV1): number {
+  let total = 0;
+  for (const asset of project.assets) {
+    total += asset.source.length + (asset.fallbackSource?.length ?? 0);
+    for (const responsive of asset.responsiveSources ?? []) total += responsive.source.length;
+  }
+  for (const video of project.videos) total += video.source.length;
+  for (const product of project.products) {
+    total += product.description.length;
+    for (const variant of product.variants) total += variant.title.length;
+  }
+  return total;
+}
+
+/**
+ * Timeout de la auditoría proporcional al peso: con proyectos enormes la
+ * validación Zod y el análisis del worker tardan decenas de segundos; el
+ * timeout fijo de 10s mataba al worker y la auditoría nunca terminaba.
+ */
+function auditTimeoutFor(project: StoreProjectV1): number {
+  const weight = estimateProjectWeight(project);
+  return Math.min(90_000, 10_000 + Math.round(weight / 20_000));
+}
+
+/**
  * Ejecuta la auditoría de exportación en el worker del exportador: el worker
  * tiene su propio mapa de módulos, así que si la carga del chunk falla se
  * puede reintentar recreándolo (el mapa de módulos de la página no lo
@@ -471,7 +516,7 @@ export function auditProjectInWorker(
     recreateWorker(() => {
       resetExportWorker();
     }, getExportWorker),
-    10_000,
+    auditTimeoutFor(project),
   );
 }
 

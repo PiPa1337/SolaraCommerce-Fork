@@ -8,7 +8,9 @@ vi.mock("./workers", async () => {
   const actual = await vi.importActual<typeof import("./workers")>("./workers");
   return {
     ...actual,
-    createProjectArchiveInWorker: vi.fn(async (project: any) => JSON.stringify(project)),
+    createProjectArchiveInWorker: vi.fn(async (project: any) =>
+      new TextEncoder().encode(JSON.stringify(project)),
+    ),
     readProjectArchiveBytesInWorker: vi.fn(async (bytes: Uint8Array) => {
       const text = new TextDecoder().decode(bytes);
       return JSON.parse(text);
@@ -73,7 +75,7 @@ describe("persistencia - atomicidad backup vs site", () => {
     const workers = await import("./workers");
     // Fuerza createProjectArchive a devolver proyecto con id distinto para probar verificación
     (workers.createProjectArchiveInWorker as any).mockResolvedValueOnce(
-      JSON.stringify({ ...project, id: "otro-id" }),
+      new TextEncoder().encode(JSON.stringify({ ...project, id: "otro-id" })),
     );
     const { persistProjectToDisk } = await import("./localProjectRepository");
     await expect(persistProjectToDisk(project, 1)).rejects.toThrow(/no coincide/);

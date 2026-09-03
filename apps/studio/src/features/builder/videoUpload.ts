@@ -1,5 +1,6 @@
 import type { ImageAsset, StoreProjectV1, VideoAsset } from "@solara/project-schema";
-import { hashFile } from "../../lib/workers";
+import { assertImageAssetOptimized, createImageAssetFromProcessed } from "../../lib/imageAsset";
+import { hashFile, type ProcessedImage, processImageInWorker } from "../../lib/workers";
 
 export const VIDEO_MAX_BYTES = 30 * 1024 * 1024;
 export const VIDEO_MAX_DURATION_SECONDS = 60;
@@ -11,6 +12,17 @@ export function readFileAsDataUrl(file: File): Promise<string> {
     reader.addEventListener("error", () => reject(new Error("No se pudo leer el video.")));
     reader.readAsDataURL(file);
   });
+}
+
+function posterDataUrlToFile(source: string, name: string): File {
+  const match = /^data:([^;,]+);base64,(.*)$/s.exec(source);
+  const mimeType = match?.[1]?.toLowerCase();
+  if (!match || !mimeType || !["image/jpeg", "image/png", "image/webp"].includes(mimeType)) {
+    throw new Error("El poster del video no tiene un formato compatible.");
+  }
+  const binary = atob(match[2] ?? "");
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  return new File([bytes], name, { type: mimeType });
 }
 
 export function readVideoMetadata(
@@ -209,6 +221,7 @@ export interface VideoUploadDeps {
   readDataUrl?: typeof readFileAsDataUrl;
   computeHash?: typeof hashFile;
   extractPoster?: typeof extractVideoPoster;
+  processPoster?: (file: File) => Promise<ProcessedImage>;
 }
 
 export interface BuiltVideo {
@@ -259,17 +272,17 @@ export async function buildVideoAsset(file: File, deps: VideoUploadDeps = {}): P
       const posterHash = [...new Uint8Array(digest)]
         .map((byte) => byte.toString(16).padStart(2, "0"))
         .join("");
-      posterImage = {
-        kind: "image",
-        id: `asset-${crypto.randomUUID()}` as ImageAsset["id"],
-        name: `${name} (preload)`,
-        alt: `Preload de ${name}`,
-        mimeType: poster.source.startsWith("data:image/webp") ? "image/webp" : "image/jpeg",
-        source: poster.source,
-        width: poster.width,
-        height: poster.height,
-        hash: posterHash,
-      };
+      const posterFile = posterDataUrlToFile(poster.source, `${name}-poster.webp`);
+      const processPoster = deps.processPoster ?? processImageInWorker;
+      posterImage = createImageAssetFromProcessed(
+        {
+          id: `asset-${crypto.randomUUID()}` as ImageAsset["id"],
+          name: `${name} (preload)`,
+          alt: `Preload de ${name}`,
+          hash: posterHash,
+        },
+        await processPoster(posterFile),
+      );
     }
   } catch {
     posterImage = undefined;
@@ -323,6 +336,7 @@ export function applyVideoPoster(
   videoId: string,
   posterImage: ImageAsset | undefined,
 ): StoreProjectV1 {
+  if (posterImage) assertImageAssetOptimized(posterImage);
   const oldPosterId = project.videos.find((video) => video.id === videoId)?.posterAssetId;
   const assetsWithoutOld = oldPosterId
     ? project.assets.filter((asset) => asset.id !== oldPosterId)
@@ -356,6 +370,7 @@ export function applyVideoToSection(
   video: VideoAsset,
   posterImage?: ImageAsset,
 ): StoreProjectV1 {
+  if (posterImage) assertImageAssetOptimized(posterImage);
   return {
     ...project,
     sections: project.sections.map((section) =>

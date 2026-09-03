@@ -12,6 +12,8 @@ import { AssetIdSchema } from "./ids.js";
 export const RESPONSIVE_IMAGE_WIDTHS = [480, 768, 1800] as const;
 export const RESPONSIVE_IMAGE_INTERMEDIATE_WIDTH = 768;
 export const RESPONSIVE_IMAGE_MAX_WIDTH = 1800;
+/** Marca estable para distinguir la receta materializada de las variantes. */
+export const IMAGE_ASSET_RECIPE = "responsive-export-v1";
 
 export interface ResponsiveImageSource {
   width: number;
@@ -78,6 +80,8 @@ export const ImageAssetSchema = z.object({
   alt: z.string(),
   mimeType: z.string().min(1),
   source: z.string().min(1),
+  // Opcional para poder leer proyectos anteriores y repararlos al abrirlos.
+  optimizationRecipe: z.string().min(1).optional(),
   fallbackSource: z.string().min(1).optional(),
   responsiveSources: z
     .array(

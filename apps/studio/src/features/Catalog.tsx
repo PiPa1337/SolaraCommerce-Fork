@@ -17,6 +17,7 @@ import { type DomainCommand, reduceProject } from "@solara/core";
 import {
   type Category,
   getCategoryProductIds,
+  type ImageAsset,
   type Product,
   type StoreProjectV1,
   StoreProjectV1Schema,
@@ -37,6 +38,7 @@ import {
 } from "@tanstack/react-table";
 import { memo, useEffect, useId, useMemo, useRef, useState } from "react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { ResponsiveAssetImage } from "../components/ResponsiveAssetImage";
 import { Button, EmptyState, Field, InlineError, SectionHeader } from "../components/Ui";
 import { buildCatalogPackagePlan, type CatalogPackagePlan } from "../lib/catalogPackage";
 import {
@@ -342,7 +344,7 @@ function CatalogCard({
   onEdit,
 }: {
   product: Product;
-  image: { source: string; alt: string } | undefined;
+  image: ImageAsset | undefined;
   categories: string;
   selected: boolean;
   onSelectionChange(selected: boolean): void;
@@ -366,7 +368,12 @@ function CatalogCard({
       </label>
       <div className="catalog-card__image">
         {image ? (
-          <img src={image.source} alt={image.alt || product.title} loading="lazy" />
+          <ResponsiveAssetImage
+            asset={image}
+            alt={image.alt || product.title}
+            loading="lazy"
+            sizes="(min-width: 900px) 210px, 45vw"
+          />
         ) : (
           <Package aria-hidden size={26} />
         )}

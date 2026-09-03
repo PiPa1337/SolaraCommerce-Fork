@@ -171,7 +171,7 @@ async function uploadBytes(url: string, bytes: Uint8Array, contentType: string):
 /** Sube el proyecto/sitio staged y confirma el commit atómico en disco. */
 export async function saveLocalProject(
   metadata: LocalSaveMetadata,
-  projectJson: string,
+  projectJson: string | Uint8Array,
   siteMap?: string,
 ): Promise<LocalSaveReceipt> {
   const started = await requestJson<
@@ -182,9 +182,11 @@ export async function saveLocalProject(
     body: JSON.stringify(metadata),
   });
   try {
+    const projectBytes =
+      typeof projectJson === "string" ? new TextEncoder().encode(projectJson) : projectJson;
     await uploadBytes(
       `/__solara/storage/saves/${encodeURIComponent(started.transactionId)}/project`,
-      new TextEncoder().encode(projectJson),
+      projectBytes,
       "application/vnd.solara.project+json",
     );
     if (siteMap) {

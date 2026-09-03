@@ -1,4 +1,5 @@
 import type { ImageAsset } from "@solara/project-schema";
+import { createImageAssetFromProcessed, dataUrlMimeType } from "./imageAsset";
 import { ASSET_CACHE_RECIPE_VERSION, getCachedAsset, putCachedAsset } from "./repository";
 import { hashFile, processImageInWorker } from "./workers";
 
@@ -19,7 +20,7 @@ export async function processImageFile(
       hash,
       recipeVersion: ASSET_CACHE_RECIPE_VERSION,
       originalName: file.name,
-      mimeType: "image/webp",
+      mimeType: dataUrlMimeType(processed.primary) ?? "image/webp",
       width: processed.width,
       height: processed.height,
       primary: processed.primary,
@@ -30,18 +31,14 @@ export async function processImageFile(
   }
   return {
     reused: Boolean(cached),
-    asset: {
-      kind: "image",
-      id: `asset-${crypto.randomUUID()}` as ImageAsset["id"],
-      name: file.name.replace(/\.[^.]+$/, ""),
-      alt: "",
-      mimeType: "image/webp",
-      source: processed.primary,
-      fallbackSource: processed.fallback,
-      responsiveSources: processed.responsive,
-      width: processed.width,
-      height: processed.height,
-      hash,
-    },
+    asset: createImageAssetFromProcessed(
+      {
+        id: `asset-${crypto.randomUUID()}` as ImageAsset["id"],
+        name: file.name.replace(/\.[^.]+$/, ""),
+        alt: "",
+        hash,
+      },
+      processed,
+    ),
   };
 }

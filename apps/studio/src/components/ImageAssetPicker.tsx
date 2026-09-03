@@ -1,6 +1,7 @@
 import { UploadSimple } from "@phosphor-icons/react";
 import type { ImageAsset } from "@solara/project-schema";
 import { useRef, useState } from "react";
+import { assertImageAssetOptimized } from "../lib/imageAsset";
 import { IMAGE_UPLOAD_ACCEPT, processImageFile } from "../lib/imageUpload";
 import { Button, InlineError } from "./Ui";
 
@@ -30,7 +31,9 @@ export function ImageUploadButton({
         throw new Error("Sólo se aceptan imágenes JPEG, PNG o WebP.");
       }
       const asset = processFile ? await processFile(file) : (await processImageFile(file)).asset;
+      assertImageAssetOptimized(asset);
       const existing = assets.find((candidate) => candidate.hash === asset.hash);
+      if (existing) assertImageAssetOptimized(existing);
       onUpload(existing ?? asset);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo subir la imagen.");

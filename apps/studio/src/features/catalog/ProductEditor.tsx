@@ -11,6 +11,7 @@ import {
 import { useEffect, useId, useRef, useState } from "react";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { ImageAssetPicker, ImageUploadButton } from "../../components/ImageAssetPicker";
+import { ResponsiveAssetImage } from "../../components/ResponsiveAssetImage";
 import { Button, Field, IconButton, InlineError } from "../../components/Ui";
 import {
   createBlankVariant,
@@ -540,7 +541,13 @@ export function ProductEditor({
                       }))
                     }
                   />
-                  <img src={asset.source} alt="" width={asset.width} height={asset.height} />
+                  <ResponsiveAssetImage
+                    asset={asset}
+                    alt=""
+                    width={asset.width}
+                    height={asset.height}
+                    sizes="42px"
+                  />
                   <span>
                     <strong>{asset.name}</strong>
                     <small title={asset.alt || asset.name}>
@@ -617,11 +624,12 @@ export function ProductEditor({
             <span className="product-mini-preview__label">Vista previa del producto</span>
             <div className="product-mini-preview__card">
               {firstImage ? (
-                <img
-                  src={firstImage.source}
+                <ResponsiveAssetImage
+                  asset={firstImage}
                   alt=""
                   width={firstImage.width}
                   height={firstImage.height}
+                  sizes="64px"
                 />
               ) : (
                 <span className="product-mini-preview__placeholder" aria-hidden>

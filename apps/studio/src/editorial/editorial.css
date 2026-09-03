@@ -1554,6 +1554,11 @@ button.status-label:focus-visible {
   object-fit: cover;
 }
 
+.catalog-card__image picture {
+  display: block;
+  width: 100%;
+}
+
 .catalog-card__body {
   display: grid;
   min-width: 0;
@@ -1899,6 +1904,11 @@ button.status-label:focus-visible {
 
 .editor-pane[data-tab="assets"] .asset-item img {
   height: 118px;
+}
+
+.editor-pane[data-tab="assets"] .asset-item picture {
+  display: block;
+  width: 100%;
 }
 
 .editor-pane[data-tab="assets"] .asset-item > div {

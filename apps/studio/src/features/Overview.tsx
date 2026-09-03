@@ -25,6 +25,7 @@ import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from 
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ImageAssetPicker } from "../components/ImageAssetPicker";
 import { StatusBadge, Toggle } from "../components/primitives";
+import { ResponsiveAssetImage } from "../components/ResponsiveAssetImage";
 import { useToast } from "../components/Toast";
 import { Button, Field, IconButton, SectionHeader } from "../components/Ui";
 import { createFaviconAsset, createSiteCoverAsset } from "../lib/seoMedia";
@@ -709,14 +710,7 @@ export function Overview({
     return (
       <div className="identity-media-preview">
         {asset ? (
-          <img
-            src={
-              asset.mimeType === "image/x-icon"
-                ? (asset.fallbackSource ?? asset.source)
-                : asset.source
-            }
-            alt={asset.alt || label}
-          />
+          <ResponsiveAssetImage asset={asset} alt={asset.alt || label} sizes="180px" />
         ) : (
           <span>No hay una imagen configurada.</span>
         )}

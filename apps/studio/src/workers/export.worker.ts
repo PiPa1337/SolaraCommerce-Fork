@@ -136,13 +136,17 @@ self.onmessage = async (event: MessageEvent<ExportRequest>) => {
     }
 
     if (request.type === "project-write") {
-      const { createProjectArchive } = await loadProjectArchive();
-      self.postMessage({ id: request.id, ok: true, result: createProjectArchive(request.project) });
+      const { createProjectArchiveBytes } = await loadProjectArchive();
+      self.postMessage({
+        id: request.id,
+        ok: true,
+        result: createProjectArchiveBytes(request.project),
+      });
       return;
     }
 
     const { readProjectArchive } = await loadProjectArchive();
-    const project = readProjectArchive(new TextDecoder().decode(new Uint8Array(request.buffer)));
+    const project = readProjectArchive(new Uint8Array(request.buffer));
     self.postMessage({ id: request.id, ok: true, result: project });
   } catch (error) {
     self.postMessage({

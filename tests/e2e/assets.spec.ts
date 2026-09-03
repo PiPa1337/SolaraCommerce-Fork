@@ -53,6 +53,11 @@ test("procesa una imagen, muestra el lote y persiste el asset", async ({ page })
     .locator(".asset-item")
     .filter({ has: page.locator('input[value="pixel"]') });
   await expect(uploadedItem).toHaveCount(1);
+  await expect(uploadedItem.locator("picture")).toHaveCount(1);
+  await expect(uploadedItem.locator("picture source")).toHaveAttribute("srcset", /\s1w/);
+  await expect
+    .poll(() => uploadedItem.locator("img").evaluate((image) => image.currentSrc))
+    .toMatch(/^data:image\/(?:avif|webp)/);
   await expect(page.getByText(/^Guardado/, { exact: false })).toBeVisible();
 
   await page.reload();

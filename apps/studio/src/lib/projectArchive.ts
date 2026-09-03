@@ -2,7 +2,19 @@
  * Formato de transporte `.solara.json`: envelope de proyecto sin compresión.
  * La lectura trata el archivo como entrada no confiable y valida schema antes
  * de incorporarlo al estado del editor.
+ *
+ * La serialización usa el códec acotado de `@solara/exporter/json-stream`:
+ * con proyectos cuyos recursos embebidos superan el límite de cadena de V8
+ * (~536 MB de caracteres), `JSON.stringify`/`JSON.parse` del documento entero
+ * lanza `RangeError: Invalid string length`. El códec trabaja por trozos y
+ * produce exactamente el mismo texto que `JSON.stringify(x, null, 2)`.
  */
+
+import {
+  parseJsonBytesChunked,
+  stringifyJsonToBytes,
+  writeJsonChunks,
+} from "@solara/exporter/json-stream";
 import type { StoreProjectV2 } from "@solara/project-schema";
 import { StoreProjectV2Schema } from "@solara/project-schema";
 
@@ -14,28 +26,37 @@ interface ArchiveEnvelope {
   project: StoreProjectV2;
 }
 
-export function createProjectArchive(project: StoreProjectV2): string {
+function buildEnvelope(project: StoreProjectV2): ArchiveEnvelope {
   const parsed = StoreProjectV2Schema.parse(project);
-  const envelope: ArchiveEnvelope = {
+  return {
     format: "solara-project",
     version: 2,
     projectId: parsed.id,
     exportedAt: new Date().toISOString(),
     project: parsed,
   };
-  return `${JSON.stringify(envelope, null, 2)}\n`;
+}
+
+export function createProjectArchive(project: StoreProjectV2): string {
+  const chunks: string[] = [];
+  writeJsonChunks(buildEnvelope(project), (chunk) => chunks.push(chunk));
+  return `${chunks.join("")}\n`;
+}
+
+/** Igual que `createProjectArchive`, pero en bytes UTF-8 sin cadena gigante. */
+export function createProjectArchiveBytes(project: StoreProjectV2): Uint8Array {
+  const body = stringifyJsonToBytes(buildEnvelope(project));
+  const output = new Uint8Array(body.byteLength + 1);
+  output.set(body);
+  output[body.byteLength] = 0x0a;
+  return output;
 }
 
 export function readProjectArchive(input: string | Uint8Array): StoreProjectV2 {
-  let text: string;
-  if (typeof input === "string") {
-    text = input;
-  } else {
-    text = new TextDecoder().decode(input);
-  }
   let envelope: Partial<ArchiveEnvelope>;
   try {
-    envelope = JSON.parse(text) as Partial<ArchiveEnvelope>;
+    const raw = typeof input === "string" ? JSON.parse(input) : parseJsonBytesChunked(input);
+    envelope = raw as Partial<ArchiveEnvelope>;
   } catch {
     throw new Error("El respaldo está corrupto o no es JSON válido.");
   }

@@ -53,9 +53,10 @@ import { Button, IconButton, InlineError } from "../components/Ui";
 import { AutosaveQueue, type AutosaveState } from "../lib/autosave";
 import { readExportHistory } from "../lib/exportHistory";
 import { moveHistory, pushHistorySnapshot } from "../lib/history";
+import { assertProjectImagesOptimized } from "../lib/imageAsset";
 import type { LocalSaveReceipt, LocalStorageError } from "../lib/localStorage";
 import { downloadBlob } from "../lib/projectArchive";
-import { saveProject } from "../lib/repository";
+import { optimizeProjectAssets, saveProject } from "../lib/repository";
 import { formatSaveTime } from "../lib/saveTime";
 import { formatLastExportLabel } from "../lib/statusBar";
 import { createProjectArchiveInWorker } from "../lib/workers";
@@ -757,6 +758,12 @@ export function Studio({
         setValidationError(`${path}: ${issue?.message ?? "Proyecto inválido."}`);
         return false;
       }
+      try {
+        assertProjectImagesOptimized(result.data);
+      } catch (reason) {
+        setValidationError(reason instanceof Error ? reason.message : "Imagen no optimizada.");
+        return false;
+      }
       setValidationError("");
       if (options.allowProtectedWrite && immutableBase) {
         protectedWriteProjectIdRef.current = result.data.id;
@@ -833,8 +840,9 @@ export function Studio({
         return;
       }
       await autosave.flush();
-      await onProjectImported(imported);
-      setHistory(createHistory(imported));
+      const optimized = await optimizeProjectAssets(imported);
+      await onProjectImported(optimized);
+      setHistory(createHistory(optimized));
     },
     [autosave, immutableBase, onProjectImported],
   );

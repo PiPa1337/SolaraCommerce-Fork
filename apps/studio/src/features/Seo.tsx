@@ -15,7 +15,9 @@ import type { AuditReport, OptimizationReport } from "@solara/exporter";
 import type { ImageAsset, StoreProjectV1 } from "@solara/project-schema";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "../components/primitives";
+import { ResponsiveAssetImage } from "../components/ResponsiveAssetImage";
 import { Button, Field, SectionHeader } from "../components/Ui";
+import { assertImageAssetOptimized } from "../lib/imageAsset";
 import { loadExporter } from "../lib/loadExporter";
 import { downloadBlob } from "../lib/projectArchive";
 import { createFaviconAsset, createSiteCoverAsset, SEO_IMAGE_ACCEPT } from "../lib/seoMedia";
@@ -272,6 +274,7 @@ export function Seo({
     try {
       const generated =
         kind === "favicon" ? await createFaviconAsset(file) : await createSiteCoverAsset(file);
+      assertImageAssetOptimized(generated);
       const referenceId = kind === "favicon" ? seoDraft.faviconAssetId : seoDraft.socialImageId;
       const previous = project.assets.find((asset) => asset.id === referenceId);
       const canReusePrevious = previous?.name === generated.name;
@@ -459,10 +462,11 @@ export function Seo({
                 }}
               />
               {faviconAsset ? (
-                <img
+                <ResponsiveAssetImage
+                  asset={faviconAsset}
                   className="seo-media-control__icon"
-                  src={faviconAsset.source}
                   alt="Vista previa del favicon"
+                  sizes="64px"
                 />
               ) : null}
             </div>
@@ -726,7 +730,11 @@ export function Seo({
 
           <article className="asset-item" data-testid="ui-seo-preview-og">
             {socialAsset ? (
-              <img src={socialAsset.source} alt="" />
+              <ResponsiveAssetImage
+                asset={socialAsset}
+                alt=""
+                sizes="(min-width: 900px) 360px, 100vw"
+              />
             ) : (
               <div
                 style={{

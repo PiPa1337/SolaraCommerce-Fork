@@ -1,4 +1,9 @@
-import { type ImageAsset, StoreProjectV1Schema, type VideoAsset } from "@solara/project-schema";
+import {
+  IMAGE_ASSET_RECIPE,
+  type ImageAsset,
+  StoreProjectV1Schema,
+  type VideoAsset,
+} from "@solara/project-schema";
 import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import { describe, expect, it } from "vitest";
 import {
@@ -26,6 +31,27 @@ const okMetadata = () => async () => ({
   height: 1920,
   duration: 8,
 });
+
+function optimizedPoster(
+  id: string,
+  mimeType: "image/webp" | "image/jpeg" = "image/webp",
+): ImageAsset {
+  const primary = `data:${mimeType};base64,UFJJTUVSQV9GUkFNRQ==`;
+  return {
+    kind: "image",
+    id: id as ImageAsset["id"],
+    name: "look (preload)",
+    alt: "Preload de look",
+    mimeType,
+    optimizationRecipe: IMAGE_ASSET_RECIPE,
+    source: primary,
+    fallbackSource: "data:image/jpeg;base64,QU5USUdVQQ==",
+    responsiveSources: [{ width: 360, source: primary }],
+    width: 360,
+    height: 640,
+    hash: `${id}-hash`,
+  };
+}
 
 describe("buildVideoAsset", () => {
   it("rechaza formatos que no son MP4/WebM", async () => {
@@ -89,12 +115,22 @@ describe("buildVideoAsset", () => {
         width: 360,
         height: 640,
       }),
+      processPoster: async () => ({
+        width: 360,
+        height: 640,
+        primary: "data:image/webp;base64,UFJJTUVSQV9GUkFNRQ==",
+        fallback: "data:image/jpeg;base64,QU5USUdVQQ==",
+        responsive: [{ width: 360, source: "data:image/webp;base64,UFJJTUVSQV9GUkFNRQ==" }],
+      }),
     });
     expect(built.posterImage).toMatchObject({
       kind: "image",
       name: "campana (preload)",
       mimeType: "image/webp",
-      source: "data:image/webp;base64,UE9TVEVS",
+      source: "data:image/webp;base64,UFJJTUVSQV9GUkFNRQ==",
+      fallbackSource: "data:image/jpeg;base64,QU5USUdVQQ==",
+      responsiveSources: [{ width: 360, source: "data:image/webp;base64,UFJJTUVSQV9GUkFNRQ==" }],
+      optimizationRecipe: IMAGE_ASSET_RECIPE,
       width: 360,
       height: 640,
     });
@@ -163,17 +199,7 @@ describe("applyVideoToSection", () => {
       hash: "hash-poster",
       posterAssetId: "asset-poster-test" as VideoAsset["id"],
     };
-    const poster: ImageAsset = {
-      kind: "image",
-      id: "asset-poster-test" as ImageAsset["id"],
-      name: "look (preload)",
-      alt: "Preload de look",
-      mimeType: "image/webp",
-      source: "data:image/webp;base64,UE9TVEVS",
-      width: 360,
-      height: 640,
-      hash: "hash-poster-image",
-    };
+    const poster = optimizedPoster("asset-poster-test");
     const next = applyVideoToSection(
       project,
       section.id,
@@ -189,17 +215,7 @@ describe("applyVideoToSection", () => {
 
   it("re-subir el mismo video reemplaza el poster viejo por el nuevo", () => {
     const project = structuredClone(catalogModernV2Store);
-    const oldPoster: ImageAsset = {
-      kind: "image",
-      id: "asset-poster-viejo" as ImageAsset["id"],
-      name: "look (preload)",
-      alt: "",
-      mimeType: "image/jpeg",
-      source: "data:image/jpeg;base64,QU5USUdVQQ==",
-      width: 360,
-      height: 640,
-      hash: "poster-viejo",
-    };
+    const oldPoster = optimizedPoster("asset-poster-viejo");
     const video: VideoAsset = {
       kind: "video",
       id: "video-refresh-test" as VideoAsset["id"],
@@ -216,17 +232,7 @@ describe("applyVideoToSection", () => {
     project.assets = [...project.assets, oldPoster];
     project.videos = [video];
 
-    const newPoster: ImageAsset = {
-      kind: "image",
-      id: "asset-poster-nuevo" as ImageAsset["id"],
-      name: "look (preload)",
-      alt: "",
-      mimeType: "image/webp",
-      source: "data:image/webp;base64,UFJJTUVSQV9GUkFNRQ==",
-      width: 360,
-      height: 640,
-      hash: "poster-nuevo",
-    };
+    const newPoster = optimizedPoster("asset-poster-nuevo");
     const next = applyVideoPoster(project, video.id, newPoster);
     expect(next.videos.find((candidate) => candidate.id === video.id)?.posterAssetId).toBe(
       newPoster.id,

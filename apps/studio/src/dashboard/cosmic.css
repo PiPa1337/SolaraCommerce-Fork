@@ -3874,6 +3874,17 @@ tbody tr[data-selected="true"] {
   object-fit: cover;
 }
 
+.product-asset-option picture {
+  display: block;
+  width: 42px;
+  height: 42px;
+}
+
+.product-asset-option picture img {
+  width: 42px;
+  height: 42px;
+}
+
 .product-asset-option span {
   display: grid;
   min-width: 0;
@@ -3976,6 +3987,17 @@ tbody tr[data-selected="true"] {
   height: 64px;
   border-radius: 8px;
   object-fit: cover;
+}
+
+.product-mini-preview__card picture {
+  display: block;
+  width: 64px;
+  height: 64px;
+}
+
+.product-mini-preview__card picture img {
+  width: 64px;
+  height: 64px;
 }
 
 .product-mini-preview__placeholder {
@@ -4390,6 +4412,11 @@ tbody tr[data-selected="true"] {
   height: 150px;
   object-fit: cover;
   background: var(--surface-strong);
+}
+
+.asset-item picture {
+  display: block;
+  width: 100%;
 }
 
 .asset-item > div {

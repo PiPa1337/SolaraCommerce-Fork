@@ -6,6 +6,11 @@ import type {
   Product,
   StoreProjectV1,
 } from "@solara/project-schema";
+import {
+  createImageAssetFromProcessed,
+  isOptimizedImageAsset,
+  markImageAssetAsOptimized,
+} from "./imageAsset";
 import { slugify as slugifySlug } from "./slugify";
 import {
   hashFile,
@@ -268,24 +273,36 @@ async function buildAssets(
     const hash = await hashFile(file);
     const existing = byHash.get(hash);
     if (existing) {
+      if (!isOptimizedImageAsset(existing)) {
+        const repaired =
+          markImageAssetAsOptimized(existing) ??
+          createImageAssetFromProcessed(
+            {
+              id: existing.id,
+              name: existing.name,
+              alt: existing.alt,
+              hash: existing.hash,
+            },
+            await processImageInWorker(file),
+          );
+        const existingIndex = assets.findIndex((asset) => asset.id === existing.id);
+        if (existingIndex >= 0) assets[existingIndex] = repaired;
+        byHash.set(hash, repaired);
+      }
       pathToId[image.path] = existing.id;
       reused += 1;
       continue;
     }
     const processed = await processImageInWorker(file);
-    const asset: ImageAsset = {
-      kind: "image",
-      id: `asset-${hash.slice(0, 24)}` as ImageAsset["id"],
-      name: file.name,
-      alt: "",
-      mimeType: "image/webp",
-      source: processed.primary,
-      fallbackSource: processed.fallback,
-      responsiveSources: processed.responsive,
-      width: processed.width,
-      height: processed.height,
-      hash,
-    };
+    const asset = createImageAssetFromProcessed(
+      {
+        id: `asset-${hash.slice(0, 24)}` as ImageAsset["id"],
+        name: file.name,
+        alt: "",
+        hash,
+      },
+      processed,
+    );
     assets.push(asset);
     byHash.set(hash, asset);
     pathToId[image.path] = asset.id;

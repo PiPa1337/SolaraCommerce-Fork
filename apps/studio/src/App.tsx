@@ -20,7 +20,7 @@ import {
 } from "react";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { ToastProvider } from "./components/Toast";
-import { InlineError, Skeleton } from "./components/Ui";
+import { InlineError } from "./components/Ui";
 import { Dashboard } from "./features/Dashboard";
 import { getDesktopExportBridge } from "./lib/desktopBridge";
 import type { LocalStorageStatus } from "./lib/localStorage";
@@ -40,6 +40,7 @@ import {
   listProjectsWithRecovery,
   markProjectMigration,
   migrateCatalogModernDemo,
+  optimizeProjectAssets,
   type ProjectRecoveryIssue,
   purgeNonDemoStores,
   purgeRolledBackDemoRecords,
@@ -283,7 +284,8 @@ function StudioShell() {
                 if (isBaseTemplate(diskProject.project)) return;
                 const migrated = await migrateCatalogModernDemo(diskProject.project);
                 const testimonialsExpanded = expandCatalogModernDemoTestimonials(migrated);
-                if (testimonialsExpanded === diskProject.project) return;
+                if (testimonialsExpanded === diskProject.project && !diskProject.mediaRepairPending)
+                  return;
                 await markProjectMigration(diskProject.id, "pending");
                 const saved = await persistToDisk(
                   testimonialsExpanded,
@@ -292,6 +294,7 @@ function StudioShell() {
                 await markProjectMigration(diskProject.id, "done");
                 diskProject.project = testimonialsExpanded;
                 diskProject.diskVersion = saved.receipt.version;
+                diskProject.mediaRepairPending = false;
                 diskMutated = true;
               }),
             );
@@ -419,7 +422,7 @@ function StudioShell() {
 
   const importRecoveryArchive = async (file: File) => {
     await guard(async () => {
-      const project = await readProjectArchiveInWorker(file);
+      const project = await optimizeProjectAssets(await readProjectArchiveInWorker(file));
       if (storageModeRef.current) {
         const existing = projects.find((item) => item.id === project.id) as
           | (StoredProject & { diskVersion?: number })
@@ -568,16 +571,17 @@ function StudioShell() {
               void refresh();
             }}
             onProjectImported={async (project) => {
+              const optimizedProject = await optimizeProjectAssets(project);
               if (storageModeRef.current) {
-                const existing = projects.find((item) => item.id === project.id) as
+                const existing = projects.find((item) => item.id === optimizedProject.id) as
                   | (StoredProject & { diskVersion?: number })
                   | undefined;
-                await persistToDisk(project, existing?.diskVersion ?? null);
-                setActiveDiskBaseProject(project);
+                await persistToDisk(optimizedProject, existing?.diskVersion ?? null);
+                setActiveDiskBaseProject(optimizedProject);
               } else {
-                await saveProject(project);
+                await saveProject(optimizedProject);
               }
-              setActive(project);
+              setActive(optimizedProject);
               await refresh();
             }}
             {...(localStorageStatus.managed
@@ -613,16 +617,16 @@ function StudioShell() {
                 createdAt: timestamp,
                 updatedAt: timestamp,
               });
-              await saveProject(duplicate);
+              const optimizedDuplicate = await saveProject(duplicate);
               if (storageModeRef.current) {
-                const result = await persistToDisk(duplicate, null);
+                const result = await persistToDisk(optimizedDuplicate, null);
                 setActiveDiskVersion(result.receipt.version);
               } else {
                 setActiveDiskVersion(null);
               }
               await refresh();
-              setActiveDiskBaseProject(duplicate);
-              setActive(duplicate);
+              setActiveDiskBaseProject(optimizedDuplicate);
+              setActive(optimizedDuplicate);
               return { ok: true as const };
             }}
           />

@@ -6,6 +6,7 @@
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { ensureCatalogModernV2Sections } from "@solara/project-schema/catalog-modern-template";
 import { isBaseTemplate } from "@solara/project-schema/project-policy";
+import { assertProjectImagesOptimized } from "./imageAsset";
 import {
   type LocalProjectSummary,
   type LocalSaveReceipt,
@@ -22,6 +23,7 @@ import {
 import {
   createProjectArchiveInWorker,
   exportSiteInWorker,
+  readProjectArchiveBytesInWorker,
   readProjectArchiveOwnedBytesInWorker,
 } from "./workers";
 
@@ -155,21 +157,22 @@ export async function persistProjectToDisk(
   expectedVersion: number | null,
   options: { allowProtectedWrite?: boolean } = {},
 ): Promise<{ receipt: LocalSaveReceipt; siteError?: string }> {
-  const projectArchive = await createProjectArchiveInWorker(project);
-  const archiveBytes = new TextEncoder().encode(projectArchive);
-  // El hash debe calcularse antes del round-trip: la lectura por worker
-  // transfiere el buffer y lo deja inutilizable para el llamador.
+  const optimizedProject = await optimizeProjectAssets(project);
+  assertProjectImagesOptimized(optimizedProject);
+  const archiveBytes = await createProjectArchiveInWorker(optimizedProject);
   const archiveSha256 = await sha256Hex(archiveBytes);
-  const verifiedProject = await readProjectArchiveOwnedBytesInWorker(archiveBytes);
-  if (verifiedProject.id !== project.id) {
+  // El round-trip usa una copia interna del buffer: los bytes originales se
+  // conservan intactos para subirlos al servidor tras la verificación.
+  const verifiedProject = await readProjectArchiveBytesInWorker(archiveBytes);
+  if (verifiedProject.id !== optimizedProject.id) {
     throw new Error("El respaldo generado no coincide con la tienda actual.");
   }
-  const siteIsCurrent = siteSyncIndex.get(project.id) === archiveSha256;
+  const siteIsCurrent = siteSyncIndex.get(optimizedProject.id) === archiveSha256;
   let siteMap: string | undefined;
   let siteError: string | undefined;
   if (!siteIsCurrent) {
     try {
-      const site = await exportSiteInWorker(project, "production");
+      const site = await exportSiteInWorker(optimizedProject, "production");
       siteMap = serializeSiteFiles(site.files);
     } catch (error) {
       siteError =
@@ -180,10 +183,10 @@ export async function persistProjectToDisk(
   }
   const receipt = await saveLocalProject(
     {
-      projectId: project.id,
-      name: project.name,
-      slug: project.slug,
-      projectUpdatedAt: project.updatedAt,
+      projectId: optimizedProject.id,
+      name: optimizedProject.name,
+      slug: optimizedProject.slug,
+      projectUpdatedAt: optimizedProject.updatedAt,
       expectedVersion,
       // El servidor exige el canal de upgrade explícito para tocar la plantilla
       // protegida; sin esta marca, beginSave rechaza con PROTECTED_STORE.
@@ -191,12 +194,12 @@ export async function persistProjectToDisk(
         ? { actor: { kind: "template-upgrade" as const }, allowProtectedWrite: true }
         : {}),
     },
-    projectArchive,
+    archiveBytes,
     siteMap,
   );
   if (!siteError) {
-    if (receipt.status === "synced") siteSyncIndex.set(project.id, archiveSha256);
-    else siteSyncIndex.delete(project.id);
+    if (receipt.status === "synced") siteSyncIndex.set(optimizedProject.id, archiveSha256);
+    else siteSyncIndex.delete(optimizedProject.id);
   }
   return { receipt, ...(siteError ? { siteError } : {}) };
 }

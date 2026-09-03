@@ -18,6 +18,13 @@ import {
 import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import { cloneProjectFromTemplate, isBaseTemplate } from "@solara/project-schema/project-policy";
 import Dexie, { type EntityTable } from "dexie";
+import {
+  assertProjectImagesOptimized,
+  createImageAssetFromProcessed,
+  isOptimizedImageAsset,
+  isSystemImageAsset,
+  markImageAssetAsOptimized,
+} from "./imageAsset";
 import { slugify as slugifySlug } from "./slugify";
 import { processImageInWorker } from "./workers";
 
@@ -89,7 +96,7 @@ export interface ProjectMigrationRecord {
   updatedAt: string;
 }
 
-export const ASSET_CACHE_RECIPE_VERSION = 3;
+export const ASSET_CACHE_RECIPE_VERSION = 4;
 
 export function createAssetCacheKey(
   hash: string,
@@ -518,15 +525,15 @@ async function optimizeEmbeddedFixtureImage(
     type: blob.type || asset.mimeType || "image/png",
   });
   const processed = await processImageInWorker(file);
-  return {
-    ...asset,
-    mimeType: "image/webp",
-    source: processed.primary,
-    fallbackSource: processed.fallback,
-    responsiveSources: processed.responsive,
-    width: processed.width,
-    height: processed.height,
-  };
+  return createImageAssetFromProcessed(
+    {
+      id: asset.id,
+      name: asset.name,
+      alt: asset.alt,
+      hash: asset.hash,
+    },
+    processed,
+  );
 }
 
 function sameResponsiveSources(
@@ -645,37 +652,17 @@ export function repairProjectMediaMetadata(project: StoreProjectV1): StoreProjec
     : project;
 }
 
-function referencedAssetIds(project: StoreProjectV1): Set<string> {
-  const assetIds = new Set<string>(project.assets.map((asset) => String(asset.id)));
-  const referenced = new Set<string>();
-  const visit = (value: unknown): void => {
-    if (typeof value === "string") {
-      if (assetIds.has(value)) referenced.add(value);
-      return;
-    }
-    if (Array.isArray(value)) {
-      value.forEach(visit);
-      return;
-    }
-    if (typeof value !== "object" || value === null) return;
-    Object.values(value).forEach(visit);
-  };
-  const { assets: _assets, ...withoutAssetDefinitions } = project;
-  visit(withoutAssetDefinitions);
-  return referenced;
-}
-
 function needsImageOptimization(asset: StoreProjectV1["assets"][number]): boolean {
-  return (
-    asset.mimeType !== "image/x-icon" &&
-    (!asset.fallbackSource || !asset.responsiveSources?.length || asset.mimeType !== "image/webp")
-  );
+  return !isOptimizedImageAsset(asset);
 }
 
 async function optimizeImageAsset(
   asset: StoreProjectV1["assets"][number],
 ): Promise<StoreProjectV1["assets"][number]> {
-  if (!asset.source.startsWith("data:image/") || !needsImageOptimization(asset)) return asset;
+  if (!needsImageOptimization(asset)) return asset;
+  if (asset.mimeType === "image/x-icon") {
+    throw new Error(`El favicon «${asset.name}» no tiene todas sus resoluciones generadas.`);
+  }
   const response = await fetch(asset.source);
   if (!response.ok) throw new Error(`No se pudo cargar la imagen ${asset.name}.`);
   const blob = await response.blob();
@@ -683,48 +670,56 @@ async function optimizeImageAsset(
     type: blob.type || asset.mimeType,
   });
   const processed = await processImageInWorker(file);
-  return {
-    ...asset,
-    mimeType: "image/webp",
-    source: processed.primary,
-    fallbackSource: processed.fallback,
-    responsiveSources: processed.responsive,
-    width: processed.width,
-    height: processed.height,
-  };
+  return createImageAssetFromProcessed(
+    {
+      id: asset.id,
+      name: asset.name,
+      alt: asset.alt,
+      hash: asset.hash,
+    },
+    processed,
+  );
 }
 
 /**
- * Aplica la misma receta del upload a assets legacy/custom que llegaron antes
- * de que el pipeline responsive existiera. Sólo toca imágenes referenciadas;
- * si el navegador no puede decodificar una imagen, conserva el original.
+ * Aplica la misma receta del upload a todos los assets legacy/custom que
+ * llegaron antes de que el pipeline responsive existiera. Los errores de una
+ * imagen de usuario son bloqueantes: conservarla cruda permitiría que vuelva a
+ * entrar al editor y al exportador sin la receta garantizada.
  */
 export async function optimizeProjectAssets(project: StoreProjectV1): Promise<StoreProjectV1> {
-  if (!canProcessImagesInBrowser()) return compactProjectResponsiveAssets(project);
+  if (!canProcessImagesInBrowser()) {
+    assertProjectImagesOptimized(project);
+    return project;
+  }
   const projectWithFixtureAssets = await optimizeDemoFixtureAssets(project);
   const compactedProject = compactProjectResponsiveAssets(projectWithFixtureAssets);
-  const referenced = referencedAssetIds(compactedProject);
   let changed = compactedProject !== project;
   const assets = [] as StoreProjectV1["assets"];
   for (const asset of compactedProject.assets) {
-    if (!referenced.has(asset.id) || !needsImageOptimization(asset)) {
+    if (isSystemImageAsset(asset) || !needsImageOptimization(asset)) {
       assets.push(asset);
       continue;
     }
-    try {
-      const optimized = await optimizeImageAsset(asset);
-      assets.push(optimized);
-      changed ||= optimized !== asset;
-    } catch {
-      assets.push(asset);
+    const marked = markImageAssetAsOptimized(asset);
+    if (marked) {
+      assets.push(marked);
+      changed = true;
+      continue;
     }
+    const optimized = await optimizeImageAsset(asset);
+    assets.push(optimized);
+    changed ||= optimized !== asset;
   }
-  if (!changed) return project;
-  return StoreProjectV1Schema.parse({
-    ...compactedProject,
-    assets,
-    updatedAt: new Date().toISOString(),
-  });
+  const optimizedProject = changed
+    ? StoreProjectV1Schema.parse({
+        ...compactedProject,
+        assets,
+        updatedAt: new Date().toISOString(),
+      })
+    : project;
+  assertProjectImagesOptimized(optimizedProject);
+  return optimizedProject;
 }
 
 async function embedFixtureAssets(project: StoreProjectV1): Promise<StoreProjectV1> {
@@ -916,7 +911,22 @@ export async function listProjectsWithRecovery(): Promise<ProjectListResult> {
   for (const record of records) {
     const parsed = StoreProjectV1Schema.safeParse(record.project);
     if (parsed.success) {
-      projects.push({ ...record, project: ensureCatalogModernV2Sections(parsed.data) });
+      try {
+        const normalized = ensureCatalogModernV2Sections(parsed.data);
+        const project = await optimizeProjectAssets(normalized);
+        if (project !== normalized && !isBaseTemplate(project)) {
+          await database.projects.put(toRecord(project));
+        }
+        projects.push({ ...record, ...toRecord(project) });
+      } catch (error) {
+        recovery.push({
+          id: record.id,
+          name: record.name,
+          updatedAt: record.updatedAt,
+          message:
+            error instanceof Error ? error.message : "La imagen del proyecto no se pudo optimizar.",
+        });
+      }
     } else {
       recovery.push({
         id: record.id,
@@ -939,7 +949,12 @@ export async function getProject(id: string): Promise<StoreProjectV1 | undefined
       `La tienda "${record.name}" no se puede abrir. Exportá un respaldo anterior y recuperala desde Importar respaldo. ${schemaErrorMessage(parsed.error)}`,
     );
   }
-  return ensureCatalogModernV2Sections(parsed.data);
+  const normalized = ensureCatalogModernV2Sections(parsed.data);
+  const project = await optimizeProjectAssets(normalized);
+  if (project !== normalized && !isBaseTemplate(project)) {
+    await database.projects.put(toRecord(project));
+  }
+  return project;
 }
 
 export interface SaveProjectOptions {
@@ -949,7 +964,7 @@ export interface SaveProjectOptions {
 export async function saveProject(
   project: StoreProjectV1,
   options: SaveProjectOptions = {},
-): Promise<void> {
+): Promise<StoreProjectV1> {
   await ready();
   const validProject = ensureCatalogModernV2Sections(StoreProjectV1Schema.parse(project));
   if (isBaseTemplate(validProject) && !options.allowProtectedWrite) {
@@ -959,9 +974,11 @@ export async function saveProject(
     error.code = "PROTECTED_STORE";
     throw error;
   }
+  const optimizedProject = await optimizeProjectAssets(validProject);
   await database.transaction("rw", database.projects, async () => {
-    await database.projects.put(toRecord(validProject));
+    await database.projects.put(toRecord(optimizedProject));
   });
+  return optimizedProject;
 }
 
 export async function saveRecoveryDraft(
@@ -971,18 +988,19 @@ export async function saveRecoveryDraft(
   await ready();
   const validProject = ensureCatalogModernV2Sections(StoreProjectV1Schema.parse(project));
   if (isBaseTemplate(validProject)) return;
-  const existing = await database.recoveryDrafts.get(validProject.id);
+  const optimizedProject = await optimizeProjectAssets(validProject);
+  const existing = await database.recoveryDrafts.get(optimizedProject.id);
   if (existing) {
     const existingTime = Date.parse(existing.project.updatedAt);
-    const newTime = Date.parse(validProject.updatedAt);
+    const newTime = Date.parse(optimizedProject.updatedAt);
     if (newTime < existingTime) return;
     if (newTime === existingTime && baseDiskVersion <= existing.baseDiskVersion) return;
   }
   await database.recoveryDrafts.put({
-    projectId: validProject.id,
+    projectId: optimizedProject.id,
     baseDiskVersion,
     updatedAt: new Date().toISOString(),
-    project: validProject,
+    project: optimizedProject,
   });
 }
 
@@ -991,9 +1009,13 @@ export async function getRecoveryDraft(projectId: string): Promise<RecoveryDraft
   const draft = await database.recoveryDrafts.get(projectId);
   if (!draft) return undefined;
   const parsed = StoreProjectV1Schema.safeParse(draft.project);
-  return parsed.success
-    ? { ...draft, project: ensureCatalogModernV2Sections(parsed.data) }
-    : undefined;
+  if (!parsed.success) return undefined;
+  const normalized = ensureCatalogModernV2Sections(parsed.data);
+  const project = await optimizeProjectAssets(normalized);
+  if (project !== normalized) {
+    await database.recoveryDrafts.put({ ...draft, project });
+  }
+  return { ...draft, project };
 }
 
 export async function clearRecoveryDraft(projectId: string): Promise<void> {
@@ -1080,8 +1102,7 @@ export async function createProject(input: string | CreateProjectOptions): Promi
       updatedAt: timestamp,
     }),
   );
-  await saveProject(project);
-  return project;
+  return saveProject(project);
 }
 
 export async function ensureFirstProject(): Promise<StoreProjectV1> {
@@ -1089,16 +1110,14 @@ export async function ensureFirstProject(): Promise<StoreProjectV1> {
   const first = await database.projects.orderBy("updatedAt").reverse().first();
   if (first) {
     const parsed = StoreProjectV1Schema.parse(first.project);
-    if (isBaseTemplate(parsed)) return parsed;
-    const project = await optimizeDemoFixtureAssets(
+    if (isBaseTemplate(parsed)) return optimizeProjectAssets(parsed);
+    const project = await optimizeProjectAssets(
       await migrateCatalogModernDemo(repairModernGreeting(parsed)),
     );
-    if (JSON.stringify(project) !== JSON.stringify(parsed)) await saveProject(project);
-    return project;
+    return JSON.stringify(project) !== JSON.stringify(parsed) ? saveProject(project) : project;
   }
   const initial = await embedFixtureAssets(buildScaleDemoProject());
-  await saveProject(initial, { allowProtectedWrite: true });
-  return initial;
+  return saveProject(initial, { allowProtectedWrite: true });
 }
 
 export async function ensureModernBaseProject(): Promise<boolean> {
@@ -1337,8 +1356,7 @@ export async function duplicateProject(id: string): Promise<StoreProjectV1> {
     baseUrl: `https://${slugify(`${source.slug}-copia`, suffix.slice(0, 6))}.example`,
     now: timestamp,
   });
-  await saveProject(project);
-  return project;
+  return saveProject(project);
 }
 
 export async function setProjectArchived(id: string, archived: boolean): Promise<void> {
