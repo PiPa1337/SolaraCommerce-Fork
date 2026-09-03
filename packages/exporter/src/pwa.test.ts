@@ -1,4 +1,5 @@
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
+import { referenceStore } from "@solara/project-schema/fixture";
 import { describe, expect, it } from "vitest";
 import { exportProject } from "./index";
 import { buildServiceWorker } from "./pwa";
@@ -7,6 +8,18 @@ function extractRuntimeCacheable(sw: string): RegExp {
   const source = /const RUNTIME_CACHEABLE = new RegExp\('(.*)'\);/.exec(sw)?.[1];
   if (!source) throw new Error("Falta RUNTIME_CACHEABLE en el service worker generado");
   return new RegExp(source);
+}
+
+function extractPrecacheUrls(sw: string): string[] {
+  const match = /const PRECACHE_URLS = (\[[^\]]*\]);/.exec(sw);
+  if (!match) throw new Error("Falta PRECACHE_URLS en el service worker generado");
+  return JSON.parse(match[1] as string) as string[];
+}
+
+function stylesheetHrefs(html: string): string[] {
+  return [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(
+    (match) => match[1] as string,
+  );
 }
 
 describe("service worker", () => {
@@ -72,13 +85,50 @@ describe("service worker", () => {
   it("precachea exactamente la CSS que enlaza la home (coherencia export↔precache)", () => {
     const result = exportProject(catalogModernStore, { mode: "production" });
     const home = String(result.files.get("index.html"));
-    const homeCssHref = /<link rel="stylesheet" href="([^"]+)"/.exec(home)?.[1];
-    if (!homeCssHref) throw new Error("La home no enlaza una hoja de estilos");
+    const homeHrefs = stylesheetHrefs(home);
+    expect(homeHrefs.length).toBeGreaterThan(0);
     const sw = String(result.files.get("sw.js"));
-    const precacheMatch = /const PRECACHE_URLS = (\[[^\]]*\]);/.exec(sw);
-    if (!precacheMatch) throw new Error("Falta PRECACHE_URLS en el service worker generado");
-    const precacheUrls = JSON.parse(precacheMatch[1] as string) as string[];
-    expect(precacheUrls).toContain(homeCssHref);
-    expect(result.files.has(homeCssHref.slice(1))).toBe(true);
+    const precacheUrls = extractPrecacheUrls(sw);
+    for (const href of homeHrefs) {
+      expect(precacheUrls).toContain(href);
+      expect(result.files.has(href.slice(1))).toBe(true);
+    }
+    expect(new Set(precacheUrls).size).toBe(precacheUrls.length);
+    void new Function(sw);
+  });
+
+  it("precachea también la CSS de home cuando diverge de la CSS del resto del sitio", () => {
+    const project = structuredClone(catalogModernStore);
+    const aboutPage = project.pages.find((page) => page.kind === "about");
+    if (!aboutPage) throw new Error("Fixture sin página nosotros");
+    const trustSection = referenceStore.sections.find(
+      (section) => section.moduleId === "trust-strip",
+    );
+    if (!trustSection) throw new Error("Fixture sin sección trust-strip");
+    aboutPage.sections = [structuredClone(trustSection)];
+
+    const result = exportProject(project, { mode: "production" });
+    const cssPaths = [...result.files.keys()].filter((path) =>
+      /^assets\/storefront[^/]*\.css$/.test(path),
+    );
+    expect(cssPaths).toHaveLength(2);
+
+    const home = String(result.files.get("index.html"));
+    const homeHrefs = stylesheetHrefs(home);
+    expect(homeHrefs.length).toBeGreaterThan(0);
+    const sw = String(result.files.get("sw.js"));
+    const precacheUrls = extractPrecacheUrls(sw);
+
+    // Cada stylesheet enlazado por la home está en el precache.
+    for (const href of homeHrefs) {
+      expect(precacheUrls).toContain(href);
+      expect(result.files.has(href.slice(1))).toBe(true);
+    }
+    // El precache incluye BOTH css públicas (home + resto del sitio).
+    for (const path of cssPaths) {
+      expect(precacheUrls).toContain(`/${path}`);
+    }
+    expect(new Set(precacheUrls).size).toBe(precacheUrls.length);
+    void new Function(sw);
   });
 });

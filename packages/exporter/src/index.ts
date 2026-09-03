@@ -3191,6 +3191,7 @@ ${
     [assetHref(publicProject, runtimeAssetsFull.css), cssFull],
     [assetHref(publicProject, runtimeAssetsFull.js), runtimeSource],
   ]);
+  if (!unifiedHomeCss) precacheContent.set(assetHref(publicProject, cssHomePath), cssHome);
   if (mode === "production") {
     const rss = buildRssFeed(publicProject);
     if (rss) files.set("feed.xml", rss);
@@ -3242,6 +3243,7 @@ ${
     buildServiceWorker(publicProject, {
       runtimeCssPath: runtimeAssetsFull.css,
       runtimeJsPath: runtimeAssetsFull.js,
+      extraPrecachePaths: [runtimeAssetsHome.css],
       revision: deployment.revision,
       precacheContent,
     }),

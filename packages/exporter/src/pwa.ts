@@ -134,6 +134,8 @@ export function buildWebManifest(project: StoreProjectV1): string {
 export interface ServiceWorkerOptions {
   runtimeCssPath?: string;
   runtimeJsPath?: string;
+  /** Rutas extra para el precache (p. ej. CSS de home cuando diverge); se ignoran duplicados. */
+  extraPrecachePaths?: readonly string[];
   /** Revision del deployment-manifest: rota el CACHE_NAME en cada deploy. */
   revision?: string;
   /** Contenido real de cada entrada para invalidar el caché aunque conserve la URL. */
@@ -153,6 +155,10 @@ export function buildServiceWorker(
     route(options.runtimeCssPath ?? "/assets/storefront.css"),
     route(options.runtimeJsPath ?? "/assets/storefront.js"),
   ];
+  for (const extraPath of options.extraPrecachePaths ?? []) {
+    const extraUrl = route(extraPath);
+    if (!precacheUrls.includes(extraUrl)) precacheUrls.push(extraUrl);
+  }
   const precacheFingerprint = precacheUrls.map((url) => [
     url,
     options.precacheContent?.get(url) === undefined
