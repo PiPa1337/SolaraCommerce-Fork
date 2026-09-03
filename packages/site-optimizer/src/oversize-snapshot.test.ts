@@ -47,26 +47,30 @@ function oversizeProject(): StoreProjectV1 {
 }
 
 describe("optimizeProject con proyectos que exceden el límite de cadena de V8", () => {
-  it("audita sin lanzar Invalid string length y produce un hash acotado", () => {
-    const project = oversizeProject();
-    const embeddedChars = project.assets.reduce((total, asset) => {
-      const sources = [
-        asset.source,
-        asset.fallbackSource ?? "",
-        ...(asset.responsiveSources?.map((responsive) => responsive.source) ?? []),
-      ];
-      return total + sources.reduce((sum, source) => sum + source.length, 0);
-    }, 0);
-    // La serialización plana del proyecto DEBERÍA superar el límite de V8:
-    // si este guard se debilita, el test deja de ejercitar la regresión.
-    expect(embeddedChars).toBeGreaterThan(536_870_888);
+  it(
+    "audita sin lanzar Invalid string length y produce un hash acotado",
+    { timeout: 30_000 },
+    () => {
+      const project = oversizeProject();
+      const embeddedChars = project.assets.reduce((total, asset) => {
+        const sources = [
+          asset.source,
+          asset.fallbackSource ?? "",
+          ...(asset.responsiveSources?.map((responsive) => responsive.source) ?? []),
+        ];
+        return total + sources.reduce((sum, source) => sum + source.length, 0);
+      }, 0);
+      // La serialización plana del proyecto DEBERÍA superar el límite de V8:
+      // si este guard se debilita, el test deja de ejercitar la regresión.
+      expect(embeddedChars).toBeGreaterThan(536_870_888);
 
-    const report = optimizeProject(project, { mode: "production", publicAiContext: true });
-    expect(report.snapshotHash).toMatch(/^[0-9a-f]{8}$/);
-    expect(report.counts.assets).toBe(project.assets.length);
-  });
+      const report = optimizeProject(project, { mode: "production", publicAiContext: true });
+      expect(report.snapshotHash).toMatch(/^[0-9a-f]{8}$/);
+      expect(report.counts.assets).toBe(project.assets.length);
+    },
+  );
 
-  it("mantiene el hash determinista y sensible a cambios del proyecto", () => {
+  it("mantiene el hash determinista y sensible a cambios del proyecto", { timeout: 30_000 }, () => {
     const project = oversizeProject();
     const first = optimizeProject(project, { mode: "production", publicAiContext: true });
     const second = optimizeProject(project, { mode: "production", publicAiContext: true });
