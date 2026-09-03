@@ -91,6 +91,51 @@ export const AgentOperationSchema = z.discriminatedUnion("type", [
     }),
   }),
   z.object({
+    type: z.literal("store.updateWhatsapp"),
+    phone: z
+      .string()
+      .regex(/^\d{0,15}$/)
+      .optional(),
+    greeting: z.string().optional(),
+    includeSku: z.boolean().optional(),
+  }).refine(
+    (changes) =>
+      changes.phone !== undefined ||
+      changes.greeting !== undefined ||
+      changes.includeSku !== undefined,
+    { message: "store.updateWhatsapp requiere al menos un campo." },
+  ),
+  z.object({
+    type: z.literal("store.updateNavigation"),
+    mode: z.enum(["automatic", "curated"]).optional(),
+    catalogLabel: z.string().min(1).max(40).optional(),
+    items: z
+      .object({
+        id: z.string().min(1),
+        label: z.string().min(1).max(80),
+        href: z.string().refine(
+          (href) => {
+            if (href.startsWith("/") && !href.startsWith("//")) return true;
+            try {
+              return ["http:", "https:", "mailto:", "tel:"].includes(new URL(href).protocol);
+            } catch {
+              return false;
+            }
+          },
+          { message: "La navegación contiene un enlace inseguro." },
+        ),
+      })
+      .array()
+      .max(20)
+      .optional(),
+  }).refine(
+    (changes) =>
+      changes.mode !== undefined ||
+      changes.catalogLabel !== undefined ||
+      changes.items !== undefined,
+    { message: "store.updateNavigation requiere al menos un campo." },
+  ),
+  z.object({
     type: z.literal("category.create"),
     categoryId: SafeIdSchema.optional(),
     slug: SlugSchema,

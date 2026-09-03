@@ -40,6 +40,56 @@ describe("contrato del agente", () => {
     expect(() => AgentRequestSchema.parse({ id: 1 })).toThrow();
   });
 
+  it("acepta store.updateWhatsapp con teléfono internacional en dígitos", () => {
+    const operation = AgentOperationSchema.parse({
+      type: "store.updateWhatsapp",
+      phone: "5492804662332",
+      greeting: "Hola RM, quiero hacer este pedido:",
+      includeSku: true,
+    });
+    expect(operation.type).toBe("store.updateWhatsapp");
+    if (operation.type === "store.updateWhatsapp") {
+      expect(operation.phone).toBe("5492804662332");
+      expect(operation.includeSku).toBe(true);
+    }
+  });
+
+  it("store.updateWhatsapp exige formato de dígitos y al menos un campo", () => {
+    expect(() =>
+      AgentOperationSchema.parse({ type: "store.updateWhatsapp", phone: "+54 9 280 466-2332" }),
+    ).toThrow();
+    expect(() => AgentOperationSchema.parse({ type: "store.updateWhatsapp" })).toThrow();
+    expect(() =>
+      AgentOperationSchema.parse({ type: "store.updateWhatsapp", includeSku: false }),
+    ).not.toThrow();
+  });
+
+  it("acepta store.updateNavigation con merge parcial de navegación", () => {
+    const operation = AgentOperationSchema.parse({
+      type: "store.updateNavigation",
+      mode: "curated",
+      catalogLabel: "Categorías",
+      items: [{ id: "nav-1", label: "Bolsas", href: "/categorias/bolsas/" }],
+    });
+    expect(operation.type).toBe("store.updateNavigation");
+    if (operation.type === "store.updateNavigation") {
+      expect(operation.catalogLabel).toBe("Categorías");
+      expect(operation.items).toHaveLength(1);
+    }
+    expect(() =>
+      AgentOperationSchema.parse({
+        type: "store.updateNavigation",
+        mode: "hibrido",
+      }),
+    ).toThrow();
+    expect(() =>
+      AgentOperationSchema.parse({
+        type: "store.updateNavigation",
+        items: [{ id: "nav-1", label: "Sin href interno seguro", href: "javascript:alert(1)" }],
+      }),
+    ).toThrow();
+  });
+
   it("publica límites y métodos de recuperación del protocolo", () => {
     expect(AgentProtocolJsonSchema.methods).toContain("jobs.get");
     expect(AgentProtocolJsonSchema.methods).toContain("assets.upload.finish");

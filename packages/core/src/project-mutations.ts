@@ -81,6 +81,14 @@ export type TypedSeoChanges = Partial<
   >
 >;
 
+export type TypedWhatsappChanges = Partial<
+  Pick<StoreProjectV1["whatsapp"], "phone" | "greeting" | "includeSku">
+>;
+
+export type TypedNavigationChanges = Partial<
+  Pick<StoreProjectV1["navigation"], "mode" | "catalogLabel" | "items" | "showHome" | "showContact" | "showAbout" | "showSearch" | "showCart">
+>;
+
 export type TypedThemePatch = {
   colorMode?: Theme["colorMode"];
   spacingScale?: Theme["spacingScale"];
@@ -157,6 +165,14 @@ export type ProjectMutation =
   | {
       type: "seo.update";
       changes: TypedSeoChanges;
+    }
+  | {
+      type: "whatsapp.update";
+      changes: TypedWhatsappChanges;
+    }
+  | {
+      type: "navigation.update";
+      changes: TypedNavigationChanges;
     };
 
 export type ProjectMutationActor =
@@ -523,6 +539,24 @@ export function createMutationRegistry(): Record<string, MutationHandler> {
       StoreProjectV2Schema.parse({
         ...project,
         seo: { ...project.seo, ...(mutation as { changes: TypedSeoChanges }).changes },
+        updatedAt: at,
+      }),
+    "whatsapp.update": (project, mutation, at) =>
+      StoreProjectV2Schema.parse({
+        ...project,
+        whatsapp: {
+          ...project.whatsapp,
+          ...(mutation as { changes: TypedWhatsappChanges }).changes,
+        },
+        updatedAt: at,
+      }),
+    "navigation.update": (project, mutation, at) =>
+      StoreProjectV2Schema.parse({
+        ...project,
+        navigation: {
+          ...project.navigation,
+          ...(mutation as { changes: TypedNavigationChanges }).changes,
+        },
         updatedAt: at,
       }),
   };

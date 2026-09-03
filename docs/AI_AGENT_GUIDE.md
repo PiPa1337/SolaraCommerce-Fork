@@ -93,6 +93,16 @@ Nunca enviar floats. Luego enviar el `planId` devuelto:
 {"id":"commit-1","method":"plans.commit","params":{"planId":"PLAN_ID_DEVUELTO","idempotencyKey":"crear-lunaria-2026-01"}}
 ```
 
+Comportamiento de `store.create` con `source base-template`: el clon hereda la
+plantilla vigente en disco con IDs regenerados, pero **no hereda los datos de
+contacto de ejemplo**: `identity.email` e `identity.phone` nacen vacíos salvo
+que la operación los provea, y un `phone` provisto configura también
+`whatsapp.phone` (la marca sobrescribe `identity.brandName`, `legalName` y el
+greeting de WhatsApp). El catálogo demo de la plantilla (5 productos
+placeholder) sí se hereda con IDs nuevos: los planes lo advierten en
+`warnings` y el readiness marca sus textos como placeholder; reemplazalos
+antes de considerar la tienda lista.
+
 Si la tienda recién creada todavía no puede exportarse a producción por falta
 de contenido, el respaldo editable se conserva y la respuesta indica
 `site-outdated`, `exportWarning` y la auditoría de draft. No fabricar datos para
@@ -130,9 +140,19 @@ original.
 ## Operaciones permitidas
 
 El conjunto es cerrado: `store.create`, `store.updateIdentity`,
-`store.updateSeo`, `category.create`, `collection.create`, `product.create`,
-`product.update`, `product.setStatus`, `product.delete`, `store.archive`,
-`section.updateSettings` y `asset.attach`.
+`store.updateSeo`, `store.updateWhatsapp`, `store.updateNavigation`,
+`store.updatePublicCopy`, `store.updatePolicies`, `store.updateLegalProfile`,
+`category.create`, `category.update`, `category.setStatus`, `collection.create`,
+`collection.update`, `product.create`, `product.update`, `product.setStatus`,
+`product.delete`, `store.archive`, `section.updateSettings`, `asset.attach`,
+`asset.remove`, `product.createBatch`, `theme.applyPreset` y
+`theme.updateTokens`.
+
+`store.updateWhatsapp` es la vía para configurar el teléfono de pedidos de una
+tienda existente (dígitos internacionales sin `+`, greeting y `includeSku`).
+Sin él, `whatsapp.phone` queda vacío y el sitio se exporta sin enlaces de
+WhatsApp. `store.updateNavigation` ajusta el modo, la etiqueta del catálogo y
+los items curados; los hrefs internos se validan contra destinos existentes.
 
 Los valores válidos de `product.setStatus` son `active`, `hidden` y
 `archived`; no existe un estado `draft`. Para ocultar un producto del sitio

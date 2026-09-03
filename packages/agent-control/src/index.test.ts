@@ -77,6 +77,165 @@ describe("control nativo del agente", () => {
     },
   );
 
+  it(
+    "base-template aplica el phone a whatsapp y no hereda placeholders de contacto",
+    { timeout: 30_000 },
+    async () => {
+      const root = await mkdtemp(join(tmpdir(), "solara-agent-whatsapp-"));
+      try {
+        const storage = createLocalProjectStorage({
+          applicationRoot: root,
+          projectsRoot: join(root, "proyectos"),
+          stagingRoot: join(root, ".solara-runtime", "transactions"),
+        });
+        const template = buildCatalogModernProject({
+          seed: "placeholder",
+          id: "store-modo-sur-demo",
+          name: "Predeterminado",
+          slug: "predeterminado",
+        });
+        const seed = await storage.beginSave({
+          projectId: template.id,
+          name: template.name,
+          slug: template.slug,
+          projectUpdatedAt: template.updatedAt,
+          expectedVersion: null,
+          actor: { kind: "template-upgrade", id: "test-template-seed" },
+          allowProtectedWrite: true,
+        });
+        await storage.upload(
+          seed.transactionId,
+          "project",
+          (async function* () {
+            yield new TextEncoder().encode(createProjectArchive(template));
+          })(),
+        );
+        await storage.commit(seed.transactionId);
+
+        const controller = createAgentController({ storage, applicationRoot: root });
+        const plan = await controller.createPlan({
+          operations: [
+            {
+              type: "store.create",
+              storeId: "store-whatsapp-fix",
+              name: "Verificación WhatsApp",
+              slug: "verificacion-whatsapp",
+              email: "hola@verificacion.test",
+              phone: "5491100000001",
+            },
+          ],
+        });
+        const planned = await controller.getPlan({ planId: plan.planId, includeProject: true });
+        expect(planned.project?.whatsapp.phone).toBe("5491100000001");
+        expect(planned.project?.identity.phone).toBe("5491100000001");
+        expect(planned.project?.identity.email).toBe("hola@verificacion.test");
+        // El greeting se regenera con la marca del clon.
+        expect(planned.project?.whatsapp.greeting).toBe(
+          "Hola Verificación WhatsApp, quiero hacer este pedido:",
+        );
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it(
+    "base-template sin datos de contacto deja campos vacíos y advierte por el catálogo demo",
+    { timeout: 30_000 },
+    async () => {
+      const root = await mkdtemp(join(tmpdir(), "solara-agent-sentinels-"));
+      try {
+        const storage = createLocalProjectStorage({
+          applicationRoot: root,
+          projectsRoot: join(root, "proyectos"),
+          stagingRoot: join(root, ".solara-runtime", "transactions"),
+        });
+        const template = buildCatalogModernProject({
+          seed: "placeholder",
+          id: "store-modo-sur-demo",
+          name: "Predeterminado",
+          slug: "predeterminado",
+        });
+        const seed = await storage.beginSave({
+          projectId: template.id,
+          name: template.name,
+          slug: template.slug,
+          projectUpdatedAt: template.updatedAt,
+          expectedVersion: null,
+          actor: { kind: "template-upgrade", id: "test-template-seed" },
+          allowProtectedWrite: true,
+        });
+        await storage.upload(
+          seed.transactionId,
+          "project",
+          (async function* () {
+            yield new TextEncoder().encode(createProjectArchive(template));
+          })(),
+        );
+        await storage.commit(seed.transactionId);
+
+        const controller = createAgentController({ storage, applicationRoot: root });
+        const plan = await controller.createPlan({
+          operations: [
+            {
+              type: "store.create",
+              storeId: "store-sentinels",
+              name: "Sentinel Store",
+              slug: "sentinel-store",
+            },
+          ],
+        });
+        const planned = await controller.getPlan({ planId: plan.planId, includeProject: true });
+        expect(planned.project?.whatsapp.phone).toBe("");
+        expect(planned.project?.identity.email).toBe("");
+        expect(planned.project?.identity.phone).toBe("");
+        const warnings = plan.warnings.join("\n");
+        expect(warnings).toContain("catálogo demo");
+        expect(warnings).toContain("WhatsApp");
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it("store.updateWhatsapp y store.updateNavigation aplican sobre la tienda del plan", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-agent-newops-"));
+    try {
+      const storage = createLocalProjectStorage({
+        applicationRoot: root,
+        projectsRoot: join(root, "proyectos"),
+        stagingRoot: join(root, ".solara-runtime", "transactions"),
+      });
+      const controller = createAgentController({ storage, applicationRoot: root });
+      const plan = await controller.createPlan({
+        operations: [
+          {
+            type: "store.create",
+            storeId: "store-newops",
+            name: "Ops nuevas",
+            slug: "ops-nuevas",
+            source: { kind: "clean" },
+          },
+          { type: "store.updateWhatsapp", phone: "5491100000002", includeSku: true },
+          {
+            type: "store.updateNavigation",
+            mode: "curated",
+            catalogLabel: "Rubros",
+            items: [{ id: "nav-1", label: "Buscar", href: "/buscar/" }],
+          },
+        ],
+      });
+      const planned = await controller.getPlan({ planId: plan.planId, includeProject: true });
+      expect(planned.project?.whatsapp.phone).toBe("5491100000002");
+      expect(planned.project?.whatsapp.includeSku).toBe(true);
+      expect(planned.project?.navigation.catalogLabel).toBe("Rubros");
+      expect(planned.project?.navigation.mode).toBe("curated");
+      expect(planned.project?.navigation.items[0]?.href).toBe("/buscar/");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("crea, stagea, adjunta y publica una tienda sin copiar el demo", async () => {
     const root = await mkdtemp(join(tmpdir(), "solara-agent-control-"));
     try {

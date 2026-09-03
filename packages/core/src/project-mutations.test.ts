@@ -5,6 +5,43 @@ import { commitCanvasField } from "../../../apps/studio/src/features/canvas/canv
 import { applyMutation, createMutationRegistry } from "./project-mutations.js";
 
 describe("ProjectMutationRegistry", () => {
+  it("whatsapp.update hace merge parcial y valida el schema", () => {
+    const applied = applyMutation(catalogModernStore, createMutationRegistry(), {
+      type: "whatsapp.update",
+      changes: { phone: "5491100000001", includeSku: false },
+    });
+    expect(applied.project.whatsapp.phone).toBe("5491100000001");
+    expect(applied.project.whatsapp.includeSku).toBe(false);
+    expect(applied.project.whatsapp.greeting).toBe(catalogModernStore.whatsapp.greeting);
+    // Un teléfono con formato libre viola el contrato estricto de WhatsApp.
+    expect(() =>
+      applyMutation(catalogModernStore, createMutationRegistry(), {
+        type: "whatsapp.update",
+        changes: { phone: "+54 9 280 466-2332" },
+      }),
+    ).toThrow();
+  });
+
+  it("navigation.update hace merge parcial sobre la navegación existente", () => {
+    const applied = applyMutation(catalogModernStore, createMutationRegistry(), {
+      type: "navigation.update",
+      changes: {
+        mode: "curated",
+        items: [{ id: "nav-1", label: "Buscar", href: "/buscar/" }],
+      },
+    });
+    expect(applied.project.navigation.mode).toBe("curated");
+    expect(applied.project.navigation.items).toHaveLength(1);
+    expect(applied.project.navigation.showHome).toBe(catalogModernStore.navigation.showHome);
+    // Un href inseguro no puede colarse por la mutation.
+    expect(() =>
+      applyMutation(catalogModernStore, createMutationRegistry(), {
+        type: "navigation.update",
+        changes: { items: [{ id: "nav-x", label: "X", href: "javascript:alert(1)" }] },
+      }),
+    ).toThrow();
+  });
+
   it("section.field.update produce el mismo snapshot que section.updateSettings del agente", () => {
     const sectionId = "modo-section-hero";
     const registry = createMutationRegistry();

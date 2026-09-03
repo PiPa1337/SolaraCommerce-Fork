@@ -121,4 +121,64 @@ describe("Catalog Modern guidance", () => {
     // requisitos para rutas inexistentes (serían targets muertos).
     expect(editorialTargets).toHaveLength(0);
   });
+
+  it("detecta los sentinels de la plantilla aunque el clon sea seed duplicate", () => {
+    // Simula el clon base-template del canal agente: hereda los placeholders
+    // tipados pero su origen ya no es "clean", así que el detector de frases
+    // del seed limpio no aplica. Los sentinels exactos deben igual marcarlos.
+    const clone = {
+      ...buildCatalogModernProject({ seed: "placeholder" }),
+      origin: {
+        templateId: "catalog-modern" as const,
+        templateVersion: 2,
+        seed: "duplicate" as const,
+        role: "store" as const,
+        updatePolicy: "managed" as const,
+      },
+    };
+    const requirements = getCatalogModernContentRequirements(clone);
+    const byId = (id: string) => requirements.find((item) => item.id === id);
+    expect(byId("identity.description")?.status).toBe("placeholder");
+    // El template de código emite email vacío (los valores tipados sólo
+    // existen en respaldos on-disk): el requisito honesto es "missing".
+    expect(byId("identity.email")?.status).toBe("missing");
+    expect(byId("seo.description")?.status).toBe("placeholder");
+    expect(byId("product.product-placeholder-1.title")?.status).toBe("placeholder");
+    expect(byId("product.product-placeholder-1.description")?.status).toBe("placeholder");
+    expect(byId("category.category-placeholder-1.title")?.status).toBe("placeholder");
+  });
+
+  it("el contenido real de una tienda customizada no dispara ningún sentinel", () => {
+    const clone = {
+      ...buildCatalogModernProject({ seed: "placeholder" }),
+      origin: {
+        templateId: "catalog-modern" as const,
+        templateVersion: 2,
+        seed: "duplicate" as const,
+        role: "store" as const,
+        updatePolicy: "managed" as const,
+      },
+      identity: {
+        ...buildCatalogModernProject({ seed: "placeholder" }).identity,
+        legalName: "RM Descartables",
+        brandName: "RM Descartables",
+        description:
+          "Trabajamos exclusivamente en la provincia de Chubut, con atención personalizada.",
+        email: "rmventas85@gmail.com",
+        phone: "+54 9 280 466-2332",
+        address: "Trelew, Chubut, Argentina",
+      },
+      seo: {
+        ...buildCatalogModernProject({ seed: "placeholder" }).seo,
+        title: "RM Descartables | Descartables y packaging en Chubut",
+        description:
+          "Descartables y packaging en Chubut, con entregas rápidas en Trelew, Rawson, Dolavon, Gaiman y zonas cercanas.",
+      },
+    };
+    const requirements = getCatalogModernContentRequirements(clone);
+    const byId = (id: string) => requirements.find((item) => item.id === id);
+    expect(byId("identity.description")?.status).toBe("ready");
+    expect(byId("identity.email")?.status).toBe("ready");
+    expect(byId("seo.description")?.status).toBe("ready");
+  });
 });

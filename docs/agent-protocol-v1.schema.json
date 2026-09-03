@@ -147,6 +147,49 @@
         },
         {
           "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "store.updateWhatsapp" },
+            "phone": { "type": "string", "pattern": "^\\d{0,15}$" },
+            "greeting": { "type": "string" },
+            "includeSku": { "type": "boolean" }
+          },
+          "anyOf": [
+            { "required": ["phone"] },
+            { "required": ["greeting"] },
+            { "required": ["includeSku"] }
+          ]
+        },
+        {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "store.updateNavigation" },
+            "mode": { "enum": ["automatic", "curated"] },
+            "catalogLabel": { "type": "string", "minLength": 1, "maxLength": 40 },
+            "items": {
+              "type": "array",
+              "maxItems": 20,
+              "items": {
+                "type": "object",
+                "required": ["id", "label"],
+                "properties": {
+                  "id": { "$ref": "#/$defs/id" },
+                  "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+                  "href": { "type": "string" }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "anyOf": [
+            { "required": ["mode"] },
+            { "required": ["catalogLabel"] },
+            { "required": ["items"] }
+          ]
+        },
+        {
+          "type": "object",
           "required": ["type", "slug", "title"],
           "properties": {
             "type": { "const": "category.create" },

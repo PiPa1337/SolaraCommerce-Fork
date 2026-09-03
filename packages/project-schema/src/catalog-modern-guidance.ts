@@ -62,6 +62,34 @@ export const CATALOG_MODERN_GUIDANCE_VERSION = 2 as const;
 /** Número de WhatsApp con el que nace la plantilla limpia: la guía lo trata como no configurado. */
 export const CATALOG_MODERN_PLACEHOLDER_PHONE = "5491100000000" as const;
 
+/**
+ * Valores exactos que la plantilla base siembra en un clon (identity, seo,
+ * catálogo demo). Un clon `duplicate`/`store` no es cubierto por el detector
+ * de frases del seed limpio, así que estos valores se marcan como placeholder
+ * con igual match normalizado, sin importar el seed. Contenido real nunca
+ * coincide con ellos.
+ */
+const CATALOG_MODERN_SENTINEL_VALUES: ReadonlySet<string> = new Set([
+  "email@gmail.com",
+  "15412345",
+  "direccion",
+  "razonsocial",
+  "descripcion corta de tu tienda.",
+  "descripcion seo de tu tienda.",
+  "coleccion 1",
+]);
+
+export function isCatalogModernSentinelValue(value: string): boolean {
+  const normalized = value.trim().toLocaleLowerCase("es-AR");
+  if (!normalized) return false;
+  if (CATALOG_MODERN_SENTINEL_VALUES.has(normalized)) return true;
+  return (
+    /^producto \d+$/.test(normalized) ||
+    /^descripcion del producto \d+\.$/.test(normalized) ||
+    /^categoria \d+$/.test(normalized)
+  );
+}
+
 /** Valor visible del teléfono para la guía: el placeholder de la plantilla equivale a vacío. */
 export function catalogModernPhoneValue(phone: string): string {
   return phone === CATALOG_MODERN_PLACEHOLDER_PHONE ? "" : phone;
@@ -143,6 +171,7 @@ function isPlaceholder(value: string, project: StoreProjectV2): boolean {
 function statusFor(value: string, project: StoreProjectV2, invalid = false): ContentStatus {
   if (invalid) return "invalid";
   if (!value.trim()) return "missing";
+  if (isCatalogModernSentinelValue(value)) return "placeholder";
   if (isPlaceholder(value, project)) return "placeholder";
   return "ready";
 }

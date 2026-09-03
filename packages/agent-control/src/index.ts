@@ -332,6 +332,26 @@ function planWarnings(project: StoreProjectV1, diff: PlanDiff): string[] {
     warnings.push("Hay productos sin imagen asociada.");
   }
   if (!project.identity.phone) warnings.push("La tienda todavía no tiene teléfono de WhatsApp.");
+  // La plantilla base siembra un catálogo demo y datos de contacto de
+  // ejemplo: un clon que no los reemplace se vería terminado sin serlo.
+  const hasDemoProducts = project.products.some(
+    (product) => /^product-placeholder-\d+$/.test(product.id) || /^Producto \d+$/.test(product.title),
+  );
+  if (hasDemoProducts) {
+    warnings.push(
+      "La tienda todavía tiene productos del catálogo demo de la plantilla; reemplazalos antes de publicar.",
+    );
+  }
+  const demoEmail = project.identity.email.trim().toLowerCase() === "email@gmail.com";
+  const demoPhone = project.identity.phone === "15412345";
+  if (demoEmail || demoPhone) {
+    warnings.push("La identidad todavía tiene datos de contacto de ejemplo de la plantilla.");
+  }
+  if (!project.whatsapp.phone) {
+    warnings.push(
+      "whatsapp.phone está vacío: el sitio se exporta sin enlaces de WhatsApp; configuralo con store.updateWhatsapp.",
+    );
+  }
   return warnings;
 }
 
@@ -812,6 +832,8 @@ export class AgentController {
         "store.updatePublicCopy",
         "store.updatePolicies",
         "store.updateLegalProfile",
+        "store.updateWhatsapp",
+        "store.updateNavigation",
         "category.create",
         "category.update",
         "category.setStatus",
@@ -1954,14 +1976,25 @@ export class AgentController {
           name: createOperation.name,
           slug: createOperation.slug ?? safeSlug(createOperation.name),
           ...(createOperation.baseUrl ? { baseUrl: createOperation.baseUrl } : {}),
-          ...(createOperation.brandName ? { brandName: createOperation.brandName } : {}),
+          // Sin brandName explícito, el clon heredaría la marca de la
+          // plantilla (identity.brandName, legalName y greeting de WhatsApp).
+          brandName: createOperation.brandName ?? createOperation.name,
           now: this.now().toISOString(),
         });
+        // Paridad con createProject del Studio: el clon no hereda los
+        // placeholders tipados de contacto de la plantilla; los campos no
+        // provistos quedan vacíos para que el readiness los reporte honestos.
+        // El teléfono, cuando viene, también configura WhatsApp (el canal no
+        // tiene otra forma de dejarlo operativo para el sitio exportado).
         base = StoreProjectV2Schema.parse({
           ...base,
           identity: {
             ...base.identity,
-            ...(createOperation.email === undefined ? {} : { email: createOperation.email }),
+            email: createOperation.email ?? "",
+            phone: createOperation.phone ?? "",
+          },
+          whatsapp: {
+            ...base.whatsapp,
             ...(createOperation.phone === undefined ? {} : { phone: createOperation.phone }),
           },
         });
@@ -2425,6 +2458,25 @@ export class AgentController {
               revisionAt: operation.changes.revisionAt ?? at,
             },
           });
+          break;
+        }
+        case "store.updateWhatsapp": {
+          // Filtrar undefined: con exactOptionalPropertyTypes un spread
+          // explícito de `phone: undefined` pisaría el campo y fallaría el
+          // schema (phone es string obligatorio).
+          const changes: Record<string, unknown> = {};
+          if (operation.phone !== undefined) changes.phone = operation.phone;
+          if (operation.greeting !== undefined) changes.greeting = operation.greeting;
+          if (operation.includeSku !== undefined) changes.includeSku = operation.includeSku;
+          applyRegistered({ type: "whatsapp.update", changes } as never, at);
+          break;
+        }
+        case "store.updateNavigation": {
+          const changes: Record<string, unknown> = {};
+          if (operation.mode !== undefined) changes.mode = operation.mode;
+          if (operation.catalogLabel !== undefined) changes.catalogLabel = operation.catalogLabel;
+          if (operation.items !== undefined) changes.items = operation.items;
+          applyRegistered({ type: "navigation.update", changes } as never, at);
           break;
         }
         case "category.create": {
