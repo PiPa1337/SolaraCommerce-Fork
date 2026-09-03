@@ -74,7 +74,7 @@ test("selecciona una variante, agrega al carrito y abre WhatsApp", async ({ page
   await expect(page.locator("[data-cart-count]").first()).toHaveText("2");
   await expect(page.locator("[data-solara-cart-open]").first()).toHaveAttribute(
     "aria-label",
-    "Carrito, 2 productos",
+    "Carrito 2",
   );
   await expect(page.locator("[data-cart-drawer]")).toHaveAttribute("aria-hidden", "false");
   await page.getByLabel("Nombre").fill("Malena Ortiz");
