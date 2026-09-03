@@ -79,6 +79,18 @@ async function openPrepararTab(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
 }
 
+/** El checklist tapea los pendientes a 12 con un toggle "+N más"
+ *  (GuidedOverview.tsx:89). Al desplegarlo quedan todos visibles, así que las
+ *  aserciones 1:1 (por ejemplo los assets, últimos en el orden del modelo)
+ *  operan sobre la lista completa. */
+async function expandPendingChecklist(page: Page): Promise<void> {
+  const toggle = page.locator(".guided-checklist__more");
+  if ((await toggle.count()) > 0) {
+    await toggle.click();
+    await expect(toggle).toHaveText("Mostrar menos");
+  }
+}
+
 /** Lee el proyecto autoservado en IndexedDB (receptor del payload del editor). */
 async function readStoredProject(page: Page, key: string): Promise<StoreProjectV1 | null> {
   return page.evaluate(
@@ -413,11 +425,12 @@ test("paridad tienda limpia: las imágenes de plantilla pendientes bloquean prod
     (asset) =>
       asset.name === "Imagen de plantilla" || asset.alt === "Imagen de ejemplo para reemplazar",
   ).length;
-  await expect(placeholderAssets).toHaveCount(Math.min(12, placeholderAssetCount ?? 0));
-  if ((placeholderAssetCount ?? 0) > 12) {
-    await expect(page.locator(".guided-checklist__more")).toHaveText(
-      `+${(placeholderAssetCount ?? 0) - 12} más`,
-    );
+  // El checklist tapea a 12 y los asset.* van al final del orden del modelo:
+  // desplegar la lista completa antes de contar (contrato GuidedOverview).
+  await expandPendingChecklist(page);
+  await expect(placeholderAssets).toHaveCount(placeholderAssetCount ?? 0);
+  if (readiness.pending > 12) {
+    await expect(page.locator(".guided-checklist__more")).toHaveText("Mostrar menos");
   } else {
     await expect(page.locator(".guided-checklist__more")).toHaveCount(0);
   }
@@ -592,12 +605,17 @@ test("paridad: una imagen de plantilla sigue pendiente si solo se corrige su alt
   });
   const broken = await reloadAndOpen(page, cleanStoreKey);
   await openPrepararTab(page);
+  await expandPendingChecklist(page);
   await expect(
     page.locator(
       '[data-testid="ui-guided-requirement"][data-requirement-id^="asset."][data-requirement-status="placeholder"]',
     ),
-  ).toHaveCount(Math.min(12, placeholderAssetCount ?? 0));
-  await expect(page.locator(".guided-checklist__more")).toHaveCount(0);
+  ).toHaveCount(placeholderAssetCount ?? 0);
+  if ((await page.locator('section.guided-checklist > ul > [data-testid="ui-guided-requirement"]').count()) > 12) {
+    await expect(page.locator(".guided-checklist__more")).toHaveText("Mostrar menos");
+  } else {
+    await expect(page.locator(".guided-checklist__more")).toHaveCount(0);
+  }
   expect(criticalCodes(broken)).toEqual(["template.placeholder"]);
   const outcome = exportOutcome(broken);
   expect(outcome.ok).toBe(false);

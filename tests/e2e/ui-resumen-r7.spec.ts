@@ -84,6 +84,17 @@ function requirement(page: Page, id: string) {
   return page.locator(`[data-testid="ui-guided-requirement"][data-requirement-id="${id}"]`);
 }
 
+/** El checklist tapea los pendientes a 12 con un toggle "+N más"
+ *  (GuidedOverview.tsx:89); al desplegarlo quedan todos visibles para las
+ *  aserciones de conteo 1:1 (los asset.* van al final del orden del modelo). */
+async function expandPendingChecklist(page: Page): Promise<void> {
+  const toggle = page.locator(".guided-checklist__more");
+  if ((await toggle.count()) > 0) {
+    await toggle.click();
+    await expect(toggle).toHaveText("Mostrar menos");
+  }
+}
+
 async function readProgress(page: Page): Promise<{ text: string; percent: number }> {
   await expect(page.locator(".guided-progress")).toBeVisible();
   return {
@@ -161,6 +172,19 @@ async function seedProjectRecord(page: Page, storeName: string, kind: SeedKind):
                 name: "tejido-estacion.png",
                 alt: "Tejido textil en tonos tierra",
               }));
+              // El seed placeholder trae 5 productos y 2 categorías con
+              // títulos sentinel ("Producto N", "Categoria N"): el intento
+              // "todo listo salvo el teléfono" también los reemplaza, porque
+              // el checklist los marca como pendientes.
+              project.products = project.products.map((product, index) => ({
+                ...product,
+                title: `Producto textil ${index + 1}`,
+                description: `Producto textil artesanal número ${index + 1}, tejido a mano.`,
+              }));
+              project.categories = project.categories.map((category, index) => ({
+                ...category,
+                title: `Colección textil ${index + 1}`,
+              }));
             }
             store.put({ ...record, project });
           });
@@ -235,6 +259,9 @@ test("completar un campo marca el requisito listo, el progreso avanza y Siguient
   expect(after.percent).toBe(Math.round(((beforeReady + 1) / beforeTotal) * 100));
 
   // El requisito completado figura como "listo" y salió de los pendientes.
+  // La tienda nace del seed placeholder (>12 pendientes): desplegar la lista
+  // completa antes del conteo.
+  await expandPendingChecklist(page);
   await expect(pendingRequirements(page)).toHaveCount(beforeTotal - beforeReady - 1);
   await expect(
     page.locator('[data-testid="ui-guided-requirement"][data-requirement-id="identity.whatsapp"]'),
@@ -271,6 +298,8 @@ test("el requisito pendiente de imagen se refleja en el Export y desbloquea al c
 
   // Las imágenes de plantilla están pendientes como placeholder y el audit del
   // exporter las bloquea como críticas (template.placeholder): 1:1 real.
+  // El checklist tapea a 12 y los asset.* van al final: desplegar la lista.
+  await expandPendingChecklist(page);
   const placeholderAsset = page.locator(
     '[data-testid="ui-guided-requirement"][data-requirement-id^="asset."]',
   );

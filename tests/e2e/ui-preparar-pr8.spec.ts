@@ -116,11 +116,26 @@ async function openPrepararTab(page: Page): Promise<void> {
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
   await expect(page.getByTestId("ui-guided-progress")).toBeVisible();
+  // Volver a la tab remonta el componente y resetea la expansión: desplegar
+  // siempre la lista completa para que las aserciones 1:1 alcancen a los
+  // pendientes que quedan fuera de la cota de 12 visibles.
+  await expandPendingChecklist(page);
 }
 
 /** Requisitos pendientes visibles (lista directa del checklist). */
 function pendingRequirements(page: Page) {
   return page.locator('section.guided-checklist > ul > [data-testid="ui-guided-requirement"]');
+}
+
+/** El checklist tapea los pendientes a 12 con un toggle "+N más"
+ *  (GuidedOverview.tsx:89); al desplegarlo quedan todos visibles (los asset.*
+ *  y el catálogo placeholder viven al final del orden del modelo). */
+async function expandPendingChecklist(page: Page): Promise<void> {
+  const toggle = page.locator(".guided-checklist__more");
+  if ((await toggle.count()) > 0) {
+    await toggle.click();
+    await expect(toggle).toHaveText("Mostrar menos");
+  }
 }
 
 function requirement(page: Page, id: string) {
@@ -317,6 +332,9 @@ test("journey: tienda limpia → completar Preparar por destinos → exportar pr
     "1 pendiente bloquea producción.",
     { timeout: 20_000 },
   );
+  // La tienda nace del seed placeholder (5 productos + 2 categorías + 1 asset
+  // de plantilla): hay más de 12 pendientes y openPrepararTab despliega la
+  // lista completa.
   await expect(pendingRequirements(page)).toHaveCount(
     initialProgress.total - initialProgress.ready,
   );
@@ -418,6 +436,39 @@ test("journey: tienda limpia → completar Preparar por destinos → exportar pr
     `assets.${templateAssets}.alt`,
     "Taza de cerámica esmaltada a mano.",
   );
+
+  // (8b) Catálogo placeholder: el seed trae 5 productos y 2 categorías con
+  // títulos sentinel ("Producto N", "Categoria N") que el checklist marca
+  // como pendientes; el journey los reemplaza por contenido real.
+  await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
+  for (let index = 1; index <= 5; index += 1) {
+    const row = page
+      .locator("tbody tr")
+      .filter({ hasText: `Producto ${index}` })
+      .first();
+    await row.getByRole("button", { name: "Editar" }).click();
+    const dialog = page.locator("dialog.product-dialog");
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("textbox", { name: "Título" }).fill(`Producto artesanal ${index}`);
+    await dialog
+      .getByRole("textbox", { name: "Descripción" })
+      .fill(`Pieza de cerámica artesanal número ${index}, esmaltada y horneada a mano.`);
+    await dialog.getByRole("button", { name: "Guardar cambios" }).click();
+    await expect(dialog).toHaveCount(0);
+  }
+  const categoryRenames = [
+    ["Categoria 1", "Cerámica editorial"],
+    ["Categoria 2", "Vasos y botellas"],
+  ] as const;
+  for (const [original, renamed] of categoryRenames) {
+    await page.getByRole("button", { name: `Editar ${original}` }).click();
+    const editor = page.locator("section.taxonomy-editor");
+    await expect(editor).toBeVisible();
+    await editor.getByLabel("Nombre").fill(renamed);
+    await editor.getByRole("button", { name: "Guardar cambios" }).click();
+    await expect(editor).toHaveCount(0);
+  }
 
   // (9) Preparar al final del journey: todos los requisitos cubiertos por el
   // modelo guiado quedan listos y el gate real ya no bloquea producción. Las

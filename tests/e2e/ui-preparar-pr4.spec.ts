@@ -232,6 +232,9 @@ test("cada scope pendiente de la tienda limpia aterriza en su tab con el pane ab
     if (id.startsWith("seo.")) return "seo";
     if (id.startsWith("asset.")) return "assets";
     if (id.startsWith("catalog.")) return "catalog";
+    // La tienda limpia nace del seed placeholder con productos y categorías
+    // genéricos: su scope mapea a Catálogo (guidedDestinations.ts:8).
+    if (id.startsWith("product.") || id.startsWith("category.")) return "catalog";
     return "overview";
   }
   const visibleIds = await pendingRequirements(page).evaluateAll((items) =>

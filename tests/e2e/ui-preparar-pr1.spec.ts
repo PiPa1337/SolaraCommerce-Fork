@@ -78,6 +78,26 @@ const PLACEHOLDER_PHRASES = [
   "imagen de ejemplo para reemplazar",
 ] as const;
 
+/** Sentinels exactos del modelo (catalog-modern-guidance.ts:72-91): valores
+ *  tipados que la plantilla siembra en clones y el checklist marca como
+ *  placeholder aunque el origen ya no sea seed "clean". La reimplementación
+ *  independiente los replica para no divergir del contrato vigente. */
+const PLACEHOLDER_SENTINELS: ReadonlySet<string> = new Set([
+  "email@gmail.com",
+  "15412345",
+  "direccion",
+  "razonsocial",
+  "descripcion corta de tu tienda.",
+  "descripcion seo de tu tienda.",
+  "coleccion 1",
+]);
+
+const PLACEHOLDER_SENTINEL_PATTERNS = [
+  /^producto \d+$/,
+  /^descripcion del producto \d+\.$/,
+  /^categoria \d+$/,
+] as const;
+
 let server: Server;
 let studioUrl: string;
 
@@ -232,9 +252,16 @@ function expectedStatus(project: ProjectRecord, target: string, resolved: unknow
   let raw = asRequirementValue(resolved);
   if (target === "whatsapp.phone") raw = raw === CATALOG_MODERN_PLACEHOLDER_PHONE ? "" : raw;
   if (!raw.trim()) return "missing";
+  const normalized = raw.trim().toLocaleLowerCase("es-AR");
+  if (
+    PLACEHOLDER_SENTINELS.has(normalized) ||
+    PLACEHOLDER_SENTINEL_PATTERNS.some((pattern) => pattern.test(normalized))
+  ) {
+    return "placeholder";
+  }
   if (
     isCleanTemplate(project) &&
-    PLACEHOLDER_PHRASES.some((phrase) => raw.trim().toLocaleLowerCase("es-AR").includes(phrase))
+    PLACEHOLDER_PHRASES.some((phrase) => normalized.includes(phrase))
   ) {
     return "placeholder";
   }
@@ -445,7 +472,17 @@ test("limpia: cada requisito refleja su dato real (missing/placeholder/ready) y 
   await expectChecklistUiMatches(page, clean);
 
   const ui = await readUiStatuses(page);
+  // La cota de 12 pendientes visibles (GuidedOverview.tsx:89) oculta el resto
+  // del orden del modelo: la matriz 1:1 sólo aplica a los requisitos que la
+  // UI renderiza (pendientes visibles + listos del detalle).
+  const hiddenByCap = new Set(
+    readiness.requirements
+      .filter((requirement) => requirement.status !== "ready")
+      .slice(12)
+      .map((requirement) => requirement.id),
+  );
   for (const [requirementId, expected] of expectedMatrix) {
+    if (hiddenByCap.has(requirementId)) continue;
     expect(ui.get(requirementId), `matriz: ${requirementId}`).toBe(expected);
   }
   expect(ui.get("identity.whatsapp"), "teléfono vacío en UI").toBe("missing");

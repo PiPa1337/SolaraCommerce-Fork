@@ -494,7 +494,14 @@ test("los ítems de requisito navegan a su scope", async ({ page }) => {
     await openGuidedTab(page);
   }
 
-  // Los recursos de la plantilla limpia (4 assets) navegan a Recursos.
+  // Los recursos de la plantilla limpia navegan a Recursos. El checklist
+  // tapea los pendientes a 12 y los asset.* van al final del orden del
+  // modelo: desplegar la lista completa antes de buscarlos.
+  const moreToggle = page.locator(".guided-checklist__more");
+  if ((await moreToggle.count()) > 0) {
+    await moreToggle.click();
+    await expect(moreToggle).toHaveText("Mostrar menos");
+  }
   const assetItem = page.locator('[data-requirement-id^="asset."]').first();
   await expect(assetItem).toHaveAttribute("data-requirement-status", "placeholder");
   await assetItem.getByRole("button", { name: /^Editar / }).click();

@@ -218,7 +218,10 @@ test("PR7-2: matriz del checklist: marca placeholder todo texto de plantilla sal
   const modelStatus = new Map(readiness.requirements.map((item) => [item.id, item.status]));
   expect(modelStatus.get("home.hero.title")).toBe("ready");
   expect(modelStatus.get("identity.description")).toBe("placeholder");
-  expect(modelStatus.get("seo.description")).toBe("ready");
+  // El seed placeholder siembra "Descripcion SEO de tu tienda." (sentinel
+  // exacto del modelo, catalog-modern-guidance.ts:78): el checklist lo marca
+  // placeholder, ya no "ready".
+  expect(modelStatus.get("seo.description")).toBe("placeholder");
   expect(modelStatus.get("identity.email")).toBe("missing");
   expect(modelStatus.get("identity.whatsapp")).toBe("missing");
   expect(modelStatus.get("home.hero.primary-cta")).toBe("ready");
@@ -233,7 +236,22 @@ test("PR7-2: matriz del checklist: marca placeholder todo texto de plantilla sal
   );
   expect(before.percent).toBe(readiness.percent);
 
-  // Cada pendiente persistido aparece con el estado que le corresponde.
+  // Cota visible del checklist (GuidedOverview.tsx:89): 12 pendientes + "+N más".
+  const pendingCount = readiness.pending;
+  await expect(page.locator(".guided-checklist > ul > li")).toHaveCount(Math.min(12, pendingCount));
+  if (pendingCount > 12) {
+    await expect(page.locator(".guided-checklist__more")).toHaveText(`+${pendingCount - 12} más`);
+  } else {
+    await expect(page.locator(".guided-checklist__more")).toHaveCount(0);
+  }
+
+  // Cada pendiente persistido aparece con el estado que le corresponde: la
+  // lista se despliega completa para alcanzar también los asset.* (últimos
+  // en el orden del modelo).
+  if (pendingCount > 12) {
+    await page.locator(".guided-checklist__more").click();
+    await expect(page.locator(".guided-checklist__more")).toHaveText("Mostrar menos");
+  }
   for (const item of readiness.requirements.filter((candidate) => candidate.status !== "ready")) {
     const row = requirement(page, item.id);
     await expect(row).toHaveAttribute("data-requirement-status", item.status);
@@ -250,12 +268,9 @@ test("PR7-2: matriz del checklist: marca placeholder todo texto de plantilla sal
   );
   await expect(requirement(page, "identity.email")).toContainText("Marca · Falta completar");
 
-  const pendingCount = readiness.pending;
-  await expect(page.locator(".guided-checklist > ul > li")).toHaveCount(Math.min(12, pendingCount));
-  await expect(page.locator(".guided-checklist__more")).toHaveCount(0);
-
-  // HALLAZGO: el CTA del hero ("Abrir búsqueda") es texto de plantilla pero
-  // no figura en la lista de isPlaceholder: el checklist lo da por listo.
+  // HALLAZGO: el CTA del hero ("Ver productos" en el seed placeholder) es
+  // texto de plantilla pero no figura en la lista de isPlaceholder: el
+  // checklist lo da por listo.
   await expect(page.getByTestId("ui-guided-next")).toContainText("Siguiente: Descripción de marca");
   await page.getByTestId("ui-guided-done").locator("summary").click();
   const cta = page.locator(

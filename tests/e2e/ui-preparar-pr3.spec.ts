@@ -84,6 +84,17 @@ function pendingRequirements(page: Page) {
   return page.locator('section.guided-checklist > ul > [data-testid="ui-guided-requirement"]');
 }
 
+/** El checklist tapea los pendientes a 12 con un toggle "+N más"
+ *  (GuidedOverview.tsx:89); al desplegarlo quedan todos visibles para las
+ *  aserciones 1:1 (los asset.* van al final del orden del modelo). */
+async function expandPendingChecklist(page: Page): Promise<void> {
+  const toggle = page.locator(".guided-checklist__more");
+  if ((await toggle.count()) > 0) {
+    await toggle.click();
+    await expect(toggle).toHaveText("Mostrar menos");
+  }
+}
+
 function doneRequirement(page: Page, id: string) {
   return page.locator(`[data-testid="ui-guided-done"] [data-requirement-id="${id}"]`);
 }
@@ -166,9 +177,14 @@ test("completar un requisito sube X/N, el percent real y el contenido de la regi
   expect(afterText).toContain(`${after.ready} de ${after.total} requisitos listos`);
 
   // Checklist: el requisito completado salió de pendientes y el conteo no
-  // duplica requisitos.
+  // duplica requisitos. La lista se despliega completa (cota de 12 visible).
+  await expandPendingChecklist(page);
   await expect(pendingRequirements(page)).toHaveCount(after.total - after.ready);
-  await expect(page.locator(".guided-checklist__more")).toHaveCount(0);
+  if (after.total - after.ready > 12) {
+    await expect(page.locator(".guided-checklist__more")).toHaveText("Mostrar menos");
+  } else {
+    await expect(page.locator(".guided-checklist__more")).toHaveCount(0);
+  }
   await expect(page.getByTestId("ui-guided-done").locator("summary")).toHaveText(
     `Requisitos listos (${after.ready})`,
   );
@@ -202,6 +218,9 @@ test("iconos y labels del checklist por estado, anunciados a lectores de pantall
   } else {
     await expect(page.locator(".guided-checklist__more")).toHaveCount(0);
   }
+  // Los asset.* viven al final del orden del modelo: desplegar la lista
+  // completa antes de aserciones por requisito.
+  await expandPendingChecklist(page);
 
   // Estados puntuales con sus labels reales (scope · estado):
   // - identity.email nace vacío en la plantilla → missing → "Falta completar";
