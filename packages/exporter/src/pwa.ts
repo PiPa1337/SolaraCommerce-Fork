@@ -134,6 +134,8 @@ export function buildWebManifest(project: StoreProjectV1): string {
 export interface ServiceWorkerOptions {
   runtimeCssPath?: string;
   runtimeJsPath?: string;
+  /** Revision del deployment-manifest: rota el CACHE_NAME en cada deploy. */
+  revision?: string;
   /** Contenido real de cada entrada para invalidar el caché aunque conserve la URL. */
   precacheContent?: ReadonlyMap<string, string | Uint8Array>;
 }
@@ -158,12 +160,17 @@ export function buildServiceWorker(
       : sha256Hex(options.precacheContent.get(url) as string | Uint8Array),
   ]);
   const version = sha256Hex(JSON.stringify(precacheFingerprint)).slice(0, 16);
+  const cacheName = options.revision
+    ? `solara-${options.revision}-${version}`
+    : `solara-${version}`;
   const precacheJson = JSON.stringify(precacheUrls);
   const offlinePath = route("/offline/index.html");
   const assetsPrefix = route("/assets/");
+  const prefixPattern = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const lines = [
-    `const CACHE_NAME = 'solara-${version}';`,
+    `const CACHE_NAME = '${cacheName}';`,
     `const PRECACHE_URLS = ${precacheJson};`,
+    `const RUNTIME_CACHEABLE = new RegExp('^${prefixPattern}/assets/|^${prefixPattern}/(search-index|catalog-index)\\.json$|^${prefixPattern}/offline(/|/index\\.html)?$');`,
     "self.addEventListener('install', (event) => {",
     "  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)));",
     "  self.skipWaiting();",
@@ -179,11 +186,12 @@ export function buildServiceWorker(
     "  if (event.request.method !== 'GET') return;",
     "  const url = new URL(event.request.url);",
     "  if (url.origin !== location.origin) return;",
+    "  const pathname = url.pathname;",
     "  event.respondWith(",
     "    caches.open(CACHE_NAME).then((cache) => cache.match(event.request)).then((cached) => {",
-    `      if (cached && url.pathname.startsWith('${assetsPrefix}')) return cached;`,
+    `      if (cached && pathname.startsWith('${assetsPrefix}')) return cached;`,
     "      return fetch(event.request).then((response) => {",
-    "        if (response.ok) {",
+    "        if (response.ok && RUNTIME_CACHEABLE.test(pathname)) {",
     "          const clone = response.clone();",
     "          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));",
     "        }",

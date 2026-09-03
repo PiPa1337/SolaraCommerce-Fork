@@ -2939,7 +2939,11 @@ function addDeploymentManifest(
   mode: ExportMode,
   publicAiContext: boolean,
   runtimeAssets: RuntimeAssetPaths,
-): DeploymentManifestV1 {
+): {
+  manifest: DeploymentManifestV1;
+  revision: string;
+  essentialFileHashes: Record<string, string>;
+} {
   assertPublicFileMap(files);
   const essentialPaths = [
     "index.html",
@@ -2949,7 +2953,7 @@ function addDeploymentManifest(
     "manifest.webmanifest",
     ...(mode === "production" ? ["_headers"] : []),
   ].filter((path) => files.has(path));
-  const essentialFileHashes = Object.fromEntries(
+  const essentialFileHashes: Record<string, string> = Object.fromEntries(
     essentialPaths.sort().map((path) => [path, fileHash(files.get(path) as string | Uint8Array)]),
   );
   const runtime = { css: runtimeAssets.css, js: runtimeAssets.js };
@@ -2968,7 +2972,7 @@ function addDeploymentManifest(
   };
   files.set("deployment-manifest.json", JSON.stringify(deploymentManifest, null, 2));
   assertPublicFileMap(files);
-  return deploymentManifest;
+  return { manifest: deploymentManifest, revision, essentialFileHashes };
 }
 
 function buildFiles(
@@ -3187,14 +3191,6 @@ ${
     [assetHref(publicProject, runtimeAssetsFull.css), cssFull],
     [assetHref(publicProject, runtimeAssetsFull.js), runtimeSource],
   ]);
-  files.set(
-    "sw.js",
-    buildServiceWorker(publicProject, {
-      runtimeCssPath: runtimeAssetsFull.css,
-      runtimeJsPath: runtimeAssetsFull.js,
-      precacheContent,
-    }),
-  );
   if (mode === "production") {
     const rss = buildRssFeed(publicProject);
     if (rss) files.set("feed.xml", rss);
@@ -3234,7 +3230,24 @@ ${
       }
     });
   assertPublicArtifactReferences(files, publicProject);
-  addDeploymentManifest(files, publicProject, mode, publicAiContext, runtimeAssetsFull);
+  const deployment = addDeploymentManifest(
+    files,
+    publicProject,
+    mode,
+    publicAiContext,
+    runtimeAssetsFull,
+  );
+  files.set(
+    "sw.js",
+    buildServiceWorker(publicProject, {
+      runtimeCssPath: runtimeAssetsFull.css,
+      runtimeJsPath: runtimeAssetsFull.js,
+      revision: deployment.revision,
+      precacheContent,
+    }),
+  );
+  deployment.essentialFileHashes["sw.js"] = fileHash(files.get("sw.js") as string | Uint8Array);
+  files.set("deployment-manifest.json", JSON.stringify(deployment.manifest, null, 2));
   return files;
 }
 
