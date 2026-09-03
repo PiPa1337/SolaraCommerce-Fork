@@ -300,18 +300,32 @@ async function failRendererChunk(page: Page): Promise<void> {
       // Los navegadores sin service workers ya permiten interceptar el chunk.
     }
   });
-  const rendererAsset = readdirSync(resolve("apps/studio/dist/assets")).find((asset) => {
-    if (!asset.endsWith(".js")) return false;
-    return readFileSync(resolve("apps/studio/dist/assets", asset), "utf8").includes(
-      "renderPreviewHtml",
-    );
-  });
-  if (!rendererAsset) throw new Error("No se encontró el chunk del renderer SEO.");
-  const rendererPath = `/assets/${rendererAsset}`;
-  let blocked = false;
+  // "renderPreviewHtml" aparece en varios chunks del build: el worker de
+  // preview lo invoca (t.renderPreviewHtml) y los chunks que exportan el
+  // módulo @solara/exporter lo declaran (xx as renderPreviewHtml). La
+  // auditoría SEO hace import("@solara/exporter") desde Seo-*.js, así que el
+  // bloqueo debe cubrir TODOS los chunks que lo contienen salvo el entry del
+  // index.html (romperlo impediría bootear el Studio). Sin flag de un solo
+  // disparo: un abort no consume el bloqueo del chunk del exporter.
+  const assetsDirectory = resolve("apps/studio/dist/assets");
+  const entryScripts = new Set(
+    [...readFileSync(resolve("apps/studio/dist/index.html"), "utf8").matchAll(/assets\/[^"']+\.js/g)].map(
+      (match) => `/${match[0]}`,
+    ),
+  );
+  const rendererPaths = new Set(
+    readdirSync(assetsDirectory)
+      .filter(
+        (asset) =>
+          asset.endsWith(".js") &&
+          !entryScripts.has(`/assets/${asset}`) &&
+          readFileSync(resolve(assetsDirectory, asset), "utf8").includes("renderPreviewHtml"),
+      )
+      .map((asset) => `/assets/${asset}`),
+  );
+  if (rendererPaths.size === 0) throw new Error("No se encontró el chunk del renderer SEO.");
   await page.route("**/assets/*.js", async (route) => {
-    if (!blocked && new URL(route.request().url()).pathname === rendererPath) {
-      blocked = true;
+    if (rendererPaths.has(new URL(route.request().url()).pathname)) {
       await route.abort("failed");
       return;
     }
