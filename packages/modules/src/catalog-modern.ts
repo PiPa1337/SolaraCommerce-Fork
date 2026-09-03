@@ -1469,6 +1469,7 @@ export const catalogProductDetail: ModuleDefinition<
       context.project.commerceTemplates.designFamily === "catalog-modern-v1"
         ? "Elegí talle y color"
         : copy.product.variant;
+    const monoVariant = product.variants.length === 1;
     return moduleRoot(
       "catalog-product-detail",
       context.section,
@@ -1481,9 +1482,9 @@ export const catalogProductDetail: ModuleDefinition<
           ${descriptionBeforePurchase}
           <form class="catalog-add-form" action="/carrito/" method="get" data-solara-add-form>
             <input type="hidden" name="product" value="${escapeAttribute(product.id)}">
-            <label for="catalog-variant-${escapeAttribute(context.section.id)}">${escapeHtml(variantLabel)}</label>
-            <select id="catalog-variant-${escapeAttribute(context.section.id)}" name="variant" data-variant-select required>${variants}</select>
-            ${optionControls ? `<div class="catalog-variant-options" aria-label="${escapeAttribute(copy.product.options)}">${optionControls}</div>` : ""}
+            <label for="catalog-variant-${escapeAttribute(context.section.id)}"${monoVariant ? " hidden" : ""}>${escapeHtml(variantLabel)}</label>
+            <select id="catalog-variant-${escapeAttribute(context.section.id)}" name="variant" data-variant-select required${monoVariant ? " hidden" : ""}>${variants}</select>
+            ${optionControls ? `<div class="catalog-variant-options" aria-label="${escapeAttribute(copy.product.options)}"${monoVariant ? " hidden" : ""}>${optionControls}</div>` : ""}
             <div class="catalog-quantity-row"><label for="catalog-quantity-${escapeAttribute(context.section.id)}">${escapeHtml(copy.product.quantity)}</label><input id="catalog-quantity-${escapeAttribute(context.section.id)}" name="quantity" type="number" min="1" max="99" value="1" inputmode="numeric"></div>
             <button class="catalog-product-add" type="submit" data-add-to-cart${canvasTextAttributes(canvasContext(context), "actionLabel", 100)}>${escapeHtml(context.settings.actionLabel)}</button>
             ${whatsappFallback ? `<noscript><style>[data-solara-store].catalog-modern .catalog-add-form .catalog-add-fallback{display:inline-flex}[data-solara-store].catalog-modern .catalog-add-form .catalog-product-add{display:none}</style><a class="catalog-add-fallback" href="${escapeAttribute(whatsappFallback)}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.product.askWhatsApp)}</a></noscript>` : ""}
@@ -1670,7 +1671,7 @@ export const catalogCategoryBento: ModuleDefinition<
               sizes: categoryBentoImageSizes(item.size, sourceItems.length),
               fallbackAlt: category.title,
             })
-          : `<span class="catalog-category-bento-fallback" aria-hidden="true">${escapeHtml(category.title.charAt(0))}</span>`;
+          : `<div class="solara-category-placeholder" aria-hidden="true">${escapeHtml(category.title.charAt(0).toUpperCase())}</div>`;
         const imageMarkup = imageId
           ? image.replace(
               "<img",

@@ -171,12 +171,9 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("i !== +!!count");
   });
 
-  it("mantiene el runtime por debajo del límite público de 64 KiB crudos", () => {
-    // El runtime queda en ~58 KiB crudos después del formulario dual
-    // (email + WhatsApp) y Trusted Types; se deja margen hasta 60 KiB.
-    // 2026-08-21: +34 B por la señal data-solara-ready (tests E2E); el techo
-    // del gate externo sigue siendo 64 KiB (storefront-runtime-budget.test.ts).
-    expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(64 * 1024);
+  it("mantiene el runtime por debajo del límite público de 68 KiB crudos", () => {
+    // Task 9: skeletons de búsqueda, contador visible, título con query y guards del índice suman ~450 B; tope 68 KiB autorizado por el brief.
+    expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(68 * 1024);
   });
 });
 
@@ -448,8 +445,9 @@ describe("carrito y checkout del drawer (A29)", () => {
   it("refleja el conteo en el badge y en el aria-label del trigger", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("count > 99");
     expect(STOREFRONT_RUNTIME_JS).toContain("99+");
-    expect(STOREFRONT_RUNTIME_JS).toContain(`\`\${label} vacío\``);
-    expect(STOREFRONT_RUNTIME_JS).toContain(`\`\${label}, \${count} productos\``);
+    expect(STOREFRONT_RUNTIME_JS).toContain('element.setAttribute("aria-label", `${label} ${count}`)');
+    expect(STOREFRONT_RUNTIME_JS).not.toContain("`${label} vacío`");
+    expect(STOREFRONT_RUNTIME_JS).not.toContain("`${label}, ${count} productos`");
   });
 
   it("marca el drawer cuando el carrito está vacío para compactar su estado", () => {
@@ -541,5 +539,40 @@ describe("fixmes del barrido A29 (index.ts)", () => {
   it("en /buscar/ el binding usa el input visible de la página, no el del diálogo", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain('document.querySelector("#solara-search-input")');
     expect(STOREFRONT_RUNTIME_JS).not.toContain('"#catalog-search-input, #solara-search-input"');
+  });
+});
+
+describe("ux pública: a11y carrito, búsqueda con estado y memo del índice (auditoría 2)", () => {
+  it("muestra 8 skeletons de búsqueda al cargar y los reemplaza al resolver", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("solara-skeleton");
+    expect(STOREFRONT_RUNTIME_JS).toContain("showSearchSkeletons()");
+    expect(STOREFRONT_RUNTIME_JS).toContain("length: 8");
+    const idxSkeletons = STOREFRONT_RUNTIME_JS.indexOf("const showSearchSkeletons");
+    const idxLoading = STOREFRONT_RUNTIME_JS.indexOf("showSearchSkeletons();");
+    const idxFetch = STOREFRONT_RUNTIME_JS.indexOf("fetch(`${baseHref}/search-index.json`");
+    expect(idxSkeletons).toBeGreaterThan(-1);
+    expect(idxLoading).toBeGreaterThan(idxSkeletons);
+    expect(idxFetch).toBeGreaterThan(idxLoading);
+    expect(STOREFRONT_RUNTIME_CSS).toContain(".solara-skeleton");
+    expect(STOREFRONT_RUNTIME_CSS).toContain("@keyframes solara-shimmer");
+    expect(STOREFRONT_RUNTIME_CSS).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.solara-skeleton[\s\S]*animation: none/,
+    );
+  });
+
+  it("anuncia el total recortado cuando hay más de 48 resultados", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("ranked.length > 48");
+    expect(STOREFRONT_RUNTIME_JS).toContain("`Mostrando 48 de ${ranked.length} resultados`");
+  });
+
+  it("refleja la query en el título de la página de búsqueda", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("document.title = `Búsqueda: ${query} | ${brand}`");
+  });
+
+  it("no invalida el índice del catálogo cuando el carrito está vacío", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("if (cart.length > 0) freshCatalog = null;");
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      '(pageType === "cart" || pageType === "checkout") && cart.length > 0',
+    );
   });
 });

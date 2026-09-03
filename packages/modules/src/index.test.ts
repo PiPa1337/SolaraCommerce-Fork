@@ -593,9 +593,26 @@ describe("official module system", () => {
     project.products = project.products.filter((product) => !root.productIds.includes(product.id));
     const html = renderSections(project, [section], { pageType: "home" });
     expect(html).toContain(
-      `<span class="catalog-category-bento-fallback" aria-hidden="true">${root.title.charAt(0)}</span>`,
+      `<div class="solara-category-placeholder" aria-hidden="true">${root.title.charAt(0).toUpperCase()}</div>`,
     );
     expect(html).not.toContain("catalog-category-bento-image");
+    expect(html).not.toContain("catalog-category-bento-fallback");
+  });
+
+  it("no emite el placeholder cuando la categoría del bento tiene imagen", () => {
+    const section = catalogModernStore.sections.find(
+      (candidate) => candidate.moduleId === "catalog-category-bento",
+    );
+    if (!section) throw new Error("Fixture sin bento de categorías");
+    const html = renderSections(catalogModernStore, [section], { pageType: "home" });
+    expect(html).toContain("catalog-category-bento-image");
+    expect(html).not.toContain("solara-category-placeholder");
+  });
+
+  it("estila el placeholder del bento bajo el atributo raíz del módulo", () => {
+    const styles = Object.values(MODULE_STYLE_BLOCKS).join("\n");
+    expect(styles).toContain("[data-solara-store].catalog-modern .solara-category-placeholder");
+    expect(styles).not.toContain("bento-fallback");
   });
 
   it("respeta showRating en las cards y expone el resumen de reseñas visible", () => {
@@ -700,6 +717,77 @@ describe("registro de módulos tipado", () => {
     ].map((definition) => definition.manifest.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toContain("catalog-hero");
+  });
+});
+
+describe("variante única oculta en fichas (auditoría 2)", () => {
+  const monoModernDetail = createModuleSection({
+    id: "section-mono-modern" as StoreSection["id"],
+    slot: "product",
+    moduleId: "catalog-product-detail",
+  });
+  const monoLegacyDetail = createModuleSection({
+    id: "section-mono-legacy" as StoreSection["id"],
+    slot: "product",
+    moduleId: "product-detail",
+  });
+
+  it("oculta label, select y pills de variante en el detalle moderno mono-variante", () => {
+    const project = structuredClone(catalogModernStore);
+    const product = project.products.find(
+      (candidate) => candidate.slug === "remera-esencial-de-algodon",
+    );
+    if (!product) throw new Error("Fixture sin remera esencial");
+    const only = product.variants[0];
+    if (!only) throw new Error("Fixture sin variantes");
+    product.variants = [only];
+    const html = renderSections(project, [monoModernDetail], {
+      pageType: "product",
+      product,
+    });
+    expect(html).toMatch(/<label for="catalog-variant-section-mono-modern"[^>]* hidden>/);
+    expect(html).toContain('data-variant-select required hidden>');
+    expect(html).toMatch(/class="catalog-variant-options"[^>]* hidden>/);
+  });
+
+  it("muestra el selector en el detalle moderno multi-variante", () => {
+    const product = catalogModernStore.products.find(
+      (candidate) => candidate.slug === "remera-esencial-de-algodon",
+    );
+    if (!product || product.variants.length < 2) throw new Error("Fixture sin multi-variante");
+    const html = renderSections(catalogModernStore, [monoModernDetail], {
+      pageType: "product",
+      product,
+    });
+    expect(html).not.toMatch(/<label for="catalog-variant-section-mono-modern"[^>]*hidden/);
+    expect(html).not.toContain("data-variant-select required hidden");
+    expect(html).not.toMatch(/class="catalog-variant-options"[^>]*hidden/);
+  });
+
+  it("oculta label y select de variante en el detalle legacy mono-variante", () => {
+    const project = structuredClone(referenceStore);
+    const product = project.products[0];
+    if (!product) throw new Error("Fixture sin producto");
+    const only = product.variants[0];
+    if (!only) throw new Error("Fixture sin variantes");
+    product.variants = [only];
+    const html = renderSections(project, [monoLegacyDetail], {
+      pageType: "product",
+      product,
+    });
+    expect(html).toMatch(/<label for="variant-section-mono-legacy"[^>]* hidden>/);
+    expect(html).toContain('data-variant-select required hidden>');
+  });
+
+  it("muestra el selector en el detalle legacy multi-variante", () => {
+    const product = referenceStore.products[0];
+    if (!product || product.variants.length < 2) throw new Error("Fixture sin multi-variante");
+    const html = renderSections(referenceStore, [monoLegacyDetail], {
+      pageType: "product",
+      product,
+    });
+    expect(html).not.toMatch(/<label for="variant-section-mono-legacy"[^>]*hidden/);
+    expect(html).not.toContain("data-variant-select required hidden");
   });
 });
 

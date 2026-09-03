@@ -742,10 +742,7 @@ function storefrontBoot(): void {
     });
     document.querySelectorAll<HTMLElement>("[data-solara-cart-open]").forEach((element) => {
       const label = element.dataset.cartLabel ?? "";
-      element.setAttribute(
-        "aria-label",
-        count === 0 ? `${label} vacío` : `${label}, ${count} productos`,
-      );
+      element.setAttribute("aria-label", `${label} ${count}`);
     });
 
     document.querySelectorAll<HTMLElement>("[data-cart-lines]").forEach((container) => {
@@ -1247,7 +1244,7 @@ function storefrontBoot(): void {
         return;
       }
       if (!form.reportValidity()) return;
-      freshCatalog = null;
+      if (cart.length > 0) freshCatalog = null;
       void reconcileCart().then((ok) => {
         if (!ok) {
           if (preview) {
@@ -1791,6 +1788,16 @@ function storefrontBoot(): void {
         node("p", text, { ...(className ? { class: className } : {}), ...(role ? { role } : {}) }),
       );
     };
+    const showSearchSkeletons = (): void => {
+      searchGrid.replaceChildren(
+        ...Array.from({ length: 8 }, () =>
+          node("article", undefined, {
+            class: "solara-search-result solara-skeleton",
+            "aria-hidden": "true",
+          }),
+        ),
+      );
+    };
     const validSearchEntry = (entry: SearchEntryWithTokens): boolean => {
       return (
         boundedRuntimeString(entry.title, 240, -1) &&
@@ -1841,13 +1848,15 @@ function storefrontBoot(): void {
     const query = new URLSearchParams(window.location.search).get("q") ?? "";
     searchInput.value = query;
     if (query) {
+      const brand = document.title.split(" | ").pop() ?? "";
+      document.title = `Búsqueda: ${query} | ${brand}`;
       document.querySelector('meta[name="robots"]')?.setAttribute("content", "noindex,follow");
       const terms = searchApi.normalizeSearchTokens(query);
       if (!terms.length || terms.some((t) => t.length < 2)) {
         showSearchMessage(s.queryTooShort);
       } else {
         const controller = new AbortController();
-        showSearchMessage(s.loading);
+        showSearchSkeletons();
         const searchIndexError =
           (copy as Record<string, Record<string, string>>).errors?.searchIndexLoad ??
           "No se pudo cargar el índice de búsqueda.";
@@ -1896,6 +1905,13 @@ function storefrontBoot(): void {
               }
               showSearchMessage(s.noResults);
               return;
+            }
+            if (ranked.length > 48) {
+              searchGrid.before(
+                node("p", `Mostrando 48 de ${ranked.length} resultados`, {
+                  class: "solara-search-summary",
+                }),
+              );
             }
             searchGrid.replaceChildren(
               ...ranked.slice(0, 48).map(({ entry }) => {
@@ -2178,7 +2194,7 @@ function storefrontBoot(): void {
     if (hasFeature("variants")) {
       document.querySelectorAll<HTMLElement>("[data-product]").forEach(syncVariant);
     }
-    if (pageType === "cart" || pageType === "checkout") {
+    if ((pageType === "cart" || pageType === "checkout") && cart.length > 0) {
       freshCatalog = null;
       void reconcileCart();
     }
@@ -2288,6 +2304,13 @@ export const STOREFRONT_RUNTIME_CSS = `
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+.solara-skeleton {
+  min-height: 10rem;
+  border-radius: 0.35rem;
+  background: var(--solara-surface);
+  animation: solara-shimmer 1.4s ease-in-out infinite;
 }
 
 [data-cart-drawer] {
@@ -2497,6 +2520,10 @@ export const STOREFRONT_RUNTIME_CSS = `
   to { transform: scaleX(1); }
 }
 
+@keyframes solara-shimmer {
+  50% { opacity: 0.45; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -2505,6 +2532,10 @@ export const STOREFRONT_RUNTIME_CSS = `
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+  }
+
+  .solara-skeleton {
+    animation: none;
   }
 
   [data-motion-root],

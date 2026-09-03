@@ -18,7 +18,8 @@ test("mantiene el runtime storefront dentro del presupuesto", () => {
     storefrontRuntimeJavascriptRaw: javascriptBytes,
     storefrontRuntimeCssRaw: cssBytes,
   });
-  expect(javascriptBytes).toBeLessThanOrEqual(64 * 1024);
+  // Task 9: skeletons de búsqueda, contador visible, título con query y guards del índice suman ~450 B; tope 68 KiB autorizado por el brief.
+  expect(javascriptBytes).toBeLessThanOrEqual(68 * 1024);
 
   const { files } = exportProject(catalogModernStore, { mode: "production" });
   const manifest = JSON.parse(String(files.get("deployment-manifest.json"))) as {

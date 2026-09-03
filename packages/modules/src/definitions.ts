@@ -1110,6 +1110,7 @@ export const productDetail: ModuleDefinition<
           `<a href="/productos/${escapeAttribute(product.slug)}/?variant=${escapeAttribute(variant.id)}">${escapeHtml(variant.title)}</a>`,
       )
       .join("");
+    const monoVariant = product.variants.length === 1;
     const whatsappFallback = buildWhatsAppInquiryLink(context, product);
     const compareAt =
       context.settings.showCompareAtPrice && firstVariant?.compareAtPrice
@@ -1133,8 +1134,8 @@ export const productDetail: ModuleDefinition<
           ${description}
           <form action="/carrito/" method="get" data-solara-add-form>
             <input type="hidden" name="product" value="${escapeAttribute(product.id)}">
-            <label for="variant-${escapeAttribute(context.section.id)}">${escapeHtml(copy.product.variant)}</label>
-            <select id="variant-${escapeAttribute(context.section.id)}" name="variant" data-variant-select required>${variants}</select>
+            <label for="variant-${escapeAttribute(context.section.id)}"${monoVariant ? " hidden" : ""}>${escapeHtml(copy.product.variant)}</label>
+            <select id="variant-${escapeAttribute(context.section.id)}" name="variant" data-variant-select required${monoVariant ? " hidden" : ""}>${variants}</select>
             <label for="quantity-${escapeAttribute(context.section.id)}">${escapeHtml(copy.product.quantity)}</label>
             <input id="quantity-${escapeAttribute(context.section.id)}" name="quantity" type="number" min="1" max="99" value="1" inputmode="numeric">
             <button type="submit" data-add-to-cart${canvasTextAttributes(canvas, "actionLabel", 100)}>${escapeHtml(context.settings.actionLabel)}</button>

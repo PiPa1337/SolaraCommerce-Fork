@@ -2241,7 +2241,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-category-bento-media { position: relative; overflow: hidden; aspect-ratio: 1; background: var(--catalog-surface); }
 [data-solara-store].catalog-modern .catalog-category-bento-image { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .78; transition: transform var(--solara-motion-normal) var(--solara-motion-easing); }
 [data-solara-store].catalog-modern .catalog-category-bento-item:hover .catalog-category-bento-image { transform: scale(1.02); }
-[data-solara-store].catalog-modern .catalog-category-bento-fallback { position: absolute; z-index: 0; inset: 0; display: grid; place-items: center; margin: 0; background: var(--catalog-surface); color: var(--catalog-ink); font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(3rem, 5vw, 4.5rem); font-weight: 500; letter-spacing: -.06em; line-height: 1; }
+[data-solara-store].catalog-modern .solara-category-placeholder { position: absolute; z-index: 0; inset: 0; display: grid; place-items: center; margin: 0; background: color-mix(in srgb, var(--catalog-ink) 7%, var(--catalog-surface)); color: var(--catalog-ink); font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(3rem, 5vw, 4.5rem); font-weight: 500; letter-spacing: -.06em; line-height: 1; }
 [data-solara-store].catalog-modern .catalog-category-bento-all { border-bottom: 1px solid currentColor; font-size: .82rem; text-decoration: none; }
 [data-solara-store].catalog-modern .catalog-testimonials-track { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(280px, 1fr); gap: calc(.8rem * var(--solara-space-scale, 1)); overflow-x: auto; overscroll-behavior-inline: contain; scroll-snap-type: x proximity; padding-bottom: .5rem; }
 [data-solara-store].catalog-modern .catalog-testimonials-track:focus-visible { outline: 2px solid var(--catalog-ink); outline-offset: 2px; }
@@ -3270,7 +3270,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-category-bento-item img {
   transition: transform var(--catalog-v2-motion-editorial) var(--catalog-v2-ease-out), filter var(--catalog-v2-motion-component) ease;
 }
-.cm.v2 .catalog-category-bento-fallback {
+.cm.v2 .solara-category-placeholder {
   font-size: calc(clamp(3rem, 5vw, 4.5rem) * var(--solara-type-scale, 1));
 }
 .cm.v2 .catalog-category-bento-item:hover,
@@ -3977,7 +3977,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     background: var(--catalog-paper);
     box-shadow: var(--catalog-v2-shadow-overlay), 0 0 0 100vmax color-mix(in srgb, var(--catalog-ink), transparent 50%);
   }
-  .cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
+  .cm.v2 .catalog-category-bento-item > span:not(.solara-category-placeholder) {
     max-width: calc(100% - .8rem);
     margin: .4rem;
     padding: .55rem .85rem;
@@ -4847,7 +4847,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     grid-template-columns: minmax(0, 1fr);
     gap: 1.5rem;
   }
-  .cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
+  .cm.v2 .catalog-category-bento-item > span:not(.solara-category-placeholder) {
     max-width: calc(100% - .8rem);
     margin: .4rem;
     padding: .55rem .85rem;
@@ -4921,7 +4921,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-category-bento-grid {
     gap: .5rem;
   }
-  .cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
+  .cm.v2 .catalog-category-bento-item > span:not(.solara-category-placeholder) {
     max-width: calc(100% - .8rem);
     margin: .4rem;
     padding: .55rem .85rem;
@@ -5021,7 +5021,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
 }
 @media (max-width: 900px) {
-  .cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
+  .cm.v2 .catalog-category-bento-item > span:not(.solara-category-placeholder) {
     max-width: calc(100% - .8rem);
     margin: .4rem;
     padding: .55rem .85rem;
@@ -5038,7 +5038,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
 }
 @media (max-width: 339px) {
-  .cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback) {
+  .cm.v2 .catalog-category-bento-item > span:not(.solara-category-placeholder) {
     max-width: calc(100% - .6rem);
     margin: .3rem;
     padding: .55rem .85rem;
@@ -5444,7 +5444,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-hero-media,
   .cm.v2 .catalog-product-media,
   .cm.v2 .catalog-category-bento-item,
-  .cm.v2 .catalog-category-bento-item > span:not(.catalog-category-bento-fallback),
+  .cm.v2 .catalog-category-bento-item > span:not(.solara-category-placeholder),
   .cm.v2 .catalog-product-gallery-main,
   .cm.v2 .catalog-product-gallery-thumbs button,
   .cm.v2 .solara-category-hero img,
