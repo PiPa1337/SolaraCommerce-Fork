@@ -413,7 +413,7 @@ export function buildWhatsAppMessage(
   for (const line of merged.values()) {
     if (items.length < 25) {
       const variant = line.variantTitle.trim();
-      const showVariant = variant !== "" && variant.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() !== "unica";
+      const showVariant = variant !== "" && !/^(unic[oa])$/.test(variant.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase());
       items.push(`- ${line.quantity}x ${line.title}${showVariant ? ` (${variant})` : ""}`);
     } else hidden += 1;
   }

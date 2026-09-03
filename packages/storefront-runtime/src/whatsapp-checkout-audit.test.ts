@@ -646,6 +646,20 @@ describe("AUDITORIA A2-P1: mensaje whatsapp compacto", () => {
     expect(msg).not.toContain("(Unica)");
     expect(msg).not.toContain("()");
   });
+  it("variante Único (masculino) omitida y variante compuesta Única 30x40 visible", () => {
+    const lines = [
+      makeProduct({ variantId: "v1", title: "Producto A", variantTitle: "Único" }),
+      makeProduct({ variantId: "v2", title: "Producto B", variantTitle: "UNICO" }),
+      makeProduct({ variantId: "v3", title: "Producto C", variantTitle: "Única 30x40" }),
+    ];
+    const msg = buildWhatsAppMessage(makeStore() as any, lines, compactCustomer);
+    expect(msg).toContain("1x Producto A");
+    expect(msg).toContain("1x Producto B");
+    expect(msg).toContain("1x Producto C (Única 30x40)");
+    expect(msg).not.toContain("(Único)");
+    expect(msg).not.toContain("(UNICO)");
+    expect(msg).not.toContain("()");
+  });
   it("cap de 25 renglones: primeros 25, renglon de excedentes y total completo", () => {
     const lines = bigCart(30).map((line) => ({ ...line, quantity: 1, unitPrice: 1000 }));
     const msg = buildWhatsAppMessage(makeStore() as any, lines, compactCustomer);
