@@ -72,7 +72,7 @@ test("mantiene la foundation V2 dentro de un presupuesto público explícito", (
   // ~6 KiB; la reducción real requiere granularizar styles por familia
   // (Task 4 del plan) y quedó como débito documentado.
   // 2026-09-03 (task 11): eliminado el css dark muerto (decisión F4); medición
-  // real 211.265 B, tope baja de 220 a 212 KiB con margen ~5,8 KiB.
+  // real 211.179 B, tope baja de 220 a 212 KiB con margen ~5,9 KiB.
   expect(cssBytes).toBeGreaterThan(0);
   expect(javascriptBytes).toBeGreaterThan(0);
   expect(cssBytes).toBeLessThanOrEqual(212 * 1024);
