@@ -1809,3 +1809,54 @@ describe("pattern de teléfono válido en regex v-mode (auditoría #9)", () => {
     expect(() => new RegExp(pattern, "v")).not.toThrow();
   });
 });
+
+describe("nombre accesible del carrito coincide con el texto visible (axe label-content-name)", () => {
+  function headerCartButton(html: string): string {
+    const start = html.indexOf('<button class="catalog-cart-link"');
+    if (start === -1) throw new Error("El header no renderiza el botón del carrito");
+    const end = html.indexOf("</button>", start);
+    return html.slice(start, end + "</button>".length);
+  }
+
+  it("el header moderno mantiene un espacio visible entre el label y el contador", () => {
+    const headerSection = createModuleSection({
+      id: "section-modern-header-axe-cart" as StoreSection["id"],
+      slot: "header",
+      moduleId: "catalog-header",
+    });
+    const html = renderSections(catalogModernStore, [headerSection], { pageType: "home" });
+    const button = headerCartButton(html);
+
+    // El runtime arma aria-label como `${data-cart-label} ${count}`; axe exige
+    // que el texto visible normalizado esté contenido en ese nombre accesible.
+    const label = button.match(/data-cart-label="([^"]*)"/)?.[1] ?? "";
+    const visible = button
+      .slice(button.indexOf(">") + 1)
+      .replace(/<[^>]*>/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    expect(`${label} 0`).toBe("Carrito 0");
+    expect(visible).toBe("Carrito 0");
+    // El espacio debe ser un nodo de texto real entre los inline elements.
+    expect(button).toContain("</span> <strong");
+  });
+
+  it("el trigger legacy ya separa label y contador con un nodo de texto", () => {
+    const headerSection = referenceStore.sections.find(
+      (candidate) => candidate.moduleId === "editorial-header",
+    );
+    if (!headerSection) throw new Error("Fixture legacy sin header editorial");
+    const html = renderSections(referenceStore, [headerSection], { pageType: "home" });
+    const start = html.indexOf('<button class="solara-cart-trigger"');
+    if (start === -1) throw new Error("El header legacy no renderiza el botón del carrito");
+    const end = html.indexOf("</button>", start);
+    const button = html.slice(start, end + "</button>".length);
+    const visible = button
+      .slice(button.indexOf(">") + 1)
+      .replace(/<[^>]*>/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    expect(visible).toBe("Carrito 0");
+  });
+});

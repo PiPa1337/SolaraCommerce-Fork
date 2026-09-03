@@ -1790,12 +1790,18 @@ function storefrontBoot(): void {
     };
     const showSearchSkeletons = (): void => {
       searchGrid.replaceChildren(
-        ...Array.from({ length: 8 }, () =>
-          node("article", undefined, {
-            class: "solara-search-result solara-skeleton",
+        ...Array.from({ length: 8 }, () => {
+          const card = node("article", undefined, {
+            class: "solara-search-result",
             "aria-hidden": "true",
-          }),
-        ),
+          });
+          card.append(
+            node("div", undefined, { class: "solara-skeleton solara-skeleton--media" }),
+            node("div", undefined, { class: "solara-skeleton solara-skeleton--line" }),
+            node("div", undefined, { class: "solara-skeleton solara-skeleton--line" }),
+          );
+          return card;
+        }),
       );
     };
     const validSearchEntry = (entry: SearchEntryWithTokens): boolean => {
@@ -2307,10 +2313,26 @@ export const STOREFRONT_RUNTIME_CSS = `
 }
 
 .solara-skeleton {
-  min-height: 10rem;
   border-radius: 0.35rem;
   background: var(--solara-surface);
   animation: solara-shimmer 1.4s ease-in-out infinite;
+}
+
+/* El skeleton replica la card real (imagen aspect-ratio 1 + líneas de texto)
+   para que la carga de resultados no produzca saltos de layout. */
+.solara-skeleton--media {
+  aspect-ratio: 1;
+}
+
+.solara-skeleton--line {
+  height: 1.5rem;
+  margin-top: 0.75rem;
+}
+
+.solara-skeleton--line + .solara-skeleton--line {
+  height: 1.1rem;
+  margin-top: 0.5rem;
+  width: 62%;
 }
 
 [data-cart-drawer] {

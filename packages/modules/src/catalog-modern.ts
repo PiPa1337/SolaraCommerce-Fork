@@ -342,7 +342,7 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
       context.project.siteShell.cart &&
       (context.project.commerceTemplates.cart.enabled ||
         context.project.commerceTemplates.checkout.enabled)
-        ? `<button class="catalog-cart-link" type="button" data-solara-cart-open data-open-cart data-cart-label="${escapeAttribute(context.settings.cartLabel || copy.navigation.cart)}" aria-controls="solara-cart" aria-expanded="false"><span${canvasTextAttributes(canvasContext(context), "cartLabel", 80)}>${escapeHtml(context.settings.cartLabel || copy.navigation.cart)}</span><strong data-solara-cart-count data-cart-count aria-live="polite">0</strong></button>`
+        ? `<button class="catalog-cart-link" type="button" data-solara-cart-open data-open-cart data-cart-label="${escapeAttribute(context.settings.cartLabel || copy.navigation.cart)}" aria-controls="solara-cart" aria-expanded="false"><span${canvasTextAttributes(canvasContext(context), "cartLabel", 80)}>${escapeHtml(context.settings.cartLabel || copy.navigation.cart)}</span> <strong data-solara-cart-count data-cart-count aria-live="polite">0</strong></button>`
         : "";
     return moduleRoot(
       "catalog-header",

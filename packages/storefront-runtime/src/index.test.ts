@@ -560,6 +560,16 @@ describe("ux pública: a11y carrito, búsqueda con estado y memo del índice (au
     );
   });
 
+  it("el skeleton de búsqueda replica la estructura de la card para evitar CLS", () => {
+    // Piezas: bloque de imagen cuadrado (aspect-ratio 1) + líneas de texto.
+    expect(STOREFRONT_RUNTIME_JS).toContain("solara-skeleton--media");
+    expect(STOREFRONT_RUNTIME_JS).toContain("solara-skeleton--line");
+    expect(STOREFRONT_RUNTIME_CSS).toMatch(/\.solara-skeleton--media \{[^}]*aspect-ratio: 1/);
+    expect(STOREFRONT_RUNTIME_CSS).toMatch(/\.solara-skeleton--line \{[^}]*height:/);
+    // El bloque plano ya no fuerza una altura mínima propia: la da la estructura.
+    expect(STOREFRONT_RUNTIME_CSS).not.toMatch(/\.solara-skeleton \{[^}]*min-height/);
+  });
+
   it("anuncia el total recortado cuando hay más de 48 resultados", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("ranked.length > 48");
     expect(STOREFRONT_RUNTIME_JS).toContain("`Mostrando 48 de ${ranked.length} resultados`");
