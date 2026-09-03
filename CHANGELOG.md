@@ -1,3 +1,11 @@
+### Ajustes de tests tras la suite E2E completa (2026-09-03)
+
+- **quality-forge-visual**: Chromium cancela de forma especulativa (`net::ERR_ABORTED`) el fetch del preload scanner sobre el fallback del `<picture>` del LCP cuando una navegación previa dejó el recurso en la memory cache; el HTML servido es correcto (el espejo de preload por `media` de `904af642` elige exactamente la fuente del `<picture>`, sin doble descarga). El spec tolera ese único caso, anclado a los URLs declarados en los `<link rel=preload as=image>` del documento servido y sólo con `net::ERR_ABORTED`; cualquier otro fallo de red sigue fallando (`62f72ec5`).
+- **exported-store**: la aserción del aria-label del trigger del carrito pasa al contrato T9 vigente (`Carrito 2`, `packages/storefront-runtime/src/index.ts:745`); el flujo variante → carrito → WhatsApp queda verificado completo (`e506cb28`).
+- **axe-site**: timeout explícito 240s local / 300s CI; la auditoría (3 fixtures × 3 viewports × ~7 rutas) quedó corta de 120s bajo la carga de la suite completa, sin hallazgos axe reales (`580efa6c`).
+- **ui-sweep-a28 (C10)**: con la paginación numérica de T10 el spec mide el radio sobre el chip `span[aria-current="page"]` en vez del único span histórico (`af2693f3`).
+- **ui-tema-t5**: consumidores de `var(--solara-radius)` declarados en el skin moderno: 37 → 36, por el retiro del radio del panel del menú hamburguesa al pasar a pantalla completa (`be9dceb6`) (`8da2181a`).
+
 ### Resolución de la auditoría del sitio exportado: Cloudflare, PWA, imágenes, WhatsApp y a11y (2026-09-03)
 
 Cierre de `docs/AUDITORIA.md` (auditorías #1 y #2 sobre la exportación de RM
