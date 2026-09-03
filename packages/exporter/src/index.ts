@@ -326,6 +326,7 @@ export {
 export { breadcrumbData, productStructuredData, storeStructuredData };
 
 import { auditProject, auditReport } from "./audit.js";
+import { buildCfWorkerSource } from "./cf-worker.js";
 import {
   buildCatalogIndex,
   buildImageSitemap,
@@ -2775,7 +2776,7 @@ function externalHosts(project: StoreProjectV1): string[] {
 
 function isAllowedPublicPath(path: string): boolean {
   if (!path || /^[\\/]|^[A-Za-z]:[\\/]|(^|[\\/])\.\.(?:[\\/]|$)/.test(path)) return false;
-  return /^(?:index\.html|404\.html|[A-Za-z0-9._+-]+(?:\/[A-Za-z0-9._+-]+)*\/index\.html|assets\/[A-Za-z0-9._+-]+|icons\/icon-(?:192|512)\.png|offline\/index\.html|manifest\.webmanifest|sw\.js|favicon\.ico|robots\.txt|sitemap\.xml|image-sitemap\.xml|video-sitemap\.xml|google-merchant\.xml|ai-context\.json|llms(?:-full)?\.txt|search-index\.json|catalog-index\.json|feed\.xml|_headers|_redirects|\.well-known\/security\.txt|deployment-manifest\.json)$/.test(
+  return /^(?:index\.html|404\.html|[A-Za-z0-9._+-]+(?:\/[A-Za-z0-9._+-]+)*\/index\.html|assets\/[A-Za-z0-9._+-]+|icons\/icon-(?:192|512)\.png|offline\/index\.html|manifest\.webmanifest|sw\.js|favicon\.ico|robots\.txt|sitemap\.xml|image-sitemap\.xml|video-sitemap\.xml|google-merchant\.xml|ai-context\.json|llms(?:-full)?\.txt|search-index\.json|catalog-index\.json|feed\.xml|_headers|_worker\.js|_redirects|\.well-known\/security\.txt|deployment-manifest\.json)$/.test(
     path,
   );
 }
@@ -2954,7 +2955,7 @@ function addDeploymentManifest(
     runtimeAssets.js.slice(1),
     "sw.js",
     "manifest.webmanifest",
-    ...(mode === "production" ? ["_headers"] : []),
+    ...(mode === "production" ? ["_headers", "_worker.js"] : []),
   ].filter((path) => files.has(path));
   const essentialFileHashes: Record<string, string> = Object.fromEntries(
     essentialPaths.sort().map((path) => [path, fileHash(files.get(path) as string | Uint8Array)]),
@@ -3164,6 +3165,10 @@ ${
   Cache-Control: public, max-age=900, must-revalidate
   Content-Type: application/rss+xml; charset=utf-8
 `,
+    );
+    files.set(
+      "_worker.js",
+      buildCfWorkerSource({ canonicalOrigin: normalizeBaseUrl(publicProject.baseUrl) }),
     );
   }
   // PWA: manifest y service worker para instalación y cache offline.
