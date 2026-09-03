@@ -3,8 +3,8 @@
  * Contrato de 4 capas:
  * - funcional: la paleta servida es siempre la del usuario (light). Ni el modo
  *   auto ni un colorMode "dark" declarado en el proyecto cambian los tokens;
- *   el CSS exportado no contiene media query de prefers-color-scheme ni
- *   override [data-color-mode="dark"];
+ *   el CSS exportado no contiene media query de prefers-color-scheme, ni
+ *   override [data-color-mode="dark"], ni color-scheme dark;
  * - auto-feedback: el select Modo mantiene la opción Oscuro deshabilitada con
  *   el hint conectado por aria-describedby;
  * - datos: el valor llega a project.theme.colorMode (IndexedDB) y al atributo
@@ -340,10 +340,12 @@ test("estabilidad light: el sitio exportado con colorMode dark mantiene la palet
   const css = exportedCss(darkProject);
 
   // data-color-mode sigue presente en el HTML (incluido "dark") y el <html>
-  // conserva data-theme="dark"; la paleta en cambio no cambia.
+  // conserva data-theme="dark" como hook heredado sin consumidor; la paleta y
+  // el color-scheme en cambio no cambian.
   expect(html).toContain('data-color-mode="dark"');
   expect(html).toContain('data-theme="dark"');
   expectNoDarkCss(css.replaceAll(/\\+(?=")/g, ""));
+  expect(css).not.toContain("color-scheme:dark");
 
   const exported = exportProject(darkProject, { mode: "draft" });
   const siteServer = await startExportedServer(exported.files);
@@ -351,11 +353,11 @@ test("estabilidad light: el sitio exportado con colorMode dark mantiene la palet
     await page.emulateMedia({ colorScheme: "dark" });
     await page.goto(siteServer.url);
     await page.locator(".solara-page").waitFor({ state: "attached" });
-    // La paleta servida es la clara del proyecto; el color-scheme del root
-    // sigue el colorMode declarado pero ya no arrastra tokens dark.
+    // La paleta y el color-scheme servidos son los claros del proyecto:
+    // colorMode ya no arrastra ni tokens ni color-scheme dark (decisión f4).
     await expect
-      .poll(() => servedTheme(page)().then((theme) => theme.background), { timeout: 15_000 })
-      .toBe(THEME_BACKGROUND);
+      .poll(() => servedTheme(page)(), { timeout: 15_000 })
+      .toEqual({ background: THEME_BACKGROUND, colorScheme: "light" });
     await expect
       .poll(servedCatalogBackground(page), { timeout: 15_000 })
       .toBe(THEME_BACKGROUND_RGB);

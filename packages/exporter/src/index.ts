@@ -798,7 +798,6 @@ function themeCss(
   if (cached) return cached;
   const t = project.theme;
   const { colors, typography, spacingScale, radius, container } = t;
-  const rootColorScheme = t.colorMode === "dark" ? "dark" : "light";
 
   const lhTight = typography.lineHeightTight ?? 1.15;
   const lhBody = typography.lineHeightBody ?? 1.6;
@@ -826,7 +825,7 @@ function themeCss(
 
   const result = `
 :root {
-  color-scheme: ${rootColorScheme};
+  color-scheme: light;
   --solara-background: ${colors.background};
   --solara-surface: ${colors.surface};
   --solara-text: ${colors.text};
@@ -864,8 +863,6 @@ function themeCss(
 
 * { box-sizing: border-box; }
 html { background: var(--solara-background); color: var(--solara-text); }
-html[data-theme="dark"] { color-scheme: dark; }
-html[data-theme="light"] { color-scheme: light; }
 body { margin: 0; min-width: 0; font-family: var(--solara-font-body); line-height: var(--solara-line-height-body); }
 ${fontCssFor(typography.display, typography.body, transport, fontPathOverrides)}
 img { display: block; max-width: 100%; height: auto; }

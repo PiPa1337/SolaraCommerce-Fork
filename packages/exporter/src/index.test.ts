@@ -427,7 +427,8 @@ describe("exporter", () => {
     expect(css).not.toContain(".solara-dark-toggle");
     expect(css).not.toContain("color-scheme: light dark");
     expect(css).not.toContain("data-color-mode");
-    expect(css).toContain("color-scheme:dark");
+    expect(css).not.toContain("color-scheme:dark");
+    expect(css).toContain(":root{color-scheme:light");
   });
 
   it("no emite el css dark muerto por la decision f4", () => {
@@ -443,22 +444,24 @@ describe("exporter", () => {
     expect(home).toContain('data-color-mode="light"');
   });
 
-  it("consume data-theme del html con color-scheme en el CSS exportado", () => {
+  it("con colorMode dark el sitio exportado es identico al light (decision f4)", () => {
     const darkProject = {
       ...referenceStore,
       theme: { ...referenceStore.theme, colorMode: "dark" },
     } as typeof referenceStore;
+    const darkHtml = String(exportProject(darkProject, { mode: "draft" }).files.get("index.html"));
+    // El atributo heredado persiste en el HTML (traza T15) pero ya no consume
+    // color-scheme dark: el CSS exportado es identico al de un sitio light.
+    expect(darkHtml).toContain('data-theme="dark"');
     const darkCss = String(
       runtimeAsset(exportProject(darkProject, { mode: "draft" }).files, "css"),
     );
-    const darkHtml = String(exportProject(darkProject, { mode: "draft" }).files.get("index.html"));
-    expect(darkHtml).toContain('data-theme="dark"');
-    expect(darkCss).toContain('html[data-theme="dark"]{color-scheme:dark}');
-
     const lightCss = String(
       runtimeAsset(exportProject(referenceStore, { mode: "draft" }).files, "css"),
     );
-    expect(lightCss).toContain('html[data-theme="light"]{color-scheme:light}');
+    expect(darkCss).toBe(lightCss);
+    expect(darkCss).not.toContain("color-scheme:dark");
+    expect(darkCss).toContain(":root{color-scheme:light");
   });
 
   it("usa el mismo árbol semántico de módulos en preview y home exportado", () => {
