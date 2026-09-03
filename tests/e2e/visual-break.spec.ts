@@ -6,6 +6,11 @@ import type { StoreProjectV1 } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 
+// Cada test exporta el sitio y captura pantallas por viewport: con la suite
+// completa corriendo en 8 workers el default de 30s flaquea por contención
+// (mismo tratamiento que axe-site y oversize-snapshot).
+test.setTimeout(120_000);
+
 const VIEWPORTS = [
   { w: 320, h: 800, name: "320" },
   { w: 360, h: 800, name: "360" },
