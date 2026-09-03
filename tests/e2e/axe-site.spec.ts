@@ -8,7 +8,11 @@ import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixtur
 import { referenceStore } from "@solara/project-schema/fixture";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 
-test.setTimeout(process.env.CI ? 180_000 : 120_000);
+// La auditoría recorre 3 fixtures × 3 viewports × ~7 rutas: bajo la carga de
+// la suite completa (8 workers) un solo timeout de 120s quedó corto (el retry
+// pasaba en ~110s). El timeout explícito cubre el peor caso observado con
+// margen, mismo criterio que oversize-snapshot (f74740c7).
+test.setTimeout(process.env.CI ? 300_000 : 240_000);
 
 const projects = {
   reference: referenceStore,
