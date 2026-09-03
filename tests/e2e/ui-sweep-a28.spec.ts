@@ -145,7 +145,9 @@ test("C1: el toggle de carrito legacy declara aria-expanded, abre el drawer y ci
   const trigger = page.locator("[data-solara-cart-open]").first();
   const drawer = page.locator("[data-cart-drawer]");
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
-  await expect(trigger).toHaveAttribute("aria-label", "Carrito vacío");
+  // Contrato T9: el aria-label del trigger es "Carrito N" (N = líneas), ya no
+  // "Carrito vacío" (storefront-runtime:744-745).
+  await expect(trigger).toHaveAttribute("aria-label", "Carrito 0");
   await expect(trigger.locator("[data-cart-count]")).toHaveText("0");
   await expect(drawer).toHaveAttribute("aria-hidden", "true");
   await expect(drawer).toHaveAttribute("inert", "");
@@ -195,7 +197,7 @@ test("C2: agregar al carrito legacy crea la línea, actualiza conteo/totales y p
   const trigger = page.locator("[data-solara-cart-open]").first();
   await expect(drawer).toHaveAttribute("data-open", "true");
   await expect(trigger.locator("[data-cart-count]")).toHaveText("2");
-  await expect(trigger).toHaveAttribute("aria-label", "Carrito, 2 productos");
+  await expect(trigger).toHaveAttribute("aria-label", "Carrito 2");
   const line = drawer.locator(".solara-cart-line").first();
   await expect(line).toContainText("Pieza de escala 10");
   await expect(line).toContainText("Natural");

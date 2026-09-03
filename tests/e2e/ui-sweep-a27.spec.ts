@@ -131,7 +131,9 @@ test("C1: el toggle de carrito abre el drawer, refleja aria-expanded y devuelve 
   const toggle = page.locator("button[data-solara-cart-open]");
   const drawer = page.locator("[data-cart-drawer]");
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
-  await expect(toggle).toHaveAttribute("aria-label", "Carrito vacío");
+  // Contrato T9: el aria-label del trigger es "Carrito N" (N = líneas), ya no
+  // "Carrito vacío" (storefront-runtime:744-745).
+  await expect(toggle).toHaveAttribute("aria-label", "Carrito 0");
   await expect(toggle.locator("[data-cart-count]")).toHaveText("0");
   await expect(drawer).toHaveAttribute("aria-hidden", "true");
 
@@ -179,7 +181,7 @@ test("C2: agregar al carrito crea la línea, actualiza contador y subtotales con
   const drawer = page.locator("[data-cart-drawer]");
   await expect(drawer).toHaveAttribute("data-open", "true");
   await expect(toggle.locator("[data-cart-count]")).toHaveText("2");
-  await expect(toggle).toHaveAttribute("aria-label", "Carrito, 2 productos");
+  await expect(toggle).toHaveAttribute("aria-label", "Carrito 2");
   const line = drawer.locator(".solara-cart-line").first();
   await expect(line).toContainText("Remera esencial de algodón");
   await expect(line).toContainText("Negro / S");
@@ -209,7 +211,7 @@ test("C2: agregar al carrito crea la línea, actualiza contador y subtotales con
 
   await drawer.locator("[data-cart-remove]").first().click();
   await expect(toggle.locator("[data-cart-count]")).toHaveText("0");
-  await expect(toggle).toHaveAttribute("aria-label", "Carrito vacío");
+  await expect(toggle).toHaveAttribute("aria-label", "Carrito 0");
   await expect(drawer.locator("[data-cart-lines]")).toContainText("Tu carrito está vacío");
 });
 
