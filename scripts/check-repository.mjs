@@ -45,6 +45,9 @@ const zipExemptPaths = new Set([
   // público, no introduce compresión en el producto.
   "scripts/public-storefront-budget.test.ts",
   "scripts/storefront-runtime-budget.test.ts",
+  // PNG requiere deflate zlib en IDAT por especificación; no es formato ZIP.
+  "packages/exporter/src/pwa-png.ts",
+  "packages/exporter/src/pwa.test.ts",
 ]);
 // Texto con encoding dañado: secuencias UTF-8 leídas como ANSI y reescritas
 // ("á" → "Ã¡", "ó" → "Ã³", "β" → "Î²") o caracteres perdidos (U+FFFD). Los
