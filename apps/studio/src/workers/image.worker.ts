@@ -14,6 +14,9 @@ export const IMAGE_RECIPE = {
   jpegQuality: 0.88,
 } as const;
 
+export type { SocialCropPlan } from "./social-crop";
+export { createSocialPlan, generateSocialCrops, SOCIAL_CROP_RECIPE } from "./social-crop";
+
 const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"] as const;
 type SupportedImageType = (typeof SUPPORTED_IMAGE_TYPES)[number];
 

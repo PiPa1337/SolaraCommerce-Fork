@@ -219,9 +219,16 @@ export function imageMimeTypeFromBytes(bytes: Uint8Array | undefined): string | 
   }
   return undefined;
 }
-
 export type SocialImageFormat = "compatible" | "incompatible" | "unknown";
+
 export type SocialImageMimeType = string;
+
+/** Recorte og 1200x630 generado por el pipeline de Studio, por assetId. */
+export interface SocialImageCrop {
+  dataUrl: string;
+  width: number;
+  height: number;
+}
 
 export interface SocialImageDiagnostic {
   assetId?: string;
@@ -232,7 +239,9 @@ export interface SocialImageResolution {
   asset?: ImageAsset;
   source?: string;
   mimeType?: SocialImageMimeType;
-  kind?: "primary" | "fallback";
+  kind?: "primary" | "fallback" | "og";
+  width?: number;
+  height?: number;
   status: "resolved" | "missing" | "incompatible" | "unknown";
   diagnostics: readonly SocialImageDiagnostic[];
 }
@@ -242,6 +251,8 @@ export interface SocialImageResolutionOptions {
   allowedAssetIds?: ReadonlySet<string>;
   /** Formato comprobado antes de convertir data URLs a rutas públicas. */
   compatibilityByAssetId?: ReadonlyMap<string, SocialImageFormat>;
+  /** Recortes og.jpg disponibles (production), indexados por assetId. */
+  socialImageCrops?: ReadonlyMap<string, SocialImageCrop>;
 }
 
 function canonicalMimeType(mimeType: string | undefined): string | undefined {
@@ -360,9 +371,26 @@ function imageByReference(project: StoreProjectV1, value: string): ImageAsset | 
   );
 }
 
+const SOCIAL_FALLBACK_MAX_WIDTH = 768;
+
+export function socialOgImagePath(asset: ImageAsset): string {
+  return `/assets/${asset.hash}-og.jpg`;
+}
+
+type SocialImageCandidate = {
+  source: string;
+  kind: "primary" | "fallback" | "og";
+  mimeType: SocialImageMimeType;
+};
+
 function socialSourceForAsset(
   asset: ImageAsset,
-): { source: string; kind: "primary" | "fallback"; mimeType: SocialImageMimeType } | undefined {
+  options: SocialImageResolutionOptions = {},
+): SocialImageCandidate | undefined {
+  const crop = options.socialImageCrops?.get(asset.id);
+  if (crop && crop.dataUrl.startsWith("data:image/jpeg")) {
+    return { source: socialOgImagePath(asset), kind: "og", mimeType: "image/jpeg" };
+  }
   const fallback = asset.fallbackSource
     ? sourceFormat(asset.fallbackSource)
     : { format: "unknown" as const };
@@ -382,6 +410,30 @@ function socialSourceForAsset(
     };
   }
   return undefined;
+}
+
+function socialDimensionsForCandidate(
+  asset: ImageAsset,
+  candidate: SocialImageCandidate,
+  options: SocialImageResolutionOptions = {},
+): { width?: number; height?: number } {
+  if (candidate.kind === "og") {
+    const crop = options.socialImageCrops?.get(asset.id);
+    return crop &&
+      Number.isInteger(crop.width) &&
+      crop.width > 0 &&
+      Number.isInteger(crop.height) &&
+      crop.height > 0
+      ? { width: crop.width, height: crop.height }
+      : {};
+  }
+  if (!Number.isInteger(asset.width) || !Number.isInteger(asset.height)) return {};
+  if (asset.width < 1 || asset.height < 1) return {};
+  if (candidate.kind === "fallback") {
+    const width = Math.min(asset.width, SOCIAL_FALLBACK_MAX_WIDTH);
+    return { width, height: Math.max(1, Math.round((asset.height / asset.width) * width)) };
+  }
+  return { width: asset.width, height: asset.height };
 }
 
 function imageSourceForAsset(
@@ -450,15 +502,23 @@ export function resolveSocialImage(
     // A data URL becomes a public path before the final render. Preserve the
     // original byte verdict so an invalid source cannot look valid merely
     // because its generated path ends in .jpg or .png.
-    const candidate = knownCompatibility === "unknown" ? undefined : socialSourceForAsset(asset);
+    const candidate =
+      knownCompatibility === "unknown" ? undefined : socialSourceForAsset(asset, options);
     if (candidate) {
-      return { ...candidate, asset, status: "resolved", diagnostics };
+      return {
+        ...candidate,
+        asset,
+        ...socialDimensionsForCandidate(asset, candidate, options),
+        status: "resolved",
+        diagnostics,
+      };
     }
     const bestAvailable = knownCompatibility === "unknown" ? undefined : imageSourceForAsset(asset);
     if (bestAvailable && !fallbackResolution) {
       fallbackResolution = {
         ...bestAvailable,
         asset,
+        ...socialDimensionsForCandidate(asset, bestAvailable, options),
         status: "resolved",
         diagnostics,
       };

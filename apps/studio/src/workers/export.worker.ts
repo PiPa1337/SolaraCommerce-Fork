@@ -1,6 +1,7 @@
 /** Valida archive/export fuera de React y conserva paridad con el exporter. */
 import type { AuditIssue, OptimizationReport } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
+import { generateSocialCrops } from "./social-crop";
 
 type ExporterModule = typeof import("@solara/exporter");
 type ProjectArchiveModule = typeof import("../lib/projectArchive");
@@ -62,12 +63,19 @@ self.onmessage = async (event: MessageEvent<ExportRequest>) => {
   try {
     const request = event.data;
     if (request.type === "site") {
-      const { auditReport, exportProject } = await loadExporter();
+      const { auditReport, collectSocialCropRequests, exportProject } = await loadExporter();
       const project = { ...request.project };
       const options = { mode: request.mode, ...request.options };
       auditReport(project);
       self.postMessage({ id: request.id, kind: "export-stage", stage: "validate" });
-      const result = exportProject(project, options);
+      const socialImageCrops =
+        request.mode === "production"
+          ? await generateSocialCrops(collectSocialCropRequests(project))
+          : undefined;
+      const result = exportProject(project, {
+        ...options,
+        ...(socialImageCrops && socialImageCrops.size > 0 ? { socialImageCrops } : {}),
+      });
       self.postMessage({ id: request.id, kind: "export-stage", stage: "render" });
       self.postMessage({ id: request.id, kind: "export-stage", stage: "package" });
       const optimization: OptimizationReport = result.optimization;

@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   auditProject,
   buildCommerceSnapshot,
+  collectSocialCropRequests,
   createProjectArchive,
   createPublicExportManifest,
   exportProject,
@@ -1896,5 +1897,232 @@ describe("tema: carga real de fuentes y vars sin duplicados", () => {
     expect(css).not.toMatch(/--solara-body:/);
     expect(css).not.toMatch(/--solara-space:/);
     expect(css).toContain("font-family:var(--solara-font-body)");
+  });
+});
+
+function preloadAttribute(tag: string, name: string): string | undefined {
+  return new RegExp(`\\b${name}="([^"]*)"`).exec(tag)?.[1];
+}
+
+function parseSrcsetPairs(value: string): Array<{ url: string; width: number }> {
+  return value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const [url, descriptor] = part.split(/\s+/);
+      return { url: url ?? "", width: Number((descriptor ?? "").replace(/w$/, "")) || 0 };
+    });
+}
+
+function lcpPreloadTag(html: string): string {
+  const tag = /<link rel="preload" as="image"[^>]*>/.exec(html)?.[0];
+  if (!tag) throw new Error("Falta el preload del LCP.");
+  return tag;
+}
+
+function pictureSourcesFor(
+  html: string,
+  marker: string,
+): { mobile: string; full: string; sizes?: string } {
+  for (const match of html.matchAll(/<picture>([\s\S]*?)<\/picture>/g)) {
+    const block = match[1] ?? "";
+    if (!block.includes(marker)) continue;
+    const sources = [...block.matchAll(/<source\b[^>]*>/g)].map((tag) => tag[0]);
+    const mobile = sources.find((tag) => preloadAttribute(tag, "media") === "(max-width: 1023px)");
+    const full = sources.find((tag) => !preloadAttribute(tag, "media"));
+    if (!mobile || !full) throw new Error("El picture no tiene fuente móvil y completa.");
+    return {
+      mobile: preloadAttribute(mobile, "srcset") ?? "",
+      full: preloadAttribute(full, "srcset") ?? "",
+      sizes: preloadAttribute(mobile, "sizes"),
+    };
+  }
+  throw new Error(`No se encontró el picture con ${marker}.`);
+}
+
+describe("preload espejo y og social", () => {
+  it("el preload del LCP espeja los descriptores del picture de categoría", () => {
+    const project = structuredClone(catalogModernStore);
+    const category = project.categories.find((candidate) => candidate.slug === "remeras");
+    if (!category) throw new Error("Fixture incompleto");
+    category.imageId = "asset-manta";
+    const html = String(
+      exportProject(project, { mode: "production" }).files.get("categorias/remeras/index.html"),
+    );
+    const preload = lcpPreloadTag(html);
+    const picture = pictureSourcesFor(html, "solara-category-hero-image");
+    const expectedPairs = [...parseSrcsetPairs(picture.mobile), ...parseSrcsetPairs(picture.full)];
+    expect(expectedPairs.length).toBeGreaterThanOrEqual(2);
+    expect(parseSrcsetPairs(preloadAttribute(preload, "imagesrcset") ?? "")).toEqual(expectedPairs);
+    expect(preloadAttribute(preload, "imagesizes")).toBe(picture.sizes);
+    expect(preloadAttribute(preload, "href")).toBe(parseSrcsetPairs(picture.full)[0]?.url);
+    expect(preloadAttribute(preload, "fetchpriority")).toBe("high");
+  });
+
+  it("mantiene el preload simple cuando el asset del banner no tiene variantes", () => {
+    const project = structuredClone(catalogModernStore);
+    const category = project.categories.find((candidate) => candidate.slug === "remeras");
+    if (!category) throw new Error("Fixture incompleto");
+    category.imageId = "asset-product-01";
+    const html = String(
+      exportProject(project, { mode: "production" }).files.get("categorias/remeras/index.html"),
+    );
+    const preload = lcpPreloadTag(html);
+    expect(preloadAttribute(preload, "href")).toBe("/fixtures/modo-sur-product-01.webp");
+    expect(preloadAttribute(preload, "imagesrcset")).toBeUndefined();
+    expect(preloadAttribute(preload, "imagesizes")).toBeUndefined();
+  });
+
+  function projectWithSocialAsset(assetOverrides: Partial<{ width: number; height: number }> = {}) {
+    const socialAsset = {
+      kind: "image" as const,
+      id: "asset-social-crop" as (typeof referenceStore.assets)[number]["id"],
+      name: "Portada social",
+      alt: "Portada social de la tienda",
+      mimeType: "image/avif",
+      source: VALID_AVIF_DATA_URL,
+      fallbackSource: VALID_JPEG_DATA_URL,
+      width: assetOverrides.width ?? 1600,
+      height: assetOverrides.height ?? 900,
+      hash: "social-crop",
+    };
+    return {
+      socialAsset,
+      project: {
+        ...referenceStore,
+        assets: [...referenceStore.assets, socialAsset],
+        seo: { ...referenceStore.seo, socialImageId: socialAsset.id },
+      } as typeof referenceStore,
+    };
+  }
+
+  it("emite og:image:width/height con las dimensiones reales del fallback", () => {
+    const { project } = projectWithSocialAsset({ width: 1200, height: 630 });
+    const html = String(exportProject(project, { mode: "draft" }).files.get("index.html"));
+    expect(html).toContain(
+      '<meta property="og:image" content="https://tienda-referencia.example/assets/social-crop-fallback.jpg">',
+    );
+    expect(html).toContain('<meta property="og:image:width" content="768">');
+    expect(html).toContain('<meta property="og:image:height" content="403">');
+  });
+
+  it("prefiere el og.jpg generado por el pipeline y declara 1200x630", () => {
+    const { project } = projectWithSocialAsset();
+    const result = exportProject(project, {
+      mode: "production",
+      socialImageCrops: new Map([
+        ["asset-social-crop", { dataUrl: VALID_JPEG_DATA_URL, width: 1200, height: 630 }],
+      ]),
+    });
+    const html = String(result.files.get("index.html"));
+    expect(html).toContain(
+      '<meta property="og:image" content="https://tienda-referencia.example/assets/social-crop-og.jpg">',
+    );
+    expect(html).toContain('<meta property="og:image:width" content="1200">');
+    expect(html).toContain('<meta property="og:image:height" content="630">');
+    expect(html).toContain('<meta property="og:image:type" content="image/jpeg">');
+    expect(result.files.get("assets/social-crop-og.jpg")).toBeInstanceOf(Uint8Array);
+  });
+
+  it("escribe un único og.jpg por imagen única compartida entre productos", () => {
+    const project = structuredClone(referenceStore) as typeof referenceStore;
+    const [firstProduct, secondProduct] = project.products;
+    if (!firstProduct || !secondProduct) throw new Error("Fixture incompleto");
+    secondProduct.imageIds = [firstProduct.imageIds[0] ?? ""];
+    const result = exportProject(project, {
+      mode: "production",
+      socialImageCrops: new Map([
+        [
+          firstProduct.imageIds[0] ?? "",
+          { dataUrl: VALID_JPEG_DATA_URL, width: 1200, height: 630 },
+        ],
+      ]),
+    });
+    const ogFiles = [...result.files.keys()].filter((path) => path.endsWith("-og.jpg"));
+    expect(ogFiles).toEqual(["assets/fixture-manta-og.jpg"]);
+    for (const slug of [firstProduct.slug, secondProduct.slug]) {
+      const html = String(result.files.get(`productos/${slug}/index.html`));
+      expect(html).toContain(
+        '<meta property="og:image" content="https://tienda-referencia.example/assets/fixture-manta-og.jpg">',
+      );
+      expect(html).toContain('<meta property="og:image:width" content="1200">');
+      expect(html).toContain('<meta property="og:image:height" content="630">');
+    }
+  });
+
+  it("no genera og.jpg cuando la fuente es menor a 1200x630 y declara dims reales del fallback", () => {
+    const { project } = projectWithSocialAsset({ width: 900, height: 600 });
+    expect(
+      collectSocialCropRequests(project).some((request) => request.assetId === "asset-social-crop"),
+    ).toBe(false);
+    const result = exportProject(project, { mode: "production" });
+    expect([...result.files.keys()].filter((path) => path.endsWith("-og.jpg"))).toEqual([]);
+    const html = String(result.files.get("index.html"));
+    expect(html).toContain(
+      '<meta property="og:image" content="https://tienda-referencia.example/assets/social-crop-fallback.jpg">',
+    );
+    expect(html).toContain('<meta property="og:image:width" content="768">');
+    expect(html).toContain('<meta property="og:image:height" content="512">');
+  });
+
+  it("colecta pedidos de recorte social deduplicados por imagen única", () => {
+    const project = structuredClone(catalogModernStore);
+    const [firstProduct, secondProduct] = project.products;
+    if (!firstProduct || !secondProduct) throw new Error("Fixture incompleto");
+    firstProduct.imageIds = ["asset-manta"];
+    secondProduct.imageIds = ["asset-manta"];
+    const requests = collectSocialCropRequests(project);
+    const mantaRequests = requests.filter((request) => request.assetId === "asset-manta");
+    expect(mantaRequests).toHaveLength(1);
+    expect(mantaRequests[0]).toMatchObject({
+      assetId: "asset-manta",
+      width: 1254,
+      height: 1254,
+    });
+    expect(mantaRequests[0]?.source.startsWith("data:image/webp")).toBe(true);
+    expect(requests.every((request) => request.source.startsWith("data:"))).toBe(true);
+    expect(requests.some((request) => request.assetId === "asset-hero")).toBe(true);
+  });
+
+  it("excluye de los recortes sociales las fuentes menores a 1200x630", () => {
+    const { project } = projectWithSocialAsset({ width: 900, height: 600 });
+    expect(
+      collectSocialCropRequests(project).some((request) => request.assetId === "asset-social-crop"),
+    ).toBe(false);
+  });
+
+  it("excluye de los recortes sociales los assets remotos y los favicons", () => {
+    const remoteAsset = {
+      kind: "image" as const,
+      id: "asset-remote-social" as (typeof referenceStore.assets)[number]["id"],
+      name: "Portada remota",
+      alt: "Portada remota",
+      mimeType: "image/jpeg",
+      source: "https://images.example.com/foto.jpg",
+      width: 1800,
+      height: 1200,
+      hash: "remote-social",
+    };
+    const faviconAsset = {
+      kind: "image" as const,
+      id: "asset-favicon-social" as (typeof referenceStore.assets)[number]["id"],
+      name: "Favicon social",
+      alt: "Favicon social",
+      mimeType: "image/x-icon",
+      source: "data:image/x-icon;base64,AAABAA==",
+      width: 256,
+      height: 256,
+      hash: "favicon-social",
+    };
+    const project = {
+      ...referenceStore,
+      assets: [...referenceStore.assets, remoteAsset, faviconAsset],
+      seo: { ...referenceStore.seo, socialImageId: remoteAsset.id },
+    } as typeof referenceStore;
+    const requests = collectSocialCropRequests(project);
+    expect(requests.some((request) => request.assetId === "asset-remote-social")).toBe(false);
+    expect(requests.some((request) => request.assetId === "asset-favicon-social")).toBe(false);
+    expect(requests.every((request) => request.source.startsWith("data:"))).toBe(true);
   });
 });

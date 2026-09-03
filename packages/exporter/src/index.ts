@@ -144,6 +144,8 @@ export interface ExportOptions {
   optimizationProfile?: OptimizationOptions["profile"];
   /** Genera nombres de archivo semantico para assets (SEO para Google Images). */
   useSemanticNames?: boolean;
+  /** Recortes og 1200x630 por assetId, generados por el pipeline de Studio. */
+  socialImageCrops?: ReadonlyMap<string, SocialImageCrop>;
 }
 
 export interface ExportResult {
@@ -291,9 +293,11 @@ import {
   parseDataUrl,
   productImagePaths,
   resolveSocialImage,
+  type SocialImageCrop,
   type SocialImageResolutionOptions,
   socialImageCompatibility,
   socialImageCompatibilityByAssetId,
+  socialOgImagePath,
   videoFor,
   videoUrl,
 } from "./assets.js";
@@ -320,6 +324,8 @@ export {
   socialImageCompatibility,
   socialImageCompatibilityByAssetId,
   resolveSocialImage,
+  socialOgImagePath,
+  type SocialImageCrop,
   videoFor,
   videoUrl,
 };
@@ -1073,6 +1079,53 @@ export function publicMediaUsage(
   return { assetIds, videoIds };
 }
 
+const SOCIAL_IMAGE_MIN_WIDTH = 1200;
+const SOCIAL_IMAGE_MIN_HEIGHT = 630;
+
+export interface SocialCropRequest {
+  assetId: string;
+  source: string;
+  width: number;
+  height: number;
+}
+
+export function collectSocialCropRequests(
+  project: StoreProjectV1,
+  socialImageOptions: SocialImageResolutionOptions = {},
+): SocialCropRequest[] {
+  const options = {
+    compatibilityByAssetId: socialImageCompatibilityByAssetId(project),
+    ...socialImageOptions,
+  };
+  const requests = new Map<string, SocialCropRequest>();
+  const pushAsset = (asset: ImageAsset | undefined): void => {
+    if (!asset || requests.has(asset.id)) return;
+    if (imageMimeTypeFromSource(asset.source, asset.mimeType) === "image/x-icon") return;
+    const source = /^data:/i.test(asset.source)
+      ? asset.source
+      : /^data:/i.test(asset.fallbackSource ?? "")
+        ? (asset.fallbackSource ?? "")
+        : "";
+    if (!source) return;
+    if (asset.width < SOCIAL_IMAGE_MIN_WIDTH || asset.height < SOCIAL_IMAGE_MIN_HEIGHT) return;
+    requests.set(asset.id, { assetId: asset.id, source, width: asset.width, height: asset.height });
+  };
+  pushAsset(resolveSocialImage(project, undefined, options).asset);
+  for (const category of project.categories) {
+    if (category.status === "hidden") continue;
+    pushAsset(imageFor(project, category.imageId));
+  }
+  for (const collection of project.collections) {
+    if (collection.status === "hidden") continue;
+    pushAsset(imageFor(project, collection.imageId));
+  }
+  for (const product of project.products) {
+    if (product.status !== "active") continue;
+    pushAsset(imageFor(project, product.imageIds[0]));
+  }
+  return [...requests.values()];
+}
+
 /**
  * Resolve the public export graph once so every derived file uses the same
  * page/module/media decisions. This is intentionally not persisted.
@@ -1360,6 +1413,57 @@ function listingSections(
   ];
 }
 
+const PICTURE_MOBILE_MEDIA = "(max-width: 1023px)";
+
+function parseSrcsetPairs(value: string): Array<{ url: string; width: number }> {
+  const pairs: Array<{ url: string; width: number }> = [];
+  for (const part of value.split(",")) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const [url, descriptor] = trimmed.split(/\s+/);
+    if (!url) continue;
+    const width = Number((descriptor ?? "").replace(/w$/, ""));
+    pairs.push({ url, width: Number.isFinite(width) && width > 0 ? width : 0 });
+  }
+  return pairs;
+}
+
+function picturePreloadMirror(
+  body: string,
+  preloadImage: string,
+): { srcset: string; sizes?: string } | undefined {
+  const candidates: Array<{ srcset: string; sizes?: string; eager: boolean }> = [];
+  for (const match of body.matchAll(/<picture>([\s\S]*?)<\/picture>/g)) {
+    const block = match[1] ?? "";
+    if (!block.includes(preloadImage)) continue;
+    const sourceTags = [...block.matchAll(/<source\b[^>]*>/g)].map((tag) => tag[0]);
+    if (sourceTags.length === 0) continue;
+    const attribute = (tag: string, name: string): string | undefined =>
+      new RegExp(`\\b${name}="([^"]*)"`, "i").exec(tag)?.[1];
+    const mobileTags = sourceTags.filter((tag) => attribute(tag, "media") === PICTURE_MOBILE_MEDIA);
+    const fullTags = sourceTags.filter((tag) => !attribute(tag, "media"));
+    const pairs = [...mobileTags, ...fullTags]
+      .flatMap((tag) => parseSrcsetPairs(attribute(tag, "srcset") ?? ""))
+      .filter(
+        (pair, index, all) =>
+          all.findIndex((other) => other.url === pair.url && other.width === pair.width) === index,
+      );
+    if (pairs.length === 0) continue;
+    const imgTag = /<img\b[^>]*>/i.exec(block)?.[0] ?? "";
+    const sizes =
+      (mobileTags[0] ? attribute(mobileTags[0], "sizes") : undefined) ??
+      (fullTags[0] ? attribute(fullTags[0], "sizes") : undefined);
+    candidates.push({
+      srcset: pairs
+        .map((pair) => (pair.width > 0 ? `${pair.url} ${pair.width}w` : pair.url))
+        .join(", "),
+      ...(sizes ? { sizes } : {}),
+      eager: /loading="eager"/i.test(imgTag) || /fetchpriority="high"/i.test(imgTag),
+    });
+  }
+  return candidates.find((candidate) => candidate.eager) ?? candidates[0];
+}
+
 function renderDocument(
   project: StoreProjectV1,
   page: PageDescriptor,
@@ -1519,9 +1623,21 @@ function renderDocument(
           };
   const publicCopyAttribute = ` data-solara-copy="${escapeAttribute(JSON.stringify(runtimeCopy))}"`;
   const criticalImage = page.preloadImage ? resourceHref(project, page.preloadImage) : undefined;
+  const criticalImageDescriptors =
+    mode === "production" && page.preloadImage && criticalImage
+      ? picturePreloadMirror(page.body, page.preloadImage)
+      : undefined;
   const lcpPreload =
     mode === "production" && criticalImage
-      ? `<link rel="preload" as="image" href="${escapeAttribute(criticalImage)}" fetchpriority="high">`
+      ? `<link rel="preload" as="image" href="${escapeAttribute(criticalImage)}"${
+          criticalImageDescriptors
+            ? ` imagesrcset="${escapeAttribute(criticalImageDescriptors.srcset)}"${
+                criticalImageDescriptors.sizes
+                  ? ` imagesizes="${escapeAttribute(criticalImageDescriptors.sizes)}"`
+                  : ""
+              }`
+            : ""
+        } fetchpriority="high">`
       : "";
   const fontPreloads =
     mode === "production"
@@ -1551,8 +1667,8 @@ function renderDocument(
       : "";
   const bodyWithConsumerRights = appendToFooter(page.body, consumerRightsLink);
   const socialDimensions =
-    social.asset?.width === 1200 && social.asset.height === 630
-      ? `<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">`
+    social.width && social.height
+      ? `<meta property="og:image:width" content="${social.width}"><meta property="og:image:height" content="${social.height}">`
       : "";
   const socialMetadata = socialImage
     ? `<meta property="og:image" content="${escapeAttribute(socialImage)}"><meta property="og:image:type" content="${escapeAttribute(social.mimeType ?? "")}"><meta property="og:image:alt" content="${escapeAttribute(social.asset?.alt || page.title)}">${socialDimensions}<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeAttribute(page.title)}"><meta name="twitter:description" content="${escapeAttribute(page.description)}"><meta name="twitter:image" content="${escapeAttribute(socialImage)}">`
@@ -2992,9 +3108,11 @@ function buildFiles(
   mode: ExportMode,
   publicAiContext: boolean,
   semanticNames: boolean,
+  socialImageCrops?: ReadonlyMap<string, SocialImageCrop>,
 ): Map<string, string | Uint8Array> {
   const socialImageOptions: SocialImageResolutionOptions = {
     compatibilityByAssetId: socialImageCompatibilityByAssetId(project),
+    ...(mode === "production" && socialImageCrops?.size ? { socialImageCrops } : {}),
   };
   const sourceMedia = publicMediaUsage(project, socialImageOptions);
   const publicProject = projectWithPublicAssetUrls(
@@ -3263,6 +3381,14 @@ ${
         setFileChecked(files, `assets/${video.hash}.${assetExtension(video)}`, bytes);
       }
     });
+  if (socialImageOptions.socialImageCrops) {
+    for (const [assetId, crop] of socialImageOptions.socialImageCrops) {
+      const asset = project.assets.find((candidate) => candidate.id === assetId);
+      const bytes = dataUrlBytes(crop.dataUrl);
+      if (!asset || !bytes || bytes.length === 0) continue;
+      setFileChecked(files, socialOgImagePath(asset).slice(1), bytes);
+    }
+  }
   assertPublicArtifactReferences(files, publicProject);
   const deployment = addDeploymentManifest(
     files,
@@ -3337,7 +3463,13 @@ export function exportProject(projectInput: StoreProjectV1, options: ExportOptio
   }
 
   const files = withExportContext("la fase de archivos del sitio", () =>
-    buildFiles(project, options.mode, publicAiContext, options.useSemanticNames ?? false),
+    buildFiles(
+      project,
+      options.mode,
+      publicAiContext,
+      options.useSemanticNames ?? false,
+      options.socialImageCrops,
+    ),
   );
   return { files, audit, optimization };
 }

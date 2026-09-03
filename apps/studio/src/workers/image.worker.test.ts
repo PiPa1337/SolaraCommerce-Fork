@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createImagePlan,
+  createSocialPlan,
+  generateSocialCrops,
   IMAGE_RECIPE,
   processImage,
   sourceCanContainAlpha,
@@ -168,5 +170,98 @@ describe("procesamiento con alfa real", () => {
     });
     expect(result.primary.startsWith("data:image/avif;")).toBe(true);
     expect(result.fallback.startsWith("data:image/jpeg;")).toBe(true);
+  });
+});
+
+class SocialCropCanvasStub {
+  static instances: SocialCropCanvasStub[] = [];
+  readonly drawCalls: unknown[][] = [];
+  readonly blobOptions: Array<{ type?: string; quality?: number } | undefined> = [];
+  constructor(
+    public width: number,
+    public height: number,
+  ) {
+    SocialCropCanvasStub.instances.push(this);
+  }
+  getContext() {
+    return {
+      fillStyle: "",
+      fillRect: () => {},
+      drawImage: (...args: unknown[]) => {
+        this.drawCalls.push(args);
+      },
+    };
+  }
+  convertToBlob(options?: { type?: string; quality?: number }) {
+    this.blobOptions.push(options);
+    return Promise.resolve(
+      new Blob([new Uint8Array([7, 8, 9])], { type: options?.type ?? "image/jpeg" }),
+    );
+  }
+}
+
+describe("receta social og 1200x630", () => {
+  it("calcula el recorte cover sólo para fuentes de al menos 1200x630", () => {
+    expect(createSocialPlan(1200, 630)).toEqual({
+      width: 1200,
+      height: 630,
+      sourceX: 0,
+      sourceY: 0,
+      sourceWidth: 1200,
+      sourceHeight: 630,
+    });
+    expect(createSocialPlan(1800, 1000)).toEqual({
+      width: 1200,
+      height: 630,
+      sourceX: 0,
+      sourceY: 27.5,
+      sourceWidth: 1800,
+      sourceHeight: 945,
+    });
+    expect(createSocialPlan(2400, 800)).toMatchObject({ sourceHeight: 800, sourceY: 0 });
+    expect(createSocialPlan(1100, 900)).toBeUndefined();
+    expect(createSocialPlan(1200, 600)).toBeUndefined();
+    expect(createSocialPlan(0, 630)).toBeUndefined();
+  });
+
+  it("genera el derivado og jpeg con calidad 0.82 por imagen única", async () => {
+    SocialCropCanvasStub.instances = [];
+    let bitmapCall = 0;
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(async () => {
+        bitmapCall += 1;
+        return bitmapCall === 1
+          ? { width: 1800, height: 1000, close: () => {} }
+          : { width: 900, height: 600, close: () => {} };
+      }),
+    );
+    vi.stubGlobal("OffscreenCanvas", SocialCropCanvasStub);
+    try {
+      const result = await generateSocialCrops([
+        { assetId: "asset-a", source: "data:image/avif;base64,AAAA", width: 1800, height: 1000 },
+        { assetId: "asset-b", source: "data:image/jpeg;base64,/9j/2Q==", width: 900, height: 600 },
+      ]);
+      expect(result.size).toBe(1);
+      const crop = result.get("asset-a");
+      expect(crop).toMatchObject({ width: 1200, height: 630 });
+      expect(crop?.dataUrl.startsWith("data:image/jpeg;base64,")).toBe(true);
+      const canvas = SocialCropCanvasStub.instances[0];
+      expect(canvas?.width).toBe(1200);
+      expect(canvas?.height).toBe(630);
+      expect(canvas?.blobOptions[0]).toEqual({ type: "image/jpeg", quality: 0.82 });
+      expect(canvas?.drawCalls[0]?.slice(1, 5)).toEqual([0, 27.5, 1800, 945]);
+      expect(canvas?.drawCalls[0]?.slice(5, 9)).toEqual([0, 0, 1200, 630]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("no genera recortes cuando el entorno no tiene OffscreenCanvas", async () => {
+    vi.unstubAllGlobals();
+    const result = await generateSocialCrops([
+      { assetId: "asset-a", source: "data:image/jpeg;base64,/9j/2Q==", width: 1800, height: 1000 },
+    ]);
+    expect(result.size).toBe(0);
   });
 });
