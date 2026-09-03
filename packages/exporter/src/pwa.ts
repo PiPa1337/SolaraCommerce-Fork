@@ -5,6 +5,7 @@
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { buildIndexableRoutes, publicProductTitle } from "@solara/site-optimizer";
 import { escapeHtml, escapeXml } from "./html.js";
+import { decodePngRgba, encodePngPalette, quantizeRgba, scaleRgbaBilinear } from "./pwa-png.js";
 import { absoluteUrl, baseUrlPathname } from "./urls.js";
 
 const SHA256_K = new Uint32Array([
@@ -112,18 +113,27 @@ function concatBytes(...parts: readonly Uint8Array[]): Uint8Array {
 export function buildWebManifest(project: StoreProjectV1): string {
   const prefix = baseUrlPathname(project.baseUrl);
   const route = (path: string): string => `${prefix}${path}` || path;
+  const description = project.identity.description.replace(/\s+/g, " ").trim().slice(0, 200);
   return JSON.stringify(
     {
       name: project.identity.brandName,
       short_name: project.identity.brandName,
+      id: route("/"),
       start_url: route("/"),
       display: "standalone",
+      description,
       background_color: project.theme.colors.background,
       theme_color: project.theme.colors.background,
       lang: project.locale,
       icons: [
-        { src: route("/icons/icon-192.png"), sizes: "192x192", type: "image/png" },
-        { src: route("/icons/icon-512.png"), sizes: "512x512", type: "image/png" },
+        { src: route("/icons/icon-192.png"), sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: route("/icons/icon-512.png"), sizes: "512x512", type: "image/png", purpose: "any" },
+        {
+          src: route("/icons/icon-512.png"),
+          sizes: "512x512",
+          type: "image/png",
+          purpose: "maskable",
+        },
       ],
     },
     null,
@@ -292,88 +302,87 @@ ${items}
  */
 export function generateIconPng(seed: string, size: number): Uint8Array {
   const hash = sha256Bytes(seed);
-  const r = hash[0] ?? 0,
-    g = hash[1] ?? 0,
-    b = hash[2] ?? 0;
-  const bytesPerRow = size * 3 + 1;
-  const rawData = new Uint8Array(bytesPerRow * size);
-  for (let y = 0; y < size; y++) {
-    rawData[y * bytesPerRow] = 0;
-    for (let x = 0; x < size; x++) {
-      const offset = y * bytesPerRow + 1 + x * 3;
-      rawData[offset] = r;
-      rawData[offset + 1] = g;
-      rawData[offset + 2] = b;
-    }
-  }
-  const compressed = deflateStored(rawData);
-  const crcTable = new Uint32Array(256);
-  for (let n = 0; n < 256; n++) {
-    let c = n;
-    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    crcTable[n] = c;
-  }
-  function crc32(buf: Uint8Array): number {
-    let crc = 0xffffffff;
-    for (const byte of buf) {
-      const entry = crcTable[(crc ^ byte) & 0xff];
-      if (entry !== undefined) crc = entry ^ (crc >>> 8);
-    }
-    return (crc ^ 0xffffffff) >>> 0;
-  }
-  function chunk(type: string, data: Uint8Array): Uint8Array {
-    const typeBytes = new TextEncoder().encode(type);
-    const payload = concatBytes(typeBytes, data);
-    const result = new Uint8Array(data.length + 12);
-    const view = new DataView(result.buffer);
-    view.setUint32(0, data.length, false);
-    result.set(typeBytes, 4);
-    result.set(data, 8);
-    view.setUint32(data.length + 8, crc32(payload), false);
-    return result;
-  }
-  const ihdr = new Uint8Array(13);
-  const ihdrView = new DataView(ihdr.buffer);
-  ihdrView.setUint32(0, size, false);
-  ihdrView.setUint32(4, size, false);
-  ihdr[8] = 8;
-  ihdr[9] = 2;
-  return concatBytes(
-    new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    chunk("IHDR", ihdr),
-    chunk("IDAT", compressed),
-    chunk("IEND", new Uint8Array()),
-  );
+  const palette = new Uint8Array([hash[0] ?? 0, hash[1] ?? 0, hash[2] ?? 0]);
+  return encodePngPalette(new Uint8Array(size * size), palette, size, size);
 }
 
-/** Empaqueta bloques DEFLATE sin compresión dentro del contenedor zlib. */
-function deflateStored(data: Uint8Array): Uint8Array {
-  const blockCount = Math.max(1, Math.ceil(data.length / 65535));
-  const result = new Uint8Array(2 + blockCount * 5 + data.length + 4);
-  result[0] = 0x78;
-  result[1] = 0x01;
-  let offset = 2;
-  let sourceOffset = 0;
-  for (let block = 0; block < blockCount; block += 1) {
-    const length = Math.min(65535, data.length - sourceOffset);
-    result[offset] = block === blockCount - 1 ? 1 : 0;
-    result[offset + 1] = length & 0xff;
-    result[offset + 2] = length >>> 8;
-    const inverse = ~length & 0xffff;
-    result[offset + 3] = inverse & 0xff;
-    result[offset + 4] = inverse >>> 8;
-    result.set(data.subarray(sourceOffset, sourceOffset + length), offset + 5);
-    offset += 5 + length;
-    sourceOffset += length;
+const ICON_SAFE_ZONE_RATIO = 0.7;
+
+function hexToRgb(value: string): [number, number, number] | undefined {
+  const match = /^#([0-9a-f]{6}|[0-9a-f]{3})$/i.exec(value.trim());
+  if (!match) return undefined;
+  const hex = match[1] ?? "";
+  const full = hex.length === 3 ? [...hex].map((character) => character + character).join("") : hex;
+  if (!/^[0-9a-f]{6}$/i.test(full)) return undefined;
+  return [
+    parseInt(full.slice(0, 2), 16),
+    parseInt(full.slice(2, 4), 16),
+    parseInt(full.slice(4, 6), 16),
+  ];
+}
+
+function compositeScaledLogo(
+  decoded: { width: number; height: number; rgba: Uint8Array },
+  size: number,
+  background: [number, number, number],
+): Uint8Array {
+  const content = Math.max(1, Math.round(size * ICON_SAFE_ZONE_RATIO));
+  const scale = Math.min(content / decoded.width, content / decoded.height);
+  const scaledWidth = Math.max(1, Math.min(size, Math.round(decoded.width * scale)));
+  const scaledHeight = Math.max(1, Math.min(size, Math.round(decoded.height * scale)));
+  const scaled = scaleRgbaBilinear(
+    decoded.rgba,
+    decoded.width,
+    decoded.height,
+    scaledWidth,
+    scaledHeight,
+  );
+  const canvas = new Uint8Array(size * size * 4);
+  for (let pixel = 0; pixel < size * size; pixel += 1) {
+    canvas[pixel * 4] = background[0];
+    canvas[pixel * 4 + 1] = background[1];
+    canvas[pixel * 4 + 2] = background[2];
+    canvas[pixel * 4 + 3] = 255;
   }
-  let adlerA = 1;
-  let adlerB = 0;
-  for (const byte of data) {
-    adlerA = (adlerA + byte) % 65521;
-    adlerB = (adlerB + adlerA) % 65521;
+  const offsetX = Math.floor((size - scaledWidth) / 2);
+  const offsetY = Math.floor((size - scaledHeight) / 2);
+  for (let y = 0; y < scaledHeight; y += 1) {
+    for (let x = 0; x < scaledWidth; x += 1) {
+      const source = (y * scaledWidth + x) * 4;
+      const target = ((y + offsetY) * size + (x + offsetX)) * 4;
+      const alpha = (scaled[source + 3] ?? 255) / 255;
+      const inverse = 1 - alpha;
+      canvas[target] = Math.round((scaled[source] ?? 0) * alpha + (canvas[target] ?? 0) * inverse);
+      canvas[target + 1] = Math.round(
+        (scaled[source + 1] ?? 0) * alpha + (canvas[target + 1] ?? 0) * inverse,
+      );
+      canvas[target + 2] = Math.round(
+        (scaled[source + 2] ?? 0) * alpha + (canvas[target + 2] ?? 0) * inverse,
+      );
+      canvas[target + 3] = 255;
+    }
   }
-  new DataView(result.buffer).setUint32(offset, (adlerB << 16) | adlerA, false);
-  return result;
+  return canvas;
+}
+
+/**
+ * Icono PWA de la tienda: deriva del logo PNG de identidad (escalado con safe
+ * zone maskable y cuantizado a paleta); si no hay logo decodificable, cae al
+ * color solido determinista comprimido.
+ */
+export function generateStoreIconPng(
+  project: StoreProjectV1,
+  size: number,
+  logoBytes?: Uint8Array,
+): Uint8Array {
+  const decoded = logoBytes ? decodePngRgba(logoBytes) : undefined;
+  const background = decoded ? hexToRgb(project.theme.colors.background) : undefined;
+  if (decoded && background) {
+    const composited = compositeScaledLogo(decoded, size, background);
+    const { indices, palette } = quantizeRgba(composited, 256);
+    return encodePngPalette(indices, palette, size, size);
+  }
+  return generateIconPng(`${project.identity.brandName}-${size}`, size);
 }
 
 /**
@@ -387,7 +396,7 @@ export function buildOfflinePage(project: StoreProjectV1): string {
     "<html lang=" +
     JSON.stringify(project.locale) +
     ">" +
-    "<head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>" +
+    "<head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=robots content=noindex>" +
     "<title>Sin conexi\u00f3n | " +
     brandName +
     "</title>" +

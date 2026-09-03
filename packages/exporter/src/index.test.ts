@@ -1690,7 +1690,7 @@ describe("exporter", () => {
     );
   });
 
-  it("emite el favicon ICO y su fallback Apple cuando SEO lo configura", () => {
+  function buildCustomFaviconProject() {
     const favicon = {
       kind: "image" as const,
       id: "asset-test-favicon" as (typeof referenceStore.assets)[number]["id"],
@@ -1703,19 +1703,44 @@ describe("exporter", () => {
       height: 256,
       hash: "test-favicon-v1",
     };
+    return {
+      favicon,
+      project: {
+        ...referenceStore,
+        assets: [...referenceStore.assets, favicon],
+        seo: { ...referenceStore.seo, faviconAssetId: favicon.id },
+      },
+    };
+  }
+
+  it("emite el favicon ICO en la raíz y deduplica la copia del asset", () => {
+    const { project } = buildCustomFaviconProject();
+    const result = exportProject(project as typeof referenceStore, { mode: "production" });
+    const homeHtml = String(result.files.get("index.html"));
+    expect(homeHtml).toContain('rel="icon" href="/favicon.ico"');
+    expect(homeHtml).toContain(
+      'rel="apple-touch-icon" sizes="180x180" href="/assets/test-favicon-v1-fallback.png"',
+    );
+    expect(result.files.has("assets/test-favicon-v1.ico")).toBe(false);
+    expect(result.files.has("assets/test-favicon-v1-fallback.png")).toBe(true);
+    const rootIco = result.files.get("favicon.ico") as Uint8Array;
+    const customIco = new Uint8Array(Buffer.from("AAABAA==", "base64"));
+    expect(Buffer.from(rootIco).equals(Buffer.from(customIco))).toBe(true);
+  });
+
+  it("mantiene la emisión del asset favicon cuando además se usa como imagen de producto", () => {
+    const { favicon } = buildCustomFaviconProject();
+    const products = referenceStore.products.map((product, index) =>
+      index === 0 ? { ...product, imageIds: [...product.imageIds, favicon.id] } : product,
+    );
     const project = {
       ...referenceStore,
       assets: [...referenceStore.assets, favicon],
       seo: { ...referenceStore.seo, faviconAssetId: favicon.id },
+      products,
     };
     const result = exportProject(project as typeof referenceStore, { mode: "production" });
-    const homeHtml = String(result.files.get("index.html"));
-    expect(homeHtml).toContain('rel="icon" href="/assets/test-favicon-v1.ico"');
-    expect(homeHtml).toContain(
-      'rel="apple-touch-icon" sizes="180x180" href="/assets/test-favicon-v1-fallback.png"',
-    );
     expect(result.files.has("assets/test-favicon-v1.ico")).toBe(true);
-    expect(result.files.has("assets/test-favicon-v1-fallback.png")).toBe(true);
   });
 
   it("usa la descripción SEO de la tienda en rutas sin descripción editable", () => {

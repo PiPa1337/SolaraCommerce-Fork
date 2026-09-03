@@ -240,7 +240,7 @@ import {
   buildRssFeed,
   buildServiceWorker,
   buildWebManifest,
-  generateIconPng,
+  generateStoreIconPng,
   sha256Hex,
 } from "./pwa.js";
 
@@ -1388,10 +1388,13 @@ function renderDocument(
       ? videoFor(project, heroVideoSetting)
       : undefined;
   const faviconAsset = imageFor(project, project.seo.faviconAssetId);
-  const faviconHref = faviconAsset?.source ? assetHref(project, faviconAsset.source) : undefined;
   const faviconMimeType = faviconAsset
     ? (imageMimeTypeFromSource(faviconAsset.source, faviconAsset.mimeType) ?? "image/x-icon")
     : undefined;
+  const faviconHref =
+    faviconAsset && faviconMimeType !== "image/x-icon" && faviconAsset.source
+      ? assetHref(project, faviconAsset.source)
+      : assetHref(project, "/favicon.ico");
   const faviconFallbackHref = faviconAsset?.fallbackSource
     ? assetHref(project, faviconAsset.fallbackSource)
     : undefined;
@@ -3164,8 +3167,10 @@ ${
     );
   }
   // PWA: manifest y service worker para instalación y cache offline.
-  files.set("icons/icon-192.png", generateIconPng(`${publicProject.identity.brandName}-192`, 192));
-  files.set("icons/icon-512.png", generateIconPng(`${publicProject.identity.brandName}-512`, 512));
+  const logoAsset = project.assets.find((asset) => asset.id === project.identity.logoAssetId);
+  const logoBytes = logoAsset ? dataUrlBytes(logoAsset.source) : undefined;
+  files.set("icons/icon-192.png", generateStoreIconPng(publicProject, 192, logoBytes));
+  files.set("icons/icon-512.png", generateStoreIconPng(publicProject, 512, logoBytes));
   {
     const customFaviconAsset = project.assets.find(
       (asset) => asset.id === project.seo.faviconAssetId,
@@ -3208,10 +3213,25 @@ ${
     files.set("_redirects", "# Solara redirect rules\n");
   }
 
+  const faviconAssetId = project.seo.faviconAssetId;
+  let faviconOnlyAsset: ImageAsset | undefined;
+  if (faviconAssetId) {
+    const usageWithoutFavicon = publicMediaUsage(
+      { ...project, seo: { ...project.seo, faviconAssetId: undefined } },
+      socialImageOptions,
+    );
+    if (!usageWithoutFavicon.assetIds.has(faviconAssetId)) {
+      faviconOnlyAsset = project.assets.find((asset) => asset.id === faviconAssetId);
+    }
+  }
   project.assets
     .filter((asset) => mediaUsage.assetIds.has(asset.id))
     .forEach((asset) => {
-      writeDataAsset(files, asset, "primary", asset.source, undefined, semanticNames);
+      const dedupedFaviconPrimary =
+        faviconOnlyAsset?.id === asset.id &&
+        imageMimeTypeFromSource(asset.source, asset.mimeType) === "image/x-icon";
+      if (!dedupedFaviconPrimary)
+        writeDataAsset(files, asset, "primary", asset.source, undefined, semanticNames);
       if (asset.fallbackSource)
         writeDataAsset(files, asset, "fallback", asset.fallbackSource, undefined, semanticNames);
       responsiveSourcesForAsset(asset)?.forEach((source) => {
