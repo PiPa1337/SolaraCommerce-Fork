@@ -197,7 +197,7 @@ export async function verifyCloudflareDeployment(
       "csp",
       "CSP endurecida",
       csp.includes("frame-ancestors 'none'") &&
-        csp.includes("trusted-types 'none'") &&
+        !csp.includes("trusted-types") &&
         csp.includes("form-action 'self'") &&
         csp.includes("worker-src") &&
         csp.includes("manifest-src") &&
@@ -212,7 +212,9 @@ export async function verifyCloudflareDeployment(
     check(
       "hsts",
       "HSTS",
-      hsts.includes("max-age=") && !/includeSubDomains|preload/i.test(hsts) ? "pass" : "fail",
+      hsts.includes("max-age=") && hsts.includes("includeSubDomains") && !/preload/i.test(hsts)
+        ? "pass"
+        : "fail",
       hsts || "Falta Strict-Transport-Security.",
     ),
   );

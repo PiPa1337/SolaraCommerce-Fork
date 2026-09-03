@@ -8,15 +8,15 @@ const runtime = {
 
 const secureHeaders = {
   "content-security-policy":
-    "default-src 'self'; script-src 'self'; frame-ancestors 'none'; form-action 'self'; worker-src 'self'; manifest-src 'self'; font-src 'self'; trusted-types 'none'",
-  "strict-transport-security": "max-age=31536000",
+    "default-src 'self'; script-src 'self'; frame-ancestors 'none'; form-action 'self'; worker-src 'self'; manifest-src 'self'; font-src 'self'",
+  "strict-transport-security": "max-age=31536000; includeSubDomains",
   "x-content-type-options": "nosniff",
   "x-frame-options": "DENY",
 };
 
 function installFetch(
   manifest: Record<string, unknown> | null,
-  options: { csp?: boolean; blocked?: boolean } = {},
+  options: { csp?: boolean; blocked?: boolean; headerOverrides?: Record<string, string> } = {},
 ) {
   vi.stubGlobal(
     "fetch",
@@ -27,7 +27,7 @@ function installFetch(
         if (!manifest) return new Response("missing", { status: 404 });
         return Response.json(manifest);
       }
-      const headers = new Headers(secureHeaders);
+      const headers = new Headers({ ...secureHeaders, ...options.headerOverrides });
       if (options.csp === false) headers.delete("content-security-policy");
       if (url.endsWith("/sw.js")) headers.set("cache-control", "no-cache");
       else if (url.endsWith(".css") || url.endsWith(".js"))
@@ -61,6 +61,22 @@ describe("verificador de publicación Cloudflare", () => {
 
     installFetch({ version: 1, mode: "draft", runtime });
     expect((await verifyCloudflareDeployment("https://example.test")).status).toBe("fail");
+  });
+
+  it("rechaza CSP con trusted-types y HSTS sin includeSubDomains", async () => {
+    installFetch(
+      { version: 1, mode: "production", runtime },
+      {
+        headerOverrides: {
+          "content-security-policy":
+            "default-src 'self'; script-src 'self'; frame-ancestors 'none'; form-action 'self'; worker-src 'self'; manifest-src 'self'; font-src 'self'; trusted-types 'none'",
+          "strict-transport-security": "max-age=31536000",
+        },
+      },
+    );
+    const result = await verifyCloudflareDeployment("https://example.test");
+    expect(result.checks.find((entry) => entry.id === "csp")?.status).toBe("fail");
+    expect(result.checks.find((entry) => entry.id === "hsts")?.status).toBe("fail");
   });
 
   it("distingue manifest faltante de una verificación bloqueada por CORS", async () => {
