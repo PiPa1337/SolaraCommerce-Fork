@@ -1688,3 +1688,36 @@ describe("auditoría Resumen — fixes Ola 3 (navegación y footer moderno)", ()
     expect(cleanHtml).toContain('<p class="catalog-eyebrow">Categorías</p>');
   });
 });
+
+describe("pattern de teléfono válido en regex v-mode (auditoría #9)", () => {
+  const PATTERN = "[\\d\\+\\(\\)\\- ]{8,}";
+  function phonePattern(html: string): string {
+    const match = html.match(/name="phone"[^>]*pattern="([^"]+)"/);
+    if (!match?.[1]) throw new Error("El input de teléfono no declara pattern");
+    return match[1];
+  }
+  it("drawer legacy emite el pattern nuevo compilable con flag v", () => {
+    const section = createModuleSection({
+      id: "section-cart-pattern" as StoreSection["id"],
+      slot: "cart",
+      moduleId: "cart-drawer",
+    });
+    const html = renderSections(referenceStore, [section], { pageType: "home" });
+    const pattern = phonePattern(html);
+    expect(pattern).toBe(PATTERN);
+    expect(html).not.toContain("[0-9+ ()-]{8,}");
+    expect(() => new RegExp(pattern, "v")).not.toThrow();
+    expect(new RegExp(pattern, "v").test("11 5555-0142")).toBe(true);
+  });
+  it("drawer catalog-modern emite el pattern nuevo compilable con flag v", () => {
+    const section = catalogModernV2Store.sections.find(
+      (candidate) => candidate.moduleId === "catalog-cart-drawer",
+    );
+    if (!section) throw new Error("Fixture V2 sin drawer de carrito");
+    const html = renderSections(catalogModernV2Store, [section], { pageType: "home" });
+    const pattern = phonePattern(html);
+    expect(pattern).toBe(PATTERN);
+    expect(html).not.toContain("[0-9+ ()-]{8,}");
+    expect(() => new RegExp(pattern, "v")).not.toThrow();
+  });
+});

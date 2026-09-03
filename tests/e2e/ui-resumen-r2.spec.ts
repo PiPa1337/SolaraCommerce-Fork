@@ -23,11 +23,6 @@ test.setTimeout(process.env.CI ? 150_000 : 90_000);
 const EDITED_PHONE = "5492212345678";
 const EDITED_GREETING = "Gracias por elegirnos, preparo mi pedido:";
 const PRODUCT_PATH = "/productos/remera-esencial-de-algodon/";
-// El formato es-AR de Intl separa el símbolo del monto con NBSP (U+00A0),
-// tanto en el runtime del sitio como en el formatMoney del exporter.
-const PRICE = "$\u00A028.850,00";
-const PRODUCT_LINE_WITH_SKU = `1 x Remera esencial de algodón (Negro / S) [MS-001-NE-S]: ${PRICE}`;
-const PRODUCT_LINE_NO_SKU = `1 x Remera esencial de algodón (Negro / S): ${PRICE}`;
 
 // Sitio ANTES: tienda demo tal cual (número 5491123456789, saludo original,
 // SKU incluido). Sitio DESPUÉS: número/saludo editados y SKU apagado. Un
@@ -350,11 +345,11 @@ test("utilidad: el número y el saludo editados llegan al sitio exportado (diff 
   expect(href).toContain(`https://wa.me/${EDITED_PHONE}?text=`);
   const message = decodeURIComponent(href);
   expect(message).toContain(EDITED_GREETING);
-  expect(message).toContain(PRODUCT_LINE_NO_SKU);
+  expect(message).toContain("1x Remera esencial de algodón (Negro / S)");
   expect(message).not.toContain("[MS-001-NE-S]");
 });
 
-test("utilidad: includeSku cambia el mensaje del checkout (con SKU vs sin SKU)", async ({
+test("utilidad: includeSku queda tolerado pero el runtime omite el SKU siempre", async ({
   page,
 }) => {
   const withSkuHref = await prepareWhatsAppOrder(page, baselineUrl);
@@ -366,12 +361,11 @@ test("utilidad: includeSku cambia el mensaje del checkout (con SKU vs sin SKU)",
   const withSkuMessage = decodeURIComponent(withSkuHref);
   const withoutSkuMessage = decodeURIComponent(withoutSkuHref);
   expect(withSkuMessage).toContain("Hola Tienda Referencia, quiero hacer este pedido:");
-  expect(withSkuMessage).toContain(PRODUCT_LINE_WITH_SKU);
+  expect(withSkuMessage).toContain("1x Remera esencial de algodón (Negro / S)");
+  expect(withSkuMessage).not.toContain("[MS-001-NE-S]");
   expect(withoutSkuMessage).not.toContain("[MS-001-NE-S]");
-  expect(withoutSkuMessage).toContain(PRODUCT_LINE_NO_SKU);
+  expect(withoutSkuMessage).toContain("1x Remera esencial de algodón (Negro / S)");
 
-  // El resto del mensaje es idéntico: el toggle sólo quita el SKU.
-  expect(withoutSkuMessage.replace(PRODUCT_LINE_NO_SKU, PRODUCT_LINE_WITH_SKU)).toBe(
-    withSkuMessage,
-  );
+  // El toggle sólo cambia el proyecto: el mensaje ya no depende de includeSku.
+  expect(withSkuMessage).toBe(withoutSkuMessage);
 });

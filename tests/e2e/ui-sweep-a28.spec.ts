@@ -240,7 +240,8 @@ test("C2: agregar al carrito legacy crea la línea, actualiza conteo/totales y p
   const openedUrl = await page.locator("html").getAttribute("data-solara-whatsapp-url");
   expect(openedUrl).toMatch(/^https:\/\/wa\.me\/5491123456789\?text=/);
   const message = decodeURIComponent(openedUrl ?? "").replace(/[\u202F\u00A0]/g, " ");
-  expect(message).toContain("3 x Pieza de escala 10 (Natural) [CL-SCL-010-A]: $ 43.500,00");
+  expect(message).toContain("3x Pieza de escala 10 (Natural)");
+  expect(message).not.toContain("[CL-SCL-010-A]");
   expect(message).toContain("Total estimado: $ 43.500,00");
   await whatsappPopup.close();
 

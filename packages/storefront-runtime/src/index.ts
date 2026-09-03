@@ -384,58 +384,58 @@ export function buildCartLine(product: Product, variant: Variant, quantity = 1):
   };
 }
 
-/**
- * Formats a stable customer/order message from reconciled cart lines; callers
- * should never pass prices read only from localStorage.
- */
+export type WhatsAppMessageProject = Pick<StoreProjectV1, "publicCopy"> & {
+  currency: string;
+  locale: string;
+  whatsapp: Pick<StoreProjectV1["whatsapp"], "greeting">;
+  identity?: Pick<StoreProjectV1["identity"], "brandName">;
+  priceFractionDisplay?: "always" | "auto";
+};
+
 export function buildWhatsAppMessage(
-  project: Pick<
-    StoreProjectV1,
-    "currency" | "locale" | "whatsapp" | "publicCopy" | "priceFractionDisplay" | "identity"
-  >,
+  project: WhatsAppMessageProject,
   lines: CartLine[],
   customer: CustomerDetails,
 ): string {
-  const display = (project as any).priceFractionDisplay ?? "always";
-  const items = lines.map((line) => {
-    const sku = project.whatsapp.includeSku && line.sku ? ` [${line.sku}]` : "";
-    const lineTotal = formatMoney(
-      line.unitPrice * line.quantity,
-      project.currency,
-      project.locale,
-      display,
-    );
-    return `- ${line.quantity} x ${line.title} (${line.variantTitle})${sku}: ${lineTotal}`;
-  });
-  const total = lines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
-
   const copy = project.publicCopy.whatsapp;
-  const checkoutCopy = project.publicCopy.checkout;
-  // Mantener paridad con runtime: greeting personalizado con brandName si disponible
-  const rawGreeting = project.whatsapp.greeting.trim();
-  const brandForGreeting = (project as any).identity?.brandName?.trim?.() ?? "";
-  const greeting = brandForGreeting
-    ? personalizeWhatsAppGreeting(rawGreeting, brandForGreeting)
-    : rawGreeting;
+  const pub = project.publicCopy;
+  const merged = new Map<string, CartLine>();
+  let total = 0;
+  for (const line of lines) {
+    total += line.unitPrice * line.quantity;
+    const key = `${line.productId}\n${line.variantId}`;
+    const existing = merged.get(key);
+    if (existing) existing.quantity += line.quantity;
+    else merged.set(key, { ...line });
+  }
+  const items = [];
+  let hidden = 0;
+  for (const line of merged.values()) {
+    if (items.length < 25) {
+      const variant = line.variantTitle.trim();
+      const showVariant = variant !== "" && variant.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() !== "unica";
+      items.push(`- ${line.quantity}x ${line.title}${showVariant ? ` (${variant})` : ""}`);
+    } else hidden += 1;
+  }
+  if (hidden > 0) items.push(`- \u2026y ${hidden} productos mas (incluidos en el total)`);
+  let greeting = project.whatsapp.greeting.trim();
+  const brand = project.identity?.brandName?.trim() ?? "";
+  if (brand) greeting = personalizeWhatsAppGreeting(greeting, brand);
   return [
     greeting,
     "",
     ...items,
     "",
-    `${copy.total}: ${formatMoney(total, project.currency, project.locale, display)}`,
+    `${copy.total}: ${formatMoney(total, project.currency, project.locale, project.priceFractionDisplay ?? "always")}`,
     "",
     `${copy.customerName}: ${customer.name.trim()}`,
     `${copy.customerPhone}: ${customer.phone.trim()}`,
     `${copy.delivery}: ${customer.address.trim()}`,
-    customer.locality?.trim()
-      ? `${project.publicCopy.cart.locality}: ${customer.locality.trim()}`
-      : "",
-    customer.postalCode?.trim()
-      ? `${project.publicCopy.cart.postalCode}: ${customer.postalCode.trim()}`
-      : "",
+    customer.locality?.trim() ? `${pub.cart.locality}: ${customer.locality.trim()}` : "",
+    customer.postalCode?.trim() ? `${pub.cart.postalCode}: ${customer.postalCode.trim()}` : "",
     customer.notes.trim() ? `${copy.notes}: ${customer.notes.trim()}` : "",
     "",
-    `${checkoutCopy.disclaimer || copy.confirmation}\n${checkoutCopy.verificationWarning || ""}`,
+    `${pub.checkout.disclaimer || copy.confirmation}\n${pub.checkout.verificationWarning || ""}`,
   ]
     .filter((line, index, all) => line !== "" || all[index - 1] !== "")
     .join("\n")
@@ -482,8 +482,6 @@ function storefrontBoot(): void {
     filters: f,
   } = copy;
   const greeting = root.dataset.whatsappGreeting ?? "";
-  const includeSku = root.dataset.whatsappIncludeSku !== "false";
-  const orderVerificationWarning = x.verificationWarning || x.disclaimer || w.confirmation || "";
   const storageKey = `solara-cart:${storeId}`;
   const embed = parent !== window && location.protocol[0] !== "s";
   const priceFractionDisplay = (root.dataset.priceFractionDisplay ?? "always") as "always" | "auto";
@@ -1231,14 +1229,20 @@ function storefrontBoot(): void {
   });
 
   document.querySelectorAll<HTMLFormElement>("[data-checkout-form]").forEach((form) => {
+    const preview = form.querySelector<HTMLElement>("[data-order-preview]");
+    const note = node(
+      "p",
+      "El mensaje incluye los primeros 25 productos; el total del pedido es completo.",
+      { class: "solara-whatsapp-truncated", hidden: true },
+    );
+    preview?.before(note);
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       if (cart.length === 0) {
-        const emptyPreview = form.querySelector<HTMLElement>("[data-order-preview]");
-        if (emptyPreview) {
-          emptyPreview.textContent = x.emptyCart;
-          emptyPreview.setAttribute("role", "alert");
-          emptyPreview.removeAttribute("hidden");
+        if (preview) {
+          preview.textContent = x.emptyCart;
+          preview.setAttribute("role", "alert");
+          preview.removeAttribute("hidden");
         }
         return;
       }
@@ -1246,7 +1250,6 @@ function storefrontBoot(): void {
       freshCatalog = null;
       void reconcileCart().then((ok) => {
         if (!ok) {
-          const preview = form.querySelector<HTMLElement>("[data-order-preview]");
           if (preview) {
             preview.textContent = s.error ?? x.invalidItems;
             preview.setAttribute("role", "alert");
@@ -1256,7 +1259,6 @@ function storefrontBoot(): void {
         if (cart.length === 0) return;
         const unavailable = cart.filter((line) => line.available === false);
         if (unavailable.length > 0) {
-          const preview = form.querySelector<HTMLElement>("[data-order-preview]");
           if (preview) {
             preview.textContent = x.invalidItems;
             preview.setAttribute("role", "alert");
@@ -1265,45 +1267,29 @@ function storefrontBoot(): void {
         }
 
         const data = new FormData(form);
-        const itemLines = cart.map((line) => {
-          const sku = includeSku && line.sku ? ` [${line.sku}]` : "";
-          const total = money.format((line.unitPrice * line.quantity) / 100);
-          return `- ${line.quantity} x ${line.title} (${line.variantTitle})${sku}: ${total}`;
-        });
-        const total = cart.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
-        const notes = String(data.get("notes") ?? "").trim();
-        const message = [
-          greeting.trim(),
-          "",
-          ...itemLines,
-          "",
-          `${x.total}: ${money.format(total / 100)}`,
-          "",
-          `${a.name}: ${String(data.get("name") ?? "").trim()}`,
-          `${a.phone}: ${String(data.get("phone") ?? "").trim()}`,
-          `${a.delivery}: ${String(data.get("address") ?? "").trim()}`,
-          `${a.locality}: ${String(data.get("locality") ?? "").trim()}`,
-          `${a.postalCode}: ${String(data.get("postalCode") ?? "").trim()}`,
-          notes ? `${a.notes}: ${notes}` : "",
-          "",
-          `${x.disclaimer}\n${orderVerificationWarning}`,
-        ]
-          .filter((line, index, all) => line !== "" || all[index - 1] !== "")
-          .join("\n")
-          .trim();
-
-        const cleanPhone = phone.replace(/\D/g, "");
-        if (!cleanPhone) {
-          const p = form.querySelector<HTMLElement>("[data-order-preview]");
-          if (p) {
-            p.textContent = a.phoneInvalid || x.invalidItems;
-            p.setAttribute("role", "alert");
+        const value = (key: string): string => String(data.get(key) ?? "").trim();
+        const message = buildWhatsAppMessage(
+          { currency, locale, whatsapp: { greeting }, publicCopy: copy, priceFractionDisplay },
+          cart,
+          {
+            name: value("name"),
+            phone: value("phone"),
+            address: value("address"),
+            locality: value("locality"),
+            postalCode: value("postalCode"),
+            notes: value("notes"),
+          },
+        );
+        const url = buildWhatsAppUrl(phone, message);
+        if (!url) {
+          if (preview) {
+            preview.textContent = a.phoneInvalid || x.invalidItems;
+            preview.setAttribute("role", "alert");
           }
           return;
         }
-        const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-        const preview = form.querySelector<HTMLElement>("[data-order-preview]");
         if (preview) preview.textContent = message;
+        note.hidden = cart.length <= 25;
         const whatsappWindow = window.open(url, "_blank");
         if (whatsappWindow) whatsappWindow.opener = null;
         else window.location.assign(url);
@@ -2233,6 +2219,8 @@ const RUNTIME_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unk
   ["reconcileCartLines", reconcileCartLines],
   ["cartLinesEqual", cartLinesEqual],
   ["formatMoney", formatMoney],
+  ["buildWhatsAppMessage", buildWhatsAppMessage],
+  ["buildWhatsAppUrl", buildWhatsAppUrl],
 ];
 
 const SERIALIZED_RUNTIME_HELPERS = RUNTIME_HELPERS.map(([name, fn]) => {
@@ -2371,6 +2359,12 @@ export const STOREFRONT_RUNTIME_CSS = `
 .solara-cart-line input {
   width: 100%;
   min-height: 2.5rem;
+}
+
+.solara-whatsapp-truncated {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  color: var(--solara-muted);
 }
 
 @media (max-width: 520px) {

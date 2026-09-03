@@ -7,6 +7,7 @@ import {
   formatMoney,
   parseCart,
   reconcileCartLines,
+  STOREFRONT_RUNTIME_CSS,
   STOREFRONT_RUNTIME_JS,
 } from "./index";
 
@@ -45,7 +46,7 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
       address: "CABA",
       notes: "",
     });
-    expect(msg).toContain("1 x Remera (M)");
+    expect(msg).toContain("1x Remera (M)");
     expect(msg).toContain(formatMoney(150000));
     const url = buildWhatsAppUrl("5491123456789", msg);
     expect(url).toContain("https://wa.me/5491123456789?text=");
@@ -83,7 +84,7 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
       address: "Calle 123",
       notes: "",
     });
-    expect((msg.match(/- \d+ x /g) || []).length).toBe(3);
+    expect((msg.match(/- \d+x /g) || []).length).toBe(3);
     expect(msg).toContain("A");
     expect(msg).toContain("B");
     expect(msg).toContain("C");
@@ -98,7 +99,8 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
       address: "Z",
       notes: "",
     });
-    expect(msg).toContain("Manta Bruma (Musgo) [ML-BRU-MUS]");
+    expect(msg).toContain("Manta Bruma (Musgo)");
+    expect(msg).not.toContain("ML-BRU-MUS");
   });
   it("cantidades altas: 99 unidades calculo exacto sin overflow", () => {
     const line = makeProduct({ unitPrice: 10000, quantity: 99 });
@@ -108,7 +110,7 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
       address: "Z",
       notes: "",
     });
-    expect(msg).toContain("99 x");
+    expect(msg).toContain("99x");
     expect(msg).toContain(formatMoney(990000));
   });
   it("parseCart limita quantity a 1-99", () => {
@@ -292,7 +294,7 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
     const decoded = decodeURIComponent(url.split("?text=")[1] || "");
     expect(decoded).toBe(msg);
   });
-  it("mensaje con 50 productos: todos presentes, encoding reversible", () => {
+  it("mensaje con 50 productos: cap de 25 renglones, excedentes y encoding reversible", () => {
     const lines = Array.from({ length: 50 }, (_, i) =>
       makeProduct({
         variantId: `v${i}`,
@@ -308,12 +310,16 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
       address: "CABA",
       notes: "Notas",
     });
-    expect((msg.match(/- 2 x Producto/g) || []).length).toBe(50);
+    expect((msg.match(/- 2x Producto/g) || []).length).toBe(25);
+    expect(msg).toContain("- \u2026y 25 productos mas (incluidos en el total)");
+    expect(msg).toContain("Producto 24 ");
+    expect(msg).not.toContain("Producto 25 ");
+    expect(msg).toContain(formatMoney(lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0)));
     const url = buildWhatsAppUrl("5491123456789", msg);
     const decoded = decodeURIComponent(url.split("?text=")[1] || "");
     expect(decoded).toBe(msg);
   });
-  it("mensaje con 100 productos no pierde datos tras encode", () => {
+  it("mensaje con 100 productos: cap de 25 renglones y total completo", () => {
     const lines = Array.from({ length: 100 }, (_, i) =>
       makeProduct({
         variantId: `v${i}`,
@@ -330,10 +336,10 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
       address: "C",
       notes: "",
     });
-    expect((msg.match(/- 1 x P/g) || []).length).toBe(100);
-    const url = buildWhatsAppUrl("5491123456789", msg);
-    const decoded = decodeURIComponent(url.split("?text=")[1] || "");
-    expect(decoded).toBe(msg);
+    expect((msg.match(/- 1x P/g) || []).length).toBe(25);
+    expect(msg).toContain("- \u2026y 75 productos mas (incluidos en el total)");
+    expect(msg).toContain(formatMoney(10000 * 100));
+    expect(msg).not.toContain("P99 ");
   });
   it("Unicode diverso: \u00F1 \u00E1", () => {
     const line = makeProduct({
@@ -420,8 +426,6 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
       notes: "",
     });
     expect(msg).toContain(formatMoney(201));
-    expect(msg).toContain(formatMoney(3));
-    expect(msg).toContain(formatMoney(198));
   });
   it("ninguna duplicacion: variantId duplicado no genera dos lineas", () => {
     const dupCart = [
@@ -481,7 +485,7 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
       notes: "Entregar por la tarde",
     });
     expect(msg).toContain(store.whatsapp.greeting.trim());
-    expect(msg).toContain("- 1 x");
+    expect(msg).toContain("- 1x");
     expect(msg).toContain(store.publicCopy.whatsapp.total);
     expect(msg).toContain("Malena Ortiz");
     expect(msg).toContain("11 5555 0142");
@@ -500,7 +504,7 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("void reconcileCart().then((ok)");
     expect(STOREFRONT_RUNTIME_JS).toContain("if (!ok)");
     const idxReconcile = STOREFRONT_RUNTIME_JS.indexOf("void reconcileCart().then");
-    const idxMessage = STOREFRONT_RUNTIME_JS.indexOf("const message = [");
+    const idxMessage = STOREFRONT_RUNTIME_JS.indexOf("const message = buildWhatsAppMessage(");
     expect(idxReconcile).toBeGreaterThan(-1);
     expect(idxMessage).toBeGreaterThan(idxReconcile);
     expect(STOREFRONT_RUNTIME_JS).toContain("freshCatalog = null");
@@ -564,12 +568,112 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
     expect(msg2).toContain("Hola Tienda Referencia,");
   });
   it("telefono vacio: STOREFRONT_RUNTIME_JS debe guardar contra telefono vacio en checkout", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain("cleanPhone");
-    expect(STOREFRONT_RUNTIME_JS).toContain("if (!cleanPhone)");
+    expect(STOREFRONT_RUNTIME_JS).toContain("const url = buildWhatsAppUrl(phone, message)");
+    expect(STOREFRONT_RUNTIME_JS).toContain("if (!url) {");
+    expect(STOREFRONT_RUNTIME_JS).toContain("a.phoneInvalid || x.invalidItems");
     expect(STOREFRONT_RUNTIME_JS).toContain("whatsappFallback");
   });
   it("runtime no pierde productos por truncamiento en wa.me", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain("cart.map((line)");
+    expect(STOREFRONT_RUNTIME_JS).toContain("buildWhatsAppMessage(");
+    expect(STOREFRONT_RUNTIME_JS).toContain("cart,");
     expect(STOREFRONT_RUNTIME_JS).not.toContain("cart.slice");
+  });
+});
+
+describe("AUDITORIA A2-P1: mensaje whatsapp compacto", () => {
+  const compactCustomer = {
+    name: "Malena Ortiz",
+    phone: "11 5555 0142",
+    address: "Av. Forest 842, CABA",
+    notes: "",
+  };
+  function bigCart(count: number): CartLine[] {
+    return Array.from({ length: count }, (_, i) =>
+      makeProduct({
+        productId: `p${i}`,
+        variantId: `v${i}`,
+        title: `Copa termica acero inoxidable 500ml modelo ${i + 1}`,
+        variantTitle: i % 2 === 0 ? "30x40cm" : "Única",
+        sku: `RM-DSC-${String(i + 1).padStart(3, "0")}`,
+        unitPrice: 12345 + i,
+        quantity: 2,
+      }),
+    );
+  }
+  it("30 items x 2 unidades con titulos realistas: URL <= 4000", () => {
+    const store = makeStore();
+    (store.whatsapp as any).includeSku = true;
+    const msg = buildWhatsAppMessage(store as any, bigCart(30), compactCustomer);
+    const url = buildWhatsAppUrl("5491123456789", msg);
+    expect(url.length).toBeGreaterThan(0);
+    expect(url.length).toBeLessThanOrEqual(4000);
+  });
+  it("deduplica lineas con mismo productId+variantId sumando quantity", () => {
+    const lines = [makeProduct({ quantity: 1 }), makeProduct({ quantity: 2 })];
+    const msg = buildWhatsAppMessage(makeStore() as any, lines, compactCustomer);
+    expect((msg.match(/- \d+x /g) || []).length).toBe(1);
+    expect(msg).toContain("3x Producto Base (Variante Base)");
+    expect(msg).toContain(formatMoney(150000 * 3));
+  });
+  it("sku ausente del mensaje aunque includeSku sea true", () => {
+    const store = makeStore();
+    (store.whatsapp as any).includeSku = true;
+    const msg = buildWhatsAppMessage(store as any, [makeProduct({ sku: "SKU-SECRETO-99" })], {
+      ...compactCustomer,
+      name: "A",
+    });
+    expect(msg).not.toContain("SKU-SECRETO-99");
+    expect(msg).not.toContain("[SKU");
+  });
+  it("variante Unica omitida (con/sin acentos, mayusculas, espacios) y 30x40cm visible", () => {
+    const lines = [
+      makeProduct({ variantId: "v1", title: "Producto A", variantTitle: "Única" }),
+      makeProduct({ variantId: "v2", title: "Producto B", variantTitle: "UNICA" }),
+      makeProduct({ variantId: "v3", title: "Producto C", variantTitle: "  Unica  " }),
+      makeProduct({ variantId: "v4", title: "Producto D", variantTitle: "30x40cm" }),
+      makeProduct({ variantId: "v5", title: "Producto E", variantTitle: "   " }),
+      makeProduct({ variantId: "v6", title: "Producto F", variantTitle: "" }),
+    ];
+    const msg = buildWhatsAppMessage(makeStore() as any, lines, compactCustomer);
+    expect(msg).toContain("1x Producto A");
+    expect(msg).toContain("1x Producto B");
+    expect(msg).toContain("1x Producto C");
+    expect(msg).toContain("1x Producto D (30x40cm)");
+    expect(msg).toContain("1x Producto E");
+    expect(msg).toContain("1x Producto F");
+    expect(msg).not.toContain("(Única)");
+    expect(msg).not.toContain("(UNICA)");
+    expect(msg).not.toContain("(Unica)");
+    expect(msg).not.toContain("()");
+  });
+  it("cap de 25 renglones: primeros 25, renglon de excedentes y total completo", () => {
+    const lines = bigCart(30).map((line) => ({ ...line, quantity: 1, unitPrice: 1000 }));
+    const msg = buildWhatsAppMessage(makeStore() as any, lines, compactCustomer);
+    expect((msg.match(/- 1x /g) || []).length).toBe(25);
+    expect(msg).toContain("- \u2026y 5 productos mas (incluidos en el total)");
+    expect(msg).toContain("modelo 25");
+    expect(msg).not.toContain("modelo 26");
+    expect(msg).toContain(formatMoney(30000));
+    const url = buildWhatsAppUrl("5491123456789", msg);
+    expect(url.length).toBeLessThanOrEqual(4000);
+  });
+  it("el total del pedido completo aparece aunque se muestren 25 renglones", () => {
+    const lines = bigCart(30).map((line) => ({ ...line, quantity: 1, unitPrice: 1000 }));
+    const msg = buildWhatsAppMessage(makeStore() as any, lines, compactCustomer);
+    expect(msg).toContain(formatMoney(30000));
+    expect(msg).toContain("modelo 25");
+    expect(msg).not.toContain("modelo 26");
+  });
+  it("el drawer usa el builder unico, aviso de truncado y guardas de telefono", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("const message = buildWhatsAppMessage(");
+    expect(STOREFRONT_RUNTIME_JS).not.toContain("const message = [");
+    expect(STOREFRONT_RUNTIME_JS).toContain("const url = buildWhatsAppUrl(phone, message)");
+    expect(STOREFRONT_RUNTIME_JS).toContain("cart.length <= 25");
+    expect(STOREFRONT_RUNTIME_JS).toContain("El mensaje incluye los primeros 25 productos");
+    expect(STOREFRONT_RUNTIME_CSS).toContain("solara-whatsapp-truncated");
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      "const buildWhatsAppMessage = function buildWhatsAppMessage",
+    );
+    expect(STOREFRONT_RUNTIME_JS).toContain("const buildWhatsAppUrl = function buildWhatsAppUrl");
   });
 });

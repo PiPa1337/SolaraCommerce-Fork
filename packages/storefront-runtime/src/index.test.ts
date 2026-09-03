@@ -48,7 +48,7 @@ describe("storefront runtime", () => {
     expect(decodeURIComponent(mailto)).toContain("11 5555 1111");
   });
 
-  it("genera un mensaje determinista con variante y SKU", () => {
+  it("genera un mensaje determinista con variante y sin SKU", () => {
     const product = referenceStore.products[0];
     const variant = product?.variants[0];
     if (!product || !variant) throw new Error("Fixture incompleto");
@@ -62,7 +62,8 @@ describe("storefront runtime", () => {
       notes: "Entregar por la tarde",
     });
 
-    expect(message).toContain("2 x Manta Bruma (Musgo) [ML-BRU-MUS]");
+    expect(message).toContain("2x Manta Bruma (Musgo)");
+    expect(message).not.toContain("[ML-BRU-MUS]");
     expect(message).toContain(formatMoney(15_700_000));
     expect(message).toContain("Malena Ortiz");
     expect(message).toContain("Localidad / Provincia: Villa Urquiza, CABA");
@@ -498,9 +499,9 @@ describe("carrito y checkout del drawer (A29)", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("https://wa.me/");
     expect(STOREFRONT_RUNTIME_JS).toContain("encodeURIComponent(message)");
     expect(STOREFRONT_RUNTIME_JS).toContain('replace(/\\D/g, "")');
-    expect(STOREFRONT_RUNTIME_JS).toContain("cleanPhone");
-    expect(STOREFRONT_RUNTIME_JS).toContain("x.total");
-    expect(STOREFRONT_RUNTIME_JS).toContain("x.disclaimer");
+    expect(STOREFRONT_RUNTIME_JS).toContain("const url = buildWhatsAppUrl(phone, message)");
+    expect(STOREFRONT_RUNTIME_JS).toContain("copy.total");
+    expect(STOREFRONT_RUNTIME_JS).toContain("pub.checkout.disclaimer");
   });
 
   it("acota la cantidad editada y el agregado a 1–99", () => {

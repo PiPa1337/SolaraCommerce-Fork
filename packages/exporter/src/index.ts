@@ -1458,6 +1458,14 @@ function renderDocument(
   const runtimeCopy =
     page.pageType === "product" || page.pageType === "cart" || page.pageType === "checkout"
       ? {
+          whatsapp: {
+            total: copy.whatsapp.total,
+            customerName: copy.whatsapp.customerName,
+            customerPhone: copy.whatsapp.customerPhone,
+            delivery: copy.whatsapp.delivery,
+            notes: copy.whatsapp.notes,
+            confirmation: copy.whatsapp.confirmation,
+          },
           contact: { whatsappFallback: copy.contact.whatsappFallback },
           cart: {
             unavailable: copy.cart.unavailable,
@@ -2281,7 +2289,7 @@ function buildPages(
     `<a data-cart-cta href="${escapeAttribute(emptyCartHref)}"><span class="solara-primary-action">${escapeHtml(copy.cart.exploreCategories)}</span></a><a data-cart-cta href="${escapeAttribute(cartContinueHref)}" hidden><span class="solara-primary-action">${escapeHtml(cartContinueLabel)}</span></a>`,
   );
 
-  const checkoutFields = `<label for="solara-customer-name">${escapeHtml(copy.cart.name)}</label><input id="solara-customer-name" name="name" autocomplete="name" required><label for="solara-customer-phone">${escapeHtml(copy.cart.phone)}</label><input id="solara-customer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[0-9+ ()-]{8,}" title="${escapeAttribute(copy.cart.phoneInvalid)}" required><label for="solara-customer-address">${escapeHtml(copy.cart.address)}</label><textarea id="solara-customer-address" name="address" autocomplete="street-address" required></textarea><label for="solara-customer-locality">${escapeHtml(copy.cart.locality)}</label><input id="solara-customer-locality" name="locality" autocomplete="address-level2" required><label for="solara-customer-postal-code">${escapeHtml(copy.cart.postalCode)}</label><input id="solara-customer-postal-code" name="postalCode" autocomplete="postal-code" required><label for="solara-customer-notes">${escapeHtml(copy.cart.notes)}</label><textarea id="solara-customer-notes" name="notes"></textarea><button class="solara-primary-action" type="submit">${escapeHtml(copy.checkout.submit)}</button><p data-order-verification-warning role="note">${escapeHtml(copy.checkout.verificationWarning)}</p>`;
+  const checkoutFields = `<label for="solara-customer-name">${escapeHtml(copy.cart.name)}</label><input id="solara-customer-name" name="name" autocomplete="name" required><label for="solara-customer-phone">${escapeHtml(copy.cart.phone)}</label><input id="solara-customer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[\\d\\+\\(\\)\\- ]{8,}" title="${escapeAttribute(copy.cart.phoneInvalid)}" required><label for="solara-customer-address">${escapeHtml(copy.cart.address)}</label><textarea id="solara-customer-address" name="address" autocomplete="street-address" required></textarea><label for="solara-customer-locality">${escapeHtml(copy.cart.locality)}</label><input id="solara-customer-locality" name="locality" autocomplete="address-level2" required><label for="solara-customer-postal-code">${escapeHtml(copy.cart.postalCode)}</label><input id="solara-customer-postal-code" name="postalCode" autocomplete="postal-code" required><label for="solara-customer-notes">${escapeHtml(copy.cart.notes)}</label><textarea id="solara-customer-notes" name="notes"></textarea><button class="solara-primary-action" type="submit">${escapeHtml(copy.checkout.submit)}</button><p data-order-verification-warning role="note">${escapeHtml(copy.checkout.verificationWarning)}</p>`;
   const checkoutForm =
     project.commerceTemplates.designFamily === "catalog-modern-v2"
       ? `<form class="solara-checkout-form solara-checkout-form-v2" data-checkout-form><div class="solara-checkout-fields">${checkoutFields}</div><aside class="solara-checkout-order-panel" aria-labelledby="solara-order-summary-title"><p class="solara-eyebrow">${escapeHtml(copy.checkout.selection)}</p><h2 id="solara-order-summary-title">${escapeHtml(copy.checkout.summary)}</h2><p>${escapeHtml(copy.checkout.prepare)}</p><pre data-order-preview aria-live="polite"></pre></aside></form>`

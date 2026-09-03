@@ -97,7 +97,7 @@ test("selecciona una variante, agrega al carrito y abre WhatsApp", async ({ page
   await expect(page.locator("[data-whatsapp-link]")).toHaveCount(0);
   const openedUrl = await page.locator("html").getAttribute("data-solara-whatsapp-url");
   expect(openedUrl).toContain("https://wa.me/5491123456789?text=");
-  expect(decodeURIComponent(openedUrl ?? "")).toContain("2 x Manta Bruma (Piedra) [ML-BRU-PIE]");
+  expect(decodeURIComponent(openedUrl ?? "")).toContain("2x Manta Bruma (Piedra)");
   await whatsappPopup.close();
 });
 

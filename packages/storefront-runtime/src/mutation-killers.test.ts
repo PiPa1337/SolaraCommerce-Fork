@@ -121,7 +121,7 @@ describe("mutation-killers: storefront-runtime / dinero", () => {
     expect(msg).not.toContain("NaN");
     expect(msg).toMatch(/\$|ARS/);
   });
-  it("buildWhatsAppMessage incluye SKU solo si includeSku true", () => {
+  it("buildWhatsAppMessage nunca incluye SKU (includeSku tolerado pero ignorado)", () => {
     const prod = referenceStore.products[0]!;
     const variant = prod.variants[0]!;
     const line = buildCartLine(prod, variant!, 1);
@@ -130,13 +130,15 @@ describe("mutation-killers: storefront-runtime / dinero", () => {
       [line as any],
       { name: "A", phone: "B", address: "C", notes: "" },
     );
-    expect(withSku).toContain(`[${variant?.sku}]`);
+    expect(withSku).not.toContain(`[${variant?.sku}]`);
+    expect(withSku).not.toContain(variant?.sku ?? "\u0000");
     const withoutSku = buildWhatsAppMessage(
       { ...referenceStore, whatsapp: { ...referenceStore.whatsapp, includeSku: false } } as any,
       [line as any],
       { name: "A", phone: "B", address: "C", notes: "" },
     );
     expect(withoutSku).not.toContain(`[${variant?.sku}]`);
+    expect(withSku).toBe(withoutSku);
   });
   it("ghost image se limpia cuando catalog no tiene imagen (no preservar vieja)", () => {
     const cart = [

@@ -588,6 +588,17 @@ describe("exporter", () => {
     expect(checkout).toContain('<meta name="robots" content="noindex,follow">');
   });
 
+  it("emite un pattern de teléfono válido en regex v-mode en /compra/", () => {
+    const result = exportProject(referenceStore, { mode: "production" });
+    const checkout = String(result.files.get("compra/index.html"));
+    const match = checkout.match(/name="phone"[^>]*pattern="([^"]+)"/);
+    const pattern = match?.[1];
+    expect(pattern).toBe("[\\d\\+\\(\\)\\- ]{8,}");
+    expect(checkout).not.toContain("[0-9+ ()-]{8,}");
+    expect(() => new RegExp(pattern ?? "", "v")).not.toThrow();
+    expect(new RegExp(pattern ?? "", "v").test("11 5555-0142")).toBe(true);
+  });
+
   it("precarga sólo la imagen crítica de cada ruta y conserva headers de cache", () => {
     const result = exportProject(referenceStore, { mode: "production" });
     const home = String(result.files.get("index.html"));

@@ -14,8 +14,8 @@
  *  - Edición de cantidad en el drawer: restaura en vacío/cero; acota 1–99.
  *  - Quitar línea: desaparece, badge y totales recalcular.
  *  - Drawer: aria-expanded, cierre con Escape, trampa de foco y retorno al trigger.
- *  - Checkout del drawer: mensaje de WhatsApp con saludo, formato de línea, SKU
- *    y total en centavos (URL wa.me).
+ *  - Checkout del drawer: mensaje de WhatsApp compacto (sin SKU) con saludo,
+ *    variante visible y total en centavos (URL wa.me).
  *  - Línea no disponible: se conserva con "Ya no disponible" (no se descarta).
  *  - Página de carrito: reconciliación con precios frescos de catalog-index.json.
  *  - Totales con aria-live.
@@ -297,7 +297,7 @@ test("drawer: trampa de foco con Tab y Shift+Tab dentro del panel", async ({ pag
   await expect(first).toBeFocused();
 });
 
-test("checkout del drawer: abre URL wa.me con saludo, líneas, SKU y total en centavos", async ({
+test("checkout del drawer: abre URL wa.me con saludo, líneas compactas y total en centavos", async ({
   page,
 }) => {
   await clearCart(page);
@@ -334,14 +334,13 @@ test("checkout del drawer: abre URL wa.me con saludo, líneas, SKU y total en ce
   expect(url.pathname).toBe("/5491123456789");
   const message = (url.searchParams.get("text") ?? "").replace(/[\u202F\u00A0]/g, " ");
   expect(message).toContain("Hola Tienda Referencia, quiero hacer este pedido:");
-  expect(message).toContain(
-    "- 2 x Remera esencial de algodón (Negro / S) [MS-001-NE-S]: $ 57.700,00",
-  );
+  expect(message).toContain("- 2x Remera esencial de algodón (Negro / S)");
+  expect(message).not.toContain("[MS-001-NE-S]");
   expect(message).toContain("Total estimado: $ 57.700,00");
   expect(message).toContain("Nombre: Malena Ortiz");
   expect(message).toContain("Teléfono: 11 5555 0142");
   expect(message).toContain("Entrega: Av. Forest 842, CABA");
-  expect(message).toContain("Notas opcionales: Entregar por la tarde");
+  expect(message).toContain("Notas: Entregar por la tarde");
   expect(message).toContain("Entiendo que precio, disponibilidad, envío y pago se confirman");
   await expect(drawer.locator("[data-order-preview]")).toContainText("Total estimado: $ 57.700,00");
   await whatsappPopup.close();
