@@ -47,6 +47,7 @@ import { formatPrice } from "@solara/project-schema/money";
 import {
   buildAiContext,
   buildLlmsTxt,
+  fitTitle,
   type OptimizationOptions,
   type OptimizationReport,
   optimizeProject,
@@ -1807,6 +1808,23 @@ function appendToFooter(body: string, content: string): string {
   return `${body.slice(0, footerInnerEnd)}${content}${body.slice(footerInnerEnd)}`;
 }
 
+function paginationWindowItems(pageNumber: number, totalPages: number): Array<number | "gap"> {
+  const pages = new Set<number>([1, totalPages]);
+  for (let page = pageNumber - 2; page <= pageNumber + 2; page += 1) {
+    if (page >= 1 && page <= totalPages) pages.add(page);
+  }
+  const sorted = [...pages].sort((left, right) => left - right);
+  const items: Array<number | "gap"> = [];
+  let previous = 0;
+  for (const page of sorted) {
+    if (page - previous === 2) items.push(previous + 1);
+    else if (page - previous > 2) items.push("gap");
+    items.push(page);
+    previous = page;
+  }
+  return items;
+}
+
 function paginationNavigation(
   project: StoreProjectV1,
   basePath: string,
@@ -1817,8 +1835,18 @@ function paginationNavigation(
   const copy = project.publicCopy.export;
   const pathFor = (page: number) =>
     internalHref(project, page === 1 ? `${basePath}/` : `${basePath}/pagina/${page}/`);
+  const numericWindow = paginationWindowItems(pageNumber, totalPages)
+    .map((item) => {
+      if (item === "gap") {
+        return `<span class="solara-pagination__ellipsis" aria-hidden="true">…</span>`;
+      }
+      if (item === pageNumber) return `<span aria-current="page">${item}</span>`;
+      return `<a href="${escapeHtml(pathFor(item))}">${item}</a>`;
+    })
+    .join(" ");
   return `<nav class="solara-pagination" aria-label="${escapeAttribute(copy.pagination)}">
     ${pageNumber > 1 ? `<a rel="prev" href="${escapeHtml(pathFor(pageNumber - 1))}">${escapeHtml(copy.previous)}</a>` : ""}
+    ${numericWindow}
     <span>${escapeHtml(interpolatePublicCopy(copy.pageOf, { page: String(pageNumber), total: String(totalPages) }))}</span>
     ${pageNumber < totalPages ? `<a rel="next" href="${escapeHtml(pathFor(pageNumber + 1))}">${escapeHtml(copy.next)}</a>` : ""}
   </nav>`;
@@ -2146,7 +2174,10 @@ function buildPages(
           pageNumber === 1
             ? `categorias/${category.slug}/index.html`
             : `categorias/${category.slug}/pagina/${pageNumber}/index.html`,
-        title: `${category.title}${pageNumber > 1 ? ` — Página ${pageNumber}` : ""} | ${project.identity.brandName}`,
+        title: fitTitle(
+          `${category.title}${pageNumber > 1 ? ` — Página ${pageNumber}` : ""}`,
+          project.identity.brandName,
+        ),
         description: category.description || project.seo.description,
         canonicalPath,
         pageType: "category",
@@ -2238,7 +2269,10 @@ function buildPages(
             pageNumber === 1
               ? `colecciones/${collection.slug}/index.html`
               : `colecciones/${collection.slug}/pagina/${pageNumber}/index.html`,
-          title: `${collection.title}${pageNumber > 1 ? ` — Página ${pageNumber}` : ""} | ${project.identity.brandName}`,
+          title: fitTitle(
+            `${collection.title}${pageNumber > 1 ? ` — Página ${pageNumber}` : ""}`,
+            project.identity.brandName,
+          ),
           description: collection.description || project.seo.description,
           canonicalPath,
           pageType: "collection",
@@ -2290,7 +2324,10 @@ function buildPages(
     ].join("");
     return {
       path: `productos/${product.slug}/index.html`,
-      title: `${product.title}${(activeProductTitleCounts.get(product.title) ?? 0) > 1 ? ` — ${product.slug}` : ""} | ${project.identity.brandName}`,
+      title: fitTitle(
+        `${product.title}${(activeProductTitleCounts.get(product.title) ?? 0) > 1 ? ` — ${product.slug}` : ""}`,
+        project.identity.brandName,
+      ),
       description: product.description || project.seo.description,
       canonicalPath: `/productos/${product.slug}/`,
       lastModifiedAt: product.updatedAt,

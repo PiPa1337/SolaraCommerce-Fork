@@ -417,6 +417,14 @@ export const STORE_BASE_STYLES = `
   background: var(--solara-accent);
   color: var(--solara-accent-text);
 }
+[data-solara-store] .solara-pagination .solara-pagination__ellipsis {
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--solara-muted);
+}
 [data-solara-store] .solara-checkout-form {
   display: grid;
   gap: .75rem;
@@ -2491,7 +2499,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .solara-category-children a { display: grid; gap: .25rem; padding: .75rem .8rem; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); background: var(--catalog-paper); text-decoration: none; }
 [data-solara-store].catalog-modern .solara-category-children small { color: var(--catalog-muted); }
 [data-solara-store].catalog-modern .solara-pagination { display: flex; align-items: center; justify-content: center; gap: .75rem; margin: 2rem auto 3rem; }
-[data-solara-store].catalog-modern .solara-pagination a { padding: .5rem .8rem; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); text-decoration: none; }
+[data-solara-store].catalog-modern .solara-pagination a { padding: .5rem .8rem; min-height: 44px; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); text-decoration: none; }
+[data-solara-store].catalog-modern .solara-pagination .solara-pagination__ellipsis { min-width: 0; min-height: 0; padding: 0; border: 0; background: transparent; color: var(--catalog-muted); }
 [data-solara-store].catalog-modern .solara-search-page .solara-page-intro { max-width: 56rem; padding: clamp(2.5rem, 5vw, 4rem) 0 2.5rem; }
 [data-solara-store].catalog-modern .solara-search-page .solara-page-intro h1 { max-width: 16ch; }
 [data-solara-store].catalog-modern .solara-search-page-trigger { display: inline-flex; align-items: center; justify-content: center; width: fit-content; min-height: 44px; margin-top: 1.25rem; padding: .75rem 1rem; border: 1px solid var(--catalog-border); border-radius: 0; background: transparent; color: var(--catalog-ink); cursor: pointer; }
@@ -2531,7 +2540,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 @media (max-width: 767px) {
   [data-solara-store].catalog-modern .catalog-header-inner { grid-template-columns: auto 1fr auto; gap: .75rem; min-height: 64px; }
-  [data-solara-store].catalog-modern .catalog-mobile-menu-button { display: inline-grid; place-items: center; width: 44px; height: 44px; border: 0; background: transparent; font-size: 1.15rem; -webkit-user-select: none; user-select: none; }
+  [data-solara-store].catalog-modern .catalog-mobile-menu-button { display: inline-grid; place-items: center; width: 44px; height: 44px; min-width: 44px; min-height: 44px; border: 0; background: transparent; font-size: 1.15rem; -webkit-user-select: none; user-select: none; }
   [data-solara-store].catalog-modern .catalog-desktop-nav { display: none; }
   [data-solara-store].catalog-modern .catalog-header-actions { gap: .25rem; }
   [data-solara-store].catalog-modern .catalog-cart-link span { display: none; }
@@ -2598,7 +2607,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   [data-solara-store].catalog-modern .catalog-mobile-categories[open] > summary .catalog-nav-chevron { transform: rotate(180deg); }
   [data-solara-store].catalog-modern .catalog-hero-inner { display: flex; flex-direction: column; min-height: calc(100svh - 96px); margin-top: .75rem; border-radius: var(--solara-radius); }
   [data-solara-store].catalog-modern .catalog-hero-copy { padding: 2rem 1.25rem 1.5rem; }
-  [data-solara-store].catalog-modern .catalog-hero-copy h1 { max-width: 10ch; font-size: calc(clamp(2.7rem, 13vw, 4.5rem) * var(--solara-type-scale, 1)); line-height: 1.15; }
+  [data-solara-store].catalog-modern .catalog-hero-copy h1 { max-width: 10ch; font-size: calc(clamp(2.2rem, 9vw, 3.2rem) * var(--solara-type-scale, 1)); line-height: 1.15; }
   [data-solara-store].catalog-modern .catalog-hero-copy > p:not(.catalog-eyebrow) { max-width: 34ch; }
   [data-solara-store].catalog-modern .catalog-hero-actions { display: grid; grid-template-columns: 1fr; }
   [data-solara-store].catalog-modern .catalog-primary-action,
@@ -3857,7 +3866,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
   .cm.v2 .catalog-hero-copy h1 {
     max-width: 100%;
-    font-size: calc(clamp(3.25rem, 14vw, 5.2rem) * var(--solara-type-scale, 1));
+    font-size: calc(clamp(2.3rem, 9vw, 3.4rem) * var(--solara-type-scale, 1));
   }
   .cm.v2 .catalog-hero-media {
     min-height: 42svh;

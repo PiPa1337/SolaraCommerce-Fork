@@ -746,7 +746,7 @@ describe("variante única oculta en fichas (auditoría 2)", () => {
       product,
     });
     expect(html).toMatch(/<label for="catalog-variant-section-mono-modern"[^>]* hidden>/);
-    expect(html).toContain('data-variant-select required hidden>');
+    expect(html).toContain("data-variant-select required hidden>");
     expect(html).toMatch(/class="catalog-variant-options"[^>]* hidden>/);
   });
 
@@ -776,7 +776,7 @@ describe("variante única oculta en fichas (auditoría 2)", () => {
       product,
     });
     expect(html).toMatch(/<label for="variant-section-mono-legacy"[^>]* hidden>/);
-    expect(html).toContain('data-variant-select required hidden>');
+    expect(html).toContain("data-variant-select required hidden>");
   });
 
   it("muestra el selector en el detalle legacy multi-variante", () => {
@@ -1056,6 +1056,38 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
       /\.solara-pagination a \{[^}]*border-radius: var\(--solara-radius\)[^}]*\}/,
     );
     expect(styles).not.toMatch(/\.solara-pagination a \{[^}]*border-radius: 999px/);
+  });
+
+  it("garantiza hit-area de 44px en la hamburguesa y clamp compacto del hero móvil", () => {
+    const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
+    const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!styles || !v2Styles) throw new Error("Faltan los estilos de catalog-modern");
+
+    expect(styles).toMatch(/\.catalog-mobile-menu-button \{[^}]*min-width: 44px; min-height: 44px/);
+    expect(styles).toContain(
+      "font-size: calc(clamp(2.2rem, 9vw, 3.2rem) * var(--solara-type-scale, 1))",
+    );
+    expect(styles).toContain(
+      "font-size: calc(clamp(3.2rem, 6vw, 6.5rem) * var(--solara-type-scale, 1))",
+    );
+    expect(v2Styles).toContain(
+      "font-size: calc(clamp(2.3rem, 9vw, 3.4rem) * var(--solara-type-scale, 1))",
+    );
+    expect(v2Styles).toContain(
+      "font-size: calc(clamp(4.75rem, 6.4vw, 8rem) * var(--solara-type-scale, 1))",
+    );
+    expect(v2Styles).toContain(
+      "font-size: calc(clamp(3.6rem, 7vw, 5.5rem) * var(--solara-type-scale, 1))",
+    );
+  });
+
+  it("estila la ventana numérica de paginación con elipses discretas", () => {
+    const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
+    if (!styles) throw new Error("Falta el bloque de estilos catalog-modern");
+
+    expect(styles).toMatch(/\.solara-pagination__ellipsis \{[^}]*border: 0/);
+    expect(STORE_BASE_STYLES).toMatch(/\.solara-pagination__ellipsis \{[^}]*border: 0/);
+    expect(styles).toMatch(/\.solara-pagination a \{[^}]*min-height: 44px/);
   });
 
   it("mantiene cuadrados todos los controles de búsqueda", () => {

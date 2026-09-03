@@ -383,7 +383,10 @@ function buildRoutes(project: StoreProjectV1): OptimizationRoute[] {
             "category",
             true,
             path,
-            `${category.title}${page > 1 ? ` — Página ${page}` : ""} | ${project.identity.brandName}`,
+            `${fitTitle(
+              `${category.title}${page > 1 ? ` — Página ${page}` : ""}`,
+              project.identity.brandName,
+            )}`,
             category.description,
             page === 1,
           ),
@@ -405,7 +408,10 @@ function buildRoutes(project: StoreProjectV1): OptimizationRoute[] {
           "collection",
           true,
           path,
-          `${collection.title}${page > 1 ? ` — Página ${page}` : ""} | ${project.identity.brandName}`,
+          `${fitTitle(
+            `${collection.title}${page > 1 ? ` — Página ${page}` : ""}`,
+            project.identity.brandName,
+          )}`,
           collection.description,
           page === 1,
         ),
@@ -423,7 +429,10 @@ function buildRoutes(project: StoreProjectV1): OptimizationRoute[] {
           "product",
           true,
           path,
-          `${product.title}${(activeProductTitleCounts.get(cleanText(product.title)) ?? 0) > 1 ? ` — ${product.slug}` : ""} | ${project.identity.brandName}`,
+          `${fitTitle(
+            `${product.title}${(activeProductTitleCounts.get(cleanText(product.title)) ?? 0) > 1 ? ` — ${product.slug}` : ""}`,
+            project.identity.brandName,
+          )}`,
           product.description,
           true,
         ),
@@ -459,6 +468,20 @@ export function publicProductTitle(
   const title = cleanText(product.title);
   const sameTitleCount = titleCounts.get(title) ?? 0;
   return `${title}${sameTitleCount > 1 ? ` — ${product.slug}` : ""}`;
+}
+
+export const FIT_TITLE_MIN_ENTITY_CHARS = 20;
+
+export function fitTitle(entityTitle: string, brandName: string, max = 60): string {
+  const suffix = ` | ${brandName}`;
+  const available = max - suffix.length;
+  if (available < FIT_TITLE_MIN_ENTITY_CHARS) return `${entityTitle}${suffix}`;
+  if (entityTitle.length <= available) return `${entityTitle}${suffix}`;
+  const slice = entityTitle.slice(0, available - 1);
+  const boundary = slice.lastIndexOf(" ");
+  const fitted = boundary >= FIT_TITLE_MIN_ENTITY_CHARS ? slice.slice(0, boundary) : slice;
+  if (fitted.length < FIT_TITLE_MIN_ENTITY_CHARS) return `${entityTitle}${suffix}`;
+  return `${fitted}…${suffix}`;
 }
 
 function addFinding(

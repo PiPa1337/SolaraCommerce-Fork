@@ -1,7 +1,13 @@
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
 import { describe, expect, it } from "vitest";
-import { buildAiContext, buildLlmsTxt, optimizeProject } from "./index";
+import {
+  buildAiContext,
+  buildIndexableRoutes,
+  buildLlmsTxt,
+  fitTitle,
+  optimizeProject,
+} from "./index";
 
 describe("site optimizer", () => {
   it("construye un informe determinista para la demo de 50 productos", () => {
@@ -226,5 +232,80 @@ describe("site optimizer", () => {
     expect(
       context.pages.some((page) => page.path === "/colecciones/recien-llegados/pagina/2/"),
     ).toBe(false);
+  });
+});
+
+describe("fitTitle", () => {
+  const brand = "Tienda Referencia";
+
+  it("conserva byte-idénticos los títulos que caben", () => {
+    expect(fitTitle("Remera esencial negra", brand)).toBe(
+      "Remera esencial negra | Tienda Referencia",
+    );
+  });
+
+  it("trunca la entidad en límite de palabra con … y conserva la marca completa", () => {
+    const entity = "Uno dos tres cuatro cinco seis siete ocho nueve diez";
+    const title = fitTitle(entity, brand);
+    expect(title).toBe("Uno dos tres cuatro cinco seis siete… | Tienda Referencia");
+    expect(title.length).toBeLessThanOrEqual(60);
+    expect(title.endsWith(` | ${brand}`)).toBe(true);
+  });
+
+  it("no trunca cuando la marca deja menos de 20 caracteres para la entidad", () => {
+    const marcaLarga = "Marca con nombre comercial sumamente extenso";
+    const entity = `Término ${"extenso".repeat(12)}`;
+    expect(fitTitle(entity, marcaLarga)).toBe(`${entity} | ${marcaLarga}`);
+  });
+
+  it("no trunca cuando el recorte quedaría por debajo del mínimo de entidad", () => {
+    const marca = "M".repeat(37);
+    const entity = `Hola ${"palabra".repeat(15)}`;
+    expect(fitTitle(entity, marca)).toBe(`${entity} | ${marca}`);
+  });
+});
+
+describe("títulos de rutas acotados a 60 caracteres", () => {
+  it("trunca solo la entidad en categoría, colección y producto manteniendo la marca", () => {
+    const project = structuredClone(catalogModernStore);
+    const category = project.categories[0];
+    if (!category) throw new Error("Fixture sin categorías");
+    category.title = "Categoria con un nombre comercial excesivamente largo para titulos";
+    const collection = project.collections[0];
+    if (!collection) throw new Error("Fixture sin colecciones");
+    collection.title = "Coleccion con un nombre comercial excesivamente largo para titulos";
+    const product = project.products.find((item) => item.status === "active");
+    if (!product) throw new Error("Fixture sin productos activos");
+    product.title = "Producto con un nombre comercial excesivamente largo para un titulo seo";
+
+    const routes = buildIndexableRoutes(project);
+    const brand = project.identity.brandName;
+    const categoryRoute = routes.find((item) => item.path === `/categorias/${category.slug}/`);
+    const collectionRoute = routes.find((item) => item.path === `/colecciones/${collection.slug}/`);
+    const productRoute = routes.find((item) => item.path === `/productos/${product.slug}/`);
+    if (!categoryRoute || !collectionRoute || !productRoute) {
+      throw new Error("Fixture sin rutas esperadas");
+    }
+
+    expect(categoryRoute.title.length).toBeLessThanOrEqual(60);
+    expect(categoryRoute.title.endsWith(` | ${brand}`)).toBe(true);
+    expect(categoryRoute.title).toContain("…");
+    expect(collectionRoute.title.length).toBeLessThanOrEqual(60);
+    expect(collectionRoute.title.endsWith(` | ${brand}`)).toBe(true);
+    expect(productRoute.title.length).toBeLessThanOrEqual(60);
+    expect(productRoute.title.endsWith(` | ${brand}`)).toBe(true);
+  });
+
+  it("deja byte-idénticos los títulos cortos de producto", () => {
+    const project = structuredClone(catalogModernStore);
+    const product = project.products.find((item) => item.status === "active");
+    if (!product) throw new Error("Fixture sin productos activos");
+    const expected = `${product.title} | ${project.identity.brandName}`;
+    if (expected.length > 60) throw new Error("Fixture no apto para el caso corto");
+
+    const route = buildIndexableRoutes(project).find(
+      (item) => item.path === `/productos/${product.slug}/`,
+    );
+    expect(route?.title).toBe(expected);
   });
 });

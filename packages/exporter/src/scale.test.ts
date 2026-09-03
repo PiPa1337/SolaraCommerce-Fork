@@ -145,4 +145,90 @@ describe("exporter con catálogo jerárquico de escala", () => {
     expect(pageTwoPreview).toContain("Casa");
     expect(exportProject(catalogScaleStore, { mode: "production" }).files).toEqual(exported.files);
   });
+
+  it("emite ventana numérica de paginación además de prev/next", () => {
+    const project = structuredClone(catalogScaleStore);
+    project.commerceTemplates.category.productsPerPage = 4;
+    const result = exportProject(project, { mode: "production" });
+    const navOf = (path: string) => {
+      const html = String(result.files.get(path));
+      if (!html) throw new Error(`Fixture sin ${path}`);
+      const nav = /<nav class="solara-pagination"[\s\S]*?<\/nav>/.exec(html)?.[0];
+      if (!nav) throw new Error(`Sin paginación en ${path}`);
+      return nav;
+    };
+    const pageOne = navOf("categorias/casa/index.html");
+    const pageFour = navOf("categorias/casa/pagina/4/index.html");
+    const pageSeven = navOf("categorias/casa/pagina/7/index.html");
+
+    expect(pageOne).toContain('<span aria-current="page">1</span>');
+    expect(pageOne).not.toContain('href="/categorias/casa/">1</a>');
+    expect(pageOne).toContain('href="/categorias/casa/pagina/2/">2</a>');
+    expect(pageOne).toContain('href="/categorias/casa/pagina/3/">3</a>');
+    expect(pageOne).toContain('href="/categorias/casa/pagina/7/">7</a>');
+    expect(pageOne).toContain(
+      '<span class="solara-pagination__ellipsis" aria-hidden="true">…</span>',
+    );
+    expect(pageOne).not.toMatch(/<a[^>]*>…<\/a>/);
+    expect(pageOne).toContain('rel="next"');
+    expect(pageOne).not.toContain('rel="prev"');
+
+    expect(pageFour).toContain('<span aria-current="page">4</span>');
+    expect(pageFour).toContain('href="/categorias/casa/">1</a>');
+    expect(pageFour).toContain('href="/categorias/casa/pagina/2/">2</a>');
+    expect(pageFour).toContain('href="/categorias/casa/pagina/3/">3</a>');
+    expect(pageFour).toContain('href="/categorias/casa/pagina/5/">5</a>');
+    expect(pageFour).toContain('href="/categorias/casa/pagina/6/">6</a>');
+    expect(pageFour).toContain('href="/categorias/casa/pagina/7/">7</a>');
+    expect(pageFour).not.toContain("solara-pagination__ellipsis");
+    expect(pageFour).toContain('rel="prev"');
+    expect(pageFour).toContain('rel="next"');
+
+    expect(pageSeven).toContain('<span aria-current="page">7</span>');
+    expect(pageSeven).toContain('href="/categorias/casa/pagina/5/">5</a>');
+    expect(pageSeven).toContain('href="/categorias/casa/pagina/6/">6</a>');
+    expect(pageSeven).toContain("solara-pagination__ellipsis");
+    expect(pageSeven).toContain('rel="prev"');
+    expect(pageSeven).not.toContain('rel="next"');
+  });
+
+  it("limita la ventana numérica a ±2 con primera, última y elipses", () => {
+    const project = structuredClone(catalogScaleStore);
+    project.commerceTemplates.category.productsPerPage = 2;
+    const html = String(
+      exportProject(project, { mode: "production" }).files.get(
+        "categorias/casa/pagina/7/index.html",
+      ),
+    );
+    if (!html) throw new Error("Fixture sin página 7 de casa");
+    const pageSeven = /<nav class="solara-pagination"[\s\S]*?<\/nav>/.exec(html)?.[0];
+    if (!pageSeven) throw new Error("Sin paginación en página 7");
+
+    expect(pageSeven).toContain('<span aria-current="page">7</span>');
+    expect(pageSeven).toContain('href="/categorias/casa/">1</a>');
+    expect(pageSeven).toContain('href="/categorias/casa/pagina/14/">14</a>');
+    for (const page of [5, 6, 8, 9]) {
+      expect(pageSeven).toContain(`href="/categorias/casa/pagina/${page}/">${page}</a>`);
+    }
+    for (const page of [2, 3, 4, 10, 11, 12, 13]) {
+      expect(pageSeven).not.toContain(`href="/categorias/casa/pagina/${page}/">${page}</a>`);
+    }
+    expect(pageSeven.match(/solara-pagination__ellipsis/g)).toHaveLength(2);
+    expect(pageSeven).toContain('rel="prev" href="/categorias/casa/pagina/6/"');
+    expect(pageSeven).toContain('rel="next" href="/categorias/casa/pagina/8/"');
+  });
+
+  it("mantiene la ventana numérica idéntica entre preview y export", () => {
+    const project = structuredClone(catalogScaleStore);
+    project.commerceTemplates.category.productsPerPage = 4;
+    const preview = renderPreviewHtml(project, "draft", "/categorias/casa/pagina/4/");
+    const exportedPage = String(
+      exportProject(project, { mode: "production" }).files.get(
+        "categorias/casa/pagina/4/index.html",
+      ),
+    );
+    const window = (html: string) =>
+      /<nav class="solara-pagination"[\s\S]*?<\/nav>/.exec(html)?.[0] ?? "";
+    expect(window(preview)).toBe(window(exportedPage));
+  });
 });
