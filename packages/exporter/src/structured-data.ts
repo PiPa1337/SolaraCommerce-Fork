@@ -132,6 +132,12 @@ export function faqPageData(project: StoreProjectV1): unknown {
   };
 }
 
+function priceValidUntilFor(project: StoreProjectV1): string {
+  const valid = new Date(project.updatedAt);
+  valid.setUTCDate(valid.getUTCDate() + 90);
+  return valid.toISOString().slice(0, 10);
+}
+
 export function offerData(project: StoreProjectV1, offer: CommerceOfferSnapshot): unknown {
   return {
     "@type": "Offer",
@@ -160,7 +166,7 @@ export function offerData(project: StoreProjectV1, offer: CommerceOfferSnapshot)
     itemCondition: "https://schema.org/NewCondition",
     // Google Merchant recomienda una fecha de validez del precio para rich
     // snippets. Determinística a partir de updatedAt del proyecto.
-    priceValidUntil: `${new Date(project.updatedAt).getUTCFullYear()}-12-31`,
+    priceValidUntil: priceValidUntilFor(project),
     seller: { "@type": "Organization", name: project.identity.brandName },
     shippingDetails: {
       "@type": "OfferShippingDetails",
