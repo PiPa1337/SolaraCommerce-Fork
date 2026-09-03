@@ -1414,6 +1414,7 @@ function listingSections(
 }
 
 const PICTURE_MOBILE_MEDIA = "(max-width: 1023px)";
+const PICTURE_DESKTOP_MEDIA = "(min-width: 1024px)";
 
 function parseSrcsetPairs(value: string): Array<{ url: string; width: number }> {
   const pairs: Array<{ url: string; width: number }> = [];
@@ -1428,11 +1429,27 @@ function parseSrcsetPairs(value: string): Array<{ url: string; width: number }> 
   return pairs;
 }
 
-function picturePreloadMirror(
+/**
+ * Espejo del `<picture>` real del body para el preload del LCP, partido por
+ * media: el navegador sólo descarga el link cuyo `media` matchea, así cada
+ * viewport resuelve el MISMO recurso que elegirá el `<picture>` (con DPR alto
+ * un único imagesrcset global podía resolver el full en móvil y duplicar la
+ * descarga que el picture evita con su fuente ≤1023px).
+ */
+function picturePreloadSources(
   body: string,
   preloadImage: string,
-): { srcset: string; sizes?: string } | undefined {
-  const candidates: Array<{ srcset: string; sizes?: string; eager: boolean }> = [];
+):
+  | {
+      mobile?: { srcset: string; sizes?: string };
+      full?: { href: string; srcset: string; sizes?: string };
+    }
+  | undefined {
+  const candidates: Array<{
+    mobile?: { srcset: string; sizes?: string };
+    full?: { href: string; srcset: string; sizes?: string };
+    eager: boolean;
+  }> = [];
   for (const match of body.matchAll(/<picture>([\s\S]*?)<\/picture>/g)) {
     const block = match[1] ?? "";
     if (!block.includes(preloadImage)) continue;
@@ -1440,28 +1457,82 @@ function picturePreloadMirror(
     if (sourceTags.length === 0) continue;
     const attribute = (tag: string, name: string): string | undefined =>
       new RegExp(`\\b${name}="([^"]*)"`, "i").exec(tag)?.[1];
-    const mobileTags = sourceTags.filter((tag) => attribute(tag, "media") === PICTURE_MOBILE_MEDIA);
-    const fullTags = sourceTags.filter((tag) => !attribute(tag, "media"));
-    const pairs = [...mobileTags, ...fullTags]
-      .flatMap((tag) => parseSrcsetPairs(attribute(tag, "srcset") ?? ""))
-      .filter(
+    const dedupePairs = (pairs: Array<{ url: string; width: number }>) =>
+      pairs.filter(
         (pair, index, all) =>
           all.findIndex((other) => other.url === pair.url && other.width === pair.width) === index,
       );
-    if (pairs.length === 0) continue;
+    const serializePairs = (pairs: Array<{ url: string; width: number }>) =>
+      pairs.map((pair) => (pair.width > 0 ? `${pair.url} ${pair.width}w` : pair.url)).join(", ");
+    const mobileTags = sourceTags.filter((tag) => attribute(tag, "media") === PICTURE_MOBILE_MEDIA);
+    const fullTags = sourceTags.filter((tag) => !attribute(tag, "media"));
+    const mobilePairs = dedupePairs(
+      mobileTags.flatMap((tag) => parseSrcsetPairs(attribute(tag, "srcset") ?? "")),
+    );
+    const fullPairs = dedupePairs(
+      fullTags.flatMap((tag) => parseSrcsetPairs(attribute(tag, "srcset") ?? "")),
+    );
+    if (mobilePairs.length === 0 && fullPairs.length === 0) continue;
     const imgTag = /<img\b[^>]*>/i.exec(block)?.[0] ?? "";
-    const sizes =
-      (mobileTags[0] ? attribute(mobileTags[0], "sizes") : undefined) ??
-      (fullTags[0] ? attribute(fullTags[0], "sizes") : undefined);
+    const mobileSizes = mobileTags[0] ? attribute(mobileTags[0], "sizes") : undefined;
+    const fullSizes = fullTags[0] ? attribute(fullTags[0], "sizes") : undefined;
     candidates.push({
-      srcset: pairs
-        .map((pair) => (pair.width > 0 ? `${pair.url} ${pair.width}w` : pair.url))
-        .join(", "),
-      ...(sizes ? { sizes } : {}),
+      ...(mobilePairs.length
+        ? {
+            mobile: {
+              srcset: serializePairs(mobilePairs),
+              ...(mobileSizes ? { sizes: mobileSizes } : {}),
+            },
+          }
+        : {}),
+      ...(fullPairs.length
+        ? {
+            full: {
+              href: fullPairs[0]?.url ?? "",
+              srcset: serializePairs(fullPairs),
+              ...(fullSizes ? { sizes: fullSizes } : {}),
+            },
+          }
+        : {}),
       eager: /loading="eager"/i.test(imgTag) || /fetchpriority="high"/i.test(imgTag),
     });
   }
   return candidates.find((candidate) => candidate.eager) ?? candidates[0];
+}
+
+function lcpPreloadLinks(
+  criticalImage: string,
+  sources: ReturnType<typeof picturePreloadSources>,
+): string {
+  if (!sources) {
+    return `<link rel="preload" as="image" href="${escapeAttribute(criticalImage)}" fetchpriority="high">`;
+  }
+  const { mobile, full } = sources;
+  if (mobile && full) {
+    return [
+      `<link rel="preload" as="image" media="${PICTURE_MOBILE_MEDIA}" imagesrcset="${escapeAttribute(mobile.srcset)}"${
+        mobile.sizes ? ` imagesizes="${escapeAttribute(mobile.sizes)}"` : ""
+      } fetchpriority="high">`,
+      `<link rel="preload" as="image" media="${PICTURE_DESKTOP_MEDIA}" href="${escapeAttribute(full.href)}" fetchpriority="high">`,
+    ].join("\n  ");
+  }
+  if (mobile) {
+    // Defensivo: renderImage siempre emite la fuente completa junto a la móvil;
+    // si no existiera, el escritorio caería al src del <img>.
+    return [
+      `<link rel="preload" as="image" media="${PICTURE_MOBILE_MEDIA}" imagesrcset="${escapeAttribute(mobile.srcset)}"${
+        mobile.sizes ? ` imagesizes="${escapeAttribute(mobile.sizes)}"` : ""
+      } fetchpriority="high">`,
+      `<link rel="preload" as="image" media="${PICTURE_DESKTOP_MEDIA}" href="${escapeAttribute(criticalImage)}" fetchpriority="high">`,
+    ].join("\n  ");
+  }
+  // Sin rama móvil en el picture: la fuente completa aplica en todos los
+  // anchos, así que el preload conserva un único link sin media.
+  const srcset = full?.srcset;
+  const sizes = full?.sizes;
+  return `<link rel="preload" as="image" href="${escapeAttribute(full?.href || criticalImage)}"${
+    srcset ? ` imagesrcset="${escapeAttribute(srcset)}"` : ""
+  }${sizes ? ` imagesizes="${escapeAttribute(sizes)}"` : ""} fetchpriority="high">`;
 }
 
 function renderDocument(
@@ -1623,21 +1694,13 @@ function renderDocument(
           };
   const publicCopyAttribute = ` data-solara-copy="${escapeAttribute(JSON.stringify(runtimeCopy))}"`;
   const criticalImage = page.preloadImage ? resourceHref(project, page.preloadImage) : undefined;
-  const criticalImageDescriptors =
+  const criticalImageSources =
     mode === "production" && page.preloadImage && criticalImage
-      ? picturePreloadMirror(page.body, page.preloadImage)
+      ? picturePreloadSources(page.body, page.preloadImage)
       : undefined;
   const lcpPreload =
     mode === "production" && criticalImage
-      ? `<link rel="preload" as="image" href="${escapeAttribute(criticalImage)}"${
-          criticalImageDescriptors
-            ? ` imagesrcset="${escapeAttribute(criticalImageDescriptors.srcset)}"${
-                criticalImageDescriptors.sizes
-                  ? ` imagesizes="${escapeAttribute(criticalImageDescriptors.sizes)}"`
-                  : ""
-              }`
-            : ""
-        } fetchpriority="high">`
+      ? lcpPreloadLinks(criticalImage, criticalImageSources)
       : "";
   const fontPreloads =
     mode === "production"

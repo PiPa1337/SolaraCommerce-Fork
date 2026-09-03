@@ -606,8 +606,8 @@ describe("exporter", () => {
     const product = String(result.files.get("productos/manta-bruma/index.html"));
     const headers = String(result.files.get("_headers"));
 
-    expect(home.match(/<link rel="preload" as="image"/g)).toHaveLength(1);
-    expect(product.match(/<link rel="preload" as="image"/g)).toHaveLength(1);
+    expect(home.match(/<link rel="preload" as="image"/g)).toHaveLength(2);
+    expect(product.match(/<link rel="preload" as="image"/g)).toHaveLength(2);
     expect(headers).toContain("/assets/*");
     expect(headers).toContain("max-age=31536000, immutable");
     expect(headers).toContain("Strict-Transport-Security: max-age=31536000");
@@ -906,9 +906,12 @@ describe("exporter", () => {
     );
     const home = String(result.files.get("index.html"));
 
-    expect(home).toContain('rel="preload" as="image" href="/assets/fixture-modo-sur-hero.webp"');
-    expect(home).not.toContain(
-      'rel="preload" as="image" href="https://demo-catalogo-jerarquico.example',
+    expect(home).toContain(
+      'media="(max-width: 1023px)" imagesrcset="/assets/fixture-modo-sur-hero.webp 1536w"',
+    );
+    expect(home).toContain('media="(min-width: 1024px)" href="/assets/fixture-modo-sur-hero.webp"');
+    expect(home).not.toMatch(
+      /rel="preload" as="image"[^>]*href="https:\/\/demo-catalogo-jerarquico\.example/,
     );
     expect(home).toContain(
       '<link rel="canonical" href="https://demo-catalogo-jerarquico.example/">',
@@ -1915,9 +1918,17 @@ function parseSrcsetPairs(value: string): Array<{ url: string; width: number }> 
     });
 }
 
-function lcpPreloadTag(html: string): string {
-  const tag = /<link rel="preload" as="image"[^>]*>/.exec(html)?.[0];
-  if (!tag) throw new Error("Falta el preload del LCP.");
+function lcpPreloadTags(html: string): string[] {
+  const tags = [...html.matchAll(/<link rel="preload" as="image"[^>]*>/g)].map((match) => match[0]);
+  if (tags.length === 0) throw new Error("Falta el preload del LCP.");
+  return tags;
+}
+
+function lcpPreloadTagWithMedia(html: string, media: string): string {
+  const tag = lcpPreloadTags(html).find(
+    (candidate) => preloadAttribute(candidate, "media") === media,
+  );
+  if (!tag) throw new Error(`Falta el preload del LCP con media "${media}".`);
   return tag;
 }
 
@@ -1942,7 +1953,7 @@ function pictureSourcesFor(
 }
 
 describe("preload espejo y og social", () => {
-  it("el preload del LCP espeja los descriptores del picture de categoría", () => {
+  it("el preload del LCP se parte por media y espeja cada fuente del picture de categoría", () => {
     const project = structuredClone(catalogModernStore);
     const category = project.categories.find((candidate) => candidate.slug === "remeras");
     if (!category) throw new Error("Fixture incompleto");
@@ -1950,17 +1961,25 @@ describe("preload espejo y og social", () => {
     const html = String(
       exportProject(project, { mode: "production" }).files.get("categorias/remeras/index.html"),
     );
-    const preload = lcpPreloadTag(html);
     const picture = pictureSourcesFor(html, "solara-category-hero-image");
-    const expectedPairs = [...parseSrcsetPairs(picture.mobile), ...parseSrcsetPairs(picture.full)];
-    expect(expectedPairs.length).toBeGreaterThanOrEqual(2);
-    expect(parseSrcsetPairs(preloadAttribute(preload, "imagesrcset") ?? "")).toEqual(expectedPairs);
-    expect(preloadAttribute(preload, "imagesizes")).toBe(picture.sizes);
-    expect(preloadAttribute(preload, "href")).toBe(parseSrcsetPairs(picture.full)[0]?.url);
-    expect(preloadAttribute(preload, "fetchpriority")).toBe("high");
+    const mobilePairs = parseSrcsetPairs(picture.mobile);
+    const fullPairs = parseSrcsetPairs(picture.full);
+    expect(mobilePairs.length).toBeGreaterThanOrEqual(1);
+    expect(fullPairs.length).toBeGreaterThanOrEqual(1);
+    const tags = lcpPreloadTags(html);
+    expect(tags).toHaveLength(2);
+    const mobile = lcpPreloadTagWithMedia(html, "(max-width: 1023px)");
+    const desktop = lcpPreloadTagWithMedia(html, "(min-width: 1024px)");
+    expect(parseSrcsetPairs(preloadAttribute(mobile, "imagesrcset") ?? "")).toEqual(mobilePairs);
+    expect(preloadAttribute(mobile, "imagesizes")).toBe(picture.sizes);
+    expect(preloadAttribute(mobile, "href")).toBeUndefined();
+    expect(preloadAttribute(desktop, "href")).toBe(fullPairs[0]?.url);
+    expect(preloadAttribute(desktop, "imagesrcset")).toBeUndefined();
+    expect(preloadAttribute(mobile, "fetchpriority")).toBe("high");
+    expect(preloadAttribute(desktop, "fetchpriority")).toBe("high");
   });
 
-  it("mantiene el preload simple cuando el asset del banner no tiene variantes", () => {
+  it("mantiene un único preload sin media cuando el asset del banner no tiene variantes", () => {
     const project = structuredClone(catalogModernStore);
     const category = project.categories.find((candidate) => candidate.slug === "remeras");
     if (!category) throw new Error("Fixture incompleto");
@@ -1968,7 +1987,10 @@ describe("preload espejo y og social", () => {
     const html = String(
       exportProject(project, { mode: "production" }).files.get("categorias/remeras/index.html"),
     );
-    const preload = lcpPreloadTag(html);
+    const tags = lcpPreloadTags(html);
+    expect(tags).toHaveLength(1);
+    const preload = tags[0] ?? "";
+    expect(preloadAttribute(preload, "media")).toBeUndefined();
     expect(preloadAttribute(preload, "href")).toBe("/fixtures/modo-sur-product-01.webp");
     expect(preloadAttribute(preload, "imagesrcset")).toBeUndefined();
     expect(preloadAttribute(preload, "imagesizes")).toBeUndefined();
