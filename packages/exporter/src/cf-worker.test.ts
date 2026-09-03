@@ -21,8 +21,11 @@ function evaluateWorkerSource(source: string): WorkerModule {
   return handler;
 }
 
-function assetResponse(headers?: Record<string, string>): Response {
-  return new Response("<html>ok</html>", { status: 200, headers });
+function assetResponse(
+  headers?: Record<string, string>,
+  body: string | null = "<html>ok</html>",
+): Response {
+  return new Response(body, { status: 200, headers });
 }
 
 function mockEnv(response: Response): {
@@ -43,13 +46,21 @@ function mockEnv(response: Response): {
   };
 }
 
-async function runDirect(url: string, headers?: Record<string, string>): Promise<Response> {
-  return applyWorkerPolicies(new URL(url), assetResponse(headers), CANONICAL_ORIGIN);
+async function runDirect(
+  url: string,
+  headers?: Record<string, string>,
+  body: string | null = "<html>ok</html>",
+): Promise<Response> {
+  return applyWorkerPolicies(new URL(url), assetResponse(headers, body), CANONICAL_ORIGIN);
 }
 
-async function runEmitted(url: string, headers?: Record<string, string>): Promise<Response> {
+async function runEmitted(
+  url: string,
+  headers?: Record<string, string>,
+  body: string | null = "<html>ok</html>",
+): Promise<Response> {
   const handler = evaluateWorkerSource(buildCfWorkerSource({ canonicalOrigin: CANONICAL_ORIGIN }));
-  const { env } = mockEnv(assetResponse(headers));
+  const { env } = mockEnv(assetResponse(headers, body));
   return handler.fetch(new Request(url), env, undefined);
 }
 
@@ -68,29 +79,58 @@ async function observable(response: Response | Promise<Response>): Promise<{
   };
 }
 
-async function expectParity(url: string, headers?: Record<string, string>): Promise<Response> {
-  const direct = await observable(runDirect(url, headers));
-  const emitted = await observable(runEmitted(url, headers));
+async function expectParity(
+  url: string,
+  headers?: Record<string, string>,
+  body: string | null = "<html>ok</html>",
+): Promise<Response> {
+  const direct = await observable(runDirect(url, headers, body));
+  const emitted = await observable(runEmitted(url, headers, body));
   expect(emitted).toEqual(direct);
-  return runDirect(url, headers);
+  return runDirect(url, headers, body);
 }
 
-function cacheControlRulesFromHeadersFile(content: string): Array<{ path: string; value: string }> {
-  const rules: Array<{ path: string; value: string }> = [];
-  let path: string | undefined;
+type HeadersBlock = { pattern: string; headers: Array<[string, string]> };
+
+function headersBlocksFromHeadersFile(content: string): HeadersBlock[] {
+  const blocks: HeadersBlock[] = [];
+  let current: HeadersBlock | undefined;
   for (const rawLine of content.split("\n")) {
     const line = rawLine.trim();
-    if (!line || line.startsWith("#") || line.startsWith("! ")) continue;
-    const separator = line.indexOf(":");
-    if (separator < 0) {
-      path = line;
+    if (!line) {
+      current = undefined;
       continue;
     }
-    const name = line.slice(0, separator).trim();
-    const value = line.slice(separator + 1).trim();
-    if (name.toLowerCase() === "cache-control" && path) rules.push({ path, value });
+    if (line.startsWith("#")) continue;
+    if (line.startsWith("!")) continue;
+    const separator = line.indexOf(":");
+    if (separator < 0) {
+      current = { pattern: line, headers: [] };
+      blocks.push(current);
+      continue;
+    }
+    if (!current) throw new Error(`header fuera de bloque en _headers: ${line}`);
+    current.headers.push([
+      line.slice(0, separator).trim().toLowerCase(),
+      line.slice(separator + 1).trim(),
+    ]);
   }
-  return rules;
+  return blocks;
+}
+
+function headersBlockMatches(pattern: string, path: string): boolean {
+  if (pattern === "/*") return true;
+  if (pattern.endsWith("/*")) return path.startsWith(pattern.slice(0, -1));
+  return pattern === path;
+}
+
+function effectiveHeadersFor(blocks: HeadersBlock[], path: string): Map<string, string> {
+  const effective = new Map<string, string>();
+  for (const block of blocks) {
+    if (!headersBlockMatches(block.pattern, path)) continue;
+    for (const [name, value] of block.headers) effective.set(name, value);
+  }
+  return effective;
 }
 
 function probeForPattern(pattern: string): string {
@@ -150,9 +190,13 @@ describe("cf-worker", () => {
     const headers = {
       "Content-Security-Policy": CSP_ESPERADA,
       "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
       "X-Content-Type-Options": "nosniff",
       "X-Frame-Options": "DENY",
-      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+      "Access-Control-Expose-Headers":
+        "Content-Security-Policy, Strict-Transport-Security, X-Content-Type-Options, X-Frame-Options, Cache-Control, Referrer-Policy, Permissions-Policy",
       "Cache-Control": "public, max-age=0, must-revalidate, stale-while-revalidate=86400",
       "X-Robots-Tag": "noindex",
     };
@@ -186,9 +230,16 @@ describe("cf-worker", () => {
     expect(direct.headers.get("Strict-Transport-Security")).toBe(
       "max-age=31536000; includeSubDomains",
     );
+    expect(direct.headers.get("Cross-Origin-Opener-Policy")).toBe("same-origin");
     expect(direct.headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(direct.headers.get("X-Frame-Options")).toBe("DENY");
     expect(direct.headers.get("Referrer-Policy")).toBe("strict-origin-when-cross-origin");
+    expect(direct.headers.get("Permissions-Policy")).toBe(
+      "camera=(), microphone=(), geolocation=()",
+    );
+    expect(direct.headers.get("Access-Control-Expose-Headers")).toBe(
+      "Content-Security-Policy, Strict-Transport-Security, X-Content-Type-Options, X-Frame-Options, Cache-Control, Referrer-Policy, Permissions-Policy",
+    );
     expect(direct.headers.get("X-Robots-Tag")).toBeNull();
   });
 
@@ -251,20 +302,49 @@ describe("cf-worker", () => {
     expect(() => buildCfWorkerSource({ canonicalOrigin: "no-es-url" })).toThrow();
   });
 
-  it("el mapa de Cache-Control del worker coincide con el _headers emitido", async () => {
+  it("el worker emitido replica exactamente todos los headers del _headers emitido", async () => {
     const production = exportProject(referenceStore, { mode: "production" });
-    const rules = cacheControlRulesFromHeadersFile(String(production.files.get("_headers")));
-    expect(rules.length).toBeGreaterThan(5);
+    const blocks = headersBlocksFromHeadersFile(String(production.files.get("_headers")));
+    expect(blocks.length).toBeGreaterThan(5);
     const handler = evaluateWorkerSource(String(production.files.get("_worker.js")));
-    const { env } = mockEnv(assetResponse());
-    for (const rule of rules) {
-      const probe = probeForPattern(rule.path);
-      const response = await handler.fetch(
-        new Request(`${new URL(referenceStore.baseUrl).origin}${probe}`),
-        env,
-        undefined,
+    const { env } = mockEnv(assetResponse(undefined, null));
+    const origin = new URL(referenceStore.baseUrl).origin;
+    for (const block of blocks) {
+      const probe = probeForPattern(block.pattern);
+      const esperados = effectiveHeadersFor(blocks, probe);
+      expect(esperados.size, `headers esperados para ${probe}`).toBeGreaterThan(5);
+      const response = await handler.fetch(new Request(`${origin}${probe}`), env, undefined);
+      const obtenidos = new Map(response.headers.entries());
+      expect([...obtenidos.keys()].sort(), `set de headers en ${probe}`).toEqual(
+        [...esperados.keys()].sort(),
       );
-      expect(response.headers.get("Cache-Control"), `ruta ${probe}`).toBe(rule.value);
+      for (const [name, value] of esperados) {
+        expect(obtenidos.get(name), `${probe} → ${name}`).toBe(value);
+      }
+    }
+  });
+
+  it("agrega Content-Type explícito en /google-merchant.xml y /feed.xml cuando falta", async () => {
+    const casos = [
+      ["/google-merchant.xml", "application/xml; charset=utf-8"],
+      ["/feed.xml", "application/rss+xml; charset=utf-8"],
+    ] as const;
+    for (const [path, esperado] of casos) {
+      const direct = await expectParity(`https://tienda-ejemplo.com${path}`, undefined, null);
+      expect(direct.headers.get("Content-Type")).toBe(esperado);
+    }
+  });
+
+  it("no pisa un Content-Type ya presente en las rutas de feeds", async () => {
+    const casos = [
+      ["/google-merchant.xml", "application/xml"],
+      ["/feed.xml", "text/xml; charset=utf-8"],
+    ] as const;
+    for (const [path, existente] of casos) {
+      const direct = await expectParity(`https://tienda-ejemplo.com${path}`, {
+        "Content-Type": existente,
+      });
+      expect(direct.headers.get("Content-Type")).toBe(existente);
     }
   });
 });

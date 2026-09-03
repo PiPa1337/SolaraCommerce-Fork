@@ -2,32 +2,43 @@ const WORKER_SECURITY_HEADERS: Record<string, string> = {
   "Content-Security-Policy":
     "default-src 'self'; img-src 'self' data: https:; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self'; media-src 'self' data: https:; font-src 'self' data:; manifest-src 'self'; worker-src 'self'; form-action 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
   "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  "Cross-Origin-Opener-Policy": "same-origin",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
-  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+  "Access-Control-Expose-Headers":
+    "Content-Security-Policy, Strict-Transport-Security, X-Content-Type-Options, X-Frame-Options, Cache-Control, Referrer-Policy, Permissions-Policy",
 };
 
-const WORKER_CACHE_CONTROL_EXACT: Record<string, string> = {
-  "/sitemap.xml": "public, max-age=3600, must-revalidate",
-  "/image-sitemap.xml": "public, max-age=3600, must-revalidate",
-  "/video-sitemap.xml": "public, max-age=3600, must-revalidate",
-  "/google-merchant.xml": "public, max-age=900, must-revalidate",
-  "/ai-context.json": "public, max-age=900, must-revalidate",
-  "/llms.txt": "public, max-age=900, must-revalidate",
-  "/llms-full.txt": "public, max-age=900, must-revalidate",
-  "/search-index.json": "public, max-age=900, must-revalidate",
-  "/catalog-index.json": "public, max-age=900, must-revalidate",
-  "/sw.js": "no-cache",
-  "/manifest.webmanifest": "public, max-age=3600, must-revalidate",
-  "/feed.xml": "public, max-age=900, must-revalidate",
+const WORKER_ROUTE_HEADERS: Record<string, Record<string, string>> = {
+  "/sitemap.xml": { "Cache-Control": "public, max-age=3600, must-revalidate" },
+  "/image-sitemap.xml": { "Cache-Control": "public, max-age=3600, must-revalidate" },
+  "/video-sitemap.xml": { "Cache-Control": "public, max-age=3600, must-revalidate" },
+  "/google-merchant.xml": {
+    "Cache-Control": "public, max-age=900, must-revalidate",
+    "Content-Type": "application/xml; charset=utf-8",
+  },
+  "/ai-context.json": { "Cache-Control": "public, max-age=900, must-revalidate" },
+  "/llms.txt": { "Cache-Control": "public, max-age=900, must-revalidate" },
+  "/llms-full.txt": { "Cache-Control": "public, max-age=900, must-revalidate" },
+  "/search-index.json": { "Cache-Control": "public, max-age=900, must-revalidate" },
+  "/catalog-index.json": { "Cache-Control": "public, max-age=900, must-revalidate" },
+  "/sw.js": { "Cache-Control": "no-cache" },
+  "/manifest.webmanifest": { "Cache-Control": "public, max-age=3600, must-revalidate" },
+  "/feed.xml": {
+    "Cache-Control": "public, max-age=900, must-revalidate",
+    "Content-Type": "application/rss+xml; charset=utf-8",
+  },
 };
 
-const WORKER_CACHE_CONTROL_PREFIX: Array<readonly [string, string]> = [
-  ["/assets/", "public, max-age=31536000, immutable"],
+const WORKER_ROUTE_HEADERS_PREFIX: Array<readonly [string, Record<string, string>]> = [
+  ["/assets/", { "Cache-Control": "public, max-age=31536000, immutable" }],
 ];
 
-const WORKER_CACHE_CONTROL_DEFAULT =
-  "public, max-age=0, must-revalidate, stale-while-revalidate=86400";
+const WORKER_DEFAULT_HEADERS: Record<string, string> = {
+  "Cache-Control": "public, max-age=0, must-revalidate, stale-while-revalidate=86400",
+};
 
 function canonicalHostOf(canonicalOrigin: string): string {
   let host: string;
@@ -40,11 +51,11 @@ function canonicalHostOf(canonicalOrigin: string): string {
   return host;
 }
 
-function workerCacheControlFor(pathname: string): string {
-  for (const [prefix, value] of WORKER_CACHE_CONTROL_PREFIX) {
-    if (pathname.startsWith(prefix)) return value;
+function workerRouteHeadersFor(pathname: string): Record<string, string> {
+  for (const [prefix, headers] of WORKER_ROUTE_HEADERS_PREFIX) {
+    if (pathname.startsWith(prefix)) return headers;
   }
-  return WORKER_CACHE_CONTROL_EXACT[pathname] ?? WORKER_CACHE_CONTROL_DEFAULT;
+  return WORKER_ROUTE_HEADERS[pathname] ?? WORKER_DEFAULT_HEADERS;
 }
 
 export function applyWorkerPolicies(
@@ -67,8 +78,8 @@ export function applyWorkerPolicies(
   for (const [name, value] of Object.entries(WORKER_SECURITY_HEADERS)) {
     if (!clone.headers.has(name)) clone.headers.set(name, value);
   }
-  if (!clone.headers.has("Cache-Control")) {
-    clone.headers.set("Cache-Control", workerCacheControlFor(url.pathname));
+  for (const [name, value] of Object.entries(workerRouteHeadersFor(url.pathname))) {
+    if (!clone.headers.has(name)) clone.headers.set(name, value);
   }
   return clone;
 }
@@ -77,15 +88,15 @@ export function buildCfWorkerSource({ canonicalOrigin }: { canonicalOrigin: stri
   const canonicalHost = canonicalHostOf(canonicalOrigin);
   return `const CANONICAL_HOST = ${JSON.stringify(canonicalHost)};
 const SECURITY_HEADERS = ${JSON.stringify(WORKER_SECURITY_HEADERS)};
-const CACHE_CONTROL_EXACT = ${JSON.stringify(WORKER_CACHE_CONTROL_EXACT)};
-const CACHE_CONTROL_PREFIX = ${JSON.stringify(WORKER_CACHE_CONTROL_PREFIX)};
-const CACHE_CONTROL_DEFAULT = ${JSON.stringify(WORKER_CACHE_CONTROL_DEFAULT)};
-function cacheControlFor(pathname) {
-  for (const [prefix, value] of CACHE_CONTROL_PREFIX) {
-    if (pathname.startsWith(prefix)) return value;
+const ROUTE_HEADERS_EXACT = ${JSON.stringify(WORKER_ROUTE_HEADERS)};
+const ROUTE_HEADERS_PREFIX = ${JSON.stringify(WORKER_ROUTE_HEADERS_PREFIX)};
+const DEFAULT_HEADERS = ${JSON.stringify(WORKER_DEFAULT_HEADERS)};
+function routeHeadersFor(pathname) {
+  for (const [prefix, headers] of ROUTE_HEADERS_PREFIX) {
+    if (pathname.startsWith(prefix)) return headers;
   }
-  const exact = CACHE_CONTROL_EXACT[pathname];
-  return typeof exact === "string" ? exact : CACHE_CONTROL_DEFAULT;
+  const exact = ROUTE_HEADERS_EXACT[pathname];
+  return typeof exact === "object" && exact !== null ? exact : DEFAULT_HEADERS;
 }
 export default {
   async fetch(request, env, ctx) {
@@ -116,8 +127,9 @@ export default {
     for (const name of Object.keys(SECURITY_HEADERS)) {
       if (!clone.headers.has(name)) clone.headers.set(name, SECURITY_HEADERS[name]);
     }
-    if (!clone.headers.has("Cache-Control")) {
-      clone.headers.set("Cache-Control", cacheControlFor(url.pathname));
+    const routeHeaders = routeHeadersFor(url.pathname);
+    for (const name of Object.keys(routeHeaders)) {
+      if (!clone.headers.has(name)) clone.headers.set(name, routeHeaders[name]);
     }
     return clone;
   },
