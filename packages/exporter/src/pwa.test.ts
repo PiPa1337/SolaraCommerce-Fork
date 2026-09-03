@@ -119,12 +119,10 @@ describe("service worker", () => {
     const sw = String(result.files.get("sw.js"));
     const precacheUrls = extractPrecacheUrls(sw);
 
-    // Cada stylesheet enlazado por la home está en el precache.
     for (const href of homeHrefs) {
       expect(precacheUrls).toContain(href);
       expect(result.files.has(href.slice(1))).toBe(true);
     }
-    // El precache incluye BOTH css públicas (home + resto del sitio).
     for (const path of cssPaths) {
       expect(precacheUrls).toContain(`/${path}`);
     }
