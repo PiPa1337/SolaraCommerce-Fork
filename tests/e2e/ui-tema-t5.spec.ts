@@ -167,9 +167,11 @@ test("radius: el token llega al preview y al sitio y el radio visual cambia (T5)
   const css0 = exportCss(0, 1);
   expect(css40).toMatch(/--solara-radius:\s*40px;/);
   expect(css0).toMatch(/--solara-radius:\s*0px;/);
-  // El skin moderno tiene 37 consumidores declarados; los controles de
-  // búsqueda son deliberadamente cuadrados y no dependen del radio del tema.
-  expect(css40.match(/border-radius:\s*var\(--solara-radius\)/g) ?? []).toHaveLength(37);
+  // El skin moderno tiene 36 consumidores declarados desde que el panel del
+  // menú hamburguesa pasó a pantalla completa sin radio (be9dceb6); los
+  // controles de búsqueda son deliberadamente cuadrados y no dependen del
+  // radio del tema.
+  expect(css40.match(/border-radius:\s*var\(--solara-radius\)/g) ?? []).toHaveLength(36);
 
   // Comportamiento CORREGIDO (fix Ola 3): las superficies del skin moderno
   // consumen var(--solara-radius); el render del preview difiere entre 40 y 0.
