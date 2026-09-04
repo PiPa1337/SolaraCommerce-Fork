@@ -119,7 +119,9 @@ test("búsqueda: casos borde — vacío, whitespace, término corto y sin result
   const results = page.locator("[data-search-results]");
   const resultCount = page.locator("[data-category-result-count]");
   await expect(results).toHaveAttribute("aria-live", "polite");
-  await expect(resultCount).toHaveText("Elegí una búsqueda");
+  // Sin query: catálogo completo paginado client-side (50 productos, 24/página).
+  await expect(results.locator(".solara-search-result")).toHaveCount(50, { timeout: 15_000 });
+  await expect(resultCount).toContainText("50 de 50");
 
   await page.goto(scaleUrlFor("/buscar/?q=%20%20"));
   await expect(results).toContainText("Escribí al menos 2 caracteres para buscar.");

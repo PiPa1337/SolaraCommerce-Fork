@@ -1851,6 +1851,39 @@ function storefrontBoot(): void {
       }
       return best?.term;
     };
+    const renderSearchResult = (entry: SearchEntryWithTokens): HTMLElement => {
+      const article = node("article", undefined, {
+        class: "solara-search-result",
+        "data-product-card": "",
+        "data-product-price": entry.priceMin,
+        "data-product-available": entry.available,
+        "data-product-tags": (entry.tags ?? []).join(","),
+        "data-product-options": (entry.options ?? []).join("|"),
+      });
+      const link = node("a", undefined, { href: entry.path });
+      const imageUrl = safeRuntimeImageUrl(entry.imageUrl);
+      if (imageUrl) {
+        link.append(
+          node("img", undefined, {
+            src: imageUrl,
+            alt: entry.title,
+            width: entry.imageWidth ?? 1,
+            height: entry.imageHeight ?? 1,
+            sizes: "(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem",
+            loading: "lazy",
+          }),
+        );
+      }
+      const details = node("div");
+      details.append(
+        node("h2", entry.title),
+        node("p", entry.brand),
+        node("strong", money.format(entry.priceMin / 100)),
+      );
+      link.append(details);
+      article.append(link);
+      return article;
+    };
     const query = new URLSearchParams(window.location.search).get("q") ?? "";
     searchInput.value = query;
     if (query) {
@@ -1920,39 +1953,7 @@ function storefrontBoot(): void {
               );
             }
             searchGrid.replaceChildren(
-              ...ranked.slice(0, 48).map(({ entry }) => {
-                const article = node("article", undefined, {
-                  class: "solara-search-result",
-                  "data-product-card": "",
-                  "data-product-price": entry.priceMin,
-                  "data-product-available": entry.available,
-                  "data-product-tags": (entry.tags ?? []).join(","),
-                  "data-product-options": (entry.options ?? []).join("|"),
-                });
-                const link = node("a", undefined, { href: entry.path });
-                const imageUrl = safeRuntimeImageUrl(entry.imageUrl);
-                if (imageUrl) {
-                  link.append(
-                    node("img", undefined, {
-                      src: imageUrl,
-                      alt: entry.title,
-                      width: entry.imageWidth ?? 1,
-                      height: entry.imageHeight ?? 1,
-                      sizes: "(max-width: 767px) 46vw, (max-width: 1199px) 18rem, 13rem",
-                      loading: "lazy",
-                    }),
-                  );
-                }
-                const details = node("div");
-                details.append(
-                  node("h2", entry.title),
-                  node("p", entry.brand),
-                  node("strong", money.format(entry.priceMin / 100)),
-                );
-                link.append(details);
-                article.append(link);
-                return article;
-              }),
+              ...ranked.slice(0, 48).map(({ entry }) => renderSearchResult(entry)),
             );
             searchGrid.dispatchEvent(new Event("f"));
           })
@@ -1961,6 +1962,26 @@ function storefrontBoot(): void {
           });
         window.addEventListener("pagehide", () => controller.abort(), { once: true });
       }
+    } else {
+      const controller = new AbortController();
+      showSearchSkeletons();
+      const searchIndexError =
+        (copy as Record<string, Record<string, string>>).errors?.searchIndexLoad ??
+        "No se pudo cargar el índice de búsqueda.";
+      fetch(`${baseHref}/search-index.json`, { signal: controller.signal })
+        .then((response) => {
+          if (!response.ok) throw new Error(searchIndexError);
+          return response.json() as Promise<SearchEntryWithTokens[]>;
+        })
+        .then((entries) => {
+          const safeEntries = Array.isArray(entries) ? entries.filter(validSearchEntry) : [];
+          searchGrid.replaceChildren(...safeEntries.map(renderSearchResult));
+          searchGrid.dispatchEvent(new Event("f"));
+        })
+        .catch(() => {
+          showSearchMessage(s.error, undefined, "alert");
+        });
+      window.addEventListener("pagehide", () => controller.abort(), { once: true });
     }
   }
 
