@@ -36,6 +36,13 @@ if (!availableVariant) throw new Error("Fixture sin variante disponible");
 
 const noSearchStore = structuredClone(catalogModernStore);
 noSearchStore.commerceTemplates.search.enabled = false;
+// Los grid de la plantilla limpia siembran viewAllHref "/buscar/": con la
+// búsqueda apagada deben resolver a la primera categoría raíz visible.
+noSearchStore.sections = noSearchStore.sections.map((section) =>
+  section.moduleId === "catalog-product-grid"
+    ? { ...section, settings: { ...section.settings, viewAllHref: "/buscar/" } }
+    : section,
+);
 
 const baseExport = exportProject(catalogModernStore, { mode: "production" });
 const soldOutFirstExport = exportProject(soldOutFirstStore, { mode: "production" });
@@ -152,4 +159,15 @@ test("sin búsqueda habilitada no se emiten formularios ni enlaces muertos a /bu
   await page.goto(`http://127.0.0.1:${noSearchPort}${PRODUCT_PAGE}`);
   await expect(page.locator('a[href="/buscar/"]')).toHaveCount(0);
   expect(await page.content()).not.toContain('action="/buscar/"');
+});
+
+test("búsqueda deshabilitada: 'Ver todos' cae en la primera categoría raíz visible", async ({
+  page,
+}) => {
+  await page.goto(`http://127.0.0.1:${noSearchPort}/`);
+  const viewAll = page.locator("a.catalog-view-all").first();
+  await expect(viewAll).toHaveAttribute("href", "/categorias/remeras/");
+  await viewAll.click();
+  await expect(page).toHaveURL(/\/categorias\/remeras\/$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Remeras" })).toBeVisible();
 });
