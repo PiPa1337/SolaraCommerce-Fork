@@ -1,3 +1,14 @@
+### Fixes del catálogo en `/buscar/` (2026-09-04)
+
+**Fixed**
+
+- La nav de paginación client-side quedaba visible con una sola página: el
+  override `[hidden]` empataba en especificidad con la regla de catalog-modern
+  y perdía por orden; ahora usa `!important` (precedente del codebase).
+- El preview de `/buscar/` sin query mostraba "No se pudo cargar la búsqueda":
+  el iframe del Studio no sirve `search-index.json`; el fetch se saltea cuando
+  el runtime detecta que corre embebido y se conserva el estado estático.
+
 ### Catálogo completo en "Ver todos los productos" (2026-09-04)
 
 **Added**

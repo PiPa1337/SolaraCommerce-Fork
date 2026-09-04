@@ -1131,6 +1131,15 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     expect(styles).not.toMatch(/\.solara-pagination a \{[^}]*border-radius: 999px/);
   });
 
+  it("la nav de paginación oculta nunca se pinta aunque otra regla posterior use flex", () => {
+    // Regresión 2026-09-04: `[data-solara-store].catalog-modern .solara-pagination`
+    // empata en especificidad (0,3,0) con el override [hidden] y viene después,
+    // así que sin !important la nav con hidden="true" se seguía viendo.
+    expect(STORE_BASE_STYLES).toMatch(
+      /\.solara-pagination\[hidden\] \{\s*display: none !important;\s*\}/,
+    );
+  });
+
   it("garantiza hit-area de 44px en la hamburguesa y clamp compacto del hero móvil", () => {
     const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
     const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];

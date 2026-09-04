@@ -1962,7 +1962,9 @@ function storefrontBoot(): void {
           });
         window.addEventListener("pagehide", () => controller.abort(), { once: true });
       }
-    } else {
+    } else if (!embed) {
+      // En el iframe del preview del Studio no se sirve search-index.json:
+      // se conserva el estado estático en vez de mostrar un error.
       const controller = new AbortController();
       showSearchSkeletons();
       const searchIndexError =

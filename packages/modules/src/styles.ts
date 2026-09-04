@@ -389,7 +389,7 @@ export const STORE_BASE_STYLES = `
   gap: .75rem;
   margin: 2.5rem auto 6rem;
 }
-[data-solara-store] .solara-pagination[hidden] { display: none; }
+[data-solara-store] .solara-pagination[hidden] { display: none !important; }
 [data-solara-store] .solara-pagination a,
 [data-solara-store] .solara-pagination span {
   min-width: 2.75rem;

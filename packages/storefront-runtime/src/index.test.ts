@@ -127,6 +127,12 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("catalog-search-open");
   });
 
+  it("el catálogo client-side no hace fetch embebido en el preview del Studio", () => {
+    // Regresión 2026-09-04: en el iframe del preview no se sirve search-index.json
+    // y el fetch terminaba en alerta de error; se conserva el estado estático.
+    expect(STOREFRONT_RUNTIME_JS).toContain("} else if (!embed) {");
+  });
+
   it("conecta los controles de testimonios con su fila desplazable", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("data-testimonials-prev");
     expect(STOREFRONT_RUNTIME_JS).toContain("data-testimonials-next");
