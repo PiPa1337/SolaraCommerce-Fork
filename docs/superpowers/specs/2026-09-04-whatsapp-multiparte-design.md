@@ -136,7 +136,10 @@ El envío se coordina por este chat. {disclaimer}
   `splitOrderParts`, no esta función.
 - Nuevo `splitOrderParts(project, lines, customer): string[]`: dedupe como
   hoy, total en centavos, 1 parte si ≤50 renglones y URL ≤3900, si no chunk
-  greedy con probe conservadora (`Parte 99 de 99`, subtotal `$99.999.999`).
+  greedy con probe conservadora (`Parte 99 de 99`, saludo incluido, subtotal
+  `$99.999.999,99`) menos un margen exacto y adaptativo: el footer real
+  (total + cliente + disclaimer + fin) menos la cola intermedia. Así toda
+  parte cabe aunque sea la última. Asume subtotal de parte < $100M.
   Constantes `3900` (URL) y `50`/`12` como literales con comentario.
 - Drawer (`storefrontBoot`, bloque `[data-checkout-form]`): máquina de
   estados, reetiquetado, nota dinámica, `Empezar de nuevo`, botón copiar,
