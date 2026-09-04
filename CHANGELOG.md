@@ -1,3 +1,12 @@
+### Preload del logo del navbar (2026-09-04)
+
+**Fixed**
+
+- El logo parpadeaba como hueco ~150ms en frío: el navegador lo descubría
+  recién al parsear el header. Ahora se precarga en el `<head>` con el mismo
+  recurso que elige su `<picture>` (técnica del preload LCP), sólo en
+  producción y salvo `data:` URLs.
+
 ### Fixes del catálogo en `/buscar/` (2026-09-04)
 
 **Fixed**

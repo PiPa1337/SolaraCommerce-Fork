@@ -1668,6 +1668,16 @@ function renderDocument(
     mode === "production" && criticalImage
       ? lcpPreloadLinks(criticalImage, criticalImageSources)
       : "";
+  // El logo del navbar está above-the-fold en todas las páginas pero el navegador
+  // lo descubre recién al parsear el header: se precarga con el mismo recurso que
+  // elegirá su <picture> (igual que el preload LCP) para que no parpadee en frío.
+  const logoImgSrc = /\bsrc="([^"]*)"/i.exec(
+    /<img\b[^>]*class="[^"]*\bsolara-logo\b[^"]*"[^>]*>/i.exec(page.body)?.[0] ?? "",
+  )?.[1];
+  const logoPreload =
+    mode === "production" && logoImgSrc && !logoImgSrc.startsWith("data:")
+      ? lcpPreloadLinks(logoImgSrc, picturePreloadSources(page.body, logoImgSrc))
+      : "";
   const fontPreloads =
     mode === "production"
       ? activeFonts(project.theme.typography.display, project.theme.typography.body)
@@ -1739,6 +1749,7 @@ function renderDocument(
   ${page.pageType === "product" ? `<meta property="article:published_time" content="${escapeAttribute(project.createdAt)}"><meta property="article:modified_time" content="${escapeAttribute(project.updatedAt)}"><meta property="article:author" content="${escapeAttribute(author)}">` : ""}
   ${verification}
   ${lcpPreload}
+  ${logoPreload}
   ${fontPreloads}
   ${aiContextLinks}
   ${rssFeedLink}

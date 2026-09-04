@@ -1882,6 +1882,47 @@ describe("renderPreviewHtml sin preload absoluto", () => {
   });
 });
 
+describe("preload del logo del navbar", () => {
+  function storeWithLogo() {
+    const project = structuredClone(catalogModernStore);
+    const base = project.assets[0];
+    if (!base) throw new Error("Fixture sin assets");
+    const logo = {
+      ...base,
+      id: "asset-logo-test",
+      name: "Logo de prueba",
+      alt: "Logo de prueba",
+      hash: "logo-test",
+    } as (typeof project.assets)[number];
+    project.identity.logoAssetId = logo.id;
+    project.assets = [...project.assets, logo];
+    return project;
+  }
+
+  it("precarga el logo en producción con el mismo recurso del img", () => {
+    const { files } = exportProject(storeWithLogo(), { mode: "production" });
+    const home = String(files.get("index.html"));
+    const imgSrc = /\bsrc="([^"]*)"/.exec(
+      /<img\b[^>]*class="[^"]*\bsolara-logo\b[^"]*"[^>]*>/.exec(home)?.[0] ?? "",
+    )?.[1];
+    expect(imgSrc).toMatch(/^\/assets\/.+\.webp$/);
+    const preloads = [...home.matchAll(/<link rel="preload" as="image"[^>]*>/g)].map(
+      (match) => match[0],
+    );
+    expect(
+      preloads.some((link) => link.includes(imgSrc ?? "") && link.includes('fetchpriority="high"')),
+    ).toBe(true);
+  });
+
+  it("no precarga logo en draft ni cuando la tienda usa wordmark", () => {
+    const { files } = exportProject(storeWithLogo(), { mode: "draft" });
+    expect(String(files.get("index.html"))).not.toMatch(/rel="preload" as="image"/);
+    const plain = exportProject(catalogModernStore, { mode: "production" });
+    const plainHome = String(plain.files.get("index.html"));
+    expect(plainHome).not.toContain("solara-logo");
+  });
+});
+
 describe("tema: carga real de fuentes y vars sin duplicados", () => {
   const decodePreviewCss = (preview: string): string => {
     const match = /data:text\/css;base64,([^"]+)/.exec(preview);
