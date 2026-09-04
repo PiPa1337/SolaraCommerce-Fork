@@ -196,6 +196,57 @@ describe("official module system", () => {
     expect(STORE_THEME_TOKEN_STYLES).toContain("var(--solara-line-height-tight");
   });
 
+  it("alinea los márgenes del sitio v2 con el gutter de 3rem y limpia el CSS muerto", () => {
+    const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!v2Styles) throw new Error("Falta el bloque de estilos catalog-modern-v2");
+
+    // P1: las páginas con contenedor comparten la línea vertical del header y del footer.
+    expect(v2Styles).toMatch(/\.cm\.v2 main\.solara-container\s*\{[^}]*padding-inline:\s*0/);
+
+    // P6: los relacionados no acumulan la anidación del contenedor base.
+    expect(v2Styles).toMatch(
+      /\.cm\.v2 \.solara-related-products\s*>\s*\.solara-container\s*\{[^}]*width:\s*100%/,
+    );
+    expect(v2Styles).toMatch(
+      /\.cm\.v2 \.solara-related-products\s*>\s*\.solara-container\s*\{[^}]*padding-inline:\s*0/,
+    );
+
+    // P7: el mega menú (absoluto respecto del header-inner) usa width 100% para
+    // quedar exactamente en la línea vertical del gutter v2, con padding contenido.
+    expect(v2Styles).toMatch(
+      /\.cm\.v2 \.catalog-mega-menu\s*\{[^}]*width:\s*100%/,
+    );
+    expect(v2Styles).toMatch(
+      /\.cm\.v2 \.catalog-mega-menu\s*\{[^}]*padding:\s*clamp\(2rem,\s*4vw,\s*3rem\)\s+clamp\(1\.5rem,\s*3vw,\s*2\.5rem\)\s+1\.5rem/,
+    );
+
+    // P8: la paginación se centra sobre la grilla de resultados, no sobre el main.
+    expect(v2Styles).toMatch(
+      /\.cm\.v2 \.catalog-category-page\s*>\s*\.solara-pagination\s*\{[^}]*padding-left:\s*calc\(270px \+ 1rem\)/,
+    );
+
+    // P3: el anuncio libera espacio útil en móvil sin tapar el botón de cerrar.
+    expect(v2Styles).toMatch(
+      /@media \(max-width: ?767px\)\s*\{[^@]*\.cm\.v2 \.catalog-announcement-inner\s*\{[^}]*padding-left:\s*1rem/,
+    );
+
+    // P8: reset móvil de la paginación coherente con el layout de una columna.
+    expect(v2Styles).toMatch(
+      /@media \(max-width: ?767px\)\s*\{[^@]*\.cm\.v2 \.catalog-category-page\s*>\s*\.solara-pagination\s*\{[^}]*padding-left:\s*0/,
+    );
+
+    // P5: sin declaraciones ni variables muertas.
+    expect(v2Styles).not.toContain("--catalog-v2-reading");
+    expect(v2Styles).not.toContain("clamp(1.5rem, 2.4vw, 3rem)");
+    expect(v2Styles).not.toContain("clamp(2.5rem, 4vw, 5rem)");
+    expect(v2Styles).not.toMatch(
+      /\.cm\.v2 \.catalog-product-grid-section,\s*\.cm\.v2 \.catalog-testimonials-section\s*\{\s*padding-block:/,
+    );
+    expect(v2Styles).not.toMatch(
+      /\.cm\.v2 \.catalog-category-bento-section\s*\{[^}]*padding-block:\s*clamp\(2\.6rem,\s*4\.6vw,\s*4\.6rem\)/,
+    );
+  });
+
   it("delega el appear del CTA de novedades al motion declarativo", () => {
     const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
     if (!v2Styles) throw new Error("Falta el bloque de estilos catalog-modern-v2");

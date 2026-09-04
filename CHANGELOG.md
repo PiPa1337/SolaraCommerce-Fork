@@ -1,3 +1,42 @@
+### Alineación de márgenes horizontales del sitio v2 y limpieza de CSS muerto (2026-09-04)
+
+Auditoría de márgenes completa del sitio exportado (`docs/audits/margenestienda.md`): 182 páginas
+medidas con `getComputedStyle` + capturas de visión en 6 viewports (320-2560). Toda la corrección
+vive en el template `catalog-modern-v2` de `packages/modules/src/styles.ts` (selectores `.cm.v2`);
+sin cambios de schema, runtime JS, markup del exporter ni datos de la portable. Los sitios ya
+exportados aplican el nuevo CSS al re-exportar.
+
+**Changed**
+
+- **P1**: el contenido de las páginas con contenedor (categoría, buscar, carrito, legales, 404) ya
+  no hereda el `padding-inline` de 1rem del `.solara-container` base: el texto comparte la línea
+  vertical del gutter de 3rem del header y del footer (40→24px desktop/tablet, 28→12px móvil)
+  (`.cm.v2 main.solara-container { padding-inline: 0 }`).
+- **P6**: los relacionados de producto dejan de sumar la doble anidación del contenedor
+  (`.cm.v2 .solara-related-products > .solara-container` full-width sin padding): 56/44px → 24/12px,
+  alineados con la ficha.
+- **P7**: el mega menú desktop (absoluto respecto del header-inner) usa `width: 100%` y padding
+  horizontal `clamp(1.5rem, 3vw, 2.5rem)`: panel 1408→1392px exactamente en el borde del header y
+  contenido a 64px en lugar de 72px.
+- **P8**: la paginación de categoría se centra sobre la columna de resultados (padding-left
+  `calc(270px + 1rem)` del layout con sidebar, reset en ≤767px) y no sobre el main completo
+  (~143px de corrección visual).
+- **P3**: el anuncio libera espacio útil en móvil sin tapar el botón de cerrar
+  (`padding-left: 1rem`, `padding-right: 3.25rem` en ≤767px; antes 48px por lado).
+
+**Fixed**
+
+- **P5**: CSS muerto eliminado del template v2 — la declaración `gap` de 2.4vw de la grilla de
+  productos, el `gap` de 4vw del layout de categoría y los `padding-block` de 4.6vw/3.25rem de
+  secciones y bento (todas invalidadas por la cascada posterior; valores medidos sin cambio), más
+  la variable sin uso `--catalog-v2-reading`. CSS de foundation V2: 211.6→206.1 KB raw (budget 212
+  KiB, gates de presupuesto en verde).
+- Verificación: unit tests v2 en rojo→verde (112/112), smoke 161 ✓, e2e completa 1048 ✓ (+2 flaky
+  de layout reintentados y `rm-performance` en verde con `SOLARA_RM_EXPECTED_VERSION=62`, guard de
+  datos del portable), presupuesto CSS 3/3, `desktop:package` + `portable:smoke` OK con
+  `proyectos/` preservado. Flakes de contención del gate paralelo documentados (typecheck vs test
+  en `check-quick.mjs`; unhandled intermitente de studio aislado limpio).
+
 ### Ajustes de tests tras la suite E2E completa (2026-09-03)
 
 - **quality-forge-visual**: Chromium cancela de forma especulativa (`net::ERR_ABORTED`) el fetch del preload scanner sobre el fallback del `<picture>` del LCP cuando una navegación previa dejó el recurso en la memory cache; el HTML servido es correcto (el espejo de preload por `media` de `904af642` elige exactamente la fuente del `<picture>`, sin doble descarga). El spec tolera ese único caso, anclado a los URLs declarados en los `<link rel=preload as=image>` del documento servido y sólo con `net::ERR_ABORTED`; cualquier otro fallo de red sigue fallando (`62f72ec5`).

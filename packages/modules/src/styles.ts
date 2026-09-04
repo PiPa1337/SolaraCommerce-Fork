@@ -2707,7 +2707,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   --catalog-v2-motion-editorial: var(--solara-motion-normal, 680ms);
   --catalog-v2-ease-out: var(--solara-motion-easing, cubic-bezier(.16, 1, .3, 1));
   --catalog-v2-wide: var(--solara-container, 1760px);
-  --catalog-v2-reading: min(var(--catalog-v2-wide), 720px);
   --catalog-v2-space: var(--solara-space-scale, 1);
   letter-spacing: -.006em;
 }
@@ -3033,10 +3032,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   margin-top: 0;
   padding-block: clamp(2.5rem, 4vw, 4rem);
 }
-.cm.v2 .catalog-product-grid-section,
-.cm.v2 .catalog-testimonials-section {
-  padding-block: clamp(2.6rem, 4.6vw, 4.6rem);
-}
+/* El padding-block de product-grid-section y testimonials-section lo define
+   la regla de secciones con var(--solara-section-y) más adelante en el
+   template; la declaración previa de 4.6vw quedó invalidada y se elimina. */
 .cm.v2 .catalog-product-grid-section h2,
 .cm.v2 .catalog-category-bento-section h2,
 .cm.v2 .catalog-testimonials-section h2 {
@@ -3072,7 +3070,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .catalog-product-grid {
   grid-template-columns: repeat(auto-fill,minmax(min(100% / 5, 20rem),1fr));
   justify-content: start;
-  gap: calc(clamp(1.5rem, 2.4vw, 3rem) * var(--catalog-v2-space, 1)) calc(clamp(.8rem, 1.4vw, 1.6rem) * var(--catalog-v2-space, 1));
+  /* El gap efectivo lo fija la regla global de grillas con
+     var(--solara-card-gap) más adelante; la fórmula previa de 2.4vw quedó
+     invalidada y se elimina. */
   margin: 0 auto;
 }
 @media (min-width: 1200px) {
@@ -3238,7 +3238,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 .cm.v2 .catalog-category-bento-section {
   margin-top: 0;
-  padding-block: clamp(2.6rem, 4.6vw, 4.6rem);
   padding-inline: 0;
   border-radius: 0;
   background: transparent;
@@ -3432,7 +3431,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .solara-search-result strong { font-size: .92rem; font-weight: 500; }
 .cm.v2 .catalog-category-layout {
   grid-template-columns: 270px minmax(0, 1fr);
-  gap: clamp(2.5rem, 4vw, 5rem);
+  /* El gap efectivo es el global de 1rem por v2-space (regla posterior); el
+     clamp de 4vw quedó invalidado y se elimina. */
 }
 .cm.v2 .catalog-category-filters {
   position: sticky;
@@ -3475,6 +3475,28 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .solara-error-page {
   width: min(calc(100% - 3rem), var(--catalog-v2-wide));
   margin-inline: auto;
+}
+/* Alineación de márgenes V2: el contenido de las páginas con contenedor, los
+   relacionados y el mega menú comparten la línea vertical del gutter de 3rem
+   (24px por lado) que ya usan el header y el footer; sin heredar el
+   padding-inline de 1rem del contenedor base. */
+.cm.v2 main.solara-container {
+  padding-inline: 0;
+}
+.cm.v2 .solara-related-products > .solara-container {
+  width: 100%;
+  margin-inline: 0;
+  padding-inline: 0;
+}
+/* El mega menú es absoluto respecto del header-inner: width 100% lo deja
+   exactamente en la línea vertical del gutter v2 (24px por lado en desktop,
+   12px en móvil) y el padding horizontal queda contenido. */
+.cm.v2 .catalog-mega-menu {
+  width: 100%;
+  padding: clamp(2rem, 4vw, 3rem) clamp(1.5rem, 3vw, 2.5rem) 1.5rem;
+}
+.cm.v2 .catalog-category-page > .solara-pagination {
+  padding-left: calc(270px + 1rem);
 }
 .cm.v2 .catalog-product-detail-inner {
   grid-template-columns: minmax(0, 1.1fr) minmax(460px, .9fr);
@@ -3924,10 +3946,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band .catalog-hero-benefit-copy small {
     line-height: 1.35;
   }
-  .cm.v2 .catalog-product-grid-section,
-  .cm.v2 .catalog-testimonials-section {
-    padding-block: 3.25rem;
-  }
+  /* El padding-block móvil de 3.25rem de estas secciones y del bento quedó
+     invalidado por la regla de secciones con var(--solara-section-y); se
+     elimina. El bento hereda padding-inline: 0 de su regla base. */
   .cm.v2 .catalog-product-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 2rem .7rem;
@@ -3940,10 +3961,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
   .cm.v2 .catalog-product-card:hover {
     transform: none;
-  }
-  .cm.v2 .catalog-category-bento-section {
-    padding-block: 3.25rem;
-    padding-inline: 0;
   }
   .cm.v2 .catalog-footer-meta {
     justify-content: center;
@@ -5631,6 +5648,17 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
       animation: none !important;
       transition: none !important;
       transform: none !important;
+    }
+  }
+  @media (max-width: 767px) {
+    .cm.v2 .catalog-category-page > .solara-pagination {
+      padding-left: 0;
+    }
+    /* El anuncio libera espacio útil en móvil: aire a la izquierda y hueco
+       reservado a la derecha para el botón de cerrar. */
+    .cm.v2 .catalog-announcement-inner {
+      padding-left: 1rem;
+      padding-right: 3.25rem;
     }
   }
 `,
