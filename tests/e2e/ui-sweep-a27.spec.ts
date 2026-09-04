@@ -517,7 +517,7 @@ test("C10: el checkout del drawer moderno abre WhatsApp con el pedido", async ({
   const openedUrl = await page.locator("html").getAttribute("data-solara-whatsapp-url");
   expect(openedUrl).toMatch(/^https:\/\/wa\.me\/5491123456789\?text=/);
   const message = decodeURIComponent(openedUrl ?? "");
-  expect(message).toContain("1x Remera esencial de algodón (Negro / S)");
+  expect(message).toContain("- Remera esencial de algodon (Negro / S) = $");
   expect(message).toContain("Total estimado: $");
   expect(message).toContain("Entregar por la tarde");
   await expect(drawer.locator("[data-order-preview]")).toContainText("Nombre: Malena Ortiz");

@@ -345,7 +345,7 @@ test("utilidad: el número y el saludo editados llegan al sitio exportado (diff 
   expect(href).toContain(`https://wa.me/${EDITED_PHONE}?text=`);
   const message = decodeURIComponent(href);
   expect(message).toContain(EDITED_GREETING);
-  expect(message).toContain("1x Remera esencial de algodón (Negro / S)");
+  expect(message).toContain("- Remera esencial de algodon (Negro / S) = $");
   expect(message).not.toContain("[MS-001-NE-S]");
 });
 
@@ -361,10 +361,10 @@ test("utilidad: includeSku queda tolerado pero el runtime omite el SKU siempre",
   const withSkuMessage = decodeURIComponent(withSkuHref);
   const withoutSkuMessage = decodeURIComponent(withoutSkuHref);
   expect(withSkuMessage).toContain("Hola Tienda Referencia, quiero hacer este pedido:");
-  expect(withSkuMessage).toContain("1x Remera esencial de algodón (Negro / S)");
+  expect(withSkuMessage).toContain("- Remera esencial de algodon (Negro / S) = $");
   expect(withSkuMessage).not.toContain("[MS-001-NE-S]");
   expect(withoutSkuMessage).not.toContain("[MS-001-NE-S]");
-  expect(withoutSkuMessage).toContain("1x Remera esencial de algodón (Negro / S)");
+  expect(withoutSkuMessage).toContain("- Remera esencial de algodon (Negro / S) = $");
 
   // El toggle sólo cambia el proyecto: el mensaje ya no depende de includeSku.
   expect(withSkuMessage).toBe(withoutSkuMessage);

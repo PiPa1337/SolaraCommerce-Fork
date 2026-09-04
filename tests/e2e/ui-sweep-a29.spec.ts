@@ -334,7 +334,7 @@ test("checkout del drawer: abre URL wa.me con saludo, líneas compactas y total 
   expect(url.pathname).toBe("/5491123456789");
   const message = (url.searchParams.get("text") ?? "").replace(/[\u202F\u00A0]/g, " ");
   expect(message).toContain("Hola Tienda Referencia, quiero hacer este pedido:");
-  expect(message).toContain("- 2x Remera esencial de algodón (Negro / S)");
+  expect(message).toContain("- 2x Remera esencial de algodon (Negro / S) = $ 57.700,00");
   expect(message).not.toContain("[MS-001-NE-S]");
   expect(message).toContain("Total estimado: $ 57.700,00");
   expect(message).toContain("Nombre: Malena Ortiz");
