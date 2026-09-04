@@ -1,9 +1,14 @@
 import { expect, test } from "vitest";
-import { createPublicExportManifest, exportProject } from "../packages/exporter/src/index";
+import { createPublicExportManifest } from "../packages/exporter/src/index";
 import { catalogModernStore } from "../packages/project-schema/src/catalog-modern-fixture";
 import { referenceStore } from "../packages/project-schema/src/fixture";
 import { getCategoryProductIds } from "../packages/project-schema/src/index";
 import { catalogScaleStore } from "../packages/project-schema/src/scale-fixture";
+import {
+  getCatalogModernExport,
+  getCatalogScaleExport,
+  getReferenceExport,
+} from "./export-shared-fixture";
 
 const fixtures = {
   reference: referenceStore,
@@ -11,9 +16,17 @@ const fixtures = {
   catalogScale: catalogScaleStore,
 } as const;
 
+// Exports production compartidos (una vez por proceso) para los tests de
+// propiedades. Ningún test muta el resultado.
+const sharedProductionExports = {
+  reference: () => getReferenceExport(),
+  catalogModern: () => getCatalogModernExport(),
+  catalogScale: () => getCatalogScaleExport(),
+} as const;
+
 test("P6-2: data-design-family del html coincide con el fixture", () => {
   for (const [name, project] of Object.entries(fixtures)) {
-    const result = exportProject(project, { mode: "production" });
+    const result = sharedProductionExports[name as keyof typeof sharedProductionExports]();
     const home = String(result.files.get("index.html"));
     const family = project.commerceTemplates.designFamily ?? "legacy-editorial-v1";
     expect(home, `${name}: design-family`).toContain(`data-design-family="${family}"`);
@@ -44,8 +57,8 @@ test("P6-3: los productIds de categorias y colecciones son indices derivados val
 });
 
 test("P6-4: sin assets huerfanos ni faltantes en el export", () => {
-  for (const [name, project] of Object.entries(fixtures)) {
-    const result = exportProject(project, { mode: "production" });
+  for (const name of Object.keys(fixtures) as (keyof typeof fixtures)[]) {
+    const result = sharedProductionExports[name]();
     const htmlFiles = [...result.files.entries()]
       .filter(([path]) => path.endsWith(".html"))
       .map(([, value]) => String(value))
@@ -61,7 +74,7 @@ test("P6-4: sin assets huerfanos ni faltantes en el export", () => {
 
 test("P6-5: las features del runtime estan declaradas en el html", () => {
   for (const [name, project] of Object.entries(fixtures)) {
-    const result = exportProject(project, { mode: "production" });
+    const result = sharedProductionExports[name as keyof typeof sharedProductionExports]();
     const home = String(result.files.get("index.html"));
     const manifest = createPublicExportManifest(project);
     const declared = (home.match(/data-solara-runtime-features="([^"]*)"/)?.[1] ?? "")
@@ -75,7 +88,7 @@ test("P6-5: las features del runtime estan declaradas en el html", () => {
 
 test("P6-6: los estilos de familia estan aislados bajo su raiz", () => {
   for (const [name, project] of Object.entries(fixtures)) {
-    const result = exportProject(project, { mode: "production" });
+    const result = sharedProductionExports[name as keyof typeof sharedProductionExports]();
     const css = String(result.files.get("assets/storefront.css") ?? "");
     const family = project.commerceTemplates.designFamily ?? "legacy-editorial-v1";
     if (family === "catalog-modern-v2") {
@@ -91,8 +104,8 @@ test("P6-6: los estilos de familia estan aislados bajo su raiz", () => {
 });
 
 test("P6-7: el sitemap no duplica canonicales", () => {
-  for (const [name, project] of Object.entries(fixtures)) {
-    const result = exportProject(project, { mode: "production" });
+  for (const name of Object.keys(fixtures) as (keyof typeof fixtures)[]) {
+    const result = sharedProductionExports[name]();
     const sitemap = String(result.files.get("sitemap.xml") ?? "");
     const locations = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
     expect(new Set(locations).size, `${name}: sitemap con duplicados`).toBe(locations.length);

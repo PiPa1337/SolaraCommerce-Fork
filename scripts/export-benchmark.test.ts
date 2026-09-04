@@ -1,10 +1,11 @@
 import { expect, test } from "vitest";
-import { generatePerformanceFixture } from "../packages/core/src/performance";
 import { exportProject } from "../packages/exporter/src/index";
+import { getPerf2000Project } from "./export-shared-fixture";
 
 test("exporta catalog-modern-v2 con 2.000 productos dentro del presupuesto", () => {
-  const project = generatePerformanceFixture(2_000);
-  project.commerceTemplates.designFamily = "catalog-modern-v2";
+  // Proyecto compartido (se genera una vez); el export es fresco porque este
+  // test mide tiempo real de exportación.
+  const project = getPerf2000Project();
   const requestedValidationMode = process.env.SOLARA_VALIDATION_MODE?.trim().toLowerCase();
   const validationMode =
     process.env.CI === "true"

@@ -1,3 +1,45 @@
+### Tests post-cambio rápidos: loop afectado + techo de CPU + smoke quick (2026-09-04)
+
+El loop que corre la IA después de cada cambio tardaba ~30 min porque corría
+todo (todos los paquetes en paralelo, 15 navegadores, exports de 2.000
+productos repetidos). Ahora el default post-cambio verifica sólo lo afectado
+en 2-3 min; la cobertura completa sigue intacta en cierre.
+
+**Added**
+
+- `check:micro` (`git diff --check` + `check:repository` + `typecheck:affected` +
+  `test:affected`): nuevo loop post-cambio de la IA, sólo paquetes afectados
+  (`scripts/test-affected-map.mjs` como fuente única, cubierta por
+  `test-affected-map.test.ts`; `scripts/typecheck-affected.mjs` nuevo).
+- `--dry-run` en `scripts/e2e-smoke.mjs`: muestra modo y specs sin levantar
+  navegadores. `--smoke-full` para los 15 specs de cierre.
+- `scripts/export-shared-fixture.ts` (+ tests): fixture/export de 2.000
+  productos y exports chicos (reference, modern, modern-v2, scale, draft)
+  calculados una vez por proceso y reutilizados.
+
+**Changed**
+
+- `test:e2e:smoke` ahora es quick por defecto (5 specs, 15 tests, ~13s
+  medidos); `test:e2e:smoke:full` conserva los 15 specs de cierre.
+- Techo de CPU: `pnpm -r` con `--workspace-concurrency=2`, `check:quick` con
+  typecheck/test en serie, Playwright 3 workers + `retries: 0` + trace off en
+  local (override `PLAYWRIGHT_WORKERS=8` en máquinas grandes).
+- `scripts/enganches`, `contratos-profundos`, `sitio-consistencia`,
+  `seo-check`, `recursos-check`, budgets y benchmark reutilizan los exports
+  compartidos; los tests de determinismo (F5/F5-draft, benchmark de tiempo)
+  siguen con exports frescos a propósito.
+- `AGENTS.md` y `docs/TESTING.md`: el contrato de la IA es `check:micro` +
+  smoke quick post-cambio; `check:quick` + smoke full sólo en cierre o si el
+  diff toca exporter/storefront/modules/Preview.
+
+**Notas**
+
+- Verificación: smoke quick 15/15 en 13.2s con build cacheado; scripts
+  migrados verdes salvo 3 fallos pre-existentes del fixture `reference`
+  (P6-4, P6-6, P4-9: dominio `casa-luma` vs `tienda-referencia`, asset copy
+  huérfano, CSS legacy vacío), verificados idénticos en HEAD sin este cambio
+  y fuera de todo gate; no se tocan en esta sesión.
+
 ### Alineación de márgenes horizontales del sitio v2 y limpieza de CSS muerto (2026-09-04)
 
 Auditoría de márgenes completa del sitio exportado (`docs/audits/margenestienda.md`): 182 páginas

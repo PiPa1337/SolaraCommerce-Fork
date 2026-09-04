@@ -1,10 +1,11 @@
 import { expect, test } from "vitest";
 import { exportProject } from "../packages/exporter/src/index";
-import { catalogModernStore } from "../packages/project-schema/src/catalog-modern-fixture";
 import { referenceStore } from "../packages/project-schema/src/fixture";
+import { getCatalogModernExport } from "./export-shared-fixture";
 
 test("P5-4: duplicacion de selectores en el CSS V2 post-iteracion del usuario", () => {
-  const result = exportProject(catalogModernStore, { mode: "production" });
+  // Export production compartido (una vez por proceso).
+  const result = getCatalogModernExport();
   const css = String(result.files.get("assets/storefront.css") ?? "");
   const v2 = css.slice(css.indexOf(".cm.v2"));
   const rules = [...v2.matchAll(/([^{}]+)\{/g)].map((m) => m[1].trim());

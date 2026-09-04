@@ -1,8 +1,6 @@
 import { gzipSync } from "node:zlib";
 import { expect, test } from "vitest";
-import { exportProject } from "../packages/exporter/src/index";
-import { catalogModernStore } from "../packages/project-schema/src/catalog-modern-fixture";
-import { catalogModernV2Store } from "../packages/project-schema/src/catalog-modern-v2-fixture";
+import { getCatalogModernExport, getCatalogModernV2Export } from "./export-shared-fixture";
 
 function runtimeAsset(
   files: Map<string, string | Uint8Array>,
@@ -20,7 +18,8 @@ function runtimeAsset(
 }
 
 test("mantiene el presupuesto de la salida pública optimizada", () => {
-  const result = exportProject(catalogModernStore, { mode: "production" });
+  // Export production compartido (una vez por proceso).
+  const result = getCatalogModernExport();
   const cssBytes = runtimeAsset(result.files, "css").bytes;
   const javascriptBytes = runtimeAsset(result.files, "js").bytes;
   const html = [...result.files.entries()]
@@ -46,7 +45,8 @@ test("mantiene el presupuesto de la salida pública optimizada", () => {
 });
 
 test("mantiene la foundation V2 dentro de un presupuesto público explícito", () => {
-  const result = exportProject(catalogModernV2Store, { mode: "production" });
+  // Export production compartido (una vez por proceso).
+  const result = getCatalogModernV2Export();
   const { bytes: cssBytes, content: cssContent } = runtimeAsset(result.files, "css");
   const javascriptBytes = runtimeAsset(result.files, "js").bytes;
   const cssGzip = Buffer.byteLength(gzipSync(cssContent, { level: 9 }), "utf8");

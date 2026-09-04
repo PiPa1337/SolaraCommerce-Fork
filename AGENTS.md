@@ -179,8 +179,10 @@ Desde la raíz:
 ```bash
 corepack pnpm install --frozen-lockfile
 corepack pnpm dev
-corepack pnpm check:quick        # <90s, 7 gates en paralelo (iteración diaria, 9800X3D 8 workers)
-corepack pnpm test:e2e:smoke   # 15 specs críticos con build cacheado (~45s-2min)
+corepack pnpm check:micro         # post-cambio: diff + repository + typecheck/test afectados (<3 min)
+corepack pnpm check:quick        # cierre o cambio amplio (todos los paquetes, concurrencia acotada)
+corepack pnpm test:e2e:smoke   # post-cambio: 5 specs quick con build cacheado (~20-40s)
+corepack pnpm test:e2e:smoke:full  # cierre o cambio en exporter/storefront/Preview (15 specs)
 corepack pnpm check             # alias de check:full, secuencial (cierre/CI)
 corepack pnpm check:full        # secuencial, para cierre
 corepack pnpm build
@@ -228,7 +230,7 @@ La guía de distribución autocontenida está en
 - [ ] Mantener `catalogModernStore`, `catalogScaleStore` y la plantilla limpia
       coherentes cuando corresponda.
 - [ ] Agregar primero una prueba del comportamiento nuevo o del bug.
-- [ ] Ejecutar el bucle local del paquete afectado y luego el gate proporcional: diaria `check:quick` + `test:e2e:smoke` (~2-3 min); cierre `check` + `test:e2e` full. `test:e2e:release` y `desktop:package` solo on-demand (Node 24).
+- [ ] Ejecutar el loop post-cambio (rápido, <3 min): `corepack pnpm check:micro` (diff + repository + typecheck/test solo afectados) y `corepack pnpm test:e2e:smoke` (5 specs quick por defecto). `check:quick` + smoke full solo en cierre o si el diff toca `packages/exporter/src/index.ts`, `storefront-runtime`, `modules` o `Preview.tsx`. Cierre: `check` + `test:e2e` full. `test:e2e:release` y `desktop:package` solo on-demand (Node 24).
 - [ ] Revisar HTML inicial, responsive, teclado, reduced motion y no-JavaScript si
       se toca storefront.
 - [ ] Ejecutar `git diff --check` y `corepack pnpm check:repository`.

@@ -26,12 +26,14 @@ corepack pnpm --filter @solara/storefront-runtime test
 los paquetes y checks de optimizer de forma secuencial (CI/cierre). `build` comprueba que los paquetes se
 compilan en orden.
 
-Para iteración diaria en 9800X3D usar `check:quick` — seis gates en paralelo
-(repository, hardcoded-content, image-budget, format, typecheck y tests; ~40-60%
-más rápido, <90s):
+Para iteración post-cambio usar `check:micro` — diff + repository + typecheck/test
+solo de paquetes afectados (mapeo en `scripts/test-affected-map.mjs`, <3 min).
+`check:quick` queda para cierre o cambio amplio (todos los paquetes con
+concurrencia acotada a 2):
 
 ```powershell
-corepack pnpm check:quick   # 6 gates en paralelo
+corepack pnpm check:micro   # post-cambio: solo afectados
+corepack pnpm check:quick   # cierre o cambio amplio
 corepack pnpm check:full    # secuencial, para cierre/CI
 corepack pnpm check         # alias de check:full
 corepack pnpm build
@@ -77,17 +79,21 @@ sube su límite para hacer pasar la auditoría.
 
 ### Playwright
 
-`test:e2e` compila Studio y ejecuta Chromium (8 workers por defecto en 9800X3D, override con `PLAYWRIGHT_WORKERS=6`) contra un servidor local. En CI el
+`test:e2e` compila Studio y ejecuta Chromium (3 workers por defecto en local, override con `PLAYWRIGHT_WORKERS=8` en máquinas 8C/16T) contra un servidor local. En CI el
 build ya está hecho y se usa `test:e2e:ci`.
 
-Para iteración diaria usar smoke ampliado (15 specs, ~45s-2min) con cache de build:
+Para iteración post-cambio usar smoke quick (5 specs, ~20-40s) con cache de build:
 
 ```powershell
 corepack pnpm playwright:install:chromium
-corepack pnpm test:e2e:smoke  # 15 specs criticos + build cacheado
+corepack pnpm test:e2e:smoke  # 5 specs quick por defecto + build cacheado
+corepack pnpm test:e2e:smoke:full  # 15 specs criticos + build cacheado (cierre)
 corepack pnpm test:e2e        # suite full (961 tests observados; puede requerir menos workers)
 corepack pnpm test:e2e:ci     # sin build, CI usa dist ya compilado
 ```
+
+Smoke quick cubre: exported-store, storefront-nojs, catalog, assets, interacciones.
+Smoke full agrega: catalog-modern-v2, exporter-sentinel, scale-store, ui-sweep-a27..30, axe-site, nojs-coverage, focus-visible.
 
 Smoke ampliado cubre: catalog-modern-v2, exporter-sentinel, scale-store, storefront-nojs, ui-sweep-a27..30, axe-site, nojs-coverage, focus-visible, interacciones, catalog, assets, exported-store.
 No incluye visual sweep (VISUAL_REVIEW_STAGE) ni LCP pesado.
@@ -106,7 +112,7 @@ detalle en `TECHNICAL_DEBT.md`; el plan histórico
 `2026-08-21-flaky-e2e-runtime-debuggeable.md` quedó en el historial de git).
 
 1. **Incorporación**: un spec nuevo entra al smoke sólo después de 5 corridas
-   consecutivas limpias (local, misma máquina, 8 workers).
+   consecutivas limpias (local, misma máquina, workers por defecto).
 2. **Sincronización**: prohibido usar `waitForTimeout` fijo como espera
    primaria. Esperar señales: roles/atributos visibles, respuestas de red
    (`page.waitForResponse`), o el helper compartido de "runtime listo".
@@ -152,16 +158,16 @@ del draft lo requiere (la validación actual exige sólo la marca DEBUG).
 
 ## Qué probar ante cada tipo de cambio
 
-> Validación diaria = `check:quick` + `test:e2e:smoke` (~2-3 min). Cierre/CI = `check:full` + `test:e2e` full + `benchmark:export` si toca exporter. Release (3 browsers + desktop:package) solo on-demand; Node 24.x es el único runtime soportado.
+> Validación post-cambio = `check:micro` + `test:e2e:smoke` (~2-3 min). Cierre/CI = `check:full` + `test:e2e:smoke:full` + `test:e2e` full + `benchmark:export` si toca exporter. Release (3 browsers + desktop:package) solo on-demand; Node 24.x es el único runtime soportado.
 
-| Cambio | Mínimo (quick) | Cierre recomendado |
+| Cambio | Mínimo (post-cambio) | Cierre recomendado |
 | --- | --- | --- |
-| Schema/migración | `check:quick` + tests de schema | `check:full`, `build`, E2E persistencia |
-| Reducer/CSV | `check:quick` + tests de `core` | benchmark de catálogo |
-| Módulo/estilo público | `check:quick` + tests de módulo | `test:e2e:smoke` + E2E responsive |
-| Preview/Studio | `check:quick` (typecheck) | `test:e2e:smoke` / `test:e2e` |
-| Guardado local | `check:quick` | ciclo real launcher + `test:e2e` |
-| SEO/exporter | `check:quick` + tests de exporter | `benchmark:export`, E2E sin JS |
+| Schema/migración | `check:micro` + tests de schema | `check:full`, `build`, E2E persistencia |
+| Reducer/CSV | `check:micro` + tests de `core` | benchmark de catálogo |
+| Módulo/estilo público | `check:micro` + tests de módulo | `test:e2e:smoke:full` + E2E responsive |
+| Preview/Studio | `check:micro` (typecheck) | `test:e2e:smoke:full` / `test:e2e` |
+| Guardado local | `check:micro` | ciclo real launcher + `test:e2e` |
+| SEO/exporter | `check:micro` + tests de exporter | `benchmark:export`, E2E sin JS |
 
 ## Diagnóstico
 
@@ -174,8 +180,8 @@ del draft lo requiere (la validación actual exige sólo la marca DEBUG).
 - `test:e2e:release` requiere Node 24.x y los navegadores instalados. La salida
   identifica el runtime validado.
 - El servidor de tests usa loopback; no debe apuntarse a una tienda publicada.
-- Validación rápida diaria: `pnpm check:quick && pnpm test:e2e:smoke` (~2-3 min en 9800X3D, 8 workers). Cierre: `pnpm check && pnpm test:e2e`.
-- Workers Playwright por defecto 8 (env `PLAYWRIGHT_WORKERS` para limitar a 6 si hay lag). Antes era 4.
+- Validación rápida post-cambio: `pnpm check:micro && pnpm test:e2e:smoke` (~2-3 min, 3 workers). Cierre: `pnpm check && pnpm test:e2e:smoke:full && pnpm test:e2e`.
+- Workers Playwright por defecto 3 (env `PLAYWRIGHT_WORKERS=8` en máquinas 8C/16T). Antes era 8.
 - Para inspeccionar una exportación, usar `pnpm reference:export` o
   `pnpm pilot:export` y revisar el directorio indicado por el script.
 

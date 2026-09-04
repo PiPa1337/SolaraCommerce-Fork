@@ -1,11 +1,10 @@
 import { gzipSync } from "node:zlib";
 import { expect, test } from "vitest";
-import { exportProject } from "../packages/exporter/src/index";
-import { catalogModernStore } from "../packages/project-schema/src/catalog-modern-fixture";
 import {
   STOREFRONT_RUNTIME_CSS,
   STOREFRONT_RUNTIME_JS,
 } from "../packages/storefront-runtime/src/index";
+import { getCatalogModernExport } from "./export-shared-fixture";
 
 test("mantiene el runtime storefront dentro del presupuesto", () => {
   const javascriptBytes = Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8");
@@ -21,7 +20,7 @@ test("mantiene el runtime storefront dentro del presupuesto", () => {
   // Task 9: skeletons de búsqueda, contador visible, título con query y guards del índice suman ~450 B; tope 68 KiB autorizado por el brief.
   expect(javascriptBytes).toBeLessThanOrEqual(68 * 1024);
 
-  const { files } = exportProject(catalogModernStore, { mode: "production" });
+  const { files } = getCatalogModernExport();
   const manifest = JSON.parse(String(files.get("deployment-manifest.json"))) as {
     runtime: { css: string };
   };

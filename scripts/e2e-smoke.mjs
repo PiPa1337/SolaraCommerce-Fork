@@ -2,9 +2,11 @@ import { spawn } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
-// e2e-smoke — smoke ampliado (~2min, 15 specs) con cache de build Studio
+// e2e-smoke — smoke quick post-cambio (5 specs, ~20-40s) con cache de build Studio
 // Valida flujos criticos sin compilar Studio si no hay cambios.
 // Uso: corepack pnpm test:e2e:smoke [-- args extra para playwright]
+//   --smoke-full: 15 specs de cierre (catalog-modern-v2, sentinel, scale, sweeps, axe...)
+//   --full: solo build cacheado, no ejecuta specs (lo usa test:e2e antes del full)
 
 const smokeSpecs = [
   "tests/e2e/catalog-modern-v2.spec.ts",
@@ -135,8 +137,13 @@ function spawnCmd(cmd, args, opts = {}) {
 
 const rawArgs = process.argv.slice(2);
 const isFull = rawArgs.includes("--full");
-const isQuick = rawArgs.includes("--quick") || process.env.SMOKE_QUICK === "1";
-const extraArgs = rawArgs.filter((a) => a !== "--full" && a !== "--quick");
+const isFullSmoke = rawArgs.includes("--smoke-full");
+const isDryRun = rawArgs.includes("--dry-run");
+const isQuick =
+  !isFull && !isFullSmoke && (rawArgs.includes("--quick") || process.env.SMOKE_QUICK !== "0");
+const extraArgs = rawArgs.filter(
+  (a) => a !== "--full" && a !== "--quick" && a !== "--smoke-full" && a !== "--dry-run",
+);
 // Contención de inestabilidad: los specs listados en unstable.json salen del
 // gate diario (fallan intermitentemente bajo carga; ver TECHNICAL_DEBT.md y
 // docs/TESTING.md). SMOKE_INCLUDE_UNSTABLE=1 los vuelve a incluir para el canal
@@ -153,6 +160,15 @@ if (existsSync(unstablePath) && process.env.SMOKE_INCLUDE_UNSTABLE !== "1") {
 }
 const baseSpecs = isQuick ? quickSmokeSpecs : smokeSpecs;
 const activeSpecs = baseSpecs.filter((spec) => !unstableSpecs.includes(spec));
+if (isDryRun) {
+  if (isFull) {
+    console.log("[smoke] dry-run --full: solo build cacheado, sin specs");
+    process.exit(0);
+  }
+  console.log(`[smoke] dry-run modo ${isQuick ? "quick" : "full"} (${activeSpecs.length} specs):`);
+  for (const spec of activeSpecs) console.log(`[smoke]   - ${spec}`);
+  process.exit(0);
+}
 if (unstableSpecs.length > 0) {
   console.log(
     `[smoke] ⏭ ${unstableSpecs.length} specs inestables excluidos (SMOKE_INCLUDE_UNSTABLE=1 para incluirlos):`,
@@ -178,19 +194,20 @@ if (isFull) {
   );
   process.exit(0);
 }
-// Construir comando playwright con workers optimizados (8 por defecto, env override)
+// Construir comando playwright con workers acotados (3 por defecto, env override)
 // y solo Chromium (smoke no necesita Firefox/WebKit). Quick usa retries 0 y 0 trace para ahorrar ~10s.
-const smokeMode = isQuick ? "quick (5 specs, ~20-30s)" : "full (15 specs, ~30-45s)";
+const smokeMode = isQuick ? "quick (5 specs, ~20-40s)" : "full (15 specs, cierre)";
 console.log(`[smoke] ▶ modo ${smokeMode}`);
 const playwrightArgs = ["exec", "playwright", "test", ...activeSpecs, ...extraArgs];
 if (isQuick && !extraArgs.includes("--retries")) playwrightArgs.push("--retries", "0");
+if (isQuick && !extraArgs.includes("--trace")) playwrightArgs.push("--trace", "off");
 console.log(`[smoke] ▶ corepack pnpm ${playwrightArgs.join(" ")}`);
 const env = isQuick
-  ? { ...process.env, PLAYWRIGHT_WORKERS: process.env.PLAYWRIGHT_WORKERS ?? "8" }
+  ? { ...process.env, PLAYWRIGHT_WORKERS: process.env.PLAYWRIGHT_WORKERS ?? "3" }
   : undefined;
 const code = await spawnCmd("corepack", ["pnpm", ...playwrightArgs], env ? { env } : {});
 if (code !== 0) {
   console.error(`[smoke] ✖ smoke fallo con codigo ${code}`);
   process.exit(code ?? 1);
 }
-console.log(`[smoke] ✔ smoke ampliado ${activeSpecs.length} specs paso`);
+console.log(`[smoke] ✔ smoke ${smokeMode} — ${activeSpecs.length} specs paso`);

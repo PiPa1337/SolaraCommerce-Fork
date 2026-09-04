@@ -9,11 +9,25 @@ import {
 import { catalogModernStore } from "../packages/project-schema/src/catalog-modern-fixture";
 import { referenceStore } from "../packages/project-schema/src/fixture";
 import { catalogScaleStore } from "../packages/project-schema/src/scale-fixture";
+import {
+  getCatalogModernExport,
+  getCatalogScaleExport,
+  getReferenceExport,
+} from "./export-shared-fixture";
 
 const fixtures = {
   reference: referenceStore,
   catalogModern: catalogModernStore,
   catalogScale: catalogScaleStore,
+} as const;
+
+// Exports production compartidos (una vez por proceso) para los tests de
+// propiedades. F5/F5-draft usan exports frescos a propósito: verifican
+// determinismo entre dos corridas independientes.
+const sharedProductionExports = {
+  reference: () => getReferenceExport(),
+  catalogModern: () => getCatalogModernExport(),
+  catalogScale: () => getCatalogScaleExport(),
 } as const;
 
 function sha256(value: string | Uint8Array): string {
@@ -30,8 +44,8 @@ function serializeForHash(files: ReadonlyMap<string, string | Uint8Array>): stri
 }
 
 test("F2: el atributo data-solara-runtime-features coincide con el manifest", () => {
-  for (const [, project] of Object.entries(fixtures)) {
-    const result = exportProject(project, { mode: "production" });
+  for (const [name, project] of Object.entries(fixtures)) {
+    const result = sharedProductionExports[name as keyof typeof sharedProductionExports]();
     const manifest = createPublicExportManifest(project);
     const home = String(result.files.get("index.html"));
     const match = /data-solara-runtime-features="([^"]*)"/.exec(home);
@@ -41,8 +55,8 @@ test("F2: el atributo data-solara-runtime-features coincide con el manifest", ()
 });
 
 test("F3: search-index y catalog-index referencian solo productos activos con rutas del sitio", () => {
-  for (const [, project] of Object.entries(fixtures)) {
-    const result = exportProject(project, { mode: "production" });
+  for (const name of Object.keys(fixtures) as (keyof typeof fixtures)[]) {
+    const result = sharedProductionExports[name]();
     const searchIndex = JSON.parse(String(result.files.get("search-index.json") ?? "[]")) as Array<{
       path?: string;
     }>;
@@ -66,7 +80,7 @@ test("F3: search-index y catalog-index referencian solo productos activos con ru
 
 test("F4: criticalCount del audit coincide con el bloqueo de production", () => {
   const audit = auditReport(referenceStore);
-  const result = exportProject(referenceStore, { mode: "production" });
+  const result = getReferenceExport();
   expect(result.audit.filter((issue) => issue.severity === "critical")).toHaveLength(
     audit.criticalCount,
   );

@@ -1,14 +1,19 @@
 import { execSync, spawn } from "node:child_process";
 import { resolve } from "node:path";
+import { mapFilesToPackages } from "./test-affected-map.mjs";
 
 // test-affected.mjs — ejecuta solo tests de paquetes afectados por git diff
 // Uso: node scripts/test-affected.mjs [--base=origin/main] [--all]
-// - Sin git o con --all, corre "pnpm -r --parallel test" (todos)
-// - Con cambios, mapea archivos a paquetes y corre solo esos via "pnpm --filter"
+// - Por defecto compara el worktree contra HEAD (cambios sin commitear).
+//   Con --base=X compara además X...HEAD (útil en CI contra la rama base).
+// - Sin git o con --all, corre tests con concurrencia acotada (todos)
+// - Con cambios, mapea archivos a paquetes (ver test-affected-map.mjs) y corre
+//   solo esos via "pnpm --filter". Con [] (solo infra/docs) no corre tests de
+//   paquete: sale verde sin trabajo pesado.
 // Reutiliza artefactos deterministas y evita trabajo redundante.
 const args = process.argv.slice(2);
 const shouldRunAll = args.includes("--all") || args.includes("--full");
-let baseRef = "origin/main";
+let baseRef = "HEAD";
 for (const a of args) {
   if (a.startsWith("--base=")) baseRef = a.slice(7);
 }
@@ -50,42 +55,16 @@ function getChangedFiles() {
     return null;
   }
 }
-function mapFilesToPackages(files) {
-  if (!files || files.length === 0) return null;
-  // Si tocan root config, correr todo
-  const rootTouched = files.some(
-    (f) =>
-      f === "package.json" ||
-      f === "pnpm-workspace.yaml" ||
-      f === "tsconfig.base.json" ||
-      f.startsWith("scripts/"),
-  );
-  if (rootTouched) return null;
-  const pkgs = new Set();
-  for (const f of files) {
-    if (f.startsWith("packages/project-schema/")) pkgs.add("@solara/project-schema");
-    else if (f.startsWith("packages/core/")) pkgs.add("@solara/core");
-    else if (f.startsWith("packages/module-sdk/")) pkgs.add("@solara/module-sdk");
-    else if (f.startsWith("packages/modules/")) pkgs.add("@solara/modules");
-    else if (f.startsWith("packages/exporter/")) pkgs.add("@solara/exporter");
-    else if (f.startsWith("packages/storefront-runtime/")) pkgs.add("@solara/storefront-runtime");
-    else if (f.startsWith("packages/site-optimizer/")) pkgs.add("@solara/site-optimizer");
-    else if (f.startsWith("apps/studio/")) pkgs.add("@solara/studio");
-    else if (f.startsWith("apps/desktop/")) pkgs.add("@solara/desktop");
-    else if (f.startsWith("tests/")) return null; // tests tocan muchos paquetes
-  }
-  if (pkgs.size === 0) return null;
-  // Si muchos paquetes afectados (>4), correr todo es más rápido que filtrar
-  if (pkgs.size > 4) return null;
-  return [...pkgs];
-}
 const changed = getChangedFiles();
 const pkgs = mapFilesToPackages(changed);
 let cmd, cmdArgs;
 if (!pkgs) {
-  console.log("[affected] Cambios amplios o sin git → pnpm -r --parallel test (todos)");
+  console.log("[affected] Cambios amplios o sin git → pnpm -r con concurrencia acotada (todos)");
   cmd = "corepack";
-  cmdArgs = ["pnpm", "-r", "--parallel", "--if-present", "test"];
+  cmdArgs = ["pnpm", "-r", "--workspace-concurrency=2", "--if-present", "test"];
+} else if (pkgs.length === 0) {
+  console.log("[affected] Solo infra/docs → sin tests de paquete (verde)");
+  process.exit(0);
 } else {
   console.log(`[affected] Paquetes afectados: ${pkgs.join(", ")} → pnpm --filter ... test`);
   // Construir pnpm --filter args: "pnpm --filter pkg1 --filter pkg2 test"

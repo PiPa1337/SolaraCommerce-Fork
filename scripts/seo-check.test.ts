@@ -1,9 +1,9 @@
 import { expect, test } from "vitest";
-import { exportProject } from "../packages/exporter/src/index";
-import { referenceStore } from "../packages/project-schema/src/fixture";
+import { getReferenceExport } from "./export-shared-fixture";
 
 test("P5-9: JSON-LD valido y con URLs absolutas en las paginas comerciales", () => {
-  const result = exportProject(referenceStore, { mode: "production" });
+  // Export production compartido (una vez por proceso).
+  const result = getReferenceExport();
   const expectStructured = (path: string): boolean =>
     /^(index|productos\/[^/]+\/index|colecciones\/[^/]+\/index|nosotros|contacto)\.html$/.test(
       path,

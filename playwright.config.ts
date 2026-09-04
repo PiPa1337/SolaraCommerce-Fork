@@ -18,21 +18,19 @@ export default defineConfig({
   // pero no bloquean CI mientras se estabiliza su entorno de ejecución.
   testIgnore: process.env.CI === "true" ? ciVisualSpecs : undefined,
   fullyParallel: false,
-  // 1 reintento por test: con 532 tests y 4 workers, un puñado de aserciones
-  // sensibles a timing (ventanas de ~1 frame) flakea una vez por corrida bajo
-  // presión de suite; cada test se verifica dos veces en contexto fresco.
-  retries: 1,
-  // 8 workers (9800X3D optimizado): cada spec levanta su propio servidor en puerto aleatorio
-  // (listen(0) o rangos disjuntos por archivo), así que la paralelización es
-  // segura; la suite completa baja de ~9 min a ~3-4 min en una máquina 8C/16T.
-  // Smoke ampliado (15 specs) queda en ~45s-2min. Override con PLAYWRIGHT_WORKERS=6 si el IDE laggea.
-  // Default previo era 4 workers.
-  workers: Number(process.env.PLAYWRIGHT_WORKERS ?? 8),
+  // 0 reintentos en local (post-cambio rápido); CI conserva 1 para flakes de timing.
+  retries: process.env.CI === "true" ? 1 : 0,
+  // 3 workers por defecto en local para no congelar la máquina: cada spec levanta
+  // su propio servidor en puerto aleatorio (listen(0) o rangos disjuntos por
+  // archivo), así que la paralelización es segura pero acotada. En máquinas
+  // 8C/16T usar PLAYWRIGHT_WORKERS=8 para la suite completa (~3-4 min).
+  // Smoke quick (5 specs) queda en ~20-40s. Override con PLAYWRIGHT_WORKERS=N.
+  workers: Number(process.env.PLAYWRIGHT_WORKERS ?? 3),
   reporter: process.env.CI
     ? [["line"], ["html", { open: "never", outputFolder: "playwright-report" }]]
     : "list",
   use: {
-    trace: "retain-on-failure",
+    trace: process.env.CI === "true" ? "retain-on-failure" : "off",
     serviceWorkers: "block",
   },
   outputDir: process.env.SOLARA_PERF_PLAYWRIGHT_OUTPUT_DIR ?? "test-results",

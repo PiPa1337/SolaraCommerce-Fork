@@ -1,11 +1,9 @@
 import { test } from "vitest";
-import { generatePerformanceFixture } from "../packages/core/src/performance";
-import { exportProject } from "../packages/exporter/src/index";
+import { getPerf2000Export } from "./export-shared-fixture";
 
 test("audit repetido 2000", () => {
-  const project = generatePerformanceFixture(2000);
-  project.commerceTemplates.designFamily = "catalog-modern-v2";
-  const result = exportProject(project, { mode: "production" });
+  // Export compartido (se calcula una vez por proceso Vitest).
+  const result = getPerf2000Export();
   const prodEntries = [...result.files.entries()].filter(([p]) => p.startsWith("productos/"));
   const htmls = prodEntries.map(([, v]) => String(v));
   // comparar dos productos para medir shell repetido (LCS aproximado via longitud comun)

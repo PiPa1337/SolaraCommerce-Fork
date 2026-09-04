@@ -1,11 +1,9 @@
 import { test } from "vitest";
-import { generatePerformanceFixture } from "../packages/core/src/performance";
-import { exportProject } from "../packages/exporter/src/index";
+import { getPerf2000Export } from "./export-shared-fixture";
 
 test("audit 2000 desglose", () => {
-  const project = generatePerformanceFixture(2000);
-  project.commerceTemplates.designFamily = "catalog-modern-v2";
-  const result = exportProject(project, { mode: "production" });
+  // Export compartido (se calcula una vez por proceso Vitest).
+  const result = getPerf2000Export();
   const files = [...result.files.entries()].map(
     ([p, v]) =>
       [

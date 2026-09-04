@@ -24,9 +24,9 @@ function getSubstFallback() {
 }
 const SUBST_DRIVE = getSubstFallback();
 
-// check:quick — gates en paralelo para 9800X3D (8C/16T)
-// Ejecuta todos los checks livianos en paralelo en vez de secuencial.
-// Mantiene la misma cobertura que `pnpm check` pero en ~40-60% menos tiempo.
+// check:quick — gates con concurrencia acotada (post-cambio y cierre liviano)
+// Los gates livianos corren en paralelo; typecheck y test (pesados en CPU)
+// corren en serie con workspace-concurrency=2 para no congelar la máquina.
 // Uso: corepack pnpm check:quick
 const isFull = process.argv.includes("--full");
 const isCi = process.env.CI === "true";
@@ -39,16 +39,21 @@ const validationMode = isCi
 const isAdvisory = validationMode === "advisory";
 const testCommand = isCi
   ? "corepack pnpm -r --workspace-concurrency=1 --if-present --filter=!@solara/studio --filter=!@solara/exporter --filter=!@solara/core test"
-  : "corepack pnpm -r --parallel --if-present test";
+  : "corepack pnpm -r --workspace-concurrency=2 --if-present test";
 const fastTasks = [
   { name: "check:repository", cmd: "corepack pnpm check:repository" },
   { name: "check:hardcoded-content", cmd: "corepack pnpm check:hardcoded-content" },
   { name: "check:image-budget", cmd: "node scripts/check-image-budget.mjs" },
   { name: "format:check", cmd: "corepack pnpm format:check" },
-  { name: "typecheck", cmd: "corepack pnpm -r --parallel --if-present typecheck" },
+  {
+    name: "typecheck",
+    cmd: "corepack pnpm -r --workspace-concurrency=2 --if-present typecheck",
+    serial: true,
+  },
   // Los fuzz y los exports deterministas superan 15s cuando todos los
   // paquetes comparten CPU; el timeout del gate debe cubrir esa carga real.
-  { name: "test", cmd: testCommand },
+  // Serie (después de typecheck) para no competir por CPU con el resto.
+  { name: "test", cmd: testCommand, serial: true },
   ...(isCi
     ? [
         {
@@ -152,7 +157,7 @@ const startAll = Date.now();
 const parallelTasks = tasks.filter((task) => !task.serial);
 const serialTasks = tasks.filter((task) => task.serial);
 console.log(
-  `[quick] Iniciando ${tasks.length} gates (${parallelTasks.length} en paralelo, ${serialTasks.length} serializados; ${isFull ? "full" : "fast"}, modo ${validationMode}, 9800X3D optimizado)...`,
+  `[quick] Iniciando ${tasks.length} gates (${parallelTasks.length} en paralelo, ${serialTasks.length} serializados; ${isFull ? "full" : "fast"}, modo ${validationMode}, concurrencia acotada)...`,
 );
 const parallelResults = await Promise.all(parallelTasks.map(runTask));
 const serialResults = [];
