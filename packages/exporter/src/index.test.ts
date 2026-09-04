@@ -1254,6 +1254,19 @@ describe("exporter", () => {
     expect(preview).toContain('href="/tienda/categorias/mesa/"');
   });
 
+  it("la página de búsqueda declara pageSize y total del catálogo", () => {
+    const { files } = exportProject(catalogScaleStore, { mode: "production" });
+    const searchHtml = String(files.get("buscar/index.html"));
+    expect(searchHtml).toContain(
+      `data-products-per-page="${catalogScaleStore.commerceTemplates.category.productsPerPage}"`,
+    );
+    const total = catalogScaleStore.products.filter(
+      (product) => product.status === "active",
+    ).length;
+    expect(total).toBe(50);
+    expect(searchHtml).toContain(`data-category-total="${total}"`);
+  });
+
   it("publica catalog-index.json cuando el drawer de carrito está activo sin templates", () => {
     const project = {
       ...referenceStore,
