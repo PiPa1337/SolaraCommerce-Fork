@@ -520,13 +520,13 @@ export function splitOrderParts(
     if (chunk.length > maxLines) return false;
     const text = [
       header(99, 99),
+      greetingLine,
       "",
       ...chunk.map((line) => renderWhatsAppLine(line, money)),
       "",
-      "*Subtotal de esta parte: $99.999.999*",
-      "Sigue en la parte 99 →",
+      nonLastTail,
     ].join("\n");
-    return encodeURIComponent(text).length <= messageBudget;
+    return encodeURIComponent(text).length <= chunkBudget;
   };
   const renderLastBlock = (parts: number): string[] => [
     `*Total del pedido: ${money(total)}*`,
@@ -536,6 +536,16 @@ export function splitOrderParts(
     renderWhatsAppDisclaimer(project),
     `✓ Fin del pedido (${parts}/${parts})`,
   ];
+  const greetingLine = resolveWhatsAppGreeting(project);
+  // Margen exacto: el footer real (total + cliente + disclaimer + fin) menos la
+  // cola de parte intermedia. Así TODA parte cabe aunque sea la última, sin
+  // adivinar longitudes. Asume subtotal de parte < $99.999.999,99.
+  const nonLastTail = ["*Subtotal de esta parte: $99.999.999,99*", "Sigue en la parte 99 →"].join("\n");
+  const probeMargin = Math.max(
+    0,
+    encodeURIComponent(renderLastBlock(99).join("\n")).length - encodeURIComponent(nonLastTail).length,
+  );
+  const chunkBudget = messageBudget - probeMargin;
   const renderPart = (chunk: CartLine[], part: number, parts: number, summarized: boolean): string => {
     const head = header(part, parts);
     if (summarized) {
@@ -556,7 +566,7 @@ export function splitOrderParts(
       const subtotal = chunk.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
       return [
         head,
-        ...(part === 1 ? [resolveWhatsAppGreeting(project), ""] : [""]),
+        ...(part === 1 ? [greetingLine, ""] : [""]),
         ...items,
         "",
         `*Subtotal de esta parte: ${money(subtotal)}*`,
