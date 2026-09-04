@@ -1,5 +1,6 @@
 import {
   CATALOG_MODERN_PLACEHOLDER_PHONE,
+  CategorySchema,
   type ImageAsset,
   type StoreSection,
   type VideoAsset,
@@ -994,12 +995,33 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
 
     const html = renderSections(project, project.sections, { pageType: "home" });
     expect(html).not.toContain("/buscar/");
-    expect(html).toContain('href="/categorias/"');
+    // Sin categorías el fallback es la home; nunca `/categorias/` (404 latente).
+    expect(html).toContain('class="catalog-view-all" href="/"');
+    expect(html).not.toContain('href="/categorias/"');
 
     const enabledHtml = renderSections(catalogModernCleanStore, catalogModernCleanStore.sections, {
       pageType: "home",
     });
     expect(enabledHtml).toContain('href="/buscar/"');
+  });
+
+  it("con búsqueda apagada el viewAll /buscar/ cae en la primera categoría raíz visible", () => {
+    const project = structuredClone(catalogModernCleanStore);
+    project.commerceTemplates.search.enabled = false;
+    project.categories = [
+      CategorySchema.parse({
+        id: "category-fallback-test",
+        slug: "test-principal",
+        title: "Test principal",
+        description: "",
+        productIds: [],
+      }),
+    ];
+
+    const html = renderSections(project, project.sections, { pageType: "home" });
+    expect(html).toContain('class="catalog-view-all" href="/categorias/test-principal/"');
+    expect(html).not.toContain("/buscar/");
+    expect(html).not.toContain('href="/categorias/"');
   });
 
   it("gates el botón de carrito moderno con los templates de carrito o checkout", () => {

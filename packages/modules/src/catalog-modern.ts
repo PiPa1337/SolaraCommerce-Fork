@@ -583,8 +583,12 @@ function modernFallbackAsset(
   );
 }
 
-function catalogSearchHref(searchEnabled: boolean, href: string): string {
-  return !searchEnabled && href.startsWith("/buscar") ? "/categorias/" : href;
+function catalogSearchHref(searchEnabled: boolean, href: string, project: StoreProjectV1): string {
+  if (searchEnabled || !href.startsWith("/buscar")) return href;
+  const firstRootCategory = project.categories.find(
+    (category) => !category.parentId && category.status !== "hidden",
+  );
+  return firstRootCategory ? `/categorias/${firstRootCategory.slug}/` : "/";
 }
 
 function renderCatalogHeroMedia(
@@ -850,7 +854,11 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
     const body = activeSlide?.body ?? settings.body;
     const actionLabel = activeSlide?.actionLabel ?? settings.actionLabel;
     const actionHref = normalizeV2Href(
-      catalogSearchHref(searchEnabled, activeSlide?.actionHref ?? settings.actionHref),
+      catalogSearchHref(
+        searchEnabled,
+        activeSlide?.actionHref ?? settings.actionHref,
+        context.project,
+      ),
     );
     const configuredSecondaryActionHref = safeUrl(settings.secondaryActionHref);
     const secondaryActionHref = normalizeV2Href(configuredSecondaryActionHref);
@@ -875,7 +883,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
                 "<img",
                 `<img${canvasRepeaterItemAttributes(canvasContext(context), "slide-image", slide.id)}`,
               );
-              return `<figure data-catalog-hero-slide-panel data-title="${escapeAttribute(slide.title)}" data-body="${escapeAttribute(slide.body)}" data-action-label="${escapeAttribute(slide.actionLabel)}" data-action-href="${escapeAttribute(normalizeV2Href(safeUrl(catalogSearchHref(searchEnabled, slide.actionHref))))}"${canvasRepeaterItemAttributes(canvasContext(context), "slide-title", slide.id)}${index === 0 ? "" : " hidden"}>${slideImageMarkup}</figure>`;
+              return `<figure data-catalog-hero-slide-panel data-title="${escapeAttribute(slide.title)}" data-body="${escapeAttribute(slide.body)}" data-action-label="${escapeAttribute(slide.actionLabel)}" data-action-href="${escapeAttribute(normalizeV2Href(safeUrl(catalogSearchHref(searchEnabled, slide.actionHref, context.project))))}"${canvasRepeaterItemAttributes(canvasContext(context), "slide-title", slide.id)}${index === 0 ? "" : " hidden"}>${slideImageMarkup}</figure>`;
             })
             .join("")
         : "";
@@ -1209,7 +1217,11 @@ export const catalogProductGrid: ModuleDefinition<
       : context.settings.title;
     const searchEnabled =
       context.project.navigation.showSearch && context.project.commerceTemplates.search.enabled;
-    const viewAllHref = catalogSearchHref(searchEnabled, context.settings.viewAllHref);
+    const viewAllHref = catalogSearchHref(
+      searchEnabled,
+      context.settings.viewAllHref,
+      context.project,
+    );
     const viewAllAriaLabel = `${context.project.publicCopy.navigation.viewAll} de ${sectionTitle}`;
     const categoryGrid = context.pageType === "category" ? " data-category-grid" : "";
     const cards = products
