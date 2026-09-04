@@ -110,4 +110,10 @@ describe("estilo de rendimiento del Preview", () => {
       '[data-solara-module]:not([data-solara-module="catalog-cart-drawer"])',
     );
   });
+
+  it("oculta las imágenes diferidas sin src hasta hidratar (sin alt gigante)", () => {
+    // deferPreviewAssetMarkup deja el <img> sin src hasta que el postMessage
+    // resuelve el asset: sin esto el preview muestra icono roto + alt enorme.
+    expect(PREVIEW_PERF_STYLE).toContain("img[data-solara-preview-src]:not([src])");
+  });
 });

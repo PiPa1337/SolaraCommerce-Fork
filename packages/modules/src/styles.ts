@@ -2298,6 +2298,30 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-footer-brand { display: flex; flex-direction: column; align-items: flex-start; padding-inline-start: clamp(.9rem, 1.8vw, 1.5rem); border-inline-start: 2px solid var(--solara-accent); }
 [data-solara-store].catalog-modern .catalog-footer-brand .catalog-brand { display: inline-flex; align-items: center; width: fit-content; max-width: min(100%, 16rem); min-height: 3rem; }
 [data-solara-store].catalog-modern .catalog-footer-brand .catalog-brand .solara-logo { display: block; width: auto; max-width: 100%; height: clamp(2.75rem, 4vw, 4.75rem); object-fit: contain; object-position: left center; }
+/* Primer frame: el <img> trae width/height del asset y reserva la caja; el alt
+   no debe heredar la display del brand (~2rem) cuando la imagen aún no cargó. */
+[data-solara-store].catalog-modern .catalog-brand .solara-logo { display: block; width: auto; height: auto; max-width: 100%; object-fit: contain; object-position: left center; overflow: hidden; font-size: 12px; line-height: 1.2; }
+/* Appear de marca V1 (logo + hero-media): oculto pre-load sólo con motion
+   listo y preset distinto de none; al cargar anima con duración/easing/delay/
+   distancia/intensidad de la sección (panel Movimiento). Sin JS, con
+   movimiento reducido o en error, visible directo. */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion-ready="true"] [data-solara-store].catalog-modern:not(.v2) [data-motion-root]:not([data-motion-preset="none"]) :is(img.solara-logo, figure.solara-hero-media, .solara-hero-media):not([data-solara-loaded]):not([data-solara-broken]) {
+    opacity: 0;
+  }
+  html[data-motion-ready="true"] [data-solara-store].catalog-modern:not(.v2) [data-motion-root][data-motion-preset="fade"][data-motion-visible="true"] :is(img.solara-logo, figure.solara-hero-media, .solara-hero-media)[data-solara-loaded] {
+    animation: solara-motion-fade var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
+  }
+  html[data-motion-ready="true"] [data-solara-store].catalog-modern:not(.v2) [data-motion-root]:is([data-motion-preset="fade-up"], [data-motion-preset="stagger"])[data-motion-visible="true"] :is(img.solara-logo, figure.solara-hero-media, .solara-hero-media)[data-solara-loaded] {
+    animation: solara-motion-fade-up var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
+  }
+  html[data-motion-ready="true"] [data-solara-store].catalog-modern:not(.v2) [data-motion-root][data-motion-preset="scale"][data-motion-visible="true"] :is(img.solara-logo, figure.solara-hero-media, .solara-hero-media)[data-solara-loaded] {
+    animation: solara-motion-scale var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
+  }
+  html[data-motion-ready="true"] [data-solara-store].catalog-modern:not(.v2) [data-motion-root][data-motion-preset="slide"][data-motion-visible="true"] :is(img.solara-logo, figure.solara-hero-media, .solara-hero-media)[data-solara-loaded] {
+    animation: solara-motion-slide var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
+  }
+}
 [data-solara-store].catalog-modern .catalog-footer-brand .catalog-brand .solara-wordmark { max-width: 100%; overflow-wrap: anywhere; font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(1.25rem, 2.4vw, 2rem); line-height: 1; }
 [data-solara-store].catalog-modern .catalog-footer-brand p { max-width: 28ch; margin: 1rem 0 0; color: var(--catalog-muted); font-size: .84rem; }
 [data-solara-store].catalog-modern .catalog-footer-whatsapp { display: inline-flex; align-items: center; justify-content: space-between; gap: 1rem; width: min(100%, 16rem); min-height: 2.75rem; margin-top: 1rem; padding: .65rem .8rem; border: 1px solid var(--solara-accent); border-radius: var(--solara-radius); color: var(--solara-accent); font-size: .78rem; font-weight: 800; text-decoration: none; }
@@ -2560,7 +2584,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   [data-solara-store].catalog-modern .catalog-mobile-menu[data-state="open"] .catalog-mobile-menu__panel { transform: translateX(0); }
   [data-solara-store].catalog-modern .catalog-mobile-menu__header { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: .75rem; min-height: 5.25rem; padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) 1rem max(1rem, env(safe-area-inset-left)); border-bottom: 1px solid var(--catalog-border); }
   [data-solara-store].catalog-modern .catalog-mobile-brand { display: inline-flex; align-items: center; width: fit-content; min-width: 0; max-width: min(14rem, calc(100% - 3.75rem)); max-height: 4.5rem; overflow: hidden; color: var(--catalog-ink); font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(1.7rem, 8vw, 2.3rem); letter-spacing: -.06em; text-decoration: none; overflow-wrap: anywhere; }
-  [data-solara-store].catalog-modern .catalog-mobile-brand .solara-logo { display: block; width: auto; height: auto; max-width: 100%; max-height: 4.5rem; object-fit: contain; }
+  [data-solara-store].catalog-modern .catalog-mobile-brand .solara-logo { display: block; width: auto; height: auto; max-width: 100%; max-height: 4.5rem; object-fit: contain; overflow: hidden; font-size: 12px; line-height: 1.2; }
   [data-solara-store].catalog-modern .catalog-mobile-menu__close { display: inline-grid; flex: 0 0 48px; place-items: center; width: 48px; height: 48px; padding: 0; border: 1px solid var(--catalog-border); border-radius: var(--solara-radius); background: var(--catalog-paper); color: var(--catalog-ink); cursor: pointer; transition: color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease), background-color var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease), transform var(--solara-motion-fast, 180ms) var(--solara-motion-easing, ease); }
   [data-solara-store].catalog-modern .catalog-mobile-menu__close:hover { background: var(--catalog-surface); color: var(--solara-accent); }
   [data-solara-store].catalog-modern .catalog-mobile-menu__close:active { transform: scale(.96); }
@@ -2796,15 +2820,29 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   white-space: nowrap;
   overflow-wrap: normal;
 }
-.cm.v2 .catalog-brand .solara-logo,
-.cm.v2 .catalog-footer-brand .catalog-brand .solara-logo {
-  height: 100%;
-  object-fit: contain;
+/* Primer frame: height:100% sobre el brand de alto auto no reservaba caja y el
+   alt heredaba la display del brand (~2.45rem). Con max-height explícito la
+   caja queda reservada y el alt contenido aunque la imagen tarde o falle. */
+.cm.v2 .catalog-brand .solara-logo {
+  display: block;
   width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 3.5rem;
+  object-fit: contain;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.2;
 }
 .cm.v2 .catalog-footer-brand .catalog-brand .solara-logo {
+  width: auto;
   height: clamp(2.75rem, 4vw, 4.75rem);
   max-width: 100%;
+  max-height: 4.75rem;
+  object-fit: contain;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.2;
 }
 .cm.v2 .catalog-mobile-brand .solara-wordmark {
   display: block;
@@ -2999,7 +3037,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 /* Motion cinematográfico del hero V2 (familia imagen/video): la coreografía de
    entrada está gateada por [data-motion-visible="true"], que el runtime setea
    con el observer; sin el atributo el contenido queda visible sin animar. */
-.cm.v2 [data-solara-module="catalog-hero"] [data-motion-zone]{animation:none!important}
+.cm.v2 [data-solara-module="catalog-hero"] [data-motion-zone]:not([data-solara-loaded]){animation:none!important}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-line{display:block;overflow:hidden}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-rule{width:3.5rem;height:1px;background:color-mix(in srgb,var(--catalog-ink) 35%,transparent);transform-origin:left;margin-block:1.35rem 1.05rem}
 .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(1.5rem * var(--catalog-v2-space, 1)) calc(2.25rem * var(--catalog-v2-space, 1));margin:2rem 0 1rem;padding:0;list-style:none}
@@ -3035,12 +3073,32 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-benefits--copy .catalog-hero-benefit{animation:solara-hero-rise var(--hero-v2-dur-benefit,420ms) var(--catalog-v2-ease-out) var(--hero-v2-benefit-delay,500ms) both}
 .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-benefits--copy .catalog-hero-benefit:nth-child(2){--hero-v2-benefit-delay:560ms}
 .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-benefits--copy .catalog-hero-benefit:nth-child(3){--hero-v2-benefit-delay:620ms}
-.cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] [data-hero-media]{animation:none!important;opacity:1!important}
 .cm.v2 [data-solara-module="catalog-hero"][data-motion-visible="true"] .catalog-hero-image{animation:solara-hero-media-zoom var(--hero-v2-dur-zoom,1200ms) var(--catalog-v2-ease-out) 80ms backwards}
 @keyframes solara-hero-rise{from{opacity:0;transform:translateY(var(--hero-v2-rise,16px))}to{opacity:1;transform:translateY(0)}}
 @keyframes solara-hero-line{from{transform:translateY(115%)}to{transform:translateY(0)}}
 @keyframes solara-hero-rule{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @keyframes solara-hero-media-zoom{from{transform:scale(1.06)}to{transform:scale(1)}}
+/* Appear de marca V2 (logo + hero-media): oculto pre-load sólo con motion
+   listo y preset distinto de none; al cargar anima con duración/easing/delay/
+   distancia/intensidad de la sección (panel Movimiento). Sin JS, con
+   movimiento reducido o en error, visible directo. */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion-ready="true"] .cm.v2 [data-motion-root]:not([data-motion-preset="none"]) :is(img.solara-logo, [data-hero-media], .catalog-hero-media):not([data-solara-loaded]):not([data-solara-broken]) {
+    opacity: 0;
+  }
+  html[data-motion-ready="true"] .cm.v2 [data-motion-root][data-motion-preset="fade"][data-motion-visible="true"] :is(img.solara-logo, [data-hero-media], .catalog-hero-media)[data-solara-loaded] {
+    animation: solara-motion-fade var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
+  }
+  html[data-motion-ready="true"] .cm.v2 [data-motion-root]:is([data-motion-preset="fade-up"], [data-motion-preset="stagger"])[data-motion-visible="true"] :is(img.solara-logo, [data-hero-media], .catalog-hero-media)[data-solara-loaded] {
+    animation: solara-motion-fade-up var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
+  }
+  html[data-motion-ready="true"] .cm.v2 [data-motion-root][data-motion-preset="scale"][data-motion-visible="true"] :is(img.solara-logo, [data-hero-media], .catalog-hero-media)[data-solara-loaded] {
+    animation: solara-motion-scale var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
+  }
+  html[data-motion-ready="true"] .cm.v2 [data-motion-root][data-motion-preset="slide"][data-motion-visible="true"] :is(img.solara-logo, [data-hero-media], .catalog-hero-media)[data-solara-loaded] {
+    animation: solara-motion-slide var(--motion-duration, 600ms) var(--motion-easing, cubic-bezier(.16, 1, .3, 1)) var(--motion-delay, 0ms) backwards;
+  }
+}
 .cm.v2 .catalog-brand-strip-inner,
 .cm.v2 .catalog-product-grid-section,
 .cm.v2 .catalog-category-bento-section,
@@ -5279,7 +5337,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-hero-page .catalog-hero-benefit-copy { display: flex; min-width: 0; flex-direction: column; gap: .25rem; }
   .cm.v2 .catalog-hero-page .catalog-hero-benefit-copy small { color: var(--catalog-muted); }
   .cm.v2 .catalog-hero-page > .catalog-hero-inner[data-motion-zone],
-  .cm.v2 .catalog-hero-page .catalog-hero-media[data-motion-zone],
+  .cm.v2 .catalog-hero-page .catalog-hero-media[data-motion-zone]:not([data-solara-loaded]),
   .cm.v2 [data-solara-module^="about-"]:not(.catalog-hero-page) [data-motion-zone],
   .cm.v2 [data-solara-module^="contact-"]:not(.catalog-hero-page) [data-motion-zone] { animation: none !important; }
   .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-reveal--eyebrow { --hero-v2-rise: 14px; animation: solara-hero-rise var(--hero-v2-dur-eyebrow, 380ms) var(--catalog-v2-ease-out) 60ms both; }
@@ -5292,7 +5350,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-benefits--copy .catalog-hero-benefit { animation: solara-hero-rise var(--hero-v2-dur-benefit, 420ms) var(--catalog-v2-ease-out) var(--hero-v2-benefit-delay, 500ms) both; }
   .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-benefits--copy .catalog-hero-benefit:nth-child(2) { --hero-v2-benefit-delay: 560ms; }
   .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-benefits--copy .catalog-hero-benefit:nth-child(3) { --hero-v2-benefit-delay: 620ms; }
-  .cm.v2 .catalog-hero-page[data-motion-visible="true"] [data-hero-media] { animation: none !important; opacity: 1 !important; }
   .cm.v2 .catalog-hero-page[data-motion-visible="true"] .catalog-hero-image { animation: solara-hero-media-zoom var(--hero-v2-dur-zoom, 1200ms) var(--catalog-v2-ease-out) 80ms backwards; }
   .cm.v2 .contact-hero-module[data-motion-visible="true"] .contact-hero-links { --hero-v2-rise: 16px; animation: solara-hero-rise var(--catalog-v2-motion-component) var(--catalog-v2-ease-out) 140ms backwards !important; }
   .cm.v2 .contact-hero-module[data-motion-visible="true"] .contact-hero-links .contact-quick-link { --hero-v2-rise: 12px; animation: solara-hero-rise var(--catalog-v2-motion-component) var(--catalog-v2-ease-out) calc(140ms + var(--contact-link-index, 0) * 70ms) backwards !important; }

@@ -2559,6 +2559,36 @@ function storefrontBoot(): void {
     });
   }
 
+  // Appear de marca: el logo y la hero-media se marcan al cargar para que el
+  // CSS las presente con la coreografía de su sección (sólo roots con preset
+  // distinto de none; `none` y los fallos de red quedan visibles directos).
+  if (hasFeature("motion")) {
+    const markBrandLoaded = (image: HTMLImageElement): void => {
+      image.dataset.solaraLoaded = "true";
+      image
+        .closest("[data-hero-media], figure.solara-hero-media, .solara-hero-media, .catalog-hero-media")
+        ?.setAttribute("data-solara-loaded", "true");
+    };
+    const markBrandBroken = (image: HTMLImageElement): void => {
+      image.dataset.solaraBroken = "true";
+    };
+    const brandImages = Array.from(
+      document.querySelectorAll<HTMLImageElement>(
+        '[data-motion-root]:not([data-motion-preset="none"]) img.solara-logo, [data-motion-root]:not([data-motion-preset="none"]) [data-hero-media] img, [data-motion-root]:not([data-motion-preset="none"]) figure.solara-hero-media img, [data-motion-root]:not([data-motion-preset="none"]) .solara-hero-media img, [data-motion-root]:not([data-motion-preset="none"]) .catalog-hero-media img',
+      ),
+    );
+    brandImages.forEach((image) => {
+      if (image.complete && image.naturalWidth > 0) {
+        markBrandLoaded(image);
+      } else if (image.complete && image.getAttribute("src")) {
+        markBrandBroken(image);
+      } else {
+        image.addEventListener("load", () => markBrandLoaded(image), { once: true });
+        image.addEventListener("error", () => markBrandBroken(image), { once: true });
+      }
+    });
+  }
+
   if (hasFeature("cart") || hasFeature("checkout")) {
     const initializeCart = (): void => {
       renderCart(false);

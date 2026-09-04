@@ -64,6 +64,10 @@ html { scroll-behavior: auto !important; }
   contain-intrinsic-size: 600px 400px;
 }
 img, video { content-visibility: auto; contain-intrinsic-size: 300px 200px; }
+/* Los assets viajan por postMessage: deferPreviewAssetMarkup deja el <img>
+   sin src hasta hidratar. Ocultarlo reserva la caja (width/height) sin mostrar
+   icono roto ni alt gigante en el primer frame; al poner src se revela solo. */
+img[data-solara-preview-src]:not([src]) { visibility: hidden; }
 </style>`;
 
 const PREVIEW_PERF_SCRIPT = `<script data-solara-preview-perf>

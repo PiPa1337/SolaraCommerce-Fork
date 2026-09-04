@@ -1,3 +1,29 @@
+### Appear de marca al cargar: logo y hero con el motion de su sección (2026-09-04)
+
+**Added**
+
+- El logo del navbar y la media del hero aparecen con fundido al terminar de
+  cargar, usando la coreografía de su sección (preset, duración, easing,
+  delay, distancia e intensidad del panel Movimiento; `fade` = sólo opacidad,
+  `fade-up`/`stagger`/`slide`/`scale` = su gesto; `none` y el resto = visible
+  directo). Sin JavaScript, con movimiento reducido o si la imagen falla,
+  todo queda visible como antes. Vale para V1, V2, preview y exportado con el
+  mismo renderer; para verlo en una tienda existente basta poner el header en
+  preset `fade` (el hero ya viene en `fade-up`).
+
+### Logo del navbar visible desde el primer frame (2026-09-04)
+
+**Fixed**
+
+- El logo mostraba icono roto + alt gigante (~2rem) mientras la imagen
+  llegaba: en el preview el transporte por `postMessage` deja el `<img>` sin
+  `src` hasta hidratar, y en el exportado la caja no estaba reservada (V2 usaba
+  `height: 100%` sobre un padre de alto auto). Ahora el header reserva la caja
+  (`max-height` explícito en V2, `width/height` del asset en V1), el alt del
+  logo queda contenido (`12px`, sin heredar la display del brand) y el preview
+  oculta las imágenes diferidas sin `src` hasta hidratar (`visibility`,
+  conserva layout). Sin cambios de markup, preload ni contratos.
+
 ### Checkout WhatsApp multiparte con subtotales (2026-09-04)
 
 **Added**

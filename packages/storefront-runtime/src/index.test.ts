@@ -98,6 +98,14 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("motionEntry");
   });
 
+  it("marca el load de logo y hero-media para el appear de marca", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("solara-logo");
+    expect(STOREFRONT_RUNTIME_JS).toContain("data-hero-media");
+    expect(STOREFRONT_RUNTIME_JS).toContain("data-solara-loaded");
+    // El serializado usa dataset.camelCase: solaraBroken => data-solara-broken.
+    expect(STOREFRONT_RUNTIME_JS).toContain("solaraBroken");
+  });
+
   it("serializa el límite global de 140 FPS y no deja un loop sin callbacks", () => {
     expect(MAX_APP_FPS).toBe(140);
     expect(STOREFRONT_RUNTIME_JS).toContain("installFrameRateCap(window, 140)");

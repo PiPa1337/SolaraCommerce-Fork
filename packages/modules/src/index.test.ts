@@ -141,8 +141,27 @@ describe("official module system", () => {
         .map((line) => line.slice(0, -1).trim());
 
       expect(selectors.length).toBeGreaterThan(0);
+      // Split por comas de primer nivel: :is()/:has() pueden agrupar
+      // selectores con comas internas sin romper el aislamiento.
+      const splitTopLevel = (group: string): string[] => {
+        const parts: string[] = [];
+        let depth = 0;
+        let current = "";
+        for (const char of group) {
+          if (char === "(") depth += 1;
+          else if (char === ")") depth = Math.max(0, depth - 1);
+          if (char === "," && depth === 0) {
+            parts.push(current);
+            current = "";
+          } else {
+            current += char;
+          }
+        }
+        parts.push(current);
+        return parts;
+      };
       for (const selectorGroup of selectors) {
-        for (const selector of selectorGroup.split(",")) {
+        for (const selector of splitTopLevel(selectorGroup)) {
           const trimmed = selector.trim();
           const scoped =
             trimmed.startsWith(":root") ||
@@ -1339,7 +1358,7 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
       /\.cm\.v2 \.catalog-brand \.solara-wordmark \{[\s\S]*overflow: hidden;[\s\S]*text-overflow: ellipsis;[\s\S]*white-space: nowrap;/,
     );
     expect(styles).toMatch(
-      /\.cm\.v2 \.catalog-brand \.solara-logo,[\s\S]*height: 100%;[\s\S]*object-fit: contain;/,
+      /\.cm\.v2 \.catalog-brand \.solara-logo \{[^}]*max-height: 3\.5rem;[^}]*object-fit: contain;/,
     );
 
     const narrowStart = styles.indexOf("@media (max-width: 450px)");
@@ -1351,6 +1370,26 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     expect(narrowStyles).toContain(".cm.v2 .catalog-brand .solara-wordmark {");
     expect(narrowStyles).toContain("white-space: nowrap;");
     expect(narrowStyles).toContain("overflow: hidden;");
+  });
+
+  it("el logo del header reserva caja y contiene el alt desde el primer frame", () => {
+    const baseStyles = MODULE_STYLE_BLOCKS["catalog-modern"];
+    const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!baseStyles || !v2Styles) throw new Error("Faltan estilos de catálogo");
+    // V1: el brand del header nunca tuvo regla para el logo: el alt heredaba
+    // la tipografía display (~2rem) y reventaba el navbar cuando la imagen
+    // aún no cargó o falla.
+    expect(baseStyles).toContain(
+      "[data-solara-store].catalog-modern .catalog-brand .solara-logo {",
+    );
+    // V2: height:100% sobre un padre de alto auto no reserva caja; se pasa a
+    // max-height explícito con regla propia del header.
+    expect(v2Styles).toContain(".cm.v2 .catalog-brand .solara-logo {");
+    expect(v2Styles).toMatch(/\.cm\.v2 \.catalog-brand \.solara-logo \{[^}]*max-height:[^}]*\}/);
+    // En ambas familias el alt del logo no debe heredar la display del brand.
+    for (const styles of [baseStyles, v2Styles]) {
+      expect(styles).toMatch(/\.solara-logo \{[^}]*font-size: 12px;[^}]*\}/);
+    }
   });
 
   it("usa una única imagen de identidad en navbar y footer", () => {
@@ -1394,6 +1433,9 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     if (!modernStyles) throw new Error("Falta el bloque de estilos catalog-modern-v2");
 
     expect(modernStyles).toContain(
+      "[data-hero-media], .catalog-hero-media)[data-solara-loaded]",
+    );
+    expect(modernStyles).not.toContain(
       "[data-hero-media]{animation:none!important;opacity:1!important}",
     );
     expect(modernStyles).toContain("@keyframes solara-hero-media-zoom");
@@ -1403,6 +1445,25 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     expect(modernStyles).toContain("@media (min-width: 768px) and (max-width: 899px)");
     expect(modernStyles).toContain(".catalog-hero-benefits--band");
     expect(modernStyles).not.toContain("clip-path");
+  });
+
+  it("el appear de marca depende del preset de la sección y del load", () => {
+    const baseStyles = MODULE_STYLE_BLOCKS["catalog-modern"];
+    const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!baseStyles || !v2Styles) throw new Error("Faltan estilos de catálogo");
+    // Oculto pre-load sólo con motion listo y preset distinto de none; el
+    // error muestra el alt contenido en vez de dejarlo invisible.
+    for (const styles of [baseStyles, v2Styles]) {
+      expect(styles).toContain(":is(img.solara-logo");
+      expect(styles).toContain(":not([data-solara-loaded]):not([data-solara-broken])");
+      expect(styles).toContain("[data-solara-loaded] {");
+    }
+    expect(v2Styles).toContain("[data-hero-media], .catalog-hero-media)[data-solara-loaded]");
+    expect(baseStyles).toContain("figure.solara-hero-media, .solara-hero-media)[data-solara-loaded]");
+    // Sin movimiento reducido nunca se oculta: respeta reduced-motion.
+    for (const styles of [baseStyles, v2Styles]) {
+      expect(styles).toContain("prefers-reduced-motion: no-preference");
+    }
   });
 });
 
