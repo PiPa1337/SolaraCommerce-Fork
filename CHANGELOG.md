@@ -1,3 +1,19 @@
+### Catálogo completo en "Ver todos los productos" (2026-09-04)
+
+**Added**
+
+- `/buscar/` sin query ahora muestra el catálogo completo paginado client-side
+  (`search-index.json` + misma card de resultados), con controles
+  `‹ Página X de Y ›`, deep-link `?pagina=N`, filtros y orden sobre todo el
+  conjunto y `noindex,follow` en páginas profundas. Sin JS el grid sigue vacío
+  (limitación C8 documentada).
+
+**Fixed**
+
+- Con la búsqueda deshabilitada, "Ver todos los productos" caía en
+  `/categorias/` (ruta inexistente): ahora apunta a la primera categoría raíz
+  visible o a la home.
+
 ### Tests post-cambio rápidos: loop afectado + techo de CPU + smoke quick (2026-09-04)
 
 El loop que corre la IA después de cada cambio tardaba ~30 min porque corría

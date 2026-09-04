@@ -159,6 +159,7 @@ El exporter genera las siguientes rutas desde un proyecto V2:
 | `/productos/{slug}/` | product | Productos activos | header, breadcrumbs, product-detail (galería, variantes, tabs), related-products, footer |
 | `/colecciones/{slug}/` (+ paginación) | collection | Colecciones definidas | header, collection-grid, pagination, footer |
 | `/buscar/?q=` | search | search.enabled | header, search-results, footer · noindex |
+| `/buscar/?pagina=N` | search | search.enabled | grid del catálogo completo paginado client-side (pageSize = `commerceTemplates.category.productsPerPage`); sin JS el grid queda vacío · noindex |
 | `/carrito/` | cart | cart.enabled | header, cart-page-grid (lines + summary), drawer, footer · noindex |
 | `/compra/` | checkout | checkout.enabled && !isV2Design | header, checkout-form-v2, footer · noindex |
 | `/contacto/` | contact | Solo V1 (en V2 son módulos de home) | header, contact-hero, form, channels, whatsapp-cta, purchase-info, faq, location, footer |
