@@ -389,6 +389,7 @@ export const STORE_BASE_STYLES = `
   gap: .75rem;
   margin: 2.5rem auto 6rem;
 }
+[data-solara-store] .solara-pagination[hidden] { display: none; }
 [data-solara-store] .solara-pagination a,
 [data-solara-store] .solara-pagination span {
   min-width: 2.75rem;
@@ -404,6 +405,28 @@ export const STORE_BASE_STYLES = `
 [data-solara-store] .solara-pagination a:hover {
   border-color: var(--solara-accent);
   color: var(--solara-accent);
+}
+[data-solara-store] .solara-pagination button {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: .5rem .75rem;
+  border: 1px solid var(--solara-border);
+  border-radius: var(--solara-radius);
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+[data-solara-store] .solara-pagination button:hover:not(:disabled) {
+  border-color: var(--solara-accent);
+  color: var(--solara-accent);
+}
+[data-solara-store] .solara-pagination button:disabled {
+  opacity: .45;
+  cursor: default;
 }
 [data-solara-store] .solara-pagination span[aria-current="page"] {
   border-color: var(--solara-accent);

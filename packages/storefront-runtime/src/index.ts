@@ -2044,6 +2044,45 @@ function storefrontBoot(): void {
     filterEmpty.textContent = e.filteredProducts;
     filterEmpty.hidden = true;
     grid.insertAdjacentElement("afterend", filterEmpty);
+    const pageSize =
+      Number(grid.dataset.productsPerPage ?? "") ||
+      (grid.closest("[data-search-results]") ? 24 : 0);
+    let currentPage = 1;
+    if (pageSize > 0) {
+      const rawPage = Number.parseInt(
+        new URLSearchParams(window.location.search).get("pagina") ?? "1",
+        10,
+      );
+      currentPage = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
+      if (currentPage > 1) {
+        document.querySelector('meta[name="robots"]')?.setAttribute("content", "noindex,follow");
+      }
+    }
+    const paginationCopy = copy.export ?? {
+      pagination: "Paginación",
+      previous: "Anterior",
+      next: "Siguiente",
+      pageOf: "Página {page} de {total}",
+    };
+    const paginationNav = document.createElement("nav");
+    paginationNav.className = "solara-pagination";
+    paginationNav.setAttribute("aria-label", paginationCopy.pagination);
+    paginationNav.hidden = true;
+    const prevButton = node("button", paginationCopy.previous, {
+      type: "button",
+      "data-pagination-prev": "",
+    });
+    const pageStatus = node("span", "", {
+      "data-pagination-status": "",
+      "aria-live": "polite",
+      tabindex: "-1",
+    });
+    const nextButton = node("button", paginationCopy.next, {
+      type: "button",
+      "data-pagination-next": "",
+    });
+    paginationNav.append(prevButton, pageStatus, nextButton);
+    if (pageSize > 0) filterEmpty.insertAdjacentElement("afterend", paginationNav);
     const render = (): void => {
       const cards = getCards();
       const visible = cards.filter((card) => {
@@ -2082,17 +2121,47 @@ function storefrontBoot(): void {
           (left.textContent ?? "").localeCompare(right.textContent ?? ""),
         );
       }
+      const totalFilteredPages =
+        pageSize > 0 ? Math.max(1, Math.ceil(sorted.length / pageSize)) : 1;
+      if (currentPage > totalFilteredPages) currentPage = totalFilteredPages;
+      const pageWindow = new Set(
+        pageSize > 0 ? sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize) : sorted,
+      );
       sorted.forEach((card) => {
         grid.append(card);
       });
       cards.forEach((card) => {
-        card.hidden = !visible.includes(card);
+        card.hidden = !pageWindow.has(card);
       });
       filterEmpty.hidden = visible.length > 0;
       if (resultCount) {
         const total = resultCount.getAttribute("data-category-total") ?? String(visible.length);
         resultCount.textContent = `${visible.length} de ${total} ${f.resultCount}`;
       }
+      if (pageSize > 0) {
+        paginationNav.hidden = totalFilteredPages <= 1;
+        prevButton.disabled = currentPage <= 1;
+        nextButton.disabled = currentPage >= totalFilteredPages;
+        pageStatus.textContent = paginationCopy.pageOf
+          .replace("{page}", String(currentPage))
+          .replace("{total}", String(totalFilteredPages));
+        pageStatus.setAttribute("aria-current", "page");
+        const url = new URL(window.location.href);
+        if (currentPage > 1) url.searchParams.set("pagina", String(currentPage));
+        else url.searchParams.delete("pagina");
+        window.history.replaceState(null, "", url);
+      }
+    };
+    const goToPage = (next: number): void => {
+      currentPage = Math.max(1, next);
+      render();
+      pageStatus.focus({ preventScroll: true });
+      grid.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "start",
+      });
     };
     grid.addEventListener("f", render);
     sort.addEventListener("change", render);
@@ -2103,6 +2172,8 @@ function storefrontBoot(): void {
     });
     minPrice?.addEventListener("input", render);
     maxPrice?.addEventListener("input", render);
+    prevButton.addEventListener("click", () => goToPage(currentPage - 1));
+    nextButton.addEventListener("click", () => goToPage(currentPage + 1));
   });
 
   const queryVariant = new URLSearchParams(window.location.search).get("variant");
