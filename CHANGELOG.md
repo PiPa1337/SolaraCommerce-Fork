@@ -1,3 +1,23 @@
+### Checkout WhatsApp multiparte con subtotales (2026-09-04)
+
+**Added**
+
+- El mensaje de WhatsApp ahora lista cada renglón con cantidad, título,
+  variante y **subtotal** (`- 3x Vaso (x50) = $58.950`); la cantidad `1x` y la
+  variante `Única` se omiten, y los títulos se sanitizan (sin saltos ni `*`,
+  acentos plegados salvo `ñ`).
+- Pedidos grandes se dividen automáticamente en partes de hasta 50 renglones
+  o 3900 chars de URL: `*Pedido #A7F3 · Parte N de M*`, subtotal por parte
+  (los subtotales suman el total) y cierre con total, datos del cliente y
+  `✓ Fin del pedido (N/M)`. El drawer envía parte por parte con auto-avance,
+  estado en `localStorage` (TTL 24 h, se resetea si cambia el carrito) y
+  botón `Copiar pedido completo` como alternativa.
+
+**Changed**
+
+- Tope del runtime serializado: 68 a 80 KiB (medido 76,2 KiB; +8,7 KB por
+  `splitOrderParts`, 9 helpers y la máquina de estados del drawer).
+
 ### Preload del logo del navbar (2026-09-04)
 
 **Fixed**

@@ -37,8 +37,9 @@ test("mantiene el presupuesto de la salida pública optimizada", () => {
   expect(cssBytes).toBeGreaterThan(0);
   expect(javascriptBytes).toBeGreaterThan(0);
   // Task 9: skeletons de búsqueda, contador visible, título con query y guards del índice suman ~450 B; tope 68 KiB autorizado por el brief.
+  // 2026-09-04: checkout WhatsApp multiparte (~8,7 KB reales); tope 80 KiB con margen ~4 KiB.
   expect(cssBytes).toBeLessThanOrEqual(780 * 1024);
-  expect(javascriptBytes).toBeLessThanOrEqual(68 * 1024);
+  expect(javascriptBytes).toBeLessThanOrEqual(80 * 1024);
   expect(html).not.toContain("data:image/");
   expect(new Set(assetPaths).size).toBe(assetPaths.length);
   expect(html.match(/rel="preload" as="image"/g)?.length ?? 0).toBeGreaterThan(0);
@@ -77,5 +78,6 @@ test("mantiene la foundation V2 dentro de un presupuesto público explícito", (
   expect(javascriptBytes).toBeGreaterThan(0);
   expect(cssBytes).toBeLessThanOrEqual(212 * 1024);
   // Task 9: skeletons de búsqueda, contador visible, título con query y guards del índice suman ~450 B; tope 68 KiB autorizado por el brief.
-  expect(javascriptBytes).toBeLessThanOrEqual(68 * 1024);
+  // 2026-09-04: checkout WhatsApp multiparte (~8,7 KB reales); tope 80 KiB con margen ~4 KiB.
+  expect(javascriptBytes).toBeLessThanOrEqual(80 * 1024);
 });

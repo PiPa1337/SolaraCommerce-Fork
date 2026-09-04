@@ -7,6 +7,7 @@ import {
   formatMoney,
   parseCart,
   reconcileCartLines,
+  splitOrderParts,
   STOREFRONT_RUNTIME_CSS,
   STOREFRONT_RUNTIME_JS,
 } from "./index";
@@ -46,7 +47,7 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
       address: "CABA",
       notes: "",
     });
-    expect(msg).toContain("1x Remera (M)");
+    expect(msg).toContain("- Remera (M) = " + formatMoney(150000));
     expect(msg).toContain(formatMoney(150000));
     const url = buildWhatsAppUrl("5491123456789", msg);
     expect(url).toContain("https://wa.me/5491123456789?text=");
@@ -84,7 +85,10 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
       address: "Calle 123",
       notes: "",
     });
-    expect((msg.match(/- \d+x /g) || []).length).toBe(3);
+    expect((msg.match(/- (\d+x )?[^=\n]+ = /g) || []).length).toBe(3);
+    expect(msg).toContain("- 2x A (V1) = " + formatMoney(200000));
+    expect(msg).toContain("- B (V2) = " + formatMoney(200000));
+    expect(msg).toContain("- 3x C (V3) = " + formatMoney(15000));
     expect(msg).toContain("A");
     expect(msg).toContain("B");
     expect(msg).toContain("C");
@@ -294,35 +298,41 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
     const decoded = decodeURIComponent(url.split("?text=")[1] || "");
     expect(decoded).toBe(msg);
   });
-  it("mensaje con 50 productos: cap de 25 renglones, excedentes y encoding reversible", () => {
+  it("mensaje con 50 productos: una parte con todos listados y subtotales", () => {
     const lines = Array.from({ length: 50 }, (_, i) =>
       makeProduct({
-        variantId: `v${i}`,
+        productId: `mp${i}`,
+        variantId: `mv${i}`,
         title: `Producto ${i} con nombre largo para probar l\u00EDmites de URL y encoding especial &%#?+`,
         variantTitle: `Variante ${i}`,
         unitPrice: 10000 + i,
         quantity: 2,
       }),
     );
-    const msg = buildWhatsAppMessage(makeStore() as any, lines as any, {
+    const store = makeStore();
+    const parts = splitOrderParts(store as any, lines as any, {
       name: "Test",
       phone: "123",
       address: "CABA",
       notes: "Notas",
     });
-    expect((msg.match(/- 2x Producto/g) || []).length).toBe(25);
-    expect(msg).toContain("- \u2026y 25 productos mas (incluidos en el total)");
-    expect(msg).toContain("Producto 24 ");
-    expect(msg).not.toContain("Producto 25 ");
-    expect(msg).toContain(formatMoney(lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0)));
-    const url = buildWhatsAppUrl("5491123456789", msg);
-    const decoded = decodeURIComponent(url.split("?text=")[1] || "");
-    expect(decoded).toBe(msg);
+    const total = lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0);
+    const joined = parts.join("\n");
+    for (let i = 0; i < 50; i += 1) expect(joined).toContain(`Producto ${i} `);
+    expect(joined).toContain(formatMoney(total));
+    expect(joined).not.toContain("productos mas");
+    for (const part of parts) {
+      const url = buildWhatsAppUrl("5491123456789", part);
+      expect(url.length).toBeLessThanOrEqual(3900);
+      const decoded = decodeURIComponent(url.split("?text=")[1] || "");
+      expect(decoded).toBe(part);
+    }
   });
-  it("mensaje con 100 productos: cap de 25 renglones y total completo", () => {
+  it("mensaje con 100 productos: multiparte 50+50 sin resumen y total completo", () => {
     const lines = Array.from({ length: 100 }, (_, i) =>
       makeProduct({
-        variantId: `v${i}`,
+        productId: `qp${i}`,
+        variantId: `qv${i}`,
         title: `P${i}`,
         variantTitle: `V${i}`,
         sku: `SKU${i}`,
@@ -330,18 +340,19 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
         quantity: 1,
       }),
     );
-    const msg = buildWhatsAppMessage(makeStore() as any, lines as any, {
+    const parts = splitOrderParts(makeStore() as any, lines as any, {
       name: "A",
       phone: "B",
       address: "C",
       notes: "",
     });
-    expect((msg.match(/- 1x P/g) || []).length).toBe(25);
-    expect(msg).toContain("- \u2026y 75 productos mas (incluidos en el total)");
-    expect(msg).toContain(formatMoney(10000 * 100));
-    expect(msg).not.toContain("P99 ");
+    expect(parts.length).toBe(2);
+    const joined = parts.join("\n");
+    for (let i = 0; i < 100; i += 1) expect(joined).toContain(`P${i} (V${i})`);
+    expect(joined).toContain(formatMoney(10000 * 100));
+    expect(joined).not.toContain("productos mas");
   });
-  it("Unicode diverso: \u00F1 \u00E1", () => {
+  it("Unicode diverso: \u00F1 \u00E1 (titulos plegados, cliente verbatim)", () => {
     const line = makeProduct({
       title: "Ni\u00F1o \u00F1and\u00FA ca\u00F1a",
       variantTitle: "Talla \u00FC \u00E7",
@@ -352,12 +363,15 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
       address: "Calle \u4E2D\u6587 123",
       notes: "Nota con emojis y tildes: \u00E1\u00E9\u00ED\u00F3\u00FA \u00F1",
     });
+    expect(msg).toContain("Ni\u00F1o \u00F1andu ca\u00F1a (Talla u c)");
+    expect(msg).toContain("Jos\u00E9 Garc\u00EDa \u00F1");
+    expect(msg).toContain("Nota con emojis y tildes: \u00E1\u00E9\u00ED\u00F3\u00FA \u00F1");
     const url = buildWhatsAppUrl("5491123456789", msg);
     const decoded = decodeURIComponent(url.split("?text=")[1] || "");
     expect(decoded).toBe(msg);
     expect(decoded).toContain("\u00F1");
   });
-  it("saltos de linea en notas y titulos se preservan", () => {
+  it("saltos de linea en titulos se colapsan, en datos del cliente se preservan", () => {
     const line = makeProduct({ title: "Remera\nCon Salto", variantTitle: "V1\nV2" });
     const msg = buildWhatsAppMessage(makeStore() as any, [line], {
       name: "Ana\nApellido",
@@ -365,6 +379,8 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
       address: "Calle 123\nDepto 4B",
       notes: "L\u00EDnea1\nL\u00EDnea2\nL\u00EDnea3",
     });
+    expect(msg).toContain("- Remera Con Salto (V1 V2) = ");
+    expect(msg).not.toContain("Remera\n");
     expect(msg).toContain("Ana\nApellido");
     expect(msg).toContain("L\u00EDnea1\nL\u00EDnea2");
     const url = buildWhatsAppUrl("5491123456789", msg);
@@ -485,7 +501,7 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
       notes: "Entregar por la tarde",
     });
     expect(msg).toContain(store.whatsapp.greeting.trim());
-    expect(msg).toContain("- 1x");
+    expect(msg).toContain("- Producto Base (Variante Base) = " + formatMoney(150000));
     expect(msg).toContain(store.publicCopy.whatsapp.total);
     expect(msg).toContain("Malena Ortiz");
     expect(msg).toContain("11 5555 0142");
@@ -504,9 +520,10 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("void reconcileCart().then((ok)");
     expect(STOREFRONT_RUNTIME_JS).toContain("if (!ok)");
     const idxReconcile = STOREFRONT_RUNTIME_JS.indexOf("void reconcileCart().then");
-    const idxMessage = STOREFRONT_RUNTIME_JS.indexOf("const message = buildWhatsAppMessage(");
+    const idxSplit = STOREFRONT_RUNTIME_JS.indexOf("const parts = buildParts(customer);");
     expect(idxReconcile).toBeGreaterThan(-1);
-    expect(idxMessage).toBeGreaterThan(idxReconcile);
+    expect(idxSplit).toBeGreaterThan(idxReconcile);
+    expect(STOREFRONT_RUNTIME_JS).toContain("const full = buildWhatsAppMessage(");
     expect(STOREFRONT_RUNTIME_JS).toContain("freshCatalog = null");
     const idxReset = STOREFRONT_RUNTIME_JS.indexOf("freshCatalog = null");
     expect(idxReset).toBeGreaterThan(-1);
@@ -568,8 +585,8 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
     expect(msg2).toContain("Hola Tienda Referencia,");
   });
   it("telefono vacio: STOREFRONT_RUNTIME_JS debe guardar contra telefono vacio en checkout", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain("const url = buildWhatsAppUrl(phone, message)");
-    expect(STOREFRONT_RUNTIME_JS).toContain("if (!url) {");
+    expect(STOREFRONT_RUNTIME_JS).toContain("buildWhatsAppUrl(phone, message)");
+    expect(STOREFRONT_RUNTIME_JS).toContain("urls.some((partUrl) => !partUrl)");
     expect(STOREFRONT_RUNTIME_JS).toContain("a.phoneInvalid || x.invalidItems");
     expect(STOREFRONT_RUNTIME_JS).toContain("whatsappFallback");
   });
@@ -600,13 +617,14 @@ describe("AUDITORIA A2-P1: mensaje whatsapp compacto", () => {
       }),
     );
   }
-  it("30 items x 2 unidades con titulos realistas: URL <= 4000", () => {
+  it("30 items x 2 unidades con titulos realistas: una parte, URL <= 3900", () => {
     const store = makeStore();
     (store.whatsapp as any).includeSku = true;
-    const msg = buildWhatsAppMessage(store as any, bigCart(30), compactCustomer);
-    const url = buildWhatsAppUrl("5491123456789", msg);
+    const parts = splitOrderParts(store as any, bigCart(30), compactCustomer);
+    expect(parts.length).toBe(1);
+    const url = buildWhatsAppUrl("5491123456789", parts[0] ?? "");
     expect(url.length).toBeGreaterThan(0);
-    expect(url.length).toBeLessThanOrEqual(4000);
+    expect(url.length).toBeLessThanOrEqual(3900);
   });
   it("deduplica lineas con mismo productId+variantId sumando quantity", () => {
     const lines = [makeProduct({ quantity: 1 }), makeProduct({ quantity: 2 })];
@@ -635,12 +653,12 @@ describe("AUDITORIA A2-P1: mensaje whatsapp compacto", () => {
       makeProduct({ variantId: "v6", title: "Producto F", variantTitle: "" }),
     ];
     const msg = buildWhatsAppMessage(makeStore() as any, lines, compactCustomer);
-    expect(msg).toContain("1x Producto A");
-    expect(msg).toContain("1x Producto B");
-    expect(msg).toContain("1x Producto C");
-    expect(msg).toContain("1x Producto D (30x40cm)");
-    expect(msg).toContain("1x Producto E");
-    expect(msg).toContain("1x Producto F");
+    expect(msg).toContain("- Producto A = " + formatMoney(150000));
+    expect(msg).toContain("- Producto B = " + formatMoney(150000));
+    expect(msg).toContain("- Producto C = " + formatMoney(150000));
+    expect(msg).toContain("- Producto D (30x40cm) = " + formatMoney(150000));
+    expect(msg).toContain("- Producto E = " + formatMoney(150000));
+    expect(msg).toContain("- Producto F = " + formatMoney(150000));
     expect(msg).not.toContain("(Única)");
     expect(msg).not.toContain("(UNICA)");
     expect(msg).not.toContain("(Unica)");
@@ -653,41 +671,43 @@ describe("AUDITORIA A2-P1: mensaje whatsapp compacto", () => {
       makeProduct({ variantId: "v3", title: "Producto C", variantTitle: "Única 30x40" }),
     ];
     const msg = buildWhatsAppMessage(makeStore() as any, lines, compactCustomer);
-    expect(msg).toContain("1x Producto A");
-    expect(msg).toContain("1x Producto B");
-    expect(msg).toContain("1x Producto C (Única 30x40)");
+    expect(msg).toContain("- Producto A = " + formatMoney(150000));
+    expect(msg).toContain("- Producto B = " + formatMoney(150000));
+    expect(msg).toContain("- Producto C (Unica 30x40) = " + formatMoney(150000));
     expect(msg).not.toContain("(Único)");
     expect(msg).not.toContain("(UNICO)");
     expect(msg).not.toContain("()");
   });
-  it("cap de 25 renglones: primeros 25, renglon de excedentes y total completo", () => {
+  it("30 renglones: una sola parte con todos listados y total completo", () => {
     const lines = bigCart(30).map((line) => ({ ...line, quantity: 1, unitPrice: 1000 }));
-    const msg = buildWhatsAppMessage(makeStore() as any, lines, compactCustomer);
-    expect((msg.match(/- 1x /g) || []).length).toBe(25);
-    expect(msg).toContain("- \u2026y 5 productos mas (incluidos en el total)");
-    expect(msg).toContain("modelo 25");
-    expect(msg).not.toContain("modelo 26");
-    expect(msg).toContain(formatMoney(30000));
-    const url = buildWhatsAppUrl("5491123456789", msg);
-    expect(url.length).toBeLessThanOrEqual(4000);
+    const parts = splitOrderParts(makeStore() as any, lines, compactCustomer);
+    expect(parts.length).toBe(1);
+    const joined = parts.join("\n");
+    for (let i = 1; i <= 30; i += 1) expect(joined).toContain(`modelo ${i}`);
+    expect(joined).not.toContain("productos mas");
+    expect(joined).toContain(formatMoney(30000));
+    const url = buildWhatsAppUrl("5491123456789", parts[0] ?? "");
+    expect(url.length).toBeLessThanOrEqual(3900);
   });
-  it("el total del pedido completo aparece aunque se muestren 25 renglones", () => {
+  it("el total del pedido completo aparece con todos los renglones listados", () => {
     const lines = bigCart(30).map((line) => ({ ...line, quantity: 1, unitPrice: 1000 }));
-    const msg = buildWhatsAppMessage(makeStore() as any, lines, compactCustomer);
-    expect(msg).toContain(formatMoney(30000));
-    expect(msg).toContain("modelo 25");
-    expect(msg).not.toContain("modelo 26");
+    const parts = splitOrderParts(makeStore() as any, lines, compactCustomer);
+    expect(parts.join("\n")).toContain(formatMoney(30000));
+    expect(parts.join("\n")).toContain("modelo 30");
   });
-  it("el drawer usa el builder unico, aviso de truncado y guardas de telefono", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain("const message = buildWhatsAppMessage(");
-    expect(STOREFRONT_RUNTIME_JS).not.toContain("const message = [");
-    expect(STOREFRONT_RUNTIME_JS).toContain("const url = buildWhatsAppUrl(phone, message)");
-    expect(STOREFRONT_RUNTIME_JS).toContain("cart.length <= 25");
-    expect(STOREFRONT_RUNTIME_JS).toContain("El mensaje incluye los primeros 25 productos");
+  it("el drawer usa splitOrderParts, maneja partes y guardas de telefono", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("const parts = buildParts(customer);");
+    expect(STOREFRONT_RUNTIME_JS).toContain("const full = buildWhatsAppMessage(");
+    expect(STOREFRONT_RUNTIME_JS).toContain("orderFingerprint(cart)");
+    expect(STOREFRONT_RUNTIME_JS).toContain("solara-wa:");
+    expect(STOREFRONT_RUNTIME_JS).toContain("Copiar pedido completo");
+    expect(STOREFRONT_RUNTIME_JS).toContain("Empezar de nuevo");
+    expect(STOREFRONT_RUNTIME_JS).toContain("El carrito cambió: reenviá desde la parte 1.");
     expect(STOREFRONT_RUNTIME_CSS).toContain("solara-whatsapp-truncated");
     expect(STOREFRONT_RUNTIME_JS).toContain(
       "const buildWhatsAppMessage = function buildWhatsAppMessage",
     );
     expect(STOREFRONT_RUNTIME_JS).toContain("const buildWhatsAppUrl = function buildWhatsAppUrl");
+    expect(STOREFRONT_RUNTIME_JS).toContain("const splitOrderParts = function splitOrderParts");
   });
 });

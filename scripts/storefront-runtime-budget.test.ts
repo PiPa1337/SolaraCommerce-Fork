@@ -18,7 +18,8 @@ test("mantiene el runtime storefront dentro del presupuesto", () => {
     storefrontRuntimeCssRaw: cssBytes,
   });
   // Task 9: skeletons de búsqueda, contador visible, título con query y guards del índice suman ~450 B; tope 68 KiB autorizado por el brief.
-  expect(javascriptBytes).toBeLessThanOrEqual(68 * 1024);
+  // 2026-09-04: checkout WhatsApp multiparte (splitOrderParts + drawer, ~8,7 KB reales); tope 80 KiB con margen ~4 KiB.
+  expect(javascriptBytes).toBeLessThanOrEqual(80 * 1024);
 
   const { files } = getCatalogModernExport();
   const manifest = JSON.parse(String(files.get("deployment-manifest.json"))) as {

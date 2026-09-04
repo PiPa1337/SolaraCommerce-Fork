@@ -392,13 +392,40 @@ export type WhatsAppMessageProject = Pick<StoreProjectV1, "publicCopy"> & {
   priceFractionDisplay?: "always" | "auto";
 };
 
-export function buildWhatsAppMessage(
-  project: WhatsAppMessageProject,
-  lines: CartLine[],
-  customer: CustomerDetails,
-): string {
-  const copy = project.publicCopy.whatsapp;
-  const pub = project.publicCopy;
+export function sanitizeWhatsAppText(value: unknown): string {
+  return String(value ?? "")
+    .replace(/\*/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function foldWhatsAppAccents(value: string): string {
+  return value
+    .replace(/ñ/g, "n~")
+    .replace(/Ñ/g, "N~")
+    .normalize("NFD")
+    .replace(/[^ -~]/g, "")
+    .replace(/n~/g, "ñ")
+    .replace(/N~/g, "Ñ");
+}
+
+function isDefaultVariantTitle(value: string): boolean {
+  return /^(unic[oa])$/.test(foldWhatsAppAccents(value).toLowerCase());
+}
+
+function renderWhatsAppLine(line: CartLine, money: (cents: number) => string): string {
+  const title = foldWhatsAppAccents(sanitizeWhatsAppText(line.title));
+  const variant = foldWhatsAppAccents(sanitizeWhatsAppText(line.variantTitle));
+  const escaped = variant.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const showVariant =
+    variant !== "" &&
+    !isDefaultVariantTitle(variant) &&
+    !new RegExp(`\\b${escaped}\\b`, "i").test(title);
+  const quantity = line.quantity === 1 ? "" : `${line.quantity}x `;
+  return `- ${quantity}${title}${showVariant ? ` (${variant})` : ""} = ${money(line.unitPrice * line.quantity)}`;
+}
+
+function mergeWhatsAppLines(lines: CartLine[]): { merged: CartLine[]; total: number } {
   const merged = new Map<string, CartLine>();
   let total = 0;
   for (const line of lines) {
@@ -408,38 +435,164 @@ export function buildWhatsAppMessage(
     if (existing) existing.quantity += line.quantity;
     else merged.set(key, { ...line });
   }
-  const items = [];
-  let hidden = 0;
-  for (const line of merged.values()) {
-    if (items.length < 25) {
-      const variant = line.variantTitle.trim();
-      const showVariant = variant !== "" && !/^(unic[oa])$/.test(variant.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase());
-      items.push(`- ${line.quantity}x ${line.title}${showVariant ? ` (${variant})` : ""}`);
-    } else hidden += 1;
-  }
-  if (hidden > 0) items.push(`- \u2026y ${hidden} productos mas (incluidos en el total)`);
+  return { merged: [...merged.values()], total };
+}
+
+export function orderFingerprint(lines: CartLine[]): string {
+  const keys = lines.map(
+    (line) => `${line.productId}\n${line.variantId}\n${line.quantity}\n${line.unitPrice}`,
+  );
+  keys.sort();
+  const joined = keys.join("\n");
+  let hash = 5381;
+  for (let index = 0; index < joined.length; index += 1)
+    hash = ((hash * 33) ^ joined.charCodeAt(index)) >>> 0;
+  return hash.toString(16).toUpperCase().padStart(4, "0").slice(-4);
+}
+
+function resolveWhatsAppGreeting(project: WhatsAppMessageProject): string {
   let greeting = project.whatsapp.greeting.trim();
   const brand = project.identity?.brandName?.trim() ?? "";
   if (brand) greeting = personalizeWhatsAppGreeting(greeting, brand);
+  return greeting;
+}
+
+function renderWhatsAppCustomer(project: WhatsAppMessageProject, customer: CustomerDetails): string[] {
+  const copy = project.publicCopy.whatsapp;
+  const pub = project.publicCopy;
   return [
-    greeting,
-    "",
-    ...items,
-    "",
-    `${copy.total}: ${formatMoney(total, project.currency, project.locale, project.priceFractionDisplay ?? "always")}`,
-    "",
     `${copy.customerName}: ${customer.name.trim()}`,
     `${copy.customerPhone}: ${customer.phone.trim()}`,
     `${copy.delivery}: ${customer.address.trim()}`,
     customer.locality?.trim() ? `${pub.cart.locality}: ${customer.locality.trim()}` : "",
     customer.postalCode?.trim() ? `${pub.cart.postalCode}: ${customer.postalCode.trim()}` : "",
     customer.notes.trim() ? `${copy.notes}: ${customer.notes.trim()}` : "",
+  ];
+}
+
+function renderWhatsAppDisclaimer(project: WhatsAppMessageProject): string {
+  const copy = project.publicCopy.whatsapp;
+  const pub = project.publicCopy;
+  return `El envío se coordina por este chat. ${pub.checkout.disclaimer || copy.confirmation}\n${pub.checkout.verificationWarning || ""}`;
+}
+
+export function buildWhatsAppMessage(
+  project: WhatsAppMessageProject,
+  lines: CartLine[],
+  customer: CustomerDetails,
+): string {
+  const copy = project.publicCopy.whatsapp;
+  const money = (cents: number): string =>
+    formatMoney(cents, project.currency, project.locale, project.priceFractionDisplay ?? "always");
+  const { merged, total } = mergeWhatsAppLines(lines);
+  return [
+    resolveWhatsAppGreeting(project),
     "",
-    `${pub.checkout.disclaimer || copy.confirmation}\n${pub.checkout.verificationWarning || ""}`,
+    ...merged.map((line) => renderWhatsAppLine(line, money)),
+    "",
+    `${copy.total}: ${money(total)}`,
+    "",
+    ...renderWhatsAppCustomer(project, customer),
+    "",
+    renderWhatsAppDisclaimer(project),
   ]
     .filter((line, index, all) => line !== "" || all[index - 1] !== "")
     .join("\n")
     .trim();
+}
+
+export function splitOrderParts(
+  project: WhatsAppMessageProject,
+  lines: CartLine[],
+  customer: CustomerDetails,
+): string[] {
+  const money = (cents: number): string =>
+    formatMoney(cents, project.currency, project.locale, project.priceFractionDisplay ?? "always");
+  const { merged, total } = mergeWhatsAppLines(lines);
+  const fingerprint = orderFingerprint(merged);
+  // 3860 deja ~40 chars para https://wa.me/<teléfono>?text= dentro del tope de 3900 de URL.
+  const messageBudget = 3860;
+  const maxLines = 50;
+  const maxParts = 12;
+  const header = (part: number, parts: number): string =>
+    `*Pedido #${fingerprint} · Parte ${part} de ${parts}*`;
+  const fits = (chunk: CartLine[]): boolean => {
+    if (chunk.length > maxLines) return false;
+    const text = [
+      header(99, 99),
+      "",
+      ...chunk.map((line) => renderWhatsAppLine(line, money)),
+      "",
+      "*Subtotal de esta parte: $99.999.999*",
+      "Sigue en la parte 99 →",
+    ].join("\n");
+    return encodeURIComponent(text).length <= messageBudget;
+  };
+  const renderLastBlock = (parts: number): string[] => [
+    `*Total del pedido: ${money(total)}*`,
+    "",
+    ...renderWhatsAppCustomer(project, customer),
+    "",
+    renderWhatsAppDisclaimer(project),
+    `✓ Fin del pedido (${parts}/${parts})`,
+  ];
+  const renderPart = (chunk: CartLine[], part: number, parts: number, summarized: boolean): string => {
+    const head = header(part, parts);
+    if (summarized) {
+      return [
+        head,
+        "",
+        `- …y ${chunk.length} productos mas (incluidos en el total)`,
+        "",
+        ...renderLastBlock(parts),
+      ]
+        .filter((line, index, all) => line !== "" || all[index - 1] !== "")
+        .join("\n")
+        .trim();
+    }
+    const items = chunk.map((line) => renderWhatsAppLine(line, money));
+    if (parts === 1) return buildWhatsAppMessage(project, lines, customer);
+    if (part < parts) {
+      const subtotal = chunk.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
+      return [
+        head,
+        ...(part === 1 ? [resolveWhatsAppGreeting(project), ""] : [""]),
+        ...items,
+        "",
+        `*Subtotal de esta parte: ${money(subtotal)}*`,
+        `Sigue en la parte ${part + 1} →`,
+      ]
+        .filter((line, index, all) => line !== "" || all[index - 1] !== "")
+        .join("\n")
+        .trim();
+    }
+    return [head, "", ...items, "", ...renderLastBlock(parts)]
+      .filter((line, index, all) => line !== "" || all[index - 1] !== "")
+      .join("\n")
+      .trim();
+  };
+  if (merged.length <= maxLines) {
+    const single = buildWhatsAppMessage(project, lines, customer);
+    if (encodeURIComponent(single).length <= messageBudget) return [single];
+  }
+  const chunks: CartLine[][] = [];
+  let current: CartLine[] = [];
+  for (const line of merged) {
+    const candidate = [...current, line];
+    if (current.length > 0 && !fits(candidate)) {
+      chunks.push(current);
+      current = [line];
+    } else current = candidate;
+  }
+  if (current.length > 0) chunks.push(current);
+  if (chunks.length <= maxParts)
+    return chunks.map((chunk, index) => renderPart(chunk, index + 1, chunks.length, false));
+  const head = chunks.slice(0, maxParts - 1);
+  const tail = chunks.slice(maxParts - 1).reduce<CartLine[]>((all, chunk) => all.concat(chunk), []);
+  return [
+    ...head.map((chunk, index) => renderPart(chunk, index + 1, maxParts, false)),
+    renderPart(tail, maxParts, maxParts, true),
+  ];
 }
 
 export function buildWhatsAppUrl(phone: string, message: string): string {
@@ -1227,12 +1380,148 @@ function storefrontBoot(): void {
 
   document.querySelectorAll<HTMLFormElement>("[data-checkout-form]").forEach((form) => {
     const preview = form.querySelector<HTMLElement>("[data-order-preview]");
-    const note = node(
-      "p",
-      "El mensaje incluye los primeros 25 productos; el total del pedido es completo.",
-      { class: "solara-whatsapp-truncated", hidden: true },
-    );
+    const note = node("p", "", { class: "solara-whatsapp-truncated", hidden: true });
+    note.setAttribute("role", "status");
+    const copyButton = node("button", "Copiar pedido completo", {
+      type: "button",
+      class: "solara-whatsapp-copy",
+    });
+    const restartButton = node("button", "Empezar de nuevo", {
+      type: "button",
+      class: "solara-whatsapp-restart",
+      hidden: true,
+    });
     preview?.before(note);
+    preview?.after(copyButton);
+    copyButton.after(restartButton);
+    const submitButton = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    const defaultSubmitLabel = submitButton?.textContent ?? "";
+    const partsKey = `solara-wa:${storeId}`;
+    const readPartsState = (): { fp: string; sent: number; ts: number } | null => {
+      try {
+        const raw = window.localStorage.getItem(partsKey);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw) as {
+          fp?: unknown;
+          sent?: unknown;
+          ts?: unknown;
+        };
+        if (
+          typeof parsed.fp !== "string" ||
+          typeof parsed.sent !== "number" ||
+          typeof parsed.ts !== "number"
+        )
+          return null;
+        if (Date.now() - parsed.ts > 86400000) return null;
+        return { fp: parsed.fp, sent: parsed.sent, ts: parsed.ts };
+      } catch {
+        return null;
+      }
+    };
+    const writePartsState = (state: { fp: string; sent: number; ts: number }): void => {
+      try {
+        window.localStorage.setItem(partsKey, JSON.stringify(state));
+      } catch {
+        return;
+      }
+    };
+    const clearPartsState = (): void => {
+      try {
+        window.localStorage.removeItem(partsKey);
+      } catch {
+        return;
+      }
+    };
+    const readCustomer = (): CustomerDetails => {
+      const data = new FormData(form);
+      const value = (key: string): string => String(data.get(key) ?? "").trim();
+      return {
+        name: value("name"),
+        phone: value("phone"),
+        address: value("address"),
+        locality: value("locality"),
+        postalCode: value("postalCode"),
+        notes: value("notes"),
+      };
+    };
+    const buildParts = (customer: CustomerDetails): string[] =>
+      splitOrderParts(
+        { currency, locale, whatsapp: { greeting }, publicCopy: copy, priceFractionDisplay },
+        cart,
+        customer,
+      );
+    const refreshPartsUi = (): void => {
+      if (cart.length === 0 || !submitButton) return;
+      const parts = buildParts(readCustomer());
+      const fingerprint = orderFingerprint(cart);
+      const stored = readPartsState();
+      if (parts.length <= 1) {
+        submitButton.textContent = defaultSubmitLabel;
+        note.hidden = true;
+        restartButton.hidden = true;
+        return;
+      }
+      if (stored !== null && stored.fp === fingerprint && stored.sent >= parts.length) {
+        submitButton.textContent = defaultSubmitLabel;
+        note.textContent = "Pedido completo enviado por WhatsApp. Para un pedido nuevo, modificá el carrito.";
+        note.hidden = false;
+        restartButton.hidden = false;
+        return;
+      }
+      let index = 0;
+      let resumed = false;
+      if (stored !== null && stored.fp === fingerprint && stored.sent < parts.length) {
+        index = stored.sent;
+        resumed = true;
+      }
+      submitButton.textContent = `Enviar parte ${index + 1} de ${parts.length} por WhatsApp${
+        index + 1 === parts.length ? " (final, con el total)" : ""
+      }`;
+      note.textContent = `El pedido se envía en ${parts.length} partes por WhatsApp. Estás en la parte ${
+        index + 1
+      }. El total viaja en la última parte.`;
+      note.hidden = false;
+      restartButton.hidden = !(resumed && index > 0);
+    };
+    copyButton.addEventListener("click", () => {
+      if (cart.length === 0) return;
+      const full = buildWhatsAppMessage(
+        { currency, locale, whatsapp: { greeting }, publicCopy: copy, priceFractionDisplay },
+        cart,
+        readCustomer(),
+      );
+      const announce = (ok: boolean): void => {
+        if (!preview) return;
+        preview.textContent = ok
+          ? "Pedido copiado. Pegalo en el chat para enviarlo."
+          : a.phoneInvalid || x.invalidItems;
+        preview.setAttribute("role", "status");
+        preview.removeAttribute("hidden");
+      };
+      const clipboard = navigator.clipboard;
+      if (clipboard && typeof clipboard.writeText === "function") {
+        clipboard.writeText(full).then(
+          () => announce(true),
+          () => announce(false),
+        );
+      } else {
+        const area = node("textarea", full, { class: "sr-only" });
+        document.body.append(area);
+        area.select();
+        let ok = false;
+        try {
+          ok = document.execCommand("copy");
+        } catch {
+          ok = false;
+        }
+        area.remove();
+        announce(ok);
+      }
+    });
+    restartButton.addEventListener("click", () => {
+      clearPartsState();
+      refreshPartsUi();
+    });
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       if (cart.length === 0) {
@@ -1262,35 +1551,43 @@ function storefrontBoot(): void {
           }
           return;
         }
-
-        const data = new FormData(form);
-        const value = (key: string): string => String(data.get(key) ?? "").trim();
-        const message = buildWhatsAppMessage(
-          { currency, locale, whatsapp: { greeting }, publicCopy: copy, priceFractionDisplay },
-          cart,
-          {
-            name: value("name"),
-            phone: value("phone"),
-            address: value("address"),
-            locality: value("locality"),
-            postalCode: value("postalCode"),
-            notes: value("notes"),
-          },
-        );
-        const url = buildWhatsAppUrl(phone, message);
-        if (!url) {
+        const customer = readCustomer();
+        const parts = buildParts(customer);
+        const fingerprint = orderFingerprint(cart);
+        const stored = readPartsState();
+        let index = 0;
+        const cartChanged = stored !== null && stored.sent > 0 && stored.fp !== fingerprint;
+        if (stored !== null && stored.fp === fingerprint && stored.sent < parts.length)
+          index = stored.sent;
+        const urls = parts.map((message) => buildWhatsAppUrl(phone, message));
+        if (urls.length === 0 || urls.some((partUrl) => !partUrl)) {
           if (preview) {
             preview.textContent = a.phoneInvalid || x.invalidItems;
             preview.setAttribute("role", "alert");
           }
           return;
         }
+        const message = parts[index] ?? "";
+        const url = urls[index] ?? "";
         if (preview) preview.textContent = message;
-        note.hidden = cart.length <= 25;
+        if (parts.length > 1) {
+          writePartsState({ fp: fingerprint, sent: index + 1, ts: Date.now() });
+          refreshPartsUi();
+          if (cartChanged) {
+            note.textContent = `El carrito cambió: reenviá desde la parte 1. ${note.textContent}`;
+          }
+        } else {
+          clearPartsState();
+          if (submitButton) submitButton.textContent = defaultSubmitLabel;
+          note.hidden = true;
+        }
         const whatsappWindow = window.open(url, "_blank");
         if (whatsappWindow) whatsappWindow.opener = null;
         else window.location.assign(url);
       });
+    });
+    window.addEventListener("focus", () => {
+      refreshPartsUi();
     });
   });
 
@@ -2339,6 +2636,16 @@ const RUNTIME_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unk
   ["formatMoney", formatMoney],
   ["buildWhatsAppMessage", buildWhatsAppMessage],
   ["buildWhatsAppUrl", buildWhatsAppUrl],
+  ["sanitizeWhatsAppText", sanitizeWhatsAppText],
+  ["foldWhatsAppAccents", foldWhatsAppAccents],
+  ["isDefaultVariantTitle", isDefaultVariantTitle],
+  ["renderWhatsAppLine", renderWhatsAppLine],
+  ["mergeWhatsAppLines", mergeWhatsAppLines],
+  ["orderFingerprint", orderFingerprint],
+  ["resolveWhatsAppGreeting", resolveWhatsAppGreeting],
+  ["renderWhatsAppCustomer", renderWhatsAppCustomer],
+  ["renderWhatsAppDisclaimer", renderWhatsAppDisclaimer],
+  ["splitOrderParts", splitOrderParts],
 ];
 
 const SERIALIZED_RUNTIME_HELPERS = RUNTIME_HELPERS.map(([name, fn]) => {

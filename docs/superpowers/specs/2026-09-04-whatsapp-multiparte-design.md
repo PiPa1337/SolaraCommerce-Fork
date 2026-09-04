@@ -43,11 +43,15 @@ migraciones. Copy inline es-AR (criterio de T6), sin tocar `publicCopy`.
 `priceFractionDisplay` del proyecto:
 
 - cantidad `1x` se omite (`- Papel aluminio 30m = $17.550`);
-- variante `Única`/`Unica` se omite; variante ya contenida en el título se
-  omite; si no: `- 3x Vaso trago largo 220cc (x50) = $58.950`;
+- variante `Única`/`Unica` se omite; variante que ya aparece como palabra
+  completa en el título se omite (`\b`, case-insensitive: el talle `M` en
+  `Remera` sí se muestra, `con tapa` en `Vaso ... con tapa` no); si no:
+  `- 3x Vaso trago largo 220cc (x50) = $58.950`;
 - SKU nunca aparece (aunque `includeSku` sea true, como hoy);
-- títulos/variantes se sanitizan: collapse de whitespace (`\s+` → espacio) y
-  se eliminan `*` literales (protegen las negritas de WhatsApp);
+- títulos/variantes se sanitizan: collapse de whitespace (`\s+` → espacio),
+  se eliminan `*` literales (protegen las negritas de WhatsApp) y se pliegan
+  acentos latinos **excepto `ñ/Ñ`** (evita `año`→`ano`); datos del cliente
+  (nombre, dirección, notas) se preservan verbatim con sus saltos de línea;
 - subtotal = `unitPrice * quantity` en centavos enteros (nunca floats).
 
 ## Formato de partes
@@ -126,9 +130,10 @@ El envío se coordina por este chat. {disclaimer}
 - Nuevo `renderWhatsAppLine(line, money)`: renglón con subtotal (puro).
 - Nuevo `orderFingerprint(lines): string`: djb2 → 4 hex mayúsculas (puro,
   exportado; serializado en el runtime para la clave de estado).
-- `buildWhatsAppMessage` conserva firma: mensaje completo de **una** parte
-  (todos los renglones + precios + total + cliente). Lo usa el drawer cuando
-  hay una sola parte y el botón de copiar.
+- `buildWhatsAppMessage` conserva firma y renderiza el mensaje **completo**
+  (todas las líneas + precios + total + cliente, sin cap): lo usa el drawer
+  cuando hay una sola parte y el botón de copiar. El budget lo garantiza
+  `splitOrderParts`, no esta función.
 - Nuevo `splitOrderParts(project, lines, customer): string[]`: dedupe como
   hoy, total en centavos, 1 parte si ≤50 renglones y URL ≤3900, si no chunk
   greedy con probe conservadora (`Parte 99 de 99`, subtotal `$99.999.999`).
@@ -137,8 +142,11 @@ El envío se coordina por este chat. {disclaimer}
   estados, reetiquetado, nota dinámica, `Empezar de nuevo`, botón copiar,
   `role="status"`, listener de `focus`.
 - Registrar `splitOrderParts` y `orderFingerprint` en `RUNTIME_HELPERS`
-  (renders serializados; el código suma ~2–3 KiB crudos: medir contra el
-  budget `scripts/public-storefront-budget.test.ts`, compensar si hace falta).
+  (renders serializados). Medido: +8,7 KB crudos (76,2 KiB); tope subido de
+  68 a 80 KiB con margen ~4 KiB en `index.test.ts`,
+  `scripts/storefront-runtime-budget.test.ts` y
+  `scripts/public-storefront-budget.test.ts`, con justificación en comentarios
+  (precedente: los topes se ajustan con medición documentada).
 
 ## Tests
 

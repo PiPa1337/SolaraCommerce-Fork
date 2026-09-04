@@ -177,9 +177,11 @@ describe("storefront runtime", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("i !== +!!count");
   });
 
-  it("mantiene el runtime por debajo del límite público de 68 KiB crudos", () => {
+  it("mantiene el runtime por debajo del límite público de 80 KiB crudos", () => {
     // Task 9: skeletons de búsqueda, contador visible, título con query y guards del índice suman ~450 B; tope 68 KiB autorizado por el brief.
-    expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(68 * 1024);
+    // 2026-09-04: checkout WhatsApp multiparte (spec docs/superpowers/specs/2026-09-04-whatsapp-multiparte-design.md):
+    // splitOrderParts + 9 helpers + máquina de estados del drawer suman ~8,7 KB reales; tope 80 KiB con margen ~4 KiB.
+    expect(Buffer.byteLength(STOREFRONT_RUNTIME_JS, "utf8")).toBeLessThanOrEqual(80 * 1024);
   });
 });
 
@@ -503,7 +505,7 @@ describe("carrito y checkout del drawer (A29)", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("https://wa.me/");
     expect(STOREFRONT_RUNTIME_JS).toContain("encodeURIComponent(message)");
     expect(STOREFRONT_RUNTIME_JS).toContain('replace(/\\D/g, "")');
-    expect(STOREFRONT_RUNTIME_JS).toContain("const url = buildWhatsAppUrl(phone, message)");
+    expect(STOREFRONT_RUNTIME_JS).toContain("buildWhatsAppUrl(phone, message)");
     expect(STOREFRONT_RUNTIME_JS).toContain("copy.total");
     expect(STOREFRONT_RUNTIME_JS).toContain("pub.checkout.disclaimer");
   });
