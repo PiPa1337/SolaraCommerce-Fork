@@ -2044,9 +2044,11 @@ function storefrontBoot(): void {
     filterEmpty.textContent = e.filteredProducts;
     filterEmpty.hidden = true;
     grid.insertAdjacentElement("afterend", filterEmpty);
-    const pageSize =
-      Number(grid.dataset.productsPerPage ?? "") ||
-      (grid.closest("[data-search-results]") ? 24 : 0);
+    const queryParam = new URLSearchParams(window.location.search).get("q") ?? "";
+    const pageSize = queryParam
+      ? 0
+      : Number(grid.dataset.productsPerPage ?? "") ||
+        (grid.closest("[data-search-results]") ? 24 : 0);
     let currentPage = 1;
     if (pageSize > 0) {
       const rawPage = Number.parseInt(

@@ -132,3 +132,12 @@ test("los filtros operan sobre todo el catálogo y re-paginan", async ({ page })
   await expect(nav).toContainText("Página 2 de 2", { timeout: 15_000 });
   await expect(page).toHaveURL(/\/buscar\/\?pagina=2$/);
 });
+
+test("el modo búsqueda con ?q= no se pagina (top 48 intacto)", async ({ page }) => {
+  await page.goto(storeUrl("/buscar/?q=escala"));
+  await expect(
+    page.locator("[data-search-results] .solara-search-result:not([hidden])"),
+  ).toHaveCount(48, { timeout: 15_000 });
+  await expect(page.locator(".solara-search-page .solara-pagination")).toHaveCount(0);
+  await expect(page).toHaveURL(/\/buscar\/\?q=escala$/);
+});
