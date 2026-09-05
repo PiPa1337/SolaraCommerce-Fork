@@ -1,4 +1,10 @@
-/** Lógica pura de galería mixta imagen/video, sin estado global. */
+/**
+ * Lógica pura de galería mixta imagen/video, sin estado global.
+ * ESPEJO de la función anidada en storefrontBoot (index.ts:selectGalleryImage):
+ * mantener ambas idénticas. El boot no puede importarla porque se serializa
+ * con fn.toString() y el bundler renombra los imports.
+ * Cubierto por el test "serializa el selector mixto de galería".
+ */
 export function selectGalleryMedia(productRoot: HTMLElement, mediaId?: string): void {
   const figures = Array.from(
     productRoot.querySelectorAll<HTMLElement>("[data-gallery-media-id], [data-gallery-image-id]"),

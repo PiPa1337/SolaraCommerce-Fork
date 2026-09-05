@@ -5,7 +5,6 @@
  */
 import type { Product, PublicCopy, StoreProjectV1, Variant } from "@solara/project-schema";
 import { personalizeWhatsAppGreeting } from "@solara/project-schema";
-import { selectGalleryMedia } from "./gallery-media.js";
 import { levenshtein, normalizeSearchTokens, type SearchEntryTokens, scoreEntry } from "./search";
 
 export const MAX_APP_FPS = 140;
@@ -1103,7 +1102,42 @@ function storefrontBoot(): void {
   };
 
   const selectGalleryImage = (productRoot: HTMLElement, imageId?: string): void => {
-    selectGalleryMedia(productRoot, imageId);
+    // Lógica espejo de gallery-media.ts:selectGalleryMedia. Debe vivir
+    // ANIDADA aquí (no importada): storefrontBoot se serializa con
+    // fn.toString() y el bundler renombra los imports (ReferenceError en
+    // producción). El test "serializa el selector mixto" lo cubre.
+    const figures = Array.from(
+      productRoot.querySelectorAll<HTMLElement>("[data-gallery-media-id], [data-gallery-image-id]"),
+    );
+    if (figures.length === 0) return;
+    const target =
+      figures.find(
+        (figure) =>
+          figure.dataset.galleryMediaId === imageId || figure.dataset.galleryImageId === imageId,
+      ) ?? figures[0];
+    if (!target) return;
+    figures.forEach((figure) => {
+      const active = figure === target;
+      figure.dataset.galleryActive = String(active);
+      if (!active) {
+        figure.querySelectorAll("video").forEach((video) => {
+          try {
+            video.pause();
+          } catch {
+            /* noop */
+          }
+        });
+      }
+    });
+    productRoot.querySelectorAll<HTMLElement>("[data-gallery-thumb]").forEach((thumb) => {
+      thumb.setAttribute(
+        "aria-current",
+        String(
+          thumb.dataset.galleryThumb === target.dataset.galleryMediaId ||
+            thumb.dataset.galleryThumb === target.dataset.galleryImageId,
+        ),
+      );
+    });
   };
 
   const syncVariant = (productRoot: HTMLElement): void => {
@@ -2649,7 +2683,6 @@ const SEARCH_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unkn
 
 const RUNTIME_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unknown]> = [
   ["installFrameRateCap", installFrameRateCap],
-  ["selectGalleryMedia", selectGalleryMedia as (...args: never[]) => unknown],
   ...SEARCH_HELPERS,
   ["safeRuntimeImageUrl", safeRuntimeImageUrl],
   ["boundedRuntimeString", boundedRuntimeString],

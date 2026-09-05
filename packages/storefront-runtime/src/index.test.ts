@@ -15,7 +15,10 @@ import {
 } from "./index";
 
 describe("storefront runtime", () => {
-  it("normaliza cualquier cantidad al rango entero 1–99", () => {
+  it("serializa el selector mixto de galería en el bundle público", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain("gallery-media-id");
+    expect(STOREFRONT_RUNTIME_JS).toContain("galleryMediaId");
+  });  it("normaliza cualquier cantidad al rango entero 1–99", () => {
     const cases: Array<[unknown, number]> = [
       [undefined, 1],
       ["", 1],
