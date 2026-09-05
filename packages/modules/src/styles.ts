@@ -2778,6 +2778,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 [data-solara-module="catalog-header"][data-scrolled="true"]::before {
   backdrop-filter: blur(14px);
 }
+.cm.v2 .catalog-header-inner.catalog-header-inner--no-divider {
+  border-bottom: 0;
+}
 .cm.v2 .catalog-announcement-inner {
   min-height: 36px;
   background: var(--catalog-ink);
@@ -4861,6 +4864,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
+  }
+  /* En columna móvil la info es ítem flex: align-self:start la encogería a su
+     contenido y dejaría un hueco a la derecha. En desktop (grid) no aplica. */
+  .cm.v2 .catalog-product-info {
+    align-self: stretch;
   }
   .cm.v2 .catalog-product-tabs {
     display: grid;

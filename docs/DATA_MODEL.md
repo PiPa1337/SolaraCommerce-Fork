@@ -83,6 +83,10 @@ plantilla para upgrades tipados.
 - `theme`: tokens de color, tipografía, espaciado, radios y modo visual. El
   color `theme.colors.accentAlt` es opcional para compatibilidad con respaldos
   antiguos; el exporter deriva un valor desde acento y fondo cuando falta.
+  `theme.background` es opcional y no rompe persistencia: `{ imageAssetId,
+  repeat, size }` pinta una imagen sobre el color de fondo (el exporter la
+  incluye en el uso de medios y emite `background-image` en el CSS; sin token
+  no se emite nada). `size` solo admite caracteres seguros de `background-size`.
 - `navigation`: etiqueta de catálogo, enlaces curados y sus hijos (máximo un
   nivel adicional), además de búsqueda y carrito.
 - `siteShell`: configuración de announcement, header, footer y drawer de carrito.

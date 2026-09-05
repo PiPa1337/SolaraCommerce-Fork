@@ -189,6 +189,33 @@ describe("StoreProjectV2Schema", () => {
     );
   });
 
+  it("acepta fondo de tema opcional y rechaza imagen inexistente o tamaño inseguro", () => {
+    const assetId = referenceStore.assets[0]?.id;
+    if (!assetId) throw new Error("Fixture incompleto");
+    const withBackground = invalidProject((project) => {
+      Object.assign(project.theme, {
+        background: { imageAssetId: assetId, repeat: "repeat", size: "480px" },
+      });
+    });
+    const parsed = StoreProjectV2Schema.parse(withBackground);
+    expect(parsed.schemaVersion).toBe(2);
+    expect(parsed.theme.background?.imageAssetId).toBe(assetId);
+    expect(parsed.theme.background?.repeat).toBe("repeat");
+    expect(parsed.theme.background?.size).toBe("480px");
+
+    const missingBackground = invalidProject((project) => {
+      Object.assign(project.theme, { background: { imageAssetId: "missing-background" } });
+    });
+    expect(() => StoreProjectV2Schema.parse(missingBackground)).toThrow("Fondo");
+
+    const unsafeSize = invalidProject((project) => {
+      Object.assign(project.theme, {
+        background: { imageAssetId: assetId, size: "480px};body{display:none" },
+      });
+    });
+    expect(() => StoreProjectV2Schema.parse(unsafeSize)).toThrow();
+  });
+
   it("rechaza cronología imposible", () => {
     const invalidTimestamp = invalidProject((project) => {
       project.updatedAt = "2020-01-01T00:00:00.000Z";

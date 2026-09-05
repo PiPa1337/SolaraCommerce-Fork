@@ -673,6 +673,22 @@ export const ThemeMotionSchema = z.object({
   easing: z.string().default("cubic-bezier(.16,1,.3,1)"),
 });
 
+/**
+ * Fondo con imagen por tienda (opcional, no rompe persistencia: ausente por
+ * defecto). `size` admite el mismo vocabulario que background-size CSS pero
+ * sin caracteres de control, para no inyectar reglas ajenas.
+ */
+export const ThemeBackgroundSchema = z.object({
+  imageAssetId: AssetIdSchema,
+  repeat: z.enum(["repeat", "repeat-x", "repeat-y", "no-repeat"]).default("repeat"),
+  size: z
+    .string()
+    .min(1)
+    .max(64)
+    .regex(/^[a-zA-Z0-9%. ,/()-]+$/)
+    .default("480px"),
+});
+
 export const ThemeSchema = z.object({
   colorMode: z.enum(["auto", "light", "dark"]),
   colors: ThemeColorsSchema,
@@ -683,6 +699,7 @@ export const ThemeSchema = z.object({
   shadows: ThemeShadowsSchema.optional(),
   borders: ThemeBordersSchema.optional(),
   motion: ThemeMotionSchema.optional(),
+  background: ThemeBackgroundSchema.optional(),
   radius: z.number().min(0).max(40),
   container: z.number().int().min(960).max(1800),
 });
@@ -1261,6 +1278,15 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
       ["seo", "faviconAssetId"],
       "Favicon",
       project.seo.faviconAssetId,
+      context,
+    );
+  }
+  if (project.theme.background !== undefined) {
+    addMissingReferenceIssue(
+      mediaIds.has(project.theme.background.imageAssetId),
+      ["theme", "background", "imageAssetId"],
+      "Fondo del tema",
+      project.theme.background.imageAssetId,
       context,
     );
   }

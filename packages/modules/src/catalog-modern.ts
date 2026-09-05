@@ -176,6 +176,7 @@ export const catalogAnnouncement: ModuleDefinition<
 const headerSettings = z.object({
   cartLabel: z.string().default("Carrito"),
   searchLabel: z.string().default("Buscar productos"),
+  showDivider: z.boolean().default(true),
 });
 
 export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof headerSettings>> = {
@@ -184,12 +185,13 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
     name: "Navbar de catálogo",
     description: "Header compacto con menú de dos niveles, búsqueda y carrito.",
     slots: ["header"],
-    compatibleSettings: ["cartLabel", "searchLabel"],
+    compatibleSettings: ["cartLabel", "searchLabel", "showDivider"],
   }),
   settingsSchema: headerSettings,
   settingsFields: [
     { key: "cartLabel", type: "text", label: "Texto del carrito" },
     { key: "searchLabel", type: "text", label: "Texto de búsqueda" },
+    { key: "showDivider", type: "boolean", label: "Mostrar divisor inferior" },
   ],
   motionZones: modernRevealZone,
   canvasBindings: [
@@ -347,7 +349,7 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
     return moduleRoot(
       "catalog-header",
       context.section,
-      safeHtml(`<div class="catalog-header-inner" data-motion-zone="content">
+      safeHtml(`<div class="catalog-header-inner${context.settings.showDivider === false ? " catalog-header-inner--no-divider" : ""}" data-motion-zone="content">
         <button class="catalog-mobile-menu-button" type="button" data-catalog-menu-open aria-controls="catalog-mobile-menu" aria-expanded="false"><span class="sr-only">${escapeHtml(copy.navigation.openMenu)}</span><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
         <a class="catalog-brand" href="/" aria-label="${escapeAttribute(`${copy.navigation.home} de ${context.project.identity.brandName}`)}">${renderBrand(context.project, canvasContext(context))}</a>
         <nav class="catalog-desktop-nav" aria-label="${escapeAttribute(copy.accessibility.mainNavigation)}">${nav}</nav>

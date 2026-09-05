@@ -793,7 +793,18 @@ function themeCss(
   transport: FontTransport = "file",
   fontPathOverrides?: ReadonlyMap<string, string>,
 ): string {
-  const cacheKey = `${transport}:${JSON.stringify(project.theme)}:${[...(fontPathOverrides?.entries() ?? [])].map(([k, v]) => `${k}=${v}`).join(",")}`;
+  const cacheKeyParts = [
+    transport,
+    JSON.stringify(project.theme),
+    [...(fontPathOverrides?.entries() ?? [])].map(([k, v]) => `${k}=${v}`).join(","),
+  ];
+  const backgroundAsset = project.theme.background
+    ? project.assets.find((asset) => asset.id === project.theme.background?.imageAssetId)
+    : undefined;
+  // La URL del fondo depende de los bytes del asset: sin su hash, un cambio de
+  // imagen con el mismo tema serviría CSS con la URL anterior.
+  if (backgroundAsset) cacheKeyParts.push(`bg=${backgroundAsset.hash}`);
+  const cacheKey = cacheKeyParts.join("|");
   const cached = themeCssCache.get(cacheKey);
   if (cached) return cached;
   const t = project.theme;
@@ -822,6 +833,16 @@ function themeCss(
   const ratingColor = colors.rating ?? "#d99a12";
   const accentAltColor =
     colors.accentAlt ?? `color-mix(in srgb, ${colors.accent} 68%, ${colors.background})`;
+  // Fondo con imagen por tienda: el color sigue como base y la imagen repite
+  // encima. En export `source` ya es la ruta pública; en preview es data URI.
+  // La raíz [data-solara-store] pinta el color plano (y cada familia repite
+  // con (0,2,0), ej. [data-solara-store].catalog-modern): se transparenta con
+  // (0,2,2) y solo cuando hay imagen (el html conserva el color debajo).
+  // La raíz siempre es div.solara-page[data-solara-store] en toda familia.
+  const backgroundCss =
+    t.background && backgroundAsset
+      ? `\nbody{background-image:url("${backgroundAsset.source.replace(/"/g, "%22")}");background-repeat:${t.background.repeat};background-size:${t.background.size};}\nhtml body [data-solara-store].solara-page{background-color:transparent}`
+      : "";
 
   const result = `
 :root {
@@ -863,7 +884,7 @@ function themeCss(
 
 * { box-sizing: border-box; }
 html { background: var(--solara-background); color: var(--solara-text); }
-body { margin: 0; min-width: 0; font-family: var(--solara-font-body); line-height: var(--solara-line-height-body); }
+body { margin: 0; min-width: 0; font-family: var(--solara-font-body); line-height: var(--solara-line-height-body); }${backgroundCss}
 ${fontCssFor(typography.display, typography.body, transport, fontPathOverrides)}
 img { display: block; max-width: 100%; height: auto; }
 a { color: inherit; }
@@ -960,6 +981,7 @@ export function publicMediaUsage(
   };
   addValue(project.identity.logoAssetId);
   addValue(project.seo.faviconAssetId);
+  if (project.theme.background) addValue(project.theme.background.imageAssetId);
   project.products
     .filter((product) => product.status === "active")
     .forEach((product) => {

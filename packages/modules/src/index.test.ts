@@ -233,9 +233,7 @@ describe("official module system", () => {
 
     // P7: el mega menú (absoluto respecto del header-inner) usa width 100% para
     // quedar exactamente en la línea vertical del gutter v2, con padding contenido.
-    expect(v2Styles).toMatch(
-      /\.cm\.v2 \.catalog-mega-menu\s*\{[^}]*width:\s*100%/,
-    );
+    expect(v2Styles).toMatch(/\.cm\.v2 \.catalog-mega-menu\s*\{[^}]*width:\s*100%/);
     expect(v2Styles).toMatch(
       /\.cm\.v2 \.catalog-mega-menu\s*\{[^}]*padding:\s*clamp\(2rem,\s*4vw,\s*3rem\)\s+clamp\(1\.5rem,\s*3vw,\s*2\.5rem\)\s+1\.5rem/,
     );
@@ -264,6 +262,17 @@ describe("official module system", () => {
     );
     expect(v2Styles).not.toMatch(
       /\.cm\.v2 \.catalog-category-bento-section\s*\{[^}]*padding-block:\s*clamp\(2\.6rem,\s*4\.6vw,\s*4\.6rem\)/,
+    );
+  });
+
+  it("estira la info de ficha a todo el ancho en móvil (sin hueco derecho)", () => {
+    const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!v2Styles) throw new Error("Falta el bloque de estilos catalog-modern-v2");
+
+    // En columna móvil, align-self:start encogería la info a su contenido y
+    // dejaría un hueco a la derecha; debe estirarse al contenedor.
+    expect(v2Styles).toMatch(
+      /@media \(max-width: ?767px\)\s*\{[^@]*\.cm\.v2 \.catalog-product-info\s*\{[^}]*align-self:\s*stretch/,
     );
   });
 
@@ -1372,6 +1381,27 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     expect(narrowStyles).toContain("overflow: hidden;");
   });
 
+  it("el header permite ocultar su divisor inferior sin tocar otros bordes", () => {
+    const project = structuredClone(catalogModernV2Store);
+    const header = createModuleSection({
+      id: "section-modern-header-divider-test" as StoreSection["id"],
+      slot: "header",
+      moduleId: "catalog-header",
+    });
+    const base = renderSections(project, [header], { pageType: "home" });
+    expect(base).not.toContain("catalog-header-inner--no-divider");
+
+    header.settings = { ...header.settings, showDivider: false };
+    const noDivider = renderSections(project, [header], { pageType: "home" });
+    expect(noDivider).toContain("catalog-header-inner--no-divider");
+
+    const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!v2Styles) throw new Error("Falta el bloque de estilos catalog-modern-v2");
+    expect(v2Styles).toMatch(
+      /\.cm\.v2 \.catalog-header-inner\.catalog-header-inner--no-divider\s*\{[^}]*border-bottom:\s*0/,
+    );
+  });
+
   it("el logo del header reserva caja y contiene el alt desde el primer frame", () => {
     const baseStyles = MODULE_STYLE_BLOCKS["catalog-modern"];
     const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
@@ -1421,10 +1451,15 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     );
 
     const headerDefinition = getModuleDefinition("catalog-header");
-    expect(headerDefinition?.manifest.compatibleSettings).toEqual(["cartLabel", "searchLabel"]);
+    expect(headerDefinition?.manifest.compatibleSettings).toEqual([
+      "cartLabel",
+      "searchLabel",
+      "showDivider",
+    ]);
     expect(headerDefinition?.settingsFields.map((field) => field.key)).toEqual([
       "cartLabel",
       "searchLabel",
+      "showDivider",
     ]);
   });
 
@@ -1432,9 +1467,7 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     const modernStyles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
     if (!modernStyles) throw new Error("Falta el bloque de estilos catalog-modern-v2");
 
-    expect(modernStyles).toContain(
-      "[data-hero-media], .catalog-hero-media)[data-solara-loaded]",
-    );
+    expect(modernStyles).toContain("[data-hero-media], .catalog-hero-media)[data-solara-loaded]");
     expect(modernStyles).not.toContain(
       "[data-hero-media]{animation:none!important;opacity:1!important}",
     );
@@ -1459,7 +1492,9 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
       expect(styles).toContain("[data-solara-loaded] {");
     }
     expect(v2Styles).toContain("[data-hero-media], .catalog-hero-media)[data-solara-loaded]");
-    expect(baseStyles).toContain("figure.solara-hero-media, .solara-hero-media)[data-solara-loaded]");
+    expect(baseStyles).toContain(
+      "figure.solara-hero-media, .solara-hero-media)[data-solara-loaded]",
+    );
     // Sin movimiento reducido nunca se oculta: respeta reduced-motion.
     for (const styles of [baseStyles, v2Styles]) {
       expect(styles).toContain("prefers-reduced-motion: no-preference");

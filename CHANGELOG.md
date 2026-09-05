@@ -1,3 +1,20 @@
+### Fondo por tienda, divisor de navbar y ficha móvil (2026-09-05)
+
+**Added**
+
+- Nuevo token opcional `theme.background { imageAssetId, repeat, size }`:
+  pinta una imagen sobre el color de fondo, solo en las tiendas que lo usan.
+  Sin migración (ausente por defecto, no se emite nada). Incluye validación
+  de referencia y sanitización del tamaño.
+- El header (`catalog-header`) suma el setting `showDivider` (default `true`):
+  permite ocultar su divisor inferior por tienda sin tocar otros bordes.
+
+**Fixed**
+
+- La columna de la ficha se encogía a su contenido entre 460–767px y dejaba
+  un hueco a la derecha (`align-self: start` del sticky de desktop aplicado
+  en columna móvil). En móvil la info ahora estira al contenedor.
+
 ### Appear de marca al cargar: logo y hero con el motion de su sección (2026-09-04)
 
 **Added**

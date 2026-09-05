@@ -1981,6 +1981,31 @@ describe("tema: carga real de fuentes y vars sin duplicados", () => {
     expect(css).not.toMatch(/--solara-space:/);
     expect(css).toContain("font-family:var(--solara-font-body)");
   });
+
+  it("emite el fondo del tema como background-image y lo omite sin token", () => {
+    const assetId = referenceStore.assets[0]?.id;
+    if (!assetId) throw new Error("Fixture incompleto");
+    const withBackground = structuredClone(referenceStore);
+    Object.assign(withBackground.theme, {
+      background: { imageAssetId: assetId, repeat: "repeat", size: "480px" },
+    });
+    const css = String(runtimeAsset(exportProject(withBackground, { mode: "draft" }).files, "css"));
+
+    expect(css).toContain("background-image:url(");
+    expect(css).toContain("background-repeat:repeat");
+    expect(css).toContain("background-size:480px");
+    expect(css).toContain(
+      "html body [data-solara-store].solara-page{background-color:transparent}",
+    );
+
+    const plain = String(
+      runtimeAsset(exportProject(referenceStore, { mode: "draft" }).files, "css"),
+    );
+    expect(plain).not.toContain("background-image:url(");
+    expect(plain).not.toContain(
+      "html body [data-solara-store].solara-page{background-color:transparent}",
+    );
+  });
 });
 
 function preloadAttribute(tag: string, name: string): string | undefined {
