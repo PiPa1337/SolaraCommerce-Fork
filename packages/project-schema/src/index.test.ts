@@ -5,6 +5,7 @@ import { referenceStore } from "./fixture";
 import {
   MoneySchema,
   migrateProject,
+  ProductSchema,
   PUBLIC_COPY_DEFAULTS,
   personalizeWhatsAppGreeting,
   SlugSchema,
@@ -255,5 +256,69 @@ describe("StoreProjectV2Schema", () => {
       }
     });
     expect(() => StoreProjectV2Schema.parse(invalidPage)).toThrow("Recurso de la sección");
+  });
+
+  it("producto acepta videoIds opcionales y rechaza más de 3", () => {
+    const base = {
+      id: "prod-video-001",
+      slug: "prod-video",
+      title: "Prod video",
+      description: "desc",
+      status: "active",
+      brand: "Marca",
+      categoryIds: [],
+      collectionIds: [],
+      tags: [],
+      imageIds: [],
+      variants: [
+        {
+          id: "var-001",
+          title: "Única",
+          sku: "",
+          optionValues: {},
+          price: 1000,
+          available: true,
+          stockStatus: "in_stock",
+        },
+      ],
+      createdAt: "2026-09-04T00:00:00.000Z",
+      updatedAt: "2026-09-04T00:00:00.000Z",
+    };
+    expect(ProductSchema.parse({ ...base }).videoIds).toEqual([]);
+    expect(ProductSchema.parse({ ...base, videoIds: ["video-1"] }).videoIds).toEqual([
+      "video-1",
+    ]);
+    expect(() =>
+      ProductSchema.parse({ ...base, videoIds: ["a", "b", "c", "d"] }),
+    ).toThrow();
+  });
+
+  it("proyecto viejo sin videoIds sigue válido (back-compat)", () => {
+    const base = {
+      id: "prod-old-001",
+      slug: "prod-old",
+      title: "Viejo",
+      description: "desc",
+      status: "active",
+      brand: "Marca",
+      categoryIds: [],
+      collectionIds: [],
+      tags: [],
+      imageIds: [],
+      variants: [
+        {
+          id: "var-001",
+          title: "Única",
+          sku: "",
+          optionValues: {},
+          price: 1000,
+          available: true,
+          stockStatus: "in_stock",
+        },
+      ],
+      createdAt: "2026-09-04T00:00:00.000Z",
+      updatedAt: "2026-09-04T00:00:00.000Z",
+    };
+    expect(ProductSchema.parse({ ...base }).videoIds).toEqual([]);
   });
 });

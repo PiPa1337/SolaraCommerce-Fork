@@ -539,6 +539,7 @@ export const ProductSchema = z.object({
   collectionIds: z.array(CollectionIdSchema),
   tags: z.array(z.string()),
   imageIds: z.array(AssetIdSchema),
+  videoIds: z.array(AssetIdSchema).max(3).default([]),
   variants: z.array(VariantSchema).min(1),
   reviews: z.array(ProductReviewSchema).optional(),
   createdAt: z.string().datetime(),
@@ -979,6 +980,12 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
       `Imagen del producto ${product.id}`,
       context,
     );
+    addDuplicateIssues(
+      product.videoIds ?? [],
+      ["products", productIndex, "videoIds"],
+      `Video del producto ${product.id}`,
+      context,
+    );
 
     product.categoryIds.forEach((categoryId, referenceIndex) => {
       addMissingReferenceIssue(
@@ -1004,6 +1011,15 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
         ["products", productIndex, "imageIds", referenceIndex],
         `Imagen del producto ${product.id}`,
         assetId,
+        context,
+      );
+    });
+    (product.videoIds ?? []).forEach((videoId, referenceIndex) => {
+      addMissingReferenceIssue(
+        project.videos.some((video) => video.id === videoId),
+        ["products", productIndex, "videoIds", referenceIndex],
+        `Video del producto ${product.id}`,
+        videoId,
         context,
       );
     });
