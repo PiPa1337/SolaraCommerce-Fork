@@ -97,9 +97,17 @@ plantilla para upgrades tipados.
 ### Producto y variante
 
 Un `Product` contiene título, slug, marca opcional, descripción, tags,
-`categoryIds`, `collectionIds`, imágenes, estado y un array de `Variant`.
+`categoryIds`, `collectionIds`, imágenes, videos opcionales (`videoIds`,
+default `[]`, máx 3, referencia `assets.videos`), estado y un array de
+`Variant`.
 Cada variante tiene un ID, SKU opcional, `optionValues`, precio entero en
 centavos, precio comparativo opcional, disponibilidad e imagen opcional.
+
+La galería de producto renderiza imágenes primero y videos después;
+`<video controls preload="none" playsinline poster width height>`, sin
+autoplay. Ultra-light: ≤2 MB hard, ~1 MB ideal, ≤720p (540p si dura >8 s),
+≤10 s recomendado. Los videos nunca cuentan como imagen requerida para
+activar (protege Merchant/SEO/no-JS).
 
 El precio de una tarjeta o página nunca se toma de un carrito almacenado: se
 resuelve de nuevo desde el snapshot validado. Las líneas del carrito son una
