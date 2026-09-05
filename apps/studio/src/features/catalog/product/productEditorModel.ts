@@ -20,6 +20,12 @@ export const VARIANT_STOCK_OPTIONS: readonly Variant["stockStatus"][] = [
 
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+/** Máximo de videos por producto (espejo del contrato product-video). */
+export function validateProductVideos(videoIds: readonly string[] | undefined): string | undefined {
+  if ((videoIds ?? []).length > 3) return "El producto admite como máximo 3 videos.";
+  return undefined;
+}
+
 /** Slug local desde el título (canónico del Studio, límite 120 del schema). */
 export { slugify } from "../../../lib/slugify";
 

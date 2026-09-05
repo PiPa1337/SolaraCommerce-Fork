@@ -7,6 +7,7 @@ import {
   type Product,
   ProductSchema,
   type Variant,
+  type VideoAsset,
 } from "@solara/project-schema";
 import { useEffect, useId, useRef, useState } from "react";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
@@ -22,6 +23,7 @@ import {
   parseOptions,
   productActivationRequirements,
   slugify,
+  validateProductVideos,
   VARIANT_STOCK_OPTIONS,
   validateDraft,
 } from "./product/productEditorModel";
@@ -31,11 +33,13 @@ interface ProductEditorProps {
   categories: Category[];
   collections: Collection[];
   assets: ImageAsset[];
+  videos?: VideoAsset[];
   existingSlugs: string[];
   mode: "create" | "edit";
   onCancel(): void;
   onSave(product: Product, activate?: boolean): void;
   onAssetUpload?(asset: ImageAsset): void;
+  onVideoUpload?(video: VideoAsset, poster?: ImageAsset): void;
 }
 
 type EditorStep = "details" | "media" | "organization" | "variants";
@@ -129,15 +133,20 @@ export function ProductEditor({
   categories,
   collections,
   assets,
+  videos = [],
   existingSlugs,
   mode,
   onCancel,
   onSave,
   onAssetUpload,
+  onVideoUpload,
 }: ProductEditorProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
-  const [draft, setDraft] = useState<Product>(() => structuredClone(product));
+  const [draft, setDraft] = useState<Product>(() => ({
+    ...structuredClone(product),
+    videoIds: product.videoIds ?? [],
+  }));
   const [optionValues, setOptionValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       product.variants.map((variant) => [variant.id, optionsText(variant.optionValues)]),
@@ -513,7 +522,7 @@ export function ProductEditor({
             stepRefs.current.media = element;
           }}
         >
-          <legend>Imágenes del producto</legend>
+          <legend>Imágenes y videos</legend>
           {onAssetUpload ? (
             <ImageUploadButton
               assets={assets}
@@ -558,6 +567,95 @@ export function ProductEditor({
               ))}
             </div>
           )}
+          <div className="product-video-picker">
+            <strong>Videos (opcional, máx. 3 — ideal 1 MB, tope 2 MB)</strong>
+            {videos.length === 0 ? (
+              <p className="editor-empty-hint">
+                Todavía no hay videos. Subí un MP4 o WebM de hasta 2 MB (ideal 1 MB) y 10 s.
+              </p>
+            ) : (
+              <div className="product-asset-picker">
+                {videos.map((video) => {
+                  const selected = (draft.videoIds ?? []).includes(video.id);
+                  const full = (draft.videoIds ?? []).length >= 3;
+                  return (
+                    <label className="product-asset-option" key={video.id}>
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        disabled={!selected && full}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            videoIds: event.target.checked
+                              ? [...(current.videoIds ?? []), video.id]
+                              : (current.videoIds ?? []).filter((id) => id !== video.id),
+                          }))
+                        }
+                      />
+                      <video
+                        src={video.source}
+                        poster={assets.find((a) => a.id === video.posterAssetId)?.source}
+                        preload="metadata"
+                        muted
+                        playsInline
+                        width={84}
+                        height={47}
+                      />
+                      <span>
+                        <strong>{video.name}</strong>
+                        <small>
+                          {Math.round(video.durationSeconds)} s · {video.width}×{video.height}
+                        </small>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+            {onVideoUpload ? (
+              <label className="field">
+                <span>Subir video nuevo</span>
+                <input
+                  type="file"
+                  accept="video/mp4,video/webm"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    void (async () => {
+                      try {
+                        const { readVideoMetadata, buildVideoAsset } = await import(
+                          "../builder/videoUpload.js"
+                        );
+                        const { optimizeProductVideoSource } = await import(
+                          "../builder/productVideoOptimize.js"
+                        );
+                        const metadata = await readVideoMetadata(file);
+                        const optimized = await optimizeProductVideoSource(file, metadata);
+                        const sourceFile = optimized
+                          ? new File([optimized.blob], file.name, { type: optimized.mimeType })
+                          : file;
+                        const built = await buildVideoAsset(sourceFile);
+                        setDraft((current) => ({
+                          ...current,
+                          videoIds: [...(current.videoIds ?? []), built.video.id].slice(0, 3),
+                        }));
+                        onVideoUpload(built.video, built.posterImage);
+                      } catch (reason) {
+                        setError(
+                          reason instanceof Error ? reason.message : "No se pudo subir el video.",
+                        );
+                      }
+                    })();
+                    event.target.value = "";
+                  }}
+                />
+              </label>
+            ) : null}
+            {validateProductVideos(draft.videoIds) ? (
+              <InlineError>{validateProductVideos(draft.videoIds) as string}</InlineError>
+            ) : null}
+          </div>
         </fieldset>
 
         <fieldset

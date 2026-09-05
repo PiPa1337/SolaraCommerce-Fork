@@ -1395,6 +1395,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
           categories={project.categories}
           collections={project.collections}
           assets={project.assets}
+          videos={project.videos}
           existingSlugs={project.products
             .filter((product) => product.id !== editor.product.id)
             .map((product) => product.slug)}
@@ -1403,6 +1404,18 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
             onChange({
               ...project,
               assets: [...project.assets, asset],
+              updatedAt: now(),
+            });
+          }}
+          onVideoUpload={(video, poster) => {
+            if (project.videos.some((current) => current.id === video.id)) return;
+            onChange({
+              ...project,
+              videos: [...project.videos, video],
+              assets:
+                poster && !project.assets.some((a) => a.id === poster.id)
+                  ? [...project.assets, poster]
+                  : project.assets,
               updatedAt: now(),
             });
           }}
@@ -1426,6 +1439,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
                   collectionIds: savedProduct.collectionIds,
                   tags: savedProduct.tags,
                   imageIds: savedProduct.imageIds,
+                  videoIds: savedProduct.videoIds ?? [],
                   variants: savedProduct.variants,
                 },
                 at: now(),

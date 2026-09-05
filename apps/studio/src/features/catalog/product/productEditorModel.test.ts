@@ -14,6 +14,7 @@ import {
   productActivationRequirements,
   slugErrorFor,
   slugify,
+  validateProductVideos,
   VARIANT_STOCK_OPTIONS,
   validateDraft,
 } from "./productEditorModel";
@@ -30,6 +31,7 @@ function baseProduct(overrides: Partial<Product> = {}): Product {
     collectionIds: [],
     tags: [],
     imageIds: [],
+    videoIds: [],
     variants: [
       {
         id: "variant-test" as Variant["id"],
@@ -250,8 +252,7 @@ describe("contrato con el schema del editor (T9)", () => {
     expect(VARIANT_STOCK_OPTIONS).toEqual(VariantSchema.shape.stockStatus.options);
   });
 
-  it("el payload de guardado conserva los ids del draft y los campos del schema", () => {
-    const draft = baseProduct({ brand: "  Marca con espacios  " });
+  it("el payload de guardado conserva los ids del draft y los campos del schema", () => {    const draft = baseProduct({ brand: "  Marca con espacios  " });
     const parsed = ProductSchema.parse({
       ...draft,
       slug: draft.slug.trim(),
@@ -273,5 +274,13 @@ describe("contrato con el schema del editor (T9)", () => {
     expect(parsed.variants.map((variant) => variant.id)).toEqual(
       draft.variants.map((variant) => variant.id),
     );
+  });
+});
+
+describe("validateProductVideos", () => {
+  it("rechaza más de 3 videos", () => {
+    expect(validateProductVideos(["a", "b", "c", "d"])).toMatch(/máximo 3/i);
+    expect(validateProductVideos(["a", "b"])).toBeUndefined();
+    expect(validateProductVideos(undefined)).toBeUndefined();
   });
 });
