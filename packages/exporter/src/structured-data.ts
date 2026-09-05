@@ -3,7 +3,7 @@
  * productos. Extraídos de index.ts como parte de la división por
  * responsabilidad (2026-08-21).
  */
-import type { Product, StoreProjectV1 } from "@solara/project-schema";
+import type { Product, StoreProjectV1, VideoAsset } from "@solara/project-schema";
 import { imageUrl, videoFor, videoUrl } from "./assets.js";
 import type { CommerceOfferSnapshot, CommerceProductSnapshot, CommerceSnapshot } from "./index.js";
 import { effectiveHomeSections } from "./index.js";
@@ -213,6 +213,25 @@ export function schemaOptionName(value: string): string {
   return aliases[normalized] ?? normalized.replace(/[^a-z0-9]+/g, "");
 }
 
+function productVideoNodes(project: StoreProjectV1, product: Product): unknown[] {
+  const videos = (product.videoIds ?? [])
+    .map((id) => project.videos.find((video) => video.id === id))
+    .filter((video): video is VideoAsset => Boolean(video))
+    .slice(0, 3);
+  return videos.map((video) => {
+    const thumbnail = video.posterAssetId ? imageUrl(project, video.posterAssetId) : undefined;
+    return {
+      "@type": "VideoObject",
+      name: `${product.title} — ${video.name}`,
+      description: product.description || video.alt || video.name,
+      ...(thumbnail ? { thumbnailUrl: absoluteResourceUrl(project, thumbnail) } : {}),
+      contentUrl: absoluteResourceUrl(project, videoUrl(project, video.id) ?? video.source),
+      duration: `PT${Math.max(1, Math.round(video.durationSeconds))}S`,
+      uploadDate: product.updatedAt,
+    };
+  });
+}
+
 export function productStructuredData(
   project: StoreProjectV1,
   product: Product,
@@ -220,6 +239,7 @@ export function productStructuredData(
 ): unknown {
   const productSnapshot = snapshot.products.find((item) => item.productId === product.id);
   if (!productSnapshot) return {};
+  const videoNodes = productVideoNodes(project, product);
   const variantNodes = productSnapshot.offers.map((offer) => ({
     "@type": "Product",
     name: offer.title,
@@ -251,6 +271,7 @@ export function productStructuredData(
       description: product.description,
       brand: { "@type": "Brand", name: product.brand },
       url: absoluteUrl(project, productSnapshot.canonicalPath),
+      ...(videoNodes.length > 0 ? { video: videoNodes } : {}),
       // Fragmentos aptos para asistentes de voz (Google Assistant).
       speakable: {
         "@type": "SpeakableSpecification",
@@ -283,6 +304,7 @@ export function productStructuredData(
     brand: { "@type": "Brand", name: product.brand },
     url: absoluteUrl(project, `/productos/${product.slug}/`),
     ...(productSnapshot.imageUrls.length ? { image: productSnapshot.imageUrls } : {}),
+    ...(videoNodes.length > 0 ? { video: videoNodes } : {}),
     variesBy,
     hasVariant: variantNodes,
     ...(() => {

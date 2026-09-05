@@ -986,6 +986,7 @@ export function publicMediaUsage(
     .filter((product) => product.status === "active")
     .forEach((product) => {
       product.imageIds.forEach(addValue);
+      (product.videoIds ?? []).forEach(addValue);
       product.variants.forEach((variant) => {
         addValue(variant.imageId);
       });
@@ -1551,6 +1552,16 @@ function renderDocument(
     typeof heroVideoSetting === "string" && heroVideoSetting
       ? videoFor(project, heroVideoSetting)
       : undefined;
+  const productVideo =
+    page.pageType === "product"
+      ? (() => {
+          const slug = page.canonicalPath.replace(/^\/productos\//, "").replace(/\/$/, "");
+          const product = project.products.find((p) => p.slug === slug);
+          const firstVideoId = (product?.videoIds ?? [])[0];
+          return typeof firstVideoId === "string" ? videoFor(project, firstVideoId) : undefined;
+        })()
+      : undefined;
+  const effectiveVideo = pageVideo ?? productVideo;
   const faviconAsset = imageFor(project, project.seo.faviconAssetId);
   const faviconMimeType = faviconAsset
     ? (imageMimeTypeFromSource(faviconAsset.source, faviconAsset.mimeType) ?? "image/x-icon")
@@ -1767,7 +1778,7 @@ function renderDocument(
   <meta property="og:url" content="${escapeAttribute(canonical)}">
   ${socialMetadata}
   ${project.identity.twitterHandle ? `<meta name="twitter:site" content="${escapeAttribute(project.identity.twitterHandle.startsWith("@") ? project.identity.twitterHandle : `@${project.identity.twitterHandle}`)}">` : ""}
-  ${pageVideo ? `<meta property="og:video" content="${escapeAttribute(absoluteResourceUrl(project, pageVideo.source))}"><meta property="og:video:type" content="${escapeAttribute(pageVideo.mimeType)}">` : ""}
+  ${effectiveVideo ? `<meta property="og:video" content="${escapeAttribute(absoluteResourceUrl(project, effectiveVideo.source))}"><meta property="og:video:type" content="${escapeAttribute(effectiveVideo.mimeType)}">` : ""}
   ${page.pageType === "product" ? `<meta property="article:published_time" content="${escapeAttribute(project.createdAt)}"><meta property="article:modified_time" content="${escapeAttribute(project.updatedAt)}"><meta property="article:author" content="${escapeAttribute(author)}">` : ""}
   ${verification}
   ${lcpPreload}

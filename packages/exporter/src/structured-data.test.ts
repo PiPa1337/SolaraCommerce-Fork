@@ -63,3 +63,36 @@ describe("priceValidUntil derivado de updatedAt mas 90 dias", () => {
     }
   });
 });
+
+describe("producto con videos opcionales", () => {
+  it("expone VideoObject y sin video no", () => {
+    const store = structuredClone(catalogModernV2Store) as StoreProjectV2;
+    const product = store.products.find((p) => p.status === "active");
+    if (!product || !store.assets[0]) throw new Error("Fixture incompleto.");
+    product.videoIds = [];
+    store.videos = [];
+    const snap0 = buildCommerceSnapshot(store);
+    expect(JSON.stringify(productStructuredData(store, product, snap0))).not.toContain(
+      "VideoObject",
+    );
+    const video = {
+      kind: "video",
+      id: "video-seo-001",
+      name: "Demo",
+      alt: "Demo",
+      mimeType: "video/mp4",
+      source: "/assets/demo.mp4",
+      posterAssetId: store.assets[0].id,
+      width: 640,
+      height: 360,
+      durationSeconds: 8,
+      hash: "seo-video-hash",
+    } as unknown as StoreProjectV2["videos"][number];
+    store.videos = [video];
+    product.videoIds = [video.id];
+    const snap1 = buildCommerceSnapshot(store);
+    expect(JSON.stringify(productStructuredData(store, product, snap1))).toContain(
+      "VideoObject",
+    );
+  });
+});
