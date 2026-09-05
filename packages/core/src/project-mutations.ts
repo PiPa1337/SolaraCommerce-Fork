@@ -50,6 +50,7 @@ export type TypedProductChanges = Partial<
     | "collectionIds"
     | "tags"
     | "imageIds"
+    | "videoIds"
   >
 > & { price?: number };
 

@@ -152,8 +152,7 @@ describe("reduceProject", () => {
     );
   });
 
-  it("ajusta precios masivos con enteros y redondeo estable", () => {
-    expect(adjustPrice(10_001, { type: "percentage", basisPoints: 1_250 })).toBe(11_251);
+  it("ajusta precios masivos con enteros y redondeo estable", () => {    expect(adjustPrice(10_001, { type: "percentage", basisPoints: 1_250 })).toBe(11_251);
     expect(adjustPrice(50, { type: "percentage", basisPoints: -5_000 })).toBe(25);
     expect(adjustPrice(50, { type: "amount", cents: -100 })).toBe(0);
 
@@ -229,6 +228,19 @@ describe("reduceProject", () => {
     });
     expect(changed.updatedAt).toBe(referenceStore.updatedAt);
     expect(changed.products[0]?.updatedAt).toBe(referenceStore.updatedAt);
+  });
+
+  it("product.update acepta videoIds y conserva variantes y precios", () => {
+    const before = referenceStore.products[0];
+    if (!before) throw new Error("Fixture incompleto.");
+    const updated = reduceProject(referenceStore, {
+      type: "product.update",
+      productId: before.id,
+      changes: { videoIds: [] },
+      at: timestamp,
+    });
+    expect(updated.products[0]?.videoIds).toEqual([]);
+    expect(updated.products[0]?.variants).toEqual(before.variants);
   });
 
   it("aplica categorías, colecciones, tags y estados de forma coherente", () => {

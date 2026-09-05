@@ -41,6 +41,7 @@ type ProductPatch = Partial<
     | "collectionIds"
     | "tags"
     | "imageIds"
+    | "videoIds"
     | "variants"
   >
 >;
@@ -343,12 +344,14 @@ function normalizeImportedProductReferences(
   const categoryIds = new Set(project.categories.map((category) => category.id));
   const collectionIds = new Set(project.collections.map((collection) => collection.id));
   const assetIds = new Set(project.assets.map((asset) => asset.id));
+  const videoIds = new Set(project.videos.map((video) => video.id));
 
   return products.map((product) => ({
     ...product,
     categoryIds: product.categoryIds.filter((categoryId) => categoryIds.has(categoryId)),
     collectionIds: product.collectionIds.filter((collectionId) => collectionIds.has(collectionId)),
     imageIds: product.imageIds.filter((assetId) => assetIds.has(assetId)),
+    videoIds: (product.videoIds ?? []).filter((videoId) => videoIds.has(videoId)),
     variants: product.variants.map((variant) =>
       variant.imageId === undefined || assetIds.has(variant.imageId)
         ? variant
