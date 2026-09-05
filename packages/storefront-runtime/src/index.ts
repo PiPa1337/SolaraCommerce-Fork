@@ -5,6 +5,7 @@
  */
 import type { Product, PublicCopy, StoreProjectV1, Variant } from "@solara/project-schema";
 import { personalizeWhatsAppGreeting } from "@solara/project-schema";
+import { selectGalleryMedia } from "./gallery-media.js";
 import { levenshtein, normalizeSearchTokens, type SearchEntryTokens, scoreEntry } from "./search";
 
 export const MAX_APP_FPS = 140;
@@ -1102,21 +1103,7 @@ function storefrontBoot(): void {
   };
 
   const selectGalleryImage = (productRoot: HTMLElement, imageId?: string): void => {
-    const figures = Array.from(
-      productRoot.querySelectorAll<HTMLElement>("[data-gallery-image-id]"),
-    );
-    if (figures.length === 0) return;
-    const target =
-      figures.find((figure) => figure.dataset.galleryImageId === imageId) ?? figures[0];
-    figures.forEach((figure) => {
-      figure.dataset.galleryActive = String(figure === target);
-    });
-    productRoot.querySelectorAll<HTMLElement>("[data-gallery-thumb]").forEach((thumb) => {
-      thumb.setAttribute(
-        "aria-current",
-        String(thumb.dataset.galleryThumb === target?.dataset.galleryImageId),
-      );
-    });
+    selectGalleryMedia(productRoot, imageId);
   };
 
   const syncVariant = (productRoot: HTMLElement): void => {
@@ -2662,6 +2649,7 @@ const SEARCH_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unkn
 
 const RUNTIME_HELPERS: ReadonlyArray<readonly [string, (...args: never[]) => unknown]> = [
   ["installFrameRateCap", installFrameRateCap],
+  ["selectGalleryMedia", selectGalleryMedia as (...args: never[]) => unknown],
   ...SEARCH_HELPERS,
   ["safeRuntimeImageUrl", safeRuntimeImageUrl],
   ["boundedRuntimeString", boundedRuntimeString],
