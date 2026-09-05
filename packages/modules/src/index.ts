@@ -52,6 +52,7 @@ import {
 import {
   MODULE_STYLE_BLOCKS,
   MODULE_STYLES,
+  PRODUCT_GALLERY_MOBILE_FIX,
   STORE_BASE_STYLES,
   STORE_THEME_TOKEN_STYLES,
 } from "./styles";
@@ -69,6 +70,7 @@ export {
   imageTextContent,
   MODULE_STYLES,
   MODULE_STYLE_BLOCKS,
+  PRODUCT_GALLERY_MOBILE_FIX,
   officialModules,
   productDetail,
   splitHero,

@@ -109,6 +109,9 @@ autoplay. Ultra-light: ≤2 MB hard, ~1 MB ideal, ≤720p (540p si dura >8 s),
 ≤10 s recomendado. Los videos nunca cuentan como imagen requerida para
 activar (protege Merchant/SEO/no-JS).
 
+Los CSV técnicos y comerciales incluyen las referencias de video (`video_ids`
+o `videos`). Al importar un CSV anterior sin esa columna se usa `[]`.
+
 El precio de una tarjeta o página nunca se toma de un carrito almacenado: se
 resuelve de nuevo desde el snapshot validado. Las líneas del carrito son una
 proyección temporal y no una fuente comercial.

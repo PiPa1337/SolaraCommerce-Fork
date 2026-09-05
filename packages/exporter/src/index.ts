@@ -16,6 +16,7 @@ import {
   getModuleDefinition,
   MODULE_STYLE_BLOCKS,
   moduleRegistry,
+  PRODUCT_GALLERY_MOBILE_FIX,
   type PageRenderContext,
   renderSections,
   STORE_BASE_STYLES,
@@ -66,7 +67,7 @@ export { FONT_OPTIONS, fontCssFor, fontFilesFor } from "./fonts";
  * el mismo código producen la misma huella.
  */
 export const EXPORTER_RENDERER_FINGERPRINT = `${sha256Hex(
-  `${STORE_BASE_STYLES}\n${Object.values(MODULE_STYLE_BLOCKS).join("\n")}\n${STOREFRONT_RUNTIME_JS}`,
+  `${STORE_BASE_STYLES}\n${Object.values(MODULE_STYLE_BLOCKS).join("\n")}\n${PRODUCT_GALLERY_MOBILE_FIX}\n${STOREFRONT_RUNTIME_JS}`,
 ).slice(0, 16)}`;
 
 export type ExportMode = "draft" | "production";
@@ -1292,11 +1293,11 @@ function moduleStylesForSections(
 
 function stylesForProjectFamily(project: StoreProjectV1, styles: string): string {
   if (project.commerceTemplates.designFamily !== "catalog-modern-v2") {
-    return `${styles}\n${STORE_THEME_TOKEN_STYLES}`;
+    return `${styles}\n${STORE_THEME_TOKEN_STYLES}\n${PRODUCT_GALLERY_MOBILE_FIX}`;
   }
   const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"] ?? "";
   const withFamily = v2Styles ? `${styles}\n${v2Styles}` : styles;
-  return `${withFamily}\n${STORE_THEME_TOKEN_STYLES}`;
+  return `${withFamily}\n${STORE_THEME_TOKEN_STYLES}\n${PRODUCT_GALLERY_MOBILE_FIX}`;
 }
 
 function exportedModuleStyles(project: StoreProjectV1): string {

@@ -724,6 +724,7 @@ const csvColumns = [
   "collection_ids",
   "tags",
   "image_ids",
+  "video_ids",
   "variant_id",
   "variant_title",
   "sku",
@@ -738,6 +739,7 @@ const csvColumns = [
   "created_at",
   "updated_at",
 ] as const;
+const csvColumnsWithoutVideos = csvColumns.filter((column) => column !== "video_ids");
 
 type CsvColumn = (typeof csvColumns)[number];
 type CsvRecord = Record<CsvColumn, string>;
@@ -819,6 +821,7 @@ export function exportProductsCsv(products: readonly Product[]): string {
         collection_ids: jsonStringArray(product.collectionIds),
         tags: jsonStringArray(product.tags),
         image_ids: jsonStringArray(product.imageIds),
+        video_ids: jsonStringArray(product.videoIds),
         variant_id: variant.id,
         variant_title: variant.title,
         sku: variant.sku,
@@ -863,10 +866,12 @@ export function importProductsCsv(csv: string): Product[] {
   if (header === undefined) {
     return [];
   }
-  if (
-    header.length !== csvColumns.length ||
-    csvColumns.some((column, index) => header[index] !== column)
-  ) {
+  const columns = csvColumns.every((column, index) => header[index] === column)
+    ? csvColumns
+    : csvColumnsWithoutVideos.every((column, index) => header[index] === column)
+      ? csvColumnsWithoutVideos
+      : undefined;
+  if (!columns || header.length !== columns.length) {
     throw new Error("Las columnas del CSV no coinciden con el formato SolaraCommerce.");
   }
 
@@ -874,11 +879,11 @@ export function importProductsCsv(csv: string): Product[] {
 
   rows.slice(1).forEach((values, rowIndex) => {
     const rowNumber = rowIndex + 2;
-    if (values.length !== csvColumns.length) {
+    if (values.length !== columns.length) {
       throw new Error(`Cantidad de columnas inválida en la fila ${rowNumber}.`);
     }
     const record = Object.fromEntries(
-      csvColumns.map((column, index) => [column, values[index] ?? ""]),
+      columns.map((column, index) => [column, values[index] ?? ""]),
     ) as CsvRecord;
     const existing = grouped.get(record.product_id);
     const base = {
@@ -893,6 +898,7 @@ export function importProductsCsv(csv: string): Product[] {
       collectionIds: parseJson(record.collection_ids, "collection_ids", rowNumber),
       tags: parseJson(record.tags, "tags", rowNumber),
       imageIds: parseJson(record.image_ids, "image_ids", rowNumber),
+      videoIds: parseJson(record.video_ids ?? "[]", "video_ids", rowNumber),
       createdAt: record.created_at,
       updatedAt: record.updated_at,
     };
@@ -951,6 +957,7 @@ export const catalogCsvColumns = [
   "colecciones",
   "etiquetas",
   "imagenes",
+  "videos",
   "variante",
   "sku",
   "opciones",
@@ -964,6 +971,7 @@ export const catalogCsvColumns = [
   "creado_en",
   "actualizado_en",
 ] as const;
+const catalogCsvColumnsWithoutVideos = catalogCsvColumns.filter((column) => column !== "videos");
 
 type CatalogCsvColumn = (typeof catalogCsvColumns)[number];
 export type CatalogCsvRecord = Record<CatalogCsvColumn, string>;
@@ -1003,19 +1011,21 @@ export function parseCatalogCsvRecords(csv: string): CatalogCsvRecord[] {
   const rows = parseCsvRows(csv.replace(/^\uFEFF/, ""));
   const header = rows[0];
   if (!header) return [];
-  if (
-    header.length !== catalogCsvColumns.length ||
-    catalogCsvColumns.some((column, index) => header[index] !== column)
-  ) {
+  const columns = catalogCsvColumns.every((column, index) => header[index] === column)
+    ? catalogCsvColumns
+    : catalogCsvColumnsWithoutVideos.every((column, index) => header[index] === column)
+      ? catalogCsvColumnsWithoutVideos
+      : undefined;
+  if (!columns || header.length !== columns.length) {
     throw new Error("Las columnas del CSV comercial no coinciden con la plantilla Catalog Modern.");
   }
   return rows.slice(1).map((values, rowIndex) => {
     const row = rowIndex + 2;
-    if (values.length !== catalogCsvColumns.length) {
+    if (values.length !== columns.length) {
       throw new Error(`Cantidad de columnas inválida en la fila ${row}.`);
     }
     return Object.fromEntries(
-      catalogCsvColumns.map((column, index) => [column, values[index] ?? ""]),
+      columns.map((column, index) => [column, values[index] ?? ""]),
     ) as CatalogCsvRecord;
   });
 }
@@ -1041,6 +1051,7 @@ export function exportCatalogCsv(
         colecciones: pipeValues(product.collectionIds.map((id) => collectionSlugs.get(id) ?? id)),
         etiquetas: pipeValues(product.tags),
         imagenes: pipeValues(product.imageIds),
+        videos: pipeValues(product.videoIds),
         variante: variant.title,
         sku: variant.sku,
         opciones: optionValuesText(variant.optionValues),
@@ -1123,6 +1134,7 @@ export function importCatalogCsv(csv: string, context: CatalogCsvContext): Produ
     const imageIds = parsePipeValues(record.imagenes).map((value) =>
       resolveCatalogAssetRef(value, context),
     );
+    const videoIds = parsePipeValues(record.videos ?? "");
     const categoryIdsForProduct = categoryValues.map((value) => {
       const resolved = resolveCatalogCategoryRef(value, context);
       return categoryIds.get(resolved) ?? resolved;
@@ -1145,6 +1157,7 @@ export function importCatalogCsv(csv: string, context: CatalogCsvContext): Produ
       collectionIds: collectionIdsForProduct,
       tags: parsePipeValues(record.etiquetas),
       imageIds,
+      videoIds,
       createdAt: record.creado_en.trim() || context.defaultTimestamp || "",
       updatedAt: record.actualizado_en.trim() || context.defaultTimestamp || "",
     };

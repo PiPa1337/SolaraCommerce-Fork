@@ -5,11 +5,14 @@
 - `Product.videoIds` opcional (default `[]`, máx 3, `schemaVersion: 2` sin
   migración): la galería mezcla imágenes primero y videos después, con
   `<video controls preload="none" playsinline poster>`, sin autoplay.
-  Ultra-light 2 MB hard / 1 MB ideal (720p, 540p si dura >8 s, ≤10 s
-  recomendado), poster WebP con receta de imagen, `og:video` y `VideoObject`
-  en JSON-LD. Sin videos, la salida es idéntica a la anterior.
+  Ultra-light 2 MB hard / 1 MB ideal (recompresión canvas + MediaRecorder a
+  720p o 540p si dura >8 s, con fallback seguro al original), poster WebP con
+  receta de imagen, `og:video` y `VideoObject` en JSON-LD. Sin videos, la
+  salida es idéntica a la anterior.
 - Stage mobile (≤767px, todas las tiendas V1/V2/legacy): mínimo 1:1 cuadrado
   y adaptable en alto hasta 9:16 sin recorte (`contain` sobre fondo surface).
+- Los CSV técnicos y comerciales exportan/importan `video_ids`/`videos`; las
+  columnas ausentes de CSV antiguos se interpretan como `[]`.
 
 ### Fondo por tienda, divisor de navbar y ficha móvil (2026-09-05)
 

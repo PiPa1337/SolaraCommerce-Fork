@@ -714,6 +714,16 @@ describe("CSV", () => {
     expect(imported).toEqual(referenceStore.products);
   });
 
+  it("preserva las referencias de videos en un round-trip", () => {
+    const products = [
+      {
+        ...firstProduct,
+        videoIds: ["video-producto-1", "video-producto-2"],
+      },
+    ];
+    expect(importProductsCsv(exportProductsCsv(products))).toEqual(products);
+  });
+
   it("neutraliza fórmulas de planilla sin perder contenido", () => {
     const products = [
       {
@@ -747,6 +757,19 @@ describe("CSV", () => {
     expect(csv.split("\r\n", 1)[0]).toContain("categorias");
     const imported = importCatalogCsv(csv, referenceStore);
     expect(imported).toEqual(referenceStore.products);
+  });
+
+  it("preserva videos en el CSV comercial", () => {
+    const project = {
+      ...referenceStore,
+      products: [
+        {
+          ...firstProduct,
+          videoIds: ["video-producto-1"],
+        },
+      ],
+    };
+    expect(importCatalogCsv(exportCatalogCsv(project), referenceStore)).toEqual(project.products);
   });
 });
 
