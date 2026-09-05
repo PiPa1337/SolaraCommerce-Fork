@@ -871,6 +871,56 @@ describe("variante única oculta en fichas (auditoría 2)", () => {
   });
 });
 
+describe("galería producto con videos opcionales", () => {
+  const modernVideoSection = createModuleSection({
+    id: "section-modern-video" as StoreSection["id"],
+    slot: "product",
+    moduleId: "catalog-product-detail",
+  });
+
+  it("mezcla imágenes y videos con poster/controls y sin autoplay", () => {
+    const project = structuredClone(catalogModernStore);
+    const video = {
+      kind: "video",
+      id: "video-prod-001",
+      name: "Demo",
+      alt: "Demo video",
+      mimeType: "video/mp4",
+      source: "data:video/mp4;base64,AAAA",
+      posterAssetId: project.assets[0]?.id,
+      width: 640,
+      height: 360,
+      durationSeconds: 8,
+      hash: "video-prod-hash-001",
+    } as unknown as VideoAsset;
+    project.videos = [video];
+    const base = project.products.find((p) => p.status === "active");
+    if (!base || !project.assets[0]) throw new Error("Fixture incompleto");
+    const product = { ...base, imageIds: [project.assets[0].id], videoIds: [video.id] };
+    const html = String(
+      renderSections(project, [modernVideoSection], { pageType: "product", product }),
+    );
+    expect(html).toContain('data-gallery-media-id="video-prod-001"');
+    expect(html).toContain("<video");
+    expect(html).toContain("controls");
+    expect(html).toContain('preload="none"');
+    expect(html).not.toContain("autoplay");
+  });
+
+  it("sin videos no emite video y conserva imagen (paridad)", () => {
+    const project = structuredClone(catalogModernStore);
+    project.videos = [];
+    const base = project.products.find((p) => p.status === "active");
+    if (!base) throw new Error("Fixture incompleto");
+    const product = { ...base, videoIds: [] };
+    const html = String(
+      renderSections(project, [modernVideoSection], { pageType: "product", product }),
+    );
+    expect(html).not.toContain("<video");
+    expect(html).toContain("data-gallery-image-id");
+  });
+});
+
 describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
   const modernDetailSection = createModuleSection({
     id: "section-modern-detail-test" as StoreSection["id"],

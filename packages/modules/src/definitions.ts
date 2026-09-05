@@ -1,6 +1,7 @@
 import {
   type CanvasBinding,
   type CanvasEditorContext,
+  assetUrl,
   canvasEntityAttributes,
   canvasImageAttributes,
   canvasRepeaterItemAttributes,
@@ -24,6 +25,7 @@ import {
   type AssetId,
   CATALOG_MODERN_PLACEHOLDER_PHONE,
   type Product,
+  productVideos,
   type StoreProjectV1,
 } from "@solara/project-schema";
 import { z } from "zod";
@@ -1071,19 +1073,34 @@ export const productDetail: ModuleDefinition<
       (assetId, index, all): assetId is AssetId =>
         Boolean(assetId) && all.indexOf(assetId) === index,
     );
-    const galleryFigures = galleryAssetIds
-      .map((assetId, index) => {
+    const galleryVideos = productVideos(product, context.project);
+    const galleryFigures = [
+      ...galleryAssetIds.map((assetId, index) => {
         const image = renderImage(context.project, assetId, {
           className: "solara-product-gallery-image",
-          loading: index === 0 ? "eager" : "lazy",
+          loading: index === 0 && galleryVideos.length === 0 ? "eager" : "lazy",
           sizes: "(max-width: 767px) 92vw, 58vw",
           fallbackAlt: product.title,
         });
-        return `<figure data-gallery-image-id="${escapeAttribute(assetId)}" data-gallery-active="${String(index === 0)}"${canvasEntityAttributes(canvas, "product-image", "product", product.id, "imageIds", "image")}>${instrumentImage(image, canvas, "asset-alt")}</figure>`;
-      })
-      .join("");
-    const galleryThumbs = galleryAssetIds
-      .map((assetId, index) => {
+        return `<figure data-gallery-image-id="${escapeAttribute(assetId)}" data-gallery-media-id="${escapeAttribute(assetId)}" data-media-kind="image" data-gallery-active="${String(index === 0)}"${canvasEntityAttributes(canvas, "product-image", "product", product.id, "imageIds", "image")}>${instrumentImage(image, canvas, "asset-alt")}</figure>`;
+      }),
+      ...galleryVideos.map((video, videoIndex) => {
+        const posterUrl = video.posterAssetId
+          ? assetUrl(context.project, video.posterAssetId, "")
+          : "";
+        const isActive = galleryAssetIds.length === 0 && videoIndex === 0;
+        const caption = video.alt || video.name;
+        const posterImg = renderImage(context.project, video.posterAssetId, {
+          className: "solara-product-gallery-image",
+          loading: "lazy",
+          sizes: "(max-width: 767px) 92vw, 58vw",
+          fallbackAlt: `${product.title}, video ${videoIndex + 1}`,
+        });
+        return `<figure data-gallery-media-id="${escapeAttribute(video.id)}" data-media-kind="video" data-gallery-active="${String(isActive)}"><video class="solara-product-gallery-video" width="${video.width}" height="${video.height}"${posterUrl ? ` poster="${escapeAttribute(posterUrl)}"` : ""} preload="none" playsinline controls aria-label="${escapeAttribute(caption)}"><source src="${escapeAttribute(safeAssetUrl(video.source, ""))}" type="${escapeAttribute(video.mimeType)}">${posterImg}<span>${escapeHtml(caption)}</span></video></figure>`;
+      }),
+    ].join("");
+    const galleryThumbs = [
+      ...galleryAssetIds.map((assetId, index) => {
         const image = renderImage(context.project, assetId, {
           className: "solara-product-gallery-thumb",
           loading: "lazy",
@@ -1091,11 +1108,21 @@ export const productDetail: ModuleDefinition<
           fallbackAlt: `${product.title}, imagen ${index + 1}`,
         });
         return `<button type="button" data-gallery-thumb="${escapeAttribute(assetId)}" aria-label="${escapeAttribute(copy.export.viewImage.replace("{index}", String(index + 1)))}" aria-current="${String(index === 0)}">${image}</button>`;
-      })
-      .join("");
-    const gallery = galleryAssetIds.length
-      ? `<div class="solara-product-gallery" data-product-gallery><div class="solara-product-gallery-main">${galleryFigures}</div><div class="solara-product-gallery-thumbs">${galleryThumbs}</div></div>`
-      : `<p class="solara-empty-state">${escapeHtml(copy.empty.products)}</p>`;
+      }),
+      ...galleryVideos.map((video, videoIndex) => {
+        const thumb = renderImage(context.project, video.posterAssetId, {
+          className: "solara-product-gallery-thumb",
+          loading: "lazy",
+          sizes: "5rem",
+          fallbackAlt: `${product.title}, video ${videoIndex + 1}`,
+        });
+        return `<button type="button" data-gallery-thumb="${escapeAttribute(video.id)}" data-media-kind="video" aria-label="${escapeAttribute(`Ver video ${videoIndex + 1}`)}" aria-current="${String(galleryAssetIds.length === 0 && videoIndex === 0)}">${thumb}<span class="solara-product-thumb-badge" aria-hidden="true">▶ ${Math.round(video.durationSeconds)}s</span></button>`;
+      }),
+    ].join("");
+    const gallery =
+      galleryAssetIds.length > 0 || galleryVideos.length > 0
+        ? `<div class="solara-product-gallery" data-product-gallery><div class="solara-product-gallery-main">${galleryFigures}</div><div class="solara-product-gallery-thumbs">${galleryThumbs}</div></div>`
+        : `<p class="solara-empty-state">${escapeHtml(copy.empty.products)}</p>`;
     const variants = product.variants
       .map((variant) => {
         const variantImage = context.project.assets.find(
