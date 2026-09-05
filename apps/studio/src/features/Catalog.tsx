@@ -106,6 +106,7 @@ function blankProduct(project: StoreProjectV1): Product {
     collectionIds: [],
     tags: [],
     imageIds: [],
+    videoIds: [],
     variants: [
       {
         id: `variant-${crypto.randomUUID()}` as Product["variants"][number]["id"],

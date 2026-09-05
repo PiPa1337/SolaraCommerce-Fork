@@ -13,6 +13,7 @@
     "./catalog-modern-guidance": "./src/catalog-modern-guidance.ts",
     "./catalog-modern-upgrade": "./src/catalog-modern-upgrade.ts",
     "./project-policy": "./src/project-policy.ts",
+    "./product-video": "./src/product-video.ts",
     "./money": "./src/money.ts"
   },
   "scripts": {

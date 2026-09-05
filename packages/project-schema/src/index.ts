@@ -1414,6 +1414,19 @@ export {
   defaultContactV2Sections,
 } from "./catalog-modern-contact";
 export * from "./catalog-modern-guidance";
+export {
+  isProductVideoLightEnough,
+  PRODUCT_VIDEO_LONG_DIMENSION,
+  PRODUCT_VIDEO_MAX_BYTES,
+  PRODUCT_VIDEO_MAX_COUNT,
+  PRODUCT_VIDEO_MAX_DIMENSION,
+  PRODUCT_VIDEO_RECOMMENDED_SECONDS,
+  PRODUCT_VIDEO_SOFT_MAX_SECONDS,
+  PRODUCT_VIDEO_TARGET_BYTES,
+  productVideoIds,
+  productVideos,
+  productVideoTarget,
+} from "./product-video.js";
 
 /** Valida una entrada desconocida y agrega contexto al error de schema. */
 export function parseProject(input: unknown): StoreProjectV2 {

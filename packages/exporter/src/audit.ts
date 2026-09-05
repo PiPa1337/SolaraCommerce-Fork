@@ -284,6 +284,41 @@ export function auditProject(
     }
   });
 
+  const productVideoIdSet = new Set(project.products.flatMap((p) => p.videoIds ?? []));
+  project.videos.forEach((video, videoIndex) => {
+    if (!productVideoIdSet.has(video.id)) return;
+    const bytes = dataUrlBytes(video.source)?.byteLength;
+    if (bytes && bytes > 2 * 1024 * 1024) {
+      issues.push({
+        code: "product-video.size",
+        severity: "critical",
+        message: `${video.name} supera 2 MB en producto (ideal 1 MB).`,
+        path: `videos.${videoIndex}.source`,
+        area: "content",
+        fixTarget: "assets",
+      });
+    } else if (bytes && bytes > 1 * 1024 * 1024) {
+      issues.push({
+        code: "product-video.size",
+        severity: "warning",
+        message: `${video.name} supera 1 MB ideal en producto.`,
+        path: `videos.${videoIndex}.source`,
+        area: "content",
+        fixTarget: "assets",
+      });
+    }
+    if (Math.min(video.width, video.height) > 720) {
+      issues.push({
+        code: "product-video.dimensions",
+        severity: "warning",
+        message: `${video.name} supera 720p en producto.`,
+        path: `videos.${videoIndex}.source`,
+        area: "content",
+        fixTarget: "assets",
+      });
+    }
+  });
+
   project.categories.forEach((category) => {
     categorySlugs.set(category.slug, (categorySlugs.get(category.slug) ?? 0) + 1);
   });
