@@ -6,17 +6,32 @@ import { defineConfig, devices } from "@playwright/test";
 // accidente el gate release ni convierta diferencias del browser del Studio en
 // supuestas regresiones del storefront.
 const publicStorefrontSpecs =
-  /[/\\](catalog-modern(?:-v2)?|exported-store|exporter-sentinel|scale-store|storefront-nojs|ui-sweep-a(?:27|28|29|30))\.spec\.ts$/;
+  /[/\\](exported-store|exporter-sentinel|storefront-nojs)\.spec\.ts$/;
 const ciVisualSpecs = [
   /[/\\]__vision__[/\\]/,
   /[/\\](?:qa-visual(?:-[^/\\]+)?|quality-forge-visual|studio-visual|theme-preset-visual|visual-break)\.spec\.ts$/,
 ];
+const auditSpecs = [
+  /[/\\]__vision__[/\\].+\.spec\.ts$/,
+  /[/\\]ui-sweep-a(?:0[1-9]|1\d|2[0-6])\.spec\.ts$/,
+  /[/\\]ui-(?:tema-t|resumen-r|preparar-pr)\d+\.spec\.ts$/,
+  /[/\\](?:qa-visual(?:-[^/\\]+)?|quality-forge-visual|studio-visual|theme-preset-visual|visual-break)\.spec\.ts$/,
+  /[/\\](?:editor-perf|lcp-cold|perf-app|perf-idle|rm-performance|ux-audit)\.spec\.ts$/,
+  /[/\\](?:axe-app|axe-site|cdp-site|editor-responsive|layout-fit|ui-export)\.spec\.ts$/,
+];
+const requestedE2eMode = process.env.SOLARA_E2E_MODE?.trim().toLowerCase();
+const e2eMode =
+  requestedE2eMode === "audit" || requestedE2eMode === "all" ? requestedE2eMode : "functional";
+const testMatch = e2eMode === "audit" ? auditSpecs : undefined;
+const testIgnore =
+  e2eMode === "functional" ? auditSpecs : process.env.CI === "true" ? ciVisualSpecs : undefined;
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  // Las auditorías visuales dedicadas se mantienen disponibles localmente,
-  // pero no bloquean CI mientras se estabiliza su entorno de ejecución.
-  testIgnore: process.env.CI === "true" ? ciVisualSpecs : undefined,
+  // El gate normal conserva contratos funcionales. Barridos históricos,
+  // auditorías visuales y performance se ejecutan sólo en modo audit/all.
+  testMatch,
+  testIgnore,
   fullyParallel: false,
   // 0 reintentos en local (post-cambio rápido); CI conserva 1 para flakes de timing.
   retries: process.env.CI === "true" ? 1 : 0,

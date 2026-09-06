@@ -29,6 +29,7 @@ import {
   clearRecoveryDraft,
   consumeStorageResetNotice,
   createProject,
+  deleteProject,
   duplicateProject,
   ensureDeprecatedCategoriesRemoved,
   ensureFirstProject,
@@ -278,7 +279,6 @@ function StudioShell() {
           // cuando una migración escribe sobre él.
           let diskMutated = false;
           if (detectedStorage.writable) {
-            await purgeNonDemoStores();
             await Promise.allSettled(
               diskListing.projects.map(async (diskProject) => {
                 if (isBaseTemplate(diskProject.project)) return;
@@ -342,7 +342,10 @@ function StudioShell() {
             "Se reinició la base local para activar el contrato de tienda v2. Los respaldos y exportaciones no fueron modificados.",
           );
         }
-        await purgeNonDemoStores();
+        // La purga histórica sólo pertenece al perfil browser-only. En modo
+        // administrado, IndexedDB puede contener RecoveryDrafts que deben
+        // conservarse y reconciliarse con el almacenamiento comercial en disco.
+        if (!detectedStorage.managed) await purgeNonDemoStores();
         if (result.projects.length === 0 && result.recovery.length === 0) {
           await ensureFirstProject();
         }
@@ -845,6 +848,23 @@ function StudioShell() {
                   await persistToDisk(project, selected?.diskVersion ?? null);
                 }
               }
+              await refresh();
+            })
+          }
+          onDelete={(id) =>
+            guard(async () => {
+              if (storageModeRef.current) {
+                const { deleteLocalProject } = await loadLocalStorage();
+                try {
+                  await deleteLocalProject(id);
+                } catch (reason) {
+                  // Si no existe en disco (p.ej. tienda sólo en navegador), se
+                  // sigue con el borrado local: el mensaje del servidor lo dice.
+                  const message = reason instanceof Error ? reason.message : "";
+                  if (!message.includes("no existe en disco")) throw reason;
+                }
+              }
+              await deleteProject(id);
               await refresh();
             })
           }

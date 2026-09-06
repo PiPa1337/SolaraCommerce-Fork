@@ -1,3 +1,59 @@
+### Migración definitiva de portable a app por CMD (2026-09-06)
+
+**Changed**
+
+- La operación real queda centralizada en `Abrir SolaraCommerce.cmd` y
+  `proyectos/` del checkout. Se migraron y verificaron Predeterminado protegida,
+  RM Descartables y Stylo Lashes. Las fuentes históricas y snapshots se
+  conservaron durante el cutover y se eliminaron manualmente después de la
+  verificación final del usuario.
+- El cierre posterior a la eliminación de `.release/` verificó 9/9 entradas del
+  ledger y 2380/2380 archivos heredados. Una reapertura limpia volvió a enumerar
+  exactamente las 3 tiendas activas, sincronizadas y con sitio vigente.
+- La limpieza final retiró `.migration-archive/`, `.migration-staging/`,
+  `.migration-preflight.json` y `temporalstylolashes/`; ninguno forma parte del
+  runtime actual.
+### Suite E2E funcional y auditorías separadas (2026-09-05)
+
+**Changed**
+
+- `test:e2e` queda en 447 tests de 79 specs funcionales; `test:e2e:audit`
+  concentra 609 tests de 75 specs históricos, visuales, de performance, Axe/CDP
+  y UX. Los barridos pesados `axe-app`, `axe-site`, `cdp-site`,
+  `editor-responsive`, `layout-fit` y `ui-export` pasan a auditoría, mientras el
+  smoke full conserva cobertura rápida con `release-a11y`. Se eliminó el spec
+  temporal `zz-t5-debug.spec.ts`.
+- El release multi-browser mantiene Chromium completo y limita Firefox/WebKit a
+  13 contratos representativos del storefront exportado por navegador. La
+  matriz baja de 1.383 a 1.082 ejecuciones (-301) sin quitar esos contratos.
+- Los tests unitarios diarios separan fuzz largos, casos de más de 536 MB y la
+  creación masiva de tiendas en `test:fuzz`, `test:stress` y `test:qa`.
+  `check:full` conserva esas capas mediante `test:extended` y agrega el check
+  post-build de lazy fixtures. Se eliminó el test dummy `fuzz2.test.ts`.
+
+### Recuperación desde sitios publicados (2026-09-05)
+
+**Added**
+
+- Las exportaciones de Studio incluyen una bóveda flaca opcional de hasta 2 MiB
+  en `solara-recovery/<64 hex>/`, con proyecto comprimido, índice de medios,
+  hashes SHA-256 y listado de recursos no publicados. No duplica bytes de fotos
+  o videos.
+- Exportar permite recuperar desde la URL completa del manifest o desde una
+  carpeta local. La restauración valida rutas, tamaños, hashes y schema antes de
+  reemplazar el proyecto, y rehidrata únicamente los medios publicados.
+
+### Eliminación segura de tiendas desde el dashboard (2026-09-05)
+
+**Added**
+
+- Nuevo botón naranja `Archivar` y botón rojo `Eliminar tienda` en el detalle
+  del dashboard. La eliminación muestra el nombre, espera 30 segundos y exige
+  dos confirmaciones secuenciales antes de borrar la tienda.
+- El borrado elimina el proyecto, sus borradores de recuperación, migraciones y
+  la carpeta persistida con su sitio público cuando se usa el servidor local.
+  La plantilla base protegida no puede archivarse ni eliminarse.
+
 ### Videos opcionales en galería de producto + stage mobile 1:1 (2026-09-05)
 
 **Added**

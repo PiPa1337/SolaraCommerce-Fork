@@ -44,22 +44,26 @@ El flujo principal es:
 
 ## Dónde vive la data real
 
-- El usuario siempre trabaja con la distribución portable: sus tiendas, respaldos
-  y sitios viven únicamente en
-  `.release/portable/SolaraCommerce-Portable/proyectos/` (perfil y logs en
-  `.solara-runtime/`). Esa carpeta no está en Git y es la única copia de la data.
-- La IA puede usar la app que prefiera (portable o modo dev `pnpm dev` /
-  `Abrir SolaraCommerce.cmd`) para probar y depurar código; sólo el usuario
-  opera la portable para trabajar.
-- El `proyectos/` del repo es la zona de pruebas de la IA (modo dev): puede
-  contener tiendas de prueba transitorias. La data real del usuario nunca vive
-  ahí ni viaja a la portable: `desktop:package` no copia `proyectos/` del repo.
-- Inspeccionar la portable: lectura directa permitida. Escribir tiendas: canal
-  del agente (`SolaraCommerce-Agent.cmd`, JSONL/MCP) o cambiar código y
-  reconstruir (`desktop:build`, `desktop:package`). Nunca editar a mano
-  `.solara.json`, manifests ni staging de la portable.
-- Antes de regenerar o limpiar la portable, verificar que se preserva
-  `proyectos/`; nunca borrar la carpeta a mano.
+- Desde el cierre de la migración del 06/09/2026, la operación real del usuario
+  se hace con `Abrir SolaraCommerce.cmd` y `proyectos/` del checkout es la fuente
+  de verdad de las tiendas confirmadas en disco.
+- `proyectos/` está ignorado por Git porque contiene datos reales del usuario, no
+  porque sea una zona temporal de tests. Tests, fixtures y agentes deben usar
+  directorios temporales o fixtures explícitas y nunca vaciar, reemplazar ni
+  sembrar el `proyectos/` real.
+- `.release/` es salida regenerable. La portable usada como fuente durante la
+  migración fue eliminada sólo después del cierre 9/9 del ledger; reconstruir una
+  portable en el futuro no la convierte en respaldo ni en fuente de verdad.
+- `desktop:package` no copia el `proyectos/` real del checkout a una portable. Si
+  se genera una nueva distribución, su almacenamiento es independiente.
+- Los snapshots, fuentes históricas, runtime, rollback y reportes de la migración
+  se conservaron hasta completar la verificación final. Después de la revisión
+  manual del usuario se eliminaron `.migration-archive/`, `.migration-staging/`,
+  `.migration-preflight.json` y `temporalstylolashes/`; no son dependencias del
+  funcionamiento actual.
+- Antes de cualquier operación que reemplace `proyectos/`, usar el flujo
+  transaccional documentado en `futuraeliminaciondeportable.md`, con staging,
+  rollback y verificación por hashes.
 
 ## Stack y arquitectura resumida
 
@@ -183,11 +187,14 @@ corepack pnpm check:micro         # post-cambio: diff + repository + typecheck/t
 corepack pnpm check:quick        # cierre o cambio amplio (todos los paquetes, concurrencia acotada)
 corepack pnpm test:e2e:smoke   # post-cambio: 5 specs quick con build cacheado (~20-40s)
 corepack pnpm test:e2e:smoke:full  # cierre o cambio en exporter/storefront/Preview (15 specs)
-corepack pnpm check             # alias de check:full, secuencial (cierre/CI)
-corepack pnpm check:full        # secuencial, para cierre
+corepack pnpm check             # alias de check:fast
+corepack pnpm check:full        # tests extendidos + gates lentos + build/post-build, cierre/CI
 corepack pnpm build
 corepack pnpm benchmark:export
-corepack pnpm test:e2e          # 74 specs full (~3-4 min con 8 workers)
+corepack pnpm test:extended     # fuzz + stress + QA pesados; incluido en check:full
+corepack pnpm test:diagnostic   # diagnóstico manual de placeholders
+corepack pnpm test:e2e          # 85 specs funcionales (482 tests observados)
+corepack pnpm test:e2e:audit    # 69 specs históricos/visuales/performance, manual
 corepack pnpm test:e2e:release       # Node 24 + navegadores instalados (solo on-demand)
 corepack pnpm desktop:build
 corepack pnpm desktop:package
@@ -212,14 +219,15 @@ La guía de distribución autocontenida está en
   local valida rutas y límites sobre el mapa de archivos del sitio. La migración
   única de `.solara.zip` antiguos usa `fflate` de forma temporal hasta un
   release posterior. Ver [`docs/TECHNICAL_DEBT.md`](docs/TECHNICAL_DEBT.md).
-- El shell Electron portable y el launcher HTTP comparten el handler de
-  `packages/exporter/scripts/solara-request-handler.mjs`; cualquier cambio de
-  endpoints debe probar ambos transportes.
-- El artefacto portable es una carpeta `win-unpacked`, no un instalador. No se
-  deben mover `proyectos/` o `.solara-runtime/` fuera de la carpeta del `.exe`.
+- El launcher HTTP activo y el shell Electron opcional comparten el handler de
+  `packages/exporter/scripts/solara-request-handler.mjs`; si un cambio afecta el
+  transporte Electron, probar también ese empaquetado.
+- Una distribución portable futura es un artefacto `win-unpacked` aislado. Su
+  `proyectos/` y `.solara-runtime/` pertenecen sólo a esa copia generada y nunca
+  sustituyen la fuente comercial del checkout.
 - La matriz release exige Node 24.x. No se deben presentar otras versiones como
   validación release.
-- Playwright usa 8 workers por defecto (9800X3D) con override `PLAYWRIGHT_WORKERS=6`; `check:quick` paraleliza typecheck/test con `pnpm -r --parallel`.
+- Playwright usa 3 workers por defecto y permite override con `PLAYWRIGHT_WORKERS=N`; `check:quick` limita los tests/typecheck de workspace a concurrencia 2.
 - El checkout termina en WhatsApp y puede limitar la elegibilidad de Merchant.
 - La publicación real, DNS, Search Console y Merchant Center son manuales.
 
@@ -230,15 +238,15 @@ La guía de distribución autocontenida está en
 - [ ] Mantener `catalogModernStore`, `catalogScaleStore` y la plantilla limpia
       coherentes cuando corresponda.
 - [ ] Agregar primero una prueba del comportamiento nuevo o del bug.
-- [ ] Ejecutar el loop post-cambio (rápido, <3 min): `corepack pnpm check:micro` (diff + repository + typecheck/test solo afectados) y `corepack pnpm test:e2e:smoke` (5 specs quick por defecto). `check:quick` + smoke full solo en cierre o si el diff toca `packages/exporter/src/index.ts`, `storefront-runtime`, `modules` o `Preview.tsx`. Cierre: `check` + `test:e2e` full. `test:e2e:release` y `desktop:package` solo on-demand (Node 24).
+- [ ] Ejecutar el loop post-cambio (rápido, <3 min): `corepack pnpm check:micro` (diff + repository + typecheck/test diarios solo afectados) y `corepack pnpm test:e2e:smoke` (5 specs quick por defecto). `check:quick` + smoke full solo en cierre o si el diff toca `packages/exporter/src/index.ts`, `storefront-runtime`, `modules` o `Preview.tsx`. Cierre: `check:full` (incluye `test:extended` + post-build) + `test:e2e:smoke:full` + `test:e2e` funcional. `test:e2e:audit`, `test:e2e:release` y `desktop:package` solo on-demand (Node 24).
 - [ ] Revisar HTML inicial, responsive, teclado, reduced motion y no-JavaScript si
       se toca storefront.
 - [ ] Ejecutar `git diff --check` y `corepack pnpm check:repository`.
 - [ ] Revisar que no entren secretos, builds, reportes, `proyectos/` ni runtime.
-- [ ] Reconstruir los ejecutables al cerrar trabajo que afecte la app o el shell:
-      `corepack pnpm build`, `corepack pnpm desktop:build`, `corepack pnpm desktop:package`
-      y `corepack pnpm portable:smoke`. Los artefactos nunca deben quedar atrasados
-      respecto del código (`.release/` y `dist/` son regenerables y no se commitean).
+- [ ] Si el cierre incluye una distribución Electron/portable, reconstruir y
+      validar ese artefacto con `corepack pnpm build`, `corepack pnpm desktop:build`,
+      `corepack pnpm desktop:package` y `corepack pnpm portable:smoke`. `.release/`
+      y `dist/` son salidas regenerables y no se commitean.
 - [ ] Actualizar [`CHANGELOG.md`](CHANGELOG.md) con los cambios notables de la
       sesión (formato Keep a Changelog, en español).
 - [ ] Actualizar documentación si cambia una decisión.

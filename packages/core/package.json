@@ -9,8 +9,9 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --no-file-parallelism",
-    "test:ci": "vitest run --no-file-parallelism --pool=threads --poolOptions.threads.singleThread",
+    "test": "vitest run --no-file-parallelism --exclude src/cross-surface-race.test.ts --exclude src/fuzz100.test.ts --exclude src/fuzz.test.ts --exclude src/fuzz-comprehensive.test.ts",
+    "test:ci": "vitest run --no-file-parallelism --pool=threads --poolOptions.threads.singleThread --exclude src/cross-surface-race.test.ts --exclude src/fuzz100.test.ts --exclude src/fuzz.test.ts --exclude src/fuzz-comprehensive.test.ts",
+    "test:fuzz": "vitest run --no-file-parallelism src/cross-surface-race.test.ts src/fuzz100.test.ts src/fuzz.test.ts src/fuzz-comprehensive.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

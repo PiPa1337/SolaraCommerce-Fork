@@ -17,7 +17,7 @@ const smokeSpecs = [
   "tests/e2e/ui-sweep-a28.spec.ts",
   "tests/e2e/ui-sweep-a29.spec.ts",
   "tests/e2e/ui-sweep-a30.spec.ts",
-  "tests/e2e/axe-site.spec.ts",
+  "tests/e2e/release-a11y.spec.ts",
   "tests/e2e/nojs-coverage.spec.ts",
   "tests/e2e/focus-visible.spec.ts",
   "tests/e2e/interacciones.spec.ts",

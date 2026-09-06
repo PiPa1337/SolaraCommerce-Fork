@@ -27,7 +27,7 @@ import {
 } from "../../../packages/exporter/scripts/solara-request-handler.mjs";
 import { runAgentHost } from "./agent-host.mjs";
 import { createExportDestination, writeExportFiles } from "./export-site.mjs";
-import { GPU_CRASH_WINDOW_MS, gpuMarkerPath, shouldUseSoftwareMode } from "./gpu-mode.mjs";
+import { GPU_CRASH_WINDOW_MS, gpuMarkerPath } from "./gpu-mode.mjs";
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -58,7 +58,7 @@ const smokeMode = process.argv.includes("--solara-smoke");
 const agentMode = process.argv.includes("--solara-agent");
 const agentProtocolMode = process.argv.includes("--jsonl") ? "jsonl" : "mcp";
 const gpuMarkerPathValue = gpuMarkerPath(layout.profileRoot);
-const gpuSoftwareEnabled = shouldUseSoftwareMode(existsSync(gpuMarkerPathValue));
+const gpuSoftwareEnabled = existsSync(gpuMarkerPathValue);
 if (gpuSoftwareEnabled) {
   app.commandLine.appendSwitch("disable-gpu");
   app.commandLine.appendSwitch("disable-gpu-compositing");
@@ -113,10 +113,6 @@ app.setPath("crashDumps", join(layout.runtimeRoot, "crash-dumps"));
 // fija explícitamente. Mantenerlos dentro del runtime hace que una copia
 // portable no deje rastros en AppData ni mezcle diagnósticos entre copias.
 app.setAppLogsPath(layout.logsRoot);
-// La distribución debe iniciar también en equipos sin un controlador GPU
-// compatible. Chromium conserva composición acelerada en el navegador externo;
-// Studio prioriza una apertura determinista dentro de la carpeta portable.
-app.disableHardwareAcceleration();
 
 const singleInstance = app.requestSingleInstanceLock();
 if (!singleInstance) {

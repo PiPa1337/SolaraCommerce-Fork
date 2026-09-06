@@ -18,7 +18,9 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --exclude src/placeholder-diag.test.ts --exclude src/fixture-lazy.test.ts",
+    "test:diagnostic": "vitest run src/placeholder-diag.test.ts",
+    "test:postbuild": "vitest run src/fixture-lazy.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

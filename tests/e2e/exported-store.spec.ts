@@ -66,6 +66,12 @@ test.afterAll(async () => {
 });
 
 test("selecciona una variante, agrega al carrito y abre WhatsApp", async ({ page }) => {
+  const runtimeErrors: string[] = [];
+  page.on("pageerror", (error) => runtimeErrors.push(`pageerror: ${error.message}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") runtimeErrors.push(`console.error: ${message.text()}`);
+  });
+
   await page.goto(storeUrl("/productos/manta-bruma/"));
   await page.getByLabel("Variante", { exact: true }).selectOption("variant-manta-piedra");
   await page.getByLabel("Cantidad").fill("2");
@@ -99,6 +105,7 @@ test("selecciona una variante, agrega al carrito y abre WhatsApp", async ({ page
   expect(openedUrl).toContain("https://wa.me/5491123456789?text=");
   expect(decodeURIComponent(openedUrl ?? "")).toContain("2x Manta Bruma (Piedra)");
   await whatsappPopup.close();
+  expect(runtimeErrors).toEqual([]);
 });
 
 test("mantiene producto, precio y descripcion sin JavaScript", async ({ browser }) => {

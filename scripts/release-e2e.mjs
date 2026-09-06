@@ -36,6 +36,7 @@ function run(args) {
       ...process.env,
       NODE_PATH: [workspaceNodePath, process.env.NODE_PATH].filter(Boolean).join(delimiter),
       PLAYWRIGHT_MULTI_BROWSER: "1",
+      SOLARA_E2E_MODE: "all",
     },
   });
   if (result.error) throw result.error;
@@ -52,6 +53,7 @@ const result = spawnSync(process.execPath, [playwrightCli, "test"], {
     ...process.env,
     NODE_PATH: [workspaceNodePath, process.env.NODE_PATH].filter(Boolean).join(delimiter),
     PLAYWRIGHT_MULTI_BROWSER: "1",
+    SOLARA_E2E_MODE: "all",
   },
 });
 if (result.error) throw result.error;

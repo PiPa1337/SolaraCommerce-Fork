@@ -377,7 +377,11 @@ export async function processImageInWorker(file: File): Promise<ProcessedImage> 
 export function exportSiteInWorker(
   project: StoreProjectV1,
   mode: ExportMode,
-  options: { publicAiContext?: boolean; optimizationProfile?: "safe" | "strict" } = {},
+  options: {
+    publicAiContext?: boolean;
+    optimizationProfile?: "safe" | "strict";
+    includeRecovery?: boolean;
+  } = {},
   onStage?: (stage: ExportStageId) => void,
 ): Promise<{
   files: ReadonlyMap<string, string | Uint8Array>;
@@ -389,6 +393,38 @@ export function exportSiteInWorker(
     getExportWorker(),
     { type: "site", project, mode, options },
     onStage,
+    recreateWorker(() => {
+      resetExportWorker();
+    }, getExportWorker),
+  );
+}
+
+export function recoverProjectFromUrlInWorker(manifestUrl: string): Promise<StoreProjectV1> {
+  return requestWorker(
+    getExportWorker(),
+    { type: "project-recover", manifestUrl },
+    [],
+    recreateWorker(() => {
+      resetExportWorker();
+    }, getExportWorker),
+  );
+}
+
+export async function recoverProjectFromFolderInWorker(files: File[]): Promise<StoreProjectV1> {
+  if (files.length === 0) throw new Error("Seleccioná la carpeta exportada del sitio.");
+  const root = files[0]?.webkitRelativePath.split("/")[0] ?? "";
+  const entries = await Promise.all(
+    files.map(async (file) => {
+      const relative = file.webkitRelativePath || file.name;
+      const path =
+        root && relative.startsWith(`${root}/`) ? relative.slice(root.length + 1) : relative;
+      return { path, data: await file.arrayBuffer() };
+    }),
+  );
+  return requestWorker(
+    getExportWorker(),
+    { type: "project-recover-folder", files: entries },
+    entries.map((entry) => entry.data),
     recreateWorker(() => {
       resetExportWorker();
     }, getExportWorker),

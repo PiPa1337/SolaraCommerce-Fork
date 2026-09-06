@@ -102,10 +102,6 @@ for (const viewport of VIEWPORTS) {
       // El detalle puede seguir abierto (estado real tras la captura): el
       // botón "Abrir tienda" vive dentro del propio panel, así que no hace
       // falta cerrarlo ni clickear la card de nuevo.
-      await page
-        .getByRole("button", { name: "Cerrar detalle" })
-        .isVisible({ timeout: 3000 })
-        .catch(() => {});
       const openButton = page.getByRole("button", { name: "Abrir tienda", exact: true });
       if (await openButton.isVisible().catch(() => false)) {
         await openButton.click();

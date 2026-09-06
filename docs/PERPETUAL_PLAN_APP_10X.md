@@ -245,7 +245,7 @@ Mapa A-L del Núcleo Común — este plan se enfoca en las capas H (Export) e I 
 0. Health check (git limpio, baseline vigente) → 1. ítem por orden del backlog → 2. MEDIR ANTES → 3. TDD → 4. fix mínimo → 5. MEDIR DESPUÉS → Δ% → 6. autocrítica → 7. gates proporcionales + baseline → 8. commit con Δ% + log → volver a 1.
 
 **6. Criterios de salida (fin del PLAN 8)**
-Lista cerrada + gates (check, e2e de export/persistencia/portable) + sección PLAN 8 del reporte + commit de cierre + push. **Al cerrar el PLAN 8, ejecutar el PLAN 9 inmediatamente, sin preguntar.**
+Lista cerrada + gates (check, e2e de export/persistencia; portable sólo si ese ciclo valida empaquetado Electron) + sección PLAN 8 del reporte + commit de cierre + push. **Al cerrar el PLAN 8, ejecutar el PLAN 9 inmediatamente, sin preguntar.**
 
 **7. Watchdog acotado**
 3 intentos por ítem → bloqueado con evidencia; 3 ciclos consecutivos con Δ% ≤ 0 → switch al ítem de mayor potencial; corte de sesión reanuda por `SIGUIENTE`.
@@ -276,7 +276,7 @@ Mapa A-L del Núcleo Común — este plan se enfoca en las capas J (Shell), K (R
 0. Health check (git limpio, baseline vigente) → 1. ítem por orden del backlog → 2. MEDIR ANTES → 3. TDD → 4. fix mínimo → 5. MEDIR DESPUÉS → Δ% → 6. autocrítica → 7. gates proporcionales + baseline → 8. commit con Δ% + log → volver a 1.
 
 **6. Criterios de salida (fin del PLAN 9)**
-Lista cerrada + gates (check, perf, axe de la app, portable) + sección PLAN 9 del reporte + commit de cierre + push. **Al cerrar el PLAN 9, ejecutar el PLAN 10 inmediatamente, sin preguntar.**
+Lista cerrada + gates (check, perf, axe de la app; portable sólo si ese ciclo valida empaquetado Electron) + sección PLAN 9 del reporte + commit de cierre + push. **Al cerrar el PLAN 9, ejecutar el PLAN 10 inmediatamente, sin preguntar.**
 
 **7. Watchdog acotado**
 3 intentos por ítem → bloqueado con evidencia; 3 ciclos consecutivos con Δ% ≤ 0 → switch al ítem de mayor potencial; corte de sesión reanuda por `SIGUIENTE`.
@@ -291,7 +291,7 @@ Inicio: baseline formal = cierre del PLAN 9, commiteado. Fin: lista cerrada del 
 **2. Backlog semilla (to do del PLAN 10)**
 - R1: re-auditoría de las 12 capas una vez más (barrido visual + axe + perf + e2e).
 - R2: consolidación del reporte global (comparado contra el baseline del PLAN 1).
-- R3: gates finales: `pnpm check`, benchmark, e2e completo, portable smoke/e2e, ejecutables reconstruidos.
+- R3: gates finales: `pnpm check`, benchmark y e2e completo; smoke/e2e portable y ejecutables reconstruidos sólo cuando el cierre incluya una distribución Electron.
 
 **3. Componente de medición con autocrítica**
 Cada fila del backlog lleva `Métrica | Antes | Después | Δ%` con el mismo instrumento antes y después; consolidación final: tabla ítem × Δ% con totales globales. Regla: Δ% > 0 → mejora (commit con %); Δ% ≈ 0 → solo robustez documentada; Δ% < 0 → revertir o bloquear con evidencia; ciclo sin Δ% = inválido.

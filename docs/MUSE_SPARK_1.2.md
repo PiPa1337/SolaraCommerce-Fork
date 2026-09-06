@@ -30,14 +30,15 @@
 - **On-demand**: `pnpm test:e2e:release` (Node 24, 3 browsers), `pnpm desktop:package`, `pnpm benchmark:export`.
 - **Budgets actuales (2026-08-20, no bloqueantes)**: Studio JS 720 KiB (688 medido), CSS 112 KiB (102 medido), runtime JS 64 KiB (59 medido), V2 CSS 180 KiB (169 medido), `continue-on-error: true` en CI. `pnpm check:budgets` siempre pasa.
 
-## 5. Build portable — obligatorio si toca app/shell
+## 5. Empaquetado Electron/portable — sólo cuando se solicita o se valida distribución
 ```bash
 corepack pnpm build # studio + workers + packages
 corepack pnpm desktop:build
 corepack pnpm desktop:package # -> .release/portable/SolaraCommerce-Portable/SolaraCommerce.exe
 corepack pnpm portable:smoke # OK
 ```
-- Artefacto es carpeta `win-unpacked`, mover toda la carpeta junta. `.release/` nunca se commitea. Si el usuario guarda y no ve cambios → exe stale (ej: 18-08 vs 20-08) → recompilar.
+- La operación comercial normal usa `Abrir SolaraCommerce.cmd` y el `proyectos/` del checkout. El empaquetado Electron es una distribución opcional y aislada; `.release/` nunca es fuente de verdad ni se commitea.
+- Si se genera una portable, el artefacto es una carpeta `win-unpacked` y se mueve completa. Su almacenamiento local pertenece sólo a esa copia.
 - Tras cada fix UI que afecta preview/export, verificar `export.worker-*.js` y `index-*.js` contienen el CSS nuevo.
 
 ## 6. Visión nativa (Playwright)
@@ -67,7 +68,7 @@ corepack pnpm portable:smoke # OK
 
 ## 10. Para cualquier repo/trabajo (reusable)
 - Aplicar mismos principios 1,2,5,6,8 adaptando stack: leer `AGENTS.md`/`README`/`package.json` primero, detectar `pnpm`/`npm`/`cargo` etc., mantener `check:quick` paralelo si existe.
-- Siempre distinguir artefactos: source repo vs `dist`/`.release`/local data; instruir mover carpeta completa para portables.
+- Siempre distinguir código fuente, datos comerciales del checkout y artefactos regenerables (`dist/`/`.release/`). Una portable, si se genera, conserva su almacenamiento aislado.
 - No enviar catálogo/datos completos a IA; usar fixtures/muestras deterministas.
 - Guardar este archivo como referencia y re-leer al iniciar nueva sesión invocando `muse spark 1.2`.
 

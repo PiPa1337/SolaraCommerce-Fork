@@ -50,9 +50,8 @@ const fastTasks = [
     cmd: "corepack pnpm -r --workspace-concurrency=2 --if-present typecheck",
     serial: true,
   },
-  // Los fuzz y los exports deterministas superan 15s cuando todos los
-  // paquetes comparten CPU; el timeout del gate debe cubrir esa carga real.
-  // Serie (después de typecheck) para no competir por CPU con el resto.
+  // Las suites diarias excluyen fuzz/stress/QA pesados; esas capas se conservan
+  // en test:extended para el cierre. Serie para no competir con typecheck.
   { name: "test", cmd: testCommand, serial: true },
   ...(isCi
     ? [

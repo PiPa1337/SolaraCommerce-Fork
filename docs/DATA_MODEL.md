@@ -246,6 +246,22 @@ un JSON con envelope:
   la carpeta `sitios/<versión>/` validando rutas relativas y límites de tamaño
   y cantidad (`writeSiteFiles`).
 
+## Bóveda de recuperación del sitio
+
+La exportación puede incluir `solara-recovery/<64 hex>/` con tres archivos:
+
+- `manifest.json`: `format: "solara-recovery"`, `version: 1`, `projectId`,
+  `schemaVersion: 2`, `assetBasePath`, hashes SHA-256, tamaños y `missing`.
+- `slim.json.gz`: envelope `solara-project` comprimido; su proyecto reemplaza
+  las fuentes `data:` publicadas por `solara-ref:<assetId>`.
+- `assets.json`: referencias `{ id, kind, file, mimeType, hash }` de los medios
+  publicados. El hash es de los bytes exactos que el sitio sirve.
+
+La bóveda completa no puede superar 2 MiB. Es un índice de recuperación, no un
+segundo backup editable: los medios no publicados se omiten y se enumeran en
+`missing`. El sitio y Studio deben mantener `splitSlimProject` y
+`restoreAssetSources` como el único protocolo de transformación.
+
 ## Migración única de respaldos `.solara.zip`
 
 | Formato anterior | Ubicación | Migración | Marca idempotente |

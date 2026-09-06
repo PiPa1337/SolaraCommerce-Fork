@@ -236,3 +236,15 @@ export async function openLocalProjectFolder(projectId: string): Promise<{ folde
     throw new LocalStorageError("El servidor no devolvió la carpeta de la tienda.");
   return { folder: result.folder };
 }
+
+/**
+ * Borra la carpeta de la tienda en disco (`proyectos/<slug>--<hash>/`).
+ * Reutiliza `removeProject` del storage compartido; la plantilla protegida
+ * se rechaza en el servidor con PROTECTED_STORE.
+ */
+export async function deleteLocalProject(projectId: string): Promise<void> {
+  await requestJson<{ ok?: boolean }>(
+    `/__solara/storage/projects/${encodeURIComponent(projectId)}`,
+    { method: "DELETE", headers: { Accept: "application/json" } },
+  );
+}

@@ -154,4 +154,37 @@ describe("requestWorker con reintento", () => {
     retry.respond({ id: retryMessage.id, ok: true, result });
     await expect(thirdPromise).resolves.toEqual(result);
   });
+
+  it("envía recuperación por URL y carpeta al worker de exportación", async () => {
+    const urlPromise = workers.recoverProjectFromUrlInWorker(
+      "https://tienda.example/solara-recovery/hash/manifest.json",
+    );
+    const worker = instances.find((instance) => instance.url.includes("export.worker"));
+    if (!worker) throw new Error("worker de recuperación no creado");
+    const urlMessage = worker.posted[0] as { id: string; type: string; manifestUrl: string };
+    expect(urlMessage).toMatchObject({
+      type: "project-recover",
+      manifestUrl: "https://tienda.example/solara-recovery/hash/manifest.json",
+    });
+    worker.respond({ id: urlMessage.id, ok: true, result: { id: "recovered-url" } });
+    await expect(urlPromise).resolves.toEqual({ id: "recovered-url" });
+
+    const folderPromise = workers.recoverProjectFromFolderInWorker([
+      {
+        name: "manifest.json",
+        webkitRelativePath: "sitio/solara-recovery/manifest.json",
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(3)),
+      },
+    ] as unknown as File[]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const folderMessage = worker.posted[1] as {
+      id: string;
+      type: string;
+      files: Array<{ path: string; data: ArrayBuffer }>;
+    };
+    expect(folderMessage.type).toBe("project-recover-folder");
+    expect(folderMessage.files[0]?.path).toBe("solara-recovery/manifest.json");
+    worker.respond({ id: folderMessage.id, ok: true, result: { id: "recovered-folder" } });
+    await expect(folderPromise).resolves.toEqual({ id: "recovered-folder" });
+  });
 });

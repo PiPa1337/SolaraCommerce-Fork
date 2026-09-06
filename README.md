@@ -16,11 +16,12 @@ navegador puede mantener la pestaña abierta, por lo que el último mensaje indi
 que ya se puede cerrar. Si Studio se sirve con Vite, Playwright u otro servidor,
 el control no aparece y no intenta detener procesos ajenos.
 
-Para una IA que deba crear tiendas mediante la aplicación real, una distribución
-portable incluye [`SolaraCommerce-Agent.cmd`](SolaraCommerce-Agent.cmd) y el
-contrato [`docs/AI_AGENT_GUIDE.md`](docs/AI_AGENT_GUIDE.md). Ese canal usa MCP o
+Para una IA que deba crear tiendas mediante la aplicación real, el canal nativo
+está documentado en [`docs/AI_AGENT_GUIDE.md`](docs/AI_AGENT_GUIDE.md). Usa MCP o
 JSONL stdio, planes tipados durables, diff previo, jobs consultables y el mismo
-guardado transaccional de Studio; no permite parches arbitrarios de archivos.
+guardado transaccional de Studio; no permite parches arbitrarios de archivos. La
+distribución Electron opcional incluye `SolaraCommerce-Agent.cmd` como uno de sus
+transportes, pero no define una segunda fuente de datos.
 
 ## Requisitos
 
@@ -434,7 +435,7 @@ el sandbox del preview. Durante esa hidratación, las imágenes del preview se
 marcan como eager para que el editor no dependa de desplazar el iframe; el sitio público
 conserva `loading="lazy"` donde corresponde.
 
-## Distribución portable para Windows
+## Distribución empaquetada opcional para Windows
 
 El checkout sigue siendo el modo de desarrollo. Para crear una carpeta que se
 pueda copiar a otro equipo sin Node, pnpm ni el navegador del sistema:
@@ -448,9 +449,12 @@ corepack pnpm test:e2e:portable
 ```
 
 La salida es `.release/portable/SolaraCommerce-Portable/`. Incluye Electron,
-Chromium, Studio compilado y el shell `solara://studio/`. `proyectos/` es la
-fuente de verdad de las tiendas; `.solara-runtime/` contiene el perfil aislado,
-logs y transacciones regenerables. Copiá la carpeta completa, no sólo el `.exe`.
+Chromium, Studio compilado y el shell `solara://studio/`. Es un artefacto
+regenerable e independiente para distribución y QA: su `proyectos/` sólo es la
+fuente de verdad dentro de esa copia aislada. La única fuente comercial activa
+del checkout sigue siendo el `proyectos/` raíz usado por `Abrir SolaraCommerce.cmd`.
+`.solara-runtime/` contiene el perfil aislado, logs y transacciones regenerables.
+Copiá la carpeta completa, no sólo el `.exe`.
 
 `Abrir SolaraCommerce.cmd` abre el `.exe` adyacente cuando existe y conserva el
 servidor HTTP de desarrollo como fallback cuando se ejecuta desde un checkout.

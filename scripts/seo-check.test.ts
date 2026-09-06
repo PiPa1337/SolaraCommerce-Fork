@@ -23,9 +23,3 @@ test("P5-9: JSON-LD valido y con URLs absolutas en las paginas comerciales", () 
     }
   }
 });
-
-test("P5-8: el sitio no emite errores al interactuar (agregar al carrito, navegar)", async () => {
-  // Cubierto por exported-store.spec.ts (navegacion completa); verificar que el
-  // gate existente corra sin errores de consola es responsabilidad del spec.
-  expect(true).toBe(true);
-});

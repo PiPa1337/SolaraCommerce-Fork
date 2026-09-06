@@ -11,6 +11,7 @@ import {
   Minus,
   Package,
   Plus,
+  Trash,
   X,
 } from "@phosphor-icons/react";
 import { isBaseTemplate } from "@solara/project-schema/project-policy";
@@ -69,6 +70,8 @@ export interface ProjectCardProps {
   onDownloadBackup?: ((id: string) => Promise<void>) | undefined;
   onDuplicate(id: string): Promise<void>;
   onArchive(id: string, archived: boolean): Promise<void>;
+  onDelete?(id: string): Promise<void>;
+  deletingId?: string | undefined;
 }
 
 export function ProjectCard({
@@ -88,6 +91,8 @@ export function ProjectCard({
   onDownloadBackup,
   onDuplicate,
   onArchive,
+  onDelete,
+  deletingId,
 }: ProjectCardProps) {
   const protectedTemplate = project ? isBaseTemplate(project.project) : false;
   const faviconSrc = project ? storeFaviconSrc(project.project) : undefined;
@@ -120,6 +125,15 @@ export function ProjectCard({
   const simulatorErrorId = useId();
   const calculatorButtonRef = useRef<HTMLButtonElement>(null);
   const calculatorDialogRef = useRef<HTMLDivElement>(null);
+  const DELETE_CONFIRM_SECONDS = 30;
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteArmed, setDeleteArmed] = useState(false);
+  const [deleteCountdown, setDeleteCountdown] = useState(DELETE_CONFIRM_SECONDS);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const deleteTitleId = useId();
+  const deleteButtonRef = useRef<HTMLButtonElement>(null);
+  const deleteDialogRef = useRef<HTMLDivElement>(null);
 
   const parsedSimulatedProducts = Number(simulatedProducts);
   const validSimulatedProducts =
@@ -193,6 +207,95 @@ export function ProjectCard({
     window.requestAnimationFrame(() => calculatorButtonRef.current?.focus());
   };
 
+  const openDelete = () => {
+    setDeleteArmed(false);
+    setDeleteCountdown(DELETE_CONFIRM_SECONDS);
+    setDeleteBusy(false);
+    setDeleteError("");
+    setDeleteOpen(true);
+  };
+  const closeDelete = () => {
+    if (deleteBusy) return;
+    setDeleteOpen(false);
+    setDeleteArmed(false);
+    setDeleteCountdown(DELETE_CONFIRM_SECONDS);
+    setDeleteBusy(false);
+    setDeleteError("");
+    window.requestAnimationFrame(() => deleteButtonRef.current?.focus());
+  };
+
+  useEffect(() => {
+    if (!deleteOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const frame = window.requestAnimationFrame(() => {
+      deleteDialogRef.current
+        ?.querySelector<HTMLButtonElement>('[aria-label="Cerrar eliminación"]')
+        ?.focus();
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [deleteOpen]);
+
+  useEffect(() => {
+    if (!deleteOpen) return;
+    setDeleteArmed(false);
+    setDeleteCountdown(DELETE_CONFIRM_SECONDS);
+    setDeleteError("");
+    const timer = window.setInterval(() => {
+      setDeleteCountdown((current) => (current <= 1 ? 0 : current - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [deleteOpen]);
+
+  useEffect(() => {
+    if (projectId) return;
+    setDeleteOpen(false);
+  }, [projectId]);
+
+  const handleDeleteKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      closeDelete();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = Array.from(
+      deleteDialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ) ?? [],
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  };
+
+  const confirmDelete = () => {
+    if (!project || !onDelete || deleteBusy || deleteCountdown > 0 || !deleteArmed) return;
+    setDeleteBusy(true);
+    setDeleteError("");
+    void onDelete(project.id)
+      .then(() => {
+        setDeleteBusy(false);
+        setDeleteOpen(false);
+        setDeleteArmed(false);
+      })
+      .catch((reason: unknown) => {
+        setDeleteBusy(false);
+        setDeleteError(reason instanceof Error ? reason.message : "No se pudo eliminar la tienda.");
+      });
+  };
+
   const handleCalculatorKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -233,7 +336,8 @@ export function ProjectCard({
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           event.preventDefault();
-          if (calculatorOpen) closeCalculator();
+          if (deleteOpen) closeDelete();
+          else if (calculatorOpen) closeCalculator();
           else onClose();
         }
       }}
@@ -372,8 +476,8 @@ export function ProjectCard({
               Calculadora
             </Button>
             <Button
-              className="dashboard-store-detail__danger"
-              variant={project.status === "archived" ? "secondary" : "danger"}
+              className="dashboard-store-detail__danger dashboard-store-detail__archive"
+              variant="secondary"
               icon={project.status === "archived" ? ArrowCounterClockwise : Archive}
               loading={archivingId === project.id}
               disabled={protectedTemplate}
@@ -385,6 +489,19 @@ export function ProjectCard({
                   ? "Restaurar"
                   : "Archivar"}
             </Button>
+            {onDelete ? (
+              <Button
+                ref={deleteButtonRef}
+                className="dashboard-store-detail__danger"
+                variant="danger"
+                icon={Trash}
+                loading={deletingId === project.id || deleteBusy}
+                disabled={protectedTemplate}
+                onClick={openDelete}
+              >
+                {deletingId === project.id || deleteBusy ? "Eliminando tienda" : "Eliminar tienda"}
+              </Button>
+            ) : null}
           </div>
           {calculatorOpen
             ? createPortal(
@@ -706,6 +823,119 @@ export function ProjectCard({
                       )}
                       <Button variant="primary" type="button" onClick={closeCalculator}>
                         Listo
+                      </Button>
+                    </footer>
+                  </form>
+                </div>,
+                document.body,
+              )
+            : null}
+          {deleteOpen
+            ? createPortal(
+                <div
+                  ref={deleteDialogRef}
+                  className="dashboard-calculator-dialog is-open dashboard-delete-dialog"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby={deleteTitleId}
+                  onKeyDown={handleDeleteKeyDown}
+                  onMouseDown={(event) => {
+                    if (event.target === event.currentTarget) closeDelete();
+                  }}
+                >
+                  <form
+                    className="dashboard-calculator-dialog__content"
+                    onSubmit={(e) => e.preventDefault()}
+                    onMouseDown={(event) => event.stopPropagation()}
+                  >
+                    <header className="dashboard-calculator-dialog__header">
+                      <div className="dashboard-calculator-dialog__title">
+                        <span className="dashboard-calculator-dialog__eyebrow">
+                          Zona de peligro
+                        </span>
+                        <h2 id={deleteTitleId}>Eliminar tienda</h2>
+                        <p>
+                          Cuidado, estás por borrar la tienda “{project.name}”. Esta acción elimina
+                          el proyecto, sus respaldos visibles y su sitio, y no se puede deshacer.
+                        </p>
+                      </div>
+                      <IconButton
+                        icon={X}
+                        label="Cerrar eliminación"
+                        className="dashboard-calculator-dialog__close"
+                        autoFocus
+                        onClick={closeDelete}
+                        disabled={deleteBusy}
+                      />
+                    </header>
+                    <div className="dashboard-calculator-dialog__body">
+                      <section
+                        className="dashboard-calculator-dialog__section dashboard-delete-dialog__countdown"
+                        aria-live="polite"
+                      >
+                        {deleteCountdown > 0 ? (
+                          <p>
+                            Podrás confirmar en {deleteCountdown}{" "}
+                            {deleteCountdown === 1 ? "segundo" : "segundos"}. Leé con calma: el
+                            borrado es definitivo.
+                          </p>
+                        ) : (
+                          <p>
+                            Ya podés confirmar. Son dos pasos: primero aceptá el riesgo y después
+                            eliminá definitivamente.
+                          </p>
+                        )}
+                        <div
+                          className="dashboard-delete-dialog__progress"
+                          role="progressbar"
+                          aria-valuemin={0}
+                          aria-valuemax={DELETE_CONFIRM_SECONDS}
+                          aria-valuenow={DELETE_CONFIRM_SECONDS - deleteCountdown}
+                          aria-label="Espera de seguridad"
+                        >
+                          <span
+                            style={{
+                              width: `${Math.round(((DELETE_CONFIRM_SECONDS - deleteCountdown) / DELETE_CONFIRM_SECONDS) * 100)}%`,
+                            }}
+                          />
+                        </div>
+                      </section>
+                      {deleteError ? (
+                        <p
+                          className="dashboard-delete-dialog__error"
+                          role="alert"
+                          data-testid="ui-delete-error"
+                        >
+                          {deleteError}
+                        </p>
+                      ) : null}
+                    </div>
+                    <footer className="dashboard-calculator-dialog__actions dashboard-delete-dialog__actions">
+                      <Button
+                        variant="quiet"
+                        type="button"
+                        onClick={closeDelete}
+                        disabled={deleteBusy}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        type="button"
+                        disabled={deleteBusy || deleteCountdown > 0 || deleteArmed}
+                        onClick={() => setDeleteArmed(true)}
+                      >
+                        {deleteArmed ? "Riesgo aceptado" : "Entiendo el riesgo"}
+                      </Button>
+                      <Button
+                        variant="danger"
+                        type="button"
+                        loading={deleteBusy}
+                        disabled={deleteBusy || deleteCountdown > 0 || !deleteArmed}
+                        onClick={confirmDelete}
+                        data-testid="ui-delete-confirm"
+                      >
+                        {deleteBusy ? "Eliminando" : "Eliminar definitivamente"}
                       </Button>
                     </footer>
                   </form>

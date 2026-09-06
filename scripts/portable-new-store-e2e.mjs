@@ -72,10 +72,6 @@ function stableStoreSnapshot(project) {
   });
 }
 
-function containsId(ids, value) {
-  return ids.includes(value);
-}
-
 async function openPortable() {
   const app = await electron.launch({
     executablePath: join(copy, "SolaraCommerce.exe"),
@@ -257,9 +253,9 @@ try {
     throw new Error("El producto no quedó activo después del flujo nativo.");
   }
   if (
-    created.products.some((product) => containsId(defaultProductIds, product.id)) ||
-    created.categories.some((category) => containsId(defaultCategoryIds, category.id)) ||
-    created.collections.some((collection) => containsId(defaultCollectionIds, collection.id))
+    created.products.some((product) => defaultProductIds.includes(product.id)) ||
+    created.categories.some((category) => defaultCategoryIds.includes(category.id)) ||
+    created.collections.some((collection) => defaultCollectionIds.includes(collection.id))
   ) {
     throw new Error("La nueva tienda comparte IDs de catálogo con la plantilla.");
   }

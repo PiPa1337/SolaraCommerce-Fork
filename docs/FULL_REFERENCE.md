@@ -53,7 +53,7 @@ es autocontenido.
 | Paquete | Descripción | Archivos clave |
 | --- | --- | --- |
 | `@solara/studio` | Editor React SPA. Dashboard, Constructor, Catálogo, Tema, Assets, SEO, Export, Preview. PWA con service worker. | `main.tsx`, `App.tsx`, `features/Studio.tsx` (1121), `features/Catalog.tsx` (1369), `features/Dashboard.tsx` (1068), `features/Overview.tsx` (1187) |
-| `@solara/desktop` | Shell Electron portable Windows. Sirve el sitio + Studio localmente. | `src/main.mjs`, `src/preload.mjs` |
+| `@solara/desktop` | Shell Electron Windows opcional para distribución y QA. Sirve el sitio + Studio localmente en una copia aislada. | `src/main.mjs`, `src/preload.mjs` |
 
 ### packages/
 
@@ -310,7 +310,7 @@ en `respaldos/` hasta que un guardado exitoso las pode.
 | `check:full` / `check` | check:quick + check:slow (optimization, serialization, budgets, benchmark) + build | ~5-8 min | Cierre |
 | `test:e2e:smoke` | Build cacheado + specs críticos Playwright | ~45s-2min | Diaria |
 | `test:e2e` | Smoke full + todos los specs Playwright | ~3-4 min | Release |
-| `desktop:package` + `portable:smoke` | EXE portable Windows + smoke test | ~2 min | Si toca app/shell |
+| `desktop:package` + `portable:smoke` | Artefacto Electron Windows aislado + smoke test | ~2 min | Si toca app/shell |
 
 ### CI (GitHub Actions)
 

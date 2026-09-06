@@ -157,6 +157,61 @@ describe("handler: abrir carpeta de una tienda", () => {
   });
 });
 
+describe("handler: eliminar una tienda", () => {
+  it("borra la tienda persistida y requiere la sesión local", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-handler-delete-"));
+    let handler;
+    try {
+      handler = createSolaraRequestHandler({
+        applicationRoot: root,
+        shutdownToken: "token-test",
+        onShutdown: () => {},
+      });
+      const id = "store-delete-test";
+      await createStoredProject(handler, id);
+
+      const response = await handler.handle(
+        request("DELETE", `/__solara/storage/projects/${id}`, {
+          cookie: `${shutdownCookieName}=token-test`,
+        }),
+      );
+      expect(response.status).toBe(200);
+      expect(JSON.parse(response.body)).toEqual({ ok: true });
+      await expect(handler.storage.readCurrent(id)).resolves.toBeUndefined();
+
+      const unauthorized = await handler.handle(
+        request("DELETE", `/__solara/storage/projects/${id}`),
+      );
+      expect(unauthorized.status).toBe(403);
+    } finally {
+      await handler?.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("anuncia DELETE en rutas de almacenamiento no permitidas", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-handler-delete-allow-"));
+    let handler;
+    try {
+      handler = createSolaraRequestHandler({
+        applicationRoot: root,
+        shutdownToken: "token-test",
+        onShutdown: () => {},
+      });
+      const response = await handler.handle(
+        request("PATCH", "/__solara/storage/projects/store-delete-test", {
+          cookie: `${shutdownCookieName}=token-test`,
+        }),
+      );
+      expect(response.status).toBe(405);
+      expect(response.headers.Allow).toContain("DELETE");
+    } finally {
+      await handler?.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("handler: transacción de guardado (begin-save/upload)", () => {
   it("comienza una transacción con un slug largo válido del schema", async () => {
     const root = await mkdtemp(join(tmpdir(), "solara-handler-longslug-"));

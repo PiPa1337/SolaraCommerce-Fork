@@ -69,6 +69,7 @@ interface DashboardProps {
   onOpen(id: string): void;
   onDuplicate(id: string, name?: string): Promise<void>;
   onArchive(id: string, archived: boolean): Promise<void>;
+  onDelete(id: string): Promise<void>;
   onBackup(id: string): Promise<void>;
   onDownloadBackup?(id: string): Promise<void>;
   onOpenSite?(id: string): Promise<void>;
@@ -200,6 +201,7 @@ export function Dashboard({
   onOpen,
   onDuplicate,
   onArchive,
+  onDelete,
   onBackup,
   onDownloadBackup,
   onOpenSite,
@@ -231,6 +233,7 @@ export function Dashboard({
   const [duplicateTarget, setDuplicateTarget] = useState<StoredProject>();
   const [pendingArchiveId, setPendingArchiveId] = useState<string | null>(null);
   const [archivingId, setArchivingId] = useState<string>();
+  const [deletingId, setDeletingId] = useState<string>();
   const [backingUp, setBackingUp] = useState<string>();
   const [criticalIssues, setCriticalIssues] = useState<number | null>(null);
   const [auditSkipped, setAuditSkipped] = useState(0);
@@ -489,6 +492,28 @@ export function Dashboard({
       return doArchive(id, false);
     },
     [doArchive],
+  );
+
+  const handleDelete = useCallback(
+    async (id: string): Promise<void> => {
+      const record = projects.find((item) => item.id === id);
+      setDeletingId(id);
+      try {
+        await onDelete(id);
+      } catch (reason) {
+        setDeletingId(undefined);
+        throw reason instanceof Error ? reason : new Error("No se pudo eliminar la tienda.");
+      }
+      setDeletingId(undefined);
+      setPinnedIds((current) => {
+        if (!current.includes(id)) return current;
+        const next = current.filter((item) => item !== id);
+        writePinnedIds(next);
+        return next;
+      });
+      success(`Tienda "${record?.name ?? "eliminada"}" eliminada.`);
+    },
+    [onDelete, projects, success],
   );
 
   const pendingArchiveRecord = projects.find((item) => item.id === pendingArchiveId) ?? null;
@@ -1059,6 +1084,7 @@ export function Dashboard({
               detailRef={selectedPanelRef}
               backupId={backupId}
               archivingId={archivingId}
+              deletingId={deletingId}
               siteOpeningId={siteOpeningId}
               folderOpeningId={folderOpeningId}
               downloadingId={downloadingId}
@@ -1071,6 +1097,7 @@ export function Dashboard({
               onDownloadBackup={onDownloadBackup ? downloadBackup : undefined}
               onDuplicate={openDuplicate}
               onArchive={handleArchive}
+              onDelete={handleDelete}
             />
           </div>
         </section>

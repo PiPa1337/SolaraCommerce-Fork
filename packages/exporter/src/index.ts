@@ -148,6 +148,8 @@ export interface ExportOptions {
   useSemanticNames?: boolean;
   /** Recortes og 1200x630 por assetId, generados por el pipeline de Studio. */
   socialImageCrops?: ReadonlyMap<string, SocialImageCrop>;
+  /** Archivos opcionales de la bóveda de recuperación, preparados por Studio. */
+  recoveryFiles?: ReadonlyMap<string, string | Uint8Array>;
 }
 
 export interface ExportResult {
@@ -250,6 +252,7 @@ import {
 
 export { escapeAttribute, escapeHtml, escapeXml, jsonForScript };
 export { runLighthouseLite } from "./lighthouse-lite.js";
+export { sha256Hex } from "./pwa.js";
 
 function formatMoney(amount: number, project: StoreProjectV1): string {
   return formatPrice(amount, {
@@ -278,6 +281,28 @@ export {
   prefixDocumentHrefs,
   resourceHref,
 };
+
+export type {
+  MediaUsage,
+  RecoveryAssetRef,
+  RecoveryManifest,
+  RecoveryMissing,
+  SlimResult,
+} from "./recovery.js";
+export {
+  buildRecoveryAssetRefs,
+  newRecoveryDir,
+  parseRecoveryManifest,
+  RECOVERY_ASSETS_NAME,
+  RECOVERY_MANIFEST_NAME,
+  RECOVERY_MAX_BYTES,
+  RECOVERY_ROOT,
+  RECOVERY_SLIM_NAME,
+  REF_PREFIX,
+  recoveryFileList,
+  restoreAssetSources,
+  splitSlimProject,
+} from "./recovery.js";
 
 import { buildWhatsAppLink, interpolatePublicCopy, publicWhatsAppPhone } from "./whatsapp.js";
 
@@ -452,6 +477,55 @@ function publicAssetPath(
     .slice(0, 60);
   const baseName = slug || asset.hash.slice(0, 12);
   return `/assets/${baseName}-${asset.hash.slice(0, 8)}${suffix}.${extension}`;
+}
+
+/**
+ * Mapa canónico asset/video → archivo del sitio con sus bytes exactos.
+ *
+ * Es la única fuente que la bóveda de recuperación usa para rehidratar:
+ * replica las mismas decisiones que `buildFiles` (primario vs `favicon.ico`
+ * dedicado, fórmula de videos, skip de sources http). Sin entrada = sin
+ * archivo (las sources http se conservan tal cual porque no pesan).
+ *
+ * `favicon.ico` siempre guarda los bytes del favicon cuando es x-icon
+ * (ver emisión en `buildFiles`), así que mapearlo ahí es correcto haya o no
+ * primario dedicado. Solo entran IDs del conjunto `used` (misma instancia que
+ * `buildFiles` calcula): cada entrada existe sí o sí en el sitio exportado.
+ */
+export function publicAssetPaths(
+  project: StoreProjectV1,
+  used: { assetIds: ReadonlySet<string>; videoIds: ReadonlySet<string> },
+  semanticNames = false,
+): Map<string, string> {
+  const paths = new Map<string, string>();
+  const faviconAsset = project.assets.find((asset) => asset.id === project.seo.faviconAssetId);
+  const faviconBytes = faviconAsset ? dataUrlBytes(faviconAsset.source) : undefined;
+  const faviconIsCustomIco =
+    !!faviconBytes && imageMimeTypeFromBytes(faviconBytes) === "image/x-icon";
+  for (const asset of project.assets) {
+    if (!used.assetIds.has(asset.id) || !/^data:/i.test(asset.source)) continue;
+    const bytes = dataUrlBytes(asset.source);
+    if (!bytes) {
+      throw new Error(`El asset ${asset.id} contiene una data URL inválida.`);
+    }
+    if (faviconIsCustomIco && faviconAsset && asset.id === faviconAsset.id) {
+      paths.set(asset.id, "favicon.ico");
+      continue;
+    }
+    paths.set(
+      asset.id,
+      publicAssetPath(asset, "primary", asset.source, undefined, semanticNames).slice(1),
+    );
+  }
+  for (const video of project.videos) {
+    if (!used.videoIds.has(video.id) || !/^data:/i.test(video.source)) continue;
+    const bytes = dataUrlBytes(video.source);
+    if (!bytes || bytes.length === 0) {
+      throw new Error(`El video ${video.id} contiene una data URL inválida.`);
+    }
+    paths.set(video.id, `assets/${video.hash}.${assetExtension(video)}`);
+  }
+  return paths;
 }
 
 function responsiveSourcesForAsset(asset: ImageAsset): ImageAsset["responsiveSources"] {
@@ -3010,7 +3084,7 @@ function externalHosts(project: StoreProjectV1): string[] {
 
 function isAllowedPublicPath(path: string): boolean {
   if (!path || /^[\\/]|^[A-Za-z]:[\\/]|(^|[\\/])\.\.(?:[\\/]|$)/.test(path)) return false;
-  return /^(?:index\.html|404\.html|[A-Za-z0-9._+-]+(?:\/[A-Za-z0-9._+-]+)*\/index\.html|assets\/[A-Za-z0-9._+-]+|icons\/icon-(?:192|512)\.png|offline\/index\.html|manifest\.webmanifest|sw\.js|favicon\.ico|robots\.txt|sitemap\.xml|image-sitemap\.xml|video-sitemap\.xml|google-merchant\.xml|ai-context\.json|llms(?:-full)?\.txt|search-index\.json|catalog-index\.json|feed\.xml|_headers|_worker\.js|_redirects|\.well-known\/security\.txt|deployment-manifest\.json)$/.test(
+  return /^(?:index\.html|404\.html|[A-Za-z0-9._+-]+(?:\/[A-Za-z0-9._+-]+)*\/index\.html|assets\/[A-Za-z0-9._+-]+|icons\/icon-(?:192|512)\.png|offline\/index\.html|manifest\.webmanifest|sw\.js|favicon\.ico|robots\.txt|sitemap\.xml|image-sitemap\.xml|video-sitemap\.xml|google-merchant\.xml|ai-context\.json|llms(?:-full)?\.txt|search-index\.json|catalog-index\.json|feed\.xml|_headers|_worker\.js|_redirects|\.well-known\/security\.txt|deployment-manifest\.json|solara-recovery\/[0-9a-f]{64}\/(?:manifest\.json|slim\.json\.gz|assets\.json))$/.test(
     path,
   );
 }
@@ -3219,6 +3293,7 @@ function buildFiles(
   publicAiContext: boolean,
   semanticNames: boolean,
   socialImageCrops?: ReadonlyMap<string, SocialImageCrop>,
+  recoveryFiles?: ReadonlyMap<string, string | Uint8Array>,
 ): Map<string, string | Uint8Array> {
   const socialImageOptions: SocialImageResolutionOptions = {
     compatibilityByAssetId: socialImageCompatibilityByAssetId(project),
@@ -3311,11 +3386,14 @@ function buildFiles(
   if (manifest.searchEnabled) files.set("search-index.json", buildSearchIndex(publicProject));
   if (manifest.cartEnabled || manifest.checkoutEnabled || publicProject.siteShell.cart)
     files.set("catalog-index.json", buildCatalogIndex(publicProject));
+  if (recoveryFiles) {
+    for (const [path, value] of recoveryFiles) setFileChecked(files, path, value);
+  }
   files.set(
     "robots.txt",
     mode === "draft"
       ? "User-agent: *\nDisallow: /\n"
-      : `User-agent: *\nAllow: /\nSitemap: ${absoluteUrl(publicProject, "/sitemap.xml")}\n`,
+      : `User-agent: *\nAllow: /\nDisallow: /solara-recovery/\nSitemap: ${absoluteUrl(publicProject, "/sitemap.xml")}\n`,
   );
   if (mode === "production") {
     files.set("sitemap.xml", buildSitemap(publicProject, pages, manifest));
@@ -3387,7 +3465,17 @@ ${
 /catalog-index.json
   ! Cache-Control
   Cache-Control: public, max-age=900, must-revalidate
+${
+  recoveryFiles
+    ? `/solara-recovery/*
+  ! Cache-Control
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Robots-Tag: noindex, nofollow
+  Access-Control-Allow-Origin: *
 
+`
+    : ""
+}
 /sw.js
   ! Cache-Control
   Cache-Control: no-cache
@@ -3579,6 +3667,7 @@ export function exportProject(projectInput: StoreProjectV1, options: ExportOptio
       publicAiContext,
       options.useSemanticNames ?? false,
       options.socialImageCrops,
+      options.recoveryFiles,
     ),
   );
   return { files, audit, optimization };

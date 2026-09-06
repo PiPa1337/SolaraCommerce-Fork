@@ -34,6 +34,8 @@ import {
   createProjectArchiveInWorker,
   exportSiteInWorker,
   readProjectArchiveInWorker,
+  recoverProjectFromFolderInWorker,
+  recoverProjectFromUrlInWorker,
 } from "../lib/workers";
 
 const EXPORT_STAGES = [
@@ -105,7 +107,10 @@ export function ExportPanel({
   onNavigate(destination: "seo"): void;
 }) {
   const importRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState<"draft" | "production" | "project" | "import" | "">("");
+  const recoveryFolderRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState<"draft" | "production" | "project" | "import" | "recovery" | "">(
+    "",
+  );
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [critical, setCritical] = useState(0);
@@ -116,14 +121,20 @@ export function ExportPanel({
   const [optimization, setOptimization] = useState<OptimizationReport | null>(null);
   const [exportDone, setExportDone] = useState(false);
   const [doneStages, setDoneStages] = useState<ReadonlySet<string>>(new Set());
-  const [confirmAction, setConfirmAction] = useState<"production" | "import" | "history" | "">("");
+  const [confirmAction, setConfirmAction] = useState<
+    "production" | "import" | "recovery" | "history" | ""
+  >("");
   const [pendingImport, setPendingImport] = useState<File | null>(null);
+  const [pendingRecoveredProject, setPendingRecoveredProject] = useState<StoreProjectV1 | null>(
+    null,
+  );
   const [history, setHistory] = useState<ExportHistoryEntry[]>(() =>
     readExportHistory(project.slug),
   );
   const [postDone, setPostDone] = useState<Set<string>>(new Set());
   const [siteOpening, setSiteOpening] = useState(false);
   const [publishedSiteUrl, setPublishedSiteUrl] = useState(project.baseUrl);
+  const [recoveryUrl, setRecoveryUrl] = useState("");
   const [cloudflareVerification, setCloudflareVerification] =
     useState<CloudflareVerificationResult | null>(null);
   const [cloudflareBusy, setCloudflareBusy] = useState(false);
@@ -180,6 +191,7 @@ export function ExportPanel({
         {
           publicAiContext,
           optimizationProfile: "safe",
+          includeRecovery: true,
         },
         (stage) => {
           setDoneStages((current) => {
@@ -281,6 +293,49 @@ export function ExportPanel({
       await onImport(await readProjectArchiveInWorker(file));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo importar el proyecto.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const recoverFromUrl = async () => {
+    const value = recoveryUrl.trim();
+    if (!value) {
+      setError("Pegá la URL completa del manifest de recuperación.");
+      return;
+    }
+    setBusy("recovery");
+    setError("");
+    try {
+      setPendingRecoveredProject(await recoverProjectFromUrlInWorker(value));
+      setConfirmAction("recovery");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "No se pudo recuperar el proyecto.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const recoverFromFolder = async (files: File[]) => {
+    setBusy("recovery");
+    setError("");
+    try {
+      setPendingRecoveredProject(await recoverProjectFromFolderInWorker(files));
+      setConfirmAction("recovery");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "No se pudo recuperar el proyecto.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const importRecoveredProject = async (recovered: StoreProjectV1) => {
+    setBusy("import");
+    setError("");
+    try {
+      await onImport(recovered);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "No se pudo aplicar la recuperación.");
     } finally {
       setBusy("");
     }
@@ -413,7 +468,9 @@ export function ExportPanel({
               ? "Generando sitio de producción…"
               : busy === "project"
                 ? "Creando respaldo del proyecto…"
-                : "Importando respaldo…"}
+                : busy === "import"
+                  ? "Importando respaldo…"
+                  : "Descargando y verificando la bóveda…"}
         </output>
       ) : null}
       {notice ? (
@@ -628,6 +685,53 @@ export function ExportPanel({
           antiguas manualmente.
         </small>
       </section>
+      <section className="audit-panel export-recovery" data-testid="ui-export-recovery">
+        <header>
+          <div>
+            <h3>Recuperar desde un sitio publicado</h3>
+            <p>
+              Pegá la URL completa de `solara-recovery/.../manifest.json`. Se descargará solo el
+              contenido publicado y se verificarán sus hashes.
+            </p>
+          </div>
+        </header>
+        <div className="export-actions">
+          <input
+            aria-label="URL del manifest de recuperación"
+            value={recoveryUrl}
+            onChange={(event) => setRecoveryUrl(event.target.value)}
+            placeholder="https://tu-dominio.com/solara-recovery/.../manifest.json"
+          />
+          <Button
+            size="sm"
+            variant="quiet"
+            onClick={() => void recoverFromUrl()}
+            disabled={Boolean(busy)}
+          >
+            {busy === "recovery" ? "Recuperando…" : "Recuperar proyecto"}
+          </Button>
+          <input
+            ref={recoveryFolderRef}
+            className="visually-hidden"
+            type="file"
+            aria-label="Seleccionar carpeta del sitio publicado"
+            webkitdirectory="true"
+            onChange={(event) => {
+              const files = Array.from(event.target.files ?? []);
+              event.target.value = "";
+              if (files.length > 0) void recoverFromFolder(files);
+            }}
+          />
+          <Button
+            size="sm"
+            variant="quiet"
+            onClick={() => recoveryFolderRef.current?.click()}
+            disabled={Boolean(busy)}
+          >
+            Recuperar carpeta
+          </Button>
+        </div>
+      </section>
       {optimization ? (
         <output className="optimization-export-summary">
           <strong>Salud de exportación: {optimization.score}/100</strong>
@@ -806,6 +910,29 @@ export function ExportPanel({
           onCancel={() => {
             setConfirmAction("");
             setPendingImport(null);
+          }}
+        />
+      ) : null}
+      {confirmAction === "recovery" ? (
+        <ConfirmDialog
+          title="Recuperar proyecto publicado"
+          danger
+          confirmLabel="Recuperar y reemplazar"
+          body={
+            <p>
+              El proyecto recuperado reemplazará el proyecto actual. Las fotos no publicadas y los
+              recursos que no estén en la bóveda no podrán recuperarse. ¿Continuar?
+            </p>
+          }
+          onConfirm={() => {
+            const recovered = pendingRecoveredProject;
+            setConfirmAction("");
+            setPendingRecoveredProject(null);
+            if (recovered) void importRecoveredProject(recovered);
+          }}
+          onCancel={() => {
+            setConfirmAction("");
+            setPendingRecoveredProject(null);
           }}
         />
       ) : null}

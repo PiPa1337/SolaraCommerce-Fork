@@ -11,11 +11,6 @@ import { join } from "node:path";
 
 export const GPU_MODE_MARKER = "gpu-software-mode.json";
 
-/** El modo software se aplica cuando el marcador de fallback existe. */
-export function shouldUseSoftwareMode(markerExists) {
-  return markerExists;
-}
-
 /** Ruta del marcador dentro del perfil de la instalación (persiste entre ejecuciones). */
 export function gpuMarkerPath(profileRoot) {
   return join(profileRoot, GPU_MODE_MARKER);

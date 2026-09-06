@@ -22,9 +22,10 @@ corepack pnpm --filter @solara/storefront-runtime test
 
 ### Integración
 
-`corepack pnpm check` (alias `check:full`) ejecuta repository scan, formato, typecheck, tests de todos
-los paquetes y checks de optimizer de forma secuencial (CI/cierre). `build` comprueba que los paquetes se
-compilan en orden.
+`corepack pnpm check` es el alias rápido de `check:fast`: ejecuta repository scan,
+formato, typecheck y tests diarios de todos los paquetes con concurrencia acotada.
+`check:full` agrega fuzz, stress, QA, gates lentos, benchmark, build y el check
+post-build para cierre/CI.
 
 Para iteración post-cambio usar `check:micro` — diff + repository + typecheck/test
 solo de paquetes afectados (mapeo en `scripts/test-affected-map.mjs`, <3 min).
@@ -34,10 +35,30 @@ concurrencia acotada a 2):
 ```powershell
 corepack pnpm check:micro   # post-cambio: solo afectados
 corepack pnpm check:quick   # cierre o cambio amplio
-corepack pnpm check:full    # secuencial, para cierre/CI
-corepack pnpm check         # alias de check:full
+corepack pnpm check         # alias de check:fast
+corepack pnpm check:full    # cobertura extendida + gates lentos + build, cierre/CI
 corepack pnpm build
 ```
+
+### Capas de tests de paquetes
+
+Los `test` normales están pensados para iteración y `check:micro`. Los escenarios
+que consumen decenas de segundos o cientos de MiB mantienen cobertura explícita:
+
+```powershell
+corepack pnpm test:fuzz       # carreras/fuzz de Core + navegación de Studio
+corepack pnpm test:stress     # archivos > límite de string de V8 (Studio + Exporter)
+corepack pnpm test:qa         # creación masiva de tiendas por el canal oficial
+corepack pnpm test:extended   # fuzz + stress + QA; incluido en check:full
+corepack pnpm test:diagnostic # dump manual de placeholders; no corre en cierre
+corepack pnpm test:postbuild  # verifica lazy fixture contra dist de Studio
+```
+
+Core conserva `fuzz-comprehensive.test.ts` en el test diario; sólo los fuzz largos
+se separan. Studio usa hasta 4 workers en local y 2 en `test:ci`. Exporter también
+usa 2 workers en `test:ci`; el caso JSON de más de 536 MB se ejecuta en `test:stress`.
+`fixture-lazy.test.ts` queda fuera de la suite unitaria y se ejecuta después de
+`build` dentro de `check:full`.
 
 ### Exportación y presupuestos
 
@@ -79,8 +100,11 @@ sube su límite para hacer pasar la auditoría.
 
 ### Playwright
 
-`test:e2e` compila Studio y ejecuta Chromium (3 workers por defecto en local, override con `PLAYWRIGHT_WORKERS=8` en máquinas 8C/16T) contra un servidor local. En CI el
-build ya está hecho y se usa `test:e2e:ci`.
+`test:e2e` compila Studio y ejecuta la suite funcional de Chromium (3 workers por
+defecto en local, override con `PLAYWRIGHT_WORKERS=8` en máquinas 8C/16T) contra
+un servidor local. Los barridos históricos, auditorías visuales/performance y UX
+se separan en `test:e2e:audit`. En CI el build ya está hecho y se usa
+`test:e2e:ci`, también funcional.
 
 Para iteración post-cambio usar smoke quick (5 specs, ~20-40s) con cache de build:
 
@@ -88,18 +112,32 @@ Para iteración post-cambio usar smoke quick (5 specs, ~20-40s) con cache de bui
 corepack pnpm playwright:install:chromium
 corepack pnpm test:e2e:smoke  # 5 specs quick por defecto + build cacheado
 corepack pnpm test:e2e:smoke:full  # 15 specs criticos + build cacheado (cierre)
-corepack pnpm test:e2e        # suite full (961 tests observados; puede requerir menos workers)
+corepack pnpm test:e2e        # funcional: 447 tests / 79 specs observados
+corepack pnpm test:e2e:audit  # manual: 609 tests / 75 specs observados
 corepack pnpm test:e2e:ci     # sin build, CI usa dist ya compilado
 ```
 
-Smoke quick cubre: exported-store, storefront-nojs, catalog, assets, interacciones.
-Smoke full agrega: catalog-modern-v2, exporter-sentinel, scale-store, ui-sweep-a27..30, axe-site, nojs-coverage, focus-visible.
+La suite de auditoría contiene `ui-sweep-a01..a26`, Tema, Resumen, Preparar,
+`__vision__`, visuales dedicados, performance, `ux-audit` y los barridos pesados
+`axe-app`, `axe-site`, `cdp-site`, `editor-responsive`, `layout-fit` y `ui-export`.
+`ui-sweep-a27..a30` permanece en la suite funcional porque forma parte del
+contrato actual de smoke full.
 
-Smoke ampliado cubre: catalog-modern-v2, exporter-sentinel, scale-store, storefront-nojs, ui-sweep-a27..30, axe-site, nojs-coverage, focus-visible, interacciones, catalog, assets, exported-store.
+Smoke quick cubre: exported-store, storefront-nojs, catalog, assets, interacciones.
+Smoke full agrega: catalog-modern-v2, exporter-sentinel, scale-store,
+ui-sweep-a27..30, release-a11y, nojs-coverage y focus-visible.
+
+Smoke ampliado cubre: catalog-modern-v2, exporter-sentinel, scale-store,
+storefront-nojs, ui-sweep-a27..30, release-a11y, nojs-coverage, focus-visible,
+interacciones, catalog, assets y exported-store.
 No incluye visual sweep (VISUAL_REVIEW_STAGE) ni LCP pesado.
 
 La matriz de release instala Chromium, Firefox y WebKit mediante
-`PLAYWRIGHT_MULTI_BROWSER=1`. Los tests visuales se activan sólo con
+`PLAYWRIGHT_MULTI_BROWSER=1`. Chromium ejecuta las 1.056 pruebas de ambas capas;
+Firefox y WebKit repiten únicamente 13 contratos representativos del storefront
+exportado (`exported-store`, `exporter-sentinel` y `storefront-nojs`) cada uno.
+La matriz observada queda en 1.082 ejecuciones sobre 154 archivos, frente a las
+1.383 ejecuciones anteriores. Los tests visuales se activan sólo con
 `VISUAL_REVIEW_STAGE=...` y escriben en `test-results/visual-review/`, que no se
 versiona.
 
@@ -158,7 +196,7 @@ del draft lo requiere (la validación actual exige sólo la marca DEBUG).
 
 ## Qué probar ante cada tipo de cambio
 
-> Validación post-cambio = `check:micro` + `test:e2e:smoke` (~2-3 min). Cierre/CI = `check:full` + `test:e2e:smoke:full` + `test:e2e` full + `benchmark:export` si toca exporter. Release (3 browsers + desktop:package) solo on-demand; Node 24.x es el único runtime soportado.
+> Validación post-cambio = `check:micro` + `test:e2e:smoke` (~2-3 min). Cierre/CI = `check:full` + `test:e2e:smoke:full` + `test:e2e` funcional. `test:e2e:audit` queda manual/on-demand. `benchmark:export` ya forma parte de `check:full`. Release (3 browsers + desktop:package) solo on-demand; Node 24.x es el único runtime soportado.
 
 | Cambio | Mínimo (post-cambio) | Cierre recomendado |
 | --- | --- | --- |
@@ -180,7 +218,7 @@ del draft lo requiere (la validación actual exige sólo la marca DEBUG).
 - `test:e2e:release` requiere Node 24.x y los navegadores instalados. La salida
   identifica el runtime validado.
 - El servidor de tests usa loopback; no debe apuntarse a una tienda publicada.
-- Validación rápida post-cambio: `pnpm check:micro && pnpm test:e2e:smoke` (~2-3 min, 3 workers). Cierre: `pnpm check && pnpm test:e2e:smoke:full && pnpm test:e2e`.
+- Validación rápida post-cambio: `pnpm check:micro && pnpm test:e2e:smoke` (~2-3 min, 3 workers). Cierre: `pnpm check:full && pnpm test:e2e:smoke:full && pnpm test:e2e`. Auditoría pesada: `pnpm test:e2e:audit`.
 - Workers Playwright por defecto 3 (env `PLAYWRIGHT_WORKERS=8` en máquinas 8C/16T). Antes era 8.
 - Para inspeccionar una exportación, usar `pnpm reference:export` o
   `pnpm pilot:export` y revisar el directorio indicado por el script.
@@ -230,6 +268,10 @@ para un job Windows de release, donde puede aislarse el volumen temporal sin
 tocar proyectos confirmados.
 
 ## Portable Windows
+
+Estas suites validan artefactos Electron generados y copias temporales aisladas.
+Nunca deben usar, sembrar ni modificar el `proyectos/` raíz, que contiene la data
+comercial activa de `Abrir SolaraCommerce.cmd`.
 
 El bucle mínimo del shell Electron es:
 

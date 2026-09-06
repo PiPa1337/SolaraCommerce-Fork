@@ -1,0 +1,83 @@
+{
+  "format": "solara-portable-migration-decisions",
+  "version": 1,
+  "updatedAt": "2026-09-06",
+  "recoveryDraftsReviewed": true,
+  "recoveryDraftsReview": {
+    "method": "immutable-indexeddb-clone",
+    "snapshot": ".migration-archive/00-ORIGINAL-INMUTABLE",
+    "result": "Chrome Default y Edge Default revisados desde copias aisladas: 0 RecoveryDrafts en ambos. Los proyectos cacheados se preservan completos dentro del snapshot y los reportes de revision.",
+    "reports": [
+      ".migration-archive/reports/recovery-review-chrome.json",
+      ".migration-archive/reports/recovery-review-edge.json",
+      ".migration-archive/reports/recovery-review-summary.json"
+    ]
+  },
+  "postMigrationCleanup": {
+    "completedAt": "2026-09-06",
+    "verifiedByUser": true,
+    "deleted": [
+      ".migration-archive",
+      ".migration-staging",
+      ".migration-preflight.json",
+      "temporalstylolashes"
+    ],
+    "note": "Los destinos .migration-archive de las entradas inferiores registran el destino historico usado durante el cutover; el archivo fue eliminado manualmente solo despues de completar la verificacion final."
+  },
+  "entries": [
+    {
+      "sourceKey": "portable:demo-catalogo-jerarquico--ecb19169",
+      "action": "migrate-active",
+      "destination": "proyectos/demo-catalogo-jerarquico--ecb19169",
+      "note": "La tienda protegida Predeterminado (store-modo-sur-demo) debe permanecer activa y visible en la aplicacion normal. La copia archivada se conserva adicionalmente como evidencia historica."
+    },
+    {
+      "sourceKey": "portable:qa-post-package--dc2244b2",
+      "action": "archive",
+      "destination": ".migration-archive/portable/qa-post-package--dc2244b2",
+      "note": "QA preservada completa como evidencia archivada; no se mostrara como tienda activa."
+    },
+    {
+      "sourceKey": "portable:qa-verif-sentinels--93267b1a",
+      "action": "archive",
+      "destination": ".migration-archive/portable/qa-verif-sentinels--93267b1a",
+      "note": "QA preservada completa como evidencia archivada; no se mostrara como tienda activa."
+    },
+    {
+      "sourceKey": "portable:qa-verif-whatsapp--cc62fc7c",
+      "action": "archive",
+      "destination": ".migration-archive/portable/qa-verif-whatsapp--cc62fc7c",
+      "note": "QA preservada completa como evidencia archivada; no se mostrara como tienda activa."
+    },
+    {
+      "sourceKey": "portable:rm-descartables--704e2877",
+      "action": "migrate-active",
+      "destination": "proyectos/rm-descartables--704e2877",
+      "note": "Tienda comercial portable que quedara activa en la aplicacion normal."
+    },
+    {
+      "sourceKey": "portable:stylo-lashes--eb03b464",
+      "action": "migrate-active",
+      "destination": "proyectos/stylo-lashes--eb03b464",
+      "note": "Decision explicita del usuario: la version activa de Stylo Lashes sera la de la portable."
+    },
+    {
+      "sourceKey": "normal:stylo-lashes",
+      "action": "archive",
+      "destination": ".migration-archive/normal/stylo-lashes",
+      "note": "Preservar completa como historia no activa; no sobrescribir ni fusionar manualmente."
+    },
+    {
+      "sourceKey": "temporal-stylo:temporalstylolashes",
+      "action": "archive",
+      "destination": ".migration-archive/evidencia/temporalstylolashes",
+      "note": "Preservar como evidencia separada de Stylo Lashes."
+    },
+    {
+      "sourceKey": "portable-runtime:.solara-runtime",
+      "action": "archive",
+      "destination": ".migration-archive/portable-runtime/.solara-runtime",
+      "note": "Preservar el runtime portable completo como evidencia historica; nunca activarlo como runtime de la aplicacion normal."
+    }
+  ]
+}

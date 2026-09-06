@@ -60,7 +60,7 @@ test("abre la base limpia en Preparar y ofrece edición manual por pasos", async
   await expect(page.getByRole("navigation", { name: "Pasos del producto" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Imágenes", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Imágenes", exact: true }).click();
-  await expect(page.getByText("Imágenes del producto")).toBeVisible();
+  await expect(page.getByText("Imágenes y videos")).toBeVisible();
 });
 
 test("Preparar conserva una sola columna y un CTA legible en móvil", async ({ page }) => {

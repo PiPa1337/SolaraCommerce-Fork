@@ -1,11 +1,27 @@
-# SolaraCommerce Portable
+# Distribución Electron opcional de SolaraCommerce
 
-SolaraCommerce tiene dos modos de ejecución deliberadamente separados:
+SolaraCommerce mantiene una única aplicación y un único contrato de datos. El
+flujo operativo actual usa `Abrir SolaraCommerce.cmd` y el `proyectos/` raíz;
+Electron existe como transporte empaquetado opcional para distribución y QA.
 
 | Modo | Entrada | Persistencia | Origen de Studio |
 | --- | --- | --- | --- |
 | Desarrollo | `pnpm dev` o `Abrir SolaraCommerce.cmd` sin `.exe` | IndexedDB y, con el launcher, `proyectos/` | HTTP loopback |
-| Portable | `SolaraCommerce.exe` | `proyectos/` junto al ejecutable y perfil en `.solara-runtime/` | `solara://studio/` |
+| Electron empaquetado opcional | `SolaraCommerce.exe` | `proyectos/` aislado junto al ejecutable y perfil en `.solara-runtime/` | `solara://studio/` |
+
+## Estado operativo actual
+
+Desde el 06/09/2026 la operación real se realiza con `Abrir SolaraCommerce.cmd`.
+El `proyectos/` de la raíz del checkout es la fuente de verdad comercial. La
+portable que contenía la data histórica fue migrada, verificada y eliminada sólo
+después de comprobar el ledger completo y reabrir correctamente la app normal.
+
+`.release/` vuelve a ser exclusivamente salida regenerable. Generar una portable
+en el futuro sigue siendo posible para distribución o QA, pero esa copia tendrá
+persistencia independiente y no debe reemplazar ni sembrar automáticamente el
+`proyectos/` real. Los snapshots y temporales de la migración se eliminaron
+manualmente después de la verificación final; el plan y las decisiones versionadas
+conservan el registro técnico del proceso.
 
 El modo portable está pensado para copiar una carpeta completa a Windows. No
 usa `%APPDATA%`, `%LOCALAPPDATA%`, Node ni pnpm instalados en el equipo. Electron
@@ -32,9 +48,11 @@ SolaraCommerce-Portable/
     └── instance.json
 ```
 
-`proyectos/` es la fuente de verdad de las tiendas confirmadas en disco. El
+Dentro de una copia Electron empaquetada, su propio `proyectos/` es la fuente de
+verdad de las tiendas confirmadas en esa copia aislada. Esto no cambia la
+autoridad comercial del checkout, que sigue siendo el `proyectos/` raíz. El
 perfil de Electron contiene IndexedDB, localStorage, caché y Service Workers
-del origen portable; no se comparte con Chrome ni con otra copia de la carpeta.
+del origen empaquetado; no se comparte con Chrome ni con otra copia de la carpeta.
 Los archivos confirmados y el formato de manifest (`manifestVersion: 2` con
 `current.projectPath`) son los mismos que en desarrollo: `.solara.json`,
 `actual/`, `respaldos/`, `respaldos-manuales/` y `sitios/`.
@@ -66,12 +84,13 @@ El resultado queda en:
 .release/portable/SolaraCommerce-Portable/
 ```
 
-`desktop:package` genera una carpeta `win-unpacked`, la convierte en la carpeta
-portable final y preserva `proyectos/` y `.solara-runtime/` del portable
-anterior. El `proyectos/` del checkout no se copia: es la zona de pruebas de la
-IA en modo desarrollo (ver `AGENTS.md`); la data real del usuario vive en la
-copia portable. `.release/` está ignorado por Git. `portable:clean` elimina
-únicamente esa salida generada.
+`desktop:package` genera una carpeta `win-unpacked` y la convierte en la carpeta
+portable final. El `proyectos/` real del checkout no se copia a la portable: una
+distribución nueva empieza con almacenamiento independiente. `proyectos/` del
+checkout continúa siendo el almacén comercial de `Abrir SolaraCommerce.cmd` y
+`.release/` permanece ignorado por Git como salida regenerable. Si se actualiza
+una portable ya existente, el empaquetador puede preservar la data de esa propia
+instancia; esa persistencia nunca sustituye la fuente de verdad del checkout.
 
 Para distribuirla, copiá o comprimí la carpeta completa. No copies sólo el
 `.exe`: `resources/app.asar`, `proyectos/` y `.solara-runtime/` forman una única

@@ -553,15 +553,11 @@ test("modales dentro del viewport en mobile", async ({ page }) => {
     if ((await cartOpen.count()) > 0) {
       await cartOpen.click();
       await page.waitForTimeout(400);
-      await page
-        .locator('[data-cart-drawer][data-open="true"]')
-        .waitFor({ state: "visible" })
-        .catch(() => {});
+      await page.locator('[data-cart-drawer][data-open="true"]').waitFor({ state: "visible" });
       const drawerBox = await page.locator("[data-cart-drawer]").boundingBox();
-      if (drawerBox) {
-        expect(drawerBox.x + drawerBox.width).toBeLessThanOrEqual(390 + 2);
-        expect(drawerBox.x).toBeGreaterThanOrEqual(-2);
-      }
+      expect(drawerBox).not.toBeNull();
+      expect(drawerBox!.x + drawerBox!.width).toBeLessThanOrEqual(390 + 2);
+      expect(drawerBox!.x).toBeGreaterThanOrEqual(-2);
       await page.keyboard.press("Escape");
     }
     await page.screenshot({ path: `test-results/visual-break/modals-mobile.png` });

@@ -81,6 +81,46 @@ test("archivar confirma, muestra deshacer y restaura la tienda", async ({ page }
   ).toHaveText("Activa");
 });
 
+test("eliminar abre el diálogo de seguridad con espera de 30 segundos", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const detail = await openMutableDetail(page);
+
+  await detail.getByRole("button", { name: "Eliminar tienda" }).click();
+  const dialog = page.getByRole("dialog", { name: "Eliminar tienda" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("Cuidado, estás por borrar la tienda");
+  await expect(dialog).toContainText("Tienda archivable QA");
+  // La espera de seguridad bloquea la doble confirmación secuencial.
+  await expect(dialog).toContainText("Podrás confirmar en");
+  await expect(dialog.getByRole("button", { name: "Entiendo el riesgo" })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Eliminar definitivamente" })).toBeDisabled();
+  await dialog.getByRole("button", { name: "Cancelar" }).click();
+  await expect(dialog).toBeHidden();
+  // Cancelar no borra: la tienda sigue visible.
+  await expect(
+    page.locator(".dashboard-store-card").filter({ hasText: "Tienda archivable QA" }).first(),
+  ).toBeVisible();
+});
+
+test("eliminar confirma dos veces y quita la tienda del dashboard", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const detail = await openMutableDetail(page);
+  await page.clock.install();
+
+  await detail.getByRole("button", { name: "Eliminar tienda" }).click();
+  const dialog = page.getByRole("dialog", { name: "Eliminar tienda" });
+  await page.clock.runFor(30_000);
+  await dialog.getByRole("button", { name: "Entiendo el riesgo" }).click();
+  await expect(dialog.getByRole("button", { name: "Riesgo aceptado" })).toBeDisabled();
+  await dialog.getByRole("button", { name: "Eliminar definitivamente" }).click();
+
+  await expect(dialog).toBeHidden();
+  await expect(
+    page.locator(".dashboard-store-card").filter({ hasText: "Tienda archivable QA" }),
+  ).toHaveCount(0);
+  await expect(page.getByTestId("ui-toast").filter({ hasText: "eliminada" })).toBeVisible();
+});
+
 test("duplicar pasa por el diálogo y aplica el nombre elegido", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const detail = await openDemoDetail(page);

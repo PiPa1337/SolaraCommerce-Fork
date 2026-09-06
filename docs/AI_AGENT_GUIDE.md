@@ -2,14 +2,16 @@
 
 Esta guía describe el canal nativo para crear y mantener tiendas sin editar
 archivos a mano, sin escribir HTML/JavaScript y sin depender de la interfaz
-visual. El agente opera sobre la misma aplicación portable y sobre el mismo
-contrato `StoreProjectV2` que Studio.
+visual. El agente opera sobre el mismo almacenamiento de la aplicación y sobre el
+mismo contrato `StoreProjectV2` que Studio. En la operación normal, la autoridad
+comercial está en el `proyectos/` raíz usado por `Abrir SolaraCommerce.cmd`.
 
 ## Inicio
 
-Una distribución portable contiene `SolaraCommerce.exe`,
-`SolaraCommerce-Agent.cmd`, `proyectos/`, `.solara-runtime/` y la carpeta
-opcional `agent-inbox/`. El launcher inicia el ejecutable con
+La distribución Electron opcional contiene `SolaraCommerce.exe`,
+`SolaraCommerce-Agent.cmd`, su propio `proyectos/`, `.solara-runtime/` y la carpeta
+opcional `agent-inbox/`. Ese almacenamiento pertenece únicamente a esa copia
+aislada y no sustituye el `proyectos/` comercial del checkout. El launcher inicia el ejecutable con
 `--solara-agent --jsonl`; no abre una ventana, no inicia HTTP y reserva
 `stdout` exclusivamente para respuestas JSONL. Los diagnósticos quedan en
 `.solara-runtime/logs/main.log`.
@@ -243,8 +245,9 @@ Para imágenes pequeñas, usar `assets.stage` con base64 y MIME:
 {"method":"assets.stage","params":{"name":"taza-luna.png","alt":"Taza Luna de cerámica azul","mimeType":"image/png","source":{"kind":"base64","data":"iVBORw0KGgo..."}}}
 ```
 
-Para archivos grandes, copiar la imagen a `agent-inbox/` dentro del portable y
-enviar sólo el nombre. Para integraciones que no pueden escribir esa carpeta,
+Para archivos grandes cuando se usa el transporte Electron empaquetado, copiar la
+imagen a `agent-inbox/` dentro de esa copia y enviar sólo el nombre. Para
+integraciones que no pueden escribir esa carpeta,
 usar el upload por chunks:
 
 ```json

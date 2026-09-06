@@ -28,8 +28,7 @@ test("P1-L2: el foco del teclado es visible en tabs, pane y botones del editor",
     .first()
     .locator(".dashboard-store-card__button")
     .dblclick();
-  await page.locator(".studio-shell").waitFor({ timeout: 30000 });
-  await page.waitForTimeout(1500);
+  await expect(page.locator(".studio-shell")).toBeVisible({ timeout: 30_000 });
 
   const invisible: string[] = [];
   const checkFocus = async (label: string) => {
@@ -50,8 +49,9 @@ test("P1-L2: el foco del teclado es visible en tabs, pane y botones del editor",
     await checkFocus(`tab ${i + 1}`);
   }
   for (const tab of ["Catálogo", "Constructor", "Exportar"]) {
-    await page.getByRole("tab", { name: tab, exact: true }).click();
-    await page.waitForTimeout(1000);
+    const tabControl = page.getByRole("tab", { name: tab, exact: true });
+    await tabControl.click();
+    await expect(tabControl).toHaveAttribute("aria-selected", "true");
     for (let i = 0; i < 6; i += 1) {
       await page.keyboard.press("Tab");
       await checkFocus(`${tab} tab ${i + 1}`);

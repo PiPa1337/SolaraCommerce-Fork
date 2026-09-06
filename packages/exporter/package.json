@@ -13,8 +13,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",
     "serve": "node scripts/serve.mjs",
-    "test": "vitest run --testTimeout=120000",
-    "test:ci": "vitest run --testTimeout=120000 --no-file-parallelism --pool=threads --poolOptions.threads.singleThread",
+    "test": "vitest run --testTimeout=120000 --exclude src/json-stream.stress.test.ts",
+    "test:ci": "vitest run --testTimeout=120000 --pool=threads --maxWorkers=2 --minWorkers=2 --exclude src/json-stream.stress.test.ts",
+    "test:stress": "vitest run --testTimeout=600000 --no-file-parallelism src/json-stream.stress.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

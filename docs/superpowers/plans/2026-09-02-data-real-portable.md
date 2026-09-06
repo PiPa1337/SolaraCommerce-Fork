@@ -1,5 +1,11 @@
 # Dónde vive la data real (portable vs repo) — Plan de implementación
 
+> **SUPERADO (06/09/2026):** este plan conserva el contrato temporal anterior
+> como evidencia histórica. La migración definitiva dejó
+> `Abrir SolaraCommerce.cmd` + `proyectos/` raíz como única operación comercial
+> activa. No ejecutar estas instrucciones como política actual; ver `AGENTS.md`,
+> `README.md` y `docs/PORTABILITY.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Hacer explícito y aplicar el contrato "la data real del usuario vive sólo en la portable" en documentación, marcador físico y empaquetado.

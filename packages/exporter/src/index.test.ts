@@ -47,6 +47,24 @@ function runtimeAsset(files: ReadonlyMap<string, string | Uint8Array>, kind: "cs
 }
 
 describe("exporter", () => {
+  it("incluye archivos de recuperación permitidos y los excluye del rastreo", () => {
+    const dir = `solara-recovery/${"a".repeat(64)}`;
+    const result = exportProject(referenceStore, {
+      mode: "production",
+      recoveryFiles: new Map([
+        [`${dir}/manifest.json`, '{"format":"solara-recovery","version":1}'],
+        [`${dir}/slim.json.gz`, new Uint8Array([31, 139, 8])],
+        [`${dir}/assets.json`, "[]"],
+      ]),
+    });
+
+    expect(result.files.has(`${dir}/manifest.json`)).toBe(true);
+    expect(result.files.get("robots.txt")).toContain("Disallow: /solara-recovery/");
+    expect(result.files.get("_headers")).toContain("solara-recovery/*");
+    expect(result.files.get("_headers")).toContain("Access-Control-Allow-Origin: *");
+    expect(result.files.get("sitemap.xml")).not.toContain("solara-recovery");
+  });
+
   it("calcula SHA-256 de forma portable en browser y Node", () => {
     expect(sha256Hex("")).toBe("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
     expect(sha256Hex("abc")).toBe(

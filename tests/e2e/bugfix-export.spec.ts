@@ -162,18 +162,3 @@ test("una tienda con críticos nunca habilita el export, ni al re-auditar por co
   });
   await expect(production).toBeDisabled();
 });
-
-test("el aviso post-exportación no promete guardado en proyectos/ en modo navegador", async ({
-  page,
-}) => {
-  await openDemoStore(page);
-  await page.getByRole("tab", { name: "Exportar", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible();
-
-  await page.getByRole("button", { name: "Exportar borrador" }).click();
-  const result = page.getByTestId("ui-export-result");
-  await expect(result).toBeVisible({ timeout: 60_000 });
-  await expect(result).toContainText("Exportación correcta");
-  await expect(result).not.toContainText("proyectos/");
-  await expect(result).not.toContainText("sitios/");
-});

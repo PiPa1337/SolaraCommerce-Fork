@@ -1,5 +1,11 @@
 # Diseño: Dónde vive la data real (portable vs repo)
 
+> **SUPERADO (06/09/2026):** este documento registra el contrato temporal
+> anterior. Tras la migración definitiva, la operación activa usa
+> `Abrir SolaraCommerce.cmd` y el `proyectos/` raíz como única fuente comercial.
+> No usar este diseño como instrucción vigente; ver `AGENTS.md`, `README.md` y
+> `docs/PORTABILITY.md`.
+
 Fecha: 2026-09-02
 Estado: aprobado en conversación, pendiente de implementación
 

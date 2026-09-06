@@ -1397,6 +1397,23 @@ export async function setProjectArchived(id: string, archived: boolean): Promise
   );
 }
 
+/**
+ * Elimina una tienda del perfil local con sus borradores y migraciones.
+ * La plantilla base protegida nunca se puede borrar. El disco se borra por
+ * separado vía el endpoint administrado (`deleteLocalProject`). Es idempotente
+ * para permitir borrar tiendas que sólo estaban persistidas en disco.
+ */
+export async function deleteProject(id: string): Promise<void> {
+  const project = await getProject(id);
+  if (project && isBaseTemplate(project)) {
+    throw new Error("La plantilla protegida no se puede borrar.");
+  }
+  await ready();
+  await database.projects.delete(id);
+  await database.recoveryDrafts.delete(id);
+  await database.migrations.delete(id);
+}
+
 export async function putCachedAsset(
   asset: Omit<CachedAsset, "cacheKey" | "recipeVersion" | "lastUsedAt"> &
     Partial<Pick<CachedAsset, "recipeVersion" | "lastUsedAt">>,

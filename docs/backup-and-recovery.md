@@ -80,6 +80,36 @@ puede importarse como proyecto editable. Si el ID ya existe en disco, se
 requiere una acción explícita y se crea una nueva versión; no se sobreescribe
 silenciosamente el historial.
 
+## Recuperación desde un sitio publicado
+
+Cada exportación generada por Studio incluye, cuando se habilita la recuperación,
+una bóveda privada en `solara-recovery/<64 hex>/`:
+
+```text
+solara-recovery/<64 hex>/
+├── manifest.json
+├── slim.json.gz
+└── assets.json
+```
+
+La bóveda tiene un límite total de 2 MiB. `slim.json.gz` contiene el proyecto
+validado sin duplicar imágenes ni videos: las fuentes publicadas se reemplazan
+por `solara-ref:<assetId>`. `assets.json` lista la ruta pública y el SHA-256 de
+cada recurso publicado; los recursos remotos se conservan como URL y los no
+publicados se informan en `missing` junto con sus rutas `usedBy`.
+
+Para recuperar, ir a `Exportar` y pegar la URL completa de
+`solara-recovery/<64 hex>/manifest.json`, o seleccionar la carpeta del sitio
+exportado. Studio descarga o lee los tres archivos, valida el schema, tamaños,
+rutas y hashes, descarga los assets publicados del mismo sitio y recién después
+ofrece reemplazar el proyecto actual. No se recuperan recursos que nunca fueron
+publicados.
+
+La bóveda se excluye de `sitemap.xml`, `robots.txt` la desindexa y `_headers`
+la limita a `noindex`, sin caché y CORS de lectura. No se debe publicar la URL de
+la bóveda como secreto de acceso: contiene datos del proyecto, aunque no duplica
+los bytes de media.
+
 ## Archivo corrupto o incompatible
 
 No sobrescribir el último respaldo válido. Conservar el archivo rechazado y

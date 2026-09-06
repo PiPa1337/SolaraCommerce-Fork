@@ -56,9 +56,7 @@ test("a11y: landmarks, headings y skip link", async ({ page }) => {
     const h1Text = await page.locator("h1").first().textContent();
     expect(h1Text?.trim().length).toBeGreaterThan(0);
     // breadcrumbs have aria-label
-    await expect(page.locator('nav[aria-label="Migas de pan"]').first())
-      .toBeHidden({ timeout: 100 })
-      .catch(() => {});
+    await expect(page.locator('nav[aria-label="Migas de pan"]').first()).toBeHidden({ timeout: 100 });
     // on category page, breadcrumbs should exist
     const categoryPath = [...exported.files.keys()].find((p) => p.startsWith("categorias/"));
     if (categoryPath) {
@@ -86,31 +84,10 @@ test("a11y: testimonials track focusable y keyboard scrolleable", async ({ page 
       await expect(track).toHaveAttribute("tabindex", "0");
       await expect(track).toHaveAttribute("role", "region");
       await expect(track).toHaveAttribute("aria-label", "Testimonios de clientes");
-      // focus via Tab
-      await page.keyboard.press("Tab");
-      // find track via keyboard
-      let _focused = false;
-      for (let i = 0; i < 20; i++) {
-        const active = await page.evaluate(() => document.activeElement?.className || "");
-        if (active.includes("catalog-testimonials-track")) {
-          _focused = true;
-          break;
-        }
-        await page.keyboard.press("Tab");
-      }
-      // at least it should be focusable via .focus()
       await track.focus();
       await expect(track).toBeFocused();
-      // check focus-visible outline exists (computed style)
-      const _outline = await track.evaluate((el) => getComputedStyle(el).outlineStyle);
-      // after focus, outline should be visible if focus-visible supported - check via :focus-visible pseudo
-      const hasFocusVisible = await page.evaluate(() => {
-        const el = document.querySelector(".catalog-testimonials-track");
-        return el
-          ? getComputedStyle(el).outlineWidth !== "0px" || el.matches(":focus-visible")
-          : false;
-      });
-      expect(hasFocusVisible || true).toBeTruthy(); // permissive
+      const outlineWidth = await track.evaluate((el) => getComputedStyle(el).outlineWidth);
+      expect(outlineWidth).not.toBe("0px");
     }
   } finally {
     await new Promise<void>((r) => server.close(() => r()));

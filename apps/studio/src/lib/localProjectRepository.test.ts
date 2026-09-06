@@ -1,5 +1,5 @@
 import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { normalizeLoadedProject } from "./localProjectRepository";
 
 const createProjectArchiveInWorker = vi.fn(async (project: unknown) =>
@@ -66,6 +66,26 @@ describe("carga de proyectos administrados", () => {
 });
 
 describe("persistProjectToDisk", () => {
+  afterEach(() => {
+    exportSiteInWorker.mockClear();
+    saveLocalProject.mockClear();
+  });
+
+  it("no genera la bóveda de recuperación durante el guardado administrado", async () => {
+    const { persistProjectToDisk } = await import("./localProjectRepository");
+    const project = {
+      ...structuredClone(catalogModernV2Store),
+      id: "store-save-without-recovery",
+      slug: "save-without-recovery",
+    };
+
+    exportSiteInWorker.mockClear();
+    await persistProjectToDisk(project, 1);
+
+    expect(exportSiteInWorker).toHaveBeenCalledTimes(1);
+    expect(exportSiteInWorker.mock.calls[0]?.[2]).toBeUndefined();
+  });
+
   it("no re-exporta el sitio cuando el proyecto ya está sincronizado", async () => {
     const { persistProjectToDisk } = await import("./localProjectRepository");
     const project = structuredClone(catalogModernV2Store);

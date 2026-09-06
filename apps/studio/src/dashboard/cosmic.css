@@ -762,6 +762,45 @@
   color: #b3cfff !important;
 }
 
+.dashboard-store-detail__actions .button.dashboard-store-detail__archive {
+  /* Archivar en naranja: misma estructura full-width que Eliminar, acento ámbar */
+  border-color: rgb(251 146 60 / 0.55) !important;
+  background: rgb(251 146 60 / 0.16) !important;
+  color: #fdba74 !important;
+}
+
+.dashboard-store-detail__actions .button.dashboard-store-detail__archive:hover,
+.dashboard-store-detail__actions .button.dashboard-store-detail__archive:focus-visible {
+  border-color: rgb(251 146 60 / 0.8) !important;
+  background: rgb(251 146 60 / 0.27) !important;
+  color: #fed7aa !important;
+}
+
+.dashboard-delete-dialog__progress {
+  height: 8px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.08);
+  overflow: hidden;
+}
+
+.dashboard-delete-dialog__progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #fb923c, #ef4444);
+  transition: width 1s linear;
+}
+
+.dashboard-delete-dialog__error {
+  color: #fca5a5;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dashboard-delete-dialog__actions {
+  flex-wrap: wrap;
+}
+
 .dashboard-store-detail__actions .button:first-child {
   grid-column: 1 / -1;
 }

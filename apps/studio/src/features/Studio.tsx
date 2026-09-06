@@ -700,28 +700,21 @@ export function Studio({
 
   useEffect(() => {
     if (managedStorage) return;
-    const h = () => {
-      try {
-        localStorage.setItem(`solara-recovery-fallback:${project.id}`, JSON.stringify(project));
-        localStorage.setItem(
-          `solara-recovery-fallback-meta:${project.id}`,
-          JSON.stringify({ baseDiskVersion: 0, updatedAt: new Date().toISOString() }),
-        );
-      } catch {}
+    const flushPendingAutosave = () => {
       void autosave.flush().catch(() => {});
     };
     const v = () => {
-      if (document.visibilityState === "hidden") h();
+      if (document.visibilityState === "hidden") flushPendingAutosave();
     };
-    window.addEventListener("pagehide", h);
+    window.addEventListener("pagehide", flushPendingAutosave);
     document.addEventListener("visibilitychange", v);
-    window.addEventListener("beforeunload", h);
+    window.addEventListener("beforeunload", flushPendingAutosave);
     return () => {
-      window.removeEventListener("pagehide", h);
+      window.removeEventListener("pagehide", flushPendingAutosave);
       document.removeEventListener("visibilitychange", v);
-      window.removeEventListener("beforeunload", h);
+      window.removeEventListener("beforeunload", flushPendingAutosave);
     };
-  }, [autosave, managedStorage, project]);
+  }, [autosave, managedStorage]);
   useEffect(() => () => autosave.dispose(), [autosave]);
 
   const performLeave = async () => {

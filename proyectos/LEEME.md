@@ -1,14 +1,15 @@
-# Zona de pruebas de la IA
+# Almacenamiento comercial protegido
 
-Este `proyectos/` del checkout **no** contiene la data real del usuario: aquí
-sólo quedan tiendas de prueba transitorias generadas al ejecutar la app en modo
-desarrollo (`pnpm dev` o `Abrir SolaraCommerce.cmd` sin `.exe`).
+Este `proyectos/` es el almacenamiento persistente usado por
+`Abrir SolaraCommerce.cmd`. Durante y después de la migración desde la portable
+puede contener tiendas reales, respaldos y sitios exportados.
 
-La data real del usuario vive únicamente en la carpeta portable:
+No borrar, limpiar, reemplazar ni usar esta carpeta para fixtures o pruebas.
+Los tests deben trabajar en directorios temporales. Cualquier reemplazo de este
+árbol debe pasar por staging + rollback + verificación de hashes según
+[`../futuraeliminaciondeportable.md`](../futuraeliminaciondeportable.md).
 
-```text
-.release/portable/SolaraCommerce-Portable/proyectos/
-```
-
-`desktop:package` no copia este `proyectos/` a la portable. Reglas completas en
-[`../AGENTS.md`](../AGENTS.md) (sección "Dónde vive la data real").
+`desktop:package` no copia este almacenamiento a la distribución portable.
+Una distribución empaquetada futura mantiene sus propios datos aislados y
+regenerables; nunca reemplaza ni supera a este `proyectos/` como fuente comercial
+activa.

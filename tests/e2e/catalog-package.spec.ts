@@ -54,27 +54,26 @@ test("importa una carpeta comercial con imagen y crea categorías faltantes", as
   const { tmpdir } = await import("node:os");
   const { join } = await import("node:path");
   const packageDirectory = mkdtempSync(join(tmpdir(), "solara-catalog-package-"));
+  const folderName = packageDirectory.split(/[\\/]/).pop() ?? "carpeta";
   try {
     mkdirSync(join(packageDirectory, "imagenes"), { recursive: true });
     writeFileSync(join(packageDirectory, "productos.csv"), csv, "utf8");
     writeFileSync(join(packageDirectory, "imagenes", "taza.png"), pixel);
     await page.locator('input[type="file"][webkitdirectory]').setInputFiles(packageDirectory);
+    await expect(
+      page.locator(".catalog-package-review").getByRole("heading", { name: folderName }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Productos nuevos").locator("..")).toContainText("1");
+    await page.getByRole("button", { name: "Agregar y actualizar" }).click();
+    await expect(catalogDescription).toHaveText(
+      `${initialProductCount + 1} productos y ${initialVariantCount + 1} variantes.`,
+      { timeout: 15_000 },
+    );
+    const categoryTree = page.getByRole("region", { name: /rbol de categor/ });
+    const categoryList = categoryTree.getByRole("list", { name: /Categor/ });
+    await expect(categoryList.getByText("Cocina", { exact: true })).toBeVisible();
+    await expect(categoryList.getByText("Favoritos", { exact: true })).toBeVisible();
   } finally {
     rmSync(packageDirectory, { recursive: true, force: true });
   }
-
-  const folderName = packageDirectory.split(/[\\/]/).pop() ?? "carpeta";
-  await expect(page.getByRole("heading", { name: folderName })).toBeVisible({
-    timeout: 15_000,
-  });
-  await expect(page.getByText("Productos nuevos").locator("..")).toContainText("1");
-  await page.getByRole("button", { name: "Agregar y actualizar" }).click();
-  await expect(catalogDescription).toHaveText(
-    `${initialProductCount + 1} productos y ${initialVariantCount + 1} variantes.`,
-    { timeout: 15_000 },
-  );
-  const categoryTree = page.getByRole("region", { name: /rbol de categor/ });
-  const categoryList = categoryTree.getByRole("list", { name: /Categor/ });
-  await expect(categoryList.getByText("Cocina", { exact: true })).toBeVisible();
-  await expect(categoryList.getByText("Favoritos", { exact: true })).toBeVisible();
 });

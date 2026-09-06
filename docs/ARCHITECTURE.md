@@ -36,9 +36,10 @@ No existe un backend remoto. El único servidor es el proceso Node local iniciad
 por `Abrir SolaraCommerce.cmd`; su API está protegida por una cookie de sesión y
 queda limitada a `127.0.0.1`.
 
-El modo agente es un transporte local adicional dentro del shell Electron. Se
-  inicia con el entry de consola portable, no crea BrowserWindow ni puerto HTTP y
-  sólo expone operaciones cerradas de `@solara/agent-control`. `plans.create`
+El modo agente comparte el mismo servicio de almacenamiento y las mismas
+transacciones que Studio. Puede exponerse mediante el transporte Electron
+empaquetado, cuyo entry de consola no crea BrowserWindow ni puerto HTTP, y sólo
+expone operaciones cerradas de `@solara/agent-control`. `plans.create`
   persiste un snapshot y adquiere un lock con TTL; devuelve un diff acotado para
   revisión. `plans.commit` vuelve a leer la versión del disco y delega en la misma
   transacción de `local-project-storage.mjs` que Studio. Planes, jobs, assets,

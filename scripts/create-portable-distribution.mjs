@@ -1,9 +1,8 @@
 /**
  * Convierte el directorio `win-unpacked` de electron-builder en una carpeta
- * portable estable. El `proyectos/` del checkout no se copia: es la zona de
- * pruebas de la IA en modo desarrollo; la data real del usuario vive en la
- * propia carpeta portable. Los builds y el runtime permanecen fuera del
- * repositorio gracias a `.gitignore`.
+ * portable estable. El `proyectos/` del checkout no se copia: es un almacén
+ * comercial independiente usado por la app normal. La portable conserva su
+ * propio estado hasta que el usuario autorice explícitamente retirarla.
  *
  * Preserva el estado del portable anterior: las tiendas guardadas por la app
  * y `.solara-runtime/` se conservan a través de cada rebuild. Así un
@@ -197,9 +196,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   await mkdir(join(destination, "proyectos"), { recursive: true });
   await mkdir(join(destination, ".solara-runtime"), { recursive: true });
 
-  // 2. Restaurar las tiendas preservadas del portable anterior: la data real
-  // del usuario vive sólo en la portable; el proyectos/ del repo (zona de
-  // pruebas de la IA) nunca viaja a la distribución.
+  // 2. Restaurar las tiendas preservadas del portable anterior. El proyectos/
+  // comercial de la app normal es independiente y nunca viaja al packaging.
   if (existsSync(preservedProyectos)) {
     const entries = await readdir(preservedProyectos, { withFileTypes: true });
     for (const entry of entries) {

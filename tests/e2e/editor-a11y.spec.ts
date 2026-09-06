@@ -665,50 +665,6 @@ test("el tooltip top de un IconButton aparece sobre el botón con descripción a
   ).toBe(true);
 });
 
-test("el tooltip bottom del toggle de tema aparece bajo el control con descripción accesible (A13)", async ({
-  page,
-}) => {
-  await openDefaultStore(page);
-
-  const toggle = page.getByTestId("ui-theme-toggle");
-  // Dark-only: el toggle fue deprecado; si no existe, verificar que el tema es dark.
-  if ((await toggle.count()) === 0) {
-    await expect(page.locator("html")).toHaveAttribute("data-studio-theme", "dark");
-    return;
-  }
-  const wrapper = toggle.locator("xpath=..");
-  await expect(wrapper).toHaveClass(/ui-tooltip--bottom/);
-  await expect(wrapper).toHaveAttribute("data-tip", /^Usar tema (claro|oscuro)$/);
-  const description = wrapper.locator('[role="tooltip"]');
-  await expect(description).toHaveText(/^Usar tema (claro|oscuro)$/);
-  await expect(toggle).toHaveAttribute("aria-describedby", await description.getAttribute("id"));
-  await expect(wrapper).not.toHaveAttribute("title");
-  await expect(toggle).not.toHaveAttribute("title");
-
-  await toggle.hover();
-  await expect
-    .poll(() => tooltipBubbleOpacity(wrapper), "la burbuja debe hacerse visible")
-    .toBe("1");
-
-  const buttonBox = (await toggle.boundingBox()) ?? { x: 0, y: 0, width: 0, height: 0 };
-  expect(buttonBox, "el toggle debe tener caja medible").not.toEqual({
-    x: 0,
-    y: 0,
-    width: 0,
-    height: 0,
-  });
-  const bubble = await tooltipBubbleRect(wrapper);
-  const gapBelow = bubble.y - (buttonBox.y + bubble.height);
-  expect(gapBelow, "la burbuja bottom queda bajo el control").toBeGreaterThanOrEqual(0);
-  expect(gapBelow, "la burbuja bottom queda pegada al control (hueco de 7px)").toBeLessThanOrEqual(
-    20,
-  );
-  expect(
-    bubble.x + bubble.width > buttonBox.x && bubble.x < buttonBox.x + buttonBox.width,
-    "la burbuja bottom comparte el eje horizontal con el control",
-  ).toBe(true);
-});
-
 /** Abre el Constructor de la tienda demo (mismo arranque que editor-builder.spec.ts). */
 async function openBuilderForPicker(page: Page): Promise<void> {
   await page.goto(studioUrl);
@@ -977,6 +933,10 @@ test("el diálogo 409 cierra con Escape conservando el borrador y el fondo es in
     await expect(pageA.getByTestId("ui-studio-notice")).toContainText("Borrador conservado");
     await expect(pageA.locator("[data-studio-save]")).toBeFocused();
     await expect(pageA.locator(".studio-shell")).not.toHaveAttribute("inert", "");
+    await pageA.getByRole("tab", { name: "Resumen", exact: true }).click();
+    await expect(pageA.getByLabel("Nombre de la tienda")).toHaveValue(
+      "A11y A (borrador local)",
+    );
   } finally {
     await stopManagedServer(managed);
   }

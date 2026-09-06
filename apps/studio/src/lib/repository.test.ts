@@ -42,6 +42,7 @@ import {
   DEMO_ONLY_PURGE_SENTINEL,
   DEPRECATED_CATEGORY_CLEANUP_SENTINEL,
   database,
+  deleteProject,
   duplicateProject,
   ensureCatalogModernDemoGallery,
   ensureCatalogModernDemoReviews,
@@ -224,6 +225,27 @@ describe("repositorio local", () => {
     expect((await getProject(duplicate.id))?.status).toBe("archived");
     await setProjectArchived(duplicate.id, false);
     expect((await getProject(duplicate.id))?.status).toBe("active");
+  });
+
+  it("elimina una tienda con sus borradores y protege la plantilla base", async () => {
+    await saveProject(referenceStore);
+    await saveProject(catalogModernStore);
+    const duplicate = await duplicateProject(referenceStore.id);
+    await saveRecoveryDraft(duplicate);
+    await markProjectMigration(duplicate.id, "pending");
+
+    await deleteProject(duplicate.id);
+    expect(await getProject(duplicate.id)).toBeUndefined();
+    expect(await getRecoveryDraft(duplicate.id)).toBeUndefined();
+    expect(await getProjectMigration(duplicate.id)).toBeUndefined();
+    // El original sigue intacto.
+    expect(await getProject(referenceStore.id)).toEqual(referenceStore);
+    await expect(deleteProject(catalogModernStore.id)).rejects.toThrow(
+      "La plantilla protegida no se puede borrar.",
+    );
+
+    // El borrado es idempotente para tiendas que sólo estaban persistidas en disco.
+    await expect(deleteProject(duplicate.id)).resolves.toBeUndefined();
   });
 
   it("crea una tienda nueva desde la plantilla sin inventar un teléfono de WhatsApp", async () => {

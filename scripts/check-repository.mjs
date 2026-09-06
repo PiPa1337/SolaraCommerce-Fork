@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { lstatSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { extname, resolve } from "node:path";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
@@ -79,7 +79,11 @@ function repositoryFiles() {
     ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
     { stdio: ["ignore", "pipe", "inherit"] },
   );
-  return output.toString("utf8").split("\0").filter(Boolean);
+  return output
+    .toString("utf8")
+    .split("\0")
+    .filter(Boolean)
+    .filter((path) => existsSync(resolve(path)));
 }
 
 function isBinary(buffer) {

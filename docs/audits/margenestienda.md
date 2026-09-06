@@ -2,6 +2,11 @@
 
 > **EDICIÓN FINAL** (`docs/audits/margenestienda.md`, aprobada por el usuario).
 > 4 rondas de investigación: (1) código + mediciones deterministas, (2) visión con capturas, (3) estados dinámicos/overlays, (4) internos de componentes y verificación de extremos.
+>
+> **NOTA DE PERSISTENCIA (06/09/2026):** las rutas portable citadas abajo son
+> evidencia del snapshot auditado el 03/09/2026. RM Descartables fue migrada y la
+> fuente comercial vigente está en `proyectos/` del checkout abierto con
+> `Abrir SolaraCommerce.cmd`.
 
 - **Tienda:** `rm-descartables--704e2877` (portable: `.release/portable/SolaraCommerce-Portable/proyectos/`)
 - **Sitio analizado:** `sitios/rm-descartables-2026-09-03T02-10-36-730Z-v000061` (v000061, export del 2026-09-03 02:10 UTC, la última versión)

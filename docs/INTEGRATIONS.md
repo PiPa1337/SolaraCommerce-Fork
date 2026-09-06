@@ -109,6 +109,12 @@ rutas son archivos estáticos. No requiere endpoints del sitio en producción.
   verificación y envío se hacen manualmente en el dominio publicado.
 - **Hosting estático:** `_headers` contiene sugerencias compatibles con hosts
   estáticos. El usuario copia la carpeta `sitios/<versión>/` a su proveedor.
+- **Bóveda de recuperación:** cuando Studio la genera, publica
+  `solara-recovery/<64 hex>/manifest.json`, `slim.json.gz` y `assets.json`.
+  `_headers` aplica `Access-Control-Allow-Origin: *` sólo a esa ruta, junto con
+  `noindex` y `Cache-Control: max-age=0`; el resto del sitio no queda habilitado
+  para CORS. La recuperación valida SHA-256 localmente y no llama a ningún
+  servicio externo.
 
 ## Variables y dependencias externas
 
@@ -132,7 +138,7 @@ Para reemplazar el servidor local hay que conservar el contrato de
 `current.projectPath`), los hashes, el bloqueo por tienda y el commit atómico.
 No se debe conectar el storefront directamente a estas rutas.
 
-## Transporte portable
+## Transporte Electron empaquetado opcional
 
 La distribución Electron no abre Studio desde HTTP. El proceso principal registra
 `solara://studio/` y adapta cada request al mismo
@@ -147,8 +153,8 @@ tienda seleccionada y se cierra al cerrar la instancia Electron.
 
 ## Canal nativo para agentes
 
-La carpeta portable incluye `SolaraCommerce-Agent.cmd`. El launcher inicia el
-mismo `.exe` con un entry de consola
+La copia Electron empaquetada incluye `SolaraCommerce-Agent.cmd` como transporte
+opcional. El launcher inicia el mismo `.exe` con un entry de consola
 embebido; por defecto usa JSONL protocol-only y con `--mcp` usa MCP stdio. El
 proceso no abre Studio ni expone HTTP. Los logs quedan en
 `.solara-runtime/logs/main.log`. Sin `--jsonl`, el proceso ofrece MCP por stdio
