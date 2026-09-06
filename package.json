@@ -36,6 +36,7 @@
     "reference:export": "vitest run scripts/write-reference-export.test.ts",
     "release:manifest": "node scripts/create-release-manifest.mjs",
     "test:e2e:release": "node scripts/release-e2e.mjs",
+    "vitest": "node ./node_modules/vitest/vitest.mjs",
     "test": "corepack pnpm -r --workspace-concurrency=2 --if-present test -- --testTimeout=15000",
     "test:fuzz": "corepack pnpm --filter @solara/core test:fuzz && corepack pnpm --filter @solara/studio test:fuzz",
     "test:stress": "corepack pnpm --filter @solara/studio test:stress && corepack pnpm --filter @solara/exporter test:stress && corepack pnpm --filter @solara/site-optimizer test:stress",
