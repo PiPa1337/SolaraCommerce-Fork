@@ -11,14 +11,15 @@ test("mantiene el runtime storefront dentro del presupuesto", () => {
   const cssBytes = Buffer.byteLength(STOREFRONT_RUNTIME_CSS, "utf8");
 
   // Medición real al 2026-08-17: runtime JS 55.3 KiB, runtime CSS 7.486 B.
-  // El techo de 64 KiB incluye el pequeño coste de la política Trusted Types
-  // que protege los sinks HTML del carrito y la búsqueda.
+  // La medición histórica de 55.3 KiB precede al techo vigente de 80 KiB,
+  // que incluye Trusted Types y las capacidades agregadas después.
   console.log({
     storefrontRuntimeJavascriptRaw: javascriptBytes,
     storefrontRuntimeCssRaw: cssBytes,
   });
-  // Task 9: skeletons de búsqueda, contador visible, título con query y guards del índice suman ~450 B; tope 68 KiB autorizado por el brief.
-  // 2026-09-04: checkout WhatsApp multiparte (splitOrderParts + drawer, ~8,7 KB reales); tope 80 KiB con margen ~4 KiB.
+  // Task 9 agregó skeletons, contador, título con query y guards del índice.
+  // Desde 2026-09-04 el checkout WhatsApp multiparte llevó el guard vigente a
+  // 80 KiB con margen para el runtime serializado actual.
   expect(javascriptBytes).toBeLessThanOrEqual(80 * 1024);
 
   const { files } = getCatalogModernExport();

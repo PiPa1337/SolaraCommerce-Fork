@@ -346,7 +346,12 @@ function rankHotspots(
       proposal:
         "Reducir CSS por familia/módulo y revisar preload, srcset, lazy loading y bytes críticos con no-JS como contrato.",
       risk: "Medio-alto: puede alterar LCP, layout shift y checkout.",
-      guardTests: ["runtime JS <= 64 KiB", "CSS <= 8 KiB", "no-JS", "checkout y srcset"],
+      guardTests: [
+        "runtime JS <= 80 KiB",
+        "CSS exportado gzip <= 32 KiB",
+        "no-JS",
+        "checkout y srcset",
+      ],
     },
     {
       score: snapshot.fileInventory.totalBytes,

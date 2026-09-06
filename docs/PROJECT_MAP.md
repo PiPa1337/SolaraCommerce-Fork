@@ -26,7 +26,7 @@ buscá sus tests con `rg`.
 | Respaldo `.solara.json` | `apps/studio/src/lib/projectArchive.ts` | exporter, workers, schema | Validar envelope y schema; no asumir que un archivo externo es confiable. |
 | Servidor local | `packages/exporter/scripts/serve.mjs` | `local-project-storage.mjs`, launcher | Loopback solamente; proteger sesión, rutas y shutdown. |
 | Fixtures | `packages/project-schema/src/catalog-modern-fixture.ts`, `scale-fixture.ts` | templates, tests, benchmark | Deterministas; no cambiar silenciosamente Predeterminado administrado. |
-| Tests unitarios | Cada paquete `src/*.test.ts` | Vitest | Ejecutar paquete afectado y luego `pnpm check`. |
+| Tests unitarios | Cada paquete `src/*.test.ts` | Vitest | Ejecutar el paquete afectado y el gate proporcional definido en `docs/TESTING.md` (`check:micro` para post-cambio). |
 | Tests E2E | `tests/e2e/` | `studio-server.ts`, helpers | Chromium local; release habilita Firefox/WebKit. |
 | CI/release | `.github/workflows/`, `scripts/` | package scripts | CI y release usan Node 24.x y pnpm 10.15.1; no introducir comandos no documentados. |
 | Launcher Windows | `Abrir SolaraCommerce.cmd`, `scripts/open-solara.ps1` | `serve.mjs`, `.solara-runtime` | No matar procesos ajenos; revisar puertos 4173–4180. |

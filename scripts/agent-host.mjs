@@ -179,6 +179,7 @@ export const AGENT_MCP_TOOL_DEFINITIONS = [
                   "store.updateSeo",
                   "category.create",
                   "category.update",
+                  "category.delete",
                   "collection.create",
                   "collection.update",
                   "product.create",

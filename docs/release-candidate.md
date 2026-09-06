@@ -10,12 +10,13 @@ Desde un checkout limpio:
 
 ```bash
 corepack pnpm install --frozen-lockfile
-corepack pnpm check
-corepack pnpm build
-corepack pnpm check:budgets
-corepack pnpm benchmark:export
 corepack pnpm playwright:install:release
-corepack pnpm test:e2e:release
+corepack pnpm release
+```
+
+Después del gate automatizado, preparar los artefactos del candidato:
+
+```bash
 corepack pnpm reference:export
 corepack pnpm release:manifest
 ```
@@ -53,6 +54,6 @@ generado para maquillar el resultado.
 
 ## Artefactos y fallos
 
-El workflow conserva el manifiesto, el reporte HTML, traces y resultados durante
-14 días. Un fallo de Firefox o WebKit bloquea el release candidate aunque
-Chromium pase; se corrige la causa antes de publicar el piloto.
+La política de disparadores, artefactos y retención vive en
+`.github/workflows/release.yml`. Un fallo de Firefox o WebKit bloquea el release
+candidate aunque Chromium pase; se corrige la causa antes de publicar el piloto.

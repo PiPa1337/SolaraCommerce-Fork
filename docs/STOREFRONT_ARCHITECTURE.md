@@ -85,7 +85,7 @@ si un respaldo antiguo no lo tiene, se deriva de los colores del mismo tema.
 | prefers-reduced-motion | Desactiva animaciones espaciales |
 
 Los specs en `tests/e2e/__vision__/storefront-deep-vision.spec.ts` capturan
-19 viewports que cubren todos estos breakpoints.
+la matriz de viewports declarada por el propio spec para cubrir estos breakpoints.
 
 ## Escala de espaciado (rem — respeta type-scale)
 

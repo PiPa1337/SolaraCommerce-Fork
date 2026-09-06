@@ -34,21 +34,22 @@ todos los elementos en su estado final y elimina las transiciones espaciales.
 ## Gates actuales
 
 - Preview y exportación comparten renderer.
-- Las trece rutas públicas permanecen sin overflow horizontal en 390x844,
-  768x1024, 1024x768, 1366x768, 1440x900 y 1920x968.
+- Las rutas públicas y la matriz responsive declaradas por los specs activos
+  permanecen sin overflow horizontal; `docs/TESTING.md` y los propios specs son
+  la autoridad de esa matriz.
 - navegación por teclado, foco visible, nombres accesibles e IDs únicos;
 - fallback de compra directa y navegación móvil sin JavaScript;
 - canonical, Open Graph, sitemap y `noindex` de rutas transaccionales;
 - benchmark de exportación de 2.000 productos bajo 30 segundos y 48 MiB;
-- presupuesto público V2: CSS crudo hasta 104 KiB y runtime JS hasta 53 KiB.
+- presupuesto público V2 vigente: CSS crudo hasta 212 KiB y runtime JS hasta
+  80 KiB; los valores ejecutables viven en los guardianes de `scripts/`.
 - comparación visual equivalente en 1920x968: V1 conserva su composición y no
   recibe estilos `.cm.v2`; ambas familias mantienen el mismo contenido.
 
-La evidencia histórica de la matriz release con Node 22.18.0 se conserva como
-referencia de compatibilidad: los contratos públicos V2 pasaron en Chromium,
-Firefox y WebKit. El contrato actual exige repetir la certificación bajo Node
-24.x. Aquella ejecución registró 903 tests verdes, 2 casos Chromium que pasaron
-al reintentar y 3 capturas visuales opcionales omitidas.
+La evidencia de release anterior a la migración a Node 24 es histórica. El
+contrato vigente de certificación usa Node 24.x y la matriz definida en
+`docs/TESTING.md`; los conteos de ejecuciones históricas no forman parte de este
+contrato activo.
 
 ## Evidencia visual
 

@@ -28,7 +28,7 @@ formato, typecheck y tests diarios de todos los paquetes con concurrencia acotad
 post-build para cierre/CI.
 
 Para iteración post-cambio usar `check:micro` — diff + repository + typecheck/test
-solo de paquetes afectados (mapeo en `scripts/test-affected-map.mjs`, <3 min).
+solo de paquetes afectados (mapeo en `scripts/test-affected-map.mjs`).
 `check:quick` queda para cierre o cambio amplio (todos los paquetes con
 concurrencia acotada a 2):
 
@@ -104,14 +104,14 @@ un servidor local. Los barridos históricos, auditorías visuales/performance y 
 se separan en `test:e2e:audit`. En CI el build ya está hecho y se usa
 `test:e2e:ci`, también funcional.
 
-Para iteración post-cambio usar smoke quick (5 specs, ~20-40s) con cache de build:
+Para iteración post-cambio usar smoke quick con caché de build:
 
 ```powershell
 corepack pnpm playwright:install:chromium
-corepack pnpm test:e2e:smoke  # 5 specs quick por defecto + build cacheado
-corepack pnpm test:e2e:smoke:full  # 15 specs criticos + build cacheado (cierre)
-corepack pnpm test:e2e        # funcional: 447 tests / 79 specs observados
-corepack pnpm test:e2e:audit  # manual: 609 tests / 75 specs observados
+corepack pnpm test:e2e:smoke       # smoke quick + build cacheado
+corepack pnpm test:e2e:smoke:full  # smoke completo + build cacheado (cierre)
+corepack pnpm test:e2e             # suite funcional Chromium
+corepack pnpm test:e2e:audit       # auditorías históricas/visuales/performance, manual
 corepack pnpm test:e2e:ci     # sin build, CI usa dist ya compilado
 ```
 
@@ -124,20 +124,15 @@ contrato actual de smoke full.
 Smoke quick cubre: exported-store, storefront-nojs, catalog, assets, interacciones.
 Smoke full agrega: catalog-modern-v2, exporter-sentinel, scale-store,
 ui-sweep-a27..30, release-a11y, nojs-coverage y focus-visible.
-
-Smoke ampliado cubre: catalog-modern-v2, exporter-sentinel, scale-store,
-storefront-nojs, ui-sweep-a27..30, release-a11y, nojs-coverage, focus-visible,
-interacciones, catalog, assets y exported-store.
-No incluye visual sweep (VISUAL_REVIEW_STAGE) ni LCP pesado.
+El smoke full no incluye visual sweep (`VISUAL_REVIEW_STAGE`) ni LCP pesado.
 
 La matriz de release instala Chromium, Firefox y WebKit mediante
-`PLAYWRIGHT_MULTI_BROWSER=1`. Chromium ejecuta las 1.056 pruebas de ambas capas;
-Firefox y WebKit repiten únicamente 13 contratos representativos del storefront
-exportado (`exported-store`, `exporter-sentinel` y `storefront-nojs`) cada uno.
-La matriz observada queda en 1.082 ejecuciones sobre 154 archivos, frente a las
-1.383 ejecuciones anteriores. Los tests visuales se activan sólo con
-`VISUAL_REVIEW_STAGE=...` y escriben en `test-results/visual-review/`, que no se
-versiona.
+`PLAYWRIGHT_MULTI_BROWSER=1`. Chromium ejecuta la cobertura funcional prevista
+por el script de release; Firefox y WebKit repiten el subconjunto explícito del
+storefront exportado definido por la configuración vigente. Los conteos exactos
+se derivan de los specs y scripts actuales, no se fijan en esta guía. Los tests
+visuales se activan sólo con `VISUAL_REVIEW_STAGE=...` y escriben en
+`test-results/visual-review/`, que no se versiona.
 
 ## Política de estabilidad E2E (2026-08-21)
 
@@ -194,7 +189,7 @@ del draft lo requiere (la validación actual exige sólo la marca DEBUG).
 
 ## Qué probar ante cada tipo de cambio
 
-> Validación post-cambio = `check:micro` + `test:e2e:smoke` (~2-3 min). Cierre/CI = `check:full` + `test:e2e:smoke:full` + `test:e2e` funcional. `test:e2e:audit` queda manual/on-demand. `benchmark:export` ya forma parte de `check:full`. Release de navegador (3 browsers) queda on-demand; Node 24.x es el único runtime soportado.
+> Validación post-cambio = `check:micro` + `test:e2e:smoke`. Cierre/CI = `check:full` + `test:e2e:smoke:full` + `test:e2e` funcional. `test:e2e:audit` queda manual/on-demand. `benchmark:export` ya forma parte de `check:full`. Release de navegador (3 browsers) queda on-demand; Node 24.x es el único runtime soportado.
 
 | Cambio | Mínimo (post-cambio) | Cierre recomendado |
 | --- | --- | --- |
@@ -216,8 +211,8 @@ del draft lo requiere (la validación actual exige sólo la marca DEBUG).
 - `test:e2e:release` requiere Node 24.x y los navegadores instalados. La salida
   identifica el runtime validado.
 - El servidor de tests usa loopback; no debe apuntarse a una tienda publicada.
-- Validación rápida post-cambio: `pnpm check:micro && pnpm test:e2e:smoke` (~2-3 min, 3 workers). Cierre: `pnpm check:full && pnpm test:e2e:smoke:full && pnpm test:e2e`. Auditoría pesada: `pnpm test:e2e:audit`.
-- Workers Playwright por defecto 3 (env `PLAYWRIGHT_WORKERS=8` en máquinas 8C/16T). Antes era 8.
+- La matriz canónica de validación post-cambio/cierre está en **Qué probar ante cada tipo de cambio**; no duplicar aquí comandos ni duraciones.
+- Playwright usa 3 workers por defecto; `PLAYWRIGHT_WORKERS=N` permite un override explícito cuando el entorno lo justifica.
 - Para inspeccionar una exportación, usar `pnpm reference:export` o
   `pnpm pilot:export` y revisar el directorio indicado por el script.
 

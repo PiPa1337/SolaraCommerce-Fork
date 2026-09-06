@@ -7,7 +7,7 @@ import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixtur
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 
 // Cada test exporta el sitio y captura pantallas por viewport: con la suite
-// completa corriendo en 8 workers el default de 30s flaquea por contención
+// completa con alta concurrencia el default de 30s flaquea por contención
 // (mismo tratamiento que axe-site y oversize-snapshot).
 test.setTimeout(120_000);
 

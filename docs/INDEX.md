@@ -7,16 +7,19 @@ Los documentos históricos/auditorías cerradas viven en `docs/archive/`.
 | --- | --- | --- |
 | `AGENTS.md` (raíz) | Contrato operativo del repo | Antes de cualquier tarea |
 | `ARCHITECTURE.md` | Capas, flujo de datos, ciclo de vida | Cambios de arquitectura o renderer |
+| `architecture-decisions.md` | ADRs y razones de decisiones estructurales | Entender por qué existe una decisión vigente |
 | `PROJECT_MAP.md` | Mapa archivo → funcionalidad | Localizar dónde editar |
 | `DATA_MODEL.md` | Contrato StoreProjectV2 y migraciones | Tocar schema o persistencia |
 | `TESTING.md` | Gates, budgets y convenciones de test | Correr o agregar tests |
 | `TECHNICAL_DEBT.md` | Deuda abierta/resuelta con evidencia | Antes de reportar un bug conocido |
-| `INTEGRATIONS.md` | Servidor local, hash sha256, migración ZIP | Tocar persistencia o endpoints |
+| `INTEGRATIONS.md` | Servidor local, hash sha256 y compatibilidad legacy ZIP | Tocar persistencia o endpoints |
 | `LOCAL_OPERATION.md` | Ejecución local Node/navegador, backups y layout | Mover, respaldar o diagnosticar una instalación |
 | `DATA_STORAGE_SAFETY.md` | Contrato para reemplazos/migraciones de `proyectos/` | Antes de tocar el árbol comercial en forma masiva |
 | `AI_AGENT_GUIDE.md` | MCP/JSONL, SDK y flujo seguro para IA | Crear o automatizar tiendas |
 | `agent-protocol-v1.schema.json` | Contrato machine-readable del agente | Generar clientes o validadores |
 | `STOREFRONT_V2.md` | Familia visual V2 y compatibilidad V1 | Trabajo de módulos/tema |
+| `LIVE_CANVAS.md` | Contrato y cobertura de Live Canvas | Cambios de bindings o edición visual |
+| `SECURITY.md` | Seguridad del storefront y referencias a superficies relacionadas | Revisiones de seguridad |
 | `backup-and-recovery.md` | Respaldo `.solara.json` y recovery drafts | Flujos de guardado |
 | `product-spec.md` | Spec de producto resumida | Contexto de negocio |
 | `PERPETUAL_PLAN_APP_10X.md` | Plan QA perpetuo activo | Invocación "plan perpetuo" |

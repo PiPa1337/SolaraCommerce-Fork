@@ -1,3 +1,12 @@
+### Borrado físico de categorías por agente (2026-09-06)
+
+**Added**
+
+- El protocolo administrado incorpora `category.delete` con confirmación
+  `ELIMINAR_CATEGORIA`. Sólo elimina categorías ocultas, vacías y sin
+  subcategorías, y expone el borrado en `diff.categories.removed` antes del
+  commit.
+
 ### Runtime único Node/navegador (2026-09-06)
 
 **Removed**
@@ -1765,7 +1774,7 @@ cerrar la documentación; el detalle de pruebas por fix está en el apéndice de
 
 ### Plan: estabilidad E2E + runtime debuggeable (2026-08-21)
 
-- **Plan documentado** en `docs/superpowers/plans/2026-08-21-flaky-e2e-runtime-debuggeable.md`:
+- **Plan histórico** `2026-08-21-flaky-e2e-runtime-debuggeable.md` (ya no está en el árbol activo de documentación):
   7 tasks con criterio de éxito — medición de inestabilidad (script), contención
   vía `tests/e2e/unstable.json`, fix raíz por familia de síntoma, re-inclusión
   verificada (10/10), y runtime dual con esbuild (draft externo + source map,
@@ -3399,8 +3408,7 @@ versión publicada.
 
 ### Auditoría total de la pestaña Preparar (2026-08-10)
 
-Cierre del plan
-[`docs/superpowers/plans/2026-08-10-auditoria-preparar.md`](docs/superpowers/plans/2026-08-10-auditoria-preparar.md):
+Cierre del plan histórico `2026-08-10-auditoria-preparar.md` (archivo ya retirado del árbol activo):
 el flujo guiado (GuidedOverview + modelo `catalog-modern-guidance.ts`) se auditó
 contra el proyecto REAL y contra el gate real de producción (`auditReport` del
 exporter) — el checklist ya no promete bloqueos que el export no tiene. Hallazgo
@@ -3439,8 +3447,7 @@ auditor como única fuente.
 
 ### Auditoría total de la pestaña Resumen (2026-08-10)
 
-Cierre del plan
-[`docs/superpowers/plans/2026-08-10-auditoria-resumen.md`](docs/superpowers/plans/2026-08-10-auditoria-resumen.md):
+Cierre del plan histórico `2026-08-10-auditoria-resumen.md` (archivo ya retirado del árbol activo):
 ~40 controles del tab Resumen auditados con el contrato de 4 capas —
 funcional / auto-feedback / datos / **utilidad** (el control debe producir un
 cambio visible en el preview Y en el sitio exportado). Hallazgo central: los
@@ -3473,8 +3480,7 @@ editor.
 
 ### Auditoría total de la pestaña Tema (2026-08-10)
 
-Cierre del plan
-[`docs/superpowers/plans/2026-08-10-auditoria-tema.md`](docs/superpowers/plans/2026-08-10-auditoria-tema.md):
+Cierre del plan histórico `2026-08-10-auditoria-tema.md` (archivo ya retirado del árbol activo):
 ~40 controles auditados con el contrato de 4 capas — funcional /
 auto-feedback / datos / **utilidad** (el control debe producir un cambio
 visible en el preview Y en el sitio exportado). Hallazgo central: la plantilla
@@ -3510,8 +3516,7 @@ vars del tema (U2). Dark mode queda deshabilitado por decisión documentada: los
 
 ### Barrido total de controles (2026-08-10)
 
-Cierre del plan
-[`docs/superpowers/plans/2026-08-10-barrido-total-controles.md`](docs/superpowers/plans/2026-08-10-barrido-total-controles.md):
+Cierre del plan histórico `2026-08-10-barrido-total-controles.md` (archivo ya retirado del árbol activo):
 30 agentes (bins A1-A30) auditaron ~300 controles de Studio y storefront con el
 contrato de 3 capas — (1) click → efecto real, (2) auto-feedback del control
 (estado seleccionado/activo/expandido), (3) contrato de datos payload →
@@ -3793,8 +3798,8 @@ en 100 KiB.
 
 ### Editor UI/UX (2026-08-07)
 
-Auditoría y mejora integral del editor (plan
-[`docs/superpowers/plans/2026-08-07-editor-uiux.md`](docs/superpowers/plans/2026-08-07-editor-uiux.md),
+Auditoría y mejora integral del editor (plan histórico
+`2026-08-07-editor-uiux.md`, ya retirado del árbol activo,
 olas 0-4): consola limpia en todos los flujos, estados coherentes, responsive,
 accesibilidad, rendimiento, workers y persistencia verificados con specs E2E
 nuevos; sistema de componentes unificado; dashboard con acciones y atajos;
@@ -4009,8 +4014,8 @@ todos sus flujos. El contrato de la tienda (`StoreProjectV2Schema`,
 
 ### Resolución de deuda técnica (2026-08-07)
 
-Cierre del plan de deuda: once tasks de implementación
-(`docs/superpowers/plans/2026-08-07-deuda-tecnica.md`). El contrato de la
+Cierre del plan histórico de deuda `2026-08-07-deuda-tecnica.md`: once tasks de
+implementación. El contrato de la
 tienda no cambió; las filas correspondientes de `docs/TECHNICAL_DEBT.md`
 quedaron marcadas como resueltas.
 

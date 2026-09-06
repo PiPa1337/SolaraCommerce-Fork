@@ -55,6 +55,70 @@ describe("jerarquía de categorías en el dominio", () => {
     expect(() => StoreProjectV2Schema.parse(edited)).not.toThrow();
   });
 
+  it("elimina físicamente sólo categorías ocultas, vacías y sin subcategorías", () => {
+    const root = reduceProject(catalogModernCleanStore, {
+      type: "category.create",
+      category: {
+        id: "category-delete-root",
+        slug: "delete-root",
+        title: "Raíz para borrar",
+        description: "",
+        productIds: [],
+      },
+      at: "2026-09-06T07:00:00.000Z",
+    });
+
+    expect(() =>
+      reduceProject(root, {
+        type: "category.delete",
+        categoryId: "category-delete-root",
+        at: "2026-09-06T07:01:00.000Z",
+      }),
+    ).toThrow(/oculta/);
+
+    const hiddenRoot = reduceProject(root, {
+      type: "category.update",
+      categoryId: "category-delete-root",
+      changes: { status: "hidden" },
+      at: "2026-09-06T07:02:00.000Z",
+    });
+    const withChild = reduceProject(hiddenRoot, {
+      type: "category.create",
+      category: {
+        id: "category-delete-child",
+        slug: "delete-child",
+        title: "Hija para borrar",
+        description: "",
+        parentId: "category-delete-root",
+        status: "hidden",
+        productIds: [],
+      },
+      at: "2026-09-06T07:03:00.000Z",
+    });
+
+    expect(() =>
+      reduceProject(withChild, {
+        type: "category.delete",
+        categoryId: "category-delete-root",
+        at: "2026-09-06T07:04:00.000Z",
+      }),
+    ).toThrow(/subcategorías/);
+
+    const withoutChild = reduceProject(withChild, {
+      type: "category.delete",
+      categoryId: "category-delete-child",
+      at: "2026-09-06T07:05:00.000Z",
+    });
+    const deleted = reduceProject(withoutChild, {
+      type: "category.delete",
+      categoryId: "category-delete-root",
+      at: "2026-09-06T07:06:00.000Z",
+    });
+
+    expect(deleted.categories).toHaveLength(0);
+    expect(() => StoreProjectV2Schema.parse(deleted)).not.toThrow();
+  });
+
   it("rechaza slugs públicos reservados y una tercera profundidad", () => {
     const root = {
       id: "category-root" as const,

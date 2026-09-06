@@ -1,5 +1,6 @@
 /**
- * Visión profunda del sitio exportado: captura las 11 rutas en 8 viewports
+ * Visión profunda del sitio exportado: captura las rutas en todos los viewports
+ * declarados en VIEWPORTS
  * más estados interactivos (hover, menú móvil, drawer, filtros).
  * Herramienta de diagnóstico manual — no es gate de CI.
  */
@@ -124,7 +125,7 @@ for (const viewport of VIEWPORTS) {
     test.use({ viewport: { width: viewport.width, height: viewport.height } });
 
     test("captura de rutas", async ({ page }, testInfo) => {
-      // Cada viewport/test necesita su propio directorio: con ocho workers
+      // Cada viewport/test necesita su propio directorio: con workers en paralelo
       // otros barridos visuales pueden capturar las mismas rutas al mismo
       // tiempo. Las capturas diagnósticas no deben competir con screenshots
       // versionados del repositorio.

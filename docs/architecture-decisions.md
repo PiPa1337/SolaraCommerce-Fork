@@ -26,6 +26,10 @@ La exportación completa se regenera desde un snapshot inmutable. Se considerar�
 caché incremental sólo si 1.000 productos tardan más de cinco segundos sin contar
 procesamiento de imágenes.
 
+Ese valor es un umbral para decidir una optimización de caché. No define el
+máximo de productos soportado por el producto ni sustituye la especificación de
+catálogo vigente.
+
 ## ADR-006: movimiento progresivo
 
 Las zonas animables pertenecen al contrato del módulo. Se usan CSS, Web Animations

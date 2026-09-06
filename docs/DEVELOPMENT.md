@@ -40,7 +40,7 @@ packages/
   storefront-runtime/ JS progresivo del sitio exportado (carrito, variantes...)
   site-optimizer/    Auditoría pura de SEO, media, Merchant y contexto IA
 scripts/             Gates, budgets, benchmarks, preflight, release, launcher
-tests/e2e/           Playwright specs (~131 archivos)
+tests/e2e/           Playwright funcional, smoke, auditorías y visión
 docs/                Documentación (este directorio)
 ```
 
@@ -106,15 +106,18 @@ extender el enum Y el switch en `buildCatalogModernProject()`.
 ## Comandos oficiales
 
 ```bash
-# Iteración diaria (~80s, 6 gates en paralelo)
-corepack pnpm check:quick
-
-# Cierre o CI (~3-4 min)
-corepack pnpm check:full
+# Iteración post-cambio
+corepack pnpm check:micro
 corepack pnpm test:e2e:smoke
+
+# Cierre o cambio amplio
+corepack pnpm check:full
+corepack pnpm test:e2e:smoke:full
+corepack pnpm test:e2e
 
 # Release completo
 corepack pnpm release   # check:full + smoke full + E2E release
 ```
 
-Ver `docs/TESTING.md` para la lista completa de gates y budgets.
+`docs/TESTING.md` es la autoridad para la matriz vigente de gates, workers,
+budgets y suites on-demand.

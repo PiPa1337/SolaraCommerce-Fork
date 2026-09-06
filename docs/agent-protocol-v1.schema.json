@@ -221,6 +221,15 @@
         },
         {
           "type": "object",
+          "required": ["type", "categoryId", "confirmation"],
+          "properties": {
+            "type": { "const": "category.delete" },
+            "categoryId": { "$ref": "#/$defs/id" },
+            "confirmation": { "const": "ELIMINAR_CATEGORIA" }
+          }
+        },
+        {
+          "type": "object",
           "required": ["type", "slug", "title"],
           "properties": {
             "type": { "const": "collection.create" },

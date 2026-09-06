@@ -122,6 +122,7 @@ export type DomainCommand =
 export type CategoryCommand =
   | (CommandMetadata & { type: "category.create"; category: Category })
   | (CommandMetadata & { type: "category.update"; categoryId: CategoryId; changes: CategoryPatch })
+  | (CommandMetadata & { type: "category.delete"; categoryId: CategoryId })
   | (CommandMetadata & {
       type: "category.reparent";
       categoryId: CategoryId;
@@ -449,6 +450,26 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
           categories: project.categories.map((item) =>
             item.id === category.id ? { ...candidate, productIds: item.productIds } : item,
           ),
+          updatedAt: at,
+        }),
+      );
+    }
+    case "category.delete": {
+      const category = project.categories.find((candidate) => candidate.id === command.categoryId);
+      if (!category) throw new Error(`La categoría no existe: ${command.categoryId}.`);
+      if (category.status !== "hidden") {
+        throw new Error(`La categoría debe estar oculta antes de eliminarla: ${command.categoryId}.`);
+      }
+      if (project.categories.some((candidate) => candidate.parentId === category.id)) {
+        throw new Error(`La categoría tiene subcategorías: ${command.categoryId}.`);
+      }
+      if (project.products.some((product) => product.categoryIds.includes(category.id))) {
+        throw new Error(`La categoría todavía tiene productos asignados: ${command.categoryId}.`);
+      }
+      return parseProject(
+        synchronizeAssignments({
+          ...project,
+          categories: project.categories.filter((candidate) => candidate.id !== category.id),
           updatedAt: at,
         }),
       );

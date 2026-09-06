@@ -234,14 +234,18 @@ limpiarse sin tocar los proyectos guardados.
 ## Verificación
 
 ```bash
-corepack pnpm check:repository
-corepack pnpm check
-corepack pnpm build
+# Post-cambio
+corepack pnpm check:micro
+corepack pnpm test:e2e:smoke
+
+# Cierre
+corepack pnpm check:full
+corepack pnpm test:e2e:smoke:full
 corepack pnpm test:e2e
-corepack pnpm benchmark:export
-corepack pnpm check:budgets
-corepack pnpm pilot:preflight
 ```
+
+La matriz proporcional completa y los gates on-demand viven en
+[`docs/TESTING.md`](docs/TESTING.md).
 
 Comandos adicionales útiles:
 
@@ -273,10 +277,11 @@ en el sitio público.
 - **Falla el gate de release:** ejecutalo con Node 24.x y los tres navegadores;
   es el mismo runtime que usa CI.
 
-El benchmark exporta `catalog-modern-v2` con 2.000 productos y falla si supera
-30 segundos. Playwright usa Chromium para el bucle local; la matriz completa y
-Lighthouse se reservan para el gate de release. El gate release requiere Node
-24.x (igual que CI) y ejecuta Chromium, Firefox y WebKit.
+El benchmark exporta `catalog-modern-v2` con 2.000 productos y tiene presupuestos
+de 30 segundos y 48 MiB de archivos; fuera de CI puede operar en modo advisory.
+Playwright usa Chromium para el bucle local. La matriz multinavegador pertenece
+al gate automatizado de release; Lighthouse se ejecuta como operación posterior
+del release candidate. Node 24.x es el runtime soportado para CI/release.
 
 Los tests de Studio usan una IndexedDB en memoria para comprobar guardado,
 reapertura, duplicación, archivo, restauración y ráfagas de autosave sin depender
@@ -290,7 +295,7 @@ ejecuta sobre Windows, Node 24 y pnpm 10.15.1:
 1. instalación con lockfile congelado;
 2. revisión de secretos y archivos mayores a 10 MB;
 3. formato, TypeScript y unit tests;
-4. build y benchmark de 1.000 productos;
+4. build y benchmark de 2.000 productos;
 5. Playwright Chromium sin reconstruir Studio.
 
 Si Playwright falla, el workflow conserva durante siete días el reporte HTML,
@@ -356,17 +361,19 @@ La pantalla de Recursos muestra el uso de cuota de IndexedDB y sólo permite
 limpiar la caché regenerable de imágenes. El exportador genera `_headers` con
 CSP, Referrer-Policy, Permissions-Policy y protección contra framing.
 
-El gate incluye `corepack pnpm check:budgets`, que bloquea bundles iniciales de
-Studio por encima de 700 KiB crudos de JavaScript o 100 KiB crudos de CSS. La
-matriz multinavegador y Lighthouse se ejecutan en el gate de release, no en
-cada cambio local.
+El gate incluye `corepack pnpm check:budgets`; los límites ejecutables actuales
+son 720 KiB crudos de JavaScript y 135 KiB crudos de CSS para el bundle inicial
+de Studio. Los valores exactos viven en `scripts/check-budgets.mjs` y se resumen
+en [`docs/GUARDIANS.md`](docs/GUARDIANS.md). La matriz multinavegador y Lighthouse
+no se ejecutan en cada cambio local.
 
 ## Release candidate (Fase 9)
 
 El bucle local ejecuta Chromium. `corepack pnpm test:e2e:release` activa la
 matriz Chromium, Firefox y WebKit; el workflow separado se dispara manualmente
-o con tags `v*` y conserva sus diagnósticos durante 14 días. `release:manifest`
-genera metadata del commit y artefactos en `.release/`, fuera del repositorio.
+o con tags `v*`. La política de artefactos/retención pertenece a
+`.github/workflows/release.yml`. `release:manifest` genera metadata del commit y
+artefactos en `.release/`, fuera del repositorio.
 
 La auditoría Lighthouse usa `.lighthouserc.json` contra la carpeta exportada de
 producción servida localmente o en el dominio piloto. Se ejecuta con
@@ -402,10 +409,10 @@ El contexto para agentes es una ayuda de descubrimiento, no un reemplazo del
 SEO fundamental: el contenido HTML sigue siendo rastreable, semantico y util
 sin JavaScript.
 
-`corepack pnpm check:budgets` tambien comprueba el runtime publico: JavaScript
-<= 52 KiB crudos (medido ~48,9 KiB) y CSS <= 8 KiB crudos (medido ~7,3 KiB),
-ademas de los limites
-del bundle inicial de Studio.
+Los guardianes del sitio público comprueban JavaScript de runtime ≤80 KiB y CSS
+exportado gzip ≤32 KiB; la familia V2 tiene además un límite de CSS crudo de
+212 KiB. Los límites exactos y su script propietario están en
+[`docs/GUARDIANS.md`](docs/GUARDIANS.md).
 
 ## Piloto real (Fase 10)
 

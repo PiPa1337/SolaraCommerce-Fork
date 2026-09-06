@@ -863,6 +863,95 @@ describe("control nativo del agente", () => {
     }
   });
 
+  it("elimina físicamente categorías ocultas y vacías mediante category.delete", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-agent-category-delete-"));
+    try {
+      const storage = createLocalProjectStorage({
+        applicationRoot: root,
+        projectsRoot: join(root, "proyectos"),
+        stagingRoot: join(root, ".solara-runtime", "transactions"),
+      });
+      const controller = createAgentController({ storage, applicationRoot: root });
+      const storeId = "store-category-delete";
+      const categoryId = "category-delete-test";
+      const activeCategoryId = "category-delete-active";
+      const initial = await controller.createPlan({
+        idempotencyKey: "agent-category-delete-initial-001",
+        operations: [
+          {
+            type: "store.create",
+            storeId,
+            name: "Borrado de categorías",
+            slug: "borrado-de-categorias",
+            source: { kind: "clean" },
+          },
+          {
+            type: "category.create",
+            categoryId,
+            slug: "categoria-delete-test",
+            title: "Categoría a eliminar",
+          },
+          {
+            type: "category.create",
+            categoryId: activeCategoryId,
+            slug: "categoria-delete-activa",
+            title: "Categoría activa",
+          },
+          {
+            type: "category.setStatus",
+            categoryId,
+            status: "hidden",
+          },
+        ],
+      });
+      const initialReceipt = await controller.commitPlan({
+        planId: initial.planId,
+        idempotencyKey: "agent-category-delete-initial-001",
+      });
+
+      const protocol = await controller.describeProtocol({});
+      expect(protocol.operationTypes).toContain("category.delete");
+      await expect(
+        controller.createPlan({
+          storeId,
+          baseVersion: initialReceipt.version,
+          operations: [
+            {
+              type: "category.delete",
+              categoryId: activeCategoryId,
+              confirmation: "ELIMINAR_CATEGORIA",
+            },
+          ],
+        }),
+      ).rejects.toMatchObject({ code: "CATEGORY_DELETE_REQUIRES_HIDDEN" });
+
+      const plan = await controller.createPlan({
+        storeId,
+        baseVersion: initialReceipt.version,
+        idempotencyKey: "agent-category-delete-001",
+        operations: [
+          {
+            type: "category.delete",
+            categoryId,
+            confirmation: "ELIMINAR_CATEGORIA",
+          },
+        ],
+      });
+      expect(plan.diff.categories.removed).toContain(categoryId);
+      await controller.commitPlan({
+        planId: plan.planId,
+        idempotencyKey: "agent-category-delete-001",
+      });
+
+      const current = await storage.readCurrent(storeId);
+      if (!current) throw new Error("Falta el respaldo del test.");
+      const project = readProjectArchive(Buffer.from(current.bytes).toString("utf8"));
+      expect(project.categories.map((category) => category.id)).toEqual([activeCategoryId]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("reporta blockingIssues en plans.create para productos sin imagen", async () => {
     const root = await mkdtemp(join(tmpdir(), "solara-agent-blocking-"));
     try {

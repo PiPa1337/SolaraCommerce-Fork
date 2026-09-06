@@ -44,6 +44,7 @@ import {
   readProjectArchive,
 } from "@solara/exporter";
 import {
+  type Category,
   CategorySchema,
   CollectionSchema,
   type ImageAsset,
@@ -837,6 +838,7 @@ export class AgentController {
         "category.create",
         "category.update",
         "category.setStatus",
+        "category.delete",
         "collection.create",
         "collection.update",
         "product.create",
@@ -864,6 +866,12 @@ export class AgentController {
         protectedDemosWritable: false,
       },
       operationSchemas: {
+        "category.delete": {
+          confirmation: "ELIMINAR_CATEGORIA",
+          requiresStatus: "hidden",
+          requiresEmpty: true,
+          requiresNoChildren: true,
+        },
         "product.setStatus": { status: ["active", "hidden", "archived"] },
         "product.delete": {
           confirmation: "ELIMINAR_PRODUCTO",
@@ -2526,6 +2534,36 @@ export class AgentController {
             },
             at,
           );
+          break;
+        }
+        case "category.delete": {
+          const category = project.categories.find(
+            (candidate) => candidate.id === operation.categoryId,
+          );
+          if (!category) fail("CATEGORY_NOT_FOUND", `No existe la categoría ${operation.categoryId}.`);
+          if (category.status !== "hidden") {
+            fail(
+              "CATEGORY_DELETE_REQUIRES_HIDDEN",
+              `La categoría ${operation.categoryId} debe estar oculta antes de eliminarla.`,
+            );
+          }
+          if (project.categories.some((candidate) => candidate.parentId === category.id)) {
+            fail(
+              "CATEGORY_DELETE_HAS_CHILDREN",
+              `La categoría ${operation.categoryId} todavía tiene subcategorías.`,
+            );
+          }
+          if (project.products.some((product) => product.categoryIds.includes(category.id))) {
+            fail(
+              "CATEGORY_DELETE_NOT_EMPTY",
+              `La categoría ${operation.categoryId} todavía tiene productos asignados.`,
+            );
+          }
+          project = reduceProject(project, {
+            type: "category.delete",
+            categoryId: operation.categoryId as Category["id"],
+            at,
+          });
           break;
         }
         case "collection.update": {

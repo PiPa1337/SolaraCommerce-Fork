@@ -181,18 +181,18 @@ Desde la raíz:
 ```bash
 corepack pnpm install --frozen-lockfile
 corepack pnpm dev
-corepack pnpm check:micro         # post-cambio: diff + repository + typecheck/test afectados (<3 min)
+corepack pnpm check:micro         # post-cambio: diff + repository + typecheck/test afectados
 corepack pnpm check:quick        # cierre o cambio amplio (todos los paquetes, concurrencia acotada)
-corepack pnpm test:e2e:smoke   # post-cambio: 5 specs quick con build cacheado (~20-40s)
-corepack pnpm test:e2e:smoke:full  # cierre o cambio en exporter/storefront/Preview (15 specs)
+corepack pnpm test:e2e:smoke   # post-cambio: smoke quick con build cacheado
+corepack pnpm test:e2e:smoke:full  # cierre o cambio en exporter/storefront/Preview
 corepack pnpm check             # alias de check:fast
 corepack pnpm check:full        # tests extendidos + gates lentos + build/post-build, cierre/CI
 corepack pnpm build
 corepack pnpm benchmark:export
 corepack pnpm test:extended     # fuzz + stress + QA pesados; incluido en check:full
 corepack pnpm test:diagnostic   # diagnóstico manual de placeholders
-corepack pnpm test:e2e          # 85 specs funcionales (482 tests observados)
-corepack pnpm test:e2e:audit    # 69 specs históricos/visuales/performance, manual
+corepack pnpm test:e2e          # suite funcional Chromium
+corepack pnpm test:e2e:audit    # históricos/visuales/performance, manual
 corepack pnpm test:e2e:release       # Node 24 + navegadores instalados (solo on-demand)
 ```
 
@@ -228,7 +228,7 @@ La guía de operación local está en
 - [ ] Mantener `catalogModernStore`, `catalogScaleStore` y la plantilla limpia
       coherentes cuando corresponda.
 - [ ] Agregar primero una prueba del comportamiento nuevo o del bug.
-- [ ] Ejecutar el loop post-cambio (rápido, <3 min): `corepack pnpm check:micro` (diff + repository + typecheck/test diarios solo afectados) y `corepack pnpm test:e2e:smoke` (5 specs quick por defecto). `check:quick` + smoke full solo en cierre o si el diff toca `packages/exporter/src/index.ts`, `storefront-runtime`, `modules` o `Preview.tsx`. Cierre: `check:full` (incluye `test:extended` + post-build) + `test:e2e:smoke:full` + `test:e2e` funcional. `test:e2e:audit` y `test:e2e:release` quedan on-demand (Node 24).
+- [ ] Ejecutar el loop post-cambio definido en [`docs/TESTING.md`](docs/TESTING.md): `corepack pnpm check:micro` + `corepack pnpm test:e2e:smoke`. Usar `check:quick` + smoke full sólo en cierre o si el diff toca `packages/exporter/src/index.ts`, `storefront-runtime`, `modules` o `Preview.tsx`. Cierre: `check:full` + `test:e2e:smoke:full` + `test:e2e` funcional. `test:e2e:audit` y `test:e2e:release` quedan on-demand (Node 24).
 - [ ] Revisar HTML inicial, responsive, teclado, reduced motion y no-JavaScript si
       se toca storefront.
 - [ ] Ejecutar `git diff --check` y `corepack pnpm check:repository`.

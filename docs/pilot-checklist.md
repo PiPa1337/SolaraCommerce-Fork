@@ -6,12 +6,9 @@
 
   ```bash
   corepack pnpm install --frozen-lockfile
-  corepack pnpm check
-  corepack pnpm build
-  corepack pnpm check:budgets
-  corepack pnpm benchmark:export
+  corepack pnpm playwright:install:release
+  corepack pnpm release
   corepack pnpm pilot:preflight
-  corepack pnpm reference:export
   ```
 
   Para validar una tienda real desde su respaldo editable, en PowerShell usar:
@@ -27,7 +24,8 @@
   set "SOLARA_PILOT_PROJECT_ARCHIVE=C:\ruta\tienda.solara.json"
   corepack pnpm pilot:preflight
   ```
-  Sin esa variable el preflight usa el fixture de referencia.
+  Sin esa variable, `pilot:preflight` usa el fixture de referencia; ese resultado
+  valida el pipeline, no una tienda comercial real.
 
   Para generar el paquete production de esa misma tienda en PowerShell:
 
@@ -35,8 +33,9 @@
   corepack pnpm pilot:export
   ```
 
-  El comando deja `.release/pilot-site/` listo para cargar en el hosting
-  elegido.
+  Con `SOLARA_PILOT_PROJECT_ARCHIVE` definido, `pilot:export` genera en
+  `.release/pilot-site/` una exportación production de ese respaldo para revisar
+  el candidato. Sin la variable, la carpeta corresponde al fixture de referencia.
 
 - Usar exportación `production` con dominio HTTPS definitivo.
 - Resolver todos los errores críticos del panel SEO.
@@ -49,7 +48,8 @@
 
 1. Exportar la tienda elegida en modo `production` desde Studio y publicar la
    carpeta `proyectos/<tienda>/sitios/<versión>/` sin modificar sus archivos.
-   `.release/pilot-site/` del preflight sólo es el fixture de referencia.
+   `.release/pilot-site/` es una salida de validación del flujo `pilot:*`; no
+   sustituye la versión confirmada en `proyectos/` que se decidió publicar.
 2. Verificar el dominio en Search Console.
 3. Enviar `/sitemap.xml` e inspeccionar home, categoría, producto y variante.
 4. Crear una subcuenta Merchant para el dominio.

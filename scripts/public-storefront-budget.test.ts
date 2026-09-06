@@ -36,8 +36,8 @@ test("mantiene el presupuesto de la salida pública optimizada", () => {
   // ~1.6 KB); el css incluye los estilos generados por página del sitio exportado.
   expect(cssBytes).toBeGreaterThan(0);
   expect(javascriptBytes).toBeGreaterThan(0);
-  // Task 9: skeletons de búsqueda, contador visible, título con query y guards del índice suman ~450 B; tope 68 KiB autorizado por el brief.
-  // 2026-09-04: checkout WhatsApp multiparte (~8,7 KB reales); tope 80 KiB con margen ~4 KiB.
+  // Task 9 agregó skeletons, contador visible, título con query y guards del índice.
+  // Desde 2026-09-04 el checkout WhatsApp multiparte deja el guard vigente en 80 KiB.
   expect(cssBytes).toBeLessThanOrEqual(780 * 1024);
   expect(javascriptBytes).toBeLessThanOrEqual(80 * 1024);
   expect(html).not.toContain("data:image/");
@@ -65,7 +65,8 @@ test("mantiene la foundation V2 dentro de un presupuesto público explícito", (
   // producto y categoría, entrada estilo hero de reseñas/novedades, "Ver todo
   // el catálogo" animado y footer con "Hecho con ❤️ en solara.com.ar"), con
   // margen para la iteración visual V2 en curso sin tocar los gates del
-  // runtime (56 KiB JS / 8 KiB CSS) ni el tope público de V1 (780 KiB).
+  // runtime (80 KiB JS; el CSS exportado tiene además guard gzip de 32 KiB)
+  // ni el tope público genérico de CSS (780 KiB).
   // 2026-08-31: medición real 213.346 B (208 KiB, gzip 27 KiB) tras aislar
   // fixtures/styles/fonts en chunks del Studio. El CSS público incluye
   // STORE_BASE + catalog-modern + catalog-modern-v2 + STORE_THEME_TOKEN +
@@ -77,7 +78,7 @@ test("mantiene la foundation V2 dentro de un presupuesto público explícito", (
   expect(cssBytes).toBeGreaterThan(0);
   expect(javascriptBytes).toBeGreaterThan(0);
   expect(cssBytes).toBeLessThanOrEqual(212 * 1024);
-  // Task 9: skeletons de búsqueda, contador visible, título con query y guards del índice suman ~450 B; tope 68 KiB autorizado por el brief.
-  // 2026-09-04: checkout WhatsApp multiparte (~8,7 KB reales); tope 80 KiB con margen ~4 KiB.
+  // Task 9 agregó skeletons, contador visible, título con query y guards del índice.
+  // Desde 2026-09-04 el checkout WhatsApp multiparte deja el guard vigente en 80 KiB.
   expect(javascriptBytes).toBeLessThanOrEqual(80 * 1024);
 });

@@ -29,16 +29,20 @@ Simulan condiciones hostiles o entradas maliciosas.
 
 | Script | Qué valida | Límite |
 | --- | --- | --- |
-| `check-budgets.mjs` | Studio JS/CSS iniciales | 720/112 KiB |
-| `check-image-budget.mjs` | PNG >200KB en fixtures | Prohibido |
-| `public-storefront-budget.test.ts` | CSS V2 exportado ≤180 KiB, JS runtime ≤64 KiB | Bloqueante en CI |
+| `check-budgets.mjs` | Studio JS/CSS iniciales | JS ≤720 KiB; CSS ≤135 KiB |
+| `check-image-budget.mjs` | PNG en `apps/studio/public/fixtures` | ≤200 KiB por archivo |
+| `public-storefront-budget.test.ts` | CSS público genérico, CSS V2 y JS runtime | CSS genérico ≤780 KiB; CSS V2 ≤212 KiB; JS ≤80 KiB |
+| `storefront-runtime-budget.test.ts` | Runtime público y CSS exportado comprimido | JS ≤80 KiB; CSS gzip ≤32 KiB |
+
+Los límites exactos son autoridad de los scripts anteriores; este cuadro sólo
+resume el contrato vigente para navegación humana.
 
 ## Guardianes de seguridad
 
 | Spec | Qué valida |
 | --- | --- |
-| `security-redteam.test.ts` | Path traversal, XSS en settings, CSV formula injection, auth de handler |
-| `chaos-storage.test.mjs` | Disco lleno, locks transitorios, staging huérfano |
+| `packages/exporter/src/security-redteam.test.ts` | Path traversal, XSS en settings, CSV formula injection, auth de handler |
+| `packages/exporter/src/chaos-storage.test.mjs` | Disco lleno, locks transitorios, staging huérfano |
 
 
 ## Specs de visión (diagnóstico manual)
@@ -47,5 +51,5 @@ No son gate. Generan capturas para inspección visual.
 
 | Spec | Captura | Output |
 | --- | --- | --- |
-| `storefront-deep-vision.spec.ts` | 11 rutas × 19 viewports + estados interactivos | `screenshots/storefront-vision/` (~209 PNG) |
-| `studio-vision.spec.ts` | 9 pantallas × 4 viewports del editor | `screenshots/studio-vision/` |
+| `storefront-deep-vision.spec.ts` | Rutas y viewports declarados por el propio spec + estados interactivos | `testInfo.outputPath("storefront-vision")` dentro del output de Playwright |
+| `studio-vision.spec.ts` | Dashboard, tabs del Studio y galería en los viewports declarados por el spec | `test-results/studio-vision/` |

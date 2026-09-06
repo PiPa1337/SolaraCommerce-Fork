@@ -160,6 +160,11 @@ export const AgentOperationSchema = z.discriminatedUnion("type", [
     status: z.enum(["active", "hidden"]),
   }),
   z.object({
+    type: z.literal("category.delete"),
+    categoryId: SafeIdSchema,
+    confirmation: z.literal("ELIMINAR_CATEGORIA"),
+  }),
+  z.object({
     type: z.literal("collection.create"),
     collectionId: SafeIdSchema.optional(),
     slug: SlugSchema,

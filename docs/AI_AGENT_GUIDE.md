@@ -141,7 +141,7 @@ original.
 El conjunto es cerrado: `store.create`, `store.updateIdentity`,
 `store.updateSeo`, `store.updateWhatsapp`, `store.updateNavigation`,
 `store.updatePublicCopy`, `store.updatePolicies`, `store.updateLegalProfile`,
-`category.create`, `category.update`, `category.setStatus`, `collection.create`,
+`category.create`, `category.update`, `category.setStatus`, `category.delete`, `collection.create`,
 `collection.update`, `product.create`, `product.update`, `product.setStatus`,
 `product.delete`, `store.archive`, `section.updateSettings`, `asset.attach`,
 `asset.remove`, `product.createBatch`, `theme.applyPreset` y
@@ -161,6 +161,11 @@ público sin archivarlo, usar `hidden`.
 confirmación literal `"ELIMINAR_PRODUCTO"`. Sólo acepta productos que ya estén
 en estado `archived`; las referencias derivadas de categorías y colecciones se
 recalculan durante la operación.
+
+`category.delete` elimina físicamente una categoría y exige la confirmación
+literal `"ELIMINAR_CATEGORIA"`. Sólo acepta categorías `hidden`, sin productos
+asignados y sin subcategorías; el diff del plan informa su id en
+`categories.removed` antes del commit.
 
 ### Archivar y restaurar tiendas
 
