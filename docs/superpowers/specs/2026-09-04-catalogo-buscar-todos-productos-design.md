@@ -129,7 +129,7 @@ client-side. Con `?q=` el comportamiento actual no cambia.
 
 ## Documentación
 
-- `docs/FULL_REFERENCE.md`: documentar `?pagina=` en la tabla de rutas.
+- `docs/STOREFRONT_ARCHITECTURE.md`: documentar `?pagina=` junto al comportamiento de búsqueda.
 - `CHANGELOG.md`: entrada de la mejora.
 - `docs/TECHNICAL_DEBT.md`: actualizar la fila del fallback `/categorias/`
   (resuelto) y registrar el follow-up de debounce.

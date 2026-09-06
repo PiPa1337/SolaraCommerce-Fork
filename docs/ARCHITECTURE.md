@@ -37,8 +37,8 @@ por `Abrir SolaraCommerce.cmd`; su API está protegida por una cookie de sesión
 queda limitada a `127.0.0.1`.
 
 El modo agente comparte el mismo servicio de almacenamiento y las mismas
-transacciones que Studio. Puede exponerse mediante el transporte Electron
-empaquetado, cuyo entry de consola no crea BrowserWindow ni puerto HTTP, y sólo
+transacciones que Studio. `SolaraCommerce-Agent.cmd` inicia directamente el
+agente Node por JSONL o MCP stdio, sin abrir navegador ni puerto HTTP, y sólo
 expone operaciones cerradas de `@solara/agent-control`. `plans.create`
   persiste un snapshot y adquiere un lock con TTL; devuelve un diff acotado para
   revisión. `plans.commit` vuelve a leer la versión del disco y delega en la misma

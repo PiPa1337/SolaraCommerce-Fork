@@ -75,19 +75,17 @@ productos, jerarquía y 60 variantes; el benchmark de core exporta
 ### Auditoría read-only de RM Descartables
 
 La auditoría integral de rendimiento usa el snapshot actual de RM Descartables
-como fixture externo y no guarda, migra, exporta ni modifica la tienda original.
-El loader sólo abre `manifest.json` y `manifest.current.projectPath`; la carpeta
-temporal del portable contiene únicamente una copia del runtime, el manifest y
-ese snapshot. Los reportes machine-readable se escriben en
+como fuente externa de sólo lectura y no guarda, migra, exporta ni modifica la
+tienda original. El loader sólo abre `manifest.json` y
+`manifest.current.projectPath`; los reportes machine-readable se escriben en
 `test-results/performance/rm-descartables/`, que no se versiona.
 
 ```powershell
 corepack pnpm audit:performance:rm:readonly  # mock administrado writable:false
 corepack pnpm audit:performance:rm:node      # Node/exporter, 1 fría + 5 calientes
 corepack pnpm audit:performance:rm:browser   # Studio + storefront, Chromium aislado
-corepack pnpm audit:performance:rm:portable  # portable en carpeta temporal aislada
 corepack pnpm audit:performance:rm:merge     # agrega las capas en report.json
-corepack pnpm audit:performance:rm           # build + todas las capas + merge
+corepack pnpm audit:performance:rm           # build + capas actuales + merge
 ```
 
 La auditoría mide rutas del preview y storefront, feeds, bundles, recursos,
@@ -196,7 +194,7 @@ del draft lo requiere (la validación actual exige sólo la marca DEBUG).
 
 ## Qué probar ante cada tipo de cambio
 
-> Validación post-cambio = `check:micro` + `test:e2e:smoke` (~2-3 min). Cierre/CI = `check:full` + `test:e2e:smoke:full` + `test:e2e` funcional. `test:e2e:audit` queda manual/on-demand. `benchmark:export` ya forma parte de `check:full`. Release (3 browsers + desktop:package) solo on-demand; Node 24.x es el único runtime soportado.
+> Validación post-cambio = `check:micro` + `test:e2e:smoke` (~2-3 min). Cierre/CI = `check:full` + `test:e2e:smoke:full` + `test:e2e` funcional. `test:e2e:audit` queda manual/on-demand. `benchmark:export` ya forma parte de `check:full`. Release de navegador (3 browsers) queda on-demand; Node 24.x es el único runtime soportado.
 
 | Cambio | Mínimo (post-cambio) | Cierre recomendado |
 | --- | --- | --- |
@@ -267,43 +265,16 @@ simulación OS real (disco lleno y permisos a nivel de volumen) queda reservada
 para un job Windows de release, donde puede aislarse el volumen temporal sin
 tocar proyectos confirmados.
 
-## Portable Windows
+## Runtime local Windows
 
-Estas suites validan artefactos Electron generados y copias temporales aisladas.
-Nunca deben usar, sembrar ni modificar el `proyectos/` raíz, que contiene la data
-comercial activa de `Abrir SolaraCommerce.cmd`.
+Los tests del servidor, storage, layout y agente deben usar directorios
+temporales o fixtures explícitas. Nunca deben sembrar, reemplazar ni modificar el
+`proyectos/` raíz, que contiene la data comercial activa de
+`Abrir SolaraCommerce.cmd`.
 
-El bucle mínimo del shell Electron es:
+Las protecciones de traversal, rutas absolutas, nombres reservados y reparse
+points se validan en los tests de `local-layout.mjs`, storage y seguridad del
+exporter. JSONL/MCP se validan contra el host Node de `scripts/agent-host.mjs`.
 
-```powershell
-corepack pnpm --filter @solara/desktop typecheck
-corepack pnpm --filter @solara/desktop test
-corepack pnpm desktop:build
-corepack pnpm desktop:package
-corepack pnpm test:e2e:portable
-```
-
-Los tests de `apps/desktop/tests/portable.test.mjs` cubren layout movible,
-espacios/Unicode, paridad del handler HTTP/protocolo y rechazo de manifests con
-rutas absolutas. `portable:smoke` abre dos instancias silenciosas y comprueba
-perfiles, locks y `instance.json`. `scripts/portable-e2e.mjs` usa Playwright
-Electron para abrir dos copias, guardar una tienda, comprobar que la otra no la
-vea, verificar el sitio público confirmado, cerrar y reabrir desde disco y mover
-la copia a una ruta con espacios y Unicode.
-
-La suite no simula disco lleno ni permisos revocados del sistema operativo en
-cada cambio; esos casos quedan documentados como matriz de release. El E2E
-portable sí valida dos copias, Guardar, aislamiento, sitio público, traslado y
-recuperación desde disco.
-
-La prueba `test:e2e:portable:new-store` elimina sólo `.solara-runtime` de su copia
-temporal antes de abrirla; así no reutiliza perfiles Electron stale. La matriz
-MCP/JSONL del release debe ejecutarse contra el EXE portable, no contra módulos
-fuente.
-
-Evidencia de la sesión 2026-08-26: `check:quick` 6/6, smoke 129/129,
-`check:runtime-serialization` 4/4 (fuera del sandbox por Access Denied de
-esbuild), budget público con bytes no cero, benchmark 2.000 productos dentro de
-48 MiB y los tres E2E portable (smoke, UI nueva y agente) verdes. La matriz
-release completa bajo Node 24.x y el full E2E quedan pendientes/bloqueados en
-este host.
+La evidencia histórica de suites Electron/portable anteriores a la migración se
+conserva en documentos fechados y no forma parte de los gates activos.

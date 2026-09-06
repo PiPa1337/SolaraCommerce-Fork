@@ -1,3 +1,20 @@
+### Runtime único Node/navegador (2026-09-06)
+
+**Removed**
+
+- Se retiran del runtime activo el shell Electron, la distribución portable,
+  sus scripts/tests de empaquetado y los jobs de CI/release asociados.
+
+**Changed**
+
+- `Abrir SolaraCommerce.cmd` queda como única entrada operativa: Node 24,
+  servidor loopback y navegador del sistema, con `proyectos/` raíz como única
+  fuente comercial de verdad.
+- `SolaraCommerce-Agent.cmd` ejecuta el agente directamente con Node; JSONL es
+  el modo predeterminado y `--mcp` selecciona MCP stdio.
+- Las protecciones de paths/instancia pasan al layout local y CI/release quedan
+  alineados al runtime de navegador.
+
 ### Migración definitiva de portable a app por CMD (2026-09-06)
 
 **Changed**

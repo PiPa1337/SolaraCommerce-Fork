@@ -1,5 +1,5 @@
 /**
- * Carga tiendas reales del disco portable y sirve su export production en
+ * Carga tiendas reales del checkout local y sirve su export production en
  * memoria. Compartido por los barridos visuales de diagnóstico manual.
  */
 
@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { exportProject } from "@solara/exporter";
 import { StoreProjectV2Schema } from "@solara/project-schema";
 
-export const PROJECTS_ROOT = ".release/portable/SolaraCommerce-Portable/proyectos";
+export const PROJECTS_ROOT = "proyectos";
 
 export const REAL_STORES = [
   { label: "predeterminada", dir: "demo-catalogo-jerarquico--ecb19169" },

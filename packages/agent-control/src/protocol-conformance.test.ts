@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AgentProtocolJsonSchema } from "@solara/agent-contracts";
 import { describe, expect, it } from "vitest";
-import { AGENT_MCP_TOOL_DEFINITIONS } from "../../../apps/desktop/src/agent-host.mjs";
+import { AGENT_MCP_TOOL_DEFINITIONS } from "../../../scripts/agent-host.mjs";
 import { createLocalProjectStorage } from "../../exporter/scripts/local-project-storage.mjs";
 import { createAgentController } from "./index";
 

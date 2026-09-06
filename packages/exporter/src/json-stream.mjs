@@ -12,8 +12,8 @@
  * - `parseJsonBytesChunked` decodifica UTF-8 por ventanas y materializa cada
  *   valor JSON individual sin construir nunca la cadena del documento entero.
  *
- * Es JavaScript plano (.mjs) a propósito: el servidor local y el shell
- * Electron lo importan con la versión de Node embebida, sin transformar TS.
+ * Es JavaScript plano (.mjs) a propósito: el servidor local y el agente Node
+ * lo importan directamente, sin transformar TS.
  *
  * Limitación documentada: no soporta `toJSON()` ni wrappers (Date, Number);
  * los datos del proyecto son objetos planos validados por Zod.

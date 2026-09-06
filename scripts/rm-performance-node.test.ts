@@ -351,7 +351,7 @@ function rankHotspots(
     {
       score: snapshot.fileInventory.totalBytes,
       rank: 0,
-      layer: "portable/I-O",
+      layer: "layout/I-O",
       evidence: `[observado] la carpeta RM contiene ${snapshot.fileInventory.fileCount} archivos y ${snapshot.fileInventory.totalBytes} B; el loader sólo abre manifest y current.`,
       hypothesis:
         "Escanear históricos o respaldos en el arranque puede explicar latencia e I/O sin aportar al editor actual.",
@@ -361,7 +361,7 @@ function rankHotspots(
       guardTests: [
         "manifest/current",
         "recovery",
-        "portable aislado",
+        "layout local aislado",
         "integridad de RM antes/después",
       ],
     },

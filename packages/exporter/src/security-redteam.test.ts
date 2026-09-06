@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { safeUrl, sanitizeRichText } from "@solara/module-sdk";
 import { describe, expect, it } from "vitest";
 import { createLocalProjectStorage } from "../scripts/local-project-storage.mjs";
-import { resolvePortablePath } from "../scripts/portable-layout.mjs";
+import { resolveLocalPath } from "../scripts/local-layout.mjs";
 import {
   createSolaraRequestHandler,
   resolveStaticFile,
@@ -14,11 +14,11 @@ import {
 
 describe("security: path traversal", () => {
   it("bloquea ../", () => {
-    expect(() => resolvePortablePath("/tmp/root", "../../../etc/passwd")).toThrow();
-    expect(() => resolvePortablePath("/tmp/root", "/absolute")).toThrow();
+    expect(() => resolveLocalPath("/tmp/root", "../../../etc/passwd")).toThrow();
+    expect(() => resolveLocalPath("/tmp/root", "/absolute")).toThrow();
   });
   it("bloquea null bytes", () => {
-    expect(() => resolvePortablePath("/tmp/root", "a\u0000b")).toThrow();
+    expect(() => resolveLocalPath("/tmp/root", "a\u0000b")).toThrow();
   });
 });
 describe("security: safeUrl", () => {
@@ -133,16 +133,16 @@ describe("security: import .solara.json", () => {
 });
 describe("security: Windows reserved names", () => {
   it("bloquea CON, PRN, AUX, NUL, COM1", () => {
-    expect(() => resolvePortablePath("/tmp/root", "CON")).toThrow();
-    expect(() => resolvePortablePath("/tmp/root", "CON.txt")).toThrow();
-    expect(() => resolvePortablePath("/tmp/root", "aux")).toThrow();
-    expect(() => resolvePortablePath("/tmp/root", "COM1")).toThrow();
-    expect(() => resolvePortablePath("/tmp/root", "LPT1")).toThrow();
-    expect(() => resolvePortablePath("/tmp/root", "nul")).toThrow();
+    expect(() => resolveLocalPath("/tmp/root", "CON")).toThrow();
+    expect(() => resolveLocalPath("/tmp/root", "CON.txt")).toThrow();
+    expect(() => resolveLocalPath("/tmp/root", "aux")).toThrow();
+    expect(() => resolveLocalPath("/tmp/root", "COM1")).toThrow();
+    expect(() => resolveLocalPath("/tmp/root", "LPT1")).toThrow();
+    expect(() => resolveLocalPath("/tmp/root", "nul")).toThrow();
   });
   it("bloquea site map con CON", async () => {
     const tmp = await mkdtemp(join(tmpdir(), "sec-reserved-"));
-    expect(() => resolvePortablePath(tmp, "CON")).toThrow();
+    expect(() => resolveLocalPath(tmp, "CON")).toThrow();
     await rm(tmp, { recursive: true, force: true });
   });
 });

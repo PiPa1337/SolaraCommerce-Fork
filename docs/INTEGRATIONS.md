@@ -138,27 +138,13 @@ Para reemplazar el servidor local hay que conservar el contrato de
 `current.projectPath`), los hashes, el bloqueo por tienda y el commit atómico.
 No se debe conectar el storefront directamente a estas rutas.
 
-## Transporte Electron empaquetado opcional
-
-La distribución Electron no abre Studio desde HTTP. El proceso principal registra
-`solara://studio/` y adapta cada request al mismo
-`packages/exporter/scripts/solara-request-handler.mjs` usado por `serve.mjs`.
-Los endpoints, payloads y respuestas no cambian. El origen `solara://studio` se
-autoriza únicamente dentro del protocolo privilegiado; el renderer no recibe
-acceso a Node o filesystem.
-
-El sitio público continúa usando un servidor HTTP efímero en loopback cuando se
-elige “abrir sitio”. Ese servidor sólo recibe la carpeta pública validada de la
-tienda seleccionada y se cierra al cerrar la instancia Electron.
-
 ## Canal nativo para agentes
 
-La copia Electron empaquetada incluye `SolaraCommerce-Agent.cmd` como transporte
-opcional. El launcher inicia el mismo `.exe` con un entry de consola
-embebido; por defecto usa JSONL protocol-only y con `--mcp` usa MCP stdio. El
-proceso no abre Studio ni expone HTTP. Los logs quedan en
-`.solara-runtime/logs/main.log`. Sin `--jsonl`, el proceso ofrece MCP por stdio
-con `initialize`, `tools/list` y `tools/call`.
+`SolaraCommerce-Agent.cmd` inicia directamente `scripts/agent-cli.mjs` con Node
+24. Por defecto usa JSONL protocol-only y con `--mcp` usa MCP stdio. El proceso
+no abre Studio ni expone HTTP. El agente resuelve su raíz con `local-layout.mjs`
+y comparte `proyectos/`, transacciones y locks con Studio. En modo MCP ofrece
+`initialize`, `tools/list` y `tools/call` por stdio.
 
 El protocolo v1 está documentado en [`AI_AGENT_GUIDE.md`](AI_AGENT_GUIDE.md) y
 [`agent-protocol-v1.schema.json`](agent-protocol-v1.schema.json). El control usa
@@ -169,7 +155,7 @@ son de sólo lectura; las tiendas existentes requieren `storeId` y
 mantienen locks cooperativos con Studio y registran jobs, idempotencia y
 auditoría en `.solara-runtime/agent/`. Los assets pasan por staging con MIME,
 firma, tamaño, hash y dimensiones; los archivos grandes también se pueden subir
-por chunks ordenados.
+por chunks ordenados o usar `agent-inbox/` dentro de la raíz local.
 
 ## Cloudflare Pages (publicación manual)
 

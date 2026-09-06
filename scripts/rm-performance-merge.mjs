@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 const reportDir = resolve(
   process.env.SOLARA_PERF_REPORT_DIR ?? "test-results/performance/rm-descartables",
 );
-const layers = ["node", "studio", "storefront", "portable"];
+const layers = ["node", "studio", "storefront"];
 
 function readLayer(layer) {
   const path = resolve(reportDir, `${layer}.json`);

@@ -47,7 +47,7 @@ function isTestOrDocumentation(path) {
 }
 
 function isFixture(path) {
-  return /(?:fixture|scale-fixture|portable-e2e)/i.test(path);
+  return /(?:fixture|scale-fixture)/i.test(path);
 }
 
 function isAuditTool(path) {

@@ -710,13 +710,13 @@ git commit -m "test(e2e): verifica el fallback de ver todos con busqueda apagada
 ### Task 6: Documentación y CHANGELOG
 
 **Files:**
-- Modify: `docs/FULL_REFERENCE.md` (tabla de rutas, línea ~161)
+- Modify: `docs/STOREFRONT_ARCHITECTURE.md` (comportamiento de la ruta de búsqueda)
 - Modify: `docs/TECHNICAL_DEBT.md` (fila NG-1, línea 116; nueva fila de follow-up)
 - Modify: `CHANGELOG.md` (entrada arriba del todo)
 
-- [ ] **Step 1: FULL_REFERENCE**
+- [ ] **Step 1: STOREFRONT_ARCHITECTURE**
 
-En `docs/FULL_REFERENCE.md`, debajo de la fila de `/buscar/?q=`, agregar:
+En `docs/STOREFRONT_ARCHITECTURE.md`, documentar junto a la página de búsqueda:
 
 ```markdown
 | `/buscar/?pagina=N` | search | search.enabled | grid del catálogo completo paginado client-side (pageSize = `commerceTemplates.category.productsPerPage`); sin JS el grid queda vacío · noindex |
@@ -757,7 +757,7 @@ Agregar arriba del todo de `CHANGELOG.md` (formato del archivo, español):
 - [ ] **Step 4: Commit**
 
 ```powershell
-git add docs/FULL_REFERENCE.md docs/TECHNICAL_DEBT.md CHANGELOG.md
+git add docs/STOREFRONT_ARCHITECTURE.md docs/TECHNICAL_DEBT.md CHANGELOG.md
 git commit -m "docs: documenta el catalogo paginado de /buscar/ y el fallback de viewAll"
 ```
 
@@ -784,13 +784,14 @@ Expected: PASS. Si toca `packages/exporter` o storefront (toca), correr además 
 
 - [ ] **Step 4: Cierre**
 
-Run: `corepack pnpm check:quick` y luego `corepack pnpm test:e2e` (full, ~3-4 min).
+Run: `corepack pnpm check:full`, `corepack pnpm test:e2e:smoke:full` y
+`corepack pnpm test:e2e`.
 Expected: PASS completo.
 
-- [ ] **Step 5: Reconstruir artefactos portable**
+- [ ] **Step 5: Matriz release si corresponde**
 
-Run: `corepack pnpm build; corepack pnpm desktop:build; corepack pnpm desktop:package; corepack pnpm portable:smoke`
-Expected: PASS (el código de storefront/exporter afecta el output de la app; AGENTS exige artefactos al día).
+Seguir `docs/TESTING.md`. `test:e2e:release` es on-demand y requiere Node 24.x;
+no hay artefactos desktop/portable en el runtime actual.
 
 - [ ] **Step 6: Estado final**
 

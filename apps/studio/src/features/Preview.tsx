@@ -809,9 +809,8 @@ export function Preview({
               ref={attachPreviewObserver}
               title={`Vista previa ${size}`}
               srcDoc={html}
-              // Electron no carga srcdoc con origen opaco; conserva su origen
-              // sólo en el protocolo portable. En HTTP mantiene el sandbox
-              // más restrictivo y evita el warning de Chromium.
+              // El preview local usa srcdoc dentro del servidor HTTP; mantiene
+              // el sandbox restrictivo para aislar el documento renderizado.
               sandbox={previewSandbox}
               style={zoom !== 100 ? { zoom: zoom / 100 } : undefined}
               onLoad={(event) => {

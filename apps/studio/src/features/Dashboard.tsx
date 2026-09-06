@@ -59,7 +59,6 @@ import { CompareView } from "./dashboard/CompareView";
 import { CreateStoreDialog } from "./dashboard/CreateStoreDialog";
 import { DashboardToolbar } from "./dashboard/DashboardToolbar";
 import { DuplicateDialog } from "./dashboard/DuplicateDialog";
-import { NativeOperationsPanel } from "./dashboard/NativeOperationsPanel";
 import { formatCompactDate, ProjectCard, statusLabel } from "./dashboard/ProjectCard";
 import { QaStatusCard } from "./QaStatusCard";
 
@@ -1002,8 +1001,6 @@ export function Dashboard({
               </div>
             ) : null}
           </div>
-
-          <NativeOperationsPanel projects={projects} />
 
           <div className={`dashboard-cosmic-results dashboard-cosmic-results--${view}`}>
             <div className="dashboard-cosmic-store-groups" aria-live="polite">

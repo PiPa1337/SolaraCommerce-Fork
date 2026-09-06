@@ -1,8 +1,6 @@
 packages:
-  - apps/*
+  - apps/studio
   - packages/*
 
 onlyBuiltDependencies:
   - esbuild
-  - electron
-  - electron-winstaller

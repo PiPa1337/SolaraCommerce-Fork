@@ -21,9 +21,9 @@ import { parseJsonBytesChunked } from "../src/json-stream.mjs";
 import { createAgentLockStore } from "./agent-lock.mjs";
 import {
   assertNoReparsePoints,
-  resolvePortableLayout,
-  resolvePortablePath,
-} from "./portable-layout.mjs";
+  resolveLocalLayout,
+  resolveLocalPath,
+} from "./local-layout.mjs";
 
 const MANIFEST_FORMAT = "solara-local-project";
 const MANIFEST_VERSION = 2;
@@ -333,11 +333,10 @@ async function sweepStaleTmp(directory, maxAgeMs) {
 }
 
 export function createLocalProjectStorage(options = {}) {
-  const defaultLayout = resolvePortableLayout({
-    mode: "development",
-    cwd: options.applicationRoot ?? process.cwd(),
+  const defaultLayout = resolveLocalLayout({
+    applicationRoot: options.applicationRoot ?? process.cwd(),
   });
-  const applicationRoot = resolve(options.applicationRoot ?? defaultLayout.portableRoot);
+  const applicationRoot = resolve(options.applicationRoot ?? defaultLayout.applicationRoot);
   const projectsRoot = resolve(options.projectsRoot ?? defaultLayout.projectsRoot);
   const stagingRoot = resolve(options.stagingRoot ?? defaultLayout.transactionRoot);
   const maxUploadBytes = options.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES;
@@ -459,8 +458,8 @@ export function createLocalProjectStorage(options = {}) {
         }
         if (manifest.lastValidSite?.directoryPath) {
           // Los manifests se pueden copiar entre equipos, por eso sólo se
-          // aceptan rutas relativas a la raíz de la instalación portable.
-          resolvePortablePath(applicationRoot, manifest.lastValidSite.directoryPath);
+          // aceptan rutas relativas a la raíz de la instalación local.
+          resolveLocalPath(applicationRoot, manifest.lastValidSite.directoryPath);
         }
         // La carpeta es una tienda sana: se elimina cualquier diagnóstico viejo.
         await rm(join(root, "recovery.json"), { force: true });
@@ -992,7 +991,7 @@ export function createLocalProjectStorage(options = {}) {
     if (!found || !found.manifest.lastValidSite?.directoryPath) return undefined;
     const directory = assertInside(
       applicationRoot,
-      resolvePortablePath(applicationRoot, found.manifest.lastValidSite.directoryPath),
+      resolveLocalPath(applicationRoot, found.manifest.lastValidSite.directoryPath),
     );
     if (!(await directoryExists(directory))) return undefined;
     await assertNoReparsePoints(applicationRoot, directory);

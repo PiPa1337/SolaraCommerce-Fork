@@ -3,8 +3,7 @@ import { lstatSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join, relative, resolve, sep } from "node:path";
 import { type StoreProjectV1, StoreProjectV2Schema } from "../packages/project-schema/src/index";
 
-export const RM_PROJECTS_ROOT =
-  process.env.SOLARA_RM_PROJECTS_ROOT ?? ".release/portable/SolaraCommerce-Portable/proyectos";
+export const RM_PROJECTS_ROOT = process.env.SOLARA_RM_PROJECTS_ROOT ?? "proyectos";
 export const RM_STORE_FOLDER = process.env.SOLARA_RM_STORE_FOLDER ?? "rm-descartables--704e2877";
 export const RM_EXPECTED_VERSION = Number(process.env.SOLARA_RM_EXPECTED_VERSION ?? 31);
 export const RM_STORE_ID = "store-rm-descartables";

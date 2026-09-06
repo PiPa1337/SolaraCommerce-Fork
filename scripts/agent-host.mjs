@@ -4,8 +4,12 @@ import {
   AgentRequestSchema,
   protocolError,
   protocolOk,
-} from "@solara/agent-contracts";
-import { agentError, createAgentController, dispatchAgentMethod } from "@solara/agent-control";
+} from "../packages/agent-contracts/src/index.ts";
+import {
+  agentError,
+  createAgentController,
+  dispatchAgentMethod,
+} from "../packages/agent-control/src/index.ts";
 
 const MCP_VERSION = "2024-11-05";
 
@@ -495,10 +499,7 @@ function writeLine(value) {
   process.stdout.write(`${JSON.stringify(value)}\n`);
 }
 
-/**
- * Host único para Electron portable. stdout queda reservado al protocolo;
- * cualquier diagnóstico debe ir por el logger de main o por stderr.
- */
+/** Host local del agente. stdout queda reservado al protocolo y stderr a diagnósticos. */
 export async function runAgentHost({
   storage,
   applicationRoot,
@@ -599,9 +600,8 @@ export async function runAgentHost({
     }
   };
 
-  // Electron en Windows puede exponer stdin como un stream sin readline/TTY
-  // estable. Escuchar data/end directamente evita que el iterador de readline
-  // cierre el host antes de entregar la primera línea al protocolo.
+  // Escuchar data/end directamente mantiene el protocolo estable también cuando
+  // stdin llega por pipes sin TTY ni readline interactivo.
   await new Promise((resolveInput) => {
     process.stdin.setEncoding("utf8");
     let buffer = "";

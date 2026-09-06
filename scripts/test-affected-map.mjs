@@ -43,7 +43,6 @@ export function mapFilesToPackages(files) {
     else if (f.startsWith("packages/agent-contracts/")) pkgs.add("@solara/agent-contracts");
     else if (f.startsWith("packages/agent-sdk/")) pkgs.add("@solara/agent-sdk");
     else if (f.startsWith("apps/studio/")) pkgs.add("@solara/studio");
-    else if (f.startsWith("apps/desktop/")) pkgs.add("@solara/desktop");
     else if (f.startsWith("tests/e2e/")) {
       for (const p of mapE2EToPackages(f)) pkgs.add(p);
     }

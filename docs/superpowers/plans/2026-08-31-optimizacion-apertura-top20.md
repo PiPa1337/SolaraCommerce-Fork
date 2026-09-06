@@ -6,7 +6,7 @@
 
 **Architecture:** Extraer el mayor contribuyente (`optimized-fixture-urls.ts` 1575 KiB con 33 data URLs) a asset JSON lazy + dynamic import en workers; partir `vite.config.ts` manualChunks para aislar `project-schema/fixtures`, `modules/styles`, `exporter/fonts`, `storefront-runtime`; granularizar fonts/styles por familia; paralelizar el waterfall `App.tsx:221` y gatear polls/timers cuando hidden; deduplicar workers.
 
-**Tech Stack:** Vite 7.1.3 + @vitejs/plugin-react 5.0.2, React 19.1.1, TypeScript 5.9.2 estricto, Zod 4.1.5, Dexie 4.2.0, Vitest 3.2.4, Playwright 1.55, Biome 2.2.2, pnpm 10.15.1 workspaces, Node 22+.
+**Tech Stack:** Vite 7.1.3 + @vitejs/plugin-react 5.0.2, React 19.1.1, TypeScript 5.9.2 estricto, Zod 4.1.5, Dexie 4.2.0, Vitest 3.2.4, Playwright 1.55, Biome 2.2.2, pnpm 10.15.1 workspaces, Node 24.x.
 
 ## Global Constraints
 
@@ -19,8 +19,8 @@
 - No incorporar binarios generados, `dist/`, `proyectos/`, `.solara-runtime/`, `.release/` ni reportes al commit.
 - No agregar dependencias de runtime sin justificar impacto en sitio público y budgets existentes.
 - No enviar catálogo completo a IA: usar schema/fixtures pequeñas o muestras deterministas.
-- Node 22+ y Corepack, pnpm 10.15.1 sin Nx/Turbo/Docker; React 19 + Vite para `apps/studio`; TS estricto + Biome + Vitest; Playwright Chromium local.
-- El arte portable es `win-unpacked`, no instalador; `proyectos/` y `.solara-runtime/` junto al `.exe`.
+- Node 24.x y Corepack, pnpm 10.15.1 sin Nx/Turbo/Docker; React 19 + Vite para `apps/studio`; TS estricto + Biome + Vitest; Playwright Chromium local.
+- La operación local vigente parte de `Abrir SolaraCommerce.cmd`; `proyectos/` en la raíz del checkout es la fuente de verdad comercial. Ver `docs/LOCAL_OPERATION.md`.
 
 ---
 

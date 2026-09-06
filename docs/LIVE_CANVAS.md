@@ -3,7 +3,7 @@
 Edición directa de contenido desde el preview, sin tocar el DOM como fuente de
 verdad y sin metadata en el sitio exportado.
 
-## Estado de esta entrega (2026-08-27)
+## Estado actual
 
 Implementado y verificado: contrato editor-only en el SDK, bindings declarativos
 para Catalog Modern, About V2, Contact V2 y la familia legacy, manifest
@@ -13,6 +13,10 @@ imágenes, alt, precio entero y repeaters por ID. El padre aplica todo mediante
 `ProjectMutationRegistry`, con undo/redo y persistencia de Studio. El smoke
 directo pasó 129/129 con `--retries=0`; el spec de Live Canvas pasó 2/2 sin
 reintentos.
+
+Última evidencia detallada de esta implementación: 2026-08-27. Los conteos de
+tests de esa fecha son evidencia histórica y no reemplazan a `TESTING.md` como
+contrato vigente de suites y gates.
 
 Pendiente de certificación: una matriz E2E completa alineada con el contrato
 actual de plantilla protegida y checklist, la prueba release bajo Node 24.x y el

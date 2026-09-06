@@ -1,29 +1,23 @@
-/**
- * Adaptador HTTP de desarrollo para el handler local compartido.
- *
- * `solara-request-handler.mjs` también es usado por Electron. Mantener este
- * archivo pequeño conserva el servidor loopback y evita duplicar persistencia,
- * autenticación o reglas de archivos al incorporar el protocolo portable.
- */
+/** Adaptador HTTP local para el handler compartido de SolaraCommerce. */
 import { createServer } from "node:http";
 import { resolve } from "node:path";
-import { ensurePortableLayout, resolvePortableLayout } from "./portable-layout.mjs";
+import { ensureLocalLayout, resolveLocalLayout } from "./local-layout.mjs";
 import { createSolaraRequestHandler } from "./solara-request-handler.mjs";
 
 const root = resolve(process.argv[2] ?? "site");
 const port = Number(process.argv[3] ?? process.env.SOLARA_PORT ?? "4174");
 const shutdownToken = process.argv[4] ?? "";
 const applicationRoot = resolve(process.argv[5] ?? process.cwd());
-const layout = resolvePortableLayout({ mode: "development", cwd: applicationRoot });
+const layout = resolveLocalLayout({ applicationRoot });
 const serverOrigin = `http://127.0.0.1:${port}`;
 let server;
 let shuttingDown = false;
 
 async function start() {
-  await ensurePortableLayout(layout, { appVersion: "0.1.0" });
+  await ensureLocalLayout(layout, { appVersion: "0.1.0" });
   const handler = createSolaraRequestHandler({
     staticRoot: root,
-    applicationRoot: layout.portableRoot,
+    applicationRoot: layout.applicationRoot,
     projectsRoot: layout.projectsRoot,
     transactionRoot: layout.transactionRoot,
     shutdownToken,

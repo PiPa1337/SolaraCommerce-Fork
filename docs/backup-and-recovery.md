@@ -40,6 +40,11 @@ renderer; un `project-migration` cambia proyecto y sitio. Ambos guardan el
 resultado individual y el sitio/proyecto anterior para rollback condicionado a
 la versión esperada.
 
+Si una operación necesita reemplazar el árbol `proyectos/` completo o una parte
+de él fuera del guardado normal, aplicar además el contrato de
+[`DATA_STORAGE_SAFETY.md`](DATA_STORAGE_SAFETY.md): staging separado, hashes,
+swap transaccional y rollback retenido hasta la verificación posterior.
+
 ## Qué se debe respaldar
 
 Desde `Exportar`, descargar periódicamente `{tienda}.solara.json`; contiene el

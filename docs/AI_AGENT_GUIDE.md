@@ -8,13 +8,10 @@ comercial está en el `proyectos/` raíz usado por `Abrir SolaraCommerce.cmd`.
 
 ## Inicio
 
-La distribución Electron opcional contiene `SolaraCommerce.exe`,
-`SolaraCommerce-Agent.cmd`, su propio `proyectos/`, `.solara-runtime/` y la carpeta
-opcional `agent-inbox/`. Ese almacenamiento pertenece únicamente a esa copia
-aislada y no sustituye el `proyectos/` comercial del checkout. El launcher inicia el ejecutable con
-`--solara-agent --jsonl`; no abre una ventana, no inicia HTTP y reserva
-`stdout` exclusivamente para respuestas JSONL. Los diagnósticos quedan en
-`.solara-runtime/logs/main.log`.
+El checkout contiene `SolaraCommerce-Agent.cmd`, `proyectos/`, `.solara-runtime/`
+y la carpeta opcional `agent-inbox/`. `proyectos/` en la raíz es la única fuente
+comercial de verdad. El launcher inicia directamente `scripts/agent-cli.mjs` con
+Node; no abre una ventana, no inicia HTTP y reserva `stdout` para el protocolo.
 
 `SolaraCommerce-Agent.cmd` usa JSONL por defecto. Para MCP, ejecutar
 `SolaraCommerce-Agent.cmd --mcp`; implementa `initialize`, `ping`, `tools/list`
@@ -245,8 +242,8 @@ Para imágenes pequeñas, usar `assets.stage` con base64 y MIME:
 {"method":"assets.stage","params":{"name":"taza-luna.png","alt":"Taza Luna de cerámica azul","mimeType":"image/png","source":{"kind":"base64","data":"iVBORw0KGgo..."}}}
 ```
 
-Para archivos grandes cuando se usa el transporte Electron empaquetado, copiar la
-imagen a `agent-inbox/` dentro de esa copia y enviar sólo el nombre. Para
+Para archivos grandes, copiar la imagen a `agent-inbox/` dentro de la raíz local
+del checkout y enviar sólo el nombre. Para
 integraciones que no pueden escribir esa carpeta,
 usar el upload por chunks:
 
@@ -332,7 +329,7 @@ Un `plans.create` no demuestra persistencia: sólo `plans.commit` seguido de
 
 El contrato formal está en [`agent-protocol-v1.schema.json`](agent-protocol-v1.schema.json).
 El runtime se divide en `packages/agent-contracts`, `packages/agent-control`,
-`packages/agent-sdk` y `apps/desktop/src/agent-host.mjs`.
+`packages/agent-sdk` y `scripts/agent-host.mjs`.
 ### QA perpetuo
 
 El scope `qa:write` habilita metodos para ejecutar ciclos de calidad

@@ -124,49 +124,6 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  portable:
-    name: Windows, portable E2E
-    needs: [verify, e2e]
-    runs-on: windows-latest
-    timeout-minutes: 20
-    env:
-      CI: true
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Instalar pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.15.1
-          run_install: false
-
-      - name: Configurar Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Instalar dependencias
-        run: pnpm install --frozen-lockfile
-
-      - name: Recuperar build de Studio
-        uses: actions/download-artifact@v4
-        with:
-          name: studio-dist
-          path: apps/studio/dist
-
-      - name: Construir shell portable
-        run: pnpm desktop:package
-
-      - name: Preparar fixture demo del portable
-        run: pnpm portable:seed-demo
-
-      - name: E2E portable
-        run: pnpm test:e2e:portable
-
   portability:
     name: Linux, Node 24 (portabilidad Node)
     runs-on: ubuntu-latest

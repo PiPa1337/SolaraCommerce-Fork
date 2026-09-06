@@ -19,9 +19,9 @@ el control no aparece y no intenta detener procesos ajenos.
 Para una IA que deba crear tiendas mediante la aplicación real, el canal nativo
 está documentado en [`docs/AI_AGENT_GUIDE.md`](docs/AI_AGENT_GUIDE.md). Usa MCP o
 JSONL stdio, planes tipados durables, diff previo, jobs consultables y el mismo
-guardado transaccional de Studio; no permite parches arbitrarios de archivos. La
-distribución Electron opcional incluye `SolaraCommerce-Agent.cmd` como uno de sus
-transportes, pero no define una segunda fuente de datos.
+guardado transaccional de Studio; no permite parches arbitrarios de archivos.
+El transporte local vigente es `SolaraCommerce-Agent.cmd`: ejecuta el host Node
+junto al checkout y usa la misma fuente de datos que Studio.
 
 ## Requisitos
 
@@ -435,34 +435,18 @@ el sandbox del preview. Durante esa hidratación, las imágenes del preview se
 marcan como eager para que el editor no dependa de desplazar el iframe; el sitio público
 conserva `loading="lazy"` donde corresponde.
 
-## Distribución empaquetada opcional para Windows
+## Ejecución local en Windows
 
-El checkout sigue siendo el modo de desarrollo. Para crear una carpeta que se
-pueda copiar a otro equipo sin Node, pnpm ni el navegador del sistema:
+SolaraCommerce se ejecuta únicamente desde `Abrir SolaraCommerce.cmd`. El
+launcher valida Node 24/Corepack, prepara el Studio cuando hace falta, inicia el
+servidor Node en loopback y abre la aplicación en el navegador del sistema.
 
-```powershell
-corepack pnpm install --frozen-lockfile
-corepack pnpm desktop:build
-corepack pnpm desktop:package
-corepack pnpm portable:smoke
-corepack pnpm test:e2e:portable
-```
+El `proyectos/` de la raíz del checkout es la única fuente comercial de verdad.
+`.solara-runtime/` contiene logs, transacciones y estado operativo local. Git no
+respalda `proyectos/`: para mover o resguardar la instalación hay que copiar esos
+datos de forma explícita junto con el checkout cuando corresponda.
 
-La salida es `.release/portable/SolaraCommerce-Portable/`. Incluye Electron,
-Chromium, Studio compilado y el shell `solara://studio/`. Es un artefacto
-regenerable e independiente para distribución y QA: su `proyectos/` sólo es la
-fuente de verdad dentro de esa copia aislada. La única fuente comercial activa
-del checkout sigue siendo el `proyectos/` raíz usado por `Abrir SolaraCommerce.cmd`.
-`.solara-runtime/` contiene el perfil aislado, logs y transacciones regenerables.
-Copiá la carpeta completa, no sólo el `.exe`.
-
-`Abrir SolaraCommerce.cmd` abre el `.exe` adyacente cuando existe y conserva el
-servidor HTTP de desarrollo como fallback cuando se ejecuta desde un checkout.
-La distribución puede moverse a rutas con espacios o Unicode y dos copias en
-carpetas distintas pueden ejecutarse simultáneamente. Los sitios exportados se
-abren mediante un servidor efímero loopback; `file://` no es el modo soportado
-para índices, búsqueda y mejoras JavaScript.
-
-La arquitectura, los límites de seguridad y la actualización de una copia están
-en [`docs/PORTABILITY.md`](docs/PORTABILITY.md). `portable:clean` elimina sólo
-la salida generada bajo `.release/portable/`.
+No existe una distribución EXE/portable activa. La arquitectura, los límites de
+seguridad y las reglas para copiar o respaldar una instalación están en
+[`docs/LOCAL_OPERATION.md`](docs/LOCAL_OPERATION.md). Los reemplazos de datos
+comerciales siguen [`docs/DATA_STORAGE_SAFETY.md`](docs/DATA_STORAGE_SAFETY.md).

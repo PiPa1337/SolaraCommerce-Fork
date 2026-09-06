@@ -233,7 +233,7 @@ Inicio: baseline formal = cierre del PLAN 7, commiteado. Fin: lista cerrada del 
 - I2: conflicto de versión: diálogo, opciones, foco.
 - I3: recovery draft: cuándo aparece, qué recupera, descartar.
 - I4: workers: reintentos (ya implementado) — verificar en flujo real con fallo simulado.
-- I5: conexiones: servidor local ↔ Studio (session, guardado), shell ↔ Studio (IPC), preview ↔ runtime — revisión de contratos con e2e.
+- I5: conexiones: servidor local ↔ Studio (session, guardado), launcher Node ↔ Studio, preview ↔ runtime — revisión de contratos con e2e.
 
 **3. Componente de medición con autocrítica**
 Cada fila del backlog lleva `Métrica | Antes | Después | Δ%` con el mismo instrumento antes y después. Regla: Δ% > 0 → mejora (commit con %); Δ% ≈ 0 → solo robustez documentada; Δ% < 0 → revertir o bloquear con evidencia; ciclo sin Δ% = inválido.
@@ -245,20 +245,20 @@ Mapa A-L del Núcleo Común — este plan se enfoca en las capas H (Export) e I 
 0. Health check (git limpio, baseline vigente) → 1. ítem por orden del backlog → 2. MEDIR ANTES → 3. TDD → 4. fix mínimo → 5. MEDIR DESPUÉS → Δ% → 6. autocrítica → 7. gates proporcionales + baseline → 8. commit con Δ% + log → volver a 1.
 
 **6. Criterios de salida (fin del PLAN 8)**
-Lista cerrada + gates (check, e2e de export/persistencia; portable sólo si ese ciclo valida empaquetado Electron) + sección PLAN 8 del reporte + commit de cierre + push. **Al cerrar el PLAN 8, ejecutar el PLAN 9 inmediatamente, sin preguntar.**
+Lista cerrada + gates (check, e2e de export/persistencia) + sección PLAN 8 del reporte + commit de cierre + push. **Al cerrar el PLAN 8, ejecutar el PLAN 9 inmediatamente, sin preguntar.**
 
 **7. Watchdog acotado**
 3 intentos por ítem → bloqueado con evidencia; 3 ciclos consecutivos con Δ% ≤ 0 → switch al ítem de mayor potencial; corte de sesión reanuda por `SIGUIENTE`.
 
 ---
 
-## PLAN 9 — Shell, rendimiento profundo y calidad
+## PLAN 9 — Launcher local, rendimiento profundo y calidad
 
 **1. Contrato del plan (inicio y fin definidos)**
 Inicio: baseline formal = cierre del PLAN 8, commiteado. Fin: lista cerrada del PLAN 9 + gates verdes + reporte de Δ% con autocrítica + push. Al cerrar el PLAN 9, **ejecutar el PLAN 10 inmediatamente, sin preguntar.**
 
 **2. Backlog semilla (to do del PLAN 9)**
-- J1: ventana y shell: tamaños mínimos, cierre, respaldos manuales, abrir carpeta/sitio — revisión de flujo.
+- J1: launcher local: apertura/cierre, respaldos manuales y abrir carpeta/sitio — revisión de flujo.
 - K1: boot del editor: parse de chunks (ya lazy) — medir y compactar más si hay margen.
 - K2: memoria: fuga al navegar pestañas y abrir/cerrar tiendas (medición con CDP, Δ% por fix).
 - K3: reposo del editor con preview: re-medición post-lazy.
@@ -270,13 +270,13 @@ Inicio: baseline formal = cierre del PLAN 8, commiteado. Fin: lista cerrada del 
 Cada fila del backlog lleva `Métrica | Antes | Después | Δ%` con el mismo instrumento antes y después. Regla: Δ% > 0 → mejora (commit con %); Δ% ≈ 0 → solo robustez documentada; Δ% < 0 → revertir o bloquear con evidencia; ciclo sin Δ% = inválido.
 
 **4. Componente de cobertura**
-Mapa A-L del Núcleo Común — este plan se enfoca en las capas J (Shell), K (Rendimiento) y L (Calidad) y registra hallazgos de las demás capas al backlog.
+Mapa A-L del Núcleo Común — este plan se enfoca en las capas J (Launcher local), K (Rendimiento) y L (Calidad) y registra hallazgos de las demás capas al backlog.
 
 **5. Ciclo con medición obligatoria**
 0. Health check (git limpio, baseline vigente) → 1. ítem por orden del backlog → 2. MEDIR ANTES → 3. TDD → 4. fix mínimo → 5. MEDIR DESPUÉS → Δ% → 6. autocrítica → 7. gates proporcionales + baseline → 8. commit con Δ% + log → volver a 1.
 
 **6. Criterios de salida (fin del PLAN 9)**
-Lista cerrada + gates (check, perf, axe de la app; portable sólo si ese ciclo valida empaquetado Electron) + sección PLAN 9 del reporte + commit de cierre + push. **Al cerrar el PLAN 9, ejecutar el PLAN 10 inmediatamente, sin preguntar.**
+Lista cerrada + gates (check, perf, axe de la app) + sección PLAN 9 del reporte + commit de cierre + push. **Al cerrar el PLAN 9, ejecutar el PLAN 10 inmediatamente, sin preguntar.**
 
 **7. Watchdog acotado**
 3 intentos por ítem → bloqueado con evidencia; 3 ciclos consecutivos con Δ% ≤ 0 → switch al ítem de mayor potencial; corte de sesión reanuda por `SIGUIENTE`.
@@ -291,7 +291,7 @@ Inicio: baseline formal = cierre del PLAN 9, commiteado. Fin: lista cerrada del 
 **2. Backlog semilla (to do del PLAN 10)**
 - R1: re-auditoría de las 12 capas una vez más (barrido visual + axe + perf + e2e).
 - R2: consolidación del reporte global (comparado contra el baseline del PLAN 1).
-- R3: gates finales: `pnpm check`, benchmark y e2e completo; smoke/e2e portable y ejecutables reconstruidos sólo cuando el cierre incluya una distribución Electron.
+- R3: gates finales: `pnpm check`, benchmark y e2e completo sobre Node 24 + navegador.
 
 **3. Componente de medición con autocrítica**
 Cada fila del backlog lleva `Métrica | Antes | Después | Δ%` con el mismo instrumento antes y después; consolidación final: tabla ítem × Δ% con totales globales. Regla: Δ% > 0 → mejora (commit con %); Δ% ≈ 0 → solo robustez documentada; Δ% < 0 → revertir o bloquear con evidencia; ciclo sin Δ% = inválido.

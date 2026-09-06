@@ -70,9 +70,9 @@ import {
 // @ts-expect-error módulo .mjs compartido sin d.ts
 import { createAgentLockStore } from "../../exporter/scripts/agent-lock.mjs";
 // El layout compartido es un módulo Node ESM sin declaraciones; Vite lo
-// incorpora al bundle y el contrato runtime se comprueba en los tests portables.
+// incorpora al bundle y el contrato runtime se comprueba en tests locales.
 // @ts-expect-error módulo .mjs compartido sin d.ts
-import { assertNoReparsePoints } from "../../exporter/scripts/portable-layout.mjs";
+import { assertNoReparsePoints } from "../../exporter/scripts/local-layout.mjs";
 import { generateResponsiveVariants } from "./image-processor.js";
 import { migrationApplies, resolveMigration } from "./migration-registry.js";
 

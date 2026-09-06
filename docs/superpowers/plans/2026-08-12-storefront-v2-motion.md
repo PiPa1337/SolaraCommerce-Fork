@@ -415,7 +415,8 @@ sin saltos de layout.
 - canonical, robots, sitemap, JSON-LD, Open Graph y Merchant;
 - HTML inicial y rutas útiles sin JavaScript;
 - consola limpia y recursos faltantes controlados;
-- release multibrowser público bajo Node 22.
+- release multibrowser público según la matriz vigente de `docs/TESTING.md`,
+  sobre Node 24.x.
 
 **Gate:** todos los gates oficiales verdes y riesgos residuales documentados.
 
@@ -503,15 +504,9 @@ como métricas de campo reales—:
 
 ### Gate release
 
-- `corepack pnpm check`;
-- `corepack pnpm build`;
-- `corepack pnpm check:budgets`;
-- `corepack pnpm test:e2e`;
-- `corepack pnpm test:e2e:release` con Node 22;
-- `corepack pnpm desktop:build`;
-- `corepack pnpm desktop:package`;
-- `corepack pnpm portable:smoke`;
-- `corepack pnpm test:e2e:portable` cuando cambie shell/persistencia.
+Usar la matriz de cierre vigente de `docs/TESTING.md`: `check:full`,
+`test:e2e:smoke:full` y `test:e2e`. La matriz multibrowser
+`test:e2e:release` queda on-demand y se ejecuta sobre Node 24.x.
 
 ## 11. Checkpoints y continuidad
 

@@ -39,7 +39,7 @@ Simulan condiciones hostiles o entradas maliciosas.
 | --- | --- |
 | `security-redteam.test.ts` | Path traversal, XSS en settings, CSV formula injection, auth de handler |
 | `chaos-storage.test.mjs` | Disco lleno, locks transitorios, staging huérfano |
-| `portable-adversarial.test.ts` | Movimiento de carpeta, locks, crash recovery, rutas profundas |
+
 
 ## Specs de visión (diagnóstico manual)
 

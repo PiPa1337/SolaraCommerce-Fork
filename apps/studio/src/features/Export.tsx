@@ -10,7 +10,7 @@ import {
   UploadSimple,
   WarningCircle,
 } from "@phosphor-icons/react";
-import type { DeploymentManifestV1, OptimizationReport } from "@solara/exporter";
+import type { OptimizationReport } from "@solara/exporter";
 import { publicWhatsAppPhone } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { useEffect, useRef, useState } from "react";
@@ -20,7 +20,6 @@ import {
   type CloudflareVerificationResult,
   verifyCloudflareDeployment,
 } from "../lib/cloudflareVerification";
-import { getDesktopExportBridge } from "../lib/desktopBridge";
 import {
   clearExportHistory,
   type ExportHistoryEntry,
@@ -139,8 +138,6 @@ export function ExportPanel({
     useState<CloudflareVerificationResult | null>(null);
   const [cloudflareBusy, setCloudflareBusy] = useState(false);
   const [cloudflareChecklist, setCloudflareChecklist] = useState<Set<string>>(new Set());
-  const desktopExport = getDesktopExportBridge();
-
   /* biome-ignore lint/correctness/useExhaustiveDependencies: auditAttempt es la clave de reintento de la auditoría tras un fallo. */
   useEffect(() => {
     let active = true;
@@ -203,27 +200,6 @@ export function ExportPanel({
         },
       );
       setOptimization(result.optimization);
-      const deploymentManifest = JSON.parse(
-        String(result.files.get("deployment-manifest.json") ?? "{}"),
-      ) as Partial<DeploymentManifestV1>;
-      if (desktopExport) {
-        const revision =
-          typeof deploymentManifest.revision === "string" ? deploymentManifest.revision : undefined;
-        const saved = await desktopExport.exportSite({
-          storeSlug: project.slug,
-          mode,
-          ...(revision ? { revision } : {}),
-          files: [...result.files.entries()].map(([path, data]) => ({ path, data })),
-        });
-        if (saved.cancelled) {
-          setNotice("Exportación cancelada. No se modificó ninguna carpeta.");
-          setDoneStages(new Set());
-          return;
-        }
-        setNotice(
-          `Subí únicamente esta carpeta: ${saved.folder}. Modo: ${mode === "production" ? "producción" : "borrador"}. Revisión: ${saved.revision ?? revision ?? "no disponible"}. (${saved.filesWritten ?? result.files.size} archivos).`,
-        );
-      }
       recordHistory({
         mode,
         score: result.optimization.score,
@@ -232,13 +208,11 @@ export function ExportPanel({
       setExportDone(true);
       setDoneStages(new Set(EXPORT_STAGES.map((stage) => stage.id)));
       setPostDone(new Set());
-      if (!desktopExport) {
-        setNotice(
-          onOpenSite
-            ? "Exportación correcta. El sitio público se guarda en proyectos/<tienda>/sitios/ al guardar con el lanzador; podés abrirlo desde el dashboard."
-            : "Exportación correcta. En modo navegador el sitio generado no se conserva en disco; usá el lanzador de SolaraCommerce para guardarlo y abrirlo.",
-        );
-      }
+      setNotice(
+        onOpenSite
+          ? "Exportación correcta. El sitio público se guarda en proyectos/<tienda>/sitios/ al guardar con el lanzador; podés abrirlo desde el dashboard."
+          : "Exportación correcta. En modo navegador el sitio generado no se conserva en disco; usá el lanzador de SolaraCommerce para guardarlo y abrirlo.",
+      );
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo exportar la tienda.");
     } finally {
@@ -265,20 +239,8 @@ export function ExportPanel({
       if (remainingBusyMs > 0) {
         await new Promise<void>((resolve) => setTimeout(resolve, remainingBusyMs));
       }
-      if (desktopExport) {
-        const saved = await desktopExport.saveProjectArchive({
-          filename: `${project.slug}.solara.json`,
-          data: archive,
-        });
-        setNotice(
-          saved.cancelled
-            ? "Respaldo cancelado. No se guardó ningún archivo."
-            : `Respaldo guardado en ${saved.path}.`,
-        );
-      } else {
-        downloadBlob(archive, `${project.slug}.solara.json`, "application/vnd.solara.project+json");
-        setNotice("Respaldo descargado.");
-      }
+      downloadBlob(archive, `${project.slug}.solara.json`, "application/vnd.solara.project+json");
+      setNotice("Respaldo descargado.");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo crear el respaldo.");
     } finally {
@@ -793,11 +755,7 @@ export function ExportPanel({
             onClick={() => void exportSite("draft")}
             disabled={Boolean(busy)}
           >
-            {busy === "draft"
-              ? "Generando"
-              : desktopExport
-                ? "Elegir carpeta y exportar"
-                : "Exportar borrador"}
+            {busy === "draft" ? "Generando" : "Exportar borrador"}
           </Button>
         </article>
 
@@ -818,11 +776,7 @@ export function ExportPanel({
             onClick={() => setConfirmAction("production")}
             disabled={Boolean(busy) || !auditReady || critical > 0}
           >
-            {busy === "production"
-              ? "Generando"
-              : desktopExport
-                ? "Elegir carpeta y exportar"
-                : "Exportar producción"}
+            {busy === "production" ? "Generando" : "Exportar producción"}
           </Button>
         </article>
       </div>
@@ -874,9 +828,7 @@ export function ExportPanel({
           body={
             <p>
               Se generará el HTML final con sitemap, datos estructurados y feed de Merchant.
-              {desktopExport
-                ? " Al terminar, se abrirá el explorador de Windows para elegir una carpeta padre; la app creará una hija dedicada y no mezclará exportaciones."
-                : " Revisá el preview y el checklist SEO antes de continuar."}
+              {" Revisá el preview y el checklist SEO antes de continuar."}
               {publicAiContext
                 ? " El contexto público incluirá contacto, políticas, SKUs, precios y productos activos."
                 : ""}

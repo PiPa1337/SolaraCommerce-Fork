@@ -12,7 +12,8 @@ Los documentos históricos/auditorías cerradas viven en `docs/archive/`.
 | `TESTING.md` | Gates, budgets y convenciones de test | Correr o agregar tests |
 | `TECHNICAL_DEBT.md` | Deuda abierta/resuelta con evidencia | Antes de reportar un bug conocido |
 | `INTEGRATIONS.md` | Servidor local, hash sha256, migración ZIP | Tocar persistencia o endpoints |
-| `PORTABILITY.md` | Distribución Electron Windows opcional y QA aislado | Empaquetar, probar o mover una copia |
+| `LOCAL_OPERATION.md` | Ejecución local Node/navegador, backups y layout | Mover, respaldar o diagnosticar una instalación |
+| `DATA_STORAGE_SAFETY.md` | Contrato para reemplazos/migraciones de `proyectos/` | Antes de tocar el árbol comercial en forma masiva |
 | `AI_AGENT_GUIDE.md` | MCP/JSONL, SDK y flujo seguro para IA | Crear o automatizar tiendas |
 | `agent-protocol-v1.schema.json` | Contrato machine-readable del agente | Generar clientes o validadores |
 | `STOREFRONT_V2.md` | Familia visual V2 y compatibilidad V1 | Trabajo de módulos/tema |
@@ -26,9 +27,14 @@ Los documentos históricos/auditorías cerradas viven en `docs/archive/`.
 | `DEVELOPMENT.md` | Setup, estructura del monorepo, pipeline, comandos | Onboarding o referencia diaria |
 | `STOREFRONT_ARCHITECTURE.md` | CSS del storefront: módulos, breakpoints, variables | Trabajo de estilos o módulos |
 | `GUARDIANS.md` | Catálogo de specs guardianes (geométricos, adversariales, seguridad) | Antes de agregar tests o cambiar layout |
+| `FULL_REFERENCE.md` | Mapa liviano hacia fuentes autoritativas | Navegación temática sin duplicar snapshots |
+| `MUSE_SPARK_1.2.md` | Preferencias del perfil Muse, sin duplicar contratos | Sólo al usar ese perfil de colaboración |
 
 ## Regla de archivo
 
 Las auditorías puntuales y planes cerrados se mueven a `docs/archive/`
 (ej: auditorías fechadas, revisiones arquitectónicas). No se borran: quedan
 como referencia histórica fuera del nivel principal.
+
+`PORTABILITY.md` se conserva como alias histórico hacia `LOCAL_OPERATION.md`;
+no es una fuente operativa adicional.

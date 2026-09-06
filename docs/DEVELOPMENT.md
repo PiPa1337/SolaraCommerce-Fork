@@ -7,7 +7,7 @@ cambio, y cómo las piezas se conectan entre sí.
 ## Requisitos
 
 - Node.js 24.x y Corepack (pnpm 10.15.1)
-- Windows 10/11 (el artefacto Electron empaquetado es Windows-only; el código Node es cross-platform)
+- Windows 10/11 para el launcher `Abrir SolaraCommerce.cmd`; el código Node es cross-platform.
 - Chromium para Playwright E2E (`corepack pnpm playwright:install:chromium`)
 
 ## Setup inicial
@@ -31,7 +31,6 @@ Abrir SolaraCommerce.cmd
 ```text
 apps/
   studio/            Editor React + Vite (la app que usa el merchant)
-  desktop/           Shell Electron opcional para distribución Windows
 packages/
   project-schema/    Zod schemas, fixtures, template (contrato de datos)
   core/              Reducer de dominio, HistoryState, CSV (sin navegador)
@@ -115,7 +114,7 @@ corepack pnpm check:full
 corepack pnpm test:e2e:smoke
 
 # Release completo
-corepack pnpm release   # check:full + smoke + desktop:package
+corepack pnpm release   # check:full + smoke full + E2E release
 ```
 
 Ver `docs/TESTING.md` para la lista completa de gates y budgets.

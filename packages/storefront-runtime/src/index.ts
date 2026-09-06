@@ -646,7 +646,7 @@ function storefrontBoot(): void {
   } = copy;
   const greeting = root.dataset.whatsappGreeting ?? "";
   const storageKey = `solara-cart:${storeId}`;
-  const embed = parent !== window && location.protocol[0] !== "s";
+  const embed = parent !== window;
   const priceFractionDisplay = (root.dataset.priceFractionDisplay ?? "always") as "always" | "auto";
   function formatMoneyRuntime(cents: number): string {
     return formatMoney(cents, currency, locale, priceFractionDisplay);

@@ -21,14 +21,7 @@ createRoot(container).render(
   </StrictMode>,
 );
 
-// El shell portable usa solara:// y mantiene su perfil aislado; un
-// Service Worker sobre el navegador no debe mezclarse con ese origen.
-// Launcher HTTP conserva comportamiento PWA.
-if (
-  "serviceWorker" in navigator &&
-  import.meta.env.PROD &&
-  window.location.protocol !== "solara:"
-) {
+if ("serviceWorker" in navigator && import.meta.env.PROD) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("/sw.js")

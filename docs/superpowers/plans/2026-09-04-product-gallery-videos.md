@@ -1008,7 +1008,7 @@ git commit -m "docs: videos producto ultra-light en modelo y changelog"
 
 **Files:**
 - Create: `tests/e2e/product-video.spec.ts`
-- Verify: budgets, `check:micro/quick/full`, smoke/full, build/portable si aplica.
+- Verify: budgets, `check:micro/quick/full` y smoke/full según `docs/TESTING.md`.
 
 **Interfaces:**
 - Consumes: Tasks 1-8.
@@ -1054,7 +1054,7 @@ corepack pnpm test:e2e:smoke:full
 corepack pnpm exec vitest run scripts/storefront-runtime-budget.test.ts scripts/public-storefront-budget.test.ts
 ```
 
-Expected: todo PASS; runtime JS ≤80 KiB, CSS ≤32 KiB gzip; delta runtime por este feature <1 KiB. Cierre formal: `corepack pnpm check` + `corepack pnpm test:e2e` full. Como toca Studio/shell: `corepack pnpm build`, `desktop:build`, `desktop:package`, `portable:smoke` al cerrar (artefactos no se commitean).
+Expected: todo PASS; runtime JS ≤80 KiB, CSS ≤32 KiB gzip; delta runtime por este feature <1 KiB. Cierre formal según `docs/TESTING.md`: `corepack pnpm check:full` + `corepack pnpm test:e2e:smoke:full` + `corepack pnpm test:e2e`. `test:e2e:release` queda on-demand sobre Node 24.x.
 
 - [ ] **Step 5: Commit**
 

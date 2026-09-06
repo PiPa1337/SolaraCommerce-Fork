@@ -298,8 +298,8 @@ describe("carrito robusto y checkout con precios frescos (C2/C3/C5/C9 + SF-B4/B5
     expect(STOREFRONT_RUNTIME_JS).toContain("if (!embed) cart = readStoredCart();");
   });
 
-  it("usa el almacenamiento compartido en el preview portable", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain('location.protocol[0] !== "s"');
+  it("aísla el almacenamiento local cuando el storefront está embebido", () => {
+    expect(STOREFRONT_RUNTIME_JS).toContain('const embed = parent !== window;');
     expect(STOREFRONT_RUNTIME_JS).toContain("if (!embed) cart = readStoredCart();");
   });
 
