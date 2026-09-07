@@ -113,6 +113,11 @@ test("sin JS el video con poster sigue útil", async ({ browser }) => {
 test("mobile 390px: stage mínimo cuadrado y retrato visible", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${baseUrl}${PRODUCT_PATH}`);
+  await page.locator('[data-gallery-thumb="video-e2e-001"]').click();
+  await expect(page.locator('[data-gallery-media-id="video-e2e-001"]')).toHaveAttribute(
+    "data-gallery-active",
+    "true",
+  );
   const main = page.locator(".catalog-product-gallery-main").first();
   const box = await main.boundingBox();
   expect(box).not.toBeNull();

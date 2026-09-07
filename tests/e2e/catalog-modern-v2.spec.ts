@@ -9,6 +9,14 @@ import { waitForStorefrontReady } from "./storefront-helpers";
 
 const exported = exportProject(catalogModernV2Store, { mode: "production" });
 const exportedV1 = exportProject(catalogModernStore, { mode: "production" });
+const mobileLogoProject = structuredClone(catalogModernV2Store);
+mobileLogoProject.identity.logoAssetId = "asset-hero";
+const mobileLogoHeader = mobileLogoProject.sections.find(
+  (section) => section.moduleId === "catalog-header",
+);
+if (!mobileLogoHeader) throw new Error("La fixture V2 no tiene header para la prueba del logo móvil.");
+mobileLogoHeader.motion = { ...mobileLogoHeader.motion, preset: "fade" };
+const exportedMobileLogo = exportProject(mobileLogoProject, { mode: "production" });
 const longTitleProject = structuredClone(catalogModernV2Store);
 const longTitleHero = longTitleProject.sections.find(
   (section) => section.moduleId === "catalog-hero",
@@ -127,7 +135,9 @@ test.beforeAll(async () => {
         : requested.endsWith("/")
           ? `${requested}index.html`
           : requested;
-    const source = url.searchParams.has("autoplayHero")
+    const source = url.searchParams.has("mobileLogo")
+      ? exportedMobileLogo
+      : url.searchParams.has("autoplayHero")
       ? exportedAutoplayHero
       : url.searchParams.has("responsiveGallery")
         ? exportedResponsiveGallery
@@ -152,6 +162,7 @@ test.beforeAll(async () => {
           exportedLongTitle.files.get(path) ??
           exportedResponsiveGallery.files.get(path) ??
           exportedAutoplayHero.files.get(path) ??
+          exportedMobileLogo.files.get(path) ??
           exported.files.get(path))
         : undefined) ??
       fixtureFiles.get(path);
@@ -978,37 +989,66 @@ test("V2 conserva visibles los bordes externos de las cards en cualquier grilla"
   }
 });
 
-test("V2 no solapa el menú móvil con la marca", async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 844 });
-  await page.goto(serverUrl);
+test("V2 mantiene visible el logo entre el menú móvil y las acciones", async ({ page }) => {
+  for (const scenario of [
+    { width: 320, path: "/" },
+    { width: 390, path: "/productos/remera-esencial-de-algodon/" },
+  ]) {
+    await page.setViewportSize({ width: scenario.width, height: 844 });
+    const url = new URL(scenario.path, serverUrl);
+    url.searchParams.set("mobileLogo", "1");
+    await page.goto(url.toString());
 
-  const metrics = await page.evaluate(() => {
-    const button = document.querySelector<HTMLElement>(".catalog-mobile-menu-button");
-    const brand = document.querySelector<HTMLElement>(".catalog-brand");
-    const actions = document.querySelector<HTMLElement>(".catalog-header-actions");
-    const header = document.querySelector<HTMLElement>(".catalog-header-inner");
-    if (!button || !brand || !actions || !header) return null;
-    const buttonRect = button.getBoundingClientRect();
-    const brandRect = brand.getBoundingClientRect();
-    const brandContent = brand.querySelector<HTMLElement>("picture, .solara-wordmark");
-    const actionsRect = actions.getBoundingClientRect();
-    return {
-      buttonRight: buttonRect.right,
-      brandLeft: brandRect.left,
-      brandRight: brandRect.right,
-      brandContentRight: brandContent?.getBoundingClientRect().right ?? brandRect.right,
-      actionsLeft: actionsRect.left,
-      headerRight: header.getBoundingClientRect().right,
-      documentWidth: document.documentElement.scrollWidth,
-    };
-  });
+    const metrics = await page.evaluate(() => {
+      const motionRoot = document.querySelector<HTMLElement>(
+        '[data-solara-module="catalog-header"]',
+      );
+      const button = document.querySelector<HTMLElement>(".catalog-mobile-menu-button");
+      const brand = document.querySelector<HTMLElement>(".catalog-brand");
+      const logo = brand?.querySelector<HTMLImageElement>("img.solara-logo");
+      const actions = document.querySelector<HTMLElement>(".catalog-header-actions");
+      const header = document.querySelector<HTMLElement>(".catalog-header-inner");
+      if (!motionRoot || !button || !brand || !logo || !actions || !header) return null;
 
-  expect(metrics).not.toBeNull();
-  expect(metrics?.brandLeft).toBeGreaterThanOrEqual((metrics?.buttonRight ?? 0) - 0.5);
-  expect(metrics?.brandRight).toBeLessThanOrEqual((metrics?.brandContentRight ?? 0) + 1);
-  expect(metrics?.actionsLeft).toBeGreaterThanOrEqual((metrics?.brandRight ?? 0) - 0.5);
-  expect(metrics?.headerRight).toBeLessThanOrEqual(320);
-  expect(metrics?.documentWidth).toBeLessThanOrEqual(320);
+      // Reproduce el frame frágil: motion listo mientras el logo aún no fue marcado como cargado.
+      document.documentElement.dataset.motionReady = "true";
+      motionRoot.dataset.motionPreset = "fade";
+      delete logo.dataset.solaraLoaded;
+      delete logo.dataset.solaraBroken;
+
+      const buttonRect = button.getBoundingClientRect();
+      const brandRect = brand.getBoundingClientRect();
+      const logoRect = logo.getBoundingClientRect();
+      const actionsRect = actions.getBoundingClientRect();
+      const logoStyle = getComputedStyle(logo);
+      return {
+        buttonRight: buttonRect.right,
+        brandLeft: brandRect.left,
+        brandRight: brandRect.right,
+        logoWidth: logoRect.width,
+        logoHeight: logoRect.height,
+        logoLeft: logoRect.left,
+        logoRight: logoRect.right,
+        logoOpacity: logoStyle.opacity,
+        logoVisibility: logoStyle.visibility,
+        actionsLeft: actionsRect.left,
+        headerRight: header.getBoundingClientRect().right,
+        documentWidth: document.documentElement.scrollWidth,
+      };
+    });
+
+    expect(metrics).not.toBeNull();
+    expect(metrics?.brandLeft).toBeGreaterThanOrEqual((metrics?.buttonRight ?? 0) - 0.5);
+    expect(metrics?.logoWidth ?? 0).toBeGreaterThan(0);
+    expect(metrics?.logoHeight ?? 0).toBeGreaterThan(0);
+    expect(metrics?.logoOpacity).toBe("1");
+    expect(metrics?.logoVisibility).toBe("visible");
+    expect(metrics?.logoLeft).toBeGreaterThanOrEqual((metrics?.brandLeft ?? 0) - 0.5);
+    expect(metrics?.logoRight).toBeLessThanOrEqual((metrics?.brandRight ?? 0) + 0.5);
+    expect(metrics?.actionsLeft).toBeGreaterThanOrEqual((metrics?.brandRight ?? 0) - 0.5);
+    expect(metrics?.headerRight).toBeLessThanOrEqual(scenario.width);
+    expect(metrics?.documentWidth).toBeLessThanOrEqual(scenario.width);
+  }
 });
 
 test("V2 no deja el mega menú cerrado fuera del layout", async ({ page }) => {
@@ -2083,12 +2123,20 @@ test("V2 presenta PDP editorial y carrito lateral o inferior según viewport", a
   const mobileProductMetrics = await mobileDetail.evaluate((element) => {
     const detailRect = element.getBoundingClientRect();
     const gallery = element.querySelector<HTMLElement>(".catalog-product-gallery-main");
+    const galleryRect = gallery?.getBoundingClientRect();
+    const galleryMedia = gallery?.querySelector<HTMLElement>(".catalog-product-gallery-image");
+    const productInfo = element.querySelector<HTMLElement>(".catalog-product-info");
+    const title = productInfo?.querySelector<HTMLElement>("h1");
     const action = element.querySelector<HTMLElement>(".catalog-product-add");
     return {
       layout: getComputedStyle(element).display,
       detailLeft: detailRect.left,
       detailRight: innerWidth - detailRect.right,
-      galleryHeight: gallery?.getBoundingClientRect().height ?? 0,
+      galleryWidth: galleryRect?.width ?? 0,
+      galleryHeight: galleryRect?.height ?? 0,
+      galleryObjectFit: galleryMedia ? getComputedStyle(galleryMedia).objectFit : "",
+      infoWidth: productInfo?.getBoundingClientRect().width ?? 0,
+      titleWidth: title?.getBoundingClientRect().width ?? 0,
       actionBottom: action?.getBoundingClientRect().bottom ?? Number.POSITIVE_INFINITY,
       documentWidth: document.documentElement.scrollWidth,
     };
@@ -2096,7 +2144,12 @@ test("V2 presenta PDP editorial y carrito lateral o inferior según viewport", a
   expect(mobileProductMetrics.layout).toBe("flex");
   expect(mobileProductMetrics.detailLeft).toBeGreaterThanOrEqual(11);
   expect(mobileProductMetrics.detailRight).toBeGreaterThanOrEqual(11);
+  expect(mobileProductMetrics.galleryWidth / mobileProductMetrics.galleryHeight).toBeCloseTo(1, 1);
   expect(mobileProductMetrics.galleryHeight).toBeLessThanOrEqual(520);
+  expect(mobileProductMetrics.galleryObjectFit).toBe("cover");
+  expect(mobileProductMetrics.titleWidth / mobileProductMetrics.infoWidth).toBeGreaterThanOrEqual(
+    0.98,
+  );
   expect(mobileProductMetrics.actionBottom).toBeGreaterThan(0);
   expect(mobileProductMetrics.documentWidth).toBeLessThanOrEqual(390);
   await expect(mobileInfo.getByRole("button", { name: "Agregar al carrito" })).toBeVisible();

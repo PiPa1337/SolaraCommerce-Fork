@@ -17,9 +17,11 @@ import {
   createModuleSection,
   getModuleDefinition,
   getTypedModule,
+  MOBILE_HERO_SQUARE_FIX,
   MODULE_STYLE_BLOCKS,
   moduleRegistry,
   officialModules,
+  PRODUCT_GALLERY_MOBILE_FIX,
   renderSections,
   replaceModuleInSection,
   STORE_BASE_STYLES,
@@ -1290,6 +1292,42 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     );
   });
 
+  it("mantiene cuadrada y cubierta la galería de producto en mobile", () => {
+    expect(PRODUCT_GALLERY_MOBILE_FIX).toContain("aspect-ratio:1");
+    expect(PRODUCT_GALLERY_MOBILE_FIX).toMatch(
+      /:is\(img\.catalog-product-gallery-image,img\.solara-product-gallery-image\)[^{]*\{[^}]*object-fit:cover/,
+    );
+  });
+
+  it("fija en cuadrado el medio del hero de inicio en todas las familias", () => {
+    expect(MOBILE_HERO_SQUARE_FIX).toContain(
+      '[data-solara-store].catalog-modern .catalog-hero-inner',
+    );
+    expect(MOBILE_HERO_SQUARE_FIX).toContain(".cm.v2 .catalog-hero-editorial [data-hero-media]");
+    expect(MOBILE_HERO_SQUARE_FIX).toContain("border-radius:0");
+
+    const splitHeroStyles = MODULE_STYLE_BLOCKS["split-hero"];
+    const heroMediaStyles = MODULE_STYLE_BLOCKS["hero-media"];
+    const editorialHeroStyles = MODULE_STYLE_BLOCKS["editorial-hero"];
+    if (!splitHeroStyles || !heroMediaStyles || !editorialHeroStyles) {
+      throw new Error("Faltan estilos de los heroes legacy");
+    }
+    expect(splitHeroStyles).toMatch(/\.solara-hero-media \{[^}]*border-radius: 0;/s);
+    expect(heroMediaStyles).not.toContain(".solara-hero-media-shell {\n  border-radius:");
+    expect(editorialHeroStyles).not.toContain(".solara-hero-media {\n  border-radius:");
+  });
+
+  it("permite que el título de producto use todo el ancho en mobile", () => {
+    const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
+    const modernStyles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!styles || !modernStyles) throw new Error("Faltan estilos de detalle de producto");
+
+    expect(styles).toMatch(/\.catalog-product-info h1 \{ width: 100%; max-width: 100%;/);
+    expect(modernStyles).toMatch(
+      /\.cm\.v2 \.catalog-product-info h1 \{\s*width: 100%;\s*max-width: 100%;/,
+    );
+  });
+
   it("hace que las imágenes del carrito llenen su marco cuadrado", () => {
     const styles = MODULE_STYLE_BLOCKS["catalog-modern"];
     const modernStyles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
@@ -1510,20 +1548,30 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
   });
 
   it("mantiene visible la media LCP y usa zoom compositado sin clip-path", () => {
-    const modernStyles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
-    if (!modernStyles) throw new Error("Falta el bloque de estilos catalog-modern-v2");
+    const baseStyles = MODULE_STYLE_BLOCKS["catalog-modern"];
+    const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];
+    if (!baseStyles || !v2Styles) throw new Error("Faltan los estilos de Catalog Modern");
 
-    expect(modernStyles).toContain("[data-hero-media], .catalog-hero-media)[data-solara-loaded]");
-    expect(modernStyles).not.toContain(
+    expect(v2Styles).toContain("[data-hero-media], .catalog-hero-media)[data-solara-loaded]");
+    expect(v2Styles).not.toContain(
       "[data-hero-media]{animation:none!important;opacity:1!important}",
     );
-    expect(modernStyles).toContain("@keyframes solara-hero-media-zoom");
-    expect(modernStyles).toContain(".catalog-hero-line-inner");
-    expect(modernStyles).toContain("line-height: 1.1;");
-    expect(modernStyles).toContain("text-shadow: none;");
-    expect(modernStyles).toContain("@media (min-width: 768px) and (max-width: 899px)");
-    expect(modernStyles).toContain(".catalog-hero-benefits--band");
-    expect(modernStyles).not.toContain("clip-path");
+    expect(v2Styles).toContain("@keyframes solara-hero-media-zoom");
+    expect(v2Styles).toContain(".catalog-hero-line-inner");
+    expect(v2Styles).toContain("line-height: 1.1;");
+    expect(v2Styles).toContain("text-shadow: none;");
+    expect(baseStyles).toContain(
+      "min-height: calc(100svh - 96px); margin-top: .75rem; border-radius: 0;",
+    );
+    expect(v2Styles).toContain(".cm.v2 .catalog-hero-editorial [data-hero-media]");
+    expect(v2Styles).toContain("aspect-ratio: auto;\n    border-radius: 0;");
+    expect(v2Styles).toContain(
+      "min-height: clamp(35.5rem, min(82svh, calc(100vw * 16 / 9)), 43rem);\n      border-radius: 0;",
+    );
+    expect(v2Styles).toContain("aspect-ratio: 9 / 16;\n      border-radius: 0;");
+    expect(v2Styles).toContain("@media (min-width: 768px) and (max-width: 899px)");
+    expect(v2Styles).toContain(".catalog-hero-benefits--band");
+    expect(v2Styles).not.toContain("clip-path");
   });
 
   it("el appear de marca depende del preset de la sección y del load", () => {

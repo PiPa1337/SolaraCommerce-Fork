@@ -12,6 +12,9 @@
 
 **Fixed**
 
+- En la ficha de producto mobile, la galería conserva un marco cuadrado: las
+  imágenes usan `cover` y los videos `contain` para evitar recortes; el título
+  aprovecha todo el ancho disponible de forma responsive.
 - Se corrigen los errores de formato/diagnóstico que afectaban al editor de
   productos y al helper de optimización de video.
 - Se agrega cobertura browser para installability/recarga offline del Studio y

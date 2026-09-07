@@ -137,7 +137,6 @@ Los errores Biome observados originalmente en el editor de productos, su modelo 
 | AUD-027 | Edición | Perfil legal | Completa | 9 | P1 | schema/exporter SEO/legal tests | Requiere mantenimiento normativo manual | Checklist de campos legales | Profiles legales versionados |
 | AUD-028 | Edición | SEO general | Completa | 9 | P1 | exporter/SEO tests | Publicación externa sigue manual | Previsualizar SERP/social | Integraciones de verificación opcionales |
 | AUD-029 | Edición | Tema/tokens/presets | Completa | 9 | P2 | theme tests | Tema único por diseño | Auditoría automática de contraste | Presets versionados |
-| AUD-030 | Edición | Tema único; ausencia de selector `auto/light/dark` | Completa | 10 | P2 | schema + ThemeEditor + exporter tests | Función retirada por diseño | Mantener regresión de ausencia | Auditoría automática de contraste y presets |
 | AUD-031 | Edición | Navegación y site shell | Completa | 9 | P2 | schema/modules/exporter tests | Sin revisión browser fresca | Test de navegación por teclado | Builder visual de navegación |
 | AUD-032 | Edición | Editor de productos | Completa | 9 | P2 | Studio tests + `format:check` sin errores | Sin hallazgo funcional actual | Mantener regresiones y formato | Simplificar modelo/editor si sigue creciendo |
 | AUD-033 | Edición | Imágenes/assets | Completa | 9 | P1 | workers/exporter tests | Riesgo de peso controlado por budget | Mostrar costo de export por asset | Pipeline de variantes más visible |
@@ -154,10 +153,8 @@ Los errores Biome observados originalmente en el editor de productos, su modelo 
 | AUD-044 | Dominio | `catalog.applyImport` | Completa | 8 | P1 | core/import tests | Requiere cuidado con payloads grandes | Métricas de import | Resume/retry de import |
 | AUD-045 | Dominio | CRUD/reparent de categorías | Completa | 9 | P1 | core tests | Sin hallazgo | Validar ciclos en UI antes de enviar | Reorganización masiva |
 | AUD-046 | Dominio | Crear/editar colecciones | Completa | 9 | P2 | core tests | No hay delete domain command equivalente listado | Definir si delete es requerido | Completar lifecycle uniforme |
-| AUD-047 | Módulos | Registro legacy editorial (13 módulos) | Completa | 8 | P3 | modules tests | Sólo compatibilidad | Congelar features nuevas | Plan de migración/retirada futura |
 | AUD-048 | Módulos | Catalog Modern (11 módulos) | Completa | 9 | P1 | 120 tests modules + exporter | Sin revisión visual fresca | Visual smoke por módulo | Matriz visual automática |
 | AUD-049 | Módulos | Contacto en Home (`contact-form` + `contact-channels`) | Completa | 10 | P1 | modules + exporter tests | Sin página dedicada por diseño | Mantener anclas y WhatsApp cubiertos | Mejoras de UX dentro de la sección Home |
-| AUD-050 | Módulos | Ausencia de suite/página Nosotros por diseño | Completa | 10 | P1 | registry + exporter tests | Función retirada intencionalmente | Mantener regresión de ausencia | Sin mejora planificada mientras siga fuera del producto |
 | AUD-051 | Builder | Inspector generado desde metadata de módulos | Completa | 9 | P2 | Builder/module SDK tests | Superficie grande | Añadir búsqueda de settings | Schema-driven editor más uniforme |
 | AUD-052 | Builder | Repetidores/settings/defaults | Completa | 9 | P2 | repeater/default tests | Sin hallazgo | Mejor feedback de límites | Presets por módulo |
 | AUD-053 | Preview | Renderer compartido Preview↔Export | Completa | 10 | P0 | exporter parity tests | Contrato crítico; mantener | Gate focal obligatorio | Hash/fingerprint visible en Studio |
@@ -178,16 +175,12 @@ Los errores Biome observados originalmente en el editor de productos, su modelo 
 | AUD-068 | Checkout | Formulario de datos del pedido | Completa | 9 | P0 | exporter/runtime tests | Sin validación manual fresca | E2E de campos inválidos | Persistencia opcional local de datos no sensibles |
 | AUD-069 | Checkout | Preparación de pedido WhatsApp | Completa | 9 | P0 | runtime tests | Depende de WhatsApp externo | Mejor fallback copy | Destinos alternativos configurables |
 | AUD-070 | Checkout | Multipart/fallback para mensajes largos | Completa | 10 | P1 | tests específicos runtime | Sin hallazgo | Mostrar cantidad de partes | Estrategia de compresión textual |
-| AUD-071 | Checkout | `whatsapp.includeSku` legado | Completa | 10 | P3 | schema + tests de ausencia/ignore en runtime/exporter | Sólo compatibilidad de lectura; fuera de UI y checkout activo | Mantener deprecated/ignored | Retirar en una migración explícita futura |
 | AUD-072 | Exporter | Home | Completa | 10 | P0 | exporter tests | Sin hallazgo | Mantener parity | Componentización interna de `buildPages` |
 | AUD-073 | Exporter | Categorías paginadas | Completa | 10 | P0 | exporter tests | Sin hallazgo | Test de jerarquías extremas | Separar builder de ruta |
 | AUD-074 | Exporter | Colecciones paginadas | Completa | 9 | P1 | exporter tests | Sin hallazgo | Edge cases de colecciones vacías | Builder específico |
 | AUD-075 | Exporter | Producto | Completa | 10 | P0 | exporter tests | Sin hallazgo | Mantener no-JS | Builder específico |
 | AUD-076 | Exporter | `/buscar/` | Completa | 9 | P1 | runtime/exporter tests | Sin hallazgo | E2E sin query | URLs con estado de filtros |
 | AUD-077 | Exporter | `/carrito/` | Completa | 9 | P1 | exporter/runtime tests | En V2 continúa al contacto embebido | Documentar flujo V2 | Configurar estrategia de checkout |
-| AUD-078 | Exporter | Ausencia de `/compra/` por diseño | Completa | 10 | P1 | exporter absence regression | Ruta retirada; checkout interno se conserva | Mantener 404/ausencia | Sin página Compra mientras siga fuera del producto |
-| AUD-079 | Exporter | Ausencia de `/nosotros/` por diseño | Completa | 10 | P1 | exporter absence regression | Ruta retirada intencionalmente | Mantener 404/ausencia | Sin página Nosotros mientras siga fuera del producto |
-| AUD-080 | Exporter | Contacto sólo en `/#contact-form` | Completa | 10 | P1 | modules + exporter absence regression | `/contacto/` retirada intencionalmente | Mantener ancla y 404 dedicados | Mejorar la sección de Inicio sin crear otra ruta |
 | AUD-081 | Exporter | `/envios/` | Completa | 9 | P1 | exporter tests | Publicación depende de flags legales | Mostrar preview legal | Versionado de perfiles |
 | AUD-082 | Exporter | `/devoluciones/` | Completa | 9 | P1 | exporter tests | Igual que arriba | Preview legal | Versionado de perfiles |
 | AUD-083 | Exporter | `/privacidad/` | Completa | 9 | P1 | exporter tests | Override/manual legal | Validación de contenido vacío | Plantillas legales versionadas |
@@ -216,7 +209,6 @@ Los errores Biome observados originalmente en el editor de productos, su modelo 
 | AUD-106 | Persistencia | Open site/open folder | Completa | 9 | P3 | endpoints + App + `request-handler.test.mjs` | Integración Windows endurecida y cubierta de forma determinista | Mantener test por plataforma | Abstracción por plataforma |
 | AUD-107 | Persistencia | Delete local project | Completa | 8 | P1 | storage endpoint/tests | Acción destructiva | Backup previo sugerido | Papelera transaccional |
 | AUD-108 | Persistencia | Transacción save start/project/site/commit/abort | Completa | 10 | P0 | storage tests | Sin hallazgo | Chaos test puntual | Journal transaccional explícito |
-| AUD-109 | Persistencia | Migración legacy `.solara.zip` | Completa | 9 | P1 | migration tests/docs | `fflate` temporal es deuda | Mantener marcador/one-shot | Retirar migración tras ventana definida |
 | AUD-110 | Persistencia | QA/status de storage | Completa | 9 | P2 | endpoints/tests | Sin hallazgo | Mostrarlo en UI de diagnóstico | Exportar reporte de salud |
 | AUD-111 | Agentes | Health/protocol describe | Completa | 10 | P1 | agent-control/contracts tests | Sin hallazgo | Mantener conformance | Version negotiation avanzada |
 | AUD-112 | Agentes | Stores list/get/restore | Completa | 9 | P1 | agent-control + SDK parity test | Sin hallazgo | Mantener conformance | Cliente generado |
@@ -224,7 +216,6 @@ Los errores Biome observados originalmente en el editor de productos, su modelo 
 | AUD-114 | Agentes | Rollouts preview/commit/get/rollback | Completa | 9 | P0 | host/contracts + SDK parity test | Sin hallazgo | Mantener conformance | Cliente generado |
 | AUD-115 | Agentes | Plans create/get/commit/discard/heartbeat | Completa | 10 | P0 | agent-control tests | Sin hallazgo host | Mejor UX en CLI | Declarative plan diff |
 | AUD-116 | Agentes | `plans.createAndCommit` | Completa | 9 | P1 | host/contracts + SDK parity test | Sin hallazgo | Mantener conformance | Generación automática |
-| AUD-117 | Agentes | Jobs get | Completa | 9 | P1 | host/SDK | Polling helper usa interval fijo por defecto | Backoff simple | Suscripción/event stream local |
 | AUD-118 | Agentes | Audit list | Completa | 9 | P1 | host/SDK | Sin hallazgo | Filtros SDK | Export auditoría |
 | AUD-119 | Agentes | Assets stage/upload begin/chunk/finish | Completa | 9 | P1 | host/contracts/SDK | Sin hallazgo | Resume upload | Checksum por chunk |
 | AUD-120 | Agentes | Placeholder generation | Completa | 9 | P2 | host/contracts + SDK parity test | Sin hallazgo | Mantener conformance | Providers opcionales |
@@ -243,8 +234,6 @@ Los errores Biome observados originalmente en el editor de productos, su modelo 
 | AUD-133 | Schema | assets/videos/sections | Completa | 9 | P1 | schema/modules/exporter tests | Sin hallazgo | Herramientas de depuración de refs | Garbage collector seguro de assets |
 | AUD-134 | Optimizer | Auditoría SEO/media/Merchant/contexto IA | Completa | 9 | P1 | 17 optimizer tests | Sin verificación externa de buscadores | UI con severidad/solución | Profiles por industria |
 | AUD-135 | Cloudflare | Verificación HTTPS/manifest/runtime hashed/fetch/headers | Completa | 9 | P1 | implementation/tests | CORS puede impedir chequeo directo | Mensaje y curl copy mejorados | Verificador multi-hosting |
-| AUD-136 | Cloudflare | Fallback a comandos curl cuando CORS bloquea | Completa | 8 | P2 | cloudflareVerification | Requiere ejecución manual | Botón copiar todo | Runner local integrado |
-| AUD-137 | Studio PWA | Manifest + service worker del Studio | Completa | 9 | P2 | manifest + service worker + E2E installability/offline | Installability y recarga offline verificadas en Chromium | Mantener test install/offline | Estrategia de actualización con aviso |
 | AUD-138 | QA | `check:repository` | Completa | 10 | P1 | ejecutado OK en quick | Sin hallazgo | Mantener | Extender sólo con reglas de alto valor |
 | AUD-139 | QA | `check:hardcoded-content` | Completa | 10 | P1 | ejecutado OK en quick | Sin hallazgo | Mantener | Detectar copy duplicado por schema |
 | AUD-140 | QA | `check:image-budget` | Completa | 10 | P1 | ejecutado OK en quick | Sin hallazgo | Mantener | Budget por clase de asset |
@@ -286,7 +275,7 @@ El contrato de agentes también permite operaciones de mutación adicionales com
 
 ### 5.2 Registro completo de módulos — 42 módulos
 
-**Legacy editorial — 13 → AUD-047**
+**Legacy editorial — compatibilidad interna (fuera de matriz funcional)**
 
 1. `announcement-bar`
 2. `editorial-header`
@@ -316,12 +305,12 @@ El contrato de agentes también permite operaciones de mutación adicionales com
 10. `catalog-cart-drawer`
 11. `catalog-footer`
 
-**Contacto en Home — 2 → AUD-049/AUD-080**
+**Contacto en Home — decisión de arquitectura de navegación**
 
 1. `contact-form`
 2. `contact-channels`
 
-No existe una suite modular ni una página independiente de Nosotros por diseño → AUD-050/AUD-079.
+No existe una suite modular ni una página independiente de Nosotros por decisión de producto.
 
 ### 5.3 Protocolo público de agentes — 34 métodos
 
@@ -428,7 +417,7 @@ Mapeados a AUD-002, AUD-101…AUD-110:
 - `/carrito/` cuando cart está habilitado → AUD-077
 - El checkout vive dentro del carrito/drawer y termina en WhatsApp, sin ruta independiente → AUD-068/AUD-069/AUD-078
 - Contacto se resuelve dentro de Inicio con `/#contact-form` → AUD-049/AUD-080
-- `/compra/`, `/nosotros/` y `/contacto/` no se generan por diseño → AUD-078/AUD-079/AUD-080
+- `/compra/`, `/nosotros/` y `/contacto/` no se generan por decisión de producto; se documentan como exclusiones intencionales
 - `/envios/` → AUD-081
 - `/devoluciones/` → AUD-082
 - `/privacidad/` → AUD-083
@@ -479,6 +468,24 @@ Todos quedan cubiertos por AUD-087…AUD-099:
 - favicon e icons
 - archivos de recuperación cuando correspondan
 - assets públicos optimizados/copied
+
+## Decisiones de producto fuera de la matriz funcional
+
+Estas entradas no representan capacidades faltantes ni funcionalidades auditables. Se mantienen como documentación de alcance para evitar interpretar decisiones de diseño como deuda:
+
+- Tema único sin selector `auto/light/dark`.
+- Contacto integrado dentro de Inicio mediante `/#contact-form`.
+- Sin páginas independientes `/nosotros/`, `/contacto/` o `/compra/`.
+- Checkout basado en carrito/drawer con salida a WhatsApp.
+
+## Compatibilidad, legado e infraestructura interna
+
+Estas áreas se documentan separadas porque existen por soporte técnico, migración o herramientas internas:
+
+- Módulos legacy editoriales conservados por compatibilidad.
+- Campos legacy tolerados por schema como `whatsapp.includeSku`.
+- Migraciones antiguas como `.solara.zip`.
+- Helpers internos de agentes, diagnósticos y validaciones manuales.
 
 ## 6. Priorización P0/P1
 

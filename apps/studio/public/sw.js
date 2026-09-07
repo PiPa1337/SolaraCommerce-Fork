@@ -7,10 +7,10 @@ const ASSET_CACHE = "solara-studio-assets-v1";
 const SHELL_CACHE_PREFIX = "solara-studio-shell-";
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches
-      .open(CACHE)
-      .then((cache) => cache.addAll(SHELL))
-      .then(() => self.skipWaiting()),
+    Promise.all([
+      caches.open(CACHE).then((cache) => cache.addAll(SHELL)),
+      caches.open(ASSET_CACHE),
+    ]).then(() => self.skipWaiting()),
   );
 });
 self.addEventListener("activate", (event) => {

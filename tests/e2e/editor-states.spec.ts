@@ -36,7 +36,7 @@ async function openStore(page: Page): Promise<void> {
         );
       }),
   );
-  await page.reload();
+  await page.goto(studioUrl);
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   const card = page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }).first();
   await card.locator(".dashboard-store-card__button").click();
@@ -95,10 +95,11 @@ async function expectDisabledButton(button: Locator, label: string) {
 }
 
 async function expectFocusRing(element: Locator, label: string) {
-  await element.focus();
-  await expect(element).toBeFocused();
+  // Activa la modalidad de teclado antes de enfocar el control. Hacer un
+  // Tab/Shift+Tab alrededor del elemento era inestable cuando el siguiente
+  // destino era el iframe de Preview.
   await element.page().keyboard.press("Tab");
-  await element.page().keyboard.press("Shift+Tab");
+  await element.focus();
   await expect(element).toBeFocused();
   const hasRing = await element.evaluate((el) => {
     const visibleRing = (node: Element) => {

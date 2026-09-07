@@ -87,6 +87,19 @@ describe("exporter", () => {
     expect(legacyCss).toContain("--solara-accent-alt:color-mix(in srgb,#a63d2f 68%,#f7f5f0)");
   });
 
+  it("deriva el color de sombreado desde el token más contrastante y sólo lo aplica en mobile", () => {
+    const project = structuredClone(catalogModernV2Store);
+    project.theme.colors.text = "#202020";
+    project.theme.colors.background = "#f7f5f0";
+    project.theme.colors.accentAlt = "#ffffff";
+    const css = runtimeAsset(exportProject(project, { mode: "production" }).files, "css");
+
+    expect(css).toContain("--solara-text-shadow:#ffffff");
+    expect(css).toContain(
+      "text-shadow:1px 1px 0 color-mix(in srgb,var(--solara-text-shadow) 12%,transparent)",
+    );
+  });
+
   it("transporta el copy global personalizado a preview y exportación", () => {
     const project = structuredClone(catalogModernV2Store);
     project.publicCopy.navigation.cart = "Bolsa";

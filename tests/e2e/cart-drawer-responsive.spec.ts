@@ -147,6 +147,12 @@ test("compacta doce líneas y reserva espacio para la scrollbar en mobile", asyn
   ]) {
     await page.setViewportSize(viewport);
     await openPopulatedCart(page);
+    await page.evaluate(() => document.fonts.ready);
+
+    const cartScroll = page.locator(".catalog-cart-scroll");
+    await expect
+      .poll(() => cartScroll.evaluate((scroll) => scroll.scrollHeight / scroll.clientHeight))
+      .toBeLessThan(6);
 
     const metrics = await page.locator(".catalog-cart-drawer").evaluate((drawer) => {
       const scroll = drawer.querySelector<HTMLElement>(".catalog-cart-scroll");
