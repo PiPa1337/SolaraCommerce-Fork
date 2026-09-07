@@ -1,3 +1,15 @@
+### Dashboard Gargantúa (2026-09-07)
+
+**Changed**
+
+- Se rediseña la biblioteca de tiendas con una ilustración vectorial propia inspirada en Gargantúa, tipografía editorial y una paleta carbón, marfil y ámbar.
+- La grilla muestra 12 tiendas simultáneas en escritorio y pagina según el espacio disponible, sin scroll de biblioteca ni de detalle. Búsqueda, filtros y fijadas operan sobre el catálogo completo; la comparación conserva selecciones entre páginas.
+- En móvil, biblioteca y detalle alternan dentro de la misma pantalla. Se conservan apertura, respaldos, duplicado, calculadora, archivo y eliminación con sus confirmaciones existentes.
+
+**Tests**
+
+- Se agrega cobertura con 120 tiendas de prueba, viewports de 320×568 a 1920×950, detalle administrado de solo lectura, navegación por teclado y accesibilidad automática.
+
 ### Reinicio desde el tray (2026-09-07)
 
 **Changed**

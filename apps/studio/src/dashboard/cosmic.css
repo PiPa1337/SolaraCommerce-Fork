@@ -677,31 +677,31 @@
 
 .dashboard-store-detail__actions .button.dashboard-store-detail__calculator {
   grid-column: 1 / -1;
-  /* Similar a Archivar pero con acento azul/cyan - mayor especificidad y !important para sobreescribir variant secondary */
-  border-color: rgb(56 139 253 / 0.5) !important;
-  background: rgb(56 139 253 / 0.16) !important;
-  color: #8ab4ff !important;
+  /* La especificidad permite que cada shell aplique su propia paleta. */
+  border-color: rgb(56 139 253 / 0.5);
+  background: rgb(56 139 253 / 0.16);
+  color: #8ab4ff;
 }
 
 .dashboard-store-detail__actions .button.dashboard-store-detail__calculator:hover,
 .dashboard-store-detail__actions .button.dashboard-store-detail__calculator:focus-visible {
-  border-color: rgb(56 139 253 / 0.78) !important;
-  background: rgb(56 139 253 / 0.26) !important;
-  color: #b3cfff !important;
+  border-color: rgb(56 139 253 / 0.78);
+  background: rgb(56 139 253 / 0.26);
+  color: #b3cfff;
 }
 
 .dashboard-store-detail__actions .button.dashboard-store-detail__archive {
   /* Archivar en naranja: misma estructura full-width que Eliminar, acento ámbar */
-  border-color: rgb(251 146 60 / 0.55) !important;
-  background: rgb(251 146 60 / 0.16) !important;
-  color: #fdba74 !important;
+  border-color: rgb(251 146 60 / 0.55);
+  background: rgb(251 146 60 / 0.16);
+  color: #fdba74;
 }
 
 .dashboard-store-detail__actions .button.dashboard-store-detail__archive:hover,
 .dashboard-store-detail__actions .button.dashboard-store-detail__archive:focus-visible {
-  border-color: rgb(251 146 60 / 0.8) !important;
-  background: rgb(251 146 60 / 0.27) !important;
-  color: #fed7aa !important;
+  border-color: rgb(251 146 60 / 0.8);
+  background: rgb(251 146 60 / 0.27);
+  color: #fed7aa;
 }
 
 .dashboard-delete-dialog__progress {

@@ -381,7 +381,7 @@ export function ProjectCard({
           <dl className="dashboard-store-detail__facts">
             <div>
               <dt>ID</dt>
-              <dd>{project.id}</dd>
+              <dd title={project.id}>{project.id}</dd>
             </div>
             <div>
               <dt>Actualizada</dt>

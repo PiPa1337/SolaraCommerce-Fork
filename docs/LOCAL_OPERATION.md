@@ -27,6 +27,21 @@ sesiones gestionadas pudieron cerrarse. El tray refresca el registro
 periódicamente y también detecta sesiones que ya estaban abiertas antes de
 iniciarlo.
 
+## Biblioteca de tiendas
+
+El dashboard adapta la cantidad de tiendas por página al espacio disponible:
+en escritorio, la grilla muestra 12 a la vez en 1366×768, 1440×900 y 1920×950.
+Los controles inferiores permiten avanzar, retroceder o ir a una página concreta.
+Buscar, ordenar y filtrar consultan todas las tiendas y vuelven a la primera página;
+las fijadas aparecen primero y se pueden comparar tiendas de páginas distintas.
+
+En móvil, seleccionar una tienda reemplaza la biblioteca por su detalle. `Cerrar detalle`
+devuelve a la biblioteca; `Ver detalle` permite volver a la selección. La ilustración
+decorativa es SVG local y estática. No requiere servicios externos ni modifica tiendas.
+
+La cobertura `tests/e2e/dashboard-gargantua.spec.ts` usa IndexedDB aislado y un
+servidor administrado de solo lectura; nunca siembra fixtures en `proyectos/`.
+
 ## Fuente de verdad y layout
 
 `proyectos/` en la raíz del checkout es la única fuente de verdad de las tiendas
