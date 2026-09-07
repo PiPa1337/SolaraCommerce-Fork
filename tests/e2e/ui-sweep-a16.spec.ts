@@ -74,6 +74,10 @@ function previewRoot(page: Page): Locator {
   return page.frameLocator('iframe[title="Vista previa desktop"]').locator("html");
 }
 
+function previewBody(page: Page): Locator {
+  return page.frameLocator('iframe[title="Vista previa desktop"]').locator("body");
+}
+
 /** El div raíz del sitio público (lleva data-color-mode, data-design-family…). */
 function previewPage(page: Page): Locator {
   return page.frameLocator('iframe[title="Vista previa desktop"]').locator(".solara-page");
@@ -373,4 +377,61 @@ test("resets por grupo: cada uno restaura sólo su grupo de valores de apertura"
   await expect(
     page.getByTestId("ui-theme-preset").filter({ hasText: "Marfil editorial" }),
   ).toHaveAttribute("aria-pressed", "true");
+});
+
+test("fondo decorativo: queda disponible sin aplicarse a tiendas nuevas", async ({ page }) => {
+  await setupCleanStore(page, "A16 fondo opcional");
+  await openThemeTab(page);
+
+  const image = page.getByLabel("Imagen del fondo decorativo");
+  const opacity = page.getByTestId("ui-theme-background-opacity");
+
+  await expect(image).toHaveValue("");
+  await expect(opacity).toHaveValue("1");
+  await expect(previewBody(page)).toHaveCSS("background-image", "none");
+});
+
+test("fondo decorativo: selecciona asset, ajusta sutileza y permite restaurar", async ({
+  page,
+}) => {
+  await setupCleanStore(page, "A16 fondo configurable");
+  await openThemeTab(page);
+
+  const image = page.getByLabel("Imagen del fondo decorativo");
+  const opacity = page.getByTestId("ui-theme-background-opacity");
+  const repeat = page.getByTestId("ui-theme-background-repeat");
+  const size = page.getByTestId("ui-theme-background-size");
+
+  await image.selectOption({ index: 1 });
+  await repeat.selectOption("repeat-x");
+  await size.selectOption("1024px");
+  await opacity.fill("0.45");
+
+  await expect(image).not.toHaveValue("");
+  await expect(repeat).toHaveValue("repeat-x");
+  await expect(size).toHaveValue("1024px");
+  await expect(opacity).toHaveValue("0.45");
+  await expect(previewBody(page)).toHaveCSS("background-image", /linear-gradient/);
+  await expect(previewBody(page)).toHaveCSS("background-repeat", "no-repeat, repeat-x");
+  await expect(previewBody(page)).toHaveCSS("background-size", "auto, 1024px");
+
+  await page.getByTestId("ui-reset-background").click();
+  await expect(image).toHaveValue("");
+  await expect(previewBody(page)).toHaveCSS("background-image", "none");
+});
+
+test("fondo decorativo: sus controles caben en móvil", async ({ page }) => {
+  await setupCleanStore(page, "A16 fondo móvil");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openThemeTab(page);
+
+  const grid = page.locator(".theme-background-grid");
+  const metrics = await grid.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
+  await expect(page.getByLabel("Imagen del fondo decorativo")).toBeVisible();
+  await expect(page.getByTestId("ui-theme-background-opacity")).toBeDisabled();
 });

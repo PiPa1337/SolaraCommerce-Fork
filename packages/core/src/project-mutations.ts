@@ -93,6 +93,10 @@ export type TypedNavigationChanges = Partial<
   >
 >;
 
+type TypedThemeShadowsPatch = Omit<Partial<NonNullable<Theme["shadows"]>>, "text"> & {
+  text?: Partial<NonNullable<NonNullable<Theme["shadows"]>["text"]>>;
+};
+
 export type TypedThemePatch = {
   spacingScale?: Theme["spacingScale"];
   radius?: Theme["radius"];
@@ -100,9 +104,10 @@ export type TypedThemePatch = {
   colors?: Partial<Theme["colors"]>;
   typography?: Partial<Theme["typography"]>;
   spacing?: Partial<NonNullable<Theme["spacing"]>>;
-  shadows?: Partial<NonNullable<Theme["shadows"]>>;
+  shadows?: TypedThemeShadowsPatch;
   borders?: Partial<NonNullable<Theme["borders"]>>;
   motion?: Partial<NonNullable<Theme["motion"]>>;
+  background?: Partial<NonNullable<Theme["background"]>>;
 };
 
 export type ProjectMutation =
@@ -441,19 +446,33 @@ function updateTheme(project: StoreProjectV1, tokens: TypedThemePatch, at: strin
     "shadows",
     "borders",
     "motion",
+    "background",
   ]);
   const unknown = Object.keys(tokens).filter((key) => !allowed.has(key));
   if (unknown.length > 0) throw new Error(`Tokens de tema desconocidos: ${unknown.join(", ")}.`);
-  const { colors, typography, spacing, shadows, borders, motion, ...topLevel } = tokens;
+  const { colors, typography, spacing, shadows, borders, motion, background, ...topLevel } = tokens;
   const nextTheme = {
     ...project.theme,
     ...topLevel,
     colors: { ...project.theme.colors, ...(colors ?? {}) },
     typography: { ...project.theme.typography, ...(typography ?? {}) },
     ...(spacing ? { spacing: { ...(project.theme.spacing ?? {}), ...spacing } } : {}),
-    ...(shadows ? { shadows: { ...(project.theme.shadows ?? {}), ...shadows } } : {}),
+    ...(shadows
+      ? {
+          shadows: {
+            ...(project.theme.shadows ?? {}),
+            ...shadows,
+            ...(shadows.text
+              ? { text: { ...(project.theme.shadows?.text ?? {}), ...shadows.text } }
+              : {}),
+          },
+        }
+      : {}),
     ...(borders ? { borders: { ...(project.theme.borders ?? {}), ...borders } } : {}),
     ...(motion ? { motion: { ...(project.theme.motion ?? {}), ...motion } } : {}),
+    ...(background
+      ? { background: { ...(project.theme.background ?? {}), ...background } }
+      : {}),
   };
   return StoreProjectV2Schema.parse({ ...project, theme: nextTheme, updatedAt: at });
 }

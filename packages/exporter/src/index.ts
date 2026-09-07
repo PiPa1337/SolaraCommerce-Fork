@@ -35,6 +35,8 @@ import type {
 import {
   ARGENTINA_LEGAL_PROFILE,
   compactResponsiveSources,
+  DEFAULT_THEME_TEXT_SHADOW_OPACITY,
+  deriveThemeTextShadowColor,
   formatLegalCountryCoverage,
   formatLegalRevisionAt,
   getCategoryAncestors,
@@ -862,71 +864,6 @@ function deferPreviewAssetMarkup(document: string, sources: ReadonlyMap<string, 
 
 const themeCssCache = new Map<string, string>();
 
-function parseThemeHex(value: string): [number, number, number] | null {
-  const match = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value.trim());
-  if (!match) return null;
-  const hex =
-    match[1]!.length === 3
-      ? match[1]!
-          .split("")
-          .map((channel) => channel + channel)
-          .join("")
-      : match[1]!;
-  return [0, 2, 4].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16)) as [
-    number,
-    number,
-    number,
-  ];
-}
-
-function themeLuminance([red, green, blue]: [number, number, number]): number {
-  const linear = (channel: number) => {
-    const value = channel / 255;
-    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
-  };
-  return 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue);
-}
-
-function themeContrastRatio(first: string, second: string): number | null {
-  const firstRgb = parseThemeHex(first);
-  const secondRgb = parseThemeHex(second);
-  if (!firstRgb || !secondRgb) return null;
-  const firstLuminance = themeLuminance(firstRgb);
-  const secondLuminance = themeLuminance(secondRgb);
-  const lighter = Math.max(firstLuminance, secondLuminance);
-  const darker = Math.min(firstLuminance, secondLuminance);
-  return (lighter + 0.05) / (darker + 0.05);
-}
-
-function textShadowColor(
-  colors: StoreProjectV1["theme"]["colors"],
-  accentAltColor: string,
-  saleColor: string,
-  ratingColor: string,
-): string {
-  const candidates = [
-    accentAltColor,
-    colors.accent,
-    colors.background,
-    colors.surface,
-    colors.border,
-    colors.muted,
-    colors.accentText,
-    saleColor,
-    ratingColor,
-  ];
-  let selected = colors.background;
-  let selectedContrast = -1;
-  for (const candidate of candidates) {
-    const contrast = themeContrastRatio(colors.text, candidate);
-    if (contrast !== null && contrast > selectedContrast) {
-      selected = candidate;
-      selectedContrast = contrast;
-    }
-  }
-  return selected;
-}
-
 function themeCss(
   project: StoreProjectV1,
   transport: FontTransport = "file",
@@ -972,16 +909,30 @@ function themeCss(
   const ratingColor = colors.rating ?? "#d99a12";
   const accentAltColor =
     colors.accentAlt ?? `color-mix(in srgb, ${colors.accent} 68%, ${colors.background})`;
-  const textShadowColorValue = textShadowColor(colors, accentAltColor, saleColor, ratingColor);
+  const textShadowColorValue = deriveThemeTextShadowColor(colors);
+  const v2TextShadowColorValue = deriveThemeTextShadowColor(colors, colors.background);
+  const textShadowOpacity = t.shadows?.text?.opacity ?? DEFAULT_THEME_TEXT_SHADOW_OPACITY;
+  const heroTextShadow =
+    t.shadows?.text?.enabled === false
+      ? "none"
+      : `1px 1px 0 color-mix(in srgb, var(--solara-text-shadow) ${Math.round(textShadowOpacity * 100)}%, transparent)`;
+  const v2HeroTextShadow =
+    t.shadows?.text?.enabled === false
+      ? "none"
+      : `1px 1px 0 color-mix(in srgb, ${v2TextShadowColorValue} ${Math.round(textShadowOpacity * 100)}%, transparent)`;
   // Fondo con imagen por tienda: el color sigue como base y la imagen repite
   // encima. En export `source` ya es la ruta pública; en preview es data URI.
   // La raíz [data-solara-store] pinta el color plano (y cada familia repite
   // con (0,2,0), ej. [data-solara-store].catalog-modern): se transparenta con
   // (0,2,2) y solo cuando hay imagen (el html conserva el color debajo).
   // La raíz siempre es div.solara-page[data-solara-store] en toda familia.
+  const backgroundOverlay =
+    t.background && t.background.opacity < 1
+      ? `linear-gradient(color-mix(in srgb,var(--solara-background) ${Math.round((1 - t.background.opacity) * 100)}%,transparent),color-mix(in srgb,var(--solara-background) ${Math.round((1 - t.background.opacity) * 100)}%,transparent)),`
+      : "";
   const backgroundCss =
     t.background && backgroundAsset
-      ? `\nbody{background-image:url("${backgroundAsset.source.replace(/"/g, "%22")}");background-repeat:${t.background.repeat};background-size:${t.background.size};}\nhtml body [data-solara-store].solara-page{background-color:transparent}`
+      ? `\nbody{background-image:${backgroundOverlay}url("${backgroundAsset.source.replace(/"/g, "%22")}");background-repeat:${backgroundOverlay ? "no-repeat," : ""}${t.background.repeat};background-size:${backgroundOverlay ? "auto," : ""}${t.background.size};}\nhtml body [data-solara-store].solara-page{background-color:transparent}`
       : "";
 
   const result = `
@@ -998,6 +949,8 @@ function themeCss(
   --solara-rating: ${ratingColor};
   --solara-accent-alt: ${accentAltColor};
   --solara-text-shadow: ${textShadowColorValue};
+  --solara-hero-text-shadow: ${heroTextShadow};
+  --solara-hero-text-shadow-v2: ${v2HeroTextShadow};
   --solara-font-display: ${typography.display};
   --solara-font-body: ${typography.body};
   --solara-type-scale: ${typography.scale};
@@ -1026,7 +979,6 @@ function themeCss(
 * { box-sizing: border-box; }
 html { background: var(--solara-background); color: var(--solara-text); }
 body { margin: 0; min-width: 0; font-family: var(--solara-font-body); line-height: var(--solara-line-height-body); }${backgroundCss}
-@media (max-width: 767px) { body { text-shadow: 1px 1px 0 color-mix(in srgb, var(--solara-text-shadow) 12%, transparent); } }
 ${fontCssFor(typography.display, typography.body, transport, fontPathOverrides)}
 img { display: block; max-width: 100%; height: auto; }
 a { color: inherit; }

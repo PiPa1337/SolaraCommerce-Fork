@@ -831,6 +831,7 @@ export class AgentController {
         "store.create",
         "store.updateIdentity",
         "store.updateSeo",
+        "store.updatePage",
         "store.updatePublicCopy",
         "store.updatePolicies",
         "store.updateLegalProfile",
@@ -2388,6 +2389,18 @@ export class AgentController {
         case "store.updateSeo":
           applyRegistered({ type: "seo.update", changes: operation.changes as never }, at);
           break;
+        case "store.updatePage": {
+          if (!project.pages.some((page) => page.id === operation.pageId))
+            fail("PAGE_NOT_FOUND", `No existe la página ${operation.pageId}.`);
+          project = StoreProjectV2Schema.parse({
+            ...project,
+            pages: project.pages.map((page) =>
+              page.id === operation.pageId ? { ...page, ...operation.changes } : page,
+            ),
+            updatedAt: at,
+          });
+          break;
+        }
         case "store.updatePublicCopy": {
           const LEGAL_MIN_LENGTHS: Record<string, number> = {
             "whatsapp.confirmation": 20,

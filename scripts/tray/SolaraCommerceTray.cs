@@ -164,6 +164,47 @@ internal sealed class TrayServices
         return failures;
     }
 
+    public bool RestartSessions(int sessionCount, out List<LauncherResult> launched, out string error)
+    {
+        launched = new List<LauncherResult>();
+        error = "";
+        if (sessionCount < 1) sessionCount = 1;
+
+        int closeFailures = CloseAll();
+        if (closeFailures > 0 || DiscoverSessions().Count > 0)
+        {
+            error = "No se pudieron cerrar todas las sesiones activas de forma segura.";
+            return false;
+        }
+
+        for (int index = 0; index < sessionCount; index++)
+        {
+            string launchError;
+            LauncherResult result = StartNewSession(out launchError);
+            if (result == null)
+            {
+                error = string.IsNullOrWhiteSpace(launchError)
+                    ? "No se pudo volver a abrir una sesión."
+                    : launchError;
+                CloseAll();
+                return false;
+            }
+
+            bool live = DiscoverSessions().Exists(delegate(SessionRecord session)
+            {
+                return string.Equals(session.sessionId, result.sessionId, StringComparison.Ordinal);
+            });
+            if (!live)
+            {
+                error = "El lanzador informó una sesión, pero no quedó registrada como activa.";
+                CloseAll();
+                return false;
+            }
+            launched.Add(result);
+        }
+        return true;
+    }
+
     public LauncherResult StartNewSession(out string error)
     {
         error = "";
@@ -389,8 +430,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
         };
         menu.Items.Add(closeAll);
 
-        ToolStripMenuItem restart = new ToolStripMenuItem("Reiniciar");
-        restart.Click += delegate { RestartTray(); };
+        ToolStripMenuItem restart = new ToolStripMenuItem("Reiniciar aplicación");
+        restart.Click += delegate { RestartApplication(); };
         menu.Items.Add(restart);
 
         ToolStripMenuItem exit = new ToolStripMenuItem("Salir");
@@ -398,29 +439,32 @@ internal sealed class TrayApplicationContext : ApplicationContext
         menu.Items.Add(exit);
     }
 
-    private void RestartTray()
+    private void RestartApplication()
     {
-        string executablePath = Application.ExecutablePath;
-        string workingDirectory = Path.GetDirectoryName(executablePath);
-        ProcessStartInfo start = new ProcessStartInfo();
-        start.FileName = executablePath;
-        start.Arguments = "--wait-for-exit " + Process.GetCurrentProcess().Id.ToString(CultureInfo.InvariantCulture);
-        start.WorkingDirectory = string.IsNullOrEmpty(workingDirectory) ? services.ApplicationRoot : workingDirectory;
-        start.UseShellExecute = true;
+        int sessionCount = services.DiscoverSessions().Count;
+        if (sessionCount < 1) sessionCount = 1;
 
-        try
+        List<LauncherResult> launched;
+        string error;
+        if (!services.RestartSessions(sessionCount, out launched, out error))
         {
-            // La instancia nueva espera a que esta libere el mutex del tray.
-            Process.Start(start);
-        }
-        catch (Exception exception)
-        {
-            MessageBox.Show("No se pudo reiniciar SolaraCommerce: " + exception.Message, "SolaraCommerce", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            RefreshMenu();
+            MessageBox.Show("No se pudo reiniciar la aplicación: " + error, "SolaraCommerce", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
         }
 
-        DisposeTray();
-        ExitThread();
+        foreach (LauncherResult result in launched)
+        {
+            try
+            {
+                TrayServices.OpenUrl(result.url);
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show("La aplicación se reinició, pero no se pudo abrir localhost: " + exception.Message, "SolaraCommerce", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+        RefreshMenu();
     }
 
     private void ExitTray()
@@ -463,7 +507,6 @@ internal static class Program
         string diagnostic = "";
         string diagnosticSessionId = "";
         string outputPath = "";
-        int waitForExitProcessId = 0;
 
         for (int index = 0; index < args.Length; index++)
         {
@@ -475,7 +518,7 @@ internal static class Program
             {
                 outputPath = args[++index];
             }
-            else if (args[index] == "--diagnostic-list" || args[index] == "--diagnostic-close-all")
+            else if (args[index] == "--diagnostic-list" || args[index] == "--diagnostic-close-all" || args[index] == "--diagnostic-restart")
             {
                 diagnostic = args[index];
             }
@@ -484,15 +527,6 @@ internal static class Program
                 diagnostic = args[index];
                 diagnosticSessionId = args[++index];
             }
-            else if (args[index] == "--wait-for-exit" && index + 1 < args.Length)
-            {
-                int.TryParse(args[++index], NumberStyles.Integer, CultureInfo.InvariantCulture, out waitForExitProcessId);
-            }
-        }
-
-        if (waitForExitProcessId > 0)
-        {
-            WaitForProcessExit(waitForExitProcessId);
         }
 
         if (!string.IsNullOrEmpty(diagnostic))
@@ -516,25 +550,19 @@ internal static class Program
         return 0;
     }
 
-    private static void WaitForProcessExit(int processId)
-    {
-        try
-        {
-            using (Process process = Process.GetProcessById(processId))
-            {
-                if (!process.HasExited) process.WaitForExit(10000);
-            }
-        }
-        catch
-        {
-        }
-    }
-
     private static int RunDiagnostic(string root, string diagnostic, string diagnosticSessionId, string outputPath)
     {
         TrayServices services = new TrayServices(root);
         int failures = 0;
-        if (diagnostic == "--diagnostic-close-all")
+        if (diagnostic == "--diagnostic-restart")
+        {
+            int sessionCount = services.DiscoverSessions().Count;
+            if (sessionCount < 1) sessionCount = 1;
+            List<LauncherResult> launched;
+            string error;
+            if (!services.RestartSessions(sessionCount, out launched, out error)) failures = 1;
+        }
+        else if (diagnostic == "--diagnostic-close-all")
         {
             failures = services.CloseAll();
         }
@@ -554,7 +582,10 @@ internal static class Program
         result.sessions = sessions;
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputPath)));
         File.WriteAllText(outputPath, new JavaScriptSerializer().Serialize(result), Encoding.UTF8);
-        return failures == 0 && (diagnostic != "--diagnostic-close-all" || sessions.Count == 0) ? 0 : 1;
+        bool valid = failures == 0;
+        if (diagnostic == "--diagnostic-close-all") valid = valid && sessions.Count == 0;
+        if (diagnostic == "--diagnostic-restart") valid = valid && sessions.Count > 0;
+        return valid ? 0 : 1;
     }
 
     private static string BuildMutexName(string applicationRoot)

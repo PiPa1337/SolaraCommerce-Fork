@@ -84,9 +84,17 @@ plantilla para upgrades tipados.
   color `theme.colors.accentAlt` es opcional para compatibilidad con respaldos
   antiguos; el exporter deriva un valor desde acento y fondo cuando falta.
   `theme.background` es opcional y no rompe persistencia: `{ imageAssetId,
-  repeat, size }` pinta una imagen sobre el color de fondo (el exporter la
-  incluye en el uso de medios y emite `background-image` en el CSS; sin token
-  no se emite nada). `size` solo admite caracteres seguros de `background-size`.
+  repeat, size, opacity }` pinta una imagen sobre el color de fondo (el
+  exporter la incluye en el uso de medios y emite `background-image` en el CSS;
+  `opacity` va de 0 a 1 y permite hacer el patrón más sutil; sin token no se
+  emite nada). Studio lo expone como una opción del editor de Tema, pero no lo
+  asigna a tiendas nuevas. `size` solo admite caracteres seguros de
+  `background-size`.
+  `theme.shadows.text` es opcional y guarda `{ enabled, opacity }`: aplica una
+  sombra de 1 px hacia la derecha y abajo sólo al texto del hero de Inicio en
+  mobile (hasta 767 px). El color se deriva automáticamente de la paleta y el
+  botón queda excluido; Studio y el canal nativo del agente exponen ambos
+  controles.
 - `navigation`: etiqueta de catálogo, enlaces curados y sus hijos (máximo un
   nivel adicional), además de búsqueda y carrito.
 - `siteShell`: configuración de announcement, header, footer y drawer de carrito.

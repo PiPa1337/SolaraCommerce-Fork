@@ -617,10 +617,16 @@ export const ThemeSpacingSchema = z.object({
   containerPaddingX: z.string().default("1rem"),
 });
 
+export const ThemeTextShadowSchema = z.object({
+  enabled: z.boolean().default(true),
+  opacity: z.number().min(0).max(1).default(0.65),
+});
+
 export const ThemeShadowsSchema = z.object({
   card: z.string().default("none"),
   elevated: z.string().default("none"),
   overlay: z.string().default("0 24px 70px rgba(0,0,0,.14)"),
+  text: ThemeTextShadowSchema.optional(),
 });
 
 export const ThemeBordersSchema = z.object({
@@ -648,6 +654,7 @@ export const ThemeBackgroundSchema = z.object({
     .max(64)
     .regex(/^[a-zA-Z0-9%. ,/()-]+$/)
     .default("480px"),
+  opacity: z.number().min(0).max(1).default(1),
 });
 
 export const ThemeSchema = z.object({
@@ -1455,3 +1462,7 @@ export function migrateProject(input: unknown): StoreProjectV2 {
 }
 
 export { applyPreset, THEME_PRESETS, type ThemePreset } from "./theme-presets.js";
+export {
+  DEFAULT_THEME_TEXT_SHADOW_OPACITY,
+  deriveThemeTextShadowColor,
+} from "./theme-text-shadow.js";

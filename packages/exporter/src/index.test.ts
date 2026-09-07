@@ -87,17 +87,35 @@ describe("exporter", () => {
     expect(legacyCss).toContain("--solara-accent-alt:color-mix(in srgb,#a63d2f 68%,#f7f5f0)");
   });
 
-  it("deriva el color de sombreado desde el token más contrastante y sólo lo aplica en mobile", () => {
+  it("deriva la sombra del hero desde la paleta y sólo la aplica en su copy mobile", () => {
     const project = structuredClone(catalogModernV2Store);
     project.theme.colors.text = "#202020";
     project.theme.colors.background = "#f7f5f0";
     project.theme.colors.accentAlt = "#ffffff";
+    Object.assign(project.theme, { shadows: { text: { enabled: true, opacity: 0.65 } } });
     const css = runtimeAsset(exportProject(project, { mode: "production" }).files, "css");
 
     expect(css).toContain("--solara-text-shadow:#ffffff");
     expect(css).toContain(
-      "text-shadow:1px 1px 0 color-mix(in srgb,var(--solara-text-shadow) 12%,transparent)",
+      "--solara-hero-text-shadow:1px 1px 0 color-mix(in srgb,var(--solara-text-shadow) 65%,transparent)",
     );
+    expect(css).toContain(
+      "--solara-hero-text-shadow-v2:1px 1px 0 color-mix(in srgb,#202020 65%,transparent)",
+    );
+    expect(css).toContain(
+      '[data-solara-store][data-page-type="home"] [data-solara-module="catalog-hero"] .catalog-hero-copy .catalog-eyebrow,',
+    );
+    expect(css).toContain("text-shadow:var(--solara-hero-text-shadow,none)");
+    expect(css).not.toContain(".catalog-hero-actions{text-shadow");
+    expect(css).not.toContain("@media(max-width:767px){body{text-shadow:");
+  });
+
+  it("permite apagar la sombra del hero sin dejar una regla residual", () => {
+    const project = structuredClone(catalogModernV2Store);
+    Object.assign(project.theme, { shadows: { text: { enabled: false, opacity: 0.65 } } });
+    const css = runtimeAsset(exportProject(project, { mode: "production" }).files, "css");
+
+    expect(css).toContain("--solara-hero-text-shadow:none");
   });
 
   it("transporta el copy global personalizado a preview y exportación", () => {
@@ -1930,6 +1948,25 @@ describe("tema: carga real de fuentes y vars sin duplicados", () => {
     expect(plain).not.toContain(
       "html body [data-solara-store].solara-page{background-color:transparent}",
     );
+  });
+
+  it("puede reducir la presencia visual del fondo sin afectar el contenido", () => {
+    const assetId = referenceStore.assets[0]?.id;
+    if (!assetId) throw new Error("Fixture incompleto");
+    const withSubtleBackground = structuredClone(referenceStore);
+    Object.assign(withSubtleBackground.theme, {
+      background: { imageAssetId: assetId, repeat: "repeat", size: "480px", opacity: 0.45 },
+    });
+
+    const css = String(
+      runtimeAsset(exportProject(withSubtleBackground, { mode: "draft" }).files, "css"),
+    );
+
+    expect(css).toContain(
+      "background-image:linear-gradient(color-mix(in srgb,var(--solara-background) 55%,transparent),color-mix(in srgb,var(--solara-background) 55%,transparent)),url(\"",
+    );
+    expect(css).toContain("background-repeat:no-repeat,repeat");
+    expect(css).toContain("background-size:auto,480px");
   });
 });
 

@@ -56,11 +56,31 @@ describe("control nativo del agente", () => {
               name: "Clon agente",
               slug: "clon-agente",
             },
+            {
+              type: "store.updatePage",
+              pageId: "page-home",
+              changes: {
+                seoTitle: "Clon agente | Página de inicio",
+                seoDescription: "Descripción actualizada del clon.",
+              },
+            },
+            {
+              type: "theme.updateTokens",
+              tokens: { shadows: { text: { enabled: true, opacity: 0.8 } } },
+            },
           ],
         });
         const planned = await controller.getPlan({ planId: plan.planId, includeProject: true });
         expect(planned.project?.origin).toMatchObject({ seed: "duplicate", role: "store" });
         expect(planned.project?.id).toBe("store-clon-agent");
+        expect(planned.project?.pages[0]).toMatchObject({
+          seoTitle: "Clon agente | Página de inicio",
+          seoDescription: "Descripción actualizada del clon.",
+        });
+        expect(planned.project?.theme.shadows?.text).toMatchObject({
+          enabled: true,
+          opacity: 0.8,
+        });
         expect(planned.project?.products.map((product) => product.id)).not.toEqual(
           template.products.map((product) => product.id),
         );

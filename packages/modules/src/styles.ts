@@ -4997,9 +4997,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     }
     .cm.v2 .catalog-hero-page .catalog-hero-copy .catalog-hero-body { color: var(--catalog-paper); }
     .cm.v2 .catalog-hero-page .catalog-hero-copy .catalog-eyebrow,
-    .cm.v2 .catalog-hero-page .catalog-hero-copy .catalog-hero-title .catalog-hero-line-inner,
-    .cm.v2 .catalog-hero-page .catalog-hero-copy .catalog-hero-body { text-shadow: 1px 1px 0 rgb(0 0 0 / 0.5); }
-    .cm.v2 .catalog-hero-page .catalog-hero-copy .catalog-eyebrow,
     .cm.v2 [data-solara-module="catalog-hero"] .catalog-eyebrow { color: var(--catalog-surface); font-size: .68rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; }
     .cm.v2 .catalog-hero-page .catalog-hero-background { display: none; }
     .cm.v2 .catalog-hero-page .catalog-hero-benefits--copy { display: none; }
@@ -5321,6 +5318,23 @@ export const STORE_THEME_TOKEN_STYLES = `
   font-weight: var(--solara-font-weight-display, 500);
   letter-spacing: var(--solara-letter-spacing-display, -.02em);
   line-height: var(--solara-line-height-tight, 1.15);
+}
+@media (max-width: 767px) {
+  [data-solara-store][data-page-type="home"] [data-solara-module="split-hero"] .solara-hero-copy > :is(.solara-eyebrow, h1, .solara-hero-body),
+  [data-solara-store][data-page-type="home"] [data-solara-module="editorial-hero"] .solara-editorial-head > :is(.solara-eyebrow, h1, .solara-hero-body),
+  [data-solara-store][data-page-type="home"] [data-solara-module="hero-media"] .solara-hero-media-copy > :is(.solara-eyebrow, h1, .solara-hero-body),
+  [data-solara-store][data-page-type="home"] [data-solara-module="catalog-hero"] .catalog-hero-copy .catalog-eyebrow,
+  [data-solara-store][data-page-type="home"] [data-solara-module="catalog-hero"] .catalog-hero-copy .catalog-hero-title,
+  [data-solara-store][data-page-type="home"] [data-solara-module="catalog-hero"] .catalog-hero-copy .catalog-hero-line-inner,
+  [data-solara-store][data-page-type="home"] [data-solara-module="catalog-hero"] .catalog-hero-copy .catalog-hero-body {
+    text-shadow: var(--solara-hero-text-shadow, none);
+  }
+  [data-solara-store].cm.v2[data-page-type="home"] [data-solara-module="catalog-hero"] .catalog-hero-copy .catalog-eyebrow,
+  [data-solara-store].cm.v2[data-page-type="home"] [data-solara-module="catalog-hero"] .catalog-hero-copy .catalog-hero-title,
+  [data-solara-store].cm.v2[data-page-type="home"] [data-solara-module="catalog-hero"] .catalog-hero-copy .catalog-hero-line-inner,
+  [data-solara-store].cm.v2[data-page-type="home"] [data-solara-module="catalog-hero"] .catalog-hero-copy .catalog-hero-body {
+    text-shadow: var(--solara-hero-text-shadow-v2, var(--solara-hero-text-shadow, none));
+  }
 }
 `;
 

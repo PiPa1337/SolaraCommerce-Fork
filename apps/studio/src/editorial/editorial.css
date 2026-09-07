@@ -930,7 +930,8 @@ tbody tr:hover {
   .navigation-switches,
   .builder-grid,
   .color-grid,
-  .inspector-split {
+  .inspector-split,
+  .theme-background-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 

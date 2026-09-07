@@ -246,3 +246,62 @@ for (const key of THEME_COLOR_KEYS) {
     expect(recovered.vars[key]).toBe(textTarget);
   });
 }
+
+test("sombra del hero mobile: control nativo, preview y exclusión del botón", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1000 });
+  await setupCleanStore(page, "T2 sombra hero mobile");
+  await openThemeTab(page);
+
+  const toggle = page.getByTestId("ui-text-shadow-enabled");
+  const opacity = page.getByTestId("ui-text-shadow-opacity");
+  const preview = page.getByTestId("ui-text-shadow-preview");
+
+  await expect(toggle).toBeChecked();
+  await expect(opacity).toHaveValue("0.65");
+  await expect
+    .poll(() => preview.evaluate((element) => element.style.textShadow))
+    .toContain("1px 1px 0");
+
+  await page.getByRole("button", { name: "Vista móvil" }).click();
+  const mobileFrame = page.frameLocator('iframe[title="Vista previa mobile"]');
+  const mobileHeroTitle = mobileFrame.locator(
+    '[data-solara-store][data-page-type="home"] [data-solara-module="catalog-hero"] .catalog-hero-title',
+  );
+  const mobileHeroButtons = mobileFrame.locator(
+    '[data-solara-store][data-page-type="home"] [data-solara-module="catalog-hero"] .catalog-hero-actions a',
+  );
+  await expect(mobileHeroTitle).toBeVisible();
+  await expect
+    .poll(() => mobileHeroTitle.evaluate((element) => getComputedStyle(element).textShadow))
+    .toContain("1px 1px 0");
+  await expect
+    .poll(() =>
+      mobileHeroButtons.evaluateAll((elements) =>
+        elements.map((element) => getComputedStyle(element).textShadow),
+      ),
+    )
+    .toEqual(["none", "none"]);
+
+  await page.getByRole("button", { name: "Vista de escritorio" }).click();
+  const desktopFrame = page.frameLocator('iframe[title="Vista previa desktop"]');
+  const desktopHeroTitle = desktopFrame.locator(
+    '[data-solara-store][data-page-type="home"] [data-solara-module="catalog-hero"] .catalog-hero-title',
+  );
+  await expect(desktopHeroTitle).toBeVisible();
+  await expect
+    .poll(() => desktopHeroTitle.evaluate((element) => getComputedStyle(element).textShadow))
+    .toBe("none");
+
+  await opacity.fill("0.85");
+  await expect(opacity).toHaveValue("0.85");
+
+  await toggle.uncheck();
+  await expect(opacity).toBeDisabled();
+  await expect(preview).toHaveCSS("text-shadow", "none");
+
+  await toggle.check();
+  await expect(opacity).toBeEnabled();
+  await expect
+    .poll(() => preview.evaluate((element) => element.style.textShadow))
+    .toContain("1px 1px 0");
+});

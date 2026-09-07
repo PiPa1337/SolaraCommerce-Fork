@@ -292,8 +292,9 @@ Framework disponible y ejecuta `scripts/tray-smoke.mjs`. El smoke usa una raíz
 en `%TEMP%`, nunca el `proyectos/` real, y cubre sesiones preexistentes, 1/2/5
 sesiones, cierre individual y total, registros corruptos, puerto reasignado,
 `sessionId` exacto, rechazo de shutdown sin fallback a PID, retirada del registro
-al cerrar el servidor y ocupación de los puertos 4173–4180 con fallo limpio de
-una novena sesión. Los tests unitarios de apoyo viven en
+al cerrar el servidor, reinicio de una sesión mediante el launcher y ocupación
+de los puertos 4173–4180 con fallo limpio de una novena sesión. Los tests
+unitarios de apoyo viven en
 `packages/exporter/scripts/session-registry.test.mjs` y
 `session-handler.test.mjs`.
 

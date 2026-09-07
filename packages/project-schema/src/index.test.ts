@@ -195,7 +195,7 @@ describe("StoreProjectV2Schema", () => {
     if (!assetId) throw new Error("Fixture incompleto");
     const withBackground = invalidProject((project) => {
       Object.assign(project.theme, {
-        background: { imageAssetId: assetId, repeat: "repeat", size: "480px" },
+        background: { imageAssetId: assetId, repeat: "repeat", size: "480px", opacity: 0.45 },
       });
     });
     const parsed = StoreProjectV2Schema.parse(withBackground);
@@ -203,6 +203,12 @@ describe("StoreProjectV2Schema", () => {
     expect(parsed.theme.background?.imageAssetId).toBe(assetId);
     expect(parsed.theme.background?.repeat).toBe("repeat");
     expect(parsed.theme.background?.size).toBe("480px");
+    expect(parsed.theme.background?.opacity).toBe(0.45);
+
+    const defaultBackground = invalidProject((project) => {
+      Object.assign(project.theme, { background: { imageAssetId: assetId } });
+    });
+    expect(StoreProjectV2Schema.parse(defaultBackground).theme.background?.opacity).toBe(1);
 
     const missingBackground = invalidProject((project) => {
       Object.assign(project.theme, { background: { imageAssetId: "missing-background" } });
@@ -215,6 +221,21 @@ describe("StoreProjectV2Schema", () => {
       });
     });
     expect(() => StoreProjectV2Schema.parse(unsafeSize)).toThrow();
+
+    const unsafeOpacity = invalidProject((project) => {
+      Object.assign(project.theme, { background: { imageAssetId: assetId, opacity: 1.1 } });
+    });
+    expect(() => StoreProjectV2Schema.parse(unsafeOpacity)).toThrow();
+  });
+
+  it("acepta la sombra de texto del hero mobile con defaults seguros", () => {
+    const project = invalidProject((value) => {
+      Object.assign(value.theme, { shadows: { text: { opacity: 0.85 } } });
+    });
+
+    const parsed = StoreProjectV2Schema.parse(project);
+    expect(parsed.schemaVersion).toBe(2);
+    expect(parsed.theme.shadows?.text).toEqual({ enabled: true, opacity: 0.85 });
   });
 
   it("rechaza cronología imposible", () => {

@@ -28,6 +28,7 @@ import {
 } from "../lib/exportHistory";
 import { formatDate } from "../lib/format";
 import { downloadBlob } from "../lib/projectArchive";
+import { chooseExportDirectory, writeSiteToDirectory } from "../lib/siteExport";
 import {
   auditProjectInWorker,
   createProjectArchiveInWorker,
@@ -182,6 +183,12 @@ export function ExportPanel({
     setExportDone(false);
     setDoneStages(new Set());
     try {
+      const exportDirectory =
+        mode === "production" ? await chooseExportDirectory() : undefined;
+      if (mode === "production" && !exportDirectory) {
+        setNotice("Exportación cancelada. No se modificó ninguna carpeta.");
+        return;
+      }
       const result = await exportSiteInWorker(
         project,
         mode,
@@ -200,6 +207,9 @@ export function ExportPanel({
         },
       );
       setOptimization(result.optimization);
+      const savedSite = exportDirectory
+        ? await writeSiteToDirectory(exportDirectory, result.files, mode)
+        : undefined;
       recordHistory({
         mode,
         score: result.optimization.score,
@@ -209,9 +219,11 @@ export function ExportPanel({
       setDoneStages(new Set(EXPORT_STAGES.map((stage) => stage.id)));
       setPostDone(new Set());
       setNotice(
-        onOpenSite
-          ? "Exportación correcta. El sitio público se guarda en proyectos/<tienda>/sitios/ al guardar con el lanzador; podés abrirlo desde el dashboard."
-          : "Exportación correcta. En modo navegador el sitio generado no se conserva en disco; usá el lanzador de SolaraCommerce para guardarlo y abrirlo.",
+        savedSite
+          ? `Exportación correcta: ${savedSite.filesWritten} archivos guardados en ${savedSite.folder}.`
+          : onOpenSite
+            ? "Exportación correcta. El sitio público se guarda en proyectos/<tienda>/sitios/ al guardar con el lanzador; podés abrirlo desde el dashboard."
+            : "Exportación correcta. En modo navegador el sitio generado no se conserva en disco; usá el lanzador de SolaraCommerce para guardarlo y abrirlo.",
       );
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo exportar la tienda.");
@@ -776,7 +788,7 @@ export function ExportPanel({
             onClick={() => setConfirmAction("production")}
             disabled={Boolean(busy) || !auditReady || critical > 0}
           >
-            {busy === "production" ? "Generando" : "Exportar producción"}
+            {busy === "production" ? "Generando" : "Elegir carpeta y exportar"}
           </Button>
         </article>
       </div>
@@ -828,7 +840,9 @@ export function ExportPanel({
           body={
             <p>
               Se generará el HTML final con sitemap, datos estructurados y feed de Merchant.
-              {" Revisá el preview y el checklist SEO antes de continuar."}
+              {
+                " Primero se abrirá el selector de carpetas para elegir dónde guardar el sitio."
+              }
               {publicAiContext
                 ? " El contexto público incluirá contacto, políticas, SKUs, precios y productos activos."
                 : ""}

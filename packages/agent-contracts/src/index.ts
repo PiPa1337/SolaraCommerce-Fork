@@ -68,6 +68,20 @@ export const AgentOperationSchema = z.discriminatedUnion("type", [
       merchantVerification: z.string().max(500).optional(),
     }),
   }),
+  z
+    .object({
+      type: z.literal("store.updatePage"),
+      pageId: SafeIdSchema,
+      changes: z.object({
+        title: z.string().min(1).max(200).optional(),
+        seoTitle: z.string().min(1).max(70).optional(),
+        seoDescription: z.string().min(1).max(180).optional(),
+      }),
+    })
+    .refine(
+      (operation) => Object.keys(operation.changes).length > 0,
+      { message: "store.updatePage requiere al menos un campo." },
+    ),
   z.object({
     type: z.literal("store.updatePublicCopy"),
     changes: z.record(z.string(), z.record(z.string(), z.unknown())),

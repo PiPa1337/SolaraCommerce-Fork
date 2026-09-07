@@ -1,3 +1,54 @@
+### Reinicio real de la aplicación desde el tray (2026-09-07)
+
+**Fixed**
+
+- `Reiniciar aplicación` deja de relanzar únicamente el proceso del tray: cierra
+  y vuelve a levantar las sesiones Node/Studio activas, conservando su cantidad,
+  validando el registro HTTP de cada sesión y abriendo las URLs nuevas.
+- El reinicio vuelve a pasar por el launcher administrado, por lo que detecta y
+  recompila cambios recientes del Studio antes de servirlos.
+
+**Tests**
+
+- El smoke del tray cubre el ciclo cerrar → levantar → validar en una raíz
+  temporal, sin tocar las tiendas reales.
+
+### Sombra dinámica del hero mobile (2026-09-07)
+
+**Changed**
+
+- La sombra de 1 px del texto del hero de Inicio queda limitada a mobile,
+  deriva su color de la paleta y excluye el botón.
+- Studio la expone como control nativo de activación e intensidad, y el canal
+  nativo del agente permite persistir `enabled` y `opacity`.
+
+### Exportación de producción a carpeta elegida (2026-09-07)
+
+**Changed**
+
+- La exportación de producción abre el selector nativo de carpetas en Chrome/Edge y escribe allí el sitio completo, incluyendo subcarpetas y archivos binarios.
+- Cancelar el selector ya no registra una exportación incompleta ni deja el botón sin feedback.
+
+**Tests**
+
+- Se agrega cobertura del selector, cancelación, rutas anidadas, binarios y rechazo de rutas inseguras.
+
+### Fondo sutil y portada de Stylo Lashes (2026-09-07)
+
+**Changed**
+
+- Se agrega opacidad persistida al fondo de tema para que los patrones decorativos puedan verse con menor intensidad sin afectar el contenido.
+- Stylo Lashes usa el patrón de corazones y estrellas con una presencia visual más sutil; la portada conserva su URL pública desde `baseUrl`, sin hardcodearla.
+- El editor de Tema de la tienda expone el fondo decorativo de forma opcional para elegir o subir un asset, ajustar repetición, tamaño y presencia, sin aplicarlo a tiendas nuevas.
+
+### Copywriting de Stylo Lashes y SEO de páginas (2026-09-07)
+
+**Changed**
+
+- Se recupera la integridad del manifest de Stylo Lashes y se actualiza la tienda mediante el canal nativo a la versión 16.
+- Se mejora el copy comercial, SEO, página de inicio, secciones, políticas, colección, descripciones y etiquetas, preservando literalmente los nombres de productos y categorías.
+- Se incorpora `store.updatePage` al protocolo tipado para editar títulos y metadatos SEO de páginas sin usar parches arbitrarios.
+
 ### Dashboard Gargantúa (2026-09-07)
 
 **Changed**

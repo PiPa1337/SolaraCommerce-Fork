@@ -1,7 +1,20 @@
 /** Inspector de tokens visuales persistidos; no introduce estilos públicos paralelos. */
-import { ArrowCounterClockwise, PaintBrush, TextT, Wrench } from "@phosphor-icons/react";
-import type { StoreProjectV1, Theme } from "@solara/project-schema";
+import {
+  ArrowCounterClockwise,
+  Image as ImageIcon,
+  PaintBrush,
+  TextT,
+  Wrench,
+} from "@phosphor-icons/react";
+import {
+  DEFAULT_THEME_TEXT_SHADOW_OPACITY,
+  deriveThemeTextShadowColor,
+  type ImageAsset,
+  type StoreProjectV1,
+  type Theme,
+} from "@solara/project-schema";
 import { useEffect, useRef, useState } from "react";
+import { ImageAssetPicker } from "../components/ImageAssetPicker";
 import { Button, Field, SectionHeader } from "../components/Ui";
 
 const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -563,12 +576,35 @@ const CONTRAST_PAIRS: Array<{
 
 const CONTRAST_THRESHOLD = 4.5;
 
-type ThemeGroup = "colors" | "typography" | "geometry";
+type ThemeBackground = NonNullable<Theme["background"]>;
+type ThemeTextShadow = NonNullable<NonNullable<Theme["shadows"]>["text"]>;
+
+const BACKGROUND_REPEAT_OPTIONS: Array<ThemeBackground["repeat"]> = [
+  "repeat",
+  "repeat-x",
+  "repeat-y",
+  "no-repeat",
+];
+const BACKGROUND_SIZE_OPTIONS = [
+  "auto",
+  "240px",
+  "320px",
+  "480px",
+  "640px",
+  "768px",
+  "1024px",
+  "cover",
+  "contain",
+] as const;
+
+type ThemeGroup = "colors" | "typography" | "geometry" | "background" | "textShadow";
 
 const groupLabels: Record<ThemeGroup, string> = {
   colors: "colores",
   typography: "tipografía",
   geometry: "geometría",
+  background: "fondo decorativo",
+  textShadow: "sombra del hero mobile",
 };
 
 export function ThemeEditor({
@@ -602,6 +638,20 @@ export function ThemeEditor({
   const [containerDraft, setContainerDraft] = useState<string | null>(null);
   const [containerError, setContainerError] = useState<boolean>(false);
 
+  const textShadowEnabled = project.theme.shadows?.text?.enabled ?? true;
+  const textShadowOpacity =
+    project.theme.shadows?.text?.opacity ?? DEFAULT_THEME_TEXT_SHADOW_OPACITY;
+  const isCatalogModernV2 = project.commerceTemplates.designFamily === "catalog-modern-v2";
+  const heroPreviewTextColor = isCatalogModernV2
+    ? project.theme.colors.background
+    : project.theme.colors.text;
+  const textShadowColor = isCatalogModernV2
+    ? deriveThemeTextShadowColor(project.theme.colors, project.theme.colors.background)
+    : deriveThemeTextShadowColor(project.theme.colors);
+  const previewTextShadow = textShadowEnabled
+    ? `1px 1px 0 color-mix(in srgb, ${textShadowColor} ${Math.round(textShadowOpacity * 100)}%, transparent)`
+    : "none";
+
   /* biome-ignore lint/correctness/useExhaustiveDependencies: al cambiar los colores confirmados (commit, preset o reset) los borradores de texto deben volver a partir de esos valores. */
   useEffect(() => {
     setColorDrafts({});
@@ -613,8 +663,8 @@ export function ThemeEditor({
     setContainerError(false);
   }, []);
 
-  const updateTheme = (theme: Theme) =>
-    onChange({ ...project, theme, updatedAt: new Date().toISOString() });
+  const updateTheme = (theme: Theme, assets: StoreProjectV1["assets"] = project.assets) =>
+    onChange({ ...project, assets, theme, updatedAt: new Date().toISOString() });
 
   const commitColor = (key: keyof Theme["colors"], raw: string) => {
     const next = normalizeHexColor(raw);
@@ -649,6 +699,25 @@ export function ThemeEditor({
     }
     if (group === "typography") {
       updateTheme({ ...project.theme, typography: base.typography });
+      return;
+    }
+    if (group === "background") {
+      const nextTheme = { ...project.theme };
+      if (base.background) nextTheme.background = base.background;
+      else delete nextTheme.background;
+      updateTheme(nextTheme);
+      return;
+    }
+    if (group === "textShadow") {
+      const currentShadows = project.theme.shadows;
+      if (!currentShadows) return;
+      const shadows = { ...currentShadows };
+      if (base.shadows?.text) shadows.text = base.shadows.text;
+      else delete shadows.text;
+      updateTheme({
+        ...project.theme,
+        shadows,
+      });
       return;
     }
     setContainerDraft(null);
@@ -690,6 +759,64 @@ export function ThemeEditor({
     }
   };
 
+  const updateTextShadow = (changes: Partial<ThemeTextShadow>) =>
+    updateTheme({
+      ...project.theme,
+      shadows: {
+        card: project.theme.shadows?.card ?? "none",
+        elevated: project.theme.shadows?.elevated ?? "none",
+        overlay: project.theme.shadows?.overlay ?? "0 24px 70px rgba(0,0,0,.14)",
+        ...project.theme.shadows,
+        text: {
+          enabled: textShadowEnabled,
+          opacity: textShadowOpacity,
+          ...changes,
+        },
+      },
+    });
+
+  const setBackgroundImage = (assetId: string) => {
+    const nextTheme = { ...project.theme };
+    const selectedAsset = project.assets.find((asset) => asset.id === assetId);
+    if (!selectedAsset) {
+      delete nextTheme.background;
+    } else {
+      const current = project.theme.background;
+      nextTheme.background = {
+        imageAssetId: selectedAsset.id,
+        repeat: current?.repeat ?? "repeat",
+        size: current?.size ?? "480px",
+        opacity: current?.opacity ?? 1,
+      };
+    }
+    updateTheme(nextTheme);
+  };
+
+  const applyUploadedBackground = (asset: ImageAsset) => {
+    const assets = project.assets.some((current) => current.id === asset.id)
+      ? project.assets
+      : [...project.assets, asset];
+    const current = project.theme.background;
+    updateTheme(
+      {
+        ...project.theme,
+        background: {
+          imageAssetId: asset.id,
+          repeat: current?.repeat ?? "repeat",
+          size: current?.size ?? "480px",
+          opacity: current?.opacity ?? 1,
+        },
+      },
+      assets,
+    );
+  };
+
+  const updateBackground = (changes: Partial<ThemeBackground>) => {
+    const current = project.theme.background;
+    if (!current) return;
+    updateTheme({ ...project.theme, background: { ...current, ...changes } });
+  };
+
   const contrastChecks = CONTRAST_PAIRS.map((pair) => ({
     ...pair,
     ratio: contrastRatio(
@@ -697,6 +824,10 @@ export function ThemeEditor({
       editableThemeColor(project.theme.colors, pair.background),
     ),
   }));
+  const background = project.theme.background;
+  const backgroundSizeIsCustom =
+    background !== undefined &&
+    !BACKGROUND_SIZE_OPTIONS.includes(background.size as (typeof BACKGROUND_SIZE_OPTIONS)[number]);
 
   return (
     <section className="workspace-section">
@@ -761,6 +892,100 @@ export function ThemeEditor({
               </button>
             );
           })}
+        </div>
+      </fieldset>
+
+      <fieldset className="theme-background-panel">
+        <legend>
+          <ImageIcon aria-hidden size={19} /> Fondo decorativo
+        </legend>
+        <p className="inspector-note">
+          Opcional: elegí una imagen de Recursos para repetirla detrás del sitio. Las tiendas nuevas
+          comienzan sin fondo.
+        </p>
+        <div className="fieldset-toolbar">
+          <Button
+            variant="quiet"
+            size="sm"
+            icon={ArrowCounterClockwise}
+            data-testid="ui-reset-background"
+            onClick={() => resetGroup("background")}
+          >
+            Restaurar fondo
+          </Button>
+        </div>
+        <div className="theme-background-grid">
+          <Field
+            label="Imagen del patrón"
+            hint="Podés elegir un asset existente o subir uno nuevo."
+          >
+            <ImageAssetPicker
+              value={background?.imageAssetId ?? ""}
+              assets={project.assets}
+              knownAssets={project.assets}
+              noneLabel="Sin fondo decorativo"
+              ariaLabel="Imagen del fondo decorativo"
+              onChange={setBackgroundImage}
+              onUpload={applyUploadedBackground}
+            />
+          </Field>
+          <Field label="Repetición">
+            <select
+              value={background?.repeat ?? "repeat"}
+              disabled={!background}
+              data-testid="ui-theme-background-repeat"
+              aria-label="Repetición del fondo decorativo"
+              onChange={(event) =>
+                updateBackground({ repeat: event.target.value as ThemeBackground["repeat"] })
+              }
+            >
+              {BACKGROUND_REPEAT_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option === "repeat"
+                    ? "En ambas direcciones"
+                    : option === "repeat-x"
+                      ? "Horizontal"
+                      : option === "repeat-y"
+                        ? "Vertical"
+                        : "Una sola vez"}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Tamaño">
+            <select
+              value={background?.size ?? "480px"}
+              disabled={!background}
+              data-testid="ui-theme-background-size"
+              aria-label="Tamaño del fondo decorativo"
+              onChange={(event) => updateBackground({ size: event.target.value })}
+            >
+              {backgroundSizeIsCustom ? (
+                <option value={background.size}>{background.size}</option>
+              ) : null}
+              {BACKGROUND_SIZE_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field
+            label={`Presencia ${Math.round((background?.opacity ?? 1) * 100)}%`}
+            hint="Menor presencia deja ver más el color de fondo."
+          >
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={background?.opacity ?? 1}
+              disabled={!background}
+              data-testid="ui-theme-background-opacity"
+              aria-label="Presencia del fondo decorativo"
+              onChange={(event) => updateBackground({ opacity: Number(event.target.value) })}
+            />
+          </Field>
         </div>
       </fieldset>
 
@@ -940,9 +1165,66 @@ export function ThemeEditor({
           </Field>
         </fieldset>
       </div>
+      <fieldset className="theme-text-shadow-panel">
+        <legend>
+          <TextT aria-hidden size={19} /> Sombra del hero mobile
+        </legend>
+        <p className="theme-text-shadow-meta">
+          Sólo aparece hasta 767 px, 1 px a la derecha y abajo. El color se deriva automáticamente
+          del token de mayor contraste de la paleta y no afecta el botón.
+        </p>
+        <label className="theme-text-shadow-toggle">
+          <input
+            type="checkbox"
+            checked={textShadowEnabled}
+            data-testid="ui-text-shadow-enabled"
+            onChange={(event) => updateTextShadow({ enabled: event.target.checked })}
+          />
+          <span>Activar sombra en el texto del hero</span>
+        </label>
+        <Field label={`Intensidad ${Math.round(textShadowOpacity * 100)}%`}>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={textShadowOpacity}
+            disabled={!textShadowEnabled}
+            aria-label="Intensidad de la sombra del hero mobile"
+            data-testid="ui-text-shadow-opacity"
+            onChange={(event) => updateTextShadow({ opacity: Number(event.target.value) })}
+          />
+        </Field>
+        <div
+          className="theme-text-shadow-preview"
+          data-testid="ui-text-shadow-preview"
+          style={{
+            backgroundColor: project.theme.colors.background,
+            color: heroPreviewTextColor,
+            textShadow: previewTextShadow,
+          }}
+        >
+          <small>VISTA PREVIA DEL HERO MOBILE</small>
+          <strong>Texto del hero</strong>
+          <span>La sombra no se aplica al botón.</span>
+          <i style={{ background: textShadowColor }} aria-hidden />
+        </div>
+        <div className="fieldset-toolbar">
+          <Button
+            variant="quiet"
+            size="sm"
+            icon={ArrowCounterClockwise}
+            data-testid="ui-reset-text-shadow"
+            onClick={() => resetGroup("textShadow")}
+          >
+            Restaurar sombra
+          </Button>
+        </div>
+      </fieldset>
       <p className="inspector-note">
         Los resets vuelven cada grupo al tema que tenía la tienda al abrir esta pestaña (
-        {groupLabels.colors}, {groupLabels.typography} y {groupLabels.geometry} por separado).
+        {groupLabels.colors}, {groupLabels.typography}, {groupLabels.geometry},
+        {groupLabels.background} y {groupLabels.textShadow} por separado).
       </p>
     </section>
   );

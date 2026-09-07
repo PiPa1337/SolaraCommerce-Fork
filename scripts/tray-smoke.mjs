@@ -169,6 +169,137 @@ function record(root, port, sessionId, shutdownToken, processId = process.pid) {
   };
 }
 
+async function writeRestartLauncher(root) {
+  const scriptsRoot = join(root, "scripts");
+  await mkdir(scriptsRoot, { recursive: true });
+  await writeFile(
+    join(scriptsRoot, "restart-server.mjs"),
+    `import { createServer } from "node:http";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+
+const [root, portText, sessionId, shutdownToken] = process.argv.slice(2);
+const port = Number(portText);
+const recordPath = join(root, ".solara-runtime", "instances", sessionId + ".json");
+const sessionPayload = JSON.stringify({ managed: true, sessionId });
+let stopping = false;
+let server;
+
+async function stop() {
+  if (stopping) return;
+  stopping = true;
+  await rm(recordPath, { force: true }).catch(() => {});
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 1000).unref();
+}
+
+server = createServer((request, response) => {
+  response.setHeader("Content-Type", "application/json");
+  if (request.url === "/__solara/session") {
+    response.end(sessionPayload);
+    return;
+  }
+  if (request.method === "POST" && request.url === "/__solara/shutdown") {
+    const expectedCookie = "solara_shutdown=" + shutdownToken;
+    if ((request.headers.cookie || "").indexOf(expectedCookie) < 0) {
+      response.statusCode = 403;
+      response.end(JSON.stringify({ ok: false }));
+      return;
+    }
+    response.statusCode = 202;
+    response.end(JSON.stringify({ ok: true }));
+    void stop();
+    return;
+  }
+  response.statusCode = 404;
+  response.end(JSON.stringify({ ok: false }));
+});
+
+await mkdir(join(root, ".solara-runtime", "instances"), { recursive: true });
+await new Promise((resolveListen) => server.listen(port, "127.0.0.1", resolveListen));
+await writeFile(
+  recordPath,
+  JSON.stringify({
+    format: "solara-local-session",
+    version: 1,
+    sessionId,
+    processId: process.pid,
+    port,
+    projectRoot: root,
+    startedAt: new Date().toISOString(),
+    managed: true,
+    shutdownToken,
+  }) + "\\n",
+  "utf8",
+);
+process.once("SIGTERM", () => void stop());
+process.once("SIGINT", () => void stop());
+`,
+    "utf8",
+  );
+  await writeFile(
+    join(scriptsRoot, "open-solara.ps1"),
+    String.raw`param(
+  [switch]$NoBrowser,
+  [switch]$NewSession,
+  [switch]$Json
+)
+
+$ErrorActionPreference = "Stop"
+$root = Split-Path -Parent $PSScriptRoot
+$serverScript = Join-Path $PSScriptRoot "restart-server.mjs"
+$nodePath = (Get-Command node).Source
+$port = 0
+foreach ($candidate in 4173..4180) {
+  $listener = $null
+  try {
+    $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $candidate)
+    $listener.Start()
+    $port = $candidate
+  } catch {
+  } finally {
+    if ($null -ne $listener) { $listener.Stop() }
+  }
+  if ($port -gt 0) { break }
+}
+if ($port -eq 0) { [Console]::Error.WriteLine("No hay un puerto libre"); exit 1 }
+
+$sessionId = [Guid]::NewGuid().ToString("N")
+$shutdownToken = ([Guid]::NewGuid().ToString("N") + [Guid]::NewGuid().ToString("N"))
+$arguments = @(
+  ('"' + $serverScript + '"'),
+  ('"' + $root + '"'),
+  "$port",
+  ('"' + $sessionId + '"'),
+  ('"' + $shutdownToken + '"')
+)
+$serverProcess = Start-Process -FilePath $nodePath -ArgumentList $arguments -WorkingDirectory $root -WindowStyle Hidden -PassThru
+$ready = $false
+for ($attempt = 0; $attempt -lt 40; $attempt++) {
+  try {
+    $probe = Invoke-RestMethod -Uri "http://127.0.0.1:$port/__solara/session" -Method Get -TimeoutSec 1
+    if ($probe.managed -eq $true -and $probe.sessionId -eq $sessionId) {
+      $ready = $true
+      break
+    }
+  } catch {
+  }
+  Start-Sleep -Milliseconds 100
+}
+if (-not $ready) {
+  if (-not $serverProcess.HasExited) { Stop-Process -Id $serverProcess.Id -Force -ErrorAction SilentlyContinue }
+  throw "El servidor temporal no respondió."
+}
+[pscustomobject]@{
+  sessionId = $sessionId
+  port = $port
+  url = "http://127.0.0.1:$port"
+} | ConvertTo-Json -Compress | Write-Output
+`,
+    "utf8",
+  );
+}
+
 async function main() {
   await stat(trayExe);
   const root = await mkdtemp(join(tmpdir(), "solara-tray-smoke-"));
@@ -179,6 +310,7 @@ async function main() {
     "<!doctype html><title>Tray smoke</title>",
     "utf8",
   );
+  await writeRestartLauncher(root);
 
   try {
     let available = await freePorts();
@@ -306,6 +438,26 @@ async function main() {
     }
 
     available = await freePorts();
+    if (available.length >= 1) {
+      const session = await startManaged(root, staticRoot, available[0], "restart-before");
+      const restarted = await runTray(root, "--diagnostic-restart");
+      assert.equal(restarted.code, 0);
+      assert.equal(restarted.result.failures, 0);
+      assert.equal(restarted.result.count, 1);
+      assert.equal(restarted.result.sessions.length, 1);
+      assert.notEqual(restarted.result.sessions[0].sessionId, session.sessionId);
+      assert.equal(
+        (await probe(restarted.result.sessions[0].port))?.sessionId,
+        restarted.result.sessions[0].sessionId,
+      );
+      const restartedClose = await runTray(root, "--diagnostic-close-all");
+      assert.equal(restartedClose.code, 0);
+      assert.equal(restartedClose.result.count, 0);
+    } else {
+      skipped.push("reinicio de aplicación: ningún puerto libre");
+    }
+
+    available = await freePorts();
     if (available.length === ports.length) {
       const maxSessions = [];
       for (let index = 0; index < ports.length; index++) {
@@ -335,6 +487,7 @@ async function main() {
 
     console.log(`tray-smoke: ok${skipped.length ? `; omitidos: ${skipped.join(" | ")}` : ""}`);
   } finally {
+    await runTray(root, "--diagnostic-close-all").catch(() => {});
     for (const server of [...mockServers]) {
       await closeServer(server).catch(() => {});
     }

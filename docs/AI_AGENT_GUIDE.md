@@ -139,7 +139,7 @@ original.
 ## Operaciones permitidas
 
 El conjunto es cerrado: `store.create`, `store.updateIdentity`,
-`store.updateSeo`, `store.updateWhatsapp`, `store.updateNavigation`,
+`store.updateSeo`, `store.updatePage`, `store.updateWhatsapp`, `store.updateNavigation`,
 `store.updatePublicCopy`, `store.updatePolicies`, `store.updateLegalProfile`,
 `category.create`, `category.update`, `category.setStatus`, `category.delete`, `collection.create`,
 `collection.update`, `product.create`, `product.update`, `product.setStatus`,
@@ -203,9 +203,24 @@ sección existente (por ejemplo, cambiar la imagen de portada del hero):
 {"type":"section.updateSettings","sectionId":"modo-section-hero","settings":{"posterAssetId":"ASSET_ID"}}
 ```
 
-El merge es superficial: los settings no incluidos conservan su valor. Los
-IDs válidos dependen del template; usar `plans.get` con `includeProject: true`
-para inspeccionarlos antes de commitear.
+El merge de settings es superficial: los settings no incluidos conservan su
+valor. Los IDs válidos dependen del template; usar `plans.get` con
+`includeProject: true` para inspeccionarlos antes de commitear.
+
+`store.updatePage` permite actualizar el título visible y los metadatos SEO de
+una página editable existente. Requiere el `pageId` y sólo acepta los campos
+tipados del contrato:
+
+```json
+{"type":"store.updatePage","pageId":"page-home","changes":{"title":"Tu mirada, tu estilo","seoTitle":"Stylo Lashes | Pestañas DIY para crear tu estilo","seoDescription":"Descubrí pestañas DIY, kits y estilos para realzar tu mirada desde casa."}}
+```
+
+Para controlar la sombra del texto del hero mobile, usar `theme.updateTokens`.
+El color se deriva de la paleta y no se envía como un valor CSS arbitrario:
+
+```json
+{"type":"theme.updateTokens","tokens":{"shadows":{"text":{"enabled":true,"opacity":0.65}}}}
+```
 
 ### Creación atómica con plans.createAndCommit
 

@@ -320,14 +320,29 @@ describe("ProjectMutationRegistry", () => {
       ).map((item) => item.id),
     ).toEqual(["slide-b", "slide-a"]);
 
+    const withBackground = structuredClone(reordered);
+    const backgroundAssetId = withBackground.assets[0]?.id;
+    if (!backgroundAssetId) throw new Error("fixture sin asset");
+    Object.assign(withBackground.theme, { background: { imageAssetId: backgroundAssetId } });
     const themed = applyMutation(
-      reordered,
+      withBackground,
       registry,
-      { type: "theme.updateTokens", tokens: { colors: { accent: "#123456" }, radius: 12 } },
+      {
+        type: "theme.updateTokens",
+        tokens: {
+          colors: { accent: "#123456" },
+          radius: 12,
+          background: { opacity: 0.45 },
+          shadows: { text: { enabled: true, opacity: 0.8 } },
+        },
+      },
       undefined,
       at,
     ).project;
     expect(themed.theme.colors.accent).toBe("#123456");
     expect(themed.theme.radius).toBe(12);
+    expect(themed.theme.background?.imageAssetId).toBe(backgroundAssetId);
+    expect(themed.theme.background?.opacity).toBe(0.45);
+    expect(themed.theme.shadows?.text).toMatchObject({ enabled: true, opacity: 0.8 });
   });
 });
